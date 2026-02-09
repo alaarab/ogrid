@@ -188,16 +188,21 @@
     .fui-DataGrid .fui-Table {
       width: 100% !important;
     }
-    /* Equal base width for all columns; last column gets remainder so it extends to the right edge (no dead strip) */
-    .fui-DataGridHeaderCell:not(:last-of-type),
-    .fui-DataGridCell:not(:last-of-type) {
+    /* Equal base width for all columns — override Fluent's inline width/min-width/max-width */
+    .fui-DataGridHeaderCell,
+    .fui-DataGridCell {
       width: calc(100% / var(--data-table-column-count, 1)) !important;
+      min-width: 0 !important;
+      max-width: none !important;
     }
-    .fui-DataGridHeader .fui-DataGridRow .fui-DataGridHeaderCell:last-of-type,
-    .fui-DataGridBody .fui-DataGridRow .fui-DataGridCell:last-of-type {
-      min-width: calc(100% / var(--data-table-column-count, 1)) !important;
-      width: auto !important;
-    }
+  }
+
+  /* Selection column must stay 48px even in auto-fit mode (needs same specificity depth to win) */
+  &[data-auto-fit='true'][data-column-count] .selectionHeaderCellWrapper,
+  &[data-auto-fit='true'][data-column-count] .selectionCellWrapper {
+    width: 48px !important;
+    min-width: 48px !important;
+    max-width: 48px !important;
   }
 
   /* Hide resize handle on last column only when table fits (autoFitColumns); when overflow/scroll, last column can resize (Fluent docs) */

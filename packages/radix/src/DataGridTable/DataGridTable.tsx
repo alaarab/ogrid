@@ -378,6 +378,14 @@ function DataGridTableInner<T>(props: IOGridDataGridProps<T>): React.ReactElemen
                 cutRange={cutRange}
                 colOffset={colOffset}
               />
+              {statusBarConfig && (
+                <StatusBar
+                  totalCount={statusBarConfig.totalCount}
+                  filteredCount={statusBarConfig.filteredCount}
+                  selectedCount={statusBarConfig.selectedCount ?? selectedRowIds.size}
+                  selectedCellCount={selectionRange ? (Math.abs(selectionRange.endRow - selectionRange.startRow) + 1) * (Math.abs(selectionRange.endCol - selectionRange.startCol) + 1) : undefined}
+                />
+              )}
             </div>
           </div>
         </div>
@@ -410,15 +418,6 @@ function DataGridTableInner<T>(props: IOGridDataGridProps<T>): React.ReactElemen
           </div>
         )}
       </div>
-
-      {statusBarConfig && (
-        <StatusBar
-          totalCount={statusBarConfig.totalCount}
-          filteredCount={statusBarConfig.filteredCount}
-          selectedCount={statusBarConfig.selectedCount ?? selectedRowIds.size}
-          selectedCellCount={selectionRange ? (Math.abs(selectionRange.endRow - selectionRange.startRow) + 1) * (Math.abs(selectionRange.endCol - selectionRange.startCol) + 1) : undefined}
-        />
-      )}
 
       {contextMenu &&
         createPortal(
