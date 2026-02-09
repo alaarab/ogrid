@@ -8,6 +8,7 @@
 }
 
 .tableWidthAnchor {
+  position: relative;
   /* When table fits (data-auto-fit): fill 100% so last column gets space. When overflow: size to content for scroll. */
   width: max-content;
   min-width: max(100%, var(--data-table-total-min-width, 0px));
@@ -116,6 +117,8 @@
       text-overflow: ellipsis !important;
       white-space: nowrap !important;
       font-size: 12px;
+      padding: 0 !important;
+      height: 1px; // CSS table trick: lets children use height: 100%
       border-right: 1px solid var(--colorNeutralStroke1, #c4c4c4);
 
       /* Prevent long unbroken content from forcing intrinsic widths / overlap */
@@ -271,49 +274,50 @@
 
 .cellContent {
   width: 100%;
-  min-height: 100%;
+  height: 100%;
   display: flex;
   align-items: center;
+  padding: 4px 8px;
+  box-sizing: border-box;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
   user-select: none;
 }
 
 .activeCellContent {
-  outline: 2px solid var(--colorBrandStroke1, #0078d4) !important;
-  outline-offset: -2px;
-  border-radius: 2px;
-  z-index: 1;
+  outline: 2px solid var(--ogrid-selection, #217346) !important;
+  outline-offset: -1px;
+  z-index: 2;
   position: relative;
+  overflow: visible;
 }
 
 // Cell range selection (spreadsheet-style multi-cell highlight) — clearly visible like Excel
 .cellInRange {
-  background-color: var(--colorNeutralBackground1Selected, #cce4f7) !important;
-  position: relative;
-  box-shadow: inset 0 0 0 1px var(--colorBrandStroke1, #0078d4);
+  background-color: var(--ogrid-bg-range, rgba(33, 115, 70, 0.12)) !important;
 }
 
-// Cut range (marching ants) — dashed outline when cells are cut
+// Cut range — subtle background only; MarchingAntsOverlay renders the animated border
 .cellCut {
-  outline: 2px dashed var(--colorBrandStroke1, #0078d4);
-  outline-offset: -2px;
   background-color: var(--colorNeutralBackground1Hover, rgba(0, 0, 0, 0.04)) !important;
-  animation: cellCutDash 0.6s linear infinite;
+  opacity: 0.7;
 }
 
-@keyframes cellCutDash {
-  0% { outline-offset: -2px; }
-  50% { outline-offset: -3px; }
-  100% { outline-offset: -2px; }
+// cellCopied kept for descriptor compatibility — overlay handles the border
+.cellCopied {
+  // intentionally empty
 }
 
 // Fill handle (drag from selection corner to fill range)
 .fillHandle {
   position: absolute;
-  right: 2px;
-  bottom: 2px;
-  width: 8px;
-  height: 8px;
-  background: var(--colorBrandStroke1, #0078d4);
+  right: -3px;
+  bottom: -3px;
+  width: 7px;
+  height: 7px;
+  background: var(--ogrid-selection, #217346);
+  border: 1px solid #fff;
   border-radius: 1px;
   cursor: crosshair;
   pointer-events: auto;
@@ -450,7 +454,10 @@
 }
 
 .contextMenuItem {
-  display: block;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
   width: 100%;
   padding: 6px 12px;
   border: none;
@@ -468,6 +475,15 @@
     opacity: 0.5;
     cursor: not-allowed;
   }
+}
+
+.contextMenuItemLabel {
+  flex: 1;
+}
+
+.contextMenuItemShortcut {
+  color: var(--colorNeutralForeground3, rgba(0, 0, 0, 0.4));
+  font-size: 0.85em;
 }
 
 .contextMenuDivider {

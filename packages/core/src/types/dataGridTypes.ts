@@ -198,9 +198,13 @@ export interface IOGridProps<T> {
   freezeRows?: number;
   freezeCols?: number;
   editable?: boolean;
+  /** Enable spreadsheet-like cell selection (active cell, range, fill handle, clipboard, context menu). Default: true. */
+  cellSelection?: boolean;
   onCellValueChanged?: (event: ICellValueChangedEvent<T>) => void;
   onUndo?: () => void;
   onRedo?: () => void;
+  canUndo?: boolean;
+  canRedo?: boolean;
 
   rowSelection?: RowSelectionMode;
   selectedRows?: Set<RowId>;
@@ -247,9 +251,13 @@ export interface IOGridDataGridProps<T> {
   isLoading?: boolean;
   loadingMessage?: string;
   editable?: boolean;
+  /** Enable spreadsheet-like cell selection. Default: true. */
+  cellSelection?: boolean;
   onCellValueChanged?: (event: ICellValueChangedEvent<T>) => void;
   onUndo?: () => void;
   onRedo?: () => void;
+  canUndo?: boolean;
+  canRedo?: boolean;
   rowSelection?: RowSelectionMode;
   selectedRows?: Set<RowId>;
   onSelectionChange?: (event: IRowSelectionChangeEvent<T>) => void;
