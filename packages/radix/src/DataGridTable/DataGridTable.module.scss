@@ -31,6 +31,7 @@
 }
 
 .tableWidthAnchor {
+  position: relative;
   width: max-content;
   min-width: max(100%, var(--data-table-total-min-width, 0px));
   background: var(--ogrid-bg, #fff);
@@ -53,10 +54,17 @@
 .dataTable td {
   min-width: 80px;
   box-sizing: border-box;
-  padding: 6px 10px;
   border-right: 1px solid var(--ogrid-border, #e0e0e0);
   font-size: 13px;
   vertical-align: middle;
+}
+
+.dataTable th {
+  padding: 6px 10px;
+}
+
+.dataTable td {
+  padding: 0;
 }
 
 .dataTable th:last-of-type,
@@ -187,55 +195,56 @@
 }
 
 .dataTable tbody td {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  position: relative;
+  height: 1px; // CSS table trick: lets children use height: 100%
 }
 
 .cellContent {
   width: 100%;
-  min-height: 100%;
+  height: 100%;
   display: flex;
   align-items: center;
   min-width: 0;
+  padding: 6px 10px;
+  box-sizing: border-box;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
   user-select: none;
 }
 
 .activeCellContent {
-  outline: 2px solid var(--ogrid-primary, #0066cc);
-  outline-offset: -2px;
-  border-radius: 2px;
-  z-index: 1;
+  outline: 2px solid var(--ogrid-selection, #217346);
+  outline-offset: -1px;
+  z-index: 2;
   position: relative;
+  overflow: visible;
 }
 
 .cellInRange {
-  background: var(--ogrid-bg-range, #cce4f7) !important;
-  box-shadow: inset 0 0 0 1px var(--ogrid-primary, #0066cc);
+  background: var(--ogrid-bg-range, rgba(33, 115, 70, 0.12)) !important;
 }
 
 .cellCut {
-  outline: 2px dashed var(--ogrid-primary, #0066cc);
-  outline-offset: -2px;
   background: var(--ogrid-bg-hover, rgba(0, 0, 0, 0.04)) !important;
-  animation: cellCutDash 0.6s linear infinite;
+  opacity: 0.7;
 }
 
-@keyframes cellCutDash {
-  0% { outline-offset: -2px; }
-  50% { outline-offset: -3px; }
-  100% { outline-offset: -2px; }
+// cellCopied kept as a no-op class for descriptor compatibility (overlay handles the border)
+.cellCopied {
+  // intentionally empty — MarchingAntsOverlay renders the animated border
 }
 
 // Fill handle (drag from selection corner to fill range)
 .fillHandle {
   position: absolute;
-  right: 2px;
-  bottom: 2px;
-  width: 8px;
-  height: 8px;
-  background: var(--ogrid-primary, #0066cc);
-  border-radius: 2px;
+  right: -3px;
+  bottom: -3px;
+  width: 7px;
+  height: 7px;
+  background: var(--ogrid-selection, #217346);
+  border: 1px solid #fff;
+  border-radius: 1px;
   cursor: crosshair;
   pointer-events: auto;
   z-index: 3;
@@ -307,7 +316,10 @@
 }
 
 .contextMenuItem {
-  display: block;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
   width: 100%;
   padding: 6px 12px;
   border: none;
@@ -323,6 +335,15 @@
     opacity: 0.5;
     cursor: not-allowed;
   }
+}
+
+.contextMenuItemLabel {
+  flex: 1;
+}
+
+.contextMenuItemShortcut {
+  color: var(--ogrid-fg-muted, rgba(0, 0, 0, 0.4));
+  font-size: 0.85em;
 }
 
 .contextMenuDivider {

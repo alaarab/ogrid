@@ -25,6 +25,18 @@ export interface IColumnMeta {
   pinned?: 'left' | 'right';
 }
 
+/** Parameters passed to the valueParser function. */
+export interface IValueParserParams<T = unknown> {
+  /** The new value to parse (typically a string from paste or editor). */
+  newValue: unknown;
+  /** The current value of the cell before the edit. */
+  oldValue: unknown;
+  /** The row data item. */
+  data: T;
+  /** The column definition. */
+  column: IColumnDef<T>;
+}
+
 export interface IColumnDef<T = unknown> extends IColumnMeta {
   renderCell?: (item: T) => React.ReactNode;
   compare?: (a: T, b: T) => number;
@@ -32,6 +44,12 @@ export interface IColumnDef<T = unknown> extends IColumnMeta {
   valueGetter?: (item: T) => unknown;
   /** Format the cell value for display (used when no renderCell). */
   valueFormatter?: (value: unknown, item: T) => string;
+  /**
+   * Parse/validate a new value before it is committed to the cell.
+   * Called on paste, inline edit commit, fill handle, and delete.
+   * Return the parsed value to use, or `undefined` to reject (skip) the change.
+   */
+  valueParser?: (params: IValueParserParams<T>) => unknown;
   /** Static or per-row cell inline styles. */
   cellStyle?: React.CSSProperties | ((item: T) => React.CSSProperties);
   /** Whether the cell is editable (per-column or per-row). */
