@@ -444,7 +444,7 @@ function DataGridTableInner<T>(props: IOGridDataGridProps<T>): React.ReactElemen
                 resizableColumns
                 resizableColumnsOptions={{ autoFitColumns: layoutMode === 'fill' && !allowOverflowX }}
                 columnSizingOptions={columnSizingOptions}
-                getRowId={getRowId}
+                getRowId={(item) => String(getRowId(item))}
                 focusMode="composite"
                 className={styles.dataGrid}
               >
@@ -469,22 +469,21 @@ function DataGridTableInner<T>(props: IOGridDataGridProps<T>): React.ReactElemen
                   </DataGridRow>
                 </DataGridHeader>
                 <DataGridBody<T>>
-                  {({ item, rowId }) => {
-                    const rowIdStr = String(rowId);
-                    const isSelected = selectedRowIds.has(rowIdStr);
+                  {({ item }) => {
+                    const rowId = getRowId(item);
+                    const isSelected = selectedRowIds.has(rowId);
                     return (
                       <DataGridRow<T>
                         key={rowId}
                         className={`${isSelected ? styles.selectedRow : ''} ${
-                          activeCell !== null && (rowIndexByRowId.get(rowIdStr) ?? -1) === activeCell.rowIndex
+                          activeCell !== null && (rowIndexByRowId.get(rowId) ?? -1) === activeCell.rowIndex
                             ? styles.activeRow
                             : ''
                         }`}
                         onClick={() => {
                           if (rowSelection === 'single') {
-                            const id = getRowId(item);
-                            const isCurrentlySelected = selectedRowIds.has(id);
-                            updateSelection(isCurrentlySelected ? new Set() : new Set([id]));
+                            const isCurrentlySelected = selectedRowIds.has(rowId);
+                            updateSelection(isCurrentlySelected ? new Set() : new Set([rowId]));
                           }
                         }}
                       >

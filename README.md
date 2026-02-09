@@ -173,7 +173,7 @@ Each framework package exports **`<OGrid>`** — the package you import from pic
 | Prop | Type | Description |
 |------|------|-------------|
 | `columns` | `(IColumnDef<T> \| IColumnGroupDef<T>)[]` | Column definitions (flat or grouped) |
-| `getRowId` | `(item: T) => string` | Unique row key |
+| `getRowId` | `(item: T) => string \| number` | Unique row key |
 | `data` | `T[]` | Client-side: in-memory array |
 | `dataSource` | `IDataSource<T>` | Server-side: your API adapter |
 | `defaultPageSize` | `number` | Initial rows per page (default 20) |

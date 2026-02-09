@@ -1,7 +1,8 @@
 import { useState } from 'react';
+import type { RowId } from '../types';
 
 export interface EditingCell {
-  rowId: string;
+  rowId: RowId;
   columnId: string;
 }
 
