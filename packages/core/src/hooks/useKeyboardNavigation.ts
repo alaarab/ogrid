@@ -2,6 +2,7 @@ import { useCallback } from 'react';
 import { normalizeSelectionRange } from '../types';
 import { getCellValue } from '../utils';
 import type {
+  RowId,
   IActiveCell,
   ISelectionRange,
   IColumnDef,
@@ -23,13 +24,13 @@ export interface UseKeyboardNavigationParams<T> {
   setSelectionRange: (range: ISelectionRange | null) => void;
   editable: boolean | undefined;
   onCellValueChanged: ((event: ICellValueChangedEvent<T>) => void) | undefined;
-  getRowId: (item: T) => string;
+  getRowId: (item: T) => RowId;
   editingCell: EditingCell | null;
   setEditingCell: (cell: EditingCell | null) => void;
   rowSelection: RowSelectionMode;
-  selectedRowIds: Set<string>;
+  selectedRowIds: Set<RowId>;
   handleRowCheckboxChange: (
-    rowId: string,
+    rowId: RowId,
     checked: boolean,
     rowIndex: number,
     shiftKey: boolean

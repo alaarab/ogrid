@@ -1,6 +1,9 @@
 import type { ReactNode } from 'react';
 import type { IColumnDef, IColumnGroupDef, ICellValueChangedEvent } from './columnTypes';
 
+/** Row identifier type — grids accept string or number IDs. */
+export type RowId = string | number;
+
 export interface UserLike {
   id?: string;
   displayName: string;
@@ -85,9 +88,9 @@ export interface IGridColumnState {
 /** Row selection mode. */
 export type RowSelectionMode = 'none' | 'single' | 'multiple';
 
-/** Event payload when row selection changes. Uses string[] for JSON-serializability. */
+/** Event payload when row selection changes. */
 export interface IRowSelectionChangeEvent<T> {
-  selectedRowIds: string[];
+  selectedRowIds: RowId[];
   selectedItems: T[];
 }
 
@@ -160,9 +163,9 @@ export interface IOGridApi<T> {
   /** Set filter model (unified IFilters). */
   setFilterModel: (filters: IFilters) => void;
   /** Get currently selected row IDs. */
-  getSelectedRows: () => string[];
+  getSelectedRows: () => RowId[];
   /** Set selected row IDs programmatically. */
-  setSelectedRows: (rowIds: string[]) => void;
+  setSelectedRows: (rowIds: RowId[]) => void;
   /** Select all rows. */
   selectAll: () => void;
   /** Deselect all rows. */
@@ -174,7 +177,7 @@ export interface IOGridApi<T> {
 /** Props for the OGrid wrapper component (shared across Fluent, Material, Radix). */
 export interface IOGridProps<T> {
   columns: (IColumnDef<T> | IColumnGroupDef<T>)[];
-  getRowId: (item: T) => string;
+  getRowId: (item: T) => RowId;
   data?: T[];
   dataSource?: IDataSource<T>;
 
@@ -200,7 +203,7 @@ export interface IOGridProps<T> {
   onRedo?: () => void;
 
   rowSelection?: RowSelectionMode;
-  selectedRows?: Set<string>;
+  selectedRows?: Set<RowId>;
   onSelectionChange?: (event: IRowSelectionChangeEvent<T>) => void;
 
   statusBar?: boolean | IStatusBarProps;
@@ -228,8 +231,8 @@ export interface IOGridProps<T> {
 export interface IOGridDataGridProps<T> {
   items: T[];
   columns: (IColumnDef<T> | IColumnGroupDef<T>)[];
-  getRowId: (item: T) => string;
-  sortBy: string;
+  getRowId: (item: T) => RowId;
+  sortBy?: string;
   sortDirection: 'asc' | 'desc';
   onColumnSort: (columnKey: string) => void;
   visibleColumns: Set<string>;
@@ -248,7 +251,7 @@ export interface IOGridDataGridProps<T> {
   onUndo?: () => void;
   onRedo?: () => void;
   rowSelection?: RowSelectionMode;
-  selectedRows?: Set<string>;
+  selectedRows?: Set<RowId>;
   onSelectionChange?: (event: IRowSelectionChangeEvent<T>) => void;
   statusBar?: IStatusBarProps;
   multiSelectFilters: Record<string, string[]>;

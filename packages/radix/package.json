@@ -1,6 +1,6 @@
 {
   "name": "@alaarab/ogrid",
-  "version": "1.2.0",
+  "version": "1.2.2",
   "description": "OGrid default (Radix) – Data grid with sorting, filtering, pagination, column chooser, and CSV export. Packed with Radix UI; no Fluent or Material required.",
   "main": "dist/esm/index.js",
   "module": "dist/esm/index.js",
@@ -18,12 +18,28 @@
     "storybook": "storybook dev -p 6008 --no-open",
     "build-storybook": "storybook build"
   },
-  "keywords": ["ogrid", "radix", "datatable", "react", "typescript", "grid", "headless"],
+  "keywords": [
+    "ogrid",
+    "radix",
+    "datatable",
+    "react",
+    "typescript",
+    "grid",
+    "headless"
+  ],
   "author": "Ala Arab",
   "license": "MIT",
-  "files": ["dist", "README.md", "LICENSE"],
-  "sideEffects": ["**/*.css"],
-  "engines": { "node": ">=18" },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "sideEffects": [
+    "**/*.css"
+  ],
+  "engines": {
+    "node": ">=18"
+  },
   "dependencies": {
     "@alaarab/ogrid-core": "^1.2.0",
     "@radix-ui/react-checkbox": "^1.1.2",
@@ -52,5 +68,7 @@
     "typescript": "^5.7.3",
     "vite": "^6.1.0"
   },
-  "publishConfig": { "access": "public" }
+  "publishConfig": {
+    "access": "public"
+  }
 }

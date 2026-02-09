@@ -1,6 +1,6 @@
 {
   "name": "@alaarab/ogrid-fluent",
-  "version": "1.2.0",
+  "version": "1.2.2",
   "description": "OGrid Fluent UI implementation – DataGrid-powered data table with sorting, filtering, pagination, column chooser, and CSV export.",
   "main": "dist/esm/index.js",
   "module": "dist/esm/index.js",
@@ -18,11 +18,24 @@
     "storybook": "storybook dev -p 6006 --no-open",
     "build-storybook": "storybook build"
   },
-  "keywords": ["ogrid", "fluentui", "datatable", "react", "typescript", "grid"],
+  "keywords": [
+    "ogrid",
+    "fluentui",
+    "datatable",
+    "react",
+    "typescript",
+    "grid"
+  ],
   "author": "Ala Arab",
   "license": "MIT",
-  "files": ["dist", "README.md", "LICENSE"],
-  "sideEffects": ["**/*.css"],
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "sideEffects": [
+    "**/*.css"
+  ],
   "engines": {
     "node": ">=18"
   },
