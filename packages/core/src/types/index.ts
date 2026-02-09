@@ -11,6 +11,7 @@ export type {
 } from './columnTypes';
 
 export type {
+  RowId,
   UserLike,
   UserLikeInput,
   FilterValue,
