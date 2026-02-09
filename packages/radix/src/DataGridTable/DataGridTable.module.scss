@@ -106,8 +106,10 @@
   background: var(--ogrid-bg-subtle, #f3f2f1);
 }
 
-/* Pinned columns: sticky positioning based on column pinned property */
-.pinnedColLeft {
+/* Pinned columns: sticky positioning based on column pinned property.
+   Selectors use .dataTable qualifier to beat .dataTable thead th / .dataTable tbody td
+   which set position: relative. */
+.dataTable .pinnedColLeft {
   position: sticky;
   left: 0;
   z-index: 2;
@@ -129,7 +131,7 @@
   background: var(--ogrid-bg-subtle, #f3f2f1);
 }
 
-.pinnedColRight {
+.dataTable .pinnedColRight {
   position: sticky;
   right: 0;
   z-index: 2;

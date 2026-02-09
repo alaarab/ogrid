@@ -230,9 +230,6 @@ function DataGridTableInner<T>(props: IOGridDataGridProps<T>): React.ReactElemen
             descriptor.isInRange ? styles.cellInRange : '',
             descriptor.isInCutRange ? styles.cellCut : '',
             descriptor.isInCopyRange ? styles.cellCopied : '',
-            descriptor.isPinned ? styles.pinnedCell : '',
-            descriptor.isPinned && descriptor.pinnedSide === 'left' ? styles.pinnedLeft : '',
-            descriptor.isPinned && descriptor.pinnedSide === 'right' ? styles.pinnedRight : '',
           ]
             .filter(Boolean)
             .join(' ');
@@ -471,11 +468,20 @@ function DataGridTableInner<T>(props: IOGridDataGridProps<T>): React.ReactElemen
                       const colIdx = visibleCols.findIndex((c) => c.columnId === columnId);
                       const isFreezeCol =
                         freezeCols != null && freezeCols >= 1 && colIdx >= 0 && colIdx < freezeCols;
+                      const col = colIdx >= 0 ? visibleCols[colIdx] : undefined;
+                      const isPinnedLeft = col?.pinned === 'left';
+                      const isPinnedRight = col?.pinned === 'right';
                       return (
                         <DataGridHeaderCell
-                          className={`${columnId === '__selection__' ? styles.selectionHeaderCellWrapper : ''} ${
-                            isFreezeCol ? styles.freezeCol : ''
-                          } ${isFreezeCol && colIdx === 0 ? styles.freezeColFirst : ''}`.trim()}
+                          className={[
+                            columnId === '__selection__' ? styles.selectionHeaderCellWrapper : '',
+                            isFreezeCol ? styles.freezeCol : '',
+                            isFreezeCol && colIdx === 0 ? styles.freezeColFirst : '',
+                            isPinnedLeft ? styles.pinnedCell : '',
+                            isPinnedLeft ? styles.pinnedLeft : '',
+                            isPinnedRight ? styles.pinnedCell : '',
+                            isPinnedRight ? styles.pinnedRight : '',
+                          ].filter(Boolean).join(' ')}
                         >
                           {renderHeaderCell()}
                         </DataGridHeaderCell>
@@ -506,11 +512,20 @@ function DataGridTableInner<T>(props: IOGridDataGridProps<T>): React.ReactElemen
                           const colIdx = visibleCols.findIndex((c) => c.columnId === columnId);
                           const isFreezeCol =
                             freezeCols != null && freezeCols >= 1 && colIdx >= 0 && colIdx < freezeCols;
+                          const col = colIdx >= 0 ? visibleCols[colIdx] : undefined;
+                          const isPinnedLeft = col?.pinned === 'left';
+                          const isPinnedRight = col?.pinned === 'right';
                           return (
                             <DataGridCell
-                              className={`${columnId === '__selection__' ? styles.selectionCellWrapper : ''} ${
-                                isFreezeCol ? styles.freezeCol : ''
-                              } ${isFreezeCol && colIdx === 0 ? styles.freezeColFirst : ''}`.trim()}
+                              className={[
+                                columnId === '__selection__' ? styles.selectionCellWrapper : '',
+                                isFreezeCol ? styles.freezeCol : '',
+                                isFreezeCol && colIdx === 0 ? styles.freezeColFirst : '',
+                                isPinnedLeft ? styles.pinnedCell : '',
+                                isPinnedLeft ? styles.pinnedLeft : '',
+                                isPinnedRight ? styles.pinnedCell : '',
+                                isPinnedRight ? styles.pinnedRight : '',
+                              ].filter(Boolean).join(' ')}
                             >
                               {renderCell(item)}
                             </DataGridCell>
