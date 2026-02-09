@@ -250,6 +250,8 @@ export function useDataGridState<T>(
     activeCell,
     editable,
     onCellValueChanged,
+    beginBatch: undoRedo.beginBatch,
+    endBatch: undoRedo.endBatch,
   });
 
   const handleCellMouseDown = useCallback(
@@ -299,6 +301,8 @@ export function useDataGridState<T>(
     setActiveCell,
     colOffset,
     wrapperRef,
+    beginBatch: undoRedo.beginBatch,
+    endBatch: undoRedo.endBatch,
   });
 
   const [containerWidth, setContainerWidth] = useState<number>(0);

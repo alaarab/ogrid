@@ -438,6 +438,14 @@ function DataGridTableInner<T>(props: IOGridDataGridProps<T>): React.ReactElemen
             cutRange={cutRange}
             colOffset={colOffset}
           />
+          {statusBarConfig && (
+            <StatusBar
+              totalCount={statusBarConfig.totalCount}
+              filteredCount={statusBarConfig.filteredCount}
+              selectedCount={statusBarConfig.selectedCount ?? selectedRowIds.size}
+              selectedCellCount={selectionRange ? (Math.abs(selectionRange.endRow - selectionRange.startRow) + 1) * (Math.abs(selectionRange.endCol - selectionRange.startCol) + 1) : undefined}
+            />
+          )}
         </Box>
         {showEmptyInGrid && emptyState && (
           <Box sx={{ py: 4, px: 2, textAlign: 'center', borderTop: 1, borderColor: 'divider', bgcolor: 'action.hover' }}>
@@ -464,15 +472,6 @@ function DataGridTableInner<T>(props: IOGridDataGridProps<T>): React.ReactElemen
           </Box>
         )}
       </TableContainer>
-
-      {statusBarConfig && (
-        <StatusBar
-          totalCount={statusBarConfig.totalCount}
-          filteredCount={statusBarConfig.filteredCount}
-          selectedCount={statusBarConfig.selectedCount ?? selectedRowIds.size}
-          selectedCellCount={selectionRange ? (Math.abs(selectionRange.endRow - selectionRange.startRow) + 1) * (Math.abs(selectionRange.endCol - selectionRange.startCol) + 1) : undefined}
-        />
-      )}
 
       {contextMenu &&
         createPortal(

@@ -16,6 +16,8 @@ export interface UseFillHandleParams<T> {
   setActiveCell: (cell: IActiveCell | null) => void;
   colOffset: number;
   wrapperRef: RefObject<HTMLDivElement | null>;
+  beginBatch?: () => void;
+  endBatch?: () => void;
 }
 
 export interface UseFillHandleResult {
@@ -35,6 +37,8 @@ export function useFillHandle<T>(params: UseFillHandleParams<T>): UseFillHandleR
     setActiveCell,
     colOffset,
     wrapperRef,
+    beginBatch,
+    endBatch,
   } = params;
 
   const [fillDrag, setFillDrag] = useState<{ startRow: number; startCol: number } | null>(null);
@@ -73,6 +77,7 @@ export function useFillHandle<T>(params: UseFillHandleParams<T>): UseFillHandleR
       const startColDef = visibleCols[norm.startCol];
       if (startItem && startColDef) {
         const startValue = getCellValue(startItem, startColDef);
+        beginBatch?.();
         for (let row = norm.startRow; row <= norm.endRow; row++) {
           for (let col = norm.startCol; col <= norm.endCol; col++) {
             if (row === fillDrag.startRow && col === fillDrag.startCol) continue;
@@ -96,6 +101,7 @@ export function useFillHandle<T>(params: UseFillHandleParams<T>): UseFillHandleR
             });
           }
         }
+        endBatch?.();
       }
       setFillDrag(null);
     };
@@ -115,6 +121,8 @@ export function useFillHandle<T>(params: UseFillHandleParams<T>): UseFillHandleR
     setActiveCell,
     onCellValueChanged,
     wrapperRef,
+    beginBatch,
+    endBatch,
   ]);
 
   const handleFillHandleMouseDown = useCallback(
