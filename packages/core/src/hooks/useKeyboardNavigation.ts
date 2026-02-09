@@ -114,18 +114,21 @@ export function useKeyboardNavigation<T>(
       switch (e.key) {
         case 'c':
           if (e.ctrlKey || e.metaKey) {
+            if (editingCell != null) break; // let the input handle copy
             e.preventDefault();
             handleCopy();
           }
           break;
         case 'x':
           if (e.ctrlKey || e.metaKey) {
+            if (editingCell != null) break; // let the input handle cut
             e.preventDefault();
             handleCut();
           }
           break;
         case 'v':
           if (e.ctrlKey || e.metaKey) {
+            if (editingCell != null) break; // let the input handle paste
             e.preventDefault();
             void handlePaste();
           }
@@ -346,6 +349,7 @@ export function useKeyboardNavigation<T>(
           break;
         case 'a':
           if (e.ctrlKey || e.metaKey) {
+            if (editingCell != null) break; // let the input handle select-all
             e.preventDefault();
             if (items.length > 0 && visibleColumnCount > 0) {
               setSelectionRange({

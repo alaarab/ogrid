@@ -186,7 +186,8 @@ function DataGridTableInner<T>(props: IOGridDataGridProps<T>): React.ReactElemen
         textOverflow: 'ellipsis',
         whiteSpace: 'nowrap',
         userSelect: 'none',
-        ...(descriptor.isActive && { outline: '2px solid #217346', outlineOffset: '-1px', zIndex: 2, position: 'relative' as const, overflow: 'visible' }),
+        outline: 'none',
+        ...(descriptor.isActive && !descriptor.isInRange && { outline: '2px solid #217346', outlineOffset: '-1px', zIndex: 2, position: 'relative' as const, overflow: 'visible' }),
         ...(descriptor.isInRange && { bgcolor: 'rgba(33, 115, 70, 0.12)' }),
         ...(descriptor.isInCutRange && { bgcolor: 'action.hover', opacity: 0.7 }),
       };
@@ -305,7 +306,7 @@ function DataGridTableInner<T>(props: IOGridDataGridProps<T>): React.ReactElemen
             >
               <TableRow sx={{ bgcolor: 'action.hover' }}>
                 {hasCheckboxCol && (
-                  <TableCell padding="checkbox" sx={{ width: 48, minWidth: 48, maxWidth: 48 }}>
+                  <TableCell padding="checkbox" sx={{ width: 48, minWidth: 48, maxWidth: 48, textAlign: 'center' }}>
                     <Checkbox
                       checked={allSelected}
                       indeterminate={someSelected}
@@ -381,7 +382,7 @@ function DataGridTableInner<T>(props: IOGridDataGridProps<T>): React.ReactElemen
                       sx={{ '&:hover': { bgcolor: 'action.hover' } }}
                     >
                       {hasCheckboxCol && (
-                        <TableCell padding="checkbox" sx={{ width: 48, minWidth: 48 }}>
+                        <TableCell padding="checkbox" sx={{ width: 48, minWidth: 48, maxWidth: 48, textAlign: 'center' }}>
                           <Box
                             data-row-index={rowIndex}
                             data-col-index={0}
@@ -391,6 +392,7 @@ function DataGridTableInner<T>(props: IOGridDataGridProps<T>): React.ReactElemen
                             <Checkbox
                               checked={selectedRowIds.has(rowIdStr)}
                               onChange={(_, checked) => handleRowCheckboxChange(rowIdStr, checked, rowIndex, lastMouseShiftRef.current)}
+                              size="small"
                               aria-label={`Select row ${rowIndex + 1}`}
                             />
                           </Box>
