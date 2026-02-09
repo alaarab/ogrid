@@ -15,7 +15,8 @@
     "storybook:fluent": "npm run storybook -w @alaarab/ogrid-fluent",
     "storybook:material": "npm run storybook -w @alaarab/ogrid-material",
     "storybook:radix": "npm run storybook -w @alaarab/ogrid",
-    "lint": "eslint ."
+    "lint": "eslint .",
+    "publish:all": "npm publish --workspace=packages/core --access=public && npm publish --workspace=packages/fluent --access=public && npm publish --workspace=packages/material --access=public && npm publish --workspace=packages/radix --access=public"
   },
   "engines": {
     "node": ">=18"
