@@ -14,7 +14,6 @@
   width: 100%;
   min-width: 0;
   max-width: 100%;
-  margin-bottom: 15px;
   border-radius: 6px;
   box-sizing: border-box;
 
@@ -33,7 +32,8 @@
 .tableWidthAnchor {
   position: relative;
   width: max-content;
-  min-width: max(100%, var(--data-table-total-min-width, 0px));
+  /* No min-width: 100% — anchor sizes to grid content so status bar aligns with the table border.
+     .tableScrollContent provides the full-width background so no gap is visible. */
   background: var(--ogrid-bg, #fff);
 }
 
@@ -309,6 +309,7 @@
   gap: 16px;
   width: 100%;
   padding: 6px 12px;
+  box-sizing: border-box;
   font-size: 12px;
   color: var(--ogrid-muted, #616161);
   background: var(--ogrid-bg-subtle, #f3f2f1);
