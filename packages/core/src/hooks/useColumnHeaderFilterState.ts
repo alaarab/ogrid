@@ -109,7 +109,7 @@ export function useColumnHeaderFilterState(
   const [peopleSearchText, setPeopleSearchText] = useState('');
   const [popoverPosition, setPopoverPosition] = useState<{ top: number; left: number } | null>(null);
 
-  // Sync temp state when popover opens; compute position
+  // Sync temp state when popover opens
   useEffect(() => {
     if (isFilterOpen) {
       setTempSelected(new Set(safeSelectedValues));
@@ -117,16 +117,9 @@ export function useColumnHeaderFilterState(
       setSearchText('');
       setPeopleSearchText('');
       setPeopleSuggestions([]);
-      const t = setTimeout(() => {
-        if (headerRef.current) {
-          const rect = headerRef.current.getBoundingClientRect();
-          setPopoverPosition({ top: rect.bottom + 4, left: rect.left });
-        }
-        if (filterType === 'people') {
-          setTimeout(() => peopleInputRef.current?.focus(), 50);
-        }
-      }, 0);
-      return () => clearTimeout(t);
+      if (filterType === 'people') {
+        setTimeout(() => peopleInputRef.current?.focus(), 50);
+      }
     } else {
       setPopoverPosition(null);
     }
@@ -196,7 +189,13 @@ export function useColumnHeaderFilterState(
   const handleFilterIconClick = useCallback((e: React.MouseEvent) => {
     e.stopPropagation();
     e.preventDefault();
-    setFilterOpen((prev) => !prev);
+    setFilterOpen((prev) => {
+      if (!prev && headerRef.current) {
+        const rect = headerRef.current.getBoundingClientRect();
+        setPopoverPosition({ top: rect.bottom + 4, left: rect.left });
+      }
+      return !prev;
+    });
   }, []);
 
   const handleSortClick = useCallback(

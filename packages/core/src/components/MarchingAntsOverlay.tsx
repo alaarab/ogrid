@@ -128,10 +128,20 @@ export function MarchingAntsOverlay({
 
   if (!selRect && !clipRect) return null;
 
+  // When clipboard range matches the selection range, hide the solid selection border
+  // so the marching ants animation is clearly visible (not obscured by solid stroke underneath).
+  const clipRangeMatchesSel =
+    selectionRange != null &&
+    clipRange != null &&
+    selectionRange.startRow === clipRange.startRow &&
+    selectionRange.startCol === clipRange.startCol &&
+    selectionRange.endRow === clipRange.endRow &&
+    selectionRange.endCol === clipRange.endCol;
+
   return (
     <>
-      {/* Selection range: solid green border */}
-      {selRect && (
+      {/* Selection range: solid green border (hidden when clipboard range overlaps) */}
+      {selRect && !clipRangeMatchesSel && (
         <svg
           style={{
             position: 'absolute',

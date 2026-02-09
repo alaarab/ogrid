@@ -226,7 +226,7 @@ function DataGridTableInner<T>(props: IOGridDataGridProps<T>): React.ReactElemen
 
           const cellClassNames = [
             styles.cellContent,
-            descriptor.isActive ? styles.activeCellContent : '',
+            descriptor.isActive && !descriptor.isInRange ? styles.activeCellContent : '',
             descriptor.isInRange ? styles.cellInRange : '',
             descriptor.isInCutRange ? styles.cellCut : '',
             descriptor.isInCopyRange ? styles.cellCopied : '',

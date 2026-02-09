@@ -129,6 +129,8 @@ export interface CellRenderDescriptorInput<T> {
   getRowId: (item: T) => RowId;
   editable?: boolean;
   onCellValueChanged?: (event: import('../types/columnTypes').ICellValueChangedEvent<T>) => void;
+  /** True while user is drag-selecting cells — hides fill handle during drag. */
+  isDragging?: boolean;
 }
 
 export interface CellRenderDescriptor {
@@ -196,6 +198,9 @@ export function getCellRenderDescriptor<T>(
     input.copyRange != null &&
     isInSelectionRange(input.copyRange, rowIndex, colIdx);
   const isSelectionEndCell =
+    !input.isDragging &&
+    input.copyRange == null &&
+    input.cutRange == null &&
     input.selectionRange != null &&
     rowIndex === input.selectionRange.endRow &&
     colIdx === input.selectionRange.endCol;

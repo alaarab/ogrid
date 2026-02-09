@@ -14,6 +14,8 @@ export interface UseCellSelectionResult {
   setSelectionRange: (range: ISelectionRange | null) => void;
   handleCellMouseDown: (e: React.MouseEvent, rowIndex: number, globalColIndex: number) => void;
   handleSelectAllCells: () => void;
+  /** True while the user is drag-selecting cells (mousedown → mousemove → mouseup). */
+  isDragging: boolean;
 }
 
 export function useCellSelection(params: UseCellSelectionParams): UseCellSelectionResult {
@@ -21,6 +23,7 @@ export function useCellSelection(params: UseCellSelectionParams): UseCellSelecti
 
   const [selectionRange, setSelectionRange] = useState<ISelectionRange | null>(null);
   const isDraggingRef = useRef(false);
+  const [isDragging, setIsDragging] = useState(false);
   const dragStartRef = useRef<{ row: number; col: number } | null>(null);
 
   const handleCellMouseDown = useCallback(
@@ -49,6 +52,7 @@ export function useCellSelection(params: UseCellSelectionParams): UseCellSelecti
         });
         setActiveCell({ rowIndex, columnIndex: globalColIndex });
         isDraggingRef.current = true;
+        setIsDragging(true);
       }
     },
     [colOffset, selectionRange, setActiveCell]
@@ -89,6 +93,7 @@ export function useCellSelection(params: UseCellSelectionParams): UseCellSelecti
     };
     const onUp = () => {
       isDraggingRef.current = false;
+      setIsDragging(false);
       dragStartRef.current = null;
     };
     window.addEventListener('mousemove', onMove, true);
@@ -104,5 +109,6 @@ export function useCellSelection(params: UseCellSelectionParams): UseCellSelecti
     setSelectionRange,
     handleCellMouseDown,
     handleSelectAllCells,
+    isDragging,
   };
 }

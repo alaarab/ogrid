@@ -13,6 +13,7 @@ import { useContextMenu } from './useContextMenu';
 import { useClipboard } from './useClipboard';
 import { useKeyboardNavigation } from './useKeyboardNavigation';
 import { useFillHandle } from './useFillHandle';
+import { useUndoRedo } from './useUndoRedo';
 
 // Stable no-op handlers used when cellSelection is disabled (module-scope = no re-renders)
 const NOOP = () => {};
@@ -162,14 +163,14 @@ export function useDataGridState<T>(
     emptyState,
     editable,
     cellSelection: cellSelectionProp,
-    onCellValueChanged,
-    onUndo,
-    onRedo,
-    canUndo: canUndoProp,
-    canRedo: canRedoProp,
+    onCellValueChanged: onCellValueChangedProp,
   } = props;
 
   const cellSelection = cellSelectionProp !== false;
+
+  // Wrap onCellValueChanged with undo/redo tracking — all edits are recorded automatically
+  const undoRedo = useUndoRedo<T>({ onCellValueChanged: onCellValueChangedProp });
+  const onCellValueChanged = undoRedo.onCellValueChanged;
 
   const flatColumns = useMemo(() => flattenColumns(columns), [columns]);
 
@@ -230,6 +231,7 @@ export function useDataGridState<T>(
     setSelectionRange,
     handleCellMouseDown: handleCellMouseDownBase,
     handleSelectAllCells,
+    isDragging,
   } = useCellSelection({
     colOffset,
     rowCount: items.length,
@@ -282,8 +284,8 @@ export function useDataGridState<T>(
     handlePaste,
     setContextMenu,
     wrapperRef,
-    onUndo,
-    onRedo,
+    onUndo: undoRedo.undo,
+    onRedo: undoRedo.redo,
     clearClipboardRanges,
   });
 
@@ -418,6 +420,7 @@ export function useDataGridState<T>(
       getRowId,
       editable,
       onCellValueChanged,
+      isDragging: cellSelection ? isDragging : false,
     }),
     [
       editingCell,
@@ -431,6 +434,7 @@ export function useDataGridState<T>(
       editable,
       onCellValueChanged,
       cellSelection,
+      isDragging,
     ]
   );
 
@@ -514,10 +518,10 @@ export function useDataGridState<T>(
     setContextMenu: cellSelection ? setContextMenu : (NOOP as typeof setContextMenu),
     handleCellContextMenu: cellSelection ? handleCellContextMenu : (NOOP_CTX as typeof handleCellContextMenu),
     closeContextMenu: cellSelection ? closeContextMenu : NOOP,
-    canUndo: canUndoProp ?? false,
-    canRedo: canRedoProp ?? false,
-    onUndo,
-    onRedo,
+    canUndo: undoRedo.canUndo,
+    canRedo: undoRedo.canRedo,
+    onUndo: undoRedo.undo,
+    onRedo: undoRedo.redo,
     handleCopy: cellSelection ? handleCopy : NOOP,
     handleCut: cellSelection ? handleCut : NOOP,
     handlePaste: cellSelection ? handlePaste : (NOOP_ASYNC as typeof handlePaste),
