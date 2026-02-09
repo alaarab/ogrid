@@ -237,6 +237,7 @@ export function useDataGridState<T>(
     rowCount: items.length,
     visibleColCount: visibleCols.length,
     setActiveCell,
+    wrapperRef,
   });
 
   const { contextMenu, setContextMenu, handleCellContextMenu, closeContextMenu } =
