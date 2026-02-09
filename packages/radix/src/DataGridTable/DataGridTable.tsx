@@ -291,7 +291,6 @@ function DataGridTableInner<T>(props: IOGridDataGridProps<T>): React.ReactElemen
                             minWidth: col.minWidth ?? 80,
                             width: hasExplicitWidth ? columnWidth : undefined,
                             maxWidth: hasExplicitWidth ? columnWidth : undefined,
-                            position: 'relative',
                           }}
                         >
                           <ColumnHeaderFilter {...getHeaderFilterConfig(col, headerFilterInput)} />

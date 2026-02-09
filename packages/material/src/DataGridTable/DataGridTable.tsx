@@ -321,6 +321,8 @@ function DataGridTableInner<T>(props: IOGridDataGridProps<T>): React.ReactElemen
                 )}
                 {visibleCols.map((col, colIdx) => {
                   const isFreezeCol = freezeCols != null && freezeCols >= 1 && colIdx < freezeCols;
+                  const isPinnedLeft = col.pinned === 'left';
+                  const isPinnedRight = col.pinned === 'right';
                   const columnWidth = getColumnWidth(col);
                   return (
                     <TableCell
@@ -337,6 +339,22 @@ function DataGridTableInner<T>(props: IOGridDataGridProps<T>): React.ReactElemen
                           ? {
                               position: 'sticky',
                               left: 0,
+                              zIndex: 2,
+                              bgcolor: 'action.hover',
+                            }
+                          : {}),
+                        ...(isPinnedLeft
+                          ? {
+                              position: 'sticky',
+                              left: 0,
+                              zIndex: 2,
+                              bgcolor: 'action.hover',
+                            }
+                          : {}),
+                        ...(isPinnedRight
+                          ? {
+                              position: 'sticky',
+                              right: 0,
                               zIndex: 2,
                               bgcolor: 'action.hover',
                             }
@@ -403,6 +421,8 @@ function DataGridTableInner<T>(props: IOGridDataGridProps<T>): React.ReactElemen
                       )}
                       {visibleCols.map((col, colIdx) => {
                         const isFreezeCol = freezeCols != null && freezeCols >= 1 && colIdx < freezeCols;
+                        const isPinnedLeft = col.pinned === 'left';
+                        const isPinnedRight = col.pinned === 'right';
                         const columnWidth = getColumnWidth(col);
                         return (
                           <TableCell
@@ -418,6 +438,22 @@ function DataGridTableInner<T>(props: IOGridDataGridProps<T>): React.ReactElemen
                                 ? {
                                     position: 'sticky',
                                     left: 0,
+                                    zIndex: 2,
+                                    bgcolor: 'background.paper',
+                                  }
+                                : {}),
+                              ...(isPinnedLeft
+                                ? {
+                                    position: 'sticky',
+                                    left: 0,
+                                    zIndex: 2,
+                                    bgcolor: 'background.paper',
+                                  }
+                                : {}),
+                              ...(isPinnedRight
+                                ? {
+                                    position: 'sticky',
+                                    right: 0,
                                     zIndex: 2,
                                     bgcolor: 'background.paper',
                                   }
