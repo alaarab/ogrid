@@ -9,6 +9,7 @@
 }
 
 .tableWrapper {
+  position: relative;
   overflow-x: hidden;
   overflow-y: visible;
   width: 100%;
@@ -231,6 +232,11 @@
   background: var(--ogrid-bg-range, rgba(33, 115, 70, 0.12)) !important;
 }
 
+// Drag-range highlight applied via DOM attributes during drag (bypasses React for performance)
+:global([data-drag-range]) {
+  background: var(--ogrid-bg-range, rgba(33, 115, 70, 0.12)) !important;
+}
+
 .cellCut {
   background: var(--ogrid-bg-hover, rgba(0, 0, 0, 0.04)) !important;
   opacity: 0.7;
@@ -387,10 +393,6 @@
   height: 1px;
   margin: 4px 0;
   background: var(--ogrid-border, #e0e0e0);
-}
-
-.loadingOverlayContainer {
-  position: relative;
 }
 
 .loadingOverlay {
