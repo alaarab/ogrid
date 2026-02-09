@@ -1,6 +1,7 @@
 import { useMemo, useCallback, useEffect, useState } from 'react';
 import type { RefObject } from 'react';
 import { flattenColumns, getDataGridStatusBarConfig } from '../utils';
+import { parseValue } from '../utils/valueParsers';
 import type { HeaderFilterConfigInput, CellRenderDescriptorInput } from '../utils';
 import type { RowId, IOGridDataGridProps, IStatusBarProps, IColumnDef } from '../types';
 import type { ICellValueChangedEvent } from '../types';
@@ -12,6 +13,13 @@ import { useContextMenu } from './useContextMenu';
 import { useClipboard } from './useClipboard';
 import { useKeyboardNavigation } from './useKeyboardNavigation';
 import { useFillHandle } from './useFillHandle';
+
+// Stable no-op handlers used when cellSelection is disabled (module-scope = no re-renders)
+const NOOP = () => {};
+const NOOP_ASYNC = async () => {};
+const NOOP_MOUSE = (_e: React.MouseEvent, _r: number, _c: number) => {};
+const NOOP_KEY = (_e: React.KeyboardEvent) => {};
+const NOOP_CTX = (_e: { clientX: number; clientY: number; preventDefault?: () => void }) => {};
 
 export interface UseDataGridStateParams<T> {
   props: IOGridDataGridProps<T>;
@@ -67,14 +75,26 @@ export interface UseDataGridStateResult<T> {
   // Context menu
   contextMenu: { x: number; y: number } | null;
   setContextMenu: (pos: { x: number; y: number } | null) => void;
-  handleCellContextMenu: (e: { clientX: number; clientY: number }) => void;
+  handleCellContextMenu: (e: { clientX: number; clientY: number; preventDefault?: () => void }) => void;
   closeContextMenu: () => void;
+
+  // Undo/redo
+  canUndo: boolean;
+  canRedo: boolean;
+  onUndo?: () => void;
+  onRedo?: () => void;
 
   // Clipboard
   handleCopy: () => void;
   handleCut: () => void;
   handlePaste: () => Promise<void>;
   cutRange: {
+    startRow: number;
+    startCol: number;
+    endRow: number;
+    endCol: number;
+  } | null;
+  copyRange: {
     startRow: number;
     startCol: number;
     endRow: number;
@@ -112,6 +132,9 @@ export interface UseDataGridStateResult<T> {
   popoverAnchorEl: HTMLElement | null;
   setPopoverAnchorEl: React.Dispatch<React.SetStateAction<HTMLElement | null>>;
 
+  // Clipboard management
+  clearClipboardRanges: () => void;
+
   // Status bar & empty
   statusBarConfig: IStatusBarProps | null;
   showEmptyInGrid: boolean;
@@ -138,10 +161,15 @@ export function useDataGridState<T>(
     statusBar,
     emptyState,
     editable,
+    cellSelection: cellSelectionProp,
     onCellValueChanged,
     onUndo,
     onRedo,
+    canUndo: canUndoProp,
+    canRedo: canRedoProp,
   } = props;
+
+  const cellSelection = cellSelectionProp !== false;
 
   const flatColumns = useMemo(() => flattenColumns(columns), [columns]);
 
@@ -209,25 +237,27 @@ export function useDataGridState<T>(
     setActiveCell,
   });
 
-  const handleCellMouseDown = useCallback(
-    (e: React.MouseEvent, rowIndex: number, globalColIndex: number) => {
-      (wrapperRef as RefObject<HTMLDivElement | null>).current?.focus();
-      handleCellMouseDownBase(e, rowIndex, globalColIndex);
-    },
-    [handleCellMouseDownBase, wrapperRef]
-  );
-
   const { contextMenu, setContextMenu, handleCellContextMenu, closeContextMenu } =
     useContextMenu();
 
-  const { handleCopy, handleCut, handlePaste, cutRange } = useClipboard({
+  const { handleCopy, handleCut, handlePaste, cutRange, copyRange, clearClipboardRanges } = useClipboard({
     items,
     visibleCols,
     colOffset,
     selectionRange,
     activeCell,
+    editable,
     onCellValueChanged,
   });
+
+  const handleCellMouseDown = useCallback(
+    (e: React.MouseEvent, rowIndex: number, globalColIndex: number) => {
+      (wrapperRef as RefObject<HTMLDivElement | null>).current?.focus();
+      clearClipboardRanges();
+      handleCellMouseDownBase(e, rowIndex, globalColIndex);
+    },
+    [handleCellMouseDownBase, wrapperRef, clearClipboardRanges]
+  );
 
   const { handleGridKeyDown } = useKeyboardNavigation({
     items,
@@ -254,11 +284,13 @@ export function useDataGridState<T>(
     wrapperRef,
     onUndo,
     onRedo,
+    clearClipboardRanges,
   });
 
   const { handleFillHandleMouseDown } = useFillHandle({
     items,
     visibleCols,
+    editable,
     onCellValueChanged,
     selectionRange,
     setSelectionRange,
@@ -377,9 +409,10 @@ export function useDataGridState<T>(
   const cellDescriptorInput: CellRenderDescriptorInput<T> = useMemo(
     () => ({
       editingCell,
-      activeCell,
-      selectionRange,
-      cutRange,
+      activeCell: cellSelection ? activeCell : null,
+      selectionRange: cellSelection ? selectionRange : null,
+      cutRange: cellSelection ? cutRange : null,
+      copyRange: cellSelection ? copyRange : null,
       colOffset,
       itemsLength: items.length,
       getRowId,
@@ -391,11 +424,13 @@ export function useDataGridState<T>(
       activeCell,
       selectionRange,
       cutRange,
+      copyRange,
       colOffset,
       items.length,
       getRowId,
       editable,
       onCellValueChanged,
+      cellSelection,
     ]
   );
 
@@ -412,6 +447,20 @@ export function useDataGridState<T>(
       rowIndex: number,
       globalColIndex: number
     ) => {
+      // Validate via valueParser before committing
+      const col = visibleCols.find((c) => c.columnId === columnId);
+      if (col) {
+        const result = parseValue(newValue, oldValue, item, col);
+        if (!result.valid) {
+          // Reject — cancel the edit
+          setEditingCell(null);
+          setPopoverAnchorEl(null);
+          setPendingEditorValue(undefined);
+          return;
+        }
+        newValue = result.value;
+      }
+
       onCellValueChanged?.({
         item,
         columnId,
@@ -428,7 +477,7 @@ export function useDataGridState<T>(
         setActiveCell({ rowIndex: rowIndex + 1, columnIndex: globalColIndex });
       }
     },
-    [onCellValueChanged, setEditingCell, setPendingEditorValue, setActiveCell, items.length]
+    [onCellValueChanged, setEditingCell, setPendingEditorValue, setActiveCell, items.length, visibleCols]
   );
 
   const cancelPopoverEdit = useCallback(() => {
@@ -455,22 +504,27 @@ export function useDataGridState<T>(
     setEditingCell,
     pendingEditorValue,
     setPendingEditorValue,
-    activeCell,
-    setActiveCell,
-    selectionRange,
-    setSelectionRange,
-    handleCellMouseDown,
-    handleSelectAllCells,
-    contextMenu,
-    setContextMenu,
-    handleCellContextMenu,
-    closeContextMenu,
-    handleCopy,
-    handleCut,
-    handlePaste,
-    cutRange,
-    handleGridKeyDown,
-    handleFillHandleMouseDown,
+    activeCell: cellSelection ? activeCell : null,
+    setActiveCell: cellSelection ? setActiveCell : (NOOP as typeof setActiveCell),
+    selectionRange: cellSelection ? selectionRange : null,
+    setSelectionRange: cellSelection ? setSelectionRange : (NOOP as typeof setSelectionRange),
+    handleCellMouseDown: cellSelection ? handleCellMouseDown : (NOOP_MOUSE as typeof handleCellMouseDown),
+    handleSelectAllCells: cellSelection ? handleSelectAllCells : NOOP,
+    contextMenu: cellSelection ? contextMenu : null,
+    setContextMenu: cellSelection ? setContextMenu : (NOOP as typeof setContextMenu),
+    handleCellContextMenu: cellSelection ? handleCellContextMenu : (NOOP_CTX as typeof handleCellContextMenu),
+    closeContextMenu: cellSelection ? closeContextMenu : NOOP,
+    canUndo: canUndoProp ?? false,
+    canRedo: canRedoProp ?? false,
+    onUndo,
+    onRedo,
+    handleCopy: cellSelection ? handleCopy : NOOP,
+    handleCut: cellSelection ? handleCut : NOOP,
+    handlePaste: cellSelection ? handlePaste : (NOOP_ASYNC as typeof handlePaste),
+    cutRange: cellSelection ? cutRange : null,
+    copyRange: cellSelection ? copyRange : null,
+    handleGridKeyDown: cellSelection ? handleGridKeyDown : (NOOP_KEY as typeof handleGridKeyDown),
+    handleFillHandleMouseDown: cellSelection ? handleFillHandleMouseDown : (NOOP as typeof handleFillHandleMouseDown),
     containerWidth,
     minTableWidth,
     columnSizingOverrides,
@@ -481,8 +535,9 @@ export function useDataGridState<T>(
     cancelPopoverEdit,
     popoverAnchorEl,
     setPopoverAnchorEl,
+    clearClipboardRanges: cellSelection ? clearClipboardRanges : NOOP,
     statusBarConfig,
     showEmptyInGrid,
-    hasCellSelection,
+    hasCellSelection: cellSelection ? hasCellSelection : false,
   };
 }

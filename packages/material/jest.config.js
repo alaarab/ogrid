@@ -31,6 +31,7 @@ module.exports = {
     '^@alaarab/ogrid-core/storybook$': '<rootDir>/../core/src/storybook/index.ts',
     '^@mui/material(.*)$': '<rootDir>/jest-mocks/mui-material.cjs.js',
     '^@mui/icons-material(.*)$': '<rootDir>/jest-mocks/mui-icons.cjs.js',
+    '^@mui/system$': '<rootDir>/jest-mocks/mui-system.cjs.js',
   },
   collectCoverageFrom: [
     'src/**/*.{ts,tsx}',

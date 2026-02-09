@@ -8,14 +8,15 @@ export interface ContextMenuPosition {
 export interface UseContextMenuResult {
   contextMenu: ContextMenuPosition | null;
   setContextMenu: (pos: ContextMenuPosition | null) => void;
-  handleCellContextMenu: (e: { clientX: number; clientY: number }) => void;
+  handleCellContextMenu: (e: { clientX: number; clientY: number; preventDefault?: () => void }) => void;
   closeContextMenu: () => void;
 }
 
 export function useContextMenu(): UseContextMenuResult {
   const [contextMenu, setContextMenu] = useState<ContextMenuPosition | null>(null);
 
-  const handleCellContextMenu = useCallback((e: { clientX: number; clientY: number }) => {
+  const handleCellContextMenu = useCallback((e: { clientX: number; clientY: number; preventDefault?: () => void }) => {
+    e.preventDefault?.();
     setContextMenu({ x: e.clientX, y: e.clientY });
   }, []);
 

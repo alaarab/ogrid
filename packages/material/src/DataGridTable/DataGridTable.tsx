@@ -29,6 +29,7 @@ import {
   useColumnResize,
   getHeaderFilterConfig,
   getCellRenderDescriptor,
+  MarchingAntsOverlay,
 } from '@alaarab/ogrid-core';
 
 /** @deprecated Use IOGridDataGridProps from @alaarab/ogrid-core for new code. */
@@ -36,6 +37,7 @@ export type IDataGridTableProps<T> = IOGridDataGridProps<T>;
 
 function DataGridTableInner<T>(props: IOGridDataGridProps<T>): React.ReactElement {
   const wrapperRef = useRef<HTMLDivElement>(null);
+  const tableContainerRef = useRef<HTMLDivElement>(null);
   const state = useDataGridState({ props, wrapperRef });
   const lastMouseShiftRef = useRef(false);
 
@@ -58,6 +60,10 @@ function DataGridTableInner<T>(props: IOGridDataGridProps<T>): React.ReactElemen
     setContextMenu,
     handleCellContextMenu,
     closeContextMenu,
+    canUndo,
+    canRedo,
+    onUndo,
+    onRedo,
     handleCopy,
     handleCut,
     handlePaste,
@@ -71,6 +77,9 @@ function DataGridTableInner<T>(props: IOGridDataGridProps<T>): React.ReactElemen
     showEmptyInGrid,
     hasCellSelection,
     selectionRange,
+    copyRange,
+    cutRange,
+    colOffset,
     headerFilterInput,
     cellDescriptorInput,
     commitCellEdit,
@@ -166,13 +175,20 @@ function DataGridTableInner<T>(props: IOGridDataGridProps<T>): React.ReactElemen
 
       const cellSx = {
         width: '100%',
-        minHeight: '100%',
+        height: '100%',
         display: 'flex',
         alignItems: 'center',
         minWidth: 0,
-        ...(descriptor.isActive && { outline: 2, outlineOffset: -2, outlineColor: 'primary.main', borderRadius: 0.5 }),
-        ...(descriptor.isInRange && { bgcolor: 'action.selected' }),
-        ...(descriptor.isInCutRange && { outline: '2px dashed', outlineColor: 'primary.main', outlineOffset: -2, bgcolor: 'action.hover' }),
+        px: '10px',
+        py: '6px',
+        boxSizing: 'border-box',
+        overflow: 'hidden',
+        textOverflow: 'ellipsis',
+        whiteSpace: 'nowrap',
+        userSelect: 'none',
+        ...(descriptor.isActive && { outline: '2px solid #217346', outlineOffset: '-1px', zIndex: 2, position: 'relative' as const, overflow: 'visible' }),
+        ...(descriptor.isInRange && { bgcolor: 'rgba(33, 115, 70, 0.12)' }),
+        ...(descriptor.isInCutRange && { bgcolor: 'action.hover', opacity: 0.7 }),
       };
 
       if (descriptor.canEditAny) {
@@ -188,7 +204,7 @@ function DataGridTableInner<T>(props: IOGridDataGridProps<T>): React.ReactElemen
             onClick={() => setActiveCell({ rowIndex: descriptor.rowIndex, columnIndex: descriptor.globalColIndex })}
             onDoubleClick={() => setEditingCell({ rowId: descriptor.rowId, columnId: col.columnId })}
             onContextMenu={handleCellContextMenu}
-            sx={[{ cursor: 'cell', outline: 'none', position: 'relative', userSelect: 'none' }, cellSx]}
+            sx={[{ cursor: 'cell' }, cellSx]}
           >
             {content}
             {descriptor.isSelectionEndCell && (
@@ -198,12 +214,13 @@ function DataGridTableInner<T>(props: IOGridDataGridProps<T>): React.ReactElemen
                 aria-label="Fill handle"
                 sx={{
                   position: 'absolute',
-                  right: 2,
-                  bottom: 2,
-                  width: 8,
-                  height: 8,
-                  bgcolor: 'primary.main',
-                  borderRadius: 0.25,
+                  right: -3,
+                  bottom: -3,
+                  width: 7,
+                  height: 7,
+                  bgcolor: '#217346',
+                  border: '1px solid #fff',
+                  borderRadius: '1px',
                   cursor: 'crosshair',
                   pointerEvents: 'auto',
                   zIndex: 3,
@@ -223,7 +240,7 @@ function DataGridTableInner<T>(props: IOGridDataGridProps<T>): React.ReactElemen
           onMouseDown={(e: React.MouseEvent) => handleCellMouseDown(e, descriptor.rowIndex, descriptor.globalColIndex)}
           onClick={() => setActiveCell({ rowIndex: descriptor.rowIndex, columnIndex: descriptor.globalColIndex })}
           onContextMenu={handleCellContextMenu}
-          sx={[{ outline: 'none', userSelect: 'none' }, cellSx]}
+          sx={cellSx}
         >
           {content}
         </Box>
@@ -243,7 +260,6 @@ function DataGridTableInner<T>(props: IOGridDataGridProps<T>): React.ReactElemen
       onKeyDown={handleGridKeyDown}
       onContextMenu={(e: React.MouseEvent) => {
         e.preventDefault();
-        setContextMenu({ x: e.clientX, y: e.clientY });
       }}
       sx={{
         width: fitToContent ? 'fit-content' : '100%',
@@ -272,7 +288,7 @@ function DataGridTableInner<T>(props: IOGridDataGridProps<T>): React.ReactElemen
             </Box>
           </Box>
         )}
-        <Box sx={{ position: 'relative', opacity: isLoading && items.length > 0 ? 0.6 : 1 }}>
+        <Box ref={tableContainerRef} sx={{ position: 'relative', opacity: isLoading && items.length > 0 ? 0.6 : 1 }}>
           <Table size="small" sx={{ border: 1, borderColor: 'divider', borderRadius: 1, overflow: 'hidden', minWidth: minTableWidth }}>
             <TableHead
               sx={
@@ -390,9 +406,9 @@ function DataGridTableInner<T>(props: IOGridDataGridProps<T>): React.ReactElemen
                               minWidth: col.minWidth ?? 80,
                               width: columnWidth,
                               maxWidth: columnWidth,
-                              overflow: 'hidden',
-                              textOverflow: 'ellipsis',
-                              whiteSpace: 'nowrap',
+                              position: 'relative',
+                              p: 0,
+                              height: '1px',
                               ...(isFreezeCol && colIdx === 0
                                 ? {
                                     position: 'sticky',
@@ -413,6 +429,13 @@ function DataGridTableInner<T>(props: IOGridDataGridProps<T>): React.ReactElemen
               </TableBody>
             )}
           </Table>
+          <MarchingAntsOverlay
+            containerRef={tableContainerRef}
+            selectionRange={selectionRange}
+            copyRange={copyRange}
+            cutRange={cutRange}
+            colOffset={colOffset}
+          />
         </Box>
         {showEmptyInGrid && emptyState && (
           <Box sx={{ py: 4, px: 2, textAlign: 'center', borderTop: 1, borderColor: 'divider', bgcolor: 'action.hover' }}>
@@ -455,6 +478,10 @@ function DataGridTableInner<T>(props: IOGridDataGridProps<T>): React.ReactElemen
             x={contextMenu.x}
             y={contextMenu.y}
             hasSelection={hasCellSelection}
+            canUndo={canUndo}
+            canRedo={canRedo}
+            onUndo={onUndo ?? (() => {})}
+            onRedo={onRedo ?? (() => {})}
             onCopy={handleCopy}
             onCut={handleCut}
             onPaste={() => void handlePaste()}

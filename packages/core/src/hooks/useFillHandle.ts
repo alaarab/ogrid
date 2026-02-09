@@ -4,10 +4,12 @@ import { normalizeSelectionRange } from '../types';
 import type { ISelectionRange, IActiveCell } from '../types';
 import type { IColumnDef, ICellValueChangedEvent } from '../types/columnTypes';
 import { getCellValue } from '../utils';
+import { parseValue } from '../utils/valueParsers';
 
 export interface UseFillHandleParams<T> {
   items: T[];
   visibleCols: IColumnDef<T>[];
+  editable?: boolean;
   onCellValueChanged?: (event: ICellValueChangedEvent<T>) => void;
   selectionRange: ISelectionRange | null;
   setSelectionRange: (range: ISelectionRange | null) => void;
@@ -26,6 +28,7 @@ export function useFillHandle<T>(params: UseFillHandleParams<T>): UseFillHandleR
   const {
     items,
     visibleCols,
+    editable,
     onCellValueChanged,
     selectionRange,
     setSelectionRange,
@@ -38,7 +41,7 @@ export function useFillHandle<T>(params: UseFillHandleParams<T>): UseFillHandleR
   const fillDragEndRef = useRef<{ endRow: number; endCol: number }>({ endRow: 0, endCol: 0 });
 
   useEffect(() => {
-    if (!fillDrag || !onCellValueChanged || !wrapperRef.current) return;
+    if (!fillDrag || editable === false || !onCellValueChanged || !wrapperRef.current) return;
     fillDragEndRef.current = { endRow: fillDrag.startRow, endCol: fillDrag.startCol };
     const onMove = (e: MouseEvent) => {
       const target = document.elementFromPoint(e.clientX, e.clientY) as HTMLElement | null;
@@ -76,13 +79,19 @@ export function useFillHandle<T>(params: UseFillHandleParams<T>): UseFillHandleR
             if (row >= items.length || col >= visibleCols.length) continue;
             const item = items[row];
             const colDef = visibleCols[col];
+            const colEditable =
+              colDef.editable === true ||
+              (typeof colDef.editable === 'function' && colDef.editable(item));
+            if (!colEditable) continue;
             const oldValue = getCellValue(item, colDef);
+            const result = parseValue(startValue, oldValue, item, colDef);
+            if (!result.valid) continue;
             onCellValueChanged({
               item,
               columnId: colDef.columnId,
               field: colDef.columnId,
               oldValue,
-              newValue: startValue,
+              newValue: result.value,
               rowIndex: row,
             });
           }
@@ -98,6 +107,7 @@ export function useFillHandle<T>(params: UseFillHandleParams<T>): UseFillHandleR
     };
   }, [
     fillDrag,
+    editable,
     colOffset,
     items,
     visibleCols,

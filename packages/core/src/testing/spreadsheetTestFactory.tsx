@@ -317,21 +317,24 @@ export function createSpreadsheetTests(DataGridTable: React.ComponentType<any>):
     });
 
     describe('context menu', () => {
-      it('shows context menu on right-click with Copy, Cut, Paste, Select all; does not open editor', async () => {
+      it('shows context menu on right-click with Undo, Redo, Copy, Cut, Paste, Select all; does not open editor', async () => {
         const { container } = renderSpreadsheetGrid();
-        const grid = container.querySelector('[role="region"]');
-        expect(grid).toBeTruthy();
+        const cell00 = getCellAt(container, 0, 0);
+        expect(cell00).toBeTruthy();
 
-        fireEvent.contextMenu(grid!, { clientX: 100, clientY: 100 });
+        fireEvent.contextMenu(cell00!, { clientX: 100, clientY: 100 });
 
         await waitFor(() => {
           expect(screen.getByRole('menu')).toBeInTheDocument();
           expect(screen.getByRole('menu')).toHaveAttribute('aria-label', 'Grid context menu');
+          expect(screen.getByText('Undo')).toBeInTheDocument();
+          expect(screen.getByText('Redo')).toBeInTheDocument();
           expect(screen.getByText('Copy')).toBeInTheDocument();
           expect(screen.getByText('Cut')).toBeInTheDocument();
           expect(screen.getByText('Paste')).toBeInTheDocument();
           expect(screen.getByText('Select all')).toBeInTheDocument();
         });
+        const grid = container.querySelector('[role="region"]');
         expect(grid!.querySelector('input')).toBeNull();
       });
 
@@ -344,11 +347,26 @@ export function createSpreadsheetTests(DataGridTable: React.ComponentType<any>):
 
         await waitFor(() => {
           expect(screen.getByRole('menu')).toBeInTheDocument();
+          expect(screen.getByText('Undo')).toBeInTheDocument();
+          expect(screen.getByText('Redo')).toBeInTheDocument();
           expect(screen.getByText('Copy')).toBeInTheDocument();
           expect(screen.getByText('Cut')).toBeInTheDocument();
           expect(screen.getByText('Paste')).toBeInTheDocument();
           expect(screen.getByText('Select all')).toBeInTheDocument();
         });
+      });
+
+      it('does not show context menu when right-clicking the grid wrapper (only cells)', async () => {
+        const { container } = renderSpreadsheetGrid();
+        const grid = container.querySelector('[role="region"]');
+        expect(grid).toBeTruthy();
+
+        fireEvent.contextMenu(grid!, { clientX: 100, clientY: 100 });
+
+        await act(async () => {
+          await new Promise((r) => setTimeout(r, 50));
+        });
+        expect(screen.queryByRole('menu')).not.toBeInTheDocument();
       });
 
       it('shows context menu on Shift+F10 when a cell is selected', async () => {
@@ -363,6 +381,8 @@ export function createSpreadsheetTests(DataGridTable: React.ComponentType<any>):
 
         await waitFor(() => {
           expect(screen.getByRole('menu')).toBeInTheDocument();
+          expect(screen.getByText('Undo')).toBeInTheDocument();
+          expect(screen.getByText('Redo')).toBeInTheDocument();
           expect(screen.getByText('Copy')).toBeInTheDocument();
           expect(screen.getByText('Cut')).toBeInTheDocument();
           expect(screen.getByText('Paste')).toBeInTheDocument();
@@ -372,8 +392,8 @@ export function createSpreadsheetTests(DataGridTable: React.ComponentType<any>):
 
       it('Select all selects all data cells', async () => {
         const { container } = renderSpreadsheetGrid();
-        const grid = container.querySelector('[role="region"]');
-        fireEvent.contextMenu(grid!, { clientX: 100, clientY: 100 });
+        const cell00 = getCellAt(container, 0, 0);
+        fireEvent.contextMenu(cell00!, { clientX: 100, clientY: 100 });
 
         await waitFor(() => {
           expect(screen.getByRole('menu')).toBeInTheDocument();
@@ -398,8 +418,7 @@ export function createSpreadsheetTests(DataGridTable: React.ComponentType<any>):
         const { container } = renderSpreadsheetGrid();
         const cell00 = getCellAt(container, 0, 0);
         fireEvent.mouseDown(cell00!);
-        const grid = container.querySelector('[role="region"]');
-        fireEvent.contextMenu(grid!, { clientX: 100, clientY: 100 });
+        fireEvent.contextMenu(cell00!, { clientX: 100, clientY: 100 });
 
         await waitFor(() => {
           expect(screen.getByRole('menu')).toBeInTheDocument();
@@ -425,7 +444,7 @@ export function createSpreadsheetTests(DataGridTable: React.ComponentType<any>):
         const cell00 = getCellAt(container, 0, 0);
         fireEvent.mouseDown(cell00!);
         const grid = container.querySelector('[role="region"]');
-        fireEvent.contextMenu(grid!, { clientX: 100, clientY: 100 });
+        fireEvent.contextMenu(cell00!, { clientX: 100, clientY: 100 });
 
         await waitFor(() => {
           expect(screen.getByRole('menu')).toBeInTheDocument();
@@ -455,8 +474,7 @@ export function createSpreadsheetTests(DataGridTable: React.ComponentType<any>):
         const { container } = renderSpreadsheetGrid({ onCellValueChanged });
         const cell00 = getCellAt(container, 0, 0);
         fireEvent.mouseDown(cell00!);
-        const grid = container.querySelector('[role="region"]');
-        fireEvent.contextMenu(grid!, { clientX: 100, clientY: 100 });
+        fireEvent.contextMenu(cell00!, { clientX: 100, clientY: 100 });
 
         await waitFor(() => {
           expect(screen.getByRole('menu')).toBeInTheDocument();
@@ -590,6 +608,75 @@ export function createSpreadsheetTests(DataGridTable: React.ComponentType<any>):
           expect(inRange.length).toBe(1);
           expect(inRange[0].getAttribute('data-row-index')).toBe('2');
           expect(inRange[0].getAttribute('data-col-index')).toBe('1');
+        });
+      });
+    });
+
+    describe('cellSelection=false disables all selection', () => {
+      it('does not show active cell highlight or range on mousedown', async () => {
+        const { container } = renderSpreadsheetGrid({ cellSelection: false });
+        const cell = getCellAt(container, 0, 0);
+        expect(cell).toBeTruthy();
+        fireEvent.mouseDown(cell!);
+
+        // Short wait to confirm no state update occurs
+        await act(async () => {
+          await new Promise((r) => setTimeout(r, 50));
+        });
+        const inRange = container.querySelectorAll('[data-in-range="true"]');
+        expect(inRange.length).toBe(0);
+      });
+
+      it('does not show context menu on right-click of a cell', async () => {
+        const { container } = renderSpreadsheetGrid({ cellSelection: false });
+        const cell = getCellAt(container, 0, 0);
+        expect(cell).toBeTruthy();
+
+        fireEvent.contextMenu(cell!, { clientX: 100, clientY: 100 });
+
+        await act(async () => {
+          await new Promise((r) => setTimeout(r, 50));
+        });
+        expect(screen.queryByRole('menu')).not.toBeInTheDocument();
+      });
+
+      it('does not respond to keyboard navigation', async () => {
+        const { container } = renderSpreadsheetGrid({ cellSelection: false });
+        const cell = getCellAt(container, 0, 0);
+        fireEvent.mouseDown(cell!);
+        const grid = container.querySelector('[role="region"]') as HTMLElement;
+        grid.focus();
+
+        fireEvent.keyDown(grid, { key: 'ArrowDown' });
+
+        await act(async () => {
+          await new Promise((r) => setTimeout(r, 50));
+        });
+        const inRange = container.querySelectorAll('[data-in-range="true"]');
+        expect(inRange.length).toBe(0);
+      });
+
+      it('does not show fill handle on cell click', async () => {
+        const { container } = renderSpreadsheetGrid({ cellSelection: false });
+        const cell = getCellAt(container, 0, 0);
+        fireEvent.mouseDown(cell!);
+
+        await act(async () => {
+          await new Promise((r) => setTimeout(r, 50));
+        });
+        const fillHandle = container.querySelector('[aria-label="Fill handle"]');
+        expect(fillHandle).toBeNull();
+      });
+
+      it('still allows double-click to edit when editable', async () => {
+        const { container } = renderSpreadsheetGrid({ cellSelection: false });
+        const cell = getCellAt(container, 0, 0);
+        expect(cell).toBeTruthy();
+        fireEvent.doubleClick(cell!);
+        await waitFor(() => {
+          const grid = container.querySelector('[role="region"]');
+          const input = grid?.querySelector('input');
+          expect(input).toBeInTheDocument();
         });
       });
     });

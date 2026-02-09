@@ -8,6 +8,7 @@ export type {
   ICellValueChangedEvent,
   ICellEditorProps,
   CellEditorParams,
+  IValueParserParams,
 } from './columnTypes';
 
 export type {
