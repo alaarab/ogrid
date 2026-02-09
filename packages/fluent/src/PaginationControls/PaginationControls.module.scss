@@ -1,0 +1,83 @@
+// Pagination – Fluent 9 small outline buttons, Apple-level polish
+// All controls: consistent outline style; only current page is primary
+
+.pagination {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px 24px;
+  width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+  padding: 14px 0;
+  margin-top: 16px;
+  border-top: 1px solid var(--colorNeutralStroke2, #e5e5e5);
+}
+
+.paginationInfo {
+  font-size: 13px;
+  color: var(--colorNeutralForeground2, #605e5c);
+  flex-shrink: 0;
+  font-variant-numeric: tabular-nums;
+}
+
+.paginationControls {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-wrap: wrap;
+  flex: 1 1 auto;
+  justify-content: center;
+  min-width: 0;
+}
+
+// Small circular outline buttons for First/Prev/Next/Last (Fluent small icon-only style)
+.navBtn {
+  min-width: 28px;
+  min-height: 28px;
+}
+
+.pageNumbers {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin: 0 8px;
+}
+
+// Uniform small squares for every page number – no plain text, no inconsistent boxes
+.pageBtn {
+  min-width: 28px;
+  min-height: 28px;
+  font-variant-numeric: tabular-nums;
+}
+
+.ellipsis {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 24px;
+  font-size: 12px;
+  color: var(--colorNeutralForeground3, #8a8886);
+  user-select: none;
+  pointer-events: none;
+  letter-spacing: 0.02em;
+}
+
+.pageSizeSelector {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+
+  .pageSizeLabel {
+    font-size: 13px;
+    color: var(--colorNeutralForeground2, #605e5c);
+    user-select: none;
+    white-space: nowrap;
+  }
+
+  .pageSizeSelect {
+    min-width: 72px;
+  }
+}
