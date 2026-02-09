@@ -1,8 +1,10 @@
 import { renderHook, act } from '@testing-library/react';
+import { createRef } from 'react';
 import { useCellSelection } from '../useCellSelection';
 
 describe('useCellSelection', () => {
   const setActiveCell = jest.fn();
+  const wrapperRef = createRef<HTMLElement>();
 
   beforeEach(() => {
     setActiveCell.mockClear();
@@ -15,6 +17,7 @@ describe('useCellSelection', () => {
         rowCount: 5,
         visibleColCount: 3,
         setActiveCell,
+        wrapperRef,
       })
     );
 
@@ -31,12 +34,13 @@ describe('useCellSelection', () => {
         rowCount: 5,
         visibleColCount: 3,
         setActiveCell,
+        wrapperRef,
       })
     );
 
     act(() => {
       result.current.handleCellMouseDown(
-        { shiftKey: false, preventDefault: jest.fn() } as unknown as React.MouseEvent,
+        { button: 0, shiftKey: false, preventDefault: jest.fn() } as unknown as React.MouseEvent,
         2,
         1
       );
@@ -58,14 +62,38 @@ describe('useCellSelection', () => {
         rowCount: 5,
         visibleColCount: 3,
         setActiveCell,
+        wrapperRef,
       })
     );
 
     act(() => {
       result.current.handleCellMouseDown(
-        { shiftKey: false, preventDefault: jest.fn() } as unknown as React.MouseEvent,
+        { button: 0, shiftKey: false, preventDefault: jest.fn() } as unknown as React.MouseEvent,
         0,
         0
+      );
+    });
+
+    expect(result.current.selectionRange).toBeNull();
+    expect(setActiveCell).not.toHaveBeenCalled();
+  });
+
+  it('handleCellMouseDown ignores middle-click (button 1) for native scroll', () => {
+    const { result } = renderHook(() =>
+      useCellSelection({
+        colOffset: 0,
+        rowCount: 5,
+        visibleColCount: 3,
+        setActiveCell,
+        wrapperRef,
+      })
+    );
+
+    act(() => {
+      result.current.handleCellMouseDown(
+        { button: 1, shiftKey: false, preventDefault: jest.fn() } as unknown as React.MouseEvent,
+        2,
+        1
       );
     });
 
@@ -80,6 +108,7 @@ describe('useCellSelection', () => {
         rowCount: 4,
         visibleColCount: 3,
         setActiveCell,
+        wrapperRef,
       })
     );
 
@@ -103,6 +132,7 @@ describe('useCellSelection', () => {
         rowCount: 0,
         visibleColCount: 3,
         setActiveCell,
+        wrapperRef,
       })
     );
 

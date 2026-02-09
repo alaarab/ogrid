@@ -98,10 +98,14 @@ export function createSpreadsheetTests(DataGridTable: React.ComponentType<any>):
         };
 
         fireEvent.mouseDown(cell00!, { clientX: 0, clientY: 0 });
+        // Dispatch move/up on window directly — jsdom capture-phase listeners on window
+        // may not fire for events dispatched on child nodes.
         act(() => {
-          fireEvent.mouseMove(document.body, { clientX: 50, clientY: 50 });
+          window.dispatchEvent(new MouseEvent('mousemove', { clientX: 50, clientY: 50, bubbles: true }));
         });
-        fireEvent.mouseUp(document.body);
+        act(() => {
+          window.dispatchEvent(new MouseEvent('mouseup', { bubbles: true }));
+        });
 
         document.elementFromPoint = originalElementFromPoint;
 

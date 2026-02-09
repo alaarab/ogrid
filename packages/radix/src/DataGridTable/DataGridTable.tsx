@@ -237,18 +237,17 @@ function DataGridTableInner<T>(props: IOGridDataGridProps<T>): React.ReactElemen
         ['--data-table-total-min-width' as string]: `${minTableWidth}px`,
       } as React.CSSProperties}
     >
+      {isLoading && items.length > 0 && (
+        <div className={styles.loadingOverlay} aria-live="polite">
+          <div className={styles.loadingOverlayContent}>
+            <div className={styles.spinner} />
+            <span className={styles.loadingOverlayText}>{loadingMessage}</span>
+          </div>
+        </div>
+      )}
       <div className={styles.tableScrollContent}>
-        <div className={isLoading && items.length > 0 ? styles.loadingOverlayContainer : undefined}>
-          {isLoading && items.length > 0 && (
-            <div className={styles.loadingOverlay} aria-live="polite">
-              <div className={styles.loadingOverlayContent}>
-                <div className={styles.spinner} />
-                <span className={styles.loadingOverlayText}>{loadingMessage}</span>
-              </div>
-            </div>
-          )}
-          <div className={isLoading && items.length > 0 ? styles.loadingDimmed : undefined}>
-            <div className={styles.tableWidthAnchor} ref={tableContainerRef}>
+        <div className={isLoading && items.length > 0 ? styles.loadingDimmed : undefined}>
+          <div className={styles.tableWidthAnchor} ref={tableContainerRef}>
               <table className={styles.dataTable}>
                 <thead
                   className={freezeRows != null && freezeRows >= 1 ? styles.stickyHeader : undefined}
@@ -388,37 +387,36 @@ function DataGridTableInner<T>(props: IOGridDataGridProps<T>): React.ReactElemen
                   selectedCellCount={selectionRange ? (Math.abs(selectionRange.endRow - selectionRange.startRow) + 1) * (Math.abs(selectionRange.endCol - selectionRange.startCol) + 1) : undefined}
                 />
               )}
-            </div>
-          </div>
-        </div>
-        {showEmptyInGrid && emptyState && (
-          <div className={styles.emptyStateInGrid}>
-            <div>
-              {emptyState.render ? (
-                emptyState.render()
-              ) : (
-                <>
-                  <div className={styles.emptyStateInGridTitle}>No results found</div>
-                  <div className={styles.emptyStateInGridMessage}>
-                    {emptyState.message != null ? (
-                      emptyState.message
-                    ) : emptyState.hasActiveFilters ? (
-                      <>
-                        No items match your current filters. Try adjusting your search or{' '}
-                        <button type="button" className={styles.emptyStateInGridLink} onClick={emptyState.onClearAll}>
-                          clear all filters
-                        </button>{' '}
-                        to see all items.
-                      </>
+              {showEmptyInGrid && emptyState && (
+                <div className={styles.emptyStateInGrid}>
+                  <div>
+                    {emptyState.render ? (
+                      emptyState.render()
                     ) : (
-                      'There are no items available at this time.'
+                      <>
+                        <div className={styles.emptyStateInGridTitle}>No results found</div>
+                        <div className={styles.emptyStateInGridMessage}>
+                          {emptyState.message != null ? (
+                            emptyState.message
+                          ) : emptyState.hasActiveFilters ? (
+                            <>
+                              No items match your current filters. Try adjusting your search or{' '}
+                              <button type="button" className={styles.emptyStateInGridLink} onClick={emptyState.onClearAll}>
+                                clear all filters
+                              </button>{' '}
+                              to see all items.
+                            </>
+                          ) : (
+                            'There are no items available at this time.'
+                          )}
+                        </div>
+                      </>
                     )}
                   </div>
-                </>
+                </div>
               )}
             </div>
           </div>
-        )}
       </div>
 
       {contextMenu &&
