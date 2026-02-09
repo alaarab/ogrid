@@ -161,7 +161,7 @@ function DataGridTableInner<T>(props: IOGridDataGridProps<T>): React.ReactElemen
 
       const cellClassNames = [
         styles.cellContent,
-        descriptor.isActive ? styles.activeCellContent : '',
+        descriptor.isActive && !descriptor.isInRange ? styles.activeCellContent : '',
         descriptor.isInRange ? styles.cellInRange : '',
         descriptor.isInCutRange ? styles.cellCut : '',
         descriptor.isInCopyRange ? styles.cellCopied : '',
@@ -258,11 +258,14 @@ function DataGridTableInner<T>(props: IOGridDataGridProps<T>): React.ReactElemen
                       <th className={styles.selectionHeaderCell} scope="col">
                         <div className={styles.selectionHeaderCellInner}>
                           <Checkbox.Root
+                            className={styles.rowCheckbox}
                             checked={allSelected ? true : someSelected ? 'indeterminate' : false}
                             onCheckedChange={(c: boolean | 'indeterminate') => handleSelectAll(!!c)}
                             aria-label="Select all rows"
                           >
-                            <Checkbox.Indicator>✓</Checkbox.Indicator>
+                            <Checkbox.Indicator className={styles.rowCheckboxIndicator}>
+                              {someSelected && !allSelected ? '–' : '✓'}
+                            </Checkbox.Indicator>
                           </Checkbox.Root>
                         </div>
                       </th>
@@ -326,12 +329,14 @@ function DataGridTableInner<T>(props: IOGridDataGridProps<T>): React.ReactElemen
                                 data-col-index={0}
                                 onClick={(e) => e.stopPropagation()}
                               >
-                                <input
-                                  type="checkbox"
+                                <Checkbox.Root
+                                  className={styles.rowCheckbox}
                                   checked={selectedRowIds.has(rowIdStr)}
-                                  onChange={(e) => handleRowCheckboxChange(rowIdStr, (e.target as HTMLInputElement).checked, rowIndex, lastMouseShiftRef.current)}
+                                  onCheckedChange={(c: boolean | 'indeterminate') => handleRowCheckboxChange(rowIdStr, !!c, rowIndex, lastMouseShiftRef.current)}
                                   aria-label={`Select row ${rowIndex + 1}`}
-                                />
+                                >
+                                  <Checkbox.Indicator className={styles.rowCheckboxIndicator}>✓</Checkbox.Indicator>
+                                </Checkbox.Root>
                               </div>
                             </td>
                           )}
