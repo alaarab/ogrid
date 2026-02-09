@@ -2,7 +2,7 @@ import { useMemo, useCallback, useEffect, useState } from 'react';
 import type { RefObject } from 'react';
 import { flattenColumns, getDataGridStatusBarConfig } from '../utils';
 import type { HeaderFilterConfigInput, CellRenderDescriptorInput } from '../utils';
-import type { IOGridDataGridProps, IStatusBarProps, IColumnDef } from '../types';
+import type { RowId, IOGridDataGridProps, IStatusBarProps, IColumnDef } from '../types';
 import type { ICellValueChangedEvent } from '../types';
 import { useRowSelection } from './useRowSelection';
 import { useCellEditing } from './useCellEditing';
@@ -26,13 +26,13 @@ export interface UseDataGridStateResult<T> {
   totalColCount: number;
   colOffset: number;
   hasCheckboxCol: boolean;
-  rowIndexByRowId: Map<string, number>;
+  rowIndexByRowId: Map<RowId, number>;
 
   // Row selection
-  selectedRowIds: Set<string>;
-  updateSelection: (newSelectedIds: Set<string>) => void;
+  selectedRowIds: Set<RowId>;
+  updateSelection: (newSelectedIds: Set<RowId>) => void;
   handleRowCheckboxChange: (
-    rowId: string,
+    rowId: RowId,
     checked: boolean,
     rowIndex: number,
     shiftKey: boolean
@@ -42,8 +42,8 @@ export interface UseDataGridStateResult<T> {
   someSelected: boolean;
 
   // Cell editing
-  editingCell: { rowId: string; columnId: string } | null;
-  setEditingCell: (cell: { rowId: string; columnId: string } | null) => void;
+  editingCell: { rowId: RowId; columnId: string } | null;
+  setEditingCell: (cell: { rowId: RowId; columnId: string } | null) => void;
   pendingEditorValue: unknown;
   setPendingEditorValue: (value: unknown) => void;
 
@@ -166,7 +166,7 @@ export function useDataGridState<T>(
   const colOffset = hasCheckboxCol ? 1 : 0;
 
   const rowIndexByRowId = useMemo(() => {
-    const m = new Map<string, number>();
+    const m = new Map<RowId, number>();
     items.forEach((item, idx) => m.set(getRowId(item), idx));
     return m;
   }, [items, getRowId]);

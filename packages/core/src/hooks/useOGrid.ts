@@ -17,6 +17,7 @@ import { getCellValue, flattenColumns } from '../utils';
 import { toDataGridFilterProps } from '../types';
 import { useFilterOptions } from './useFilterOptions';
 import type {
+  RowId,
   IOGridProps,
   IOGridDataGridProps,
   IOGridApi,
@@ -227,7 +228,7 @@ export function useOGrid<T>(
     [visibleColumns, setVisibleColumns]
   );
 
-  const [internalSelectedRows, setInternalSelectedRows] = useState<Set<string>>(
+  const [internalSelectedRows, setInternalSelectedRows] = useState<Set<RowId>>(
     new Set()
   );
   const effectiveSelectedRows = selectedRows ?? internalSelectedRows;
@@ -398,7 +399,7 @@ export function useOGrid<T>(
       getColumnState: () => ({ visibleColumns: Array.from(visibleColumns), sort }),
       setFilterModel: setFilters,
       getSelectedRows: () => Array.from(effectiveSelectedRows),
-      setSelectedRows: (rowIds: string[]) => {
+      setSelectedRows: (rowIds: RowId[]) => {
         if (selectedRows === undefined) setInternalSelectedRows(new Set(rowIds));
       },
       selectAll: () => {
