@@ -1,0 +1,12 @@
+node_modules
+dist
+coverage
+storybook-static
+.playwright-mcp
+.turbo
+*.tsbuildinfo
+*.log
+*.tgz
+*.local
+.cursor
+.claude

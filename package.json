@@ -1,0 +1,44 @@
+{
+  "name": "ogrid",
+  "private": true,
+  "workspaces": [
+    "packages/*"
+  ],
+  "scripts": {
+    "build": "npm run build --workspaces --if-present",
+    "test": "npm run test --workspaces --if-present",
+    "test:all": "npm run test --workspaces --if-present",
+    "test:core": "npm test -w @alaarab/ogrid-core",
+    "test:fluent": "npm test -w @alaarab/ogrid-fluent",
+    "test:material": "npm test -w @alaarab/ogrid-material",
+    "test:radix": "npm test -w @alaarab/ogrid",
+    "storybook:fluent": "npm run storybook -w @alaarab/ogrid-fluent",
+    "storybook:material": "npm run storybook -w @alaarab/ogrid-material",
+    "storybook:radix": "npm run storybook -w @alaarab/ogrid",
+    "lint": "eslint ."
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "devDependencies": {
+    "@testing-library/jest-dom": "^6.6.3",
+    "@testing-library/react": "^16.1.0",
+    "@testing-library/user-event": "^14.6.1",
+    "@types/jest": "^29.5.14",
+    "@types/react": "^18.3.18",
+    "@types/react-dom": "^18.3.5",
+    "identity-obj-proxy": "^3.0.0",
+    "jest": "^29.7.0",
+    "jest-environment-jsdom": "^29.7.0",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "rimraf": "^6.0.1",
+    "ts-jest": "^29.2.5",
+    "typescript": "^5.7.3",
+    "eslint": "^9.15.0",
+    "@eslint/js": "^9.15.0",
+    "typescript-eslint": "^8.15.0",
+    "eslint-plugin-react": "^7.37.2",
+    "eslint-plugin-react-hooks": "^5.0.0"
+  }
+}
