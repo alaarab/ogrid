@@ -1,0 +1,64 @@
+{
+  "name": "@alaarab/ogrid-material",
+  "version": "1.2.0",
+  "description": "OGrid Material UI implementation – MUI Table–based data grid with sorting, filtering, pagination, column chooser, spreadsheet selection, and CSV export.",
+  "main": "dist/esm/index.js",
+  "module": "dist/esm/index.js",
+  "types": "dist/types/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/types/index.d.ts",
+      "import": "./dist/esm/index.js",
+      "require": "./dist/esm/index.js"
+    }
+  },
+  "scripts": {
+    "build": "rimraf dist && tsc -p tsconfig.build.json",
+    "test": "jest",
+    "storybook": "storybook dev -p 6007 --no-open",
+    "build-storybook": "storybook build"
+  },
+  "keywords": [
+    "ogrid",
+    "material-ui",
+    "mui",
+    "datatable",
+    "react",
+    "typescript",
+    "grid"
+  ],
+  "author": "Ala Arab",
+  "license": "MIT",
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "engines": {
+    "node": ">=18"
+  },
+  "dependencies": {
+    "@alaarab/ogrid-core": "^1.2.0"
+  },
+  "peerDependencies": {
+    "@emotion/react": "^11.0.0",
+    "@emotion/styled": "^11.0.0",
+    "@mui/icons-material": "^6.0.0",
+    "@mui/material": "^6.0.0",
+    "react": "^17.0.0 || ^18.0.0 || ^19.0.0",
+    "react-dom": "^17.0.0 || ^18.0.0 || ^19.0.0"
+  },
+  "devDependencies": {
+    "@emotion/react": "^11.14.0",
+    "@emotion/styled": "^11.14.0",
+    "@mui/icons-material": "^6.4.0",
+    "@mui/material": "^6.4.0",
+    "@storybook/react": "^8.5.3",
+    "@storybook/react-vite": "^8.5.3",
+    "storybook": "^8.5.3",
+    "vite": "^6.1.0"
+  },
+  "publishConfig": {
+    "access": "public"
+  }
+}
