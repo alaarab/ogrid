@@ -50,10 +50,12 @@ export function useInlineCellEditorState(
     (e: React.KeyboardEvent) => {
       if (e.key === 'Escape') {
         e.preventDefault();
+        e.stopPropagation(); // Don't let the grid handler clear selection on Escape
         cancel();
       }
       if (e.key === 'Enter' && editorType === 'text') {
         e.preventDefault();
+        e.stopPropagation(); // Don't let the grid handler re-open an editor
         commit(localValue);
       }
     },

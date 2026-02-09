@@ -211,6 +211,7 @@
   text-overflow: ellipsis;
   white-space: nowrap;
   user-select: none;
+  outline: none;
 }
 
 .activeCellContent {
@@ -265,6 +266,36 @@
   align-items: center;
   justify-content: center;
   width: 100%;
+}
+
+// Radix Checkbox styling for row-selection checkboxes
+.rowCheckbox {
+  width: 18px;
+  height: 18px;
+  border: 1.5px solid var(--ogrid-border-strong, #888);
+  border-radius: 3px;
+  background: var(--ogrid-bg, #fff);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  padding: 0;
+
+  &[data-state='checked'],
+  &[data-state='indeterminate'] {
+    background: var(--ogrid-primary, #0066cc);
+    border-color: var(--ogrid-primary, #0066cc);
+  }
+}
+
+.rowCheckboxIndicator {
+  color: var(--ogrid-primary-fg, #fff);
+  font-size: 13px;
+  line-height: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .statusBar {
