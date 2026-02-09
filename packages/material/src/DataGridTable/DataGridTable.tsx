@@ -263,32 +263,35 @@ function DataGridTableInner<T>(props: IOGridDataGridProps<T>): React.ReactElemen
         e.preventDefault();
       }}
       sx={{
+        position: 'relative',
         width: fitToContent ? 'fit-content' : '100%',
         maxWidth: '100%',
         overflowX: allowOverflowX ? 'auto' : 'hidden',
         overflowY: 'visible',
+        // Drag-range highlight applied via DOM attributes during drag (bypasses React for performance)
+        '& [data-drag-range]': { bgcolor: 'rgba(33, 115, 70, 0.12) !important' },
       }}
     >
-      <TableContainer sx={{ minWidth: allowOverflowX ? minTableWidth : undefined }}>
-        {isLoading && items.length > 0 && (
-          <Box
-            sx={{
-              position: 'absolute',
-              inset: 0,
-              zIndex: 2,
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              bgcolor: 'rgba(255,255,255,0.7)',
-              borderRadius: 1,
-            }}
-          >
-            <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 1, p: 2, bgcolor: 'background.paper', border: 1, borderColor: 'divider', borderRadius: 1 }}>
-              <CircularProgress size={24} />
-              <Typography variant="body2" color="text.secondary">{loadingMessage}</Typography>
-            </Box>
+      {isLoading && items.length > 0 && (
+        <Box
+          sx={{
+            position: 'absolute',
+            inset: 0,
+            zIndex: 2,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            bgcolor: 'rgba(255,255,255,0.7)',
+            borderRadius: 1,
+          }}
+        >
+          <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 1, p: 2, bgcolor: 'background.paper', border: 1, borderColor: 'divider', borderRadius: 1 }}>
+            <CircularProgress size={24} />
+            <Typography variant="body2" color="text.secondary">{loadingMessage}</Typography>
           </Box>
-        )}
+        </Box>
+      )}
+      <TableContainer sx={{ minWidth: allowOverflowX ? minTableWidth : undefined }}>
         <Box ref={tableContainerRef} sx={{ position: 'relative', opacity: isLoading && items.length > 0 ? 0.6 : 1 }}>
           <Table size="small" sx={{ border: 1, borderColor: 'divider', borderRadius: 1, overflow: 'hidden', minWidth: minTableWidth }}>
             <TableHead
@@ -446,31 +449,31 @@ function DataGridTableInner<T>(props: IOGridDataGridProps<T>): React.ReactElemen
               selectedCellCount={selectionRange ? (Math.abs(selectionRange.endRow - selectionRange.startRow) + 1) * (Math.abs(selectionRange.endCol - selectionRange.startCol) + 1) : undefined}
             />
           )}
+          {showEmptyInGrid && emptyState && (
+            <Box sx={{ py: 4, px: 2, textAlign: 'center', borderTop: 1, borderColor: 'divider', bgcolor: 'action.hover' }}>
+              {emptyState.render ? (
+                emptyState.render()
+              ) : (
+                <>
+                  <Typography variant="h6" gutterBottom>No results found</Typography>
+                  <Typography variant="body2" color="text.secondary">
+                    {emptyState.message != null ? (
+                      emptyState.message
+                    ) : emptyState.hasActiveFilters ? (
+                      <>
+                        No items match your current filters. Try adjusting your search or{' '}
+                        <Button variant="text" size="small" onClick={emptyState.onClearAll}>clear all filters</Button>{' '}
+                        to see all items.
+                      </>
+                    ) : (
+                      'There are no items available at this time.'
+                    )}
+                  </Typography>
+                </>
+              )}
+            </Box>
+          )}
         </Box>
-        {showEmptyInGrid && emptyState && (
-          <Box sx={{ py: 4, px: 2, textAlign: 'center', borderTop: 1, borderColor: 'divider', bgcolor: 'action.hover' }}>
-            {emptyState.render ? (
-              emptyState.render()
-            ) : (
-              <>
-                <Typography variant="h6" gutterBottom>No results found</Typography>
-                <Typography variant="body2" color="text.secondary">
-                  {emptyState.message != null ? (
-                    emptyState.message
-                  ) : emptyState.hasActiveFilters ? (
-                    <>
-                      No items match your current filters. Try adjusting your search or{' '}
-                      <Button variant="text" size="small" onClick={emptyState.onClearAll}>clear all filters</Button>{' '}
-                      to see all items.
-                    </>
-                  ) : (
-                    'There are no items available at this time.'
-                  )}
-                </Typography>
-              </>
-            )}
-          </Box>
-        )}
       </TableContainer>
 
       {contextMenu &&
