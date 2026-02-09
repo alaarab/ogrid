@@ -118,6 +118,12 @@ export interface CellRenderDescriptorInput<T> {
     endRow: number;
     endCol: number;
   } | null;
+  copyRange: {
+    startRow: number;
+    startCol: number;
+    endRow: number;
+    endCol: number;
+  } | null;
   colOffset: number;
   itemsLength: number;
   getRowId: (item: T) => RowId;
@@ -132,6 +138,7 @@ export interface CellRenderDescriptor {
   isActive: boolean;
   isInRange: boolean;
   isInCutRange: boolean;
+  isInCopyRange: boolean;
   isSelectionEndCell: boolean;
   canEditAny: boolean;
   isPinned: boolean;
@@ -185,6 +192,9 @@ export function getCellRenderDescriptor<T>(
   const isInCutRange =
     input.cutRange != null &&
     isInSelectionRange(input.cutRange, rowIndex, colIdx);
+  const isInCopyRange =
+    input.copyRange != null &&
+    isInSelectionRange(input.copyRange, rowIndex, colIdx);
   const isSelectionEndCell =
     input.selectionRange != null &&
     rowIndex === input.selectionRange.endRow &&
@@ -220,6 +230,7 @@ export function getCellRenderDescriptor<T>(
     isActive,
     isInRange,
     isInCutRange,
+    isInCopyRange,
     isSelectionEndCell,
     canEditAny,
     isPinned,
