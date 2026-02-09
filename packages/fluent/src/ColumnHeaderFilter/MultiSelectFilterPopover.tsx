@@ -1,0 +1,100 @@
+import * as React from 'react';
+import { Input, Checkbox, Spinner } from '@fluentui/react-components';
+import { SearchRegular } from '@fluentui/react-icons';
+import styles from './ColumnHeaderFilter.module.scss';
+
+export interface MultiSelectFilterPopoverProps {
+  searchText: string;
+  onSearchChange: (value: string) => void;
+  options: string[];
+  filteredOptions: string[];
+  selected: Set<string>;
+  onOptionToggle: (option: string, checked: boolean) => void;
+  onSelectAll: () => void;
+  onClearSelection: () => void;
+  onApply: () => void;
+  isLoading: boolean;
+  onPopoverClick: (e: React.MouseEvent) => void;
+  onInputFocus: (e: React.FocusEvent) => void;
+  onInputMouseDown: (e: React.MouseEvent) => void;
+  onInputClick: (e: React.MouseEvent) => void;
+  onInputKeyDown: (e: React.KeyboardEvent) => void;
+}
+
+export const MultiSelectFilterPopover: React.FC<MultiSelectFilterPopoverProps> = ({
+  searchText,
+  onSearchChange,
+  options,
+  filteredOptions,
+  selected,
+  onOptionToggle,
+  onSelectAll,
+  onClearSelection,
+  onApply,
+  isLoading,
+  onPopoverClick,
+  onInputFocus,
+  onInputMouseDown,
+  onInputClick,
+  onInputKeyDown,
+}) => (
+  <>
+    <div className={styles.popoverSearch} onClick={onPopoverClick}>
+      <Input
+        placeholder="Search..."
+        value={searchText}
+        onChange={(e, data) => onSearchChange(data.value ?? '')}
+        onFocus={onInputFocus}
+        onMouseDown={onInputMouseDown}
+        onClick={onInputClick}
+        onKeyDown={onInputKeyDown}
+        autoComplete="off"
+        className={styles.searchInput}
+        contentBefore={<SearchRegular />}
+      />
+      <div className={styles.resultCount}>
+        {filteredOptions.length} of {options.length} options
+      </div>
+    </div>
+    <div className={styles.selectAllRow} onClick={onPopoverClick}>
+      <button type="button" className={styles.selectAllButton} onClick={onSelectAll}>
+        Select All ({filteredOptions.length})
+      </button>
+      <button type="button" className={styles.selectAllButton} onClick={onClearSelection}>
+        Clear
+      </button>
+    </div>
+    <div className={styles.popoverOptions} onClick={onPopoverClick}>
+      {isLoading ? (
+        <div className={styles.loadingContainer}>
+          <Spinner size="small" label="Loading..." />
+        </div>
+      ) : filteredOptions.length === 0 ? (
+        <div className={styles.noResults}>No options found</div>
+      ) : (
+        filteredOptions.map((option) => (
+          <div key={option} className={styles.popoverOption}>
+            <Checkbox
+              label={option}
+              checked={selected.has(option)}
+              onChange={(ev, data) => {
+                ev.stopPropagation();
+                onOptionToggle(option, data.checked === true);
+              }}
+            />
+          </div>
+        ))
+      )}
+    </div>
+    <div className={styles.popoverActions} onClick={onPopoverClick}>
+      <button type="button" className={styles.clearButton} onClick={onClearSelection}>
+        Clear
+      </button>
+      <button type="button" className={styles.applyButton} onClick={onApply}>
+        Apply
+      </button>
+    </div>
+  </>
+);
+
+MultiSelectFilterPopover.displayName = 'MultiSelectFilterPopover';

@@ -1,0 +1,32 @@
+{
+  "name": "@alaarab/ogrid-core",
+  "version": "1.2.0",
+  "description": "OGrid core – framework-agnostic types, hooks, and utilities for OGrid data tables.",
+  "main": "dist/esm/index.js",
+  "module": "dist/esm/index.js",
+  "types": "dist/types/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/types/index.d.ts",
+      "import": "./dist/esm/index.js",
+      "require": "./dist/esm/index.js"
+    }
+  },
+  "scripts": {
+    "build": "rimraf dist && tsc -p tsconfig.build.json",
+    "test": "jest"
+  },
+  "keywords": ["ogrid", "datatable", "react", "typescript", "grid", "core"],
+  "author": "Ala Arab",
+  "license": "MIT",
+  "files": ["dist", "README.md", "LICENSE"],
+  "engines": {
+    "node": ">=18"
+  },
+  "peerDependencies": {
+    "react": "^17.0.0 || ^18.0.0 || ^19.0.0"
+  },
+  "publishConfig": {
+    "access": "public"
+  }
+}

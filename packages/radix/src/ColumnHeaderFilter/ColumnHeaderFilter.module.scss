@@ -1,0 +1,337 @@
+// OGrid Radix – column header filter (minimal default)
+
+.columnHeader {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  position: relative;
+  box-sizing: border-box;
+  overflow: hidden;
+}
+
+.headerContent {
+  display: flex;
+  align-items: center;
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.columnName {
+  display: block;
+  min-width: 0;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-weight: 600;
+  font-size: 14px;
+  color: var(--ogrid-fg, #242424);
+}
+
+.headerActions {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  margin-left: auto;
+  flex-shrink: 0;
+}
+
+.sortIcon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  padding: 4px;
+  border: none;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--ogrid-muted, #616161);
+  cursor: pointer;
+  flex-shrink: 0;
+  font-size: 14px;
+
+  &:hover {
+    background: var(--ogrid-bg-hover, #f5f5f5);
+    color: var(--ogrid-fg, #424242);
+  }
+  &.sortActive {
+    background: var(--ogrid-bg-selected, #e0e0e0);
+    color: var(--ogrid-fg, #333);
+  }
+}
+
+.filterIcon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  padding: 4px;
+  border: none;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--ogrid-muted, #616161);
+  cursor: pointer;
+  flex-shrink: 0;
+  position: relative;
+  font-size: 14px;
+
+  &:hover {
+    background: var(--ogrid-bg-hover, #f5f5f5);
+    color: var(--ogrid-fg, #424242);
+  }
+  &.filterActive {
+    background: var(--ogrid-bg-selected, #e0e0e0);
+    color: var(--ogrid-primary, #0066cc);
+  }
+  &.filterOpen {
+    background: var(--ogrid-bg-selected, #e8e8e8);
+  }
+}
+
+.filterBadge {
+  position: absolute;
+  top: 2px;
+  right: 2px;
+  width: 6px;
+  height: 6px;
+  background: var(--ogrid-primary, #0066cc);
+  border-radius: 50%;
+  border: 1px solid var(--ogrid-bg, #fff);
+}
+
+// Popover content (Radix Popover.Content)
+.popoverContent {
+  z-index: 1000;
+  min-width: 280px;
+  max-width: 320px;
+  background: var(--ogrid-bg, #fff);
+  border: 1px solid var(--ogrid-border, #d1d1d1);
+  border-radius: 8px;
+  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.14);
+  overflow: hidden;
+}
+
+.popoverHeader {
+  padding: 10px 14px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--ogrid-muted, #616161);
+  border-bottom: 1px solid var(--ogrid-border, #e0e0e0);
+  background: var(--ogrid-bg-subtle, #fafafa);
+}
+
+.popoverSearch {
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--ogrid-border, #e0e0e0);
+}
+
+.searchInput {
+  width: 100%;
+  padding: 6px 10px;
+  border: 1px solid var(--ogrid-border, #d1d1d1);
+  border-radius: 4px;
+  font-size: 14px;
+  box-sizing: border-box;
+  &:focus {
+    outline: none;
+    border-color: var(--ogrid-primary, #0066cc);
+  }
+}
+
+.nativeInputWrapper {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  border: 1px solid var(--ogrid-border, #d1d1d1);
+  border-radius: 4px;
+  background: var(--ogrid-bg, #fff);
+  padding: 6px 12px;
+  min-height: 36px;
+  box-sizing: border-box;
+  &:focus-within {
+    border-color: var(--ogrid-primary, #0066cc);
+    outline: none;
+  }
+}
+
+.nativeInput {
+  flex: 1;
+  min-width: 0;
+  border: none;
+  outline: none;
+  padding: 0;
+  font-size: 14px;
+  font-family: inherit;
+  background: transparent;
+  color: var(--ogrid-fg, #242424);
+  &::placeholder {
+    color: var(--ogrid-muted, #707070);
+  }
+}
+
+.resultCount {
+  margin-top: 6px;
+  font-size: 11px;
+  color: var(--ogrid-muted, #616161);
+}
+
+.selectAllRow {
+  display: flex;
+  gap: 8px;
+  padding: 6px 12px;
+  border-bottom: 1px solid var(--ogrid-border, #e0e0e0);
+  background: var(--ogrid-bg-subtle, #fafafa);
+}
+
+.selectAllButton {
+  background: none;
+  border: none;
+  color: var(--ogrid-primary, #0066cc);
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  padding: 4px 8px;
+  border-radius: 4px;
+  &:hover {
+    background: var(--ogrid-bg-hover, #e8f4fc);
+  }
+}
+
+.popoverOptions {
+  overflow-y: auto;
+  max-height: 250px;
+  padding: 6px 0;
+}
+
+.popoverOption {
+  padding: 4px 12px;
+  display: flex;
+  align-items: center;
+  &:hover {
+    background: var(--ogrid-bg-hover, #f5f5f5);
+  }
+}
+
+.filterCheckbox {
+  width: 16px;
+  height: 16px;
+  border: 1px solid var(--ogrid-border, #888);
+  border-radius: 3px;
+  background: var(--ogrid-bg, #fff);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  &[data-state='checked'] {
+    background: var(--ogrid-primary, #0066cc);
+    border-color: var(--ogrid-primary, #0066cc);
+    color: var(--ogrid-primary-fg, #fff);
+  }
+}
+
+.personOption {
+  padding: 8px 12px;
+  cursor: pointer;
+  &:hover {
+    background: var(--ogrid-bg-hover, #f5f5f5);
+  }
+}
+
+.loadingContainer,
+.noResults {
+  padding: 20px;
+  text-align: center;
+  font-size: 13px;
+  color: var(--ogrid-muted, #666);
+}
+
+.selectedUserSection {
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--ogrid-border, #e0e0e0);
+}
+
+.selectedUserLabel {
+  font-size: 11px;
+  color: var(--ogrid-muted, #666);
+  margin-bottom: 4px;
+}
+
+.selectedUser {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.userInfo {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.userText {
+  min-width: 0;
+  font-size: 13px;
+  .userSecondary {
+    font-size: 12px;
+    color: var(--ogrid-muted, #666);
+  }
+}
+
+.removeUserButton {
+  padding: 4px;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  color: var(--ogrid-muted, #666);
+  flex-shrink: 0;
+  &:hover {
+    color: var(--ogrid-fg, #333);
+  }
+}
+
+.popoverActions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  padding: 8px 12px;
+  border-top: 1px solid var(--ogrid-border, #e0e0e0);
+  background: var(--ogrid-bg-subtle, #f5f5f5);
+}
+
+.clearButton {
+  padding: 6px 12px;
+  border: 1px solid var(--ogrid-border, #ccc);
+  border-radius: 4px;
+  background: var(--ogrid-bg, #fff);
+  color: var(--ogrid-muted, #666);
+  font-size: 12px;
+  cursor: pointer;
+  &:hover {
+    background: var(--ogrid-bg-hover, #f5f5f5);
+    color: var(--ogrid-fg, #333);
+  }
+}
+
+.applyButton {
+  padding: 6px 16px;
+  border: none;
+  border-radius: 4px;
+  background: var(--ogrid-primary, #0066cc);
+  color: var(--ogrid-primary-fg, #fff);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  &:hover {
+    background: var(--ogrid-primary-hover, #0052a3);
+  }
+}
