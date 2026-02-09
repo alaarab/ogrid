@@ -1,5 +1,5 @@
 import { useState, useLayoutEffect } from 'react';
-import type { IActiveCell } from '../types';
+import type { IActiveCell, RowId } from '../types';
 
 export interface UseActiveCellResult {
   activeCell: IActiveCell | null;
@@ -12,7 +12,7 @@ export interface UseActiveCellResult {
  */
 export function useActiveCell(
   wrapperRef?: React.RefObject<HTMLElement | null>,
-  editingCell?: { rowId: string; columnId: string } | null
+  editingCell?: { rowId: RowId; columnId: string } | null
 ): UseActiveCellResult {
   const [activeCell, setActiveCell] = useState<IActiveCell | null>(null);
 

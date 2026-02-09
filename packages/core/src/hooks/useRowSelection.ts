@@ -1,18 +1,18 @@
 import { useState, useCallback, useRef, useMemo } from 'react';
-import type { RowSelectionMode, IRowSelectionChangeEvent } from '../types';
+import type { RowId, RowSelectionMode, IRowSelectionChangeEvent } from '../types';
 
 export interface UseRowSelectionParams<T> {
   items: T[];
-  getRowId: (item: T) => string;
+  getRowId: (item: T) => RowId;
   rowSelection: RowSelectionMode;
-  controlledSelectedRows: Set<string> | undefined;
+  controlledSelectedRows: Set<RowId> | undefined;
   onSelectionChange: ((event: IRowSelectionChangeEvent<T>) => void) | undefined;
 }
 
 export interface UseRowSelectionResult {
-  selectedRowIds: Set<string>;
-  updateSelection: (newSelectedIds: Set<string>) => void;
-  handleRowCheckboxChange: (rowId: string, checked: boolean, rowIndex: number, shiftKey: boolean) => void;
+  selectedRowIds: Set<RowId>;
+  updateSelection: (newSelectedIds: Set<RowId>) => void;
+  handleRowCheckboxChange: (rowId: RowId, checked: boolean, rowIndex: number, shiftKey: boolean) => void;
   handleSelectAll: (checked: boolean) => void;
   allSelected: boolean;
   someSelected: boolean;
@@ -27,22 +27,22 @@ export function useRowSelection<T>(params: UseRowSelectionParams<T>): UseRowSele
     onSelectionChange,
   } = params;
 
-  const [internalSelectedRows, setInternalSelectedRows] = useState<Set<string>>(new Set());
+  const [internalSelectedRows, setInternalSelectedRows] = useState<Set<RowId>>(new Set());
   const lastClickedRowRef = useRef<number>(-1);
 
   // Defensive: convert to Set if caller passes an array (e.g. from JSON state)
-  const selectedRowIds: Set<string> = useMemo(
+  const selectedRowIds: Set<RowId> = useMemo(
     () =>
       controlledSelectedRows != null
         ? controlledSelectedRows instanceof Set
           ? controlledSelectedRows
-          : new Set(controlledSelectedRows as Iterable<string>)
+          : new Set(controlledSelectedRows as Iterable<RowId>)
         : internalSelectedRows,
     [controlledSelectedRows, internalSelectedRows]
   );
 
   const updateSelection = useCallback(
-    (newSelectedIds: Set<string>) => {
+    (newSelectedIds: Set<RowId>) => {
       if (controlledSelectedRows === undefined) {
         setInternalSelectedRows(newSelectedIds);
       }
@@ -55,7 +55,7 @@ export function useRowSelection<T>(params: UseRowSelectionParams<T>): UseRowSele
   );
 
   const handleRowCheckboxChange = useCallback(
-    (rowId: string, checked: boolean, rowIndex: number, shiftKey: boolean) => {
+    (rowId: RowId, checked: boolean, rowIndex: number, shiftKey: boolean) => {
       if (rowSelection === 'single') {
         updateSelection(checked ? new Set([rowId]) : new Set());
         lastClickedRowRef.current = rowIndex;

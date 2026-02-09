@@ -4,14 +4,14 @@
 
 import type { ColumnFilterType } from '../types/columnTypes';
 import type { IColumnDef } from '../types/columnTypes';
-import type { UserLike } from '../types/dataGridTypes';
+import type { RowId, UserLike } from '../types/dataGridTypes';
 import { getCellValue } from './cellValue';
 import { isInSelectionRange } from '../types/dataGridTypes';
 
 // --- Header filter config (replaces createHeaderWithFilter body) ---
 
 export interface HeaderFilterConfigInput {
-  sortBy: string;
+  sortBy?: string;
   sortDirection: 'asc' | 'desc';
   onColumnSort: (columnKey: string) => void;
   textFilters?: Record<string, string>;
@@ -104,7 +104,7 @@ export function getHeaderFilterConfig<T>(
 export type CellRenderMode = 'editing-inline' | 'editing-popover' | 'display';
 
 export interface CellRenderDescriptorInput<T> {
-  editingCell: { rowId: string; columnId: string } | null;
+  editingCell: { rowId: RowId; columnId: string } | null;
   activeCell: { rowIndex: number; columnIndex: number } | null;
   selectionRange: {
     startRow: number;
@@ -120,7 +120,7 @@ export interface CellRenderDescriptorInput<T> {
   } | null;
   colOffset: number;
   itemsLength: number;
-  getRowId: (item: T) => string;
+  getRowId: (item: T) => RowId;
   editable?: boolean;
   onCellValueChanged?: (event: import('../types/columnTypes').ICellValueChangedEvent<T>) => void;
 }
@@ -137,7 +137,7 @@ export interface CellRenderDescriptor {
   isPinned: boolean;
   pinnedSide?: 'left' | 'right';
   globalColIndex: number;
-  rowId: string;
+  rowId: RowId;
   rowIndex: number;
   /** Raw value for display (when mode === 'display'). UI uses col.renderCell or col.valueFormatter. */
   displayValue?: unknown;
