@@ -23,6 +23,7 @@
 
 /* Always use full container width (matches pagination); columns fill the space */
 .tableWrapper {
+  position: relative;
   /* Default: no horizontal scroll unless we explicitly allow overflow (wide tables). */
   overflow-x: hidden;
   overflow-y: visible;
@@ -304,6 +305,11 @@
   background-color: var(--ogrid-bg-range, rgba(33, 115, 70, 0.12)) !important;
 }
 
+// Drag-range highlight applied via DOM attributes during drag (bypasses React for performance)
+:global([data-drag-range]) {
+  background-color: var(--ogrid-bg-range, rgba(33, 115, 70, 0.12)) !important;
+}
+
 // Cut range — subtle background only; MarchingAntsOverlay renders the animated border
 .cellCut {
   background-color: var(--colorNeutralBackground1Hover, rgba(0, 0, 0, 0.04)) !important;
@@ -501,10 +507,6 @@
 // ─────────────────────────────────────────────────
 // Loading overlay (unchanged)
 // ─────────────────────────────────────────────────
-
-.loadingOverlayContainer {
-  position: relative;
-}
 
 .loadingOverlay {
   position: absolute;
