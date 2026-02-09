@@ -157,10 +157,11 @@ describe('useClipboard', () => {
   it('handlePaste with text and onCellValueChanged fires for each cell', async () => {
     readTextMock.mockResolvedValue('NewName\t42');
     const onCellValueChanged = jest.fn();
+    const editableCols = visibleCols.map((c) => ({ ...c, editable: true as const }));
     const { result } = renderHook(() =>
       useClipboard({
         items,
-        visibleCols,
+        visibleCols: editableCols,
         colOffset: 0,
         selectionRange: null,
         activeCell: { rowIndex: 0, columnIndex: 0 },
@@ -189,5 +190,149 @@ describe('useClipboard', () => {
         rowIndex: 0,
       })
     );
+  });
+
+  describe('paste validation (valueParser)', () => {
+    type Item = { id: string; name: string; score: number; status: string };
+    const editableItems: Item[] = [
+      { id: '1', name: 'Alice', score: 10, status: 'Active' },
+      { id: '2', name: 'Bob', score: 20, status: 'Closed' },
+    ];
+
+    it('skips cells when valueParser returns undefined (rejects)', async () => {
+      readTextMock.mockResolvedValue('Alice\tnotanumber');
+      const onCellValueChanged = jest.fn();
+      const cols = [
+        { columnId: 'name', name: 'Name', editable: true },
+        {
+          columnId: 'score',
+          name: 'Score',
+          editable: true,
+          valueParser: ({ newValue }: { newValue: unknown }) => {
+            const n = Number(newValue);
+            return Number.isNaN(n) ? undefined : n;
+          },
+        },
+      ] as import('../../types').IColumnDef<Item>[];
+
+      const { result } = renderHook(() =>
+        useClipboard({
+          items: editableItems,
+          visibleCols: cols,
+          colOffset: 0,
+          selectionRange: null,
+          activeCell: { rowIndex: 0, columnIndex: 0 },
+          onCellValueChanged,
+        })
+      );
+
+      await act(async () => {
+        await result.current.handlePaste();
+      });
+
+      // name column passes through (no parser); score rejects 'notanumber'
+      expect(onCellValueChanged).toHaveBeenCalledTimes(1);
+      expect(onCellValueChanged).toHaveBeenCalledWith(
+        expect.objectContaining({ columnId: 'name', newValue: 'Alice' })
+      );
+    });
+
+    it('uses parsed value from valueParser', async () => {
+      readTextMock.mockResolvedValue('42');
+      const onCellValueChanged = jest.fn();
+      const cols = [
+        {
+          columnId: 'score',
+          name: 'Score',
+          editable: true,
+          valueParser: ({ newValue }: { newValue: unknown }) => Number(newValue),
+        },
+      ] as import('../../types').IColumnDef<Item>[];
+
+      const { result } = renderHook(() =>
+        useClipboard({
+          items: editableItems,
+          visibleCols: cols,
+          colOffset: 0,
+          selectionRange: null,
+          activeCell: { rowIndex: 0, columnIndex: 0 },
+          onCellValueChanged,
+        })
+      );
+
+      await act(async () => {
+        await result.current.handlePaste();
+      });
+
+      expect(onCellValueChanged).toHaveBeenCalledTimes(1);
+      expect(onCellValueChanged).toHaveBeenCalledWith(
+        expect.objectContaining({ columnId: 'score', newValue: 42 })
+      );
+    });
+
+    it('auto-validates select columns and rejects invalid options', async () => {
+      readTextMock.mockResolvedValue('InvalidStatus');
+      const onCellValueChanged = jest.fn();
+      const cols = [
+        {
+          columnId: 'status',
+          name: 'Status',
+          editable: true,
+          cellEditor: 'select' as const,
+          cellEditorParams: { values: ['Active', 'Closed'] },
+        },
+      ] as import('../../types').IColumnDef<Item>[];
+
+      const { result } = renderHook(() =>
+        useClipboard({
+          items: editableItems,
+          visibleCols: cols,
+          colOffset: 0,
+          selectionRange: null,
+          activeCell: { rowIndex: 0, columnIndex: 0 },
+          onCellValueChanged,
+        })
+      );
+
+      await act(async () => {
+        await result.current.handlePaste();
+      });
+
+      expect(onCellValueChanged).not.toHaveBeenCalled();
+    });
+
+    it('auto-validates select columns with case-insensitive match', async () => {
+      readTextMock.mockResolvedValue('active');
+      const onCellValueChanged = jest.fn();
+      const cols = [
+        {
+          columnId: 'status',
+          name: 'Status',
+          editable: true,
+          cellEditor: 'select' as const,
+          cellEditorParams: { values: ['Active', 'Closed'] },
+        },
+      ] as import('../../types').IColumnDef<Item>[];
+
+      const { result } = renderHook(() =>
+        useClipboard({
+          items: editableItems,
+          visibleCols: cols,
+          colOffset: 0,
+          selectionRange: null,
+          activeCell: { rowIndex: 0, columnIndex: 0 },
+          onCellValueChanged,
+        })
+      );
+
+      await act(async () => {
+        await result.current.handlePaste();
+      });
+
+      expect(onCellValueChanged).toHaveBeenCalledTimes(1);
+      expect(onCellValueChanged).toHaveBeenCalledWith(
+        expect.objectContaining({ columnId: 'status', newValue: 'Active' })
+      );
+    });
   });
 });
