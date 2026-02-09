@@ -45,7 +45,6 @@
   border-spacing: 0;
   border: 1px solid var(--ogrid-border, #e0e0e0);
   border-radius: 6px;
-  overflow: hidden;
   box-sizing: border-box;
   table-layout: auto;
 }
@@ -70,6 +69,12 @@
 .dataTable th:last-of-type,
 .dataTable td:last-of-type {
   border-right: none;
+}
+
+/* When status bar follows, remove bottom border-radius so the frame connects */
+.tableWidthAnchor:has(.statusBar) .dataTable {
+  border-bottom-left-radius: 0;
+  border-bottom-right-radius: 0;
 }
 
 .dataTable thead {

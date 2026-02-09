@@ -12,6 +12,8 @@ export interface UseClipboardParams<T> {
   activeCell: IActiveCell | null;
   editable?: boolean;
   onCellValueChanged: ((event: ICellValueChangedEvent<T>) => void) | undefined;
+  beginBatch?: () => void;
+  endBatch?: () => void;
 }
 
 export interface UseClipboardResult {
@@ -36,6 +38,8 @@ export function useClipboard<T>(params: UseClipboardParams<T>): UseClipboardResu
     activeCell,
     editable,
     onCellValueChanged,
+    beginBatch,
+    endBatch,
   } = params;
 
   const cutRangeRef = useRef<ISelectionRange | null>(null);
@@ -126,6 +130,7 @@ export function useClipboard<T>(params: UseClipboardParams<T>): UseClipboardResu
     const anchorRow = norm ? norm.startRow : 0;
     const anchorCol = norm ? norm.startCol : 0;
     const lines = text.split(/\r?\n/).filter((l) => l.length > 0);
+    beginBatch?.();
     for (let r = 0; r < lines.length; r++) {
       const cells = lines[r].split('\t');
       for (let c = 0; c < cells.length; c++) {
@@ -179,8 +184,9 @@ export function useClipboard<T>(params: UseClipboardParams<T>): UseClipboardResu
       cutRangeRef.current = null;
       setCutRange(null);
     }
+    endBatch?.();
     setCopyRange(null);
-  }, [selectionRange, activeCell, colOffset, items, visibleCols, editable, onCellValueChanged]);
+  }, [selectionRange, activeCell, colOffset, items, visibleCols, editable, onCellValueChanged, beginBatch, endBatch]);
 
   const clearClipboardRanges = useCallback(() => {
     setCopyRange(null);
