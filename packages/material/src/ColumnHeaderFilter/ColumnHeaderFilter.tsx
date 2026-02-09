@@ -1,0 +1,221 @@
+import * as React from 'react';
+import { Popover, Tooltip, IconButton, Box, Typography } from '@mui/material';
+import {
+  ArrowUpward as ArrowUpwardIcon,
+  ArrowDownward as ArrowDownwardIcon,
+  SwapVert as SwapVertIcon,
+  FilterList as FilterListIcon,
+} from '@mui/icons-material';
+import type { UserLike, ColumnFilterType } from '@alaarab/ogrid-core';
+import { useColumnHeaderFilterState } from '@alaarab/ogrid-core';
+import { TextFilterPopover } from './TextFilterPopover';
+import { MultiSelectFilterPopover } from './MultiSelectFilterPopover';
+import { PeopleFilterPopover } from './PeopleFilterPopover';
+
+export interface IColumnHeaderFilterProps {
+  columnKey: string;
+  columnName: string;
+  filterType: ColumnFilterType;
+  isSorted?: boolean;
+  isSortedDescending?: boolean;
+  onSort?: () => void;
+  selectedValues?: string[];
+  onFilterChange?: (values: string[]) => void;
+  options?: string[];
+  isLoadingOptions?: boolean;
+  textValue?: string;
+  onTextChange?: (value: string) => void;
+  selectedUser?: UserLike;
+  onUserChange?: (user: UserLike | undefined) => void;
+  peopleSearch?: (query: string) => Promise<UserLike[]>;
+}
+
+export const ColumnHeaderFilter: React.FC<IColumnHeaderFilterProps> = React.memo((props) => {
+  const {
+    columnName,
+    filterType,
+    isSorted = false,
+    isSortedDescending = false,
+    onSort,
+    selectedValues,
+    onFilterChange,
+    options = [],
+    isLoadingOptions = false,
+    textValue = '',
+    onTextChange,
+    selectedUser,
+    onUserChange,
+    peopleSearch,
+  } = props;
+
+  const state = useColumnHeaderFilterState({
+    filterType,
+    isSorted,
+    isSortedDescending,
+    onSort,
+    selectedValues,
+    onFilterChange,
+    options,
+    isLoadingOptions,
+    textValue,
+    onTextChange,
+    selectedUser,
+    onUserChange,
+    peopleSearch,
+  });
+
+  const {
+    headerRef,
+    peopleInputRef,
+    isFilterOpen,
+    setFilterOpen,
+    tempSelected,
+    tempTextValue,
+    setTempTextValue,
+    searchText,
+    setSearchText,
+    filteredOptions,
+    peopleSuggestions,
+    isPeopleLoading,
+    peopleSearchText,
+    setPeopleSearchText,
+    hasActiveFilter,
+    popoverPosition,
+    handlers,
+  } = state;
+
+  const safeOptions = options ?? [];
+
+  const renderPopoverContent = (): React.ReactNode => {
+    if (filterType === 'multiSelect') {
+      return (
+        <MultiSelectFilterPopover
+          searchText={searchText}
+          onSearchChange={setSearchText}
+          options={safeOptions}
+          filteredOptions={filteredOptions}
+          selected={tempSelected}
+          onOptionToggle={handlers.handleCheckboxChange}
+          onSelectAll={handlers.handleSelectAll}
+          onClearSelection={handlers.handleClearSelection}
+          onApply={handlers.handleApplyMultiSelect}
+          isLoading={isLoadingOptions}
+        />
+      );
+    }
+    if (filterType === 'text') {
+      return (
+        <TextFilterPopover
+          value={tempTextValue}
+          onValueChange={setTempTextValue}
+          onApply={handlers.handleTextApply}
+          onClear={handlers.handleTextClear}
+        />
+      );
+    }
+    if (filterType === 'people') {
+      return (
+        <PeopleFilterPopover
+          selectedUser={selectedUser}
+          searchText={peopleSearchText}
+          onSearchChange={setPeopleSearchText}
+          suggestions={peopleSuggestions}
+          isLoading={isPeopleLoading}
+          onUserSelect={handlers.handleUserSelect}
+          onClearUser={handlers.handleClearUser}
+          inputRef={peopleInputRef}
+        />
+      );
+    }
+    return null;
+  };
+
+  return (
+    <Box ref={headerRef as React.RefObject<HTMLDivElement>} sx={{ display: 'flex', alignItems: 'center', width: '100%', minWidth: 0 }}>
+      <Box sx={{ flex: 1, minWidth: 0, overflow: 'hidden' }}>
+        <Tooltip title={columnName} arrow>
+          <Typography
+            variant="body2"
+            fontWeight={600}
+            noWrap
+            data-header-label
+            sx={{ lineHeight: 1.4 }}
+          >
+            {columnName}
+          </Typography>
+        </Tooltip>
+      </Box>
+
+      <Box sx={{ display: 'flex', alignItems: 'center', ml: 0.5, flexShrink: 0 }}>
+        {onSort && (
+          <IconButton
+            size="small"
+            onClick={handlers.handleSortClick}
+            aria-label={`Sort by ${columnName}`}
+            title={isSorted ? (isSortedDescending ? 'Sorted descending' : 'Sorted ascending') : 'Sort'}
+            color={isSorted ? 'primary' : 'default'}
+            sx={{ p: 0.25 }}
+          >
+            {isSorted ? (
+              isSortedDescending ? (
+                <ArrowDownwardIcon sx={{ fontSize: 16 }} />
+              ) : (
+                <ArrowUpwardIcon sx={{ fontSize: 16 }} />
+              )
+            ) : (
+              <SwapVertIcon sx={{ fontSize: 16 }} />
+            )}
+          </IconButton>
+        )}
+
+        {filterType !== 'none' && (
+          <IconButton
+            size="small"
+            onClick={handlers.handleFilterIconClick}
+            aria-label={`Filter ${columnName}`}
+            title={`Filter ${columnName}`}
+            color={hasActiveFilter || isFilterOpen ? 'primary' : 'default'}
+            sx={{ p: 0.25, position: 'relative' }}
+          >
+            <FilterListIcon sx={{ fontSize: 16 }} />
+            {hasActiveFilter && (
+              <Box
+                sx={{
+                  position: 'absolute',
+                  top: 2,
+                  right: 2,
+                  width: 6,
+                  height: 6,
+                  borderRadius: '50%',
+                  bgcolor: 'primary.main',
+                }}
+              />
+            )}
+          </IconButton>
+        )}
+      </Box>
+
+      <Popover
+        open={isFilterOpen && filterType !== 'none'}
+        onClose={() => setFilterOpen(false)}
+        anchorReference="anchorPosition"
+        anchorPosition={popoverPosition ?? { top: 0, left: 0 }}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'left' }}
+        transformOrigin={{ vertical: 'top', horizontal: 'left' }}
+        slotProps={{
+          paper: {
+            sx: { mt: 0.5, overflow: 'visible' },
+            onClick: (e: React.MouseEvent) => e.stopPropagation(),
+          },
+        }}
+      >
+        <Box sx={{ borderBottom: 1, borderColor: 'divider', px: 1.5, py: 1 }}>
+          <Typography variant="subtitle2">Filter: {columnName}</Typography>
+        </Box>
+        {renderPopoverContent()}
+      </Popover>
+    </Box>
+  );
+});
+
+ColumnHeaderFilter.displayName = 'ColumnHeaderFilter';

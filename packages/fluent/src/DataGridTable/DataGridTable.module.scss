@@ -1,0 +1,602 @@
+.tableScrollContent {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  min-width: 0;
+  /* Match wrapper so any gap to the right is not transparent (no purple stripe showing through) */
+  background-color: var(--colorNeutralBackground1, #ffffff);
+}
+
+.tableWidthAnchor {
+  /* When table fits (data-auto-fit): fill 100% so last column gets space. When overflow: size to content for scroll. */
+  width: max-content;
+  min-width: max(100%, var(--data-table-total-min-width, 0px));
+  background-color: var(--colorNeutralBackground1, #ffffff);
+}
+
+/* When table fits in container: fill full width so columns (including Tags) use the space, no dead zone on the right */
+.tableWrapper[data-auto-fit='true'] .tableWidthAnchor {
+  width: 100%;
+}
+
+/* Always use full container width (matches pagination); columns fill the space */
+.tableWrapper {
+  /* Default: no horizontal scroll unless we explicitly allow overflow (wide tables). */
+  overflow-x: hidden;
+  overflow-y: visible;
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+  margin-bottom: 15px;
+  border-radius: var(--borderRadiusMedium, 4px);
+  box-sizing: border-box;
+  /* Border is applied to the grid itself so we don't draw an empty bordered area
+     when the grid content is narrower than the container. */
+  border: none;
+  -webkit-overflow-scrolling: touch;
+
+  /* Wide tables: allow horizontal scroll */
+  &[data-overflow-x='true'] {
+    overflow-x: auto;
+  }
+
+  /* Empty state: no horizontal scroll – can't scroll right into white space */
+  &[data-empty='true'] {
+    overflow-x: hidden;
+  }
+
+  /* Scoped by data-column-count so our overrides apply; variable is set on this wrapper */
+  &[data-column-count] :global {
+    /* Let the grid/table size to its content.
+       This avoids "last column becomes a giant spacer" when the container is wider than the columns,
+       and keeps header actions (sort/filter) from drifting all the way to the far right.
+       The wrapper still stays width:100% so pagination aligns. */
+    .fui-DataGrid {
+      /* Width behavior is controlled by a CSS var from the React wrapper. */
+      width: var(--data-table-width, fit-content) !important;
+      max-width: 100% !important;
+      min-width: var(--data-table-min-width, max-content) !important;
+      box-sizing: border-box !important;
+
+      /* Visual container border belongs to the grid (not the full-width wrapper). */
+      border: 1px solid var(--colorNeutralStroke2, #e0e0e0) !important;
+      border-radius: var(--borderRadiusMedium, 4px) !important;
+      overflow: hidden;
+    }
+
+    /* Use auto layout so Fluent sizing/resize works naturally. */
+    .fui-DataGrid .fui-Table {
+      width: var(--data-table-width, fit-content) !important;
+      max-width: 100% !important;
+      min-width: var(--data-table-min-width, max-content) !important;
+      table-layout: auto !important;
+      box-sizing: border-box !important;
+      border: none !important;
+      outline: none !important;
+    }
+
+    /* Rows span full table width */
+    .fui-DataGrid .fui-TableRow,
+    .fui-DataGrid .fui-DataGridRow {
+      width: 100% !important;
+      min-width: 100% !important;
+    }
+
+    .fui-DataGridHeader {
+      background-color: var(--colorSubtleBackgroundSelected, #f3f2f1);
+    }
+
+    /* Let Fluent's column sizing system own widths (resizableColumns + columnSizingOptions).
+       We only enforce a min-width + sane box sizing. */
+    .fui-DataGridHeaderCell,
+    .fui-DataGridCell {
+      /* Do NOT use !important here: Fluent sets inline width/min/max during resize. */
+      min-width: 80px;
+      box-sizing: border-box !important;
+    }
+
+    .fui-DataGridHeaderCell {
+      min-width: var(--data-table-cell-min-width, 80px);
+      white-space: nowrap !important;
+      position: relative;
+      background-color: var(--colorSubtleBackgroundSelected, #f3f2f1);
+      font-size: 14px;
+      border-right: 1px solid var(--colorNeutralStroke1, #c4c4c4);
+    }
+
+    /* No extra right border on last column – wrapper provides right edge (row may have trailing <i> so use last-of-type) */
+    .fui-DataGridHeader .fui-DataGridRow .fui-DataGridHeaderCell:last-of-type,
+    .fui-DataGridBody .fui-DataGridRow .fui-DataGridCell:last-of-type {
+      border-right: none !important;
+    }
+
+    .fui-DataGridCell {
+      min-width: var(--data-table-cell-min-width, 80px);
+      overflow: hidden !important;
+      text-overflow: ellipsis !important;
+      white-space: nowrap !important;
+      font-size: 12px;
+      border-right: 1px solid var(--colorNeutralStroke1, #c4c4c4);
+
+      /* Prevent long unbroken content from forcing intrinsic widths / overlap */
+      > * {
+        min-width: 0;
+      }
+
+      .fui-TableCellLayout {
+        font-size: 12px;
+      }
+    }
+
+    /* Resize handle: contained so focus ring doesn't create a purple stripe to the right */
+    .fui-DataGridHeaderCell__aside {
+      display: flex !important;
+      cursor: col-resize !important;
+      position: absolute !important;
+      right: 0 !important;
+      top: 0 !important;
+      bottom: 0 !important;
+      width: 16px !important;
+      z-index: 1 !important;
+      outline: none !important;
+      border-radius: 0 !important;
+    }
+
+    /* Fix: Fluent renders a resize handle on the last header cell.
+       The handle has negative horizontal margins (hit target), which bleeds past the table edge
+       and makes the last header look like it has extra space vs the body cells.
+       Hide the resize affordance on the last column header. */
+    .fui-DataGridHeader .fui-DataGridRow .fui-DataGridHeaderCell:last-of-type {
+      .fui-DataGridHeaderCell__aside,
+      .fui-TableResizeHandle {
+        display: none !important;
+      }
+    }
+
+    /* No extra bottom border: last row (row + cells) – wrapper provides bottom edge so no double line */
+    .fui-DataGridBody .fui-DataGridRow:last-child {
+      border-bottom: none !important;
+    }
+    .fui-DataGridBody .fui-DataGridRow:last-child .fui-DataGridCell {
+      border-bottom: none !important;
+    }
+
+    .fui-Link {
+      color: #0f6cbd !important;
+      font-weight: 600 !important;
+      text-decoration: none !important;
+
+      &:hover {
+        text-decoration: underline !important;
+        color: #115ea3 !important;
+      }
+
+      &:active {
+        color: #0c3b5e !important;
+      }
+    }
+  }
+
+  /* When table fits: fill 100% and distribute column width evenly so last column (e.g. Tags) isn't tiny */
+  &[data-auto-fit='true'][data-column-count] :global {
+    .fui-DataGrid {
+      width: 100% !important;
+    }
+    .fui-DataGrid .fui-Table {
+      width: 100% !important;
+    }
+    /* Equal base width for all columns; last column gets remainder so it extends to the right edge (no dead strip) */
+    .fui-DataGridHeaderCell:not(:last-of-type),
+    .fui-DataGridCell:not(:last-of-type) {
+      width: calc(100% / var(--data-table-column-count, 1)) !important;
+    }
+    .fui-DataGridHeader .fui-DataGridRow .fui-DataGridHeaderCell:last-of-type,
+    .fui-DataGridBody .fui-DataGridRow .fui-DataGridCell:last-of-type {
+      min-width: calc(100% / var(--data-table-column-count, 1)) !important;
+      width: auto !important;
+    }
+  }
+
+  /* Hide resize handle on last column only when table fits (autoFitColumns); when overflow/scroll, last column can resize (Fluent docs) */
+  &[data-column-count][data-auto-fit='true'] :global(.fui-DataGridHeader .fui-DataGridRow .fui-DataGridHeaderCell:last-of-type .fui-DataGridHeaderCell__aside) {
+    display: none !important;
+  }
+}
+
+.dataGrid {
+  min-width: 0;
+}
+
+// ─────────────────────────────────────────────────
+// Row selection
+// ─────────────────────────────────────────────────
+
+.selectionHeaderCellWrapper {
+  width: 48px !important;
+  min-width: 48px !important;
+  max-width: 48px !important;
+  padding: 0 !important;
+}
+
+.selectionCellWrapper {
+  width: 48px !important;
+  min-width: 48px !important;
+  max-width: 48px !important;
+  padding: 0 !important;
+}
+
+.selectionHeaderCell {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+}
+
+.selectionCell {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+}
+
+// Selected row highlight
+.selectedRow :global {
+  .fui-DataGridCell {
+    background-color: var(--colorNeutralBackground1Selected, #e6f0fb) !important;
+  }
+}
+
+// Row hover in selectable grids
+.selectableGrid :global {
+  .fui-DataGridBody .fui-DataGridRow:hover .fui-DataGridCell {
+    background-color: var(--colorSubtleBackgroundHover, #f5f5f5);
+    cursor: pointer;
+  }
+
+  .fui-DataGridBody .fui-DataGridRow:hover.selectedRow .fui-DataGridCell {
+    background-color: var(--colorNeutralBackground1Hover, #dae8f8) !important;
+  }
+}
+
+// Selectable row cursor
+.selectableGrid :global(.fui-DataGridBody .fui-DataGridRow) {
+  cursor: pointer;
+}
+
+// ─────────────────────────────────────────────────
+// Active cell / keyboard navigation
+// ─────────────────────────────────────────────────
+
+.cellContent {
+  width: 100%;
+  min-height: 100%;
+  display: flex;
+  align-items: center;
+  user-select: none;
+}
+
+.activeCellContent {
+  outline: 2px solid var(--colorBrandStroke1, #0078d4) !important;
+  outline-offset: -2px;
+  border-radius: 2px;
+  z-index: 1;
+  position: relative;
+}
+
+// Cell range selection (spreadsheet-style multi-cell highlight) — clearly visible like Excel
+.cellInRange {
+  background-color: var(--colorNeutralBackground1Selected, #cce4f7) !important;
+  position: relative;
+  box-shadow: inset 0 0 0 1px var(--colorBrandStroke1, #0078d4);
+}
+
+// Cut range (marching ants) — dashed outline when cells are cut
+.cellCut {
+  outline: 2px dashed var(--colorBrandStroke1, #0078d4);
+  outline-offset: -2px;
+  background-color: var(--colorNeutralBackground1Hover, rgba(0, 0, 0, 0.04)) !important;
+  animation: cellCutDash 0.6s linear infinite;
+}
+
+@keyframes cellCutDash {
+  0% { outline-offset: -2px; }
+  50% { outline-offset: -3px; }
+  100% { outline-offset: -2px; }
+}
+
+// Fill handle (drag from selection corner to fill range)
+.fillHandle {
+  position: absolute;
+  right: 2px;
+  bottom: 2px;
+  width: 8px;
+  height: 8px;
+  background: var(--colorBrandStroke1, #0078d4);
+  border-radius: 1px;
+  cursor: crosshair;
+  pointer-events: auto;
+  z-index: 3;
+}
+
+/* Freeze panes: sticky header when freezeRows >= 1 */
+.stickyHeader {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  background-color: var(--colorSubtleBackgroundSelected, #f3f2f1);
+}
+
+/* Freeze panes: sticky first column(s) when freezeCols >= 1; only first column gets left: 0 (multi-column needs width measurement) */
+.freezeColFirst {
+  position: sticky;
+  left: 0;
+  z-index: 2;
+  background-color: var(--colorNeutralBackground1, #ffffff);
+}
+
+:global(.fui-DataGridHeader) .freezeColFirst {
+  background-color: var(--colorSubtleBackgroundSelected, #f3f2f1);
+}
+
+.activeRow :global {
+  // Subtle row highlight for the active row
+  .fui-DataGridCell:not(:has(.activeCellContent)) {
+    background-color: var(--colorSubtleBackgroundSelected, #f3f2f1);
+  }
+}
+
+// ─────────────────────────────────────────────────
+// Pinned columns
+// ─────────────────────────────────────────────────
+
+.pinnedCell {
+  position: sticky;
+  z-index: 2;
+  background-color: inherit;
+}
+
+.pinnedLeft {
+  left: 0;
+  // Shadow to indicate pinned column
+  &::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    right: -4px;
+    bottom: 0;
+    width: 4px;
+    background: linear-gradient(to right, rgba(0, 0, 0, 0.08), transparent);
+    pointer-events: none;
+  }
+}
+
+.pinnedRight {
+  right: 0;
+  &::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -4px;
+    bottom: 0;
+    width: 4px;
+    background: linear-gradient(to left, rgba(0, 0, 0, 0.08), transparent);
+    pointer-events: none;
+  }
+}
+
+// ─────────────────────────────────────────────────
+// Status bar
+// ─────────────────────────────────────────────────
+
+.statusBar {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+  padding: 6px 12px;
+  font-size: 12px;
+  color: var(--colorNeutralForeground2, #616161);
+  background-color: var(--colorSubtleBackgroundSelected, #f3f2f1);
+  border: 1px solid var(--colorNeutralStroke2, #e0e0e0);
+  border-top: none;
+  border-radius: 0 0 var(--borderRadiusMedium, 4px) var(--borderRadiusMedium, 4px);
+  min-height: 28px;
+  user-select: none;
+}
+
+.statusBarItem {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+
+  &:not(:last-child)::after {
+    content: '';
+    display: inline-block;
+    width: 1px;
+    height: 14px;
+    background-color: var(--colorNeutralStroke1, #c4c4c4);
+    margin-left: 12px;
+  }
+}
+
+.statusBarLabel {
+  color: var(--colorNeutralForeground3, #707070);
+  font-weight: 400;
+}
+
+.statusBarValue {
+  color: var(--colorNeutralForeground1, #242424);
+  font-weight: 600;
+}
+
+// ─────────────────────────────────────────────────
+// Context menu (Copy, Cut, Paste, Select all)
+// ─────────────────────────────────────────────────
+
+.contextMenu {
+  position: fixed;
+  z-index: 10000;
+  min-width: 160px;
+  padding: 4px 0;
+  background: var(--colorNeutralBackground1, #fff);
+  border: 1px solid var(--colorNeutralStroke1, #e0e0e0);
+  border-radius: var(--borderRadiusMedium, 4px);
+  box-shadow: var(--shadow16, 0 4px 16px rgba(0, 0, 0, 0.12));
+  outline: none;
+}
+
+.contextMenuItem {
+  display: block;
+  width: 100%;
+  padding: 6px 12px;
+  border: none;
+  background: none;
+  font-size: 13px;
+  text-align: left;
+  cursor: pointer;
+  color: var(--colorNeutralForeground1, #242424);
+
+  &:hover:not(:disabled) {
+    background-color: var(--colorSubtleBackgroundHover, #f5f5f5);
+  }
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+}
+
+.contextMenuDivider {
+  height: 1px;
+  margin: 4px 0;
+  background-color: var(--colorNeutralStroke2, #e0e0e0);
+}
+
+// ─────────────────────────────────────────────────
+// Loading overlay (unchanged)
+// ─────────────────────────────────────────────────
+
+.loadingOverlayContainer {
+  position: relative;
+}
+
+.loadingOverlay {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255, 255, 255, 0.7);
+  backdrop-filter: blur(1px);
+  pointer-events: all;
+  border-radius: var(--borderRadiusMedium, 4px);
+}
+
+.loadingOverlayContent {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 16px 24px;
+  background: var(--colorNeutralBackground1, #ffffff);
+  border: 1px solid var(--colorNeutralStroke1, #c4c4c4);
+  border-radius: var(--borderRadiusMedium, 4px);
+  box-shadow: var(--shadow4, 0 2px 4px rgba(0, 0, 0, 0.14));
+}
+
+.loadingOverlayText {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--colorNeutralForeground2, #616161);
+}
+
+.loadingDimmed {
+  opacity: 0.6;
+  pointer-events: none;
+  transition: opacity 0.15s ease;
+}
+
+// ─────────────────────────────────────────────────
+// Empty state (unchanged)
+// ─────────────────────────────────────────────────
+
+.emptyStateInGrid {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 20px 16px;
+  min-height: 88px;
+  min-width: 0;
+  width: 100%;
+  box-sizing: border-box;
+  border-top: 1px solid var(--colorNeutralStroke2, #e0e0e0);
+  background-color: var(--colorNeutralBackground2, #fafafa);
+}
+
+.emptyStateInGridMessageSticky {
+  position: sticky;
+  left: 50%;
+  transform: translateX(-50%);
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+}
+
+.emptyStateInGridIcon {
+  font-size: 24px;
+  margin-bottom: 8px;
+  opacity: 0.6;
+}
+
+.emptyStateInGridTitle {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--colorNeutralForeground1, #242424);
+  margin-bottom: 4px;
+}
+
+.emptyStateInGridMessage {
+  font-size: 13px;
+  color: var(--colorNeutralForeground2, #616161);
+  max-width: 100%;
+  line-height: 1.5;
+}
+
+.emptyStateInGridLink {
+  background: none;
+  border: none;
+  color: var(--colorBrandForeground1, #0f6cbd);
+  text-decoration: underline;
+  cursor: pointer;
+  padding: 0;
+  font-size: inherit;
+  font-family: inherit;
+
+  &:hover {
+    color: var(--colorBrandForeground1Hover, #115ea3);
+  }
+}
+
+/* Empty state: hide body, keep header and empty message */
+.tableWrapper[data-empty='true'] :global(.fui-DataGrid) tbody {
+  display: none;
+}
+
+/* Empty state: no extra bottom border (header row is last row, remove its border-bottom) */
+.tableWrapper[data-empty='true'] :global(.fui-DataGridHeader .fui-DataGridRow) {
+  border-bottom: none !important;
+}
+
+/* When status bar is present, remove bottom border-radius from the grid */
+.tableWrapper:has(.statusBar) :global(.fui-DataGrid) {
+  border-bottom-left-radius: 0 !important;
+  border-bottom-right-radius: 0 !important;
+}
