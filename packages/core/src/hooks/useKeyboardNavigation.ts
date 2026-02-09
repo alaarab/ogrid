@@ -1,6 +1,7 @@
 import { useCallback } from 'react';
 import { normalizeSelectionRange } from '../types';
 import { getCellValue } from '../utils';
+import { parseValue } from '../utils/valueParsers';
 import type {
   RowId,
   IActiveCell,
@@ -22,7 +23,7 @@ export interface UseKeyboardNavigationParams<T> {
   setActiveCell: (cell: IActiveCell | null) => void;
   selectionRange: ISelectionRange | null;
   setSelectionRange: (range: ISelectionRange | null) => void;
-  editable: boolean | undefined;
+  editable?: boolean;
   onCellValueChanged: ((event: ICellValueChangedEvent<T>) => void) | undefined;
   getRowId: (item: T) => RowId;
   editingCell: EditingCell | null;
@@ -42,6 +43,7 @@ export interface UseKeyboardNavigationParams<T> {
   wrapperRef: React.RefObject<HTMLElement | null>;
   onUndo?: () => void;
   onRedo?: () => void;
+  clearClipboardRanges?: () => void;
 }
 
 export interface UseKeyboardNavigationResult {
@@ -76,6 +78,7 @@ export function useKeyboardNavigation<T>(
     wrapperRef,
     onUndo,
     onRedo,
+    clearClipboardRanges,
   } = params;
 
   const maxRowIndex = items.length - 1;
@@ -300,6 +303,7 @@ export function useKeyboardNavigation<T>(
           if (editingCell != null) {
             setEditingCell(null);
           } else {
+            clearClipboardRanges?.();
             setActiveCell(null);
             setSelectionRange(null);
           }
@@ -357,6 +361,7 @@ export function useKeyboardNavigation<T>(
         case 'Delete':
         case 'Backspace': {
           if (editingCell != null) break;
+          if (editable === false) break;
           if (onCellValueChanged == null) break;
           const range =
             selectionRange ??
@@ -376,13 +381,19 @@ export function useKeyboardNavigation<T>(
               if (r >= items.length || c >= visibleCols.length) continue;
               const item = items[r];
               const col = visibleCols[c];
+              const colEditable =
+                col.editable === true ||
+                (typeof col.editable === 'function' && col.editable(item));
+              if (!colEditable) continue;
               const oldValue = getCellValue(item, col);
+              const result = parseValue('', oldValue, item, col);
+              if (!result.valid) continue;
               onCellValueChanged({
                 item,
                 columnId: col.columnId,
                 field: col.columnId,
                 oldValue,
-                newValue: '',
+                newValue: result.value,
                 rowIndex: r,
               } as ICellValueChangedEvent<T>);
             }
@@ -440,6 +451,7 @@ export function useKeyboardNavigation<T>(
       wrapperRef,
       onUndo,
       onRedo,
+      clearClipboardRanges,
     ]
   );
 

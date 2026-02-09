@@ -9,6 +9,7 @@ export type {
   ICellValueChangedEvent,
   ICellEditorProps,
   CellEditorParams,
+  IValueParserParams,
   UserLike,
   UserLikeInput,
   FilterValue,
@@ -89,6 +90,8 @@ export { StatusBar } from './components/StatusBar';
 export type { StatusBarProps, StatusBarClassNames } from './components/StatusBar';
 export { GridContextMenu } from './components/GridContextMenu';
 export type { GridContextMenuProps, GridContextMenuClassNames } from './components/GridContextMenu';
+export { MarchingAntsOverlay } from './components/MarchingAntsOverlay';
+export type { MarchingAntsOverlayProps } from './components/MarchingAntsOverlay';
 
 // Utilities
 export {
@@ -107,11 +110,18 @@ export {
   getDataGridStatusBarConfig,
   GRID_CONTEXT_MENU_ITEMS,
   getContextMenuHandlers,
+  formatShortcut,
   getPaginationViewModel,
   PAGE_SIZE_OPTIONS,
   MAX_PAGE_BUTTONS,
   getHeaderFilterConfig,
   getCellRenderDescriptor,
+  parseValue,
+  numberParser,
+  currencyParser,
+  dateParser,
+  emailParser,
+  booleanParser,
 } from './utils';
 export type {
   CsvColumn,
@@ -125,4 +135,5 @@ export type {
   CellRenderDescriptorInput,
   CellRenderDescriptor,
   CellRenderMode,
+  ParseValueResult,
 } from './utils';

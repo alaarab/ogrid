@@ -1,5 +1,6 @@
 import { useCallback, useRef, useState } from 'react';
 import { getCellValue } from '../utils';
+import { parseValue } from '../utils/valueParsers';
 import { normalizeSelectionRange } from '../types';
 import type { ISelectionRange, IActiveCell, ICellValueChangedEvent, IColumnDef } from '../types';
 
@@ -9,6 +10,7 @@ export interface UseClipboardParams<T> {
   colOffset: number;
   selectionRange: ISelectionRange | null;
   activeCell: IActiveCell | null;
+  editable?: boolean;
   onCellValueChanged: ((event: ICellValueChangedEvent<T>) => void) | undefined;
 }
 
@@ -19,6 +21,10 @@ export interface UseClipboardResult {
   cutRangeRef: React.MutableRefObject<ISelectionRange | null>;
   /** Current cut range for UI (marching ants). Null when no cut or after paste. */
   cutRange: ISelectionRange | null;
+  /** Current copy range for UI (marching ants). Null when no copy or after paste/cut. */
+  copyRange: ISelectionRange | null;
+  /** Clear both copy and cut ranges (dismisses marching ants). Called on Escape. */
+  clearClipboardRanges: () => void;
 }
 
 export function useClipboard<T>(params: UseClipboardParams<T>): UseClipboardResult {
@@ -28,11 +34,13 @@ export function useClipboard<T>(params: UseClipboardParams<T>): UseClipboardResu
     colOffset,
     selectionRange,
     activeCell,
+    editable,
     onCellValueChanged,
   } = params;
 
   const cutRangeRef = useRef<ISelectionRange | null>(null);
   const [cutRange, setCutRange] = useState<ISelectionRange | null>(null);
+  const [copyRange, setCopyRange] = useState<ISelectionRange | null>(null);
   /** In-page clipboard fallback when system clipboard is unavailable. */
   const internalClipboardRef = useRef<string | null>(null);
 
@@ -56,7 +64,8 @@ export function useClipboard<T>(params: UseClipboardParams<T>): UseClipboardResu
         if (r >= items.length || c >= visibleCols.length) break;
         const item = items[r];
         const col = visibleCols[c];
-        const val = getCellValue(item, col);
+        const raw = getCellValue(item, col);
+        const val = col.valueFormatter ? col.valueFormatter(raw, item) : raw;
         cells.push(
           val != null && val !== '' ? String(val).replace(/\t/g, ' ').replace(/\n/g, ' ') : ''
         );
@@ -65,10 +74,12 @@ export function useClipboard<T>(params: UseClipboardParams<T>): UseClipboardResu
     }
     const tsv = rows.join('\r\n');
     internalClipboardRef.current = tsv;
+    setCopyRange(norm);
     void navigator.clipboard.writeText(tsv).catch(() => {});
   }, [selectionRange, activeCell, colOffset, items, visibleCols]);
 
   const handleCut = useCallback(() => {
+    if (editable === false) return;
     const range =
       selectionRange ??
       (activeCell != null
@@ -83,10 +94,14 @@ export function useClipboard<T>(params: UseClipboardParams<T>): UseClipboardResu
     const norm = normalizeSelectionRange(range);
     cutRangeRef.current = norm;
     setCutRange(norm);
+    setCopyRange(null);
     handleCopy();
-  }, [selectionRange, activeCell, colOffset, handleCopy, onCellValueChanged]);
+    // handleCopy sets copyRange — override it back since this is a cut
+    setCopyRange(null);
+  }, [selectionRange, activeCell, colOffset, handleCopy, editable, onCellValueChanged]);
 
   const handlePaste = useCallback(async () => {
+    if (editable === false) return;
     if (onCellValueChanged == null) return;
     let text: string;
     try {
@@ -119,14 +134,20 @@ export function useClipboard<T>(params: UseClipboardParams<T>): UseClipboardResu
         if (targetRow >= items.length || targetCol >= visibleCols.length) continue;
         const item = items[targetRow];
         const col = visibleCols[targetCol];
-        const newValue = cells[c] ?? '';
+        const colEditable =
+          col.editable === true ||
+          (typeof col.editable === 'function' && col.editable(item));
+        if (!colEditable) continue;
+        const rawValue = cells[c] ?? '';
         const oldValue = getCellValue(item, col);
+        const result = parseValue(rawValue, oldValue, item, col);
+        if (!result.valid) continue;
         onCellValueChanged({
           item,
           columnId: col.columnId,
           field: col.columnId,
           oldValue,
-          newValue,
+          newValue: result.value,
           rowIndex: targetRow,
         } as ICellValueChangedEvent<T>);
       }
@@ -138,13 +159,19 @@ export function useClipboard<T>(params: UseClipboardParams<T>): UseClipboardResu
           if (r >= items.length || c >= visibleCols.length) continue;
           const item = items[r];
           const col = visibleCols[c];
+          const colEditable =
+            col.editable === true ||
+            (typeof col.editable === 'function' && col.editable(item));
+          if (!colEditable) continue;
           const oldValue = getCellValue(item, col);
+          const result = parseValue('', oldValue, item, col);
+          if (!result.valid) continue;
           onCellValueChanged({
             item,
             columnId: col.columnId,
             field: col.columnId,
             oldValue,
-            newValue: '',
+            newValue: result.value,
             rowIndex: r,
           } as ICellValueChangedEvent<T>);
         }
@@ -152,7 +179,14 @@ export function useClipboard<T>(params: UseClipboardParams<T>): UseClipboardResu
       cutRangeRef.current = null;
       setCutRange(null);
     }
-  }, [selectionRange, activeCell, colOffset, items, visibleCols, onCellValueChanged]);
+    setCopyRange(null);
+  }, [selectionRange, activeCell, colOffset, items, visibleCols, editable, onCellValueChanged]);
 
-  return { handleCopy, handleCut, handlePaste, cutRangeRef, cutRange };
+  const clearClipboardRanges = useCallback(() => {
+    setCopyRange(null);
+    setCutRange(null);
+    cutRangeRef.current = null;
+  }, []);
+
+  return { handleCopy, handleCut, handlePaste, cutRangeRef, cutRange, copyRange, clearClipboardRanges };
 }
