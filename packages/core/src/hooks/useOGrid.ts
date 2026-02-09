@@ -81,7 +81,7 @@ export function useOGrid<T>(
     entityLabelPlural = 'items',
     className,
     title,
-    layoutMode = 'content',
+    layoutMode = 'fill',
     editable,
     cellSelection,
     onCellValueChanged,
