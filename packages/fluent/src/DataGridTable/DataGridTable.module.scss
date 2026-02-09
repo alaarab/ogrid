@@ -11,7 +11,8 @@
   position: relative;
   /* When table fits (data-auto-fit): fill 100% so last column gets space. When overflow: size to content for scroll. */
   width: max-content;
-  min-width: max(100%, var(--data-table-total-min-width, 0px));
+  /* No min-width: 100% — anchor sizes to grid content so status bar aligns with the DataGrid border.
+     .tableScrollContent provides the full-width background color so no gap is visible. */
   background-color: var(--colorNeutralBackground1, #ffffff);
 }
 
@@ -28,7 +29,6 @@
   width: 100%;
   min-width: 0;
   max-width: 100%;
-  margin-bottom: 15px;
   border-radius: var(--borderRadiusMedium, 4px);
   box-sizing: border-box;
   /* Border is applied to the grid itself so we don't draw an empty bordered area

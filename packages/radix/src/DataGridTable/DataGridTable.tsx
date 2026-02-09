@@ -276,6 +276,7 @@ function DataGridTableInner<T>(props: IOGridDataGridProps<T>): React.ReactElemen
                       const isPinnedLeft = col.pinned === 'left';
                       const isPinnedRight = col.pinned === 'right';
                       const columnWidth = getColumnWidth(col);
+                      const hasExplicitWidth = !!(columnSizingOverrides[col.columnId] || col.idealWidth != null || col.defaultWidth != null);
                       return (
                         <th
                           key={col.columnId}
@@ -289,8 +290,8 @@ function DataGridTableInner<T>(props: IOGridDataGridProps<T>): React.ReactElemen
                           ].filter(Boolean).join(' ')}
                           style={{
                             minWidth: col.minWidth ?? 80,
-                            width: columnWidth,
-                            maxWidth: columnWidth,
+                            width: hasExplicitWidth ? columnWidth : undefined,
+                            maxWidth: hasExplicitWidth ? columnWidth : undefined,
                             position: 'relative',
                           }}
                         >
@@ -346,6 +347,7 @@ function DataGridTableInner<T>(props: IOGridDataGridProps<T>): React.ReactElemen
                             const isPinnedLeft = col.pinned === 'left';
                             const isPinnedRight = col.pinned === 'right';
                             const columnWidth = getColumnWidth(col);
+                            const hasExplicitWidth = !!(columnSizingOverrides[col.columnId] || col.idealWidth != null || col.defaultWidth != null);
                             return (
                               <td
                                 key={col.columnId}
@@ -357,8 +359,8 @@ function DataGridTableInner<T>(props: IOGridDataGridProps<T>): React.ReactElemen
                                 ].filter(Boolean).join(' ')}
                                 style={{
                                   minWidth: col.minWidth ?? 80,
-                                  width: columnWidth,
-                                  maxWidth: columnWidth,
+                                  width: hasExplicitWidth ? columnWidth : undefined,
+                                  maxWidth: hasExplicitWidth ? columnWidth : undefined,
                                 }}
                               >
                                 {renderCellContent(item, col, rowIndex, colIdx)}
