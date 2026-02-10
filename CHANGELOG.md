@@ -2,6 +2,51 @@
 
 All notable changes to OGrid will be documented in this file.
 
+## [1.5.0] – 2026-02-09
+
+### Added
+
+- **Side Bar** — Toggle-able side panel with `sideBar` prop (`boolean | ISideBarDef`). Includes two panels:
+  - **Columns Panel** — Show/hide column visibility with checkboxes, Select All / Clear All buttons
+  - **Filters Panel** — Inline filter controls (text, multiSelect, date range, people) per filterable column
+- **Column State Persistence API** — Save and restore complete grid state with `getColumnState()` and `applyColumnState(state)` on `IOGridApi`. State includes:
+  - `columnOrder`, `columnWidths`, `filters`, `pinnedColumns`, `visibleColumns`, `sort`
+  - New callbacks: `onColumnResized(columnId, width)`, `onColumnPinned(columnId, pinned)`
+  - `initialColumnWidths` and `pinnedColumns` props on `IOGridDataGridProps` for declarative initialization
+- **Multi-Row Grouped Column Headers** — `buildHeaderRows()` utility handles arbitrary nesting depth. `IColumnGroupDef` with `headerName` and `children`. All three UI packages render multi-row `<thead>` with `.groupHeaderCell` styling.
+- **Built-in Column Types** — Extended `IColumnMeta.type` to `'text' | 'numeric' | 'date' | 'boolean'`:
+  - **Date type**: Auto-formats via `toLocaleDateString()`, date range filter (from/to), chronological sorting, native `<input type="date">` editor
+  - **Boolean type**: Displays `True`/`False`, center-aligned, defaults to checkbox editor
+- **Rich Select Editor** — New `cellEditor: 'richSelect'` with searchable dropdown. Headless `useRichSelectState` hook (search, filter, keyboard nav). All three UI packages implement the dropdown with inline search.
+- **Status Bar Aggregation** — `computeAggregations()` utility calculates `sum`, `avg`, `min`, `max`, `count` for numeric selected cells. Rendered in StatusBar when selection range exists.
+- **Ctrl+Arrow Excel-Style Navigation** — Ctrl+Up/Down/Left/Right jumps to data region edges (Excel behavior):
+  - Non-empty + non-empty neighbor → scan to last non-empty before gap/edge
+  - Empty or empty neighbor → skip empties to next non-empty or edge
+  - Ctrl+Shift+Arrow extends selection to the same target
+- **Unified Grid Layout** — `OGridLayout` wraps everything in a single bordered container:
+  - **Toolbar strip**: `toolbar` (custom ReactNode, left) + `toolbarEnd` (column chooser, right)
+  - **Footer strip**: Pagination controls inside bordered container
+  - **Column chooser placement**: `columnChooser` prop (`boolean | 'toolbar' | 'sidebar'`) controls where column chooser renders
+  - `title` prop deprecated (renders above container for backward compat)
+- **Undo/Redo Context Menu** — Context menu items for Undo/Redo with keyboard shortcut labels (Ctrl+Z/Y, ⌘ on Mac). `canUndo`/`canRedo` boolean props on `IOGridProps` and `IOGridDataGridProps`.
+- **521 tests** across all packages (Core: 245, Radix: 92, Fluent: 92, Material: 92).
+
+### Changed
+
+- **Cell Selection Colors** — Selection colors changed from blue (#0066cc) to Excel green (#217346) via `--ogrid-selection` CSS variable
+- **Drag Selection Performance** — Eliminated 60-120Hz re-renders during drag selection. During drag, bypass React state entirely using refs + `requestAnimationFrame` + DOM attribute toggling (`data-drag-range`). React state only committed on mouseup (single re-render). Same optimization applied to fill handle.
+- **Context Menu Behavior** — Context menu now only appears on cell right-click (not wrapper/headers/empty space). `useContextMenu.handleCellContextMenu` now calls `preventDefault()` on the event.
+- **useOGrid Layout Mode** — Default `layoutMode` changed from `'content'` to `'fill'` for consistency with DataGridTable
+- **Clipboard Copy** — `useClipboard.handleCopy` now uses `col.valueFormatter` before `String()` conversion, fixing `[object Object]` output for complex types like `UserLike`
+- **DataGridTable Styling** — Removed outer `border` and `border-radius` from DataGridTable components (OGridLayout provides the container border)
+
+### Fixed
+
+- **Cell Click Target** — Padding moved from `<td>` to `.cellContent` div so entire cell is clickable
+- **Batch Visibility Bug** — Select All / Clear All in side bar now use `onSetVisibleColumns(Set)` instead of per-column `onVisibilityChange` to avoid stale closure batching bugs
+
+---
+
 ## [1.2.0] – 2026-02-08
 
 ### Added
