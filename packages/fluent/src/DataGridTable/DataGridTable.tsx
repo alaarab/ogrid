@@ -56,6 +56,94 @@ const EDITABLE_NUMERIC_STYLE: React.CSSProperties = { cursor: 'cell', justifyCon
 const EDITABLE_BOOLEAN_STYLE: React.CSSProperties = { cursor: 'cell', justifyContent: 'center', textAlign: 'center' };
 const PREVENT_DEFAULT = (e: React.MouseEvent) => { e.preventDefault(); };
 
+// --- Memoized row component (skips re-render for rows unaffected by selection changes) ---
+
+interface GridRowProps {
+  item: unknown;
+  rowId: string | number;
+  rowIndex: number;
+  isSelected: boolean;
+  cellClassMap: Record<string, string>;
+  handleSingleRowClick: (rowId: string | number) => void;
+  // Comparator-only props (drive re-render decisions, not used in render body)
+  selectionRange: { startRow: number; endRow: number; startCol: number; endCol: number } | null;
+  activeCell: { rowIndex: number; columnIndex: number } | null;
+  cutRange: { startRow: number; endRow: number; startCol: number; endCol: number } | null;
+  copyRange: { startRow: number; endRow: number; startCol: number; endCol: number } | null;
+  isDragging: boolean;
+  editingRowId: string | number | null;
+}
+
+function GridRowInner(props: GridRowProps) {
+  const { item, rowId, rowIndex, isSelected, cellClassMap, handleSingleRowClick, activeCell } = props;
+
+  const rowClassName = [
+    isSelected ? styles.selectedRow : '',
+    activeCell !== null && rowIndex === activeCell.rowIndex ? styles.activeRow : '',
+  ].filter(Boolean).join(' ') || undefined;
+
+  return (
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    <DataGridRow<any>
+      className={rowClassName}
+      onClick={() => handleSingleRowClick(rowId)}
+    >
+      {({ renderCell, columnId }: { renderCell: (item: unknown) => React.ReactNode; columnId: string | number }) => (
+        <DataGridCell className={cellClassMap[String(columnId)] || undefined}>
+          {renderCell(item)}
+        </DataGridCell>
+      )}
+    </DataGridRow>
+  );
+}
+
+function areGridRowPropsEqual(prev: GridRowProps, next: GridRowProps): boolean {
+  // Data / structure changes — always re-render
+  if (prev.item !== next.item) return false;
+  if (prev.isSelected !== next.isSelected) return false;
+  if (prev.cellClassMap !== next.cellClassMap) return false;
+
+  const ri = prev.rowIndex;
+
+  // Editing cell in this row?
+  if (prev.editingRowId !== next.editingRowId) {
+    if (prev.editingRowId === prev.rowId || next.editingRowId === next.rowId) return false;
+  }
+
+  // Active cell in this row?
+  const prevActive = prev.activeCell?.rowIndex === ri;
+  const nextActive = next.activeCell?.rowIndex === ri;
+  if (prevActive !== nextActive) return false;
+  if (prevActive && nextActive && prev.activeCell!.columnIndex !== next.activeCell!.columnIndex) return false;
+
+  // Selection range touches this row?
+  const prevInSel = isRowInRange(prev.selectionRange, ri);
+  const nextInSel = isRowInRange(next.selectionRange, ri);
+  if (prevInSel !== nextInSel) return false;
+  if (prevInSel && nextInSel) {
+    if (prev.selectionRange!.startCol !== next.selectionRange!.startCol ||
+        prev.selectionRange!.endCol !== next.selectionRange!.endCol) return false;
+  }
+
+  // Fill handle (selection end row) + isDragging
+  const prevIsEnd = prev.selectionRange?.endRow === ri;
+  const nextIsEnd = next.selectionRange?.endRow === ri;
+  if (prevIsEnd !== nextIsEnd) return false;
+  if ((prevIsEnd || nextIsEnd) && prev.isDragging !== next.isDragging) return false;
+
+  // Cut/copy ranges touch this row?
+  if (prev.cutRange !== next.cutRange) {
+    if (isRowInRange(prev.cutRange, ri) || isRowInRange(next.cutRange, ri)) return false;
+  }
+  if (prev.copyRange !== next.copyRange) {
+    if (isRowInRange(prev.copyRange, ri) || isRowInRange(next.copyRange, ri)) return false;
+  }
+
+  return true;
+}
+
+const GridRow = React.memo(GridRowInner, areGridRowPropsEqual);
+
 function DataGridTableInner<T>(props: IOGridDataGridProps<T>): React.ReactElement {
   const wrapperRef = useRef<HTMLDivElement>(null);
   const tableContainerRef = useRef<HTMLDivElement>(null);
@@ -468,26 +556,22 @@ function DataGridTableInner<T>(props: IOGridDataGridProps<T>): React.ReactElemen
                 <DataGridBody<T>>
                   {({ item }) => {
                     const rowId = getRowId(item);
-                    const isSelected = selectedRowIdsRef.current.has(rowId);
-                    const ac = activeCellRef.current;
                     return (
-                      <DataGridRow<T>
+                      <GridRow
                         key={rowId}
-                        className={`${isSelected ? styles.selectedRow : ''} ${
-                          ac !== null && (rowIndexByRowId.get(rowId) ?? -1) === ac.rowIndex
-                            ? styles.activeRow
-                            : ''
-                        }`}
-                        onClick={() => handleSingleRowClick(rowId)}
-                      >
-                        {({ renderCell, columnId }) => (
-                          <DataGridCell
-                            className={cellClassMap[String(columnId)] || undefined}
-                          >
-                            {renderCell(item)}
-                          </DataGridCell>
-                        )}
-                      </DataGridRow>
+                        item={item}
+                        rowId={rowId}
+                        rowIndex={rowIndexByRowId.get(rowId) ?? -1}
+                        isSelected={selectedRowIds.has(rowId)}
+                        cellClassMap={cellClassMap}
+                        handleSingleRowClick={handleSingleRowClick}
+                        selectionRange={selectionRange}
+                        activeCell={activeCell}
+                        cutRange={cutRange}
+                        copyRange={copyRange}
+                        isDragging={isDragging}
+                        editingRowId={editingCell?.rowId ?? null}
+                      />
                     );
                   }}
                 </DataGridBody>

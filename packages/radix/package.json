@@ -1,6 +1,6 @@
 {
   "name": "@alaarab/ogrid",
-  "version": "1.8.1",
+  "version": "1.8.2",
   "description": "OGrid default (Radix) – Data grid with sorting, filtering, pagination, column chooser, and CSV export. Packed with Radix UI; no Fluent or Material required.",
   "main": "dist/esm/index.js",
   "module": "dist/esm/index.js",
@@ -41,7 +41,7 @@
     "node": ">=18"
   },
   "dependencies": {
-    "@alaarab/ogrid-core": "^1.8.1",
+    "@alaarab/ogrid-core": "^1.8.2",
     "@radix-ui/react-checkbox": "^1.1.2",
     "@radix-ui/react-popover": "^1.1.2"
   },
