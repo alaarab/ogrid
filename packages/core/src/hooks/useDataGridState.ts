@@ -2,6 +2,7 @@ import { useMemo, useCallback, useEffect, useState } from 'react';
 import type { RefObject } from 'react';
 import { flattenColumns, getDataGridStatusBarConfig } from '../utils';
 import { parseValue } from '../utils/valueParsers';
+import { computeAggregations } from '../utils/aggregationUtils';
 import type { HeaderFilterConfigInput, CellRenderDescriptorInput } from '../utils';
 import type { RowId, IOGridDataGridProps, IStatusBarProps, IColumnDef } from '../types';
 import type { ICellValueChangedEvent } from '../types';
@@ -111,10 +112,13 @@ export interface UseDataGridStateResult<T> {
   // Container & sizing
   containerWidth: number;
   minTableWidth: number;
+  desiredTableWidth: number;
   columnSizingOverrides: Record<string, { widthPx: number }>;
   setColumnSizingOverrides: React.Dispatch<
     React.SetStateAction<Record<string, { widthPx: number }>>
   >;
+  /** Callback to fire when a column resize completes. */
+  onColumnResized?: (columnId: string, width: number) => void;
 
   // View-model inputs (eliminates duplicate memos in each UI package)
   headerFilterInput: HeaderFilterConfigInput;
@@ -164,6 +168,9 @@ export function useDataGridState<T>(
     editable,
     cellSelection: cellSelectionProp,
     onCellValueChanged: onCellValueChangedProp,
+    initialColumnWidths,
+    onColumnResized,
+    pinnedColumns,
   } = props;
 
   const cellSelection = cellSelectionProp !== false;
@@ -172,7 +179,20 @@ export function useDataGridState<T>(
   const undoRedo = useUndoRedo<T>({ onCellValueChanged: onCellValueChangedProp });
   const onCellValueChanged = undoRedo.onCellValueChanged;
 
-  const flatColumns = useMemo(() => flattenColumns(columns), [columns]);
+  const flatColumnsRaw = useMemo(() => flattenColumns(columns), [columns]);
+
+  // Apply runtime pin overrides (from applyColumnState or programmatic changes)
+  const flatColumns = useMemo(() => {
+    if (!pinnedColumns || Object.keys(pinnedColumns).length === 0) return flatColumnsRaw;
+    return flatColumnsRaw.map((col) => {
+      const override = pinnedColumns[col.columnId];
+      if (override && col.pinned !== override) {
+        return { ...col, pinned: override };
+      }
+      // If col was pinned by definition but not in overrides, keep original
+      return col;
+    });
+  }, [flatColumnsRaw, pinnedColumns]);
 
   const visibleCols = useMemo(() => {
     const filtered = visibleColumns
@@ -324,6 +344,17 @@ export function useDataGridState<T>(
     return () => ro.disconnect();
   }, [wrapperRef]);
 
+  const [columnSizingOverrides, setColumnSizingOverrides] = useState<
+    Record<string, { widthPx: number }>
+  >(() => {
+    if (!initialColumnWidths) return {};
+    const result: Record<string, { widthPx: number }> = {};
+    for (const [id, width] of Object.entries(initialColumnWidths)) {
+      result[id] = { widthPx: width };
+    }
+    return result;
+  });
+
   const minTableWidth = useMemo(() => {
     const PADDING = 16;
     const checkboxW = hasCheckboxCol ? 48 : 0;
@@ -332,10 +363,6 @@ export function useDataGridState<T>(
       checkboxW
     );
   }, [visibleCols, hasCheckboxCol]);
-
-  const [columnSizingOverrides, setColumnSizingOverrides] = useState<
-    Record<string, { widthPx: number }>
-  >({});
 
   useEffect(() => {
     const colIds = new Set(flatColumns.map((c) => c.columnId));
@@ -352,14 +379,34 @@ export function useDataGridState<T>(
     });
   }, [flatColumns]);
 
+  const desiredTableWidth = useMemo(() => {
+    const PADDING = 16;
+    const checkboxW = hasCheckboxCol ? 48 : 0;
+    return visibleCols.reduce((sum, c) => {
+      const override = columnSizingOverrides[c.columnId];
+      const w = override
+        ? override.widthPx
+        : (c.idealWidth ?? c.defaultWidth ?? c.minWidth ?? 80);
+      return sum + Math.max(c.minWidth ?? 80, w) + PADDING;
+    }, checkboxW);
+  }, [visibleCols, columnSizingOverrides, hasCheckboxCol]);
+
+  const aggregation = useMemo(
+    () => computeAggregations(items, visibleCols, cellSelection ? selectionRange : null),
+    [items, visibleCols, selectionRange, cellSelection]
+  );
+
   const statusBarConfig = useMemo(
-    () =>
-      getDataGridStatusBarConfig(
+    () => {
+      const base = getDataGridStatusBarConfig(
         statusBar as boolean | IStatusBarProps | undefined,
         items.length,
         selectedRowIds.size
-      ),
-    [statusBar, items.length, selectedRowIds.size]
+      );
+      if (!base) return null;
+      return { ...base, aggregation: aggregation ?? undefined };
+    },
+    [statusBar, items.length, selectedRowIds.size, aggregation]
   );
 
   const showEmptyInGrid = items.length === 0 && !!emptyState;
@@ -380,6 +427,8 @@ export function useDataGridState<T>(
     loadingFilterOptions,
     multiSelectFilters,
     onMultiSelectFilterChange,
+    dateFilters = {},
+    onDateFilterChange,
   } = props;
 
   const headerFilterInput: HeaderFilterConfigInput = useMemo(
@@ -396,6 +445,8 @@ export function useDataGridState<T>(
       loadingFilterOptions,
       multiSelectFilters,
       onMultiSelectFilterChange,
+      dateFilters,
+      onDateFilterChange,
     }),
     [
       sortBy,
@@ -410,6 +461,8 @@ export function useDataGridState<T>(
       loadingFilterOptions,
       multiSelectFilters,
       onMultiSelectFilterChange,
+      dateFilters,
+      onDateFilterChange,
     ]
   );
 
@@ -536,8 +589,10 @@ export function useDataGridState<T>(
     handleFillHandleMouseDown: cellSelection ? handleFillHandleMouseDown : (NOOP as typeof handleFillHandleMouseDown),
     containerWidth,
     minTableWidth,
+    desiredTableWidth,
     columnSizingOverrides,
     setColumnSizingOverrides,
+    onColumnResized,
     headerFilterInput,
     cellDescriptorInput,
     commitCellEdit,
