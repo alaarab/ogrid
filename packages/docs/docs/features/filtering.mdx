@@ -8,7 +8,7 @@ import FilteringDemo from '@site/src/components/demos/FilteringDemo';
 
 # Filtering
 
-OGrid supports three built-in filter types -- **text**, **multiSelect**, and **people** -- configured per column. Filters appear as popovers triggered from column headers.
+OGrid supports four built-in filter types -- **text**, **multiSelect**, **people**, and **date** -- configured per column. Filters appear as popovers triggered from column headers.
 
 ## Live Demo
 
@@ -102,6 +102,23 @@ A search-as-you-type input that finds users via `dataSource.searchPeople(query)`
 The people filter requires a `dataSource` with a `searchPeople` method. It is designed for directory lookups (e.g., Microsoft Graph, LDAP).
 :::
 
+### Date Filter
+
+A date range picker with **From** and **To** date inputs. Filters rows where the column value falls within the specified range.
+
+```tsx
+{
+  columnId: 'createdDate',
+  name: 'Created',
+  type: 'date',
+  filterable: { type: 'date' },
+}
+```
+
+:::tip
+Columns with `type: 'date'` automatically get date formatting, chronological sorting, and a native date input editor — no additional configuration needed.
+:::
+
 ### Controlled vs. Uncontrolled
 
 - **Uncontrolled** -- the grid manages filter state internally. Filters reset when the component unmounts.
@@ -110,8 +127,8 @@ The people filter requires a `dataSource` with a `searchPeople` method. It is de
 ```tsx
 function App() {
   const [filters, setFilters] = useState<IFilters>({
-    status: ['Active'],
-    name: 'John',
+    status: { type: 'multiSelect', value: ['Active'] },
+    name: { type: 'text', value: 'John' },
   });
 
   return (
@@ -134,7 +151,7 @@ When using a `dataSource`, filter values are passed to `fetchPage()` in the `fil
 const dataSource: IDataSource<Task> = {
   fetchPage: async ({ filters, page, pageSize, sort }) => {
     const params = new URLSearchParams({ page: String(page), pageSize: String(pageSize) });
-    if (filters.status) params.set('status', (filters.status as string[]).join(','));
+    if (filters.status?.type === 'multiSelect') params.set('status', filters.status.value.join(','));
     const res = await fetch(`/api/tasks?${params}`);
     return res.json();
   },
@@ -154,7 +171,7 @@ const dataSource: IDataSource<Task> = {
 | Prop | Type | Default | Description |
 |------|------|---------|-------------|
 | `filterable` | `IColumnFilterDef` | -- | Set on `IColumnDef`. Defines filter type and options. |
-| `filterable.type` | `'text' \| 'multiSelect' \| 'people'` | -- | Filter UI type. |
+| `filterable.type` | `'text' \| 'multiSelect' \| 'people' \| 'date'` | -- | Filter UI type. |
 | `filterable.filterField` | `string` | `columnId` | Field name used in the filter model. |
 | `filterable.optionsSource` | `'api' \| 'static' \| 'years'` | auto | Where multi-select options come from. |
 | `filterable.options` | `string[]` | -- | Static options for multi-select. |
