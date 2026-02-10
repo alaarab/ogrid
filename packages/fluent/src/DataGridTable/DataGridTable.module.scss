@@ -360,7 +360,7 @@
 .stickyHeader {
   position: sticky;
   top: 0;
-  z-index: 2;
+  z-index: 6;
   background-color: var(--colorSubtleBackgroundSelected, #f3f2f1);
 }
 
@@ -383,7 +383,7 @@
 .stickyHeader .pinnedLeft,
 .stickyHeader .pinnedRight {
   top: 0;
-  z-index: 3;
+  z-index: 7;
 }
 
 .activeRow :global {

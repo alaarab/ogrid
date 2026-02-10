@@ -1,0 +1,205 @@
+---
+sidebar_position: 4
+title: Editing & Clipboard
+description: Inline editing, clipboard operations, fill handle, and undo/redo
+---
+
+import CellEditingDemo from '@site/src/components/demos/CellEditingDemo';
+import ClipboardDemo from '@site/src/components/demos/ClipboardDemo';
+import FillHandleDemo from '@site/src/components/demos/FillHandleDemo';
+
+# Editing & Clipboard
+
+OGrid supports inline cell editing, clipboard copy/paste, drag-to-fill, and undo/redo -- all working together through `onCellValueChanged` and `valueParser`.
+
+## Live Demo
+
+<CellEditingDemo />
+
+## Quick Example
+
+```tsx
+import { OGrid, useUndoRedo } from '@alaarab/ogrid';
+import { useState } from 'react';
+
+const columns = [
+  { columnId: 'name', name: 'Name', editable: true },
+  {
+    columnId: 'status',
+    name: 'Status',
+    editable: true,
+    cellEditor: 'select',
+    cellEditorParams: { values: ['Active', 'Draft', 'Archived'] },
+  },
+  {
+    columnId: 'salary',
+    name: 'Salary',
+    editable: true,
+    type: 'numeric',
+    valueParser: ({ newValue }) => {
+      const num = Number(newValue);
+      return isNaN(num) || num < 0 ? undefined : num; // reject invalid
+    },
+    valueFormatter: (v) => `$${Number(v).toLocaleString()}`,
+  },
+];
+
+function App() {
+  const [data, setData] = useState(initialData);
+  const { handleCellValueChanged, undo, redo, canUndo, canRedo } = useUndoRedo({
+    data, setData, getRowId: (item) => item.id,
+  });
+
+  return (
+    <OGrid
+      columns={columns}
+      data={data}
+      getRowId={(item) => item.id}
+      editable
+      onCellValueChanged={handleCellValueChanged}
+      onUndo={undo}
+      onRedo={redo}
+      canUndo={canUndo}
+      canRedo={canRedo}
+    />
+  );
+}
+```
+
+This single setup gives you inline editing, clipboard paste, fill handle, and full undo/redo.
+
+## Inline Editing
+
+Double-click or press **F2** to edit. **Enter** commits and moves down, **Tab** commits and moves right, **Escape** cancels.
+
+### Built-in Editors
+
+| `cellEditor` | Description |
+|--------------|-------------|
+| `'text'` (default) | Standard text input |
+| `'select'` | Dropdown from `cellEditorParams.values` |
+| `'checkbox'` | Toggle boolean |
+| `'richSelect'` | Searchable dropdown with keyboard nav |
+
+### Rich Select
+
+```tsx
+{
+  columnId: 'category',
+  editable: true,
+  cellEditor: 'richSelect',
+  cellEditorParams: {
+    values: ['Engineering', 'Design', 'Marketing', 'Sales'],
+    formatValue: (v) => `Dept: ${v}`,
+  },
+}
+```
+
+### Per-Row Editability
+
+```tsx
+{ columnId: 'name', editable: (item) => item.status !== 'locked' }
+```
+
+### Custom Editor
+
+Pass a component to `cellEditor`. Use `cellEditorPopup: true` for a popover:
+
+```tsx
+function DateEditor({ value, onValueChange, onCommit, onCancel }: ICellEditorProps<Task>) {
+  return (
+    <input
+      type="date"
+      value={value as string}
+      onChange={(e) => onValueChange(e.target.value)}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter') onCommit();
+        if (e.key === 'Escape') onCancel();
+      }}
+      autoFocus
+    />
+  );
+}
+
+// In column def:
+{ columnId: 'dueDate', editable: true, cellEditor: DateEditor, cellEditorPopup: true }
+```
+
+### Value Parsing
+
+`valueParser` validates input for editing, paste, fill, and delete. Return `undefined` to reject:
+
+```tsx
+{ columnId: 'age', editable: true, type: 'numeric',
+  valueParser: ({ newValue }) => {
+    const num = Number(newValue);
+    return isNaN(num) || num < 0 || num > 150 ? undefined : num;
+  },
+}
+```
+
+## Clipboard
+
+<ClipboardDemo />
+
+Standard keyboard shortcuts on selected cells:
+
+| Key | Action | Requires `editable` |
+|-----|--------|-------------------|
+| Ctrl+C (Cmd+C) | Copy as tab-delimited text | No |
+| Ctrl+V (Cmd+V) | Paste into cells | Yes |
+| Ctrl+X (Cmd+X) | Cut (copy + clear) | Yes |
+| Delete / Backspace | Clear selected cells | Yes |
+
+- **Copy** uses `valueFormatter` so copied values match the display.
+- **Paste** calls `valueParser` on each value and fires `onCellValueChanged` per cell.
+
+## Fill Handle
+
+<FillHandleDemo />
+
+A small square at the bottom-right of the selection. Drag it down to fill cells with the source value (like Excel).
+
+- Requires `editable={true}` and `cellSelection={true}` (default).
+- Calls `valueParser` per cell -- return `undefined` to skip.
+- Each filled cell fires `onCellValueChanged`.
+- Uses `requestAnimationFrame` for smooth drag performance.
+
+## Undo / Redo
+
+The `useUndoRedo` hook tracks edit history (including paste, fill, and delete). See the quick example above.
+
+| Hook Input | Type | Description |
+|------------|------|-------------|
+| `data` | `T[]` | Current data array |
+| `setData` | `(data: T[]) => void` | State setter |
+| `getRowId` | `(item: T) => RowId` | Row identifier |
+
+| Hook Output | Type | Description |
+|-------------|------|-------------|
+| `handleCellValueChanged` | `(event) => void` | Wraps edits onto the undo stack |
+| `undo` / `redo` | `() => void` | Revert / re-apply |
+| `canUndo` / `canRedo` | `boolean` | Stack status |
+
+**Shortcuts:** Ctrl+Z (undo), Ctrl+Y (redo). Also available in the right-click [context menu](./context-menu).
+
+## Props Summary
+
+| Prop | Type | Description |
+|------|------|-------------|
+| `editable` | `boolean` | Enable editing grid-wide (on `OGrid`) |
+| `editable` | `boolean \| (item: T) => boolean` | Per-column/row (on `IColumnDef`) |
+| `cellEditor` | `'text' \| 'select' \| 'checkbox' \| 'richSelect' \| ComponentType` | Editor type |
+| `cellEditorPopup` | `boolean` | Render custom editor in a popover |
+| `cellEditorParams` | `CellEditorParams` | Editor parameters (e.g., `{ values: [...] }`) |
+| `valueParser` | `(params) => unknown` | Validate on edit/paste/fill/delete. Return `undefined` to reject. |
+| `valueFormatter` | `(value, item) => string` | Format display & copy output |
+| `onCellValueChanged` | `(event) => void` | Fired after any cell value change |
+| `onUndo` / `onRedo` | `() => void` | Undo/redo callbacks |
+| `canUndo` / `canRedo` | `boolean` | Enable/disable undo/redo in context menu |
+
+## Related
+
+- [Spreadsheet Selection](./spreadsheet-selection) -- select cells for editing
+- [Context Menu](./context-menu) -- right-click menu with undo/redo
+- [Custom Cell Editors](../guides/custom-cell-editors) -- advanced editor guide

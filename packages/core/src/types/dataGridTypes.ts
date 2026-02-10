@@ -242,6 +242,8 @@ export interface IOGridProps<T> {
   defaultSortDirection?: 'asc' | 'desc';
 
   toolbar?: ReactNode;
+  /** Secondary toolbar row rendered below the primary toolbar (e.g. active filter chips). */
+  toolbarBelow?: ReactNode;
   emptyState?: { message?: ReactNode; render?: () => ReactNode };
   entityLabelPlural?: string;
   className?: string;
