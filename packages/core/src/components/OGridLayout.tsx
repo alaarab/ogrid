@@ -40,17 +40,25 @@ const borderedContainerStyle: React.CSSProperties = {
   background: 'var(--ogrid-bg, #fff)',
 };
 
-const toolbarStripStyle: React.CSSProperties = {
+const toolbarStripBase: React.CSSProperties = {
   display: 'flex',
   justifyContent: 'space-between',
   alignItems: 'center',
   padding: '6px 12px',
-  borderBottom: '1px solid var(--ogrid-border, #e0e0e0)',
   background: 'var(--ogrid-header-bg, #f5f5f5)',
   gap: 8,
   flexWrap: 'wrap',
   minHeight: 0,
 };
+
+/** Toolbar strip with border-bottom (when it's the only toolbar row). */
+const toolbarStripStyle: React.CSSProperties = {
+  ...toolbarStripBase,
+  borderBottom: '1px solid var(--ogrid-border, #e0e0e0)',
+};
+
+/** Toolbar strip without border-bottom (when toolbarBelow follows — it owns the border). */
+const toolbarStripNoBorderStyle: React.CSSProperties = toolbarStripBase;
 
 const toolbarSectionStyle: React.CSSProperties = {
   display: 'flex',
@@ -138,7 +146,7 @@ export function OGridLayout(props: OGridLayoutProps): React.ReactElement {
       <div style={borderedContainerStyle}>
         {/* Toolbar strip */}
         {hasToolbar && (
-          <div style={toolbarStripStyle}>
+          <div style={toolbarBelow ? toolbarStripNoBorderStyle : toolbarStripStyle}>
             <div style={toolbarSectionStyle}>{toolbar}</div>
             <div style={toolbarSectionStyle}>{toolbarEnd}</div>
           </div>
