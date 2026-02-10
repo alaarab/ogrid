@@ -376,6 +376,16 @@
   background-color: var(--colorSubtleBackgroundSelected, #f3f2f1);
 }
 
+/* Freeze/pinned header cells need top: 0 + z-index: 3 so they stick in BOTH
+   directions — left/right (from .freezeCol/.pinnedCell) AND top (from .stickyHeader).
+   Without explicit top, the child's own position: sticky overrides the parent's. */
+.stickyHeader .freezeColFirst,
+.stickyHeader .pinnedLeft,
+.stickyHeader .pinnedRight {
+  top: 0;
+  z-index: 3;
+}
+
 .activeRow :global {
   // Subtle row highlight for the active row
   .fui-DataGridCell:not(:has(.activeCellContent)) {

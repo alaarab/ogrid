@@ -31,38 +31,16 @@ export function toUserLike(u: UserLikeInput | undefined): UserLike | undefined {
   };
 }
 
-/** Single filter value: text (string), multi-select (string[]), people (UserLike), or date range. */
-export type FilterValue = string | string[] | UserLike | IDateFilterValue;
+/** Discriminated filter value. The `type` field identifies the filter kind. */
+export type FilterValue =
+  | { type: 'text'; value: string }
+  | { type: 'multiSelect'; value: string[] }
+  | { type: 'people'; value: UserLike }
+  | { type: 'date'; value: IDateFilterValue };
 
-/** Unified filter model: field id -> filter value. Use FilterValue for type-safe access. */
+/** Unified filter model: field id -> discriminated filter value. */
 export interface IFilters {
   [field: string]: FilterValue | undefined;
-}
-
-/** Type guard for IDateFilterValue. */
-function isDateFilterValue(value: unknown): value is IDateFilterValue {
-  return typeof value === 'object' && value !== null && !Array.isArray(value) && !('email' in value) && ('from' in value || 'to' in value);
-}
-
-/** Split IFilters into DataGridTable's multiSelect, text, people, and date props. */
-export function toDataGridFilterProps(filters: IFilters): {
-  multiSelectFilters: Record<string, string[]>;
-  textFilters: Record<string, string>;
-  peopleFilters: Record<string, UserLike | undefined>;
-  dateFilters: Record<string, IDateFilterValue>;
-} {
-  const multiSelectFilters: Record<string, string[]> = {};
-  const textFilters: Record<string, string> = {};
-  const peopleFilters: Record<string, UserLike | undefined> = {};
-  const dateFilters: Record<string, IDateFilterValue> = {};
-  for (const [key, value] of Object.entries(filters)) {
-    if (value === undefined) continue;
-    if (Array.isArray(value)) multiSelectFilters[key] = value;
-    else if (typeof value === 'string') textFilters[key] = value;
-    else if (typeof value === 'object' && value !== null && 'email' in value) peopleFilters[key] = value as UserLike;
-    else if (isDateFilterValue(value)) dateFilters[key] = value;
-  }
-  return { multiSelectFilters, textFilters, peopleFilters, dateFilters };
 }
 
 export interface IFetchParams {
@@ -267,9 +245,6 @@ export interface IOGridProps<T> {
   emptyState?: { message?: ReactNode; render?: () => ReactNode };
   entityLabelPlural?: string;
   className?: string;
-  /** @deprecated Render your title outside the OGrid component. Will be removed in next major. */
-  title?: ReactNode;
-
   /** Where the column chooser renders.
    *  - `true` or `'toolbar'` (default): column chooser button in the toolbar strip.
    *  - `'sidebar'`: column chooser only available via the sidebar columns panel.
@@ -338,14 +313,10 @@ export interface IOGridDataGridProps<T> {
   selectedRows?: Set<RowId>;
   onSelectionChange?: (event: IRowSelectionChangeEvent<T>) => void;
   statusBar?: IStatusBarProps;
-  multiSelectFilters: Record<string, string[]>;
-  onMultiSelectFilterChange: (key: string, values: string[]) => void;
-  textFilters?: Record<string, string>;
-  onTextFilterChange?: (key: string, value: string) => void;
-  peopleFilters?: Record<string, UserLike | undefined>;
-  onPeopleFilterChange?: (key: string, user: UserLike | undefined) => void;
-  dateFilters?: Record<string, IDateFilterValue>;
-  onDateFilterChange?: (key: string, value: IDateFilterValue | undefined) => void;
+  /** Unified filter model (discriminated union values). */
+  filters: IFilters;
+  /** Single callback for all filter changes. Pass undefined to clear. */
+  onFilterChange: (key: string, value: FilterValue | undefined) => void;
   filterOptions: Record<string, string[]>;
   loadingFilterOptions: Record<string, boolean>;
   peopleSearch?: (query: string) => Promise<UserLike[]>;

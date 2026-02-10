@@ -28,7 +28,6 @@ const OGridInner = forwardRef(function OGridInner<T>(
     columnChooserColumns,
     visibleColumns,
     handleVisibilityChange,
-    title,
     toolbar,
     className,
     entityLabelPlural,
@@ -42,9 +41,7 @@ const OGridInner = forwardRef(function OGridInner<T>(
       containerComponent={Box}
       containerProps={{ sx: { display: 'flex', flexDirection: 'column', gap: 1 } }}
       className={className}
-      gap={0}
       sideBar={sideBarProps}
-      title={title}
       toolbar={toolbar}
       toolbarEnd={
         columnChooserPlacement === 'toolbar' ? (

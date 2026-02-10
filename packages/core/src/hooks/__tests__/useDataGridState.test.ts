@@ -17,12 +17,11 @@ const defaultProps: IOGridDataGridProps<Row> = {
   ],
   getRowId: (r) => r.id,
   sortBy: 'name',
-  sortDirection: 'asc',
+  sortDirection: 'asc' as const,
   onColumnSort: jest.fn(),
   visibleColumns: new Set(['id', 'name', 'score']),
-  multiSelectFilters: {},
-  onMultiSelectFilterChange: jest.fn(),
-  textFilters: {},
+  filters: {},
+  onFilterChange: jest.fn(),
   filterOptions: {},
   loadingFilterOptions: {},
 };
@@ -58,63 +57,63 @@ describe('useDataGridState', () => {
     const state = result.current;
 
     // Columns & layout
-    expect(state.flatColumns).toHaveLength(3);
-    expect(state.visibleCols).toHaveLength(3);
-    expect(state.visibleColumnCount).toBe(3);
-    expect(state.hasCheckboxCol).toBe(false);
-    expect(state.colOffset).toBe(0);
-    expect(state.totalColCount).toBe(3);
-    expect(state.rowIndexByRowId).toBeInstanceOf(Map);
-    expect(state.rowIndexByRowId.get('1')).toBe(0);
-    expect(state.rowIndexByRowId.get('2')).toBe(1);
+    expect(state.layout.flatColumns).toHaveLength(3);
+    expect(state.layout.visibleCols).toHaveLength(3);
+    expect(state.layout.visibleColumnCount).toBe(3);
+    expect(state.layout.hasCheckboxCol).toBe(false);
+    expect(state.layout.colOffset).toBe(0);
+    expect(state.layout.totalColCount).toBe(3);
+    expect(state.layout.rowIndexByRowId).toBeInstanceOf(Map);
+    expect(state.layout.rowIndexByRowId.get('1')).toBe(0);
+    expect(state.layout.rowIndexByRowId.get('2')).toBe(1);
 
     // Row selection
-    expect(state.selectedRowIds).toBeInstanceOf(Set);
-    expect(typeof state.updateSelection).toBe('function');
-    expect(typeof state.handleRowCheckboxChange).toBe('function');
-    expect(typeof state.handleSelectAll).toBe('function');
-    expect(state.allSelected).toBe(false);
-    expect(state.someSelected).toBe(false);
+    expect(state.rowSelection.selectedRowIds).toBeInstanceOf(Set);
+    expect(typeof state.rowSelection.updateSelection).toBe('function');
+    expect(typeof state.rowSelection.handleRowCheckboxChange).toBe('function');
+    expect(typeof state.rowSelection.handleSelectAll).toBe('function');
+    expect(state.rowSelection.allSelected).toBe(false);
+    expect(state.rowSelection.someSelected).toBe(false);
 
     // Cell editing
-    expect(state.editingCell).toBeNull();
-    expect(typeof state.setEditingCell).toBe('function');
-    expect(typeof state.setPendingEditorValue).toBe('function');
+    expect(state.editing.editingCell).toBeNull();
+    expect(typeof state.editing.setEditingCell).toBe('function');
+    expect(typeof state.editing.setPendingEditorValue).toBe('function');
 
     // Active cell & selection range
-    expect(state.activeCell).toBeNull();
-    expect(typeof state.setActiveCell).toBe('function');
-    expect(state.selectionRange).toBeNull();
-    expect(typeof state.setSelectionRange).toBe('function');
-    expect(typeof state.handleCellMouseDown).toBe('function');
-    expect(typeof state.handleSelectAllCells).toBe('function');
+    expect(state.interaction.activeCell).toBeNull();
+    expect(typeof state.interaction.setActiveCell).toBe('function');
+    expect(state.interaction.selectionRange).toBeNull();
+    expect(typeof state.interaction.setSelectionRange).toBe('function');
+    expect(typeof state.interaction.handleCellMouseDown).toBe('function');
+    expect(typeof state.interaction.handleSelectAllCells).toBe('function');
 
     // Context menu
-    expect(state.contextMenu).toBeNull();
-    expect(typeof state.setContextMenu).toBe('function');
-    expect(typeof state.handleCellContextMenu).toBe('function');
-    expect(typeof state.closeContextMenu).toBe('function');
+    expect(state.contextMenu.menuPosition).toBeNull();
+    expect(typeof state.contextMenu.setMenuPosition).toBe('function');
+    expect(typeof state.contextMenu.handleCellContextMenu).toBe('function');
+    expect(typeof state.contextMenu.closeContextMenu).toBe('function');
 
     // Clipboard
-    expect(typeof state.handleCopy).toBe('function');
-    expect(typeof state.handleCut).toBe('function');
-    expect(typeof state.handlePaste).toBe('function');
-    expect(state.cutRange).toBeNull();
+    expect(typeof state.interaction.handleCopy).toBe('function');
+    expect(typeof state.interaction.handleCut).toBe('function');
+    expect(typeof state.interaction.handlePaste).toBe('function');
+    expect(state.interaction.cutRange).toBeNull();
 
     // Keyboard & fill handle
-    expect(typeof state.handleGridKeyDown).toBe('function');
-    expect(typeof state.handleFillHandleMouseDown).toBe('function');
+    expect(typeof state.interaction.handleGridKeyDown).toBe('function');
+    expect(typeof state.interaction.handleFillHandleMouseDown).toBe('function');
 
     // Container & sizing
-    expect(typeof state.containerWidth).toBe('number');
-    expect(typeof state.minTableWidth).toBe('number');
-    expect(state.columnSizingOverrides).toEqual({});
-    expect(typeof state.setColumnSizingOverrides).toBe('function');
+    expect(typeof state.layout.containerWidth).toBe('number');
+    expect(typeof state.layout.minTableWidth).toBe('number');
+    expect(state.layout.columnSizingOverrides).toEqual({});
+    expect(typeof state.layout.setColumnSizingOverrides).toBe('function');
 
     // Status bar & empty
-    expect(state.statusBarConfig).toBeNull();
-    expect(state.showEmptyInGrid).toBe(false);
-    expect(state.hasCellSelection).toBe(false);
+    expect(state.viewModels.statusBarConfig).toBeNull();
+    expect(state.viewModels.showEmptyInGrid).toBe(false);
+    expect(state.interaction.hasCellSelection).toBe(false);
   });
 
   it('derives visibleCols from visibleColumns and columnOrder', () => {
@@ -129,7 +128,7 @@ describe('useDataGridState', () => {
       { wrapper: ({ children }: { children: React.ReactNode }) => React.createElement(React.Fragment, null, children) }
     );
 
-    expect(result.current.visibleCols.map((c) => c.columnId)).toEqual(['id', 'score', 'name']);
+    expect(result.current.layout.visibleCols.map((c) => c.columnId)).toEqual(['id', 'score', 'name']);
   });
 
   it('returns statusBarConfig null when statusBar is undefined', () => {
@@ -138,7 +137,7 @@ describe('useDataGridState', () => {
       () => useDataGridState<Row>({ props: defaultProps, wrapperRef }),
       { wrapper: ({ children }: { children: React.ReactNode }) => React.createElement(React.Fragment, null, children) }
     );
-    expect(result.current.statusBarConfig).toBeNull();
+    expect(result.current.viewModels.statusBarConfig).toBeNull();
   });
 
   it('returns statusBarConfig when statusBar is object', () => {
@@ -152,7 +151,7 @@ describe('useDataGridState', () => {
       { wrapper: ({ children }: { children: React.ReactNode }) => React.createElement(React.Fragment, null, children) }
     );
 
-    expect(result.current.statusBarConfig).toEqual({
+    expect(result.current.viewModels.statusBarConfig).toEqual({
       totalCount: 100,
       filteredCount: 50,
       selectedCount: 2,
@@ -175,7 +174,7 @@ describe('useDataGridState', () => {
       { wrapper: ({ children }: { children: React.ReactNode }) => React.createElement(React.Fragment, null, children) }
     );
 
-    expect(result.current.showEmptyInGrid).toBe(true);
+    expect(result.current.viewModels.showEmptyInGrid).toBe(true);
   });
 
   it('returns hasCheckboxCol and colOffset when rowSelection is multiple', () => {
@@ -191,9 +190,9 @@ describe('useDataGridState', () => {
       { wrapper: ({ children }: { children: React.ReactNode }) => React.createElement(React.Fragment, null, children) }
     );
 
-    expect(result.current.hasCheckboxCol).toBe(true);
-    expect(result.current.colOffset).toBe(1);
-    expect(result.current.totalColCount).toBe(4); // 3 data + 1 checkbox
+    expect(result.current.layout.hasCheckboxCol).toBe(true);
+    expect(result.current.layout.colOffset).toBe(1);
+    expect(result.current.layout.totalColCount).toBe(4); // 3 data + 1 checkbox
   });
 
   it('setSelectionRange updates selectionRange', () => {
@@ -203,10 +202,10 @@ describe('useDataGridState', () => {
       { wrapper: ({ children }: { children: React.ReactNode }) => React.createElement(React.Fragment, null, children) }
     );
 
-    expect(result.current.selectionRange).toBeNull();
+    expect(result.current.interaction.selectionRange).toBeNull();
 
     act(() => {
-      result.current.setSelectionRange({
+      result.current.interaction.setSelectionRange({
         startRow: 0,
         startCol: 0,
         endRow: 1,
@@ -214,13 +213,13 @@ describe('useDataGridState', () => {
       });
     });
 
-    expect(result.current.selectionRange).toEqual({
+    expect(result.current.interaction.selectionRange).toEqual({
       startRow: 0,
       startCol: 0,
       endRow: 1,
       endCol: 1,
     });
-    expect(result.current.hasCellSelection).toBe(true);
+    expect(result.current.interaction.hasCellSelection).toBe(true);
   });
 
   it('setActiveCell updates activeCell and hasCellSelection', () => {
@@ -230,15 +229,15 @@ describe('useDataGridState', () => {
       { wrapper: ({ children }: { children: React.ReactNode }) => React.createElement(React.Fragment, null, children) }
     );
 
-    expect(result.current.activeCell).toBeNull();
-    expect(result.current.hasCellSelection).toBe(false);
+    expect(result.current.interaction.activeCell).toBeNull();
+    expect(result.current.interaction.hasCellSelection).toBe(false);
 
     act(() => {
-      result.current.setActiveCell({ rowIndex: 0, columnIndex: 1 });
+      result.current.interaction.setActiveCell({ rowIndex: 0, columnIndex: 1 });
     });
 
-    expect(result.current.activeCell).toEqual({ rowIndex: 0, columnIndex: 1 });
-    expect(result.current.hasCellSelection).toBe(true);
+    expect(result.current.interaction.activeCell).toEqual({ rowIndex: 0, columnIndex: 1 });
+    expect(result.current.interaction.hasCellSelection).toBe(true);
   });
 
   it('closeContextMenu clears contextMenu', () => {
@@ -249,13 +248,13 @@ describe('useDataGridState', () => {
     );
 
     act(() => {
-      result.current.setContextMenu({ x: 100, y: 200 });
+      result.current.contextMenu.setMenuPosition({ x: 100, y: 200 });
     });
-    expect(result.current.contextMenu).toEqual({ x: 100, y: 200 });
+    expect(result.current.contextMenu.menuPosition).toEqual({ x: 100, y: 200 });
 
     act(() => {
-      result.current.closeContextMenu();
+      result.current.contextMenu.closeContextMenu();
     });
-    expect(result.current.contextMenu).toBeNull();
+    expect(result.current.contextMenu.menuPosition).toBeNull();
   });
 });

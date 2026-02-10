@@ -37,4 +37,4 @@ export type {
   ISideBarDef,
 } from './dataGridTypes';
 
-export { toUserLike, toDataGridFilterProps, isInSelectionRange, normalizeSelectionRange } from './dataGridTypes';
+export { toUserLike, isInSelectionRange, normalizeSelectionRange } from './dataGridTypes';

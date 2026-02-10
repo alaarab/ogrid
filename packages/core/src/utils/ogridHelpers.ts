@@ -7,7 +7,7 @@ export function getFilterField<T>(col: IColumnDef<T>): string {
   return (f?.filterField ?? col.columnId) as string;
 }
 
-/** Merge a single filter change into a full IFilters object. */
+/** Merge a single filter change into a full IFilters object. Strips empty values automatically. */
 export function mergeFilter(
   prev: IFilters,
   key: string,
@@ -16,13 +16,10 @@ export function mergeFilter(
   const next = { ...prev };
   const isEmpty =
     value === undefined ||
-    (Array.isArray(value) && value.length === 0) ||
-    (typeof value === 'string' && value.trim() === '');
-  // Date filter is empty when neither from nor to is set
-  const isEmptyDate =
-    typeof value === 'object' && value !== null && !Array.isArray(value) && !('email' in value) &&
-    !((value as { from?: string; to?: string }).from || (value as { from?: string; to?: string }).to);
-  if (isEmpty || isEmptyDate) {
+    (value.type === 'text' && value.value.trim() === '') ||
+    (value.type === 'multiSelect' && value.value.length === 0) ||
+    (value.type === 'date' && !value.value.from && !value.value.to);
+  if (isEmpty) {
     delete next[key];
   } else {
     next[key] = value;

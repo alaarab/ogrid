@@ -56,8 +56,8 @@ export function createColumnGroupTests(DataGridTable: React.ComponentType<any>):
         sortDirection="asc"
         onColumnSort={jest.fn()}
         visibleColumns={new Set(['name', 'status'])}
-        multiSelectFilters={{}}
-        onMultiSelectFilterChange={jest.fn()}
+        filters={{}}
+        onFilterChange={jest.fn()}
         filterOptions={{}}
         loadingFilterOptions={{}}
         {...overrides}

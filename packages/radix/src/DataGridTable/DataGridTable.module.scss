@@ -98,6 +98,16 @@
   background: var(--ogrid-bg, #ffffff);
 }
 
+/* Freeze/pinned header cells need top: 0 + z-index: 3 so they stick in BOTH
+   directions — left (from .freezeCol/.pinnedCol) AND top (from .stickyHeader).
+   Without explicit top, the child's own position: sticky overrides the parent's. */
+.dataTable thead.stickyHeader .freezeColFirst,
+.dataTable thead.stickyHeader .pinnedColLeft,
+.dataTable thead.stickyHeader .pinnedColRight {
+  top: 0;
+  z-index: 3;
+}
+
 .dataTable thead .freezeColFirst {
   background: var(--ogrid-bg-subtle, #f3f2f1);
 }

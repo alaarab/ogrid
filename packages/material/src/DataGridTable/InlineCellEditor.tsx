@@ -53,6 +53,11 @@ export function InlineCellEditor<T>(props: InlineCellEditorProps<T>): React.Reac
     onCancel,
   });
 
+  React.useEffect(() => {
+    const input = wrapperRef.current?.querySelector('input');
+    input?.focus();
+  }, []);
+
   if (editorType === 'richSelect') {
     return (
       <div ref={wrapperRef} style={{ ...editorWrapperStyle, position: 'relative' }}>

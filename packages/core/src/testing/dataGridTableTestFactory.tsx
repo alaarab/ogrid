@@ -36,12 +36,8 @@ export function createDataGridTableTests(DataGridTable: React.ComponentType<any>
       sortDirection: 'asc',
       onColumnSort: jest.fn(),
       visibleColumns: new Set(['name', 'status']),
-      multiSelectFilters: {},
-      onMultiSelectFilterChange: jest.fn(),
-      textFilters: {},
-      onTextFilterChange: jest.fn(),
-      peopleFilters: {},
-      onPeopleFilterChange: jest.fn(),
+      filters: {},
+      onFilterChange: jest.fn(),
       filterOptions: { status: ['Active', 'Closed'] },
       loadingFilterOptions: {},
     };
@@ -78,8 +74,8 @@ export function createDataGridTableTests(DataGridTable: React.ComponentType<any>
           sortDirection="asc"
           onColumnSort={jest.fn()}
           visibleColumns={new Set(['name', 'status'])}
-          multiSelectFilters={{}}
-          onMultiSelectFilterChange={jest.fn()}
+          filters={{}}
+          onFilterChange={jest.fn()}
           filterOptions={{}}
           loadingFilterOptions={{}}
           aria-labelledby="grid-heading"
@@ -110,8 +106,8 @@ export function createDataGridTableTests(DataGridTable: React.ComponentType<any>
     expect(onClearAll).toHaveBeenCalled();
   });
 
-  it('wires text filter through onTextFilterChange with filterField override', () => {
-    const onTextFilterChange = jest.fn();
+  it('wires text filter through onFilterChange with filterField override', () => {
+    const onFilterChange = jest.fn();
     const textFilterColumns: IColumnDef<FixtureRow>[] = [
       {
         columnId: 'name',
@@ -121,18 +117,18 @@ export function createDataGridTableTests(DataGridTable: React.ComponentType<any>
         renderCell: (item) => <span data-testid="cell-name">{item.name}</span>,
       },
     ];
-    renderTable({ columns: textFilterColumns, onTextFilterChange });
+    renderTable({ columns: textFilterColumns, onFilterChange });
     const filterButton = screen.getByRole('button', { name: /filter name/i });
     fireEvent.click(filterButton);
     const input = screen.getByPlaceholderText(/enter search term/i);
     fireEvent.change(input, { target: { value: 'Alpha' } });
     const applyButton = screen.getByRole('button', { name: /apply/i });
     fireEvent.click(applyButton);
-    expect(onTextFilterChange).toHaveBeenCalledWith('nameFilter', 'Alpha');
+    expect(onFilterChange).toHaveBeenCalledWith('nameFilter', { type: 'text', value: 'Alpha' });
   });
 
-  it('wires multi-select filter through onMultiSelectFilterChange with filterField', () => {
-    const onMultiSelectFilterChange = jest.fn();
+  it('wires multi-select filter through onFilterChange with filterField', () => {
+    const onFilterChange = jest.fn();
     const statusColumns: IColumnDef<FixtureRow>[] = [
       {
         columnId: 'name',
@@ -145,7 +141,7 @@ export function createDataGridTableTests(DataGridTable: React.ComponentType<any>
     renderTable({
       columns: statusColumns,
       visibleColumns: new Set(['name']),
-      onMultiSelectFilterChange,
+      onFilterChange,
       filterOptions: { status: ['Active', 'Closed'] },
     });
     const filterButton = screen.getByRole('button', { name: /filter name/i });
@@ -154,7 +150,7 @@ export function createDataGridTableTests(DataGridTable: React.ComponentType<any>
     fireEvent.click(selectAllButton);
     const applyButton = screen.getByRole('button', { name: /apply/i });
     fireEvent.click(applyButton);
-    expect(onMultiSelectFilterChange).toHaveBeenCalledWith('status', ['Active', 'Closed']);
+    expect(onFilterChange).toHaveBeenCalledWith('status', { type: 'multiSelect', value: ['Active', 'Closed'] });
   });
 
   it('renders with editable columns and onCellValueChanged (editable smoke)', () => {
@@ -202,10 +198,10 @@ export function createDataGridTableTests(DataGridTable: React.ComponentType<any>
     expect(nameCells[0]).toHaveTextContent('Alpha');
   });
 
-  it('wires people filter: open, search, select user, calls onPeopleFilterChange', async () => {
+  it('wires people filter: open, search, select user, calls onFilterChange', async () => {
     const alice: UserLike = { id: '1', displayName: 'Alice Johnson', email: 'alice@example.com' };
     const peopleSearch = jest.fn<Promise<UserLike[]>, [string]>().mockResolvedValue([alice]);
-    const onPeopleFilterChange = jest.fn();
+    const onFilterChange = jest.fn();
     const peopleColumns: IColumnDef<FixtureRow>[] = [
       { columnId: 'name', name: 'Name', sortable: false, renderCell: (item) => <span data-testid="cell-name">{item.name}</span> },
       { columnId: 'owner', name: 'Owner', sortable: false, filterable: { type: 'people', filterField: 'ownerEmail' }, renderCell: (item) => <span data-testid="cell-owner">{item.name}</span> },
@@ -213,12 +209,10 @@ export function createDataGridTableTests(DataGridTable: React.ComponentType<any>
     renderTable({
       columns: peopleColumns,
       visibleColumns: new Set(['name', 'owner']),
-      multiSelectFilters: {},
-      onMultiSelectFilterChange: jest.fn(),
+      filters: {},
+      onFilterChange,
       filterOptions: {},
       loadingFilterOptions: {},
-      peopleFilters: {},
-      onPeopleFilterChange,
       peopleSearch,
     });
     const filterButton = screen.getByRole('button', { name: /filter owner/i });
@@ -230,7 +224,7 @@ export function createDataGridTableTests(DataGridTable: React.ComponentType<any>
     await waitFor(() => { expect(peopleSearch).toHaveBeenCalledWith('ali'); });
     const suggestion = await screen.findByText('Alice Johnson');
     fireEvent.click(suggestion);
-    expect(onPeopleFilterChange).toHaveBeenCalledWith('ownerEmail', expect.objectContaining({ displayName: 'Alice Johnson', email: 'alice@example.com' }));
+    expect(onFilterChange).toHaveBeenCalledWith('ownerEmail', { type: 'people', value: expect.objectContaining({ displayName: 'Alice Johnson', email: 'alice@example.com' }) });
   });
 
   it('type: numeric column renders cells correctly', () => {

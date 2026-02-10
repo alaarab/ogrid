@@ -141,10 +141,10 @@ describe('useOGrid', () => {
 
     // Set a filter via setFilterModel
     act(() => {
-      ref.current!.setFilterModel({ name: 'Alice' });
+      ref.current!.setFilterModel({ name: { type: 'text', value: 'Alice' } });
     });
     const state2 = ref.current!.getColumnState();
-    expect(state2.filters).toEqual({ name: 'Alice' });
+    expect(state2.filters).toEqual({ name: { type: 'text', value: 'Alice' } });
   });
 
   it('getColumnState omits columnWidths when none set', () => {
@@ -176,14 +176,14 @@ describe('useOGrid', () => {
       ref.current!.applyColumnState({
         visibleColumns: ['id'],
         sort: { field: 'id', direction: 'desc' },
-        filters: { id: '1' },
+        filters: { id: { type: 'text', value: '1' } },
       });
     });
 
     const state = ref.current!.getColumnState();
     expect(state.visibleColumns).toEqual(['id']);
     expect(state.sort).toEqual({ field: 'id', direction: 'desc' });
-    expect(state.filters).toEqual({ id: '1' });
+    expect(state.filters).toEqual({ id: { type: 'text', value: '1' } });
   });
 
   it('applyColumnState restores columnWidths', () => {
@@ -222,7 +222,7 @@ describe('useOGrid', () => {
       visibleColumns: ['name'],
       sort: { field: 'name', direction: 'asc' as const },
       columnWidths: { name: 250 },
-      filters: { name: 'Bob' },
+      filters: { name: { type: 'text' as const, value: 'Bob' } },
     };
 
     act(() => {
@@ -233,7 +233,7 @@ describe('useOGrid', () => {
     expect(restored.visibleColumns).toEqual(['name']);
     expect(restored.sort).toEqual({ field: 'name', direction: 'asc' });
     expect(restored.columnWidths).toEqual({ name: 250 });
-    expect(restored.filters).toEqual({ name: 'Bob' });
+    expect(restored.filters).toEqual({ name: { type: 'text', value: 'Bob' } });
   });
 
   it('applyColumnState with partial state only changes specified fields', () => {
@@ -261,14 +261,14 @@ describe('useOGrid', () => {
 
     // Only change filters — visibility and sort should remain
     act(() => {
-      ref.current!.applyColumnState({ filters: { id: '2' } });
+      ref.current!.applyColumnState({ filters: { id: { type: 'text', value: '2' } } });
     });
 
     const after = ref.current!.getColumnState();
     expect(after.sort).toEqual({ field: 'name', direction: 'desc' });
     expect(after.visibleColumns).toContain('id');
     expect(after.visibleColumns).toContain('name');
-    expect(after.filters).toEqual({ id: '2' });
+    expect(after.filters).toEqual({ id: { type: 'text', value: '2' } });
   });
 
   it('applyColumnState calls onColumnOrderChange when columnOrder is provided', () => {
@@ -538,7 +538,7 @@ describe('useOGrid', () => {
               getRowId: getDateRowId,
               data: dateData,
               defaultPageSize: 10,
-              filters: { date: { from: '2024-06-01' } },
+              filters: { date: { type: 'date', value: { from: '2024-06-01' } } },
             },
             ref
           ),
@@ -557,7 +557,7 @@ describe('useOGrid', () => {
               getRowId: getDateRowId,
               data: dateData,
               defaultPageSize: 10,
-              filters: { date: { to: '2024-03-10' } },
+              filters: { date: { type: 'date', value: { to: '2024-03-10' } } },
             },
             ref
           ),
@@ -576,7 +576,7 @@ describe('useOGrid', () => {
               getRowId: getDateRowId,
               data: dateData,
               defaultPageSize: 10,
-              filters: { date: { from: '2024-02-01', to: '2024-07-01' } },
+              filters: { date: { type: 'date', value: { from: '2024-02-01', to: '2024-07-01' } } },
             },
             ref
           ),
@@ -633,7 +633,7 @@ describe('useOGrid', () => {
       ]);
     });
 
-    it('passes dateFilters and onDateFilterChange to dataGridProps', () => {
+    it('passes filters and onFilterChange to dataGridProps', () => {
       const ref = React.createRef<IOGridApi<DateRow>>();
       const { result } = renderHook(
         () =>
@@ -643,16 +643,16 @@ describe('useOGrid', () => {
               getRowId: getDateRowId,
               data: dateData,
               defaultPageSize: 10,
-              filters: { date: { from: '2024-01-01', to: '2024-12-31' } },
+              filters: { date: { type: 'date', value: { from: '2024-01-01', to: '2024-12-31' } } },
             },
             ref
           ),
         { wrapper: ({ children }) => <>{children}</> }
       );
-      expect(result.current.dataGridProps.dateFilters).toEqual({
-        date: { from: '2024-01-01', to: '2024-12-31' },
+      expect(result.current.dataGridProps.filters).toEqual({
+        date: { type: 'date', value: { from: '2024-01-01', to: '2024-12-31' } },
       });
-      expect(typeof result.current.dataGridProps.onDateFilterChange).toBe('function');
+      expect(typeof result.current.dataGridProps.onFilterChange).toBe('function');
     });
   });
 });
