@@ -1,4 +1,4 @@
-import { useState, useLayoutEffect } from 'react';
+import { useState, useLayoutEffect, useCallback, useRef } from 'react';
 import type { IActiveCell, RowId } from '../types';
 
 export interface UseActiveCellResult {
@@ -14,7 +14,19 @@ export function useActiveCell(
   wrapperRef?: React.RefObject<HTMLElement | null>,
   editingCell?: { rowId: RowId; columnId: string } | null
 ): UseActiveCellResult {
-  const [activeCell, setActiveCell] = useState<IActiveCell | null>(null);
+  const [activeCell, _setActiveCell] = useState<IActiveCell | null>(null);
+  const activeCellRef = useRef(activeCell);
+  activeCellRef.current = activeCell;
+
+  // Deduplicating setter — skips state update (and all downstream effects) when
+  // the cell coordinates haven't actually changed. This prevents re-renders when
+  // rapidly clicking the same cell.
+  const setActiveCell = useCallback((cell: IActiveCell | null) => {
+    const prev = activeCellRef.current;
+    if (prev === cell) return;
+    if (prev && cell && prev.rowIndex === cell.rowIndex && prev.columnIndex === cell.columnIndex) return;
+    _setActiveCell(cell);
+  }, []);
 
   // useLayoutEffect ensures focus moves synchronously before the browser can
   // reset focus to body (fixes left/right arrow navigation losing focus)
