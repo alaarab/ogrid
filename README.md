@@ -184,14 +184,14 @@ ogrid/
 └── package.json      # npm workspaces root
 ```
 
-**Core** owns all state logic (hooks) and types. **UI packages** are thin view layers using their framework's primitives. All three pass the same 521 tests.
+**Core** owns all state logic (hooks) and types. **UI packages** are thin view layers using their framework's primitives. All three pass the same test suite.
 
 ## Development
 
 ```bash
 npm install                     # Install all dependencies
 npm run build                   # Build all packages (Turborepo)
-npm run test:all                # Run all 521 tests
+npm run test:all                # Run all tests
 npm run lint                    # ESLint
 
 # Storybook (per-framework)

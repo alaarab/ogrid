@@ -41,7 +41,7 @@ export default function ToolbarBelowDemo() {
         }
         toolbarBelow={
           chips.length > 0 ? (
-            <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', alignItems: 'center' }}>
+            <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', alignItems: 'center', padding: '6px 12px' }}>
               <span style={{ fontSize: '0.75rem', color: 'var(--ogrid-muted)', marginRight: 4 }}>
                 Filters:
               </span>
