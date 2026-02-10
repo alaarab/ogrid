@@ -215,17 +215,22 @@ export function useFillHandle<T>(params: UseFillHandleParams<T>): UseFillHandleR
     endBatch,
   ]);
 
+  // Ref mirror — keeps handleFillHandleMouseDown stable across selection changes
+  const selectionRangeRef = useRef(selectionRange);
+  selectionRangeRef.current = selectionRange;
+
   const handleFillHandleMouseDown = useCallback(
     (e: React.MouseEvent) => {
       e.preventDefault();
       e.stopPropagation();
-      if (!selectionRange) return;
+      const range = selectionRangeRef.current;
+      if (!range) return;
       setFillDrag({
-        startRow: selectionRange.startRow,
-        startCol: selectionRange.startCol,
+        startRow: range.startRow,
+        startCol: range.startCol,
       });
     },
-    [selectionRange]
+    []
   );
 
   return { fillDrag, setFillDrag, handleFillHandleMouseDown };

@@ -25,6 +25,7 @@ export { GRID_CONTEXT_MENU_ITEMS, getContextMenuHandlers, formatShortcut } from 
 export {
   getHeaderFilterConfig,
   getCellRenderDescriptor,
+  isRowInRange,
   resolveCellDisplayContent,
   resolveCellStyle,
   buildInlineEditorProps,
