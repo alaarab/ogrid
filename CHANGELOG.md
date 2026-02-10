@@ -2,6 +2,49 @@
 
 All notable changes to OGrid will be documented in this file.
 
+## [1.6.0] – 2026-02-09
+
+### BREAKING CHANGES
+
+- **FilterValue discriminated union** — `IFilters` values are now typed discriminated unions instead of raw values. All filter values must specify their `type`:
+  ```typescript
+  // Before (1.5.x)
+  { status: ['Active', 'Closed'], name: 'Alice' }
+  // After (1.6.0)
+  { status: { type: 'multiSelect', value: ['Active', 'Closed'] }, name: { type: 'text', value: 'Alice' } }
+  ```
+  Supported types: `{ type: 'text', value: string }`, `{ type: 'multiSelect', value: string[] }`, `{ type: 'people', value: UserLike }`, `{ type: 'date', value: IDateFilterValue }`.
+
+- **Unified filter API on DataGridTable** — `IOGridDataGridProps` now uses `filters: IFilters` + `onFilterChange: (key, value) => void` instead of the 8 split filter props (`multiSelectFilters`, `textFilters`, `peopleFilters`, `dateFilters` and their onChange handlers). This does NOT affect `OGrid` consumers — only direct `DataGridTable` users.
+
+- **Grouped `useDataGridState` returns** — The hook's return object is now organized into 6 logical groups instead of 42 flat properties:
+  - `layout` — column structure, sizing, container dimensions
+  - `rowSelection` — selected rows, selection handlers
+  - `editing` — cell editing state, commit/cancel
+  - `interaction` — active cell, selection range, keyboard, clipboard, fill handle, undo/redo
+  - `contextMenu` — menu position, handlers (note: `contextMenu` position renamed to `menuPosition`)
+  - `viewModels` — headerFilterInput, cellDescriptorInput, statusBarConfig, showEmptyInGrid
+
+- **Removed deprecated props** — `title`, `gap`, and `columnChooser` removed from `OGridLayout`. Consumers should render titles outside `<OGrid>` and use `toolbarEnd` for column chooser placement.
+
+- **Removed `toDataGridFilterProps`** — This helper was replaced by the unified filter API; use `filters`/`onFilterChange` directly.
+
+### Added
+
+- **`processClientSideData` utility** — Pure function extracted from `useOGrid` for client-side filtering and sorting. Can be used independently for custom data processing pipelines.
+- **Wildcard re-exports** — All three UI packages now use `export * from '@alaarab/ogrid-core'` instead of cherry-picked re-export lists. Every core type is automatically available from any UI package import.
+- **Grouped state sub-interfaces** — `DataGridLayoutState`, `DataGridRowSelectionState`, `DataGridEditingState`, `DataGridCellInteractionState`, `DataGridContextMenuState`, `DataGridViewModelState` are exported for consumers building custom grid wrappers.
+
+### Fixed
+
+- **Material InlineCellEditor auto-focus** — Added `useEffect` auto-focus matching Radix/Fluent behavior.
+
+### Improved
+
+- **Phase 2: Descriptor-to-component pattern** — All three UI packages now use the full suite of 6 core helpers (`getCellRenderDescriptor`, `buildInlineEditorProps`, `buildPopoverEditorProps`, `getCellInteractionProps`, `resolveCellDisplayContent`, `resolveCellStyle`). Each package's `renderCellContent` is now a thin ~50-line mapping from descriptors to framework-specific JSX.
+
+---
+
 ## [1.5.0] – 2026-02-09
 
 ### Added
