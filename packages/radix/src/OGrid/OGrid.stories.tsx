@@ -283,6 +283,37 @@ export const SideBarLeftPosition: Story = {
   },
 };
 
+export const ToolbarWithSecondaryRow: Story = {
+  render: () => (
+    <OGrid<Project>
+      data={makeProjects(20)}
+      columns={columns}
+      getRowId={getRowId}
+      entityLabelPlural="projects"
+      columnChooser="toolbar"
+      pagination
+      defaultPageSize={10}
+      toolbar={
+        <div style={{ display: 'flex', gap: 8, alignItems: 'center', fontSize: 13 }}>
+          <strong>Projects</strong>
+          <button type="button" style={{ padding: '2px 8px', fontSize: 12 }}>Export</button>
+        </div>
+      }
+      toolbarBelow={
+        <div style={{ display: 'flex', gap: 6, alignItems: 'center', fontSize: 12, flexWrap: 'wrap' }}>
+          <span style={{ color: '#666', marginRight: 4 }}>Active filters:</span>
+          <span style={{ padding: '2px 8px', background: '#e0e0e0', borderRadius: 12 }}>
+            Status: Active &times;
+          </span>
+          <span style={{ padding: '2px 8px', background: '#e0e0e0', borderRadius: 12 }}>
+            Department: Engineering &times;
+          </span>
+        </div>
+      }
+    />
+  ),
+};
+
 // ---------------------------------------------------------------------------
 // Playground — fully interactive with Storybook controls
 // ---------------------------------------------------------------------------
@@ -361,6 +392,7 @@ interface PlaygroundArgs {
   defaultSortDirection: 'asc' | 'desc';
   entityLabelPlural: string;
   showCustomToolbar: boolean;
+  showToolbarBelow: boolean;
   pageSizeOptions: string;
 }
 
@@ -401,6 +433,7 @@ export const Playground: StoryObj<PlaygroundArgs> = {
     defaultSortDirection: { control: 'radio', options: ['asc', 'desc'] },
     entityLabelPlural: { control: 'text' },
     showCustomToolbar: { control: 'boolean' },
+    showToolbarBelow: { control: 'boolean' },
     pageSizeOptions: {
       control: 'text',
       description: 'Comma-separated page size options (e.g. "10,25,50,100")',
@@ -425,6 +458,7 @@ export const Playground: StoryObj<PlaygroundArgs> = {
     defaultSortDirection: 'asc',
     entityLabelPlural: 'projects',
     showCustomToolbar: false,
+    showToolbarBelow: false,
     pageSizeOptions: '10,20,50,100',
   },
   render: function PlaygroundStory(args) {
@@ -513,6 +547,27 @@ export const Playground: StoryObj<PlaygroundArgs> = {
               >
                 Import
               </button>
+            </div>
+          ) : undefined
+        }
+        toolbarBelow={
+          args.showToolbarBelow ? (
+            <div
+              style={{
+                display: 'flex',
+                gap: 6,
+                alignItems: 'center',
+                fontSize: 12,
+                flexWrap: 'wrap',
+              }}
+            >
+              <span style={{ color: '#666', marginRight: 4 }}>Filters:</span>
+              <span style={{ padding: '2px 8px', background: '#e0e0e0', borderRadius: 12 }}>
+                Status: Active &times;
+              </span>
+              <span style={{ padding: '2px 8px', background: '#e0e0e0', borderRadius: 12 }}>
+                Owner: Alice &times;
+              </span>
             </div>
           ) : undefined
         }

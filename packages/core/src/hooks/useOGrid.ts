@@ -47,6 +47,7 @@ export interface UseOGridResult<T> {
   /** Resolved placement of the column chooser. */
   columnChooserPlacement: ColumnChooserPlacement;
   toolbar: React.ReactNode;
+  toolbarBelow: React.ReactNode;
   className?: string;
   entityLabelPlural: string;
   emptyState?: { message?: React.ReactNode; render?: () => React.ReactNode };
@@ -86,6 +87,7 @@ export function useOGrid<T>(
     defaultSortBy,
     defaultSortDirection = 'asc',
     toolbar,
+    toolbarBelow,
     emptyState,
     entityLabelPlural = 'items',
     className,
@@ -597,6 +599,7 @@ export function useOGrid<T>(
     handleVisibilityChange,
     columnChooserPlacement,
     toolbar,
+    toolbarBelow,
     className,
     entityLabelPlural,
     emptyState,
