@@ -47,6 +47,11 @@ export function useCellSelection(params: UseCellSelectionParams): UseCellSelecti
   /** Auto-scroll interval during drag. */
   const autoScrollRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
+  // Ref mirror of selectionRange — lets handleCellMouseDown read current value
+  // without adding selectionRange to its useCallback deps (keeps it stable).
+  const selectionRangeRef = useRef(selectionRange);
+  selectionRangeRef.current = selectionRange;
+
   const handleCellMouseDown = useCallback(
     (e: React.MouseEvent, rowIndex: number, globalColIndex: number) => {
       // Only handle primary (left) button — let middle-click scroll and right-click context menu work natively
@@ -55,11 +60,12 @@ export function useCellSelection(params: UseCellSelectionParams): UseCellSelecti
       // Prevent native text selection during cell drag
       e.preventDefault();
       const dataColIndex = globalColIndex - colOffset;
-      if (e.shiftKey && selectionRange != null) {
+      const currentRange = selectionRangeRef.current;
+      if (e.shiftKey && currentRange != null) {
         setSelectionRange(
           normalizeSelectionRange({
-            startRow: selectionRange.startRow,
-            startCol: selectionRange.startCol,
+            startRow: currentRange.startRow,
+            startCol: currentRange.startCol,
             endRow: rowIndex,
             endCol: dataColIndex,
           })
@@ -80,7 +86,7 @@ export function useCellSelection(params: UseCellSelectionParams): UseCellSelecti
         setIsDragging(true);
       }
     },
-    [colOffset, selectionRange, setActiveCell]
+    [colOffset, setActiveCell]
   );
 
   const handleSelectAllCells = useCallback(() => {

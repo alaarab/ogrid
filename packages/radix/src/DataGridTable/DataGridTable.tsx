@@ -17,6 +17,7 @@ import {
   useColumnResize,
   getHeaderFilterConfig,
   getCellRenderDescriptor,
+  isRowInRange,
   buildHeaderRows,
   MarchingAntsOverlay,
   resolveCellDisplayContent,
@@ -34,6 +35,125 @@ const CURSOR_CELL_STYLE: React.CSSProperties = { cursor: 'cell' };
 const STOP_PROPAGATION = (e: React.MouseEvent) => e.stopPropagation();
 const PREVENT_DEFAULT = (e: React.MouseEvent) => { e.preventDefault(); };
 
+// --- Memoized row component (skips re-render for rows unaffected by selection changes) ---
+
+interface GridRowProps {
+  item: unknown;
+  rowIndex: number;
+  rowId: string | number;
+  isSelected: boolean;
+  visibleCols: IColumnDef<unknown>[];
+  columnMeta: { cellStyles: Record<string, React.CSSProperties>; cellClasses: Record<string, string> };
+  renderCellContent: (item: unknown, col: IColumnDef<unknown>, rowIndex: number, colIdx: number) => React.ReactNode;
+  handleSingleRowClick: (e: React.MouseEvent<HTMLTableRowElement>) => void;
+  handleRowCheckboxChange: (rowId: string | number, checked: boolean, rowIndex: number, shiftKey: boolean) => void;
+  lastMouseShiftRef: React.MutableRefObject<boolean>;
+  hasCheckboxCol: boolean;
+  // Comparator-only props (drive re-render decisions, not used in render body)
+  selectionRange: { startRow: number; endRow: number; startCol: number; endCol: number } | null;
+  activeCell: { rowIndex: number; columnIndex: number } | null;
+  cutRange: { startRow: number; endRow: number; startCol: number; endCol: number } | null;
+  copyRange: { startRow: number; endRow: number; startCol: number; endCol: number } | null;
+  isDragging: boolean;
+  editingRowId: string | number | null;
+}
+
+function GridRowInner(props: GridRowProps) {
+  const {
+    item, rowIndex, rowId, isSelected, visibleCols, columnMeta,
+    renderCellContent, handleSingleRowClick, handleRowCheckboxChange,
+    lastMouseShiftRef, hasCheckboxCol,
+  } = props;
+
+  return (
+    <tr
+      className={isSelected ? styles.selectedRow : ''}
+      data-row-id={rowId}
+      onClick={handleSingleRowClick}
+    >
+      {hasCheckboxCol && (
+        <td className={styles.selectionCell}>
+          <div
+            className={styles.selectionCellInner}
+            data-row-index={rowIndex}
+            data-col-index={0}
+            onClick={STOP_PROPAGATION}
+          >
+            <Checkbox.Root
+              className={styles.rowCheckbox}
+              checked={isSelected}
+              onCheckedChange={(c: boolean | 'indeterminate') =>
+                handleRowCheckboxChange(rowId, !!c, rowIndex, lastMouseShiftRef.current)
+              }
+              aria-label={`Select row ${rowIndex + 1}`}
+            >
+              <Checkbox.Indicator className={styles.rowCheckboxIndicator}>✓</Checkbox.Indicator>
+            </Checkbox.Root>
+          </div>
+        </td>
+      )}
+      {visibleCols.map((col, colIdx) => (
+        <td
+          key={col.columnId}
+          className={columnMeta.cellClasses[col.columnId] || undefined}
+          style={columnMeta.cellStyles[col.columnId]}
+        >
+          {renderCellContent(item, col, rowIndex, colIdx)}
+        </td>
+      ))}
+    </tr>
+  );
+}
+
+function areGridRowPropsEqual(prev: GridRowProps, next: GridRowProps): boolean {
+  // Data / structure changes — always re-render
+  if (prev.item !== next.item) return false;
+  if (prev.isSelected !== next.isSelected) return false;
+  if (prev.visibleCols !== next.visibleCols) return false;
+  if (prev.columnMeta !== next.columnMeta) return false;
+  if (prev.hasCheckboxCol !== next.hasCheckboxCol) return false;
+
+  const ri = prev.rowIndex;
+
+  // Editing cell in this row?
+  if (prev.editingRowId !== next.editingRowId) {
+    if (prev.editingRowId === prev.rowId || next.editingRowId === next.rowId) return false;
+  }
+
+  // Active cell in this row?
+  const prevActive = prev.activeCell?.rowIndex === ri;
+  const nextActive = next.activeCell?.rowIndex === ri;
+  if (prevActive !== nextActive) return false;
+  if (prevActive && nextActive && prev.activeCell!.columnIndex !== next.activeCell!.columnIndex) return false;
+
+  // Selection range touches this row?
+  const prevInSel = isRowInRange(prev.selectionRange, ri);
+  const nextInSel = isRowInRange(next.selectionRange, ri);
+  if (prevInSel !== nextInSel) return false;
+  if (prevInSel && nextInSel) {
+    if (prev.selectionRange!.startCol !== next.selectionRange!.startCol ||
+        prev.selectionRange!.endCol !== next.selectionRange!.endCol) return false;
+  }
+
+  // Fill handle (selection end row) + isDragging
+  const prevIsEnd = prev.selectionRange?.endRow === ri;
+  const nextIsEnd = next.selectionRange?.endRow === ri;
+  if (prevIsEnd !== nextIsEnd) return false;
+  if ((prevIsEnd || nextIsEnd) && prev.isDragging !== next.isDragging) return false;
+
+  // Cut/copy ranges touch this row?
+  if (prev.cutRange !== next.cutRange) {
+    if (isRowInRange(prev.cutRange, ri) || isRowInRange(next.cutRange, ri)) return false;
+  }
+  if (prev.copyRange !== next.copyRange) {
+    if (isRowInRange(prev.copyRange, ri) || isRowInRange(next.copyRange, ri)) return false;
+  }
+
+  return true;
+}
+
+const GridRow = React.memo(GridRowInner, areGridRowPropsEqual);
+
 function DataGridTableInner<T>(props: IOGridDataGridProps<T>): React.ReactElement {
   const wrapperRef = useRef<HTMLDivElement>(null);
   const tableContainerRef = useRef<HTMLDivElement>(null);
@@ -43,8 +163,8 @@ function DataGridTableInner<T>(props: IOGridDataGridProps<T>): React.ReactElemen
   const { layout, rowSelection: rowSel, editing, interaction, contextMenu: ctxMenu, viewModels } = state;
   const { visibleCols, totalColCount, hasCheckboxCol, colOffset, containerWidth, minTableWidth, desiredTableWidth, columnSizingOverrides, setColumnSizingOverrides } = layout;
   const { selectedRowIds, updateSelection, handleRowCheckboxChange, handleSelectAll, allSelected, someSelected } = rowSel;
-  const { setEditingCell, pendingEditorValue, setPendingEditorValue, commitCellEdit, cancelPopoverEdit, popoverAnchorEl, setPopoverAnchorEl } = editing;
-  const { setActiveCell, handleCellMouseDown, handleSelectAllCells, selectionRange, hasCellSelection, handleGridKeyDown, handleFillHandleMouseDown, handleCopy, handleCut, handlePaste, cutRange, copyRange, canUndo, canRedo, onUndo, onRedo } = interaction;
+  const { editingCell, setEditingCell, pendingEditorValue, setPendingEditorValue, commitCellEdit, cancelPopoverEdit, popoverAnchorEl, setPopoverAnchorEl } = editing;
+  const { setActiveCell, handleCellMouseDown, handleSelectAllCells, selectionRange, hasCellSelection, handleGridKeyDown, handleFillHandleMouseDown, handleCopy, handleCut, handlePaste, cutRange, copyRange, canUndo, canRedo, onUndo, onRedo, isDragging } = interaction;
   const { menuPosition, handleCellContextMenu, closeContextMenu } = ctxMenu;
   const { headerFilterInput, cellDescriptorInput, statusBarConfig, showEmptyInGrid } = viewModels;
 
@@ -78,6 +198,15 @@ function DataGridTableInner<T>(props: IOGridDataGridProps<T>): React.ReactElemen
 
   const editCallbacks = useMemo(() => ({ commitCellEdit, setEditingCell, setPendingEditorValue, cancelPopoverEdit }), [commitCellEdit, setEditingCell, setPendingEditorValue, cancelPopoverEdit]);
   const interactionHandlers = useMemo(() => ({ handleCellMouseDown, setActiveCell, setEditingCell, handleCellContextMenu }), [handleCellMouseDown, setActiveCell, setEditingCell, handleCellContextMenu]);
+
+  // Refs for volatile state — lets renderCellContent be stable (same function ref across
+  // selection changes) so that GridRow's React.memo comparator can skip unaffected rows.
+  const cellDescriptorInputRef = useRef(cellDescriptorInput);
+  cellDescriptorInputRef.current = cellDescriptorInput;
+  const pendingEditorValueRef = useRef(pendingEditorValue);
+  pendingEditorValueRef.current = pendingEditorValue;
+  const popoverAnchorElRef = useRef(popoverAnchorEl);
+  popoverAnchorElRef.current = popoverAnchorEl;
 
   // Pre-compute column styles and classNames (avoids per-cell object creation in the row loop)
   const columnMeta = useMemo(() => {
@@ -135,19 +264,21 @@ function DataGridTableInner<T>(props: IOGridDataGridProps<T>): React.ReactElemen
   // Stable header select-all handler
   const handleSelectAllChecked = useCallback((c: boolean | 'indeterminate') => handleSelectAll(!!c), [handleSelectAll]);
 
+  // renderCellContent reads volatile state from refs — keeps function identity stable so
+  // GridRow's React.memo comparator can skip rows whose selection state hasn't changed.
   const renderCellContent = useCallback(
     (item: T, col: IColumnDef<T>, rowIndex: number, colIdx: number): React.ReactNode => {
-      const descriptor = getCellRenderDescriptor(item, col, rowIndex, colIdx, cellDescriptorInput);
+      const descriptor = getCellRenderDescriptor(item, col, rowIndex, colIdx, cellDescriptorInputRef.current);
 
       if (descriptor.mode === 'editing-inline') {
         return <InlineCellEditor<T> {...buildInlineEditorProps(item, col, descriptor, editCallbacks)} />;
       }
 
       if (descriptor.mode === 'editing-popover' && typeof col.cellEditor === 'function') {
-        const editorProps = buildPopoverEditorProps(item, col, descriptor, pendingEditorValue, editCallbacks);
+        const editorProps = buildPopoverEditorProps(item, col, descriptor, pendingEditorValueRef.current, editCallbacks);
         const CustomEditor = col.cellEditor as React.ComponentType<ICellEditorProps<T>>;
         return (
-          <Popover.Root open={!!popoverAnchorEl} onOpenChange={(open: boolean) => { if (!open) cancelPopoverEdit(); }}>
+          <Popover.Root open={!!popoverAnchorElRef.current} onOpenChange={(open: boolean) => { if (!open) cancelPopoverEdit(); }}>
             <Popover.Anchor asChild>
               <div ref={(el) => el && setPopoverAnchorEl(el)} style={{ minHeight: '100%', minWidth: 40 }} aria-hidden />
             </Popover.Anchor>
@@ -191,7 +322,7 @@ function DataGridTableInner<T>(props: IOGridDataGridProps<T>): React.ReactElemen
         </div>
       );
     },
-    [cellDescriptorInput, pendingEditorValue, popoverAnchorEl, editCallbacks, interactionHandlers, handleFillHandleMouseDown, setPopoverAnchorEl, cancelPopoverEdit]
+    [editCallbacks, interactionHandlers, handleFillHandleMouseDown, setPopoverAnchorEl, cancelPopoverEdit]
   );
 
   return (
@@ -289,43 +420,27 @@ function DataGridTableInner<T>(props: IOGridDataGridProps<T>): React.ReactElemen
                   <tbody>
                     {items.map((item, rowIndex) => {
                       const rowIdStr = getRowId(item);
-                      const isSelected = selectedRowIds.has(rowIdStr);
                       return (
-                        <tr
+                        <GridRow
                           key={rowIdStr}
-                          className={isSelected ? styles.selectedRow : ''}
-                          data-row-id={rowIdStr}
-                          onClick={handleSingleRowClick}
-                        >
-                          {hasCheckboxCol && (
-                            <td className={styles.selectionCell}>
-                              <div
-                                className={styles.selectionCellInner}
-                                data-row-index={rowIndex}
-                                data-col-index={0}
-                                onClick={STOP_PROPAGATION}
-                              >
-                                <Checkbox.Root
-                                  className={styles.rowCheckbox}
-                                  checked={selectedRowIds.has(rowIdStr)}
-                                  onCheckedChange={(c: boolean | 'indeterminate') => handleRowCheckboxChange(rowIdStr, !!c, rowIndex, lastMouseShiftRef.current)}
-                                  aria-label={`Select row ${rowIndex + 1}`}
-                                >
-                                  <Checkbox.Indicator className={styles.rowCheckboxIndicator}>✓</Checkbox.Indicator>
-                                </Checkbox.Root>
-                              </div>
-                            </td>
-                          )}
-                          {visibleCols.map((col, colIdx) => (
-                            <td
-                              key={col.columnId}
-                              className={columnMeta.cellClasses[col.columnId] || undefined}
-                              style={columnMeta.cellStyles[col.columnId]}
-                            >
-                              {renderCellContent(item, col, rowIndex, colIdx)}
-                            </td>
-                          ))}
-                        </tr>
+                          item={item}
+                          rowIndex={rowIndex}
+                          rowId={rowIdStr}
+                          isSelected={selectedRowIds.has(rowIdStr)}
+                          visibleCols={visibleCols as IColumnDef<unknown>[]}
+                          columnMeta={columnMeta}
+                          renderCellContent={renderCellContent as GridRowProps['renderCellContent']}
+                          handleSingleRowClick={handleSingleRowClick}
+                          handleRowCheckboxChange={handleRowCheckboxChange}
+                          lastMouseShiftRef={lastMouseShiftRef}
+                          hasCheckboxCol={hasCheckboxCol}
+                          selectionRange={selectionRange}
+                          activeCell={interaction.activeCell}
+                          cutRange={cutRange}
+                          copyRange={copyRange}
+                          isDragging={isDragging}
+                          editingRowId={editingCell?.rowId ?? null}
+                        />
                       );
                     })}
                   </tbody>
@@ -368,16 +483,6 @@ function DataGridTableInner<T>(props: IOGridDataGridProps<T>): React.ReactElemen
               )}
             </div>
           </div>
-        {statusBarConfig && (
-          <StatusBar
-            totalCount={statusBarConfig.totalCount}
-            filteredCount={statusBarConfig.filteredCount}
-            selectedCount={statusBarConfig.selectedCount ?? selectedRowIds.size}
-            selectedCellCount={selectionRange ? (Math.abs(selectionRange.endRow - selectionRange.startRow) + 1) * (Math.abs(selectionRange.endCol - selectionRange.startCol) + 1) : undefined}
-            aggregation={statusBarConfig.aggregation}
-            suppressRowCount={statusBarConfig.suppressRowCount}
-          />
-        )}
       </div>
 
         {menuPosition &&
@@ -399,6 +504,16 @@ function DataGridTableInner<T>(props: IOGridDataGridProps<T>): React.ReactElemen
             document.body
           )}
       </div>
+      {statusBarConfig && (
+        <StatusBar
+          totalCount={statusBarConfig.totalCount}
+          filteredCount={statusBarConfig.filteredCount}
+          selectedCount={statusBarConfig.selectedCount ?? selectedRowIds.size}
+          selectedCellCount={selectionRange ? (Math.abs(selectionRange.endRow - selectionRange.startRow) + 1) * (Math.abs(selectionRange.endCol - selectionRange.startCol) + 1) : undefined}
+          aggregation={statusBarConfig.aggregation}
+          suppressRowCount={statusBarConfig.suppressRowCount}
+        />
+      )}
       {isLoading && items.length > 0 && (
         <div className={styles.loadingOverlay} aria-live="polite">
           <div className={styles.loadingOverlayContent}>

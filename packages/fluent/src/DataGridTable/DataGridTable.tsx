@@ -35,6 +35,7 @@ import {
   buildInlineEditorProps,
   buildPopoverEditorProps,
   getCellInteractionProps,
+  isRowInRange,
 } from '@alaarab/ogrid-core';
 import styles from './DataGridTable.module.scss';
 
@@ -63,8 +64,8 @@ function DataGridTableInner<T>(props: IOGridDataGridProps<T>): React.ReactElemen
   const { layout, rowSelection: rowSel, editing, interaction, contextMenu: ctxMenu, viewModels } = state;
   const { flatColumns, visibleCols, totalColCount, hasCheckboxCol, colOffset, rowIndexByRowId, containerWidth, minTableWidth, desiredTableWidth, columnSizingOverrides, setColumnSizingOverrides } = layout;
   const { selectedRowIds, updateSelection, handleRowCheckboxChange, handleSelectAll, allSelected, someSelected } = rowSel;
-  const { setEditingCell, pendingEditorValue, setPendingEditorValue, commitCellEdit, cancelPopoverEdit, popoverAnchorEl, setPopoverAnchorEl } = editing;
-  const { activeCell, setActiveCell, handleCellMouseDown, handleSelectAllCells, selectionRange, hasCellSelection, handleGridKeyDown, handleFillHandleMouseDown, handleCopy, handleCut, handlePaste, cutRange, copyRange, canUndo, canRedo, onUndo, onRedo } = interaction;
+  const { editingCell, setEditingCell, pendingEditorValue, setPendingEditorValue, commitCellEdit, cancelPopoverEdit, popoverAnchorEl, setPopoverAnchorEl } = editing;
+  const { activeCell, setActiveCell, handleCellMouseDown, handleSelectAllCells, selectionRange, hasCellSelection, handleGridKeyDown, handleFillHandleMouseDown, handleCopy, handleCut, handlePaste, cutRange, copyRange, canUndo, canRedo, onUndo, onRedo, isDragging } = interaction;
   const { menuPosition, handleCellContextMenu, closeContextMenu } = ctxMenu;
   const { headerFilterInput, cellDescriptorInput, statusBarConfig, showEmptyInGrid } = viewModels;
 
@@ -531,16 +532,6 @@ function DataGridTableInner<T>(props: IOGridDataGridProps<T>): React.ReactElemen
               )}
             </div>
           </div>
-        {statusBarConfig && (
-          <StatusBar
-            totalCount={statusBarConfig.totalCount}
-            filteredCount={statusBarConfig.filteredCount}
-            selectedCount={statusBarConfig.selectedCount ?? selectedRowIds.size}
-            selectedCellCount={selectionRange ? (Math.abs(selectionRange.endRow - selectionRange.startRow) + 1) * (Math.abs(selectionRange.endCol - selectionRange.startCol) + 1) : undefined}
-            aggregation={statusBarConfig.aggregation}
-            suppressRowCount={statusBarConfig.suppressRowCount}
-          />
-        )}
       </div>
 
         {menuPosition &&
@@ -562,6 +553,16 @@ function DataGridTableInner<T>(props: IOGridDataGridProps<T>): React.ReactElemen
             document.body
           )}
       </div>
+      {statusBarConfig && (
+        <StatusBar
+          totalCount={statusBarConfig.totalCount}
+          filteredCount={statusBarConfig.filteredCount}
+          selectedCount={statusBarConfig.selectedCount ?? selectedRowIds.size}
+          selectedCellCount={selectionRange ? (Math.abs(selectionRange.endRow - selectionRange.startRow) + 1) * (Math.abs(selectionRange.endCol - selectionRange.startCol) + 1) : undefined}
+          aggregation={statusBarConfig.aggregation}
+          suppressRowCount={statusBarConfig.suppressRowCount}
+        />
+      )}
       {isLoading && items.length > 0 && (
         <div className={styles.loadingOverlay} aria-live="polite">
           <div className={styles.loadingOverlayContent}>
