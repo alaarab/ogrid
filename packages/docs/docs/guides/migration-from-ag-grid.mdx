@@ -1,0 +1,227 @@
+---
+sidebar_position: 4
+title: Migration from AG Grid
+description: Side-by-side mapping from AG Grid to OGrid with equivalent APIs, props, and features.
+---
+
+# Migration from AG Grid
+
+AG Grid is the industry standard for React data grids -- but its most useful features (range selection, clipboard, context menu, fill handle, status bar) are locked behind a $999/developer/year enterprise license. OGrid delivers all of these features under the MIT license, with zero cost, a smaller bundle, and a more React-idiomatic API.
+
+This guide maps every major AG Grid concept to its OGrid equivalent, so you can migrate systematically.
+
+## Installation
+
+```bash
+# Remove AG Grid
+npm uninstall ag-grid-react ag-grid-community ag-grid-enterprise
+
+# Install OGrid (pick your UI framework)
+npm install @alaarab/ogrid          # Radix (lightweight, no framework dep)
+npm install @alaarab/ogrid-fluent   # Fluent UI v9
+npm install @alaarab/ogrid-material # Material UI v6
+```
+
+## Component Mapping
+
+AG Grid uses a single `<AgGridReact>` component. OGrid uses `<OGrid>` with the same pattern:
+
+```tsx
+// AG Grid
+import { AgGridReact } from 'ag-grid-react';
+
+<AgGridReact
+  columnDefs={columnDefs}
+  rowData={rowData}
+  getRowId={(params) => params.data.id}
+/>
+
+// OGrid
+import { OGrid } from '@alaarab/ogrid';
+
+<OGrid
+  columns={columns}
+  data={data}
+  getRowId={(item) => item.id}
+/>
+```
+
+## Column Definition Mapping
+
+| AG Grid (`colDef`) | OGrid (`IColumnDef`) | Notes |
+|---|---|---|
+| `field` | `columnId` | OGrid uses `columnId` as both the field key and unique identifier |
+| `headerName` | `name` | Display name in the column header |
+| `sortable: true` | `sortable: true` | Identical |
+| `filter: true` | `filterable: { type: 'text' }` | OGrid uses a typed filter config object |
+| `filter: 'agSetColumnFilter'` | `filterable: { type: 'multiSelect' }` | Multi-select filter with checkboxes |
+| `cellRenderer` | `renderCell` | `(item) => ReactNode` instead of `(params) => ReactNode` |
+| `valueGetter` | `valueGetter` | `(item) => unknown` instead of `(params) => unknown` |
+| `valueFormatter` | `valueFormatter` | `(value, item) => string` instead of `(params) => string` |
+| `editable: true` | `editable: true` | Also supports `(item) => boolean` for per-row |
+| `cellEditor: 'agSelectCellEditor'` | `cellEditor: 'select'` | Built-in select editor |
+| `cellEditor: 'agRichSelectCellEditor'` | `cellEditor: 'richSelect'` | Searchable dropdown |
+| `cellEditorParams` | `cellEditorParams` | Same concept -- `{ values: [...] }` |
+| `cellEditorPopup: true` | `cellEditorPopup: true` | Identical |
+| `pinned: 'left'` | `pinned: 'left'` | Also supports `'right'` |
+| `width` | `defaultWidth` | Initial column width |
+| `minWidth` | `minWidth` | Minimum column width |
+| `hide: true` | `defaultVisible: false` | Column hidden by default |
+| `cellStyle` | `cellStyle` | Static object or `(item) => CSSProperties` |
+
+### Column Definition Example
+
+```tsx
+// AG Grid
+const columnDefs = [
+  { field: 'name', headerName: 'Name', sortable: true, filter: true },
+  { field: 'status', headerName: 'Status', filter: 'agSetColumnFilter',
+    cellEditor: 'agSelectCellEditor', editable: true,
+    cellEditorParams: { values: ['Active', 'Inactive'] } },
+  { field: 'amount', headerName: 'Amount', valueFormatter: (p) => `$${p.value}` },
+];
+
+// OGrid
+const columns = [
+  { columnId: 'name', name: 'Name', sortable: true, filterable: { type: 'text' } },
+  { columnId: 'status', name: 'Status', filterable: { type: 'multiSelect' },
+    cellEditor: 'select', editable: true,
+    cellEditorParams: { values: ['Active', 'Inactive'] } },
+  { columnId: 'amount', name: 'Amount', type: 'numeric',
+    valueFormatter: (value) => `$${value}` },
+];
+```
+
+## Grid Options Mapping
+
+| AG Grid (`gridOptions`) | OGrid (`IOGridProps`) | Notes |
+|---|---|---|
+| `pagination: true` | Built-in, always available | Pagination is always included |
+| `paginationPageSize: 25` | `defaultPageSize={25}` | Or controlled: `pageSize` + `onPageSizeChange` |
+| `rowSelection: 'multiple'` | `rowSelection="multiple"` | Also `'single'` or `'none'` |
+| `suppressRowClickSelection` | -- | OGrid uses checkbox column for selection |
+| `rowData` | `data` | Client-side data array |
+| `datasource` / `serverSideDatasource` | `dataSource` | `IDataSource<T>` with `fetchPage()` |
+| `onSortChanged` | `onSortChange` | Controlled sort callback |
+| `onFilterChanged` | `onFiltersChange` | Controlled filter callback |
+| `onCellValueChanged` | `onCellValueChanged` | Same concept, different event shape |
+| `defaultColDef.editable` | `editable` | Grid-level toggle |
+| `statusBar` | `statusBar` | `true` or `IStatusBarProps` |
+| `sideBar` | `sideBar` | `true` or `ISideBarDef` |
+| `domLayout: 'autoHeight'` | `layoutMode="content"` | Grid sizes to content |
+
+## API Mapping
+
+AG Grid exposes an imperative API via `gridApi`. OGrid uses a ref:
+
+```tsx
+// AG Grid
+const gridRef = useRef();
+gridRef.current.api.setRowData(newData);
+gridRef.current.api.getSelectedRows();
+gridRef.current.api.exportDataAsCsv();
+
+// OGrid
+import { useRef } from 'react';
+import { OGrid, type IOGridApi, exportToCsv } from '@alaarab/ogrid';
+
+const gridRef = useRef<IOGridApi<MyRow>>(null);
+gridRef.current?.setRowData(newData);
+gridRef.current?.getSelectedRows();
+exportToCsv(items, columns); // standalone utility function
+```
+
+| AG Grid API | OGrid API | Notes |
+|---|---|---|
+| `api.setRowData(data)` | `gridRef.current.setRowData(data)` | Client-side only |
+| `api.getSelectedRows()` | `gridRef.current.getSelectedRows()` | Returns `RowId[]` |
+| `api.selectAll()` | `gridRef.current.selectAll()` | Select all rows |
+| `api.deselectAll()` | `gridRef.current.deselectAll()` | Deselect all rows |
+| `api.setFilterModel(model)` | `gridRef.current.setFilterModel(filters)` | Uses `IFilters` type |
+| `api.exportDataAsCsv()` | `exportToCsv(items, columns)` | Standalone utility, not on ref |
+| `api.getColumnState()` | `gridRef.current.getColumnState()` | Returns `IGridColumnState` |
+| `api.applyColumnState(state)` | `gridRef.current.applyColumnState(state)` | Bulk restore |
+| `api.setLoading(true)` | `gridRef.current.setLoading(true)` | Show loading overlay |
+
+## Enterprise Features -- Now Free
+
+These features require an AG Grid Enterprise license ($999/dev/year). In OGrid, they are all included for free under the MIT license.
+
+| Feature | AG Grid | OGrid |
+|---------|---------|-------|
+| Cell Range Selection | Enterprise | `cellSelection` (default `true`) |
+| Clipboard (Copy/Paste) | Enterprise | Built-in (Ctrl+C / Ctrl+V) |
+| Fill Handle | Enterprise | Built-in (drag corner of selection) |
+| Context Menu | Enterprise | Built-in (right-click any cell) |
+| Status Bar | Enterprise | `statusBar={true}` |
+| Column State Persistence | Enterprise | `getColumnState()` / `applyColumnState()` |
+| Undo/Redo | Enterprise | Built-in (Ctrl+Z / Ctrl+Y) |
+| Rich Select Editor | Enterprise | `cellEditor: 'richSelect'` |
+
+## Server-Side Data Source
+
+```tsx
+// AG Grid (server-side row model)
+const datasource = {
+  getRows: (params) => {
+    fetch(`/api/data?start=${params.request.startRow}`)
+      .then(res => res.json())
+      .then(data => params.success({ rowData: data.rows, rowCount: data.total }));
+  }
+};
+
+// OGrid
+const dataSource: IDataSource<MyRow> = {
+  fetchPage: async ({ page, pageSize, sort, filters }) => {
+    const res = await fetch(
+      `/api/data?page=${page}&size=${pageSize}&sort=${sort?.field}&dir=${sort?.direction}`
+    );
+    const json = await res.json();
+    return { items: json.rows, totalCount: json.total };
+  },
+};
+
+<OGrid columns={columns} dataSource={dataSource} getRowId={(item) => item.id} />
+```
+
+## Column Groups
+
+```tsx
+// AG Grid
+const columnDefs = [
+  {
+    headerName: 'Contact Info',
+    children: [
+      { field: 'email', headerName: 'Email' },
+      { field: 'phone', headerName: 'Phone' },
+    ],
+  },
+];
+
+// OGrid
+const columns = [
+  {
+    headerName: 'Contact Info',
+    children: [
+      { columnId: 'email', name: 'Email' },
+      { columnId: 'phone', name: 'Phone' },
+    ],
+  },
+];
+```
+
+Column groups in OGrid render as multi-row headers, exactly like AG Grid.
+
+## Step-by-Step Migration
+
+1. **Install OGrid** and remove AG Grid packages.
+2. **Rename column definitions:** `field` to `columnId`, `headerName` to `name`, `cellRenderer` to `renderCell`, `filter: true` to `filterable: { type: 'text' }`.
+3. **Replace `<AgGridReact>`** with `<OGrid>`. Rename `rowData` to `data`, `columnDefs` to `columns`.
+4. **Update API usage:** Replace `gridRef.current.api.*` with `gridRef.current.*`. Move `exportDataAsCsv` to the standalone `exportToCsv` function.
+5. **Remove Enterprise license.** Delete AG Grid license keys and `LicenseManager.setLicenseKey()` calls.
+6. **Remove AG Grid CSS imports.** OGrid handles its own styling through your UI framework's theme.
+7. **Test.** OGrid's API is intentionally similar to AG Grid's, so most migrations are mechanical find-and-replace operations.
+
+:::tip
+OGrid works with the same React patterns as AG Grid (controlled/uncontrolled state, refs for imperative API, column definitions as plain objects). The migration is primarily a prop rename exercise, not an architecture change.
+:::

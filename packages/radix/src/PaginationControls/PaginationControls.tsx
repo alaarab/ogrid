@@ -9,6 +9,7 @@ export interface IPaginationControlsProps {
   totalCount: number;
   onPageChange: (page: number) => void;
   onPageSizeChange: (pageSize: number) => void;
+  pageSizeOptions?: number[];
   entityLabelPlural?: string;
   className?: string;
 }
@@ -27,12 +28,12 @@ function ChevronDoubleRight(): React.ReactElement {
 }
 
 export const PaginationControls: React.FC<IPaginationControlsProps> = React.memo((props) => {
-  const { currentPage, pageSize, totalCount, onPageChange, onPageSizeChange, entityLabelPlural, className } = props;
+  const { currentPage, pageSize, totalCount, onPageChange, onPageSizeChange, pageSizeOptions, entityLabelPlural, className } = props;
   const labelPlural = entityLabelPlural ?? 'items';
 
   const vm = useMemo(
-    () => getPaginationViewModel(currentPage, pageSize, totalCount),
-    [currentPage, pageSize, totalCount]
+    () => getPaginationViewModel(currentPage, pageSize, totalCount, pageSizeOptions ? { pageSizeOptions } : undefined),
+    [currentPage, pageSize, totalCount, pageSizeOptions]
   );
 
   const handlePageSizeChange = useCallback(

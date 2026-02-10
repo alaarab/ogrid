@@ -22,6 +22,18 @@ export interface UseCellSelectionResult {
 /** DOM attribute name used for drag-range highlighting (bypasses React). */
 const DRAG_ATTR = 'data-drag-range';
 
+/** Auto-scroll config */
+const AUTO_SCROLL_EDGE = 40;   // px from wrapper edge to trigger
+const AUTO_SCROLL_MIN_SPEED = 2;
+const AUTO_SCROLL_MAX_SPEED = 20;
+const AUTO_SCROLL_INTERVAL = 16; // ~60fps
+
+/** Compute scroll speed proportional to distance past the edge, capped. */
+function autoScrollSpeed(distance: number): number {
+  const t = Math.min(distance / AUTO_SCROLL_EDGE, 1);
+  return AUTO_SCROLL_MIN_SPEED + t * (AUTO_SCROLL_MAX_SPEED - AUTO_SCROLL_MIN_SPEED);
+}
+
 export function useCellSelection(params: UseCellSelectionParams): UseCellSelectionResult {
   const { colOffset, rowCount, visibleColCount, setActiveCell, wrapperRef } = params;
 
@@ -32,6 +44,8 @@ export function useCellSelection(params: UseCellSelectionParams): UseCellSelecti
   const rafRef = useRef(0);
   /** Live drag range kept in a ref — only committed to React state on mouseup. */
   const liveDragRangeRef = useRef<ISelectionRange | null>(null);
+  /** Auto-scroll interval during drag. */
+  const autoScrollRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const handleCellMouseDown = useCallback(
     (e: React.MouseEvent, rowIndex: number, globalColIndex: number) => {
@@ -137,11 +151,81 @@ export function useCellSelection(params: UseCellSelectionParams): UseCellSelecti
       });
     };
 
+    /** Start or update auto-scroll interval based on mouse position relative to wrapper edges. */
+    const updateAutoScroll = () => {
+      const wrapper = wrapperRef.current;
+      const pos = lastMousePosRef.current;
+      if (!wrapper || !pos || !isDraggingRef.current) {
+        stopAutoScroll();
+        return;
+      }
+
+      const rect = wrapper.getBoundingClientRect();
+      let dx = 0;
+      let dy = 0;
+
+      if (pos.cy < rect.top + AUTO_SCROLL_EDGE) {
+        dy = -autoScrollSpeed(rect.top + AUTO_SCROLL_EDGE - pos.cy);
+      } else if (pos.cy > rect.bottom - AUTO_SCROLL_EDGE) {
+        dy = autoScrollSpeed(pos.cy - (rect.bottom - AUTO_SCROLL_EDGE));
+      }
+
+      if (pos.cx < rect.left + AUTO_SCROLL_EDGE) {
+        dx = -autoScrollSpeed(rect.left + AUTO_SCROLL_EDGE - pos.cx);
+      } else if (pos.cx > rect.right - AUTO_SCROLL_EDGE) {
+        dx = autoScrollSpeed(pos.cx - (rect.right - AUTO_SCROLL_EDGE));
+      }
+
+      if (dx === 0 && dy === 0) {
+        stopAutoScroll();
+        return;
+      }
+
+      // Start interval if not already running
+      if (!autoScrollRef.current) {
+        autoScrollRef.current = setInterval(() => {
+          const w = wrapperRef.current;
+          const p = lastMousePosRef.current;
+          if (!w || !p || !isDraggingRef.current) { stopAutoScroll(); return; }
+
+          const r = w.getBoundingClientRect();
+          let sdx = 0;
+          let sdy = 0;
+          if (p.cy < r.top + AUTO_SCROLL_EDGE) sdy = -autoScrollSpeed(r.top + AUTO_SCROLL_EDGE - p.cy);
+          else if (p.cy > r.bottom - AUTO_SCROLL_EDGE) sdy = autoScrollSpeed(p.cy - (r.bottom - AUTO_SCROLL_EDGE));
+          if (p.cx < r.left + AUTO_SCROLL_EDGE) sdx = -autoScrollSpeed(r.left + AUTO_SCROLL_EDGE - p.cx);
+          else if (p.cx > r.right - AUTO_SCROLL_EDGE) sdx = autoScrollSpeed(p.cx - (r.right - AUTO_SCROLL_EDGE));
+
+          if (sdx === 0 && sdy === 0) { stopAutoScroll(); return; }
+
+          w.scrollTop += sdy;
+          w.scrollLeft += sdx;
+
+          // After scrolling, re-resolve the cell under the mouse and update drag range
+          const newRange = resolveRange(p.cx, p.cy);
+          if (newRange) {
+            liveDragRangeRef.current = newRange;
+            applyDragAttrs(newRange);
+          }
+        }, AUTO_SCROLL_INTERVAL);
+      }
+    };
+
+    const stopAutoScroll = () => {
+      if (autoScrollRef.current) {
+        clearInterval(autoScrollRef.current);
+        autoScrollRef.current = null;
+      }
+    };
+
     const onMove = (e: MouseEvent) => {
       if (!isDraggingRef.current || !dragStartRef.current) return;
 
       // Always store latest position so mouseUp can flush if RAF hasn't executed
       lastMousePosRef.current = { cx: e.clientX, cy: e.clientY };
+
+      // Update auto-scroll based on mouse proximity to edges
+      updateAutoScroll();
 
       // Cancel previous pending frame
       if (rafRef.current) cancelAnimationFrame(rafRef.current);
@@ -173,6 +257,8 @@ export function useCellSelection(params: UseCellSelectionParams): UseCellSelecti
 
     const onUp = () => {
       if (!isDraggingRef.current) return;
+
+      stopAutoScroll();
 
       if (rafRef.current) {
         cancelAnimationFrame(rafRef.current);
@@ -213,6 +299,7 @@ export function useCellSelection(params: UseCellSelectionParams): UseCellSelecti
       window.removeEventListener('mousemove', onMove, true);
       window.removeEventListener('mouseup', onUp, true);
       if (rafRef.current) cancelAnimationFrame(rafRef.current);
+      stopAutoScroll();
     };
   }, [colOffset, setActiveCell, wrapperRef]);
 

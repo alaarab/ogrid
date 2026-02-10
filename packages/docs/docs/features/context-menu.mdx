@@ -1,0 +1,107 @@
+---
+sidebar_position: 13
+title: Context Menu
+description: Right-click cell menu with clipboard, undo/redo, and export actions
+---
+
+import ContextMenuDemo from '@site/src/components/demos/ContextMenuDemo';
+
+# Context Menu
+
+Right-click any cell to open a context menu with clipboard operations, undo/redo, and selection actions. Keyboard shortcut labels are displayed alongside each item.
+
+## Live Demo
+
+<ContextMenuDemo />
+
+## Quick Example
+
+```tsx
+import { OGrid } from '@alaarab/ogrid';
+import { useRef } from 'react';
+import { useUndoRedo } from '@alaarab/ogrid-core';
+
+function App() {
+  const undoRedo = useUndoRedo();
+
+  return (
+    <OGrid
+      columns={columns}
+      data={data}
+      getRowId={(r) => r.id}
+      editable
+      onCellValueChanged={(e) => {
+        undoRedo.pushChange(e);
+        // persist change...
+      }}
+      onUndo={undoRedo.undo}
+      onRedo={undoRedo.redo}
+      canUndo={undoRedo.canUndo}
+      canRedo={undoRedo.canRedo}
+    />
+  );
+}
+```
+
+Right-click a cell to see the context menu with all available actions.
+
+## How It Works
+
+The context menu is built in and requires no additional configuration. It appears when the user right-clicks on a data cell. Right-clicking on headers, empty space, or outside the grid does not open the menu.
+
+### Built-in Menu Items
+
+| Item | Shortcut | Description |
+|---|---|---|
+| Undo | Ctrl+Z | Undo the last cell edit |
+| Redo | Ctrl+Y | Redo the last undone edit |
+| Copy | Ctrl+C | Copy selected cells to clipboard |
+| Cut | Ctrl+X | Cut selected cells to clipboard |
+| Paste | Ctrl+V | Paste clipboard contents into selected cells |
+| Select all | Ctrl+A | Select all cells in the grid |
+
+On macOS, "Ctrl" is automatically displayed as the Command symbol.
+
+### Undo/Redo State
+
+The Undo and Redo items reflect their availability through the `canUndo` and `canRedo` props. When `canUndo` is `false`, the Undo item appears disabled (grayed out). Same for Redo.
+
+```tsx
+<OGrid
+  // ...
+  onUndo={undoRedo.undo}
+  onRedo={undoRedo.redo}
+  canUndo={undoRedo.canUndo}
+  canRedo={undoRedo.canRedo}
+/>
+```
+
+If `onUndo` and `onRedo` are not provided, the undo/redo items still appear but do nothing.
+
+### Cell-Only Activation
+
+The context menu only opens on cell right-clicks. This is intentional:
+
+- **Header right-click**: default browser context menu (no grid menu).
+- **Empty space right-click**: default browser context menu.
+- **Cell right-click**: grid context menu with actions scoped to the current selection.
+
+### Copy/Cut Disabled State
+
+The Copy and Cut items are disabled when no cells are selected. Once the user clicks a cell or selects a range, these items become active.
+
+## Props Reference
+
+| Type | Field | Description |
+|---|---|---|
+| `IOGridProps<T>` | `onUndo` | Callback invoked when Undo is clicked |
+| `IOGridProps<T>` | `onRedo` | Callback invoked when Redo is clicked |
+| `IOGridProps<T>` | `canUndo` | `boolean` -- disables Undo item when `false` |
+| `IOGridProps<T>` | `canRedo` | `boolean` -- disables Redo item when `false` |
+| `IOGridProps<T>` | `cellSelection` | `boolean` -- context menu requires cell selection (default `true`) |
+
+## Related
+
+- [Keyboard Navigation](./keyboard-navigation) -- same shortcuts work via keyboard
+- [CSV Export](./csv-export) -- export is also available via the `exportToCsv` utility
+- [Grid API](./grid-api) -- programmatic access to selection and data
