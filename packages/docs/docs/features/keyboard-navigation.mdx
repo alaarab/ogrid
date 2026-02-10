@@ -1,0 +1,144 @@
+---
+sidebar_position: 17
+title: Keyboard Navigation
+description: Full keyboard support for navigating, editing, selecting, and operating on cells
+---
+
+import KeyboardNavigationDemo from '@site/src/components/demos/KeyboardNavigationDemo';
+
+# Keyboard Navigation
+
+OGrid supports comprehensive keyboard navigation for moving between cells, editing values, selecting ranges, and performing clipboard and undo operations -- all without touching the mouse.
+
+## Live Demo
+
+<KeyboardNavigationDemo />
+
+## Quick Example
+
+```tsx
+import { OGrid } from '@alaarab/ogrid';
+
+function App() {
+  return (
+    <OGrid
+      columns={columns}
+      data={data}
+      getRowId={(r) => r.id}
+      editable
+    />
+  );
+}
+```
+
+Click any cell to make it the active cell, then use the keyboard to navigate and edit.
+
+## Navigation
+
+| Key | Action |
+|---|---|
+| Arrow Up / Down / Left / Right | Move active cell in that direction |
+| Ctrl+Arrow | Jump to the edge of the current data region (Excel-style) |
+| Tab | Move to the next cell (left to right, then next row) |
+| Shift+Tab | Move to the previous cell |
+| Home | Move to the first column in the current row |
+| End | Move to the last column in the current row |
+| Ctrl+Home | Move to the first cell in the grid (top-left) |
+| Ctrl+End | Move to the last cell in the grid (bottom-right) |
+| Page Down | Move down by one page of rows |
+| Page Up | Move up by one page of rows |
+
+## Cell Selection
+
+| Key | Action |
+|---|---|
+| Click | Set active cell |
+| Shift+Arrow | Extend selection range from the active cell |
+| Ctrl+Shift+Arrow | Extend selection to the edge of the current data region |
+| Shift+Click | Select range from active cell to clicked cell |
+| Ctrl+A | Select all cells |
+
+The selection range is highlighted with a green border. The active cell remains visually distinct within the range.
+
+### Ctrl+Arrow (Data Region Jump)
+
+Ctrl+Arrow navigates the same way Excel does:
+
+- **Non-empty cell → non-empty neighbor**: Jumps to the last non-empty cell before a gap (empty cell) or the grid edge.
+- **Non-empty cell → empty neighbor**: Skips over the empty cells and lands on the next non-empty cell, or the grid edge if all remaining cells are empty.
+- **Empty cell**: Jumps to the next non-empty cell in that direction, or the grid edge.
+
+Combine with **Shift** to extend the selection range to the same target.
+
+## Editing
+
+| Key | Action |
+|---|---|
+| Enter | Start editing the active cell; press again to commit and move down |
+| F2 | Start editing the active cell (cursor at end of text) |
+| Escape | Cancel editing and revert to the original value |
+| Delete / Backspace | Clear the contents of selected cells |
+| Any printable character | Start editing and replace cell content with the typed character |
+
+When a cell is in edit mode:
+- **Enter** commits the value and moves the active cell down.
+- **Tab** commits the value and moves the active cell right.
+- **Escape** discards the edit and returns to navigation mode.
+- Arrow keys move the cursor within the editor (they do not navigate between cells while editing).
+
+## Clipboard
+
+| Key | Action |
+|---|---|
+| Ctrl+C | Copy selected cells to clipboard (tab-separated) |
+| Ctrl+X | Cut selected cells (copy + clear originals) |
+| Ctrl+V | Paste clipboard contents starting at the active cell |
+
+Copied data uses tab-separated format compatible with Excel and Google Sheets. Multi-cell selections copy the entire rectangular range.
+
+## Undo / Redo
+
+| Key | Action |
+|---|---|
+| Ctrl+Z | Undo the last cell edit |
+| Ctrl+Y | Redo the last undone edit |
+
+Undo/redo requires the `onUndo`, `onRedo`, `canUndo`, and `canRedo` props to be wired up (typically via the `useUndoRedo` hook).
+
+## How It Works
+
+Keyboard navigation is handled by the `useKeyboardNavigation` hook in core, which is automatically wired into the grid when `cellSelection` is enabled (the default). The hook listens for `keydown` events on the grid wrapper element and translates them into active cell movements, selection range changes, or editing actions.
+
+### Disabling Cell Selection
+
+Set `cellSelection={false}` to disable keyboard-driven cell navigation, selection, clipboard, and context menu. The grid becomes a read-only display table.
+
+```tsx
+<OGrid
+  columns={columns}
+  data={data}
+  getRowId={(r) => r.id}
+  cellSelection={false}
+/>
+```
+
+### macOS
+
+On macOS, Ctrl is replaced by the Command key for all shortcuts (Cmd+C, Cmd+V, Cmd+Z, etc.). The grid detects the platform automatically.
+
+## Props Reference
+
+| Type | Field | Description |
+|---|---|---|
+| `IOGridProps<T>` | `cellSelection` | `boolean` -- enable/disable keyboard navigation and selection (default `true`) |
+| `IOGridProps<T>` | `editable` | `boolean` -- enable cell editing via keyboard |
+| `IOGridProps<T>` | `onUndo` | Callback for Ctrl+Z |
+| `IOGridProps<T>` | `onRedo` | Callback for Ctrl+Y |
+| `IOGridProps<T>` | `canUndo` | `boolean` -- whether undo is available |
+| `IOGridProps<T>` | `canRedo` | `boolean` -- whether redo is available |
+
+## Related
+
+- [Context Menu](./context-menu) -- right-click menu mirrors keyboard shortcuts
+- [Status Bar](./status-bar) -- shows aggregations for keyboard-selected ranges
+- [Column Pinning](./column-pinning) -- navigation works seamlessly across pinned and scrollable columns

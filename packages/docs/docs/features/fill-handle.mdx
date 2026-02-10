@@ -1,0 +1,98 @@
+---
+sidebar_position: 9
+title: Fill Handle
+description: Drag the fill handle to copy cell values down a column, like Excel's fill feature.
+---
+
+import FillHandleDemo from '@site/src/components/demos/FillHandleDemo';
+
+# Fill Handle
+
+A small square appears at the bottom-right corner of the selected cell or range. Drag it down (or up) to fill adjacent cells with the source value -- just like Excel.
+
+## Live Demo
+
+<FillHandleDemo />
+
+## Quick Example
+
+```tsx
+import { OGrid } from '@alaarab/ogrid';
+
+function App() {
+  return (
+    <OGrid
+      columns={columns}
+      data={items}
+      getRowId={(item) => item.id}
+      editable
+      cellSelection
+    />
+  );
+}
+```
+
+Select a cell, then drag the small green square at its bottom-right corner downward to fill the cells below with the same value.
+
+## How It Works
+
+The fill handle activates when both `editable` and `cellSelection` are enabled (both default to `true` for `cellSelection`):
+
+1. **Select** a cell or range of cells.
+2. A small square indicator appears at the bottom-right corner of the selection.
+3. **Click and drag** the indicator downward to extend the fill range.
+4. On mouse release, each target cell is filled with the value from the corresponding source cell in the selection.
+
+### Validation
+
+The `valueParser` on each target column is called before writing. If `valueParser` returns `undefined`, that cell is skipped (the fill is rejected for that cell only):
+
+```tsx
+{
+  columnId: 'quantity',
+  name: 'Quantity',
+  editable: true,
+  type: 'numeric',
+  valueParser: ({ newValue }) => {
+    const num = Number(newValue);
+    return isNaN(num) || num < 0 ? undefined : num;
+  },
+}
+```
+
+### Performance
+
+Like drag selection, the fill handle uses `requestAnimationFrame` for visual feedback during the drag. React state is only committed on mouse release, keeping the operation smooth.
+
+### Events
+
+Each filled cell fires an `onCellValueChanged` event with the `oldValue` and `newValue`, so fill operations integrate with undo/redo and data persistence.
+
+:::tip
+Fill handle operations are tracked by `useUndoRedo`, so users can Ctrl+Z to undo a fill.
+:::
+
+## Props
+
+| Prop | Type | Default | Description |
+|------|------|---------|-------------|
+| `editable` | `boolean` | `false` | Must be `true` on `OGrid` for the fill handle to appear. |
+| `cellSelection` | `boolean` | `true` | Must be `true` for the fill handle to appear. |
+| `onCellValueChanged` | `(event: ICellValueChangedEvent<T>) => void` | -- | Fired for each cell filled. |
+| `valueParser` | `(params: IValueParserParams<T>) => unknown` | -- | On `IColumnDef`. Validates each filled value. Return `undefined` to skip. |
+
+## Requirements
+
+The fill handle requires both of these to be enabled:
+
+- `editable={true}` on the `OGrid` component
+- `cellSelection={true}` (or omitted, since it defaults to `true`)
+
+Individual columns must also have `editable: true` (or an editable function that returns `true` for the target row) for their cells to be filled.
+
+## Related
+
+- [Spreadsheet Selection](./spreadsheet-selection) -- select the source cells
+- [Cell Editing](./cell-editing) -- the editable column setup
+- [Clipboard](./clipboard) -- paste is another way to bulk-fill cells
+- [Undo/Redo](./undo-redo) -- undo fill operations

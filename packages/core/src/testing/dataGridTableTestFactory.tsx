@@ -232,4 +232,46 @@ export function createDataGridTableTests(DataGridTable: React.ComponentType<any>
     fireEvent.click(suggestion);
     expect(onPeopleFilterChange).toHaveBeenCalledWith('ownerEmail', expect.objectContaining({ displayName: 'Alice Johnson', email: 'alice@example.com' }));
   });
+
+  it('type: numeric column renders cells correctly', () => {
+    const numericColumns: IColumnDef<FixtureRow>[] = [
+      {
+        columnId: 'name',
+        name: 'Name',
+        renderCell: (item) => <span data-testid="cell-name">{item.name}</span>,
+      },
+      {
+        columnId: 'status',
+        name: 'Amount',
+        type: 'numeric',
+        renderCell: (item) => <span data-testid="cell-amount">{item.status}</span>,
+      },
+    ];
+    const { container } = renderTable({
+      columns: numericColumns,
+      visibleColumns: new Set(['name', 'status']),
+    });
+    // Verify numeric column cells render
+    const amountCells = container.querySelectorAll('[data-testid="cell-amount"]');
+    expect(amountCells.length).toBe(2);
+    expect(amountCells[0].textContent).toBe('Active');
+    // Verify it's within a cell wrapper that has row/col index attributes
+    const cellWrapper = amountCells[0].closest('[data-col-index]');
+    expect(cellWrapper).toBeTruthy();
+  });
+
+  it('suppressHorizontalScroll prevents overflow-x auto', () => {
+    const { container } = renderTable({ suppressHorizontalScroll: true });
+    const region = container.querySelector('[role="region"]');
+    expect(region).toBeTruthy();
+    // suppressHorizontalScroll sets data-overflow-x="false" (CSS handles hiding)
+    expect(region!.getAttribute('data-overflow-x')).toBe('false');
+  });
+
+  it('renders status bar when statusBar is true', () => {
+    renderTable({ statusBar: true });
+    const statusBar = screen.getByRole('status');
+    expect(statusBar).toBeInTheDocument();
+    expect(statusBar.textContent).toContain('Rows:');
+  });
 }

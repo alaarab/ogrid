@@ -10,3 +10,5 @@ storybook-static
 *.local
 .cursor
 .claude
+.docusaurus
+packages/docs/build

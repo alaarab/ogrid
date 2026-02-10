@@ -3,6 +3,7 @@
   flex-direction: column;
   width: 100%;
   min-width: 0;
+  min-height: 100%;
   /* Match wrapper so any gap to the right is not transparent (no purple stripe showing through) */
   background-color: var(--colorNeutralBackground1, #ffffff);
 }
@@ -11,8 +12,6 @@
   position: relative;
   /* When table fits (data-auto-fit): fill 100% so last column gets space. When overflow: size to content for scroll. */
   width: max-content;
-  /* No min-width: 100% — anchor sizes to grid content so status bar aligns with the DataGrid border.
-     .tableScrollContent provides the full-width background color so no gap is visible. */
   background-color: var(--colorNeutralBackground1, #ffffff);
 }
 
@@ -24,17 +23,19 @@
 /* Always use full container width (matches pagination); columns fill the space */
 .tableWrapper {
   position: relative;
+  flex: 1;
+  min-height: 0;
   /* Default: no horizontal scroll unless we explicitly allow overflow (wide tables). */
   overflow-x: hidden;
-  overflow-y: visible;
+  overflow-y: auto;
   width: 100%;
   min-width: 0;
   max-width: 100%;
-  border-radius: var(--borderRadiusMedium, 4px);
   box-sizing: border-box;
   /* Border is applied to the grid itself so we don't draw an empty bordered area
      when the grid content is narrower than the container. */
   border: none;
+  background-color: var(--colorNeutralBackground1, #ffffff);
   -webkit-overflow-scrolling: touch;
 
   /* Wide tables: allow horizontal scroll */
@@ -59,10 +60,6 @@
       max-width: 100% !important;
       min-width: var(--data-table-min-width, max-content) !important;
       box-sizing: border-box !important;
-
-      /* Visual container border belongs to the grid (not the full-width wrapper). */
-      border: 1px solid var(--colorNeutralStroke2, #e0e0e0) !important;
-      border-radius: var(--borderRadiusMedium, 4px) !important;
       overflow: hidden;
     }
 
@@ -214,6 +211,29 @@
 
 .dataGrid {
   min-width: 0;
+}
+
+// ─────────────────────────────────────────────────
+// Multi-row grouped column headers
+// ─────────────────────────────────────────────────
+
+.groupHeaderRow {
+  th {
+    background: var(--ogrid-header-bg, #f5f5f5);
+  }
+}
+
+.groupHeaderCell {
+  text-align: center;
+  font-weight: 600;
+  border-bottom: 2px solid var(--ogrid-border, #e0e0e0);
+  padding: 6px 10px;
+}
+
+.leafHeaderCellSpan {
+  font-weight: 600;
+  padding: 6px 10px;
+  background: var(--ogrid-header-bg, #f5f5f5);
 }
 
 // ─────────────────────────────────────────────────
@@ -417,10 +437,9 @@
   font-size: 12px;
   color: var(--colorNeutralForeground2, #616161);
   background-color: var(--colorSubtleBackgroundSelected, #f3f2f1);
-  border: 1px solid var(--colorNeutralStroke2, #e0e0e0);
-  border-top: none;
-  border-radius: 0 0 var(--borderRadiusMedium, 4px) var(--borderRadiusMedium, 4px);
+  border-top: 1px solid var(--colorNeutralStroke2, #e0e0e0);
   min-height: 28px;
+  margin-top: auto;
   user-select: none;
 }
 
@@ -518,7 +537,6 @@
   background: rgba(255, 255, 255, 0.7);
   backdrop-filter: blur(1px);
   pointer-events: all;
-  border-radius: var(--borderRadiusMedium, 4px);
 }
 
 .loadingOverlayContent {

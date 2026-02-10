@@ -1,5 +1,5 @@
 import * as React from 'react';
-import type { Meta, StoryObj } from '@storybook/react';
+import type { Meta, StoryObj } from '@storybook/react-vite';
 import { PaginationControls } from './PaginationControls';
 
 const meta: Meta<typeof PaginationControls> = {
@@ -13,7 +13,7 @@ type Story = StoryObj<typeof PaginationControls>;
 
 function PaginationDemo(props: { totalCount: number; initialPage?: number; initialPageSize?: number }) {
   const [page, setPage] = React.useState(props.initialPage ?? 1);
-  const [pageSize, setPageSize] = React.useState(props.initialPageSize ?? 20);
+  const [pageSize, setPageSize] = React.useState(props.initialPageSize ?? 25);
   return (
     <PaginationControls
       currentPage={page}
@@ -42,5 +42,5 @@ export const ManyPages: Story = {
 };
 
 export const SinglePage: Story = {
-  render: () => <PaginationDemo totalCount={8} initialPageSize={20} />,
+  render: () => <PaginationDemo totalCount={8} initialPageSize={25} />,
 };

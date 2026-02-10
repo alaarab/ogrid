@@ -1,0 +1,168 @@
+---
+sidebar_position: 2
+title: Filtering
+description: Column-level filtering with text, multi-select, and people filter types.
+---
+
+import FilteringDemo from '@site/src/components/demos/FilteringDemo';
+
+# Filtering
+
+OGrid supports three built-in filter types -- **text**, **multiSelect**, and **people** -- configured per column. Filters appear as popovers triggered from column headers.
+
+## Live Demo
+
+<FilteringDemo />
+
+## Quick Example
+
+```tsx
+import { OGrid } from '@alaarab/ogrid';
+
+const columns = [
+  {
+    columnId: 'name',
+    name: 'Name',
+    filterable: { type: 'text' },
+  },
+  {
+    columnId: 'status',
+    name: 'Status',
+    filterable: { type: 'multiSelect', filterField: 'status' },
+  },
+  {
+    columnId: 'assignee',
+    name: 'Assignee',
+    filterable: { type: 'people' },
+  },
+];
+
+function App() {
+  return (
+    <OGrid
+      columns={columns}
+      data={tasks}
+      getRowId={(item) => item.id}
+    />
+  );
+}
+```
+
+## How It Works
+
+Set the `filterable` property on a column definition to an `IColumnFilterDef` object. The `type` field determines the filter UI:
+
+### Text Filter
+
+A simple text input. Filters rows where the column value contains the search string (case-insensitive).
+
+```tsx
+{ columnId: 'name', name: 'Name', filterable: { type: 'text' } }
+```
+
+### Multi-Select Filter
+
+A checkbox list with **Select All** and **Clear All** buttons. Users pick one or more values to include.
+
+```tsx
+{
+  columnId: 'status',
+  name: 'Status',
+  filterable: {
+    type: 'multiSelect',
+    filterField: 'status',       // field to filter on (defaults to columnId)
+    optionsSource: 'static',     // 'static' | 'api' | 'years'
+    options: ['Active', 'Draft', 'Archived'],
+  },
+}
+```
+
+**Options sources:**
+
+| `optionsSource` | Behavior |
+|-----------------|----------|
+| `'static'` | Uses the `options` array you provide. |
+| `'api'` | Calls `dataSource.fetchFilterOptions(field)` to load options dynamically. |
+| `'years'` | Auto-generates a year list (current year down, configurable via `yearsCount`). |
+| _(omitted)_ | Client-side: unique values extracted from the data array. Server-side: uses `'api'`. |
+
+### People Filter
+
+A search-as-you-type input that finds users via `dataSource.searchPeople(query)`. Displays `UserLike` objects with name, email, and photo.
+
+```tsx
+{
+  columnId: 'assignee',
+  name: 'Assignee',
+  filterable: { type: 'people' },
+}
+```
+
+:::info
+The people filter requires a `dataSource` with a `searchPeople` method. It is designed for directory lookups (e.g., Microsoft Graph, LDAP).
+:::
+
+### Controlled vs. Uncontrolled
+
+- **Uncontrolled** -- the grid manages filter state internally. Filters reset when the component unmounts.
+- **Controlled** -- pass `filters` and `onFiltersChange` to own the filter state externally (e.g., for URL sync or persistence).
+
+```tsx
+function App() {
+  const [filters, setFilters] = useState<IFilters>({
+    status: ['Active'],
+    name: 'John',
+  });
+
+  return (
+    <OGrid
+      columns={columns}
+      data={tasks}
+      getRowId={(item) => item.id}
+      filters={filters}
+      onFiltersChange={setFilters}
+    />
+  );
+}
+```
+
+### Server-Side Filtering
+
+When using a `dataSource`, filter values are passed to `fetchPage()` in the `filters` param. The grid does not filter client-side.
+
+```tsx
+const dataSource: IDataSource<Task> = {
+  fetchPage: async ({ filters, page, pageSize, sort }) => {
+    const params = new URLSearchParams({ page: String(page), pageSize: String(pageSize) });
+    if (filters.status) params.set('status', (filters.status as string[]).join(','));
+    const res = await fetch(`/api/tasks?${params}`);
+    return res.json();
+  },
+  fetchFilterOptions: async (field) => {
+    const res = await fetch(`/api/tasks/filter-options/${field}`);
+    return res.json();
+  },
+  searchPeople: async (query) => {
+    const res = await fetch(`/api/users/search?q=${query}`);
+    return res.json();
+  },
+};
+```
+
+## Props
+
+| Prop | Type | Default | Description |
+|------|------|---------|-------------|
+| `filterable` | `IColumnFilterDef` | -- | Set on `IColumnDef`. Defines filter type and options. |
+| `filterable.type` | `'text' \| 'multiSelect' \| 'people'` | -- | Filter UI type. |
+| `filterable.filterField` | `string` | `columnId` | Field name used in the filter model. |
+| `filterable.optionsSource` | `'api' \| 'static' \| 'years'` | auto | Where multi-select options come from. |
+| `filterable.options` | `string[]` | -- | Static options for multi-select. |
+| `filterable.yearsCount` | `number` | -- | Number of years to generate for `'years'` source. |
+| `filters` | `IFilters` | -- | Controlled filter state on `OGrid`. |
+| `onFiltersChange` | `(filters: IFilters) => void` | -- | Called when filters change (controlled mode). |
+
+## Related
+
+- [Sorting](./sorting) -- sort filtered results
+- [Pagination](./pagination) -- paginate filtered results

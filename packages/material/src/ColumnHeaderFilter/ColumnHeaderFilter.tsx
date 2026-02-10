@@ -6,7 +6,7 @@ import {
   SwapVert as SwapVertIcon,
   FilterList as FilterListIcon,
 } from '@mui/icons-material';
-import type { UserLike, ColumnFilterType } from '@alaarab/ogrid-core';
+import type { UserLike, ColumnFilterType, IDateFilterValue } from '@alaarab/ogrid-core';
 import { useColumnHeaderFilterState } from '@alaarab/ogrid-core';
 import { TextFilterPopover } from './TextFilterPopover';
 import { MultiSelectFilterPopover } from './MultiSelectFilterPopover';
@@ -28,6 +28,8 @@ export interface IColumnHeaderFilterProps {
   selectedUser?: UserLike;
   onUserChange?: (user: UserLike | undefined) => void;
   peopleSearch?: (query: string) => Promise<UserLike[]>;
+  dateValue?: IDateFilterValue;
+  onDateChange?: (value: IDateFilterValue | undefined) => void;
 }
 
 export const ColumnHeaderFilter: React.FC<IColumnHeaderFilterProps> = React.memo((props) => {
@@ -46,6 +48,8 @@ export const ColumnHeaderFilter: React.FC<IColumnHeaderFilterProps> = React.memo
     selectedUser,
     onUserChange,
     peopleSearch,
+    dateValue,
+    onDateChange,
   } = props;
 
   const state = useColumnHeaderFilterState({
@@ -62,6 +66,8 @@ export const ColumnHeaderFilter: React.FC<IColumnHeaderFilterProps> = React.memo
     selectedUser,
     onUserChange,
     peopleSearch,
+    dateValue,
+    onDateChange,
   });
 
   const {
@@ -125,6 +131,24 @@ export const ColumnHeaderFilter: React.FC<IColumnHeaderFilterProps> = React.memo
           onClearUser={handlers.handleClearUser}
           inputRef={peopleInputRef}
         />
+      );
+    }
+    if (filterType === 'date') {
+      return (
+        <Box sx={{ p: 1.5, display: 'flex', flexDirection: 'column', gap: 1 }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+            <Typography variant="caption" sx={{ minWidth: 36 }}>From:</Typography>
+            <input type="date" value={state.tempDateFrom} onChange={(e) => state.setTempDateFrom(e.target.value)} style={{ flex: 1, padding: '4px 6px' }} />
+          </Box>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+            <Typography variant="caption" sx={{ minWidth: 36 }}>To:</Typography>
+            <input type="date" value={state.tempDateTo} onChange={(e) => state.setTempDateTo(e.target.value)} style={{ flex: 1, padding: '4px 6px' }} />
+          </Box>
+          <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 1, mt: 0.5 }}>
+            <button onClick={handlers.handleDateClear} disabled={!state.tempDateFrom && !state.tempDateTo} style={{ padding: '4px 12px', cursor: 'pointer' }}>Clear</button>
+            <button onClick={handlers.handleDateApply} style={{ padding: '4px 12px', cursor: 'pointer' }}>Apply</button>
+          </Box>
+        </Box>
       );
     }
     return null;

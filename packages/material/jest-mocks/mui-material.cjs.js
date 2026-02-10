@@ -99,7 +99,11 @@ const Table = passthroughElement('table', 'Table');
 const TableHead = passthroughElement('thead', 'TableHead');
 const TableBody = passthroughElement('tbody', 'TableBody');
 const TableRow = passthroughElement('tr', 'TableRow');
-const TableCell = passthroughElement('td', 'TableCell');
+function TableCell(props) {
+  const { component = 'td', children, padding, ...rest } = props || {};
+  return React.createElement(component, { 'data-mock': 'TableCell', ...rest }, children);
+}
+TableCell.displayName = 'TableCell';
 const TableContainer = passthroughElement('div', 'TableContainer');
 
 module.exports = {

@@ -1,7 +1,7 @@
 import * as React from 'react';
 import { Tooltip } from '@fluentui/react-components';
 import { ArrowUpRegular, ArrowDownRegular, ArrowSortRegular, FilterRegular } from '@fluentui/react-icons';
-import type { UserLike, ColumnFilterType } from '@alaarab/ogrid-core';
+import type { UserLike, ColumnFilterType, IDateFilterValue } from '@alaarab/ogrid-core';
 import { useColumnHeaderFilterState } from '@alaarab/ogrid-core';
 import { TextFilterPopover } from './TextFilterPopover';
 import { MultiSelectFilterPopover } from './MultiSelectFilterPopover';
@@ -24,6 +24,8 @@ export interface IColumnHeaderFilterProps {
   selectedUser?: UserLike;
   onUserChange?: (user: UserLike | undefined) => void;
   peopleSearch?: (query: string) => Promise<UserLike[]>;
+  dateValue?: IDateFilterValue;
+  onDateChange?: (value: IDateFilterValue | undefined) => void;
 }
 
 export const ColumnHeaderFilter: React.FC<IColumnHeaderFilterProps> = React.memo((props) => {
@@ -42,6 +44,8 @@ export const ColumnHeaderFilter: React.FC<IColumnHeaderFilterProps> = React.memo
     selectedUser,
     onUserChange,
     peopleSearch,
+    dateValue,
+    onDateChange,
   } = props;
 
   const state = useColumnHeaderFilterState({
@@ -58,6 +62,8 @@ export const ColumnHeaderFilter: React.FC<IColumnHeaderFilterProps> = React.memo
     selectedUser,
     onUserChange,
     peopleSearch,
+    dateValue,
+    onDateChange,
   });
 
   const {
@@ -129,6 +135,26 @@ export const ColumnHeaderFilter: React.FC<IColumnHeaderFilterProps> = React.memo
           onPopoverClick={handlers.handlePopoverClick}
           inputRef={peopleInputRef as React.RefObject<HTMLInputElement>}
         />
+      );
+    }
+    if (filterType === 'date') {
+      return (
+        <div onClick={handlers.handlePopoverClick}>
+          <div style={{ padding: '8px 12px', display: 'flex', flexDirection: 'column', gap: 6 }}>
+            <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12 }}>
+              From:
+              <input type="date" value={state.tempDateFrom} onChange={(e) => state.setTempDateFrom(e.target.value)} style={{ flex: 1 }} />
+            </label>
+            <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12 }}>
+              To:
+              <input type="date" value={state.tempDateTo} onChange={(e) => state.setTempDateTo(e.target.value)} style={{ flex: 1 }} />
+            </label>
+          </div>
+          <div className={styles.popoverActions}>
+            <button className={styles.clearButton} onClick={handlers.handleDateClear} disabled={!state.tempDateFrom && !state.tempDateTo}>Clear</button>
+            <button className={styles.applyButton} onClick={handlers.handleDateApply}>Apply</button>
+          </div>
+        </div>
       );
     }
     return null;

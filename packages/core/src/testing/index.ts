@@ -6,3 +6,5 @@ export { createPaginationControlsTests } from './paginationControlsTestFactory';
 export { createColumnHeaderFilterTests } from './columnHeaderFilterTestFactory';
 export { createDataGridTableTests } from './dataGridTableTestFactory';
 export { createOGridTests } from './oGridTestFactory';
+export { createColumnGroupTests } from './columnGroupTestFactory';
+export { createSideBarTests } from './sideBarTestFactory';

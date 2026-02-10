@@ -1,0 +1,112 @@
+---
+sidebar_position: 1
+title: Sorting
+description: Enable column sorting with click-to-toggle, custom comparators, and server-side support.
+---
+
+import SortingDemo from '@site/src/components/demos/SortingDemo';
+
+# Sorting
+
+Add sortable columns to your grid with a single prop. Users click a column header to cycle through ascending, descending, and unsorted states. A sort indicator arrow shows the current direction.
+
+## Live Demo
+
+<SortingDemo />
+
+## Quick Example
+
+```tsx
+import { OGrid } from '@alaarab/ogrid';
+
+const columns = [
+  { columnId: 'name', name: 'Name', sortable: true },
+  { columnId: 'age', name: 'Age', sortable: true, type: 'numeric' as const },
+  { columnId: 'email', name: 'Email' }, // not sortable
+];
+
+function App() {
+  return (
+    <OGrid
+      columns={columns}
+      data={people}
+      getRowId={(item) => item.id}
+    />
+  );
+}
+```
+
+## How It Works
+
+Set `sortable: true` on any column definition to make it sortable. When a user clicks the column header, OGrid toggles the sort direction: unsorted, ascending, then descending.
+
+OGrid supports both **uncontrolled** and **controlled** sorting:
+
+- **Uncontrolled** -- the grid manages sort state internally. Use `defaultSortBy` and `defaultSortDirection` to set the initial sort.
+- **Controlled** -- you own the state. Pass `sort` and `onSortChange` to the grid.
+
+### Custom Comparator
+
+For columns that need custom sort logic (e.g., sorting by a nested field or special ordering), provide a `compare` function on the column definition:
+
+```tsx
+const columns = [
+  {
+    columnId: 'priority',
+    name: 'Priority',
+    sortable: true,
+    compare: (a, b) => {
+      const order = { High: 0, Medium: 1, Low: 2 };
+      return order[a.priority] - order[b.priority];
+    },
+  },
+];
+```
+
+### Server-Side Sorting
+
+When using a `dataSource`, the sort parameter is forwarded to `fetchPage()`. The grid does not sort the data itself -- your server handles it:
+
+```tsx
+const dataSource: IDataSource<Project> = {
+  fetchPage: async ({ sort, page, pageSize, filters }) => {
+    const res = await fetch(`/api/projects?sort=${sort?.field}&dir=${sort?.direction}&page=${page}`);
+    const json = await res.json();
+    return { items: json.data, totalCount: json.total };
+  },
+};
+```
+
+### Controlled Example
+
+```tsx
+function App() {
+  const [sort, setSort] = useState({ field: 'name', direction: 'asc' as const });
+
+  return (
+    <OGrid
+      columns={columns}
+      data={people}
+      getRowId={(item) => item.id}
+      sort={sort}
+      onSortChange={setSort}
+    />
+  );
+}
+```
+
+## Props
+
+| Prop | Type | Default | Description |
+|------|------|---------|-------------|
+| `sortable` | `boolean` | `false` | Set on `IColumnDef` to enable sorting for that column. |
+| `compare` | `(a: T, b: T) => number` | -- | Custom sort comparator on `IColumnDef`. |
+| `sort` | `{ field: string; direction: 'asc' \| 'desc' }` | -- | Controlled sort state on `OGrid`. |
+| `onSortChange` | `(sort: { field: string; direction: 'asc' \| 'desc' }) => void` | -- | Called when sort changes (controlled mode). |
+| `defaultSortBy` | `string` | -- | Initial sort column (uncontrolled mode). |
+| `defaultSortDirection` | `'asc' \| 'desc'` | `'asc'` | Initial sort direction (uncontrolled mode). |
+
+## Related
+
+- [Filtering](./filtering) -- filter rows by column values
+- [Pagination](./pagination) -- paginate sorted results

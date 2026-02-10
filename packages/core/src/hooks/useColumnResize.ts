@@ -1,4 +1,4 @@
-import { useCallback, useRef, useEffect } from 'react';
+import { useCallback, useRef } from 'react';
 import type { IColumnDef } from '../types';
 
 export interface UseColumnResizeParams {
@@ -8,6 +8,8 @@ export interface UseColumnResizeParams {
   >;
   minWidth?: number;
   defaultWidth?: number;
+  /** Called when a column resize completes (mouseup). */
+  onColumnResized?: (columnId: string, width: number) => void;
 }
 
 export interface UseColumnResizeResult<T> {
@@ -20,53 +22,72 @@ export function useColumnResize<T>({
   setColumnSizingOverrides,
   minWidth = 80,
   defaultWidth = 120,
+  onColumnResized,
 }: UseColumnResizeParams): UseColumnResizeResult<T> {
-  const resizingRef = useRef<{ columnId: string; startX: number; startWidth: number } | null>(null);
+  const rafRef = useRef(0);
+  const onColumnResizedRef = useRef(onColumnResized);
+  onColumnResizedRef.current = onColumnResized;
 
   const handleResizeStart = useCallback((e: React.MouseEvent, col: IColumnDef<T>) => {
     e.preventDefault();
     e.stopPropagation();
 
-    const currentWidth = columnSizingOverrides[col.columnId]?.widthPx
+    const startX = e.clientX;
+    const columnId = col.columnId;
+    const startWidth = columnSizingOverrides[columnId]?.widthPx
       ?? col.idealWidth
       ?? col.defaultWidth
       ?? defaultWidth;
+    let latestWidth = startWidth;
 
-    resizingRef.current = {
-      columnId: col.columnId,
-      startX: e.clientX,
-      startWidth: currentWidth,
+    // Lock cursor and prevent text selection during drag
+    const prevCursor = document.body.style.cursor;
+    const prevUserSelect = document.body.style.userSelect;
+    document.body.style.cursor = 'col-resize';
+    document.body.style.userSelect = 'none';
+
+    const flushWidth = () => {
+      setColumnSizingOverrides((prev) => ({
+        ...prev,
+        [columnId]: { widthPx: latestWidth },
+      }));
     };
-  }, [columnSizingOverrides, defaultWidth]);
 
-  const handleResizeMove = useCallback((e: MouseEvent) => {
-    if (!resizingRef.current) return;
-    const { columnId, startX, startWidth } = resizingRef.current;
-    const deltaX = e.clientX - startX;
-    const newWidth = Math.max(minWidth, startWidth + deltaX);
+    const onMove = (moveEvent: MouseEvent) => {
+      const deltaX = moveEvent.clientX - startX;
+      latestWidth = Math.max(minWidth, startWidth + deltaX);
 
-    setColumnSizingOverrides((prev) => ({
-      ...prev,
-      [columnId]: { widthPx: newWidth },
-    }));
-  }, [setColumnSizingOverrides, minWidth]);
-
-  const handleResizeEnd = useCallback(() => {
-    resizingRef.current = null;
-  }, []);
-
-  useEffect(() => {
-    const handleMouseMove = (e: MouseEvent) => handleResizeMove(e);
-    const handleMouseUp = () => handleResizeEnd();
-
-    document.addEventListener('mousemove', handleMouseMove);
-    document.addEventListener('mouseup', handleMouseUp);
-
-    return () => {
-      document.removeEventListener('mousemove', handleMouseMove);
-      document.removeEventListener('mouseup', handleMouseUp);
+      if (!rafRef.current) {
+        rafRef.current = requestAnimationFrame(() => {
+          rafRef.current = 0;
+          flushWidth();
+        });
+      }
     };
-  }, [handleResizeMove, handleResizeEnd]);
+
+    const onUp = () => {
+      document.removeEventListener('mousemove', onMove);
+      document.removeEventListener('mouseup', onUp);
+
+      // Restore cursor and user-select
+      document.body.style.cursor = prevCursor;
+      document.body.style.userSelect = prevUserSelect;
+
+      // Cancel pending RAF and flush final width synchronously
+      if (rafRef.current) {
+        cancelAnimationFrame(rafRef.current);
+        rafRef.current = 0;
+      }
+      flushWidth();
+
+      if (onColumnResizedRef.current) {
+        onColumnResizedRef.current(columnId, latestWidth);
+      }
+    };
+
+    document.addEventListener('mousemove', onMove);
+    document.addEventListener('mouseup', onUp);
+  }, [columnSizingOverrides, defaultWidth, minWidth, setColumnSizingOverrides]);
 
   const getColumnWidth = useCallback((col: IColumnDef<T>) => {
     return columnSizingOverrides[col.columnId]?.widthPx

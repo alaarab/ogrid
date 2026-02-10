@@ -2,7 +2,8 @@
  * View model helpers for DataGridTable. Core owns the logic; UI packages only render.
  */
 
-import type { ColumnFilterType } from '../types/columnTypes';
+import type * as React from 'react';
+import type { ColumnFilterType, ICellEditorProps, IDateFilterValue } from '../types/columnTypes';
 import type { IColumnDef } from '../types/columnTypes';
 import type { RowId, UserLike } from '../types/dataGridTypes';
 import { getCellValue } from './cellValue';
@@ -23,6 +24,8 @@ export interface HeaderFilterConfigInput {
   loadingFilterOptions: Record<string, boolean>;
   multiSelectFilters: Record<string, string[]>;
   onMultiSelectFilterChange: (key: string, values: string[]) => void;
+  dateFilters?: Record<string, IDateFilterValue>;
+  onDateFilterChange?: (key: string, value: IDateFilterValue | undefined) => void;
 }
 
 /** Props to pass to ColumnHeaderFilter. Matches IColumnHeaderFilterProps. */
@@ -42,6 +45,8 @@ export interface HeaderFilterConfig {
   selectedUser?: UserLike;
   onUserChange?: (user: UserLike | undefined) => void;
   peopleSearch?: (query: string) => Promise<UserLike[]>;
+  dateValue?: IDateFilterValue;
+  onDateChange?: (value: IDateFilterValue | undefined) => void;
 }
 
 /**
@@ -96,6 +101,15 @@ export function getHeaderFilterConfig<T>(
         input.onMultiSelectFilterChange(filterField, values),
     };
   }
+  if (filterType === 'date') {
+    return {
+      ...base,
+      dateValue: input.dateFilters?.[filterField],
+      onDateChange: input.onDateFilterChange
+        ? (v: IDateFilterValue | undefined) => input.onDateFilterChange!(filterField, v)
+        : undefined,
+    };
+  }
   return base;
 }
 
@@ -135,7 +149,7 @@ export interface CellRenderDescriptorInput<T> {
 
 export interface CellRenderDescriptor {
   mode: CellRenderMode;
-  editorType?: 'text' | 'select' | 'checkbox';
+  editorType?: 'text' | 'select' | 'checkbox' | 'richSelect' | 'date';
   value?: unknown;
   isActive: boolean;
   isInRange: boolean;
@@ -209,17 +223,26 @@ export function getCellRenderDescriptor<T>(
   const pinnedSide = col.pinned ?? undefined;
 
   let mode: CellRenderMode = 'display';
-  let editorType: 'text' | 'select' | 'checkbox' | undefined;
+  let editorType: 'text' | 'select' | 'checkbox' | 'richSelect' | 'date' | undefined;
   let value: unknown;
 
   if (isEditing && canEditInline) {
     mode = 'editing-inline';
-    editorType =
+    if (
       col.cellEditor === 'text' ||
       col.cellEditor === 'select' ||
-      col.cellEditor === 'checkbox'
-        ? col.cellEditor
-        : 'text';
+      col.cellEditor === 'checkbox' ||
+      col.cellEditor === 'richSelect' ||
+      col.cellEditor === 'date'
+    ) {
+      editorType = col.cellEditor;
+    } else if (col.type === 'date') {
+      editorType = 'date';
+    } else if (col.type === 'boolean') {
+      editorType = 'checkbox';
+    } else {
+      editorType = 'text';
+    }
     value = getCellValue(item, col);
   } else if (isEditing && canEditPopup && typeof col.cellEditor === 'function') {
     mode = 'editing-popover';
@@ -244,5 +267,131 @@ export function getCellRenderDescriptor<T>(
     rowId,
     rowIndex,
     displayValue: value,
+  };
+}
+
+// --- Cell rendering helpers (reduce DataGridTable view-layer duplication) ---
+
+/**
+ * Resolves display content for a cell in display mode.
+ * Handles the renderCell → valueFormatter → String() fallback chain.
+ */
+export function resolveCellDisplayContent<T>(
+  col: IColumnDef<T>,
+  item: T,
+  displayValue: unknown
+): React.ReactNode {
+  if (col.renderCell) return col.renderCell(item);
+  if (col.valueFormatter) return col.valueFormatter(displayValue, item);
+  if (displayValue == null) return null;
+  if (col.type === 'date') {
+    const d = new Date(String(displayValue));
+    if (!Number.isNaN(d.getTime())) return d.toLocaleDateString();
+  }
+  if (col.type === 'boolean') {
+    return displayValue ? 'True' : 'False';
+  }
+  return String(displayValue);
+}
+
+/**
+ * Resolves the cellStyle from a column def, handling both function and static values.
+ */
+export function resolveCellStyle<T>(
+  col: IColumnDef<T>,
+  item: T
+): React.CSSProperties | undefined {
+  if (!col.cellStyle) return undefined;
+  return typeof col.cellStyle === 'function' ? col.cellStyle(item) : col.cellStyle;
+}
+
+/**
+ * Builds props for InlineCellEditor. Shared across all UI packages.
+ */
+export function buildInlineEditorProps<T>(
+  item: T,
+  col: IColumnDef<T>,
+  descriptor: CellRenderDescriptor,
+  callbacks: {
+    commitCellEdit: (item: T, columnId: string, oldValue: unknown, newValue: unknown, rowIndex: number, globalColIndex: number) => void;
+    setEditingCell: (cell: null) => void;
+  }
+) {
+  return {
+    value: descriptor.value,
+    item,
+    column: col,
+    rowIndex: descriptor.rowIndex,
+    editorType: (descriptor.editorType ?? 'text') as 'text' | 'select' | 'checkbox' | 'richSelect' | 'date',
+    onCommit: (newValue: unknown) =>
+      callbacks.commitCellEdit(item, col.columnId, descriptor.value, newValue, descriptor.rowIndex, descriptor.globalColIndex),
+    onCancel: () => callbacks.setEditingCell(null),
+  };
+}
+
+/**
+ * Builds ICellEditorProps for custom popover editors. Shared across all UI packages.
+ */
+export function buildPopoverEditorProps<T>(
+  item: T,
+  col: IColumnDef<T>,
+  descriptor: CellRenderDescriptor,
+  pendingEditorValue: unknown,
+  callbacks: {
+    setPendingEditorValue: (value: unknown) => void;
+    commitCellEdit: (item: T, columnId: string, oldValue: unknown, newValue: unknown, rowIndex: number, globalColIndex: number) => void;
+    cancelPopoverEdit: () => void;
+  }
+): ICellEditorProps<T> {
+  const oldValue = descriptor.value;
+  const displayValue = pendingEditorValue !== undefined ? pendingEditorValue : oldValue;
+  return {
+    value: displayValue,
+    onValueChange: callbacks.setPendingEditorValue,
+    onCommit: () => {
+      const newValue = pendingEditorValue !== undefined ? pendingEditorValue : oldValue;
+      callbacks.commitCellEdit(item, col.columnId, oldValue, newValue, descriptor.rowIndex, descriptor.globalColIndex);
+    },
+    onCancel: callbacks.cancelPopoverEdit,
+    item,
+    column: col,
+    cellEditorParams: col.cellEditorParams,
+  };
+}
+
+/**
+ * Common interaction props for cell wrapper elements.
+ * Includes data attributes, event handlers, and accessibility props.
+ * Spread onto the cell wrapper div/Box in each UI package.
+ */
+export interface CellInteractionHandlers {
+  handleCellMouseDown: (e: React.MouseEvent, rowIndex: number, colIndex: number) => void;
+  setActiveCell: (cell: { rowIndex: number; columnIndex: number }) => void;
+  setEditingCell: (cell: { rowId: RowId; columnId: string } | null) => void;
+  handleCellContextMenu: (e: React.MouseEvent) => void;
+}
+
+export function getCellInteractionProps(
+  descriptor: CellRenderDescriptor,
+  columnId: string,
+  handlers: CellInteractionHandlers
+) {
+  return {
+    'data-row-index': descriptor.rowIndex,
+    'data-col-index': descriptor.globalColIndex,
+    ...(descriptor.isInRange ? { 'data-in-range': 'true' as const } : {}),
+    tabIndex: descriptor.isActive ? 0 : -1,
+    onMouseDown: (e: React.MouseEvent) =>
+      handlers.handleCellMouseDown(e, descriptor.rowIndex, descriptor.globalColIndex),
+    onClick: () =>
+      handlers.setActiveCell({ rowIndex: descriptor.rowIndex, columnIndex: descriptor.globalColIndex }),
+    onContextMenu: handlers.handleCellContextMenu,
+    ...(descriptor.canEditAny
+      ? {
+          role: 'button' as const,
+          onDoubleClick: () =>
+            handlers.setEditingCell({ rowId: descriptor.rowId, columnId }),
+        }
+      : {}),
   };
 }

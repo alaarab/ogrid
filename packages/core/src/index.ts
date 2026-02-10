@@ -27,6 +27,11 @@ export type {
   IStatusBarProps,
   IActiveCell,
   ISelectionRange,
+  HeaderCell,
+  HeaderRow,
+  SideBarPanelId,
+  ISideBarDef,
+  IDateFilterValue,
 } from './types';
 export { toUserLike, toDataGridFilterProps, isInSelectionRange, normalizeSelectionRange } from './types';
 
@@ -49,10 +54,13 @@ export {
   useColumnChooserState,
   useInlineCellEditorState,
   useColumnResize,
+  useRichSelectState,
+  useSideBarState,
 } from './hooks';
 export type {
   UseFilterOptionsResult,
   UseOGridResult,
+  ColumnChooserPlacement,
   UseActiveCellResult,
   UseCellEditingResult,
   EditingCell,
@@ -81,6 +89,10 @@ export type {
   InlineCellEditorType,
   UseColumnResizeParams,
   UseColumnResizeResult,
+  UseRichSelectStateParams,
+  UseRichSelectStateResult,
+  UseSideBarStateParams,
+  UseSideBarStateResult,
 } from './hooks';
 
 // Components
@@ -92,6 +104,8 @@ export { GridContextMenu } from './components/GridContextMenu';
 export type { GridContextMenuProps, GridContextMenuClassNames } from './components/GridContextMenu';
 export { MarchingAntsOverlay } from './components/MarchingAntsOverlay';
 export type { MarchingAntsOverlayProps } from './components/MarchingAntsOverlay';
+export { SideBar } from './components/SideBar';
+export type { SideBarProps, SideBarFilterColumn } from './components/SideBar';
 
 // Utilities
 export {
@@ -102,6 +116,7 @@ export {
   triggerCsvDownload,
   getCellValue,
   flattenColumns,
+  buildHeaderRows,
   getFilterField,
   mergeFilter,
   deriveFilterOptionsFromData,
@@ -116,12 +131,18 @@ export {
   MAX_PAGE_BUTTONS,
   getHeaderFilterConfig,
   getCellRenderDescriptor,
+  resolveCellDisplayContent,
+  resolveCellStyle,
+  buildInlineEditorProps,
+  buildPopoverEditorProps,
+  getCellInteractionProps,
   parseValue,
   numberParser,
   currencyParser,
   dateParser,
   emailParser,
   booleanParser,
+  computeAggregations,
 } from './utils';
 export type {
   CsvColumn,
@@ -135,5 +156,7 @@ export type {
   CellRenderDescriptorInput,
   CellRenderDescriptor,
   CellRenderMode,
+  CellInteractionHandlers,
   ParseValueResult,
+  AggregationResult,
 } from './utils';

@@ -1,0 +1,125 @@
+---
+sidebar_position: 12
+title: Column Chooser
+description: Let users show and hide columns with a dropdown control
+---
+
+import ColumnChooserDemo from '@site/src/components/demos/ColumnChooserDemo';
+
+# Column Chooser
+
+The Column Chooser gives users a dropdown with checkboxes to show or hide columns at runtime. Columns marked `required` cannot be hidden.
+
+## Live Demo
+
+<ColumnChooserDemo />
+
+## Quick Example
+
+```tsx
+import { OGrid } from '@alaarab/ogrid';
+import type { IColumnDef } from '@alaarab/ogrid-core';
+
+interface Row {
+  id: number;
+  name: string;
+  email: string;
+  phone: string;
+  department: string;
+}
+
+const columns: IColumnDef<Row>[] = [
+  { columnId: 'name', name: 'Name', required: true },
+  { columnId: 'email', name: 'Email' },
+  { columnId: 'phone', name: 'Phone', defaultVisible: false },
+  { columnId: 'department', name: 'Department' },
+];
+
+function App() {
+  return (
+    <OGrid
+      columns={columns}
+      data={rows}
+      getRowId={(r) => r.id}
+    />
+  );
+}
+```
+
+In this example:
+- **Name** is always visible (cannot be unchecked because `required: true`).
+- **Phone** is hidden by default but the user can enable it.
+- **Email** and **Department** are visible by default and can be toggled.
+
+## How It Works
+
+OGrid includes a built-in Column Chooser that appears in the grid toolbar. Users click it to open a dropdown listing all columns with checkboxes.
+
+### Hiding Columns by Default
+
+Set `defaultVisible: false` on a column definition to hide it when the grid first renders. Users can still show it via the Column Chooser.
+
+```tsx
+{ columnId: 'phone', name: 'Phone', defaultVisible: false }
+```
+
+### Preventing Users from Hiding a Column
+
+Set `required: true` to lock a column as always visible. Its checkbox in the Column Chooser will be disabled.
+
+```tsx
+{ columnId: 'name', name: 'Name', required: true }
+```
+
+### Controlled Visibility
+
+For full control over which columns are visible, pass `visibleColumns` and `onVisibleColumnsChange`.
+
+```tsx
+function App() {
+  const [visible, setVisible] = useState<Set<string>>(
+    new Set(['name', 'email', 'department'])
+  );
+
+  return (
+    <OGrid
+      columns={columns}
+      data={rows}
+      getRowId={(r) => r.id}
+      visibleColumns={visible}
+      onVisibleColumnsChange={setVisible}
+    />
+  );
+}
+```
+
+When these props are provided, OGrid uses them instead of its internal visibility state.
+
+### Standalone ColumnChooser Component
+
+Each UI package also exports a standalone `ColumnChooser` component that you can render anywhere in your UI.
+
+```tsx
+import { ColumnChooser } from '@alaarab/ogrid';
+
+<ColumnChooser
+  columns={columns}
+  visibleColumns={visibleColumns}
+  onVisibleColumnsChange={setVisibleColumns}
+/>
+```
+
+## Props Reference
+
+| Type | Field | Description |
+|---|---|---|
+| `IColumnMeta` | `defaultVisible` | `false` to hide on initial render (default: `true`) |
+| `IColumnMeta` | `required` | `true` to prevent the user from hiding this column |
+| `IOGridProps<T>` | `visibleColumns` | Controlled `Set<string>` of visible column IDs |
+| `IOGridProps<T>` | `onVisibleColumnsChange` | Callback when visibility changes: `(cols: Set<string>) => void` |
+
+## Related
+
+- [Column Groups](./column-groups) -- visibility applies to leaf columns within groups
+- [Column Pinning](./column-pinning) -- pinned columns can also be toggled
+- [Grid API](./grid-api) -- `getColumnState()` / `applyColumnState()` to save and restore visibility

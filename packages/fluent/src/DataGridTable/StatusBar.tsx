@@ -7,6 +7,14 @@ export interface StatusBarProps {
   filteredCount?: number;
   selectedCount?: number;
   selectedCellCount?: number;
+  aggregation?: {
+    sum: number;
+    avg: number;
+    min: number;
+    max: number;
+    count: number;
+  } | null;
+  suppressRowCount?: boolean;
 }
 
 export function StatusBar(props: StatusBarProps): React.ReactElement {

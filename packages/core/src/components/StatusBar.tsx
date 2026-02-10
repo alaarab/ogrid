@@ -13,6 +13,15 @@ export interface StatusBarProps {
   filteredCount?: number;
   selectedCount?: number;
   selectedCellCount?: number;
+  /** Aggregation values for selected numeric cells. */
+  aggregation?: {
+    sum: number;
+    avg: number;
+    min: number;
+    max: number;
+    count: number;
+  } | null;
+  suppressRowCount?: boolean;
   classNames?: StatusBarClassNames;
 }
 

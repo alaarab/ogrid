@@ -1,0 +1,131 @@
+---
+sidebar_position: 7
+title: Row Selection
+description: Single and multi-row selection with checkboxes, keyboard support, and imperative API.
+---
+
+import RowSelectionDemo from '@site/src/components/demos/RowSelectionDemo';
+
+# Row Selection
+
+Select entire rows with checkboxes (multiple mode) or radio-button-style selection (single mode). Access selected rows programmatically via the grid API ref.
+
+## Live Demo
+
+<RowSelectionDemo />
+
+## Quick Example
+
+```tsx
+import { OGrid, IOGridApi } from '@alaarab/ogrid';
+import { useRef } from 'react';
+
+function App() {
+  const gridRef = useRef<IOGridApi<Person>>(null);
+
+  const handleExport = () => {
+    const selectedIds = gridRef.current?.getSelectedRows() ?? [];
+    console.log('Selected:', selectedIds);
+  };
+
+  return (
+    <>
+      <button onClick={handleExport}>Export Selected</button>
+      <OGrid
+        ref={gridRef}
+        columns={columns}
+        data={people}
+        getRowId={(item) => item.id}
+        rowSelection="multiple"
+        onSelectionChange={(event) => {
+          console.log(`${event.selectedItems.length} rows selected`);
+        }}
+      />
+    </>
+  );
+}
+```
+
+## How It Works
+
+Set `rowSelection` on the `OGrid` component to enable row selection:
+
+| Mode | Behavior |
+|------|----------|
+| `'none'` | No row selection (default). |
+| `'single'` | One row at a time. Clicking a row selects it and deselects the previous. |
+| `'multiple'` | Checkbox column appears. Click checkboxes to toggle. Shift+click for range select. Header checkbox toggles all. |
+
+### Multiple Selection
+
+In `'multiple'` mode, a checkbox column is prepended to the grid:
+
+- Click a checkbox to toggle that row.
+- Click the header checkbox to select or deselect all visible rows.
+- Hold **Shift** and click a checkbox to select a range of rows from the last clicked row.
+
+### Controlled Mode
+
+For full control, pass `selectedRows` and `onSelectionChange`:
+
+```tsx
+function App() {
+  const [selectedRows, setSelectedRows] = useState<Set<RowId>>(new Set());
+
+  return (
+    <OGrid
+      columns={columns}
+      data={people}
+      getRowId={(item) => item.id}
+      rowSelection="multiple"
+      selectedRows={selectedRows}
+      onSelectionChange={(event) => {
+        setSelectedRows(new Set(event.selectedRowIds));
+      }}
+    />
+  );
+}
+```
+
+### Imperative API
+
+Use the grid ref to programmatically control selection:
+
+```tsx
+const gridRef = useRef<IOGridApi<Person>>(null);
+
+// Get selected row IDs
+gridRef.current?.getSelectedRows();
+
+// Set selection programmatically
+gridRef.current?.setSelectedRows([1, 2, 3]);
+
+// Select all rows
+gridRef.current?.selectAll();
+
+// Deselect all rows
+gridRef.current?.deselectAll();
+```
+
+## Props
+
+| Prop | Type | Default | Description |
+|------|------|---------|-------------|
+| `rowSelection` | `'none' \| 'single' \| 'multiple'` | `'none'` | Row selection mode. |
+| `selectedRows` | `Set<RowId>` | -- | Controlled set of selected row IDs. |
+| `onSelectionChange` | `(event: IRowSelectionChangeEvent<T>) => void` | -- | Called when selection changes. Event contains `selectedRowIds` and `selectedItems`. |
+
+## API Methods
+
+| Method | Signature | Description |
+|--------|-----------|-------------|
+| `getSelectedRows` | `() => RowId[]` | Returns currently selected row IDs. |
+| `setSelectedRows` | `(rowIds: RowId[]) => void` | Sets selected rows programmatically. |
+| `selectAll` | `() => void` | Selects all rows. |
+| `deselectAll` | `() => void` | Deselects all rows. |
+
+## Related
+
+- [Spreadsheet Selection](./spreadsheet-selection) -- cell-level selection
+- [Sorting](./sorting) -- sort rows before selection
+- [Filtering](./filtering) -- filter rows before selection

@@ -1,0 +1,129 @@
+---
+sidebar_position: 5
+title: "Quick Start: Material UI"
+description: Get started with OGrid using Material UI
+---
+
+# Quick Start: Material UI
+
+This guide walks you through building a fully functional data grid with sorting, filtering, and cell editing using the Material UI package. This is the recommended choice for projects already using MUI.
+
+## Install
+
+```bash
+npm install @alaarab/ogrid-material @mui/material @emotion/react @emotion/styled
+```
+
+## Full Example
+
+```tsx
+import { ThemeProvider, createTheme } from '@mui/material/styles';
+import CssBaseline from '@mui/material/CssBaseline';
+import { OGrid, type IColumnDef } from '@alaarab/ogrid-material';
+
+const theme = createTheme();
+
+interface Employee {
+  id: number;
+  name: string;
+  department: string;
+  salary: number;
+}
+
+const data: Employee[] = [
+  { id: 1, name: 'Alice Johnson', department: 'Engineering', salary: 95000 },
+  { id: 2, name: 'Bob Smith', department: 'Marketing', salary: 72000 },
+  { id: 3, name: 'Carol Williams', department: 'Engineering', salary: 110000 },
+  { id: 4, name: 'David Brown', department: 'Sales', salary: 68000 },
+  { id: 5, name: 'Eva Martinez', department: 'Marketing', salary: 78000 },
+];
+
+const columns: IColumnDef<Employee>[] = [
+  {
+    columnId: 'name',
+    name: 'Name',
+    sortable: true,
+  },
+  {
+    columnId: 'department',
+    name: 'Department',
+    sortable: true,
+    filterable: {
+      type: 'multiSelect',
+      options: ['Engineering', 'Marketing', 'Sales'],
+    },
+  },
+  {
+    columnId: 'salary',
+    name: 'Salary',
+    type: 'numeric',
+    sortable: true,
+    editable: true,
+    valueFormatter: (value) =>
+      new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(value as number),
+  },
+];
+
+export default function App() {
+  return (
+    <ThemeProvider theme={theme}>
+      <CssBaseline />
+      <OGrid<Employee>
+        columns={columns}
+        data={data}
+        getRowId={(row) => row.id}
+        defaultPageSize={10}
+        defaultSortBy="name"
+        statusBar
+        aria-label="Employee directory"
+      />
+    </ThemeProvider>
+  );
+}
+```
+
+:::tip
+`ThemeProvider` and `CssBaseline` are standard MUI setup. If your app already has these at the root, you can render `OGrid` directly without wrapping it again. Use `createTheme()` with custom options to match your brand colors.
+:::
+
+## Differences from Radix
+
+The API is **identical**. The only differences are:
+
+1. **Import path** -- `@alaarab/ogrid-material` instead of `@alaarab/ogrid`
+2. **Theme provider** -- MUI requires a `ThemeProvider` wrapper (standard MUI setup)
+3. **Visual style** -- Components render with Material Design (MUI tables, buttons, popovers)
+
+All props, types, hooks, and the Grid API work exactly the same way. You can follow the [Radix Quick Start](./quick-start-radix) for detailed explanations of column definitions, layout modes, and the Grid API -- everything applies here.
+
+## Using with Next.js
+
+When using OGrid with Next.js App Router, add the `"use client"` directive since the grid uses React hooks and DOM APIs:
+
+```tsx
+'use client';
+
+import { ThemeProvider, createTheme } from '@mui/material/styles';
+import { OGrid, type IColumnDef } from '@alaarab/ogrid-material';
+
+const theme = createTheme();
+
+export default function DataGridPage() {
+  return (
+    <ThemeProvider theme={theme}>
+      <OGrid
+        columns={columns}
+        data={data}
+        getRowId={(row) => row.id}
+      />
+    </ThemeProvider>
+  );
+}
+```
+
+## Next Steps
+
+- [Features overview](../features/sorting) -- explore sorting, filtering, cell editing, and more
+- [Grid API reference](../api/grid-api) -- full list of imperative API methods
+- [Column definitions](../api/column-def) -- all column configuration options
+- [Migration from AG Grid](../guides/migration-from-ag-grid) -- switching from AG Grid to OGrid
