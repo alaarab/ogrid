@@ -32,14 +32,13 @@ npm install @alaarab/ogrid-core
 
 ### Components
 
-- `OGridLayout` -- Layout structure for OGrid: toolbar row (title, toolbar, columnChooser), grid area, pagination. Accepts `containerComponent` and `gap` so Fluent/Material/Radix supply their Container (div or Box).
+- `OGridLayout` -- Unified bordered layout: toolbar strip (custom content + column chooser), optional secondary toolbar row, sidebar, grid area, and footer strip (pagination).
 
 ### Utilities
 
 - `getPaginationViewModel(...)` -- Page numbers, ellipsis, start/end item for PaginationControls
 - `getHeaderFilterConfig(col, input)` -- ColumnHeaderFilter props from column + filter/sort state
 - `getCellRenderDescriptor(item, col, rowIndex, colIdx, input)` -- Cell mode (editing-inline / editing-popover / display) and flags for DataGridTable
-- `toDataGridFilterProps(filters)` -- Splits `IFilters` into `multiSelectFilters`, `textFilters`, `peopleFilters`
 - `toUserLike(user)` -- Converts a user-like object to `UserLike`
 - `exportToCsv(items, columns, getValue, filename)` -- Full CSV export
 - `buildCsvHeader`, `buildCsvRows`, `triggerCsvDownload`, `escapeCsvValue` -- Low-level CSV helpers

@@ -1,4 +1,5 @@
 import { useState, useCallback, useRef, useMemo } from 'react';
+
 import type { RowId, RowSelectionMode, IRowSelectionChangeEvent } from '../types';
 
 export interface UseRowSelectionParams<T> {
@@ -96,8 +97,14 @@ export function useRowSelection<T>(params: UseRowSelectionParams<T>): UseRowSele
     [items, getRowId, updateSelection]
   );
 
-  const allSelected = items.length > 0 && items.every((item) => selectedRowIds.has(getRowId(item)));
-  const someSelected = !allSelected && items.some((item) => selectedRowIds.has(getRowId(item)));
+  const allSelected = useMemo(
+    () => items.length > 0 && items.every((item) => selectedRowIds.has(getRowId(item))),
+    [items, selectedRowIds, getRowId]
+  );
+  const someSelected = useMemo(
+    () => !allSelected && items.some((item) => selectedRowIds.has(getRowId(item))),
+    [allSelected, items, selectedRowIds, getRowId]
+  );
 
   return {
     selectedRowIds,

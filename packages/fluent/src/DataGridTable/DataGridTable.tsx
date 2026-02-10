@@ -39,7 +39,7 @@ import {
 import styles from './DataGridTable.module.scss';
 
 
-// Module-scope stable style for grid root wrapper
+// Module-scope stable constants (avoid per-render allocations)
 const gridRootStyle: React.CSSProperties = {
   position: 'relative',
   flex: 1,
@@ -47,6 +47,13 @@ const gridRootStyle: React.CSSProperties = {
   display: 'flex',
   flexDirection: 'column',
 };
+
+const CURSOR_CELL_STYLE: React.CSSProperties = { cursor: 'cell' };
+const NUMERIC_STYLE: React.CSSProperties = { justifyContent: 'flex-end', textAlign: 'right' };
+const BOOLEAN_STYLE: React.CSSProperties = { justifyContent: 'center', textAlign: 'center' };
+const EDITABLE_NUMERIC_STYLE: React.CSSProperties = { cursor: 'cell', justifyContent: 'flex-end', textAlign: 'right' };
+const EDITABLE_BOOLEAN_STYLE: React.CSSProperties = { cursor: 'cell', justifyContent: 'center', textAlign: 'center' };
+const PREVENT_DEFAULT = (e: React.MouseEvent) => { e.preventDefault(); };
 
 function DataGridTableInner<T>(props: IOGridDataGridProps<T>): React.ReactElement {
   const wrapperRef = useRef<HTMLDivElement>(null);
@@ -76,7 +83,8 @@ function DataGridTableInner<T>(props: IOGridDataGridProps<T>): React.ReactElemen
     'aria-labelledby': ariaLabelledBy,
   } = props;
 
-  const headerRows = buildHeaderRows(props.columns, props.visibleColumns);
+  // Memoize header rows (recursive tree traversal)
+  const headerRows = useMemo(() => buildHeaderRows(props.columns, props.visibleColumns), [props.columns, props.visibleColumns]);
   const hasGroupHeaders = headerRows.length > 1;
 
   const fitToContent = layoutMode === 'content';
@@ -108,6 +116,49 @@ function DataGridTableInner<T>(props: IOGridDataGridProps<T>): React.ReactElemen
 
   const allowOverflowX = !suppressHorizontalScroll && containerWidth > 0 && (minTableWidth > containerWidth || desiredTableWidth > containerWidth);
 
+  // Pre-compute column class maps (avoids per-cell .filter(Boolean).join(' '))
+  const { cellClassMap, headerClassMap, colIndexMap } = useMemo(() => {
+    const cm: Record<string, string> = {};
+    const hm: Record<string, string> = {};
+    const im = new Map<string, number>();
+
+    for (let i = 0; i < visibleCols.length; i++) {
+      const col = visibleCols[i];
+      const isFreezeCol = freezeCols != null && freezeCols >= 1 && i < freezeCols;
+      const isPinnedLeft = col.pinned === 'left';
+      const isPinnedRight = col.pinned === 'right';
+      const parts: string[] = [];
+      if (isFreezeCol) parts.push(styles.freezeCol);
+      if (isFreezeCol && i === 0) parts.push(styles.freezeColFirst);
+      if (isPinnedLeft) { parts.push(styles.pinnedCell); parts.push(styles.pinnedLeft); }
+      if (isPinnedRight) { parts.push(styles.pinnedCell); parts.push(styles.pinnedRight); }
+      cm[col.columnId] = parts.join(' ');
+      hm[col.columnId] = parts.join(' ');
+      im.set(col.columnId, i);
+    }
+
+    cm['__selection__'] = styles.selectionCellWrapper;
+    hm['__selection__'] = styles.selectionHeaderCellWrapper;
+
+    return { cellClassMap: cm, headerClassMap: hm, colIndexMap: im };
+  }, [visibleCols, freezeCols]);
+
+  // Refs for volatile state (read inside fluentColumns render closures without adding to deps)
+  const cellDescriptorInputRef = useRef(cellDescriptorInput);
+  cellDescriptorInputRef.current = cellDescriptorInput;
+  const selectedRowIdsRef = useRef(selectedRowIds);
+  selectedRowIdsRef.current = selectedRowIds;
+  const activeCellRef = useRef(activeCell);
+  activeCellRef.current = activeCell;
+  const pendingEditorValueRef = useRef(pendingEditorValue);
+  pendingEditorValueRef.current = pendingEditorValue;
+  const popoverAnchorElRef = useRef(popoverAnchorEl);
+  popoverAnchorElRef.current = popoverAnchorEl;
+  const allSelectedRef = useRef(allSelected);
+  allSelectedRef.current = allSelected;
+  const someSelectedRef = useRef(someSelected);
+  someSelectedRef.current = someSelected;
+
   const fluentColumns = useMemo<TableColumnDefinition<T>[]>(() => {
     const dataCols: TableColumnDefinition<T>[] = visibleCols.map((col, colIdx) =>
       createTableColumn<T>({
@@ -121,14 +172,14 @@ function DataGridTableInner<T>(props: IOGridDataGridProps<T>): React.ReactElemen
         renderCell: (item) => {
           const rowId = getRowId(item);
           const rowIndex = rowIndexByRowId.get(rowId) ?? -1;
-          const descriptor = getCellRenderDescriptor(item, col, rowIndex, colIdx, cellDescriptorInput);
+          const descriptor = getCellRenderDescriptor(item, col, rowIndex, colIdx, cellDescriptorInputRef.current);
 
           if (descriptor.mode === 'editing-inline') {
             return <InlineCellEditor<T> {...buildInlineEditorProps(item, col, descriptor, { commitCellEdit, setEditingCell })} />;
           }
 
           if (descriptor.mode === 'editing-popover' && typeof col.cellEditor === 'function') {
-            const editorProps = buildPopoverEditorProps(item, col, descriptor, pendingEditorValue, { setPendingEditorValue, commitCellEdit, cancelPopoverEdit });
+            const editorProps = buildPopoverEditorProps(item, col, descriptor, pendingEditorValueRef.current, { setPendingEditorValue, commitCellEdit, cancelPopoverEdit });
             const CustomEditor = col.cellEditor as React.ComponentType<ICellEditorProps<T>>;
             return (
               <>
@@ -138,9 +189,9 @@ function DataGridTableInner<T>(props: IOGridDataGridProps<T>): React.ReactElemen
                   aria-hidden
                 />
                 <Popover
-                  open={!!popoverAnchorEl}
+                  open={!!popoverAnchorElRef.current}
                   onOpenChange={(_, data) => { if (!data.open) cancelPopoverEdit(); }}
-                  positioning={{ target: popoverAnchorEl ?? undefined }}
+                  positioning={{ target: popoverAnchorElRef.current ?? undefined }}
                 >
                   <PopoverSurface>
                     <CustomEditor {...editorProps} />
@@ -167,15 +218,16 @@ function DataGridTableInner<T>(props: IOGridDataGridProps<T>): React.ReactElemen
           const colType = col.type;
           const interactionProps = getCellInteractionProps(descriptor, col.columnId, { handleCellMouseDown, setActiveCell, setEditingCell, handleCellContextMenu });
 
+          // Select stable style constant by type + editability
+          const computedStyle = descriptor.canEditAny
+            ? (colType === 'numeric' ? EDITABLE_NUMERIC_STYLE : colType === 'boolean' ? EDITABLE_BOOLEAN_STYLE : CURSOR_CELL_STYLE)
+            : (colType === 'numeric' ? NUMERIC_STYLE : colType === 'boolean' ? BOOLEAN_STYLE : undefined);
+
           return (
             <div
               className={cellClassNames}
               {...interactionProps}
-              style={{
-                ...(descriptor.canEditAny ? { cursor: 'cell' } : undefined),
-                ...(colType === 'numeric' ? { justifyContent: 'flex-end', textAlign: 'right' } : undefined),
-                ...(colType === 'boolean' ? { justifyContent: 'center', textAlign: 'center' } : undefined),
-              }}
+              style={computedStyle}
             >
               {styledContent}
               {descriptor.canEditAny && descriptor.isSelectionEndCell && (
@@ -198,7 +250,7 @@ function DataGridTableInner<T>(props: IOGridDataGridProps<T>): React.ReactElemen
         renderHeaderCell: () => (
           <div className={styles.selectionHeaderCell}>
             <Checkbox
-              checked={allSelected ? true : someSelected ? 'mixed' : false}
+              checked={allSelectedRef.current ? true : someSelectedRef.current ? 'mixed' : false}
               onChange={(_, data) => handleSelectAll(!!data.checked)}
               aria-label="Select all rows"
             />
@@ -207,8 +259,9 @@ function DataGridTableInner<T>(props: IOGridDataGridProps<T>): React.ReactElemen
         renderCell: (item) => {
           const rowId = getRowId(item);
           const rowIndex = rowIndexByRowId.get(rowId) ?? -1;
-          const isChecked = selectedRowIds.has(rowId);
-          const isActive = activeCell?.rowIndex === rowIndex && activeCell?.columnIndex === 0;
+          const isChecked = selectedRowIdsRef.current.has(rowId);
+          const ac = activeCellRef.current;
+          const isActive = ac?.rowIndex === rowIndex && ac?.columnIndex === 0;
           return (
             <div
               className={`${styles.selectionCell} ${isActive ? styles.activeCellContent : ''}`}
@@ -237,18 +290,11 @@ function DataGridTableInner<T>(props: IOGridDataGridProps<T>): React.ReactElemen
   }, [
     visibleCols,
     headerFilterInput,
-    cellDescriptorInput,
     getRowId,
     rowIndexByRowId,
-    pendingEditorValue,
-    popoverAnchorEl,
     hasCheckboxCol,
-    allSelected,
-    someSelected,
-    selectedRowIds,
     handleSelectAll,
     handleRowCheckboxChange,
-    activeCell,
     handleCellMouseDown,
     handleFillHandleMouseDown,
     handleCellContextMenu,
@@ -259,6 +305,16 @@ function DataGridTableInner<T>(props: IOGridDataGridProps<T>): React.ReactElemen
     commitCellEdit,
     cancelPopoverEdit,
   ]);
+
+  // Stable row-click handler
+  const handleSingleRowClick = useCallback((rowId: string | number) => {
+    if (rowSelection !== 'single') return;
+    const ids = selectedRowIdsRef.current;
+    updateSelection(ids.has(rowId) ? new Set() : new Set([rowId]));
+  }, [rowSelection, updateSelection]);
+
+  // Stable getRowId wrapper for Fluent DataGrid
+  const fluentGetRowId = useCallback((item: T) => String(getRowId(item)), [getRowId]);
 
   // Double-click to auto-fit column width
   useEffect(() => {
@@ -330,9 +386,7 @@ function DataGridTableInner<T>(props: IOGridDataGridProps<T>): React.ReactElemen
         data-container-width={containerWidth}
         data-min-table-width={Math.round(minTableWidth)}
         data-has-selection={rowSelection !== 'none' ? 'true' : undefined}
-        onContextMenu={(e) => {
-          e.preventDefault();
-        }}
+        onContextMenu={PREVENT_DEFAULT}
         style={{
           ['--data-table-column-count' as string]: totalColCount,
           ['--data-table-width' as string]: showEmptyInGrid
@@ -362,7 +416,7 @@ function DataGridTableInner<T>(props: IOGridDataGridProps<T>): React.ReactElemen
                 resizableColumnsOptions={{ autoFitColumns: layoutMode === 'fill' && !allowOverflowX }}
                 columnSizingOptions={columnSizingOptions}
                 onColumnResize={handleColumnResize}
-                getRowId={(item) => String(getRowId(item))}
+                getRowId={fluentGetRowId}
                 focusMode="composite"
                 className={styles.dataGrid}
               >
@@ -401,73 +455,37 @@ function DataGridTableInner<T>(props: IOGridDataGridProps<T>): React.ReactElemen
                     </tr>
                   ))}
                   <DataGridRow>
-                    {({ renderHeaderCell, columnId }) => {
-                      const colIdx = visibleCols.findIndex((c) => c.columnId === columnId);
-                      const isFreezeCol =
-                        freezeCols != null && freezeCols >= 1 && colIdx >= 0 && colIdx < freezeCols;
-                      const col = colIdx >= 0 ? visibleCols[colIdx] : undefined;
-                      const isPinnedLeft = col?.pinned === 'left';
-                      const isPinnedRight = col?.pinned === 'right';
-                      return (
-                        <DataGridHeaderCell
-                          className={[
-                            columnId === '__selection__' ? styles.selectionHeaderCellWrapper : '',
-                            isFreezeCol ? styles.freezeCol : '',
-                            isFreezeCol && colIdx === 0 ? styles.freezeColFirst : '',
-                            isPinnedLeft ? styles.pinnedCell : '',
-                            isPinnedLeft ? styles.pinnedLeft : '',
-                            isPinnedRight ? styles.pinnedCell : '',
-                            isPinnedRight ? styles.pinnedRight : '',
-                          ].filter(Boolean).join(' ')}
-                        >
-                          {renderHeaderCell()}
-                        </DataGridHeaderCell>
-                      );
-                    }}
+                    {({ renderHeaderCell, columnId }) => (
+                      <DataGridHeaderCell
+                        className={headerClassMap[String(columnId)] || undefined}
+                      >
+                        {renderHeaderCell()}
+                      </DataGridHeaderCell>
+                    )}
                   </DataGridRow>
                 </DataGridHeader>
                 <DataGridBody<T>>
                   {({ item }) => {
                     const rowId = getRowId(item);
-                    const isSelected = selectedRowIds.has(rowId);
+                    const isSelected = selectedRowIdsRef.current.has(rowId);
+                    const ac = activeCellRef.current;
                     return (
                       <DataGridRow<T>
                         key={rowId}
                         className={`${isSelected ? styles.selectedRow : ''} ${
-                          activeCell !== null && (rowIndexByRowId.get(rowId) ?? -1) === activeCell.rowIndex
+                          ac !== null && (rowIndexByRowId.get(rowId) ?? -1) === ac.rowIndex
                             ? styles.activeRow
                             : ''
                         }`}
-                        onClick={() => {
-                          if (rowSelection === 'single') {
-                            const isCurrentlySelected = selectedRowIds.has(rowId);
-                            updateSelection(isCurrentlySelected ? new Set() : new Set([rowId]));
-                          }
-                        }}
+                        onClick={() => handleSingleRowClick(rowId)}
                       >
-                        {({ renderCell, columnId }) => {
-                          const colIdx = visibleCols.findIndex((c) => c.columnId === columnId);
-                          const isFreezeCol =
-                            freezeCols != null && freezeCols >= 1 && colIdx >= 0 && colIdx < freezeCols;
-                          const col = colIdx >= 0 ? visibleCols[colIdx] : undefined;
-                          const isPinnedLeft = col?.pinned === 'left';
-                          const isPinnedRight = col?.pinned === 'right';
-                          return (
-                            <DataGridCell
-                              className={[
-                                columnId === '__selection__' ? styles.selectionCellWrapper : '',
-                                isFreezeCol ? styles.freezeCol : '',
-                                isFreezeCol && colIdx === 0 ? styles.freezeColFirst : '',
-                                isPinnedLeft ? styles.pinnedCell : '',
-                                isPinnedLeft ? styles.pinnedLeft : '',
-                                isPinnedRight ? styles.pinnedCell : '',
-                                isPinnedRight ? styles.pinnedRight : '',
-                              ].filter(Boolean).join(' ')}
-                            >
-                              {renderCell(item)}
-                            </DataGridCell>
-                          );
-                        }}
+                        {({ renderCell, columnId }) => (
+                          <DataGridCell
+                            className={cellClassMap[String(columnId)] || undefined}
+                          >
+                            {renderCell(item)}
+                          </DataGridCell>
+                        )}
                       </DataGridRow>
                     );
                   }}

@@ -97,14 +97,16 @@ type Story = StoryObj<typeof OGrid<Project>>;
 
 export const Default: Story = {
   render: () => (
-    <OGrid<Project>
-      data={makeProjects(50)}
-      columns={columns}
-      getRowId={getRowId}
-      entityLabelPlural="projects"
-      title={<h2 style={{ margin: 0 }}>Projects</h2>}
-      defaultPageSize={10}
-    />
+    <div>
+      <h2 style={{ margin: '0 0 8px 0' }}>Projects</h2>
+      <OGrid<Project>
+        data={makeProjects(50)}
+        columns={columns}
+        getRowId={getRowId}
+        entityLabelPlural="projects"
+        defaultPageSize={10}
+      />
+    </div>
   ),
 };
 
@@ -205,15 +207,17 @@ export const Editable: Story = {
       },
     ];
     return (
-      <OGrid<Project>
-        data={data}
-        columns={editableColumns}
-        getRowId={getRowId}
-        entityLabelPlural="projects"
-        title={<h2 style={{ margin: 0 }}>Projects (editable name &amp; status)</h2>}
-        editable
-        onCellValueChanged={handleCellValueChanged}
-      />
+      <div>
+        <h2 style={{ margin: '0 0 8px 0' }}>Projects (editable name &amp; status)</h2>
+        <OGrid<Project>
+          data={data}
+          columns={editableColumns}
+          getRowId={getRowId}
+          entityLabelPlural="projects"
+          editable
+          onCellValueChanged={handleCellValueChanged}
+        />
+      </div>
     );
   },
 };
@@ -268,12 +272,12 @@ export const SpreadsheetExperience: Story = {
 
     return (
       <div style={{ maxWidth: 900 }}>
+        <h2 style={{ margin: '0 0 8px 0' }}>Employee Directory (OGrid)</h2>
         <OGrid<SpreadsheetRow>
           data={data}
           columns={spreadsheetColumns}
           getRowId={(r) => r.id}
           entityLabelPlural="employees"
-          title={<h2 style={{ margin: 0 }}>Employee Directory (OGrid)</h2>}
           editable
           onCellValueChanged={handleCellValueChanged}
           rowSelection="multiple"
