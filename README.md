@@ -11,7 +11,7 @@
 <p align="center">
   <a href="https://www.npmjs.com/package/@alaarab/ogrid"><img src="https://img.shields.io/npm/v/@alaarab/ogrid?color=%23217346&label=npm" alt="npm version" /></a>
   <a href="https://github.com/alaarab/ogrid/blob/main/LICENSE"><img src="https://img.shields.io/badge/license-MIT-green" alt="MIT License" /></a>
-  <img src="https://img.shields.io/badge/tests-504%20passing-brightgreen" alt="480 tests passing" />
+  <img src="https://img.shields.io/badge/tests-521%20passing-brightgreen" alt="521 tests passing" />
   <img src="https://img.shields.io/badge/React-17%20%7C%2018%20%7C%2019-blue" alt="React 17, 18, 19" />
   <img src="https://img.shields.io/badge/TypeScript-strict-blue" alt="TypeScript strict" />
 </p>
@@ -102,7 +102,8 @@ Using Fluent UI? Change the import to `@alaarab/ogrid-fluent`. Material UI? `@al
 - **Column Groups** — Multi-row grouped headers with arbitrary nesting
 - **Column Pinning** — Sticky left/right columns
 - **Toolbar & Layout** — Unified bordered container with configurable toolbar strip, column chooser placement (`toolbar` / `sidebar` / hidden), and cohesive footer
-- **Column Chooser** — Show/hide columns via dropdown or sidebar panel
+- **Side Bar** — Toggle-able side panel with Columns (show/hide, Select All/Clear All) and Filters (inline filter controls per column) panels
+- **Column Chooser** — Show/hide columns via toolbar dropdown or sidebar panel
 - **Column Resize** — Drag column borders to resize
 - **Context Menu** — Right-click: copy, paste, cut, export, undo/redo with shortcuts
 - **Status Bar** — Row count, filtered count, selection aggregations (sum, avg, min, max)
@@ -183,14 +184,14 @@ ogrid/
 └── package.json      # npm workspaces root
 ```
 
-**Core** owns all state logic (hooks) and types. **UI packages** are thin view layers using their framework's primitives. All three pass the same 480 tests.
+**Core** owns all state logic (hooks) and types. **UI packages** are thin view layers using their framework's primitives. All three pass the same 521 tests.
 
 ## Development
 
 ```bash
 npm install                     # Install all dependencies
 npm run build                   # Build all packages (Turborepo)
-npm run test:all                # Run all 480 tests
+npm run test:all                # Run all 521 tests
 npm run lint                    # ESLint
 
 # Storybook (per-framework)

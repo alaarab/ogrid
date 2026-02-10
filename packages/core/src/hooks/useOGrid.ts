@@ -586,6 +586,7 @@ export function useOGrid<T>(
     (columnId: string, pinned: 'left' | 'right' | null) => {
       setPinnedOverrides((prev) => {
         if (pinned === null) {
+          // eslint-disable-next-line @typescript-eslint/no-unused-vars
           const { [columnId]: _, ...rest } = prev;
           return rest;
         }
