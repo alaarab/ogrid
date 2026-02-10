@@ -13,8 +13,7 @@ import {
   deriveFilterOptionsFromData,
   getMultiSelectFilterFields,
 } from '../utils/ogridHelpers';
-import { getCellValue, flattenColumns } from '../utils';
-import { toDataGridFilterProps } from '../types';
+import { getCellValue, flattenColumns, processClientSideData } from '../utils';
 import { useFilterOptions } from './useFilterOptions';
 import { useSideBarState } from './useSideBarState';
 import type { SideBarProps } from '../components/SideBar';
@@ -24,11 +23,10 @@ import type {
   IOGridDataGridProps,
   IOGridApi,
   IFilters,
+  FilterValue,
   IRowSelectionChangeEvent,
   IStatusBarProps,
-  UserLike,
   IColumnDefinition,
-  IDateFilterValue,
 } from '../types';
 
 const DEFAULT_PAGE_SIZE = 25;
@@ -48,7 +46,6 @@ export interface UseOGridResult<T> {
   handleVisibilityChange: (columnKey: string, isVisible: boolean) => void;
   /** Resolved placement of the column chooser. */
   columnChooserPlacement: ColumnChooserPlacement;
-  title: React.ReactNode;
   toolbar: React.ReactNode;
   className?: string;
   entityLabelPlural: string;
@@ -92,7 +89,6 @@ export function useOGrid<T>(
     emptyState,
     entityLabelPlural = 'items',
     className,
-    title,
     layoutMode = 'fill',
     suppressHorizontalScroll,
     editable,
@@ -210,11 +206,6 @@ export function useOGrid<T>(
     [controlledVisibleColumns, onVisibleColumnsChange]
   );
 
-  const { multiSelectFilters, textFilters, peopleFilters, dateFilters } = useMemo(
-    () => toDataGridFilterProps(filters),
-    [filters]
-  );
-
   const handleSort = useCallback(
     (columnKey: string) => {
       setSort({
@@ -226,29 +217,9 @@ export function useOGrid<T>(
     [sort, setSort]
   );
 
-  const handleMultiSelectFilterChange = useCallback(
-    (key: string, values: string[]) => {
-      setFilters(mergeFilter(filters, key, values.length ? values : undefined));
-    },
-    [filters, setFilters]
-  );
-
-  const handleTextFilterChange = useCallback(
-    (key: string, value: string) => {
-      setFilters(mergeFilter(filters, key, value.trim() || undefined));
-    },
-    [filters, setFilters]
-  );
-
-  const handlePeopleFilterChange = useCallback(
-    (key: string, user: UserLike | undefined) => {
-      setFilters(mergeFilter(filters, key, user ?? undefined));
-    },
-    [filters, setFilters]
-  );
-
-  const handleDateFilterChange = useCallback(
-    (key: string, value: IDateFilterValue | undefined) => {
+  /** Single filter change handler — wraps discriminated FilterValue into mergeFilter. */
+  const handleFilterChange = useCallback(
+    (key: string, value: FilterValue | undefined) => {
       setFilters(mergeFilter(filters, key, value));
     },
     [filters, setFilters]
@@ -298,90 +269,16 @@ export function useOGrid<T>(
     return deriveFilterOptionsFromData(displayData, columns);
   }, [dataSource, displayData, columns, serverFilterOptions]);
 
+  // --- Client-side filtering & sorting ---
   const clientItemsAndTotal = useMemo(() => {
     if (!isClientSide) return null;
-    let rows = displayData.slice();
-    columns.forEach((col) => {
-      const filterKey = getFilterField(col);
-      const f =
-        col.filterable && typeof col.filterable === 'object'
-          ? col.filterable
-          : null;
-      const type = f?.type;
-      const val = filters[filterKey];
-      if (type === 'multiSelect' && Array.isArray(val) && val.length > 0) {
-        rows = rows.filter((r) =>
-          val.includes(String(getCellValue(r, col)))
-        );
-      } else if (
-        type === 'text' &&
-        typeof val === 'string' &&
-        val.trim()
-      ) {
-        const lower = val.trim().toLowerCase();
-        rows = rows.filter((r) =>
-          String(getCellValue(r, col) ?? '').toLowerCase().includes(lower)
-        );
-      } else if (
-        type === 'people' &&
-        val &&
-        typeof val === 'object' &&
-        'email' in val
-      ) {
-        const email = (val as UserLike).email.toLowerCase();
-        rows = rows.filter(
-          (r) =>
-            String(getCellValue(r, col) ?? '').toLowerCase() === email
-        );
-      } else if (
-        type === 'date' &&
-        val &&
-        typeof val === 'object' &&
-        !Array.isArray(val) &&
-        ('from' in val || 'to' in val)
-      ) {
-        const dv = val as IDateFilterValue;
-        rows = rows.filter((r) => {
-          const cellVal = getCellValue(r, col);
-          if (cellVal == null) return false;
-          const cellDate = new Date(String(cellVal));
-          if (Number.isNaN(cellDate.getTime())) return false;
-          const cellDateStr = cellDate.toISOString().split('T')[0];
-          if (dv.from && cellDateStr < dv.from) return false;
-          if (dv.to && cellDateStr > dv.to) return false;
-          return true;
-        });
-      }
-    });
-    if (sort.field) {
-      const sortCol = columns.find((c) => c.columnId === sort.field);
-      const compare = sortCol?.compare;
-      const dir = sort.direction === 'asc' ? 1 : -1;
-      rows.sort((a, b) => {
-        if (compare) return compare(a, b) * dir;
-        const av = sortCol
-          ? getCellValue(a, sortCol)
-          : (a as Record<string, unknown>)[sort.field];
-        const bv = sortCol
-          ? getCellValue(b, sortCol)
-          : (b as Record<string, unknown>)[sort.field];
-        if (av == null && bv == null) return 0;
-        if (av == null) return -1 * dir;
-        if (bv == null) return 1 * dir;
-        if (sortCol?.type === 'date') {
-          const at = new Date(String(av)).getTime();
-          const bt = new Date(String(bv)).getTime();
-          const aN = Number.isNaN(at) ? 0 : at;
-          const bN = Number.isNaN(bt) ? 0 : bt;
-          return aN === bN ? 0 : aN > bN ? dir : -dir;
-        }
-        if (typeof av === 'number' && typeof bv === 'number')
-          return av === bv ? 0 : av > bv ? dir : -dir;
-        const as = String(av).toLowerCase();
-        const bs = String(bv).toLowerCase();
-        return as === bs ? 0 : as > bs ? dir : -dir;
-      });
-    }
+    const rows = processClientSideData(
+      displayData,
+      columns,
+      filters,
+      sort.field,
+      sort.direction
+    );
     const total = rows.length;
     const start = (page - 1) * pageSize;
     const paged = rows.slice(start, start + pageSize);
@@ -535,12 +432,9 @@ export function useOGrid<T>(
     ]
   );
 
+  // With discriminated union, any defined value is active (mergeFilter already strips empties)
   const hasActiveFilters = useMemo(() => {
-    return Object.values(filters).some(
-      (v) =>
-        v !== undefined &&
-        (Array.isArray(v) ? v.length > 0 : typeof v === 'string' ? v.trim() !== '' : true)
-    );
+    return Object.values(filters).some((v) => v !== undefined);
   }, [filters]);
 
   const columnChooserColumns: IColumnDefinition[] = useMemo(
@@ -625,12 +519,8 @@ export function useOGrid<T>(
       onVisibilityChange: handleVisibilityChange,
       onSetVisibleColumns: setVisibleColumns,
       filterableColumns,
-      multiSelectFilters,
-      textFilters: textFilters ?? {},
-      onMultiSelectFilterChange: handleMultiSelectFilterChange,
-      onTextFilterChange: handleTextFilterChange,
-      dateFilters,
-      onDateFilterChange: handleDateFilterChange,
+      filters,
+      onFilterChange: handleFilterChange,
       filterOptions: clientFilterOptions,
     };
   }, [
@@ -644,12 +534,8 @@ export function useOGrid<T>(
     handleVisibilityChange,
     setVisibleColumns,
     filterableColumns,
-    multiSelectFilters,
-    textFilters,
-    handleMultiSelectFilterChange,
-    handleTextFilterChange,
-    dateFilters,
-    handleDateFilterChange,
+    filters,
+    handleFilterChange,
     clientFilterOptions,
   ]);
 
@@ -681,14 +567,8 @@ export function useOGrid<T>(
     onSelectionChange: handleSelectionChange,
     statusBar: statusBarConfig,
     isLoading: (isServerSide && loading) || displayLoading,
-    multiSelectFilters,
-    onMultiSelectFilterChange: handleMultiSelectFilterChange,
-    textFilters,
-    onTextFilterChange: handleTextFilterChange,
-    peopleFilters,
-    onPeopleFilterChange: handlePeopleFilterChange,
-    dateFilters,
-    onDateFilterChange: handleDateFilterChange,
+    filters,
+    onFilterChange: handleFilterChange,
     filterOptions: clientFilterOptions,
     loadingFilterOptions: dataSource?.fetchFilterOptions ? loadingFilterOptions : {},
     peopleSearch: dataSource?.searchPeople,
@@ -716,7 +596,6 @@ export function useOGrid<T>(
     visibleColumns,
     handleVisibilityChange,
     columnChooserPlacement,
-    title,
     toolbar,
     className,
     entityLabelPlural,

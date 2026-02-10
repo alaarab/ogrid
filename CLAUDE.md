@@ -41,11 +41,11 @@ npm run docs:build              # Build docs site
 
 ### Core (`packages/core/src/`)
 
-**Types** — `IColumnDef`, `IColumnGroupDef`, `IDataSource`, `IFilters`, `IDateFilterValue`, `UserLike`, `IOGridApi`, `IOGridProps`, `ICellEditorProps`, etc. in `types/`. Column types: `'text' | 'numeric' | 'date' | 'boolean'`. Filter types: `'none' | 'text' | 'multiSelect' | 'people' | 'date'`.
+**Types** — `IColumnDef`, `IColumnGroupDef`, `IDataSource`, `IFilters`, `IDateFilterValue`, `UserLike`, `IOGridApi`, `IOGridProps`, `ICellEditorProps`, `FilterValue`, etc. in `types/`. Column types: `'text' | 'numeric' | 'date' | 'boolean'`. Filter types: `'none' | 'text' | 'multiSelect' | 'people' | 'date'`. `FilterValue` is a discriminated union: `{ type: 'text', value: string } | { type: 'multiSelect', value: string[] } | { type: 'people', value: UserLike } | { type: 'date', value: IDateFilterValue }`.
 
 **Orchestration hooks:**
 - `useOGrid` — Pagination, sorting, filtering, visibility, editing, row selection, status bar. Exposes `IOGridApi` ref.
-- `useDataGridState` — All DataGridTable state (layout, selection, editing, keyboard, clipboard, context menu).
+- `useDataGridState` — All DataGridTable state, grouped into 6 sub-objects: `layout`, `rowSelection`, `editing`, `interaction`, `contextMenu`, `viewModels`.
 
 **Headless state hooks** (consumed by UI packages):
 - `useColumnHeaderFilterState` — Filter popover state (open, temp values, apply/clear, people search debounce)
@@ -56,7 +56,7 @@ npm run docs:build              # Build docs site
 
 **Feature hooks:** `useActiveCell`, `useCellEditing`, `useCellSelection`, `useRowSelection`, `useKeyboardNavigation`, `useClipboard`, `useFillHandle`, `useUndoRedo`, `useContextMenu`, `useColumnResize`, `useFilterOptions`, `useDebounce`
 
-**Utilities:** `exportToCsv`, `getCellValue`, `flattenColumns`, `buildHeaderRows`, `getPaginationViewModel`, `getHeaderFilterConfig`, `getCellRenderDescriptor`, `getStatusBarParts`, `getDataGridStatusBarConfig`, `computeAggregations`, `GRID_CONTEXT_MENU_ITEMS`, `getContextMenuHandlers`, `formatShortcut`
+**Utilities:** `exportToCsv`, `getCellValue`, `flattenColumns`, `buildHeaderRows`, `getPaginationViewModel`, `getHeaderFilterConfig`, `getCellRenderDescriptor`, `resolveCellDisplayContent`, `resolveCellStyle`, `buildInlineEditorProps`, `buildPopoverEditorProps`, `getCellInteractionProps`, `getStatusBarParts`, `getDataGridStatusBarConfig`, `computeAggregations`, `processClientSideData`, `GRID_CONTEXT_MENU_ITEMS`, `getContextMenuHandlers`, `formatShortcut`
 
 **Headless components:** `OGridLayout`, `StatusBar`, `GridContextMenu`, `SideBar`
 
@@ -104,7 +104,7 @@ Pure React hooks. No external state libraries. Supports uncontrolled (internal) 
 
 ## Testing
 
-**504 tests** across 4 packages (Core: 228, Radix: 92, Fluent: 92, Material: 92).
+**521 tests** across 4 packages (Core: 245, Radix: 92, Fluent: 92, Material: 92).
 
 - Jest 29 + React Testing Library 16 + ts-jest, jsdom environment, 10s timeout
 - Core tests: `packages/core/src/*/__tests__/**/*.test.ts(x)`
@@ -214,15 +214,14 @@ Opus is the **orchestrator**. For multi-step tasks, break the work into well-sco
 - [ ] State logic stays in core hooks — UI packages should only add view-layer code.
 - [ ] If the same pattern appears in 2+ UI packages, consider a shared factory or headless component.
 
-## Remaining Duplication (Future Work)
+## View Layer Architecture (Phase 2 Complete)
 
-State and behavior are centralized in core. The remaining triplication is in the **view layer** of DataGridTable:
+State and behavior are centralized in core. Each UI package's `renderCellContent` is a thin ~50-line mapping from core-computed descriptors to framework-specific JSX, using 6 core helpers: `getCellRenderDescriptor`, `buildInlineEditorProps`, `buildPopoverEditorProps`, `getCellInteractionProps`, `resolveCellDisplayContent`, `resolveCellStyle`.
 
-| What's shared | What's triplicated |
+| What's in core | What's per-framework |
 |---|---|
 | `useDataGridState`, all sub-hooks, types, utils | Table primitives (Fluent DataGrid vs MUI Table vs native `<table>`) |
-| `getCellRenderDescriptor` (cell mode, flags) | Cell rendering (editing vs display, active/range styling) |
-| `getHeaderFilterConfig` | Header filter rendering (Fluent/MUI/Radix popovers) |
+| `getCellRenderDescriptor` + 5 builder helpers | Popover rendering (Radix/Fluent/MUI popover APIs) |
+| `getHeaderFilterConfig` | Header filter rendering (framework-specific popovers) |
 | `getPaginationViewModel` | Pagination rendering (Fluent/MUI/native buttons) |
-
-**Next step (Phase 2):** Use `getCellRenderDescriptor` in all three DataGridTable implementations so cell rendering is "map descriptor to component" instead of reimplementing the booleans and callbacks. This would make each DataGridTable a thin mapping from descriptors to framework-specific primitives.
+| `processClientSideData` | CSS/styling (CSS modules vs MUI sx) |
