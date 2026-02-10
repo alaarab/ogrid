@@ -2,6 +2,14 @@ import { useState, useCallback, useRef, useEffect } from 'react';
 import { normalizeSelectionRange } from '../types';
 import type { ISelectionRange, IActiveCell } from '../types';
 
+/** Compares two selection ranges by value. */
+function rangesEqual(a: ISelectionRange | null, b: ISelectionRange | null): boolean {
+  if (a === b) return true;
+  if (!a || !b) return false;
+  return a.startRow === b.startRow && a.endRow === b.endRow &&
+         a.startCol === b.startCol && a.endCol === b.endCol;
+}
+
 export interface UseCellSelectionParams {
   colOffset: number;
   rowCount: number;
@@ -37,9 +45,11 @@ function autoScrollSpeed(distance: number): number {
 export function useCellSelection(params: UseCellSelectionParams): UseCellSelectionResult {
   const { colOffset, rowCount, visibleColCount, setActiveCell, wrapperRef } = params;
 
-  const [selectionRange, setSelectionRange] = useState<ISelectionRange | null>(null);
+  const [selectionRange, _setSelectionRange] = useState<ISelectionRange | null>(null);
   const isDraggingRef = useRef(false);
   const [isDragging, setIsDragging] = useState(false);
+  /** True once a mousemove has been seen during the current drag gesture. */
+  const dragMovedRef = useRef(false);
   const dragStartRef = useRef<{ row: number; col: number } | null>(null);
   const rafRef = useRef(0);
   /** Live drag range kept in a ref — only committed to React state on mouseup. */
@@ -51,6 +61,12 @@ export function useCellSelection(params: UseCellSelectionParams): UseCellSelecti
   // without adding selectionRange to its useCallback deps (keeps it stable).
   const selectionRangeRef = useRef(selectionRange);
   selectionRangeRef.current = selectionRange;
+
+  // Deduplicating setter — skips re-render when the range hasn't actually changed.
+  const setSelectionRange = useCallback((next: ISelectionRange | null) => {
+    if (rangesEqual(selectionRangeRef.current, next)) return;
+    _setSelectionRange(next);
+  }, []);
 
   const handleCellMouseDown = useCallback(
     (e: React.MouseEvent, rowIndex: number, globalColIndex: number) => {
@@ -73,6 +89,7 @@ export function useCellSelection(params: UseCellSelectionParams): UseCellSelecti
         setActiveCell({ rowIndex, columnIndex: globalColIndex });
       } else {
         dragStartRef.current = { row: rowIndex, col: dataColIndex };
+        dragMovedRef.current = false;
         const initial: ISelectionRange = {
           startRow: rowIndex,
           startCol: dataColIndex,
@@ -82,8 +99,10 @@ export function useCellSelection(params: UseCellSelectionParams): UseCellSelecti
         setSelectionRange(initial);
         liveDragRangeRef.current = initial;
         setActiveCell({ rowIndex, columnIndex: globalColIndex });
+        // Mark drag as "started" but don't set isDragging state yet —
+        // setIsDragging(true) is deferred to the first mousemove to avoid
+        // a true→false toggle on simple clicks (which causes 2 extra renders).
         isDraggingRef.current = true;
-        setIsDragging(true);
       }
     },
     [colOffset, setActiveCell]
@@ -227,6 +246,13 @@ export function useCellSelection(params: UseCellSelectionParams): UseCellSelecti
     const onMove = (e: MouseEvent) => {
       if (!isDraggingRef.current || !dragStartRef.current) return;
 
+      // Promote to a real drag on first mousemove (deferred from mouseDown
+      // to avoid a true→false toggle on simple clicks).
+      if (!dragMovedRef.current) {
+        dragMovedRef.current = true;
+        setIsDragging(true);
+      }
+
       // Always store latest position so mouseUp can flush if RAF hasn't executed
       lastMousePosRef.current = { cx: e.clientX, cy: e.clientY };
 
@@ -272,31 +298,36 @@ export function useCellSelection(params: UseCellSelectionParams): UseCellSelecti
       }
 
       isDraggingRef.current = false;
+      const wasDrag = dragMovedRef.current;
 
-      // Flush: if the last RAF hasn't executed yet, resolve the range now from the
-      // last known mouse position so the final committed range is always accurate.
-      const pos = lastMousePosRef.current;
-      if (pos) {
-        const flushed = resolveRange(pos.cx, pos.cy);
-        if (flushed) liveDragRangeRef.current = flushed;
-      }
+      if (wasDrag) {
+        // Flush: if the last RAF hasn't executed yet, resolve the range now from the
+        // last known mouse position so the final committed range is always accurate.
+        const pos = lastMousePosRef.current;
+        if (pos) {
+          const flushed = resolveRange(pos.cx, pos.cy);
+          if (flushed) liveDragRangeRef.current = flushed;
+        }
 
-      // Commit final range to React state (triggers a single re-render)
-      const finalRange = liveDragRangeRef.current;
-      if (finalRange) {
-        setSelectionRange(finalRange);
-        setActiveCell({
-          rowIndex: finalRange.endRow,
-          columnIndex: finalRange.endCol + colOff,
-        });
+        // Commit final range to React state (triggers a single re-render)
+        const finalRange = liveDragRangeRef.current;
+        if (finalRange) {
+          setSelectionRange(finalRange);
+          setActiveCell({
+            rowIndex: finalRange.endRow,
+            columnIndex: finalRange.endCol + colOff,
+          });
+        }
       }
+      // For simple clicks (no drag movement), mouseDown already set
+      // selectionRange + activeCell — skip redundant state updates.
 
       // Clean up DOM attributes — React will apply CSS-module classes on the same paint
       clearDragAttrs();
       liveDragRangeRef.current = null;
       lastMousePosRef.current = null;
       dragStartRef.current = null;
-      setIsDragging(false);
+      if (wasDrag) setIsDragging(false);
     };
 
     window.addEventListener('mousemove', onMove, true);
