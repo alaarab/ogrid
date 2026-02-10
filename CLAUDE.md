@@ -164,22 +164,6 @@ GitHub Actions (`.github/workflows/ci.yml`): push to `main` + PRs. Node 22, ubun
 7. **Headless architecture** — Core owns all state logic; UI packages are thin view layers.
 8. **Feature parity** — All three UI packages must support the same features and pass the same tests.
 
-## Agent Workflow
-
-Opus is the **orchestrator**. For multi-step tasks, break the work into well-scoped subtasks and delegate to **Sonnet subagents** (up to 3 concurrently). Sonnet is highly capable and cheaper — use it for mechanical, well-defined work.
-
-### When to Use Subagents
-- **Parallel UI package changes** — e.g., send one Sonnet per package (Radix, Fluent, Material) when implementing the same view-layer change across all three.
-- **Independent workstreams** — e.g., one agent writes tests while another updates docs while another implements the feature in core.
-- **Research + implementation** — e.g., one agent explores the codebase while another starts on the parts that are already clear.
-
-### Rules
-1. **Max 3 subagents at a time.** Don't over-parallelize — keep tasks non-overlapping so agents don't edit the same files.
-2. **Use `model: "sonnet"` for subagents.** Reserve Opus for orchestration, planning, and complex decisions.
-3. **Give each agent a complete, self-contained prompt.** Include file paths, expected patterns, and clear acceptance criteria so the agent can work autonomously.
-4. **Avoid file conflicts.** Don't send two agents to edit the same file. If tasks touch shared files, run them sequentially or split the file edits so each agent owns a distinct section.
-5. **Verify after merge.** After subagent results come back, run `npm run test:all` and `npm run build` from the orchestrator to catch integration issues.
-
 ## Definition of Done
 
 **Every feature, fix, or change must satisfy ALL of these before it's considered complete.** Use a TodoWrite checklist to track progress.

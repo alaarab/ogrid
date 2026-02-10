@@ -17,17 +17,38 @@ type RowId = string | number;
 
 ## FilterValue
 
-A single filter value. The shape depends on the filter type.
+A discriminated union representing a single filter value. Each variant has a `type` tag and a `value` field.
 
 ```typescript
-type FilterValue = string | string[] | UserLike;
+type FilterValue =
+  | { type: 'text'; value: string }
+  | { type: 'multiSelect'; value: string[] }
+  | { type: 'people'; value: UserLike }
+  | { type: 'date'; value: IDateFilterValue };
 ```
 
-| Filter Type | FilterValue Shape | Example |
-|------------|-------------------|---------|
-| `text` | `string` | `"Alice"` |
-| `multiSelect` | `string[]` | `["Active", "Pending"]` |
-| `people` | `UserLike` | `{ displayName: "Alice", email: "alice@example.com" }` |
+| Filter Type | `type` Tag | `value` Shape | Example |
+|------------|------------|---------------|---------|
+| Text | `'text'` | `string` | `{ type: 'text', value: 'Alice' }` |
+| Multi-select | `'multiSelect'` | `string[]` | `{ type: 'multiSelect', value: ['Active', 'Pending'] }` |
+| People | `'people'` | `UserLike` | `{ type: 'people', value: { displayName: 'Alice', email: 'alice@example.com' } }` |
+| Date range | `'date'` | `IDateFilterValue` | `{ type: 'date', value: { from: '2024-01-01', to: '2024-12-31' } }` |
+
+## IDateFilterValue
+
+A date range for date column filters. Both fields are optional ISO `YYYY-MM-DD` strings.
+
+```typescript
+interface IDateFilterValue {
+  from?: string;
+  to?: string;
+}
+```
+
+| Name | Type | Description |
+|------|------|-------------|
+| `from` | `string` | Start date (inclusive). ISO `YYYY-MM-DD` format. |
+| `to` | `string` | End date (inclusive). ISO `YYYY-MM-DD` format. |
 
 ## IFilters
 
@@ -43,10 +64,11 @@ interface IFilters {
 
 ```typescript
 const filters: IFilters = {
-  name: 'Alice',                              // text filter
-  status: ['Active', 'Pending'],              // multiSelect filter
-  owner: { displayName: 'Bob', email: 'bob@example.com' }, // people filter
-  department: undefined,                       // cleared filter
+  name: { type: 'text', value: 'Alice' },
+  status: { type: 'multiSelect', value: ['Active', 'Pending'] },
+  owner: { type: 'people', value: { displayName: 'Bob', email: 'bob@example.com' } },
+  startDate: { type: 'date', value: { from: '2024-01-01' } },
+  department: undefined, // cleared filter
 };
 ```
 
