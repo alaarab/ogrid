@@ -1,0 +1,208 @@
+---
+sidebar_position: 3
+title: Quick Start
+description: Build a fully functional data grid in minutes
+---
+
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+
+# Quick Start
+
+Build a sortable, filterable, editable data grid in under 50 lines.
+
+## Install
+
+<Tabs groupId="framework">
+  <TabItem value="radix" label="Radix (Lightweight)" default>
+
+```bash
+npm install @alaarab/ogrid
+```
+
+  </TabItem>
+  <TabItem value="fluent" label="Fluent UI">
+
+```bash
+npm install @alaarab/ogrid-fluent @fluentui/react-components
+```
+
+  </TabItem>
+  <TabItem value="material" label="Material UI">
+
+```bash
+npm install @alaarab/ogrid-material @mui/material @emotion/react @emotion/styled
+```
+
+  </TabItem>
+</Tabs>
+
+## Full Example
+
+<Tabs groupId="framework">
+  <TabItem value="radix" label="Radix (Lightweight)" default>
+
+```tsx
+import { OGrid, type IColumnDef } from '@alaarab/ogrid';
+
+interface Employee {
+  id: number;
+  name: string;
+  department: string;
+  salary: number;
+}
+
+const data: Employee[] = [
+  { id: 1, name: 'Alice Johnson', department: 'Engineering', salary: 95000 },
+  { id: 2, name: 'Bob Smith', department: 'Marketing', salary: 72000 },
+  { id: 3, name: 'Carol Williams', department: 'Engineering', salary: 110000 },
+  { id: 4, name: 'David Brown', department: 'Sales', salary: 68000 },
+  { id: 5, name: 'Eva Martinez', department: 'Marketing', salary: 78000 },
+];
+
+const columns: IColumnDef<Employee>[] = [
+  { columnId: 'name', name: 'Name', sortable: true },
+  {
+    columnId: 'department',
+    name: 'Department',
+    sortable: true,
+    filterable: { type: 'multiSelect', options: ['Engineering', 'Marketing', 'Sales'] },
+  },
+  {
+    columnId: 'salary',
+    name: 'Salary',
+    type: 'numeric',
+    sortable: true,
+    editable: true,
+    valueFormatter: (value) =>
+      new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(value as number),
+  },
+];
+
+export default function App() {
+  return (
+    <OGrid<Employee>
+      columns={columns}
+      data={data}
+      getRowId={(row) => row.id}
+      defaultPageSize={10}
+      defaultSortBy="name"
+      statusBar
+      aria-label="Employee directory"
+    />
+  );
+}
+```
+
+  </TabItem>
+  <TabItem value="fluent" label="Fluent UI">
+
+```tsx
+import { FluentProvider, webLightTheme } from '@fluentui/react-components';
+import { OGrid, type IColumnDef } from '@alaarab/ogrid-fluent';
+
+// ... same Employee type, data, and columns as above ...
+
+export default function App() {
+  return (
+    <FluentProvider theme={webLightTheme}>
+      <OGrid<Employee>
+        columns={columns}
+        data={data}
+        getRowId={(row) => row.id}
+        defaultPageSize={10}
+        defaultSortBy="name"
+        statusBar
+        aria-label="Employee directory"
+      />
+    </FluentProvider>
+  );
+}
+```
+
+:::tip
+`FluentProvider` with a theme is required for Fluent UI components. Wrap it around your app root or at least around `OGrid`. Best choice for **Microsoft 365 / SPFx** projects.
+:::
+
+  </TabItem>
+  <TabItem value="material" label="Material UI">
+
+```tsx
+import { ThemeProvider, createTheme } from '@mui/material/styles';
+import CssBaseline from '@mui/material/CssBaseline';
+import { OGrid, type IColumnDef } from '@alaarab/ogrid-material';
+
+const theme = createTheme();
+
+// ... same Employee type, data, and columns as above ...
+
+export default function App() {
+  return (
+    <ThemeProvider theme={theme}>
+      <CssBaseline />
+      <OGrid<Employee>
+        columns={columns}
+        data={data}
+        getRowId={(row) => row.id}
+        defaultPageSize={10}
+        defaultSortBy="name"
+        statusBar
+        aria-label="Employee directory"
+      />
+    </ThemeProvider>
+  );
+}
+```
+
+:::tip
+If your app already has `ThemeProvider` and `CssBaseline` at the root, render `OGrid` directly. For **Next.js App Router**, add `"use client"` since the grid uses hooks and DOM APIs.
+:::
+
+  </TabItem>
+</Tabs>
+
+## What You Get
+
+With just this code:
+
+- **Sorting** -- click column headers to sort ascending/descending
+- **Filtering** -- click the filter icon on Department to filter by value
+- **Inline editing** -- double-click any salary cell to edit
+- **Numeric formatting** -- `type: 'numeric'` right-aligns; `valueFormatter` displays currency
+- **Pagination, keyboard nav, cell selection, status bar** -- all built in
+
+## Key Concepts
+
+| Concept | Description |
+|---------|-------------|
+| `IColumnDef<T>` | Column config. `columnId` matches a key on `T` (or use `valueGetter`). |
+| `getRowId` | Returns a unique `string \| number` per row for selection, editing, and re-rendering. |
+| `layoutMode` | `'fill'` (default) fills container; `'content'` sizes to content. |
+
+## Using the Grid API
+
+```tsx
+import { useRef } from 'react';
+import { OGrid, type IOGridApi } from '@alaarab/ogrid';
+
+function App() {
+  const gridRef = useRef<IOGridApi<Employee>>(null);
+
+  return (
+    <>
+      <button onClick={() => console.log(gridRef.current?.getColumnState())}>
+        Log State
+      </button>
+      <OGrid<Employee> ref={gridRef} columns={columns} data={data} getRowId={(row) => row.id} />
+    </>
+  );
+}
+```
+
+## Next Steps
+
+- [Sorting](../features/sorting), [Filtering](../features/filtering), [Editing](../features/editing) -- core features
+- [Grid API](../api/grid-api) -- imperative methods
+- [Column Definitions](../api/column-def) -- all column options
+- [Controlled vs Uncontrolled](../guides/controlled-vs-uncontrolled) -- managing state externally
+- [Server-Side Data](../features/server-side-data) -- connect to REST APIs or GraphQL

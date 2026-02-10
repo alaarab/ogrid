@@ -101,7 +101,7 @@ Using Fluent UI? Change the import to `@alaarab/ogrid-fluent`. Material UI? `@al
 - **Fill Handle** — Drag to fill cells (Excel-style)
 - **Column Groups** — Multi-row grouped headers with arbitrary nesting
 - **Column Pinning** — Sticky left/right columns
-- **Toolbar & Layout** — Unified bordered container with configurable toolbar strip, column chooser placement (`toolbar` / `sidebar` / hidden), and cohesive footer
+- **Toolbar & Layout** — Unified bordered container with primary toolbar (left/right slots), secondary `toolbarBelow` row (e.g. filter chips), column chooser placement (`toolbar` / `sidebar` / hidden), and cohesive footer
 - **Side Bar** — Toggle-able side panel with Columns (show/hide, Select All/Clear All) and Filters (inline filter controls per column) panels
 - **Column Chooser** — Show/hide columns via toolbar dropdown or sidebar panel
 - **Column Resize** — Drag column borders to resize
