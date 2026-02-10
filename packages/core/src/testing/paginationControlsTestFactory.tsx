@@ -55,7 +55,7 @@ export function createPaginationControlsTests(PaginationControls: React.Componen
     const onPageSizeChange = jest.fn();
     renderControls({ onPageSizeChange });
     const select = screen.getByLabelText('Rows per page');
-    fireEvent.change(select, { target: { value: '20' } });
-    expect(onPageSizeChange).toHaveBeenCalledWith(20);
+    fireEvent.change(select, { target: { value: '25' } });
+    expect(onPageSizeChange).toHaveBeenCalledWith(25);
   });
 }

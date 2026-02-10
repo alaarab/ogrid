@@ -9,6 +9,9 @@ export type {
   ICellEditorProps,
   CellEditorParams,
   IValueParserParams,
+  IDateFilterValue,
+  HeaderCell,
+  HeaderRow,
 } from './columnTypes';
 
 export type {
@@ -30,6 +33,8 @@ export type {
   IStatusBarProps,
   IActiveCell,
   ISelectionRange,
+  SideBarPanelId,
+  ISideBarDef,
 } from './dataGridTypes';
 
 export { toUserLike, toDataGridFilterProps, isInSelectionRange, normalizeSelectionRange } from './dataGridTypes';

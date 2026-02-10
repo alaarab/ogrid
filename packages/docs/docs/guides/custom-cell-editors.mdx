@@ -1,0 +1,202 @@
+---
+sidebar_position: 2
+title: Custom Cell Editors
+description: Build custom inline and popup cell editors for OGrid columns.
+---
+
+# Custom Cell Editors
+
+OGrid includes built-in editors for common types (`text`, `select`, `checkbox`, `richSelect`), but you can create fully custom editors for any use case. A custom editor is a React component that receives the cell value, update callbacks, and optional params.
+
+## The ICellEditorProps Interface
+
+Every custom editor receives these props:
+
+```tsx
+interface ICellEditorProps<T> {
+  value: unknown;                           // Current cell value
+  onValueChange: (value: unknown) => void;  // Update the value as user types
+  onCommit: () => void;                     // Save and close
+  onCancel: () => void;                     // Discard and close
+  item: T;                                  // The full row data
+  column: IColumnDef<T>;                    // The column definition
+  cellEditorParams?: CellEditorParams;      // Extra config from the column def
+}
+```
+
+## Popup Editor Example
+
+A popup editor renders in a floating overlay above the cell. This is ideal for editors that need more space than an inline cell -- like a textarea, a date picker, or a color picker.
+
+### Step 1: Create the Editor Component
+
+```tsx
+import type { ICellEditorProps } from '@alaarab/ogrid';
+
+interface NoteItem {
+  id: string;
+  title: string;
+  notes: string;
+}
+
+function NotesEditor({ value, onValueChange, onCommit, onCancel }: ICellEditorProps<NoteItem>) {
+  return (
+    <div style={{ padding: 12, width: 300 }}>
+      <textarea
+        autoFocus
+        rows={5}
+        value={String(value ?? '')}
+        onChange={(e) => onValueChange(e.target.value)}
+        onKeyDown={(e) => {
+          if (e.key === 'Escape') onCancel();
+        }}
+        style={{ width: '100%', resize: 'vertical', fontFamily: 'inherit', fontSize: 14 }}
+      />
+      <div style={{ display: 'flex', gap: 8, marginTop: 8, justifyContent: 'flex-end' }}>
+        <button onClick={onCancel}>Cancel</button>
+        <button onClick={onCommit}>Save</button>
+      </div>
+    </div>
+  );
+}
+```
+
+### Step 2: Wire It Up in the Column Definition
+
+Set `cellEditor` to your component and `cellEditorPopup: true` to render it in a floating overlay:
+
+```tsx
+import type { IColumnDef } from '@alaarab/ogrid';
+
+const columns: IColumnDef<NoteItem>[] = [
+  { columnId: 'title', name: 'Title', editable: true },
+  {
+    columnId: 'notes',
+    name: 'Notes',
+    editable: true,
+    cellEditor: NotesEditor,
+    cellEditorPopup: true,
+  },
+];
+```
+
+### Step 3: Enable Editing on the Grid
+
+```tsx
+<OGrid
+  columns={columns}
+  data={items}
+  getRowId={(item) => item.id}
+  editable
+  onCellValueChanged={(event) => {
+    console.log(`${event.columnId} changed from`, event.oldValue, 'to', event.newValue);
+  }}
+/>
+```
+
+When a user double-clicks the Notes cell (or presses Enter on it), the `NotesEditor` appears in a popup. Clicking Save calls `onCommit`, which writes the value back to the grid and fires `onCellValueChanged`.
+
+## Inline Editor Example
+
+Without `cellEditorPopup`, the editor replaces the cell content inline. This is the default behavior and works well for small inputs:
+
+```tsx
+function ColorEditor({ value, onValueChange, onCommit, onCancel }: ICellEditorProps<any>) {
+  return (
+    <input
+      type="color"
+      autoFocus
+      value={String(value ?? '#000000')}
+      onChange={(e) => onValueChange(e.target.value)}
+      onBlur={onCommit}
+      onKeyDown={(e) => {
+        if (e.key === 'Escape') onCancel();
+        if (e.key === 'Enter') onCommit();
+      }}
+    />
+  );
+}
+
+const columns = [
+  {
+    columnId: 'color',
+    name: 'Color',
+    editable: true,
+    cellEditor: ColorEditor,
+    // No cellEditorPopup -- renders inline
+  },
+];
+```
+
+## Using cellEditorParams
+
+Pass extra configuration to your editor through `cellEditorParams`. This keeps your editor component reusable across columns:
+
+```tsx
+function RatingEditor({ value, onValueChange, onCommit, cellEditorParams }: ICellEditorProps<any>) {
+  const maxStars = (cellEditorParams?.maxStars as number) ?? 5;
+
+  return (
+    <div style={{ display: 'flex', gap: 4 }}>
+      {Array.from({ length: maxStars }, (_, i) => (
+        <button
+          key={i}
+          onClick={() => {
+            onValueChange(i + 1);
+            // Auto-commit after selection
+            setTimeout(onCommit, 0);
+          }}
+          style={{
+            background: 'none',
+            border: 'none',
+            cursor: 'pointer',
+            fontSize: 18,
+            opacity: (value as number) >= i + 1 ? 1 : 0.3,
+          }}
+        >
+          *
+        </button>
+      ))}
+    </div>
+  );
+}
+
+const columns = [
+  {
+    columnId: 'rating',
+    name: 'Rating',
+    editable: true,
+    cellEditor: RatingEditor,
+    cellEditorParams: { maxStars: 10 },
+  },
+];
+```
+
+:::tip
+The `cellEditorParams` object is passed through as-is. You can put any serializable configuration there -- select options, validation rules, format strings, API endpoints, or anything your editor needs.
+:::
+
+## Built-in Editors
+
+Before building a custom editor, check if a built-in one fits your needs:
+
+| `cellEditor` | Description | `cellEditorParams` |
+|---|---|---|
+| `'text'` | Standard text input (default) | -- |
+| `'select'` | Dropdown select | `{ values: ['Option A', 'Option B'] }` |
+| `'checkbox'` | Boolean toggle | -- |
+| `'richSelect'` | Searchable dropdown with keyboard navigation | `{ values: [...], formatValue: (v) => string }` |
+
+## Conditional Editability
+
+Use a function for `editable` to control which rows allow editing:
+
+```tsx
+{
+  columnId: 'status',
+  name: 'Status',
+  editable: (item) => item.status !== 'locked',
+  cellEditor: 'select',
+  cellEditorParams: { values: ['Draft', 'Review', 'Published'] },
+}
+```

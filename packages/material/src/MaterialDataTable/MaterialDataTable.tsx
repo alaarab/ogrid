@@ -32,22 +32,28 @@ const OGridInner = forwardRef(function OGridInner<T>(
     toolbar,
     className,
     entityLabelPlural,
+    pageSizeOptions,
+    sideBarProps,
+    columnChooserPlacement,
   } = useOGrid(props, ref);
 
   return (
     <OGridLayout
       containerComponent={Box}
-      containerProps={{ sx: { display: 'flex', flexDirection: 'column', gap: 2 } }}
+      containerProps={{ sx: { display: 'flex', flexDirection: 'column', gap: 1 } }}
       className={className}
       gap={0}
+      sideBar={sideBarProps}
       title={title}
       toolbar={toolbar}
-      columnChooser={
-        <ColumnChooser
-          columns={columnChooserColumns}
-          visibleColumns={visibleColumns}
-          onVisibilityChange={handleVisibilityChange}
-        />
+      toolbarEnd={
+        columnChooserPlacement === 'toolbar' ? (
+          <ColumnChooser
+            columns={columnChooserColumns}
+            visibleColumns={visibleColumns}
+            onVisibilityChange={handleVisibilityChange}
+          />
+        ) : undefined
       }
       pagination={
         <PaginationControls
@@ -59,6 +65,7 @@ const OGridInner = forwardRef(function OGridInner<T>(
             setPageSize(size);
             setPage(1);
           }}
+          pageSizeOptions={pageSizeOptions}
           entityLabelPlural={entityLabelPlural}
         />
       }
