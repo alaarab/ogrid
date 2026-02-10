@@ -4,7 +4,7 @@
  * Uses inline styles for framework-agnostic rendering.
  */
 import * as React from 'react';
-import type { IColumnDefinition, IDateFilterValue, SideBarPanelId } from '../types';
+import type { IColumnDefinition, IDateFilterValue, SideBarPanelId, IFilters, FilterValue } from '../types';
 
 /** Describes a filterable column for the sidebar filters panel. */
 export interface SideBarFilterColumn {
@@ -27,12 +27,8 @@ export interface SideBarProps {
   onSetVisibleColumns: (columns: Set<string>) => void;
   // Filters panel
   filterableColumns: SideBarFilterColumn[];
-  multiSelectFilters: Record<string, string[]>;
-  textFilters: Record<string, string>;
-  onMultiSelectFilterChange: (key: string, values: string[]) => void;
-  onTextFilterChange: (key: string, value: string) => void;
-  dateFilters: Record<string, IDateFilterValue>;
-  onDateFilterChange: (key: string, value: IDateFilterValue | undefined) => void;
+  filters: IFilters;
+  onFilterChange: (key: string, value: FilterValue | undefined) => void;
   filterOptions: Record<string, string[]>;
 }
 
@@ -55,12 +51,8 @@ export function SideBar(props: SideBarProps): React.ReactElement {
     onVisibilityChange,
     onSetVisibleColumns,
     filterableColumns,
-    multiSelectFilters,
-    textFilters,
-    onMultiSelectFilterChange,
-    onTextFilterChange,
-    dateFilters,
-    onDateFilterChange,
+    filters,
+    onFilterChange,
     filterOptions,
   } = props;
 
@@ -157,12 +149,8 @@ export function SideBar(props: SideBarProps): React.ReactElement {
         {activePanel === 'filters' && (
           <FiltersPanel
             filterableColumns={filterableColumns}
-            multiSelectFilters={multiSelectFilters}
-            textFilters={textFilters}
-            onMultiSelectFilterChange={onMultiSelectFilterChange}
-            onTextFilterChange={onTextFilterChange}
-            dateFilters={dateFilters}
-            onDateFilterChange={onDateFilterChange}
+            filters={filters}
+            onFilterChange={onFilterChange}
             filterOptions={filterOptions}
           />
         )}
@@ -238,15 +226,11 @@ function ColumnsPanel(props: {
 
 function FiltersPanel(props: {
   filterableColumns: SideBarFilterColumn[];
-  multiSelectFilters: Record<string, string[]>;
-  textFilters: Record<string, string>;
-  onMultiSelectFilterChange: (key: string, values: string[]) => void;
-  onTextFilterChange: (key: string, value: string) => void;
-  dateFilters: Record<string, IDateFilterValue>;
-  onDateFilterChange: (key: string, value: IDateFilterValue | undefined) => void;
+  filters: IFilters;
+  onFilterChange: (key: string, value: FilterValue | undefined) => void;
   filterOptions: Record<string, string[]>;
 }): React.ReactElement {
-  const { filterableColumns, multiSelectFilters, textFilters, onMultiSelectFilterChange, onTextFilterChange, dateFilters, onDateFilterChange, filterOptions } = props;
+  const { filterableColumns, filters, onFilterChange, filterOptions } = props;
 
   if (filterableColumns.length === 0) {
     return <div style={{ color: 'var(--ogrid-muted, #999)', fontStyle: 'italic' }}>No filterable columns</div>;
@@ -262,8 +246,8 @@ function FiltersPanel(props: {
             {col.filterType === 'text' && (
               <input
                 type="text"
-                value={textFilters[filterKey] ?? ''}
-                onChange={(e) => onTextFilterChange(filterKey, e.target.value)}
+                value={filters[filterKey]?.type === 'text' ? filters[filterKey]!.value : ''}
+                onChange={(e) => onFilterChange(filterKey, e.target.value ? { type: 'text', value: e.target.value } : undefined)}
                 placeholder={`Filter ${col.name}...`}
                 aria-label={`Filter ${col.name}`}
                 style={{ width: '100%', boxSizing: 'border-box', padding: '4px 6px', background: 'var(--ogrid-bg, #fff)', color: 'var(--ogrid-fg, #242424)', border: '1px solid var(--ogrid-border, #e0e0e0)', borderRadius: 4 }}
@@ -275,11 +259,12 @@ function FiltersPanel(props: {
                   From:
                   <input
                     type="date"
-                    value={dateFilters[filterKey]?.from ?? ''}
+                    value={filters[filterKey]?.type === 'date' ? (filters[filterKey]!.value.from ?? '') : ''}
                     onChange={(e) => {
                       const from = e.target.value || undefined;
-                      const to = dateFilters[filterKey]?.to;
-                      onDateFilterChange(filterKey, from || to ? { from, to } : undefined);
+                      const existingValue = filters[filterKey]?.type === 'date' ? filters[filterKey]!.value : {};
+                      const to = existingValue.to;
+                      onFilterChange(filterKey, from || to ? { type: 'date', value: { from, to } } : undefined);
                     }}
                     aria-label={`${col.name} from date`}
                     style={{ flex: 1, padding: '2px 4px', background: 'var(--ogrid-bg, #fff)', color: 'var(--ogrid-fg, #242424)', border: '1px solid var(--ogrid-border, #e0e0e0)', borderRadius: 4 }}
@@ -289,11 +274,12 @@ function FiltersPanel(props: {
                   To:
                   <input
                     type="date"
-                    value={dateFilters[filterKey]?.to ?? ''}
+                    value={filters[filterKey]?.type === 'date' ? (filters[filterKey]!.value.to ?? '') : ''}
                     onChange={(e) => {
                       const to = e.target.value || undefined;
-                      const from = dateFilters[filterKey]?.from;
-                      onDateFilterChange(filterKey, from || to ? { from, to } : undefined);
+                      const existingValue = filters[filterKey]?.type === 'date' ? filters[filterKey]!.value : {};
+                      const from = existingValue.from;
+                      onFilterChange(filterKey, from || to ? { type: 'date', value: { from, to } } : undefined);
                     }}
                     aria-label={`${col.name} to date`}
                     style={{ flex: 1, padding: '2px 4px', background: 'var(--ogrid-bg, #fff)', color: 'var(--ogrid-fg, #242424)', border: '1px solid var(--ogrid-border, #e0e0e0)', borderRadius: 4 }}
@@ -304,7 +290,7 @@ function FiltersPanel(props: {
             {col.filterType === 'multiSelect' && (
               <div style={{ maxHeight: 120, overflowY: 'auto' }} role="group" aria-label={`${col.name} options`}>
                 {(filterOptions[filterKey] ?? []).map((opt) => {
-                  const selected = (multiSelectFilters[filterKey] ?? []).includes(opt);
+                  const selected = filters[filterKey]?.type === 'multiSelect' ? filters[filterKey]!.value.includes(opt) : false;
                   return (
                     <label
                       key={opt}
@@ -314,11 +300,11 @@ function FiltersPanel(props: {
                         type="checkbox"
                         checked={selected}
                         onChange={(e) => {
-                          const current = multiSelectFilters[filterKey] ?? [];
+                          const current = filters[filterKey]?.type === 'multiSelect' ? filters[filterKey]!.value : [];
                           const next = e.target.checked
                             ? [...current, opt]
                             : current.filter((v) => v !== opt);
-                          onMultiSelectFilterChange(filterKey, next);
+                          onFilterChange(filterKey, next.length > 0 ? { type: 'multiSelect', value: next } : undefined);
                         }}
                       />
                       <span>{opt}</span>

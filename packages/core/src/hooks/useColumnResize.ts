@@ -34,10 +34,17 @@ export function useColumnResize<T>({
 
     const startX = e.clientX;
     const columnId = col.columnId;
-    const startWidth = columnSizingOverrides[columnId]?.widthPx
-      ?? col.idealWidth
-      ?? col.defaultWidth
-      ?? defaultWidth;
+
+    // Measure the actual rendered width from the DOM. With table-layout: auto,
+    // the browser may have auto-sized the column wider than the config values.
+    // The resize handle is a direct child of <th>, so parentElement is the header cell.
+    const thEl = (e.currentTarget as HTMLElement).parentElement;
+    const startWidth = thEl
+      ? thEl.getBoundingClientRect().width
+      : columnSizingOverrides[columnId]?.widthPx
+        ?? col.idealWidth
+        ?? col.defaultWidth
+        ?? defaultWidth;
     let latestWidth = startWidth;
 
     // Lock cursor and prevent text selection during drag

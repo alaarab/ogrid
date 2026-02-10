@@ -36,53 +36,13 @@ function DataGridTableInner<T>(props: IOGridDataGridProps<T>): React.ReactElemen
   const state = useDataGridState({ props, wrapperRef });
   const lastMouseShiftRef = useRef(false);
 
-  const {
-    visibleCols,
-    totalColCount,
-    hasCheckboxCol,
-    selectedRowIds,
-    updateSelection,
-    handleRowCheckboxChange,
-    handleSelectAll,
-    allSelected,
-    someSelected,
-    setEditingCell,
-    pendingEditorValue,
-    setPendingEditorValue,
-    setActiveCell,
-    handleCellMouseDown,
-    handleSelectAllCells,
-    contextMenu,
-    handleCellContextMenu,
-    closeContextMenu,
-    canUndo,
-    canRedo,
-    onUndo,
-    onRedo,
-    handleCopy,
-    handleCut,
-    handlePaste,
-    handleGridKeyDown,
-    handleFillHandleMouseDown,
-    containerWidth,
-    minTableWidth,
-    desiredTableWidth,
-    columnSizingOverrides,
-    setColumnSizingOverrides,
-    statusBarConfig,
-    showEmptyInGrid,
-    hasCellSelection,
-    selectionRange,
-    copyRange,
-    cutRange,
-    colOffset,
-    headerFilterInput,
-    cellDescriptorInput,
-    commitCellEdit,
-    cancelPopoverEdit,
-    popoverAnchorEl,
-    setPopoverAnchorEl,
-  } = state;
+  const { layout, rowSelection: rowSel, editing, interaction, contextMenu: ctxMenu, viewModels } = state;
+  const { visibleCols, totalColCount, hasCheckboxCol, colOffset, containerWidth, minTableWidth, desiredTableWidth, columnSizingOverrides, setColumnSizingOverrides } = layout;
+  const { selectedRowIds, updateSelection, handleRowCheckboxChange, handleSelectAll, allSelected, someSelected } = rowSel;
+  const { setEditingCell, pendingEditorValue, setPendingEditorValue, commitCellEdit, cancelPopoverEdit, popoverAnchorEl, setPopoverAnchorEl } = editing;
+  const { setActiveCell, handleCellMouseDown, handleSelectAllCells, selectionRange, hasCellSelection, handleGridKeyDown, handleFillHandleMouseDown, handleCopy, handleCut, handlePaste, cutRange, copyRange, canUndo, canRedo, onUndo, onRedo } = interaction;
+  const { menuPosition, handleCellContextMenu, closeContextMenu } = ctxMenu;
+  const { headerFilterInput, cellDescriptorInput, statusBarConfig, showEmptyInGrid } = viewModels;
 
   const {
     items,
@@ -404,11 +364,11 @@ function DataGridTableInner<T>(props: IOGridDataGridProps<T>): React.ReactElemen
         )}
       </div>
 
-      {contextMenu &&
+      {menuPosition &&
         createPortal(
           <GridContextMenu
-            x={contextMenu.x}
-            y={contextMenu.y}
+            x={menuPosition.x}
+            y={menuPosition.y}
             hasSelection={hasCellSelection}
             canUndo={canUndo}
             canRedo={canRedo}

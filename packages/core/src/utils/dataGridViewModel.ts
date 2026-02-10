@@ -5,7 +5,7 @@
 import type * as React from 'react';
 import type { ColumnFilterType, ICellEditorProps, IDateFilterValue } from '../types/columnTypes';
 import type { IColumnDef } from '../types/columnTypes';
-import type { RowId, UserLike } from '../types/dataGridTypes';
+import type { RowId, UserLike, IFilters, FilterValue } from '../types/dataGridTypes';
 import { getCellValue } from './cellValue';
 import { isInSelectionRange } from '../types/dataGridTypes';
 
@@ -15,17 +15,11 @@ export interface HeaderFilterConfigInput {
   sortBy?: string;
   sortDirection: 'asc' | 'desc';
   onColumnSort: (columnKey: string) => void;
-  textFilters?: Record<string, string>;
-  onTextFilterChange?: (key: string, value: string) => void;
-  peopleFilters?: Record<string, UserLike | undefined>;
-  onPeopleFilterChange?: (key: string, user: UserLike | undefined) => void;
-  peopleSearch?: (query: string) => Promise<UserLike[]>;
+  filters: IFilters;
+  onFilterChange: (key: string, value: FilterValue | undefined) => void;
   filterOptions: Record<string, string[]>;
   loadingFilterOptions: Record<string, boolean>;
-  multiSelectFilters: Record<string, string[]>;
-  onMultiSelectFilterChange: (key: string, values: string[]) => void;
-  dateFilters?: Record<string, IDateFilterValue>;
-  onDateFilterChange?: (key: string, value: IDateFilterValue | undefined) => void;
+  peopleSearch?: (query: string) => Promise<UserLike[]>;
 }
 
 /** Props to pass to ColumnHeaderFilter. Matches IColumnHeaderFilterProps. */
@@ -62,6 +56,7 @@ export function getHeaderFilterConfig<T>(
   const filterType = (filterable?.type ?? 'none') as ColumnFilterType;
   const filterField = filterable?.filterField ?? col.columnId;
   const sortable = col.sortable !== false;
+  const filterValue = input.filters[filterField];
 
   const base = {
     columnKey: col.columnId,
@@ -75,19 +70,17 @@ export function getHeaderFilterConfig<T>(
   if (filterType === 'text') {
     return {
       ...base,
-      textValue: input.textFilters?.[filterField] ?? '',
-      onTextChange: input.onTextFilterChange
-        ? (v: string) => input.onTextFilterChange!(filterField, v)
-        : undefined,
+      textValue: filterValue?.type === 'text' ? filterValue.value : '',
+      onTextChange: (v: string) =>
+        input.onFilterChange(filterField, v.trim() ? { type: 'text', value: v } : undefined),
     };
   }
   if (filterType === 'people') {
     return {
       ...base,
-      selectedUser: input.peopleFilters?.[filterField],
-      onUserChange: input.onPeopleFilterChange
-        ? (u: UserLike | undefined) => input.onPeopleFilterChange!(filterField, u)
-        : undefined,
+      selectedUser: filterValue?.type === 'people' ? filterValue.value : undefined,
+      onUserChange: (u: UserLike | undefined) =>
+        input.onFilterChange(filterField, u ? { type: 'people', value: u } : undefined),
       peopleSearch: input.peopleSearch,
     };
   }
@@ -96,18 +89,17 @@ export function getHeaderFilterConfig<T>(
       ...base,
       options: input.filterOptions[filterField] ?? [],
       isLoadingOptions: input.loadingFilterOptions[filterField] ?? false,
-      selectedValues: input.multiSelectFilters[filterField] ?? [],
+      selectedValues: filterValue?.type === 'multiSelect' ? filterValue.value : [],
       onFilterChange: (values: string[]) =>
-        input.onMultiSelectFilterChange(filterField, values),
+        input.onFilterChange(filterField, values.length ? { type: 'multiSelect', value: values } : undefined),
     };
   }
   if (filterType === 'date') {
     return {
       ...base,
-      dateValue: input.dateFilters?.[filterField],
-      onDateChange: input.onDateFilterChange
-        ? (v: IDateFilterValue | undefined) => input.onDateFilterChange!(filterField, v)
-        : undefined,
+      dateValue: filterValue?.type === 'date' ? filterValue.value : undefined,
+      onDateChange: (v: IDateFilterValue | undefined) =>
+        input.onFilterChange(filterField, v ? { type: 'date', value: v } : undefined),
     };
   }
   return base;
