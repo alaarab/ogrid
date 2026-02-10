@@ -1,0 +1,119 @@
+---
+sidebar_position: 14
+title: Status Bar
+description: Row counts, selection counts, and numeric aggregations at the bottom of the grid
+---
+
+import StatusBarDemo from '@site/src/components/demos/StatusBarDemo';
+
+# Status Bar
+
+The status bar sits at the bottom of the grid and displays row counts, filter counts, selection counts, and numeric aggregations for selected cell ranges.
+
+## Live Demo
+
+<StatusBarDemo />
+
+## Quick Example
+
+```tsx
+import { OGrid } from '@alaarab/ogrid';
+
+function App() {
+  return (
+    <OGrid
+      columns={columns}
+      data={data}
+      getRowId={(r) => r.id}
+      statusBar
+    />
+  );
+}
+```
+
+Set `statusBar={true}` and the bar appears at the bottom showing "Rows: 150".
+
+## How It Works
+
+The status bar dynamically shows information based on the current grid state.
+
+### Basic Row Count
+
+With `statusBar={true}`, the bar always shows the total row count.
+
+```
+Rows: 150
+```
+
+### Filtered Count
+
+When filters are active and reduce the displayed rows, a "Filtered" count appears alongside the total.
+
+```
+Rows: 150  |  Filtered: 42
+```
+
+### Selected Row Count
+
+When row selection is enabled and the user selects rows, a "Selected" count appears.
+
+```
+Rows: 150  |  Selected: 5
+```
+
+### Cell Aggregations
+
+When the user selects a range of cells that includes numeric values, the status bar shows aggregation values: Sum, Avg, Min, Max, and Count.
+
+```
+Rows: 150  |  Cells: 12  |  Sum: 4800  |  Avg: 400  |  Min: 150  |  Max: 900  |  Count: 12
+```
+
+Aggregations:
+- Only appear when 2 or more cells are selected.
+- Only include cells with numeric values.
+- `Avg` is rounded to 2 decimal places.
+- Disappear when the selection is cleared.
+
+### Combining Indicators
+
+All indicators can appear simultaneously. The status bar shows whichever are relevant:
+
+```
+Rows: 1000  |  Filtered: 250  |  Selected: 3  |  Cells: 8  |  Sum: 12500  |  Avg: 1562.50  |  Min: 800  |  Max: 3200  |  Count: 8
+```
+
+## Advanced: Custom Status Bar Props
+
+For full control, pass an `IStatusBarProps` object instead of `true`.
+
+```tsx
+<OGrid
+  columns={columns}
+  data={data}
+  getRowId={(r) => r.id}
+  statusBar={{
+    totalCount: data.length,
+    filteredCount: filteredData.length,
+    selectedCount: selectedRows.size,
+    panels: ['rowCount', 'filteredRowCount', 'selectedRowCount'],
+  }}
+/>
+```
+
+## Props Reference
+
+| Type | Field | Description |
+|---|---|---|
+| `IOGridProps<T>` | `statusBar` | `boolean` or `IStatusBarProps` |
+| `IStatusBarProps` | `totalCount` | Total number of rows (unfiltered) |
+| `IStatusBarProps` | `filteredCount` | Number of rows after filtering (omit to hide) |
+| `IStatusBarProps` | `selectedCount` | Number of selected rows (omit or 0 to hide) |
+| `IStatusBarProps` | `panels` | Array of panel IDs to show: `'rowCount'`, `'filteredRowCount'`, `'selectedRowCount'` |
+| `IStatusBarProps` | `aggregation` | `{ sum, avg, min, max, count } \| null` for selected numeric cells |
+
+## Related
+
+- [CSV Export](./csv-export) -- export the data behind the counts
+- [Server-Side Data](./server-side-data) -- status bar works with server-side `totalCount`
+- [Keyboard Navigation](./keyboard-navigation) -- Shift+Arrow to select cell ranges for aggregation

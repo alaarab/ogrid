@@ -1,0 +1,215 @@
+---
+sidebar_position: 3
+title: Theming & CSS Variables
+description: Customize OGrid's appearance with CSS variables, framework themes, and per-cell styles.
+---
+
+# Theming & CSS Variables
+
+OGrid is designed to inherit your application's design system. Each UI package integrates with its framework's theming mechanism, and the core grid exposes CSS variables and props for fine-grained control.
+
+## CSS Variables
+
+OGrid exposes CSS custom properties that you can override to change the grid's appearance globally or per-instance.
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `--ogrid-selection` | `#217346` | Cell selection highlight color (active cell border, range background) |
+
+Override globally:
+
+```css
+:root {
+  --ogrid-selection: #0066cc;
+}
+```
+
+Or scope it to a specific grid instance using the `className` prop:
+
+```css
+.my-grid {
+  --ogrid-selection: #8b5cf6;
+}
+```
+
+```tsx
+<OGrid className="my-grid" columns={columns} data={data} getRowId={(item) => item.id} />
+```
+
+## Framework Theming
+
+Each UI package inherits styles from its framework's theme system. OGrid does not fight your theme -- it builds on top of it.
+
+### Radix UI (`@alaarab/ogrid`)
+
+Radix is the lightest implementation. It uses CSS Modules (`.module.scss`) for all grid styles. Override styles with standard CSS specificity or by targeting the grid's class names.
+
+### Fluent UI (`@alaarab/ogrid-fluent`)
+
+The Fluent implementation renders with Fluent UI v9 components, which inherit from `FluentProvider`. Wrap your app in a `FluentProvider` with your theme:
+
+```tsx
+import { FluentProvider, webLightTheme } from '@fluentui/react-components';
+import { OGrid } from '@alaarab/ogrid-fluent';
+
+function App() {
+  return (
+    <FluentProvider theme={webLightTheme}>
+      <OGrid columns={columns} data={data} getRowId={(item) => item.id} />
+    </FluentProvider>
+  );
+}
+```
+
+Fluent also uses CSS Modules for grid-specific styles (cell selection, fill handle, etc.).
+
+### Material UI (`@alaarab/ogrid-material`)
+
+The Material implementation renders with MUI v6 components, which inherit from `ThemeProvider`. Wrap your app in a `ThemeProvider` with your theme:
+
+```tsx
+import { ThemeProvider, createTheme } from '@mui/material/styles';
+import { OGrid } from '@alaarab/ogrid-material';
+
+const theme = createTheme({
+  palette: {
+    primary: { main: '#1976d2' },
+  },
+});
+
+function App() {
+  return (
+    <ThemeProvider theme={theme}>
+      <OGrid columns={columns} data={data} getRowId={(item) => item.id} />
+    </ThemeProvider>
+  );
+}
+```
+
+Material uses CSS-in-JS (inline styles) for grid-specific styling rather than CSS Modules.
+
+## Layout Mode
+
+The `layoutMode` prop controls how the grid sizes itself:
+
+| Mode | Behavior |
+|------|----------|
+| `'fill'` (default) | Grid stretches to fill its parent container. The parent must have a defined height. |
+| `'content'` | Grid sizes itself based on content. Width fits columns; height fits rows. |
+
+```tsx
+{/* Fill parent container */}
+<div style={{ height: 600 }}>
+  <OGrid layoutMode="fill" columns={columns} data={data} getRowId={(item) => item.id} />
+</div>
+
+{/* Size to content */}
+<OGrid layoutMode="content" columns={columns} data={data} getRowId={(item) => item.id} />
+```
+
+:::tip
+When using `layoutMode="fill"`, make sure the grid's parent has a defined height (explicit px/vh/%, or flex layout). Without it, the grid will collapse to zero height.
+:::
+
+## Suppress Horizontal Scroll
+
+To prevent horizontal scrolling (useful when all columns fit the viewport), set `suppressHorizontalScroll`:
+
+```tsx
+<OGrid suppressHorizontalScroll columns={columns} data={data} getRowId={(item) => item.id} />
+```
+
+This sets `overflow-x: hidden` on the grid's scroll container.
+
+## Per-Cell Styles
+
+Use `cellStyle` on a column definition to apply inline styles to individual cells. It accepts a static style object or a function for conditional styling:
+
+### Static Style
+
+```tsx
+const columns = [
+  {
+    columnId: 'amount',
+    name: 'Amount',
+    type: 'numeric' as const,
+    cellStyle: { fontWeight: 600 },
+  },
+];
+```
+
+### Dynamic Style (Per-Row)
+
+```tsx
+const columns = [
+  {
+    columnId: 'status',
+    name: 'Status',
+    cellStyle: (item) => ({
+      color: item.status === 'Active' ? '#16a34a' : '#dc2626',
+      fontWeight: 600,
+    }),
+  },
+];
+```
+
+## Numeric Column Alignment
+
+Set `type: 'numeric'` on a column to right-align cell content automatically:
+
+```tsx
+{
+  columnId: 'price',
+  name: 'Price',
+  type: 'numeric',
+  valueFormatter: (value) => `$${Number(value).toFixed(2)}`,
+}
+```
+
+## Custom Wrapper Class
+
+The `className` prop adds a CSS class to the grid's outermost wrapper element. Use it for scoped styling:
+
+```tsx
+<OGrid className="dashboard-grid" columns={columns} data={data} getRowId={(item) => item.id} />
+```
+
+```css
+.dashboard-grid {
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  overflow: hidden;
+}
+```
+
+## Column Width Control
+
+Control column widths through the column definition:
+
+| Prop | Description |
+|------|-------------|
+| `minWidth` | Minimum column width in pixels |
+| `defaultWidth` | Initial column width in pixels |
+| `idealWidth` | Preferred width (used for auto-sizing) |
+
+```tsx
+{
+  columnId: 'description',
+  name: 'Description',
+  minWidth: 150,
+  defaultWidth: 300,
+}
+```
+
+Users can resize columns by dragging the column border. Listen for resize events with `onColumnResized`:
+
+```tsx
+<OGrid
+  columns={columns}
+  data={data}
+  getRowId={(item) => item.id}
+  onColumnResized={(columnId, width) => {
+    localStorage.setItem(`col-width-${columnId}`, String(width));
+  }}
+/>
+```
