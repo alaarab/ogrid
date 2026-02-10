@@ -138,6 +138,7 @@ export {
   MAX_PAGE_BUTTONS,
   getHeaderFilterConfig,
   getCellRenderDescriptor,
+  isRowInRange,
   resolveCellDisplayContent,
   resolveCellStyle,
   buildInlineEditorProps,
