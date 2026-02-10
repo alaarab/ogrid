@@ -20,6 +20,7 @@
   max-width: 100%;
   box-sizing: border-box;
   background: var(--ogrid-bg, #fff);
+  will-change: scroll-position;
 
   &[data-overflow-x='true'] {
     overflow-x: auto;
@@ -96,6 +97,7 @@
   left: 0;
   z-index: 2;
   background: var(--ogrid-bg, #ffffff);
+  will-change: transform;
 }
 
 /* Freeze/pinned header cells need top: 0 + z-index: 3 so they stick in BOTH
@@ -120,6 +122,7 @@
   left: 0;
   z-index: 2;
   background: var(--ogrid-bg, #ffffff);
+  will-change: transform;
 
   &::after {
     content: '';
@@ -142,6 +145,7 @@
   right: 0;
   z-index: 2;
   background: var(--ogrid-bg, #ffffff);
+  will-change: transform;
 
   &::before {
     content: '';

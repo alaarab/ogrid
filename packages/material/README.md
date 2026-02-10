@@ -11,8 +11,8 @@ npm install @alaarab/ogrid-material
 ### Peer Dependencies
 
 ```
-@mui/material ^6.0.0
-@mui/icons-material ^6.0.0
+@mui/material ^7.0.0
+@mui/icons-material ^7.0.0
 @emotion/react ^11.0.0
 @emotion/styled ^11.0.0
 react ^17.0.0 || ^18.0.0 || ^19.0.0

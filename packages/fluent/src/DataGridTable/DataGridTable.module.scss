@@ -37,6 +37,7 @@
   border: none;
   background-color: var(--colorNeutralBackground1, #ffffff);
   -webkit-overflow-scrolling: touch;
+  will-change: scroll-position;
 
   /* Wide tables: allow horizontal scroll */
   &[data-overflow-x='true'] {
@@ -370,6 +371,7 @@
   left: 0;
   z-index: 2;
   background-color: var(--colorNeutralBackground1, #ffffff);
+  will-change: transform;
 }
 
 :global(.fui-DataGridHeader) .freezeColFirst {
@@ -401,6 +403,7 @@
   position: sticky;
   z-index: 2;
   background-color: inherit;
+  will-change: transform;
 }
 
 .pinnedLeft {
