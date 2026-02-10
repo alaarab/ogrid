@@ -5,7 +5,7 @@
     "packages/*"
   ],
   "scripts": {
-    "build": "npm run build --workspaces --if-present",
+    "build": "turbo build",
     "test": "npm run test --workspaces --if-present",
     "test:all": "npm run test --workspaces --if-present",
     "test:core": "npm test -w @alaarab/ogrid-core",
@@ -22,6 +22,7 @@
     "lint": "eslint .",
     "publish:all": "npm publish --workspace=packages/core --access=public && npm publish --workspace=packages/fluent --access=public && npm publish --workspace=packages/material --access=public && npm publish --workspace=packages/radix --access=public"
   },
+  "packageManager": "npm@11.6.2",
   "engines": {
     "node": ">=18"
   },
@@ -43,6 +44,7 @@
     "react-dom": "^18.3.1",
     "rimraf": "^6.0.1",
     "ts-jest": "^29.2.5",
+    "turbo": "^2.8.3",
     "typescript": "^5.7.3",
     "typescript-eslint": "^8.15.0"
   },
