@@ -13,6 +13,35 @@ import type {
 import type { EditingCell } from './useCellEditing';
 import type { ContextMenuPosition } from './useContextMenu';
 
+/**
+ * Excel-style Ctrl+Arrow: find the target position along a 1D axis.
+ * - Non-empty current + non-empty next → scan through non-empties, stop at last before empty/edge.
+ * - Otherwise → skip empties, land on next non-empty or edge.
+ */
+function findCtrlTarget(
+  pos: number,
+  edge: number,
+  step: number,
+  isEmpty: (i: number) => boolean
+): number {
+  if (pos === edge) return pos;
+  const next = pos + step;
+  if (!isEmpty(pos) && !isEmpty(next)) {
+    let p = next;
+    while (p !== edge) {
+      if (isEmpty(p + step)) return p;
+      p += step;
+    }
+    return edge;
+  }
+  let p = next;
+  while (p !== edge) {
+    if (!isEmpty(p)) return p;
+    p += step;
+  }
+  return edge;
+}
+
 export interface UseKeyboardNavigationParams<T> {
   items: T[];
   visibleCols: IColumnDef<T>[];
@@ -110,6 +139,11 @@ export function useKeyboardNavigation<T>(
       const { rowIndex, columnIndex } = activeCell;
       const dataColIndex = columnIndex - colOffset;
       const shift = e.shiftKey;
+      const isEmptyAt = (r: number, c: number): boolean => {
+        if (r < 0 || r >= items.length || c < 0 || c >= visibleCols.length) return true;
+        const v = getCellValue(items[r], visibleCols[c]);
+        return v == null || v === '';
+      };
 
       switch (e.key) {
         case 'c':
@@ -135,7 +169,10 @@ export function useKeyboardNavigation<T>(
           break;
         case 'ArrowDown': {
           e.preventDefault();
-          const newRow = Math.min(rowIndex + 1, maxRowIndex);
+          const ctrl = e.ctrlKey || e.metaKey;
+          const newRow = ctrl
+            ? findCtrlTarget(rowIndex, maxRowIndex, 1, (r) => isEmptyAt(r, Math.max(0, dataColIndex)))
+            : Math.min(rowIndex + 1, maxRowIndex);
           if (shift) {
             setSelectionRange(
               normalizeSelectionRange({
@@ -158,7 +195,10 @@ export function useKeyboardNavigation<T>(
         }
         case 'ArrowUp': {
           e.preventDefault();
-          const newRowUp = Math.max(rowIndex - 1, 0);
+          const ctrl = e.ctrlKey || e.metaKey;
+          const newRowUp = ctrl
+            ? findCtrlTarget(rowIndex, 0, -1, (r) => isEmptyAt(r, Math.max(0, dataColIndex)))
+            : Math.max(rowIndex - 1, 0);
           if (shift) {
             setSelectionRange(
               normalizeSelectionRange({
@@ -181,7 +221,13 @@ export function useKeyboardNavigation<T>(
         }
         case 'ArrowRight': {
           e.preventDefault();
-          const newCol = Math.min(columnIndex + 1, maxColIndex);
+          const ctrl = e.ctrlKey || e.metaKey;
+          let newCol: number;
+          if (ctrl && dataColIndex >= 0) {
+            newCol = findCtrlTarget(dataColIndex, visibleCols.length - 1, 1, (c) => isEmptyAt(rowIndex, c)) + colOffset;
+          } else {
+            newCol = Math.min(columnIndex + 1, maxColIndex);
+          }
           const newDataCol = newCol - colOffset;
           if (shift) {
             setSelectionRange(
@@ -205,7 +251,13 @@ export function useKeyboardNavigation<T>(
         }
         case 'ArrowLeft': {
           e.preventDefault();
-          const newColLeft = Math.max(columnIndex - 1, colOffset);
+          const ctrl = e.ctrlKey || e.metaKey;
+          let newColLeft: number;
+          if (ctrl && dataColIndex >= 0) {
+            newColLeft = findCtrlTarget(dataColIndex, 0, -1, (c) => isEmptyAt(rowIndex, c)) + colOffset;
+          } else {
+            newColLeft = Math.max(columnIndex - 1, colOffset);
+          }
           const newDataColLeft = newColLeft - colOffset;
           if (shift) {
             setSelectionRange(
