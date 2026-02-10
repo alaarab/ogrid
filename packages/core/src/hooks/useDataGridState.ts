@@ -123,6 +123,8 @@ export interface DataGridCellInteractionState {
   canRedo: boolean;
   onUndo?: () => void;
   onRedo?: () => void;
+  /** True while user is drag-selecting cells (mousedown → mouseup). */
+  isDragging: boolean;
 }
 
 /** Context menu position and handlers. */
@@ -590,6 +592,7 @@ export function useDataGridState<T>(
       canRedo: undoRedo.canRedo,
       onUndo: undoRedo.undo,
       onRedo: undoRedo.redo,
+      isDragging: cellSelection ? isDragging : false,
     },
     contextMenu: {
       menuPosition: cellSelection ? contextMenu : null,

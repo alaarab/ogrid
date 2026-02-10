@@ -452,7 +452,6 @@
   background-color: var(--colorSubtleBackgroundSelected, #f3f2f1);
   border-top: 1px solid var(--colorNeutralStroke2, #e0e0e0);
   min-height: 28px;
-  margin-top: auto;
   user-select: none;
 }
 
@@ -650,8 +649,3 @@
   border-bottom: none !important;
 }
 
-/* When status bar is present, remove bottom border-radius from the grid */
-.tableWrapper:has(.statusBar) :global(.fui-DataGrid) {
-  border-bottom-left-radius: 0 !important;
-  border-bottom-right-radius: 0 !important;
-}

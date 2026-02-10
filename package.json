@@ -50,5 +50,6 @@
   },
   "dependencies": {
     "@docusaurus/theme-mermaid": "3.9.2"
-  }
+  },
+  "version": "1.8.0"
 }
