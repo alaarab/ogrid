@@ -1,5 +1,5 @@
 import * as React from 'react';
-import type { Meta, StoryObj } from '@storybook/react';
+import type { Meta, StoryObj } from '@storybook/react-vite';
 import { DataGridTable } from './DataGridTable';
 import type { IColumnDef, ICellValueChangedEvent, ICellEditorProps, IRowSelectionChangeEvent } from '@alaarab/ogrid-core';
 
@@ -450,7 +450,7 @@ const spreadsheetColumns: IColumnDef<SpreadsheetRow>[] = [
     valueFormatter: (v) => typeof v === 'number' ? `$${v.toLocaleString()}` : '',
     cellStyle: { textAlign: 'right', fontVariantNumeric: 'tabular-nums' },
   },
-  { columnId: 'startDate', name: 'Start Date', sortable: true, minWidth: 110 },
+  { columnId: 'startDate', name: 'Start Date', type: 'date', sortable: true, minWidth: 110 },
   { columnId: 'status', name: 'Status', sortable: true, filterable: { type: 'multiSelect' } },
   { columnId: 'email', name: 'Email', sortable: true, minWidth: 180 },
 ];
@@ -563,7 +563,7 @@ export const KeyboardNavigation: Story = {
         valueFormatter: (v) => typeof v === 'number' ? `$${v.toLocaleString()}` : '',
         cellStyle: { textAlign: 'right', fontVariantNumeric: 'tabular-nums' },
       },
-      { columnId: 'startDate', name: 'Start Date', sortable: true, minWidth: 110 },
+      { columnId: 'startDate', name: 'Start Date', type: 'date', sortable: true, editable: true, minWidth: 110 },
       {
         columnId: 'status',
         name: 'Status',
@@ -655,7 +655,7 @@ export const PinnedColumns: Story = {
         minWidth: 100,
         valueFormatter: (v) => typeof v === 'number' ? `$${v.toLocaleString()}` : '',
       },
-      { columnId: 'startDate', name: 'Start Date', sortable: true, minWidth: 120 },
+      { columnId: 'startDate', name: 'Start Date', type: 'date', sortable: true, minWidth: 120 },
       { columnId: 'status', name: 'Status', sortable: true, minWidth: 100 },
       { columnId: 'email', name: 'Email', sortable: true, minWidth: 200 },
     ];
@@ -734,10 +734,11 @@ export const SpreadsheetExperience: Story = {
       {
         columnId: 'startDate',
         name: 'Start Date',
+        type: 'date',
         sortable: true,
         editable: true,
-        cellEditor: 'text',
         minWidth: 120,
+        filterable: { type: 'date' },
       },
       {
         columnId: 'status',

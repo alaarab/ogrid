@@ -1,45 +1,61 @@
-# OGrid
+<p align="center">
+  <img src="packages/docs/static/img/favicon.svg" width="64" height="64" alt="OGrid" />
+</p>
 
-A lightweight, framework-agnostic data grid for React. Pick the UI framework you already use — Fluent UI, Material UI, or Radix UI — and get sorting, filtering, pagination, cell editing, spreadsheet selection, and more out of the box. Designed to be the simpler, smaller, better-packaged alternative to AG Grid.
+<h1 align="center">OGrid</h1>
+
+<p align="center">
+  <strong>The lightweight React data grid with enterprise features and zero enterprise cost.</strong>
+</p>
+
+<p align="center">
+  <a href="https://www.npmjs.com/package/@alaarab/ogrid"><img src="https://img.shields.io/npm/v/@alaarab/ogrid?color=%23217346&label=npm" alt="npm version" /></a>
+  <a href="https://github.com/alaarab/ogrid/blob/main/LICENSE"><img src="https://img.shields.io/badge/license-MIT-green" alt="MIT License" /></a>
+  <img src="https://img.shields.io/badge/tests-504%20passing-brightgreen" alt="480 tests passing" />
+  <img src="https://img.shields.io/badge/React-17%20%7C%2018%20%7C%2019-blue" alt="React 17, 18, 19" />
+  <img src="https://img.shields.io/badge/TypeScript-strict-blue" alt="TypeScript strict" />
+</p>
+
+<p align="center">
+  <a href="https://alaarab.github.io/ogrid/">Docs</a> &middot;
+  <a href="https://alaarab.github.io/ogrid/docs/getting-started/overview">Getting Started</a> &middot;
+  <a href="https://alaarab.github.io/ogrid/docs/api/ogrid-props">API Reference</a> &middot;
+  <a href="https://alaarab.github.io/ogrid/docs/guides/migration-from-ag-grid">Migrate from AG Grid</a>
+</p>
+
+---
+
+Pick the UI framework you already use — **Fluent UI**, **Material UI**, or **Radix UI** — and get sorting, filtering, pagination, cell editing, spreadsheet selection, and more out of the box.
+
+## Why OGrid?
+
+| | OGrid | AG Grid Community | AG Grid Enterprise |
+|---|---|---|---|
+| Spreadsheet selection | Built-in | - | $999/dev/year |
+| Clipboard (copy/paste) | Built-in | - | $999/dev/year |
+| Fill handle | Built-in | - | $999/dev/year |
+| Undo/redo | Built-in | - | $999/dev/year |
+| Context menu | Built-in | - | $999/dev/year |
+| Status bar | Built-in | - | $999/dev/year |
+| Cell editing | Built-in | Built-in | Built-in |
+| Sorting & filtering | Built-in | Built-in | Built-in |
+| **License** | **MIT (free)** | MIT | Commercial |
+| **Cost** | **$0** | $0 | **$999/dev/year** |
+
+OGrid gives you every feature AG Grid locks behind an enterprise license — for free, forever.
 
 ## Packages
 
 | Package | npm | Description |
 |---------|-----|-------------|
-| [`@alaarab/ogrid-core`](./packages/core) | [![npm](https://img.shields.io/npm/v/@alaarab/ogrid-core)](https://www.npmjs.com/package/@alaarab/ogrid-core) | Framework-agnostic types, hooks, and utilities |
-| [`@alaarab/ogrid-fluent`](./packages/fluent) | [![npm](https://img.shields.io/npm/v/@alaarab/ogrid-fluent)](https://www.npmjs.com/package/@alaarab/ogrid-fluent) | Fluent UI implementation |
-| [`@alaarab/ogrid-material`](./packages/material) | [![npm](https://img.shields.io/npm/v/@alaarab/ogrid-material)](https://www.npmjs.com/package/@alaarab/ogrid-material) | Material UI implementation (MUI Table-based) |
-| [`@alaarab/ogrid`](./packages/radix) | [![npm](https://img.shields.io/npm/v/@alaarab/ogrid)](https://www.npmjs.com/package/@alaarab/ogrid) | Default implementation (Radix UI; lightweight, no Fluent or Material required) |
+| [`@alaarab/ogrid`](./packages/radix) | [![npm](https://img.shields.io/npm/v/@alaarab/ogrid)](https://www.npmjs.com/package/@alaarab/ogrid) | **Default** — Radix UI (lightweight, no Fluent/Material needed) |
+| [`@alaarab/ogrid-fluent`](./packages/fluent) | [![npm](https://img.shields.io/npm/v/@alaarab/ogrid-fluent)](https://www.npmjs.com/package/@alaarab/ogrid-fluent) | Fluent UI v9 implementation |
+| [`@alaarab/ogrid-material`](./packages/material) | [![npm](https://img.shields.io/npm/v/@alaarab/ogrid-material)](https://www.npmjs.com/package/@alaarab/ogrid-material) | Material UI v6 implementation |
+| [`@alaarab/ogrid-core`](./packages/core) | [![npm](https://img.shields.io/npm/v/@alaarab/ogrid-core)](https://www.npmjs.com/package/@alaarab/ogrid-core) | Headless core — types, hooks, utilities |
 
-## Features
-
-- **Sorting** — Click column headers to sort ascending/descending; configurable default sort
-- **Filtering** — Three filter types: text search, multi-select checkboxes, people picker
-- **Pagination** — Configurable page sizes with first/prev/next/last navigation
-- **Column Visibility** — Show/hide columns via a dropdown chooser
-- **Cell Editing** — Inline editing with built-in editors (`text`, `select`, `checkbox`) and custom popup editors
-- **Spreadsheet Selection** — Click and drag range selection, Shift+click, keyboard navigation (arrow keys, Tab, Enter)
-- **Clipboard** — Copy/cut/paste with TSV support (Ctrl+C/X/V)
-- **Row Selection** — Single or multiple row selection with shift-click
-- **Undo/Redo** — History stack for cell edits (Ctrl+Z / Ctrl+Y)
-- **Fill Handle** — Drag to fill cells down (spreadsheet-style)
-- **Column Groups** — Multi-level grouped headers
-- **Column Pinning** — Pin columns to the left or right edge
-- **Value Getters/Formatters** — Compute and format cell values without custom `renderCell`
-- **Cell Styles** — Static or dynamic per-cell inline styles
-- **Context Menu** — Right-click menu (Copy, Cut, Paste, Select All)
-- **Status Bar** — Row count, filtered count, selected count
-- **Grid API** — Imperative ref API (`setRowData`, `setFilterModel`, `getSelectedRows`, etc.)
-- **CSV Export** — Export visible or all data to CSV
-- **Empty State** — Custom message or full custom content when no results
-- **Data Source Pattern** — Pass `data` (array) for client-side or `dataSource` for server-side
-- **React 17, 18 & 19** — Compatible with all three versions
-- **Generic Types** — Works with any data type `<T>`
-- **Lightweight** — No heavy runtime; just your framework's components + thin logic
+All framework packages re-export everything from `@alaarab/ogrid-core` — one import is all you need.
 
 ## Quick Start
-
-### Radix UI (Default)
 
 ```bash
 npm install @alaarab/ogrid
@@ -48,72 +64,76 @@ npm install @alaarab/ogrid
 ```tsx
 import { OGrid, type IColumnDef } from '@alaarab/ogrid';
 
-const columns: IColumnDef<Product>[] = [
-  { columnId: 'name', name: 'Name', sortable: true, filterable: { type: 'text' }, renderCell: (item) => <span>{item.name}</span> },
-  { columnId: 'category', name: 'Category', sortable: true, filterable: { type: 'multiSelect', filterField: 'category' }, renderCell: (item) => <span>{item.category}</span> },
-  { columnId: 'price', name: 'Price', sortable: true, renderCell: (item) => <span>${item.price.toFixed(2)}</span> },
+const columns: IColumnDef<Employee>[] = [
+  { columnId: 'name', name: 'Name', sortable: true, filterable: { type: 'text' } },
+  { columnId: 'department', name: 'Department', filterable: { type: 'multiSelect' } },
+  { columnId: 'salary', name: 'Salary', editable: true, type: 'numeric',
+    valueFormatter: (v) => `$${Number(v).toLocaleString()}` },
 ];
 
-<OGrid<Product>
-  data={products}
-  columns={columns}
-  getRowId={(r) => r.id}
-  entityLabelPlural="products"
-/>
+function App() {
+  return (
+    <OGrid
+      columns={columns}
+      data={employees}
+      getRowId={(e) => e.id}
+      editable
+      cellSelection
+      statusBar
+    />
+  );
+}
 ```
 
-### Fluent UI
+Using Fluent UI? Change the import to `@alaarab/ogrid-fluent`. Material UI? `@alaarab/ogrid-material`. Same API.
 
-```bash
-npm install @alaarab/ogrid-fluent
-```
+## Features
+
+- **Sorting** — Click headers to sort; configurable defaults; custom comparators
+- **Column Types** — Built-in `text`, `numeric`, `date`, `boolean` types with auto-formatting, alignment, editors, and filters
+- **Filtering** — Text search, multi-select checkboxes, date range picker, people picker; client or server-side
+- **Pagination** — Configurable page sizes; client-side or server-side via `IDataSource`
+- **Cell Editing** — Inline text, select, checkbox, rich select, and custom popup editors
+- **Spreadsheet Selection** — Click-and-drag range selection with active cell highlight
+- **Clipboard** — Ctrl+C/X/V with multi-cell copy/paste; respects `valueFormatter`/`valueParser`
+- **Row Selection** — Single or multiple with Shift+click range support
+- **Undo / Redo** — Edit history with Ctrl+Z / Ctrl+Y
+- **Fill Handle** — Drag to fill cells (Excel-style)
+- **Column Groups** — Multi-row grouped headers with arbitrary nesting
+- **Column Pinning** — Sticky left/right columns
+- **Toolbar & Layout** — Unified bordered container with configurable toolbar strip, column chooser placement (`toolbar` / `sidebar` / hidden), and cohesive footer
+- **Column Chooser** — Show/hide columns via dropdown or sidebar panel
+- **Column Resize** — Drag column borders to resize
+- **Context Menu** — Right-click: copy, paste, cut, export, undo/redo with shortcuts
+- **Status Bar** — Row count, filtered count, selection aggregations (sum, avg, min, max)
+- **Grid API** — `ref`-based imperative API: `setRowData`, `getColumnState`, `selectAll`, etc.
+- **CSV Export** — One-click export with formatted values
+- **Server-Side Data** — `IDataSource` pattern for remote pagination, sorting, filtering
+- **Column State Persistence** — Save/restore visibility, sort, order, widths, filters
+- **Empty State** — Custom message or render function
+- **Keyboard Navigation** — Arrow keys, Tab, Enter, F2, Home/End, Ctrl+Home/End, Ctrl+Arrow (Excel-style data region jump)
+- **React 17, 18 & 19** — Compatible with all three
+- **TypeScript Strict** — Fully generic `<T>` with strict mode
+- **Lightweight** — No bloat, no heavy runtime
+
+## Cell Editing
 
 ```tsx
-import { OGrid, type IColumnDef } from '@alaarab/ogrid-fluent';
-
-<OGrid<Product>
-  data={products}
-  columns={columns}
-  getRowId={(r) => r.id}
-  entityLabelPlural="products"
-/>
-```
-
-### Material UI
-
-```bash
-npm install @alaarab/ogrid-material
-```
-
-```tsx
-import { OGrid, type IColumnDef } from '@alaarab/ogrid-material';
-
-<OGrid<Product>
-  data={products}
-  columns={columns}
-  getRowId={(r) => r.id}
-  entityLabelPlural="products"
-/>
-```
-
-All framework packages re-export everything from `@alaarab/ogrid-core`, so you only need one import.
-
-### Cell Editing
-
-```tsx
-<OGrid<Product>
-  data={products}
+<OGrid
   columns={[
-    { columnId: 'name', name: 'Name', editable: true, cellEditor: 'text' },
-    { columnId: 'status', name: 'Status', editable: true, cellEditor: 'select', cellEditorParams: { values: ['Active', 'Inactive'] } },
+    { columnId: 'name', name: 'Name', editable: true },
+    { columnId: 'status', name: 'Status', editable: true,
+      cellEditor: 'select', cellEditorParams: { values: ['Active', 'Inactive'] } },
     { columnId: 'verified', name: 'Verified', editable: true, cellEditor: 'checkbox' },
   ]}
+  data={data}
   getRowId={(r) => r.id}
-  onCellValueChanged={(event) => console.log(event)}
+  editable
+  onCellValueChanged={(e) => console.log(e.columnId, e.oldValue, '→', e.newValue)}
 />
 ```
 
-### Grid API
+## Grid API
 
 ```tsx
 const gridRef = useRef<IOGridApi<Product>>(null);
@@ -124,16 +144,20 @@ const gridRef = useRef<IOGridApi<Product>>(null);
 gridRef.current?.setRowData(newData);
 gridRef.current?.setFilterModel({ status: ['Active'] });
 gridRef.current?.selectAll();
+
+// Save/restore column state (localStorage, database, etc.)
+const state = gridRef.current?.getColumnState();
+gridRef.current?.applyColumnState(savedState);
 ```
 
-### Server-Side Data
+## Server-Side Data
 
 ```tsx
 import type { IDataSource } from '@alaarab/ogrid-core';
 
 const dataSource: IDataSource<Product> = {
-  async fetchPage(params) {
-    const res = await fetch(`/api/products?page=${params.page}&pageSize=${params.pageSize}`);
+  async fetchPage({ page, pageSize, sort, filters }) {
+    const res = await fetch(`/api/products?page=${page}&pageSize=${pageSize}`);
     return res.json(); // { items: Product[], totalCount: number }
   },
   async fetchFilterOptions(field) {
@@ -142,7 +166,6 @@ const dataSource: IDataSource<Product> = {
   },
 };
 
-// Works with any framework package (same component name, different import):
 <OGrid dataSource={dataSource} columns={columns} getRowId={(r) => r.id} />
 ```
 
@@ -151,141 +174,43 @@ const dataSource: IDataSource<Product> = {
 ```
 ogrid/
 ├── packages/
-│   ├── core/         # @alaarab/ogrid-core    – types, hooks, utilities
-│   ├── fluent/       # @alaarab/ogrid-fluent   – Fluent UI components
-│   ├── material/     # @alaarab/ogrid-material – Material UI components
-│   ├── radix/        # @alaarab/ogrid          – Radix UI components (default)
-│   └── examples/     # Example apps for each framework
-├── turbo.json        # Turborepo task config
-└── package.json      # Workspace root
+│   ├── core/         # @alaarab/ogrid-core     – types, hooks, utilities (headless)
+│   ├── fluent/       # @alaarab/ogrid-fluent    – Fluent UI components
+│   ├── material/     # @alaarab/ogrid-material  – Material UI components
+│   ├── radix/        # @alaarab/ogrid           – Radix UI components (default)
+│   ├── docs/         # Documentation site
+│   └── examples/     # Example apps per framework
+└── package.json      # npm workspaces root
 ```
 
-- **Core** holds everything framework-agnostic: `IColumnDef`, `IDataSource`, `IFilters`, all state hooks (`useDataGridState`, `useCellEditing`, `useCellSelection`, `useKeyboardNavigation`, `useClipboard`, `useUndoRedo`, etc.), utilities (`exportToCsv`, `getCellValue`, `flattenColumns`), and headless components (`OGridLayout`, `StatusBar`, `GridContextMenu`).
-- **Fluent**, **Material**, and **Radix** (`@alaarab/ogrid`) each export **`<OGrid>`** (same component name) plus lower-level pieces (`DataGridTable`, `ColumnHeaderFilter`, `ColumnChooser`, `PaginationControls`) using their respective UI libraries.
-- All framework packages re-export core types and utilities for convenience — consumers only need one import.
-
-## API Overview
-
-### Top-Level Component
-
-Each framework package exports **`<OGrid>`** — the package you import from picks the implementation. It wires together the grid, filters, column chooser, pagination, and all interactive features.
-
-| Prop | Type | Description |
-|------|------|-------------|
-| `columns` | `(IColumnDef<T> \| IColumnGroupDef<T>)[]` | Column definitions (flat or grouped) |
-| `getRowId` | `(item: T) => string \| number` | Unique row key |
-| `data` | `T[]` | Client-side: in-memory array |
-| `dataSource` | `IDataSource<T>` | Server-side: your API adapter |
-| `defaultPageSize` | `number` | Initial rows per page (default 20) |
-| `defaultSortBy` | `string` | Initial sort column |
-| `defaultSortDirection` | `'asc' \| 'desc'` | Initial sort direction |
-| `entityLabelPlural` | `string` | Label for pagination (e.g. "products") |
-| `title` | `ReactNode` | Optional title above the grid |
-| `toolbar` | `ReactNode` | Optional toolbar (e.g. export button) |
-| `emptyState` | `{ message?, render? }` | Custom empty state |
-| `layoutMode` | `'content' \| 'fill'` | Grid sizing behavior |
-| `editable` | `boolean` | Enable cell editing |
-| `onCellValueChanged` | `(event: ICellValueChangedEvent<T>) => void` | Cell edit callback |
-| `rowSelection` | `'none' \| 'single' \| 'multiple'` | Row selection mode |
-| `onSelectionChange` | `(event: IRowSelectionChangeEvent<T>) => void` | Row selection callback |
-| `statusBar` | `boolean \| IStatusBarProps` | Show status bar |
-| `freezeRows` | `number` | Sticky header rows |
-| `freezeCols` | `number` | Sticky left columns |
-| `aria-label` | `string` | Accessible name |
-| `ref` | `Ref<IOGridApi<T>>` | Imperative grid API |
-
-For controlled state, pass `page`, `sort`, `filters`, `visibleColumns` and the corresponding `on*Change` callbacks.
-
-### Core Types
-
-```typescript
-interface IColumnDef<T> {
-  columnId: string;
-  name: string;
-  sortable?: boolean;
-  filterable?: { type: 'text' | 'multiSelect' | 'people'; filterField?: string };
-  defaultVisible?: boolean;
-  required?: boolean;
-  minWidth?: number;
-  defaultWidth?: number;
-  idealWidth?: number;
-  pinned?: 'left' | 'right';
-  renderCell?: (item: T) => ReactNode;
-  compare?: (a: T, b: T) => number;
-  valueGetter?: (item: T) => unknown;
-  valueFormatter?: (value: unknown, item: T) => string;
-  cellStyle?: CSSProperties | ((item: T) => CSSProperties);
-  editable?: boolean | ((item: T) => boolean);
-  cellEditor?: 'text' | 'select' | 'checkbox' | ComponentType<ICellEditorProps<T>>;
-  cellEditorPopup?: boolean;
-  cellEditorParams?: CellEditorParams;
-}
-
-interface IColumnGroupDef<T> {
-  headerName: string;
-  children: (IColumnGroupDef<T> | IColumnDef<T>)[];
-}
-
-interface IDataSource<T> {
-  fetchPage(params: IFetchParams): Promise<{ items: T[]; totalCount: number }>;
-  fetchFilterOptions?(field: string): Promise<string[]>;
-  searchPeople?(query: string): Promise<UserLike[]>;
-  getUserByEmail?(email: string): Promise<UserLike | undefined>;
-}
-
-interface IOGridApi<T> {
-  setRowData: (data: T[]) => void;
-  setLoading: (loading: boolean) => void;
-  getColumnState: () => IGridColumnState;
-  setFilterModel: (filters: IFilters) => void;
-  getSelectedRows: () => string[];
-  setSelectedRows: (rowIds: string[]) => void;
-  selectAll: () => void;
-  deselectAll: () => void;
-}
-```
+**Core** owns all state logic (hooks) and types. **UI packages** are thin view layers using their framework's primitives. All three pass the same 480 tests.
 
 ## Development
 
 ```bash
-# Install all dependencies
-npm install
+npm install                     # Install all dependencies
+npm run build                   # Build all packages (Turborepo)
+npm run test:all                # Run all 480 tests
+npm run lint                    # ESLint
 
-# Run all workspace tests
-npm run test:all
+# Storybook (per-framework)
+npm run storybook:fluent        # port 6006
+npm run storybook:material      # port 6007
+npm run storybook:radix         # port 6008
 
-# Run tests for a specific package
-npm run test:core
-npm run test:fluent
-npm run test:material
-npm run test:radix
-
-# Build all packages
-npm run build
-
-# Lint
-npm run lint
-
-# Storybook
-npm run storybook:fluent    # port 6006
-npm run storybook:material  # port 6007
-npm run storybook:radix     # port 6008
-
-# Example apps
-cd packages/examples
-npm run dev:fluent           # port 3001
-npm run dev:material         # port 3002
+# Docs site
+npm run docs:dev                # Docusaurus dev server
 ```
 
 ## Peer Dependencies
 
 | Package | Peer Dependencies |
 |---------|-------------------|
-| `@alaarab/ogrid-core` | `react ^17 \|\| ^18 \|\| ^19` |
+| `@alaarab/ogrid` (Radix) | `react`, `react-dom` |
 | `@alaarab/ogrid-fluent` | `react`, `react-dom`, `@fluentui/react-components ^9`, `@fluentui/react-icons ^2` |
 | `@alaarab/ogrid-material` | `react`, `react-dom`, `@mui/material ^6`, `@mui/icons-material ^6`, `@emotion/react ^11`, `@emotion/styled ^11` |
-| `@alaarab/ogrid` (Radix) | `react`, `react-dom` |
+| `@alaarab/ogrid-core` | `react ^17 \|\| ^18 \|\| ^19` |
 
 ## License
 
-MIT
+MIT — Free forever. No enterprise tiers. No feature paywalls.

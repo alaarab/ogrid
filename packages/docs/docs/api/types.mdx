@@ -1,0 +1,282 @@
+---
+sidebar_position: 5
+title: Types
+---
+
+# Types
+
+Reference for all shared types exported from `@alaarab/ogrid-core`. These types are also re-exported from all UI packages (`@alaarab/ogrid`, `@alaarab/ogrid-fluent`, `@alaarab/ogrid-material`).
+
+## RowId
+
+Unique identifier for a row. Used throughout the grid for row selection, tracking, and the `getRowId` callback.
+
+```typescript
+type RowId = string | number;
+```
+
+## FilterValue
+
+A single filter value. The shape depends on the filter type.
+
+```typescript
+type FilterValue = string | string[] | UserLike;
+```
+
+| Filter Type | FilterValue Shape | Example |
+|------------|-------------------|---------|
+| `text` | `string` | `"Alice"` |
+| `multiSelect` | `string[]` | `["Active", "Pending"]` |
+| `people` | `UserLike` | `{ displayName: "Alice", email: "alice@example.com" }` |
+
+## IFilters
+
+A record of active filters, keyed by field name. Each value is a `FilterValue` or `undefined` (when a filter has been cleared).
+
+```typescript
+interface IFilters {
+  [field: string]: FilterValue | undefined;
+}
+```
+
+### Example
+
+```typescript
+const filters: IFilters = {
+  name: 'Alice',                              // text filter
+  status: ['Active', 'Pending'],              // multiSelect filter
+  owner: { displayName: 'Bob', email: 'bob@example.com' }, // people filter
+  department: undefined,                       // cleared filter
+};
+```
+
+## RowSelectionMode
+
+Controls how row selection behaves in the grid.
+
+```typescript
+type RowSelectionMode = 'none' | 'single' | 'multiple';
+```
+
+| Value | Description |
+|-------|-------------|
+| `'none'` | Row selection is disabled. No checkbox column is shown. |
+| `'single'` | Only one row can be selected at a time. Clicking a row replaces the previous selection. |
+| `'multiple'` | Multiple rows can be selected. A header checkbox toggles select/deselect all. Shift+click selects a range. |
+
+## ISelectionRange
+
+Describes a rectangular range of cells selected in the grid. Used internally by cell selection and passed to aggregation utilities.
+
+```typescript
+interface ISelectionRange {
+  startRow: number;
+  startCol: number;
+  endRow: number;
+  endCol: number;
+}
+```
+
+| Name | Type | Description |
+|------|------|-------------|
+| `startRow` | `number` | Row index where the selection began. |
+| `startCol` | `number` | Column index where the selection began. |
+| `endRow` | `number` | Row index where the selection ended. |
+| `endCol` | `number` | Column index where the selection ended. |
+
+The range is inclusive. `startRow` may be greater than `endRow` (and likewise for columns) when the user selects from bottom-right to top-left; the grid normalizes the range internally.
+
+## IActiveCell
+
+Identifies the currently active (focused) cell in the grid.
+
+```typescript
+interface IActiveCell {
+  rowIndex: number;
+  columnIndex: number;
+}
+```
+
+| Name | Type | Description |
+|------|------|-------------|
+| `rowIndex` | `number` | Zero-based row index of the active cell. |
+| `columnIndex` | `number` | Zero-based column index of the active cell. |
+
+## UserLike
+
+Represents a person/user. Used by `people` type column filters and the `searchPeople` / `getUserByEmail` methods on `IDataSource`.
+
+```typescript
+interface UserLike {
+  id?: string;
+  displayName: string;
+  email: string;
+  photo?: string;
+}
+```
+
+| Name | Type | Required | Description |
+|------|------|----------|-------------|
+| `id` | `string` | No | Unique identifier for the user. |
+| `displayName` | `string` | Yes | The user's display name, shown in filter chips and people cells. |
+| `email` | `string` | Yes | The user's email address. Used as the filter value and for user resolution. |
+| `photo` | `string` | No | URL to the user's profile photo. Displayed as an avatar in people filters. |
+
+## IStatusBarProps
+
+Configuration for the grid status bar, which displays counts and aggregation information at the bottom of the grid.
+
+```typescript
+interface IStatusBarProps {
+  totalCount: number;
+  filteredCount?: number;
+  selectedCount?: number;
+  panels?: StatusBarPanel[];
+  aggregation?: {
+    sum: number;
+    avg: number;
+    min: number;
+    max: number;
+    count: number;
+  } | null;
+}
+```
+
+| Name | Type | Default | Description |
+|------|------|---------|-------------|
+| `totalCount` | `number` | **Required** | Total number of items in the data set. |
+| `filteredCount` | `number` | `undefined` | Number of items after filtering. When different from `totalCount`, the status bar shows "X of Y items". |
+| `selectedCount` | `number` | `undefined` | Number of selected rows. Shown when row selection is enabled. |
+| `panels` | `StatusBarPanel[]` | `undefined` | Custom status bar panels for additional content. |
+| `aggregation` | `{ sum, avg, min, max, count } \| null` | `undefined` | Aggregation values computed from the selected cell range. Displayed when the user selects a range containing numeric cells. |
+
+### Aggregation Object
+
+When cells are selected and contain numeric values, the status bar can display aggregation values.
+
+| Name | Type | Description |
+|------|------|-------------|
+| `sum` | `number` | Sum of all numeric values in the selection. |
+| `avg` | `number` | Average of all numeric values in the selection. |
+| `min` | `number` | Minimum numeric value in the selection. |
+| `max` | `number` | Maximum numeric value in the selection. |
+| `count` | `number` | Count of numeric values in the selection. |
+
+### Usage
+
+Pass `true` for a default status bar, or an object for full control:
+
+```typescript
+// Default status bar (shows item counts automatically)
+<OGrid statusBar={true} ... />
+
+// Custom status bar with aggregation
+<OGrid
+  statusBar={{
+    totalCount: data.length,
+    filteredCount: filteredData.length,
+    selectedCount: selectedRows.size,
+    aggregation: { sum: 1500, avg: 375, min: 100, max: 600, count: 4 },
+  }}
+  ...
+/>
+```
+
+## ISideBarDef
+
+Configuration for the grid side bar panel.
+
+```typescript
+interface ISideBarDef {
+  panels?: ('columns' | 'filters')[];
+  defaultPanel?: 'columns' | 'filters';
+  position?: 'left' | 'right';
+}
+```
+
+| Name | Type | Default | Description |
+|------|------|---------|-------------|
+| `panels` | `('columns' \| 'filters')[]` | `['columns', 'filters']` | Which panels to include in the side bar. `'columns'` shows a column chooser. `'filters'` shows filter controls. |
+| `defaultPanel` | `'columns' \| 'filters'` | `undefined` | Which panel is open by default. When not set, the side bar starts collapsed. |
+| `position` | `'left' \| 'right'` | `'right'` | Which side of the grid the side bar appears on. |
+
+### Usage
+
+```typescript
+// Default side bar
+<OGrid sideBar={true} ... />
+
+// Custom side bar on the left, showing only column chooser
+<OGrid
+  sideBar={{
+    panels: ['columns'],
+    position: 'left',
+    defaultPanel: 'columns',
+  }}
+  ...
+/>
+```
+
+## IRowSelectionChangeEvent&lt;T&gt;
+
+Event object passed to the `onSelectionChange` callback when row selection changes.
+
+```typescript
+interface IRowSelectionChangeEvent<T> {
+  selectedRowIds: RowId[];
+  selectedItems: T[];
+}
+```
+
+| Name | Type | Description |
+|------|------|-------------|
+| `selectedRowIds` | `RowId[]` | Array of IDs for all currently selected rows. |
+| `selectedItems` | `T[]` | Array of full row data objects for all currently selected rows. |
+
+### Usage
+
+```typescript
+<OGrid<Employee>
+  columns={columns}
+  data={data}
+  getRowId={(e) => e.id}
+  rowSelection="multiple"
+  onSelectionChange={(event) => {
+    console.log('Selected IDs:', event.selectedRowIds);
+    console.log('Selected items:', event.selectedItems);
+  }}
+/>
+```
+
+## Type Imports
+
+All types can be imported from any OGrid package:
+
+```typescript
+// From the core package (useful in shared code)
+import type {
+  RowId,
+  FilterValue,
+  IFilters,
+  RowSelectionMode,
+  ISelectionRange,
+  IActiveCell,
+  UserLike,
+  IStatusBarProps,
+  ISideBarDef,
+  IRowSelectionChangeEvent,
+  IColumnDef,
+  IColumnGroupDef,
+  IDataSource,
+  IOGridApi,
+  IOGridProps,
+  ICellEditorProps,
+  ICellValueChangedEvent,
+  IGridColumnState,
+} from '@alaarab/ogrid-core';
+
+// From UI packages (re-exports everything from core)
+import type { IColumnDef, IOGridApi } from '@alaarab/ogrid';
+import type { IColumnDef, IOGridApi } from '@alaarab/ogrid-fluent';
+import type { IColumnDef, IOGridApi } from '@alaarab/ogrid-material';
+```

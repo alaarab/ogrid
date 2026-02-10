@@ -1,0 +1,143 @@
+---
+sidebar_position: 15
+title: Side Bar
+description: Collapsible side panel with Columns and Filters panels for managing column visibility and filtering.
+---
+
+import SideBarDemo from '@site/src/components/demos/SideBarDemo';
+import SideBarLeftDemo from '@site/src/components/demos/SideBarLeftDemo';
+import SideBarColumnsOnlyDemo from '@site/src/components/demos/SideBarColumnsOnlyDemo';
+
+# Side Bar
+
+The Side Bar adds a collapsible panel alongside the grid with two built-in panels: **Columns** (toggle column visibility with Select All / Clear All) and **Filters** (inline text, multi-select, and date filters). Click the tab icons to open or close panels.
+
+## Live Demo
+
+<SideBarDemo />
+
+```tsx
+<OGrid
+  columns={columns}
+  data={items}
+  getRowId={(item) => item.id}
+  sideBar
+  columnChooser="sidebar"
+  pagination
+/>
+```
+
+Set `sideBar` to `true` to enable both panels with default settings. Set `columnChooser="sidebar"` to move the column chooser from the toolbar into the sidebar's Columns panel.
+
+## Panels
+
+### Columns Panel
+
+The Columns panel lists every column with a checkbox. Users can:
+
+- Toggle individual columns on or off
+- **Select All** to show every column
+- **Clear All** to hide all non-required columns
+
+Columns with `required: true` cannot be hidden — their checkboxes are disabled.
+
+### Filters Panel
+
+The Filters panel shows inline filter controls for every filterable column:
+
+| Column filter type | Sidebar control |
+|---|---|
+| `text` | Text input |
+| `multiSelect` | Checkbox list of options |
+| `date` | From / To date inputs |
+
+Filters applied in the sidebar work the same as column header filters — they share state.
+
+## Configuration
+
+Pass an `ISideBarDef` object instead of `true` to customize panels, position, and default state.
+
+### Left Position
+
+<SideBarLeftDemo />
+
+```tsx
+import type { ISideBarDef } from '@alaarab/ogrid';
+
+const sideBarDef: ISideBarDef = {
+  position: 'left',
+  defaultPanel: 'filters',
+};
+
+<OGrid
+  columns={columns}
+  data={items}
+  getRowId={(item) => item.id}
+  sideBar={sideBarDef}
+  columnChooser="sidebar"
+/>
+```
+
+### Columns Panel Only
+
+<SideBarColumnsOnlyDemo />
+
+```tsx
+const sideBarDef: ISideBarDef = {
+  panels: ['columns'],
+  defaultPanel: 'columns',
+};
+
+<OGrid
+  columns={columns}
+  data={items}
+  getRowId={(item) => item.id}
+  sideBar={sideBarDef}
+  columnChooser="sidebar"
+/>
+```
+
+### Filters Panel Only
+
+```tsx
+const sideBarDef: ISideBarDef = {
+  panels: ['filters'],
+};
+
+<OGrid
+  columns={columns}
+  data={items}
+  getRowId={(item) => item.id}
+  sideBar={sideBarDef}
+/>
+```
+
+## Props
+
+### `sideBar` (on `IOGridProps`)
+
+| Value | Behavior |
+|-------|----------|
+| `false` / omitted | No side bar |
+| `true` | Both panels, right position, collapsed on mount |
+| `ISideBarDef` | Full configuration (see below) |
+
+### `ISideBarDef`
+
+| Field | Type | Default | Description |
+|-------|------|---------|-------------|
+| `panels` | `SideBarPanelId[]` | `['columns', 'filters']` | Which panels to include. |
+| `defaultPanel` | `SideBarPanelId` | -- | Panel to open automatically on mount. |
+| `position` | `'left' \| 'right'` | `'right'` | Which side of the grid the bar appears on. |
+
+### `SideBarPanelId`
+
+```ts
+type SideBarPanelId = 'columns' | 'filters';
+```
+
+## Related
+
+- [Column Chooser](./column-chooser) -- standalone column visibility dropdown
+- [Toolbar & Layout](./toolbar) -- the container that wraps sidebar + grid
+- [Filtering](./filtering) -- column header filters (shared state with sidebar)
