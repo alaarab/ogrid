@@ -27,7 +27,6 @@ const OGridInner = forwardRef(function OGridInner<T>(
     columnChooserColumns,
     visibleColumns,
     handleVisibilityChange,
-    title,
     toolbar,
     className,
     entityLabelPlural,
@@ -39,9 +38,7 @@ const OGridInner = forwardRef(function OGridInner<T>(
   return (
     <OGridLayout
       className={className}
-      gap={8}
       sideBar={sideBarProps}
-      title={title}
       toolbar={toolbar}
       toolbarEnd={
         columnChooserPlacement === 'toolbar' ? (

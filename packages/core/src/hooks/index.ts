@@ -25,7 +25,16 @@ export { useDebounce } from './useDebounce';
 export { useFillHandle } from './useFillHandle';
 export type { UseFillHandleResult, UseFillHandleParams } from './useFillHandle';
 export { useDataGridState } from './useDataGridState';
-export type { UseDataGridStateParams, UseDataGridStateResult } from './useDataGridState';
+export type {
+  UseDataGridStateParams,
+  UseDataGridStateResult,
+  DataGridLayoutState,
+  DataGridRowSelectionState,
+  DataGridEditingState,
+  DataGridCellInteractionState,
+  DataGridContextMenuState,
+  DataGridViewModelState,
+} from './useDataGridState';
 export { useColumnHeaderFilterState } from './useColumnHeaderFilterState';
 export type {
   UseColumnHeaderFilterStateParams,

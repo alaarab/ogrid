@@ -22,6 +22,7 @@ export type {
   IOGridProps,
   IOGridDataGridProps,
   RowSelectionMode,
+  RowId,
   IRowSelectionChangeEvent,
   StatusBarPanel,
   IStatusBarProps,
@@ -33,7 +34,7 @@ export type {
   ISideBarDef,
   IDateFilterValue,
 } from './types';
-export { toUserLike, toDataGridFilterProps, isInSelectionRange, normalizeSelectionRange } from './types';
+export { toUserLike, isInSelectionRange, normalizeSelectionRange } from './types';
 
 // Hooks
 export {
@@ -80,6 +81,12 @@ export type {
   UseFillHandleParams,
   UseDataGridStateParams,
   UseDataGridStateResult,
+  DataGridLayoutState,
+  DataGridRowSelectionState,
+  DataGridEditingState,
+  DataGridCellInteractionState,
+  DataGridContextMenuState,
+  DataGridViewModelState,
   UseColumnHeaderFilterStateParams,
   UseColumnHeaderFilterStateResult,
   UseColumnChooserStateParams,
@@ -143,6 +150,7 @@ export {
   emailParser,
   booleanParser,
   computeAggregations,
+  processClientSideData,
 } from './utils';
 export type {
   CsvColumn,

@@ -13,15 +13,9 @@ export interface OGridLayoutProps {
   containerComponent?: React.ElementType;
   /** Extra props for the root container (e.g. sx for MUI Box). */
   containerProps?: Record<string, unknown>;
-  /** Gap between deprecated title and the bordered container in px (default: 8). */
-  gap?: number | string;
   className?: string;
-  /** @deprecated Render title outside OGrid. Renders above the bordered container during transition. */
-  title?: React.ReactNode;
   /** Custom toolbar content (left-aligned in toolbar strip). */
   toolbar?: React.ReactNode;
-  /** @deprecated Use toolbarEnd instead. */
-  columnChooser?: React.ReactNode;
   /** Built-in toolbar items rendered on the right side (column chooser, etc.). */
   toolbarEnd?: React.ReactNode;
   /** Grid content (DataGridTable). */
@@ -95,7 +89,6 @@ const gridChildStyle: React.CSSProperties = {
 
 /**
  * Renders OGrid layout as a unified bordered container:
- *   [deprecated title above]
  *   ┌────────────────────────────────────┐
  *   │ [toolbar strip]                    │
  *   ├────────────────────────────────────┤
@@ -108,12 +101,9 @@ export function OGridLayout(props: OGridLayoutProps): React.ReactElement {
   const {
     containerComponent: Container = 'div',
     containerProps = {},
-    gap = 8,
     className,
-    title,
     toolbar,
-    columnChooser,
-    toolbarEnd: toolbarEndProp,
+    toolbarEnd,
     children,
     pagination,
     sideBar,
@@ -121,17 +111,12 @@ export function OGridLayout(props: OGridLayoutProps): React.ReactElement {
 
   const hasSideBar = sideBar != null;
   const sideBarPosition = sideBar?.position ?? 'right';
-
-  // Backward compat: columnChooser prop → toolbarEnd
-  const toolbarEnd = toolbarEndProp ?? columnChooser;
   const hasToolbar = toolbar != null || toolbarEnd != null;
 
-  // Root styles: flex column, fill parent height, gap for deprecated title spacing
   const rootStyle: React.CSSProperties = {
     display: 'flex',
     flexDirection: 'column',
     height: '100%',
-    gap: title != null ? (typeof gap === 'number' ? `${gap}px` : gap) : undefined,
   };
 
   return (
@@ -140,9 +125,6 @@ export function OGridLayout(props: OGridLayoutProps): React.ReactElement {
       style={rootStyle}
       {...containerProps}
     >
-      {/* Deprecated: title renders ABOVE the bordered container */}
-      {title != null && <div style={{ margin: 0 }}>{title}</div>}
-
       {/* === Bordered container === */}
       <div style={borderedContainerStyle}>
         {/* Toolbar strip */}
