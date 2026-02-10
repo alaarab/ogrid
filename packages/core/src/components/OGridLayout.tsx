@@ -66,9 +66,11 @@ const toolbarSectionStyle: React.CSSProperties = {
   gap: 8,
 };
 
-/** Secondary toolbar row — minimal wrapper. Consumer content handles its own padding/background. */
+/** Secondary toolbar row (e.g. active filter chips). Matches toolbar strip styling. */
 const toolbarBelowStyle: React.CSSProperties = {
   borderBottom: '1px solid var(--ogrid-border, #e0e0e0)',
+  padding: '6px 12px',
+  background: 'var(--ogrid-header-bg, #f5f5f5)',
 };
 
 const footerStripStyle: React.CSSProperties = {
