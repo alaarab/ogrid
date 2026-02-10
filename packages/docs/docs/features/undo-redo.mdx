@@ -1,0 +1,116 @@
+---
+sidebar_position: 8
+title: Undo / Redo
+description: Track and reverse cell edits with undo/redo support and context menu integration.
+---
+
+import UndoRedoDemo from '@site/src/components/demos/UndoRedoDemo';
+
+# Undo / Redo
+
+OGrid provides a `useUndoRedo` hook that tracks cell edit history. Users can undo and redo changes with keyboard shortcuts or via the right-click context menu.
+
+## Live Demo
+
+<UndoRedoDemo />
+
+## Quick Example
+
+```tsx
+import { OGrid, useUndoRedo } from '@alaarab/ogrid';
+import { useState } from 'react';
+
+function App() {
+  const [data, setData] = useState(initialData);
+
+  const { handleCellValueChanged, undo, redo, canUndo, canRedo } = useUndoRedo({
+    data,
+    setData,
+    getRowId: (item) => item.id,
+  });
+
+  return (
+    <OGrid
+      columns={columns}
+      data={data}
+      getRowId={(item) => item.id}
+      editable
+      onCellValueChanged={handleCellValueChanged}
+      onUndo={undo}
+      onRedo={redo}
+      canUndo={canUndo}
+      canRedo={canRedo}
+    />
+  );
+}
+```
+
+## How It Works
+
+The `useUndoRedo` hook from `@alaarab/ogrid-core` (also re-exported by all UI packages) manages an internal history stack of cell edits:
+
+1. Pass it your `data`, `setData`, and `getRowId`.
+2. Use its `handleCellValueChanged` as the `onCellValueChanged` callback.
+3. Connect `undo`, `redo`, `canUndo`, and `canRedo` to the grid's corresponding props.
+
+When connected:
+
+- **Ctrl+Z** (Cmd+Z on Mac) triggers `onUndo`, which reverts the last edit.
+- **Ctrl+Y** or **Ctrl+Shift+Z** (Cmd+Y / Cmd+Shift+Z on Mac) triggers `onRedo`.
+- The right-click **context menu** shows Undo and Redo items with keyboard shortcut labels. They are grayed out when the respective history stack is empty.
+
+### Context Menu Integration
+
+When `onUndo`/`onRedo` and `canUndo`/`canRedo` are provided, the context menu automatically includes undo/redo items:
+
+| Menu Item | Shortcut | When Enabled |
+|-----------|----------|--------------|
+| Undo | Ctrl+Z | `canUndo === true` |
+| Redo | Ctrl+Y | `canRedo === true` |
+
+:::info
+The context menu only appears when right-clicking on a data cell, not on headers or empty space.
+:::
+
+## Props
+
+### `useUndoRedo` Parameters
+
+| Param | Type | Description |
+|-------|------|-------------|
+| `data` | `T[]` | Current data array. |
+| `setData` | `(data: T[]) => void` | State setter for the data array. |
+| `getRowId` | `(item: T) => RowId` | Row identifier function. |
+
+### `useUndoRedo` Return Value
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `handleCellValueChanged` | `(event: ICellValueChangedEvent<T>) => void` | Wraps edits to push them onto the undo stack. |
+| `undo` | `() => void` | Reverts the last edit. |
+| `redo` | `() => void` | Re-applies the last undone edit. |
+| `canUndo` | `boolean` | Whether the undo stack has entries. |
+| `canRedo` | `boolean` | Whether the redo stack has entries. |
+
+### OGrid Props
+
+| Prop | Type | Default | Description |
+|------|------|---------|-------------|
+| `onUndo` | `() => void` | -- | Called on Ctrl+Z. |
+| `onRedo` | `() => void` | -- | Called on Ctrl+Y. |
+| `canUndo` | `boolean` | -- | Enables/disables undo in context menu. |
+| `canRedo` | `boolean` | -- | Enables/disables redo in context menu. |
+
+## Keyboard Shortcuts
+
+| Key | Action |
+|-----|--------|
+| Ctrl+Z (Cmd+Z) | Undo last edit |
+| Ctrl+Y (Cmd+Y) | Redo last undone edit |
+| Ctrl+Shift+Z (Cmd+Shift+Z) | Redo (alternative) |
+
+## Related
+
+- [Cell Editing](./cell-editing) -- the edits that get tracked
+- [Clipboard](./clipboard) -- paste and delete are undoable
+- [Fill Handle](./fill-handle) -- fill operations are undoable
