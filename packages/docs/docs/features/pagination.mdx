@@ -1,0 +1,111 @@
+---
+sidebar_position: 3
+title: Pagination
+description: Built-in pagination with configurable page sizes for client-side and server-side data.
+---
+
+import PaginationDemo from '@site/src/components/demos/PaginationDemo';
+
+# Pagination
+
+OGrid includes a built-in pagination bar with page navigation buttons, page size selector, and a row count summary. It works seamlessly with both client-side data arrays and server-side data sources.
+
+## Live Demo
+
+<PaginationDemo />
+
+## Quick Example
+
+```tsx
+import { OGrid } from '@alaarab/ogrid';
+
+function App() {
+  return (
+    <OGrid
+      columns={columns}
+      data={items}
+      getRowId={(item) => item.id}
+      defaultPageSize={25}
+      entityLabelPlural="projects"
+    />
+  );
+}
+```
+
+## How It Works
+
+Pagination is automatic. When your data exceeds the page size, the pagination bar appears at the bottom of the grid with:
+
+- **Previous / Next** buttons
+- **Page number** indicator ("Page 1 of 5")
+- **Page size selector** (dropdown to change rows per page)
+- **Row count summary** ("Showing 1-25 of 120 projects")
+
+### Client-Side Pagination
+
+When you pass a `data` array, OGrid slices it automatically based on the current page and page size. Sorting and filtering are applied before slicing.
+
+### Server-Side Pagination
+
+When you pass a `dataSource`, the grid calls `fetchPage()` with `page` and `pageSize` parameters. Your server returns only the rows for that page along with a `totalCount`:
+
+```tsx
+const dataSource: IDataSource<Project> = {
+  fetchPage: async ({ page, pageSize, sort, filters }) => {
+    const res = await fetch(`/api/projects?page=${page}&pageSize=${pageSize}`);
+    const json = await res.json();
+    return { items: json.data, totalCount: json.total };
+  },
+};
+
+function App() {
+  return (
+    <OGrid
+      columns={columns}
+      dataSource={dataSource}
+      getRowId={(item) => item.id}
+      defaultPageSize={50}
+      entityLabelPlural="projects"
+    />
+  );
+}
+```
+
+### Controlled Pagination
+
+For full control over page state (e.g., URL-synced pagination), pass `page`, `pageSize`, `onPageChange`, and `onPageSizeChange`:
+
+```tsx
+function App() {
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(25);
+
+  return (
+    <OGrid
+      columns={columns}
+      data={items}
+      getRowId={(item) => item.id}
+      page={page}
+      pageSize={pageSize}
+      onPageChange={setPage}
+      onPageSizeChange={setPageSize}
+    />
+  );
+}
+```
+
+## Props
+
+| Prop | Type | Default | Description |
+|------|------|---------|-------------|
+| `defaultPageSize` | `number` | `25` | Initial page size (uncontrolled mode). |
+| `page` | `number` | -- | Current page number (controlled mode, 1-indexed). |
+| `pageSize` | `number` | -- | Rows per page (controlled mode). |
+| `onPageChange` | `(page: number) => void` | -- | Called when page changes. |
+| `onPageSizeChange` | `(size: number) => void` | -- | Called when page size changes. |
+| `entityLabelPlural` | `string` | `'items'` | Label used in the row count summary (e.g., "Showing 1-25 of 100 **projects**"). |
+
+## Related
+
+- [Sorting](./sorting) -- sort results before pagination
+- [Filtering](./filtering) -- filter results before pagination

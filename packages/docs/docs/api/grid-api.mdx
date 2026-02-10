@@ -1,0 +1,280 @@
+---
+sidebar_position: 4
+title: Grid API
+---
+
+# Grid API
+
+The `IOGridApi<T>` interface provides imperative methods for controlling the grid programmatically. Access it via a React ref on the `OGrid` component.
+
+## Accessing the API
+
+```typescript
+import { useRef } from 'react';
+import { OGrid, IOGridApi } from '@alaarab/ogrid';
+
+interface Employee {
+  id: number;
+  name: string;
+  department: string;
+}
+
+function EmployeeGrid() {
+  const apiRef = useRef<IOGridApi<Employee>>(null);
+
+  const handleClearFilters = () => {
+    apiRef.current?.setFilterModel({});
+  };
+
+  return (
+    <>
+      <button onClick={handleClearFilters}>Clear Filters</button>
+      <OGrid<Employee>
+        ref={apiRef}
+        columns={columns}
+        data={data}
+        getRowId={(e) => e.id}
+      />
+    </>
+  );
+}
+```
+
+## IOGridApi&lt;T&gt;
+
+```typescript
+interface IOGridApi<T> {
+  setRowData: (data: T[]) => void;
+  setLoading: (loading: boolean) => void;
+  getColumnState: () => IGridColumnState;
+  applyColumnState: (state: Partial<IGridColumnState>) => void;
+  setFilterModel: (filters: IFilters) => void;
+  getSelectedRows: () => RowId[];
+  setSelectedRows: (rowIds: RowId[]) => void;
+  selectAll: () => void;
+  deselectAll: () => void;
+}
+```
+
+### Data Methods
+
+| Method | Signature | Description |
+|--------|-----------|-------------|
+| `setRowData` | `(data: T[]) => void` | Replaces the grid's data with a new array. Useful for client-side mode when you want to update data imperatively rather than through the `data` prop. |
+| `setLoading` | `(loading: boolean) => void` | Sets the loading state of the grid. When `true`, the grid displays a loading indicator. |
+
+### Column State Methods
+
+| Method | Signature | Description |
+|--------|-----------|-------------|
+| `getColumnState` | `() => IGridColumnState` | Returns the current column state including visibility, sort, order, widths, and filters. See [IGridColumnState](#igridcolumnstate) below. |
+| `applyColumnState` | `(state: Partial<IGridColumnState>) => void` | Applies a partial column state. Any fields not included in the object are left unchanged. Useful for restoring saved state. |
+
+### Filter Methods
+
+| Method | Signature | Description |
+|--------|-----------|-------------|
+| `setFilterModel` | `(filters: IFilters) => void` | Sets the filter state. Pass an empty object `{}` to clear all filters. See [Types](./types) for `IFilters`. |
+
+### Row Selection Methods
+
+| Method | Signature | Description |
+|--------|-----------|-------------|
+| `getSelectedRows` | `() => RowId[]` | Returns an array of selected row IDs. |
+| `setSelectedRows` | `(rowIds: RowId[]) => void` | Sets the selected rows to the given IDs. Any previously selected rows not in the array are deselected. |
+| `selectAll` | `() => void` | Selects all rows in the current data set. |
+| `deselectAll` | `() => void` | Deselects all rows. |
+
+## IGridColumnState
+
+Represents the complete column state of the grid. Returned by `getColumnState()` and accepted by `applyColumnState()`.
+
+```typescript
+interface IGridColumnState {
+  visibleColumns: string[];
+  sort?: { field: string; direction: 'asc' | 'desc' };
+  columnOrder?: string[];
+  columnWidths?: Record<string, number>;
+  filters?: IFilters;
+}
+```
+
+| Name | Type | Description |
+|------|------|-------------|
+| `visibleColumns` | `string[]` | Array of visible column IDs. |
+| `sort` | `{ field: string; direction: 'asc' \| 'desc' }` | Current sort configuration, or `undefined` if no sort is active. |
+| `columnOrder` | `string[]` | Current column display order as an array of column IDs. |
+| `columnWidths` | `Record<string, number>` | Map of column IDs to their current pixel widths. Only includes columns that have been explicitly sized. |
+| `filters` | `IFilters` | Current filter state. |
+
+## Save and Restore State
+
+A common use case is persisting the grid's column state to `localStorage` so it survives page reloads.
+
+```typescript
+import { useRef, useCallback, useEffect } from 'react';
+import { OGrid, IOGridApi, IGridColumnState } from '@alaarab/ogrid';
+
+const STORAGE_KEY = 'employee-grid-state';
+
+function EmployeeGrid() {
+  const apiRef = useRef<IOGridApi<Employee>>(null);
+
+  // Restore state on mount
+  useEffect(() => {
+    const saved = localStorage.getItem(STORAGE_KEY);
+    if (saved) {
+      try {
+        const state: Partial<IGridColumnState> = JSON.parse(saved);
+        apiRef.current?.applyColumnState(state);
+      } catch {
+        // Ignore corrupted state
+      }
+    }
+  }, []);
+
+  // Save state on any column change
+  const handleSaveState = useCallback(() => {
+    const state = apiRef.current?.getColumnState();
+    if (state) {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+    }
+  }, []);
+
+  return (
+    <OGrid<Employee>
+      ref={apiRef}
+      columns={columns}
+      data={data}
+      getRowId={(e) => e.id}
+      onSortChange={handleSaveState}
+      onFiltersChange={handleSaveState}
+      onVisibleColumnsChange={handleSaveState}
+      onColumnOrderChange={handleSaveState}
+      onColumnResized={handleSaveState}
+    />
+  );
+}
+```
+
+## Dynamic Data Updates
+
+Use `setRowData` and `setLoading` for imperative data updates, such as polling or WebSocket-driven refresh.
+
+```typescript
+function LiveGrid() {
+  const apiRef = useRef<IOGridApi<StockQuote>>(null);
+
+  useEffect(() => {
+    const ws = new WebSocket('wss://quotes.example.com');
+
+    ws.onmessage = (event) => {
+      const quotes: StockQuote[] = JSON.parse(event.data);
+      apiRef.current?.setRowData(quotes);
+    };
+
+    ws.onopen = () => {
+      apiRef.current?.setLoading(false);
+    };
+
+    return () => ws.close();
+  }, []);
+
+  return (
+    <OGrid<StockQuote>
+      ref={apiRef}
+      columns={columns}
+      data={[]}
+      isLoading={true}
+      getRowId={(q) => q.symbol}
+    />
+  );
+}
+```
+
+## Programmatic Row Selection
+
+```typescript
+function SelectableGrid() {
+  const apiRef = useRef<IOGridApi<Employee>>(null);
+
+  return (
+    <>
+      <div>
+        <button onClick={() => apiRef.current?.selectAll()}>
+          Select All
+        </button>
+        <button onClick={() => apiRef.current?.deselectAll()}>
+          Deselect All
+        </button>
+        <button
+          onClick={() => {
+            const selected = apiRef.current?.getSelectedRows() ?? [];
+            console.log('Selected IDs:', selected);
+          }}
+        >
+          Log Selection
+        </button>
+        <button
+          onClick={() => {
+            // Select specific rows by their IDs
+            apiRef.current?.setSelectedRows([1, 3, 5]);
+          }}
+        >
+          Select Rows 1, 3, 5
+        </button>
+      </div>
+      <OGrid<Employee>
+        ref={apiRef}
+        columns={columns}
+        data={data}
+        getRowId={(e) => e.id}
+        rowSelection="multiple"
+      />
+    </>
+  );
+}
+```
+
+## Programmatic Filter Control
+
+```typescript
+function FilteredGrid() {
+  const apiRef = useRef<IOGridApi<Employee>>(null);
+
+  const showOnlyEngineering = () => {
+    apiRef.current?.setFilterModel({
+      department: ['Engineering'],
+    });
+  };
+
+  const clearFilters = () => {
+    apiRef.current?.setFilterModel({});
+  };
+
+  const applyMultipleFilters = () => {
+    // Apply column state which includes filters along with other state
+    apiRef.current?.applyColumnState({
+      filters: {
+        department: ['Engineering', 'Product'],
+        name: 'John',
+      },
+      sort: { field: 'name', direction: 'asc' },
+    });
+  };
+
+  return (
+    <>
+      <button onClick={showOnlyEngineering}>Engineering Only</button>
+      <button onClick={clearFilters}>Clear Filters</button>
+      <button onClick={applyMultipleFilters}>Apply Preset</button>
+      <OGrid<Employee>
+        ref={apiRef}
+        columns={columns}
+        data={data}
+        getRowId={(e) => e.id}
+      />
+    </>
+  );
+}
+```

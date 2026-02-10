@@ -1,6 +1,12 @@
 import * as React from 'react';
 
-export type ColumnFilterType = 'none' | 'text' | 'multiSelect' | 'people';
+export type ColumnFilterType = 'none' | 'text' | 'multiSelect' | 'people' | 'date';
+
+/** Date range filter value (ISO YYYY-MM-DD strings). Both fields optional for open-ended ranges. */
+export interface IDateFilterValue {
+  from?: string;
+  to?: string;
+}
 
 export interface IColumnFilterDef {
   type: Exclude<ColumnFilterType, 'none'>;
@@ -13,6 +19,8 @@ export interface IColumnFilterDef {
 export interface IColumnMeta {
   columnId: string;
   name: string;
+  /** Column type shorthand. Affects alignment, default editor, filter type, sorting, and display formatting. */
+  type?: 'text' | 'numeric' | 'date' | 'boolean';
   sortable?: boolean;
   /** Omit for not filterable; set to IColumnFilterDef for filterable. */
   filterable?: IColumnFilterDef;
@@ -55,7 +63,7 @@ export interface IColumnDef<T = unknown> extends IColumnMeta {
   /** Whether the cell is editable (per-column or per-row). */
   editable?: boolean | ((item: T) => boolean);
   /** Built-in editor type or custom React component. */
-  cellEditor?: 'text' | 'select' | 'checkbox' | React.ComponentType<ICellEditorProps<T>>;
+  cellEditor?: 'text' | 'select' | 'checkbox' | 'richSelect' | 'date' | React.ComponentType<ICellEditorProps<T>>;
   /** When true, custom cell editor is rendered in a popover/popper instead of inline. */
   cellEditorPopup?: boolean;
   /** Params passed to the cell editor (e.g. { values: string[] } for select). */
@@ -86,6 +94,8 @@ export interface ICellEditorProps<T> {
 /** Params for built-in cell editors (e.g. select: { values: string[] }). Extend for custom editors. */
 export interface CellEditorParams {
   values?: unknown[];
+  /** Format a value for display in rich select editor. */
+  formatValue?: (value: unknown) => string;
   [key: string]: unknown;
 }
 
@@ -96,6 +106,23 @@ export interface IColumnGroupDef<T = unknown> {
   /** Nested groups or leaf columns. */
   children: (IColumnGroupDef<T> | IColumnDef<T>)[];
 }
+
+/** A single cell in a header row (either a group header or a leaf column header). */
+export interface HeaderCell<T = unknown> {
+  /** Display text for this header cell. */
+  label: string;
+  /** Number of leaf columns this cell spans. */
+  colSpan: number;
+  /** True if this is a group header (not a leaf column). */
+  isGroup: boolean;
+  /** The leaf column definition (only set when isGroup is false). */
+  columnDef?: IColumnDef<T>;
+  /** The depth level of this cell in the group tree (0 = top). */
+  depth: number;
+}
+
+/** A single row in the multi-row header. */
+export type HeaderRow<T = unknown> = HeaderCell<T>[];
 
 /** Minimal column info for the ColumnChooser (framework-agnostic). */
 export interface IColumnDefinition {

@@ -13,7 +13,7 @@ import {
   type Dispatch,
   type SetStateAction,
 } from 'react';
-import type { ColumnFilterType } from '../types/columnTypes';
+import type { ColumnFilterType, IDateFilterValue } from '../types/columnTypes';
 import type { UserLike } from '../types/dataGridTypes';
 import { useDebounce } from './useDebounce';
 
@@ -34,6 +34,8 @@ export interface UseColumnHeaderFilterStateParams {
   selectedUser?: UserLike;
   onUserChange?: (user: UserLike | undefined) => void;
   peopleSearch?: (query: string) => Promise<UserLike[]>;
+  dateValue?: IDateFilterValue;
+  onDateChange?: (value: IDateFilterValue | undefined) => void;
 }
 
 export interface UseColumnHeaderFilterStateResult {
@@ -54,6 +56,10 @@ export interface UseColumnHeaderFilterStateResult {
   isPeopleLoading: boolean;
   peopleSearchText: string;
   setPeopleSearchText: (v: string) => void;
+  tempDateFrom: string;
+  setTempDateFrom: (v: string) => void;
+  tempDateTo: string;
+  setTempDateTo: (v: string) => void;
   hasActiveFilter: boolean;
   popoverPosition: { top: number; left: number } | null;
   handlers: {
@@ -71,6 +77,8 @@ export interface UseColumnHeaderFilterStateResult {
     handleInputMouseDown: (e: React.MouseEvent) => void;
     handleInputClick: (e: React.MouseEvent) => void;
     handleInputKeyDown: (e: React.KeyboardEvent) => void;
+    handleDateApply: () => void;
+    handleDateClear: () => void;
     handleSortClick: (e: React.MouseEvent) => void;
   };
 }
@@ -89,6 +97,8 @@ export function useColumnHeaderFilterState(
     selectedUser,
     onUserChange,
     peopleSearch,
+    dateValue,
+    onDateChange,
   } = params;
 
   const safeSelectedValues = selectedValues ?? EMPTY_OPTIONS;
@@ -107,6 +117,8 @@ export function useColumnHeaderFilterState(
   const [peopleSuggestions, setPeopleSuggestions] = useState<UserLike[]>([]);
   const [isPeopleLoading, setIsPeopleLoading] = useState(false);
   const [peopleSearchText, setPeopleSearchText] = useState('');
+  const [tempDateFrom, setTempDateFrom] = useState(dateValue?.from ?? '');
+  const [tempDateTo, setTempDateTo] = useState(dateValue?.to ?? '');
   const [popoverPosition, setPopoverPosition] = useState<{ top: number; left: number } | null>(null);
 
   // Sync temp state when popover opens
@@ -114,6 +126,8 @@ export function useColumnHeaderFilterState(
     if (isFilterOpen) {
       setTempSelected(new Set(safeSelectedValues));
       setTempTextValue(textValue);
+      setTempDateFrom(dateValue?.from ?? '');
+      setTempDateTo(dateValue?.to ?? '');
       setSearchText('');
       setPeopleSearchText('');
       setPeopleSuggestions([]);
@@ -123,7 +137,7 @@ export function useColumnHeaderFilterState(
     } else {
       setPopoverPosition(null);
     }
-  }, [isFilterOpen, filterType, safeSelectedValues, textValue]);
+  }, [isFilterOpen, filterType, safeSelectedValues, textValue, dateValue]);
 
   // Click outside and Escape to close
   useEffect(() => {
@@ -241,6 +255,18 @@ export function useColumnHeaderFilterState(
     [onUserChange]
   );
 
+  const handleDateApply = useCallback(() => {
+    const from = tempDateFrom || undefined;
+    const to = tempDateTo || undefined;
+    onDateChange?.(from || to ? { from, to } : undefined);
+    setFilterOpen(false);
+  }, [onDateChange, tempDateFrom, tempDateTo]);
+
+  const handleDateClear = useCallback(() => {
+    setTempDateFrom('');
+    setTempDateTo('');
+  }, []);
+
   const handleClearUser = useCallback(() => {
     onUserChange?.(undefined);
     setFilterOpen(false);
@@ -258,8 +284,9 @@ export function useColumnHeaderFilterState(
     if (filterType === 'multiSelect') return safeSelectedValues.length > 0;
     if (filterType === 'text') return !!textValue.trim();
     if (filterType === 'people') return !!selectedUser;
+    if (filterType === 'date') return !!(dateValue?.from || dateValue?.to);
     return false;
-  }, [filterType, safeSelectedValues, textValue, selectedUser]);
+  }, [filterType, safeSelectedValues, textValue, selectedUser, dateValue]);
 
   return {
     headerRef,
@@ -279,6 +306,10 @@ export function useColumnHeaderFilterState(
     isPeopleLoading,
     peopleSearchText,
     setPeopleSearchText,
+    tempDateFrom,
+    setTempDateFrom,
+    tempDateTo,
+    setTempDateTo,
     hasActiveFilter,
     popoverPosition,
     handlers: {
@@ -288,6 +319,8 @@ export function useColumnHeaderFilterState(
       handleTextClear,
       handleUserSelect,
       handleClearUser,
+      handleDateApply,
+      handleDateClear,
       handleCheckboxChange,
       handleSelectAll,
       handleClearSelection,
