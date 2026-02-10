@@ -9,9 +9,7 @@ const sidebars: SidebarsConfig = {
       items: [
         'getting-started/overview',
         'getting-started/installation',
-        'getting-started/quick-start-radix',
-        'getting-started/quick-start-fluent',
-        'getting-started/quick-start-material',
+        'getting-started/quick-start',
       ],
     },
     {
@@ -22,12 +20,9 @@ const sidebars: SidebarsConfig = {
         'features/sorting',
         'features/filtering',
         'features/pagination',
-        'features/cell-editing',
+        'features/editing',
         'features/spreadsheet-selection',
-        'features/clipboard',
         'features/row-selection',
-        'features/undo-redo',
-        'features/fill-handle',
         'features/column-groups',
         'features/column-pinning',
         'features/column-chooser',
@@ -57,7 +52,6 @@ const sidebars: SidebarsConfig = {
       items: [
         'api/ogrid-props',
         'api/column-def',
-        'api/data-source',
         'api/grid-api',
         'api/types',
       ],

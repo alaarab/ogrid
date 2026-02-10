@@ -1,6 +1,6 @@
 // Components
-export { OGrid, type IOGridProps, FluentDataTable, type IFluentDataTableProps } from './FluentDataTable';
-export { DataGridTable, type IDataGridTableProps } from './DataGridTable/DataGridTable';
+export { OGrid, type IOGridProps } from './FluentDataTable';
+export { DataGridTable } from './DataGridTable/DataGridTable';
 export { ColumnChooser, type IColumnChooserProps } from './ColumnChooser/ColumnChooser';
 export { ColumnHeaderFilter, type IColumnHeaderFilterProps } from './ColumnHeaderFilter/ColumnHeaderFilter';
 export { PaginationControls, type IPaginationControlsProps } from './PaginationControls/PaginationControls';

@@ -1,1 +1,1 @@
-export { OGrid, MaterialDataTable, type IOGridProps, type IMaterialDataTableProps } from './MaterialDataTable';
+export { OGrid, type IOGridProps } from './MaterialDataTable';

@@ -37,6 +37,12 @@ const toolbarStrip: React.CSSProperties = {
   borderBottom: '1px solid var(--ogrid-border)',
 };
 
+const secondaryToolbarStrip: React.CSSProperties = {
+  padding: '8px 16px',
+  background: 'var(--ogrid-header-bg)',
+  borderBottom: '1px solid var(--ogrid-border)',
+};
+
 const middleRow: React.CSSProperties = {
   display: 'flex',
   minHeight: 130,
@@ -111,6 +117,15 @@ export function LayoutDiagram() {
           <div style={{ ...sectionHint, marginTop: 0 }}>
             <span style={pill}>columnChooser</span>
           </div>
+        </div>
+      </div>
+
+      {/* Secondary Toolbar Row */}
+      <div style={secondaryToolbarStrip}>
+        <div style={sectionHint}>
+          <span style={pill}>toolbarBelow</span>
+          <span style={dotSeparator}>&middot;</span>
+          Filter chips, breadcrumbs, secondary actions
         </div>
       </div>
 
