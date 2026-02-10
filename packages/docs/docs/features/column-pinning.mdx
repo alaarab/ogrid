@@ -1,0 +1,150 @@
+---
+sidebar_position: 11
+title: Column Pinning
+description: Pin columns to the left edge so they stay visible during horizontal scroll
+---
+
+import ColumnPinningDemo from '@site/src/components/demos/ColumnPinningDemo';
+
+# Column Pinning
+
+Pin columns to the left edge of the grid so they remain visible while the user scrolls horizontally through the remaining columns.
+
+## Live Demo
+
+<ColumnPinningDemo />
+
+## Quick Example
+
+```tsx
+import { OGrid } from '@alaarab/ogrid';
+import type { IColumnDef } from '@alaarab/ogrid-core';
+
+interface Row {
+  id: number;
+  name: string;
+  email: string;
+  department: string;
+  salary: number;
+  location: string;
+}
+
+const columns: IColumnDef<Row>[] = [
+  { columnId: 'name', name: 'Name', pinned: 'left' },
+  { columnId: 'email', name: 'Email' },
+  { columnId: 'department', name: 'Department' },
+  { columnId: 'salary', name: 'Salary', type: 'numeric' },
+  { columnId: 'location', name: 'Location' },
+];
+
+function App() {
+  return (
+    <OGrid
+      columns={columns}
+      data={rows}
+      getRowId={(r) => r.id}
+    />
+  );
+}
+```
+
+The "Name" column stays fixed on the left while all other columns scroll normally.
+
+## How It Works
+
+Set `pinned: 'left'` on any `IColumnDef` to pin it. The grid renders pinned columns with CSS `position: sticky` and a calculated `left` offset so multiple pinned columns stack correctly.
+
+```tsx
+{ columnId: 'name', name: 'Name', pinned: 'left' }
+```
+
+Pinned columns:
+
+- Use **sticky positioning** so they stay visible during horizontal scroll.
+- Stack left-to-right in the order they appear in the `columns` array.
+- Work with all grid features: sorting, filtering, editing, cell selection, and context menu.
+
+### With Row Selection
+
+When `rowSelection` is `'single'` or `'multiple'`, OGrid inserts a checkbox column at the far left. Pinned columns appear after the checkbox column, and both stay visible during scroll.
+
+```tsx
+<OGrid
+  columns={columns}
+  data={rows}
+  getRowId={(r) => r.id}
+  rowSelection="multiple"
+/>
+```
+
+### With Column Groups
+
+Pinning works inside column groups. Set `pinned: 'left'` on the leaf `IColumnDef` items within a group. The group header will span correctly over the pinned columns.
+
+```tsx
+const columns = [
+  {
+    headerName: 'Identity',
+    children: [
+      { columnId: 'id', name: 'ID', pinned: 'left' },
+      { columnId: 'name', name: 'Name', pinned: 'left' },
+    ],
+  },
+  { columnId: 'email', name: 'Email' },
+];
+```
+
+## Persisting Pin State
+
+Pin state can be saved and restored via the Grid API, just like column widths and sort order:
+
+```tsx
+const gridRef = useRef<IOGridApi<Row>>(null);
+
+// Save pin state (e.g. to localStorage)
+const state = gridRef.current.getColumnState();
+// state.pinnedColumns → { name: 'left' }
+localStorage.setItem('gridState', JSON.stringify(state));
+
+// Restore pin state on mount
+const saved = JSON.parse(localStorage.getItem('gridState'));
+gridRef.current.applyColumnState(saved);
+```
+
+### `onColumnPinned` Callback
+
+Listen for pin changes to persist state automatically:
+
+```tsx
+<OGrid
+  columns={columns}
+  data={rows}
+  getRowId={(r) => r.id}
+  ref={gridRef}
+  onColumnPinned={(columnId, pinned) => {
+    // pinned is 'left', 'right', or null (unpinned)
+    const state = gridRef.current.getColumnState();
+    localStorage.setItem('gridState', JSON.stringify(state));
+  }}
+/>
+```
+
+## Props Reference
+
+| Type | Field | Values | Description |
+|---|---|---|---|
+| `IColumnMeta` | `pinned` | `'left' \| 'right'` | Pin column to left or right edge |
+| `IOGridProps` | `onColumnPinned` | `(columnId, pinned) => void` | Called when a column is pinned or unpinned |
+| `IGridColumnState` | `pinnedColumns` | `Record<string, 'left' \| 'right'>` | Pinned columns in saved state |
+| `IColumnMeta` | `minWidth` | `number` | Minimum width in pixels (useful for pinned columns) |
+| `IColumnMeta` | `defaultWidth` | `number` | Initial width in pixels |
+
+:::tip
+Pin identifying columns like "Name" or "ID" so users always know which row they are looking at, even when scrolling through many columns.
+:::
+
+## Related
+
+- [Column Groups](./column-groups) -- group headers with pinned leaf columns
+- [Column Chooser](./column-chooser) -- show/hide columns (including pinned ones)
+- [Keyboard Navigation](./keyboard-navigation) -- arrow keys work across pinned and scrollable columns

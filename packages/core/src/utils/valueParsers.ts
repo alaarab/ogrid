@@ -57,7 +57,22 @@ export function parseValue<T>(
     return { valid: false, value: undefined };
   }
 
-  // 3. No parser, not a select column — pass through unchanged
+  // 3. Auto-validate built-in column types
+  const colType = col.type;
+  if (colType === 'date') {
+    const parsed = dateParser({ newValue, oldValue, data: item, column: col });
+    return parsed === undefined ? { valid: false, value: undefined } : { valid: true, value: parsed };
+  }
+  if (colType === 'boolean') {
+    const parsed = booleanParser({ newValue, oldValue, data: item, column: col });
+    return parsed === undefined ? { valid: false, value: undefined } : { valid: true, value: parsed };
+  }
+  if (colType === 'numeric') {
+    const parsed = numberParser({ newValue, oldValue, data: item, column: col });
+    return parsed === undefined ? { valid: false, value: undefined } : { valid: true, value: parsed };
+  }
+
+  // 4. No parser, not a select column, no built-in type — pass through unchanged
   return { valid: true, value: newValue };
 }
 

@@ -1,0 +1,160 @@
+---
+sidebar_position: 14
+title: Toolbar & Layout
+description: Unified bordered container with configurable toolbar strip, sidebar, and column chooser placement.
+---
+
+import ToolbarDefaultDemo from '@site/src/components/demos/ToolbarDefaultDemo';
+import ToolbarCustomDemo from '@site/src/components/demos/ToolbarCustomDemo';
+import ToolbarSidebarDemo from '@site/src/components/demos/ToolbarSidebarDemo';
+import ToolbarFullDemo from '@site/src/components/demos/ToolbarFullDemo';
+import { LayoutDiagram } from '@site/src/components/LayoutDiagram';
+
+# Toolbar & Layout
+
+OGrid wraps your grid in a **single bordered container** with three sections: a toolbar strip, the grid area, and a footer. Every section is optional — the container adapts to what you enable.
+
+## Layout Anatomy
+
+<LayoutDiagram />
+
+Every combination is valid — you can use just the grid, add a toolbar, add pagination, enable the sidebar, or use all of them together. The bordered container handles spacing and borders automatically.
+
+## Default Layout
+
+With no extra props, OGrid renders a toolbar strip containing only the column chooser button on the right, plus the grid. Click the columns button to toggle column visibility.
+
+<ToolbarDefaultDemo />
+
+```tsx
+<OGrid
+  columns={columns}
+  data={items}
+  getRowId={(item) => item.id}
+  columnChooser="toolbar"
+  pagination
+/>
+```
+
+## Custom Toolbar Content
+
+The `toolbar` prop places your content on the **left** side of the toolbar strip. The column chooser stays on the **right**. Use this for action buttons, search inputs, status text, or anything else.
+
+<ToolbarCustomDemo />
+
+```tsx
+<OGrid
+  columns={columns}
+  data={items}
+  getRowId={(item) => item.id}
+  toolbar={
+    <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+      <button onClick={handleExport}>Export CSV</button>
+      <button onClick={handleSelectAll}>Select All</button>
+      <span>{data.length} rows</span>
+    </div>
+  }
+  columnChooser="toolbar"
+  pagination
+/>
+```
+
+## Column Chooser Placement
+
+The `columnChooser` prop controls where the column visibility control appears:
+
+| Value | Behavior |
+|-------|----------|
+| `true` or `'toolbar'` | Column chooser button in the toolbar strip (default) |
+| `'sidebar'` | Column chooser moves to the sidebar's Columns panel |
+| `false` | Hidden entirely — columns are locked |
+
+### Sidebar Mode
+
+When `columnChooser="sidebar"`, the column chooser button is removed from the toolbar. Instead, users toggle column visibility from the sidebar's Columns panel. This is useful when you have many columns and want a dedicated panel for managing them.
+
+<ToolbarSidebarDemo />
+
+```tsx
+<OGrid
+  columns={columns}
+  data={items}
+  getRowId={(item) => item.id}
+  columnChooser="sidebar"
+  sideBar
+  pagination
+/>
+```
+
+:::tip
+The sidebar also includes a **Filters** panel with inline filter controls. Click the filter icon tab to switch panels.
+:::
+
+### Hidden
+
+Set `columnChooser={false}` when you want to lock the visible columns and prevent users from changing them.
+
+```tsx
+<OGrid
+  columns={columns}
+  data={items}
+  getRowId={(item) => item.id}
+  columnChooser={false}
+/>
+```
+
+## Full Layout
+
+Here is every layout feature enabled at once — toolbar with custom buttons, column chooser, sidebar, cell selection with status bar aggregations, and pagination:
+
+<ToolbarFullDemo />
+
+```tsx
+<OGrid
+  ref={gridRef}
+  columns={columns}
+  data={items}
+  getRowId={(item) => item.id}
+  columnChooser="toolbar"
+  sideBar
+  statusBar
+  cellSelection
+  pagination
+  toolbar={
+    <div style={{ display: 'flex', gap: 8 }}>
+      <button onClick={() => gridRef.current?.deselectAll()}>
+        Clear Selection
+      </button>
+    </div>
+  }
+/>
+```
+
+## Headings and Titles
+
+The `title` prop is **deprecated**. Render headings outside the `<OGrid>` component for full control over styling:
+
+```tsx
+<div>
+  <h1>Projects Dashboard</h1>
+  <p>Manage all active projects below.</p>
+  <OGrid columns={columns} data={projects} getRowId={(p) => p.id} />
+</div>
+```
+
+## Props
+
+| Prop | Type | Default | Description |
+|------|------|---------|-------------|
+| `toolbar` | `ReactNode` | -- | Custom content in the left side of the toolbar strip. |
+| `columnChooser` | `boolean \| 'toolbar' \| 'sidebar'` | `true` | Where to place the column chooser. `true`/`'toolbar'` = toolbar, `'sidebar'` = sidebar panel only, `false` = hidden. |
+| `sideBar` | `boolean \| ISideBarDef` | `false` | Enable sidebar panels. Required for `columnChooser="sidebar"`. |
+| `statusBar` | `boolean` | `false` | Show status bar below the grid with row counts and aggregations. |
+| `pagination` | `boolean \| IPaginationProps` | `false` | Show pagination in the footer strip. |
+| `cellSelection` | `boolean` | `true` | Enable cell range selection (needed for status bar aggregations). |
+
+## Related
+
+- [Column Chooser](./column-chooser) -- toggle column visibility
+- [Status Bar](./status-bar) -- row counts and aggregations
+- [Pagination](./pagination) -- paginate data rows

@@ -25,7 +25,7 @@ function App() {
           getRowId={getRowId}
           entityLabelPlural="projects"
           title={<h2 style={{ margin: 0 }}>Projects</h2>}
-          defaultPageSize={20}
+          defaultPageSize={25}
         />
       </div>
     </ThemeProvider>

@@ -16,6 +16,8 @@ import {
 import { getCellValue, flattenColumns } from '../utils';
 import { toDataGridFilterProps } from '../types';
 import { useFilterOptions } from './useFilterOptions';
+import { useSideBarState } from './useSideBarState';
+import type { SideBarProps } from '../components/SideBar';
 import type {
   RowId,
   IOGridProps,
@@ -26,9 +28,13 @@ import type {
   IStatusBarProps,
   UserLike,
   IColumnDefinition,
+  IDateFilterValue,
 } from '../types';
 
-const DEFAULT_PAGE_SIZE = 20;
+const DEFAULT_PAGE_SIZE = 25;
+
+/** Resolved column chooser placement. */
+export type ColumnChooserPlacement = 'toolbar' | 'sidebar' | 'none';
 
 export interface UseOGridResult<T> {
   dataGridProps: IOGridDataGridProps<T>;
@@ -40,6 +46,8 @@ export interface UseOGridResult<T> {
   columnChooserColumns: IColumnDefinition[];
   visibleColumns: Set<string>;
   handleVisibilityChange: (columnKey: string, isVisible: boolean) => void;
+  /** Resolved placement of the column chooser. */
+  columnChooserPlacement: ColumnChooserPlacement;
   title: React.ReactNode;
   toolbar: React.ReactNode;
   className?: string;
@@ -47,6 +55,8 @@ export interface UseOGridResult<T> {
   emptyState?: { message?: React.ReactNode; render?: () => React.ReactNode };
   hasActiveFilters: boolean;
   setFilters: (f: IFilters) => void;
+  pageSizeOptions?: number[];
+  sideBarProps: SideBarProps | null;
 }
 
 export function useOGrid<T>(
@@ -71,6 +81,8 @@ export function useOGrid<T>(
     onVisibleColumnsChange,
     columnOrder,
     onColumnOrderChange,
+    onColumnResized,
+    onColumnPinned,
     freezeRows,
     freezeCols,
     defaultPageSize = DEFAULT_PAGE_SIZE,
@@ -82,6 +94,7 @@ export function useOGrid<T>(
     className,
     title,
     layoutMode = 'fill',
+    suppressHorizontalScroll,
     editable,
     cellSelection,
     onCellValueChanged,
@@ -93,10 +106,20 @@ export function useOGrid<T>(
     selectedRows,
     onSelectionChange,
     statusBar,
+    pageSizeOptions,
+    sideBar,
+    onFirstDataRendered,
     onError,
+    columnChooser: columnChooserProp,
     'aria-label': ariaLabel,
     'aria-labelledby': ariaLabelledBy,
   } = props;
+
+  // Resolve column chooser placement
+  const columnChooserPlacement: ColumnChooserPlacement =
+    columnChooserProp === false ? 'none'
+    : columnChooserProp === 'sidebar' ? 'sidebar'
+    : 'toolbar';
 
   const columns = useMemo(() => flattenColumns(columnsProp), [columnsProp]);
   const isServerSide = dataSource != null;
@@ -134,6 +157,9 @@ export function useOGrid<T>(
       );
     }
   );
+
+  const [columnWidthOverrides, setColumnWidthOverrides] = useState<Record<string, number>>({});
+  const [pinnedOverrides, setPinnedOverrides] = useState<Record<string, 'left' | 'right'>>({});
 
   const page = controlledPage ?? internalPage;
   const pageSize = controlledPageSize ?? internalPageSize;
@@ -184,7 +210,7 @@ export function useOGrid<T>(
     [controlledVisibleColumns, onVisibleColumnsChange]
   );
 
-  const { multiSelectFilters, textFilters, peopleFilters } = useMemo(
+  const { multiSelectFilters, textFilters, peopleFilters, dateFilters } = useMemo(
     () => toDataGridFilterProps(filters),
     [filters]
   );
@@ -217,6 +243,13 @@ export function useOGrid<T>(
   const handlePeopleFilterChange = useCallback(
     (key: string, user: UserLike | undefined) => {
       setFilters(mergeFilter(filters, key, user ?? undefined));
+    },
+    [filters, setFilters]
+  );
+
+  const handleDateFilterChange = useCallback(
+    (key: string, value: IDateFilterValue | undefined) => {
+      setFilters(mergeFilter(filters, key, value));
     },
     [filters, setFilters]
   );
@@ -300,6 +333,24 @@ export function useOGrid<T>(
           (r) =>
             String(getCellValue(r, col) ?? '').toLowerCase() === email
         );
+      } else if (
+        type === 'date' &&
+        val &&
+        typeof val === 'object' &&
+        !Array.isArray(val) &&
+        ('from' in val || 'to' in val)
+      ) {
+        const dv = val as IDateFilterValue;
+        rows = rows.filter((r) => {
+          const cellVal = getCellValue(r, col);
+          if (cellVal == null) return false;
+          const cellDate = new Date(String(cellVal));
+          if (Number.isNaN(cellDate.getTime())) return false;
+          const cellDateStr = cellDate.toISOString().split('T')[0];
+          if (dv.from && cellDateStr < dv.from) return false;
+          if (dv.to && cellDateStr > dv.to) return false;
+          return true;
+        });
       }
     });
     if (sort.field) {
@@ -317,6 +368,13 @@ export function useOGrid<T>(
         if (av == null && bv == null) return 0;
         if (av == null) return -1 * dir;
         if (bv == null) return 1 * dir;
+        if (sortCol?.type === 'date') {
+          const at = new Date(String(av)).getTime();
+          const bt = new Date(String(bv)).getTime();
+          const aN = Number.isNaN(at) ? 0 : at;
+          const bN = Number.isNaN(bt) ? 0 : bt;
+          return aN === bN ? 0 : aN > bN ? dir : -dir;
+        }
         if (typeof av === 'number' && typeof bv === 'number')
           return av === bv ? 0 : av > bv ? dir : -dir;
         const as = String(av).toLowerCase();
@@ -392,6 +450,15 @@ export function useOGrid<T>(
       ? clientItemsAndTotal.totalCount
       : serverTotalCount;
 
+  // Fire onFirstDataRendered once when the grid first has data
+  const firstDataRenderedRef = useRef(false);
+  useEffect(() => {
+    if (!firstDataRenderedRef.current && displayItems.length > 0) {
+      firstDataRenderedRef.current = true;
+      onFirstDataRendered?.();
+    }
+  }, [displayItems.length, onFirstDataRendered]);
+
   useImperativeHandle(
     ref,
     () => ({
@@ -399,7 +466,34 @@ export function useOGrid<T>(
         if (!isServerSide) setInternalData(d);
       },
       setLoading: setInternalLoading,
-      getColumnState: () => ({ visibleColumns: Array.from(visibleColumns), sort }),
+      getColumnState: () => ({
+        visibleColumns: Array.from(visibleColumns),
+        sort,
+        columnOrder: columnOrder ?? undefined,
+        columnWidths: Object.keys(columnWidthOverrides).length > 0 ? columnWidthOverrides : undefined,
+        filters: Object.keys(filters).length > 0 ? filters : undefined,
+        pinnedColumns: Object.keys(pinnedOverrides).length > 0 ? pinnedOverrides : undefined,
+      }),
+      applyColumnState: (state: Partial<import('../types').IGridColumnState>) => {
+        if (state.visibleColumns) {
+          setVisibleColumns(new Set(state.visibleColumns));
+        }
+        if (state.sort) {
+          setSort(state.sort);
+        }
+        if (state.columnOrder && onColumnOrderChange) {
+          onColumnOrderChange(state.columnOrder);
+        }
+        if (state.columnWidths) {
+          setColumnWidthOverrides(state.columnWidths);
+        }
+        if (state.filters) {
+          setFilters(state.filters);
+        }
+        if (state.pinnedColumns) {
+          setPinnedOverrides(state.pinnedColumns);
+        }
+      },
       setFilterModel: setFilters,
       getSelectedRows: () => Array.from(effectiveSelectedRows),
       setSelectedRows: (rowIds: RowId[]) => {
@@ -424,7 +518,14 @@ export function useOGrid<T>(
     [
       visibleColumns,
       sort,
+      columnOrder,
+      columnWidthOverrides,
+      pinnedOverrides,
+      filters,
       setFilters,
+      setSort,
+      setVisibleColumns,
+      onColumnOrderChange,
       isServerSide,
       effectiveSelectedRows,
       selectedRows,
@@ -461,6 +562,7 @@ export function useOGrid<T>(
       totalCount: totalData,
       filteredCount: hasActiveFilters ? filteredData : undefined,
       selectedCount: effectiveSelectedRows.size,
+      suppressRowCount: true, // OGrid always has pagination which shows the total
     };
   }, [
     statusBar,
@@ -470,6 +572,84 @@ export function useOGrid<T>(
     displayTotalCount,
     hasActiveFilters,
     effectiveSelectedRows.size,
+  ]);
+
+  const handleColumnResized = useCallback(
+    (columnId: string, width: number) => {
+      setColumnWidthOverrides((prev) => ({ ...prev, [columnId]: width }));
+      onColumnResized?.(columnId, width);
+    },
+    [onColumnResized]
+  );
+
+  const handleColumnPinned = useCallback(
+    (columnId: string, pinned: 'left' | 'right' | null) => {
+      setPinnedOverrides((prev) => {
+        if (pinned === null) {
+          const { [columnId]: _, ...rest } = prev;
+          return rest;
+        }
+        return { ...prev, [columnId]: pinned };
+      });
+      onColumnPinned?.(columnId, pinned);
+    },
+    [onColumnPinned]
+  );
+
+  // --- Side bar ---
+  const sideBarState = useSideBarState({ config: sideBar });
+
+  const filterableColumns = useMemo(
+    () =>
+      columns
+        .filter((c) => c.filterable && c.filterable.type)
+        .map((c) => ({
+          columnId: c.columnId,
+          name: c.name,
+          filterField: c.filterable!.filterField ?? c.columnId,
+          filterType: c.filterable!.type as 'text' | 'multiSelect' | 'people' | 'date',
+        })),
+    [columns]
+  );
+
+  const sideBarProps: SideBarProps | null = useMemo(() => {
+    if (!sideBarState.isEnabled) return null;
+    return {
+      activePanel: sideBarState.activePanel,
+      onPanelChange: sideBarState.setActivePanel,
+      panels: sideBarState.panels,
+      position: sideBarState.position,
+      columns: columnChooserColumns,
+      visibleColumns,
+      onVisibilityChange: handleVisibilityChange,
+      onSetVisibleColumns: setVisibleColumns,
+      filterableColumns,
+      multiSelectFilters,
+      textFilters: textFilters ?? {},
+      onMultiSelectFilterChange: handleMultiSelectFilterChange,
+      onTextFilterChange: handleTextFilterChange,
+      dateFilters,
+      onDateFilterChange: handleDateFilterChange,
+      filterOptions: clientFilterOptions,
+    };
+  }, [
+    sideBarState.isEnabled,
+    sideBarState.activePanel,
+    sideBarState.setActivePanel,
+    sideBarState.panels,
+    sideBarState.position,
+    columnChooserColumns,
+    visibleColumns,
+    handleVisibilityChange,
+    setVisibleColumns,
+    filterableColumns,
+    multiSelectFilters,
+    textFilters,
+    handleMultiSelectFilterChange,
+    handleTextFilterChange,
+    dateFilters,
+    handleDateFilterChange,
+    clientFilterOptions,
   ]);
 
   const dataGridProps: IOGridDataGridProps<T> = {
@@ -482,6 +662,10 @@ export function useOGrid<T>(
     visibleColumns,
     columnOrder,
     onColumnOrderChange,
+    onColumnResized: handleColumnResized,
+    onColumnPinned: handleColumnPinned,
+    pinnedColumns: pinnedOverrides,
+    initialColumnWidths: columnWidthOverrides,
     freezeRows,
     freezeCols,
     editable,
@@ -502,11 +686,14 @@ export function useOGrid<T>(
     onTextFilterChange: handleTextFilterChange,
     peopleFilters,
     onPeopleFilterChange: handlePeopleFilterChange,
+    dateFilters,
+    onDateFilterChange: handleDateFilterChange,
     filterOptions: clientFilterOptions,
     loadingFilterOptions: dataSource?.fetchFilterOptions ? loadingFilterOptions : {},
     peopleSearch: dataSource?.searchPeople,
     getUserByEmail: dataSource?.getUserByEmail,
     layoutMode,
+    suppressHorizontalScroll,
     'aria-label': ariaLabel,
     'aria-labelledby': ariaLabelledBy,
     emptyState: {
@@ -527,6 +714,7 @@ export function useOGrid<T>(
     columnChooserColumns,
     visibleColumns,
     handleVisibilityChange,
+    columnChooserPlacement,
     title,
     toolbar,
     className,
@@ -534,5 +722,7 @@ export function useOGrid<T>(
     emptyState,
     hasActiveFilters,
     setFilters,
+    pageSizeOptions,
+    sideBarProps,
   };
 }

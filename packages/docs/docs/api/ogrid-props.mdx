@@ -1,0 +1,215 @@
+---
+sidebar_position: 1
+title: OGrid Props
+---
+
+# OGrid Props
+
+Complete reference for `IOGridProps<T>`, the props accepted by the `OGrid` component in all UI packages (`@alaarab/ogrid`, `@alaarab/ogrid-fluent`, `@alaarab/ogrid-material`).
+
+```typescript
+import { OGrid } from '@alaarab/ogrid'; // Radix (default)
+import { OGrid } from '@alaarab/ogrid-fluent';
+import { OGrid } from '@alaarab/ogrid-material';
+```
+
+## Data
+
+| Name | Type | Default | Description |
+|------|------|---------|-------------|
+| `columns` | `(IColumnDef<T> \| IColumnGroupDef<T>)[]` | **Required** | Array of column definitions and optional column groups. See [Column Definition](./column-def). |
+| `getRowId` | `(item: T) => RowId` | **Required** | Function that returns a unique identifier for each row. Must be stable across re-renders. |
+| `data` | `T[]` | `undefined` | Array of row data for client-side mode. Mutually exclusive with `dataSource`. When provided, sorting, filtering, and pagination are handled in-memory. |
+| `dataSource` | `IDataSource<T>` | `undefined` | Server-side data source. Mutually exclusive with `data`. See [Data Source](./data-source). |
+| `isLoading` | `boolean` | `false` | Whether the grid is in a loading state. When `true`, the grid displays a loading indicator. |
+
+## Sorting
+
+| Name | Type | Default | Description |
+|------|------|---------|-------------|
+| `sort` | `{ field: string; direction: 'asc' \| 'desc' }` | `undefined` | Controlled sort state. When provided, the grid uses this value and calls `onSortChange` when the user clicks a sortable column header. |
+| `onSortChange` | `(sort: { field: string; direction: 'asc' \| 'desc' }) => void` | `undefined` | Callback fired when the user changes the sort. Required for controlled sort mode. |
+| `defaultSortBy` | `string` | `undefined` | Column ID to sort by initially in uncontrolled mode. |
+| `defaultSortDirection` | `'asc' \| 'desc'` | `undefined` | Initial sort direction in uncontrolled mode. Used together with `defaultSortBy`. |
+
+## Filtering
+
+| Name | Type | Default | Description |
+|------|------|---------|-------------|
+| `filters` | `IFilters` | `undefined` | Controlled filter state. A record mapping field names to filter values. See [Types](./types) for `IFilters`. |
+| `onFiltersChange` | `(filters: IFilters) => void` | `undefined` | Callback fired when the user applies or clears a filter. Required for controlled filter mode. |
+
+## Pagination
+
+| Name | Type | Default | Description |
+|------|------|---------|-------------|
+| `page` | `number` | `undefined` | Controlled current page (1-based). |
+| `pageSize` | `number` | `undefined` | Controlled page size. |
+| `onPageChange` | `(page: number) => void` | `undefined` | Callback fired when the user navigates to a different page. |
+| `onPageSizeChange` | `(size: number) => void` | `undefined` | Callback fired when the user changes the page size. |
+| `defaultPageSize` | `number` | `10` | Initial page size in uncontrolled mode. |
+
+## Column Visibility and Order
+
+| Name | Type | Default | Description |
+|------|------|---------|-------------|
+| `visibleColumns` | `Set<string>` | `undefined` | Controlled set of visible column IDs. When provided, only these columns are displayed. |
+| `onVisibleColumnsChange` | `(cols: Set<string>) => void` | `undefined` | Callback fired when column visibility changes (e.g., via the column chooser). |
+| `columnOrder` | `string[]` | `undefined` | Controlled column order as an array of column IDs. |
+| `onColumnOrderChange` | `(order: string[]) => void` | `undefined` | Callback fired when the user reorders columns. |
+| `onColumnResized` | `(columnId: string, width: number) => void` | `undefined` | Callback fired when the user finishes resizing a column. |
+
+## Editing
+
+| Name | Type | Default | Description |
+|------|------|---------|-------------|
+| `editable` | `boolean` | `false` | Whether inline cell editing is enabled globally. Individual columns can override this via `IColumnDef.editable`. |
+| `onCellValueChanged` | `(event: ICellValueChangedEvent<T>) => void` | `undefined` | Callback fired after a cell value is committed. The event contains `item`, `columnId`, `field`, `oldValue`, `newValue`, and `rowIndex`. |
+| `onUndo` | `() => void` | `undefined` | Callback fired when the user triggers undo (Ctrl+Z or context menu). |
+| `onRedo` | `() => void` | `undefined` | Callback fired when the user triggers redo (Ctrl+Y or context menu). |
+| `canUndo` | `boolean` | `false` | Whether undo is available. Controls the enabled state of the undo context menu item. |
+| `canRedo` | `boolean` | `false` | Whether redo is available. Controls the enabled state of the redo context menu item. |
+
+## Cell Selection
+
+| Name | Type | Default | Description |
+|------|------|---------|-------------|
+| `cellSelection` | `boolean` | `true` | Whether cell selection (active cell, range selection, drag selection) is enabled. When `false`, clicking cells does not highlight them. |
+| `freezeRows` | `number` | `0` | Number of rows to freeze at the top of the grid. Frozen rows remain visible when scrolling vertically. |
+| `freezeCols` | `number` | `0` | Number of columns to freeze on the left side. Frozen columns remain visible when scrolling horizontally. |
+
+## Row Selection
+
+| Name | Type | Default | Description |
+|------|------|---------|-------------|
+| `rowSelection` | `RowSelectionMode` | `'none'` | Row selection mode: `'none'`, `'single'`, or `'multiple'`. When enabled, a checkbox column is added. |
+| `selectedRows` | `Set<RowId>` | `undefined` | Controlled set of selected row IDs. |
+| `onSelectionChange` | `(event: IRowSelectionChangeEvent<T>) => void` | `undefined` | Callback fired when row selection changes. The event contains `selectedRowIds` and `selectedItems`. |
+
+## Status Bar
+
+| Name | Type | Default | Description |
+|------|------|---------|-------------|
+| `statusBar` | `boolean \| IStatusBarProps` | `false` | Controls the status bar at the bottom of the grid. Pass `true` to show a default status bar with item counts, or pass an `IStatusBarProps` object for full control. See [Types](./types) for `IStatusBarProps`. |
+
+## Side Bar
+
+| Name | Type | Default | Description |
+|------|------|---------|-------------|
+| `sideBar` | `boolean \| ISideBarDef` | `undefined` | Controls the side bar panel. Pass `true` for default side bar, or an `ISideBarDef` object to configure panels and position. See [Types](./types) for `ISideBarDef`. |
+
+## Layout
+
+| Name | Type | Default | Description |
+|------|------|---------|-------------|
+| `layoutMode` | `'content' \| 'fill'` | `'fill'` | How the grid sizes itself. `'content'` sizes to fit content. `'fill'` expands to fill its container. |
+| `suppressHorizontalScroll` | `boolean` | `false` | When `true`, disables horizontal scrolling by setting `overflow-x: hidden` on the grid wrapper. |
+| `className` | `string` | `undefined` | Additional CSS class name applied to the root grid element. |
+| `title` | `ReactNode` | `undefined` | Title rendered above the grid. |
+| `toolbar` | `ReactNode` | `undefined` | Custom toolbar content rendered in the grid header area. |
+| `entityLabelPlural` | `string` | `undefined` | Plural label for the entity type (e.g., `"projects"`, `"users"`). Used in status bar text and empty state messages. |
+| `emptyState` | `{ message?: ReactNode; render?: () => ReactNode }` | `undefined` | Custom empty state configuration. Provide `message` for a simple text override, or `render` for a fully custom empty state component. |
+
+## Error Handling
+
+| Name | Type | Default | Description |
+|------|------|---------|-------------|
+| `onError` | `(error: unknown) => void` | `undefined` | Callback fired when the grid encounters an error (e.g., a failed server-side fetch). |
+
+## Accessibility
+
+| Name | Type | Default | Description |
+|------|------|---------|-------------|
+| `aria-label` | `string` | `undefined` | Accessible label for the grid. Use this or `aria-labelledby`, not both. |
+| `aria-labelledby` | `string` | `undefined` | ID of an element that labels the grid. Use this or `aria-label`, not both. |
+
+## Ref
+
+The `OGrid` component accepts a `ref` prop that exposes the `IOGridApi<T>` imperative API. See [Grid API](./grid-api) for full details.
+
+```typescript
+import { useRef } from 'react';
+import { OGrid, IOGridApi } from '@alaarab/ogrid';
+
+function MyGrid() {
+  const apiRef = useRef<IOGridApi<MyRow>>(null);
+
+  return (
+    <OGrid
+      ref={apiRef}
+      columns={columns}
+      data={data}
+      getRowId={(row) => row.id}
+    />
+  );
+}
+```
+
+## Minimal Example
+
+```typescript
+import { OGrid } from '@alaarab/ogrid';
+
+interface Person {
+  id: number;
+  name: string;
+  age: number;
+}
+
+const columns = [
+  { columnId: 'name', name: 'Name' },
+  { columnId: 'age', name: 'Age', type: 'numeric' as const },
+];
+
+const data: Person[] = [
+  { id: 1, name: 'Alice', age: 30 },
+  { id: 2, name: 'Bob', age: 25 },
+];
+
+function App() {
+  return (
+    <OGrid<Person>
+      columns={columns}
+      data={data}
+      getRowId={(row) => row.id}
+    />
+  );
+}
+```
+
+## Controlled vs Uncontrolled
+
+OGrid supports both controlled and uncontrolled modes for pagination, sorting, filtering, column visibility, column order, and row selection.
+
+**Uncontrolled** (default): The grid manages state internally. Use `default*` props to set initial values.
+
+```typescript
+<OGrid
+  columns={columns}
+  data={data}
+  getRowId={(row) => row.id}
+  defaultPageSize={25}
+  defaultSortBy="name"
+  defaultSortDirection="asc"
+/>
+```
+
+**Controlled**: You own the state and pass values + callbacks. The grid never updates these values on its own.
+
+```typescript
+const [page, setPage] = useState(1);
+const [pageSize, setPageSize] = useState(25);
+const [sort, setSort] = useState({ field: 'name', direction: 'asc' as const });
+
+<OGrid
+  columns={columns}
+  data={data}
+  getRowId={(row) => row.id}
+  page={page}
+  pageSize={pageSize}
+  sort={sort}
+  onPageChange={setPage}
+  onPageSizeChange={setPageSize}
+  onSortChange={setSort}
+/>
+```

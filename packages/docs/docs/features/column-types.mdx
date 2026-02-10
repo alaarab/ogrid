@@ -1,0 +1,80 @@
+---
+sidebar_position: 12
+title: Column Types
+description: Built-in column types for common data patterns — text, numeric, date, and boolean.
+---
+
+# Column Types
+
+OGrid provides built-in column types that automatically configure alignment, display formatting, cell editors, and filter types. Set `type` on a column definition to opt in.
+
+## Available Types
+
+| Type | Alignment | Default Editor | Default Filter | Display Format |
+|------|-----------|---------------|----------------|----------------|
+| `'text'` | Left (default) | Text input | Text search | `String()` |
+| `'numeric'` | Right | Text input | Text search | `String()` |
+| `'date'` | Left | Date picker | Date range (from/to) | `toLocaleDateString()` |
+| `'boolean'` | Center | Checkbox | — | `True` / `False` |
+
+## Quick Example
+
+```tsx
+const columns = [
+  { columnId: 'name', name: 'Name' },
+  { columnId: 'age', name: 'Age', type: 'numeric' },
+  {
+    columnId: 'hireDate',
+    name: 'Hire Date',
+    type: 'date',
+    filterable: { type: 'date' },
+  },
+  {
+    columnId: 'active',
+    name: 'Active',
+    type: 'boolean',
+    editable: true,
+  },
+];
+```
+
+## Date Columns
+
+Setting `type: 'date'` provides:
+
+- **Display**: Values are automatically formatted via `toLocaleDateString()` (unless you provide a custom `valueFormatter` or `renderCell`).
+- **Sorting**: Dates are compared chronologically via `Date.getTime()`, not alphabetically.
+- **Cell editor**: Uses `<input type="date">` (native browser date picker) by default.
+- **Filter**: When `filterable: { type: 'date' }` is set, the column header filter shows **From** and **To** date inputs. Both are optional — you can filter by "after", "before", or a range.
+
+### Date Filter Values
+
+Date filter values use ISO `YYYY-MM-DD` strings:
+
+```ts
+// In IFilters
+{ hireDate: { from: '2024-01-01', to: '2024-12-31' } }
+```
+
+## Boolean Columns
+
+Setting `type: 'boolean'` provides:
+
+- **Display**: Shows `True` or `False` text (override with `valueFormatter` or `renderCell`).
+- **Alignment**: Center-aligned.
+- **Cell editor**: Defaults to checkbox editor.
+
+## Custom Formatting
+
+The `type` sets sensible defaults, but you can always override with `valueFormatter`, `renderCell`, or `cellEditor`:
+
+```tsx
+{
+  columnId: 'hireDate',
+  name: 'Hire Date',
+  type: 'date',
+  valueFormatter: (value) => new Date(String(value)).toLocaleDateString('en-US', {
+    year: 'numeric', month: 'short', day: 'numeric',
+  }),
+}
+```

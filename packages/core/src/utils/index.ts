@@ -6,7 +6,7 @@ export {
   triggerCsvDownload,
 } from './exportToCsv';
 export { getCellValue } from './cellValue';
-export { flattenColumns } from './columnUtils';
+export { flattenColumns, buildHeaderRows } from './columnUtils';
 export {
   getFilterField,
   mergeFilter,
@@ -25,6 +25,11 @@ export { GRID_CONTEXT_MENU_ITEMS, getContextMenuHandlers, formatShortcut } from 
 export {
   getHeaderFilterConfig,
   getCellRenderDescriptor,
+  resolveCellDisplayContent,
+  resolveCellStyle,
+  buildInlineEditorProps,
+  buildPopoverEditorProps,
+  getCellInteractionProps,
 } from './dataGridViewModel';
 export type {
   HeaderFilterConfigInput,
@@ -32,6 +37,7 @@ export type {
   CellRenderDescriptorInput,
   CellRenderDescriptor,
   CellRenderMode,
+  CellInteractionHandlers,
 } from './dataGridViewModel';
 export type { CsvColumn } from './exportToCsv';
 export type { StatusBarPart, StatusBarPartsInput } from './statusBarHelpers';
@@ -45,3 +51,5 @@ export {
   booleanParser,
 } from './valueParsers';
 export type { ParseValueResult } from './valueParsers';
+export { computeAggregations } from './aggregationUtils';
+export type { AggregationResult } from './aggregationUtils';

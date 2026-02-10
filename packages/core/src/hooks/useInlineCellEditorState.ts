@@ -5,7 +5,7 @@
 
 import { useState, useCallback } from 'react';
 
-export type InlineCellEditorType = 'text' | 'select' | 'checkbox';
+export type InlineCellEditorType = 'text' | 'select' | 'checkbox' | 'richSelect' | 'date';
 
 export interface UseInlineCellEditorStateParams {
   value: unknown;
