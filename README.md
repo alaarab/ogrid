@@ -50,7 +50,7 @@ OGrid gives you every feature AG Grid locks behind an enterprise license — for
 |---------|-----|-------------|
 | [`@alaarab/ogrid`](./packages/radix) | [![npm](https://img.shields.io/npm/v/@alaarab/ogrid)](https://www.npmjs.com/package/@alaarab/ogrid) | **Default** — Radix UI (lightweight, no Fluent/Material needed) |
 | [`@alaarab/ogrid-fluent`](./packages/fluent) | [![npm](https://img.shields.io/npm/v/@alaarab/ogrid-fluent)](https://www.npmjs.com/package/@alaarab/ogrid-fluent) | Fluent UI v9 implementation |
-| [`@alaarab/ogrid-material`](./packages/material) | [![npm](https://img.shields.io/npm/v/@alaarab/ogrid-material)](https://www.npmjs.com/package/@alaarab/ogrid-material) | Material UI v6 implementation |
+| [`@alaarab/ogrid-material`](./packages/material) | [![npm](https://img.shields.io/npm/v/@alaarab/ogrid-material)](https://www.npmjs.com/package/@alaarab/ogrid-material) | Material UI v7 implementation |
 | [`@alaarab/ogrid-core`](./packages/core) | [![npm](https://img.shields.io/npm/v/@alaarab/ogrid-core)](https://www.npmjs.com/package/@alaarab/ogrid-core) | Headless core — types, hooks, utilities |
 
 All framework packages re-export everything from `@alaarab/ogrid-core` — one import is all you need.
@@ -209,7 +209,7 @@ npm run docs:dev                # Docusaurus dev server
 |---------|-------------------|
 | `@alaarab/ogrid` (Radix) | `react`, `react-dom` |
 | `@alaarab/ogrid-fluent` | `react`, `react-dom`, `@fluentui/react-components ^9`, `@fluentui/react-icons ^2` |
-| `@alaarab/ogrid-material` | `react`, `react-dom`, `@mui/material ^6`, `@mui/icons-material ^6`, `@emotion/react ^11`, `@emotion/styled ^11` |
+| `@alaarab/ogrid-material` | `react`, `react-dom`, `@mui/material ^7`, `@mui/icons-material ^7`, `@emotion/react ^11`, `@emotion/styled ^11` |
 | `@alaarab/ogrid-core` | `react ^17 \|\| ^18 \|\| ^19` |
 
 ## License

@@ -1,6 +1,6 @@
 {
   "name": "@alaarab/ogrid-material",
-  "version": "1.7.0",
+  "version": "1.7.1",
   "description": "OGrid Material UI implementation – MUI Table–based data grid with sorting, filtering, pagination, column chooser, spreadsheet selection, and CSV export.",
   "main": "dist/esm/index.js",
   "module": "dist/esm/index.js",
@@ -38,13 +38,13 @@
     "node": ">=18"
   },
   "dependencies": {
-    "@alaarab/ogrid-core": "^1.6.0"
+    "@alaarab/ogrid-core": "^1.7.1"
   },
   "peerDependencies": {
     "@emotion/react": "^11.0.0",
     "@emotion/styled": "^11.0.0",
-    "@mui/icons-material": "^6.0.0 || ^7.0.0",
-    "@mui/material": "^6.0.0 || ^7.0.0",
+    "@mui/icons-material": "^7.0.0",
+    "@mui/material": "^7.0.0",
     "react": "^17.0.0 || ^18.0.0 || ^19.0.0",
     "react-dom": "^17.0.0 || ^18.0.0 || ^19.0.0"
   },

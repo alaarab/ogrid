@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { useCallback, useRef } from 'react';
+import { useCallback, useRef, useMemo } from 'react';
 import { createPortal } from 'react-dom';
 import * as Popover from '@radix-ui/react-popover';
 import * as Checkbox from '@radix-ui/react-checkbox';
@@ -28,7 +28,11 @@ import {
 import styles from './DataGridTable.module.scss';
 
 
+// Module-scope stable constants (avoid per-render allocations)
 const GRID_ROOT_STYLE: React.CSSProperties = { position: 'relative', flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column' };
+const CURSOR_CELL_STYLE: React.CSSProperties = { cursor: 'cell' };
+const STOP_PROPAGATION = (e: React.MouseEvent) => e.stopPropagation();
+const PREVENT_DEFAULT = (e: React.MouseEvent) => { e.preventDefault(); };
 
 function DataGridTableInner<T>(props: IOGridDataGridProps<T>): React.ReactElement {
   const wrapperRef = useRef<HTMLDivElement>(null);
@@ -61,7 +65,8 @@ function DataGridTableInner<T>(props: IOGridDataGridProps<T>): React.ReactElemen
     visibleColumns,
   } = props;
 
-  const headerRows = buildHeaderRows(columns, visibleColumns);
+  // Memoize header rows (recursive tree traversal — avoid recomputing every render)
+  const headerRows = useMemo(() => buildHeaderRows(columns, visibleColumns), [columns, visibleColumns]);
 
   const allowOverflowX = !suppressHorizontalScroll && containerWidth > 0 && (minTableWidth > containerWidth || desiredTableWidth > containerWidth);
   const fitToContent = layoutMode === 'content';
@@ -71,8 +76,64 @@ function DataGridTableInner<T>(props: IOGridDataGridProps<T>): React.ReactElemen
     setColumnSizingOverrides,
   });
 
-  const editCallbacks = React.useMemo(() => ({ commitCellEdit, setEditingCell, setPendingEditorValue, cancelPopoverEdit }), [commitCellEdit, setEditingCell, setPendingEditorValue, cancelPopoverEdit]);
-  const interactionHandlers = React.useMemo(() => ({ handleCellMouseDown, setActiveCell, setEditingCell, handleCellContextMenu }), [handleCellMouseDown, setActiveCell, setEditingCell, handleCellContextMenu]);
+  const editCallbacks = useMemo(() => ({ commitCellEdit, setEditingCell, setPendingEditorValue, cancelPopoverEdit }), [commitCellEdit, setEditingCell, setPendingEditorValue, cancelPopoverEdit]);
+  const interactionHandlers = useMemo(() => ({ handleCellMouseDown, setActiveCell, setEditingCell, handleCellContextMenu }), [handleCellMouseDown, setActiveCell, setEditingCell, handleCellContextMenu]);
+
+  // Pre-compute column styles and classNames (avoids per-cell object creation in the row loop)
+  const columnMeta = useMemo(() => {
+    const cellStyles: Record<string, React.CSSProperties> = {};
+    const cellClasses: Record<string, string> = {};
+    const hdrStyles: Record<string, React.CSSProperties> = {};
+    const hdrClasses: Record<string, string> = {};
+
+    for (let i = 0; i < visibleCols.length; i++) {
+      const col = visibleCols[i];
+      const columnWidth = getColumnWidth(col);
+      const hasExplicitWidth = !!(columnSizingOverrides[col.columnId] || col.idealWidth != null || col.defaultWidth != null);
+      const isFreezeCol = freezeCols != null && freezeCols >= 1 && i < freezeCols;
+      const isPinnedLeft = col.pinned === 'left';
+      const isPinnedRight = col.pinned === 'right';
+
+      cellStyles[col.columnId] = {
+        minWidth: col.minWidth ?? 80,
+        width: hasExplicitWidth ? columnWidth : undefined,
+        maxWidth: hasExplicitWidth ? columnWidth : undefined,
+        textAlign: col.type === 'numeric' ? 'right' : col.type === 'boolean' ? 'center' : undefined,
+      };
+
+      hdrStyles[col.columnId] = {
+        minWidth: col.minWidth ?? 80,
+        width: hasExplicitWidth ? columnWidth : undefined,
+        maxWidth: hasExplicitWidth ? columnWidth : undefined,
+      };
+
+      const parts: string[] = [];
+      if (isFreezeCol) parts.push(styles.freezeCol);
+      if (isFreezeCol && i === 0) parts.push(styles.freezeColFirst);
+      if (isPinnedLeft) parts.push(styles.pinnedColLeft);
+      if (isPinnedRight) parts.push(styles.pinnedColRight);
+      const cn = parts.join(' ');
+      cellClasses[col.columnId] = cn;
+      hdrClasses[col.columnId] = cn;
+    }
+
+    return { cellStyles, cellClasses, hdrStyles, hdrClasses };
+  }, [visibleCols, getColumnWidth, columnSizingOverrides, freezeCols]);
+
+  // Stable row-click handler (avoids creating a new arrow function per row)
+  const selectedRowIdsRef = useRef(selectedRowIds);
+  selectedRowIdsRef.current = selectedRowIds;
+
+  const handleSingleRowClick = useCallback((e: React.MouseEvent<HTMLTableRowElement>) => {
+    if (rowSelection !== 'single') return;
+    const rowId = e.currentTarget.dataset.rowId;
+    if (!rowId) return;
+    const ids = selectedRowIdsRef.current;
+    updateSelection(ids.has(rowId) ? new Set() : new Set([rowId]));
+  }, [rowSelection, updateSelection]);
+
+  // Stable header select-all handler
+  const handleSelectAllChecked = useCallback((c: boolean | 'indeterminate') => handleSelectAll(!!c), [handleSelectAll]);
 
   const renderCellContent = useCallback(
     (item: T, col: IColumnDef<T>, rowIndex: number, colIdx: number): React.ReactNode => {
@@ -117,7 +178,7 @@ function DataGridTableInner<T>(props: IOGridDataGridProps<T>): React.ReactElemen
         <div
           className={cellClassNames}
           {...interactionProps}
-          style={descriptor.canEditAny ? { cursor: 'cell' } : undefined}
+          style={descriptor.canEditAny ? CURSOR_CELL_STYLE : undefined}
         >
           {styledContent}
           {descriptor.canEditAny && descriptor.isSelectionEndCell && (
@@ -151,7 +212,7 @@ function DataGridTableInner<T>(props: IOGridDataGridProps<T>): React.ReactElemen
         data-container-width={containerWidth}
         data-min-table-width={Math.round(minTableWidth)}
         data-has-selection={rowSelection !== 'none' ? 'true' : undefined}
-        onContextMenu={(e) => { e.preventDefault(); }}
+        onContextMenu={PREVENT_DEFAULT}
         onKeyDown={handleGridKeyDown}
         style={{
           ['--data-table-column-count' as string]: totalColCount,
@@ -176,7 +237,7 @@ function DataGridTableInner<T>(props: IOGridDataGridProps<T>): React.ReactElemen
                             <Checkbox.Root
                               className={styles.rowCheckbox}
                               checked={allSelected ? true : someSelected ? 'indeterminate' : false}
-                              onCheckedChange={(c: boolean | 'indeterminate') => handleSelectAll(!!c)}
+                              onCheckedChange={handleSelectAllChecked}
                               aria-label="Select all rows"
                             >
                               <Checkbox.Indicator className={styles.rowCheckboxIndicator}>
@@ -200,13 +261,6 @@ function DataGridTableInner<T>(props: IOGridDataGridProps<T>): React.ReactElemen
                         }
                         // Leaf cell
                         const col = cell.columnDef!;
-                        const colIdx = visibleCols.indexOf(col);
-                        const isFreezeCol =
-                          freezeCols != null && freezeCols >= 1 && colIdx < freezeCols;
-                        const isPinnedLeft = col.pinned === 'left';
-                        const isPinnedRight = col.pinned === 'right';
-                        const columnWidth = getColumnWidth(col);
-                        const hasExplicitWidth = !!(columnSizingOverrides[col.columnId] || col.idealWidth != null || col.defaultWidth != null);
                         const leafRowSpan = headerRows.length > 1 && rowIdx < headerRows.length - 1
                           ? headerRows.length - rowIdx
                           : undefined;
@@ -216,17 +270,8 @@ function DataGridTableInner<T>(props: IOGridDataGridProps<T>): React.ReactElemen
                             scope="col"
                             data-column-id={col.columnId}
                             rowSpan={leafRowSpan}
-                            className={[
-                              isFreezeCol ? styles.freezeCol : '',
-                              isFreezeCol && colIdx === 0 ? styles.freezeColFirst : '',
-                              isPinnedLeft ? styles.pinnedColLeft : '',
-                              isPinnedRight ? styles.pinnedColRight : '',
-                            ].filter(Boolean).join(' ')}
-                            style={{
-                              minWidth: col.minWidth ?? 80,
-                              width: hasExplicitWidth ? columnWidth : undefined,
-                              maxWidth: hasExplicitWidth ? columnWidth : undefined,
-                            }}
+                            className={columnMeta.hdrClasses[col.columnId] || undefined}
+                            style={columnMeta.hdrStyles[col.columnId]}
                           >
                             <ColumnHeaderFilter {...getHeaderFilterConfig(col, headerFilterInput)} />
                             <div
@@ -249,12 +294,8 @@ function DataGridTableInner<T>(props: IOGridDataGridProps<T>): React.ReactElemen
                         <tr
                           key={rowIdStr}
                           className={isSelected ? styles.selectedRow : ''}
-                          onClick={() => {
-                            if (rowSelection === 'single') {
-                              const id = getRowId(item);
-                              updateSelection(selectedRowIds.has(id) ? new Set() : new Set([id]));
-                            }
-                          }}
+                          data-row-id={rowIdStr}
+                          onClick={handleSingleRowClick}
                         >
                           {hasCheckboxCol && (
                             <td className={styles.selectionCell}>
@@ -262,7 +303,7 @@ function DataGridTableInner<T>(props: IOGridDataGridProps<T>): React.ReactElemen
                                 className={styles.selectionCellInner}
                                 data-row-index={rowIndex}
                                 data-col-index={0}
-                                onClick={(e) => e.stopPropagation()}
+                                onClick={STOP_PROPAGATION}
                               >
                                 <Checkbox.Root
                                   className={styles.rowCheckbox}
@@ -275,33 +316,15 @@ function DataGridTableInner<T>(props: IOGridDataGridProps<T>): React.ReactElemen
                               </div>
                             </td>
                           )}
-                          {visibleCols.map((col, colIdx) => {
-                            const isFreezeCol =
-                              freezeCols != null && freezeCols >= 1 && colIdx < freezeCols;
-                            const isPinnedLeft = col.pinned === 'left';
-                            const isPinnedRight = col.pinned === 'right';
-                            const columnWidth = getColumnWidth(col);
-                            const hasExplicitWidth = !!(columnSizingOverrides[col.columnId] || col.idealWidth != null || col.defaultWidth != null);
-                            return (
-                              <td
-                                key={col.columnId}
-                                className={[
-                                  isFreezeCol ? styles.freezeCol : '',
-                                  isFreezeCol && colIdx === 0 ? styles.freezeColFirst : '',
-                                  isPinnedLeft ? styles.pinnedColLeft : '',
-                                  isPinnedRight ? styles.pinnedColRight : '',
-                                ].filter(Boolean).join(' ')}
-                                style={{
-                                  minWidth: col.minWidth ?? 80,
-                                  width: hasExplicitWidth ? columnWidth : undefined,
-                                  maxWidth: hasExplicitWidth ? columnWidth : undefined,
-                                  textAlign: col.type === 'numeric' ? 'right' : col.type === 'boolean' ? 'center' : undefined,
-                                }}
-                              >
-                                {renderCellContent(item, col, rowIndex, colIdx)}
-                              </td>
-                            );
-                          })}
+                          {visibleCols.map((col, colIdx) => (
+                            <td
+                              key={col.columnId}
+                              className={columnMeta.cellClasses[col.columnId] || undefined}
+                              style={columnMeta.cellStyles[col.columnId]}
+                            >
+                              {renderCellContent(item, col, rowIndex, colIdx)}
+                            </td>
+                          ))}
                         </tr>
                       );
                     })}

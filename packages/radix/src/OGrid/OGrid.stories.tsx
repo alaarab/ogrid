@@ -201,15 +201,17 @@ export const Editable: Story = {
       },
     ];
     return (
-      <OGrid<Project>
-        data={data}
-        columns={editableColumns}
-        getRowId={getRowId}
-        entityLabelPlural="projects"
-        title={<h2 style={{ margin: 0 }}>Projects (editable name &amp; status)</h2>}
-        editable
-        onCellValueChanged={handleCellValueChanged}
-      />
+      <div>
+        <h2 style={{ margin: '0 0 8px 0' }}>Projects (editable name &amp; status)</h2>
+        <OGrid<Project>
+          data={data}
+          columns={editableColumns}
+          getRowId={getRowId}
+          entityLabelPlural="projects"
+          editable
+          onCellValueChanged={handleCellValueChanged}
+        />
+      </div>
     );
   },
 };
@@ -232,18 +234,20 @@ export const SpreadsheetExperience: Story = {
       { columnId: 'startDate', name: 'Start Date', type: 'date', sortable: true, filterable: { type: 'date' }, editable: true },
     ];
     return (
-      <OGrid<Project>
-        data={data}
-        columns={editableColumns}
-        getRowId={getRowId}
-        entityLabelPlural="projects"
-        title={<h2 style={{ margin: 0 }}>Projects (Spreadsheet)</h2>}
-        editable
-        onCellValueChanged={handleCellValueChanged}
-        rowSelection="multiple"
-        statusBar
-        defaultPageSize={25}
-      />
+      <div>
+        <h2 style={{ margin: '0 0 8px 0' }}>Projects (Spreadsheet)</h2>
+        <OGrid<Project>
+          data={data}
+          columns={editableColumns}
+          getRowId={getRowId}
+          entityLabelPlural="projects"
+          editable
+          onCellValueChanged={handleCellValueChanged}
+          rowSelection="multiple"
+          statusBar
+          defaultPageSize={25}
+        />
+      </div>
     );
   },
 };

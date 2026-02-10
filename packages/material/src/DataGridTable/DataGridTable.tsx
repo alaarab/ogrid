@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { useCallback, useRef } from 'react';
+import { useCallback, useRef, useMemo } from 'react';
 import { createPortal } from 'react-dom';
 import {
   Box,
@@ -39,8 +39,76 @@ import {
 } from '@alaarab/ogrid-core';
 
 
-// Module-scope stable styles
+// ── Module-scope stable styles (avoid per-render Emotion resolutions) ──
+
 const gridRootSx = { position: 'relative', flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column' } as const;
+
+// Row
+const ROW_HOVER_SX = { '&:hover': { bgcolor: 'action.hover' } } as const;
+
+// Checkbox column
+const CHECKBOX_CELL_SX = { width: 48, minWidth: 48, maxWidth: 48, textAlign: 'center' } as const;
+const CHECKBOX_WRAPPER_SX = { display: 'flex', alignItems: 'center', justifyContent: 'center' } as const;
+const CHECKBOX_PLACEHOLDER_SX = { width: 48, minWidth: 48, p: 0 } as const;
+
+// Header
+const STICKY_HEADER_SX = { position: 'sticky', top: 0, zIndex: 6, bgcolor: 'action.hover', '& th': { bgcolor: 'action.hover' } } as const;
+const HEADER_ROW_SX = { bgcolor: 'action.hover' } as const;
+const GROUP_HEADER_CELL_SX = { textAlign: 'center', fontWeight: 600, borderBottom: 2, borderColor: 'divider', py: 0.75 } as const;
+
+// Cell content base variants (selected by column type + editability)
+const CELL_CONTENT_BASE_SX = {
+  width: '100%', height: '100%', display: 'flex', alignItems: 'center', minWidth: 0,
+  px: '10px', py: '6px', boxSizing: 'border-box', overflow: 'hidden',
+  textOverflow: 'ellipsis', whiteSpace: 'nowrap', userSelect: 'none', outline: 'none',
+} as const;
+const CELL_CONTENT_NUMERIC_SX = { ...CELL_CONTENT_BASE_SX, justifyContent: 'flex-end', textAlign: 'right' as const } as const;
+const CELL_CONTENT_BOOLEAN_SX = { ...CELL_CONTENT_BASE_SX, justifyContent: 'center', textAlign: 'center' as const } as const;
+const CELL_CONTENT_EDITABLE_SX = { ...CELL_CONTENT_BASE_SX, cursor: 'cell' } as const;
+const CELL_CONTENT_NUMERIC_EDITABLE_SX = { ...CELL_CONTENT_NUMERIC_SX, cursor: 'cell' } as const;
+const CELL_CONTENT_BOOLEAN_EDITABLE_SX = { ...CELL_CONTENT_BOOLEAN_SX, cursor: 'cell' } as const;
+
+// Cell overlay states (only applied to the few active/selected cells)
+const CELL_ACTIVE_SX = { outline: '2px solid #217346', outlineOffset: '-1px', zIndex: 2, position: 'relative' as const, overflow: 'visible' } as const;
+const CELL_IN_RANGE_SX = { bgcolor: 'rgba(33, 115, 70, 0.12)' } as const;
+const CELL_CUT_RANGE_SX = { bgcolor: 'action.hover', opacity: 0.7 } as const;
+
+// Fill handle
+const FILL_HANDLE_SX = {
+  position: 'absolute', right: -3, bottom: -3, width: 7, height: 7,
+  bgcolor: '#217346', border: '1px solid #fff', borderRadius: '1px',
+  cursor: 'crosshair', pointerEvents: 'auto', zIndex: 3,
+} as const;
+
+// Cell <td> positioning variants
+const CELL_TD_BASE_SX = { position: 'relative' as const, p: 0, height: '1px' } as const;
+const CELL_TD_PINNED_LEFT_SX = { ...CELL_TD_BASE_SX, position: 'sticky' as const, left: 0, zIndex: 2, bgcolor: 'background.paper', willChange: 'transform' } as const;
+const CELL_TD_PINNED_RIGHT_SX = { ...CELL_TD_BASE_SX, position: 'sticky' as const, right: 0, zIndex: 2, bgcolor: 'background.paper', willChange: 'transform' } as const;
+
+// Header cell positioning variants
+const HEADER_BASE_SX = { fontWeight: 600, position: 'relative' as const } as const;
+const HEADER_PINNED_LEFT_SX = { ...HEADER_BASE_SX, position: 'sticky' as const, left: 0, top: 0, zIndex: 7, bgcolor: 'action.hover', willChange: 'transform' } as const;
+const HEADER_PINNED_RIGHT_SX = { ...HEADER_BASE_SX, position: 'sticky' as const, right: 0, top: 0, zIndex: 7, bgcolor: 'action.hover', willChange: 'transform' } as const;
+
+// Resize handle
+const RESIZE_HANDLE_SX = {
+  position: 'absolute', top: 0, right: '-3px', bottom: 0, width: '8px',
+  cursor: 'col-resize', userSelect: 'none',
+  '&::after': { content: '""', position: 'absolute', top: 0, right: '3px', bottom: 0, width: '2px' },
+  '&:hover::after': { bgcolor: 'primary.main' },
+  '&:active::after': { bgcolor: 'primary.dark' },
+} as const;
+
+// Popover
+const POPOVER_ANCHOR_SX = { minHeight: '100%', minWidth: 40 } as const;
+const POPOVER_CONTENT_SX = { p: 1 } as const;
+
+// Wrapper
+const WRAPPER_SCROLL_SX = { display: 'flex', flexDirection: 'column', minHeight: '100%' } as const;
+
+// Module-scope event handlers
+const STOP_PROPAGATION = (e: React.MouseEvent) => e.stopPropagation();
+const PREVENT_DEFAULT = (e: React.MouseEvent) => { e.preventDefault(); };
 
 function DataGridTableInner<T>(props: IOGridDataGridProps<T>): React.ReactElement {
   const wrapperRef = useRef<HTMLDivElement>(null);
@@ -73,15 +141,43 @@ function DataGridTableInner<T>(props: IOGridDataGridProps<T>): React.ReactElemen
 
   const fitToContent = layoutMode === 'content';
   const allowOverflowX = !suppressHorizontalScroll && containerWidth > 0 && (minTableWidth > containerWidth || desiredTableWidth > containerWidth);
-  const headerRows = buildHeaderRows(props.columns, props.visibleColumns);
+
+  // Memoize header rows (recursive tree traversal)
+  const headerRows = useMemo(() => buildHeaderRows(props.columns, props.visibleColumns), [props.columns, props.visibleColumns]);
 
   const { handleResizeStart, getColumnWidth } = useColumnResize<T>({
     columnSizingOverrides,
     setColumnSizingOverrides,
   });
 
-  const editCallbacks = React.useMemo(() => ({ commitCellEdit, setEditingCell, setPendingEditorValue, cancelPopoverEdit }), [commitCellEdit, setEditingCell, setPendingEditorValue, cancelPopoverEdit]);
-  const interactionHandlers = React.useMemo(() => ({ handleCellMouseDown, setActiveCell, setEditingCell, handleCellContextMenu }), [handleCellMouseDown, setActiveCell, setEditingCell, handleCellContextMenu]);
+  const editCallbacks = useMemo(() => ({ commitCellEdit, setEditingCell, setPendingEditorValue, cancelPopoverEdit }), [commitCellEdit, setEditingCell, setPendingEditorValue, cancelPopoverEdit]);
+  const interactionHandlers = useMemo(() => ({ handleCellMouseDown, setActiveCell, setEditingCell, handleCellContextMenu }), [handleCellMouseDown, setActiveCell, setEditingCell, handleCellContextMenu]);
+
+  // Stable row-click handler
+  const selectedRowIdsRef = useRef(selectedRowIds);
+  selectedRowIdsRef.current = selectedRowIds;
+
+  const handleSingleRowClick = useCallback((e: React.MouseEvent<HTMLTableRowElement>) => {
+    if (rowSelection !== 'single') return;
+    const rowId = e.currentTarget.dataset.rowId;
+    if (!rowId) return;
+    const ids = selectedRowIdsRef.current;
+    updateSelection(ids.has(rowId) ? new Set() : new Set([rowId]));
+  }, [rowSelection, updateSelection]);
+
+  // Wrapper sx (depends on dynamic values — memoize to avoid recreation)
+  const wrapperSx = useMemo(() => ({
+    position: 'relative' as const,
+    flex: 1,
+    minHeight: 0,
+    width: fitToContent ? 'fit-content' : '100%',
+    maxWidth: '100%',
+    overflowX: suppressHorizontalScroll ? 'hidden' as const : allowOverflowX ? 'auto' as const : 'hidden' as const,
+    overflowY: 'auto' as const,
+    bgcolor: 'background.paper',
+    willChange: 'scroll-position',
+    '& [data-drag-range]': { bgcolor: 'rgba(33, 115, 70, 0.12) !important' },
+  }), [fitToContent, suppressHorizontalScroll, allowOverflowX]);
 
   const renderCellContent = useCallback(
     (item: T, col: IColumnDef<T>, rowIndex: number, colIdx: number): React.ReactNode => {
@@ -96,7 +192,7 @@ function DataGridTableInner<T>(props: IOGridDataGridProps<T>): React.ReactElemen
         const CustomEditor = col.cellEditor as React.ComponentType<ICellEditorProps<T>>;
         return (
           <>
-            <Box ref={(el: HTMLDivElement | null) => { if (el) setPopoverAnchorEl(el); }} sx={{ minHeight: '100%', minWidth: 40 }} aria-hidden />
+            <Box ref={(el: HTMLDivElement | null) => { if (el) setPopoverAnchorEl(el); }} sx={POPOVER_ANCHOR_SX} aria-hidden />
             <Popover
               open={!!popoverAnchorEl}
               anchorEl={popoverAnchorEl}
@@ -104,7 +200,7 @@ function DataGridTableInner<T>(props: IOGridDataGridProps<T>): React.ReactElemen
               anchorOrigin={{ vertical: 'bottom', horizontal: 'left' }}
               transformOrigin={{ vertical: 'top', horizontal: 'left' }}
             >
-              <Box sx={{ p: 1 }}>
+              <Box sx={POPOVER_CONTENT_SX}>
                 <CustomEditor {...editorProps} />
               </Box>
             </Popover>
@@ -116,26 +212,22 @@ function DataGridTableInner<T>(props: IOGridDataGridProps<T>): React.ReactElemen
       const cellStyle = resolveCellStyle(col, item);
       const styledContent = cellStyle ? <Box component="span" sx={cellStyle}>{content}</Box> : content;
 
-      const cellSx = {
-        width: '100%',
-        height: '100%',
-        display: 'flex',
-        alignItems: 'center',
-        minWidth: 0,
-        px: '10px',
-        py: '6px',
-        boxSizing: 'border-box',
-        overflow: 'hidden',
-        textOverflow: 'ellipsis',
-        whiteSpace: 'nowrap',
-        userSelect: 'none',
-        outline: 'none',
-        ...(col.type === 'numeric' && { justifyContent: 'flex-end', textAlign: 'right' as const }),
-        ...(col.type === 'boolean' && { justifyContent: 'center', textAlign: 'center' as const }),
-        ...(descriptor.isActive && !descriptor.isInRange && { outline: '2px solid #217346', outlineOffset: '-1px', zIndex: 2, position: 'relative' as const, overflow: 'visible' }),
-        ...(descriptor.isInRange && { bgcolor: 'rgba(33, 115, 70, 0.12)' }),
-        ...(descriptor.isInCutRange && { bgcolor: 'action.hover', opacity: 0.7 }),
-      };
+      // Select stable base sx by column type + editability (module-scope = Emotion cache hit)
+      let baseSx;
+      if (col.type === 'numeric') baseSx = descriptor.canEditAny ? CELL_CONTENT_NUMERIC_EDITABLE_SX : CELL_CONTENT_NUMERIC_SX;
+      else if (col.type === 'boolean') baseSx = descriptor.canEditAny ? CELL_CONTENT_BOOLEAN_EDITABLE_SX : CELL_CONTENT_BOOLEAN_SX;
+      else baseSx = descriptor.canEditAny ? CELL_CONTENT_EDITABLE_SX : CELL_CONTENT_BASE_SX;
+
+      // Only build array sx for the few cells with overlay state
+      const hasOverlay = (descriptor.isActive && !descriptor.isInRange) || descriptor.isInRange || descriptor.isInCutRange;
+      const cellSx = hasOverlay
+        ? [
+            baseSx,
+            descriptor.isActive && !descriptor.isInRange ? CELL_ACTIVE_SX : false,
+            descriptor.isInRange ? CELL_IN_RANGE_SX : false,
+            descriptor.isInCutRange ? CELL_CUT_RANGE_SX : false,
+          ].filter(Boolean)
+        : baseSx;
 
       const interactionProps = getCellInteractionProps(descriptor, col.columnId, interactionHandlers);
 
@@ -143,28 +235,11 @@ function DataGridTableInner<T>(props: IOGridDataGridProps<T>): React.ReactElemen
         <Box
           component="div"
           {...interactionProps}
-          sx={descriptor.canEditAny ? [{ cursor: 'cell' }, cellSx] : cellSx}
+          sx={cellSx}
         >
           {styledContent}
           {descriptor.canEditAny && descriptor.isSelectionEndCell && (
-            <Box
-              component="div"
-              onMouseDown={handleFillHandleMouseDown}
-              aria-label="Fill handle"
-              sx={{
-                position: 'absolute',
-                right: -3,
-                bottom: -3,
-                width: 7,
-                height: 7,
-                bgcolor: '#217346',
-                border: '1px solid #fff',
-                borderRadius: '1px',
-                cursor: 'crosshair',
-                pointerEvents: 'auto',
-                zIndex: 3,
-              }}
-            />
+            <Box component="div" onMouseDown={handleFillHandleMouseDown} aria-label="Fill handle" sx={FILL_HANDLE_SX} />
           )}
         </Box>
       );
@@ -182,47 +257,26 @@ function DataGridTableInner<T>(props: IOGridDataGridProps<T>): React.ReactElemen
         aria-labelledby={ariaLabelledBy}
         onMouseDown={(e) => { lastMouseShiftRef.current = e.shiftKey; }}
         onKeyDown={handleGridKeyDown}
-        onContextMenu={(e: React.MouseEvent) => {
-          e.preventDefault();
-        }}
+        onContextMenu={PREVENT_DEFAULT}
         data-overflow-x={allowOverflowX ? 'true' : 'false'}
-        sx={{
-          position: 'relative',
-          flex: 1,
-          minHeight: 0,
-          width: fitToContent ? 'fit-content' : '100%',
-          maxWidth: '100%',
-          overflowX: suppressHorizontalScroll ? 'hidden' : (allowOverflowX ? 'auto' : 'hidden'),
-          overflowY: 'auto',
-          bgcolor: 'background.paper',
-          // Drag-range highlight applied via DOM attributes during drag (bypasses React for performance)
-          '& [data-drag-range]': { bgcolor: 'rgba(33, 115, 70, 0.12) !important' },
-        }}
+        sx={wrapperSx}
       >
-      <Box sx={{ display: 'flex', flexDirection: 'column', minHeight: '100%' }}>
+      <Box sx={WRAPPER_SCROLL_SX}>
       <TableContainer sx={{ minWidth: allowOverflowX ? minTableWidth : undefined }}>
         <Box ref={tableContainerRef} sx={{ position: 'relative', opacity: isLoading && items.length > 0 ? 0.6 : 1 }}>
           <Table size="small" sx={{ overflow: 'hidden', minWidth: minTableWidth }}
             data-freeze-rows={freezeRows != null && freezeRows >= 1 ? freezeRows : undefined}
             data-freeze-cols={freezeCols != null && freezeCols >= 1 ? freezeCols : undefined}
           >
-            <TableHead
-              sx={{
-                position: 'sticky',
-                top: 0,
-                zIndex: 6,
-                bgcolor: 'action.hover',
-                '& th': { bgcolor: 'action.hover' },
-              }}
-            >
+            <TableHead sx={STICKY_HEADER_SX}>
               {headerRows.map((row, rowIdx) => (
-                <TableRow key={rowIdx} sx={{ bgcolor: 'action.hover' }}>
+                <TableRow key={rowIdx} sx={HEADER_ROW_SX}>
                   {/* Checkbox column in the last (leaf) row only */}
                   {rowIdx === headerRows.length - 1 && hasCheckboxCol && (
                     <TableCell
                       padding="checkbox"
                       rowSpan={headerRows.length > 1 ? 1 : undefined}
-                      sx={{ width: 48, minWidth: 48, maxWidth: 48, textAlign: 'center' }}
+                      sx={CHECKBOX_CELL_SX}
                     >
                       <Checkbox
                         checked={allSelected}
@@ -235,7 +289,7 @@ function DataGridTableInner<T>(props: IOGridDataGridProps<T>): React.ReactElemen
                   )}
                   {/* Empty placeholder for checkbox in the first group row */}
                   {rowIdx === 0 && rowIdx < headerRows.length - 1 && hasCheckboxCol && (
-                    <TableCell rowSpan={headerRows.length - 1} sx={{ width: 48, minWidth: 48, p: 0 }} />
+                    <TableCell rowSpan={headerRows.length - 1} sx={CHECKBOX_PLACEHOLDER_SX} />
                   )}
                   {row.map((cell, cellIdx) => {
                     if (cell.isGroup) {
@@ -245,93 +299,31 @@ function DataGridTableInner<T>(props: IOGridDataGridProps<T>): React.ReactElemen
                           colSpan={cell.colSpan}
                           component="th"
                           scope="colgroup"
-                          sx={{
-                            textAlign: 'center',
-                            fontWeight: 600,
-                            borderBottom: 2,
-                            borderColor: 'divider',
-                            py: 0.75,
-                          }}
+                          sx={GROUP_HEADER_CELL_SX}
                         >
                           {cell.label}
                         </TableCell>
                       );
                     }
-                    // Leaf cell — existing header rendering with ColumnHeaderFilter + resize handle
+                    // Leaf cell
                     const col = cell.columnDef!;
                     const colIdx = visibleCols.indexOf(col);
                     const isFreezeCol = freezeCols != null && freezeCols >= 1 && colIdx < freezeCols;
                     const isPinnedLeft = col.pinned === 'left';
                     const isPinnedRight = col.pinned === 'right';
                     const columnWidth = getColumnWidth(col);
+                    const headerSx = isPinnedLeft || (isFreezeCol && colIdx === 0) ? HEADER_PINNED_LEFT_SX : isPinnedRight ? HEADER_PINNED_RIGHT_SX : HEADER_BASE_SX;
                     return (
                       <TableCell
                         key={col.columnId}
                         component="th"
                         scope="col"
                         rowSpan={headerRows.length > 1 ? headerRows.length - rowIdx : undefined}
-                        sx={{
-                          minWidth: col.minWidth ?? 80,
-                          width: columnWidth,
-                          maxWidth: columnWidth,
-                          fontWeight: 600,
-                          position: 'relative',
-                          ...(isFreezeCol && colIdx === 0
-                            ? {
-                                position: 'sticky',
-                                left: 0,
-                                top: 0,
-                                zIndex: 7,
-                                bgcolor: 'action.hover',
-                              }
-                            : {}),
-                          ...(isPinnedLeft
-                            ? {
-                                position: 'sticky',
-                                left: 0,
-                                top: 0,
-                                zIndex: 7,
-                                bgcolor: 'action.hover',
-                              }
-                            : {}),
-                          ...(isPinnedRight
-                            ? {
-                                position: 'sticky',
-                                right: 0,
-                                top: 0,
-                                zIndex: 7,
-                                bgcolor: 'action.hover',
-                              }
-                            : {}),
-                        }}
+                        sx={headerSx}
+                        style={{ minWidth: col.minWidth ?? 80, width: columnWidth, maxWidth: columnWidth }}
                       >
                         <ColumnHeaderFilter {...getHeaderFilterConfig(col, headerFilterInput)} />
-                        <Box
-                          onMouseDown={(e) => handleResizeStart(e, col)}
-                          sx={{
-                            position: 'absolute',
-                            top: 0,
-                            right: '-3px',
-                            bottom: 0,
-                            width: '8px',
-                            cursor: 'col-resize',
-                            userSelect: 'none',
-                            '&::after': {
-                              content: '""',
-                              position: 'absolute',
-                              top: 0,
-                              right: '3px',
-                              bottom: 0,
-                              width: '2px',
-                            },
-                            '&:hover::after': {
-                              bgcolor: 'primary.main',
-                            },
-                            '&:active::after': {
-                              bgcolor: 'primary.dark',
-                            },
-                          }}
-                        />
+                        <Box onMouseDown={(e) => handleResizeStart(e, col)} sx={RESIZE_HANDLE_SX} />
                       </TableCell>
                     );
                   })}
@@ -347,21 +339,17 @@ function DataGridTableInner<T>(props: IOGridDataGridProps<T>): React.ReactElemen
                     <TableRow
                       key={rowIdStr}
                       selected={isSelected}
-                      onClick={() => {
-                        if (rowSelection === 'single') {
-                          const id = getRowId(item);
-                          updateSelection(selectedRowIds.has(id) ? new Set() : new Set([id]));
-                        }
-                      }}
-                      sx={{ '&:hover': { bgcolor: 'action.hover' } }}
+                      data-row-id={rowIdStr}
+                      onClick={handleSingleRowClick}
+                      sx={ROW_HOVER_SX}
                     >
                       {hasCheckboxCol && (
-                        <TableCell padding="checkbox" sx={{ width: 48, minWidth: 48, maxWidth: 48, textAlign: 'center' }}>
+                        <TableCell padding="checkbox" sx={CHECKBOX_CELL_SX}>
                           <Box
                             data-row-index={rowIndex}
                             data-col-index={0}
-                            onClick={(e) => e.stopPropagation()}
-                            sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                            onClick={STOP_PROPAGATION}
+                            sx={CHECKBOX_WRAPPER_SX}
                           >
                             <Checkbox
                               checked={selectedRowIds.has(rowIdStr)}
@@ -377,41 +365,12 @@ function DataGridTableInner<T>(props: IOGridDataGridProps<T>): React.ReactElemen
                         const isPinnedLeft = col.pinned === 'left';
                         const isPinnedRight = col.pinned === 'right';
                         const columnWidth = getColumnWidth(col);
+                        const tdSx = isPinnedLeft || (isFreezeCol && colIdx === 0) ? CELL_TD_PINNED_LEFT_SX : isPinnedRight ? CELL_TD_PINNED_RIGHT_SX : CELL_TD_BASE_SX;
                         return (
                           <TableCell
                             key={col.columnId}
-                            sx={{
-                              minWidth: col.minWidth ?? 80,
-                              width: columnWidth,
-                              maxWidth: columnWidth,
-                              position: 'relative',
-                              p: 0,
-                              height: '1px',
-                              ...(isFreezeCol && colIdx === 0
-                                ? {
-                                    position: 'sticky',
-                                    left: 0,
-                                    zIndex: 2,
-                                    bgcolor: 'background.paper',
-                                  }
-                                : {}),
-                              ...(isPinnedLeft
-                                ? {
-                                    position: 'sticky',
-                                    left: 0,
-                                    zIndex: 2,
-                                    bgcolor: 'background.paper',
-                                  }
-                                : {}),
-                              ...(isPinnedRight
-                                ? {
-                                    position: 'sticky',
-                                    right: 0,
-                                    zIndex: 2,
-                                    bgcolor: 'background.paper',
-                                  }
-                                : {}),
-                            }}
+                            sx={tdSx}
+                            style={{ minWidth: col.minWidth ?? 80, width: columnWidth, maxWidth: columnWidth }}
                           >
                             {renderCellContent(item, col, rowIndex, colIdx)}
                           </TableCell>
