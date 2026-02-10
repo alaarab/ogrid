@@ -1,0 +1,87 @@
+---
+sidebar_position: 2
+title: Installation
+description: Install OGrid for your framework
+---
+
+# Installation
+
+OGrid ships as separate packages for each UI framework. Pick the one that matches your project's design system.
+
+## Radix UI (Default)
+
+The lightest option. Radix UI primitives are bundled as regular dependencies, so there are no additional peer dependencies beyond React.
+
+```bash
+npm install @alaarab/ogrid
+```
+
+## Fluent UI
+
+For projects using Microsoft's Fluent UI v9 design system. Requires `@fluentui/react-components` as a peer dependency.
+
+```bash
+npm install @alaarab/ogrid-fluent @fluentui/react-components
+```
+
+## Material UI
+
+For projects using Google's Material Design via MUI v6. Requires MUI core and Emotion as peer dependencies.
+
+```bash
+npm install @alaarab/ogrid-material @mui/material @emotion/react @emotion/styled
+```
+
+## Core Only (Headless)
+
+If you want to build your own UI layer on top of OGrid's hooks and utilities, install the core package directly. This is what the three UI packages use internally.
+
+```bash
+npm install @alaarab/ogrid-core
+```
+
+:::info
+You typically do not need to install `@alaarab/ogrid-core` separately. All three UI packages re-export everything from core, so types like `IColumnDef`, `IOGridApi`, and hooks like `useUndoRedo` are available directly from your chosen UI package.
+:::
+
+## Requirements
+
+| Requirement | Version |
+|---|---|
+| React | 17, 18, or 19 |
+| TypeScript | 5.x recommended (not required) |
+| Node.js | >= 18 (for development/build tooling) |
+
+## Verifying the Installation
+
+After installing, confirm everything is working by rendering a minimal grid:
+
+```tsx
+import { OGrid, type IColumnDef } from '@alaarab/ogrid'; // or ogrid-fluent, ogrid-material
+
+type Row = { id: number; name: string };
+
+const columns: IColumnDef<Row>[] = [
+  { columnId: 'name', name: 'Name' },
+];
+
+function App() {
+  return (
+    <OGrid<Row>
+      columns={columns}
+      data={[{ id: 1, name: 'Test' }]}
+      getRowId={(row) => row.id}
+    />
+  );
+}
+```
+
+If the grid renders with a single row showing "Test", your installation is correct.
+
+## Next Steps
+
+Follow the quick start guide for your framework:
+
+- [Quick Start: Radix](./quick-start-radix)
+- [Quick Start: Fluent UI](./quick-start-fluent)
+- [Quick Start: Material UI](./quick-start-material)

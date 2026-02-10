@@ -1,0 +1,131 @@
+---
+sidebar_position: 10
+title: Column Groups
+description: Multi-row grouped column headers with arbitrary nesting
+---
+
+import ColumnGroupsDemo from '@site/src/components/demos/ColumnGroupsDemo';
+
+# Column Groups
+
+Group related columns under shared parent headers. OGrid supports arbitrarily nested column groups that render as multi-row `<thead>` headers.
+
+## Live Demo
+
+<ColumnGroupsDemo />
+
+## Quick Example
+
+```tsx
+import { OGrid } from '@alaarab/ogrid'; // or ogrid-fluent, ogrid-material
+import type { IColumnDef, IColumnGroupDef } from '@alaarab/ogrid-core';
+
+interface Employee {
+  id: number;
+  firstName: string;
+  lastName: string;
+  department: string;
+  salary: number;
+}
+
+const columns: (IColumnDef<Employee> | IColumnGroupDef<Employee>)[] = [
+  {
+    headerName: 'Personal Info',
+    children: [
+      { columnId: 'firstName', name: 'First Name' },
+      { columnId: 'lastName', name: 'Last Name' },
+    ],
+  },
+  {
+    headerName: 'Employment',
+    children: [
+      { columnId: 'department', name: 'Department' },
+      { columnId: 'salary', name: 'Salary', type: 'numeric' },
+    ],
+  },
+];
+
+function App() {
+  return (
+    <OGrid
+      columns={columns}
+      data={employees}
+      getRowId={(e) => e.id}
+    />
+  );
+}
+```
+
+This renders a two-row header: the first row shows "Personal Info" spanning two columns and "Employment" spanning two columns, with the individual column names in the second row.
+
+## How It Works
+
+Column groups use the `IColumnGroupDef<T>` type. A group has a `headerName` (the text displayed in the group header cell) and a `children` array that can contain either `IColumnDef` items or nested `IColumnGroupDef` items.
+
+```tsx
+// IColumnGroupDef<T>
+{
+  headerName: string;
+  children: (IColumnGroupDef<T> | IColumnDef<T>)[];
+}
+```
+
+When the `columns` prop contains groups, OGrid internally calls `buildHeaderRows()` to produce a multi-row header model. Each group header cell spans the correct number of leaf columns via `colSpan`.
+
+### Nested Groups
+
+Groups can be nested to any depth. Each level adds another header row.
+
+```tsx
+const columns: (IColumnDef<Row> | IColumnGroupDef<Row>)[] = [
+  {
+    headerName: 'Contact',
+    children: [
+      {
+        headerName: 'Name',
+        children: [
+          { columnId: 'firstName', name: 'First' },
+          { columnId: 'lastName', name: 'Last' },
+        ],
+      },
+      { columnId: 'email', name: 'Email' },
+    ],
+  },
+  { columnId: 'role', name: 'Role' },
+];
+```
+
+This produces three header rows:
+
+| Contact (span 3) | Role (span 1, rowSpan 3) |
+|---|---|
+| Name (span 2) | Email (rowSpan 2) | |
+| First | Last | | |
+
+### Mixing Groups and Standalone Columns
+
+Standalone `IColumnDef` items at the top level are valid alongside groups. They span all header rows vertically.
+
+## Group Header Behavior
+
+Group headers are display-only:
+
+- **Not sortable.** Clicking a group header does nothing.
+- **Not filterable.** No filter icon or popover appears on group headers.
+- **Not resizable.** Group headers cannot be dragged to resize.
+- **Centered text.** Group header labels are centered over their children by default.
+
+Sorting, filtering, and resizing remain available on the leaf column headers beneath the groups.
+
+## Props Reference
+
+| Type | Field | Description |
+|---|---|---|
+| `IColumnGroupDef<T>` | `headerName` | Display text for the group header |
+| `IColumnGroupDef<T>` | `children` | Array of child columns or nested groups |
+| `IOGridProps<T>` | `columns` | Accepts `(IColumnDef<T> \| IColumnGroupDef<T>)[]` |
+
+## Related
+
+- [Column Pinning](./column-pinning) -- pin grouped columns to the left edge
+- [Column Chooser](./column-chooser) -- show/hide columns within groups

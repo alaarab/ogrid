@@ -1,0 +1,103 @@
+---
+sidebar_position: 5
+title: Spreadsheet Selection
+description: Excel-like cell selection with active cell, range selection, and drag-to-select.
+---
+
+import SpreadsheetSelectionDemo from '@site/src/components/demos/SpreadsheetSelectionDemo';
+
+# Spreadsheet Selection
+
+OGrid provides Excel-like cell selection out of the box. Click a cell to make it active, drag or Shift+click to select a range. The active cell gets a green border, and selected ranges are highlighted with a green background.
+
+## Live Demo
+
+<SpreadsheetSelectionDemo />
+
+## Quick Example
+
+```tsx
+import { OGrid } from '@alaarab/ogrid';
+
+function App() {
+  return (
+    <OGrid
+      columns={columns}
+      data={items}
+      getRowId={(item) => item.id}
+      cellSelection  // default: true
+    />
+  );
+}
+```
+
+## How It Works
+
+Cell selection is **enabled by default** (`cellSelection={true}`). When active:
+
+- **Click** a cell to make it the active cell (green border).
+- **Shift+Click** another cell to select a rectangular range from the active cell to the clicked cell.
+- **Click and drag** across cells to select a range.
+- **Ctrl+A** selects all cells in the grid.
+- **Arrow keys** move the active cell. **Shift+Arrow** extends the selection range.
+
+The selection range is represented by `ISelectionRange`:
+
+```tsx
+interface ISelectionRange {
+  startRow: number;   // row index of the anchor cell
+  startCol: number;   // column index of the anchor cell
+  endRow: number;     // row index of the end cell
+  endCol: number;     // column index of the end cell
+}
+```
+
+### Performance
+
+Drag selection is optimized with `requestAnimationFrame` and DOM attribute toggling. During a drag, React state is not updated on every mouse move -- only on mouse up. This keeps the grid responsive even with thousands of cells.
+
+### Disabling Cell Selection
+
+Pass `cellSelection={false}` to disable all spreadsheet-style selection. This also disables the fill handle, clipboard integration, and context menu cell operations:
+
+```tsx
+<OGrid
+  columns={columns}
+  data={items}
+  getRowId={(item) => item.id}
+  cellSelection={false}
+/>
+```
+
+### Selection Styling
+
+Selection colors use CSS custom properties for easy theming:
+
+```css
+--ogrid-selection: #217346;          /* Excel green, used for active cell border */
+--ogrid-selection-bg: rgba(33, 115, 70, 0.08);  /* range background */
+```
+
+## Props
+
+| Prop | Type | Default | Description |
+|------|------|---------|-------------|
+| `cellSelection` | `boolean` | `true` | Enable or disable spreadsheet-style cell selection. |
+
+## Keyboard Shortcuts
+
+| Key | Action |
+|-----|--------|
+| Click | Select a single cell |
+| Shift+Click | Extend selection to a range |
+| Click+Drag | Select a range by dragging |
+| Arrow keys | Move active cell |
+| Shift+Arrow | Extend selection range |
+| Ctrl+A | Select all cells |
+
+## Related
+
+- [Clipboard](./clipboard) -- copy/paste selected cells
+- [Fill Handle](./fill-handle) -- drag to fill from selection
+- [Cell Editing](./cell-editing) -- edit the active cell
+- [Row Selection](./row-selection) -- select entire rows instead of cells

@@ -30,6 +30,11 @@ export function useActiveCell(
     const cell = wrapperRef.current.querySelector(selector) as HTMLElement | null;
     if (cell) {
       if (typeof cell.scrollIntoView === 'function') {
+        // Account for sticky <thead> so scrollIntoView doesn't leave
+        // the cell hidden behind the header.
+        const thead = wrapperRef.current.querySelector('thead');
+        const headerHeight = thead ? thead.getBoundingClientRect().height : 0;
+        cell.style.scrollMarginTop = `${headerHeight}px`;
         cell.scrollIntoView({ block: 'nearest', inline: 'nearest' });
       }
       if (document.activeElement !== cell && typeof cell.focus === 'function') {

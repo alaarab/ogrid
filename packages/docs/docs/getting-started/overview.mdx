@@ -1,0 +1,123 @@
+---
+sidebar_position: 1
+title: Overview
+description: What is OGrid and why use it
+---
+
+# Overview
+
+OGrid is a lightweight, open-source React data grid library that delivers spreadsheet-grade features without the enterprise paywall. It ships with three UI implementations -- Radix, Fluent UI, and Material UI -- all powered by a shared headless core.
+
+## Why OGrid?
+
+Most production-grade React data grids fall into one of two camps: free but limited, or feature-rich but locked behind expensive licenses. OGrid bridges that gap.
+
+- **Free and MIT-licensed.** Every feature is included. No enterprise tier, no feature gating.
+- **20+ built-in features.** Sorting, filtering, pagination, cell editing, clipboard, undo/redo, fill handle, row selection, cell range selection, column pinning, column groups, CSV export, context menu, keyboard navigation, status bar, and more.
+- **Three UI frameworks.** Pick the one that matches your design system -- or switch later with zero logic changes.
+- **TypeScript-first.** Full strict-mode TypeScript with exported types for every prop, event, and API method.
+- **Lightweight.** The Radix package has no heavy framework dependency. Fluent and Material packages use their respective component libraries as peer dependencies.
+
+## Architecture
+
+OGrid is built on a **headless core + thin UI shell** pattern. All state management, data processing, and business logic live in `@alaarab/ogrid-core`. The three UI packages are pure rendering layers — they consume headless state and map it to framework-specific primitives. No duplicated logic, no drift.
+
+```mermaid
+flowchart TD
+  subgraph ui [" "]
+    direction LR
+    radix("<b>@alaarab/ogrid</b><br/><small>Radix Primitives</small>")
+    fluent("<b>@alaarab/ogrid-fluent</b><br/><small>Fluent UI v9</small>")
+    material("<b>@alaarab/ogrid-material</b><br/><small>MUI v6</small>")
+  end
+
+  radix --> core
+  fluent --> core
+  material --> core
+
+  core("<b>@alaarab/ogrid-core</b><br/><small>Types · Hooks · Utilities · Headless Components</small>")
+
+  style radix fill:#217346,color:#fff,stroke:#185530,stroke-width:2px
+  style fluent fill:#217346,color:#fff,stroke:#185530,stroke-width:2px
+  style material fill:#217346,color:#fff,stroke:#185530,stroke-width:2px
+  style core fill:#0d0d14,color:#3ab876,stroke:#3ab876,stroke-width:2px
+  style ui fill:none,stroke:none
+```
+
+### Core Layer — `@alaarab/ogrid-core`
+
+The engine. Every feature is implemented once here as framework-agnostic React hooks and utilities:
+
+| Domain | Hooks |
+|---|---|
+| **Orchestration** | `useOGrid` · `useDataGridState` |
+| **Cell Editing** | `useCellEditing` · `useInlineCellEditorState` · `useRichSelectState` |
+| **Selection** | `useCellSelection` · `useRowSelection` · `useActiveCell` |
+| **Navigation** | `useKeyboardNavigation` (arrow keys, Tab, Enter, Ctrl+Arrow) |
+| **Clipboard** | `useClipboard` · `useFillHandle` · `useUndoRedo` |
+| **Layout** | `useColumnResize` · `useSideBarState` · `useColumnChooserState` |
+| **Filtering** | `useColumnHeaderFilterState` · `useFilterOptions` |
+
+Plus headless components (`OGridLayout`, `StatusBar`, `SideBar`, `GridContextMenu`), utilities (`exportToCsv`, `computeAggregations`, `buildHeaderRows`), and the full type system (`IOGridProps`, `IColumnDef`, `IOGridApi`, etc.).
+
+### UI Layer — Pick Your Framework
+
+Each UI package is a thin shell that calls the same core hooks and renders results into native components:
+
+| Package | Built on | Best for |
+|---|---|---|
+| `@alaarab/ogrid` | Radix primitives | Lightweight apps, custom design systems |
+| `@alaarab/ogrid-fluent` | Fluent UI v9 | Microsoft 365, SharePoint, Teams apps |
+| `@alaarab/ogrid-material` | MUI v6 | Material Design apps, dashboards |
+
+All three export the same `OGrid` component with the same props. All three pass the same 89 integration tests. Switching frameworks is a one-line import change — your column definitions, event handlers, data sources, and API calls stay identical.
+
+### Why This Matters
+
+- **Write once, render anywhere.** A bug fix or feature in core lands across all three frameworks instantly.
+- **Zero lock-in.** Migrate between frameworks without rewriting business logic.
+- **Guaranteed parity.** Shared test factories ensure all three packages behave identically.
+- **Small surface area.** No duplicated state logic to drift out of sync.
+
+## Packages
+
+| Package | npm | Description |
+|---|---|---|
+| `@alaarab/ogrid` | [![npm](https://img.shields.io/npm/v/@alaarab/ogrid)](https://npmjs.com/package/@alaarab/ogrid) | Radix UI implementation (default, lightweight) |
+| `@alaarab/ogrid-fluent` | [![npm](https://img.shields.io/npm/v/@alaarab/ogrid-fluent)](https://npmjs.com/package/@alaarab/ogrid-fluent) | Fluent UI v9 implementation |
+| `@alaarab/ogrid-material` | [![npm](https://img.shields.io/npm/v/@alaarab/ogrid-material)](https://npmjs.com/package/@alaarab/ogrid-material) | Material UI v6 implementation |
+| `@alaarab/ogrid-core` | [![npm](https://img.shields.io/npm/v/@alaarab/ogrid-core)](https://npmjs.com/package/@alaarab/ogrid-core) | Headless core (types, hooks, utilities) |
+
+## Feature Highlights
+
+| Feature | Description |
+|---|---|
+| Sorting | Single-column sort with ascending/descending toggle |
+| Filtering | Text, multi-select, and people filters per column |
+| Pagination | Client-side or server-side with configurable page sizes |
+| Cell Editing | Inline text, select, checkbox, and rich select editors |
+| Cell Selection | Spreadsheet-style range selection with drag support |
+| Clipboard | Copy/paste with multi-cell support (Ctrl+C / Ctrl+V) |
+| Fill Handle | Drag to fill cells (like Excel) |
+| Undo/Redo | Full undo/redo stack for cell edits |
+| Row Selection | Single or multiple row selection with checkbox column |
+| Column Pinning | Pin columns to left or right edge |
+| Column Groups | Multi-row grouped column headers |
+| Column Chooser | Show/hide columns with a dropdown |
+| Context Menu | Right-click menu with copy, paste, undo, and export |
+| CSV Export | One-click export to CSV |
+| Keyboard Navigation | Arrow keys, Tab, Enter, Escape for full keyboard control |
+| Status Bar | Row count, filtered count, selected count, and aggregations |
+| Server-Side Data | `IDataSource` interface for server-side pagination and filtering |
+| Grid API | Imperative `IOGridApi` ref for programmatic control |
+| Column Resize | Drag column borders to resize |
+| Theming | Inherits your framework's theme automatically |
+
+## Coming from AG Grid?
+
+OGrid is designed as a drop-in replacement for AG Grid with a simpler, more React-idiomatic API. If you are migrating from AG Grid, see the [Migration Guide](../guides/migration-from-ag-grid).
+
+## Next Steps
+
+- [Installation](./installation) -- install OGrid for your framework
+- Quick start guides for [Radix](./quick-start-radix), [Fluent UI](./quick-start-fluent), or [Material UI](./quick-start-material)
