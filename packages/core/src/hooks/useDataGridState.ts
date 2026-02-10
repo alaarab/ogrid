@@ -282,6 +282,7 @@ export function useDataGridState<T>(
 
   const handleCellMouseDown = useCallback(
     (e: React.MouseEvent, rowIndex: number, globalColIndex: number) => {
+      if (e.button !== 0) return;
       (wrapperRef as RefObject<HTMLDivElement | null>).current?.focus();
       clearClipboardRanges();
       handleCellMouseDownBase(e, rowIndex, globalColIndex);
