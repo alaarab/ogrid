@@ -82,7 +82,7 @@
 .dataTable thead.stickyHeader {
   position: sticky;
   top: 0;
-  z-index: 2;
+  z-index: 6;
   background: var(--ogrid-bg-subtle, #f3f2f1);
 }
 
@@ -105,7 +105,7 @@
 .dataTable thead.stickyHeader .pinnedColLeft,
 .dataTable thead.stickyHeader .pinnedColRight {
   top: 0;
-  z-index: 3;
+  z-index: 7;
 }
 
 .dataTable thead .freezeColFirst {

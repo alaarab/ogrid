@@ -38,8 +38,9 @@ import {
   getCellInteractionProps,
 } from '@alaarab/ogrid-core';
 
-/** @deprecated Use IOGridDataGridProps from @alaarab/ogrid-core for new code. */
-export type IDataGridTableProps<T> = IOGridDataGridProps<T>;
+
+// Module-scope stable styles
+const gridRootSx = { position: 'relative', flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column' } as const;
 
 function DataGridTableInner<T>(props: IOGridDataGridProps<T>): React.ReactElement {
   const wrapperRef = useRef<HTMLDivElement>(null);
@@ -172,49 +173,32 @@ function DataGridTableInner<T>(props: IOGridDataGridProps<T>): React.ReactElemen
   );
 
   return (
-    <Box
-      ref={wrapperRef}
-      tabIndex={0}
-      role="region"
-      aria-label={ariaLabel ?? (ariaLabelledBy ? undefined : 'Data grid')}
-      aria-labelledby={ariaLabelledBy}
-      onMouseDown={(e) => { lastMouseShiftRef.current = e.shiftKey; }}
-      onKeyDown={handleGridKeyDown}
-      onContextMenu={(e: React.MouseEvent) => {
-        e.preventDefault();
-      }}
-      data-overflow-x={allowOverflowX ? 'true' : 'false'}
-      sx={{
-        position: 'relative',
-        flex: 1,
-        minHeight: 0,
-        width: fitToContent ? 'fit-content' : '100%',
-        maxWidth: '100%',
-        overflowX: suppressHorizontalScroll ? 'hidden' : (allowOverflowX ? 'auto' : 'hidden'),
-        overflowY: 'auto',
-        bgcolor: 'background.paper',
-        // Drag-range highlight applied via DOM attributes during drag (bypasses React for performance)
-        '& [data-drag-range]': { bgcolor: 'rgba(33, 115, 70, 0.12) !important' },
-      }}
-    >
-      {isLoading && items.length > 0 && (
-        <Box
-          sx={{
-            position: 'absolute',
-            inset: 0,
-            zIndex: 2,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            bgcolor: 'rgba(255,255,255,0.7)',
-          }}
-        >
-          <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 1, p: 2, bgcolor: 'background.paper', border: 1, borderColor: 'divider', borderRadius: 1 }}>
-            <CircularProgress size={24} />
-            <Typography variant="body2" color="text.secondary">{loadingMessage}</Typography>
-          </Box>
-        </Box>
-      )}
+    <Box sx={gridRootSx}>
+      <Box
+        ref={wrapperRef}
+        tabIndex={0}
+        role="region"
+        aria-label={ariaLabel ?? (ariaLabelledBy ? undefined : 'Data grid')}
+        aria-labelledby={ariaLabelledBy}
+        onMouseDown={(e) => { lastMouseShiftRef.current = e.shiftKey; }}
+        onKeyDown={handleGridKeyDown}
+        onContextMenu={(e: React.MouseEvent) => {
+          e.preventDefault();
+        }}
+        data-overflow-x={allowOverflowX ? 'true' : 'false'}
+        sx={{
+          position: 'relative',
+          flex: 1,
+          minHeight: 0,
+          width: fitToContent ? 'fit-content' : '100%',
+          maxWidth: '100%',
+          overflowX: suppressHorizontalScroll ? 'hidden' : (allowOverflowX ? 'auto' : 'hidden'),
+          overflowY: 'auto',
+          bgcolor: 'background.paper',
+          // Drag-range highlight applied via DOM attributes during drag (bypasses React for performance)
+          '& [data-drag-range]': { bgcolor: 'rgba(33, 115, 70, 0.12) !important' },
+        }}
+      >
       <Box sx={{ display: 'flex', flexDirection: 'column', minHeight: '100%' }}>
       <TableContainer sx={{ minWidth: allowOverflowX ? minTableWidth : undefined }}>
         <Box ref={tableContainerRef} sx={{ position: 'relative', opacity: isLoading && items.length > 0 ? 0.6 : 1 }}>
@@ -226,7 +210,7 @@ function DataGridTableInner<T>(props: IOGridDataGridProps<T>): React.ReactElemen
               sx={{
                 position: 'sticky',
                 top: 0,
-                zIndex: 2,
+                zIndex: 6,
                 bgcolor: 'action.hover',
                 '& th': { bgcolor: 'action.hover' },
               }}
@@ -297,7 +281,7 @@ function DataGridTableInner<T>(props: IOGridDataGridProps<T>): React.ReactElemen
                                 position: 'sticky',
                                 left: 0,
                                 top: 0,
-                                zIndex: 3,
+                                zIndex: 7,
                                 bgcolor: 'action.hover',
                               }
                             : {}),
@@ -306,7 +290,7 @@ function DataGridTableInner<T>(props: IOGridDataGridProps<T>): React.ReactElemen
                                 position: 'sticky',
                                 left: 0,
                                 top: 0,
-                                zIndex: 3,
+                                zIndex: 7,
                                 bgcolor: 'action.hover',
                               }
                             : {}),
@@ -315,7 +299,7 @@ function DataGridTableInner<T>(props: IOGridDataGridProps<T>): React.ReactElemen
                                 position: 'sticky',
                                 right: 0,
                                 top: 0,
-                                zIndex: 3,
+                                zIndex: 7,
                                 bgcolor: 'action.hover',
                               }
                             : {}),
@@ -484,24 +468,43 @@ function DataGridTableInner<T>(props: IOGridDataGridProps<T>): React.ReactElemen
       )}
       </Box>
 
-      {menuPosition &&
-        createPortal(
-          <GridContextMenu
-            x={menuPosition.x}
-            y={menuPosition.y}
-            hasSelection={hasCellSelection}
-            canUndo={canUndo}
-            canRedo={canRedo}
-            onUndo={onUndo ?? (() => {})}
-            onRedo={onRedo ?? (() => {})}
-            onCopy={handleCopy}
-            onCut={handleCut}
-            onPaste={() => void handlePaste()}
-            onSelectAll={handleSelectAllCells}
-            onClose={closeContextMenu}
-          />,
-          document.body
-        )}
+        {menuPosition &&
+          createPortal(
+            <GridContextMenu
+              x={menuPosition.x}
+              y={menuPosition.y}
+              hasSelection={hasCellSelection}
+              canUndo={canUndo}
+              canRedo={canRedo}
+              onUndo={onUndo ?? (() => {})}
+              onRedo={onRedo ?? (() => {})}
+              onCopy={handleCopy}
+              onCut={handleCut}
+              onPaste={() => void handlePaste()}
+              onSelectAll={handleSelectAllCells}
+              onClose={closeContextMenu}
+            />,
+            document.body
+          )}
+      </Box>
+      {isLoading && items.length > 0 && (
+        <Box
+          sx={{
+            position: 'absolute',
+            inset: 0,
+            zIndex: 2,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            bgcolor: 'rgba(255,255,255,0.7)',
+          }}
+        >
+          <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 1, p: 2, bgcolor: 'background.paper', border: 1, borderColor: 'divider', borderRadius: 1 }}>
+            <CircularProgress size={24} />
+            <Typography variant="body2" color="text.secondary">{loadingMessage}</Typography>
+          </Box>
+        </Box>
+      )}
     </Box>
   );
 }

@@ -38,8 +38,15 @@ import {
 } from '@alaarab/ogrid-core';
 import styles from './DataGridTable.module.scss';
 
-/** @deprecated Use IOGridDataGridProps from @alaarab/ogrid-core for new code. */
-export type IDataGridTableProps<T> = IOGridDataGridProps<T>;
+
+// Module-scope stable style for grid root wrapper
+const gridRootStyle: React.CSSProperties = {
+  position: 'relative',
+  flex: 1,
+  minHeight: 0,
+  display: 'flex',
+  flexDirection: 'column',
+};
 
 function DataGridTableInner<T>(props: IOGridDataGridProps<T>): React.ReactElement {
   const wrapperRef = useRef<HTMLDivElement>(null);
@@ -306,53 +313,46 @@ function DataGridTableInner<T>(props: IOGridDataGridProps<T>): React.ReactElemen
   );
 
   return (
-    <div
-      ref={wrapperRef}
-      tabIndex={0}
-      className={`${styles.tableWrapper} ${rowSelection !== 'none' ? styles.selectableGrid : ''}`}
-      role="region"
-      aria-label={ariaLabel ?? (ariaLabelledBy ? undefined : 'Data grid')}
-      aria-labelledby={ariaLabelledBy}
-      data-empty={showEmptyInGrid ? 'true' : undefined}
-      data-auto-fit={layoutMode === 'fill' && !allowOverflowX ? 'true' : undefined}
-      data-column-count={totalColCount}
-      data-freeze-rows={freezeRows != null && freezeRows >= 1 ? freezeRows : undefined}
-      data-freeze-cols={freezeCols != null && freezeCols >= 1 ? freezeCols : undefined}
-      data-overflow-x={allowOverflowX ? 'true' : 'false'}
-      data-container-width={containerWidth}
-      data-min-table-width={Math.round(minTableWidth)}
-      data-has-selection={rowSelection !== 'none' ? 'true' : undefined}
-      onContextMenu={(e) => {
-        e.preventDefault();
-      }}
-      style={{
-        ['--data-table-column-count' as string]: totalColCount,
-        ['--data-table-width' as string]: showEmptyInGrid
-          ? '100%'
-          : allowOverflowX
-            ? 'fit-content'
-            : fitToContent
+    <div style={gridRootStyle}>
+      <div
+        ref={wrapperRef}
+        tabIndex={0}
+        className={`${styles.tableWrapper} ${rowSelection !== 'none' ? styles.selectableGrid : ''}`}
+        role="region"
+        aria-label={ariaLabel ?? (ariaLabelledBy ? undefined : 'Data grid')}
+        aria-labelledby={ariaLabelledBy}
+        data-empty={showEmptyInGrid ? 'true' : undefined}
+        data-auto-fit={layoutMode === 'fill' && !allowOverflowX ? 'true' : undefined}
+        data-column-count={totalColCount}
+        data-freeze-rows={freezeRows != null && freezeRows >= 1 ? freezeRows : undefined}
+        data-freeze-cols={freezeCols != null && freezeCols >= 1 ? freezeCols : undefined}
+        data-overflow-x={allowOverflowX ? 'true' : 'false'}
+        data-container-width={containerWidth}
+        data-min-table-width={Math.round(minTableWidth)}
+        data-has-selection={rowSelection !== 'none' ? 'true' : undefined}
+        onContextMenu={(e) => {
+          e.preventDefault();
+        }}
+        style={{
+          ['--data-table-column-count' as string]: totalColCount,
+          ['--data-table-width' as string]: showEmptyInGrid
+            ? '100%'
+            : allowOverflowX
               ? 'fit-content'
-              : '100%',
-        ['--data-table-min-width' as string]: showEmptyInGrid
-          ? '100%'
-          : allowOverflowX
-            ? 'max-content'
-            : fitToContent
+              : fitToContent
+                ? 'fit-content'
+                : '100%',
+          ['--data-table-min-width' as string]: showEmptyInGrid
+            ? '100%'
+            : allowOverflowX
               ? 'max-content'
-              : '100%',
-      }}
-      onKeyDown={handleGridKeyDown}
-    >
-      {isLoading && items.length > 0 && (
-        <div className={styles.loadingOverlay} aria-live="polite">
-          <div className={styles.loadingOverlayContent}>
-            <Spinner size="small" />
-            <span className={styles.loadingOverlayText}>{loadingMessage}</span>
-          </div>
-        </div>
-      )}
-      <div className={styles.tableScrollContent}>
+              : fitToContent
+                ? 'max-content'
+                : '100%',
+        }}
+        onKeyDown={handleGridKeyDown}
+      >
+        <div className={styles.tableScrollContent}>
         <div className={isLoading && items.length > 0 ? styles.loadingDimmed : undefined}>
           <div className={styles.tableWidthAnchor} ref={tableContainerRef}>
               <DataGrid
@@ -525,24 +525,33 @@ function DataGridTableInner<T>(props: IOGridDataGridProps<T>): React.ReactElemen
         )}
       </div>
 
-      {menuPosition &&
-        createPortal(
-          <GridContextMenu
-            x={menuPosition.x}
-            y={menuPosition.y}
-            hasSelection={hasCellSelection}
-            canUndo={canUndo}
-            canRedo={canRedo}
-            onUndo={onUndo ?? (() => {})}
-            onRedo={onRedo ?? (() => {})}
-            onCopy={handleCopy}
-            onCut={handleCut}
-            onPaste={() => void handlePaste()}
-            onSelectAll={handleSelectAllCells}
-            onClose={closeContextMenu}
-          />,
-          document.body
-        )}
+        {menuPosition &&
+          createPortal(
+            <GridContextMenu
+              x={menuPosition.x}
+              y={menuPosition.y}
+              hasSelection={hasCellSelection}
+              canUndo={canUndo}
+              canRedo={canRedo}
+              onUndo={onUndo ?? (() => {})}
+              onRedo={onRedo ?? (() => {})}
+              onCopy={handleCopy}
+              onCut={handleCut}
+              onPaste={() => void handlePaste()}
+              onSelectAll={handleSelectAllCells}
+              onClose={closeContextMenu}
+            />,
+            document.body
+          )}
+      </div>
+      {isLoading && items.length > 0 && (
+        <div className={styles.loadingOverlay} aria-live="polite">
+          <div className={styles.loadingOverlayContent}>
+            <Spinner size="small" />
+            <span className={styles.loadingOverlayText}>{loadingMessage}</span>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -64,12 +64,8 @@ export const Default: Story = {
       sortDirection="asc"
       onColumnSort={noop}
       visibleColumns={new Set(['name', 'status', 'owner'])}
-      multiSelectFilters={{}}
-      onMultiSelectFilterChange={noop}
-      textFilters={{}}
-      onTextFilterChange={noop}
-      peopleFilters={{}}
-      onPeopleFilterChange={noop}
+      filters={{}}
+      onFilterChange={noop}
       filterOptions={{ status: ['Active', 'Closed', 'Planning'] }}
       loadingFilterOptions={{}}
     />
@@ -86,12 +82,8 @@ export const Empty: Story = {
       sortDirection="asc"
       onColumnSort={noop}
       visibleColumns={new Set(['name', 'status', 'owner'])}
-      multiSelectFilters={{}}
-      onMultiSelectFilterChange={noop}
-      textFilters={{}}
-      onTextFilterChange={noop}
-      peopleFilters={{}}
-      onPeopleFilterChange={noop}
+      filters={{}}
+      onFilterChange={noop}
       filterOptions={{}}
       loadingFilterOptions={{}}
       emptyState={{
@@ -112,12 +104,8 @@ export const EmptyWithActiveFilters: Story = {
       sortDirection="asc"
       onColumnSort={noop}
       visibleColumns={new Set(['name', 'status', 'owner'])}
-      multiSelectFilters={{ status: ['Active'] }}
-      onMultiSelectFilterChange={noop}
-      textFilters={{}}
-      onTextFilterChange={noop}
-      peopleFilters={{}}
-      onPeopleFilterChange={noop}
+      filters={{ status: { type: 'multiSelect', value: ['Active'] } }}
+      onFilterChange={noop}
       filterOptions={{ status: ['Active', 'Closed', 'Planning'] }}
       loadingFilterOptions={{}}
       emptyState={{
@@ -138,12 +126,8 @@ export const WithPeopleFilter: Story = {
       sortDirection="asc"
       onColumnSort={noop}
       visibleColumns={new Set(['name', 'status', 'owner'])}
-      multiSelectFilters={{}}
-      onMultiSelectFilterChange={noop}
-      textFilters={{}}
-      onTextFilterChange={noop}
-      peopleFilters={{}}
-      onPeopleFilterChange={noop}
+      filters={{}}
+      onFilterChange={noop}
       filterOptions={{ status: ['Active', 'Closed', 'Planning'] }}
       loadingFilterOptions={{}}
     />
@@ -178,12 +162,8 @@ export const DynamicColumns: Story = {
           sortDirection="asc"
           onColumnSort={noop}
           visibleColumns={new Set(visibleIds)}
-          multiSelectFilters={{}}
-          onMultiSelectFilterChange={noop}
-          textFilters={{}}
-          onTextFilterChange={noop}
-          peopleFilters={{}}
-          onPeopleFilterChange={noop}
+          filters={{}}
+          onFilterChange={noop}
           filterOptions={{ status: ['Active', 'Closed', 'Planning'] }}
           loadingFilterOptions={{}}
         />
@@ -255,12 +235,8 @@ export const EditableInline: Story = {
           visibleColumns={new Set(['name', 'status', 'approved'])}
           editable
           onCellValueChanged={handleCellValueChanged}
-          multiSelectFilters={{}}
-          onMultiSelectFilterChange={noop}
-          textFilters={{}}
-          onTextFilterChange={noop}
-          peopleFilters={{}}
-          onPeopleFilterChange={noop}
+          filters={{}}
+          onFilterChange={noop}
           filterOptions={{ status: ['Active', 'Closed', 'Planning'] }}
           loadingFilterOptions={{}}
         />
@@ -334,12 +310,8 @@ export const EditableCustomPopup: Story = {
           visibleColumns={new Set(['name', 'notes'])}
           editable
           onCellValueChanged={handleCellValueChanged}
-          multiSelectFilters={{}}
-          onMultiSelectFilterChange={noop}
-          textFilters={{}}
-          onTextFilterChange={noop}
-          peopleFilters={{}}
-          onPeopleFilterChange={noop}
+          filters={{}}
+          onFilterChange={noop}
           filterOptions={{}}
           loadingFilterOptions={{}}
         />
@@ -398,12 +370,8 @@ export const EditablePerRow: Story = {
           visibleColumns={new Set(['name', 'status', 'approved'])}
           editable
           onCellValueChanged={handleCellValueChanged}
-          multiSelectFilters={{}}
-          onMultiSelectFilterChange={noop}
-          textFilters={{}}
-          onTextFilterChange={noop}
-          peopleFilters={{}}
-          onPeopleFilterChange={noop}
+          filters={{}}
+          onFilterChange={noop}
           filterOptions={{ status: ['Active', 'Closed', 'Planning'] }}
           loadingFilterOptions={{}}
         />
@@ -476,10 +444,8 @@ export const MultiRowSelection: Story = {
           selectedRows={selected}
           onSelectionChange={(e: IRowSelectionChangeEvent<SpreadsheetRow>) => setSelected(new Set(e.selectedRowIds))}
           statusBar
-          multiSelectFilters={{}}
-          onMultiSelectFilterChange={noop}
-          textFilters={{}}
-          onTextFilterChange={noop}
+          filters={{}}
+          onFilterChange={noop}
           filterOptions={{
             department: ['Engineering', 'Marketing', 'Sales', 'HR'],
             status: ['Active', 'On Leave', 'Inactive'],
@@ -517,8 +483,8 @@ export const SingleRowSelection: Story = {
           selectedRows={selected}
           onSelectionChange={(e: IRowSelectionChangeEvent<SpreadsheetRow>) => setSelected(new Set(e.selectedRowIds))}
           statusBar
-          multiSelectFilters={{}}
-          onMultiSelectFilterChange={noop}
+          filters={{}}
+          onFilterChange={noop}
           filterOptions={{
             department: ['Engineering', 'Marketing', 'Sales', 'HR'],
             status: ['Active', 'On Leave', 'Inactive'],
@@ -594,8 +560,8 @@ export const KeyboardNavigation: Story = {
           onCellValueChanged={handleCellValueChanged}
           rowSelection="multiple"
           statusBar
-          multiSelectFilters={{}}
-          onMultiSelectFilterChange={noop}
+          filters={{}}
+          onFilterChange={noop}
           filterOptions={{}}
           loadingFilterOptions={{}}
         />
@@ -627,8 +593,8 @@ export const WithStatusBar: Story = {
           filteredCount: spreadsheetRows.length,
           selectedCount: 0,
         }}
-        multiSelectFilters={{}}
-        onMultiSelectFilterChange={noop}
+        filters={{}}
+        onFilterChange={noop}
         filterOptions={{
           department: ['Engineering', 'Marketing', 'Sales', 'HR'],
           status: ['Active', 'On Leave', 'Inactive'],
@@ -674,8 +640,8 @@ export const PinnedColumns: Story = {
           onColumnSort={noop}
           visibleColumns={new Set(pinnedCols.map((c) => c.columnId))}
           statusBar
-          multiSelectFilters={{}}
-          onMultiSelectFilterChange={noop}
+          filters={{}}
+          onFilterChange={noop}
           filterOptions={{}}
           loadingFilterOptions={{}}
         />
@@ -789,10 +755,8 @@ export const SpreadsheetExperience: Story = {
             totalCount: items.length,
             selectedCount: selected.size,
           }}
-          multiSelectFilters={{}}
-          onMultiSelectFilterChange={noop}
-          textFilters={{}}
-          onTextFilterChange={noop}
+          filters={{}}
+          onFilterChange={noop}
           filterOptions={{
             department: ['Engineering', 'Marketing', 'Sales', 'HR'],
             status: ['Active', 'On Leave', 'Inactive'],

@@ -18,6 +18,8 @@ export interface OGridLayoutProps {
   toolbar?: React.ReactNode;
   /** Built-in toolbar items rendered on the right side (column chooser, etc.). */
   toolbarEnd?: React.ReactNode;
+  /** Secondary toolbar row below the primary toolbar (e.g. active filter chips). Full width. */
+  toolbarBelow?: React.ReactNode;
   /** Grid content (DataGridTable). */
   children: React.ReactNode;
   /** Pagination controls (rendered in footer strip inside the bordered container). */
@@ -54,6 +56,12 @@ const toolbarSectionStyle: React.CSSProperties = {
   display: 'flex',
   alignItems: 'center',
   gap: 8,
+};
+
+const toolbarBelowStyle: React.CSSProperties = {
+  padding: '6px 12px',
+  borderBottom: '1px solid var(--ogrid-border, #e0e0e0)',
+  background: 'var(--ogrid-header-bg, #f5f5f5)',
 };
 
 const footerStripStyle: React.CSSProperties = {
@@ -104,6 +112,7 @@ export function OGridLayout(props: OGridLayoutProps): React.ReactElement {
     className,
     toolbar,
     toolbarEnd,
+    toolbarBelow,
     children,
     pagination,
     sideBar,
@@ -133,6 +142,11 @@ export function OGridLayout(props: OGridLayoutProps): React.ReactElement {
             <div style={toolbarSectionStyle}>{toolbar}</div>
             <div style={toolbarSectionStyle}>{toolbarEnd}</div>
           </div>
+        )}
+
+        {/* Secondary toolbar row (filter chips, etc.) */}
+        {toolbarBelow && (
+          <div style={toolbarBelowStyle}>{toolbarBelow}</div>
         )}
 
         {/* Grid area (with optional sidebar) */}

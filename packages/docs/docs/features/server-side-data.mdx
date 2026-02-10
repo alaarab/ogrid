@@ -1,14 +1,14 @@
 ---
 sidebar_position: 16
 title: Server-Side Data
-description: Fetch pages of data from a server with sorting and filtering
+description: Fetch pages of data from a server with sorting, filtering, and people search
 ---
 
 import ServerSideDemo from '@site/src/components/demos/ServerSideDemo';
 
 # Server-Side Data
 
-For large datasets, pass a `dataSource` instead of a `data` array. The grid calls your server on every page change, sort, or filter action and displays the results.
+Pass a `dataSource` instead of a `data` array to delegate sorting, filtering, and pagination to your server.
 
 ## Live Demo
 
@@ -37,7 +37,6 @@ const dataSource: IDataSource<Employee> = {
         sortDir: params.sort.direction,
       }),
     });
-
     const res = await fetch(`/api/employees?${query}`);
     return res.json(); // { items: Employee[], totalCount: number }
   },
@@ -49,18 +48,17 @@ function App() {
       columns={columns}
       dataSource={dataSource}
       getRowId={(e) => e.id}
+      defaultPageSize={25}
     />
   );
 }
 ```
 
-The grid fetches the first page on mount and re-fetches whenever the user changes page, sort, or filters.
+The grid fetches the first page on mount and re-fetches whenever page, sort, or filters change.
 
-## How It Works
+## IDataSource&lt;T&gt; Reference
 
-### The `IDataSource<T>` Interface
-
-```tsx
+```typescript
 interface IDataSource<T> {
   fetchPage(params: IFetchParams): Promise<IPageResult<T>>;
   fetchFilterOptions?(field: string): Promise<string[]>;
@@ -69,44 +67,34 @@ interface IDataSource<T> {
 }
 ```
 
-Only `fetchPage` is required. The optional methods support filter dropdowns and people-type filters.
+| Method | Required | Description |
+|--------|----------|-------------|
+| `fetchPage` | Yes | Fetches a page of data. Called on page/sort/filter changes. |
+| `fetchFilterOptions` | No | Returns options for `multiSelect` filters with `optionsSource: 'api'`. |
+| `searchPeople` | No | Searches people for `people`-type column filters. |
+| `getUserByEmail` | No | Resolves a user by email (for restoring saved people filters). |
 
-### `IFetchParams`
+### IFetchParams
 
-Every call to `fetchPage` receives these parameters:
-
-```tsx
+```typescript
 interface IFetchParams {
-  page: number;
+  page: number;        // 1-indexed
   pageSize: number;
   sort?: { field: string; direction: 'asc' | 'desc' };
-  filters: IFilters;
+  filters: IFilters;   // See Types reference for FilterValue shapes
 }
 ```
 
-| Field | Description |
-|---|---|
-| `page` | Current page number (1-indexed) |
-| `pageSize` | Number of rows per page |
-| `sort` | Active sort column and direction, or `undefined` if unsorted |
-| `filters` | Active filter model: `{ [field]: string \| string[] \| UserLike }` |
+### IPageResult&lt;T&gt;
 
-### `IPageResult<T>`
-
-Your `fetchPage` must return:
-
-```tsx
+```typescript
 interface IPageResult<T> {
   items: T[];
-  totalCount: number;
+  totalCount: number;  // drives pagination controls
 }
 ```
 
-`totalCount` drives the pagination controls (total pages = `Math.ceil(totalCount / pageSize)`).
-
-### Filter Options from the Server
-
-For multi-select column filters, implement `fetchFilterOptions` to return the available options from the server.
+## Filter Options & People Search
 
 ```tsx
 const dataSource: IDataSource<Employee> = {
@@ -116,18 +104,6 @@ const dataSource: IDataSource<Employee> = {
     const res = await fetch(`/api/employees/filter-options/${field}`);
     return res.json(); // ['Engineering', 'Marketing', 'Sales']
   },
-};
-```
-
-The grid calls this method when a user opens a multi-select filter dropdown.
-
-### People Filter
-
-For columns with `filterable: { type: 'people' }`, implement `searchPeople` and optionally `getUserByEmail`.
-
-```tsx
-const dataSource: IDataSource<Employee> = {
-  async fetchPage(params) { /* ... */ },
 
   async searchPeople(query: string): Promise<UserLike[]> {
     const res = await fetch(`/api/people/search?q=${query}`);
@@ -142,9 +118,7 @@ const dataSource: IDataSource<Employee> = {
 };
 ```
 
-### Error Handling
-
-Pass `onError` to handle fetch failures gracefully.
+## Error Handling & Loading
 
 ```tsx
 <OGrid
@@ -153,48 +127,23 @@ Pass `onError` to handle fetch failures gracefully.
   getRowId={(e) => e.id}
   onError={(error) => {
     console.error('Grid fetch failed:', error);
-    showToast('Failed to load data. Please try again.');
+    showToast('Failed to load data.');
   }}
 />
 ```
 
-### Loading State
-
-The grid manages its own loading state automatically: it shows a loading indicator while `fetchPage` is in-flight. You can also control it manually via the API ref.
-
-```tsx
-const gridRef = useRef<IOGridApi<Employee>>(null);
-
-// Show loading manually
-gridRef.current?.setLoading(true);
-```
+The grid manages loading state automatically. You can also control it via `gridRef.current?.setLoading(true)`.
 
 ## Client-Side vs. Server-Side
 
 | | Client-side (`data`) | Server-side (`dataSource`) |
 |---|---|---|
 | Data location | All rows in memory | Fetched per page |
-| Sorting | In-memory via `compare` | Server applies sort |
-| Filtering | In-memory via `valueGetter` | Server applies filters |
-| Pagination | Slices the full array | Server returns one page |
+| Sorting / Filtering | In-memory by the grid | Your server handles it |
 | Best for | < 10,000 rows | Large datasets, real-time data |
-
-You cannot pass both `data` and `dataSource`. Use one or the other.
-
-## Props Reference
-
-| Type | Field | Description |
-|---|---|---|
-| `IOGridProps<T>` | `dataSource` | `IDataSource<T>` for server-side data |
-| `IOGridProps<T>` | `data` | `T[]` for client-side data (mutually exclusive with `dataSource`) |
-| `IOGridProps<T>` | `onError` | `(error: unknown) => void` called when `fetchPage` rejects |
-| `IDataSource<T>` | `fetchPage` | Required. Fetch one page of data |
-| `IDataSource<T>` | `fetchFilterOptions` | Optional. Fetch filter dropdown options for a field |
-| `IDataSource<T>` | `searchPeople` | Optional. Search people for people-type filters |
-| `IDataSource<T>` | `getUserByEmail` | Optional. Resolve a person by email |
 
 ## Related
 
-- [Status Bar](./status-bar) -- displays the server-provided `totalCount`
-- [Grid API](./grid-api) -- `setFilterModel()` to programmatically filter server-side data
-- [CSV Export](./csv-export) -- export the currently loaded page
+- [Filtering](./filtering) -- filter types and configuration
+- [Grid API](../api/grid-api) -- `setFilterModel()` for programmatic filtering
+- [Types](../api/types) -- `IFilters`, `FilterValue`, `UserLike` shapes

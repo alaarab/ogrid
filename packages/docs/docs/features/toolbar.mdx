@@ -6,6 +6,7 @@ description: Unified bordered container with configurable toolbar strip, sidebar
 
 import ToolbarDefaultDemo from '@site/src/components/demos/ToolbarDefaultDemo';
 import ToolbarCustomDemo from '@site/src/components/demos/ToolbarCustomDemo';
+import ToolbarBelowDemo from '@site/src/components/demos/ToolbarBelowDemo';
 import ToolbarSidebarDemo from '@site/src/components/demos/ToolbarSidebarDemo';
 import ToolbarFullDemo from '@site/src/components/demos/ToolbarFullDemo';
 import { LayoutDiagram } from '@site/src/components/LayoutDiagram';
@@ -58,6 +59,42 @@ The `toolbar` prop places your content on the **left** side of the toolbar strip
   pagination
 />
 ```
+
+## Secondary Toolbar Row
+
+The `toolbarBelow` prop renders a **secondary row** below the primary toolbar strip. Use it for active filter chips, breadcrumbs, search bars, or any contextual content that should sit between the toolbar and the grid.
+
+<ToolbarBelowDemo />
+
+```tsx
+<OGrid
+  columns={columns}
+  data={items}
+  getRowId={(item) => item.id}
+  toolbar={
+    <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+      <button onClick={handleExport}>Export CSV</button>
+      <span>{data.length} rows</span>
+    </div>
+  }
+  toolbarBelow={
+    <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+      <span style={{ padding: '2px 8px', background: '#e0e0e0', borderRadius: 12, fontSize: 12 }}>
+        Department: Engineering ✕
+      </span>
+      <span style={{ padding: '2px 8px', background: '#e0e0e0', borderRadius: 12, fontSize: 12 }}>
+        Status: Active ✕
+      </span>
+    </div>
+  }
+  columnChooser="toolbar"
+  pagination
+/>
+```
+
+:::tip
+The secondary toolbar row shares the same background and border styling as the primary toolbar. It only renders when `toolbarBelow` is provided — no empty space when omitted.
+:::
 
 ## Column Chooser Placement
 
@@ -147,6 +184,7 @@ The `title` prop is **deprecated**. Render headings outside the `<OGrid>` compon
 | Prop | Type | Default | Description |
 |------|------|---------|-------------|
 | `toolbar` | `ReactNode` | -- | Custom content in the left side of the toolbar strip. |
+| `toolbarBelow` | `ReactNode` | -- | Secondary toolbar row below the primary toolbar (e.g. filter chips, breadcrumbs). |
 | `columnChooser` | `boolean \| 'toolbar' \| 'sidebar'` | `true` | Where to place the column chooser. `true`/`'toolbar'` = toolbar, `'sidebar'` = sidebar panel only, `false` = hidden. |
 | `sideBar` | `boolean \| ISideBarDef` | `false` | Enable sidebar panels. Required for `columnChooser="sidebar"`. |
 | `statusBar` | `boolean` | `false` | Show status bar below the grid with row counts and aggregations. |

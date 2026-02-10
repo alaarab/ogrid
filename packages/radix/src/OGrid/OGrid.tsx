@@ -1,7 +1,7 @@
 import * as React from 'react';
 import { forwardRef } from 'react';
 import { DataGridTable } from '../DataGridTable/DataGridTable';
-import type { IDataGridTableProps } from '../DataGridTable/DataGridTable';
+import type { IOGridDataGridProps } from '@alaarab/ogrid-core';
 import { ColumnChooser } from '../ColumnChooser/ColumnChooser';
 import { PaginationControls } from '../PaginationControls/PaginationControls';
 import {
@@ -29,6 +29,7 @@ const OGridInner = forwardRef(function OGridInner<T>(
     handleVisibilityChange,
     columnChooserPlacement,
     toolbar,
+    toolbarBelow,
     className,
     entityLabelPlural,
     pageSizeOptions,
@@ -40,6 +41,7 @@ const OGridInner = forwardRef(function OGridInner<T>(
       className={className}
       sideBar={sideBarProps}
       toolbar={toolbar}
+      toolbarBelow={toolbarBelow}
       toolbarEnd={
         columnChooserPlacement === 'toolbar' ? (
           <ColumnChooser
@@ -64,7 +66,7 @@ const OGridInner = forwardRef(function OGridInner<T>(
         />
       }
     >
-      <DataGridTable<T> {...(dataGridProps as IDataGridTableProps<T>)} />
+      <DataGridTable<T> {...(dataGridProps as IOGridDataGridProps<T>)} />
     </OGridLayout>
   );
 });
