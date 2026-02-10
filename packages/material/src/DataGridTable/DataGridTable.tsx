@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { useCallback, useRef, useEffect } from 'react';
+import { useCallback, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import {
   Box,
@@ -30,6 +30,12 @@ import {
   getHeaderFilterConfig,
   getCellRenderDescriptor,
   MarchingAntsOverlay,
+  buildHeaderRows,
+  resolveCellDisplayContent,
+  resolveCellStyle,
+  buildInlineEditorProps,
+  buildPopoverEditorProps,
+  getCellInteractionProps,
 } from '@alaarab/ogrid-core';
 
 /** @deprecated Use IOGridDataGridProps from @alaarab/ogrid-core for new code. */
@@ -57,7 +63,6 @@ function DataGridTableInner<T>(props: IOGridDataGridProps<T>): React.ReactElemen
     handleCellMouseDown,
     handleSelectAllCells,
     contextMenu,
-    setContextMenu,
     handleCellContextMenu,
     closeContextMenu,
     canUndo,
@@ -71,6 +76,7 @@ function DataGridTableInner<T>(props: IOGridDataGridProps<T>): React.ReactElemen
     handleFillHandleMouseDown,
     containerWidth,
     minTableWidth,
+    desiredTableWidth,
     columnSizingOverrides,
     setColumnSizingOverrides,
     statusBarConfig,
@@ -96,6 +102,7 @@ function DataGridTableInner<T>(props: IOGridDataGridProps<T>): React.ReactElemen
     rowSelection = 'none',
     freezeRows,
     freezeCols,
+    suppressHorizontalScroll,
     isLoading = false,
     loadingMessage = 'Loading\u2026',
     'aria-label': ariaLabel,
@@ -103,47 +110,28 @@ function DataGridTableInner<T>(props: IOGridDataGridProps<T>): React.ReactElemen
   } = props;
 
   const fitToContent = layoutMode === 'content';
-  const allowOverflowX = containerWidth > 0 && minTableWidth > containerWidth;
+  const allowOverflowX = !suppressHorizontalScroll && containerWidth > 0 && (minTableWidth > containerWidth || desiredTableWidth > containerWidth);
+  const headerRows = buildHeaderRows(props.columns, props.visibleColumns);
 
   const { handleResizeStart, getColumnWidth } = useColumnResize<T>({
     columnSizingOverrides,
     setColumnSizingOverrides,
   });
 
+  const editCallbacks = React.useMemo(() => ({ commitCellEdit, setEditingCell, setPendingEditorValue, cancelPopoverEdit }), [commitCellEdit, setEditingCell, setPendingEditorValue, cancelPopoverEdit]);
+  const interactionHandlers = React.useMemo(() => ({ handleCellMouseDown, setActiveCell, setEditingCell, handleCellContextMenu }), [handleCellMouseDown, setActiveCell, setEditingCell, handleCellContextMenu]);
+
   const renderCellContent = useCallback(
     (item: T, col: IColumnDef<T>, rowIndex: number, colIdx: number): React.ReactNode => {
       const descriptor = getCellRenderDescriptor(item, col, rowIndex, colIdx, cellDescriptorInput);
 
       if (descriptor.mode === 'editing-inline') {
-        return (
-          <InlineCellEditor<T>
-            value={descriptor.value}
-            item={item}
-            column={col}
-            rowIndex={descriptor.rowIndex}
-            editorType={descriptor.editorType ?? 'text'}
-            onCommit={(newValue) => commitCellEdit(item, col.columnId, descriptor.value, newValue, descriptor.rowIndex, descriptor.globalColIndex)}
-            onCancel={() => setEditingCell(null)}
-          />
-        );
+        return <InlineCellEditor<T> {...buildInlineEditorProps(item, col, descriptor, editCallbacks)} />;
       }
 
       if (descriptor.mode === 'editing-popover' && typeof col.cellEditor === 'function') {
-        const oldValue = descriptor.value;
-        const displayValue = pendingEditorValue !== undefined ? pendingEditorValue : oldValue;
+        const editorProps = buildPopoverEditorProps(item, col, descriptor, pendingEditorValue, editCallbacks);
         const CustomEditor = col.cellEditor as React.ComponentType<ICellEditorProps<T>>;
-        const editorProps: ICellEditorProps<T> = {
-          value: displayValue,
-          onValueChange: setPendingEditorValue,
-          onCommit: () => {
-            const newValue = pendingEditorValue !== undefined ? pendingEditorValue : oldValue;
-            commitCellEdit(item, col.columnId, oldValue, newValue, descriptor.rowIndex, descriptor.globalColIndex);
-          },
-          onCancel: cancelPopoverEdit,
-          item,
-          column: col,
-          cellEditorParams: col.cellEditorParams,
-        };
         return (
           <>
             <Box ref={(el: HTMLDivElement | null) => { if (el) setPopoverAnchorEl(el); }} sx={{ minHeight: '100%', minWidth: 40 }} aria-hidden />
@@ -162,16 +150,9 @@ function DataGridTableInner<T>(props: IOGridDataGridProps<T>): React.ReactElemen
         );
       }
 
-      let content: React.ReactNode;
-      if (col.renderCell) content = col.renderCell(item);
-      else {
-        const value = descriptor.displayValue;
-        if (col.valueFormatter) content = col.valueFormatter(value, item);
-        else if (value !== null && value !== undefined) content = String(value);
-        else content = null;
-      }
-      const cellStyle = col.cellStyle ? (typeof col.cellStyle === 'function' ? col.cellStyle(item) : col.cellStyle) : undefined;
-      if (cellStyle) content = <Box component="span" sx={cellStyle}>{content}</Box>;
+      const content = resolveCellDisplayContent(col, item, descriptor.displayValue);
+      const cellStyle = resolveCellStyle(col, item);
+      const styledContent = cellStyle ? <Box component="span" sx={cellStyle}>{content}</Box> : content;
 
       const cellSx = {
         width: '100%',
@@ -187,67 +168,46 @@ function DataGridTableInner<T>(props: IOGridDataGridProps<T>): React.ReactElemen
         whiteSpace: 'nowrap',
         userSelect: 'none',
         outline: 'none',
+        ...(col.type === 'numeric' && { justifyContent: 'flex-end', textAlign: 'right' as const }),
+        ...(col.type === 'boolean' && { justifyContent: 'center', textAlign: 'center' as const }),
         ...(descriptor.isActive && !descriptor.isInRange && { outline: '2px solid #217346', outlineOffset: '-1px', zIndex: 2, position: 'relative' as const, overflow: 'visible' }),
         ...(descriptor.isInRange && { bgcolor: 'rgba(33, 115, 70, 0.12)' }),
         ...(descriptor.isInCutRange && { bgcolor: 'action.hover', opacity: 0.7 }),
       };
 
-      if (descriptor.canEditAny) {
-        return (
-          <Box
-            component="div"
-            data-row-index={descriptor.rowIndex}
-            data-col-index={descriptor.globalColIndex}
-            data-in-range={descriptor.isInRange ? 'true' : undefined}
-            role="button"
-            tabIndex={descriptor.isActive ? 0 : -1}
-            onMouseDown={(e: React.MouseEvent) => handleCellMouseDown(e, descriptor.rowIndex, descriptor.globalColIndex)}
-            onClick={() => setActiveCell({ rowIndex: descriptor.rowIndex, columnIndex: descriptor.globalColIndex })}
-            onDoubleClick={() => setEditingCell({ rowId: descriptor.rowId, columnId: col.columnId })}
-            onContextMenu={handleCellContextMenu}
-            sx={[{ cursor: 'cell' }, cellSx]}
-          >
-            {content}
-            {descriptor.isSelectionEndCell && (
-              <Box
-                component="div"
-                onMouseDown={handleFillHandleMouseDown}
-                aria-label="Fill handle"
-                sx={{
-                  position: 'absolute',
-                  right: -3,
-                  bottom: -3,
-                  width: 7,
-                  height: 7,
-                  bgcolor: '#217346',
-                  border: '1px solid #fff',
-                  borderRadius: '1px',
-                  cursor: 'crosshair',
-                  pointerEvents: 'auto',
-                  zIndex: 3,
-                }}
-              />
-            )}
-          </Box>
-        );
-      }
+      const interactionProps = getCellInteractionProps(descriptor, col.columnId, interactionHandlers);
+
       return (
         <Box
           component="div"
-          data-row-index={descriptor.rowIndex}
-          data-col-index={descriptor.globalColIndex}
-          data-in-range={descriptor.isInRange ? 'true' : undefined}
-          tabIndex={descriptor.isActive ? 0 : -1}
-          onMouseDown={(e: React.MouseEvent) => handleCellMouseDown(e, descriptor.rowIndex, descriptor.globalColIndex)}
-          onClick={() => setActiveCell({ rowIndex: descriptor.rowIndex, columnIndex: descriptor.globalColIndex })}
-          onContextMenu={handleCellContextMenu}
-          sx={cellSx}
+          {...interactionProps}
+          sx={descriptor.canEditAny ? [{ cursor: 'cell' }, cellSx] : cellSx}
         >
-          {content}
+          {styledContent}
+          {descriptor.canEditAny && descriptor.isSelectionEndCell && (
+            <Box
+              component="div"
+              onMouseDown={handleFillHandleMouseDown}
+              aria-label="Fill handle"
+              sx={{
+                position: 'absolute',
+                right: -3,
+                bottom: -3,
+                width: 7,
+                height: 7,
+                bgcolor: '#217346',
+                border: '1px solid #fff',
+                borderRadius: '1px',
+                cursor: 'crosshair',
+                pointerEvents: 'auto',
+                zIndex: 3,
+              }}
+            />
+          )}
         </Box>
       );
     },
-    [cellDescriptorInput, pendingEditorValue, popoverAnchorEl, handleCellMouseDown, handleCellContextMenu, handleFillHandleMouseDown, setActiveCell, setEditingCell, setPendingEditorValue, setPopoverAnchorEl, commitCellEdit, cancelPopoverEdit]
+    [cellDescriptorInput, pendingEditorValue, popoverAnchorEl, editCallbacks, interactionHandlers, handleFillHandleMouseDown, setPopoverAnchorEl, cancelPopoverEdit]
   );
 
   return (
@@ -262,12 +222,16 @@ function DataGridTableInner<T>(props: IOGridDataGridProps<T>): React.ReactElemen
       onContextMenu={(e: React.MouseEvent) => {
         e.preventDefault();
       }}
+      data-overflow-x={allowOverflowX ? 'true' : 'false'}
       sx={{
         position: 'relative',
+        flex: 1,
+        minHeight: 0,
         width: fitToContent ? 'fit-content' : '100%',
         maxWidth: '100%',
-        overflowX: allowOverflowX ? 'auto' : 'hidden',
-        overflowY: 'visible',
+        overflowX: suppressHorizontalScroll ? 'hidden' : (allowOverflowX ? 'auto' : 'hidden'),
+        overflowY: 'auto',
+        bgcolor: 'background.paper',
         // Drag-range highlight applied via DOM attributes during drag (bypasses React for performance)
         '& [data-drag-range]': { bgcolor: 'rgba(33, 115, 70, 0.12) !important' },
       }}
@@ -282,7 +246,6 @@ function DataGridTableInner<T>(props: IOGridDataGridProps<T>): React.ReactElemen
             alignItems: 'center',
             justifyContent: 'center',
             bgcolor: 'rgba(255,255,255,0.7)',
-            borderRadius: 1,
           }}
         >
           <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 1, p: 2, bgcolor: 'background.paper', border: 1, borderColor: 'divider', borderRadius: 1 }}>
@@ -291,99 +254,141 @@ function DataGridTableInner<T>(props: IOGridDataGridProps<T>): React.ReactElemen
           </Box>
         </Box>
       )}
+      <Box sx={{ display: 'flex', flexDirection: 'column', minHeight: '100%' }}>
       <TableContainer sx={{ minWidth: allowOverflowX ? minTableWidth : undefined }}>
         <Box ref={tableContainerRef} sx={{ position: 'relative', opacity: isLoading && items.length > 0 ? 0.6 : 1 }}>
-          <Table size="small" sx={{ border: 1, borderColor: 'divider', borderRadius: 1, overflow: 'hidden', minWidth: minTableWidth }}>
+          <Table size="small" sx={{ overflow: 'hidden', minWidth: minTableWidth }}
+            data-freeze-rows={freezeRows != null && freezeRows >= 1 ? freezeRows : undefined}
+            data-freeze-cols={freezeCols != null && freezeCols >= 1 ? freezeCols : undefined}
+          >
             <TableHead
-              sx={
-                freezeRows != null && freezeRows >= 1
-                  ? {
-                      position: 'sticky',
-                      top: 0,
-                      zIndex: 2,
-                      bgcolor: 'action.hover',
-                      '& th': { bgcolor: 'action.hover' },
-                    }
-                  : undefined
-              }
+              sx={{
+                position: 'sticky',
+                top: 0,
+                zIndex: 2,
+                bgcolor: 'action.hover',
+                '& th': { bgcolor: 'action.hover' },
+              }}
             >
-              <TableRow sx={{ bgcolor: 'action.hover' }}>
-                {hasCheckboxCol && (
-                  <TableCell padding="checkbox" sx={{ width: 48, minWidth: 48, maxWidth: 48, textAlign: 'center' }}>
-                    <Checkbox
-                      checked={allSelected}
-                      indeterminate={someSelected}
-                      onChange={(_, c) => handleSelectAll(!!c)}
-                      size="small"
-                      aria-label="Select all rows"
-                    />
-                  </TableCell>
-                )}
-                {visibleCols.map((col, colIdx) => {
-                  const isFreezeCol = freezeCols != null && freezeCols >= 1 && colIdx < freezeCols;
-                  const isPinnedLeft = col.pinned === 'left';
-                  const isPinnedRight = col.pinned === 'right';
-                  const columnWidth = getColumnWidth(col);
-                  return (
+              {headerRows.map((row, rowIdx) => (
+                <TableRow key={rowIdx} sx={{ bgcolor: 'action.hover' }}>
+                  {/* Checkbox column in the last (leaf) row only */}
+                  {rowIdx === headerRows.length - 1 && hasCheckboxCol && (
                     <TableCell
-                      key={col.columnId}
-                      component="th"
-                      scope="col"
-                      sx={{
-                        minWidth: col.minWidth ?? 80,
-                        width: columnWidth,
-                        maxWidth: columnWidth,
-                        fontWeight: 600,
-                        position: 'relative',
-                        ...(isFreezeCol && colIdx === 0
-                          ? {
-                              position: 'sticky',
-                              left: 0,
-                              zIndex: 2,
-                              bgcolor: 'action.hover',
-                            }
-                          : {}),
-                        ...(isPinnedLeft
-                          ? {
-                              position: 'sticky',
-                              left: 0,
-                              zIndex: 2,
-                              bgcolor: 'action.hover',
-                            }
-                          : {}),
-                        ...(isPinnedRight
-                          ? {
-                              position: 'sticky',
-                              right: 0,
-                              zIndex: 2,
-                              bgcolor: 'action.hover',
-                            }
-                          : {}),
-                      }}
+                      padding="checkbox"
+                      rowSpan={headerRows.length > 1 ? 1 : undefined}
+                      sx={{ width: 48, minWidth: 48, maxWidth: 48, textAlign: 'center' }}
                     >
-                      <ColumnHeaderFilter {...getHeaderFilterConfig(col, headerFilterInput)} />
-                      <Box
-                        onMouseDown={(e) => handleResizeStart(e, col)}
-                        sx={{
-                          position: 'absolute',
-                          top: 0,
-                          right: 0,
-                          bottom: 0,
-                          width: '4px',
-                          cursor: 'col-resize',
-                          userSelect: 'none',
-                          '&:hover': {
-                            bgcolor: 'primary.main',
-                          },
-                          '&:active': {
-                            bgcolor: 'primary.dark',
-                          },
-                        }}
+                      <Checkbox
+                        checked={allSelected}
+                        indeterminate={someSelected}
+                        onChange={(_, c) => handleSelectAll(!!c)}
+                        size="small"
+                        aria-label="Select all rows"
                       />
                     </TableCell>
-                  );
-                })}
-              </TableRow>
+                  )}
+                  {/* Empty placeholder for checkbox in the first group row */}
+                  {rowIdx === 0 && rowIdx < headerRows.length - 1 && hasCheckboxCol && (
+                    <TableCell rowSpan={headerRows.length - 1} sx={{ width: 48, minWidth: 48, p: 0 }} />
+                  )}
+                  {row.map((cell, cellIdx) => {
+                    if (cell.isGroup) {
+                      return (
+                        <TableCell
+                          key={cellIdx}
+                          colSpan={cell.colSpan}
+                          component="th"
+                          scope="colgroup"
+                          sx={{
+                            textAlign: 'center',
+                            fontWeight: 600,
+                            borderBottom: 2,
+                            borderColor: 'divider',
+                            py: 0.75,
+                          }}
+                        >
+                          {cell.label}
+                        </TableCell>
+                      );
+                    }
+                    // Leaf cell — existing header rendering with ColumnHeaderFilter + resize handle
+                    const col = cell.columnDef!;
+                    const colIdx = visibleCols.indexOf(col);
+                    const isFreezeCol = freezeCols != null && freezeCols >= 1 && colIdx < freezeCols;
+                    const isPinnedLeft = col.pinned === 'left';
+                    const isPinnedRight = col.pinned === 'right';
+                    const columnWidth = getColumnWidth(col);
+                    return (
+                      <TableCell
+                        key={col.columnId}
+                        component="th"
+                        scope="col"
+                        rowSpan={headerRows.length > 1 ? headerRows.length - rowIdx : undefined}
+                        sx={{
+                          minWidth: col.minWidth ?? 80,
+                          width: columnWidth,
+                          maxWidth: columnWidth,
+                          fontWeight: 600,
+                          position: 'relative',
+                          ...(isFreezeCol && colIdx === 0
+                            ? {
+                                position: 'sticky',
+                                left: 0,
+                                zIndex: 2,
+                                bgcolor: 'action.hover',
+                              }
+                            : {}),
+                          ...(isPinnedLeft
+                            ? {
+                                position: 'sticky',
+                                left: 0,
+                                zIndex: 2,
+                                bgcolor: 'action.hover',
+                              }
+                            : {}),
+                          ...(isPinnedRight
+                            ? {
+                                position: 'sticky',
+                                right: 0,
+                                zIndex: 2,
+                                bgcolor: 'action.hover',
+                              }
+                            : {}),
+                        }}
+                      >
+                        <ColumnHeaderFilter {...getHeaderFilterConfig(col, headerFilterInput)} />
+                        <Box
+                          onMouseDown={(e) => handleResizeStart(e, col)}
+                          sx={{
+                            position: 'absolute',
+                            top: 0,
+                            right: '-3px',
+                            bottom: 0,
+                            width: '8px',
+                            cursor: 'col-resize',
+                            userSelect: 'none',
+                            '&::after': {
+                              content: '""',
+                              position: 'absolute',
+                              top: 0,
+                              right: '3px',
+                              bottom: 0,
+                              width: '2px',
+                            },
+                            '&:hover::after': {
+                              bgcolor: 'primary.main',
+                            },
+                            '&:active::after': {
+                              bgcolor: 'primary.dark',
+                            },
+                          }}
+                        />
+                      </TableCell>
+                    );
+                  })}
+                </TableRow>
+              ))}
             </TableHead>
             {!showEmptyInGrid && (
               <TableBody>
@@ -477,14 +482,6 @@ function DataGridTableInner<T>(props: IOGridDataGridProps<T>): React.ReactElemen
             cutRange={cutRange}
             colOffset={colOffset}
           />
-          {statusBarConfig && (
-            <StatusBar
-              totalCount={statusBarConfig.totalCount}
-              filteredCount={statusBarConfig.filteredCount}
-              selectedCount={statusBarConfig.selectedCount ?? selectedRowIds.size}
-              selectedCellCount={selectionRange ? (Math.abs(selectionRange.endRow - selectionRange.startRow) + 1) * (Math.abs(selectionRange.endCol - selectionRange.startCol) + 1) : undefined}
-            />
-          )}
           {showEmptyInGrid && emptyState && (
             <Box sx={{ py: 4, px: 2, textAlign: 'center', borderTop: 1, borderColor: 'divider', bgcolor: 'action.hover' }}>
               {emptyState.render ? (
@@ -511,6 +508,17 @@ function DataGridTableInner<T>(props: IOGridDataGridProps<T>): React.ReactElemen
           )}
         </Box>
       </TableContainer>
+      {statusBarConfig && (
+        <StatusBar
+          totalCount={statusBarConfig.totalCount}
+          filteredCount={statusBarConfig.filteredCount}
+          selectedCount={statusBarConfig.selectedCount ?? selectedRowIds.size}
+          selectedCellCount={selectionRange ? (Math.abs(selectionRange.endRow - selectionRange.startRow) + 1) * (Math.abs(selectionRange.endCol - selectionRange.startCol) + 1) : undefined}
+          aggregation={statusBarConfig.aggregation}
+          suppressRowCount={statusBarConfig.suppressRowCount}
+        />
+      )}
+      </Box>
 
       {contextMenu &&
         createPortal(

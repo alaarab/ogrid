@@ -1,6 +1,6 @@
 {
   "name": "@alaarab/ogrid-examples",
-  "version": "1.1.0",
+  "version": "1.4.0",
   "private": true,
   "description": "OGrid example apps for Fluent UI and Material UI implementations.",
   "scripts": {
@@ -20,14 +20,14 @@
     "@emotion/styled": "^11.14.0",
     "@fluentui/react-components": "^9.72.10",
     "@fluentui/react-icons": "^2.0.317",
-    "@mui/icons-material": "^6.4.0",
-    "@mui/material": "^6.4.0",
+    "@mui/icons-material": "^7.0.0",
+    "@mui/material": "^7.0.0",
     "@mui/x-data-grid": "^7.27.0",
     "@radix-ui/react-checkbox": "^1.1.2",
     "@radix-ui/react-popover": "^1.1.2"
   },
   "devDependencies": {
-    "@vitejs/plugin-react": "^4.3.4",
-    "vite": "^6.1.0"
+    "@vitejs/plugin-react": "^5.0.0",
+    "vite": "^7.0.0"
   }
 }

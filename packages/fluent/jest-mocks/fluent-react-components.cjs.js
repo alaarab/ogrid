@@ -151,11 +151,12 @@ function mergeClasses(...args) {
   return args.filter(Boolean).join(' ');
 }
 
-// DataGrid and friends – minimal implementation that renders headers & cells
+// DataGrid and friends – children-based mock that mirrors real Fluent structure
 function createTableColumn(config) {
-  // In this mock we just pass the config through as the column object
   return config;
 }
+
+const DataGridContext = React.createContext({ columns: [], items: [], getRowId: null });
 
 function DataGrid(props) {
   const {
@@ -169,66 +170,70 @@ function DataGrid(props) {
     resizableColumnsOptions,
     columnSizingOptions,
     focusMode,
+    onColumnResize,
     ...rest
   } = props || {};
-  const tableProps = { 'data-mock': 'DataGrid', className, style, ...rest };
-
   return React.createElement(
-    'table',
-    tableProps,
-    React.createElement(
-      'thead',
-      null,
-      React.createElement(
-        'tr',
-        null,
-        columns.map((col, idx) =>
-          React.createElement(
-            'th',
-            { key: col.columnId || idx },
-            typeof col.renderHeaderCell === 'function' ? col.renderHeaderCell() : null
-          )
-        )
-      )
-    ),
-    React.createElement(
-      'tbody',
-      null,
-      items.map((item, rowIndex) => {
-        const rowId = getRowId ? getRowId(item) : rowIndex;
-        return React.createElement(
-          'tr',
-          { key: rowId },
-          columns.map((col, idx) =>
-            React.createElement(
-              'td',
-              { key: col.columnId || idx },
-              typeof col.renderCell === 'function' ? col.renderCell(item) : null
-            )
-          )
-        );
-      })
-    )
+    DataGridContext.Provider,
+    { value: { columns, items, getRowId } },
+    React.createElement('table', { 'data-mock': 'DataGrid', className, style, ...rest }, children)
   );
 }
 DataGrid.displayName = 'DataGrid';
 
-// Child helpers – no-op components, since our DataGrid ignores children
-function DataGridHeader() {
-  return null;
+function DataGridHeader(props) {
+  const { children, ...rest } = props || {};
+  return React.createElement('thead', { ...rest }, children);
 }
-function DataGridRow() {
-  return null;
+DataGridHeader.displayName = 'DataGridHeader';
+
+function DataGridRow(props) {
+  const { children, className, onClick, ...rest } = props || {};
+  const { columns } = React.useContext(DataGridContext);
+  if (typeof children === 'function') {
+    const cells = columns.map((col, idx) => {
+      const el = children({
+        renderHeaderCell: col.renderHeaderCell || (() => null),
+        renderCell: col.renderCell || (() => null),
+        columnId: col.columnId || String(idx),
+      });
+      return React.cloneElement(el, { key: col.columnId || idx });
+    });
+    return React.createElement('tr', { className, onClick }, cells);
+  }
+  return React.createElement('tr', { className, onClick }, children);
 }
+DataGridRow.displayName = 'DataGridRow';
+
 function DataGridHeaderCell(props) {
-  return React.createElement('th', { 'data-mock': 'DataGridHeaderCell' }, props.children);
+  const { children, className, ...rest } = props || {};
+  return React.createElement('th', { className }, children);
 }
-function DataGridBody() {
-  return null;
+DataGridHeaderCell.displayName = 'DataGridHeaderCell';
+
+function DataGridBody(props) {
+  const { children, ...rest } = props || {};
+  const { items, getRowId } = React.useContext(DataGridContext);
+  if (typeof children === 'function') {
+    return React.createElement(
+      'tbody',
+      null,
+      items.map((item, idx) => {
+        const rowId = getRowId ? getRowId(item) : idx;
+        const el = children({ item, rowId });
+        return React.cloneElement(el, { key: rowId });
+      })
+    );
+  }
+  return React.createElement('tbody', null, children);
 }
+DataGridBody.displayName = 'DataGridBody';
+
 function DataGridCell(props) {
-  return React.createElement('td', { 'data-mock': 'DataGridCell' }, props.children);
+  const { children, className, ...rest } = props || {};
+  return React.createElement('td', { className }, children);
 }
+DataGridCell.displayName = 'DataGridCell';
 
 module.exports = {
   // Core form / input components used in this project

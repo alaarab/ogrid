@@ -1,0 +1,17 @@
+import React from 'react';
+import { OGrid } from '@alaarab/ogrid';
+import { LiveDemo } from '../LiveDemo';
+import { people, getRowId, pinningColumns } from './demoData';
+
+export default function ColumnPinningDemo() {
+  return (
+    <LiveDemo height={420} title="Scroll horizontally — the Name column stays pinned">
+      <OGrid
+        columns={pinningColumns}
+        data={people}
+        getRowId={getRowId}
+        defaultPageSize={10}
+      />
+    </LiveDemo>
+  );
+}

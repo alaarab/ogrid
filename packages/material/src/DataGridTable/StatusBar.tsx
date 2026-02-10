@@ -7,6 +7,14 @@ export interface StatusBarProps {
   filteredCount?: number;
   selectedCount?: number;
   selectedCellCount?: number;
+  aggregation?: {
+    sum: number;
+    avg: number;
+    min: number;
+    max: number;
+    count: number;
+  } | null;
+  suppressRowCount?: boolean;
 }
 
 const partSx = (isLast: boolean) => ({
@@ -19,7 +27,7 @@ const partSx = (isLast: boolean) => ({
 export function StatusBar(props: StatusBarProps): React.ReactElement {
   const parts = getStatusBarParts(props);
   return (
-    <Box role="status" aria-live="polite" sx={{ px: 1.5, py: 0.75, borderTop: 1, borderColor: 'divider', bgcolor: 'action.hover' }}>
+    <Box role="status" aria-live="polite" sx={{ mt: 'auto', px: 1.5, py: 0.75, borderTop: 1, borderColor: 'divider', bgcolor: 'action.hover' }}>
       {parts.map((p, i) => (
         <Typography key={p.key} component="span" variant="body2" sx={partSx(i === parts.length - 1)}>
           <Typography component="span" color="text.secondary">{p.label}</Typography>

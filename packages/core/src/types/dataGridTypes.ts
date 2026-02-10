@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react';
-import type { IColumnDef, IColumnGroupDef, ICellValueChangedEvent } from './columnTypes';
+import type { IColumnDef, IColumnGroupDef, ICellValueChangedEvent, IDateFilterValue } from './columnTypes';
 
 /** Row identifier type — grids accept string or number IDs. */
 export type RowId = string | number;
@@ -31,30 +31,38 @@ export function toUserLike(u: UserLikeInput | undefined): UserLike | undefined {
   };
 }
 
-/** Single filter value: text (string), multi-select (string[]), or people (UserLike). */
-export type FilterValue = string | string[] | UserLike;
+/** Single filter value: text (string), multi-select (string[]), people (UserLike), or date range. */
+export type FilterValue = string | string[] | UserLike | IDateFilterValue;
 
 /** Unified filter model: field id -> filter value. Use FilterValue for type-safe access. */
 export interface IFilters {
   [field: string]: FilterValue | undefined;
 }
 
-/** Split IFilters into DataGridTable's multiSelect, text, and people props. */
+/** Type guard for IDateFilterValue. */
+function isDateFilterValue(value: unknown): value is IDateFilterValue {
+  return typeof value === 'object' && value !== null && !Array.isArray(value) && !('email' in value) && ('from' in value || 'to' in value);
+}
+
+/** Split IFilters into DataGridTable's multiSelect, text, people, and date props. */
 export function toDataGridFilterProps(filters: IFilters): {
   multiSelectFilters: Record<string, string[]>;
   textFilters: Record<string, string>;
   peopleFilters: Record<string, UserLike | undefined>;
+  dateFilters: Record<string, IDateFilterValue>;
 } {
   const multiSelectFilters: Record<string, string[]> = {};
   const textFilters: Record<string, string> = {};
   const peopleFilters: Record<string, UserLike | undefined> = {};
+  const dateFilters: Record<string, IDateFilterValue> = {};
   for (const [key, value] of Object.entries(filters)) {
     if (value === undefined) continue;
     if (Array.isArray(value)) multiSelectFilters[key] = value;
     else if (typeof value === 'string') textFilters[key] = value;
     else if (typeof value === 'object' && value !== null && 'email' in value) peopleFilters[key] = value as UserLike;
+    else if (isDateFilterValue(value)) dateFilters[key] = value;
   }
-  return { multiSelectFilters, textFilters, peopleFilters };
+  return { multiSelectFilters, textFilters, peopleFilters, dateFilters };
 }
 
 export interface IFetchParams {
@@ -77,10 +85,18 @@ export interface IDataSource<T> {
   getUserByEmail?(email: string): Promise<UserLike | undefined>;
 }
 
-/** Column state returned by getColumnState(). Uses string[] for JSON-serializability (e.g. column state persistence). */
+/** Column state returned by getColumnState(). All fields JSON-serializable for persistence (e.g. localStorage). */
 export interface IGridColumnState {
   visibleColumns: string[];
   sort?: { field: string; direction: 'asc' | 'desc' };
+  /** Column display order (array of column ids). */
+  columnOrder?: string[];
+  /** Column widths (column id -> width in pixels). */
+  columnWidths?: Record<string, number>;
+  /** Active filters. */
+  filters?: IFilters;
+  /** Pinned columns (column id -> 'left' | 'right'). */
+  pinnedColumns?: Record<string, 'left' | 'right'>;
 }
 
 // --- Row selection ---
@@ -109,6 +125,16 @@ export interface IStatusBarProps {
   selectedCount?: number;
   /** Panels to show (default: all applicable). */
   panels?: StatusBarPanel[];
+  /** Aggregation values for selected numeric cells. */
+  aggregation?: {
+    sum: number;
+    avg: number;
+    min: number;
+    max: number;
+    count: number;
+  } | null;
+  /** When true, hides the "Rows: X" label (e.g. when pagination already shows it). */
+  suppressRowCount?: boolean;
 }
 
 // --- Active cell (keyboard navigation) ---
@@ -152,14 +178,31 @@ export function normalizeSelectionRange(range: ISelectionRange): ISelectionRange
   };
 }
 
+// --- Side bar ---
+
+/** Available side bar panel identifiers. */
+export type SideBarPanelId = 'columns' | 'filters';
+
+/** Side bar configuration options. */
+export interface ISideBarDef {
+  /** Which panels to show (default: ['columns', 'filters']). */
+  panels?: SideBarPanelId[];
+  /** Panel to open on mount. */
+  defaultPanel?: SideBarPanelId;
+  /** Position of the side bar (default: 'right'). */
+  position?: 'left' | 'right';
+}
+
 /** Imperative grid API exposed via ref. */
 export interface IOGridApi<T> {
   /** Set row data (client-side only; no-op when using dataSource). */
   setRowData: (data: T[]) => void;
   /** Set loading overlay. */
   setLoading: (loading: boolean) => void;
-  /** Get current column state (visible columns, sort). */
+  /** Get current column state (visibility, order, widths, sort, filters). */
   getColumnState: () => IGridColumnState;
+  /** Bulk restore column state (visibility, order, widths, sort, filters). All fields optional. */
+  applyColumnState: (state: Partial<IGridColumnState>) => void;
   /** Set filter model (unified IFilters). */
   setFilterModel: (filters: IFilters) => void;
   /** Get currently selected row IDs. */
@@ -195,6 +238,10 @@ export interface IOGridProps<T> {
   onVisibleColumnsChange?: (cols: Set<string>) => void;
   columnOrder?: string[];
   onColumnOrderChange?: (order: string[]) => void;
+  /** Called when a column is resized by the user. */
+  onColumnResized?: (columnId: string, width: number) => void;
+  /** Called when a column is pinned or unpinned. */
+  onColumnPinned?: (columnId: string, pinned: 'left' | 'right' | null) => void;
   freezeRows?: number;
   freezeCols?: number;
   editable?: boolean;
@@ -220,9 +267,28 @@ export interface IOGridProps<T> {
   emptyState?: { message?: ReactNode; render?: () => ReactNode };
   entityLabelPlural?: string;
   className?: string;
+  /** @deprecated Render your title outside the OGrid component. Will be removed in next major. */
   title?: ReactNode;
 
+  /** Where the column chooser renders.
+   *  - `true` or `'toolbar'` (default): column chooser button in the toolbar strip.
+   *  - `'sidebar'`: column chooser only available via the sidebar columns panel.
+   *  - `false`: column chooser hidden entirely. */
+  columnChooser?: boolean | 'toolbar' | 'sidebar';
+
   layoutMode?: 'content' | 'fill';
+
+  /** When true, horizontal scrolling is suppressed (overflow-x hidden). */
+  suppressHorizontalScroll?: boolean;
+
+  /** Side bar configuration. `true` shows default panels (columns + filters). Pass ISideBarDef for options. */
+  sideBar?: boolean | ISideBarDef;
+
+  /** Page size options shown in the pagination dropdown. Default: [10, 20, 50, 100]. */
+  pageSizeOptions?: number[];
+
+  /** Fires once when the grid first renders with data (useful for restoring column state). */
+  onFirstDataRendered?: () => void;
 
   /** Called when server-side fetchPage fails. */
   onError?: (error: unknown) => void;
@@ -243,11 +309,21 @@ export interface IOGridDataGridProps<T> {
   /** Optional column display order (column ids). When set, visible columns are ordered by this array. */
   columnOrder?: string[];
   onColumnOrderChange?: (order: string[]) => void;
+  /** Called when a column is resized by the user. */
+  onColumnResized?: (columnId: string, width: number) => void;
+  /** Called when a column is pinned or unpinned. */
+  onColumnPinned?: (columnId: string, pinned: 'left' | 'right' | null) => void;
+  /** Runtime pin overrides (from restored state or programmatic changes). */
+  pinnedColumns?: Record<string, 'left' | 'right'>;
+  /** Initial column width overrides (from restored state). */
+  initialColumnWidths?: Record<string, number>;
   /** Number of rows to freeze (sticky), e.g. 1 = header row. */
   freezeRows?: number;
   /** Number of data columns to freeze (sticky left). */
   freezeCols?: number;
   layoutMode?: 'content' | 'fill';
+  /** When true, horizontal scrolling is suppressed (overflow-x hidden). */
+  suppressHorizontalScroll?: boolean;
   isLoading?: boolean;
   loadingMessage?: string;
   editable?: boolean;
@@ -268,6 +344,8 @@ export interface IOGridDataGridProps<T> {
   onTextFilterChange?: (key: string, value: string) => void;
   peopleFilters?: Record<string, UserLike | undefined>;
   onPeopleFilterChange?: (key: string, user: UserLike | undefined) => void;
+  dateFilters?: Record<string, IDateFilterValue>;
+  onDateFilterChange?: (key: string, value: IDateFilterValue | undefined) => void;
   filterOptions: Record<string, string[]>;
   loadingFilterOptions: Record<string, boolean>;
   peopleSearch?: (query: string) => Promise<UserLike[]>;

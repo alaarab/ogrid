@@ -97,6 +97,60 @@ describe('parseValue', () => {
       expect(parseValue('anything', 'old', item, col)).toEqual({ valid: true, value: 'anything' });
     });
   });
+
+  describe('built-in column type auto-validation', () => {
+    it('rejects non-date value for date column', () => {
+      const col: IColumnDef<Row> = { ...baseCol, type: 'date' };
+      expect(parseValue('Marketing', 'old', item, col)).toEqual({ valid: false, value: undefined });
+    });
+
+    it('accepts valid date for date column', () => {
+      const col: IColumnDef<Row> = { ...baseCol, type: 'date' };
+      const result = parseValue('2024-06-15', 'old', item, col);
+      expect(result.valid).toBe(true);
+      expect(result.value).toContain('2024-06-15');
+    });
+
+    it('allows clearing date column with empty string', () => {
+      const col: IColumnDef<Row> = { ...baseCol, type: 'date' };
+      expect(parseValue('', 'old', item, col)).toEqual({ valid: true, value: null });
+    });
+
+    it('rejects non-boolean value for boolean column', () => {
+      const col: IColumnDef<Row> = { ...baseCol, type: 'boolean' };
+      expect(parseValue('Engineering', 'old', item, col)).toEqual({ valid: false, value: undefined });
+    });
+
+    it('accepts "true"/"false" for boolean column', () => {
+      const col: IColumnDef<Row> = { ...baseCol, type: 'boolean' };
+      expect(parseValue('true', 'old', item, col)).toEqual({ valid: true, value: true });
+      expect(parseValue('false', 'old', item, col)).toEqual({ valid: true, value: false });
+    });
+
+    it('rejects non-numeric value for numeric column', () => {
+      const col: IColumnDef<Row> = { ...baseCol, type: 'numeric' };
+      expect(parseValue('Sales', 'old', item, col)).toEqual({ valid: false, value: undefined });
+    });
+
+    it('accepts valid number for numeric column', () => {
+      const col: IColumnDef<Row> = { ...baseCol, type: 'numeric' };
+      expect(parseValue('42', 'old', item, col)).toEqual({ valid: true, value: 42 });
+    });
+
+    it('custom valueParser takes priority over built-in type validation', () => {
+      const col: IColumnDef<Row> = {
+        ...baseCol,
+        type: 'date',
+        valueParser: ({ newValue }) => `custom:${newValue}`,
+      };
+      expect(parseValue('anything', 'old', item, col)).toEqual({ valid: true, value: 'custom:anything' });
+    });
+
+    it('text type passes through unchanged', () => {
+      const col: IColumnDef<Row> = { ...baseCol, type: 'text' };
+      expect(parseValue('anything', 'old', item, col)).toEqual({ valid: true, value: 'anything' });
+    });
+  });
 });
 
 describe('numberParser', () => {

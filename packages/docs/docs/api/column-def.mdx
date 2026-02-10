@@ -1,0 +1,381 @@
+---
+sidebar_position: 2
+title: Column Definition
+---
+
+# Column Definition
+
+Complete reference for column definitions, column groups, cell editors, and related types.
+
+## IColumnMeta
+
+Base metadata shared by all column definitions. These properties control how a column appears and behaves in the grid header.
+
+```typescript
+interface IColumnMeta {
+  columnId: string;
+  name: string;
+  type?: 'numeric';
+  sortable?: boolean;
+  filterable?: IColumnFilterDef;
+  defaultVisible?: boolean;
+  required?: boolean;
+  minWidth?: number;
+  defaultWidth?: number;
+  idealWidth?: number;
+  pinned?: 'left' | 'right';
+}
+```
+
+| Name | Type | Default | Description |
+|------|------|---------|-------------|
+| `columnId` | `string` | **Required** | Unique identifier for the column. Used as the key for sorting, filtering, visibility, and state persistence. Also used as the default field name for `valueGetter` if none is provided. |
+| `name` | `string` | **Required** | Display name shown in the column header. |
+| `type` | `'numeric'` | `undefined` | Column data type. When set to `'numeric'`, cell content is right-aligned. |
+| `sortable` | `boolean` | `true` | Whether the column header is clickable for sorting. |
+| `filterable` | `IColumnFilterDef` | `undefined` | Filter configuration. When provided, a filter icon appears in the column header. See [IColumnFilterDef](#icolumnfilterdef) below. |
+| `defaultVisible` | `boolean` | `true` | Whether the column is visible by default. Columns with `defaultVisible: false` can be shown via the column chooser. |
+| `required` | `boolean` | `false` | When `true`, the column cannot be hidden via the column chooser. |
+| `minWidth` | `number` | `undefined` | Minimum column width in pixels. The column cannot be resized below this value. |
+| `defaultWidth` | `number` | `undefined` | Default column width in pixels. |
+| `idealWidth` | `number` | `undefined` | Preferred column width in pixels. Used by the grid's auto-sizing algorithm. |
+| `pinned` | `'left' \| 'right'` | `undefined` | Pin the column to the left or right edge of the grid. Pinned columns remain visible when scrolling horizontally. |
+
+## IColumnDef&lt;T&gt;
+
+Extends `IColumnMeta` with rendering, editing, and data access properties.
+
+```typescript
+interface IColumnDef<T> extends IColumnMeta {
+  renderCell?: (item: T) => ReactNode;
+  compare?: (a: T, b: T) => number;
+  valueGetter?: (item: T) => unknown;
+  valueFormatter?: (value: unknown, item: T) => string;
+  valueParser?: (params: IValueParserParams<T>) => unknown;
+  cellStyle?: CSSProperties | ((item: T) => CSSProperties);
+  editable?: boolean | ((item: T) => boolean);
+  cellEditor?: 'text' | 'select' | 'checkbox' | 'richSelect' | ComponentType<ICellEditorProps<T>>;
+  cellEditorPopup?: boolean;
+  cellEditorParams?: CellEditorParams;
+}
+```
+
+### Rendering
+
+| Name | Type | Default | Description |
+|------|------|---------|-------------|
+| `renderCell` | `(item: T) => ReactNode` | `undefined` | Custom cell renderer. Receives the row data and returns JSX. When not provided, the grid displays the raw value from `valueGetter` or the field matching `columnId`. |
+| `cellStyle` | `CSSProperties \| ((item: T) => CSSProperties)` | `undefined` | Custom styles applied to the cell. Can be a static style object or a function that returns styles based on the row data. |
+
+### Data Access
+
+| Name | Type | Default | Description |
+|------|------|---------|-------------|
+| `valueGetter` | `(item: T) => unknown` | `undefined` | Extracts the raw value from a row for sorting, filtering, editing, and display. When not provided, the grid reads `item[columnId]`. |
+| `valueFormatter` | `(value: unknown, item: T) => string` | `undefined` | Formats the raw value for display and clipboard copy. Receives the value from `valueGetter` and the row data. |
+| `valueParser` | `(params: IValueParserParams<T>) => unknown` | `undefined` | Parses a user-entered string back into the data type expected by your model. Used during cell editing and paste operations. |
+| `compare` | `(a: T, b: T) => number` | `undefined` | Custom sort comparator. Returns a negative number if `a` comes before `b`, positive if after, or `0` if equal. When not provided, the grid uses a default comparison on the `valueGetter` result. |
+
+### Editing
+
+| Name | Type | Default | Description |
+|------|------|---------|-------------|
+| `editable` | `boolean \| ((item: T) => boolean)` | `false` | Whether cells in this column are editable. A function allows per-row control. The grid-level `editable` prop must also be `true` for editing to work. |
+| `cellEditor` | `'text' \| 'select' \| 'checkbox' \| 'richSelect' \| ComponentType<ICellEditorProps<T>>` | `'text'` | The editor to use when a cell enters edit mode. Built-in editors: `'text'` (text input), `'select'` (dropdown), `'checkbox'` (toggle), `'richSelect'` (searchable dropdown). You can also pass a custom React component. |
+| `cellEditorPopup` | `boolean` | `false` | When `true`, the cell editor renders in a popup overlay instead of inline within the cell. |
+| `cellEditorParams` | `CellEditorParams` | `undefined` | Additional parameters passed to the cell editor. The shape depends on the editor type. See [CellEditorParams](#celleditorparams) below. |
+
+## IColumnFilterDef
+
+Configuration for column header filters.
+
+```typescript
+interface IColumnFilterDef {
+  type: 'text' | 'multiSelect' | 'people';
+  filterField?: string;
+  optionsSource?: 'api' | 'static' | 'years';
+  options?: string[];
+  yearsCount?: number;
+}
+```
+
+| Name | Type | Default | Description |
+|------|------|---------|-------------|
+| `type` | `'text' \| 'multiSelect' \| 'people'` | **Required** | Filter type. `'text'` shows a text input. `'multiSelect'` shows a list of checkboxes. `'people'` shows a people picker with search. |
+| `filterField` | `string` | `columnId` | The field name to use in the `IFilters` record. Defaults to the column's `columnId`. Useful when multiple columns filter on the same field. |
+| `optionsSource` | `'api' \| 'static' \| 'years'` | `undefined` | Where multiSelect options come from. `'static'` uses the `options` array. `'api'` calls `dataSource.fetchFilterOptions()`. `'years'` auto-generates a list of years. |
+| `options` | `string[]` | `undefined` | Static list of filter options for `optionsSource: 'static'`. |
+| `yearsCount` | `number` | `undefined` | Number of years to generate when `optionsSource: 'years'`. |
+
+### Filter Type Examples
+
+```typescript
+// Text filter
+{ columnId: 'name', name: 'Name', filterable: { type: 'text' } }
+
+// Multi-select with static options
+{
+  columnId: 'status',
+  name: 'Status',
+  filterable: {
+    type: 'multiSelect',
+    optionsSource: 'static',
+    options: ['Active', 'Inactive', 'Pending'],
+  },
+}
+
+// Multi-select with server-side options
+{
+  columnId: 'department',
+  name: 'Department',
+  filterable: { type: 'multiSelect', optionsSource: 'api' },
+}
+
+// People filter
+{
+  columnId: 'assignee',
+  name: 'Assignee',
+  filterable: { type: 'people' },
+}
+
+// Year filter
+{
+  columnId: 'year',
+  name: 'Year',
+  filterable: { type: 'multiSelect', optionsSource: 'years', yearsCount: 10 },
+}
+```
+
+## IColumnGroupDef&lt;T&gt;
+
+Defines a group of columns rendered under a shared multi-row header.
+
+```typescript
+interface IColumnGroupDef<T> {
+  headerName: string;
+  children: (IColumnGroupDef<T> | IColumnDef<T>)[];
+}
+```
+
+| Name | Type | Default | Description |
+|------|------|---------|-------------|
+| `headerName` | `string` | **Required** | Display name for the column group header. Rendered centered above its child columns. |
+| `children` | `(IColumnGroupDef<T> \| IColumnDef<T>)[]` | **Required** | Child columns or nested column groups. Groups can be nested to arbitrary depth, producing multi-row headers. |
+
+### Column Group Example
+
+```typescript
+const columns = [
+  { columnId: 'name', name: 'Name' },
+  {
+    headerName: 'Contact Info',
+    children: [
+      { columnId: 'email', name: 'Email' },
+      { columnId: 'phone', name: 'Phone' },
+    ],
+  },
+  {
+    headerName: 'Address',
+    children: [
+      { columnId: 'city', name: 'City' },
+      { columnId: 'state', name: 'State' },
+      { columnId: 'zip', name: 'ZIP' },
+    ],
+  },
+];
+```
+
+This renders as:
+
+| Name | Contact Info || Address |||
+|------|-------|-------|------|-------|-----|
+|      | Email | Phone | City | State | ZIP |
+
+## ICellEditorProps&lt;T&gt;
+
+Props received by custom cell editor components.
+
+```typescript
+interface ICellEditorProps<T> {
+  value: unknown;
+  onValueChange: (value: unknown) => void;
+  onCommit: () => void;
+  onCancel: () => void;
+  item: T;
+  column: IColumnDef<T>;
+  cellEditorParams?: CellEditorParams;
+}
+```
+
+| Name | Type | Description |
+|------|------|-------------|
+| `value` | `unknown` | The current cell value. |
+| `onValueChange` | `(value: unknown) => void` | Call this to update the pending value as the user types or makes a selection. |
+| `onCommit` | `() => void` | Call this to commit the current value and exit edit mode. Typically bound to Enter or blur. |
+| `onCancel` | `() => void` | Call this to discard changes and exit edit mode. Typically bound to Escape. |
+| `item` | `T` | The full row data object. |
+| `column` | `IColumnDef<T>` | The column definition for the cell being edited. |
+| `cellEditorParams` | `CellEditorParams` | Additional parameters from the column definition's `cellEditorParams`. |
+
+### Custom Cell Editor Example
+
+```typescript
+import { ICellEditorProps } from '@alaarab/ogrid-core';
+
+function DateEditor({ value, onValueChange, onCommit, onCancel }: ICellEditorProps<MyRow>) {
+  return (
+    <input
+      type="date"
+      value={value as string}
+      onChange={(e) => onValueChange(e.target.value)}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter') onCommit();
+        if (e.key === 'Escape') onCancel();
+      }}
+      onBlur={onCommit}
+      autoFocus
+    />
+  );
+}
+
+const columns = [
+  {
+    columnId: 'dueDate',
+    name: 'Due Date',
+    editable: true,
+    cellEditor: DateEditor,
+  },
+];
+```
+
+## CellEditorParams
+
+Parameters passed to built-in cell editors via the `cellEditorParams` property on a column definition. The shape varies by editor type.
+
+### Select Editor
+
+```typescript
+{
+  cellEditor: 'select',
+  cellEditorParams: {
+    values: ['Option A', 'Option B', 'Option C'],
+  },
+}
+```
+
+| Name | Type | Description |
+|------|------|-------------|
+| `values` | `string[]` | List of options for the select dropdown. |
+
+### Rich Select Editor
+
+```typescript
+{
+  cellEditor: 'richSelect',
+  cellEditorParams: {
+    values: ['Active', 'Inactive', 'Pending'],
+    formatValue: (value: string) => value.toUpperCase(),
+  },
+}
+```
+
+| Name | Type | Description |
+|------|------|-------------|
+| `values` | `string[]` | List of options for the searchable dropdown. |
+| `formatValue` | `(value: string) => string` | Optional function to format how each option is displayed. |
+
+## ICellValueChangedEvent&lt;T&gt;
+
+Event object passed to `onCellValueChanged` after a cell edit is committed.
+
+```typescript
+interface ICellValueChangedEvent<T> {
+  item: T;
+  columnId: string;
+  field: string;
+  oldValue: unknown;
+  newValue: unknown;
+  rowIndex: number;
+}
+```
+
+| Name | Type | Description |
+|------|------|-------------|
+| `item` | `T` | The row data object (before the change). |
+| `columnId` | `string` | The column ID of the edited cell. |
+| `field` | `string` | The field name of the edited cell. |
+| `oldValue` | `unknown` | The value before editing. |
+| `newValue` | `unknown` | The value after editing. |
+| `rowIndex` | `number` | The row index of the edited cell. |
+
+## Complete Column Definition Example
+
+```typescript
+import { IColumnDef, IColumnGroupDef } from '@alaarab/ogrid-core';
+
+interface Employee {
+  id: number;
+  name: string;
+  department: string;
+  salary: number;
+  startDate: string;
+  manager: { displayName: string; email: string };
+}
+
+const columns: (IColumnDef<Employee> | IColumnGroupDef<Employee>)[] = [
+  {
+    columnId: 'name',
+    name: 'Employee Name',
+    sortable: true,
+    required: true,
+    pinned: 'left',
+    minWidth: 150,
+    filterable: { type: 'text' },
+    editable: true,
+    cellEditor: 'text',
+  },
+  {
+    headerName: 'Details',
+    children: [
+      {
+        columnId: 'department',
+        name: 'Department',
+        filterable: {
+          type: 'multiSelect',
+          optionsSource: 'static',
+          options: ['Engineering', 'Marketing', 'Sales', 'HR'],
+        },
+        editable: true,
+        cellEditor: 'richSelect',
+        cellEditorParams: { values: ['Engineering', 'Marketing', 'Sales', 'HR'] },
+      },
+      {
+        columnId: 'salary',
+        name: 'Salary',
+        type: 'numeric',
+        valueFormatter: (value) => `$${Number(value).toLocaleString()}`,
+        valueParser: ({ newValue }) => Number(String(newValue).replace(/[$,]/g, '')),
+        editable: true,
+        cellStyle: (item) => ({
+          color: item.salary > 100000 ? 'green' : undefined,
+        }),
+      },
+    ],
+  },
+  {
+    columnId: 'startDate',
+    name: 'Start Date',
+    defaultVisible: false,
+    valueFormatter: (value) => new Date(value as string).toLocaleDateString(),
+  },
+  {
+    columnId: 'manager',
+    name: 'Manager',
+    filterable: { type: 'people' },
+    valueGetter: (item) => item.manager,
+    renderCell: (item) => <span>{item.manager.displayName}</span>,
+    valueFormatter: (value) => (value as Employee['manager']).displayName,
+    editable: false,
+  },
+];
+```

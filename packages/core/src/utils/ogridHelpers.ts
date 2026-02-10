@@ -1,4 +1,4 @@
-import type { IColumnDef, UserLike, IFilters } from '../types';
+import type { IColumnDef, IFilters, FilterValue } from '../types';
 import { getCellValue } from './cellValue';
 
 /** Resolve the filter field key for a column (filterField or columnId). */
@@ -11,16 +11,18 @@ export function getFilterField<T>(col: IColumnDef<T>): string {
 export function mergeFilter(
   prev: IFilters,
   key: string,
-  value: string | string[] | UserLike | undefined
+  value: FilterValue | undefined
 ): IFilters {
   const next = { ...prev };
   const isEmpty =
     value === undefined ||
     (Array.isArray(value) && value.length === 0) ||
     (typeof value === 'string' && value.trim() === '');
-  const isPlainObjectWithoutEmail =
-    typeof value === 'object' && value !== null && !Array.isArray(value) && !('email' in value);
-  if (isEmpty || isPlainObjectWithoutEmail) {
+  // Date filter is empty when neither from nor to is set
+  const isEmptyDate =
+    typeof value === 'object' && value !== null && !Array.isArray(value) && !('email' in value) &&
+    !((value as { from?: string; to?: string }).from || (value as { from?: string; to?: string }).to);
+  if (isEmpty || isEmptyDate) {
     delete next[key];
   } else {
     next[key] = value;

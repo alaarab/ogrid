@@ -76,6 +76,21 @@ export function createOGridTests(OGrid: React.ComponentType<any>): void {
     expect(screen.getAllByTestId('cell-name')).toHaveLength(3);
   });
 
+  it('hides column chooser when columnChooser={false}', () => {
+    renderOGrid({ columnChooser: false });
+    expect(screen.queryByRole('button', { name: /column visibility/i })).not.toBeInTheDocument();
+  });
+
+  it('hides column chooser from toolbar when columnChooser="sidebar"', () => {
+    renderOGrid({ columnChooser: 'sidebar' });
+    expect(screen.queryByRole('button', { name: /column visibility/i })).not.toBeInTheDocument();
+  });
+
+  it('shows column chooser by default (columnChooser unset)', () => {
+    renderOGrid();
+    expect(screen.getByRole('button', { name: /column visibility/i })).toBeInTheDocument();
+  });
+
   it('integration: filter reduces rows, sort changes order, page size changes row count, column hide hides column', () => {
     renderOGrid({ defaultPageSize: 2 });
     expect(screen.getAllByTestId('cell-name')).toHaveLength(2);

@@ -28,7 +28,13 @@ import {
   useDataGridState,
   getHeaderFilterConfig,
   getCellRenderDescriptor,
+  buildHeaderRows,
   MarchingAntsOverlay,
+  resolveCellDisplayContent,
+  resolveCellStyle,
+  buildInlineEditorProps,
+  buildPopoverEditorProps,
+  getCellInteractionProps,
 } from '@alaarab/ogrid-core';
 import styles from './DataGridTable.module.scss';
 
@@ -60,7 +66,6 @@ function DataGridTableInner<T>(props: IOGridDataGridProps<T>): React.ReactElemen
     handleCellMouseDown,
     handleSelectAllCells,
     contextMenu,
-    setContextMenu,
     handleCellContextMenu,
     closeContextMenu,
     canUndo,
@@ -74,6 +79,7 @@ function DataGridTableInner<T>(props: IOGridDataGridProps<T>): React.ReactElemen
     handleFillHandleMouseDown,
     containerWidth,
     minTableWidth,
+    desiredTableWidth,
     columnSizingOverrides,
     setColumnSizingOverrides,
     statusBarConfig,
@@ -99,11 +105,15 @@ function DataGridTableInner<T>(props: IOGridDataGridProps<T>): React.ReactElemen
     rowSelection = 'none',
     freezeRows,
     freezeCols,
+    suppressHorizontalScroll,
     isLoading = false,
     loadingMessage = 'Loading\u2026',
     'aria-label': ariaLabel,
     'aria-labelledby': ariaLabelledBy,
   } = props;
+
+  const headerRows = buildHeaderRows(props.columns, props.visibleColumns);
+  const hasGroupHeaders = headerRows.length > 1;
 
   const fitToContent = layoutMode === 'content';
 
@@ -132,17 +142,7 @@ function DataGridTableInner<T>(props: IOGridDataGridProps<T>): React.ReactElemen
     return acc;
   }, [visibleCols, columnSizingOverrides, hasCheckboxCol]);
 
-  const desiredTableWidth = useMemo(() => {
-    const PADDING = 16;
-    const checkboxW = hasCheckboxCol ? 48 : 0;
-    return visibleCols.reduce((sum, c) => {
-      const s = columnSizingOptions[c.columnId] as { idealWidth?: number; defaultWidth?: number; minWidth: number } | undefined;
-      const w = s?.idealWidth ?? s?.defaultWidth ?? c.idealWidth ?? c.defaultWidth ?? c.minWidth ?? 80;
-      return sum + Math.max(c.minWidth ?? 80, w) + PADDING;
-    }, checkboxW);
-  }, [visibleCols, columnSizingOptions, hasCheckboxCol]);
-
-  const allowOverflowX = containerWidth > 0 && (minTableWidth > containerWidth || desiredTableWidth > containerWidth);
+  const allowOverflowX = !suppressHorizontalScroll && containerWidth > 0 && (minTableWidth > containerWidth || desiredTableWidth > containerWidth);
 
   const fluentColumns = useMemo<TableColumnDefinition<T>[]>(() => {
     const dataCols: TableColumnDefinition<T>[] = visibleCols.map((col, colIdx) =>
@@ -160,35 +160,12 @@ function DataGridTableInner<T>(props: IOGridDataGridProps<T>): React.ReactElemen
           const descriptor = getCellRenderDescriptor(item, col, rowIndex, colIdx, cellDescriptorInput);
 
           if (descriptor.mode === 'editing-inline') {
-            return (
-              <InlineCellEditor<T>
-                value={descriptor.value}
-                item={item}
-                column={col}
-                rowIndex={descriptor.rowIndex}
-                editorType={descriptor.editorType ?? 'text'}
-                onCommit={(newValue) => commitCellEdit(item, col.columnId, descriptor.value, newValue, descriptor.rowIndex, descriptor.globalColIndex)}
-                onCancel={() => setEditingCell(null)}
-              />
-            );
+            return <InlineCellEditor<T> {...buildInlineEditorProps(item, col, descriptor, { commitCellEdit, setEditingCell })} />;
           }
 
           if (descriptor.mode === 'editing-popover' && typeof col.cellEditor === 'function') {
-            const oldValue = descriptor.value;
-            const displayValue = pendingEditorValue !== undefined ? pendingEditorValue : oldValue;
+            const editorProps = buildPopoverEditorProps(item, col, descriptor, pendingEditorValue, { setPendingEditorValue, commitCellEdit, cancelPopoverEdit });
             const CustomEditor = col.cellEditor as React.ComponentType<ICellEditorProps<T>>;
-            const editorProps: ICellEditorProps<T> = {
-              value: displayValue,
-              onValueChange: setPendingEditorValue,
-              onCommit: () => {
-                const newValue = pendingEditorValue !== undefined ? pendingEditorValue : oldValue;
-                commitCellEdit(item, col.columnId, oldValue, newValue, descriptor.rowIndex, descriptor.globalColIndex);
-              },
-              onCancel: cancelPopoverEdit,
-              item,
-              column: col,
-              cellEditorParams: col.cellEditorParams,
-            };
             return (
               <>
                 <div
@@ -209,20 +186,9 @@ function DataGridTableInner<T>(props: IOGridDataGridProps<T>): React.ReactElemen
             );
           }
 
-          const cellStyle = col.cellStyle
-            ? typeof col.cellStyle === 'function'
-              ? col.cellStyle(item)
-              : col.cellStyle
-            : undefined;
-          let content: React.ReactNode;
-          if (col.renderCell) content = col.renderCell(item);
-          else {
-            const value = descriptor.displayValue;
-            if (col.valueFormatter) content = col.valueFormatter(value, item);
-            else if (value !== null && value !== undefined) content = String(value);
-            else content = null;
-          }
-          if (cellStyle) content = <span style={cellStyle}>{content}</span>;
+          const content = resolveCellDisplayContent(col, item, descriptor.displayValue);
+          const cellStyle = resolveCellStyle(col, item);
+          const styledContent = cellStyle ? <span style={cellStyle}>{content}</span> : content;
 
           const cellClassNames = [
             styles.cellContent,
@@ -234,44 +200,27 @@ function DataGridTableInner<T>(props: IOGridDataGridProps<T>): React.ReactElemen
             .filter(Boolean)
             .join(' ');
 
-          if (descriptor.canEditAny) {
-            return (
-              <div
-                className={cellClassNames}
-                data-row-index={descriptor.rowIndex}
-                data-col-index={descriptor.globalColIndex}
-                {...(descriptor.isInRange ? { 'data-in-range': 'true' } : {})}
-                role="button"
-                tabIndex={descriptor.isActive ? 0 : -1}
-                onMouseDown={(e) => handleCellMouseDown(e, descriptor.rowIndex, descriptor.globalColIndex)}
-                onClick={() => setActiveCell({ rowIndex: descriptor.rowIndex, columnIndex: descriptor.globalColIndex })}
-                onDoubleClick={() => setEditingCell({ rowId: descriptor.rowId, columnId: col.columnId })}
-                onContextMenu={handleCellContextMenu}
-                style={{ cursor: 'cell' }}
-              >
-                {content}
-                {descriptor.isSelectionEndCell && (
-                  <div
-                    className={styles.fillHandle}
-                    onMouseDown={handleFillHandleMouseDown}
-                    aria-label="Fill handle"
-                  />
-                )}
-              </div>
-            );
-          }
+          const colType = col.type;
+          const interactionProps = getCellInteractionProps(descriptor, col.columnId, { handleCellMouseDown, setActiveCell, setEditingCell, handleCellContextMenu });
+
           return (
             <div
               className={cellClassNames}
-              data-row-index={descriptor.rowIndex}
-              data-col-index={descriptor.globalColIndex}
-              {...(descriptor.isInRange ? { 'data-in-range': 'true' } : {})}
-              tabIndex={descriptor.isActive ? 0 : -1}
-              onMouseDown={(e) => handleCellMouseDown(e, descriptor.rowIndex, descriptor.globalColIndex)}
-              onClick={() => setActiveCell({ rowIndex: descriptor.rowIndex, columnIndex: descriptor.globalColIndex })}
-              onContextMenu={handleCellContextMenu}
+              {...interactionProps}
+              style={{
+                ...(descriptor.canEditAny ? { cursor: 'cell' } : undefined),
+                ...(colType === 'numeric' ? { justifyContent: 'flex-end', textAlign: 'right' } : undefined),
+                ...(colType === 'boolean' ? { justifyContent: 'center', textAlign: 'center' } : undefined),
+              }}
             >
-              {content}
+              {styledContent}
+              {descriptor.canEditAny && descriptor.isSelectionEndCell && (
+                <div
+                  className={styles.fillHandle}
+                  onMouseDown={handleFillHandleMouseDown}
+                  aria-label="Fill handle"
+                />
+              )}
             </div>
           );
         },
@@ -461,8 +410,39 @@ function DataGridTableInner<T>(props: IOGridDataGridProps<T>): React.ReactElemen
                 className={styles.dataGrid}
               >
                 <DataGridHeader
-                  className={freezeRows != null && freezeRows >= 1 ? styles.stickyHeader : undefined}
+                  className={styles.stickyHeader}
                 >
+                  {hasGroupHeaders && headerRows.slice(0, -1).map((row, rowIdx) => (
+                    <tr key={`group-${rowIdx}`} className={styles.groupHeaderRow}>
+                      {rowIdx === 0 && hasCheckboxCol && (
+                        <th rowSpan={headerRows.length - 1} style={{ width: 48, minWidth: 48 }} />
+                      )}
+                      {row.map((cell, cellIdx) => {
+                        if (cell.isGroup) {
+                          return (
+                            <th
+                              key={cellIdx}
+                              colSpan={cell.colSpan}
+                              className={styles.groupHeaderCell}
+                              scope="colgroup"
+                            >
+                              {cell.label}
+                            </th>
+                          );
+                        }
+                        return (
+                          <th
+                            key={cellIdx}
+                            rowSpan={headerRows.length - rowIdx}
+                            className={styles.leafHeaderCellSpan}
+                            scope="col"
+                          >
+                            {cell.columnDef?.name}
+                          </th>
+                        );
+                      })}
+                    </tr>
+                  ))}
                   <DataGridRow>
                     {({ renderHeaderCell, columnId }) => {
                       const colIdx = visibleCols.findIndex((c) => c.columnId === columnId);
@@ -543,14 +523,6 @@ function DataGridTableInner<T>(props: IOGridDataGridProps<T>): React.ReactElemen
                 cutRange={cutRange}
                 colOffset={colOffset}
               />
-              {statusBarConfig && (
-                <StatusBar
-                  totalCount={statusBarConfig.totalCount}
-                  filteredCount={statusBarConfig.filteredCount}
-                  selectedCount={statusBarConfig.selectedCount ?? selectedRowIds.size}
-                  selectedCellCount={selectionRange ? (Math.abs(selectionRange.endRow - selectionRange.startRow) + 1) * (Math.abs(selectionRange.endCol - selectionRange.startCol) + 1) : undefined}
-                />
-              )}
               {showEmptyInGrid && emptyState && (
                 <div className={styles.emptyStateInGrid}>
                   <div className={styles.emptyStateInGridMessageSticky}>
@@ -584,6 +556,16 @@ function DataGridTableInner<T>(props: IOGridDataGridProps<T>): React.ReactElemen
               )}
             </div>
           </div>
+        {statusBarConfig && (
+          <StatusBar
+            totalCount={statusBarConfig.totalCount}
+            filteredCount={statusBarConfig.filteredCount}
+            selectedCount={statusBarConfig.selectedCount ?? selectedRowIds.size}
+            selectedCellCount={selectionRange ? (Math.abs(selectionRange.endRow - selectionRange.startRow) + 1) * (Math.abs(selectionRange.endCol - selectionRange.startCol) + 1) : undefined}
+            aggregation={statusBarConfig.aggregation}
+            suppressRowCount={statusBarConfig.suppressRowCount}
+          />
+        )}
       </div>
 
       {contextMenu &&

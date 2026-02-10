@@ -1,13 +1,15 @@
-const js = require('@eslint/js');
-const tseslint = require('typescript-eslint');
-const react = require('eslint-plugin-react');
-const reactHooks = require('eslint-plugin-react-hooks');
+import js from '@eslint/js';
+import tseslint from 'typescript-eslint';
+import react from 'eslint-plugin-react';
+import reactHooks from 'eslint-plugin-react-hooks';
+import storybook from 'eslint-plugin-storybook';
 
-module.exports = [
+export default [
   {
     ignores: [
       '**/node_modules/**', '**/dist/**', '**/coverage/**', '**/storybook-static/**', '**/.turbo/**',
       '**/*.config.js', '**/jest-mocks/**', '**/scripts/**', '**/*.stories.tsx', '**/__tests__/**',
+      '**/.docusaurus/**', '**/build/**', 'packages/docs/**',
     ],
   },
   js.configs.recommended,
@@ -34,4 +36,5 @@ module.exports = [
       '@typescript-eslint/no-unused-expressions': 'off',
     },
   },
+  ...storybook.configs['flat/recommended'],
 ];

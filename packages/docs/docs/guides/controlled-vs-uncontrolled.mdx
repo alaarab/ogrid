@@ -1,0 +1,158 @@
+---
+sidebar_position: 1
+title: Controlled vs Uncontrolled
+description: Choose between letting OGrid manage state internally or owning it yourself.
+---
+
+# Controlled vs Uncontrolled
+
+OGrid supports both **uncontrolled** and **controlled** state patterns for every stateful feature -- sorting, filtering, pagination, column visibility, row selection, and column order. You can also mix and match, controlling some features while leaving others to the grid.
+
+## Uncontrolled (Zero Config)
+
+In uncontrolled mode, OGrid manages all state internally. Just pass your columns and data:
+
+```tsx
+import { OGrid } from '@alaarab/ogrid';
+
+const columns = [
+  { columnId: 'name', name: 'Name', sortable: true },
+  { columnId: 'email', name: 'Email', filterable: { type: 'text' as const } },
+  { columnId: 'role', name: 'Role' },
+];
+
+function App() {
+  return (
+    <OGrid
+      columns={columns}
+      data={people}
+      getRowId={(item) => item.id}
+      defaultPageSize={25}
+      defaultSortBy="name"
+      defaultSortDirection="asc"
+    />
+  );
+}
+```
+
+The grid handles sorting, filtering, pagination, and everything else on its own. Use the `default*` props to set initial values.
+
+## Controlled (You Own the State)
+
+In controlled mode, you pass the current value and an `onChange` callback for each feature you want to control. This is useful when you need to sync grid state with a URL, persist it to storage, or coordinate with other components.
+
+```tsx
+import { useState } from 'react';
+import { OGrid, type IFilters } from '@alaarab/ogrid';
+
+function App() {
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(25);
+  const [sort, setSort] = useState({ field: 'name', direction: 'asc' as const });
+  const [filters, setFilters] = useState<IFilters>({});
+
+  // Sync to URL, localStorage, or server on every change
+  const handleFiltersChange = (newFilters: IFilters) => {
+    setFilters(newFilters);
+    saveToUrl(newFilters);
+  };
+
+  return (
+    <OGrid
+      columns={columns}
+      data={people}
+      getRowId={(item) => item.id}
+      page={page}
+      onPageChange={setPage}
+      pageSize={pageSize}
+      onPageSizeChange={setPageSize}
+      sort={sort}
+      onSortChange={setSort}
+      filters={filters}
+      onFiltersChange={handleFiltersChange}
+    />
+  );
+}
+```
+
+## Partial Control
+
+You do not have to control everything. Control only the features you need -- the rest stays uncontrolled:
+
+```tsx
+function App() {
+  // Only control sort; filters, pagination, etc. are managed by the grid
+  const [sort, setSort] = useState({ field: 'name', direction: 'asc' as const });
+
+  return (
+    <OGrid
+      columns={columns}
+      data={people}
+      getRowId={(item) => item.id}
+      sort={sort}
+      onSortChange={setSort}
+      defaultPageSize={50}
+    />
+  );
+}
+```
+
+## Controllable Prop Pairs
+
+Every stateful feature follows the same pattern: a value prop and an `onChange` callback. When both are provided, the grid operates in controlled mode for that feature. When neither is provided, the grid manages it internally.
+
+| Feature | Value Prop | Callback Prop | Default Prop |
+|---------|-----------|---------------|-------------|
+| Sort | `sort` | `onSortChange` | `defaultSortBy`, `defaultSortDirection` |
+| Filters | `filters` | `onFiltersChange` | -- |
+| Page | `page` | `onPageChange` | -- |
+| Page size | `pageSize` | `onPageSizeChange` | `defaultPageSize` |
+| Visible columns | `visibleColumns` | `onVisibleColumnsChange` | -- |
+| Selected rows | `selectedRows` | `onSelectionChange` | -- |
+| Column order | `columnOrder` | `onColumnOrderChange` | -- |
+
+:::tip
+When using controlled mode, always pass **both** the value and the callback. Passing only the value without a callback will lock the feature in its initial state, since OGrid will not be able to update it.
+:::
+
+## Imperative API
+
+For cases where you need to read or set state programmatically (e.g., a "Reset Filters" button), use the grid API ref:
+
+```tsx
+import { useRef } from 'react';
+import { OGrid, type IOGridApi } from '@alaarab/ogrid';
+
+function App() {
+  const gridRef = useRef<IOGridApi<Person>>(null);
+
+  const handleReset = () => {
+    gridRef.current?.setFilterModel({});
+    gridRef.current?.deselectAll();
+  };
+
+  return (
+    <>
+      <button onClick={handleReset}>Reset</button>
+      <OGrid
+        ref={gridRef}
+        columns={columns}
+        data={people}
+        getRowId={(item) => item.id}
+      />
+    </>
+  );
+}
+```
+
+The API ref works in both controlled and uncontrolled mode. See the [Grid API reference](../api/grid-api) for the full list of methods.
+
+## When to Use Which
+
+| Scenario | Recommendation |
+|----------|---------------|
+| Simple table, no external state needed | Uncontrolled |
+| URL-driven filters or sort | Controlled (filters, sort) |
+| Persist column layout to localStorage | Controlled (visibleColumns, columnOrder) + `getColumnState()` |
+| Server-side data with `dataSource` | Controlled or uncontrolled -- both work with `dataSource` |
+| Coordinate multiple grids | Controlled (shared state between grids) |

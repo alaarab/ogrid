@@ -1,7 +1,7 @@
 export { useFilterOptions } from './useFilterOptions';
 export type { UseFilterOptionsResult } from './useFilterOptions';
 export { useOGrid } from './useOGrid';
-export type { UseOGridResult } from './useOGrid';
+export type { UseOGridResult, ColumnChooserPlacement } from './useOGrid';
 export { useActiveCell } from './useActiveCell';
 export type { UseActiveCellResult } from './useActiveCell';
 export { useCellEditing } from './useCellEditing';
@@ -47,3 +47,7 @@ export type {
   UseColumnResizeParams,
   UseColumnResizeResult,
 } from './useColumnResize';
+export { useRichSelectState } from './useRichSelectState';
+export type { UseRichSelectStateParams, UseRichSelectStateResult } from './useRichSelectState';
+export { useSideBarState } from './useSideBarState';
+export type { UseSideBarStateParams, UseSideBarStateResult } from './useSideBarState';

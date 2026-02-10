@@ -1,0 +1,428 @@
+/* ──────────────────────────────────────────────
+   OGrid Landing Page
+   ────────────────────────────────────────────── */
+
+/* ── Hero ── */
+.hero {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  position: relative;
+  overflow: hidden;
+  padding: 2rem;
+  background: var(--ogrid-hero-bg);
+}
+
+.heroGradientMesh {
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(ellipse at 20% 50%, rgba(33, 115, 70, 0.15) 0%, transparent 50%),
+    radial-gradient(ellipse at 80% 20%, rgba(0, 102, 204, 0.12) 0%, transparent 50%),
+    radial-gradient(ellipse at 50% 80%, rgba(139, 92, 246, 0.08) 0%, transparent 50%);
+  animation: meshDrift 20s ease-in-out infinite;
+  pointer-events: none;
+}
+
+@keyframes meshDrift {
+  0%, 100% { background-position: 0% 0%, 100% 0%, 50% 100%; }
+  33% { background-position: 30% 20%, 70% 50%, 20% 60%; }
+  66% { background-position: 60% 40%, 30% 80%, 80% 20%; }
+}
+
+.heroContent {
+  position: relative;
+  z-index: 1;
+  max-width: 1100px;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.heroTitle {
+  font-size: clamp(2.5rem, 6vw, 4.5rem);
+  font-weight: 800;
+  letter-spacing: -0.04em;
+  line-height: 1.1;
+  margin-bottom: 1.25rem;
+
+  background: linear-gradient(135deg, var(--ogrid-accent) 0%, var(--ogrid-accent-secondary) 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.heroSubtitle {
+  font-size: clamp(1.1rem, 2vw, 1.35rem);
+  color: var(--ifm-color-emphasis-700);
+  line-height: 1.6;
+  max-width: 600px;
+  margin: 0 auto 2.5rem;
+}
+
+.heroButtons {
+  display: flex;
+  gap: 1rem;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+.btnPrimary {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.85rem 2rem;
+  font-size: 1rem;
+  font-weight: 600;
+  color: white;
+  background: linear-gradient(135deg, #217346 0%, #2d9b5f 100%);
+  border: none;
+  border-radius: 10px;
+  cursor: pointer;
+  text-decoration: none;
+  transition: transform 0.15s, box-shadow 0.15s;
+
+  &:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 8px 24px rgba(33, 115, 70, 0.3);
+    color: white;
+    text-decoration: none;
+  }
+}
+
+.btnGhost {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.85rem 2rem;
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--ifm-font-color-base);
+  background: var(--ogrid-surface-glass);
+  border: 1px solid var(--ogrid-border-glass);
+  border-radius: 10px;
+  cursor: pointer;
+  text-decoration: none;
+  backdrop-filter: blur(8px);
+  transition: transform 0.15s, border-color 0.15s;
+
+  &:hover {
+    transform: translateY(-1px);
+    border-color: var(--ogrid-accent);
+    color: var(--ifm-font-color-base);
+    text-decoration: none;
+  }
+}
+
+.heroInstall {
+  margin-top: 2.5rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.75rem 1.5rem;
+  background: var(--ogrid-surface-glass);
+  border: 1px solid var(--ogrid-border-glass);
+  border-radius: 10px;
+  font-family: var(--ifm-font-family-monospace);
+  font-size: 0.9rem;
+  backdrop-filter: blur(8px);
+  user-select: all;
+}
+
+.heroInstallDollar {
+  color: var(--ogrid-accent);
+  user-select: none;
+}
+
+/* ── Section Shared ── */
+.section {
+  padding: 6rem 2rem;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.sectionTitle {
+  font-size: clamp(1.75rem, 3vw, 2.5rem);
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  text-align: center;
+  margin-bottom: 0.75rem;
+}
+
+.sectionSubtitle {
+  font-size: 1.1rem;
+  color: var(--ifm-color-emphasis-600);
+  text-align: center;
+  max-width: 600px;
+  margin: 0 auto 3rem;
+}
+
+/* ── Code Preview ── */
+.codePreview {
+  padding: 6rem 2rem;
+  background: var(--ifm-background-surface-color);
+}
+
+.codePreviewInner {
+  max-width: 800px;
+  margin: 0 auto;
+}
+
+.codeCard {
+  background: var(--ogrid-surface-glass);
+  border: 1px solid var(--ogrid-border-glass);
+  border-radius: 14px;
+  overflow: hidden;
+  backdrop-filter: blur(16px);
+}
+
+.codeTabs {
+  display: flex;
+  border-bottom: 1px solid var(--ogrid-border-glass);
+}
+
+.codeTab {
+  flex: 1;
+  padding: 0.85rem 1rem;
+  font-size: 0.85rem;
+  font-weight: 600;
+  text-align: center;
+  cursor: pointer;
+  border: none;
+  background: transparent;
+  color: var(--ifm-color-emphasis-600);
+  transition: color 0.15s, background 0.15s;
+
+  &:hover {
+    background: rgba(255, 255, 255, 0.03);
+  }
+}
+
+.codeTabActive {
+  color: var(--ogrid-accent);
+  background: rgba(58, 184, 118, 0.06);
+  box-shadow: inset 0 -2px 0 var(--ogrid-accent);
+}
+
+.codeBody {
+  padding: 1.5rem;
+
+  pre {
+    margin: 0 !important;
+    background: transparent !important;
+    border: none !important;
+  }
+}
+
+/* ── Feature Grid (Bento) ── */
+.featureGrid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1rem;
+
+  @media (max-width: 768px) {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  @media (max-width: 480px) {
+    grid-template-columns: 1fr;
+  }
+}
+
+.featureCard {
+  padding: 1.5rem;
+  background: var(--ogrid-surface-glass);
+  border: 1px solid var(--ogrid-border-glass);
+  border-radius: 12px;
+  transition: transform 0.2s, box-shadow 0.2s, border-color 0.2s;
+
+  &:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+    border-color: rgba(58, 184, 118, 0.3);
+  }
+}
+
+.featureIcon {
+  font-size: 1.5rem;
+  margin-bottom: 0.75rem;
+  display: block;
+}
+
+.featureTitle {
+  font-size: 1rem;
+  font-weight: 700;
+  margin-bottom: 0.4rem;
+}
+
+.featureDesc {
+  font-size: 0.85rem;
+  color: var(--ifm-color-emphasis-600);
+  line-height: 1.5;
+}
+
+/* ── Comparison Table ── */
+.comparison {
+  padding: 6rem 2rem;
+  background: var(--ifm-background-surface-color);
+}
+
+.comparisonInner {
+  max-width: 900px;
+  margin: 0 auto;
+}
+
+.comparisonTable {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  border-radius: 12px;
+  overflow: hidden;
+  border: 1px solid var(--ogrid-border-glass);
+
+  th, td {
+    padding: 0.85rem 1rem;
+    text-align: center;
+    border-bottom: 1px solid var(--ogrid-border-glass);
+  }
+
+  th {
+    font-weight: 700;
+    font-size: 0.9rem;
+    background: var(--ogrid-surface-glass);
+  }
+
+  th:first-child, td:first-child {
+    text-align: left;
+    font-weight: 500;
+  }
+
+  tr:last-child td {
+    border-bottom: none;
+  }
+}
+
+.checkGreen {
+  color: #3ab876;
+  font-weight: 700;
+}
+
+.enterprise {
+  color: #f59e0b;
+  font-weight: 600;
+  font-size: 0.8rem;
+}
+
+
+/* ── CTA ── */
+.cta {
+  padding: 8rem 2rem;
+  text-align: center;
+  position: relative;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.ctaGradient {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(ellipse at 50% 50%, rgba(33, 115, 70, 0.08) 0%, transparent 70%);
+  pointer-events: none;
+}
+
+.ctaContent {
+  position: relative;
+  z-index: 1;
+}
+
+.ctaTitle {
+  font-size: clamp(1.75rem, 3vw, 2.5rem);
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  margin-bottom: 1rem;
+}
+
+.ctaSubtitle {
+  font-size: 1.1rem;
+  color: var(--ifm-color-emphasis-600);
+  margin-bottom: 2.5rem;
+}
+
+.ctaInstall {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 1rem 2rem;
+  background: var(--ogrid-surface-glass);
+  border: 1px solid var(--ogrid-border-glass);
+  border-radius: 12px;
+  font-family: var(--ifm-font-family-monospace);
+  font-size: 1.1rem;
+  margin-bottom: 2rem;
+  backdrop-filter: blur(8px);
+  user-select: all;
+}
+
+.ctaButtons {
+  display: flex;
+  gap: 1rem;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+/* ── Hero Grid (Real OGrid) ── */
+.heroGridWrapper {
+  width: 100%;
+  max-width: 1100px;
+  height: 580px;
+  margin: 2rem 0 2.5rem;
+  border-radius: 12px;
+  overflow: hidden;
+  border: 1px solid var(--ogrid-border-glass);
+  box-shadow:
+    0 24px 80px rgba(0, 0, 0, 0.4),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.04);
+
+  /* Make OGrid fill the wrapper with proper internal scrolling */
+  display: flex;
+  flex-direction: column;
+
+  /* OGridLayout root — stretch to fill */
+  > div {
+    flex: 1;
+    min-height: 0;
+  }
+
+  /* Strip OGridLayout's inner bordered container (wrapper provides the border) */
+  > div > div {
+    border: none !important;
+    border-radius: 0 !important;
+  }
+
+  /* Reset Docusaurus global table styles inside OGrid */
+  table {
+    font-size: inherit;
+  }
+
+  th {
+    text-transform: none;
+    font-size: inherit;
+    letter-spacing: normal;
+  }
+}
+
+.heroGridPlaceholder {
+  width: 100%;
+  max-width: 1100px;
+  height: 580px;
+  margin: 2rem 0 2.5rem;
+  border-radius: 12px;
+  background: var(--ogrid-bg);
+  border: 1px solid var(--ogrid-border-glass);
+}

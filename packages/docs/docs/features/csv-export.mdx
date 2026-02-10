@@ -1,0 +1,109 @@
+---
+sidebar_position: 15
+title: CSV Export
+description: Export grid data to a CSV file with one function call
+---
+
+import CsvExportDemo from '@site/src/components/demos/CsvExportDemo';
+
+# CSV Export
+
+Export grid data to a downloadable CSV file using the `exportToCsv` utility from core. It respects column visibility and applies `valueFormatter` so the exported values match what the user sees.
+
+## Live Demo
+
+<CsvExportDemo />
+
+## Quick Example
+
+```tsx
+import { exportToCsv } from '@alaarab/ogrid-core';
+
+function ExportButton({ data, columns }: { data: Row[]; columns: IColumnDef<Row>[] }) {
+  const handleExport = () => {
+    exportToCsv(
+      data,
+      columns.map((col) => ({ columnId: col.columnId, name: col.name })),
+      (item, columnId) => {
+        const col = columns.find((c) => c.columnId === columnId);
+        if (!col) return '';
+        const value = col.valueGetter ? col.valueGetter(item) : (item as Record<string, unknown>)[columnId];
+        return col.valueFormatter ? col.valueFormatter(value, item) : String(value ?? '');
+      },
+      'my-data.csv'
+    );
+  };
+
+  return <button onClick={handleExport}>Export to CSV</button>;
+}
+```
+
+## How It Works
+
+### The `exportToCsv` Function
+
+```tsx
+exportToCsv<T>(
+  items: T[],
+  columns: CsvColumn[],
+  getValue: (item: T, columnId: string) => string,
+  filename?: string
+): void
+```
+
+| Parameter | Type | Description |
+|---|---|---|
+| `items` | `T[]` | The row data to export |
+| `columns` | `CsvColumn[]` | Array of `{ columnId, name }` defining which columns to include and their header names |
+| `getValue` | `(item, columnId) => string` | Function to extract the display value for each cell |
+| `filename` | `string` (optional) | Download filename (default: `'export.csv'`) |
+
+The function:
+1. Builds a CSV header row from `columns[].name`.
+2. Iterates over each item and calls `getValue` for each column.
+3. Escapes values containing commas, quotes, or newlines.
+4. Triggers a browser download with the specified filename.
+
+### Context Menu Integration
+
+When `cellSelection` is enabled (the default), the context menu does not include a dedicated "Export to CSV" item. Use the `exportToCsv` utility directly from a toolbar button or custom UI element.
+
+### Exporting Visible Columns Only
+
+Filter the columns array to only include visible columns before passing to `exportToCsv`.
+
+```tsx
+const visibleCols = columns.filter((col) => visibleColumns.has(col.columnId));
+
+exportToCsv(
+  data,
+  visibleCols.map((col) => ({ columnId: col.columnId, name: col.name })),
+  getValue,
+  'filtered-export.csv'
+);
+```
+
+### Formatted Values
+
+Use `valueFormatter` in your `getValue` function so exported data matches the display. For example, a currency column that shows "$1,234.56" in the grid will export that same string.
+
+```tsx
+const getValue = (item: Row, columnId: string) => {
+  const col = columns.find((c) => c.columnId === columnId)!;
+  const raw = col.valueGetter ? col.valueGetter(item) : (item as any)[columnId];
+  return col.valueFormatter ? col.valueFormatter(raw, item) : String(raw ?? '');
+};
+```
+
+## Props Reference
+
+| Type | Field | Description |
+|---|---|---|
+| `CsvColumn` | `columnId` | Column identifier |
+| `CsvColumn` | `name` | Header label in the CSV |
+
+## Related
+
+- [Context Menu](./context-menu) -- clipboard operations for quick copy/paste
+- [Grid API](./grid-api) -- access current data and column state programmatically
+- [Column Chooser](./column-chooser) -- determines which columns are visible for export

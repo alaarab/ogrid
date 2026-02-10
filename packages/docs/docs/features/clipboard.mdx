@@ -1,0 +1,99 @@
+---
+sidebar_position: 6
+title: Clipboard
+description: Copy, paste, cut, and clear cells with standard keyboard shortcuts.
+---
+
+import ClipboardDemo from '@site/src/components/demos/ClipboardDemo';
+
+# Clipboard
+
+OGrid supports standard clipboard operations on selected cells. Copy cell values to the clipboard as tab-delimited text, paste from spreadsheets or text editors, cut to move values, and delete to clear cells.
+
+## Live Demo
+
+<ClipboardDemo />
+
+## Quick Example
+
+```tsx
+import { OGrid } from '@alaarab/ogrid';
+
+function App() {
+  return (
+    <OGrid
+      columns={columns}
+      data={items}
+      getRowId={(item) => item.id}
+      editable
+      onCellValueChanged={(event) => {
+        // Handle paste, cut, and delete changes
+        console.log(event.columnId, event.newValue);
+      }}
+    />
+  );
+}
+```
+
+Select a range of cells, then use Ctrl+C to copy. Open a spreadsheet and paste -- the values appear in matching cells.
+
+## How It Works
+
+Clipboard operations work on the current cell selection (active cell or selected range):
+
+### Copy (Ctrl+C)
+
+Copies selected cell values to the clipboard as tab-delimited, newline-separated text. This format is compatible with Excel, Google Sheets, and other spreadsheet applications.
+
+- Uses `valueFormatter` when defined on the column, so copied values match what the user sees.
+- Copy always works, even when `editable` is `false`.
+
+### Paste (Ctrl+V)
+
+Pastes clipboard content into the grid starting at the active cell. Tab-delimited columns and newline-delimited rows map onto the grid cells.
+
+- Requires `editable={true}` on the grid and `editable: true` on the target columns.
+- Calls `valueParser` on each pasted value for validation/transformation.
+- Fires `onCellValueChanged` for each cell that changes.
+
+### Cut (Ctrl+X)
+
+Copies the selected cell values to the clipboard, then clears them. Equivalent to Copy followed by Delete.
+
+- Requires `editable={true}`.
+
+### Delete / Backspace
+
+Clears the values of all selected cells (sets them to `''`).
+
+- Requires `editable={true}`.
+- Calls `valueParser` before clearing, so you can reject delete on specific cells.
+
+:::tip
+Clipboard operations respect `valueFormatter` on copy and `valueParser` on paste. This means you can copy formatted display values (e.g., "$1,234.56") and parse raw values on paste (e.g., strip the "$" and parse as a number).
+:::
+
+## Props
+
+| Prop | Type | Default | Description |
+|------|------|---------|-------------|
+| `editable` | `boolean` | `false` | Required for paste, cut, and delete. Copy always works. |
+| `cellSelection` | `boolean` | `true` | Must be enabled for clipboard to work on ranges. |
+| `onCellValueChanged` | `(event: ICellValueChangedEvent<T>) => void` | -- | Fired for each cell modified by paste, cut, or delete. |
+| `valueFormatter` | `(value: unknown, item: T) => string` | -- | On `IColumnDef`. Formats values on copy. |
+| `valueParser` | `(params: IValueParserParams<T>) => unknown` | -- | On `IColumnDef`. Parses/validates values on paste. Return `undefined` to reject. |
+
+## Keyboard Shortcuts
+
+| Key | Action |
+|-----|--------|
+| Ctrl+C (Cmd+C) | Copy selected cells |
+| Ctrl+V (Cmd+V) | Paste into selected cells |
+| Ctrl+X (Cmd+X) | Cut selected cells |
+| Delete / Backspace | Clear selected cells |
+
+## Related
+
+- [Spreadsheet Selection](./spreadsheet-selection) -- select cells to copy/paste
+- [Cell Editing](./cell-editing) -- inline editing of individual cells
+- [Undo/Redo](./undo-redo) -- undo paste and delete operations
