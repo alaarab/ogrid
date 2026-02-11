@@ -330,7 +330,7 @@ function DataGridTableInner<T>(props: IOGridDataGridProps<T>): React.ReactElemen
     if (!rowId) return;
     const ids = selectedRowIdsRef.current;
     updateSelection(ids.has(rowId) ? new Set() : new Set([rowId]));
-  }, [rowSelection, updateSelection]);
+  }, [rowSelection, updateSelection, selectedRowIdsRef]);
 
   // Wrapper sx (depends on dynamic values — memoize to avoid recreation)
   const wrapperSx = useMemo(() => ({
@@ -410,7 +410,7 @@ function DataGridTableInner<T>(props: IOGridDataGridProps<T>): React.ReactElemen
         </CellErrorBoundary>
       );
     },
-    [editCallbacks, interactionHandlers, handleFillHandleMouseDown, setPopoverAnchorEl, cancelPopoverEdit, getRowId, onCellError]
+    [editCallbacks, interactionHandlers, handleFillHandleMouseDown, setPopoverAnchorEl, cancelPopoverEdit, getRowId, onCellError, cellDescriptorInputRef, pendingEditorValueRef, popoverAnchorElRef]
   );
 
   return (
