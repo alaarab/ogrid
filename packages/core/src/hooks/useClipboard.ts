@@ -3,6 +3,7 @@ import { getCellValue } from '../utils';
 import { parseValue } from '../utils/valueParsers';
 import { normalizeSelectionRange } from '../types';
 import type { ISelectionRange, IActiveCell, ICellValueChangedEvent, IColumnDef } from '../types';
+import { useLatestRef } from './useLatestRef';
 
 export interface UseClipboardParams<T> {
   items: T[];
@@ -29,18 +30,25 @@ export interface UseClipboardResult {
   clearClipboardRanges: () => void;
 }
 
+/**
+ * Manages copy, cut, and paste operations for cell ranges with TSV clipboard format.
+ * @param params - Items, columns, selection, editability, and value change callback.
+ * @returns Copy/cut/paste handlers, cut/copy ranges, and range clear function.
+ */
 export function useClipboard<T>(params: UseClipboardParams<T>): UseClipboardResult {
   const {
-    items,
-    visibleCols,
     colOffset,
-    selectionRange,
-    activeCell,
-    editable,
-    onCellValueChanged,
     beginBatch,
     endBatch,
   } = params;
+
+  // Volatile values accessed via refs — keeps callbacks stable
+  const itemsRef = useLatestRef(params.items);
+  const visibleColsRef = useLatestRef(params.visibleCols);
+  const selectionRangeRef = useLatestRef(params.selectionRange);
+  const activeCellRef = useLatestRef(params.activeCell);
+  const editableRef = useLatestRef(params.editable);
+  const onCellValueChangedRef = useLatestRef(params.onCellValueChanged);
 
   const cutRangeRef = useRef<ISelectionRange | null>(null);
   const [cutRange, setCutRange] = useState<ISelectionRange | null>(null);
@@ -48,19 +56,21 @@ export function useClipboard<T>(params: UseClipboardParams<T>): UseClipboardResu
   /** In-page clipboard fallback when system clipboard is unavailable. */
   const internalClipboardRef = useRef<string | null>(null);
 
+  /** Resolve current effective range from selection or active cell. */
+  const getEffectiveRange = useCallback((): ISelectionRange | null => {
+    const sel = selectionRangeRef.current;
+    const ac = activeCellRef.current;
+    return sel ?? (ac != null
+      ? { startRow: ac.rowIndex, startCol: ac.columnIndex - colOffset, endRow: ac.rowIndex, endCol: ac.columnIndex - colOffset }
+      : null);
+  }, [colOffset, selectionRangeRef, activeCellRef]);
+
   const handleCopy = useCallback(() => {
-    const range =
-      selectionRange ??
-      (activeCell != null
-        ? {
-            startRow: activeCell.rowIndex,
-            startCol: activeCell.columnIndex - colOffset,
-            endRow: activeCell.rowIndex,
-            endCol: activeCell.columnIndex - colOffset,
-          }
-        : null);
+    const range = getEffectiveRange();
     if (range == null) return;
     const norm = normalizeSelectionRange(range);
+    const items = itemsRef.current;
+    const visibleCols = visibleColsRef.current;
     const rows: string[] = [];
     for (let r = norm.startRow; r <= norm.endRow; r++) {
       const cells: string[] = [];
@@ -80,21 +90,12 @@ export function useClipboard<T>(params: UseClipboardParams<T>): UseClipboardResu
     internalClipboardRef.current = tsv;
     setCopyRange(norm);
     void navigator.clipboard.writeText(tsv).catch(() => {});
-  }, [selectionRange, activeCell, colOffset, items, visibleCols]);
+  }, [getEffectiveRange, itemsRef, visibleColsRef]);
 
   const handleCut = useCallback(() => {
-    if (editable === false) return;
-    const range =
-      selectionRange ??
-      (activeCell != null
-        ? {
-            startRow: activeCell.rowIndex,
-            startCol: activeCell.columnIndex - colOffset,
-            endRow: activeCell.rowIndex,
-            endCol: activeCell.columnIndex - colOffset,
-          }
-        : null);
-    if (range == null || onCellValueChanged == null) return;
+    if (editableRef.current === false) return;
+    const range = getEffectiveRange();
+    if (range == null || onCellValueChangedRef.current == null) return;
     const norm = normalizeSelectionRange(range);
     cutRangeRef.current = norm;
     setCutRange(norm);
@@ -102,10 +103,11 @@ export function useClipboard<T>(params: UseClipboardParams<T>): UseClipboardResu
     handleCopy();
     // handleCopy sets copyRange — override it back since this is a cut
     setCopyRange(null);
-  }, [selectionRange, activeCell, colOffset, handleCopy, editable, onCellValueChanged]);
+  }, [getEffectiveRange, handleCopy, editableRef, onCellValueChangedRef]);
 
   const handlePaste = useCallback(async () => {
-    if (editable === false) return;
+    if (editableRef.current === false) return;
+    const onCellValueChanged = onCellValueChangedRef.current;
     if (onCellValueChanged == null) return;
     let text: string;
     try {
@@ -117,18 +119,11 @@ export function useClipboard<T>(params: UseClipboardParams<T>): UseClipboardResu
       text = internalClipboardRef.current;
     }
     if (!text.trim()) return;
-    const norm =
-      selectionRange ??
-      (activeCell != null
-        ? {
-            startRow: activeCell.rowIndex,
-            startCol: activeCell.columnIndex - colOffset,
-            endRow: activeCell.rowIndex,
-            endCol: activeCell.columnIndex - colOffset,
-          }
-        : null);
+    const norm = getEffectiveRange();
     const anchorRow = norm ? norm.startRow : 0;
     const anchorCol = norm ? norm.startCol : 0;
+    const items = itemsRef.current;
+    const visibleCols = visibleColsRef.current;
     const lines = text.split(/\r?\n/).filter((l) => l.length > 0);
     beginBatch?.();
     for (let r = 0; r < lines.length; r++) {
@@ -150,11 +145,10 @@ export function useClipboard<T>(params: UseClipboardParams<T>): UseClipboardResu
         onCellValueChanged({
           item,
           columnId: col.columnId,
-          field: col.columnId,
           oldValue,
           newValue: result.value,
           rowIndex: targetRow,
-        } as ICellValueChangedEvent<T>);
+        });
       }
     }
     if (cutRangeRef.current) {
@@ -174,11 +168,10 @@ export function useClipboard<T>(params: UseClipboardParams<T>): UseClipboardResu
           onCellValueChanged({
             item,
             columnId: col.columnId,
-            field: col.columnId,
             oldValue,
             newValue: result.value,
             rowIndex: r,
-          } as ICellValueChangedEvent<T>);
+          });
         }
       }
       cutRangeRef.current = null;
@@ -186,7 +179,7 @@ export function useClipboard<T>(params: UseClipboardParams<T>): UseClipboardResu
     }
     endBatch?.();
     setCopyRange(null);
-  }, [selectionRange, activeCell, colOffset, items, visibleCols, editable, onCellValueChanged, beginBatch, endBatch]);
+  }, [getEffectiveRange, itemsRef, visibleColsRef, editableRef, onCellValueChangedRef, beginBatch, endBatch]);
 
   const clearClipboardRanges = useCallback(() => {
     setCopyRange(null);

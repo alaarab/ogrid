@@ -429,7 +429,7 @@ export const Playground: StoryObj<PlaygroundArgs> = {
     suppressHorizontalScroll: { control: 'boolean' },
     freezeRows: { control: { type: 'range', min: 0, max: 3, step: 1 } },
     freezeCols: { control: { type: 'range', min: 0, max: 3, step: 1 } },
-    defaultPageSize: { control: 'select', options: [5, 10, 20, 50, 100] },
+    defaultPageSize: { control: 'select', options: [10, 25, 50, 100] },
     defaultSortBy: {
       control: 'select',
       options: ['none', 'name', 'status', 'owner', 'budget', 'startDate', 'active'],
@@ -463,7 +463,7 @@ export const Playground: StoryObj<PlaygroundArgs> = {
     entityLabelPlural: 'projects',
     showCustomToolbar: false,
     showToolbarBelow: false,
-    pageSizeOptions: '10,20,50,100',
+    pageSizeOptions: '10,25,50,100',
   },
   render: function PlaygroundStory(args) {
     const [data, setData] = React.useState(() => makeProjects(args.rowCount));

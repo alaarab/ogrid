@@ -18,6 +18,11 @@ export interface UseSideBarStateResult {
 
 const DEFAULT_PANELS: SideBarPanelId[] = ['columns', 'filters'];
 
+/**
+ * Manages side bar panel state: enabled panels, active panel, position, and toggle/close handlers.
+ * @param params - Side bar config (boolean, ISideBarDef, or undefined).
+ * @returns Enabled flag, active panel, setters, panel list, position, open state, toggle, and close.
+ */
 export function useSideBarState(params: UseSideBarStateParams): UseSideBarStateResult {
   const { config } = params;
   const isEnabled = config != null && config !== false;

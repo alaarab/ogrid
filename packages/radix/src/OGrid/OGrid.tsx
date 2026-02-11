@@ -17,52 +17,35 @@ const OGridInner = forwardRef(function OGridInner<T>(
   props: IOGridProps<T>,
   ref: React.Ref<IOGridApi<T>>
 ): React.ReactElement {
-  const {
-    dataGridProps,
-    page,
-    pageSize,
-    displayTotalCount,
-    setPage,
-    setPageSize,
-    columnChooserColumns,
-    visibleColumns,
-    handleVisibilityChange,
-    columnChooserPlacement,
-    toolbar,
-    toolbarBelow,
-    className,
-    entityLabelPlural,
-    pageSizeOptions,
-    sideBarProps,
-  } = useOGrid(props, ref);
+  const { dataGridProps, pagination, columnChooser, layout } = useOGrid(props, ref);
 
   return (
     <OGridLayout
-      className={className}
-      sideBar={sideBarProps}
-      toolbar={toolbar}
-      toolbarBelow={toolbarBelow}
+      className={layout.className}
+      sideBar={layout.sideBarProps}
+      toolbar={layout.toolbar}
+      toolbarBelow={layout.toolbarBelow}
       toolbarEnd={
-        columnChooserPlacement === 'toolbar' ? (
+        columnChooser.placement === 'toolbar' ? (
           <ColumnChooser
-            columns={columnChooserColumns}
-            visibleColumns={visibleColumns}
-            onVisibilityChange={handleVisibilityChange}
+            columns={columnChooser.columns}
+            visibleColumns={columnChooser.visibleColumns}
+            onVisibilityChange={columnChooser.onVisibilityChange}
           />
         ) : undefined
       }
       pagination={
         <PaginationControls
-          currentPage={page}
-          pageSize={pageSize}
-          totalCount={displayTotalCount}
-          onPageChange={setPage}
+          currentPage={pagination.page}
+          pageSize={pagination.pageSize}
+          totalCount={pagination.displayTotalCount}
+          onPageChange={pagination.setPage}
           onPageSizeChange={(size) => {
-            setPageSize(size);
-            setPage(1);
+            pagination.setPageSize(size);
+            pagination.setPage(1);
           }}
-          pageSizeOptions={pageSizeOptions}
-          entityLabelPlural={entityLabelPlural}
+          pageSizeOptions={pagination.pageSizeOptions}
+          entityLabelPlural={pagination.entityLabelPlural}
         />
       }
     >

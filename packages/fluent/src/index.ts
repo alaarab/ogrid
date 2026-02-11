@@ -1,5 +1,5 @@
 // Components
-export { OGrid, type IOGridProps } from './FluentDataTable';
+export { OGrid, FluentDataTable, type IOGridProps } from './FluentDataTable';
 export { DataGridTable } from './DataGridTable/DataGridTable';
 export { ColumnChooser, type IColumnChooserProps } from './ColumnChooser/ColumnChooser';
 export { ColumnHeaderFilter, type IColumnHeaderFilterProps } from './ColumnHeaderFilter/ColumnHeaderFilter';
