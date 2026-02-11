@@ -1,0 +1,29 @@
+{
+  "name": "@alaarab/ogrid-js",
+  "version": "2.0.0",
+  "description": "OGrid vanilla JS – framework-free data grid with sorting, filtering, pagination, and spreadsheet-style editing.",
+  "main": "dist/esm/index.js",
+  "module": "dist/esm/index.js",
+  "types": "dist/types/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/types/index.d.ts",
+      "import": "./dist/esm/index.js",
+      "require": "./dist/esm/index.js"
+    },
+    "./styles": "./dist/styles/ogrid.css"
+  },
+  "scripts": {
+    "build": "rimraf dist && tsc -p tsconfig.build.json",
+    "test": "jest"
+  },
+  "keywords": ["ogrid", "datagrid", "vanilla", "javascript", "typescript", "grid"],
+  "author": "Ala Arab",
+  "license": "MIT",
+  "files": ["dist", "README.md", "LICENSE"],
+  "engines": { "node": ">=18" },
+  "dependencies": {
+    "@alaarab/ogrid-core": "2.0.0"
+  },
+  "publishConfig": { "access": "public" }
+}
