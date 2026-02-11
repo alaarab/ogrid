@@ -31,7 +31,7 @@ export interface UsePeopleFilterStateResult {
 export function usePeopleFilterState(
   params: UsePeopleFilterStateParams
 ): UsePeopleFilterStateResult {
-  const { selectedUser, onUserChange, peopleSearch, isFilterOpen, filterType } = params;
+  const { onUserChange, peopleSearch, isFilterOpen, filterType } = params;
 
   const peopleInputRef = useRef<HTMLInputElement | null>(null);
   const peopleSearchTimeoutRef = useRef<number | undefined>(undefined);

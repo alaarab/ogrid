@@ -1,5 +1,4 @@
 import type { IActiveCell, ISelectionRange, RowId } from '@alaarab/ogrid-core';
-import { normalizeSelectionRange } from '@alaarab/ogrid-core';
 import { EventEmitter } from './EventEmitter';
 
 interface SelectionStateEvents extends Record<string, unknown> {

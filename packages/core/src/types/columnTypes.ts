@@ -57,8 +57,9 @@ export interface IColumnDef<T = unknown> extends IColumnMeta {
   valueParser?: (params: IValueParserParams<T>) => unknown;
   /** Whether the cell is editable (per-column or per-row). */
   editable?: boolean | ((item: T) => boolean);
-  /** Built-in editor type. */
-  cellEditor?: 'text' | 'select' | 'checkbox' | 'richSelect' | 'date';
+  /** Built-in editor type or framework-specific custom editor (e.g. React component).
+   *  Core utilities never inspect this value — framework packages narrow the type. */
+  cellEditor?: unknown;
   /** When true, custom cell editor is rendered in a popover/popper instead of inline. */
   cellEditorPopup?: boolean;
   /** Params passed to the cell editor (e.g. { values: string[] } for select). */
