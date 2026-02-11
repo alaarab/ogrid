@@ -1,6 +1,5 @@
 import { useCallback, useRef, useState } from 'react';
-import { getCellValue } from '../utils';
-import { parseValue } from '../utils/valueParsers';
+import { getCellValue, parseValue } from '../utils';
 import { normalizeSelectionRange } from '../types';
 import type { ISelectionRange, IActiveCell, ICellValueChangedEvent, IColumnDef } from '../types';
 import { useLatestRef } from './useLatestRef';

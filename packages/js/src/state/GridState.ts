@@ -6,15 +6,17 @@ import type {
   RowId,
   IFilters,
   OGridOptions,
+  IJsOGridApi,
 } from '../types/gridTypes';
 import type {
   IGridColumnState,
-  IOGridApi,
   FilterValue,
 } from '@alaarab/ogrid-core';
 import {
   flattenColumns,
   processClientSideData,
+  exportToCsv as coreExportToCsv,
+  getCellValue,
 } from '@alaarab/ogrid-core';
 import { EventEmitter } from './EventEmitter';
 
@@ -162,7 +164,7 @@ export class GridState<T> {
 
   // --- API ---
 
-  getApi(): IOGridApi<T> {
+  getApi(): IJsOGridApi<T> {
     return {
       setRowData: (data: T[]) => this.setData(data),
       setLoading: (loading: boolean) => this.setLoading(loading),
@@ -194,6 +196,17 @@ export class GridState<T> {
       },
       getDisplayedRows: () => this.getProcessedItems().items,
       refreshData: () => {},
+      exportToCsv: (filename?: string) => {
+        const { items } = this.getProcessedItems();
+        const cols = this.visibleColumnDefs.map(c => ({ columnId: c.columnId, name: c.name }));
+        coreExportToCsv(items, cols, (item, colId) => {
+          const col = this._columns.find(c => c.columnId === colId);
+          if (!col) return '';
+          const val = getCellValue(item, col as unknown as Parameters<typeof getCellValue>[1]);
+          if (col.valueFormatter) return col.valueFormatter(val, item);
+          return val != null ? String(val) : '';
+        }, filename);
+      },
     };
   }
 

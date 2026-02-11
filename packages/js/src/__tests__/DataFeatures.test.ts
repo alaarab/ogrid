@@ -175,6 +175,142 @@ describe('Status Bar', () => {
   });
 });
 
+describe('CSV Export', () => {
+  it('api.exportToCsv triggers a download', () => {
+    const { grid } = createGrid({ data: generateData(3), pageSize: 10 });
+
+    // Mock URL.createObjectURL and link click
+    const createObjectURL = jest.fn(() => 'blob:test');
+    const revokeObjectURL = jest.fn();
+    global.URL.createObjectURL = createObjectURL;
+    global.URL.revokeObjectURL = revokeObjectURL;
+
+    const clickSpy = jest.fn();
+    jest.spyOn(document, 'createElement').mockImplementation((tag: string) => {
+      if (tag === 'a') {
+        const a = Object.create(HTMLAnchorElement.prototype) as any;
+        a.setAttribute = jest.fn();
+        a.click = clickSpy;
+        a.style = {};
+        return a;
+      }
+      return document.createElement.call(document, tag) as any;
+    });
+
+    grid.api.exportToCsv('test.csv');
+
+    expect(createObjectURL).toHaveBeenCalled();
+    expect(clickSpy).toHaveBeenCalled();
+
+    jest.restoreAllMocks();
+    grid.destroy();
+  });
+
+  it('csv includes visible column headers', () => {
+    const { grid } = createGrid({ data: generateData(2), pageSize: 10 });
+
+    // Capture the blob content
+    let blobContent = '';
+    global.URL.createObjectURL = jest.fn(() => 'blob:test');
+    global.URL.revokeObjectURL = jest.fn();
+    const OrigBlob = global.Blob;
+    global.Blob = class MockBlob {
+      constructor(parts: BlobPart[]) { blobContent = parts.join(''); }
+      get size() { return blobContent.length; }
+      get type() { return 'text/csv'; }
+    } as any;
+
+    const clickSpy = jest.fn();
+    const origCreate = document.createElement.bind(document);
+    jest.spyOn(document, 'createElement').mockImplementation((tag: string) => {
+      if (tag === 'a') {
+        const a = origCreate('a');
+        a.click = clickSpy;
+        return a;
+      }
+      return origCreate(tag);
+    });
+
+    grid.api.exportToCsv();
+
+    expect(blobContent).toContain('Name,Age,Department');
+    expect(blobContent).toContain('Person 1');
+
+    global.Blob = OrigBlob;
+    jest.restoreAllMocks();
+    grid.destroy();
+  });
+
+  it('csv respects column visibility', () => {
+    const { grid } = createGrid({ data: generateData(2), pageSize: 10, visibleColumns: new Set(['name', 'age']) });
+
+    let blobContent = '';
+    global.URL.createObjectURL = jest.fn(() => 'blob:test');
+    global.URL.revokeObjectURL = jest.fn();
+    const OrigBlob = global.Blob;
+    global.Blob = class MockBlob {
+      constructor(parts: BlobPart[]) { blobContent = parts.join(''); }
+      get size() { return blobContent.length; }
+      get type() { return 'text/csv'; }
+    } as any;
+
+    const origCreate = document.createElement.bind(document);
+    jest.spyOn(document, 'createElement').mockImplementation((tag: string) => {
+      if (tag === 'a') {
+        const a = origCreate('a');
+        a.click = jest.fn();
+        return a;
+      }
+      return origCreate(tag);
+    });
+
+    grid.api.exportToCsv();
+
+    expect(blobContent).toContain('Name,Age');
+    expect(blobContent).not.toContain('Department');
+
+    global.Blob = OrigBlob;
+    jest.restoreAllMocks();
+    grid.destroy();
+  });
+
+  it('csv uses valueFormatter when present', () => {
+    const columns: IColumnDef<TestRow>[] = [
+      { columnId: 'name', name: 'Name' },
+      { columnId: 'age', name: 'Age', type: 'numeric', valueFormatter: (val) => `${val} years` },
+    ];
+    const { grid } = createGrid({ columns, data: generateData(2), pageSize: 10 });
+
+    let blobContent = '';
+    global.URL.createObjectURL = jest.fn(() => 'blob:test');
+    global.URL.revokeObjectURL = jest.fn();
+    const OrigBlob = global.Blob;
+    global.Blob = class MockBlob {
+      constructor(parts: BlobPart[]) { blobContent = parts.join(''); }
+      get size() { return blobContent.length; }
+      get type() { return 'text/csv'; }
+    } as any;
+
+    const origCreate = document.createElement.bind(document);
+    jest.spyOn(document, 'createElement').mockImplementation((tag: string) => {
+      if (tag === 'a') {
+        const a = origCreate('a');
+        a.click = jest.fn();
+        return a;
+      }
+      return origCreate(tag);
+    });
+
+    grid.api.exportToCsv();
+
+    expect(blobContent).toContain('20 years');
+
+    global.Blob = OrigBlob;
+    jest.restoreAllMocks();
+    grid.destroy();
+  });
+});
+
 describe('API interactions', () => {
   it('api.setRowData updates the display', () => {
     const { container, grid } = createGrid();
