@@ -1,4 +1,12 @@
-import { isRowInRange } from './dataGridViewModel';
+/**
+ * Check if a row index is within a range (inclusive).
+ */
+function isRowInRange(range: { startRow: number; endRow: number } | null, rowIndex: number): boolean {
+  if (!range) return false;
+  const minR = Math.min(range.startRow, range.endRow);
+  const maxR = Math.max(range.startRow, range.endRow);
+  return rowIndex >= minR && rowIndex <= maxR;
+}
 
 /**
  * Props for GridRow comparator (generic to work with all 3 UI frameworks).
