@@ -166,10 +166,9 @@ function DataGridTableInner<T>(props: IOGridDataGridProps<T>): React.ReactElemen
   const allowOverflowX = !suppressHorizontalScroll && containerWidth > 0 && (minTableWidth > containerWidth || desiredTableWidth > containerWidth);
 
   // Pre-compute column class maps (avoids per-cell .filter(Boolean).join(' '))
-  const { cellClassMap, headerClassMap, colIndexMap } = useMemo(() => {
+  const { cellClassMap, headerClassMap } = useMemo(() => {
     const cm: Record<string, string> = {};
     const hm: Record<string, string> = {};
-    const im = new Map<string, number>();
 
     for (let i = 0; i < visibleCols.length; i++) {
       const col = visibleCols[i];
@@ -183,13 +182,12 @@ function DataGridTableInner<T>(props: IOGridDataGridProps<T>): React.ReactElemen
       if (isPinnedRight) { parts.push(styles.pinnedCell); parts.push(styles.pinnedRight); }
       cm[col.columnId] = parts.join(' ');
       hm[col.columnId] = parts.join(' ');
-      im.set(col.columnId, i);
     }
 
     cm['__selection__'] = styles.selectionCellWrapper;
     hm['__selection__'] = styles.selectionHeaderCellWrapper;
 
-    return { cellClassMap: cm, headerClassMap: hm, colIndexMap: im };
+    return { cellClassMap: cm, headerClassMap: hm };
   }, [visibleCols, freezeCols]);
 
   // Refs for volatile state (read inside fluentColumns render closures without adding to deps)
@@ -349,7 +347,7 @@ function DataGridTableInner<T>(props: IOGridDataGridProps<T>): React.ReactElemen
     if (rowSelection !== 'single') return;
     const ids = selectedRowIdsRef.current;
     updateSelection(ids.has(rowId) ? new Set() : new Set([rowId]));
-  }, [rowSelection, updateSelection]);
+  }, [rowSelection, updateSelection, selectedRowIdsRef]);
 
   // Stable getRowId wrapper for Fluent DataGrid
   const fluentGetRowId = useCallback((item: T) => String(getRowId(item)), [getRowId]);

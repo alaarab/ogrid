@@ -8,12 +8,11 @@ import {
   useImperativeHandle,
 } from 'react';
 import {
-  getFilterField,
   mergeFilter,
   deriveFilterOptionsFromData,
   getMultiSelectFilterFields,
 } from '../utils/ogridHelpers';
-import { getCellValue, flattenColumns, processClientSideData } from '../utils';
+import { flattenColumns, processClientSideData } from '../utils';
 import { useFilterOptions } from './useFilterOptions';
 import { useSideBarState } from './useSideBarState';
 import type { SideBarProps } from '../components/SideBar';
@@ -356,7 +355,6 @@ export function useOGrid<T>(
       .finally(() => {
         if (id === fetchIdRef.current) setLoading(false);
       });
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
     isServerSide,
     dataSource,
