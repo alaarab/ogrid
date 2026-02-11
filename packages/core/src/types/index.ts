@@ -26,6 +26,8 @@ export type {
   IGridColumnState,
   IOGridApi,
   IOGridProps,
+  IOGridClientProps,
+  IOGridServerProps,
   IOGridDataGridProps,
   RowSelectionMode,
   IRowSelectionChangeEvent,

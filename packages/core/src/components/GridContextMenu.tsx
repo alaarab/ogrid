@@ -19,10 +19,15 @@ export interface GridContextMenuProps extends GridContextMenuHandlerProps {
   classNames?: GridContextMenuClassNames;
 }
 
+const menuPositionStyle = (x: number, y: number): React.CSSProperties => ({ left: x, top: y });
+
 export function GridContextMenu(props: GridContextMenuProps): React.ReactElement {
-  const { x, y, hasSelection, canUndo, canRedo, onClose, classNames } = props;
+  const { x, y, hasSelection, canUndo, canRedo, onClose, onCopy, onCut, onPaste, onSelectAll, onUndo, onRedo, classNames } = props;
   const ref = React.useRef<HTMLDivElement>(null);
-  const handlers = React.useMemo(() => getContextMenuHandlers(props), [props]);
+  const handlers = React.useMemo(
+    () => getContextMenuHandlers({ onCopy, onCut, onPaste, onSelectAll, onUndo, onRedo, onClose }),
+    [onCopy, onCut, onPaste, onSelectAll, onUndo, onRedo, onClose]
+  );
 
   const isDisabled = React.useCallback(
     (item: (typeof GRID_CONTEXT_MENU_ITEMS)[number]) => {
@@ -54,7 +59,7 @@ export function GridContextMenu(props: GridContextMenuProps): React.ReactElement
       ref={ref}
       className={classNames?.contextMenu}
       role="menu"
-      style={{ left: x, top: y }}
+      style={menuPositionStyle(x, y)}
       aria-label="Grid context menu"
     >
       {GRID_CONTEXT_MENU_ITEMS.map((item) => (

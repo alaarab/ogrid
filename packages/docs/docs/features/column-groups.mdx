@@ -20,27 +20,36 @@ Group related columns under shared parent headers. OGrid supports arbitrarily ne
 import { OGrid } from '@alaarab/ogrid'; // or ogrid-fluent, ogrid-material
 import type { IColumnDef, IColumnGroupDef } from '@alaarab/ogrid-core';
 
-interface Employee {
+interface Person {
   id: number;
-  firstName: string;
-  lastName: string;
+  name: string;
+  age: number;
+  email: string;
   department: string;
   salary: number;
+  status: string;
 }
 
-const columns: (IColumnDef<Employee> | IColumnGroupDef<Employee>)[] = [
+const columns: (IColumnDef<Person> | IColumnGroupDef<Person>)[] = [
   {
     headerName: 'Personal Info',
     children: [
-      { columnId: 'firstName', name: 'First Name' },
-      { columnId: 'lastName', name: 'Last Name' },
+      { columnId: 'name', name: 'Name' },
+      { columnId: 'age', name: 'Age', type: 'numeric' },
+      { columnId: 'email', name: 'Email' },
     ],
   },
   {
     headerName: 'Employment',
     children: [
       { columnId: 'department', name: 'Department' },
-      { columnId: 'salary', name: 'Salary', type: 'numeric' },
+      {
+        columnId: 'salary',
+        name: 'Salary',
+        type: 'numeric',
+        valueFormatter: (v) => `$${Number(v).toLocaleString()}`,
+      },
+      { columnId: 'status', name: 'Status' },
     ],
   },
 ];
@@ -49,14 +58,15 @@ function App() {
   return (
     <OGrid
       columns={columns}
-      data={employees}
-      getRowId={(e) => e.id}
+      data={people}
+      getRowId={(p) => p.id}
+      defaultPageSize={10}
     />
   );
 }
 ```
 
-This renders a two-row header: the first row shows "Personal Info" spanning two columns and "Employment" spanning two columns, with the individual column names in the second row.
+This renders a two-row header: the first row shows "Personal Info" spanning three columns and "Employment" spanning three columns, with the individual column names in the second row.
 
 ## How It Works
 

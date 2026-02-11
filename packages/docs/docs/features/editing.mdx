@@ -22,14 +22,24 @@ OGrid supports inline cell editing, clipboard copy/paste, drag-to-fill, and undo
 import { OGrid, useUndoRedo } from '@alaarab/ogrid';
 import { useState } from 'react';
 
+const DEPTS = ['Engineering', 'Marketing', 'Sales', 'Finance', 'Operations'];
+const STATUSES = ['Active', 'Draft', 'Archived'];
+
 const columns = [
   { columnId: 'name', name: 'Name', editable: true },
+  {
+    columnId: 'department',
+    name: 'Department',
+    editable: true,
+    cellEditor: 'richSelect',
+    cellEditorParams: { values: DEPTS },
+  },
   {
     columnId: 'status',
     name: 'Status',
     editable: true,
     cellEditor: 'select',
-    cellEditorParams: { values: ['Active', 'Draft', 'Archived'] },
+    cellEditorParams: { values: STATUSES },
   },
   {
     columnId: 'salary',

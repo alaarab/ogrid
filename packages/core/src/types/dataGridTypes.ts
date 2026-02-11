@@ -191,16 +191,24 @@ export interface IOGridApi<T> {
   selectAll: () => void;
   /** Deselect all rows. */
   deselectAll: () => void;
+  /** Clear all filters (shorthand for setFilterModel({})). */
+  clearFilters: () => void;
+  /** Reset sort to the default (first column, ascending). */
+  clearSort: () => void;
+  /** Reset all grid state (filters, sort, selection). */
+  resetGridState: (options?: { keepSelection?: boolean }) => void;
+  /** Get the currently displayed (paginated) rows. */
+  getDisplayedRows: () => T[];
+  /** Re-trigger a data fetch (server-side only; no-op for client-side). */
+  refreshData: () => void;
 }
 
 // --- OGrid / useOGrid ---
 
-/** Props for the OGrid wrapper component (shared across Fluent, Material, Radix). */
-export interface IOGridProps<T> {
+/** Base props shared by both client-side and server-side OGrid modes. */
+interface IOGridBaseProps<T> {
   columns: (IColumnDef<T> | IColumnGroupDef<T>)[];
   getRowId: (item: T) => RowId;
-  data?: T[];
-  dataSource?: IDataSource<T>;
 
   page?: number;
   pageSize?: number;
@@ -270,9 +278,28 @@ export interface IOGridProps<T> {
   /** Called when server-side fetchPage fails. */
   onError?: (error: unknown) => void;
 
+  /** Called when a cell renderer or custom editor throws an error. */
+  onCellError?: (error: Error, errorInfo: React.ErrorInfo) => void;
+
   'aria-label'?: string;
   'aria-labelledby'?: string;
 }
+
+/** Client-side mode: pass a data array. */
+export interface IOGridClientProps<T> extends IOGridBaseProps<T> {
+  data: T[];
+  dataSource?: never;
+}
+
+/** Server-side mode: pass a dataSource. */
+export interface IOGridServerProps<T> extends IOGridBaseProps<T> {
+  data?: never;
+  dataSource: IDataSource<T>;
+}
+
+/** Props for the OGrid wrapper component (shared across Fluent, Material, Radix).
+ *  Must provide either `data` (client-side) or `dataSource` (server-side), not both. */
+export type IOGridProps<T> = IOGridClientProps<T> | IOGridServerProps<T>;
 
 /** Props passed from useOGrid to the framework-specific DataGridTable. */
 export interface IOGridDataGridProps<T> {
@@ -329,6 +356,8 @@ export interface IOGridDataGridProps<T> {
     message?: ReactNode;
     render?: () => ReactNode;
   };
+  /** Called when a cell renderer or custom editor throws an error. */
+  onCellError?: (error: Error, errorInfo: React.ErrorInfo) => void;
   'aria-label'?: string;
   'aria-labelledby'?: string;
 }

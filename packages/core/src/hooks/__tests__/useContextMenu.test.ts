@@ -2,10 +2,10 @@ import { renderHook, act } from '@testing-library/react';
 import { useContextMenu } from '../useContextMenu';
 
 describe('useContextMenu', () => {
-  it('returns contextMenu null and handlers', () => {
+  it('returns contextMenuPosition null and handlers', () => {
     const { result } = renderHook(() => useContextMenu());
-    expect(result.current.contextMenu).toBeNull();
-    expect(typeof result.current.setContextMenu).toBe('function');
+    expect(result.current.contextMenuPosition).toBeNull();
+    expect(typeof result.current.setContextMenuPosition).toBe('function');
     expect(typeof result.current.handleCellContextMenu).toBe('function');
     expect(typeof result.current.closeContextMenu).toBe('function');
   });
@@ -15,7 +15,7 @@ describe('useContextMenu', () => {
     act(() => {
       result.current.handleCellContextMenu({ clientX: 100, clientY: 200 });
     });
-    expect(result.current.contextMenu).toEqual({ x: 100, y: 200 });
+    expect(result.current.contextMenuPosition).toEqual({ x: 100, y: 200 });
   });
 
   it('closeContextMenu clears context menu', () => {
@@ -26,14 +26,14 @@ describe('useContextMenu', () => {
     act(() => {
       result.current.closeContextMenu();
     });
-    expect(result.current.contextMenu).toBeNull();
+    expect(result.current.contextMenuPosition).toBeNull();
   });
 
-  it('setContextMenu sets position directly', () => {
+  it('setContextMenuPosition sets position directly', () => {
     const { result } = renderHook(() => useContextMenu());
     act(() => {
-      result.current.setContextMenu({ x: 10, y: 20 });
+      result.current.setContextMenuPosition({ x: 10, y: 20 });
     });
-    expect(result.current.contextMenu).toEqual({ x: 10, y: 20 });
+    expect(result.current.contextMenuPosition).toEqual({ x: 10, y: 20 });
   });
 });

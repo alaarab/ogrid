@@ -18,6 +18,11 @@ export interface UseRichSelectStateResult {
   getDisplayText: (value: unknown) => string;
 }
 
+/**
+ * Manages searchable rich select editor state with keyboard navigation (arrow keys, enter, escape).
+ * @param params - Values, format function, initial value, and commit/cancel callbacks.
+ * @returns Search text, filtered values, highlighted index, keyboard handler, and select function.
+ */
 export function useRichSelectState(params: UseRichSelectStateParams): UseRichSelectStateResult {
   const { values, formatValue, onCommit, onCancel } = params;
   const [searchText, setSearchText] = useState('');

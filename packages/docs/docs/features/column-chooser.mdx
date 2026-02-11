@@ -20,27 +20,37 @@ The Column Chooser gives users a dropdown with checkboxes to show or hide column
 import { OGrid } from '@alaarab/ogrid';
 import type { IColumnDef } from '@alaarab/ogrid-core';
 
-interface Row {
+interface Person {
   id: number;
   name: string;
   email: string;
-  phone: string;
+  age: number;
   department: string;
+  salary: number;
+  startDate: string;
 }
 
-const columns: IColumnDef<Row>[] = [
+const columns: IColumnDef<Person>[] = [
   { columnId: 'name', name: 'Name', required: true },
   { columnId: 'email', name: 'Email' },
-  { columnId: 'phone', name: 'Phone', defaultVisible: false },
+  { columnId: 'age', name: 'Age', type: 'numeric', defaultVisible: false },
   { columnId: 'department', name: 'Department' },
+  {
+    columnId: 'salary',
+    name: 'Salary',
+    type: 'numeric',
+    valueFormatter: (v) => `$${Number(v).toLocaleString()}`,
+  },
+  { columnId: 'startDate', name: 'Start Date', defaultVisible: false },
 ];
 
 function App() {
   return (
     <OGrid
       columns={columns}
-      data={rows}
-      getRowId={(r) => r.id}
+      data={people}
+      getRowId={(p) => p.id}
+      defaultPageSize={10}
     />
   );
 }
@@ -48,8 +58,8 @@ function App() {
 
 In this example:
 - **Name** is always visible (cannot be unchecked because `required: true`).
-- **Phone** is hidden by default but the user can enable it.
-- **Email** and **Department** are visible by default and can be toggled.
+- **Age** and **Start Date** are hidden by default but the user can enable them.
+- **Email**, **Department**, and **Salary** are visible by default and can be toggled.
 
 ## How It Works
 
