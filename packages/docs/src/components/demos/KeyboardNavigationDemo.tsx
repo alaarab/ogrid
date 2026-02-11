@@ -1,6 +1,6 @@
 import React, { useState, useCallback } from 'react';
-import { OGrid } from '@alaarab/ogrid';
-import type { ICellValueChangedEvent } from '@alaarab/ogrid';
+import { OGrid } from '@alaarab/ogrid-react-radix';
+import type { ICellValueChangedEvent } from '@alaarab/ogrid-react-radix';
 import { LiveDemo } from '../LiveDemo';
 import { people as initialPeople, getRowId, editingColumns, type Person } from './demoData';
 

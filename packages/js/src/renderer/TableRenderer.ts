@@ -1,7 +1,22 @@
 import type { IColumnDef } from '../types/columnTypes';
 import type { RowId } from '../types/gridTypes';
-import { getCellValue, buildHeaderRows } from '@alaarab/ogrid-core';
+import type { IActiveCell, ISelectionRange } from '@alaarab/ogrid-core';
+import { getCellValue, buildHeaderRows, isInSelectionRange } from '@alaarab/ogrid-core';
 import type { GridState } from '../state/GridState';
+
+export interface TableRendererInteractionState {
+  activeCell: IActiveCell | null;
+  selectionRange: ISelectionRange | null;
+  copyRange: ISelectionRange | null;
+  cutRange: ISelectionRange | null;
+  editingCell: { rowId: RowId; columnId: string } | null;
+  columnWidths: Record<string, number>;
+  onCellClick?: (rowIndex: number, colIndex: number, e: MouseEvent) => void;
+  onCellMouseDown?: (rowIndex: number, colIndex: number, e: MouseEvent) => void;
+  onCellDoubleClick?: (rowIndex: number, colIndex: number, rowId: RowId, columnId: string) => void;
+  onCellContextMenu?: (rowIndex: number, colIndex: number, e: MouseEvent) => void;
+  onResizeStart?: (columnId: string, clientX: number, currentWidth: number) => void;
+}
 
 export class TableRenderer<T> {
   private container: HTMLElement;
@@ -9,10 +24,20 @@ export class TableRenderer<T> {
   private table: HTMLTableElement | null = null;
   private thead: HTMLTableSectionElement | null = null;
   private tbody: HTMLTableSectionElement | null = null;
+  private interactionState: TableRendererInteractionState | null = null;
+  private wrapperEl: HTMLDivElement | null = null;
 
   constructor(container: HTMLElement, state: GridState<T>) {
     this.container = container;
     this.state = state;
+  }
+
+  setInteractionState(state: TableRendererInteractionState | null): void {
+    this.interactionState = state;
+  }
+
+  getWrapperElement(): HTMLDivElement | null {
+    return this.wrapperEl;
   }
 
   /** Full render — creates the table structure from scratch. */
@@ -24,10 +49,12 @@ export class TableRenderer<T> {
     const wrapper = document.createElement('div');
     wrapper.className = 'ogrid-wrapper';
     wrapper.setAttribute('role', 'grid');
+    wrapper.setAttribute('tabindex', '0'); // Make focusable for keyboard nav
     const ariaLabel = (this.state as unknown as { _ariaLabel?: string })._ariaLabel;
     if (ariaLabel) {
       wrapper.setAttribute('aria-label', ariaLabel);
     }
+    this.wrapperEl = wrapper;
 
     // Create table
     this.table = document.createElement('table');
@@ -102,11 +129,16 @@ export class TableRenderer<T> {
     } else {
       // Single row header
       const tr = document.createElement('tr');
-      for (const col of visibleCols) {
+      for (let colIdx = 0; colIdx < visibleCols.length; colIdx++) {
+        const col = visibleCols[colIdx];
         const th = document.createElement('th');
-        th.textContent = col.name;
         th.className = 'ogrid-header-cell';
         th.setAttribute('data-column-id', col.columnId);
+
+        // Text container
+        const textSpan = document.createElement('span');
+        textSpan.textContent = col.name;
+        th.appendChild(textSpan);
 
         if (col.sortable) {
           th.classList.add('ogrid-sortable');
@@ -124,6 +156,30 @@ export class TableRenderer<T> {
         if (col.type === 'numeric') {
           th.style.textAlign = 'right';
         }
+
+        // Apply column width from resize state
+        if (this.interactionState?.columnWidths[col.columnId]) {
+          th.style.width = `${this.interactionState.columnWidths[col.columnId]}px`;
+        }
+
+        // Add resize handle
+        const resizeHandle = document.createElement('div');
+        resizeHandle.className = 'ogrid-resize-handle';
+        resizeHandle.style.position = 'absolute';
+        resizeHandle.style.right = '0';
+        resizeHandle.style.top = '0';
+        resizeHandle.style.bottom = '0';
+        resizeHandle.style.width = '4px';
+        resizeHandle.style.cursor = 'col-resize';
+        resizeHandle.style.userSelect = 'none';
+        th.style.position = 'relative';
+        th.appendChild(resizeHandle);
+
+        resizeHandle.addEventListener('mousedown', (e) => {
+          e.stopPropagation();
+          const rect = th.getBoundingClientRect();
+          this.interactionState?.onResizeStart?.(col.columnId, e.clientX, rect.width);
+        });
 
         tr.appendChild(th);
       }
@@ -148,19 +204,73 @@ export class TableRenderer<T> {
       return;
     }
 
-    for (const item of items) {
+    for (let rowIndex = 0; rowIndex < items.length; rowIndex++) {
+      const item = items[rowIndex];
       const rowId = this.state.getRowId(item);
       const tr = document.createElement('tr');
       tr.className = 'ogrid-row';
       tr.setAttribute('data-row-id', String(rowId));
 
-      for (const col of visibleCols) {
+      for (let colIndex = 0; colIndex < visibleCols.length; colIndex++) {
+        const col = visibleCols[colIndex];
         const td = document.createElement('td');
         td.className = 'ogrid-cell';
         td.setAttribute('data-column-id', col.columnId);
+        td.setAttribute('data-row-index', String(rowIndex));
+        td.setAttribute('data-col-index', String(colIndex));
+        td.setAttribute('tabindex', '-1'); // Make focusable
 
         if (col.type === 'numeric') {
           td.style.textAlign = 'right';
+        }
+
+        // Apply interaction state
+        if (this.interactionState) {
+          const { activeCell, selectionRange, copyRange, cutRange, editingCell } = this.interactionState;
+
+          // Active cell
+          if (activeCell && activeCell.rowIndex === rowIndex && activeCell.columnIndex === colIndex) {
+            td.setAttribute('data-active-cell', 'true');
+            td.style.outline = '2px solid #0078d4';
+          }
+
+          // Selection range
+          if (selectionRange && isInSelectionRange(selectionRange, rowIndex, colIndex)) {
+            td.setAttribute('data-in-range', 'true');
+            td.style.backgroundColor = '#e3f2fd';
+          }
+
+          // Copy range
+          if (copyRange && isInSelectionRange(copyRange, rowIndex, colIndex)) {
+            td.style.outline = '1px dashed #666';
+          }
+
+          // Cut range
+          if (cutRange && isInSelectionRange(cutRange, rowIndex, colIndex)) {
+            td.style.outline = '1px dashed #d32f2f';
+          }
+
+          // Editing cell (hide content, editor overlay will be shown)
+          if (editingCell && editingCell.rowId === rowId && editingCell.columnId === col.columnId) {
+            td.style.visibility = 'hidden';
+          }
+
+          // Cell interaction handlers
+          td.addEventListener('click', (e) => {
+            this.interactionState?.onCellClick?.(rowIndex, colIndex, e);
+          });
+
+          td.addEventListener('mousedown', (e) => {
+            this.interactionState?.onCellMouseDown?.(rowIndex, colIndex, e);
+          });
+
+          td.addEventListener('dblclick', (e) => {
+            this.interactionState?.onCellDoubleClick?.(rowIndex, colIndex, rowId, col.columnId);
+          });
+
+          td.addEventListener('contextmenu', (e) => {
+            this.interactionState?.onCellContextMenu?.(rowIndex, colIndex, e);
+          });
         }
 
         // Custom DOM render
