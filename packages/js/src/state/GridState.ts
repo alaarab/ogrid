@@ -11,12 +11,15 @@ import type {
 import type {
   IGridColumnState,
   FilterValue,
+  IDataSource,
 } from '@alaarab/ogrid-core';
 import {
   flattenColumns,
   processClientSideData,
   exportToCsv as coreExportToCsv,
   getCellValue,
+  deriveFilterOptionsFromData,
+  mergeFilter,
 } from '@alaarab/ogrid-core';
 import { EventEmitter } from './EventEmitter';
 
@@ -38,17 +41,45 @@ export class GridState<T> {
   private _allColumns: (IColumnDef<T> | IColumnGroupDef<T>)[];
   private _getRowId: (item: T) => RowId;
 
+  // Server-side data source
+  private _dataSource: IDataSource<T> | undefined;
+  private _serverItems: T[] = [];
+  private _serverTotalCount = 0;
+  private _fetchId = 0; // Guards against stale fetch responses
+  private _onError?: (error: unknown) => void;
+  private _onFirstDataRendered?: () => void;
+  private _firstDataRendered = false;
+
+  // Filter options for client-side data (used by sidebar filters panel & header filter popovers)
+  private _filterOptions: Record<string, string[]> = {};
+
   constructor(options: OGridOptions<T>) {
     this._allColumns = options.columns;
-    // flattenColumns expects core types - cast to unknown first to avoid type conflicts
     this._columns = flattenColumns(options.columns as unknown as Parameters<typeof flattenColumns>[0]) as IColumnDef<T>[];
     this._getRowId = options.getRowId;
     this._data = options.data ?? [];
+    this._dataSource = options.dataSource;
     this._page = options.page ?? 1;
     this._pageSize = options.pageSize ?? 20;
     this._sort = options.sort;
     this._filters = options.filters ?? {};
     this._visibleColumns = options.visibleColumns ?? new Set(this._columns.map(c => c.columnId));
+    this._onError = options.onError;
+    this._onFirstDataRendered = options.onFirstDataRendered;
+
+    // Derive initial filter options for client-side data
+    if (!this._dataSource) {
+      this._filterOptions = deriveFilterOptionsFromData(
+        this._data,
+        this._columns as unknown as Parameters<typeof deriveFilterOptionsFromData>[1]
+      );
+    }
+
+    // If server-side, trigger initial fetch
+    if (this._dataSource) {
+      this._isLoading = true;
+      this.fetchServerData();
+    }
   }
 
   // --- Getters ---
@@ -63,6 +94,8 @@ export class GridState<T> {
   get columns(): IColumnDef<T>[] { return this._columns; }
   get allColumns(): (IColumnDef<T> | IColumnGroupDef<T>)[] { return this._allColumns; }
   get getRowId(): (item: T) => RowId { return this._getRowId; }
+  get isServerSide(): boolean { return this._dataSource != null; }
+  get filterOptions(): Record<string, string[]> { return this._filterOptions; }
 
   /** Get the visible columns in display order. */
   get visibleColumnDefs(): IColumnDef<T>[] {
@@ -71,8 +104,10 @@ export class GridState<T> {
 
   /** Get processed (sorted, filtered, paginated) items for current page. */
   getProcessedItems(): { items: T[]; totalCount: number } {
-    // processClientSideData signature: (data, columns, filters, sortBy?, sortDirection?)
-    // Cast to unknown first to work around structural type differences
+    if (this.isServerSide) {
+      return { items: this._serverItems, totalCount: this._serverTotalCount };
+    }
+
     const filtered = processClientSideData(
       this._data,
       this._columns as unknown as Parameters<typeof processClientSideData>[1],
@@ -82,8 +117,6 @@ export class GridState<T> {
     ) as T[];
 
     const totalCount = filtered.length;
-
-    // Apply pagination
     const startIdx = (this._page - 1) * this._pageSize;
     const endIdx = startIdx + this._pageSize;
     const items = filtered.slice(startIdx, endIdx);
@@ -91,28 +124,85 @@ export class GridState<T> {
     return { items, totalCount };
   }
 
+  // --- Server-side fetch ---
+
+  private fetchServerData(): void {
+    if (!this._dataSource) return;
+
+    const id = ++this._fetchId;
+    this._isLoading = true;
+    this.emitter.emit('stateChange', { type: 'loading' });
+
+    this._dataSource
+      .fetchPage({
+        page: this._page,
+        pageSize: this._pageSize,
+        sort: this._sort ? { field: this._sort.field, direction: this._sort.direction } : undefined,
+        filters: this._filters,
+      })
+      .then((res) => {
+        if (id !== this._fetchId) return; // Stale response
+        this._serverItems = res.items;
+        this._serverTotalCount = res.totalCount;
+        this._isLoading = false;
+
+        if (!this._firstDataRendered && res.items.length > 0) {
+          this._firstDataRendered = true;
+          this._onFirstDataRendered?.();
+        }
+
+        this.emitter.emit('stateChange', { type: 'data' });
+      })
+      .catch((err) => {
+        if (id !== this._fetchId) return;
+        this._onError?.(err);
+        this._serverItems = [];
+        this._serverTotalCount = 0;
+        this._isLoading = false;
+        this.emitter.emit('stateChange', { type: 'data' });
+      });
+  }
+
   // --- Setters ---
 
   setData(data: T[]): void {
     this._data = data;
+    if (!this.isServerSide) {
+      this._filterOptions = deriveFilterOptionsFromData(
+        data,
+        this._columns as unknown as Parameters<typeof deriveFilterOptionsFromData>[1]
+      );
+    }
     this.emitter.emit('stateChange', { type: 'data' });
   }
 
   setPage(page: number): void {
     this._page = page;
-    this.emitter.emit('stateChange', { type: 'page' });
+    if (this.isServerSide) {
+      this.fetchServerData();
+    } else {
+      this.emitter.emit('stateChange', { type: 'page' });
+    }
   }
 
   setPageSize(pageSize: number): void {
     this._pageSize = pageSize;
     this._page = 1;
-    this.emitter.emit('stateChange', { type: 'page' });
+    if (this.isServerSide) {
+      this.fetchServerData();
+    } else {
+      this.emitter.emit('stateChange', { type: 'page' });
+    }
   }
 
   setSort(sort: { field: string; direction: 'asc' | 'desc' } | undefined): void {
     this._sort = sort;
     this._page = 1;
-    this.emitter.emit('stateChange', { type: 'sort' });
+    if (this.isServerSide) {
+      this.fetchServerData();
+    } else {
+      this.emitter.emit('stateChange', { type: 'sort' });
+    }
   }
 
   toggleSort(field: string): void {
@@ -124,25 +214,31 @@ export class GridState<T> {
       this._sort = { field, direction: 'asc' };
     }
     this._page = 1;
-    this.emitter.emit('stateChange', { type: 'sort' });
+    if (this.isServerSide) {
+      this.fetchServerData();
+    } else {
+      this.emitter.emit('stateChange', { type: 'sort' });
+    }
   }
 
   setFilter(key: string, value: FilterValue | undefined): void {
-    if (value === undefined) {
-      const next = { ...this._filters };
-      delete next[key];
-      this._filters = next;
-    } else {
-      this._filters = { ...this._filters, [key]: value };
-    }
+    this._filters = mergeFilter(this._filters, key, value);
     this._page = 1;
-    this.emitter.emit('stateChange', { type: 'filter' });
+    if (this.isServerSide) {
+      this.fetchServerData();
+    } else {
+      this.emitter.emit('stateChange', { type: 'filter' });
+    }
   }
 
   clearFilters(): void {
     this._filters = {};
     this._page = 1;
-    this.emitter.emit('stateChange', { type: 'filter' });
+    if (this.isServerSide) {
+      this.fetchServerData();
+    } else {
+      this.emitter.emit('stateChange', { type: 'filter' });
+    }
   }
 
   setVisibleColumns(columns: Set<string>): void {
@@ -153,6 +249,12 @@ export class GridState<T> {
   setLoading(loading: boolean): void {
     this._isLoading = loading;
     this.emitter.emit('stateChange', { type: 'loading' });
+  }
+
+  refreshData(): void {
+    if (this.isServerSide) {
+      this.fetchServerData();
+    }
   }
 
   // --- Event subscription ---
@@ -166,7 +268,9 @@ export class GridState<T> {
 
   getApi(): IJsOGridApi<T> {
     return {
-      setRowData: (data: T[]) => this.setData(data),
+      setRowData: (data: T[]) => {
+        if (!this.isServerSide) this.setData(data);
+      },
       setLoading: (loading: boolean) => this.setLoading(loading),
       getColumnState: (): IGridColumnState => ({
         visibleColumns: Array.from(this._visibleColumns),
@@ -177,12 +281,20 @@ export class GridState<T> {
         if (state.visibleColumns) this._visibleColumns = new Set(state.visibleColumns);
         if (state.sort !== undefined) this._sort = state.sort;
         if (state.filters !== undefined) this._filters = state.filters ?? {};
-        this.emitter.emit('stateChange', { type: 'columns' });
+        if (this.isServerSide) {
+          this.fetchServerData();
+        } else {
+          this.emitter.emit('stateChange', { type: 'columns' });
+        }
       },
       setFilterModel: (filters: IFilters) => {
         this._filters = filters;
         this._page = 1;
-        this.emitter.emit('stateChange', { type: 'filter' });
+        if (this.isServerSide) {
+          this.fetchServerData();
+        } else {
+          this.emitter.emit('stateChange', { type: 'filter' });
+        }
       },
       getSelectedRows: () => [],
       setSelectedRows: () => {},
@@ -195,7 +307,7 @@ export class GridState<T> {
         this.setSort(undefined);
       },
       getDisplayedRows: () => this.getProcessedItems().items,
-      refreshData: () => {},
+      refreshData: () => this.refreshData(),
       exportToCsv: (filename?: string) => {
         const { items } = this.getProcessedItems();
         const cols = this.visibleColumnDefs.map(c => ({ columnId: c.columnId, name: c.name }));
