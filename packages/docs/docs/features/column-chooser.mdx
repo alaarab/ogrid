@@ -17,8 +17,8 @@ The Column Chooser gives users a dropdown with checkboxes to show or hide column
 ## Quick Example
 
 ```tsx
-import { OGrid } from '@alaarab/ogrid';
-import type { IColumnDef } from '@alaarab/ogrid-core';
+import { OGrid } from '@alaarab/ogrid-react-radix';
+import type { IColumnDef } from '@alaarab/ogrid-react-radix';
 
 interface Person {
   id: number;
@@ -110,7 +110,7 @@ When these props are provided, OGrid uses them instead of its internal visibilit
 Each UI package also exports a standalone `ColumnChooser` component that you can render anywhere in your UI.
 
 ```tsx
-import { ColumnChooser } from '@alaarab/ogrid';
+import { ColumnChooser } from '@alaarab/ogrid-react-radix';
 
 <ColumnChooser
   columns={columns}

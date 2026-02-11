@@ -1,5 +1,3 @@
-import * as React from 'react';
-
 export type ColumnFilterType = 'none' | 'text' | 'multiSelect' | 'people' | 'date';
 
 /** Date range filter value (ISO YYYY-MM-DD strings). Both fields optional for open-ended ranges. */
@@ -46,7 +44,6 @@ export interface IValueParserParams<T = unknown> {
 }
 
 export interface IColumnDef<T = unknown> extends IColumnMeta {
-  renderCell?: (item: T) => React.ReactNode;
   compare?: (a: T, b: T) => number;
   /** Compute cell value from row data (used for filtering, sorting, display when no renderCell). */
   valueGetter?: (item: T) => unknown;
@@ -58,12 +55,11 @@ export interface IColumnDef<T = unknown> extends IColumnMeta {
    * Return the parsed value to use, or `undefined` to reject (skip) the change.
    */
   valueParser?: (params: IValueParserParams<T>) => unknown;
-  /** Static or per-row cell inline styles. */
-  cellStyle?: React.CSSProperties | ((item: T) => React.CSSProperties);
   /** Whether the cell is editable (per-column or per-row). */
   editable?: boolean | ((item: T) => boolean);
-  /** Built-in editor type or custom React component. */
-  cellEditor?: 'text' | 'select' | 'checkbox' | 'richSelect' | 'date' | React.ComponentType<ICellEditorProps<T>>;
+  /** Built-in editor type or framework-specific custom editor (e.g. React component).
+   *  Core utilities never inspect this value — framework packages narrow the type. */
+  cellEditor?: unknown;
   /** When true, custom cell editor is rendered in a popover/popper instead of inline. */
   cellEditorPopup?: boolean;
   /** Params passed to the cell editor (e.g. { values: string[] } for select). */

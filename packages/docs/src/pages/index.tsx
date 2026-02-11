@@ -54,7 +54,7 @@ function generateData(): EmployeeRow[] {
 
 function HeroGrid() {
   // eslint-disable-next-line @typescript-eslint/no-var-requires
-  const { OGrid } = require('@alaarab/ogrid') as typeof import('@alaarab/ogrid');
+  const { OGrid } = require('@alaarab/ogrid-react-radix') as typeof import('@alaarab/ogrid-react-radix');
 
   const data = useMemo(() => generateData(), []);
 
@@ -122,7 +122,7 @@ function Hero() {
         </div>
         <div className={styles.heroInstall}>
           <span className={styles.heroInstallDollar}>$</span>
-          npm install @alaarab/ogrid
+          npm install @alaarab/ogrid-react-radix
         </div>
       </div>
     </section>
@@ -134,14 +134,14 @@ function Hero() {
    ────────────────────────────────────────────── */
 
 const frameworks = [
-  { id: 'ogrid', label: 'OGrid (Default)', import: `import { OGrid } from '@alaarab/ogrid';` },
-  { id: 'fluent', label: 'Fluent UI', import: `import { OGrid } from '@alaarab/ogrid-fluent';` },
-  { id: 'material', label: 'Material UI', import: `import { OGrid } from '@alaarab/ogrid-material';` },
+  { id: 'ogrid', label: 'OGrid (Default)', import: `import { OGrid } from '@alaarab/ogrid-react-radix';` },
+  { id: 'fluent', label: 'Fluent UI', import: `import { OGrid } from '@alaarab/ogrid-react-fluent';` },
+  { id: 'material', label: 'Material UI', import: `import { OGrid } from '@alaarab/ogrid-react-material';` },
 ] as const;
 
 function getCodeExample(importLine: string) {
   return `${importLine}
-import type { IColumnDef } from '@alaarab/ogrid-core';
+import type { IColumnDef } from '@alaarab/ogrid-react';
 
 const columns: IColumnDef<Employee>[] = [
   { columnId: 'name', name: 'Name', sortable: true },
@@ -328,7 +328,7 @@ function CTASection() {
         </p>
         <div className={styles.ctaInstall}>
           <span className={styles.heroInstallDollar}>$</span>
-          npm install @alaarab/ogrid
+          npm install @alaarab/ogrid-react-radix
         </div>
         <div className={styles.ctaButtons}>
           <Link className={styles.btnPrimary} to="/docs/getting-started/overview">

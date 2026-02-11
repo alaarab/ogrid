@@ -1,4 +1,4 @@
-import type { IColumnDef, IColumnGroupDef } from '@alaarab/ogrid';
+import type { IColumnDef, IColumnGroupDef } from '@alaarab/ogrid-react-radix';
 
 export interface Person {
   id: number;

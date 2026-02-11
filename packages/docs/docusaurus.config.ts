@@ -32,7 +32,8 @@ const config: Config = {
             resolve: {
               alias: {
                 '@alaarab/ogrid-core': path.resolve(__dirname, '../core/dist/esm'),
-                '@alaarab/ogrid': path.resolve(__dirname, '../radix/dist/esm'),
+                '@alaarab/ogrid-react': path.resolve(__dirname, '../react/dist/esm'),
+                '@alaarab/ogrid-react-radix': path.resolve(__dirname, '../react-radix/dist/esm'),
               },
             },
           };
@@ -99,7 +100,7 @@ const config: Config = {
           position: 'right',
         },
         {
-          href: 'https://www.npmjs.com/package/@alaarab/ogrid',
+          href: 'https://www.npmjs.com/package/@alaarab/ogrid-react-radix',
           label: 'npm',
           position: 'right',
         },
@@ -119,10 +120,12 @@ const config: Config = {
         {
           title: 'Packages',
           items: [
-            { label: '@alaarab/ogrid', href: 'https://npmjs.com/package/@alaarab/ogrid' },
             { label: '@alaarab/ogrid-core', href: 'https://npmjs.com/package/@alaarab/ogrid-core' },
-            { label: '@alaarab/ogrid-fluent', href: 'https://npmjs.com/package/@alaarab/ogrid-fluent' },
-            { label: '@alaarab/ogrid-material', href: 'https://npmjs.com/package/@alaarab/ogrid-material' },
+            { label: '@alaarab/ogrid-react', href: 'https://npmjs.com/package/@alaarab/ogrid-react' },
+            { label: '@alaarab/ogrid-react-radix', href: 'https://npmjs.com/package/@alaarab/ogrid-react-radix' },
+            { label: '@alaarab/ogrid-react-fluent', href: 'https://npmjs.com/package/@alaarab/ogrid-react-fluent' },
+            { label: '@alaarab/ogrid-react-material', href: 'https://npmjs.com/package/@alaarab/ogrid-react-material' },
+            { label: '@alaarab/ogrid-js', href: 'https://npmjs.com/package/@alaarab/ogrid-js' },
           ],
         },
         {

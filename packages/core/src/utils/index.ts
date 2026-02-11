@@ -22,24 +22,6 @@ export {
 } from './paginationHelpers';
 export type { PaginationViewModel } from './paginationHelpers';
 export { GRID_CONTEXT_MENU_ITEMS, getContextMenuHandlers, formatShortcut } from './gridContextMenuHelpers';
-export {
-  getHeaderFilterConfig,
-  getCellRenderDescriptor,
-  isRowInRange,
-  resolveCellDisplayContent,
-  resolveCellStyle,
-  buildInlineEditorProps,
-  buildPopoverEditorProps,
-  getCellInteractionProps,
-} from './dataGridViewModel';
-export type {
-  HeaderFilterConfigInput,
-  HeaderFilterConfig,
-  CellRenderDescriptorInput,
-  CellRenderDescriptor,
-  CellRenderMode,
-  CellInteractionHandlers,
-} from './dataGridViewModel';
 export type { CsvColumn } from './exportToCsv';
 export type { StatusBarPart, StatusBarPartsInput } from './statusBarHelpers';
 export type { GridContextMenuItem, GridContextMenuHandlerProps } from './gridContextMenuHelpers';
@@ -55,5 +37,5 @@ export type { ParseValueResult } from './valueParsers';
 export { computeAggregations } from './aggregationUtils';
 export type { AggregationResult } from './aggregationUtils';
 export { processClientSideData } from './clientSideData';
-export { areGridRowPropsEqual } from './gridRowComparator';
+export { areGridRowPropsEqual, isRowInRange } from './gridRowComparator';
 export type { GridRowComparatorProps } from './gridRowComparator';
