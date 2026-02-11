@@ -1,6 +1,6 @@
 import React, { useMemo } from 'react';
-import { OGrid } from '@alaarab/ogrid';
-import type { IDataSource, IFetchParams } from '@alaarab/ogrid';
+import { OGrid } from '@alaarab/ogrid-react-radix';
+import type { IDataSource, IFetchParams } from '@alaarab/ogrid-react-radix';
 import { LiveDemo } from '../LiveDemo';
 import { people, getRowId, sortingColumns, type Person } from './demoData';
 

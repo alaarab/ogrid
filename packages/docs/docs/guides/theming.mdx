@@ -40,17 +40,17 @@ Or scope it to a specific grid instance using the `className` prop:
 
 Each UI package inherits styles from its framework's theme system. OGrid does not fight your theme -- it builds on top of it.
 
-### Radix UI (`@alaarab/ogrid`)
+### Radix UI (`@alaarab/ogrid-react-radix`)
 
 Radix is the lightest implementation. It uses CSS Modules (`.module.scss`) for all grid styles. Override styles with standard CSS specificity or by targeting the grid's class names.
 
-### Fluent UI (`@alaarab/ogrid-fluent`)
+### Fluent UI (`@alaarab/ogrid-react-fluent`)
 
 The Fluent implementation renders with Fluent UI v9 components, which inherit from `FluentProvider`. Wrap your app in a `FluentProvider` with your theme:
 
 ```tsx
 import { FluentProvider, webLightTheme } from '@fluentui/react-components';
-import { OGrid } from '@alaarab/ogrid-fluent';
+import { OGrid } from '@alaarab/ogrid-react-fluent';
 
 function App() {
   return (
@@ -63,13 +63,13 @@ function App() {
 
 Fluent also uses CSS Modules for grid-specific styles (cell selection, fill handle, etc.).
 
-### Material UI (`@alaarab/ogrid-material`)
+### Material UI (`@alaarab/ogrid-react-material`)
 
 The Material implementation renders with MUI v7 components, which inherit from `ThemeProvider`. Wrap your app in a `ThemeProvider` with your theme:
 
 ```tsx
 import { ThemeProvider, createTheme } from '@mui/material/styles';
-import { OGrid } from '@alaarab/ogrid-material';
+import { OGrid } from '@alaarab/ogrid-react-material';
 
 const theme = createTheme({
   palette: {

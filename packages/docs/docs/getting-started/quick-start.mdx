@@ -24,14 +24,14 @@ npm install @alaarab/ogrid
   <TabItem value="fluent" label="Fluent UI">
 
 ```bash
-npm install @alaarab/ogrid-fluent @fluentui/react-components
+npm install @alaarab/ogrid-react-fluent @fluentui/react-components
 ```
 
   </TabItem>
   <TabItem value="material" label="Material UI">
 
 ```bash
-npm install @alaarab/ogrid-material @mui/material @emotion/react @emotion/styled
+npm install @alaarab/ogrid-react-material @mui/material @emotion/react @emotion/styled
 ```
 
   </TabItem>
@@ -43,7 +43,7 @@ npm install @alaarab/ogrid-material @mui/material @emotion/react @emotion/styled
   <TabItem value="radix" label="Radix (Lightweight)" default>
 
 ```tsx
-import { OGrid, type IColumnDef } from '@alaarab/ogrid';
+import { OGrid, type IColumnDef } from '@alaarab/ogrid-react-radix';
 
 interface Employee {
   id: number;
@@ -99,7 +99,7 @@ export default function App() {
 
 ```tsx
 import { FluentProvider, webLightTheme } from '@fluentui/react-components';
-import { OGrid, type IColumnDef } from '@alaarab/ogrid-fluent';
+import { OGrid, type IColumnDef } from '@alaarab/ogrid-react-fluent';
 
 // ... same Employee type, data, and columns as above ...
 
@@ -130,7 +130,7 @@ export default function App() {
 ```tsx
 import { ThemeProvider, createTheme } from '@mui/material/styles';
 import CssBaseline from '@mui/material/CssBaseline';
-import { OGrid, type IColumnDef } from '@alaarab/ogrid-material';
+import { OGrid, type IColumnDef } from '@alaarab/ogrid-react-material';
 
 const theme = createTheme();
 
@@ -183,7 +183,7 @@ With just this code:
 
 ```tsx
 import { useRef } from 'react';
-import { OGrid, type IOGridApi } from '@alaarab/ogrid';
+import { OGrid, type IOGridApi } from '@alaarab/ogrid-react-radix';
 
 function App() {
   const gridRef = useRef<IOGridApi<Employee>>(null);

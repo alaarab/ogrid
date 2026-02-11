@@ -1,5 +1,5 @@
 import React from 'react';
-import { OGrid } from '@alaarab/ogrid';
+import { OGrid } from '@alaarab/ogrid-react-radix';
 import { LiveDemo } from '../LiveDemo';
 import { people, getRowId, columnChooserColumns } from './demoData';
 

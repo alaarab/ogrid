@@ -13,7 +13,7 @@ OGrid supports both **uncontrolled** and **controlled** state patterns for every
 In uncontrolled mode, OGrid manages all state internally. Just pass your columns and data:
 
 ```tsx
-import { OGrid } from '@alaarab/ogrid';
+import { OGrid } from '@alaarab/ogrid-react-radix';
 
 const columns = [
   { columnId: 'name', name: 'Name', sortable: true },
@@ -43,7 +43,7 @@ In controlled mode, you pass the current value and an `onChange` callback for ea
 
 ```tsx
 import { useState } from 'react';
-import { OGrid, type IFilters } from '@alaarab/ogrid';
+import { OGrid, type IFilters } from '@alaarab/ogrid-react-radix';
 
 function App() {
   const [page, setPage] = useState(1);
@@ -121,7 +121,7 @@ For cases where you need to read or set state programmatically (e.g., a "Reset F
 
 ```tsx
 import { useRef } from 'react';
-import { OGrid, type IOGridApi } from '@alaarab/ogrid';
+import { OGrid, type IOGridApi } from '@alaarab/ogrid-react-radix';
 
 function App() {
   const gridRef = useRef<IOGridApi<Person>>(null);

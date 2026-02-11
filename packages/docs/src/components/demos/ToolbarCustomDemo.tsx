@@ -1,6 +1,6 @@
 import React, { useCallback, useRef, useState } from 'react';
-import { OGrid, exportToCsv } from '@alaarab/ogrid';
-import type { IOGridApi, CsvColumn } from '@alaarab/ogrid';
+import { OGrid, exportToCsv } from '@alaarab/ogrid-react-radix';
+import type { IOGridApi, CsvColumn } from '@alaarab/ogrid-react-radix';
 import { LiveDemo } from '../LiveDemo';
 import { people, getRowId, toolbarColumns, btnStyle, type Person } from './demoData';
 

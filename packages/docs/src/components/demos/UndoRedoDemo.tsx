@@ -1,7 +1,7 @@
 import React, { useState, useCallback } from 'react';
-import { OGrid } from '@alaarab/ogrid';
-import type { ICellValueChangedEvent } from '@alaarab/ogrid';
-import { useUndoRedo } from '@alaarab/ogrid-core';
+import { OGrid } from '@alaarab/ogrid-react-radix';
+import type { ICellValueChangedEvent } from '@alaarab/ogrid-react-radix';
+import { useUndoRedo } from '@alaarab/ogrid-react';
 import { LiveDemo } from '../LiveDemo';
 import { people as initialPeople, getRowId, editingColumns, type Person } from './demoData';
 
