@@ -53,6 +53,11 @@ export class InlineCellEditor<T> {
     editor.focus();
   }
 
+  /** Returns the cell currently being edited, or null if no editor is open. */
+  getEditingCell(): { rowId: RowId; columnId: string } | null {
+    return this.editingCell;
+  }
+
   closeEditor(): void {
     if (this.editor) {
       this.editor.remove();

@@ -1,10 +1,10 @@
-// Constants
+// Constants (re-exported from core)
 export {
   CHECKBOX_COLUMN_WIDTH,
   DEFAULT_MIN_COLUMN_WIDTH,
   CELL_PADDING,
   GRID_BORDER_RADIUS,
-} from './constants';
+} from '@alaarab/ogrid-core';
 
 // Types
 export type {

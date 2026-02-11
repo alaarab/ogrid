@@ -1,9 +1,6 @@
 import type {
-  IColumnMeta,
   IColumnDef as ICoreColumnDef,
-  ICellValueChangedEvent,
   CellEditorParams,
-  IColumnGroupDef as ICoreColumnGroupDef,
 } from '@alaarab/ogrid-core';
 
 // Re-export unchanged types

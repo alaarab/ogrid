@@ -5,8 +5,8 @@ import type {
   IDataSource,
   RowSelectionMode,
   IRowSelectionChangeEvent,
-  ISideBarDef,
   IOGridApi,
+  ISideBarDef,
 } from '@alaarab/ogrid-core';
 
 // Re-export core types
@@ -30,6 +30,12 @@ export type {
   ISideBarDef,
   IOGridApi,
 } from '@alaarab/ogrid-core';
+
+/** Extended API for the vanilla JS package (adds methods not in the core IOGridApi). */
+export interface IJsOGridApi<T> extends IOGridApi<T> {
+  /** Export displayed rows to CSV and trigger a download. */
+  exportToCsv: (filename?: string) => void;
+}
 
 /** Options for the vanilla JS OGrid constructor. */
 export interface OGridOptions<T> {

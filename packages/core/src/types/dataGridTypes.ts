@@ -1,4 +1,4 @@
-import type { IColumnDef, IColumnGroupDef, ICellValueChangedEvent, IDateFilterValue } from './columnTypes';
+import type { IDateFilterValue } from './columnTypes';
 
 /** Row identifier type — grids accept string or number IDs. */
 export type RowId = string | number;

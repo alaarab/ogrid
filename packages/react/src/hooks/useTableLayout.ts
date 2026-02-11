@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import type { RefObject } from 'react';
 import type { IColumnDef } from '../types';
-import { CHECKBOX_COLUMN_WIDTH, DEFAULT_MIN_COLUMN_WIDTH, CELL_PADDING } from '../constants';
+import { CHECKBOX_COLUMN_WIDTH, DEFAULT_MIN_COLUMN_WIDTH, CELL_PADDING } from '@alaarab/ogrid-core';
 
 export interface UseTableLayoutParams<T> {
   wrapperRef: RefObject<HTMLDivElement | null>;

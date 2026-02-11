@@ -1,6 +1,6 @@
 {
   "name": "@alaarab/ogrid-examples",
-  "version": "1.9.0",
+  "version": "1.9.1",
   "private": true,
   "description": "OGrid example apps for Fluent UI and Material UI implementations.",
   "scripts": {
@@ -12,10 +12,10 @@
     "build:radix": "vite build --config vite.radix.config.ts"
   },
   "dependencies": {
-    "@alaarab/ogrid-react-radix": "2.0.0",
-    "@alaarab/ogrid-react": "2.0.0",
-    "@alaarab/ogrid-react-fluent": "2.0.0",
-    "@alaarab/ogrid-react-material": "2.0.0",
+    "@alaarab/ogrid-react-radix": "1.9.1",
+    "@alaarab/ogrid-react": "1.9.1",
+    "@alaarab/ogrid-react-fluent": "1.9.1",
+    "@alaarab/ogrid-react-material": "1.9.1",
     "@emotion/react": "^11.14.0",
     "@emotion/styled": "^11.14.0",
     "@fluentui/react-components": "^9.72.10",

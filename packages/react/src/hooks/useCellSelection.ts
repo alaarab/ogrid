@@ -110,6 +110,7 @@ export function useCellSelection(params: UseCellSelectionParams): UseCellSelecti
         isDraggingRef.current = true;
       }
     },
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- setSelectionRange is a stable callback
     [colOffset, setActiveCell]
   );
 
@@ -122,6 +123,7 @@ export function useCellSelection(params: UseCellSelectionParams): UseCellSelecti
       endCol: visibleColCount - 1,
     });
     setActiveCell({ rowIndex: 0, columnIndex: colOffset });
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- setSelectionRange is a stable callback
   }, [rowCount, visibleColCount, colOffset, setActiveCell]);
 
   /** Last known mouse position during drag — used by mouseUp to flush pending RAF work. */

@@ -22,7 +22,7 @@
     "docs:build": "npm run build -w @alaarab/ogrid-docs",
     "docs:serve": "npm run serve -w @alaarab/ogrid-docs",
     "lint": "eslint .",
-    "publish:all": "npm publish --workspace=packages/core --access=public && npm publish --workspace=packages/react --access=public && npm publish --workspace=packages/react-fluent --access=public && npm publish --workspace=packages/react-material --access=public && npm publish --workspace=packages/react-radix --access=public"
+    "publish:all": "npm publish --workspace=packages/core --access=public && npm publish --workspace=packages/react --access=public && npm publish --workspace=packages/js --access=public && npm publish --workspace=packages/react-fluent --access=public && npm publish --workspace=packages/react-material --access=public && npm publish --workspace=packages/react-radix --access=public"
   },
   "packageManager": "npm@11.6.2",
   "engines": {
@@ -50,8 +50,5 @@
     "typescript": "^5.7.3",
     "typescript-eslint": "^8.15.0"
   },
-  "dependencies": {
-    "@docusaurus/theme-mermaid": "3.9.2"
-  },
-  "version": "2.0.0"
+  "version": "1.9.1"
 }
