@@ -94,7 +94,7 @@ export function useRowSelection<T>(params: UseRowSelectionParams<T>): UseRowSele
       lastClickedRowRef.current = rowIndex;
       updateSelection(next);
     },
-    [rowSelection, getRowId, updateSelection]
+    [rowSelection, getRowId, updateSelection, itemsRef, selectedRowIdsRef]
   );
 
   const handleSelectAll = useCallback(
