@@ -1,6 +1,6 @@
 import React from 'react';
-import { OGrid } from '@alaarab/ogrid';
-import type { ISideBarDef } from '@alaarab/ogrid';
+import { OGrid } from '@alaarab/ogrid-react-radix';
+import type { ISideBarDef } from '@alaarab/ogrid-react-radix';
 import { LiveDemo } from '../LiveDemo';
 import { people, getRowId, toolbarColumns } from './demoData';
 
