@@ -2,7 +2,7 @@
 
 All notable changes to OGrid will be documented in this file.
 
-## [1.9.1] – 2026-02-11
+## [2.0.0-beta] – 2026-02-11
 
 ### BREAKING CHANGES
 
@@ -20,11 +20,11 @@ All notable changes to OGrid will be documented in this file.
 
 - **`@alaarab/ogrid-core`** — New pure TypeScript package with zero dependencies. Contains all shared types (`IColumnDef`, `IFilters`, `FilterValue`, etc.), algorithms (sorting, filtering, pagination), and utilities (`exportToCsv`, `buildHeaderRows`, `computeAggregations`, etc.). 237 tests.
 
-- **`@alaarab/ogrid-js`** — New vanilla JS data grid package. Class-based architecture with `EventEmitter`, `GridState`, and `TableRenderer`. Features: pagination, status bar, column chooser, cell selection, keyboard navigation, clipboard, undo/redo, inline editing, context menu, column resize. 68 tests.
+- **`@alaarab/ogrid-js`** — New vanilla JS data grid package. Class-based architecture with `EventEmitter`, `GridState`, and `TableRenderer`. Full feature parity with React: pagination, status bar, column chooser, cell selection, keyboard navigation, clipboard, undo/redo, inline editing, context menu, column resize, fill handle, marching ants overlay, row selection, column pinning, server-side data via `IDataSource`, sidebar (columns + filters panels), header filter popovers (text, multiSelect, date), CSV export, and table layout with ResizeObserver. 194 tests.
 
 ### Improved
 
-- **React package deduplication** — `@alaarab/ogrid-react` now imports shared utilities and constants from `@alaarab/ogrid-core` instead of maintaining duplicate copies. Eliminates ~800 lines of duplicated source code and ~1,200 lines of duplicated tests.
+- **React package deduplication** — `@alaarab/ogrid-react` now imports shared utilities and constants from `@alaarab/ogrid-core` instead of maintaining duplicate copies. Eliminates ~800 lines of duplicated source code and ~1,200 lines of duplicated tests. React's `IColumnDef<T>` now extends Core's `IColumnDef<T>` (no duplicate type definitions). `dataGridTypes.ts` reduced from ~207 to ~42 lines. `gridRowComparator.ts` is now a 3-line re-export from Core.
 
 - **Lint cleanup** — Removed all unused imports, variables, and type parameters across all 6 packages. Added `eslint-disable` comments with explanations for intentional `exhaustive-deps` suppressions (stable refs excluded from dependency arrays).
 
@@ -32,7 +32,7 @@ All notable changes to OGrid will be documented in this file.
 
 ### Changed
 
-- **1,065 tests** across 6 packages (Core: 237, JS: 68, React: 373, Radix: 92, Fluent: 92, Material: 92). React test count decreased from 484 to 373 because 111 duplicate utility tests were removed (those tests now run only in Core).
+- **954 tests** across 6 packages (Core: 237, JS: 194, React: 247, Radix: 92, Fluent: 92, Material: 92). React test count decreased from 484 to 247 because duplicate utility tests were removed (those tests now run only in Core). JS test count increased from 68 to 194 with full feature parity.
 
 ---
 
