@@ -110,7 +110,7 @@ export function useCellSelection(params: UseCellSelectionParams): UseCellSelecti
         isDraggingRef.current = true;
       }
     },
-    [colOffset, setActiveCell]
+    [colOffset, setActiveCell, setSelectionRange]
   );
 
   const handleSelectAllCells = useCallback(() => {
@@ -122,7 +122,7 @@ export function useCellSelection(params: UseCellSelectionParams): UseCellSelecti
       endCol: visibleColCount - 1,
     });
     setActiveCell({ rowIndex: 0, columnIndex: colOffset });
-  }, [rowCount, visibleColCount, colOffset, setActiveCell]);
+  }, [rowCount, visibleColCount, colOffset, setActiveCell, setSelectionRange]);
 
   /** Last known mouse position during drag — used by mouseUp to flush pending RAF work. */
   const lastMousePosRef = useRef<{ cx: number; cy: number } | null>(null);
