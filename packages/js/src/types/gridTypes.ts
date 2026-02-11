@@ -65,6 +65,13 @@ export interface OGridOptions<T> {
   onCellValueChanged?: (event: ICellValueChangedEvent<T>) => void;
 
   rowSelection?: RowSelectionMode;
+  /** Callback fired when row selection changes. */
+  onSelectionChange?: (event: IRowSelectionChangeEvent<T>) => void;
+  /** Controlled selected row IDs. */
+  selectedRows?: Set<RowId>;
+
+  /** Pin columns to left/right edges. Keys are columnIds. */
+  pinnedColumns?: Record<string, 'left' | 'right'>;
 
   /** Layout mode: 'content' sizes to content, 'fill' fills container. Default: 'fill'. */
   layoutMode?: 'content' | 'fill';
@@ -75,6 +82,15 @@ export interface OGridOptions<T> {
 
   /** Accessible label for the grid. */
   'aria-label'?: string;
+
+  /** Side bar configuration (columns panel + filters panel). */
+  sideBar?: boolean | ISideBarDef;
+
+  /** Error callback for server-side data source failures. */
+  onError?: (error: unknown) => void;
+
+  /** Callback fired when first data is rendered. */
+  onFirstDataRendered?: () => void;
 }
 
 /** Events emitted by the OGrid instance. */
