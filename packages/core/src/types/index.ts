@@ -1,19 +1,21 @@
+// Column types
 export type {
   ColumnFilterType,
+  IDateFilterValue,
   IColumnFilterDef,
   IColumnMeta,
+  IValueParserParams,
   IColumnDef,
-  IColumnGroupDef,
-  IColumnDefinition,
   ICellValueChangedEvent,
   ICellEditorProps,
   CellEditorParams,
-  IValueParserParams,
-  IDateFilterValue,
+  IColumnGroupDef,
   HeaderCell,
   HeaderRow,
+  IColumnDefinition,
 } from './columnTypes';
 
+// Data grid types
 export type {
   RowId,
   UserLike,
@@ -24,11 +26,6 @@ export type {
   IPageResult,
   IDataSource,
   IGridColumnState,
-  IOGridApi,
-  IOGridProps,
-  IOGridClientProps,
-  IOGridServerProps,
-  IOGridDataGridProps,
   RowSelectionMode,
   IRowSelectionChangeEvent,
   StatusBarPanel,
@@ -37,6 +34,12 @@ export type {
   ISelectionRange,
   SideBarPanelId,
   ISideBarDef,
+  IOGridApi,
 } from './dataGridTypes';
 
-export { toUserLike, isInSelectionRange, normalizeSelectionRange } from './dataGridTypes';
+// Utility functions
+export {
+  toUserLike,
+  isInSelectionRange,
+  normalizeSelectionRange,
+} from './dataGridTypes';

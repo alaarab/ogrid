@@ -1,0 +1,62 @@
+// Shared utilities re-exported from core
+export {
+  escapeCsvValue,
+  buildCsvHeader,
+  buildCsvRows,
+  exportToCsv,
+  triggerCsvDownload,
+  getCellValue,
+  flattenColumns,
+  buildHeaderRows,
+  getFilterField,
+  mergeFilter,
+  deriveFilterOptionsFromData,
+  getMultiSelectFilterFields,
+  getStatusBarParts,
+  getDataGridStatusBarConfig,
+  getPaginationViewModel,
+  PAGE_SIZE_OPTIONS,
+  MAX_PAGE_BUTTONS,
+  GRID_CONTEXT_MENU_ITEMS,
+  getContextMenuHandlers,
+  formatShortcut,
+  parseValue,
+  numberParser,
+  currencyParser,
+  dateParser,
+  emailParser,
+  booleanParser,
+  computeAggregations,
+  processClientSideData,
+} from '@alaarab/ogrid-core';
+export type {
+  CsvColumn,
+  StatusBarPart,
+  StatusBarPartsInput,
+  GridContextMenuItem,
+  GridContextMenuHandlerProps,
+  PaginationViewModel,
+  ParseValueResult,
+  AggregationResult,
+} from '@alaarab/ogrid-core';
+
+// React-specific utilities (not in core)
+export {
+  getHeaderFilterConfig,
+  getCellRenderDescriptor,
+  resolveCellDisplayContent,
+  resolveCellStyle,
+  buildInlineEditorProps,
+  buildPopoverEditorProps,
+  getCellInteractionProps,
+} from './dataGridViewModel';
+export type {
+  HeaderFilterConfigInput,
+  HeaderFilterConfig,
+  CellRenderDescriptorInput,
+  CellRenderDescriptor,
+  CellRenderMode,
+  CellInteractionHandlers,
+} from './dataGridViewModel';
+export { areGridRowPropsEqual, isRowInRange } from './gridRowComparator';
+export type { GridRowComparatorProps } from './gridRowComparator';
