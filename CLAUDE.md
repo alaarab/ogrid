@@ -83,7 +83,31 @@ React hooks, headless components, and shared test factories. Depends on `@alaara
 
 ### JS (`packages/js/src/`) — `@alaarab/ogrid-js`
 
-Vanilla JS data grid with no framework dependency. Class-based state with EventEmitter (replaces React hooks). `GridState` combines `useOGrid` + `useDataGridState`. Depends on `@alaarab/ogrid-core`.
+Vanilla JS data grid with no framework dependency. Full feature parity with React. Class-based state with EventEmitter (replaces React hooks). Depends on `@alaarab/ogrid-core`.
+
+**State classes:**
+- `GridState` — Core data state (sorting, filtering, pagination, columns, server-side fetch). Combines `useOGrid` + `useDataGridState`.
+- `SelectionState` — Active cell, selection range, drag selection via RAF + `data-drag-range` attributes
+- `FillHandleState` — Drag-to-fill with RAF optimization, batch undo support
+- `RowSelectionState` — Single/multiple modes, shift-click range, select-all/deselect-all
+- `ColumnResizeState` — Drag column borders to resize
+- `ColumnPinningState` — Sticky left/right column positioning with cumulative offsets
+- `UndoRedoState` — Edit history with batch support (`beginBatch`/`endBatch`)
+- `SideBarState` — Panel management (columns, filters), position (left/right)
+- `HeaderFilterState` — Text/multiSelect/date filter popover state, apply/clear
+- `TableLayoutState` — ResizeObserver-based container measurement, column width computation
+
+**Components:**
+- `TableRenderer` — DOM rendering (`<table>`, headers, rows, cells, pinning styles, filter icons, checkbox column)
+- `InlineCellEditor` — Text/select/checkbox/date inline editors
+- `PaginationControls` — Page navigation with page size dropdown
+- `StatusBar` — Row count, filtered count, selection aggregations
+- `ColumnChooser` — Show/hide columns dropdown
+- `SideBar` — Sidebar with columns panel (checkboxes) and filters panel (text/multiSelect/date inputs)
+- `HeaderFilter` — Positioned filter popovers per column
+- `MarchingAntsOverlay` — SVG animated copy/cut selection border
+
+**Entry point:** `OGrid` class — constructor takes a container element + `OGridOptions<T>`, wires all state and components, exposes `getApi()` and `destroy()`.
 
 ### React UI Packages (`packages/react-radix/`, `packages/react-fluent/`, `packages/react-material/`)
 
@@ -131,7 +155,7 @@ All re-export everything from `@alaarab/ogrid-react` (which re-exports from `@al
 
 ## Testing
 
-**1,065 tests** across 6 packages (Core: 237, JS: 68, React: 484, Radix: 92, Fluent: 92, Material: 92).
+**954 tests** across 6 packages (Core: 237, JS: 194, React: 247, Radix: 92, Fluent: 92, Material: 92).
 
 - Jest 29 + React Testing Library 16 + ts-jest, jsdom environment, 10s timeout
 - Core tests: `packages/core/src/*/__tests__/**/*.test.ts(x)`
@@ -189,7 +213,8 @@ GitHub Actions (`.github/workflows/ci.yml`): push to `main` + PRs. Node 22, ubun
 5. **Naming** — `I` prefix for interfaces (`IColumnDef`, `IDataSource`).
 6. **Test co-location** — Tests in `__tests__/` dirs. UI package tests use shared factories.
 7. **Headless architecture** — Core owns types and utilities; React owns hooks and state logic; UI packages are thin view layers.
-8. **Feature parity** — All three UI packages must support the same features and pass the same tests.
+8. **Feature parity** — All three React UI packages must support the same features and pass the same tests. The JS package has full feature parity with React.
+9. **Type deduplication** — React's `IColumnDef<T>` extends Core's `IColumnDef<T>` (not a duplicate). React-specific additions (`renderCell`, `cellStyle`, React `cellEditor` types) are in the extension. `dataGridTypes.ts` re-exports shared types from Core. Safe casts (`as IColumnDef<T>[]`) are used at framework boundaries where Core utilities return Core types.
 
 ## Definition of Done
 
