@@ -10,3 +10,6 @@ export { OGrid } from './OGrid';
 export { GridState } from './state/GridState';
 export { EventEmitter } from './state/EventEmitter';
 export { TableRenderer } from './renderer/TableRenderer';
+export { PaginationControls } from './components/PaginationControls';
+export { StatusBar } from './components/StatusBar';
+export { ColumnChooser } from './components/ColumnChooser';
