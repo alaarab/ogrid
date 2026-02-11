@@ -598,7 +598,7 @@ function DataGridTableInner<T>(props: IOGridDataGridProps<T>): React.ReactElemen
           suppressRowCount={statusBarConfig.suppressRowCount}
         />
       )}
-      {isLoading && items.length > 0 && (
+      {isLoading && (
         <div className={styles.loadingOverlay} aria-live="polite">
           <div className={styles.loadingOverlayContent}>
             <Spinner size="small" />
