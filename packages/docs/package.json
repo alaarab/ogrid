@@ -16,8 +16,8 @@
     "prism-react-renderer": "^2.4.1",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
-    "@alaarab/ogrid": "*",
-    "@alaarab/ogrid-core": "*"
+    "@alaarab/ogrid-react-radix": "*",
+    "@alaarab/ogrid-react": "*"
   },
   "devDependencies": {
     "@docusaurus/module-type-aliases": "^3.7.0",
