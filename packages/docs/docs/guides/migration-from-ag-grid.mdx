@@ -17,9 +17,9 @@ This guide maps every major AG Grid concept to its OGrid equivalent, so you can 
 npm uninstall ag-grid-react ag-grid-community ag-grid-enterprise
 
 # Install OGrid (pick your UI framework)
-npm install @alaarab/ogrid          # Radix (lightweight, no framework dep)
-npm install @alaarab/ogrid-fluent   # Fluent UI v9
-npm install @alaarab/ogrid-material # Material UI v7
+npm install @alaarab/ogrid-react-radix          # Radix (lightweight, no framework dep)
+npm install @alaarab/ogrid-react-fluent   # Fluent UI v9
+npm install @alaarab/ogrid-react-material # Material UI v7
 ```
 
 ## Component Mapping
@@ -37,7 +37,7 @@ import { AgGridReact } from 'ag-grid-react';
 />
 
 // OGrid
-import { OGrid } from '@alaarab/ogrid';
+import { OGrid } from '@alaarab/ogrid-react-radix';
 
 <OGrid
   columns={columns}
@@ -123,7 +123,7 @@ gridRef.current.api.exportDataAsCsv();
 
 // OGrid
 import { useRef } from 'react';
-import { OGrid, type IOGridApi, exportToCsv } from '@alaarab/ogrid';
+import { OGrid, type IOGridApi, exportToCsv } from '@alaarab/ogrid-react-radix';
 
 const gridRef = useRef<IOGridApi<MyRow>>(null);
 gridRef.current?.setRowData(newData);

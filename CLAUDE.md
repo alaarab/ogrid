@@ -2,7 +2,7 @@
 
 ## Project Overview
 
-OGrid is a lightweight, framework-agnostic React data grid library with separate implementations for **Fluent UI**, **Material UI**, and **Radix UI**, sharing a core of types, hooks, and utilities.
+OGrid is a lightweight, multi-framework data grid library. A pure-TypeScript core provides types, algorithms, and utilities. Framework-specific packages wrap the core for **React** (with **Fluent UI**, **Material UI**, and **Radix UI** implementations) and **vanilla JS**.
 
 - **Author:** Ala Arab
 - **License:** MIT
@@ -14,12 +14,24 @@ OGrid is a lightweight, framework-agnostic React data grid library with separate
 
 ```
 packages/
-  core/       → @alaarab/ogrid-core      — Types, hooks, utilities, headless components, shared test factories
-  fluent/     → @alaarab/ogrid-fluent     — Fluent UI implementation
-  material/   → @alaarab/ogrid-material   — Material UI implementation
-  radix/      → @alaarab/ogrid            — Radix UI implementation (default, lightweight)
-  docs/       → Docusaurus documentation site (features, API reference, guides)
-  examples/   → @alaarab/ogrid-examples   — Vite-powered example apps (private)
+  core/             → @alaarab/ogrid-core           — Pure TS types, algorithms, utilities (zero deps)
+  react/            → @alaarab/ogrid-react           — React hooks, headless components, shared test factories
+  react-radix/      → @alaarab/ogrid-react-radix     — Radix UI implementation (default, lightweight)
+  react-fluent/     → @alaarab/ogrid-react-fluent    — Fluent UI implementation
+  react-material/   → @alaarab/ogrid-react-material  — Material UI implementation
+  js/               → @alaarab/ogrid-js              — Vanilla JS data grid (class-based, no framework)
+  docs/             → @alaarab/ogrid-docs             — Docusaurus documentation site (private)
+  examples/         → @alaarab/ogrid-examples         — Vite-powered example apps (private)
+```
+
+**Dependency graph:**
+```
+@alaarab/ogrid-core (zero deps)
+├── @alaarab/ogrid-react       → core
+│   ├── @alaarab/ogrid-react-radix
+│   ├── @alaarab/ogrid-react-fluent
+│   └── @alaarab/ogrid-react-material
+└── @alaarab/ogrid-js          → core
 ```
 
 Managed with **npm workspaces** and **Turborepo**.
@@ -30,7 +42,10 @@ Managed with **npm workspaces** and **Turborepo**.
 npm ci                          # Install
 npm run build                   # Build all (Turborepo dependency order)
 npm run test:all                # Test all packages
-npm run test:core               # Test core only (also: test:fluent, test:material, test:radix)
+npm run test:core               # Test core only
+npm run test:js                 # Test JS only
+npm run test:react              # Test React hooks only
+npm run test:radix              # Test Radix UI (also: test:fluent, test:material)
 npm run lint                    # ESLint
 npm run storybook:fluent        # Storybook on port 6006 (also: storybook:material :6007, storybook:radix :6008)
 npm run docs:dev                # Docusaurus dev server
@@ -39,9 +54,15 @@ npm run docs:build              # Build docs site
 
 ## Architecture
 
-### Core (`packages/core/src/`)
+### Core (`packages/core/src/`) — `@alaarab/ogrid-core`
 
 **Types** — `IColumnDef`, `IColumnGroupDef`, `IDataSource`, `IFilters`, `IDateFilterValue`, `UserLike`, `IOGridApi`, `IOGridProps`, `ICellEditorProps`, `FilterValue`, etc. in `types/`. Column types: `'text' | 'numeric' | 'date' | 'boolean'`. Filter types: `'none' | 'text' | 'multiSelect' | 'people' | 'date'`. `FilterValue` is a discriminated union: `{ type: 'text', value: string } | { type: 'multiSelect', value: string[] } | { type: 'people', value: UserLike } | { type: 'date', value: IDateFilterValue }`.
+
+Core is **pure TypeScript with zero dependencies** — no React, no DOM APIs. It contains types, algorithms, and utilities shared by all framework packages.
+
+### React (`packages/react/src/`) — `@alaarab/ogrid-react`
+
+React hooks, headless components, and shared test factories. Depends on `@alaarab/ogrid-core`.
 
 **Orchestration hooks:**
 - `useOGrid` — Pagination, sorting, filtering, visibility, editing, row selection, status bar. Exposes `IOGridApi` ref.
@@ -60,16 +81,44 @@ npm run docs:build              # Build docs site
 
 **Headless components:** `OGridLayout`, `StatusBar`, `GridContextMenu`, `SideBar`
 
-### UI Packages (`packages/fluent/`, `packages/material/`, `packages/radix/`)
+### JS (`packages/js/src/`) — `@alaarab/ogrid-js`
 
-All three expose the same component API:
+Vanilla JS data grid with no framework dependency. Full feature parity with React. Class-based state with EventEmitter (replaces React hooks). Depends on `@alaarab/ogrid-core`.
+
+**State classes:**
+- `GridState` — Core data state (sorting, filtering, pagination, columns, server-side fetch). Combines `useOGrid` + `useDataGridState`.
+- `SelectionState` — Active cell, selection range, drag selection via RAF + `data-drag-range` attributes
+- `FillHandleState` — Drag-to-fill with RAF optimization, batch undo support
+- `RowSelectionState` — Single/multiple modes, shift-click range, select-all/deselect-all
+- `ColumnResizeState` — Drag column borders to resize
+- `ColumnPinningState` — Sticky left/right column positioning with cumulative offsets
+- `UndoRedoState` — Edit history with batch support (`beginBatch`/`endBatch`)
+- `SideBarState` — Panel management (columns, filters), position (left/right)
+- `HeaderFilterState` — Text/multiSelect/date filter popover state, apply/clear
+- `TableLayoutState` — ResizeObserver-based container measurement, column width computation
+
+**Components:**
+- `TableRenderer` — DOM rendering (`<table>`, headers, rows, cells, pinning styles, filter icons, checkbox column)
+- `InlineCellEditor` — Text/select/checkbox/date inline editors
+- `PaginationControls` — Page navigation with page size dropdown
+- `StatusBar` — Row count, filtered count, selection aggregations
+- `ColumnChooser` — Show/hide columns dropdown
+- `SideBar` — Sidebar with columns panel (checkboxes) and filters panel (text/multiSelect/date inputs)
+- `HeaderFilter` — Positioned filter popovers per column
+- `MarchingAntsOverlay` — SVG animated copy/cut selection border
+
+**Entry point:** `OGrid` class — constructor takes a container element + `OGridOptions<T>`, wires all state and components, exposes `getApi()` and `destroy()`.
+
+### React UI Packages (`packages/react-radix/`, `packages/react-fluent/`, `packages/react-material/`)
+
+All three expose the same component API and depend on `@alaarab/ogrid-react`:
 - `OGrid` — Top-level data table (accepts `ref` for `IOGridApi`)
 - `DataGridTable` — Lower-level grid
 - `ColumnHeaderFilter` — Column filtering UI (text, multiSelect, people)
 - `ColumnChooser` — Column visibility dropdown
 - `PaginationControls` — Pagination UI
 
-All re-export everything from `@alaarab/ogrid-core`.
+All re-export everything from `@alaarab/ogrid-react` (which re-exports from `@alaarab/ogrid-core`).
 
 ### Layout Architecture
 
@@ -100,11 +149,13 @@ All re-export everything from `@alaarab/ogrid-core`.
 
 ### State
 
-Pure React hooks. No external state libraries. Supports uncontrolled (internal) and controlled (parent passes values + `on*Change` callbacks) modes.
+**React packages:** Pure React hooks. No external state libraries. Supports uncontrolled (internal) and controlled (parent passes values + `on*Change` callbacks) modes.
+
+**JS package:** Class-based state with EventEmitter. `GridState` = `useOGrid` + `useDataGridState` combined.
 
 ## Testing
 
-**521 tests** across 4 packages (Core: 245, Radix: 92, Fluent: 92, Material: 92).
+**954 tests** across 6 packages (Core: 237, JS: 194, React: 247, Radix: 92, Fluent: 92, Material: 92).
 
 - Jest 29 + React Testing Library 16 + ts-jest, jsdom environment, 10s timeout
 - Core tests: `packages/core/src/*/__tests__/**/*.test.ts(x)`
@@ -115,7 +166,7 @@ Pure React hooks. No external state libraries. Supports uncontrolled (internal) 
 UI package tests are **5-line wrappers** calling shared factories from `core/src/testing/`:
 
 ```typescript
-// Example: packages/radix/src/__tests__/DataGridTable.test.tsx
+// Example: packages/react-radix/src/__tests__/DataGridTable.test.tsx
 import { DataGridTable } from '../DataGridTable/DataGridTable';
 import { createDataGridTableTests } from '@alaarab/ogrid-core/testing';
 describe('DataGridTable', () => { createDataGridTableTests(DataGridTable); });
@@ -129,8 +180,8 @@ Mapped in all jest configs: `moduleNameMapper: { '^@alaarab/ogrid-core/testing':
 
 ### Framework Mocks
 
-- Fluent: `packages/fluent/jest-mocks/fluentui-react-components.cjs.js`
-- Material: `packages/material/jest-mocks/mui-material.cjs.js`, `mui-icons-material.cjs.js`
+- Fluent: `packages/react-fluent/jest-mocks/fluentui-react-components.cjs.js`
+- Material: `packages/react-material/jest-mocks/mui-material.cjs.js`, `mui-icons-material.cjs.js`
 
 When adding new MUI component props in tests, update the mock (e.g., `MenuListProps` passthrough on `Menu`).
 
@@ -161,8 +212,9 @@ GitHub Actions (`.github/workflows/ci.yml`): push to `main` + PRs. Node 22, ubun
 4. **Component structure** — Each component in its own PascalCase directory with co-located styles and stories.
 5. **Naming** — `I` prefix for interfaces (`IColumnDef`, `IDataSource`).
 6. **Test co-location** — Tests in `__tests__/` dirs. UI package tests use shared factories.
-7. **Headless architecture** — Core owns all state logic; UI packages are thin view layers.
-8. **Feature parity** — All three UI packages must support the same features and pass the same tests.
+7. **Headless architecture** — Core owns types and utilities; React owns hooks and state logic; UI packages are thin view layers.
+8. **Feature parity** — All three React UI packages must support the same features and pass the same tests. The JS package has full feature parity with React.
+9. **Type deduplication** — React's `IColumnDef<T>` extends Core's `IColumnDef<T>` (not a duplicate). React-specific additions (`renderCell`, `cellStyle`, React `cellEditor` types) are in the extension. `dataGridTypes.ts` re-exports shared types from Core. Safe casts (`as IColumnDef<T>[]`) are used at framework boundaries where Core utilities return Core types.
 
 ## Definition of Done
 
@@ -176,7 +228,7 @@ GitHub Actions (`.github/workflows/ci.yml`): push to `main` + PRs. Node 22, ubun
 ### 2. Tests
 - [ ] Core unit tests for new hooks/utilities in `core/src/*/__tests__/`.
 - [ ] If UI-specific rendering is involved, add a shared test factory in `core/src/testing/` and call it from all 3 UI packages.
-- [ ] Run `npm run test:all` — **all tests must pass** across all 4 packages.
+- [ ] Run `npm run test:all` — **all tests must pass** across all 6 packages.
 
 ### 3. Build
 - [ ] Run `npm run build` — must succeed with zero errors.
@@ -200,9 +252,9 @@ GitHub Actions (`.github/workflows/ci.yml`): push to `main` + PRs. Node 22, ubun
 
 ## View Layer Architecture (Phase 2 Complete)
 
-State and behavior are centralized in core. Each UI package's `renderCellContent` is a thin ~50-line mapping from core-computed descriptors to framework-specific JSX, using 6 core helpers: `getCellRenderDescriptor`, `buildInlineEditorProps`, `buildPopoverEditorProps`, `getCellInteractionProps`, `resolveCellDisplayContent`, `resolveCellStyle`.
+State and behavior are centralized in the React package (`@alaarab/ogrid-react`). Each UI package's `renderCellContent` is a thin ~50-line mapping from React-computed descriptors to framework-specific JSX, using 6 helpers: `getCellRenderDescriptor`, `buildInlineEditorProps`, `buildPopoverEditorProps`, `getCellInteractionProps`, `resolveCellDisplayContent`, `resolveCellStyle`.
 
-| What's in core | What's per-framework |
+| What's in React (`@alaarab/ogrid-react`) | What's per-framework |
 |---|---|
 | `useDataGridState`, all sub-hooks, types, utils | Table primitives (Fluent DataGrid vs MUI Table vs native `<table>`) |
 | `getCellRenderDescriptor` + 5 builder helpers | Popover rendering (Radix/Fluent/MUI popover APIs) |
