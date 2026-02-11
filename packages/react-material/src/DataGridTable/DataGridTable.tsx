@@ -591,7 +591,7 @@ function DataGridTableInner<T>(props: IOGridDataGridProps<T>): React.ReactElemen
           suppressRowCount={statusBarConfig.suppressRowCount}
         />
       )}
-      {isLoading && items.length > 0 && (
+      {isLoading && (
         <Box sx={LOADING_OVERLAY_SX}>
           <Box sx={LOADING_INNER_SX}>
             <CircularProgress size={24} />
