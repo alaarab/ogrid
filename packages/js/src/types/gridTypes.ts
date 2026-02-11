@@ -55,6 +55,9 @@ export interface OGridOptions<T> {
   editable?: boolean;
   cellSelection?: boolean;
 
+  /** Callback fired when a cell value is changed via editing. */
+  onCellValueChanged?: (event: ICellValueChangedEvent<T>) => void;
+
   rowSelection?: RowSelectionMode;
 
   /** Layout mode: 'content' sizes to content, 'fill' fills container. Default: 'fill'. */
