@@ -57,7 +57,7 @@ const CHECKBOX_WRAPPER_SX = { display: 'flex', alignItems: 'center', justifyCont
 const CHECKBOX_PLACEHOLDER_SX = { width: CHECKBOX_COLUMN_WIDTH, minWidth: CHECKBOX_COLUMN_WIDTH, p: 0 } as const;
 
 // Header
-const STICKY_HEADER_SX = { position: 'sticky', top: 0, zIndex: 6, bgcolor: 'action.hover', '& th': { bgcolor: 'action.hover' } } as const;
+const STICKY_HEADER_SX = { position: 'sticky', top: 0, zIndex: 8, bgcolor: 'action.hover', '& th': { bgcolor: 'action.hover' } } as const;
 const HEADER_ROW_SX = { bgcolor: 'action.hover' } as const;
 const GROUP_HEADER_CELL_SX = { textAlign: 'center', fontWeight: 600, borderBottom: 2, borderColor: 'divider', py: 0.75 } as const;
 
@@ -135,13 +135,13 @@ const FILL_HANDLE_SX = {
 
 // Cell <td> positioning variants
 const CELL_TD_BASE_SX = { position: 'relative' as const, p: 0, height: '1px' } as const;
-const CELL_TD_PINNED_LEFT_SX = { ...CELL_TD_BASE_SX, position: 'sticky' as const, left: 0, zIndex: 2, bgcolor: 'background.paper', willChange: 'transform' } as const;
-const CELL_TD_PINNED_RIGHT_SX = { ...CELL_TD_BASE_SX, position: 'sticky' as const, right: 0, zIndex: 2, bgcolor: 'background.paper', willChange: 'transform' } as const;
+const CELL_TD_PINNED_LEFT_SX = { ...CELL_TD_BASE_SX, position: 'sticky' as const, left: 0, zIndex: 6, bgcolor: 'background.paper', willChange: 'transform' } as const;
+const CELL_TD_PINNED_RIGHT_SX = { ...CELL_TD_BASE_SX, position: 'sticky' as const, right: 0, zIndex: 6, bgcolor: 'background.paper', willChange: 'transform' } as const;
 
 // Header cell positioning variants
 const HEADER_BASE_SX = { fontWeight: 600, position: 'relative' as const } as const;
-const HEADER_PINNED_LEFT_SX = { ...HEADER_BASE_SX, position: 'sticky' as const, left: 0, top: 0, zIndex: 7, bgcolor: 'action.hover', willChange: 'transform' } as const;
-const HEADER_PINNED_RIGHT_SX = { ...HEADER_BASE_SX, position: 'sticky' as const, right: 0, top: 0, zIndex: 7, bgcolor: 'action.hover', willChange: 'transform' } as const;
+const HEADER_PINNED_LEFT_SX = { ...HEADER_BASE_SX, position: 'sticky' as const, left: 0, top: 0, zIndex: 9, bgcolor: 'action.hover', willChange: 'transform' } as const;
+const HEADER_PINNED_RIGHT_SX = { ...HEADER_BASE_SX, position: 'sticky' as const, right: 0, top: 0, zIndex: 9, bgcolor: 'action.hover', willChange: 'transform' } as const;
 
 // Resize handle
 const RESIZE_HANDLE_SX = {
@@ -330,6 +330,7 @@ function DataGridTableInner<T>(props: IOGridDataGridProps<T>): React.ReactElemen
     if (!rowId) return;
     const ids = selectedRowIdsRef.current;
     updateSelection(ids.has(rowId) ? new Set() : new Set([rowId]));
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- selectedRowIdsRef is a stable ref
   }, [rowSelection, updateSelection]);
 
   // Wrapper sx (depends on dynamic values — memoize to avoid recreation)
@@ -410,6 +411,7 @@ function DataGridTableInner<T>(props: IOGridDataGridProps<T>): React.ReactElemen
         </CellErrorBoundary>
       );
     },
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- *Ref vars are stable refs from useLatestRef
     [editCallbacks, interactionHandlers, handleFillHandleMouseDown, setPopoverAnchorEl, cancelPopoverEdit, getRowId, onCellError]
   );
 
@@ -472,7 +474,7 @@ function DataGridTableInner<T>(props: IOGridDataGridProps<T>): React.ReactElemen
                       );
                     }
                     // Leaf cell
-                    const col = cell.columnDef!;
+                    const col = cell.columnDef! as IColumnDef<T>;
                     const colIdx = visibleCols.indexOf(col);
                     const isFreezeCol = freezeCols != null && freezeCols >= 1 && colIdx < freezeCols;
                     const isPinnedLeft = col.pinned === 'left';

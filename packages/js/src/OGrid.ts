@@ -1,5 +1,4 @@
-import type { OGridOptions, OGridEvents } from './types/gridTypes';
-import type { IOGridApi, ICellValueChangedEvent } from '@alaarab/ogrid-core';
+import type { OGridOptions, OGridEvents, IJsOGridApi } from './types/gridTypes';
 import { GridState } from './state/GridState';
 import { TableRenderer } from './renderer/TableRenderer';
 import { PaginationControls } from './components/PaginationControls';
@@ -10,6 +9,7 @@ import { KeyboardNavState } from './state/KeyboardNavState';
 import { ClipboardState } from './state/ClipboardState';
 import { UndoRedoState } from './state/UndoRedoState';
 import { ColumnResizeState } from './state/ColumnResizeState';
+import { TableLayoutState } from './state/TableLayoutState';
 import { InlineCellEditor } from './components/InlineCellEditor';
 import { ContextMenu } from './components/ContextMenu';
 import { EventEmitter } from './state/EventEmitter';
@@ -20,7 +20,7 @@ export class OGrid<T> {
   private state: GridState<T>;
   private renderer: TableRenderer<T>;
   private pagination: PaginationControls<T>;
-  private statusBar: StatusBar<T>;
+  private statusBar: StatusBar;
   private columnChooser: ColumnChooser<T>;
 
   // Interaction states
@@ -31,6 +31,7 @@ export class OGrid<T> {
   private resizeState: ColumnResizeState | null = null;
   private cellEditor: InlineCellEditor<T> | null = null;
   private contextMenu: ContextMenu | null = null;
+  private layoutState: TableLayoutState;
 
   private events = new EventEmitter<OGridEvents<T>>();
   private unsubscribes: (() => void)[] = [];
@@ -41,8 +42,8 @@ export class OGrid<T> {
   private statusBarContainer: HTMLElement;
   private options: OGridOptions<T>;
 
-  /** The imperative grid API (same interface as React's IOGridApi). */
-  readonly api: IOGridApi<T>;
+  /** The imperative grid API (extends React's IOGridApi with JS-specific methods). */
+  readonly api: IJsOGridApi<T>;
 
   constructor(container: HTMLElement, options: OGridOptions<T>) {
     this.options = options;
@@ -75,10 +76,14 @@ export class OGrid<T> {
 
     container.appendChild(this.containerEl);
 
+    // Create layout state (measures container, tracks column sizing)
+    this.layoutState = new TableLayoutState();
+    this.layoutState.observeContainer(this.tableContainer);
+
     // Create sub-components
     this.renderer = new TableRenderer<T>(this.tableContainer, this.state);
     this.pagination = new PaginationControls<T>(this.paginationContainer, this.state);
-    this.statusBar = new StatusBar<T>(this.statusBarContainer);
+    this.statusBar = new StatusBar(this.statusBarContainer);
     this.columnChooser = new ColumnChooser<T>(this.toolbarEl, this.state);
 
     // Initial render (must happen before interaction init so wrapper DOM exists)
@@ -102,7 +107,7 @@ export class OGrid<T> {
   }
 
   private initializeInteraction(): void {
-    const { cellSelection, editable } = this.options;
+    const { editable } = this.options;
 
     // Create interaction states
     this.selectionState = new SelectionState();
@@ -192,7 +197,8 @@ export class OGrid<T> {
     const handleMouseMove = (e: MouseEvent) => {
       if (resizing && this.resizeState) {
         const newWidth = this.resizeState.updateResize(e.clientX);
-        if (newWidth !== null) {
+        if (newWidth !== null && this.resizeState.resizingColumnId) {
+          this.layoutState.setColumnOverride(this.resizeState.resizingColumnId, newWidth);
           this.updateRendererInteractionState();
         }
       }
@@ -208,8 +214,14 @@ export class OGrid<T> {
       }
     };
 
-    const handleMouseUp = () => {
+    const handleMouseUp = (e: MouseEvent) => {
       if (resizing && this.resizeState) {
+        const colId = this.resizeState.resizingColumnId;
+        this.resizeState.endResize(e.clientX);
+        if (colId) {
+          const width = this.resizeState.getColumnWidth(colId);
+          if (width) this.layoutState.setColumnOverride(colId, width);
+        }
         resizing = false;
         document.body.style.cursor = '';
         this.updateRendererInteractionState();
@@ -254,8 +266,8 @@ export class OGrid<T> {
       selectionRange: this.selectionState.selectionRange,
       copyRange: this.clipboardState.copyRange,
       cutRange: this.clipboardState.cutRange,
-      editingCell: this.cellEditor ? { rowId: '', columnId: '' } : null, // TODO: track editing cell
-      columnWidths: this.resizeState.getAllColumnWidths(),
+      editingCell: this.cellEditor?.getEditingCell() ?? null,
+      columnWidths: this.layoutState.getAllColumnWidths(),
       onCellClick: (rowIndex, colIndex) => this.handleCellClick(rowIndex, colIndex),
       onCellMouseDown: (rowIndex, colIndex, e) => this.handleCellMouseDown(rowIndex, colIndex, e),
       onCellDoubleClick: (rowIndex, colIndex, rowId, columnId) => this.startCellEdit(rowId, columnId),
@@ -460,6 +472,7 @@ export class OGrid<T> {
     this.clipboardState?.destroy();
     this.undoRedoState?.destroy();
     this.resizeState?.destroy();
+    this.layoutState.destroy();
     this.cellEditor?.closeEditor();
     this.contextMenu?.close();
     this.events.removeAllListeners();

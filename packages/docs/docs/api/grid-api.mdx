@@ -11,7 +11,7 @@ The `IOGridApi<T>` interface provides imperative methods for controlling the gri
 
 ```typescript
 import { useRef } from 'react';
-import { OGrid, IOGridApi } from '@alaarab/ogrid';
+import { OGrid, IOGridApi } from '@alaarab/ogrid-react-radix';
 
 interface Employee {
   id: number;
@@ -113,7 +113,7 @@ A common use case is persisting the grid's column state to `localStorage` so it 
 
 ```typescript
 import { useRef, useCallback, useEffect } from 'react';
-import { OGrid, IOGridApi, IGridColumnState } from '@alaarab/ogrid';
+import { OGrid, IOGridApi, IGridColumnState } from '@alaarab/ogrid-react-radix';
 
 const STORAGE_KEY = 'employee-grid-state';
 

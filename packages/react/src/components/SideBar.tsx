@@ -4,7 +4,7 @@
  * Uses inline styles for framework-agnostic rendering.
  */
 import * as React from 'react';
-import type { IColumnDefinition, IDateFilterValue, SideBarPanelId, IFilters, FilterValue } from '../types';
+import type { IColumnDefinition, SideBarPanelId, IFilters, FilterValue } from '../types';
 
 /** Describes a filterable column for the sidebar filters panel. */
 export interface SideBarFilterColumn {

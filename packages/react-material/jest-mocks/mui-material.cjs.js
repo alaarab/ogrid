@@ -91,7 +91,8 @@ const InputAdornment = passthroughElement('span', 'InputAdornment');
 function Menu(props) {
   const { children, open, onClose, anchorEl, MenuListProps, ...rest } = props || {};
   if (!open) return null;
-  return React.createElement('div', { 'data-mock': 'Menu', role: 'menu', ...rest, ...(MenuListProps || {}) }, children);
+  const { dense, ...menuListAttrs } = MenuListProps || {};
+  return React.createElement('div', { 'data-mock': 'Menu', role: 'menu', ...rest, ...menuListAttrs }, children);
 }
 Menu.displayName = 'Menu';
 

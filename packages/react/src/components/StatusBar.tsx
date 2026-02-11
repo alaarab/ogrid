@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { getStatusBarParts } from '../utils/statusBarHelpers';
+import { getStatusBarParts } from '../utils';
 
 export interface StatusBarClassNames {
   statusBar?: string;
