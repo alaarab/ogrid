@@ -66,7 +66,7 @@ export function processClientSideData<T>(
     }
   }
 
-  let rows = predicates.length > 0
+  const rows = predicates.length > 0
     ? data.filter((row) => {
         for (let i = 0; i < predicates.length; i++) {
           if (!predicates[i](row)) return false;

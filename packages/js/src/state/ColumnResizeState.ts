@@ -13,6 +13,10 @@ export class ColumnResizeState {
   private resizeStartX = 0;
   private resizeStartWidth = 0;
 
+  get resizingColumnId(): string | null {
+    return this.resizeColumnId;
+  }
+
   getColumnWidth(columnId: string): number | undefined {
     return this.columnWidths.get(columnId);
   }

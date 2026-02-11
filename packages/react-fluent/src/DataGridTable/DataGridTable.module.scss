@@ -361,7 +361,7 @@
 .stickyHeader {
   position: sticky;
   top: 0;
-  z-index: 6;
+  z-index: 8;
   background-color: var(--colorSubtleBackgroundSelected, #f3f2f1);
 }
 
@@ -369,7 +369,7 @@
 .freezeColFirst {
   position: sticky;
   left: 0;
-  z-index: 2;
+  z-index: 6;
   background-color: var(--colorNeutralBackground1, #ffffff);
   will-change: transform;
 }
@@ -378,14 +378,14 @@
   background-color: var(--colorSubtleBackgroundSelected, #f3f2f1);
 }
 
-/* Freeze/pinned header cells need top: 0 + z-index: 3 so they stick in BOTH
+/* Freeze/pinned header cells need top: 0 + highest z-index so they stick in BOTH
    directions — left/right (from .freezeCol/.pinnedCell) AND top (from .stickyHeader).
    Without explicit top, the child's own position: sticky overrides the parent's. */
 .stickyHeader .freezeColFirst,
 .stickyHeader .pinnedLeft,
 .stickyHeader .pinnedRight {
   top: 0;
-  z-index: 7;
+  z-index: 9;
 }
 
 .activeRow :global {
@@ -401,7 +401,7 @@
 
 .pinnedCell {
   position: sticky;
-  z-index: 2;
+  z-index: 6;
   background-color: inherit;
   will-change: transform;
 }

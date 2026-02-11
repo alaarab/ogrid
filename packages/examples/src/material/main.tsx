@@ -1,7 +1,7 @@
 import React from 'react';
 import { createRoot } from 'react-dom/client';
 import { ThemeProvider, createTheme, CssBaseline } from '@mui/material';
-import { OGrid } from '@alaarab/ogrid-material';
+import { OGrid } from '@alaarab/ogrid-react-material';
 import { makeDemoProjects, makeDemoColumns, getRowId } from '../shared/demoData';
 import type { Project } from '../shared/demoData';
 
@@ -16,7 +16,7 @@ function App() {
       <div style={{ padding: 24, maxWidth: 1200, margin: '0 auto' }}>
         <h1>OGrid - Material UI Example</h1>
         <p style={{ color: '#666', marginBottom: 16 }}>
-          A fully featured data table powered by <code>@alaarab/ogrid-material</code>.
+          A fully featured data table powered by <code>@alaarab/ogrid-react-material</code>.
           Includes sorting, multi-select &amp; text filtering, column chooser, and pagination.
         </p>
         <OGrid<Project>

@@ -6,8 +6,7 @@ import type * as React from 'react';
 import type { ColumnFilterType, ICellEditorProps, IDateFilterValue } from '../types/columnTypes';
 import type { IColumnDef } from '../types/columnTypes';
 import type { RowId, UserLike, IFilters, FilterValue } from '../types/dataGridTypes';
-import { getCellValue } from './cellValue';
-import { isInSelectionRange } from '../types/dataGridTypes';
+import { getCellValue, isInSelectionRange } from '@alaarab/ogrid-core';
 
 // --- Header filter config (replaces createHeaderWithFilter body) ---
 
