@@ -55,3 +55,5 @@ export type { ParseValueResult } from './valueParsers';
 export { computeAggregations } from './aggregationUtils';
 export type { AggregationResult } from './aggregationUtils';
 export { processClientSideData } from './clientSideData';
+export { areGridRowPropsEqual } from './gridRowComparator';
+export type { GridRowComparatorProps } from './gridRowComparator';

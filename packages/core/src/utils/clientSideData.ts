@@ -20,41 +20,38 @@ export function processClientSideData<T>(
   sortBy?: string,
   sortDirection?: 'asc' | 'desc'
 ): T[] {
-  let rows = data.slice();
+  // --- Filtering (single-pass: build predicates, then one .filter()) ---
+  const predicates: ((row: T) => boolean)[] = [];
 
-  // --- Filtering ---
-  columns.forEach((col) => {
+  for (let i = 0; i < columns.length; i++) {
+    const col = columns[i];
     const filterKey = getFilterField(col);
     const val = filters[filterKey];
-    if (!val) return;
+    if (!val) continue;
 
     switch (val.type) {
       case 'multiSelect':
         if (val.value.length > 0) {
-          rows = rows.filter((r) =>
-            val.value.includes(String(getCellValue(r, col)))
-          );
+          const allowedSet = new Set(val.value);
+          predicates.push((r) => allowedSet.has(String(getCellValue(r, col))));
         }
         break;
-      case 'text':
-        if (val.value.trim()) {
-          const lower = val.value.trim().toLowerCase();
-          rows = rows.filter((r) =>
-            String(getCellValue(r, col) ?? '').toLowerCase().includes(lower)
-          );
+      case 'text': {
+        const trimmed = val.value.trim();
+        if (trimmed) {
+          const lower = trimmed.toLowerCase();
+          predicates.push((r) => String(getCellValue(r, col) ?? '').toLowerCase().includes(lower));
         }
         break;
+      }
       case 'people': {
         const email = val.value.email.toLowerCase();
-        rows = rows.filter(
-          (r) =>
-            String(getCellValue(r, col) ?? '').toLowerCase() === email
-        );
+        predicates.push((r) => String(getCellValue(r, col) ?? '').toLowerCase() === email);
         break;
       }
       case 'date': {
         const dv = val.value;
-        rows = rows.filter((r) => {
+        predicates.push((r) => {
           const cellVal = getCellValue(r, col);
           if (cellVal == null) return false;
           const cellDate = new Date(String(cellVal));
@@ -67,7 +64,16 @@ export function processClientSideData<T>(
         break;
       }
     }
-  });
+  }
+
+  let rows = predicates.length > 0
+    ? data.filter((row) => {
+        for (let i = 0; i < predicates.length; i++) {
+          if (!predicates[i](row)) return false;
+        }
+        return true;
+      })
+    : data.slice();
 
   // --- Sorting ---
   if (sortBy) {

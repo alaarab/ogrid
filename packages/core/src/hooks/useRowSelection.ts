@@ -1,4 +1,5 @@
 import { useState, useCallback, useRef, useMemo } from 'react';
+import { useLatestRef } from './useLatestRef';
 
 import type { RowId, RowSelectionMode, IRowSelectionChangeEvent } from '../types';
 
@@ -19,6 +20,11 @@ export interface UseRowSelectionResult {
   someSelected: boolean;
 }
 
+/**
+ * Manages row selection state for single or multiple selection modes with shift-click range support.
+ * @param params - Items, getRowId, selection mode, controlled state, and selection change callback.
+ * @returns Selected row IDs, update function, checkbox handlers, and selection state booleans.
+ */
 export function useRowSelection<T>(params: UseRowSelectionParams<T>): UseRowSelectionResult {
   const {
     items,
@@ -55,6 +61,10 @@ export function useRowSelection<T>(params: UseRowSelectionParams<T>): UseRowSele
     [controlledSelectedRows, onSelectionChange, items, getRowId]
   );
 
+  // Read selectedRowIds via ref to avoid recreating this callback on every selection change
+  const selectedRowIdsRef = useLatestRef(selectedRowIds);
+  const itemsRef = useLatestRef(items);
+
   const handleRowCheckboxChange = useCallback(
     (rowId: RowId, checked: boolean, rowIndex: number, shiftKey: boolean) => {
       if (rowSelection === 'single') {
@@ -63,14 +73,15 @@ export function useRowSelection<T>(params: UseRowSelectionParams<T>): UseRowSele
         return;
       }
 
-      const next = new Set(selectedRowIds);
+      const next = new Set(selectedRowIdsRef.current);
+      const currentItems = itemsRef.current;
 
       if (shiftKey && lastClickedRowRef.current >= 0 && lastClickedRowRef.current !== rowIndex) {
         const start = Math.min(lastClickedRowRef.current, rowIndex);
         const end = Math.max(lastClickedRowRef.current, rowIndex);
         for (let i = start; i <= end; i++) {
-          if (i < items.length) {
-            const id = getRowId(items[i]);
+          if (i < currentItems.length) {
+            const id = getRowId(currentItems[i]);
             if (checked) next.add(id);
             else next.delete(id);
           }
@@ -83,7 +94,7 @@ export function useRowSelection<T>(params: UseRowSelectionParams<T>): UseRowSele
       lastClickedRowRef.current = rowIndex;
       updateSelection(next);
     },
-    [rowSelection, selectedRowIds, items, getRowId, updateSelection]
+    [rowSelection, getRowId, updateSelection]
   );
 
   const handleSelectAll = useCallback(

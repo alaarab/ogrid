@@ -1,7 +1,14 @@
 export { useFilterOptions } from './useFilterOptions';
 export type { UseFilterOptionsResult } from './useFilterOptions';
 export { useOGrid } from './useOGrid';
-export type { UseOGridResult, ColumnChooserPlacement } from './useOGrid';
+export type {
+  UseOGridResult,
+  UseOGridPagination,
+  UseOGridColumnChooser,
+  UseOGridLayout,
+  UseOGridFilters,
+  ColumnChooserPlacement,
+} from './useOGrid';
 export { useActiveCell } from './useActiveCell';
 export type { UseActiveCellResult } from './useActiveCell';
 export { useCellEditing } from './useCellEditing';
@@ -40,6 +47,26 @@ export type {
   UseColumnHeaderFilterStateParams,
   UseColumnHeaderFilterStateResult,
 } from './useColumnHeaderFilterState';
+export { useTextFilterState } from './useTextFilterState';
+export type {
+  UseTextFilterStateParams,
+  UseTextFilterStateResult,
+} from './useTextFilterState';
+export { useMultiSelectFilterState } from './useMultiSelectFilterState';
+export type {
+  UseMultiSelectFilterStateParams,
+  UseMultiSelectFilterStateResult,
+} from './useMultiSelectFilterState';
+export { usePeopleFilterState } from './usePeopleFilterState';
+export type {
+  UsePeopleFilterStateParams,
+  UsePeopleFilterStateResult,
+} from './usePeopleFilterState';
+export { useDateFilterState } from './useDateFilterState';
+export type {
+  UseDateFilterStateParams,
+  UseDateFilterStateResult,
+} from './useDateFilterState';
 export { useColumnChooserState } from './useColumnChooserState';
 export type {
   UseColumnChooserStateParams,
@@ -60,3 +87,6 @@ export { useRichSelectState } from './useRichSelectState';
 export type { UseRichSelectStateParams, UseRichSelectStateResult } from './useRichSelectState';
 export { useSideBarState } from './useSideBarState';
 export type { UseSideBarStateParams, UseSideBarStateResult } from './useSideBarState';
+export { useTableLayout } from './useTableLayout';
+export type { UseTableLayoutParams, UseTableLayoutResult } from './useTableLayout';
+export { useLatestRef } from './useLatestRef';

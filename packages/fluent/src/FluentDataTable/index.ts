@@ -1,1 +1,1 @@
-export { OGrid, type IOGridProps } from './FluentDataTable';
+export { OGrid, FluentDataTable, type IOGridProps } from './FluentDataTable';

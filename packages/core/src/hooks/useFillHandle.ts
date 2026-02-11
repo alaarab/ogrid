@@ -29,6 +29,11 @@ export interface UseFillHandleResult {
 /** DOM attribute name for fill-drag range highlighting (same as cell selection drag). */
 const DRAG_ATTR = 'data-drag-range';
 
+/**
+ * Manages Excel-style fill handle drag-to-fill for cell ranges.
+ * @param params - Items, columns, selection range, editability, and value change callback.
+ * @returns Fill drag state, setter, and mousedown handler for the fill handle.
+ */
 export function useFillHandle<T>(params: UseFillHandleParams<T>): UseFillHandleResult {
   const {
     items,
@@ -181,7 +186,6 @@ export function useFillHandle<T>(params: UseFillHandleParams<T>): UseFillHandleR
             onCellValueChanged({
               item,
               columnId: colDef.columnId,
-              field: colDef.columnId,
               oldValue,
               newValue: result.value,
               rowIndex: row,
@@ -201,6 +205,7 @@ export function useFillHandle<T>(params: UseFillHandleParams<T>): UseFillHandleR
       window.removeEventListener('mouseup', onUp, true);
       if (rafRef.current) cancelAnimationFrame(rafRef.current);
     };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
     fillDrag,
     editable,
@@ -210,7 +215,7 @@ export function useFillHandle<T>(params: UseFillHandleParams<T>): UseFillHandleR
     setSelectionRange,
     setActiveCell,
     onCellValueChanged,
-    wrapperRef,
+    // wrapperRef excluded — refs are stable across renders
     beginBatch,
     endBatch,
   ]);

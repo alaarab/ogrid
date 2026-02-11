@@ -40,6 +40,81 @@ const PANEL_LABELS: Record<SideBarPanelId, string> = {
   filters: 'Filters',
 };
 
+// --- Stable style objects (avoid re-creating on every render) ---
+
+const tabStripBaseStyle: React.CSSProperties = {
+  display: 'flex',
+  flexDirection: 'column',
+  width: TAB_WIDTH,
+  background: 'var(--ogrid-header-bg, #f5f5f5)',
+};
+const tabStripBorderLeft: React.CSSProperties = { ...tabStripBaseStyle, borderLeft: '1px solid var(--ogrid-border, #e0e0e0)' };
+const tabStripBorderRight: React.CSSProperties = { ...tabStripBaseStyle, borderRight: '1px solid var(--ogrid-border, #e0e0e0)' };
+
+const tabButtonBase: React.CSSProperties = {
+  width: TAB_WIDTH,
+  height: TAB_WIDTH,
+  border: 'none',
+  cursor: 'pointer',
+  color: 'var(--ogrid-fg, #242424)',
+  fontSize: 14,
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+};
+const tabButtonActive: React.CSSProperties = { ...tabButtonBase, background: 'var(--ogrid-bg, #fff)', fontWeight: 'bold' };
+const tabButtonInactive: React.CSSProperties = { ...tabButtonBase, background: 'transparent', fontWeight: 'normal' };
+
+const panelContainerBase: React.CSSProperties = {
+  width: PANEL_WIDTH,
+  display: 'flex',
+  flexDirection: 'column',
+  overflow: 'hidden',
+  background: 'var(--ogrid-bg, #fff)',
+  color: 'var(--ogrid-fg, #242424)',
+};
+const panelContainerBorderLeft: React.CSSProperties = { ...panelContainerBase, borderLeft: '1px solid var(--ogrid-border, #e0e0e0)' };
+const panelContainerBorderRight: React.CSSProperties = { ...panelContainerBase, borderRight: '1px solid var(--ogrid-border, #e0e0e0)' };
+
+const panelHeaderStyle: React.CSSProperties = {
+  display: 'flex',
+  justifyContent: 'space-between',
+  alignItems: 'center',
+  padding: '8px 12px',
+  borderBottom: '1px solid var(--ogrid-border, #e0e0e0)',
+  fontWeight: 600,
+};
+
+const closeButtonStyle: React.CSSProperties = { border: 'none', background: 'transparent', cursor: 'pointer', fontSize: 16, color: 'var(--ogrid-fg, #242424)' };
+
+const panelBodyStyle: React.CSSProperties = { flex: 1, overflowY: 'auto', padding: '8px 12px' };
+
+const sideBarRootStyle: React.CSSProperties = { display: 'flex', flexDirection: 'row', flexShrink: 0 };
+
+const buttonRowStyle: React.CSSProperties = { display: 'flex', gap: 8, marginBottom: 8 };
+
+const actionButtonStyle: React.CSSProperties = { flex: 1, cursor: 'pointer', background: 'var(--ogrid-bg-subtle, #f3f2f1)', color: 'var(--ogrid-fg, #242424)', border: '1px solid var(--ogrid-border, #e0e0e0)', borderRadius: 4, padding: '4px 8px' };
+
+const checkboxLabelStyle: React.CSSProperties = { display: 'flex', alignItems: 'center', gap: 6, padding: '2px 0', cursor: 'pointer' };
+
+const noFilterStyle: React.CSSProperties = { color: 'var(--ogrid-muted, #999)', fontStyle: 'italic' };
+
+const filterGroupStyle: React.CSSProperties = { marginBottom: 12 };
+
+const filterLabelStyle: React.CSSProperties = { fontWeight: 500, marginBottom: 4, fontSize: 13 };
+
+const textInputStyle: React.CSSProperties = { width: '100%', boxSizing: 'border-box', padding: '4px 6px', background: 'var(--ogrid-bg, #fff)', color: 'var(--ogrid-fg, #242424)', border: '1px solid var(--ogrid-border, #e0e0e0)', borderRadius: 4 };
+
+const dateContainerStyle: React.CSSProperties = { display: 'flex', flexDirection: 'column', gap: 4 };
+
+const dateLabelStyle: React.CSSProperties = { display: 'flex', alignItems: 'center', gap: 4, fontSize: 12 };
+
+const dateInputStyle: React.CSSProperties = { flex: 1, padding: '2px 4px', background: 'var(--ogrid-bg, #fff)', color: 'var(--ogrid-fg, #242424)', border: '1px solid var(--ogrid-border, #e0e0e0)', borderRadius: 4 };
+
+const multiSelectContainerStyle: React.CSSProperties = { maxHeight: 120, overflowY: 'auto' };
+
+const multiSelectLabelStyle: React.CSSProperties = { display: 'flex', alignItems: 'center', gap: 4, padding: '1px 0', cursor: 'pointer', fontSize: 13 };
+
 export function SideBar(props: SideBarProps): React.ReactElement {
   const {
     activePanel,
@@ -62,19 +137,11 @@ export function SideBar(props: SideBarProps): React.ReactElement {
     onPanelChange(activePanel === panel ? null : panel);
   };
 
+  const tabStripStyle = position === 'right' ? tabStripBorderLeft : tabStripBorderRight;
+  const panelContainerStyle = position === 'right' ? panelContainerBorderLeft : panelContainerBorderRight;
+
   const tabStrip = (
-    <div
-      style={{
-        display: 'flex',
-        flexDirection: 'column',
-        width: TAB_WIDTH,
-        borderLeft: position === 'right' ? '1px solid var(--ogrid-border, #e0e0e0)' : undefined,
-        borderRight: position === 'left' ? '1px solid var(--ogrid-border, #e0e0e0)' : undefined,
-        background: 'var(--ogrid-header-bg, #f5f5f5)',
-      }}
-      role="tablist"
-      aria-label="Side bar tabs"
-    >
+    <div style={tabStripStyle} role="tablist" aria-label="Side bar tabs">
       {panels.map((panel) => (
         <button
           key={panel}
@@ -83,19 +150,7 @@ export function SideBar(props: SideBarProps): React.ReactElement {
           aria-label={PANEL_LABELS[panel]}
           onClick={() => handleTabClick(panel)}
           title={PANEL_LABELS[panel]}
-          style={{
-            width: TAB_WIDTH,
-            height: TAB_WIDTH,
-            border: 'none',
-            cursor: 'pointer',
-            background: activePanel === panel ? 'var(--ogrid-bg, #fff)' : 'transparent',
-            color: 'var(--ogrid-fg, #242424)',
-            fontWeight: activePanel === panel ? 'bold' : 'normal',
-            fontSize: 14,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-          }}
+          style={activePanel === panel ? tabButtonActive : tabButtonInactive}
         >
           {panel === 'columns' ? '\u2261' : '\u2A65'}
         </button>
@@ -104,40 +159,14 @@ export function SideBar(props: SideBarProps): React.ReactElement {
   );
 
   const panelContent = isOpen ? (
-    <div
-      role="tabpanel"
-      aria-label={PANEL_LABELS[activePanel!]}
-      style={{
-        width: PANEL_WIDTH,
-        display: 'flex',
-        flexDirection: 'column',
-        borderLeft: position === 'right' ? '1px solid var(--ogrid-border, #e0e0e0)' : undefined,
-        borderRight: position === 'left' ? '1px solid var(--ogrid-border, #e0e0e0)' : undefined,
-        overflow: 'hidden',
-        background: 'var(--ogrid-bg, #fff)',
-        color: 'var(--ogrid-fg, #242424)',
-      }}
-    >
-      <div
-        style={{
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-          padding: '8px 12px',
-          borderBottom: '1px solid var(--ogrid-border, #e0e0e0)',
-          fontWeight: 600,
-        }}
-      >
+    <div role="tabpanel" aria-label={PANEL_LABELS[activePanel!]} style={panelContainerStyle}>
+      <div style={panelHeaderStyle}>
         <span>{PANEL_LABELS[activePanel!]}</span>
-        <button
-          onClick={() => onPanelChange(null)}
-          style={{ border: 'none', background: 'transparent', cursor: 'pointer', fontSize: 16, color: 'var(--ogrid-fg, #242424)' }}
-          aria-label="Close panel"
-        >
+        <button onClick={() => onPanelChange(null)} style={closeButtonStyle} aria-label="Close panel">
           &times;
         </button>
       </div>
-      <div style={{ flex: 1, overflowY: 'auto', padding: '8px 12px' }}>
+      <div style={panelBodyStyle}>
         {activePanel === 'columns' && (
           <ColumnsPanel
             columns={columns}
@@ -159,11 +188,7 @@ export function SideBar(props: SideBarProps): React.ReactElement {
   ) : null;
 
   return (
-    <div
-      style={{ display: 'flex', flexDirection: 'row', flexShrink: 0 }}
-      role="complementary"
-      aria-label="Side bar"
-    >
+    <div style={sideBarRootStyle} role="complementary" aria-label="Side bar">
       {position === 'left' && tabStrip}
       {position === 'left' && panelContent}
       {position === 'right' && panelContent}
@@ -198,19 +223,16 @@ function ColumnsPanel(props: {
 
   return (
     <>
-      <div style={{ display: 'flex', gap: 8, marginBottom: 8 }}>
-        <button onClick={handleSelectAll} disabled={allVisible} style={{ flex: 1, cursor: 'pointer', background: 'var(--ogrid-bg-subtle, #f3f2f1)', color: 'var(--ogrid-fg, #242424)', border: '1px solid var(--ogrid-border, #e0e0e0)', borderRadius: 4, padding: '4px 8px' }}>
+      <div style={buttonRowStyle}>
+        <button onClick={handleSelectAll} disabled={allVisible} style={actionButtonStyle}>
           Select All
         </button>
-        <button onClick={handleClearAll} style={{ flex: 1, cursor: 'pointer', background: 'var(--ogrid-bg-subtle, #f3f2f1)', color: 'var(--ogrid-fg, #242424)', border: '1px solid var(--ogrid-border, #e0e0e0)', borderRadius: 4, padding: '4px 8px' }}>
+        <button onClick={handleClearAll} style={actionButtonStyle}>
           Clear All
         </button>
       </div>
       {columns.map((col) => (
-        <label
-          key={col.columnId}
-          style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '2px 0', cursor: 'pointer' }}
-        >
+        <label key={col.columnId} style={checkboxLabelStyle}>
           <input
             type="checkbox"
             checked={visibleColumns.has(col.columnId)}
@@ -233,7 +255,7 @@ function FiltersPanel(props: {
   const { filterableColumns, filters, onFilterChange, filterOptions } = props;
 
   if (filterableColumns.length === 0) {
-    return <div style={{ color: 'var(--ogrid-muted, #999)', fontStyle: 'italic' }}>No filterable columns</div>;
+    return <div style={noFilterStyle}>No filterable columns</div>;
   }
 
   return (
@@ -241,8 +263,8 @@ function FiltersPanel(props: {
       {filterableColumns.map((col) => {
         const filterKey = col.filterField;
         return (
-          <div key={col.columnId} style={{ marginBottom: 12 }}>
-            <div style={{ fontWeight: 500, marginBottom: 4, fontSize: 13 }}>{col.name}</div>
+          <div key={col.columnId} style={filterGroupStyle}>
+            <div style={filterLabelStyle}>{col.name}</div>
             {col.filterType === 'text' && (
               <input
                 type="text"
@@ -250,12 +272,12 @@ function FiltersPanel(props: {
                 onChange={(e) => onFilterChange(filterKey, e.target.value ? { type: 'text', value: e.target.value } : undefined)}
                 placeholder={`Filter ${col.name}...`}
                 aria-label={`Filter ${col.name}`}
-                style={{ width: '100%', boxSizing: 'border-box', padding: '4px 6px', background: 'var(--ogrid-bg, #fff)', color: 'var(--ogrid-fg, #242424)', border: '1px solid var(--ogrid-border, #e0e0e0)', borderRadius: 4 }}
+                style={textInputStyle}
               />
             )}
             {col.filterType === 'date' && (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-                <label style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 12 }}>
+              <div style={dateContainerStyle}>
+                <label style={dateLabelStyle}>
                   From:
                   <input
                     type="date"
@@ -267,10 +289,10 @@ function FiltersPanel(props: {
                       onFilterChange(filterKey, from || to ? { type: 'date', value: { from, to } } : undefined);
                     }}
                     aria-label={`${col.name} from date`}
-                    style={{ flex: 1, padding: '2px 4px', background: 'var(--ogrid-bg, #fff)', color: 'var(--ogrid-fg, #242424)', border: '1px solid var(--ogrid-border, #e0e0e0)', borderRadius: 4 }}
+                    style={dateInputStyle}
                   />
                 </label>
-                <label style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 12 }}>
+                <label style={dateLabelStyle}>
                   To:
                   <input
                     type="date"
@@ -282,20 +304,17 @@ function FiltersPanel(props: {
                       onFilterChange(filterKey, from || to ? { type: 'date', value: { from, to } } : undefined);
                     }}
                     aria-label={`${col.name} to date`}
-                    style={{ flex: 1, padding: '2px 4px', background: 'var(--ogrid-bg, #fff)', color: 'var(--ogrid-fg, #242424)', border: '1px solid var(--ogrid-border, #e0e0e0)', borderRadius: 4 }}
+                    style={dateInputStyle}
                   />
                 </label>
               </div>
             )}
             {col.filterType === 'multiSelect' && (
-              <div style={{ maxHeight: 120, overflowY: 'auto' }} role="group" aria-label={`${col.name} options`}>
+              <div style={multiSelectContainerStyle} role="group" aria-label={`${col.name} options`}>
                 {(filterOptions[filterKey] ?? []).map((opt) => {
                   const selected = filters[filterKey]?.type === 'multiSelect' ? filters[filterKey]!.value.includes(opt) : false;
                   return (
-                    <label
-                      key={opt}
-                      style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '1px 0', cursor: 'pointer', fontSize: 13 }}
-                    >
+                    <label key={opt} style={multiSelectLabelStyle}>
                       <input
                         type="checkbox"
                         checked={selected}

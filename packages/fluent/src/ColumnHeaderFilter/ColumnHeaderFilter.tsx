@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { Tooltip } from '@fluentui/react-components';
+import { Popover, PopoverSurface } from '@fluentui/react-components';
 import { ArrowUpRegular, ArrowDownRegular, ArrowSortRegular, FilterRegular } from '@fluentui/react-icons';
 import type { UserLike, ColumnFilterType, IDateFilterValue } from '@alaarab/ogrid-core';
 import { useColumnHeaderFilterState } from '@alaarab/ogrid-core';
@@ -71,6 +71,7 @@ export const ColumnHeaderFilter: React.FC<IColumnHeaderFilterProps> = React.memo
     popoverRef,
     peopleInputRef,
     isFilterOpen,
+    setFilterOpen,
     tempSelected,
     setTempTextValue,
     searchText,
@@ -81,9 +82,10 @@ export const ColumnHeaderFilter: React.FC<IColumnHeaderFilterProps> = React.memo
     peopleSearchText,
     setPeopleSearchText,
     hasActiveFilter,
-    popoverPosition,
     handlers,
   } = state;
+
+  const filterBtnRef = React.useRef<HTMLButtonElement>(null);
 
   const renderPopoverContent = (): React.ReactNode => {
     if (filterType === 'multiSelect') {
@@ -163,13 +165,9 @@ export const ColumnHeaderFilter: React.FC<IColumnHeaderFilterProps> = React.memo
   return (
     <div className={styles.columnHeader} ref={headerRef as React.RefObject<HTMLDivElement>}>
       <div className={styles.headerContent}>
-        <Tooltip content={columnName} relationship="label" withArrow>
-          <span className={styles.columnNameTooltipTrigger}>
-            <span className={styles.columnName} data-header-label>
-              {columnName}
-            </span>
-          </span>
-        </Tooltip>
+        <span className={styles.columnName} title={columnName} data-header-label>
+          {columnName}
+        </span>
       </div>
 
       <div className={styles.headerActions}>
@@ -190,34 +188,36 @@ export const ColumnHeaderFilter: React.FC<IColumnHeaderFilterProps> = React.memo
         )}
 
         {filterType !== 'none' && (
-          <button
-            type="button"
-            className={`${styles.filterIcon} ${hasActiveFilter ? styles.filterActive : ''} ${isFilterOpen ? styles.filterOpen : ''}`}
-            onClick={handlers.handleFilterIconClick}
-            aria-label={`Filter ${columnName}`}
-            title={`Filter ${columnName}`}
-          >
-            <FilterRegular />
-            {hasActiveFilter && <span className={styles.filterBadge} />}
-          </button>
+          <>
+            <button
+              ref={filterBtnRef}
+              type="button"
+              className={`${styles.filterIcon} ${hasActiveFilter ? styles.filterActive : ''} ${isFilterOpen ? styles.filterOpen : ''}`}
+              onClick={handlers.handleFilterIconClick}
+              aria-label={`Filter ${columnName}`}
+              title={`Filter ${columnName}`}
+            >
+              <FilterRegular />
+              {hasActiveFilter && <span className={styles.filterBadge} />}
+            </button>
+            <Popover
+              open={isFilterOpen}
+              onOpenChange={(_, data) => { if (!data.open) setFilterOpen(false); }}
+              positioning={{ target: filterBtnRef.current ?? undefined, position: 'below', align: 'start', offset: 4 }}
+              trapFocus={false}
+            >
+              <PopoverSurface
+                ref={popoverRef as React.RefObject<HTMLDivElement>}
+                className={styles.filterPopover}
+                onClick={handlers.handlePopoverClick}
+              >
+                <div className={styles.popoverHeader}>Filter: {columnName}</div>
+                {renderPopoverContent()}
+              </PopoverSurface>
+            </Popover>
+          </>
         )}
       </div>
-
-      {isFilterOpen && filterType !== 'none' && (
-        <div
-          className={styles.filterPopover}
-          ref={popoverRef as React.RefObject<HTMLDivElement>}
-          onClick={handlers.handlePopoverClick}
-          style={
-            popoverPosition
-              ? { top: `${popoverPosition.top}px`, left: `${popoverPosition.left}px` }
-              : { top: 0, left: 0 }
-          }
-        >
-          <div className={styles.popoverHeader}>Filter: {columnName}</div>
-          {renderPopoverContent()}
-        </div>
-      )}
     </div>
   );
 });

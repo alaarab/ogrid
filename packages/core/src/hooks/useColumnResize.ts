@@ -1,5 +1,6 @@
-import { useCallback, useRef } from 'react';
+import { useCallback, useEffect, useRef } from 'react';
 import type { IColumnDef } from '../types';
+import { useLatestRef } from './useLatestRef';
 
 export interface UseColumnResizeParams {
   columnSizingOverrides: Record<string, { widthPx: number }>;
@@ -17,6 +18,11 @@ export interface UseColumnResizeResult<T> {
   getColumnWidth: (col: IColumnDef<T>) => number;
 }
 
+/**
+ * Manages column resize drag interactions with RAF-throttled state updates.
+ * @param params - Sizing overrides, setter, min/default widths, and resize callback.
+ * @returns Resize start handler and column width getter.
+ */
 export function useColumnResize<T>({
   columnSizingOverrides,
   setColumnSizingOverrides,
@@ -27,6 +33,19 @@ export function useColumnResize<T>({
   const rafRef = useRef(0);
   const onColumnResizedRef = useRef(onColumnResized);
   onColumnResizedRef.current = onColumnResized;
+  const columnSizingOverridesRef = useLatestRef(columnSizingOverrides);
+
+  // Track active drag listeners so we can clean up on unmount
+  const cleanupRef = useRef<(() => void) | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (cleanupRef.current) {
+        cleanupRef.current();
+        cleanupRef.current = null;
+      }
+    };
+  }, []);
 
   const handleResizeStart = useCallback((e: React.MouseEvent, col: IColumnDef<T>) => {
     e.preventDefault();
@@ -41,7 +60,7 @@ export function useColumnResize<T>({
     const thEl = (e.currentTarget as HTMLElement).parentElement;
     const startWidth = thEl
       ? thEl.getBoundingClientRect().width
-      : columnSizingOverrides[columnId]?.widthPx
+      : columnSizingOverridesRef.current[columnId]?.widthPx
         ?? col.idealWidth
         ?? col.defaultWidth
         ?? defaultWidth;
@@ -72,9 +91,10 @@ export function useColumnResize<T>({
       }
     };
 
-    const onUp = () => {
+    const cleanup = () => {
       document.removeEventListener('mousemove', onMove);
       document.removeEventListener('mouseup', onUp);
+      cleanupRef.current = null;
 
       // Restore cursor and user-select
       document.body.style.cursor = prevCursor;
@@ -85,6 +105,10 @@ export function useColumnResize<T>({
         cancelAnimationFrame(rafRef.current);
         rafRef.current = 0;
       }
+    };
+
+    const onUp = () => {
+      cleanup();
       flushWidth();
 
       if (onColumnResizedRef.current) {
@@ -94,7 +118,9 @@ export function useColumnResize<T>({
 
     document.addEventListener('mousemove', onMove);
     document.addEventListener('mouseup', onUp);
-  }, [columnSizingOverrides, defaultWidth, minWidth, setColumnSizingOverrides]);
+    cleanupRef.current = cleanup;
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [defaultWidth, minWidth, setColumnSizingOverrides]); // columnSizingOverrides read via ref
 
   const getColumnWidth = useCallback((col: IColumnDef<T>) => {
     return columnSizingOverrides[col.columnId]?.widthPx
