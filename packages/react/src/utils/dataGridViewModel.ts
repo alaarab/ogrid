@@ -104,19 +104,6 @@ export function getHeaderFilterConfig<T>(
   return base;
 }
 
-// --- Row-level range utility (used by memoized GridRow comparators) ---
-
-/**
- * Checks whether a given row index falls within a selection range.
- * O(1) — used by React.memo comparators to skip unchanged rows.
- */
-export function isRowInRange(range: { startRow: number; endRow: number } | null, rowIndex: number): boolean {
-  if (!range) return false;
-  const minR = Math.min(range.startRow, range.endRow);
-  const maxR = Math.max(range.startRow, range.endRow);
-  return rowIndex >= minR && rowIndex <= maxR;
-}
-
 // --- Cell render descriptor (replaces cell boolean + branch logic) ---
 
 export type CellRenderMode = 'editing-inline' | 'editing-popover' | 'display';
