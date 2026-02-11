@@ -2,6 +2,40 @@
 
 All notable changes to OGrid will be documented in this file.
 
+## [1.9.1] – 2026-02-11
+
+### BREAKING CHANGES
+
+- **Package renames for v2.0 multi-framework architecture:**
+  | Old Package | New Package | Description |
+  |-------------|-------------|-------------|
+  | `@alaarab/ogrid-core` (hooks) | `@alaarab/ogrid-react` | React hooks, headless components, shared test factories |
+  | `@alaarab/ogrid` | `@alaarab/ogrid-react-radix` | Radix UI implementation |
+  | `@alaarab/ogrid-fluent` | `@alaarab/ogrid-react-fluent` | Fluent UI implementation |
+  | `@alaarab/ogrid-material` | `@alaarab/ogrid-react-material` | Material UI implementation |
+  | *(new)* | `@alaarab/ogrid-core` | Pure TypeScript types, algorithms, utilities (zero deps) |
+  | *(new)* | `@alaarab/ogrid-js` | Vanilla JS data grid (class-based, no framework) |
+
+### Added
+
+- **`@alaarab/ogrid-core`** — New pure TypeScript package with zero dependencies. Contains all shared types (`IColumnDef`, `IFilters`, `FilterValue`, etc.), algorithms (sorting, filtering, pagination), and utilities (`exportToCsv`, `buildHeaderRows`, `computeAggregations`, etc.). 237 tests.
+
+- **`@alaarab/ogrid-js`** — New vanilla JS data grid package. Class-based architecture with `EventEmitter`, `GridState`, and `TableRenderer`. Features: pagination, status bar, column chooser, cell selection, keyboard navigation, clipboard, undo/redo, inline editing, context menu, column resize. 68 tests.
+
+### Improved
+
+- **React package deduplication** — `@alaarab/ogrid-react` now imports shared utilities and constants from `@alaarab/ogrid-core` instead of maintaining duplicate copies. Eliminates ~800 lines of duplicated source code and ~1,200 lines of duplicated tests.
+
+- **Lint cleanup** — Removed all unused imports, variables, and type parameters across all 6 packages. Added `eslint-disable` comments with explanations for intentional `exhaustive-deps` suppressions (stable refs excluded from dependency arrays).
+
+- **Fluent build fix** — Added type declaration shim for `@fluentui/react-icons` (upstream package ships broken typings in v2.0.318).
+
+### Changed
+
+- **1,065 tests** across 6 packages (Core: 237, JS: 68, React: 373, Radix: 92, Fluent: 92, Material: 92). React test count decreased from 484 to 373 because 111 duplicate utility tests were removed (those tests now run only in Core).
+
+---
+
 ## [1.9.0] – 2026-02-10
 
 ### BREAKING CHANGES
@@ -40,7 +74,7 @@ All notable changes to OGrid will be documented in this file.
 
 - **`UseOGridPagination`, `UseOGridColumnChooser`, `UseOGridLayout`, `UseOGridFilters`** — New exported sub-interfaces for the grouped `useOGrid` return type.
 
-- **234 new tests** (total: **755** across all packages — Core: 479, Radix: 92, Fluent: 92, Material: 92). New test suites:
+- **234 new tests** (total: **755** across all packages at v1.9.0 — Core: 479, Radix: 92, Fluent: 92, Material: 92). New test suites:
   - `useTextFilterState.test.ts`, `useMultiSelectFilterState.test.ts`, `usePeopleFilterState.test.ts`, `useDateFilterState.test.ts`
   - `useColumnChooserState.test.ts`, `useColumnResize.test.ts`, `useInlineCellEditorState.test.ts`
   - `clientSideData.test.ts`, `paginationHelpers.test.ts`, `ogridHelpers.test.ts`, `dataGridStatusBar.test.ts`, `gridContextMenuHelpers.test.ts`

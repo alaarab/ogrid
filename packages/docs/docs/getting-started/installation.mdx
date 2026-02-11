@@ -13,7 +13,7 @@ OGrid ships as separate packages for each UI framework. Pick the one that matche
 The lightest option. Radix UI primitives are bundled as regular dependencies, so there are no additional peer dependencies beyond React.
 
 ```bash
-npm install @alaarab/ogrid
+npm install @alaarab/ogrid-react-radix
 ```
 
 ## Fluent UI
@@ -21,7 +21,7 @@ npm install @alaarab/ogrid
 For projects using Microsoft's Fluent UI v9 design system. Requires `@fluentui/react-components` as a peer dependency.
 
 ```bash
-npm install @alaarab/ogrid-fluent @fluentui/react-components
+npm install @alaarab/ogrid-react-fluent @fluentui/react-components
 ```
 
 ## Material UI
@@ -29,19 +29,27 @@ npm install @alaarab/ogrid-fluent @fluentui/react-components
 For projects using Google's Material Design via MUI v7. Requires MUI core and Emotion as peer dependencies.
 
 ```bash
-npm install @alaarab/ogrid-material @mui/material @emotion/react @emotion/styled
+npm install @alaarab/ogrid-react-material @mui/material @emotion/react @emotion/styled
 ```
 
-## Core Only (Headless)
+## Vanilla JS (No Framework)
 
-If you want to build your own UI layer on top of OGrid's hooks and utilities, install the core package directly. This is what the three UI packages use internally.
+For projects without React. Class-based API with EventEmitter state management.
+
+```bash
+npm install @alaarab/ogrid-js
+```
+
+## Core Only
+
+If you want to build your own framework adapter on top of OGrid's types and utilities, install the core package directly.
 
 ```bash
 npm install @alaarab/ogrid-core
 ```
 
 :::info
-You typically do not need to install `@alaarab/ogrid-core` separately. All three UI packages re-export everything from core, so types like `IColumnDef`, `IOGridApi`, and hooks like `useUndoRedo` are available directly from your chosen UI package.
+You typically do not need to install `@alaarab/ogrid-core` separately. All React UI packages re-export everything from `@alaarab/ogrid-react` (which re-exports from core), so types like `IColumnDef`, `IOGridApi`, and hooks like `useUndoRedo` are available directly from your chosen UI package.
 :::
 
 ## Requirements
@@ -57,7 +65,7 @@ You typically do not need to install `@alaarab/ogrid-core` separately. All three
 After installing, confirm everything is working by rendering a minimal grid:
 
 ```tsx
-import { OGrid, type IColumnDef } from '@alaarab/ogrid'; // or ogrid-fluent, ogrid-material
+import { OGrid, type IColumnDef } from '@alaarab/ogrid-react-radix'; // or ogrid-react-fluent, ogrid-react-material
 
 type Row = { id: number; name: string };
 
