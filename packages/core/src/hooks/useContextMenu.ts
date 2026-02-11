@@ -6,27 +6,31 @@ export interface ContextMenuPosition {
 }
 
 export interface UseContextMenuResult {
-  contextMenu: ContextMenuPosition | null;
-  setContextMenu: (pos: ContextMenuPosition | null) => void;
+  contextMenuPosition: ContextMenuPosition | null;
+  setContextMenuPosition: (pos: ContextMenuPosition | null) => void;
   handleCellContextMenu: (e: { clientX: number; clientY: number; preventDefault?: () => void }) => void;
   closeContextMenu: () => void;
 }
 
+/**
+ * Manages context menu position state for right-click menus.
+ * @returns Menu position, setter, right-click handler, and close handler.
+ */
 export function useContextMenu(): UseContextMenuResult {
-  const [contextMenu, setContextMenu] = useState<ContextMenuPosition | null>(null);
+  const [contextMenuPosition, setContextMenuPosition] = useState<ContextMenuPosition | null>(null);
 
   const handleCellContextMenu = useCallback((e: { clientX: number; clientY: number; preventDefault?: () => void }) => {
     e.preventDefault?.();
-    setContextMenu({ x: e.clientX, y: e.clientY });
+    setContextMenuPosition({ x: e.clientX, y: e.clientY });
   }, []);
 
   const closeContextMenu = useCallback(() => {
-    setContextMenu(null);
+    setContextMenuPosition(null);
   }, []);
 
   return {
-    contextMenu,
-    setContextMenu,
+    contextMenuPosition,
+    setContextMenuPosition,
     handleCellContextMenu,
     closeContextMenu,
   };

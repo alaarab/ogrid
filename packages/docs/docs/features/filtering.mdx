@@ -26,14 +26,20 @@ const columns = [
     filterable: { type: 'text' },
   },
   {
+    columnId: 'department',
+    name: 'Department',
+    filterable: { type: 'multiSelect', filterField: 'department' },
+  },
+  {
     columnId: 'status',
     name: 'Status',
     filterable: { type: 'multiSelect', filterField: 'status' },
   },
   {
-    columnId: 'assignee',
-    name: 'Assignee',
-    filterable: { type: 'people' },
+    columnId: 'salary',
+    name: 'Salary',
+    type: 'numeric' as const,
+    valueFormatter: (v) => `$${Number(v).toLocaleString()}`,
   },
 ];
 
@@ -41,8 +47,9 @@ function App() {
   return (
     <OGrid
       columns={columns}
-      data={tasks}
+      data={people}
       getRowId={(item) => item.id}
+      defaultPageSize={10}
     />
   );
 }

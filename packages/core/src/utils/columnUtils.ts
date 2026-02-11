@@ -79,7 +79,11 @@ export function buildHeaderRows<T>(
   const rows: HeaderRow<T>[] = Array.from({ length: totalRows }, () => []);
 
   // Step 3: Walk the tree and place cells
+  // Cache leaf counts by children array ref to avoid O(n²) repeated traversals
+  const leafCountCache = new Map<(IColumnGroupDef<T> | IColumnDef<T>)[], number>();
   function countVisibleLeaves(cols: (IColumnGroupDef<T> | IColumnDef<T>)[]): number {
+    const cached = leafCountCache.get(cols);
+    if (cached !== undefined) return cached;
     let count = 0;
     for (const c of cols) {
       if (isColumnGroupDef(c)) {
@@ -90,6 +94,7 @@ export function buildHeaderRows<T>(
         }
       }
     }
+    leafCountCache.set(cols, count);
     return count;
   }
 

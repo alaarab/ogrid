@@ -20,29 +20,40 @@ Pin columns to the left edge of the grid so they remain visible while the user s
 import { OGrid } from '@alaarab/ogrid';
 import type { IColumnDef } from '@alaarab/ogrid-core';
 
-interface Row {
+interface Person {
   id: number;
   name: string;
   email: string;
   department: string;
   salary: number;
-  location: string;
+  status: string;
+  age: number;
+  startDate: string;
 }
 
-const columns: IColumnDef<Row>[] = [
-  { columnId: 'name', name: 'Name', pinned: 'left' },
-  { columnId: 'email', name: 'Email' },
-  { columnId: 'department', name: 'Department' },
-  { columnId: 'salary', name: 'Salary', type: 'numeric' },
-  { columnId: 'location', name: 'Location' },
+const columns: IColumnDef<Person>[] = [
+  { columnId: 'name', name: 'Name', pinned: 'left', defaultWidth: 160 },
+  { columnId: 'email', name: 'Email', defaultWidth: 220 },
+  { columnId: 'department', name: 'Department', defaultWidth: 160 },
+  {
+    columnId: 'salary',
+    name: 'Salary',
+    type: 'numeric',
+    defaultWidth: 120,
+    valueFormatter: (v) => `$${Number(v).toLocaleString()}`,
+  },
+  { columnId: 'status', name: 'Status', defaultWidth: 120 },
+  { columnId: 'age', name: 'Age', type: 'numeric', defaultWidth: 80 },
+  { columnId: 'startDate', name: 'Start Date', defaultWidth: 130 },
 ];
 
 function App() {
   return (
     <OGrid
       columns={columns}
-      data={rows}
-      getRowId={(r) => r.id}
+      data={people}
+      getRowId={(p) => p.id}
+      defaultPageSize={10}
     />
   );
 }

@@ -24,9 +24,9 @@ describe('useOGrid', () => {
     );
     expect(result.current.dataGridProps.items).toEqual(data);
     expect(result.current.dataGridProps.items).toHaveLength(3);
-    expect(result.current.displayTotalCount).toBe(3);
-    expect(result.current.page).toBe(1);
-    expect(result.current.pageSize).toBe(10);
+    expect(result.current.pagination.displayTotalCount).toBe(3);
+    expect(result.current.pagination.page).toBe(1);
+    expect(result.current.pagination.pageSize).toBe(10);
   });
 
   it('paginates items when pageSize is smaller than data length', () => {
@@ -37,7 +37,7 @@ describe('useOGrid', () => {
     );
     expect(result.current.dataGridProps.items).toHaveLength(2);
     expect(result.current.dataGridProps.items.map((r) => r.name)).toEqual(['Alice', 'Bob']);
-    expect(result.current.displayTotalCount).toBe(3);
+    expect(result.current.pagination.displayTotalCount).toBe(3);
   });
 
   it('setPage changes page and dataGridProps.items slice', () => {
@@ -47,9 +47,9 @@ describe('useOGrid', () => {
       { wrapper: ({ children }) => <>{children}</> }
     );
     act(() => {
-      result.current.setPage(2);
+      result.current.pagination.setPage(2);
     });
-    expect(result.current.page).toBe(2);
+    expect(result.current.pagination.page).toBe(2);
     expect(result.current.dataGridProps.items.map((r) => r.name)).toEqual(['Carol']);
   });
 
@@ -59,15 +59,15 @@ describe('useOGrid', () => {
       () => useOGrid<Row>({ columns, getRowId, data, defaultPageSize: 10 }, ref),
       { wrapper: ({ children }) => <>{children}</> }
     );
-    expect(result.current.visibleColumns.has('name')).toBe(true);
+    expect(result.current.columnChooser.visibleColumns.has('name')).toBe(true);
     act(() => {
-      result.current.handleVisibilityChange('name', false);
+      result.current.columnChooser.onVisibilityChange('name', false);
     });
-    expect(result.current.visibleColumns.has('name')).toBe(false);
+    expect(result.current.columnChooser.visibleColumns.has('name')).toBe(false);
     act(() => {
-      result.current.handleVisibilityChange('name', true);
+      result.current.columnChooser.onVisibilityChange('name', true);
     });
-    expect(result.current.visibleColumns.has('name')).toBe(true);
+    expect(result.current.columnChooser.visibleColumns.has('name')).toBe(true);
   });
 
   it('getColumnState returns visibleColumns array and sort (via ref)', () => {
@@ -96,7 +96,7 @@ describe('useOGrid', () => {
   it('setRowData updates internal data (client-side)', () => {
     const ref = React.createRef<IOGridApi<Row>>();
     const Wrapper = () => {
-      useOGrid<Row>({ columns, getRowId, data: undefined, defaultPageSize: 10 }, ref);
+      useOGrid<Row>({ columns, getRowId, data: [], defaultPageSize: 10 }, ref);
       return null;
     };
     render(<Wrapper />);
@@ -115,8 +115,8 @@ describe('useOGrid', () => {
       () => useOGrid<Row>({ columns, getRowId, data }, ref),
       { wrapper: ({ children }) => <>{children}</> }
     );
-    expect(result.current.columnChooserColumns).toHaveLength(2);
-    expect(result.current.columnChooserColumns.map((c) => c.columnId)).toEqual(['id', 'name']);
+    expect(result.current.columnChooser.columns).toHaveLength(2);
+    expect(result.current.columnChooser.columns.map((c) => c.columnId)).toEqual(['id', 'name']);
   });
 
   // --- Column State Persistence API ---
@@ -513,6 +513,125 @@ describe('useOGrid', () => {
   });
 
   // --- Date column type ---
+
+  // --- New IOGridApi methods ---
+
+  it('clearFilters removes all filters', () => {
+    const ref = React.createRef<IOGridApi<Row>>();
+    const Wrapper = () => {
+      useOGrid<Row>(
+        { columns, getRowId, data, defaultPageSize: 10 },
+        ref
+      );
+      return null;
+    };
+    render(<Wrapper />);
+
+    // Set a filter first
+    act(() => {
+      ref.current!.setFilterModel({ name: { type: 'text', value: 'Alice' } });
+    });
+    expect(ref.current!.getColumnState().filters).toBeDefined();
+
+    // Clear all filters
+    act(() => {
+      ref.current!.clearFilters();
+    });
+    expect(ref.current!.getColumnState().filters).toBeUndefined();
+  });
+
+  it('clearSort resets to default sort', () => {
+    const ref = React.createRef<IOGridApi<Row>>();
+    const Wrapper = () => {
+      useOGrid<Row>(
+        { columns, getRowId, data, defaultPageSize: 10, defaultSortBy: 'id', defaultSortDirection: 'asc' },
+        ref
+      );
+      return null;
+    };
+    render(<Wrapper />);
+
+    // Change sort
+    act(() => {
+      ref.current!.applyColumnState({ sort: { field: 'name', direction: 'desc' } });
+    });
+    expect(ref.current!.getColumnState().sort).toEqual({ field: 'name', direction: 'desc' });
+
+    // Clear sort
+    act(() => {
+      ref.current!.clearSort();
+    });
+    expect(ref.current!.getColumnState().sort).toEqual({ field: 'id', direction: 'asc' });
+  });
+
+  it('resetGridState clears filters, sort, and selection', () => {
+    const ref = React.createRef<IOGridApi<Row>>();
+    const Wrapper = () => {
+      useOGrid<Row>(
+        { columns, getRowId, data, defaultPageSize: 10, defaultSortBy: 'id' },
+        ref
+      );
+      return null;
+    };
+    render(<Wrapper />);
+
+    // Set some state
+    act(() => {
+      ref.current!.setFilterModel({ name: { type: 'text', value: 'Alice' } });
+      ref.current!.applyColumnState({ sort: { field: 'name', direction: 'desc' } });
+      ref.current!.setSelectedRows(['1', '2']);
+    });
+
+    // Reset everything
+    act(() => {
+      ref.current!.resetGridState();
+    });
+
+    const state = ref.current!.getColumnState();
+    expect(state.filters).toBeUndefined();
+    expect(state.sort).toEqual({ field: 'id', direction: 'asc' });
+    expect(ref.current!.getSelectedRows()).toEqual([]);
+  });
+
+  it('resetGridState with keepSelection preserves selection', () => {
+    const ref = React.createRef<IOGridApi<Row>>();
+    const Wrapper = () => {
+      useOGrid<Row>(
+        { columns, getRowId, data, defaultPageSize: 10, defaultSortBy: 'id' },
+        ref
+      );
+      return null;
+    };
+    render(<Wrapper />);
+
+    act(() => {
+      ref.current!.setFilterModel({ name: { type: 'text', value: 'Alice' } });
+      ref.current!.setSelectedRows(['1']);
+    });
+
+    act(() => {
+      ref.current!.resetGridState({ keepSelection: true });
+    });
+
+    expect(ref.current!.getColumnState().filters).toBeUndefined();
+    expect(ref.current!.getSelectedRows()).toEqual(['1']);
+  });
+
+  it('getDisplayedRows returns current page items', () => {
+    const ref = React.createRef<IOGridApi<Row>>();
+    const Wrapper = () => {
+      useOGrid<Row>(
+        { columns, getRowId, data, defaultPageSize: 2 },
+        ref
+      );
+      return null;
+    };
+    render(<Wrapper />);
+
+    const rows = ref.current!.getDisplayedRows();
+    expect(rows).toHaveLength(2);
+    expect(rows.map((r) => r.name)).toEqual(['Alice', 'Bob']);
+  });
 
   describe('date column filtering and sorting', () => {
     type DateRow = { id: string; date: string };

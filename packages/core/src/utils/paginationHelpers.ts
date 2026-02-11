@@ -4,6 +4,12 @@
  */
 
 export const PAGE_SIZE_OPTIONS = [10, 25, 50, 100] as const;
+
+/** Ensures the active pageSize is included in the options list, inserting it in sorted order if missing. */
+function ensurePageSizeInOptions(pageSize: number, options: readonly number[]): readonly number[] {
+  if (options.includes(pageSize)) return options;
+  return [...options, pageSize].sort((a, b) => a - b);
+}
 export const MAX_PAGE_BUTTONS = 5;
 
 export interface PaginationViewModel {
@@ -63,6 +69,6 @@ export function getPaginationViewModel(
     showEndEllipsis,
     startItem,
     endItem,
-    pageSizeOptions: options?.pageSizeOptions ?? PAGE_SIZE_OPTIONS,
+    pageSizeOptions: ensurePageSizeInOptions(pageSize, options?.pageSizeOptions ?? PAGE_SIZE_OPTIONS),
   };
 }
