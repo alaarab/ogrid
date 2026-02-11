@@ -1,6 +1,6 @@
 import * as React from 'react';
-import { GRID_CONTEXT_MENU_ITEMS, getContextMenuHandlers, formatShortcut } from '../utils/gridContextMenuHelpers';
-import type { GridContextMenuHandlerProps } from '../utils/gridContextMenuHelpers';
+import { GRID_CONTEXT_MENU_ITEMS, getContextMenuHandlers, formatShortcut } from '../utils';
+import type { GridContextMenuHandlerProps } from '../utils';
 
 export interface GridContextMenuClassNames {
   contextMenu?: string;
