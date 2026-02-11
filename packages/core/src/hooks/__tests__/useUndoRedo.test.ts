@@ -5,7 +5,7 @@ describe('useUndoRedo', () => {
   it('returns wrapped callback and undo/redo when onCellValueChanged provided', () => {
     const onCellValueChanged = jest.fn();
     const { result } = renderHook(() =>
-      useUndoRedo({ onCellValueChanged, maxHistory: 10 })
+      useUndoRedo({ onCellValueChanged, maxUndoDepth: 10 })
     );
     expect(typeof result.current.onCellValueChanged).toBe('function');
     expect(typeof result.current.undo).toBe('function');
@@ -22,7 +22,7 @@ describe('useUndoRedo', () => {
   it('wrapped callback calls onCellValueChanged and enables undo', () => {
     const onCellValueChanged = jest.fn();
     const { result } = renderHook(() =>
-      useUndoRedo({ onCellValueChanged, maxHistory: 10 })
+      useUndoRedo({ onCellValueChanged, maxUndoDepth: 10 })
     );
     const event = {
       item: { id: '1', name: 'A' },
@@ -43,7 +43,7 @@ describe('useUndoRedo', () => {
   it('undo reverts last change and enables redo', () => {
     const onCellValueChanged = jest.fn();
     const { result } = renderHook(() =>
-      useUndoRedo({ onCellValueChanged, maxHistory: 10 })
+      useUndoRedo({ onCellValueChanged, maxUndoDepth: 10 })
     );
     const event = {
       item: { id: '1', name: 'A' },
@@ -72,7 +72,7 @@ describe('useUndoRedo', () => {
   it('redo reapplies reverted change', () => {
     const onCellValueChanged = jest.fn();
     const { result } = renderHook(() =>
-      useUndoRedo({ onCellValueChanged, maxHistory: 10 })
+      useUndoRedo({ onCellValueChanged, maxUndoDepth: 10 })
     );
     const event = {
       item: { id: '1', name: 'A' },

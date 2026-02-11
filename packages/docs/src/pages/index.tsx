@@ -27,6 +27,8 @@ const DEPARTMENTS = ['Engineering','Product','Design','Marketing','Sales','Finan
 const TITLES = ['Software Engineer','Product Manager','UX Designer','Data Analyst','Sales Executive','Account Manager','HR Specialist','Legal Counsel','DevOps Engineer','Support Lead','Frontend Developer','Backend Developer','QA Engineer','Scrum Master','Tech Lead','Marketing Manager','Content Strategist','BD Manager','Recruiter','Finance Analyst'];
 const STATUSES: string[] = ['Active','Active','Active','Active','Active','Active','Active','Remote','Remote','On Leave'];
 const RATINGS = ['A+','A','A','A-','B+','B+','B','B','A','A-'];
+const STATUSES_UNIQUE = [...new Set(STATUSES)];
+const RATINGS_UNIQUE = [...new Set(RATINGS)];
 
 const ROW_COUNT = 10_000;
 
@@ -59,13 +61,13 @@ function HeroGrid() {
   const columns = useMemo(() => [
     { columnId: 'id', name: '#', type: 'numeric' as const, defaultWidth: 55 },
     { columnId: 'name', name: 'Name', sortable: true, editable: true, defaultWidth: 160 },
-    { columnId: 'department', name: 'Department', sortable: true, filterable: { type: 'multiSelect' as const }, defaultWidth: 120 },
-    { columnId: 'title', name: 'Title', sortable: true, defaultWidth: 175 },
+    { columnId: 'department', name: 'Department', sortable: true, editable: true, filterable: { type: 'multiSelect' as const }, cellEditor: 'richSelect' as const, cellEditorParams: { values: DEPARTMENTS }, defaultWidth: 120 },
+    { columnId: 'title', name: 'Title', sortable: true, editable: true, defaultWidth: 175 },
     { columnId: 'email', name: 'Email', defaultWidth: 220 },
     { columnId: 'salary', name: 'Salary', type: 'numeric' as const, editable: true, valueFormatter: (v: unknown) => v != null ? `$${Number(v).toLocaleString()}` : '', defaultWidth: 110 },
-    { columnId: 'startDate', name: 'Start Date', type: 'date' as const, sortable: true, defaultWidth: 105 },
-    { columnId: 'status', name: 'Status', filterable: { type: 'multiSelect' as const }, defaultWidth: 90 },
-    { columnId: 'rating', name: 'Rating', sortable: true, filterable: { type: 'multiSelect' as const }, defaultWidth: 75 },
+    { columnId: 'startDate', name: 'Start Date', type: 'date' as const, sortable: true, editable: true, defaultWidth: 115 },
+    { columnId: 'status', name: 'Status', editable: true, filterable: { type: 'multiSelect' as const }, cellEditor: 'richSelect' as const, cellEditorParams: { values: STATUSES_UNIQUE }, defaultWidth: 90 },
+    { columnId: 'rating', name: 'Rating', sortable: true, editable: true, filterable: { type: 'multiSelect' as const }, cellEditor: 'richSelect' as const, cellEditorParams: { values: RATINGS_UNIQUE }, defaultWidth: 75 },
   ], []);
 
   return (
@@ -77,6 +79,7 @@ function HeroGrid() {
         editable
         cellSelection
         statusBar
+        sideBar
         defaultPageSize={100}
         layoutMode="fill"
         entityLabelPlural="employees"

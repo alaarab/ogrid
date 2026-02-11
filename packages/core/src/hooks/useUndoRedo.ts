@@ -3,7 +3,7 @@ import type { ICellValueChangedEvent } from '../types';
 
 export interface UseUndoRedoParams<T> {
   onCellValueChanged: ((event: ICellValueChangedEvent<T>) => void) | undefined;
-  maxHistory?: number;
+  maxUndoDepth?: number;
 }
 
 export interface UseUndoRedoResult<T> {
@@ -16,6 +16,8 @@ export interface UseUndoRedoResult<T> {
   beginBatch: () => void;
   /** End a batch — commits the accumulated changes as a single undo entry. */
   endBatch: () => void;
+  /** The configured maximum undo stack depth. */
+  maxUndoDepth: number;
 }
 
 /**
@@ -25,7 +27,7 @@ export interface UseUndoRedoResult<T> {
 export function useUndoRedo<T>(
   params: UseUndoRedoParams<T>
 ): UseUndoRedoResult<T> {
-  const { onCellValueChanged, maxHistory = 50 } = params;
+  const { onCellValueChanged, maxUndoDepth = 100 } = params;
   // Each history entry is an array of events (batch). Single edits are [event].
   const historyRef = useRef<ICellValueChangedEvent<T>[][]>([]);
   const redoStackRef = useRef<ICellValueChangedEvent<T>[][]>([]);
@@ -40,14 +42,14 @@ export function useUndoRedo<T>(
         // Accumulate into the current batch — don't push to history yet
         batchRef.current.push(event);
       } else {
-        historyRef.current = [...historyRef.current, [event]].slice(-maxHistory);
+        historyRef.current = [...historyRef.current, [event]].slice(-maxUndoDepth);
         redoStackRef.current = [];
         setHistoryLength(historyRef.current.length);
         setRedoLength(0);
       }
       onCellValueChanged(event);
     },
-    [onCellValueChanged, maxHistory]
+    [onCellValueChanged, maxUndoDepth]
   );
 
   const beginBatch = useCallback(() => {
@@ -58,11 +60,11 @@ export function useUndoRedo<T>(
     const batch = batchRef.current;
     batchRef.current = null;
     if (!batch || batch.length === 0) return;
-    historyRef.current = [...historyRef.current, batch].slice(-maxHistory);
+    historyRef.current = [...historyRef.current, batch].slice(-maxUndoDepth);
     redoStackRef.current = [];
     setHistoryLength(historyRef.current.length);
     setRedoLength(0);
-  }, [maxHistory]);
+  }, [maxUndoDepth]);
 
   const undo = useCallback(() => {
     if (!onCellValueChanged || historyRef.current.length === 0) return;
@@ -103,5 +105,6 @@ export function useUndoRedo<T>(
     canRedo: redoLength > 0,
     beginBatch,
     endBatch,
+    maxUndoDepth,
   };
 }

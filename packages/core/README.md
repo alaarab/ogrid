@@ -1,8 +1,46 @@
-# @alaarab/ogrid-core
+<p align="center">
+  <strong>OGrid Core</strong> — Headless types, hooks, and utilities for OGrid data grids.
+</p>
 
-Framework-agnostic types, hooks, and utilities for [OGrid](https://github.com/alaarab/ogrid) data tables.
+<p align="center">
+  <a href="https://www.npmjs.com/package/@alaarab/ogrid-core"><img src="https://img.shields.io/npm/v/@alaarab/ogrid-core?color=%23217346&label=npm" alt="npm version" /></a>
+  <a href="https://github.com/alaarab/ogrid/blob/main/LICENSE"><img src="https://img.shields.io/badge/license-MIT-green" alt="MIT License" /></a>
+  <img src="https://img.shields.io/badge/React-17%20%7C%2018%20%7C%2019-blue" alt="React 17, 18, 19" />
+  <img src="https://img.shields.io/badge/TypeScript-strict-blue" alt="TypeScript strict" />
+</p>
 
-This package is the shared foundation used by `@alaarab/ogrid-fluent` and `@alaarab/ogrid-material`. You typically don't need to install it directly -- both framework packages re-export everything from core.
+<p align="center">
+  <a href="https://alaarab.github.io/ogrid/">Documentation</a> · <a href="https://alaarab.github.io/ogrid/docs/getting-started/overview">Getting Started</a> · <a href="https://alaarab.github.io/ogrid/docs/api/ogrid-props">API Reference</a>
+</p>
+
+---
+
+Framework-agnostic foundation for [OGrid](https://github.com/alaarab/ogrid) data grids. You typically don't need to install this directly — the UI packages ([`@alaarab/ogrid`](https://www.npmjs.com/package/@alaarab/ogrid), [`@alaarab/ogrid-fluent`](https://www.npmjs.com/package/@alaarab/ogrid-fluent), [`@alaarab/ogrid-material`](https://www.npmjs.com/package/@alaarab/ogrid-material)) re-export everything from core.
+
+## What's Inside
+
+### Hooks
+
+- `useOGrid` — Orchestrator: pagination, sorting, filtering, visibility, editing, row selection, status bar, grid API
+- `useDataGridState` — All DataGridTable state: layout, selection, editing, interaction, context menu, view models
+- `useColumnHeaderFilterState` — Filter popover (open, temp values, apply/clear, people search debounce)
+- `useColumnChooserState` — Column visibility dropdown
+- `useInlineCellEditorState` — Inline cell editor
+- `useRichSelectState` — Searchable rich select dropdown
+- `useSideBarState` — Side bar panel management
+- `useActiveCell`, `useCellSelection`, `useCellEditing`, `useRowSelection`, `useKeyboardNavigation`, `useClipboard`, `useFillHandle`, `useUndoRedo`, `useContextMenu`, `useColumnResize`, `useFilterOptions`, `useDebounce`
+
+### Types
+
+`IColumnDef<T>` · `IColumnGroupDef` · `IDataSource<T>` · `IFilters` · `FilterValue` · `IDateFilterValue` · `UserLike` · `IOGridApi<T>` · `IOGridProps<T>` · `IOGridDataGridProps<T>` · `ICellEditorProps<T>` · `IGridColumnState` · `ISideBarDef` · `ColumnFilterType` · `IColumnMeta`
+
+### Utilities
+
+`processClientSideData` · `exportToCsv` · `getCellValue` · `flattenColumns` · `buildHeaderRows` · `getPaginationViewModel` · `getHeaderFilterConfig` · `getCellRenderDescriptor` · `computeAggregations` · `formatShortcut` · `GRID_CONTEXT_MENU_ITEMS`
+
+### Headless Components
+
+`OGridLayout` · `StatusBar` · `GridContextMenu` · `SideBar` · `MarchingAntsOverlay`
 
 ## Install
 
@@ -10,39 +48,12 @@ This package is the shared foundation used by `@alaarab/ogrid-fluent` and `@alaa
 npm install @alaarab/ogrid-core
 ```
 
-## What's Included
+Only peer dep is `react ^17 || ^18 || ^19`.
 
-### Types
+## Documentation
 
-- `IColumnDef<T>` -- Column definition with sorting, filtering, and rendering
-- `IDataSource<T>` -- Server-side data source interface
-- `IFetchParams` -- Parameters for `fetchPage()`
-- `IFilters` -- Unified filter values (text, multi-select, people)
-- `UserLike` -- Minimal user shape for people picker
-- `IColumnFilterDef`, `IColumnMeta`, `IPageResult`, `ColumnFilterType`
-
-### Hooks
-
-- `useOGrid(props, ref)` -- Page/sort/filter/visibleColumns + `dataGridProps` for DataGridTable (used by OGrid wrappers)
-- `useDataGridState({ props, wrapperRef })` -- Orchestrator for grid state, selection, editing, clipboard, keyboard, fill handle, status bar
-- `useFilterOptions(dataSource, fields)` -- Loads filter options for multi-select columns
-- `useColumnHeaderFilterState(params)` -- Headless filter popover state (open, temp values, apply/clear, people search)
-- `useColumnChooserState({ columns, visibleColumns, onVisibilityChange })` -- Column visibility dropdown (open, Escape, select all/clear)
-- `useInlineCellEditorState({ value, editorType, onCommit, onCancel })` -- Inline cell editor (localValue, keydown, blur/commit)
-
-### Components
-
-- `OGridLayout` -- Unified bordered layout: toolbar strip (custom content + column chooser), optional secondary toolbar row, sidebar, grid area, and footer strip (pagination).
-
-### Utilities
-
-- `getPaginationViewModel(...)` -- Page numbers, ellipsis, start/end item for PaginationControls
-- `getHeaderFilterConfig(col, input)` -- ColumnHeaderFilter props from column + filter/sort state
-- `getCellRenderDescriptor(item, col, rowIndex, colIdx, input)` -- Cell mode (editing-inline / editing-popover / display) and flags for DataGridTable
-- `toUserLike(user)` -- Converts a user-like object to `UserLike`
-- `exportToCsv(items, columns, getValue, filename)` -- Full CSV export
-- `buildCsvHeader`, `buildCsvRows`, `triggerCsvDownload`, `escapeCsvValue` -- Low-level CSV helpers
+Full docs at **[alaarab.github.io/ogrid](https://alaarab.github.io/ogrid/)**.
 
 ## License
 
-MIT
+MIT — Free forever.

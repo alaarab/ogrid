@@ -15,9 +15,9 @@ import type {
 import {
   useDataGridState,
   useColumnResize,
+  useLatestRef,
   getHeaderFilterConfig,
   getCellRenderDescriptor,
-  isRowInRange,
   buildHeaderRows,
   MarchingAntsOverlay,
   resolveCellDisplayContent,
@@ -25,6 +25,9 @@ import {
   buildInlineEditorProps,
   buildPopoverEditorProps,
   getCellInteractionProps,
+  areGridRowPropsEqual,
+  CellErrorBoundary,
+  DEFAULT_MIN_COLUMN_WIDTH,
 } from '@alaarab/ogrid-core';
 import styles from './DataGridTable.module.scss';
 
@@ -32,8 +35,10 @@ import styles from './DataGridTable.module.scss';
 // Module-scope stable constants (avoid per-render allocations)
 const GRID_ROOT_STYLE: React.CSSProperties = { position: 'relative', flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column' };
 const CURSOR_CELL_STYLE: React.CSSProperties = { cursor: 'cell' };
+const POPOVER_ANCHOR_STYLE: React.CSSProperties = { minHeight: '100%', minWidth: 40 };
 const STOP_PROPAGATION = (e: React.MouseEvent) => e.stopPropagation();
 const PREVENT_DEFAULT = (e: React.MouseEvent) => { e.preventDefault(); };
+const NOOP = () => {};
 
 // --- Memoized row component (skips re-render for rows unaffected by selection changes) ---
 
@@ -105,53 +110,6 @@ function GridRowInner(props: GridRowProps) {
   );
 }
 
-function areGridRowPropsEqual(prev: GridRowProps, next: GridRowProps): boolean {
-  // Data / structure changes — always re-render
-  if (prev.item !== next.item) return false;
-  if (prev.isSelected !== next.isSelected) return false;
-  if (prev.visibleCols !== next.visibleCols) return false;
-  if (prev.columnMeta !== next.columnMeta) return false;
-  if (prev.hasCheckboxCol !== next.hasCheckboxCol) return false;
-
-  const ri = prev.rowIndex;
-
-  // Editing cell in this row?
-  if (prev.editingRowId !== next.editingRowId) {
-    if (prev.editingRowId === prev.rowId || next.editingRowId === next.rowId) return false;
-  }
-
-  // Active cell in this row?
-  const prevActive = prev.activeCell?.rowIndex === ri;
-  const nextActive = next.activeCell?.rowIndex === ri;
-  if (prevActive !== nextActive) return false;
-  if (prevActive && nextActive && prev.activeCell!.columnIndex !== next.activeCell!.columnIndex) return false;
-
-  // Selection range touches this row?
-  const prevInSel = isRowInRange(prev.selectionRange, ri);
-  const nextInSel = isRowInRange(next.selectionRange, ri);
-  if (prevInSel !== nextInSel) return false;
-  if (prevInSel && nextInSel) {
-    if (prev.selectionRange!.startCol !== next.selectionRange!.startCol ||
-        prev.selectionRange!.endCol !== next.selectionRange!.endCol) return false;
-  }
-
-  // Fill handle (selection end row) + isDragging
-  const prevIsEnd = prev.selectionRange?.endRow === ri;
-  const nextIsEnd = next.selectionRange?.endRow === ri;
-  if (prevIsEnd !== nextIsEnd) return false;
-  if ((prevIsEnd || nextIsEnd) && prev.isDragging !== next.isDragging) return false;
-
-  // Cut/copy ranges touch this row?
-  if (prev.cutRange !== next.cutRange) {
-    if (isRowInRange(prev.cutRange, ri) || isRowInRange(next.cutRange, ri)) return false;
-  }
-  if (prev.copyRange !== next.copyRange) {
-    if (isRowInRange(prev.copyRange, ri) || isRowInRange(next.copyRange, ri)) return false;
-  }
-
-  return true;
-}
-
 const GridRow = React.memo(GridRowInner, areGridRowPropsEqual);
 
 function DataGridTableInner<T>(props: IOGridDataGridProps<T>): React.ReactElement {
@@ -165,8 +123,9 @@ function DataGridTableInner<T>(props: IOGridDataGridProps<T>): React.ReactElemen
   const { selectedRowIds, updateSelection, handleRowCheckboxChange, handleSelectAll, allSelected, someSelected } = rowSel;
   const { editingCell, setEditingCell, pendingEditorValue, setPendingEditorValue, commitCellEdit, cancelPopoverEdit, popoverAnchorEl, setPopoverAnchorEl } = editing;
   const { setActiveCell, handleCellMouseDown, handleSelectAllCells, selectionRange, hasCellSelection, handleGridKeyDown, handleFillHandleMouseDown, handleCopy, handleCut, handlePaste, cutRange, copyRange, canUndo, canRedo, onUndo, onRedo, isDragging } = interaction;
+  const handlePasteVoid = useCallback(() => { void handlePaste(); }, [handlePaste]);
   const { menuPosition, handleCellContextMenu, closeContextMenu } = ctxMenu;
-  const { headerFilterInput, cellDescriptorInput, statusBarConfig, showEmptyInGrid } = viewModels;
+  const { headerFilterInput, cellDescriptorInput, statusBarConfig, showEmptyInGrid, onCellError } = viewModels;
 
   const {
     items,
@@ -201,12 +160,9 @@ function DataGridTableInner<T>(props: IOGridDataGridProps<T>): React.ReactElemen
 
   // Refs for volatile state — lets renderCellContent be stable (same function ref across
   // selection changes) so that GridRow's React.memo comparator can skip unaffected rows.
-  const cellDescriptorInputRef = useRef(cellDescriptorInput);
-  cellDescriptorInputRef.current = cellDescriptorInput;
-  const pendingEditorValueRef = useRef(pendingEditorValue);
-  pendingEditorValueRef.current = pendingEditorValue;
-  const popoverAnchorElRef = useRef(popoverAnchorEl);
-  popoverAnchorElRef.current = popoverAnchorEl;
+  const cellDescriptorInputRef = useLatestRef(cellDescriptorInput);
+  const pendingEditorValueRef = useLatestRef(pendingEditorValue);
+  const popoverAnchorElRef = useLatestRef(popoverAnchorEl);
 
   // Pre-compute column styles and classNames (avoids per-cell object creation in the row loop)
   const columnMeta = useMemo(() => {
@@ -224,14 +180,14 @@ function DataGridTableInner<T>(props: IOGridDataGridProps<T>): React.ReactElemen
       const isPinnedRight = col.pinned === 'right';
 
       cellStyles[col.columnId] = {
-        minWidth: col.minWidth ?? 80,
+        minWidth: col.minWidth ?? DEFAULT_MIN_COLUMN_WIDTH,
         width: hasExplicitWidth ? columnWidth : undefined,
         maxWidth: hasExplicitWidth ? columnWidth : undefined,
         textAlign: col.type === 'numeric' ? 'right' : col.type === 'boolean' ? 'center' : undefined,
       };
 
       hdrStyles[col.columnId] = {
-        minWidth: col.minWidth ?? 80,
+        minWidth: col.minWidth ?? DEFAULT_MIN_COLUMN_WIDTH,
         width: hasExplicitWidth ? columnWidth : undefined,
         maxWidth: hasExplicitWidth ? columnWidth : undefined,
       };
@@ -250,8 +206,7 @@ function DataGridTableInner<T>(props: IOGridDataGridProps<T>): React.ReactElemen
   }, [visibleCols, getColumnWidth, columnSizingOverrides, freezeCols]);
 
   // Stable row-click handler (avoids creating a new arrow function per row)
-  const selectedRowIdsRef = useRef(selectedRowIds);
-  selectedRowIdsRef.current = selectedRowIds;
+  const selectedRowIdsRef = useLatestRef(selectedRowIds);
 
   const handleSingleRowClick = useCallback((e: React.MouseEvent<HTMLTableRowElement>) => {
     if (rowSelection !== 'single') return;
@@ -269,18 +224,19 @@ function DataGridTableInner<T>(props: IOGridDataGridProps<T>): React.ReactElemen
   const renderCellContent = useCallback(
     (item: T, col: IColumnDef<T>, rowIndex: number, colIdx: number): React.ReactNode => {
       const descriptor = getCellRenderDescriptor(item, col, rowIndex, colIdx, cellDescriptorInputRef.current);
+      const rowId = getRowId(item);
+
+      let content: React.ReactNode;
 
       if (descriptor.mode === 'editing-inline') {
-        return <InlineCellEditor<T> {...buildInlineEditorProps(item, col, descriptor, editCallbacks)} />;
-      }
-
-      if (descriptor.mode === 'editing-popover' && typeof col.cellEditor === 'function') {
+        content = <InlineCellEditor<T> {...buildInlineEditorProps(item, col, descriptor, editCallbacks)} />;
+      } else if (descriptor.mode === 'editing-popover' && typeof col.cellEditor === 'function') {
         const editorProps = buildPopoverEditorProps(item, col, descriptor, pendingEditorValueRef.current, editCallbacks);
         const CustomEditor = col.cellEditor as React.ComponentType<ICellEditorProps<T>>;
-        return (
+        content = (
           <Popover.Root open={!!popoverAnchorElRef.current} onOpenChange={(open: boolean) => { if (!open) cancelPopoverEdit(); }}>
             <Popover.Anchor asChild>
-              <div ref={(el) => el && setPopoverAnchorEl(el)} style={{ minHeight: '100%', minWidth: 40 }} aria-hidden />
+              <div ref={(el) => el && setPopoverAnchorEl(el)} style={POPOVER_ANCHOR_STYLE} aria-hidden />
             </Popover.Anchor>
             <Popover.Portal>
               <Popover.Content sideOffset={4} onOpenAutoFocus={(e: Event) => e.preventDefault()}>
@@ -289,40 +245,40 @@ function DataGridTableInner<T>(props: IOGridDataGridProps<T>): React.ReactElemen
             </Popover.Portal>
           </Popover.Root>
         );
+      } else {
+        const displayContent = resolveCellDisplayContent(col, item, descriptor.displayValue);
+        const cellStyle = resolveCellStyle(col, item);
+        const styledContent = cellStyle ? <span style={cellStyle}>{displayContent}</span> : displayContent;
+
+        const cellClassNames = `${styles.cellContent}${descriptor.isActive && !descriptor.isInRange ? ` ${styles.activeCellContent}` : ''}${descriptor.isInRange ? ` ${styles.cellInRange}` : ''}${descriptor.isInCutRange ? ` ${styles.cellCut}` : ''}${descriptor.isInCopyRange ? ` ${styles.cellCopied}` : ''}`;
+
+        const interactionProps = getCellInteractionProps(descriptor, col.columnId, interactionHandlers);
+
+        content = (
+          <div
+            className={cellClassNames}
+            {...interactionProps}
+            style={descriptor.canEditAny ? CURSOR_CELL_STYLE : undefined}
+          >
+            {styledContent}
+            {descriptor.canEditAny && descriptor.isSelectionEndCell && (
+              <div
+                className={styles.fillHandle}
+                onMouseDown={handleFillHandleMouseDown}
+                aria-label="Fill handle"
+              />
+            )}
+          </div>
+        );
       }
 
-      const content = resolveCellDisplayContent(col, item, descriptor.displayValue);
-      const cellStyle = resolveCellStyle(col, item);
-      const styledContent = cellStyle ? <span style={cellStyle}>{content}</span> : content;
-
-      const cellClassNames = [
-        styles.cellContent,
-        descriptor.isActive && !descriptor.isInRange ? styles.activeCellContent : '',
-        descriptor.isInRange ? styles.cellInRange : '',
-        descriptor.isInCutRange ? styles.cellCut : '',
-        descriptor.isInCopyRange ? styles.cellCopied : '',
-      ].filter(Boolean).join(' ');
-
-      const interactionProps = getCellInteractionProps(descriptor, col.columnId, interactionHandlers);
-
       return (
-        <div
-          className={cellClassNames}
-          {...interactionProps}
-          style={descriptor.canEditAny ? CURSOR_CELL_STYLE : undefined}
-        >
-          {styledContent}
-          {descriptor.canEditAny && descriptor.isSelectionEndCell && (
-            <div
-              className={styles.fillHandle}
-              onMouseDown={handleFillHandleMouseDown}
-              aria-label="Fill handle"
-            />
-          )}
-        </div>
+        <CellErrorBoundary key={`${rowId}-${col.columnId}`} onError={onCellError}>
+          {content}
+        </CellErrorBoundary>
       );
     },
-    [editCallbacks, interactionHandlers, handleFillHandleMouseDown, setPopoverAnchorEl, cancelPopoverEdit]
+    [editCallbacks, interactionHandlers, handleFillHandleMouseDown, setPopoverAnchorEl, cancelPopoverEdit, getRowId, onCellError]
   );
 
   return (
@@ -493,11 +449,11 @@ function DataGridTableInner<T>(props: IOGridDataGridProps<T>): React.ReactElemen
               hasSelection={hasCellSelection}
               canUndo={canUndo}
               canRedo={canRedo}
-              onUndo={onUndo ?? (() => {})}
-              onRedo={onRedo ?? (() => {})}
+              onUndo={onUndo ?? NOOP}
+              onRedo={onRedo ?? NOOP}
               onCopy={handleCopy}
               onCut={handleCut}
-              onPaste={() => void handlePaste()}
+              onPaste={handlePasteVoid}
               onSelectAll={handleSelectAllCells}
               onClose={closeContextMenu}
             />,

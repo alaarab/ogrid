@@ -18,7 +18,8 @@ export function mergeFilter(
     value === undefined ||
     (value.type === 'text' && value.value.trim() === '') ||
     (value.type === 'multiSelect' && value.value.length === 0) ||
-    (value.type === 'date' && !value.value.from && !value.value.to);
+    (value.type === 'date' && !value.value.from && !value.value.to) ||
+    (value.type === 'people' && !value.value);
   if (isEmpty) {
     delete next[key];
   } else {

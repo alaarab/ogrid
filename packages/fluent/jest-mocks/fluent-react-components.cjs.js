@@ -235,6 +235,21 @@ function DataGridCell(props) {
 }
 DataGridCell.displayName = 'DataGridCell';
 
+// Popover -> renders children only when open
+function Popover(props) {
+  const { open, children } = props || {};
+  if (!open) return null;
+  return React.createElement(React.Fragment, null, children);
+}
+Popover.displayName = 'Popover';
+
+// PopoverSurface -> simple div
+function PopoverSurface(props) {
+  const { children, ...rest } = props || {};
+  return React.createElement('div', { 'data-mock': 'PopoverSurface', ...rest }, children);
+}
+PopoverSurface.displayName = 'PopoverSurface';
+
 module.exports = {
   // Core form / input components used in this project
   Button,
@@ -244,6 +259,10 @@ module.exports = {
   Spinner,
   Avatar,
   Tooltip,
+
+  // Popover components
+  Popover,
+  PopoverSurface,
 
   // Styling helpers
   makeStyles,
