@@ -44,7 +44,6 @@ export type {
 export {
   getHeaderFilterConfig,
   getCellRenderDescriptor,
-  isRowInRange,
   resolveCellDisplayContent,
   resolveCellStyle,
   buildInlineEditorProps,
@@ -59,5 +58,5 @@ export type {
   CellRenderMode,
   CellInteractionHandlers,
 } from './dataGridViewModel';
-export { areGridRowPropsEqual } from './gridRowComparator';
+export { areGridRowPropsEqual, isRowInRange } from './gridRowComparator';
 export type { GridRowComparatorProps } from './gridRowComparator';
