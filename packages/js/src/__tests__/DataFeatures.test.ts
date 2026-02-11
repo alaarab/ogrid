@@ -186,15 +186,16 @@ describe('CSV Export', () => {
     global.URL.revokeObjectURL = revokeObjectURL;
 
     const clickSpy = jest.fn();
+    const origCreate = document.createElement.bind(document);
     jest.spyOn(document, 'createElement').mockImplementation((tag: string) => {
       if (tag === 'a') {
-        const a = Object.create(HTMLAnchorElement.prototype) as any;
+        const a = origCreate('a');
         a.setAttribute = jest.fn();
         a.click = clickSpy;
-        a.style = {};
+        a.style = {} as any;
         return a;
       }
-      return document.createElement.call(document, tag) as any;
+      return origCreate(tag);
     });
 
     grid.api.exportToCsv('test.csv');

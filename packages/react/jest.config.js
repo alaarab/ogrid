@@ -23,6 +23,9 @@ module.exports = {
       },
     ],
   },
+  moduleNameMapper: {
+    '^@alaarab/ogrid-core$': '<rootDir>/../core/src/index.ts',
+  },
   collectCoverageFrom: [
     'src/**/*.{ts,tsx}',
     '!src/**/*.d.ts',
