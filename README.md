@@ -5,13 +5,13 @@
 <h1 align="center">OGrid</h1>
 
 <p align="center">
-  <strong>The lightweight React data grid with enterprise features and zero enterprise cost.</strong>
+  <strong>The lightweight, multi-framework data grid with enterprise features and zero enterprise cost.</strong>
 </p>
 
 <p align="center">
-  <a href="https://www.npmjs.com/package/@alaarab/ogrid"><img src="https://img.shields.io/npm/v/@alaarab/ogrid?color=%23217346&label=npm" alt="npm version" /></a>
+  <a href="https://www.npmjs.com/package/@alaarab/ogrid-react-radix"><img src="https://img.shields.io/npm/v/@alaarab/ogrid-react-radix?color=%23217346&label=npm" alt="npm version" /></a>
   <a href="https://github.com/alaarab/ogrid/blob/main/LICENSE"><img src="https://img.shields.io/badge/license-MIT-green" alt="MIT License" /></a>
-  <img src="https://img.shields.io/badge/tests-521%20passing-brightgreen" alt="521 tests passing" />
+  <img src="https://img.shields.io/badge/tests-954%20passing-brightgreen" alt="954 tests passing" />
   <img src="https://img.shields.io/badge/React-17%20%7C%2018%20%7C%2019-blue" alt="React 17, 18, 19" />
   <img src="https://img.shields.io/badge/TypeScript-strict-blue" alt="TypeScript strict" />
 </p>
@@ -25,7 +25,7 @@
 
 ---
 
-Pick the UI framework you already use — **Fluent UI**, **Material UI**, or **Radix UI** — and get sorting, filtering, pagination, cell editing, spreadsheet selection, and more out of the box.
+Pick the UI framework you already use — **Fluent UI**, **Material UI**, or **Radix UI** — and get sorting, filtering, pagination, cell editing, spreadsheet selection, and more out of the box. Or use the **vanilla JS** package for framework-free grids.
 
 ## Why OGrid?
 
@@ -48,21 +48,23 @@ OGrid gives you every feature AG Grid locks behind an enterprise license — for
 
 | Package | npm | Description |
 |---------|-----|-------------|
-| [`@alaarab/ogrid`](./packages/radix) | [![npm](https://img.shields.io/npm/v/@alaarab/ogrid)](https://www.npmjs.com/package/@alaarab/ogrid) | **Default** — Radix UI (lightweight, no Fluent/Material needed) |
-| [`@alaarab/ogrid-fluent`](./packages/fluent) | [![npm](https://img.shields.io/npm/v/@alaarab/ogrid-fluent)](https://www.npmjs.com/package/@alaarab/ogrid-fluent) | Fluent UI v9 implementation |
-| [`@alaarab/ogrid-material`](./packages/material) | [![npm](https://img.shields.io/npm/v/@alaarab/ogrid-material)](https://www.npmjs.com/package/@alaarab/ogrid-material) | Material UI v7 implementation |
-| [`@alaarab/ogrid-core`](./packages/core) | [![npm](https://img.shields.io/npm/v/@alaarab/ogrid-core)](https://www.npmjs.com/package/@alaarab/ogrid-core) | Headless core — types, hooks, utilities |
+| [`@alaarab/ogrid-core`](./packages/core) | [![npm](https://img.shields.io/npm/v/@alaarab/ogrid-core)](https://www.npmjs.com/package/@alaarab/ogrid-core) | Pure TS types, algorithms, utilities (zero deps) |
+| [`@alaarab/ogrid-react`](./packages/react) | [![npm](https://img.shields.io/npm/v/@alaarab/ogrid-react)](https://www.npmjs.com/package/@alaarab/ogrid-react) | React hooks, headless components, shared test factories |
+| [`@alaarab/ogrid-react-radix`](./packages/react-radix) | [![npm](https://img.shields.io/npm/v/@alaarab/ogrid-react-radix)](https://www.npmjs.com/package/@alaarab/ogrid-react-radix) | **Default** — Radix UI (lightweight, no Fluent/Material needed) |
+| [`@alaarab/ogrid-react-fluent`](./packages/react-fluent) | [![npm](https://img.shields.io/npm/v/@alaarab/ogrid-react-fluent)](https://www.npmjs.com/package/@alaarab/ogrid-react-fluent) | Fluent UI v9 implementation |
+| [`@alaarab/ogrid-react-material`](./packages/react-material) | [![npm](https://img.shields.io/npm/v/@alaarab/ogrid-react-material)](https://www.npmjs.com/package/@alaarab/ogrid-react-material) | Material UI v7 implementation |
+| [`@alaarab/ogrid-js`](./packages/js) | [![npm](https://img.shields.io/npm/v/@alaarab/ogrid-js)](https://www.npmjs.com/package/@alaarab/ogrid-js) | Vanilla JS data grid (no framework) |
 
-All framework packages re-export everything from `@alaarab/ogrid-core` — one import is all you need.
+React UI packages re-export everything from `@alaarab/ogrid-react` (which re-exports from `@alaarab/ogrid-core`) — one import is all you need.
 
 ## Quick Start
 
 ```bash
-npm install @alaarab/ogrid
+npm install @alaarab/ogrid-react-radix
 ```
 
 ```tsx
-import { OGrid, type IColumnDef } from '@alaarab/ogrid';
+import { OGrid, type IColumnDef } from '@alaarab/ogrid-react-radix';
 
 const columns: IColumnDef<Employee>[] = [
   { columnId: 'name', name: 'Name', sortable: true, filterable: { type: 'text' } },
@@ -85,7 +87,33 @@ function App() {
 }
 ```
 
-Using Fluent UI? Change the import to `@alaarab/ogrid-fluent`. Material UI? `@alaarab/ogrid-material`. Same API.
+Using Fluent UI? Change the import to `@alaarab/ogrid-react-fluent`. Material UI? `@alaarab/ogrid-react-material`. Same API.
+
+### Vanilla JS
+
+```bash
+npm install @alaarab/ogrid-js
+```
+
+```ts
+import { OGrid } from '@alaarab/ogrid-js';
+
+const grid = new OGrid(document.getElementById('grid')!, {
+  columns: [
+    { columnId: 'name', name: 'Name', sortable: true, filterable: { type: 'text' } },
+    { columnId: 'department', name: 'Department', filterable: { type: 'multiSelect' } },
+    { columnId: 'salary', name: 'Salary', editable: true, type: 'numeric' },
+  ],
+  data: employees,
+  getRowId: (e) => e.id,
+  editable: true,
+  cellSelection: true,
+});
+
+// Later: update data, destroy
+grid.getApi().setRowData(newData);
+grid.destroy();
+```
 
 ## Features
 
@@ -175,16 +203,18 @@ const dataSource: IDataSource<Product> = {
 ```
 ogrid/
 ├── packages/
-│   ├── core/         # @alaarab/ogrid-core     – types, hooks, utilities (headless)
-│   ├── fluent/       # @alaarab/ogrid-fluent    – Fluent UI components
-│   ├── material/     # @alaarab/ogrid-material  – Material UI components
-│   ├── radix/        # @alaarab/ogrid           – Radix UI components (default)
-│   ├── docs/         # Documentation site
-│   └── examples/     # Example apps per framework
-└── package.json      # npm workspaces root
+│   ├── core/             # @alaarab/ogrid-core           – pure TS types, algorithms, utilities
+│   ├── react/            # @alaarab/ogrid-react           – React hooks, headless components
+│   ├── react-radix/      # @alaarab/ogrid-react-radix     – Radix UI components (default)
+│   ├── react-fluent/     # @alaarab/ogrid-react-fluent    – Fluent UI components
+│   ├── react-material/   # @alaarab/ogrid-react-material  – Material UI components
+│   ├── js/               # @alaarab/ogrid-js              – Vanilla JS data grid
+│   ├── docs/             # Documentation site
+│   └── examples/         # Example apps per framework
+└── package.json          # npm workspaces root
 ```
 
-**Core** owns all state logic (hooks) and types. **UI packages** are thin view layers using their framework's primitives. All three pass the same test suite.
+**Core** owns types and pure TS utilities. **React** owns hooks and state logic. **UI packages** are thin view layers using their framework's primitives. All three React UI packages pass the same test suite.
 
 ## Development
 
@@ -207,10 +237,12 @@ npm run docs:dev                # Docusaurus dev server
 
 | Package | Peer Dependencies |
 |---------|-------------------|
-| `@alaarab/ogrid` (Radix) | `react`, `react-dom` |
-| `@alaarab/ogrid-fluent` | `react`, `react-dom`, `@fluentui/react-components ^9`, `@fluentui/react-icons ^2` |
-| `@alaarab/ogrid-material` | `react`, `react-dom`, `@mui/material ^7`, `@mui/icons-material ^7`, `@emotion/react ^11`, `@emotion/styled ^11` |
-| `@alaarab/ogrid-core` | `react ^17 \|\| ^18 \|\| ^19` |
+| `@alaarab/ogrid-react-radix` (Radix) | `react`, `react-dom` |
+| `@alaarab/ogrid-react-fluent` | `react`, `react-dom`, `@fluentui/react-components ^9`, `@fluentui/react-icons ^2` |
+| `@alaarab/ogrid-react-material` | `react`, `react-dom`, `@mui/material ^7`, `@mui/icons-material ^7`, `@emotion/react ^11`, `@emotion/styled ^11` |
+| `@alaarab/ogrid-react` | `react ^17 \|\| ^18 \|\| ^19` |
+| `@alaarab/ogrid-js` | None |
+| `@alaarab/ogrid-core` | None |
 
 ## License
 

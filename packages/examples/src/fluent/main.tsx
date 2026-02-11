@@ -1,7 +1,7 @@
 import React from 'react';
 import { createRoot } from 'react-dom/client';
 import { FluentProvider, webLightTheme } from '@fluentui/react-components';
-import { OGrid } from '@alaarab/ogrid-fluent';
+import { OGrid } from '@alaarab/ogrid-react-fluent';
 import { makeDemoProjects, makeDemoColumns, getRowId } from '../shared/demoData';
 import type { Project } from '../shared/demoData';
 
@@ -14,7 +14,7 @@ function App() {
       <div style={{ padding: 24, maxWidth: 1200, margin: '0 auto' }}>
         <h1>OGrid - Fluent UI Example</h1>
         <p style={{ color: '#666', marginBottom: 16 }}>
-          A fully featured data table powered by <code>@alaarab/ogrid-fluent</code>.
+          A fully featured data table powered by <code>@alaarab/ogrid-react-fluent</code>.
           Includes sorting, multi-select &amp; text filtering, column chooser, and pagination.
         </p>
         <OGrid<Project>
