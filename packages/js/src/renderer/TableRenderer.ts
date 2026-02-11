@@ -336,7 +336,7 @@ export class TableRenderer<T> {
     const hasCheckbox = this.hasCheckboxColumn();
     const colOffset = this.getColOffset();
 
-    if (items.length === 0) {
+    if (items.length === 0 && !this.state.isLoading) {
       const tr = document.createElement('tr');
       const td = document.createElement('td');
       td.colSpan = visibleCols.length + colOffset;
