@@ -7,7 +7,7 @@
 import * as React from 'react';
 import { SideBar } from './SideBar';
 import type { SideBarProps } from './SideBar';
-import { GRID_BORDER_RADIUS } from '../constants';
+import { GRID_BORDER_RADIUS } from '@alaarab/ogrid-core';
 
 export interface OGridLayoutProps {
   /** Root container element (default: 'div'). Material can pass Box. */

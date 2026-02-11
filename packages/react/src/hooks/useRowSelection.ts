@@ -94,6 +94,7 @@ export function useRowSelection<T>(params: UseRowSelectionParams<T>): UseRowSele
       lastClickedRowRef.current = rowIndex;
       updateSelection(next);
     },
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- itemsRef, selectedRowIdsRef are stable refs
     [rowSelection, getRowId, updateSelection]
   );
 

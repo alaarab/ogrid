@@ -1,11 +1,8 @@
 import { useMemo, useCallback, useState } from 'react';
 import type { RefObject } from 'react';
-import { flattenColumns, getDataGridStatusBarConfig } from '../utils';
-import { parseValue } from '../utils/valueParsers';
-import { computeAggregations } from '../utils/aggregationUtils';
+import { flattenColumns, getDataGridStatusBarConfig, parseValue, computeAggregations } from '../utils';
 import type { HeaderFilterConfigInput, CellRenderDescriptorInput } from '../utils';
 import type { RowId, IOGridDataGridProps, IStatusBarProps, IColumnDef } from '../types';
-import type { ICellValueChangedEvent } from '../types';
 import { useRowSelection } from './useRowSelection';
 import { useCellEditing } from './useCellEditing';
 import { useActiveCell } from './useActiveCell';
@@ -17,7 +14,6 @@ import { useFillHandle } from './useFillHandle';
 import { useUndoRedo } from './useUndoRedo';
 import { useLatestRef } from './useLatestRef';
 import { useTableLayout } from './useTableLayout';
-import { CHECKBOX_COLUMN_WIDTH, DEFAULT_MIN_COLUMN_WIDTH, CELL_PADDING } from '../constants';
 
 // Stable no-op handlers used when cellSelection is disabled (module-scope = no re-renders)
 const NOOP = () => {};
@@ -191,7 +187,8 @@ export function useDataGridState<T>(
   const undoRedo = useUndoRedo<T>({ onCellValueChanged: onCellValueChangedProp });
   const onCellValueChanged = undoRedo.onCellValueChanged;
 
-  const flatColumnsRaw = useMemo(() => flattenColumns(columns), [columns]);
+  // Cast is safe: input columns are React.IColumnDef instances; flattenColumns only extracts leaves.
+  const flatColumnsRaw = useMemo(() => flattenColumns(columns) as IColumnDef<T>[], [columns]);
 
   // Apply runtime pin overrides (from applyColumnState or programmatic changes)
   const flatColumns = useMemo(() => {
@@ -325,7 +322,6 @@ export function useDataGridState<T>(
     desiredTableWidth,
     columnSizingOverrides,
     setColumnSizingOverrides,
-    onColumnResized: onColumnResizedFromLayout,
   } = useTableLayout({
     wrapperRef,
     visibleCols,

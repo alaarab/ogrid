@@ -83,7 +83,7 @@
 .dataTable thead.stickyHeader {
   position: sticky;
   top: 0;
-  z-index: 6;
+  z-index: 8;
   background: var(--ogrid-bg-subtle, #f3f2f1);
 }
 
@@ -95,19 +95,19 @@
 .dataTable .freezeColFirst {
   position: sticky;
   left: 0;
-  z-index: 2;
+  z-index: 6;
   background: var(--ogrid-bg, #ffffff);
   will-change: transform;
 }
 
-/* Freeze/pinned header cells need top: 0 + z-index: 3 so they stick in BOTH
+/* Freeze/pinned header cells need top: 0 + highest z-index so they stick in BOTH
    directions — left (from .freezeCol/.pinnedCol) AND top (from .stickyHeader).
    Without explicit top, the child's own position: sticky overrides the parent's. */
 .dataTable thead.stickyHeader .freezeColFirst,
 .dataTable thead.stickyHeader .pinnedColLeft,
 .dataTable thead.stickyHeader .pinnedColRight {
   top: 0;
-  z-index: 7;
+  z-index: 9;
 }
 
 .dataTable thead .freezeColFirst {
@@ -120,7 +120,7 @@
 .dataTable .pinnedColLeft {
   position: sticky;
   left: 0;
-  z-index: 2;
+  z-index: 6;
   background: var(--ogrid-bg, #ffffff);
   will-change: transform;
 
@@ -143,7 +143,7 @@
 .dataTable .pinnedColRight {
   position: sticky;
   right: 0;
-  z-index: 2;
+  z-index: 6;
   background: var(--ogrid-bg, #ffffff);
   will-change: transform;
 

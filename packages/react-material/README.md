@@ -3,7 +3,7 @@
 </p>
 
 <p align="center">
-  <a href="https://www.npmjs.com/package/@alaarab/ogrid-material"><img src="https://img.shields.io/npm/v/@alaarab/ogrid-material?color=%23217346&label=npm" alt="npm version" /></a>
+  <a href="https://www.npmjs.com/package/@alaarab/ogrid-react-material"><img src="https://img.shields.io/npm/v/@alaarab/ogrid-react-material?color=%23217346&label=npm" alt="npm version" /></a>
   <a href="https://github.com/alaarab/ogrid/blob/main/LICENSE"><img src="https://img.shields.io/badge/license-MIT-green" alt="MIT License" /></a>
   <img src="https://img.shields.io/badge/React-17%20%7C%2018%20%7C%2019-blue" alt="React 17, 18, 19" />
   <img src="https://img.shields.io/badge/TypeScript-strict-blue" alt="TypeScript strict" />
@@ -15,7 +15,7 @@
 
 ---
 
-OGrid data grid for **[Material UI v7](https://mui.com/)**, built on MUI Table. Also available for [Radix UI](https://www.npmjs.com/package/@alaarab/ogrid) (default, lightweight) and [Fluent UI](https://www.npmjs.com/package/@alaarab/ogrid-fluent). Same API, just swap the import.
+OGrid data grid for **[Material UI v7](https://mui.com/)**, built on MUI Table. Also available for [Radix UI](https://www.npmjs.com/package/@alaarab/ogrid-react-radix) (default, lightweight) and [Fluent UI](https://www.npmjs.com/package/@alaarab/ogrid-react-fluent). Same API, just swap the import.
 
 ## Why OGrid?
 
@@ -39,7 +39,7 @@ Sorting · Filtering (text, multi-select, date range, people picker) · Paginati
 ## Install
 
 ```bash
-npm install @alaarab/ogrid-material
+npm install @alaarab/ogrid-react-material
 ```
 
 ### Peer Dependencies
@@ -56,7 +56,7 @@ react-dom ^17.0.0 || ^18.0.0 || ^19.0.0
 ## Quick Start
 
 ```tsx
-import { OGrid, type IColumnDef } from '@alaarab/ogrid-material';
+import { OGrid, type IColumnDef } from '@alaarab/ogrid-react-material';
 
 const columns: IColumnDef<Employee>[] = [
   { columnId: 'name', name: 'Name', sortable: true, editable: true },
