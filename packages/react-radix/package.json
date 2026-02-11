@@ -1,0 +1,62 @@
+{
+  "name": "@alaarab/ogrid-react-radix",
+  "version": "2.0.0-beta",
+  "description": "OGrid default (Radix) – Data grid with sorting, filtering, pagination, column chooser, and CSV export. Packed with Radix UI; no Fluent or Material required.",
+  "main": "dist/esm/index.js",
+  "module": "dist/esm/index.js",
+  "types": "dist/types/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/types/index.d.ts",
+      "import": "./dist/esm/index.js",
+      "require": "./dist/esm/index.js"
+    }
+  },
+  "scripts": {
+    "build": "rimraf dist && tsc -p tsconfig.build.json && node scripts/compile-styles.js",
+    "test": "jest",
+    "storybook": "storybook dev -p 6008 --no-open",
+    "build-storybook": "storybook build"
+  },
+  "keywords": [
+    "ogrid",
+    "radix",
+    "datatable",
+    "react",
+    "typescript",
+    "grid",
+    "headless"
+  ],
+  "author": "Ala Arab",
+  "license": "MIT",
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "sideEffects": [
+    "**/*.css"
+  ],
+  "engines": {
+    "node": ">=18"
+  },
+  "dependencies": {
+    "@alaarab/ogrid-react": "2.0.0-beta",
+    "@radix-ui/react-checkbox": "^1.1.2",
+    "@radix-ui/react-popover": "^1.1.2"
+  },
+  "peerDependencies": {
+    "react": "^17.0.0 || ^18.0.0 || ^19.0.0",
+    "react-dom": "^17.0.0 || ^18.0.0 || ^19.0.0"
+  },
+  "devDependencies": {
+    "@storybook/react-vite": "10.2.8",
+    "eslint-plugin-storybook": "10.2.8",
+    "sass": "^1.83.4",
+    "storybook": "10.2.8",
+    "vite": "^7.0.0"
+  },
+  "publishConfig": {
+    "access": "public"
+  }
+}
