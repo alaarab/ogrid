@@ -349,7 +349,7 @@ export function useDataGridState<T>(
     [statusBar, items.length, selectedRowIds.size, aggregation]
   );
 
-  const showEmptyInGrid = items.length === 0 && !!emptyState;
+  const showEmptyInGrid = items.length === 0 && !!emptyState && !props.isLoading;
   const hasCellSelection = selectionRange != null || activeCell != null;
 
   // --- View-model inputs (shared across all 3 DataGridTables) ---
