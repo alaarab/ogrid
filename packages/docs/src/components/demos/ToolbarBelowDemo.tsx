@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { OGrid } from '@alaarab/ogrid';
+import { OGrid } from '@alaarab/ogrid-react-radix';
 import { LiveDemo } from '../LiveDemo';
 import { people, getRowId, toolbarColumns, btnStyle, type Person } from './demoData';
 
