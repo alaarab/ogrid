@@ -9,18 +9,20 @@
     "test": "npm run test --workspaces --if-present",
     "test:all": "npm run test --workspaces --if-present",
     "test:core": "npm test -w @alaarab/ogrid-core",
-    "test:fluent": "npm test -w @alaarab/ogrid-fluent",
-    "test:material": "npm test -w @alaarab/ogrid-material",
-    "test:radix": "npm test -w @alaarab/ogrid",
-    "storybook:fluent": "npm run storybook -w @alaarab/ogrid-fluent",
-    "storybook:material": "npm run storybook -w @alaarab/ogrid-material",
-    "storybook:radix": "npm run storybook -w @alaarab/ogrid",
+    "test:js": "npm test -w @alaarab/ogrid-js",
+    "test:react": "npm test -w @alaarab/ogrid-react",
+    "test:fluent": "npm test -w @alaarab/ogrid-react-fluent",
+    "test:material": "npm test -w @alaarab/ogrid-react-material",
+    "test:radix": "npm test -w @alaarab/ogrid-react-radix",
+    "storybook:fluent": "npm run storybook -w @alaarab/ogrid-react-fluent",
+    "storybook:material": "npm run storybook -w @alaarab/ogrid-react-material",
+    "storybook:radix": "npm run storybook -w @alaarab/ogrid-react-radix",
     "docs:dev": "npm run start -w @alaarab/ogrid-docs",
-    "docs:dev:full": "npm run build -w @alaarab/ogrid-core && npm run build -w @alaarab/ogrid && npm run start -w @alaarab/ogrid-docs",
+    "docs:dev:full": "npm run build -w @alaarab/ogrid-core && npm run build -w @alaarab/ogrid-react && npm run build -w @alaarab/ogrid-react-radix && npm run start -w @alaarab/ogrid-docs",
     "docs:build": "npm run build -w @alaarab/ogrid-docs",
     "docs:serve": "npm run serve -w @alaarab/ogrid-docs",
     "lint": "eslint .",
-    "publish:all": "npm publish --workspace=packages/core --access=public && npm publish --workspace=packages/fluent --access=public && npm publish --workspace=packages/material --access=public && npm publish --workspace=packages/radix --access=public"
+    "publish:all": "npm publish --workspace=packages/core --access=public && npm publish --workspace=packages/react --access=public && npm publish --workspace=packages/js --access=public && npm publish --workspace=packages/react-fluent --access=public && npm publish --workspace=packages/react-material --access=public && npm publish --workspace=packages/react-radix --access=public"
   },
   "packageManager": "npm@11.6.2",
   "engines": {
@@ -48,8 +50,5 @@
     "typescript": "^5.7.3",
     "typescript-eslint": "^8.15.0"
   },
-  "dependencies": {
-    "@docusaurus/theme-mermaid": "3.9.2"
-  },
-  "version": "1.9.0"
+  "version": "2.0.0-beta"
 }

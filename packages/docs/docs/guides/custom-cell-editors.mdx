@@ -31,7 +31,7 @@ A popup editor renders in a floating overlay above the cell. This is ideal for e
 ### Step 1: Create the Editor Component
 
 ```tsx
-import type { ICellEditorProps } from '@alaarab/ogrid';
+import type { ICellEditorProps } from '@alaarab/ogrid-react-radix';
 
 interface NoteItem {
   id: string;
@@ -66,7 +66,7 @@ function NotesEditor({ value, onValueChange, onCommit, onCancel }: ICellEditorPr
 Set `cellEditor` to your component and `cellEditorPopup: true` to render it in a floating overlay:
 
 ```tsx
-import type { IColumnDef } from '@alaarab/ogrid';
+import type { IColumnDef } from '@alaarab/ogrid-react-radix';
 
 const columns: IColumnDef<NoteItem>[] = [
   { columnId: 'title', name: 'Title', editable: true },

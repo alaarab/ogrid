@@ -1,4 +1,4 @@
-import type { IColumnDef } from '@alaarab/ogrid-core';
+import type { IColumnDef } from '@alaarab/ogrid-react';
 
 export interface Project {
   id: string;

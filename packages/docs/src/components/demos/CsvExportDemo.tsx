@@ -1,6 +1,6 @@
 import React, { useCallback } from 'react';
-import { OGrid, exportToCsv } from '@alaarab/ogrid';
-import type { CsvColumn } from '@alaarab/ogrid';
+import { OGrid, exportToCsv } from '@alaarab/ogrid-react-radix';
+import type { CsvColumn } from '@alaarab/ogrid-react-radix';
 import { LiveDemo } from '../LiveDemo';
 import { people, getRowId, paginationColumns, btnStyle, type Person } from './demoData';
 

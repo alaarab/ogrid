@@ -5,12 +5,12 @@ title: OGrid Props
 
 # OGrid Props
 
-Complete reference for `IOGridProps<T>`, the props accepted by the `OGrid` component in all UI packages (`@alaarab/ogrid`, `@alaarab/ogrid-fluent`, `@alaarab/ogrid-material`).
+Complete reference for `IOGridProps<T>`, the props accepted by the `OGrid` component in all UI packages (`@alaarab/ogrid-react-radix`, `@alaarab/ogrid-react-fluent`, `@alaarab/ogrid-react-material`).
 
 ```typescript
-import { OGrid } from '@alaarab/ogrid'; // Radix (default)
-import { OGrid } from '@alaarab/ogrid-fluent';
-import { OGrid } from '@alaarab/ogrid-material';
+import { OGrid } from '@alaarab/ogrid-react-radix'; // Radix (default)
+import { OGrid } from '@alaarab/ogrid-react-fluent';
+import { OGrid } from '@alaarab/ogrid-react-material';
 ```
 
 :::caution v1.6.0 Breaking Changes
@@ -135,7 +135,7 @@ The `OGrid` component accepts a `ref` prop that exposes the `IOGridApi<T>` imper
 
 ```typescript
 import { useRef } from 'react';
-import { OGrid, IOGridApi } from '@alaarab/ogrid';
+import { OGrid, IOGridApi } from '@alaarab/ogrid-react-radix';
 
 function MyGrid() {
   const apiRef = useRef<IOGridApi<MyRow>>(null);
@@ -154,7 +154,7 @@ function MyGrid() {
 ## Minimal Example
 
 ```typescript
-import { OGrid } from '@alaarab/ogrid';
+import { OGrid } from '@alaarab/ogrid-react-radix';
 
 interface Person {
   id: number;
