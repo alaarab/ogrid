@@ -214,6 +214,7 @@ function DataGridTableInner<T>(props: IOGridDataGridProps<T>): React.ReactElemen
     if (!rowId) return;
     const ids = selectedRowIdsRef.current;
     updateSelection(ids.has(rowId) ? new Set() : new Set([rowId]));
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- selectedRowIdsRef is a stable ref
   }, [rowSelection, updateSelection]);
 
   // Stable header select-all handler
@@ -278,6 +279,7 @@ function DataGridTableInner<T>(props: IOGridDataGridProps<T>): React.ReactElemen
         </CellErrorBoundary>
       );
     },
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- *Ref vars are stable refs from useLatestRef
     [editCallbacks, interactionHandlers, handleFillHandleMouseDown, setPopoverAnchorEl, cancelPopoverEdit, getRowId, onCellError]
   );
 
@@ -347,7 +349,7 @@ function DataGridTableInner<T>(props: IOGridDataGridProps<T>): React.ReactElemen
                           );
                         }
                         // Leaf cell
-                        const col = cell.columnDef!;
+                        const col = cell.columnDef! as IColumnDef<T>;
                         const leafRowSpan = headerRows.length > 1 && rowIdx < headerRows.length - 1
                           ? headerRows.length - rowIdx
                           : undefined;

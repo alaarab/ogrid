@@ -166,7 +166,7 @@ function DataGridTableInner<T>(props: IOGridDataGridProps<T>): React.ReactElemen
   const allowOverflowX = !suppressHorizontalScroll && containerWidth > 0 && (minTableWidth > containerWidth || desiredTableWidth > containerWidth);
 
   // Pre-compute column class maps (avoids per-cell .filter(Boolean).join(' '))
-  const { cellClassMap, headerClassMap, colIndexMap } = useMemo(() => {
+  const { cellClassMap, headerClassMap } = useMemo(() => {
     const cm: Record<string, string> = {};
     const hm: Record<string, string> = {};
     const im = new Map<string, number>();
@@ -349,6 +349,7 @@ function DataGridTableInner<T>(props: IOGridDataGridProps<T>): React.ReactElemen
     if (rowSelection !== 'single') return;
     const ids = selectedRowIdsRef.current;
     updateSelection(ids.has(rowId) ? new Set() : new Set([rowId]));
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- selectedRowIdsRef is a stable ref
   }, [rowSelection, updateSelection]);
 
   // Stable getRowId wrapper for Fluent DataGrid

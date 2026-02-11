@@ -29,7 +29,6 @@ export function InlineCellEditor<T>(props: InlineCellEditorProps<T>): React.Reac
         </Checkbox.Root>
       )}
       renderSelect={(value, values, onCommit, onCancel) => {
-        const { column } = props;
         return (
           <div style={selectWrapperStyle}>
             <select

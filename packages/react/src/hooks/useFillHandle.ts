@@ -3,8 +3,7 @@ import type { RefObject } from 'react';
 import { normalizeSelectionRange } from '../types';
 import type { ISelectionRange, IActiveCell } from '../types';
 import type { IColumnDef, ICellValueChangedEvent } from '../types/columnTypes';
-import { getCellValue } from '../utils';
-import { parseValue } from '../utils/valueParsers';
+import { getCellValue, parseValue } from '../utils';
 
 export interface UseFillHandleParams<T> {
   items: T[];
@@ -168,7 +167,7 @@ export function useFillHandle<T>(params: UseFillHandleParams<T>): UseFillHandleR
       const startItem = items[norm.startRow];
       const startColDef = visibleCols[norm.startCol];
       if (startItem && startColDef) {
-        const startValue = getCellValue(startItem, startColDef);
+        const startValue = getCellValue(startItem as T, startColDef);
         beginBatch?.();
         for (let row = norm.startRow; row <= norm.endRow; row++) {
           for (let col = norm.startCol; col <= norm.endCol; col++) {

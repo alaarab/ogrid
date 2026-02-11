@@ -1,7 +1,7 @@
 import { getStatusBarParts } from '@alaarab/ogrid-core';
 import type { IStatusBarProps } from '@alaarab/ogrid-core';
 
-export class StatusBar<T> {
+export class StatusBar {
   private container: HTMLElement;
   private el: HTMLElement | null = null;
 

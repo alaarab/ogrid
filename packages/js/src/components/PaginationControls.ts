@@ -1,5 +1,5 @@
 import type { GridState } from '../state/GridState';
-import { getPaginationViewModel, PAGE_SIZE_OPTIONS } from '@alaarab/ogrid-core';
+import { getPaginationViewModel } from '@alaarab/ogrid-core';
 
 export class PaginationControls<T> {
   private container: HTMLElement;

@@ -1,4 +1,3 @@
-import type { IColumnDef } from '../types/columnTypes';
 import type { RowId } from '../types/gridTypes';
 import type { IActiveCell, ISelectionRange } from '@alaarab/ogrid-core';
 import { getCellValue, buildHeaderRows, isInSelectionRange } from '@alaarab/ogrid-core';
@@ -264,7 +263,7 @@ export class TableRenderer<T> {
             this.interactionState?.onCellMouseDown?.(rowIndex, colIndex, e);
           });
 
-          td.addEventListener('dblclick', (e) => {
+          td.addEventListener('dblclick', () => {
             this.interactionState?.onCellDoubleClick?.(rowIndex, colIndex, rowId, col.columnId);
           });
 
