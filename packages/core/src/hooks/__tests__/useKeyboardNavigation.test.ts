@@ -8,30 +8,42 @@ describe('useKeyboardNavigation', () => {
   ] as import('../../types').IColumnDef<{ id: string; name: string }>[];
   const wrapperRef = { current: document.createElement('div') };
 
-  const defaultParams = {
-    items,
-    visibleCols,
-    colOffset: 0,
-    hasCheckboxCol: false,
-    visibleColumnCount: 1,
-    activeCell: null,
-    setActiveCell: jest.fn(),
-    selectionRange: null,
-    setSelectionRange: jest.fn(),
-    editable: false,
-    onCellValueChanged: undefined,
-    getRowId: (item: { id: string }) => item.id,
-    editingCell: null,
-    setEditingCell: jest.fn(),
-    rowSelection: 'none' as const,
-    selectedRowIds: new Set<string>(),
-    handleRowCheckboxChange: jest.fn(),
-    handleCopy: jest.fn(),
-    handleCut: jest.fn(),
-    handlePaste: jest.fn().mockResolvedValue(undefined),
-    setContextMenu: jest.fn(),
-    wrapperRef,
-  };
+  // Helper to create params in the new grouped structure
+  const makeParams = (overrides: Record<string, any> = {}) => ({
+    data: {
+      items: (overrides.items !== undefined ? overrides.items : items) as typeof items,
+      visibleCols: (overrides.visibleCols !== undefined ? overrides.visibleCols : visibleCols) as typeof visibleCols,
+      colOffset: (overrides.colOffset !== undefined ? overrides.colOffset : 0) as number,
+      hasCheckboxCol: (overrides.hasCheckboxCol !== undefined ? overrides.hasCheckboxCol : false) as boolean,
+      visibleColumnCount: (overrides.visibleColumnCount !== undefined ? overrides.visibleColumnCount : 1) as number,
+      getRowId: (overrides.getRowId !== undefined ? overrides.getRowId : ((item: { id: string }) => item.id)) as (item: any) => string,
+    },
+    state: {
+      activeCell: (overrides.activeCell !== undefined ? overrides.activeCell : null) as any,
+      selectionRange: (overrides.selectionRange !== undefined ? overrides.selectionRange : null) as any,
+      editingCell: (overrides.editingCell !== undefined ? overrides.editingCell : null) as any,
+      selectedRowIds: (overrides.selectedRowIds !== undefined ? overrides.selectedRowIds : new Set<string>()) as Set<string>,
+    },
+    handlers: {
+      setActiveCell: (overrides.setActiveCell !== undefined ? overrides.setActiveCell : jest.fn()) as jest.Mock,
+      setSelectionRange: (overrides.setSelectionRange !== undefined ? overrides.setSelectionRange : jest.fn()) as jest.Mock,
+      setEditingCell: (overrides.setEditingCell !== undefined ? overrides.setEditingCell : jest.fn()) as jest.Mock,
+      handleRowCheckboxChange: (overrides.handleRowCheckboxChange !== undefined ? overrides.handleRowCheckboxChange : jest.fn()) as jest.Mock,
+      handleCopy: (overrides.handleCopy !== undefined ? overrides.handleCopy : jest.fn()) as jest.Mock,
+      handleCut: (overrides.handleCut !== undefined ? overrides.handleCut : jest.fn()) as jest.Mock,
+      handlePaste: (overrides.handlePaste !== undefined ? overrides.handlePaste : jest.fn().mockResolvedValue(undefined)) as jest.Mock,
+      setContextMenu: (overrides.setContextMenu !== undefined ? overrides.setContextMenu : jest.fn()) as jest.Mock,
+      onUndo: overrides.onUndo as (() => void) | undefined,
+      onRedo: overrides.onRedo as (() => void) | undefined,
+      clearClipboardRanges: overrides.clearClipboardRanges as (() => void) | undefined,
+    },
+    features: {
+      editable: (overrides.editable !== undefined ? overrides.editable : false) as boolean,
+      onCellValueChanged: overrides.onCellValueChanged as any,
+      rowSelection: (overrides.rowSelection !== undefined ? overrides.rowSelection : 'none' as const) as any,
+      wrapperRef: (overrides.wrapperRef !== undefined ? overrides.wrapperRef : wrapperRef) as typeof wrapperRef,
+    },
+  });
 
   beforeEach(() => {
     jest.clearAllMocks();
@@ -39,7 +51,7 @@ describe('useKeyboardNavigation', () => {
 
   it('returns handleGridKeyDown function', () => {
     const { result } = renderHook(() =>
-      useKeyboardNavigation({ ...defaultParams })
+      useKeyboardNavigation(makeParams())
     );
 
     expect(typeof result.current.handleGridKeyDown).toBe('function');
@@ -48,10 +60,7 @@ describe('useKeyboardNavigation', () => {
   it('ArrowDown when activeCell is null sets active cell to (0, colOffset) and prevents default', () => {
     const setActiveCell = jest.fn();
     const { result } = renderHook(() =>
-      useKeyboardNavigation({
-        ...defaultParams,
-        setActiveCell,
-      })
+      useKeyboardNavigation(makeParams({ setActiveCell }))
     );
 
     const e = {
@@ -73,11 +82,7 @@ describe('useKeyboardNavigation', () => {
   it('when items.length is 0, ArrowDown does nothing', () => {
     const setActiveCell = jest.fn();
     const { result } = renderHook(() =>
-      useKeyboardNavigation({
-        ...defaultParams,
-        items: [],
-        setActiveCell,
-      })
+      useKeyboardNavigation(makeParams({ items: [], setActiveCell }))
     );
 
     const e = {
@@ -95,11 +100,7 @@ describe('useKeyboardNavigation', () => {
   it('Ctrl+C when activeCell is set calls handleCopy and prevents default', () => {
     const handleCopy = jest.fn();
     const { result } = renderHook(() =>
-      useKeyboardNavigation({
-        ...defaultParams,
-        activeCell: { rowIndex: 0, columnIndex: 0 },
-        handleCopy,
-      })
+      useKeyboardNavigation(makeParams({ activeCell: { rowIndex: 0, columnIndex: 0 }, handleCopy }))
     );
 
     const e = {
@@ -120,12 +121,11 @@ describe('useKeyboardNavigation', () => {
   it('Escape when editingCell is set calls setEditingCell(null)', () => {
     const setEditingCell = jest.fn();
     const { result } = renderHook(() =>
-      useKeyboardNavigation({
-        ...defaultParams,
+      useKeyboardNavigation(makeParams({
         activeCell: { rowIndex: 0, columnIndex: 0 },
         editingCell: { rowId: '1', columnId: 'name' },
         setEditingCell,
-      })
+      }))
     );
 
     const e = {
@@ -165,8 +165,7 @@ describe('useKeyboardNavigation', () => {
     ] as import('../../types').IColumnDef<Item>[];
 
     function makeCtrlParams(activeRow: number, activeCol: number) {
-      return {
-        ...defaultParams,
+      return makeParams({
         items: ctrlItems,
         visibleCols: ctrlCols,
         visibleColumnCount: 3,
@@ -174,7 +173,7 @@ describe('useKeyboardNavigation', () => {
         setActiveCell: jest.fn(),
         setSelectionRange: jest.fn(),
         getRowId: (item: Item) => item.id,
-      };
+      });
     }
 
     function fireKey(handler: (e: React.KeyboardEvent) => void, key: string, opts: { ctrl?: boolean; shift?: boolean } = {}) {
@@ -195,7 +194,7 @@ describe('useKeyboardNavigation', () => {
       const p = makeCtrlParams(0, 0);
       const { result } = renderHook(() => useKeyboardNavigation(p));
       fireKey(result.current.handleGridKeyDown, 'ArrowDown', { ctrl: true });
-      expect(p.setActiveCell).toHaveBeenCalledWith({ rowIndex: 2, columnIndex: 0 });
+      expect(p.handlers.setActiveCell).toHaveBeenCalledWith({ rowIndex: 2, columnIndex: 0 });
     });
 
     it('Ctrl+Down from non-empty cell with empty below jumps to next non-empty', () => {
@@ -203,7 +202,7 @@ describe('useKeyboardNavigation', () => {
       const p = makeCtrlParams(2, 0);
       const { result } = renderHook(() => useKeyboardNavigation(p));
       fireKey(result.current.handleGridKeyDown, 'ArrowDown', { ctrl: true });
-      expect(p.setActiveCell).toHaveBeenCalledWith({ rowIndex: 4, columnIndex: 0 });
+      expect(p.handlers.setActiveCell).toHaveBeenCalledWith({ rowIndex: 4, columnIndex: 0 });
     });
 
     it('Ctrl+Down from empty cell jumps to next non-empty', () => {
@@ -211,7 +210,7 @@ describe('useKeyboardNavigation', () => {
       const p = makeCtrlParams(3, 0);
       const { result } = renderHook(() => useKeyboardNavigation(p));
       fireKey(result.current.handleGridKeyDown, 'ArrowDown', { ctrl: true });
-      expect(p.setActiveCell).toHaveBeenCalledWith({ rowIndex: 4, columnIndex: 0 });
+      expect(p.handlers.setActiveCell).toHaveBeenCalledWith({ rowIndex: 4, columnIndex: 0 });
     });
 
     it('Ctrl+Down from last non-empty runs to edge', () => {
@@ -219,14 +218,14 @@ describe('useKeyboardNavigation', () => {
       const p = makeCtrlParams(4, 0);
       const { result } = renderHook(() => useKeyboardNavigation(p));
       fireKey(result.current.handleGridKeyDown, 'ArrowDown', { ctrl: true });
-      expect(p.setActiveCell).toHaveBeenCalledWith({ rowIndex: 5, columnIndex: 0 });
+      expect(p.handlers.setActiveCell).toHaveBeenCalledWith({ rowIndex: 5, columnIndex: 0 });
     });
 
     it('Ctrl+Down at bottom edge stays put', () => {
       const p = makeCtrlParams(5, 0);
       const { result } = renderHook(() => useKeyboardNavigation(p));
       fireKey(result.current.handleGridKeyDown, 'ArrowDown', { ctrl: true });
-      expect(p.setActiveCell).toHaveBeenCalledWith({ rowIndex: 5, columnIndex: 0 });
+      expect(p.handlers.setActiveCell).toHaveBeenCalledWith({ rowIndex: 5, columnIndex: 0 });
     });
 
     // --- Ctrl+Up ---
@@ -235,7 +234,7 @@ describe('useKeyboardNavigation', () => {
       const p = makeCtrlParams(5, 0);
       const { result } = renderHook(() => useKeyboardNavigation(p));
       fireKey(result.current.handleGridKeyDown, 'ArrowUp', { ctrl: true });
-      expect(p.setActiveCell).toHaveBeenCalledWith({ rowIndex: 4, columnIndex: 0 });
+      expect(p.handlers.setActiveCell).toHaveBeenCalledWith({ rowIndex: 4, columnIndex: 0 });
     });
 
     it('Ctrl+Up from non-empty cell with empty above jumps to next non-empty', () => {
@@ -243,7 +242,7 @@ describe('useKeyboardNavigation', () => {
       const p = makeCtrlParams(4, 0);
       const { result } = renderHook(() => useKeyboardNavigation(p));
       fireKey(result.current.handleGridKeyDown, 'ArrowUp', { ctrl: true });
-      expect(p.setActiveCell).toHaveBeenCalledWith({ rowIndex: 2, columnIndex: 0 });
+      expect(p.handlers.setActiveCell).toHaveBeenCalledWith({ rowIndex: 2, columnIndex: 0 });
     });
 
     it('Ctrl+Up from empty cell jumps to next non-empty above', () => {
@@ -251,14 +250,14 @@ describe('useKeyboardNavigation', () => {
       const p = makeCtrlParams(3, 0);
       const { result } = renderHook(() => useKeyboardNavigation(p));
       fireKey(result.current.handleGridKeyDown, 'ArrowUp', { ctrl: true });
-      expect(p.setActiveCell).toHaveBeenCalledWith({ rowIndex: 2, columnIndex: 0 });
+      expect(p.handlers.setActiveCell).toHaveBeenCalledWith({ rowIndex: 2, columnIndex: 0 });
     });
 
     it('Ctrl+Up at top edge stays put', () => {
       const p = makeCtrlParams(0, 0);
       const { result } = renderHook(() => useKeyboardNavigation(p));
       fireKey(result.current.handleGridKeyDown, 'ArrowUp', { ctrl: true });
-      expect(p.setActiveCell).toHaveBeenCalledWith({ rowIndex: 0, columnIndex: 0 });
+      expect(p.handlers.setActiveCell).toHaveBeenCalledWith({ rowIndex: 0, columnIndex: 0 });
     });
 
     // --- Ctrl+Right ---
@@ -267,7 +266,7 @@ describe('useKeyboardNavigation', () => {
       const p = makeCtrlParams(0, 0);
       const { result } = renderHook(() => useKeyboardNavigation(p));
       fireKey(result.current.handleGridKeyDown, 'ArrowRight', { ctrl: true });
-      expect(p.setActiveCell).toHaveBeenCalledWith({ rowIndex: 0, columnIndex: 2 });
+      expect(p.handlers.setActiveCell).toHaveBeenCalledWith({ rowIndex: 0, columnIndex: 2 });
     });
 
     it('Ctrl+Right from non-empty with empty next jumps to edge when all empty after', () => {
@@ -275,7 +274,7 @@ describe('useKeyboardNavigation', () => {
       const p = makeCtrlParams(2, 0);
       const { result } = renderHook(() => useKeyboardNavigation(p));
       fireKey(result.current.handleGridKeyDown, 'ArrowRight', { ctrl: true });
-      expect(p.setActiveCell).toHaveBeenCalledWith({ rowIndex: 2, columnIndex: 2 });
+      expect(p.handlers.setActiveCell).toHaveBeenCalledWith({ rowIndex: 2, columnIndex: 2 });
     });
 
     it('Ctrl+Right stops at boundary between non-empty and empty', () => {
@@ -283,14 +282,14 @@ describe('useKeyboardNavigation', () => {
       const p = makeCtrlParams(1, 0);
       const { result } = renderHook(() => useKeyboardNavigation(p));
       fireKey(result.current.handleGridKeyDown, 'ArrowRight', { ctrl: true });
-      expect(p.setActiveCell).toHaveBeenCalledWith({ rowIndex: 1, columnIndex: 1 });
+      expect(p.handlers.setActiveCell).toHaveBeenCalledWith({ rowIndex: 1, columnIndex: 1 });
     });
 
     it('Ctrl+Right at right edge stays put', () => {
       const p = makeCtrlParams(0, 2);
       const { result } = renderHook(() => useKeyboardNavigation(p));
       fireKey(result.current.handleGridKeyDown, 'ArrowRight', { ctrl: true });
-      expect(p.setActiveCell).toHaveBeenCalledWith({ rowIndex: 0, columnIndex: 2 });
+      expect(p.handlers.setActiveCell).toHaveBeenCalledWith({ rowIndex: 0, columnIndex: 2 });
     });
 
     // --- Ctrl+Left ---
@@ -299,7 +298,7 @@ describe('useKeyboardNavigation', () => {
       const p = makeCtrlParams(0, 2);
       const { result } = renderHook(() => useKeyboardNavigation(p));
       fireKey(result.current.handleGridKeyDown, 'ArrowLeft', { ctrl: true });
-      expect(p.setActiveCell).toHaveBeenCalledWith({ rowIndex: 0, columnIndex: 0 });
+      expect(p.handlers.setActiveCell).toHaveBeenCalledWith({ rowIndex: 0, columnIndex: 0 });
     });
 
     it('Ctrl+Left from empty cell jumps to next non-empty on the left', () => {
@@ -307,14 +306,14 @@ describe('useKeyboardNavigation', () => {
       const p = makeCtrlParams(1, 2);
       const { result } = renderHook(() => useKeyboardNavigation(p));
       fireKey(result.current.handleGridKeyDown, 'ArrowLeft', { ctrl: true });
-      expect(p.setActiveCell).toHaveBeenCalledWith({ rowIndex: 1, columnIndex: 1 });
+      expect(p.handlers.setActiveCell).toHaveBeenCalledWith({ rowIndex: 1, columnIndex: 1 });
     });
 
     it('Ctrl+Left at left edge stays put', () => {
       const p = makeCtrlParams(0, 0);
       const { result } = renderHook(() => useKeyboardNavigation(p));
       fireKey(result.current.handleGridKeyDown, 'ArrowLeft', { ctrl: true });
-      expect(p.setActiveCell).toHaveBeenCalledWith({ rowIndex: 0, columnIndex: 0 });
+      expect(p.handlers.setActiveCell).toHaveBeenCalledWith({ rowIndex: 0, columnIndex: 0 });
     });
 
     // --- Ctrl+Shift+Arrow (extend selection) ---
@@ -323,8 +322,8 @@ describe('useKeyboardNavigation', () => {
       const p = makeCtrlParams(0, 0);
       const { result } = renderHook(() => useKeyboardNavigation(p));
       fireKey(result.current.handleGridKeyDown, 'ArrowDown', { ctrl: true, shift: true });
-      expect(p.setActiveCell).toHaveBeenCalledWith({ rowIndex: 2, columnIndex: 0 });
-      expect(p.setSelectionRange).toHaveBeenCalledWith(
+      expect(p.handlers.setActiveCell).toHaveBeenCalledWith({ rowIndex: 2, columnIndex: 0 });
+      expect(p.handlers.setSelectionRange).toHaveBeenCalledWith(
         expect.objectContaining({ startRow: 0, endRow: 2 })
       );
     });
@@ -334,8 +333,8 @@ describe('useKeyboardNavigation', () => {
       const p = makeCtrlParams(0, 0);
       const { result } = renderHook(() => useKeyboardNavigation(p));
       fireKey(result.current.handleGridKeyDown, 'ArrowRight', { ctrl: true, shift: true });
-      expect(p.setActiveCell).toHaveBeenCalledWith({ rowIndex: 0, columnIndex: 2 });
-      expect(p.setSelectionRange).toHaveBeenCalledWith(
+      expect(p.handlers.setActiveCell).toHaveBeenCalledWith({ rowIndex: 0, columnIndex: 2 });
+      expect(p.handlers.setSelectionRange).toHaveBeenCalledWith(
         expect.objectContaining({ startCol: 0, endCol: 2 })
       );
     });
@@ -346,7 +345,7 @@ describe('useKeyboardNavigation', () => {
       const p = makeCtrlParams(1, 2);
       const { result } = renderHook(() => useKeyboardNavigation(p));
       fireKey(result.current.handleGridKeyDown, 'ArrowDown', { ctrl: true });
-      expect(p.setActiveCell).toHaveBeenCalledWith({ rowIndex: 4, columnIndex: 2 });
+      expect(p.handlers.setActiveCell).toHaveBeenCalledWith({ rowIndex: 4, columnIndex: 2 });
     });
   });
 });

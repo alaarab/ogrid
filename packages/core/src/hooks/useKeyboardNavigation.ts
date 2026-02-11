@@ -1,4 +1,4 @@
-import { useCallback } from 'react';
+import { useCallback, useRef } from 'react';
 import { normalizeSelectionRange } from '../types';
 import { getCellValue } from '../utils';
 import { parseValue } from '../utils/valueParsers';
@@ -43,78 +43,73 @@ function findCtrlTarget(
 }
 
 export interface UseKeyboardNavigationParams<T> {
-  items: T[];
-  visibleCols: IColumnDef<T>[];
-  colOffset: number;
-  hasCheckboxCol: boolean;
-  visibleColumnCount: number;
-  activeCell: IActiveCell | null;
-  setActiveCell: (cell: IActiveCell | null) => void;
-  selectionRange: ISelectionRange | null;
-  setSelectionRange: (range: ISelectionRange | null) => void;
-  editable?: boolean;
-  onCellValueChanged: ((event: ICellValueChangedEvent<T>) => void) | undefined;
-  getRowId: (item: T) => RowId;
-  editingCell: EditingCell | null;
-  setEditingCell: (cell: EditingCell | null) => void;
-  rowSelection: RowSelectionMode;
-  selectedRowIds: Set<RowId>;
-  handleRowCheckboxChange: (
-    rowId: RowId,
-    checked: boolean,
-    rowIndex: number,
-    shiftKey: boolean
-  ) => void;
-  handleCopy: () => void;
-  handleCut: () => void;
-  handlePaste: () => Promise<void>;
-  setContextMenu: (pos: ContextMenuPosition | null) => void;
-  wrapperRef: React.RefObject<HTMLElement | null>;
-  onUndo?: () => void;
-  onRedo?: () => void;
-  clearClipboardRanges?: () => void;
+  data: {
+    items: T[];
+    visibleCols: IColumnDef<T>[];
+    colOffset: number;
+    hasCheckboxCol: boolean;
+    visibleColumnCount: number;
+    getRowId: (item: T) => RowId;
+  };
+  state: {
+    activeCell: IActiveCell | null;
+    selectionRange: ISelectionRange | null;
+    editingCell: EditingCell | null;
+    selectedRowIds: Set<RowId>;
+  };
+  handlers: {
+    setActiveCell: (cell: IActiveCell | null) => void;
+    setSelectionRange: (range: ISelectionRange | null) => void;
+    setEditingCell: (cell: EditingCell | null) => void;
+    handleRowCheckboxChange: (
+      rowId: RowId,
+      checked: boolean,
+      rowIndex: number,
+      shiftKey: boolean
+    ) => void;
+    handleCopy: () => void;
+    handleCut: () => void;
+    handlePaste: () => Promise<void>;
+    setContextMenu: (pos: ContextMenuPosition | null) => void;
+    onUndo?: () => void;
+    onRedo?: () => void;
+    clearClipboardRanges?: () => void;
+  };
+  features: {
+    editable?: boolean;
+    onCellValueChanged: ((event: ICellValueChangedEvent<T>) => void) | undefined;
+    rowSelection: RowSelectionMode;
+    wrapperRef: React.RefObject<HTMLElement | null>;
+  };
 }
 
 export interface UseKeyboardNavigationResult {
   handleGridKeyDown: (e: React.KeyboardEvent) => void;
 }
 
+/**
+ * Handles all keyboard navigation, shortcuts, and cell editing triggers for the grid.
+ * @param params - Grouped data, state, handlers, and feature flags for keyboard interactions.
+ * @returns Keyboard event handler for the grid wrapper.
+ */
 export function useKeyboardNavigation<T>(
   params: UseKeyboardNavigationParams<T>
 ): UseKeyboardNavigationResult {
-  const {
-    items,
-    visibleCols,
-    colOffset,
-    hasCheckboxCol,
-    visibleColumnCount,
-    activeCell,
-    setActiveCell,
-    selectionRange,
-    setSelectionRange,
-    editable,
-    onCellValueChanged,
-    getRowId,
-    editingCell,
-    setEditingCell,
-    rowSelection,
-    selectedRowIds,
-    handleRowCheckboxChange,
-    handleCopy,
-    handleCut,
-    handlePaste,
-    setContextMenu,
-    wrapperRef,
-    onUndo,
-    onRedo,
-    clearClipboardRanges,
-  } = params;
-
-  const maxRowIndex = items.length - 1;
-  const maxColIndex = visibleColumnCount - 1 + colOffset;
+  // Store latest params in a ref so handleGridKeyDown is a stable callback
+  const paramsRef = useRef(params);
+  paramsRef.current = params;
 
   const handleGridKeyDown = useCallback(
     (e: React.KeyboardEvent) => {
+      const { data, state, handlers, features } = paramsRef.current;
+      const { items, visibleCols, colOffset, hasCheckboxCol, visibleColumnCount, getRowId } = data;
+      const { activeCell, selectionRange, editingCell, selectedRowIds } = state;
+      const { setActiveCell, setSelectionRange, setEditingCell, handleRowCheckboxChange, handleCopy, handleCut, handlePaste, setContextMenu, onUndo, onRedo, clearClipboardRanges } = handlers;
+      const { editable, onCellValueChanged, rowSelection, wrapperRef } = features;
+
+      const maxRowIndex = items.length - 1;
+      const maxColIndex = visibleColumnCount - 1 + colOffset;
+
       if (items.length === 0) return;
 
       if (activeCell === null) {
@@ -447,11 +442,10 @@ export function useKeyboardNavigation<T>(
               onCellValueChanged({
                 item,
                 columnId: col.columnId,
-                field: col.columnId,
                 oldValue,
                 newValue: result.value,
                 rowIndex: r,
-              } as ICellValueChangedEvent<T>);
+              });
             }
           }
           break;
@@ -480,35 +474,7 @@ export function useKeyboardNavigation<T>(
           break;
       }
     },
-    [
-      items,
-      activeCell,
-      hasCheckboxCol,
-      visibleColumnCount,
-      visibleCols,
-      colOffset,
-      editable,
-      onCellValueChanged,
-      getRowId,
-      editingCell,
-      rowSelection,
-      selectedRowIds,
-      handleRowCheckboxChange,
-      handleCopy,
-      handleCut,
-      handlePaste,
-      selectionRange,
-      setActiveCell,
-      setSelectionRange,
-      maxRowIndex,
-      maxColIndex,
-      setEditingCell,
-      setContextMenu,
-      wrapperRef,
-      onUndo,
-      onRedo,
-      clearClipboardRanges,
-    ]
+    [] // stable — reads latest values from paramsRef
   );
 
   return { handleGridKeyDown };

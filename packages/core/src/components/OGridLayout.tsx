@@ -7,6 +7,7 @@
 import * as React from 'react';
 import { SideBar } from './SideBar';
 import type { SideBarProps } from './SideBar';
+import { GRID_BORDER_RADIUS } from '../constants';
 
 export interface OGridLayoutProps {
   /** Root container element (default: 'div'). Material can pass Box. */
@@ -31,7 +32,7 @@ export interface OGridLayoutProps {
 // Stable style objects (avoid re-creating on every render)
 const borderedContainerStyle: React.CSSProperties = {
   border: '1px solid var(--ogrid-border, #e0e0e0)',
-  borderRadius: 6,
+  borderRadius: GRID_BORDER_RADIUS,
   overflow: 'hidden',
   display: 'flex',
   flexDirection: 'column',
@@ -104,6 +105,12 @@ const gridChildStyle: React.CSSProperties = {
   flexDirection: 'column',
 };
 
+const rootStyle: React.CSSProperties = {
+  display: 'flex',
+  flexDirection: 'column',
+  height: '100%',
+};
+
 /**
  * Renders OGrid layout as a unified bordered container:
  *   ┌────────────────────────────────────┐
@@ -130,12 +137,6 @@ export function OGridLayout(props: OGridLayoutProps): React.ReactElement {
   const hasSideBar = sideBar != null;
   const sideBarPosition = sideBar?.position ?? 'right';
   const hasToolbar = toolbar != null || toolbarEnd != null;
-
-  const rootStyle: React.CSSProperties = {
-    display: 'flex',
-    flexDirection: 'column',
-    height: '100%',
-  };
 
   return (
     <Container

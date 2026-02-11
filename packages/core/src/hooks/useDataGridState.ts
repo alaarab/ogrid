@@ -1,4 +1,4 @@
-import { useMemo, useCallback, useEffect, useState } from 'react';
+import { useMemo, useCallback, useState } from 'react';
 import type { RefObject } from 'react';
 import { flattenColumns, getDataGridStatusBarConfig } from '../utils';
 import { parseValue } from '../utils/valueParsers';
@@ -15,6 +15,9 @@ import { useClipboard } from './useClipboard';
 import { useKeyboardNavigation } from './useKeyboardNavigation';
 import { useFillHandle } from './useFillHandle';
 import { useUndoRedo } from './useUndoRedo';
+import { useLatestRef } from './useLatestRef';
+import { useTableLayout } from './useTableLayout';
+import { CHECKBOX_COLUMN_WIDTH, DEFAULT_MIN_COLUMN_WIDTH, CELL_PADDING } from '../constants';
 
 // Stable no-op handlers used when cellSelection is disabled (module-scope = no re-renders)
 const NOOP = () => {};
@@ -141,6 +144,7 @@ export interface DataGridViewModelState<T> {
   cellDescriptorInput: CellRenderDescriptorInput<T>;
   statusBarConfig: IStatusBarProps | null;
   showEmptyInGrid: boolean;
+  onCellError?: (error: Error, errorInfo: React.ErrorInfo) => void;
 }
 
 /** Grouped result from useDataGridState. */
@@ -178,6 +182,7 @@ export function useDataGridState<T>(
     initialColumnWidths,
     onColumnResized,
     pinnedColumns,
+    onCellError,
   } = props;
 
   const cellSelection = cellSelectionProp !== false;
@@ -267,7 +272,7 @@ export function useDataGridState<T>(
     wrapperRef,
   });
 
-  const { contextMenu, setContextMenu, handleCellContextMenu, closeContextMenu } =
+  const { contextMenuPosition, setContextMenuPosition, handleCellContextMenu, closeContextMenu } =
     useContextMenu();
 
   const { handleCopy, handleCut, handlePaste, cutRange, copyRange, clearClipboardRanges } = useClipboard({
@@ -285,39 +290,19 @@ export function useDataGridState<T>(
   const handleCellMouseDown = useCallback(
     (e: React.MouseEvent, rowIndex: number, globalColIndex: number) => {
       if (e.button !== 0) return;
-      (wrapperRef as RefObject<HTMLDivElement | null>).current?.focus();
+      (wrapperRef as RefObject<HTMLDivElement | null>).current?.focus({ preventScroll: true });
       clearClipboardRanges();
       handleCellMouseDownBase(e, rowIndex, globalColIndex);
     },
-    [handleCellMouseDownBase, wrapperRef, clearClipboardRanges]
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [handleCellMouseDownBase, clearClipboardRanges] // wrapperRef excluded — refs are stable
   );
 
   const { handleGridKeyDown } = useKeyboardNavigation({
-    items,
-    visibleCols,
-    colOffset,
-    hasCheckboxCol,
-    visibleColumnCount,
-    activeCell,
-    setActiveCell,
-    selectionRange,
-    setSelectionRange,
-    editable,
-    onCellValueChanged,
-    getRowId,
-    editingCell,
-    setEditingCell,
-    rowSelection,
-    selectedRowIds,
-    handleRowCheckboxChange,
-    handleCopy,
-    handleCut,
-    handlePaste,
-    setContextMenu,
-    wrapperRef,
-    onUndo: undoRedo.undo,
-    onRedo: undoRedo.redo,
-    clearClipboardRanges,
+    data: { items, visibleCols, colOffset, hasCheckboxCol, visibleColumnCount, getRowId },
+    state: { activeCell, selectionRange, editingCell, selectedRowIds },
+    handlers: { setActiveCell, setSelectionRange, setEditingCell, handleRowCheckboxChange, handleCopy, handleCut, handlePaste, setContextMenu: setContextMenuPosition, onUndo: undoRedo.undo, onRedo: undoRedo.redo, clearClipboardRanges },
+    features: { editable, onCellValueChanged, rowSelection, wrapperRef },
   });
 
   const { handleFillHandleMouseDown } = useFillHandle({
@@ -334,70 +319,21 @@ export function useDataGridState<T>(
     endBatch: undoRedo.endBatch,
   });
 
-  const [containerWidth, setContainerWidth] = useState<number>(0);
-  useEffect(() => {
-    const el = wrapperRef.current;
-    if (!el) return;
-    const measure = () => {
-      const rect = el.getBoundingClientRect();
-      const cs = window.getComputedStyle(el);
-      const borderX =
-        (parseFloat(cs.borderLeftWidth || '0') || 0) +
-        (parseFloat(cs.borderRightWidth || '0') || 0);
-      setContainerWidth(Math.max(0, rect.width - borderX));
-    };
-    const ro = new ResizeObserver(measure);
-    ro.observe(el);
-    measure();
-    return () => ro.disconnect();
-  }, [wrapperRef]);
-
-  const [columnSizingOverrides, setColumnSizingOverrides] = useState<
-    Record<string, { widthPx: number }>
-  >(() => {
-    if (!initialColumnWidths) return {};
-    const result: Record<string, { widthPx: number }> = {};
-    for (const [id, width] of Object.entries(initialColumnWidths)) {
-      result[id] = { widthPx: width };
-    }
-    return result;
+  const {
+    containerWidth,
+    minTableWidth,
+    desiredTableWidth,
+    columnSizingOverrides,
+    setColumnSizingOverrides,
+    onColumnResized: onColumnResizedFromLayout,
+  } = useTableLayout({
+    wrapperRef,
+    visibleCols,
+    flatColumns,
+    hasCheckboxCol,
+    initialColumnWidths,
+    onColumnResized,
   });
-
-  const minTableWidth = useMemo(() => {
-    const PADDING = 16;
-    const checkboxW = hasCheckboxCol ? 48 : 0;
-    return visibleCols.reduce(
-      (sum, c) => sum + (c.minWidth ?? 80) + PADDING,
-      checkboxW
-    );
-  }, [visibleCols, hasCheckboxCol]);
-
-  useEffect(() => {
-    const colIds = new Set(flatColumns.map((c) => c.columnId));
-    setColumnSizingOverrides((prev) => {
-      const next = { ...prev };
-      let changed = false;
-      for (const id of Object.keys(next)) {
-        if (!colIds.has(id)) {
-          delete next[id];
-          changed = true;
-        }
-      }
-      return changed ? next : prev;
-    });
-  }, [flatColumns]);
-
-  const desiredTableWidth = useMemo(() => {
-    const PADDING = 16;
-    const checkboxW = hasCheckboxCol ? 48 : 0;
-    return visibleCols.reduce((sum, c) => {
-      const override = columnSizingOverrides[c.columnId];
-      const w = override
-        ? override.widthPx
-        : (c.idealWidth ?? c.defaultWidth ?? c.minWidth ?? 80);
-      return sum + Math.max(c.minWidth ?? 80, w) + PADDING;
-    }, checkboxW);
-  }, [visibleCols, columnSizingOverrides, hasCheckboxCol]);
 
   const aggregation = useMemo(
     () => computeAggregations(items, visibleCols, cellSelection ? selectionRange : null),
@@ -433,26 +369,49 @@ export function useDataGridState<T>(
     peopleSearch,
   } = props;
 
+  // Stabilize callbacks via refs — headerFilterInput only re-creates when data changes,
+  // not when callback identities change (which happens on unrelated state updates).
+  const onColumnSortRef = useLatestRef(onColumnSort);
+  const onFilterChangeRef = useLatestRef(onFilterChange);
+  const peopleSearchRef = useLatestRef(peopleSearch);
+
+  // Stable callback wrappers that delegate to refs
+  const stableOnColumnSort = useCallback(
+    (columnKey: string) => onColumnSortRef.current?.(columnKey),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    []
+  );
+  const stableOnFilterChange = useCallback(
+    (...args: Parameters<NonNullable<typeof onFilterChange>>) => onFilterChangeRef.current?.(...args),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    []
+  );
+  const stablePeopleSearch = useCallback(
+    (...args: Parameters<NonNullable<typeof peopleSearch>>) => peopleSearchRef.current?.(...args) ?? Promise.resolve([]),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    []
+  );
+
   const headerFilterInput: HeaderFilterConfigInput = useMemo(
     () => ({
       sortBy,
       sortDirection,
-      onColumnSort,
+      onColumnSort: stableOnColumnSort,
       filters,
-      onFilterChange,
+      onFilterChange: stableOnFilterChange,
       filterOptions,
       loadingFilterOptions,
-      peopleSearch,
+      peopleSearch: peopleSearch ? stablePeopleSearch : undefined,
     }),
     [
       sortBy,
       sortDirection,
-      onColumnSort,
+      stableOnColumnSort,
       filters,
-      onFilterChange,
+      stableOnFilterChange,
       filterOptions,
       loadingFilterOptions,
-      peopleSearch,
+      peopleSearch, stablePeopleSearch,
     ]
   );
 
@@ -490,6 +449,9 @@ export function useDataGridState<T>(
 
   const [popoverAnchorEl, setPopoverAnchorEl] = useState<HTMLElement | null>(null);
 
+  const visibleColsRef = useLatestRef(visibleCols);
+  const itemsLengthRef = useLatestRef(items.length);
+
   const commitCellEdit = useCallback(
     (
       item: T,
@@ -500,7 +462,7 @@ export function useDataGridState<T>(
       globalColIndex: number
     ) => {
       // Validate via valueParser before committing
-      const col = visibleCols.find((c) => c.columnId === columnId);
+      const col = visibleColsRef.current.find((c) => c.columnId === columnId);
       if (col) {
         const result = parseValue(newValue, oldValue, item, col);
         if (!result.valid) {
@@ -516,20 +478,20 @@ export function useDataGridState<T>(
       onCellValueChanged?.({
         item,
         columnId,
-        field: columnId,
         oldValue,
         newValue,
         rowIndex,
-      } as ICellValueChangedEvent<T>);
+      });
       setEditingCell(null);
       setPopoverAnchorEl(null);
       setPendingEditorValue(undefined);
       // Advance to next row for inline editors
-      if (rowIndex < items.length - 1) {
+      if (rowIndex < itemsLengthRef.current - 1) {
         setActiveCell({ rowIndex: rowIndex + 1, columnIndex: globalColIndex });
       }
     },
-    [onCellValueChanged, setEditingCell, setPendingEditorValue, setActiveCell, items.length, visibleCols]
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [onCellValueChanged, setEditingCell, setPendingEditorValue, setActiveCell]
   );
 
   const cancelPopoverEdit = useCallback(() => {
@@ -538,73 +500,74 @@ export function useDataGridState<T>(
     setPendingEditorValue(undefined);
   }, [setEditingCell, setPendingEditorValue]);
 
+  // --- Memoize each sub-object so downstream consumers only re-render when their slice changes ---
+
+  const layoutState = useMemo<DataGridLayoutState<T>>(() => ({
+    flatColumns, visibleCols, visibleColumnCount, totalColCount, colOffset,
+    hasCheckboxCol, rowIndexByRowId, containerWidth, minTableWidth,
+    desiredTableWidth, columnSizingOverrides, setColumnSizingOverrides, onColumnResized,
+  }), [
+    flatColumns, visibleCols, visibleColumnCount, totalColCount, colOffset,
+    hasCheckboxCol, rowIndexByRowId, containerWidth, minTableWidth,
+    desiredTableWidth, columnSizingOverrides, setColumnSizingOverrides, onColumnResized,
+  ]);
+
+  const rowSelectionState = useMemo<DataGridRowSelectionState>(() => ({
+    selectedRowIds, updateSelection, handleRowCheckboxChange,
+    handleSelectAll, allSelected, someSelected,
+  }), [selectedRowIds, updateSelection, handleRowCheckboxChange, handleSelectAll, allSelected, someSelected]);
+
+  const editingState = useMemo<DataGridEditingState<T>>(() => ({
+    editingCell, setEditingCell, pendingEditorValue, setPendingEditorValue,
+    commitCellEdit, cancelPopoverEdit, popoverAnchorEl, setPopoverAnchorEl,
+  }), [editingCell, setEditingCell, pendingEditorValue, setPendingEditorValue, commitCellEdit, cancelPopoverEdit, popoverAnchorEl, setPopoverAnchorEl]);
+
+  const interactionState = useMemo<DataGridCellInteractionState>(() => ({
+    activeCell: cellSelection ? activeCell : null,
+    setActiveCell: cellSelection ? setActiveCell : (NOOP as typeof setActiveCell),
+    selectionRange: cellSelection ? selectionRange : null,
+    setSelectionRange: cellSelection ? setSelectionRange : (NOOP as typeof setSelectionRange),
+    handleCellMouseDown: cellSelection ? handleCellMouseDown : (NOOP_MOUSE as typeof handleCellMouseDown),
+    handleSelectAllCells: cellSelection ? handleSelectAllCells : NOOP,
+    hasCellSelection: cellSelection ? hasCellSelection : false,
+    handleGridKeyDown: cellSelection ? handleGridKeyDown : (NOOP_KEY as typeof handleGridKeyDown),
+    handleFillHandleMouseDown: cellSelection ? handleFillHandleMouseDown : (NOOP as typeof handleFillHandleMouseDown),
+    handleCopy: cellSelection ? handleCopy : NOOP,
+    handleCut: cellSelection ? handleCut : NOOP,
+    handlePaste: cellSelection ? handlePaste : (NOOP_ASYNC as typeof handlePaste),
+    cutRange: cellSelection ? cutRange : null,
+    copyRange: cellSelection ? copyRange : null,
+    clearClipboardRanges: cellSelection ? clearClipboardRanges : NOOP,
+    canUndo: undoRedo.canUndo,
+    canRedo: undoRedo.canRedo,
+    onUndo: undoRedo.undo,
+    onRedo: undoRedo.redo,
+    isDragging: cellSelection ? isDragging : false,
+  }), [
+    cellSelection, activeCell, setActiveCell, selectionRange, setSelectionRange,
+    handleCellMouseDown, handleSelectAllCells, hasCellSelection, handleGridKeyDown,
+    handleFillHandleMouseDown, handleCopy, handleCut, handlePaste, cutRange, copyRange,
+    clearClipboardRanges, undoRedo.canUndo, undoRedo.canRedo, undoRedo.undo, undoRedo.redo,
+    isDragging,
+  ]);
+
+  const contextMenuState = useMemo<DataGridContextMenuState>(() => ({
+    menuPosition: cellSelection ? contextMenuPosition : null,
+    setMenuPosition: cellSelection ? setContextMenuPosition : (NOOP as typeof setContextMenuPosition),
+    handleCellContextMenu: cellSelection ? handleCellContextMenu : (NOOP_CTX as typeof handleCellContextMenu),
+    closeContextMenu: cellSelection ? closeContextMenu : NOOP,
+  }), [cellSelection, contextMenuPosition, setContextMenuPosition, handleCellContextMenu, closeContextMenu]);
+
+  const viewModelsState = useMemo<DataGridViewModelState<T>>(() => ({
+    headerFilterInput, cellDescriptorInput, statusBarConfig, showEmptyInGrid, onCellError,
+  }), [headerFilterInput, cellDescriptorInput, statusBarConfig, showEmptyInGrid, onCellError]);
+
   return {
-    layout: {
-      flatColumns,
-      visibleCols,
-      visibleColumnCount,
-      totalColCount,
-      colOffset,
-      hasCheckboxCol,
-      rowIndexByRowId,
-      containerWidth,
-      minTableWidth,
-      desiredTableWidth,
-      columnSizingOverrides,
-      setColumnSizingOverrides,
-      onColumnResized,
-    },
-    rowSelection: {
-      selectedRowIds,
-      updateSelection,
-      handleRowCheckboxChange,
-      handleSelectAll,
-      allSelected,
-      someSelected,
-    },
-    editing: {
-      editingCell,
-      setEditingCell,
-      pendingEditorValue,
-      setPendingEditorValue,
-      commitCellEdit,
-      cancelPopoverEdit,
-      popoverAnchorEl,
-      setPopoverAnchorEl,
-    },
-    interaction: {
-      activeCell: cellSelection ? activeCell : null,
-      setActiveCell: cellSelection ? setActiveCell : (NOOP as typeof setActiveCell),
-      selectionRange: cellSelection ? selectionRange : null,
-      setSelectionRange: cellSelection ? setSelectionRange : (NOOP as typeof setSelectionRange),
-      handleCellMouseDown: cellSelection ? handleCellMouseDown : (NOOP_MOUSE as typeof handleCellMouseDown),
-      handleSelectAllCells: cellSelection ? handleSelectAllCells : NOOP,
-      hasCellSelection: cellSelection ? hasCellSelection : false,
-      handleGridKeyDown: cellSelection ? handleGridKeyDown : (NOOP_KEY as typeof handleGridKeyDown),
-      handleFillHandleMouseDown: cellSelection ? handleFillHandleMouseDown : (NOOP as typeof handleFillHandleMouseDown),
-      handleCopy: cellSelection ? handleCopy : NOOP,
-      handleCut: cellSelection ? handleCut : NOOP,
-      handlePaste: cellSelection ? handlePaste : (NOOP_ASYNC as typeof handlePaste),
-      cutRange: cellSelection ? cutRange : null,
-      copyRange: cellSelection ? copyRange : null,
-      clearClipboardRanges: cellSelection ? clearClipboardRanges : NOOP,
-      canUndo: undoRedo.canUndo,
-      canRedo: undoRedo.canRedo,
-      onUndo: undoRedo.undo,
-      onRedo: undoRedo.redo,
-      isDragging: cellSelection ? isDragging : false,
-    },
-    contextMenu: {
-      menuPosition: cellSelection ? contextMenu : null,
-      setMenuPosition: cellSelection ? setContextMenu : (NOOP as typeof setContextMenu),
-      handleCellContextMenu: cellSelection ? handleCellContextMenu : (NOOP_CTX as typeof handleCellContextMenu),
-      closeContextMenu: cellSelection ? closeContextMenu : NOOP,
-    },
-    viewModels: {
-      headerFilterInput,
-      cellDescriptorInput,
-      statusBarConfig,
-      showEmptyInGrid,
-    },
+    layout: layoutState,
+    rowSelection: rowSelectionState,
+    editing: editingState,
+    interaction: interactionState,
+    contextMenu: contextMenuState,
+    viewModels: viewModelsState,
   };
 }

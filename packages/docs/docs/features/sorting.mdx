@@ -22,7 +22,14 @@ import { OGrid } from '@alaarab/ogrid';
 const columns = [
   { columnId: 'name', name: 'Name', sortable: true },
   { columnId: 'age', name: 'Age', sortable: true, type: 'numeric' as const },
-  { columnId: 'email', name: 'Email' }, // not sortable
+  { columnId: 'department', name: 'Department', sortable: true },
+  {
+    columnId: 'salary',
+    name: 'Salary',
+    sortable: true,
+    type: 'numeric' as const,
+    valueFormatter: (v) => `$${Number(v).toLocaleString()}`,
+  },
 ];
 
 function App() {
@@ -31,6 +38,7 @@ function App() {
       columns={columns}
       data={people}
       getRowId={(item) => item.id}
+      defaultPageSize={10}
     />
   );
 }

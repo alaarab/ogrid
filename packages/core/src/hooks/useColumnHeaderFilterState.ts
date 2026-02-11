@@ -1,6 +1,7 @@
 /**
  * Headless column header filter state and handlers for Fluent, Material, and Radix.
  * UI packages use this hook and render only presentation (popover, inputs, buttons).
+ * Composes 4 sub-hooks for each filter type's state management.
  */
 
 import {
@@ -15,9 +16,11 @@ import {
 } from 'react';
 import type { ColumnFilterType, IDateFilterValue } from '../types/columnTypes';
 import type { UserLike } from '../types/dataGridTypes';
-import { useDebounce } from './useDebounce';
+import { useTextFilterState } from './useTextFilterState';
+import { useMultiSelectFilterState } from './useMultiSelectFilterState';
+import { usePeopleFilterState } from './usePeopleFilterState';
+import { useDateFilterState } from './useDateFilterState';
 
-const SEARCH_DEBOUNCE_MS = 150;
 const EMPTY_OPTIONS: string[] = [];
 
 export interface UseColumnHeaderFilterStateParams {
@@ -102,42 +105,47 @@ export function useColumnHeaderFilterState(
   } = params;
 
   const safeSelectedValues = selectedValues ?? EMPTY_OPTIONS;
-  const safeOptions = options ?? EMPTY_OPTIONS;
 
+  // Shared state
   const headerRef = useRef<HTMLDivElement | null>(null);
   const popoverRef = useRef<HTMLDivElement | null>(null);
-  const peopleInputRef = useRef<HTMLInputElement | null>(null);
-  const peopleSearchTimeoutRef = useRef<number | undefined>(undefined);
-
   const [isFilterOpen, setFilterOpen] = useState(false);
-  const [tempSelected, setTempSelected] = useState<Set<string>>(() => new Set(safeSelectedValues));
-  const [tempTextValue, setTempTextValue] = useState(textValue);
-  const [searchText, setSearchText] = useState('');
-  const debouncedSearchText = useDebounce(searchText, SEARCH_DEBOUNCE_MS);
-  const [peopleSuggestions, setPeopleSuggestions] = useState<UserLike[]>([]);
-  const [isPeopleLoading, setIsPeopleLoading] = useState(false);
-  const [peopleSearchText, setPeopleSearchText] = useState('');
-  const [tempDateFrom, setTempDateFrom] = useState(dateValue?.from ?? '');
-  const [tempDateTo, setTempDateTo] = useState(dateValue?.to ?? '');
   const [popoverPosition, setPopoverPosition] = useState<{ top: number; left: number } | null>(null);
 
-  // Sync temp state when popover opens
+  // Compose sub-hooks for each filter type
+  const textFilterState = useTextFilterState({
+    textValue,
+    onTextChange,
+    isFilterOpen,
+  });
+
+  const multiSelectFilterState = useMultiSelectFilterState({
+    selectedValues,
+    onFilterChange,
+    options,
+    isFilterOpen,
+  });
+
+  const peopleFilterState = usePeopleFilterState({
+    selectedUser,
+    onUserChange,
+    peopleSearch,
+    isFilterOpen,
+    filterType,
+  });
+
+  const dateFilterState = useDateFilterState({
+    dateValue,
+    onDateChange,
+    isFilterOpen,
+  });
+
+  // Close popover resets position
   useEffect(() => {
-    if (isFilterOpen) {
-      setTempSelected(new Set(safeSelectedValues));
-      setTempTextValue(textValue);
-      setTempDateFrom(dateValue?.from ?? '');
-      setTempDateTo(dateValue?.to ?? '');
-      setSearchText('');
-      setPeopleSearchText('');
-      setPeopleSuggestions([]);
-      if (filterType === 'people') {
-        setTimeout(() => peopleInputRef.current?.focus(), 50);
-      }
-    } else {
+    if (!isFilterOpen) {
       setPopoverPosition(null);
     }
-  }, [isFilterOpen, filterType, safeSelectedValues, textValue, dateValue]);
+  }, [isFilterOpen]);
 
   // Click outside and Escape to close
   useEffect(() => {
@@ -169,37 +177,7 @@ export function useColumnHeaderFilterState(
     };
   }, [isFilterOpen]);
 
-  // Filtered options for multiSelect (search within options)
-  const filteredOptions = useMemo(() => {
-    if (!debouncedSearchText.trim()) return safeOptions;
-    const searchLower = debouncedSearchText.toLowerCase().trim();
-    return safeOptions.filter((opt) => opt.toLowerCase().includes(searchLower));
-  }, [safeOptions, debouncedSearchText]);
-
-  // People search
-  useEffect(() => {
-    if (!peopleSearch || !isFilterOpen || filterType !== 'people') return;
-    if (peopleSearchTimeoutRef.current) window.clearTimeout(peopleSearchTimeoutRef.current);
-    if (!peopleSearchText.trim()) {
-      setPeopleSuggestions([]);
-      return;
-    }
-    setIsPeopleLoading(true);
-    peopleSearchTimeoutRef.current = window.setTimeout(async () => {
-      try {
-        const results = await peopleSearch(peopleSearchText);
-        setPeopleSuggestions(results.slice(0, 10));
-      } catch {
-        setPeopleSuggestions([]);
-      } finally {
-        setIsPeopleLoading(false);
-      }
-    }, 300);
-    return () => {
-      if (peopleSearchTimeoutRef.current) window.clearTimeout(peopleSearchTimeoutRef.current);
-    };
-  }, [peopleSearchText, peopleSearch, isFilterOpen, filterType]);
-
+  // Shared handlers
   const handleFilterIconClick = useCallback((e: React.MouseEvent) => {
     e.stopPropagation();
     e.preventDefault();
@@ -220,58 +198,36 @@ export function useColumnHeaderFilterState(
     [onSort]
   );
 
-  const handleCheckboxChange = useCallback((option: string, checked: boolean) => {
-    setTempSelected((prev) => {
-      const next = new Set(prev);
-      if (checked) next.add(option);
-      else next.delete(option);
-      return next;
-    });
-  }, []);
-
-  const handleSelectAll = useCallback(() => {
-    setTempSelected(new Set(filteredOptions));
-  }, [filteredOptions]);
-
-  const handleClearSelection = useCallback(() => setTempSelected(new Set()), []);
-
+  // Wrap sub-hook handlers to close popover
   const handleApplyMultiSelect = useCallback(() => {
-    onFilterChange?.(Array.from(tempSelected));
+    multiSelectFilterState.handleApplyMultiSelect();
     setFilterOpen(false);
-  }, [onFilterChange, tempSelected]);
+  }, [multiSelectFilterState]);
 
   const handleTextApply = useCallback(() => {
-    onTextChange?.(tempTextValue.trim());
+    textFilterState.handleTextApply();
     setFilterOpen(false);
-  }, [onTextChange, tempTextValue]);
-
-  const handleTextClear = useCallback(() => setTempTextValue(''), []);
+  }, [textFilterState]);
 
   const handleUserSelect = useCallback(
     (user: UserLike) => {
-      onUserChange?.(user);
+      peopleFilterState.handleUserSelect(user);
       setFilterOpen(false);
     },
-    [onUserChange]
+    [peopleFilterState]
   );
 
-  const handleDateApply = useCallback(() => {
-    const from = tempDateFrom || undefined;
-    const to = tempDateTo || undefined;
-    onDateChange?.(from || to ? { from, to } : undefined);
-    setFilterOpen(false);
-  }, [onDateChange, tempDateFrom, tempDateTo]);
-
-  const handleDateClear = useCallback(() => {
-    setTempDateFrom('');
-    setTempDateTo('');
-  }, []);
-
   const handleClearUser = useCallback(() => {
-    onUserChange?.(undefined);
+    peopleFilterState.handleClearUser();
     setFilterOpen(false);
-  }, [onUserChange]);
+  }, [peopleFilterState]);
 
+  const handleDateApply = useCallback(() => {
+    dateFilterState.handleDateApply();
+    setFilterOpen(false);
+  }, [dateFilterState]);
+
+  // Event propagation stoppers
   const handlePopoverClick = useCallback((e: React.MouseEvent) => e.stopPropagation(), []);
   const handleInputFocus = useCallback((e: React.FocusEvent) => e.stopPropagation(), []);
   const handleInputMouseDown = useCallback((e: React.MouseEvent) => e.stopPropagation(), []);
@@ -280,6 +236,7 @@ export function useColumnHeaderFilterState(
     if (e.key !== 'Escape' && e.key !== 'Esc') e.stopPropagation();
   }, []);
 
+  // Compute hasActiveFilter from all sub-hooks
   const hasActiveFilter = useMemo(() => {
     if (filterType === 'multiSelect') return safeSelectedValues.length > 0;
     if (filterType === 'text') return !!textValue.trim();
@@ -291,39 +248,39 @@ export function useColumnHeaderFilterState(
   return {
     headerRef,
     popoverRef,
-    peopleInputRef,
+    peopleInputRef: peopleFilterState.peopleInputRef,
     isFilterOpen,
     setFilterOpen,
-    tempSelected,
-    setTempSelected,
-    tempTextValue,
-    setTempTextValue,
-    searchText,
-    setSearchText,
-    debouncedSearchText,
-    filteredOptions,
-    peopleSuggestions,
-    isPeopleLoading,
-    peopleSearchText,
-    setPeopleSearchText,
-    tempDateFrom,
-    setTempDateFrom,
-    tempDateTo,
-    setTempDateTo,
+    tempSelected: multiSelectFilterState.tempSelected,
+    setTempSelected: multiSelectFilterState.setTempSelected,
+    tempTextValue: textFilterState.tempTextValue,
+    setTempTextValue: textFilterState.setTempTextValue,
+    searchText: multiSelectFilterState.searchText,
+    setSearchText: multiSelectFilterState.setSearchText,
+    debouncedSearchText: multiSelectFilterState.debouncedSearchText,
+    filteredOptions: multiSelectFilterState.filteredOptions,
+    peopleSuggestions: peopleFilterState.peopleSuggestions,
+    isPeopleLoading: peopleFilterState.isPeopleLoading,
+    peopleSearchText: peopleFilterState.peopleSearchText,
+    setPeopleSearchText: peopleFilterState.setPeopleSearchText,
+    tempDateFrom: dateFilterState.tempDateFrom,
+    setTempDateFrom: dateFilterState.setTempDateFrom,
+    tempDateTo: dateFilterState.tempDateTo,
+    setTempDateTo: dateFilterState.setTempDateTo,
     hasActiveFilter,
     popoverPosition,
     handlers: {
       handleFilterIconClick,
       handleApplyMultiSelect,
       handleTextApply,
-      handleTextClear,
+      handleTextClear: textFilterState.handleTextClear,
       handleUserSelect,
       handleClearUser,
       handleDateApply,
-      handleDateClear,
-      handleCheckboxChange,
-      handleSelectAll,
-      handleClearSelection,
+      handleDateClear: dateFilterState.handleDateClear,
+      handleCheckboxChange: multiSelectFilterState.handleCheckboxChange,
+      handleSelectAll: multiSelectFilterState.handleSelectAll,
+      handleClearSelection: multiSelectFilterState.handleClearSelection,
       handlePopoverClick,
       handleInputFocus,
       handleInputMouseDown,

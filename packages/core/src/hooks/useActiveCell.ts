@@ -41,19 +41,36 @@ export function useActiveCell(
     const selector = `[data-row-index="${rowIndex}"][data-col-index="${columnIndex}"]`;
     const cell = wrapperRef.current.querySelector(selector) as HTMLElement | null;
     if (cell) {
-      if (typeof cell.scrollIntoView === 'function') {
-        // Account for sticky <thead> so scrollIntoView doesn't leave
-        // the cell hidden behind the header.
-        const thead = wrapperRef.current.querySelector('thead');
-        const headerHeight = thead ? thead.getBoundingClientRect().height : 0;
-        cell.style.scrollMarginTop = `${headerHeight}px`;
-        cell.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+      // Scroll the cell into view within the table wrapper only — do NOT
+      // use native scrollIntoView() which scrolls all ancestor containers
+      // including the page, causing an unwanted viewport jump.
+      const wrapper = wrapperRef.current;
+      const thead = wrapper.querySelector('thead');
+      const headerHeight = thead ? thead.getBoundingClientRect().height : 0;
+      const wrapperRect = wrapper.getBoundingClientRect();
+      const cellRect = cell.getBoundingClientRect();
+
+      // Vertical scroll (account for sticky thead)
+      const visibleTop = wrapperRect.top + headerHeight;
+      if (cellRect.top < visibleTop) {
+        wrapper.scrollTop -= visibleTop - cellRect.top;
+      } else if (cellRect.bottom > wrapperRect.bottom) {
+        wrapper.scrollTop += cellRect.bottom - wrapperRect.bottom;
       }
+
+      // Horizontal scroll
+      if (cellRect.left < wrapperRect.left) {
+        wrapper.scrollLeft -= wrapperRect.left - cellRect.left;
+      } else if (cellRect.right > wrapperRect.right) {
+        wrapper.scrollLeft += cellRect.right - wrapperRect.right;
+      }
+
       if (document.activeElement !== cell && typeof cell.focus === 'function') {
-        cell.focus();
+        cell.focus({ preventScroll: true });
       }
     }
-  }, [activeCell, editingCell, wrapperRef]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeCell, editingCell]); // wrapperRef excluded — refs are stable across renders
 
   return { activeCell, setActiveCell };
 }

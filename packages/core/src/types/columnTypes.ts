@@ -74,7 +74,6 @@ export interface IColumnDef<T = unknown> extends IColumnMeta {
 export interface ICellValueChangedEvent<T> {
   item: T;
   columnId: string;
-  field: string;
   oldValue: unknown;
   newValue: unknown;
   rowIndex: number;
@@ -91,12 +90,12 @@ export interface ICellEditorProps<T> {
   cellEditorParams?: CellEditorParams;
 }
 
-/** Params for built-in cell editors (e.g. select: { values: string[] }). Extend for custom editors. */
+/** Params for built-in cell editors (e.g. select: { values: string[] }). */
 export interface CellEditorParams {
+  /** Array of allowed values for select/richSelect editors. */
   values?: unknown[];
   /** Format a value for display in rich select editor. */
   formatValue?: (value: unknown) => string;
-  [key: string]: unknown;
 }
 
 /** Column group for multi-row header (has children, no columnId for data). */

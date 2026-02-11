@@ -19,14 +19,27 @@ OGrid includes a built-in pagination bar with page navigation buttons, page size
 ```tsx
 import { OGrid } from '@alaarab/ogrid';
 
+const columns = [
+  { columnId: 'name', name: 'Name' },
+  { columnId: 'email', name: 'Email' },
+  { columnId: 'department', name: 'Department' },
+  {
+    columnId: 'salary',
+    name: 'Salary',
+    type: 'numeric' as const,
+    valueFormatter: (v) => `$${Number(v).toLocaleString()}`,
+  },
+];
+
 function App() {
   return (
     <OGrid
       columns={columns}
-      data={items}
+      data={people}
       getRowId={(item) => item.id}
-      defaultPageSize={25}
-      entityLabelPlural="projects"
+      defaultPageSize={5}
+      pageSizeOptions={[5, 10, 25, 50]}
+      entityLabelPlural="people"
     />
   );
 }
@@ -99,6 +112,7 @@ function App() {
 | Prop | Type | Default | Description |
 |------|------|---------|-------------|
 | `defaultPageSize` | `number` | `25` | Initial page size (uncontrolled mode). |
+| `pageSizeOptions` | `number[]` | `[10, 25, 50, 100]` | Options shown in the page size dropdown. If the active page size isn't in the list, it's auto-inserted. |
 | `page` | `number` | -- | Current page number (controlled mode, 1-indexed). |
 | `pageSize` | `number` | -- | Rows per page (controlled mode). |
 | `onPageChange` | `(page: number) => void` | -- | Called when page changes. |

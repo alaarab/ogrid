@@ -30,33 +30,59 @@ import type {
 } from '../types';
 
 const DEFAULT_PAGE_SIZE = 25;
+const EMPTY_LOADING_OPTIONS: Record<string, boolean> = {};
 
 /** Resolved column chooser placement. */
 export type ColumnChooserPlacement = 'toolbar' | 'sidebar' | 'none';
 
-export interface UseOGridResult<T> {
-  dataGridProps: IOGridDataGridProps<T>;
+/** Pagination state and handlers. */
+export interface UseOGridPagination {
   page: number;
   pageSize: number;
   displayTotalCount: number;
   setPage: (p: number) => void;
   setPageSize: (size: number) => void;
-  columnChooserColumns: IColumnDefinition[];
+  pageSizeOptions?: number[];
+  entityLabelPlural: string;
+}
+
+/** Column chooser state and handlers. */
+export interface UseOGridColumnChooser {
+  columns: IColumnDefinition[];
   visibleColumns: Set<string>;
-  handleVisibilityChange: (columnKey: string, isVisible: boolean) => void;
-  /** Resolved placement of the column chooser. */
-  columnChooserPlacement: ColumnChooserPlacement;
+  onVisibilityChange: (columnKey: string, isVisible: boolean) => void;
+  placement: ColumnChooserPlacement;
+}
+
+/** Layout / chrome configuration. */
+export interface UseOGridLayout {
   toolbar: React.ReactNode;
   toolbarBelow: React.ReactNode;
   className?: string;
-  entityLabelPlural: string;
   emptyState?: { message?: React.ReactNode; render?: () => React.ReactNode };
-  hasActiveFilters: boolean;
-  setFilters: (f: IFilters) => void;
-  pageSizeOptions?: number[];
   sideBarProps: SideBarProps | null;
 }
 
+/** Filter state. */
+export interface UseOGridFilters {
+  hasActiveFilters: boolean;
+  setFilters: (f: IFilters) => void;
+}
+
+export interface UseOGridResult<T> {
+  dataGridProps: IOGridDataGridProps<T>;
+  pagination: UseOGridPagination;
+  columnChooser: UseOGridColumnChooser;
+  layout: UseOGridLayout;
+  filters: UseOGridFilters;
+}
+
+/**
+ * Top-level orchestration hook for OGrid: manages pagination, sorting, filtering, column visibility, and sidebar.
+ * @param props - All OGrid props (columns, data, callbacks, feature flags).
+ * @param ref - Forwarded ref for imperative API (refresh, export, applyColumnState).
+ * @returns Grouped props for DataGridTable, pagination controls, column chooser, layout, and filters.
+ */
 export function useOGrid<T>(
   props: IOGridProps<T>,
   ref: React.Ref<IOGridApi<T>>
@@ -125,10 +151,6 @@ export function useOGrid<T>(
 
   const [internalData, setInternalData] = useState<T[]>([]);
   const [internalLoading, setInternalLoading] = useState(false);
-
-  if (data != null && dataSource != null) {
-    console.error('OGrid: pass either data or dataSource, not both.');
-  }
 
   const displayData = data ?? internalData;
   const displayLoading = controlledLoading ?? internalLoading;
@@ -265,11 +287,12 @@ export function useOGrid<T>(
   const { filterOptions: serverFilterOptions, loadingOptions: loadingFilterOptions } =
     useFilterOptions(filterOptionsSource, multiSelectFilterFields);
 
+  const hasServerFilterOptions = dataSource?.fetchFilterOptions != null;
   const clientFilterOptions = useMemo(() => {
-    if (dataSource != null && dataSource.fetchFilterOptions)
+    if (hasServerFilterOptions)
       return serverFilterOptions;
     return deriveFilterOptionsFromData(displayData, columns);
-  }, [dataSource, displayData, columns, serverFilterOptions]);
+  }, [hasServerFilterOptions, displayData, columns, serverFilterOptions]);
 
   // --- Client-side filtering & sorting ---
   const clientItemsAndTotal = useMemo(() => {
@@ -301,6 +324,10 @@ export function useOGrid<T>(
   const [loading, setLoading] = useState(true);
   const fetchIdRef = useRef(0);
 
+  // Ref counter to trigger server-side re-fetches
+  const refreshCounterRef = useRef(0);
+  const [refreshCounter, setRefreshCounter] = useState(0);
+
   useEffect(() => {
     if (!isServerSide || !dataSource) {
       if (!isServerSide) setLoading(false);
@@ -329,6 +356,7 @@ export function useOGrid<T>(
       .finally(() => {
         if (id === fetchIdRef.current) setLoading(false);
       });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
     isServerSide,
     dataSource,
@@ -338,6 +366,7 @@ export function useOGrid<T>(
     sort.direction,
     filters,
     onError,
+    refreshCounter,
   ]);
 
   const displayItems =
@@ -413,6 +442,23 @@ export function useOGrid<T>(
           selectedItems: [],
         });
       },
+      clearFilters: () => setFilters({}),
+      clearSort: () => setSort({ field: defaultSortField, direction: defaultSortDirection }),
+      resetGridState: (options?: { keepSelection?: boolean }) => {
+        setFilters({});
+        setSort({ field: defaultSortField, direction: defaultSortDirection });
+        if (!options?.keepSelection) {
+          if (selectedRows === undefined) setInternalSelectedRows(new Set());
+          onSelectionChange?.({ selectedRowIds: [], selectedItems: [] });
+        }
+      },
+      getDisplayedRows: () => displayItems,
+      refreshData: () => {
+        if (isServerSide) {
+          refreshCounterRef.current += 1;
+          setRefreshCounter(refreshCounterRef.current);
+        }
+      },
     }),
     [
       visibleColumns,
@@ -431,6 +477,8 @@ export function useOGrid<T>(
       displayItems,
       getRowId,
       onSelectionChange,
+      defaultSortField,
+      defaultSortDirection,
     ]
   );
 
@@ -541,7 +589,10 @@ export function useOGrid<T>(
     clientFilterOptions,
   ]);
 
-  const dataGridProps: IOGridDataGridProps<T> = {
+  const clearAllFilters = useCallback(() => setFilters({}), [setFilters]);
+  const isLoadingResolved = (isServerSide && loading) || displayLoading;
+
+  const dataGridProps = useMemo<IOGridDataGridProps<T>>(() => ({
     items: displayItems,
     columns: columnsProp,
     getRowId,
@@ -568,11 +619,11 @@ export function useOGrid<T>(
     selectedRows: effectiveSelectedRows,
     onSelectionChange: handleSelectionChange,
     statusBar: statusBarConfig,
-    isLoading: (isServerSide && loading) || displayLoading,
+    isLoading: isLoadingResolved,
     filters,
     onFilterChange: handleFilterChange,
     filterOptions: clientFilterOptions,
-    loadingFilterOptions: dataSource?.fetchFilterOptions ? loadingFilterOptions : {},
+    loadingFilterOptions: dataSource?.fetchFilterOptions ? loadingFilterOptions : EMPTY_LOADING_OPTIONS,
     peopleSearch: dataSource?.searchPeople,
     getUserByEmail: dataSource?.getUserByEmail,
     layoutMode,
@@ -581,31 +632,56 @@ export function useOGrid<T>(
     'aria-labelledby': ariaLabelledBy,
     emptyState: {
       hasActiveFilters,
-      onClearAll: () => setFilters({}),
+      onClearAll: clearAllFilters,
       message: emptyState?.message,
       render: emptyState?.render,
     },
-  };
+  }), [
+    displayItems, columnsProp, getRowId, sort.field, sort.direction, handleSort,
+    visibleColumns, columnOrder, onColumnOrderChange, handleColumnResized,
+    handleColumnPinned, pinnedOverrides, columnWidthOverrides, freezeRows, freezeCols,
+    editable, cellSelection, onCellValueChanged, onUndo, onRedo, canUndo, canRedo,
+    rowSelection, effectiveSelectedRows, handleSelectionChange, statusBarConfig,
+    isLoadingResolved, filters, handleFilterChange, clientFilterOptions, dataSource,
+    loadingFilterOptions, layoutMode, suppressHorizontalScroll, ariaLabel, ariaLabelledBy,
+    hasActiveFilters, clearAllFilters, emptyState,
+  ]);
 
-  return {
-    dataGridProps,
+  const pagination = useMemo<UseOGridPagination>(() => ({
     page,
     pageSize,
     displayTotalCount,
     setPage,
     setPageSize,
-    columnChooserColumns,
+    pageSizeOptions,
+    entityLabelPlural,
+  }), [page, pageSize, displayTotalCount, setPage, setPageSize, pageSizeOptions, entityLabelPlural]);
+
+  const columnChooser = useMemo<UseOGridColumnChooser>(() => ({
+    columns: columnChooserColumns,
     visibleColumns,
-    handleVisibilityChange,
-    columnChooserPlacement,
+    onVisibilityChange: handleVisibilityChange,
+    placement: columnChooserPlacement,
+  }), [columnChooserColumns, visibleColumns, handleVisibilityChange, columnChooserPlacement]);
+
+  const layout = useMemo<UseOGridLayout>(() => ({
     toolbar,
     toolbarBelow,
     className,
-    entityLabelPlural,
     emptyState,
+    sideBarProps,
+  }), [toolbar, toolbarBelow, className, emptyState, sideBarProps]);
+
+  const filtersResult = useMemo<UseOGridFilters>(() => ({
     hasActiveFilters,
     setFilters,
-    pageSizeOptions,
-    sideBarProps,
+  }), [hasActiveFilters, setFilters]);
+
+  return {
+    dataGridProps,
+    pagination,
+    columnChooser,
+    layout,
+    filters: filtersResult,
   };
 }

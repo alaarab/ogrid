@@ -2,6 +2,166 @@
 
 All notable changes to OGrid will be documented in this file.
 
+## [1.9.0] – 2026-02-10
+
+### BREAKING CHANGES
+
+- **Grouped `useOGrid` returns** — The hook's flat return object is now organized into 4 logical groups: `pagination`, `columnChooser`, `layout`, `filters`. The `dataGridProps` field is unchanged.
+  ```typescript
+  // Before (1.8.x)
+  const { page, setPage, pageSize, ... } = useOGrid(props, ref);
+  // After (1.9.0)
+  const { dataGridProps, pagination, columnChooser, layout, filters } = useOGrid(props, ref);
+  pagination.page;  pagination.setPage(2);
+  columnChooser.columns;  columnChooser.onVisibilityChange('col', true);
+  ```
+  Renamed: `columnChooserColumns` → `columnChooser.columns`, `handleVisibilityChange` → `columnChooser.onVisibilityChange`, `columnChooserPlacement` → `columnChooser.placement`.
+
+- **`useKeyboardNavigation` params restructured** — Flat params object replaced with 4 groups: `data`, `state`, `handlers`, `features`. Internal change — only affects direct hook consumers (not OGrid/DataGridTable users).
+
+- **`useUndoRedo` param renamed** — `maxHistory` → `maxUndoDepth` (default raised from 50 to 100). Result now also exposes `maxUndoDepth`.
+
+### Added
+
+- **New `IOGridApi` methods** — 5 new methods on the grid API ref:
+  - `clearFilters()` — Remove all active filters.
+  - `clearSort()` — Reset to default sort field/direction.
+  - `resetGridState(options?)` — Clear filters, sort, and selection in one call. Pass `{ keepSelection: true }` to preserve row selection.
+  - `getDisplayedRows()` — Returns the currently visible (post-filter/sort/paginate) rows.
+  - `refreshData()` — Re-trigger server-side data fetch (no-op for client-side).
+
+- **Filter sub-hooks** — `useColumnHeaderFilterState` decomposed into 4 composable sub-hooks, each independently exported:
+  - `useTextFilterState` — Text filter temp value and apply/clear.
+  - `useMultiSelectFilterState` — Multi-select checkboxes, search, select/clear all.
+  - `usePeopleFilterState` — People search with debounce, suggestions, select/clear.
+  - `useDateFilterState` — Date range from/to temp values, apply/clear.
+
+- **`useLatestRef` utility hook** — Generic hook that keeps a ref synced to the latest value. Eliminates boilerplate 2-line `useRef` + assignment pattern across all UI packages.
+
+- **`UseOGridPagination`, `UseOGridColumnChooser`, `UseOGridLayout`, `UseOGridFilters`** — New exported sub-interfaces for the grouped `useOGrid` return type.
+
+- **234 new tests** (total: **755** across all packages — Core: 479, Radix: 92, Fluent: 92, Material: 92). New test suites:
+  - `useTextFilterState.test.ts`, `useMultiSelectFilterState.test.ts`, `usePeopleFilterState.test.ts`, `useDateFilterState.test.ts`
+  - `useColumnChooserState.test.ts`, `useColumnResize.test.ts`, `useInlineCellEditorState.test.ts`
+  - `clientSideData.test.ts`, `paginationHelpers.test.ts`, `ogridHelpers.test.ts`, `dataGridStatusBar.test.ts`, `gridContextMenuHelpers.test.ts`
+
+- **`pageSizeOptions` prop** on `IOGridProps` — Customizable page size dropdown options (default `[10, 25, 50, 100]`). Active page size is auto-inserted if missing.
+
+### Improved
+
+- **`dataGridProps` memoized** — `useOGrid` now wraps `dataGridProps` in `useMemo`, preventing unnecessary re-renders of `DataGridTable` when only pagination or column chooser state changes.
+
+- **`useDataGridState` sub-objects memoized** — Each of the 6 return groups (`layout`, `rowSelection`, `editing`, `interaction`, `contextMenu`, `viewModels`) is individually `useMemo`-ized, so consumers only re-render when their specific slice changes.
+
+- **Stable `handleGridKeyDown`** — `useKeyboardNavigation` now reads params from a ref instead of closing over 20+ values. The returned handler is a single stable callback (no dependency array churn).
+
+- **Client-side filtering: single-pass predicate pipeline** — `processClientSideData` builds a predicate array and runs one `.filter()` pass instead of N sequential `.filter()` calls (one per column). Reduces allocations for grids with many filtered columns.
+
+- **`buildHeaderRows` leaf count caching** — Uses a `Map` cache to avoid O(n^2) repeated subtree traversals for deeply nested column groups.
+
+- **`useFilterOptions` stable deps** — `fields` array sorted+joined into a `useMemo` string key instead of inline `.slice().sort().join()` in the dependency array.
+
+- **Stable empty-object references** — `EMPTY_LOADING_OPTIONS` constant avoids creating `{}` on every render for `loadingFilterOptions`.
+
+- **`useLatestRef` across all UI packages** — Replaced 7+ manual `useRef`+assignment pairs per DataGridTable with `useLatestRef(value)` one-liners. Reduces boilerplate and ensures consistency.
+
+- **Inline style hoisting** — All three InlineCellEditor components hoist rich-select styles (wrapper, dropdown, option, highlight, no-matches) to module-scope constants. Eliminates per-render object allocation.
+
+- **Material DataGridTable sx hoisting** — Loading overlay, empty state, table wrapper, and inner loading box sx objects moved to module-scope constants.
+
+- **Fluent row className optimization** — Replaced `.filter(Boolean).join(' ')` with template literal concatenation for row class computation.
+
+- **Material fill handle / selection CSS vars** — Hardcoded colors (`#217346`, `#fff`) replaced with CSS custom properties (`--ogrid-selection`, `--ogrid-bg`, `--ogrid-bg-range`) for theme consistency.
+
+- **MarchingAntsOverlay deduplication** — Keyframe injection checks for existing `<style id="ogrid-marching-ants-keyframes">` element instead of module-scope boolean, preventing issues with multiple OGrid instances or HMR.
+
+- **`useOGrid` return sub-objects memoized** — `pagination`, `columnChooser`, `layout`, and `filters` return groups are each individually `useMemo`-ized. Previously they were plain objects recreated every render, defeating the grouping benefit.
+
+- **`useClipboard` stable callbacks** — `handleCopy`, `handleCut`, and `handlePaste` now use `useLatestRef` for volatile dependencies (`items`, `visibleCols`, `selectionRange`, `activeCell`, `editable`, `onCellValueChanged`). Callbacks no longer recreate when data or selection changes — only `colOffset`, `beginBatch`, and `endBatch` remain as true deps.
+
+- **`GridContextMenu` useMemo fix** — The handler memoization was using `[props]` as the dependency, which always changes (object identity). Now destructures individual handler props as deps, so handlers are only recomputed when actual callbacks change.
+
+- **`SideBar` inline style hoisting** — ~20 inline style objects (tab strip, buttons, panels, filters, checkboxes) hoisted to module-scope constants. Eliminates per-render object allocation for every sidebar render.
+
+- **`OGridLayout` rootStyle hoisted** — Root container style moved from inline to module scope.
+
+- **Stable context menu props (all 3 UI packages)** — `onUndo`/`onRedo` fallbacks use module-scope `NOOP` instead of inline `() => {}`. `onPaste` wrapper uses `useCallback` (`handlePasteVoid`) instead of inline arrow function.
+
+- **`commitCellEdit` stable callback** — `useDataGridState`'s `commitCellEdit` now reads `visibleCols` and `items.length` via `useLatestRef` instead of closing over them. The callback no longer recreates when columns or data change, which keeps the `editingState` memo group stable.
+
+- **Client-side multiSelect filter: Set lookup** — `processClientSideData` multiSelect filter now uses `Set.has()` (O(1)) instead of `Array.includes()` (O(n)) per row. Significant for grids with many filter options.
+
+- **`MarchingAntsOverlay` animation style hoisted** — Static marching ants CSS animation object moved to module scope.
+
+- **`useColumnResize` cleanup on unmount** — Drag event listeners are now properly removed if the component unmounts mid-resize.
+
+- **`mergeFilter` people filter cleanup** — Empty people filter values are now correctly removed from the filter object.
+
+- **`ensurePageSizeInOptions`** — Pagination helper auto-inserts the active page size into the options list if it's not already present, preventing a missing option when `defaultPageSize` doesn't match standard options.
+
+### Fixed
+
+- **Fluent filter popover positioning** — Replaced manual `position: fixed` popover with Fluent UI's native `Popover`/`PopoverSurface` component. The filter dropdown was rendering far from the header when the grid was inside a scrollable container (e.g. SPFx web parts). Removed `Tooltip` wrapper around column name (was causing layout issues).
+
+- **Page scroll on cell click** — Replaced `scrollIntoView()` with manual wrapper-only scroll math that only scrolls the grid container, not ancestor containers or the page. All `focus()` calls use `{ preventScroll: true }`.
+
+- **Fluent hardcoded link colors** — Replaced `#0f6cbd`/`#115ea3`/`#0c3b5e` with Fluent design tokens (`--colorBrandForeground1`, etc.) for proper dark mode support.
+
+- **Fill handle border color** — Radix and Fluent fill handle border changed from hardcoded `#fff` to `var(--ogrid-bg, #fff)`.
+
+### Changed
+
+- **Package READMEs** — All 4 package READMEs updated with feature highlights, AG Grid comparison table, and links to full documentation.
+
+- **Docs improvements** — All feature doc pages (column-chooser, column-groups, column-pinning, editing, filtering, pagination, sorting) updated with richer examples showing numeric types, value formatters, rich select editors, and `defaultPageSize`/`pageSizeOptions`. Homepage hero grid now showcases rich select editors, date editing, and sidebar panel.
+
+- **Fluent mock updated** — Added `Popover` and `PopoverSurface` mocks for the new filter popover implementation.
+
+---
+
+## [1.8.x] – 2026-02-10
+
+### 1.8.2
+- **DataGrid row rendering optimization** — Memoized row components to reduce unnecessary re-renders during cell selection and drag operations.
+
+### 1.8.1
+- Version bump with minor fixes.
+
+### 1.8.0
+- **Drag-selecting state** — `isDragging` flag in `DataGridCellInteractionState`.
+- **`isRowInRange` utility** — Row-level selection range check for render optimization.
+- **Mobile touch support** — Touch events for cell drag-selection and fill handle.
+- **Memoized row rendering** — All three UI packages use memoized row components.
+
+---
+
+## [1.7.2] – 2026-02-10
+
+### Improved
+
+- **DataGridTable performance** — Added memoization across all three UI packages for row rendering and cell interaction.
+- **Story consistency** — OGrid stories updated with consistent title wrapping.
+
+### Changed
+
+- **Material peer deps** — Updated to require MUI v7 (`@mui/material ^7.0.0`).
+
+---
+
+## [1.7.0] – 2026-02-09
+
+### Added
+
+- **`toolbarBelow` prop** — New slot on `OGrid` and `OGridLayout` for a secondary toolbar row below the primary toolbar (e.g. filter chips, breadcrumbs).
+
+### Changed
+
+- **Removed deprecated exports** — `FluentDataTable` and `IFluentDataTableProps` removed from Fluent package exports. Use `OGrid` instead.
+- **Story refactor** — DataGridTable stories across all three UI packages updated to use unified `filters` prop and `onFilterChange`.
+- **Simplified Material/Fluent internals** — `MaterialDataTable` and `FluentDataTable` components streamlined to remove deprecated types.
+
+---
+
 ## [1.6.0] – 2026-02-09
 
 ### BREAKING CHANGES
@@ -87,6 +247,55 @@ All notable changes to OGrid will be documented in this file.
 
 - **Cell Click Target** — Padding moved from `<td>` to `.cellContent` div so entire cell is clickable
 - **Batch Visibility Bug** — Select All / Clear All in side bar now use `onSetVisibleColumns(Set)` instead of per-column `onVisibilityChange` to avoid stale closure batching bugs
+
+---
+
+## [1.3.2] – 2026-02-09
+
+### Fixed
+
+- **Pinned column sticky positioning** — Radix: boosted SCSS specificity with `.dataTable` qualifier to override `position: relative` on `th`/`td`. Fluent/Material: applied sticky `left`/`right` positioning to both header and body cells for pinned columns.
+
+### Improved
+
+- **Drag selection performance** — Bypassed React state during mouse drag using refs + `requestAnimationFrame` + DOM `data-drag-range` attributes for visual feedback. React state committed only on mouseup (single re-render). Same pattern applied to `useFillHandle`.
+
+---
+
+## [1.3.1] – 2026-02-09
+
+### Changed
+
+- **Default layout mode** — `useOGrid` default `layoutMode` changed from `'content'` to `'fill'` for consistency with DataGridTable.
+- **Batch processing** — Clipboard, fill handle, and undo/redo hooks now support batch operations (`beginBatch`/`endBatch`) for grouped edits.
+
+### Improved
+
+- **Cell selection** — Enhanced selection and clipboard handling, improved checkbox styling.
+
+---
+
+## [1.3.0] – 2026-02-09
+
+### Added
+
+- **Marching Ants Overlay** — `MarchingAntsOverlay` component for visual feedback on selection and copy/cut ranges (animated dashed border).
+- **Value Parsers** — Utility functions for parsing various data types: `parseNumber`, `parseCurrency`, `parseDate`, `parseEmail`, `parseBoolean` with unit tests.
+- **Context Menu Enhancements** — Undo/redo actions with keyboard shortcut labels displayed in context menu.
+
+### Improved
+
+- **Clipboard** — Enhanced copy/cut/paste with proper range tracking and marching ants visual feedback.
+- **Keyboard navigation** — Additional keybindings and improved cell navigation.
+
+---
+
+## [1.2.2] – 2026-02-09
+
+### Changed
+
+- **`getRowId` type widened** — Return type changed from `string` to `string | number`.
+- **`sortBy` made optional** — `sortBy` is now optional in `IOGridDataGridProps` (was required).
 
 ---
 

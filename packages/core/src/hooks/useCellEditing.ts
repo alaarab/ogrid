@@ -13,6 +13,10 @@ export interface UseCellEditingResult {
   setPendingEditorValue: (value: unknown) => void;
 }
 
+/**
+ * Manages cell editing state: which cell is being edited and its pending value.
+ * @returns Current editing cell, setter, pending editor value, and setter.
+ */
 export function useCellEditing(): UseCellEditingResult {
   const [editingCell, setEditingCell] = useState<EditingCell | null>(null);
   const [pendingEditorValue, setPendingEditorValue] = useState<unknown>(undefined);

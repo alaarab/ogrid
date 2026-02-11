@@ -10,6 +10,8 @@ import { useEffect, useRef, useState, useCallback } from 'react';
 import * as React from 'react';
 import type { ISelectionRange } from '../types';
 
+const MARCHING_ANTS_ANIMATION: React.CSSProperties = { animation: 'ogrid-marching-ants 0.5s linear infinite' };
+
 export interface MarchingAntsOverlayProps {
   /** Ref to the positioned container that wraps the table (must have position: relative) */
   containerRef: React.RefObject<HTMLElement | null>;
@@ -23,16 +25,15 @@ export interface MarchingAntsOverlayProps {
   colOffset: number;
 }
 
-// Inject the @keyframes rule once into <head>
-let styleInjected = false;
+// Inject the @keyframes rule once into <head> (deduplicates across multiple OGrid instances / module copies)
 function ensureKeyframes() {
-  if (styleInjected || typeof document === 'undefined') return;
+  if (typeof document === 'undefined') return;
+  if (document.getElementById('ogrid-marching-ants-keyframes')) return;
   const style = document.createElement('style');
   style.id = 'ogrid-marching-ants-keyframes';
   style.textContent =
     '@keyframes ogrid-marching-ants{to{stroke-dashoffset:-8}}';
   document.head.appendChild(style);
-  styleInjected = true;
 }
 
 interface OverlayRect {
@@ -191,7 +192,7 @@ export function MarchingAntsOverlay({
             stroke="var(--ogrid-selection, #217346)"
             strokeWidth="2"
             strokeDasharray="4 4"
-            style={{ animation: 'ogrid-marching-ants 0.5s linear infinite' }}
+            style={MARCHING_ANTS_ANIMATION}
           />
         </svg>
       )}

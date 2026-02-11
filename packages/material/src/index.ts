@@ -1,5 +1,5 @@
 // Components
-export { OGrid, type IOGridProps } from './MaterialDataTable';
+export { OGrid, MaterialDataTable, type IOGridProps } from './MaterialDataTable';
 export { DataGridTable } from './DataGridTable/DataGridTable';
 export { ColumnChooser, type IColumnChooserProps } from './ColumnChooser/ColumnChooser';
 export { ColumnHeaderFilter, type IColumnHeaderFilterProps } from './ColumnHeaderFilter/ColumnHeaderFilter';

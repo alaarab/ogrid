@@ -42,6 +42,11 @@ function autoScrollSpeed(distance: number): number {
   return AUTO_SCROLL_MIN_SPEED + t * (AUTO_SCROLL_MAX_SPEED - AUTO_SCROLL_MIN_SPEED);
 }
 
+/**
+ * Manages cell selection range with drag-to-select and select-all support.
+ * @param params - Row/col counts, active cell setter, and wrapper ref for auto-scroll.
+ * @returns Selection range, setters, mouse/keyboard handlers, and drag state.
+ */
 export function useCellSelection(params: UseCellSelectionParams): UseCellSelectionResult {
   const { colOffset, rowCount, visibleColCount, setActiveCell, wrapperRef } = params;
 
@@ -338,7 +343,8 @@ export function useCellSelection(params: UseCellSelectionParams): UseCellSelecti
       if (rafRef.current) cancelAnimationFrame(rafRef.current);
       stopAutoScroll();
     };
-  }, [colOffset, setActiveCell, wrapperRef]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [colOffset, setActiveCell]); // wrapperRef excluded — refs are stable across renders
 
   return {
     selectionRange,

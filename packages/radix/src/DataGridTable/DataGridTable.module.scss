@@ -284,7 +284,7 @@
   width: 7px;
   height: 7px;
   background: var(--ogrid-selection, #217346);
-  border: 1px solid #fff;
+  border: 1px solid var(--ogrid-bg, #fff);
   border-radius: 1px;
   cursor: crosshair;
   pointer-events: auto;

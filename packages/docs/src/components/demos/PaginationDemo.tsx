@@ -11,6 +11,7 @@ export default function PaginationDemo() {
         data={people}
         getRowId={getRowId}
         defaultPageSize={5}
+        pageSizeOptions={[5, 10, 25, 50]}
         entityLabelPlural="people"
       />
     </LiveDemo>
