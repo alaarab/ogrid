@@ -1,6 +1,6 @@
 {
   "name": "@alaarab/ogrid-docs",
-  "version": "1.9.0",
+  "version": "2.0.0-beta",
   "private": true,
   "scripts": {
     "start": "docusaurus start",
@@ -16,8 +16,9 @@
     "prism-react-renderer": "^2.4.1",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
-    "@alaarab/ogrid": "*",
-    "@alaarab/ogrid-core": "*"
+    "@alaarab/ogrid-react-radix": "2.0.0-beta",
+    "@alaarab/ogrid-react": "2.0.0-beta",
+    "@docusaurus/theme-mermaid": "^3.7.0"
   },
   "devDependencies": {
     "@docusaurus/module-type-aliases": "^3.7.0",
