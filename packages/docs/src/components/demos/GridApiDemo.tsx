@@ -1,6 +1,6 @@
 import React, { useRef } from 'react';
-import { OGrid } from '@alaarab/ogrid';
-import type { IOGridApi } from '@alaarab/ogrid';
+import { OGrid } from '@alaarab/ogrid-react-radix';
+import type { IOGridApi } from '@alaarab/ogrid-react-radix';
 import { LiveDemo } from '../LiveDemo';
 import { people, getRowId, gridApiColumns, btnStyle, type Person } from './demoData';
 
