@@ -20,6 +20,12 @@ export function processClientSideData<T>(
   sortBy?: string,
   sortDirection?: 'asc' | 'desc'
 ): T[] {
+  // Build column lookup map for O(1) access by columnId
+  const columnMap = new Map<string, IColumnDef<T>>();
+  for (let i = 0; i < columns.length; i++) {
+    columnMap.set(columns[i].columnId, columns[i]);
+  }
+
   // --- Filtering (single-pass: build predicates, then one .filter()) ---
   const predicates: ((row: T) => boolean)[] = [];
 
@@ -77,33 +83,51 @@ export function processClientSideData<T>(
 
   // --- Sorting ---
   if (sortBy) {
-    const sortCol = columns.find((c) => c.columnId === sortBy);
+    const sortCol = columnMap.get(sortBy);
     const compare = sortCol?.compare;
     const dir = sortDirection === 'asc' ? 1 : -1;
-    rows.sort((a, b) => {
-      if (compare) return compare(a, b) * dir;
-      const av = sortCol
-        ? getCellValue(a, sortCol)
-        : (a as Record<string, unknown>)[sortBy];
-      const bv = sortCol
-        ? getCellValue(b, sortCol)
-        : (b as Record<string, unknown>)[sortBy];
-      if (av == null && bv == null) return 0;
-      if (av == null) return -1 * dir;
-      if (bv == null) return 1 * dir;
-      if (sortCol?.type === 'date') {
-        const at = new Date(String(av)).getTime();
-        const bt = new Date(String(bv)).getTime();
-        const aN = Number.isNaN(at) ? 0 : at;
-        const bN = Number.isNaN(bt) ? 0 : bt;
-        return aN === bN ? 0 : aN > bN ? dir : -dir;
+    const isDateSort = sortCol?.type === 'date';
+
+    // For date columns, pre-compute timestamps to avoid repeated new Date() in O(n log n) comparisons
+    if (isDateSort && !compare) {
+      const timestampCache = new Map<T, number>();
+      for (let i = 0; i < rows.length; i++) {
+        const row = rows[i];
+        const val = sortCol ? getCellValue(row, sortCol) : (row as Record<string, unknown>)[sortBy];
+        if (val == null) {
+          timestampCache.set(row, NaN);
+        } else {
+          const t = new Date(String(val)).getTime();
+          timestampCache.set(row, Number.isNaN(t) ? 0 : t);
+        }
       }
-      if (typeof av === 'number' && typeof bv === 'number')
-        return av === bv ? 0 : av > bv ? dir : -dir;
-      const as = String(av).toLowerCase();
-      const bs = String(bv).toLowerCase();
-      return as === bs ? 0 : as > bs ? dir : -dir;
-    });
+      rows.sort((a, b) => {
+        const at = timestampCache.get(a)!;
+        const bt = timestampCache.get(b)!;
+        if (Number.isNaN(at) && Number.isNaN(bt)) return 0;
+        if (Number.isNaN(at)) return -1 * dir;
+        if (Number.isNaN(bt)) return 1 * dir;
+        return at === bt ? 0 : at > bt ? dir : -dir;
+      });
+    } else {
+      rows.sort((a, b) => {
+        if (compare) return compare(a, b) * dir;
+        const av = sortCol
+          ? getCellValue(a, sortCol)
+          : (a as Record<string, unknown>)[sortBy];
+        const bv = sortCol
+          ? getCellValue(b, sortCol)
+          : (b as Record<string, unknown>)[sortBy];
+        if (av == null && bv == null) return 0;
+        if (av == null) return -1 * dir;
+        if (bv == null) return 1 * dir;
+        if (typeof av === 'number' && typeof bv === 'number')
+          return av === bv ? 0 : av > bv ? dir : -dir;
+        const as = String(av).toLowerCase();
+        const bs = String(bv).toLowerCase();
+        return as === bs ? 0 : as > bs ? dir : -dir;
+      });
+    }
   }
 
   return rows;

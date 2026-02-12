@@ -47,12 +47,20 @@ export function computeAggregations<T>(
   // Need at least 2 cells selected and at least 1 numeric value to show aggregation
   if (totalCells < 2 || numericValues.length === 0) return null;
 
-  const sum = numericValues.reduce((a, b) => a + b, 0);
+  let sum = 0;
+  let min = numericValues[0];
+  let max = numericValues[0];
+  for (let i = 0; i < numericValues.length; i++) {
+    const v = numericValues[i];
+    sum += v;
+    if (v < min) min = v;
+    if (v > max) max = v;
+  }
   return {
     sum,
     avg: sum / numericValues.length,
-    min: Math.min(...numericValues),
-    max: Math.max(...numericValues),
+    min,
+    max,
     count: numericValues.length,
   };
 }
