@@ -18,7 +18,6 @@ export interface UseClipboardResult {
     cutRange: ShallowRef<ISelectionRange | null>;
     copyRange: ShallowRef<ISelectionRange | null>;
     clearClipboardRanges: () => void;
-    cutRangeRef: Ref<ISelectionRange | null>;
 }
 /**
  * Manages copy, cut, and paste operations for cell ranges with TSV clipboard format.
