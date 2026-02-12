@@ -2,7 +2,7 @@ import { useMemo, useCallback, useRef } from 'react';
 import { useVirtualizer } from '@tanstack/react-virtual';
 import type { Virtualizer } from '@tanstack/react-virtual';
 import type { RefObject } from 'react';
-import type { IVirtualScrollConfig, IVisibleRange } from '@alaarab/ogrid-core';
+import type { IVisibleRange } from '@alaarab/ogrid-core';
 
 // Re-export core's IVirtualScrollConfig for convenience
 export type { IVirtualScrollConfig } from '@alaarab/ogrid-core';

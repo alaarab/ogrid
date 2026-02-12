@@ -8,8 +8,8 @@ export default [
   {
     ignores: [
       '**/node_modules/**', '**/dist/**', '**/coverage/**', '**/storybook-static/**', '**/.turbo/**',
-      '**/*.config.js', '**/jest-mocks/**', '**/scripts/**', '**/*.stories.tsx', '**/__tests__/**',
-      '**/.docusaurus/**', '**/build/**', 'packages/docs/**',
+      '**/*.config.js', '**/*.config.cjs', '**/jest-mocks/**', '**/scripts/**', '**/*.stories.tsx', '**/__tests__/**',
+      '**/.docusaurus/**', '**/build/**', 'packages/docs/**', '**/*.mjs', '**/*.d.ts',
     ],
   },
   js.configs.recommended,
@@ -30,18 +30,24 @@ export default [
       'react/display-name': 'off',
       'react-hooks/rules-of-hooks': 'error',
       'react-hooks/exhaustive-deps': 'warn',
-      '@typescript-eslint/no-unused-vars': ['warn', { argsIgnorePattern: '^_' }],
+      '@typescript-eslint/no-unused-vars': ['warn', { argsIgnorePattern: '^_', varsIgnorePattern: '^_' }],
       '@typescript-eslint/no-explicit-any': 'warn',
       '@typescript-eslint/no-require-imports': 'off',
       '@typescript-eslint/no-unused-expressions': 'off',
     },
   },
   {
-    files: ['packages/vue/**/*.ts', 'packages/vue-vuetify/**/*.ts', 'packages/vue-primevue/**/*.ts', 'packages/angular/**/*.ts', 'packages/angular-material/**/*.ts', 'packages/angular-primeng/**/*.ts'],
+    files: ['packages/vue/**/*.ts', 'packages/vue-vuetify/**/*.ts', 'packages/vue-primevue/**/*.ts', 'packages/angular/**/*.ts', 'packages/angular-material/**/*.ts', 'packages/angular-primeng/**/*.ts', 'packages/angular-radix/**/*.ts'],
     rules: {
       'react-hooks/rules-of-hooks': 'off',
       'react-hooks/exhaustive-deps': 'off',
       'react/no-unknown-property': 'off',
+    },
+  },
+  {
+    files: ['packages/vue-vuetify/**/*.ts', 'packages/vue-primevue/**/*.ts'],
+    rules: {
+      '@typescript-eslint/no-explicit-any': 'off',
     },
   },
   ...storybook.configs['flat/recommended'],

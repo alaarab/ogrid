@@ -11,12 +11,10 @@ import { MultiSelectFilterPopover } from './MultiSelectFilterPopover';
 import { PeopleFilterPopover } from './PeopleFilterPopover';
 
 // Vuetify component types don't align with h() overloads; cast to Component
-/* eslint-disable @typescript-eslint/no-explicit-any */
 const _VBtn = VBtn as any;
 const _VIcon = VIcon as any;
 const _VMenu = VMenu as any;
 const _VTooltip = VTooltip as any;
-/* eslint-enable @typescript-eslint/no-explicit-any */
 
 export interface IColumnHeaderFilterProps {
   columnKey: string;

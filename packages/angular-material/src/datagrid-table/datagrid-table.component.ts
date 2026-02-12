@@ -1,19 +1,16 @@
 import {
-  Component, input, computed, ElementRef, viewChild,
+  Component, input, ElementRef, viewChild,
   ChangeDetectionStrategy,
 } from '@angular/core';
 import {
   BaseDataGridTableComponent,
   DataGridStateService,
-  StatusBarComponent,
-  GridContextMenuComponent,
   MarchingAntsOverlayComponent,
   CHECKBOX_COLUMN_WIDTH,
   ROW_NUMBER_COLUMN_WIDTH,
 } from '@alaarab/ogrid-angular';
 import type {
   IOGridDataGridProps,
-  IColumnDef,
 } from '@alaarab/ogrid-angular';
 import { ColumnHeaderFilterComponent } from '../column-header-filter/column-header-filter.component';
 import { ColumnHeaderMenuComponent } from '../column-header-menu/column-header-menu.component';

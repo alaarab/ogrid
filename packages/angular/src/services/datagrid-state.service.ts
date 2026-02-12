@@ -1,4 +1,4 @@
-import { Injectable, signal, computed, effect, DestroyRef, inject, ElementRef } from '@angular/core';
+import { Injectable, signal, computed, effect, DestroyRef, inject } from '@angular/core';
 import {
   flattenColumns,
   getDataGridStatusBarConfig,
@@ -18,11 +18,9 @@ import type {
   IFilters,
   FilterValue,
   UserLike,
-  RowSelectionMode,
-  IRowSelectionChangeEvent,
   ICellValueChangedEvent,
 } from '../types';
-import type { IColumnDef as IAngularColumnDef, IColumnGroupDef } from '../types';
+import type { IColumnDef as IAngularColumnDef } from '../types';
 import type { IColumnDef as ICoreColumnDef } from '@alaarab/ogrid-core';
 import type { IOGridDataGridProps } from '../types';
 
