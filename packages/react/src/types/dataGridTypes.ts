@@ -81,6 +81,9 @@ interface IOGridBaseProps<T> {
   selectedRows?: Set<RowId>;
   onSelectionChange?: (event: IRowSelectionChangeEvent<T>) => void;
 
+  /** Show Excel-style row numbers column at the start of the grid (1, 2, 3...). Default: false. */
+  showRowNumbers?: boolean;
+
   statusBar?: boolean | IStatusBarProps;
 
   defaultPageSize?: number;
@@ -115,6 +118,9 @@ interface IOGridBaseProps<T> {
 
   /** Virtual scrolling configuration. When provided, only visible rows are rendered for large datasets. */
   virtualScroll?: IVirtualScrollConfig;
+
+  /** Cell spacing/density preset. Controls cell padding throughout the grid. Default: 'normal'. */
+  density?: 'compact' | 'normal' | 'comfortable';
 
   /** Fires once when the grid first renders with data (useful for restoring column state). */
   onFirstDataRendered?: () => void;
@@ -185,6 +191,12 @@ export interface IOGridDataGridProps<T> {
   rowSelection?: RowSelectionMode;
   selectedRows?: Set<RowId>;
   onSelectionChange?: (event: IRowSelectionChangeEvent<T>) => void;
+  /** Show Excel-style row numbers column. */
+  showRowNumbers?: boolean;
+  /** Current page number (1-based) for row number calculation. */
+  currentPage?: number;
+  /** Page size for row number calculation. */
+  pageSize?: number;
   statusBar?: IStatusBarProps;
   /** Unified filter model (discriminated union values). */
   filters: IFilters;
@@ -204,6 +216,8 @@ export interface IOGridDataGridProps<T> {
   columnReorder?: boolean;
   /** Virtual scrolling configuration. When provided, only visible rows are rendered for large datasets. */
   virtualScroll?: IVirtualScrollConfig;
+  /** Cell spacing/density preset. Controls cell padding throughout the grid. Default: 'normal'. */
+  density?: 'compact' | 'normal' | 'comfortable';
   /** Called when a cell renderer or custom editor throws an error. */
   onCellError?: (error: Error, errorInfo: React.ErrorInfo) => void;
   'aria-label'?: string;

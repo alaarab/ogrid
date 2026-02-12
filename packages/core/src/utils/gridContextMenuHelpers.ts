@@ -73,3 +73,17 @@ export function getContextMenuHandlers(
     },
   };
 }
+
+/** Column header menu item definition. */
+export interface IColumnHeaderMenuItem {
+  id: string;
+  label: string;
+  icon?: string;
+}
+
+/** Column header menu items for pin/unpin actions. */
+export const COLUMN_HEADER_MENU_ITEMS: IColumnHeaderMenuItem[] = [
+  { id: 'pinLeft', label: 'Pin left' },
+  { id: 'pinRight', label: 'Pin right' },
+  { id: 'unpin', label: 'Unpin' },
+];
