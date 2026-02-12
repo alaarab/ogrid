@@ -29,6 +29,10 @@ With no extra props, OGrid renders a toolbar strip containing only the column ch
 
 <ToolbarDefaultDemo />
 
+:::tip Try it in your framework
+The demo above uses Radix UI for styling. To see this feature with your framework's design system (Fluent UI, Material UI, Vuetify, PrimeNG, etc.), click **"Open in StackBlitz"** below the demo.
+:::
+
 <Tabs groupId="framework">
   <TabItem value="react" label="React" default>
 
@@ -78,6 +82,7 @@ export class GridComponent {
 :::tip Switching UI libraries
 Same component API across Angular packages. To switch, just change the import:
 
+- **Radix (CDK)**: `from '@alaarab/ogrid-angular-radix'` *(default, lightweight)*
 - **Angular Material**: `from '@alaarab/ogrid-angular-material'`
 - **PrimeNG**: `from '@alaarab/ogrid-angular-primeng'`
 
@@ -108,6 +113,7 @@ const gridProps = {
 :::tip Switching UI libraries
 Same component API across Vue packages. To switch, just change the import:
 
+- **Radix (Headless UI)**: `from '@alaarab/ogrid-vue-radix'` *(default, lightweight)*
 - **Vuetify**: `from '@alaarab/ogrid-vue-vuetify'` — wrap in `<v-app>` for theming
 - **PrimeVue**: `from '@alaarab/ogrid-vue-primevue'`
 :::

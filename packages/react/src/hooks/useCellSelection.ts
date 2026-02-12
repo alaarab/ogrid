@@ -27,8 +27,9 @@ export interface UseCellSelectionResult {
   isDragging: boolean;
 }
 
-/** DOM attribute name used for drag-range highlighting (bypasses React). */
+/** DOM attribute names used for drag-range highlighting (bypasses React). */
 const DRAG_ATTR = 'data-drag-range';
+const DRAG_ANCHOR_ATTR = 'data-drag-anchor';
 
 /** Auto-scroll config */
 const AUTO_SCROLL_EDGE = 40;   // px from wrapper edge to trigger
@@ -108,6 +109,9 @@ export function useCellSelection(params: UseCellSelectionParams): UseCellSelecti
         // setIsDragging(true) is deferred to the first mousemove to avoid
         // a true→false toggle on simple clicks (which causes 2 extra renders).
         isDraggingRef.current = true;
+        // Apply drag attrs immediately for the initial cell so the anchor styling shows
+        // even before the first mousemove. This ensures instant visual feedback.
+        setTimeout(() => applyDragAttrsRef.current?.(initial), 0);
       }
     },
     // eslint-disable-next-line react-hooks/exhaustive-deps -- setSelectionRange is a stable callback
@@ -129,13 +133,18 @@ export function useCellSelection(params: UseCellSelectionParams): UseCellSelecti
   /** Last known mouse position during drag — used by mouseUp to flush pending RAF work. */
   const lastMousePosRef = useRef<{ cx: number; cy: number } | null>(null);
 
+  // Ref to expose applyDragAttrs outside useEffect so it can be called from mouseDown
+  const applyDragAttrsRef = useRef<((range: ISelectionRange) => void) | null>(null);
+
   // Window mouse move/up for drag selection.
   // Performance: during drag, we update a ref + toggle DOM attributes via rAF.
   // React state is only committed on mouseup (single re-render instead of 60-120/s).
   useEffect(() => {
     const colOff = colOffset; // capture for closure
 
-    /** Toggle DRAG_ATTR on cell-content divs to show the range highlight via CSS. */
+    /** Toggle DRAG_ATTR on cells to show the range highlight via CSS.
+     *  Also sets edge box-shadows for a green border around the selection range,
+     *  and marks the anchor cell with DRAG_ANCHOR_ATTR (white background). */
     const applyDragAttrs = (range: ISelectionRange) => {
       const wrapper = wrapperRef.current;
       if (!wrapper) return;
@@ -143,25 +152,50 @@ export function useCellSelection(params: UseCellSelectionParams): UseCellSelecti
       const maxR = Math.max(range.startRow, range.endRow);
       const minC = Math.min(range.startCol, range.endCol);
       const maxC = Math.max(range.startCol, range.endCol);
+      const anchor = dragStartRef.current;
       const cells = wrapper.querySelectorAll('[data-row-index][data-col-index]');
       for (let i = 0; i < cells.length; i++) {
-        const el = cells[i];
+        const el = cells[i] as HTMLElement;
         const r = parseInt(el.getAttribute('data-row-index')!, 10);
         const c = parseInt(el.getAttribute('data-col-index')!, 10) - colOff;
         const inRange = r >= minR && r <= maxR && c >= minC && c <= maxC;
         if (inRange) {
           if (!el.hasAttribute(DRAG_ATTR)) el.setAttribute(DRAG_ATTR, '');
+          // Anchor cell gets white background instead of green
+          const isAnchor = anchor && r === anchor.row && c === anchor.col;
+          if (isAnchor) {
+            if (!el.hasAttribute(DRAG_ANCHOR_ATTR)) el.setAttribute(DRAG_ANCHOR_ATTR, '');
+          } else {
+            if (el.hasAttribute(DRAG_ANCHOR_ATTR)) el.removeAttribute(DRAG_ANCHOR_ATTR);
+          }
+          // Edge borders via inset box-shadow (no layout shift)
+          const shadows: string[] = [];
+          if (r === minR) shadows.push('inset 0 2px 0 0 var(--ogrid-selection, #217346)');
+          if (r === maxR) shadows.push('inset 0 -2px 0 0 var(--ogrid-selection, #217346)');
+          if (c === minC) shadows.push('inset 2px 0 0 0 var(--ogrid-selection, #217346)');
+          if (c === maxC) shadows.push('inset -2px 0 0 0 var(--ogrid-selection, #217346)');
+          el.style.boxShadow = shadows.length > 0 ? shadows.join(', ') : '';
         } else {
           if (el.hasAttribute(DRAG_ATTR)) el.removeAttribute(DRAG_ATTR);
+          if (el.hasAttribute(DRAG_ANCHOR_ATTR)) el.removeAttribute(DRAG_ANCHOR_ATTR);
+          if (el.style.boxShadow) el.style.boxShadow = '';
         }
       }
     };
+
+    // Expose applyDragAttrs via ref so mouseDown can access it
+    applyDragAttrsRef.current = applyDragAttrs;
 
     const clearDragAttrs = () => {
       const wrapper = wrapperRef.current;
       if (!wrapper) return;
       const marked = wrapper.querySelectorAll(`[${DRAG_ATTR}]`);
-      for (let i = 0; i < marked.length; i++) marked[i].removeAttribute(DRAG_ATTR);
+      for (let i = 0; i < marked.length; i++) {
+        const el = marked[i] as HTMLElement;
+        el.removeAttribute(DRAG_ATTR);
+        el.removeAttribute(DRAG_ANCHOR_ATTR);
+        el.style.boxShadow = '';
+      }
     };
 
     /** Resolve mouse coordinates to a cell range (shared by RAF callback and mouseUp flush). */

@@ -9,3 +9,4 @@ export type { IColumnHeaderFilterProps } from './column-header-filter/column-hea
 export { ColumnChooserComponent } from './column-chooser/column-chooser.component';
 export type { IColumnChooserProps } from './column-chooser/column-chooser.component';
 export { PaginationControlsComponent } from './pagination-controls/pagination-controls.component';
+export { ColumnHeaderMenuComponent } from './column-header-menu/column-header-menu.component';

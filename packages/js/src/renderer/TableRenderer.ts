@@ -1,6 +1,6 @@
 import type { RowId } from '../types/gridTypes';
 import type { IActiveCell, ISelectionRange } from '@alaarab/ogrid-core';
-import { getCellValue, buildHeaderRows, isInSelectionRange } from '@alaarab/ogrid-core';
+import { getCellValue, buildHeaderRows, isInSelectionRange, ROW_NUMBER_COLUMN_WIDTH } from '@alaarab/ogrid-core';
 import type { GridState } from '../state/GridState';
 import type { HeaderFilterState, HeaderFilterConfig } from '../state/HeaderFilterState';
 import type { VirtualScrollState } from '../state/VirtualScrollState';
@@ -26,6 +26,8 @@ export interface TableRendererInteractionState {
   onSelectAll?: (checked: boolean) => void;
   allSelected?: boolean;
   someSelected?: boolean;
+  // Row numbers
+  showRowNumbers?: boolean;
   // Column pinning
   pinnedColumns?: Record<string, 'left' | 'right'>;
   leftOffsets?: Record<string, number>;
@@ -135,9 +137,16 @@ export class TableRenderer<T> {
     return mode === 'single' || mode === 'multiple';
   }
 
-  /** The column index offset for data columns (1 if checkbox column present, else 0). */
+  private hasRowNumbersColumn(): boolean {
+    return !!this.interactionState?.showRowNumbers;
+  }
+
+  /** The column index offset for data columns (checkbox + row numbers if present). */
   getColOffset(): number {
-    return this.hasCheckboxColumn() ? 1 : 0;
+    let offset = 0;
+    if (this.hasCheckboxColumn()) offset++;
+    if (this.hasRowNumbersColumn()) offset++;
+    return offset;
   }
 
   private applyPinningStyles(
@@ -249,6 +258,16 @@ export class TableRenderer<T> {
         th.className = 'ogrid-header-cell ogrid-checkbox-header';
         th.style.width = `${CHECKBOX_COL_WIDTH}px`;
         this.appendSelectAllCheckbox(th);
+        tr.appendChild(th);
+      }
+
+      // Row numbers header
+      if (this.hasRowNumbersColumn()) {
+        const th = document.createElement('th');
+        th.className = 'ogrid-header-cell ogrid-row-number-header';
+        th.style.width = `${ROW_NUMBER_COLUMN_WIDTH}px`;
+        th.style.textAlign = 'center';
+        th.textContent = '#';
         tr.appendChild(th);
       }
 
@@ -382,8 +401,12 @@ export class TableRenderer<T> {
     const visibleCols = this.state.visibleColumnDefs;
     const { items } = this.state.getProcessedItems();
     const hasCheckbox = this.hasCheckboxColumn();
+    const hasRowNumbers = this.hasRowNumbersColumn();
     const colOffset = this.getColOffset();
     const totalColSpan = visibleCols.length + colOffset;
+
+    // Calculate row number offset for pagination
+    const rowNumberOffset = hasRowNumbers ? (this.state.page - 1) * this.state.pageSize : 0;
 
     if (items.length === 0 && !this.state.isLoading) {
       const tr = document.createElement('tr');
@@ -452,6 +475,18 @@ export class TableRenderer<T> {
           this.interactionState?.onRowCheckboxChange?.(rowId, checkbox.checked, rowIndex, e.shiftKey);
         });
         td.appendChild(checkbox);
+        tr.appendChild(td);
+      }
+
+      // Row numbers column
+      if (hasRowNumbers) {
+        const td = document.createElement('td');
+        td.className = 'ogrid-cell ogrid-row-number-cell';
+        td.style.width = `${ROW_NUMBER_COLUMN_WIDTH}px`;
+        td.style.textAlign = 'center';
+        td.style.color = 'var(--ogrid-fg-muted, #666)';
+        td.style.fontSize = '0.9em';
+        td.textContent = String(rowNumberOffset + rowIndex + 1);
         tr.appendChild(td);
       }
 

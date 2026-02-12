@@ -107,6 +107,7 @@ function TableCell(props) {
 TableCell.displayName = 'TableCell';
 const TableContainer = passthroughElement('div', 'TableContainer');
 
+// Export as named exports
 module.exports = {
   Button,
   IconButton,
@@ -131,3 +132,7 @@ module.exports = {
   TableCell,
   TableContainer,
 };
+
+// Also export each as default for default imports
+// This allows both `import { Menu } from '@mui/material'` and `import Menu from '@mui/material/Menu'`
+module.exports.default = module.exports;

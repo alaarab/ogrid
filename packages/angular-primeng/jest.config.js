@@ -29,6 +29,12 @@ module.exports = {
     '^@alaarab/ogrid-angular$': '<rootDir>/../angular/src/index.ts',
     '^@angular/core$': '<rootDir>/../angular/jest-mocks/angular-core.cjs.js',
     '^@angular/common$': '<rootDir>/../angular/jest-mocks/angular-common.cjs.js',
+    '^primeng/button$': '<rootDir>/jest-mocks/primeng-button.cjs.js',
+    '^primeng/menu$': '<rootDir>/jest-mocks/primeng-menu.cjs.js',
+    '^primeng/api$': '<rootDir>/jest-mocks/primeng-api.cjs.js',
   },
+  transformIgnorePatterns: [
+    'node_modules/(?!(@angular|primeng)/)',
+  ],
   testTimeout: 10000,
 };

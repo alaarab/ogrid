@@ -16,6 +16,10 @@ OGrid supports comprehensive keyboard navigation for moving between cells, editi
 
 <KeyboardNavigationDemo />
 
+:::tip Try it in your framework
+The demo above uses Radix UI for styling. To see this feature with your framework's design system (Fluent UI, Material UI, Vuetify, PrimeNG, etc.), click **"Open in StackBlitz"** below the demo.
+:::
+
 ## Quick Example
 
 <Tabs groupId="framework">
@@ -69,6 +73,7 @@ export class GridComponent {
 :::tip Switching UI libraries
 Same component API across Angular packages. To switch, just change the import:
 
+- **Radix (CDK)**: `from '@alaarab/ogrid-angular-radix'` *(default, lightweight)*
 - **Angular Material**: `from '@alaarab/ogrid-angular-material'`
 - **PrimeNG**: `from '@alaarab/ogrid-angular-primeng'`
 
@@ -98,6 +103,7 @@ const gridProps = {
 :::tip Switching UI libraries
 Same component API across Vue packages. To switch, just change the import:
 
+- **Radix (Headless UI)**: `from '@alaarab/ogrid-vue-radix'` *(default, lightweight)*
 - **Vuetify**: `from '@alaarab/ogrid-vue-vuetify'` — wrap in `<v-app>` for theming
 - **PrimeVue**: `from '@alaarab/ogrid-vue-primevue'`
 :::
@@ -147,9 +153,13 @@ Click any cell to make it the active cell, then use the keyboard to navigate and
 | Shift+Arrow | Extend selection range from the active cell |
 | Ctrl+Shift+Arrow | Extend selection to the edge of the current data region |
 | Shift+Click | Select range from active cell to clicked cell |
-| Ctrl+A | Select all cells |
+| Ctrl+A | Select all **cells** in the grid (for copy/paste/fill operations, not row selection) |
 
 The selection range is highlighted with a green border. The active cell remains visually distinct within the range.
+
+:::info Cell Selection vs Row Selection
+Ctrl+A selects all **cells** in the grid for spreadsheet operations (copy/paste/fill). This is different from row selection, where the header checkbox selects all **rows** for bulk operations. See [Row Selection](./row-selection) and [Spreadsheet Selection](./spreadsheet-selection) for details.
+:::
 
 ### Ctrl+Arrow (Data Region Jump)
 

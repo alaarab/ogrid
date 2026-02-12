@@ -204,6 +204,14 @@
     max-width: 48px !important;
   }
 
+  /* Row numbers column must stay 50px even in auto-fit mode */
+  &[data-auto-fit='true'][data-column-count] .rowNumberHeaderCellWrapper,
+  &[data-auto-fit='true'][data-column-count] .rowNumberCellWrapper {
+    width: 50px !important;
+    min-width: 50px !important;
+    max-width: 50px !important;
+  }
+
   /* Hide resize handle on last column only when table fits (autoFitColumns); when overflow/scroll, last column can resize (Fluent docs) */
   &[data-column-count][data-auto-fit='true'] :global(.fui-DataGridHeader .fui-DataGridRow .fui-DataGridHeaderCell:last-of-type .fui-DataGridHeaderCell__aside) {
     display: none !important;
@@ -255,6 +263,20 @@
   padding: 0 !important;
 }
 
+.rowNumberHeaderCellWrapper {
+  width: 50px !important;
+  min-width: 50px !important;
+  max-width: 50px !important;
+  padding: 0 !important;
+}
+
+.rowNumberCellWrapper {
+  width: 50px !important;
+  min-width: 50px !important;
+  max-width: 50px !important;
+  padding: 0 !important;
+}
+
 .selectionHeaderCell {
   display: flex;
   align-items: center;
@@ -269,6 +291,20 @@
   justify-content: center;
   width: 100%;
   height: 100%;
+}
+
+// Row numbers column
+.rowNumberHeaderCell,
+.rowNumberCell {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  color: var(--colorNeutralForeground3, #666);
+  background: var(--colorNeutralBackground3, #f5f5f5);
 }
 
 // Selected row highlight
@@ -329,6 +365,11 @@
 // Drag-range highlight applied via DOM attributes during drag (bypasses React for performance)
 :global([data-drag-range]) {
   background-color: var(--ogrid-bg-range, rgba(33, 115, 70, 0.12)) !important;
+}
+
+// Anchor cell during drag: white/transparent background (like Excel)
+:global([data-drag-anchor]) {
+  background-color: var(--colorNeutralBackground1, #fff) !important;
 }
 
 // Cut range — subtle background only; MarchingAntsOverlay renders the animated border
@@ -659,5 +700,90 @@
 /* Empty state: no extra bottom border (header row is last row, remove its border-bottom) */
 .tableWrapper[data-empty='true'] :global(.fui-DataGridHeader .fui-DataGridRow) {
   border-bottom: none !important;
+}
+
+// ─────────────────────────────────────────────────
+// Column header menu trigger
+// ─────────────────────────────────────────────────
+
+.headerCellContent {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.headerMenuTrigger {
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  padding: 2px 4px;
+  font-size: 16px;
+  line-height: 1;
+  color: var(--colorNeutralForeground3, #666);
+  opacity: 0;
+  transition: opacity 0.15s, background-color 0.15s;
+  border-radius: 3px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 20px;
+  height: 20px;
+
+  &:hover {
+    background: var(--colorNeutralBackground1Hover, #f3f2f1);
+    opacity: 1;
+  }
+
+  &:active {
+    background: var(--colorNeutralBackground1Pressed, #e1dfdd);
+  }
+}
+
+.tableWrapper :global(.fui-DataGridHeaderCell:hover) .headerMenuTrigger {
+  opacity: 1;
+}
+
+// ─────────────────────────────────────────────────
+// Pinned column borders
+// ─────────────────────────────────────────────────
+
+.tableWrapper :global(.fui-DataGridHeaderCell.pinnedColLeft),
+.tableWrapper :global(.fui-DataGridCell.pinnedColLeft) {
+  border-left: 2px solid var(--colorBrandForeground1, #0078d4) !important;
+}
+
+.tableWrapper :global(.fui-DataGridHeaderCell.pinnedColRight),
+.tableWrapper :global(.fui-DataGridCell.pinnedColRight) {
+  border-right: 2px solid var(--colorBrandForeground1, #0078d4) !important;
+}
+
+// ─────────────────────────────────────────────────
+// Cell Density
+// ─────────────────────────────────────────────────
+
+.density-compact {
+  :global(.fui-DataGridHeaderCell),
+  :global(.fui-DataGridCell) {
+    padding: 4px 8px;
+  }
+
+  .cellContent {
+    padding: 4px 8px;
+  }
+}
+
+.density-normal {
+  // Default Fluent UI styles
+}
+
+.density-comfortable {
+  :global(.fui-DataGridHeaderCell),
+  :global(.fui-DataGridCell) {
+    padding: 12px 16px;
+  }
+
+  .cellContent {
+    padding: 12px 16px;
+  }
 }
 

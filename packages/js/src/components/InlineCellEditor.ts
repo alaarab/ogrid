@@ -244,6 +244,7 @@ export class InlineCellEditor<T> {
       this.closeEditor();
     });
 
+    setTimeout(() => input.select(), 0);
     return input;
   }
 

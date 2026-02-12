@@ -180,6 +180,9 @@ export interface IOGridDataGridProps<T> {
   rowSelection?: RowSelectionMode;
   selectedRows?: Set<RowId>;
   onSelectionChange?: (event: IRowSelectionChangeEvent<T>) => void;
+  showRowNumbers?: boolean;
+  currentPage?: number;
+  pageSize?: number;
   statusBar?: IStatusBarProps;
   /** Unified filter model (discriminated union values). */
   filters: IFilters;

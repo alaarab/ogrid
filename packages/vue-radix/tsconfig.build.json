@@ -1,0 +1,9 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "declaration": true,
+    "declarationDir": "dist/types",
+    "outDir": "dist/esm"
+  },
+  "exclude": ["src/**/__tests__/**", "src/**/*.vue"]
+}

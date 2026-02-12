@@ -29,6 +29,12 @@ module.exports = {
     '^@alaarab/ogrid-angular$': '<rootDir>/../angular/src/index.ts',
     '^@angular/core$': '<rootDir>/../angular/jest-mocks/angular-core.cjs.js',
     '^@angular/common$': '<rootDir>/../angular/jest-mocks/angular-common.cjs.js',
+    '^@angular/material/menu$': '<rootDir>/jest-mocks/angular-material-menu.cjs.js',
+    '^@angular/material/button$': '<rootDir>/jest-mocks/angular-material-button.cjs.js',
+    '^@angular/material/icon$': '<rootDir>/jest-mocks/angular-material-icon.cjs.js',
   },
+  transformIgnorePatterns: [
+    'node_modules/(?!(@angular/material|@angular/cdk)/)',
+  ],
   testTimeout: 10000,
 };

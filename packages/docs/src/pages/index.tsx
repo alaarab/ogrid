@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import BrowserOnly from '@docusaurus/BrowserOnly';
 import Layout from '@theme/Layout';
 import CodeBlock from '@theme/CodeBlock';
@@ -70,11 +70,14 @@ const toolbarBtnStyle: React.CSSProperties = {
 
 function HeroGrid() {
   // eslint-disable-next-line @typescript-eslint/no-var-requires
-  const { OGrid, exportToCsv, getCellValue } = require('@alaarab/ogrid-react-radix') as typeof import('@alaarab/ogrid-react-radix');
+  const { OGrid, exportToCsv } = require('@alaarab/ogrid-react-radix') as typeof import('@alaarab/ogrid-react-radix');
   type ApiType = import('@alaarab/ogrid-react-radix').IOGridApi<EmployeeRow>;
+  type IFilters = import('@alaarab/ogrid-react-radix').IFilters;
 
   const apiRef = useRef<ApiType>(null);
   const data = useMemo(() => generateData(), []);
+  const [filters, setFilters] = useState<IFilters>({});
+  const [density, setDensity] = useState<'compact' | 'normal' | 'comfortable'>('normal');
 
   const columns = useMemo(() => [
     { columnId: 'id', name: '#', type: 'numeric' as const, defaultWidth: 50 },
@@ -93,32 +96,62 @@ function HeroGrid() {
     if (!api) return;
     const rows = api.getDisplayedRows();
     exportToCsv(rows, columns, (item, colId) => {
-      const val = getCellValue(item, colId);
+      const val = (item as Record<string, unknown>)[colId];
       return val != null ? String(val) : '';
     }, 'ogrid-employees.csv');
-  }, [columns, exportToCsv, getCellValue]);
-
-  const handleSelectAll = useCallback(() => {
-    apiRef.current?.selectAll();
-  }, []);
+  }, [columns, exportToCsv]);
 
   const handleClearFilters = useCallback(() => {
-    apiRef.current?.clearFilters();
+    setFilters({});
   }, []);
+
+  const hasActiveFilters = Object.keys(filters).length > 0;
+
+  const densityOptions: Array<{ value: 'compact' | 'normal' | 'comfortable'; label: string; icon: string }> = [
+    { value: 'compact', label: 'Compact', icon: '☰' },
+    { value: 'normal', label: 'Normal', icon: '≡' },
+    { value: 'comfortable', label: 'Comfortable', icon: '☷' },
+  ];
 
   const toolbar = useMemo(() => (
     <>
       <button style={toolbarBtnStyle} onClick={handleExportCsv} title="Export to CSV">
         Export CSV
       </button>
-      <button style={toolbarBtnStyle} onClick={handleSelectAll} title="Select all rows">
-        Select All
-      </button>
-      <button style={toolbarBtnStyle} onClick={handleClearFilters} title="Clear all filters">
+      <button
+        style={{
+          ...toolbarBtnStyle,
+          opacity: hasActiveFilters ? 1 : 0.5,
+          cursor: hasActiveFilters ? 'pointer' : 'not-allowed',
+        }}
+        onClick={handleClearFilters}
+        title="Clear all filters"
+        disabled={!hasActiveFilters}
+      >
         Clear Filters
       </button>
+      <div style={{ display: 'flex', gap: 0, border: '1px solid var(--ogrid-border, #e0e0e0)', borderRadius: 4, overflow: 'hidden' }}>
+        {densityOptions.map((opt, idx) => (
+          <button
+            key={opt.value}
+            onClick={() => setDensity(opt.value)}
+            title={`${opt.label} density`}
+            style={{
+              ...toolbarBtnStyle,
+              border: 'none',
+              borderRadius: 0,
+              borderRight: idx < densityOptions.length - 1 ? '1px solid var(--ogrid-border, #e0e0e0)' : 'none',
+              background: density === opt.value ? 'var(--ogrid-selection, #217346)' : 'transparent',
+              color: density === opt.value ? 'white' : 'var(--ogrid-fg, #242424)',
+              minWidth: 32,
+            }}
+          >
+            <span title={opt.label}>{opt.icon}</span>
+          </button>
+        ))}
+      </div>
     </>
-  ), [handleExportCsv, handleSelectAll, handleClearFilters]);
+  ), [handleExportCsv, handleClearFilters, hasActiveFilters, density, densityOptions]);
 
   return (
     <div className={styles.heroGridWrapper}>
@@ -132,10 +165,51 @@ function HeroGrid() {
         statusBar
         sideBar
         toolbar={toolbar}
+        filters={filters}
+        onFiltersChange={setFilters}
+        density={density}
         defaultPageSize={100}
         layoutMode="fill"
         entityLabelPlural="employees"
       />
+    </div>
+  );
+}
+
+/* ──────────────────────────────────────────────
+   Rotating Install Command
+   ────────────────────────────────────────────── */
+
+const installCommands = [
+  { pkg: '@alaarab/ogrid-react-radix', label: 'React + Radix' },
+  { pkg: '@alaarab/ogrid-react-fluent', label: 'React + Fluent UI' },
+  { pkg: '@alaarab/ogrid-react-material', label: 'React + Material UI' },
+  { pkg: '@alaarab/ogrid-angular-material', label: 'Angular + Material' },
+  { pkg: '@alaarab/ogrid-angular-primeng', label: 'Angular + PrimeNG' },
+  { pkg: '@alaarab/ogrid-vue-vuetify', label: 'Vue + Vuetify' },
+  { pkg: '@alaarab/ogrid-vue-primevue', label: 'Vue + PrimeVue' },
+  { pkg: '@alaarab/ogrid-js', label: 'Vanilla JS' },
+];
+
+function RotatingInstallCommand() {
+  const [index, setIndex] = useState(0);
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setIndex((prev) => (prev + 1) % installCommands.length);
+    }, 2500);
+    return () => clearInterval(interval);
+  }, []);
+
+  return (
+    <div className={styles.heroInstall}>
+      <span className={styles.heroInstallDollar}>$</span>
+      <span className={styles.heroInstallCommand}>
+        npm install {installCommands[index].pkg}
+      </span>
+      <span className={styles.heroInstallLabel}>
+        {installCommands[index].label}
+      </span>
     </div>
   );
 }
@@ -172,10 +246,7 @@ function Hero() {
             GitHub
           </Link>
         </div>
-        <div className={styles.heroInstall}>
-          <span className={styles.heroInstallDollar}>$</span>
-          npm install @alaarab/ogrid-react-radix
-        </div>
+        <RotatingInstallCommand />
       </div>
     </section>
   );
@@ -410,6 +481,38 @@ function renderCell(type: CellType, text: string) {
 }
 
 function ComparisonSection() {
+  const ogridFeatures: Array<{ name: string; value: string; type: 'check' | 'free' }> = [
+    { name: 'Sorting & Filtering', value: 'Built-in', type: 'check' },
+    { name: 'Cell Editing', value: 'Built-in', type: 'check' },
+    { name: 'Spreadsheet Selection', value: 'Built-in', type: 'check' },
+    { name: 'Clipboard (Copy/Paste)', value: 'Built-in', type: 'check' },
+    { name: 'Fill Handle', value: 'Built-in', type: 'check' },
+    { name: 'Undo / Redo', value: 'Built-in', type: 'check' },
+    { name: 'Context Menu', value: 'Built-in', type: 'check' },
+    { name: 'Status Bar', value: 'Built-in', type: 'check' },
+    { name: 'Side Bar', value: 'Built-in', type: 'check' },
+    { name: 'Server-Side Data', value: 'Built-in', type: 'check' },
+    { name: 'Headless Core', value: 'Yes', type: 'check' },
+    { name: 'License', value: 'MIT (free forever)', type: 'free' },
+    { name: 'Enterprise Cost', value: '$0', type: 'free' },
+  ];
+
+  const aggridFeatures: Array<{ name: string; value: string; type: 'check' | 'paid' | 'neutral' }> = [
+    { name: 'Sorting & Filtering', value: 'Community (free)', type: 'check' },
+    { name: 'Cell Editing', value: 'Community (free)', type: 'check' },
+    { name: 'Spreadsheet Selection', value: 'Enterprise $999+/dev', type: 'paid' },
+    { name: 'Clipboard (Copy/Paste)', value: 'Enterprise $999+/dev', type: 'paid' },
+    { name: 'Fill Handle', value: 'Enterprise $999+/dev', type: 'paid' },
+    { name: 'Undo / Redo', value: 'Enterprise $999+/dev', type: 'paid' },
+    { name: 'Context Menu', value: 'Enterprise $999+/dev', type: 'paid' },
+    { name: 'Status Bar', value: 'Enterprise $999+/dev', type: 'paid' },
+    { name: 'Side Bar', value: 'Enterprise $999+/dev', type: 'paid' },
+    { name: 'Server-Side Data', value: 'Enterprise $999+/dev', type: 'paid' },
+    { name: 'Headless Core', value: 'No', type: 'neutral' },
+    { name: 'License', value: 'MIT / Commercial', type: 'neutral' },
+    { name: 'Enterprise Cost', value: 'From $999/dev', type: 'paid' },
+  ];
+
   return (
     <section className={styles.comparison}>
       <div className={styles.comparisonInner}>
@@ -417,24 +520,66 @@ function ComparisonSection() {
         <p className={styles.sectionSubtitle}>
           Enterprise-grade features without the enterprise price tag.
         </p>
-        <table className={styles.comparisonTable}>
-          <thead>
-            <tr>
-              <th>Feature</th>
-              <th>OGrid</th>
-              <th>AG Grid</th>
-            </tr>
-          </thead>
-          <tbody>
-            {compRows.map((row) => (
-              <tr key={row.feature}>
-                <td>{row.feature}</td>
-                <td>{renderCell(...row.ogrid)}</td>
-                <td>{renderCell(...row.aggrid)}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+
+        <div className={styles.comparisonGrid}>
+          {/* OGrid Card */}
+          <div className={`${styles.comparisonCard} ${styles.comparisonCardOGrid}`}>
+            <div className={styles.comparisonCardHeader}>
+              <div className={`${styles.comparisonCardIcon} ${styles.comparisonCardIconOGrid}`}>
+                OG
+              </div>
+              <div className={styles.comparisonCardTitle}>OGrid</div>
+            </div>
+            <ul className={styles.comparisonFeatureList}>
+              {ogridFeatures.map((f) => (
+                <li key={f.name} className={styles.comparisonFeatureItem}>
+                  <span className={`${styles.comparisonFeatureIcon} ${styles.comparisonFeatureIconCheck}`}>
+                    ✓
+                  </span>
+                  <div className={styles.comparisonFeatureText}>
+                    <span className={styles.comparisonFeatureName}>{f.name}</span>
+                    <span className={`${styles.comparisonFeatureValue} ${f.type === 'free' ? styles.comparisonFeatureValueFree : ''}`}>
+                      {f.value}
+                    </span>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          </div>
+
+          {/* AG Grid Card */}
+          <div className={`${styles.comparisonCard} ${styles.comparisonCardAggrid}`}>
+            <div className={styles.comparisonCardHeader}>
+              <div className={`${styles.comparisonCardIcon} ${styles.comparisonCardIconAggrid}`}>
+                AG
+              </div>
+              <div className={styles.comparisonCardTitle}>AG Grid</div>
+            </div>
+            <ul className={styles.comparisonFeatureList}>
+              {aggridFeatures.map((f) => (
+                <li key={f.name} className={styles.comparisonFeatureItem}>
+                  <span
+                    className={`${styles.comparisonFeatureIcon} ${
+                      f.type === 'check'
+                        ? styles.comparisonFeatureIconCheck
+                        : f.type === 'paid'
+                        ? styles.comparisonFeatureIconEnterprise
+                        : styles.comparisonFeatureIconNeutral
+                    }`}
+                  >
+                    {f.type === 'check' ? '✓' : f.type === 'paid' ? '$' : '—'}
+                  </span>
+                  <div className={styles.comparisonFeatureText}>
+                    <span className={styles.comparisonFeatureName}>{f.name}</span>
+                    <span className={`${styles.comparisonFeatureValue} ${f.type === 'paid' ? styles.comparisonFeatureValuePaid : ''}`}>
+                      {f.value}
+                    </span>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          </div>
+        </div>
       </div>
     </section>
   );
@@ -453,10 +598,7 @@ function CTASection() {
         <p className={styles.ctaSubtitle}>
           Get started in under 5 minutes. Free. MIT licensed. No strings attached.
         </p>
-        <div className={styles.ctaInstall}>
-          <span className={styles.heroInstallDollar}>$</span>
-          npm install @alaarab/ogrid-react-radix
-        </div>
+        <RotatingInstallCommand />
         <div className={styles.ctaButtons}>
           <Link className={styles.btnPrimary} to="/docs/getting-started/overview">
             Read the Docs

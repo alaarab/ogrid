@@ -129,6 +129,7 @@ export function useOGrid<T>(
     rowSelection = 'none',
     selectedRows,
     onSelectionChange,
+    showRowNumbers,
     statusBar,
     pageSizeOptions,
     sideBar,
@@ -137,6 +138,7 @@ export function useOGrid<T>(
     columnChooser: columnChooserProp,
     columnReorder,
     virtualScroll,
+    density = 'normal',
     'aria-label': ariaLabel,
     'aria-labelledby': ariaLabelledBy,
   } = props;
@@ -627,6 +629,9 @@ export function useOGrid<T>(
     rowSelection,
     selectedRows: effectiveSelectedRows,
     onSelectionChange: handleSelectionChange,
+    showRowNumbers,
+    currentPage: page,
+    pageSize,
     statusBar: statusBarConfig,
     isLoading: isLoadingResolved,
     filters,
@@ -639,6 +644,7 @@ export function useOGrid<T>(
     suppressHorizontalScroll,
     columnReorder,
     virtualScroll,
+    density,
     'aria-label': ariaLabel,
     'aria-labelledby': ariaLabelledBy,
     emptyState: {
@@ -652,10 +658,10 @@ export function useOGrid<T>(
     visibleColumns, columnOrder, onColumnOrderChange, handleColumnResized,
     handleColumnPinned, pinnedOverrides, columnWidthOverrides, freezeRows, freezeCols,
     editable, cellSelection, onCellValueChanged, onUndo, onRedo, canUndo, canRedo,
-    rowSelection, effectiveSelectedRows, handleSelectionChange, statusBarConfig,
+    rowSelection, effectiveSelectedRows, handleSelectionChange, showRowNumbers, page, pageSize, statusBarConfig,
     isLoadingResolved, filters, handleFilterChange, clientFilterOptions, dataSource,
     loadingFilterOptions, layoutMode, suppressHorizontalScroll, columnReorder, virtualScroll,
-    ariaLabel, ariaLabelledBy,
+    density, ariaLabel, ariaLabelledBy,
     hasActiveFilters, clearAllFilters, emptyState,
   ]);
 

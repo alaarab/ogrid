@@ -7,6 +7,9 @@ const identity = (v) => v;
 // Decorator factories — return the class/method unchanged
 const Injectable = (opts) => (target) => target;
 const Component = (opts) => (target) => target;
+const Input = (opts) => (target, propertyKey) => {};
+const Output = (opts) => (target, propertyKey) => {};
+const ViewChild = (selector, opts) => (target, propertyKey) => {};
 
 // Signal primitives — return simple getter functions
 const signal = (initial) => {
@@ -53,6 +56,9 @@ class TemplateRef {}
 module.exports = {
   Injectable,
   Component,
+  Input,
+  Output,
+  ViewChild,
   signal,
   computed,
   effect,
