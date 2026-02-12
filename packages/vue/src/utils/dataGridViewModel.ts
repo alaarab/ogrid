@@ -1,0 +1,369 @@
+/**
+ * View model helpers for Vue DataGridTable.
+ * These are Vue equivalents of the React-specific utils in @alaarab/ogrid-react.
+ */
+import type { ColumnFilterType, IDateFilterValue, ICellEditorProps } from '../types/columnTypes';
+import type { IColumnDef } from '../types/columnTypes';
+import type { RowId, UserLike, IFilters, FilterValue, ICellValueChangedEvent } from '../types';
+import { getCellValue, isInSelectionRange } from '@alaarab/ogrid-core';
+
+// --- Header filter config ---
+
+export interface HeaderFilterConfigInput {
+  sortBy?: string;
+  sortDirection: 'asc' | 'desc';
+  onColumnSort: (columnKey: string) => void;
+  filters: IFilters;
+  onFilterChange: (key: string, value: FilterValue | undefined) => void;
+  filterOptions: Record<string, string[]>;
+  loadingFilterOptions: Record<string, boolean>;
+  peopleSearch?: (query: string) => Promise<UserLike[]>;
+}
+
+export interface HeaderFilterConfig {
+  columnKey: string;
+  columnName: string;
+  filterType: ColumnFilterType;
+  isSorted?: boolean;
+  isSortedDescending?: boolean;
+  onSort?: () => void;
+  selectedValues?: string[];
+  onFilterChange?: (values: string[]) => void;
+  options?: string[];
+  isLoadingOptions?: boolean;
+  textValue?: string;
+  onTextChange?: (value: string) => void;
+  selectedUser?: UserLike;
+  onUserChange?: (user: UserLike | undefined) => void;
+  peopleSearch?: (query: string) => Promise<UserLike[]>;
+  dateValue?: IDateFilterValue;
+  onDateChange?: (value: IDateFilterValue | undefined) => void;
+}
+
+export function getHeaderFilterConfig<T>(
+  col: IColumnDef<T>,
+  input: HeaderFilterConfigInput
+): HeaderFilterConfig {
+  const filterable =
+    col.filterable && typeof col.filterable === 'object' ? col.filterable : null;
+  const filterType = (filterable?.type ?? 'none') as ColumnFilterType;
+  const filterField = filterable?.filterField ?? col.columnId;
+  const sortable = col.sortable !== false;
+  const filterValue = input.filters[filterField];
+
+  const base = {
+    columnKey: col.columnId,
+    columnName: col.name,
+    filterType,
+    isSorted: input.sortBy === col.columnId,
+    isSortedDescending: input.sortBy === col.columnId && input.sortDirection === 'desc',
+    onSort: sortable ? () => input.onColumnSort(col.columnId) : undefined,
+  };
+
+  if (filterType === 'text') {
+    return {
+      ...base,
+      textValue: filterValue?.type === 'text' ? filterValue.value : '',
+      onTextChange: (v: string) =>
+        input.onFilterChange(filterField, v.trim() ? { type: 'text', value: v } : undefined),
+    };
+  }
+  if (filterType === 'people') {
+    return {
+      ...base,
+      selectedUser: filterValue?.type === 'people' ? filterValue.value : undefined,
+      onUserChange: (u: UserLike | undefined) =>
+        input.onFilterChange(filterField, u ? { type: 'people', value: u } : undefined),
+      peopleSearch: input.peopleSearch,
+    };
+  }
+  if (filterType === 'multiSelect') {
+    return {
+      ...base,
+      options: input.filterOptions[filterField] ?? [],
+      isLoadingOptions: input.loadingFilterOptions[filterField] ?? false,
+      selectedValues: filterValue?.type === 'multiSelect' ? filterValue.value : [],
+      onFilterChange: (values: string[]) =>
+        input.onFilterChange(filterField, values.length ? { type: 'multiSelect', value: values } : undefined),
+    };
+  }
+  if (filterType === 'date') {
+    return {
+      ...base,
+      dateValue: filterValue?.type === 'date' ? filterValue.value : undefined,
+      onDateChange: (v: IDateFilterValue | undefined) =>
+        input.onFilterChange(filterField, v ? { type: 'date', value: v } : undefined),
+    };
+  }
+  return base;
+}
+
+// --- Cell render descriptor ---
+
+export type CellRenderMode = 'editing-inline' | 'editing-popover' | 'display';
+
+export interface CellRenderDescriptorInput<T> {
+  editingCell: { rowId: RowId; columnId: string } | null;
+  activeCell: { rowIndex: number; columnIndex: number } | null;
+  selectionRange: {
+    startRow: number;
+    startCol: number;
+    endRow: number;
+    endCol: number;
+  } | null;
+  cutRange: {
+    startRow: number;
+    startCol: number;
+    endRow: number;
+    endCol: number;
+  } | null;
+  copyRange: {
+    startRow: number;
+    startCol: number;
+    endRow: number;
+    endCol: number;
+  } | null;
+  colOffset: number;
+  itemsLength: number;
+  getRowId: (item: T) => RowId;
+  editable?: boolean;
+  onCellValueChanged?: (event: ICellValueChangedEvent<T>) => void;
+  isDragging?: boolean;
+}
+
+export interface CellRenderDescriptor {
+  mode: CellRenderMode;
+  editorType?: 'text' | 'select' | 'checkbox' | 'richSelect' | 'date';
+  value?: unknown;
+  isActive: boolean;
+  isInRange: boolean;
+  isInCutRange: boolean;
+  isInCopyRange: boolean;
+  isSelectionEndCell: boolean;
+  canEditAny: boolean;
+  isPinned: boolean;
+  pinnedSide?: 'left' | 'right';
+  globalColIndex: number;
+  rowId: RowId;
+  rowIndex: number;
+  displayValue?: unknown;
+}
+
+export function getCellRenderDescriptor<T>(
+  item: T,
+  col: IColumnDef<T>,
+  rowIndex: number,
+  colIdx: number,
+  input: CellRenderDescriptorInput<T>
+): CellRenderDescriptor {
+  const rowId = input.getRowId(item);
+  const globalColIndex = colIdx + input.colOffset;
+
+  const colEditable =
+    col.editable === true ||
+    (typeof col.editable === 'function' && col.editable(item));
+  const canEditInline =
+    input.editable !== false &&
+    !!colEditable &&
+    !!input.onCellValueChanged &&
+    typeof col.cellEditor !== 'function';
+  const canEditPopup =
+    input.editable !== false &&
+    !!colEditable &&
+    !!input.onCellValueChanged &&
+    typeof col.cellEditor === 'function' &&
+    col.cellEditorPopup !== false;
+  const canEditAny = canEditInline || canEditPopup;
+
+  const isEditing =
+    input.editingCell?.rowId === rowId &&
+    input.editingCell?.columnId === col.columnId;
+  const isActive =
+    input.activeCell?.rowIndex === rowIndex &&
+    input.activeCell?.columnIndex === globalColIndex;
+  const isInRange =
+    input.selectionRange != null &&
+    isInSelectionRange(input.selectionRange, rowIndex, colIdx);
+  const isInCutRange =
+    input.cutRange != null &&
+    isInSelectionRange(input.cutRange, rowIndex, colIdx);
+  const isInCopyRange =
+    input.copyRange != null &&
+    isInSelectionRange(input.copyRange, rowIndex, colIdx);
+  const isSelectionEndCell =
+    !input.isDragging &&
+    input.copyRange == null &&
+    input.cutRange == null &&
+    input.selectionRange != null &&
+    rowIndex === input.selectionRange.endRow &&
+    colIdx === input.selectionRange.endCol;
+
+  const isPinned = col.pinned != null;
+  const pinnedSide = col.pinned ?? undefined;
+
+  let mode: CellRenderMode = 'display';
+  let editorType: 'text' | 'select' | 'checkbox' | 'richSelect' | 'date' | undefined;
+  let value: unknown;
+
+  if (isEditing && canEditInline) {
+    mode = 'editing-inline';
+    if (
+      col.cellEditor === 'text' ||
+      col.cellEditor === 'select' ||
+      col.cellEditor === 'checkbox' ||
+      col.cellEditor === 'richSelect' ||
+      col.cellEditor === 'date'
+    ) {
+      editorType = col.cellEditor;
+    } else if (col.type === 'date') {
+      editorType = 'date';
+    } else if (col.type === 'boolean') {
+      editorType = 'checkbox';
+    } else {
+      editorType = 'text';
+    }
+    value = getCellValue(item, col);
+  } else if (isEditing && canEditPopup && typeof col.cellEditor === 'function') {
+    mode = 'editing-popover';
+    value = getCellValue(item, col);
+  } else {
+    value = getCellValue(item, col);
+  }
+
+  return {
+    mode,
+    editorType,
+    value,
+    isActive,
+    isInRange,
+    isInCutRange,
+    isInCopyRange,
+    isSelectionEndCell,
+    canEditAny,
+    isPinned,
+    pinnedSide,
+    globalColIndex,
+    rowId,
+    rowIndex,
+    displayValue: value,
+  };
+}
+
+// --- Cell rendering helpers ---
+
+export function resolveCellDisplayContent<T>(
+  col: IColumnDef<T>,
+  item: T,
+  displayValue: unknown
+): unknown {
+  if (col.renderCell) return col.renderCell(item);
+  if (col.valueFormatter) return col.valueFormatter(displayValue, item);
+  if (displayValue == null) return null;
+  if (col.type === 'date') {
+    const d = new Date(String(displayValue));
+    if (!Number.isNaN(d.getTime())) return d.toLocaleDateString();
+  }
+  if (col.type === 'boolean') {
+    return displayValue ? 'True' : 'False';
+  }
+  return String(displayValue);
+}
+
+export function resolveCellStyle<T>(
+  col: IColumnDef<T>,
+  item: T
+): Record<string, string> | undefined {
+  if (!col.cellStyle) return undefined;
+  return typeof col.cellStyle === 'function' ? col.cellStyle(item) : col.cellStyle;
+}
+
+export function buildInlineEditorProps<T>(
+  item: T,
+  col: IColumnDef<T>,
+  descriptor: CellRenderDescriptor,
+  callbacks: {
+    commitCellEdit: (item: T, columnId: string, oldValue: unknown, newValue: unknown, rowIndex: number, globalColIndex: number) => void;
+    setEditingCell: (cell: null) => void;
+  }
+) {
+  return {
+    value: descriptor.value,
+    item,
+    column: col,
+    rowIndex: descriptor.rowIndex,
+    editorType: (descriptor.editorType ?? 'text') as 'text' | 'select' | 'checkbox' | 'richSelect' | 'date',
+    onCommit: (newValue: unknown) =>
+      callbacks.commitCellEdit(item, col.columnId, descriptor.value, newValue, descriptor.rowIndex, descriptor.globalColIndex),
+    onCancel: () => callbacks.setEditingCell(null),
+  };
+}
+
+export function buildPopoverEditorProps<T>(
+  item: T,
+  col: IColumnDef<T>,
+  descriptor: CellRenderDescriptor,
+  pendingEditorValue: unknown,
+  callbacks: {
+    setPendingEditorValue: (value: unknown) => void;
+    commitCellEdit: (item: T, columnId: string, oldValue: unknown, newValue: unknown, rowIndex: number, globalColIndex: number) => void;
+    cancelPopoverEdit: () => void;
+  }
+): ICellEditorProps<T> {
+  const oldValue = descriptor.value;
+  const displayValue = pendingEditorValue !== undefined ? pendingEditorValue : oldValue;
+  return {
+    value: displayValue,
+    onValueChange: callbacks.setPendingEditorValue,
+    onCommit: () => {
+      const newValue = pendingEditorValue !== undefined ? pendingEditorValue : oldValue;
+      callbacks.commitCellEdit(item, col.columnId, oldValue, newValue, descriptor.rowIndex, descriptor.globalColIndex);
+    },
+    onCancel: callbacks.cancelPopoverEdit,
+    item,
+    column: col,
+    cellEditorParams: col.cellEditorParams,
+  };
+}
+
+export interface CellInteractionHandlers {
+  handleCellMouseDown: (e: MouseEvent, rowIndex: number, colIndex: number) => void;
+  setActiveCell: (cell: { rowIndex: number; columnIndex: number }) => void;
+  setEditingCell: (cell: { rowId: RowId; columnId: string } | null) => void;
+  handleCellContextMenu: (e: { clientX: number; clientY: number; preventDefault?: () => void }) => void;
+}
+
+export interface CellInteractionProps {
+  'data-row-index': number;
+  'data-col-index': number;
+  'data-in-range'?: 'true';
+  tabindex: number;
+  role?: 'button';
+  onMousedown: (e: MouseEvent) => void;
+  onClick: () => void;
+  onContextmenu: (e: MouseEvent) => void;
+  onDblclick?: () => void;
+}
+
+export function getCellInteractionProps(
+  descriptor: CellRenderDescriptor,
+  columnId: string,
+  handlers: CellInteractionHandlers
+): CellInteractionProps {
+  const base: CellInteractionProps = {
+    'data-row-index': descriptor.rowIndex,
+    'data-col-index': descriptor.globalColIndex,
+    ...(descriptor.isInRange ? { 'data-in-range': 'true' as const } : {}),
+    tabindex: descriptor.isActive ? 0 : -1,
+    onMousedown: (e: MouseEvent) =>
+      handlers.handleCellMouseDown(e, descriptor.rowIndex, descriptor.globalColIndex),
+    onClick: () =>
+      handlers.setActiveCell({ rowIndex: descriptor.rowIndex, columnIndex: descriptor.globalColIndex }),
+    onContextmenu: (e: MouseEvent) => handlers.handleCellContextMenu(e),
+  };
+  if (descriptor.canEditAny) {
+    base.role = 'button';
+    base.onDblclick = () =>
+      handlers.setEditingCell({ rowId: descriptor.rowId, columnId });
+  }
+  return base;
+}
