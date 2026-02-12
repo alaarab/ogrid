@@ -18,6 +18,7 @@ import {
   type ICellEditorProps,
 } from '@alaarab/ogrid-vue';
 import { ColumnHeaderFilter } from '../ColumnHeaderFilter';
+import { ColumnHeaderMenu } from '../ColumnHeaderMenu/ColumnHeaderMenu';
 import { InlineCellEditor } from './InlineCellEditor';
 import { StatusBar } from './StatusBar';
 import { GridContextMenu } from './GridContextMenu';
@@ -70,6 +71,8 @@ export const DataGridTable = defineComponent({
       const interaction = state.interaction.value;
       const ctxMenu = state.contextMenu.value;
       const viewModels = state.viewModels.value;
+      const pinning = state.pinning.value;
+      const { headerMenu } = pinning;
 
       const {
         visibleCols, hasCheckboxCol, hasRowNumbersCol, colOffset: _colOffset, containerWidth, minTableWidth, desiredTableWidth,
@@ -421,7 +424,27 @@ export const DataGridTable = defineComponent({
                             },
                             onMousedown: (e: MouseEvent) => handleReorderMouseDown(col.columnId, e),
                           }, [
-                            h(ColumnHeaderFilter, getHeaderFilterConfig(col, headerFilterInput)),
+                            h('div', { style: { display: 'flex', alignItems: 'center', width: '100%' } }, [
+                              h(ColumnHeaderFilter, getHeaderFilterConfig(col, headerFilterInput)),
+                              h('button', {
+                                onClick: (e: MouseEvent) => {
+                                  e.stopPropagation();
+                                  headerMenu.open(col.columnId, e.currentTarget as HTMLElement);
+                                },
+                                'aria-label': 'Column options',
+                                title: 'Column options',
+                                style: {
+                                  background: 'none',
+                                  border: 'none',
+                                  cursor: 'pointer',
+                                  padding: '2px 4px',
+                                  fontSize: '14px',
+                                  color: 'rgba(0,0,0,0.5)',
+                                  lineHeight: '1',
+                                  flexShrink: '0',
+                                },
+                              }, '\u22EE'),
+                            ]),
                             h('div', {
                               onMousedown: (e: MouseEvent) => { e.stopPropagation(); handleResizeStart(e, col); },
                               style: {
@@ -589,6 +612,19 @@ export const DataGridTable = defineComponent({
             })
           ),
         ] : []),
+
+        // Column header menu
+        h(ColumnHeaderMenu, {
+          isOpen: headerMenu.isOpen,
+          anchorElement: headerMenu.anchorElement,
+          onClose: headerMenu.close,
+          onPinLeft: headerMenu.handlePinLeft,
+          onPinRight: headerMenu.handlePinRight,
+          onUnpin: headerMenu.handleUnpin,
+          canPinLeft: headerMenu.canPinLeft,
+          canPinRight: headerMenu.canPinRight,
+          canUnpin: headerMenu.canUnpin,
+        }),
 
         // Status bar
         ...(statusBarConfig ? [

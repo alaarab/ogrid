@@ -27,8 +27,9 @@ export interface UseCellSelectionResult {
   isDragging: Ref<boolean>;
 }
 
-/** DOM attribute name used for drag-range highlighting (bypasses Vue). */
+/** DOM attribute names used for drag-range highlighting (bypasses Vue). */
 const DRAG_ATTR = 'data-drag-range';
+const DRAG_ANCHOR_ATTR = 'data-drag-anchor';
 
 /** Auto-scroll config */
 const AUTO_SCROLL_EDGE = 40;
@@ -93,6 +94,9 @@ export function useCellSelection(params: UseCellSelectionParams): UseCellSelecti
       liveDragRange = initial;
       setActiveCell({ rowIndex, columnIndex: globalColIndex });
       isDraggingInternal = true;
+      // Apply drag attrs immediately for the initial cell so the anchor styling shows
+      // even before the first mousemove. This ensures instant visual feedback.
+      setTimeout(() => applyDragAttrs(initial), 0);
     }
   };
 
@@ -110,6 +114,9 @@ export function useCellSelection(params: UseCellSelectionParams): UseCellSelecti
 
   // --- Window mouse move/up for drag selection ---
 
+  /** Toggle DRAG_ATTR on cells to show the range highlight via CSS.
+   *  Also sets edge box-shadows for a green border around the selection range,
+   *  and marks the anchor cell with DRAG_ANCHOR_ATTR (white background). */
   const applyDragAttrs = (range: ISelectionRange) => {
     const wrapper = wrapperRef.value;
     if (!wrapper) return;
@@ -117,16 +124,33 @@ export function useCellSelection(params: UseCellSelectionParams): UseCellSelecti
     const maxR = Math.max(range.startRow, range.endRow);
     const minC = Math.min(range.startCol, range.endCol);
     const maxC = Math.max(range.startCol, range.endCol);
+    const anchor = dragStart;
     const cells = wrapper.querySelectorAll('[data-row-index][data-col-index]');
     for (let i = 0; i < cells.length; i++) {
-      const el = cells[i];
+      const el = cells[i] as HTMLElement;
       const r = parseInt(el.getAttribute('data-row-index')!, 10);
       const c = parseInt(el.getAttribute('data-col-index')!, 10) - colOffset;
       const inRange = r >= minR && r <= maxR && c >= minC && c <= maxC;
       if (inRange) {
         if (!el.hasAttribute(DRAG_ATTR)) el.setAttribute(DRAG_ATTR, '');
+        // Anchor cell gets white background instead of green
+        const isAnchor = anchor && r === anchor.row && c === anchor.col;
+        if (isAnchor) {
+          if (!el.hasAttribute(DRAG_ANCHOR_ATTR)) el.setAttribute(DRAG_ANCHOR_ATTR, '');
+        } else {
+          if (el.hasAttribute(DRAG_ANCHOR_ATTR)) el.removeAttribute(DRAG_ANCHOR_ATTR);
+        }
+        // Edge borders via inset box-shadow (no layout shift)
+        const shadows: string[] = [];
+        if (r === minR) shadows.push('inset 0 2px 0 0 var(--ogrid-selection, #217346)');
+        if (r === maxR) shadows.push('inset 0 -2px 0 0 var(--ogrid-selection, #217346)');
+        if (c === minC) shadows.push('inset 2px 0 0 0 var(--ogrid-selection, #217346)');
+        if (c === maxC) shadows.push('inset -2px 0 0 0 var(--ogrid-selection, #217346)');
+        el.style.boxShadow = shadows.length > 0 ? shadows.join(', ') : '';
       } else {
         if (el.hasAttribute(DRAG_ATTR)) el.removeAttribute(DRAG_ATTR);
+        if (el.hasAttribute(DRAG_ANCHOR_ATTR)) el.removeAttribute(DRAG_ANCHOR_ATTR);
+        if (el.style.boxShadow) el.style.boxShadow = '';
       }
     }
   };
@@ -135,7 +159,12 @@ export function useCellSelection(params: UseCellSelectionParams): UseCellSelecti
     const wrapper = wrapperRef.value;
     if (!wrapper) return;
     const marked = wrapper.querySelectorAll(`[${DRAG_ATTR}]`);
-    for (let i = 0; i < marked.length; i++) marked[i].removeAttribute(DRAG_ATTR);
+    for (let i = 0; i < marked.length; i++) {
+      const el = marked[i] as HTMLElement;
+      el.removeAttribute(DRAG_ATTR);
+      el.removeAttribute(DRAG_ANCHOR_ATTR);
+      el.style.boxShadow = '';
+    }
   };
 
   const resolveRange = (cx: number, cy: number): ISelectionRange | null => {

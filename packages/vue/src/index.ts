@@ -76,6 +76,8 @@ export {
   useInlineCellEditorState,
   useRichSelectState,
   useSideBarState,
+  useColumnPinning,
+  useColumnHeaderMenuState,
   useDataGridTableSetup,
 } from './composables';
 
@@ -95,6 +97,7 @@ export type {
   DataGridCellInteractionState,
   DataGridContextMenuState,
   DataGridViewModelState,
+  DataGridPinningState,
   UseActiveCellResult,
   EditingCell,
   UseCellEditingParams,
@@ -142,6 +145,10 @@ export type {
   UseSideBarStateParams,
   UseSideBarStateResult,
   DebouncedFn,
+  UseColumnPinningParams,
+  UseColumnPinningResult,
+  UseColumnHeaderMenuStateParams,
+  UseColumnHeaderMenuStateResult,
   UseDataGridTableSetupParams,
   UseDataGridTableSetupResult,
 } from './composables';

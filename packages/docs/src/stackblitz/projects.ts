@@ -104,14 +104,31 @@ function indexHtml(title: string, entryScript: string, body = '<div id="app"></d
 
 // ── React ──
 
-export function createReactProject(code: string, title = 'OGrid React Demo'): StackBlitzProject {
+export type ReactUILibrary = 'radix' | 'fluent' | 'material';
+
+export function createReactProject(
+  code: string,
+  title = 'OGrid React Demo',
+  uiLibrary: ReactUILibrary = 'radix'
+): StackBlitzProject {
+  const packageMap = {
+    radix: '@alaarab/ogrid-react-radix',
+    fluent: '@alaarab/ogrid-react-fluent',
+    material: '@alaarab/ogrid-react-material',
+  };
+  const descMap = {
+    radix: 'Radix UI',
+    fluent: 'Fluent UI',
+    material: 'Material UI',
+  };
+
   const def: ProjectDef = {
     title,
-    description: 'OGrid data grid with React (Radix UI)',
+    description: `OGrid data grid with React (${descMap[uiLibrary]})`,
     dependencies: {
       react: '^18.3.1',
       'react-dom': '^18.3.1',
-      [`@alaarab/ogrid-react-radix`]: OGRID_VERSION,
+      [packageMap[uiLibrary]]: OGRID_VERSION,
     },
     devDependencies: {
       vite: '^6.0.0',
@@ -148,23 +165,53 @@ createRoot(document.getElementById('app')!).render(
 
 // ── Angular ──
 
-export function createAngularProject(code: string, title = 'OGrid Angular Demo'): StackBlitzProject {
+export type AngularUILibrary = 'radix' | 'material' | 'primeng';
+
+export function createAngularProject(
+  code: string,
+  title = 'OGrid Angular Demo',
+  uiLibrary: AngularUILibrary = 'radix'
+): StackBlitzProject {
+  const packageMap = {
+    radix: '@alaarab/ogrid-angular-radix',
+    material: '@alaarab/ogrid-angular-material',
+    primeng: '@alaarab/ogrid-angular-primeng',
+  };
+  const descMap = {
+    radix: 'Radix UI (CDK)',
+    material: 'Angular Material',
+    primeng: 'PrimeNG',
+  };
+
+  const baseDeps = {
+    '@angular/core': '^21.0.0',
+    '@angular/common': '^21.0.0',
+    '@angular/compiler': '^21.0.0',
+    '@angular/animations': '^21.0.0',
+    '@angular/platform-browser': '^21.0.0',
+    '@angular/platform-browser-dynamic': '^21.0.0',
+    '@angular/cdk': '^21.0.0',
+    '@angular/forms': '^21.0.0',
+    rxjs: '^7.8.0',
+    'zone.js': '^0.15.0',
+  };
+
+  const uiLibDeps = {
+    radix: {},
+    material: { '@angular/material': '^21.0.0' },
+    primeng: {
+      primeng: '^19.0.0',
+      primeicons: '^7.0.0',
+    },
+  };
+
   const def: ProjectDef = {
     title,
-    description: 'OGrid data grid with Angular (Angular Material)',
+    description: `OGrid data grid with Angular (${descMap[uiLibrary]})`,
     dependencies: {
-      '@angular/core': '^21.0.0',
-      '@angular/common': '^21.0.0',
-      '@angular/compiler': '^21.0.0',
-      '@angular/animations': '^21.0.0',
-      '@angular/platform-browser': '^21.0.0',
-      '@angular/platform-browser-dynamic': '^21.0.0',
-      '@angular/material': '^21.0.0',
-      '@angular/cdk': '^21.0.0',
-      '@angular/forms': '^21.0.0',
-      rxjs: '^7.8.0',
-      'zone.js': '^0.15.0',
-      [`@alaarab/ogrid-angular-material`]: OGRID_VERSION,
+      ...baseDeps,
+      ...uiLibDeps[uiLibrary],
+      [packageMap[uiLibrary]]: OGRID_VERSION,
     },
     devDependencies: {
       typescript: '^5.7.0',
@@ -263,15 +310,43 @@ bootstrapApplication(AppComponent, {
 
 // ── Vue ──
 
-export function createVueProject(code: string, title = 'OGrid Vue Demo'): StackBlitzProject {
-  const def: ProjectDef = {
-    title,
-    description: 'OGrid data grid with Vue (Vuetify)',
-    dependencies: {
-      vue: '^3.5.0',
+export type VueUILibrary = 'radix' | 'vuetify' | 'primevue';
+
+export function createVueProject(
+  code: string,
+  title = 'OGrid Vue Demo',
+  uiLibrary: VueUILibrary = 'radix'
+): StackBlitzProject {
+  const packageMap = {
+    radix: '@alaarab/ogrid-vue-radix',
+    vuetify: '@alaarab/ogrid-vue-vuetify',
+    primevue: '@alaarab/ogrid-vue-primevue',
+  };
+  const descMap = {
+    radix: 'Radix UI (Headless)',
+    vuetify: 'Vuetify',
+    primevue: 'PrimeVue',
+  };
+
+  const uiLibDeps = {
+    radix: {},
+    vuetify: {
       vuetify: '^3.7.0',
       '@mdi/font': '^7.4.0',
-      [`@alaarab/ogrid-vue-vuetify`]: OGRID_VERSION,
+    },
+    primevue: {
+      primevue: '^4.2.0',
+      primeicons: '^7.0.0',
+    },
+  };
+
+  const def: ProjectDef = {
+    title,
+    description: `OGrid data grid with Vue (${descMap[uiLibrary]})`,
+    dependencies: {
+      vue: '^3.5.0',
+      ...uiLibDeps[uiLibrary],
+      [packageMap[uiLibrary]]: OGRID_VERSION,
     },
     devDependencies: {
       vite: '^6.0.0',
@@ -279,6 +354,34 @@ export function createVueProject(code: string, title = 'OGrid Vue Demo'): StackB
       typescript: '^5.7.0',
     },
     files: {},
+  };
+
+  const mainTsMap = {
+    radix: `import { createApp } from 'vue';
+import App from './App.vue';
+
+createApp(App).mount('#app');
+`,
+    vuetify: `import { createApp } from 'vue';
+import { createVuetify } from 'vuetify';
+import 'vuetify/styles';
+import '@mdi/font/css/materialdesignicons.css';
+import App from './App.vue';
+
+const vuetify = createVuetify();
+
+createApp(App).use(vuetify).mount('#app');
+`,
+    primevue: `import { createApp } from 'vue';
+import PrimeVue from 'primevue/config';
+import Aura from '@primevue/themes/aura';
+import 'primeicons/primeicons.css';
+import App from './App.vue';
+
+const app = createApp(App);
+app.use(PrimeVue, { theme: { preset: Aura } });
+app.mount('#app');
+`,
   };
 
   return {
@@ -292,16 +395,7 @@ export function createVueProject(code: string, title = 'OGrid Vue Demo'): StackB
       'index.html': indexHtml(title, '/src/main.ts'),
       'src/data.ts': DEMO_DATA_TS,
       'src/App.vue': code,
-      'src/main.ts': `import { createApp } from 'vue';
-import { createVuetify } from 'vuetify';
-import 'vuetify/styles';
-import '@mdi/font/css/materialdesignicons.css';
-import App from './App.vue';
-
-const vuetify = createVuetify();
-
-createApp(App).use(vuetify).mount('#app');
-`,
+      'src/main.ts': mainTsMap[uiLibrary],
     },
   };
 }

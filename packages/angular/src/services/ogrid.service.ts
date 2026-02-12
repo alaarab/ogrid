@@ -112,6 +112,7 @@ export class OGridService<T> {
   readonly suppressHorizontalScroll = signal<boolean | undefined>(undefined);
   readonly editable = signal<boolean | undefined>(undefined);
   readonly cellSelection = signal<boolean | undefined>(undefined);
+  readonly density = signal<'compact' | 'normal' | 'comfortable'>('normal');
   readonly onCellValueChanged = signal<((event: ICellValueChangedEvent<T>) => void) | undefined>(undefined);
   readonly onUndo = signal<(() => void) | undefined>(undefined);
   readonly onRedo = signal<(() => void) | undefined>(undefined);
@@ -314,6 +315,7 @@ export class OGridService<T> {
     freezeCols: this.freezeCols(),
     editable: this.editable(),
     cellSelection: this.cellSelection(),
+    density: this.density(),
     onCellValueChanged: this.onCellValueChanged(),
     onUndo: this.onUndo(),
     onRedo: this.onRedo(),
@@ -570,6 +572,7 @@ export class OGridService<T> {
     if (props.defaultSortDirection !== undefined) this.defaultSortDirection.set(props.defaultSortDirection);
     if (props.editable !== undefined) this.editable.set(props.editable);
     if (props.cellSelection !== undefined) this.cellSelection.set(props.cellSelection);
+    if (props.density !== undefined) this.density.set(props.density);
     if (props.onCellValueChanged) this.onCellValueChanged.set(props.onCellValueChanged);
     if (props.onUndo) this.onUndo.set(props.onUndo);
     if (props.onRedo) this.onRedo.set(props.onRedo);
