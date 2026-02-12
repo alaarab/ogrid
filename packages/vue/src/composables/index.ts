@@ -19,6 +19,7 @@ export type {
   DataGridCellInteractionState,
   DataGridContextMenuState,
   DataGridViewModelState,
+  DataGridPinningState,
 } from './useDataGridState';
 
 // Feature composables
@@ -106,6 +107,12 @@ export type { UseColumnReorderParams, UseColumnReorderResult } from './useColumn
 
 export { useVirtualScroll } from './useVirtualScroll';
 export type { UseVirtualScrollParams, UseVirtualScrollResult } from './useVirtualScroll';
+
+export { useColumnPinning } from './useColumnPinning';
+export type { UseColumnPinningParams, UseColumnPinningResult } from './useColumnPinning';
+
+export { useColumnHeaderMenuState } from './useColumnHeaderMenuState';
+export type { UseColumnHeaderMenuStateParams, UseColumnHeaderMenuStateResult } from './useColumnHeaderMenuState';
 
 export { useDataGridTableSetup } from './useDataGridTableSetup';
 export type { UseDataGridTableSetupParams, UseDataGridTableSetupResult } from './useDataGridTableSetup';

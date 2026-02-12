@@ -99,6 +99,9 @@ export abstract class BaseDataGridTableComponent<T = unknown> {
   readonly headerFilterInput = computed(() => this.state().viewModels.headerFilterInput);
   readonly cellDescriptorInput = computed(() => this.state().viewModels.cellDescriptorInput);
 
+  // Pinning state
+  readonly pinnedColumnsMap = computed(() => this.state().pinning.pinnedColumns);
+
   readonly allowOverflowX = computed(() => {
     const p = this.getProps();
     if (p?.suppressHorizontalScroll) return false;
@@ -358,18 +361,15 @@ export abstract class BaseDataGridTableComponent<T = unknown> {
   // --- Column pinning methods ---
 
   onPinColumn(columnId: string, side: 'left' | 'right'): void {
-    const props = this.getProps();
-    props?.onColumnPinned?.(columnId, side);
+    this.state().pinning.pinColumn(columnId, side);
   }
 
   onUnpinColumn(columnId: string): void {
-    const props = this.getProps();
-    props?.onColumnPinned?.(columnId, null);
+    this.state().pinning.unpinColumn(columnId);
   }
 
   isPinned(columnId: string): 'left' | 'right' | undefined {
-    const props = this.getProps();
-    return props?.pinnedColumns?.[columnId];
+    return this.state().pinning.isPinned(columnId);
   }
 
   getPinState(columnId: string): { canPinLeft: boolean; canPinRight: boolean; canUnpin: boolean } {

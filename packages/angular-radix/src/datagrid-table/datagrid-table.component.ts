@@ -14,6 +14,7 @@ import type {
   IOGridDataGridProps,
 } from '@alaarab/ogrid-angular';
 import { ColumnHeaderFilterComponent } from '../column-header-filter/column-header-filter.component';
+import { ColumnHeaderMenuComponent } from '../column-header-menu/column-header-menu.component';
 
 /**
  * DataGridTable component for Angular Radix using native HTML table.
@@ -22,7 +23,7 @@ import { ColumnHeaderFilterComponent } from '../column-header-filter/column-head
 @Component({
   selector: 'ogrid-datagrid-table',
   standalone: true,
-  imports: [ColumnHeaderFilterComponent, StatusBarComponent, GridContextMenuComponent, MarchingAntsOverlayComponent, EmptyStateComponent],
+  imports: [ColumnHeaderFilterComponent, ColumnHeaderMenuComponent, StatusBarComponent, GridContextMenuComponent, MarchingAntsOverlayComponent, EmptyStateComponent],
   providers: [DataGridStateService],
   changeDetection: ChangeDetectionStrategy.OnPush,
   styleUrl: './datagrid-table.component.scss',
@@ -68,6 +69,14 @@ import { ColumnHeaderFilterComponent } from '../column-header-filter/column-head
                       @if (rowIdx === 0 && rowIdx < headerRows().length - 1 && hasCheckboxCol()) {
                         <th [attr.rowSpan]="headerRows().length - 1" class="ogrid-datagrid-th ogrid-datagrid-checkbox-spacer"></th>
                       }
+                      @if (rowIdx === headerRows().length - 1 && hasRowNumbersCol()) {
+                        <th class="ogrid-datagrid-th ogrid-datagrid-row-number-header" [attr.rowSpan]="headerRows().length > 1 ? 1 : null">
+                          #
+                        </th>
+                      }
+                      @if (rowIdx === 0 && rowIdx < headerRows().length - 1 && hasRowNumbersCol()) {
+                        <th [attr.rowSpan]="headerRows().length - 1" class="ogrid-datagrid-th ogrid-datagrid-row-number-spacer"></th>
+                      }
                       @for (cell of row; track $index; let cellIdx = $index) {
                         @if (cell.isGroup) {
                           <th [attr.colSpan]="cell.colSpan" scope="colgroup" class="ogrid-datagrid-th ogrid-datagrid-group-header">
@@ -78,10 +87,13 @@ import { ColumnHeaderFilterComponent } from '../column-header-filter/column-head
                           @let colIdx = visibleColIndex(col);
                           @let isFreezeCol = freezeCols() != null && (freezeCols() ?? 0) >= 1 && colIdx < (freezeCols() ?? 0);
                           @let colW = getColumnWidth(col);
+                          @let pinned = isPinned(col.columnId);
+                          @let pinnedLeft = pinned === 'left' || (isFreezeCol && colIdx === 0);
+                          @let pinnedRight = pinned === 'right';
                           <th scope="col"
                             class="ogrid-datagrid-th"
-                            [class.ogrid-datagrid-th--pinned-left]="col.pinned === 'left' || (isFreezeCol && colIdx === 0)"
-                            [class.ogrid-datagrid-th--pinned-right]="col.pinned === 'right'"
+                            [class.ogrid-datagrid-th--pinned-left]="pinnedLeft"
+                            [class.ogrid-datagrid-th--pinned-right]="pinnedRight"
                             [attr.rowSpan]="headerRows().length > 1 ? headerRows().length - rowIdx : null"
                             [attr.data-column-id]="col.columnId"
                             [style.minWidth.px]="col.minWidth ?? 80"
@@ -91,25 +103,37 @@ import { ColumnHeaderFilterComponent } from '../column-header-filter/column-head
                             [class.ogrid-datagrid-th--dragging]="columnReorderService.isDragging()"
                             (mousedown)="onHeaderMouseDown(col.columnId, $event)"
                           >
-                            <column-header-filter
-                              [columnKey]="col.columnId"
-                              [columnName]="col.name"
-                              [filterType]="getFilterConfig(col).filterType"
-                              [isSorted]="getFilterConfig(col).isSorted"
-                              [isSortedDescending]="getFilterConfig(col).isSortedDescending"
-                              [onSort]="getFilterConfig(col).onSort"
-                              [selectedValues]="getFilterConfig(col).selectedValues"
-                              [onFilterChange]="getFilterConfig(col).onFilterChange"
-                              [options]="getFilterConfig(col).options"
-                              [isLoadingOptions]="getFilterConfig(col).isLoadingOptions ?? false"
-                              [textValue]="getFilterConfig(col).textValue ?? ''"
-                              [onTextChange]="getFilterConfig(col).onTextChange"
-                              [selectedUser]="getFilterConfig(col).selectedUser"
-                              [onUserChange]="getFilterConfig(col).onUserChange"
-                              [peopleSearch]="getFilterConfig(col).peopleSearch"
-                              [dateValue]="getFilterConfig(col).dateValue"
-                              [onDateChange]="getFilterConfig(col).onDateChange"
-                            />
+                            <div style="display: flex; align-items: center; gap: 4px; flex: 1; min-width: 0;">
+                              <column-header-filter
+                                [columnKey]="col.columnId"
+                                [columnName]="col.name"
+                                [filterType]="getFilterConfig(col).filterType"
+                                [isSorted]="getFilterConfig(col).isSorted"
+                                [isSortedDescending]="getFilterConfig(col).isSortedDescending"
+                                [onSort]="getFilterConfig(col).onSort"
+                                [selectedValues]="getFilterConfig(col).selectedValues"
+                                [onFilterChange]="getFilterConfig(col).onFilterChange"
+                                [options]="getFilterConfig(col).options"
+                                [isLoadingOptions]="getFilterConfig(col).isLoadingOptions ?? false"
+                                [textValue]="getFilterConfig(col).textValue ?? ''"
+                                [onTextChange]="getFilterConfig(col).onTextChange"
+                                [selectedUser]="getFilterConfig(col).selectedUser"
+                                [onUserChange]="getFilterConfig(col).onUserChange"
+                                [peopleSearch]="getFilterConfig(col).peopleSearch"
+                                [dateValue]="getFilterConfig(col).dateValue"
+                                [onDateChange]="getFilterConfig(col).onDateChange"
+                              />
+                              @let colPinState = getPinState(col.columnId);
+                              <column-header-menu
+                                [columnId]="col.columnId"
+                                [onPinLeft]="() => onPinColumn(col.columnId, 'left')"
+                                [onPinRight]="() => onPinColumn(col.columnId, 'right')"
+                                [onUnpin]="() => onUnpinColumn(col.columnId)"
+                                [canPinLeft]="colPinState.canPinLeft"
+                                [canPinRight]="colPinState.canPinRight"
+                                [canUnpin]="colPinState.canUnpin"
+                              />
+                            </div>
                             <div class="ogrid-datagrid-resize-handle" (mousedown)="onResizeStart($event, col)"></div>
                           </th>
                         }
@@ -143,6 +167,11 @@ import { ColumnHeaderFilterComponent } from '../column-header-filter/column-head
                                 [attr.aria-label]="'Select row ' + (rowIndex + 1)"
                               />
                             </div>
+                          </td>
+                        }
+                        @if (hasRowNumbersCol()) {
+                          <td class="ogrid-datagrid-td ogrid-datagrid-row-number-cell">
+                            {{ rowNumberOffset() + rowIndex + 1 }}
                           </td>
                         }
                         @for (colLayout of columnLayouts(); track colLayout.col.columnId; let colIdx = $index) {
