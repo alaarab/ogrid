@@ -363,7 +363,7 @@ export function useOGrid<T>(
 
   const handleColumnPinned = (columnId: string, pinned: 'left' | 'right' | null) => {
     if (pinned === null) {
-      const { [columnId]: _, ...rest } = pinnedOverrides.value;
+      const { [columnId]: _removed, ...rest } = pinnedOverrides.value;
       pinnedOverrides.value = rest;
     } else {
       pinnedOverrides.value = { ...pinnedOverrides.value, [columnId]: pinned };

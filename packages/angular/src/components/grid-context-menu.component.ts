@@ -1,6 +1,6 @@
-import { Component, input, output, ElementRef, effect, viewChild, DestroyRef, inject } from '@angular/core';
+import { Component, input, output, ElementRef, viewChild, DestroyRef, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { GRID_CONTEXT_MENU_ITEMS, getContextMenuHandlers, formatShortcut } from '@alaarab/ogrid-core';
+import { GRID_CONTEXT_MENU_ITEMS, formatShortcut } from '@alaarab/ogrid-core';
 
 @Component({
   selector: 'ogrid-context-menu',

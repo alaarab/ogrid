@@ -1,9 +1,7 @@
 import { defineComponent, h, type PropType } from 'vue';
 import { VBtn, VTextField } from 'vuetify/components';
-/* eslint-disable @typescript-eslint/no-explicit-any */
 const _VBtn = VBtn as any;
 const _VTextField = VTextField as any;
-/* eslint-enable @typescript-eslint/no-explicit-any */
 
 export const TextFilterPopover = defineComponent({
   name: 'TextFilterPopover',
