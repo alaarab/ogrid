@@ -1,0 +1,192 @@
+---
+sidebar_position: 4
+title: Vanilla JS
+description: Use OGrid without React — pure JavaScript, class-based API
+---
+
+import VanillaJSDemo from '@site/src/components/demos/VanillaJSDemo';
+
+# Vanilla JS Quick Start
+
+OGrid's vanilla JS package provides the same features as the React packages with a class-based, imperative API. No React, no virtual DOM — just a container element and an options object.
+
+## Install
+
+```bash
+npm install @alaarab/ogrid-js
+```
+
+## Basic Example
+
+```html
+<div id="grid" style="height: 400px;"></div>
+
+<script type="module">
+  import { OGrid } from '@alaarab/ogrid-js';
+  import '@alaarab/ogrid-js/styles'; // default theme (light + dark mode)
+
+  const grid = new OGrid(document.getElementById('grid'), {
+    columns: [
+      { columnId: 'name', name: 'Name', sortable: true },
+      { columnId: 'department', name: 'Department', sortable: true },
+      {
+        columnId: 'salary',
+        name: 'Salary',
+        type: 'numeric',
+        sortable: true,
+        editable: true,
+        valueFormatter: (v) => `$${Number(v).toLocaleString()}`,
+      },
+    ],
+    data: [
+      { id: 1, name: 'Alice Johnson', department: 'Engineering', salary: 95000 },
+      { id: 2, name: 'Bob Smith', department: 'Marketing', salary: 72000 },
+      { id: 3, name: 'Carol Williams', department: 'Sales', salary: 110000 },
+      { id: 4, name: 'David Brown', department: 'Engineering', salary: 68000 },
+      { id: 5, name: 'Eva Martinez', department: 'Marketing', salary: 78000 },
+    ],
+    getRowId: (row) => row.id,
+    pageSize: 10,
+    editable: true,
+    cellSelection: true,
+    statusBar: true,
+  });
+</script>
+```
+
+## Live Demo
+
+<VanillaJSDemo />
+
+## What You Get
+
+With this code you have:
+
+- **Sorting** — click column headers
+- **Inline editing** — double-click any salary cell
+- **Cell selection** — click and drag to select ranges
+- **Keyboard navigation** — arrow keys, Tab, Home/End, Ctrl+Arrow
+- **Clipboard** — Ctrl+C/V/X
+- **Undo/redo** — Ctrl+Z/Y
+- **Status bar** — row count and selection aggregations
+- **Pagination** — page controls at the bottom
+
+## Constructor
+
+```js
+const grid = new OGrid(containerElement, options);
+```
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `container` | `HTMLElement` | The DOM element to render into. OGrid fills this element. |
+| `options` | `OGridOptions<T>` | Grid configuration (see below). |
+
+## Key Options
+
+| Option | Type | Default | Description |
+|--------|------|---------|-------------|
+| `columns` | `IColumnDef<T>[]` | **required** | Column definitions |
+| `data` | `T[]` | — | Client-side data array |
+| `dataSource` | `IDataSource<T>` | — | Server-side data source (mutually exclusive with `data`) |
+| `getRowId` | `(item: T) => RowId` | **required** | Unique row identifier |
+| `pageSize` | `number` | `20` | Rows per page |
+| `sort` | `{ field, direction }` | — | Initial sort |
+| `filters` | `IFilters` | — | Initial filters |
+| `editable` | `boolean` | `false` | Enable cell editing |
+| `cellSelection` | `boolean` | `false` | Enable spreadsheet-style selection |
+| `rowSelection` | `'single' \| 'multiple'` | — | Row selection mode |
+| `sideBar` | `boolean \| ISideBarDef` | — | Show sidebar (columns + filters panels) |
+| `layoutMode` | `'fill' \| 'content'` | `'fill'` | `'fill'` stretches to container; `'content'` sizes to data |
+| `pinnedColumns` | `Record<string, 'left' \| 'right'>` | — | Pin columns to edges |
+
+## Events
+
+Listen for events with `.on()`:
+
+```js
+grid.on('cellValueChanged', (event) => {
+  console.log(`Cell ${event.columnId} changed from ${event.oldValue} to ${event.newValue}`);
+});
+
+grid.on('sortChange', ({ field, direction }) => {
+  console.log(`Sorted by ${field} ${direction}`);
+});
+
+grid.on('selectionChange', ({ selectedRows }) => {
+  console.log(`${selectedRows.length} rows selected`);
+});
+```
+
+| Event | Payload | Fired when |
+|-------|---------|------------|
+| `cellValueChanged` | `{ item, columnId, oldValue, newValue }` | A cell edit is committed |
+| `sortChange` | `{ field, direction }` | Sort changes |
+| `filterChange` | `{ filters }` | Filters change |
+| `pageChange` | `{ page }` | Page changes |
+| `selectionChange` | `{ selectedRows, selectedRowIds }` | Row selection changes |
+
+## Grid API
+
+Access the imperative API via `grid.api`:
+
+```js
+// Update data
+grid.api.setRowData(newData);
+
+// Get current state
+const state = grid.api.getColumnState();
+
+// Export to CSV
+grid.api.exportToCsv('my-data.csv');
+
+// Programmatic sort
+grid.api.setSort('salary', 'desc');
+```
+
+See the full [JS API Reference](../api/js-api) for all methods.
+
+## Theming
+
+The default theme uses CSS custom properties. Override them to match your design:
+
+```css
+:root {
+  --ogrid-primary: #0066cc;       /* buttons, active page */
+  --ogrid-selection: #0078d4;     /* active cell outline */
+  --ogrid-bg: #ffffff;            /* background */
+  --ogrid-fg: #242424;            /* text color */
+  --ogrid-border: #e0e0e0;       /* borders */
+  --ogrid-bg-subtle: #f3f2f1;    /* header background */
+  --ogrid-bg-hover: #f5f5f5;     /* row hover */
+}
+```
+
+For dark mode, set `data-theme="dark"` on a parent element or rely on `prefers-color-scheme`:
+
+```css
+[data-theme='dark'] {
+  --ogrid-bg: #1a1a24;
+  --ogrid-fg: #e0e0e0;
+  --ogrid-border: #333340;
+  /* ... */
+}
+```
+
+Or skip the default theme entirely and write your own CSS targeting the `ogrid-*` class names.
+
+## Cleanup
+
+Always destroy the grid when you're done:
+
+```js
+grid.destroy();
+```
+
+This removes all DOM elements, event listeners, and ResizeObservers.
+
+## Next Steps
+
+- [JS API Reference](../api/js-api) — full method and options reference
+- [Features](../features/sorting) — all grid features work identically in JS
+- [Theming Guide](../guides/theming) — deep dive into CSS customization

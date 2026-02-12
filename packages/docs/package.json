@@ -16,8 +16,15 @@
     "prism-react-renderer": "^2.4.1",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
-    "@alaarab/ogrid-react-radix": "2.0.0-beta",
-    "@alaarab/ogrid-react": "2.0.0-beta",
+    "@alaarab/ogrid-react-radix": "2.0.0",
+    "@alaarab/ogrid-react-fluent": "2.0.0",
+    "@alaarab/ogrid-react-material": "2.0.0",
+    "@alaarab/ogrid-react": "2.0.0",
+    "@alaarab/ogrid-js": "2.0.0",
+    "@fluentui/react-components": "^9.46.0",
+    "@mui/material": "^7.0.0",
+    "@emotion/react": "^11.11.0",
+    "@emotion/styled": "^11.11.0",
     "@docusaurus/theme-mermaid": "^3.7.0"
   },
   "devDependencies": {
