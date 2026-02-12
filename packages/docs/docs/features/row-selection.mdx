@@ -5,6 +5,8 @@ description: Single and multi-row selection with checkboxes, keyboard support, a
 ---
 
 import RowSelectionDemo from '@site/src/components/demos/RowSelectionDemo';
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
 
 # Row Selection
 
@@ -15,6 +17,9 @@ Select entire rows with checkboxes (multiple mode) or radio-button-style selecti
 <RowSelectionDemo />
 
 ## Quick Example
+
+<Tabs groupId="framework">
+  <TabItem value="radix" label="Radix (Lightweight)" default>
 
 ```tsx
 import { OGrid, IOGridApi } from '@alaarab/ogrid-react-radix';
@@ -45,6 +50,106 @@ function App() {
   );
 }
 ```
+
+  </TabItem>
+  <TabItem value="fluent" label="Fluent UI">
+
+```tsx
+import { OGrid, IOGridApi } from '@alaarab/ogrid-react-fluent';
+import { FluentProvider, webLightTheme } from '@fluentui/react-components';
+import { useRef } from 'react';
+
+function App() {
+  const gridRef = useRef<IOGridApi<Person>>(null);
+
+  const handleExport = () => {
+    const selectedIds = gridRef.current?.getSelectedRows() ?? [];
+    console.log('Selected:', selectedIds);
+  };
+
+  return (
+    <FluentProvider theme={webLightTheme}>
+      <button onClick={handleExport}>Export Selected</button>
+      <OGrid
+        ref={gridRef}
+        columns={columns}
+        data={people}
+        getRowId={(item) => item.id}
+        rowSelection="multiple"
+        onSelectionChange={(event) => {
+          console.log(`${event.selectedItems.length} rows selected`);
+        }}
+      />
+    </FluentProvider>
+  );
+}
+```
+
+  </TabItem>
+  <TabItem value="material" label="Material UI">
+
+```tsx
+import { OGrid, IOGridApi } from '@alaarab/ogrid-react-material';
+import { ThemeProvider, createTheme } from '@mui/material/styles';
+import CssBaseline from '@mui/material/CssBaseline';
+import { useRef } from 'react';
+
+const theme = createTheme();
+
+function App() {
+  const gridRef = useRef<IOGridApi<Person>>(null);
+
+  const handleExport = () => {
+    const selectedIds = gridRef.current?.getSelectedRows() ?? [];
+    console.log('Selected:', selectedIds);
+  };
+
+  return (
+    <ThemeProvider theme={theme}>
+      <CssBaseline />
+      <button onClick={handleExport}>Export Selected</button>
+      <OGrid
+        ref={gridRef}
+        columns={columns}
+        data={people}
+        getRowId={(item) => item.id}
+        rowSelection="multiple"
+        onSelectionChange={(event) => {
+          console.log(`${event.selectedItems.length} rows selected`);
+        }}
+      />
+    </ThemeProvider>
+  );
+}
+```
+
+  </TabItem>
+  <TabItem value="js" label="Vanilla JS">
+
+```js
+import { OGrid } from '@alaarab/ogrid-js';
+import '@alaarab/ogrid-js/styles';
+
+const grid = new OGrid(document.getElementById('grid'), {
+  columns: columns,
+  data: people,
+  getRowId: (item) => item.id,
+  rowSelection: 'multiple',
+});
+
+grid.on('selectionChange', ({ selectedRows }) => {
+  console.log(`${selectedRows.length} rows selected`);
+});
+
+// Programmatic access
+document.getElementById('export-btn').addEventListener('click', () => {
+  const selected = grid.api.getSelectedRows();
+  console.log('Selected:', selected);
+});
+```
+
+  </TabItem>
+</Tabs>
 
 ## How It Works
 

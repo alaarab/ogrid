@@ -5,6 +5,8 @@ description: Column-level filtering with text, multi-select, and people filter t
 ---
 
 import FilteringDemo from '@site/src/components/demos/FilteringDemo';
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
 
 # Filtering
 
@@ -15,6 +17,9 @@ OGrid supports four built-in filter types -- **text**, **multiSelect**, **people
 <FilteringDemo />
 
 ## Quick Example
+
+<Tabs groupId="framework">
+  <TabItem value="radix" label="Radix (Lightweight)" default>
 
 ```tsx
 import { OGrid } from '@alaarab/ogrid-react-radix';
@@ -54,6 +59,140 @@ function App() {
   );
 }
 ```
+
+  </TabItem>
+  <TabItem value="fluent" label="Fluent UI">
+
+```tsx
+import { OGrid } from '@alaarab/ogrid-react-fluent';
+import { FluentProvider, webLightTheme } from '@fluentui/react-components';
+
+const columns = [
+  {
+    columnId: 'name',
+    name: 'Name',
+    filterable: { type: 'text' },
+  },
+  {
+    columnId: 'department',
+    name: 'Department',
+    filterable: { type: 'multiSelect', filterField: 'department' },
+  },
+  {
+    columnId: 'status',
+    name: 'Status',
+    filterable: { type: 'multiSelect', filterField: 'status' },
+  },
+  {
+    columnId: 'salary',
+    name: 'Salary',
+    type: 'numeric' as const,
+    valueFormatter: (v) => `$${Number(v).toLocaleString()}`,
+  },
+];
+
+function App() {
+  return (
+    <FluentProvider theme={webLightTheme}>
+      <OGrid
+        columns={columns}
+        data={people}
+        getRowId={(item) => item.id}
+        defaultPageSize={10}
+      />
+    </FluentProvider>
+  );
+}
+```
+
+  </TabItem>
+  <TabItem value="material" label="Material UI">
+
+```tsx
+import { OGrid } from '@alaarab/ogrid-react-material';
+import { ThemeProvider, createTheme } from '@mui/material/styles';
+import CssBaseline from '@mui/material/CssBaseline';
+
+const theme = createTheme();
+
+const columns = [
+  {
+    columnId: 'name',
+    name: 'Name',
+    filterable: { type: 'text' },
+  },
+  {
+    columnId: 'department',
+    name: 'Department',
+    filterable: { type: 'multiSelect', filterField: 'department' },
+  },
+  {
+    columnId: 'status',
+    name: 'Status',
+    filterable: { type: 'multiSelect', filterField: 'status' },
+  },
+  {
+    columnId: 'salary',
+    name: 'Salary',
+    type: 'numeric' as const,
+    valueFormatter: (v) => `$${Number(v).toLocaleString()}`,
+  },
+];
+
+function App() {
+  return (
+    <ThemeProvider theme={theme}>
+      <CssBaseline />
+      <OGrid
+        columns={columns}
+        data={people}
+        getRowId={(item) => item.id}
+        defaultPageSize={10}
+      />
+    </ThemeProvider>
+  );
+}
+```
+
+  </TabItem>
+  <TabItem value="js" label="Vanilla JS">
+
+```js
+import { OGrid } from '@alaarab/ogrid-js';
+import '@alaarab/ogrid-js/styles';
+
+const grid = new OGrid(document.getElementById('grid'), {
+  columns: [
+    {
+      columnId: 'name',
+      name: 'Name',
+      filterable: { type: 'text' },
+    },
+    {
+      columnId: 'department',
+      name: 'Department',
+      filterable: { type: 'multiSelect', filterField: 'department' },
+    },
+    {
+      columnId: 'status',
+      name: 'Status',
+      filterable: { type: 'multiSelect', filterField: 'status' },
+    },
+    {
+      columnId: 'salary',
+      name: 'Salary',
+      type: 'numeric',
+      valueFormatter: (v) => `$${Number(v).toLocaleString()}`,
+    },
+  ],
+  data: people,
+  getRowId: (item) => item.id,
+  pageSize: 10,
+});
+```
+
+  </TabItem>
+</Tabs>
 
 ## How It Works
 

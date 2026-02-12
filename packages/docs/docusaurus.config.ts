@@ -34,6 +34,10 @@ const config: Config = {
                 '@alaarab/ogrid-core': path.resolve(__dirname, '../core/dist/esm'),
                 '@alaarab/ogrid-react': path.resolve(__dirname, '../react/dist/esm'),
                 '@alaarab/ogrid-react-radix': path.resolve(__dirname, '../react-radix/dist/esm'),
+                '@alaarab/ogrid-react-fluent': path.resolve(__dirname, '../react-fluent/dist/esm'),
+                '@alaarab/ogrid-react-material': path.resolve(__dirname, '../react-material/dist/esm'),
+                '@alaarab/ogrid-js/styles': path.resolve(__dirname, '../js/styles/ogrid.css'),
+                '@alaarab/ogrid-js': path.resolve(__dirname, '../js/dist/esm'),
               },
             },
           };

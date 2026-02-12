@@ -5,6 +5,8 @@ description: Pin columns to the left edge so they stay visible during horizontal
 ---
 
 import ColumnPinningDemo from '@site/src/components/demos/ColumnPinningDemo';
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
 
 # Column Pinning
 
@@ -15,6 +17,9 @@ Pin columns to the left edge of the grid so they remain visible while the user s
 <ColumnPinningDemo />
 
 ## Quick Example
+
+<Tabs groupId="framework">
+  <TabItem value="radix" label="Radix (Lightweight)" default>
 
 ```tsx
 import { OGrid } from '@alaarab/ogrid-react-radix';
@@ -58,6 +63,140 @@ function App() {
   );
 }
 ```
+
+  </TabItem>
+  <TabItem value="fluent" label="Fluent UI">
+
+```tsx
+import { OGrid } from '@alaarab/ogrid-react-fluent';
+import type { IColumnDef } from '@alaarab/ogrid-react-fluent';
+import { FluentProvider, webLightTheme } from '@fluentui/react-components';
+
+interface Person {
+  id: number;
+  name: string;
+  email: string;
+  department: string;
+  salary: number;
+  status: string;
+  age: number;
+  startDate: string;
+}
+
+const columns: IColumnDef<Person>[] = [
+  { columnId: 'name', name: 'Name', pinned: 'left', defaultWidth: 160 },
+  { columnId: 'email', name: 'Email', defaultWidth: 220 },
+  { columnId: 'department', name: 'Department', defaultWidth: 160 },
+  {
+    columnId: 'salary',
+    name: 'Salary',
+    type: 'numeric',
+    defaultWidth: 120,
+    valueFormatter: (v) => `$${Number(v).toLocaleString()}`,
+  },
+  { columnId: 'status', name: 'Status', defaultWidth: 120 },
+  { columnId: 'age', name: 'Age', type: 'numeric', defaultWidth: 80 },
+  { columnId: 'startDate', name: 'Start Date', defaultWidth: 130 },
+];
+
+function App() {
+  return (
+    <FluentProvider theme={webLightTheme}>
+      <OGrid
+        columns={columns}
+        data={people}
+        getRowId={(p) => p.id}
+        defaultPageSize={10}
+      />
+    </FluentProvider>
+  );
+}
+```
+
+  </TabItem>
+  <TabItem value="material" label="Material UI">
+
+```tsx
+import { OGrid } from '@alaarab/ogrid-react-material';
+import type { IColumnDef } from '@alaarab/ogrid-react-material';
+import { ThemeProvider, createTheme } from '@mui/material/styles';
+import CssBaseline from '@mui/material/CssBaseline';
+
+const theme = createTheme();
+
+interface Person {
+  id: number;
+  name: string;
+  email: string;
+  department: string;
+  salary: number;
+  status: string;
+  age: number;
+  startDate: string;
+}
+
+const columns: IColumnDef<Person>[] = [
+  { columnId: 'name', name: 'Name', pinned: 'left', defaultWidth: 160 },
+  { columnId: 'email', name: 'Email', defaultWidth: 220 },
+  { columnId: 'department', name: 'Department', defaultWidth: 160 },
+  {
+    columnId: 'salary',
+    name: 'Salary',
+    type: 'numeric',
+    defaultWidth: 120,
+    valueFormatter: (v) => `$${Number(v).toLocaleString()}`,
+  },
+  { columnId: 'status', name: 'Status', defaultWidth: 120 },
+  { columnId: 'age', name: 'Age', type: 'numeric', defaultWidth: 80 },
+  { columnId: 'startDate', name: 'Start Date', defaultWidth: 130 },
+];
+
+function App() {
+  return (
+    <ThemeProvider theme={theme}>
+      <CssBaseline />
+      <OGrid
+        columns={columns}
+        data={people}
+        getRowId={(p) => p.id}
+        defaultPageSize={10}
+      />
+    </ThemeProvider>
+  );
+}
+```
+
+  </TabItem>
+  <TabItem value="js" label="Vanilla JS">
+
+```js
+import { OGrid } from '@alaarab/ogrid-js';
+import '@alaarab/ogrid-js/styles';
+
+const grid = new OGrid(document.getElementById('grid'), {
+  columns: [
+    { columnId: 'name', name: 'Name', pinned: 'left', defaultWidth: 160 },
+    { columnId: 'email', name: 'Email', defaultWidth: 220 },
+    { columnId: 'department', name: 'Department', defaultWidth: 160 },
+    {
+      columnId: 'salary',
+      name: 'Salary',
+      type: 'numeric',
+      defaultWidth: 120,
+      valueFormatter: (v) => `$${Number(v).toLocaleString()}`,
+    },
+    { columnId: 'status', name: 'Status', defaultWidth: 120 },
+    { columnId: 'age', name: 'Age', type: 'numeric', defaultWidth: 80 },
+    { columnId: 'startDate', name: 'Start Date', defaultWidth: 130 },
+  ],
+  data: people,
+  getRowId: (p) => p.id,
+  pageSize: 10,
+});
+```
+
+  </TabItem>
+</Tabs>
 
 The "Name" column stays fixed on the left while all other columns scroll normally.
 
