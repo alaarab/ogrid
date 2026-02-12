@@ -1,0 +1,76 @@
+import { ref, watch, nextTick, type Ref, type ShallowRef } from 'vue';
+import type { IActiveCell, RowId } from '../types';
+
+export interface UseActiveCellResult {
+  activeCell: Ref<IActiveCell | null>;
+  setActiveCell: (cell: IActiveCell | null) => void;
+}
+
+/**
+ * Tracks the active cell for keyboard navigation.
+ * When wrapperRef and editingCell are provided, scrolls the active cell into view when it changes (and not editing).
+ */
+export function useActiveCell(
+  wrapperRef?: Ref<HTMLElement | null> | ShallowRef<HTMLElement | null>,
+  editingCell?: Ref<{ rowId: RowId; columnId: string } | null>
+): UseActiveCellResult {
+  const activeCell = ref<IActiveCell | null>(null);
+
+  // Deduplicating setter — skips update when the cell coordinates haven't actually changed.
+  const setActiveCell = (cell: IActiveCell | null) => {
+    const prev = activeCell.value;
+    if (prev === cell) return;
+    if (prev && cell && prev.rowIndex === cell.rowIndex && prev.columnIndex === cell.columnIndex) return;
+    activeCell.value = cell;
+  };
+
+  // Scroll active cell into view when it changes (equivalent to useLayoutEffect)
+  watch(
+    [activeCell, () => editingCell?.value],
+    () => {
+      if (
+        activeCell.value == null ||
+        !wrapperRef?.value ||
+        editingCell?.value != null
+      ) return;
+
+      // Use nextTick to ensure DOM is updated before scrolling
+      void nextTick(() => {
+        const wrapper = wrapperRef.value;
+        if (!wrapper || !activeCell.value) return;
+
+        const { rowIndex, columnIndex } = activeCell.value;
+        const selector = `[data-row-index="${rowIndex}"][data-col-index="${columnIndex}"]`;
+        const cell = wrapper.querySelector(selector) as HTMLElement | null;
+        if (cell) {
+          const thead = wrapper.querySelector('thead');
+          const headerHeight = thead ? thead.getBoundingClientRect().height : 0;
+          const wrapperRect = wrapper.getBoundingClientRect();
+          const cellRect = cell.getBoundingClientRect();
+
+          // Vertical scroll (account for sticky thead)
+          const visibleTop = wrapperRect.top + headerHeight;
+          if (cellRect.top < visibleTop) {
+            wrapper.scrollTop -= visibleTop - cellRect.top;
+          } else if (cellRect.bottom > wrapperRect.bottom) {
+            wrapper.scrollTop += cellRect.bottom - wrapperRect.bottom;
+          }
+
+          // Horizontal scroll
+          if (cellRect.left < wrapperRect.left) {
+            wrapper.scrollLeft -= wrapperRect.left - cellRect.left;
+          } else if (cellRect.right > wrapperRect.right) {
+            wrapper.scrollLeft += cellRect.right - wrapperRect.right;
+          }
+
+          if (document.activeElement !== cell && typeof cell.focus === 'function') {
+            cell.focus({ preventScroll: true });
+          }
+        }
+      });
+    },
+    { flush: 'post' }
+  );
+
+  return { activeCell, setActiveCell };
+}

@@ -1,0 +1,42 @@
+{
+  "name": "@alaarab/ogrid-angular",
+  "version": "2.0.2",
+  "description": "OGrid Angular – Angular services, signals, and headless components for OGrid data grids.",
+  "main": "dist/esm/index.js",
+  "module": "dist/esm/index.js",
+  "types": "dist/types/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/types/index.d.ts",
+      "import": "./dist/esm/index.js",
+      "require": "./dist/esm/index.js"
+    }
+  },
+  "scripts": {
+    "build": "rimraf dist && tsc -p tsconfig.build.json",
+    "test": "jest --passWithNoTests"
+  },
+  "keywords": ["ogrid", "angular", "datatable", "typescript", "grid", "signals"],
+  "author": "Ala Arab",
+  "license": "MIT",
+  "files": ["dist", "README.md", "LICENSE"],
+  "engines": { "node": ">=18" },
+  "dependencies": {
+    "@alaarab/ogrid-core": "2.0.2"
+  },
+  "peerDependencies": {
+    "@angular/core": "^21.0.0",
+    "@angular/common": "^21.0.0"
+  },
+  "devDependencies": {
+    "@angular/core": "^21.1.4",
+    "@angular/common": "^21.1.4",
+    "@angular/compiler": "^21.1.4",
+    "@angular/platform-browser": "^21.1.4",
+    "@angular/platform-browser-dynamic": "^21.1.4",
+    "rxjs": "^7.8.0",
+    "zone.js": "^0.15.0",
+    "typescript": "^5.7.3"
+  },
+  "publishConfig": { "access": "public" }
+}
