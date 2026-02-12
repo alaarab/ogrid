@@ -17,7 +17,7 @@ import { getCellValue, parseValue } from '@alaarab/ogrid-core';
           (input)="localValue.set($any($event.target).value)"
           (keydown)="onTextKeyDown($event)"
           (blur)="onTextBlur()"
-          style="width:100%;box-sizing:border-box;padding:6px 10px;border:2px solid var(--ogrid-selection, #217346);border-radius:2px;outline:none;font:inherit;background:var(--ogrid-bg, #fff);color:var(--ogrid-fg, #242424)"
+          [style]="getInputStyle()"
         />
       }
       @case ('select') {
@@ -53,7 +53,7 @@ import { getCellValue, parseValue } from '@alaarab/ogrid-core';
           (change)="commitValue($any($event.target).value)"
           (keydown)="onTextKeyDown($event)"
           (blur)="onTextBlur()"
-          style="width:100%;box-sizing:border-box;padding:6px 10px;border:2px solid var(--ogrid-selection, #217346);border-radius:2px;outline:none;font:inherit;background:var(--ogrid-bg, #fff);color:var(--ogrid-fg, #242424)"
+          [style]="getInputStyle()"
         />
       }
       @default {
@@ -64,7 +64,7 @@ import { getCellValue, parseValue } from '@alaarab/ogrid-core';
           (input)="localValue.set($any($event.target).value)"
           (keydown)="onTextKeyDown($event)"
           (blur)="onTextBlur()"
-          style="width:100%;box-sizing:border-box;padding:6px 10px;border:2px solid var(--ogrid-selection, #217346);border-radius:2px;outline:none;font:inherit;background:var(--ogrid-bg, #fff);color:var(--ogrid-fg, #242424)"
+          [style]="getInputStyle()"
         />
       }
     }
@@ -149,5 +149,14 @@ export class InlineCellEditorComponent<T = unknown> implements AfterViewInit {
 
   onTextBlur(): void {
     this.commitValue(this.localValue());
+  }
+
+  getInputStyle(): string {
+    const baseStyle = 'width:100%;box-sizing:border-box;padding:6px 10px;border:2px solid var(--ogrid-selection, #217346);border-radius:2px;outline:none;font:inherit;background:var(--ogrid-bg, #fff);color:var(--ogrid-fg, #242424);';
+    const col = this.column();
+    if (col.type === 'numeric') {
+      return baseStyle + 'text-align:right;';
+    }
+    return baseStyle;
   }
 }

@@ -121,7 +121,11 @@ export function BaseInlineCellEditor<T>(props: BaseInlineCellEditorProps<T>): Re
 
   React.useEffect(() => {
     const input = wrapperRef.current?.querySelector('input');
-    input?.focus();
+    if (input) {
+      input.focus();
+      // Select all text for easy replacement (like Excel)
+      input.select();
+    }
   }, []);
 
   // Rich select (shared across all frameworks)
