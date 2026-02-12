@@ -14,7 +14,7 @@
     "./styles": "./dist/styles/ogrid.css"
   },
   "scripts": {
-    "build": "rimraf dist && tsc -p tsconfig.build.json",
+    "build": "rimraf dist && tsc -p tsconfig.build.json && mkdir -p dist/styles && cp styles/ogrid.css dist/styles/ogrid.css",
     "test": "jest"
   },
   "keywords": ["ogrid", "datagrid", "vanilla", "javascript", "typescript", "grid"],

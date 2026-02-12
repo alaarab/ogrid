@@ -7,6 +7,8 @@ description: Inline editing, clipboard operations, fill handle, and undo/redo
 import CellEditingDemo from '@site/src/components/demos/CellEditingDemo';
 import ClipboardDemo from '@site/src/components/demos/ClipboardDemo';
 import FillHandleDemo from '@site/src/components/demos/FillHandleDemo';
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
 
 # Editing & Clipboard
 
@@ -17,6 +19,9 @@ OGrid supports inline cell editing, clipboard copy/paste, drag-to-fill, and undo
 <CellEditingDemo />
 
 ## Quick Example
+
+<Tabs groupId="framework">
+  <TabItem value="radix" label="Radix (Lightweight)" default>
 
 ```tsx
 import { OGrid, useUndoRedo } from '@alaarab/ogrid-react-radix';
@@ -75,6 +80,191 @@ function App() {
   );
 }
 ```
+
+  </TabItem>
+  <TabItem value="fluent" label="Fluent UI">
+
+```tsx
+import { OGrid, useUndoRedo } from '@alaarab/ogrid-react-fluent';
+import { FluentProvider, webLightTheme } from '@fluentui/react-components';
+import { useState } from 'react';
+
+const DEPTS = ['Engineering', 'Marketing', 'Sales', 'Finance', 'Operations'];
+const STATUSES = ['Active', 'Draft', 'Archived'];
+
+const columns = [
+  { columnId: 'name', name: 'Name', editable: true },
+  {
+    columnId: 'department',
+    name: 'Department',
+    editable: true,
+    cellEditor: 'richSelect',
+    cellEditorParams: { values: DEPTS },
+  },
+  {
+    columnId: 'status',
+    name: 'Status',
+    editable: true,
+    cellEditor: 'select',
+    cellEditorParams: { values: STATUSES },
+  },
+  {
+    columnId: 'salary',
+    name: 'Salary',
+    editable: true,
+    type: 'numeric',
+    valueParser: ({ newValue }) => {
+      const num = Number(newValue);
+      return isNaN(num) || num < 0 ? undefined : num; // reject invalid
+    },
+    valueFormatter: (v) => `$${Number(v).toLocaleString()}`,
+  },
+];
+
+function App() {
+  const [data, setData] = useState(initialData);
+  const { handleCellValueChanged, undo, redo, canUndo, canRedo } = useUndoRedo({
+    data, setData, getRowId: (item) => item.id,
+  });
+
+  return (
+    <FluentProvider theme={webLightTheme}>
+      <OGrid
+        columns={columns}
+        data={data}
+        getRowId={(item) => item.id}
+        editable
+        onCellValueChanged={handleCellValueChanged}
+        onUndo={undo}
+        onRedo={redo}
+        canUndo={canUndo}
+        canRedo={canRedo}
+      />
+    </FluentProvider>
+  );
+}
+```
+
+  </TabItem>
+  <TabItem value="material" label="Material UI">
+
+```tsx
+import { OGrid, useUndoRedo } from '@alaarab/ogrid-react-material';
+import { ThemeProvider, createTheme } from '@mui/material/styles';
+import CssBaseline from '@mui/material/CssBaseline';
+import { useState } from 'react';
+
+const theme = createTheme();
+
+const DEPTS = ['Engineering', 'Marketing', 'Sales', 'Finance', 'Operations'];
+const STATUSES = ['Active', 'Draft', 'Archived'];
+
+const columns = [
+  { columnId: 'name', name: 'Name', editable: true },
+  {
+    columnId: 'department',
+    name: 'Department',
+    editable: true,
+    cellEditor: 'richSelect',
+    cellEditorParams: { values: DEPTS },
+  },
+  {
+    columnId: 'status',
+    name: 'Status',
+    editable: true,
+    cellEditor: 'select',
+    cellEditorParams: { values: STATUSES },
+  },
+  {
+    columnId: 'salary',
+    name: 'Salary',
+    editable: true,
+    type: 'numeric',
+    valueParser: ({ newValue }) => {
+      const num = Number(newValue);
+      return isNaN(num) || num < 0 ? undefined : num; // reject invalid
+    },
+    valueFormatter: (v) => `$${Number(v).toLocaleString()}`,
+  },
+];
+
+function App() {
+  const [data, setData] = useState(initialData);
+  const { handleCellValueChanged, undo, redo, canUndo, canRedo } = useUndoRedo({
+    data, setData, getRowId: (item) => item.id,
+  });
+
+  return (
+    <ThemeProvider theme={theme}>
+      <CssBaseline />
+      <OGrid
+        columns={columns}
+        data={data}
+        getRowId={(item) => item.id}
+        editable
+        onCellValueChanged={handleCellValueChanged}
+        onUndo={undo}
+        onRedo={redo}
+        canUndo={canUndo}
+        canRedo={canRedo}
+      />
+    </ThemeProvider>
+  );
+}
+```
+
+  </TabItem>
+  <TabItem value="js" label="Vanilla JS">
+
+```js
+import { OGrid } from '@alaarab/ogrid-js';
+import '@alaarab/ogrid-js/styles';
+
+const DEPTS = ['Engineering', 'Marketing', 'Sales', 'Finance', 'Operations'];
+const STATUSES = ['Active', 'Draft', 'Archived'];
+
+const grid = new OGrid(document.getElementById('grid'), {
+  columns: [
+    { columnId: 'name', name: 'Name', editable: true },
+    {
+      columnId: 'department',
+      name: 'Department',
+      editable: true,
+      cellEditor: 'richSelect',
+      cellEditorParams: { values: DEPTS },
+    },
+    {
+      columnId: 'status',
+      name: 'Status',
+      editable: true,
+      cellEditor: 'select',
+      cellEditorParams: { values: STATUSES },
+    },
+    {
+      columnId: 'salary',
+      name: 'Salary',
+      editable: true,
+      type: 'numeric',
+      valueParser: ({ newValue }) => {
+        const num = Number(newValue);
+        return isNaN(num) || num < 0 ? undefined : num;
+      },
+      valueFormatter: (v) => `$${Number(v).toLocaleString()}`,
+    },
+  ],
+  data: initialData,
+  getRowId: (item) => item.id,
+  editable: true,
+});
+
+// Listen for cell edits
+grid.on('cellValueChanged', (event) => {
+  console.log(`${event.columnId} changed to ${event.newValue}`);
+});
+```
+
+  </TabItem>
+</Tabs>
 
 This single setup gives you inline editing, clipboard paste, fill handle, and full undo/redo.
 

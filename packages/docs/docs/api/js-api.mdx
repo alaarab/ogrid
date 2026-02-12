@@ -1,0 +1,195 @@
+---
+sidebar_position: 5
+title: Vanilla JS API
+description: Full API reference for @alaarab/ogrid-js
+---
+
+# Vanilla JS API
+
+Complete reference for `@alaarab/ogrid-js` — the framework-free data grid.
+
+## OGrid Class
+
+```js
+import { OGrid } from '@alaarab/ogrid-js';
+import '@alaarab/ogrid-js/styles'; // optional default theme
+
+const grid = new OGrid(container, options);
+```
+
+### Constructor
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `container` | `HTMLElement` | DOM element to render into. OGrid fills this container. |
+| `options` | `OGridOptions<T>` | Configuration object (see below). |
+
+### Instance Methods
+
+| Method | Description |
+|--------|-------------|
+| `grid.api` | The imperative API object (see [API Methods](#api-methods) below). |
+| `grid.on(event, handler)` | Subscribe to a grid event. Returns `void`. |
+| `grid.off(event, handler)` | Unsubscribe from a grid event. |
+| `grid.destroy()` | Tear down the grid — removes DOM, listeners, and ResizeObservers. |
+
+---
+
+## OGridOptions\<T\>
+
+All configuration is passed to the constructor.
+
+### Data
+
+| Option | Type | Default | Description |
+|--------|------|---------|-------------|
+| `columns` | `(IColumnDef<T> \| IColumnGroupDef<T>)[]` | **required** | Column definitions. |
+| `getRowId` | `(item: T) => RowId` | **required** | Returns a unique `string \| number` per row. |
+| `data` | `T[]` | — | Client-side data. Mutually exclusive with `dataSource`. |
+| `dataSource` | `IDataSource<T>` | — | Server-side data source. Mutually exclusive with `data`. |
+
+### Pagination & Sorting
+
+| Option | Type | Default | Description |
+|--------|------|---------|-------------|
+| `page` | `number` | `1` | Initial page (1-based). |
+| `pageSize` | `number` | `20` | Rows per page. |
+| `sort` | `{ field: string; direction: 'asc' \| 'desc' }` | — | Initial sort state. |
+| `filters` | `IFilters` | — | Initial filter state. |
+
+### Interaction
+
+| Option | Type | Default | Description |
+|--------|------|---------|-------------|
+| `editable` | `boolean` | `false` | Enable inline cell editing. |
+| `cellSelection` | `boolean` | `false` | Enable spreadsheet-style cell/range selection. |
+| `rowSelection` | `'single' \| 'multiple'` | — | Row checkbox selection mode. |
+| `selectedRows` | `Set<RowId>` | — | Controlled selected row IDs. |
+| `pinnedColumns` | `Record<string, 'left' \| 'right'>` | — | Pin columns to left/right edges. |
+| `visibleColumns` | `Set<string>` | all | Initially visible column IDs. |
+
+### Layout
+
+| Option | Type | Default | Description |
+|--------|------|---------|-------------|
+| `layoutMode` | `'fill' \| 'content'` | `'fill'` | `'fill'` stretches to container; `'content'` sizes to data. |
+| `suppressHorizontalScroll` | `boolean` | `false` | Prevent horizontal scrollbar. |
+| `sideBar` | `boolean \| ISideBarDef` | — | Show sidebar with columns/filters panels. |
+| `emptyMessage` | `string` | `'No data'` | Custom empty state text. |
+| `aria-label` | `string` | — | Accessible label for the grid. |
+
+### Callbacks
+
+| Option | Type | Description |
+|--------|------|-------------|
+| `onCellValueChanged` | `(event: ICellValueChangedEvent<T>) => void` | Fired when a cell edit is committed. |
+| `onSelectionChange` | `(event: IRowSelectionChangeEvent<T>) => void` | Fired when row selection changes. |
+| `onError` | `(error: unknown) => void` | Fired on server-side data source failures. |
+| `onFirstDataRendered` | `() => void` | Fired once when the first data render completes. |
+
+---
+
+## API Methods
+
+Access via `grid.api`:
+
+### Data
+
+| Method | Signature | Description |
+|--------|-----------|-------------|
+| `setRowData` | `(data: T[]) => void` | Replace the entire dataset. |
+| `getDisplayedRows` | `() => T[]` | Get the currently visible (filtered, sorted, paginated) rows. |
+| `getRowNode` | `(id: RowId) => T \| undefined` | Find a row by its ID. |
+| `refreshData` | `() => void` | Re-fetch from `dataSource` (server-side only). |
+
+### Sorting & Filtering
+
+| Method | Signature | Description |
+|--------|-----------|-------------|
+| `setSort` | `(field: string, direction: 'asc' \| 'desc') => void` | Set sort programmatically. |
+| `setFilter` | `(key: string, value: FilterValue \| undefined) => void` | Set or clear a filter. |
+
+### Columns
+
+| Method | Signature | Description |
+|--------|-----------|-------------|
+| `getColumnState` | `() => IGridColumnState[]` | Get column widths, visibility, and order. |
+| `setColumnVisible` | `(columnId: string, visible: boolean) => void` | Show/hide a column. |
+
+### Selection
+
+| Method | Signature | Description |
+|--------|-----------|-------------|
+| `selectAll` | `() => void` | Select all rows (requires `rowSelection: 'multiple'`). |
+| `deselectAll` | `() => void` | Deselect all rows. |
+| `getSelectedRows` | `() => T[]` | Get the currently selected row data. |
+
+### Export
+
+| Method | Signature | Description |
+|--------|-----------|-------------|
+| `exportToCsv` | `(filename?: string) => void` | Export displayed rows to CSV and trigger a browser download. |
+
+### Pagination
+
+| Method | Signature | Description |
+|--------|-----------|-------------|
+| `setPage` | `(page: number) => void` | Navigate to a specific page. |
+| `setPageSize` | `(size: number) => void` | Change rows per page. |
+
+---
+
+## Events
+
+Subscribe with `grid.on(eventName, handler)`.
+
+| Event | Payload Type | Fired When |
+|-------|-------------|------------|
+| `cellValueChanged` | `ICellValueChangedEvent<T>` | A cell edit is committed |
+| `selectionChange` | `IRowSelectionChangeEvent<T>` | Row selection changes |
+| `sortChange` | `{ field: string; direction: 'asc' \| 'desc' }` | Sort state changes |
+| `filterChange` | `{ filters: IFilters }` | Filter state changes |
+| `pageChange` | `{ page: number }` | Current page changes |
+
+### ICellValueChangedEvent\<T\>
+
+```ts
+{
+  item: T;           // The row data object
+  columnId: string;  // Which column was edited
+  oldValue: unknown; // Previous cell value
+  newValue: unknown; // New cell value
+}
+```
+
+---
+
+## IColumnDef\<T\> (JS-specific)
+
+The JS package extends the core `IColumnDef<T>` with DOM-aware fields:
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `renderCell` | `(cell: HTMLTableCellElement, item: T, value: unknown) => void` | Custom cell renderer — mutate the `<td>` DOM directly. |
+| `cellStyle` | `Partial<CSSStyleDeclaration>` | Inline styles applied to each cell. |
+| `cellEditor` | `string \| (container: HTMLElement, params: object) => { getValue: () => unknown; destroy: () => void }` | Built-in editor name (`'text'`, `'select'`, `'richSelect'`, `'checkbox'`, `'date'`) or a factory function for custom editors. |
+
+All other `IColumnDef` fields (`columnId`, `name`, `sortable`, `filterable`, `type`, `editable`, `valueFormatter`, `valueGetter`, `valueParser`, `minWidth`, `defaultWidth`, `idealWidth`, `pinned`, `required`, `defaultVisible`) are identical to the React version — see [Column Definitions](./column-def).
+
+---
+
+## CSS Classes
+
+The JS package renders semantic HTML with `ogrid-*` class names. Import the default theme or write your own CSS targeting these selectors:
+
+### Layout
+`ogrid-container`, `ogrid-toolbar`, `ogrid-body-area`, `ogrid-table-container`, `ogrid-sidebar-container`, `ogrid-status-bar-container`, `ogrid-pagination-container`
+
+### Table
+`ogrid-wrapper`, `ogrid-table`, `ogrid-header-cell`, `ogrid-group-header`, `ogrid-sortable`, `ogrid-sort-indicator`, `ogrid-resize-handle`, `ogrid-filter-icon`, `ogrid-row`, `ogrid-cell`, `ogrid-checkbox-header`, `ogrid-checkbox-cell`, `ogrid-fill-handle`, `ogrid-empty-state`
+
+### Data Attributes
+`[data-active-cell]`, `[data-in-range]`, `[data-drag-range]`, `[data-row-selected]`, `[data-pinned="left|right"]`, `[data-column-id]`, `[data-row-index]`, `[data-col-index]`
+
+### CSS Variables
+Override `--ogrid-bg`, `--ogrid-fg`, `--ogrid-border`, `--ogrid-primary`, `--ogrid-selection`, `--ogrid-bg-subtle`, `--ogrid-bg-hover`, `--ogrid-muted`, and more. See [Theming](../guides/theming).

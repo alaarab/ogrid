@@ -40,6 +40,22 @@ For projects without React. Class-based API with EventEmitter state management.
 npm install @alaarab/ogrid-js
 ```
 
+:::tip Theme CSS
+The JS package ships a default theme with light and dark mode support:
+
+```js
+import '@alaarab/ogrid-js/styles';
+```
+
+Or link it directly in HTML:
+
+```html
+<link rel="stylesheet" href="node_modules/@alaarab/ogrid-js/dist/styles/ogrid.css" />
+```
+
+You can override any `--ogrid-*` CSS variable to customize colors, or skip the default theme entirely and write your own CSS targeting the `ogrid-*` class names.
+:::
+
 ## Core Only
 
 If you want to build your own framework adapter on top of OGrid's types and utilities, install the core package directly.

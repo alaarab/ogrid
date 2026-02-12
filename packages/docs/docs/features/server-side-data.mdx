@@ -5,6 +5,8 @@ description: Fetch pages of data from a server with sorting, filtering, and peop
 ---
 
 import ServerSideDemo from '@site/src/components/demos/ServerSideDemo';
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
 
 # Server-Side Data
 
@@ -15,6 +17,9 @@ Pass a `dataSource` instead of a `data` array to delegate sorting, filtering, an
 <ServerSideDemo />
 
 ## Quick Example
+
+<Tabs groupId="framework">
+  <TabItem value="radix" label="Radix (Lightweight)" default>
 
 ```tsx
 import { OGrid } from '@alaarab/ogrid-react-radix';
@@ -53,6 +58,129 @@ function App() {
   );
 }
 ```
+
+  </TabItem>
+  <TabItem value="fluent" label="Fluent UI">
+
+```tsx
+import { OGrid } from '@alaarab/ogrid-react-fluent';
+import type { IDataSource, IFetchParams, IPageResult } from '@alaarab/ogrid-react-fluent';
+import { FluentProvider, webLightTheme } from '@fluentui/react-components';
+
+interface Employee {
+  id: number;
+  name: string;
+  department: string;
+  salary: number;
+}
+
+const dataSource: IDataSource<Employee> = {
+  async fetchPage(params: IFetchParams): Promise<IPageResult<Employee>> {
+    const query = new URLSearchParams({
+      page: String(params.page),
+      pageSize: String(params.pageSize),
+      ...(params.sort && {
+        sortField: params.sort.field,
+        sortDir: params.sort.direction,
+      }),
+    });
+    const res = await fetch(`/api/employees?${query}`);
+    return res.json(); // { items: Employee[], totalCount: number }
+  },
+};
+
+function App() {
+  return (
+    <FluentProvider theme={webLightTheme}>
+      <OGrid
+        columns={columns}
+        dataSource={dataSource}
+        getRowId={(e) => e.id}
+        defaultPageSize={25}
+      />
+    </FluentProvider>
+  );
+}
+```
+
+  </TabItem>
+  <TabItem value="material" label="Material UI">
+
+```tsx
+import { OGrid } from '@alaarab/ogrid-react-material';
+import type { IDataSource, IFetchParams, IPageResult } from '@alaarab/ogrid-react-material';
+import { ThemeProvider, createTheme } from '@mui/material/styles';
+import CssBaseline from '@mui/material/CssBaseline';
+
+const theme = createTheme();
+
+interface Employee {
+  id: number;
+  name: string;
+  department: string;
+  salary: number;
+}
+
+const dataSource: IDataSource<Employee> = {
+  async fetchPage(params: IFetchParams): Promise<IPageResult<Employee>> {
+    const query = new URLSearchParams({
+      page: String(params.page),
+      pageSize: String(params.pageSize),
+      ...(params.sort && {
+        sortField: params.sort.field,
+        sortDir: params.sort.direction,
+      }),
+    });
+    const res = await fetch(`/api/employees?${query}`);
+    return res.json(); // { items: Employee[], totalCount: number }
+  },
+};
+
+function App() {
+  return (
+    <ThemeProvider theme={theme}>
+      <CssBaseline />
+      <OGrid
+        columns={columns}
+        dataSource={dataSource}
+        getRowId={(e) => e.id}
+        defaultPageSize={25}
+      />
+    </ThemeProvider>
+  );
+}
+```
+
+  </TabItem>
+  <TabItem value="js" label="Vanilla JS">
+
+```js
+import { OGrid } from '@alaarab/ogrid-js';
+import '@alaarab/ogrid-js/styles';
+
+const grid = new OGrid(document.getElementById('grid'), {
+  columns: columns,
+  dataSource: {
+    async fetchPage({ page, pageSize, sort, filters }) {
+      const query = new URLSearchParams({
+        page: String(page),
+        pageSize: String(pageSize),
+        ...(sort && {
+          sortField: sort.field,
+          sortDir: sort.direction,
+        }),
+      });
+      const res = await fetch(`/api/employees?${query}`);
+      return res.json(); // { items: Employee[], totalCount: number }
+    },
+  },
+  getRowId: (e) => e.id,
+  pageSize: 25,
+});
+```
+
+  </TabItem>
+</Tabs>
 
 The grid fetches the first page on mount and re-fetches whenever page, sort, or filters change.
 
