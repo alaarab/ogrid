@@ -1,17 +1,10 @@
 <script setup lang="ts">
-import { ref, computed, h, Teleport } from 'vue';
+import { computed } from 'vue';
 import {
-  useDataGridState,
-  useColumnResize,
-  useColumnReorder,
-  useVirtualScroll,
-  getHeaderFilterConfig,
+  useDataGridTableSetup,
   getCellRenderDescriptor,
   resolveCellDisplayContent,
-  resolveCellStyle,
-  getCellInteractionProps,
   buildHeaderRows,
-  flattenColumns,
   CHECKBOX_COLUMN_WIDTH,
   DEFAULT_MIN_COLUMN_WIDTH,
   type IOGridDataGridProps,
@@ -28,38 +21,19 @@ const props = defineProps<{
   gridProps: IOGridDataGridProps<any>;
 }>();
 
-const wrapperRef = ref<HTMLDivElement | null>(null);
-const tableContainerRef = ref<HTMLDivElement | null>(null);
-const tableRef = ref<HTMLTableElement | null>(null);
-const lastMouseShift = ref(false);
 const propsRef = computed(() => props.gridProps);
 
-const state = useDataGridState({ props: propsRef, wrapperRef });
-
-// Column reorder
-const columnOrderRef = computed(() => {
-  const p = props.gridProps;
-  if (p.columnOrder) return p.columnOrder;
-  return flattenColumns(p.columns).filter(c => p.visibleColumns?.has(c.columnId) ?? true).map(c => c.columnId);
-});
-const onColumnOrderChangeRef = computed(() => props.gridProps.onColumnOrderChange);
-const { isDragging: isReorderDragging, dropIndicatorX, handleHeaderMouseDown: handleReorderMouseDown } = useColumnReorder({
-  columnOrder: columnOrderRef,
-  onColumnOrderChange: onColumnOrderChangeRef,
+const {
+  wrapperRef,
+  tableContainerRef,
   tableRef,
-});
-
-// Virtual scrolling
-const virtualScrollEnabled = computed(() => props.gridProps.virtualScroll?.enabled ?? false);
-const totalRowsRef = computed(() => props.gridProps.items.length);
-const rowHeight = props.gridProps.virtualScroll?.rowHeight ?? 36;
-const overscan = props.gridProps.virtualScroll?.overscan ?? 5;
-const { containerRef: vsContainerRef, visibleRange, totalHeight, scrollToRow } = useVirtualScroll({
-  totalRows: totalRowsRef,
-  rowHeight,
-  enabled: virtualScrollEnabled,
-  overscan,
-});
+  lastMouseShift,
+  state,
+  columnReorder: { isDragging: isReorderDragging, dropIndicatorX, handleHeaderMouseDown: handleReorderMouseDown },
+  virtualScroll: { containerRef: vsContainerRef, visibleRange, totalHeight, scrollToRow },
+  virtualScrollEnabled,
+  columnResize: { handleResizeStart, getColumnWidth },
+} = useDataGridTableSetup({ props: propsRef });
 
 // Computed state refs
 const layout = computed(() => state.layout.value);
@@ -70,11 +44,6 @@ const ctxMenu = computed(() => state.contextMenu.value);
 const viewModels = computed(() => state.viewModels.value);
 
 const headerRows = computed(() => buildHeaderRows(props.gridProps.columns, props.gridProps.visibleColumns));
-
-const { handleResizeStart, getColumnWidth } = useColumnResize({
-  columnSizingOverrides: computed(() => layout.value.columnSizingOverrides),
-  setColumnSizingOverrides: layout.value.setColumnSizingOverrides,
-});
 
 const handleSingleRowClick = (e: MouseEvent, rowId: string | number) => {
   if (props.gridProps.rowSelection !== 'single') return;

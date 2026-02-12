@@ -287,3 +287,14 @@
       inset: 0;
       z-index: 1000;
     }
+    .ogrid-datagrid-checkbox-spacer {
+      width: 48px;
+      min-width: 48px;
+      padding: 0;
+    }
+    .ogrid-datagrid-th--reorderable {
+      cursor: grab;
+    }
+    .ogrid-datagrid-th--dragging {
+      cursor: grabbing;
+    }

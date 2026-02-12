@@ -1,6 +1,6 @@
 import { DEMO_DATA_TS } from './demoData';
 
-const OGRID_VERSION = '2.0.3';
+const OGRID_VERSION = '2.0.6';
 
 interface ProjectDef {
   title: string;
