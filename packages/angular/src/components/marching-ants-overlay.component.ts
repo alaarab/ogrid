@@ -123,7 +123,7 @@ export class MarchingAntsOverlayComponent {
       const selRange = this.selectionRange();
       const clipRange = this.copyRange() ?? this.cutRange();
       const colOff = this.colOffset();
-      const _version = this.columnSizingVersion(); // Track column resize changes
+      void this.columnSizingVersion(); // Track column resize changes
 
       if (this.resizeObserver) {
         this.resizeObserver.disconnect();

@@ -4,7 +4,6 @@ import { ColumnReorderService } from '../services/column-reorder.service';
 import { VirtualScrollService } from '../services/virtual-scroll.service';
 import {
   buildHeaderRows,
-  getCellValue,
   DEFAULT_MIN_COLUMN_WIDTH,
 } from '@alaarab/ogrid-core';
 import {
@@ -29,7 +28,7 @@ import type { HeaderFilterConfig, CellRenderDescriptor } from '../utils';
  * 2. Call `initBase()` in the constructor (effects require injection context)
  * 3. Implement abstract accessors for propsInput, wrapperRef, and tableContainerRef
  */
-export abstract class BaseDataGridTableComponent<T = any> {
+export abstract class BaseDataGridTableComponent<T = unknown> {
   readonly stateService = new DataGridStateService<T>();
   readonly columnReorderService = new ColumnReorderService<T>();
   readonly virtualScrollService = new VirtualScrollService();
@@ -131,8 +130,8 @@ export abstract class BaseDataGridTableComponent<T = any> {
     return cols.map((col, colIdx) => {
       const isFreezeCol = fc != null && fc >= 1 && colIdx < fc;
       const runtimePinned = pinnedCols[col.columnId];
-      const pinnedLeft = runtimePinned === 'left' || (col as any).pinned === 'left' || (isFreezeCol && colIdx === 0);
-      const pinnedRight = runtimePinned === 'right' || (col as any).pinned === 'right';
+      const pinnedLeft = runtimePinned === 'left' || (col as unknown as Record<string, unknown>).pinned === 'left' || (isFreezeCol && colIdx === 0);
+      const pinnedRight = runtimePinned === 'right' || (col as unknown as Record<string, unknown>).pinned === 'right';
       const w = this.getColumnWidth(col);
       return {
         col,
