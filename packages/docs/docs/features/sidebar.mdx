@@ -4,6 +4,8 @@ title: Side Bar
 description: Collapsible side panel with Columns and Filters panels for managing column visibility and filtering.
 ---
 
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
 import SideBarDemo from '@site/src/components/demos/SideBarDemo';
 import SideBarLeftDemo from '@site/src/components/demos/SideBarLeftDemo';
 import SideBarColumnsOnlyDemo from '@site/src/components/demos/SideBarColumnsOnlyDemo';
@@ -16,7 +18,12 @@ The Side Bar adds a collapsible panel alongside the grid with two built-in panel
 
 <SideBarDemo />
 
+<Tabs groupId="framework">
+  <TabItem value="radix" label="Radix (Lightweight)" default>
+
 ```tsx
+import { OGrid } from '@alaarab/ogrid-react-radix';
+
 <OGrid
   columns={columns}
   data={items}
@@ -26,6 +33,68 @@ The Side Bar adds a collapsible panel alongside the grid with two built-in panel
   pagination
 />
 ```
+
+  </TabItem>
+  <TabItem value="fluent" label="Fluent UI">
+
+```tsx
+import { OGrid } from '@alaarab/ogrid-react-fluent';
+import { FluentProvider, webLightTheme } from '@fluentui/react-components';
+
+<FluentProvider theme={webLightTheme}>
+  <OGrid
+    columns={columns}
+    data={items}
+    getRowId={(item) => item.id}
+    sideBar
+    columnChooser="sidebar"
+    pagination
+  />
+</FluentProvider>
+```
+
+  </TabItem>
+  <TabItem value="material" label="Material UI">
+
+```tsx
+import { OGrid } from '@alaarab/ogrid-react-material';
+import { ThemeProvider, createTheme } from '@mui/material/styles';
+import CssBaseline from '@mui/material/CssBaseline';
+
+const theme = createTheme();
+
+<ThemeProvider theme={theme}>
+  <CssBaseline />
+  <OGrid
+    columns={columns}
+    data={items}
+    getRowId={(item) => item.id}
+    sideBar
+    columnChooser="sidebar"
+    pagination
+  />
+</ThemeProvider>
+```
+
+  </TabItem>
+  <TabItem value="js" label="Vanilla JS">
+
+```js
+import { OGrid } from '@alaarab/ogrid-js';
+import '@alaarab/ogrid-js/styles';
+
+const grid = new OGrid(document.getElementById('grid'), {
+  columns: columns,
+  data: items,
+  getRowId: (item) => item.id,
+  sideBar: true,
+  columnChooser: 'sidebar',
+  pagination: true,
+});
+```
+
+  </TabItem>
+</Tabs>
 
 Set `sideBar` to `true` to enable both panels with default settings. Set `columnChooser="sidebar"` to move the column chooser from the toolbar into the sidebar's Columns panel.
 

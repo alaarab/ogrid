@@ -4,6 +4,8 @@ title: Toolbar & Layout
 description: Unified bordered container with configurable toolbar strip, sidebar, and column chooser placement.
 ---
 
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
 import ToolbarDefaultDemo from '@site/src/components/demos/ToolbarDefaultDemo';
 import ToolbarCustomDemo from '@site/src/components/demos/ToolbarCustomDemo';
 import ToolbarBelowDemo from '@site/src/components/demos/ToolbarBelowDemo';
@@ -27,7 +29,12 @@ With no extra props, OGrid renders a toolbar strip containing only the column ch
 
 <ToolbarDefaultDemo />
 
+<Tabs groupId="framework">
+  <TabItem value="radix" label="Radix (Lightweight)" default>
+
 ```tsx
+import { OGrid } from '@alaarab/ogrid-react-radix';
+
 <OGrid
   columns={columns}
   data={items}
@@ -36,6 +43,65 @@ With no extra props, OGrid renders a toolbar strip containing only the column ch
   pagination
 />
 ```
+
+  </TabItem>
+  <TabItem value="fluent" label="Fluent UI">
+
+```tsx
+import { OGrid } from '@alaarab/ogrid-react-fluent';
+import { FluentProvider, webLightTheme } from '@fluentui/react-components';
+
+<FluentProvider theme={webLightTheme}>
+  <OGrid
+    columns={columns}
+    data={items}
+    getRowId={(item) => item.id}
+    columnChooser="toolbar"
+    pagination
+  />
+</FluentProvider>
+```
+
+  </TabItem>
+  <TabItem value="material" label="Material UI">
+
+```tsx
+import { OGrid } from '@alaarab/ogrid-react-material';
+import { ThemeProvider, createTheme } from '@mui/material/styles';
+import CssBaseline from '@mui/material/CssBaseline';
+
+const theme = createTheme();
+
+<ThemeProvider theme={theme}>
+  <CssBaseline />
+  <OGrid
+    columns={columns}
+    data={items}
+    getRowId={(item) => item.id}
+    columnChooser="toolbar"
+    pagination
+  />
+</ThemeProvider>
+```
+
+  </TabItem>
+  <TabItem value="js" label="Vanilla JS">
+
+```js
+import { OGrid } from '@alaarab/ogrid-js';
+import '@alaarab/ogrid-js/styles';
+
+const grid = new OGrid(document.getElementById('grid'), {
+  columns: columns,
+  data: items,
+  getRowId: (item) => item.id,
+  columnChooser: true,
+  pagination: true,
+});
+```
+
+  </TabItem>
+</Tabs>
 
 ## Custom Toolbar Content
 

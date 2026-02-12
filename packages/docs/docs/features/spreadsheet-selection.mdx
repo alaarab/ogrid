@@ -5,6 +5,8 @@ description: Excel-like cell selection with active cell, range selection, and dr
 ---
 
 import SpreadsheetSelectionDemo from '@site/src/components/demos/SpreadsheetSelectionDemo';
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
 
 # Spreadsheet Selection
 
@@ -15,6 +17,9 @@ OGrid provides Excel-like cell selection out of the box. Click a cell to make it
 <SpreadsheetSelectionDemo />
 
 ## Quick Example
+
+<Tabs groupId="framework">
+  <TabItem value="radix" label="Radix (Lightweight)" default>
 
 ```tsx
 import { OGrid } from '@alaarab/ogrid-react-radix';
@@ -30,6 +35,70 @@ function App() {
   );
 }
 ```
+
+  </TabItem>
+  <TabItem value="fluent" label="Fluent UI">
+
+```tsx
+import { OGrid } from '@alaarab/ogrid-react-fluent';
+import { FluentProvider, webLightTheme } from '@fluentui/react-components';
+
+function App() {
+  return (
+    <FluentProvider theme={webLightTheme}>
+      <OGrid
+        columns={columns}
+        data={items}
+        getRowId={(item) => item.id}
+        cellSelection
+      />
+    </FluentProvider>
+  );
+}
+```
+
+  </TabItem>
+  <TabItem value="material" label="Material UI">
+
+```tsx
+import { OGrid } from '@alaarab/ogrid-react-material';
+import { ThemeProvider, createTheme } from '@mui/material/styles';
+import CssBaseline from '@mui/material/CssBaseline';
+
+const theme = createTheme();
+
+function App() {
+  return (
+    <ThemeProvider theme={theme}>
+      <CssBaseline />
+      <OGrid
+        columns={columns}
+        data={items}
+        getRowId={(item) => item.id}
+        cellSelection
+      />
+    </ThemeProvider>
+  );
+}
+```
+
+  </TabItem>
+  <TabItem value="js" label="Vanilla JS">
+
+```js
+import { OGrid } from '@alaarab/ogrid-js';
+import '@alaarab/ogrid-js/styles';
+
+const grid = new OGrid(document.getElementById('grid'), {
+  columns: columns,
+  data: items,
+  getRowId: (item) => item.id,
+  cellSelection: true,
+});
+```
+
+  </TabItem>
+</Tabs>
 
 ## How It Works
 

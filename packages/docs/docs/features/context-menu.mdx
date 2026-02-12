@@ -5,6 +5,8 @@ description: Right-click cell menu with clipboard, undo/redo, and export actions
 ---
 
 import ContextMenuDemo from '@site/src/components/demos/ContextMenuDemo';
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
 
 # Context Menu
 
@@ -15,6 +17,9 @@ Right-click any cell to open a context menu with clipboard operations, undo/redo
 <ContextMenuDemo />
 
 ## Quick Example
+
+<Tabs groupId="framework">
+  <TabItem value="radix" label="Radix (Lightweight)" default>
 
 ```tsx
 import { OGrid } from '@alaarab/ogrid-react-radix';
@@ -42,6 +47,97 @@ function App() {
   );
 }
 ```
+
+  </TabItem>
+  <TabItem value="fluent" label="Fluent UI">
+
+```tsx
+import { OGrid } from '@alaarab/ogrid-react-fluent';
+import { useUndoRedo } from '@alaarab/ogrid-react-fluent';
+import { FluentProvider, webLightTheme } from '@fluentui/react-components';
+import { useRef } from 'react';
+
+function App() {
+  const undoRedo = useUndoRedo();
+
+  return (
+    <FluentProvider theme={webLightTheme}>
+      <OGrid
+        columns={columns}
+        data={data}
+        getRowId={(r) => r.id}
+        editable
+        onCellValueChanged={(e) => {
+          undoRedo.pushChange(e);
+          // persist change...
+        }}
+        onUndo={undoRedo.undo}
+        onRedo={undoRedo.redo}
+        canUndo={undoRedo.canUndo}
+        canRedo={undoRedo.canRedo}
+      />
+    </FluentProvider>
+  );
+}
+```
+
+  </TabItem>
+  <TabItem value="material" label="Material UI">
+
+```tsx
+import { OGrid } from '@alaarab/ogrid-react-material';
+import { useUndoRedo } from '@alaarab/ogrid-react-material';
+import { ThemeProvider, createTheme } from '@mui/material/styles';
+import CssBaseline from '@mui/material/CssBaseline';
+import { useRef } from 'react';
+
+const theme = createTheme();
+
+function App() {
+  const undoRedo = useUndoRedo();
+
+  return (
+    <ThemeProvider theme={theme}>
+      <CssBaseline />
+      <OGrid
+        columns={columns}
+        data={data}
+        getRowId={(r) => r.id}
+        editable
+        onCellValueChanged={(e) => {
+          undoRedo.pushChange(e);
+          // persist change...
+        }}
+        onUndo={undoRedo.undo}
+        onRedo={undoRedo.redo}
+        canUndo={undoRedo.canUndo}
+        canRedo={undoRedo.canRedo}
+      />
+    </ThemeProvider>
+  );
+}
+```
+
+  </TabItem>
+  <TabItem value="js" label="Vanilla JS">
+
+```js
+import { OGrid } from '@alaarab/ogrid-js';
+import '@alaarab/ogrid-js/styles';
+
+const grid = new OGrid(document.getElementById('grid'), {
+  columns: columns,
+  data: data,
+  getRowId: (r) => r.id,
+  editable: true,
+});
+
+// Right-click any cell to see the context menu
+// Undo/redo is handled automatically by the JS package
+```
+
+  </TabItem>
+</Tabs>
 
 Right-click a cell to see the context menu with all available actions.
 
