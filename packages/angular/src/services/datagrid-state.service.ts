@@ -253,9 +253,14 @@ export class DataGridStateService<T> {
       : flatCols;
     const order = p.columnOrder;
     if (!order?.length) return filtered;
+    // Build index map for O(1) lookup instead of repeated O(n) indexOf
+    const orderMap = new Map<string, number>();
+    for (let i = 0; i < order.length; i++) {
+      orderMap.set(order[i], i);
+    }
     return [...filtered].sort((a, b) => {
-      const ia = order.indexOf(a.columnId);
-      const ib = order.indexOf(b.columnId);
+      const ia = orderMap.get(a.columnId) ?? -1;
+      const ib = orderMap.get(b.columnId) ?? -1;
       if (ia === -1 && ib === -1) return 0;
       if (ia === -1) return 1;
       if (ib === -1) return -1;
@@ -404,11 +409,11 @@ export class DataGridStateService<T> {
       measure();
     });
 
-    // Cleanup on destroy
+    // Cleanup on destroy — null out refs to prevent accidental reuse after teardown
     this.destroyRef.onDestroy(() => {
-      if (this.rafId) cancelAnimationFrame(this.rafId);
-      if (this.autoScrollInterval) clearInterval(this.autoScrollInterval);
-      if (this.resizeObserver) this.resizeObserver.disconnect();
+      if (this.rafId) { cancelAnimationFrame(this.rafId); this.rafId = 0; }
+      if (this.autoScrollInterval) { clearInterval(this.autoScrollInterval); this.autoScrollInterval = null; }
+      if (this.resizeObserver) { this.resizeObserver.disconnect(); this.resizeObserver = null; }
     });
 
     // Clean up column sizing overrides for removed columns
