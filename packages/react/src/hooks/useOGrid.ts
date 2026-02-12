@@ -471,6 +471,7 @@ export function useOGrid<T>(
         // this via useVirtualScroll.scrollToIndex when virtual scrolling is active.
       },
     }),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     [
       visibleColumns,
       sort,
@@ -541,7 +542,6 @@ export function useOGrid<T>(
     (columnId: string, pinned: 'left' | 'right' | null) => {
       setPinnedOverrides((prev) => {
         if (pinned === null) {
-          // eslint-disable-next-line @typescript-eslint/no-unused-vars
           const { [columnId]: _, ...rest } = prev;
           return rest;
         }
