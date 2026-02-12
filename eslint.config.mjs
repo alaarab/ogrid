@@ -36,5 +36,13 @@ export default [
       '@typescript-eslint/no-unused-expressions': 'off',
     },
   },
+  {
+    files: ['packages/vue/**/*.ts', 'packages/vue-vuetify/**/*.ts', 'packages/vue-primevue/**/*.ts', 'packages/angular/**/*.ts', 'packages/angular-material/**/*.ts', 'packages/angular-primeng/**/*.ts'],
+    rules: {
+      'react-hooks/rules-of-hooks': 'off',
+      'react-hooks/exhaustive-deps': 'off',
+      'react/no-unknown-property': 'off',
+    },
+  },
   ...storybook.configs['flat/recommended'],
 ];
