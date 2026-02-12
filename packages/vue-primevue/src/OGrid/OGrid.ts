@@ -21,7 +21,7 @@ export const OGrid = defineComponent({
     expose({ api: api.value });
 
     return () => {
-      const sideBar = layout.value.sideBarProps;
+      const _sideBar = layout.value.sideBarProps;
 
       // Toolbar
       const toolbarChildren: any[] = [];

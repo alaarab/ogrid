@@ -40,7 +40,7 @@ export const DataGridTable = defineComponent({
       lastMouseShift,
       state,
       columnReorder: { isDragging: isReorderDragging, dropIndicatorX, handleHeaderMouseDown: handleReorderMouseDown },
-      virtualScroll: { containerRef: vsContainerRef, visibleRange, totalHeight, scrollToRow },
+      virtualScroll: { containerRef: vsContainerRef, visibleRange, totalHeight: _totalHeight, scrollToRow: _scrollToRow },
       virtualScrollEnabled,
       columnResize: { handleResizeStart, getColumnWidth },
     } = useDataGridTableSetup({ props: propsRef });
@@ -72,7 +72,7 @@ export const DataGridTable = defineComponent({
       const viewModels = state.viewModels.value;
 
       const {
-        visibleCols, hasCheckboxCol, hasRowNumbersCol, colOffset, containerWidth, minTableWidth, desiredTableWidth,
+        visibleCols, hasCheckboxCol, hasRowNumbersCol, colOffset: _colOffset, containerWidth, minTableWidth, desiredTableWidth,
       } = layout;
 
       const currentPage = props.gridProps.currentPage ?? 1;
@@ -80,14 +80,14 @@ export const DataGridTable = defineComponent({
       const rowNumberOffset = hasRowNumbersCol ? (currentPage - 1) * pageSize : 0;
 
       const { selectedRowIds, handleRowCheckboxChange, handleSelectAll, allSelected, someSelected } = rowSel;
-      const { editingCell, setEditingCell, pendingEditorValue, setPendingEditorValue, commitCellEdit, cancelPopoverEdit, popoverAnchorEl, setPopoverAnchorEl } = editing;
+      const { editingCell: _editingCell, setEditingCell, pendingEditorValue, setPendingEditorValue, commitCellEdit, cancelPopoverEdit, popoverAnchorEl, setPopoverAnchorEl } = editing;
       const {
         setActiveCell, handleCellMouseDown, handleSelectAllCells, selectionRange, hasCellSelection,
         handleGridKeyDown, handleFillHandleMouseDown, handleCopy, handleCut, handlePaste,
-        cutRange, copyRange, canUndo, canRedo, onUndo, onRedo, isDragging,
+        cutRange: _cutRange, copyRange: _copyRange, canUndo, canRedo, onUndo, onRedo, isDragging: _isDragging,
       } = interaction;
       const { menuPosition, handleCellContextMenu, closeContextMenu } = ctxMenu;
-      const { headerFilterInput, cellDescriptorInput, statusBarConfig, showEmptyInGrid, onCellError } = viewModels;
+      const { headerFilterInput, cellDescriptorInput, statusBarConfig, showEmptyInGrid, onCellError: _onCellError } = viewModels;
 
       const items = p.items;
       const getRowId = p.getRowId;
@@ -120,7 +120,7 @@ export const DataGridTable = defineComponent({
       // Render a cell's content
       const renderCellContent = (item: unknown, col: IColumnDef<unknown>, rowIndex: number, colIdx: number): VNode | string | null => {
         const descriptor = getCellRenderDescriptor(item, col, rowIndex, colIdx, cellDescriptorInput);
-        const rowId = getRowId(item);
+        const _rowId = getRowId(item);
 
         if (descriptor.mode === 'editing-inline') {
           const editorProps = buildInlineEditorProps(item, col, descriptor, editCallbacks);
@@ -158,7 +158,7 @@ export const DataGridTable = defineComponent({
         const interactionProps = getCellInteractionProps(descriptor, col.columnId, interactionHandlers);
 
         // Compute cell CSS classes based on state
-        const cellClasses: string[] = ['ogrid-cell'];
+        const _cellClasses: string[] = ['ogrid-cell'];
         const cellInlineStyle: Record<string, string> = {
           width: '100%',
           height: '100%',
