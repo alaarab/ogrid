@@ -76,6 +76,7 @@ export {
   useInlineCellEditorState,
   useRichSelectState,
   useSideBarState,
+  useDataGridTableSetup,
 } from './composables';
 
 // Composable types
@@ -141,6 +142,8 @@ export type {
   UseSideBarStateParams,
   UseSideBarStateResult,
   DebouncedFn,
+  UseDataGridTableSetupParams,
+  UseDataGridTableSetupResult,
 } from './composables';
 
 // View model utilities (for UI packages)

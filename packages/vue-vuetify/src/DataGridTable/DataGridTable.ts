@@ -1,10 +1,7 @@
-import { defineComponent, ref, computed, h, type PropType, type VNode, Teleport } from 'vue';
+import { defineComponent, computed, h, type PropType, type VNode, Teleport } from 'vue';
 import { VCheckbox, VProgressCircular, VBtn } from 'vuetify/components';
 import {
-  useDataGridState,
-  useColumnResize,
-  useColumnReorder,
-  useVirtualScroll,
+  useDataGridTableSetup,
   getHeaderFilterConfig,
   getCellRenderDescriptor,
   resolveCellDisplayContent,
@@ -13,7 +10,6 @@ import {
   buildPopoverEditorProps,
   getCellInteractionProps,
   buildHeaderRows,
-  flattenColumns,
   CHECKBOX_COLUMN_WIDTH,
   ROW_NUMBER_COLUMN_WIDTH,
   DEFAULT_MIN_COLUMN_WIDTH,
@@ -35,38 +31,19 @@ export const DataGridTable = defineComponent({
     gridProps: { type: Object as PropType<IOGridDataGridProps<unknown>>, required: true },
   },
   setup(props) {
-    const wrapperRef = ref<HTMLDivElement | null>(null);
-    const tableContainerRef = ref<HTMLDivElement | null>(null);
-    const lastMouseShift = ref(false);
     const propsRef = computed(() => props.gridProps);
 
-    const state = useDataGridState({ props: propsRef, wrapperRef });
-
-    // Column reorder — setup scope for lifecycle hooks
-    const columnOrderRef = computed(() => {
-      const p = props.gridProps;
-      if (p.columnOrder) return p.columnOrder;
-      return flattenColumns(p.columns).filter(c => p.visibleColumns?.has(c.columnId) ?? true).map(c => c.columnId);
-    });
-    const onColumnOrderChangeRef = computed(() => props.gridProps.onColumnOrderChange);
-    const tableRef = ref<HTMLElement | null>(null);
-    const { isDragging: isReorderDragging, dropIndicatorX, handleHeaderMouseDown: handleReorderMouseDown } = useColumnReorder({
-      columnOrder: columnOrderRef,
-      onColumnOrderChange: onColumnOrderChangeRef,
+    const {
+      wrapperRef,
+      tableContainerRef,
       tableRef,
-    });
-
-    // Virtual scrolling — setup scope for lifecycle hooks
-    const virtualScrollEnabled = computed(() => props.gridProps.virtualScroll?.enabled ?? false);
-    const totalRowsRef = computed(() => props.gridProps.items.length);
-    const rowHeight = props.gridProps.virtualScroll?.rowHeight ?? 36;
-    const overscan = props.gridProps.virtualScroll?.overscan ?? 5;
-    const { containerRef: vsContainerRef, visibleRange, totalHeight, scrollToRow } = useVirtualScroll({
-      totalRows: totalRowsRef,
-      rowHeight,
-      enabled: virtualScrollEnabled,
-      overscan,
-    });
+      lastMouseShift,
+      state,
+      columnReorder: { isDragging: isReorderDragging, dropIndicatorX, handleHeaderMouseDown: handleReorderMouseDown },
+      virtualScroll: { containerRef: vsContainerRef, visibleRange, totalHeight, scrollToRow },
+      virtualScrollEnabled,
+      columnResize: { handleResizeStart, getColumnWidth },
+    } = useDataGridTableSetup({ props: propsRef });
 
     return () => {
       /**
@@ -96,7 +73,6 @@ export const DataGridTable = defineComponent({
 
       const {
         visibleCols, hasCheckboxCol, hasRowNumbersCol, colOffset, containerWidth, minTableWidth, desiredTableWidth,
-        columnSizingOverrides, setColumnSizingOverrides,
       } = layout;
 
       const currentPage = props.gridProps.currentPage ?? 1;
@@ -129,11 +105,6 @@ export const DataGridTable = defineComponent({
       const allowOverflowX = !suppressHorizontalScroll && containerWidth > 0 && (minTableWidth > containerWidth || desiredTableWidth > containerWidth);
 
       const headerRows = buildHeaderRows(p.columns, p.visibleColumns);
-
-      const { handleResizeStart, getColumnWidth } = useColumnResize({
-        columnSizingOverrides: computed(() => columnSizingOverrides),
-        setColumnSizingOverrides,
-      });
 
       const editCallbacks = { commitCellEdit, setEditingCell, setPendingEditorValue, cancelPopoverEdit };
       const interactionHandlers = { handleCellMouseDown, setActiveCell, setEditingCell, handleCellContextMenu };

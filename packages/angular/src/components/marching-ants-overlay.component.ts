@@ -51,17 +51,19 @@ function ensureKeyframes(): void {
   selector: 'ogrid-marching-ants-overlay',
   standalone: true,
   imports: [CommonModule],
+  styles: [`
+    .ogrid-marching-ants-svg { position: absolute; pointer-events: none; overflow: visible; }
+    .ogrid-marching-ants-svg--selection { z-index: 4; }
+    .ogrid-marching-ants-svg--clip { z-index: 5; }
+  `],
   template: `
     @if (selRect() && !clipRangeMatchesSel()) {
       <svg
-        [style.position]="'absolute'"
+        class="ogrid-marching-ants-svg ogrid-marching-ants-svg--selection"
         [style.top.px]="selRect()!.top"
         [style.left.px]="selRect()!.left"
         [style.width.px]="selRect()!.width"
         [style.height.px]="selRect()!.height"
-        [style.pointer-events]="'none'"
-        [style.z-index]="4"
-        [style.overflow]="'visible'"
         aria-hidden="true"
       >
         <rect
@@ -76,14 +78,11 @@ function ensureKeyframes(): void {
     }
     @if (clipRect()) {
       <svg
-        [style.position]="'absolute'"
+        class="ogrid-marching-ants-svg ogrid-marching-ants-svg--clip"
         [style.top.px]="clipRect()!.top"
         [style.left.px]="clipRect()!.left"
         [style.width.px]="clipRect()!.width"
         [style.height.px]="clipRect()!.height"
-        [style.pointer-events]="'none'"
-        [style.z-index]="5"
-        [style.overflow]="'visible'"
         aria-hidden="true"
       >
         <rect
