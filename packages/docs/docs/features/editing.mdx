@@ -21,7 +21,7 @@ OGrid supports inline cell editing, clipboard copy/paste, drag-to-fill, and undo
 ## Quick Example
 
 <Tabs groupId="framework">
-  <TabItem value="radix" label="Radix (Lightweight)" default>
+  <TabItem value="react" label="React" default>
 
 ```tsx
 import { OGrid, useUndoRedo } from '@alaarab/ogrid-react-radix';
@@ -81,137 +81,116 @@ function App() {
 }
 ```
 
-  </TabItem>
-  <TabItem value="fluent" label="Fluent UI">
+:::tip Switching UI libraries
+The `OGrid` component has the same props across all React UI packages. To switch, just change the import:
 
-```tsx
-import { OGrid, useUndoRedo } from '@alaarab/ogrid-react-fluent';
-import { FluentProvider, webLightTheme } from '@fluentui/react-components';
-import { useState } from 'react';
+- **Radix** (lightweight, default): `from '@alaarab/ogrid-react-radix'`
+- **Fluent UI** (Microsoft 365 / SPFx): `from '@alaarab/ogrid-react-fluent'` — wrap in `<FluentProvider>`
+- **Material UI** (MUI v7): `from '@alaarab/ogrid-react-material'` — wrap in `<ThemeProvider>`
+:::
+
+  </TabItem>
+  <TabItem value="angular" label="Angular">
+
+```typescript
+import { Component } from '@angular/core';
+import { OGridComponent, type IColumnDef } from '@alaarab/ogrid-angular-material';
 
 const DEPTS = ['Engineering', 'Marketing', 'Sales', 'Finance', 'Operations'];
 const STATUSES = ['Active', 'Draft', 'Archived'];
 
-const columns = [
+@Component({
+  standalone: true,
+  imports: [OGridComponent],
+  template: `<ogrid [gridProps]="gridProps" />`
+})
+export class GridComponent {
+  gridProps = {
+    columns: [
+      { columnId: 'name', name: 'Name', editable: true },
+      {
+        columnId: 'department', name: 'Department', editable: true,
+        cellEditor: 'richSelect', cellEditorParams: { values: DEPTS },
+      },
+      {
+        columnId: 'status', name: 'Status', editable: true,
+        cellEditor: 'select', cellEditorParams: { values: STATUSES },
+      },
+      {
+        columnId: 'salary', name: 'Salary', editable: true, type: 'numeric',
+        valueParser: ({ newValue }: any) => {
+          const num = Number(newValue);
+          return isNaN(num) || num < 0 ? undefined : num;
+        },
+        valueFormatter: (v: unknown) => `$${Number(v).toLocaleString()}`,
+      },
+    ] as IColumnDef<Person>[],
+    data: initialData,
+    getRowId: (item: Person) => item.id,
+    editable: true,
+  };
+}
+```
+
+:::tip Switching UI libraries
+Same component API across Angular packages. To switch, just change the import:
+
+- **Angular Material**: `from '@alaarab/ogrid-angular-material'`
+- **PrimeNG**: `from '@alaarab/ogrid-angular-primeng'`
+
+All components are standalone — no NgModule required.
+:::
+
+  </TabItem>
+  <TabItem value="vue" label="Vue">
+
+```vue
+<script setup lang="ts">
+import { ref } from 'vue';
+import { OGrid, type IColumnDef } from '@alaarab/ogrid-vue-vuetify';
+
+const DEPTS = ['Engineering', 'Marketing', 'Sales', 'Finance', 'Operations'];
+const STATUSES = ['Active', 'Draft', 'Archived'];
+
+const columns: IColumnDef<Person>[] = [
   { columnId: 'name', name: 'Name', editable: true },
   {
-    columnId: 'department',
-    name: 'Department',
-    editable: true,
-    cellEditor: 'richSelect',
-    cellEditorParams: { values: DEPTS },
+    columnId: 'department', name: 'Department', editable: true,
+    cellEditor: 'richSelect', cellEditorParams: { values: DEPTS },
   },
   {
-    columnId: 'status',
-    name: 'Status',
-    editable: true,
-    cellEditor: 'select',
-    cellEditorParams: { values: STATUSES },
+    columnId: 'status', name: 'Status', editable: true,
+    cellEditor: 'select', cellEditorParams: { values: STATUSES },
   },
   {
-    columnId: 'salary',
-    name: 'Salary',
-    editable: true,
-    type: 'numeric',
+    columnId: 'salary', name: 'Salary', editable: true, type: 'numeric',
     valueParser: ({ newValue }) => {
       const num = Number(newValue);
-      return isNaN(num) || num < 0 ? undefined : num; // reject invalid
+      return isNaN(num) || num < 0 ? undefined : num;
     },
     valueFormatter: (v) => `$${Number(v).toLocaleString()}`,
   },
 ];
 
-function App() {
-  const [data, setData] = useState(initialData);
-  const { handleCellValueChanged, undo, redo, canUndo, canRedo } = useUndoRedo({
-    data, setData, getRowId: (item) => item.id,
-  });
+const gridProps = {
+  columns,
+  data: initialData,
+  getRowId: (item) => item.id,
+  editable: true,
+};
+</script>
 
-  return (
-    <FluentProvider theme={webLightTheme}>
-      <OGrid
-        columns={columns}
-        data={data}
-        getRowId={(item) => item.id}
-        editable
-        onCellValueChanged={handleCellValueChanged}
-        onUndo={undo}
-        onRedo={redo}
-        canUndo={canUndo}
-        canRedo={canRedo}
-      />
-    </FluentProvider>
-  );
-}
+<template>
+  <OGrid :gridProps="gridProps" />
+</template>
 ```
 
-  </TabItem>
-  <TabItem value="material" label="Material UI">
+:::tip Switching UI libraries
+Same component API across Vue packages. To switch, just change the import:
 
-```tsx
-import { OGrid, useUndoRedo } from '@alaarab/ogrid-react-material';
-import { ThemeProvider, createTheme } from '@mui/material/styles';
-import CssBaseline from '@mui/material/CssBaseline';
-import { useState } from 'react';
-
-const theme = createTheme();
-
-const DEPTS = ['Engineering', 'Marketing', 'Sales', 'Finance', 'Operations'];
-const STATUSES = ['Active', 'Draft', 'Archived'];
-
-const columns = [
-  { columnId: 'name', name: 'Name', editable: true },
-  {
-    columnId: 'department',
-    name: 'Department',
-    editable: true,
-    cellEditor: 'richSelect',
-    cellEditorParams: { values: DEPTS },
-  },
-  {
-    columnId: 'status',
-    name: 'Status',
-    editable: true,
-    cellEditor: 'select',
-    cellEditorParams: { values: STATUSES },
-  },
-  {
-    columnId: 'salary',
-    name: 'Salary',
-    editable: true,
-    type: 'numeric',
-    valueParser: ({ newValue }) => {
-      const num = Number(newValue);
-      return isNaN(num) || num < 0 ? undefined : num; // reject invalid
-    },
-    valueFormatter: (v) => `$${Number(v).toLocaleString()}`,
-  },
-];
-
-function App() {
-  const [data, setData] = useState(initialData);
-  const { handleCellValueChanged, undo, redo, canUndo, canRedo } = useUndoRedo({
-    data, setData, getRowId: (item) => item.id,
-  });
-
-  return (
-    <ThemeProvider theme={theme}>
-      <CssBaseline />
-      <OGrid
-        columns={columns}
-        data={data}
-        getRowId={(item) => item.id}
-        editable
-        onCellValueChanged={handleCellValueChanged}
-        onUndo={undo}
-        onRedo={redo}
-        canUndo={canUndo}
-        canRedo={canRedo}
-      />
-    </ThemeProvider>
-  );
-}
-```
+- **Vuetify**: `from '@alaarab/ogrid-vue-vuetify'` — wrap in `<v-app>` for theming
+- **PrimeVue**: `from '@alaarab/ogrid-vue-primevue'`
+:::
 
   </TabItem>
   <TabItem value="js" label="Vanilla JS">

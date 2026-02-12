@@ -19,7 +19,7 @@ The Column Chooser gives users a dropdown with checkboxes to show or hide column
 ## Quick Example
 
 <Tabs groupId="framework">
-  <TabItem value="radix" label="Radix (Lightweight)" default>
+  <TabItem value="react" label="React" default>
 
 ```tsx
 import { OGrid } from '@alaarab/ogrid-react-radix';
@@ -61,13 +61,75 @@ function App() {
 }
 ```
 
-  </TabItem>
-  <TabItem value="fluent" label="Fluent UI">
+:::tip Switching UI libraries
+The `OGrid` component has the same props across all React UI packages. To switch, just change the import:
 
-```tsx
-import { OGrid } from '@alaarab/ogrid-react-fluent';
-import type { IColumnDef } from '@alaarab/ogrid-react-fluent';
-import { FluentProvider, webLightTheme } from '@fluentui/react-components';
+- **Radix** (lightweight, default): `from '@alaarab/ogrid-react-radix'`
+- **Fluent UI** (Microsoft 365 / SPFx): `from '@alaarab/ogrid-react-fluent'` — wrap in `<FluentProvider>`
+- **Material UI** (MUI v7): `from '@alaarab/ogrid-react-material'` — wrap in `<ThemeProvider>`
+:::
+
+  </TabItem>
+  <TabItem value="angular" label="Angular">
+
+```typescript
+import { Component } from '@angular/core';
+import { OGridComponent, type IColumnDef } from '@alaarab/ogrid-angular-material';
+
+interface Person {
+  id: number;
+  name: string;
+  email: string;
+  age: number;
+  department: string;
+  salary: number;
+  startDate: string;
+}
+
+const columns: IColumnDef<Person>[] = [
+  { columnId: 'name', name: 'Name', required: true },
+  { columnId: 'email', name: 'Email' },
+  { columnId: 'age', name: 'Age', type: 'numeric', defaultVisible: false },
+  { columnId: 'department', name: 'Department' },
+  {
+    columnId: 'salary',
+    name: 'Salary',
+    type: 'numeric',
+    valueFormatter: (v: unknown) => `$${Number(v).toLocaleString()}`,
+  },
+  { columnId: 'startDate', name: 'Start Date', defaultVisible: false },
+];
+
+@Component({
+  standalone: true,
+  imports: [OGridComponent],
+  template: `<ogrid [gridProps]="gridProps" />`
+})
+export class GridComponent {
+  gridProps = {
+    columns,
+    data: people,
+    getRowId: (p: Person) => p.id,
+    defaultPageSize: 10,
+  };
+}
+```
+
+:::tip Switching UI libraries
+Same component API across Angular packages. To switch, just change the import:
+
+- **Angular Material**: `from '@alaarab/ogrid-angular-material'`
+- **PrimeNG**: `from '@alaarab/ogrid-angular-primeng'`
+
+All components are standalone — no NgModule required.
+:::
+
+  </TabItem>
+  <TabItem value="vue" label="Vue">
+
+```vue
+<script setup lang="ts">
+import { OGrid, type IColumnDef } from '@alaarab/ogrid-vue-vuetify';
 
 interface Person {
   id: number;
@@ -93,69 +155,25 @@ const columns: IColumnDef<Person>[] = [
   { columnId: 'startDate', name: 'Start Date', defaultVisible: false },
 ];
 
-function App() {
-  return (
-    <FluentProvider theme={webLightTheme}>
-      <OGrid
-        columns={columns}
-        data={people}
-        getRowId={(p) => p.id}
-        defaultPageSize={10}
-      />
-    </FluentProvider>
-  );
-}
+const gridProps = {
+  columns,
+  data: people,
+  getRowId: (p: Person) => p.id,
+  defaultPageSize: 10,
+};
+</script>
+
+<template>
+  <OGrid :gridProps="gridProps" />
+</template>
 ```
 
-  </TabItem>
-  <TabItem value="material" label="Material UI">
+:::tip Switching UI libraries
+Same component API across Vue packages. To switch, just change the import:
 
-```tsx
-import { OGrid } from '@alaarab/ogrid-react-material';
-import type { IColumnDef } from '@alaarab/ogrid-react-material';
-import { ThemeProvider, createTheme } from '@mui/material/styles';
-import CssBaseline from '@mui/material/CssBaseline';
-
-const theme = createTheme();
-
-interface Person {
-  id: number;
-  name: string;
-  email: string;
-  age: number;
-  department: string;
-  salary: number;
-  startDate: string;
-}
-
-const columns: IColumnDef<Person>[] = [
-  { columnId: 'name', name: 'Name', required: true },
-  { columnId: 'email', name: 'Email' },
-  { columnId: 'age', name: 'Age', type: 'numeric', defaultVisible: false },
-  { columnId: 'department', name: 'Department' },
-  {
-    columnId: 'salary',
-    name: 'Salary',
-    type: 'numeric',
-    valueFormatter: (v) => `$${Number(v).toLocaleString()}`,
-  },
-  { columnId: 'startDate', name: 'Start Date', defaultVisible: false },
-];
-
-function App() {
-  return (
-    <ThemeProvider theme={theme}>
-      <CssBaseline />
-      <OGrid
-        columns={columns}
-        data={people}
-        getRowId={(p) => p.id}
-        defaultPageSize={10}
-      />
-    </ThemeProvider>
-  );
-}
-```
+- **Vuetify**: `from '@alaarab/ogrid-vue-vuetify'` — wrap in `<v-app>` for theming
+- **PrimeVue**: `from '@alaarab/ogrid-vue-primevue'`
+:::
 
   </TabItem>
   <TabItem value="js" label="Vanilla JS">
