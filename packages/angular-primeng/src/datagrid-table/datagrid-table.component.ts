@@ -20,6 +20,7 @@ import {
   MarchingAntsOverlayComponent,
   EmptyStateComponent,
   DEFAULT_MIN_COLUMN_WIDTH,
+  ROW_NUMBER_COLUMN_WIDTH,
   buildHeaderRows,
   getCellValue,
   getHeaderFilterConfig,
@@ -35,6 +36,7 @@ import type {
   HeaderFilterConfig,
 } from '@alaarab/ogrid-angular';
 import { ColumnHeaderFilterComponent } from '../column-header-filter/column-header-filter.component';
+import { ColumnHeaderMenuComponent } from '../column-header-menu/column-header-menu.component';
 import { InlineCellEditorComponent } from './inline-cell-editor.component';
 
 @Component({
@@ -47,6 +49,7 @@ import { InlineCellEditorComponent } from './inline-cell-editor.component';
     MarchingAntsOverlayComponent,
     EmptyStateComponent,
     ColumnHeaderFilterComponent,
+    ColumnHeaderMenuComponent,
     InlineCellEditorComponent,
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -100,6 +103,18 @@ import { InlineCellEditorComponent } from './inline-cell-editor.component';
                       @if (rowIdx === 0 && rowIdx < headerRows().length - 1 && state().layout.hasCheckboxCol) {
                         <th [attr.rowSpan]="headerRows().length - 1"></th>
                       }
+                      @if (rowIdx === headerRows().length - 1 && state().layout.hasRowNumbersCol) {
+                        <th
+                          scope="col"
+                          rowSpan="1"
+                          style="width:50px;min-width:50px;max-width:50px;padding:6px;text-align:center;font-weight:600;background:var(--ogrid-bg-subtle,#fafafa);color:var(--ogrid-text-secondary,#666);border-bottom:1px solid var(--ogrid-border,#e0e0e0);position:sticky;left:0;z-index:4"
+                        >
+                          #
+                        </th>
+                      }
+                      @if (rowIdx === 0 && rowIdx < headerRows().length - 1 && state().layout.hasRowNumbersCol) {
+                        <th [attr.rowSpan]="headerRows().length - 1" style="width:50px;min-width:50px"></th>
+                      }
                       @for (cell of row; track $index; let cellIdx = $index) {
                         @if (cell.isGroup) {
                           <th
@@ -110,10 +125,13 @@ import { InlineCellEditorComponent } from './inline-cell-editor.component';
                             {{ cell.label }}
                           </th>
                         } @else {
+                          @let pinned = isPinned(cell.columnDef!.columnId);
                           <th
                             scope="col"
                             [attr.data-column-id]="cell.columnDef!.columnId"
                             [attr.rowSpan]="headerRows().length > 1 && rowIdx < headerRows().length - 1 ? headerRows().length - rowIdx : null"
+                            [class.ogrid-th-pinned-left]="pinned === 'left'"
+                            [class.ogrid-th-pinned-right]="pinned === 'right'"
                             style="padding:6px 8px;text-align:left;font-weight:600;border-bottom:1px solid var(--ogrid-border, #e0e0e0);position:relative"
                             [style.min-width.px]="cell.columnDef!.minWidth ?? defaultMinWidth"
                             [style.width.px]="getColumnWidth(cell.columnDef!)"
@@ -121,25 +139,37 @@ import { InlineCellEditorComponent } from './inline-cell-editor.component';
                             [style.cursor]="columnReorderService.isDragging() ? 'grabbing' : 'grab'"
                             (mousedown)="onHeaderMouseDown(cell.columnDef!.columnId, $event)"
                           >
-                            <ogrid-primeng-column-header-filter
-                              [columnKey]="cell.columnDef!.columnId"
-                              [columnName]="cell.columnDef!.name"
-                              [filterType]="getFilterConfig(cell.columnDef!).filterType"
-                              [isSorted]="getFilterConfig(cell.columnDef!).isSorted ?? false"
-                              [isSortedDescending]="getFilterConfig(cell.columnDef!).isSortedDescending ?? false"
-                              [onSort]="getFilterConfig(cell.columnDef!).onSort"
-                              [selectedValues]="getFilterConfig(cell.columnDef!).selectedValues"
-                              [onFilterChange]="getFilterConfig(cell.columnDef!).onFilterChange"
-                              [options]="getFilterConfig(cell.columnDef!).options ?? []"
-                              [isLoadingOptions]="getFilterConfig(cell.columnDef!).isLoadingOptions ?? false"
-                              [textValue]="getFilterConfig(cell.columnDef!).textValue ?? ''"
-                              [onTextChange]="getFilterConfig(cell.columnDef!).onTextChange"
-                              [selectedUser]="getFilterConfig(cell.columnDef!).selectedUser"
-                              [onUserChange]="getFilterConfig(cell.columnDef!).onUserChange"
-                              [peopleSearch]="getFilterConfig(cell.columnDef!).peopleSearch"
-                              [dateValue]="getFilterConfig(cell.columnDef!).dateValue"
-                              [onDateChange]="getFilterConfig(cell.columnDef!).onDateChange"
-                            ></ogrid-primeng-column-header-filter>
+                            <div style="display:flex;align-items:center;gap:4px;">
+                              <ogrid-primeng-column-header-filter
+                                [columnKey]="cell.columnDef!.columnId"
+                                [columnName]="cell.columnDef!.name"
+                                [filterType]="getFilterConfig(cell.columnDef!).filterType"
+                                [isSorted]="getFilterConfig(cell.columnDef!).isSorted ?? false"
+                                [isSortedDescending]="getFilterConfig(cell.columnDef!).isSortedDescending ?? false"
+                                [onSort]="getFilterConfig(cell.columnDef!).onSort"
+                                [selectedValues]="getFilterConfig(cell.columnDef!).selectedValues"
+                                [onFilterChange]="getFilterConfig(cell.columnDef!).onFilterChange"
+                                [options]="getFilterConfig(cell.columnDef!).options ?? []"
+                                [isLoadingOptions]="getFilterConfig(cell.columnDef!).isLoadingOptions ?? false"
+                                [textValue]="getFilterConfig(cell.columnDef!).textValue ?? ''"
+                                [onTextChange]="getFilterConfig(cell.columnDef!).onTextChange"
+                                [selectedUser]="getFilterConfig(cell.columnDef!).selectedUser"
+                                [onUserChange]="getFilterConfig(cell.columnDef!).onUserChange"
+                                [peopleSearch]="getFilterConfig(cell.columnDef!).peopleSearch"
+                                [dateValue]="getFilterConfig(cell.columnDef!).dateValue"
+                                [onDateChange]="getFilterConfig(cell.columnDef!).onDateChange"
+                              ></ogrid-primeng-column-header-filter>
+                              @let pinState = getPinState(cell.columnDef!.columnId);
+                              <column-header-menu
+                                [columnId]="cell.columnDef!.columnId"
+                                [onPinLeft]="() => onPinColumn(cell.columnDef!.columnId, 'left')"
+                                [onPinRight]="() => onPinColumn(cell.columnDef!.columnId, 'right')"
+                                [onUnpin]="() => onUnpinColumn(cell.columnDef!.columnId)"
+                                [canPinLeft]="pinState.canPinLeft"
+                                [canPinRight]="pinState.canPinRight"
+                                [canUnpin]="pinState.canUnpin"
+                              />
+                            </div>
                             <div
                               style="position:absolute;top:0;right:0;bottom:0;width:4px;cursor:col-resize"
                               (mousedown)="onResizeStart($event, cell.columnDef!)"
@@ -175,8 +205,18 @@ import { InlineCellEditorComponent } from './inline-cell-editor.component';
                             />
                           </td>
                         }
-                        @for (col of state().layout.visibleCols; track col.columnId; let colIdx = $index) {
+                        @if (state().layout.hasRowNumbersCol) {
                           <td
+                            style="width:50px;min-width:50px;max-width:50px;padding:6px;text-align:center;font-weight:600;font-variant-numeric:tabular-nums;color:var(--ogrid-text-secondary,#666);background:var(--ogrid-bg-subtle,#fafafa);border-bottom:1px solid var(--ogrid-border,#f0f0f0);position:sticky;left:0;z-index:3"
+                          >
+                            {{ rowNumberOffset() + rowIndex + 1 }}
+                          </td>
+                        }
+                        @for (col of state().layout.visibleCols; track col.columnId; let colIdx = $index) {
+                          @let pinned = isPinned(col.columnId);
+                          <td
+                            [class.ogrid-td-pinned-left]="pinned === 'left'"
+                            [class.ogrid-td-pinned-right]="pinned === 'right'"
                             style="padding:0;border-bottom:1px solid var(--ogrid-border, #f0f0f0);position:relative"
                             [style.min-width.px]="col.minWidth ?? defaultMinWidth"
                             [style.width.px]="getColumnWidth(col)"
@@ -230,6 +270,7 @@ import { InlineCellEditorComponent } from './inline-cell-editor.component';
                 [copyRange]="state().interaction.copyRange"
                 [cutRange]="state().interaction.cutRange"
                 [colOffset]="state().layout.colOffset"
+                [columnSizingVersion]="columnSizingVersion()"
               ></ogrid-marching-ants-overlay>
 
               @if (state().viewModels.showEmptyInGrid && emptyState()) {
@@ -310,6 +351,34 @@ import { InlineCellEditorComponent } from './inline-cell-editor.component';
       z-index: 100;
       transition: left 0.05s;
     }
+    .ogrid-th-pinned-left {
+      position: sticky;
+      left: 0;
+      z-index: 10;
+      background: var(--ogrid-header-bg, #f5f5f5);
+      border-left: 2px solid var(--ogrid-primary, #217346);
+    }
+    .ogrid-th-pinned-right {
+      position: sticky;
+      right: 0;
+      z-index: 10;
+      background: var(--ogrid-header-bg, #f5f5f5);
+      border-right: 2px solid var(--ogrid-primary, #217346);
+    }
+    .ogrid-td-pinned-left {
+      position: sticky;
+      left: 0;
+      z-index: 5;
+      background: var(--ogrid-bg, #fff);
+      border-left: 2px solid var(--ogrid-primary, #217346);
+    }
+    .ogrid-td-pinned-right {
+      position: sticky;
+      right: 0;
+      z-index: 5;
+      background: var(--ogrid-bg, #fff);
+      border-right: 2px solid var(--ogrid-primary, #217346);
+    }
   `],
 })
 export class DataGridTableComponent<T = unknown> {
@@ -361,6 +430,9 @@ export class DataGridTableComponent<T = unknown> {
   readonly onCellError = input<((error: Error) => void) | undefined>(undefined);
   readonly ariaLabel = input<string | undefined>(undefined, { alias: 'aria-label' });
   readonly ariaLabelledBy = input<string | undefined>(undefined, { alias: 'aria-labelledby' });
+  readonly showRowNumbers = input<boolean>(false);
+  readonly currentPage = input<number>(1);
+  readonly pageSize = input<number>(25);
 
   readonly defaultMinWidth = DEFAULT_MIN_COLUMN_WIDTH;
 
@@ -379,6 +451,7 @@ export class DataGridTableComponent<T = unknown> {
 
   // Last shift state for row checkbox
   private lastMouseShift = false;
+  private columnSizingVersion = signal(0);
 
   constructor() {
     // Wire inputs to DataGridStateService
@@ -422,6 +495,10 @@ export class DataGridTableComponent<T = unknown> {
 
   readonly resolvedAriaLabel = computed(() =>
     this.ariaLabel() ?? (this.ariaLabelledBy() ? undefined : 'Data grid'),
+  );
+
+  readonly rowNumberOffset = computed(() =>
+    this.state().layout.hasRowNumbersCol ? (this.currentPage() - 1) * this.pageSize() : 0,
   );
 
   readonly headerRows = computed(() =>
@@ -601,6 +678,7 @@ export class DataGridTableComponent<T = unknown> {
       const minW = col.minWidth ?? DEFAULT_MIN_COLUMN_WIDTH;
       const newWidth = Math.max(minW, this.resizeStartWidth + delta);
       this.columnSizingOverrides.update((prev) => ({ ...prev, [this.resizeColumnId]: newWidth }));
+      this.columnSizingVersion.update(v => v + 1);
     };
 
     const onUp = () => {
@@ -619,6 +697,29 @@ export class DataGridTableComponent<T = unknown> {
 
     window.addEventListener('mousemove', onMove, true);
     window.addEventListener('mouseup', onUp, true);
+  }
+
+  // --- Column pinning methods ---
+
+  onPinColumn(columnId: string, side: 'left' | 'right'): void {
+    this.onColumnPinned()?.(columnId, side);
+  }
+
+  onUnpinColumn(columnId: string): void {
+    this.onColumnPinned()?.(columnId, null);
+  }
+
+  isPinned(columnId: string): 'left' | 'right' | undefined {
+    return this.pinnedColumns()?.[columnId];
+  }
+
+  getPinState(columnId: string): { canPinLeft: boolean; canPinRight: boolean; canUnpin: boolean } {
+    const pinned = this.isPinned(columnId);
+    return {
+      canPinLeft: pinned !== 'left',
+      canPinRight: pinned !== 'right',
+      canUnpin: !!pinned,
+    };
   }
 
   private buildProps(): IOGridDataGridProps<T> {
@@ -652,6 +753,9 @@ export class DataGridTableComponent<T = unknown> {
       rowSelection: this.rowSelectionMode(),
       selectedRows: this.selectedRows(),
       onSelectionChange: this.onSelectionChange() as IOGridDataGridProps<T>['onSelectionChange'],
+      showRowNumbers: this.showRowNumbers(),
+      currentPage: this.currentPage(),
+      pageSize: this.pageSize(),
       statusBar: this.statusBar() as IOGridDataGridProps<T>['statusBar'],
       filters: this.filters() as IOGridDataGridProps<T>['filters'],
       onFilterChange: this.onFilterChange() as IOGridDataGridProps<T>['onFilterChange'],

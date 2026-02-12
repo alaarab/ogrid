@@ -328,6 +328,10 @@
   background: var(--ogrid-bg-range, rgba(33, 115, 70, 0.12)) !important;
 }
 
+[data-drag-anchor] {
+  background: var(--ogrid-bg, #fff) !important;
+}
+
 /* ── Fill Handle ── */
 
 .ogrid-fill-handle {

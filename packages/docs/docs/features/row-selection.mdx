@@ -16,6 +16,16 @@ Select entire rows with checkboxes (multiple mode) or radio-button-style selecti
 
 <RowSelectionDemo />
 
+:::tip Framework-Specific Styling
+The live demo above shows **React Radix UI** styling (lightweight default). To see how row selection looks in your framework's design system, click the framework buttons above the demo to open StackBlitz:
+- **React** — Radix UI checkboxes
+- **Angular** — Angular Material checkboxes
+- **Vue** — Vuetify checkboxes
+- **JS** — Vanilla JS default theme
+
+Each framework renders with its native checkbox components, so the styling matches your design system.
+:::
+
 ## Quick Example
 
 <Tabs groupId="framework">
@@ -97,6 +107,7 @@ export class GridComponent {
 :::tip Switching UI libraries
 Same component API across Angular packages. To switch, just change the import:
 
+- **Radix (CDK)**: `from '@alaarab/ogrid-angular-radix'` *(default, lightweight)*
 - **Angular Material**: `from '@alaarab/ogrid-angular-material'`
 - **PrimeNG**: `from '@alaarab/ogrid-angular-primeng'`
 
@@ -129,6 +140,7 @@ const gridProps = {
 :::tip Switching UI libraries
 Same component API across Vue packages. To switch, just change the import:
 
+- **Radix (Headless UI)**: `from '@alaarab/ogrid-vue-radix'` *(default, lightweight)*
 - **Vuetify**: `from '@alaarab/ogrid-vue-vuetify'` — wrap in `<v-app>` for theming
 - **PrimeVue**: `from '@alaarab/ogrid-vue-primevue'`
 :::
@@ -170,6 +182,14 @@ Set `rowSelection` on the `OGrid` component to enable row selection:
 | `'none'` | No row selection (default). |
 | `'single'` | One row at a time. Clicking a row selects it and deselects the previous. |
 | `'multiple'` | Checkbox column appears. Click checkboxes to toggle. Shift+click for range select. Header checkbox toggles all. |
+
+:::info Row Selection vs Cell Selection
+**Row selection** (this page) selects entire rows using checkboxes. The header checkbox selects or deselects **all rows** at once.
+
+This is separate from **cell selection** ([Spreadsheet Selection](./spreadsheet-selection)), which selects individual cells using click/drag. Cell selection's **Ctrl+A** shortcut selects all **cells** in the grid, not rows.
+
+You can use both features together -- row selection and cell selection are independent.
+:::
 
 ### Multiple Selection
 
@@ -215,7 +235,7 @@ gridRef.current?.getSelectedRows();
 // Set selection programmatically
 gridRef.current?.setSelectedRows([1, 2, 3]);
 
-// Select all rows
+// Select all rows (row selection, not cells)
 gridRef.current?.selectAll();
 
 // Deselect all rows

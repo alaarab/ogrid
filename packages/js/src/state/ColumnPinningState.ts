@@ -1,4 +1,5 @@
 import type { IColumnDef } from '@alaarab/ogrid-core';
+import { ROW_NUMBER_COLUMN_WIDTH } from '@alaarab/ogrid-core';
 import { EventEmitter } from './EventEmitter';
 
 interface ColumnPinningEvents extends Record<string, unknown> {
@@ -60,10 +61,13 @@ export class ColumnPinningState {
     columnWidths: Record<string, number>,
     defaultWidth: number,
     hasCheckboxColumn: boolean,
-    checkboxColumnWidth: number
+    checkboxColumnWidth: number,
+    hasRowNumbersColumn?: boolean
   ): Record<string, number> {
     const offsets: Record<string, number> = {};
-    let left = hasCheckboxColumn ? checkboxColumnWidth : 0;
+    let left = 0;
+    if (hasCheckboxColumn) left += checkboxColumnWidth;
+    if (hasRowNumbersColumn) left += ROW_NUMBER_COLUMN_WIDTH;
 
     for (const col of visibleCols) {
       if (this._pinnedColumns[col.columnId] === 'left') {

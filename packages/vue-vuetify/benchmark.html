@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Vue DataGridTable Benchmark</title>
+  <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/vuetify@3/dist/vuetify.min.js"></script>
+  <link href="https://cdn.jsdelivr.net/npm/vuetify@3/dist/vuetify.min.css" rel="stylesheet">
+  <style>
+    body { font-family: sans-serif; padding: 20px; }
+    #results { margin-top: 20px; padding: 10px; background: #f0f0f0; }
+  </style>
+</head>
+<body>
+  <div id="app">
+    <h1>Vue DataGridTable Benchmark - 1000 Rows</h1>
+    <button @click="triggerSelectionChange">Change Selection (Measure Render Time)</button>
+    <div id="results">
+      <p>Click the button to measure render time when changing selection on one row.</p>
+      <p v-if="renderTime"><strong>Last render time: {{ renderTime }}ms</strong></p>
+    </div>
+    <div>
+      <p>Grid would render here, but requires built packages from npm</p>
+      <p>This benchmark requires:</p>
+      <ul>
+        <li>@alaarab/ogrid-vue-vuetify to be published to npm</li>
+        <li>Or a local Vite dev server to bundle the packages</li>
+      </ul>
+    </div>
+  </div>
+
+  <script>
+    const { createApp } = Vue;
+
+    createApp({
+      data() {
+        return {
+          renderTime: null,
+          selectedRow: 0,
+          // 1000 rows of test data
+          items: Array.from({ length: 1000 }, (_, i) => ({
+            id: i,
+            name: `Person ${i}`,
+            age: 20 + (i % 50),
+            email: `person${i}@example.com`
+          }))
+        };
+      },
+      methods: {
+        triggerSelectionChange() {
+          const start = performance.now();
+          this.selectedRow = (this.selectedRow + 1) % 1000;
+          this.$nextTick(() => {
+            const end = performance.now();
+            this.renderTime = (end - start).toFixed(2);
+          });
+        }
+      }
+    }).mount('#app');
+  </script>
+</body>
+</html>

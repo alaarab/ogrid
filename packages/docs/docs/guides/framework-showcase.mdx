@@ -56,19 +56,23 @@ npm install @alaarab/ogrid-react-material @mui/material @emotion/react @emotion/
 
 ## Angular
 
-Signals-based reactivity with standalone components. Zone-less by default, no NgModule boilerplate. Both packages share the same services from `@alaarab/ogrid-angular`.
+Signals-based reactivity with standalone components. Zone-less by default, no NgModule boilerplate. All three packages share the same services from `@alaarab/ogrid-angular`.
 
-### Angular Material
+### Radix (Angular CDK) <small>(Default)</small>
 
-Angular Material v21 with full OGrid feature parity.
+The lightest option — Angular CDK for overlays with zero heavy UI framework dependencies.
+
+:::warning Beta Package
+This package is currently in beta. While core functionality works, some advanced features are still being implemented. For production use, consider the stable alternatives (Angular Material/PrimeNG for Angular) until this package reaches v2.1.0.
+:::
 
 ```bash
-npm install @alaarab/ogrid-angular-material @angular/material @angular/cdk
+npm install @alaarab/ogrid-angular-radix @angular/cdk
 ```
 
 ```typescript
 import { Component } from '@angular/core';
-import { OGridComponent } from '@alaarab/ogrid-angular-material';
+import { OGridComponent } from '@alaarab/ogrid-angular-radix';
 
 @Component({
   standalone: true,
@@ -83,6 +87,19 @@ export class GridComponent {
 <div style={{ marginTop: '0.75rem' }}>
   <OpenInStackBlitz project={showcase.Angular} label="Open in StackBlitz" />
 </div>
+
+### Angular Material
+
+Angular Material v21 components. Best for projects already using **Material Design**.
+
+```bash
+npm install @alaarab/ogrid-angular-material @angular/material @angular/cdk
+```
+
+```typescript
+import { OGridComponent } from '@alaarab/ogrid-angular-material';
+// Same API — just change the import
+```
 
 ### PrimeNG
 
@@ -101,11 +118,39 @@ import { OGridComponent } from '@alaarab/ogrid-angular-primeng';
 
 ## Vue
 
-Composition API composables using `ref()` and `computed()`. Both packages share the same composables from `@alaarab/ogrid-vue`.
+Composition API composables using `ref()` and `computed()`. All three packages share the same composables from `@alaarab/ogrid-vue`.
+
+### Radix (Headless UI) <small>(Default)</small>
+
+The lightest option — Headless UI Vue components are bundled with zero peer dependencies beyond Vue.
+
+:::warning Beta Package
+This package is currently in beta. While core functionality works, some advanced features are still being implemented. For production use, consider the stable alternatives (Vuetify/PrimeVue for Vue) until this package reaches v2.1.0.
+:::
+
+```bash
+npm install @alaarab/ogrid-vue-radix
+```
+
+```vue
+<script setup lang="ts">
+import { OGrid } from '@alaarab/ogrid-vue-radix';
+
+const gridProps = { columns, data, getRowId: (row) => row.id, defaultPageSize: 10 };
+</script>
+
+<template>
+  <OGrid :gridProps="gridProps" />
+</template>
+```
+
+<div style={{ marginTop: '0.75rem' }}>
+  <OpenInStackBlitz project={showcase.Vue} label="Open in StackBlitz" />
+</div>
 
 ### Vuetify
 
-Vuetify 3 components with full OGrid feature parity.
+Vuetify 3 components. Best for projects already using **Vuetify and Material Design**.
 
 ```bash
 npm install @alaarab/ogrid-vue-vuetify vuetify
@@ -114,20 +159,9 @@ npm install @alaarab/ogrid-vue-vuetify vuetify
 ```vue
 <script setup lang="ts">
 import { OGrid } from '@alaarab/ogrid-vue-vuetify';
-
-const gridProps = { columns, data, getRowId: (row) => row.id, defaultPageSize: 10 };
+// Same API — just change the import
 </script>
-
-<template>
-  <v-app>
-    <OGrid :gridProps="gridProps" />
-  </v-app>
-</template>
 ```
-
-<div style={{ marginTop: '0.75rem' }}>
-  <OpenInStackBlitz project={showcase.Vue} label="Open in StackBlitz" />
-</div>
 
 ### PrimeVue
 
@@ -163,19 +197,23 @@ npm install @alaarab/ogrid-js
 | Framework | Design Systems | Reactivity |
 |-----------|---------------|------------|
 | **React** 17–19 | Radix *(default, bundled)* · Fluent UI v9 · MUI v7 | Hooks |
-| **Angular** 21 | Angular Material · PrimeNG | Signals |
-| **Vue** 3.3+ | Vuetify 3 · PrimeVue 4 | Composition API |
+| **Angular** 21 | Radix (CDK) *(default)* · Angular Material · PrimeNG | Signals |
+| **Vue** 3.3+ | Radix (Headless UI) *(default, bundled)* · Vuetify 3 · PrimeVue 4 | Composition API |
 | **Vanilla JS/TS** | Built-in CSS theme *(zero deps)* | EventEmitter |
 
-All 8 packages share the same **headless core** (`@alaarab/ogrid-core`) and pass the same **1012 tests**. Switching design systems is a matter of changing imports.
+All 10 packages share the same **headless core** (`@alaarab/ogrid-core`) and pass the same **1162 tests**. Switching design systems is a matter of changing imports.
 
 ## Choosing a Package
 
 - **Starting fresh with React?** → **Radix** — lightest weight, zero peer deps, full feature parity.
 - **Microsoft ecosystem?** → **Fluent** — native look in Teams, SharePoint, Outlook.
 - **Already using MUI?** → **Material** — matches your existing theme and components.
-- **Angular project?** → **Angular Material** or **PrimeNG** — signals-based, zone-less, standalone components.
-- **Vue project?** → **Vuetify** or **PrimeVue** — Composition API composables, full reactivity.
+- **Starting fresh with Angular?** → **Radix (CDK)** — lightest weight with Angular CDK for overlays.
+- **Already using Angular Material?** → **Angular Material** — matches your existing theme.
+- **Already using PrimeNG?** → **PrimeNG** — integrates with PrimeFaces ecosystem.
+- **Starting fresh with Vue?** → **Radix (Headless UI)** — lightest weight, zero peer deps, Composition API.
+- **Already using Vuetify?** → **Vuetify** — matches your existing theme and components.
+- **Already using PrimeVue?** → **PrimeVue** — integrates with PrimeFaces ecosystem.
 - **No framework?** → **Vanilla JS** — works anywhere, class-based API, CSS-only theming.
 
 ## Related

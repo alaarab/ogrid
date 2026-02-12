@@ -16,6 +16,10 @@ OGrid includes a built-in pagination bar with page navigation buttons, page size
 
 <PaginationDemo />
 
+:::tip Framework-Specific Styling
+The live demo above shows **React Radix UI** styling (lightweight default). To see how pagination controls look in your framework's design system, click the framework buttons above the demo to open StackBlitz. Each framework renders with its native button and dropdown components, so the styling matches your design system.
+:::
+
 ## Quick Example
 
 <Tabs groupId="framework">
@@ -93,6 +97,7 @@ export class GridComponent {
 :::tip Switching UI libraries
 Same component API across Angular packages. To switch, just change the import:
 
+- **Radix (CDK)**: `from '@alaarab/ogrid-angular-radix'` *(default, lightweight)*
 - **Angular Material**: `from '@alaarab/ogrid-angular-material'`
 - **PrimeNG**: `from '@alaarab/ogrid-angular-primeng'`
 
@@ -134,6 +139,7 @@ const gridProps = {
 :::tip Switching UI libraries
 Same component API across Vue packages. To switch, just change the import:
 
+- **Radix (Headless UI)**: `from '@alaarab/ogrid-vue-radix'` *(default, lightweight)*
 - **Vuetify**: `from '@alaarab/ogrid-vue-vuetify'` — wrap in `<v-app>` for theming
 - **PrimeVue**: `from '@alaarab/ogrid-vue-primevue'`
 :::
