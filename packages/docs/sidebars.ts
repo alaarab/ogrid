@@ -10,6 +10,7 @@ const sidebars: SidebarsConfig = {
         'getting-started/overview',
         'getting-started/installation',
         'getting-started/quick-start',
+        'getting-started/vanilla-js',
       ],
     },
     {
@@ -43,6 +44,7 @@ const sidebars: SidebarsConfig = {
         'guides/controlled-vs-uncontrolled',
         'guides/custom-cell-editors',
         'guides/theming',
+        'guides/framework-showcase',
         'guides/migration-from-ag-grid',
       ],
     },
@@ -53,6 +55,7 @@ const sidebars: SidebarsConfig = {
         'api/ogrid-props',
         'api/column-def',
         'api/grid-api',
+        'api/js-api',
         'api/types',
       ],
     },

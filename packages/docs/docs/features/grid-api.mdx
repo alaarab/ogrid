@@ -5,6 +5,8 @@ description: Imperative API ref for programmatic control of the grid
 ---
 
 import GridApiDemo from '@site/src/components/demos/GridApiDemo';
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
 
 # Grid API
 
@@ -15,6 +17,9 @@ The `IOGridApi` ref gives you imperative control over the grid: set data, manage
 <GridApiDemo />
 
 ## Quick Example
+
+<Tabs groupId="framework">
+  <TabItem value="radix" label="Radix (Lightweight)" default>
 
 ```tsx
 import { OGrid } from '@alaarab/ogrid-react-radix';
@@ -51,6 +56,115 @@ function App() {
   );
 }
 ```
+
+  </TabItem>
+  <TabItem value="fluent" label="Fluent UI">
+
+```tsx
+import { OGrid } from '@alaarab/ogrid-react-fluent';
+import { FluentProvider, webLightTheme } from '@fluentui/react-components';
+import { useRef } from 'react';
+import type { IOGridApi } from '@alaarab/ogrid-react-fluent';
+
+interface Row {
+  id: number;
+  name: string;
+  department: string;
+  salary: number;
+}
+
+function App() {
+  const gridRef = useRef<IOGridApi<Row>>(null);
+
+  const handleRefresh = async () => {
+    gridRef.current?.setLoading(true);
+    const data = await fetchEmployees();
+    gridRef.current?.setRowData(data);
+    gridRef.current?.setLoading(false);
+  };
+
+  return (
+    <FluentProvider theme={webLightTheme}>
+      <button onClick={handleRefresh}>Refresh</button>
+      <OGrid
+        ref={gridRef}
+        columns={columns}
+        data={initialData}
+        getRowId={(r) => r.id}
+      />
+    </FluentProvider>
+  );
+}
+```
+
+  </TabItem>
+  <TabItem value="material" label="Material UI">
+
+```tsx
+import { OGrid } from '@alaarab/ogrid-react-material';
+import { ThemeProvider, createTheme } from '@mui/material/styles';
+import CssBaseline from '@mui/material/CssBaseline';
+import { useRef } from 'react';
+import type { IOGridApi } from '@alaarab/ogrid-react-material';
+
+const theme = createTheme();
+
+interface Row {
+  id: number;
+  name: string;
+  department: string;
+  salary: number;
+}
+
+function App() {
+  const gridRef = useRef<IOGridApi<Row>>(null);
+
+  const handleRefresh = async () => {
+    gridRef.current?.setLoading(true);
+    const data = await fetchEmployees();
+    gridRef.current?.setRowData(data);
+    gridRef.current?.setLoading(false);
+  };
+
+  return (
+    <ThemeProvider theme={theme}>
+      <CssBaseline />
+      <button onClick={handleRefresh}>Refresh</button>
+      <OGrid
+        ref={gridRef}
+        columns={columns}
+        data={initialData}
+        getRowId={(r) => r.id}
+      />
+    </ThemeProvider>
+  );
+}
+```
+
+  </TabItem>
+  <TabItem value="js" label="Vanilla JS">
+
+```js
+import { OGrid } from '@alaarab/ogrid-js';
+import '@alaarab/ogrid-js/styles';
+
+const grid = new OGrid(document.getElementById('grid'), {
+  columns: columns,
+  data: initialData,
+  getRowId: (r) => r.id,
+});
+
+// Use the grid API directly
+async function handleRefresh() {
+  grid.api.setLoading(true);
+  const data = await fetchEmployees();
+  grid.api.setRowData(data);
+  grid.api.setLoading(false);
+}
+```
+
+  </TabItem>
+</Tabs>
 
 ## How It Works
 

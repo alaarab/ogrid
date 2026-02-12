@@ -5,6 +5,8 @@ description: Multi-row grouped column headers with arbitrary nesting
 ---
 
 import ColumnGroupsDemo from '@site/src/components/demos/ColumnGroupsDemo';
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
 
 # Column Groups
 
@@ -16,8 +18,11 @@ Group related columns under shared parent headers. OGrid supports arbitrarily ne
 
 ## Quick Example
 
+<Tabs groupId="framework">
+  <TabItem value="radix" label="Radix (Lightweight)" default>
+
 ```tsx
-import { OGrid } from '@alaarab/ogrid-react-radix'; // or ogrid-react-fluent, ogrid-react-material
+import { OGrid } from '@alaarab/ogrid-react-radix';
 import type { IColumnDef, IColumnGroupDef } from '@alaarab/ogrid-react-radix';
 
 interface Person {
@@ -65,6 +70,162 @@ function App() {
   );
 }
 ```
+
+  </TabItem>
+  <TabItem value="fluent" label="Fluent UI">
+
+```tsx
+import { OGrid } from '@alaarab/ogrid-react-fluent';
+import type { IColumnDef, IColumnGroupDef } from '@alaarab/ogrid-react-fluent';
+import { FluentProvider, webLightTheme } from '@fluentui/react-components';
+
+interface Person {
+  id: number;
+  name: string;
+  age: number;
+  email: string;
+  department: string;
+  salary: number;
+  status: string;
+}
+
+const columns: (IColumnDef<Person> | IColumnGroupDef<Person>)[] = [
+  {
+    headerName: 'Personal Info',
+    children: [
+      { columnId: 'name', name: 'Name' },
+      { columnId: 'age', name: 'Age', type: 'numeric' },
+      { columnId: 'email', name: 'Email' },
+    ],
+  },
+  {
+    headerName: 'Employment',
+    children: [
+      { columnId: 'department', name: 'Department' },
+      {
+        columnId: 'salary',
+        name: 'Salary',
+        type: 'numeric',
+        valueFormatter: (v) => `$${Number(v).toLocaleString()}`,
+      },
+      { columnId: 'status', name: 'Status' },
+    ],
+  },
+];
+
+function App() {
+  return (
+    <FluentProvider theme={webLightTheme}>
+      <OGrid
+        columns={columns}
+        data={people}
+        getRowId={(p) => p.id}
+        defaultPageSize={10}
+      />
+    </FluentProvider>
+  );
+}
+```
+
+  </TabItem>
+  <TabItem value="material" label="Material UI">
+
+```tsx
+import { OGrid } from '@alaarab/ogrid-react-material';
+import type { IColumnDef, IColumnGroupDef } from '@alaarab/ogrid-react-material';
+import { ThemeProvider, createTheme } from '@mui/material/styles';
+import CssBaseline from '@mui/material/CssBaseline';
+
+const theme = createTheme();
+
+interface Person {
+  id: number;
+  name: string;
+  age: number;
+  email: string;
+  department: string;
+  salary: number;
+  status: string;
+}
+
+const columns: (IColumnDef<Person> | IColumnGroupDef<Person>)[] = [
+  {
+    headerName: 'Personal Info',
+    children: [
+      { columnId: 'name', name: 'Name' },
+      { columnId: 'age', name: 'Age', type: 'numeric' },
+      { columnId: 'email', name: 'Email' },
+    ],
+  },
+  {
+    headerName: 'Employment',
+    children: [
+      { columnId: 'department', name: 'Department' },
+      {
+        columnId: 'salary',
+        name: 'Salary',
+        type: 'numeric',
+        valueFormatter: (v) => `$${Number(v).toLocaleString()}`,
+      },
+      { columnId: 'status', name: 'Status' },
+    ],
+  },
+];
+
+function App() {
+  return (
+    <ThemeProvider theme={theme}>
+      <CssBaseline />
+      <OGrid
+        columns={columns}
+        data={people}
+        getRowId={(p) => p.id}
+        defaultPageSize={10}
+      />
+    </ThemeProvider>
+  );
+}
+```
+
+  </TabItem>
+  <TabItem value="js" label="Vanilla JS">
+
+```js
+import { OGrid } from '@alaarab/ogrid-js';
+import '@alaarab/ogrid-js/styles';
+
+const grid = new OGrid(document.getElementById('grid'), {
+  columns: [
+    {
+      headerName: 'Personal Info',
+      children: [
+        { columnId: 'name', name: 'Name' },
+        { columnId: 'age', name: 'Age', type: 'numeric' },
+        { columnId: 'email', name: 'Email' },
+      ],
+    },
+    {
+      headerName: 'Employment',
+      children: [
+        { columnId: 'department', name: 'Department' },
+        {
+          columnId: 'salary',
+          name: 'Salary',
+          type: 'numeric',
+          valueFormatter: (v) => `$${Number(v).toLocaleString()}`,
+        },
+        { columnId: 'status', name: 'Status' },
+      ],
+    },
+  ],
+  data: people,
+  getRowId: (p) => p.id,
+  pageSize: 10,
+});
+```
+
+  </TabItem>
+</Tabs>
 
 This renders a two-row header: the first row shows "Personal Info" spanning three columns and "Employment" spanning three columns, with the individual column names in the second row.
 
