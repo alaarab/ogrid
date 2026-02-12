@@ -195,9 +195,6 @@ export class DataGridStateService<T> {
   private lastMousePos: { cx: number; cy: number } | null = null;
   private autoScrollInterval: ReturnType<typeof setInterval> | null = null;
 
-  // Window event listeners cleanup
-  private windowCleanups: (() => void)[] = [];
-
   // ResizeObserver
   private resizeObserver: ResizeObserver | null = null;
 
@@ -358,13 +355,17 @@ export class DataGridStateService<T> {
 
   constructor() {
     // Setup window event listeners for cell selection drag
-    const onMove = (e: MouseEvent) => this.onWindowMouseMove(e);
-    const onUp = () => this.onWindowMouseUp();
-    window.addEventListener('mousemove', onMove, true);
-    window.addEventListener('mouseup', onUp, true);
-    this.windowCleanups.push(() => {
-      window.removeEventListener('mousemove', onMove, true);
-      window.removeEventListener('mouseup', onUp, true);
+    // Using effect with cleanup return to ensure proper removal on destroy
+    effect((onCleanup) => {
+      const onMove = (e: MouseEvent) => this.onWindowMouseMove(e);
+      const onUp = () => this.onWindowMouseUp();
+      window.addEventListener('mousemove', onMove, true);
+      window.addEventListener('mouseup', onUp, true);
+
+      onCleanup(() => {
+        window.removeEventListener('mousemove', onMove, true);
+        window.removeEventListener('mouseup', onUp, true);
+      });
     });
 
     // Initialize column sizing overrides from initial widths
@@ -402,7 +403,6 @@ export class DataGridStateService<T> {
 
     // Cleanup on destroy
     this.destroyRef.onDestroy(() => {
-      this.windowCleanups.forEach((fn) => fn());
       if (this.rafId) cancelAnimationFrame(this.rafId);
       if (this.autoScrollInterval) clearInterval(this.autoScrollInterval);
       if (this.resizeObserver) this.resizeObserver.disconnect();
@@ -1409,6 +1409,10 @@ export class DataGridStateService<T> {
         this.endBatch();
       }
       this.fillDragStart = null;
+
+      // Remove event listeners after mouseup completes
+      window.removeEventListener('mousemove', onMove, true);
+      window.removeEventListener('mouseup', onUp, true);
     };
 
     window.addEventListener('mousemove', onMove, true);

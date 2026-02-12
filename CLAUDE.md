@@ -273,7 +273,7 @@ GitHub Actions (`.github/workflows/ci.yml`): push to `main` + PRs. Node 22, ubun
 5. **Naming** — `I` prefix for interfaces (`IColumnDef`, `IDataSource`).
 6. **Test co-location** — Tests in `__tests__/` dirs. UI package tests use shared factories.
 7. **Headless architecture** — Core owns types and utilities; React owns hooks and state logic; UI packages are thin view layers.
-8. **Feature parity** — All three React UI packages must support the same features and pass the same tests. The JS package has full feature parity with React.
+8. **Feature parity** — All UI packages within each framework must support the same features and pass the same tests. Cross-framework parity: React (3 packages), Angular (2 packages), Vue (2 packages), and JS (1 package) all share the same headless core and expose equivalent APIs.
 9. **Type deduplication** — React's `IColumnDef<T>` extends Core's `IColumnDef<T>` (not a duplicate). React-specific additions (`renderCell`, `cellStyle`, React `cellEditor` types) are in the extension. `dataGridTypes.ts` re-exports shared types from Core. Safe casts (`as IColumnDef<T>[]`) are used at framework boundaries where Core utilities return Core types.
 
 ## Definition of Done
@@ -282,33 +282,72 @@ GitHub Actions (`.github/workflows/ci.yml`): push to `main` + PRs. Node 22, ubun
 
 ### 1. Code
 - [ ] Implementation in core (headless hooks/utils) when possible — avoid duplicating logic in UI packages.
-- [ ] If UI package changes are needed, update **all three** (Radix, Fluent, Material) equally.
+- [ ] If UI package changes are needed, update **all** UI packages equally:
+  - **React:** Radix, Fluent, Material (3 packages)
+  - **Angular:** Angular Material, PrimeNG (2 packages)
+  - **Vue:** Vuetify, PrimeVue (2 packages)
+  - **JS:** ogrid-js (1 package)
 - [ ] Types exported from `core/src/types/index.ts` and `core/src/index.ts` as needed.
 
 ### 2. Tests
 - [ ] Core unit tests for new hooks/utilities in `core/src/*/__tests__/`.
-- [ ] If UI-specific rendering is involved, add a shared test factory in `core/src/testing/` and call it from all 3 UI packages.
-- [ ] Run `npm run test:all` — **all tests must pass** across all 6 packages.
+- [ ] If UI-specific rendering is involved, add a shared test factory in `core/src/testing/` and call it from all UI packages.
+- [ ] Run `npm run test:all` — **all tests must pass** across all 12 packages.
 
 ### 3. Build
 - [ ] Run `npm run build` — must succeed with zero errors.
 
 ### 4. Storybook
-- [ ] If the feature adds or changes **visual UI** (new component, new cell editor, new panel, changed styles), add or update a story in all relevant UI packages.
+- [ ] If the feature adds or changes **visual UI** (new component, new cell editor, new panel, changed styles), add or update a story in all relevant React UI packages (Radix, Fluent, Material).
 - [ ] Stories should demonstrate the feature interactively (not just render it). Use args/controls where useful.
 - [ ] Pure headless/keyboard-only changes (like keyboard shortcuts) don't need new stories unless they visibly change UI.
 
-### 5. Documentation
+### 5. Documentation — Feature Pages
 - [ ] Update the relevant page in `packages/docs/docs/features/` (or create one for new features).
+- [ ] Feature page must have **4 framework tabs**: React, Angular, Vue, Vanilla JS (`groupId="framework"`).
+  - **React tab:** Show Radix import as default + tip admonition listing Fluent/Material alternatives.
+  - **Angular tab:** Show Angular Material import + tip listing PrimeNG alternative.
+  - **Vue tab:** Show Vuetify import + tip listing PrimeVue alternative.
+  - **JS tab:** Show `@alaarab/ogrid-js` usage.
 - [ ] Update `README.md` feature list if the feature is user-facing.
 - [ ] Update `CLAUDE.md` if conventions, architecture, or API surface changed.
 
-### 6. Memory
+### 6. Documentation — StackBlitz Demos
+- [ ] Add a `FeatureDemoSet` entry in `packages/docs/src/stackblitz/featureDemos.ts` with working code for all 4 frameworks (React, Angular, Vue, JS).
+- [ ] Update the feature's demo component to pass `stackblitz={featureName}` to `<LiveDemo>`.
+- [ ] StackBlitz projects reference the **current published version** of `@alaarab/ogrid-*` packages.
+
+### 7. Documentation — Framework Showcase
+- [ ] If adding a **new UI package**, add its section to `packages/docs/docs/guides/framework-showcase.mdx` with install command, code example, and StackBlitz button.
+- [ ] Update the comparison table in framework-showcase.mdx to include the new package.
+
+### 8. Memory
 - [ ] Update `MEMORY.md` with key decisions, patterns, and test counts.
 
-### 7. No Unnecessary Duplication
+### 9. No Unnecessary Duplication
 - [ ] State logic stays in core hooks — UI packages should only add view-layer code.
 - [ ] If the same pattern appears in 2+ UI packages, consider a shared factory or headless component.
+
+### Parity Matrix
+
+When any feature changes, these artifacts must stay in sync:
+
+| Artifact | Scope | Location |
+|----------|-------|----------|
+| **Core logic** | 1 (shared) | `packages/core/src/` |
+| **React hooks** | 1 (shared) | `packages/react/src/` |
+| **React UI** | 3 packages | `packages/react-{radix,fluent,material}/` |
+| **Angular services** | 1 (shared) | `packages/angular/src/` |
+| **Angular UI** | 2 packages | `packages/angular-{material,primeng}/` |
+| **Vue composables** | 1 (shared) | `packages/vue/src/` |
+| **Vue UI** | 2 packages | `packages/vue-{vuetify,primevue}/` |
+| **Vanilla JS** | 1 package | `packages/js/src/` |
+| **Tests** | 12 packages | All `__tests__/` dirs — shared factories in `core/src/testing/` |
+| **Storybook** | 3 (React UI) | `packages/react-{radix,fluent,material}/src/stories/` |
+| **Feature docs** | 1 file per feature | `packages/docs/docs/features/*.mdx` — 4 framework tabs each |
+| **StackBlitz demos** | 1 entry per feature | `packages/docs/src/stackblitz/featureDemos.ts` — 4 frameworks each |
+| **Demo components** | 1 per feature | `packages/docs/src/components/demos/*Demo.tsx` — pass `stackblitz` prop |
+| **Framework showcase** | 1 page | `packages/docs/docs/guides/framework-showcase.mdx` — all 8 UI packages |
 
 ## View Layer Architecture (Phase 2 Complete)
 

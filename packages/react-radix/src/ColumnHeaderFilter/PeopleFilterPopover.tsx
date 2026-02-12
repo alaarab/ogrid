@@ -23,7 +23,7 @@ function UserAvatar({ user, size = 32 }: { user: UserLike; size?: number }) {
         width: size,
         height: size,
         borderRadius: '50%',
-        background: '#e0e0e0',
+        background: 'var(--ogrid-border, #e0e0e0)',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',

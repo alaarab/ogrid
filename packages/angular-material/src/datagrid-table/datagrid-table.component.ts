@@ -4,208 +4,29 @@ import {
 } from '@angular/core';
 import {
   DataGridStateService,
+  ColumnReorderService,
+  VirtualScrollService,
   StatusBarComponent,
   GridContextMenuComponent,
   MarchingAntsOverlayComponent,
   EmptyStateComponent,
   buildHeaderRows,
   getCellValue,
-  isInSelectionRange,
   CHECKBOX_COLUMN_WIDTH,
   DEFAULT_MIN_COLUMN_WIDTH,
+  getHeaderFilterConfig,
+  getCellRenderDescriptor,
+  resolveCellDisplayContent,
+  resolveCellStyle,
 } from '@alaarab/ogrid-angular';
 import type {
   IOGridDataGridProps,
   IColumnDef,
   RowId,
-  ColumnFilterType,
-  IDateFilterValue,
-  UserLike,
-  IFilters,
-  FilterValue,
+  CellRenderDescriptor,
+  HeaderFilterConfig,
 } from '@alaarab/ogrid-angular';
 import { ColumnHeaderFilterComponent } from '../column-header-filter/column-header-filter.component';
-
-// --- View model helpers (ported from React's dataGridViewModel.ts) ---
-
-type CellRenderMode = 'editing-inline' | 'editing-popover' | 'display';
-
-interface CellRenderDescriptor {
-  mode: CellRenderMode;
-  editorType?: 'text' | 'select' | 'checkbox' | 'richSelect' | 'date';
-  value?: unknown;
-  isActive: boolean;
-  isInRange: boolean;
-  isInCutRange: boolean;
-  isSelectionEndCell: boolean;
-  canEditAny: boolean;
-  globalColIndex: number;
-  rowId: RowId;
-  rowIndex: number;
-  displayValue?: unknown;
-}
-
-interface HeaderFilterConfig {
-  columnKey: string;
-  columnName: string;
-  filterType: ColumnFilterType;
-  isSorted: boolean;
-  isSortedDescending: boolean;
-  onSort: (() => void) | undefined;
-  selectedValues?: string[];
-  onFilterChange?: (values: string[]) => void;
-  options?: string[];
-  isLoadingOptions?: boolean;
-  textValue?: string;
-  onTextChange?: (value: string) => void;
-  selectedUser?: UserLike;
-  onUserChange?: (user: UserLike | undefined) => void;
-  peopleSearch?: (query: string) => Promise<UserLike[]>;
-  dateValue?: IDateFilterValue;
-  onDateChange?: (value: IDateFilterValue | undefined) => void;
-}
-
-function getHeaderFilterConfig<T>(
-  col: IColumnDef<T>,
-  input: {
-    sortBy?: string;
-    sortDirection: 'asc' | 'desc';
-    onColumnSort: (columnKey: string) => void;
-    filters: IFilters;
-    onFilterChange: (key: string, value: FilterValue | undefined) => void;
-    filterOptions: Record<string, string[]>;
-    loadingFilterOptions: Record<string, boolean>;
-    peopleSearch?: (query: string) => Promise<UserLike[]>;
-  },
-): HeaderFilterConfig {
-  const filterable = col.filterable && typeof col.filterable === 'object' ? col.filterable : null;
-  const filterType = (filterable?.type ?? 'none') as ColumnFilterType;
-  const filterField = filterable?.filterField ?? col.columnId;
-  const sortable = col.sortable !== false;
-  const filterValue = input.filters[filterField];
-
-  const base = {
-    columnKey: col.columnId,
-    columnName: col.name,
-    filterType,
-    isSorted: input.sortBy === col.columnId,
-    isSortedDescending: input.sortBy === col.columnId && input.sortDirection === 'desc',
-    onSort: sortable ? () => input.onColumnSort(col.columnId) : undefined,
-  };
-
-  if (filterType === 'text') {
-    return {
-      ...base,
-      textValue: filterValue?.type === 'text' ? filterValue.value : '',
-      onTextChange: (v: string) =>
-        input.onFilterChange(filterField, v.trim() ? { type: 'text', value: v } : undefined),
-    };
-  }
-  if (filterType === 'people') {
-    return {
-      ...base,
-      selectedUser: filterValue?.type === 'people' ? filterValue.value : undefined,
-      onUserChange: (u: UserLike | undefined) =>
-        input.onFilterChange(filterField, u ? { type: 'people', value: u } : undefined),
-      peopleSearch: input.peopleSearch,
-    };
-  }
-  if (filterType === 'multiSelect') {
-    return {
-      ...base,
-      options: input.filterOptions[filterField] ?? [],
-      isLoadingOptions: input.loadingFilterOptions[filterField] ?? false,
-      selectedValues: filterValue?.type === 'multiSelect' ? filterValue.value : [],
-      onFilterChange: (values: string[]) =>
-        input.onFilterChange(filterField, values.length ? { type: 'multiSelect', value: values } : undefined),
-    };
-  }
-  if (filterType === 'date') {
-    return {
-      ...base,
-      dateValue: filterValue?.type === 'date' ? filterValue.value : undefined,
-      onDateChange: (v: IDateFilterValue | undefined) =>
-        input.onFilterChange(filterField, v ? { type: 'date', value: v } : undefined),
-    };
-  }
-  return base;
-}
-
-function getCellRenderDescriptor<T>(
-  item: T,
-  col: IColumnDef<T>,
-  rowIndex: number,
-  colIdx: number,
-  input: {
-    editingCell: { rowId: RowId; columnId: string } | null;
-    activeCell: { rowIndex: number; columnIndex: number } | null;
-    selectionRange: { startRow: number; startCol: number; endRow: number; endCol: number } | null;
-    cutRange: { startRow: number; startCol: number; endRow: number; endCol: number } | null;
-    copyRange: { startRow: number; startCol: number; endRow: number; endCol: number } | null;
-    colOffset: number;
-    getRowId: (item: T) => RowId;
-    editable?: boolean;
-    onCellValueChanged?: unknown;
-    isDragging: boolean;
-  },
-): CellRenderDescriptor {
-  const rowId = input.getRowId(item);
-  const globalColIndex = colIdx + input.colOffset;
-
-  const colEditable = col.editable === true || (typeof col.editable === 'function' && col.editable(item));
-  const canEditInline = input.editable !== false && !!colEditable && !!input.onCellValueChanged && typeof col.cellEditor !== 'function';
-  const canEditPopup = input.editable !== false && !!colEditable && !!input.onCellValueChanged && typeof col.cellEditor === 'function';
-  const canEditAny = canEditInline || canEditPopup;
-
-  const isEditing = input.editingCell?.rowId === rowId && input.editingCell?.columnId === col.columnId;
-  const isActive = input.activeCell?.rowIndex === rowIndex && input.activeCell?.columnIndex === globalColIndex;
-  const inRange = input.selectionRange != null && isInSelectionRange(input.selectionRange, rowIndex, colIdx);
-  const isInCutRange = input.cutRange != null && isInSelectionRange(input.cutRange, rowIndex, colIdx);
-  const isSelectionEndCell =
-    !input.isDragging && input.copyRange == null && input.cutRange == null &&
-    input.selectionRange != null && rowIndex === input.selectionRange.endRow && colIdx === input.selectionRange.endCol;
-
-  let mode: CellRenderMode = 'display';
-  let editorType: 'text' | 'select' | 'checkbox' | 'richSelect' | 'date' | undefined;
-  const value: unknown = getCellValue(item, col as Parameters<typeof getCellValue>[1]);
-
-  if (isEditing && canEditInline) {
-    mode = 'editing-inline';
-    if (col.cellEditor === 'text' || col.cellEditor === 'select' || col.cellEditor === 'checkbox' || col.cellEditor === 'richSelect' || col.cellEditor === 'date') {
-      editorType = col.cellEditor;
-    } else if (col.type === 'date') editorType = 'date';
-    else if (col.type === 'boolean') editorType = 'checkbox';
-    else editorType = 'text';
-  } else if (isEditing && canEditPopup) {
-    mode = 'editing-popover';
-  }
-
-  return {
-    mode, editorType, value,
-    isActive, isInRange: inRange, isInCutRange, isSelectionEndCell,
-    canEditAny, globalColIndex, rowId, rowIndex, displayValue: value,
-  };
-}
-
-function resolveCellDisplayContent<T>(col: IColumnDef<T>, item: T, displayValue: unknown): string {
-  if (col.renderCell && typeof col.renderCell === 'function') {
-    const result = (col.renderCell as (item: T) => unknown)(item);
-    return result != null ? String(result) : '';
-  }
-  if (col.valueFormatter) return String(col.valueFormatter(displayValue, item) ?? '');
-  if (displayValue == null) return '';
-  if (col.type === 'date') {
-    const d = new Date(String(displayValue));
-    if (!Number.isNaN(d.getTime())) return d.toLocaleDateString();
-  }
-  if (col.type === 'boolean') return displayValue ? 'True' : 'False';
-  return String(displayValue);
-}
-
-function resolveCellStyle<T>(col: IColumnDef<T>, item: T): Record<string, string> | undefined {
-  if (!col.cellStyle) return undefined;
-  return typeof col.cellStyle === 'function' ? col.cellStyle(item) : col.cellStyle;
-}
 
 /**
  * DataGridTable component using native HTML table with Material Design-inspired styling.
@@ -274,9 +95,12 @@ function resolveCellStyle<T>(col: IColumnDef<T>, item: T): Record<string, string
                             [class.ogrid-datagrid-th--pinned-left]="col.pinned === 'left' || (isFreezeCol && colIdx === 0)"
                             [class.ogrid-datagrid-th--pinned-right]="col.pinned === 'right'"
                             [attr.rowSpan]="headerRows().length > 1 ? headerRows().length - rowIdx : null"
+                            [attr.data-column-id]="col.columnId"
                             [style.minWidth.px]="col.minWidth ?? 80"
                             [style.width.px]="colW"
                             [style.maxWidth.px]="colW"
+                            [style.cursor]="columnReorderService.isDragging() ? 'grabbing' : 'grab'"
+                            (mousedown)="onHeaderMouseDown(col.columnId, $event)"
                           >
                             <ogrid-column-header-filter
                               [columnKey]="col.columnId"
@@ -444,6 +268,10 @@ function resolveCellStyle<T>(col: IColumnDef<T>, item: T): Record<string, string
           </div>
         </div>
 
+        @if (columnReorderService.isDragging() && columnReorderService.dropIndicatorX() !== null) {
+          <div class="ogrid-datagrid-drop-indicator" [style.left.px]="columnReorderService.dropIndicatorX()"></div>
+        }
+
         @if (menuPosition()) {
           <div
             class="ogrid-datagrid-context-menu-overlay"
@@ -602,6 +430,11 @@ function resolveCellStyle<T>(col: IColumnDef<T>, item: T): Record<string, string
       border-radius: 50%; animation: ogrid-spin 0.8s linear infinite;
     }
     @keyframes ogrid-spin { to { transform: rotate(360deg); } }
+    .ogrid-datagrid-drop-indicator {
+      position: absolute; top: 0; bottom: 0; width: 3px;
+      background: var(--ogrid-primary, #217346);
+      pointer-events: none; z-index: 100; transition: left 0.05s;
+    }
     .ogrid-datagrid-context-menu-overlay {
       position: fixed; inset: 0; z-index: 1000;
     }
@@ -613,6 +446,8 @@ export class DataGridTableComponent<T> {
   private readonly wrapperRef = viewChild<ElementRef<HTMLElement>>('wrapperEl');
   private readonly tableContainerRef = viewChild<ElementRef<HTMLElement>>('tableContainerEl');
   private readonly stateService = new DataGridStateService<T>();
+  readonly columnReorderService = new ColumnReorderService<T>();
+  readonly virtualScrollService = new VirtualScrollService();
 
   private lastMouseShift = false;
 
@@ -625,7 +460,30 @@ export class DataGridTableComponent<T> {
 
     effect(() => {
       const el = this.wrapperRef()?.nativeElement;
-      if (el) this.stateService.wrapperEl.set(el);
+      if (el) {
+        this.stateService.wrapperEl.set(el);
+        this.columnReorderService.wrapperEl.set(el);
+      }
+    });
+
+    // Wire column reorder service inputs
+    effect(() => {
+      const p = this.propsInput();
+      if (p) {
+        const cols = this.visibleCols() as IColumnDef<T>[];
+        this.columnReorderService.columns.set(cols);
+        this.columnReorderService.columnOrder.set(p.columnOrder);
+        this.columnReorderService.onColumnOrderChange.set(p.onColumnOrderChange);
+        this.columnReorderService.enabled.set(!!p.onColumnOrderChange);
+      }
+    });
+
+    // Wire virtual scroll service inputs
+    effect(() => {
+      const p = this.propsInput();
+      if (p) {
+        this.virtualScrollService.totalRows.set(p.items.length);
+      }
     });
   }
 
@@ -880,5 +738,9 @@ export class DataGridTableComponent<T> {
 
   onRedo(): void {
     this.state().interaction.onRedo?.();
+  }
+
+  onHeaderMouseDown(columnId: string, event: MouseEvent): void {
+    this.columnReorderService.handleHeaderMouseDown(columnId, event);
   }
 }

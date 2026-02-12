@@ -2,6 +2,44 @@
 
 All notable changes to OGrid will be documented in this file.
 
+## [2.0.3] – 2026-02-11
+
+### Added
+
+- **Column Reordering** — Drag-and-drop column reordering across all 12 packages. Pure TypeScript core utilities (`calculateDropTarget`, `reorderColumnArray`, `getPinStateForColumn`) with framework-specific hooks/services/composables/state classes. Respects pinning zones (left-pinned, unpinned, right-pinned). 5px drag threshold, 8px resize handle exclusion zone, RAF-throttled mouse tracking with visual drop indicator.
+  - React: `useColumnReorder` hook (196 lines)
+  - Angular: `ColumnReorderService` (injectable with signals)
+  - Vue: `useColumnReorder` composable
+  - JS: `ColumnReorderState` class (EventEmitter + RAF)
+  - All 8 UI packages wired with drop indicators and `data-column-id` attributes
+
+- **Virtual Scrolling** — Fixed row height virtual scrolling for large datasets across all 12 packages. Auto-enables at >100 rows with 5-row overscan. Core utilities (`computeVisibleRange`, `computeTotalHeight`, `getScrollTopForRow`) shared by Angular/Vue/JS. React uses `@tanstack/react-virtual`.
+  - New `IVirtualScrollConfig` type: `{ enabled?, rowHeight?, overscan? }`
+  - New `IOGridApi` methods: `scrollToRow(index, options?)` with `start`/`center`/`end` alignment
+  - Spacer-row rendering (not absolute positioning) for consistent table layout
+
+- **New `IOGridApi` methods** — `getColumnOrder()` and `setColumnOrder(order)` for programmatic column order control.
+
+- **Docs: Column Reordering feature page** — `column-reordering.mdx` with 4 framework tabs (React, Angular, Vue, Vanilla JS) and StackBlitz demos.
+
+- **Docs: Virtual Scrolling feature page** — `virtual-scrolling.mdx` with 4 framework tabs and StackBlitz demos.
+
+- **Docs: Landing page improvements** — Wider column widths for readability, toolbar with Export CSV / Select All / Clear Filters buttons, code preview tabs updated to show all 4 frameworks (React, Angular, Vue, Vanilla JS).
+
+### Fixed
+
+- **Vue: Row deselection in controlled mode** — `useRowSelection.updateSelection` now correctly mutates the controlled ref when provided, instead of silently no-op'ing. Deselection and "deselect all" now work in controlled mode.
+
+- **Vue: Sidebar toggle/close reactivity** — `sideBarProps` in `useOGrid` now uses JS getters for `activePanel` and `isOpen`, so stored references to the sidebar object stay current after `toggle()`/`close()` calls.
+
+- **Vue: `useDebouncedCallback` missing cancel/flush** — Added `.cancel()` and `.flush()` methods with new `DebouncedFn<T>` interface. Tests now properly `await nextTick()` before advancing fake timers (Vue's `watch` schedules callbacks as microtasks).
+
+### Changed
+
+- **1,162 tests** across 12 packages (Core: 237, JS: 241, React: 247, Radix: 92, Fluent: 92, Material: 92, Angular: 57, Angular Material: 9, Angular PrimeNG: 10, Vue: 65, Vue Vuetify: 10, Vue PrimeVue: 10). Up from 1,012 in v2.0.2.
+
+---
+
 ## [2.0.0-beta] – 2026-02-11
 
 ### BREAKING CHANGES

@@ -5,6 +5,9 @@ export * from '@alaarab/ogrid-core';
 export type { IColumnDef, IColumnGroupDef, ICellEditorContext } from './types/columnTypes';
 export type { OGridOptions, OGridEvents, IJsOGridApi } from './types/gridTypes';
 
+// Utils
+export { debounce } from './utils';
+
 // Classes
 export { OGrid } from './OGrid';
 export { GridState } from './state/GridState';
@@ -24,6 +27,8 @@ export { ContextMenu } from './components/ContextMenu';
 export { FillHandleState } from './state/FillHandleState';
 export { RowSelectionState } from './state/RowSelectionState';
 export { ColumnPinningState } from './state/ColumnPinningState';
+export { ColumnReorderState } from './state/ColumnReorderState';
+export { VirtualScrollState } from './state/VirtualScrollState';
 export { MarchingAntsOverlay } from './components/MarchingAntsOverlay';
 export { SideBarState } from './state/SideBarState';
 export { HeaderFilterState } from './state/HeaderFilterState';

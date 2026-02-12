@@ -1,4 +1,4 @@
-import { ref, type Ref } from 'vue';
+import { ref, shallowRef, type Ref, type ShallowRef } from 'vue';
 import { getCellValue, parseValue, normalizeSelectionRange } from '@alaarab/ogrid-core';
 import type { ISelectionRange, IActiveCell, ICellValueChangedEvent, IColumnDef } from '../types';
 
@@ -6,8 +6,8 @@ export interface UseClipboardParams<T> {
   items: Ref<T[]>;
   visibleCols: Ref<IColumnDef<T>[]>;
   colOffset: number;
-  selectionRange: Ref<ISelectionRange | null>;
-  activeCell: Ref<IActiveCell | null>;
+  selectionRange: Ref<ISelectionRange | null> | ShallowRef<ISelectionRange | null>;
+  activeCell: Ref<IActiveCell | null> | ShallowRef<IActiveCell | null>;
   editable: Ref<boolean | undefined>;
   onCellValueChanged: Ref<((event: ICellValueChangedEvent<T>) => void) | undefined>;
   beginBatch?: () => void;
@@ -18,9 +18,10 @@ export interface UseClipboardResult {
   handleCopy: () => void;
   handleCut: () => void;
   handlePaste: () => Promise<void>;
-  cutRange: Ref<ISelectionRange | null>;
-  copyRange: Ref<ISelectionRange | null>;
+  cutRange: ShallowRef<ISelectionRange | null>;
+  copyRange: ShallowRef<ISelectionRange | null>;
   clearClipboardRanges: () => void;
+  cutRangeRef: Ref<ISelectionRange | null>;
 }
 
 /**
@@ -39,10 +40,10 @@ export function useClipboard<T>(params: UseClipboardParams<T>): UseClipboardResu
     endBatch,
   } = params;
 
-  let cutRangeInternal: ISelectionRange | null = null;
-  const cutRange = ref<ISelectionRange | null>(null);
-  const copyRange = ref<ISelectionRange | null>(null);
-  let internalClipboard: string | null = null;
+  const cutRangeRef = ref<ISelectionRange | null>(null);
+  const cutRange = shallowRef<ISelectionRange | null>(null);
+  const copyRange = shallowRef<ISelectionRange | null>(null);
+  const internalClipboardRef = ref<string | null>(null);
 
   const getEffectiveRange = (): ISelectionRange | null => {
     const sel = selectionRange.value;
@@ -74,7 +75,7 @@ export function useClipboard<T>(params: UseClipboardParams<T>): UseClipboardResu
       rows.push(cells.join('\t'));
     }
     const tsv = rows.join('\r\n');
-    internalClipboard = tsv;
+    internalClipboardRef.value = tsv;
     copyRange.value = norm;
     void navigator.clipboard.writeText(tsv).catch(() => {});
   };
@@ -84,7 +85,7 @@ export function useClipboard<T>(params: UseClipboardParams<T>): UseClipboardResu
     const range = getEffectiveRange();
     if (range == null || onCellValueChanged.value == null) return;
     const norm = normalizeSelectionRange(range);
-    cutRangeInternal = norm;
+    cutRangeRef.value = norm;
     cutRange.value = norm;
     copyRange.value = null;
     handleCopy();
@@ -101,8 +102,8 @@ export function useClipboard<T>(params: UseClipboardParams<T>): UseClipboardResu
     } catch {
       text = '';
     }
-    if (!text.trim() && internalClipboard != null) {
-      text = internalClipboard;
+    if (!text.trim() && internalClipboardRef.value != null) {
+      text = internalClipboardRef.value;
     }
     if (!text.trim()) return;
     const norm = getEffectiveRange();
@@ -137,8 +138,8 @@ export function useClipboard<T>(params: UseClipboardParams<T>): UseClipboardResu
         });
       }
     }
-    if (cutRangeInternal) {
-      const cut = cutRangeInternal;
+    if (cutRangeRef.value) {
+      const cut = cutRangeRef.value;
       for (let r = cut.startRow; r <= cut.endRow; r++) {
         for (let c = cut.startCol; c <= cut.endCol; c++) {
           if (r >= currentItems.length || c >= currentCols.length) continue;
@@ -160,7 +161,7 @@ export function useClipboard<T>(params: UseClipboardParams<T>): UseClipboardResu
           });
         }
       }
-      cutRangeInternal = null;
+      cutRangeRef.value = null;
       cutRange.value = null;
     }
     endBatch?.();
@@ -170,8 +171,8 @@ export function useClipboard<T>(params: UseClipboardParams<T>): UseClipboardResu
   const clearClipboardRanges = () => {
     copyRange.value = null;
     cutRange.value = null;
-    cutRangeInternal = null;
+    cutRangeRef.value = null;
   };
 
-  return { handleCopy, handleCut, handlePaste, cutRange, copyRange, clearClipboardRanges };
+  return { handleCopy, handleCut, handlePaste, cutRange, copyRange, clearClipboardRanges, cutRangeRef };
 }

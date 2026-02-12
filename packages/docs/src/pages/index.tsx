@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useRef, useCallback } from 'react';
 import BrowserOnly from '@docusaurus/BrowserOnly';
 import Layout from '@theme/Layout';
 import CodeBlock from '@theme/CodeBlock';
@@ -52,27 +52,78 @@ function generateData(): EmployeeRow[] {
   return rows;
 }
 
+const toolbarBtnStyle: React.CSSProperties = {
+  display: 'inline-flex',
+  alignItems: 'center',
+  gap: 4,
+  padding: '4px 10px',
+  fontSize: '12px',
+  fontWeight: 600,
+  fontFamily: 'inherit',
+  color: 'var(--ogrid-fg, #242424)',
+  background: 'transparent',
+  border: '1px solid var(--ogrid-border, #e0e0e0)',
+  borderRadius: 4,
+  cursor: 'pointer',
+  whiteSpace: 'nowrap' as const,
+};
+
 function HeroGrid() {
   // eslint-disable-next-line @typescript-eslint/no-var-requires
-  const { OGrid } = require('@alaarab/ogrid-react-radix') as typeof import('@alaarab/ogrid-react-radix');
+  const { OGrid, exportToCsv, getCellValue } = require('@alaarab/ogrid-react-radix') as typeof import('@alaarab/ogrid-react-radix');
+  type ApiType = import('@alaarab/ogrid-react-radix').IOGridApi<EmployeeRow>;
 
+  const apiRef = useRef<ApiType>(null);
   const data = useMemo(() => generateData(), []);
 
   const columns = useMemo(() => [
-    { columnId: 'id', name: '#', type: 'numeric' as const, defaultWidth: 55 },
-    { columnId: 'name', name: 'Name', sortable: true, editable: true, defaultWidth: 160 },
-    { columnId: 'department', name: 'Department', sortable: true, editable: true, filterable: { type: 'multiSelect' as const }, cellEditor: 'richSelect' as const, cellEditorParams: { values: DEPARTMENTS }, defaultWidth: 120 },
-    { columnId: 'title', name: 'Title', sortable: true, editable: true, defaultWidth: 175 },
-    { columnId: 'email', name: 'Email', defaultWidth: 220 },
+    { columnId: 'id', name: '#', type: 'numeric' as const, defaultWidth: 50 },
+    { columnId: 'name', name: 'Name', sortable: true, editable: true, defaultWidth: 170 },
+    { columnId: 'department', name: 'Department', sortable: true, editable: true, filterable: { type: 'multiSelect' as const }, cellEditor: 'richSelect' as const, cellEditorParams: { values: DEPARTMENTS }, defaultWidth: 145 },
+    { columnId: 'title', name: 'Title', sortable: true, editable: true, defaultWidth: 180 },
+    { columnId: 'email', name: 'Email', editable: true, defaultWidth: 200 },
     { columnId: 'salary', name: 'Salary', type: 'numeric' as const, editable: true, valueFormatter: (v: unknown) => v != null ? `$${Number(v).toLocaleString()}` : '', defaultWidth: 110 },
-    { columnId: 'startDate', name: 'Start Date', type: 'date' as const, sortable: true, editable: true, defaultWidth: 115 },
-    { columnId: 'status', name: 'Status', editable: true, filterable: { type: 'multiSelect' as const }, cellEditor: 'richSelect' as const, cellEditorParams: { values: STATUSES_UNIQUE }, defaultWidth: 90 },
-    { columnId: 'rating', name: 'Rating', sortable: true, editable: true, filterable: { type: 'multiSelect' as const }, cellEditor: 'richSelect' as const, cellEditorParams: { values: RATINGS_UNIQUE }, defaultWidth: 75 },
+    { columnId: 'startDate', name: 'Start Date', type: 'date' as const, sortable: true, editable: true, defaultWidth: 130 },
+    { columnId: 'status', name: 'Status', editable: true, filterable: { type: 'multiSelect' as const }, cellEditor: 'richSelect' as const, cellEditorParams: { values: STATUSES_UNIQUE }, defaultWidth: 110 },
+    { columnId: 'rating', name: 'Rating', sortable: true, editable: true, filterable: { type: 'multiSelect' as const }, cellEditor: 'richSelect' as const, cellEditorParams: { values: RATINGS_UNIQUE }, defaultWidth: 90 },
   ], []);
+
+  const handleExportCsv = useCallback(() => {
+    const api = apiRef.current;
+    if (!api) return;
+    const rows = api.getDisplayedRows();
+    exportToCsv(rows, columns, (item, colId) => {
+      const val = getCellValue(item, colId);
+      return val != null ? String(val) : '';
+    }, 'ogrid-employees.csv');
+  }, [columns, exportToCsv, getCellValue]);
+
+  const handleSelectAll = useCallback(() => {
+    apiRef.current?.selectAll();
+  }, []);
+
+  const handleClearFilters = useCallback(() => {
+    apiRef.current?.clearFilters();
+  }, []);
+
+  const toolbar = useMemo(() => (
+    <>
+      <button style={toolbarBtnStyle} onClick={handleExportCsv} title="Export to CSV">
+        Export CSV
+      </button>
+      <button style={toolbarBtnStyle} onClick={handleSelectAll} title="Select all rows">
+        Select All
+      </button>
+      <button style={toolbarBtnStyle} onClick={handleClearFilters} title="Clear all filters">
+        Clear Filters
+      </button>
+    </>
+  ), [handleExportCsv, handleSelectAll, handleClearFilters]);
 
   return (
     <div className={styles.heroGridWrapper}>
       <OGrid
+        ref={apiRef}
         columns={columns}
         data={data}
         getRowId={(row: EmployeeRow) => row.id}
@@ -80,6 +131,7 @@ function HeroGrid() {
         cellSelection
         statusBar
         sideBar
+        toolbar={toolbar}
         defaultPageSize={100}
         layoutMode="fill"
         entityLabelPlural="employees"
@@ -101,8 +153,8 @@ function Hero() {
           Every Spreadsheet Feature.<br />Zero Enterprise Tax.
         </h1>
         <p className={styles.heroSubtitle}>
-          A lightweight React data grid with sorting, filtering, editing, selection,
-          clipboard, and more. Pick your framework. Free forever.
+          A lightweight data grid for React, Angular, Vue, and vanilla JS with sorting,
+          filtering, editing, selection, clipboard, and more. Free forever.
         </p>
 
         <BrowserOnly fallback={<div className={styles.heroGridPlaceholder} />}>
@@ -134,36 +186,20 @@ function Hero() {
    ────────────────────────────────────────────── */
 
 const frameworks = [
-  { id: 'ogrid', label: 'OGrid (Default)', import: `import { OGrid } from '@alaarab/ogrid-react-radix';` },
-  { id: 'fluent', label: 'Fluent UI', import: `import { OGrid } from '@alaarab/ogrid-react-fluent';` },
-  { id: 'material', label: 'Material UI', import: `import { OGrid } from '@alaarab/ogrid-react-material';` },
-  { id: 'js', label: 'Vanilla JS', import: `import { OGrid } from '@alaarab/ogrid-js';\nimport '@alaarab/ogrid-js/styles';` },
+  { id: 'react', label: 'React' },
+  { id: 'angular', label: 'Angular' },
+  { id: 'vue', label: 'Vue' },
+  { id: 'js', label: 'Vanilla JS' },
 ] as const;
 
 function getCodeExample(fw: typeof frameworks[number]) {
-  if (fw.id === 'js') {
-    return `import { OGrid } from '@alaarab/ogrid-js';
-import '@alaarab/ogrid-js/styles';
+  switch (fw.id) {
+    case 'react':
+      return `import { OGrid } from '@alaarab/ogrid-react-radix';
+// Also available: '@alaarab/ogrid-react-fluent'
+//                 '@alaarab/ogrid-react-material'
 
-const grid = new OGrid(document.getElementById('grid'), {
-  columns: [
-    { columnId: 'name', name: 'Name', sortable: true },
-    { columnId: 'role', name: 'Role',
-      filterable: { type: 'multiSelect' } },
-    { columnId: 'salary', name: 'Salary', editable: true,
-      valueFormatter: (v) => \`$\${v.toLocaleString()}\` },
-  ],
-  data: employees,
-  getRowId: (e) => e.id,
-  editable: true,
-  cellSelection: true,
-  statusBar: true,
-});`;
-  }
-  return `${fw.import}
-import type { IColumnDef } from '@alaarab/ogrid-react';
-
-const columns: IColumnDef<Employee>[] = [
+const columns = [
   { columnId: 'name', name: 'Name', sortable: true },
   { columnId: 'role', name: 'Role', filterable: { type: 'multiSelect' } },
   { columnId: 'salary', name: 'Salary', editable: true,
@@ -182,6 +218,77 @@ function App() {
     />
   );
 }`;
+    case 'angular':
+      return `import { OGridComponent } from '@alaarab/ogrid-angular-material';
+// Also available: '@alaarab/ogrid-angular-primeng'
+
+@Component({
+  standalone: true,
+  imports: [OGridComponent],
+  template: \`
+    <ogrid
+      [columns]="columns"
+      [data]="employees"
+      [getRowId]="getRowId"
+      [editable]="true"
+      [cellSelection]="true"
+      [statusBar]="true"
+    />
+  \`,
+})
+export class AppComponent {
+  columns = [
+    { columnId: 'name', name: 'Name', sortable: true },
+    { columnId: 'role', name: 'Role',
+      filterable: { type: 'multiSelect' } },
+    { columnId: 'salary', name: 'Salary', editable: true,
+      valueFormatter: (v) => \`$\${v.toLocaleString()}\` },
+  ];
+  getRowId = (e) => e.id;
+}`;
+    case 'vue':
+      return `<script setup lang="ts">
+import { OGrid } from '@alaarab/ogrid-vue-vuetify';
+// Also available: '@alaarab/ogrid-vue-primevue'
+
+const columns = [
+  { columnId: 'name', name: 'Name', sortable: true },
+  { columnId: 'role', name: 'Role',
+    filterable: { type: 'multiSelect' } },
+  { columnId: 'salary', name: 'Salary', editable: true,
+    valueFormatter: (v) => \`$\${v.toLocaleString()}\` },
+];
+</script>
+
+<template>
+  <OGrid
+    :columns="columns"
+    :data="employees"
+    :getRowId="(e) => e.id"
+    editable
+    cellSelection
+    statusBar
+  />
+</template>`;
+    case 'js':
+      return `import { OGrid } from '@alaarab/ogrid-js';
+import '@alaarab/ogrid-js/styles';
+
+const grid = new OGrid(document.getElementById('grid'), {
+  columns: [
+    { columnId: 'name', name: 'Name', sortable: true },
+    { columnId: 'role', name: 'Role',
+      filterable: { type: 'multiSelect' } },
+    { columnId: 'salary', name: 'Salary', editable: true,
+      valueFormatter: (v) => \`$\${v.toLocaleString()}\` },
+  ],
+  data: employees,
+  getRowId: (e) => e.id,
+  editable: true,
+  cellSelection: true,
+  statusBar: true,
+});`;
+  }
 }
 
 function CodePreviewSection() {
@@ -207,7 +314,7 @@ function CodePreviewSection() {
             ))}
           </div>
           <div className={styles.codeBody}>
-            <CodeBlock language="tsx">
+            <CodeBlock language={frameworks[active].id === 'vue' ? 'html' : frameworks[active].id === 'react' ? 'tsx' : 'typescript'}>
               {getCodeExample(frameworks[active])}
             </CodeBlock>
           </div>

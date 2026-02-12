@@ -1,4 +1,4 @@
-import { type Ref, type ShallowRef } from 'vue';
+import { computed, type Ref, type ShallowRef } from 'vue';
 import { normalizeSelectionRange, getCellValue, parseValue } from '@alaarab/ogrid-core';
 import type {
   RowId,
@@ -10,6 +10,10 @@ import type {
 } from '../types';
 import type { EditingCell } from './useCellEditing';
 import type { ContextMenuPosition } from './useContextMenu';
+import { useLatestRef } from './useLatestRef';
+
+/** Accept either Ref or ShallowRef for state fields */
+type MaybeShallowRef<T> = Ref<T> | ShallowRef<T>;
 
 /**
  * Excel-style Ctrl+Arrow: find the target position along a 1D axis.
@@ -48,9 +52,9 @@ export interface UseKeyboardNavigationParams<T> {
     getRowId: (item: T) => RowId;
   };
   state: {
-    activeCell: Ref<IActiveCell | null>;
-    selectionRange: Ref<ISelectionRange | null>;
-    editingCell: Ref<EditingCell | null>;
+    activeCell: MaybeShallowRef<IActiveCell | null>;
+    selectionRange: MaybeShallowRef<ISelectionRange | null>;
+    editingCell: MaybeShallowRef<EditingCell | null>;
     selectedRowIds: Ref<Set<RowId>>;
   };
   handlers: {
@@ -71,6 +75,7 @@ export interface UseKeyboardNavigationParams<T> {
     onCellValueChanged: Ref<((event: ICellValueChangedEvent<T>) => void) | undefined>;
     rowSelection: Ref<RowSelectionMode>;
     wrapperRef: Ref<HTMLElement | null> | ShallowRef<HTMLElement | null>;
+    scrollToRow?: (index: number, align?: 'start' | 'center' | 'end') => void;
   };
 }
 
@@ -84,9 +89,11 @@ export interface UseKeyboardNavigationResult {
 export function useKeyboardNavigation<T>(
   params: UseKeyboardNavigationParams<T>
 ): UseKeyboardNavigationResult {
-  // Read latest values from refs on each call — no memoization needed in Vue
+  // Store latest params in a ref so handleGridKeyDown is a stable callback
+  const paramsRef = useLatestRef(computed(() => params));
+
   const handleGridKeyDown = (e: KeyboardEvent) => {
-    const { data, state, handlers, features } = params;
+    const { data, state, handlers, features } = paramsRef.value;
     const items = data.items.value;
     const visibleCols = data.visibleCols.value;
     const { colOffset, getRowId } = data;
@@ -101,6 +108,7 @@ export function useKeyboardNavigation<T>(
     const onCellValueChanged = features.onCellValueChanged.value;
     const rowSelection = features.rowSelection.value;
     const wrapperRef = features.wrapperRef;
+    const scrollToRow = features.scrollToRow;
 
     const maxRowIndex = items.length - 1;
     const maxColIndex = visibleColumnCount - 1 + colOffset;
@@ -165,6 +173,7 @@ export function useKeyboardNavigation<T>(
           setSelectionRange({ startRow: newRow, startCol: dataColIndex, endRow: newRow, endCol: dataColIndex });
         }
         setActiveCell({ rowIndex: newRow, columnIndex });
+        scrollToRow?.(newRow, 'center');
         break;
       }
       case 'ArrowUp': {
@@ -186,6 +195,7 @@ export function useKeyboardNavigation<T>(
           setSelectionRange({ startRow: newRowUp, startCol: dataColIndex, endRow: newRowUp, endCol: dataColIndex });
         }
         setActiveCell({ rowIndex: newRowUp, columnIndex });
+        scrollToRow?.(newRowUp, 'center');
         break;
       }
       case 'ArrowRight': {

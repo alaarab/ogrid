@@ -26,7 +26,7 @@ export { useActiveCell } from './useActiveCell';
 export type { UseActiveCellResult } from './useActiveCell';
 
 export { useCellEditing } from './useCellEditing';
-export type { EditingCell, UseCellEditingResult } from './useCellEditing';
+export type { EditingCell, UseCellEditingParams, UseCellEditingResult } from './useCellEditing';
 
 export { useCellSelection } from './useCellSelection';
 export type { UseCellSelectionParams, UseCellSelectionResult } from './useCellSelection';
@@ -56,6 +56,9 @@ export { useFilterOptions } from './useFilterOptions';
 export type { UseFilterOptionsResult } from './useFilterOptions';
 
 export { useDebounce, useDebouncedCallback } from './useDebounce';
+export type { DebouncedFn } from './useDebounce';
+
+export { useLatestRef } from './useLatestRef';
 
 export { useTableLayout } from './useTableLayout';
 export type { UseTableLayoutParams, UseTableLayoutResult } from './useTableLayout';
@@ -97,3 +100,9 @@ export type { UseRichSelectStateParams, UseRichSelectStateResult } from './useRi
 
 export { useSideBarState } from './useSideBarState';
 export type { UseSideBarStateParams, UseSideBarStateResult } from './useSideBarState';
+
+export { useColumnReorder } from './useColumnReorder';
+export type { UseColumnReorderParams, UseColumnReorderResult } from './useColumnReorder';
+
+export { useVirtualScroll } from './useVirtualScroll';
+export type { UseVirtualScrollParams, UseVirtualScrollResult } from './useVirtualScroll';
