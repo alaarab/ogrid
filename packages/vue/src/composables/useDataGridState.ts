@@ -1,0 +1,456 @@
+import { ref, computed, type Ref, type ShallowRef } from 'vue';
+import { flattenColumns, getDataGridStatusBarConfig, parseValue, computeAggregations } from '@alaarab/ogrid-core';
+import type { RowId, IOGridDataGridProps, IStatusBarProps, IColumnDef } from '../types';
+import type { HeaderFilterConfigInput, CellRenderDescriptorInput } from '../utils';
+import { useRowSelection } from './useRowSelection';
+import { useCellEditing } from './useCellEditing';
+import { useActiveCell } from './useActiveCell';
+import { useCellSelection } from './useCellSelection';
+import { useContextMenu } from './useContextMenu';
+import { useClipboard } from './useClipboard';
+import { useKeyboardNavigation } from './useKeyboardNavigation';
+import { useFillHandle } from './useFillHandle';
+import { useUndoRedo } from './useUndoRedo';
+import { useTableLayout } from './useTableLayout';
+
+// Stable no-op handlers
+const NOOP = () => {};
+const NOOP_ASYNC = async () => {};
+const NOOP_MOUSE = (_e: MouseEvent, _r: number, _c: number) => {};
+const NOOP_KEY = (_e: KeyboardEvent) => {};
+const NOOP_CTX = (_e: { clientX: number; clientY: number; preventDefault?: () => void }) => {};
+
+export interface UseDataGridStateParams<T> {
+  props: Ref<IOGridDataGridProps<T>>;
+  wrapperRef: Ref<HTMLDivElement | null> | ShallowRef<HTMLDivElement | null>;
+}
+
+// --- Grouped sub-interfaces ---
+
+export interface DataGridLayoutState<T> {
+  flatColumns: IColumnDef<T>[];
+  visibleCols: IColumnDef<T>[];
+  visibleColumnCount: number;
+  totalColCount: number;
+  colOffset: number;
+  hasCheckboxCol: boolean;
+  rowIndexByRowId: Map<RowId, number>;
+  containerWidth: number;
+  minTableWidth: number;
+  desiredTableWidth: number;
+  columnSizingOverrides: Record<string, { widthPx: number }>;
+  setColumnSizingOverrides: (value: Record<string, { widthPx: number }>) => void;
+  onColumnResized?: (columnId: string, width: number) => void;
+}
+
+export interface DataGridRowSelectionState {
+  selectedRowIds: Set<RowId>;
+  updateSelection: (newSelectedIds: Set<RowId>) => void;
+  handleRowCheckboxChange: (rowId: RowId, checked: boolean, rowIndex: number, shiftKey: boolean) => void;
+  handleSelectAll: (checked: boolean) => void;
+  allSelected: boolean;
+  someSelected: boolean;
+}
+
+export interface DataGridEditingState<T> {
+  editingCell: { rowId: RowId; columnId: string } | null;
+  setEditingCell: (cell: { rowId: RowId; columnId: string } | null) => void;
+  pendingEditorValue: unknown;
+  setPendingEditorValue: (value: unknown) => void;
+  commitCellEdit: (item: T, columnId: string, oldValue: unknown, newValue: unknown, rowIndex: number, globalColIndex: number) => void;
+  cancelPopoverEdit: () => void;
+  popoverAnchorEl: HTMLElement | null;
+  setPopoverAnchorEl: (el: HTMLElement | null) => void;
+}
+
+export interface DataGridCellInteractionState {
+  activeCell: { rowIndex: number; columnIndex: number } | null;
+  setActiveCell: (cell: { rowIndex: number; columnIndex: number } | null) => void;
+  selectionRange: { startRow: number; startCol: number; endRow: number; endCol: number } | null;
+  setSelectionRange: (range: DataGridCellInteractionState['selectionRange']) => void;
+  handleCellMouseDown: (e: MouseEvent, rowIndex: number, globalColIndex: number) => void;
+  handleSelectAllCells: () => void;
+  hasCellSelection: boolean;
+  handleGridKeyDown: (e: KeyboardEvent) => void;
+  handleFillHandleMouseDown: (e: MouseEvent) => void;
+  handleCopy: () => void;
+  handleCut: () => void;
+  handlePaste: () => Promise<void>;
+  cutRange: { startRow: number; startCol: number; endRow: number; endCol: number } | null;
+  copyRange: { startRow: number; startCol: number; endRow: number; endCol: number } | null;
+  clearClipboardRanges: () => void;
+  canUndo: boolean;
+  canRedo: boolean;
+  onUndo?: () => void;
+  onRedo?: () => void;
+  isDragging: boolean;
+}
+
+export interface DataGridContextMenuState {
+  menuPosition: { x: number; y: number } | null;
+  setMenuPosition: (pos: { x: number; y: number } | null) => void;
+  handleCellContextMenu: (e: { clientX: number; clientY: number; preventDefault?: () => void }) => void;
+  closeContextMenu: () => void;
+}
+
+export interface DataGridViewModelState<T> {
+  headerFilterInput: HeaderFilterConfigInput;
+  cellDescriptorInput: CellRenderDescriptorInput<T>;
+  statusBarConfig: IStatusBarProps | null;
+  showEmptyInGrid: boolean;
+  onCellError?: (error: Error, info: unknown) => void;
+}
+
+export interface UseDataGridStateResult<T> {
+  layout: Ref<DataGridLayoutState<T>>;
+  rowSelection: Ref<DataGridRowSelectionState>;
+  editing: Ref<DataGridEditingState<T>>;
+  interaction: Ref<DataGridCellInteractionState>;
+  contextMenu: Ref<DataGridContextMenuState>;
+  viewModels: Ref<DataGridViewModelState<T>>;
+}
+
+/**
+ * Single orchestration composable for DataGridTable. Takes grid props and wrapper ref,
+ * returns all derived state and handlers so UI packages can be thin view layers.
+ */
+export function useDataGridState<T>(
+  params: UseDataGridStateParams<T>
+): UseDataGridStateResult<T> {
+  const { props, wrapperRef } = params;
+
+  const items = computed(() => props.value.items);
+  const columnsProp = computed(() => props.value.columns);
+  const getRowId = computed(() => props.value.getRowId).value; // getRowId is stable
+  const visibleColumnsProp = computed(() => props.value.visibleColumns);
+  const columnOrderProp = computed(() => props.value.columnOrder);
+  const rowSelectionProp = computed(() => props.value.rowSelection ?? 'none');
+  const controlledSelectedRows = computed(() => props.value.selectedRows);
+  const onSelectionChangeProp = computed(() => props.value.onSelectionChange);
+  const statusBarProp = computed(() => props.value.statusBar);
+  const emptyStateProp = computed(() => props.value.emptyState);
+  const editableProp = computed(() => props.value.editable);
+  const cellSelectionPropRaw = computed(() => props.value.cellSelection);
+  const cellSelection = computed(() => cellSelectionPropRaw.value !== false);
+  const onCellValueChangedProp = computed(() => props.value.onCellValueChanged);
+  const initialColumnWidths = computed(() => props.value.initialColumnWidths);
+  const onColumnResizedProp = computed(() => props.value.onColumnResized);
+  const pinnedColumnsProp = computed(() => props.value.pinnedColumns);
+  const onCellErrorProp = computed(() => props.value.onCellError);
+
+  // Undo/redo wrapping
+  const undoRedo = useUndoRedo<T>({ onCellValueChanged: onCellValueChangedProp.value });
+  const onCellValueChanged = computed(() => undoRedo.onCellValueChanged);
+
+  const flatColumnsRaw = computed(() => flattenColumns(columnsProp.value) as IColumnDef<T>[]);
+
+  const flatColumns = computed(() => {
+    const pinned = pinnedColumnsProp.value;
+    if (!pinned || Object.keys(pinned).length === 0) return flatColumnsRaw.value;
+    return flatColumnsRaw.value.map((col) => {
+      const override = pinned[col.columnId];
+      if (override && col.pinned !== override) return { ...col, pinned: override };
+      return col;
+    });
+  });
+
+  const visibleCols = computed(() => {
+    const vis = visibleColumnsProp.value;
+    const order = columnOrderProp.value;
+    const filtered = vis ? flatColumns.value.filter((c) => vis.has(c.columnId)) : flatColumns.value;
+    if (!order?.length) return filtered;
+    return [...filtered].sort((a, b) => {
+      const ia = order.indexOf(a.columnId);
+      const ib = order.indexOf(b.columnId);
+      if (ia === -1 && ib === -1) return 0;
+      if (ia === -1) return 1;
+      if (ib === -1) return -1;
+      return ia - ib;
+    });
+  });
+
+  const visibleColumnCount = computed(() => visibleCols.value.length);
+  const hasCheckboxCol = computed(() => rowSelectionProp.value === 'multiple');
+  const totalColCount = computed(() => visibleColumnCount.value + (hasCheckboxCol.value ? 1 : 0));
+  const colOffset = computed(() => hasCheckboxCol.value ? 1 : 0).value; // stable once computed
+
+  const rowIndexByRowId = computed(() => {
+    const m = new Map<RowId, number>();
+    items.value.forEach((item, idx) => m.set(getRowId(item), idx));
+    return m;
+  });
+
+  const rowSelectionResult = useRowSelection({
+    items,
+    getRowId,
+    rowSelection: rowSelectionProp,
+    controlledSelectedRows,
+    onSelectionChange: onSelectionChangeProp.value,
+  });
+
+  const { editingCell, setEditingCell, pendingEditorValue, setPendingEditorValue } = useCellEditing();
+  const { activeCell, setActiveCell } = useActiveCell(wrapperRef, editingCell);
+
+  const rowCount = computed(() => items.value.length);
+  const visColCount = computed(() => visibleCols.value.length);
+
+  const {
+    selectionRange,
+    setSelectionRange,
+    handleCellMouseDown: handleCellMouseDownBase,
+    handleSelectAllCells,
+    isDragging,
+  } = useCellSelection({
+    colOffset,
+    rowCount,
+    visibleColCount: visColCount,
+    setActiveCell,
+    wrapperRef,
+  });
+
+  const { contextMenuPosition, setContextMenuPosition, handleCellContextMenu, closeContextMenu } = useContextMenu();
+
+  const { handleCopy, handleCut, handlePaste, cutRange, copyRange, clearClipboardRanges } = useClipboard({
+    items,
+    visibleCols,
+    colOffset,
+    selectionRange,
+    activeCell,
+    editable: editableProp,
+    onCellValueChanged,
+    beginBatch: undoRedo.beginBatch,
+    endBatch: undoRedo.endBatch,
+  });
+
+  const handleCellMouseDown = (e: MouseEvent, rowIndex: number, globalColIndex: number) => {
+    if (e.button !== 0) return;
+    wrapperRef.value?.focus({ preventScroll: true });
+    clearClipboardRanges();
+    handleCellMouseDownBase(e, rowIndex, globalColIndex);
+  };
+
+  const { handleGridKeyDown } = useKeyboardNavigation({
+    data: { items, visibleCols, colOffset, hasCheckboxCol, visibleColumnCount, getRowId },
+    state: { activeCell, selectionRange, editingCell, selectedRowIds: rowSelectionResult.selectedRowIds },
+    handlers: {
+      setActiveCell, setSelectionRange, setEditingCell,
+      handleRowCheckboxChange: rowSelectionResult.handleRowCheckboxChange,
+      handleCopy, handleCut, handlePaste,
+      setContextMenu: setContextMenuPosition,
+      onUndo: undoRedo.undo,
+      onRedo: undoRedo.redo,
+      clearClipboardRanges,
+    },
+    features: {
+      editable: editableProp,
+      onCellValueChanged,
+      rowSelection: rowSelectionProp,
+      wrapperRef,
+    },
+  });
+
+  const { handleFillHandleMouseDown } = useFillHandle({
+    items,
+    visibleCols,
+    editable: editableProp,
+    onCellValueChanged,
+    selectionRange,
+    setSelectionRange,
+    setActiveCell,
+    colOffset,
+    wrapperRef,
+    beginBatch: undoRedo.beginBatch,
+    endBatch: undoRedo.endBatch,
+  });
+
+  const {
+    containerWidth,
+    minTableWidth,
+    desiredTableWidth,
+    columnSizingOverrides,
+    setColumnSizingOverrides,
+  } = useTableLayout({
+    wrapperRef,
+    visibleCols,
+    flatColumns,
+    hasCheckboxCol,
+    initialColumnWidths: initialColumnWidths.value,
+    onColumnResized: onColumnResizedProp.value,
+  });
+
+  const aggregation = computed(() =>
+    computeAggregations(items.value, visibleCols.value, cellSelection.value ? selectionRange.value : null)
+  );
+
+  const statusBarConfig = computed(() => {
+    const base = getDataGridStatusBarConfig(
+      statusBarProp.value as boolean | IStatusBarProps | undefined,
+      items.value.length,
+      rowSelectionResult.selectedRowIds.value.size
+    );
+    if (!base) return null;
+    return { ...base, aggregation: aggregation.value ?? undefined };
+  });
+
+  const showEmptyInGrid = computed(() => items.value.length === 0 && !!emptyStateProp.value && !props.value.isLoading);
+  const hasCellSelection = computed(() => selectionRange.value != null || activeCell.value != null);
+
+  // --- View-model inputs ---
+  const headerFilterInput = computed<HeaderFilterConfigInput>(() => ({
+    sortBy: props.value.sortBy,
+    sortDirection: props.value.sortDirection,
+    onColumnSort: props.value.onColumnSort,
+    filters: props.value.filters,
+    onFilterChange: props.value.onFilterChange,
+    filterOptions: props.value.filterOptions,
+    loadingFilterOptions: props.value.loadingFilterOptions,
+    peopleSearch: props.value.peopleSearch,
+  }));
+
+  const cellDescriptorInput = computed<CellRenderDescriptorInput<T>>(() => ({
+    editingCell: editingCell.value,
+    activeCell: cellSelection.value ? activeCell.value : null,
+    selectionRange: cellSelection.value ? selectionRange.value : null,
+    cutRange: cellSelection.value ? cutRange.value : null,
+    copyRange: cellSelection.value ? copyRange.value : null,
+    colOffset,
+    itemsLength: items.value.length,
+    getRowId,
+    editable: editableProp.value,
+    onCellValueChanged: onCellValueChanged.value,
+    isDragging: cellSelection.value ? isDragging.value : false,
+  }));
+
+  // --- Cell edit helpers ---
+  const popoverAnchorEl = ref<HTMLElement | null>(null);
+
+  const setPopoverAnchorEl = (el: HTMLElement | null) => {
+    popoverAnchorEl.value = el;
+  };
+
+  const commitCellEdit = (
+    item: T,
+    columnId: string,
+    oldValue: unknown,
+    newValue: unknown,
+    rowIndex: number,
+    globalColIndex: number
+  ) => {
+    const col = visibleCols.value.find((c) => c.columnId === columnId);
+    if (col) {
+      const result = parseValue(newValue, oldValue, item, col);
+      if (!result.valid) {
+        setEditingCell(null);
+        setPopoverAnchorEl(null);
+        setPendingEditorValue(undefined);
+        return;
+      }
+      newValue = result.value;
+    }
+
+    onCellValueChanged.value?.({
+      item,
+      columnId,
+      oldValue,
+      newValue,
+      rowIndex,
+    });
+    setEditingCell(null);
+    setPopoverAnchorEl(null);
+    setPendingEditorValue(undefined);
+    if (rowIndex < items.value.length - 1) {
+      setActiveCell({ rowIndex: rowIndex + 1, columnIndex: globalColIndex });
+    }
+  };
+
+  const cancelPopoverEdit = () => {
+    setEditingCell(null);
+    setPopoverAnchorEl(null);
+    setPendingEditorValue(undefined);
+  };
+
+  // --- Memoize each sub-object ---
+
+  const layoutState = computed<DataGridLayoutState<T>>(() => ({
+    flatColumns: flatColumns.value,
+    visibleCols: visibleCols.value,
+    visibleColumnCount: visibleColumnCount.value,
+    totalColCount: totalColCount.value,
+    colOffset,
+    hasCheckboxCol: hasCheckboxCol.value,
+    rowIndexByRowId: rowIndexByRowId.value,
+    containerWidth: containerWidth.value,
+    minTableWidth: minTableWidth.value,
+    desiredTableWidth: desiredTableWidth.value,
+    columnSizingOverrides: columnSizingOverrides.value,
+    setColumnSizingOverrides,
+    onColumnResized: onColumnResizedProp.value,
+  }));
+
+  const rowSelectionState = computed<DataGridRowSelectionState>(() => ({
+    selectedRowIds: rowSelectionResult.selectedRowIds.value,
+    updateSelection: rowSelectionResult.updateSelection,
+    handleRowCheckboxChange: rowSelectionResult.handleRowCheckboxChange,
+    handleSelectAll: rowSelectionResult.handleSelectAll,
+    allSelected: rowSelectionResult.allSelected.value,
+    someSelected: rowSelectionResult.someSelected.value,
+  }));
+
+  const editingState = computed<DataGridEditingState<T>>(() => ({
+    editingCell: editingCell.value,
+    setEditingCell,
+    pendingEditorValue: pendingEditorValue.value,
+    setPendingEditorValue,
+    commitCellEdit,
+    cancelPopoverEdit,
+    popoverAnchorEl: popoverAnchorEl.value,
+    setPopoverAnchorEl,
+  }));
+
+  const interactionState = computed<DataGridCellInteractionState>(() => ({
+    activeCell: cellSelection.value ? activeCell.value : null,
+    setActiveCell: cellSelection.value ? setActiveCell : (NOOP as typeof setActiveCell),
+    selectionRange: cellSelection.value ? selectionRange.value : null,
+    setSelectionRange: cellSelection.value ? setSelectionRange : (NOOP as typeof setSelectionRange),
+    handleCellMouseDown: cellSelection.value ? handleCellMouseDown : (NOOP_MOUSE as typeof handleCellMouseDown),
+    handleSelectAllCells: cellSelection.value ? handleSelectAllCells : NOOP,
+    hasCellSelection: cellSelection.value ? hasCellSelection.value : false,
+    handleGridKeyDown: cellSelection.value ? handleGridKeyDown : (NOOP_KEY as typeof handleGridKeyDown),
+    handleFillHandleMouseDown: cellSelection.value ? handleFillHandleMouseDown : (NOOP as typeof handleFillHandleMouseDown),
+    handleCopy: cellSelection.value ? handleCopy : NOOP,
+    handleCut: cellSelection.value ? handleCut : NOOP,
+    handlePaste: cellSelection.value ? handlePaste : (NOOP_ASYNC as typeof handlePaste),
+    cutRange: cellSelection.value ? cutRange.value : null,
+    copyRange: cellSelection.value ? copyRange.value : null,
+    clearClipboardRanges: cellSelection.value ? clearClipboardRanges : NOOP,
+    canUndo: undoRedo.canUndo.value,
+    canRedo: undoRedo.canRedo.value,
+    onUndo: undoRedo.undo,
+    onRedo: undoRedo.redo,
+    isDragging: cellSelection.value ? isDragging.value : false,
+  }));
+
+  const contextMenuState = computed<DataGridContextMenuState>(() => ({
+    menuPosition: cellSelection.value ? contextMenuPosition.value : null,
+    setMenuPosition: cellSelection.value ? setContextMenuPosition : (NOOP as typeof setContextMenuPosition),
+    handleCellContextMenu: cellSelection.value ? handleCellContextMenu : (NOOP_CTX as typeof handleCellContextMenu),
+    closeContextMenu: cellSelection.value ? closeContextMenu : NOOP,
+  }));
+
+  const viewModelsState = computed<DataGridViewModelState<T>>(() => ({
+    headerFilterInput: headerFilterInput.value,
+    cellDescriptorInput: cellDescriptorInput.value,
+    statusBarConfig: statusBarConfig.value,
+    showEmptyInGrid: showEmptyInGrid.value,
+    onCellError: onCellErrorProp.value,
+  }));
+
+  return {
+    layout: layoutState,
+    rowSelection: rowSelectionState,
+    editing: editingState,
+    interaction: interactionState,
+    contextMenu: contextMenuState,
+    viewModels: viewModelsState,
+  };
+}

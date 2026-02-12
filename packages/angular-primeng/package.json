@@ -1,0 +1,45 @@
+{
+  "name": "@alaarab/ogrid-angular-primeng",
+  "version": "2.0.2",
+  "description": "OGrid PrimeNG – PrimeNG Table-based data grid with sorting, filtering, pagination, column chooser, and CSV export.",
+  "main": "dist/esm/index.js",
+  "module": "dist/esm/index.js",
+  "types": "dist/types/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/types/index.d.ts",
+      "import": "./dist/esm/index.js",
+      "require": "./dist/esm/index.js"
+    }
+  },
+  "scripts": {
+    "build": "rimraf dist && tsc -p tsconfig.build.json",
+    "test": "jest --passWithNoTests"
+  },
+  "keywords": ["ogrid", "angular", "primeng", "datatable", "typescript", "grid"],
+  "author": "Ala Arab",
+  "license": "MIT",
+  "files": ["dist", "README.md", "LICENSE"],
+  "engines": { "node": ">=18" },
+  "dependencies": {
+    "@alaarab/ogrid-angular": "2.0.2"
+  },
+  "peerDependencies": {
+    "@angular/core": "^21.0.0",
+    "@angular/common": "^21.0.0",
+    "primeng": "^21.0.0"
+  },
+  "devDependencies": {
+    "@angular/core": "^21.1.4",
+    "@angular/common": "^21.1.4",
+    "@angular/compiler": "^21.1.4",
+    "@angular/platform-browser": "^21.1.4",
+    "@angular/platform-browser-dynamic": "^21.1.4",
+    "@angular/animations": "^21.1.4",
+    "primeng": "^21.1.1",
+    "rxjs": "^7.8.0",
+    "zone.js": "^0.15.0",
+    "typescript": "^5.7.3"
+  },
+  "publishConfig": { "access": "public" }
+}
