@@ -19,7 +19,7 @@ Right-click any cell to open a context menu with clipboard operations, undo/redo
 ## Quick Example
 
 <Tabs groupId="framework">
-  <TabItem value="radix" label="Radix (Lightweight)" default>
+  <TabItem value="react" label="React" default>
 
 ```tsx
 import { OGrid } from '@alaarab/ogrid-react-radix';
@@ -48,75 +48,89 @@ function App() {
 }
 ```
 
+:::tip Switching UI libraries
+The `OGrid` component has the same props across all React UI packages. To switch, just change the import:
+
+- **Radix** (lightweight, default): `from '@alaarab/ogrid-react-radix'`
+- **Fluent UI** (Microsoft 365 / SPFx): `from '@alaarab/ogrid-react-fluent'` — wrap in `<FluentProvider>`
+- **Material UI** (MUI v7): `from '@alaarab/ogrid-react-material'` — wrap in `<ThemeProvider>`
+:::
+
   </TabItem>
-  <TabItem value="fluent" label="Fluent UI">
+  <TabItem value="angular" label="Angular">
 
-```tsx
-import { OGrid } from '@alaarab/ogrid-react-fluent';
-import { useUndoRedo } from '@alaarab/ogrid-react-fluent';
-import { FluentProvider, webLightTheme } from '@fluentui/react-components';
-import { useRef } from 'react';
+```typescript
+import { Component } from '@angular/core';
+import { OGridComponent, type IColumnDef } from '@alaarab/ogrid-angular-material';
 
-function App() {
-  const undoRedo = useUndoRedo();
-
-  return (
-    <FluentProvider theme={webLightTheme}>
-      <OGrid
-        columns={columns}
-        data={data}
-        getRowId={(r) => r.id}
-        editable
-        onCellValueChanged={(e) => {
-          undoRedo.pushChange(e);
-          // persist change...
-        }}
-        onUndo={undoRedo.undo}
-        onRedo={undoRedo.redo}
-        canUndo={undoRedo.canUndo}
-        canRedo={undoRedo.canRedo}
-      />
-    </FluentProvider>
-  );
+@Component({
+  standalone: true,
+  imports: [OGridComponent],
+  template: `<ogrid [gridProps]="gridProps" />`
+})
+export class GridComponent {
+  gridProps = {
+    columns: [
+      { columnId: 'name', name: 'Name', editable: true },
+      { columnId: 'department', name: 'Department' },
+      {
+        columnId: 'salary', name: 'Salary', type: 'numeric', editable: true,
+        valueFormatter: (v: unknown) => `$${Number(v).toLocaleString()}`,
+      },
+    ] as IColumnDef<Person>[],
+    data: people,
+    getRowId: (item: Person) => item.id,
+    editable: true,
+    contextMenu: true,
+  };
 }
 ```
 
+:::tip Switching UI libraries
+Same component API across Angular packages. To switch, just change the import:
+
+- **Angular Material**: `from '@alaarab/ogrid-angular-material'`
+- **PrimeNG**: `from '@alaarab/ogrid-angular-primeng'`
+
+All components are standalone — no NgModule required.
+:::
+
   </TabItem>
-  <TabItem value="material" label="Material UI">
+  <TabItem value="vue" label="Vue">
 
-```tsx
-import { OGrid } from '@alaarab/ogrid-react-material';
-import { useUndoRedo } from '@alaarab/ogrid-react-material';
-import { ThemeProvider, createTheme } from '@mui/material/styles';
-import CssBaseline from '@mui/material/CssBaseline';
-import { useRef } from 'react';
+```vue
+<script setup lang="ts">
+import { OGrid, type IColumnDef } from '@alaarab/ogrid-vue-vuetify';
 
-const theme = createTheme();
+const columns: IColumnDef<Person>[] = [
+  { columnId: 'name', name: 'Name', editable: true },
+  { columnId: 'department', name: 'Department' },
+  {
+    columnId: 'salary', name: 'Salary', type: 'numeric', editable: true,
+    valueFormatter: (v) => `$${Number(v).toLocaleString()}`,
+  },
+];
 
-function App() {
-  const undoRedo = useUndoRedo();
+const gridProps = {
+  columns,
+  data: people,
+  getRowId: (item) => item.id,
+  editable: true,
+  contextMenu: true,
+};
+</script>
 
-  return (
-    <ThemeProvider theme={theme}>
-      <CssBaseline />
-      <OGrid
-        columns={columns}
-        data={data}
-        getRowId={(r) => r.id}
-        editable
-        onCellValueChanged={(e) => {
-          undoRedo.pushChange(e);
-          // persist change...
-        }}
-        onUndo={undoRedo.undo}
-        onRedo={undoRedo.redo}
-        canUndo={undoRedo.canUndo}
-        canRedo={undoRedo.canRedo}
-      />
-    </ThemeProvider>
-  );
-}
+<template>
+  <OGrid :gridProps="gridProps" />
+</template>
 ```
+
+:::tip Switching UI libraries
+Same component API across Vue packages. To switch, just change the import:
+
+- **Vuetify**: `from '@alaarab/ogrid-vue-vuetify'` — wrap in `<v-app>` for theming
+- **PrimeVue**: `from '@alaarab/ogrid-vue-primevue'`
+:::
 
   </TabItem>
   <TabItem value="js" label="Vanilla JS">

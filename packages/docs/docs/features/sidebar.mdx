@@ -19,7 +19,7 @@ The Side Bar adds a collapsible panel alongside the grid with two built-in panel
 <SideBarDemo />
 
 <Tabs groupId="framework">
-  <TabItem value="radix" label="Radix (Lightweight)" default>
+  <TabItem value="react" label="React" default>
 
 ```tsx
 import { OGrid } from '@alaarab/ogrid-react-radix';
@@ -34,47 +34,75 @@ import { OGrid } from '@alaarab/ogrid-react-radix';
 />
 ```
 
-  </TabItem>
-  <TabItem value="fluent" label="Fluent UI">
+:::tip Switching UI libraries
+The `OGrid` component has the same props across all React UI packages. To switch, just change the import:
 
-```tsx
-import { OGrid } from '@alaarab/ogrid-react-fluent';
-import { FluentProvider, webLightTheme } from '@fluentui/react-components';
-
-<FluentProvider theme={webLightTheme}>
-  <OGrid
-    columns={columns}
-    data={items}
-    getRowId={(item) => item.id}
-    sideBar
-    columnChooser="sidebar"
-    pagination
-  />
-</FluentProvider>
-```
+- **Radix** (lightweight, default): `from '@alaarab/ogrid-react-radix'`
+- **Fluent UI** (Microsoft 365 / SPFx): `from '@alaarab/ogrid-react-fluent'` — wrap in `<FluentProvider>`
+- **Material UI** (MUI v7): `from '@alaarab/ogrid-react-material'` — wrap in `<ThemeProvider>`
+:::
 
   </TabItem>
-  <TabItem value="material" label="Material UI">
+  <TabItem value="angular" label="Angular">
 
-```tsx
-import { OGrid } from '@alaarab/ogrid-react-material';
-import { ThemeProvider, createTheme } from '@mui/material/styles';
-import CssBaseline from '@mui/material/CssBaseline';
+```typescript
+import { Component } from '@angular/core';
+import { OGridComponent } from '@alaarab/ogrid-angular-material';
 
-const theme = createTheme();
-
-<ThemeProvider theme={theme}>
-  <CssBaseline />
-  <OGrid
-    columns={columns}
-    data={items}
-    getRowId={(item) => item.id}
-    sideBar
-    columnChooser="sidebar"
-    pagination
-  />
-</ThemeProvider>
+@Component({
+  standalone: true,
+  imports: [OGridComponent],
+  template: `<ogrid [gridProps]="gridProps" />`
+})
+export class GridComponent {
+  gridProps = {
+    columns: columns,
+    data: items,
+    getRowId: (item: Item) => item.id,
+    sideBar: true,
+    columnChooser: 'sidebar' as const,
+    pagination: true,
+  };
+}
 ```
+
+:::tip Switching UI libraries
+Same component API across Angular packages. To switch, just change the import:
+
+- **Angular Material**: `from '@alaarab/ogrid-angular-material'`
+- **PrimeNG**: `from '@alaarab/ogrid-angular-primeng'`
+
+All components are standalone — no NgModule required.
+:::
+
+  </TabItem>
+  <TabItem value="vue" label="Vue">
+
+```vue
+<script setup lang="ts">
+import { OGrid } from '@alaarab/ogrid-vue-vuetify';
+
+const gridProps = {
+  columns,
+  data: items,
+  getRowId: (item) => item.id,
+  sideBar: true,
+  columnChooser: 'sidebar' as const,
+  pagination: true,
+};
+</script>
+
+<template>
+  <OGrid :gridProps="gridProps" />
+</template>
+```
+
+:::tip Switching UI libraries
+Same component API across Vue packages. To switch, just change the import:
+
+- **Vuetify**: `from '@alaarab/ogrid-vue-vuetify'` — wrap in `<v-app>` for theming
+- **PrimeVue**: `from '@alaarab/ogrid-vue-primevue'`
+:::
 
   </TabItem>
   <TabItem value="js" label="Vanilla JS">

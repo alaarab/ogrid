@@ -2,10 +2,11 @@ import React from 'react';
 import { OGrid } from '@alaarab/ogrid-react-radix';
 import { LiveDemo } from '../LiveDemo';
 import { people, getRowId, selectionColumns } from './demoData';
+import { spreadsheetSelection } from '../../stackblitz/featureDemos';
 
 export default function SpreadsheetSelectionDemo() {
   return (
-    <LiveDemo height={420} title="Click a cell, then drag or Shift+click to select a range">
+    <LiveDemo height={420} title="Click a cell, then drag or Shift+click to select a range" stackblitz={spreadsheetSelection}>
       <OGrid
         columns={selectionColumns}
         data={people}
