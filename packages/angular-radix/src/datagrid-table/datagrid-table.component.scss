@@ -298,3 +298,34 @@
     .ogrid-datagrid-th--dragging {
       cursor: grabbing;
     }
+    .ogrid-datagrid-row-number-header {
+      width: 50px;
+      min-width: 50px;
+      max-width: 50px;
+      text-align: center;
+      font-weight: 600;
+      background: var(--ogrid-bg-subtle, #fafafa);
+      color: var(--ogrid-text-secondary, #666);
+      position: sticky;
+      left: 0;
+      z-index: 9;
+    }
+    .ogrid-datagrid-row-number-spacer {
+      width: 50px;
+      min-width: 50px;
+      padding: 0;
+    }
+    .ogrid-datagrid-row-number-cell {
+      width: 50px;
+      min-width: 50px;
+      max-width: 50px;
+      text-align: center;
+      font-weight: 600;
+      font-variant-numeric: tabular-nums;
+      color: var(--ogrid-text-secondary, #666);
+      background: var(--ogrid-bg-subtle, #fafafa);
+      padding: 6px;
+      position: sticky;
+      left: 0;
+      z-index: 6;
+    }

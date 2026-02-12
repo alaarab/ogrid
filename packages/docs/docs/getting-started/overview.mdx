@@ -22,61 +22,9 @@ Most production-grade React data grids fall into one of two camps: free but limi
 
 OGrid is built on a **3-layer architecture**: a pure TypeScript core, framework adapter layers (React hooks, Angular services, Vue composables), and thin UI shells. No duplicated logic, no drift.
 
-```mermaid
-flowchart TD
-  subgraph reactui ["React UI"]
-    direction LR
-    radix("<b>ogrid-react-radix</b><br/><small>Radix Primitives</small>")
-    fluent("<b>ogrid-react-fluent</b><br/><small>Fluent UI v9</small>")
-    material("<b>ogrid-react-material</b><br/><small>MUI v7</small>")
-  end
+import { ArchitectureDiagram } from '@site/src/components/ArchitectureDiagram';
 
-  subgraph angularui ["Angular UI"]
-    direction LR
-    angmat("<b>ogrid-angular-material</b><br/><small>Angular Material v21</small>")
-    angprime("<b>ogrid-angular-primeng</b><br/><small>PrimeNG v21</small>")
-  end
-
-  subgraph vueui ["Vue UI"]
-    direction LR
-    vuetify("<b>ogrid-vue-vuetify</b><br/><small>Vuetify 3</small>")
-    vueprime("<b>ogrid-vue-primevue</b><br/><small>PrimeVue 4</small>")
-  end
-
-  radix --> react
-  fluent --> react
-  material --> react
-  angmat --> angular
-  angprime --> angular
-  vuetify --> vue
-  vueprime --> vue
-  react --> core
-  angular --> core
-  vue --> core
-  js --> core
-
-  react("<b>@alaarab/ogrid-react</b><br/><small>Hooks · Headless Components</small>")
-  angular("<b>@alaarab/ogrid-angular</b><br/><small>Services · Signals · Components</small>")
-  vue("<b>@alaarab/ogrid-vue</b><br/><small>Composables · Utilities</small>")
-  js("<b>@alaarab/ogrid-js</b><br/><small>Vanilla JS Grid</small>")
-  core("<b>@alaarab/ogrid-core</b><br/><small>Types · Algorithms · Utilities</small>")
-
-  style radix fill:#217346,color:#fff,stroke:#185530,stroke-width:2px
-  style fluent fill:#217346,color:#fff,stroke:#185530,stroke-width:2px
-  style material fill:#217346,color:#fff,stroke:#185530,stroke-width:2px
-  style angmat fill:#c3002f,color:#fff,stroke:#9a0025,stroke-width:2px
-  style angprime fill:#c3002f,color:#fff,stroke:#9a0025,stroke-width:2px
-  style vuetify fill:#42b883,color:#fff,stroke:#35946b,stroke-width:2px
-  style vueprime fill:#42b883,color:#fff,stroke:#35946b,stroke-width:2px
-  style react fill:#1a4a2e,color:#fff,stroke:#185530,stroke-width:2px
-  style angular fill:#6a1b2a,color:#fff,stroke:#9a0025,stroke-width:2px
-  style vue fill:#2c6e49,color:#fff,stroke:#35946b,stroke-width:2px
-  style js fill:#1a4a2e,color:#fff,stroke:#185530,stroke-width:2px
-  style core fill:#0d0d14,color:#3ab876,stroke:#3ab876,stroke-width:2px
-  style reactui fill:none,stroke:none
-  style angularui fill:none,stroke:none
-  style vueui fill:none,stroke:none
-```
+<ArchitectureDiagram />
 
 ### Core Layer — `@alaarab/ogrid-core`
 

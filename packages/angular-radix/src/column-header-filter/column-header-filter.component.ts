@@ -153,6 +153,58 @@ export interface IColumnHeaderFilterProps {
               </div>
             </div>
           }
+          @case ('people') {
+            <div class="ogrid-header-filter__popover-body" style="width: 300px;">
+              @if (selectedUser()) {
+                <div class="ogrid-header-filter__people-selected">
+                  <div class="ogrid-header-filter__people-info-label">Currently filtered by:</div>
+                  <div class="ogrid-header-filter__people-card">
+                    <div class="ogrid-header-filter__people-avatar">{{ selectedUser()!.displayName?.[0] ?? '?' }}</div>
+                    <div class="ogrid-header-filter__people-details">
+                      <div>{{ selectedUser()!.displayName }}</div>
+                      <div class="ogrid-header-filter__people-email">{{ selectedUser()!.email }}</div>
+                    </div>
+                    <button class="ogrid-header-filter__btn" (click)="handleClearUser()" aria-label="Remove filter">&times;</button>
+                  </div>
+                </div>
+              }
+              <div style="padding: 12px 12px 4px;">
+                <input
+                  type="text"
+                  class="ogrid-header-filter__input"
+                  placeholder="Search for a person..."
+                  [value]="peopleSearchText()"
+                  (input)="onPeopleSearchInput($event)"
+                  (keydown)="$event.stopPropagation()"
+                  autocomplete="off"
+                />
+              </div>
+              <div class="ogrid-header-filter__options-list">
+                @if (isPeopleLoading() && peopleSearchText().trim()) {
+                  <div class="ogrid-header-filter__loading">Loading...</div>
+                } @else if (peopleSuggestions().length === 0 && peopleSearchText().trim()) {
+                  <div class="ogrid-header-filter__empty">No results found</div>
+                } @else if (peopleSearchText().trim()) {
+                  @for (user of peopleSuggestions(); track user.id || user.email || user.displayName) {
+                    <div class="ogrid-header-filter__people-option" (click)="handleUserSelect(user)">
+                      <div class="ogrid-header-filter__people-avatar">{{ user.displayName?.[0] ?? '?' }}</div>
+                      <div class="ogrid-header-filter__people-details">
+                        <div>{{ user.displayName }}</div>
+                        <div class="ogrid-header-filter__people-email">{{ user.email }}</div>
+                      </div>
+                    </div>
+                  }
+                } @else {
+                  <div class="ogrid-header-filter__empty">Type to search...</div>
+                }
+              </div>
+              @if (selectedUser()) {
+                <div style="padding: 8px 12px; border-top: 1px solid var(--ogrid-border, #e0e0e0);">
+                  <button class="ogrid-header-filter__action-btn" style="width: 100%;" (click)="handleClearUser()">Clear Filter</button>
+                </div>
+              }
+            </div>
+          }
           @case ('date') {
             <div class="ogrid-header-filter__popover-body" style="width: 280px;">
               <div style="padding: 12px;">
@@ -353,6 +405,61 @@ export interface IColumnHeaderFilterProps {
     .ogrid-header-filter__action-btn--primary:hover:not(:disabled) {
       opacity: 0.9;
     }
+    .ogrid-header-filter__people-selected {
+      padding: 12px;
+      border-bottom: 1px solid var(--ogrid-border, #e0e0e0);
+    }
+    .ogrid-header-filter__people-info-label {
+      font-size: 12px;
+      color: var(--ogrid-fg, #242424);
+      opacity: 0.7;
+      margin-bottom: 6px;
+    }
+    .ogrid-header-filter__people-card {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 6px 8px;
+      background: var(--ogrid-header-bg, #f5f5f5);
+      border-radius: 4px;
+    }
+    .ogrid-header-filter__people-avatar {
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      background: var(--ogrid-active-border, #0078d4);
+      color: #ffffff;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 12px;
+      font-weight: 600;
+      flex-shrink: 0;
+    }
+    .ogrid-header-filter__people-details {
+      flex: 1;
+      min-width: 0;
+      font-size: 13px;
+    }
+    .ogrid-header-filter__people-email {
+      font-size: 11px;
+      color: var(--ogrid-fg, #242424);
+      opacity: 0.6;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .ogrid-header-filter__people-option {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 12px;
+      cursor: pointer;
+      transition: background 0.15s ease;
+    }
+    .ogrid-header-filter__people-option:hover {
+      background: var(--ogrid-hover-bg, #f0f0f0);
+    }
   `],
   host: {
     '(document:click)': 'onDocumentClick($event)',
@@ -394,10 +501,17 @@ export class ColumnHeaderFilterComponent {
   readonly tempDateFrom = signal('');
   readonly tempDateTo = signal('');
 
+  // People filter
+  readonly peopleSearchText = signal('');
+  readonly peopleSuggestions = signal<UserLike[]>([]);
+  readonly isPeopleLoading = signal(false);
+  private peopleDebounceTimer: ReturnType<typeof setTimeout> | null = null;
+
   readonly hasActiveFilter = computed(() => {
     const ft = this.filterType();
     if (ft === 'text') return !!this.textValue();
     if (ft === 'multiSelect') return (this.selectedValues() ?? []).length > 0;
+    if (ft === 'people') return this.selectedUser() != null;
     if (ft === 'date') {
       const dv = this.dateValue();
       return !!dv && (!!dv.from || !!dv.to);
@@ -426,6 +540,10 @@ export class ColumnHeaderFilterComponent {
     } else if (this.filterType() === 'multiSelect') {
       this.tempSelected.set(new Set(this.selectedValues() ?? []));
       this.searchText.set('');
+    } else if (this.filterType() === 'people') {
+      this.peopleSearchText.set('');
+      this.peopleSuggestions.set([]);
+      this.isPeopleLoading.set(false);
     } else if (this.filterType() === 'date') {
       const dv = this.dateValue();
       this.tempDateFrom.set(dv?.from ?? '');
@@ -506,6 +624,41 @@ export class ColumnHeaderFilterComponent {
   handleMultiSelectClear(): void {
     this.tempSelected.set(new Set());
     this.onFilterChange()?.([]);
+    this.isFilterOpen.set(false);
+  }
+
+  // People filter handlers
+  onPeopleSearchInput(event: Event): void {
+    const value = (event.target as HTMLInputElement).value;
+    this.peopleSearchText.set(value);
+    if (this.peopleDebounceTimer) clearTimeout(this.peopleDebounceTimer);
+    const query = value.trim();
+    if (!query) {
+      this.peopleSuggestions.set([]);
+      this.isPeopleLoading.set(false);
+      return;
+    }
+    this.isPeopleLoading.set(true);
+    this.peopleDebounceTimer = setTimeout(() => {
+      const fn = this.peopleSearch();
+      if (!fn) return;
+      fn(query).then((results) => {
+        this.peopleSuggestions.set(results);
+        this.isPeopleLoading.set(false);
+      }).catch(() => {
+        this.peopleSuggestions.set([]);
+        this.isPeopleLoading.set(false);
+      });
+    }, 300);
+  }
+
+  handleUserSelect(user: UserLike): void {
+    this.onUserChange()?.(user);
+    this.isFilterOpen.set(false);
+  }
+
+  handleClearUser(): void {
+    this.onUserChange()?.(undefined);
     this.isFilterOpen.set(false);
   }
 

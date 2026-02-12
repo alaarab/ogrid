@@ -1,23 +1,58 @@
+/*
+ * OGrid StackBlitz Feature Demos
+ *
+ * GUIDELINES FOR CREATING EFFECTIVE DEMOS:
+ *
+ * 1. Showcase the unique aspects of each feature
+ *    - Don't just render a basic grid for every feature
+ *    - Highlight what makes THIS feature special
+ *    - Use data and interactions that demonstrate the feature's value
+ *
+ * 2. Use appropriate data for the feature
+ *    - Sorting: Mix of text, numbers, dates to show different sort behaviors
+ *    - Filtering: Diverse data with clear filter targets
+ *    - Editing: Editable fields with various input types
+ *    - Aggregations: Numeric data that makes sense to sum/average
+ *    - Virtual scrolling: Large datasets (1000+ rows)
+ *
+ * 3. Provide context in the demo
+ *    - Add a title or description explaining what to try
+ *    - Include examples of edge cases (empty states, max values, etc.)
+ *    - Show multiple scenarios when relevant
+ *
+ * 4. Keep the code clean and focused
+ *    - Minimize boilerplate
+ *    - Comment non-obvious configurations
+ *    - Use realistic but simple examples
+ *
+ * 5. Ensure UI library variants are functionally identical
+ *    - All three UI libraries (radix/fluent/material or radix/material/primeng or radix/vuetify/primevue)
+ *      should demonstrate the SAME feature behavior
+ *    - Only the import path and component styling should differ
+ *    - This ensures users can trust that all libraries have feature parity
+ */
+
 import {
   createReactProject,
   createAngularProject,
   createVueProject,
   createJSProject,
   type StackBlitzProject,
+  type ReactUILibrary,
+  type AngularUILibrary,
+  type VueUILibrary,
 } from './projects';
 
 export interface FeatureDemoSet {
-  React: StackBlitzProject;
-  Angular: StackBlitzProject;
-  Vue: StackBlitzProject;
+  React: Record<ReactUILibrary, StackBlitzProject>;
+  Angular: Record<AngularUILibrary, StackBlitzProject>;
+  Vue: Record<VueUILibrary, StackBlitzProject>;
   JS: StackBlitzProject;
 }
 
 // ── Sorting ──
 
-export const sorting: FeatureDemoSet = {
-  React: createReactProject(
-    `import { OGrid } from '@alaarab/ogrid-react-radix';
+const sortingReactCode = (pkg: string) => `import { OGrid } from '${pkg}';
 import { people, getRowId, type Person } from './data';
 
 const columns = [
@@ -31,12 +66,10 @@ const columns = [
 export default function App() {
   return <OGrid<Person> columns={columns} data={people} getRowId={getRowId} defaultPageSize={10} />;
 }
-`,
-    'OGrid Sorting — React',
-  ),
-  Angular: createAngularProject(
-    `import { Component } from '@angular/core';
-import { OGridComponent, type IColumnDef } from '@alaarab/ogrid-angular-material';
+`;
+
+const sortingAngularCode = (pkg: string) => `import { Component } from '@angular/core';
+import { OGridComponent, type IColumnDef } from '${pkg}';
 import { people, getRowId, type Person } from './data';
 
 @Component({
@@ -58,12 +91,10 @@ export class AppComponent {
     defaultPageSize: 10,
   };
 }
-`,
-    'OGrid Sorting — Angular',
-  ),
-  Vue: createVueProject(
-    `<script setup lang="ts">
-import { OGrid, type IColumnDef } from '@alaarab/ogrid-vue-vuetify';
+`;
+
+const sortingVueCode = (pkg: string, wrapper?: string) => {
+  const content = `import { OGrid, type IColumnDef } from '${pkg}';
 import { people, getRowId, type Person } from './data';
 
 const columns: IColumnDef<Person>[] = [
@@ -78,13 +109,30 @@ const gridProps = { columns, data: people, getRowId, defaultPageSize: 10 };
 </script>
 
 <template>
-  <v-app>
+  ${wrapper ? `<${wrapper}>` : ''}
     <OGrid :gridProps="gridProps" />
-  </v-app>
+  ${wrapper ? `</${wrapper}>` : ''}
 </template>
-`,
-    'OGrid Sorting — Vue',
-  ),
+`;
+  return `<script setup lang="ts">\n${content}`;
+};
+
+export const sorting: FeatureDemoSet = {
+  React: {
+    radix: createReactProject(sortingReactCode('@alaarab/ogrid-react-radix'), 'OGrid Sorting — React (Radix)', 'radix'),
+    fluent: createReactProject(sortingReactCode('@alaarab/ogrid-react-fluent'), 'OGrid Sorting — React (Fluent)', 'fluent'),
+    material: createReactProject(sortingReactCode('@alaarab/ogrid-react-material'), 'OGrid Sorting — React (Material)', 'material'),
+  },
+  Angular: {
+    radix: createAngularProject(sortingAngularCode('@alaarab/ogrid-angular-radix'), 'OGrid Sorting — Angular (Radix)', 'radix'),
+    material: createAngularProject(sortingAngularCode('@alaarab/ogrid-angular-material'), 'OGrid Sorting — Angular (Material)', 'material'),
+    primeng: createAngularProject(sortingAngularCode('@alaarab/ogrid-angular-primeng'), 'OGrid Sorting — Angular (PrimeNG)', 'primeng'),
+  },
+  Vue: {
+    radix: createVueProject(sortingVueCode('@alaarab/ogrid-vue-radix'), 'OGrid Sorting — Vue (Radix)', 'radix'),
+    vuetify: createVueProject(sortingVueCode('@alaarab/ogrid-vue-vuetify', 'v-app'), 'OGrid Sorting — Vue (Vuetify)', 'vuetify'),
+    primevue: createVueProject(sortingVueCode('@alaarab/ogrid-vue-primevue'), 'OGrid Sorting — Vue (PrimeVue)', 'primevue'),
+  },
   JS: createJSProject(
     `import { OGrid } from '@alaarab/ogrid-js';
 import '@alaarab/ogrid-js/styles';
@@ -109,9 +157,7 @@ const grid = new OGrid(document.getElementById('grid')!, {
 
 // ── Filtering ──
 
-export const filtering: FeatureDemoSet = {
-  React: createReactProject(
-    `import { OGrid } from '@alaarab/ogrid-react-radix';
+const filteringReactCode = (pkg: string) => `import { OGrid } from '${pkg}';
 import { people, getRowId, type Person } from './data';
 
 const columns = [
@@ -127,12 +173,10 @@ const columns = [
 export default function App() {
   return <OGrid<Person> columns={columns} data={people} getRowId={getRowId} defaultPageSize={10} />;
 }
-`,
-    'OGrid Filtering — React',
-  ),
-  Angular: createAngularProject(
-    `import { Component } from '@angular/core';
-import { OGridComponent, type IColumnDef } from '@alaarab/ogrid-angular-material';
+`;
+
+const filteringAngularCode = (pkg: string) => `import { Component } from '@angular/core';
+import { OGridComponent, type IColumnDef } from '${pkg}';
 import { people, getRowId, type Person } from './data';
 
 @Component({
@@ -156,12 +200,10 @@ export class AppComponent {
     defaultPageSize: 10,
   };
 }
-`,
-    'OGrid Filtering — Angular',
-  ),
-  Vue: createVueProject(
-    `<script setup lang="ts">
-import { OGrid, type IColumnDef } from '@alaarab/ogrid-vue-vuetify';
+`;
+
+const filteringVueCode = (pkg: string, wrapper?: string) => {
+  const content = `import { OGrid, type IColumnDef } from '${pkg}';
 import { people, getRowId, type Person } from './data';
 
 const columns: IColumnDef<Person>[] = [
@@ -178,13 +220,30 @@ const gridProps = { columns, data: people, getRowId, defaultPageSize: 10 };
 </script>
 
 <template>
-  <v-app>
+  ${wrapper ? `<${wrapper}>` : ''}
     <OGrid :gridProps="gridProps" />
-  </v-app>
+  ${wrapper ? `</${wrapper}>` : ''}
 </template>
-`,
-    'OGrid Filtering — Vue',
-  ),
+`;
+  return `<script setup lang="ts">\n${content}`;
+};
+
+export const filtering: FeatureDemoSet = {
+  React: {
+    radix: createReactProject(filteringReactCode('@alaarab/ogrid-react-radix'), 'OGrid Filtering — React (Radix)', 'radix'),
+    fluent: createReactProject(filteringReactCode('@alaarab/ogrid-react-fluent'), 'OGrid Filtering — React (Fluent)', 'fluent'),
+    material: createReactProject(filteringReactCode('@alaarab/ogrid-react-material'), 'OGrid Filtering — React (Material)', 'material'),
+  },
+  Angular: {
+    radix: createAngularProject(filteringAngularCode('@alaarab/ogrid-angular-radix'), 'OGrid Filtering — Angular (Radix)', 'radix'),
+    material: createAngularProject(filteringAngularCode('@alaarab/ogrid-angular-material'), 'OGrid Filtering — Angular (Material)', 'material'),
+    primeng: createAngularProject(filteringAngularCode('@alaarab/ogrid-angular-primeng'), 'OGrid Filtering — Angular (PrimeNG)', 'primeng'),
+  },
+  Vue: {
+    radix: createVueProject(filteringVueCode('@alaarab/ogrid-vue-radix'), 'OGrid Filtering — Vue (Radix)', 'radix'),
+    vuetify: createVueProject(filteringVueCode('@alaarab/ogrid-vue-vuetify', 'v-app'), 'OGrid Filtering — Vue (Vuetify)', 'vuetify'),
+    primevue: createVueProject(filteringVueCode('@alaarab/ogrid-vue-primevue'), 'OGrid Filtering — Vue (PrimeVue)', 'primevue'),
+  },
   JS: createJSProject(
     `import { OGrid } from '@alaarab/ogrid-js';
 import '@alaarab/ogrid-js/styles';
@@ -323,10 +382,8 @@ const grid = new OGrid(document.getElementById('grid')!, {
 
 // ── Editing ──
 
-export const editing: FeatureDemoSet = {
-  React: createReactProject(
-    `import { useState } from 'react';
-import { OGrid, useUndoRedo } from '@alaarab/ogrid-react-radix';
+const editingReactCode = (pkg: string) => `import { useState } from 'react';
+import { OGrid, useUndoRedo } from '${pkg}';
 import { people, getRowId, type Person } from './data';
 
 const DEPTS = ['Engineering', 'Marketing', 'Sales', 'Finance', 'Operations'];
@@ -358,12 +415,10 @@ export default function App() {
     />
   );
 }
-`,
-    'OGrid Editing — React',
-  ),
-  Angular: createAngularProject(
-    `import { Component } from '@angular/core';
-import { OGridComponent, type IColumnDef } from '@alaarab/ogrid-angular-material';
+`;
+
+const editingAngularCode = (pkg: string) => `import { Component } from '@angular/core';
+import { OGridComponent, type IColumnDef } from '${pkg}';
 import { people, getRowId, type Person } from './data';
 
 const DEPTS = ['Engineering', 'Marketing', 'Sales', 'Finance', 'Operations'];
@@ -392,13 +447,11 @@ export class AppComponent {
     editable: true,
   };
 }
-`,
-    'OGrid Editing — Angular',
-  ),
-  Vue: createVueProject(
-    `<script setup lang="ts">
-import { ref } from 'vue';
-import { OGrid, type IColumnDef } from '@alaarab/ogrid-vue-vuetify';
+`;
+
+const editingVueCode = (pkg: string, wrapper?: string) => {
+  const content = `import { ref } from 'vue';
+import { OGrid, type IColumnDef } from '${pkg}';
 import { people, getRowId, type Person } from './data';
 
 const DEPTS = ['Engineering', 'Marketing', 'Sales', 'Finance', 'Operations'];
@@ -422,13 +475,30 @@ const gridProps = {
 </script>
 
 <template>
-  <v-app>
+  ${wrapper ? `<${wrapper}>` : ''}
     <OGrid :gridProps="gridProps" />
-  </v-app>
+  ${wrapper ? `</${wrapper}>` : ''}
 </template>
-`,
-    'OGrid Editing — Vue',
-  ),
+`;
+  return `<script setup lang="ts">\n${content}`;
+};
+
+export const editing: FeatureDemoSet = {
+  React: {
+    radix: createReactProject(editingReactCode('@alaarab/ogrid-react-radix'), 'OGrid Editing — React (Radix)', 'radix'),
+    fluent: createReactProject(editingReactCode('@alaarab/ogrid-react-fluent'), 'OGrid Editing — React (Fluent)', 'fluent'),
+    material: createReactProject(editingReactCode('@alaarab/ogrid-react-material'), 'OGrid Editing — React (Material)', 'material'),
+  },
+  Angular: {
+    radix: createAngularProject(editingAngularCode('@alaarab/ogrid-angular-radix'), 'OGrid Editing — Angular (Radix)', 'radix'),
+    material: createAngularProject(editingAngularCode('@alaarab/ogrid-angular-material'), 'OGrid Editing — Angular (Material)', 'material'),
+    primeng: createAngularProject(editingAngularCode('@alaarab/ogrid-angular-primeng'), 'OGrid Editing — Angular (PrimeNG)', 'primeng'),
+  },
+  Vue: {
+    radix: createVueProject(editingVueCode('@alaarab/ogrid-vue-radix'), 'OGrid Editing — Vue (Radix)', 'radix'),
+    vuetify: createVueProject(editingVueCode('@alaarab/ogrid-vue-vuetify', 'v-app'), 'OGrid Editing — Vue (Vuetify)', 'vuetify'),
+    primevue: createVueProject(editingVueCode('@alaarab/ogrid-vue-primevue'), 'OGrid Editing — Vue (PrimeVue)', 'primevue'),
+  },
   JS: createJSProject(
     `import { OGrid } from '@alaarab/ogrid-js';
 import '@alaarab/ogrid-js/styles';

@@ -1,4 +1,4 @@
-import { Component, Input, Output, EventEmitter, ViewChild } from '@angular/core';
+import { Component, input, computed, viewChild, ChangeDetectionStrategy } from '@angular/core';
 import { ButtonModule } from 'primeng/button';
 import { MenuModule } from 'primeng/menu';
 import type { Menu } from 'primeng/menu';
@@ -13,6 +13,7 @@ import { COLUMN_HEADER_MENU_ITEMS } from '@alaarab/ogrid-core';
   selector: 'column-header-menu',
   standalone: true,
   imports: [ButtonModule, MenuModule],
+  changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <button
       pButton
@@ -20,12 +21,12 @@ import { COLUMN_HEADER_MENU_ITEMS } from '@alaarab/ogrid-core';
       icon="pi pi-ellipsis-v"
       class="p-button-text p-button-sm column-header-menu-trigger"
       (click)="menu.toggle($event)"
-      [attr.aria-label]="'Column options for ' + columnId"
+      [attr.aria-label]="'Column options for ' + columnId()"
     ></button>
 
     <p-menu
       #menu
-      [model]="menuModel"
+      [model]="menuModel()"
       [popup]="true"
       appendTo="body"
     ></p-menu>
@@ -45,71 +46,50 @@ import { COLUMN_HEADER_MENU_ITEMS } from '@alaarab/ogrid-core';
   `],
 })
 export class ColumnHeaderMenuComponent {
-  @Input() columnId!: string;
-  @Input() set canPinLeft(value: boolean) {
-    this._canPinLeft = value;
-    this.updateMenuModel();
-  }
-  @Input() set canPinRight(value: boolean) {
-    this._canPinRight = value;
-    this.updateMenuModel();
-  }
-  @Input() set canUnpin(value: boolean) {
-    this._canUnpin = value;
-    this.updateMenuModel();
-  }
+  readonly columnId = input.required<string>();
+  readonly canPinLeft = input<boolean>(true);
+  readonly canPinRight = input<boolean>(true);
+  readonly canUnpin = input<boolean>(false);
 
-  @Output() pinLeft = new EventEmitter<void>();
-  @Output() pinRight = new EventEmitter<void>();
-  @Output() unpin = new EventEmitter<void>();
+  readonly onPinLeft = input<(() => void) | undefined>(undefined);
+  readonly onPinRight = input<(() => void) | undefined>(undefined);
+  readonly onUnpin = input<(() => void) | undefined>(undefined);
 
-  @ViewChild('menu') menu!: Menu;
+  readonly menuRef = viewChild<Menu>('menu');
 
-  private _canPinLeft = true;
-  private _canPinRight = true;
-  private _canUnpin = false;
-
-  menuModel: MenuItem[] = [];
-
-  ngOnInit(): void {
-    this.updateMenuModel();
-  }
-
-  private updateMenuModel(): void {
-    this.menuModel = [
-      {
-        label: COLUMN_HEADER_MENU_ITEMS[0].label,
-        disabled: !this._canPinLeft,
-        command: () => this.handlePinLeft(),
-      },
-      {
-        label: COLUMN_HEADER_MENU_ITEMS[1].label,
-        disabled: !this._canPinRight,
-        command: () => this.handlePinRight(),
-      },
-      {
-        label: COLUMN_HEADER_MENU_ITEMS[2].label,
-        disabled: !this._canUnpin,
-        command: () => this.handleUnpin(),
-      },
-    ];
-  }
+  readonly menuModel = computed<MenuItem[]>(() => [
+    {
+      label: COLUMN_HEADER_MENU_ITEMS[0].label,
+      disabled: !this.canPinLeft(),
+      command: () => this.handlePinLeft(),
+    },
+    {
+      label: COLUMN_HEADER_MENU_ITEMS[1].label,
+      disabled: !this.canPinRight(),
+      command: () => this.handlePinRight(),
+    },
+    {
+      label: COLUMN_HEADER_MENU_ITEMS[2].label,
+      disabled: !this.canUnpin(),
+      command: () => this.handleUnpin(),
+    },
+  ]);
 
   handlePinLeft(): void {
-    if (this._canPinLeft) {
-      this.pinLeft.emit();
+    if (this.canPinLeft()) {
+      this.onPinLeft()?.();
     }
   }
 
   handlePinRight(): void {
-    if (this._canPinRight) {
-      this.pinRight.emit();
+    if (this.canPinRight()) {
+      this.onPinRight()?.();
     }
   }
 
   handleUnpin(): void {
-    if (this._canUnpin) {
-      this.unpin.emit();
+    if (this.canUnpin()) {
+      this.onUnpin()?.();
     }
   }
 }
