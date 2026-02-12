@@ -27,6 +27,8 @@ import type {
 import {
   useDataGridState,
   useColumnResize,
+  useColumnReorder,
+  useVirtualScroll,
   useLatestRef,
   getHeaderFilterConfig,
   getCellRenderDescriptor,
@@ -170,7 +172,7 @@ const EMPTY_STATE_SX = { py: 4, px: 2, textAlign: 'center', borderTop: 1, border
 const LOADING_OVERLAY_SX = {
   position: 'absolute', inset: 0, zIndex: 2,
   display: 'flex', alignItems: 'center', justifyContent: 'center',
-  bgcolor: 'rgba(255,255,255,0.7)',
+  background: 'var(--ogrid-loading-bg, rgba(255,255,255,0.7))',
 } as const;
 const LOADING_INNER_SX = {
   display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 1,
@@ -287,6 +289,11 @@ function DataGridTableInner<T>(props: IOGridDataGridProps<T>): React.ReactElemen
     loadingMessage = 'Loading\u2026',
     'aria-label': ariaLabel,
     'aria-labelledby': ariaLabelledBy,
+    columnOrder,
+    onColumnOrderChange,
+    columnReorder,
+    virtualScroll,
+    pinnedColumns,
   } = props;
 
   const fitToContent = layoutMode === 'content';
@@ -298,6 +305,25 @@ function DataGridTableInner<T>(props: IOGridDataGridProps<T>): React.ReactElemen
   const { handleResizeStart, getColumnWidth } = useColumnResize<T>({
     columnSizingOverrides,
     setColumnSizingOverrides,
+  });
+
+  const { isDragging: isReorderDragging, dropIndicatorX, handleHeaderMouseDown } = useColumnReorder<T>({
+    columns: visibleCols as IColumnDef<T>[],
+    columnOrder,
+    onColumnOrderChange,
+    enabled: columnReorder === true,
+    pinnedColumns,
+    wrapperRef,
+  });
+
+  const virtualScrollEnabled = virtualScroll?.enabled === true;
+  const virtualRowHeight = virtualScroll?.rowHeight ?? 36;
+  const { visibleRange } = useVirtualScroll({
+    totalRows: items.length,
+    rowHeight: virtualRowHeight,
+    enabled: virtualScrollEnabled,
+    overscan: virtualScroll?.overscan,
+    containerRef: wrapperRef,
   });
 
   // Pre-compute per-column layout (tdSx, widths) so GridRow doesn't recalculate per-cell
@@ -486,9 +512,16 @@ function DataGridTableInner<T>(props: IOGridDataGridProps<T>): React.ReactElemen
                         key={col.columnId}
                         component="th"
                         scope="col"
+                        data-column-id={col.columnId}
                         rowSpan={headerRows.length > 1 ? headerRows.length - rowIdx : undefined}
                         sx={headerSx}
-                        style={{ minWidth: col.minWidth ?? DEFAULT_MIN_COLUMN_WIDTH, width: columnWidth, maxWidth: columnWidth }}
+                        style={{
+                          minWidth: col.minWidth ?? DEFAULT_MIN_COLUMN_WIDTH,
+                          width: columnWidth,
+                          maxWidth: columnWidth,
+                          ...(columnReorder ? { cursor: isReorderDragging ? 'grabbing' : 'grab' } : undefined),
+                        }}
+                        onMouseDown={columnReorder ? (e: React.MouseEvent) => handleHeaderMouseDown(col.columnId, e) : undefined}
                       >
                         <ColumnHeaderFilter {...getHeaderFilterConfig(col, headerFilterInput)} />
                         <Box onMouseDown={(e) => handleResizeStart(e, col)} sx={RESIZE_HANDLE_SX} />
@@ -500,33 +533,81 @@ function DataGridTableInner<T>(props: IOGridDataGridProps<T>): React.ReactElemen
             </TableHead>
             {!showEmptyInGrid && (
               <TableBody>
-                {items.map((item, rowIndex) => {
-                  const rowIdStr = getRowId(item);
-                  return (
-                    <GridRow
-                      key={rowIdStr}
-                      item={item}
-                      rowIndex={rowIndex}
-                      rowId={rowIdStr}
-                      isSelected={selectedRowIds.has(rowIdStr)}
-                      columnLayouts={columnLayouts as ColumnLayout<unknown>[]}
-                      renderCellContent={renderCellContent as GridRowProps['renderCellContent']}
-                      handleSingleRowClick={handleSingleRowClick}
-                      handleRowCheckboxChange={handleRowCheckboxChange}
-                      lastMouseShiftRef={lastMouseShiftRef}
-                      hasCheckboxCol={hasCheckboxCol}
-                      selectionRange={selectionRange}
-                      activeCell={interaction.activeCell}
-                      cutRange={cutRange}
-                      copyRange={copyRange}
-                      isDragging={isDragging}
-                      editingRowId={editingCell?.rowId ?? null}
-                    />
-                  );
-                })}
+                {virtualScrollEnabled && visibleRange.offsetTop > 0 && (
+                  <TableRow style={{ height: visibleRange.offsetTop }} aria-hidden />
+                )}
+                {(virtualScrollEnabled
+                  ? items.slice(visibleRange.startIndex, visibleRange.endIndex + 1).map((item, i) => {
+                      const rowIndex = visibleRange.startIndex + i;
+                      const rowIdStr = getRowId(item);
+                      return (
+                        <GridRow
+                          key={rowIdStr}
+                          item={item}
+                          rowIndex={rowIndex}
+                          rowId={rowIdStr}
+                          isSelected={selectedRowIds.has(rowIdStr)}
+                          columnLayouts={columnLayouts as ColumnLayout<unknown>[]}
+                          renderCellContent={renderCellContent as GridRowProps['renderCellContent']}
+                          handleSingleRowClick={handleSingleRowClick}
+                          handleRowCheckboxChange={handleRowCheckboxChange}
+                          lastMouseShiftRef={lastMouseShiftRef}
+                          hasCheckboxCol={hasCheckboxCol}
+                          selectionRange={selectionRange}
+                          activeCell={interaction.activeCell}
+                          cutRange={cutRange}
+                          copyRange={copyRange}
+                          isDragging={isDragging}
+                          editingRowId={editingCell?.rowId ?? null}
+                        />
+                      );
+                    })
+                  : items.map((item, rowIndex) => {
+                      const rowIdStr = getRowId(item);
+                      return (
+                        <GridRow
+                          key={rowIdStr}
+                          item={item}
+                          rowIndex={rowIndex}
+                          rowId={rowIdStr}
+                          isSelected={selectedRowIds.has(rowIdStr)}
+                          columnLayouts={columnLayouts as ColumnLayout<unknown>[]}
+                          renderCellContent={renderCellContent as GridRowProps['renderCellContent']}
+                          handleSingleRowClick={handleSingleRowClick}
+                          handleRowCheckboxChange={handleRowCheckboxChange}
+                          lastMouseShiftRef={lastMouseShiftRef}
+                          hasCheckboxCol={hasCheckboxCol}
+                          selectionRange={selectionRange}
+                          activeCell={interaction.activeCell}
+                          cutRange={cutRange}
+                          copyRange={copyRange}
+                          isDragging={isDragging}
+                          editingRowId={editingCell?.rowId ?? null}
+                        />
+                      );
+                    })
+                )}
+                {virtualScrollEnabled && visibleRange.offsetBottom > 0 && (
+                  <TableRow style={{ height: visibleRange.offsetBottom }} aria-hidden />
+                )}
               </TableBody>
             )}
           </Table>
+          {isReorderDragging && dropIndicatorX != null && (
+            <Box
+              sx={{
+                position: 'absolute',
+                top: 0,
+                bottom: 0,
+                width: 3,
+                bgcolor: 'var(--ogrid-primary, #217346)',
+                pointerEvents: 'none',
+                zIndex: 100,
+                transition: 'left 0.05s',
+                left: dropIndicatorX - (wrapperRef.current?.getBoundingClientRect().left ?? 0),
+              }}
+            />
+          )}
           <MarchingAntsOverlay
             containerRef={tableContainerRef}
             selectionRange={selectionRange}

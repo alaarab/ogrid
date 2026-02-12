@@ -3,14 +3,16 @@ import type { ISelectionRange } from '@alaarab/ogrid-core';
 
 const MENU_STYLE: Partial<CSSStyleDeclaration> = {
   position: 'fixed',
-  backgroundColor: 'white',
-  border: '1px solid #ccc',
-  boxShadow: '0 2px 8px rgba(0,0,0,0.15)',
+  backgroundColor: 'var(--ogrid-bg, #fff)',
+  border: '1px solid var(--ogrid-border, #e0e0e0)',
+  boxShadow: 'var(--ogrid-shadow, 0 4px 16px rgba(0, 0, 0, 0.12))',
+  borderRadius: '6px',
   zIndex: '10000',
   minWidth: '180px',
   padding: '4px 0',
   fontFamily: 'system-ui, -apple-system, sans-serif',
   fontSize: '14px',
+  color: 'var(--ogrid-fg, #242424)',
 };
 
 const ITEM_STYLE: Partial<CSSStyleDeclaration> = {
@@ -23,7 +25,7 @@ const ITEM_STYLE: Partial<CSSStyleDeclaration> = {
 
 const DIVIDER_STYLE: Partial<CSSStyleDeclaration> = {
   height: '1px',
-  backgroundColor: '#e0e0e0',
+  backgroundColor: 'var(--ogrid-border, #e0e0e0)',
   margin: '4px 0',
 };
 
@@ -74,7 +76,7 @@ export class ContextMenu {
         const shortcut = document.createElement('span');
         shortcut.textContent = formatShortcut(item.shortcut);
         shortcut.style.marginLeft = '20px';
-        shortcut.style.color = '#666';
+        shortcut.style.color = 'var(--ogrid-muted, #666)';
         shortcut.style.fontSize = '12px';
         menuItem.appendChild(shortcut);
       }
@@ -85,14 +87,15 @@ export class ContextMenu {
         (item.disabledWhenNoSelection && selectionRange == null);
 
       if (isDisabled) {
-        menuItem.style.color = '#aaa';
+        menuItem.style.color = 'var(--ogrid-fg-muted, rgba(0, 0, 0, 0.4))';
+        menuItem.style.opacity = '0.5';
         menuItem.style.cursor = 'not-allowed';
       } else {
         menuItem.addEventListener('mouseenter', () => {
-          menuItem.style.backgroundColor = '#f0f0f0';
+          menuItem.style.backgroundColor = 'var(--ogrid-bg-hover, #f5f5f5)';
         });
         menuItem.addEventListener('mouseleave', () => {
-          menuItem.style.backgroundColor = 'white';
+          menuItem.style.backgroundColor = '';
         });
         menuItem.addEventListener('click', () => {
           this.handleItemClick(item.id);

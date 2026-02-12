@@ -170,6 +170,26 @@ export interface ISideBarDef {
   position?: 'left' | 'right';
 }
 
+// --- Virtual scrolling ---
+
+/** Configuration for virtual scrolling. */
+export interface IVirtualScrollConfig {
+  /** Enable virtual scrolling (default: false). */
+  enabled?: boolean;
+  /** Fixed row height in pixels (required when enabled). */
+  rowHeight?: number;
+  /** Number of extra rows to render above/below the visible area (default: 5). */
+  overscan?: number;
+}
+
+// --- Column reordering ---
+
+/** Configuration for column reordering via drag-and-drop. */
+export interface IColumnReorderConfig {
+  /** Enable column reordering (default: false). */
+  enabled?: boolean;
+}
+
 /** Imperative grid API exposed via ref. */
 export interface IOGridApi<T> {
   /** Set row data (client-side only; no-op when using dataSource). */
@@ -200,4 +220,10 @@ export interface IOGridApi<T> {
   getDisplayedRows: () => T[];
   /** Re-trigger a data fetch (server-side only; no-op for client-side). */
   refreshData: () => void;
+  /** Scroll to a specific row by index (virtual scrolling). */
+  scrollToRow: (index: number, options?: { align?: 'start' | 'center' | 'end' }) => void;
+  /** Get the current column display order (array of column ids). */
+  getColumnOrder: () => string[];
+  /** Set the column display order. */
+  setColumnOrder: (order: string[]) => void;
 }

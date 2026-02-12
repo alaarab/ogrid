@@ -34,6 +34,8 @@ export type {
   ISelectionRange,
   SideBarPanelId,
   ISideBarDef,
+  IVirtualScrollConfig,
+  IColumnReorderConfig,
   IOGridApi,
 } from './dataGridTypes';
 
