@@ -79,58 +79,93 @@ export interface UseOGridResult<T> {
 export function useOGrid<T>(
   props: Ref<IOGridProps<T>>
 ): UseOGridResult<T> {
-  // --- Destructure props reactively ---
-  const columnsProp = computed(() => props.value.columns);
-  const getRowId = computed(() => props.value.getRowId);
-  const data = computed(() => ('data' in props.value ? props.value.data : undefined) as T[] | undefined);
-  const dataSource = computed(() => ('dataSource' in props.value ? props.value.dataSource : undefined));
-  const controlledPage = computed(() => props.value.page);
-  const controlledPageSize = computed(() => props.value.pageSize);
-  const controlledSort = computed(() => props.value.sort);
-  const controlledFilters = computed(() => props.value.filters);
-  const controlledVisibleColumns = computed(() => props.value.visibleColumns);
-  const controlledLoading = computed(() => props.value.isLoading);
-  const onPageChange = computed(() => props.value.onPageChange);
-  const onPageSizeChange = computed(() => props.value.onPageSizeChange);
-  const onSortChange = computed(() => props.value.onSortChange);
-  const onFiltersChange = computed(() => props.value.onFiltersChange);
-  const onVisibleColumnsChange = computed(() => props.value.onVisibleColumnsChange);
-  const columnOrder = computed(() => props.value.columnOrder);
-  const onColumnOrderChange = computed(() => props.value.onColumnOrderChange);
-  const onColumnResized = computed(() => props.value.onColumnResized);
-  const onColumnPinned = computed(() => props.value.onColumnPinned);
-  const defaultPageSize = computed(() => props.value.defaultPageSize ?? DEFAULT_PAGE_SIZE);
-  const defaultSortBy = computed(() => props.value.defaultSortBy);
-  const defaultSortDirection = computed(() => props.value.defaultSortDirection ?? 'asc');
-  const entityLabelPlural = computed(() => props.value.entityLabelPlural ?? 'items');
-  const columnChooserProp = computed(() => props.value.columnChooser);
-  const onFirstDataRendered = computed(() => props.value.onFirstDataRendered);
-  const onError = computed(() => props.value.onError);
+  // --- Destructure props reactively (grouped by change frequency) ---
+
+  // Group 1: Column-related (changes rarely)
+  const columnProps = computed(() => {
+    const p = props.value;
+    return {
+      columns: p.columns,
+      columnOrder: p.columnOrder,
+      onColumnOrderChange: p.onColumnOrderChange,
+      onColumnResized: p.onColumnResized,
+      onColumnPinned: p.onColumnPinned,
+      columnChooser: p.columnChooser,
+    };
+  });
+
+  // Group 2: Data identity (stable or rarely changes)
+  const dataProps = computed(() => {
+    const p = props.value;
+    return {
+      getRowId: p.getRowId,
+      data: ('data' in p ? p.data : undefined) as T[] | undefined,
+      dataSource: ('dataSource' in p ? p.dataSource : undefined),
+    };
+  });
+
+  // Group 3: Controlled state (changes on user interaction)
+  const controlledState = computed(() => {
+    const p = props.value;
+    return {
+      page: p.page,
+      pageSize: p.pageSize,
+      sort: p.sort,
+      filters: p.filters,
+      visibleColumns: p.visibleColumns,
+      isLoading: p.isLoading,
+    };
+  });
+
+  // Group 4: Callbacks (stable references)
+  const callbacks = computed(() => {
+    const p = props.value;
+    return {
+      onPageChange: p.onPageChange,
+      onPageSizeChange: p.onPageSizeChange,
+      onSortChange: p.onSortChange,
+      onFiltersChange: p.onFiltersChange,
+      onVisibleColumnsChange: p.onVisibleColumnsChange,
+      onFirstDataRendered: p.onFirstDataRendered,
+      onError: p.onError,
+    };
+  });
+
+  // Group 5: Config defaults (stable)
+  const defaults = computed(() => {
+    const p = props.value;
+    return {
+      defaultPageSize: p.defaultPageSize ?? DEFAULT_PAGE_SIZE,
+      defaultSortBy: p.defaultSortBy,
+      defaultSortDirection: (p.defaultSortDirection ?? 'asc') as 'asc' | 'desc',
+      entityLabelPlural: p.entityLabelPlural ?? 'items',
+    };
+  });
 
   // Resolve column chooser placement
   const columnChooserPlacement = computed<ColumnChooserPlacement>(() =>
-    columnChooserProp.value === false ? 'none'
-    : columnChooserProp.value === 'sidebar' ? 'sidebar'
+    columnProps.value.columnChooser === false ? 'none'
+    : columnProps.value.columnChooser === 'sidebar' ? 'sidebar'
     : 'toolbar'
   );
 
-  const columns = computed(() => flattenColumns(columnsProp.value));
-  const isServerSide = computed(() => dataSource.value != null);
+  const columns = computed(() => flattenColumns(columnProps.value.columns));
+  const isServerSide = computed(() => dataProps.value.dataSource != null);
   const isClientSide = computed(() => !isServerSide.value);
 
   const internalData = ref<T[]>([]) as Ref<T[]>;
   const internalLoading = ref(false);
 
-  const displayData = computed(() => data.value ?? internalData.value);
-  const displayLoading = computed(() => controlledLoading.value ?? internalLoading.value);
+  const displayData = computed(() => dataProps.value.data ?? internalData.value);
+  const displayLoading = computed(() => controlledState.value.isLoading ?? internalLoading.value);
 
-  const defaultSortField = computed(() => defaultSortBy.value ?? columns.value[0]?.columnId ?? '');
+  const defaultSortField = computed(() => defaults.value.defaultSortBy ?? columns.value[0]?.columnId ?? '');
 
   const internalPage = ref(1);
-  const internalPageSize = ref(defaultPageSize.value);
+  const internalPageSize = ref(defaults.value.defaultPageSize);
   const internalSort = ref<{ field: string; direction: 'asc' | 'desc' }>({
     field: defaultSortField.value,
-    direction: defaultSortDirection.value,
+    direction: defaults.value.defaultSortDirection,
   });
   const internalFilters = ref<IFilters>({});
   const internalVisibleColumns = ref<Set<string>>((() => {
@@ -143,38 +178,38 @@ export function useOGrid<T>(
   const columnWidthOverrides = ref<Record<string, number>>({});
   const pinnedOverrides = ref<Record<string, 'left' | 'right'>>({});
 
-  const page = computed(() => controlledPage.value ?? internalPage.value);
-  const pageSize = computed(() => controlledPageSize.value ?? internalPageSize.value);
-  const sort = computed(() => controlledSort.value ?? internalSort.value);
-  const filters = computed(() => controlledFilters.value ?? internalFilters.value);
-  const visibleColumns = computed(() => controlledVisibleColumns.value ?? internalVisibleColumns.value);
+  const page = computed(() => controlledState.value.page ?? internalPage.value);
+  const pageSize = computed(() => controlledState.value.pageSize ?? internalPageSize.value);
+  const sort = computed(() => controlledState.value.sort ?? internalSort.value);
+  const filters = computed(() => controlledState.value.filters ?? internalFilters.value);
+  const visibleColumns = computed(() => controlledState.value.visibleColumns ?? internalVisibleColumns.value);
 
   const setPage = (p: number) => {
-    if (controlledPage.value === undefined) internalPage.value = p;
-    onPageChange.value?.(p);
+    if (controlledState.value.page === undefined) internalPage.value = p;
+    callbacks.value.onPageChange?.(p);
   };
 
   const setPageSize = (size: number) => {
-    if (controlledPageSize.value === undefined) internalPageSize.value = size;
-    onPageSizeChange.value?.(size);
+    if (controlledState.value.pageSize === undefined) internalPageSize.value = size;
+    callbacks.value.onPageSizeChange?.(size);
     setPage(1);
   };
 
   const setSort = (s: { field: string; direction: 'asc' | 'desc' }) => {
-    if (controlledSort.value === undefined) internalSort.value = s;
-    onSortChange.value?.(s);
+    if (controlledState.value.sort === undefined) internalSort.value = s;
+    callbacks.value.onSortChange?.(s);
     setPage(1);
   };
 
   const setFilters = (f: IFilters) => {
-    if (controlledFilters.value === undefined) internalFilters.value = f;
-    onFiltersChange.value?.(f);
+    if (controlledState.value.filters === undefined) internalFilters.value = f;
+    callbacks.value.onFiltersChange?.(f);
     setPage(1);
   };
 
   const setVisibleColumns = (cols: Set<string>) => {
-    if (controlledVisibleColumns.value === undefined) internalVisibleColumns.value = cols;
-    onVisibleColumnsChange.value?.(cols);
+    if (controlledState.value.visibleColumns === undefined) internalVisibleColumns.value = cols;
+    callbacks.value.onVisibleColumnsChange?.(cols);
   };
 
   const handleSort = (columnKey: string) => {
@@ -208,12 +243,12 @@ export function useOGrid<T>(
 
   const multiSelectFilterFields = computed(() => getMultiSelectFilterFields(columns.value));
 
-  const filterOptionsSource = computed(() => dataSource.value ?? { fetchFilterOptions: undefined });
+  const filterOptionsSource = computed(() => dataProps.value.dataSource ?? { fetchFilterOptions: undefined });
 
   const { filterOptions: serverFilterOptions, loadingOptions: loadingFilterOptions } =
     useFilterOptions(filterOptionsSource, multiSelectFilterFields);
 
-  const hasServerFilterOptions = computed(() => dataSource.value?.fetchFilterOptions != null);
+  const hasServerFilterOptions = computed(() => dataProps.value.dataSource?.fetchFilterOptions != null);
   const clientFilterOptions = computed(() => {
     if (hasServerFilterOptions.value) return serverFilterOptions.value;
     return deriveFilterOptionsFromData(displayData.value, columns.value);
@@ -243,15 +278,15 @@ export function useOGrid<T>(
   const refreshCounter = ref(0);
 
   watch(
-    [isServerSide, dataSource, page, pageSize, () => sort.value.field, () => sort.value.direction, filters, refreshCounter],
+    [isServerSide, () => dataProps.value.dataSource, page, pageSize, () => sort.value.field, () => sort.value.direction, filters, refreshCounter],
     () => {
-      if (!isServerSide.value || !dataSource.value) {
+      if (!isServerSide.value || !dataProps.value.dataSource) {
         if (!isServerSide.value) loading.value = false;
         return;
       }
       const id = ++fetchId;
       loading.value = true;
-      dataSource.value
+      dataProps.value.dataSource
         .fetchPage({
           page: page.value,
           pageSize: pageSize.value,
@@ -265,7 +300,7 @@ export function useOGrid<T>(
         })
         .catch((err) => {
           if (id !== fetchId) return;
-          onError.value?.(err);
+          callbacks.value.onError?.(err);
           serverItems.value = [];
           serverTotalCount.value = 0;
         })
@@ -292,7 +327,7 @@ export function useOGrid<T>(
   watch(displayItems, (items) => {
     if (!firstDataRendered && items.length > 0) {
       firstDataRendered = true;
-      onFirstDataRendered.value?.();
+      callbacks.value.onFirstDataRendered?.();
     }
   });
 
@@ -311,7 +346,7 @@ export function useOGrid<T>(
     const sb = props.value.statusBar;
     if (!sb) return undefined;
     if (typeof sb === 'object') return sb;
-    const totalData = isClientSide.value ? (data.value?.length ?? 0) : serverTotalCount.value;
+    const totalData = isClientSide.value ? (dataProps.value.data?.length ?? 0) : serverTotalCount.value;
     const filteredData = displayTotalCount.value;
     return {
       totalCount: totalData,
@@ -323,7 +358,7 @@ export function useOGrid<T>(
 
   const handleColumnResized = (columnId: string, width: number) => {
     columnWidthOverrides.value = { ...columnWidthOverrides.value, [columnId]: width };
-    onColumnResized.value?.(columnId, width);
+    columnProps.value.onColumnResized?.(columnId, width);
   };
 
   const handleColumnPinned = (columnId: string, pinned: 'left' | 'right' | null) => {
@@ -333,7 +368,7 @@ export function useOGrid<T>(
     } else {
       pinnedOverrides.value = { ...pinnedOverrides.value, [columnId]: pinned };
     }
-    onColumnPinned.value?.(columnId, pinned);
+    columnProps.value.onColumnPinned?.(columnId, pinned);
   };
 
   // --- Side bar ---
@@ -382,52 +417,56 @@ export function useOGrid<T>(
 
   // --- Build result objects ---
 
-  const dataGridProps = computed<IOGridDataGridProps<T>>(() => ({
-    items: displayItems.value,
-    columns: columnsProp.value,
-    getRowId: getRowId.value,
-    sortBy: sort.value.field,
-    sortDirection: sort.value.direction,
-    onColumnSort: handleSort,
-    visibleColumns: visibleColumns.value,
-    columnOrder: columnOrder.value,
-    onColumnOrderChange: onColumnOrderChange.value,
-    onColumnResized: handleColumnResized,
-    onColumnPinned: handleColumnPinned,
-    pinnedColumns: pinnedOverrides.value,
-    initialColumnWidths: columnWidthOverrides.value,
-    freezeRows: props.value.freezeRows,
-    freezeCols: props.value.freezeCols,
-    editable: props.value.editable,
-    cellSelection: props.value.cellSelection,
-    onCellValueChanged: props.value.onCellValueChanged,
-    onUndo: props.value.onUndo,
-    onRedo: props.value.onRedo,
-    canUndo: props.value.canUndo,
-    canRedo: props.value.canRedo,
-    rowSelection: props.value.rowSelection ?? 'none',
-    selectedRows: effectiveSelectedRows.value,
-    onSelectionChange: handleSelectionChange,
-    statusBar: statusBarConfig.value,
-    isLoading: isLoadingResolved.value,
-    filters: filters.value,
-    onFilterChange: handleFilterChange,
-    filterOptions: clientFilterOptions.value,
-    loadingFilterOptions: dataSource.value?.fetchFilterOptions ? loadingFilterOptions.value : EMPTY_LOADING_OPTIONS,
-    peopleSearch: dataSource.value?.searchPeople,
-    getUserByEmail: dataSource.value?.getUserByEmail,
-    layoutMode: props.value.layoutMode,
-    suppressHorizontalScroll: props.value.suppressHorizontalScroll,
-    virtualScroll: props.value.virtualScroll,
-    'aria-label': props.value['aria-label'],
-    'aria-labelledby': props.value['aria-labelledby'],
-    emptyState: {
-      hasActiveFilters: hasActiveFilters.value,
-      onClearAll: clearAllFilters,
-      message: props.value.emptyState?.message,
-      render: props.value.emptyState?.render,
-    },
-  }));
+  const dataGridProps = computed<IOGridDataGridProps<T>>(() => {
+    const p = props.value;
+    const ds = dataProps.value.dataSource;
+    return {
+      items: displayItems.value,
+      columns: columnProps.value.columns,
+      getRowId: dataProps.value.getRowId,
+      sortBy: sort.value.field,
+      sortDirection: sort.value.direction,
+      onColumnSort: handleSort,
+      visibleColumns: visibleColumns.value,
+      columnOrder: columnProps.value.columnOrder,
+      onColumnOrderChange: columnProps.value.onColumnOrderChange,
+      onColumnResized: handleColumnResized,
+      onColumnPinned: handleColumnPinned,
+      pinnedColumns: pinnedOverrides.value,
+      initialColumnWidths: columnWidthOverrides.value,
+      freezeRows: p.freezeRows,
+      freezeCols: p.freezeCols,
+      editable: p.editable,
+      cellSelection: p.cellSelection,
+      onCellValueChanged: p.onCellValueChanged,
+      onUndo: p.onUndo,
+      onRedo: p.onRedo,
+      canUndo: p.canUndo,
+      canRedo: p.canRedo,
+      rowSelection: p.rowSelection ?? 'none',
+      selectedRows: effectiveSelectedRows.value,
+      onSelectionChange: handleSelectionChange,
+      statusBar: statusBarConfig.value,
+      isLoading: isLoadingResolved.value,
+      filters: filters.value,
+      onFilterChange: handleFilterChange,
+      filterOptions: clientFilterOptions.value,
+      loadingFilterOptions: ds?.fetchFilterOptions ? loadingFilterOptions.value : EMPTY_LOADING_OPTIONS,
+      peopleSearch: ds?.searchPeople,
+      getUserByEmail: ds?.getUserByEmail,
+      layoutMode: p.layoutMode,
+      suppressHorizontalScroll: p.suppressHorizontalScroll,
+      virtualScroll: p.virtualScroll,
+      'aria-label': p['aria-label'],
+      'aria-labelledby': p['aria-labelledby'],
+      emptyState: {
+        hasActiveFilters: hasActiveFilters.value,
+        onClearAll: clearAllFilters,
+        message: p.emptyState?.message,
+        render: p.emptyState?.render,
+      },
+    };
+  });
 
   const pagination = computed<UseOGridPagination>(() => ({
     page: page.value,
@@ -436,7 +475,7 @@ export function useOGrid<T>(
     setPage,
     setPageSize,
     pageSizeOptions: props.value.pageSizeOptions,
-    entityLabelPlural: entityLabelPlural.value,
+    entityLabelPlural: defaults.value.entityLabelPlural,
   }));
 
   const columnChooser = computed<UseOGridColumnChooser>(() => ({
@@ -468,7 +507,7 @@ export function useOGrid<T>(
     getColumnState: () => ({
       visibleColumns: Array.from(visibleColumns.value),
       sort: sort.value,
-      columnOrder: columnOrder.value ?? undefined,
+      columnOrder: columnProps.value.columnOrder ?? undefined,
       columnWidths: Object.keys(columnWidthOverrides.value).length > 0 ? columnWidthOverrides.value : undefined,
       filters: Object.keys(filters.value).length > 0 ? filters.value : undefined,
       pinnedColumns: Object.keys(pinnedOverrides.value).length > 0 ? pinnedOverrides.value : undefined,
@@ -476,7 +515,7 @@ export function useOGrid<T>(
     applyColumnState: (state: Partial<IGridColumnState>) => {
       if (state.visibleColumns) setVisibleColumns(new Set(state.visibleColumns));
       if (state.sort) setSort(state.sort);
-      if (state.columnOrder && onColumnOrderChange.value) onColumnOrderChange.value(state.columnOrder);
+      if (state.columnOrder && columnProps.value.onColumnOrderChange) columnProps.value.onColumnOrderChange(state.columnOrder);
       if (state.columnWidths) columnWidthOverrides.value = state.columnWidths;
       if (state.filters) setFilters(state.filters);
       if (state.pinnedColumns) pinnedOverrides.value = state.pinnedColumns;
@@ -487,7 +526,7 @@ export function useOGrid<T>(
       if (selectedRowsProp.value === undefined) internalSelectedRows.value = new Set(rowIds);
     },
     selectAll: () => {
-      const allIds = new Set(displayItems.value.map((item) => getRowId.value(item)));
+      const allIds = new Set(displayItems.value.map((item) => dataProps.value.getRowId(item)));
       if (selectedRowsProp.value === undefined) internalSelectedRows.value = allIds;
       props.value.onSelectionChange?.({ selectedRowIds: Array.from(allIds), selectedItems: displayItems.value });
     },
@@ -496,10 +535,10 @@ export function useOGrid<T>(
       props.value.onSelectionChange?.({ selectedRowIds: [], selectedItems: [] });
     },
     clearFilters: () => setFilters({}),
-    clearSort: () => setSort({ field: defaultSortField.value, direction: defaultSortDirection.value }),
+    clearSort: () => setSort({ field: defaultSortField.value, direction: defaults.value.defaultSortDirection }),
     resetGridState: (options?: { keepSelection?: boolean }) => {
       setFilters({});
-      setSort({ field: defaultSortField.value, direction: defaultSortDirection.value });
+      setSort({ field: defaultSortField.value, direction: defaults.value.defaultSortDirection });
       if (!options?.keepSelection) {
         if (selectedRowsProp.value === undefined) internalSelectedRows.value = new Set();
         props.value.onSelectionChange?.({ selectedRowIds: [], selectedItems: [] });
@@ -513,9 +552,9 @@ export function useOGrid<T>(
       // No-op at orchestration level — DataGridTable components implement
       // this via useVirtualScroll.scrollToRow when virtual scrolling is active.
     },
-    getColumnOrder: () => columnOrder.value ?? columns.value.map((c) => c.columnId),
+    getColumnOrder: () => columnProps.value.columnOrder ?? columns.value.map((c) => c.columnId),
     setColumnOrder: (order: string[]) => {
-      onColumnOrderChange.value?.(order);
+      columnProps.value.onColumnOrderChange?.(order);
     },
   }));
 
