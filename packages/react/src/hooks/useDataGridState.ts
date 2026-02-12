@@ -247,9 +247,14 @@ export function useDataGridState<T>(
       ? flatColumns.filter((c) => visibleColumns.has(c.columnId))
       : flatColumns;
     if (!columnOrder?.length) return filtered;
+    // Build index map for O(1) lookup instead of repeated O(n) indexOf
+    const orderMap = new Map<string, number>();
+    for (let i = 0; i < columnOrder.length; i++) {
+      orderMap.set(columnOrder[i], i);
+    }
     return [...filtered].sort((a, b) => {
-      const ia = columnOrder.indexOf(a.columnId);
-      const ib = columnOrder.indexOf(b.columnId);
+      const ia = orderMap.get(a.columnId) ?? -1;
+      const ib = orderMap.get(b.columnId) ?? -1;
       if (ia === -1 && ib === -1) return 0;
       if (ia === -1) return 1;
       if (ib === -1) return -1;
@@ -631,7 +636,14 @@ export function useDataGridState<T>(
       canPinRight: headerMenuResult.canPinRight,
       canUnpin: headerMenuResult.canUnpin,
     },
-  }), [pinningResult, headerMenuResult]);
+  }), [
+    pinningResult.pinnedColumns, pinningResult.pinColumn, pinningResult.unpinColumn,
+    pinningResult.isPinned, pinningResult.computeLeftOffsets, pinningResult.computeRightOffsets,
+    headerMenuResult.isOpen, headerMenuResult.openForColumn, headerMenuResult.anchorElement,
+    headerMenuResult.open, headerMenuResult.close, headerMenuResult.handlePinLeft,
+    headerMenuResult.handlePinRight, headerMenuResult.handleUnpin,
+    headerMenuResult.canPinLeft, headerMenuResult.canPinRight, headerMenuResult.canUnpin,
+  ]);
 
   return {
     layout: layoutState,

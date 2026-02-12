@@ -160,9 +160,14 @@ export function useDataGridState<T>(
     const order = columnOrderProp.value;
     const filtered = vis ? flatColumns.value.filter((c) => vis.has(c.columnId)) : flatColumns.value;
     if (!order?.length) return filtered;
+    // Build index map for O(1) lookup instead of repeated O(n) indexOf
+    const orderMap = new Map<string, number>();
+    for (let i = 0; i < order.length; i++) {
+      orderMap.set(order[i], i);
+    }
     return [...filtered].sort((a, b) => {
-      const ia = order.indexOf(a.columnId);
-      const ib = order.indexOf(b.columnId);
+      const ia = orderMap.get(a.columnId) ?? -1;
+      const ib = orderMap.get(b.columnId) ?? -1;
       if (ia === -1 && ib === -1) return 0;
       if (ia === -1) return 1;
       if (ib === -1) return -1;

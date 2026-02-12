@@ -76,11 +76,9 @@ export class GridContextMenuComponent {
   };
 
   constructor() {
-    effect(() => {
-      // Re-register listeners when component renders
-      document.addEventListener('mousedown', this.clickOutsideHandler, true);
-      document.addEventListener('keydown', this.keyDownHandler, true);
-    });
+    // Register listeners once on init (no signal dependencies needed)
+    document.addEventListener('mousedown', this.clickOutsideHandler, true);
+    document.addEventListener('keydown', this.keyDownHandler, true);
 
     this.destroyRef.onDestroy(() => {
       document.removeEventListener('mousedown', this.clickOutsideHandler, true);

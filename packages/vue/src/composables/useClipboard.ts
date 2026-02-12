@@ -21,7 +21,6 @@ export interface UseClipboardResult {
   cutRange: ShallowRef<ISelectionRange | null>;
   copyRange: ShallowRef<ISelectionRange | null>;
   clearClipboardRanges: () => void;
-  cutRangeRef: Ref<ISelectionRange | null>;
 }
 
 /**
@@ -40,7 +39,6 @@ export function useClipboard<T>(params: UseClipboardParams<T>): UseClipboardResu
     endBatch,
   } = params;
 
-  const cutRangeRef = ref<ISelectionRange | null>(null);
   const cutRange = shallowRef<ISelectionRange | null>(null);
   const copyRange = shallowRef<ISelectionRange | null>(null);
   const internalClipboardRef = ref<string | null>(null);
@@ -85,7 +83,6 @@ export function useClipboard<T>(params: UseClipboardParams<T>): UseClipboardResu
     const range = getEffectiveRange();
     if (range == null || onCellValueChanged.value == null) return;
     const norm = normalizeSelectionRange(range);
-    cutRangeRef.value = norm;
     cutRange.value = norm;
     copyRange.value = null;
     handleCopy();
@@ -138,8 +135,8 @@ export function useClipboard<T>(params: UseClipboardParams<T>): UseClipboardResu
         });
       }
     }
-    if (cutRangeRef.value) {
-      const cut = cutRangeRef.value;
+    if (cutRange.value) {
+      const cut = cutRange.value;
       for (let r = cut.startRow; r <= cut.endRow; r++) {
         for (let c = cut.startCol; c <= cut.endCol; c++) {
           if (r >= currentItems.length || c >= currentCols.length) continue;
@@ -161,7 +158,6 @@ export function useClipboard<T>(params: UseClipboardParams<T>): UseClipboardResu
           });
         }
       }
-      cutRangeRef.value = null;
       cutRange.value = null;
     }
     endBatch?.();
@@ -171,8 +167,7 @@ export function useClipboard<T>(params: UseClipboardParams<T>): UseClipboardResu
   const clearClipboardRanges = () => {
     copyRange.value = null;
     cutRange.value = null;
-    cutRangeRef.value = null;
   };
 
-  return { handleCopy, handleCut, handlePaste, cutRange, copyRange, clearClipboardRanges, cutRangeRef };
+  return { handleCopy, handleCut, handlePaste, cutRange, copyRange, clearClipboardRanges };
 }
