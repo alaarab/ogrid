@@ -19,7 +19,7 @@ Pass a `dataSource` instead of a `data` array to delegate sorting, filtering, an
 ## Quick Example
 
 <Tabs groupId="framework">
-  <TabItem value="radix" label="Radix (Lightweight)" default>
+  <TabItem value="react" label="React" default>
 
 ```tsx
 import { OGrid } from '@alaarab/ogrid-react-radix';
@@ -59,13 +59,20 @@ function App() {
 }
 ```
 
-  </TabItem>
-  <TabItem value="fluent" label="Fluent UI">
+:::tip Switching UI libraries
+The `OGrid` component has the same props across all React UI packages. To switch, just change the import:
 
-```tsx
-import { OGrid } from '@alaarab/ogrid-react-fluent';
-import type { IDataSource, IFetchParams, IPageResult } from '@alaarab/ogrid-react-fluent';
-import { FluentProvider, webLightTheme } from '@fluentui/react-components';
+- **Radix** (lightweight, default): `from '@alaarab/ogrid-react-radix'`
+- **Fluent UI** (Microsoft 365 / SPFx): `from '@alaarab/ogrid-react-fluent'` — wrap in `<FluentProvider>`
+- **Material UI** (MUI v7): `from '@alaarab/ogrid-react-material'` — wrap in `<ThemeProvider>`
+:::
+
+  </TabItem>
+  <TabItem value="angular" label="Angular">
+
+```typescript
+import { Component } from '@angular/core';
+import { OGridComponent, type IDataSource, type IFetchParams, type IPageResult } from '@alaarab/ogrid-angular-material';
 
 interface Employee {
   id: number;
@@ -85,34 +92,40 @@ const dataSource: IDataSource<Employee> = {
       }),
     });
     const res = await fetch(`/api/employees?${query}`);
-    return res.json(); // { items: Employee[], totalCount: number }
+    return res.json();
   },
 };
 
-function App() {
-  return (
-    <FluentProvider theme={webLightTheme}>
-      <OGrid
-        columns={columns}
-        dataSource={dataSource}
-        getRowId={(e) => e.id}
-        defaultPageSize={25}
-      />
-    </FluentProvider>
-  );
+@Component({
+  standalone: true,
+  imports: [OGridComponent],
+  template: `<ogrid [gridProps]="gridProps" />`
+})
+export class GridComponent {
+  gridProps = {
+    columns: columns,
+    dataSource,
+    getRowId: (e: Employee) => e.id,
+    defaultPageSize: 25,
+  };
 }
 ```
 
+:::tip Switching UI libraries
+Same component API across Angular packages. To switch, just change the import:
+
+- **Angular Material**: `from '@alaarab/ogrid-angular-material'`
+- **PrimeNG**: `from '@alaarab/ogrid-angular-primeng'`
+
+All components are standalone — no NgModule required.
+:::
+
   </TabItem>
-  <TabItem value="material" label="Material UI">
+  <TabItem value="vue" label="Vue">
 
-```tsx
-import { OGrid } from '@alaarab/ogrid-react-material';
-import type { IDataSource, IFetchParams, IPageResult } from '@alaarab/ogrid-react-material';
-import { ThemeProvider, createTheme } from '@mui/material/styles';
-import CssBaseline from '@mui/material/CssBaseline';
-
-const theme = createTheme();
+```vue
+<script setup lang="ts">
+import { OGrid, type IDataSource, type IFetchParams, type IPageResult } from '@alaarab/ogrid-vue-vuetify';
 
 interface Employee {
   id: number;
@@ -132,24 +145,29 @@ const dataSource: IDataSource<Employee> = {
       }),
     });
     const res = await fetch(`/api/employees?${query}`);
-    return res.json(); // { items: Employee[], totalCount: number }
+    return res.json();
   },
 };
 
-function App() {
-  return (
-    <ThemeProvider theme={theme}>
-      <CssBaseline />
-      <OGrid
-        columns={columns}
-        dataSource={dataSource}
-        getRowId={(e) => e.id}
-        defaultPageSize={25}
-      />
-    </ThemeProvider>
-  );
-}
+const gridProps = {
+  columns,
+  dataSource,
+  getRowId: (e: Employee) => e.id,
+  defaultPageSize: 25,
+};
+</script>
+
+<template>
+  <OGrid :gridProps="gridProps" />
+</template>
 ```
+
+:::tip Switching UI libraries
+Same component API across Vue packages. To switch, just change the import:
+
+- **Vuetify**: `from '@alaarab/ogrid-vue-vuetify'` — wrap in `<v-app>` for theming
+- **PrimeVue**: `from '@alaarab/ogrid-vue-primevue'`
+:::
 
   </TabItem>
   <TabItem value="js" label="Vanilla JS">
