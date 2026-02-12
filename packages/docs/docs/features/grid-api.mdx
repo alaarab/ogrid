@@ -19,7 +19,7 @@ The `IOGridApi` ref gives you imperative control over the grid: set data, manage
 ## Quick Example
 
 <Tabs groupId="framework">
-  <TabItem value="radix" label="Radix (Lightweight)" default>
+  <TabItem value="react" label="React" default>
 
 ```tsx
 import { OGrid } from '@alaarab/ogrid-react-radix';
@@ -57,14 +57,20 @@ function App() {
 }
 ```
 
-  </TabItem>
-  <TabItem value="fluent" label="Fluent UI">
+:::tip Switching UI libraries
+The `OGrid` component has the same props across all React UI packages. To switch, just change the import:
 
-```tsx
-import { OGrid } from '@alaarab/ogrid-react-fluent';
-import { FluentProvider, webLightTheme } from '@fluentui/react-components';
-import { useRef } from 'react';
-import type { IOGridApi } from '@alaarab/ogrid-react-fluent';
+- **Radix** (lightweight, default): `from '@alaarab/ogrid-react-radix'`
+- **Fluent UI** (Microsoft 365 / SPFx): `from '@alaarab/ogrid-react-fluent'` — wrap in `<FluentProvider>`
+- **Material UI** (MUI v7): `from '@alaarab/ogrid-react-material'` — wrap in `<ThemeProvider>`
+:::
+
+  </TabItem>
+  <TabItem value="angular" label="Angular">
+
+```typescript
+import { Component } from '@angular/core';
+import { OGridComponent, type IOGridApi } from '@alaarab/ogrid-angular-material';
 
 interface Row {
   id: number;
@@ -73,41 +79,45 @@ interface Row {
   salary: number;
 }
 
-function App() {
-  const gridRef = useRef<IOGridApi<Row>>(null);
-
-  const handleRefresh = async () => {
-    gridRef.current?.setLoading(true);
-    const data = await fetchEmployees();
-    gridRef.current?.setRowData(data);
-    gridRef.current?.setLoading(false);
+@Component({
+  standalone: true,
+  imports: [OGridComponent],
+  template: `
+    <button (click)="handleRefresh()">Refresh</button>
+    <ogrid [gridProps]="gridProps" />
+  `
+})
+export class GridComponent {
+  gridProps = {
+    columns: columns,
+    data: initialData,
+    getRowId: (r: Row) => r.id,
   };
 
-  return (
-    <FluentProvider theme={webLightTheme}>
-      <button onClick={handleRefresh}>Refresh</button>
-      <OGrid
-        ref={gridRef}
-        columns={columns}
-        data={initialData}
-        getRowId={(r) => r.id}
-      />
-    </FluentProvider>
-  );
+  async handleRefresh() {
+    // Use the grid API via ViewChild or service
+    const data = await fetchEmployees();
+    this.gridProps = { ...this.gridProps, data };
+  }
 }
 ```
 
+:::tip Switching UI libraries
+Same component API across Angular packages. To switch, just change the import:
+
+- **Angular Material**: `from '@alaarab/ogrid-angular-material'`
+- **PrimeNG**: `from '@alaarab/ogrid-angular-primeng'`
+
+All components are standalone — no NgModule required.
+:::
+
   </TabItem>
-  <TabItem value="material" label="Material UI">
+  <TabItem value="vue" label="Vue">
 
-```tsx
-import { OGrid } from '@alaarab/ogrid-react-material';
-import { ThemeProvider, createTheme } from '@mui/material/styles';
-import CssBaseline from '@mui/material/CssBaseline';
-import { useRef } from 'react';
-import type { IOGridApi } from '@alaarab/ogrid-react-material';
-
-const theme = createTheme();
+```vue
+<script setup lang="ts">
+import { ref } from 'vue';
+import { OGrid } from '@alaarab/ogrid-vue-vuetify';
 
 interface Row {
   id: number;
@@ -116,30 +126,32 @@ interface Row {
   salary: number;
 }
 
-function App() {
-  const gridRef = useRef<IOGridApi<Row>>(null);
+const data = ref<Row[]>(initialData);
 
-  const handleRefresh = async () => {
-    gridRef.current?.setLoading(true);
-    const data = await fetchEmployees();
-    gridRef.current?.setRowData(data);
-    gridRef.current?.setLoading(false);
-  };
+const gridProps = {
+  columns,
+  data: data.value,
+  getRowId: (r: Row) => r.id,
+};
 
-  return (
-    <ThemeProvider theme={theme}>
-      <CssBaseline />
-      <button onClick={handleRefresh}>Refresh</button>
-      <OGrid
-        ref={gridRef}
-        columns={columns}
-        data={initialData}
-        getRowId={(r) => r.id}
-      />
-    </ThemeProvider>
-  );
+async function handleRefresh() {
+  const fresh = await fetchEmployees();
+  data.value = fresh;
 }
+</script>
+
+<template>
+  <button @click="handleRefresh">Refresh</button>
+  <OGrid :gridProps="gridProps" />
+</template>
 ```
+
+:::tip Switching UI libraries
+Same component API across Vue packages. To switch, just change the import:
+
+- **Vuetify**: `from '@alaarab/ogrid-vue-vuetify'` — wrap in `<v-app>` for theming
+- **PrimeVue**: `from '@alaarab/ogrid-vue-primevue'`
+:::
 
   </TabItem>
   <TabItem value="js" label="Vanilla JS">

@@ -2,10 +2,11 @@ import React from 'react';
 import { OGrid } from '@alaarab/ogrid-react-radix';
 import { LiveDemo } from '../LiveDemo';
 import { people, getRowId, toolbarColumns } from './demoData';
+import { sidebar } from '../../stackblitz/featureDemos';
 
 export default function SideBarDemo() {
   return (
-    <LiveDemo height={480} title="Click the tab icons on the right to open Columns or Filters panels">
+    <LiveDemo height={480} title="Click the tab icons on the right to open Columns or Filters panels" stackblitz={sidebar}>
       <OGrid
         columns={toolbarColumns}
         data={people}
