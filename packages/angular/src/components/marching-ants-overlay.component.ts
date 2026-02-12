@@ -1,0 +1,176 @@
+import { Component, input, effect, signal, DestroyRef, inject } from '@angular/core';
+import { CommonModule } from '@angular/common';
+import type { ISelectionRange } from '../types';
+
+interface OverlayRect {
+  top: number;
+  left: number;
+  width: number;
+  height: number;
+}
+
+function measureRange(
+  container: HTMLElement,
+  range: ISelectionRange,
+  colOffset: number,
+): OverlayRect | null {
+  const startGlobalCol = range.startCol + colOffset;
+  const endGlobalCol = range.endCol + colOffset;
+
+  const topLeft = container.querySelector(
+    `[data-row-index="${range.startRow}"][data-col-index="${startGlobalCol}"]`,
+  ) as HTMLElement | null;
+  const bottomRight = container.querySelector(
+    `[data-row-index="${range.endRow}"][data-col-index="${endGlobalCol}"]`,
+  ) as HTMLElement | null;
+
+  if (!topLeft || !bottomRight) return null;
+
+  const cRect = container.getBoundingClientRect();
+  const tlRect = topLeft.getBoundingClientRect();
+  const brRect = bottomRight.getBoundingClientRect();
+
+  return {
+    top: tlRect.top - cRect.top,
+    left: tlRect.left - cRect.left,
+    width: brRect.right - tlRect.left,
+    height: brRect.bottom - tlRect.top,
+  };
+}
+
+function ensureKeyframes(): void {
+  if (typeof document === 'undefined') return;
+  if (document.getElementById('ogrid-marching-ants-keyframes')) return;
+  const style = document.createElement('style');
+  style.id = 'ogrid-marching-ants-keyframes';
+  style.textContent = '@keyframes ogrid-marching-ants{to{stroke-dashoffset:-8}}';
+  document.head.appendChild(style);
+}
+
+@Component({
+  selector: 'ogrid-marching-ants-overlay',
+  standalone: true,
+  imports: [CommonModule],
+  template: `
+    @if (selRect() && !clipRangeMatchesSel()) {
+      <svg
+        [style.position]="'absolute'"
+        [style.top.px]="selRect()!.top"
+        [style.left.px]="selRect()!.left"
+        [style.width.px]="selRect()!.width"
+        [style.height.px]="selRect()!.height"
+        [style.pointer-events]="'none'"
+        [style.z-index]="4"
+        [style.overflow]="'visible'"
+        aria-hidden="true"
+      >
+        <rect
+          x="1" y="1"
+          [attr.width]="max0(selRect()!.width - 2)"
+          [attr.height]="max0(selRect()!.height - 2)"
+          fill="none"
+          stroke="var(--ogrid-selection, #217346)"
+          stroke-width="2"
+        />
+      </svg>
+    }
+    @if (clipRect()) {
+      <svg
+        [style.position]="'absolute'"
+        [style.top.px]="clipRect()!.top"
+        [style.left.px]="clipRect()!.left"
+        [style.width.px]="clipRect()!.width"
+        [style.height.px]="clipRect()!.height"
+        [style.pointer-events]="'none'"
+        [style.z-index]="5"
+        [style.overflow]="'visible'"
+        aria-hidden="true"
+      >
+        <rect
+          x="1" y="1"
+          [attr.width]="max0(clipRect()!.width - 2)"
+          [attr.height]="max0(clipRect()!.height - 2)"
+          fill="none"
+          stroke="var(--ogrid-selection, #217346)"
+          stroke-width="2"
+          stroke-dasharray="4 4"
+          style="animation: ogrid-marching-ants 0.5s linear infinite"
+        />
+      </svg>
+    }
+  `,
+})
+export class MarchingAntsOverlayComponent {
+  private destroyRef = inject(DestroyRef);
+
+  readonly containerEl = input.required<HTMLElement | null>();
+  readonly selectionRange = input<ISelectionRange | null>(null);
+  readonly copyRange = input<ISelectionRange | null>(null);
+  readonly cutRange = input<ISelectionRange | null>(null);
+  readonly colOffset = input<number>(0);
+
+  readonly selRect = signal<OverlayRect | null>(null);
+  readonly clipRect = signal<OverlayRect | null>(null);
+
+  private rafId = 0;
+  private resizeObserver: ResizeObserver | null = null;
+
+  constructor() {
+    ensureKeyframes();
+
+    effect(() => {
+      const container = this.containerEl();
+      const selRange = this.selectionRange();
+      const clipRange = this.copyRange() ?? this.cutRange();
+      const colOff = this.colOffset();
+
+      if (this.resizeObserver) {
+        this.resizeObserver.disconnect();
+        this.resizeObserver = null;
+      }
+
+      if (!selRange && !clipRange) {
+        this.selRect.set(null);
+        this.clipRect.set(null);
+        return;
+      }
+
+      const measureAll = () => {
+        if (!container) {
+          this.selRect.set(null);
+          this.clipRect.set(null);
+          return;
+        }
+        this.selRect.set(selRange ? measureRange(container, selRange, colOff) : null);
+        this.clipRect.set(clipRange ? measureRange(container, clipRange, colOff) : null);
+      };
+
+      if (this.rafId) cancelAnimationFrame(this.rafId);
+      this.rafId = requestAnimationFrame(measureAll);
+
+      if (container) {
+        this.resizeObserver = new ResizeObserver(measureAll);
+        this.resizeObserver.observe(container);
+      }
+    });
+
+    this.destroyRef.onDestroy(() => {
+      if (this.rafId) cancelAnimationFrame(this.rafId);
+      if (this.resizeObserver) this.resizeObserver.disconnect();
+    });
+  }
+
+  clipRangeMatchesSel(): boolean {
+    const selRange = this.selectionRange();
+    const clipRange = this.copyRange() ?? this.cutRange();
+    return selRange != null && clipRange != null &&
+      selRange.startRow === clipRange.startRow &&
+      selRange.startCol === clipRange.startCol &&
+      selRange.endRow === clipRange.endRow &&
+      selRange.endCol === clipRange.endCol;
+  }
+
+  max0(n: number): number {
+    return Math.max(0, n);
+  }
+}

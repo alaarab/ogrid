@@ -6,7 +6,7 @@ description: What is OGrid and why use it
 
 # Overview
 
-OGrid is a lightweight, open-source data grid library that delivers spreadsheet-grade features without the enterprise paywall. It ships with three React UI implementations -- Radix, Fluent UI, and Material UI -- plus a vanilla JS package, all powered by a shared TypeScript core.
+OGrid is a lightweight, open-source data grid library that delivers spreadsheet-grade features without the enterprise paywall. It ships with React, Angular, and Vue adapters -- each with multiple UI library implementations -- plus a vanilla JS package, all powered by a shared TypeScript core.
 
 ## Why OGrid?
 
@@ -14,49 +14,79 @@ Most production-grade React data grids fall into one of two camps: free but limi
 
 - **Free and MIT-licensed.** Every feature is included. No enterprise tier, no feature gating.
 - **20+ built-in features.** Sorting, filtering, pagination, cell editing, clipboard, undo/redo, fill handle, row selection, cell range selection, column pinning, column groups, CSV export, context menu, keyboard navigation, status bar, and more.
-- **Three UI frameworks.** Pick the one that matches your design system -- or switch later with zero logic changes.
+- **Multiple frameworks.** React, Angular, and Vue adapters with UI library choices for each -- switch later with zero logic changes.
 - **TypeScript-first.** Full strict-mode TypeScript with exported types for every prop, event, and API method.
 - **Lightweight.** The Radix package has no heavy framework dependency. Fluent and Material packages use their respective component libraries as peer dependencies.
 
 ## Architecture
 
-OGrid is built on a **3-layer architecture**: a pure TypeScript core, a React hooks layer, and thin UI shells. No duplicated logic, no drift.
+OGrid is built on a **3-layer architecture**: a pure TypeScript core, framework adapter layers (React hooks, Angular services, Vue composables), and thin UI shells. No duplicated logic, no drift.
 
 ```mermaid
 flowchart TD
-  subgraph ui [" "]
+  subgraph reactui ["React UI"]
     direction LR
-    radix("<b>@alaarab/ogrid-react-radix</b><br/><small>Radix Primitives</small>")
-    fluent("<b>@alaarab/ogrid-react-fluent</b><br/><small>Fluent UI v9</small>")
-    material("<b>@alaarab/ogrid-react-material</b><br/><small>MUI v7</small>")
+    radix("<b>ogrid-react-radix</b><br/><small>Radix Primitives</small>")
+    fluent("<b>ogrid-react-fluent</b><br/><small>Fluent UI v9</small>")
+    material("<b>ogrid-react-material</b><br/><small>MUI v7</small>")
+  end
+
+  subgraph angularui ["Angular UI"]
+    direction LR
+    angmat("<b>ogrid-angular-material</b><br/><small>Angular Material v21</small>")
+    angprime("<b>ogrid-angular-primeng</b><br/><small>PrimeNG v21</small>")
+  end
+
+  subgraph vueui ["Vue UI"]
+    direction LR
+    vuetify("<b>ogrid-vue-vuetify</b><br/><small>Vuetify 3</small>")
+    vueprime("<b>ogrid-vue-primevue</b><br/><small>PrimeVue 4</small>")
   end
 
   radix --> react
   fluent --> react
   material --> react
+  angmat --> angular
+  angprime --> angular
+  vuetify --> vue
+  vueprime --> vue
   react --> core
+  angular --> core
+  vue --> core
   js --> core
 
-  react("<b>@alaarab/ogrid-react</b><br/><small>Hooks · Headless Components · Utilities</small>")
+  react("<b>@alaarab/ogrid-react</b><br/><small>Hooks · Headless Components</small>")
+  angular("<b>@alaarab/ogrid-angular</b><br/><small>Services · Signals · Components</small>")
+  vue("<b>@alaarab/ogrid-vue</b><br/><small>Composables · Utilities</small>")
   js("<b>@alaarab/ogrid-js</b><br/><small>Vanilla JS Grid</small>")
   core("<b>@alaarab/ogrid-core</b><br/><small>Types · Algorithms · Utilities</small>")
 
   style radix fill:#217346,color:#fff,stroke:#185530,stroke-width:2px
   style fluent fill:#217346,color:#fff,stroke:#185530,stroke-width:2px
   style material fill:#217346,color:#fff,stroke:#185530,stroke-width:2px
+  style angmat fill:#c3002f,color:#fff,stroke:#9a0025,stroke-width:2px
+  style angprime fill:#c3002f,color:#fff,stroke:#9a0025,stroke-width:2px
+  style vuetify fill:#42b883,color:#fff,stroke:#35946b,stroke-width:2px
+  style vueprime fill:#42b883,color:#fff,stroke:#35946b,stroke-width:2px
   style react fill:#1a4a2e,color:#fff,stroke:#185530,stroke-width:2px
+  style angular fill:#6a1b2a,color:#fff,stroke:#9a0025,stroke-width:2px
+  style vue fill:#2c6e49,color:#fff,stroke:#35946b,stroke-width:2px
   style js fill:#1a4a2e,color:#fff,stroke:#185530,stroke-width:2px
   style core fill:#0d0d14,color:#3ab876,stroke:#3ab876,stroke-width:2px
-  style ui fill:none,stroke:none
+  style reactui fill:none,stroke:none
+  style angularui fill:none,stroke:none
+  style vueui fill:none,stroke:none
 ```
 
 ### Core Layer — `@alaarab/ogrid-core`
 
 Pure TypeScript with zero dependencies. Provides the type system (`IOGridProps`, `IColumnDef`, `IOGridApi`, `FilterValue`, etc.) and shared algorithms (`getCellValue`, `buildHeaderRows`, `parseValue`, `normalizeSelectionRange`, etc.) used by both the React and JS packages.
 
-### React Layer — `@alaarab/ogrid-react`
+### Framework Adapter Layers
 
-All state management and business logic as React hooks:
+Each framework adapter translates Core's algorithms into idiomatic framework patterns — React hooks, Angular services with signals, or Vue composables with refs.
+
+**React** — `@alaarab/ogrid-react`
 
 | Domain | Hooks |
 |---|---|
@@ -68,25 +98,46 @@ All state management and business logic as React hooks:
 | **Layout** | `useColumnResize` · `useSideBarState` · `useColumnChooserState` |
 | **Filtering** | `useColumnHeaderFilterState` · `useFilterOptions` |
 
-Plus headless components (`OGridLayout`, `StatusBar`, `SideBar`, `GridContextMenu`) and utilities (`exportToCsv`, `computeAggregations`, `processClientSideData`).
+**Angular** — `@alaarab/ogrid-angular`
+
+Angular v21 services using signals (`signal()`, `computed()`, `effect()`). Standalone components with inline templates. Zone-less by default.
+
+| Service | Equivalent |
+|---|---|
+| `OGridService` | `useOGrid` — pagination, sorting, filtering, visibility, editing |
+| `DataGridStateService` | `useDataGridState` — layout, selection, editing, interaction |
+
+**Vue** — `@alaarab/ogrid-vue`
+
+Vue 3 Composition API composables using `ref()`, `computed()`, `watch()`.
+
+| Composable | Equivalent |
+|---|---|
+| `useOGrid` | Pagination, sorting, filtering, column visibility |
+| `useDataGridState` | Layout, cell selection, editing, clipboard, keyboard nav |
+| 20+ feature composables | `useCellEditing`, `useCellSelection`, `useClipboard`, etc. |
 
 ### UI Layer — Pick Your Framework
 
-Each UI package is a thin shell that calls the same core hooks and renders results into native components:
+Each UI package is a thin shell (~1,500 lines) that calls the same core logic and renders into native components:
 
 | Package | Built on | Best for |
 |---|---|---|
 | `@alaarab/ogrid-react-radix` | Radix primitives | Lightweight apps, custom design systems |
 | `@alaarab/ogrid-react-fluent` | Fluent UI v9 | Microsoft 365, SharePoint, Teams apps |
 | `@alaarab/ogrid-react-material` | MUI v7 | Material Design apps, dashboards |
+| `@alaarab/ogrid-angular-material` | Angular Material v21 | Angular + Material Design |
+| `@alaarab/ogrid-angular-primeng` | PrimeNG v21 | Angular + PrimeNG ecosystem |
+| `@alaarab/ogrid-vue-vuetify` | Vuetify 3 | Vue + Material Design |
+| `@alaarab/ogrid-vue-primevue` | PrimeVue 4 | Vue + PrimeVue ecosystem |
 
-All three export the same `OGrid` component with the same props. All three pass the same 92 integration tests. Switching frameworks is a one-line import change — your column definitions, event handlers, data sources, and API calls stay identical.
+All packages within a framework export the same `OGrid` component with the same props. Switching UI libraries is a one-line import change — your column definitions, event handlers, data sources, and API calls stay identical.
 
 ### Why This Matters
 
-- **Write once, render anywhere.** A bug fix or feature in core lands across all three frameworks instantly.
-- **Zero lock-in.** Migrate between frameworks without rewriting business logic.
-- **Guaranteed parity.** Shared test factories ensure all three packages behave identically.
+- **Write once, render anywhere.** A bug fix or feature in core lands across all frameworks instantly.
+- **Zero lock-in.** Migrate between React, Angular, and Vue without rewriting business logic.
+- **Guaranteed parity.** Shared core ensures all packages behave identically.
 - **Small surface area.** No duplicated state logic to drift out of sync.
 
 ## Packages
@@ -94,10 +145,20 @@ All three export the same `OGrid` component with the same props. All three pass 
 | Package | npm | Description |
 |---|---|---|
 | `@alaarab/ogrid-core` | [![npm](https://img.shields.io/npm/v/@alaarab/ogrid-core)](https://npmjs.com/package/@alaarab/ogrid-core) | Pure TS types, algorithms, utilities (zero deps) |
+| **React** | | |
 | `@alaarab/ogrid-react` | [![npm](https://img.shields.io/npm/v/@alaarab/ogrid-react)](https://npmjs.com/package/@alaarab/ogrid-react) | React hooks, headless components, utilities |
 | `@alaarab/ogrid-react-radix` | [![npm](https://img.shields.io/npm/v/@alaarab/ogrid-react-radix)](https://npmjs.com/package/@alaarab/ogrid-react-radix) | Radix UI implementation (default, lightweight) |
 | `@alaarab/ogrid-react-fluent` | [![npm](https://img.shields.io/npm/v/@alaarab/ogrid-react-fluent)](https://npmjs.com/package/@alaarab/ogrid-react-fluent) | Fluent UI v9 implementation |
 | `@alaarab/ogrid-react-material` | [![npm](https://img.shields.io/npm/v/@alaarab/ogrid-react-material)](https://npmjs.com/package/@alaarab/ogrid-react-material) | Material UI v7 implementation |
+| **Angular** | | |
+| `@alaarab/ogrid-angular` | [![npm](https://img.shields.io/npm/v/@alaarab/ogrid-angular)](https://npmjs.com/package/@alaarab/ogrid-angular) | Angular v21 services with signals |
+| `@alaarab/ogrid-angular-material` | [![npm](https://img.shields.io/npm/v/@alaarab/ogrid-angular-material)](https://npmjs.com/package/@alaarab/ogrid-angular-material) | Angular Material v21 implementation |
+| `@alaarab/ogrid-angular-primeng` | [![npm](https://img.shields.io/npm/v/@alaarab/ogrid-angular-primeng)](https://npmjs.com/package/@alaarab/ogrid-angular-primeng) | PrimeNG v21 implementation |
+| **Vue** | | |
+| `@alaarab/ogrid-vue` | [![npm](https://img.shields.io/npm/v/@alaarab/ogrid-vue)](https://npmjs.com/package/@alaarab/ogrid-vue) | Vue 3 composables with Composition API |
+| `@alaarab/ogrid-vue-vuetify` | [![npm](https://img.shields.io/npm/v/@alaarab/ogrid-vue-vuetify)](https://npmjs.com/package/@alaarab/ogrid-vue-vuetify) | Vuetify 3 implementation |
+| `@alaarab/ogrid-vue-primevue` | [![npm](https://img.shields.io/npm/v/@alaarab/ogrid-vue-primevue)](https://npmjs.com/package/@alaarab/ogrid-vue-primevue) | PrimeVue 4 implementation |
+| **Other** | | |
 | `@alaarab/ogrid-js` | [![npm](https://img.shields.io/npm/v/@alaarab/ogrid-js)](https://npmjs.com/package/@alaarab/ogrid-js) | Vanilla JS data grid (no framework) |
 
 ## Feature Highlights
@@ -132,4 +193,4 @@ OGrid is designed as a drop-in replacement for AG Grid with a simpler, more Reac
 ## Next Steps
 
 - [Installation](./installation) -- install OGrid for your framework
-- [Quick Start](./quick-start) -- build a grid with Radix, Fluent UI, or Material UI
+- [Quick Start](./quick-start) -- build a grid with React, Angular, or Vue
