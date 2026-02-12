@@ -1,6 +1,6 @@
 {
   "name": "@alaarab/ogrid-react-material",
-  "version": "2.0.5",
+  "version": "2.0.6",
   "description": "OGrid Material UI implementation – MUI Table–based data grid with sorting, filtering, pagination, column chooser, spreadsheet selection, and CSV export.",
   "main": "dist/esm/index.js",
   "module": "dist/esm/index.js",
@@ -34,11 +34,12 @@
     "README.md",
     "LICENSE"
   ],
+  "sideEffects": false,
   "engines": {
     "node": ">=18"
   },
   "dependencies": {
-    "@alaarab/ogrid-react": "2.0.5"
+    "@alaarab/ogrid-react": "2.0.6"
   },
   "peerDependencies": {
     "@emotion/react": "^11.0.0",
@@ -50,12 +51,12 @@
   },
   "devDependencies": {
     "@emotion/react": "^11.14.0",
-    "@emotion/styled": "^11.14.0",
-    "@mui/icons-material": "^7.0.0",
-    "@mui/material": "^7.0.0",
+    "@emotion/styled": "^11.14.1",
+    "@mui/icons-material": "^7.3.8",
+    "@mui/material": "^7.3.8",
     "@storybook/react-vite": "10.2.8",
-    "@testing-library/jest-dom": "^6.6.3",
-    "@testing-library/react": "^16.1.0",
+    "@testing-library/jest-dom": "^6.9.1",
+    "@testing-library/react": "^16.3.2",
     "@testing-library/user-event": "^14.6.1",
     "@types/react": "^18.3.18",
     "@types/react-dom": "^18.3.5",
@@ -63,7 +64,7 @@
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
     "storybook": "10.2.8",
-    "vite": "^7.0.0"
+    "vite": "^7.3.1"
   },
   "publishConfig": {
     "access": "public"
