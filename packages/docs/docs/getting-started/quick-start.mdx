@@ -14,53 +14,71 @@ Build a sortable, filterable, editable data grid in under 50 lines.
 ## Install
 
 <Tabs groupId="framework">
-  <TabItem value="radix" label="React Radix" default>
+  <TabItem value="react" label="React" default>
+
+<Tabs groupId="react-ui">
+  <TabItem value="radix" label="Radix (Default)" default>
 
 ```bash
-npm install @alaarab/ogrid
+npm install @alaarab/ogrid-react-radix
 ```
 
   </TabItem>
-  <TabItem value="fluent" label="React Fluent">
+  <TabItem value="fluent" label="Fluent UI">
 
 ```bash
 npm install @alaarab/ogrid-react-fluent @fluentui/react-components
 ```
 
   </TabItem>
-  <TabItem value="material" label="React Material">
+  <TabItem value="material" label="Material UI">
 
 ```bash
 npm install @alaarab/ogrid-react-material @mui/material @emotion/react @emotion/styled
 ```
 
   </TabItem>
-  <TabItem value="angular-material" label="Angular Material">
+</Tabs>
+
+  </TabItem>
+  <TabItem value="angular" label="Angular">
+
+<Tabs groupId="angular-ui">
+  <TabItem value="angular-material" label="Angular Material" default>
 
 ```bash
 npm install @alaarab/ogrid-angular-material @angular/material @angular/cdk
 ```
 
   </TabItem>
-  <TabItem value="angular-primeng" label="Angular PrimeNG">
+  <TabItem value="angular-primeng" label="PrimeNG">
 
 ```bash
 npm install @alaarab/ogrid-angular-primeng primeng
 ```
 
   </TabItem>
-  <TabItem value="vue-vuetify" label="Vue Vuetify">
+</Tabs>
+
+  </TabItem>
+  <TabItem value="vue" label="Vue">
+
+<Tabs groupId="vue-ui">
+  <TabItem value="vue-vuetify" label="Vuetify" default>
 
 ```bash
 npm install @alaarab/ogrid-vue-vuetify vuetify
 ```
 
   </TabItem>
-  <TabItem value="vue-primevue" label="Vue PrimeVue">
+  <TabItem value="vue-primevue" label="PrimeVue">
 
 ```bash
 npm install @alaarab/ogrid-vue-primevue primevue
 ```
+
+  </TabItem>
+</Tabs>
 
   </TabItem>
   <TabItem value="js" label="Vanilla JS">
@@ -75,7 +93,7 @@ npm install @alaarab/ogrid-js
 ## Full Example
 
 <Tabs groupId="framework">
-  <TabItem value="radix" label="Radix (Lightweight)" default>
+  <TabItem value="react" label="React" default>
 
 ```tsx
 import { OGrid, type IColumnDef } from '@alaarab/ogrid-react-radix';
@@ -129,72 +147,16 @@ export default function App() {
 }
 ```
 
-  </TabItem>
-  <TabItem value="fluent" label="Fluent UI">
+:::tip Switching UI libraries
+The `OGrid` component has the same props across all React UI packages. To switch, just change the import:
 
-```tsx
-import { FluentProvider, webLightTheme } from '@fluentui/react-components';
-import { OGrid, type IColumnDef } from '@alaarab/ogrid-react-fluent';
-
-// ... same Employee type, data, and columns as above ...
-
-export default function App() {
-  return (
-    <FluentProvider theme={webLightTheme}>
-      <OGrid<Employee>
-        columns={columns}
-        data={data}
-        getRowId={(row) => row.id}
-        defaultPageSize={10}
-        defaultSortBy="name"
-        statusBar
-        aria-label="Employee directory"
-      />
-    </FluentProvider>
-  );
-}
-```
-
-:::tip
-`FluentProvider` with a theme is required for Fluent UI components. Wrap it around your app root or at least around `OGrid`. Best choice for **Microsoft 365 / SPFx** projects.
+- **Radix** (lightweight, default): `from '@alaarab/ogrid-react-radix'`
+- **Fluent UI** (Microsoft 365 / SPFx): `from '@alaarab/ogrid-react-fluent'` — wrap in `<FluentProvider>`
+- **Material UI** (MUI v7): `from '@alaarab/ogrid-react-material'` — wrap in `<ThemeProvider>`
 :::
 
   </TabItem>
-  <TabItem value="material" label="Material UI">
-
-```tsx
-import { ThemeProvider, createTheme } from '@mui/material/styles';
-import CssBaseline from '@mui/material/CssBaseline';
-import { OGrid, type IColumnDef } from '@alaarab/ogrid-react-material';
-
-const theme = createTheme();
-
-// ... same Employee type, data, and columns as above ...
-
-export default function App() {
-  return (
-    <ThemeProvider theme={theme}>
-      <CssBaseline />
-      <OGrid<Employee>
-        columns={columns}
-        data={data}
-        getRowId={(row) => row.id}
-        defaultPageSize={10}
-        defaultSortBy="name"
-        statusBar
-        aria-label="Employee directory"
-      />
-    </ThemeProvider>
-  );
-}
-```
-
-:::tip
-If your app already has `ThemeProvider` and `CssBaseline` at the root, render `OGrid` directly. For **Next.js App Router**, add `"use client"` since the grid uses hooks and DOM APIs.
-:::
-
-  </TabItem>
-  <TabItem value="angular-material" label="Angular Material">
+  <TabItem value="angular" label="Angular">
 
 ```typescript
 import { Component } from '@angular/core';
@@ -245,31 +207,17 @@ export class EmployeeGridComponent {
 }
 ```
 
-:::tip
-All Angular components are standalone — no NgModule required. Angular v21 signals power the reactive state management.
+:::tip Switching UI libraries
+Same component API across Angular packages. To switch, just change the import:
+
+- **Angular Material**: `from '@alaarab/ogrid-angular-material'`
+- **PrimeNG**: `from '@alaarab/ogrid-angular-primeng'`
+
+All components are standalone — no NgModule required.
 :::
 
   </TabItem>
-  <TabItem value="angular-primeng" label="Angular PrimeNG">
-
-```typescript
-import { Component } from '@angular/core';
-import { OGridComponent, type IColumnDef } from '@alaarab/ogrid-angular-primeng';
-
-// ... same Employee type and data as above ...
-
-@Component({
-  standalone: true,
-  imports: [OGridComponent],
-  template: `<ogrid [gridProps]="gridProps" />`
-})
-export class EmployeeGridComponent {
-  // ... same as Angular Material example ...
-}
-```
-
-  </TabItem>
-  <TabItem value="vue-vuetify" label="Vue Vuetify">
+  <TabItem value="vue" label="Vue">
 
 ```vue
 <script setup lang="ts">
@@ -318,24 +266,12 @@ const gridProps = {
 </template>
 ```
 
-:::tip
-OGrid Vue components use the Composition API. Wrap your app in Vuetify's `<v-app>` for proper theming.
+:::tip Switching UI libraries
+Same component API across Vue packages. To switch, just change the import:
+
+- **Vuetify**: `from '@alaarab/ogrid-vue-vuetify'` — wrap in `<v-app>` for theming
+- **PrimeVue**: `from '@alaarab/ogrid-vue-primevue'`
 :::
-
-  </TabItem>
-  <TabItem value="vue-primevue" label="Vue PrimeVue">
-
-```vue
-<script setup lang="ts">
-import { OGrid, type IColumnDef } from '@alaarab/ogrid-vue-primevue';
-
-// ... same Employee type, data, columns, and gridProps as Vue Vuetify ...
-</script>
-
-<template>
-  <OGrid :gridProps="gridProps" />
-</template>
-```
 
   </TabItem>
   <TabItem value="js" label="Vanilla JS">
@@ -377,7 +313,7 @@ const grid = new OGrid(document.getElementById('grid'), {
 ```
 
 :::tip
-The JS package uses a class-based imperative API instead of React components. See the [Vanilla JS guide](./vanilla-js) for the full API including events, grid methods, and theming.
+The JS package uses a class-based imperative API. See the [Vanilla JS guide](./vanilla-js) for the full API including events, grid methods, and theming.
 :::
 
   </TabItem>
@@ -403,6 +339,9 @@ With just this code:
 
 ## Using the Grid API
 
+<Tabs groupId="framework">
+  <TabItem value="react" label="React" default>
+
 ```tsx
 import { useRef } from 'react';
 import { OGrid, type IOGridApi } from '@alaarab/ogrid-react-radix';
@@ -420,6 +359,75 @@ function App() {
   );
 }
 ```
+
+  </TabItem>
+  <TabItem value="angular" label="Angular">
+
+```typescript
+import { Component, ViewChild } from '@angular/core';
+import { OGridComponent, OGridService } from '@alaarab/ogrid-angular-material';
+
+@Component({
+  standalone: true,
+  imports: [OGridComponent],
+  template: `
+    <button (click)="logState()">Log State</button>
+    <ogrid [gridProps]="gridProps" />
+  `
+})
+export class AppComponent {
+  constructor(private gridService: OGridService) {}
+
+  logState() {
+    console.log(this.gridService.getColumnState());
+  }
+
+  gridProps = { columns, data, getRowId: (row: any) => row.id };
+}
+```
+
+  </TabItem>
+  <TabItem value="vue" label="Vue">
+
+```vue
+<script setup lang="ts">
+import { ref } from 'vue';
+import { OGrid, useOGrid } from '@alaarab/ogrid-vue-vuetify';
+
+const { getColumnState } = useOGrid({ columns, data, getRowId: (row) => row.id });
+
+function logState() {
+  console.log(getColumnState());
+}
+</script>
+
+<template>
+  <button @click="logState">Log State</button>
+  <OGrid :gridProps="{ columns, data, getRowId: (row) => row.id }" />
+</template>
+```
+
+  </TabItem>
+  <TabItem value="js" label="Vanilla JS">
+
+```js
+import { OGrid } from '@alaarab/ogrid-js';
+
+const grid = new OGrid(document.getElementById('grid'), {
+  columns, data, getRowId: (row) => row.id,
+});
+
+// Programmatic control
+const api = grid.getApi();
+console.log(api.getColumnState());
+api.setRowData(newData);
+
+// Cleanup
+grid.destroy();
+```
+
+  </TabItem>
+</Tabs>
 
 ## Next Steps
 
