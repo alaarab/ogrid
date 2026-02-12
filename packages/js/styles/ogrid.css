@@ -1,0 +1,910 @@
+/* ──────────────────────────────────────────────────────────────
+   OGrid Default Theme — @alaarab/ogrid-js
+   Import: import '@alaarab/ogrid-js/styles';
+   Override any --ogrid-* variable to customize.
+   ────────────────────────────────────────────────────────────── */
+
+/* ── Light Theme (default) ── */
+:root {
+  --ogrid-bg: #ffffff;
+  --ogrid-fg: #242424;
+  --ogrid-border: #e0e0e0;
+  --ogrid-border-strong: #888;
+  --ogrid-border-hover: #999;
+  --ogrid-bg-subtle: #f3f2f1;
+  --ogrid-bg-hover: #f5f5f5;
+  --ogrid-bg-selected: #e6f0fb;
+  --ogrid-bg-selected-hover: #dae8f8;
+  --ogrid-bg-range: rgba(33, 115, 70, 0.12);
+  --ogrid-header-bg: #f5f5f5;
+  --ogrid-muted: #616161;
+  --ogrid-fg-muted: rgba(0, 0, 0, 0.4);
+  --ogrid-selection: #217346;
+  --ogrid-primary: #217346;
+  --ogrid-primary-fg: #fff;
+  --ogrid-primary-hover: #1b5f39;
+  --ogrid-accent: #217346;
+  --ogrid-accent-dark: #1b5f39;
+}
+
+/* ── Dark Theme ── */
+[data-theme='dark'] {
+  --ogrid-bg: #1a1a24;
+  --ogrid-fg: #e0e0e0;
+  --ogrid-border: #333340;
+  --ogrid-border-strong: #555;
+  --ogrid-border-hover: #666;
+  --ogrid-bg-subtle: #22222e;
+  --ogrid-bg-hover: #2a2a38;
+  --ogrid-bg-selected: #1a2f45;
+  --ogrid-bg-selected-hover: #1f3650;
+  --ogrid-bg-range: rgba(58, 184, 118, 0.12);
+  --ogrid-header-bg: #22222e;
+  --ogrid-muted: #999;
+  --ogrid-fg-muted: rgba(255, 255, 255, 0.3);
+  --ogrid-selection: #3ab876;
+  --ogrid-primary: #3ab876;
+  --ogrid-primary-fg: #0a0a0f;
+  --ogrid-primary-hover: #4ec484;
+  --ogrid-accent: #3ab876;
+  --ogrid-accent-dark: #2fa768;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) {
+    --ogrid-bg: #1a1a24;
+    --ogrid-fg: #e0e0e0;
+    --ogrid-border: #333340;
+    --ogrid-border-strong: #555;
+    --ogrid-border-hover: #666;
+    --ogrid-bg-subtle: #22222e;
+    --ogrid-bg-hover: #2a2a38;
+    --ogrid-bg-selected: #1a2f45;
+    --ogrid-bg-selected-hover: #1f3650;
+    --ogrid-bg-range: rgba(58, 184, 118, 0.12);
+    --ogrid-header-bg: #22222e;
+    --ogrid-muted: #999;
+    --ogrid-fg-muted: rgba(255, 255, 255, 0.3);
+    --ogrid-selection: #3ab876;
+    --ogrid-primary: #3ab876;
+    --ogrid-primary-fg: #0a0a0f;
+    --ogrid-primary-hover: #4ec484;
+    --ogrid-accent: #3ab876;
+    --ogrid-accent-dark: #2fa768;
+  }
+}
+
+/* ── Layout ── */
+
+.ogrid-container {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  height: 100%;
+  background: var(--ogrid-bg, #fff);
+  color: var(--ogrid-fg, #242424);
+  font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  font-size: 14px;
+  line-height: 1.5;
+  box-sizing: border-box;
+  border: 1px solid var(--ogrid-border, #e0e0e0);
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.ogrid-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 6px 12px;
+  border-bottom: 1px solid var(--ogrid-border, #e0e0e0);
+  background: var(--ogrid-bg-subtle, #f3f2f1);
+  min-height: 36px;
+}
+
+.ogrid-toolbar:empty {
+  display: none;
+}
+
+.ogrid-body-area {
+  display: flex;
+  flex: 1;
+  overflow: hidden;
+  min-height: 0;
+}
+
+.ogrid-table-container {
+  flex: 1;
+  overflow: auto;
+  position: relative;
+  min-height: 0;
+}
+
+.ogrid-sidebar-container {
+  flex-shrink: 0;
+}
+
+/* ── Table ── */
+
+.ogrid-wrapper {
+  position: relative;
+  min-width: fit-content;
+  background: var(--ogrid-bg, #fff);
+}
+
+.ogrid-table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  box-sizing: border-box;
+  table-layout: auto;
+}
+
+.ogrid-table th,
+.ogrid-table td {
+  min-width: 80px;
+  box-sizing: border-box;
+  border-right: 1px solid var(--ogrid-border, #e0e0e0);
+  font-size: 13px;
+  vertical-align: middle;
+}
+
+.ogrid-table th:last-of-type,
+.ogrid-table td:last-of-type {
+  border-right: none;
+}
+
+/* ── Header ── */
+
+.ogrid-table thead {
+  background: var(--ogrid-bg-subtle, #f3f2f1);
+  position: sticky;
+  top: 0;
+  z-index: 8;
+}
+
+.ogrid-table thead th {
+  padding: 6px 10px;
+  font-weight: 600;
+  font-size: 14px;
+  color: var(--ogrid-fg, #242424);
+  white-space: nowrap;
+  position: relative;
+  border-bottom: 1px solid var(--ogrid-border, #e0e0e0);
+  background: var(--ogrid-bg-subtle, #f3f2f1);
+}
+
+.ogrid-header-cell {
+  cursor: default;
+}
+
+.ogrid-sortable {
+  cursor: pointer;
+  user-select: none;
+}
+
+.ogrid-sort-indicator {
+  margin-left: 4px;
+  font-size: 12px;
+  color: var(--ogrid-muted, #616161);
+}
+
+.ogrid-group-header {
+  text-align: center;
+  font-weight: 600;
+  border-bottom: 2px solid var(--ogrid-border, #e0e0e0);
+  padding: 6px 10px;
+  background: var(--ogrid-header-bg, #f5f5f5);
+}
+
+/* ── Resize Handle ── */
+
+.ogrid-resize-handle {
+  position: absolute;
+  top: 0;
+  right: -3px;
+  bottom: 0;
+  width: 8px;
+  cursor: col-resize;
+  user-select: none;
+  z-index: 1;
+}
+
+.ogrid-resize-handle::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  right: 3px;
+  bottom: 0;
+  width: 2px;
+}
+
+.ogrid-resize-handle:hover::after {
+  background-color: var(--ogrid-accent, #217346);
+}
+
+.ogrid-resize-handle:active::after {
+  background-color: var(--ogrid-accent-dark, #1b5f39);
+}
+
+/* ── Filter Icon (in header) ── */
+
+.ogrid-filter-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  padding: 4px;
+  border: none;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--ogrid-muted, #616161);
+  cursor: pointer;
+  font-size: 14px;
+  vertical-align: middle;
+}
+
+.ogrid-filter-icon:hover {
+  background: var(--ogrid-bg-hover, #f5f5f5);
+  color: var(--ogrid-fg, #424242);
+}
+
+/* ── Body Rows ── */
+
+.ogrid-table tbody td {
+  padding: 6px 10px;
+  border-bottom: 1px solid var(--ogrid-border, #e8e8e8);
+  position: relative;
+  color: var(--ogrid-fg, #242424);
+}
+
+.ogrid-table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.ogrid-table tbody tr:hover td {
+  background: var(--ogrid-bg-hover, #f5f5f5);
+}
+
+.ogrid-row {
+  transition: background 0.1s;
+}
+
+/* ── Row Selection ── */
+
+.ogrid-table tbody tr[data-row-selected='true'] td {
+  background: var(--ogrid-bg-selected, #e6f0fb);
+}
+
+.ogrid-table tbody tr[data-row-selected='true']:hover td {
+  background: var(--ogrid-bg-selected-hover, #dae8f8);
+}
+
+.ogrid-checkbox-header,
+.ogrid-checkbox-cell {
+  width: 48px;
+  min-width: 48px;
+  max-width: 48px;
+  padding: 4px !important;
+  text-align: center;
+}
+
+.ogrid-select-all-checkbox,
+.ogrid-row-checkbox {
+  width: 16px;
+  height: 16px;
+  cursor: pointer;
+  accent-color: var(--ogrid-primary, #217346);
+}
+
+/* ── Cell Interaction (active cell, selection range) ── */
+
+.ogrid-cell[data-active-cell='true'] {
+  outline: 2px solid var(--ogrid-selection, #217346);
+  outline-offset: -1px;
+  z-index: 2;
+  position: relative;
+}
+
+.ogrid-cell[data-in-range='true'] {
+  background: var(--ogrid-bg-range, rgba(33, 115, 70, 0.12)) !important;
+}
+
+[data-drag-range] {
+  background: var(--ogrid-bg-range, rgba(33, 115, 70, 0.12)) !important;
+}
+
+/* ── Fill Handle ── */
+
+.ogrid-fill-handle {
+  position: absolute;
+  right: -3px;
+  bottom: -3px;
+  width: 7px;
+  height: 7px;
+  background: var(--ogrid-selection, #217346);
+  border: 1px solid var(--ogrid-bg, #fff);
+  border-radius: 1px;
+  cursor: crosshair;
+  pointer-events: auto;
+  z-index: 3;
+}
+
+/* ── Pinned Columns ── */
+
+.ogrid-table th[data-pinned='left'],
+.ogrid-table td[data-pinned='left'] {
+  position: sticky;
+  z-index: 6;
+  background: var(--ogrid-bg, #fff);
+  will-change: transform;
+}
+
+.ogrid-table thead th[data-pinned='left'] {
+  background: var(--ogrid-bg-subtle, #f3f2f1);
+  z-index: 9;
+}
+
+.ogrid-table th[data-pinned='right'],
+.ogrid-table td[data-pinned='right'] {
+  position: sticky;
+  z-index: 6;
+  background: var(--ogrid-bg, #fff);
+  will-change: transform;
+}
+
+.ogrid-table thead th[data-pinned='right'] {
+  background: var(--ogrid-bg-subtle, #f3f2f1);
+  z-index: 9;
+}
+
+/* ── Empty State ── */
+
+.ogrid-empty-state {
+  text-align: center;
+  padding: 32px 16px;
+  color: var(--ogrid-muted, #616161);
+  font-size: 14px;
+}
+
+/* ── Loading Overlay ── */
+
+.ogrid-loading-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255, 255, 255, 0.7);
+  backdrop-filter: blur(1px);
+  pointer-events: all;
+}
+
+.ogrid-loading-spinner {
+  width: 24px;
+  height: 24px;
+  border: 2px solid var(--ogrid-border, #e0e0e0);
+  border-top-color: var(--ogrid-primary, #217346);
+  border-radius: 50%;
+  animation: ogrid-spin 0.8s linear infinite;
+}
+
+@keyframes ogrid-spin {
+  to { transform: rotate(360deg); }
+}
+
+/* ── Status Bar ── */
+
+.ogrid-status-bar-container:empty {
+  display: none;
+}
+
+.ogrid-status-bar {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  width: 100%;
+  padding: 6px 12px;
+  box-sizing: border-box;
+  font-size: 12px;
+  color: var(--ogrid-muted, #616161);
+  background: var(--ogrid-bg-subtle, #f3f2f1);
+  border-top: 1px solid var(--ogrid-border, #e0e0e0);
+  min-height: 28px;
+}
+
+.ogrid-status-part {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.ogrid-status-part:not(:last-child)::after {
+  content: '';
+  width: 1px;
+  height: 14px;
+  background: var(--ogrid-border, #c4c4c4);
+  margin-left: 12px;
+}
+
+.ogrid-status-aggregation {
+  font-weight: 600;
+  color: var(--ogrid-fg, #242424);
+}
+
+/* ── Pagination ── */
+
+.ogrid-pagination-container {
+  border-top: 1px solid var(--ogrid-border, #e0e0e0);
+}
+
+.ogrid-pagination-container:empty {
+  display: none;
+}
+
+.ogrid-pagination {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px 24px;
+  width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+  padding: 8px 12px;
+}
+
+.ogrid-pagination-size {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+  font-size: 13px;
+  color: var(--ogrid-muted, #606060);
+}
+
+.ogrid-page-size-select {
+  min-width: 72px;
+  padding: 4px 8px;
+  border: 1px solid var(--ogrid-border, #ccc);
+  border-radius: 4px;
+  background: var(--ogrid-bg, #fff);
+  font-size: 13px;
+  color: var(--ogrid-fg, #242424);
+}
+
+.ogrid-pagination-info {
+  font-size: 13px;
+  color: var(--ogrid-muted, #606060);
+  font-variant-numeric: tabular-nums;
+}
+
+.ogrid-pagination-nav {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-wrap: wrap;
+  flex: 1 1 auto;
+  justify-content: center;
+  min-width: 0;
+}
+
+.ogrid-pagination-btn {
+  min-width: 28px;
+  min-height: 28px;
+  padding: 4px 8px;
+  border: 1px solid var(--ogrid-border, #ccc);
+  border-radius: 4px;
+  background: var(--ogrid-bg, #fff);
+  color: var(--ogrid-fg, #333);
+  cursor: pointer;
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.ogrid-pagination-btn:hover:not(:disabled) {
+  background: var(--ogrid-bg-hover, #f5f5f5);
+  border-color: var(--ogrid-border-hover, #999);
+}
+
+.ogrid-pagination-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.ogrid-pagination-active {
+  background: var(--ogrid-primary, #217346) !important;
+  border-color: var(--ogrid-primary, #217346) !important;
+  color: var(--ogrid-primary-fg, #fff) !important;
+}
+
+.ogrid-pagination-ellipsis {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 24px;
+  font-size: 12px;
+  color: var(--ogrid-muted, #888);
+  user-select: none;
+}
+
+/* ── Column Chooser ── */
+
+.ogrid-column-chooser {
+  position: relative;
+  display: inline-flex;
+}
+
+.ogrid-column-chooser-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border: 1px solid var(--ogrid-border, #ccc);
+  border-radius: 6px;
+  background: var(--ogrid-bg, #fff);
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--ogrid-fg, #333);
+  transition: background 0.15s, border-color 0.15s;
+}
+
+.ogrid-column-chooser-btn:hover {
+  background: var(--ogrid-bg-hover, #f5f5f5);
+  border-color: var(--ogrid-border-hover, #999);
+}
+
+.ogrid-column-chooser-dropdown {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  min-width: 220px;
+  max-height: 360px;
+  overflow-y: auto;
+  background: var(--ogrid-bg, #fff);
+  border-radius: 6px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
+  border: 1px solid var(--ogrid-border, #e0e0e0);
+  display: flex;
+  flex-direction: column;
+  padding: 4px 0;
+  z-index: 50;
+  margin-top: 4px;
+}
+
+.ogrid-column-chooser-item {
+  padding: 4px 12px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 32px;
+  cursor: pointer;
+  font-size: 13px;
+  color: var(--ogrid-fg, #242424);
+}
+
+.ogrid-column-chooser-item:hover {
+  background: var(--ogrid-bg-hover, #f0f0f0);
+}
+
+.ogrid-column-chooser-item input[type='checkbox'] {
+  accent-color: var(--ogrid-primary, #217346);
+}
+
+/* ── Sidebar ── */
+
+.ogrid-sidebar {
+  display: flex;
+  flex-direction: row;
+  flex-shrink: 0;
+  background: var(--ogrid-bg, #fff);
+  border-left: 1px solid var(--ogrid-border, #e0e0e0);
+}
+
+.ogrid-sidebar-tab {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border: none;
+  background: var(--ogrid-bg-subtle, #f3f2f1);
+  color: var(--ogrid-muted, #616161);
+  cursor: pointer;
+  font-size: 16px;
+  border-bottom: 1px solid var(--ogrid-border, #e0e0e0);
+}
+
+.ogrid-sidebar-tab:hover {
+  background: var(--ogrid-bg-hover, #f5f5f5);
+  color: var(--ogrid-fg, #242424);
+}
+
+.ogrid-sidebar-panel {
+  width: 240px;
+  background: var(--ogrid-bg, #fff);
+  border-left: 1px solid var(--ogrid-border, #e0e0e0);
+  overflow-y: auto;
+}
+
+.ogrid-sidebar-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--ogrid-border, #e0e0e0);
+  font-weight: 600;
+  font-size: 13px;
+  color: var(--ogrid-fg, #242424);
+  background: var(--ogrid-bg-subtle, #f3f2f1);
+}
+
+.ogrid-sidebar-close-btn {
+  border: none;
+  background: none;
+  cursor: pointer;
+  color: var(--ogrid-muted, #616161);
+  font-size: 16px;
+  padding: 2px;
+}
+
+.ogrid-sidebar-close-btn:hover {
+  color: var(--ogrid-fg, #242424);
+}
+
+.ogrid-sidebar-content {
+  padding: 8px 0;
+}
+
+.ogrid-sidebar-action-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 10px;
+  border: 1px solid var(--ogrid-border, #ccc);
+  border-radius: 4px;
+  background: var(--ogrid-bg, #fff);
+  color: var(--ogrid-fg, #333);
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.ogrid-sidebar-action-btn:hover {
+  background: var(--ogrid-bg-hover, #f5f5f5);
+}
+
+.ogrid-column-list {
+  padding: 4px 0;
+}
+
+.ogrid-column-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 12px;
+  min-height: 28px;
+  font-size: 13px;
+  color: var(--ogrid-fg, #242424);
+  cursor: pointer;
+}
+
+.ogrid-column-item:hover {
+  background: var(--ogrid-bg-hover, #f5f5f5);
+}
+
+.ogrid-column-item input[type='checkbox'] {
+  accent-color: var(--ogrid-primary, #217346);
+}
+
+/* ── Sidebar Filter Section ── */
+
+.ogrid-filter-section {
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--ogrid-border, #e0e0e0);
+}
+
+.ogrid-filter-field {
+  margin-bottom: 8px;
+}
+
+.ogrid-filter-label {
+  display: block;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--ogrid-muted, #616161);
+  margin-bottom: 4px;
+}
+
+/* ── Header Filter Popover ── */
+
+.ogrid-header-filter-popover {
+  position: fixed;
+  z-index: 1000;
+  min-width: 280px;
+  max-width: 320px;
+  background: var(--ogrid-bg, #fff);
+  border: 1px solid var(--ogrid-border, #d1d1d1);
+  border-radius: 8px;
+  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.14);
+  overflow: hidden;
+}
+
+.ogrid-filter-text-input,
+.ogrid-filter-search-input,
+.ogrid-filter-date-input {
+  width: 100%;
+  padding: 6px 10px;
+  border: 1px solid var(--ogrid-border, #d1d1d1);
+  border-radius: 4px;
+  font-size: 14px;
+  box-sizing: border-box;
+  background: var(--ogrid-bg, #fff);
+  color: var(--ogrid-fg, #242424);
+}
+
+.ogrid-filter-text-input:focus,
+.ogrid-filter-search-input:focus,
+.ogrid-filter-date-input:focus {
+  outline: none;
+  border-color: var(--ogrid-primary, #217346);
+}
+
+.ogrid-filter-apply-btn {
+  padding: 6px 16px;
+  border: none;
+  border-radius: 4px;
+  background: var(--ogrid-primary, #217346);
+  color: var(--ogrid-primary-fg, #fff);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.ogrid-filter-apply-btn:hover {
+  background: var(--ogrid-primary-hover, #1b5f39);
+}
+
+.ogrid-filter-clear-btn {
+  padding: 6px 12px;
+  border: 1px solid var(--ogrid-border, #ccc);
+  border-radius: 4px;
+  background: var(--ogrid-bg, #fff);
+  color: var(--ogrid-muted, #666);
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.ogrid-filter-clear-btn:hover {
+  background: var(--ogrid-bg-hover, #f5f5f5);
+  color: var(--ogrid-fg, #333);
+}
+
+.ogrid-filter-select-all-btn,
+.ogrid-filter-clear-sel-btn {
+  background: none;
+  border: none;
+  color: var(--ogrid-primary, #217346);
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  padding: 4px 8px;
+  border-radius: 4px;
+}
+
+.ogrid-filter-select-all-btn:hover,
+.ogrid-filter-clear-sel-btn:hover {
+  background: var(--ogrid-bg-hover, #f5f5f5);
+}
+
+.ogrid-filter-checkbox-list {
+  overflow-y: auto;
+  max-height: 250px;
+  padding: 6px 0;
+}
+
+.ogrid-filter-checkbox-item {
+  padding: 4px 12px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: var(--ogrid-fg, #242424);
+  cursor: pointer;
+}
+
+.ogrid-filter-checkbox-item:hover {
+  background: var(--ogrid-bg-hover, #f5f5f5);
+}
+
+.ogrid-filter-checkbox-item input[type='checkbox'] {
+  accent-color: var(--ogrid-primary, #217346);
+}
+
+.ogrid-filter-empty {
+  padding: 20px;
+  text-align: center;
+  font-size: 13px;
+  color: var(--ogrid-muted, #666);
+}
+
+/* ── Context Menu ── */
+
+.ogrid-context-menu {
+  position: fixed;
+  z-index: 10000;
+  min-width: 160px;
+  padding: 4px 0;
+  background: var(--ogrid-bg, #fff);
+  border: 1px solid var(--ogrid-border, #e0e0e0);
+  border-radius: 6px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
+}
+
+.ogrid-context-menu-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+  width: 100%;
+  padding: 6px 12px;
+  border: none;
+  background: none;
+  font-size: 13px;
+  text-align: left;
+  cursor: pointer;
+  color: var(--ogrid-fg, #242424);
+}
+
+.ogrid-context-menu-item:hover:not(:disabled) {
+  background: var(--ogrid-bg-hover, #f5f5f5);
+}
+
+.ogrid-context-menu-item:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.ogrid-context-menu-divider {
+  height: 1px;
+  margin: 4px 0;
+  background: var(--ogrid-border, #e0e0e0);
+}
+
+/* ── Inline Cell Editor ── */
+
+.ogrid-cell-editor {
+  position: absolute;
+  z-index: 10;
+  background: var(--ogrid-bg, #fff);
+  border: 2px solid var(--ogrid-selection, #217346);
+  border-radius: 0;
+  box-sizing: border-box;
+}
+
+.ogrid-cell-editor input,
+.ogrid-cell-editor select {
+  width: 100%;
+  height: 100%;
+  border: none;
+  outline: none;
+  padding: 4px 8px;
+  font-size: 13px;
+  font-family: inherit;
+  background: var(--ogrid-bg, #fff);
+  color: var(--ogrid-fg, #242424);
+  box-sizing: border-box;
+}
+
+/* ── Numeric right-alignment ── */
+
+.ogrid-table th[data-type='numeric'],
+.ogrid-table td[data-type='numeric'] {
+  text-align: right;
+}

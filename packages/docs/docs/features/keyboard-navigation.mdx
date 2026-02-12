@@ -5,6 +5,8 @@ description: Full keyboard support for navigating, editing, selecting, and opera
 ---
 
 import KeyboardNavigationDemo from '@site/src/components/demos/KeyboardNavigationDemo';
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
 
 # Keyboard Navigation
 
@@ -15,6 +17,9 @@ OGrid supports comprehensive keyboard navigation for moving between cells, editi
 <KeyboardNavigationDemo />
 
 ## Quick Example
+
+<Tabs groupId="framework">
+  <TabItem value="radix" label="Radix (Lightweight)" default>
 
 ```tsx
 import { OGrid } from '@alaarab/ogrid-react-radix';
@@ -30,6 +35,72 @@ function App() {
   );
 }
 ```
+
+  </TabItem>
+  <TabItem value="fluent" label="Fluent UI">
+
+```tsx
+import { OGrid } from '@alaarab/ogrid-react-fluent';
+import { FluentProvider, webLightTheme } from '@fluentui/react-components';
+
+function App() {
+  return (
+    <FluentProvider theme={webLightTheme}>
+      <OGrid
+        columns={columns}
+        data={data}
+        getRowId={(r) => r.id}
+        editable
+      />
+    </FluentProvider>
+  );
+}
+```
+
+  </TabItem>
+  <TabItem value="material" label="Material UI">
+
+```tsx
+import { OGrid } from '@alaarab/ogrid-react-material';
+import { ThemeProvider, createTheme } from '@mui/material/styles';
+import CssBaseline from '@mui/material/CssBaseline';
+
+const theme = createTheme();
+
+function App() {
+  return (
+    <ThemeProvider theme={theme}>
+      <CssBaseline />
+      <OGrid
+        columns={columns}
+        data={data}
+        getRowId={(r) => r.id}
+        editable
+      />
+    </ThemeProvider>
+  );
+}
+```
+
+  </TabItem>
+  <TabItem value="js" label="Vanilla JS">
+
+```js
+import { OGrid } from '@alaarab/ogrid-js';
+import '@alaarab/ogrid-js/styles';
+
+const grid = new OGrid(document.getElementById('grid'), {
+  columns: columns,
+  data: data,
+  getRowId: (r) => r.id,
+  editable: true,
+});
+
+// Click any cell to make it active, then use keyboard to navigate
+```
+
+  </TabItem>
+</Tabs>
 
 Click any cell to make it the active cell, then use the keyboard to navigate and edit.
 

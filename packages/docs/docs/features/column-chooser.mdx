@@ -5,6 +5,8 @@ description: Let users show and hide columns with a dropdown control
 ---
 
 import ColumnChooserDemo from '@site/src/components/demos/ColumnChooserDemo';
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
 
 # Column Chooser
 
@@ -15,6 +17,9 @@ The Column Chooser gives users a dropdown with checkboxes to show or hide column
 <ColumnChooserDemo />
 
 ## Quick Example
+
+<Tabs groupId="framework">
+  <TabItem value="radix" label="Radix (Lightweight)" default>
 
 ```tsx
 import { OGrid } from '@alaarab/ogrid-react-radix';
@@ -55,6 +60,132 @@ function App() {
   );
 }
 ```
+
+  </TabItem>
+  <TabItem value="fluent" label="Fluent UI">
+
+```tsx
+import { OGrid } from '@alaarab/ogrid-react-fluent';
+import type { IColumnDef } from '@alaarab/ogrid-react-fluent';
+import { FluentProvider, webLightTheme } from '@fluentui/react-components';
+
+interface Person {
+  id: number;
+  name: string;
+  email: string;
+  age: number;
+  department: string;
+  salary: number;
+  startDate: string;
+}
+
+const columns: IColumnDef<Person>[] = [
+  { columnId: 'name', name: 'Name', required: true },
+  { columnId: 'email', name: 'Email' },
+  { columnId: 'age', name: 'Age', type: 'numeric', defaultVisible: false },
+  { columnId: 'department', name: 'Department' },
+  {
+    columnId: 'salary',
+    name: 'Salary',
+    type: 'numeric',
+    valueFormatter: (v) => `$${Number(v).toLocaleString()}`,
+  },
+  { columnId: 'startDate', name: 'Start Date', defaultVisible: false },
+];
+
+function App() {
+  return (
+    <FluentProvider theme={webLightTheme}>
+      <OGrid
+        columns={columns}
+        data={people}
+        getRowId={(p) => p.id}
+        defaultPageSize={10}
+      />
+    </FluentProvider>
+  );
+}
+```
+
+  </TabItem>
+  <TabItem value="material" label="Material UI">
+
+```tsx
+import { OGrid } from '@alaarab/ogrid-react-material';
+import type { IColumnDef } from '@alaarab/ogrid-react-material';
+import { ThemeProvider, createTheme } from '@mui/material/styles';
+import CssBaseline from '@mui/material/CssBaseline';
+
+const theme = createTheme();
+
+interface Person {
+  id: number;
+  name: string;
+  email: string;
+  age: number;
+  department: string;
+  salary: number;
+  startDate: string;
+}
+
+const columns: IColumnDef<Person>[] = [
+  { columnId: 'name', name: 'Name', required: true },
+  { columnId: 'email', name: 'Email' },
+  { columnId: 'age', name: 'Age', type: 'numeric', defaultVisible: false },
+  { columnId: 'department', name: 'Department' },
+  {
+    columnId: 'salary',
+    name: 'Salary',
+    type: 'numeric',
+    valueFormatter: (v) => `$${Number(v).toLocaleString()}`,
+  },
+  { columnId: 'startDate', name: 'Start Date', defaultVisible: false },
+];
+
+function App() {
+  return (
+    <ThemeProvider theme={theme}>
+      <CssBaseline />
+      <OGrid
+        columns={columns}
+        data={people}
+        getRowId={(p) => p.id}
+        defaultPageSize={10}
+      />
+    </ThemeProvider>
+  );
+}
+```
+
+  </TabItem>
+  <TabItem value="js" label="Vanilla JS">
+
+```js
+import { OGrid } from '@alaarab/ogrid-js';
+import '@alaarab/ogrid-js/styles';
+
+const grid = new OGrid(document.getElementById('grid'), {
+  columns: [
+    { columnId: 'name', name: 'Name', required: true },
+    { columnId: 'email', name: 'Email' },
+    { columnId: 'age', name: 'Age', type: 'numeric', defaultVisible: false },
+    { columnId: 'department', name: 'Department' },
+    {
+      columnId: 'salary',
+      name: 'Salary',
+      type: 'numeric',
+      valueFormatter: (v) => `$${Number(v).toLocaleString()}`,
+    },
+    { columnId: 'startDate', name: 'Start Date', defaultVisible: false },
+  ],
+  data: people,
+  getRowId: (p) => p.id,
+  pageSize: 10,
+});
+```
+
+  </TabItem>
+</Tabs>
 
 In this example:
 - **Name** is always visible (cannot be unchecked because `required: true`).
