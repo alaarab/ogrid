@@ -8,69 +8,131 @@ description: Install OGrid for your framework
 
 OGrid ships as separate packages for each UI framework. Pick the one that matches your project's design system.
 
-## Radix UI (Default)
+## React
 
-The lightest option. Radix UI primitives are bundled as regular dependencies, so there are no additional peer dependencies beyond React.
+Choose one React UI package based on your design system:
+
+### Radix UI (Recommended)
+
+**Lightest option.** Radix UI primitives are bundled as regular dependencies -- no peer deps beyond React.
 
 ```bash
 npm install @alaarab/ogrid-react-radix
 ```
 
-## Fluent UI
+**When to choose:** New projects, or when you want minimal bundle size and no design system lock-in.
 
-For projects using Microsoft's Fluent UI v9 design system. Requires `@fluentui/react-components` as a peer dependency.
+### Fluent UI
+
+**Microsoft's design system.** Requires Fluent UI v9 as a peer dependency.
 
 ```bash
 npm install @alaarab/ogrid-react-fluent @fluentui/react-components
 ```
 
-## Material UI
+**When to choose:** SharePoint Framework (SPFx) apps, Microsoft 365 integrations, or projects already using Fluent UI.
 
-For projects using Google's Material Design via MUI v7. Requires MUI core and Emotion as peer dependencies.
+### Material UI
+
+**Google's Material Design.** Requires MUI v7 and Emotion as peer dependencies.
 
 ```bash
 npm install @alaarab/ogrid-react-material @mui/material @emotion/react @emotion/styled
 ```
 
-## Angular Material
+**When to choose:** Projects using Material Design, or when you need MUI's extensive component ecosystem.
 
-For Angular v21 projects using Angular Material. Requires `@angular/core`, `@angular/common`, `@angular/material`, and `@angular/cdk` as peer dependencies.
+---
+
+## Angular
+
+Choose one Angular UI package based on your design system:
+
+### Radix (Angular CDK) (Beta)
+
+**Lightest option.** Uses Angular CDK for overlays -- no heavy UI framework dependencies.
+
+:::warning Beta Package
+This package is currently in beta. While core functionality works, some advanced features are still being implemented. For production use, consider Angular Material or PrimeNG until this package reaches v2.1.0.
+:::
+
+```bash
+npm install @alaarab/ogrid-angular-radix @angular/cdk
+```
+
+**When to choose:** New Angular projects, or when you want minimal bundle size and no design system lock-in.
+
+### Angular Material
+
+**Official Material Design for Angular.** Requires Angular v21, Angular Material, and CDK as peer dependencies.
 
 ```bash
 npm install @alaarab/ogrid-angular-material @angular/material @angular/cdk
 ```
 
-## Angular PrimeNG
+**When to choose:** Projects already using Angular Material, or when you need Material Design components.
 
-For Angular v21 projects using PrimeNG. Requires `@angular/core`, `@angular/common`, and `primeng` as peer dependencies.
+### PrimeNG
+
+**PrimeNG component library.** Requires Angular v21 and PrimeNG as peer dependencies.
 
 ```bash
 npm install @alaarab/ogrid-angular-primeng primeng
 ```
 
-## Vue Vuetify
+**When to choose:** Projects already using PrimeNG, or when you prefer PrimeNG's component set.
 
-For Vue 3 projects using Vuetify. Requires `vue` and `vuetify` as peer dependencies.
+---
+
+## Vue
+
+Choose one Vue UI package based on your design system:
+
+### Radix (Headless UI) (Beta)
+
+**Lightest option.** Headless UI Vue components are bundled as regular dependencies -- no peer deps beyond Vue.
+
+:::warning Beta Package
+This package is currently in beta. While core functionality works, some advanced features are still being implemented. For production use, consider Vuetify or PrimeVue until this package reaches v2.1.0.
+:::
+
+```bash
+npm install @alaarab/ogrid-vue-radix
+```
+
+**When to choose:** New Vue projects, or when you want minimal bundle size and no design system lock-in.
+
+### Vuetify
+
+**Material Design for Vue.** Requires Vue 3 and Vuetify as peer dependencies.
 
 ```bash
 npm install @alaarab/ogrid-vue-vuetify vuetify
 ```
 
-## Vue PrimeVue
+**When to choose:** Projects already using Vuetify, or when you need Material Design components.
 
-For Vue 3 projects using PrimeVue. Requires `vue` and `primevue` as peer dependencies.
+### PrimeVue
+
+**PrimeVue component library.** Requires Vue 3 and PrimeVue as peer dependencies.
 
 ```bash
 npm install @alaarab/ogrid-vue-primevue primevue
 ```
 
+**When to choose:** Projects already using PrimeVue, or when you prefer PrimeVue's component set.
+
+---
+
 ## Vanilla JS (No Framework)
 
-For projects without a framework. Class-based API with EventEmitter state management.
+**Framework-free data grid.** Class-based API with EventEmitter state management. Zero framework dependencies.
 
 ```bash
 npm install @alaarab/ogrid-js
 ```
+
+**When to choose:** Projects without React/Angular/Vue, legacy codebases, or when you want full control over rendering.
 
 :::tip Theme CSS
 The JS package ships a default theme with light and dark mode support:
@@ -129,7 +191,7 @@ function App() {
 **Angular:**
 ```typescript
 import { Component } from '@angular/core';
-import { OGridComponent, OGridService, type IColumnDef } from '@alaarab/ogrid-angular-material';
+import { OGridComponent, type IColumnDef } from '@alaarab/ogrid-angular-radix';
 
 @Component({
   standalone: true,
@@ -148,7 +210,7 @@ export class AppComponent {
 **Vue:**
 ```vue
 <script setup lang="ts">
-import { OGrid } from '@alaarab/ogrid-vue-vuetify';
+import { OGrid } from '@alaarab/ogrid-vue-radix';
 import type { IColumnDef } from '@alaarab/ogrid-vue';
 
 const columns: IColumnDef[] = [{ columnId: 'name', name: 'Name' }];

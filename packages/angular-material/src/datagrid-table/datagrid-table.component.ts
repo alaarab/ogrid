@@ -13,6 +13,7 @@ import {
   buildHeaderRows,
   getCellValue,
   CHECKBOX_COLUMN_WIDTH,
+  ROW_NUMBER_COLUMN_WIDTH,
   DEFAULT_MIN_COLUMN_WIDTH,
   getHeaderFilterConfig,
   getCellRenderDescriptor,
@@ -27,6 +28,7 @@ import type {
   HeaderFilterConfig,
 } from '@alaarab/ogrid-angular';
 import { ColumnHeaderFilterComponent } from '../column-header-filter/column-header-filter.component';
+import { ColumnHeaderMenuComponent } from '../column-header-menu/column-header-menu.component';
 
 /**
  * DataGridTable component using native HTML table with Material Design-inspired styling.
@@ -35,7 +37,7 @@ import { ColumnHeaderFilterComponent } from '../column-header-filter/column-head
 @Component({
   selector: 'ogrid-datagrid-table',
   standalone: true,
-  imports: [ColumnHeaderFilterComponent],
+  imports: [ColumnHeaderFilterComponent, ColumnHeaderMenuComponent, MarchingAntsOverlayComponent],
   providers: [DataGridStateService],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
@@ -80,6 +82,14 @@ import { ColumnHeaderFilterComponent } from '../column-header-filter/column-head
                       @if (rowIdx === 0 && rowIdx < headerRows().length - 1 && hasCheckboxCol()) {
                         <th [attr.rowSpan]="headerRows().length - 1" class="ogrid-datagrid-th" style="width: 48px; min-width: 48px; padding: 0;"></th>
                       }
+                      @if (rowIdx === headerRows().length - 1 && hasRowNumbersCol()) {
+                        <th class="ogrid-datagrid-th ogrid-row-number-header" [attr.rowSpan]="headerRows().length > 1 ? 1 : null">
+                          <div class="ogrid-row-number-header-content">#</div>
+                        </th>
+                      }
+                      @if (rowIdx === 0 && rowIdx < headerRows().length - 1 && hasRowNumbersCol()) {
+                        <th [attr.rowSpan]="headerRows().length - 1" class="ogrid-datagrid-th" [style.width.px]="50" [style.min-width.px]="50" style="padding: 0;"></th>
+                      }
                       @for (cell of row; track $index; let cellIdx = $index) {
                         @if (cell.isGroup) {
                           <th [attr.colSpan]="cell.colSpan" scope="colgroup" class="ogrid-datagrid-th ogrid-datagrid-group-header">
@@ -90,10 +100,13 @@ import { ColumnHeaderFilterComponent } from '../column-header-filter/column-head
                           @let colIdx = visibleColIndex(col);
                           @let isFreezeCol = freezeCols() != null && (freezeCols() ?? 0) >= 1 && colIdx < (freezeCols() ?? 0);
                           @let colW = getColumnWidth(col);
+                          @let pinned = isPinned(col.columnId);
+                          @let pinnedLeft = pinned === 'left' || (isFreezeCol && colIdx === 0);
+                          @let pinnedRight = pinned === 'right';
                           <th scope="col"
                             class="ogrid-datagrid-th"
-                            [class.ogrid-datagrid-th--pinned-left]="col.pinned === 'left' || (isFreezeCol && colIdx === 0)"
-                            [class.ogrid-datagrid-th--pinned-right]="col.pinned === 'right'"
+                            [class.ogrid-datagrid-th--pinned-left]="pinnedLeft"
+                            [class.ogrid-datagrid-th--pinned-right]="pinnedRight"
                             [attr.rowSpan]="headerRows().length > 1 ? headerRows().length - rowIdx : null"
                             [attr.data-column-id]="col.columnId"
                             [style.minWidth.px]="col.minWidth ?? 80"
@@ -102,25 +115,37 @@ import { ColumnHeaderFilterComponent } from '../column-header-filter/column-head
                             [style.cursor]="columnReorderService.isDragging() ? 'grabbing' : 'grab'"
                             (mousedown)="onHeaderMouseDown(col.columnId, $event)"
                           >
-                            <ogrid-column-header-filter
-                              [columnKey]="col.columnId"
-                              [columnName]="col.name"
-                              [filterType]="getFilterConfig(col).filterType"
-                              [isSorted]="getFilterConfig(col).isSorted"
-                              [isSortedDescending]="getFilterConfig(col).isSortedDescending"
-                              [onSort]="getFilterConfig(col).onSort"
-                              [selectedValues]="getFilterConfig(col).selectedValues"
-                              [onFilterChange]="getFilterConfig(col).onFilterChange"
-                              [options]="getFilterConfig(col).options"
-                              [isLoadingOptions]="getFilterConfig(col).isLoadingOptions ?? false"
-                              [textValue]="getFilterConfig(col).textValue ?? ''"
-                              [onTextChange]="getFilterConfig(col).onTextChange"
-                              [selectedUser]="getFilterConfig(col).selectedUser"
-                              [onUserChange]="getFilterConfig(col).onUserChange"
-                              [peopleSearch]="getFilterConfig(col).peopleSearch"
-                              [dateValue]="getFilterConfig(col).dateValue"
-                              [onDateChange]="getFilterConfig(col).onDateChange"
-                            />
+                            <div style="display:flex;align-items:center;gap:4px;">
+                              <ogrid-column-header-filter
+                                [columnKey]="col.columnId"
+                                [columnName]="col.name"
+                                [filterType]="getFilterConfig(col).filterType"
+                                [isSorted]="getFilterConfig(col).isSorted"
+                                [isSortedDescending]="getFilterConfig(col).isSortedDescending"
+                                [onSort]="getFilterConfig(col).onSort"
+                                [selectedValues]="getFilterConfig(col).selectedValues"
+                                [onFilterChange]="getFilterConfig(col).onFilterChange"
+                                [options]="getFilterConfig(col).options"
+                                [isLoadingOptions]="getFilterConfig(col).isLoadingOptions ?? false"
+                                [textValue]="getFilterConfig(col).textValue ?? ''"
+                                [onTextChange]="getFilterConfig(col).onTextChange"
+                                [selectedUser]="getFilterConfig(col).selectedUser"
+                                [onUserChange]="getFilterConfig(col).onUserChange"
+                                [peopleSearch]="getFilterConfig(col).peopleSearch"
+                                [dateValue]="getFilterConfig(col).dateValue"
+                                [onDateChange]="getFilterConfig(col).onDateChange"
+                              />
+                              @let pinState = getPinState(col.columnId);
+                              <column-header-menu
+                                [columnId]="col.columnId"
+                                [onPinLeft]="() => onPinColumn(col.columnId, 'left')"
+                                [onPinRight]="() => onPinColumn(col.columnId, 'right')"
+                                [onUnpin]="() => onUnpinColumn(col.columnId)"
+                                [canPinLeft]="pinState.canPinLeft"
+                                [canPinRight]="pinState.canPinRight"
+                                [canUnpin]="pinState.canUnpin"
+                              />
+                            </div>
                             <div class="ogrid-datagrid-resize-handle" (mousedown)="onResizeStart($event, col)"></div>
                           </th>
                         }
@@ -153,6 +178,13 @@ import { ColumnHeaderFilterComponent } from '../column-header-filter/column-head
                                 (change)="onRowCheckboxChange(rowId, $event, rowIndex)"
                                 [attr.aria-label]="'Select row ' + (rowIndex + 1)"
                               />
+                            </div>
+                          </td>
+                        }
+                        @if (hasRowNumbersCol()) {
+                          <td class="ogrid-datagrid-td ogrid-row-number-cell">
+                            <div class="ogrid-row-number-cell-content">
+                              {{ rowNumberOffset() + rowIndex + 1 }}
                             </div>
                           </td>
                         }
@@ -247,6 +279,15 @@ import { ColumnHeaderFilterComponent } from '../column-header-filter/column-head
                   </tbody>
                 }
               </table>
+
+              <ogrid-marching-ants-overlay
+                [containerEl]="tableContainerEl()"
+                [selectionRange]="state().interaction.selectionRange"
+                [copyRange]="state().interaction.copyRange"
+                [cutRange]="state().interaction.cutRange"
+                [colOffset]="state().layout.colOffset"
+                [columnSizingVersion]="columnSizingVersion()"
+              ></ogrid-marching-ants-overlay>
 
               @if (showEmptyInGrid() && emptyState()) {
                 <div class="ogrid-datagrid-empty">
@@ -344,9 +385,11 @@ import { ColumnHeaderFilterComponent } from '../column-header-filter/column-head
     }
     .ogrid-datagrid-th--pinned-left {
       position: sticky; left: 0; z-index: 9; background: rgba(0,0,0,0.04); will-change: transform;
+      border-left: 2px solid var(--mat-sys-primary, #1976d2);
     }
     .ogrid-datagrid-th--pinned-right {
       position: sticky; right: 0; z-index: 9; background: rgba(0,0,0,0.04); will-change: transform;
+      border-right: 2px solid var(--mat-sys-primary, #1976d2);
     }
     .ogrid-datagrid-group-header {
       text-align: center; font-weight: 600; border-bottom: 2px solid rgba(0,0,0,0.12); padding: 6px;
@@ -356,15 +399,28 @@ import { ColumnHeaderFilterComponent } from '../column-header-filter/column-head
       max-width: ${CHECKBOX_COLUMN_WIDTH}px; text-align: center;
     }
     .ogrid-datagrid-checkbox-wrapper { display: flex; align-items: center; justify-content: center; }
+    .ogrid-row-number-header, .ogrid-row-number-cell {
+      width: ${ROW_NUMBER_COLUMN_WIDTH}px; min-width: ${ROW_NUMBER_COLUMN_WIDTH}px;
+      max-width: ${ROW_NUMBER_COLUMN_WIDTH}px; text-align: center;
+      background: rgba(0,0,0,0.04); font-weight: 600;
+      font-variant-numeric: tabular-nums; color: rgba(0,0,0,0.6);
+      position: sticky; left: 0; z-index: 3;
+    }
+    .ogrid-row-number-header { z-index: 4; }
+    .ogrid-row-number-header-content, .ogrid-row-number-cell-content {
+      display: flex; align-items: center; justify-content: center;
+    }
     .ogrid-datagrid-row { }
     .ogrid-datagrid-row:hover { background: rgba(0,0,0,0.04); }
     .ogrid-datagrid-row--selected { background: rgba(25,118,210,0.08); }
     .ogrid-datagrid-td { position: relative; padding: 0; height: 1px; border-bottom: 1px solid rgba(0,0,0,0.06); }
     .ogrid-datagrid-td--pinned-left {
       position: sticky; left: 0; z-index: 6; background: #fff; will-change: transform;
+      border-left: 2px solid var(--mat-sys-primary, #1976d2);
     }
     .ogrid-datagrid-td--pinned-right {
       position: sticky; right: 0; z-index: 6; background: #fff; will-change: transform;
+      border-right: 2px solid var(--mat-sys-primary, #1976d2);
     }
     .ogrid-datagrid-cell {
       width: 100%; height: 100%; display: flex; align-items: center; min-width: 0;
@@ -384,7 +440,10 @@ import { ColumnHeaderFilterComponent } from '../column-header-filter/column-head
     .ogrid-datagrid-cell--editing { padding: 0; }
     .ogrid-datagrid-editor-input {
       width: 100%; height: 100%; padding: 6px 10px; border: 2px solid var(--ogrid-selection, #217346);
-      box-sizing: border-box; font-size: 14px; outline: none;
+      box-sizing: border-box; font-size: 14px; outline: none; font-family: inherit; line-height: inherit;
+    }
+    .ogrid-datagrid-cell--numeric .ogrid-datagrid-editor-input {
+      text-align: right;
     }
     .ogrid-datagrid-editor-select {
       width: 100%; height: 100%; padding: 4px 8px; border: 2px solid var(--ogrid-selection, #217346);
@@ -450,6 +509,7 @@ export class DataGridTableComponent<T> {
   readonly virtualScrollService = new VirtualScrollService();
 
   private lastMouseShift = false;
+  private columnSizingVersion = signal(0);
 
   constructor() {
     // Wire props and wrapper element to state service
@@ -501,10 +561,14 @@ export class DataGridTableComponent<T> {
   readonly ariaLabel = computed(() => this.propsInput()?.['aria-label'] ?? 'Data grid');
   readonly ariaLabelledBy = computed(() => this.propsInput()?.['aria-labelledby']);
   readonly emptyState = computed(() => this.propsInput()?.emptyState);
+  readonly currentPage = computed(() => this.propsInput()?.currentPage ?? 1);
+  readonly pageSize = computed(() => this.propsInput()?.pageSize ?? 25);
+  readonly rowNumberOffset = computed(() => this.hasRowNumbersCol() ? (this.currentPage() - 1) * this.pageSize() : 0);
 
   // State service outputs
   readonly visibleCols = computed(() => this.state().layout.visibleCols);
   readonly hasCheckboxCol = computed(() => this.state().layout.hasCheckboxCol);
+  readonly hasRowNumbersCol = computed(() => this.state().layout.hasRowNumbersCol);
   readonly colOffset = computed(() => this.state().layout.colOffset);
   readonly containerWidth = computed(() => this.state().layout.containerWidth);
   readonly minTableWidth = computed(() => this.state().layout.minTableWidth);
@@ -559,10 +623,13 @@ export class DataGridTableComponent<T> {
   readonly columnLayouts = computed(() => {
     const cols = this.visibleCols() as IColumnDef<T>[];
     const fc = this.freezeCols();
+    const props = this.propsInput();
+    const pinnedCols = props?.pinnedColumns ?? {};
     return cols.map((col, colIdx) => {
       const isFreezeCol = fc != null && fc >= 1 && colIdx < fc;
-      const pinnedLeft = col.pinned === 'left' || (isFreezeCol && colIdx === 0);
-      const pinnedRight = col.pinned === 'right';
+      const runtimePinned = pinnedCols[col.columnId];
+      const pinnedLeft = runtimePinned === 'left' || (isFreezeCol && colIdx === 0);
+      const pinnedRight = runtimePinned === 'right';
       const w = this.getColumnWidth(col);
       return {
         col,
@@ -663,6 +730,7 @@ export class DataGridTableComponent<T> {
       const newWidth = Math.max(minWidth, startWidth + delta);
       const overrides = { ...this.columnSizingOverrides(), [col.columnId]: { widthPx: newWidth } };
       this.state().layout.setColumnSizingOverrides(overrides);
+      this.columnSizingVersion.update(v => v + 1);
     };
 
     const onUp = () => {
@@ -742,5 +810,31 @@ export class DataGridTableComponent<T> {
 
   onHeaderMouseDown(columnId: string, event: MouseEvent): void {
     this.columnReorderService.handleHeaderMouseDown(columnId, event);
+  }
+
+  // --- Column pinning methods ---
+
+  onPinColumn(columnId: string, side: 'left' | 'right'): void {
+    const props = this.propsInput();
+    props?.onColumnPinned?.(columnId, side);
+  }
+
+  onUnpinColumn(columnId: string): void {
+    const props = this.propsInput();
+    props?.onColumnPinned?.(columnId, null);
+  }
+
+  isPinned(columnId: string): 'left' | 'right' | undefined {
+    const props = this.propsInput();
+    return props?.pinnedColumns?.[columnId];
+  }
+
+  getPinState(columnId: string): { canPinLeft: boolean; canPinRight: boolean; canUnpin: boolean } {
+    const pinned = this.isPinned(columnId);
+    return {
+      canPinLeft: pinned !== 'left',
+      canPinRight: pinned !== 'right',
+      canUnpin: !!pinned,
+    };
   }
 }

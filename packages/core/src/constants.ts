@@ -5,6 +5,9 @@
 /** Width of the row selection checkbox column in pixels. */
 export const CHECKBOX_COLUMN_WIDTH = 48;
 
+/** Width of the row numbers column in pixels. */
+export const ROW_NUMBER_COLUMN_WIDTH = 50;
+
 /** Default minimum width for resizable columns in pixels. */
 export const DEFAULT_MIN_COLUMN_WIDTH = 80;
 

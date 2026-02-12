@@ -17,6 +17,7 @@ import {
   PopoverSurface,
 } from '@fluentui/react-components';
 import { ColumnHeaderFilter } from '../ColumnHeaderFilter';
+import { ColumnHeaderMenu } from '../ColumnHeaderMenu';
 import { InlineCellEditor } from './InlineCellEditor';
 import { StatusBar } from './StatusBar';
 import { GridContextMenu } from './GridContextMenu';
@@ -42,6 +43,7 @@ import {
   areGridRowPropsEqual,
   CellErrorBoundary,
   CHECKBOX_COLUMN_WIDTH,
+  ROW_NUMBER_COLUMN_WIDTH,
   DEFAULT_MIN_COLUMN_WIDTH,
 } from '@alaarab/ogrid-react';
 import styles from './DataGridTable.module.scss';
@@ -111,8 +113,8 @@ function DataGridTableInner<T>(props: IOGridDataGridProps<T>): React.ReactElemen
   const tableContainerRef = useRef<HTMLDivElement>(null);
   const state = useDataGridState({ props, wrapperRef });
 
-  const { layout, rowSelection: rowSel, editing, interaction, contextMenu: ctxMenu, viewModels } = state;
-  const { flatColumns, visibleCols, totalColCount, hasCheckboxCol, colOffset, rowIndexByRowId, containerWidth, minTableWidth, desiredTableWidth, columnSizingOverrides, setColumnSizingOverrides } = layout;
+  const { layout, rowSelection: rowSel, editing, interaction, contextMenu: ctxMenu, viewModels, pinning } = state;
+  const { flatColumns, visibleCols, totalColCount, hasCheckboxCol, hasRowNumbersCol, colOffset, rowIndexByRowId, containerWidth, minTableWidth, desiredTableWidth, columnSizingOverrides, setColumnSizingOverrides } = layout;
   const { selectedRowIds, updateSelection, handleRowCheckboxChange, handleSelectAll, allSelected, someSelected } = rowSel;
   const { editingCell, setEditingCell, pendingEditorValue, setPendingEditorValue, commitCellEdit, cancelPopoverEdit, popoverAnchorEl, setPopoverAnchorEl } = editing;
   const { activeCell, setActiveCell, handleCellMouseDown, handleSelectAllCells, selectionRange, hasCellSelection, handleGridKeyDown, handleFillHandleMouseDown, handleCopy, handleCut, handlePaste, cutRange, copyRange, canUndo, canRedo, onUndo, onRedo, isDragging } = interaction;
@@ -139,8 +141,14 @@ function DataGridTableInner<T>(props: IOGridDataGridProps<T>): React.ReactElemen
     onColumnOrderChange,
     columnReorder,
     virtualScroll,
+    density = 'normal',
     pinnedColumns,
+    currentPage = 1,
+    pageSize: propPageSize = 25,
   } = props;
+
+  // Calculate row number offset for pagination
+  const rowNumberOffset = hasRowNumbersCol ? (currentPage - 1) * propPageSize : 0;
 
   // Memoize header rows (recursive tree traversal)
   const headerRows = useMemo(() => buildHeaderRows(columns, visibleColumns), [columns, visibleColumns]);
@@ -174,6 +182,10 @@ function DataGridTableInner<T>(props: IOGridDataGridProps<T>): React.ReactElemen
       acc['__selection__'] = { minWidth: CHECKBOX_COLUMN_WIDTH, defaultWidth: CHECKBOX_COLUMN_WIDTH, idealWidth: CHECKBOX_COLUMN_WIDTH };
     }
 
+    if (hasRowNumbersCol) {
+      acc['__row_number__'] = { minWidth: ROW_NUMBER_COLUMN_WIDTH, defaultWidth: ROW_NUMBER_COLUMN_WIDTH, idealWidth: ROW_NUMBER_COLUMN_WIDTH };
+    }
+
     visibleCols.forEach((c) => {
       const minW = c.minWidth ?? DEFAULT_MIN_COLUMN_WIDTH;
       const defaultW = c.defaultWidth ?? 120;
@@ -190,7 +202,7 @@ function DataGridTableInner<T>(props: IOGridDataGridProps<T>): React.ReactElemen
     });
 
     return acc;
-  }, [visibleCols, columnSizingOverrides, hasCheckboxCol]);
+  }, [visibleCols, columnSizingOverrides, hasCheckboxCol, hasRowNumbersCol]);
 
   const allowOverflowX = !suppressHorizontalScroll && containerWidth > 0 && (minTableWidth > containerWidth || desiredTableWidth > containerWidth);
 
@@ -255,7 +267,20 @@ function DataGridTableInner<T>(props: IOGridDataGridProps<T>): React.ReactElemen
             style={columnReorder ? { cursor: isReorderDraggingRef.current ? 'grabbing' : 'grab' } : undefined}
             onMouseDown={columnReorder ? (e) => handleHeaderMouseDownRef.current(col.columnId, e) : undefined}
           >
-            <ColumnHeaderFilter {...getHeaderFilterConfig(col, headerFilterInputRef.current)} />
+            <div className={styles.headerCellContent}>
+              <ColumnHeaderFilter {...getHeaderFilterConfig(col, headerFilterInputRef.current)} />
+              <button
+                className={styles.headerMenuTrigger}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  pinning.headerMenu.open(col.columnId, e.currentTarget);
+                }}
+                aria-label="Column options"
+                title="Column options"
+              >
+                ⋮
+              </button>
+            </div>
           </div>
         ),
         renderCell: (item) => {
@@ -370,12 +395,52 @@ function DataGridTableInner<T>(props: IOGridDataGridProps<T>): React.ReactElemen
           );
         },
       });
-      return [checkboxCol, ...dataCols];
+      const cols = [checkboxCol];
+      if (hasRowNumbersCol) {
+        const rowNumberCol = createTableColumn<T>({
+          columnId: '__row_number__',
+          compare: () => 0,
+          renderHeaderCell: () => (
+            <div className={styles.rowNumberHeaderCell}>#</div>
+          ),
+          renderCell: (item) => {
+            const rowId = getRowId(item);
+            const rowIndex = rowIndexByRowIdRef.current.get(rowId) ?? -1;
+            return (
+              <div className={styles.rowNumberCell}>
+                {rowNumberOffset + rowIndex + 1}
+              </div>
+            );
+          },
+        });
+        cols.push(rowNumberCol);
+      }
+      return [...cols, ...dataCols];
+    }
+
+    if (hasRowNumbersCol) {
+      const rowNumberCol = createTableColumn<T>({
+        columnId: '__row_number__',
+        compare: () => 0,
+        renderHeaderCell: () => (
+          <div className={styles.rowNumberHeaderCell}>#</div>
+        ),
+        renderCell: (item) => {
+          const rowId = getRowId(item);
+          const rowIndex = rowIndexByRowIdRef.current.get(rowId) ?? -1;
+          return (
+            <div className={styles.rowNumberCell}>
+              {rowNumberOffset + rowIndex + 1}
+            </div>
+          );
+        },
+      });
+      return [rowNumberCol, ...dataCols];
     }
 
     return dataCols;
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [visibleCols, hasCheckboxCol, getRowId, setPopoverAnchorEl, columnReorder]); // All volatile state/callbacks read via refs
+  }, [visibleCols, hasCheckboxCol, hasRowNumbersCol, getRowId, setPopoverAnchorEl, columnReorder, rowNumberOffset]); // All volatile state/callbacks read via refs
 
   // Stable row-click handler
   const handleSingleRowClick = useCallback((rowId: string | number) => {
@@ -445,7 +510,7 @@ function DataGridTableInner<T>(props: IOGridDataGridProps<T>): React.ReactElemen
       <div
         ref={wrapperRef}
         tabIndex={0}
-        className={`${styles.tableWrapper} ${rowSelection !== 'none' ? styles.selectableGrid : ''}`}
+        className={`${styles.tableWrapper} ${rowSelection !== 'none' ? styles.selectableGrid : ''} ${styles[`density-${density}`] || ''}`}
         role="region"
         aria-label={ariaLabel ?? (ariaLabelledBy ? undefined : 'Data grid')}
         aria-labelledby={ariaLabelledBy}
@@ -502,6 +567,9 @@ function DataGridTableInner<T>(props: IOGridDataGridProps<T>): React.ReactElemen
                     <tr key={`group-${rowIdx}`} className={styles.groupHeaderRow}>
                       {rowIdx === 0 && hasCheckboxCol && (
                         <th rowSpan={headerRows.length - 1} style={{ width: CHECKBOX_COLUMN_WIDTH, minWidth: CHECKBOX_COLUMN_WIDTH }} />
+                      )}
+                      {rowIdx === 0 && hasRowNumbersCol && (
+                        <th rowSpan={headerRows.length - 1} style={{ width: ROW_NUMBER_COLUMN_WIDTH, minWidth: ROW_NUMBER_COLUMN_WIDTH }} />
                       )}
                       {row.map((cell, cellIdx) => {
                         if (cell.isGroup) {
@@ -633,6 +701,21 @@ function DataGridTableInner<T>(props: IOGridDataGridProps<T>): React.ReactElemen
             />,
             document.body
           )}
+
+        {createPortal(
+          <ColumnHeaderMenu
+            isOpen={pinning.headerMenu.isOpen}
+            anchorElement={pinning.headerMenu.anchorElement}
+            onClose={pinning.headerMenu.close}
+            onPinLeft={pinning.headerMenu.handlePinLeft}
+            onPinRight={pinning.headerMenu.handlePinRight}
+            onUnpin={pinning.headerMenu.handleUnpin}
+            canPinLeft={pinning.headerMenu.canPinLeft}
+            canPinRight={pinning.headerMenu.canPinRight}
+            canUnpin={pinning.headerMenu.canUnpin}
+          />,
+          document.body
+        )}
       </div>
       {statusBarConfig && (
         <StatusBar

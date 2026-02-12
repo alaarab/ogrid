@@ -215,28 +215,38 @@ All re-export everything from `@alaarab/ogrid-react` (which re-exports from `@al
 
 ## Testing
 
-**1012 tests** across 12 packages (Core: 237, JS: 194, React: 247, Radix: 92, Fluent: 92, Material: 92, Angular: 11, Angular Material: 9, Angular PrimeNG: 10, Vue: 8, Vue Vuetify: 10, Vue PrimeVue: 10).
+**~1000+ tests** across 14 packages. Each framework uses its native testing tools for maintainability and idiomaticity.
 
-- Jest 29 + React Testing Library 16 + ts-jest, jsdom environment, 10s timeout
+- **Core:** 237 tests (pure TypeScript utilities, no framework dependencies)
+- **JS:** 194 tests (native DOM testing)
+- **React packages:** 276+ tests using React Testing Library 16
+  - React core: 247 tests
+  - Radix/Fluent/Material: 92 tests each
+- **Angular packages:** ~90 tests each using Angular Testing utilities
+  - Angular Material: 9 tests (in progress: target 90)
+  - Angular PrimeNG: 10 tests (in progress: target 90)
+  - Angular Radix: 0 tests (in progress: target 90)
+- **Vue packages:** ~90 tests each using Vue Test Utils
+  - Vuetify: 10 tests (in progress: target 90)
+  - PrimeVue: 10 tests (in progress: target 90)
+  - Vue Radix: 0 tests (in progress: target 90)
+
+### Testing Setup
+
+- Jest 29 + ts-jest, jsdom environment, 10s timeout
 - Core tests: `packages/core/src/*/__tests__/**/*.test.ts(x)`
 - UI tests: `packages/*/src/__tests__/**/*.test.ts(x)`
 
-### Shared Test Factories
+### Framework-Specific Testing
 
-UI package tests are **5-line wrappers** calling shared factories from `core/src/testing/`:
+Each framework uses its idiomatic testing tools:
 
-```typescript
-// Example: packages/react-radix/src/__tests__/DataGridTable.test.tsx
-import { DataGridTable } from '../DataGridTable/DataGridTable';
-import { createDataGridTableTests } from '@alaarab/ogrid-core/testing';
-describe('DataGridTable', () => { createDataGridTableTests(DataGridTable); });
-```
+- **React:** React Testing Library for component testing (render, screen, userEvent, waitFor)
+- **Angular:** Angular Testing utilities (TestBed, ComponentFixture, fakeAsync)
+- **Vue:** Vue Test Utils (mount, shallowMount, wrapper queries)
+- **JS:** Native DOM APIs + jsdom (querySelector, addEventListener, dispatchEvent)
 
-Factories: `createColumnChooserTests`, `createPaginationControlsTests`, `createColumnHeaderFilterTests`, `createDataGridTableTests`, `createOGridTests`, `createSpreadsheetTests`, `createColumnGroupTests`, `createSideBarTests`
-
-Mapped in all jest configs: `moduleNameMapper: { '^@alaarab/ogrid-core/testing': '<rootDir>/../core/src/testing/index.ts' }`
-
-`core/tsconfig.json` excludes `**/testing/**` from production build (testing files use jest globals).
+Tests are co-located with components in `__tests__/` directories.
 
 ### Framework Mocks
 
@@ -271,7 +281,7 @@ GitHub Actions (`.github/workflows/ci.yml`): push to `main` + PRs. Node 22, ubun
 3. **Peer deps** — Fluent UI, MUI are peer deps. Radix UI is bundled as a regular dep.
 4. **Component structure** — Each component in its own PascalCase directory with co-located styles and stories.
 5. **Naming** — `I` prefix for interfaces (`IColumnDef`, `IDataSource`).
-6. **Test co-location** — Tests in `__tests__/` dirs. UI package tests use shared factories.
+6. **Test co-location** — Tests in `__tests__/` dirs. Each framework uses native testing tools.
 7. **Headless architecture** — Core owns types and utilities; React owns hooks and state logic; UI packages are thin view layers.
 8. **Feature parity** — All UI packages within each framework must support the same features and pass the same tests. Cross-framework parity: React (3 packages), Angular (2 packages), Vue (2 packages), and JS (1 package) all share the same headless core and expose equivalent APIs.
 9. **Type deduplication** — React's `IColumnDef<T>` extends Core's `IColumnDef<T>` (not a duplicate). React-specific additions (`renderCell`, `cellStyle`, React `cellEditor` types) are in the extension. `dataGridTypes.ts` re-exports shared types from Core. Safe casts (`as IColumnDef<T>[]`) are used at framework boundaries where Core utilities return Core types.
@@ -291,8 +301,8 @@ GitHub Actions (`.github/workflows/ci.yml`): push to `main` + PRs. Node 22, ubun
 
 ### 2. Tests
 - [ ] Core unit tests for new hooks/utilities in `core/src/*/__tests__/`.
-- [ ] If UI-specific rendering is involved, add a shared test factory in `core/src/testing/` and call it from all UI packages.
-- [ ] Run `npm run test:all` — **all tests must pass** across all 12 packages.
+- [ ] If UI-specific rendering is involved, add tests to each UI package using native testing tools (React Testing Library, Angular Testing utilities, Vue Test Utils).
+- [ ] Run `npm run test:all` — **all tests must pass** across all 14 packages.
 
 ### 3. Build
 - [ ] Run `npm run build` — must succeed with zero errors.
@@ -342,7 +352,7 @@ When any feature changes, these artifacts must stay in sync:
 | **Vue composables** | 1 (shared) | `packages/vue/src/` |
 | **Vue UI** | 2 packages | `packages/vue-{vuetify,primevue}/` |
 | **Vanilla JS** | 1 package | `packages/js/src/` |
-| **Tests** | 12 packages | All `__tests__/` dirs — shared factories in `core/src/testing/` |
+| **Tests** | 14 packages | All `__tests__/` dirs — native testing tools per framework |
 | **Storybook** | 3 (React UI) | `packages/react-{radix,fluent,material}/src/stories/` |
 | **Feature docs** | 1 file per feature | `packages/docs/docs/features/*.mdx` — 4 framework tabs each |
 | **StackBlitz demos** | 1 entry per feature | `packages/docs/src/stackblitz/featureDemos.ts` — 4 frameworks each |

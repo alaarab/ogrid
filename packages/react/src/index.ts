@@ -1,6 +1,7 @@
 // Constants (re-exported from core)
 export {
   CHECKBOX_COLUMN_WIDTH,
+  ROW_NUMBER_COLUMN_WIDTH,
   DEFAULT_MIN_COLUMN_WIDTH,
   CELL_PADDING,
   GRID_BORDER_RADIUS,

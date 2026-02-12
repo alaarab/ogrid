@@ -72,6 +72,9 @@ export interface OGridOptions<T> {
   /** Callback fired when a cell value is changed via editing. */
   onCellValueChanged?: (event: ICellValueChangedEvent<T>) => void;
 
+  /** Show row numbers column. Default: false. */
+  showRowNumbers?: boolean;
+
   rowSelection?: RowSelectionMode;
   /** Callback fired when row selection changes. */
   onSelectionChange?: (event: IRowSelectionChangeEvent<T>) => void;

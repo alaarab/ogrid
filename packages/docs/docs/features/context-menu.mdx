@@ -16,6 +16,10 @@ Right-click any cell to open a context menu with clipboard operations, undo/redo
 
 <ContextMenuDemo />
 
+:::tip Try it in your framework
+The demo above uses Radix UI for styling. To see this feature with your framework's design system (Fluent UI, Material UI, Vuetify, PrimeNG, etc.), click **"Open in StackBlitz"** below the demo.
+:::
+
 ## Quick Example
 
 <Tabs groupId="framework">
@@ -89,6 +93,7 @@ export class GridComponent {
 :::tip Switching UI libraries
 Same component API across Angular packages. To switch, just change the import:
 
+- **Radix (CDK)**: `from '@alaarab/ogrid-angular-radix'` *(default, lightweight)*
 - **Angular Material**: `from '@alaarab/ogrid-angular-material'`
 - **PrimeNG**: `from '@alaarab/ogrid-angular-primeng'`
 
@@ -128,6 +133,7 @@ const gridProps = {
 :::tip Switching UI libraries
 Same component API across Vue packages. To switch, just change the import:
 
+- **Radix (Headless UI)**: `from '@alaarab/ogrid-vue-radix'` *(default, lightweight)*
 - **Vuetify**: `from '@alaarab/ogrid-vue-vuetify'` — wrap in `<v-app>` for theming
 - **PrimeVue**: `from '@alaarab/ogrid-vue-primevue'`
 :::
@@ -168,9 +174,13 @@ The context menu is built in and requires no additional configuration. It appear
 | Copy | Ctrl+C | Copy selected cells to clipboard |
 | Cut | Ctrl+X | Cut selected cells to clipboard |
 | Paste | Ctrl+V | Paste clipboard contents into selected cells |
-| Select all | Ctrl+A | Select all cells in the grid |
+| Select all | Ctrl+A | Select all **cells** in the grid (cell selection, not row selection) |
 
 On macOS, "Ctrl" is automatically displayed as the Command symbol.
+
+:::info Cell Selection vs Row Selection
+The "Select all" menu item selects all **cells** for copy/paste/fill operations. This is different from row selection, where the header checkbox selects all **rows** for bulk operations. See [Row Selection](./row-selection) for details on row-level selection.
+:::
 
 ### Undo/Redo State
 
