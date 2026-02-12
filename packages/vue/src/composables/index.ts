@@ -106,3 +106,6 @@ export type { UseColumnReorderParams, UseColumnReorderResult } from './useColumn
 
 export { useVirtualScroll } from './useVirtualScroll';
 export type { UseVirtualScrollParams, UseVirtualScrollResult } from './useVirtualScroll';
+
+export { useDataGridTableSetup } from './useDataGridTableSetup';
+export type { UseDataGridTableSetupParams, UseDataGridTableSetupResult } from './useDataGridTableSetup';

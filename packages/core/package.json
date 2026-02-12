@@ -1,6 +1,6 @@
 {
   "name": "@alaarab/ogrid-core",
-  "version": "2.0.5",
+  "version": "2.0.6",
   "description": "OGrid core – framework-agnostic types, algorithms, and utilities for OGrid data grids.",
   "main": "dist/esm/index.js",
   "module": "dist/esm/index.js",
@@ -21,5 +21,6 @@
   "license": "MIT",
   "files": ["dist", "README.md", "LICENSE"],
   "engines": { "node": ">=18" },
+  "sideEffects": false,
   "publishConfig": { "access": "public" }
 }
