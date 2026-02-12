@@ -339,7 +339,7 @@ function DataGridTableInner<T>(props: IOGridDataGridProps<T>): React.ReactElemen
 
   // Density-aware cell padding
   const densityPadding = useMemo(() => getDensityPadding(density), [density]);
-  const cellSx = useMemo(() => ({ ...CELL_CONTENT_BASE_SX, ...densityPadding }), [densityPadding]);
+  const _cellSx = useMemo(() => ({ ...CELL_CONTENT_BASE_SX, ...densityPadding }), [densityPadding]);
   const headerCellSx = useMemo(() => ({ px: densityPadding.px, py: densityPadding.py }), [densityPadding]);
 
   // Memoize header rows (recursive tree traversal)
@@ -465,6 +465,7 @@ function DataGridTableInner<T>(props: IOGridDataGridProps<T>): React.ReactElemen
           <Box
             component="div"
             {...interactionProps}
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
             sx={Array.isArray(cellSx) ? [...cellSx, densityPadding] : { ...cellSx, ...densityPadding } as any}
           >
             {styledContent}

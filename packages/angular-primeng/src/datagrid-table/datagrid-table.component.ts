@@ -14,13 +14,11 @@ import {
   DataGridStateService,
   ColumnReorderService,
   VirtualScrollService,
-  OGridLayoutComponent,
   StatusBarComponent,
   GridContextMenuComponent,
   MarchingAntsOverlayComponent,
   EmptyStateComponent,
   DEFAULT_MIN_COLUMN_WIDTH,
-  ROW_NUMBER_COLUMN_WIDTH,
   buildHeaderRows,
   getCellValue,
   getHeaderFilterConfig,
@@ -32,7 +30,6 @@ import type {
   IColumnDef,
   IColumnGroupDef,
   RowId,
-  ISelectionRange,
   HeaderFilterConfig,
 } from '@alaarab/ogrid-angular';
 import { ColumnHeaderFilterComponent } from '../column-header-filter/column-header-filter.component';
@@ -624,7 +621,7 @@ export class DataGridTableComponent<T = unknown> {
     this.state().interaction.handleCellMouseDown(e, rowIndex, globalColIndex);
   }
 
-  onCellDblClick(item: T, col: IColumnDef<T>, rowIndex: number, colIdx: number): void {
+  onCellDblClick(item: T, col: IColumnDef<T>, _rowIndex: number, _colIdx: number): void {
     if (this.canEditCell(col, item)) {
       this.stateService.setEditingCell({ rowId: this.getRowIdFn()(item), columnId: col.columnId });
     }
@@ -654,7 +651,7 @@ export class DataGridTableComponent<T = unknown> {
     this.state().rowSelection.updateSelection(ids.has(rowId) ? new Set() : new Set([rowId]));
   }
 
-  onRowCheckboxChange(item: T, checked: boolean, rowIndex: number, e: Event): void {
+  onRowCheckboxChange(item: T, checked: boolean, rowIndex: number, _e: Event): void {
     const rowId = this.getRowIdFn()(item);
     this.state().rowSelection.handleRowCheckboxChange(rowId, checked, rowIndex, this.lastMouseShift);
   }

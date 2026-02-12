@@ -5,7 +5,6 @@ import {
   getMultiSelectFilterFields,
   flattenColumns,
   processClientSideData,
-  getDataGridStatusBarConfig,
 } from '@alaarab/ogrid-core';
 import type {
   RowId,
@@ -534,7 +533,7 @@ export class OGridService<T> {
   handleColumnPinned(columnId: string, pinned: 'left' | 'right' | null): void {
     this.pinnedOverrides.update((prev) => {
       if (pinned === null) {
-        const { [columnId]: _, ...rest } = prev;
+        const { [columnId]: _removed, ...rest } = prev;
         return rest;
       }
       return { ...prev, [columnId]: pinned };

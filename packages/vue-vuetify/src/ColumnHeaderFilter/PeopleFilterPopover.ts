@@ -1,13 +1,11 @@
 import { defineComponent, h, type PropType } from 'vue';
 import { VBtn, VTextField, VProgressCircular, VAvatar, VIcon, VDivider } from 'vuetify/components';
-/* eslint-disable @typescript-eslint/no-explicit-any */
 const _VBtn = VBtn as any;
 const _VTextField = VTextField as any;
 const _VProgressCircular = VProgressCircular as any;
 const _VAvatar = VAvatar as any;
 const _VIcon = VIcon as any;
 const _VDivider = VDivider as any;
-/* eslint-enable @typescript-eslint/no-explicit-any */
 import type { UserLike } from '@alaarab/ogrid-vue';
 
 export const PeopleFilterPopover = defineComponent({

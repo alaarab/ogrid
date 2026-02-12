@@ -1,12 +1,10 @@
 import { defineComponent, h, type PropType } from 'vue';
 import { VBtn, VTextField, VCheckbox, VProgressCircular, VDivider } from 'vuetify/components';
-/* eslint-disable @typescript-eslint/no-explicit-any */
 const _VBtn = VBtn as any;
 const _VTextField = VTextField as any;
 const _VCheckbox = VCheckbox as any;
 const _VProgressCircular = VProgressCircular as any;
 const _VDivider = VDivider as any;
-/* eslint-enable @typescript-eslint/no-explicit-any */
 
 export const MultiSelectFilterPopover = defineComponent({
   name: 'MultiSelectFilterPopover',

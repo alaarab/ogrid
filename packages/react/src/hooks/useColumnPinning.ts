@@ -51,6 +51,7 @@ export function useColumnPinning<T = unknown>(params: UseColumnPinningParams<T>)
       }
     }
     return initial;
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []); // Only on mount
 
   const [internalPinnedColumns, setInternalPinnedColumns] = useState<Record<string, 'left' | 'right'>>(

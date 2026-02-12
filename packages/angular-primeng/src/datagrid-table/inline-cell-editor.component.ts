@@ -1,7 +1,6 @@
 import { Component, input, output, signal, effect, ElementRef, viewChild, AfterViewInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import type { IColumnDef } from '@alaarab/ogrid-angular';
-import { getCellValue, parseValue } from '@alaarab/ogrid-core';
 
 @Component({
   selector: 'ogrid-primeng-inline-cell-editor',

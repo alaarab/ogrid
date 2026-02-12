@@ -1,7 +1,7 @@
 import { Component, input } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import type { IColumnDefinition, SideBarPanelId, IFilters, FilterValue } from '../types';
-import { GRID_BORDER_RADIUS } from '@alaarab/ogrid-core';
+// GRID_BORDER_RADIUS used by ogrid-layout, not sidebar
 
 /** Describes a filterable column for the sidebar filters panel. */
 export interface SideBarFilterColumn {

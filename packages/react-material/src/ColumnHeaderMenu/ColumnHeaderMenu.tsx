@@ -25,8 +25,8 @@ export interface ColumnHeaderMenuProps {
 export function ColumnHeaderMenu(props: ColumnHeaderMenuProps) {
   const {
     columnId,
-    isOpen,
-    anchorElement,
+    isOpen: _isOpen,
+    anchorElement: _anchorElement,
     onClose,
     onPinLeft,
     onPinRight,

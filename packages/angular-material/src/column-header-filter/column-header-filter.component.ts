@@ -1,5 +1,5 @@
 import {
-  Component, input, output, signal, computed,
+  Component, input, signal, computed,
   ChangeDetectionStrategy, ElementRef, viewChild,
 } from '@angular/core';
 import type { ColumnFilterType, IDateFilterValue, UserLike } from '@alaarab/ogrid-angular';
