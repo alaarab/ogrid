@@ -89,4 +89,15 @@ export { useSideBarState } from './useSideBarState';
 export type { UseSideBarStateParams, UseSideBarStateResult } from './useSideBarState';
 export { useTableLayout } from './useTableLayout';
 export type { UseTableLayoutParams, UseTableLayoutResult } from './useTableLayout';
+export { useColumnReorder } from './useColumnReorder';
+export type {
+  UseColumnReorderParams,
+  UseColumnReorderResult,
+} from './useColumnReorder';
+export { useVirtualScroll } from './useVirtualScroll';
+export type {
+  IVirtualScrollConfig,
+  UseVirtualScrollParams,
+  UseVirtualScrollResult,
+} from './useVirtualScroll';
 export { useLatestRef } from './useLatestRef';

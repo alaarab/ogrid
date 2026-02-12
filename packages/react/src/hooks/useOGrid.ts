@@ -135,6 +135,8 @@ export function useOGrid<T>(
     onFirstDataRendered,
     onError,
     columnChooser: columnChooserProp,
+    columnReorder,
+    virtualScroll,
     'aria-label': ariaLabel,
     'aria-labelledby': ariaLabelledBy,
   } = props;
@@ -458,6 +460,14 @@ export function useOGrid<T>(
           setRefreshCounter(refreshCounterRef.current);
         }
       },
+      getColumnOrder: () => columnOrder ?? columns.map((c) => c.columnId),
+      setColumnOrder: (order: string[]) => {
+        onColumnOrderChange?.(order);
+      },
+      scrollToRow: () => {
+        // No-op at orchestration level — DataGridTable components implement
+        // this via useVirtualScroll.scrollToIndex when virtual scrolling is active.
+      },
     }),
     [
       visibleColumns,
@@ -627,6 +637,8 @@ export function useOGrid<T>(
     getUserByEmail: dataSource?.getUserByEmail,
     layoutMode,
     suppressHorizontalScroll,
+    columnReorder,
+    virtualScroll,
     'aria-label': ariaLabel,
     'aria-labelledby': ariaLabelledBy,
     emptyState: {
@@ -642,7 +654,8 @@ export function useOGrid<T>(
     editable, cellSelection, onCellValueChanged, onUndo, onRedo, canUndo, canRedo,
     rowSelection, effectiveSelectedRows, handleSelectionChange, statusBarConfig,
     isLoadingResolved, filters, handleFilterChange, clientFilterOptions, dataSource,
-    loadingFilterOptions, layoutMode, suppressHorizontalScroll, ariaLabel, ariaLabelledBy,
+    loadingFilterOptions, layoutMode, suppressHorizontalScroll, columnReorder, virtualScroll,
+    ariaLabel, ariaLabelledBy,
     hasActiveFilters, clearAllFilters, emptyState,
   ]);
 

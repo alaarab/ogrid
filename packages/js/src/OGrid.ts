@@ -19,6 +19,8 @@ import { TableLayoutState } from './state/TableLayoutState';
 import { FillHandleState } from './state/FillHandleState';
 import { RowSelectionState } from './state/RowSelectionState';
 import { ColumnPinningState } from './state/ColumnPinningState';
+import { ColumnReorderState } from './state/ColumnReorderState';
+import { VirtualScrollState } from './state/VirtualScrollState';
 import { MarchingAntsOverlay } from './components/MarchingAntsOverlay';
 import { InlineCellEditor } from './components/InlineCellEditor';
 import { ContextMenu } from './components/ContextMenu';
@@ -58,6 +60,8 @@ export class OGrid<T> {
   private fillHandleState: FillHandleState<T> | null = null;
   private rowSelectionState: RowSelectionState<T> | null = null;
   private pinningState: ColumnPinningState | null = null;
+  private reorderState: ColumnReorderState | null = null;
+  private virtualScrollState: VirtualScrollState | null = null;
   private marchingAnts: MarchingAntsOverlay | null = null;
   private cellEditor: InlineCellEditor<T> | null = null;
   private contextMenu: ContextMenu | null = null;
@@ -228,6 +232,34 @@ export class OGrid<T> {
       })
     );
 
+    // Initialize virtual scrolling if configured
+    if (options.virtualScroll?.enabled) {
+      this.virtualScrollState = new VirtualScrollState(options.virtualScroll);
+      this.virtualScrollState.observeContainer(this.tableContainer);
+      this.renderer.setVirtualScrollState(this.virtualScrollState);
+
+      // Wire scroll event on the table container
+      const handleScroll = () => {
+        this.virtualScrollState?.handleScroll(this.tableContainer.scrollTop);
+      };
+      this.tableContainer.addEventListener('scroll', handleScroll, { passive: true });
+      this.unsubscribes.push(() => {
+        this.tableContainer.removeEventListener('scroll', handleScroll);
+      });
+
+      // Re-render when visible range changes
+      this.unsubscribes.push(
+        this.virtualScrollState.onRangeChanged(() => {
+          this.updateRendererInteractionState();
+        })
+      );
+
+      // Wire scrollToRow API method
+      this.api.scrollToRow = (index: number, opts?: { align?: 'start' | 'center' | 'end' }) => {
+        this.virtualScrollState?.scrollToRow(index, this.tableContainer, opts?.align);
+      };
+    }
+
     // Complete initial render (pagination, status bar, column chooser, sidebar, loading)
     this.renderAll();
   }
@@ -322,6 +354,19 @@ export class OGrid<T> {
     this.unsubscribes.push(
       this.resizeState.onColumnWidthChange(() => {
         this.updateRendererInteractionState();
+      })
+    );
+
+    // Column reorder
+    this.reorderState = new ColumnReorderState();
+    this.unsubscribes.push(
+      this.reorderState.onStateChange(({ isDragging, dropIndicatorX }) => {
+        this.renderer.updateDropIndicator(dropIndicatorX, isDragging);
+      })
+    );
+    this.unsubscribes.push(
+      this.reorderState.onReorder(({ columnOrder }) => {
+        this.state.setColumnOrder(columnOrder);
       })
     );
 
@@ -460,6 +505,19 @@ export class OGrid<T> {
       pinnedColumns: this.pinningState?.pinnedColumns,
       leftOffsets,
       rightOffsets,
+      // Column reorder
+      onColumnReorderStart: this.reorderState ? (columnId, event) => {
+        const tableEl = this.renderer.getTableElement();
+        if (!tableEl) return;
+        this.reorderState?.startDrag(
+          columnId,
+          event,
+          visibleCols,
+          this.state.columnOrder,
+          this.pinningState?.pinnedColumns,
+          tableEl
+        );
+      } : undefined,
     });
 
     this.renderer.update();
@@ -598,7 +656,30 @@ export class OGrid<T> {
       this.updateRendererInteractionState();
     };
 
-    this.cellEditor.startEdit(rowId, columnId, item, column, cell, onCommit, onCancel);
+    const onAfterCommit = () => {
+      // After Enter-commit, move the active cell down one row (Excel-style behavior)
+      if (this.selectionState) {
+        const ac = this.selectionState.activeCell;
+        if (ac) {
+          const { items: currentItems } = this.state.getProcessedItems();
+          const newRow = Math.min(ac.rowIndex + 1, currentItems.length - 1);
+          this.selectionState.setActiveCell({ rowIndex: newRow, columnIndex: ac.columnIndex });
+          const colOffset = this.renderer.getColOffset();
+          const dataCol = ac.columnIndex - colOffset;
+          this.selectionState.setSelectionRange({
+            startRow: newRow,
+            startCol: dataCol,
+            endRow: newRow,
+            endCol: dataCol,
+          });
+        }
+      }
+      // Re-focus the grid wrapper so keyboard nav continues working
+      const wrapper = this.renderer.getWrapperElement();
+      wrapper?.focus();
+    };
+
+    this.cellEditor.startEdit(rowId, columnId, item, column, cell, onCommit, onCancel, onAfterCommit);
   }
 
   private buildFilterConfigs(): void {
@@ -772,6 +853,10 @@ export class OGrid<T> {
     }
 
     const { totalCount } = this.state.getProcessedItems();
+
+    // Update virtual scroll with current total row count
+    this.virtualScrollState?.setTotalRows(totalCount);
+
     this.pagination.render(totalCount);
     this.statusBar.render({ totalCount });
     this.columnChooser.render();
@@ -808,6 +893,8 @@ export class OGrid<T> {
     this.fillHandleState?.destroy();
     this.rowSelectionState?.destroy();
     this.pinningState?.destroy();
+    this.reorderState?.destroy();
+    this.virtualScrollState?.destroy();
     this.marchingAnts?.destroy();
     this.layoutState.destroy();
     this.cellEditor?.closeEditor();

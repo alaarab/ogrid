@@ -284,7 +284,7 @@ export const SpreadsheetExperience: Story = {
           statusBar
           defaultPageSize={25}
         />
-        <p style={{ marginTop: 8, fontSize: 13, color: '#616161' }}>
+        <p style={{ marginTop: 8, fontSize: 13, color: 'var(--ogrid-muted, #616161)' }}>
           Spreadsheet behavior: single click = select; double-click or Enter/F2 = edit; drag or Shift+click = range; right-click = context menu (Copy, Cut, Paste, Select all).
         </p>
       </div>
@@ -345,11 +345,11 @@ export const ToolbarWithSecondaryRow: Story = {
       }
       toolbarBelow={
         <div style={{ display: 'flex', gap: 6, alignItems: 'center', fontSize: 12, flexWrap: 'wrap' }}>
-          <span style={{ color: '#666', marginRight: 4 }}>Active filters:</span>
-          <span style={{ padding: '2px 8px', background: '#e0e0e0', borderRadius: 12 }}>
+          <span style={{ color: 'var(--ogrid-muted, #666)', marginRight: 4 }}>Active filters:</span>
+          <span style={{ padding: '2px 8px', background: 'var(--ogrid-border, #e0e0e0)', borderRadius: 12 }}>
             Status: Active &times;
           </span>
-          <span style={{ padding: '2px 8px', background: '#e0e0e0', borderRadius: 12 }}>
+          <span style={{ padding: '2px 8px', background: 'var(--ogrid-border, #e0e0e0)', borderRadius: 12 }}>
             Department: Engineering &times;
           </span>
         </div>
@@ -605,11 +605,11 @@ export const Playground: StoryObj<PlaygroundArgs> = {
                 flexWrap: 'wrap',
               }}
             >
-              <span style={{ color: '#666', marginRight: 4 }}>Filters:</span>
-              <span style={{ padding: '2px 8px', background: '#e0e0e0', borderRadius: 12 }}>
+              <span style={{ color: 'var(--ogrid-muted, #666)', marginRight: 4 }}>Filters:</span>
+              <span style={{ padding: '2px 8px', background: 'var(--ogrid-border, #e0e0e0)', borderRadius: 12 }}>
                 Status: Active &times;
               </span>
-              <span style={{ padding: '2px 8px', background: '#e0e0e0', borderRadius: 12 }}>
+              <span style={{ padding: '2px 8px', background: 'var(--ogrid-border, #e0e0e0)', borderRadius: 12 }}>
                 Owner: Alice &times;
               </span>
             </div>

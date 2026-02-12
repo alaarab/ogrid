@@ -1,8 +1,8 @@
-import { ref, watch, nextTick, type Ref, type ShallowRef } from 'vue';
+import { shallowRef, watch, onUnmounted, type Ref, type ShallowRef } from 'vue';
 import type { IActiveCell, RowId } from '../types';
 
 export interface UseActiveCellResult {
-  activeCell: Ref<IActiveCell | null>;
+  activeCell: ShallowRef<IActiveCell | null>;
   setActiveCell: (cell: IActiveCell | null) => void;
 }
 
@@ -14,7 +14,8 @@ export function useActiveCell(
   wrapperRef?: Ref<HTMLElement | null> | ShallowRef<HTMLElement | null>,
   editingCell?: Ref<{ rowId: RowId; columnId: string } | null>
 ): UseActiveCellResult {
-  const activeCell = ref<IActiveCell | null>(null);
+  const activeCell = shallowRef<IActiveCell | null>(null);
+  let pendingRaf = 0;
 
   // Deduplicating setter — skips update when the cell coordinates haven't actually changed.
   const setActiveCell = (cell: IActiveCell | null) => {
@@ -24,22 +25,36 @@ export function useActiveCell(
     activeCell.value = cell;
   };
 
-  // Scroll active cell into view when it changes (equivalent to useLayoutEffect)
+  // Scroll active cell into view when it changes (equivalent to useLayoutEffect).
+  // Uses requestAnimationFrame to batch DOM reads (getBoundingClientRect) with the
+  // browser's layout cycle, avoiding forced reflows when rapidly clicking cells.
   watch(
     [activeCell, () => editingCell?.value],
     () => {
+      // Cancel any pending scroll from a previous cell change
+      if (pendingRaf) {
+        cancelAnimationFrame(pendingRaf);
+        pendingRaf = 0;
+      }
+
       if (
         activeCell.value == null ||
         !wrapperRef?.value ||
         editingCell?.value != null
       ) return;
 
-      // Use nextTick to ensure DOM is updated before scrolling
-      void nextTick(() => {
-        const wrapper = wrapperRef.value;
-        if (!wrapper || !activeCell.value) return;
+      // Capture the target coordinates before the async boundary
+      const { rowIndex, columnIndex } = activeCell.value;
 
-        const { rowIndex, columnIndex } = activeCell.value;
+      pendingRaf = requestAnimationFrame(() => {
+        pendingRaf = 0;
+        const wrapper = wrapperRef.value;
+        if (!wrapper) return;
+
+        // Verify the active cell hasn't changed since we scheduled
+        const current = activeCell.value;
+        if (!current || current.rowIndex !== rowIndex || current.columnIndex !== columnIndex) return;
+
         const selector = `[data-row-index="${rowIndex}"][data-col-index="${columnIndex}"]`;
         const cell = wrapper.querySelector(selector) as HTMLElement | null;
         if (cell) {
@@ -71,6 +86,13 @@ export function useActiveCell(
     },
     { flush: 'post' }
   );
+
+  onUnmounted(() => {
+    if (pendingRaf) {
+      cancelAnimationFrame(pendingRaf);
+      pendingRaf = 0;
+    }
+  });
 
   return { activeCell, setActiveCell };
 }

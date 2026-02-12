@@ -113,7 +113,7 @@
   background: var(--ogrid-bg, #fff);
   border: 1px solid var(--ogrid-border, #d1d1d1);
   border-radius: 8px;
-  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.14);
+  box-shadow: var(--ogrid-shadow, 0 4px 16px rgba(0, 0, 0, 0.12));
   overflow: hidden;
 }
 

@@ -6,6 +6,14 @@ interface SelectionStateEvents extends Record<string, unknown> {
   rowSelectionChange: { selectedRowIds: Set<RowId> };
 }
 
+/** Compares two selection ranges by value to avoid redundant RAF work. */
+function rangesEqual(a: ISelectionRange | null, b: ISelectionRange | null): boolean {
+  if (a === b) return true;
+  if (!a || !b) return false;
+  return a.startRow === b.startRow && a.endRow === b.endRow &&
+         a.startCol === b.startCol && a.endCol === b.endCol;
+}
+
 export class SelectionState {
   private emitter = new EventEmitter<SelectionStateEvents>();
   private _activeCell: IActiveCell | null = null;
@@ -72,6 +80,9 @@ export class SelectionState {
       endRow: rowIndex,
       endCol: colIndex,
     };
+
+    // Skip RAF if range hasn't changed (deduplication optimization)
+    if (rangesEqual(this.pendingRange, newRange)) return;
 
     this.pendingRange = newRange;
 

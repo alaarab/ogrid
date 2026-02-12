@@ -1,0 +1,422 @@
+---
+sidebar_position: 19
+title: Virtual Scrolling
+description: Render thousands of rows with smooth scrolling by only mounting visible rows in the DOM
+---
+
+import VirtualScrollingDemo from '@site/src/components/demos/VirtualScrollingDemo';
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+
+# Virtual Scrolling
+
+Render tens of thousands of rows without degrading performance. Virtual scrolling only mounts the rows currently visible in the viewport (plus a small overscan buffer), keeping the DOM lightweight regardless of dataset size.
+
+## Live Demo
+
+<VirtualScrollingDemo />
+
+## Quick Example
+
+<Tabs groupId="framework">
+  <TabItem value="react" label="React" default>
+
+```tsx
+import { OGrid } from '@alaarab/ogrid-react-radix';
+import type { IColumnDef } from '@alaarab/ogrid-react-radix';
+
+interface Row {
+  id: number;
+  name: string;
+  value: number;
+}
+
+// Generate 10,000 rows
+const data: Row[] = Array.from({ length: 10_000 }, (_, i) => ({
+  id: i + 1,
+  name: `Row ${i + 1}`,
+  value: Math.round(Math.random() * 10000),
+}));
+
+const columns: IColumnDef<Row>[] = [
+  { columnId: 'id', name: 'ID', type: 'numeric' },
+  { columnId: 'name', name: 'Name' },
+  { columnId: 'value', name: 'Value', type: 'numeric',
+    valueFormatter: (v) => `$${Number(v).toLocaleString()}` },
+];
+
+function App() {
+  return (
+    <OGrid
+      columns={columns}
+      data={data}
+      getRowId={(r) => r.id}
+      virtualScroll={{ rowHeight: 36 }}
+      statusBar
+    />
+  );
+}
+```
+
+:::tip Switching UI libraries
+The `OGrid` component has the same props across all React UI packages. To switch, just change the import:
+
+- **Radix** (lightweight, default): `from '@alaarab/ogrid-react-radix'`
+- **Fluent UI** (Microsoft 365 / SPFx): `from '@alaarab/ogrid-react-fluent'` — wrap in `<FluentProvider>`
+- **Material UI** (MUI v7): `from '@alaarab/ogrid-react-material'` — wrap in `<ThemeProvider>`
+:::
+
+  </TabItem>
+  <TabItem value="angular" label="Angular">
+
+```typescript
+import { Component } from '@angular/core';
+import { OGridComponent, type IColumnDef } from '@alaarab/ogrid-angular-material';
+
+interface Row {
+  id: number;
+  name: string;
+  value: number;
+}
+
+const data: Row[] = Array.from({ length: 10_000 }, (_, i) => ({
+  id: i + 1,
+  name: `Row ${i + 1}`,
+  value: Math.round(Math.random() * 10000),
+}));
+
+@Component({
+  standalone: true,
+  imports: [OGridComponent],
+  template: `<ogrid [props]="gridProps" />`
+})
+export class GridComponent {
+  gridProps = {
+    columns: [
+      { columnId: 'id', name: 'ID', type: 'numeric' },
+      { columnId: 'name', name: 'Name' },
+      { columnId: 'value', name: 'Value', type: 'numeric',
+        valueFormatter: (v: unknown) => `$${Number(v).toLocaleString()}` },
+    ] as IColumnDef<Row>[],
+    data,
+    getRowId: (item: Row) => item.id,
+    virtualScroll: { rowHeight: 36 },
+    statusBar: true,
+  };
+}
+```
+
+:::tip Switching UI libraries
+Same component API across Angular packages. To switch, just change the import:
+
+- **Angular Material**: `from '@alaarab/ogrid-angular-material'`
+- **PrimeNG**: `from '@alaarab/ogrid-angular-primeng'`
+
+All components are standalone — no NgModule required.
+:::
+
+  </TabItem>
+  <TabItem value="vue" label="Vue">
+
+```vue
+<script setup lang="ts">
+import { OGrid, type IColumnDef } from '@alaarab/ogrid-vue-vuetify';
+
+interface Row {
+  id: number;
+  name: string;
+  value: number;
+}
+
+const data: Row[] = Array.from({ length: 10_000 }, (_, i) => ({
+  id: i + 1,
+  name: `Row ${i + 1}`,
+  value: Math.round(Math.random() * 10000),
+}));
+
+const columns: IColumnDef<Row>[] = [
+  { columnId: 'id', name: 'ID', type: 'numeric' },
+  { columnId: 'name', name: 'Name' },
+  { columnId: 'value', name: 'Value', type: 'numeric',
+    valueFormatter: (v) => `$${Number(v).toLocaleString()}` },
+];
+
+const gridProps = {
+  columns,
+  data,
+  getRowId: (item: Row) => item.id,
+  virtualScroll: { rowHeight: 36 },
+  statusBar: true,
+};
+</script>
+
+<template>
+  <OGrid :gridProps="gridProps" />
+</template>
+```
+
+:::tip Switching UI libraries
+Same component API across Vue packages. To switch, just change the import:
+
+- **Vuetify**: `from '@alaarab/ogrid-vue-vuetify'` — wrap in `<v-app>` for theming
+- **PrimeVue**: `from '@alaarab/ogrid-vue-primevue'`
+:::
+
+  </TabItem>
+  <TabItem value="js" label="Vanilla JS">
+
+```js
+import { OGrid } from '@alaarab/ogrid-js';
+import '@alaarab/ogrid-js/styles';
+
+const data = Array.from({ length: 10_000 }, (_, i) => ({
+  id: i + 1,
+  name: `Row ${i + 1}`,
+  value: Math.round(Math.random() * 10000),
+}));
+
+const grid = new OGrid(document.getElementById('grid'), {
+  columns: [
+    { columnId: 'id', name: 'ID', type: 'numeric' },
+    { columnId: 'name', name: 'Name' },
+    { columnId: 'value', name: 'Value', type: 'numeric',
+      valueFormatter: (v) => `$${Number(v).toLocaleString()}` },
+  ],
+  data,
+  getRowId: (r) => r.id,
+  virtualScroll: { rowHeight: 36 },
+  statusBar: true,
+});
+```
+
+  </TabItem>
+</Tabs>
+
+All 10,000 rows are tracked (check the status bar), but only the visible rows plus a small overscan buffer are actually in the DOM.
+
+## How It Works
+
+Pass a `virtualScroll` configuration object to enable virtualization:
+
+```tsx
+<OGrid
+  virtualScroll={{ rowHeight: 36 }}
+  // ...other props
+/>
+```
+
+The grid replaces the standard row rendering with a virtualized strategy:
+
+1. A **top spacer** pushes the first visible row into the correct scroll position.
+2. Only rows within the viewport (plus `overscan` rows above and below) are rendered as real DOM elements.
+3. A **bottom spacer** maintains the full scrollable height so the scrollbar reflects the true data size.
+4. On scroll, a `requestAnimationFrame`-throttled handler recalculates which rows are visible and swaps them in.
+
+### Auto-Enable Threshold
+
+Virtual scrolling automatically becomes a no-op when the dataset has fewer than **100 rows**. Below that threshold, all rows render normally -- there is no performance benefit from virtualizing a small list, and the passthrough avoids unnecessary spacer elements.
+
+### Custom Row Height
+
+The `rowHeight` property sets the fixed pixel height for every row. Choose a value that matches your CSS row height:
+
+```tsx
+<OGrid
+  virtualScroll={{ rowHeight: 48 }}  // taller rows
+  // ...
+/>
+```
+
+:::caution
+Virtual scrolling requires a **fixed row height**. Variable-height rows are not supported -- every row must be exactly `rowHeight` pixels tall.
+:::
+
+### Overscan
+
+The `overscan` property controls how many extra rows are rendered above and below the visible area. The default is **5** rows. Increasing overscan reduces visual flicker during fast scrolling but renders more DOM nodes:
+
+```tsx
+<OGrid
+  virtualScroll={{ rowHeight: 36, overscan: 10 }}
+  // ...
+/>
+```
+
+## Programmatic Scrolling
+
+Use the Grid API `scrollToRow` method to scroll to a specific row by index:
+
+<Tabs groupId="framework">
+  <TabItem value="react" label="React" default>
+
+```tsx
+import { useRef } from 'react';
+import { OGrid, type IOGridApi } from '@alaarab/ogrid-react-radix';
+
+function App() {
+  const ref = useRef<IOGridApi<Row>>(null);
+
+  return (
+    <div>
+      <button onClick={() => ref.current?.scrollToRow(0)}>
+        Scroll to Top
+      </button>
+      <button onClick={() => ref.current?.scrollToRow(4999, { align: 'center' })}>
+        Scroll to Row 5000
+      </button>
+      <button onClick={() => ref.current?.scrollToRow(9999, { align: 'end' })}>
+        Scroll to Bottom
+      </button>
+      <OGrid
+        ref={ref}
+        columns={columns}
+        data={data}
+        getRowId={(r) => r.id}
+        virtualScroll={{ rowHeight: 36 }}
+      />
+    </div>
+  );
+}
+```
+
+  </TabItem>
+  <TabItem value="angular" label="Angular">
+
+```typescript
+import { Component } from '@angular/core';
+import { OGridComponent, OGridService } from '@alaarab/ogrid-angular-material';
+
+@Component({
+  standalone: true,
+  imports: [OGridComponent],
+  template: `
+    <button (click)="scrollToTop()">Scroll to Top</button>
+    <button (click)="scrollToMiddle()">Scroll to Row 5000</button>
+    <button (click)="scrollToBottom()">Scroll to Bottom</button>
+    <ogrid [props]="gridProps" />
+  `,
+})
+export class GridComponent {
+  constructor(private gridService: OGridService) {}
+
+  scrollToTop() { this.gridService.scrollToRow(0); }
+  scrollToMiddle() { this.gridService.scrollToRow(4999, { align: 'center' }); }
+  scrollToBottom() { this.gridService.scrollToRow(9999, { align: 'end' }); }
+
+  gridProps = {
+    columns,
+    data,
+    getRowId: (item: Row) => item.id,
+    virtualScroll: { rowHeight: 36 },
+  };
+}
+```
+
+  </TabItem>
+  <TabItem value="vue" label="Vue">
+
+```vue
+<script setup lang="ts">
+import { ref } from 'vue';
+import { OGrid, type IOGridApi } from '@alaarab/ogrid-vue-vuetify';
+
+const gridRef = ref<IOGridApi<Row> | null>(null);
+
+const scrollToTop = () => gridRef.value?.scrollToRow(0);
+const scrollToMiddle = () => gridRef.value?.scrollToRow(4999, { align: 'center' });
+const scrollToBottom = () => gridRef.value?.scrollToRow(9999, { align: 'end' });
+</script>
+
+<template>
+  <button @click="scrollToTop">Scroll to Top</button>
+  <button @click="scrollToMiddle">Scroll to Row 5000</button>
+  <button @click="scrollToBottom">Scroll to Bottom</button>
+  <OGrid :gridProps="gridProps" />
+</template>
+```
+
+  </TabItem>
+  <TabItem value="js" label="Vanilla JS">
+
+```js
+import { OGrid } from '@alaarab/ogrid-js';
+import '@alaarab/ogrid-js/styles';
+
+const grid = new OGrid(document.getElementById('grid'), {
+  columns,
+  data,
+  getRowId: (r) => r.id,
+  virtualScroll: { rowHeight: 36 },
+});
+
+const api = grid.getApi();
+
+// Scroll to the first row
+api.scrollToRow(0);
+
+// Scroll to row 5000, centered in the viewport
+api.scrollToRow(4999, { align: 'center' });
+
+// Scroll to the last row
+api.scrollToRow(9999, { align: 'end' });
+```
+
+  </TabItem>
+</Tabs>
+
+The `align` option controls where the target row appears in the viewport:
+
+| Align | Behavior |
+|-------|----------|
+| `'start'` (default) | Row appears at the top of the viewport |
+| `'center'` | Row appears in the middle of the viewport |
+| `'end'` | Row appears at the bottom of the viewport |
+
+## Keyboard Navigation
+
+Virtual scrolling integrates with keyboard navigation automatically. When the user moves the active cell with arrow keys, Tab, or Enter, the grid scrolls to keep the active row visible. No additional configuration is needed.
+
+## Performance
+
+Virtual scrolling dramatically reduces DOM node count for large datasets:
+
+| Rows | Without virtual scroll | With virtual scroll (overscan=5) |
+|------|----------------------|--------------------------------|
+| 100 | 100 `<tr>` elements | 100 (passthrough, no overhead) |
+| 1,000 | 1,000 `<tr>` elements | ~30 `<tr>` elements |
+| 10,000 | 10,000 `<tr>` elements | ~30 `<tr>` elements |
+| 100,000 | 100,000 `<tr>` elements | ~30 `<tr>` elements |
+
+Key implementation details:
+
+- **RAF throttling** -- Scroll events are batched via `requestAnimationFrame` so range recalculation happens at most once per frame.
+- **Spacer rows** -- Top and bottom spacer elements maintain the correct total scroll height without rendering every row.
+- **Overscan buffer** -- Extra rows above and below the viewport prevent blank flashes during fast scrolling.
+- **Passthrough threshold** -- Datasets under 100 rows skip virtualization entirely, avoiding unnecessary spacer elements for small lists.
+
+## Props Reference
+
+### `virtualScroll`
+
+| Field | Type | Default | Description |
+|-------|------|---------|-------------|
+| `rowHeight` | `number` | -- | Fixed height of each row in pixels (required). |
+| `enabled` | `boolean` | `true` | Whether virtual scrolling is active. Set `false` to disable. |
+| `overscan` | `number` | `5` | Extra rows rendered above and below the visible area. |
+
+### Grid API Methods
+
+| Method | Signature | Description |
+|--------|-----------|-------------|
+| `scrollToRow` | `(index: number, options?: { align?: 'start' \| 'center' \| 'end' }) => void` | Scroll to a specific row by its index in the data array. |
+
+:::tip
+For the best experience with virtual scrolling, ensure your CSS row height matches the `rowHeight` value. Mismatched heights cause scroll position drift.
+:::
+
+## Related
+
+- [Pagination](./pagination) -- alternative to virtual scrolling for large datasets
+- [Server-Side Data](./server-side-data) -- combine with virtual scrolling for server-paged data
+- [Keyboard Navigation](./keyboard-navigation) -- auto-scrolls during virtual scrolling
+- [Status Bar](./status-bar) -- shows total row count even when most rows are virtualized

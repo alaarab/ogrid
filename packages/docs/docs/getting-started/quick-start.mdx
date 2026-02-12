@@ -172,7 +172,7 @@ interface Employee {
 @Component({
   standalone: true,
   imports: [OGridComponent],
-  template: `<ogrid [gridProps]="gridProps" />`
+  template: `<ogrid [props]="gridProps" />`
 })
 export class EmployeeGridComponent {
   private readonly data: Employee[] = [
@@ -372,7 +372,7 @@ import { OGridComponent, OGridService } from '@alaarab/ogrid-angular-material';
   imports: [OGridComponent],
   template: `
     <button (click)="logState()">Log State</button>
-    <ogrid [gridProps]="gridProps" />
+    <ogrid [props]="gridProps" />
   `
 })
 export class AppComponent {

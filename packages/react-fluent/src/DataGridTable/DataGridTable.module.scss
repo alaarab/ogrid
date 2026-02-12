@@ -416,7 +416,7 @@
     right: -4px;
     bottom: 0;
     width: 4px;
-    background: linear-gradient(to right, rgba(0, 0, 0, 0.08), transparent);
+    background: linear-gradient(to right, var(--ogrid-pinned-shadow, rgba(0, 0, 0, 0.12)), transparent);
     pointer-events: none;
   }
 }
@@ -430,7 +430,7 @@
     left: -4px;
     bottom: 0;
     width: 4px;
-    background: linear-gradient(to left, rgba(0, 0, 0, 0.08), transparent);
+    background: linear-gradient(to left, var(--ogrid-pinned-shadow, rgba(0, 0, 0, 0.12)), transparent);
     pointer-events: none;
   }
 }
@@ -546,7 +546,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  background: rgba(255, 255, 255, 0.7);
+  background: var(--ogrid-loading-bg, rgba(255, 255, 255, 0.7));
   backdrop-filter: blur(1px);
   pointer-events: all;
 }
@@ -637,6 +637,18 @@
   &:hover {
     color: var(--colorBrandForeground1Hover, #115ea3);
   }
+}
+
+/* Column reorder drop indicator */
+.dropIndicator {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 3px;
+  background: var(--ogrid-primary, #217346);
+  pointer-events: none;
+  z-index: 100;
+  transition: left 0.05s;
 }
 
 /* Empty state: hide body, keep header and empty message */

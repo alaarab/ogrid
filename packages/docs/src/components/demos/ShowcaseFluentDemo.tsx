@@ -1,7 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import BrowserOnly from '@docusaurus/BrowserOnly';
 import { LiveDemo } from '../LiveDemo';
-import { showcase } from '../../stackblitz/featureDemos';
 
 const DEPARTMENTS = ['Engineering', 'Marketing', 'Sales', 'Finance', 'Operations'];
 const STATUSES = ['Active', 'Draft', 'Archived'];
@@ -105,7 +104,7 @@ function FluentGrid() {
 
 export default function ShowcaseFluentDemo() {
   return (
-    <LiveDemo height={480} title="Fluent UI — Microsoft design system" stackblitz={showcase}>
+    <LiveDemo height={480} title="Fluent UI — Microsoft design system">
       <BrowserOnly>{() => <FluentGrid />}</BrowserOnly>
     </LiveDemo>
   );

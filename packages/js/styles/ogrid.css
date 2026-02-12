@@ -25,6 +25,10 @@
   --ogrid-primary-hover: #1b5f39;
   --ogrid-accent: #217346;
   --ogrid-accent-dark: #1b5f39;
+  --ogrid-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
+  --ogrid-shadow-sm: 0 2px 4px rgba(0, 0, 0, 0.08);
+  --ogrid-loading-bg: rgba(255, 255, 255, 0.7);
+  --ogrid-pinned-shadow: rgba(0, 0, 0, 0.12);
 }
 
 /* ── Dark Theme ── */
@@ -48,6 +52,10 @@
   --ogrid-primary-hover: #4ec484;
   --ogrid-accent: #3ab876;
   --ogrid-accent-dark: #2fa768;
+  --ogrid-shadow: 0 4px 16px rgba(0, 0, 0, 0.35);
+  --ogrid-shadow-sm: 0 2px 4px rgba(0, 0, 0, 0.25);
+  --ogrid-loading-bg: rgba(26, 26, 36, 0.7);
+  --ogrid-pinned-shadow: rgba(0, 0, 0, 0.4);
 }
 
 @media (prefers-color-scheme: dark) {
@@ -71,6 +79,10 @@
     --ogrid-primary-hover: #4ec484;
     --ogrid-accent: #3ab876;
     --ogrid-accent-dark: #2fa768;
+    --ogrid-shadow: 0 4px 16px rgba(0, 0, 0, 0.35);
+    --ogrid-shadow-sm: 0 2px 4px rgba(0, 0, 0, 0.25);
+    --ogrid-loading-bg: rgba(26, 26, 36, 0.7);
+    --ogrid-pinned-shadow: rgba(0, 0, 0, 0.4);
   }
 }
 
@@ -378,7 +390,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  background: rgba(255, 255, 255, 0.7);
+  background: var(--ogrid-loading-bg, rgba(255, 255, 255, 0.7));
   backdrop-filter: blur(1px);
   pointer-events: all;
 }
@@ -570,7 +582,7 @@
   overflow-y: auto;
   background: var(--ogrid-bg, #fff);
   border-radius: 6px;
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
+  box-shadow: var(--ogrid-shadow, 0 4px 16px rgba(0, 0, 0, 0.12));
   border: 1px solid var(--ogrid-border, #e0e0e0);
   display: flex;
   flex-direction: column;
@@ -732,7 +744,7 @@
   background: var(--ogrid-bg, #fff);
   border: 1px solid var(--ogrid-border, #d1d1d1);
   border-radius: 8px;
-  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.14);
+  box-shadow: var(--ogrid-shadow, 0 4px 16px rgba(0, 0, 0, 0.12));
   overflow: hidden;
 }
 
@@ -844,7 +856,7 @@
   background: var(--ogrid-bg, #fff);
   border: 1px solid var(--ogrid-border, #e0e0e0);
   border-radius: 6px;
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
+  box-shadow: var(--ogrid-shadow, 0 4px 16px rgba(0, 0, 0, 0.12));
 }
 
 .ogrid-context-menu-item {
@@ -900,6 +912,35 @@
   background: var(--ogrid-bg, #fff);
   color: var(--ogrid-fg, #242424);
   box-sizing: border-box;
+}
+
+/* ── Column Reorder ── */
+
+.ogrid-drop-indicator {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 3px;
+  background: var(--ogrid-primary, #217346);
+  pointer-events: none;
+  z-index: 100;
+  transition: left 0.05s;
+}
+
+.ogrid-table th[data-column-id] {
+  cursor: grab;
+}
+
+.ogrid-table th[data-column-id].dragging {
+  cursor: grabbing;
+}
+
+/* ── Virtual Scrolling ── */
+
+.ogrid-virtual-spacer td {
+  padding: 0 !important;
+  border: none !important;
+  line-height: 0;
 }
 
 /* ── Numeric right-alignment ── */

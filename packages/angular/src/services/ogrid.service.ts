@@ -134,10 +134,10 @@ export class OGridService<T> {
   private readonly internalData = signal<T[]>([]);
   private readonly internalLoading = signal<boolean>(false);
   private readonly internalPage = signal<number>(1);
-  private readonly internalPageSize = signal<number>(DEFAULT_PAGE_SIZE);
-  private readonly internalSort = signal<{ field: string; direction: 'asc' | 'desc' }>({ field: '', direction: 'asc' });
+  private readonly internalPageSizeOverride = signal<number | null>(null);
+  private readonly internalSortOverride = signal<{ field: string; direction: 'asc' | 'desc' } | null>(null);
   private readonly internalFilters = signal<IFilters>({});
-  private readonly internalVisibleColumns = signal<Set<string>>(new Set());
+  private readonly internalVisibleColumnsOverride = signal<Set<string> | null>(null);
   private readonly internalSelectedRows = signal<Set<RowId>>(new Set());
   private readonly columnWidthOverrides = signal<Record<string, number>>({});
   private readonly pinnedOverrides = signal<Record<string, 'left' | 'right'>>({});
@@ -157,11 +157,6 @@ export class OGridService<T> {
   private readonly serverFilterOptions = signal<Record<string, string[]>>({});
   private readonly loadingFilterOptions = signal<Record<string, boolean>>({});
 
-  // --- Initialization ---
-  private sortInitialized = false;
-  private visibleColumnsInitialized = false;
-  private pageSizeInitialized = false;
-
   // --- Derived computed signals ---
 
   readonly columns = computed(() => flattenColumns(this.columnsProp()) as IColumnDef<T>[]);
@@ -175,10 +170,20 @@ export class OGridService<T> {
   readonly defaultSortField = computed(() => this.defaultSortBy() ?? this.columns()[0]?.columnId ?? '');
 
   readonly page = computed(() => this.controlledPage() ?? this.internalPage());
-  readonly pageSize = computed(() => this.controlledPageSize() ?? this.internalPageSize());
-  readonly sort = computed(() => this.controlledSort() ?? this.internalSort());
+  readonly pageSize = computed(() => this.controlledPageSize() ?? this.internalPageSizeOverride() ?? this.defaultPageSize());
+  readonly sort = computed(() => this.controlledSort() ?? this.internalSortOverride() ?? {
+    field: this.defaultSortField(),
+    direction: this.defaultSortDirection(),
+  });
   readonly filters = computed(() => this.controlledFilters() ?? this.internalFilters());
-  readonly visibleColumns = computed(() => this.controlledVisibleColumns() ?? this.internalVisibleColumns());
+  readonly visibleColumns = computed(() => {
+    if (this.controlledVisibleColumns()) return this.controlledVisibleColumns()!;
+    if (this.internalVisibleColumnsOverride()) return this.internalVisibleColumnsOverride()!;
+    const cols = this.columns();
+    if (cols.length === 0) return new Set<string>();
+    const visible = cols.filter((c) => c.defaultVisible !== false).map((c) => c.columnId);
+    return new Set(visible.length > 0 ? visible : cols.map((c) => c.columnId));
+  });
   readonly effectiveSelectedRows = computed(() => this.selectedRows() ?? this.internalSelectedRows());
 
   readonly columnChooserPlacement = computed<ColumnChooserPlacement>(() => {
@@ -380,33 +385,6 @@ export class OGridService<T> {
   });
 
   constructor() {
-    // Initialize internal default values based on config
-    effect(() => {
-      if (!this.sortInitialized) {
-        this.sortInitialized = true;
-        this.internalSort.set({
-          field: this.defaultSortField(),
-          direction: this.defaultSortDirection(),
-        });
-      }
-    });
-
-    effect(() => {
-      if (!this.pageSizeInitialized) {
-        this.pageSizeInitialized = true;
-        this.internalPageSize.set(this.defaultPageSize());
-      }
-    });
-
-    effect(() => {
-      if (!this.visibleColumnsInitialized && this.columns().length > 0) {
-        this.visibleColumnsInitialized = true;
-        const cols = this.columns();
-        const visible = cols.filter((c) => c.defaultVisible !== false).map((c) => c.columnId);
-        this.internalVisibleColumns.set(new Set(visible.length > 0 ? visible : cols.map((c) => c.columnId)));
-      }
-    });
-
     // Server-side data fetching effect
     effect(() => {
       const ds = this.dataSource();
@@ -500,13 +478,13 @@ export class OGridService<T> {
   }
 
   setPageSize(size: number): void {
-    if (this.controlledPageSize() === undefined) this.internalPageSize.set(size);
+    if (this.controlledPageSize() === undefined) this.internalPageSizeOverride.set(size);
     this.onPageSizeChange()?.(size);
     this.setPage(1);
   }
 
   setSort(s: { field: string; direction: 'asc' | 'desc' }): void {
-    if (this.controlledSort() === undefined) this.internalSort.set(s);
+    if (this.controlledSort() === undefined) this.internalSortOverride.set(s);
     this.onSortChange()?.(s);
     this.setPage(1);
   }
@@ -518,7 +496,7 @@ export class OGridService<T> {
   }
 
   setVisibleColumns(cols: Set<string>): void {
-    if (this.controlledVisibleColumns() === undefined) this.internalVisibleColumns.set(cols);
+    if (this.controlledVisibleColumns() === undefined) this.internalVisibleColumnsOverride.set(cols);
     this.onVisibleColumnsChange()?.(cols);
   }
 
@@ -671,6 +649,14 @@ export class OGridService<T> {
         if (this.isServerSide()) {
           this.refreshCounter.update((c) => c + 1);
         }
+      },
+      getColumnOrder: () => this.columnOrder() ?? this.columns().map((c) => c.columnId),
+      setColumnOrder: (order: string[]) => {
+        this.onColumnOrderChange()?.(order);
+      },
+      scrollToRow: (_index: number, _options?: { align?: 'start' | 'center' | 'end' }) => {
+        // Scrolling is handled by VirtualScrollService at the UI layer.
+        // The UI component should wire this to VirtualScrollService.scrollToRow().
       },
     };
   }

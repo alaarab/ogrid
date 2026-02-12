@@ -103,7 +103,7 @@ const columns: IColumnDef<Person>[] = [
 @Component({
   standalone: true,
   imports: [OGridComponent],
-  template: `<ogrid [gridProps]="gridProps" />`
+  template: `<ogrid [props]="gridProps" />`
 })
 export class GridComponent {
   gridProps = {
