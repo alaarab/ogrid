@@ -16,6 +16,7 @@ import {
   TableContainer,
 } from '@mui/material';
 import { ColumnHeaderFilter } from '../ColumnHeaderFilter';
+import { ColumnHeaderMenu } from '../ColumnHeaderMenu';
 import { InlineCellEditor } from './InlineCellEditor';
 import { StatusBar } from './StatusBar';
 import { GridContextMenu } from './GridContextMenu';
@@ -42,6 +43,7 @@ import {
   areGridRowPropsEqual,
   CellErrorBoundary,
   CHECKBOX_COLUMN_WIDTH,
+  ROW_NUMBER_COLUMN_WIDTH,
   DEFAULT_MIN_COLUMN_WIDTH,
 } from '@alaarab/ogrid-react';
 
@@ -62,6 +64,15 @@ const CHECKBOX_PLACEHOLDER_SX = { width: CHECKBOX_COLUMN_WIDTH, minWidth: CHECKB
 const STICKY_HEADER_SX = { position: 'sticky', top: 0, zIndex: 8, bgcolor: 'action.hover', '& th': { bgcolor: 'action.hover' } } as const;
 const HEADER_ROW_SX = { bgcolor: 'action.hover' } as const;
 const GROUP_HEADER_CELL_SX = { textAlign: 'center', fontWeight: 600, borderBottom: 2, borderColor: 'divider', py: 0.75 } as const;
+
+// Density padding helper
+function getDensityPadding(density: 'compact' | 'normal' | 'comfortable') {
+  switch (density) {
+    case 'compact': return { px: '8px', py: '4px' } as const;
+    case 'comfortable': return { px: '16px', py: '12px' } as const;
+    default: return { px: '10px', py: '6px' } as const;
+  }
+}
 
 // Cell content base variants (selected by column type + editability)
 const CELL_CONTENT_BASE_SX = {
@@ -137,13 +148,13 @@ const FILL_HANDLE_SX = {
 
 // Cell <td> positioning variants
 const CELL_TD_BASE_SX = { position: 'relative' as const, p: 0, height: '1px' } as const;
-const CELL_TD_PINNED_LEFT_SX = { ...CELL_TD_BASE_SX, position: 'sticky' as const, left: 0, zIndex: 6, bgcolor: 'background.paper', willChange: 'transform' } as const;
-const CELL_TD_PINNED_RIGHT_SX = { ...CELL_TD_BASE_SX, position: 'sticky' as const, right: 0, zIndex: 6, bgcolor: 'background.paper', willChange: 'transform' } as const;
+const CELL_TD_PINNED_LEFT_SX = { ...CELL_TD_BASE_SX, position: 'sticky' as const, left: 0, zIndex: 6, bgcolor: 'background.paper', willChange: 'transform', borderLeft: '2px solid', borderLeftColor: 'primary.main' } as const;
+const CELL_TD_PINNED_RIGHT_SX = { ...CELL_TD_BASE_SX, position: 'sticky' as const, right: 0, zIndex: 6, bgcolor: 'background.paper', willChange: 'transform', borderRight: '2px solid', borderRightColor: 'primary.main' } as const;
 
 // Header cell positioning variants
 const HEADER_BASE_SX = { fontWeight: 600, position: 'relative' as const } as const;
-const HEADER_PINNED_LEFT_SX = { ...HEADER_BASE_SX, position: 'sticky' as const, left: 0, top: 0, zIndex: 9, bgcolor: 'action.hover', willChange: 'transform' } as const;
-const HEADER_PINNED_RIGHT_SX = { ...HEADER_BASE_SX, position: 'sticky' as const, right: 0, top: 0, zIndex: 9, bgcolor: 'action.hover', willChange: 'transform' } as const;
+const HEADER_PINNED_LEFT_SX = { ...HEADER_BASE_SX, position: 'sticky' as const, left: 0, top: 0, zIndex: 9, bgcolor: 'action.hover', willChange: 'transform', borderLeft: '2px solid', borderLeftColor: 'primary.main' } as const;
+const HEADER_PINNED_RIGHT_SX = { ...HEADER_BASE_SX, position: 'sticky' as const, right: 0, top: 0, zIndex: 9, bgcolor: 'action.hover', willChange: 'transform', borderRight: '2px solid', borderRightColor: 'primary.main' } as const;
 
 // Resize handle
 const RESIZE_HANDLE_SX = {
@@ -206,6 +217,8 @@ interface GridRowProps {
   handleRowCheckboxChange: (rowId: string | number, checked: boolean, rowIndex: number, shiftKey: boolean) => void;
   lastMouseShiftRef: React.MutableRefObject<boolean>;
   hasCheckboxCol: boolean;
+  hasRowNumbersCol: boolean;
+  rowNumberOffset: number;
   // Comparator-only props (drive re-render decisions, not used in render body)
   selectionRange: { startRow: number; endRow: number; startCol: number; endCol: number } | null;
   activeCell: { rowIndex: number; columnIndex: number } | null;
@@ -219,7 +232,7 @@ function GridRowInner(props: GridRowProps) {
   const {
     item, rowIndex, rowId, isSelected, columnLayouts,
     renderCellContent, handleSingleRowClick, handleRowCheckboxChange,
-    lastMouseShiftRef, hasCheckboxCol,
+    lastMouseShiftRef, hasCheckboxCol, hasRowNumbersCol, rowNumberOffset,
   } = props;
 
   return (
@@ -246,6 +259,25 @@ function GridRowInner(props: GridRowProps) {
           </Box>
         </TableCell>
       )}
+      {hasRowNumbersCol && (
+        <TableCell
+          sx={{
+            width: ROW_NUMBER_COLUMN_WIDTH,
+            minWidth: ROW_NUMBER_COLUMN_WIDTH,
+            maxWidth: ROW_NUMBER_COLUMN_WIDTH,
+            textAlign: 'center',
+            fontWeight: 600,
+            fontVariantNumeric: 'tabular-nums',
+            color: 'text.secondary',
+            backgroundColor: 'action.hover',
+            position: 'sticky',
+            left: hasCheckboxCol ? CHECKBOX_COLUMN_WIDTH : 0,
+            zIndex: 3,
+          }}
+        >
+          {rowNumberOffset + rowIndex + 1}
+        </TableCell>
+      )}
       {columnLayouts.map((cl, colIdx) => (
         <TableCell
           key={cl.col.columnId}
@@ -267,8 +299,8 @@ function DataGridTableInner<T>(props: IOGridDataGridProps<T>): React.ReactElemen
   const state = useDataGridState({ props, wrapperRef });
   const lastMouseShiftRef = useRef(false);
 
-  const { layout, rowSelection: rowSel, editing, interaction, contextMenu: ctxMenu, viewModels } = state;
-  const { visibleCols, hasCheckboxCol, colOffset, containerWidth, minTableWidth, desiredTableWidth, columnSizingOverrides, setColumnSizingOverrides } = layout;
+  const { layout, rowSelection: rowSel, editing, interaction, contextMenu: ctxMenu, viewModels, pinning } = state;
+  const { visibleCols, hasCheckboxCol, hasRowNumbersCol, colOffset, containerWidth, minTableWidth, desiredTableWidth, columnSizingOverrides, setColumnSizingOverrides } = layout;
   const { selectedRowIds, updateSelection, handleRowCheckboxChange, handleSelectAll, allSelected, someSelected } = rowSel;
   const { editingCell, setEditingCell, pendingEditorValue, setPendingEditorValue, commitCellEdit, cancelPopoverEdit, popoverAnchorEl, setPopoverAnchorEl } = editing;
   const { setActiveCell, handleCellMouseDown, handleSelectAllCells, selectionRange, hasCellSelection, handleGridKeyDown, handleFillHandleMouseDown, handleCopy, handleCut, handlePaste, cutRange, copyRange, canUndo, canRedo, onUndo, onRedo, isDragging } = interaction;
@@ -293,11 +325,22 @@ function DataGridTableInner<T>(props: IOGridDataGridProps<T>): React.ReactElemen
     onColumnOrderChange,
     columnReorder,
     virtualScroll,
+    density = 'normal',
     pinnedColumns,
+    currentPage = 1,
+    pageSize: propPageSize = 25,
   } = props;
+
+  // Calculate row number offset for pagination
+  const rowNumberOffset = hasRowNumbersCol ? (currentPage - 1) * propPageSize : 0;
 
   const fitToContent = layoutMode === 'content';
   const allowOverflowX = !suppressHorizontalScroll && containerWidth > 0 && (minTableWidth > containerWidth || desiredTableWidth > containerWidth);
+
+  // Density-aware cell padding
+  const densityPadding = useMemo(() => getDensityPadding(density), [density]);
+  const cellSx = useMemo(() => ({ ...CELL_CONTENT_BASE_SX, ...densityPadding }), [densityPadding]);
+  const headerCellSx = useMemo(() => ({ px: densityPadding.px, py: densityPadding.py }), [densityPadding]);
 
   // Memoize header rows (recursive tree traversal)
   const headerRows = useMemo(() => buildHeaderRows(props.columns, props.visibleColumns), [props.columns, props.visibleColumns]);
@@ -371,6 +414,7 @@ function DataGridTableInner<T>(props: IOGridDataGridProps<T>): React.ReactElemen
     bgcolor: 'background.paper',
     willChange: 'scroll-position',
     '& [data-drag-range]': { bgcolor: 'rgba(33, 115, 70, 0.12) !important' },
+    '& [data-drag-anchor]': { bgcolor: 'background.paper !important' },
   }), [fitToContent, suppressHorizontalScroll, allowOverflowX]);
 
   const renderCellContent = useCallback(
@@ -421,7 +465,7 @@ function DataGridTableInner<T>(props: IOGridDataGridProps<T>): React.ReactElemen
           <Box
             component="div"
             {...interactionProps}
-            sx={cellSx}
+            sx={Array.isArray(cellSx) ? [...cellSx, densityPadding] : { ...cellSx, ...densityPadding } as any}
           >
             {styledContent}
             {descriptor.canEditAny && descriptor.isSelectionEndCell && (
@@ -453,6 +497,7 @@ function DataGridTableInner<T>(props: IOGridDataGridProps<T>): React.ReactElemen
         onKeyDown={handleGridKeyDown}
         onContextMenu={PREVENT_DEFAULT}
         data-overflow-x={allowOverflowX ? 'true' : 'false'}
+        data-density={density}
         sx={wrapperSx}
       >
       <Box sx={WRAPPER_SCROLL_SX}>
@@ -485,6 +530,42 @@ function DataGridTableInner<T>(props: IOGridDataGridProps<T>): React.ReactElemen
                   {rowIdx === 0 && rowIdx < headerRows.length - 1 && hasCheckboxCol && (
                     <TableCell rowSpan={headerRows.length - 1} sx={CHECKBOX_PLACEHOLDER_SX} />
                   )}
+                  {/* Row numbers column in the last (leaf) row only */}
+                  {rowIdx === headerRows.length - 1 && hasRowNumbersCol && (
+                    <TableCell
+                      component="th"
+                      scope="col"
+                      rowSpan={headerRows.length > 1 ? 1 : undefined}
+                      sx={{
+                        width: ROW_NUMBER_COLUMN_WIDTH,
+                        minWidth: ROW_NUMBER_COLUMN_WIDTH,
+                        maxWidth: ROW_NUMBER_COLUMN_WIDTH,
+                        textAlign: 'center',
+                        fontWeight: 600,
+                        backgroundColor: 'action.hover',
+                        position: 'sticky',
+                        left: hasCheckboxCol ? CHECKBOX_COLUMN_WIDTH : 0,
+                        zIndex: 4,
+                        ...headerCellSx,
+                      }}
+                    >
+                      #
+                    </TableCell>
+                  )}
+                  {/* Empty placeholder for row numbers in the first group row */}
+                  {rowIdx === 0 && rowIdx < headerRows.length - 1 && hasRowNumbersCol && (
+                    <TableCell
+                      rowSpan={headerRows.length - 1}
+                      sx={{
+                        width: ROW_NUMBER_COLUMN_WIDTH,
+                        minWidth: ROW_NUMBER_COLUMN_WIDTH,
+                        position: 'sticky',
+                        left: hasCheckboxCol ? CHECKBOX_COLUMN_WIDTH : 0,
+                        zIndex: 4,
+                        backgroundColor: 'background.paper',
+                      }}
+                    />
+                  )}
                   {row.map((cell, cellIdx) => {
                     if (cell.isGroup) {
                       return (
@@ -514,7 +595,7 @@ function DataGridTableInner<T>(props: IOGridDataGridProps<T>): React.ReactElemen
                         scope="col"
                         data-column-id={col.columnId}
                         rowSpan={headerRows.length > 1 ? headerRows.length - rowIdx : undefined}
-                        sx={headerSx}
+                        sx={{ ...headerSx, ...headerCellSx }}
                         style={{
                           minWidth: col.minWidth ?? DEFAULT_MIN_COLUMN_WIDTH,
                           width: columnWidth,
@@ -523,7 +604,44 @@ function DataGridTableInner<T>(props: IOGridDataGridProps<T>): React.ReactElemen
                         }}
                         onMouseDown={columnReorder ? (e: React.MouseEvent) => handleHeaderMouseDown(col.columnId, e) : undefined}
                       >
-                        <ColumnHeaderFilter {...getHeaderFilterConfig(col, headerFilterInput)} />
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                          <ColumnHeaderFilter {...getHeaderFilterConfig(col, headerFilterInput)} />
+                          <Box
+                            component="button"
+                            onClick={(e: React.MouseEvent<HTMLButtonElement>) => {
+                              e.stopPropagation();
+                              pinning.headerMenu.open(col.columnId, e.currentTarget);
+                            }}
+                            aria-label="Column options"
+                            title="Column options"
+                            sx={{
+                              background: 'transparent',
+                              border: 'none',
+                              cursor: 'pointer',
+                              padding: '2px 4px',
+                              fontSize: '16px',
+                              lineHeight: 1,
+                              color: 'text.secondary',
+                              opacity: 0,
+                              transition: 'opacity 0.15s, background-color 0.15s',
+                              borderRadius: '3px',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              minWidth: '20px',
+                              height: '20px',
+                              '&:hover': {
+                                bgcolor: 'action.hover',
+                                opacity: 1,
+                              },
+                              'th:hover &': {
+                                opacity: 1,
+                              },
+                            }}
+                          >
+                            ⋮
+                          </Box>
+                        </Box>
                         <Box onMouseDown={(e) => handleResizeStart(e, col)} sx={RESIZE_HANDLE_SX} />
                       </TableCell>
                     );
@@ -553,6 +671,8 @@ function DataGridTableInner<T>(props: IOGridDataGridProps<T>): React.ReactElemen
                           handleRowCheckboxChange={handleRowCheckboxChange}
                           lastMouseShiftRef={lastMouseShiftRef}
                           hasCheckboxCol={hasCheckboxCol}
+                          hasRowNumbersCol={hasRowNumbersCol}
+                          rowNumberOffset={rowNumberOffset}
                           selectionRange={selectionRange}
                           activeCell={interaction.activeCell}
                           cutRange={cutRange}
@@ -577,6 +697,8 @@ function DataGridTableInner<T>(props: IOGridDataGridProps<T>): React.ReactElemen
                           handleRowCheckboxChange={handleRowCheckboxChange}
                           lastMouseShiftRef={lastMouseShiftRef}
                           hasCheckboxCol={hasCheckboxCol}
+                          hasRowNumbersCol={hasRowNumbersCol}
+                          rowNumberOffset={rowNumberOffset}
                           selectionRange={selectionRange}
                           activeCell={interaction.activeCell}
                           cutRange={cutRange}
@@ -661,6 +783,19 @@ function DataGridTableInner<T>(props: IOGridDataGridProps<T>): React.ReactElemen
             />,
             document.body
           )}
+
+        <ColumnHeaderMenu
+          columnId={pinning.headerMenu.openForColumn || ''}
+          isOpen={pinning.headerMenu.isOpen}
+          anchorElement={pinning.headerMenu.anchorElement}
+          onClose={pinning.headerMenu.close}
+          onPinLeft={pinning.headerMenu.handlePinLeft}
+          onPinRight={pinning.headerMenu.handlePinRight}
+          onUnpin={pinning.headerMenu.handleUnpin}
+          canPinLeft={pinning.headerMenu.canPinLeft}
+          canPinRight={pinning.headerMenu.canPinRight}
+          canUnpin={pinning.headerMenu.canUnpin}
+        />
       </Box>
       {statusBarConfig && (
         <StatusBar

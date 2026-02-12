@@ -30,6 +30,12 @@ module.exports = {
     '^@alaarab/ogrid-react$': '<rootDir>/../react/src/index.ts',
     '^@alaarab/ogrid-react/testing$': '<rootDir>/../react/src/testing/index.ts',
     '^@alaarab/ogrid-react/storybook$': '<rootDir>/../react/src/storybook/index.ts',
+    // Individual component mocks (must come before catch-all pattern)
+    '^@mui/material/Menu$': '<rootDir>/jest-mocks/mui-material-Menu.cjs.js',
+    '^@mui/material/MenuItem$': '<rootDir>/jest-mocks/mui-material-MenuItem.cjs.js',
+    '^@mui/material/IconButton$': '<rootDir>/jest-mocks/mui-material-IconButton.cjs.js',
+    '^@mui/icons-material/MoreVert$': '<rootDir>/jest-mocks/mui-icons-material-MoreVert.cjs.js',
+    // Catch-all patterns for other MUI components
     '^@mui/material(.*)$': '<rootDir>/jest-mocks/mui-material.cjs.js',
     '^@mui/icons-material(.*)$': '<rootDir>/jest-mocks/mui-icons.cjs.js',
     '^@mui/system$': '<rootDir>/jest-mocks/mui-system.cjs.js',

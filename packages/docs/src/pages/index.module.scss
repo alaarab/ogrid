@@ -123,19 +123,58 @@
   display: inline-flex;
   align-items: center;
   gap: 0.75rem;
-  padding: 0.75rem 1.5rem;
+  padding: 0.9rem 1.75rem;
   background: var(--ogrid-surface-glass);
-  border: 1px solid var(--ogrid-border-glass);
-  border-radius: 10px;
+  border: 1.5px solid var(--ogrid-border-glass);
+  border-radius: 12px;
   font-family: var(--ifm-font-family-monospace);
-  font-size: 0.9rem;
-  backdrop-filter: blur(8px);
+  font-size: 0.92rem;
+  backdrop-filter: blur(12px);
   user-select: all;
+  min-width: 420px;
+  position: relative;
+  overflow: hidden;
+
+  @media (max-width: 480px) {
+    min-width: auto;
+    max-width: 100%;
+  }
 }
 
 .heroInstallDollar {
   color: var(--ogrid-accent);
   user-select: none;
+  font-weight: 700;
+}
+
+.heroInstallCommand {
+  flex: 1;
+  animation: fadeInSlide 0.5s ease-in-out;
+  display: inline-block;
+}
+
+.heroInstallLabel {
+  font-size: 0.7rem;
+  font-weight: 600;
+  color: var(--ogrid-accent);
+  background: rgba(58, 184, 118, 0.1);
+  padding: 2px 8px;
+  border-radius: 4px;
+  user-select: none;
+  letter-spacing: 0.02em;
+  animation: fadeInSlide 0.5s ease-in-out;
+  white-space: nowrap;
+}
+
+@keyframes fadeInSlide {
+  0% {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 /* ── Section Shared ── */
@@ -272,8 +311,156 @@
 }
 
 .comparisonInner {
-  max-width: 900px;
+  max-width: 1000px;
   margin: 0 auto;
+}
+
+.comparisonGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 2rem;
+  margin-top: 3rem;
+
+  @media (max-width: 768px) {
+    grid-template-columns: 1fr;
+  }
+}
+
+.comparisonCard {
+  background: var(--ogrid-surface-glass);
+  border: 2px solid var(--ogrid-border-glass);
+  border-radius: 16px;
+  padding: 2rem;
+  backdrop-filter: blur(16px);
+  transition: transform 0.2s, box-shadow 0.2s, border-color 0.2s;
+
+  &:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.12);
+  }
+}
+
+.comparisonCardOGrid {
+  border-color: rgba(58, 184, 118, 0.4);
+
+  &:hover {
+    border-color: rgba(58, 184, 118, 0.6);
+  }
+}
+
+.comparisonCardAggrid {
+  border-color: rgba(245, 158, 11, 0.3);
+
+  &:hover {
+    border-color: rgba(245, 158, 11, 0.5);
+  }
+}
+
+.comparisonCardHeader {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+  padding-bottom: 1rem;
+  border-bottom: 2px solid var(--ogrid-border-glass);
+}
+
+.comparisonCardIcon {
+  width: 48px;
+  height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 12px;
+  font-size: 1.5rem;
+  font-weight: 700;
+}
+
+.comparisonCardIconOGrid {
+  background: linear-gradient(135deg, #217346 0%, #3ab876 100%);
+  color: white;
+}
+
+.comparisonCardIconAggrid {
+  background: linear-gradient(135deg, #f59e0b 0%, #fbbf24 100%);
+  color: white;
+}
+
+.comparisonCardTitle {
+  font-size: 1.5rem;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+}
+
+.comparisonFeatureList {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.comparisonFeatureItem {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+  font-size: 0.9rem;
+  line-height: 1.5;
+}
+
+.comparisonFeatureIcon {
+  flex-shrink: 0;
+  width: 20px;
+  height: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  font-size: 0.7rem;
+  margin-top: 2px;
+}
+
+.comparisonFeatureIconCheck {
+  background: rgba(58, 184, 118, 0.15);
+  color: #3ab876;
+}
+
+.comparisonFeatureIconEnterprise {
+  background: rgba(245, 158, 11, 0.15);
+  color: #f59e0b;
+}
+
+.comparisonFeatureIconNeutral {
+  background: rgba(100, 116, 139, 0.15);
+  color: #64748b;
+}
+
+.comparisonFeatureText {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.comparisonFeatureName {
+  font-weight: 600;
+  color: var(--ifm-font-color-base);
+}
+
+.comparisonFeatureValue {
+  font-size: 0.8rem;
+  color: var(--ifm-color-emphasis-600);
+}
+
+.comparisonFeatureValueFree {
+  color: #3ab876;
+  font-weight: 600;
+}
+
+.comparisonFeatureValuePaid {
+  color: #f59e0b;
+  font-weight: 600;
 }
 
 .comparisonTable {
@@ -283,6 +470,7 @@
   border-radius: 12px;
   overflow: hidden;
   border: 1px solid var(--ogrid-border-glass);
+  display: none; // Hidden by default, keeping for fallback
 
   th, td {
     padding: 0.85rem 1rem;
@@ -360,13 +548,20 @@
   gap: 0.75rem;
   padding: 1rem 2rem;
   background: var(--ogrid-surface-glass);
-  border: 1px solid var(--ogrid-border-glass);
+  border: 1.5px solid var(--ogrid-border-glass);
   border-radius: 12px;
   font-family: var(--ifm-font-family-monospace);
-  font-size: 1.1rem;
+  font-size: 1.05rem;
   margin-bottom: 2rem;
-  backdrop-filter: blur(8px);
+  backdrop-filter: blur(12px);
   user-select: all;
+  min-width: 480px;
+
+  @media (max-width: 480px) {
+    min-width: auto;
+    max-width: 100%;
+    font-size: 0.9rem;
+  }
 }
 
 .ctaButtons {

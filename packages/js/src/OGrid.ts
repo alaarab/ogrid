@@ -468,7 +468,8 @@ export class OGrid<T> {
       columnWidths,
       120,
       !!this.rowSelectionState,
-      40
+      40,
+      !!this.options.showRowNumbers
     ) ?? {};
     const rightOffsets = this.pinningState?.computeRightOffsets(
       visibleCols,
@@ -501,6 +502,8 @@ export class OGrid<T> {
       },
       allSelected: this.rowSelectionState?.isAllSelected(items),
       someSelected: this.rowSelectionState?.isSomeSelected(items),
+      // Row numbers
+      showRowNumbers: this.options.showRowNumbers,
       // Column pinning
       pinnedColumns: this.pinningState?.pinnedColumns,
       leftOffsets,
@@ -538,16 +541,38 @@ export class OGrid<T> {
     if (!range) return;
 
     const norm = normalizeSelectionRange(range);
+    const anchor = this.selectionState.dragAnchor;
+    const minR = norm.startRow;
+    const maxR = norm.endRow;
+    const minC = norm.startCol;
+    const maxC = norm.endCol;
     const cells = wrapper.querySelectorAll('td[data-row-index][data-col-index]');
 
     for (const cell of Array.from(cells)) {
-      const rowIndex = parseInt((cell as HTMLElement).getAttribute('data-row-index') ?? '-1', 10);
-      const colIndex = parseInt((cell as HTMLElement).getAttribute('data-col-index') ?? '-1', 10);
+      const el = cell as HTMLElement;
+      const rowIndex = parseInt(el.getAttribute('data-row-index') ?? '-1', 10);
+      const colIndex = parseInt(el.getAttribute('data-col-index') ?? '-1', 10);
 
       if (isInSelectionRange(norm, rowIndex, colIndex)) {
-        (cell as HTMLElement).setAttribute('data-drag-range', 'true');
+        el.setAttribute('data-drag-range', 'true');
+        // Anchor cell (white background)
+        const isAnchor = anchor && rowIndex === anchor.rowIndex && colIndex === anchor.columnIndex;
+        if (isAnchor) {
+          el.setAttribute('data-drag-anchor', '');
+        } else {
+          el.removeAttribute('data-drag-anchor');
+        }
+        // Edge borders via inset box-shadow
+        const shadows: string[] = [];
+        if (rowIndex === minR) shadows.push('inset 0 2px 0 0 var(--ogrid-selection, #217346)');
+        if (rowIndex === maxR) shadows.push('inset 0 -2px 0 0 var(--ogrid-selection, #217346)');
+        if (colIndex === minC) shadows.push('inset 2px 0 0 0 var(--ogrid-selection, #217346)');
+        if (colIndex === maxC) shadows.push('inset -2px 0 0 0 var(--ogrid-selection, #217346)');
+        el.style.boxShadow = shadows.length > 0 ? shadows.join(', ') : '';
       } else {
-        (cell as HTMLElement).removeAttribute('data-drag-range');
+        el.removeAttribute('data-drag-range');
+        el.removeAttribute('data-drag-anchor');
+        if (el.style.boxShadow) el.style.boxShadow = '';
       }
     }
   }
@@ -563,6 +588,8 @@ export class OGrid<T> {
     if (!this.selectionState) return;
     e.preventDefault();
     this.selectionState.startDrag(rowIndex, colIndex);
+    // Apply drag attributes immediately for instant visual feedback on the initial cell
+    setTimeout(() => this.updateDragAttributes(), 0);
   }
 
   private handleCellContextMenu(rowIndex: number, colIndex: number, e: MouseEvent): void {

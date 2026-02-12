@@ -14,6 +14,8 @@ import { useFillHandle } from './useFillHandle';
 import { useUndoRedo } from './useUndoRedo';
 import { useLatestRef } from './useLatestRef';
 import { useTableLayout } from './useTableLayout';
+import { useColumnPinning } from './useColumnPinning';
+import { useColumnHeaderMenuState } from './useColumnHeaderMenuState';
 
 // Stable no-op handlers used when cellSelection is disabled (module-scope = no re-renders)
 const NOOP = () => {};
@@ -37,6 +39,7 @@ export interface DataGridLayoutState<T> {
   totalColCount: number;
   colOffset: number;
   hasCheckboxCol: boolean;
+  hasRowNumbersCol: boolean;
   rowIndexByRowId: Map<RowId, number>;
   containerWidth: number;
   minTableWidth: number;
@@ -143,6 +146,39 @@ export interface DataGridViewModelState<T> {
   onCellError?: (error: Error, errorInfo: React.ErrorInfo) => void;
 }
 
+/** Column pinning state and column header menu. */
+export interface DataGridPinningState {
+  pinnedColumns: Record<string, 'left' | 'right'>;
+  pinColumn: (columnId: string, side: 'left' | 'right') => void;
+  unpinColumn: (columnId: string) => void;
+  isPinned: (columnId: string) => 'left' | 'right' | undefined;
+  computeLeftOffsets: (
+    visibleCols: { columnId: string }[],
+    columnWidths: Record<string, number>,
+    defaultWidth: number,
+    hasCheckboxColumn: boolean,
+    checkboxColumnWidth: number
+  ) => Record<string, number>;
+  computeRightOffsets: (
+    visibleCols: { columnId: string }[],
+    columnWidths: Record<string, number>,
+    defaultWidth: number
+  ) => Record<string, number>;
+  headerMenu: {
+    isOpen: boolean;
+    openForColumn: string | null;
+    anchorElement: HTMLElement | null;
+    open: (columnId: string, anchorEl: HTMLElement) => void;
+    close: () => void;
+    handlePinLeft: () => void;
+    handlePinRight: () => void;
+    handleUnpin: () => void;
+    canPinLeft: boolean;
+    canPinRight: boolean;
+    canUnpin: boolean;
+  };
+}
+
 /** Grouped result from useDataGridState. */
 export interface UseDataGridStateResult<T> {
   layout: DataGridLayoutState<T>;
@@ -151,6 +187,7 @@ export interface UseDataGridStateResult<T> {
   interaction: DataGridCellInteractionState;
   contextMenu: DataGridContextMenuState;
   viewModels: DataGridViewModelState<T>;
+  pinning: DataGridPinningState;
 }
 
 /**
@@ -170,6 +207,7 @@ export function useDataGridState<T>(
     rowSelection = 'none',
     selectedRows: controlledSelectedRows,
     onSelectionChange,
+    showRowNumbers,
     statusBar,
     emptyState,
     editable,
@@ -178,6 +216,7 @@ export function useDataGridState<T>(
     initialColumnWidths,
     onColumnResized,
     pinnedColumns,
+    onColumnPinned,
     onCellError,
   } = props;
 
@@ -220,8 +259,10 @@ export function useDataGridState<T>(
 
   const visibleColumnCount = visibleCols.length;
   const hasCheckboxCol = rowSelection === 'multiple';
-  const totalColCount = visibleColumnCount + (hasCheckboxCol ? 1 : 0);
-  const colOffset = hasCheckboxCol ? 1 : 0;
+  const hasRowNumbersCol = !!showRowNumbers;
+  const specialColsCount = (hasCheckboxCol ? 1 : 0) + (hasRowNumbersCol ? 1 : 0);
+  const totalColCount = visibleColumnCount + specialColsCount;
+  const colOffset = specialColsCount;
 
   const rowIndexByRowId = useMemo(() => {
     const m = new Map<RowId, number>();
@@ -329,6 +370,18 @@ export function useDataGridState<T>(
     hasCheckboxCol,
     initialColumnWidths,
     onColumnResized,
+  });
+
+  const pinningResult = useColumnPinning({
+    columns: flatColumns,
+    pinnedColumns,
+    onColumnPinned,
+  });
+
+  const headerMenuResult = useColumnHeaderMenuState({
+    pinnedColumns: pinningResult.pinnedColumns,
+    onPinColumn: pinningResult.pinColumn,
+    onUnpinColumn: pinningResult.unpinColumn,
   });
 
   const aggregation = useMemo(
@@ -500,11 +553,11 @@ export function useDataGridState<T>(
 
   const layoutState = useMemo<DataGridLayoutState<T>>(() => ({
     flatColumns, visibleCols, visibleColumnCount, totalColCount, colOffset,
-    hasCheckboxCol, rowIndexByRowId, containerWidth, minTableWidth,
+    hasCheckboxCol, hasRowNumbersCol, rowIndexByRowId, containerWidth, minTableWidth,
     desiredTableWidth, columnSizingOverrides, setColumnSizingOverrides, onColumnResized,
   }), [
     flatColumns, visibleCols, visibleColumnCount, totalColCount, colOffset,
-    hasCheckboxCol, rowIndexByRowId, containerWidth, minTableWidth,
+    hasCheckboxCol, hasRowNumbersCol, rowIndexByRowId, containerWidth, minTableWidth,
     desiredTableWidth, columnSizingOverrides, setColumnSizingOverrides, onColumnResized,
   ]);
 
@@ -558,6 +611,28 @@ export function useDataGridState<T>(
     headerFilterInput, cellDescriptorInput, statusBarConfig, showEmptyInGrid, onCellError,
   }), [headerFilterInput, cellDescriptorInput, statusBarConfig, showEmptyInGrid, onCellError]);
 
+  const pinningState = useMemo<DataGridPinningState>(() => ({
+    pinnedColumns: pinningResult.pinnedColumns,
+    pinColumn: pinningResult.pinColumn,
+    unpinColumn: pinningResult.unpinColumn,
+    isPinned: pinningResult.isPinned,
+    computeLeftOffsets: pinningResult.computeLeftOffsets,
+    computeRightOffsets: pinningResult.computeRightOffsets,
+    headerMenu: {
+      isOpen: headerMenuResult.isOpen,
+      openForColumn: headerMenuResult.openForColumn,
+      anchorElement: headerMenuResult.anchorElement,
+      open: headerMenuResult.open,
+      close: headerMenuResult.close,
+      handlePinLeft: headerMenuResult.handlePinLeft,
+      handlePinRight: headerMenuResult.handlePinRight,
+      handleUnpin: headerMenuResult.handleUnpin,
+      canPinLeft: headerMenuResult.canPinLeft,
+      canPinRight: headerMenuResult.canPinRight,
+      canUnpin: headerMenuResult.canUnpin,
+    },
+  }), [pinningResult, headerMenuResult]);
+
   return {
     layout: layoutState,
     rowSelection: rowSelectionState,
@@ -565,5 +640,6 @@ export function useDataGridState<T>(
     interaction: interactionState,
     contextMenu: contextMenuState,
     viewModels: viewModelsState,
+    pinning: pinningState,
   };
 }

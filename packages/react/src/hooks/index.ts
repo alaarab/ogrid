@@ -83,6 +83,16 @@ export type {
   UseColumnResizeParams,
   UseColumnResizeResult,
 } from './useColumnResize';
+export { useColumnPinning } from './useColumnPinning';
+export type {
+  UseColumnPinningParams,
+  UseColumnPinningResult,
+} from './useColumnPinning';
+export { useColumnHeaderMenuState } from './useColumnHeaderMenuState';
+export type {
+  UseColumnHeaderMenuStateParams,
+  UseColumnHeaderMenuStateResult,
+} from './useColumnHeaderMenuState';
 export { useRichSelectState } from './useRichSelectState';
 export type { UseRichSelectStateParams, UseRichSelectStateResult } from './useRichSelectState';
 export { useSideBarState } from './useSideBarState';

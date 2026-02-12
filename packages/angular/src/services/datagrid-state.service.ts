@@ -38,6 +38,7 @@ export interface DataGridLayoutState<T> {
   totalColCount: number;
   colOffset: number;
   hasCheckboxCol: boolean;
+  hasRowNumbersCol: boolean;
   rowIndexByRowId: Map<RowId, number>;
   containerWidth: number;
   minTableWidth: number;
@@ -264,8 +265,10 @@ export class DataGridStateService<T> {
 
   readonly visibleColumnCount = computed(() => this.visibleCols().length);
   readonly hasCheckboxCol = computed(() => (this.props()?.rowSelection ?? 'none') === 'multiple');
-  readonly totalColCount = computed(() => this.visibleColumnCount() + (this.hasCheckboxCol() ? 1 : 0));
-  readonly colOffset = computed(() => this.hasCheckboxCol() ? 1 : 0);
+  readonly hasRowNumbersCol = computed(() => !!this.props()?.showRowNumbers);
+  readonly specialColsCount = computed(() => (this.hasCheckboxCol() ? 1 : 0) + (this.hasRowNumbersCol() ? 1 : 0));
+  readonly totalColCount = computed(() => this.visibleColumnCount() + this.specialColsCount());
+  readonly colOffset = computed(() => this.specialColsCount());
 
   readonly rowIndexByRowId = computed(() => {
     const p = this.props();
@@ -1095,6 +1098,7 @@ export class DataGridStateService<T> {
       totalColCount: this.totalColCount(),
       colOffset: this.colOffset(),
       hasCheckboxCol: this.hasCheckboxCol(),
+      hasRowNumbersCol: this.hasRowNumbersCol(),
       rowIndexByRowId: this.rowIndexByRowId(),
       containerWidth: this.containerWidthSig(),
       minTableWidth: this.minTableWidth(),

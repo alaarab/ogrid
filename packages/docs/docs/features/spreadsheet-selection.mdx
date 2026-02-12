@@ -16,6 +16,16 @@ OGrid provides Excel-like cell selection out of the box. Click a cell to make it
 
 <SpreadsheetSelectionDemo />
 
+:::tip Framework-Specific Styling
+The live demo above shows **React Radix UI** styling (lightweight default). To see how this feature looks in your framework's design system, click the framework buttons above the demo to open StackBlitz:
+- **React** — Radix UI styling
+- **Angular** — Angular Material styling
+- **Vue** — Vuetify styling
+- **JS** — Vanilla JS default theme
+
+Each framework renders OGrid with its native components, so the look and feel matches your design system.
+:::
+
 ## Quick Example
 
 <Tabs groupId="framework">
@@ -69,6 +79,7 @@ export class GridComponent {
 :::tip Switching UI libraries
 Same component API across Angular packages. To switch, just change the import:
 
+- **Radix (CDK)**: `from '@alaarab/ogrid-angular-radix'` *(default, lightweight)*
 - **Angular Material**: `from '@alaarab/ogrid-angular-material'`
 - **PrimeNG**: `from '@alaarab/ogrid-angular-primeng'`
 
@@ -98,6 +109,7 @@ const gridProps = {
 :::tip Switching UI libraries
 Same component API across Vue packages. To switch, just change the import:
 
+- **Radix (Headless UI)**: `from '@alaarab/ogrid-vue-radix'` *(default, lightweight)*
 - **Vuetify**: `from '@alaarab/ogrid-vue-vuetify'` — wrap in `<v-app>` for theming
 - **PrimeVue**: `from '@alaarab/ogrid-vue-primevue'`
 :::
@@ -129,6 +141,14 @@ Cell selection is **enabled by default** (`cellSelection={true}`). When active:
 - **Click and drag** across cells to select a range.
 - **Ctrl+A** selects all cells in the grid.
 - **Arrow keys** move the active cell. **Shift+Arrow** extends the selection range.
+
+:::info Cell Selection vs Row Selection
+**Cell selection** (this page) selects individual cells using click/drag. The **Ctrl+A** keyboard shortcut selects all **cells** in the grid for copy/paste/fill operations.
+
+This is separate from **row selection** ([Row Selection](./row-selection)), which selects entire rows using checkboxes. Row selection's header checkbox selects all **rows** at once.
+
+You can use both features together -- cell selection and row selection are independent.
+:::
 
 The selection range is represented by `ISelectionRange`:
 
@@ -182,7 +202,7 @@ Selection colors use CSS custom properties for easy theming:
 | Click+Drag | Select a range by dragging |
 | Arrow keys | Move active cell |
 | Shift+Arrow | Extend selection range |
-| Ctrl+A | Select all cells |
+| Ctrl+A | Select all cells (for copy/paste/fill operations) |
 
 ## Related
 

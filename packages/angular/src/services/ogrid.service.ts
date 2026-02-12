@@ -595,6 +595,82 @@ export class OGridService<T> {
 
   // --- API ---
 
+  // --- Column Pinning Methods ---
+
+  /**
+   * Pin a column to the left or right edge.
+   */
+  pinColumn(columnId: string, side: 'left' | 'right'): void {
+    this.pinnedOverrides.update((prev) => ({ ...prev, [columnId]: side }));
+    this.onColumnPinned()?.(columnId, side);
+  }
+
+  /**
+   * Unpin a column (remove sticky positioning).
+   */
+  unpinColumn(columnId: string): void {
+    this.pinnedOverrides.update((prev) => {
+      const next = { ...prev };
+      delete next[columnId];
+      return next;
+    });
+    this.onColumnPinned()?.(columnId, null);
+  }
+
+  /**
+   * Check if a column is pinned and which side.
+   */
+  isPinned(columnId: string): 'left' | 'right' | undefined {
+    return this.pinnedOverrides()[columnId];
+  }
+
+  /**
+   * Compute sticky left offsets for left-pinned columns.
+   * Returns a map of columnId -> left offset in pixels.
+   */
+  computeLeftOffsets(
+    visibleCols: { columnId: string }[],
+    columnWidths: Record<string, number>,
+    defaultWidth: number,
+    hasCheckboxColumn: boolean,
+    checkboxColumnWidth: number
+  ): Record<string, number> {
+    const offsets: Record<string, number> = {};
+    const pinned = this.pinnedOverrides();
+    let left = hasCheckboxColumn ? checkboxColumnWidth : 0;
+
+    for (const col of visibleCols) {
+      if (pinned[col.columnId] === 'left') {
+        offsets[col.columnId] = left;
+        left += columnWidths[col.columnId] ?? defaultWidth;
+      }
+    }
+    return offsets;
+  }
+
+  /**
+   * Compute sticky right offsets for right-pinned columns.
+   * Returns a map of columnId -> right offset in pixels.
+   */
+  computeRightOffsets(
+    visibleCols: { columnId: string }[],
+    columnWidths: Record<string, number>,
+    defaultWidth: number
+  ): Record<string, number> {
+    const offsets: Record<string, number> = {};
+    const pinned = this.pinnedOverrides();
+    let right = 0;
+
+    for (let i = visibleCols.length - 1; i >= 0; i--) {
+      const col = visibleCols[i];
+      if (pinned[col.columnId] === 'right') {
+        offsets[col.columnId] = right;
+        right += columnWidths[col.columnId] ?? defaultWidth;
+      }
+    }
+    return offsets;
+  }
+
   getApi(): IOGridApi<T> {
     return {
       setRowData: (d: T[]) => {

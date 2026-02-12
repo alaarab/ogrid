@@ -16,6 +16,10 @@ Render tens of thousands of rows without degrading performance. Virtual scrollin
 
 <VirtualScrollingDemo />
 
+:::tip Try it in your framework
+The demo above uses Radix UI for styling. To see this feature with your framework's design system (Fluent UI, Material UI, Vuetify, PrimeNG, etc.), click **"Open in StackBlitz"** below the demo.
+:::
+
 ## Quick Example
 
 <Tabs groupId="framework">
@@ -109,6 +113,7 @@ export class GridComponent {
 :::tip Switching UI libraries
 Same component API across Angular packages. To switch, just change the import:
 
+- **Radix (CDK)**: `from '@alaarab/ogrid-angular-radix'` *(default, lightweight)*
 - **Angular Material**: `from '@alaarab/ogrid-angular-material'`
 - **PrimeNG**: `from '@alaarab/ogrid-angular-primeng'`
 
@@ -158,6 +163,7 @@ const gridProps = {
 :::tip Switching UI libraries
 Same component API across Vue packages. To switch, just change the import:
 
+- **Radix (Headless UI)**: `from '@alaarab/ogrid-vue-radix'` *(default, lightweight)*
 - **Vuetify**: `from '@alaarab/ogrid-vue-vuetify'` — wrap in `<v-app>` for theming
 - **PrimeVue**: `from '@alaarab/ogrid-vue-primevue'`
 :::

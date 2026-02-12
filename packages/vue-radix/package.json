@@ -1,0 +1,63 @@
+{
+  "name": "@alaarab/ogrid-vue-radix",
+  "version": "2.0.4",
+  "description": "OGrid Vue Radix – Lightweight data grid with sorting, filtering, pagination, column chooser, and CSV export. Built with Headless UI Vue.",
+  "main": "dist/esm/index.js",
+  "module": "dist/esm/index.js",
+  "types": "dist/types/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/types/index.d.ts",
+      "import": "./dist/esm/index.js",
+      "require": "./dist/esm/index.js"
+    }
+  },
+  "scripts": {
+    "build": "rimraf dist && tsc -p tsconfig.build.json && node scripts/compile-styles.js",
+    "test": "jest"
+  },
+  "keywords": [
+    "ogrid",
+    "headlessui",
+    "vue",
+    "datatable",
+    "typescript",
+    "grid",
+    "headless"
+  ],
+  "author": "Ala Arab",
+  "license": "MIT",
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "sideEffects": [
+    "**/*.css"
+  ],
+  "engines": {
+    "node": ">=18"
+  },
+  "dependencies": {
+    "@alaarab/ogrid-vue": "2.0.3",
+    "@headlessui/vue": "^1.7.0"
+  },
+  "peerDependencies": {
+    "vue": "^3.3.0"
+  },
+  "devDependencies": {
+    "vue": "^3.5.28",
+    "@vitejs/plugin-vue": "^6.0.4",
+    "vite": "^7.0.0",
+    "vite-plugin-dts": "^4.5.0",
+    "typescript": "^5.7.3",
+    "sass": "^1.83.4",
+    "@types/jest": "^29.5.0",
+    "jest": "^29.7.0",
+    "jest-environment-jsdom": "^29.7.0",
+    "ts-jest": "^29.2.0"
+  },
+  "publishConfig": {
+    "access": "public"
+  }
+}

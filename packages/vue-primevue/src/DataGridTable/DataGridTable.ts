@@ -17,6 +17,7 @@ import {
   buildHeaderRows,
   flattenColumns,
   CHECKBOX_COLUMN_WIDTH,
+  ROW_NUMBER_COLUMN_WIDTH,
   DEFAULT_MIN_COLUMN_WIDTH,
   type IOGridDataGridProps,
   type IColumnDef,
@@ -164,8 +165,12 @@ export const DataGridTable = defineComponent({
       const viewModels = state.viewModels.value;
 
       const {
-        visibleCols, hasCheckboxCol, colOffset, containerWidth, minTableWidth, desiredTableWidth,
+        visibleCols, hasCheckboxCol, hasRowNumbersCol, colOffset, containerWidth, minTableWidth, desiredTableWidth,
       } = layout;
+
+      const currentPage = p.currentPage ?? 1;
+      const pageSize = p.pageSize ?? 25;
+      const rowNumberOffset = hasRowNumbersCol ? (currentPage - 1) * pageSize : 0;
 
       const { selectedRowIds, handleRowCheckboxChange, handleSelectAll, allSelected, someSelected } = rowSel;
       const { editingCell, setEditingCell, pendingEditorValue, setPendingEditorValue, commitCellEdit, cancelPopoverEdit, popoverAnchorEl, setPopoverAnchorEl } = editing;
@@ -421,6 +426,33 @@ export const DataGridTable = defineComponent({
                             style: { width: `${CHECKBOX_COLUMN_WIDTH}px`, minWidth: `${CHECKBOX_COLUMN_WIDTH}px`, padding: '0' },
                           }),
                         ] : []),
+                        // Row numbers header cell (last leaf row only)
+                        ...(rowIdx === headerRows.length - 1 && hasRowNumbersCol ? [
+                          h('th', {
+                            style: {
+                              width: `${ROW_NUMBER_COLUMN_WIDTH}px`,
+                              textAlign: 'center',
+                              fontWeight: '600',
+                              backgroundColor: 'rgba(0,0,0,0.04)',
+                              position: 'sticky',
+                              left: hasCheckboxCol ? `${CHECKBOX_COLUMN_WIDTH}px` : '0',
+                              zIndex: 3,
+                            },
+                          }, '#'),
+                        ] : []),
+                        // Empty placeholder for row numbers in first group row
+                        ...(rowIdx === 0 && rowIdx < headerRows.length - 1 && hasRowNumbersCol ? [
+                          h('th', {
+                            rowSpan: headerRows.length - 1,
+                            style: {
+                              width: `${ROW_NUMBER_COLUMN_WIDTH}px`,
+                              backgroundColor: 'rgba(0,0,0,0.04)',
+                              position: 'sticky',
+                              left: hasCheckboxCol ? `${CHECKBOX_COLUMN_WIDTH}px` : '0',
+                              zIndex: 3,
+                            },
+                          }),
+                        ] : []),
                         // Header cells
                         ...row.map((cell, cellIdx) => {
                           if (cell.isGroup) {
@@ -511,6 +543,21 @@ export const DataGridTable = defineComponent({
                                 })
                               )
                             ),
+                          ] : []),
+                          // Row numbers cell
+                          ...(hasRowNumbersCol ? [
+                            h('td', {
+                              style: {
+                                width: `${ROW_NUMBER_COLUMN_WIDTH}px`,
+                                textAlign: 'center',
+                                fontWeight: '600',
+                                fontVariantNumeric: 'tabular-nums',
+                                backgroundColor: 'rgba(0,0,0,0.04)',
+                                position: 'sticky',
+                                left: hasCheckboxCol ? `${CHECKBOX_COLUMN_WIDTH}px` : '0',
+                                zIndex: 2,
+                              },
+                            }, String(rowNumberOffset + rowIndex + 1)),
                           ] : []),
                           // Data cells
                           ...columnLayouts.map((cl, colIdx) =>

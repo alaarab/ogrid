@@ -28,6 +28,10 @@ export class SelectionState {
     return this._activeCell;
   }
 
+  get dragAnchor(): IActiveCell | null {
+    return this.dragStartCell;
+  }
+
   get selectionRange(): ISelectionRange | null {
     return this._selectionRange;
   }
