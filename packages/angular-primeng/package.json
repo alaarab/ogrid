@@ -1,6 +1,6 @@
 {
   "name": "@alaarab/ogrid-angular-primeng",
-  "version": "2.0.3",
+  "version": "2.0.4",
   "description": "OGrid PrimeNG – PrimeNG Table-based data grid with sorting, filtering, pagination, column chooser, and CSV export.",
   "main": "dist/esm/index.js",
   "module": "dist/esm/index.js",
@@ -22,7 +22,7 @@
   "files": ["dist", "README.md", "LICENSE"],
   "engines": { "node": ">=18" },
   "dependencies": {
-    "@alaarab/ogrid-angular": "2.0.3"
+    "@alaarab/ogrid-angular": "2.0.4"
   },
   "peerDependencies": {
     "@angular/core": "^21.0.0",
