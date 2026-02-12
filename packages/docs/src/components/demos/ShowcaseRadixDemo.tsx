@@ -94,7 +94,7 @@ function RadixGrid() {
 
 export default function ShowcaseRadixDemo() {
   return (
-    <LiveDemo height={480} title="Radix UI — lightweight, accessible primitives" stackblitz={showcase}>
+    <LiveDemo height={480} title="Radix UI — lightweight, accessible primitives" stackblitz={{ StackBlitz: showcase.React }}>
       <BrowserOnly>{() => <RadixGrid />}</BrowserOnly>
     </LiveDemo>
   );

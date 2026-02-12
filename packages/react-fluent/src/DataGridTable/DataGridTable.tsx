@@ -21,11 +21,14 @@ import { InlineCellEditor } from './InlineCellEditor';
 import { StatusBar } from './StatusBar';
 import { GridContextMenu } from './GridContextMenu';
 import type {
+  IColumnDef,
   ICellEditorProps,
   IOGridDataGridProps,
 } from '@alaarab/ogrid-react';
 import {
   useDataGridState,
+  useColumnReorder,
+  useVirtualScroll,
   useLatestRef,
   getHeaderFilterConfig,
   getCellRenderDescriptor,
@@ -119,6 +122,7 @@ function DataGridTableInner<T>(props: IOGridDataGridProps<T>): React.ReactElemen
 
   const {
     items,
+    columns,
     getRowId,
     emptyState,
     layoutMode = 'fill',
@@ -130,13 +134,38 @@ function DataGridTableInner<T>(props: IOGridDataGridProps<T>): React.ReactElemen
     loadingMessage = 'Loading\u2026',
     'aria-label': ariaLabel,
     'aria-labelledby': ariaLabelledBy,
+    visibleColumns,
+    columnOrder,
+    onColumnOrderChange,
+    columnReorder,
+    virtualScroll,
+    pinnedColumns,
   } = props;
 
   // Memoize header rows (recursive tree traversal)
-  const headerRows = useMemo(() => buildHeaderRows(props.columns, props.visibleColumns), [props.columns, props.visibleColumns]);
+  const headerRows = useMemo(() => buildHeaderRows(columns, visibleColumns), [columns, visibleColumns]);
   const hasGroupHeaders = headerRows.length > 1;
 
   const fitToContent = layoutMode === 'content';
+
+  const { isDragging: isReorderDragging, dropIndicatorX, handleHeaderMouseDown } = useColumnReorder<T>({
+    columns: visibleCols as IColumnDef<T>[],
+    columnOrder,
+    onColumnOrderChange,
+    enabled: columnReorder === true,
+    pinnedColumns,
+    wrapperRef,
+  });
+
+  const virtualScrollEnabled = virtualScroll?.enabled === true;
+  const virtualRowHeight = virtualScroll?.rowHeight ?? 36;
+  const { visibleRange } = useVirtualScroll({
+    totalRows: items.length,
+    rowHeight: virtualRowHeight,
+    enabled: virtualScrollEnabled,
+    overscan: virtualScroll?.overscan,
+    containerRef: wrapperRef,
+  });
 
   const columnSizingOptions: TableColumnSizingOptions = useMemo(() => {
     const acc: Record<string, { minWidth: number; defaultWidth?: number; idealWidth?: number }> = {};
@@ -212,6 +241,8 @@ function DataGridTableInner<T>(props: IOGridDataGridProps<T>): React.ReactElemen
   const handleSelectAllRef = useLatestRef(handleSelectAll);
   const handleRowCheckboxChangeRef = useLatestRef(handleRowCheckboxChange);
   const rowIndexByRowIdRef = useLatestRef(rowIndexByRowId);
+  const handleHeaderMouseDownRef = useLatestRef(handleHeaderMouseDown);
+  const isReorderDraggingRef = useLatestRef(isReorderDragging);
 
   const fluentColumns = useMemo<TableColumnDefinition<T>[]>(() => {
     const dataCols: TableColumnDefinition<T>[] = visibleCols.map((col, colIdx) =>
@@ -219,7 +250,11 @@ function DataGridTableInner<T>(props: IOGridDataGridProps<T>): React.ReactElemen
         columnId: col.columnId,
         compare: col.compare ?? (() => 0),
         renderHeaderCell: () => (
-          <div data-column-id={col.columnId}>
+          <div
+            data-column-id={col.columnId}
+            style={columnReorder ? { cursor: isReorderDraggingRef.current ? 'grabbing' : 'grab' } : undefined}
+            onMouseDown={columnReorder ? (e) => handleHeaderMouseDownRef.current(col.columnId, e) : undefined}
+          >
             <ColumnHeaderFilter {...getHeaderFilterConfig(col, headerFilterInputRef.current)} />
           </div>
         ),
@@ -340,7 +375,7 @@ function DataGridTableInner<T>(props: IOGridDataGridProps<T>): React.ReactElemen
 
     return dataCols;
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [visibleCols, hasCheckboxCol, getRowId, setPopoverAnchorEl]); // All volatile state/callbacks read via refs
+  }, [visibleCols, hasCheckboxCol, getRowId, setPopoverAnchorEl, columnReorder]); // All volatile state/callbacks read via refs
 
   // Stable row-click handler
   const handleSingleRowClick = useCallback((rowId: string | number) => {
@@ -446,8 +481,11 @@ function DataGridTableInner<T>(props: IOGridDataGridProps<T>): React.ReactElemen
         <div className={styles.tableScrollContent}>
         <div className={isLoading && items.length > 0 ? styles.loadingDimmed : undefined}>
           <div className={styles.tableWidthAnchor} ref={tableContainerRef}>
+              {virtualScrollEnabled && visibleRange.offsetTop > 0 && (
+                <div style={{ height: visibleRange.offsetTop }} aria-hidden />
+              )}
               <DataGrid
-                items={items}
+                items={virtualScrollEnabled ? items.slice(visibleRange.startIndex, visibleRange.endIndex + 1) : items}
                 columns={fluentColumns}
                 resizableColumns
                 resizableColumnsOptions={{ autoFitColumns: layoutMode === 'fill' && !allowOverflowX }}
@@ -504,12 +542,13 @@ function DataGridTableInner<T>(props: IOGridDataGridProps<T>): React.ReactElemen
                 <DataGridBody<T>>
                   {({ item }) => {
                     const rowId = getRowId(item);
+                    const rowIndex = rowIndexByRowId.get(rowId) ?? -1;
                     return (
                       <GridRow
                         key={rowId}
                         item={item}
                         rowId={rowId}
-                        rowIndex={rowIndexByRowId.get(rowId) ?? -1}
+                        rowIndex={rowIndex}
                         isSelected={selectedRowIds.has(rowId)}
                         hasCheckboxCol={hasCheckboxCol}
                         cellClassMap={cellClassMap}
@@ -525,6 +564,15 @@ function DataGridTableInner<T>(props: IOGridDataGridProps<T>): React.ReactElemen
                   }}
                 </DataGridBody>
               </DataGrid>
+              {virtualScrollEnabled && visibleRange.offsetBottom > 0 && (
+                <div style={{ height: visibleRange.offsetBottom }} aria-hidden />
+              )}
+              {isReorderDragging && dropIndicatorX != null && (
+                <div
+                  className={styles.dropIndicator}
+                  style={{ left: dropIndicatorX - (wrapperRef.current?.getBoundingClientRect().left ?? 0) }}
+                />
+              )}
               <MarchingAntsOverlay
                 containerRef={tableContainerRef}
                 selectionRange={selectionRange}

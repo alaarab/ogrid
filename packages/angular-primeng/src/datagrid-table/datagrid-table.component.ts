@@ -12,6 +12,8 @@ import {
 import { CommonModule } from '@angular/common';
 import {
   DataGridStateService,
+  ColumnReorderService,
+  VirtualScrollService,
   OGridLayoutComponent,
   StatusBarComponent,
   GridContextMenuComponent,
@@ -20,6 +22,9 @@ import {
   DEFAULT_MIN_COLUMN_WIDTH,
   buildHeaderRows,
   getCellValue,
+  getHeaderFilterConfig,
+  resolveCellDisplayContent,
+  resolveCellStyle,
 } from '@alaarab/ogrid-angular';
 import type {
   IOGridDataGridProps,
@@ -27,6 +32,7 @@ import type {
   IColumnGroupDef,
   RowId,
   ISelectionRange,
+  HeaderFilterConfig,
 } from '@alaarab/ogrid-angular';
 import { ColumnHeaderFilterComponent } from '../column-header-filter/column-header-filter.component';
 import { InlineCellEditorComponent } from './inline-cell-editor.component';
@@ -112,6 +118,8 @@ import { InlineCellEditorComponent } from './inline-cell-editor.component';
                             [style.min-width.px]="cell.columnDef!.minWidth ?? defaultMinWidth"
                             [style.width.px]="getColumnWidth(cell.columnDef!)"
                             [style.max-width.px]="getColumnWidth(cell.columnDef!)"
+                            [style.cursor]="columnReorderService.isDragging() ? 'grabbing' : 'grab'"
+                            (mousedown)="onHeaderMouseDown(cell.columnDef!.columnId, $event)"
                           >
                             <ogrid-primeng-column-header-filter
                               [columnKey]="cell.columnDef!.columnId"
@@ -242,6 +250,10 @@ import { InlineCellEditorComponent } from './inline-cell-editor.component';
         </div>
       </div>
 
+      @if (columnReorderService.isDragging() && columnReorderService.dropIndicatorX() !== null) {
+        <div class="ogrid-drop-indicator" [style.left.px]="columnReorderService.dropIndicatorX()"></div>
+      }
+
       @if (state().contextMenu.menuPosition) {
         <ogrid-context-menu
           [x]="state().contextMenu.menuPosition!.x"
@@ -288,10 +300,22 @@ import { InlineCellEditorComponent } from './inline-cell-editor.component';
       opacity: 0.5;
       pointer-events: none;
     }
+    .ogrid-drop-indicator {
+      position: absolute;
+      top: 0;
+      bottom: 0;
+      width: 3px;
+      background: var(--ogrid-primary, #217346);
+      pointer-events: none;
+      z-index: 100;
+      transition: left 0.05s;
+    }
   `],
 })
 export class DataGridTableComponent<T = unknown> {
   private readonly stateService = inject<DataGridStateService<T>>(DataGridStateService);
+  readonly columnReorderService = new ColumnReorderService<T>();
+  readonly virtualScrollService = new VirtualScrollService();
 
   readonly wrapperRef = viewChild<ElementRef<HTMLDivElement>>('wrapper');
   readonly tableContainerRef = viewChild<ElementRef<HTMLDivElement>>('tableContainer');
@@ -366,6 +390,21 @@ export class DataGridTableComponent<T = unknown> {
     effect(() => {
       const el = this.wrapperRef()?.nativeElement ?? null;
       this.stateService.wrapperEl.set(el);
+      this.columnReorderService.wrapperEl.set(el);
+    });
+
+    // Wire column reorder service inputs
+    effect(() => {
+      const cols = this.state().layout.visibleCols as IColumnDef<T>[];
+      this.columnReorderService.columns.set(cols);
+      this.columnReorderService.columnOrder.set(this.columnOrder());
+      this.columnReorderService.onColumnOrderChange.set(this.onColumnOrderChange());
+      this.columnReorderService.enabled.set(!!this.onColumnOrderChange());
+    });
+
+    // Wire virtual scroll service inputs
+    effect(() => {
+      this.virtualScrollService.totalRows.set(this.items().length);
     });
 
     // Initialize column sizing from initial widths
@@ -428,73 +467,9 @@ export class DataGridTableComponent<T = unknown> {
     return col.idealWidth ?? col.defaultWidth ?? undefined;
   }
 
-  getFilterConfig(col: IColumnDef<T>): {
-    filterType: string;
-    isSorted?: boolean;
-    isSortedDescending?: boolean;
-    onSort?: () => void;
-    selectedValues?: string[];
-    onFilterChange?: (values: string[]) => void;
-    options?: string[];
-    isLoadingOptions?: boolean;
-    textValue?: string;
-    onTextChange?: (value: string) => void;
-    selectedUser?: unknown;
-    onUserChange?: (user: unknown) => void;
-    peopleSearch?: (query: string) => Promise<unknown[]>;
-    dateValue?: { from?: string; to?: string };
-    onDateChange?: (value: { from?: string; to?: string } | undefined) => void;
-  } {
+  getFilterConfig(col: IColumnDef<T>): HeaderFilterConfig {
     const s = this.state();
-    const hfi = s.viewModels.headerFilterInput;
-    const filterable = col.filterable && typeof col.filterable === 'object' ? col.filterable : null;
-    const filterType = filterable?.type ?? 'none';
-    const filterField = filterable?.filterField ?? col.columnId;
-    const sortable = col.sortable !== false;
-    const filterValue = hfi.filters[filterField] as { type: string; value: unknown } | undefined;
-
-    const base = {
-      filterType,
-      isSorted: hfi.sortBy === col.columnId,
-      isSortedDescending: hfi.sortBy === col.columnId && hfi.sortDirection === 'desc',
-      onSort: sortable ? () => hfi.onColumnSort(col.columnId) : undefined,
-    };
-
-    if (filterType === 'text') {
-      return {
-        ...base,
-        textValue: filterValue?.type === 'text' ? filterValue.value as string : '',
-        onTextChange: (v: string) => hfi.onFilterChange(filterField, v.trim() ? { type: 'text', value: v } : undefined),
-      };
-    }
-    if (filterType === 'multiSelect') {
-      return {
-        ...base,
-        options: hfi.filterOptions[filterField] ?? [],
-        isLoadingOptions: hfi.loadingFilterOptions[filterField] ?? false,
-        selectedValues: filterValue?.type === 'multiSelect' ? filterValue.value as string[] : [],
-        onFilterChange: (values: string[]) =>
-          hfi.onFilterChange(filterField, values.length ? { type: 'multiSelect', value: values } : undefined),
-      };
-    }
-    if (filterType === 'people') {
-      return {
-        ...base,
-        selectedUser: filterValue?.type === 'people' ? filterValue.value : undefined,
-        onUserChange: (u: unknown) =>
-          hfi.onFilterChange(filterField, u ? { type: 'people' as const, value: u as import('@alaarab/ogrid-angular').UserLike } : undefined),
-        peopleSearch: hfi.peopleSearch as ((query: string) => Promise<unknown[]>) | undefined,
-      };
-    }
-    if (filterType === 'date') {
-      return {
-        ...base,
-        dateValue: filterValue?.type === 'date' ? filterValue.value as { from?: string; to?: string } : undefined,
-        onDateChange: (v: { from?: string; to?: string } | undefined) =>
-          hfi.onFilterChange(filterField, v ? { type: 'date', value: v } : undefined),
-      };
-    }
-    return base;
+    return getHeaderFilterConfig(col, s.viewModels.headerFilterInput);
   }
 
   getCellValueFn(item: T, col: IColumnDef<T>): unknown {
@@ -502,26 +477,12 @@ export class DataGridTableComponent<T = unknown> {
   }
 
   resolveCellDisplay(col: IColumnDef<T>, item: T): string {
-    if (col.renderCell && typeof col.renderCell === 'function') {
-      const result = (col.renderCell as (item: T) => string)(item);
-      return result ?? '';
-    }
     const value = getCellValue(item, col);
-    if (col.valueFormatter) return String(col.valueFormatter(value, item) ?? '');
-    if (value == null) return '';
-    if (col.type === 'date') {
-      const d = new Date(String(value));
-      if (!Number.isNaN(d.getTime())) return d.toLocaleDateString();
-    }
-    if (col.type === 'boolean') return value ? 'True' : 'False';
-    return String(value);
+    return resolveCellDisplayContent(col, item, value);
   }
 
   getCellStyleObj(col: IColumnDef<T>, item: T): Record<string, string> | null {
-    if (!col.cellStyle) return null;
-    return typeof col.cellStyle === 'function'
-      ? (col.cellStyle as (item: T) => Record<string, string>)(item)
-      : col.cellStyle as Record<string, string>;
+    return resolveCellStyle(col, item) ?? null;
   }
 
   canEditCell(col: IColumnDef<T>, item: T): boolean {
@@ -623,6 +584,10 @@ export class DataGridTableComponent<T = unknown> {
 
   handlePaste(): void {
     void this.state().interaction.handlePaste();
+  }
+
+  onHeaderMouseDown(columnId: string, event: MouseEvent): void {
+    this.columnReorderService.handleHeaderMouseDown(columnId, event);
   }
 
   onResizeStart(e: MouseEvent, col: IColumnDef<T>): void {

@@ -42,6 +42,7 @@ export type {
   ISelectionRange,
   SideBarPanelId,
   ISideBarDef,
+  IVirtualScrollConfig,
 } from './types';
 
 export { toUserLike, isInSelectionRange, normalizeSelectionRange } from './types';
@@ -60,6 +61,8 @@ export {
   useUndoRedo,
   useContextMenu,
   useColumnResize,
+  useColumnReorder,
+  useVirtualScroll,
   useFilterOptions,
   useDebounce,
   useDebouncedCallback,
@@ -93,6 +96,7 @@ export type {
   DataGridViewModelState,
   UseActiveCellResult,
   EditingCell,
+  UseCellEditingParams,
   UseCellEditingResult,
   UseCellSelectionParams,
   UseCellSelectionResult,
@@ -110,6 +114,10 @@ export type {
   UseContextMenuResult,
   UseColumnResizeParams,
   UseColumnResizeResult,
+  UseColumnReorderParams,
+  UseColumnReorderResult,
+  UseVirtualScrollParams,
+  UseVirtualScrollResult,
   UseFilterOptionsResult,
   UseTableLayoutParams,
   UseTableLayoutResult,
@@ -132,6 +140,7 @@ export type {
   UseRichSelectStateResult,
   UseSideBarStateParams,
   UseSideBarStateResult,
+  DebouncedFn,
 } from './composables';
 
 // View model utilities (for UI packages)

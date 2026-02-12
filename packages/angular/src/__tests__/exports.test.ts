@@ -70,4 +70,31 @@ describe('@alaarab/ogrid-angular exports', () => {
     expect(mod.GRID_CONTEXT_MENU_ITEMS).toBeDefined();
     expect(mod.getContextMenuHandlers).toBeDefined();
   });
+
+  it('exports view model utilities', () => {
+    expect(mod.getHeaderFilterConfig).toBeDefined();
+    expect(typeof mod.getHeaderFilterConfig).toBe('function');
+    expect(mod.getCellRenderDescriptor).toBeDefined();
+    expect(typeof mod.getCellRenderDescriptor).toBe('function');
+    expect(mod.resolveCellDisplayContent).toBeDefined();
+    expect(typeof mod.resolveCellDisplayContent).toBe('function');
+    expect(mod.resolveCellStyle).toBeDefined();
+    expect(typeof mod.resolveCellStyle).toBe('function');
+  });
+
+  it('exports debounce utilities', () => {
+    expect(mod.createDebouncedSignal).toBeDefined();
+    expect(typeof mod.createDebouncedSignal).toBe('function');
+    expect(mod.createDebouncedCallback).toBeDefined();
+    expect(typeof mod.createDebouncedCallback).toBe('function');
+    expect(mod.debounce).toBeDefined();
+    expect(typeof mod.debounce).toBe('function');
+  });
+
+  it('exports latest ref utilities', () => {
+    expect(mod.createLatestRef).toBeDefined();
+    expect(typeof mod.createLatestRef).toBe('function');
+    expect(mod.createLatestCallback).toBeDefined();
+    expect(typeof mod.createLatestCallback).toBe('function');
+  });
 });

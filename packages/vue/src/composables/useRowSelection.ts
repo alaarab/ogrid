@@ -44,7 +44,9 @@ export function useRowSelection<T>(params: UseRowSelectionParams<T>): UseRowSele
   });
 
   const updateSelection = (newSelectedIds: Set<RowId>) => {
-    if (controlledSelectedRows.value === undefined) {
+    if (controlledSelectedRows.value !== undefined) {
+      controlledSelectedRows.value = newSelectedIds;
+    } else {
       internalSelectedRows.value = newSelectedIds;
     }
     onSelectionChange?.({

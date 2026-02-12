@@ -1,6 +1,7 @@
-import { ref, onMounted, onUnmounted, type Ref, type ShallowRef } from 'vue';
+import { shallowRef, ref, computed, onMounted, onUnmounted, type Ref, type ShallowRef } from 'vue';
 import { normalizeSelectionRange } from '../types';
 import type { ISelectionRange, IActiveCell } from '../types';
+import { useLatestRef } from './useLatestRef';
 
 /** Compares two selection ranges by value. */
 function rangesEqual(a: ISelectionRange | null, b: ISelectionRange | null): boolean {
@@ -19,7 +20,7 @@ export interface UseCellSelectionParams {
 }
 
 export interface UseCellSelectionResult {
-  selectionRange: Ref<ISelectionRange | null>;
+  selectionRange: ShallowRef<ISelectionRange | null>;
   setSelectionRange: (range: ISelectionRange | null) => void;
   handleCellMouseDown: (e: MouseEvent, rowIndex: number, globalColIndex: number) => void;
   handleSelectAllCells: () => void;
@@ -44,10 +45,12 @@ function autoScrollSpeed(distance: number): number {
  * Manages cell selection range with drag-to-select and select-all support.
  */
 export function useCellSelection(params: UseCellSelectionParams): UseCellSelectionResult {
-  const { colOffset, rowCount, visibleColCount, setActiveCell, wrapperRef } = params;
+  // Store latest params in a ref for stable handler references
+  const paramsRef = useLatestRef(computed(() => params));
+  const { colOffset, wrapperRef, setActiveCell } = params; // These are stable, safe to destructure
 
-  const selectionRange = ref<ISelectionRange | null>(null);
-  const isDragging = ref(false);
+  const selectionRange = shallowRef<ISelectionRange | null>(null);
+  const isDragging = ref(false);  // boolean primitive, ref is fine
   let isDraggingInternal = false;
   let dragMoved = false;
   let dragStart: { row: number; col: number } | null = null;
@@ -94,6 +97,7 @@ export function useCellSelection(params: UseCellSelectionParams): UseCellSelecti
   };
 
   const handleSelectAllCells = () => {
+    const { rowCount, visibleColCount } = paramsRef.value;
     if (rowCount.value === 0 || visibleColCount.value === 0) return;
     setSelectionRange({
       startRow: 0,

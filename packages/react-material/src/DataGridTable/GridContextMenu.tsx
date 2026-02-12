@@ -42,7 +42,7 @@ export function GridContextMenu(props: GridContextMenuProps): React.ReactElement
           >
             <span style={{ flex: 1 }}>{item.label}</span>
             {item.shortcut && (
-              <span style={{ marginLeft: 24, color: 'rgba(0,0,0,0.4)', fontSize: '0.8em' }}>
+              <span style={{ marginLeft: 24, color: 'var(--ogrid-fg-muted, rgba(0,0,0,0.4))', fontSize: '0.8em' }}>
                 {formatShortcut(item.shortcut)}
               </span>
             )}

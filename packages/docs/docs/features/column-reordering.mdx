@@ -1,0 +1,371 @@
+---
+sidebar_position: 11.5
+title: Column Reordering
+description: Rearrange columns by dragging their headers to a new position
+---
+
+import ColumnReorderingDemo from '@site/src/components/demos/ColumnReorderingDemo';
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+
+# Column Reordering
+
+Let users rearrange columns by dragging a column header and dropping it at a new position. The grid shows a visual drop indicator while dragging.
+
+## Live Demo
+
+<ColumnReorderingDemo />
+
+## Quick Example
+
+<Tabs groupId="framework">
+  <TabItem value="react" label="React" default>
+
+```tsx
+import { OGrid } from '@alaarab/ogrid-react-radix';
+import type { IColumnDef } from '@alaarab/ogrid-react-radix';
+
+interface Person {
+  id: number;
+  name: string;
+  email: string;
+  department: string;
+  salary: number;
+  status: string;
+}
+
+const columns: IColumnDef<Person>[] = [
+  { columnId: 'name', name: 'Name' },
+  { columnId: 'email', name: 'Email' },
+  { columnId: 'department', name: 'Department' },
+  { columnId: 'salary', name: 'Salary', type: 'numeric',
+    valueFormatter: (v) => `$${Number(v).toLocaleString()}` },
+  { columnId: 'status', name: 'Status' },
+];
+
+function App() {
+  return (
+    <OGrid
+      columns={columns}
+      data={people}
+      getRowId={(p) => p.id}
+      columnReorder
+      defaultPageSize={10}
+    />
+  );
+}
+```
+
+:::tip Switching UI libraries
+The `OGrid` component has the same props across all React UI packages. To switch, just change the import:
+
+- **Radix** (lightweight, default): `from '@alaarab/ogrid-react-radix'`
+- **Fluent UI** (Microsoft 365 / SPFx): `from '@alaarab/ogrid-react-fluent'` — wrap in `<FluentProvider>`
+- **Material UI** (MUI v7): `from '@alaarab/ogrid-react-material'` — wrap in `<ThemeProvider>`
+:::
+
+  </TabItem>
+  <TabItem value="angular" label="Angular">
+
+```typescript
+import { Component } from '@angular/core';
+import { OGridComponent, type IColumnDef } from '@alaarab/ogrid-angular-material';
+
+@Component({
+  standalone: true,
+  imports: [OGridComponent],
+  template: `<ogrid [props]="gridProps" />`
+})
+export class GridComponent {
+  gridProps = {
+    columns: [
+      { columnId: 'name', name: 'Name' },
+      { columnId: 'email', name: 'Email' },
+      { columnId: 'department', name: 'Department' },
+      {
+        columnId: 'salary', name: 'Salary', type: 'numeric',
+        valueFormatter: (v: unknown) => `$${Number(v).toLocaleString()}`,
+      },
+      { columnId: 'status', name: 'Status' },
+    ] as IColumnDef<Person>[],
+    data: people,
+    getRowId: (item: Person) => item.id,
+    columnReorder: true,
+  };
+}
+```
+
+:::tip Switching UI libraries
+Same component API across Angular packages. To switch, just change the import:
+
+- **Angular Material**: `from '@alaarab/ogrid-angular-material'`
+- **PrimeNG**: `from '@alaarab/ogrid-angular-primeng'`
+
+All components are standalone — no NgModule required.
+:::
+
+  </TabItem>
+  <TabItem value="vue" label="Vue">
+
+```vue
+<script setup lang="ts">
+import { OGrid, type IColumnDef } from '@alaarab/ogrid-vue-vuetify';
+
+const columns: IColumnDef<Person>[] = [
+  { columnId: 'name', name: 'Name' },
+  { columnId: 'email', name: 'Email' },
+  { columnId: 'department', name: 'Department' },
+  {
+    columnId: 'salary', name: 'Salary', type: 'numeric',
+    valueFormatter: (v) => `$${Number(v).toLocaleString()}`,
+  },
+  { columnId: 'status', name: 'Status' },
+];
+
+const gridProps = {
+  columns,
+  data: people,
+  getRowId: (item) => item.id,
+  columnReorder: true,
+};
+</script>
+
+<template>
+  <OGrid :gridProps="gridProps" />
+</template>
+```
+
+:::tip Switching UI libraries
+Same component API across Vue packages. To switch, just change the import:
+
+- **Vuetify**: `from '@alaarab/ogrid-vue-vuetify'` — wrap in `<v-app>` for theming
+- **PrimeVue**: `from '@alaarab/ogrid-vue-primevue'`
+:::
+
+  </TabItem>
+  <TabItem value="js" label="Vanilla JS">
+
+```js
+import { OGrid } from '@alaarab/ogrid-js';
+import '@alaarab/ogrid-js/styles';
+
+const grid = new OGrid(document.getElementById('grid'), {
+  columns: [
+    { columnId: 'name', name: 'Name' },
+    { columnId: 'email', name: 'Email' },
+    { columnId: 'department', name: 'Department' },
+    {
+      columnId: 'salary',
+      name: 'Salary',
+      type: 'numeric',
+      valueFormatter: (v) => `$${Number(v).toLocaleString()}`,
+    },
+    { columnId: 'status', name: 'Status' },
+  ],
+  data: people,
+  getRowId: (p) => p.id,
+  columnReorder: true,
+  pageSize: 10,
+});
+```
+
+  </TabItem>
+</Tabs>
+
+Drag any column header to rearrange it. A vertical indicator line shows where the column will be placed.
+
+## How It Works
+
+Set `columnReorder` to `true` on the grid to enable drag-and-drop column reordering. When a user presses and drags a column header at least 5 pixels horizontally, the grid enters reorder mode:
+
+1. A vertical drop indicator appears between columns as the user drags.
+2. On mouse-up, the column is moved to the target position.
+3. The grid fires `onColumnOrderChange` with the updated order array.
+
+OGrid supports both **uncontrolled** and **controlled** column order:
+
+- **Uncontrolled** -- the grid manages column order internally. Just set `columnReorder` and it works.
+- **Controlled** -- you own the state. Pass `columnOrder` and `onColumnOrderChange` to the grid.
+
+### Controlled Column Order
+
+<Tabs groupId="framework">
+  <TabItem value="react" label="React" default>
+
+```tsx
+import { useState } from 'react';
+import { OGrid } from '@alaarab/ogrid-react-radix';
+
+function App() {
+  const [columnOrder, setColumnOrder] = useState([
+    'name', 'email', 'department', 'salary', 'status',
+  ]);
+
+  return (
+    <OGrid
+      columns={columns}
+      data={people}
+      getRowId={(p) => p.id}
+      columnReorder
+      columnOrder={columnOrder}
+      onColumnOrderChange={setColumnOrder}
+      defaultPageSize={10}
+    />
+  );
+}
+```
+
+  </TabItem>
+  <TabItem value="angular" label="Angular">
+
+```typescript
+import { Component, signal } from '@angular/core';
+import { OGridComponent, type IColumnDef } from '@alaarab/ogrid-angular-material';
+
+@Component({
+  standalone: true,
+  imports: [OGridComponent],
+  template: `<ogrid [props]="gridProps()" />`
+})
+export class GridComponent {
+  columnOrder = signal(['name', 'email', 'department', 'salary', 'status']);
+
+  gridProps = () => ({
+    columns,
+    data: people,
+    getRowId: (item: Person) => item.id,
+    columnReorder: true,
+    columnOrder: this.columnOrder(),
+    onColumnOrderChange: (order: string[]) => this.columnOrder.set(order),
+  });
+}
+```
+
+  </TabItem>
+  <TabItem value="vue" label="Vue">
+
+```vue
+<script setup lang="ts">
+import { ref, computed } from 'vue';
+import { OGrid, type IColumnDef } from '@alaarab/ogrid-vue-vuetify';
+
+const columnOrder = ref(['name', 'email', 'department', 'salary', 'status']);
+
+const gridProps = computed(() => ({
+  columns,
+  data: people,
+  getRowId: (item) => item.id,
+  columnReorder: true,
+  columnOrder: columnOrder.value,
+  onColumnOrderChange: (order: string[]) => { columnOrder.value = order; },
+}));
+</script>
+
+<template>
+  <OGrid :gridProps="gridProps" />
+</template>
+```
+
+  </TabItem>
+  <TabItem value="js" label="Vanilla JS">
+
+```js
+import { OGrid } from '@alaarab/ogrid-js';
+import '@alaarab/ogrid-js/styles';
+
+const grid = new OGrid(document.getElementById('grid'), {
+  columns,
+  data: people,
+  getRowId: (p) => p.id,
+  columnReorder: true,
+  columnOrder: ['name', 'email', 'department', 'salary', 'status'],
+  onColumnOrderChange: (order) => {
+    console.log('New column order:', order);
+  },
+});
+```
+
+  </TabItem>
+</Tabs>
+
+### With Pinned Columns
+
+Pinned columns can only be reordered within their own pinning zone. A left-pinned column cannot be dragged into the unpinned zone, and vice versa. This prevents accidental loss of pinned state during reorder.
+
+```tsx
+const columns = [
+  { columnId: 'id', name: 'ID', pinned: 'left' },
+  { columnId: 'name', name: 'Name', pinned: 'left' },
+  { columnId: 'email', name: 'Email' },
+  { columnId: 'department', name: 'Department' },
+  { columnId: 'salary', name: 'Salary' },
+];
+
+<OGrid
+  columns={columns}
+  data={people}
+  getRowId={(p) => p.id}
+  columnReorder
+  defaultPageSize={10}
+/>
+```
+
+In this example, "ID" and "Name" can be swapped with each other but cannot be dragged into the unpinned section. The unpinned columns ("Email", "Department", "Salary") can be freely rearranged among themselves.
+
+### Edge Cases
+
+- **Column groups:** Group headers are not draggable. Only leaf columns (with a `columnId`) participate in reordering.
+- **Resize handle zone:** The rightmost 8 pixels of each header cell are reserved for column resizing. Dragging in that zone starts a resize, not a reorder.
+- **Minimum drag distance:** A 5-pixel horizontal threshold prevents accidental reorders from clicks.
+
+## Grid API
+
+Column order can be read and updated programmatically through the Grid API:
+
+```tsx
+const gridRef = useRef<IOGridApi<Row>>(null);
+
+// Get the current column display order
+const order = gridRef.current.getColumnOrder();
+// ['name', 'department', 'email', 'salary', 'status']
+
+// Programmatically set column order
+gridRef.current.setColumnOrder(['department', 'name', 'email', 'salary', 'status']);
+
+// Save and restore via column state
+const state = gridRef.current.getColumnState();
+// state.columnOrder → ['name', 'department', 'email', 'salary', 'status']
+localStorage.setItem('gridState', JSON.stringify(state));
+
+// Restore on mount
+const saved = JSON.parse(localStorage.getItem('gridState'));
+gridRef.current.applyColumnState(saved);
+```
+
+## Props Reference
+
+| Prop | Type | Default | Description |
+|------|------|---------|-------------|
+| `columnReorder` | `boolean` | `false` | Enable drag-and-drop column reordering. |
+| `columnOrder` | `string[]` | -- | Controlled column display order (array of column ids). |
+| `onColumnOrderChange` | `(order: string[]) => void` | -- | Called when column order changes via drag-and-drop. |
+
+### Grid API Methods
+
+| Method | Signature | Description |
+|--------|-----------|-------------|
+| `getColumnOrder` | `() => string[]` | Returns the current column display order. |
+| `setColumnOrder` | `(order: string[]) => void` | Programmatically set column display order. |
+| `getColumnState` | `() => IGridColumnState` | Returns full column state including order, widths, sort, filters. |
+| `applyColumnState` | `(state: Partial<IGridColumnState>) => void` | Restores column state (including order). |
+
+:::tip
+Combine `columnReorder` with `columnChooser` and `sideBar` for a full column management experience -- users can show/hide, reorder, and resize columns to build their ideal layout.
+:::
+
+## Related
+
+- [Column Pinning](./column-pinning) -- pin columns that stay fixed during reorder
+- [Column Chooser](./column-chooser) -- show/hide columns
+- [Grid API](./grid-api) -- save and restore column order via API
+- [Sidebar](./sidebar) -- manage columns from a side panel

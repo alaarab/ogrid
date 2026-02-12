@@ -20,6 +20,7 @@ export type {
   SideBarPanelId,
   ISideBarDef,
   IOGridApi,
+  IVirtualScrollConfig,
 } from '@alaarab/ogrid-core';
 
 export { toUserLike, isInSelectionRange, normalizeSelectionRange } from '@alaarab/ogrid-core';
@@ -35,6 +36,7 @@ import type {
   IStatusBarProps,
   IDataSource,
   ISideBarDef,
+  IVirtualScrollConfig,
 } from '@alaarab/ogrid-core';
 
 // --- OGrid / useOGrid ---
@@ -115,6 +117,9 @@ interface IOGridBaseProps<T> {
   /** Called when a cell renderer or custom editor throws an error. */
   onCellError?: (error: Error, info: unknown) => void;
 
+  /** Virtual scrolling configuration. Set `enabled: true` with a fixed `rowHeight` to virtualize large datasets. */
+  virtualScroll?: IVirtualScrollConfig;
+
   'aria-label'?: string;
   'aria-labelledby'?: string;
 }
@@ -192,6 +197,8 @@ export interface IOGridDataGridProps<T> {
   };
   /** Called when a cell renderer or custom editor throws an error. */
   onCellError?: (error: Error, info: unknown) => void;
+  /** Virtual scrolling configuration. */
+  virtualScroll?: IVirtualScrollConfig;
   'aria-label'?: string;
   'aria-labelledby'?: string;
 }

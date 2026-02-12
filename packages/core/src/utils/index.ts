@@ -39,3 +39,15 @@ export type { AggregationResult } from './aggregationUtils';
 export { processClientSideData } from './clientSideData';
 export { areGridRowPropsEqual, isRowInRange } from './gridRowComparator';
 export type { GridRowComparatorProps } from './gridRowComparator';
+export {
+  getPinStateForColumn,
+  reorderColumnArray,
+  calculateDropTarget,
+} from './columnReorder';
+export type { ColumnPinState, IDropTarget } from './columnReorder';
+export {
+  computeVisibleRange,
+  computeTotalHeight,
+  getScrollTopForRow,
+} from './virtualScroll';
+export type { IVisibleRange } from './virtualScroll';

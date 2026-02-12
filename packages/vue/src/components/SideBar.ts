@@ -17,6 +17,12 @@ export interface SideBarProps {
   onPanelChange: (panel: SideBarPanelId | null) => void;
   panels: SideBarPanelId[];
   position: 'left' | 'right';
+  /** Whether a panel is currently open. */
+  isOpen: boolean;
+  /** Toggle a specific panel open/closed. */
+  toggle: (panel: SideBarPanelId) => void;
+  /** Close the sidebar (set activePanel to null). */
+  close: () => void;
   columns: IColumnDefinition[];
   visibleColumns: Set<string>;
   onVisibilityChange: (columnKey: string, visible: boolean) => void;

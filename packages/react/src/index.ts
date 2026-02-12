@@ -41,6 +41,8 @@ export type {
   SideBarPanelId,
   ISideBarDef,
   IDateFilterValue,
+  IVirtualScrollConfig,
+  IColumnReorderConfig,
 } from './types';
 export { toUserLike, isInSelectionRange, normalizeSelectionRange } from './types';
 
@@ -70,6 +72,8 @@ export {
   useRichSelectState,
   useSideBarState,
   useTableLayout,
+  useColumnReorder,
+  useVirtualScroll,
   useLatestRef,
 } from './hooks';
 export type {
@@ -128,6 +132,10 @@ export type {
   UseSideBarStateResult,
   UseTableLayoutParams,
   UseTableLayoutResult,
+  UseColumnReorderParams,
+  UseColumnReorderResult,
+  UseVirtualScrollParams,
+  UseVirtualScrollResult,
 } from './hooks';
 
 // Components

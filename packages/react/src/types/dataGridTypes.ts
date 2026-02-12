@@ -20,6 +20,8 @@ export type {
   ISelectionRange,
   SideBarPanelId,
   ISideBarDef,
+  IVirtualScrollConfig,
+  IColumnReorderConfig,
   IOGridApi,
 } from '@alaarab/ogrid-core';
 
@@ -36,6 +38,7 @@ import type {
   IStatusBarProps,
   IDataSource,
   ISideBarDef,
+  IVirtualScrollConfig,
 } from '@alaarab/ogrid-core';
 
 // --- OGrid / useOGrid ---
@@ -106,6 +109,12 @@ interface IOGridBaseProps<T> {
 
   /** Page size options shown in the pagination dropdown. Default: [10, 20, 50, 100]. */
   pageSizeOptions?: number[];
+
+  /** Enable column reordering via drag-and-drop on header cells. Default: false. */
+  columnReorder?: boolean;
+
+  /** Virtual scrolling configuration. When provided, only visible rows are rendered for large datasets. */
+  virtualScroll?: IVirtualScrollConfig;
 
   /** Fires once when the grid first renders with data (useful for restoring column state). */
   onFirstDataRendered?: () => void;
@@ -191,6 +200,10 @@ export interface IOGridDataGridProps<T> {
     message?: ReactNode;
     render?: () => ReactNode;
   };
+  /** Enable column reordering via drag-and-drop on header cells. Default: false. */
+  columnReorder?: boolean;
+  /** Virtual scrolling configuration. When provided, only visible rows are rendered for large datasets. */
+  virtualScroll?: IVirtualScrollConfig;
   /** Called when a cell renderer or custom editor throws an error. */
   onCellError?: (error: Error, errorInfo: React.ErrorInfo) => void;
   'aria-label'?: string;
