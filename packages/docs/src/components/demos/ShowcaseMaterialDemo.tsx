@@ -1,7 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import BrowserOnly from '@docusaurus/BrowserOnly';
 import { LiveDemo } from '../LiveDemo';
-import { showcase } from '../../stackblitz/featureDemos';
 
 const DEPARTMENTS = ['Engineering', 'Marketing', 'Sales', 'Finance', 'Operations'];
 const STATUSES = ['Active', 'Draft', 'Archived'];
@@ -106,7 +105,7 @@ function MaterialGrid() {
 
 export default function ShowcaseMaterialDemo() {
   return (
-    <LiveDemo height={480} title="Material UI — Google's design system" stackblitz={showcase}>
+    <LiveDemo height={480} title="Material UI — Google's design system">
       <BrowserOnly>{() => <MaterialGrid />}</BrowserOnly>
     </LiveDemo>
   );

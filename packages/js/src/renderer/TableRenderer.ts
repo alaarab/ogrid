@@ -3,6 +3,7 @@ import type { IActiveCell, ISelectionRange } from '@alaarab/ogrid-core';
 import { getCellValue, buildHeaderRows, isInSelectionRange } from '@alaarab/ogrid-core';
 import type { GridState } from '../state/GridState';
 import type { HeaderFilterState, HeaderFilterConfig } from '../state/HeaderFilterState';
+import type { VirtualScrollState } from '../state/VirtualScrollState';
 
 export interface TableRendererInteractionState {
   activeCell: IActiveCell | null;
@@ -29,6 +30,8 @@ export interface TableRendererInteractionState {
   pinnedColumns?: Record<string, 'left' | 'right'>;
   leftOffsets?: Record<string, number>;
   rightOffsets?: Record<string, number>;
+  // Column reorder
+  onColumnReorderStart?: (columnId: string, event: MouseEvent) => void;
 }
 
 const CHECKBOX_COL_WIDTH = 40;
@@ -44,10 +47,16 @@ export class TableRenderer<T> {
   private headerFilterState: HeaderFilterState | null = null;
   private filterConfigs: Map<string, HeaderFilterConfig> = new Map();
   private onFilterIconClick: ((columnId: string, headerEl: HTMLElement) => void) | null = null;
+  private dropIndicator: HTMLDivElement | null = null;
+  private virtualScrollState: VirtualScrollState | null = null;
 
   constructor(container: HTMLElement, state: GridState<T>) {
     this.container = container;
     this.state = state;
+  }
+
+  setVirtualScrollState(vs: VirtualScrollState): void {
+    this.virtualScrollState = vs;
   }
 
   setHeaderFilterState(state: HeaderFilterState, configs: Map<string, HeaderFilterConfig>): void {
@@ -99,6 +108,13 @@ export class TableRenderer<T> {
     this.table.appendChild(this.tbody);
 
     wrapper.appendChild(this.table);
+
+    // Create drop indicator for column reorder (hidden by default)
+    this.dropIndicator = document.createElement('div');
+    this.dropIndicator.className = 'ogrid-drop-indicator';
+    this.dropIndicator.style.display = 'none';
+    wrapper.appendChild(this.dropIndicator);
+
     this.container.appendChild(wrapper);
   }
 
@@ -199,7 +215,24 @@ export class TableRenderer<T> {
           }
 
           if (!cell.isGroup && cell.columnDef) {
+            th.setAttribute('data-column-id', cell.columnDef.columnId);
             this.applyPinningStyles(th, cell.columnDef.columnId, true);
+
+            // Column reorder in grouped headers
+            if (this.interactionState?.onColumnReorderStart) {
+              th.addEventListener('mousedown', (e) => {
+                const target = e.target as HTMLElement;
+                if (
+                  target.classList.contains('ogrid-resize-handle') ||
+                  target.classList.contains('ogrid-filter-icon')
+                ) {
+                  return;
+                }
+                if (cell.columnDef) {
+                  this.interactionState?.onColumnReorderStart?.(cell.columnDef.columnId, e);
+                }
+              });
+            }
           }
 
           tr.appendChild(th);
@@ -306,6 +339,21 @@ export class TableRenderer<T> {
           th.appendChild(filterBtn);
         }
 
+        // Column reorder: mousedown on header starts drag
+        if (this.interactionState?.onColumnReorderStart) {
+          th.addEventListener('mousedown', (e) => {
+            // Don't start reorder if clicking resize handle or filter button
+            const target = e.target as HTMLElement;
+            if (
+              target.classList.contains('ogrid-resize-handle') ||
+              target.classList.contains('ogrid-filter-icon')
+            ) {
+              return;
+            }
+            this.interactionState?.onColumnReorderStart?.(col.columnId, e);
+          });
+        }
+
         tr.appendChild(th);
       }
       this.thead!.appendChild(tr);
@@ -335,11 +383,12 @@ export class TableRenderer<T> {
     const { items } = this.state.getProcessedItems();
     const hasCheckbox = this.hasCheckboxColumn();
     const colOffset = this.getColOffset();
+    const totalColSpan = visibleCols.length + colOffset;
 
     if (items.length === 0 && !this.state.isLoading) {
       const tr = document.createElement('tr');
       const td = document.createElement('td');
-      td.colSpan = visibleCols.length + colOffset;
+      td.colSpan = totalColSpan;
       td.className = 'ogrid-empty-state';
       td.textContent = 'No data';
       tr.appendChild(td);
@@ -347,8 +396,34 @@ export class TableRenderer<T> {
       return;
     }
 
-    for (let rowIndex = 0; rowIndex < items.length; rowIndex++) {
+    // Virtual scrolling: determine which rows to render
+    const vs = this.virtualScrollState;
+    const isVirtual = vs?.enabled === true;
+    let startIndex = 0;
+    let endIndex = items.length - 1;
+
+    if (isVirtual) {
+      const range = vs!.visibleRange;
+      startIndex = Math.max(0, range.startIndex);
+      endIndex = Math.min(items.length - 1, range.endIndex);
+
+      // Top spacer row
+      if (range.offsetTop > 0) {
+        const topSpacer = document.createElement('tr');
+        topSpacer.className = 'ogrid-virtual-spacer';
+        const topTd = document.createElement('td');
+        topTd.colSpan = totalColSpan;
+        topTd.style.height = `${range.offsetTop}px`;
+        topTd.style.padding = '0';
+        topTd.style.border = 'none';
+        topSpacer.appendChild(topTd);
+        this.tbody.appendChild(topSpacer);
+      }
+    }
+
+    for (let rowIndex = startIndex; rowIndex <= endIndex; rowIndex++) {
       const item = items[rowIndex];
+      if (!item) continue;
       const rowId = this.state.getRowId(item);
       const tr = document.createElement('tr');
       tr.className = 'ogrid-row';
@@ -506,6 +581,44 @@ export class TableRenderer<T> {
 
       this.tbody.appendChild(tr);
     }
+
+    // Virtual scrolling: bottom spacer row
+    if (isVirtual) {
+      const range = vs!.visibleRange;
+      if (range.offsetBottom > 0) {
+        const bottomSpacer = document.createElement('tr');
+        bottomSpacer.className = 'ogrid-virtual-spacer';
+        const bottomTd = document.createElement('td');
+        bottomTd.colSpan = totalColSpan;
+        bottomTd.style.height = `${range.offsetBottom}px`;
+        bottomTd.style.padding = '0';
+        bottomTd.style.border = 'none';
+        bottomSpacer.appendChild(bottomTd);
+        this.tbody.appendChild(bottomSpacer);
+      }
+    }
+  }
+
+  /** Get the table element (used by ColumnReorderState for header cell queries). */
+  getTableElement(): HTMLTableElement | null {
+    return this.table;
+  }
+
+  /** Update the drop indicator position during column reorder. */
+  updateDropIndicator(x: number | null, isDragging: boolean): void {
+    if (!this.dropIndicator || !this.wrapperEl) return;
+
+    if (!isDragging || x === null) {
+      this.dropIndicator.style.display = 'none';
+      return;
+    }
+
+    // Convert client X to position relative to the wrapper
+    const wrapperRect = this.wrapperEl.getBoundingClientRect();
+    const relativeX = x - wrapperRect.left + this.wrapperEl.scrollLeft;
+
+    this.dropIndicator.style.display = 'block';
+    this.dropIndicator.style.left = `${relativeX}px`;
   }
 
   destroy(): void {
@@ -513,5 +626,6 @@ export class TableRenderer<T> {
     this.table = null;
     this.thead = null;
     this.tbody = null;
+    this.dropIndicator = null;
   }
 }

@@ -70,6 +70,11 @@ export type {
   DataGridStateResult,
 } from './services/datagrid-state.service';
 
+export { ColumnReorderService } from './services/column-reorder.service';
+
+export { VirtualScrollService } from './services/virtual-scroll.service';
+export type { IVirtualScrollConfig } from './services/virtual-scroll.service';
+
 // Components
 export { OGridLayoutComponent } from './components/ogrid-layout.component';
 export { StatusBarComponent } from './components/status-bar.component';
@@ -78,3 +83,24 @@ export { SideBarComponent } from './components/sidebar.component';
 export type { SideBarProps, SideBarFilterColumn } from './components/sidebar.component';
 export { MarchingAntsOverlayComponent } from './components/marching-ants-overlay.component';
 export { EmptyStateComponent } from './components/empty-state.component';
+
+// Utilities (view model helpers)
+export type {
+  HeaderFilterConfigInput,
+  HeaderFilterConfig,
+  CellRenderDescriptorInput,
+  CellRenderDescriptor,
+  CellRenderMode,
+} from './utils';
+
+export {
+  getHeaderFilterConfig,
+  getCellRenderDescriptor,
+  resolveCellDisplayContent,
+  resolveCellStyle,
+  createDebouncedSignal,
+  createDebouncedCallback,
+  debounce,
+  createLatestRef,
+  createLatestCallback,
+} from './utils';

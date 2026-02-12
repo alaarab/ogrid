@@ -352,11 +352,20 @@ export function useOGrid<T>(
 
   const sideBarProps = computed<SideBarProps | null>(() => {
     if (!sideBarState.isEnabled) return null;
+    // Re-read reactive deps so the computed tracks them, but use getters for
+    // activePanel/isOpen so that a stored reference stays current after toggle/close.
+    const _activePanel = sideBarState.activePanel.value;
+    const _isOpen = sideBarState.isOpen.value;
+    void _activePanel;
+    void _isOpen;
     return {
-      activePanel: sideBarState.activePanel.value,
+      get activePanel() { return sideBarState.activePanel.value; },
       onPanelChange: sideBarState.setActivePanel,
       panels: sideBarState.panels,
       position: sideBarState.position,
+      get isOpen() { return sideBarState.isOpen.value; },
+      toggle: sideBarState.toggle,
+      close: sideBarState.close,
       columns: columnChooserColumns.value,
       visibleColumns: visibleColumns.value,
       onVisibilityChange: handleVisibilityChange,
@@ -409,6 +418,7 @@ export function useOGrid<T>(
     getUserByEmail: dataSource.value?.getUserByEmail,
     layoutMode: props.value.layoutMode,
     suppressHorizontalScroll: props.value.suppressHorizontalScroll,
+    virtualScroll: props.value.virtualScroll,
     'aria-label': props.value['aria-label'],
     'aria-labelledby': props.value['aria-labelledby'],
     emptyState: {
@@ -498,6 +508,14 @@ export function useOGrid<T>(
     getDisplayedRows: () => displayItems.value,
     refreshData: () => {
       if (isServerSide.value) refreshCounter.value++;
+    },
+    scrollToRow: () => {
+      // No-op at orchestration level — DataGridTable components implement
+      // this via useVirtualScroll.scrollToRow when virtual scrolling is active.
+    },
+    getColumnOrder: () => columnOrder.value ?? columns.value.map((c) => c.columnId),
+    setColumnOrder: (order: string[]) => {
+      onColumnOrderChange.value?.(order);
     },
   }));
 

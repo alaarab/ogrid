@@ -92,7 +92,7 @@ function VanillaJSGrid() {
 
 export default function VanillaJSDemo() {
   return (
-    <LiveDemo height={420} title="Vanilla JS — no React, no framework" stackblitz={showcase}>
+    <LiveDemo height={420} title="Vanilla JS — zero dependencies" stackblitz={{ StackBlitz: showcase.JS }}>
       <BrowserOnly>{() => <VanillaJSGrid />}</BrowserOnly>
     </LiveDemo>
   );

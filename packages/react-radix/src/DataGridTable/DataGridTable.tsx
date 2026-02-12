@@ -15,6 +15,8 @@ import type {
 import {
   useDataGridState,
   useColumnResize,
+  useColumnReorder,
+  useVirtualScroll,
   useLatestRef,
   getHeaderFilterConfig,
   getCellRenderDescriptor,
@@ -142,6 +144,11 @@ function DataGridTableInner<T>(props: IOGridDataGridProps<T>): React.ReactElemen
     'aria-label': ariaLabel,
     'aria-labelledby': ariaLabelledBy,
     visibleColumns,
+    columnOrder,
+    onColumnOrderChange,
+    columnReorder,
+    virtualScroll,
+    pinnedColumns,
   } = props;
 
   // Memoize header rows (recursive tree traversal — avoid recomputing every render)
@@ -153,6 +160,25 @@ function DataGridTableInner<T>(props: IOGridDataGridProps<T>): React.ReactElemen
   const { handleResizeStart, getColumnWidth } = useColumnResize<T>({
     columnSizingOverrides,
     setColumnSizingOverrides,
+  });
+
+  const { isDragging: isReorderDragging, dropIndicatorX, handleHeaderMouseDown } = useColumnReorder<T>({
+    columns: visibleCols as IColumnDef<T>[],
+    columnOrder,
+    onColumnOrderChange,
+    enabled: columnReorder === true,
+    pinnedColumns,
+    wrapperRef,
+  });
+
+  const virtualScrollEnabled = virtualScroll?.enabled === true;
+  const virtualRowHeight = virtualScroll?.rowHeight ?? 36;
+  const { visibleRange } = useVirtualScroll({
+    totalRows: items.length,
+    rowHeight: virtualRowHeight,
+    enabled: virtualScrollEnabled,
+    overscan: virtualScroll?.overscan,
+    containerRef: wrapperRef,
   });
 
   const editCallbacks = useMemo(() => ({ commitCellEdit, setEditingCell, setPendingEditorValue, cancelPopoverEdit }), [commitCellEdit, setEditingCell, setPendingEditorValue, cancelPopoverEdit]);
@@ -360,7 +386,11 @@ function DataGridTableInner<T>(props: IOGridDataGridProps<T>): React.ReactElemen
                             data-column-id={col.columnId}
                             rowSpan={leafRowSpan}
                             className={columnMeta.hdrClasses[col.columnId] || undefined}
-                            style={columnMeta.hdrStyles[col.columnId]}
+                            style={{
+                              ...columnMeta.hdrStyles[col.columnId],
+                              ...(columnReorder ? { cursor: isReorderDragging ? 'grabbing' : 'grab' } : undefined),
+                            }}
+                            onMouseDown={columnReorder ? (e) => handleHeaderMouseDown(col.columnId, e) : undefined}
                           >
                             <ColumnHeaderFilter {...getHeaderFilterConfig(col, headerFilterInput)} />
                             <div
@@ -376,34 +406,74 @@ function DataGridTableInner<T>(props: IOGridDataGridProps<T>): React.ReactElemen
                 </thead>
                 {!showEmptyInGrid && (
                   <tbody>
-                    {items.map((item, rowIndex) => {
-                      const rowIdStr = getRowId(item);
-                      return (
-                        <GridRow
-                          key={rowIdStr}
-                          item={item}
-                          rowIndex={rowIndex}
-                          rowId={rowIdStr}
-                          isSelected={selectedRowIds.has(rowIdStr)}
-                          visibleCols={visibleCols as IColumnDef<unknown>[]}
-                          columnMeta={columnMeta}
-                          renderCellContent={renderCellContent as GridRowProps['renderCellContent']}
-                          handleSingleRowClick={handleSingleRowClick}
-                          handleRowCheckboxChange={handleRowCheckboxChange}
-                          lastMouseShiftRef={lastMouseShiftRef}
-                          hasCheckboxCol={hasCheckboxCol}
-                          selectionRange={selectionRange}
-                          activeCell={interaction.activeCell}
-                          cutRange={cutRange}
-                          copyRange={copyRange}
-                          isDragging={isDragging}
-                          editingRowId={editingCell?.rowId ?? null}
-                        />
-                      );
-                    })}
+                    {virtualScrollEnabled && visibleRange.offsetTop > 0 && (
+                      <tr style={{ height: visibleRange.offsetTop }} aria-hidden />
+                    )}
+                    {(virtualScrollEnabled
+                      ? items.slice(visibleRange.startIndex, visibleRange.endIndex + 1).map((item, i) => {
+                          const rowIndex = visibleRange.startIndex + i;
+                          const rowIdStr = getRowId(item);
+                          return (
+                            <GridRow
+                              key={rowIdStr}
+                              item={item}
+                              rowIndex={rowIndex}
+                              rowId={rowIdStr}
+                              isSelected={selectedRowIds.has(rowIdStr)}
+                              visibleCols={visibleCols as IColumnDef<unknown>[]}
+                              columnMeta={columnMeta}
+                              renderCellContent={renderCellContent as GridRowProps['renderCellContent']}
+                              handleSingleRowClick={handleSingleRowClick}
+                              handleRowCheckboxChange={handleRowCheckboxChange}
+                              lastMouseShiftRef={lastMouseShiftRef}
+                              hasCheckboxCol={hasCheckboxCol}
+                              selectionRange={selectionRange}
+                              activeCell={interaction.activeCell}
+                              cutRange={cutRange}
+                              copyRange={copyRange}
+                              isDragging={isDragging}
+                              editingRowId={editingCell?.rowId ?? null}
+                            />
+                          );
+                        })
+                      : items.map((item, rowIndex) => {
+                          const rowIdStr = getRowId(item);
+                          return (
+                            <GridRow
+                              key={rowIdStr}
+                              item={item}
+                              rowIndex={rowIndex}
+                              rowId={rowIdStr}
+                              isSelected={selectedRowIds.has(rowIdStr)}
+                              visibleCols={visibleCols as IColumnDef<unknown>[]}
+                              columnMeta={columnMeta}
+                              renderCellContent={renderCellContent as GridRowProps['renderCellContent']}
+                              handleSingleRowClick={handleSingleRowClick}
+                              handleRowCheckboxChange={handleRowCheckboxChange}
+                              lastMouseShiftRef={lastMouseShiftRef}
+                              hasCheckboxCol={hasCheckboxCol}
+                              selectionRange={selectionRange}
+                              activeCell={interaction.activeCell}
+                              cutRange={cutRange}
+                              copyRange={copyRange}
+                              isDragging={isDragging}
+                              editingRowId={editingCell?.rowId ?? null}
+                            />
+                          );
+                        })
+                    )}
+                    {virtualScrollEnabled && visibleRange.offsetBottom > 0 && (
+                      <tr style={{ height: visibleRange.offsetBottom }} aria-hidden />
+                    )}
                   </tbody>
                 )}
               </table>
+              {isReorderDragging && dropIndicatorX != null && (
+                <div
+                  className={styles.dropIndicator}
+                  style={{ left: dropIndicatorX - (wrapperRef.current?.getBoundingClientRect().left ?? 0) }}
+                />
+              )}
               <MarchingAntsOverlay
                 containerRef={tableContainerRef}
                 selectionRange={selectionRange}

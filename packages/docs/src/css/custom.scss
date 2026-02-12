@@ -50,6 +50,10 @@
   --ogrid-primary: #217346;
   --ogrid-primary-fg: #fff;
   --ogrid-primary-hover: #1b5f39;
+  --ogrid-pinned-shadow: rgba(0, 0, 0, 0.12);
+  --ogrid-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
+  --ogrid-shadow-sm: 0 2px 4px rgba(0, 0, 0, 0.08);
+  --ogrid-loading-bg: rgba(255, 255, 255, 0.7);
 }
 
 /* ── Dark Theme ── */
@@ -92,6 +96,10 @@
   --ogrid-primary: #3ab876;
   --ogrid-primary-fg: #0a0a0f;
   --ogrid-primary-hover: #4ec484;
+  --ogrid-pinned-shadow: rgba(0, 0, 0, 0.4);
+  --ogrid-shadow: 0 4px 16px rgba(0, 0, 0, 0.35);
+  --ogrid-shadow-sm: 0 2px 4px rgba(0, 0, 0, 0.25);
+  --ogrid-loading-bg: rgba(26, 26, 36, 0.7);
 }
 
 /* ── Global ── */
@@ -317,6 +325,16 @@ table th {
 .live-demo__content {
   width: 100%;
   overflow: auto;
+
+  /* Strip inner grid border/radius — the .live-demo wrapper provides them */
+  > div > div:first-child {
+    border: none !important;
+    border-radius: 0 !important;
+  }
+  .ogrid-container {
+    border: none !important;
+    border-radius: 0 !important;
+  }
 }
 
 /* ── StackBlitz Button ── */
