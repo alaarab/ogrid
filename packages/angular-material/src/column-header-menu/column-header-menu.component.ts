@@ -1,4 +1,4 @@
-import { Component, Input, Output, EventEmitter, ViewChild } from '@angular/core';
+import { Component, input, viewChild, ChangeDetectionStrategy } from '@angular/core';
 import { MatMenuModule, MatMenuTrigger } from '@angular/material/menu';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
@@ -12,12 +12,13 @@ import { COLUMN_HEADER_MENU_ITEMS } from '@alaarab/ogrid-core';
   selector: 'column-header-menu',
   standalone: true,
   imports: [MatMenuModule, MatButtonModule, MatIconModule],
+  changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <button
       mat-icon-button
       [matMenuTriggerFor]="menu"
       class="column-header-menu-trigger"
-      [attr.aria-label]="'Column options for ' + columnId"
+      [attr.aria-label]="'Column options for ' + columnId()"
     >
       <mat-icon>more_vert</mat-icon>
     </button>
@@ -25,21 +26,21 @@ import { COLUMN_HEADER_MENU_ITEMS } from '@alaarab/ogrid-core';
     <mat-menu #menu="matMenu">
       <button
         mat-menu-item
-        [disabled]="!canPinLeft"
+        [disabled]="!canPinLeft()"
         (click)="handlePinLeft()"
       >
         {{ menuItems[0].label }}
       </button>
       <button
         mat-menu-item
-        [disabled]="!canPinRight"
+        [disabled]="!canPinRight()"
         (click)="handlePinRight()"
       >
         {{ menuItems[1].label }}
       </button>
       <button
         mat-menu-item
-        [disabled]="!canUnpin"
+        [disabled]="!canUnpin()"
         (click)="handleUnpin()"
       >
         {{ menuItems[2].label }}
@@ -63,34 +64,34 @@ import { COLUMN_HEADER_MENU_ITEMS } from '@alaarab/ogrid-core';
   `],
 })
 export class ColumnHeaderMenuComponent {
-  @Input() columnId!: string;
-  @Input() canPinLeft = true;
-  @Input() canPinRight = true;
-  @Input() canUnpin = false;
+  readonly columnId = input.required<string>();
+  readonly canPinLeft = input<boolean>(true);
+  readonly canPinRight = input<boolean>(true);
+  readonly canUnpin = input<boolean>(false);
 
-  @Output() pinLeft = new EventEmitter<void>();
-  @Output() pinRight = new EventEmitter<void>();
-  @Output() unpin = new EventEmitter<void>();
+  readonly onPinLeft = input<(() => void) | undefined>(undefined);
+  readonly onPinRight = input<(() => void) | undefined>(undefined);
+  readonly onUnpin = input<(() => void) | undefined>(undefined);
 
-  @ViewChild(MatMenuTrigger) menuTrigger?: MatMenuTrigger;
+  readonly menuTrigger = viewChild(MatMenuTrigger);
 
   readonly menuItems = COLUMN_HEADER_MENU_ITEMS;
 
   handlePinLeft(): void {
-    if (this.canPinLeft) {
-      this.pinLeft.emit();
+    if (this.canPinLeft()) {
+      this.onPinLeft()?.();
     }
   }
 
   handlePinRight(): void {
-    if (this.canPinRight) {
-      this.pinRight.emit();
+    if (this.canPinRight()) {
+      this.onPinRight()?.();
     }
   }
 
   handleUnpin(): void {
-    if (this.canUnpin) {
-      this.unpin.emit();
+    if (this.canUnpin()) {
+      this.onUnpin()?.();
     }
   }
 }

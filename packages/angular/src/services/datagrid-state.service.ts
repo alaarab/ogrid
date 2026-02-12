@@ -132,6 +132,27 @@ export interface DataGridViewModelState<T> {
   onCellError?: (error: Error) => void;
 }
 
+/** Column pinning state and column header menu. */
+export interface DataGridPinningState {
+  pinnedColumns: Record<string, 'left' | 'right'>;
+  pinColumn: (columnId: string, side: 'left' | 'right') => void;
+  unpinColumn: (columnId: string) => void;
+  isPinned: (columnId: string) => 'left' | 'right' | undefined;
+  headerMenu: {
+    isOpen: boolean;
+    openForColumn: string | null;
+    anchorElement: HTMLElement | null;
+    open: (columnId: string, anchorEl: HTMLElement) => void;
+    close: () => void;
+    handlePinLeft: () => void;
+    handlePinRight: () => void;
+    handleUnpin: () => void;
+    canPinLeft: boolean;
+    canPinRight: boolean;
+    canUnpin: boolean;
+  };
+}
+
 export interface DataGridStateResult<T> {
   layout: DataGridLayoutState<T>;
   rowSelection: DataGridRowSelectionState;
@@ -139,6 +160,7 @@ export interface DataGridStateResult<T> {
   interaction: DataGridCellInteractionState;
   contextMenu: DataGridContextMenuState;
   viewModels: DataGridViewModelState<T>;
+  pinning: DataGridPinningState;
 }
 
 /**
@@ -196,6 +218,11 @@ export class DataGridStateService<T> {
 
   // ResizeObserver
   private resizeObserver: ResizeObserver | null = null;
+
+  // Header menu state (for column pinning UI)
+  private readonly headerMenuIsOpenSig = signal<boolean>(false);
+  private readonly headerMenuOpenForColumnSig = signal<string | null>(null);
+  private readonly headerMenuAnchorElementSig = signal<HTMLElement | null>(null);
 
   // --- Derived computed ---
 
@@ -1088,6 +1115,70 @@ export class DataGridStateService<T> {
     this.setupFillHandleDrag();
   }
 
+  // --- Column pinning ---
+
+  pinColumn(columnId: string, side: 'left' | 'right'): void {
+    const props = this.props();
+    props?.onColumnPinned?.(columnId, side);
+  }
+
+  unpinColumn(columnId: string): void {
+    const props = this.props();
+    props?.onColumnPinned?.(columnId, null);
+  }
+
+  isPinned(columnId: string): 'left' | 'right' | undefined {
+    const props = this.props();
+    return props?.pinnedColumns?.[columnId];
+  }
+
+  getPinState(columnId: string): { canPinLeft: boolean; canPinRight: boolean; canUnpin: boolean } {
+    const pinned = this.isPinned(columnId);
+    return {
+      canPinLeft: pinned !== 'left',
+      canPinRight: pinned !== 'right',
+      canUnpin: !!pinned,
+    };
+  }
+
+  // --- Header menu ---
+
+  openHeaderMenu(columnId: string, anchorEl: HTMLElement): void {
+    this.headerMenuOpenForColumnSig.set(columnId);
+    this.headerMenuAnchorElementSig.set(anchorEl);
+    this.headerMenuIsOpenSig.set(true);
+  }
+
+  closeHeaderMenu(): void {
+    this.headerMenuIsOpenSig.set(false);
+    this.headerMenuOpenForColumnSig.set(null);
+    this.headerMenuAnchorElementSig.set(null);
+  }
+
+  headerMenuPinLeft(): void {
+    const col = this.headerMenuOpenForColumnSig();
+    if (col && this.isPinned(col) !== 'left') {
+      this.pinColumn(col, 'left');
+      this.closeHeaderMenu();
+    }
+  }
+
+  headerMenuPinRight(): void {
+    const col = this.headerMenuOpenForColumnSig();
+    if (col && this.isPinned(col) !== 'right') {
+      this.pinColumn(col, 'right');
+      this.closeHeaderMenu();
+    }
+  }
+
+  headerMenuUnpin(): void {
+    const col = this.headerMenuOpenForColumnSig();
+    if (col && this.isPinned(col)) {
+      this.unpinColumn(col);
+      this.closeHeaderMenu();
+    }
+  }
+
   // --- Get state result ---
 
   getState(): DataGridStateResult<T> {
@@ -1197,7 +1288,31 @@ export class DataGridStateService<T> {
       onCellError: p?.onCellError,
     };
 
-    return { layout, rowSelection, editing, interaction, contextMenu, viewModels };
+    // --- Pinning ---
+    const openForColumn = this.headerMenuOpenForColumnSig();
+    const currentPinState = openForColumn ? (p?.pinnedColumns?.[openForColumn]) : undefined;
+
+    const pinning: DataGridPinningState = {
+      pinnedColumns: p?.pinnedColumns ?? {},
+      pinColumn: (columnId, side) => this.pinColumn(columnId, side),
+      unpinColumn: (columnId) => this.unpinColumn(columnId),
+      isPinned: (columnId) => this.isPinned(columnId),
+      headerMenu: {
+        isOpen: this.headerMenuIsOpenSig(),
+        openForColumn,
+        anchorElement: this.headerMenuAnchorElementSig(),
+        open: (columnId, anchorEl) => this.openHeaderMenu(columnId, anchorEl),
+        close: () => this.closeHeaderMenu(),
+        handlePinLeft: () => this.headerMenuPinLeft(),
+        handlePinRight: () => this.headerMenuPinRight(),
+        handleUnpin: () => this.headerMenuUnpin(),
+        canPinLeft: currentPinState !== 'left',
+        canPinRight: currentPinState !== 'right',
+        canUnpin: !!currentPinState,
+      },
+    };
+
+    return { layout, rowSelection, editing, interaction, contextMenu, viewModels, pinning };
   }
 
   // --- Private helpers ---

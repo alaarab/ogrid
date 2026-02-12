@@ -65,6 +65,7 @@ interface IOGridBaseProps<T> {
   freezeCols?: number;
   editable?: boolean;
   cellSelection?: boolean;
+  density?: 'compact' | 'normal' | 'comfortable';
   onCellValueChanged?: (event: ICellValueChangedEvent<T>) => void;
   onUndo?: () => void;
   onRedo?: () => void;
@@ -139,6 +140,7 @@ export interface IOGridDataGridProps<T> {
   loadingMessage?: string;
   editable?: boolean;
   cellSelection?: boolean;
+  density?: 'compact' | 'normal' | 'comfortable';
   onCellValueChanged?: (event: ICellValueChangedEvent<T>) => void;
   onUndo?: () => void;
   onRedo?: () => void;

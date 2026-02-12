@@ -2,14 +2,17 @@
 import { computed } from 'vue';
 import {
   useDataGridTableSetup,
+  getHeaderFilterConfig,
   getCellRenderDescriptor,
   resolveCellDisplayContent,
+  resolveCellStyle,
+  buildInlineEditorProps,
   buildHeaderRows,
   CHECKBOX_COLUMN_WIDTH,
+  ROW_NUMBER_COLUMN_WIDTH,
   DEFAULT_MIN_COLUMN_WIDTH,
   type IOGridDataGridProps,
   type IColumnDef,
-  type ICellEditorProps,
 } from '@alaarab/ogrid-vue';
 import ColumnHeaderFilter from '../ColumnHeaderFilter/ColumnHeaderFilter.vue';
 import InlineCellEditor from './InlineCellEditor.vue';
@@ -45,6 +48,26 @@ const viewModels = computed(() => state.viewModels.value);
 
 const headerRows = computed(() => buildHeaderRows(props.gridProps.columns, props.gridProps.visibleColumns));
 
+// Computed items for virtual scrolling support
+const visibleItems = computed(() => {
+  const items = props.gridProps.items;
+  if (!virtualScrollEnabled.value) return items.map((item, i) => ({ item, rowIndex: i }));
+  const vr = visibleRange.value;
+  const result: { item: any; rowIndex: number }[] = [];
+  for (let i = vr.startIndex; i <= Math.min(vr.endIndex, items.length - 1); i++) {
+    if (items[i]) result.push({ item: items[i], rowIndex: i });
+  }
+  return result;
+});
+
+// Pagination-aware row number offset
+const rowNumberOffset = computed(() => {
+  if (!layout.value.hasRowNumbersCol) return 0;
+  const currentPage = props.gridProps.currentPage ?? 1;
+  const pageSize = props.gridProps.pageSize ?? 25;
+  return (currentPage - 1) * pageSize;
+});
+
 const handleSingleRowClick = (e: MouseEvent, rowId: string | number) => {
   if (props.gridProps.rowSelection !== 'single') return;
   const sel = rowSel.value.selectedRowIds;
@@ -65,15 +88,21 @@ const handleKeyDown = (e: KeyboardEvent) => {
 
 const NOOP = () => {};
 
-// Helper methods for template
+// Helper methods for template — FIX P0-5 #1: use descriptor.mode not descriptor.renderMode
 const getCellRenderData = (item: any, col: IColumnDef<any>, rowIndex: number, colIndex: number) => {
   const descriptor = getCellRenderDescriptor(item, col, rowIndex, colIndex, viewModels.value.cellDescriptorInput);
 
-  if (descriptor.renderMode === 'inline-editor' && descriptor.editorProps) {
-    return { type: 'editor', props: descriptor.editorProps };
+  if (descriptor.mode === 'editing-inline') {
+    const editorProps = buildInlineEditorProps(item, col, descriptor, {
+      commitCellEdit: editing.value.commitCellEdit,
+      setEditingCell: editing.value.setEditingCell,
+      setPendingEditorValue: editing.value.setPendingEditorValue,
+      cancelPopoverEdit: editing.value.cancelPopoverEdit,
+    });
+    return { type: 'editor' as const, props: editorProps, descriptor };
   }
 
-  return { type: 'content', descriptor };
+  return { type: 'content' as const, props: null, descriptor };
 };
 
 const getCellDisplayValue = (item: any, col: IColumnDef<any>, rowIndex: number, colIndex: number) => {
@@ -96,10 +125,12 @@ const getCellClass = (rowIndex: number, colIndex: number, col: IColumnDef<any>, 
   return classes.join(' ');
 };
 
-const getCellStyle = (rowIndex: number, colIndex: number, col: IColumnDef<any>) => {
-  const descriptor = getCellRenderDescriptor(col, {}, rowIndex, colIndex, viewModels.value.cellDescriptorInput);
+// FIX P0-5 #2: pass item as first arg (not col), and pass col object (not {})
+// FIX P0-5 #3: pass col object to getColumnWidth (not col.columnId string)
+const getCellStyle = (item: any, col: IColumnDef<any>, rowIndex: number, colIndex: number) => {
+  const descriptor = getCellRenderDescriptor(item, col, rowIndex, colIndex, viewModels.value.cellDescriptorInput);
   const style: Record<string, string> = {
-    width: `${getColumnWidth(col.columnId)}px`,
+    width: `${getColumnWidth(col)}px`,
   };
 
   if (descriptor.canEditAny) {
@@ -114,17 +145,28 @@ const getCellStyle = (rowIndex: number, colIndex: number, col: IColumnDef<any>) 
   return style;
 };
 
-const shouldShowFillHandle = (rowIndex: number, colIndex: number) => {
+const shouldShowFillHandle = (item: any, col: IColumnDef<any>, rowIndex: number, colIndex: number) => {
   const range = interaction.value.selectionRange;
   if (!range) return false;
 
-  const descriptor = getCellRenderDescriptor({}, {}, rowIndex, colIndex, viewModels.value.cellDescriptorInput);
-  return descriptor.canEditAny && rowIndex === range.endRow && colIndex === range.endCol;
+  const descriptor = getCellRenderDescriptor(item, col, rowIndex, colIndex, viewModels.value.cellDescriptorInput);
+  return descriptor.canEditAny && descriptor.isSelectionEndCell;
+};
+
+// FIX P0-4: Use getHeaderFilterConfig utility for ColumnHeaderFilter props
+const getFilterProps = (col: IColumnDef<any>) => {
+  return getHeaderFilterConfig(col, viewModels.value.headerFilterInput);
+};
+
+// Bind wrapperRef to element via ref callback
+const setWrapperRef = (el: any) => {
+  wrapperRef.value = el as HTMLDivElement;
+  vsContainerRef.value = el as HTMLElement;
 };
 </script>
 
 <template>
-  <div ref="wrapperRef" class="ogrid-wrapper">
+  <div class="ogrid-wrapper">
     <!-- Loading State -->
     <div v-if="gridProps.isLoading" class="ogrid-loading">
       <div class="loading-spinner"></div>
@@ -134,7 +176,7 @@ const shouldShowFillHandle = (rowIndex: number, colIndex: number) => {
     <!-- Main Grid -->
     <div
       v-else
-      ref="tableContainerRef"
+      :ref="setWrapperRef"
       class="ogrid-table-container"
       tabindex="0"
       @keydown="handleKeyDown"
@@ -149,7 +191,7 @@ const shouldShowFillHandle = (rowIndex: number, colIndex: number) => {
       ></div>
 
       <table
-        ref="tableRef"
+        :ref="(el) => { tableRef = el as HTMLElement; }"
         class="ogrid-table"
         :style="{
           width: gridProps.layoutMode === 'content' ? 'auto' : '100%',
@@ -179,6 +221,15 @@ const shouldShowFillHandle = (rowIndex: number, colIndex: number) => {
               />
             </th>
 
+            <!-- Row Numbers Header -->
+            <th
+              v-if="layout.hasRowNumbersCol && rowIdx === headerRows.length - 1"
+              class="ogrid-header-cell ogrid-row-number-header"
+              :style="{ width: `${ROW_NUMBER_COLUMN_WIDTH}px`, textAlign: 'center' }"
+            >
+              #
+            </th>
+
             <!-- Header Cells -->
             <th
               v-for="cell in row"
@@ -187,40 +238,43 @@ const shouldShowFillHandle = (rowIndex: number, colIndex: number) => {
               :rowspan="cell.rowspan"
               class="ogrid-header-cell"
               :style="{
-                width: cell.column ? `${getColumnWidth(cell.column.columnId)}px` : undefined,
+                width: cell.column ? `${getColumnWidth(cell.column)}px` : undefined,
+                minWidth: cell.column ? `${(cell.column.minWidth ?? DEFAULT_MIN_COLUMN_WIDTH)}px` : undefined,
               }"
               @mousedown="cell.column && !cell.isGroup ? (e) => handleReorderMouseDown(cell.column.columnId, e) : undefined"
             >
               <div class="ogrid-header-content">
-                <span class="ogrid-header-label">
-                  {{ cell.column?.name || cell.groupName }}
-                </span>
-
+                <!-- FIX P0-4: Use getHeaderFilterConfig utility -->
                 <ColumnHeaderFilter
                   v-if="cell.column && !cell.isGroup"
-                  :columnKey="cell.column.columnId"
-                  :columnName="cell.column.name"
-                  :filterType="cell.column.filterable?.type || 'none'"
-                  :isSorted="cell.column.isSorted"
-                  :isSortedDescending="cell.column.isSortedDescending"
-                  :onSort="cell.column.onSort"
+                  v-bind="getFilterProps(cell.column)"
                 />
+                <span v-else class="ogrid-header-label">
+                  {{ cell.groupName }}
+                </span>
               </div>
 
-              <!-- Resize Handle -->
+              <!-- Resize Handle — FIX P0-5 #5: pass col object not columnId -->
               <div
                 v-if="cell.column && cell.column.resizable !== false"
                 class="ogrid-resize-handle"
-                @mousedown="(e) => handleResizeStart(e, cell.column!.columnId)"
+                @mousedown.stop="(e) => handleResizeStart(e, cell.column!)"
               ></div>
             </th>
           </tr>
         </thead>
 
-        <!-- Body -->
+        <!-- Body with virtual scrolling support — FIX P0-5 #6 -->
         <tbody v-if="!viewModels.showEmptyInGrid">
+          <!-- Top spacer for virtual scrolling -->
           <tr
-            v-for="(item, rowIndex) in gridProps.items"
+            v-if="virtualScrollEnabled && visibleRange.offsetTop > 0"
+            :style="{ height: `${visibleRange.offsetTop}px` }"
+            aria-hidden="true"
+          />
+
+          <tr
+            v-for="{ item, rowIndex } in visibleItems"
             :key="gridProps.getRowId(item)"
             :data-row-id="gridProps.getRowId(item)"
             :class="{
@@ -244,6 +298,14 @@ const shouldShowFillHandle = (rowIndex: number, colIndex: number) => {
               />
             </td>
 
+            <!-- Row Number Cell — FIX P1-4 -->
+            <td
+              v-if="layout.hasRowNumbersCol"
+              class="ogrid-cell ogrid-row-number-cell"
+            >
+              {{ rowNumberOffset + rowIndex + 1 }}
+            </td>
+
             <!-- Data Cells -->
             <td
               v-for="(col, colIndex) in layout.visibleCols"
@@ -251,9 +313,9 @@ const shouldShowFillHandle = (rowIndex: number, colIndex: number) => {
               :data-row-index="rowIndex"
               :data-col-index="layout.colOffset + colIndex"
               :class="getCellClass(rowIndex, layout.colOffset + colIndex, col, item)"
-              :style="getCellStyle(rowIndex, layout.colOffset + colIndex, col)"
+              :style="getCellStyle(item, col, rowIndex, layout.colOffset + colIndex)"
               @mousedown="(e) => interaction.handleCellMouseDown(e, rowIndex, layout.colOffset + colIndex)"
-              @contextmenu="(e) => ctxMenu.handleCellContextMenu(e, rowIndex, layout.colOffset + colIndex)"
+              @contextmenu="(e) => ctxMenu.handleCellContextMenu(e)"
             >
               <div class="ogrid-cell-content">
                 <component
@@ -266,7 +328,7 @@ const shouldShowFillHandle = (rowIndex: number, colIndex: number) => {
 
                   <!-- Fill Handle (on selection end cell) -->
                   <div
-                    v-if="shouldShowFillHandle(rowIndex, layout.colOffset + colIndex)"
+                    v-if="shouldShowFillHandle(item, col, rowIndex, layout.colOffset + colIndex)"
                     class="ogrid-fill-handle"
                     @mousedown="interaction.handleFillHandleMouseDown"
                     aria-label="Fill handle"
@@ -275,14 +337,22 @@ const shouldShowFillHandle = (rowIndex: number, colIndex: number) => {
               </div>
             </td>
           </tr>
+
+          <!-- Bottom spacer for virtual scrolling -->
+          <tr
+            v-if="virtualScrollEnabled && visibleRange.offsetBottom > 0"
+            :style="{ height: `${visibleRange.offsetBottom}px` }"
+            aria-hidden="true"
+          />
         </tbody>
       </table>
 
-      <!-- Empty State -->
+      <!-- Empty State — FIX P0-5 #8: call render function -->
       <div v-if="viewModels.showEmptyInGrid && gridProps.emptyState" class="ogrid-empty-state">
-        <div v-if="gridProps.emptyState.render">
-          <!-- Custom render function -->
-        </div>
+        <component
+          v-if="gridProps.emptyState.render"
+          :is="{ render: gridProps.emptyState.render }"
+        />
         <div v-else>
           <div class="ogrid-empty-title">No results found</div>
           <div class="ogrid-empty-message">
@@ -520,6 +590,17 @@ const shouldShowFillHandle = (rowIndex: number, colIndex: number) => {
   width: 40px;
   text-align: center;
   padding: 8px;
+}
+
+.ogrid-row-number-header,
+.ogrid-row-number-cell {
+  width: 40px;
+  text-align: center;
+  padding: 6px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  color: var(--ogrid-muted, #888);
+  background: var(--ogrid-header-bg, #f5f5f5);
 }
 
 .ogrid-checkbox {

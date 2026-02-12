@@ -12,6 +12,8 @@ import { useKeyboardNavigation } from './useKeyboardNavigation';
 import { useFillHandle } from './useFillHandle';
 import { useUndoRedo } from './useUndoRedo';
 import { useTableLayout } from './useTableLayout';
+import { useColumnPinning } from './useColumnPinning';
+import { useColumnHeaderMenuState } from './useColumnHeaderMenuState';
 
 // Stable no-op handlers
 const NOOP = () => {};
@@ -102,6 +104,39 @@ export interface DataGridViewModelState<T> {
   onCellError?: (error: Error, info: unknown) => void;
 }
 
+/** Column pinning state and column header menu. */
+export interface DataGridPinningState {
+  pinnedColumns: Record<string, 'left' | 'right'>;
+  pinColumn: (columnId: string, side: 'left' | 'right') => void;
+  unpinColumn: (columnId: string) => void;
+  isPinned: (columnId: string) => 'left' | 'right' | undefined;
+  computeLeftOffsets: (
+    visibleCols: { columnId: string }[],
+    columnWidths: Record<string, number>,
+    defaultWidth: number,
+    hasCheckboxColumn: boolean,
+    checkboxColumnWidth: number
+  ) => Record<string, number>;
+  computeRightOffsets: (
+    visibleCols: { columnId: string }[],
+    columnWidths: Record<string, number>,
+    defaultWidth: number
+  ) => Record<string, number>;
+  headerMenu: {
+    isOpen: boolean;
+    openForColumn: string | null;
+    anchorElement: HTMLElement | null;
+    open: (columnId: string, anchorEl: HTMLElement) => void;
+    close: () => void;
+    handlePinLeft: () => void;
+    handlePinRight: () => void;
+    handleUnpin: () => void;
+    canPinLeft: boolean;
+    canPinRight: boolean;
+    canUnpin: boolean;
+  };
+}
+
 export interface UseDataGridStateResult<T> {
   layout: Ref<DataGridLayoutState<T>>;
   rowSelection: Ref<DataGridRowSelectionState>;
@@ -109,6 +144,7 @@ export interface UseDataGridStateResult<T> {
   interaction: Ref<DataGridCellInteractionState>;
   contextMenu: Ref<DataGridContextMenuState>;
   viewModels: Ref<DataGridViewModelState<T>>;
+  pinning: Ref<DataGridPinningState>;
 }
 
 /**
@@ -137,6 +173,7 @@ export function useDataGridState<T>(
   const initialColumnWidths = computed(() => props.value.initialColumnWidths);
   const onColumnResizedProp = computed(() => props.value.onColumnResized);
   const pinnedColumnsProp = computed(() => props.value.pinnedColumns);
+  const onColumnPinnedProp = computed(() => props.value.onColumnPinned);
   const onCellErrorProp = computed(() => props.value.onCellError);
 
   // Undo/redo wrapping
@@ -284,6 +321,19 @@ export function useDataGridState<T>(
     hasCheckboxCol,
     initialColumnWidths: initialColumnWidths.value,
     onColumnResized: onColumnResizedProp.value,
+  });
+
+  // --- Column pinning ---
+  const pinningResult = useColumnPinning({
+    columns: flatColumns,
+    pinnedColumns: pinnedColumnsProp,
+    onColumnPinned: onColumnPinnedProp.value,
+  });
+
+  const headerMenuResult = useColumnHeaderMenuState({
+    pinnedColumns: pinningResult.pinnedColumns,
+    onPinColumn: pinningResult.pinColumn,
+    onUnpinColumn: pinningResult.unpinColumn,
   });
 
   const aggregation = computed(() =>
@@ -454,6 +504,28 @@ export function useDataGridState<T>(
     onCellError: onCellErrorProp.value,
   }));
 
+  const pinningState = computed<DataGridPinningState>(() => ({
+    pinnedColumns: pinningResult.pinnedColumns.value,
+    pinColumn: pinningResult.pinColumn,
+    unpinColumn: pinningResult.unpinColumn,
+    isPinned: pinningResult.isPinned,
+    computeLeftOffsets: pinningResult.computeLeftOffsets,
+    computeRightOffsets: pinningResult.computeRightOffsets,
+    headerMenu: {
+      isOpen: headerMenuResult.isOpen.value,
+      openForColumn: headerMenuResult.openForColumn.value,
+      anchorElement: headerMenuResult.anchorElement.value,
+      open: headerMenuResult.open,
+      close: headerMenuResult.close,
+      handlePinLeft: headerMenuResult.handlePinLeft,
+      handlePinRight: headerMenuResult.handlePinRight,
+      handleUnpin: headerMenuResult.handleUnpin,
+      canPinLeft: headerMenuResult.canPinLeft.value,
+      canPinRight: headerMenuResult.canPinRight.value,
+      canUnpin: headerMenuResult.canUnpin.value,
+    },
+  }));
+
   return {
     layout: layoutState,
     rowSelection: rowSelectionState,
@@ -461,5 +533,6 @@ export function useDataGridState<T>(
     interaction: interactionState,
     contextMenu: contextMenuState,
     viewModels: viewModelsState,
+    pinning: pinningState,
   };
 }

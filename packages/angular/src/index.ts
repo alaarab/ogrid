@@ -67,6 +67,7 @@ export type {
   DataGridCellInteractionState,
   DataGridContextMenuState,
   DataGridViewModelState,
+  DataGridPinningState,
   DataGridStateResult,
 } from './services/datagrid-state.service';
 
