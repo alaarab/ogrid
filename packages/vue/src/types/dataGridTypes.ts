@@ -117,8 +117,14 @@ interface IOGridBaseProps<T> {
   /** Called when a cell renderer or custom editor throws an error. */
   onCellError?: (error: Error, info: unknown) => void;
 
+  /** Enable column reordering via drag-and-drop on header cells. Default: false. */
+  columnReorder?: boolean;
+
   /** Virtual scrolling configuration. Set `enabled: true` with a fixed `rowHeight` to virtualize large datasets. */
   virtualScroll?: IVirtualScrollConfig;
+
+  /** Cell spacing/density preset. Controls cell padding throughout the grid. Default: 'normal'. */
+  density?: 'compact' | 'normal' | 'comfortable';
 
   'aria-label'?: string;
   'aria-labelledby'?: string;
@@ -200,8 +206,12 @@ export interface IOGridDataGridProps<T> {
   };
   /** Called when a cell renderer or custom editor throws an error. */
   onCellError?: (error: Error, info: unknown) => void;
+  /** Enable column reordering via drag-and-drop on header cells. Default: false. */
+  columnReorder?: boolean;
   /** Virtual scrolling configuration. */
   virtualScroll?: IVirtualScrollConfig;
+  /** Cell spacing/density preset. Controls cell padding throughout the grid. Default: 'normal'. */
+  density?: 'compact' | 'normal' | 'comfortable';
   'aria-label'?: string;
   'aria-labelledby'?: string;
 }
