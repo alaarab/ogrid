@@ -4,6 +4,9 @@ title: Column Types
 description: Built-in column types for common data patterns — text, numeric, date, and boolean.
 ---
 
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+
 # Column Types
 
 OGrid provides built-in column types that automatically configure alignment, display formatting, cell editors, and filter types. Set `type` on a column definition to opt in.
@@ -37,6 +40,90 @@ const columns = [
   },
 ];
 ```
+
+### Usage
+
+<Tabs groupId="framework">
+  <TabItem value="radix" label="Radix (Lightweight)" default>
+
+```tsx
+import { OGrid } from '@alaarab/ogrid-react-radix';
+
+function App() {
+  return (
+    <OGrid
+      columns={columns}
+      data={data}
+      getRowId={(r) => r.id}
+      editable
+    />
+  );
+}
+```
+
+  </TabItem>
+  <TabItem value="fluent" label="Fluent UI">
+
+```tsx
+import { OGrid } from '@alaarab/ogrid-react-fluent';
+import { FluentProvider, webLightTheme } from '@fluentui/react-components';
+
+function App() {
+  return (
+    <FluentProvider theme={webLightTheme}>
+      <OGrid
+        columns={columns}
+        data={data}
+        getRowId={(r) => r.id}
+        editable
+      />
+    </FluentProvider>
+  );
+}
+```
+
+  </TabItem>
+  <TabItem value="material" label="Material UI">
+
+```tsx
+import { OGrid } from '@alaarab/ogrid-react-material';
+import { ThemeProvider, createTheme } from '@mui/material/styles';
+import CssBaseline from '@mui/material/CssBaseline';
+
+const theme = createTheme();
+
+function App() {
+  return (
+    <ThemeProvider theme={theme}>
+      <CssBaseline />
+      <OGrid
+        columns={columns}
+        data={data}
+        getRowId={(r) => r.id}
+        editable
+      />
+    </ThemeProvider>
+  );
+}
+```
+
+  </TabItem>
+  <TabItem value="js" label="Vanilla JS">
+
+```js
+import { OGrid } from '@alaarab/ogrid-js';
+import '@alaarab/ogrid-js/styles';
+
+const grid = new OGrid(document.getElementById('grid'), {
+  columns: columns,
+  data: data,
+  getRowId: (r) => r.id,
+  editable: true,
+});
+```
+
+  </TabItem>
+</Tabs>
 
 ## Date Columns
 

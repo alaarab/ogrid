@@ -1,0 +1,88 @@
+---
+sidebar_position: 5
+title: Framework Showcase
+description: See OGrid in action with Radix, Fluent UI, Material UI, and Vanilla JS
+---
+
+import ShowcaseFluentDemo from '@site/src/components/demos/ShowcaseFluentDemo';
+import ShowcaseMaterialDemo from '@site/src/components/demos/ShowcaseMaterialDemo';
+import VanillaJSDemo from '@site/src/components/demos/VanillaJSDemo';
+import BrowserOnly from '@docusaurus/BrowserOnly';
+
+# Framework Showcase
+
+OGrid renders with your design system's native components. Same API, same features -- different look and feel. Every grid below is **fully interactive**: sort, filter, edit, select cells, copy/paste, and undo/redo.
+
+## Radix UI (Default)
+
+The lightest option. Radix primitives are bundled -- no peer dependencies beyond React. This is the same grid you see throughout the docs.
+
+```bash
+npm install @alaarab/ogrid-react-radix
+```
+
+<BrowserOnly>
+  {() => {
+    const RadixShowcase = require('@site/src/components/demos/ShowcaseRadixDemo').default;
+    return <RadixShowcase />;
+  }}
+</BrowserOnly>
+
+## Fluent UI
+
+Microsoft's design system. Buttons, dropdowns, and popovers all use Fluent UI v9 components. Best for **Microsoft 365 and SharePoint** projects.
+
+```bash
+npm install @alaarab/ogrid-react-fluent @fluentui/react-components
+```
+
+<ShowcaseFluentDemo />
+
+## Material UI
+
+Google's Material Design via MUI v7. Inputs, menus, and pagination use MUI components. Best for apps already on **Material Design**.
+
+```bash
+npm install @alaarab/ogrid-react-material @mui/material @emotion/react @emotion/styled
+```
+
+<ShowcaseMaterialDemo />
+
+## Vanilla JS
+
+No framework, no virtual DOM. A class-based imperative API that renders directly to the DOM. Ships with a default CSS theme supporting light and dark mode.
+
+```bash
+npm install @alaarab/ogrid-js
+```
+
+<VanillaJSDemo />
+
+## Comparison
+
+| | Radix | Fluent UI | Material UI | Vanilla JS |
+|---|---|---|---|---|
+| **Package** | `@alaarab/ogrid-react-radix` | `@alaarab/ogrid-react-fluent` | `@alaarab/ogrid-react-material` | `@alaarab/ogrid-js` |
+| **Design system** | Radix Primitives | Microsoft Fluent v9 | Google Material (MUI v7) | CSS custom properties |
+| **Peer deps** | None (Radix bundled) | `@fluentui/react-components` | `@mui/material`, Emotion | None |
+| **CSS approach** | CSS Modules (SCSS) | Fluent tokens + CSS Modules | MUI `sx` props + CSS Modules | Global `.ogrid-*` classes |
+| **React required** | Yes (17, 18, 19) | Yes (17, 18, 19) | Yes (17, 18, 19) | No |
+| **Dark mode** | Via CSS variables | Via Fluent theme tokens | Via MUI palette mode | Via `--ogrid-*` vars / `data-theme` |
+| **Best for** | Lightweight apps, BYO design | Microsoft 365 / SPFx | Material Design apps | Non-React projects, Web Components |
+| **Bundle impact** | Smallest | Medium (Fluent tree-shakes well) | Largest (MUI + Emotion) | Smallest (zero deps) |
+
+## Choosing a Package
+
+- **Start new?** Use **Radix** -- lightest weight, zero peer deps, full feature parity.
+- **Microsoft ecosystem?** Use **Fluent** -- native look in Teams, SharePoint, Outlook.
+- **Already using MUI?** Use **Material** -- matches your existing theme and components.
+- **No React?** Use **Vanilla JS** -- works anywhere, class-based API, CSS-only theming.
+
+All four packages share the same **headless core** (`@alaarab/ogrid-core`) and pass the same **954 tests**. Switching frameworks later is a matter of changing imports and wrapping in the appropriate provider.
+
+## Related
+
+- [Installation](../getting-started/installation) -- install instructions for all packages
+- [Quick Start](../getting-started/quick-start) -- build your first grid
+- [Theming Guide](./theming) -- customize colors and styling
+- [Vanilla JS Guide](../getting-started/vanilla-js) -- full JS API documentation

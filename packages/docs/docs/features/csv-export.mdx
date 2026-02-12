@@ -5,6 +5,8 @@ description: Export grid data to a CSV file with one function call
 ---
 
 import CsvExportDemo from '@site/src/components/demos/CsvExportDemo';
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
 
 # CSV Export
 
@@ -15,6 +17,9 @@ Export grid data to a downloadable CSV file using the `exportToCsv` utility from
 <CsvExportDemo />
 
 ## Quick Example
+
+<Tabs groupId="framework">
+  <TabItem value="radix" label="Radix (Lightweight)" default>
 
 ```tsx
 import { exportToCsv } from '@alaarab/ogrid-react-radix';
@@ -37,6 +42,88 @@ function ExportButton({ data, columns }: { data: Row[]; columns: IColumnDef<Row>
   return <button onClick={handleExport}>Export to CSV</button>;
 }
 ```
+
+  </TabItem>
+  <TabItem value="fluent" label="Fluent UI">
+
+```tsx
+import { exportToCsv } from '@alaarab/ogrid-react-fluent';
+
+function ExportButton({ data, columns }: { data: Row[]; columns: IColumnDef<Row>[] }) {
+  const handleExport = () => {
+    exportToCsv(
+      data,
+      columns.map((col) => ({ columnId: col.columnId, name: col.name })),
+      (item, columnId) => {
+        const col = columns.find((c) => c.columnId === columnId);
+        if (!col) return '';
+        const value = col.valueGetter ? col.valueGetter(item) : (item as Record<string, unknown>)[columnId];
+        return col.valueFormatter ? col.valueFormatter(value, item) : String(value ?? '');
+      },
+      'my-data.csv'
+    );
+  };
+
+  return <button onClick={handleExport}>Export to CSV</button>;
+}
+```
+
+  </TabItem>
+  <TabItem value="material" label="Material UI">
+
+```tsx
+import { exportToCsv } from '@alaarab/ogrid-react-material';
+
+function ExportButton({ data, columns }: { data: Row[]; columns: IColumnDef<Row>[] }) {
+  const handleExport = () => {
+    exportToCsv(
+      data,
+      columns.map((col) => ({ columnId: col.columnId, name: col.name })),
+      (item, columnId) => {
+        const col = columns.find((c) => c.columnId === columnId);
+        if (!col) return '';
+        const value = col.valueGetter ? col.valueGetter(item) : (item as Record<string, unknown>)[columnId];
+        return col.valueFormatter ? col.valueFormatter(value, item) : String(value ?? '');
+      },
+      'my-data.csv'
+    );
+  };
+
+  return <button onClick={handleExport}>Export to CSV</button>;
+}
+```
+
+  </TabItem>
+  <TabItem value="js" label="Vanilla JS">
+
+```js
+import { OGrid, exportToCsv } from '@alaarab/ogrid-js';
+import '@alaarab/ogrid-js/styles';
+
+const grid = new OGrid(document.getElementById('grid'), {
+  columns: columns,
+  data: data,
+  getRowId: (r) => r.id,
+});
+
+// Export to CSV
+document.getElementById('export-btn').addEventListener('click', () => {
+  exportToCsv(
+    data,
+    columns.map((col) => ({ columnId: col.columnId, name: col.name })),
+    (item, columnId) => {
+      const col = columns.find((c) => c.columnId === columnId);
+      if (!col) return '';
+      const value = item[columnId];
+      return col.valueFormatter ? col.valueFormatter(value, item) : String(value ?? '');
+    },
+    'my-data.csv'
+  );
+});
+```
+
+  </TabItem>
+</Tabs>
 
 ## How It Works
 

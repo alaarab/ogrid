@@ -137,10 +137,30 @@ const frameworks = [
   { id: 'ogrid', label: 'OGrid (Default)', import: `import { OGrid } from '@alaarab/ogrid-react-radix';` },
   { id: 'fluent', label: 'Fluent UI', import: `import { OGrid } from '@alaarab/ogrid-react-fluent';` },
   { id: 'material', label: 'Material UI', import: `import { OGrid } from '@alaarab/ogrid-react-material';` },
+  { id: 'js', label: 'Vanilla JS', import: `import { OGrid } from '@alaarab/ogrid-js';\nimport '@alaarab/ogrid-js/styles';` },
 ] as const;
 
-function getCodeExample(importLine: string) {
-  return `${importLine}
+function getCodeExample(fw: typeof frameworks[number]) {
+  if (fw.id === 'js') {
+    return `import { OGrid } from '@alaarab/ogrid-js';
+import '@alaarab/ogrid-js/styles';
+
+const grid = new OGrid(document.getElementById('grid'), {
+  columns: [
+    { columnId: 'name', name: 'Name', sortable: true },
+    { columnId: 'role', name: 'Role',
+      filterable: { type: 'multiSelect' } },
+    { columnId: 'salary', name: 'Salary', editable: true,
+      valueFormatter: (v) => \`$\${v.toLocaleString()}\` },
+  ],
+  data: employees,
+  getRowId: (e) => e.id,
+  editable: true,
+  cellSelection: true,
+  statusBar: true,
+});`;
+  }
+  return `${fw.import}
 import type { IColumnDef } from '@alaarab/ogrid-react';
 
 const columns: IColumnDef<Employee>[] = [
@@ -170,7 +190,7 @@ function CodePreviewSection() {
   return (
     <section className={styles.codePreview}>
       <div className={styles.codePreviewInner}>
-        <h2 className={styles.sectionTitle}>One API. Three Frameworks.</h2>
+        <h2 className={styles.sectionTitle}>One API. Four Frameworks.</h2>
         <p className={styles.sectionSubtitle}>
           Same props, same behavior. Just swap the import.
         </p>
@@ -188,7 +208,7 @@ function CodePreviewSection() {
           </div>
           <div className={styles.codeBody}>
             <CodeBlock language="tsx">
-              {getCodeExample(frameworks[active].import)}
+              {getCodeExample(frameworks[active])}
             </CodeBlock>
           </div>
         </div>
@@ -339,6 +359,9 @@ function CTASection() {
             href="https://github.com/alaarab/ogrid"
           >
             View on GitHub
+          </Link>
+          <Link className={styles.btnGhost} to="/docs/guides/framework-showcase">
+            Framework Showcase
           </Link>
         </div>
       </div>
