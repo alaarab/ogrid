@@ -1,0 +1,38 @@
+{
+  "name": "@alaarab/ogrid-vue",
+  "version": "2.0.2",
+  "description": "OGrid Vue – Vue 3 composables, headless components, and utilities for OGrid data grids.",
+  "main": "dist/esm/index.js",
+  "module": "dist/esm/index.js",
+  "types": "dist/types/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/types/index.d.ts",
+      "import": "./dist/esm/index.js",
+      "require": "./dist/esm/index.js"
+    }
+  },
+  "scripts": {
+    "build": "rimraf dist && tsc -p tsconfig.build.json",
+    "test": "jest --passWithNoTests"
+  },
+  "keywords": ["ogrid", "vue", "datatable", "typescript", "grid", "composables"],
+  "author": "Ala Arab",
+  "license": "MIT",
+  "files": ["dist", "README.md", "LICENSE"],
+  "engines": { "node": ">=18" },
+  "dependencies": {
+    "@alaarab/ogrid-core": "2.0.2"
+  },
+  "peerDependencies": {
+    "vue": "^3.3.0"
+  },
+  "devDependencies": {
+    "vue": "^3.5.28",
+    "@vitejs/plugin-vue": "^6.0.4",
+    "vite": "^7.0.0",
+    "vite-plugin-dts": "^4.5.0",
+    "typescript": "^5.7.3"
+  },
+  "publishConfig": { "access": "public" }
+}

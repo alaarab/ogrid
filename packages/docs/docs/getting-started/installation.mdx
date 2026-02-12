@@ -32,9 +32,41 @@ For projects using Google's Material Design via MUI v7. Requires MUI core and Em
 npm install @alaarab/ogrid-react-material @mui/material @emotion/react @emotion/styled
 ```
 
+## Angular Material
+
+For Angular v21 projects using Angular Material. Requires `@angular/core`, `@angular/common`, `@angular/material`, and `@angular/cdk` as peer dependencies.
+
+```bash
+npm install @alaarab/ogrid-angular-material @angular/material @angular/cdk
+```
+
+## Angular PrimeNG
+
+For Angular v21 projects using PrimeNG. Requires `@angular/core`, `@angular/common`, and `primeng` as peer dependencies.
+
+```bash
+npm install @alaarab/ogrid-angular-primeng primeng
+```
+
+## Vue Vuetify
+
+For Vue 3 projects using Vuetify. Requires `vue` and `vuetify` as peer dependencies.
+
+```bash
+npm install @alaarab/ogrid-vue-vuetify vuetify
+```
+
+## Vue PrimeVue
+
+For Vue 3 projects using PrimeVue. Requires `vue` and `primevue` as peer dependencies.
+
+```bash
+npm install @alaarab/ogrid-vue-primevue primevue
+```
+
 ## Vanilla JS (No Framework)
 
-For projects without React. Class-based API with EventEmitter state management.
+For projects without a framework. Class-based API with EventEmitter state management.
 
 ```bash
 npm install @alaarab/ogrid-js
@@ -70,34 +102,63 @@ You typically do not need to install `@alaarab/ogrid-core` separately. All React
 
 ## Requirements
 
-| Requirement | Version |
+| Framework | Version |
 |---|---|
 | React | 17, 18, or 19 |
+| Angular | 21 |
+| Vue | 3.3+ |
 | TypeScript | 5.x recommended (not required) |
 | Node.js | >= 18 (for development/build tooling) |
 
 ## Verifying the Installation
 
-After installing, confirm everything is working by rendering a minimal grid:
+After installing, confirm everything is working by rendering a minimal grid.
 
+**React:**
 ```tsx
-import { OGrid, type IColumnDef } from '@alaarab/ogrid-react-radix'; // or ogrid-react-fluent, ogrid-react-material
+import { OGrid, type IColumnDef } from '@alaarab/ogrid-react-radix';
 
 type Row = { id: number; name: string };
-
-const columns: IColumnDef<Row>[] = [
-  { columnId: 'name', name: 'Name' },
-];
+const columns: IColumnDef<Row>[] = [{ columnId: 'name', name: 'Name' }];
 
 function App() {
-  return (
-    <OGrid<Row>
-      columns={columns}
-      data={[{ id: 1, name: 'Test' }]}
-      getRowId={(row) => row.id}
-    />
-  );
+  return <OGrid<Row> columns={columns} data={[{ id: 1, name: 'Test' }]} getRowId={(row) => row.id} />;
 }
+```
+
+**Angular:**
+```typescript
+import { Component } from '@angular/core';
+import { OGridComponent, OGridService, type IColumnDef } from '@alaarab/ogrid-angular-material';
+
+@Component({
+  standalone: true,
+  imports: [OGridComponent],
+  template: `<ogrid [gridProps]="gridProps" />`
+})
+export class AppComponent {
+  gridProps = {
+    columns: [{ columnId: 'name', name: 'Name' }] as IColumnDef[],
+    data: [{ id: 1, name: 'Test' }],
+    getRowId: (row: any) => row.id,
+  };
+}
+```
+
+**Vue:**
+```vue
+<script setup lang="ts">
+import { OGrid } from '@alaarab/ogrid-vue-vuetify';
+import type { IColumnDef } from '@alaarab/ogrid-vue';
+
+const columns: IColumnDef[] = [{ columnId: 'name', name: 'Name' }];
+const data = [{ id: 1, name: 'Test' }];
+const getRowId = (row: any) => row.id;
+</script>
+
+<template>
+  <OGrid :gridProps="{ columns, data, getRowId }" />
+</template>
 ```
 
 If the grid renders with a single row showing "Test", your installation is correct.

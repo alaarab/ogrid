@@ -2,36 +2,50 @@
 
 ## Project Overview
 
-OGrid is a lightweight, multi-framework data grid library. A pure-TypeScript core provides types, algorithms, and utilities. Framework-specific packages wrap the core for **React** (with **Fluent UI**, **Material UI**, and **Radix UI** implementations) and **vanilla JS**.
+OGrid is a lightweight, multi-framework data grid library. A pure-TypeScript core provides types, algorithms, and utilities. Framework-specific packages wrap the core for **React** (Fluent UI, Material UI, Radix UI), **Angular** (Angular Material, PrimeNG), **Vue** (Vuetify, PrimeVue), and **vanilla JS**.
 
 - **Author:** Ala Arab
 - **License:** MIT
 - **Node:** >= 18 (developed with Node 22 via nvm)
 - **React:** 17, 18, or 19
+- **Angular:** 21
+- **Vue:** 3.3+
 - **Language:** TypeScript 5.7 (strict mode)
 
 ## Monorepo Structure
 
 ```
 packages/
-  core/             → @alaarab/ogrid-core           — Pure TS types, algorithms, utilities (zero deps)
-  react/            → @alaarab/ogrid-react           — React hooks, headless components, shared test factories
-  react-radix/      → @alaarab/ogrid-react-radix     — Radix UI implementation (default, lightweight)
-  react-fluent/     → @alaarab/ogrid-react-fluent    — Fluent UI implementation
-  react-material/   → @alaarab/ogrid-react-material  — Material UI implementation
-  js/               → @alaarab/ogrid-js              — Vanilla JS data grid (class-based, no framework)
-  docs/             → @alaarab/ogrid-docs             — Docusaurus documentation site (private)
-  examples/         → @alaarab/ogrid-examples         — Vite-powered example apps (private)
+  core/               → @alaarab/ogrid-core             — Pure TS types, algorithms, utilities (zero deps)
+  react/              → @alaarab/ogrid-react             — React hooks, headless components, shared test factories
+  react-radix/        → @alaarab/ogrid-react-radix       — Radix UI implementation (default, lightweight)
+  react-fluent/       → @alaarab/ogrid-react-fluent      — Fluent UI implementation
+  react-material/     → @alaarab/ogrid-react-material    — Material UI implementation
+  angular/            → @alaarab/ogrid-angular           — Angular v21 services with signals, headless components
+  angular-material/   → @alaarab/ogrid-angular-material  — Angular Material v21 implementation
+  angular-primeng/    → @alaarab/ogrid-angular-primeng   — PrimeNG v21 implementation
+  vue/                → @alaarab/ogrid-vue               — Vue 3 composables, headless components
+  vue-vuetify/        → @alaarab/ogrid-vue-vuetify       — Vuetify 3 implementation
+  vue-primevue/       → @alaarab/ogrid-vue-primevue      — PrimeVue 4 implementation
+  js/                 → @alaarab/ogrid-js                — Vanilla JS data grid (class-based, no framework)
+  docs/               → @alaarab/ogrid-docs              — Docusaurus documentation site (private)
+  examples/           → @alaarab/ogrid-examples          — Vite-powered example apps (private)
 ```
 
 **Dependency graph:**
 ```
 @alaarab/ogrid-core (zero deps)
-├── @alaarab/ogrid-react       → core
+├── @alaarab/ogrid-react         → core
 │   ├── @alaarab/ogrid-react-radix
 │   ├── @alaarab/ogrid-react-fluent
 │   └── @alaarab/ogrid-react-material
-└── @alaarab/ogrid-js          → core
+├── @alaarab/ogrid-angular       → core
+│   ├── @alaarab/ogrid-angular-material
+│   └── @alaarab/ogrid-angular-primeng
+├── @alaarab/ogrid-vue           → core
+│   ├── @alaarab/ogrid-vue-vuetify
+│   └── @alaarab/ogrid-vue-primevue
+└── @alaarab/ogrid-js            → core
 ```
 
 Managed with **npm workspaces** and **Turborepo**.
@@ -81,6 +95,50 @@ React hooks, headless components, and shared test factories. Depends on `@alaara
 
 **Headless components:** `OGridLayout`, `StatusBar`, `GridContextMenu`, `SideBar`
 
+### Angular (`packages/angular/src/`) — `@alaarab/ogrid-angular`
+
+Angular v21 services with signals (`signal()`, `computed()`, `effect()`). Standalone components with inline templates. Zone-less by default. Depends on `@alaarab/ogrid-core`.
+
+**Services:**
+- `OGridService` — Signals-based orchestration (equivalent to React `useOGrid`). Pagination, sorting, filtering, column visibility, row selection, sidebar management, server-side data fetching.
+- `DataGridStateService` — Grid interaction state (6 sub-objects: layout, rowSelection, editing, interaction, contextMenu, viewModels).
+
+**Components:** `OGridLayoutComponent`, `StatusBarComponent`, `GridContextMenuComponent`, `SideBarComponent`, `MarchingAntsOverlayComponent`, `EmptyStateComponent`
+
+### Angular UI Packages (`packages/angular-material/`, `packages/angular-primeng/`)
+
+Both expose the same component API and depend on `@alaarab/ogrid-angular`:
+- `OGridComponent` — Top-level data table
+- `DataGridTableComponent` — Lower-level grid
+- `ColumnHeaderFilterComponent` — Column filtering UI
+- `ColumnChooserComponent` — Column visibility dropdown
+- `PaginationControlsComponent` — Pagination UI
+- `InlineCellEditorComponent` — Inline cell editor (PrimeNG only)
+
+All re-export everything from `@alaarab/ogrid-angular` (which re-exports from `@alaarab/ogrid-core`).
+
+### Vue (`packages/vue/src/`) — `@alaarab/ogrid-vue`
+
+Vue 3 Composition API composables using `ref()`, `computed()`, `watch()`. Depends on `@alaarab/ogrid-core`.
+
+**Composables (27):**
+- Orchestration: `useOGrid`, `useDataGridState`
+- Feature: `useActiveCell`, `useCellEditing`, `useCellSelection`, `useClipboard`, `useColumnResize`, `useContextMenu`, `useFillHandle`, `useKeyboardNavigation`, `useRowSelection`, `useUndoRedo`, `useFilterOptions`, `useDebounce`, `useTableLayout`
+- Headless state: `useColumnChooserState`, `useColumnHeaderFilterState`, `useInlineCellEditorState`, `useRichSelectState`, `useSideBarState`, `useTextFilterState`, `useMultiSelectFilterState`, `useDateFilterState`, `usePeopleFilterState`
+
+**Utilities:** `getHeaderFilterConfig`, `getCellRenderDescriptor`, `resolveCellDisplayContent`, `resolveCellStyle`, `buildInlineEditorProps`, `buildPopoverEditorProps`, `getCellInteractionProps`
+
+### Vue UI Packages (`packages/vue-vuetify/`, `packages/vue-primevue/`)
+
+Both expose the same component API and depend on `@alaarab/ogrid-vue`:
+- `OGrid` — Top-level data table
+- `DataGridTable` — Lower-level grid (with InlineCellEditor, StatusBar, GridContextMenu)
+- `ColumnHeaderFilter` — Column filtering UI (with TextFilterPopover, MultiSelectFilterPopover, PeopleFilterPopover)
+- `ColumnChooser` — Column visibility dropdown
+- `PaginationControls` — Pagination UI
+
+All re-export everything from `@alaarab/ogrid-vue` (which re-exports from `@alaarab/ogrid-core`).
+
 ### JS (`packages/js/src/`) — `@alaarab/ogrid-js`
 
 Vanilla JS data grid with no framework dependency. Full feature parity with React. Class-based state with EventEmitter (replaces React hooks). Depends on `@alaarab/ogrid-core`.
@@ -120,6 +178,8 @@ All three expose the same component API and depend on `@alaarab/ogrid-react`:
 
 All re-export everything from `@alaarab/ogrid-react` (which re-exports from `@alaarab/ogrid-core`).
 
+**Feature parity:** All three React UI packages, both Angular UI packages, and both Vue UI packages support the same features and export the same component shapes within their respective framework.
+
 ### Layout Architecture
 
 `OGridLayout` wraps everything in a **single bordered container**:
@@ -155,7 +215,7 @@ All re-export everything from `@alaarab/ogrid-react` (which re-exports from `@al
 
 ## Testing
 
-**954 tests** across 6 packages (Core: 237, JS: 194, React: 247, Radix: 92, Fluent: 92, Material: 92).
+**1012 tests** across 12 packages (Core: 237, JS: 194, React: 247, Radix: 92, Fluent: 92, Material: 92, Angular: 11, Angular Material: 9, Angular PrimeNG: 10, Vue: 8, Vue Vuetify: 10, Vue PrimeVue: 10).
 
 - Jest 29 + React Testing Library 16 + ts-jest, jsdom environment, 10s timeout
 - Core tests: `packages/core/src/*/__tests__/**/*.test.ts(x)`

@@ -14,24 +14,52 @@ Build a sortable, filterable, editable data grid in under 50 lines.
 ## Install
 
 <Tabs groupId="framework">
-  <TabItem value="radix" label="Radix (Lightweight)" default>
+  <TabItem value="radix" label="React Radix" default>
 
 ```bash
 npm install @alaarab/ogrid
 ```
 
   </TabItem>
-  <TabItem value="fluent" label="Fluent UI">
+  <TabItem value="fluent" label="React Fluent">
 
 ```bash
 npm install @alaarab/ogrid-react-fluent @fluentui/react-components
 ```
 
   </TabItem>
-  <TabItem value="material" label="Material UI">
+  <TabItem value="material" label="React Material">
 
 ```bash
 npm install @alaarab/ogrid-react-material @mui/material @emotion/react @emotion/styled
+```
+
+  </TabItem>
+  <TabItem value="angular-material" label="Angular Material">
+
+```bash
+npm install @alaarab/ogrid-angular-material @angular/material @angular/cdk
+```
+
+  </TabItem>
+  <TabItem value="angular-primeng" label="Angular PrimeNG">
+
+```bash
+npm install @alaarab/ogrid-angular-primeng primeng
+```
+
+  </TabItem>
+  <TabItem value="vue-vuetify" label="Vue Vuetify">
+
+```bash
+npm install @alaarab/ogrid-vue-vuetify vuetify
+```
+
+  </TabItem>
+  <TabItem value="vue-primevue" label="Vue PrimeVue">
+
+```bash
+npm install @alaarab/ogrid-vue-primevue primevue
 ```
 
   </TabItem>
@@ -164,6 +192,150 @@ export default function App() {
 :::tip
 If your app already has `ThemeProvider` and `CssBaseline` at the root, render `OGrid` directly. For **Next.js App Router**, add `"use client"` since the grid uses hooks and DOM APIs.
 :::
+
+  </TabItem>
+  <TabItem value="angular-material" label="Angular Material">
+
+```typescript
+import { Component } from '@angular/core';
+import { OGridComponent, type IColumnDef } from '@alaarab/ogrid-angular-material';
+
+interface Employee {
+  id: number;
+  name: string;
+  department: string;
+  salary: number;
+}
+
+@Component({
+  standalone: true,
+  imports: [OGridComponent],
+  template: `<ogrid [gridProps]="gridProps" />`
+})
+export class EmployeeGridComponent {
+  private readonly data: Employee[] = [
+    { id: 1, name: 'Alice Johnson', department: 'Engineering', salary: 95000 },
+    { id: 2, name: 'Bob Smith', department: 'Marketing', salary: 72000 },
+    { id: 3, name: 'Carol Williams', department: 'Engineering', salary: 110000 },
+    { id: 4, name: 'David Brown', department: 'Sales', salary: 68000 },
+    { id: 5, name: 'Eva Martinez', department: 'Marketing', salary: 78000 },
+  ];
+
+  private readonly columns: IColumnDef<Employee>[] = [
+    { columnId: 'name', name: 'Name', sortable: true },
+    {
+      columnId: 'department', name: 'Department', sortable: true,
+      filterable: { type: 'multiSelect', options: ['Engineering', 'Marketing', 'Sales'] },
+    },
+    {
+      columnId: 'salary', name: 'Salary', type: 'numeric', sortable: true, editable: true,
+      valueFormatter: (value) =>
+        new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(value as number),
+    },
+  ];
+
+  gridProps = {
+    columns: this.columns,
+    data: this.data,
+    getRowId: (row: Employee) => row.id,
+    defaultPageSize: 10,
+    defaultSortBy: 'name',
+    statusBar: true,
+  };
+}
+```
+
+:::tip
+All Angular components are standalone — no NgModule required. Angular v21 signals power the reactive state management.
+:::
+
+  </TabItem>
+  <TabItem value="angular-primeng" label="Angular PrimeNG">
+
+```typescript
+import { Component } from '@angular/core';
+import { OGridComponent, type IColumnDef } from '@alaarab/ogrid-angular-primeng';
+
+// ... same Employee type and data as above ...
+
+@Component({
+  standalone: true,
+  imports: [OGridComponent],
+  template: `<ogrid [gridProps]="gridProps" />`
+})
+export class EmployeeGridComponent {
+  // ... same as Angular Material example ...
+}
+```
+
+  </TabItem>
+  <TabItem value="vue-vuetify" label="Vue Vuetify">
+
+```vue
+<script setup lang="ts">
+import { OGrid, type IColumnDef } from '@alaarab/ogrid-vue-vuetify';
+
+interface Employee {
+  id: number;
+  name: string;
+  department: string;
+  salary: number;
+}
+
+const data: Employee[] = [
+  { id: 1, name: 'Alice Johnson', department: 'Engineering', salary: 95000 },
+  { id: 2, name: 'Bob Smith', department: 'Marketing', salary: 72000 },
+  { id: 3, name: 'Carol Williams', department: 'Engineering', salary: 110000 },
+  { id: 4, name: 'David Brown', department: 'Sales', salary: 68000 },
+  { id: 5, name: 'Eva Martinez', department: 'Marketing', salary: 78000 },
+];
+
+const columns: IColumnDef<Employee>[] = [
+  { columnId: 'name', name: 'Name', sortable: true },
+  {
+    columnId: 'department', name: 'Department', sortable: true,
+    filterable: { type: 'multiSelect', options: ['Engineering', 'Marketing', 'Sales'] },
+  },
+  {
+    columnId: 'salary', name: 'Salary', type: 'numeric', sortable: true, editable: true,
+    valueFormatter: (value) =>
+      new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(value as number),
+  },
+];
+
+const gridProps = {
+  columns,
+  data,
+  getRowId: (row: Employee) => row.id,
+  defaultPageSize: 10,
+  defaultSortBy: 'name',
+  statusBar: true,
+};
+</script>
+
+<template>
+  <OGrid :gridProps="gridProps" />
+</template>
+```
+
+:::tip
+OGrid Vue components use the Composition API. Wrap your app in Vuetify's `<v-app>` for proper theming.
+:::
+
+  </TabItem>
+  <TabItem value="vue-primevue" label="Vue PrimeVue">
+
+```vue
+<script setup lang="ts">
+import { OGrid, type IColumnDef } from '@alaarab/ogrid-vue-primevue';
+
+// ... same Employee type, data, columns, and gridProps as Vue Vuetify ...
+</script>
+
+<template>
+  <OGrid :gridProps="gridProps" />
+</template>
+```
 
   </TabItem>
   <TabItem value="js" label="Vanilla JS">
