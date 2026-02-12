@@ -4,6 +4,7 @@ title: Framework Showcase
 description: See OGrid in action with React, Angular, Vue, and Vanilla JS — 8 UI implementations, one API
 ---
 
+import ShowcaseRadixDemo from '@site/src/components/demos/ShowcaseRadixDemo';
 import ShowcaseFluentDemo from '@site/src/components/demos/ShowcaseFluentDemo';
 import ShowcaseMaterialDemo from '@site/src/components/demos/ShowcaseMaterialDemo';
 import VanillaJSDemo from '@site/src/components/demos/VanillaJSDemo';
@@ -15,30 +16,25 @@ import { showcase } from '@site/src/stackblitz/featureDemos';
 
 OGrid renders with your design system's native components. Same API, same features — different look and feel. Every grid below is **fully interactive**: sort, filter, edit, select cells, copy/paste, and undo/redo.
 
+---
+
 ## React
 
-### Radix UI (Default)
+Three design-system implementations, all sharing the same hooks and headless logic from `@alaarab/ogrid-react`.
 
-The lightest option. Radix primitives are bundled — no peer dependencies beyond React. This is the same grid you see throughout the docs.
+### Radix UI <small>(Default)</small>
+
+The lightest option — Radix primitives are bundled with zero peer dependencies beyond React.
 
 ```bash
 npm install @alaarab/ogrid-react-radix
 ```
 
-<div style={{ display: 'flex', gap: '8px', margin: '8px 0 16px' }}>
-  <OpenInStackBlitz project={showcase.React} label="Open in StackBlitz" />
-</div>
-
-<BrowserOnly>
-  {() => {
-    const RadixShowcase = require('@site/src/components/demos/ShowcaseRadixDemo').default;
-    return <RadixShowcase />;
-  }}
-</BrowserOnly>
+<ShowcaseRadixDemo />
 
 ### Fluent UI
 
-Microsoft's design system. Buttons, dropdowns, and popovers all use Fluent UI v9 components. Best for **Microsoft 365 and SharePoint** projects.
+Microsoft's Fluent UI v9 components. Best for **Microsoft 365 and SharePoint** projects.
 
 ```bash
 npm install @alaarab/ogrid-react-fluent @fluentui/react-components
@@ -48,7 +44,7 @@ npm install @alaarab/ogrid-react-fluent @fluentui/react-components
 
 ### Material UI
 
-Google's Material Design via MUI v7. Inputs, menus, and pagination use MUI components. Best for apps already on **Material Design**.
+Google's Material Design via MUI v7. Best for apps already on **Material Design**.
 
 ```bash
 npm install @alaarab/ogrid-react-material @mui/material @emotion/react @emotion/styled
@@ -56,19 +52,19 @@ npm install @alaarab/ogrid-react-material @mui/material @emotion/react @emotion/
 
 <ShowcaseMaterialDemo />
 
+---
+
 ## Angular
+
+Signals-based reactivity with standalone components. Zone-less by default, no NgModule boilerplate. Both packages share the same services from `@alaarab/ogrid-angular`.
 
 ### Angular Material
 
-Angular Material v21 with signals-based reactivity. Zone-less by default, standalone components, no NgModule boilerplate.
+Angular Material v21 with full OGrid feature parity.
 
 ```bash
 npm install @alaarab/ogrid-angular-material @angular/material @angular/cdk
 ```
-
-<div style={{ display: 'flex', gap: '8px', margin: '8px 0 16px' }}>
-  <OpenInStackBlitz project={showcase.Angular} label="Open in StackBlitz" />
-</div>
 
 ```typescript
 import { Component } from '@angular/core';
@@ -77,12 +73,16 @@ import { OGridComponent } from '@alaarab/ogrid-angular-material';
 @Component({
   standalone: true,
   imports: [OGridComponent],
-  template: `<ogrid [gridProps]="gridProps" />`
+  template: `<ogrid [props]="gridProps" />`
 })
 export class GridComponent {
   gridProps = { columns, data, getRowId: (row) => row.id, defaultPageSize: 10 };
 }
 ```
+
+<div style={{ marginTop: '0.75rem' }}>
+  <OpenInStackBlitz project={showcase.Angular} label="Open in StackBlitz" />
+</div>
 
 ### PrimeNG
 
@@ -97,19 +97,19 @@ import { OGridComponent } from '@alaarab/ogrid-angular-primeng';
 // Same API — just change the import
 ```
 
+---
+
 ## Vue
+
+Composition API composables using `ref()` and `computed()`. Both packages share the same composables from `@alaarab/ogrid-vue`.
 
 ### Vuetify
 
-Vuetify 3 components with Vue Composition API composables. Full reactivity via `ref()` and `computed()`.
+Vuetify 3 components with full OGrid feature parity.
 
 ```bash
 npm install @alaarab/ogrid-vue-vuetify vuetify
 ```
-
-<div style={{ display: 'flex', gap: '8px', margin: '8px 0 16px' }}>
-  <OpenInStackBlitz project={showcase.Vue} label="Open in StackBlitz" />
-</div>
 
 ```vue
 <script setup lang="ts">
@@ -124,6 +124,10 @@ const gridProps = { columns, data, getRowId: (row) => row.id, defaultPageSize: 1
   </v-app>
 </template>
 ```
+
+<div style={{ marginTop: '0.75rem' }}>
+  <OpenInStackBlitz project={showcase.Vue} label="Open in StackBlitz" />
+</div>
 
 ### PrimeVue
 
@@ -140,42 +144,39 @@ import { OGrid } from '@alaarab/ogrid-vue-primevue';
 </script>
 ```
 
-## Vanilla JS
+---
 
-No framework, no virtual DOM. A class-based imperative API that renders directly to the DOM. Ships with a default CSS theme supporting light and dark mode.
+## Vanilla JS / TypeScript
+
+No framework, no virtual DOM. A class-based imperative API that renders directly to the DOM with a built-in CSS theme supporting light and dark mode.
 
 ```bash
 npm install @alaarab/ogrid-js
 ```
 
-<div style={{ display: 'flex', gap: '8px', margin: '8px 0 16px' }}>
-  <OpenInStackBlitz project={showcase.JS} label="Open in StackBlitz" />
-</div>
-
 <VanillaJSDemo />
 
-## Comparison
+---
 
-| | React (Radix) | React (Fluent) | React (Material) | Angular (Material) | Angular (PrimeNG) | Vue (Vuetify) | Vue (PrimeVue) | Vanilla JS |
-|---|---|---|---|---|---|---|---|---|
-| **Package** | `ogrid-react-radix` | `ogrid-react-fluent` | `ogrid-react-material` | `ogrid-angular-material` | `ogrid-angular-primeng` | `ogrid-vue-vuetify` | `ogrid-vue-primevue` | `ogrid-js` |
-| **Design system** | Radix Primitives | Fluent v9 | MUI v7 | Angular Material v21 | PrimeNG v21 | Vuetify 3 | PrimeVue 4 | CSS custom props |
-| **Peer deps** | None (bundled) | `@fluentui/*` | `@mui/*`, Emotion | `@angular/material` | `primeng` | `vuetify` | `primevue` | None |
-| **Framework** | React 17–19 | React 17–19 | React 17–19 | Angular 21 | Angular 21 | Vue 3.3+ | Vue 3.3+ | Any / None |
-| **Reactivity** | Hooks | Hooks | Hooks | Signals | Signals | Composition API | Composition API | EventEmitter |
-| **Dark mode** | CSS vars | Fluent tokens | MUI palette | Angular theming | PrimeNG themes | Vuetify theme | PrimeVue theme | `--ogrid-*` vars |
-| **Bundle impact** | Smallest | Medium | Largest | Medium | Medium | Medium | Medium | Smallest |
+## At a Glance
 
-All packages share the same **headless core** (`@alaarab/ogrid-core`) and pass the same **1012 tests**. Switching frameworks later is a matter of changing imports and wrapping in the appropriate provider.
+| Framework | Design Systems | Reactivity |
+|-----------|---------------|------------|
+| **React** 17–19 | Radix *(default, bundled)* · Fluent UI v9 · MUI v7 | Hooks |
+| **Angular** 21 | Angular Material · PrimeNG | Signals |
+| **Vue** 3.3+ | Vuetify 3 · PrimeVue 4 | Composition API |
+| **Vanilla JS/TS** | Built-in CSS theme *(zero deps)* | EventEmitter |
+
+All 8 packages share the same **headless core** (`@alaarab/ogrid-core`) and pass the same **1012 tests**. Switching design systems is a matter of changing imports.
 
 ## Choosing a Package
 
-- **Start new with React?** Use **Radix** — lightest weight, zero peer deps, full feature parity.
-- **Microsoft ecosystem?** Use **Fluent** — native look in Teams, SharePoint, Outlook.
-- **Already using MUI?** Use **Material** — matches your existing theme and components.
-- **Angular project?** Use **Angular Material** or **PrimeNG** — signals-based, zone-less, standalone components.
-- **Vue project?** Use **Vuetify** or **PrimeVue** — Composition API composables, full reactivity.
-- **No framework?** Use **Vanilla JS** — works anywhere, class-based API, CSS-only theming.
+- **Starting fresh with React?** → **Radix** — lightest weight, zero peer deps, full feature parity.
+- **Microsoft ecosystem?** → **Fluent** — native look in Teams, SharePoint, Outlook.
+- **Already using MUI?** → **Material** — matches your existing theme and components.
+- **Angular project?** → **Angular Material** or **PrimeNG** — signals-based, zone-less, standalone components.
+- **Vue project?** → **Vuetify** or **PrimeVue** — Composition API composables, full reactivity.
+- **No framework?** → **Vanilla JS** — works anywhere, class-based API, CSS-only theming.
 
 ## Related
 

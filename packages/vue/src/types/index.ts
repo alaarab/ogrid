@@ -37,6 +37,7 @@ export type {
   ISelectionRange,
   SideBarPanelId,
   ISideBarDef,
+  IVirtualScrollConfig,
 } from './dataGridTypes';
 
 export { toUserLike, isInSelectionRange, normalizeSelectionRange } from './dataGridTypes';

@@ -1,6 +1,6 @@
 import { DEMO_DATA_TS } from './demoData';
 
-const OGRID_VERSION = '2.0.2';
+const OGRID_VERSION = '2.0.3';
 
 interface ProjectDef {
   title: string;
@@ -156,6 +156,7 @@ export function createAngularProject(code: string, title = 'OGrid Angular Demo')
       '@angular/core': '^21.0.0',
       '@angular/common': '^21.0.0',
       '@angular/compiler': '^21.0.0',
+      '@angular/animations': '^21.0.0',
       '@angular/platform-browser': '^21.0.0',
       '@angular/platform-browser-dynamic': '^21.0.0',
       '@angular/material': '^21.0.0',
@@ -236,6 +237,10 @@ export function createAngularProject(code: string, title = 'OGrid Angular Demo')
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>${title}</title>
+    <style>
+      html, body { margin: 0; padding: 0; height: 100%; font-family: sans-serif; }
+      app-root { display: block; height: 100vh; padding: 24px; box-sizing: border-box; }
+    </style>
   </head>
   <body>
     <app-root></app-root>
@@ -243,9 +248,12 @@ export function createAngularProject(code: string, title = 'OGrid Angular Demo')
 </html>
 `,
       'src/main.ts': `import { bootstrapApplication } from '@angular/platform-browser';
+import { provideAnimationsAsync } from '@angular/platform-browser/animations/async';
 import { AppComponent } from './app/app.component';
 
-bootstrapApplication(AppComponent);
+bootstrapApplication(AppComponent, {
+  providers: [provideAnimationsAsync()]
+});
 `,
       'src/app/data.ts': DEMO_DATA_TS,
       'src/app/app.component.ts': code,

@@ -42,7 +42,7 @@ import { people, getRowId, type Person } from './data';
 @Component({
   standalone: true,
   imports: [OGridComponent],
-  template: \`<ogrid [gridProps]="gridProps" />\`,
+  template: \`<ogrid [props]="gridProps" />\`,
 })
 export class AppComponent {
   gridProps = {
@@ -138,7 +138,7 @@ import { people, getRowId, type Person } from './data';
 @Component({
   standalone: true,
   imports: [OGridComponent],
-  template: \`<ogrid [gridProps]="gridProps" />\`,
+  template: \`<ogrid [props]="gridProps" />\`,
 })
 export class AppComponent {
   gridProps = {
@@ -247,7 +247,7 @@ import { people, getRowId, type Person } from './data';
 @Component({
   standalone: true,
   imports: [OGridComponent],
-  template: \`<ogrid [gridProps]="gridProps" />\`,
+  template: \`<ogrid [props]="gridProps" />\`,
 })
 export class AppComponent {
   gridProps = {
@@ -372,7 +372,7 @@ const STATUSES = ['Active', 'Draft', 'Archived'];
 @Component({
   standalone: true,
   imports: [OGridComponent],
-  template: \`<ogrid [gridProps]="gridProps" />\`,
+  template: \`<ogrid [props]="gridProps" />\`,
 })
 export class AppComponent {
   gridProps = {
@@ -487,7 +487,7 @@ import { people, getRowId, type Person } from './data';
 @Component({
   standalone: true,
   imports: [OGridComponent],
-  template: \`<ogrid [gridProps]="gridProps" />\`,
+  template: \`<ogrid [props]="gridProps" />\`,
 })
 export class AppComponent {
   gridProps = {
@@ -592,7 +592,7 @@ import { people, getRowId, type Person } from './data';
 @Component({
   standalone: true,
   imports: [OGridComponent],
-  template: \`<ogrid [gridProps]="gridProps" />\`,
+  template: \`<ogrid [props]="gridProps" />\`,
 })
 export class AppComponent {
   gridProps = {
@@ -688,7 +688,7 @@ import { people, getRowId, type Person } from './data';
 @Component({
   standalone: true,
   imports: [OGridComponent],
-  template: \`<ogrid [gridProps]="gridProps" />\`,
+  template: \`<ogrid [props]="gridProps" />\`,
 })
 export class AppComponent {
   gridProps = {
@@ -762,6 +762,114 @@ const grid = new OGrid(document.getElementById('grid')!, {
   ),
 };
 
+// ── Column Reordering ──
+
+export const columnReordering: FeatureDemoSet = {
+  React: createReactProject(
+    `import { OGrid } from '@alaarab/ogrid-react-radix';
+import { people, getRowId, type Person } from './data';
+
+const columns = [
+  { columnId: 'name', name: 'Name' },
+  { columnId: 'email', name: 'Email' },
+  { columnId: 'department', name: 'Department' },
+  { columnId: 'salary', name: 'Salary', type: 'numeric' as const,
+    valueFormatter: (v) => \`$\${Number(v).toLocaleString()}\` },
+  { columnId: 'status', name: 'Status' },
+];
+
+export default function App() {
+  return (
+    <OGrid<Person>
+      columns={columns} data={people} getRowId={getRowId}
+      columnReorder defaultPageSize={10}
+    />
+  );
+}
+`,
+    'OGrid Column Reordering — React',
+  ),
+  Angular: createAngularProject(
+    `import { Component } from '@angular/core';
+import { OGridComponent, type IColumnDef } from '@alaarab/ogrid-angular-material';
+import { people, getRowId, type Person } from './data';
+
+@Component({
+  standalone: true,
+  imports: [OGridComponent],
+  template: \`<ogrid [props]="gridProps" />\`,
+})
+export class AppComponent {
+  gridProps = {
+    columns: [
+      { columnId: 'name', name: 'Name' },
+      { columnId: 'email', name: 'Email' },
+      { columnId: 'department', name: 'Department' },
+      { columnId: 'salary', name: 'Salary', type: 'numeric',
+        valueFormatter: (v: unknown) => \`$\${Number(v).toLocaleString()}\` },
+      { columnId: 'status', name: 'Status' },
+    ] as IColumnDef<Person>[],
+    data: people,
+    getRowId,
+    columnReorder: true,
+    defaultPageSize: 10,
+  };
+}
+`,
+    'OGrid Column Reordering — Angular',
+  ),
+  Vue: createVueProject(
+    `<script setup lang="ts">
+import { OGrid, type IColumnDef } from '@alaarab/ogrid-vue-vuetify';
+import { people, getRowId, type Person } from './data';
+
+const columns: IColumnDef<Person>[] = [
+  { columnId: 'name', name: 'Name' },
+  { columnId: 'email', name: 'Email' },
+  { columnId: 'department', name: 'Department' },
+  { columnId: 'salary', name: 'Salary', type: 'numeric',
+    valueFormatter: (v) => \`$\${Number(v).toLocaleString()}\` },
+  { columnId: 'status', name: 'Status' },
+];
+
+const gridProps = {
+  columns, data: people, getRowId,
+  columnReorder: true, defaultPageSize: 10,
+};
+</script>
+
+<template>
+  <v-app>
+    <OGrid :gridProps="gridProps" />
+  </v-app>
+</template>
+`,
+    'OGrid Column Reordering — Vue',
+  ),
+  JS: createJSProject(
+    `import { OGrid } from '@alaarab/ogrid-js';
+import '@alaarab/ogrid-js/styles';
+import { people, getRowId } from './data';
+
+const grid = new OGrid(document.getElementById('grid')!, {
+  columns: [
+    { columnId: 'name', name: 'Name' },
+    { columnId: 'email', name: 'Email' },
+    { columnId: 'department', name: 'Department' },
+    { columnId: 'salary', name: 'Salary', type: 'numeric',
+      valueFormatter: (v) => \`$\${Number(v).toLocaleString()}\` },
+    { columnId: 'status', name: 'Status' },
+  ],
+  data: people,
+  getRowId,
+  columnReorder: true,
+  pageSize: 10,
+});
+`,
+    'OGrid Column Reordering — JS',
+  ),
+};
+
 // ── Column Groups ──
 
 export const columnGroups: FeatureDemoSet = {
@@ -803,7 +911,7 @@ import { people, getRowId } from './data';
 @Component({
   standalone: true,
   imports: [OGridComponent],
-  template: \`<ogrid [gridProps]="gridProps" />\`,
+  template: \`<ogrid [props]="gridProps" />\`,
 })
 export class AppComponent {
   gridProps = {
@@ -937,7 +1045,7 @@ import { people, getRowId, type Person } from './data';
 @Component({
   standalone: true,
   imports: [OGridComponent],
-  template: \`<ogrid [gridProps]="gridProps" />\`,
+  template: \`<ogrid [props]="gridProps" />\`,
 })
 export class AppComponent {
   gridProps = {
@@ -1035,7 +1143,7 @@ import { people, getRowId, type Person } from './data';
 @Component({
   standalone: true,
   imports: [OGridComponent],
-  template: \`<ogrid [gridProps]="gridProps" />\`,
+  template: \`<ogrid [props]="gridProps" />\`,
 })
 export class AppComponent {
   gridProps = {
@@ -1142,7 +1250,7 @@ import { people, getRowId, type Person } from './data';
   imports: [OGridComponent],
   template: \`
     <button (click)="logState()">Log State</button>
-    <ogrid [gridProps]="gridProps" />
+    <ogrid [props]="gridProps" />
   \`,
 })
 export class AppComponent {
@@ -1254,7 +1362,7 @@ import { people, getRowId, type Person } from './data';
 @Component({
   standalone: true,
   imports: [OGridComponent],
-  template: \`<ogrid [gridProps]="gridProps" />\`,
+  template: \`<ogrid [props]="gridProps" />\`,
 })
 export class AppComponent {
   gridProps = {
@@ -1363,7 +1471,7 @@ import { people, getRowId, type Person } from './data';
 @Component({
   standalone: true,
   imports: [OGridComponent],
-  template: \`<ogrid [gridProps]="gridProps" />\`,
+  template: \`<ogrid [props]="gridProps" />\`,
 })
 export class AppComponent {
   gridProps = {
@@ -1469,7 +1577,7 @@ import { people, getRowId, type Person } from './data';
 @Component({
   standalone: true,
   imports: [OGridComponent],
-  template: \`<ogrid [gridProps]="gridProps" />\`,
+  template: \`<ogrid [props]="gridProps" />\`,
 })
 export class AppComponent {
   gridProps = {
@@ -1587,7 +1695,7 @@ import { people, getRowId, type Person } from './data';
   imports: [OGridComponent],
   template: \`
     <button (click)="exportCsv()">Export CSV</button>
-    <ogrid [gridProps]="gridProps" />
+    <ogrid [props]="gridProps" />
   \`,
 })
 export class AppComponent {
@@ -1723,7 +1831,7 @@ const dataSource: IDataSource<Person> = {
 @Component({
   standalone: true,
   imports: [OGridComponent],
-  template: \`<ogrid [gridProps]="gridProps" />\`,
+  template: \`<ogrid [props]="gridProps" />\`,
 })
 export class AppComponent {
   gridProps = {
@@ -1844,7 +1952,7 @@ import { people, getRowId, type Person } from './data';
 @Component({
   standalone: true,
   imports: [OGridComponent],
-  template: \`<ogrid [gridProps]="gridProps" />\`,
+  template: \`<ogrid [props]="gridProps" />\`,
 })
 export class AppComponent {
   gridProps = {
@@ -1944,7 +2052,7 @@ import { people, getRowId, type Person } from './data';
 @Component({
   standalone: true,
   imports: [OGridComponent],
-  template: \`<ogrid [gridProps]="gridProps" />\`,
+  template: \`<ogrid [props]="gridProps" />\`,
 })
 export class AppComponent {
   gridProps = {
@@ -2065,7 +2173,7 @@ const DEPTS = ['Engineering', 'Marketing', 'Sales', 'Finance', 'Operations'];
 @Component({
   standalone: true,
   imports: [OGridComponent],
-  template: \`<ogrid [gridProps]="gridProps" />\`,
+  template: \`<ogrid [props]="gridProps" />\`,
 })
 export class AppComponent {
   gridProps = {
@@ -2165,5 +2273,124 @@ const grid = new OGrid(document.getElementById('grid')!, {
 });
 `,
     'OGrid Full Demo — JS',
+  ),
+};
+
+// ── Virtual Scrolling ──
+
+const VIRTUAL_SCROLL_DATA = `
+const DEPTS = ['Engineering', 'Marketing', 'Sales', 'Finance', 'Operations'];
+const STATUSES = ['Active', 'Draft', 'Archived'];
+
+const data = Array.from({ length: 10_000 }, (_, i) => ({
+  id: i + 1,
+  name: \`Person \${i + 1}\`,
+  department: DEPTS[i % DEPTS.length],
+  salary: 40000 + (i % 80) * 1000,
+  status: STATUSES[i % STATUSES.length],
+}));
+
+const getRowId = (r) => r.id;
+`;
+
+export const virtualScrolling: FeatureDemoSet = {
+  React: createReactProject(
+    `import { OGrid } from '@alaarab/ogrid-react-radix';
+${VIRTUAL_SCROLL_DATA}
+const columns = [
+  { columnId: 'id', name: 'ID', type: 'numeric' as const },
+  { columnId: 'name', name: 'Name' },
+  { columnId: 'department', name: 'Department' },
+  { columnId: 'salary', name: 'Salary', type: 'numeric' as const,
+    valueFormatter: (v) => \`$\${Number(v).toLocaleString()}\` },
+  { columnId: 'status', name: 'Status' },
+];
+
+export default function App() {
+  return (
+    <OGrid
+      columns={columns} data={data} getRowId={getRowId}
+      virtualScroll={{ rowHeight: 36 }} statusBar
+    />
+  );
+}
+`,
+    'OGrid Virtual Scrolling — React',
+  ),
+  Angular: createAngularProject(
+    `import { Component } from '@angular/core';
+import { OGridComponent, type IColumnDef } from '@alaarab/ogrid-angular-material';
+${VIRTUAL_SCROLL_DATA}
+@Component({
+  standalone: true,
+  imports: [OGridComponent],
+  template: \`<ogrid [props]="gridProps" />\`,
+})
+export class AppComponent {
+  gridProps = {
+    columns: [
+      { columnId: 'id', name: 'ID', type: 'numeric' },
+      { columnId: 'name', name: 'Name' },
+      { columnId: 'department', name: 'Department' },
+      { columnId: 'salary', name: 'Salary', type: 'numeric',
+        valueFormatter: (v: unknown) => \`$\${Number(v).toLocaleString()}\` },
+      { columnId: 'status', name: 'Status' },
+    ] as IColumnDef<any>[],
+    data,
+    getRowId,
+    virtualScroll: { rowHeight: 36 },
+    statusBar: true,
+  };
+}
+`,
+    'OGrid Virtual Scrolling — Angular',
+  ),
+  Vue: createVueProject(
+    `<script setup lang="ts">
+import { OGrid, type IColumnDef } from '@alaarab/ogrid-vue-vuetify';
+${VIRTUAL_SCROLL_DATA}
+const columns: IColumnDef<any>[] = [
+  { columnId: 'id', name: 'ID', type: 'numeric' },
+  { columnId: 'name', name: 'Name' },
+  { columnId: 'department', name: 'Department' },
+  { columnId: 'salary', name: 'Salary', type: 'numeric',
+    valueFormatter: (v) => \`$\${Number(v).toLocaleString()}\` },
+  { columnId: 'status', name: 'Status' },
+];
+
+const gridProps = {
+  columns, data, getRowId,
+  virtualScroll: { rowHeight: 36 }, statusBar: true,
+};
+</script>
+
+<template>
+  <v-app>
+    <OGrid :gridProps="gridProps" />
+  </v-app>
+</template>
+`,
+    'OGrid Virtual Scrolling — Vue',
+  ),
+  JS: createJSProject(
+    `import { OGrid } from '@alaarab/ogrid-js';
+import '@alaarab/ogrid-js/styles';
+${VIRTUAL_SCROLL_DATA}
+const grid = new OGrid(document.getElementById('grid')!, {
+  columns: [
+    { columnId: 'id', name: 'ID', type: 'numeric' },
+    { columnId: 'name', name: 'Name' },
+    { columnId: 'department', name: 'Department' },
+    { columnId: 'salary', name: 'Salary', type: 'numeric',
+      valueFormatter: (v) => \`$\${Number(v).toLocaleString()}\` },
+    { columnId: 'status', name: 'Status' },
+  ],
+  data,
+  getRowId,
+  virtualScroll: { rowHeight: 36 },
+  statusBar: true,
+});
+`,
+    'OGrid Virtual Scrolling — JS',
   ),
 };

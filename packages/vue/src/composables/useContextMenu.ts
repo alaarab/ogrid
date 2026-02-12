@@ -1,4 +1,4 @@
-import { ref, type Ref } from 'vue';
+import { shallowRef, type ShallowRef } from 'vue';
 
 export interface ContextMenuPosition {
   x: number;
@@ -6,7 +6,7 @@ export interface ContextMenuPosition {
 }
 
 export interface UseContextMenuResult {
-  contextMenuPosition: Ref<ContextMenuPosition | null>;
+  contextMenuPosition: ShallowRef<ContextMenuPosition | null>;
   setContextMenuPosition: (pos: ContextMenuPosition | null) => void;
   handleCellContextMenu: (e: { clientX: number; clientY: number; preventDefault?: () => void }) => void;
   closeContextMenu: () => void;
@@ -16,7 +16,7 @@ export interface UseContextMenuResult {
  * Manages context menu position state for right-click menus.
  */
 export function useContextMenu(): UseContextMenuResult {
-  const contextMenuPosition = ref<ContextMenuPosition | null>(null);
+  const contextMenuPosition = shallowRef<ContextMenuPosition | null>(null);
 
   const setContextMenuPosition = (pos: ContextMenuPosition | null) => {
     contextMenuPosition.value = pos;

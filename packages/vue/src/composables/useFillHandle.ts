@@ -1,23 +1,25 @@
-import { ref, watch, onUnmounted, type Ref, type ShallowRef } from 'vue';
+import { shallowRef, watch, onUnmounted, type Ref, type ShallowRef } from 'vue';
 import { normalizeSelectionRange, getCellValue, parseValue } from '@alaarab/ogrid-core';
 import type { ISelectionRange, IActiveCell, IColumnDef, ICellValueChangedEvent } from '../types';
+import type { IVisibleRange } from '@alaarab/ogrid-core';
 
 export interface UseFillHandleParams<T> {
   items: Ref<T[]>;
   visibleCols: Ref<IColumnDef<T>[]>;
   editable: Ref<boolean | undefined>;
   onCellValueChanged: Ref<((event: ICellValueChangedEvent<T>) => void) | undefined>;
-  selectionRange: Ref<ISelectionRange | null>;
+  selectionRange: Ref<ISelectionRange | null> | ShallowRef<ISelectionRange | null>;
   setSelectionRange: (range: ISelectionRange | null) => void;
   setActiveCell: (cell: IActiveCell | null) => void;
   colOffset: number;
   wrapperRef: Ref<HTMLElement | null> | ShallowRef<HTMLElement | null>;
   beginBatch?: () => void;
   endBatch?: () => void;
+  visibleRange?: Ref<IVisibleRange | null>;
 }
 
 export interface UseFillHandleResult {
-  fillDrag: Ref<{ startRow: number; startCol: number } | null>;
+  fillDrag: ShallowRef<{ startRow: number; startCol: number } | null>;
   setFillDrag: (value: { startRow: number; startCol: number } | null) => void;
   handleFillHandleMouseDown: (e: MouseEvent) => void;
 }
@@ -40,9 +42,10 @@ export function useFillHandle<T>(params: UseFillHandleParams<T>): UseFillHandleR
     wrapperRef,
     beginBatch,
     endBatch,
+    visibleRange,
   } = params;
 
-  const fillDrag = ref<{ startRow: number; startCol: number } | null>(null);
+  const fillDrag = shallowRef<{ startRow: number; startCol: number } | null>(null);
   let fillDragEnd = { endRow: 0, endCol: 0 };
   let rafId = 0;
   let liveFillRange: ISelectionRange | null = null;
@@ -69,8 +72,12 @@ export function useFillHandle<T>(params: UseFillHandleParams<T>): UseFillHandleR
   };
 
   watch(fillDrag, (drag) => {
-    cleanup();
-    if (!drag || editable.value === false || !onCellValueChanged.value || !wrapperRef.value) return;
+    // Guard early before setting up any state
+    if (!drag || editable.value === false || !onCellValueChanged.value || !wrapperRef.value) {
+      // Still cleanup if transitioning from active to inactive
+      cleanup();
+      return;
+    }
 
     fillDragEnd = { endRow: drag.startRow, endCol: drag.startCol };
     liveFillRange = null;
@@ -164,6 +171,13 @@ export function useFillHandle<T>(params: UseFillHandleParams<T>): UseFillHandleR
         endCol: end.endCol,
       });
 
+      // Clamp fill range to visible + overscan when virtual scrolling is active
+      const vr = visibleRange?.value;
+      if (vr) {
+        norm.startRow = Math.max(norm.startRow, vr.startIndex);
+        norm.endRow = Math.min(norm.endRow, vr.endIndex);
+      }
+
       setSelectionRange(norm);
       setActiveCell({ rowIndex: end.endRow, columnIndex: end.endCol + colOffset });
 
@@ -200,6 +214,11 @@ export function useFillHandle<T>(params: UseFillHandleParams<T>): UseFillHandleR
 
     window.addEventListener('mousemove', moveListener, true);
     window.addEventListener('mouseup', upListener, true);
+
+    // Return cleanup function - Vue will call this BEFORE next watch run
+    return () => {
+      cleanup();
+    };
   });
 
   onUnmounted(() => cleanup());

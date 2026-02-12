@@ -7,6 +7,7 @@ import type {
   IRowSelectionChangeEvent,
   IOGridApi,
   ISideBarDef,
+  IVirtualScrollConfig,
 } from '@alaarab/ogrid-core';
 
 // Re-export core types
@@ -28,6 +29,7 @@ export type {
   ISelectionRange,
   SideBarPanelId,
   ISideBarDef,
+  IVirtualScrollConfig,
   IOGridApi,
 } from '@alaarab/ogrid-core';
 
@@ -35,6 +37,12 @@ export type {
 export interface IJsOGridApi<T> extends IOGridApi<T> {
   /** Export displayed rows to CSV and trigger a download. */
   exportToCsv: (filename?: string) => void;
+  /** Scroll to a specific row by index (virtual scrolling). */
+  scrollToRow: (index: number, options?: { align?: 'start' | 'center' | 'end' }) => void;
+  /** Get the current column display order (array of column ids). */
+  getColumnOrder: () => string[];
+  /** Set the column display order. */
+  setColumnOrder: (order: string[]) => void;
 }
 
 /** Options for the vanilla JS OGrid constructor. */
@@ -91,6 +99,9 @@ export interface OGridOptions<T> {
 
   /** Callback fired when first data is rendered. */
   onFirstDataRendered?: () => void;
+
+  /** Virtual scrolling configuration. */
+  virtualScroll?: IVirtualScrollConfig;
 }
 
 /** Events emitted by the OGrid instance. */

@@ -738,7 +738,7 @@ export const SpreadsheetExperience: Story = {
       <div style={{ maxWidth: 900 }}>
         <div style={{ marginBottom: 12 }}>
           <h3 style={{ margin: '0 0 4px 0', fontSize: 16 }}>Employee Directory</h3>
-          <p style={{ margin: 0, fontSize: 13, color: '#616161' }}>
+          <p style={{ margin: 0, fontSize: 13, color: 'var(--ogrid-muted, #616161)' }}>
             Full spreadsheet experience: row selection, keyboard navigation, inline editing, column pinning, status bar.
             Selected: <strong>{selected.size}</strong> | Total: <strong>{items.length}</strong>
           </p>
