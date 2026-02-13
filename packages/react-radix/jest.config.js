@@ -31,6 +31,6 @@ module.exports = {
     '^@alaarab/ogrid-react/testing$': '<rootDir>/../react/src/testing/index.ts',
     '^@alaarab/ogrid-react/storybook$': '<rootDir>/../react/src/storybook/index.ts',
   },
-  setupFilesAfterEnv: ['<rootDir>/jest.setup.ts'],
+  setupFilesAfterEnv: ['<rootDir>/../../jest.setup.js', '<rootDir>/jest.setup.ts'],
   testTimeout: 10000,
 };
