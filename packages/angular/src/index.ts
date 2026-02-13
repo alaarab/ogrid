@@ -97,6 +97,8 @@ export type { SideBarProps, SideBarFilterColumn } from './components/sidebar.com
 export { MarchingAntsOverlayComponent } from './components/marching-ants-overlay.component';
 export { EmptyStateComponent } from './components/empty-state.component';
 export { BaseDataGridTableComponent } from './components/base-datagrid-table.component';
+export { BaseColumnHeaderFilterComponent } from './components/base-column-header-filter.component';
+export type { IColumnHeaderFilterProps } from './components/base-column-header-filter.component';
 
 // Utilities (view model helpers)
 export type {
