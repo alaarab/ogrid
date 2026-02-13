@@ -79,6 +79,8 @@ export interface IColumnHeaderMenuItem {
   id: string;
   label: string;
   icon?: string;
+  disabled?: boolean;
+  divider?: boolean; // Render a divider after this item
 }
 
 /** Column header menu items for pin/unpin actions. */
@@ -87,3 +89,72 @@ export const COLUMN_HEADER_MENU_ITEMS: IColumnHeaderMenuItem[] = [
   { id: 'pinRight', label: 'Pin right' },
   { id: 'unpin', label: 'Unpin' },
 ];
+
+/** Input for building column header menu items. */
+export interface ColumnHeaderMenuInput {
+  canPinLeft: boolean;
+  canPinRight: boolean;
+  canUnpin: boolean;
+  currentSort?: 'asc' | 'desc' | null;
+  isSortable?: boolean;
+  isResizable?: boolean;
+}
+
+/**
+ * Builds the complete column header menu items based on current state.
+ * Returns pinning, sorting, and sizing options.
+ */
+export function getColumnHeaderMenuItems(input: ColumnHeaderMenuInput): IColumnHeaderMenuItem[] {
+  const { canPinLeft, canPinRight, canUnpin, currentSort, isSortable = true, isResizable = true } = input;
+
+  const items: IColumnHeaderMenuItem[] = [];
+
+  // Pinning section
+  items.push(
+    { id: 'pinLeft', label: 'Pin left', disabled: !canPinLeft },
+    { id: 'pinRight', label: 'Pin right', disabled: !canPinRight },
+    { id: 'unpin', label: 'Unpin', disabled: !canUnpin, divider: isSortable || isResizable },
+  );
+
+  // Sorting section
+  if (isSortable) {
+    if (!currentSort) {
+      // No sort applied - show both options
+      items.push(
+        { id: 'sortAsc', label: 'Sort ascending' },
+        { id: 'sortDesc', label: 'Sort descending', divider: isResizable },
+      );
+    } else {
+      // Sort applied - show opposite + clear
+      const oppositeSort = currentSort === 'asc' ? 'desc' : 'asc';
+      const oppositeLabel = currentSort === 'asc' ? 'Sort descending' : 'Sort ascending';
+      items.push(
+        { id: `sort${oppositeSort === 'asc' ? 'Asc' : 'Desc'}`, label: oppositeLabel },
+        { id: 'clearSort', label: 'Clear sort', divider: isResizable },
+      );
+    }
+  }
+
+  // Autosize section
+  if (isResizable) {
+    items.push(
+      { id: 'autosizeThis', label: 'Autosize this column' },
+      { id: 'autosizeAll', label: 'Autosize all columns' },
+    );
+  }
+
+  return items;
+}
+
+/** Handlers for column header menu actions. */
+export interface ColumnHeaderMenuHandlers {
+  onPinLeft: () => void;
+  onPinRight: () => void;
+  onUnpin: () => void;
+  onSortAsc: () => void;
+  onSortDesc: () => void;
+  onClearSort: () => void;
+  onAutosizeThis: () => void;
+  onAutosizeAll: () => void;
+  onClose: () => void;
+}
