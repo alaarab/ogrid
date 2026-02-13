@@ -21,10 +21,10 @@ export {
   MAX_PAGE_BUTTONS,
 } from './paginationHelpers';
 export type { PaginationViewModel } from './paginationHelpers';
-export { GRID_CONTEXT_MENU_ITEMS, COLUMN_HEADER_MENU_ITEMS, getContextMenuHandlers, formatShortcut } from './gridContextMenuHelpers';
+export { GRID_CONTEXT_MENU_ITEMS, COLUMN_HEADER_MENU_ITEMS, getContextMenuHandlers, getColumnHeaderMenuItems, formatShortcut } from './gridContextMenuHelpers';
 export type { CsvColumn } from './exportToCsv';
 export type { StatusBarPart, StatusBarPartsInput } from './statusBarHelpers';
-export type { GridContextMenuItem, IColumnHeaderMenuItem, GridContextMenuHandlerProps } from './gridContextMenuHelpers';
+export type { GridContextMenuItem, IColumnHeaderMenuItem, GridContextMenuHandlerProps, ColumnHeaderMenuInput, ColumnHeaderMenuHandlers } from './gridContextMenuHelpers';
 export {
   parseValue,
   numberParser,
