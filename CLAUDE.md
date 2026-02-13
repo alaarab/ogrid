@@ -1,5 +1,13 @@
 # CLAUDE.md — OGrid
 
+## Project Skills
+
+This project has custom skills in the `skills/` directory:
+
+- **`/verify`** — Pre-commit verification gate. Checks version sync, builds all packages, runs all tests, runs lint. Use before ANY commit.
+
+See `skills/README.md` for details.
+
 ## Project Overview
 
 OGrid is a lightweight, multi-framework data grid library. A pure-TypeScript core provides types, algorithms, and utilities. Framework-specific packages wrap the core for **React** (Fluent UI, Material UI, Radix UI), **Angular** (Angular Material, PrimeNG), **Vue** (Vuetify, PrimeVue), and **vanilla JS**.
@@ -288,6 +296,51 @@ GitHub Actions (`.github/workflows/ci.yml`): push to `main` + PRs. Node 22, ubun
 7. **Headless architecture** — Core owns types and utilities; React owns hooks and state logic; UI packages are thin view layers.
 8. **Feature parity** — All UI packages within each framework must support the same features and pass the same tests. Cross-framework parity: React (3 packages), Angular (2 packages), Vue (2 packages), and JS (1 package) all share the same headless core and expose equivalent APIs.
 9. **Type deduplication** — React's `IColumnDef<T>` extends Core's `IColumnDef<T>` (not a duplicate). React-specific additions (`renderCell`, `cellStyle`, React `cellEditor` types) are in the extension. `dataGridTypes.ts` re-exports shared types from Core. Safe casts (`as IColumnDef<T>[]`) are used at framework boundaries where Core utilities return Core types.
+
+## Pre-Commit Verification (MANDATORY)
+
+**BEFORE ANY `git commit`**, run this comprehensive verification checklist:
+
+### 1. Version Synchronization
+```bash
+# Check root version
+grep '"version"' package.json
+
+# Verify all packages match (should see same version 14 times)
+grep -r '"version"' packages/*/package.json | grep -v node_modules
+
+# Check StackBlitz version constant
+grep 'OGRID_VERSION' packages/docs/src/stackblitz/projects.ts
+```
+✅ All versions must match
+
+### 2. Full Build
+```bash
+npm run build
+```
+✅ Must complete with zero errors across all 15 packages
+
+### 3. Full Test Suite
+```bash
+npm run test:all
+```
+✅ All 2000+ tests must pass, zero errors, zero warnings
+
+### 4. Lint
+```bash
+npm run lint
+```
+✅ Must show zero errors, zero warnings
+
+### 5. Git Status Review
+```bash
+git status
+```
+✅ No untracked .env, credentials, or temp files
+
+**OUTPUT:** Report ✅ ALL CHECKS PASSED or ❌ ISSUES FOUND with details
+
+**ONLY COMMIT IF ALL CHECKS PASS** (unless user explicitly overrides)
 
 ## Definition of Done
 
