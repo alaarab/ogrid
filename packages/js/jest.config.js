@@ -19,5 +19,6 @@ module.exports = {
   moduleNameMapper: {
     '^@alaarab/ogrid-core$': '<rootDir>/../core/src/index.ts'
   },
+  setupFilesAfterEnv: ['<rootDir>/../../jest.setup.js'],
   testTimeout: 10000
 };

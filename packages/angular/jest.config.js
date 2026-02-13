@@ -29,5 +29,6 @@ module.exports = {
     '^@angular/core$': '<rootDir>/jest-mocks/angular-core.cjs.js',
     '^@angular/common$': '<rootDir>/jest-mocks/angular-common.cjs.js',
   },
+  setupFilesAfterEnv: ['<rootDir>/../../jest.setup.js'],
   testTimeout: 10000,
 };

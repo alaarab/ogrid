@@ -43,5 +43,6 @@ module.exports = {
   transformIgnorePatterns: [
     'node_modules/(?!(@angular/material|@angular/cdk)/)',
   ],
+  setupFilesAfterEnv: ['<rootDir>/../../jest.setup.js'],
   testTimeout: 10000,
 };

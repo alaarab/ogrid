@@ -34,5 +34,6 @@ module.exports = {
     '^@alaarab/ogrid-vue/testing$': '<rootDir>/../vue/src/testing/index.ts',
     '^primevue/(.+)$': '<rootDir>/jest-mocks/primevue-stub.cjs.js',
   },
+  setupFilesAfterEnv: ['<rootDir>/../../jest.setup.js'],
   testTimeout: 10000,
 };
