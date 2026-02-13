@@ -12,7 +12,7 @@ export * from '@alaarab/ogrid-angular';
 export { OGridComponent } from './ogrid/ogrid.component';
 export { DataGridTableComponent } from './datagrid-table/datagrid-table.component';
 export { ColumnHeaderFilterComponent } from './column-header-filter/column-header-filter.component';
-export type { IColumnHeaderFilterProps } from './column-header-filter/column-header-filter.component';
+// IColumnHeaderFilterProps is now exported from @alaarab/ogrid-angular (base class)
 export { ColumnChooserComponent } from './column-chooser/column-chooser.component';
 export type { IColumnChooserProps } from './column-chooser/column-chooser.component';
 export { PaginationControlsComponent } from './pagination-controls/pagination-controls.component';
