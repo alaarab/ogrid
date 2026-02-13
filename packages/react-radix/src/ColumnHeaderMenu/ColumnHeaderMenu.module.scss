@@ -53,3 +53,13 @@
     }
   }
 }
+
+.separator {
+  height: 1px;
+  background-color: #e0e0e0;
+  margin: 4px 0;
+
+  @media (prefers-color-scheme: dark) {
+    background-color: #333;
+  }
+}
