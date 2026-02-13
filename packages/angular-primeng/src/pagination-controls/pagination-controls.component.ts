@@ -1,6 +1,6 @@
-import { Component, input, output, computed } from '@angular/core';
+import { Component } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { getPaginationViewModel } from '@alaarab/ogrid-core';
+import { BasePaginationControlsComponent } from '@alaarab/ogrid-angular';
 
 @Component({
   selector: 'ogrid-primeng-pagination-controls',
@@ -10,14 +10,14 @@ import { getPaginationViewModel } from '@alaarab/ogrid-core';
     @if (vm()) {
       <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;font-size:13px;color:var(--ogrid-fg, #242424)">
         <div>
-          Showing {{ vm()!.startItem }} to {{ vm()!.endItem }} of {{ totalCount().toLocaleString() }} {{ labelPlural() }}
+          Showing {{ vm()!.startItem }} to {{ vm()!.endItem }} of {{ totalCount.toLocaleString() }} {{ labelPlural() }}
         </div>
 
         <div style="display:flex;align-items:center;gap:4px" role="navigation" aria-label="Pagination">
           <button
             type="button"
             class="p-button p-button-text p-button-sm"
-            [disabled]="currentPage() === 1"
+            [disabled]="currentPage === 1"
             (click)="pageChange.emit(1)"
             aria-label="First page"
             style="min-width:32px;padding:4px 8px"
@@ -25,8 +25,8 @@ import { getPaginationViewModel } from '@alaarab/ogrid-core';
           <button
             type="button"
             class="p-button p-button-text p-button-sm"
-            [disabled]="currentPage() === 1"
-            (click)="pageChange.emit(currentPage() - 1)"
+            [disabled]="currentPage === 1"
+            (click)="pageChange.emit(currentPage - 1)"
             aria-label="Previous page"
             style="min-width:32px;padding:4px 8px"
           >&lsaquo;</button>
@@ -46,10 +46,10 @@ import { getPaginationViewModel } from '@alaarab/ogrid-core';
             <button
               type="button"
               class="p-button p-button-sm"
-              [class.p-button-outlined]="currentPage() !== pageNum"
+              [class.p-button-outlined]="currentPage !== pageNum"
               (click)="pageChange.emit(pageNum)"
               [attr.aria-label]="'Page ' + pageNum"
-              [attr.aria-current]="currentPage() === pageNum ? 'page' : null"
+              [attr.aria-current]="currentPage === pageNum ? 'page' : null"
               style="min-width:32px;padding:4px 8px"
             >{{ pageNum }}</button>
           }
@@ -68,15 +68,15 @@ import { getPaginationViewModel } from '@alaarab/ogrid-core';
           <button
             type="button"
             class="p-button p-button-text p-button-sm"
-            [disabled]="currentPage() >= vm()!.totalPages"
-            (click)="pageChange.emit(currentPage() + 1)"
+            [disabled]="currentPage >= vm()!.totalPages"
+            (click)="pageChange.emit(currentPage + 1)"
             aria-label="Next page"
             style="min-width:32px;padding:4px 8px"
           >&rsaquo;</button>
           <button
             type="button"
             class="p-button p-button-text p-button-sm"
-            [disabled]="currentPage() >= vm()!.totalPages"
+            [disabled]="currentPage >= vm()!.totalPages"
             (click)="pageChange.emit(vm()!.totalPages)"
             aria-label="Last page"
             style="min-width:32px;padding:4px 8px"
@@ -86,7 +86,7 @@ import { getPaginationViewModel } from '@alaarab/ogrid-core';
         <div style="display:flex;align-items:center;gap:6px">
           <span style="font-size:12px">Rows</span>
           <select
-            [value]="'' + pageSize()"
+            [value]="'' + pageSize"
             (change)="onPageSizeChange($any($event.target).value)"
             aria-label="Rows per page"
             style="padding:4px 6px;border:1px solid var(--ogrid-border, #e0e0e0);border-radius:4px;background:var(--ogrid-bg, #fff);color:var(--ogrid-fg, #242424)"
@@ -100,28 +100,4 @@ import { getPaginationViewModel } from '@alaarab/ogrid-core';
     }
   `,
 })
-export class PaginationControlsComponent {
-  readonly currentPage = input.required<number>();
-  readonly pageSize = input.required<number>();
-  readonly totalCount = input.required<number>();
-  readonly pageSizeOptions = input<number[] | undefined>(undefined);
-  readonly entityLabelPlural = input<string>('items');
-
-  readonly pageChange = output<number>();
-  readonly pageSizeChange = output<number>();
-
-  protected readonly labelPlural = computed(() => this.entityLabelPlural() ?? 'items');
-
-  protected readonly vm = computed(() =>
-    getPaginationViewModel(
-      this.currentPage(),
-      this.pageSize(),
-      this.totalCount(),
-      this.pageSizeOptions() ? { pageSizeOptions: this.pageSizeOptions()! } : undefined,
-    ),
-  );
-
-  onPageSizeChange(value: string): void {
-    this.pageSizeChange.emit(Number(value));
-  }
-}
+export class PaginationControlsComponent extends BasePaginationControlsComponent {}
