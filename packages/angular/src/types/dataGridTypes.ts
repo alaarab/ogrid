@@ -20,6 +20,7 @@ export type {
   ISelectionRange,
   SideBarPanelId,
   ISideBarDef,
+  IVirtualScrollConfig,
   IOGridApi,
 } from '@alaarab/ogrid-core';
 
@@ -36,6 +37,7 @@ import type {
   IStatusBarProps,
   IDataSource,
   ISideBarDef,
+  IVirtualScrollConfig,
 } from '@alaarab/ogrid-core';
 
 // --- OGrid / OGridService ---
@@ -92,6 +94,7 @@ interface IOGridBaseProps<T> {
   layoutMode?: 'content' | 'fill';
   suppressHorizontalScroll?: boolean;
   sideBar?: boolean | ISideBarDef;
+  virtualScroll?: IVirtualScrollConfig;
   pageSizeOptions?: number[];
   onFirstDataRendered?: () => void;
   onError?: (error: unknown) => void;
@@ -159,6 +162,7 @@ export interface IOGridDataGridProps<T> {
   loadingFilterOptions: Record<string, boolean>;
   peopleSearch?: (query: string) => Promise<UserLike[]>;
   getUserByEmail?: (email: string) => Promise<UserLike | undefined>;
+  virtualScroll?: IVirtualScrollConfig;
   emptyState?: {
     onClearAll: () => void;
     hasActiveFilters: boolean;

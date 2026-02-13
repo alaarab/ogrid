@@ -4,16 +4,7 @@ import {
   computeTotalHeight,
   getScrollTopForRow,
 } from '@alaarab/ogrid-core';
-import type { IVisibleRange } from '@alaarab/ogrid-core';
-
-export interface IVirtualScrollConfig {
-  /** Enable virtual scrolling. Default: true when provided. */
-  enabled?: boolean;
-  /** Row height in pixels (required for virtualization). */
-  rowHeight: number;
-  /** Number of rows to render outside the visible area. Default: 5. */
-  overscan?: number;
-}
+import type { IVisibleRange, IVirtualScrollConfig } from '@alaarab/ogrid-core';
 
 /** Threshold below which virtual scrolling is a no-op (all rows rendered). */
 const PASSTHROUGH_THRESHOLD = 100;
@@ -43,7 +34,7 @@ export class VirtualScrollService {
 
   // --- Derived computed signals ---
 
-  readonly rowHeight = computed(() => this.config().rowHeight);
+  readonly rowHeight = computed(() => this.config().rowHeight ?? 36);
   readonly overscan = computed(() => this.config().overscan ?? 5);
   readonly enabled = computed(() => this.config().enabled !== false);
 

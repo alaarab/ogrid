@@ -5,10 +5,9 @@
  */
 
 import { useState, useCallback, useEffect, useRef, type RefObject } from 'react';
+import { PEOPLE_SEARCH_DEBOUNCE_MS } from '@alaarab/ogrid-core';
 import type { UserLike } from '../types/dataGridTypes';
 import type { ColumnFilterType } from '../types/columnTypes';
-
-const PEOPLE_SEARCH_DEBOUNCE_MS = 300;
 
 export interface UsePeopleFilterStateParams {
   selectedUser?: UserLike;

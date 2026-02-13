@@ -40,7 +40,7 @@ export type {
   AggregationResult,
 } from '@alaarab/ogrid-core';
 
-// React-specific utilities (not in core)
+// View model utilities (re-exported from core + React-specific getCellInteractionProps)
 export {
   getHeaderFilterConfig,
   getCellRenderDescriptor,

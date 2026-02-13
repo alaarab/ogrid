@@ -1,17 +1,7 @@
 <script setup lang="ts">
 import { computed } from 'vue';
 import { getPaginationViewModel } from '@alaarab/ogrid-vue';
-
-export interface IPaginationControlsProps {
-  currentPage: number;
-  pageSize: number;
-  totalCount: number;
-  onPageChange: (page: number) => void;
-  onPageSizeChange: (pageSize: number) => void;
-  pageSizeOptions?: number[];
-  entityLabelPlural?: string;
-  className?: string;
-}
+import type { IPaginationControlsProps } from './types';
 
 const props = withDefaults(defineProps<IPaginationControlsProps>(), {
   pageSizeOptions: () => [10, 25, 50, 100],

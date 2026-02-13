@@ -75,48 +75,5 @@ export function createDebouncedCallback<T extends (...args: unknown[]) => void>(
   }) as T;
 }
 
-/**
- * Simple debounce function (non-Angular-specific, can be used anywhere).
- * Returns a debounced version of the provided function.
- *
- * @param fn - The function to debounce
- * @param delayMs - Delay in milliseconds
- * @returns A debounced version of the function with a `cancel()` method
- *
- * @example
- * ```typescript
- * const handleResize = debounce(() => {
- *   console.log('Window resized');
- * }, 200);
- *
- * window.addEventListener('resize', handleResize);
- *
- * // Later, cancel pending execution
- * handleResize.cancel();
- * ```
- */
-export function debounce<T extends (...args: unknown[]) => void>(
-  fn: T,
-  delayMs: number
-): T & { cancel: () => void } {
-  let timeoutId: ReturnType<typeof setTimeout> | null = null;
-
-  const debounced = ((...args: Parameters<T>) => {
-    if (timeoutId !== null) {
-      clearTimeout(timeoutId);
-    }
-    timeoutId = setTimeout(() => {
-      fn(...args);
-      timeoutId = null;
-    }, delayMs);
-  }) as T & { cancel: () => void };
-
-  debounced.cancel = () => {
-    if (timeoutId !== null) {
-      clearTimeout(timeoutId);
-      timeoutId = null;
-    }
-  };
-
-  return debounced;
-}
+// Re-export simple debounce from core
+export { debounce } from '@alaarab/ogrid-core';

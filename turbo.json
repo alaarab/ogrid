@@ -3,11 +3,16 @@
   "tasks": {
     "build": {
       "dependsOn": ["^build"],
+      "inputs": ["src/**/*.ts", "src/**/*.tsx", "src/**/*.vue", "src/**/*.scss", "package.json", "tsconfig*.json"],
       "outputs": ["dist/**"]
     },
-    "test": {},
+    "test": {
+      "outputs": ["coverage/**"],
+      "cache": true
+    },
     "storybook": {
-      "cache": false,
+      "cache": true,
+      "inputs": ["src/**/*.stories.tsx", "src/**/*.stories.ts", "src/**/*.tsx", "src/**/*.ts", "src/**/*.vue", "src/**/*.scss", ".storybook/**"],
       "persistent": true
     }
   }
