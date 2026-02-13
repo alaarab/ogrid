@@ -1,3 +1,4 @@
+/* global console */
 // Global Jest setup - suppress known test warnings
 const originalError = console.error;
 const originalWarn = console.warn;
