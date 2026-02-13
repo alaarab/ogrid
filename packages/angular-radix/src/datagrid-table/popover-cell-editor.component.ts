@@ -1,8 +1,4 @@
-import {
-  Component, input, ChangeDetectionStrategy, signal, effect,
-  viewChild, ElementRef, Injector, createComponent,
-  EnvironmentInjector, inject,
-} from '@angular/core';
+import { Component, ChangeDetectionStrategy, signal, effect, ViewChild, ElementRef, Injector, createComponent, EnvironmentInjector, inject, Input, Output, EventEmitter } from '@angular/core';
 import type { IColumnDef, ICellEditorProps } from '@alaarab/ogrid-core';
 
 /**
@@ -16,10 +12,10 @@ import type { IColumnDef, ICellEditorProps } from '@alaarab/ogrid-core';
   template: `
     <div #anchorEl
       class="ogrid-popover-anchor"
-      [attr.data-row-index]="rowIndex()"
-      [attr.data-col-index]="globalColIndex()"
+      [attr.data-row-index]="rowIndex"
+      [attr.data-col-index]="globalColIndex"
     >
-      {{ displayValue() }}
+      {{ displayValue }}
     </div>
     @if (showEditor()) {
       <div class="ogrid-popover-editor-overlay" (click)="handleOverlayClick()">
@@ -49,16 +45,16 @@ import type { IColumnDef, ICellEditorProps } from '@alaarab/ogrid-core';
   `],
 })
 export class PopoverCellEditorComponent<T> {
-  readonly item = input.required<T>();
-  readonly column = input.required<IColumnDef<T>>();
-  readonly rowIndex = input.required<number>();
-  readonly globalColIndex = input.required<number>();
-  readonly displayValue = input.required<unknown>();
-  readonly editorProps = input.required<ICellEditorProps<T>>();
-  readonly onCancel = input.required<() => void>();
+  @Input({ required: true }) item!: T;
+  @Input({ required: true }) column!: IColumnDef<T>;
+  @Input({ required: true }) rowIndex!: number;
+  @Input({ required: true }) globalColIndex!: number;
+  @Input({ required: true }) displayValue!: unknown;
+  @Input({ required: true }) editorProps!: ICellEditorProps<T>;
+  @Input({ required: true }) onCancel!: () => void;
 
-  private readonly anchorRef = viewChild<ElementRef<HTMLElement>>('anchorEl');
-  private readonly editorContainerRef = viewChild<ElementRef<HTMLElement>>('editorContainer');
+  @ViewChild('anchorEl') private anchorRef?: ElementRef<HTMLElement>;
+  @ViewChild('editorContainer') private editorContainerRef?: ElementRef<HTMLElement>;
   private readonly injector = inject(Injector);
   private readonly envInjector = inject(EnvironmentInjector);
 
@@ -67,7 +63,7 @@ export class PopoverCellEditorComponent<T> {
   constructor() {
     // Show editor after anchor is rendered
     effect(() => {
-      const anchor = this.anchorRef();
+      const anchor = this.anchorRef;
       if (anchor) {
         setTimeout(() => this.showEditor.set(true), 0);
       }
@@ -75,9 +71,9 @@ export class PopoverCellEditorComponent<T> {
 
     // Render custom editor component when container is available
     effect(() => {
-      const container = this.editorContainerRef();
-      const props = this.editorProps();
-      const col = this.column();
+      const container = this.editorContainerRef;
+      const props = this.editorProps;
+      const col = this.column;
       if (!container || !this.showEditor() || typeof col.cellEditor !== 'function') return;
 
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -101,6 +97,6 @@ export class PopoverCellEditorComponent<T> {
   }
 
   protected handleOverlayClick(): void {
-    this.onCancel()();
+    this.onCancel();
   }
 }

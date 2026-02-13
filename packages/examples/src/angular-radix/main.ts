@@ -1,3 +1,4 @@
+import '@angular/compiler';
 import { bootstrapApplication } from '@angular/platform-browser';
 import { Component } from '@angular/core';
 import { OGridComponent } from '@alaarab/ogrid-angular-radix';

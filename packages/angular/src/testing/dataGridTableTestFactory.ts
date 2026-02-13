@@ -33,30 +33,27 @@ export function createDataGridTableTests(DataGridTableComponent: new (...args: a
     const instance = new DataGridTableComponent();
     const props = makeProps(overrides);
 
-    // Support both single-prop (Material/Radix: propsInput) and individual-input (PrimeNG) APIs
-    if (typeof instance.propsInput?.set === 'function') {
-      instance.propsInput.set(props);
-    } else {
-      // PrimeNG uses individual inputs — set each one
-      if (instance.itemsInput?.set) instance.itemsInput.set(props.items);
-      if (instance.columns?.set) instance.columns.set(props.columns);
-      if (instance.getRowIdInput?.set) instance.getRowIdInput.set(props.getRowId);
-      if (instance.sortBy?.set) instance.sortBy.set(props.sortBy);
-      if (instance.sortDirection?.set) instance.sortDirection.set(props.sortDirection ?? 'asc');
-      if (instance.onColumnSort?.set) instance.onColumnSort.set(props.onColumnSort);
-      if (instance.visibleColumns?.set) instance.visibleColumns.set(props.visibleColumns);
-      if (instance.filters?.set) instance.filters.set(props.filters);
-      if (instance.onFilterChange?.set) instance.onFilterChange.set(props.onFilterChange);
-      if (instance.filterOptions?.set) instance.filterOptions.set(props.filterOptions ?? {});
-      if (instance.loadingFilterOptions?.set) instance.loadingFilterOptions.set(props.loadingFilterOptions ?? {});
-      if (instance.isLoadingInput?.set) instance.isLoadingInput.set(props.isLoading ?? false);
-      if (instance.suppressHorizontalScroll?.set) instance.suppressHorizontalScroll.set(props.suppressHorizontalScroll);
-      if (instance.statusBar?.set) instance.statusBar.set(props.statusBar);
-      if (instance.emptyStateInput?.set) instance.emptyStateInput.set(props.emptyState);
-      if (instance.editable?.set) instance.editable.set(props.editable);
-      if (instance.onCellValueChanged?.set) instance.onCellValueChanged.set(props.onCellValueChanged);
-      if (instance.cellSelection?.set) instance.cellSelection.set(props.cellSelection);
-    }
+    // Set propsInput for Material/Radix (single-prop API)
+    instance.propsInput = props;
+    // Also set individual inputs for PrimeNG (individual-input API)
+    instance.itemsInput = props.items;
+    instance.columns = props.columns;
+    instance.getRowIdInput = props.getRowId;
+    instance.sortBy = props.sortBy;
+    instance.sortDirection = props.sortDirection ?? 'asc';
+    instance.onColumnSort = props.onColumnSort;
+    instance.visibleColumns = props.visibleColumns;
+    instance.filters = props.filters;
+    instance.onFilterChange = props.onFilterChange;
+    instance.filterOptions = props.filterOptions ?? {};
+    instance.loadingFilterOptions = props.loadingFilterOptions ?? {};
+    if (props.isLoading !== undefined) instance.isLoadingInput = props.isLoading;
+    if (props.suppressHorizontalScroll !== undefined) instance.suppressHorizontalScroll = props.suppressHorizontalScroll;
+    if (props.statusBar !== undefined) instance.statusBar = props.statusBar;
+    if (props.emptyState !== undefined) instance.emptyStateInput = props.emptyState;
+    if (props.editable !== undefined) instance.editable = props.editable;
+    if (props.onCellValueChanged !== undefined) instance.onCellValueChanged = props.onCellValueChanged;
+    if (props.cellSelection !== undefined) instance.cellSelection = props.cellSelection;
     // Feed props into the state service
     instance.stateService.props.set(props);
     return instance;

@@ -9,6 +9,7 @@ storybook-static
 *.tgz
 *.local
 .cursor
-.claude
+.claude/*
+!.claude/skills
 .docusaurus
 packages/docs/build

@@ -2,7 +2,8 @@
  * Shared ColumnChooser tests for Angular UI packages.
  * Each UI package calls createColumnChooserTests(ColumnChooserComponent) to run these.
  *
- * Tests instantiate the component class directly and verify signal-based behavior.
+ * Tests instantiate the component class directly and verify behavior.
+ * Inputs use @Input() decorators (plain properties), internal state uses signals.
  */
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -15,16 +16,17 @@ export function createColumnChooserTests(ColumnChooserComponent: new (...args: a
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   function createComponent(overrides: Record<string, unknown> = {}): any {
     const instance = new ColumnChooserComponent();
-    instance.columns.set(overrides.columns ?? columns);
-    instance.visibleColumns.set(overrides.visibleColumns ?? new Set(['a', 'b']));
+    // Set @Input() properties directly
+    instance.columns = overrides.columns ?? columns;
+    instance.visibleColumns = overrides.visibleColumns ?? new Set(['a', 'b']);
     return instance;
   }
 
   it('instantiates with columns and visibleColumns', () => {
     const comp = createComponent();
     expect(comp).toBeTruthy();
-    expect(comp.columns()).toEqual(columns);
-    expect(comp.visibleColumns()).toEqual(new Set(['a', 'b']));
+    expect(comp.columns).toEqual(columns);
+    expect(comp.visibleColumns).toEqual(new Set(['a', 'b']));
   });
 
   it('computes visibleCount and totalCount', () => {

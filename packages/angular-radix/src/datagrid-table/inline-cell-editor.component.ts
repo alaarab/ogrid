@@ -1,4 +1,4 @@
-import { Component, input, output, signal, effect, ElementRef, viewChild, AfterViewInit } from '@angular/core';
+import { Component, signal, effect, ElementRef, ViewChild, AfterViewInit, Input, Output, EventEmitter } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import type { IColumnDef } from '@alaarab/ogrid-angular';
 
@@ -7,7 +7,7 @@ import type { IColumnDef } from '@alaarab/ogrid-angular';
   standalone: true,
   imports: [CommonModule],
   template: `
-    @switch (editorType()) {
+    @switch (editorType) {
       @case ('text') {
         <input
           #inputEl
@@ -77,15 +77,15 @@ import type { IColumnDef } from '@alaarab/ogrid-angular';
   `],
 })
 export class InlineCellEditorComponent<T = unknown> implements AfterViewInit {
-  readonly value = input.required<unknown>();
-  readonly item = input.required<T>();
-  readonly column = input.required<IColumnDef<T>>();
-  readonly rowIndex = input.required<number>();
-  readonly editorType = input.required<'text' | 'select' | 'checkbox' | 'date' | 'richSelect'>();
-  readonly commit = output<unknown>();
-  readonly cancel = output<void>();
+  @Input({ required: true }) value!: unknown;
+  @Input({ required: true }) item!: T;
+  @Input({ required: true }) column!: IColumnDef<T>;
+  @Input({ required: true }) rowIndex!: number;
+  @Input({ required: true }) editorType!: 'text' | 'select' | 'checkbox' | 'date' | 'richSelect';
+  @Output() commit = new EventEmitter<unknown>();
+  @Output() cancel = new EventEmitter<void>();
 
-  readonly inputEl = viewChild<ElementRef<HTMLInputElement | HTMLSelectElement>>('inputEl');
+  @ViewChild('inputEl') inputEl?: ElementRef<HTMLInputElement | HTMLSelectElement>;
 
   readonly localValue = signal<unknown>('');
 
@@ -93,10 +93,10 @@ export class InlineCellEditorComponent<T = unknown> implements AfterViewInit {
 
   constructor() {
     effect(() => {
-      const v = this.value();
+      const v = this.value;
       this.localValue.set(v != null ? String(v) : '');
 
-      const col = this.column();
+      const col = this.column;
       if (col.cellEditorParams?.values) {
         this.selectOptions.set(col.cellEditorParams.values as unknown[]);
       }
@@ -105,7 +105,7 @@ export class InlineCellEditorComponent<T = unknown> implements AfterViewInit {
 
   ngAfterViewInit(): void {
     setTimeout(() => {
-      const el = this.inputEl()?.nativeElement;
+      const el = this.inputEl?.nativeElement;
       if (el) {
         el.focus();
         if (el instanceof HTMLInputElement && el.type === 'text') {
@@ -152,7 +152,7 @@ export class InlineCellEditorComponent<T = unknown> implements AfterViewInit {
 
   getInputStyle(): string {
     const baseStyle = 'width:100%;box-sizing:border-box;padding:6px 10px;border:2px solid var(--ogrid-selection, #217346);border-radius:2px;outline:none;font:inherit;background:var(--ogrid-bg, #fff);color:var(--ogrid-fg, #242424);';
-    const col = this.column();
+    const col = this.column;
     if (col.type === 'numeric') {
       return baseStyle + 'text-align:right;';
     }

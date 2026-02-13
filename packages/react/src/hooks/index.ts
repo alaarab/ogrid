@@ -111,3 +111,8 @@ export type {
   UseVirtualScrollResult,
 } from './useVirtualScroll';
 export { useLatestRef } from './useLatestRef';
+export { usePaginationControls } from './usePaginationControls';
+export type {
+  UsePaginationControlsProps,
+  UsePaginationControlsResult,
+} from './usePaginationControls';

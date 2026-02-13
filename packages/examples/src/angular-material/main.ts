@@ -1,3 +1,4 @@
+import '@angular/compiler';
 import { bootstrapApplication } from '@angular/platform-browser';
 import { Component } from '@angular/core';
 import { provideAnimations } from '@angular/platform-browser/animations';
