@@ -3,6 +3,12 @@ import { getCellValue } from './cellValue';
 import { getFilterField } from './ogridHelpers';
 
 /**
+ * Cached column map to avoid rebuilding on every call.
+ * WeakMap keyed by columns array reference.
+ */
+const columnMapCache = new WeakMap<IColumnDef<unknown>[], Map<string, IColumnDef<unknown>>>();
+
+/**
  * Apply client-side filtering and sorting to data.
  * Extracted from useOGrid for testability and reuse.
  *
@@ -20,10 +26,14 @@ export function processClientSideData<T>(
   sortBy?: string,
   sortDirection?: 'asc' | 'desc'
 ): T[] {
-  // Build column lookup map for O(1) access by columnId
-  const columnMap = new Map<string, IColumnDef<T>>();
-  for (let i = 0; i < columns.length; i++) {
-    columnMap.set(columns[i].columnId, columns[i]);
+  // Get or build column lookup map (cached via WeakMap)
+  let columnMap = columnMapCache.get(columns as IColumnDef<unknown>[]) as Map<string, IColumnDef<T>> | undefined;
+  if (!columnMap) {
+    columnMap = new Map<string, IColumnDef<T>>();
+    for (let i = 0; i < columns.length; i++) {
+      columnMap.set(columns[i].columnId, columns[i]);
+    }
+    columnMapCache.set(columns as IColumnDef<unknown>[], columnMap as Map<string, IColumnDef<unknown>>);
   }
 
   // --- Filtering (single-pass: build predicates, then one .filter()) ---

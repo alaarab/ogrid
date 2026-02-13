@@ -13,6 +13,7 @@ import {
   CHECKBOX_COLUMN_WIDTH,
   ROW_NUMBER_COLUMN_WIDTH,
   DEFAULT_MIN_COLUMN_WIDTH,
+  StatusBar,
   type IOGridDataGridProps,
   type IColumnDef,
   type ICellEditorProps,
@@ -20,7 +21,6 @@ import {
 import { ColumnHeaderFilter } from '../ColumnHeaderFilter';
 import { ColumnHeaderMenu } from '../ColumnHeaderMenu/ColumnHeaderMenu';
 import { InlineCellEditor } from './InlineCellEditor';
-import { StatusBar } from './StatusBar';
 import { GridContextMenu } from './GridContextMenu';
 
 const NOOP = () => {};

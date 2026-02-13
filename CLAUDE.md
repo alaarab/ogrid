@@ -215,21 +215,24 @@ All re-export everything from `@alaarab/ogrid-react` (which re-exports from `@al
 
 ## Testing
 
-**~1000+ tests** across 14 packages. Each framework uses its native testing tools for maintainability and idiomaticity.
+**2,028 tests** across 14 packages (100% pass rate). Each framework uses its native testing tools for maintainability and idiomaticity.
 
 - **Core:** 237 tests (pure TypeScript utilities, no framework dependencies)
-- **JS:** 194 tests (native DOM testing)
-- **React packages:** 276+ tests using React Testing Library 16
+- **JS:** 241 tests (native DOM testing)
+- **React packages:** 523 tests using React Testing Library 16
   - React core: 247 tests
   - Radix/Fluent/Material: 92 tests each
-- **Angular packages:** ~90 tests each using Angular Testing utilities
-  - Angular Material: 9 tests (in progress: target 90)
-  - Angular PrimeNG: 10 tests (in progress: target 90)
-  - Angular Radix: 0 tests (in progress: target 90)
-- **Vue packages:** ~90 tests each using Vue Test Utils
-  - Vuetify: 10 tests (in progress: target 90)
-  - PrimeVue: 10 tests (in progress: target 90)
-  - Vue Radix: 0 tests (in progress: target 90)
+- **Angular packages:** 505 tests using Angular Testing utilities
+  - Angular base: 111 tests
+  - Angular Material: 131 tests
+  - Angular PrimeNG: 132 tests
+  - Angular Radix: 131 tests
+- **Vue packages:** 522 tests (composable-level + factory tests)
+  - Vue base: 222 tests
+  - Vuetify: 100 tests
+  - PrimeVue: 100 tests
+  - Vue Radix: 100 tests
+  - **Note:** Vue UI packages do NOT have `exports.test.ts` files (intentionally skipped - see `__tests__/README.md` in each package). Vue 3 SFCs are ESM-only and cannot be loaded via CommonJS `require()` which Jest uses for export tests. Factory tests already verify all exports work correctly.
 
 ### Testing Setup
 

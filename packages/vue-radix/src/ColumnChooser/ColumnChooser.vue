@@ -1,13 +1,7 @@
 <script setup lang="ts">
 import { Menu, MenuButton, MenuItems, MenuItem } from '@headlessui/vue';
-import { useColumnChooserState, type IColumnDefinition } from '@alaarab/ogrid-vue';
-
-export interface IColumnChooserProps {
-  columns: IColumnDefinition[];
-  visibleColumns: Set<string>;
-  onVisibilityChange: (columnKey: string, visible: boolean) => void;
-  className?: string;
-}
+import { useColumnChooserState } from '@alaarab/ogrid-vue';
+import type { IColumnChooserProps } from './types';
 
 const props = withDefaults(defineProps<IColumnChooserProps>(), {
   className: '',

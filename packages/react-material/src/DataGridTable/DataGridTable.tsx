@@ -17,7 +17,7 @@ import {
 } from '@mui/material';
 import { ColumnHeaderFilter } from '../ColumnHeaderFilter';
 import { ColumnHeaderMenu } from '../ColumnHeaderMenu';
-import { InlineCellEditor } from './InlineCellEditor';
+import { InlineCellEditor, type InlineCellEditorProps } from './InlineCellEditor';
 import { StatusBar } from './StatusBar';
 import { GridContextMenu } from './GridContextMenu';
 import type {
@@ -425,9 +425,9 @@ function DataGridTableInner<T>(props: IOGridDataGridProps<T>): React.ReactElemen
       let cellContent: React.ReactNode;
 
       if (descriptor.mode === 'editing-inline') {
-        cellContent = <InlineCellEditor<T> {...buildInlineEditorProps(item, col, descriptor, editCallbacks)} />;
+        cellContent = <InlineCellEditor<T> {...buildInlineEditorProps(item, col, descriptor, editCallbacks) as InlineCellEditorProps<T>} />;
       } else if (descriptor.mode === 'editing-popover' && typeof col.cellEditor === 'function') {
-        const editorProps = buildPopoverEditorProps(item, col, descriptor, pendingEditorValueRef.current, editCallbacks);
+        const editorProps = buildPopoverEditorProps(item, col, descriptor, pendingEditorValueRef.current, editCallbacks) as ICellEditorProps<T>;
         const CustomEditor = col.cellEditor as React.ComponentType<ICellEditorProps<T>>;
         cellContent = (
           <>
@@ -446,7 +446,7 @@ function DataGridTableInner<T>(props: IOGridDataGridProps<T>): React.ReactElemen
           </>
         );
       } else {
-        const content = resolveCellDisplayContent(col, item, descriptor.displayValue);
+        const content = resolveCellDisplayContent(col, item, descriptor.displayValue) as React.ReactNode;
         const cellStyle = resolveCellStyle(col, item);
         const styledContent = cellStyle ? <Box component="span" sx={cellStyle}>{content}</Box> : content;
 

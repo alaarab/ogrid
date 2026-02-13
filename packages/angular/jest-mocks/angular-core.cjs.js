@@ -32,8 +32,11 @@ const output = (opts) => ({ emit: noop, subscribe: noop });
 // viewChild — returns a signal-like function
 const viewChild = (selector) => signal(undefined);
 
-// DI
-const inject = (token) => undefined;
+// DI — returns stubs for known tokens
+const inject = (token) => {
+  if (token === DestroyRef) return new DestroyRef();
+  return undefined;
+};
 
 // DestroyRef stub
 class DestroyRef {
