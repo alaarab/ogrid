@@ -11,6 +11,10 @@ console.error = (...args) => {
      msg.includes('Warning: Invalid DOM property') ||
      msg.includes('Warning: Unknown event handler') ||
      msg.includes('Warning: Function components cannot be given refs') ||
+     msg.includes('Warning: Received') ||
+     msg.includes('for a non-boolean attribute') ||
+     msg.includes('validateDOMNesting') ||
+     msg.includes('Cannot infer the option value') ||
      msg.includes('Invalid prop'))
   ) {
     return; // Suppress React DOM prop warnings
