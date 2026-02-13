@@ -39,7 +39,7 @@
     "test": "jest"
   },
   "dependencies": {
-    "@alaarab/ogrid-angular": "2.0.7",
+    "@alaarab/ogrid-angular": "2.0.8",
     "@angular/cdk": "^21.0.0"
   },
   "peerDependencies": {
