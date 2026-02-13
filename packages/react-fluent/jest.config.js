@@ -46,6 +46,6 @@ module.exports = {
     '!src/**/__tests__/**',
   ],
   coverageDirectory: 'coverage',
-  setupFilesAfterEnv: ['<rootDir>/jest.setup.ts'],
+  setupFilesAfterEnv: ['<rootDir>/../../jest.setup.js', '<rootDir>/jest.setup.ts'],
   testTimeout: 10000,
 };
