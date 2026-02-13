@@ -34,5 +34,6 @@ module.exports = {
     '^@alaarab/ogrid-vue/testing$': '<rootDir>/../vue/src/testing/index.ts',
     '^vuetify/components$': '<rootDir>/jest-mocks/vuetify-components.cjs.js',
   },
+  setupFilesAfterEnv: ['<rootDir>/../../jest.setup.js'],
   testTimeout: 10000,
 };
