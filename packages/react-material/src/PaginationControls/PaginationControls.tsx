@@ -1,5 +1,4 @@
 import * as React from 'react';
-import { useMemo, useCallback } from 'react';
 import {
   IconButton, Button, Select, MenuItem, Box, Typography,
 } from '@mui/material';
@@ -10,7 +9,7 @@ import {
   ChevronLeft as ChevronLeftIcon,
   ChevronRight as ChevronRightIcon,
 } from '@mui/icons-material';
-import { getPaginationViewModel } from '@alaarab/ogrid-react';
+import { usePaginationControls } from '@alaarab/ogrid-react';
 
 export interface IPaginationControlsProps {
   currentPage: number;
@@ -34,19 +33,20 @@ export const PaginationControls: React.FC<IPaginationControlsProps> = React.memo
     entityLabelPlural,
     className,
   } = props;
-  const labelPlural = entityLabelPlural ?? 'items';
 
-  const vm = useMemo(
-    () => getPaginationViewModel(currentPage, pageSize, totalCount, pageSizeOptions ? { pageSizeOptions } : undefined),
-    [currentPage, pageSize, totalCount, pageSizeOptions]
-  );
+  const { labelPlural, vm, handlePageSizeChange } = usePaginationControls({
+    currentPage,
+    pageSize,
+    totalCount,
+    onPageChange,
+    onPageSizeChange,
+    pageSizeOptions,
+    entityLabelPlural,
+  });
 
-  const handlePageSizeChange = useCallback(
-    (event: SelectChangeEvent<number>) => {
-      onPageSizeChange(Number(event.target.value));
-    },
-    [onPageSizeChange],
-  );
+  const handlePageSizeChangeEvent = (event: SelectChangeEvent<number>) => {
+    handlePageSizeChange(Number(event.target.value));
+  };
 
   if (!vm) {
     return null;
@@ -165,7 +165,7 @@ export const PaginationControls: React.FC<IPaginationControlsProps> = React.memo
         </Typography>
         <Select
           value={pageSize}
-          onChange={handlePageSizeChange}
+          onChange={handlePageSizeChangeEvent}
           size="small"
           aria-label="Rows per page"
           sx={{ minWidth: 70 }}

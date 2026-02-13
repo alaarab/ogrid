@@ -76,6 +76,7 @@ export {
   useColumnReorder,
   useVirtualScroll,
   useLatestRef,
+  usePaginationControls,
 } from './hooks';
 export type {
   UseFilterOptionsResult,
@@ -137,6 +138,8 @@ export type {
   UseColumnReorderResult,
   UseVirtualScrollParams,
   UseVirtualScrollResult,
+  UsePaginationControlsProps,
+  UsePaginationControlsResult,
 } from './hooks';
 
 // Components
