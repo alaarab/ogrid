@@ -1,28 +1,5 @@
-import {
-  Component, input, signal, computed,
-  ChangeDetectionStrategy, ElementRef, viewChild,
-} from '@angular/core';
-import type { ColumnFilterType, IDateFilterValue, UserLike } from '@alaarab/ogrid-angular';
-
-export interface IColumnHeaderFilterProps {
-  columnKey: string;
-  columnName: string;
-  filterType: ColumnFilterType;
-  isSorted?: boolean;
-  isSortedDescending?: boolean;
-  onSort?: () => void;
-  selectedValues?: string[];
-  onFilterChange?: (values: string[]) => void;
-  options?: string[];
-  isLoadingOptions?: boolean;
-  textValue?: string;
-  onTextChange?: (value: string) => void;
-  selectedUser?: UserLike;
-  onUserChange?: (user: UserLike | undefined) => void;
-  peopleSearch?: (query: string) => Promise<UserLike[]>;
-  dateValue?: IDateFilterValue;
-  onDateChange?: (value: IDateFilterValue | undefined) => void;
-}
+import { Component, ChangeDetectionStrategy, ElementRef, ViewChild } from '@angular/core';
+import { BaseColumnHeaderFilterComponent } from '@alaarab/ogrid-angular';
 
 /**
  * Column header filter component for Angular Radix (lightweight styling).
@@ -35,23 +12,23 @@ export interface IColumnHeaderFilterProps {
   template: `
     <div class="ogrid-header-filter" #headerEl>
       <div class="ogrid-header-filter__label">
-        <span class="ogrid-header-filter__name" [title]="columnName()" data-header-label>
-          {{ columnName() }}
+        <span class="ogrid-header-filter__name" [title]="columnName" data-header-label>
+          {{ columnName }}
         </span>
       </div>
 
       <div class="ogrid-header-filter__actions">
-        @if (onSort()) {
+        @if (onSort) {
           <button
             class="ogrid-header-filter__btn"
-            [class.ogrid-header-filter__btn--active]="isSorted()"
-            (click)="onSort()!()"
-            [attr.aria-label]="'Sort by ' + columnName()"
-            [title]="isSorted() ? (isSortedDescending() ? 'Sorted descending' : 'Sorted ascending') : 'Sort'"
+            [class.ogrid-header-filter__btn--active]="isSorted"
+            (click)="onSort!()"
+            [attr.aria-label]="'Sort by ' + columnName"
+            [title]="isSorted ? (isSortedDescending ? 'Sorted descending' : 'Sorted ascending') : 'Sort'"
           >
-            @if (isSorted() && isSortedDescending()) {
+            @if (isSorted && isSortedDescending) {
               ▼
-            } @else if (isSorted()) {
+            } @else if (isSorted) {
               ▲
             } @else {
               ↕
@@ -59,13 +36,13 @@ export interface IColumnHeaderFilterProps {
           </button>
         }
 
-        @if (filterType() !== 'none') {
+        @if (filterType !== 'none') {
           <button
             class="ogrid-header-filter__btn"
             [class.ogrid-header-filter__btn--active]="hasActiveFilter() || isFilterOpen()"
             (click)="toggleFilter($event)"
-            [attr.aria-label]="'Filter ' + columnName()"
-            [title]="'Filter ' + columnName()"
+            [attr.aria-label]="'Filter ' + columnName"
+            [title]="'Filter ' + columnName"
           >
             ⏷
             @if (hasActiveFilter()) {
@@ -76,7 +53,7 @@ export interface IColumnHeaderFilterProps {
       </div>
     </div>
 
-    @if (isFilterOpen() && filterType() !== 'none') {
+    @if (isFilterOpen() && filterType !== 'none') {
       <div
         class="ogrid-header-filter__popover"
         [style.top.px]="popoverTop()"
@@ -84,10 +61,10 @@ export interface IColumnHeaderFilterProps {
         (click)="$event.stopPropagation()"
       >
         <div class="ogrid-header-filter__popover-header">
-          Filter: {{ columnName() }}
+          Filter: {{ columnName }}
         </div>
 
-        @switch (filterType()) {
+        @switch (filterType) {
           @case ('text') {
             <div class="ogrid-header-filter__popover-body" style="width: 260px;">
               <div style="padding: 12px;">
@@ -120,7 +97,7 @@ export interface IColumnHeaderFilterProps {
                   autocomplete="off"
                 />
                 <div class="ogrid-header-filter__options-info">
-                  {{ filteredOptions().length }} of {{ (options() ?? []).length }} options
+                  {{ filteredOptions().length }} of {{ (options ?? []).length }} options
                 </div>
               </div>
               <div class="ogrid-header-filter__select-actions">
@@ -130,7 +107,7 @@ export interface IColumnHeaderFilterProps {
                 <button class="ogrid-header-filter__action-btn" (click)="handleClearSelection()">Clear</button>
               </div>
               <div class="ogrid-header-filter__options-list">
-                @if (isLoadingOptions()) {
+                @if (isLoadingOptions) {
                   <div class="ogrid-header-filter__loading">Loading...</div>
                 } @else if (filteredOptions().length === 0) {
                   <div class="ogrid-header-filter__empty">No options found</div>
@@ -155,14 +132,14 @@ export interface IColumnHeaderFilterProps {
           }
           @case ('people') {
             <div class="ogrid-header-filter__popover-body" style="width: 300px;">
-              @if (selectedUser()) {
+              @if (selectedUser) {
                 <div class="ogrid-header-filter__people-selected">
                   <div class="ogrid-header-filter__people-info-label">Currently filtered by:</div>
                   <div class="ogrid-header-filter__people-card">
-                    <div class="ogrid-header-filter__people-avatar">{{ selectedUser()!.displayName?.[0] ?? '?' }}</div>
+                    <div class="ogrid-header-filter__people-avatar">{{ selectedUser!.displayName?.[0] ?? '?' }}</div>
                     <div class="ogrid-header-filter__people-details">
-                      <div>{{ selectedUser()!.displayName }}</div>
-                      <div class="ogrid-header-filter__people-email">{{ selectedUser()!.email }}</div>
+                      <div>{{ selectedUser!.displayName }}</div>
+                      <div class="ogrid-header-filter__people-email">{{ selectedUser!.email }}</div>
                     </div>
                     <button class="ogrid-header-filter__btn" (click)="handleClearUser()" aria-label="Remove filter">&times;</button>
                   </div>
@@ -198,7 +175,7 @@ export interface IColumnHeaderFilterProps {
                   <div class="ogrid-header-filter__empty">Type to search...</div>
                 }
               </div>
-              @if (selectedUser()) {
+              @if (selectedUser) {
                 <div style="padding: 8px 12px; border-top: 1px solid var(--ogrid-border, #e0e0e0);">
                   <button class="ogrid-header-filter__action-btn" style="width: 100%;" (click)="handleClearUser()">Clear Filter</button>
                 </div>
@@ -462,220 +439,28 @@ export interface IColumnHeaderFilterProps {
     }
   `],
   host: {
-    '(document:click)': 'onDocumentClick($event)',
+    '(document:click)': 'onDocumentClickWrapper($event)',
   },
 })
-export class ColumnHeaderFilterComponent {
-  readonly columnKey = input.required<string>();
-  readonly columnName = input.required<string>();
-  readonly filterType = input.required<ColumnFilterType>();
-  readonly isSorted = input<boolean>(false);
-  readonly isSortedDescending = input<boolean>(false);
-  readonly onSort = input<(() => void) | undefined>(undefined);
-  readonly selectedValues = input<string[]>([]);
-  readonly onFilterChange = input<((values: string[]) => void) | undefined>(undefined);
-  readonly options = input<string[] | undefined>(undefined);
-  readonly isLoadingOptions = input<boolean>(false);
-  readonly textValue = input<string>('');
-  readonly onTextChange = input<((value: string) => void) | undefined>(undefined);
-  readonly selectedUser = input<UserLike | undefined>(undefined);
-  readonly onUserChange = input<((user: UserLike | undefined) => void) | undefined>(undefined);
-  readonly peopleSearch = input<((query: string) => Promise<UserLike[]>) | undefined>(undefined);
-  readonly dateValue = input<IDateFilterValue | undefined>(undefined);
-  readonly onDateChange = input<((value: IDateFilterValue | undefined) => void) | undefined>(undefined);
+export class ColumnHeaderFilterComponent extends BaseColumnHeaderFilterComponent {
+  @ViewChild('headerEl') private headerRef?: ElementRef<HTMLElement>;
 
-  private readonly headerRef = viewChild<ElementRef<HTMLElement>>('headerEl');
-
-  readonly isFilterOpen = signal(false);
-  readonly popoverTop = signal(0);
-  readonly popoverLeft = signal(0);
-
-  // Text filter
-  readonly tempTextValue = signal('');
-
-  // MultiSelect filter
-  readonly searchText = signal('');
-  readonly tempSelected = signal(new Set<string>());
-
-  // Date filter
-  readonly tempDateFrom = signal('');
-  readonly tempDateTo = signal('');
-
-  // People filter
-  readonly peopleSearchText = signal('');
-  readonly peopleSuggestions = signal<UserLike[]>([]);
-  readonly isPeopleLoading = signal(false);
-  private peopleDebounceTimer: ReturnType<typeof setTimeout> | null = null;
-
-  readonly hasActiveFilter = computed(() => {
-    const ft = this.filterType();
-    if (ft === 'text') return !!this.textValue();
-    if (ft === 'multiSelect') return (this.selectedValues() ?? []).length > 0;
-    if (ft === 'people') return this.selectedUser() != null;
-    if (ft === 'date') {
-      const dv = this.dateValue();
-      return !!dv && (!!dv.from || !!dv.to);
-    }
-    return false;
-  });
-
-  readonly filteredOptions = computed(() => {
-    const search = this.searchText().toLowerCase();
-    const opts = this.options() ?? [];
-    if (!search) return opts;
-    return opts.filter(o => o.toLowerCase().includes(search));
-  });
-
-  toggleFilter(event: MouseEvent): void {
-    event.stopPropagation();
-
-    if (this.isFilterOpen()) {
-      this.isFilterOpen.set(false);
-      return;
-    }
-
-    // Initialize temp values
-    if (this.filterType() === 'text') {
-      this.tempTextValue.set(this.textValue() ?? '');
-    } else if (this.filterType() === 'multiSelect') {
-      this.tempSelected.set(new Set(this.selectedValues() ?? []));
-      this.searchText.set('');
-    } else if (this.filterType() === 'people') {
-      this.peopleSearchText.set('');
-      this.peopleSuggestions.set([]);
-      this.isPeopleLoading.set(false);
-    } else if (this.filterType() === 'date') {
-      const dv = this.dateValue();
-      this.tempDateFrom.set(dv?.from ?? '');
-      this.tempDateTo.set(dv?.to ?? '');
-    }
-
-    // Calculate popover position
-    const headerEl = this.headerRef()?.nativeElement;
-    if (headerEl) {
-      const rect = headerEl.getBoundingClientRect();
-      this.popoverTop.set(rect.bottom + 4);
-      this.popoverLeft.set(rect.left);
-    }
-
-    this.isFilterOpen.set(true);
+  protected getHeaderEl(): ElementRef<HTMLElement> | undefined {
+    return this.headerRef;
   }
 
-  onDocumentClick(event: MouseEvent): void {
-    const el = event.target as HTMLElement;
-    if (!el.closest('column-header-filter')) {
-      this.isFilterOpen.set(false);
-    }
+  onDocumentClickWrapper(event: MouseEvent): void {
+    this.onDocumentClick(event, 'column-header-filter');
   }
 
-  asInputValue(event: Event): string {
-    return (event.target as HTMLInputElement).value;
-  }
-
-  // Text filter handlers
-  onTextKeydown(event: KeyboardEvent): void {
-    if (event.key === 'Enter') {
-      this.handleTextApply();
-    } else if (event.key === 'Escape') {
-      this.isFilterOpen.set(false);
-    }
-  }
-
-  handleTextApply(): void {
-    this.onTextChange()?.(this.tempTextValue());
-    this.isFilterOpen.set(false);
-  }
-
-  handleTextClear(): void {
-    this.tempTextValue.set('');
-    this.onTextChange()?.('');
-    this.isFilterOpen.set(false);
-  }
-
-  // MultiSelect filter handlers
-  handleCheckboxChange(option: string, event: Event): void {
-    const checked = (event.target as HTMLInputElement).checked;
-    const newSet = new Set(this.tempSelected());
-    if (checked) {
-      newSet.add(option);
-    } else {
-      newSet.delete(option);
-    }
-    this.tempSelected.set(newSet);
-  }
-
-  handleSelectAllFiltered(): void {
-    const newSet = new Set(this.tempSelected());
-    for (const opt of this.filteredOptions()) {
-      newSet.add(opt);
-    }
-    this.tempSelected.set(newSet);
-  }
-
-  handleClearSelection(): void {
-    this.tempSelected.set(new Set());
-  }
-
+  // Adapter methods for template compatibility (Radix uses different method names)
   handleMultiSelectApply(): void {
-    this.onFilterChange()?.([...this.tempSelected()]);
-    this.isFilterOpen.set(false);
+    this.handleApplyMultiSelect();
   }
 
   handleMultiSelectClear(): void {
-    this.tempSelected.set(new Set());
-    this.onFilterChange()?.([]);
-    this.isFilterOpen.set(false);
-  }
-
-  // People filter handlers
-  onPeopleSearchInput(event: Event): void {
-    const value = (event.target as HTMLInputElement).value;
-    this.peopleSearchText.set(value);
-    if (this.peopleDebounceTimer) clearTimeout(this.peopleDebounceTimer);
-    const query = value.trim();
-    if (!query) {
-      this.peopleSuggestions.set([]);
-      this.isPeopleLoading.set(false);
-      return;
-    }
-    this.isPeopleLoading.set(true);
-    this.peopleDebounceTimer = setTimeout(() => {
-      const fn = this.peopleSearch();
-      if (!fn) return;
-      fn(query).then((results) => {
-        this.peopleSuggestions.set(results);
-        this.isPeopleLoading.set(false);
-      }).catch(() => {
-        this.peopleSuggestions.set([]);
-        this.isPeopleLoading.set(false);
-      });
-    }, 300);
-  }
-
-  handleUserSelect(user: UserLike): void {
-    this.onUserChange()?.(user);
-    this.isFilterOpen.set(false);
-  }
-
-  handleClearUser(): void {
-    this.onUserChange()?.(undefined);
-    this.isFilterOpen.set(false);
-  }
-
-  // Date filter handlers
-  handleDateApply(): void {
-    const from = this.tempDateFrom();
-    const to = this.tempDateTo();
-    if (from || to) {
-      this.onDateChange()?.({ from, to });
-    }
-    this.isFilterOpen.set(false);
-  }
-
-  handleDateClear(): void {
-    this.tempDateFrom.set('');
-    this.tempDateTo.set('');
-    this.onDateChange()?.({ from: '', to: '' });
+    this.handleClearSelection();
+    this.onFilterChange?.([]);
     this.isFilterOpen.set(false);
   }
 }
