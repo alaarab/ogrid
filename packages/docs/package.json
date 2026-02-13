@@ -9,11 +9,11 @@
     "clear": "docusaurus clear"
   },
   "dependencies": {
-    "@alaarab/ogrid-js": "2.0.7",
-    "@alaarab/ogrid-react": "2.0.7",
-    "@alaarab/ogrid-react-fluent": "2.0.7",
-    "@alaarab/ogrid-react-material": "2.0.7",
-    "@alaarab/ogrid-react-radix": "2.0.7",
+    "@alaarab/ogrid-js": "2.0.8",
+    "@alaarab/ogrid-react": "2.0.8",
+    "@alaarab/ogrid-react-fluent": "2.0.8",
+    "@alaarab/ogrid-react-material": "2.0.8",
+    "@alaarab/ogrid-react-radix": "2.0.8",
     "@docusaurus/core": "^3.9.2",
     "@docusaurus/preset-classic": "^3.9.2",
     "@docusaurus/theme-mermaid": "^3.9.2",
