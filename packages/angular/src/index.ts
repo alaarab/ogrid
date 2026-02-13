@@ -99,6 +99,8 @@ export { EmptyStateComponent } from './components/empty-state.component';
 export { BaseDataGridTableComponent } from './components/base-datagrid-table.component';
 export { BaseColumnHeaderFilterComponent } from './components/base-column-header-filter.component';
 export type { IColumnHeaderFilterProps } from './components/base-column-header-filter.component';
+export { BaseColumnChooserComponent } from './components/base-column-chooser.component';
+export type { IColumnChooserProps } from './components/base-column-chooser.component';
 
 // Utilities (view model helpers)
 export type {
