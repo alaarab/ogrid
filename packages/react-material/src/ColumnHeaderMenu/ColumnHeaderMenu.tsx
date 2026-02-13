@@ -1,8 +1,5 @@
 import React, { useMemo } from 'react';
-import Menu from '@mui/material/Menu';
-import MenuItem from '@mui/material/MenuItem';
-import Divider from '@mui/material/Divider';
-import IconButton from '@mui/material/IconButton';
+import { Menu, MenuItem, Divider, IconButton } from '@mui/material';
 import MoreVertIcon from '@mui/icons-material/MoreVert';
 import { getColumnHeaderMenuItems } from '@alaarab/ogrid-core';
 import type { ColumnHeaderMenuInput } from '@alaarab/ogrid-core';
