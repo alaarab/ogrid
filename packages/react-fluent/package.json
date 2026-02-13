@@ -40,7 +40,7 @@
     "node": ">=18"
   },
   "dependencies": {
-    "@alaarab/ogrid-react": "2.0.7"
+    "@alaarab/ogrid-react": "2.0.8"
   },
   "peerDependencies": {
     "@fluentui/react-components": "^9.0.0",
