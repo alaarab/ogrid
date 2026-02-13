@@ -39,6 +39,7 @@ module.exports = {
     '^@angular/material/menu$': '<rootDir>/jest-mocks/angular-material-menu.cjs.js',
     '^@angular/material/button$': '<rootDir>/jest-mocks/angular-material-button.cjs.js',
     '^@angular/material/icon$': '<rootDir>/jest-mocks/angular-material-icon.cjs.js',
+    '^@angular/material/divider$': '<rootDir>/jest-mocks/angular-material-divider.cjs.js',
   },
   transformIgnorePatterns: [
     'node_modules/(?!(@angular/material|@angular/cdk)/)',
