@@ -1,12 +1,6 @@
-import { Component, input, output, signal, computed } from '@angular/core';
+import { Component } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import type { IColumnDefinition } from '@alaarab/ogrid-angular';
-
-export interface IColumnChooserProps {
-  columns: IColumnDefinition[];
-  visibleColumns: Set<string>;
-  onVisibilityChange: (columnKey: string, visible: boolean) => void;
-}
+import { BaseColumnChooserComponent } from '@alaarab/ogrid-angular';
 
 @Component({
   selector: 'ogrid-primeng-column-chooser',
@@ -34,11 +28,11 @@ export interface IColumnChooserProps {
           <div style="padding:4px 12px;font-weight:600;font-size:12px;color:var(--ogrid-muted, #666)">
             Select Columns ({{ visibleCount() }} of {{ totalCount() }})
           </div>
-          @for (col of columns(); track col.columnId) {
+          @for (col of columns; track col.columnId) {
             <label style="display:flex;align-items:center;gap:8px;padding:4px 12px;cursor:pointer;font-size:13px">
               <input
                 type="checkbox"
-                [checked]="visibleColumns().has(col.columnId)"
+                [checked]="visibleColumns.has(col.columnId)"
                 (change)="onToggle(col.columnId, $any($event.target).checked)"
                 [disabled]="col.required === true"
               />
@@ -64,33 +58,9 @@ export interface IColumnChooserProps {
     </div>
   `,
 })
-export class ColumnChooserComponent {
-  readonly columns = input.required<IColumnDefinition[]>();
-  readonly visibleColumns = input.required<Set<string>>();
-  readonly visibilityChange = output<{ columnKey: string; visible: boolean }>();
-
-  readonly open = signal(false);
-
-  protected readonly visibleCount = computed(() => this.visibleColumns().size);
-  protected readonly totalCount = computed(() => this.columns().length);
-
-  onToggle(columnKey: string, checked: boolean): void {
-    this.visibilityChange.emit({ columnKey, visible: checked });
-  }
-
-  onSelectAll(): void {
-    for (const col of this.columns()) {
-      if (!this.visibleColumns().has(col.columnId)) {
-        this.visibilityChange.emit({ columnKey: col.columnId, visible: true });
-      }
-    }
-  }
-
-  onClearAll(): void {
-    for (const col of this.columns()) {
-      if (col.required !== true && this.visibleColumns().has(col.columnId)) {
-        this.visibilityChange.emit({ columnKey: col.columnId, visible: false });
-      }
-    }
+export class ColumnChooserComponent extends BaseColumnChooserComponent {
+  // PrimeNG uses 'open' instead of 'isOpen'
+  get open() {
+    return this.isOpen;
   }
 }
