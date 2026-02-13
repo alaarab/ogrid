@@ -7,13 +7,7 @@
           A fully featured data table powered by <code>@alaarab/ogrid-vue-vuetify</code>.
           Includes sorting, multi-select &amp; text filtering, column chooser, and pagination.
         </p>
-        <OGrid
-          :data="projects"
-          :columns="columns"
-          :get-row-id="getRowId"
-          entity-label-plural="projects"
-          :default-page-size="25"
-        />
+        <OGrid :grid-props="gridProps" />
       </div>
     </v-main>
   </v-app>
@@ -21,9 +15,15 @@
 
 <script setup lang="ts">
 import { OGrid } from '@alaarab/ogrid-vue-vuetify';
+import type { IOGridProps } from '@alaarab/ogrid-vue-vuetify';
 import { makeDemoProjects, makeDemoColumns, getRowId } from '../shared/demoData';
 import type { Project } from '../shared/demoData';
 
-const projects = makeDemoProjects(75);
-const columns = makeDemoColumns<Project>();
+const gridProps: IOGridProps<Project> = {
+  data: makeDemoProjects(75),
+  columns: makeDemoColumns<Project>(),
+  getRowId,
+  entityLabelPlural: 'projects',
+  defaultPageSize: 25,
+};
 </script>

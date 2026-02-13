@@ -11,6 +11,7 @@ import {
   getCellRenderDescriptor,
   resolveCellDisplayContent,
   resolveCellStyle,
+  buildPopoverEditorProps,
 } from '../utils';
 import type {
   IOGridDataGridProps,
@@ -53,6 +54,7 @@ export abstract class BaseDataGridTableComponent<T = unknown> {
 
   readonly tableContainerEl = computed(() => this.getTableContainerRef()?.nativeElement ?? null);
 
+  readonly allItems = computed(() => this.getProps()?.items ?? []);
   readonly items = computed(() => this.getProps()?.items ?? []);
   readonly getRowId = computed(() => this.getProps()?.getRowId ?? ((item: T) => (item as Record<string, unknown>)['id'] as RowId));
   readonly isLoading = computed(() => this.getProps()?.isLoading ?? false);
@@ -101,6 +103,32 @@ export abstract class BaseDataGridTableComponent<T = unknown> {
 
   // Pinning state
   readonly pinnedColumnsMap = computed(() => this.state().pinning.pinnedColumns);
+
+  // Virtual scrolling
+  readonly vsEnabled = computed(() => this.virtualScrollService.isActive());
+  readonly vsVisibleRange = computed(() => this.virtualScrollService.visibleRange());
+  readonly vsTopSpacerHeight = computed(() => {
+    if (!this.vsEnabled()) return 0;
+    return this.vsVisibleRange().offsetTop;
+  });
+  readonly vsBottomSpacerHeight = computed(() => {
+    if (!this.vsEnabled()) return 0;
+    return this.vsVisibleRange().offsetBottom;
+  });
+  readonly vsVisibleItems = computed(() => {
+    const items = this.allItems();
+    if (!this.vsEnabled()) return items;
+    const range = this.vsVisibleRange();
+    return items.slice(range.startIndex, Math.min(range.endIndex + 1, items.length));
+  });
+  readonly vsStartIndex = computed(() => {
+    if (!this.vsEnabled()) return 0;
+    return this.vsVisibleRange().startIndex;
+  });
+
+  // Popover editing
+  readonly popoverAnchorEl = computed(() => this.state().editing.popoverAnchorEl);
+  readonly pendingEditorValueForPopover = computed(() => this.state().editing.pendingEditorValue);
 
   readonly allowOverflowX = computed(() => {
     const p = this.getProps();
@@ -183,6 +211,22 @@ export abstract class BaseDataGridTableComponent<T = unknown> {
       const p = this.getProps();
       if (p) {
         this.virtualScrollService.totalRows.set(p.items.length);
+        if (p.virtualScroll) {
+          this.virtualScrollService.updateConfig({
+            enabled: p.virtualScroll.enabled,
+            rowHeight: p.virtualScroll.rowHeight,
+            overscan: p.virtualScroll.overscan,
+          });
+        }
+      }
+    });
+
+    // Wire wrapper element to virtual scroll for scroll events + container height
+    effect(() => {
+      const el = this.getWrapperRef()?.nativeElement;
+      if (el) {
+        this.virtualScrollService.setContainer(el);
+        this.virtualScrollService.containerHeight.set(el.clientHeight);
       }
     });
   }
@@ -212,12 +256,21 @@ export abstract class BaseDataGridTableComponent<T = unknown> {
     return getCellRenderDescriptor(item, col, rowIndex, colIdx, this.cellDescriptorInput());
   }
 
-  resolveCellContent(col: IColumnDef<T>, item: T, displayValue: unknown): string {
+  resolveCellContent(col: IColumnDef<T>, item: T, displayValue: unknown): unknown {
     return resolveCellDisplayContent(col, item, displayValue);
   }
 
   resolveCellStyleFn(col: IColumnDef<T>, item: T): Record<string, string> | undefined {
     return resolveCellStyle(col, item);
+  }
+
+  buildPopoverEditorProps(item: T, col: IColumnDef<T>, descriptor: CellRenderDescriptor): unknown {
+    return buildPopoverEditorProps(item, col, descriptor, this.pendingEditorValue(), {
+      setPendingEditorValue: (value: unknown) => this.setPendingEditorValue(value),
+      commitCellEdit: (item: T, columnId: string, oldValue: unknown, newValue: unknown, rowIndex: number, globalColIndex: number) =>
+        this.commitEdit(item, columnId, oldValue, newValue, rowIndex, globalColIndex),
+      cancelPopoverEdit: () => this.cancelPopoverEdit(),
+    });
   }
 
   getSelectValues(col: IColumnDef<T>): string[] {
@@ -233,6 +286,30 @@ export abstract class BaseDataGridTableComponent<T = unknown> {
     const d = new Date(String(value));
     if (Number.isNaN(d.getTime())) return '';
     return d.toISOString().split('T')[0];
+  }
+
+  // --- Virtual scroll event handler ---
+
+  onWrapperScroll(event: Event): void {
+    this.virtualScrollService.onScroll(event);
+  }
+
+  // --- Popover editor helpers ---
+
+  setPopoverAnchorEl(el: HTMLElement | null): void {
+    this.state().editing.setPopoverAnchorEl(el);
+  }
+
+  setPendingEditorValue(value: unknown): void {
+    this.state().editing.setPendingEditorValue(value);
+  }
+
+  cancelPopoverEdit(): void {
+    this.state().editing.cancelPopoverEdit();
+  }
+
+  commitPopoverEdit(item: T, columnId: string, oldValue: unknown, newValue: unknown, rowIndex: number, globalColIndex: number): void {
+    this.state().editing.commitCellEdit(item, columnId, oldValue, newValue, rowIndex, globalColIndex);
   }
 
   // --- Event handlers ---

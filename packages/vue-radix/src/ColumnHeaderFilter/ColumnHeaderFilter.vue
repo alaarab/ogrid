@@ -1,29 +1,10 @@
 <script setup lang="ts">
 import { Popover, PopoverButton, PopoverPanel } from '@headlessui/vue';
-import { useColumnHeaderFilterState, type UserLike, type ColumnFilterType, type IDateFilterValue } from '@alaarab/ogrid-vue';
+import { useColumnHeaderFilterState } from '@alaarab/ogrid-vue';
 import TextFilterPopover from './TextFilterPopover.vue';
 import MultiSelectFilterPopover from './MultiSelectFilterPopover.vue';
 import PeopleFilterPopover from './PeopleFilterPopover.vue';
-
-export interface IColumnHeaderFilterProps {
-  columnKey: string;
-  columnName: string;
-  filterType: ColumnFilterType;
-  isSorted?: boolean;
-  isSortedDescending?: boolean;
-  onSort?: () => void;
-  selectedValues?: string[];
-  onFilterChange?: (values: string[]) => void;
-  options?: string[];
-  isLoadingOptions?: boolean;
-  textValue?: string;
-  onTextChange?: (value: string) => void;
-  selectedUser?: UserLike;
-  onUserChange?: (user: UserLike | undefined) => void;
-  peopleSearch?: (query: string) => Promise<UserLike[]>;
-  dateValue?: IDateFilterValue;
-  onDateChange?: (value: IDateFilterValue | undefined) => void;
-}
+import type { IColumnHeaderFilterProps } from './types';
 
 const props = withDefaults(defineProps<IColumnHeaderFilterProps>(), {
   isSorted: false,

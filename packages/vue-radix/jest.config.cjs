@@ -6,6 +6,7 @@ module.exports = {
     '^@alaarab/ogrid-core$': '<rootDir>/../core/src/index.ts',
     '^@alaarab/ogrid-core/testing$': '<rootDir>/../core/src/testing/index.ts',
     '^@alaarab/ogrid-vue$': '<rootDir>/../vue/src/index.ts',
+    '^@alaarab/ogrid-vue/testing$': '<rootDir>/../vue/src/testing/index.ts',
     '\\.vue$': '<rootDir>/jest-mocks/vue-component.cjs.js',
   },
   transform: {
@@ -17,6 +18,13 @@ module.exports = {
           esModuleInterop: true,
           allowSyntheticDefaultImports: true,
           types: ['jest', 'node'],
+          baseUrl: '.',
+          paths: {
+            '@alaarab/ogrid-core': ['../core/src/index.ts'],
+            '@alaarab/ogrid-core/testing': ['../core/src/testing/index.ts'],
+            '@alaarab/ogrid-vue': ['../vue/src/index.ts'],
+            '@alaarab/ogrid-vue/testing': ['../vue/src/testing/index.ts'],
+          },
         },
       },
     ],

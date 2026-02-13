@@ -22,7 +22,7 @@ import {
 import { ColumnHeaderFilter } from '../ColumnHeaderFilter';
 import { ColumnHeaderMenu } from '../ColumnHeaderMenu/ColumnHeaderMenu';
 import { InlineCellEditor } from './InlineCellEditor';
-import { StatusBar } from './StatusBar';
+import { StatusBar } from '@alaarab/ogrid-vue';
 import { GridContextMenu } from './GridContextMenu';
 
 const NOOP = () => {};

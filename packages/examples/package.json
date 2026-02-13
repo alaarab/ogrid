@@ -1,6 +1,6 @@
 {
   "name": "@alaarab/ogrid-examples",
-  "version": "2.0.7",
+  "version": "2.0.8",
   "private": true,
   "description": "OGrid example apps for all UI packages (React, Angular, Vue, and Vanilla JS).",
   "scripts": {
@@ -39,11 +39,13 @@
     "@alaarab/ogrid-vue-vuetify": "2.0.7",
     "@alaarab/ogrid-vue-primevue": "2.0.7",
     "@alaarab/ogrid-js": "2.0.7",
-    "@angular/common": "^19.2.0",
-    "@angular/core": "^19.2.0",
-    "@angular/platform-browser": "^19.2.0",
-    "@angular/platform-browser-dynamic": "^19.2.0",
-    "@angular/animations": "^19.2.0",
+    "@angular/common": "^21.0.0",
+    "@angular/compiler": "^21.0.0",
+    "@angular/core": "^21.0.0",
+    "@angular/cdk": "^21.0.0",
+    "@angular/platform-browser": "^21.0.0",
+    "@angular/platform-browser-dynamic": "^21.0.0",
+    "@angular/animations": "^21.0.0",
     "@angular/material": "^21.0.0",
     "@emotion/react": "^11.14.0",
     "@emotion/styled": "^11.14.1",
@@ -64,6 +66,8 @@
   },
   "devDependencies": {
     "@analogjs/vite-plugin-angular": "^2.0.0",
+    "@angular/build": "^21.0.0",
+    "@angular/compiler-cli": "^21.0.0",
     "@vitejs/plugin-react": "^5.1.4",
     "@vitejs/plugin-vue": "^6.0.2",
     "vite": "^7.3.1"

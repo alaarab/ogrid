@@ -12,3 +12,7 @@ export { PaginationControls } from './PaginationControls/PaginationControls';
 export type { IPaginationControlsProps } from './PaginationControls/PaginationControls';
 export { ColumnHeaderMenu } from './ColumnHeaderMenu/ColumnHeaderMenu';
 export type { ColumnHeaderMenuProps } from './ColumnHeaderMenu/ColumnHeaderMenu';
+// Re-export shared components from base
+export { StatusBar, MarchingAntsOverlay } from '@alaarab/ogrid-vue';
+export { GridContextMenu } from './DataGridTable/GridContextMenu';
+export { InlineCellEditor } from './DataGridTable/InlineCellEditor';

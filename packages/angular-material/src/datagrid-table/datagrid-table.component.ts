@@ -14,6 +14,8 @@ import type {
 } from '@alaarab/ogrid-angular';
 import { ColumnHeaderFilterComponent } from '../column-header-filter/column-header-filter.component';
 import { ColumnHeaderMenuComponent } from '../column-header-menu/column-header-menu.component';
+import { InlineCellEditorComponent } from './inline-cell-editor.component';
+import { PopoverCellEditorComponent } from './popover-cell-editor.component';
 
 /**
  * DataGridTable component using native HTML table with Material Design-inspired styling.
@@ -22,7 +24,7 @@ import { ColumnHeaderMenuComponent } from '../column-header-menu/column-header-m
 @Component({
   selector: 'ogrid-datagrid-table',
   standalone: true,
-  imports: [ColumnHeaderFilterComponent, ColumnHeaderMenuComponent, MarchingAntsOverlayComponent],
+  imports: [ColumnHeaderFilterComponent, ColumnHeaderMenuComponent, MarchingAntsOverlayComponent, InlineCellEditorComponent, PopoverCellEditorComponent],
   providers: [DataGridStateService],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
@@ -38,6 +40,7 @@ import { ColumnHeaderMenuComponent } from '../column-header-menu/column-header-m
         [attr.aria-labelledby]="ariaLabelledBy()"
         (mousedown)="onWrapperMouseDown($event)"
         (keydown)="onGridKeyDown($event)"
+        (scroll)="onWrapperScroll($event)"
         (contextmenu)="$event.preventDefault()"
         [attr.data-overflow-x]="allowOverflowX() ? 'true' : 'false'"
       >
@@ -140,7 +143,11 @@ import { ColumnHeaderMenuComponent } from '../column-header-menu/column-header-m
                 </thead>
                 @if (!showEmptyInGrid()) {
                   <tbody>
-                    @for (item of items(); track getRowId()(item); let rowIndex = $index) {
+                    @if (vsEnabled() && vsTopSpacerHeight() > 0) {
+                      <tr class="ogrid-datagrid-vs-spacer" [style.height.px]="vsTopSpacerHeight()"></tr>
+                    }
+                    @for (item of vsVisibleItems(); track getRowId()(item); let localIdx = $index) {
+                      @let rowIndex = vsStartIndex() + localIdx;
                       @let rowId = getRowId()(item);
                       @let isSelected = selectedRowIds().has(rowId);
                       <tr
@@ -184,47 +191,26 @@ import { ColumnHeaderMenuComponent } from '../column-header-menu/column-header-m
                           >
                             @let descriptor = getCellDescriptor(item, colLayout.col, rowIndex, colIdx);
                             @if (descriptor.mode === 'editing-inline') {
-                              <div class="ogrid-datagrid-cell ogrid-datagrid-cell--editing">
-                                @switch (descriptor.editorType) {
-                                  @case ('checkbox') {
-                                    <input
-                                      type="checkbox"
-                                      [checked]="!!descriptor.value"
-                                      (change)="commitEdit(item, colLayout.col.columnId, descriptor.value, ($event.target as HTMLInputElement).checked, rowIndex, descriptor.globalColIndex)"
-                                      (keydown)="$event.key === 'Escape' && cancelEdit()"
-                                    />
-                                  }
-                                  @case ('select') {
-                                    <select
-                                      class="ogrid-datagrid-editor-select"
-                                      [value]="descriptor.value != null ? '' + descriptor.value : ''"
-                                      (change)="commitEdit(item, colLayout.col.columnId, descriptor.value, ($event.target as HTMLSelectElement).value, rowIndex, descriptor.globalColIndex)"
-                                      (keydown)="$event.key === 'Escape' && cancelEdit()"
-                                    >
-                                      @for (v of getSelectValues(colLayout.col); track v) {
-                                        <option [value]="v">{{ v }}</option>
-                                      }
-                                    </select>
-                                  }
-                                  @case ('date') {
-                                    <input
-                                      type="date"
-                                      class="ogrid-datagrid-editor-input"
-                                      [value]="formatDateForInput(descriptor.value)"
-                                      (change)="commitEdit(item, colLayout.col.columnId, descriptor.value, ($event.target as HTMLInputElement).value, rowIndex, descriptor.globalColIndex)"
-                                      (keydown)="onEditorKeydown($event, item, colLayout.col.columnId, descriptor.value, rowIndex, descriptor.globalColIndex)"
-                                    />
-                                  }
-                                  @default {
-                                    <input
-                                      type="text"
-                                      class="ogrid-datagrid-editor-input"
-                                      [value]="descriptor.value != null ? '' + descriptor.value : ''"
-                                      (keydown)="onEditorKeydown($event, item, colLayout.col.columnId, descriptor.value, rowIndex, descriptor.globalColIndex)"
-                                    />
-                                  }
-                                }
-                              </div>
+                              <ogrid-mat-inline-cell-editor
+                                [value]="descriptor.value"
+                                [item]="item"
+                                [column]="colLayout.col"
+                                [rowIndex]="rowIndex"
+                                [editorType]="descriptor.editorType ?? 'text'"
+                                (commit)="commitEdit(item, colLayout.col.columnId, descriptor.value, $event, rowIndex, descriptor.globalColIndex)"
+                                (cancel)="cancelEdit()"
+                              ></ogrid-mat-inline-cell-editor>
+                            } @else if (descriptor.mode === 'editing-popover') {
+                              @let editorProps = buildPopoverEditorProps(item, colLayout.col, descriptor);
+                              <ogrid-mat-popover-cell-editor
+                                [item]="item"
+                                [column]="colLayout.col"
+                                [rowIndex]="rowIndex"
+                                [globalColIndex]="descriptor.globalColIndex"
+                                [displayValue]="descriptor.displayValue"
+                                [editorProps]="editorProps"
+                                [onCancel]="() => cancelEdit()"
+                              ></ogrid-mat-popover-cell-editor>
                             } @else {
                               @let content = resolveCellContent(colLayout.col, item, descriptor.displayValue);
                               @let cellStyle = resolveCellStyleFn(colLayout.col, item);
@@ -260,6 +246,9 @@ import { ColumnHeaderMenuComponent } from '../column-header-menu/column-header-m
                           </td>
                         }
                       </tr>
+                    }
+                    @if (vsEnabled() && vsBottomSpacerHeight() > 0) {
+                      <tr class="ogrid-datagrid-vs-spacer" [style.height.px]="vsBottomSpacerHeight()"></tr>
                     }
                   </tbody>
                 }
