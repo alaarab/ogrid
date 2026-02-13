@@ -585,9 +585,17 @@ function DataGridTableInner<T>(props: IOGridDataGridProps<T>): React.ReactElemen
           onPinLeft={headerMenu.handlePinLeft}
           onPinRight={headerMenu.handlePinRight}
           onUnpin={headerMenu.handleUnpin}
+          onSortAsc={headerMenu.handleSortAsc}
+          onSortDesc={headerMenu.handleSortDesc}
+          onClearSort={headerMenu.handleClearSort}
+          onAutosizeThis={headerMenu.handleAutosizeThis}
+          onAutosizeAll={headerMenu.handleAutosizeAll}
           canPinLeft={headerMenu.canPinLeft}
           canPinRight={headerMenu.canPinRight}
           canUnpin={headerMenu.canUnpin}
+          currentSort={headerMenu.currentSort}
+          isSortable={headerMenu.isSortable}
+          isResizable={headerMenu.isResizable}
         />
       </div>
       {statusBarConfig && (

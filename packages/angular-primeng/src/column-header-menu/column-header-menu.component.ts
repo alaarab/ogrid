@@ -3,10 +3,10 @@ import { ButtonModule } from 'primeng/button';
 import { MenuModule } from 'primeng/menu';
 import type { Menu } from 'primeng/menu';
 import type { MenuItem } from 'primeng/api';
-import { COLUMN_HEADER_MENU_ITEMS } from '@alaarab/ogrid-core';
+import { getColumnHeaderMenuItems, type ColumnHeaderMenuHandlers } from '@alaarab/ogrid-core';
 
 /**
- * Column header dropdown menu for pin/unpin actions.
+ * Column header dropdown menu for pin/unpin, sort, and autosize actions.
  * Uses PrimeNG Menu component.
  */
 @Component({
@@ -50,46 +50,47 @@ export class ColumnHeaderMenuComponent {
   readonly canPinLeft = input<boolean>(true);
   readonly canPinRight = input<boolean>(true);
   readonly canUnpin = input<boolean>(false);
+  readonly currentSort = input<'asc' | 'desc' | null>(null);
+  readonly isSortable = input<boolean>(true);
+  readonly isResizable = input<boolean>(true);
 
-  readonly onPinLeft = input<(() => void) | undefined>(undefined);
-  readonly onPinRight = input<(() => void) | undefined>(undefined);
-  readonly onUnpin = input<(() => void) | undefined>(undefined);
+  readonly handlers = input<Partial<ColumnHeaderMenuHandlers>>({});
 
   readonly menuRef = viewChild<Menu>('menu');
 
-  readonly menuModel = computed<MenuItem[]>(() => [
-    {
-      label: COLUMN_HEADER_MENU_ITEMS[0].label,
-      disabled: !this.canPinLeft(),
-      command: () => this.handlePinLeft(),
-    },
-    {
-      label: COLUMN_HEADER_MENU_ITEMS[1].label,
-      disabled: !this.canPinRight(),
-      command: () => this.handlePinRight(),
-    },
-    {
-      label: COLUMN_HEADER_MENU_ITEMS[2].label,
-      disabled: !this.canUnpin(),
-      command: () => this.handleUnpin(),
-    },
-  ]);
+  readonly menuModel = computed<MenuItem[]>(() => {
+    const items = getColumnHeaderMenuItems({
+      canPinLeft: this.canPinLeft(),
+      canPinRight: this.canPinRight(),
+      canUnpin: this.canUnpin(),
+      currentSort: this.currentSort(),
+      isSortable: this.isSortable(),
+      isResizable: this.isResizable(),
+    });
 
-  handlePinLeft(): void {
-    if (this.canPinLeft()) {
-      this.onPinLeft()?.();
-    }
-  }
+    const h = this.handlers();
+    const actionMap: Record<string, (() => void) | undefined> = {
+      pinLeft: h.onPinLeft,
+      pinRight: h.onPinRight,
+      unpin: h.onUnpin,
+      sortAsc: h.onSortAsc,
+      sortDesc: h.onSortDesc,
+      clearSort: h.onClearSort,
+      autosizeThis: h.onAutosizeThis,
+      autosizeAll: h.onAutosizeAll,
+    };
 
-  handlePinRight(): void {
-    if (this.canPinRight()) {
-      this.onPinRight()?.();
-    }
-  }
-
-  handleUnpin(): void {
-    if (this.canUnpin()) {
-      this.onUnpin()?.();
-    }
-  }
+    return items.map((item) => ({
+      label: item.label,
+      disabled: item.disabled,
+      separator: item.divider,
+      command: () => {
+        const action = actionMap[item.id];
+        if (action) {
+          action();
+          h.onClose?.();
+        }
+      },
+    }));
+  });
 }

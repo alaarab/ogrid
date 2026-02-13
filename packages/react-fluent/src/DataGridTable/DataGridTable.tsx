@@ -710,9 +710,17 @@ function DataGridTableInner<T>(props: IOGridDataGridProps<T>): React.ReactElemen
             onPinLeft={pinning.headerMenu.handlePinLeft}
             onPinRight={pinning.headerMenu.handlePinRight}
             onUnpin={pinning.headerMenu.handleUnpin}
+            onSortAsc={pinning.headerMenu.handleSortAsc}
+            onSortDesc={pinning.headerMenu.handleSortDesc}
+            onClearSort={pinning.headerMenu.handleClearSort}
+            onAutosizeThis={pinning.headerMenu.handleAutosizeThis}
+            onAutosizeAll={pinning.headerMenu.handleAutosizeAll}
             canPinLeft={pinning.headerMenu.canPinLeft}
             canPinRight={pinning.headerMenu.canPinRight}
             canUnpin={pinning.headerMenu.canUnpin}
+            currentSort={pinning.headerMenu.currentSort}
+            isSortable={pinning.headerMenu.isSortable}
+            isResizable={pinning.headerMenu.isResizable}
           />,
           document.body
         )}

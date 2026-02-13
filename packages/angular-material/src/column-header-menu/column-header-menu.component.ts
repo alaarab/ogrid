@@ -1,17 +1,18 @@
-import { Component, input, viewChild, ChangeDetectionStrategy } from '@angular/core';
+import { Component, input, viewChild, computed, ChangeDetectionStrategy } from '@angular/core';
 import { MatMenuModule, MatMenuTrigger } from '@angular/material/menu';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
-import { COLUMN_HEADER_MENU_ITEMS } from '@alaarab/ogrid-core';
+import { MatDividerModule } from '@angular/material/divider';
+import { getColumnHeaderMenuItems, type IColumnHeaderMenuItem, type ColumnHeaderMenuHandlers } from '@alaarab/ogrid-core';
 
 /**
- * Column header dropdown menu for pin/unpin actions.
+ * Column header dropdown menu for pin/unpin, sort, and autosize actions.
  * Uses Angular Material MatMenu.
  */
 @Component({
   selector: 'column-header-menu',
   standalone: true,
-  imports: [MatMenuModule, MatButtonModule, MatIconModule],
+  imports: [MatMenuModule, MatButtonModule, MatIconModule, MatDividerModule],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <button
@@ -24,27 +25,18 @@ import { COLUMN_HEADER_MENU_ITEMS } from '@alaarab/ogrid-core';
     </button>
 
     <mat-menu #menu="matMenu">
-      <button
-        mat-menu-item
-        [disabled]="!canPinLeft()"
-        (click)="handlePinLeft()"
-      >
-        {{ menuItems[0].label }}
-      </button>
-      <button
-        mat-menu-item
-        [disabled]="!canPinRight()"
-        (click)="handlePinRight()"
-      >
-        {{ menuItems[1].label }}
-      </button>
-      <button
-        mat-menu-item
-        [disabled]="!canUnpin()"
-        (click)="handleUnpin()"
-      >
-        {{ menuItems[2].label }}
-      </button>
+      @for (item of menuItems(); track item.id) {
+        @if (item.divider) {
+          <mat-divider></mat-divider>
+        }
+        <button
+          mat-menu-item
+          [disabled]="item.disabled"
+          (click)="handleMenuItemClick(item.id)"
+        >
+          {{ item.label }}
+        </button>
+      }
     </mat-menu>
   `,
   styles: [`
@@ -68,30 +60,41 @@ export class ColumnHeaderMenuComponent {
   readonly canPinLeft = input<boolean>(true);
   readonly canPinRight = input<boolean>(true);
   readonly canUnpin = input<boolean>(false);
+  readonly currentSort = input<'asc' | 'desc' | null>(null);
+  readonly isSortable = input<boolean>(true);
+  readonly isResizable = input<boolean>(true);
 
-  readonly onPinLeft = input<(() => void) | undefined>(undefined);
-  readonly onPinRight = input<(() => void) | undefined>(undefined);
-  readonly onUnpin = input<(() => void) | undefined>(undefined);
+  readonly handlers = input<Partial<ColumnHeaderMenuHandlers>>({});
 
   readonly menuTrigger = viewChild(MatMenuTrigger);
 
-  readonly menuItems = COLUMN_HEADER_MENU_ITEMS;
+  readonly menuItems = computed<IColumnHeaderMenuItem[]>(() =>
+    getColumnHeaderMenuItems({
+      canPinLeft: this.canPinLeft(),
+      canPinRight: this.canPinRight(),
+      canUnpin: this.canUnpin(),
+      currentSort: this.currentSort(),
+      isSortable: this.isSortable(),
+      isResizable: this.isResizable(),
+    })
+  );
 
-  handlePinLeft(): void {
-    if (this.canPinLeft()) {
-      this.onPinLeft()?.();
-    }
-  }
-
-  handlePinRight(): void {
-    if (this.canPinRight()) {
-      this.onPinRight()?.();
-    }
-  }
-
-  handleUnpin(): void {
-    if (this.canUnpin()) {
-      this.onUnpin()?.();
+  handleMenuItemClick(itemId: string): void {
+    const h = this.handlers();
+    const actionMap: Record<string, (() => void) | undefined> = {
+      pinLeft: h.onPinLeft,
+      pinRight: h.onPinRight,
+      unpin: h.onUnpin,
+      sortAsc: h.onSortAsc,
+      sortDesc: h.onSortDesc,
+      clearSort: h.onClearSort,
+      autosizeThis: h.onAutosizeThis,
+      autosizeAll: h.onAutosizeAll,
+    };
+    const action = actionMap[itemId];
+    if (action) {
+      action();
+      h.onClose?.();
     }
   }
 }
