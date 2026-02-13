@@ -1,31 +1,37 @@
 <script setup lang="ts">
-import { ref, onMounted, onBeforeUnmount } from 'vue';
-import { COLUMN_HEADER_MENU_ITEMS } from '@alaarab/ogrid-vue';
+import { ref, computed, onMounted, onBeforeUnmount } from 'vue';
+import { getColumnHeaderMenuItems } from '@alaarab/ogrid-vue';
 import type { ColumnHeaderMenuProps } from './types';
 
 const props = defineProps<ColumnHeaderMenuProps>();
 
 const menuRef = ref<HTMLDivElement | null>(null);
 
-const items = COLUMN_HEADER_MENU_ITEMS;
+const items = computed(() =>
+  getColumnHeaderMenuItems({
+    canPinLeft: props.canPinLeft,
+    canPinRight: props.canPinRight,
+    canUnpin: props.canUnpin,
+    currentSort: props.currentSort,
+    isSortable: props.isSortable,
+    isResizable: props.isResizable,
+  })
+);
 
-const getDisabled = (index: number) => {
-  if (index === 0) return !props.canPinLeft;
-  if (index === 1) return !props.canPinRight;
-  if (index === 2) return !props.canUnpin;
-  return false;
+const handlers: Record<string, () => void> = {
+  pinLeft: props.onPinLeft,
+  pinRight: props.onPinRight,
+  unpin: props.onUnpin,
+  sortAsc: props.onSortAsc,
+  sortDesc: props.onSortDesc,
+  clearSort: props.onClearSort,
+  autosizeThis: props.onAutosizeThis,
+  autosizeAll: props.onAutosizeAll,
 };
 
-const getHandler = (index: number) => {
-  if (index === 0) return props.onPinLeft;
-  if (index === 1) return props.onPinRight;
-  if (index === 2) return props.onUnpin;
-  return () => {};
-};
-
-const handleClick = (index: number) => {
-  if (!getDisabled(index)) {
-    getHandler(index)();
+const handleClick = (itemId: string, disabled: boolean) => {
+  if (!disabled && handlers[itemId]) {
+    handlers[itemId]();
   }
 };
 
@@ -56,16 +62,21 @@ onBeforeUnmount(() => {
       left: `${anchorElement.getBoundingClientRect().left}px`,
     }"
   >
-    <div
-      v-for="(item, index) in items"
-      :key="item.id"
-      role="menuitem"
-      :aria-disabled="getDisabled(index) ? 'true' : undefined"
-      :class="['ogrid-column-header-menu-item', { disabled: getDisabled(index) }]"
-      @click="handleClick(index)"
-    >
-      {{ item.label }}
-    </div>
+    <template v-for="(item, index) in items" :key="item.id">
+      <div
+        v-if="item.divider && index > 0"
+        class="ogrid-column-header-menu-divider"
+        role="separator"
+      ></div>
+      <div
+        role="menuitem"
+        :aria-disabled="item.disabled ? 'true' : undefined"
+        :class="['ogrid-column-header-menu-item', { disabled: item.disabled }]"
+        @click="handleClick(item.id, item.disabled ?? false)"
+      >
+        {{ item.label }}
+      </div>
+    </template>
   </div>
 </template>
 
@@ -77,7 +88,7 @@ onBeforeUnmount(() => {
   border: 1px solid rgba(0, 0, 0, 0.12);
   border-radius: 4px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
-  min-width: 140px;
+  min-width: 160px;
   padding: 4px 0;
 }
 
@@ -96,5 +107,11 @@ onBeforeUnmount(() => {
 .ogrid-column-header-menu-item.disabled {
   cursor: default;
   opacity: 0.4;
+}
+
+.ogrid-column-header-menu-divider {
+  height: 1px;
+  background-color: rgba(0, 0, 0, 0.12);
+  margin: 4px 0;
 }
 </style>

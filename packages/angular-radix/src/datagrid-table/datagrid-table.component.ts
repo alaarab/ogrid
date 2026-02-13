@@ -127,14 +127,26 @@ import { PopoverCellEditorComponent } from './popover-cell-editor.component';
                                 [onDateChange]="getFilterConfig(col).onDateChange"
                               />
                               @let colPinState = getPinState(col.columnId);
+                              @let colSortState = getSortState(col.columnId);
                               <column-header-menu
                                 [columnId]="col.columnId"
-                                [onPinLeft]="() => onPinColumn(col.columnId, 'left')"
-                                [onPinRight]="() => onPinColumn(col.columnId, 'right')"
-                                [onUnpin]="() => onUnpinColumn(col.columnId)"
                                 [canPinLeft]="colPinState.canPinLeft"
                                 [canPinRight]="colPinState.canPinRight"
                                 [canUnpin]="colPinState.canUnpin"
+                                [currentSort]="colSortState"
+                                [isSortable]="col.sortable !== false"
+                                [isResizable]="col.resizable !== false"
+                                [handlers]="{
+                                  onPinLeft: () => onPinColumn(col.columnId, 'left'),
+                                  onPinRight: () => onPinColumn(col.columnId, 'right'),
+                                  onUnpin: () => onUnpinColumn(col.columnId),
+                                  onSortAsc: () => onSortAsc(col.columnId),
+                                  onSortDesc: () => onSortDesc(col.columnId),
+                                  onClearSort: () => onClearSort(),
+                                  onAutosizeThis: () => onAutosizeColumn(col.columnId),
+                                  onAutosizeAll: () => onAutosizeAllColumns(),
+                                  onClose: () => {}
+                                }"
                               />
                             </div>
                             <div class="ogrid-datagrid-resize-handle" (mousedown)="onResizeStart($event, col)"></div>
