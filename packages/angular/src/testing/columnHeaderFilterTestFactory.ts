@@ -2,7 +2,8 @@
  * Shared ColumnHeaderFilter tests for Angular UI packages.
  * Each UI package calls createColumnHeaderFilterTests(ColumnHeaderFilterComponent) to run these.
  *
- * Tests instantiate the component class directly and verify signal-based behavior.
+ * Tests instantiate the component class directly and verify behavior.
+ * Inputs use @Input() decorators (plain properties), internal state uses signals.
  */
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -10,33 +11,33 @@ export function createColumnHeaderFilterTests(ColumnHeaderFilterComponent: new (
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   function createComponent(overrides: Record<string, unknown> = {}): any {
     const instance = new ColumnHeaderFilterComponent();
-    // Set required inputs
-    if (overrides.columnKey !== undefined) instance.columnKey.set(overrides.columnKey);
-    if (overrides.columnName !== undefined) instance.columnName.set(overrides.columnName);
-    if (overrides.filterType !== undefined) instance.filterType.set(overrides.filterType);
-    if (overrides.isSorted !== undefined) instance.isSorted.set(overrides.isSorted);
-    if (overrides.isSortedDescending !== undefined) instance.isSortedDescending.set(overrides.isSortedDescending);
-    if (overrides.onSort !== undefined) instance.onSort.set(overrides.onSort);
-    if (overrides.selectedValues !== undefined) instance.selectedValues.set(overrides.selectedValues);
-    if (overrides.onFilterChange !== undefined) instance.onFilterChange.set(overrides.onFilterChange);
-    if (overrides.options !== undefined) instance.options.set(overrides.options);
-    if (overrides.isLoadingOptions !== undefined) instance.isLoadingOptions.set(overrides.isLoadingOptions);
-    if (overrides.textValue !== undefined) instance.textValue.set(overrides.textValue);
-    if (overrides.onTextChange !== undefined) instance.onTextChange.set(overrides.onTextChange);
-    if (overrides.selectedUser !== undefined) instance.selectedUser.set(overrides.selectedUser);
-    if (overrides.onUserChange !== undefined) instance.onUserChange.set(overrides.onUserChange);
-    if (overrides.peopleSearch !== undefined) instance.peopleSearch.set(overrides.peopleSearch);
-    if (overrides.dateValue !== undefined) instance.dateValue.set(overrides.dateValue);
-    if (overrides.onDateChange !== undefined) instance.onDateChange.set(overrides.onDateChange);
+    // Set @Input() properties directly
+    if (overrides.columnKey !== undefined) instance.columnKey = overrides.columnKey;
+    if (overrides.columnName !== undefined) instance.columnName = overrides.columnName;
+    if (overrides.filterType !== undefined) instance.filterType = overrides.filterType;
+    if (overrides.isSorted !== undefined) instance.isSorted = overrides.isSorted;
+    if (overrides.isSortedDescending !== undefined) instance.isSortedDescending = overrides.isSortedDescending;
+    if (overrides.onSort !== undefined) instance.onSort = overrides.onSort;
+    if (overrides.selectedValues !== undefined) instance.selectedValues = overrides.selectedValues;
+    if (overrides.onFilterChange !== undefined) instance.onFilterChange = overrides.onFilterChange;
+    if (overrides.options !== undefined) instance.options = overrides.options;
+    if (overrides.isLoadingOptions !== undefined) instance.isLoadingOptions = overrides.isLoadingOptions;
+    if (overrides.textValue !== undefined) instance.textValue = overrides.textValue;
+    if (overrides.onTextChange !== undefined) instance.onTextChange = overrides.onTextChange;
+    if (overrides.selectedUser !== undefined) instance.selectedUser = overrides.selectedUser;
+    if (overrides.onUserChange !== undefined) instance.onUserChange = overrides.onUserChange;
+    if (overrides.peopleSearch !== undefined) instance.peopleSearch = overrides.peopleSearch;
+    if (overrides.dateValue !== undefined) instance.dateValue = overrides.dateValue;
+    if (overrides.onDateChange !== undefined) instance.onDateChange = overrides.onDateChange;
     return instance;
   }
 
   it('instantiates with required inputs', () => {
     const comp = createComponent({ columnKey: 'name', columnName: 'Name', filterType: 'text' });
     expect(comp).toBeTruthy();
-    expect(comp.columnKey()).toBe('name');
-    expect(comp.columnName()).toBe('Name');
-    expect(comp.filterType()).toBe('text');
+    expect(comp.columnKey).toBe('name');
+    expect(comp.columnName).toBe('Name');
+    expect(comp.filterType).toBe('text');
   });
 
   it('hasActiveFilter is false for text filter with no value', () => {

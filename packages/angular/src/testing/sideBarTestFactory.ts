@@ -35,7 +35,8 @@ export function createSideBarTests(OGridComponent: new (...args: any[]) => any):
       defaultPageSize: 10,
       ...overrides,
     } as IOGridProps<FixtureRow>;
-    instance.props.set(defaultProps);
+    // Set the props input (decorator-based @Input, not signal)
+    instance.props = defaultProps;
     svc.configure(defaultProps);
     instance._testService = svc;
     return instance;

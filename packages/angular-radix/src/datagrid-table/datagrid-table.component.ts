@@ -1,7 +1,4 @@
-import {
-  Component, input, ElementRef, viewChild,
-  ChangeDetectionStrategy,
-} from '@angular/core';
+import { Component, ElementRef, ViewChild, ChangeDetectionStrategy, Input } from '@angular/core';
 import {
   BaseDataGridTableComponent,
   DataGridStateService,
@@ -136,17 +133,7 @@ import { PopoverCellEditorComponent } from './popover-cell-editor.component';
                                 [currentSort]="colSortState"
                                 [isSortable]="col.sortable !== false"
                                 [isResizable]="col.resizable !== false"
-                                [handlers]="{
-                                  onPinLeft: () => onPinColumn(col.columnId, 'left'),
-                                  onPinRight: () => onPinColumn(col.columnId, 'right'),
-                                  onUnpin: () => onUnpinColumn(col.columnId),
-                                  onSortAsc: () => onSortAsc(col.columnId),
-                                  onSortDesc: () => onSortDesc(col.columnId),
-                                  onClearSort: () => onClearSort(),
-                                  onAutosizeThis: () => onAutosizeColumn(col.columnId),
-                                  onAutosizeAll: () => onAutosizeAllColumns(),
-                                  onClose: () => {}
-                                }"
+                                [handlers]="getColumnMenuHandlers(col.columnId)"
                               />
                             </div>
                             <div class="ogrid-datagrid-resize-handle" (mousedown)="onResizeStart($event, col)"></div>
@@ -347,10 +334,10 @@ import { PopoverCellEditorComponent } from './popover-cell-editor.component';
   `,
 })
 export class DataGridTableComponent<T> extends BaseDataGridTableComponent<T> {
-  readonly propsInput = input.required<IOGridDataGridProps<T>>({ alias: 'props' });
+  @Input({ required: true, alias: 'props' }) propsInput!: IOGridDataGridProps<T>;
 
-  private readonly wrapperRef = viewChild<ElementRef<HTMLElement>>('wrapperEl');
-  private readonly tableContainerRef = viewChild<ElementRef<HTMLElement>>('tableContainerEl');
+  @ViewChild('wrapperEl') private wrapperRef?: ElementRef<HTMLElement>;
+  @ViewChild('tableContainerEl') private tableContainerRef?: ElementRef<HTMLElement>;
 
   constructor() {
     super();
@@ -358,14 +345,29 @@ export class DataGridTableComponent<T> extends BaseDataGridTableComponent<T> {
   }
 
   protected getProps(): IOGridDataGridProps<T> | undefined {
-    return this.propsInput();
+    return this.propsInput;
   }
 
   protected getWrapperRef(): ElementRef<HTMLElement> | undefined {
-    return this.wrapperRef();
+    return this.wrapperRef;
   }
 
   protected getTableContainerRef(): ElementRef<HTMLElement> | undefined {
-    return this.tableContainerRef();
+    return this.tableContainerRef;
+  }
+
+  /** Build column header menu handlers for a given column */
+  protected getColumnMenuHandlers(columnId: string) {
+    return {
+      onPinLeft: () => this.onPinColumn(columnId, 'left'),
+      onPinRight: () => this.onPinColumn(columnId, 'right'),
+      onUnpin: () => this.onUnpinColumn(columnId),
+      onSortAsc: () => this.onSortAsc(columnId),
+      onSortDesc: () => this.onSortDesc(columnId),
+      onClearSort: () => this.onClearSort(),
+      onAutosizeThis: () => this.onAutosizeColumn(columnId),
+      onAutosizeAll: () => this.onAutosizeAllColumns(),
+      onClose: () => {}
+    };
   }
 }

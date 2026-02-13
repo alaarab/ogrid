@@ -11,20 +11,21 @@ export function createPaginationControlsTests(PaginationControlsComponent: new (
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   function createComponent(overrides: Record<string, unknown> = {}): any {
     const instance = new PaginationControlsComponent();
-    instance.currentPage.set(overrides.currentPage ?? 2);
-    instance.pageSize.set(overrides.pageSize ?? 10);
-    instance.totalCount.set(overrides.totalCount ?? 50);
-    if (overrides.pageSizeOptions !== undefined) instance.pageSizeOptions.set(overrides.pageSizeOptions);
-    if (overrides.entityLabelPlural !== undefined) instance.entityLabelPlural.set(overrides.entityLabelPlural);
+    // Set @Input() properties directly
+    instance.currentPage = overrides.currentPage ?? 2;
+    instance.pageSize = overrides.pageSize ?? 10;
+    instance.totalCount = overrides.totalCount ?? 50;
+    if (overrides.pageSizeOptions !== undefined) instance.pageSizeOptions = overrides.pageSizeOptions;
+    if (overrides.entityLabelPlural !== undefined) instance.entityLabelPlural = overrides.entityLabelPlural;
     return instance;
   }
 
   it('instantiates correctly', () => {
     const comp = createComponent();
     expect(comp).toBeTruthy();
-    expect(comp.currentPage()).toBe(2);
-    expect(comp.pageSize()).toBe(10);
-    expect(comp.totalCount()).toBe(50);
+    expect(comp.currentPage).toBe(2);
+    expect(comp.pageSize).toBe(10);
+    expect(comp.totalCount).toBe(50);
   });
 
   it('vm() computes correct page info', () => {

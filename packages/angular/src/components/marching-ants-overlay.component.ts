@@ -1,4 +1,4 @@
-import { Component, input, effect, signal, DestroyRef, inject } from '@angular/core';
+import { Component, Input, effect, signal, DestroyRef, inject, OnChanges, SimpleChanges } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import type { ISelectionRange } from '../types';
 
@@ -99,15 +99,15 @@ function ensureKeyframes(): void {
     }
   `,
 })
-export class MarchingAntsOverlayComponent {
+export class MarchingAntsOverlayComponent implements OnChanges {
   private destroyRef = inject(DestroyRef);
 
-  readonly containerEl = input.required<HTMLElement | null>();
-  readonly selectionRange = input<ISelectionRange | null>(null);
-  readonly copyRange = input<ISelectionRange | null>(null);
-  readonly cutRange = input<ISelectionRange | null>(null);
-  readonly colOffset = input<number>(0);
-  readonly columnSizingVersion = input<number>(0);
+  @Input({ required: true }) containerEl!: HTMLElement | null;
+  @Input() selectionRange: ISelectionRange | null = null;
+  @Input() copyRange: ISelectionRange | null = null;
+  @Input() cutRange: ISelectionRange | null = null;
+  @Input() colOffset: number = 0;
+  @Input() columnSizingVersion: number = 0;
 
   readonly selRect = signal<OverlayRect | null>(null);
   readonly clipRect = signal<OverlayRect | null>(null);
@@ -118,52 +118,56 @@ export class MarchingAntsOverlayComponent {
   constructor() {
     ensureKeyframes();
 
-    effect(() => {
-      const container = this.containerEl();
-      const selRange = this.selectionRange();
-      const clipRange = this.copyRange() ?? this.cutRange();
-      const colOff = this.colOffset();
-      void this.columnSizingVersion(); // Track column resize changes
-
-      if (this.resizeObserver) {
-        this.resizeObserver.disconnect();
-        this.resizeObserver = null;
-      }
-
-      if (!selRange && !clipRange) {
-        this.selRect.set(null);
-        this.clipRect.set(null);
-        return;
-      }
-
-      const measureAll = () => {
-        if (!container) {
-          this.selRect.set(null);
-          this.clipRect.set(null);
-          return;
-        }
-        this.selRect.set(selRange ? measureRange(container, selRange, colOff) : null);
-        this.clipRect.set(clipRange ? measureRange(container, clipRange, colOff) : null);
-      };
-
-      if (this.rafId) cancelAnimationFrame(this.rafId);
-      this.rafId = requestAnimationFrame(measureAll);
-
-      if (container) {
-        this.resizeObserver = new ResizeObserver(measureAll);
-        this.resizeObserver.observe(container);
-      }
-    });
-
     this.destroyRef.onDestroy(() => {
       if (this.rafId) cancelAnimationFrame(this.rafId);
       if (this.resizeObserver) this.resizeObserver.disconnect();
     });
   }
 
+  ngOnChanges(_changes: SimpleChanges): void {
+    this.recalculate();
+  }
+
+  private recalculate(): void {
+    const container = this.containerEl;
+    const selRange = this.selectionRange;
+    const clipRange = this.copyRange ?? this.cutRange;
+    const colOff = this.colOffset;
+    void this.columnSizingVersion; // Track column resize changes
+
+    if (this.resizeObserver) {
+      this.resizeObserver.disconnect();
+      this.resizeObserver = null;
+    }
+
+    if (!selRange && !clipRange) {
+      this.selRect.set(null);
+      this.clipRect.set(null);
+      return;
+    }
+
+    const measureAll = () => {
+      if (!container) {
+        this.selRect.set(null);
+        this.clipRect.set(null);
+        return;
+      }
+      this.selRect.set(selRange ? measureRange(container, selRange, colOff) : null);
+      this.clipRect.set(clipRange ? measureRange(container, clipRange, colOff) : null);
+    };
+
+    if (this.rafId) cancelAnimationFrame(this.rafId);
+    this.rafId = requestAnimationFrame(measureAll);
+
+    if (container) {
+      this.resizeObserver = new ResizeObserver(measureAll);
+      this.resizeObserver.observe(container);
+    }
+  }
+
   clipRangeMatchesSel(): boolean {
-    const selRange = this.selectionRange();
-    const clipRange = this.copyRange() ?? this.cutRange();
+    const selRange = this.selectionRange;
+    const clipRange = this.copyRange ?? this.cutRange;
     return selRange != null && clipRange != null &&
       selRange.startRow === clipRange.startRow &&
       selRange.startCol === clipRange.startCol &&
