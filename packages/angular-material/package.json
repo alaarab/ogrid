@@ -1,6 +1,6 @@
 {
   "name": "@alaarab/ogrid-angular-material",
-  "version": "2.0.7",
+  "version": "2.0.8",
   "description": "OGrid Angular Material – MatTable-based data grid with sorting, filtering, pagination, column chooser, and CSV export.",
   "main": "dist/esm/index.js",
   "module": "dist/esm/index.js",
@@ -16,33 +16,48 @@
     "build": "rimraf dist && tsc -p tsconfig.build.json",
     "test": "jest --passWithNoTests"
   },
-  "keywords": ["ogrid", "angular", "material", "datatable", "typescript", "grid"],
+  "keywords": [
+    "ogrid",
+    "angular",
+    "material",
+    "datatable",
+    "typescript",
+    "grid"
+  ],
   "author": "Ala Arab",
   "license": "MIT",
-  "files": ["dist", "README.md", "LICENSE"],
-  "engines": { "node": ">=18" },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "engines": {
+    "node": ">=18"
+  },
   "dependencies": {
     "@alaarab/ogrid-angular": "2.0.7"
   },
   "peerDependencies": {
-    "@angular/core": "^21.0.0",
+    "@angular/cdk": "^21.0.0",
     "@angular/common": "^21.0.0",
-    "@angular/material": "^21.0.0",
-    "@angular/cdk": "^21.0.0"
+    "@angular/core": "^21.0.0",
+    "@angular/material": "^21.0.0"
   },
   "devDependencies": {
-    "@angular/core": "^21.1.4",
+    "@angular/animations": "^21.1.4",
+    "@angular/cdk": "^21.1.4",
     "@angular/common": "^21.1.4",
     "@angular/compiler": "^21.1.4",
+    "@angular/core": "^21.1.4",
+    "@angular/material": "^21.1.4",
     "@angular/platform-browser": "^21.1.4",
     "@angular/platform-browser-dynamic": "^21.1.4",
-    "@angular/material": "^21.1.4",
-    "@angular/cdk": "^21.1.4",
-    "@angular/animations": "^21.1.4",
     "rxjs": "^7.8.2",
-    "zone.js": "^0.15.0",
-    "typescript": "^5.9.3"
+    "typescript": "^5.9.3",
+    "zone.js": "^0.15.0"
   },
   "sideEffects": false,
-  "publishConfig": { "access": "public" }
+  "publishConfig": {
+    "access": "public"
+  }
 }

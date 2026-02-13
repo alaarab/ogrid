@@ -1,6 +1,6 @@
 import { DEMO_DATA_TS } from './demoData';
 
-const OGRID_VERSION = '2.0.6';
+const OGRID_VERSION = '2.0.7';
 
 interface ProjectDef {
   title: string;
@@ -8,6 +8,8 @@ interface ProjectDef {
   files: Record<string, string>;
   dependencies: Record<string, string>;
   devDependencies?: Record<string, string>;
+  /** Override default Vite scripts (e.g. Angular CLI uses ng serve) */
+  scripts?: Record<string, string>;
   /** Entry HTML (defaults to a div#root or div#app) */
   entryHtml?: string;
 }
@@ -74,7 +76,7 @@ function packageJson(def: ProjectDef) {
       private: true,
       version: '0.0.0',
       type: 'module',
-      scripts: {
+      scripts: def.scripts ?? {
         dev: 'vite',
         build: 'vite build',
       },
@@ -200,7 +202,7 @@ export function createAngularProject(
     radix: {},
     material: { '@angular/material': '^21.0.0' },
     primeng: {
-      primeng: '^19.0.0',
+      primeng: '^21.0.0',
       primeicons: '^7.0.0',
     },
   };
@@ -218,6 +220,10 @@ export function createAngularProject(
       '@angular/cli': '^21.0.0',
       '@angular/compiler-cli': '^21.0.0',
       '@angular-devkit/build-angular': '^21.0.0',
+    },
+    scripts: {
+      start: 'ng serve',
+      build: 'ng build',
     },
     files: {},
   };
@@ -295,12 +301,12 @@ export function createAngularProject(
 </html>
 `,
       'src/main.ts': `import { bootstrapApplication } from '@angular/platform-browser';
-import { provideAnimationsAsync } from '@angular/platform-browser/animations/async';
+import { provideAnimations } from '@angular/platform-browser/animations';
 import { AppComponent } from './app/app.component';
 
 bootstrapApplication(AppComponent, {
-  providers: [provideAnimationsAsync()]
-});
+  providers: [provideAnimations()]
+}).catch((err) => console.error(err));
 `,
       'src/app/data.ts': DEMO_DATA_TS,
       'src/app/app.component.ts': code,

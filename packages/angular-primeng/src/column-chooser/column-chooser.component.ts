@@ -2,6 +2,12 @@ import { Component, input, output, signal, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import type { IColumnDefinition } from '@alaarab/ogrid-angular';
 
+export interface IColumnChooserProps {
+  columns: IColumnDefinition[];
+  visibleColumns: Set<string>;
+  onVisibilityChange: (columnKey: string, visible: boolean) => void;
+}
+
 @Component({
   selector: 'ogrid-primeng-column-chooser',
   standalone: true,

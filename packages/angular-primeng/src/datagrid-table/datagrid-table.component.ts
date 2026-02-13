@@ -29,6 +29,7 @@ import type {
 import { ColumnHeaderFilterComponent } from '../column-header-filter/column-header-filter.component';
 import { ColumnHeaderMenuComponent } from '../column-header-menu/column-header-menu.component';
 import { InlineCellEditorComponent } from './inline-cell-editor.component';
+import { PopoverCellEditorComponent } from './popover-cell-editor.component';
 
 @Component({
   selector: 'ogrid-primeng-datagrid-table',
@@ -41,6 +42,7 @@ import { InlineCellEditorComponent } from './inline-cell-editor.component';
     ColumnHeaderFilterComponent,
     ColumnHeaderMenuComponent,
     InlineCellEditorComponent,
+    PopoverCellEditorComponent,
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   providers: [DataGridStateService],
@@ -61,6 +63,7 @@ import { InlineCellEditorComponent } from './inline-cell-editor.component';
         (contextmenu)="$event.preventDefault()"
         (keydown)="onGridKeyDown($event)"
         (mousedown)="onWrapperMouseDown($event)"
+        (scroll)="onWrapperScroll($event)"
         style="flex:1;min-height:0;overflow:auto;outline:none;position:relative;font-size:13px;color:var(--ogrid-fg, #242424)"
         [style.--data-table-column-count]="state().layout.totalColCount"
         [style.--data-table-width]="tableWidthStyle()"
@@ -175,7 +178,11 @@ import { InlineCellEditorComponent } from './inline-cell-editor.component';
 
                 @if (!showEmptyInGrid()) {
                   <tbody>
-                    @for (item of items(); track trackByRowId($index, item); let rowIndex = $index) {
+                    @if (vsEnabled() && vsTopSpacerHeight() > 0) {
+                      <tr [style.height.px]="vsTopSpacerHeight()"></tr>
+                    }
+                    @for (item of vsVisibleItems(); track trackByRowId($index, item); let localIdx = $index) {
+                      @let rowIndex = vsStartIndex() + localIdx;
                       @let rowId = getRowIdInput()(item);
                       @let isSelected = selectedRowIds().has(rowId);
                       <tr
@@ -216,7 +223,7 @@ import { InlineCellEditorComponent } from './inline-cell-editor.component';
                             [style.max-width.px]="getColumnWidth(col)"
                             [style.text-align]="col.type === 'numeric' ? 'right' : col.type === 'boolean' ? 'center' : null"
                           >
-                            @if (isEditingCell(item, col)) {
+                            @if (isEditingCellInline(item, col)) {
                               <ogrid-primeng-inline-cell-editor
                                 [value]="getCellValueFn(item, col)"
                                 [item]="item"
@@ -226,6 +233,17 @@ import { InlineCellEditorComponent } from './inline-cell-editor.component';
                                 (commit)="onCellEditorCommit(item, col, rowIndex, colIdx, $event)"
                                 (cancel)="cancelEdit()"
                               ></ogrid-primeng-inline-cell-editor>
+                            } @else if (isEditingCellPopover(item, col)) {
+                              @let editorProps = buildPopoverEditorPropsForPrimeng(item, col, rowIndex, colIdx);
+                              <ogrid-primeng-popover-cell-editor
+                                [item]="item"
+                                [column]="col"
+                                [rowIndex]="rowIndex"
+                                [globalColIndex]="colIdx + colOffset()"
+                                [displayValue]="getCellValueFn(item, col)"
+                                [editorProps]="editorProps"
+                                [onCancel]="() => cancelEdit()"
+                              ></ogrid-primeng-popover-cell-editor>
                             } @else {
                               <div
                                 [attr.data-row-index]="rowIndex"
@@ -252,6 +270,9 @@ import { InlineCellEditorComponent } from './inline-cell-editor.component';
                           </td>
                         }
                       </tr>
+                    }
+                    @if (vsEnabled() && vsBottomSpacerHeight() > 0) {
+                      <tr [style.height.px]="vsBottomSpacerHeight()"></tr>
                     }
                   </tbody>
                 }
@@ -505,7 +526,8 @@ export class DataGridTableComponent<T = unknown> extends BaseDataGridTableCompon
 
   resolveCellDisplay(col: IColumnDef<T>, item: T): string {
     const value = getCellValue(item, col);
-    return resolveCellDisplayContent(col, item, value);
+    const result = resolveCellDisplayContent(col, item, value);
+    return result != null ? String(result) : '';
   }
 
   getCellStyleObj(col: IColumnDef<T>, item: T): Record<string, string> | null {
@@ -521,6 +543,29 @@ export class DataGridTableComponent<T = unknown> extends BaseDataGridTableCompon
     const editing = this.editingCell();
     if (!editing) return false;
     return editing.rowId === this.getRowIdInput()(item) && editing.columnId === col.columnId;
+  }
+
+  isEditingCellInline(item: T, col: IColumnDef<T>): boolean {
+    return this.isEditingCell(item, col) && typeof col.cellEditor !== 'function';
+  }
+
+  isEditingCellPopover(item: T, col: IColumnDef<T>): boolean {
+    return this.isEditingCell(item, col) && typeof col.cellEditor === 'function';
+  }
+
+  buildPopoverEditorPropsForPrimeng(item: T, col: IColumnDef<T>, rowIndex: number, colIdx: number): unknown {
+    const oldValue = getCellValue(item, col);
+    const pendingValue = this.pendingEditorValue();
+    const displayValue = pendingValue !== undefined ? pendingValue : oldValue;
+    return {
+      value: displayValue,
+      onValueChange: (value: unknown) => this.setPendingEditorValue(value),
+      item,
+      column: col,
+      rowIndex,
+      onCommit: (newValue: unknown) => this.onCellEditorCommit(item, col, rowIndex, colIdx, newValue),
+      onCancel: () => this.cancelEdit(),
+    };
   }
 
   getEditorType(col: IColumnDef<T>, _item: T): 'text' | 'select' | 'checkbox' | 'date' | 'richSelect' {

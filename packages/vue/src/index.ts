@@ -47,6 +47,10 @@ export type {
 
 export { toUserLike, isInSelectionRange, normalizeSelectionRange } from './types';
 
+// Shared components
+export { MarchingAntsOverlay } from './components/MarchingAntsOverlay';
+export { StatusBar, type StatusBarProps } from './components/StatusBar';
+
 // Composables
 export {
   useOGrid,
