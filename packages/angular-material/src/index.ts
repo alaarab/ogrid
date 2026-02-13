@@ -10,3 +10,5 @@ export { ColumnChooserComponent } from './column-chooser/column-chooser.componen
 export type { IColumnChooserProps } from './column-chooser/column-chooser.component';
 export { PaginationControlsComponent } from './pagination-controls/pagination-controls.component';
 export { ColumnHeaderMenuComponent } from './column-header-menu/column-header-menu.component';
+export { InlineCellEditorComponent } from './datagrid-table/inline-cell-editor.component';
+export { PopoverCellEditorComponent } from './datagrid-table/popover-cell-editor.component';

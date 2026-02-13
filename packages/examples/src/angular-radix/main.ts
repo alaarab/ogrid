@@ -1,6 +1,7 @@
 import { bootstrapApplication } from '@angular/platform-browser';
 import { Component } from '@angular/core';
 import { OGridComponent } from '@alaarab/ogrid-angular-radix';
+import type { IOGridProps } from '@alaarab/ogrid-angular-radix';
 import { makeDemoProjects, makeDemoColumns, getRowId } from '../shared/demoData';
 import type { Project } from '../shared/demoData';
 
@@ -18,20 +19,18 @@ const columns = makeDemoColumns<Project>();
         A fully featured data table powered by <code>@alaarab/ogrid-angular-radix</code>.
         Includes sorting, multi-select &amp; text filtering, column chooser, and pagination.
       </p>
-      <ogrid
-        [data]="projects"
-        [columns]="columns"
-        [getRowId]="getRowId"
-        entityLabelPlural="projects"
-        [defaultPageSize]="25"
-      />
+      <ogrid [props]="gridProps" />
     </div>
   `,
 })
 export class AppComponent {
-  projects = projects;
-  columns = columns;
-  getRowId = getRowId;
+  gridProps: IOGridProps<Project> = {
+    data: projects,
+    columns: columns,
+    getRowId: getRowId,
+    entityLabelPlural: 'projects',
+    defaultPageSize: 25,
+  };
 }
 
 bootstrapApplication(AppComponent).catch((err) => console.error(err));

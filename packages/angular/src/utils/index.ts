@@ -15,6 +15,8 @@ export {
   getCellRenderDescriptor,
   resolveCellDisplayContent,
   resolveCellStyle,
+  buildInlineEditorProps,
+  buildPopoverEditorProps,
 } from './dataGridViewModel';
 
 // Debounce utilities

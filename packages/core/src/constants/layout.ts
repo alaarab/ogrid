@@ -1,5 +1,5 @@
 /**
- * Core OGrid constants — magic numbers centralized for consistency and maintainability.
+ * Layout and sizing constants for OGrid components.
  */
 
 /** Width of the row selection checkbox column in pixels. */

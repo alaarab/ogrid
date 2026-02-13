@@ -51,3 +51,19 @@ export {
   getScrollTopForRow,
 } from './virtualScroll';
 export type { IVisibleRange } from './virtualScroll';
+export {
+  getHeaderFilterConfig,
+  getCellRenderDescriptor,
+  resolveCellDisplayContent,
+  resolveCellStyle,
+  buildInlineEditorProps,
+  buildPopoverEditorProps,
+} from './dataGridViewModel';
+export type {
+  HeaderFilterConfigInput,
+  HeaderFilterConfig,
+  CellRenderDescriptorInput,
+  CellRenderDescriptor,
+  CellRenderMode,
+} from './dataGridViewModel';
+export { debounce } from './debounce';
