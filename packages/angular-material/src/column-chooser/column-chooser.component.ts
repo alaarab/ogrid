@@ -1,11 +1,5 @@
-import { Component, input, output, signal, computed, ChangeDetectionStrategy } from '@angular/core';
-import type { IColumnDefinition } from '@alaarab/ogrid-angular';
-
-export interface IColumnChooserProps {
-  columns: IColumnDefinition[];
-  visibleColumns: Set<string>;
-  onVisibilityChange: (columnKey: string, visible: boolean) => void;
-}
+import { Component, ChangeDetectionStrategy } from '@angular/core';
+import { BaseColumnChooserComponent } from '@alaarab/ogrid-angular';
 
 /**
  * Column visibility chooser dropdown using Angular Material styling.
@@ -34,11 +28,11 @@ export interface IColumnChooserProps {
           </div>
 
           <div class="ogrid-column-chooser__list">
-            @for (col of columns(); track col.columnId) {
+            @for (col of columns; track col.columnId) {
               <label class="ogrid-column-chooser__item">
                 <input
                   type="checkbox"
-                  [checked]="visibleColumns().has(col.columnId)"
+                  [checked]="visibleColumns.has(col.columnId)"
                   (change)="onCheckboxChange(col.columnId, $event)"
                 />
                 <span>{{ col.name }}</span>
@@ -102,44 +96,8 @@ export interface IColumnChooserProps {
     '(document:click)': 'onDocumentClick($event)',
   },
 })
-export class ColumnChooserComponent {
-  readonly columns = input.required<IColumnDefinition[]>();
-  readonly visibleColumns = input.required<Set<string>>();
-
-  readonly visibilityChange = output<{ columnKey: string; visible: boolean }>();
-
-  readonly isOpen = signal(false);
-
-  readonly visibleCount = computed(() => this.visibleColumns().size);
-  readonly totalCount = computed(() => this.columns().length);
-
-  toggle(): void {
-    this.isOpen.update((v) => !v);
-  }
-
-  onCheckboxChange(columnKey: string, event: Event): void {
-    const checked = (event.target as HTMLInputElement).checked;
-    this.visibilityChange.emit({ columnKey, visible: checked });
-  }
-
-  selectAll(): void {
-    for (const col of this.columns()) {
-      if (!this.visibleColumns().has(col.columnId)) {
-        this.visibilityChange.emit({ columnKey: col.columnId, visible: true });
-      }
-    }
-  }
-
-  clearAll(): void {
-    for (const col of this.columns()) {
-      if (this.visibleColumns().has(col.columnId)) {
-        this.visibilityChange.emit({ columnKey: col.columnId, visible: false });
-      }
-    }
-  }
-
+export class ColumnChooserComponent extends BaseColumnChooserComponent {
   onDocumentClick(event: MouseEvent): void {
-    // Close dropdown when clicking outside
     const el = event.target as HTMLElement;
     if (!el.closest('ogrid-column-chooser')) {
       this.isOpen.set(false);

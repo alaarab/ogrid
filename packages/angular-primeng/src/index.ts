@@ -9,6 +9,6 @@ export { PopoverCellEditorComponent } from './datagrid-table/popover-cell-editor
 export { ColumnHeaderFilterComponent } from './column-header-filter/column-header-filter.component';
 // IColumnHeaderFilterProps is now exported from @alaarab/ogrid-angular (base class)
 export { ColumnChooserComponent } from './column-chooser/column-chooser.component';
-export type { IColumnChooserProps } from './column-chooser/column-chooser.component';
+// IColumnChooserProps is now exported from @alaarab/ogrid-angular (base class)
 export { PaginationControlsComponent } from './pagination-controls/pagination-controls.component';
 export { ColumnHeaderMenuComponent } from './column-header-menu/column-header-menu.component';
