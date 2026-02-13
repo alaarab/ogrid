@@ -1,8 +1,8 @@
-import { Component, input, signal, ChangeDetectionStrategy } from '@angular/core';
-import { COLUMN_HEADER_MENU_ITEMS } from '@alaarab/ogrid-angular';
+import { Component, input, signal, computed, ChangeDetectionStrategy } from '@angular/core';
+import { getColumnHeaderMenuItems, type ColumnHeaderMenuHandlers } from '@alaarab/ogrid-angular';
 
 /**
- * Column header dropdown menu for pin/unpin actions.
+ * Column header dropdown menu for pin/unpin, sort, and autosize actions.
  * Uses native HTML elements with lightweight styling.
  */
 @Component({
@@ -21,27 +21,18 @@ import { COLUMN_HEADER_MENU_ITEMS } from '@alaarab/ogrid-angular';
 
       @if (isOpen()) {
         <div class="ogrid-header-menu__dropdown">
-          <button
-            class="ogrid-header-menu__item"
-            [disabled]="!canPinLeft()"
-            (click)="handlePinLeft()"
-          >
-            {{ menuItems[0].label }}
-          </button>
-          <button
-            class="ogrid-header-menu__item"
-            [disabled]="!canPinRight()"
-            (click)="handlePinRight()"
-          >
-            {{ menuItems[1].label }}
-          </button>
-          <button
-            class="ogrid-header-menu__item"
-            [disabled]="!canUnpin()"
-            (click)="handleUnpin()"
-          >
-            {{ menuItems[2].label }}
-          </button>
+          @for (item of menuItems(); track item.id) {
+            @if (item.divider) {
+              <div class="ogrid-header-menu__divider"></div>
+            }
+            <button
+              class="ogrid-header-menu__item"
+              [disabled]="item.disabled"
+              (click)="handleMenuItemClick(item.id)"
+            >
+              {{ item.label }}
+            </button>
+          }
         </div>
       }
     </div>
@@ -106,6 +97,11 @@ import { COLUMN_HEADER_MENU_ITEMS } from '@alaarab/ogrid-angular';
       opacity: 0.4;
       cursor: not-allowed;
     }
+    .ogrid-header-menu__divider {
+      height: 1px;
+      margin: 4px 0;
+      background: var(--ogrid-border, #e0e0e0);
+    }
   `],
   host: {
     '(document:click)': 'onDocumentClick($event)',
@@ -116,36 +112,46 @@ export class ColumnHeaderMenuComponent {
   readonly canPinLeft = input<boolean>(true);
   readonly canPinRight = input<boolean>(true);
   readonly canUnpin = input<boolean>(false);
+  readonly currentSort = input<'asc' | 'desc' | null>(null);
+  readonly isSortable = input<boolean>(true);
+  readonly isResizable = input<boolean>(true);
 
-  readonly onPinLeft = input<(() => void) | undefined>(undefined);
-  readonly onPinRight = input<(() => void) | undefined>(undefined);
-  readonly onUnpin = input<(() => void) | undefined>(undefined);
+  readonly handlers = input<Partial<ColumnHeaderMenuHandlers>>({});
 
   readonly isOpen = signal(false);
-  readonly menuItems = COLUMN_HEADER_MENU_ITEMS;
+
+  readonly menuItems = computed(() =>
+    getColumnHeaderMenuItems({
+      canPinLeft: this.canPinLeft(),
+      canPinRight: this.canPinRight(),
+      canUnpin: this.canUnpin(),
+      currentSort: this.currentSort(),
+      isSortable: this.isSortable(),
+      isResizable: this.isResizable(),
+    })
+  );
 
   toggleMenu(event: MouseEvent): void {
     event.stopPropagation();
     this.isOpen.update(v => !v);
   }
 
-  handlePinLeft(): void {
-    if (this.canPinLeft()) {
-      this.onPinLeft()?.();
-    }
-    this.isOpen.set(false);
-  }
-
-  handlePinRight(): void {
-    if (this.canPinRight()) {
-      this.onPinRight()?.();
-    }
-    this.isOpen.set(false);
-  }
-
-  handleUnpin(): void {
-    if (this.canUnpin()) {
-      this.onUnpin()?.();
+  handleMenuItemClick(itemId: string): void {
+    const h = this.handlers();
+    const actionMap: Record<string, (() => void) | undefined> = {
+      pinLeft: h.onPinLeft,
+      pinRight: h.onPinRight,
+      unpin: h.onUnpin,
+      sortAsc: h.onSortAsc,
+      sortDesc: h.onSortDesc,
+      clearSort: h.onClearSort,
+      autosizeThis: h.onAutosizeThis,
+      autosizeAll: h.onAutosizeAll,
+    };
+    const action = actionMap[itemId];
+    if (action) {
+      action();
+      h.onClose?.();
     }
     this.isOpen.set(false);
   }

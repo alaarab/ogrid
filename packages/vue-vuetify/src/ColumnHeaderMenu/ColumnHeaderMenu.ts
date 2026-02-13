@@ -1,6 +1,6 @@
-import { defineComponent, h, type PropType } from 'vue';
-import { VMenu, VList, VListItem } from 'vuetify/components';
-import { COLUMN_HEADER_MENU_ITEMS } from '@alaarab/ogrid-vue';
+import { defineComponent, h, computed, type PropType } from 'vue';
+import { VMenu, VList, VListItem, VDivider } from 'vuetify/components';
+import { getColumnHeaderMenuItems } from '@alaarab/ogrid-vue';
 
 export interface ColumnHeaderMenuProps {
   isOpen: boolean;
@@ -9,9 +9,17 @@ export interface ColumnHeaderMenuProps {
   onPinLeft: () => void;
   onPinRight: () => void;
   onUnpin: () => void;
+  onSortAsc: () => void;
+  onSortDesc: () => void;
+  onClearSort: () => void;
+  onAutosizeThis: () => void;
+  onAutosizeAll: () => void;
   canPinLeft: boolean;
   canPinRight: boolean;
   canUnpin: boolean;
+  currentSort: 'asc' | 'desc' | null;
+  isSortable: boolean;
+  isResizable: boolean;
 }
 
 export const ColumnHeaderMenu = defineComponent({
@@ -23,9 +31,17 @@ export const ColumnHeaderMenu = defineComponent({
     onPinLeft: { type: Function as PropType<() => void>, required: true },
     onPinRight: { type: Function as PropType<() => void>, required: true },
     onUnpin: { type: Function as PropType<() => void>, required: true },
+    onSortAsc: { type: Function as PropType<() => void>, required: true },
+    onSortDesc: { type: Function as PropType<() => void>, required: true },
+    onClearSort: { type: Function as PropType<() => void>, required: true },
+    onAutosizeThis: { type: Function as PropType<() => void>, required: true },
+    onAutosizeAll: { type: Function as PropType<() => void>, required: true },
     canPinLeft: { type: Boolean, required: true },
     canPinRight: { type: Boolean, required: true },
     canUnpin: { type: Boolean, required: true },
+    currentSort: { type: String as PropType<'asc' | 'desc' | null>, default: null },
+    isSortable: { type: Boolean, default: true },
+    isResizable: { type: Boolean, default: true },
   },
   setup(props) {
     const handleOpenChange = (open: boolean) => {
@@ -34,21 +50,29 @@ export const ColumnHeaderMenu = defineComponent({
       }
     };
 
-    const items = COLUMN_HEADER_MENU_ITEMS;
+    const items = computed(() =>
+      getColumnHeaderMenuItems({
+        canPinLeft: props.canPinLeft,
+        canPinRight: props.canPinRight,
+        canUnpin: props.canUnpin,
+        currentSort: props.currentSort,
+        isSortable: props.isSortable,
+        isResizable: props.isResizable,
+      })
+    );
 
-    const getDisabled = (index: number) => {
-      if (index === 0) return !props.canPinLeft;
-      if (index === 1) return !props.canPinRight;
-      if (index === 2) return !props.canUnpin;
-      return false;
+    const handlers: Record<string, () => void> = {
+      pinLeft: props.onPinLeft,
+      pinRight: props.onPinRight,
+      unpin: props.onUnpin,
+      sortAsc: props.onSortAsc,
+      sortDesc: props.onSortDesc,
+      clearSort: props.onClearSort,
+      autosizeThis: props.onAutosizeThis,
+      autosizeAll: props.onAutosizeAll,
     };
 
-    const getHandler = (index: number) => {
-      if (index === 0) return props.onPinLeft;
-      if (index === 1) return props.onPinRight;
-      if (index === 2) return props.onUnpin;
-      return () => {};
-    };
+    const getHandler = (itemId: string) => handlers[itemId] || (() => {});
 
     return () =>
       h(VMenu as any, {
@@ -58,15 +82,23 @@ export const ColumnHeaderMenu = defineComponent({
         location: 'bottom start',
       }, {
         default: () =>
-          h(VList as any, { density: 'compact', 'aria-label': 'Column options' }, () =>
-            items.map((item, index) =>
-              h(VListItem as any, {
-                key: item.id,
-                disabled: getDisabled(index),
-                onClick: () => { getHandler(index)(); },
-              }, () => item.label)
-            )
-          ),
+          h(VList as any, { density: 'compact', 'aria-label': 'Column options' }, () => {
+            const children: any[] = [];
+            items.value.forEach((item, index) => {
+              // Add divider before item if needed (but not at the start)
+              if (item.divider && index > 0) {
+                children.push(h(VDivider as any, { key: `divider-${item.id}` }));
+              }
+              children.push(
+                h(VListItem as any, {
+                  key: item.id,
+                  disabled: item.disabled,
+                  onClick: () => { getHandler(item.id)(); },
+                }, () => item.label)
+              );
+            });
+            return children;
+          }),
       });
   },
 });

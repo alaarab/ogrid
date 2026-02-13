@@ -5,6 +5,7 @@ import { VirtualScrollService } from '../services/virtual-scroll.service';
 import {
   buildHeaderRows,
   DEFAULT_MIN_COLUMN_WIDTH,
+  CELL_PADDING,
 } from '@alaarab/ogrid-core';
 import {
   getHeaderFilterConfig,
@@ -456,5 +457,73 @@ export abstract class BaseDataGridTableComponent<T = unknown> {
       canPinRight: pinned !== 'right',
       canUnpin: !!pinned,
     };
+  }
+
+  // --- Column sorting methods ---
+
+  onSortAsc(columnId: string): void {
+    const props = this.getProps();
+    props?.onColumnSort?.(columnId);
+  }
+
+  onSortDesc(columnId: string): void {
+    const props = this.getProps();
+    props?.onColumnSort?.(columnId);
+  }
+
+  onClearSort(): void {
+    // Clearing sort is handled by sorting the same column again
+    // The logic in OGridService.handleSort will toggle: asc -> desc -> (clear via callback)
+    // For now, we don't have an explicit clear, so we just don't call anything
+  }
+
+  getSortState(columnId: string): 'asc' | 'desc' | null {
+    const props = this.getProps();
+    if (props?.sortBy === columnId) {
+      return props.sortDirection ?? 'asc';
+    }
+    return null;
+  }
+
+  // --- Column autosize methods ---
+
+  onAutosizeColumn(columnId: string): void {
+    const col = this.visibleCols().find((c) => c.columnId === columnId);
+    if (!col) return;
+
+    const width = this.measureColumnContentWidth(columnId);
+    this.state().layout.setColumnSizingOverrides({
+      ...this.columnSizingOverrides(),
+      [columnId]: { widthPx: width },
+    });
+    this.state().layout.onColumnResized?.(columnId, width);
+  }
+
+  onAutosizeAllColumns(): void {
+    const overrides: Record<string, { widthPx: number }> = {};
+    for (const col of this.visibleCols()) {
+      const width = this.measureColumnContentWidth(col.columnId);
+      overrides[col.columnId] = { widthPx: width };
+      this.state().layout.onColumnResized?.(col.columnId, width);
+    }
+    this.state().layout.setColumnSizingOverrides({
+      ...this.columnSizingOverrides(),
+      ...overrides,
+    });
+  }
+
+  private measureColumnContentWidth(columnId: string): number {
+    const tableEl = this.tableContainerEl();
+    if (!tableEl) return DEFAULT_MIN_COLUMN_WIDTH;
+
+    const cells = Array.from(tableEl.querySelectorAll(`[data-column-id="${columnId}"]`));
+    if (cells.length === 0) return DEFAULT_MIN_COLUMN_WIDTH;
+
+    let maxWidth = DEFAULT_MIN_COLUMN_WIDTH;
+    for (const cell of cells) {
+      const rect = cell.getBoundingClientRect();
+      maxWidth = Math.max(maxWidth, Math.ceil(rect.width) + CELL_PADDING);
+    }
+    return maxWidth;
   }
 }
