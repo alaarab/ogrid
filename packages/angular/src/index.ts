@@ -101,6 +101,7 @@ export { BaseColumnHeaderFilterComponent } from './components/base-column-header
 export type { IColumnHeaderFilterProps } from './components/base-column-header-filter.component';
 export { BaseColumnChooserComponent } from './components/base-column-chooser.component';
 export type { IColumnChooserProps } from './components/base-column-chooser.component';
+export { BasePaginationControlsComponent } from './components/base-pagination-controls.component';
 
 // Utilities (view model helpers)
 export type {

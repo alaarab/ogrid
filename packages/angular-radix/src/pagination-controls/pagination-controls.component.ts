@@ -1,5 +1,5 @@
-import { Component, input, output, computed, ChangeDetectionStrategy } from '@angular/core';
-import { getPaginationViewModel } from '@alaarab/ogrid-angular';
+import { Component, ChangeDetectionStrategy } from '@angular/core';
+import { BasePaginationControlsComponent } from '@alaarab/ogrid-angular';
 
 /**
  * Pagination controls component for Angular Radix (lightweight styling).
@@ -13,20 +13,20 @@ import { getPaginationViewModel } from '@alaarab/ogrid-angular';
     @if (vm(); as vm) {
       <nav class="ogrid-pagination" role="navigation" aria-label="Pagination">
         <span class="ogrid-pagination__info">
-          Showing {{ vm.startItem }} to {{ vm.endItem }} of {{ totalCount().toLocaleString() }} {{ entityLabelPlural() }}
+          Showing {{ vm.startItem }} to {{ vm.endItem }} of {{ totalCount.toLocaleString() }} {{ entityLabelPlural }}
         </span>
 
         <span class="ogrid-pagination__pages">
           <button
             class="ogrid-pagination__btn"
-            [disabled]="currentPage() === 1"
+            [disabled]="currentPage === 1"
             (click)="pageChange.emit(1)"
             aria-label="First page"
           >⏮</button>
           <button
             class="ogrid-pagination__btn"
-            [disabled]="currentPage() === 1"
-            (click)="pageChange.emit(currentPage() - 1)"
+            [disabled]="currentPage === 1"
+            (click)="pageChange.emit(currentPage - 1)"
             aria-label="Previous page"
           >◀</button>
 
@@ -38,10 +38,10 @@ import { getPaginationViewModel } from '@alaarab/ogrid-angular';
           @for (pageNum of vm.pageNumbers; track pageNum) {
             <button
               class="ogrid-pagination__btn"
-              [class.ogrid-pagination__btn--active]="currentPage() === pageNum"
+              [class.ogrid-pagination__btn--active]="currentPage === pageNum"
               (click)="pageChange.emit(pageNum)"
               [attr.aria-label]="'Page ' + pageNum"
-              [attr.aria-current]="currentPage() === pageNum ? 'page' : null"
+              [attr.aria-current]="currentPage === pageNum ? 'page' : null"
             >{{ pageNum }}</button>
           }
 
@@ -56,13 +56,13 @@ import { getPaginationViewModel } from '@alaarab/ogrid-angular';
 
           <button
             class="ogrid-pagination__btn"
-            [disabled]="currentPage() >= vm.totalPages"
-            (click)="pageChange.emit(currentPage() + 1)"
+            [disabled]="currentPage >= vm.totalPages"
+            (click)="pageChange.emit(currentPage + 1)"
             aria-label="Next page"
           >▶</button>
           <button
             class="ogrid-pagination__btn"
-            [disabled]="currentPage() >= vm.totalPages"
+            [disabled]="currentPage >= vm.totalPages"
             (click)="pageChange.emit(vm.totalPages)"
             aria-label="Last page"
           >⏭</button>
@@ -71,12 +71,12 @@ import { getPaginationViewModel } from '@alaarab/ogrid-angular';
         <span class="ogrid-pagination__size">
           <label>Rows
             <select
-              [value]="pageSize()"
+              [value]="pageSize"
               (change)="onPageSizeSelect($event)"
               aria-label="Rows per page"
             >
               @for (n of vm.pageSizeOptions; track n) {
-                <option [value]="n" [selected]="pageSize() === n">{{ n }}</option>
+                <option [value]="n" [selected]="pageSize === n">{{ n }}</option>
               }
             </select>
           </label>
@@ -160,28 +160,4 @@ import { getPaginationViewModel } from '@alaarab/ogrid-angular';
     }
   `],
 })
-export class PaginationControlsComponent {
-  readonly currentPage = input.required<number>();
-  readonly pageSize = input.required<number>();
-  readonly totalCount = input.required<number>();
-  readonly pageSizeOptions = input<number[] | undefined>(undefined);
-  readonly entityLabelPlural = input<string>('items');
-
-  readonly pageChange = output<number>();
-  readonly pageSizeChange = output<number>();
-
-  readonly vm = computed(() => {
-    const opts = this.pageSizeOptions();
-    return getPaginationViewModel(
-      this.currentPage(),
-      this.pageSize(),
-      this.totalCount(),
-      opts ? { pageSizeOptions: opts } : undefined,
-    );
-  });
-
-  onPageSizeSelect(event: Event): void {
-    const value = Number((event.target as HTMLSelectElement).value);
-    this.pageSizeChange.emit(value);
-  }
-}
+export class PaginationControlsComponent extends BasePaginationControlsComponent {}
