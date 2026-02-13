@@ -1,4 +1,4 @@
-import { Component, input, signal, computed, ChangeDetectionStrategy } from '@angular/core';
+import { Component, signal, computed, ChangeDetectionStrategy, Input } from '@angular/core';
 import { getColumnHeaderMenuItems, type ColumnHeaderMenuHandlers } from '@alaarab/ogrid-angular';
 
 /**
@@ -13,7 +13,7 @@ import { getColumnHeaderMenuItems, type ColumnHeaderMenuHandlers } from '@alaara
     <div class="ogrid-header-menu" (click)="$event.stopPropagation()">
       <button
         class="ogrid-header-menu__trigger"
-        [attr.aria-label]="'Column options for ' + columnId()"
+        [attr.aria-label]="'Column options for ' + columnId"
         (click)="toggleMenu($event)"
       >
         &#8942;
@@ -108,26 +108,26 @@ import { getColumnHeaderMenuItems, type ColumnHeaderMenuHandlers } from '@alaara
   },
 })
 export class ColumnHeaderMenuComponent {
-  readonly columnId = input.required<string>();
-  readonly canPinLeft = input<boolean>(true);
-  readonly canPinRight = input<boolean>(true);
-  readonly canUnpin = input<boolean>(false);
-  readonly currentSort = input<'asc' | 'desc' | null>(null);
-  readonly isSortable = input<boolean>(true);
-  readonly isResizable = input<boolean>(true);
+  @Input({ required: true }) columnId!: string;
+  @Input() canPinLeft: boolean = true;
+  @Input() canPinRight: boolean = true;
+  @Input() canUnpin: boolean = false;
+  @Input() currentSort: 'asc' | 'desc' | null = null;
+  @Input() isSortable: boolean = true;
+  @Input() isResizable: boolean = true;
 
-  readonly handlers = input<Partial<ColumnHeaderMenuHandlers>>({});
+  @Input() handlers: Partial<ColumnHeaderMenuHandlers> = {};
 
   readonly isOpen = signal(false);
 
   readonly menuItems = computed(() =>
     getColumnHeaderMenuItems({
-      canPinLeft: this.canPinLeft(),
-      canPinRight: this.canPinRight(),
-      canUnpin: this.canUnpin(),
-      currentSort: this.currentSort(),
-      isSortable: this.isSortable(),
-      isResizable: this.isResizable(),
+      canPinLeft: this.canPinLeft,
+      canPinRight: this.canPinRight,
+      canUnpin: this.canUnpin,
+      currentSort: this.currentSort,
+      isSortable: this.isSortable,
+      isResizable: this.isResizable,
     })
   );
 
@@ -137,7 +137,7 @@ export class ColumnHeaderMenuComponent {
   }
 
   handleMenuItemClick(itemId: string): void {
-    const h = this.handlers();
+    const h = this.handlers;
     const actionMap: Record<string, (() => void) | undefined> = {
       pinLeft: h.onPinLeft,
       pinRight: h.onPinRight,

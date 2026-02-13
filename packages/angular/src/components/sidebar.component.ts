@@ -1,4 +1,4 @@
-import { Component, input } from '@angular/core';
+import { Component, Input } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import type { IColumnDefinition, SideBarPanelId, IFilters, FilterValue } from '../types';
 // GRID_BORDER_RADIUS used by ogrid-layout, not sidebar
@@ -98,11 +98,11 @@ const PANEL_LABELS: Record<SideBarPanelId, string> = { columns: 'Columns', filte
   `],
   template: `
     <div class="ogrid-sidebar-root" role="complementary" aria-label="Side bar">
-      @if (sideBarProps()?.position === 'left') {
+      @if (sideBarProps?.position === 'left') {
         <ng-container *ngTemplateOutlet="tabStripTpl"></ng-container>
         <ng-container *ngTemplateOutlet="panelContentTpl"></ng-container>
       }
-      @if (sideBarProps()?.position === 'right') {
+      @if (sideBarProps?.position === 'right') {
         <ng-container *ngTemplateOutlet="panelContentTpl"></ng-container>
         <ng-container *ngTemplateOutlet="tabStripTpl"></ng-container>
       }
@@ -111,17 +111,17 @@ const PANEL_LABELS: Record<SideBarPanelId, string> = { columns: 'Columns', filte
     <ng-template #tabStripTpl>
       <div
         class="ogrid-sidebar-tab-strip"
-        [class.ogrid-sidebar-tab-strip--left]="sideBarProps()?.position === 'left'"
-        [class.ogrid-sidebar-tab-strip--right]="sideBarProps()?.position === 'right'"
+        [class.ogrid-sidebar-tab-strip--left]="sideBarProps?.position === 'left'"
+        [class.ogrid-sidebar-tab-strip--right]="sideBarProps?.position === 'right'"
         role="tablist"
         aria-label="Side bar tabs"
       >
-        @for (panel of sideBarProps()?.panels ?? []; track panel) {
+        @for (panel of sideBarProps?.panels ?? []; track panel) {
           <button
             role="tab"
             class="ogrid-sidebar-tab"
-            [class.ogrid-sidebar-tab--active]="sideBarProps()?.activePanel === panel"
-            [attr.aria-selected]="sideBarProps()?.activePanel === panel"
+            [class.ogrid-sidebar-tab--active]="sideBarProps?.activePanel === panel"
+            [attr.aria-selected]="sideBarProps?.activePanel === panel"
             [attr.aria-label]="panelLabels[panel]"
             (click)="onTabClick(panel)"
             [title]="panelLabels[panel]"
@@ -133,36 +133,36 @@ const PANEL_LABELS: Record<SideBarPanelId, string> = { columns: 'Columns', filte
     </ng-template>
 
     <ng-template #panelContentTpl>
-      @if (sideBarProps()?.activePanel) {
+      @if (sideBarProps?.activePanel) {
         <div
           role="tabpanel"
           class="ogrid-sidebar-panel"
-          [class.ogrid-sidebar-panel--left]="sideBarProps()?.position === 'left'"
-          [class.ogrid-sidebar-panel--right]="sideBarProps()?.position === 'right'"
-          [attr.aria-label]="panelLabels[sideBarProps()!.activePanel!]"
+          [class.ogrid-sidebar-panel--left]="sideBarProps?.position === 'left'"
+          [class.ogrid-sidebar-panel--right]="sideBarProps?.position === 'right'"
+          [attr.aria-label]="panelLabels[sideBarProps!.activePanel!]"
         >
           <div class="ogrid-sidebar-panel-header">
-            <span>{{ panelLabels[sideBarProps()!.activePanel!] }}</span>
-            <button (click)="sideBarProps()?.onPanelChange(null)" class="ogrid-sidebar-panel-close" aria-label="Close panel">&times;</button>
+            <span>{{ panelLabels[sideBarProps!.activePanel!] }}</span>
+            <button (click)="sideBarProps?.onPanelChange(null)" class="ogrid-sidebar-panel-close" aria-label="Close panel">&times;</button>
           </div>
           <div class="ogrid-sidebar-panel-body">
-            @if (sideBarProps()?.activePanel === 'columns') {
+            @if (sideBarProps?.activePanel === 'columns') {
               <div class="ogrid-sidebar-actions">
                 <button (click)="onSelectAll()" [disabled]="allVisible()" class="ogrid-sidebar-action-btn">Select All</button>
                 <button (click)="onClearAll()" class="ogrid-sidebar-action-btn">Clear All</button>
               </div>
-              @for (col of sideBarProps()?.columns ?? []; track col.columnId) {
+              @for (col of sideBarProps?.columns ?? []; track col.columnId) {
                 <label class="ogrid-sidebar-col-label">
-                  <input type="checkbox" [checked]="sideBarProps()?.visibleColumns?.has(col.columnId)" (change)="onVisibilityChange(col.columnId, $any($event.target).checked)" [disabled]="col.required" />
+                  <input type="checkbox" [checked]="sideBarProps?.visibleColumns?.has(col.columnId)" (change)="onVisibilityChange(col.columnId, $any($event.target).checked)" [disabled]="col.required" />
                   <span>{{ col.name }}</span>
                 </label>
               }
             }
-            @if (sideBarProps()?.activePanel === 'filters') {
-              @if ((sideBarProps()?.filterableColumns ?? []).length === 0) {
+            @if (sideBarProps?.activePanel === 'filters') {
+              @if ((sideBarProps?.filterableColumns ?? []).length === 0) {
                 <div class="ogrid-sidebar-empty">No filterable columns</div>
               }
-              @for (col of sideBarProps()?.filterableColumns ?? []; track col.columnId) {
+              @for (col of sideBarProps?.filterableColumns ?? []; track col.columnId) {
                 <div class="ogrid-sidebar-filter-group">
                   <div class="ogrid-sidebar-filter-label">{{ col.name }}</div>
                   @if (col.filterType === 'text') {
@@ -207,25 +207,25 @@ const PANEL_LABELS: Record<SideBarPanelId, string> = { columns: 'Columns', filte
   `,
 })
 export class SideBarComponent {
-  readonly sideBarProps = input<SideBarProps | null>(null);
+  @Input() sideBarProps: SideBarProps | null = null;
 
   readonly panelLabels = PANEL_LABELS;
   readonly tabWidth = TAB_WIDTH;
   readonly panelWidth = PANEL_WIDTH;
 
   onTabClick(panel: SideBarPanelId): void {
-    const props = this.sideBarProps();
+    const props = this.sideBarProps;
     if (props) props.onPanelChange(props.activePanel === panel ? null : panel);
   }
 
   allVisible(): boolean {
-    const props = this.sideBarProps();
+    const props = this.sideBarProps;
     if (!props) return false;
     return props.columns.every((c) => props.visibleColumns.has(c.columnId));
   }
 
   onSelectAll(): void {
-    const props = this.sideBarProps();
+    const props = this.sideBarProps;
     if (!props) return;
     const next = new Set(props.visibleColumns);
     props.columns.forEach((c) => next.add(c.columnId));
@@ -233,7 +233,7 @@ export class SideBarComponent {
   }
 
   onClearAll(): void {
-    const props = this.sideBarProps();
+    const props = this.sideBarProps;
     if (!props) return;
     const next = new Set<string>();
     props.columns.forEach((c) => {
@@ -243,58 +243,58 @@ export class SideBarComponent {
   }
 
   onVisibilityChange(columnKey: string, visible: boolean): void {
-    this.sideBarProps()?.onVisibilityChange(columnKey, visible);
+    this.sideBarProps?.onVisibilityChange(columnKey, visible);
   }
 
   getTextFilterValue(filterField: string): string {
-    const filters = this.sideBarProps()?.filters;
+    const filters = this.sideBarProps?.filters;
     const fv = filters?.[filterField];
     return fv?.type === 'text' ? fv.value : '';
   }
 
   onTextFilterChange(filterField: string, value: string): void {
-    this.sideBarProps()?.onFilterChange(filterField, value ? { type: 'text', value } : undefined);
+    this.sideBarProps?.onFilterChange(filterField, value ? { type: 'text', value } : undefined);
   }
 
   getDateFrom(filterField: string): string {
-    const fv = this.sideBarProps()?.filters?.[filterField];
+    const fv = this.sideBarProps?.filters?.[filterField];
     return fv?.type === 'date' ? (fv.value.from ?? '') : '';
   }
 
   getDateTo(filterField: string): string {
-    const fv = this.sideBarProps()?.filters?.[filterField];
+    const fv = this.sideBarProps?.filters?.[filterField];
     return fv?.type === 'date' ? (fv.value.to ?? '') : '';
   }
 
   onDateFromChange(filterField: string, value: string): void {
-    const fv = this.sideBarProps()?.filters?.[filterField];
+    const fv = this.sideBarProps?.filters?.[filterField];
     const existing = fv?.type === 'date' ? fv.value : {};
     const from = value || undefined;
     const to = existing.to;
-    this.sideBarProps()?.onFilterChange(filterField, from || to ? { type: 'date', value: { from, to } } : undefined);
+    this.sideBarProps?.onFilterChange(filterField, from || to ? { type: 'date', value: { from, to } } : undefined);
   }
 
   onDateToChange(filterField: string, value: string): void {
-    const fv = this.sideBarProps()?.filters?.[filterField];
+    const fv = this.sideBarProps?.filters?.[filterField];
     const existing = fv?.type === 'date' ? fv.value : {};
     const to = value || undefined;
     const from = existing.from;
-    this.sideBarProps()?.onFilterChange(filterField, from || to ? { type: 'date', value: { from, to } } : undefined);
+    this.sideBarProps?.onFilterChange(filterField, from || to ? { type: 'date', value: { from, to } } : undefined);
   }
 
   getFilterOptions(filterField: string): string[] {
-    return this.sideBarProps()?.filterOptions?.[filterField] ?? [];
+    return this.sideBarProps?.filterOptions?.[filterField] ?? [];
   }
 
   isMultiSelectChecked(filterField: string, opt: string): boolean {
-    const fv = this.sideBarProps()?.filters?.[filterField];
+    const fv = this.sideBarProps?.filters?.[filterField];
     return fv?.type === 'multiSelect' ? fv.value.includes(opt) : false;
   }
 
   onMultiSelectChange(filterField: string, opt: string, checked: boolean): void {
-    const fv = this.sideBarProps()?.filters?.[filterField];
+    const fv = this.sideBarProps?.filters?.[filterField];
     const current = fv?.type === 'multiSelect' ? fv.value : [];
     const next = checked ? [...current, opt] : current.filter((v) => v !== opt);
-    this.sideBarProps()?.onFilterChange(filterField, next.length > 0 ? { type: 'multiSelect', value: next } : undefined);
+    this.sideBarProps?.onFilterChange(filterField, next.length > 0 ? { type: 'multiSelect', value: next } : undefined);
   }
 }

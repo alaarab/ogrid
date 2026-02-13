@@ -1,4 +1,4 @@
-import { Component, input, output } from '@angular/core';
+import { Component, Input, Output, EventEmitter } from '@angular/core';
 import { CommonModule } from '@angular/common';
 
 @Component({
@@ -12,11 +12,11 @@ import { CommonModule } from '@angular/common';
     }
   `],
   template: `
-    @if (render()) {
-      <ng-container [ngTemplateOutlet]="render()!"></ng-container>
-    } @else if (message()) {
-      {{ message() }}
-    } @else if (hasActiveFilters()) {
+    @if (render) {
+      <ng-container [ngTemplateOutlet]="render"></ng-container>
+    } @else if (message) {
+      {{ message }}
+    } @else if (hasActiveFilters) {
       No items match your current filters. Try adjusting your search or
       <button type="button" (click)="clearAll.emit()" class="ogrid-empty-state-clear-btn">
         clear all filters
@@ -28,8 +28,8 @@ import { CommonModule } from '@angular/common';
   `,
 })
 export class EmptyStateComponent {
-  readonly message = input<string | undefined>(undefined);
-  readonly hasActiveFilters = input<boolean>(false);
-  readonly render = input<unknown>(undefined);
-  readonly clearAll = output<void>();
+  @Input() message: string | undefined = undefined;
+  @Input() hasActiveFilters: boolean = false;
+  @Input() render: unknown = undefined;
+  @Output() clearAll = new EventEmitter<void>();
 }

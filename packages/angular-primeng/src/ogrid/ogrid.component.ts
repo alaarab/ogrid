@@ -1,4 +1,4 @@
-import { Component, input, computed, effect, inject, ChangeDetectionStrategy } from '@angular/core';
+import { Component, Input, inject, ChangeDetectionStrategy, DoCheck } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import {
   OGridService,
@@ -24,7 +24,7 @@ import { PaginationControlsComponent } from '../pagination-controls/pagination-c
   template: `
     <ogrid-layout
       [className]="service.className()"
-      [hasToolbar]="showToolbar()"
+      [hasToolbar]="showToolbar"
       [hasToolbarBelow]="false"
       [hasPagination]="true"
       [sideBar]="service.sideBarProps()"
@@ -77,7 +77,7 @@ import { PaginationControlsComponent } from '../pagination-controls/pagination-c
         [suppressHorizontalScroll]="service.suppressHorizontalScroll()"
         [aria-label]="service.ariaLabel()"
         [aria-labelledby]="service.ariaLabelledBy()"
-        [emptyState]="emptyStateObj()"
+        [emptyState]="emptyStateObj"
       ></ogrid-primeng-datagrid-table>
 
       <div pagination>
@@ -94,10 +94,10 @@ import { PaginationControlsComponent } from '../pagination-controls/pagination-c
     </ogrid-layout>
   `,
 })
-export class OGridComponent<T = unknown> {
+export class OGridComponent<T = unknown> implements DoCheck {
   readonly service = inject<OGridService<T>>(OGridService);
 
-  readonly props = input.required<IOGridProps<T>>();
+  @Input({ required: true }) props!: IOGridProps<T>;
 
   // Stable callback references (avoid re-creating every template eval)
   readonly onColumnSortFn = (columnKey: string) => this.service.handleSort(columnKey);
@@ -106,21 +106,23 @@ export class OGridComponent<T = unknown> {
   readonly onSelectionChangeFn = (event: { selectedRowIds: RowId[]; selectedItems: T[] }) => this.service.handleSelectionChange(event);
   readonly onFilterChangeFn = (key: string, value: unknown) => this.service.handleFilterChange(key, value as never);
 
-  readonly showToolbar = computed(() =>
-    this.service.columnChooserPlacement() === 'toolbar' || this.service.toolbar() != null,
-  );
+  get showToolbar(): boolean {
+    return this.service.columnChooserPlacement() === 'toolbar' || this.service.toolbar() != null;
+  }
 
-  readonly emptyStateObj = computed(() => ({
-    hasActiveFilters: this.service.hasActiveFilters(),
-    onClearAll: () => this.service.setFilters({}),
-    message: this.service.emptyState()?.message,
-    render: this.service.emptyState()?.render,
-  }));
+  get emptyStateObj() {
+    return {
+      hasActiveFilters: this.service.hasActiveFilters(),
+      onClearAll: () => this.service.setFilters({}),
+      message: this.service.emptyState()?.message,
+      render: this.service.emptyState()?.render,
+    };
+  }
 
-  constructor() {
-    effect(() => {
-      this.service.configure(this.props());
-    });
+  ngDoCheck(): void {
+    // Configure service on every change detection cycle
+    // This replaces the effect() that was watching the signal-based input
+    this.service.configure(this.props);
   }
 
   onPageSizeChange(size: number): void {

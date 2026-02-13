@@ -1,4 +1,4 @@
-import { Component, input } from '@angular/core';
+import { Component, Input } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { SideBarComponent } from './sidebar.component';
 import type { SideBarProps } from './sidebar.component';
@@ -36,14 +36,14 @@ import { GRID_BORDER_RADIUS } from '@alaarab/ogrid-core';
     }
   `],
   template: `
-    <div [class]="(className() ?? '') + ' ogrid-layout-root'">
+    <div [class]="(className ?? '') + ' ogrid-layout-root'">
       <div class="ogrid-layout-container" [style.border-radius.px]="borderRadius">
         <!-- Toolbar strip -->
-        @if (hasToolbar()) {
+        @if (hasToolbar) {
           <div
             class="ogrid-layout-toolbar"
-            [class.ogrid-layout-toolbar--has-below]="hasToolbarBelow()"
-            [class.ogrid-layout-toolbar--no-below]="!hasToolbarBelow()"
+            [class.ogrid-layout-toolbar--has-below]="hasToolbarBelow"
+            [class.ogrid-layout-toolbar--no-below]="!hasToolbarBelow"
           >
             <div class="ogrid-layout-toolbar-left">
               <ng-content select="[toolbar]"></ng-content>
@@ -55,23 +55,23 @@ import { GRID_BORDER_RADIUS } from '@alaarab/ogrid-core';
         }
 
         <!-- Secondary toolbar row -->
-        @if (hasToolbarBelow()) {
+        @if (hasToolbarBelow) {
           <div class="ogrid-layout-toolbar-below">
             <ng-content select="[toolbarBelow]"></ng-content>
           </div>
         }
 
         <!-- Grid area -->
-        @if (sideBar()) {
+        @if (sideBar) {
           <div class="ogrid-layout-grid-area">
-            @if (sideBar()?.position === 'left') {
-              <ogrid-sidebar [sideBarProps]="sideBar()"></ogrid-sidebar>
+            @if (sideBar?.position === 'left') {
+              <ogrid-sidebar [sideBarProps]="sideBar"></ogrid-sidebar>
             }
             <div class="ogrid-layout-grid-content">
               <ng-content></ng-content>
             </div>
-            @if (sideBar()?.position !== 'left') {
-              <ogrid-sidebar [sideBarProps]="sideBar()"></ogrid-sidebar>
+            @if (sideBar?.position !== 'left') {
+              <ogrid-sidebar [sideBarProps]="sideBar"></ogrid-sidebar>
             }
           </div>
         } @else {
@@ -81,7 +81,7 @@ import { GRID_BORDER_RADIUS } from '@alaarab/ogrid-core';
         }
 
         <!-- Footer strip (pagination) -->
-        @if (hasPagination()) {
+        @if (hasPagination) {
           <div class="ogrid-layout-footer">
             <ng-content select="[pagination]"></ng-content>
           </div>
@@ -91,11 +91,11 @@ import { GRID_BORDER_RADIUS } from '@alaarab/ogrid-core';
   `,
 })
 export class OGridLayoutComponent {
-  readonly className = input<string | undefined>(undefined);
-  readonly hasToolbar = input<boolean>(false);
-  readonly hasToolbarBelow = input<boolean>(false);
-  readonly hasPagination = input<boolean>(false);
-  readonly sideBar = input<SideBarProps | null>(null);
+  @Input() className?: string;
+  @Input() hasToolbar = false;
+  @Input() hasToolbarBelow = false;
+  @Input() hasPagination = false;
+  @Input() sideBar: SideBarProps | null = null;
 
   readonly borderRadius = GRID_BORDER_RADIUS;
 }
