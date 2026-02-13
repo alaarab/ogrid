@@ -1,4 +1,4 @@
-import { Component, input, viewChild, computed, ChangeDetectionStrategy } from '@angular/core';
+import { Component, ViewChild, computed, ChangeDetectionStrategy, Input } from '@angular/core';
 import { MatMenuModule, MatMenuTrigger } from '@angular/material/menu';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
@@ -19,7 +19,7 @@ import { getColumnHeaderMenuItems, type IColumnHeaderMenuItem, type ColumnHeader
       mat-icon-button
       [matMenuTriggerFor]="menu"
       class="column-header-menu-trigger"
-      [attr.aria-label]="'Column options for ' + columnId()"
+      [attr.aria-label]="'Column options for ' + columnId"
     >
       <mat-icon>more_vert</mat-icon>
     </button>
@@ -56,31 +56,31 @@ import { getColumnHeaderMenuItems, type IColumnHeaderMenuItem, type ColumnHeader
   `],
 })
 export class ColumnHeaderMenuComponent {
-  readonly columnId = input.required<string>();
-  readonly canPinLeft = input<boolean>(true);
-  readonly canPinRight = input<boolean>(true);
-  readonly canUnpin = input<boolean>(false);
-  readonly currentSort = input<'asc' | 'desc' | null>(null);
-  readonly isSortable = input<boolean>(true);
-  readonly isResizable = input<boolean>(true);
+  @Input({ required: true }) columnId!: string;
+  @Input() canPinLeft: boolean = true;
+  @Input() canPinRight: boolean = true;
+  @Input() canUnpin: boolean = false;
+  @Input() currentSort: 'asc' | 'desc' | null = null;
+  @Input() isSortable: boolean = true;
+  @Input() isResizable: boolean = true;
 
-  readonly handlers = input<Partial<ColumnHeaderMenuHandlers>>({});
+  @Input() handlers: Partial<ColumnHeaderMenuHandlers> = {};
 
-  readonly menuTrigger = viewChild(MatMenuTrigger);
+  @ViewChild(MatMenuTrigger) menuTrigger?: MatMenuTrigger;
 
   readonly menuItems = computed<IColumnHeaderMenuItem[]>(() =>
     getColumnHeaderMenuItems({
-      canPinLeft: this.canPinLeft(),
-      canPinRight: this.canPinRight(),
-      canUnpin: this.canUnpin(),
-      currentSort: this.currentSort(),
-      isSortable: this.isSortable(),
-      isResizable: this.isResizable(),
+      canPinLeft: this.canPinLeft,
+      canPinRight: this.canPinRight,
+      canUnpin: this.canUnpin,
+      currentSort: this.currentSort,
+      isSortable: this.isSortable,
+      isResizable: this.isResizable,
     })
   );
 
   handleMenuItemClick(itemId: string): void {
-    const h = this.handlers();
+    const h = this.handlers;
     const actionMap: Record<string, (() => void) | undefined> = {
       pinLeft: h.onPinLeft,
       pinRight: h.onPinRight,

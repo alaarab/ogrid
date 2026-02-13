@@ -37,8 +37,8 @@ export function createOGridTests(OGridComponent: new (...args: any[]) => any): v
       defaultPageSize: 10,
       ...overrides,
     } as IOGridProps<FixtureRow>;
-    // Set the props input signal
-    instance.props.set(defaultProps);
+    // Set the props input (decorator-based @Input, not signal)
+    instance.props = defaultProps;
     // Trigger configure
     svc.configure(defaultProps);
     // Attach canonical accessor for tests

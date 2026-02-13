@@ -1,5 +1,4 @@
 import * as React from 'react';
-import { useMemo, useCallback } from 'react';
 import { Button, Select } from '@fluentui/react-components';
 import type { SelectOnChangeData } from '@fluentui/react-components';
 import {
@@ -8,7 +7,7 @@ import {
   ChevronDoubleLeftRegular,
   ChevronDoubleRightRegular,
 } from '@fluentui/react-icons';
-import { getPaginationViewModel } from '@alaarab/ogrid-react';
+import { usePaginationControls } from '@alaarab/ogrid-react';
 import styles from './PaginationControls.module.scss';
 
 export interface IPaginationControlsProps {
@@ -24,19 +23,20 @@ export interface IPaginationControlsProps {
 
 export const PaginationControls: React.FC<IPaginationControlsProps> = React.memo((props) => {
   const { currentPage, pageSize, totalCount, onPageChange, onPageSizeChange, pageSizeOptions, entityLabelPlural, className } = props;
-  const labelPlural = entityLabelPlural ?? 'items';
 
-  const vm = useMemo(
-    () => getPaginationViewModel(currentPage, pageSize, totalCount, pageSizeOptions ? { pageSizeOptions } : undefined),
-    [currentPage, pageSize, totalCount, pageSizeOptions]
-  );
+  const { labelPlural, vm, handlePageSizeChange } = usePaginationControls({
+    currentPage,
+    pageSize,
+    totalCount,
+    onPageChange,
+    onPageSizeChange,
+    pageSizeOptions,
+    entityLabelPlural,
+  });
 
-  const handlePageSizeChange = useCallback(
-    (_e: React.ChangeEvent<HTMLSelectElement>, data: SelectOnChangeData) => {
-      onPageSizeChange(Number(data.value));
-    },
-    [onPageSizeChange]
-  );
+  const handlePageSizeChangeEvent = (_e: React.ChangeEvent<HTMLSelectElement>, data: SelectOnChangeData) => {
+    handlePageSizeChange(Number(data.value));
+  };
 
   if (!vm) {
     return null;
@@ -89,7 +89,7 @@ export const PaginationControls: React.FC<IPaginationControlsProps> = React.memo
 
       <div className={styles.pageSizeSelector}>
         <span className={styles.pageSizeLabel}>Rows</span>
-        <Select value={String(pageSize)} onChange={handlePageSizeChange} size="small" appearance="outline" aria-label="Rows per page" className={styles.pageSizeSelect}>
+        <Select value={String(pageSize)} onChange={handlePageSizeChangeEvent} size="small" appearance="outline" aria-label="Rows per page" className={styles.pageSizeSelect}>
           {vm.pageSizeOptions.map((n) => (
             <option key={n} value={n}>{n}</option>
           ))}

@@ -1,4 +1,4 @@
-import { Component, input, computed, ChangeDetectionStrategy } from '@angular/core';
+import { Component, Input, ChangeDetectionStrategy, DoCheck } from '@angular/core';
 import {
   OGridService,
   OGridLayoutComponent,
@@ -28,8 +28,9 @@ import { PaginationControlsComponent } from '../pagination-controls/pagination-c
     <ogrid-layout
       [className]="ogridService.className()"
       [sideBar]="ogridService.sideBarProps()"
-      [toolbar]="ogridService.toolbar()"
-      [toolbarBelow]="ogridService.toolbarBelow()"
+      [hasToolbar]="true"
+      [hasToolbarBelow]="false"
+      [hasPagination]="true"
     >
       <ng-container toolbar-end>
         @if (ogridService.columnChooserPlacement() === 'toolbar') {
@@ -41,7 +42,7 @@ import { PaginationControlsComponent } from '../pagination-controls/pagination-c
         }
       </ng-container>
 
-      <ogrid-datagrid-table [props]="dataGridProps()" />
+      <ogrid-datagrid-table [props]="dataGridProps" />
 
       <ng-container pagination>
         <ogrid-pagination-controls
@@ -57,16 +58,14 @@ import { PaginationControlsComponent } from '../pagination-controls/pagination-c
     </ogrid-layout>
   `,
 })
-export class OGridComponent<T> {
-  readonly props = input.required<IOGridProps<T>>();
+export class OGridComponent<T> implements DoCheck {
+  @Input({ required: true }) props!: IOGridProps<T>;
 
   readonly ogridService: OGridService<T>;
 
-  readonly dataGridProps = computed<IOGridDataGridProps<T>>(() => {
-    // Ensure service is configured before accessing dataGridProps
-    this.ogridService.configure(this.props());
+  get dataGridProps(): IOGridDataGridProps<T> {
     return this.ogridService.dataGridProps();
-  });
+  }
 
   constructor() {
     // The OGridService is provided at the component level, so inject it here
@@ -74,6 +73,12 @@ export class OGridComponent<T> {
     // and the Angular DI system will handle it.
     // Actually we need a slightly different approach for the generic service.
     this.ogridService = new OGridService<T>();
+  }
+
+  ngDoCheck(): void {
+    // Configure the service with props on every change detection cycle
+    // This is similar to React's effect that runs on every render
+    this.ogridService.configure(this.props);
   }
 
   onPageSizeChange(size: number): void {
