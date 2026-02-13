@@ -1,12 +1,14 @@
 import {
   Component,
-  input,
+  Input,
   signal,
   computed,
   effect,
   ElementRef,
-  viewChild,
+  ViewChild,
   ChangeDetectionStrategy,
+  OnChanges,
+  SimpleChanges,
 } from '@angular/core';
 import {
   BaseDataGridTableComponent,
@@ -59,7 +61,7 @@ import { PopoverCellEditorComponent } from './popover-cell-editor.component';
         [attr.data-freeze-rows]="freezeRows() != null && freezeRows()! >= 1 ? freezeRows() : null"
         [attr.data-freeze-cols]="freezeCols() != null && freezeCols()! >= 1 ? freezeCols() : null"
         [attr.data-overflow-x]="allowOverflowX() ? 'true' : 'false'"
-        [attr.data-has-selection]="rowSelectionMode() !== 'none' ? 'true' : null"
+        [attr.data-has-selection]="rowSelectionMode !== 'none' ? 'true' : null"
         (contextmenu)="$event.preventDefault()"
         (keydown)="onGridKeyDown($event)"
         (mousedown)="onWrapperMouseDown($event)"
@@ -195,7 +197,7 @@ import { PopoverCellEditorComponent } from './popover-cell-editor.component';
                     }
                     @for (item of vsVisibleItems(); track trackByRowId($index, item); let localIdx = $index) {
                       @let rowIndex = vsStartIndex() + localIdx;
-                      @let rowId = getRowIdInput()(item);
+                      @let rowId = getRowIdInput(item);
                       @let isSelected = selectedRowIds().has(rowId);
                       <tr
                         [attr.data-row-id]="rowId"
@@ -407,54 +409,54 @@ import { PopoverCellEditorComponent } from './popover-cell-editor.component';
     }
   `],
 })
-export class DataGridTableComponent<T = unknown> extends BaseDataGridTableComponent<T> {
-  private readonly wrapperRef = viewChild<ElementRef<HTMLDivElement>>('wrapper');
-  private readonly tableContainerRefEl = viewChild<ElementRef<HTMLDivElement>>('tableContainer');
+export class DataGridTableComponent<T = unknown> extends BaseDataGridTableComponent<T> implements OnChanges {
+  @ViewChild('wrapper') private wrapperRef?: ElementRef<HTMLDivElement>;
+  @ViewChild('tableContainer') private tableContainerRefEl?: ElementRef<HTMLDivElement>;
 
   // Inputs mapped from IOGridDataGridProps
-  readonly itemsInput = input.required<T[]>({ alias: 'items' });
-  readonly columns = input.required<(IColumnDef<T> | IColumnGroupDef<T>)[]>();
-  readonly getRowIdInput = input.required<(item: T) => RowId>({ alias: 'getRowId' });
-  readonly sortBy = input<string | undefined>(undefined);
-  readonly sortDirection = input<'asc' | 'desc'>('asc');
-  readonly onColumnSort = input.required<(columnKey: string) => void>();
-  readonly visibleColumns = input.required<Set<string>>();
-  readonly columnOrder = input<string[] | undefined>(undefined);
-  readonly onColumnOrderChange = input<((order: string[]) => void) | undefined>(undefined);
-  readonly onColumnResized = input<((columnId: string, width: number) => void) | undefined>(undefined);
-  readonly onColumnPinned = input<((columnId: string, pinned: 'left' | 'right' | null) => void) | undefined>(undefined);
-  readonly pinnedColumnsInput = input<Record<string, 'left' | 'right'> | undefined>(undefined, { alias: 'pinnedColumns' });
-  readonly initialColumnWidths = input<Record<string, number> | undefined>(undefined);
-  readonly freezeRowsInput = input<number | undefined>(undefined, { alias: 'freezeRows' });
-  readonly freezeColsInput = input<number | undefined>(undefined, { alias: 'freezeCols' });
-  readonly layoutMode = input<'content' | 'fill'>('fill');
-  readonly suppressHorizontalScroll = input<boolean | undefined>(undefined);
-  readonly isLoadingInput = input<boolean>(false, { alias: 'isLoading' });
-  readonly loadingMessageInput = input<string>('Loading\u2026', { alias: 'loadingMessage' });
-  readonly editable = input<boolean | undefined>(undefined);
-  readonly cellSelection = input<boolean | undefined>(undefined);
-  readonly onCellValueChanged = input<((event: { item: T; columnId: string; oldValue: unknown; newValue: unknown; rowIndex: number }) => void) | undefined>(undefined);
-  readonly onUndoInput = input<(() => void) | undefined>(undefined, { alias: 'onUndo' });
-  readonly onRedoInput = input<(() => void) | undefined>(undefined, { alias: 'onRedo' });
-  readonly canUndoInput = input<boolean | undefined>(undefined, { alias: 'canUndo' });
-  readonly canRedoInput = input<boolean | undefined>(undefined, { alias: 'canRedo' });
-  readonly rowSelectionMode = input<'none' | 'single' | 'multiple'>('none', { alias: 'rowSelection' });
-  readonly selectedRows = input<Set<RowId> | undefined>(undefined);
-  readonly onSelectionChange = input<((event: { selectedRowIds: RowId[]; selectedItems: T[] }) => void) | undefined>(undefined);
-  readonly statusBar = input<unknown>(undefined);
-  readonly filters = input.required<Record<string, unknown>>();
-  readonly onFilterChange = input.required<(key: string, value: unknown) => void>();
-  readonly filterOptions = input<Record<string, string[]>>({});
-  readonly loadingFilterOptions = input<Record<string, boolean>>({});
-  readonly peopleSearch = input<((query: string) => Promise<unknown[]>) | undefined>(undefined);
-  readonly getUserByEmail = input<((email: string) => Promise<unknown>) | undefined>(undefined);
-  readonly emptyStateInput = input<{ onClearAll: () => void; hasActiveFilters: boolean; message?: string; render?: unknown } | undefined>(undefined, { alias: 'emptyState' });
-  readonly onCellError = input<((error: Error) => void) | undefined>(undefined);
-  readonly ariaLabelInput = input<string | undefined>(undefined, { alias: 'aria-label' });
-  readonly ariaLabelledByInput = input<string | undefined>(undefined, { alias: 'aria-labelledby' });
-  readonly showRowNumbers = input<boolean>(false);
-  readonly currentPageInput = input<number>(1, { alias: 'currentPage' });
-  readonly pageSizeInput = input<number>(25, { alias: 'pageSize' });
+  @Input({ required: true, alias: 'items' }) itemsInput!: T[];
+  @Input({ required: true }) columns!: (IColumnDef<T> | IColumnGroupDef<T>)[];
+  @Input({ required: true, alias: 'getRowId' }) getRowIdInput!: (item: T) => RowId;
+  @Input() sortBy: string | undefined = undefined;
+  @Input() sortDirection: 'asc' | 'desc' = 'asc';
+  @Input({ required: true }) onColumnSort!: (columnKey: string) => void;
+  @Input({ required: true }) visibleColumns!: Set<string>;
+  @Input() columnOrder: string[] | undefined = undefined;
+  @Input() onColumnOrderChange: ((order: string[]) => void) | undefined = undefined;
+  @Input() onColumnResized: ((columnId: string, width: number) => void) | undefined = undefined;
+  @Input() onColumnPinned: ((columnId: string, pinned: 'left' | 'right' | null) => void) | undefined = undefined;
+  @Input({ alias: 'pinnedColumns' }) pinnedColumnsInput: Record<string, 'left' | 'right'> | undefined = undefined;
+  @Input() initialColumnWidths: Record<string, number> | undefined = undefined;
+  @Input({ alias: 'freezeRows' }) freezeRowsInput: number | undefined = undefined;
+  @Input({ alias: 'freezeCols' }) freezeColsInput: number | undefined = undefined;
+  @Input() layoutMode: 'content' | 'fill' = 'fill';
+  @Input() suppressHorizontalScroll: boolean | undefined = undefined;
+  @Input({ alias: 'isLoading' }) isLoadingInput: boolean = false;
+  @Input({ alias: 'loadingMessage' }) loadingMessageInput: string = 'Loading\u2026';
+  @Input() editable: boolean | undefined = undefined;
+  @Input() cellSelection: boolean | undefined = undefined;
+  @Input() onCellValueChanged: ((event: { item: T; columnId: string; oldValue: unknown; newValue: unknown; rowIndex: number }) => void) | undefined = undefined;
+  @Input({ alias: 'onUndo' }) onUndoInput: (() => void) | undefined = undefined;
+  @Input({ alias: 'onRedo' }) onRedoInput: (() => void) | undefined = undefined;
+  @Input({ alias: 'canUndo' }) canUndoInput: boolean | undefined = undefined;
+  @Input({ alias: 'canRedo' }) canRedoInput: boolean | undefined = undefined;
+  @Input({ alias: 'rowSelection' }) rowSelectionMode: 'none' | 'single' | 'multiple' = 'none';
+  @Input() selectedRows: Set<RowId> | undefined = undefined;
+  @Input() onSelectionChange: ((event: { selectedRowIds: RowId[]; selectedItems: T[] }) => void) | undefined = undefined;
+  @Input() statusBar: unknown = undefined;
+  @Input({ required: true }) filters!: Record<string, unknown>;
+  @Input({ required: true }) onFilterChange!: (key: string, value: unknown) => void;
+  @Input() filterOptions: Record<string, string[]> = {};
+  @Input() loadingFilterOptions: Record<string, boolean> = {};
+  @Input() peopleSearch: ((query: string) => Promise<unknown[]>) | undefined = undefined;
+  @Input() getUserByEmail: ((email: string) => Promise<unknown>) | undefined = undefined;
+  @Input({ alias: 'emptyState' }) emptyStateInput: { onClearAll: () => void; hasActiveFilters: boolean; message?: string; render?: unknown } | undefined = undefined;
+  @Input() onCellError: ((error: Error) => void) | undefined = undefined;
+  @Input({ alias: 'aria-label' }) ariaLabelInput: string | undefined = undefined;
+  @Input({ alias: 'aria-labelledby' }) ariaLabelledByInput: string | undefined = undefined;
+  @Input() showRowNumbers: boolean = false;
+  @Input({ alias: 'currentPage' }) currentPageInput: number = 1;
+  @Input({ alias: 'pageSize' }) pageSizeInput: number = 25;
 
   readonly defaultMinWidth = DEFAULT_MIN_COLUMN_WIDTH;
 
@@ -474,14 +476,16 @@ export class DataGridTableComponent<T = unknown> extends BaseDataGridTableCompon
   constructor() {
     super();
     this.initBase();
+  }
 
+  ngOnChanges(changes: SimpleChanges): void {
     // Initialize column sizing from initial widths
-    effect(() => {
-      const iw = this.initialColumnWidths();
+    if (changes['initialColumnWidths']) {
+      const iw = this.initialColumnWidths;
       if (iw) {
         this.primengColumnSizingOverrides.set({ ...iw });
       }
-    });
+    }
   }
 
   // --- Abstract method implementations ---
@@ -491,30 +495,30 @@ export class DataGridTableComponent<T = unknown> extends BaseDataGridTableCompon
   }
 
   protected getWrapperRef(): ElementRef<HTMLElement> | undefined {
-    return this.wrapperRef();
+    return this.wrapperRef;
   }
 
   protected getTableContainerRef(): ElementRef<HTMLElement> | undefined {
-    return this.tableContainerRefEl();
+    return this.tableContainerRefEl;
   }
 
   // --- PrimeNG-specific computed signals ---
 
   readonly resolvedAriaLabel = computed(() =>
-    this.ariaLabelInput() ?? (this.ariaLabelledByInput() ? undefined : 'Data grid'),
+    this.ariaLabelInput ?? (this.ariaLabelledByInput ? undefined : 'Data grid'),
   );
 
   readonly tableWidthStyle = computed(() => {
     if (this.showEmptyInGrid()) return '100%';
     if (this.allowOverflowX()) return 'fit-content';
-    if (this.layoutMode() === 'content') return 'fit-content';
+    if (this.layoutMode === 'content') return 'fit-content';
     return '100%';
   });
 
   readonly tableMinWidthStyle = computed(() => {
     if (this.showEmptyInGrid()) return '100%';
     if (this.allowOverflowX()) return 'max-content';
-    if (this.layoutMode() === 'content') return 'max-content';
+    if (this.layoutMode === 'content') return 'max-content';
     return '100%';
   });
 
@@ -529,7 +533,7 @@ export class DataGridTableComponent<T = unknown> extends BaseDataGridTableCompon
   // --- PrimeNG-specific helpers ---
 
   trackByRowId(_index: number, item: T): RowId {
-    return this.getRowIdInput()(item);
+    return this.getRowIdInput(item);
   }
 
   getCellValueFn(item: T, col: IColumnDef<T>): unknown {
@@ -548,13 +552,13 @@ export class DataGridTableComponent<T = unknown> extends BaseDataGridTableCompon
 
   canEditCell(col: IColumnDef<T>, item: T): boolean {
     const colEditable = col.editable === true || (typeof col.editable === 'function' && col.editable(item));
-    return this.editable() !== false && !!colEditable && this.onCellValueChanged() != null && typeof col.cellEditor !== 'function';
+    return this.editable !== false && !!colEditable && this.onCellValueChanged != null && typeof col.cellEditor !== 'function';
   }
 
   isEditingCell(item: T, col: IColumnDef<T>): boolean {
     const editing = this.editingCell();
     if (!editing) return false;
-    return editing.rowId === this.getRowIdInput()(item) && editing.columnId === col.columnId;
+    return editing.rowId === this.getRowIdInput(item) && editing.columnId === col.columnId;
   }
 
   isEditingCellInline(item: T, col: IColumnDef<T>): boolean {
@@ -620,7 +624,7 @@ export class DataGridTableComponent<T = unknown> extends BaseDataGridTableCompon
 
   onCellDblClickPrimeng(item: T, col: IColumnDef<T>, _rowIndex: number, _colIdx: number): void {
     if (this.canEditCell(col, item)) {
-      this.stateService.setEditingCell({ rowId: this.getRowIdInput()(item), columnId: col.columnId });
+      this.stateService.setEditingCell({ rowId: this.getRowIdInput(item), columnId: col.columnId });
     }
   }
 
@@ -634,14 +638,14 @@ export class DataGridTableComponent<T = unknown> extends BaseDataGridTableCompon
   }
 
   onRowClickPrimeng(e: MouseEvent, item: T): void {
-    if (this.rowSelectionMode() !== 'single') return;
-    const rowId = this.getRowIdInput()(item);
+    if (this.rowSelectionMode !== 'single') return;
+    const rowId = this.getRowIdInput(item);
     const ids = this.selectedRowIds();
     this.state().rowSelection.updateSelection(ids.has(rowId) ? new Set() : new Set([rowId]));
   }
 
   onRowCheckboxChangePrimeng(item: T, checked: boolean, rowIndex: number, _e: Event): void {
-    const rowId = this.getRowIdInput()(item);
+    const rowId = this.getRowIdInput(item);
     this.state().rowSelection.handleRowCheckboxChange(rowId, checked, rowIndex, this.lastMouseShift);
   }
 
@@ -664,7 +668,7 @@ export class DataGridTableComponent<T = unknown> extends BaseDataGridTableCompon
       window.removeEventListener('mouseup', onUp, true);
       const finalWidth = this.primengColumnSizingOverrides()[this.resizeColumnId];
       if (finalWidth) {
-        this.onColumnResized()?.(this.resizeColumnId, finalWidth);
+        this.onColumnResized?.(this.resizeColumnId, finalWidth);
         const overrides: Record<string, { widthPx: number }> = {};
         for (const [id, w] of Object.entries(this.primengColumnSizingOverrides())) {
           overrides[id] = { widthPx: w };
@@ -681,49 +685,49 @@ export class DataGridTableComponent<T = unknown> extends BaseDataGridTableCompon
 
   private buildProps(): IOGridDataGridProps<T> {
     return {
-      items: this.itemsInput(),
-      columns: this.columns(),
-      getRowId: this.getRowIdInput(),
-      sortBy: this.sortBy(),
-      sortDirection: this.sortDirection(),
-      onColumnSort: this.onColumnSort(),
-      visibleColumns: this.visibleColumns(),
-      columnOrder: this.columnOrder(),
-      onColumnOrderChange: this.onColumnOrderChange(),
-      onColumnResized: this.onColumnResized(),
-      onColumnPinned: this.onColumnPinned(),
-      pinnedColumns: this.pinnedColumnsInput(),
-      initialColumnWidths: this.initialColumnWidths(),
-      freezeRows: this.freezeRowsInput(),
-      freezeCols: this.freezeColsInput(),
-      layoutMode: this.layoutMode(),
-      suppressHorizontalScroll: this.suppressHorizontalScroll(),
-      isLoading: this.isLoadingInput(),
-      loadingMessage: this.loadingMessageInput(),
-      editable: this.editable(),
-      cellSelection: this.cellSelection(),
-      onCellValueChanged: this.onCellValueChanged() as IOGridDataGridProps<T>['onCellValueChanged'],
-      onUndo: this.onUndoInput(),
-      onRedo: this.onRedoInput(),
-      canUndo: this.canUndoInput(),
-      canRedo: this.canRedoInput(),
-      rowSelection: this.rowSelectionMode(),
-      selectedRows: this.selectedRows(),
-      onSelectionChange: this.onSelectionChange() as IOGridDataGridProps<T>['onSelectionChange'],
-      showRowNumbers: this.showRowNumbers(),
-      currentPage: this.currentPageInput(),
-      pageSize: this.pageSizeInput(),
-      statusBar: this.statusBar() as IOGridDataGridProps<T>['statusBar'],
-      filters: this.filters() as IOGridDataGridProps<T>['filters'],
-      onFilterChange: this.onFilterChange() as IOGridDataGridProps<T>['onFilterChange'],
-      filterOptions: this.filterOptions(),
-      loadingFilterOptions: this.loadingFilterOptions(),
-      peopleSearch: this.peopleSearch() as IOGridDataGridProps<T>['peopleSearch'],
-      getUserByEmail: this.getUserByEmail() as IOGridDataGridProps<T>['getUserByEmail'],
-      emptyState: this.emptyStateInput() as IOGridDataGridProps<T>['emptyState'],
-      onCellError: this.onCellError(),
-      'aria-label': this.ariaLabelInput(),
-      'aria-labelledby': this.ariaLabelledByInput(),
+      items: this.itemsInput,
+      columns: this.columns,
+      getRowId: this.getRowIdInput,
+      sortBy: this.sortBy,
+      sortDirection: this.sortDirection,
+      onColumnSort: this.onColumnSort,
+      visibleColumns: this.visibleColumns,
+      columnOrder: this.columnOrder,
+      onColumnOrderChange: this.onColumnOrderChange,
+      onColumnResized: this.onColumnResized,
+      onColumnPinned: this.onColumnPinned,
+      pinnedColumns: this.pinnedColumnsInput,
+      initialColumnWidths: this.initialColumnWidths,
+      freezeRows: this.freezeRowsInput,
+      freezeCols: this.freezeColsInput,
+      layoutMode: this.layoutMode,
+      suppressHorizontalScroll: this.suppressHorizontalScroll,
+      isLoading: this.isLoadingInput,
+      loadingMessage: this.loadingMessageInput,
+      editable: this.editable,
+      cellSelection: this.cellSelection,
+      onCellValueChanged: this.onCellValueChanged as IOGridDataGridProps<T>['onCellValueChanged'],
+      onUndo: this.onUndoInput,
+      onRedo: this.onRedoInput,
+      canUndo: this.canUndoInput,
+      canRedo: this.canRedoInput,
+      rowSelection: this.rowSelectionMode,
+      selectedRows: this.selectedRows,
+      onSelectionChange: this.onSelectionChange as IOGridDataGridProps<T>['onSelectionChange'],
+      showRowNumbers: this.showRowNumbers,
+      currentPage: this.currentPageInput,
+      pageSize: this.pageSizeInput,
+      statusBar: this.statusBar as IOGridDataGridProps<T>['statusBar'],
+      filters: this.filters as IOGridDataGridProps<T>['filters'],
+      onFilterChange: this.onFilterChange as IOGridDataGridProps<T>['onFilterChange'],
+      filterOptions: this.filterOptions,
+      loadingFilterOptions: this.loadingFilterOptions,
+      peopleSearch: this.peopleSearch as IOGridDataGridProps<T>['peopleSearch'],
+      getUserByEmail: this.getUserByEmail as IOGridDataGridProps<T>['getUserByEmail'],
+      emptyState: this.emptyStateInput as IOGridDataGridProps<T>['emptyState'],
+      onCellError: this.onCellError,
+      'aria-label': this.ariaLabelInput,
+      'aria-labelledby': this.ariaLabelledByInput,
     };
   }
 }

@@ -2,11 +2,11 @@
 
 ## Project Skills
 
-This project has custom skills in the `skills/` directory:
+This project has custom skills in the `.claude/skills/` directory:
 
 - **`/verify`** — Pre-commit verification gate. Checks version sync, builds all packages, runs all tests, runs lint. Use before ANY commit.
 
-See `skills/README.md` for details.
+See `.claude/skills/README.md` for details.
 
 ## Project Overview
 

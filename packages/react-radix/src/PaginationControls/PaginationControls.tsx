@@ -1,6 +1,5 @@
 import * as React from 'react';
-import { useMemo, useCallback } from 'react';
-import { getPaginationViewModel } from '@alaarab/ogrid-react';
+import { usePaginationControls } from '@alaarab/ogrid-react';
 import styles from './PaginationControls.module.scss';
 
 export interface IPaginationControlsProps {
@@ -29,19 +28,20 @@ function ChevronDoubleRight(): React.ReactElement {
 
 export const PaginationControls: React.FC<IPaginationControlsProps> = React.memo((props) => {
   const { currentPage, pageSize, totalCount, onPageChange, onPageSizeChange, pageSizeOptions, entityLabelPlural, className } = props;
-  const labelPlural = entityLabelPlural ?? 'items';
 
-  const vm = useMemo(
-    () => getPaginationViewModel(currentPage, pageSize, totalCount, pageSizeOptions ? { pageSizeOptions } : undefined),
-    [currentPage, pageSize, totalCount, pageSizeOptions]
-  );
+  const { labelPlural, vm, handlePageSizeChange } = usePaginationControls({
+    currentPage,
+    pageSize,
+    totalCount,
+    onPageChange,
+    onPageSizeChange,
+    pageSizeOptions,
+    entityLabelPlural,
+  });
 
-  const handlePageSizeChange = useCallback(
-    (e: React.ChangeEvent<HTMLSelectElement>) => {
-      onPageSizeChange(Number(e.target.value));
-    },
-    [onPageSizeChange]
-  );
+  const handlePageSizeChangeEvent = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    handlePageSizeChange(Number(e.target.value));
+  };
 
   if (!vm) {
     return null;
@@ -145,7 +145,7 @@ export const PaginationControls: React.FC<IPaginationControlsProps> = React.memo
         <select
           className={styles.pageSizeSelect}
           value={String(pageSize)}
-          onChange={handlePageSizeChange}
+          onChange={handlePageSizeChangeEvent}
           aria-label="Rows per page"
         >
           {vm.pageSizeOptions.map((n) => (

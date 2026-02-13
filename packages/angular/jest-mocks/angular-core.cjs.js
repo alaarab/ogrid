@@ -43,6 +43,23 @@ class DestroyRef {
   onDestroy(fn) {}
 }
 
+// EventEmitter stub — simple pub/sub for @Output() decorators
+class EventEmitter {
+  constructor() {
+    this._listeners = [];
+  }
+  emit(value) {
+    for (const fn of this._listeners) fn(value);
+  }
+  subscribe(fn) {
+    this._listeners.push(fn);
+    return { unsubscribe: () => {
+      const idx = this._listeners.indexOf(fn);
+      if (idx >= 0) this._listeners.splice(idx, 1);
+    }};
+  }
+}
+
 // ElementRef stub
 class ElementRef {
   constructor(nativeElement) {
@@ -71,6 +88,10 @@ module.exports = {
   inject,
   DestroyRef,
   ElementRef,
+  EventEmitter,
   TemplateRef,
   ChangeDetectionStrategy: { OnPush: 0, Default: 1 },
+  // Lifecycle interface stubs (no-ops, Angular checks implements at runtime)
+  OnChanges: {},
+  SimpleChanges: {},
 };
