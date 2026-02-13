@@ -5,7 +5,7 @@ import * as Popover from '@radix-ui/react-popover';
 import * as Checkbox from '@radix-ui/react-checkbox';
 import { ColumnHeaderFilter } from '../ColumnHeaderFilter';
 import { ColumnHeaderMenu } from '../ColumnHeaderMenu';
-import { InlineCellEditor } from './InlineCellEditor';
+import { InlineCellEditor, type InlineCellEditorProps } from './InlineCellEditor';
 import { StatusBar } from './StatusBar';
 import { GridContextMenu } from './GridContextMenu';
 import type {
@@ -273,9 +273,9 @@ function DataGridTableInner<T>(props: IOGridDataGridProps<T>): React.ReactElemen
       let content: React.ReactNode;
 
       if (descriptor.mode === 'editing-inline') {
-        content = <InlineCellEditor<T> {...buildInlineEditorProps(item, col, descriptor, editCallbacks)} />;
+        content = <InlineCellEditor<T> {...buildInlineEditorProps(item, col, descriptor, editCallbacks) as InlineCellEditorProps<T>} />;
       } else if (descriptor.mode === 'editing-popover' && typeof col.cellEditor === 'function') {
-        const editorProps = buildPopoverEditorProps(item, col, descriptor, pendingEditorValueRef.current, editCallbacks);
+        const editorProps = buildPopoverEditorProps(item, col, descriptor, pendingEditorValueRef.current, editCallbacks) as ICellEditorProps<T>;
         const CustomEditor = col.cellEditor as React.ComponentType<ICellEditorProps<T>>;
         content = (
           <Popover.Root open={!!popoverAnchorElRef.current} onOpenChange={(open: boolean) => { if (!open) cancelPopoverEdit(); }}>
@@ -290,7 +290,7 @@ function DataGridTableInner<T>(props: IOGridDataGridProps<T>): React.ReactElemen
           </Popover.Root>
         );
       } else {
-        const displayContent = resolveCellDisplayContent(col, item, descriptor.displayValue);
+        const displayContent = resolveCellDisplayContent(col, item, descriptor.displayValue) as React.ReactNode;
         const cellStyle = resolveCellStyle(col, item);
         const styledContent = cellStyle ? <span style={cellStyle}>{displayContent}</span> : displayContent;
 

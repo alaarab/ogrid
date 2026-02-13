@@ -1,6 +1,19 @@
 // Re-export core types + utils
 export * from '@alaarab/ogrid-core';
 
+// Explicitly re-export constants for test resolution
+export {
+  CHECKBOX_COLUMN_WIDTH,
+  ROW_NUMBER_COLUMN_WIDTH,
+  DEFAULT_MIN_COLUMN_WIDTH,
+  CELL_PADDING,
+  GRID_BORDER_RADIUS,
+  PEOPLE_SEARCH_DEBOUNCE_MS,
+  DEFAULT_DEBOUNCE_MS,
+  SIDEBAR_TRANSITION_MS,
+  Z_INDEX,
+} from '@alaarab/ogrid-core';
+
 // Angular-specific types
 export type {
   IColumnDef,
@@ -74,7 +87,6 @@ export type {
 export { ColumnReorderService } from './services/column-reorder.service';
 
 export { VirtualScrollService } from './services/virtual-scroll.service';
-export type { IVirtualScrollConfig } from './services/virtual-scroll.service';
 
 // Components
 export { OGridLayoutComponent } from './components/ogrid-layout.component';

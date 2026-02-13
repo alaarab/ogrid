@@ -17,6 +17,7 @@ import type {
   IGridColumnState,
   IDataSource,
   ISideBarDef,
+  IVirtualScrollConfig,
   SideBarPanelId,
 } from '../types';
 import type { IOGridProps, IOGridDataGridProps } from '../types';
@@ -127,6 +128,7 @@ export class OGridService<T> {
   readonly onFirstDataRendered = signal<(() => void) | undefined>(undefined);
   readonly onError = signal<((error: unknown) => void) | undefined>(undefined);
   readonly columnChooserProp = signal<boolean | 'toolbar' | 'sidebar' | undefined>(undefined);
+  readonly virtualScroll = signal<IVirtualScrollConfig | undefined>(undefined);
   readonly ariaLabel = signal<string | undefined>(undefined);
   readonly ariaLabelledBy = signal<string | undefined>(undefined);
 
@@ -334,6 +336,7 @@ export class OGridService<T> {
     getUserByEmail: this.dataSource()?.getUserByEmail?.bind(this.dataSource()),
     layoutMode: this.layoutMode(),
     suppressHorizontalScroll: this.suppressHorizontalScroll(),
+    virtualScroll: this.virtualScroll(),
     'aria-label': this.ariaLabel(),
     'aria-labelledby': this.ariaLabelledBy(),
     emptyState: {
@@ -587,6 +590,7 @@ export class OGridService<T> {
     if (props.onFirstDataRendered) this.onFirstDataRendered.set(props.onFirstDataRendered);
     if (props.onError) this.onError.set(props.onError);
     if (props.columnChooser !== undefined) this.columnChooserProp.set(props.columnChooser);
+    if (props.virtualScroll !== undefined) this.virtualScroll.set(props.virtualScroll);
     if (props.entityLabelPlural !== undefined) this.entityLabelPlural.set(props.entityLabelPlural);
     if (props.className !== undefined) this.className.set(props.className);
     if (props.layoutMode !== undefined) this.layoutMode.set(props.layoutMode);
