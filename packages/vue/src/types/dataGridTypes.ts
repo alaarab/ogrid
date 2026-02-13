@@ -160,6 +160,10 @@ export interface IOGridDataGridProps<T> {
   onColumnOrderChange?: (order: string[]) => void;
   /** Called when a column is resized by the user. */
   onColumnResized?: (columnId: string, width: number) => void;
+  /** Called when user requests autosize for a single column. */
+  onAutosizeColumn?: (columnId: string) => void;
+  /** Called when user requests autosize for all columns. */
+  onAutosizeAllColumns?: () => void;
   /** Called when a column is pinned or unpinned. */
   onColumnPinned?: (columnId: string, pinned: 'left' | 'right' | null) => void;
   /** Runtime pin overrides (from restored state or programmatic changes). */

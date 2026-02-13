@@ -173,9 +173,17 @@ export interface DataGridPinningState {
     handlePinLeft: () => void;
     handlePinRight: () => void;
     handleUnpin: () => void;
+    handleSortAsc: () => void;
+    handleSortDesc: () => void;
+    handleClearSort: () => void;
+    handleAutosizeThis: () => void;
+    handleAutosizeAll: () => void;
     canPinLeft: boolean;
     canPinRight: boolean;
     canUnpin: boolean;
+    currentSort: 'asc' | 'desc' | null;
+    isSortable: boolean;
+    isResizable: boolean;
   };
 }
 
@@ -383,12 +391,6 @@ export function useDataGridState<T>(
     onColumnPinned,
   });
 
-  const headerMenuResult = useColumnHeaderMenuState({
-    pinnedColumns: pinningResult.pinnedColumns,
-    onPinColumn: pinningResult.pinColumn,
-    onUnpinColumn: pinningResult.unpinColumn,
-  });
-
   const aggregation = useMemo(
     () => computeAggregations(items, visibleCols, cellSelection ? selectionRange : null),
     [items, visibleCols, selectionRange, cellSelection]
@@ -435,6 +437,19 @@ export function useDataGridState<T>(
     // eslint-disable-next-line react-hooks/exhaustive-deps
     []
   );
+
+  const headerMenuResult = useColumnHeaderMenuState({
+    pinnedColumns: pinningResult.pinnedColumns,
+    onPinColumn: pinningResult.pinColumn,
+    onUnpinColumn: pinningResult.unpinColumn,
+    sortBy,
+    sortDirection,
+    onColumnSort: stableOnColumnSort,
+    onColumnResized,
+    columns: flatColumns,
+    data: items,
+    getRowId: getRowId as (item: unknown) => string | number,
+  });
   const stableOnFilterChange = useCallback(
     (...args: Parameters<NonNullable<typeof onFilterChange>>) => onFilterChangeRef.current?.(...args),
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -632,9 +647,17 @@ export function useDataGridState<T>(
       handlePinLeft: headerMenuResult.handlePinLeft,
       handlePinRight: headerMenuResult.handlePinRight,
       handleUnpin: headerMenuResult.handleUnpin,
+      handleSortAsc: headerMenuResult.handleSortAsc,
+      handleSortDesc: headerMenuResult.handleSortDesc,
+      handleClearSort: headerMenuResult.handleClearSort,
+      handleAutosizeThis: headerMenuResult.handleAutosizeThis,
+      handleAutosizeAll: headerMenuResult.handleAutosizeAll,
       canPinLeft: headerMenuResult.canPinLeft,
       canPinRight: headerMenuResult.canPinRight,
       canUnpin: headerMenuResult.canUnpin,
+      currentSort: headerMenuResult.currentSort,
+      isSortable: headerMenuResult.isSortable,
+      isResizable: headerMenuResult.isResizable,
     },
   }), [
     pinningResult.pinnedColumns, pinningResult.pinColumn, pinningResult.unpinColumn,
@@ -642,7 +665,10 @@ export function useDataGridState<T>(
     headerMenuResult.isOpen, headerMenuResult.openForColumn, headerMenuResult.anchorElement,
     headerMenuResult.open, headerMenuResult.close, headerMenuResult.handlePinLeft,
     headerMenuResult.handlePinRight, headerMenuResult.handleUnpin,
+    headerMenuResult.handleSortAsc, headerMenuResult.handleSortDesc, headerMenuResult.handleClearSort,
+    headerMenuResult.handleAutosizeThis, headerMenuResult.handleAutosizeAll,
     headerMenuResult.canPinLeft, headerMenuResult.canPinRight, headerMenuResult.canUnpin,
+    headerMenuResult.currentSort, headerMenuResult.isSortable, headerMenuResult.isResizable,
   ]);
 
   return {
