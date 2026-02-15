@@ -6,15 +6,33 @@
  * Inputs use @Input() decorators (plain properties), internal state uses signals.
  */
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export function createColumnChooserTests(ColumnChooserComponent: new (...args: any[]) => any): void {
+import type { Signal, WritableSignal } from '@angular/core';
+import type { IColumnDefinition } from '@alaarab/ogrid-core';
+
+interface ColumnChooserInstance {
+  columns: IColumnDefinition[];
+  visibleColumns: Set<string>;
+  visibleCount: Signal<number>;
+  totalCount: Signal<number>;
+  isOpen?: WritableSignal<boolean>;
+  open?: WritableSignal<boolean>;
+  toggle?: () => void;
+  onToggle?: (columnKey: string, visible: boolean) => void;
+  onCheckboxChange?: (columnKey: string, event: Event) => void;
+  visibilityChange: { emit: (event: { columnKey: string; visible: boolean }) => void };
+  selectAll?: () => void;
+  clearAll?: () => void;
+  onSelectAll?: () => void;
+  onClearAll?: () => void;
+}
+
+export function createColumnChooserTests(ColumnChooserComponent: new () => ColumnChooserInstance): void {
   const columns = [
     { columnId: 'a', name: 'Col A' },
     { columnId: 'b', name: 'Col B' },
   ];
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  function createComponent(overrides: Record<string, unknown> = {}): any {
+  function createComponent(overrides: Partial<ColumnChooserInstance> = {}): ColumnChooserInstance {
     const instance = new ColumnChooserComponent();
     // Set @Input() properties directly
     instance.columns = overrides.columns ?? columns;
@@ -38,19 +56,19 @@ export function createColumnChooserTests(ColumnChooserComponent: new (...args: a
   it('toggle opens and closes the dropdown', () => {
     const comp = createComponent();
     // Support both `isOpen` (Material/Radix) and `open` (PrimeNG) signal names
-    const getOpen = () => (typeof comp.isOpen === 'function' ? comp.isOpen() : comp.open());
+    const getOpen = () => (typeof comp.isOpen === 'function' ? comp.isOpen() : comp.open!());
     expect(getOpen()).toBe(false);
     // Support both `toggle()` (Material/Radix) and manual toggle via `open.set(!)` (PrimeNG)
     if (typeof comp.toggle === 'function') {
       comp.toggle();
     } else {
-      comp.open.set(!comp.open());
+      comp.open!.set(!comp.open!());
     }
     expect(getOpen()).toBe(true);
     if (typeof comp.toggle === 'function') {
       comp.toggle();
     } else {
-      comp.open.set(!comp.open());
+      comp.open!.set(!comp.open!());
     }
     expect(getOpen()).toBe(false);
   });
@@ -63,7 +81,7 @@ export function createColumnChooserTests(ColumnChooserComponent: new (...args: a
     if (typeof comp.selectAll === 'function') {
       comp.selectAll();
     } else {
-      comp.onSelectAll();
+      comp.onSelectAll!();
     }
     expect(emitted).toEqual([{ columnKey: 'b', visible: true }]);
   });
@@ -76,7 +94,7 @@ export function createColumnChooserTests(ColumnChooserComponent: new (...args: a
     if (typeof comp.clearAll === 'function') {
       comp.clearAll();
     } else {
-      comp.onClearAll();
+      comp.onClearAll!();
     }
     expect(emitted).toEqual([
       { columnKey: 'a', visible: false },
@@ -90,10 +108,10 @@ export function createColumnChooserTests(ColumnChooserComponent: new (...args: a
     comp.visibilityChange.emit = (event: { columnKey: string; visible: boolean }) => emitted.push(event);
     // Support both `onCheckboxChange(key, event)` (Material/Radix) and `onToggle(key, checked)` (PrimeNG)
     if (typeof comp.onCheckboxChange === 'function') {
-      const event = { target: { checked: false } };
-      comp.onCheckboxChange('a', event);
+      const event = { target: { checked: false } } as unknown as Event;
+      comp.onCheckboxChange!('a', event);
     } else {
-      comp.onToggle('a', false);
+      comp.onToggle!('a', false);
     }
     expect(emitted).toEqual([{ columnKey: 'a', visible: false }]);
   });

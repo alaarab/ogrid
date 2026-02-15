@@ -1,0 +1,441 @@
+---
+sidebar_position: 15
+title: SideBar
+---
+
+# SideBar
+
+A collapsible sidebar panel that provides quick access to column visibility controls and filter inputs. The sidebar has a tab strip with panel toggles and a content area that displays the active panel.
+
+## Import
+
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+
+<Tabs groupId="framework">
+<TabItem value="react" label="React">
+
+```typescript
+// SideBar is a headless component in @alaarab/ogrid-react
+import { SideBar } from '@alaarab/ogrid-react';
+```
+
+:::tip
+The `SideBar` component is framework-agnostic and uses inline styles. All React UI packages (Radix, Fluent, Material) use the same `SideBar` from `@alaarab/ogrid-react`.
+:::
+
+</TabItem>
+<TabItem value="angular" label="Angular">
+
+```typescript
+// SideBar is rendered internally by OGridLayout in Angular packages
+import { OGridLayoutComponent } from '@alaarab/ogrid-angular';
+```
+
+</TabItem>
+<TabItem value="vue" label="Vue">
+
+```typescript
+// SideBar is rendered internally by OGridLayout in Vue packages
+import { OGridLayout } from '@alaarab/ogrid-vue';
+```
+
+</TabItem>
+<TabItem value="js" label="Vanilla JS">
+
+```typescript
+// SideBar is an internal component in vanilla JS
+import { OGrid } from '@alaarab/ogrid-js';
+```
+
+</TabItem>
+</Tabs>
+
+## Props (React)
+
+| Prop | Type | Default | Description |
+|------|------|---------|-------------|
+| `activePanel` | `SideBarPanelId \| null` | **Required** | Currently open panel (`'columns'`, `'filters'`, or `null` for closed). |
+| `onPanelChange` | `(panel: SideBarPanelId \| null) => void` | **Required** | Callback when user toggles a panel. |
+| `panels` | `SideBarPanelId[]` | **Required** | Available panels (`['columns']`, `['filters']`, or `['columns', 'filters']`). |
+| `position` | `'left' \| 'right'` | **Required** | Sidebar position relative to the grid. |
+| `columns` | `IColumnDefinition[]` | **Required** | All columns (for the columns panel). |
+| `visibleColumns` | `Set<string>` | **Required** | Currently visible column IDs. |
+| `onVisibilityChange` | `(columnKey: string, visible: boolean) => void` | **Required** | Callback when a column's visibility is toggled. |
+| `onSetVisibleColumns` | `(columns: Set<string>) => void` | **Required** | Bulk-set all visible columns (used by Select All / Clear All). |
+| `filterableColumns` | `SideBarFilterColumn[]` | **Required** | Filterable columns (for the filters panel). |
+| `filters` | `IFilters` | **Required** | Active filter values. |
+| `onFilterChange` | `(key: string, value: FilterValue \| undefined) => void` | **Required** | Callback when a filter value changes. |
+| `filterOptions` | `Record<string, string[]>` | **Required** | Available options for multi-select filters (column ID → options array). |
+
+## SideBarFilterColumn
+
+Describes a filterable column for the sidebar filters panel:
+
+```typescript
+interface SideBarFilterColumn {
+  columnId: string;
+  name: string;
+  filterField: string;
+  filterType: 'text' | 'multiSelect' | 'people' | 'date';
+}
+```
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `columnId` | `string` | Unique column identifier. |
+| `name` | `string` | Display name shown in the filters panel. |
+| `filterField` | `string` | Field name used in the `IFilters` object. |
+| `filterType` | `'text' \| 'multiSelect' \| 'people' \| 'date'` | Filter input type. |
+
+## Panels
+
+### Columns Panel (`'columns'`)
+
+Shows a list of all columns with checkboxes. Users can:
+- Check/uncheck individual columns to show/hide them
+- Click "Select All" to show all columns
+- Click "Clear All" to hide all optional columns (required columns remain visible)
+
+This panel provides the same functionality as the `ColumnChooser` dropdown but in a persistent sidebar format.
+
+### Filters Panel (`'filters'`)
+
+Shows filter inputs for all filterable columns. Users can:
+- Enter text queries for text filters
+- Select multiple values for multi-select filters
+- Search and select users for people filters
+- Enter date ranges for date filters
+
+All filters are applied immediately as the user types or selects values (no "Apply" button required).
+
+## Enabling in OGrid
+
+The top-level `OGrid` component accepts a `sideBar` prop:
+
+```tsx
+import { OGrid } from '@alaarab/ogrid-react-radix';
+
+// Boolean mode: show default panels (columns + filters)
+<OGrid sideBar={true} {...props} />
+
+// Custom configuration
+<OGrid
+  sideBar={{
+    panels: ['columns', 'filters'],
+    defaultPanel: 'columns',
+    position: 'right',
+  }}
+  {...props}
+/>
+```
+
+## ISideBarDef
+
+Configuration options for the sidebar:
+
+```typescript
+interface ISideBarDef {
+  panels?: SideBarPanelId[];
+  defaultPanel?: SideBarPanelId;
+  position?: 'left' | 'right';
+}
+```
+
+| Field | Type | Default | Description |
+|-------|------|---------|-------------|
+| `panels` | `SideBarPanelId[]` | `['columns', 'filters']` | Which panels to show. |
+| `defaultPanel` | `SideBarPanelId` | `undefined` | Panel to open on mount. Omit to start closed. |
+| `position` | `'left' \| 'right'` | `'right'` | Sidebar position relative to the grid. |
+
+## Usage
+
+### Basic Example (React)
+
+```tsx
+import { SideBar } from '@alaarab/ogrid-react';
+import type { SideBarFilterColumn, IFilters, FilterValue } from '@alaarab/ogrid-react';
+
+function MyGrid() {
+  const [activePanel, setActivePanel] = useState<'columns' | 'filters' | null>('columns');
+  const [visibleColumns, setVisibleColumns] = useState<Set<string>>(new Set(['id', 'name', 'price']));
+  const [filters, setFilters] = useState<IFilters>({});
+
+  const columns = [
+    { columnId: 'id', name: 'ID', required: true },
+    { columnId: 'name', name: 'Product Name' },
+    { columnId: 'price', name: 'Price' },
+  ];
+
+  const filterableColumns: SideBarFilterColumn[] = [
+    { columnId: 'name', name: 'Product Name', filterField: 'name', filterType: 'text' },
+    { columnId: 'category', name: 'Category', filterField: 'category', filterType: 'multiSelect' },
+  ];
+
+  const handleVisibilityChange = (columnKey: string, visible: boolean) => {
+    const newSet = new Set(visibleColumns);
+    if (visible) {
+      newSet.add(columnKey);
+    } else {
+      newSet.delete(columnKey);
+    }
+    setVisibleColumns(newSet);
+  };
+
+  const handleFilterChange = (key: string, value: FilterValue | undefined) => {
+    setFilters({ ...filters, [key]: value });
+  };
+
+  return (
+    <SideBar
+      activePanel={activePanel}
+      onPanelChange={setActivePanel}
+      panels={['columns', 'filters']}
+      position="right"
+      columns={columns}
+      visibleColumns={visibleColumns}
+      onVisibilityChange={handleVisibilityChange}
+      onSetVisibleColumns={setVisibleColumns}
+      filterableColumns={filterableColumns}
+      filters={filters}
+      onFilterChange={handleFilterChange}
+      filterOptions={{ category: ['Electronics', 'Clothing', 'Books'] }}
+    />
+  );
+}
+```
+
+### Columns Panel Only (React)
+
+```tsx
+import { OGrid } from '@alaarab/ogrid-react-radix';
+
+<OGrid
+  sideBar={{
+    panels: ['columns'],
+    defaultPanel: 'columns',
+    position: 'left',
+  }}
+  {...props}
+/>
+```
+
+### Filters Panel Only (React)
+
+```tsx
+import { OGrid } from '@alaarab/ogrid-react-radix';
+
+<OGrid
+  sideBar={{
+    panels: ['filters'],
+    defaultPanel: 'filters',
+    position: 'right',
+  }}
+  {...props}
+/>
+```
+
+## Angular Usage
+
+In Angular packages, the sidebar is rendered internally by `OGridLayoutComponent` when `sideBar` is enabled:
+
+```typescript
+import { Component } from '@angular/core';
+import { OGridService } from '@alaarab/ogrid-angular';
+
+@Component({
+  selector: 'app-my-grid',
+  template: `
+    <ogrid [propsInput]="gridProps" />
+  `
+})
+export class MyGridComponent {
+  ogridService = new OGridService<Product>();
+
+  constructor() {
+    // Enable sidebar via props
+    this.ogridService.setProps({
+      sideBar: {
+        panels: ['columns', 'filters'],
+        defaultPanel: 'columns',
+        position: 'right',
+      },
+    });
+  }
+
+  gridProps = this.ogridService.getDataGridProps();
+}
+```
+
+## Vue Usage
+
+In Vue packages, the sidebar is rendered internally by `OGridLayout` when `sideBar` is enabled:
+
+```vue
+<template>
+  <OGrid
+    :data="products"
+    :columns="columns"
+    :get-row-id="(item) => item.id"
+    :side-bar="{
+      panels: ['columns', 'filters'],
+      defaultPanel: 'columns',
+      position: 'right',
+    }"
+  />
+</template>
+
+<script setup lang="ts">
+import { OGrid } from '@alaarab/ogrid-vue-vuetify';
+
+const products = [...];
+const columns = [...];
+</script>
+```
+
+## Behavior
+
+### Tab Strip
+
+The sidebar has a vertical tab strip with one button per panel:
+- **C** — Columns panel button
+- **F** — Filters panel button
+
+Clicking a tab toggles the panel:
+- If the panel is closed → open it
+- If the panel is open → close it
+- If another panel is open → close it and open the clicked panel
+
+### Panel Content
+
+The panel content area has a fixed width (240px) and scrollable content. The panel is rendered next to the grid with a border (left border when `position: 'right'`, right border when `position: 'left'`).
+
+### Keyboard Navigation
+
+- `Tab` / `Shift+Tab` — Move focus between interactive elements
+- `Enter` / `Space` — Toggle panel buttons, checkboxes, and other controls
+
+## Accessibility
+
+`SideBar` implements WCAG 2.1 AA standards with full keyboard and screen reader support.
+
+### ARIA Attributes
+
+```html
+<div>
+  <!-- Tab strip -->
+  <button
+    role="tab"
+    aria-label="Columns panel"
+    aria-expanded="true"
+    aria-controls="panel-columns"
+  >
+    C
+  </button>
+  <button
+    role="tab"
+    aria-label="Filters panel"
+    aria-expanded="false"
+    aria-controls="panel-filters"
+  >
+    F
+  </button>
+
+  <!-- Panel content -->
+  <div
+    role="region"
+    id="panel-columns"
+    aria-labelledby="tab-columns"
+  >
+    <h3>Columns</h3>
+    <!-- Column checkboxes -->
+  </div>
+</div>
+```
+
+| Attribute | Element | Purpose |
+|-----------|---------|---------|
+| `role="tab"` | Tab buttons | Identifies buttons as tabs in a tab interface |
+| `aria-label` | Tab buttons | Descriptive label: "Columns panel", "Filters panel" |
+| `aria-expanded` | Tab buttons | Indicates whether panel is open (`"true"`) or closed (`"false"`) |
+| `aria-controls` | Tab buttons | References the controlled panel's `id` |
+| `role="region"` | Panel content | Identifies the panel as a landmark region |
+| `id` | Panel content | Unique identifier referenced by tab button's `aria-controls` |
+| `aria-labelledby` | Panel content | References the tab button's `id` for accessible name |
+
+### Keyboard Navigation
+
+**Tab Strip:**
+- `Tab` / `Shift+Tab` — Navigate between tab buttons
+- `Enter` / `Space` — Toggle focused panel (open/close)
+- `←` `→` — Navigate between tab buttons (alternative to Tab)
+
+**Columns Panel:**
+- `Tab` / `Shift+Tab` — Navigate between checkboxes and action buttons
+- `Space` — Toggle focused checkbox
+- `Enter` (on action buttons) — Execute "Select All" or "Clear All"
+
+**Filters Panel:**
+- `Tab` / `Shift+Tab` — Navigate between filter inputs
+- Type to enter filter values
+- `Enter` — Apply filter (for text filters)
+- `Space` — Toggle checkboxes (for multi-select filters)
+
+### Focus Management
+
+- **Focus visible:** `:focus-visible` styles show 2px solid outline (`--ogrid-accent`) on keyboard navigation
+- **Focus order:** Tab buttons → panel content (top to bottom)
+- **Panel closure:** Closing a panel does not move focus; it remains on the tab button
+
+### Screen Reader Support
+
+Screen readers announce:
+- **Tab button:** "Columns panel button, expanded/collapsed"
+- **Panel open:** "Columns panel region, contains 5 column checkboxes"
+- **Checkbox state:** "Product Name checkbox, checked/unchecked"
+- **Filter input:** "Filter by Product Name, edit text"
+- **Action buttons:** "Select All button", "Clear All button"
+
+Tested with NVDA, JAWS, VoiceOver, and Narrator.
+
+### High Contrast Mode
+
+- Tab buttons and panel content remain visible in high contrast mode
+- Focus indicators use system `Highlight` color
+- Borders use system `ButtonText` color
+- Panel background uses system `Window` color
+
+See the [Accessibility Guide](/docs/guides/accessibility) for complete documentation.
+
+## Styling
+
+The `SideBar` component uses **inline styles** (no external CSS) to remain framework-agnostic. All styles use CSS custom properties for theming:
+
+**CSS custom properties:**
+- `--ogrid-header-bg` — Tab strip and panel header background color
+- `--ogrid-bg` — Panel content background color
+- `--ogrid-border` — Border color
+- `--ogrid-fg` — Foreground text color
+
+## Layout Integration
+
+The sidebar is rendered inside `OGridLayout` alongside the grid. The layout structure is:
+
+```
+[Toolbar strip]
+[Sidebar]? [DataGridTable + StatusBar]
+[Footer strip]
+```
+
+When `position: 'left'`, the sidebar is on the left. When `position: 'right'`, it's on the right.
+
+## Related Components
+
+- [OGrid](./ogrid-props.mdx) — Top-level wrapper with `sideBar` prop
+- [ColumnChooser](./components-column-chooser.mdx) — Alternative column visibility UI (toolbar dropdown)
+- [ColumnHeaderFilter](./components-column-header-filter.mdx) — Alternative filter UI (column header popovers)
+
+## See Also
+
+- [Types: ISideBarDef](./types.mdx#isidebardef) — Sidebar configuration reference
+- [Sidebar Feature Guide](/docs/features/sidebar) — Complete sidebar documentation

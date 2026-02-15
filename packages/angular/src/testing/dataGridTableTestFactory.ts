@@ -7,7 +7,10 @@
  */
 import { fixtureRows, fixtureColumns, getRowId } from './fixtures';
 import type { FixtureRow } from './fixtures';
-import type { IOGridDataGridProps, IColumnDef } from '../types';
+import type { IOGridDataGridProps, IColumnDef, IColumnGroupDef, FilterValue, IStatusBarProps, ICellValueChangedEvent } from '../types';
+import type { DataGridStateService } from '../services/datagrid-state.service';
+import type { Signal, SimpleChanges } from '@angular/core';
+import type { TemplateRef } from '@angular/core';
 
 function makeProps(overrides: Partial<IOGridDataGridProps<FixtureRow>> = {}): IOGridDataGridProps<FixtureRow> {
   return {
@@ -26,11 +29,47 @@ function makeProps(overrides: Partial<IOGridDataGridProps<FixtureRow>> = {}): IO
   } as IOGridDataGridProps<FixtureRow>;
 }
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export function createDataGridTableTests(DataGridTableComponent: new (...args: any[]) => any): void {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  function createComponent(overrides: Partial<IOGridDataGridProps<FixtureRow>> = {}): any {
-    const instance = new DataGridTableComponent();
+interface DataGridTableInstance {
+  propsInput?: IOGridDataGridProps<FixtureRow>;
+  itemsInput?: FixtureRow[];
+  columns?: (IColumnDef<FixtureRow> | IColumnGroupDef<FixtureRow>)[];
+  getRowIdInput?: (item: FixtureRow) => string | number;
+  sortBy?: string;
+  sortDirection?: 'asc' | 'desc';
+  onColumnSort?: (columnKey: string) => void;
+  visibleColumns?: Set<string>;
+  filters?: Record<string, unknown>;
+  onFilterChange?: (key: string, value: FilterValue | undefined) => void;
+  filterOptions?: Record<string, string[]>;
+  loadingFilterOptions?: Record<string, boolean>;
+  isLoadingInput?: boolean;
+  suppressHorizontalScroll?: boolean;
+  statusBar?: IStatusBarProps;
+  emptyStateInput?: {
+    onClearAll: () => void;
+    hasActiveFilters: boolean;
+    message?: string;
+    render?: TemplateRef<unknown>;
+  };
+  editable?: boolean;
+  onCellValueChanged?: (event: ICellValueChangedEvent<FixtureRow>) => void;
+  cellSelection?: boolean;
+  ngOnChanges?: (changes: SimpleChanges) => void;
+  stateService: DataGridStateService<FixtureRow>;
+  allowOverflowX: Signal<boolean>;
+  items: Signal<FixtureRow[]>;
+  getRowId: Signal<(item: FixtureRow) => string | number>;
+  isLoading: Signal<boolean>;
+  commitEdit: () => void;
+  cancelEdit: () => void;
+  onEditorKeydown: (event: KeyboardEvent) => void;
+}
+
+// Use unknown for the constructor since DataGridTableComponent is a generic class
+// The instance will be cast to DataGridTableInstance after instantiation
+export function createDataGridTableTests(DataGridTableComponent: new () => unknown): void {
+  function createComponent(overrides: Partial<IOGridDataGridProps<FixtureRow>> = {}): DataGridTableInstance {
+    const instance = new DataGridTableComponent() as DataGridTableInstance;
     const props = makeProps(overrides);
 
     // Set propsInput for Material/Radix (single-prop API via @Input setter)
@@ -117,8 +156,7 @@ export function createDataGridTableTests(DataGridTableComponent: new (...args: a
   });
 
   it('statusBar computed returns config when statusBar is provided', () => {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const comp = createComponent({ statusBar: { totalCount: 2, suppressRowCount: false } as any });
+    const comp = createComponent({ statusBar: { totalCount: 2, suppressRowCount: false } });
     const state = comp.stateService.getState();
     expect(state.viewModels.statusBarConfig).toBeTruthy();
   });

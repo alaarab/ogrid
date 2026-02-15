@@ -1,4 +1,4 @@
-import { Component, ChangeDetectionStrategy, signal, effect, ViewChild, ElementRef, Injector, createComponent, EnvironmentInjector, inject, Input, Output, EventEmitter } from '@angular/core';
+import { Component, ChangeDetectionStrategy, signal, effect, ViewChild, ElementRef, Injector, createComponent, EnvironmentInjector, inject, Input } from '@angular/core';
 import type { IColumnDef, ICellEditorProps } from '@alaarab/ogrid-core';
 
 /**

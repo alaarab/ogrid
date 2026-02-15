@@ -4,11 +4,10 @@
  */
 import * as React from 'react';
 import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
-import type { IColumnDef, UserLike } from '../types';
+import type { IColumnDef, UserLike, IOGridDataGridProps } from '../types';
 import { fixtureRows, getRowId, type FixtureRow } from './fixtures';
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export function createDataGridTableTests(DataGridTable: React.ComponentType<any>): void {
+export function createDataGridTableTests(DataGridTable: React.ComponentType<IOGridDataGridProps<FixtureRow>>): void {
   const twoColumnColumns: IColumnDef<FixtureRow>[] = [
     {
       columnId: 'name',

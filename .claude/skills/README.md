@@ -30,6 +30,12 @@ git push
 - While agents are working
 - For docs-only changes (optional)
 
+### `/testing` - Testing How-To
+
+Quick reference for test factories, edge-case priorities (cell selection, keyboard nav, clipboard, undo/redo), where tests live, and common pitfalls.
+
+**When to use:** Adding or changing tests, improving coverage, debugging test failures.
+
 ## Usage
 
 Skills are invoked with `/skill-name` in the chat.

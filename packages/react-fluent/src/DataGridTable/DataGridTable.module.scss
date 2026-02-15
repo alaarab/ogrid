@@ -784,3 +784,31 @@
   }
 }
 
+/* ─── Accessibility: Focus Visible Styles ─────────────────────── */
+
+.tableWrapper :global {
+  .fui-DataGridHeaderCell:focus-visible,
+  .fui-DataGridCell:focus-visible {
+    outline: 2px solid var(--colorBrandStroke1, #0078d4);
+    outline-offset: -2px;
+    z-index: 11;
+  }
+
+  .fui-Button:focus-visible,
+  .fui-MenuButton:focus-visible {
+    outline: 2px solid var(--colorBrandStroke1, #0078d4);
+    outline-offset: 2px;
+  }
+
+  .fui-Checkbox:focus-visible {
+    outline: 2px solid var(--colorBrandStroke1, #0078d4);
+    outline-offset: 2px;
+  }
+}
+
+.cellContent:focus-visible {
+  outline: 2px solid var(--colorBrandStroke1, #0078d4);
+  outline-offset: -2px;
+  z-index: 3;
+}
+

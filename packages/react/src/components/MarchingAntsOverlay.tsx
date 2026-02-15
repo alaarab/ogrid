@@ -9,6 +9,7 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
 import * as React from 'react';
 import type { ISelectionRange } from '../types';
+import { measureRange, injectGlobalStyles, type OverlayRect } from '@alaarab/ogrid-core';
 
 const MARCHING_ANTS_ANIMATION: React.CSSProperties = { animation: 'ogrid-marching-ants 0.5s linear infinite' };
 
@@ -31,54 +32,6 @@ export interface MarchingAntsOverlayProps {
   columnSizingOverrides: Record<string, { widthPx: number }>;
   /** Column order — triggers re-measurement when columns are reordered */
   columnOrder: readonly string[] | undefined;
-}
-
-// Inject the @keyframes rule once into <head> (deduplicates across multiple OGrid instances / module copies)
-function ensureKeyframes() {
-  if (typeof document === 'undefined') return;
-  if (document.getElementById('ogrid-marching-ants-keyframes')) return;
-  const style = document.createElement('style');
-  style.id = 'ogrid-marching-ants-keyframes';
-  style.textContent =
-    '@keyframes ogrid-marching-ants{to{stroke-dashoffset:-8}}';
-  document.head.appendChild(style);
-}
-
-interface OverlayRect {
-  top: number;
-  left: number;
-  width: number;
-  height: number;
-}
-
-/** Measure the bounding rect of a range within a container. */
-function measureRange(
-  container: HTMLElement,
-  range: ISelectionRange,
-  colOffset: number
-): OverlayRect | null {
-  const startGlobalCol = range.startCol + colOffset;
-  const endGlobalCol = range.endCol + colOffset;
-
-  const topLeft = container.querySelector(
-    `[data-row-index="${range.startRow}"][data-col-index="${startGlobalCol}"]`
-  ) as HTMLElement | null;
-  const bottomRight = container.querySelector(
-    `[data-row-index="${range.endRow}"][data-col-index="${endGlobalCol}"]`
-  ) as HTMLElement | null;
-
-  if (!topLeft || !bottomRight) return null;
-
-  const cRect = container.getBoundingClientRect();
-  const tlRect = topLeft.getBoundingClientRect();
-  const brRect = bottomRight.getBoundingClientRect();
-
-  return {
-    top: tlRect.top - cRect.top,
-    left: tlRect.left - cRect.left,
-    width: brRect.right - tlRect.left,
-    height: brRect.bottom - tlRect.top,
-  };
 }
 
 export function MarchingAntsOverlay({
@@ -108,11 +61,12 @@ export function MarchingAntsOverlay({
 
     setSelRect(selectionRange ? measureRange(container, selectionRange, colOffset) : null);
     setClipRect(clipRange ? measureRange(container, clipRange, colOffset) : null);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectionRange, clipRange, containerRef, colOffset, items, visibleColumns, columnSizingOverrides, columnOrder]);
 
   // Inject keyframes on mount
   useEffect(() => {
-    ensureKeyframes();
+    injectGlobalStyles('ogrid-marching-ants-keyframes', '@keyframes ogrid-marching-ants{to{stroke-dashoffset:-8}}');
   }, []);
 
   // Measure when any range changes; re-measure on resize

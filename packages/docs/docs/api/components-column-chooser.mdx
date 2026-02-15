@@ -1,0 +1,331 @@
+---
+sidebar_position: 12
+title: ColumnChooser
+---
+
+# ColumnChooser
+
+A dropdown component that allows users to show/hide columns in the grid. Displays a list of all columns with checkboxes, and provides "Select All" and "Clear All" actions.
+
+## Import
+
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+
+<Tabs groupId="framework">
+<TabItem value="react" label="React">
+
+```typescript
+import { ColumnChooser } from '@alaarab/ogrid-react-radix';
+// or
+import { ColumnChooser } from '@alaarab/ogrid-react-fluent';
+// or
+import { ColumnChooser } from '@alaarab/ogrid-react-material';
+```
+
+</TabItem>
+<TabItem value="angular" label="Angular">
+
+```typescript
+import { ColumnChooserComponent } from '@alaarab/ogrid-angular-material';
+// or
+import { ColumnChooserComponent } from '@alaarab/ogrid-angular-primeng';
+// or
+import { ColumnChooserComponent } from '@alaarab/ogrid-angular-radix';
+```
+
+</TabItem>
+<TabItem value="vue" label="Vue">
+
+```typescript
+import { ColumnChooser } from '@alaarab/ogrid-vue-vuetify';
+// or
+import { ColumnChooser } from '@alaarab/ogrid-vue-primevue';
+// or
+import { ColumnChooser } from '@alaarab/ogrid-vue-radix';
+```
+
+</TabItem>
+<TabItem value="js" label="Vanilla JS">
+
+```typescript
+// ColumnChooser is an internal component in vanilla JS
+import { OGrid } from '@alaarab/ogrid-js';
+```
+
+</TabItem>
+</Tabs>
+
+## Props (React)
+
+| Prop | Type | Default | Description |
+|------|------|---------|-------------|
+| `columns` | `IColumnDefinition[]` | **Required** | Array of all columns (visible and hidden). |
+| `visibleColumns` | `Set<string>` | **Required** | Set of currently visible column IDs. |
+| `onVisibilityChange` | `(columnKey: string, visible: boolean) => void` | **Required** | Callback when a column's visibility is toggled. |
+| `className` | `string` | `undefined` | Additional CSS class for the root element. |
+
+## IColumnDefinition
+
+Minimal column info used by the column chooser:
+
+```typescript
+interface IColumnDefinition {
+  columnId: string;
+  name: string;
+  required?: boolean;
+}
+```
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `columnId` | `string` | Unique column identifier. |
+| `name` | `string` | Display name shown in the dropdown. |
+| `required` | `boolean` | When `true`, the checkbox is disabled (column cannot be hidden). |
+
+## Usage
+
+### Basic Example (React)
+
+```tsx
+import { ColumnChooser } from '@alaarab/ogrid-react-radix';
+import type { IColumnDefinition } from '@alaarab/ogrid-react-radix';
+
+function MyApp() {
+  const columns: IColumnDefinition[] = [
+    { columnId: 'id', name: 'ID', required: true },
+    { columnId: 'name', name: 'Product Name' },
+    { columnId: 'price', name: 'Price' },
+    { columnId: 'category', name: 'Category' },
+  ];
+
+  const [visibleColumns, setVisibleColumns] = useState<Set<string>>(
+    new Set(['id', 'name', 'price'])
+  );
+
+  const handleVisibilityChange = (columnKey: string, visible: boolean) => {
+    const newSet = new Set(visibleColumns);
+    if (visible) {
+      newSet.add(columnKey);
+    } else {
+      newSet.delete(columnKey);
+    }
+    setVisibleColumns(newSet);
+  };
+
+  return (
+    <ColumnChooser
+      columns={columns}
+      visibleColumns={visibleColumns}
+      onVisibilityChange={handleVisibilityChange}
+    />
+  );
+}
+```
+
+### With Required Columns (React)
+
+```tsx
+import { ColumnChooser } from '@alaarab/ogrid-react-radix';
+
+const columns: IColumnDefinition[] = [
+  { columnId: 'id', name: 'ID', required: true }, // Cannot be hidden
+  { columnId: 'name', name: 'Product Name', required: true }, // Cannot be hidden
+  { columnId: 'price', name: 'Price' },
+  { columnId: 'stock', name: 'Stock' },
+];
+
+function MyApp() {
+  // ... (same as above)
+  return (
+    <ColumnChooser
+      columns={columns}
+      visibleColumns={visibleColumns}
+      onVisibilityChange={handleVisibilityChange}
+    />
+  );
+}
+```
+
+The "ID" and "Product Name" columns will have disabled checkboxes and cannot be hidden.
+
+## Angular Usage
+
+In Angular packages, the component uses `@Input()` and `@Output()` decorators:
+
+```typescript
+import { Component } from '@angular/core';
+import { ColumnChooserComponent } from '@alaarab/ogrid-angular-material';
+import type { IColumnDefinition } from '@alaarab/ogrid-angular';
+
+@Component({
+  selector: 'app-my-grid',
+  standalone: true,
+  imports: [ColumnChooserComponent],
+  template: `
+    <ogrid-column-chooser
+      [columns]="columns"
+      [visibleColumns]="visibleColumns"
+      (onVisibilityChange)="handleVisibilityChange($event)"
+    />
+  `
+})
+export class MyGridComponent {
+  columns: IColumnDefinition[] = [
+    { columnId: 'id', name: 'ID', required: true },
+    { columnId: 'name', name: 'Product Name' },
+    { columnId: 'price', name: 'Price' },
+  ];
+
+  visibleColumns = new Set(['id', 'name', 'price']);
+
+  handleVisibilityChange(event: { columnKey: string; visible: boolean }) {
+    if (event.visible) {
+      this.visibleColumns.add(event.columnKey);
+    } else {
+      this.visibleColumns.delete(event.columnKey);
+    }
+    this.visibleColumns = new Set(this.visibleColumns); // Trigger change detection
+  }
+}
+```
+
+## Vue Usage
+
+In Vue packages, the component accepts props via `v-bind` or shorthand `:`:
+
+```vue
+<template>
+  <ColumnChooser
+    :columns="columns"
+    :visible-columns="visibleColumns"
+    @visibility-change="handleVisibilityChange"
+  />
+</template>
+
+<script setup lang="ts">
+import { ref } from 'vue';
+import { ColumnChooser } from '@alaarab/ogrid-vue-vuetify';
+import type { IColumnDefinition } from '@alaarab/ogrid-vue';
+
+const columns: IColumnDefinition[] = [
+  { columnId: 'id', name: 'ID', required: true },
+  { columnId: 'name', name: 'Product Name' },
+  { columnId: 'price', name: 'Price' },
+];
+
+const visibleColumns = ref<Set<string>>(new Set(['id', 'name', 'price']));
+
+const handleVisibilityChange = (columnKey: string, visible: boolean) => {
+  if (visible) {
+    visibleColumns.value.add(columnKey);
+  } else {
+    visibleColumns.value.delete(columnKey);
+  }
+  visibleColumns.value = new Set(visibleColumns.value); // Trigger reactivity
+};
+</script>
+```
+
+## Behavior
+
+### Select All / Clear All
+
+The dropdown includes two action buttons:
+- **Select All** — Shows all columns (except those marked as `required: false` — these remain hidden)
+- **Clear All** — Hides all optional columns (required columns remain visible)
+
+### Visual Indicator
+
+The trigger button shows the current visibility count: `"Column Visibility (3 of 5)"`.
+
+### Checkbox States
+
+- **Checked** — Column is visible
+- **Unchecked** — Column is hidden
+- **Disabled + Checked** — Column is required and cannot be hidden
+
+## Accessibility
+
+`ColumnChooser` implements WCAG 2.1 AA standards with full keyboard and screen reader support.
+
+### ARIA Attributes
+
+```html
+<button aria-expanded="false" aria-haspopup="listbox">
+  Column Visibility (3 of 5)
+</button>
+<div role="dialog" aria-label="Column visibility">
+  <input type="checkbox" id="col-name" />
+  <label for="col-name">Product Name</label>
+</div>
+```
+
+| Attribute | Element | Purpose |
+|-----------|---------|---------|
+| `aria-expanded` | Trigger button | Indicates dropdown open/closed state (`"true"` / `"false"`) |
+| `aria-haspopup="listbox"` | Trigger button | Indicates the button triggers a listbox |
+| `role="dialog"` | Dropdown | Identifies the dropdown as a modal dialog |
+| `aria-label="Column visibility"` | Dropdown | Provides context for the dialog |
+| `id` / `for` | Checkbox + label | Associates each checkbox with its label |
+| `disabled` | Checkbox | Indicates required columns that cannot be hidden |
+
+### Keyboard Navigation
+
+- `Enter` / `Space` (on trigger button) — Open/close dropdown
+- `Tab` / `Shift+Tab` — Navigate between checkboxes and action buttons
+- `Space` — Toggle focused checkbox
+- `Enter` (on action buttons) — Execute "Select All" or "Clear All"
+- `Escape` — Close dropdown
+
+### Focus Management
+
+- **Focus trap:** Focus is trapped within the dropdown when open
+- **Focus restoration:** When closing the dropdown, focus returns to the trigger button
+- **Focus visible:** `:focus-visible` styles show 2px solid outline (`--ogrid-accent`)
+
+### Screen Reader Support
+
+Screen readers announce:
+- **Trigger button:** "Column Visibility (3 of 5) button, collapsed/expanded"
+- **Checkbox state:** "Product Name checkbox, checked/unchecked"
+- **Required columns:** "ID checkbox, checked, disabled, required column"
+- **Action buttons:** "Select All button", "Clear All button"
+
+Tested with NVDA, JAWS, VoiceOver, and Narrator.
+
+### High Contrast Mode
+
+- Checkboxes remain visible in high contrast mode
+- Focus indicators use system `Highlight` color
+- Dropdown borders use system `ButtonText` color
+
+See the [Accessibility Guide](/docs/guides/accessibility) for complete documentation.
+
+## Styling
+
+All UI packages provide default styles matching their design system. Styles are scoped to avoid conflicts.
+
+**CSS custom properties** (all packages):
+- `--ogrid-header-bg` — Trigger button and popover background color
+- `--ogrid-border` — Border color
+- `--ogrid-fg` — Foreground text color
+
+## Placement in OGrid
+
+The `columnChooser` prop on `OGrid` controls where the column chooser renders:
+
+- `true` or `'toolbar'` (default) — Renders in the toolbar strip (recommended)
+- `'sidebar'` — Only available via the sidebar columns panel (no toolbar button)
+- `false` — Hidden entirely (useful when you want full control over visibility)
+
+## Related Components
+
+- [DataGridTable](./components-datagrid-table.mdx) — Main grid component
+- [SideBar](./components-sidebar.mdx) — Sidebar with columns panel (alternative placement)
+- [OGrid](./ogrid-props.mdx) — Top-level wrapper that integrates the column chooser
+
+## See Also
+
+- [Column Definition](./column-def.mdx#icolumnmeta) — Column metadata reference
+- [Grid API](./grid-api.mdx) — `getColumnState()` and `applyColumnState()` methods

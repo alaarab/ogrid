@@ -1,50 +1,23 @@
-import type { ISelectionRange } from '@alaarab/ogrid-core';
+import { injectGlobalStyles, measureRange as measureRangeCore, type ISelectionRange, type OverlayRect } from '@alaarab/ogrid-core';
 
-interface OverlayRect {
-  top: number;
-  left: number;
-  width: number;
-  height: number;
-}
-
-/** Inject the @keyframes rule once into <head> (deduplicates across multiple instances). */
-function ensureKeyframes(): void {
-  if (typeof document === 'undefined') return;
-  if (document.getElementById('ogrid-marching-ants-keyframes')) return;
-  const style = document.createElement('style');
-  style.id = 'ogrid-marching-ants-keyframes';
-  style.textContent =
-    '@keyframes ogrid-marching-ants{to{stroke-dashoffset:-8}}';
-  document.head.appendChild(style);
-}
-
-/** Measure the bounding rect of a range within a container. */
+/**
+ * Measure the bounding rect of a range within a container, with scroll offsets.
+ * This variant adds scroll offsets for the JS implementation's scrollable container.
+ */
 function measureRange(
   container: HTMLElement,
   range: ISelectionRange,
   colOffset: number
 ): OverlayRect | null {
-  const startGlobalCol = range.startCol + colOffset;
-  const endGlobalCol = range.endCol + colOffset;
+  const rect = measureRangeCore(container, range, colOffset);
+  if (!rect) return null;
 
-  const topLeft = container.querySelector(
-    `[data-row-index="${range.startRow}"][data-col-index="${startGlobalCol}"]`
-  ) as HTMLElement | null;
-  const bottomRight = container.querySelector(
-    `[data-row-index="${range.endRow}"][data-col-index="${endGlobalCol}"]`
-  ) as HTMLElement | null;
-
-  if (!topLeft || !bottomRight) return null;
-
-  const cRect = container.getBoundingClientRect();
-  const tlRect = topLeft.getBoundingClientRect();
-  const brRect = bottomRight.getBoundingClientRect();
-
+  // Add scroll offsets for JS implementation's scrollable container
   return {
-    top: tlRect.top - cRect.top + container.scrollTop,
-    left: tlRect.left - cRect.left + container.scrollLeft,
-    width: brRect.right - tlRect.left,
-    height: brRect.bottom - tlRect.top,
+    top: rect.top + container.scrollTop,
+    left: rect.left + container.scrollLeft,
+    width: rect.width,
+    height: rect.height,
   };
 }
 
@@ -76,7 +49,7 @@ export class MarchingAntsOverlay {
   constructor(container: HTMLElement, colOffset = 0) {
     this.container = container;
     this.colOffset = colOffset;
-    ensureKeyframes();
+    injectGlobalStyles('ogrid-marching-ants-keyframes', '@keyframes ogrid-marching-ants{to{stroke-dashoffset:-8}}');
 
     // The container must be positioned for absolute SVGs
     const pos = getComputedStyle(container).position;

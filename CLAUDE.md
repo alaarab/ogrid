@@ -5,6 +5,7 @@
 This project has custom skills in the `.claude/skills/` directory:
 
 - **`/verify`** — Pre-commit verification gate. Checks version sync, builds all packages, runs all tests, runs lint. Use before ANY commit.
+- **`/testing`** — Testing how-to: test factories, edge-case priorities (selection, keyboard, clipboard, undo/redo), where tests live, pitfalls.
 
 See `.claude/skills/README.md` for details.
 
@@ -258,6 +259,25 @@ Each framework uses its idiomatic testing tools:
 - **JS:** Native DOM APIs + jsdom (querySelector, addEventListener, dispatchEvent)
 
 Tests are co-located with components in `__tests__/` directories.
+
+### Test Factories
+
+Shared factories drive parity across UI packages. Each framework has 8 factories that generate the same scenarios:
+
+1. **createOGridTests** — Top-level OGrid component
+2. **createDataGridTableTests** — DataGridTable
+3. **createSpreadsheetTests** — Cell selection (drag, shift-click, bounds)
+4. **createColumnHeaderFilterTests** — Filtering UI
+5. **createColumnChooserTests** — Column visibility
+6. **createPaginationControlsTests** — Pagination
+7. **createColumnGroupTests** — Grouped headers
+8. **createSideBarTests** — Sidebar panels
+
+When adding features, add or extend the relevant factory so all UI packages get the same tests.
+
+### Edge-Case Priorities
+
+When improving coverage, prioritize boundary and error cases for: **cell selection** (constrain to grid bounds, pinned columns, select-all), **keyboard navigation** (arrows/Tab/Home/End at edges), **clipboard** (null/undefined/mixed types, date formatting), and **undo/redo** (stack limits, batch operations). See `/testing` skill for concise checklist.
 
 ### Framework Mocks
 
