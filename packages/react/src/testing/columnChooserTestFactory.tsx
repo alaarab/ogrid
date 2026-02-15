@@ -5,8 +5,13 @@
 import * as React from 'react';
 import { render, screen, fireEvent } from '@testing-library/react';
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export function createColumnChooserTests(ColumnChooser: React.ComponentType<any>): void {
+interface ColumnChooserProps {
+  columns: Array<{ columnId: string; name: string; required?: boolean }>;
+  visibleColumns: Set<string>;
+  onVisibilityChange: (columnKey: string, visible: boolean) => void;
+}
+
+export function createColumnChooserTests(ColumnChooser: React.ComponentType<ColumnChooserProps>): void {
   const columns = [
     { columnId: 'a', name: 'Col A' },
     { columnId: 'b', name: 'Col B' },
