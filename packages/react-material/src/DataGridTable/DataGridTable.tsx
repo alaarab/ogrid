@@ -101,7 +101,8 @@ const CELL_CONTENT_NUMERIC_EDITABLE_SX = { ...CELL_CONTENT_NUMERIC_SX, cursor: '
 const CELL_CONTENT_BOOLEAN_EDITABLE_SX = { ...CELL_CONTENT_BOOLEAN_SX, cursor: 'cell' } as const;
 
 // Cell overlay states (only applied to the few active/selected cells)
-const CELL_ACTIVE_SX = { outline: '2px solid var(--ogrid-selection, #217346)', outlineOffset: '-1px', zIndex: 2, position: 'relative' as const, overflow: 'visible' } as const;
+// Active cell: theme-aware bg so dark mode doesn't show white (MUI action.hover adapts to theme)
+const CELL_ACTIVE_SX = { outline: '2px solid var(--ogrid-selection, #217346)', outlineOffset: '-1px', zIndex: 2, position: 'relative' as const, overflow: 'visible', bgcolor: 'action.hover' } as const;
 const CELL_IN_RANGE_SX = { bgcolor: 'var(--ogrid-bg-range, rgba(33, 115, 70, 0.12))' } as const;
 const CELL_CUT_RANGE_SX = { bgcolor: 'action.hover', opacity: 0.7 } as const;
 

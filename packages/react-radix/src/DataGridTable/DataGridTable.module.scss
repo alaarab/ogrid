@@ -332,6 +332,15 @@
   z-index: 2;
   position: relative;
   overflow: visible;
+  /* Theme-aware: no forced white so dark mode can show dark background */
+  background: var(--ogrid-bg-active-cell, transparent);
+}
+
+@media (prefers-color-scheme: dark) {
+  .activeCellContent {
+    /* Default in dark mode: subtle highlight that works on dark backgrounds */
+    background: var(--ogrid-bg-active-cell, rgba(255, 255, 255, 0.06));
+  }
 }
 
 .cellInRange {
