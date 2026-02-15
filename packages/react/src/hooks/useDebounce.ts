@@ -24,7 +24,7 @@ export function useDebouncedCallback<T extends (...args: unknown[]) => void>(
   fn: T,
   delayMs: number
 ): T {
-  const timeoutRef = useRef<ReturnType<typeof setTimeout>>();
+  const timeoutRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   const fnRef = useRef(fn);
   fnRef.current = fn;
 

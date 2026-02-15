@@ -376,6 +376,9 @@ const setWrapperRef = (el: any) => {
                   ? getHeaderCellStyle(cell.column, layout.visibleCols.indexOf(cell.column))
                   : undefined"
                 :data-column-id="cell.column?.columnId"
+                :aria-sort="cell.column && !cell.isGroup && gridProps.sort?.field === cell.column.columnId
+                  ? (gridProps.sort.direction === 'asc' ? 'ascending' : 'descending')
+                  : undefined"
                 @mousedown="cell.column && !cell.isGroup ? (e) => handleReorderMouseDown(cell.column.columnId, e) : undefined"
               >
                 <div class="ogrid-header-content">
@@ -674,6 +677,12 @@ const setWrapperRef = (el: any) => {
   &:active {
     cursor: grabbing;
   }
+
+  &:focus-visible {
+    outline: 2px solid var(--ogrid-accent, #0078d4);
+    outline-offset: -2px;
+    z-index: 11;
+  }
 }
 
 .ogrid-group-header {
@@ -714,6 +723,11 @@ const setWrapperRef = (el: any) => {
   &:hover {
     color: rgba(0, 0, 0, 0.8);
   }
+
+  &:focus-visible {
+    outline: 2px solid var(--ogrid-accent, #0078d4);
+    outline-offset: 2px;
+  }
 }
 
 .ogrid-resize-handle {
@@ -746,6 +760,12 @@ const setWrapperRef = (el: any) => {
 
   &:last-child {
     border-right: none;
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--ogrid-accent, #0078d4);
+    outline-offset: -2px;
+    z-index: 3;
   }
 }
 

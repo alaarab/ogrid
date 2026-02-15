@@ -4,7 +4,7 @@
  */
 import * as React from 'react';
 import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
-import type { IColumnDef } from '../types';
+import type { IColumnDef, IOGridDataGridProps } from '../types';
 import { fixtureRows, getRowId, type FixtureRow } from './fixtures';
 
 const twoColumnColumns: IColumnDef<FixtureRow>[] = [
@@ -41,10 +41,8 @@ function getCellAt(container: HTMLElement, rowIndex: number, colIndex: number): 
   ) ?? null;
 }
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export function createSpreadsheetTests(DataGridTable: React.ComponentType<any>): void {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  function renderSpreadsheetGrid(overrides: Record<string, any> = {}) {
+export function createSpreadsheetTests(DataGridTable: React.ComponentType<IOGridDataGridProps<FixtureRow>>): void {
+  function renderSpreadsheetGrid(overrides: Partial<IOGridDataGridProps<FixtureRow>> = {}) {
     const defaultProps = {
       items: fixtureRows,
       columns: twoColumnColumns,

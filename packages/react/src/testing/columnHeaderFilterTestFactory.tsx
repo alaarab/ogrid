@@ -5,9 +5,24 @@
 import * as React from 'react';
 import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
 import type { UserLike } from '../types';
+import type { ColumnFilterType } from '@alaarab/ogrid-core';
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export function createColumnHeaderFilterTests(ColumnHeaderFilter: React.ComponentType<any>): void {
+interface ColumnHeaderFilterProps {
+  columnKey: string;
+  columnName: string;
+  filterType: ColumnFilterType;
+  onSort?: () => void;
+  selectedValues?: string[];
+  onFilterChange?: (values: string[]) => void;
+  options?: string[];
+  textValue?: string;
+  onTextChange?: (value: string) => void;
+  selectedUser?: UserLike;
+  onUserChange?: (user: UserLike | undefined) => void;
+  peopleSearch?: (query: string) => Promise<UserLike[]>;
+}
+
+export function createColumnHeaderFilterTests(ColumnHeaderFilter: React.ComponentType<ColumnHeaderFilterProps>): void {
   it('renders no filter button when filterType is none', () => {
     render(<ColumnHeaderFilter columnKey="id" columnName="ID" filterType="none" onSort={() => undefined} />);
     expect(screen.getByRole('button', { name: /sort by id/i })).toBeInTheDocument();

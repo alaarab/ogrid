@@ -22,7 +22,7 @@ export interface UsePaginationControlsResult {
  * Computes pagination view model and provides standardized handlers.
  */
 export function usePaginationControls(props: UsePaginationControlsProps): UsePaginationControlsResult {
-  const { currentPage, pageSize, totalCount, onPageChange, onPageSizeChange, pageSizeOptions, entityLabelPlural } = props;
+  const { currentPage, pageSize, totalCount, onPageSizeChange, pageSizeOptions, entityLabelPlural } = props;
 
   const labelPlural = entityLabelPlural ?? 'items';
 

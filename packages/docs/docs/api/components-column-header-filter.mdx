@@ -1,0 +1,384 @@
+---
+sidebar_position: 11
+title: ColumnHeaderFilter
+---
+
+# ColumnHeaderFilter
+
+A column header component that combines sorting and filtering UI. Displays the column name, sort indicator, and filter icon. Clicking the filter icon opens a popover with filter controls (text input, multi-select checkboxes, people picker, or date range).
+
+## Import
+
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+
+<Tabs groupId="framework">
+<TabItem value="react" label="React">
+
+```typescript
+import { ColumnHeaderFilter } from '@alaarab/ogrid-react-radix';
+// or
+import { ColumnHeaderFilter } from '@alaarab/ogrid-react-fluent';
+// or
+import { ColumnHeaderFilter } from '@alaarab/ogrid-react-material';
+```
+
+</TabItem>
+<TabItem value="angular" label="Angular">
+
+```typescript
+import { ColumnHeaderFilterComponent } from '@alaarab/ogrid-angular-material';
+// or
+import { ColumnHeaderFilterComponent } from '@alaarab/ogrid-angular-primeng';
+// or
+import { ColumnHeaderFilterComponent } from '@alaarab/ogrid-angular-radix';
+```
+
+</TabItem>
+<TabItem value="vue" label="Vue">
+
+```typescript
+import { ColumnHeaderFilter } from '@alaarab/ogrid-vue-vuetify';
+// or
+import { ColumnHeaderFilter } from '@alaarab/ogrid-vue-primevue';
+// or
+import { ColumnHeaderFilter } from '@alaarab/ogrid-vue-radix';
+```
+
+</TabItem>
+<TabItem value="js" label="Vanilla JS">
+
+```typescript
+// ColumnHeaderFilter is an internal component in vanilla JS
+import { OGrid } from '@alaarab/ogrid-js';
+```
+
+</TabItem>
+</Tabs>
+
+## Props (React)
+
+| Prop | Type | Default | Description |
+|------|------|---------|-------------|
+| `columnKey` | `string` | **Required** | Unique column identifier. |
+| `columnName` | `string` | **Required** | Display name shown in the header. |
+| `filterType` | `ColumnFilterType` | **Required** | Filter type: `'none'`, `'text'`, `'multiSelect'`, `'people'`, or `'date'`. |
+| `isSorted` | `boolean` | `false` | Whether this column is currently sorted. |
+| `isSortedDescending` | `boolean` | `false` | Sort direction (only relevant when `isSorted` is true). |
+| `onSort` | `() => void` | `undefined` | Callback when user clicks the header to sort. |
+| `selectedValues` | `string[]` | `[]` | Selected values for multi-select filter. |
+| `onFilterChange` | `(values: string[]) => void` | `undefined` | Callback when multi-select filter is applied. |
+| `options` | `string[]` | `[]` | Available options for multi-select filter. |
+| `isLoadingOptions` | `boolean` | `false` | Loading state for multi-select options. |
+| `textValue` | `string` | `''` | Current text filter value. |
+| `onTextChange` | `(value: string) => void` | `undefined` | Callback when text filter is applied. |
+| `selectedUser` | `UserLike` | `undefined` | Selected user for people filter. |
+| `onUserChange` | `(user: UserLike \| undefined) => void` | `undefined` | Callback when people filter is applied or cleared. |
+| `peopleSearch` | `(query: string) => Promise<UserLike[]>` | `undefined` | Async search function for people picker. |
+| `dateValue` | `IDateFilterValue` | `undefined` | Current date range filter value. |
+| `onDateChange` | `(value: IDateFilterValue \| undefined) => void` | `undefined` | Callback when date filter is applied or cleared. |
+
+## Filter Types
+
+### Text Filter (`filterType: 'text'`)
+
+Shows a text input. The user types a query and clicks "Apply" to filter rows containing the text (case-insensitive).
+
+**Required props:** `textValue`, `onTextChange`
+
+### Multi-Select Filter (`filterType: 'multiSelect'`)
+
+Shows a searchable list of checkboxes. The user selects one or more values and clicks "Apply" to filter rows matching any selected value.
+
+**Required props:** `selectedValues`, `onFilterChange`, `options`
+
+**Optional props:** `isLoadingOptions`
+
+### People Filter (`filterType: 'people'`)
+
+Shows a people picker with async search. The user types a name or email, selects a person from the results, and clicks "Apply" to filter rows assigned to that person.
+
+**Required props:** `selectedUser`, `onUserChange`, `peopleSearch`
+
+### Date Filter (`filterType: 'date'`)
+
+Shows a date range picker with "From" and "To" inputs (ISO `YYYY-MM-DD` format). The user selects a date range and clicks "Apply" to filter rows within that range.
+
+**Required props:** `dateValue`, `onDateChange`
+
+### No Filter (`filterType: 'none'`)
+
+No filter icon is shown. Only the sort indicator is displayed (if the column is sortable).
+
+## Usage
+
+### Text Filter (React)
+
+```tsx
+import { ColumnHeaderFilter } from '@alaarab/ogrid-react-radix';
+
+function MyHeader() {
+  const [textValue, setTextValue] = useState('');
+
+  return (
+    <ColumnHeaderFilter
+      columnKey="name"
+      columnName="Product Name"
+      filterType="text"
+      textValue={textValue}
+      onTextChange={setTextValue}
+    />
+  );
+}
+```
+
+### Multi-Select Filter (React)
+
+```tsx
+import { ColumnHeaderFilter } from '@alaarab/ogrid-react-radix';
+
+function MyHeader() {
+  const [selectedValues, setSelectedValues] = useState<string[]>([]);
+  const options = ['Active', 'Pending', 'Completed'];
+
+  return (
+    <ColumnHeaderFilter
+      columnKey="status"
+      columnName="Status"
+      filterType="multiSelect"
+      selectedValues={selectedValues}
+      onFilterChange={setSelectedValues}
+      options={options}
+    />
+  );
+}
+```
+
+### People Filter (React)
+
+```tsx
+import { ColumnHeaderFilter } from '@alaarab/ogrid-react-radix';
+import type { UserLike } from '@alaarab/ogrid-react-radix';
+
+function MyHeader() {
+  const [selectedUser, setSelectedUser] = useState<UserLike | undefined>();
+
+  const searchPeople = async (query: string): Promise<UserLike[]> => {
+    // Call your user directory API
+    const response = await fetch(`/api/users/search?q=${query}`);
+    return response.json();
+  };
+
+  return (
+    <ColumnHeaderFilter
+      columnKey="assignee"
+      columnName="Assigned To"
+      filterType="people"
+      selectedUser={selectedUser}
+      onUserChange={setSelectedUser}
+      peopleSearch={searchPeople}
+    />
+  );
+}
+```
+
+### With Sorting (React)
+
+```tsx
+import { ColumnHeaderFilter } from '@alaarab/ogrid-react-radix';
+
+function MyHeader() {
+  const [sortBy, setSortBy] = useState('name');
+  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
+
+  const handleSort = () => {
+    if (sortBy === 'name') {
+      setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
+    } else {
+      setSortBy('name');
+      setSortDirection('asc');
+    }
+  };
+
+  return (
+    <ColumnHeaderFilter
+      columnKey="name"
+      columnName="Product Name"
+      filterType="text"
+      isSorted={sortBy === 'name'}
+      isSortedDescending={sortDirection === 'desc'}
+      onSort={handleSort}
+      textValue=""
+      onTextChange={() => {}}
+    />
+  );
+}
+```
+
+## Angular Usage
+
+In Angular packages, the component has the same prop interface but uses `@Input()` decorators:
+
+```typescript
+import { Component } from '@angular/core';
+import { ColumnHeaderFilterComponent } from '@alaarab/ogrid-angular-material';
+
+@Component({
+  selector: 'app-my-header',
+  standalone: true,
+  imports: [ColumnHeaderFilterComponent],
+  template: `
+    <ogrid-column-header-filter
+      [columnKey]="'status'"
+      [columnName]="'Status'"
+      [filterType]="'multiSelect'"
+      [selectedValues]="selectedValues"
+      (onFilterChange)="handleFilterChange($event)"
+      [options]="options"
+    />
+  `
+})
+export class MyHeaderComponent {
+  selectedValues: string[] = [];
+  options = ['Active', 'Pending', 'Completed'];
+
+  handleFilterChange(values: string[]) {
+    this.selectedValues = values;
+  }
+}
+```
+
+## Vue Usage
+
+In Vue packages, the component accepts props via `v-bind` or shorthand `:`:
+
+```vue
+<template>
+  <ColumnHeaderFilter
+    column-key="status"
+    column-name="Status"
+    filter-type="multiSelect"
+    :selected-values="selectedValues"
+    @filter-change="handleFilterChange"
+    :options="options"
+  />
+</template>
+
+<script setup lang="ts">
+import { ref } from 'vue';
+import { ColumnHeaderFilter } from '@alaarab/ogrid-vue-vuetify';
+
+const selectedValues = ref<string[]>([]);
+const options = ['Active', 'Pending', 'Completed'];
+
+const handleFilterChange = (values: string[]) => {
+  selectedValues.value = values;
+};
+</script>
+```
+
+## Accessibility
+
+`ColumnHeaderFilter` implements WCAG 2.1 AA standards with full keyboard and screen reader support.
+
+### ARIA Attributes
+
+```html
+<th scope="col">
+  <button aria-label="Sort by Product Name, currently unsorted">
+    Product Name
+  </button>
+  <button aria-label="Filter Product Name" aria-expanded="false" aria-haspopup="dialog">
+    ▼
+  </button>
+</th>
+```
+
+| Attribute | Element | Purpose |
+|-----------|---------|---------|
+| `scope="col"` | `<th>` | Associates header with its column for screen readers |
+| `aria-label` (sort button) | `<button>` | Describes current sort state: "Sort by X, currently unsorted/ascending/descending" |
+| `aria-label` (filter button) | `<button>` | Describes filter action: "Filter X" |
+| `aria-expanded` | Filter button | Indicates popover open/closed state (`"true"` / `"false"`) |
+| `aria-haspopup="dialog"` | Filter button | Indicates the button triggers a dialog |
+| `role="dialog"` | Filter popover | Identifies the popover as a modal dialog |
+| `aria-label` | Filter popover | Provides context: "Filter Product Name" |
+
+### Keyboard Navigation
+
+**Header Interaction:**
+- `Tab` — Move focus to sort button, then filter button
+- `Enter` / `Space` — Activate focused button (toggle sort or open filter)
+- `Shift+Tab` — Move focus backwards
+
+**Filter Popover (All Types):**
+- `Escape` — Close popover without applying changes
+- `Tab` / `Shift+Tab` — Navigate inputs and buttons
+- `Enter` (on Apply button) — Apply filter and close popover
+
+**Text Filter:**
+- Type to enter filter text
+- `Enter` — Apply filter immediately (no button click needed)
+
+**Multi-Select Filter:**
+- `↑` `↓` — Navigate checkbox list
+- `Space` — Toggle focused checkbox
+- `Ctrl+A` — Select all options
+- Type to search options
+
+**People Filter:**
+- Type to search people
+- `↓` — Move to search results list
+- `↑` `↓` — Navigate search results
+- `Enter` — Select focused person
+- `Backspace` — Clear selected person
+
+**Date Filter:**
+- `Tab` — Move between "From" and "To" inputs
+- Type date in `YYYY-MM-DD` format
+- Date picker (if supported): Arrow keys to navigate calendar
+
+### Focus Management
+
+- **Focus trap:** Focus is trapped within the filter popover when open
+- **Focus restoration:** When closing the popover, focus returns to the filter button
+- **Focus visible:** `:focus-visible` styles show 2px solid outline (`--ogrid-accent`) on keyboard navigation
+
+### Screen Reader Support
+
+Screen readers announce:
+- **Header navigation:** "Product Name column header, sortable"
+- **Sort state:** "Sorted by Product Name, ascending"
+- **Filter button:** "Filter Product Name button, collapsed/expanded"
+- **Filter applied:** "Filter applied: Status equals Active"
+- **Filter cleared:** "Filter cleared from Status column"
+
+Tested with NVDA, JAWS, VoiceOver, and Narrator.
+
+### High Contrast Mode
+
+- Filter icons remain visible in high contrast mode
+- Focus indicators use system `Highlight` color
+- Popover borders use system `ButtonText` color
+
+See the [Accessibility Guide](/docs/guides/accessibility) for complete documentation.
+
+## Styling
+
+All UI packages provide default styles matching their design system (Radix UI, Fluent UI, Material UI, PrimeNG, Vuetify, PrimeVue). Styles are scoped to avoid conflicts.
+
+**CSS custom properties** (all packages):
+- `--ogrid-header-bg` — Header background color
+- `--ogrid-border` — Border color
+- `--ogrid-fg` — Foreground text color
+
+## Related Components
+
+- [DataGridTable](./components-datagrid-table.mdx) — Main grid component that renders column headers
+- [ColumnChooser](./components-column-chooser.mdx) — Column visibility dropdown
+- [Types: FilterValue](./types.mdx#filtervalue) — Filter value discriminated union
+
+## See Also
+
+- [Column Definition](./column-def.mdx#icolumnfilterdef) — Filter configuration reference
+- [Filtering Feature Guide](/docs/features/filtering) — Complete filtering documentation

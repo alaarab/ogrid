@@ -3,7 +3,6 @@ import {
   Input,
   signal,
   computed,
-  effect,
   ElementRef,
   ViewChild,
   ChangeDetectionStrategy,
@@ -405,6 +404,21 @@ import { PopoverCellEditorComponent } from './popover-cell-editor.component';
       z-index: 5;
       background: var(--ogrid-bg, #fff);
       border-right: 2px solid var(--ogrid-primary, #217346);
+    }
+    ::ng-deep th:focus-visible,
+    ::ng-deep td:focus-visible {
+      outline: 2px solid var(--primary-color, #6366f1);
+      outline-offset: -2px;
+      z-index: 11;
+    }
+    ::ng-deep .p-button:focus-visible,
+    ::ng-deep button:focus-visible {
+      outline: 2px solid var(--primary-color, #6366f1);
+      outline-offset: 2px;
+    }
+    ::ng-deep .p-checkbox:focus-visible {
+      outline: 2px solid var(--primary-color, #6366f1);
+      outline-offset: 2px;
     }
   `],
 })

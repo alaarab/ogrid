@@ -1,51 +1,7 @@
-import { Component, Input, effect, signal, DestroyRef, inject, OnChanges, SimpleChanges } from '@angular/core';
+import { Component, Input, signal, DestroyRef, inject, OnChanges, SimpleChanges } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import type { ISelectionRange } from '../types';
-
-interface OverlayRect {
-  top: number;
-  left: number;
-  width: number;
-  height: number;
-}
-
-function measureRange(
-  container: HTMLElement,
-  range: ISelectionRange,
-  colOffset: number,
-): OverlayRect | null {
-  const startGlobalCol = range.startCol + colOffset;
-  const endGlobalCol = range.endCol + colOffset;
-
-  const topLeft = container.querySelector(
-    `[data-row-index="${range.startRow}"][data-col-index="${startGlobalCol}"]`,
-  ) as HTMLElement | null;
-  const bottomRight = container.querySelector(
-    `[data-row-index="${range.endRow}"][data-col-index="${endGlobalCol}"]`,
-  ) as HTMLElement | null;
-
-  if (!topLeft || !bottomRight) return null;
-
-  const cRect = container.getBoundingClientRect();
-  const tlRect = topLeft.getBoundingClientRect();
-  const brRect = bottomRight.getBoundingClientRect();
-
-  return {
-    top: tlRect.top - cRect.top,
-    left: tlRect.left - cRect.left,
-    width: brRect.right - tlRect.left,
-    height: brRect.bottom - tlRect.top,
-  };
-}
-
-function ensureKeyframes(): void {
-  if (typeof document === 'undefined') return;
-  if (document.getElementById('ogrid-marching-ants-keyframes')) return;
-  const style = document.createElement('style');
-  style.id = 'ogrid-marching-ants-keyframes';
-  style.textContent = '@keyframes ogrid-marching-ants{to{stroke-dashoffset:-8}}';
-  document.head.appendChild(style);
-}
+import { measureRange, injectGlobalStyles, type OverlayRect } from '@alaarab/ogrid-core';
 
 @Component({
   selector: 'ogrid-marching-ants-overlay',
@@ -119,7 +75,7 @@ export class MarchingAntsOverlayComponent implements OnChanges {
   private resizeObserver: ResizeObserver | null = null;
 
   constructor() {
-    ensureKeyframes();
+    injectGlobalStyles('ogrid-marching-ants-keyframes', '@keyframes ogrid-marching-ants{to{stroke-dashoffset:-8}}');
 
     this.destroyRef.onDestroy(() => {
       if (this.rafId) cancelAnimationFrame(this.rafId);
