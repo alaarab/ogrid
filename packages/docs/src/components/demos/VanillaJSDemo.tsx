@@ -1,7 +1,6 @@
 import React, { useRef, useEffect } from 'react';
 import BrowserOnly from '@docusaurus/BrowserOnly';
 import { LiveDemo } from '../LiveDemo';
-import { showcase } from '../../stackblitz/featureDemos';
 
 const DEPARTMENTS = ['Engineering', 'Marketing', 'Sales', 'Finance', 'Operations'];
 const STATUSES = ['Active', 'Draft', 'Archived'];
@@ -92,7 +91,7 @@ function VanillaJSGrid() {
 
 export default function VanillaJSDemo() {
   return (
-    <LiveDemo height={420} title="Vanilla JS — zero dependencies" stackblitz={{ StackBlitz: showcase.JS }}>
+    <LiveDemo height={420} title="Vanilla JS — zero dependencies"}>
       <BrowserOnly>{() => <VanillaJSGrid />}</BrowserOnly>
     </LiveDemo>
   );

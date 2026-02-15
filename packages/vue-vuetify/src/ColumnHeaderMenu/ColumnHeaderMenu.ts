@@ -74,12 +74,16 @@ export const ColumnHeaderMenu = defineComponent({
 
     const getHandler = (itemId: string) => handlers[itemId] || (() => {});
 
-    return () =>
-      h(VMenu as any, {
+    return () => {
+      // If no anchor element or menu is closed, don't render
+      if (!props.anchorElement) return null;
+
+      return h(VMenu as any, {
         modelValue: props.isOpen,
         'onUpdate:modelValue': handleOpenChange,
-        activator: props.anchorElement || undefined,
         location: 'bottom start',
+        // Use target prop instead of activator for programmatic positioning
+        target: props.anchorElement,
       }, {
         default: () =>
           h(VList as any, { density: 'compact', 'aria-label': 'Column options' }, () => {
@@ -100,5 +104,6 @@ export const ColumnHeaderMenu = defineComponent({
             return children;
           }),
       });
+    };
   },
 });

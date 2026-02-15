@@ -1,6 +1,7 @@
 import type { Meta, StoryObj } from '@storybook/vue3-vite';
+import { ref } from 'vue';
 import { OGrid } from './OGrid';
-import type { IOGridProps, IColumnDef } from '@alaarab/ogrid-vue';
+import type { IOGridProps, IColumnDef, ICellValueChangedEvent, ISideBarDef } from '@alaarab/ogrid-vue';
 
 interface Project {
   id: string;
@@ -122,26 +123,502 @@ export const WithSideBar: Story = {
   }),
 };
 
+export const DefaultSortDescending: Story = {
+  render: () => ({
+    components: { OGrid },
+    setup() {
+      return {
+        gridProps: makeGridProps({
+          data: makeProjects(30),
+          defaultSortBy: 'budget',
+          defaultSortDirection: 'desc',
+        }),
+      };
+    },
+    template: '<OGrid :grid-props="gridProps" />',
+  }),
+};
+
+export const Editable: Story = {
+  render: () => ({
+    components: { OGrid },
+    setup() {
+      const data = ref(makeProjects(5));
+      const handleCellValueChanged = (e: ICellValueChangedEvent<Project>) => {
+        data.value = data.value.map((row) =>
+          row.id === e.item.id ? { ...row, [e.field]: e.newValue } : row
+        );
+      };
+
+      const editableColumns: IColumnDef<Project>[] = [
+        { columnId: 'name', name: 'Project Name', sortable: true, filterable: { type: 'text' }, editable: true, cellEditor: 'text' },
+        { columnId: 'status', name: 'Status', sortable: true, filterable: { type: 'multiSelect', filterField: 'status' }, editable: true, cellEditor: 'select', cellEditorParams: { values: STATUSES } },
+        { columnId: 'owner', name: 'Owner', sortable: true, filterable: { type: 'text' } },
+        { columnId: 'budget', name: 'Budget', sortable: true, compare: (a: Project, b: Project) => a.budget - b.budget },
+        { columnId: 'startDate', name: 'Start Date', type: 'date', sortable: true, filterable: { type: 'date' }, editable: true },
+        { columnId: 'active', name: 'Active', type: 'boolean', sortable: true, editable: true },
+      ];
+
+      const gridProps = ref<IOGridProps<Project>>({
+        data: data.value,
+        columns: editableColumns,
+        getRowId,
+        entityLabelPlural: 'projects',
+        editable: true,
+        onCellValueChanged: handleCellValueChanged,
+      });
+
+      // Update grid props when data changes
+      const updateGridProps = () => {
+        gridProps.value = { ...gridProps.value, data: data.value };
+      };
+
+      return { gridProps, data, updateGridProps };
+    },
+    watch: {
+      data: {
+        handler() {
+          this.updateGridProps();
+        },
+        deep: true,
+      },
+    },
+    template: `
+      <div>
+        <h2 style="margin: 0 0 8px 0">Projects (editable name & status)</h2>
+        <OGrid :grid-props="gridProps" />
+      </div>
+    `,
+  }),
+};
+
 export const SpreadsheetExperience: Story = {
+  render: () => ({
+    components: { OGrid },
+    setup() {
+      const data = ref(makeProjects(20));
+      const handleCellValueChanged = (e: ICellValueChangedEvent<Project>) => {
+        data.value = data.value.map((row) =>
+          row.id === e.item.id ? { ...row, [e.field]: e.newValue } : row
+        );
+      };
+
+      const editableColumns: IColumnDef<Project>[] = [
+        { columnId: 'name', name: 'Project Name', sortable: true, filterable: { type: 'text' }, editable: true, cellEditor: 'text' },
+        { columnId: 'status', name: 'Status', sortable: true, filterable: { type: 'multiSelect', filterField: 'status' }, editable: true, cellEditor: 'richSelect', cellEditorParams: { values: STATUSES } },
+        { columnId: 'owner', name: 'Owner', sortable: true, filterable: { type: 'text' } },
+        { columnId: 'budget', name: 'Budget', sortable: true, compare: (a: Project, b: Project) => a.budget - b.budget },
+        { columnId: 'startDate', name: 'Start Date', type: 'date', sortable: true, filterable: { type: 'date' }, editable: true },
+      ];
+
+      const gridProps = ref<IOGridProps<Project>>({
+        data: data.value,
+        columns: editableColumns,
+        getRowId,
+        entityLabelPlural: 'projects',
+        editable: true,
+        onCellValueChanged: handleCellValueChanged,
+        rowSelection: 'multiple',
+        statusBar: true,
+        defaultPageSize: 25,
+      });
+
+      const updateGridProps = () => {
+        gridProps.value = { ...gridProps.value, data: data.value };
+      };
+
+      return { gridProps, data, updateGridProps };
+    },
+    watch: {
+      data: {
+        handler() {
+          this.updateGridProps();
+        },
+        deep: true,
+      },
+    },
+    template: `
+      <div>
+        <h2 style="margin: 0 0 8px 0">Projects (Spreadsheet)</h2>
+        <OGrid :grid-props="gridProps" />
+      </div>
+    `,
+  }),
+};
+
+export const SideBar: Story = {
   render: () => ({
     components: { OGrid },
     setup() {
       return {
         gridProps: makeGridProps({
           data: makeProjects(20),
-          rowSelection: 'multiple',
+          sideBar: true,
+          columnChooser: 'sidebar',
           statusBar: true,
-          editable: true,
-          columns: columns.map((c) => ({
-            ...c,
-            editable: c.columnId !== 'active',
-            cellEditor: c.columnId === 'status' ? ('select' as const) : ('text' as const),
-            ...(c.columnId === 'status' ? { cellEditorParams: { values: STATUSES } } : {}),
-          })),
-          defaultPageSize: 25,
+          defaultPageSize: 10,
         }),
       };
     },
     template: '<OGrid :grid-props="gridProps" />',
+  }),
+};
+
+export const SideBarLeftPosition: Story = {
+  render: () => ({
+    components: { OGrid },
+    setup() {
+      const sideBarDef: ISideBarDef = {
+        position: 'left',
+        defaultPanel: 'filters',
+      };
+      return {
+        gridProps: makeGridProps({
+          data: makeProjects(20),
+          sideBar: sideBarDef,
+          columnChooser: 'sidebar',
+          defaultPageSize: 10,
+        }),
+      };
+    },
+    template: '<OGrid :grid-props="gridProps" />',
+  }),
+};
+
+export const ToolbarWithSecondaryRow: Story = {
+  render: () => ({
+    components: { OGrid },
+    setup() {
+      const toolbarContent = `
+        <div style="display: flex; gap: 8px; align-items: center; font-size: 13px">
+          <strong>Projects</strong>
+          <button type="button" style="padding: 2px 8px; font-size: 12px">Export</button>
+        </div>
+      `;
+      const toolbarBelowContent = `
+        <div style="display: flex; gap: 6px; align-items: center; font-size: 12px; flex-wrap: wrap">
+          <span style="color: rgba(0,0,0,0.6); margin-right: 4px">Active filters:</span>
+          <span style="padding: 2px 8px; background: rgba(0,0,0,0.12); border-radius: 12px">
+            Status: Active ×
+          </span>
+          <span style="padding: 2px 8px; background: rgba(0,0,0,0.12); border-radius: 12px">
+            Department: Engineering ×
+          </span>
+        </div>
+      `;
+
+      return {
+        gridProps: makeGridProps({
+          data: makeProjects(20),
+          columnChooser: 'toolbar',
+          pagination: true,
+          defaultPageSize: 10,
+        }),
+        toolbarContent,
+        toolbarBelowContent,
+      };
+    },
+    template: `
+      <OGrid :grid-props="gridProps">
+        <template #toolbar>
+          <div style="display: flex; gap: 8px; align-items: center; font-size: 13px">
+            <strong>Projects</strong>
+            <button type="button" style="padding: 2px 8px; font-size: 12px">Export</button>
+          </div>
+        </template>
+        <template #toolbarBelow>
+          <div style="display: flex; gap: 6px; align-items: center; font-size: 12px; flex-wrap: wrap">
+            <span style="color: rgba(0,0,0,0.6); margin-right: 4px">Active filters:</span>
+            <span style="padding: 2px 8px; background: rgba(0,0,0,0.12); border-radius: 12px">
+              Status: Active ×
+            </span>
+            <span style="padding: 2px 8px; background: rgba(0,0,0,0.12); border-radius: 12px">
+              Department: Engineering ×
+            </span>
+          </div>
+        </template>
+      </OGrid>
+    `,
+  }),
+};
+
+// ---------------------------------------------------------------------------
+// Playground — fully interactive with Storybook controls
+// ---------------------------------------------------------------------------
+
+const playgroundColumns: IColumnDef<Project>[] = [
+  {
+    columnId: 'name',
+    name: 'Project Name',
+    sortable: true,
+    filterable: { type: 'text' },
+    editable: true,
+    cellEditor: 'text',
+    pinned: 'left',
+    minWidth: 150,
+  },
+  {
+    columnId: 'status',
+    name: 'Status',
+    sortable: true,
+    filterable: { type: 'multiSelect', filterField: 'status' },
+    editable: true,
+    cellEditor: 'richSelect',
+    cellEditorParams: { values: STATUSES },
+  },
+  {
+    columnId: 'owner',
+    name: 'Owner',
+    sortable: true,
+    filterable: { type: 'text' },
+    editable: true,
+    cellEditor: 'text',
+  },
+  {
+    columnId: 'budget',
+    name: 'Budget',
+    type: 'numeric',
+    sortable: true,
+    editable: true,
+    cellEditor: 'text',
+    compare: (a: Project, b: Project) => a.budget - b.budget,
+    valueFormatter: (v) => typeof v === 'number' ? `$${v.toLocaleString()}` : String(v ?? ''),
+  },
+  {
+    columnId: 'startDate',
+    name: 'Start Date',
+    type: 'date',
+    sortable: true,
+    filterable: { type: 'date' },
+    editable: true,
+  },
+  {
+    columnId: 'active',
+    name: 'Active',
+    type: 'boolean',
+    sortable: true,
+    editable: true,
+  },
+];
+
+interface PlaygroundArgs {
+  rowCount: number;
+  statusBar: boolean;
+  columnChooser: boolean | 'toolbar' | 'sidebar';
+  sideBar: boolean;
+  sideBarPosition: 'left' | 'right';
+  sideBarDefaultPanel: string;
+  rowSelection: string;
+  editable: boolean;
+  cellSelection: boolean;
+  layoutMode: 'content' | 'fill';
+  suppressHorizontalScroll: boolean;
+  freezeRows: number;
+  freezeCols: number;
+  defaultPageSize: number;
+  defaultSortBy: string;
+  defaultSortDirection: 'asc' | 'desc';
+  entityLabelPlural: string;
+  showCustomToolbar: boolean;
+  showToolbarBelow: boolean;
+  pageSizeOptions: string;
+}
+
+export const Playground: StoryObj<PlaygroundArgs> = {
+  argTypes: {
+    rowCount: { control: { type: 'range', min: 0, max: 200, step: 5 } },
+    statusBar: { control: 'boolean' },
+    columnChooser: {
+      control: 'select',
+      options: [true, false, 'toolbar', 'sidebar'],
+    },
+    sideBar: { control: 'boolean' },
+    sideBarPosition: {
+      control: 'radio',
+      options: ['left', 'right'],
+      if: { arg: 'sideBar' },
+    },
+    sideBarDefaultPanel: {
+      control: 'select',
+      options: ['none', 'columns', 'filters'],
+      if: { arg: 'sideBar' },
+    },
+    rowSelection: {
+      control: 'select',
+      options: ['none', 'single', 'multiple'],
+    },
+    editable: { control: 'boolean' },
+    cellSelection: { control: 'boolean' },
+    layoutMode: { control: 'radio', options: ['content', 'fill'] },
+    suppressHorizontalScroll: { control: 'boolean' },
+    freezeRows: { control: { type: 'range', min: 0, max: 3, step: 1 } },
+    freezeCols: { control: { type: 'range', min: 0, max: 3, step: 1 } },
+    defaultPageSize: { control: 'select', options: [10, 25, 50, 100] },
+    defaultSortBy: {
+      control: 'select',
+      options: ['none', 'name', 'status', 'owner', 'budget', 'startDate', 'active'],
+    },
+    defaultSortDirection: { control: 'radio', options: ['asc', 'desc'] },
+    entityLabelPlural: { control: 'text' },
+    showCustomToolbar: { control: 'boolean' },
+    showToolbarBelow: { control: 'boolean' },
+    pageSizeOptions: {
+      control: 'text',
+      description: 'Comma-separated page size options (e.g. "10,25,50,100")',
+    },
+  },
+  args: {
+    rowCount: 50,
+    statusBar: true,
+    columnChooser: true,
+    sideBar: false,
+    sideBarPosition: 'right',
+    sideBarDefaultPanel: 'none',
+    rowSelection: 'multiple',
+    editable: true,
+    cellSelection: true,
+    layoutMode: 'fill',
+    suppressHorizontalScroll: false,
+    freezeRows: 1,
+    freezeCols: 0,
+    defaultPageSize: 10,
+    defaultSortBy: 'name',
+    defaultSortDirection: 'asc',
+    entityLabelPlural: 'projects',
+    showCustomToolbar: false,
+    showToolbarBelow: false,
+    pageSizeOptions: '10,25,50,100',
+  },
+  render: (args: PlaygroundArgs) => ({
+    components: { OGrid },
+    setup() {
+      const data = ref(makeProjects(args.rowCount));
+      const prevRowCount = ref(args.rowCount);
+
+      // Watch for rowCount changes
+      const updateRowCount = () => {
+        if (prevRowCount.value !== args.rowCount) {
+          prevRowCount.value = args.rowCount;
+          data.value = makeProjects(args.rowCount);
+        }
+      };
+
+      const handleCellValueChanged = (e: ICellValueChangedEvent<Project>) => {
+        data.value = data.value.map((row) =>
+          row.id === e.item.id ? { ...row, [e.field]: e.newValue } : row
+        );
+      };
+
+      const sideBarDef: ISideBarDef | undefined = args.sideBar
+        ? {
+            position: args.sideBarPosition,
+            defaultPanel:
+              args.sideBarDefaultPanel === 'none'
+                ? undefined
+                : (args.sideBarDefaultPanel as 'columns' | 'filters'),
+          }
+        : undefined;
+
+      const pageSizeOpts = args.pageSizeOptions
+        .split(',')
+        .map((s) => parseInt(s.trim(), 10))
+        .filter((n) => !isNaN(n));
+
+      const gridProps = ref<IOGridProps<Project>>({
+        data: data.value,
+        columns: playgroundColumns,
+        getRowId,
+        entityLabelPlural: args.entityLabelPlural,
+        statusBar: args.statusBar,
+        columnChooser: args.columnChooser,
+        sideBar: sideBarDef,
+        rowSelection:
+          args.rowSelection === 'none'
+            ? undefined
+            : (args.rowSelection as 'single' | 'multiple'),
+        editable: args.editable,
+        cellSelection: args.cellSelection,
+        onCellValueChanged: handleCellValueChanged,
+        layoutMode: args.layoutMode,
+        suppressHorizontalScroll: args.suppressHorizontalScroll,
+        freezeRows: args.freezeRows,
+        freezeCols: args.freezeCols,
+        defaultPageSize: args.defaultPageSize,
+        defaultSortBy: args.defaultSortBy === 'none' ? undefined : args.defaultSortBy,
+        defaultSortDirection: args.defaultSortDirection,
+        pageSizeOptions: pageSizeOpts.length > 0 ? pageSizeOpts : undefined,
+      });
+
+      const updateGridProps = () => {
+        updateRowCount();
+        gridProps.value = {
+          ...gridProps.value,
+          data: data.value,
+          entityLabelPlural: args.entityLabelPlural,
+          statusBar: args.statusBar,
+          columnChooser: args.columnChooser,
+          sideBar: sideBarDef,
+          rowSelection:
+            args.rowSelection === 'none'
+              ? undefined
+              : (args.rowSelection as 'single' | 'multiple'),
+          editable: args.editable,
+          cellSelection: args.cellSelection,
+          layoutMode: args.layoutMode,
+          suppressHorizontalScroll: args.suppressHorizontalScroll,
+          freezeRows: args.freezeRows,
+          freezeCols: args.freezeCols,
+          defaultPageSize: args.defaultPageSize,
+          defaultSortBy: args.defaultSortBy === 'none' ? undefined : args.defaultSortBy,
+          defaultSortDirection: args.defaultSortDirection,
+          pageSizeOptions: pageSizeOpts.length > 0 ? pageSizeOpts : undefined,
+        };
+      };
+
+      return {
+        gridProps,
+        data,
+        args,
+        updateGridProps,
+        showCustomToolbar: args.showCustomToolbar,
+        showToolbarBelow: args.showToolbarBelow,
+      };
+    },
+    watch: {
+      args: {
+        handler() {
+          this.updateGridProps();
+        },
+        deep: true,
+      },
+      data: {
+        handler() {
+          this.updateGridProps();
+        },
+        deep: true,
+      },
+    },
+    template: `
+      <OGrid :grid-props="gridProps">
+        <template v-if="showCustomToolbar" #toolbar>
+          <div style="display: flex; gap: 8px; align-items: center; font-size: 13px">
+            <strong>My App</strong>
+            <button type="button" style="padding: 2px 8px; font-size: 12px">Export</button>
+            <button type="button" style="padding: 2px 8px; font-size: 12px">Import</button>
+          </div>
+        </template>
+        <template v-if="showToolbarBelow" #toolbarBelow>
+          <div style="display: flex; gap: 6px; align-items: center; font-size: 12px; flex-wrap: wrap">
+            <span style="color: rgba(0,0,0,0.6); margin-right: 4px">Filters:</span>
+            <span style="padding: 2px 8px; background: rgba(0,0,0,0.12); border-radius: 12px">
+              Status: Active ×
+            </span>
+            <span style="padding: 2px 8px; background: rgba(0,0,0,0.12); border-radius: 12px">
+              Owner: Alice ×
+            </span>
+          </div>
+        </template>
+      </OGrid>
+    `,
   }),
 };

@@ -13,7 +13,7 @@
     }
   },
   "scripts": {
-    "build": "rimraf dist && tsc -p tsconfig.build.json",
+    "build": "rimraf dist && tsc -p tsconfig.build.json && node scripts/copy-css.js",
     "test": "jest --passWithNoTests",
     "storybook": "storybook dev -p 6011 --no-open",
     "build-storybook": "storybook build"
@@ -44,6 +44,7 @@
     "vuetify": "^3.0.0"
   },
   "devDependencies": {
+    "@mdi/font": "^7.4.47",
     "@storybook/vue3-vite": "^10.2.8",
     "@vitejs/plugin-vue": "^6.0.4",
     "storybook": "^10.2.8",
@@ -53,7 +54,9 @@
     "vue": "^3.5.28",
     "vuetify": "^3.11.8"
   },
-  "sideEffects": false,
+  "sideEffects": [
+    "**/*.css"
+  ],
   "publishConfig": {
     "access": "public"
   }

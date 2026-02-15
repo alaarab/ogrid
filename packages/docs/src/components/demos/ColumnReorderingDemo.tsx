@@ -2,11 +2,10 @@ import React from 'react';
 import { OGrid } from '@alaarab/ogrid-react-radix';
 import { LiveDemo } from '../LiveDemo';
 import { people, getRowId, paginationColumns } from './demoData';
-import { columnReordering } from '../../stackblitz/featureDemos';
 
 export default function ColumnReorderingDemo() {
   return (
-    <LiveDemo height={420} title="Drag a column header to rearrange columns" stackblitz={columnReordering}>
+    <LiveDemo height={420} title="Drag a column header to rearrange columns">
       <OGrid
         columns={paginationColumns}
         data={people}
