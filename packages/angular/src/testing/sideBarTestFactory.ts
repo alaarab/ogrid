@@ -10,11 +10,20 @@ import { fixtureRows, fixtureColumns, getRowId } from './fixtures';
 import type { FixtureRow } from './fixtures';
 import type { IOGridProps } from '../types';
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export function createSideBarTests(OGridComponent: new (...args: any[]) => any): void {
+interface OGridInstance {
+  props?: IOGridProps<FixtureRow>;
+  ogridService?: OGridService<FixtureRow>;
+  service?: OGridService<FixtureRow>;
+  _testService?: OGridService<FixtureRow>;
+}
+
+interface OGridTestInstance extends OGridInstance {
+  _testService: OGridService<FixtureRow>;
+}
+
+export function createSideBarTests(OGridComponent: new () => OGridInstance): void {
   // Helper: get OGridService from component (supports both `ogridService` and `service` property names)
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  function getService(instance: any): OGridService<FixtureRow> {
+  function getService(instance: OGridInstance): OGridService<FixtureRow> {
     if (instance.ogridService instanceof OGridService) return instance.ogridService;
     if (instance.service instanceof OGridService) return instance.service;
     const svc = new OGridService<FixtureRow>();
@@ -24,7 +33,7 @@ export function createSideBarTests(OGridComponent: new (...args: any[]) => any):
     return svc;
   }
 
-  function createComponent(overrides: Partial<IOGridProps<FixtureRow>> = {}) {
+  function createComponent(overrides: Partial<IOGridProps<FixtureRow>> = {}): OGridTestInstance {
     const instance = new OGridComponent();
     const svc = getService(instance);
     const defaultProps: IOGridProps<FixtureRow> = {
@@ -39,7 +48,7 @@ export function createSideBarTests(OGridComponent: new (...args: any[]) => any):
     instance.props = defaultProps;
     svc.configure(defaultProps);
     instance._testService = svc;
-    return instance;
+    return instance as OGridTestInstance;
   }
 
   describe('sideBar', () => {

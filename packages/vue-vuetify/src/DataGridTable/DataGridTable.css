@@ -25,3 +25,27 @@
 [data-drag-anchor] {
   background: var(--ogrid-bg, #fff) !important;
 }
+
+/* Accessibility: Focus visible styles */
+.v-table th:focus-visible,
+.v-table td:focus-visible {
+  outline: 2px solid rgb(var(--v-theme-primary));
+  outline-offset: -2px;
+  z-index: 11;
+}
+
+.v-btn:focus-visible {
+  outline: 2px solid rgb(var(--v-theme-primary));
+  outline-offset: 2px;
+}
+
+.v-checkbox:focus-visible {
+  outline: 2px solid rgb(var(--v-theme-primary));
+  outline-offset: 2px;
+}
+
+.ogrid-cell-content:focus-visible {
+  outline: 2px solid rgb(var(--v-theme-primary));
+  outline-offset: -2px;
+  z-index: 3;
+}

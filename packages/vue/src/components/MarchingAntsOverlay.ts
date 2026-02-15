@@ -7,55 +7,7 @@
  * Uses SVG rects positioned via cell data-attribute measurements.
  */
 import { defineComponent, ref, computed, watch, onMounted, onUnmounted, h, type PropType, type Ref } from 'vue';
-import { Z_INDEX, type ISelectionRange } from '@alaarab/ogrid-core';
-
-// Inject the @keyframes rule once into <head> (deduplicates across multiple OGrid instances)
-function ensureKeyframes() {
-  if (typeof document === 'undefined') return;
-  if (document.getElementById('ogrid-marching-ants-keyframes')) return;
-  const style = document.createElement('style');
-  style.id = 'ogrid-marching-ants-keyframes';
-  style.textContent =
-    '@keyframes ogrid-marching-ants{to{stroke-dashoffset:-8}}';
-  document.head.appendChild(style);
-}
-
-interface OverlayRect {
-  top: number;
-  left: number;
-  width: number;
-  height: number;
-}
-
-/** Measure the bounding rect of a range within a container. */
-function measureRange(
-  container: HTMLElement,
-  range: ISelectionRange,
-  colOffset: number
-): OverlayRect | null {
-  const startGlobalCol = range.startCol + colOffset;
-  const endGlobalCol = range.endCol + colOffset;
-
-  const topLeft = container.querySelector(
-    `[data-row-index="${range.startRow}"][data-col-index="${startGlobalCol}"]`
-  ) as HTMLElement | null;
-  const bottomRight = container.querySelector(
-    `[data-row-index="${range.endRow}"][data-col-index="${endGlobalCol}"]`
-  ) as HTMLElement | null;
-
-  if (!topLeft || !bottomRight) return null;
-
-  const cRect = container.getBoundingClientRect();
-  const tlRect = topLeft.getBoundingClientRect();
-  const brRect = bottomRight.getBoundingClientRect();
-
-  return {
-    top: tlRect.top - cRect.top,
-    left: tlRect.left - cRect.left,
-    width: brRect.right - tlRect.left,
-    height: brRect.bottom - tlRect.top,
-  };
-}
+import { Z_INDEX, measureRange, injectGlobalStyles, type ISelectionRange, type OverlayRect } from '@alaarab/ogrid-core';
 
 export const MarchingAntsOverlay = defineComponent({
   name: 'MarchingAntsOverlay',
@@ -101,7 +53,7 @@ export const MarchingAntsOverlay = defineComponent({
 
     // Inject keyframes on mount
     onMounted(() => {
-      ensureKeyframes();
+      injectGlobalStyles('ogrid-marching-ants-keyframes', '@keyframes ogrid-marching-ants{to{stroke-dashoffset:-8}}');
     });
 
     // Measure when any range changes; re-measure on resize, column changes, data changes

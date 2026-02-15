@@ -6,10 +6,53 @@
  * Inputs use @Input() decorators (plain properties), internal state uses signals.
  */
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export function createColumnHeaderFilterTests(ColumnHeaderFilterComponent: new (...args: any[]) => any): void {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  function createComponent(overrides: Record<string, unknown> = {}): any {
+import type { ColumnFilterType, IDateFilterValue, UserLike } from '@alaarab/ogrid-core';
+
+import type { Signal, WritableSignal } from '@angular/core';
+
+interface ColumnHeaderFilterInstance {
+  // @Input() properties
+  columnKey?: string;
+  columnName?: string;
+  filterType?: ColumnFilterType;
+  isSorted?: boolean;
+  isSortedDescending?: boolean;
+  onSort?: () => void;
+  selectedValues?: string[];
+  onFilterChange?: (values: string[]) => void;
+  options?: string[];
+  isLoadingOptions?: boolean;
+  textValue?: string;
+  onTextChange?: (value: string) => void;
+  selectedUser?: UserLike;
+  onUserChange?: (user: UserLike | undefined) => void;
+  peopleSearch?: (query: string) => Promise<UserLike[]>;
+  dateValue?: IDateFilterValue;
+  onDateChange?: (value: IDateFilterValue | undefined) => void;
+  // Internal signal state (writable)
+  isFilterOpen: WritableSignal<boolean>;
+  tempTextValue: WritableSignal<string>;
+  tempSelected: WritableSignal<Set<string>>;
+  tempDateFrom: WritableSignal<string>;
+  tempDateTo: WritableSignal<string>;
+  searchText: WritableSignal<string>;
+  // Computed signals (read-only)
+  hasActiveFilter: Signal<boolean>;
+  filteredOptions: Signal<string[]>;
+  // Handler methods (canonical names)
+  handleTextApply: () => void;
+  handleTextClear: () => void;
+  handleApplyMultiSelect?: () => void;
+  handleMultiSelectApply?: () => void;
+  handleClearSelection: () => void;
+  handleSelectAllFiltered?: () => void;
+  handleSelectAllOptions?: () => void;
+  handleDateApply: () => void;
+  handleDateClear: () => void;
+}
+
+export function createColumnHeaderFilterTests(ColumnHeaderFilterComponent: new () => ColumnHeaderFilterInstance): void {
+  function createComponent(overrides: Partial<ColumnHeaderFilterInstance> = {}): ColumnHeaderFilterInstance {
     const instance = new ColumnHeaderFilterComponent();
     // Set @Input() properties directly
     if (overrides.columnKey !== undefined) instance.columnKey = overrides.columnKey;
@@ -107,7 +150,7 @@ export function createColumnHeaderFilterTests(ColumnHeaderFilterComponent: new (
     if (typeof comp.handleApplyMultiSelect === 'function') {
       comp.handleApplyMultiSelect();
     } else {
-      comp.handleMultiSelectApply();
+      comp.handleMultiSelectApply!();
     }
     expect(onFilterChange).toHaveBeenCalledWith(['Active', 'Closed']);
     expect(comp.isFilterOpen()).toBe(false);
@@ -127,7 +170,7 @@ export function createColumnHeaderFilterTests(ColumnHeaderFilterComponent: new (
     if (typeof comp.handleSelectAllFiltered === 'function') {
       comp.handleSelectAllFiltered();
     } else {
-      comp.handleSelectAllOptions();
+      comp.handleSelectAllOptions!();
     }
     expect(comp.tempSelected()).toEqual(new Set(['Active', 'Closed']));
   });

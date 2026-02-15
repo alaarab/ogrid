@@ -5,7 +5,7 @@
  */
 import * as React from 'react';
 import { render, screen } from '@testing-library/react';
-import type { IColumnDef, IColumnGroupDef } from '../types';
+import type { IColumnDef, IColumnGroupDef, IOGridDataGridProps } from '../types';
 import { getRowId, type FixtureRow } from './fixtures';
 
 const rows: FixtureRow[] = [
@@ -43,10 +43,8 @@ const nestedGroupedColumns: (IColumnGroupDef<FixtureRow> | IColumnDef<FixtureRow
   },
 ];
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export function createColumnGroupTests(DataGridTable: React.ComponentType<any>): void {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  function renderTable(columns: (IColumnGroupDef<FixtureRow> | IColumnDef<FixtureRow>)[], overrides: Record<string, any> = {}) {
+export function createColumnGroupTests(DataGridTable: React.ComponentType<IOGridDataGridProps<FixtureRow>>): void {
+  function renderTable(columns: (IColumnGroupDef<FixtureRow> | IColumnDef<FixtureRow>)[], overrides: Partial<IOGridDataGridProps<FixtureRow>> = {}) {
     return render(
       <DataGridTable
         items={rows}

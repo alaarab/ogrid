@@ -1,0 +1,363 @@
+---
+sidebar_position: 13
+title: PaginationControls
+---
+
+# PaginationControls
+
+A pagination UI component that displays page navigation buttons, current page info, and a page size dropdown. Supports first/last page buttons, previous/next buttons, and numbered page buttons with ellipsis for large page counts.
+
+## Import
+
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+
+<Tabs groupId="framework">
+<TabItem value="react" label="React">
+
+```typescript
+import { PaginationControls } from '@alaarab/ogrid-react-radix';
+// or
+import { PaginationControls } from '@alaarab/ogrid-react-fluent';
+// or
+import { PaginationControls } from '@alaarab/ogrid-react-material';
+```
+
+</TabItem>
+<TabItem value="angular" label="Angular">
+
+```typescript
+import { PaginationControlsComponent } from '@alaarab/ogrid-angular-material';
+// or
+import { PaginationControlsComponent } from '@alaarab/ogrid-angular-primeng';
+// or
+import { PaginationControlsComponent } from '@alaarab/ogrid-angular-radix';
+```
+
+</TabItem>
+<TabItem value="vue" label="Vue">
+
+```typescript
+import { PaginationControls } from '@alaarab/ogrid-vue-vuetify';
+// or
+import { PaginationControls } from '@alaarab/ogrid-vue-primevue';
+// or
+import { PaginationControls } from '@alaarab/ogrid-vue-radix';
+```
+
+</TabItem>
+<TabItem value="js" label="Vanilla JS">
+
+```typescript
+// PaginationControls is an internal component in vanilla JS
+import { OGrid } from '@alaarab/ogrid-js';
+```
+
+</TabItem>
+</Tabs>
+
+## Props (React)
+
+| Prop | Type | Default | Description |
+|------|------|---------|-------------|
+| `currentPage` | `number` | **Required** | Current page number (1-indexed). |
+| `pageSize` | `number` | **Required** | Number of items per page. |
+| `totalCount` | `number` | **Required** | Total number of items across all pages. |
+| `onPageChange` | `(page: number) => void` | **Required** | Callback when user navigates to a different page. |
+| `onPageSizeChange` | `(pageSize: number) => void` | **Required** | Callback when user changes the page size. |
+| `pageSizeOptions` | `number[]` | `[10, 20, 50, 100]` | Available page size options in the dropdown. |
+| `entityLabelPlural` | `string` | `'rows'` | Plural label for items (e.g., `'products'`, `'users'`). |
+| `className` | `string` | `undefined` | Additional CSS class for the root element. |
+
+## Usage
+
+### Basic Example (React)
+
+```tsx
+import { PaginationControls } from '@alaarab/ogrid-react-radix';
+
+function MyApp() {
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(20);
+  const totalCount = 250; // Total items
+
+  return (
+    <PaginationControls
+      currentPage={currentPage}
+      pageSize={pageSize}
+      totalCount={totalCount}
+      onPageChange={setCurrentPage}
+      onPageSizeChange={setPageSize}
+    />
+  );
+}
+```
+
+**Output:**
+```
+Showing 21 to 40 of 250 rows
+« ‹ [1] [2] ... [13] › »
+Page size: [20 ▼]
+```
+
+### With Custom Entity Label (React)
+
+```tsx
+import { PaginationControls } from '@alaarab/ogrid-react-radix';
+
+function ProductGrid() {
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(50);
+  const totalCount = 1500;
+
+  return (
+    <PaginationControls
+      currentPage={currentPage}
+      pageSize={pageSize}
+      totalCount={totalCount}
+      onPageChange={setCurrentPage}
+      onPageSizeChange={setPageSize}
+      entityLabelPlural="products"
+    />
+  );
+}
+```
+
+**Output:**
+```
+Showing 1 to 50 of 1,500 products
+```
+
+### With Custom Page Size Options (React)
+
+```tsx
+import { PaginationControls } from '@alaarab/ogrid-react-radix';
+
+function MyApp() {
+  return (
+    <PaginationControls
+      currentPage={1}
+      pageSize={25}
+      totalCount={500}
+      onPageChange={() => {}}
+      onPageSizeChange={() => {}}
+      pageSizeOptions={[25, 50, 100, 250]}
+    />
+  );
+}
+```
+
+## Angular Usage
+
+In Angular packages, the component uses `@Input()` and `@Output()` decorators:
+
+```typescript
+import { Component } from '@angular/core';
+import { PaginationControlsComponent } from '@alaarab/ogrid-angular-material';
+
+@Component({
+  selector: 'app-my-grid',
+  standalone: true,
+  imports: [PaginationControlsComponent],
+  template: `
+    <ogrid-pagination-controls
+      [currentPage]="currentPage"
+      [pageSize]="pageSize"
+      [totalCount]="totalCount"
+      (onPageChange)="handlePageChange($event)"
+      (onPageSizeChange)="handlePageSizeChange($event)"
+      [entityLabelPlural]="'users'"
+    />
+  `
+})
+export class MyGridComponent {
+  currentPage = 1;
+  pageSize = 20;
+  totalCount = 500;
+
+  handlePageChange(page: number) {
+    this.currentPage = page;
+  }
+
+  handlePageSizeChange(pageSize: number) {
+    this.pageSize = pageSize;
+    this.currentPage = 1; // Reset to first page
+  }
+}
+```
+
+## Vue Usage
+
+In Vue packages, the component accepts props via `v-bind` or shorthand `:`:
+
+```vue
+<template>
+  <PaginationControls
+    :current-page="currentPage"
+    :page-size="pageSize"
+    :total-count="totalCount"
+    @page-change="handlePageChange"
+    @page-size-change="handlePageSizeChange"
+    entity-label-plural="users"
+  />
+</template>
+
+<script setup lang="ts">
+import { ref } from 'vue';
+import { PaginationControls } from '@alaarab/ogrid-vue-vuetify';
+
+const currentPage = ref(1);
+const pageSize = ref(20);
+const totalCount = ref(500);
+
+const handlePageChange = (page: number) => {
+  currentPage.value = page;
+};
+
+const handlePageSizeChange = (size: number) => {
+  pageSize.value = size;
+  currentPage.value = 1; // Reset to first page
+};
+</script>
+```
+
+## Behavior
+
+### Pagination Buttons
+
+- **« (First)** — Jump to page 1 (disabled when on page 1)
+- **‹ (Previous)** — Go to the previous page (disabled when on page 1)
+- **[1] [2] [3]** — Numbered page buttons (up to 7 buttons shown)
+- **...** — Ellipsis when there are more than 7 pages
+- **› (Next)** — Go to the next page (disabled when on last page)
+- **» (Last)** — Jump to the last page (disabled when on last page)
+
+### Page Number Display Logic
+
+The component uses a smart algorithm to show a maximum of 7 page numbers with ellipsis:
+
+- **1-7 pages:** Show all page numbers
+- **8+ pages:**
+  - Show first and last page always
+  - Show current page and 1-2 neighbors
+  - Use ellipsis (`...`) to indicate skipped pages
+
+**Examples:**
+
+| Current Page | Total Pages | Displayed |
+|--------------|-------------|-----------|
+| 1 | 10 | `[1] 2 3 ... 10` |
+| 5 | 10 | `1 ... 4 [5] 6 ... 10` |
+| 10 | 10 | `1 ... 8 9 [10]` |
+
+### Page Size Dropdown
+
+The dropdown shows all values from `pageSizeOptions` (default: `[10, 20, 50, 100]`). When the user changes the page size:
+1. `onPageSizeChange` is called with the new size
+2. The parent should reset `currentPage` to 1 (recommended best practice)
+
+### Info Text
+
+The info text shows the range of items currently displayed:
+
+```
+Showing {startItem} to {endItem} of {totalCount} {entityLabelPlural}
+```
+
+**Example:** `Showing 21 to 40 of 250 rows`
+
+## Accessibility
+
+`PaginationControls` implements WCAG 2.1 AA standards with full keyboard and screen reader support.
+
+### ARIA Attributes
+
+```html
+<nav role="navigation" aria-label="Pagination">
+  <button aria-label="First page" aria-disabled="true">«</button>
+  <button aria-label="Previous page" aria-disabled="true">‹</button>
+  <button aria-label="Page 1" aria-current="page">1</button>
+  <button aria-label="Page 2">2</button>
+  <button aria-label="Next page">›</button>
+  <button aria-label="Last page">»</button>
+  <label for="page-size">Page size:</label>
+  <select id="page-size" aria-label="Items per page">
+    <option>20</option>
+  </select>
+</nav>
+```
+
+| Attribute | Element | Purpose |
+|-----------|---------|---------|
+| `role="navigation"` | Nav wrapper | Identifies pagination controls as navigation |
+| `aria-label="Pagination"` | Nav wrapper | Provides context for screen readers |
+| `aria-label` (icon buttons) | `<button>` | Descriptive labels for icon-only buttons (« ‹ › ») |
+| `aria-label` (page buttons) | `<button>` | Announces page number: "Page 1", "Page 2", etc. |
+| `aria-current="page"` | Current page button | Identifies the active page |
+| `aria-disabled="true"` | Disabled buttons | Indicates buttons that cannot be activated (first/prev on page 1, next/last on last page) |
+| `id` / `for` | Select + label | Associates dropdown with its label |
+| `aria-label` | `<select>` | Additional context: "Items per page" |
+
+### Keyboard Navigation
+
+- `Tab` / `Shift+Tab` — Navigate between pagination buttons and page size dropdown
+- `Enter` / `Space` (on buttons) — Activate focused button (change page)
+- `←` `→` (on page buttons) — Navigate between page number buttons
+- `↑` `↓` (on dropdown) — Change page size
+- `Enter` (on dropdown) — Confirm page size selection
+
+### Focus Management
+
+- **Focus visible:** `:focus-visible` styles show 2px solid outline (`--ogrid-accent`) on keyboard navigation
+- **Focus restoration:** After page change, focus remains on pagination controls (does not jump to grid)
+- **Disabled state:** Disabled buttons show `aria-disabled="true"` and cannot receive focus
+
+### Screen Reader Support
+
+Screen readers announce:
+- **Page info:** "Showing 21 to 40 of 250 rows"
+- **Page button:** "Page 2 button"
+- **Current page:** "Page 1 button, current page"
+- **Disabled buttons:** "First page button, disabled"
+- **Page change:** "Navigated to page 3, showing 41 to 60 of 250 rows"
+- **Page size change:** "Page size changed to 50 rows per page"
+
+Tested with NVDA, JAWS, VoiceOver, and Narrator.
+
+### High Contrast Mode
+
+- Navigation buttons remain visible in high contrast mode
+- Focus indicators use system `Highlight` color
+- Borders use system `ButtonText` color
+- Current page button uses system `HighlightText` color
+
+See the [Accessibility Guide](/docs/guides/accessibility) for complete documentation.
+
+## Styling
+
+All UI packages provide default styles matching their design system. Styles are scoped to avoid conflicts.
+
+**CSS custom properties** (all packages):
+- `--ogrid-header-bg` — Background color
+- `--ogrid-border` — Border color
+- `--ogrid-fg` — Foreground text color
+- `--ogrid-primary` — Primary color (current page button)
+
+## Layout Integration
+
+`PaginationControls` is automatically rendered in the footer strip of `OGridLayout` when pagination is enabled. The footer strip has a border-top and matches the header background color.
+
+## No Border or Padding
+
+The component itself has **no outer border or padding** — the parent container (footer strip in `OGridLayout`) provides these styles.
+
+## Related Components
+
+- [OGrid](./ogrid-props.mdx) — Top-level wrapper that includes pagination
+- [DataGridTable](./components-datagrid-table.mdx) — Main grid component
+- [StatusBar](./components-status-bar.mdx) — Status bar below the grid
+
+## See Also
+
+- [Grid API](./grid-api.mdx) — Pagination-related API methods
+- [Pagination Feature Guide](/docs/features/pagination) — Complete pagination documentation
