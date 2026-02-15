@@ -36,8 +36,22 @@ function makeProps(overrides: Partial<IOGridDataGridProps<FixtureRow>> = {}): IO
   } as IOGridDataGridProps<FixtureRow>;
 }
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export function createSpreadsheetTests(DataGridTableComponent: new (...args: any[]) => any): void {
+/** Minimal shape for DataGridTable component used by createSpreadsheetTests. */
+interface DataGridTableInstance {
+  stateService: DataGridStateService<unknown>;
+  commitEdit: (...args: unknown[]) => unknown;
+  cancelEdit: (...args: unknown[]) => unknown;
+  onEditorKeydown: (...args: unknown[]) => unknown;
+  onWrapperMouseDown: (...args: unknown[]) => unknown;
+  onGridKeyDown: (...args: unknown[]) => unknown;
+  onCellMouseDown: (...args: unknown[]) => unknown;
+  closeContextMenu: (...args: unknown[]) => unknown;
+  handleCopy: (...args: unknown[]) => unknown;
+  handleCut: (...args: unknown[]) => unknown;
+  handlePaste: (...args: unknown[]) => unknown;
+}
+
+export function createSpreadsheetTests(_DataGridTableComponent: new () => unknown): void {
   describe('DataGridTable spreadsheet features', () => {
     let stateService: DataGridStateService<FixtureRow>;
 
@@ -352,13 +366,13 @@ export function createSpreadsheetTests(DataGridTableComponent: new (...args: any
 
     describe('component class instantiation', () => {
       it('component class instantiates and has stateService', () => {
-        const comp = new DataGridTableComponent();
+        const comp = new _DataGridTableComponent() as DataGridTableInstance;
         expect(comp).toBeTruthy();
         expect(comp.stateService).toBeDefined();
       });
 
       it('component has event handler methods', () => {
-        const comp = new DataGridTableComponent();
+        const comp = new _DataGridTableComponent() as DataGridTableInstance;
         expect(typeof comp.commitEdit).toBe('function');
         expect(typeof comp.cancelEdit).toBe('function');
         expect(typeof comp.onEditorKeydown).toBe('function');

@@ -67,3 +67,5 @@ export type {
   CellRenderMode,
 } from './dataGridViewModel';
 export { debounce } from './debounce';
+export { measureRange, injectGlobalStyles } from './dom';
+export type { OverlayRect } from './dom';

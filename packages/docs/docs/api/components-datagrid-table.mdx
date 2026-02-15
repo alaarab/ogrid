@@ -1,0 +1,338 @@
+---
+sidebar_position: 10
+title: DataGridTable
+---
+
+# DataGridTable
+
+The core data grid component that renders the table structure, headers, rows, cells, and inline editing UI. `DataGridTable` is typically used internally by `OGrid`, but can also be used standalone for custom layouts.
+
+## Import
+
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+
+<Tabs groupId="framework">
+<TabItem value="react" label="React">
+
+```typescript
+import { DataGridTable } from '@alaarab/ogrid-react-radix';
+// or
+import { DataGridTable } from '@alaarab/ogrid-react-fluent';
+// or
+import { DataGridTable } from '@alaarab/ogrid-react-material';
+```
+
+</TabItem>
+<TabItem value="angular" label="Angular">
+
+```typescript
+import { DataGridTableComponent } from '@alaarab/ogrid-angular-material';
+// or
+import { DataGridTableComponent } from '@alaarab/ogrid-angular-primeng';
+// or
+import { DataGridTableComponent } from '@alaarab/ogrid-angular-radix';
+```
+
+</TabItem>
+<TabItem value="vue" label="Vue">
+
+```typescript
+import { DataGridTable } from '@alaarab/ogrid-vue-vuetify';
+// or
+import { DataGridTable } from '@alaarab/ogrid-vue-primevue';
+// or
+import { DataGridTable } from '@alaarab/ogrid-vue-radix';
+```
+
+</TabItem>
+<TabItem value="js" label="Vanilla JS">
+
+```typescript
+// DataGridTable is an internal component of OGrid in vanilla JS
+import { OGrid } from '@alaarab/ogrid-js';
+```
+
+</TabItem>
+</Tabs>
+
+## Props (React)
+
+`DataGridTable` receives `IOGridDataGridProps<T>` which includes:
+
+| Prop | Type | Default | Description |
+|------|------|---------|-------------|
+| `items` | `T[]` | **Required** | Array of data items to render (paginated subset). |
+| `columns` | `(IColumnDef<T> \| IColumnGroupDef<T>)[]` | **Required** | Column definitions (flat or grouped). |
+| `getRowId` | `(item: T) => RowId` | **Required** | Function to extract a unique ID from each row item. |
+| `sortBy` | `string` | `undefined` | Currently sorted column ID. |
+| `sortDirection` | `'asc' \| 'desc'` | `undefined` | Sort direction. |
+| `onSortChange` | `(field: string, direction: 'asc' \| 'desc') => void` | `undefined` | Callback when user clicks a sortable column header. |
+| `filters` | `IFilters` | `{}` | Active filter values (column ID → FilterValue). |
+| `onFiltersChange` | `(filters: IFilters) => void` | `undefined` | Callback when filters are applied or cleared. |
+| `visibleColumns` | `Set<string>` | All columns | Set of visible column IDs. |
+| `onVisibilityChange` | `(columnId: string, visible: boolean) => void` | `undefined` | Callback when column visibility changes. |
+| `onSetVisibleColumns` | `(columns: Set<string>) => void` | `undefined` | Bulk-set all visible columns (used by Select All / Clear All). |
+| `editable` | `boolean` | `false` | Enable inline cell editing. |
+| `cellSelection` | `boolean` | `true` | Enable spreadsheet-like cell selection (active cell, range, fill handle, clipboard). |
+| `onCellValueChanged` | `(event: ICellValueChangedEvent<T>) => void` | `undefined` | Callback when a cell value is committed after edit. |
+| `rowSelection` | `RowSelectionMode` | `'none'` | Row selection mode: `'none'`, `'single'`, or `'multiple'`. |
+| `selectedRows` | `Set<RowId>` | `new Set()` | Set of selected row IDs. |
+| `onSelectionChange` | `(event: IRowSelectionChangeEvent<T>) => void` | `undefined` | Callback when row selection changes. |
+| `showRowNumbers` | `boolean` | `false` | Show Excel-style row numbers column at the start (1, 2, 3...). |
+| `statusBar` | `boolean \| IStatusBarProps` | `false` | Show status bar below the grid with row counts and aggregations. |
+| `emptyState` | `{ message?: ReactNode; render?: () => ReactNode }` | `undefined` | Custom empty state when no rows are available. |
+| `density` | `'compact' \| 'normal' \| 'comfortable'` | `'normal'` | Cell spacing/padding preset. |
+| `suppressHorizontalScroll` | `boolean` | `false` | Suppress horizontal scrolling (overflow-x hidden). |
+| `virtualScroll` | `IVirtualScrollConfig` | `undefined` | Enable virtual scrolling for large datasets. |
+| `columnReorder` | `boolean` | `false` | Enable drag-and-drop column reordering. |
+| `dataSource` | `IDataSource<T>` | `undefined` | Server-side data source (for filter options and people search). |
+| `onCellError` | `(error: Error, errorInfo: ErrorInfo) => void` | `undefined` | Error boundary callback for cell rendering errors. |
+| `aria-label` | `string` | `undefined` | Accessible label for the grid. |
+| `aria-labelledby` | `string` | `undefined` | ID of element that labels the grid. |
+
+## Usage
+
+### Basic Example (React)
+
+```tsx
+import { DataGridTable } from '@alaarab/ogrid-react-radix';
+import type { IColumnDef } from '@alaarab/ogrid-react-radix';
+
+interface Product {
+  id: number;
+  name: string;
+  price: number;
+}
+
+const columns: IColumnDef<Product>[] = [
+  { columnId: 'name', name: 'Product Name', type: 'text' },
+  { columnId: 'price', name: 'Price', type: 'numeric' },
+];
+
+const data: Product[] = [
+  { id: 1, name: 'Widget', price: 29.99 },
+  { id: 2, name: 'Gadget', price: 49.99 },
+];
+
+function MyGrid() {
+  return (
+    <DataGridTable
+      items={data}
+      columns={columns}
+      getRowId={(item) => item.id}
+      aria-label="Product catalog"
+    />
+  );
+}
+```
+
+### With Sorting and Filtering (React)
+
+```tsx
+import { DataGridTable } from '@alaarab/ogrid-react-radix';
+import { useState } from 'react';
+
+function MyGrid() {
+  const [sortBy, setSortBy] = useState<string>('name');
+  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
+  const [filters, setFilters] = useState<IFilters>({});
+
+  const handleSortChange = (field: string, direction: 'asc' | 'desc') => {
+    setSortBy(field);
+    setSortDirection(direction);
+  };
+
+  return (
+    <DataGridTable
+      items={data}
+      columns={columns}
+      getRowId={(item) => item.id}
+      sortBy={sortBy}
+      sortDirection={sortDirection}
+      onSortChange={handleSortChange}
+      filters={filters}
+      onFiltersChange={setFilters}
+    />
+  );
+}
+```
+
+## Angular Usage
+
+In Angular Material/Radix packages, `DataGridTable` accepts a single `propsInput` property:
+
+```typescript
+import { Component } from '@angular/core';
+import { OGridService } from '@alaarab/ogrid-angular';
+import { DataGridTableComponent } from '@alaarab/ogrid-angular-material';
+
+@Component({
+  selector: 'app-my-grid',
+  standalone: true,
+  imports: [DataGridTableComponent],
+  template: `
+    <ogrid-datagrid-table [propsInput]="gridProps" />
+  `
+})
+export class MyGridComponent {
+  ogridService = new OGridService<Product>();
+  gridProps = this.ogridService.getDataGridProps();
+}
+```
+
+In Angular PrimeNG, `DataGridTable` uses individual `@Input()` properties matching the React prop names.
+
+## Vue Usage
+
+In Vue Vuetify/PrimeVue packages, `DataGridTable` accepts a single `:grid-props` prop:
+
+```vue
+<template>
+  <DataGridTable :grid-props="gridProps" />
+</template>
+
+<script setup lang="ts">
+import { DataGridTable } from '@alaarab/ogrid-vue-vuetify';
+import { useOGrid } from '@alaarab/ogrid-vue';
+
+const { dataGridProps: gridProps } = useOGrid({ /* ... */ });
+</script>
+```
+
+In Vue Radix, `DataGridTable` uses individual props via `defineProps<IOGridProps>()` (like React).
+
+## Accessibility
+
+`DataGridTable` implements WCAG 2.1 AA standards with comprehensive keyboard navigation and screen reader support.
+
+### ARIA Attributes
+
+The grid uses semantic HTML with proper ARIA roles:
+
+```html
+<div role="grid" aria-label="Product catalog" aria-rowcount="1000">
+  <table>
+    <thead>
+      <tr role="row">
+        <th role="columnheader" aria-sort="ascending" scope="col">
+          Product Name
+        </th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr role="row" aria-rowindex="1">
+        <td role="gridcell" tabindex="-1">Widget</td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+```
+
+| Attribute | Element | Purpose |
+|-----------|---------|---------|
+| `role="grid"` | Grid wrapper | Identifies the grid container for screen readers |
+| `role="row"` | `<tr>` | Identifies table rows |
+| `role="columnheader"` | `<th>` | Identifies column headers |
+| `role="gridcell"` | `<td>` | Identifies data cells |
+| `aria-label` | Grid wrapper | Provides accessible name (pass via `aria-label` prop) |
+| `aria-rowcount` | Grid wrapper | Total number of rows in dataset (server-side pagination) |
+| `aria-rowindex` | `<tr>` | Row's position in the full dataset (1-indexed) |
+| `aria-sort` | `<th>` | Current sort state: `"ascending"`, `"descending"`, or `"none"` |
+| `aria-colindex` | `<th>`, `<td>` | Column's position (1-indexed) |
+| `tabindex="-1"` | `<td>` | Enables programmatic focus for keyboard navigation |
+| `aria-readonly` | `<td>` | Indicates whether cell is editable (`"false"` when `editable: true`) |
+
+### Keyboard Navigation
+
+Complete Excel-style keyboard navigation:
+
+**Arrow Keys:**
+- `↑` `↓` `←` `→` — Move active cell one cell in the direction pressed
+- `Ctrl+↑` / `Ctrl+↓` — Jump to first/last row
+- `Ctrl+←` / `Ctrl+→` — Jump to first/last column
+- `Home` / `End` — Jump to start/end of row
+- `Ctrl+Home` / `Ctrl+End` — Jump to first/last cell in grid
+
+**Selection:**
+- `Shift+Arrows` — Extend cell selection range
+- `Ctrl+A` — Select all cells
+- `Space` (on checkbox column) — Toggle row selection
+
+**Editing:**
+- `Enter` or `F2` — Start editing active cell
+- `Escape` — Cancel editing and revert
+- `Enter` (while editing) — Commit and move down
+- `Tab` (while editing) — Commit and move right
+
+**Clipboard:**
+- `Ctrl+C` / `Cmd+C` — Copy selected cells
+- `Ctrl+X` / `Cmd+X` — Cut selected cells
+- `Ctrl+V` / `Cmd+V` — Paste
+- `Delete` — Clear selected cells
+
+**Undo/Redo:**
+- `Ctrl+Z` / `Cmd+Z` — Undo last edit
+- `Ctrl+Y` / `Cmd+Shift+Z` — Redo
+
+**Context Menu:**
+- `Shift+F10` — Open context menu for active cell
+
+See the [Accessibility Guide](/docs/guides/accessibility) for complete keyboard shortcuts.
+
+### Focus Management
+
+- **Focus visible:** `:focus-visible` styles show a 2px solid outline (`--ogrid-accent`) only when navigating via keyboard
+- **Focus restoration:** After closing dialogs or exiting edit mode, focus returns to the active cell
+- **Tab order:** Logical tab order through interactive elements (header buttons, editable cells)
+
+### Screen Reader Support
+
+Screen readers announce:
+- **Cell navigation:** "Product Name, cell, row 1, column 2"
+- **Sort changes:** "Sorted by Product Name, ascending"
+- **Edit mode:** "Editing Product Name, row 1, column 2"
+- **Value changes:** "Product Name changed from Widget to Gadget"
+
+Tested with NVDA, JAWS, VoiceOver, and Narrator.
+
+### High Contrast Mode
+
+All colors use CSS custom properties with system color fallbacks for Windows High Contrast Mode:
+- Focus indicators use system `Highlight` color
+- Borders use system `ButtonText` color
+- Text remains visible in all contrast themes
+
+### Usage Example
+
+```tsx
+import { OGrid } from '@alaarab/ogrid-react-radix';
+
+function AccessibleGrid() {
+  return (
+    <OGrid
+      data={products}
+      columns={columns}
+      getRowId={(item) => item.id}
+      aria-label="Product catalog"
+      rowSelection="multiple"
+      editable={true}
+    />
+  );
+}
+```
+
+For complete accessibility documentation, see the [Accessibility Guide](/docs/guides/accessibility).
+
+## Related Components
+
+- [OGrid](./ogrid-props.mdx) — Top-level wrapper that includes toolbar and pagination
+- [ColumnHeaderFilter](./components-column-header-filter.mdx) — Column filtering UI
+- [StatusBar](./components-status-bar.mdx) — Status bar below the grid
+- [PaginationControls](./components-pagination-controls.mdx) — Pagination UI
+
+## See Also
+
+- [Column Definition](./column-def.mdx) — Complete column definition reference
+- [Grid API](./grid-api.mdx) — Imperative grid API reference
+- [Accessibility Guide](/docs/guides/accessibility) — Complete accessibility documentation

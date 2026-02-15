@@ -5,8 +5,15 @@
 import * as React from 'react';
 import { render, screen, fireEvent } from '@testing-library/react';
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export function createPaginationControlsTests(PaginationControls: React.ComponentType<any>): void {
+interface PaginationControlsProps {
+  currentPage: number;
+  pageSize: number;
+  totalCount: number;
+  onPageChange: (page: number) => void;
+  onPageSizeChange: (pageSize: number) => void;
+}
+
+export function createPaginationControlsTests(PaginationControls: React.ComponentType<PaginationControlsProps>): void {
   const renderControls = (overrides: Record<string, unknown> = {}) => {
     const props = {
       currentPage: 2,

@@ -270,6 +270,347 @@ interface IRowSelectionChangeEvent<T> {
 />
 ```
 
+## IDataSource&lt;T&gt;
+
+Server-side data source interface. When you pass a `dataSource` to `OGrid` instead of a `data` array, the grid calls these methods to fetch paginated data and filter options.
+
+```typescript
+interface IDataSource<T> {
+  fetchPage(params: IFetchParams): Promise<IPageResult<T>>;
+  fetchFilterOptions?(field: string): Promise<string[]>;
+  searchPeople?(query: string): Promise<UserLike[]>;
+  getUserByEmail?(email: string): Promise<UserLike | undefined>;
+}
+```
+
+| Method | Required | Description |
+|--------|----------|-------------|
+| `fetchPage` | Yes | Fetch a page of data from the server. Called when the user changes page, page size, sort, or filters. |
+| `fetchFilterOptions` | No | Fetch filter options for a multi-select filter column. Called when a multi-select filter is opened. |
+| `searchPeople` | No | Search for people by name or email. Called when a user types in a people filter search box. |
+| `getUserByEmail` | No | Resolve a user by email address. Called when restoring a saved people filter. |
+
+### IFetchParams
+
+Parameters passed to `fetchPage`:
+
+```typescript
+interface IFetchParams {
+  page: number;
+  pageSize: number;
+  sort?: { field: string; direction: 'asc' | 'desc' };
+  filters: IFilters;
+}
+```
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `page` | `number` | Current page number (1-indexed). |
+| `pageSize` | `number` | Number of items per page. |
+| `sort` | `{ field, direction }` | Active sort (field name + direction). Omit if no sort. |
+| `filters` | `IFilters` | Active filters (field → FilterValue). |
+
+### IPageResult&lt;T&gt;
+
+Response shape from `fetchPage`:
+
+```typescript
+interface IPageResult<T> {
+  items: T[];
+  totalCount: number;
+}
+```
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `items` | `T[]` | Array of data items for the current page. |
+| `totalCount` | `number` | Total number of items across all pages (used for pagination). |
+
+### Usage Example
+
+```typescript
+import type { IDataSource, IFetchParams, IPageResult, UserLike } from '@alaarab/ogrid-react-radix';
+
+interface Product {
+  id: number;
+  name: string;
+  category: string;
+  price: number;
+}
+
+const dataSource: IDataSource<Product> = {
+  async fetchPage(params: IFetchParams): Promise<IPageResult<Product>> {
+    // Build query string from params
+    const queryParams = new URLSearchParams({
+      page: params.page.toString(),
+      pageSize: params.pageSize.toString(),
+      sort: params.sort ? `${params.sort.field}:${params.sort.direction}` : '',
+      filters: JSON.stringify(params.filters),
+    });
+
+    const response = await fetch(`/api/products?${queryParams}`);
+    const data = await response.json();
+
+    return {
+      items: data.items,
+      totalCount: data.totalCount,
+    };
+  },
+
+  async fetchFilterOptions(field: string): Promise<string[]> {
+    const response = await fetch(`/api/products/filter-options/${field}`);
+    return response.json();
+  },
+
+  async searchPeople(query: string): Promise<UserLike[]> {
+    const response = await fetch(`/api/users/search?q=${encodeURIComponent(query)}`);
+    return response.json();
+  },
+
+  async getUserByEmail(email: string): Promise<UserLike | undefined> {
+    const response = await fetch(`/api/users/by-email/${encodeURIComponent(email)}`);
+    if (!response.ok) return undefined;
+    return response.json();
+  },
+};
+
+// Use with OGrid
+<OGrid
+  dataSource={dataSource}
+  columns={columns}
+  getRowId={(item) => item.id}
+/>
+```
+
+## ICellEditorProps&lt;T&gt;
+
+Props passed to custom cell editor components (React) or rendered by the inline cell editor.
+
+```typescript
+interface ICellEditorProps<T> {
+  value: unknown;
+  onValueChange: (value: unknown) => void;
+  onCommit: () => void;
+  onCancel: () => void;
+  item: T;
+  column: IColumnDef<T>;
+  cellEditorParams?: CellEditorParams;
+}
+```
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `value` | `unknown` | Current cell value. |
+| `onValueChange` | `(value: unknown) => void` | Callback to update the value (doesn't commit yet). |
+| `onCommit` | `() => void` | Callback to commit the edit and close the editor. |
+| `onCancel` | `() => void` | Callback to cancel the edit and close the editor. |
+| `item` | `T` | Full row data object. |
+| `column` | `IColumnDef<T>` | Column definition. |
+| `cellEditorParams` | `CellEditorParams` | Optional params passed to the editor (e.g., `values` for a select editor). |
+
+### CellEditorParams
+
+Parameters for built-in cell editors:
+
+```typescript
+interface CellEditorParams {
+  values?: unknown[];
+  formatValue?: (value: unknown) => string;
+}
+```
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `values` | `unknown[]` | Array of allowed values for select/richSelect editors. |
+| `formatValue` | `(value: unknown) => string` | Custom formatter for values in rich select editor. |
+
+### Usage Example (React)
+
+```typescript
+import type { ICellEditorProps } from '@alaarab/ogrid-react-radix';
+
+interface Product {
+  id: number;
+  name: string;
+  category: string;
+}
+
+function CategoryEditor(props: ICellEditorProps<Product>) {
+  const { value, onValueChange, onCommit, onCancel, cellEditorParams } = props;
+
+  const handleChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    onValueChange(e.target.value);
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter') onCommit();
+    if (e.key === 'Escape') onCancel();
+  };
+
+  return (
+    <select
+      value={value as string}
+      onChange={handleChange}
+      onKeyDown={handleKeyDown}
+      autoFocus
+    >
+      {cellEditorParams?.values?.map((v) => (
+        <option key={v as string} value={v as string}>
+          {v as string}
+        </option>
+      ))}
+    </select>
+  );
+}
+
+// Use in column definition
+const columns: IColumnDef<Product>[] = [
+  {
+    columnId: 'category',
+    name: 'Category',
+    editable: true,
+    cellEditor: CategoryEditor,
+    cellEditorParams: {
+      values: ['Electronics', 'Clothing', 'Books'],
+    },
+  },
+];
+```
+
+## ICellValueChangedEvent&lt;T&gt;
+
+Event object passed to the `onCellValueChanged` callback when a cell value is committed after editing.
+
+```typescript
+interface ICellValueChangedEvent<T> {
+  item: T;
+  columnId: string;
+  oldValue: unknown;
+  newValue: unknown;
+  rowIndex: number;
+}
+```
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `item` | `T` | Full row data object (with the new value already applied). |
+| `columnId` | `string` | ID of the column that was edited. |
+| `oldValue` | `unknown` | Value before the edit. |
+| `newValue` | `unknown` | Value after the edit. |
+| `rowIndex` | `number` | Zero-based row index. |
+
+### Usage Example
+
+```typescript
+<OGrid<Product>
+  columns={columns}
+  data={data}
+  getRowId={(item) => item.id}
+  editable={true}
+  onCellValueChanged={(event) => {
+    console.log(`Cell edited: ${event.columnId}`);
+    console.log(`Old value: ${event.oldValue}`);
+    console.log(`New value: ${event.newValue}`);
+    console.log('Updated item:', event.item);
+
+    // Sync changes to the server
+    updateProduct(event.item);
+  }}
+/>
+```
+
+## IGridColumnState
+
+Column state object returned by `IOGridApi.getColumnState()` and accepted by `applyColumnState()`. All fields are JSON-serializable for persistence (e.g., localStorage).
+
+```typescript
+interface IGridColumnState {
+  visibleColumns: string[];
+  sort?: { field: string; direction: 'asc' | 'desc' };
+  columnOrder?: string[];
+  columnWidths?: Record<string, number>;
+  filters?: IFilters;
+  pinnedColumns?: Record<string, 'left' | 'right'>;
+}
+```
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `visibleColumns` | `string[]` | Array of visible column IDs. |
+| `sort` | `{ field, direction }` | Active sort (field name + direction). |
+| `columnOrder` | `string[]` | Column display order (array of column IDs). |
+| `columnWidths` | `Record<string, number>` | Column widths in pixels (column ID → width). |
+| `filters` | `IFilters` | Active filters (field → FilterValue). |
+| `pinnedColumns` | `Record<string, 'left' \| 'right'>` | Pinned columns (column ID → position). |
+
+### Usage Example
+
+```typescript
+import { useRef } from 'react';
+import { OGrid } from '@alaarab/ogrid-react-radix';
+import type { IOGridApi } from '@alaarab/ogrid-react-radix';
+
+function MyGrid() {
+  const apiRef = useRef<IOGridApi<Product>>(null);
+
+  const saveState = () => {
+    const state = apiRef.current?.getColumnState();
+    if (state) {
+      localStorage.setItem('gridState', JSON.stringify(state));
+    }
+  };
+
+  const restoreState = () => {
+    const saved = localStorage.getItem('gridState');
+    if (saved) {
+      const state = JSON.parse(saved);
+      apiRef.current?.applyColumnState(state);
+    }
+  };
+
+  return (
+    <>
+      <button onClick={saveState}>Save Grid State</button>
+      <button onClick={restoreState}>Restore Grid State</button>
+      <OGrid ref={apiRef} {...props} />
+    </>
+  );
+}
+```
+
+## IVirtualScrollConfig
+
+Configuration for virtual scrolling (rendering only visible rows for large datasets).
+
+```typescript
+interface IVirtualScrollConfig {
+  enabled?: boolean;
+  rowHeight?: number;
+  overscan?: number;
+}
+```
+
+| Field | Type | Default | Description |
+|-------|------|---------|-------------|
+| `enabled` | `boolean` | `false` | Enable virtual scrolling. |
+| `rowHeight` | `number` | **Required when enabled** | Fixed row height in pixels. All rows must have the same height. |
+| `overscan` | `number` | `5` | Number of extra rows to render above/below the visible area (for smoother scrolling). |
+
+### Usage Example
+
+```typescript
+<OGrid
+  data={largeDataset} // 10,000+ rows
+  columns={columns}
+  getRowId={(item) => item.id}
+  virtualScroll={{
+    enabled: true,
+    rowHeight: 40,
+    overscan: 10,
+  }}
+/>
+```
+
 ## Type Imports
 
 All types can be imported from any OGrid package:
@@ -295,6 +636,10 @@ import type {
   ICellEditorProps,
   ICellValueChangedEvent,
   IGridColumnState,
+  IVirtualScrollConfig,
+  IFetchParams,
+  IPageResult,
+  CellEditorParams,
 } from '@alaarab/ogrid-react-radix';
 
 // From UI packages (re-exports everything from core)

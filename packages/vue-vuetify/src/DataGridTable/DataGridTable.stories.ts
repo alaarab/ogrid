@@ -1,7 +1,7 @@
 import type { Meta, StoryObj } from '@storybook/vue3-vite';
 import { ref } from 'vue';
 import { DataGridTable } from './DataGridTable';
-import type { IOGridDataGridProps, IColumnDef, ICellValueChangedEvent, IRowSelectionChangeEvent, ICellEditorProps } from '@alaarab/ogrid-vue';
+import type { IOGridDataGridProps, IColumnDef, ICellValueChangedEvent, IRowSelectionChangeEvent } from '@alaarab/ogrid-vue';
 
 interface Row {
   id: string;

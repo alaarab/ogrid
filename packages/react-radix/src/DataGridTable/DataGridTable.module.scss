@@ -174,6 +174,12 @@
   background: var(--ogrid-bg-subtle, #f3f2f1);  /* Required for sticky overlap */
   z-index: 8;        /* Stack above body cells */
   border-bottom: 1px solid var(--ogrid-border, #e0e0e0);
+
+  &:focus-visible {
+    outline: 2px solid var(--ogrid-accent, #0078d4);
+    outline-offset: -2px;
+    z-index: 11;
+  }
 }
 
 .headerCellContent {
@@ -205,6 +211,11 @@
 
   &:active {
     background: var(--ogrid-active-bg, #e1dfdd);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--ogrid-accent, #0078d4);
+    outline-offset: 2px;
   }
 
   @media (prefers-color-scheme: dark) {
@@ -307,6 +318,12 @@
   white-space: nowrap;
   user-select: none;
   outline: none;
+
+  &:focus-visible {
+    outline: 2px solid var(--ogrid-accent, #0078d4);
+    outline-offset: -2px;
+    z-index: 3;
+  }
 }
 
 .activeCellContent {
@@ -422,6 +439,11 @@
   &[data-state='indeterminate'] {
     background: var(--ogrid-primary, #0066cc);
     border-color: var(--ogrid-primary, #0066cc);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--ogrid-accent, #0078d4);
+    outline-offset: 2px;
   }
 }
 

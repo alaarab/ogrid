@@ -90,12 +90,15 @@ import { PopoverCellEditorComponent } from './popover-cell-editor.component';
                           @let pinned = isPinned(col.columnId);
                           @let pinnedLeft = pinned === 'left' || (isFreezeCol && colIdx === 0);
                           @let pinnedRight = pinned === 'right';
+                          @let sortState = getSortState(col.columnId);
+                          @let ariaSort = sortState === 'asc' ? 'ascending' : sortState === 'desc' ? 'descending' : null;
                           <th scope="col"
                             class="ogrid-datagrid-th"
                             [class.ogrid-datagrid-th--pinned-left]="pinnedLeft"
                             [class.ogrid-datagrid-th--pinned-right]="pinnedRight"
                             [attr.rowSpan]="headerRows().length > 1 ? headerRows().length - rowIdx : null"
                             [attr.data-column-id]="col.columnId"
+                            [attr.aria-sort]="ariaSort"
                             [style.minWidth.px]="col.minWidth ?? 80"
                             [style.width.px]="colW"
                             [style.maxWidth.px]="colW"
@@ -366,6 +369,9 @@ import { PopoverCellEditorComponent } from './popover-cell-editor.component';
       font-size: 14px; border-bottom: 1px solid rgba(0,0,0,0.12);
       background: rgba(0,0,0,0.04); z-index: 8;
     }
+    .ogrid-datagrid-th:focus-visible {
+      outline: 2px solid #1976d2; outline-offset: -2px; z-index: 11;
+    }
     .ogrid-datagrid-th--pinned-left {
       position: sticky; top: 0; left: 0; z-index: 10; background: rgba(0,0,0,0.04); will-change: transform;
       border-right: 2px solid rgba(0,0,0,0.12);
@@ -410,6 +416,9 @@ import { PopoverCellEditorComponent } from './popover-cell-editor.component';
       padding: 6px 10px; box-sizing: border-box; overflow: hidden;
       text-overflow: ellipsis; white-space: nowrap; user-select: none; outline: none;
       font-size: 14px;
+    }
+    .ogrid-datagrid-cell:focus-visible {
+      outline: 2px solid #1976d2; outline-offset: -2px; z-index: 3;
     }
     .ogrid-datagrid-cell--numeric { justify-content: flex-end; text-align: right; }
     .ogrid-datagrid-cell--boolean { justify-content: center; text-align: center; }

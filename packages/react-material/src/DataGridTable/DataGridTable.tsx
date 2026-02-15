@@ -13,6 +13,7 @@ import {
   TableBody,
   TableRow,
   TableCell,
+  type TableCellProps,
   TableContainer,
 } from '@mui/material';
 import { ColumnHeaderFilter } from '../ColumnHeaderFilter';
@@ -47,6 +48,12 @@ import {
   DEFAULT_MIN_COLUMN_WIDTH,
 } from '@alaarab/ogrid-react';
 
+// ── Type helpers for MUI TableCell HTML attributes ──
+// MUI's TableCellProps doesn't expose rowSpan/colSpan in its types, but they're valid HTML attrs
+type TableCellWithSpan = TableCellProps & {
+  rowSpan?: number;
+  colSpan?: number;
+};
 
 // ── Module-scope stable styles (avoid per-render Emotion resolutions) ──
 
@@ -85,6 +92,7 @@ const CELL_CONTENT_BASE_SX = {
   width: '100%', height: '100%', display: 'flex', alignItems: 'center', minWidth: 0,
   px: '10px', py: '6px', boxSizing: 'border-box', overflow: 'hidden',
   textOverflow: 'ellipsis', whiteSpace: 'nowrap', userSelect: 'none', outline: 'none',
+  '&:focus-visible': { outline: '2px solid', outlineColor: 'primary.main', outlineOffset: '-2px', zIndex: 3 },
 } as const;
 const CELL_CONTENT_NUMERIC_SX = { ...CELL_CONTENT_BASE_SX, justifyContent: 'flex-end', textAlign: 'right' as const } as const;
 const CELL_CONTENT_BOOLEAN_SX = { ...CELL_CONTENT_BASE_SX, justifyContent: 'center', textAlign: 'center' as const } as const;
@@ -525,9 +533,7 @@ function DataGridTableInner<T>(props: IOGridDataGridProps<T>): React.ReactElemen
                   {/* Checkbox column in the last (leaf) row only */}
                   {rowIdx === headerRows.length - 1 && hasCheckboxCol && (
                     <TableCell
-                      padding="checkbox"
-                      {...({ rowSpan: headerRows.length > 1 ? 1 : undefined } as any)}
-                      sx={CHECKBOX_CELL_SX}
+                      {...({ padding: "checkbox", rowSpan: headerRows.length > 1 ? 1 : undefined, sx: CHECKBOX_CELL_SX } as TableCellWithSpan)}
                     >
                       <Checkbox
                         checked={allSelected}
@@ -540,26 +546,28 @@ function DataGridTableInner<T>(props: IOGridDataGridProps<T>): React.ReactElemen
                   )}
                   {/* Empty placeholder for checkbox in the first group row */}
                   {rowIdx === 0 && rowIdx < headerRows.length - 1 && hasCheckboxCol && (
-                    <TableCell {...({ rowSpan: headerRows.length - 1 } as any)} sx={CHECKBOX_PLACEHOLDER_SX} />
+                    <TableCell {...({ rowSpan: headerRows.length - 1, sx: CHECKBOX_PLACEHOLDER_SX } as TableCellWithSpan)} />
                   )}
                   {/* Row numbers column in the last (leaf) row only */}
                   {rowIdx === headerRows.length - 1 && hasRowNumbersCol && (
                     <TableCell
-                      component="th"
-                      scope="col"
-                      {...({ rowSpan: headerRows.length > 1 ? 1 : undefined } as any)}
-                      sx={{
-                        width: ROW_NUMBER_COLUMN_WIDTH,
-                        minWidth: ROW_NUMBER_COLUMN_WIDTH,
-                        maxWidth: ROW_NUMBER_COLUMN_WIDTH,
-                        textAlign: 'center',
-                        fontWeight: 600,
-                        backgroundColor: 'action.hover',
-                        position: 'sticky',
-                        left: hasCheckboxCol ? CHECKBOX_COLUMN_WIDTH : 0,
-                        zIndex: 4,
-                        ...headerCellSx,
-                      }}
+                      {...({
+                        component: "th",
+                        scope: "col",
+                        rowSpan: headerRows.length > 1 ? 1 : undefined,
+                        sx: {
+                          width: ROW_NUMBER_COLUMN_WIDTH,
+                          minWidth: ROW_NUMBER_COLUMN_WIDTH,
+                          maxWidth: ROW_NUMBER_COLUMN_WIDTH,
+                          textAlign: 'center',
+                          fontWeight: 600,
+                          backgroundColor: 'action.hover',
+                          position: 'sticky',
+                          left: hasCheckboxCol ? CHECKBOX_COLUMN_WIDTH : 0,
+                          zIndex: 4,
+                          ...headerCellSx,
+                        }
+                      } as TableCellWithSpan)}
                     >
                       #
                     </TableCell>
@@ -567,15 +575,17 @@ function DataGridTableInner<T>(props: IOGridDataGridProps<T>): React.ReactElemen
                   {/* Empty placeholder for row numbers in the first group row */}
                   {rowIdx === 0 && rowIdx < headerRows.length - 1 && hasRowNumbersCol && (
                     <TableCell
-                      {...({ rowSpan: headerRows.length - 1 } as any)}
-                      sx={{
-                        width: ROW_NUMBER_COLUMN_WIDTH,
-                        minWidth: ROW_NUMBER_COLUMN_WIDTH,
-                        position: 'sticky',
-                        left: hasCheckboxCol ? CHECKBOX_COLUMN_WIDTH : 0,
-                        zIndex: 4,
-                        backgroundColor: 'background.paper',
-                      }}
+                      {...({
+                        rowSpan: headerRows.length - 1,
+                        sx: {
+                          width: ROW_NUMBER_COLUMN_WIDTH,
+                          minWidth: ROW_NUMBER_COLUMN_WIDTH,
+                          position: 'sticky',
+                          left: hasCheckboxCol ? CHECKBOX_COLUMN_WIDTH : 0,
+                          zIndex: 4,
+                          backgroundColor: 'background.paper',
+                        }
+                      } as TableCellWithSpan)}
                     />
                   )}
                   {row.map((cell, cellIdx) => {
@@ -583,10 +593,12 @@ function DataGridTableInner<T>(props: IOGridDataGridProps<T>): React.ReactElemen
                       return (
                         <TableCell
                           key={cellIdx}
-                          {...({ colSpan: cell.colSpan } as any)}
-                          component="th"
-                          scope="colgroup"
-                          sx={GROUP_HEADER_CELL_SX}
+                          {...({
+                            colSpan: cell.colSpan,
+                            component: "th",
+                            scope: "colgroup",
+                            sx: GROUP_HEADER_CELL_SX
+                          } as TableCellWithSpan)}
                         >
                           {cell.label}
                         </TableCell>
@@ -600,22 +612,38 @@ function DataGridTableInner<T>(props: IOGridDataGridProps<T>): React.ReactElemen
                     const isPinnedRight = col.pinned === 'right';
                     const columnWidth = getColumnWidth(col);
                     const headerSx = isPinnedLeft || (isFreezeCol && colIdx === 0) ? HEADER_PINNED_LEFT_SX : isPinnedRight ? HEADER_PINNED_RIGHT_SX : HEADER_BASE_SX;
+
+                    // Determine aria-sort value for sorted columns
+                    const isSorted = props.sortBy === col.columnId;
+                    const ariaSort = isSorted
+                      ? (props.sortDirection === 'asc' ? 'ascending' : 'descending')
+                      : undefined;
+
                     return (
                       <TableCell
                         key={col.columnId}
-                        component="th"
-                        scope="col"
-                        data-column-id={col.columnId}
-                        {...({ rowSpan: headerRows.length > 1 ? headerRows.length - rowIdx : undefined } as any)}
-                        sx={{
-                          ...headerSx,
-                          ...headerCellSx,
-                          minWidth: col.minWidth ?? DEFAULT_MIN_COLUMN_WIDTH,
-                          width: columnWidth,
-                          maxWidth: columnWidth,
-                          ...(columnReorder ? { cursor: isReorderDragging ? 'grabbing' : 'grab' } : {}),
-                        }}
-                        onMouseDown={columnReorder ? (e: React.MouseEvent) => handleHeaderMouseDown(col.columnId, e) : undefined}
+                        {...({
+                          component: "th",
+                          scope: "col",
+                          'data-column-id': col.columnId,
+                          rowSpan: headerRows.length > 1 ? headerRows.length - rowIdx : undefined,
+                          'aria-sort': ariaSort as 'ascending' | 'descending' | 'none' | undefined,
+                          sx: {
+                            ...headerSx,
+                            ...headerCellSx,
+                            minWidth: col.minWidth ?? DEFAULT_MIN_COLUMN_WIDTH,
+                            width: columnWidth,
+                            maxWidth: columnWidth,
+                            ...(columnReorder ? { cursor: isReorderDragging ? 'grabbing' : 'grab' } : {}),
+                            '&:focus-visible': {
+                              outline: '2px solid',
+                              outlineColor: 'primary.main',
+                              outlineOffset: '-2px',
+                              zIndex: 11,
+                            },
+                          },
+                          onMouseDown: columnReorder ? (e: React.MouseEvent) => handleHeaderMouseDown(col.columnId, e) : undefined
+                        } as TableCellWithSpan)}
                       >
                         <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
                           <ColumnHeaderFilter {...getHeaderFilterConfig(col, headerFilterInput)} />

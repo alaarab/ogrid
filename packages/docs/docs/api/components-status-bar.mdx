@@ -1,0 +1,325 @@
+---
+sidebar_position: 14
+title: StatusBar
+---
+
+# StatusBar
+
+A status bar component that displays row counts, filtered counts, selected counts, and aggregations for selected numeric cells. Rendered below the grid table, above the pagination controls.
+
+## Import
+
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+
+<Tabs groupId="framework">
+<TabItem value="react" label="React">
+
+```typescript
+import { StatusBar } from '@alaarab/ogrid-react-radix';
+// or
+import { StatusBar } from '@alaarab/ogrid-react-fluent';
+// or
+import { StatusBar } from '@alaarab/ogrid-react-material';
+```
+
+</TabItem>
+<TabItem value="angular" label="Angular">
+
+```typescript
+// StatusBar is rendered internally by DataGridTable in Angular packages
+import { DataGridTableComponent } from '@alaarab/ogrid-angular-material';
+```
+
+</TabItem>
+<TabItem value="vue" label="Vue">
+
+```typescript
+// StatusBar is rendered internally by DataGridTable in Vue packages
+import { DataGridTable } from '@alaarab/ogrid-vue-vuetify';
+```
+
+</TabItem>
+<TabItem value="js" label="Vanilla JS">
+
+```typescript
+// StatusBar is an internal component in vanilla JS
+import { OGrid } from '@alaarab/ogrid-js';
+```
+
+</TabItem>
+</Tabs>
+
+## Props (React)
+
+| Prop | Type | Default | Description |
+|------|------|---------|-------------|
+| `totalCount` | `number` | **Required** | Total row count (unfiltered). |
+| `filteredCount` | `number` | `undefined` | Filtered row count (after filters applied). Omit to hide. |
+| `selectedCount` | `number` | `undefined` | Number of selected rows. Omit or 0 to hide. |
+| `selectedCellCount` | `number` | `undefined` | Number of selected cells in a cell range. Omit or 0 to hide. |
+| `aggregation` | `{ sum, avg, min, max, count }` | `null` | Aggregation values for selected numeric cells. See [Aggregation](#aggregation) below. |
+| `suppressRowCount` | `boolean` | `false` | When true, hides the "Rows: X" label (useful when pagination already shows it). |
+
+## Aggregation
+
+When the user selects a range of numeric cells, the status bar can display aggregations:
+
+```typescript
+interface Aggregation {
+  sum: number;
+  avg: number;
+  min: number;
+  max: number;
+  count: number;
+}
+```
+
+| Field | Description |
+|-------|-------------|
+| `sum` | Sum of all numeric cells in the selection. |
+| `avg` | Average of all numeric cells in the selection. |
+| `min` | Minimum value in the selection. |
+| `max` | Maximum value in the selection. |
+| `count` | Number of numeric cells in the selection. |
+
+**Example:** If the user selects a 3×3 range of cells with values `[10, 20, 30, 40, 50, 60, 70, 80, 90]`:
+- `sum: 450`
+- `avg: 50`
+- `min: 10`
+- `max: 90`
+- `count: 9`
+
+## Usage
+
+### Basic Example (React)
+
+```tsx
+import { StatusBar } from '@alaarab/ogrid-react-radix';
+
+function MyGrid() {
+  return (
+    <StatusBar
+      totalCount={1000}
+      filteredCount={250}
+      selectedCount={5}
+    />
+  );
+}
+```
+
+**Output:**
+```
+Rows: 1,000  |  Filtered: 250  |  Selected: 5
+```
+
+### With Cell Selection Aggregation (React)
+
+```tsx
+import { StatusBar } from '@alaarab/ogrid-react-radix';
+
+function MyGrid() {
+  const aggregation = {
+    sum: 450,
+    avg: 50,
+    min: 10,
+    max: 90,
+    count: 9,
+  };
+
+  return (
+    <StatusBar
+      totalCount={1000}
+      selectedCellCount={9}
+      aggregation={aggregation}
+    />
+  );
+}
+```
+
+**Output:**
+```
+Rows: 1,000  |  Selected Cells: 9  |  Sum: 450  |  Avg: 50  |  Min: 10  |  Max: 90
+```
+
+### Suppress Row Count (React)
+
+When pagination controls already show "Showing X to Y of Z rows", you can hide the redundant "Rows: Z" label:
+
+```tsx
+import { StatusBar } from '@alaarab/ogrid-react-radix';
+
+function MyGrid() {
+  return (
+    <StatusBar
+      totalCount={1000}
+      filteredCount={250}
+      suppressRowCount={true}
+    />
+  );
+}
+```
+
+**Output:**
+```
+Filtered: 250
+```
+
+## Display Logic
+
+The status bar intelligently shows/hides sections based on available data:
+
+| Condition | Displayed |
+|-----------|-----------|
+| Always | `Rows: {totalCount}` (unless `suppressRowCount` is true) |
+| `filteredCount` provided and differs from `totalCount` | `Filtered: {filteredCount}` |
+| `selectedCount` > 0 | `Selected: {selectedCount}` |
+| `selectedCellCount` > 0 | `Selected Cells: {selectedCellCount}` |
+| `aggregation` provided | `Sum: X`, `Avg: X`, `Min: X`, `Max: X` |
+
+Sections are separated by `|` (pipe) characters.
+
+## Angular Usage
+
+In Angular packages, the status bar is rendered internally by `DataGridTable` when `statusBar` is enabled. You don't need to import or use the component directly.
+
+```typescript
+import { Component } from '@angular/core';
+import { OGridService } from '@alaarab/ogrid-angular';
+
+@Component({
+  selector: 'app-my-grid',
+  template: `
+    <ogrid-datagrid-table [propsInput]="gridProps" />
+  `
+})
+export class MyGridComponent {
+  ogridService = new OGridService<Product>();
+
+  constructor() {
+    // Enable status bar via props
+    this.ogridService.setProps({ statusBar: true });
+  }
+
+  gridProps = this.ogridService.getDataGridProps();
+}
+```
+
+## Vue Usage
+
+In Vue packages, the status bar is rendered internally by `DataGridTable` when `statusBar` is enabled.
+
+```vue
+<template>
+  <DataGridTable :grid-props="gridProps" />
+</template>
+
+<script setup lang="ts">
+import { DataGridTable } from '@alaarab/ogrid-vue-vuetify';
+import { useOGrid } from '@alaarab/ogrid-vue';
+
+const { dataGridProps: gridProps } = useOGrid({
+  data: products,
+  columns: columns,
+  getRowId: (item) => item.id,
+  statusBar: true, // Enable status bar
+});
+</script>
+```
+
+## Enabling in OGrid
+
+The top-level `OGrid` component accepts a `statusBar` prop:
+
+```tsx
+import { OGrid } from '@alaarab/ogrid-react-radix';
+
+// Boolean mode: show with default configuration
+<OGrid statusBar={true} {...props} />
+
+// Custom configuration
+<OGrid
+  statusBar={{
+    totalCount: 1000,
+    filteredCount: 250,
+    selectedCount: 5,
+    suppressRowCount: false,
+  }}
+  {...props}
+/>
+```
+
+When `statusBar` is `true`, the grid automatically computes the counts from the current state.
+
+## Accessibility
+
+`StatusBar` implements WCAG 2.1 AA standards with screen reader support for dynamic content announcements.
+
+### ARIA Attributes
+
+```html
+<div role="status" aria-live="polite">
+  <span>Rows: 1,000</span>
+  <span>Filtered: 250</span>
+  <span>Selected: 5</span>
+  <span>Sum: 450</span>
+  <span>Avg: 90</span>
+</div>
+```
+
+| Attribute | Element | Purpose |
+|-----------|---------|---------|
+| `role="status"` | Status bar container | Identifies region containing status information |
+| `aria-live="polite"` | Status bar container | Announces changes when user is idle (non-intrusive) |
+
+### Screen Reader Support
+
+Screen readers announce changes to the status bar:
+- **Initial render:** "Status: Rows 1000, Filtered 250, Selected 5"
+- **Selection change:** "Selected 10"
+- **Filter change:** "Filtered 150"
+- **Aggregation update:** "Sum 450, Average 90, Minimum 10, Maximum 90"
+
+The `aria-live="polite"` setting ensures announcements don't interrupt the user's current task. Screen readers wait for a natural pause before announcing status changes.
+
+### Semantic HTML
+
+The status bar uses semantic `<span>` elements with clear text labels:
+- "Rows: 1,000" — Total row count
+- "Filtered: 250" — Filtered row count
+- "Selected: 5" — Selected row count
+- "Sum: 450" — Aggregation values
+
+No additional ARIA labels are needed because the text content is already descriptive.
+
+### High Contrast Mode
+
+- Text remains visible in all high contrast themes
+- Background uses system colors
+- Border uses system `ButtonText` color
+
+See the [Accessibility Guide](/docs/guides/accessibility) for complete documentation.
+
+## Styling
+
+All UI packages provide default styles matching their design system. The status bar is styled with a subtle background and border-top.
+
+**CSS custom properties** (all packages):
+- `--ogrid-header-bg` — Background color (matches header)
+- `--ogrid-border` — Border color
+- `--ogrid-fg` — Foreground text color
+
+## Layout Integration
+
+The status bar is rendered inside `DataGridTable` at the bottom, just above the pagination controls (when pagination is enabled).
+
+## Related Components
+
+- [DataGridTable](./components-datagrid-table.mdx) — Main grid component that renders the status bar
+- [PaginationControls](./components-pagination-controls.mdx) — Pagination UI below the status bar
+- [OGrid](./ogrid-props.mdx) — Top-level wrapper with `statusBar` prop
+
+## See Also
+
+- [Types: IStatusBarProps](./types.mdx#istatusbarprops) — Status bar props reference
+- [Spreadsheet Selection Feature Guide](/docs/features/spreadsheet-selection) — How aggregations are computed

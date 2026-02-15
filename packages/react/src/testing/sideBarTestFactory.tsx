@@ -6,11 +6,11 @@
 import * as React from 'react';
 import { render, screen, fireEvent } from '@testing-library/react';
 import { fixtureRows, fixtureColumns, getRowId } from './fixtures';
+import type { IOGridProps } from '@alaarab/ogrid-core';
+import type { FixtureRow } from './fixtures';
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export function createSideBarTests(OGrid: React.ComponentType<any>): void {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  function renderOGrid(overrides: Record<string, any> = {}) {
+export function createSideBarTests(OGrid: React.ComponentType<IOGridProps<FixtureRow>>): void {
+  function renderOGrid(overrides: Partial<IOGridProps<FixtureRow>> = {}) {
     const defaultProps = {
       data: fixtureRows,
       columns: fixtureColumns,

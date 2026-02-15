@@ -11,7 +11,7 @@
 <p align="center">
   <a href="https://www.npmjs.com/package/@alaarab/ogrid-react-radix"><img src="https://img.shields.io/npm/v/@alaarab/ogrid-react-radix?color=%23217346&label=npm" alt="npm version" /></a>
   <a href="https://github.com/alaarab/ogrid/blob/main/LICENSE"><img src="https://img.shields.io/badge/license-MIT-green" alt="MIT License" /></a>
-  <img src="https://img.shields.io/badge/tests-1012%20passing-brightgreen" alt="1012 tests passing" />
+  <img src="https://img.shields.io/badge/tests-2028%20passing-brightgreen" alt="2028 tests passing" />
   <img src="https://img.shields.io/badge/React-17%20%7C%2018%20%7C%2019-blue" alt="React 17, 18, 19" />
   <img src="https://img.shields.io/badge/Angular-21-red" alt="Angular 21" />
   <img src="https://img.shields.io/badge/Vue-3.3+-green" alt="Vue 3.3+" />

@@ -280,7 +280,7 @@ function DataGridTableInner<T>(props: IOGridDataGridProps<T>): React.ReactElemen
         content = (
           <Popover.Root open={!!popoverAnchorElRef.current} onOpenChange={(open: boolean) => { if (!open) cancelPopoverEdit(); }}>
             <Popover.Anchor asChild>
-              <div ref={(el) => el && setPopoverAnchorEl(el)} style={POPOVER_ANCHOR_STYLE} aria-hidden />
+              <div ref={(el: HTMLDivElement | null) => { if (el) setPopoverAnchorEl(el); }} style={POPOVER_ANCHOR_STYLE} aria-hidden />
             </Popover.Anchor>
             <Popover.Portal>
               <Popover.Content sideOffset={4} onOpenAutoFocus={(e: Event) => e.preventDefault()}>
@@ -408,6 +408,13 @@ function DataGridTableInner<T>(props: IOGridDataGridProps<T>): React.ReactElemen
                         const leafRowSpan = headerRows.length > 1 && rowIdx < headerRows.length - 1
                           ? headerRows.length - rowIdx
                           : undefined;
+
+                        // Determine aria-sort value for sorted columns
+                        const isSorted = props.sortBy === col.columnId;
+                        const ariaSort = isSorted
+                          ? (props.sortDirection === 'asc' ? 'ascending' : 'descending')
+                          : undefined;
+
                         return (
                           <th
                             key={col.columnId}
@@ -419,6 +426,7 @@ function DataGridTableInner<T>(props: IOGridDataGridProps<T>): React.ReactElemen
                               ...columnMeta.hdrStyles[col.columnId],
                               ...(columnReorder ? { cursor: isReorderDragging ? 'grabbing' : 'grab' } : undefined),
                             }}
+                            aria-sort={ariaSort as 'ascending' | 'descending' | 'none' | undefined}
                             onMouseDown={columnReorder ? (e) => handleHeaderMouseDown(col.columnId, e) : undefined}
                           >
                             <div className={styles.headerCellContent}>

@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { Popover, PopoverSurface } from '@fluentui/react-components';
+import { Popover, PopoverSurface, type OpenPopoverEvents, type OnOpenChangeData } from '@fluentui/react-components';
 import { ArrowUpRegular, ArrowDownRegular, ArrowSortRegular, FilterRegular } from '@fluentui/react-icons';
 import type { UserLike, ColumnFilterType, IDateFilterValue } from '@alaarab/ogrid-react';
 import { useColumnHeaderFilterState } from '@alaarab/ogrid-react';
@@ -202,7 +202,7 @@ export const ColumnHeaderFilter: React.FC<IColumnHeaderFilterProps> = React.memo
             </button>
             <Popover
               open={isFilterOpen}
-              onOpenChange={(_: any, data: any) => { if (!data.open) setFilterOpen(false); }}
+              onOpenChange={(_: OpenPopoverEvents, data: OnOpenChangeData) => { if (!data.open) setFilterOpen(false); }}
               positioning={{ target: filterBtnRef.current ?? undefined, position: 'below', align: 'start', offset: 4 }}
               trapFocus={false}
             >
