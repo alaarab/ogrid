@@ -105,17 +105,28 @@ export function MarchingAntsOverlay({
     selectionRange.endRow === clipRange.endRow &&
     selectionRange.endCol === clipRange.endCol;
 
+  // Round to integer pixels so the stroke aligns to the pixel grid and corners connect cleanly
+  const roundRect = (r: OverlayRect) => ({
+    top: Math.round(r.top),
+    left: Math.round(r.left),
+    width: Math.round(r.width),
+    height: Math.round(r.height),
+  });
+
+  const selR = selRect ? roundRect(selRect) : null;
+  const clipR = clipRect ? roundRect(clipRect) : null;
+
   return (
     <>
       {/* Selection range: solid green border (hidden when clipboard range overlaps) */}
-      {selRect && !clipRangeMatchesSel && (
+      {selR && !clipRangeMatchesSel && (
         <svg
           style={{
             position: 'absolute',
-            top: selRect.top,
-            left: selRect.left,
-            width: selRect.width,
-            height: selRect.height,
+            top: selR.top,
+            left: selR.left,
+            width: selR.width,
+            height: selR.height,
             pointerEvents: 'none',
             zIndex: 4,
             overflow: 'visible',
@@ -125,24 +136,25 @@ export function MarchingAntsOverlay({
           <rect
             x="1"
             y="1"
-            width={Math.max(0, selRect.width - 2)}
-            height={Math.max(0, selRect.height - 2)}
+            width={Math.max(0, selR.width - 2)}
+            height={Math.max(0, selR.height - 2)}
             fill="none"
             stroke="var(--ogrid-selection, #217346)"
             strokeWidth="2"
+            style={{ shapeRendering: 'crispEdges' }}
           />
         </svg>
       )}
 
       {/* Copy/Cut range: animated marching ants */}
-      {clipRect && (
+      {clipR && (
         <svg
           style={{
             position: 'absolute',
-            top: clipRect.top,
-            left: clipRect.left,
-            width: clipRect.width,
-            height: clipRect.height,
+            top: clipR.top,
+            left: clipR.left,
+            width: clipR.width,
+            height: clipR.height,
             pointerEvents: 'none',
             zIndex: 5,
             overflow: 'visible',
@@ -152,13 +164,13 @@ export function MarchingAntsOverlay({
           <rect
             x="1"
             y="1"
-            width={Math.max(0, clipRect.width - 2)}
-            height={Math.max(0, clipRect.height - 2)}
+            width={Math.max(0, clipR.width - 2)}
+            height={Math.max(0, clipR.height - 2)}
             fill="none"
             stroke="var(--ogrid-selection, #217346)"
             strokeWidth="2"
             strokeDasharray="4 4"
-            style={MARCHING_ANTS_ANIMATION}
+            style={{ ...MARCHING_ANTS_ANIMATION, shapeRendering: 'crispEdges' }}
           />
         </svg>
       )}
