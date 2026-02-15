@@ -32,20 +32,48 @@ export interface IColumnHeaderFilterProps {
 export abstract class BaseColumnHeaderFilterComponent {
   @Input({ required: true }) columnKey!: string;
   @Input({ required: true }) columnName!: string;
-  @Input({ required: true }) filterType!: ColumnFilterType;
+
+  // Signal-backed inputs used by computed() — plain @Input properties aren't tracked by computed()
+  private readonly _filterType = signal<ColumnFilterType>('none');
+  private readonly _selectedValues = signal<string[] | undefined>(undefined);
+  private readonly _options = signal<string[] | undefined>(undefined);
+  private readonly _textValue = signal('');
+  private readonly _selectedUser = signal<UserLike | undefined>(undefined);
+  private readonly _dateValue = signal<IDateFilterValue | undefined>(undefined);
+
+  @Input({ required: true })
+  set filterType(v: ColumnFilterType) { this._filterType.set(v); }
+  get filterType(): ColumnFilterType { return this._filterType(); }
+
+  @Input()
+  set selectedValues(v: string[] | undefined) { this._selectedValues.set(v); }
+  get selectedValues(): string[] | undefined { return this._selectedValues(); }
+
+  @Input()
+  set options(v: string[] | undefined) { this._options.set(v); }
+  get options(): string[] | undefined { return this._options(); }
+
+  @Input()
+  set textValue(v: string) { this._textValue.set(v); }
+  get textValue(): string { return this._textValue(); }
+
+  @Input()
+  set selectedUser(v: UserLike | undefined) { this._selectedUser.set(v); }
+  get selectedUser(): UserLike | undefined { return this._selectedUser(); }
+
+  @Input()
+  set dateValue(v: IDateFilterValue | undefined) { this._dateValue.set(v); }
+  get dateValue(): IDateFilterValue | undefined { return this._dateValue(); }
+
+  // Plain inputs (not used in computed() — no signal wrapper needed)
   @Input() isSorted: boolean = false;
   @Input() isSortedDescending: boolean = false;
   @Input() onSort: (() => void) | undefined = undefined;
-  @Input() selectedValues: string[] | undefined = undefined;
   @Input() onFilterChange: ((values: string[]) => void) | undefined = undefined;
-  @Input() options: string[] | undefined = undefined;
   @Input() isLoadingOptions: boolean = false;
-  @Input() textValue: string = '';
   @Input() onTextChange: ((value: string) => void) | undefined = undefined;
-  @Input() selectedUser: UserLike | undefined = undefined;
   @Input() onUserChange: ((user: UserLike | undefined) => void) | undefined = undefined;
   @Input() peopleSearch: ((query: string) => Promise<UserLike[]>) | undefined = undefined;
-  @Input() dateValue: IDateFilterValue | undefined = undefined;
   @Input() onDateChange: ((value: IDateFilterValue | undefined) => void) | undefined = undefined;
 
   // Abstract accessor for subclass-provided element ref
@@ -70,16 +98,16 @@ export abstract class BaseColumnHeaderFilterComponent {
 
   // Computed signals
   readonly hasActiveFilter = computed(() => {
-    const ft = this.filterType;
-    if (ft === 'text') return !!this.textValue;
-    if (ft === 'multiSelect') return (this.selectedValues?.length ?? 0) > 0;
-    if (ft === 'people') return this.selectedUser != null;
-    if (ft === 'date') return this.dateValue != null;
+    const ft = this._filterType();
+    if (ft === 'text') return !!this._textValue();
+    if (ft === 'multiSelect') return (this._selectedValues()?.length ?? 0) > 0;
+    if (ft === 'people') return this._selectedUser() != null;
+    if (ft === 'date') return this._dateValue() != null;
     return false;
   });
 
   readonly filteredOptions = computed(() => {
-    const opts = this.options ?? [];
+    const opts = this._options() ?? [];
     const search = this.searchText().toLowerCase().trim();
     if (!search) return opts;
     return opts.filter((o) => o.toLowerCase().includes(search));

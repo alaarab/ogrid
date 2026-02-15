@@ -506,10 +506,18 @@ export class OGridService<T> {
 
   handleSort(columnKey: string): void {
     const sort = this.sort();
-    this.setSort({
-      field: columnKey,
-      direction: sort.field === columnKey && sort.direction === 'asc' ? 'desc' : 'asc',
-    });
+    if (sort.field === columnKey) {
+      // Cycle: asc → desc → clear
+      if (sort.direction === 'asc') {
+        this.setSort({ field: columnKey, direction: 'desc' });
+      } else {
+        // Clear sort (empty field means no column is sorted)
+        this.setSort({ field: '', direction: 'asc' });
+      }
+    } else {
+      // Start new sort
+      this.setSort({ field: columnKey, direction: 'asc' });
+    }
   }
 
   handleFilterChange(key: string, value: FilterValue | undefined): void {

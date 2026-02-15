@@ -71,6 +71,7 @@ export class MarchingAntsOverlay {
   private copyRange: ISelectionRange | null = null;
   private cutRange: ISelectionRange | null = null;
   private rafHandle = 0;
+  private layoutVersion = 0; // Tracks layout changes to force re-measurement
 
   constructor(container: HTMLElement, colOffset = 0) {
     this.container = container;
@@ -87,10 +88,18 @@ export class MarchingAntsOverlay {
   update(
     selectionRange: ISelectionRange | null,
     copyRange: ISelectionRange | null,
-    cutRange: ISelectionRange | null
+    cutRange: ISelectionRange | null,
+    layoutVersion?: number
   ): void {
-    // Skip if nothing changed
+    // Track layout changes separately from range changes
+    const layoutChanged = layoutVersion !== undefined && layoutVersion !== this.layoutVersion;
+    if (layoutChanged && layoutVersion !== undefined) {
+      this.layoutVersion = layoutVersion;
+    }
+
+    // Skip if nothing changed (ranges or layout)
     if (
+      !layoutChanged &&
       rangesEqual(this.selectionRange, selectionRange) &&
       rangesEqual(this.copyRange, copyRange) &&
       rangesEqual(this.cutRange, cutRange)

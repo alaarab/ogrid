@@ -1,18 +1,14 @@
 .content {
   min-width: 140px;
   background: white;
+  border: 1px solid #e0e0e0;
   border-radius: 6px;
   padding: 4px;
   box-shadow: 0px 10px 38px -10px rgba(22, 23, 24, 0.35), 0px 10px 20px -15px rgba(22, 23, 24, 0.2);
-  z-index: 100;
+  z-index: 1000;
   animation-duration: 400ms;
   animation-timing-function: cubic-bezier(0.16, 1, 0.3, 1);
   will-change: transform, opacity;
-
-  @media (prefers-color-scheme: dark) {
-    background: #1a1a1a;
-    box-shadow: 0px 10px 38px -10px rgba(0, 0, 0, 0.5), 0px 10px 20px -15px rgba(0, 0, 0, 0.4);
-  }
 }
 
 .item {
@@ -20,6 +16,8 @@
   line-height: 1;
   color: #111;
   border-radius: 4px;
+  border: none;
+  background: transparent;
   display: flex;
   align-items: center;
   height: 28px;
@@ -28,29 +26,18 @@
   user-select: none;
   outline: none;
   cursor: pointer;
+  width: 100%;
+  text-align: left;
 
-  &[data-disabled] {
+  &:disabled {
     color: #999;
     pointer-events: none;
     cursor: not-allowed;
   }
 
-  &[data-highlighted]:not([data-disabled]) {
+  &:hover:not(:disabled) {
     background-color: #f5f5f5;
     color: #111;
-  }
-
-  @media (prefers-color-scheme: dark) {
-    color: #e0e0e0;
-
-    &[data-disabled] {
-      color: #555;
-    }
-
-    &[data-highlighted]:not([data-disabled]) {
-      background-color: #2a2a2a;
-      color: #fff;
-    }
   }
 }
 
@@ -58,8 +45,4 @@
   height: 1px;
   background-color: #e0e0e0;
   margin: 4px 0;
-
-  @media (prefers-color-scheme: dark) {
-    background-color: #333;
-  }
 }

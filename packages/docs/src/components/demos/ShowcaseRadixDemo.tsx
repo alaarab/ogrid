@@ -93,7 +93,7 @@ function RadixGrid() {
 
 export default function ShowcaseRadixDemo() {
   return (
-    <LiveDemo height={480} title="Radix UI — lightweight, accessible primitives"}>
+    <LiveDemo height={480} title="Radix UI - lightweight, accessible primitives">
       <BrowserOnly>{() => <RadixGrid />}</BrowserOnly>
     </LiveDemo>
   );

@@ -185,6 +185,13 @@
 
   .searchInput {
     width: 100%;
+
+    // Override Fluent UI Input's thick blue border
+    :global {
+      .fui-Input__input {
+        border-width: 1px !important;
+      }
+    }
   }
 }
 

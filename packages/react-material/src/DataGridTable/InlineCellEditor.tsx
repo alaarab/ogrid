@@ -21,7 +21,7 @@ export function InlineCellEditor<T>(props: InlineCellEditorProps<T>): React.Reac
         <Checkbox
           checked={checked}
           onChange={(_, c) => onCommit(c)}
-          onKeyDown={(e) => e.key === 'Escape' && (e.preventDefault(), onCancel())}
+          onKeyDown={(e: React.KeyboardEvent) => e.key === 'Escape' && (e.preventDefault(), onCancel())}
           size="small"
         />
       )}
@@ -31,7 +31,7 @@ export function InlineCellEditor<T>(props: InlineCellEditorProps<T>): React.Reac
             size="small"
             value={value !== null && value !== undefined ? String(value) : ''}
             onChange={(e) => onCommit(e.target.value)}
-            onKeyDown={(e) => e.key === 'Escape' && (e.preventDefault(), onCancel())}
+            onKeyDown={(e: React.KeyboardEvent) => e.key === 'Escape' && (e.preventDefault(), onCancel())}
             autoFocus
             sx={{ minWidth: 0, flex: 1 }}
           >

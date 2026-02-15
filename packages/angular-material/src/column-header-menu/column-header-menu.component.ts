@@ -1,7 +1,5 @@
-import { Component, ViewChild, computed, ChangeDetectionStrategy, Input } from '@angular/core';
+import { Component, ChangeDetectionStrategy, ViewChild, computed, Input } from '@angular/core';
 import { MatMenuModule, MatMenuTrigger } from '@angular/material/menu';
-import { MatButtonModule } from '@angular/material/button';
-import { MatIconModule } from '@angular/material/icon';
 import { MatDividerModule } from '@angular/material/divider';
 import { getColumnHeaderMenuItems, type IColumnHeaderMenuItem, type ColumnHeaderMenuHandlers } from '@alaarab/ogrid-core';
 
@@ -12,23 +10,19 @@ import { getColumnHeaderMenuItems, type IColumnHeaderMenuItem, type ColumnHeader
 @Component({
   selector: 'column-header-menu',
   standalone: true,
-  imports: [MatMenuModule, MatButtonModule, MatIconModule, MatDividerModule],
   changeDetection: ChangeDetectionStrategy.OnPush,
+  imports: [MatMenuModule, MatDividerModule],
   template: `
     <button
-      mat-icon-button
       [matMenuTriggerFor]="menu"
       class="column-header-menu-trigger"
       [attr.aria-label]="'Column options for ' + columnId"
     >
-      <mat-icon>more_vert</mat-icon>
+      &#8942;
     </button>
 
     <mat-menu #menu="matMenu">
       @for (item of menuItems(); track item.id) {
-        @if (item.divider) {
-          <mat-divider></mat-divider>
-        }
         <button
           mat-menu-item
           [disabled]="item.disabled"
@@ -36,22 +30,33 @@ import { getColumnHeaderMenuItems, type IColumnHeaderMenuItem, type ColumnHeader
         >
           {{ item.label }}
         </button>
+        @if (item.divider) {
+          <mat-divider></mat-divider>
+        }
       }
     </mat-menu>
   `,
   styles: [`
+    :host { flex-shrink: 0; }
     .column-header-menu-trigger {
-      opacity: 0;
-      transition: opacity 0.15s;
       width: 24px;
       height: 24px;
-      line-height: 24px;
       padding: 0;
+      border: none;
+      border-radius: 4px;
+      background: transparent;
+      cursor: pointer;
+      font-size: 16px;
+      line-height: 1;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      color: rgba(0,0,0,0.54);
     }
 
-    :host:hover .column-header-menu-trigger,
-    .column-header-menu-trigger:focus {
-      opacity: 1;
+    .column-header-menu-trigger:hover {
+      background: rgba(0,0,0,0.08);
+      color: rgba(0,0,0,0.87);
     }
   `],
 })

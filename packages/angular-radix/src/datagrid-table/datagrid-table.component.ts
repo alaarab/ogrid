@@ -1,4 +1,4 @@
-import { Component, ElementRef, ViewChild, ChangeDetectionStrategy, Input } from '@angular/core';
+import { Component, ElementRef, ChangeDetectionStrategy, Input, ViewChild, signal } from '@angular/core';
 import {
   BaseDataGridTableComponent,
   DataGridStateService,
@@ -22,9 +22,9 @@ import { PopoverCellEditorComponent } from './popover-cell-editor.component';
 @Component({
   selector: 'ogrid-datagrid-table',
   standalone: true,
+  changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [ColumnHeaderFilterComponent, ColumnHeaderMenuComponent, StatusBarComponent, GridContextMenuComponent, MarchingAntsOverlayComponent, EmptyStateComponent, InlineCellEditorComponent, PopoverCellEditorComponent],
   providers: [DataGridStateService],
-  changeDetection: ChangeDetectionStrategy.OnPush,
   styleUrl: './datagrid-table.component.scss',
   template: `
     <div class="ogrid-datagrid-root">
@@ -99,6 +99,8 @@ import { PopoverCellEditorComponent } from './popover-cell-editor.component';
                             [style.minWidth.px]="col.minWidth ?? 80"
                             [style.width.px]="colW"
                             [style.maxWidth.px]="colW"
+                            [style.left.px]="pinnedLeft ? getPinnedLeftOffset(col.columnId) : null"
+                            [style.right.px]="pinnedRight ? getPinnedRightOffset(col.columnId) : null"
                             [class.ogrid-datagrid-th--reorderable]="!columnReorderService.isDragging()"
                             [class.ogrid-datagrid-th--dragging]="columnReorderService.isDragging()"
                             (mousedown)="onHeaderMouseDown(col.columnId, $event)"
@@ -188,6 +190,8 @@ import { PopoverCellEditorComponent } from './popover-cell-editor.component';
                             [style.minWidth.px]="colLayout.minWidth"
                             [style.width.px]="colLayout.width"
                             [style.maxWidth.px]="colLayout.width"
+                            [style.left.px]="colLayout.pinnedLeft ? getPinnedLeftOffset(colLayout.col.columnId) : null"
+                            [style.right.px]="colLayout.pinnedRight ? getPinnedRightOffset(colLayout.col.columnId) : null"
                           >
                             @let descriptor = getCellDescriptor(item, colLayout.col, rowIndex, colIdx);
                             @if (descriptor.mode === 'editing-inline') {
@@ -255,12 +259,15 @@ import { PopoverCellEditorComponent } from './popover-cell-editor.component';
               </table>
 
               <ogrid-marching-ants-overlay
-                [containerEl]="tableContainerEl()"
+                [containerEl]="tableContainerEl"
                 [selectionRange]="state().interaction.selectionRange"
                 [copyRange]="state().interaction.copyRange"
                 [cutRange]="state().interaction.cutRange"
                 [colOffset]="state().layout.colOffset"
                 [columnSizingVersion]="columnSizingVersion()"
+                [items]="items()"
+                [visibleColumns]="propsVisibleColumns()"
+                [columnOrder]="propsColumnOrder()"
               ></ogrid-marching-ants-overlay>
 
               @if (showEmptyInGrid() && emptyState()) {
@@ -293,12 +300,12 @@ import { PopoverCellEditorComponent } from './popover-cell-editor.component';
             (click)="closeContextMenu()"
             (contextmenu)="$event.preventDefault(); closeContextMenu()"
           >
-            <ogrid-grid-context-menu
+            <ogrid-context-menu
               [x]="menuPosition()!.x"
               [y]="menuPosition()!.y"
               [hasSelection]="hasCellSelection()"
-              [canUndo]="canUndo()"
-              [canRedo]="canRedo()"
+              [canUndoProp]="canUndo()"
+              [canRedoProp]="canRedo()"
               (undoAction)="onUndo()"
               (redoAction)="onRedo()"
               (copyAction)="handleCopy()"
@@ -334,7 +341,12 @@ import { PopoverCellEditorComponent } from './popover-cell-editor.component';
   `,
 })
 export class DataGridTableComponent<T> extends BaseDataGridTableComponent<T> {
-  @Input({ required: true, alias: 'props' }) propsInput!: IOGridDataGridProps<T>;
+  private readonly propsSignal = signal<IOGridDataGridProps<T> | undefined>(undefined);
+
+  @Input({ required: true, alias: 'props' })
+  set propsInput(value: IOGridDataGridProps<T>) {
+    this.propsSignal.set(value);
+  }
 
   @ViewChild('wrapperEl') private wrapperRef?: ElementRef<HTMLElement>;
   @ViewChild('tableContainerEl') private tableContainerRef?: ElementRef<HTMLElement>;
@@ -345,7 +357,7 @@ export class DataGridTableComponent<T> extends BaseDataGridTableComponent<T> {
   }
 
   protected getProps(): IOGridDataGridProps<T> | undefined {
-    return this.propsInput;
+    return this.propsSignal();
   }
 
   protected getWrapperRef(): ElementRef<HTMLElement> | undefined {

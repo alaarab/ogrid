@@ -98,8 +98,10 @@
     .fui-DataGridHeaderCell {
       min-width: var(--data-table-cell-min-width, 80px);
       white-space: nowrap !important;
-      position: relative;
+      position: sticky; /* Changed from relative - enables vertical sticky for all headers */
+      top: 0; /* Sticky vertically */
       background-color: var(--colorSubtleBackgroundSelected, #f3f2f1);
+      z-index: 8; /* Stack above body cells */
       font-size: 14px;
       border-right: 1px solid var(--colorNeutralStroke1, #c4c4c4);
     }
@@ -400,8 +402,8 @@
 
 /* Freeze panes: sticky header when freezeRows >= 1 */
 .stickyHeader {
-  position: sticky;
-  top: 0;
+  /* Removed position: sticky; top: 0; - breaks horizontal sticky on pinned columns.
+     Instead, apply sticky to individual header cells (.fui-DataGridHeaderCell). */
   z-index: 8;
   background-color: var(--colorSubtleBackgroundSelected, #f3f2f1);
 }
@@ -426,7 +428,7 @@
 .stickyHeader .pinnedLeft,
 .stickyHeader .pinnedRight {
   top: 0;
-  z-index: 9;
+  z-index: 10; /* Increased from 9 to stack above base header cells (z-index: 8) */
 }
 
 .activeRow :global {
@@ -720,8 +722,8 @@
   font-size: 16px;
   line-height: 1;
   color: var(--colorNeutralForeground3, #666);
-  opacity: 0;
-  transition: opacity 0.15s, background-color 0.15s;
+  opacity: 1; // Always visible
+  transition: background-color 0.15s;
   border-radius: 3px;
   display: flex;
   align-items: center;
@@ -731,16 +733,11 @@
 
   &:hover {
     background: var(--colorNeutralBackground1Hover, #f3f2f1);
-    opacity: 1;
   }
 
   &:active {
     background: var(--colorNeutralBackground1Pressed, #e1dfdd);
   }
-}
-
-.tableWrapper :global(.fui-DataGridHeaderCell:hover) .headerMenuTrigger {
-  opacity: 1;
 }
 
 // ─────────────────────────────────────────────────

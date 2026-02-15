@@ -1,4 +1,5 @@
 import { OGrid } from '@alaarab/ogrid-js';
+import '@alaarab/ogrid-js/styles';
 import { makeDemoProjects, makeDemoColumns, getRowId } from '../shared/demoData';
 import type { Project } from '../shared/demoData';
 

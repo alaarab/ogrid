@@ -77,7 +77,7 @@ import { PopoverCellEditorComponent } from './popover-cell-editor.component';
               <table
                 style="width:var(--data-table-width, 100%);min-width:var(--data-table-min-width, 100%);border-collapse:collapse;table-layout:fixed"
               >
-                <thead style="position:sticky;top:0;z-index:3;background:var(--ogrid-header-bg, #f5f5f5)">
+                <thead style="z-index:3;background:var(--ogrid-header-bg, #f5f5f5)">
                   @for (row of headerRows(); track $index; let rowIdx = $index) {
                     <tr>
                       @if (rowIdx === headerRows().length - 1 && hasCheckboxCol()) {
@@ -128,10 +128,12 @@ import { PopoverCellEditorComponent } from './popover-cell-editor.component';
                             [attr.rowSpan]="headerRows().length > 1 && rowIdx < headerRows().length - 1 ? headerRows().length - rowIdx : null"
                             [class.ogrid-th-pinned-left]="pinned === 'left'"
                             [class.ogrid-th-pinned-right]="pinned === 'right'"
-                            style="padding:6px 8px;text-align:left;font-weight:600;border-bottom:1px solid var(--ogrid-border, #e0e0e0);position:relative"
+                            style="padding:6px 8px;text-align:left;font-weight:600;border-bottom:1px solid var(--ogrid-border, #e0e0e0);position:sticky;top:0;background:var(--ogrid-header-bg, #f5f5f5);z-index:3"
                             [style.min-width.px]="col.minWidth ?? defaultMinWidth"
                             [style.width.px]="getColumnWidth(col)"
                             [style.max-width.px]="getColumnWidth(col)"
+                            [style.left.px]="pinned === 'left' ? getPinnedLeftOffset(col.columnId) : null"
+                            [style.right.px]="pinned === 'right' ? getPinnedRightOffset(col.columnId) : null"
                             [style.cursor]="columnReorderService.isDragging() ? 'grabbing' : 'grab'"
                             (mousedown)="onHeaderMouseDown(col.columnId, $event)"
                           >
@@ -165,17 +167,7 @@ import { PopoverCellEditorComponent } from './popover-cell-editor.component';
                                 [currentSort]="colSortState"
                                 [isSortable]="col.sortable !== false"
                                 [isResizable]="col.resizable !== false"
-                                [handlers]="{
-                                  onPinLeft: () => onPinColumn(col.columnId, 'left'),
-                                  onPinRight: () => onPinColumn(col.columnId, 'right'),
-                                  onUnpin: () => onUnpinColumn(col.columnId),
-                                  onSortAsc: () => onSortAsc(col.columnId),
-                                  onSortDesc: () => onSortDesc(col.columnId),
-                                  onClearSort: () => onClearSort(),
-                                  onAutosizeThis: () => onAutosizeColumn(col.columnId),
-                                  onAutosizeAll: () => onAutosizeAllColumns(),
-                                  onClose: () => {}
-                                }"
+                                [handlers]="getColumnHeaderMenuHandlers(col.columnId)"
                               />
                             </div>
                             <div
@@ -235,6 +227,8 @@ import { PopoverCellEditorComponent } from './popover-cell-editor.component';
                             [style.min-width.px]="col.minWidth ?? defaultMinWidth"
                             [style.width.px]="getColumnWidth(col)"
                             [style.max-width.px]="getColumnWidth(col)"
+                            [style.left.px]="pinned === 'left' ? getPinnedLeftOffset(col.columnId) : null"
+                            [style.right.px]="pinned === 'right' ? getPinnedRightOffset(col.columnId) : null"
                             [style.text-align]="col.type === 'numeric' ? 'right' : col.type === 'boolean' ? 'center' : null"
                           >
                             @if (isEditingCellInline(item, col)) {
@@ -256,7 +250,7 @@ import { PopoverCellEditorComponent } from './popover-cell-editor.component';
                                 [globalColIndex]="colIdx + colOffset()"
                                 [displayValue]="getCellValueFn(item, col)"
                                 [editorProps]="editorProps"
-                                [onCancel]="() => cancelEdit()"
+                                [onCancel]="cancelEditHandler"
                               ></ogrid-primeng-popover-cell-editor>
                             } @else {
                               <div
@@ -299,6 +293,9 @@ import { PopoverCellEditorComponent } from './popover-cell-editor.component';
                 [cutRange]="state().interaction.cutRange"
                 [colOffset]="state().layout.colOffset"
                 [columnSizingVersion]="columnSizingVersion()"
+                [items]="items()"
+                [visibleColumns]="propsVisibleColumns()"
+                [columnOrder]="propsColumnOrder()"
               ></ogrid-marching-ants-overlay>
 
               @if (showEmptyInGrid() && emptyState()) {
@@ -381,6 +378,7 @@ import { PopoverCellEditorComponent } from './popover-cell-editor.component';
     }
     .ogrid-th-pinned-left {
       position: sticky;
+      top: 0;
       left: 0;
       z-index: 10;
       background: var(--ogrid-header-bg, #f5f5f5);
@@ -388,6 +386,7 @@ import { PopoverCellEditorComponent } from './popover-cell-editor.component';
     }
     .ogrid-th-pinned-right {
       position: sticky;
+      top: 0;
       right: 0;
       z-index: 10;
       background: var(--ogrid-header-bg, #f5f5f5);
@@ -469,9 +468,13 @@ export class DataGridTableComponent<T = unknown> extends BaseDataGridTableCompon
 
   // PrimeNG uses flat number overrides for column sizing
   private readonly primengColumnSizingOverrides = signal<Record<string, number>>({});
+  private readonly propsSignal = signal<IOGridDataGridProps<T> | undefined>(undefined);
   private resizeStartX = 0;
   private resizeColumnId = '';
   private resizeStartWidth = 0;
+
+  // Bound method reference for template
+  readonly cancelEditHandler = () => this.cancelEdit();
 
   constructor() {
     super();
@@ -486,12 +489,14 @@ export class DataGridTableComponent<T = unknown> extends BaseDataGridTableCompon
         this.primengColumnSizingOverrides.set({ ...iw });
       }
     }
+    // Rebuild props signal whenever any input changes so computed chains track it
+    this.propsSignal.set(this.buildProps());
   }
 
   // --- Abstract method implementations ---
 
   protected getProps(): IOGridDataGridProps<T> | undefined {
-    return this.buildProps();
+    return this.propsSignal();
   }
 
   protected getWrapperRef(): ElementRef<HTMLElement> | undefined {
@@ -642,6 +647,20 @@ export class DataGridTableComponent<T = unknown> extends BaseDataGridTableCompon
     const rowId = this.getRowIdInput(item);
     const ids = this.selectedRowIds();
     this.state().rowSelection.updateSelection(ids.has(rowId) ? new Set() : new Set([rowId]));
+  }
+
+  getColumnHeaderMenuHandlers(columnId: string) {
+    return {
+      onPinLeft: () => this.onPinColumn(columnId, 'left'),
+      onPinRight: () => this.onPinColumn(columnId, 'right'),
+      onUnpin: () => this.onUnpinColumn(columnId),
+      onSortAsc: () => this.onSortAsc(columnId),
+      onSortDesc: () => this.onSortDesc(columnId),
+      onClearSort: () => this.onClearSort(),
+      onAutosizeThis: () => this.onAutosizeColumn(columnId),
+      onAutosizeAll: () => this.onAutosizeAllColumns(),
+      onClose: () => {}
+    };
   }
 
   onRowCheckboxChangePrimeng(item: T, checked: boolean, rowIndex: number, _e: Event): void {

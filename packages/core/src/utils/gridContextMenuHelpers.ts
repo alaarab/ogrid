@@ -80,7 +80,7 @@ export interface IColumnHeaderMenuItem {
   label: string;
   icon?: string;
   disabled?: boolean;
-  divider?: boolean; // Render a divider after this item
+  divider?: boolean; // When true, render a visual divider/separator after this item
 }
 
 /** Column header menu items for pin/unpin actions. */
