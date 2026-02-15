@@ -357,6 +357,14 @@
   z-index: 2;
   position: relative;
   overflow: visible;
+  /* Theme-aware: no forced white so dark mode can show dark background */
+  background-color: var(--ogrid-bg-active-cell, transparent) !important;
+}
+
+@media (prefers-color-scheme: dark) {
+  .activeCellContent {
+    background-color: var(--ogrid-bg-active-cell, rgba(255, 255, 255, 0.06)) !important;
+  }
 }
 
 // Cell range selection (spreadsheet-style multi-cell highlight) — clearly visible like Excel
