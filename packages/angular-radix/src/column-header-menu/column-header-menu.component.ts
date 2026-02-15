@@ -1,4 +1,4 @@
-import { Component, signal, computed, ChangeDetectionStrategy, Input } from '@angular/core';
+import { Component, ChangeDetectionStrategy, signal, computed, Input } from '@angular/core';
 import { getColumnHeaderMenuItems, type ColumnHeaderMenuHandlers } from '@alaarab/ogrid-angular';
 
 /**
@@ -22,9 +22,6 @@ import { getColumnHeaderMenuItems, type ColumnHeaderMenuHandlers } from '@alaara
       @if (isOpen()) {
         <div class="ogrid-header-menu__dropdown">
           @for (item of menuItems(); track item.id) {
-            @if (item.divider) {
-              <div class="ogrid-header-menu__divider"></div>
-            }
             <button
               class="ogrid-header-menu__item"
               [disabled]="item.disabled"
@@ -32,6 +29,9 @@ import { getColumnHeaderMenuItems, type ColumnHeaderMenuHandlers } from '@alaara
             >
               {{ item.label }}
             </button>
+            @if (item.divider) {
+              <div class="ogrid-header-menu__divider"></div>
+            }
           }
         </div>
       }

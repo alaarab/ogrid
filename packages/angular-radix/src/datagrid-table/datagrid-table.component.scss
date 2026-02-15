@@ -35,12 +35,9 @@
     .ogrid-datagrid-table {
       width: 100%;
       border-collapse: collapse;
-      overflow: hidden;
       table-layout: fixed;
     }
     .ogrid-datagrid-thead {
-      position: sticky;
-      top: 0;
       z-index: 8;
       background: var(--ogrid-header-bg, #f5f5f5);
     }
@@ -52,24 +49,29 @@
     }
     .ogrid-datagrid-th {
       font-weight: 600;
-      position: relative;
+      position: sticky;
+      top: 0;
       padding: 6px 10px;
       text-align: left;
       font-size: 14px;
       border-bottom: 1px solid var(--ogrid-border, #e0e0e0);
       color: var(--ogrid-fg, #242424);
+      background: var(--ogrid-header-bg, #f5f5f5);
+      z-index: 8;
     }
     .ogrid-datagrid-th--pinned-left {
       position: sticky;
+      top: 0;
       left: 0;
-      z-index: 9;
+      z-index: 10;
       background: var(--ogrid-header-bg, #f5f5f5);
       will-change: transform;
     }
     .ogrid-datagrid-th--pinned-right {
       position: sticky;
+      top: 0;
       right: 0;
-      z-index: 9;
+      z-index: 10;
       background: var(--ogrid-header-bg, #f5f5f5);
       will-change: transform;
     }

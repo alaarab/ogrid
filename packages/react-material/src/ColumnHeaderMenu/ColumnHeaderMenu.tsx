@@ -1,6 +1,5 @@
-import React, { useMemo } from 'react';
-import { Menu, MenuItem, Divider, IconButton } from '@mui/material';
-import MoreVertIcon from '@mui/icons-material/MoreVert';
+import React, { useMemo, useEffect, useState } from 'react';
+import { Menu, MenuItem, Divider } from '@mui/material';
 import { getColumnHeaderMenuItems } from '@alaarab/ogrid-core';
 import type { ColumnHeaderMenuInput } from '@alaarab/ogrid-core';
 
@@ -27,13 +26,12 @@ export interface ColumnHeaderMenuProps {
 
 /**
  * Column header dropdown menu for pin/sort/autosize actions.
- * Uses Material UI Menu component.
+ * Uses Material UI Menu component with anchor position.
  */
 export function ColumnHeaderMenu(props: ColumnHeaderMenuProps) {
   const {
-    columnId,
-    isOpen: _isOpen,
-    anchorElement: _anchorElement,
+    isOpen,
+    anchorElement,
     onClose,
     onPinLeft,
     onPinRight,
@@ -51,12 +49,19 @@ export function ColumnHeaderMenu(props: ColumnHeaderMenuProps) {
     isResizable,
   } = props;
 
-  const [triggerEl, setTriggerEl] = React.useState<HTMLButtonElement | null>(null);
+  const [anchorPosition, setAnchorPosition] = useState<{ top: number; left: number } | undefined>(undefined);
 
-  const handleTriggerClick = (event: React.MouseEvent<HTMLButtonElement>) => {
-    event.stopPropagation();
-    setTriggerEl(event.currentTarget);
-  };
+  useEffect(() => {
+    if (isOpen && anchorElement) {
+      const rect = anchorElement.getBoundingClientRect();
+      setAnchorPosition({
+        top: rect.bottom + 4,
+        left: rect.left,
+      });
+    } else {
+      setAnchorPosition(undefined);
+    }
+  }, [isOpen, anchorElement]);
 
   const menuInput: ColumnHeaderMenuInput = useMemo(
     () => ({
@@ -84,57 +89,33 @@ export function ColumnHeaderMenu(props: ColumnHeaderMenuProps) {
   };
 
   return (
-    <>
-      <IconButton
-        size="small"
-        onClick={handleTriggerClick}
-        aria-label={`Column options for ${columnId}`}
-        sx={{
-          opacity: 0,
-          transition: 'opacity 0.15s',
-          padding: '4px',
-          '.MuiTableCell-root:hover &': {
-            opacity: 1,
+    <Menu
+      open={isOpen && !!anchorPosition}
+      onClose={onClose}
+      anchorReference="anchorPosition"
+      anchorPosition={anchorPosition}
+      slotProps={{
+        paper: {
+          sx: {
+            minWidth: 140,
           },
-          '&:focus': {
-            opacity: 1,
-          },
-        }}
-      >
-        <MoreVertIcon fontSize="small" />
-      </IconButton>
-
-      <Menu
-        anchorEl={triggerEl}
-        open={Boolean(triggerEl)}
-        onClose={() => {
-          setTriggerEl(null);
-          onClose();
-        }}
-        anchorOrigin={{
-          vertical: 'bottom',
-          horizontal: 'left',
-        }}
-        transformOrigin={{
-          vertical: 'top',
-          horizontal: 'left',
-        }}
-      >
-        {items.map((item, idx) => (
-          <React.Fragment key={item.id}>
-            <MenuItem
-              disabled={item.disabled}
-              onClick={() => {
-                handlers[item.id]();
-                setTriggerEl(null);
-              }}
-            >
-              {item.label}
-            </MenuItem>
-            {item.divider && idx < items.length - 1 && <Divider />}
-          </React.Fragment>
-        ))}
-      </Menu>
-    </>
+        },
+      }}
+    >
+      {items.map((item, idx) => (
+        <React.Fragment key={item.id}>
+          <MenuItem
+            disabled={item.disabled}
+            onClick={() => {
+              handlers[item.id]();
+              onClose();
+            }}
+          >
+            {item.label}
+          </MenuItem>
+          {item.divider && idx < items.length - 1 && <Divider />}
+        </React.Fragment>
+      ))}
+    </Menu>
   );
 }

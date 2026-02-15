@@ -82,6 +82,24 @@ const allowOverflowX = computed(() => {
     && (l.minTableWidth > l.containerWidth || l.desiredTableWidth > l.containerWidth);
 });
 
+// Compute pinning offsets
+const pinningOffsets = computed(() => {
+  const visibleCols = layout.value.visibleCols;
+  const columnWidthsMap: Record<string, number> = {};
+  visibleCols.forEach((col) => {
+    columnWidthsMap[col.columnId] = getColumnWidth(col);
+  });
+  const leftOffsets = pinning.value.computeLeftOffsets(
+    visibleCols,
+    columnWidthsMap,
+    DEFAULT_MIN_COLUMN_WIDTH,
+    layout.value.hasCheckboxCol,
+    CHECKBOX_COLUMN_WIDTH
+  );
+  const rightOffsets = pinning.value.computeRightOffsets(visibleCols, columnWidthsMap, DEFAULT_MIN_COLUMN_WIDTH);
+  return { leftOffsets, rightOffsets };
+});
+
 const handleSingleRowClick = (e: MouseEvent, rowId: string | number) => {
   if (props.gridProps.rowSelection !== 'single') return;
   const sel = rowSel.value.selectedRowIds;
@@ -165,14 +183,16 @@ const getCellStyle = (item: any, col: IColumnDef<any>, rowIndex: number, colInde
   const isPinnedRight = col.pinned === 'right';
 
   if (isPinnedLeft || (isFreezeCol && visibleColIndex === 0)) {
+    const offsets = pinningOffsets.value;
     style.position = 'sticky';
-    style.left = '0';
+    style.left = `${offsets.leftOffsets[col.columnId] ?? 0}px`;
     style.zIndex = '6';
     style.backgroundColor = 'var(--ogrid-bg, #fff)';
     style.willChange = 'transform';
   } else if (isPinnedRight) {
+    const offsets = pinningOffsets.value;
     style.position = 'sticky';
-    style.right = '0';
+    style.right = `${offsets.rightOffsets[col.columnId] ?? 0}px`;
     style.zIndex = '6';
     style.backgroundColor = 'var(--ogrid-bg, #fff)';
     style.willChange = 'transform';
@@ -205,15 +225,19 @@ const getHeaderCellStyle = (col: IColumnDef<any>, colIndex: number) => {
   };
 
   if (isPinnedLeft || (isFreezeCol && colIndex === 0)) {
+    const offsets = pinningOffsets.value;
     style.position = 'sticky';
-    style.left = '0';
-    style.zIndex = '9';
+    style.top = '0';
+    style.left = `${offsets.leftOffsets[col.columnId] ?? 0}px`;
+    style.zIndex = '10';
     style.backgroundColor = 'var(--ogrid-header-bg, #f5f5f5)';
     style.willChange = 'transform';
   } else if (isPinnedRight) {
+    const offsets = pinningOffsets.value;
     style.position = 'sticky';
-    style.right = '0';
-    style.zIndex = '9';
+    style.top = '0';
+    style.right = `${offsets.rightOffsets[col.columnId] ?? 0}px`;
+    style.zIndex = '10';
     style.backgroundColor = 'var(--ogrid-header-bg, #f5f5f5)';
     style.willChange = 'transform';
   }
@@ -516,6 +540,10 @@ const setWrapperRef = (el: any) => {
           :copyRange="interaction.copyRange"
           :cutRange="interaction.cutRange"
           :colOffset="layout.colOffset"
+          :items="gridProps.items"
+          :visibleColumns="gridProps.visibleColumns"
+          :columnSizingOverrides="layout.columnSizingOverrides"
+          :columnOrder="gridProps.columnOrder"
         />
       </div>
     </div>
@@ -619,22 +647,21 @@ const setWrapperRef = (el: any) => {
   border-collapse: collapse;
   font-size: 14px;
   background: var(--ogrid-bg, #fff);
-  overflow: hidden;
 }
 
 .ogrid-header-row {
-  position: sticky;
-  top: 0;
   z-index: 8;
   background: var(--ogrid-header-bg, #f5f5f5);
 }
 
 .ogrid-header-cell {
-  position: relative;
+  position: sticky;
+  top: 0;
   background: var(--ogrid-header-bg, #f5f5f5);
   border-bottom: 1px solid var(--ogrid-border, #e0e0e0);
   border-right: 1px solid var(--ogrid-border, #e0e0e0);
   padding: 8px 12px;
+  z-index: 8;
   text-align: left;
   font-weight: 600;
   user-select: none;

@@ -91,7 +91,7 @@ function VanillaJSGrid() {
 
 export default function VanillaJSDemo() {
   return (
-    <LiveDemo height={420} title="Vanilla JS — zero dependencies"}>
+    <LiveDemo height={420} title="Vanilla JS - zero dependencies">
       <BrowserOnly>{() => <VanillaJSGrid />}</BrowserOnly>
     </LiveDemo>
   );

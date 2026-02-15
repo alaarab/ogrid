@@ -75,6 +75,7 @@ export class OGrid<T> {
   private paginationContainer: HTMLElement;
   private statusBarContainer: HTMLElement;
   private options: OGridOptions<T>;
+  private layoutVersion = 0; // Incremented when items, columns, sizing, or order change
 
   /** The imperative grid API (extends React's IOGridApi with JS-specific methods). */
   readonly api: IJsOGridApi<T>;
@@ -529,7 +530,8 @@ export class OGrid<T> {
     this.marchingAnts?.update(
       this.selectionState.selectionRange,
       this.clipboardState.copyRange,
-      this.clipboardState.cutRange
+      this.clipboardState.cutRange,
+      this.layoutVersion
     );
   }
 
@@ -826,6 +828,9 @@ export class OGrid<T> {
   }
 
   private renderAll(): void {
+    // Increment layout version to trigger marching ants re-measurement
+    this.layoutVersion++;
+
     const colOffset = this.rowSelectionState ? 1 : 0;
 
     // Update header filter state with current filters and options

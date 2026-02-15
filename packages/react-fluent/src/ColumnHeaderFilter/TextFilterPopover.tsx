@@ -32,7 +32,7 @@ export const TextFilterPopover: React.FC<TextFilterPopoverProps> = ({
         placeholder="Enter search term..."
         value={value}
         onChange={(e, data) => onValueChange(data.value ?? '')}
-        onKeyDown={(e) => {
+        onKeyDown={(e: React.KeyboardEvent) => {
           onInputKeyDown(e);
           if (e.key === 'Enter') {
             e.preventDefault();

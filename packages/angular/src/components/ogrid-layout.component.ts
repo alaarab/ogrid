@@ -29,7 +29,7 @@ import { GRID_BORDER_RADIUS } from '@alaarab/ogrid-core';
       padding: 6px 12px; background: var(--ogrid-header-bg, #f5f5f5);
     }
     .ogrid-layout-grid-area { width: 100%; min-width: 0; min-height: 0; flex: 1; display: flex; }
-    .ogrid-layout-grid-content { flex: 1; min-width: 0; min-height: 0; display: flex; flex-direction: column; }
+    .ogrid-layout-grid-content { flex: 1; min-width: 0; min-height: 0; display: flex; flex-direction: column; overflow: hidden; }
     .ogrid-layout-footer {
       border-top: 1px solid var(--ogrid-border, #e0e0e0);
       background: var(--ogrid-header-bg, #f5f5f5); padding: 6px 12px;
