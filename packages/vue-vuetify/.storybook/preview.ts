@@ -2,6 +2,7 @@ import type { Preview } from '@storybook/vue3-vite';
 import { setup } from '@storybook/vue3-vite';
 import { createVuetify } from 'vuetify';
 import 'vuetify/styles';
+import '@mdi/font/css/materialdesignicons.css';
 
 const vuetify = createVuetify();
 

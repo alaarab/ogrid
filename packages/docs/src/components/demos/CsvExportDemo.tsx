@@ -3,7 +3,6 @@ import { OGrid, exportToCsv } from '@alaarab/ogrid-react-radix';
 import type { CsvColumn } from '@alaarab/ogrid-react-radix';
 import { LiveDemo } from '../LiveDemo';
 import { people, getRowId, paginationColumns, btnStyle, type Person } from './demoData';
-import { csvExport } from '../../stackblitz/featureDemos';
 
 const csvColumns: CsvColumn[] = paginationColumns.map(c => ({ columnId: c.columnId, name: c.name }));
 
@@ -18,7 +17,7 @@ export default function CsvExportDemo() {
   }, []);
 
   return (
-    <LiveDemo height={420} title="Click 'Export to CSV' to download the data" stackblitz={csvExport}>
+    <LiveDemo height={420} title="Click 'Export to CSV' to download the data">
       <OGrid
         columns={paginationColumns}
         data={people}

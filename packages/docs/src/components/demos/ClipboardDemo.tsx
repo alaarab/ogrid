@@ -3,7 +3,6 @@ import { OGrid } from '@alaarab/ogrid-react-radix';
 import type { ICellValueChangedEvent } from '@alaarab/ogrid-react-radix';
 import { LiveDemo } from '../LiveDemo';
 import { people as initialPeople, getRowId, editingColumns, type Person } from './demoData';
-import { editing } from '../../stackblitz/featureDemos';
 
 export default function ClipboardDemo() {
   const [data, setData] = useState<Person[]>(() => initialPeople.map(p => ({ ...p })));
@@ -17,7 +16,7 @@ export default function ClipboardDemo() {
   }, []);
 
   return (
-    <LiveDemo height={420} title="Select cells, then Ctrl+C to copy, Ctrl+V to paste" stackblitz={editing}>
+    <LiveDemo height={420} title="Select cells, then Ctrl+C to copy, Ctrl+V to paste">
       <OGrid
         columns={editingColumns}
         data={data}

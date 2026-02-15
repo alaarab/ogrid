@@ -20,9 +20,9 @@ All notable changes to OGrid will be documented in this file.
 
 - **New `IOGridApi` methods** — `getColumnOrder()` and `setColumnOrder(order)` for programmatic column order control.
 
-- **Docs: Column Reordering feature page** — `column-reordering.mdx` with 4 framework tabs (React, Angular, Vue, Vanilla JS) and StackBlitz demos.
+- **Docs: Column Reordering feature page** — `column-reordering.mdx` with 4 framework tabs (React, Angular, Vue, Vanilla JS).
 
-- **Docs: Virtual Scrolling feature page** — `virtual-scrolling.mdx` with 4 framework tabs and StackBlitz demos.
+- **Docs: Virtual Scrolling feature page** — `virtual-scrolling.mdx` with 4 framework tabs.
 
 - **Docs: Landing page improvements** — Wider column widths for readability, toolbar with Export CSV / Select All / Clear Filters buttons, code preview tabs updated to show all 4 frameworks (React, Angular, Vue, Vanilla JS).
 
