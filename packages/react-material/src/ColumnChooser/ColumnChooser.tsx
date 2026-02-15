@@ -62,6 +62,7 @@ export const ColumnChooser: React.FC<IColumnChooserProps> = (props) => {
         ref={buttonRef}
         variant="outlined"
         size="small"
+        color="inherit"
         startIcon={<ViewColumnIcon />}
         endIcon={isOpen ? <ExpandLessIcon /> : <ExpandMoreIcon />}
         onClick={handleToggle}

@@ -33,7 +33,7 @@ export function createDataGridTableTests(DataGridTableComponent: new (...args: a
     const instance = new DataGridTableComponent();
     const props = makeProps(overrides);
 
-    // Set propsInput for Material/Radix (single-prop API)
+    // Set propsInput for Material/Radix (single-prop API via @Input setter)
     instance.propsInput = props;
     // Also set individual inputs for PrimeNG (individual-input API)
     instance.itemsInput = props.items;
@@ -54,6 +54,10 @@ export function createDataGridTableTests(DataGridTableComponent: new (...args: a
     if (props.editable !== undefined) instance.editable = props.editable;
     if (props.onCellValueChanged !== undefined) instance.onCellValueChanged = props.onCellValueChanged;
     if (props.cellSelection !== undefined) instance.cellSelection = props.cellSelection;
+    // Trigger ngOnChanges for PrimeNG (rebuilds propsSignal from individual inputs)
+    if (typeof instance.ngOnChanges === 'function') {
+      instance.ngOnChanges({});
+    }
     // Feed props into the state service
     instance.stateService.props.set(props);
     return instance;

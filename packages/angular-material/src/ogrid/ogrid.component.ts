@@ -1,21 +1,24 @@
-import { Component, Input, ChangeDetectionStrategy, DoCheck } from '@angular/core';
+import { Component, ChangeDetectionStrategy, Input, signal, effect } from '@angular/core';
 import {
   OGridService,
   OGridLayoutComponent,
 } from '@alaarab/ogrid-angular';
-import type { IOGridProps, IOGridDataGridProps } from '@alaarab/ogrid-angular';
+import type { IOGridProps } from '@alaarab/ogrid-angular';
 import { DataGridTableComponent } from '../datagrid-table/datagrid-table.component';
 import { ColumnChooserComponent } from '../column-chooser/column-chooser.component';
 import { PaginationControlsComponent } from '../pagination-controls/pagination-controls.component';
 
 /**
  * Top-level OGrid component for Angular Material.
- * Equivalent to the React MaterialDataTable/OGrid component.
  * Standalone component — provides OGridService and renders OGridLayout with all sub-components.
+ *
+ * Uses @Input with signal setter for JIT compatibility (project builds with tsc, not ngc).
+ * The effect() reactively configures the service when the input signal changes.
  */
 @Component({
   selector: 'ogrid',
   standalone: true,
+  changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
     OGridLayoutComponent,
     DataGridTableComponent,
@@ -23,16 +26,15 @@ import { PaginationControlsComponent } from '../pagination-controls/pagination-c
     PaginationControlsComponent,
   ],
   providers: [OGridService],
-  changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <ogrid-layout
       [className]="ogridService.className()"
       [sideBar]="ogridService.sideBarProps()"
-      [hasToolbar]="true"
+      [hasToolbar]="showToolbar"
       [hasToolbarBelow]="false"
       [hasPagination]="true"
     >
-      <ng-container toolbar-end>
+      <ng-container toolbarEnd>
         @if (ogridService.columnChooserPlacement() === 'toolbar') {
           <ogrid-column-chooser
             [columns]="ogridService.columnChooser().columns"
@@ -42,7 +44,7 @@ import { PaginationControlsComponent } from '../pagination-controls/pagination-c
         }
       </ng-container>
 
-      <ogrid-datagrid-table [props]="dataGridProps" />
+      <ogrid-datagrid-table [props]="ogridService.dataGridProps()" />
 
       <ng-container pagination>
         <ogrid-pagination-controls
@@ -58,27 +60,25 @@ import { PaginationControlsComponent } from '../pagination-controls/pagination-c
     </ogrid-layout>
   `,
 })
-export class OGridComponent<T> implements DoCheck {
-  @Input({ required: true }) props!: IOGridProps<T>;
-
+export class OGridComponent<T> {
+  private readonly propsSignal = signal<IOGridProps<T> | undefined>(undefined);
   readonly ogridService: OGridService<T>;
 
-  get dataGridProps(): IOGridDataGridProps<T> {
-    return this.ogridService.dataGridProps();
+  @Input({ required: true })
+  set props(value: IOGridProps<T>) {
+    this.propsSignal.set(value);
   }
 
   constructor() {
-    // The OGridService is provided at the component level, so inject it here
-    // But since we can't use inject() with generics well, we use the providers array
-    // and the Angular DI system will handle it.
-    // Actually we need a slightly different approach for the generic service.
     this.ogridService = new OGridService<T>();
+    effect(() => {
+      const p = this.propsSignal();
+      if (p) this.ogridService.configure(p);
+    });
   }
 
-  ngDoCheck(): void {
-    // Configure the service with props on every change detection cycle
-    // This is similar to React's effect that runs on every render
-    this.ogridService.configure(this.props);
+  get showToolbar(): boolean {
+    return this.ogridService.columnChooserPlacement() === 'toolbar' || this.ogridService.toolbar() != null;
   }
 
   onPageSizeChange(size: number): void {

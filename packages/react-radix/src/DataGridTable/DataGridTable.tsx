@@ -526,6 +526,10 @@ function DataGridTableInner<T>(props: IOGridDataGridProps<T>): React.ReactElemen
                 copyRange={copyRange}
                 cutRange={cutRange}
                 colOffset={colOffset}
+                items={items}
+                visibleColumns={visibleColumns}
+                columnSizingOverrides={columnSizingOverrides}
+                columnOrder={columnOrder}
               />
               {showEmptyInGrid && emptyState && (
                 <div className={styles.emptyStateInGrid}>

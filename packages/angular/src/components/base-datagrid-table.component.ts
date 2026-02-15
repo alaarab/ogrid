@@ -6,6 +6,8 @@ import {
   buildHeaderRows,
   DEFAULT_MIN_COLUMN_WIDTH,
   CELL_PADDING,
+  CHECKBOX_COLUMN_WIDTH,
+  ROW_NUMBER_COLUMN_WIDTH,
 } from '@alaarab/ogrid-core';
 import {
   getHeaderFilterConfig,
@@ -38,6 +40,12 @@ export abstract class BaseDataGridTableComponent<T = unknown> {
   protected lastMouseShift = false;
   readonly columnSizingVersion = signal(0);
 
+  // Signal-backed view child elements — set from ngAfterViewInit.
+  // @ViewChild is a plain property (not a signal), so effects/computed that read it
+  // only evaluate once during construction when the ref is still undefined.
+  protected readonly wrapperElSignal = signal<HTMLElement | null>(null);
+  protected readonly tableContainerElSignal = signal<HTMLElement | null>(null);
+
   // --- Abstract accessors for subclass-provided values ---
 
   /** Return the IOGridDataGridProps from however the subclass receives them */
@@ -49,11 +57,19 @@ export abstract class BaseDataGridTableComponent<T = unknown> {
   /** Return the table container element ref */
   protected abstract getTableContainerRef(): ElementRef<HTMLElement> | undefined;
 
+  /** Lifecycle hook — populate element signals from @ViewChild refs */
+  ngAfterViewInit(): void {
+    const wrapper = this.getWrapperRef()?.nativeElement ?? null;
+    const tableContainer = this.getTableContainerRef()?.nativeElement ?? null;
+    if (wrapper) this.wrapperElSignal.set(wrapper);
+    if (tableContainer) this.tableContainerElSignal.set(tableContainer);
+  }
+
   // --- Delegated state ---
 
   readonly state = computed(() => this.stateService.getState());
 
-  readonly tableContainerEl = computed(() => this.getTableContainerRef()?.nativeElement ?? null);
+  readonly tableContainerEl = computed(() => this.tableContainerElSignal());
 
   readonly allItems = computed(() => this.getProps()?.items ?? []);
   readonly items = computed(() => this.getProps()?.items ?? []);
@@ -69,6 +85,8 @@ export abstract class BaseDataGridTableComponent<T = unknown> {
   readonly currentPage = computed(() => this.getProps()?.currentPage ?? 1);
   readonly pageSize = computed(() => this.getProps()?.pageSize ?? 25);
   readonly rowNumberOffset = computed(() => this.hasRowNumbersCol() ? (this.currentPage() - 1) * this.pageSize() : 0);
+  readonly propsVisibleColumns = computed(() => this.getProps()?.visibleColumns);
+  readonly propsColumnOrder = computed(() => this.getProps()?.columnOrder);
 
   // State service outputs
   readonly visibleCols = computed(() => this.state().layout.visibleCols);
@@ -175,6 +193,37 @@ export abstract class BaseDataGridTableComponent<T = unknown> {
     });
   });
 
+  // Compute sticky offsets for pinned columns (cumulative left/right positions)
+  readonly pinningOffsets = computed(() => {
+    const layouts = this.columnLayouts();
+    const leftOffsets: Record<string, number> = {};
+    const rightOffsets: Record<string, number> = {};
+
+    // Left offsets: start after checkbox and row number columns
+    let leftAcc = 0;
+    if (this.hasCheckboxCol()) leftAcc += CHECKBOX_COLUMN_WIDTH;
+    if (this.hasRowNumbersCol()) leftAcc += ROW_NUMBER_COLUMN_WIDTH;
+
+    for (const layout of layouts) {
+      if (layout.pinnedLeft) {
+        leftOffsets[layout.col.columnId] = leftAcc;
+        leftAcc += layout.width + CELL_PADDING;
+      }
+    }
+
+    // Right offsets: walk from the end
+    let rightAcc = 0;
+    for (let i = layouts.length - 1; i >= 0; i--) {
+      const layout = layouts[i];
+      if (layout.pinnedRight) {
+        rightOffsets[layout.col.columnId] = rightAcc;
+        rightAcc += layout.width + CELL_PADDING;
+      }
+    }
+
+    return { leftOffsets, rightOffsets };
+  });
+
   /**
    * Initialize base wiring effects. Must be called from subclass constructor
    * (effects need to run inside an injection context).
@@ -186,9 +235,9 @@ export abstract class BaseDataGridTableComponent<T = unknown> {
       if (p) this.stateService.props.set(p);
     });
 
-    // Wire wrapper element
+    // Wire wrapper element (reads from signal populated by ngAfterViewInit)
     effect(() => {
-      const el = this.getWrapperRef()?.nativeElement;
+      const el = this.wrapperElSignal();
       if (el) {
         this.stateService.wrapperEl.set(el);
         this.columnReorderService.wrapperEl.set(el);
@@ -224,7 +273,7 @@ export abstract class BaseDataGridTableComponent<T = unknown> {
 
     // Wire wrapper element to virtual scroll for scroll events + container height
     effect(() => {
-      const el = this.getWrapperRef()?.nativeElement;
+      const el = this.wrapperElSignal();
       if (el) {
         this.virtualScrollService.setContainer(el);
         this.virtualScrollService.containerHeight.set(el.clientHeight);
@@ -287,6 +336,16 @@ export abstract class BaseDataGridTableComponent<T = unknown> {
     const d = new Date(String(value));
     if (Number.isNaN(d.getTime())) return '';
     return d.toISOString().split('T')[0];
+  }
+
+  getPinnedLeftOffset(columnId: string): number | null {
+    const offsets = this.pinningOffsets();
+    return offsets.leftOffsets[columnId] ?? null;
+  }
+
+  getPinnedRightOffset(columnId: string): number | null {
+    const offsets = this.pinningOffsets();
+    return offsets.rightOffsets[columnId] ?? null;
   }
 
   // --- Virtual scroll event handler ---

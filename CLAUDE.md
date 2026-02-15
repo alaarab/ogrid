@@ -69,7 +69,7 @@ npm run test:js                 # Test JS only
 npm run test:react              # Test React hooks only
 npm run test:radix              # Test Radix UI (also: test:fluent, test:material)
 npm run lint                    # ESLint
-npm run storybook:fluent        # Storybook on port 6006 (also: storybook:material :6007, storybook:radix :6008)
+npm run storybook:react-fluent  # React Storybook on port 6006 (also: storybook:react-material :6007, storybook:react-radix :6008, storybook:vue-vuetify :6011)
 npm run docs:dev                # Docusaurus dev server
 npm run docs:build              # Build docs site
 ```
