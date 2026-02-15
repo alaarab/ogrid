@@ -1,4 +1,4 @@
-import { Component, Input, Output, EventEmitter, signal, effect, ElementRef, ViewChild, AfterViewInit } from '@angular/core';
+import { Component, Input, Output, EventEmitter, signal, ElementRef, ViewChild, AfterViewInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import type { IColumnDef } from '@alaarab/ogrid-angular';
 

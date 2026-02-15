@@ -90,12 +90,15 @@ import { PopoverCellEditorComponent } from './popover-cell-editor.component';
                           @let pinned = isPinned(col.columnId);
                           @let pinnedLeft = pinned === 'left' || (isFreezeCol && colIdx === 0);
                           @let pinnedRight = pinned === 'right';
+                          @let sortState = getSortState(col.columnId);
+                          @let ariaSort = sortState === 'asc' ? 'ascending' : sortState === 'desc' ? 'descending' : null;
                           <th scope="col"
                             class="ogrid-datagrid-th"
                             [class.ogrid-datagrid-th--pinned-left]="pinnedLeft"
                             [class.ogrid-datagrid-th--pinned-right]="pinnedRight"
                             [attr.rowSpan]="headerRows().length > 1 ? headerRows().length - rowIdx : null"
                             [attr.data-column-id]="col.columnId"
+                            [attr.aria-sort]="ariaSort"
                             [style.minWidth.px]="col.minWidth ?? 80"
                             [style.width.px]="colW"
                             [style.maxWidth.px]="colW"

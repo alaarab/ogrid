@@ -40,8 +40,8 @@ const nestedGroupedColumns: (IColumnGroupDef<FixtureRow> | IColumnDef<FixtureRow
   },
 ];
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export function createColumnGroupTests(_DataGridTableComponent: new (...args: any[]) => any): void {
+// The component parameter is unused but required by the test factory pattern
+export function createColumnGroupTests(_DataGridTableComponent: new () => unknown): void {
   describe('column groups', () => {
     it('flat columns produce single header row', () => {
       const rows = buildHeaderRows(leafColumns, new Set(['name', 'status']));
