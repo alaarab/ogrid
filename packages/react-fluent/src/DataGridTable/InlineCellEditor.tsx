@@ -21,7 +21,7 @@ export function InlineCellEditor<T>(props: InlineCellEditorProps<T>): React.Reac
         <Checkbox
           checked={checked}
           onChange={(_, data) => onCommit(!!data.checked)}
-          onKeyDown={(e) => e.key === 'Escape' && (e.preventDefault(), onCancel())}
+          onKeyDown={(e: React.KeyboardEvent) => e.key === 'Escape' && (e.preventDefault(), onCancel())}
         />
       )}
       renderSelect={(value, values, onCommit, onCancel) => (
@@ -29,7 +29,7 @@ export function InlineCellEditor<T>(props: InlineCellEditorProps<T>): React.Reac
           <Select
             value={value !== null && value !== undefined ? String(value) : ''}
             onChange={(_, data) => onCommit(data.value)}
-            onKeyDown={(e) => e.key === 'Escape' && (e.preventDefault(), onCancel())}
+            onKeyDown={(e: React.KeyboardEvent) => e.key === 'Escape' && (e.preventDefault(), onCancel())}
           >
             {values.map((v) => (
               <option key={String(v)} value={String(v)}>

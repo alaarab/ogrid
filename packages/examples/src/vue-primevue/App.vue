@@ -1,11 +1,13 @@
 <template>
-  <div style="padding: 24px; max-width: 1200px; margin: 0 auto;">
+  <div style="padding: 24px; max-width: 1200px; margin: 0 auto; height: 100vh; display: flex; flex-direction: column;">
     <h1>OGrid - Vue PrimeVue Example</h1>
     <p style="color: #666; margin-bottom: 16px;">
       A fully featured data table powered by <code>@alaarab/ogrid-vue-primevue</code>.
       Includes sorting, multi-select &amp; text filtering, column chooser, and pagination.
     </p>
-    <OGrid :grid-props="gridProps" />
+    <div style="flex: 1; min-height: 0;">
+      <OGrid :grid-props="gridProps" />
+    </div>
   </div>
 </template>
 

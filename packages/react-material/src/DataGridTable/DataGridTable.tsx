@@ -61,7 +61,13 @@ const CHECKBOX_WRAPPER_SX = { display: 'flex', alignItems: 'center', justifyCont
 const CHECKBOX_PLACEHOLDER_SX = { width: CHECKBOX_COLUMN_WIDTH, minWidth: CHECKBOX_COLUMN_WIDTH, p: 0 } as const;
 
 // Header
-const STICKY_HEADER_SX = { position: 'sticky', top: 0, zIndex: 8, bgcolor: 'action.hover', '& th': { bgcolor: 'action.hover' } } as const;
+const STICKY_HEADER_SX = {
+  /* Removed position: 'sticky', top: 0 - breaks horizontal sticky on pinned columns.
+     Instead, apply sticky to individual header cells (HEADER_BASE_SX). */
+  zIndex: 8,
+  bgcolor: 'action.hover',
+  '& th': { bgcolor: 'action.hover' }
+} as const;
 const HEADER_ROW_SX = { bgcolor: 'action.hover' } as const;
 const GROUP_HEADER_CELL_SX = { textAlign: 'center', fontWeight: 600, borderBottom: 2, borderColor: 'divider', py: 0.75 } as const;
 
@@ -152,9 +158,15 @@ const CELL_TD_PINNED_LEFT_SX = { ...CELL_TD_BASE_SX, position: 'sticky' as const
 const CELL_TD_PINNED_RIGHT_SX = { ...CELL_TD_BASE_SX, position: 'sticky' as const, right: 0, zIndex: 6, bgcolor: 'background.paper', willChange: 'transform', borderRight: '2px solid', borderRightColor: 'primary.main' } as const;
 
 // Header cell positioning variants
-const HEADER_BASE_SX = { fontWeight: 600, position: 'relative' as const } as const;
-const HEADER_PINNED_LEFT_SX = { ...HEADER_BASE_SX, position: 'sticky' as const, left: 0, top: 0, zIndex: 9, bgcolor: 'action.hover', willChange: 'transform', borderLeft: '2px solid', borderLeftColor: 'primary.main' } as const;
-const HEADER_PINNED_RIGHT_SX = { ...HEADER_BASE_SX, position: 'sticky' as const, right: 0, top: 0, zIndex: 9, bgcolor: 'action.hover', willChange: 'transform', borderRight: '2px solid', borderRightColor: 'primary.main' } as const;
+const HEADER_BASE_SX = {
+  fontWeight: 600,
+  position: 'sticky' as const, /* Changed from relative - enables vertical sticky for all headers */
+  top: 0, /* Sticky vertically */
+  zIndex: 8, /* Stack above body cells */
+  bgcolor: 'action.hover' /* Required for sticky overlap */
+} as const;
+const HEADER_PINNED_LEFT_SX = { ...HEADER_BASE_SX, position: 'sticky' as const, left: 0, top: 0, zIndex: 10 /* Increased from 9 to stack above base header cells (z-index: 8) */, bgcolor: 'action.hover', willChange: 'transform', borderLeft: '2px solid', borderLeftColor: 'primary.main' } as const;
+const HEADER_PINNED_RIGHT_SX = { ...HEADER_BASE_SX, position: 'sticky' as const, right: 0, top: 0, zIndex: 10 /* Increased from 9 to stack above base header cells (z-index: 8) */, bgcolor: 'action.hover', willChange: 'transform', borderRight: '2px solid', borderRightColor: 'primary.main' } as const;
 
 // Resize handle
 const RESIZE_HANDLE_SX = {
@@ -281,8 +293,7 @@ function GridRowInner(props: GridRowProps) {
       {columnLayouts.map((cl, colIdx) => (
         <TableCell
           key={cl.col.columnId}
-          sx={cl.tdSx}
-          style={{ minWidth: cl.minWidth, width: cl.width, maxWidth: cl.maxWidth }}
+          sx={[cl.tdSx, { minWidth: cl.minWidth, width: cl.width, maxWidth: cl.maxWidth }]}
         >
           {renderCellContent(item, cl.col, rowIndex, colIdx)}
         </TableCell>
@@ -494,7 +505,7 @@ function DataGridTableInner<T>(props: IOGridDataGridProps<T>): React.ReactElemen
         role="region"
         aria-label={ariaLabel ?? (ariaLabelledBy ? undefined : 'Data grid')}
         aria-labelledby={ariaLabelledBy}
-        onMouseDown={(e) => { lastMouseShiftRef.current = e.shiftKey; }}
+        onMouseDown={(e: React.MouseEvent) => { lastMouseShiftRef.current = e.shiftKey; }}
         onKeyDown={handleGridKeyDown}
         onContextMenu={PREVENT_DEFAULT}
         data-overflow-x={allowOverflowX ? 'true' : 'false'}
@@ -515,7 +526,7 @@ function DataGridTableInner<T>(props: IOGridDataGridProps<T>): React.ReactElemen
                   {rowIdx === headerRows.length - 1 && hasCheckboxCol && (
                     <TableCell
                       padding="checkbox"
-                      rowSpan={headerRows.length > 1 ? 1 : undefined}
+                      {...({ rowSpan: headerRows.length > 1 ? 1 : undefined } as any)}
                       sx={CHECKBOX_CELL_SX}
                     >
                       <Checkbox
@@ -529,14 +540,14 @@ function DataGridTableInner<T>(props: IOGridDataGridProps<T>): React.ReactElemen
                   )}
                   {/* Empty placeholder for checkbox in the first group row */}
                   {rowIdx === 0 && rowIdx < headerRows.length - 1 && hasCheckboxCol && (
-                    <TableCell rowSpan={headerRows.length - 1} sx={CHECKBOX_PLACEHOLDER_SX} />
+                    <TableCell {...({ rowSpan: headerRows.length - 1 } as any)} sx={CHECKBOX_PLACEHOLDER_SX} />
                   )}
                   {/* Row numbers column in the last (leaf) row only */}
                   {rowIdx === headerRows.length - 1 && hasRowNumbersCol && (
                     <TableCell
                       component="th"
                       scope="col"
-                      rowSpan={headerRows.length > 1 ? 1 : undefined}
+                      {...({ rowSpan: headerRows.length > 1 ? 1 : undefined } as any)}
                       sx={{
                         width: ROW_NUMBER_COLUMN_WIDTH,
                         minWidth: ROW_NUMBER_COLUMN_WIDTH,
@@ -556,7 +567,7 @@ function DataGridTableInner<T>(props: IOGridDataGridProps<T>): React.ReactElemen
                   {/* Empty placeholder for row numbers in the first group row */}
                   {rowIdx === 0 && rowIdx < headerRows.length - 1 && hasRowNumbersCol && (
                     <TableCell
-                      rowSpan={headerRows.length - 1}
+                      {...({ rowSpan: headerRows.length - 1 } as any)}
                       sx={{
                         width: ROW_NUMBER_COLUMN_WIDTH,
                         minWidth: ROW_NUMBER_COLUMN_WIDTH,
@@ -572,7 +583,7 @@ function DataGridTableInner<T>(props: IOGridDataGridProps<T>): React.ReactElemen
                       return (
                         <TableCell
                           key={cellIdx}
-                          colSpan={cell.colSpan}
+                          {...({ colSpan: cell.colSpan } as any)}
                           component="th"
                           scope="colgroup"
                           sx={GROUP_HEADER_CELL_SX}
@@ -595,13 +606,14 @@ function DataGridTableInner<T>(props: IOGridDataGridProps<T>): React.ReactElemen
                         component="th"
                         scope="col"
                         data-column-id={col.columnId}
-                        rowSpan={headerRows.length > 1 ? headerRows.length - rowIdx : undefined}
-                        sx={{ ...headerSx, ...headerCellSx }}
-                        style={{
+                        {...({ rowSpan: headerRows.length > 1 ? headerRows.length - rowIdx : undefined } as any)}
+                        sx={{
+                          ...headerSx,
+                          ...headerCellSx,
                           minWidth: col.minWidth ?? DEFAULT_MIN_COLUMN_WIDTH,
                           width: columnWidth,
                           maxWidth: columnWidth,
-                          ...(columnReorder ? { cursor: isReorderDragging ? 'grabbing' : 'grab' } : undefined),
+                          ...(columnReorder ? { cursor: isReorderDragging ? 'grabbing' : 'grab' } : {}),
                         }}
                         onMouseDown={columnReorder ? (e: React.MouseEvent) => handleHeaderMouseDown(col.columnId, e) : undefined}
                       >
@@ -623,8 +635,8 @@ function DataGridTableInner<T>(props: IOGridDataGridProps<T>): React.ReactElemen
                               fontSize: '16px',
                               lineHeight: 1,
                               color: 'text.secondary',
-                              opacity: 0,
-                              transition: 'opacity 0.15s, background-color 0.15s',
+                              opacity: 1,
+                              transition: 'background-color 0.15s',
                               borderRadius: '3px',
                               display: 'flex',
                               alignItems: 'center',
@@ -633,17 +645,13 @@ function DataGridTableInner<T>(props: IOGridDataGridProps<T>): React.ReactElemen
                               height: '20px',
                               '&:hover': {
                                 bgcolor: 'action.hover',
-                                opacity: 1,
-                              },
-                              'th:hover &': {
-                                opacity: 1,
                               },
                             }}
                           >
                             ⋮
                           </Box>
                         </Box>
-                        <Box onMouseDown={(e) => handleResizeStart(e, col)} sx={RESIZE_HANDLE_SX} />
+                        <Box onMouseDown={(e: React.MouseEvent) => handleResizeStart(e, col)} sx={RESIZE_HANDLE_SX} />
                       </TableCell>
                     );
                   })}
@@ -737,6 +745,10 @@ function DataGridTableInner<T>(props: IOGridDataGridProps<T>): React.ReactElemen
             copyRange={copyRange}
             cutRange={cutRange}
             colOffset={colOffset}
+            items={items}
+            visibleColumns={props.visibleColumns}
+            columnSizingOverrides={columnSizingOverrides}
+            columnOrder={props.columnOrder}
           />
           {showEmptyInGrid && emptyState && (
             <Box sx={EMPTY_STATE_SX}>

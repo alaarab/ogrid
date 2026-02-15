@@ -80,17 +80,23 @@ export class ColumnHeaderMenuComponent {
       autosizeAll: h.onAutosizeAll,
     };
 
-    return items.map((item) => ({
-      label: item.label,
-      disabled: item.disabled,
-      separator: item.divider,
-      command: () => {
-        const action = actionMap[item.id];
-        if (action) {
-          action();
-          h.onClose?.();
-        }
-      },
-    }));
+    const result: MenuItem[] = [];
+    for (const item of items) {
+      result.push({
+        label: item.label,
+        disabled: item.disabled,
+        command: () => {
+          const action = actionMap[item.id];
+          if (action) {
+            action();
+            h.onClose?.();
+          }
+        },
+      });
+      if (item.divider) {
+        result.push({ separator: true });
+      }
+    }
+    return result;
   });
 }

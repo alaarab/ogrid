@@ -80,8 +80,8 @@
 
 /* Freeze panes: sticky header when freezeRows >= 1 */
 .dataTable thead.stickyHeader {
-  position: sticky;
-  top: 0;
+  /* Removed position: sticky; top: 0; - breaks horizontal sticky on pinned columns.
+     Instead, apply sticky to individual th cells below. */
   z-index: 8;
   background: var(--ogrid-bg-subtle, #f3f2f1);
 }
@@ -106,7 +106,7 @@
 .dataTable thead.stickyHeader .pinnedColLeft,
 .dataTable thead.stickyHeader .pinnedColRight {
   top: 0;
-  z-index: 9;
+  z-index: 10; /* Increased from 9 to stack above base th cells (z-index: 8) */
 }
 
 .dataTable thead .freezeColFirst {
@@ -169,7 +169,10 @@
   font-size: 14px;
   color: var(--ogrid-fg, #242424);
   white-space: nowrap;
-  position: relative;
+  position: sticky;  /* Changed from relative - enables vertical sticky for all headers */
+  top: 0;            /* Sticky vertically */
+  background: var(--ogrid-bg-subtle, #f3f2f1);  /* Required for sticky overlap */
+  z-index: 8;        /* Stack above body cells */
   border-bottom: 1px solid var(--ogrid-border, #e0e0e0);
 }
 
@@ -187,8 +190,8 @@
   font-size: 16px;
   line-height: 1;
   color: var(--ogrid-fg-secondary, #666);
-  opacity: 0;
-  transition: opacity 0.15s, background-color 0.15s;
+  opacity: 1; // Always visible
+  transition: background-color 0.15s;
   border-radius: 3px;
   display: flex;
   align-items: center;
@@ -198,7 +201,6 @@
 
   &:hover {
     background: var(--ogrid-hover-bg, #f3f2f1);
-    opacity: 1;
   }
 
   &:active {
@@ -216,10 +218,6 @@
       background: var(--ogrid-active-bg, #3a3a3a);
     }
   }
-}
-
-.dataTable thead th:hover .headerMenuTrigger {
-  opacity: 1;
 }
 
 .groupHeaderCell {

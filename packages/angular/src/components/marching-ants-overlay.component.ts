@@ -108,6 +108,9 @@ export class MarchingAntsOverlayComponent implements OnChanges {
   @Input() cutRange: ISelectionRange | null = null;
   @Input() colOffset: number = 0;
   @Input() columnSizingVersion: number = 0;
+  @Input() items: readonly unknown[] = [];
+  @Input() visibleColumns: readonly string[] | undefined = undefined;
+  @Input() columnOrder: readonly string[] | undefined = undefined;
 
   readonly selRect = signal<OverlayRect | null>(null);
   readonly clipRect = signal<OverlayRect | null>(null);
@@ -134,6 +137,9 @@ export class MarchingAntsOverlayComponent implements OnChanges {
     const clipRange = this.copyRange ?? this.cutRange;
     const colOff = this.colOffset;
     void this.columnSizingVersion; // Track column resize changes
+    void this.items; // Track data changes (sorting)
+    void this.visibleColumns; // Track column visibility changes
+    void this.columnOrder; // Track column reordering
 
     if (this.resizeObserver) {
       this.resizeObserver.disconnect();

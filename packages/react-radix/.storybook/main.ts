@@ -17,6 +17,13 @@ const config: StorybookConfig = {
   },
   async viteFinal(config) {
     return mergeConfig(config, {
+      resolve: {
+        alias: {
+          // Force single React instance to avoid "Cannot read properties of null" errors
+          react: dirname(require.resolve('react')),
+          'react-dom': dirname(require.resolve('react-dom')),
+        },
+      },
       css: {
         modules: {
           localsConvention: 'camelCase',

@@ -213,10 +213,19 @@ export function useOGrid<T>(
   };
 
   const handleSort = (columnKey: string) => {
-    setSort({
-      field: columnKey,
-      direction: sort.value.field === columnKey && sort.value.direction === 'asc' ? 'desc' : 'asc',
-    });
+    const currentSort = sort.value;
+    if (currentSort.field === columnKey) {
+      // Cycle: asc → desc → clear
+      if (currentSort.direction === 'asc') {
+        setSort({ field: columnKey, direction: 'desc' });
+      } else {
+        // Clear sort (empty field means no column is sorted)
+        setSort({ field: '', direction: 'asc' });
+      }
+    } else {
+      // Start new sort
+      setSort({ field: columnKey, direction: 'asc' });
+    }
   };
 
   const handleFilterChange = (key: string, value: FilterValue | undefined) => {

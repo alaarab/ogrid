@@ -38,13 +38,13 @@ import { BaseColumnHeaderFilterComponent } from '@alaarab/ogrid-angular';
 
         @if (filterType !== 'none') {
           <button
-            class="ogrid-header-filter__btn"
-            [class.ogrid-header-filter__btn--active]="hasActiveFilter() || isFilterOpen()"
+            class="ogrid-header-filter__filter-btn"
+            [class.ogrid-header-filter__filter-btn--active]="hasActiveFilter() || isFilterOpen()"
             (click)="toggleFilter($event)"
             [attr.aria-label]="'Filter ' + columnName"
             [title]="'Filter ' + columnName"
           >
-            &#9783;
+            <span class="ogrid-header-filter__funnel"></span>
             @if (hasActiveFilter()) {
               <span class="ogrid-header-filter__dot"></span>
             }
@@ -203,7 +203,7 @@ import { BaseColumnHeaderFilterComponent } from '@alaarab/ogrid-angular';
     }
   `,
   styles: [`
-    :host { display: flex; align-items: center; width: 100%; min-width: 0; position: relative; }
+    :host { display: flex; align-items: center; flex: 1; min-width: 0; position: relative; }
     .ogrid-header-filter { display: flex; align-items: center; width: 100%; min-width: 0; }
     .ogrid-header-filter__label { flex: 1; min-width: 0; overflow: hidden; }
     .ogrid-header-filter__name {
@@ -217,17 +217,43 @@ import { BaseColumnHeaderFilterComponent } from '@alaarab/ogrid-angular';
       display: inline-flex; align-items: center; justify-content: center; position: relative;
       color: rgba(0,0,0,0.54);
     }
-    .ogrid-header-filter__btn:hover { background: rgba(0,0,0,0.04); }
+    .ogrid-header-filter__btn:hover { background: rgba(0,0,0,0.08); }
     .ogrid-header-filter__btn--active { color: var(--mat-sys-primary, #1976d2); }
+    .ogrid-header-filter__filter-btn {
+      width: 24px; height: 24px; padding: 2px; border: none; border-radius: 4px;
+      background: transparent; cursor: pointer; line-height: 1;
+      display: inline-flex; align-items: center; justify-content: center; position: relative;
+      opacity: 0.6; transition: opacity 0.15s;
+    }
+    .ogrid-header-filter:hover .ogrid-header-filter__filter-btn { opacity: 0.8; }
+    .ogrid-header-filter__filter-btn:hover { background: rgba(0,0,0,0.08); opacity: 1 !important; }
+    .ogrid-header-filter__filter-btn--active { opacity: 1 !important; }
+    .ogrid-header-filter__funnel {
+      display: block; width: 0; height: 0;
+      border-left: 5px solid transparent; border-right: 5px solid transparent;
+      border-top: 6px solid rgba(0,0,0,0.65);
+      position: relative;
+    }
+    .ogrid-header-filter__funnel::after {
+      content: ''; display: block; width: 2px; height: 4px;
+      background: rgba(0,0,0,0.65); position: absolute;
+      top: -1px; left: -1px;
+    }
+    .ogrid-header-filter__filter-btn--active .ogrid-header-filter__funnel {
+      border-top-color: var(--mat-sys-primary, #1976d2);
+    }
+    .ogrid-header-filter__filter-btn--active .ogrid-header-filter__funnel::after {
+      background: var(--mat-sys-primary, #1976d2);
+    }
     .ogrid-header-filter__dot {
       position: absolute; top: 2px; right: 2px;
       width: 6px; height: 6px; border-radius: 50%;
       background: var(--mat-sys-primary, #1976d2);
     }
     .ogrid-header-filter__popover {
-      position: fixed; z-index: 1000;
-      background: #fff; border: 1px solid rgba(0,0,0,0.12);
-      border-radius: 4px; box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+      position: fixed; z-index: 10000;
+      background: #ffffff; border: 1px solid rgba(0,0,0,0.2);
+      border-radius: 8px; box-shadow: 0 4px 16px rgba(0,0,0,0.2), 0 1px 4px rgba(0,0,0,0.1);
       margin-top: 4px;
     }
     .ogrid-header-filter__popover-header {

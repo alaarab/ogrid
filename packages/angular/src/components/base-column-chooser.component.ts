@@ -16,17 +16,25 @@ export interface IColumnChooserProps {
  * 2. Handle their own click-outside behavior (host binding or effect)
  */
 export abstract class BaseColumnChooserComponent {
-  @Input({ required: true }) columns!: IColumnDefinition[];
-  @Input({ required: true }) visibleColumns!: Set<string>;
+  private readonly _columns = signal<IColumnDefinition[]>([]);
+  private readonly _visibleColumns = signal<Set<string>>(new Set());
+
+  @Input({ required: true })
+  set columns(v: IColumnDefinition[]) { this._columns.set(v); }
+  get columns(): IColumnDefinition[] { return this._columns(); }
+
+  @Input({ required: true })
+  set visibleColumns(v: Set<string>) { this._visibleColumns.set(v); }
+  get visibleColumns(): Set<string> { return this._visibleColumns(); }
 
   @Output() visibilityChange = new EventEmitter<{ columnKey: string; visible: boolean }>();
 
   // Dropdown state
   readonly isOpen = signal(false);
 
-  // Computed counts
-  readonly visibleCount = computed(() => this.visibleColumns.size);
-  readonly totalCount = computed(() => this.columns.length);
+  // Computed counts (signal-backed so computed() tracks changes)
+  readonly visibleCount = computed(() => this._visibleColumns().size);
+  readonly totalCount = computed(() => this._columns().length);
 
   toggle(): void {
     this.isOpen.update((v) => !v);

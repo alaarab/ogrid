@@ -70,6 +70,14 @@ export const MarchingAntsOverlay = defineComponent({
     cutRange: { type: Object as PropType<ISelectionRange | null>, default: null },
     /** Column offset — 1 when checkbox column is present, else 0 */
     colOffset: { type: Number, required: true },
+    /** Items array — triggers re-measurement when data changes (e.g., sorting) */
+    items: { type: Array as PropType<readonly unknown[]>, required: true },
+    /** Visible columns — triggers re-measurement when columns are hidden/shown */
+    visibleColumns: { type: Array as PropType<readonly string[] | undefined>, default: undefined },
+    /** Column sizing overrides — triggers re-measurement when columns are resized */
+    columnSizingOverrides: { type: Object as PropType<Record<string, { widthPx: number }>>, required: true },
+    /** Column order — triggers re-measurement when columns are reordered */
+    columnOrder: { type: Array as PropType<readonly string[] | undefined>, default: undefined },
   },
   setup(props) {
     const selRect = ref<OverlayRect | null>(null);
@@ -96,8 +104,8 @@ export const MarchingAntsOverlay = defineComponent({
       ensureKeyframes();
     });
 
-    // Measure when any range changes; re-measure on resize
-    watch([() => props.selectionRange, clipRange, () => props.containerRef.value], () => {
+    // Measure when any range changes; re-measure on resize, column changes, data changes
+    watch([() => props.selectionRange, clipRange, () => props.containerRef.value, () => props.items, () => props.visibleColumns, () => props.columnSizingOverrides, () => props.columnOrder], () => {
       if (!props.selectionRange && !clipRange.value) {
         selRect.value = null;
         clipRect.value = null;

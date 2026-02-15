@@ -23,6 +23,14 @@ export interface MarchingAntsOverlayProps {
   cutRange: ISelectionRange | null;
   /** Column offset — 1 when checkbox column is present, else 0 */
   colOffset: number;
+  /** Items array — triggers re-measurement when data changes (e.g., sorting) */
+  items: readonly unknown[];
+  /** Visible columns — triggers re-measurement when columns are hidden/shown */
+  visibleColumns: Set<string> | undefined;
+  /** Column sizing overrides — triggers re-measurement when columns are resized */
+  columnSizingOverrides: Record<string, { widthPx: number }>;
+  /** Column order — triggers re-measurement when columns are reordered */
+  columnOrder: readonly string[] | undefined;
 }
 
 // Inject the @keyframes rule once into <head> (deduplicates across multiple OGrid instances / module copies)
@@ -79,6 +87,10 @@ export function MarchingAntsOverlay({
   copyRange,
   cutRange,
   colOffset,
+  items,
+  visibleColumns,
+  columnSizingOverrides,
+  columnOrder,
 }: MarchingAntsOverlayProps): React.ReactElement | null {
   const [selRect, setSelRect] = useState<OverlayRect | null>(null);
   const [clipRect, setClipRect] = useState<OverlayRect | null>(null);
@@ -96,7 +108,7 @@ export function MarchingAntsOverlay({
 
     setSelRect(selectionRange ? measureRange(container, selectionRange, colOffset) : null);
     setClipRect(clipRange ? measureRange(container, clipRange, colOffset) : null);
-  }, [selectionRange, clipRange, containerRef, colOffset]);
+  }, [selectionRange, clipRange, containerRef, colOffset, items, visibleColumns, columnSizingOverrides, columnOrder]);
 
   // Inject keyframes on mount
   useEffect(() => {

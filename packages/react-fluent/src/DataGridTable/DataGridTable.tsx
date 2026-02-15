@@ -96,6 +96,7 @@ function GridRowInner(props: GridRowProps) {
     <DataGridRow<any>
       className={rowClassName}
       onClick={() => handleSingleRowClick(rowId)}
+      focusMode="composite"
     >
       {({ renderCell, columnId }: { renderCell: (item: unknown) => React.ReactNode; columnId: string | number }) => (
         <DataGridCell className={cellClassMap[String(columnId)] || undefined}>
@@ -304,7 +305,7 @@ function DataGridTableInner<T>(props: IOGridDataGridProps<T>): React.ReactElemen
                 />
                 <Popover
                   open={!!popoverAnchorElRef.current}
-                  onOpenChange={(_, data) => { if (!data.open) cancelPopoverEditRef.current(); }}
+                  onOpenChange={(_: any, data: any) => { if (!data.open) cancelPopoverEditRef.current(); }}
                   positioning={{ target: popoverAnchorElRef.current ?? undefined }}
                 >
                   <PopoverSurface>
@@ -597,10 +598,11 @@ function DataGridTableInner<T>(props: IOGridDataGridProps<T>): React.ReactElemen
                       })}
                     </tr>
                   ))}
-                  <DataGridRow>
+                  <DataGridRow focusMode="composite">
                     {({ renderHeaderCell, columnId }) => (
                       <DataGridHeaderCell
                         className={headerClassMap[String(columnId)] || undefined}
+                        focusMode="composite"
                       >
                         {renderHeaderCell()}
                       </DataGridHeaderCell>
@@ -647,6 +649,10 @@ function DataGridTableInner<T>(props: IOGridDataGridProps<T>): React.ReactElemen
                 copyRange={copyRange}
                 cutRange={cutRange}
                 colOffset={colOffset}
+                items={items}
+                visibleColumns={visibleColumns}
+                columnSizingOverrides={columnSizingOverrides}
+                columnOrder={columnOrder}
               />
               {showEmptyInGrid && emptyState && (
                 <div className={styles.emptyStateInGrid}>

@@ -1,8 +1,10 @@
-import { Component, ElementRef, ViewChild, ChangeDetectionStrategy, Input } from '@angular/core';
+import { Component, ElementRef, ChangeDetectionStrategy, Input, ViewChild, signal } from '@angular/core';
 import {
   BaseDataGridTableComponent,
   DataGridStateService,
   MarchingAntsOverlayComponent,
+  StatusBarComponent,
+  GridContextMenuComponent,
   CHECKBOX_COLUMN_WIDTH,
   ROW_NUMBER_COLUMN_WIDTH,
 } from '@alaarab/ogrid-angular';
@@ -21,9 +23,9 @@ import { PopoverCellEditorComponent } from './popover-cell-editor.component';
 @Component({
   selector: 'ogrid-datagrid-table',
   standalone: true,
-  imports: [ColumnHeaderFilterComponent, ColumnHeaderMenuComponent, MarchingAntsOverlayComponent, InlineCellEditorComponent, PopoverCellEditorComponent],
-  providers: [DataGridStateService],
   changeDetection: ChangeDetectionStrategy.OnPush,
+  imports: [ColumnHeaderFilterComponent, ColumnHeaderMenuComponent, StatusBarComponent, GridContextMenuComponent, MarchingAntsOverlayComponent, InlineCellEditorComponent, PopoverCellEditorComponent],
+  providers: [DataGridStateService],
   template: `
     <div class="ogrid-datagrid-root">
       <div
@@ -98,6 +100,8 @@ import { PopoverCellEditorComponent } from './popover-cell-editor.component';
                             [style.width.px]="colW"
                             [style.maxWidth.px]="colW"
                             [style.cursor]="columnReorderService.isDragging() ? 'grabbing' : 'grab'"
+                            [style.left.px]="pinnedLeft ? getPinnedLeftOffset(col.columnId) : null"
+                            [style.right.px]="pinnedRight ? getPinnedRightOffset(col.columnId) : null"
                             (mousedown)="onHeaderMouseDown(col.columnId, $event)"
                           >
                             <div style="display:flex;align-items:center;gap:4px;">
@@ -187,6 +191,8 @@ import { PopoverCellEditorComponent } from './popover-cell-editor.component';
                             [style.minWidth.px]="colLayout.minWidth"
                             [style.width.px]="colLayout.width"
                             [style.maxWidth.px]="colLayout.width"
+                            [style.left.px]="colLayout.pinnedLeft ? getPinnedLeftOffset(colLayout.col.columnId) : null"
+                            [style.right.px]="colLayout.pinnedRight ? getPinnedRightOffset(colLayout.col.columnId) : null"
                           >
                             @let descriptor = getCellDescriptor(item, colLayout.col, rowIndex, colIdx);
                             @if (descriptor.mode === 'editing-inline') {
@@ -254,12 +260,15 @@ import { PopoverCellEditorComponent } from './popover-cell-editor.component';
               </table>
 
               <ogrid-marching-ants-overlay
-                [containerEl]="tableContainerEl()"
+                [containerEl]="tableContainerEl"
                 [selectionRange]="state().interaction.selectionRange"
                 [copyRange]="state().interaction.copyRange"
                 [cutRange]="state().interaction.cutRange"
                 [colOffset]="state().layout.colOffset"
                 [columnSizingVersion]="columnSizingVersion()"
+                [items]="items()"
+                [visibleColumns]="propsVisibleColumns()"
+                [columnOrder]="propsColumnOrder()"
               ></ogrid-marching-ants-overlay>
 
               @if (showEmptyInGrid() && emptyState()) {
@@ -292,12 +301,12 @@ import { PopoverCellEditorComponent } from './popover-cell-editor.component';
             (click)="closeContextMenu()"
             (contextmenu)="$event.preventDefault(); closeContextMenu()"
           >
-            <ogrid-grid-context-menu
+            <ogrid-context-menu
               [x]="menuPosition()!.x"
               [y]="menuPosition()!.y"
               [hasSelection]="hasCellSelection()"
-              [canUndo]="canUndo()"
-              [canRedo]="canRedo()"
+              [canUndoProp]="canUndo()"
+              [canRedoProp]="canRedo()"
               (undoAction)="onUndo()"
               (redoAction)="onRedo()"
               (copyAction)="handleCopy()"
@@ -345,24 +354,25 @@ import { PopoverCellEditorComponent } from './popover-cell-editor.component';
     .ogrid-datagrid-scroll-wrapper { display: flex; flex-direction: column; min-height: 100%; }
     .ogrid-datagrid-table-wrapper--loading { position: relative; opacity: 0.6; }
     .ogrid-datagrid-table {
-      width: 100%; border-collapse: collapse; overflow: hidden; table-layout: fixed;
+      width: 100%; border-collapse: collapse; table-layout: fixed;
     }
     .ogrid-datagrid-thead {
-      position: sticky; top: 0; z-index: 8; background: rgba(0,0,0,0.04);
+      z-index: 8; background: rgba(0,0,0,0.04);
     }
     .ogrid-datagrid-thead th { background: rgba(0,0,0,0.04); }
     .ogrid-datagrid-header-row { background: rgba(0,0,0,0.04); }
     .ogrid-datagrid-th {
-      font-weight: 600; position: relative; padding: 6px 10px; text-align: left;
+      font-weight: 600; position: sticky; top: 0; padding: 6px 10px; text-align: left;
       font-size: 14px; border-bottom: 1px solid rgba(0,0,0,0.12);
+      background: rgba(0,0,0,0.04); z-index: 8;
     }
     .ogrid-datagrid-th--pinned-left {
-      position: sticky; left: 0; z-index: 9; background: rgba(0,0,0,0.04); will-change: transform;
-      border-left: 2px solid var(--mat-sys-primary, #1976d2);
+      position: sticky; top: 0; left: 0; z-index: 10; background: rgba(0,0,0,0.04); will-change: transform;
+      border-right: 2px solid rgba(0,0,0,0.12);
     }
     .ogrid-datagrid-th--pinned-right {
-      position: sticky; right: 0; z-index: 9; background: rgba(0,0,0,0.04); will-change: transform;
-      border-right: 2px solid var(--mat-sys-primary, #1976d2);
+      position: sticky; top: 0; right: 0; z-index: 10; background: rgba(0,0,0,0.04); will-change: transform;
+      border-left: 2px solid rgba(0,0,0,0.12);
     }
     .ogrid-datagrid-group-header {
       text-align: center; font-weight: 600; border-bottom: 2px solid rgba(0,0,0,0.12); padding: 6px;
@@ -389,11 +399,11 @@ import { PopoverCellEditorComponent } from './popover-cell-editor.component';
     .ogrid-datagrid-td { position: relative; padding: 0; height: 1px; border-bottom: 1px solid rgba(0,0,0,0.06); }
     .ogrid-datagrid-td--pinned-left {
       position: sticky; left: 0; z-index: 6; background: #fff; will-change: transform;
-      border-left: 2px solid var(--mat-sys-primary, #1976d2);
+      border-right: 2px solid rgba(0,0,0,0.12);
     }
     .ogrid-datagrid-td--pinned-right {
       position: sticky; right: 0; z-index: 6; background: #fff; will-change: transform;
-      border-right: 2px solid var(--mat-sys-primary, #1976d2);
+      border-left: 2px solid rgba(0,0,0,0.12);
     }
     .ogrid-datagrid-cell {
       width: 100%; height: 100%; display: flex; align-items: center; min-width: 0;
@@ -433,10 +443,11 @@ import { PopoverCellEditorComponent } from './popover-cell-editor.component';
       cursor: col-resize; user-select: none;
     }
     .ogrid-datagrid-resize-handle::after {
-      content: ''; position: absolute; top: 0; right: 3px; bottom: 0; width: 2px;
+      content: ''; position: absolute; top: 4px; right: 3px; bottom: 4px; width: 2px;
+      background: rgba(0,0,0,0.12); border-radius: 1px; transition: background 0.15s;
     }
-    .ogrid-datagrid-resize-handle:hover::after { background: var(--mat-sys-primary, #1976d2); }
-    .ogrid-datagrid-resize-handle:active::after { background: var(--mat-sys-primary, #1565c0); }
+    .ogrid-datagrid-resize-handle:hover::after { background: rgba(0,0,0,0.4); }
+    .ogrid-datagrid-resize-handle:active::after { background: var(--mat-sys-primary, #1976d2); }
     .ogrid-datagrid-empty {
       padding: 32px 16px; text-align: center; border-top: 1px solid rgba(0,0,0,0.12);
       background: rgba(0,0,0,0.04);
@@ -473,7 +484,12 @@ import { PopoverCellEditorComponent } from './popover-cell-editor.component';
   `],
 })
 export class DataGridTableComponent<T> extends BaseDataGridTableComponent<T> {
-  @Input({ required: true, alias: 'props' }) propsInput!: IOGridDataGridProps<T>;
+  private readonly propsSignal = signal<IOGridDataGridProps<T> | undefined>(undefined);
+
+  @Input({ required: true, alias: 'props' })
+  set propsInput(value: IOGridDataGridProps<T>) {
+    this.propsSignal.set(value);
+  }
 
   @ViewChild('wrapperEl') private wrapperRef?: ElementRef<HTMLElement>;
   @ViewChild('tableContainerEl') private tableContainerRef?: ElementRef<HTMLElement>;
@@ -484,7 +500,7 @@ export class DataGridTableComponent<T> extends BaseDataGridTableComponent<T> {
   }
 
   protected getProps(): IOGridDataGridProps<T> | undefined {
-    return this.propsInput;
+    return this.propsSignal();
   }
 
   protected getWrapperRef(): ElementRef<HTMLElement> | undefined {

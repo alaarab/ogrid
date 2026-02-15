@@ -1,4 +1,4 @@
-import { Component, Input, inject, ChangeDetectionStrategy, DoCheck } from '@angular/core';
+import { Component, inject, ChangeDetectionStrategy, Input, signal, effect } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import {
   OGridService,
@@ -94,10 +94,14 @@ import { PaginationControlsComponent } from '../pagination-controls/pagination-c
     </ogrid-layout>
   `,
 })
-export class OGridComponent<T = unknown> implements DoCheck {
+export class OGridComponent<T = unknown> {
   readonly service = inject<OGridService<T>>(OGridService);
+  private readonly propsSignal = signal<IOGridProps<T> | undefined>(undefined);
 
-  @Input({ required: true }) props!: IOGridProps<T>;
+  @Input({ required: true })
+  set props(value: IOGridProps<T>) {
+    this.propsSignal.set(value);
+  }
 
   // Stable callback references (avoid re-creating every template eval)
   readonly onColumnSortFn = (columnKey: string) => this.service.handleSort(columnKey);
@@ -105,6 +109,13 @@ export class OGridComponent<T = unknown> implements DoCheck {
   readonly onColumnPinnedFn = (columnId: string, pinned: 'left' | 'right' | null) => this.service.handleColumnPinned(columnId, pinned);
   readonly onSelectionChangeFn = (event: { selectedRowIds: RowId[]; selectedItems: T[] }) => this.service.handleSelectionChange(event);
   readonly onFilterChangeFn = (key: string, value: unknown) => this.service.handleFilterChange(key, value as never);
+
+  constructor() {
+    effect(() => {
+      const p = this.propsSignal();
+      if (p) this.service.configure(p);
+    });
+  }
 
   get showToolbar(): boolean {
     return this.service.columnChooserPlacement() === 'toolbar' || this.service.toolbar() != null;
@@ -117,12 +128,6 @@ export class OGridComponent<T = unknown> implements DoCheck {
       message: this.service.emptyState()?.message,
       render: this.service.emptyState()?.render,
     };
-  }
-
-  ngDoCheck(): void {
-    // Configure service on every change detection cycle
-    // This replaces the effect() that was watching the signal-based input
-    this.service.configure(this.props);
   }
 
   onPageSizeChange(size: number): void {
