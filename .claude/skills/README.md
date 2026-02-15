@@ -10,7 +10,6 @@ Comprehensive pre-commit gate that checks the entire monorepo before allowing co
 
 **What it checks:**
 - ✅ Version synchronization across all 14 packages
-- ✅ Documentation version references (StackBlitz config)
 - ✅ Full build (`npm run build`)
 - ✅ Full test suite (`npm run test:all`) - 2000+ tests
 - ✅ Lint (`npm run lint`) - zero errors/warnings

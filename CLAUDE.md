@@ -308,9 +308,6 @@ grep '"version"' package.json
 
 # Verify all packages match (should see same version 14 times)
 grep -r '"version"' packages/*/package.json | grep -v node_modules
-
-# Check StackBlitz version constant
-grep 'OGRID_VERSION' packages/docs/src/stackblitz/projects.ts
 ```
 ✅ All versions must match
 
@@ -378,19 +375,14 @@ git status
 - [ ] Update `README.md` feature list if the feature is user-facing.
 - [ ] Update `CLAUDE.md` if conventions, architecture, or API surface changed.
 
-### 6. Documentation — StackBlitz Demos
-- [ ] Add a `FeatureDemoSet` entry in `packages/docs/src/stackblitz/featureDemos.ts` with working code for all 4 frameworks (React, Angular, Vue, JS).
-- [ ] Update the feature's demo component to pass `stackblitz={featureName}` to `<LiveDemo>`.
-- [ ] StackBlitz projects reference the **current published version** of `@alaarab/ogrid-*` packages.
-
-### 7. Documentation — Framework Showcase
-- [ ] If adding a **new UI package**, add its section to `packages/docs/docs/guides/framework-showcase.mdx` with install command, code example, and StackBlitz button.
+### 6. Documentation — Framework Showcase
+- [ ] If adding a **new UI package**, add its section to `packages/docs/docs/guides/framework-showcase.mdx` with install command and code example.
 - [ ] Update the comparison table in framework-showcase.mdx to include the new package.
 
-### 8. Memory
+### 7. Memory
 - [ ] Update `MEMORY.md` with key decisions, patterns, and test counts.
 
-### 9. No Unnecessary Duplication
+### 8. No Unnecessary Duplication
 - [ ] State logic stays in core hooks — UI packages should only add view-layer code.
 - [ ] If the same pattern appears in 2+ UI packages, consider a shared factory or headless component.
 
@@ -411,8 +403,7 @@ When any feature changes, these artifacts must stay in sync:
 | **Tests** | 14 packages | All `__tests__/` dirs — native testing tools per framework |
 | **Storybook** | 3 (React UI) | `packages/react-{radix,fluent,material}/src/stories/` |
 | **Feature docs** | 1 file per feature | `packages/docs/docs/features/*.mdx` — 4 framework tabs each |
-| **StackBlitz demos** | 1 entry per feature | `packages/docs/src/stackblitz/featureDemos.ts` — 4 frameworks each |
-| **Demo components** | 1 per feature | `packages/docs/src/components/demos/*Demo.tsx` — pass `stackblitz` prop |
+| **Demo components** | 1 per feature | `packages/docs/src/components/demos/*Demo.tsx` |
 | **Framework showcase** | 1 page | `packages/docs/docs/guides/framework-showcase.mdx` — all 8 UI packages |
 
 ## View Layer Architecture (Phase 2 Complete)

@@ -3,13 +3,12 @@ import { OGrid } from '@alaarab/ogrid-react-radix';
 import type { IOGridApi } from '@alaarab/ogrid-react-radix';
 import { LiveDemo } from '../LiveDemo';
 import { people, getRowId, gridApiColumns, btnStyle, type Person } from './demoData';
-import { gridApi } from '../../stackblitz/featureDemos';
 
 export default function GridApiDemo() {
   const gridRef = useRef<IOGridApi<Person>>(null);
 
   return (
-    <LiveDemo height={460} title="Use the buttons to control the grid programmatically" stackblitz={gridApi}>
+    <LiveDemo height={460} title="Use the buttons to control the grid programmatically">
       <OGrid
         ref={gridRef}
         columns={gridApiColumns}
