@@ -3,7 +3,6 @@ import { OGrid } from '@alaarab/ogrid-react-radix';
 import type { ICellValueChangedEvent } from '@alaarab/ogrid-react-radix';
 import { LiveDemo } from '../LiveDemo';
 import { people as initialPeople, getRowId, editingColumns, type Person } from './demoData';
-import { editing } from '../../stackblitz/featureDemos';
 
 export default function FillHandleDemo() {
   const [data, setData] = useState<Person[]>(() => initialPeople.map(p => ({ ...p })));
@@ -17,7 +16,7 @@ export default function FillHandleDemo() {
   }, []);
 
   return (
-    <LiveDemo height={420} title="Select a cell, then drag the green square at the bottom-right corner to fill" stackblitz={editing}>
+    <LiveDemo height={420} title="Select a cell, then drag the green square at the bottom-right corner to fill">
       <OGrid
         columns={editingColumns}
         data={data}

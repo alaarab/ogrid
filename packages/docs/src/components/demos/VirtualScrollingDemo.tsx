@@ -2,7 +2,6 @@ import React, { useMemo } from 'react';
 import { OGrid } from '@alaarab/ogrid-react-radix';
 import type { IColumnDef } from '@alaarab/ogrid-react-radix';
 import { LiveDemo } from '../LiveDemo';
-import { virtualScrolling } from '../../stackblitz/featureDemos';
 
 interface Row {
   id: number;
@@ -38,7 +37,7 @@ export default function VirtualScrollingDemo() {
   );
 
   return (
-    <LiveDemo height={460} title="10,000 rows — only visible rows are in the DOM" stackblitz={virtualScrolling}>
+    <LiveDemo height={460} title="10,000 rows — only visible rows are in the DOM">
       <OGrid
         columns={columns}
         data={data}

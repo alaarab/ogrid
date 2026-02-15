@@ -336,33 +336,3 @@ table th {
     border-radius: 0 !important;
   }
 }
-
-/* ── StackBlitz Button ── */
-.stackblitz-btn {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  padding: 2px 8px;
-  font-size: 0.65rem;
-  font-weight: 600;
-  font-family: inherit;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  color: var(--ifm-color-emphasis-700);
-  background: transparent;
-  border: 1px solid var(--ogrid-border-glass);
-  border-radius: 4px;
-  cursor: pointer;
-  transition: background 0.15s, color 0.15s, border-color 0.15s;
-  white-space: nowrap;
-
-  &:hover {
-    color: #1389fd;
-    border-color: #1389fd;
-    background: rgba(19, 137, 253, 0.06);
-  }
-}
-
-[data-theme='dark'] .stackblitz-btn:hover {
-  background: rgba(19, 137, 253, 0.12);
-}
