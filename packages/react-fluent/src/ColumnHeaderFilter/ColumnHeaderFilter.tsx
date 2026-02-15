@@ -202,7 +202,7 @@ export const ColumnHeaderFilter: React.FC<IColumnHeaderFilterProps> = React.memo
             </button>
             <Popover
               open={isFilterOpen}
-              onOpenChange={(_, data) => { if (!data.open) setFilterOpen(false); }}
+              onOpenChange={(_: any, data: any) => { if (!data.open) setFilterOpen(false); }}
               positioning={{ target: filterBtnRef.current ?? undefined, position: 'below', align: 'start', offset: 4 }}
               trapFocus={false}
             >
@@ -210,6 +210,7 @@ export const ColumnHeaderFilter: React.FC<IColumnHeaderFilterProps> = React.memo
                 ref={popoverRef as React.RefObject<HTMLDivElement>}
                 className={styles.filterPopover}
                 onClick={handlers.handlePopoverClick}
+                style={{ padding: 0 }}
               >
                 <div className={styles.popoverHeader}>Filter: {columnName}</div>
                 {renderPopoverContent()}

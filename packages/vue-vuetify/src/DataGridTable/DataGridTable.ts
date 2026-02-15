@@ -239,6 +239,14 @@ export const DataGridTable = defineComponent({
         ]);
       };
 
+      // Compute pinning offsets
+      const columnWidthsMap: Record<string, number> = {};
+      visibleCols.forEach((col) => {
+        columnWidthsMap[col.columnId] = getColumnWidth(col);
+      });
+      const leftOffsets = pinning.computeLeftOffsets(visibleCols, columnWidthsMap, DEFAULT_MIN_COLUMN_WIDTH, hasCheckboxCol, CHECKBOX_COLUMN_WIDTH);
+      const rightOffsets = pinning.computeRightOffsets(visibleCols, columnWidthsMap, DEFAULT_MIN_COLUMN_WIDTH);
+
       // Build column layouts
       const columnLayouts = visibleCols.map((col, colIdx) => {
         const isFreezeCol = freezeCols != null && freezeCols >= 1 && colIdx < freezeCols;
@@ -252,13 +260,13 @@ export const DataGridTable = defineComponent({
         };
         if (isPinnedLeft || (isFreezeCol && colIdx === 0)) {
           tdStyle.position = 'sticky';
-          tdStyle.left = '0';
+          tdStyle.left = `${leftOffsets[col.columnId] ?? 0}px`;
           tdStyle.zIndex = '6';
           tdStyle.backgroundColor = '#fff';
           tdStyle.willChange = 'transform';
         } else if (isPinnedRight) {
           tdStyle.position = 'sticky';
-          tdStyle.right = '0';
+          tdStyle.right = `${rightOffsets[col.columnId] ?? 0}px`;
           tdStyle.zIndex = '6';
           tdStyle.backgroundColor = '#fff';
           tdStyle.willChange = 'transform';
@@ -271,12 +279,14 @@ export const DataGridTable = defineComponent({
         const isFreezeCol = freezeCols != null && freezeCols >= 1 && colIdx < freezeCols;
         const isPinnedLeft = col.pinned === 'left';
         const isPinnedRight = col.pinned === 'right';
-        const base: Record<string, string> = { fontWeight: '600', position: 'relative' };
+        const base: Record<string, string> = { fontWeight: '600', position: 'sticky', top: '0', backgroundColor: 'rgba(0,0,0,0.04)', zIndex: '8' };
         if (isPinnedLeft || (isFreezeCol && colIdx === 0)) {
-          return { ...base, position: 'sticky', left: '0', top: '0', zIndex: '9', backgroundColor: 'rgba(0,0,0,0.04)', willChange: 'transform' };
+          const leftOffset = leftOffsets[col.columnId] ?? 0;
+          return { ...base, position: 'sticky', left: `${leftOffset}px`, top: '0', zIndex: '10', backgroundColor: 'rgba(0,0,0,0.04)', willChange: 'transform' };
         }
         if (isPinnedRight) {
-          return { ...base, position: 'sticky', right: '0', top: '0', zIndex: '9', backgroundColor: 'rgba(0,0,0,0.04)', willChange: 'transform' };
+          const rightOffset = rightOffsets[col.columnId] ?? 0;
+          return { ...base, position: 'sticky', right: `${rightOffset}px`, top: '0', zIndex: '10', backgroundColor: 'rgba(0,0,0,0.04)', willChange: 'transform' };
         }
         return base;
       };
@@ -337,7 +347,6 @@ export const DataGridTable = defineComponent({
                   style: {
                     width: '100%',
                     borderCollapse: 'collapse',
-                    overflow: 'hidden',
                     minWidth: `${minTableWidth}px`,
                     fontSize: '0.875rem',
                   },
@@ -345,7 +354,7 @@ export const DataGridTable = defineComponent({
                   'data-freeze-cols': freezeCols != null && freezeCols >= 1 ? freezeCols : undefined,
                 }, [
                   // Header
-                  h('thead', { style: { position: 'sticky', top: '0', zIndex: '8', backgroundColor: 'rgba(0,0,0,0.04)' } },
+                  h('thead', { style: { zIndex: '8', backgroundColor: 'rgba(0,0,0,0.04)' } },
                     headerRows.map((row, rowIdx) =>
                       h('tr', { key: rowIdx, style: { backgroundColor: 'rgba(0,0,0,0.04)' } }, [
                         // Checkbox header cell (last leaf row only)

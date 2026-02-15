@@ -6,4 +6,7 @@ export default defineConfig({
   root: 'src/angular-material',
   build: { outDir: '../../dist/angular-material' },
   server: { port: 3011 },
+  optimizeDeps: {
+    exclude: ['@alaarab/ogrid-angular', '@alaarab/ogrid-angular-material']
+  },
 });

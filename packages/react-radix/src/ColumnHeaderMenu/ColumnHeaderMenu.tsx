@@ -1,5 +1,5 @@
-import React, { useMemo } from 'react';
-import * as DropdownMenu from '@radix-ui/react-dropdown-menu';
+import React, { useMemo, useEffect, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { getColumnHeaderMenuItems } from '@alaarab/ogrid-core';
 import type { ColumnHeaderMenuInput } from '@alaarab/ogrid-core';
 import styles from './ColumnHeaderMenu.module.scss';
@@ -26,11 +26,12 @@ export interface ColumnHeaderMenuProps {
 
 /**
  * Column header dropdown menu for pin/sort/autosize actions.
- * Uses Radix UI DropdownMenu primitives.
+ * Uses positioned div with portal rendering.
  */
 export function ColumnHeaderMenu(props: ColumnHeaderMenuProps) {
   const {
     isOpen,
+    anchorElement,
     onClose,
     onPinLeft,
     onPinRight,
@@ -48,11 +49,41 @@ export function ColumnHeaderMenu(props: ColumnHeaderMenuProps) {
     isResizable,
   } = props;
 
-  const handleOpenChange = (open: boolean) => {
-    if (!open) {
-      onClose();
+  const [position, setPosition] = useState<{ top: number; left: number } | null>(null);
+
+  useEffect(() => {
+    if (!isOpen || !anchorElement) {
+      setPosition(null);
+      return;
     }
-  };
+
+    const rect = anchorElement.getBoundingClientRect();
+    setPosition({
+      top: rect.bottom + 4,
+      left: rect.left,
+    });
+
+    const handleClickOutside = (e: MouseEvent) => {
+      const target = e.target as Node;
+      if (anchorElement && !anchorElement.contains(target)) {
+        onClose();
+      }
+    };
+
+    const handleEscape = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        onClose();
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    document.addEventListener('keydown', handleEscape);
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener('keydown', handleEscape);
+    };
+  }, [isOpen, anchorElement, onClose]);
 
   const menuInput: ColumnHeaderMenuInput = useMemo(
     () => ({
@@ -79,26 +110,36 @@ export function ColumnHeaderMenu(props: ColumnHeaderMenuProps) {
     autosizeAll: onAutosizeAll,
   };
 
-  return (
-    <DropdownMenu.Root open={isOpen} onOpenChange={handleOpenChange}>
-      <DropdownMenu.Portal>
-        <DropdownMenu.Content className={styles.content} sideOffset={4} align="start">
-          {items.map((item, idx) => (
-            <React.Fragment key={item.id}>
-              <DropdownMenu.Item
-                className={styles.item}
-                disabled={item.disabled}
-                onSelect={handlers[item.id]}
-              >
-                {item.label}
-              </DropdownMenu.Item>
-              {item.divider && idx < items.length - 1 && (
-                <DropdownMenu.Separator className={styles.separator} />
-              )}
-            </React.Fragment>
-          ))}
-        </DropdownMenu.Content>
-      </DropdownMenu.Portal>
-    </DropdownMenu.Root>
+  if (!isOpen || !position) return null;
+
+  return createPortal(
+    <div
+      className={styles.content}
+      style={{
+        position: 'fixed',
+        top: position.top,
+        left: position.left,
+        zIndex: 1000,
+      }}
+    >
+      {items.map((item, idx) => (
+        <React.Fragment key={item.id}>
+          <button
+            className={styles.item}
+            disabled={item.disabled}
+            onClick={() => {
+              handlers[item.id]();
+              onClose();
+            }}
+          >
+            {item.label}
+          </button>
+          {item.divider && idx < items.length - 1 && (
+            <div className={styles.separator} />
+          )}
+        </React.Fragment>
+      ))}
+    </div>,
+    document.body
   );
 }
