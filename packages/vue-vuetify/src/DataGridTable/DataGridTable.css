@@ -1,0 +1,27 @@
+/* OGrid Vue Vuetify – DataGridTable styles */
+
+/* Remove focus outline from scrollable wrapper (keyboard nav is handled via cell outlines) */
+[role="region"][tabindex="0"] {
+  outline: none !important;
+}
+
+/* Cell selection highlighting - matches React implementation */
+.ogrid-cell-in-range {
+  background: var(--ogrid-bg-range, rgba(33, 115, 70, 0.12)) !important;
+}
+
+/* Cut range highlighting */
+.ogrid-cell-cut {
+  background: var(--ogrid-bg-hover, rgba(0, 0, 0, 0.04)) !important;
+  opacity: 0.7;
+}
+
+/* Drag-range highlight applied via DOM attributes during drag (bypasses Vue for performance) */
+[data-drag-range] {
+  background: var(--ogrid-bg-range, rgba(33, 115, 70, 0.12)) !important;
+}
+
+/* Anchor cell during drag: white/transparent background (like Excel) */
+[data-drag-anchor] {
+  background: var(--ogrid-bg, #fff) !important;
+}

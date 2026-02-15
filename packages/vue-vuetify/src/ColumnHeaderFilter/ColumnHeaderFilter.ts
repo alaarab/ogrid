@@ -1,5 +1,5 @@
 import { defineComponent, h, type PropType, type VNode } from 'vue';
-import { VBtn, VIcon, VMenu, VTooltip } from 'vuetify/components';
+import { VBtn, VIcon, VMenu, VTooltip, VCard } from 'vuetify/components';
 import {
   useColumnHeaderFilterState,
   type ColumnFilterType,
@@ -15,6 +15,7 @@ const _VBtn = VBtn as any;
 const _VIcon = VIcon as any;
 const _VMenu = VMenu as any;
 const _VTooltip = VTooltip as any;
+const _VCard = VCard as any;
 
 export interface IColumnHeaderFilterProps {
   columnKey: string;
@@ -178,11 +179,14 @@ export const ColumnHeaderFilter = defineComponent({
             h(_VBtn, {
               icon: true,
               size: 'x-small',
-              variant: 'text',
-              color: props.isSorted ? 'primary' : undefined,
+              variant: props.isSorted ? 'tonal' : 'text',
+              color: props.isSorted ? 'primary' : 'default',
               'aria-label': `Sort by ${props.columnName}`,
               title: props.isSorted ? (props.isSortedDescending ? 'Sorted descending' : 'Sorted ascending') : 'Sort',
               onClick: state.handlers.handleSortClick,
+              style: {
+                opacity: props.isSorted ? '1' : '0.7',
+              },
             }, () =>
               h(_VIcon, { size: '16' },
                 () => props.isSorted
@@ -206,10 +210,13 @@ export const ColumnHeaderFilter = defineComponent({
                     ...menuProps,
                     icon: true,
                     size: 'x-small',
-                    variant: 'text',
-                    color: state.hasActiveFilter.value || state.isFilterOpen.value ? 'primary' : undefined,
+                    variant: (state.hasActiveFilter.value || state.isFilterOpen.value) ? 'tonal' : 'text',
+                    color: (state.hasActiveFilter.value || state.isFilterOpen.value) ? 'primary' : 'default',
                     'aria-label': `Filter ${props.columnName}`,
                     title: `Filter ${props.columnName}`,
+                    style: {
+                      opacity: (state.hasActiveFilter.value || state.isFilterOpen.value) ? '1' : '0.7',
+                    },
                   }, () => h(_VIcon, { size: '16' }, () => 'mdi-filter-variant')),
                   ...(state.hasActiveFilter.value ? [
                     h('div', {
@@ -221,20 +228,23 @@ export const ColumnHeaderFilter = defineComponent({
                         height: '6px',
                         borderRadius: '50%',
                         backgroundColor: 'rgb(var(--v-theme-primary))',
+                        zIndex: '1',
                       },
                     }),
                   ] : []),
                 ]),
-              default: () => h('div', {
+              default: () => h(_VCard, {
+                elevation: 8,
                 ref: (el: unknown) => { state.popoverRef.value = el as HTMLDivElement; },
                 onClick: (e: MouseEvent) => e.stopPropagation(),
-              }, [
+              }, () => [
                 h('div', {
                   style: {
                     borderBottom: '1px solid rgba(0,0,0,0.12)',
                     padding: '8px 12px',
                     fontWeight: '600',
                     fontSize: '0.875rem',
+                    backgroundColor: '#fff',
                   },
                 }, `Filter: ${props.columnName}`),
                 renderPopoverContent(),

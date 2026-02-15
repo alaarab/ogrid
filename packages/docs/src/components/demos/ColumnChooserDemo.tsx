@@ -2,11 +2,10 @@ import React from 'react';
 import { OGrid } from '@alaarab/ogrid-react-radix';
 import { LiveDemo } from '../LiveDemo';
 import { people, getRowId, columnChooserColumns } from './demoData';
-import { columnChooser } from '../../stackblitz/featureDemos';
 
 export default function ColumnChooserDemo() {
   return (
-    <LiveDemo height={420} title="Use the column chooser to show/hide columns" stackblitz={columnChooser}>
+    <LiveDemo height={420} title="Use the column chooser to show/hide columns">
       <OGrid
         columns={columnChooserColumns}
         data={people}

@@ -1,7 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import BrowserOnly from '@docusaurus/BrowserOnly';
 import { LiveDemo } from '../LiveDemo';
-import { showcase } from '../../stackblitz/featureDemos';
 
 const DEPARTMENTS = ['Engineering', 'Marketing', 'Sales', 'Finance', 'Operations'];
 const STATUSES = ['Active', 'Draft', 'Archived'];
@@ -94,7 +93,7 @@ function RadixGrid() {
 
 export default function ShowcaseRadixDemo() {
   return (
-    <LiveDemo height={480} title="Radix UI — lightweight, accessible primitives" stackblitz={{ StackBlitz: showcase.React }}>
+    <LiveDemo height={480} title="Radix UI — lightweight, accessible primitives"}>
       <BrowserOnly>{() => <RadixGrid />}</BrowserOnly>
     </LiveDemo>
   );
