@@ -1,54 +1,8 @@
-import * as React from 'react';
-import { useRef, useEffect, useMemo } from 'react';
+import React, { useMemo, useEffect, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { getColumnHeaderMenuItems } from '@alaarab/ogrid-core';
 import type { ColumnHeaderMenuInput } from '@alaarab/ogrid-core';
-import { makeStyles, tokens } from '@fluentui/react-components';
-
-const useStyles = makeStyles({
-  menu: {
-    position: 'fixed',
-    minWidth: '140px',
-    backgroundColor: tokens.colorNeutralBackground1,
-    borderRadius: tokens.borderRadiusMedium,
-    padding: '4px',
-    boxShadow: tokens.shadow16,
-    zIndex: 100,
-  },
-  menuItem: {
-    display: 'flex',
-    alignItems: 'center',
-    height: '28px',
-    padding: '0 8px',
-    fontSize: tokens.fontSizeBase200,
-    color: tokens.colorNeutralForeground1,
-    borderRadius: tokens.borderRadiusSmall,
-    cursor: 'pointer',
-    userSelect: 'none',
-    outline: 'none',
-    backgroundColor: 'transparent',
-    border: 'none',
-    width: '100%',
-    textAlign: 'left',
-
-    ':hover:not([disabled])': {
-      backgroundColor: tokens.colorNeutralBackground1Hover,
-    },
-
-    ':active:not([disabled])': {
-      backgroundColor: tokens.colorNeutralBackground1Pressed,
-    },
-
-    ':disabled': {
-      color: tokens.colorNeutralForegroundDisabled,
-      cursor: 'not-allowed',
-    },
-  },
-  separator: {
-    height: '1px',
-    backgroundColor: tokens.colorNeutralStroke2,
-    margin: '4px 0',
-  },
-});
+import styles from './ColumnHeaderMenu.module.scss';
 
 export interface ColumnHeaderMenuProps {
   isOpen: boolean;
@@ -70,7 +24,11 @@ export interface ColumnHeaderMenuProps {
   isResizable: boolean;
 }
 
-export function ColumnHeaderMenu(props: ColumnHeaderMenuProps): React.ReactElement | null {
+/**
+ * Column header dropdown menu for pin/sort/autosize actions.
+ * Uses positioned div with portal rendering.
+ */
+export function ColumnHeaderMenu(props: ColumnHeaderMenuProps) {
   const {
     isOpen,
     anchorElement,
@@ -90,14 +48,24 @@ export function ColumnHeaderMenu(props: ColumnHeaderMenuProps): React.ReactEleme
     isSortable,
     isResizable,
   } = props;
-  const menuRef = useRef<HTMLDivElement>(null);
-  const styles = useStyles();
+
+  const [position, setPosition] = useState<{ top: number; left: number } | null>(null);
 
   useEffect(() => {
-    if (!isOpen) return;
+    if (!isOpen || !anchorElement) {
+      setPosition(null);
+      return;
+    }
+
+    const rect = anchorElement.getBoundingClientRect();
+    setPosition({
+      top: rect.bottom + 4,
+      left: rect.left,
+    });
 
     const handleClickOutside = (e: MouseEvent) => {
-      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
+      const target = e.target as Node;
+      if (anchorElement && !anchorElement.contains(target)) {
         onClose();
       }
     };
@@ -115,7 +83,7 @@ export function ColumnHeaderMenu(props: ColumnHeaderMenuProps): React.ReactEleme
       document.removeEventListener('mousedown', handleClickOutside);
       document.removeEventListener('keydown', handleEscape);
     };
-  }, [isOpen, onClose]);
+  }, [isOpen, anchorElement, onClose]);
 
   const menuInput: ColumnHeaderMenuInput = useMemo(
     () => ({
@@ -142,28 +110,36 @@ export function ColumnHeaderMenu(props: ColumnHeaderMenuProps): React.ReactEleme
     autosizeAll: onAutosizeAll,
   };
 
-  if (!isOpen || !anchorElement) return null;
+  if (!isOpen || !position) return null;
 
-  const rect = anchorElement.getBoundingClientRect();
-  const menuStyle: React.CSSProperties = {
-    top: rect.bottom + 4,
-    left: rect.left,
-  };
-
-  return (
-    <div ref={menuRef} className={styles.menu} style={menuStyle}>
+  return createPortal(
+    <div
+      className={styles.content}
+      style={{
+        position: 'fixed',
+        top: position.top,
+        left: position.left,
+        zIndex: 1000,
+      }}
+    >
       {items.map((item, idx) => (
         <React.Fragment key={item.id}>
           <button
-            className={styles.menuItem}
-            onClick={handlers[item.id]}
+            className={styles.item}
             disabled={item.disabled}
+            onClick={() => {
+              handlers[item.id]();
+              onClose();
+            }}
           >
             {item.label}
           </button>
-          {item.divider && idx < items.length - 1 && <div className={styles.separator} />}
+          {item.divider && idx < items.length - 1 && (
+            <div className={styles.separator} />
+          )}
         </React.Fragment>
       ))}
-    </div>
+    </div>,
+    document.body
   );
 }
