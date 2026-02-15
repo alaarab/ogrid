@@ -7,7 +7,7 @@
   "scripts": {
     "build": "turbo build",
     "test": "npm run test --workspaces --if-present",
-    "test:all": "npm run test --workspaces --if-present",
+    "test:all": "npm run test",
     "test:core": "npm test -w @alaarab/ogrid-core",
     "test:js": "npm test -w @alaarab/ogrid-js",
     "test:react": "npm test -w @alaarab/ogrid-react",

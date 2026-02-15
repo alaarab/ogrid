@@ -36,70 +36,43 @@ const data1000 = generateMockData(1000);
 
 console.log(`Testing with ${data1000.length} rows...`);
 
-// Simulated render test (SSR since we can't use DOM)
-const testApp = createSSRApp({
-  template: `
-    <div>
-      <table>
-        <thead>
-          <tr>
-            <th v-for="col in columns" :key="col.columnId">{{ col.label }}</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr v-for="(item, idx) in items" :key="item.id" :class="{ selected: idx === selectedRow }">
-            <td v-for="col in columns" :key="col.columnId">{{ item[col.field] }}</td>
-          </tr>
-        </tbody>
-      </table>
-    </div>
-  `,
-  data() {
-    return {
-      items: data1000,
-      columns: columns,
-      selectedRow: -1
-    };
-  }
-});
+const tableTemplate = `
+  <div>
+    <table>
+      <thead>
+        <tr>
+          <th v-for="col in columns" :key="col.columnId">{{ col.label }}</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr v-for="(item, idx) in items" :key="item.id" :class="{ selected: idx === selectedRow }">
+          <td v-for="col in columns" :key="col.columnId">{{ item[col.field] }}</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+`;
+
+function createTableApp(selectedRow) {
+  return createSSRApp({
+    template: tableTemplate,
+    data() {
+      return { items: data1000, columns, selectedRow };
+    },
+  });
+}
 
 // Measure initial render
 const startInitial = performance.now();
-await renderToString(testApp);
+await renderToString(createTableApp(-1));
 const endInitial = performance.now();
 const initialRenderTime = (endInitial - startInitial).toFixed(2);
 
 console.log(`Initial render (1000 rows): ${initialRenderTime}ms`);
 
-// Simulate selection change by creating new app instance with selection
-const testAppWithSelection = createSSRApp({
-  template: `
-    <div>
-      <table>
-        <thead>
-          <tr>
-            <th v-for="col in columns" :key="col.columnId">{{ col.label }}</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr v-for="(item, idx) in items" :key="item.id" :class="{ selected: idx === selectedRow }">
-            <td v-for="col in columns" :key="col.columnId">{{ item[col.field] }}</td>
-          </tr>
-        </tbody>
-      </table>
-    </div>
-  `,
-  data() {
-    return {
-      items: data1000,
-      columns: columns,
-      selectedRow: 500  // Row 500 selected
-    };
-  }
-});
-
+// Simulate selection change
 const startSelection = performance.now();
-await renderToString(testAppWithSelection);
+await renderToString(createTableApp(500));
 const endSelection = performance.now();
 const selectionRenderTime = (endSelection - startSelection).toFixed(2);
 
