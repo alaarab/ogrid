@@ -3,7 +3,6 @@ import { OGrid } from '@alaarab/ogrid-react-radix';
 import type { IDataSource, IFetchParams } from '@alaarab/ogrid-react-radix';
 import { LiveDemo } from '../LiveDemo';
 import { people, getRowId, sortingColumns, type Person } from './demoData';
-import { serverSideData } from '../../stackblitz/featureDemos';
 
 export default function ServerSideDemo() {
   const dataSource = useMemo<IDataSource<Person>>(() => ({
@@ -24,7 +23,7 @@ export default function ServerSideDemo() {
   }), []);
 
   return (
-    <LiveDemo height={420} title="Simulated 300ms server latency — watch the loading state" stackblitz={serverSideData}>
+    <LiveDemo height={420} title="Simulated 300ms server latency — watch the loading state">
       <OGrid columns={sortingColumns} dataSource={dataSource} getRowId={getRowId}
         defaultPageSize={5} entityLabelPlural="people" />
     </LiveDemo>

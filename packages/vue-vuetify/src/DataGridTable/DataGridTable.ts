@@ -22,6 +22,7 @@ import { ColumnHeaderFilter } from '../ColumnHeaderFilter';
 import { ColumnHeaderMenu } from '../ColumnHeaderMenu/ColumnHeaderMenu';
 import { InlineCellEditor } from './InlineCellEditor';
 import { GridContextMenu } from './GridContextMenu';
+import './DataGridTable.css';
 
 const NOOP = () => {};
 
@@ -197,13 +198,13 @@ export const DataGridTable = defineComponent({
           cellInlineStyle.overflow = 'visible';
         }
 
+        // Apply range/cut highlighting via CSS classes + data attributes for proper precedence
+        let highlightClass = '';
         if (descriptor.isInRange) {
-          cellInlineStyle.backgroundColor = 'var(--ogrid-bg-range, rgba(33, 115, 70, 0.12))';
+          highlightClass = 'ogrid-cell-in-range';
         }
-
         if (descriptor.isInCutRange) {
-          cellInlineStyle.backgroundColor = 'rgba(0,0,0,0.04)';
-          cellInlineStyle.opacity = '0.7';
+          highlightClass = 'ogrid-cell-cut';
         }
 
         const styledContent = cellStyle
@@ -212,6 +213,7 @@ export const DataGridTable = defineComponent({
 
         return h('div', {
           ...interactionProps,
+          class: highlightClass || undefined,
           style: cellInlineStyle,
         }, [
           styledContent,
