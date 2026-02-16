@@ -4,6 +4,7 @@ coverage
 storybook-static
 .playwright-mcp
 .turbo
+.angular
 *.tsbuildinfo
 *.log
 *.tgz
