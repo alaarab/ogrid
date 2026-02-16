@@ -20,6 +20,8 @@
     "test:vue": "npm test -w @alaarab/ogrid-vue",
     "test:vue-vuetify": "npm test -w @alaarab/ogrid-vue-vuetify",
     "test:vue-primevue": "npm test -w @alaarab/ogrid-vue-primevue",
+    "test:angular-radix": "npm test -w @alaarab/ogrid-angular-radix",
+    "test:vue-radix": "npm test -w @alaarab/ogrid-vue-radix",
     "dev:react-fluent": "npm run dev:react-fluent -w @alaarab/ogrid-examples",
     "dev:react-material": "npm run dev:react-material -w @alaarab/ogrid-examples",
     "dev:react-radix": "npm run dev:react-radix -w @alaarab/ogrid-examples",
@@ -39,7 +41,7 @@
     "docs:build": "npm run build -w @alaarab/ogrid-docs",
     "docs:serve": "npm run serve -w @alaarab/ogrid-docs",
     "lint": "eslint .",
-    "publish:all": "npm publish --workspace=packages/core --access=public && npm publish --workspace=packages/react --access=public && npm publish --workspace=packages/js --access=public && npm publish --workspace=packages/react-fluent --access=public && npm publish --workspace=packages/react-material --access=public && npm publish --workspace=packages/react-radix --access=public && npm publish --workspace=packages/angular --access=public && npm publish --workspace=packages/angular-material --access=public && npm publish --workspace=packages/angular-primeng --access=public && npm publish --workspace=packages/vue --access=public && npm publish --workspace=packages/vue-vuetify --access=public && npm publish --workspace=packages/vue-primevue --access=public"
+    "publish:all": "npm publish --workspace=packages/core --access=public && npm publish --workspace=packages/react --access=public && npm publish --workspace=packages/js --access=public && npm publish --workspace=packages/react-fluent --access=public && npm publish --workspace=packages/react-material --access=public && npm publish --workspace=packages/react-radix --access=public && npm publish --workspace=packages/angular --access=public && npm publish --workspace=packages/angular-material --access=public && npm publish --workspace=packages/angular-primeng --access=public && npm publish --workspace=packages/angular-radix --access=public && npm publish --workspace=packages/vue --access=public && npm publish --workspace=packages/vue-vuetify --access=public && npm publish --workspace=packages/vue-primevue --access=public && npm publish --workspace=packages/vue-radix --access=public"
   },
   "packageManager": "npm@11.6.2",
   "engines": {
