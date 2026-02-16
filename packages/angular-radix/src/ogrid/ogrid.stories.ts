@@ -51,7 +51,7 @@ function makeGridProps(overrides: Record<string, unknown> = {}): IOGridProps<Pro
 }
 
 const meta: Meta<OGridComponent<Project>> = {
-  title: 'OGrid/Angular Material/OGrid',
+  title: 'OGrid/Angular Radix/OGrid',
   component: OGridComponent,
   decorators: [
     moduleMetadata({
