@@ -14,7 +14,9 @@
   },
   "scripts": {
     "build": "rimraf dist && tsc -p tsconfig.build.json",
-    "test": "jest --passWithNoTests"
+    "test": "jest --passWithNoTests",
+    "storybook": "storybook dev -p 6013 --no-open",
+    "build-storybook": "storybook build"
   },
   "keywords": [
     "ogrid",
@@ -47,7 +49,9 @@
     "@vitejs/plugin-vue": "^6.0.4",
     "vite": "^7.3.1",
     "vite-plugin-dts": "^4.5.4",
-    "typescript": "^5.9.3"
+    "typescript": "^5.9.3",
+    "@storybook/vue3-vite": "^10.2.8",
+    "storybook": "^10.2.8"
   },
   "sideEffects": false,
   "publishConfig": {

@@ -11,13 +11,17 @@
           "options": {
             "configDir": ".storybook",
             "browserTarget": "angular-material:build-storybook",
-            "port": 6009
+            "port": 6009,
+            "compodoc": false,
+            "tsConfig": "tsconfig.storybook.json"
           }
         },
         "build-storybook": {
           "builder": "@storybook/angular:build-storybook",
           "options": {
-            "configDir": ".storybook"
+            "configDir": ".storybook",
+            "compodoc": false,
+            "tsConfig": "tsconfig.storybook.json"
           }
         }
       }

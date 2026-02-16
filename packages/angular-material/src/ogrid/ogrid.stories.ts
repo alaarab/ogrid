@@ -1,7 +1,7 @@
 import type { Meta, StoryObj } from '@storybook/angular';
 import { moduleMetadata } from '@storybook/angular';
 import { OGridComponent } from './ogrid.component';
-import type { IOGridProps, IColumnDef } from '@alaarab/ogrid-angular';
+import type { IOGridProps, IColumnDef, ISideBarDef } from '@alaarab/ogrid-angular';
 
 interface Project {
   id: string;
@@ -39,7 +39,7 @@ const columns: IColumnDef<Project>[] = [
 
 const getRowId = (p: Project) => p.id;
 
-function makeGridProps(overrides: Partial<IOGridProps<Project>> = {}): IOGridProps<Project> {
+function makeGridProps(overrides: Record<string, unknown> = {}): IOGridProps<Project> {
   return {
     data: makeProjects(50),
     columns,
@@ -47,7 +47,7 @@ function makeGridProps(overrides: Partial<IOGridProps<Project>> = {}): IOGridPro
     entityLabelPlural: 'projects',
     defaultPageSize: 10,
     ...overrides,
-  };
+  } as IOGridProps<Project>;
 }
 
 const meta: Meta<OGridComponent<Project>> = {
@@ -119,6 +119,39 @@ export const WithSideBar: Story = {
   }),
 };
 
+export const DefaultSortDescending: Story = {
+  render: () => ({
+    template: `<ogrid [props]="gridProps" />`,
+    props: {
+      gridProps: makeGridProps({
+        data: makeProjects(30),
+        defaultSortBy: 'budget',
+        defaultSortDirection: 'desc',
+      }),
+    },
+  }),
+};
+
+export const Editable: Story = {
+  render: () => ({
+    template: `<ogrid [props]="gridProps" />`,
+    props: {
+      gridProps: makeGridProps({
+        data: makeProjects(5),
+        editable: true,
+        columns: [
+          { columnId: 'name', name: 'Project Name', sortable: true, filterable: { type: 'text' }, editable: true, cellEditor: 'text' } as IColumnDef<Project>,
+          { columnId: 'status', name: 'Status', sortable: true, filterable: { type: 'multiSelect', filterField: 'status' }, editable: true, cellEditor: 'select', cellEditorParams: { values: STATUSES } } as IColumnDef<Project>,
+          { columnId: 'owner', name: 'Owner', sortable: true, filterable: { type: 'text' } } as IColumnDef<Project>,
+          { columnId: 'budget', name: 'Budget', sortable: true, compare: (a: Project, b: Project) => a.budget - b.budget } as IColumnDef<Project>,
+          { columnId: 'startDate', name: 'Start Date', type: 'date', sortable: true, filterable: { type: 'date' }, editable: true } as IColumnDef<Project>,
+          { columnId: 'active', name: 'Active', type: 'boolean', sortable: true, editable: true } as IColumnDef<Project>,
+        ],
+      }),
+    },
+  }),
+};
+
 export const SpreadsheetExperience: Story = {
   render: () => ({
     template: `<ogrid [props]="gridProps" />`,
@@ -136,6 +169,153 @@ export const SpreadsheetExperience: Story = {
         })),
         defaultPageSize: 25,
       }),
+    },
+  }),
+};
+
+export const SideBar: Story = {
+  render: () => ({
+    template: `<ogrid [props]="gridProps" />`,
+    props: {
+      gridProps: makeGridProps({
+        data: makeProjects(20),
+        sideBar: true,
+        columnChooser: 'sidebar',
+        statusBar: true,
+        defaultPageSize: 10,
+      }),
+    },
+  }),
+};
+
+export const SideBarLeftPosition: Story = {
+  render: () => ({
+    template: `<ogrid [props]="gridProps" />`,
+    props: {
+      gridProps: makeGridProps({
+        data: makeProjects(20),
+        sideBar: { position: 'left', defaultPanel: 'filters' } as ISideBarDef,
+        columnChooser: 'sidebar',
+        defaultPageSize: 10,
+      }),
+    },
+  }),
+};
+
+// ---------------------------------------------------------------------------
+// Playground — fully interactive with Storybook controls
+// ---------------------------------------------------------------------------
+
+const playgroundColumns: IColumnDef<Project>[] = [
+  { columnId: 'name', name: 'Project Name', sortable: true, filterable: { type: 'text' }, editable: true, cellEditor: 'text', pinned: 'left', minWidth: 150 },
+  { columnId: 'status', name: 'Status', sortable: true, filterable: { type: 'multiSelect', filterField: 'status' }, editable: true, cellEditor: 'select', cellEditorParams: { values: STATUSES } },
+  { columnId: 'owner', name: 'Owner', sortable: true, filterable: { type: 'text' }, editable: true, cellEditor: 'text' },
+  { columnId: 'budget', name: 'Budget', type: 'numeric', sortable: true, editable: true, cellEditor: 'text', compare: (a: Project, b: Project) => a.budget - b.budget, valueFormatter: (v: unknown) => typeof v === 'number' ? `$${v.toLocaleString()}` : String(v ?? '') },
+  { columnId: 'startDate', name: 'Start Date', type: 'date', sortable: true, filterable: { type: 'date' }, editable: true },
+  { columnId: 'active', name: 'Active', type: 'boolean', sortable: true, editable: true },
+] as IColumnDef<Project>[];
+
+interface PlaygroundArgs {
+  rowCount: number;
+  statusBar: boolean;
+  columnChooser: boolean | 'toolbar' | 'sidebar';
+  sideBar: boolean;
+  sideBarPosition: 'left' | 'right';
+  sideBarDefaultPanel: string;
+  rowSelection: string;
+  editable: boolean;
+  cellSelection: boolean;
+  layoutMode: 'content' | 'fill';
+  suppressHorizontalScroll: boolean;
+  freezeRows: number;
+  freezeCols: number;
+  defaultPageSize: number;
+  defaultSortBy: string;
+  defaultSortDirection: 'asc' | 'desc';
+  entityLabelPlural: string;
+  pageSizeOptions: string;
+}
+
+function buildPlaygroundProps(args: PlaygroundArgs): IOGridProps<Project> {
+  const pageSizeOpts = args.pageSizeOptions
+    .split(',')
+    .map((s: string) => parseInt(s.trim(), 10))
+    .filter((n: number) => !isNaN(n));
+
+  const sideBarDef: ISideBarDef | undefined = args.sideBar
+    ? {
+        position: args.sideBarPosition,
+        defaultPanel: args.sideBarDefaultPanel === 'none' ? undefined : (args.sideBarDefaultPanel as 'columns' | 'filters'),
+      }
+    : undefined;
+
+  return {
+    data: makeProjects(args.rowCount),
+    columns: playgroundColumns,
+    getRowId,
+    entityLabelPlural: args.entityLabelPlural,
+    statusBar: args.statusBar,
+    columnChooser: args.columnChooser,
+    sideBar: sideBarDef,
+    rowSelection: args.rowSelection === 'none' ? undefined : (args.rowSelection as 'single' | 'multiple'),
+    editable: args.editable,
+    cellSelection: args.cellSelection,
+    layoutMode: args.layoutMode,
+    suppressHorizontalScroll: args.suppressHorizontalScroll,
+    freezeRows: args.freezeRows,
+    freezeCols: args.freezeCols,
+    defaultPageSize: args.defaultPageSize,
+    defaultSortBy: args.defaultSortBy === 'none' ? undefined : args.defaultSortBy,
+    defaultSortDirection: args.defaultSortDirection,
+    pageSizeOptions: pageSizeOpts.length > 0 ? pageSizeOpts : undefined,
+  } as IOGridProps<Project>;
+}
+
+export const Playground: StoryObj<PlaygroundArgs> = {
+  argTypes: {
+    rowCount: { control: { type: 'range', min: 0, max: 200, step: 5 } },
+    statusBar: { control: 'boolean' },
+    columnChooser: { control: 'select', options: [true, false, 'toolbar', 'sidebar'] },
+    sideBar: { control: 'boolean' },
+    sideBarPosition: { control: 'radio', options: ['left', 'right'], if: { arg: 'sideBar' } },
+    sideBarDefaultPanel: { control: 'select', options: ['none', 'columns', 'filters'], if: { arg: 'sideBar' } },
+    rowSelection: { control: 'select', options: ['none', 'single', 'multiple'] },
+    editable: { control: 'boolean' },
+    cellSelection: { control: 'boolean' },
+    layoutMode: { control: 'radio', options: ['content', 'fill'] },
+    suppressHorizontalScroll: { control: 'boolean' },
+    freezeRows: { control: { type: 'range', min: 0, max: 3, step: 1 } },
+    freezeCols: { control: { type: 'range', min: 0, max: 3, step: 1 } },
+    defaultPageSize: { control: 'select', options: [10, 25, 50, 100] },
+    defaultSortBy: { control: 'select', options: ['none', 'name', 'status', 'owner', 'budget', 'startDate', 'active'] },
+    defaultSortDirection: { control: 'radio', options: ['asc', 'desc'] },
+    entityLabelPlural: { control: 'text' },
+    pageSizeOptions: { control: 'text', description: 'Comma-separated page size options' },
+  },
+  args: {
+    rowCount: 50,
+    statusBar: true,
+    columnChooser: true,
+    sideBar: false,
+    sideBarPosition: 'right',
+    sideBarDefaultPanel: 'none',
+    rowSelection: 'multiple',
+    editable: true,
+    cellSelection: true,
+    layoutMode: 'fill',
+    suppressHorizontalScroll: false,
+    freezeRows: 1,
+    freezeCols: 0,
+    defaultPageSize: 10,
+    defaultSortBy: 'name',
+    defaultSortDirection: 'asc',
+    entityLabelPlural: 'projects',
+    pageSizeOptions: '10,25,50,100',
+  },
+  render: (args: PlaygroundArgs) => ({
+    template: `<ogrid [props]="gridProps" />`,
+    props: {
+      gridProps: buildPlaygroundProps(args),
     },
   }),
 };
