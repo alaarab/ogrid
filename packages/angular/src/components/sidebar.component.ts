@@ -153,7 +153,7 @@ const PANEL_LABELS: Record<SideBarPanelId, string> = { columns: 'Columns', filte
               </div>
               @for (col of sideBarProps?.columns ?? []; track col.columnId) {
                 <label class="ogrid-sidebar-col-label">
-                  <input type="checkbox" [checked]="sideBarProps?.visibleColumns?.has(col.columnId)" (change)="onVisibilityChange(col.columnId, ($event.target as HTMLInputElement).checked)" [disabled]="col.required" />
+                  <input type="checkbox" [checked]="sideBarProps?.visibleColumns?.has(col.columnId)" (change)="onVisibilityChange(col.columnId, $any($event.target).checked)" [disabled]="col.required" />
                   <span>{{ col.name }}</span>
                 </label>
               }
@@ -170,7 +170,7 @@ const PANEL_LABELS: Record<SideBarPanelId, string> = { columns: 'Columns', filte
                       type="text"
                       class="ogrid-sidebar-text-input"
                       [value]="getTextFilterValue(col.filterField)"
-                      (input)="onTextFilterChange(col.filterField, ($event.target as HTMLInputElement).value)"
+                      (input)="onTextFilterChange(col.filterField, $any($event.target).value)"
                       [placeholder]="'Filter ' + col.name + '...'"
                       [attr.aria-label]="'Filter ' + col.name"
                     />
@@ -179,11 +179,11 @@ const PANEL_LABELS: Record<SideBarPanelId, string> = { columns: 'Columns', filte
                     <div class="ogrid-sidebar-date-row">
                       <label class="ogrid-sidebar-date-label">
                         From:
-                        <input type="date" class="ogrid-sidebar-date-input" [value]="getDateFrom(col.filterField)" (change)="onDateFromChange(col.filterField, ($event.target as HTMLInputElement).value)" [attr.aria-label]="col.name + ' from date'" />
+                        <input type="date" class="ogrid-sidebar-date-input" [value]="getDateFrom(col.filterField)" (change)="onDateFromChange(col.filterField, $any($event.target).value)" [attr.aria-label]="col.name + ' from date'" />
                       </label>
                       <label class="ogrid-sidebar-date-label">
                         To:
-                        <input type="date" class="ogrid-sidebar-date-input" [value]="getDateTo(col.filterField)" (change)="onDateToChange(col.filterField, ($event.target as HTMLInputElement).value)" [attr.aria-label]="col.name + ' to date'" />
+                        <input type="date" class="ogrid-sidebar-date-input" [value]="getDateTo(col.filterField)" (change)="onDateToChange(col.filterField, $any($event.target).value)" [attr.aria-label]="col.name + ' to date'" />
                       </label>
                     </div>
                   }
@@ -191,7 +191,7 @@ const PANEL_LABELS: Record<SideBarPanelId, string> = { columns: 'Columns', filte
                     <div class="ogrid-sidebar-multiselect-list" role="group" [attr.aria-label]="col.name + ' options'">
                       @for (opt of getFilterOptions(col.filterField); track opt) {
                         <label class="ogrid-sidebar-multiselect-item">
-                          <input type="checkbox" [checked]="isMultiSelectChecked(col.filterField, opt)" (change)="onMultiSelectChange(col.filterField, opt, ($event.target as HTMLInputElement).checked)" />
+                          <input type="checkbox" [checked]="isMultiSelectChecked(col.filterField, opt)" (change)="onMultiSelectChange(col.filterField, opt, $any($event.target).checked)" />
                           <span>{{ opt }}</span>
                         </label>
                       }

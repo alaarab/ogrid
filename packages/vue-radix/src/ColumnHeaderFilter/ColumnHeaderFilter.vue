@@ -15,20 +15,20 @@ const props = withDefaults(defineProps<IColumnHeaderFilterProps>(), {
 });
 
 const state = useColumnHeaderFilterState({
-  filterType: () => props.filterType,
-  isSorted: () => props.isSorted,
-  isSortedDescending: () => props.isSortedDescending,
+  filterType: props.filterType,
+  isSorted: props.isSorted,
+  isSortedDescending: props.isSortedDescending,
   onSort: props.onSort,
-  selectedValues: () => props.selectedValues,
+  selectedValues: props.selectedValues,
   onFilterChange: props.onFilterChange,
-  options: () => props.options,
-  isLoadingOptions: () => props.isLoadingOptions,
-  textValue: () => props.textValue,
+  options: props.options,
+  isLoadingOptions: props.isLoadingOptions,
+  textValue: props.textValue,
   onTextChange: props.onTextChange,
-  selectedUser: () => props.selectedUser,
+  selectedUser: props.selectedUser,
   onUserChange: props.onUserChange,
   peopleSearch: props.peopleSearch,
-  dateValue: () => props.dateValue,
+  dateValue: props.dateValue,
   onDateChange: props.onDateChange,
 });
 

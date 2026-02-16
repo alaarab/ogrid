@@ -5,5 +5,5 @@
     "declarationDir": "dist/types",
     "outDir": "dist/esm"
   },
-  "exclude": ["src/**/__tests__/**", "src/**/*.vue"]
+  "exclude": ["src/**/__tests__/**"]
 }
