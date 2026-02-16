@@ -372,41 +372,41 @@ const setWrapperRef = (el: any) => {
               <!-- Header Cells -->
               <th
                 v-for="cell in row"
-                :key="cell.column?.columnId || `group-${rowIdx}`"
-                :colspan="cell.colspan"
-                :rowspan="cell.rowspan"
+                :key="cell.columnDef?.columnId || `group-${rowIdx}`"
+                :colspan="cell.colSpan"
+                :rowspan="!cell.isGroup ? headerRows.length - cell.depth : undefined"
                 :class="['ogrid-header-cell', { 'ogrid-group-header': cell.isGroup }]"
-                :style="cell.column && !cell.isGroup
-                  ? getHeaderCellStyle(cell.column, layout.visibleCols.indexOf(cell.column))
+                :style="cell.columnDef && !cell.isGroup
+                  ? getHeaderCellStyle(cell.columnDef, layout.visibleCols.indexOf(cell.columnDef))
                   : undefined"
-                :data-column-id="cell.column?.columnId"
-                :aria-sort="cell.column && !cell.isGroup && gridProps.sort?.field === cell.column.columnId
+                :data-column-id="cell.columnDef?.columnId"
+                :aria-sort="cell.columnDef && !cell.isGroup && gridProps.sort?.field === cell.columnDef.columnId
                   ? (gridProps.sort.direction === 'asc' ? 'ascending' : 'descending')
                   : undefined"
-                @mousedown="cell.column && !cell.isGroup ? (e) => handleReorderMouseDown(cell.column.columnId, e) : undefined"
+                @mousedown="cell.columnDef && !cell.isGroup ? (e) => handleReorderMouseDown(cell.columnDef.columnId, e) : undefined"
               >
                 <div class="ogrid-header-content">
                   <ColumnHeaderFilter
-                    v-if="cell.column && !cell.isGroup"
-                    v-bind="getFilterProps(cell.column)"
+                    v-if="cell.columnDef && !cell.isGroup"
+                    v-bind="getFilterProps(cell.columnDef)"
                   />
                   <span v-else class="ogrid-header-label">
-                    {{ cell.groupName }}
+                    {{ cell.label }}
                   </span>
                   <button
-                    v-if="cell.column && !cell.isGroup"
+                    v-if="cell.columnDef && !cell.isGroup"
                     class="ogrid-header-menu-btn"
                     aria-label="Column options"
                     title="Column options"
-                    @click.stop="(e: MouseEvent) => headerMenu.open(cell.column.columnId, e.currentTarget as HTMLElement)"
+                    @click.stop="(e: MouseEvent) => headerMenu.open(cell.columnDef.columnId, e.currentTarget as HTMLElement)"
                   >&#8942;</button>
                 </div>
 
                 <!-- Resize Handle -->
                 <div
-                  v-if="cell.column && cell.column.resizable !== false"
+                  v-if="cell.columnDef && cell.columnDef.resizable !== false"
                   class="ogrid-resize-handle"
-                  @mousedown.stop="(e) => handleResizeStart(e, cell.column!)"
+                  @mousedown.stop="(e) => handleResizeStart(e, cell.columnDef!)"
                 ></div>
               </th>
             </tr>
