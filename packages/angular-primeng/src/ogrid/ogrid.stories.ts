@@ -51,7 +51,7 @@ function makeGridProps(overrides: Record<string, unknown> = {}): IOGridProps<Pro
 }
 
 const meta: Meta<OGridComponent<Project>> = {
-  title: 'OGrid/Angular Material/OGrid',
+  title: 'OGrid/Angular PrimeNG/OGrid',
   component: OGridComponent,
   decorators: [
     moduleMetadata({
@@ -67,7 +67,7 @@ type Story = StoryObj<OGridComponent<Project>>;
 
 export const Default: Story = {
   render: () => ({
-    template: `<ogrid [props]="gridProps" />`,
+    template: `<ogrid-primeng [props]="gridProps" />`,
     props: {
       gridProps: makeGridProps(),
     },
@@ -76,7 +76,7 @@ export const Default: Story = {
 
 export const Empty: Story = {
   render: () => ({
-    template: `<ogrid [props]="gridProps" />`,
+    template: `<ogrid-primeng [props]="gridProps" />`,
     props: {
       gridProps: makeGridProps({ data: [] }),
     },
@@ -85,7 +85,7 @@ export const Empty: Story = {
 
 export const SmallDataSet: Story = {
   render: () => ({
-    template: `<ogrid [props]="gridProps" />`,
+    template: `<ogrid-primeng [props]="gridProps" />`,
     props: {
       gridProps: makeGridProps({ data: makeProjects(5) }),
     },
@@ -94,7 +94,7 @@ export const SmallDataSet: Story = {
 
 export const MultiRowSelection: Story = {
   render: () => ({
-    template: `<ogrid [props]="gridProps" />`,
+    template: `<ogrid-primeng [props]="gridProps" />`,
     props: {
       gridProps: makeGridProps({
         data: makeProjects(20),
@@ -107,7 +107,7 @@ export const MultiRowSelection: Story = {
 
 export const WithSideBar: Story = {
   render: () => ({
-    template: `<ogrid [props]="gridProps" />`,
+    template: `<ogrid-primeng [props]="gridProps" />`,
     props: {
       gridProps: makeGridProps({
         data: makeProjects(20),
@@ -121,7 +121,7 @@ export const WithSideBar: Story = {
 
 export const DefaultSortDescending: Story = {
   render: () => ({
-    template: `<ogrid [props]="gridProps" />`,
+    template: `<ogrid-primeng [props]="gridProps" />`,
     props: {
       gridProps: makeGridProps({
         data: makeProjects(30),
@@ -134,7 +134,7 @@ export const DefaultSortDescending: Story = {
 
 export const Editable: Story = {
   render: () => ({
-    template: `<ogrid [props]="gridProps" />`,
+    template: `<ogrid-primeng [props]="gridProps" />`,
     props: {
       gridProps: makeGridProps({
         data: makeProjects(5),
@@ -154,7 +154,7 @@ export const Editable: Story = {
 
 export const SpreadsheetExperience: Story = {
   render: () => ({
-    template: `<ogrid [props]="gridProps" />`,
+    template: `<ogrid-primeng [props]="gridProps" />`,
     props: {
       gridProps: makeGridProps({
         data: makeProjects(20),
@@ -175,7 +175,7 @@ export const SpreadsheetExperience: Story = {
 
 export const SideBar: Story = {
   render: () => ({
-    template: `<ogrid [props]="gridProps" />`,
+    template: `<ogrid-primeng [props]="gridProps" />`,
     props: {
       gridProps: makeGridProps({
         data: makeProjects(20),
@@ -190,7 +190,7 @@ export const SideBar: Story = {
 
 export const SideBarLeftPosition: Story = {
   render: () => ({
-    template: `<ogrid [props]="gridProps" />`,
+    template: `<ogrid-primeng [props]="gridProps" />`,
     props: {
       gridProps: makeGridProps({
         data: makeProjects(20),
@@ -313,7 +313,7 @@ export const Playground: StoryObj<PlaygroundArgs> = {
     pageSizeOptions: '10,25,50,100',
   },
   render: (args: PlaygroundArgs) => ({
-    template: `<ogrid [props]="gridProps" />`,
+    template: `<ogrid-primeng [props]="gridProps" />`,
     props: {
       gridProps: buildPlaygroundProps(args),
     },
