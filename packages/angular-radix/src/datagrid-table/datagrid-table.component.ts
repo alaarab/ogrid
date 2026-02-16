@@ -25,7 +25,351 @@ import { PopoverCellEditorComponent } from './popover-cell-editor.component';
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [ColumnHeaderFilterComponent, ColumnHeaderMenuComponent, StatusBarComponent, GridContextMenuComponent, MarchingAntsOverlayComponent, EmptyStateComponent, InlineCellEditorComponent, PopoverCellEditorComponent],
   providers: [DataGridStateService],
-  styleUrl: './datagrid-table.component.scss',
+  styles: [`
+    :host { display: block; }
+    .ogrid-datagrid-root {
+      position: relative;
+      flex: 1;
+      min-height: 0;
+      display: flex;
+      flex-direction: column;
+    }
+    .ogrid-datagrid-wrapper {
+      position: relative;
+      flex: 1;
+      min-height: 0;
+      width: 100%;
+      max-width: 100%;
+      overflow-x: hidden;
+      overflow-y: auto;
+      background: var(--ogrid-bg, #ffffff);
+      will-change: scroll-position;
+      outline: none;
+    }
+    .ogrid-datagrid-wrapper [data-drag-range] {
+      background: rgba(33, 115, 70, 0.12) !important;
+    }
+    .ogrid-datagrid-wrapper--fit { width: fit-content; }
+    .ogrid-datagrid-wrapper--overflow-x { overflow-x: auto; }
+    .ogrid-datagrid-scroll-wrapper {
+      display: flex;
+      flex-direction: column;
+      min-height: 100%;
+    }
+    .ogrid-datagrid-table-wrapper--loading {
+      position: relative;
+      opacity: 0.6;
+    }
+    .ogrid-datagrid-table {
+      width: 100%;
+      border-collapse: collapse;
+      table-layout: fixed;
+    }
+    .ogrid-datagrid-thead {
+      z-index: 8;
+      background: var(--ogrid-header-bg, #f5f5f5);
+    }
+    .ogrid-datagrid-thead th {
+      background: var(--ogrid-header-bg, #f5f5f5);
+    }
+    .ogrid-datagrid-header-row {
+      background: var(--ogrid-header-bg, #f5f5f5);
+    }
+    .ogrid-datagrid-th {
+      font-weight: 600;
+      position: sticky;
+      top: 0;
+      padding: 6px 10px;
+      text-align: left;
+      font-size: 14px;
+      border-bottom: 1px solid var(--ogrid-border, #e0e0e0);
+      color: var(--ogrid-fg, #242424);
+      background: var(--ogrid-header-bg, #f5f5f5);
+      z-index: 8;
+    }
+    .ogrid-datagrid-th:focus-visible {
+      outline: 2px solid var(--ogrid-accent, #0078d4);
+      outline-offset: -2px;
+      z-index: 11;
+    }
+    .ogrid-datagrid-th--pinned-left {
+      position: sticky;
+      top: 0;
+      left: 0;
+      z-index: 10;
+      background: var(--ogrid-header-bg, #f5f5f5);
+      will-change: transform;
+    }
+    .ogrid-datagrid-th--pinned-right {
+      position: sticky;
+      top: 0;
+      right: 0;
+      z-index: 10;
+      background: var(--ogrid-header-bg, #f5f5f5);
+      will-change: transform;
+    }
+    .ogrid-datagrid-group-header {
+      text-align: center;
+      font-weight: 600;
+      border-bottom: 2px solid var(--ogrid-border, #e0e0e0);
+      padding: 6px;
+    }
+    .ogrid-datagrid-checkbox-col {
+      width: 48px;
+      min-width: 48px;
+      max-width: 48px;
+      text-align: center;
+    }
+    .ogrid-datagrid-checkbox-wrapper {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .ogrid-datagrid-row:hover {
+      background: var(--ogrid-hover-bg, #f9f9f9);
+    }
+    .ogrid-datagrid-row--selected {
+      background: rgba(0, 120, 212, 0.08);
+    }
+    .ogrid-datagrid-td {
+      position: relative;
+      padding: 0;
+      height: 1px;
+      border-bottom: 1px solid var(--ogrid-border, #e0e0e0);
+    }
+    .ogrid-datagrid-td--pinned-left {
+      position: sticky;
+      left: 0;
+      z-index: 6;
+      background: var(--ogrid-bg, #ffffff);
+      will-change: transform;
+    }
+    .ogrid-datagrid-td--pinned-right {
+      position: sticky;
+      right: 0;
+      z-index: 6;
+      background: var(--ogrid-bg, #ffffff);
+      will-change: transform;
+    }
+    .ogrid-datagrid-cell {
+      width: 100%;
+      height: 100%;
+      display: flex;
+      align-items: center;
+      min-width: 0;
+      padding: 6px 10px;
+      box-sizing: border-box;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      user-select: none;
+      outline: none;
+      font-size: 14px;
+      color: var(--ogrid-fg, #242424);
+    }
+    .ogrid-datagrid-cell:focus-visible {
+      outline: 2px solid var(--ogrid-accent, #0078d4);
+      outline-offset: -2px;
+      z-index: 3;
+    }
+    .ogrid-datagrid-cell--numeric {
+      justify-content: flex-end;
+      text-align: right;
+    }
+    .ogrid-datagrid-cell--boolean {
+      justify-content: center;
+      text-align: center;
+    }
+    .ogrid-datagrid-cell--editable { cursor: cell; }
+    .ogrid-datagrid-cell--active {
+      outline: 2px solid var(--ogrid-active-border, #0078d4);
+      outline-offset: -1px;
+      z-index: 2;
+      position: relative;
+      overflow: visible;
+    }
+    .ogrid-datagrid-cell--in-range {
+      background: var(--ogrid-bg-range, rgba(33, 115, 70, 0.12));
+    }
+    .ogrid-datagrid-cell--in-cut-range {
+      background: var(--ogrid-hover-bg, #f0f0f0);
+      opacity: 0.7;
+    }
+    .ogrid-datagrid-cell--editing { padding: 0; }
+    .ogrid-datagrid-editor-input {
+      width: 100%;
+      height: 100%;
+      padding: 6px 10px;
+      border: 2px solid var(--ogrid-active-border, #0078d4);
+      box-sizing: border-box;
+      font-size: 14px;
+      outline: none;
+      background: var(--ogrid-bg, #ffffff);
+      color: var(--ogrid-fg, #242424);
+      font-family: inherit;
+      line-height: inherit;
+    }
+    .ogrid-datagrid-cell--numeric .ogrid-datagrid-editor-input {
+      text-align: right;
+    }
+    .ogrid-datagrid-editor-select {
+      width: 100%;
+      height: 100%;
+      padding: 4px 8px;
+      border: 2px solid var(--ogrid-active-border, #0078d4);
+      box-sizing: border-box;
+      font-size: 14px;
+      background: var(--ogrid-bg, #ffffff);
+      color: var(--ogrid-fg, #242424);
+    }
+    .ogrid-datagrid-fill-handle {
+      position: absolute;
+      right: -3px;
+      bottom: -3px;
+      width: 7px;
+      height: 7px;
+      background: var(--ogrid-active-border, #0078d4);
+      border: 1px solid var(--ogrid-bg, #ffffff);
+      border-radius: 1px;
+      cursor: crosshair;
+      pointer-events: auto;
+      z-index: 3;
+    }
+    .ogrid-datagrid-resize-handle {
+      position: absolute;
+      top: 0;
+      right: -3px;
+      bottom: 0;
+      width: 8px;
+      cursor: col-resize;
+      user-select: none;
+    }
+    .ogrid-datagrid-resize-handle::after {
+      content: '';
+      position: absolute;
+      top: 0;
+      right: 3px;
+      bottom: 0;
+      width: 2px;
+    }
+    .ogrid-datagrid-resize-handle:hover::after {
+      background: var(--ogrid-active-border, #0078d4);
+    }
+    .ogrid-datagrid-resize-handle:active::after {
+      background: var(--ogrid-active-border, #0078d4);
+    }
+    .ogrid-datagrid-empty {
+      padding: 32px 16px;
+      text-align: center;
+      border-top: 1px solid var(--ogrid-border, #e0e0e0);
+      background: var(--ogrid-header-bg, #f5f5f5);
+    }
+    .ogrid-datagrid-empty__title {
+      font-size: 18px;
+      font-weight: 600;
+      margin-bottom: 8px;
+      color: var(--ogrid-fg, #242424);
+    }
+    .ogrid-datagrid-empty__message {
+      font-size: 14px;
+      color: var(--ogrid-fg, #242424);
+      opacity: 0.7;
+    }
+    .ogrid-datagrid-empty__clear {
+      background: none;
+      border: none;
+      color: var(--ogrid-active-border, #0078d4);
+      cursor: pointer;
+      font-size: inherit;
+      text-decoration: underline;
+      padding: 0;
+    }
+    .ogrid-datagrid-loading-overlay {
+      position: absolute;
+      inset: 0;
+      z-index: 2;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: rgba(255,255,255,0.7);
+    }
+    .ogrid-datagrid-loading-inner {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 8px;
+      padding: 16px;
+      background: var(--ogrid-bg, #ffffff);
+      border: 1px solid var(--ogrid-border, #e0e0e0);
+      border-radius: 4px;
+    }
+    .ogrid-datagrid-spinner {
+      width: 24px;
+      height: 24px;
+      border: 3px solid var(--ogrid-border, #e0e0e0);
+      border-top-color: var(--ogrid-active-border, #0078d4);
+      border-radius: 50%;
+      animation: ogrid-spin 0.8s linear infinite;
+    }
+    @keyframes ogrid-spin { to { transform: rotate(360deg); } }
+    .ogrid-datagrid-drop-indicator {
+      position: absolute;
+      top: 0;
+      bottom: 0;
+      width: 3px;
+      background: var(--ogrid-active-border, #0078d4);
+      pointer-events: none;
+      z-index: 100;
+      transition: left 0.05s;
+    }
+    .ogrid-datagrid-context-menu-overlay {
+      position: fixed;
+      inset: 0;
+      z-index: 1000;
+    }
+    .ogrid-datagrid-checkbox-spacer {
+      width: 48px;
+      min-width: 48px;
+      padding: 0;
+    }
+    .ogrid-datagrid-th--reorderable {
+      cursor: grab;
+    }
+    .ogrid-datagrid-th--dragging {
+      cursor: grabbing;
+    }
+    .ogrid-datagrid-row-number-header {
+      width: 50px;
+      min-width: 50px;
+      max-width: 50px;
+      text-align: center;
+      font-weight: 600;
+      background: var(--ogrid-bg-subtle, #fafafa);
+      color: var(--ogrid-text-secondary, #666);
+      position: sticky;
+      left: 0;
+      z-index: 9;
+    }
+    .ogrid-datagrid-row-number-spacer {
+      width: 50px;
+      min-width: 50px;
+      padding: 0;
+    }
+    .ogrid-datagrid-row-number-cell {
+      width: 50px;
+      min-width: 50px;
+      max-width: 50px;
+      text-align: center;
+      font-weight: 600;
+      font-variant-numeric: tabular-nums;
+      color: var(--ogrid-text-secondary, #666);
+      background: var(--ogrid-bg-subtle, #fafafa);
+      padding: 6px;
+      position: sticky;
+      left: 0;
+      z-index: 6;
+    }
+  `],
   template: `
     <div class="ogrid-datagrid-root">
       <div
@@ -216,7 +560,7 @@ import { PopoverCellEditorComponent } from './popover-cell-editor.component';
                                 [globalColIndex]="descriptor.globalColIndex"
                                 [displayValue]="descriptor.displayValue"
                                 [editorProps]="editorProps"
-                                [onCancel]="() => cancelEdit()"
+                                [onCancel]="cancelEditBound"
                               ></ogrid-radix-popover-cell-editor>
                             } @else {
                               @let content = resolveCellContent(colLayout.col, item, descriptor.displayValue);
@@ -353,6 +697,8 @@ export class DataGridTableComponent<T> extends BaseDataGridTableComponent<T> {
 
   @ViewChild('wrapperEl') private wrapperRef?: ElementRef<HTMLElement>;
   @ViewChild('tableContainerEl') private tableContainerRef?: ElementRef<HTMLElement>;
+
+  readonly cancelEditBound = () => this.cancelEdit();
 
   constructor() {
     super();

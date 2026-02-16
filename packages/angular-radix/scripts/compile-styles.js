@@ -1,5 +1,6 @@
 /**
- * Compiles all .module.scss files to .module.css and rewrites dist JS imports.
+ * Compiles all .scss files (both .module.scss and .component.scss) to .css
+ * and rewrites dist JS imports/references.
  */
 const fs = require('fs');
 const path = require('path');
@@ -15,7 +16,7 @@ function* walkDir(dir, base = dir) {
     const rel = path.relative(base, full);
     if (e.isDirectory()) {
       yield* walkDir(full, base);
-    } else if (e.isFile() && e.name.endsWith('.module.scss')) {
+    } else if (e.isFile() && e.name.endsWith('.scss')) {
       yield { full, rel };
     }
   }
@@ -43,8 +44,8 @@ function* walkJs(dir) {
 
 for (const jsPath of walkJs(DIST_ESM)) {
   let content = fs.readFileSync(jsPath, 'utf8');
-  if (content.includes('.module.scss')) {
-    content = content.replace(/\.module\.scss/g, '.module.css');
+  if (content.includes('.scss')) {
+    content = content.replace(/\.scss/g, '.css');
     fs.writeFileSync(jsPath, content, 'utf8');
     console.log('Rewrote imports:', path.relative(DIST_ESM, jsPath));
   }
