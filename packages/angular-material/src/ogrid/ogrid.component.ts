@@ -26,6 +26,7 @@ import { PaginationControlsComponent } from '../pagination-controls/pagination-c
     PaginationControlsComponent,
   ],
   providers: [OGridService],
+  styles: [`:host { display: block; height: 100%; }`],
   template: `
     <ogrid-layout
       [className]="ogridService.className()"
