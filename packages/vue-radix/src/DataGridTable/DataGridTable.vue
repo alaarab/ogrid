@@ -41,6 +41,10 @@ const {
   columnResize: { handleResizeStart, getColumnWidth },
 } = useDataGridTableSetup({ props: propsRef });
 
+// Wrap refs in plain object to prevent Vue template auto-unwrapping
+// (MarchingAntsOverlay expects Ref<HTMLElement | null>, not the raw element)
+const _refs = { tableContainer: tableContainerRef };
+
 // Computed state refs
 const layout = computed(() => state.layout.value);
 const rowSel = computed(() => state.rowSelection.value);
@@ -538,13 +542,13 @@ const setWrapperRef = (el: any) => {
 
         <!-- Marching Ants Overlay -->
         <MarchingAntsOverlay
-          :containerRef="tableContainerRef"
+          :containerRef="_refs.tableContainer"
           :selectionRange="interaction.selectionRange"
           :copyRange="interaction.copyRange"
           :cutRange="interaction.cutRange"
           :colOffset="layout.colOffset"
           :items="gridProps.items"
-          :visibleColumns="gridProps.visibleColumns"
+          :visibleColumns="gridProps.visibleColumns instanceof Set ? Array.from(gridProps.visibleColumns) : gridProps.visibleColumns"
           :columnSizingOverrides="layout.columnSizingOverrides"
           :columnOrder="gridProps.columnOrder"
         />
