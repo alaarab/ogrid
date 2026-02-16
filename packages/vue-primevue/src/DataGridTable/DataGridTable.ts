@@ -22,7 +22,7 @@ import {
 import { ColumnHeaderFilter } from '../ColumnHeaderFilter';
 import { ColumnHeaderMenu } from '../ColumnHeaderMenu/ColumnHeaderMenu';
 import { InlineCellEditor } from './InlineCellEditor';
-import { StatusBar } from '@alaarab/ogrid-vue';
+import { StatusBar, MarchingAntsOverlay } from '@alaarab/ogrid-vue';
 import { GridContextMenu } from './GridContextMenu';
 
 const NOOP = () => {};
@@ -640,6 +640,19 @@ export const DataGridTable = defineComponent({
             })
           ),
         ] : []),
+
+        // Marching ants overlay (copy/cut selection border)
+        h(MarchingAntsOverlay, {
+          containerRef: tableContainerRef,
+          selectionRange,
+          copyRange: _copyRange,
+          cutRange: _cutRange,
+          colOffset: _colOffset,
+          items,
+          visibleColumns: p.visibleColumns instanceof Set ? Array.from(p.visibleColumns) : p.visibleColumns,
+          columnSizingOverrides: layout.columnSizingOverrides,
+          columnOrder: p.columnOrder,
+        }),
 
         // Column header menu
         h(ColumnHeaderMenu, {
