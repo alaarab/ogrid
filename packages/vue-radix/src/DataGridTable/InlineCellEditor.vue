@@ -1,6 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, onMounted, type ComputedRef } from 'vue';
-import { Checkbox, CheckboxIndicator } from '@headlessui/vue';
+import { ref, computed, onMounted } from 'vue';
 import type { IColumnDefinition } from '@alaarab/ogrid-vue';
 import {
   useInlineCellEditorState,
@@ -29,19 +28,16 @@ const {
   commit,
   cancel,
 } = useInlineCellEditorState({
-  value: () => props.value,
-  editorType: () => props.editorType as ComputedRef<'text' | 'select' | 'checkbox' | 'richSelect' | 'date'>,
+  value: props.value,
+  editorType: props.editorType,
   onCommit: props.onCommit,
   onCancel: props.onCancel,
 });
 
-const richSelectValues = computed(() => (props.column.cellEditorParams?.values as unknown[]) ?? []);
-const richSelectFormatValue = computed(() => props.column.cellEditorParams?.formatValue as ((v: unknown) => string) | undefined);
-
 const richSelect = useRichSelectState({
-  values: richSelectValues,
-  formatValue: richSelectFormatValue,
-  initialValue: () => props.value,
+  values: (props.column.cellEditorParams?.values as unknown[]) ?? [],
+  formatValue: props.column.cellEditorParams?.formatValue as ((v: unknown) => string) | undefined,
+  initialValue: props.value,
   onCommit: props.onCommit,
   onCancel: props.onCancel,
 });
@@ -98,15 +94,16 @@ onMounted(() => {
   </div>
 
   <!-- Checkbox -->
-  <Checkbox
-    v-else-if="editorType === 'checkbox'"
-    :checked="checkboxChecked"
-    @update:checked="handleCheckboxChange"
-    @keydown.esc.prevent="cancel"
-    class="checkbox-editor"
-  >
-    <CheckboxIndicator class="checkbox-indicator">✓</CheckboxIndicator>
-  </Checkbox>
+  <div v-else-if="editorType === 'checkbox'" class="checkbox-editor-wrapper">
+    <input
+      type="checkbox"
+      :checked="checkboxChecked"
+      @change="(e: Event) => handleCheckboxChange((e.target as HTMLInputElement).checked)"
+      @keydown.esc.prevent="cancel"
+      class="checkbox-editor"
+      autofocus
+    />
+  </div>
 
   <!-- Select -->
   <div v-else-if="editorType === 'select'" class="select-wrapper">
@@ -232,26 +229,18 @@ onMounted(() => {
   color: var(--ogrid-muted, #999);
 }
 
-.checkbox-editor {
+.checkbox-editor-wrapper {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 20px;
-  height: 20px;
-  border: 1px solid var(--ogrid-border, #ccc);
-  border-radius: 3px;
-  background: var(--ogrid-bg, #fff);
-  cursor: pointer;
-
-  &[data-state='checked'] {
-    background: var(--ogrid-primary, #0078d4);
-    border-color: var(--ogrid-primary, #0078d4);
-  }
+  width: 100%;
+  height: 100%;
 }
 
-.checkbox-indicator {
-  color: white;
-  font-size: 14px;
-  font-weight: bold;
+.checkbox-editor {
+  width: 18px;
+  height: 18px;
+  cursor: pointer;
+  accent-color: var(--ogrid-primary, #0078d4);
 }
 </style>

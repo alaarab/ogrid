@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { computed } from 'vue';
 import { Menu, MenuButton, MenuItems, MenuItem } from '@headlessui/vue';
 import { useColumnChooserState } from '@alaarab/ogrid-vue';
 import type { IColumnChooserProps } from './types';
@@ -16,8 +17,8 @@ const {
   visibleCount,
   totalCount,
 } = useColumnChooserState({
-  columns: () => props.columns,
-  visibleColumns: () => props.visibleColumns,
+  columns: computed(() => props.columns),
+  visibleColumns: computed(() => props.visibleColumns),
   onVisibilityChange: props.onVisibilityChange,
 });
 

@@ -13,7 +13,7 @@
     }
   },
   "scripts": {
-    "build": "rimraf dist && tsc -p tsconfig.build.json && node scripts/compile-styles.js",
+    "build": "rimraf dist && vite build",
     "test": "jest"
   },
   "keywords": [
