@@ -9,6 +9,7 @@ import { GRID_BORDER_RADIUS } from '@alaarab/ogrid-core';
   standalone: true,
   imports: [CommonModule, SideBarComponent],
   styles: [`
+    :host { display: block; height: 100%; }
     .ogrid-layout-root { display: flex; flex-direction: column; height: 100%; }
     .ogrid-layout-container {
       border: 1px solid var(--ogrid-border, #e0e0e0);
@@ -29,7 +30,7 @@ import { GRID_BORDER_RADIUS } from '@alaarab/ogrid-core';
       padding: 6px 12px; background: var(--ogrid-header-bg, #f5f5f5);
     }
     .ogrid-layout-grid-area { width: 100%; min-width: 0; min-height: 0; flex: 1; display: flex; }
-    .ogrid-layout-grid-content { flex: 1; min-width: 0; min-height: 0; display: flex; flex-direction: column; overflow: hidden; }
+    .ogrid-layout-grid-content { flex: 1; min-width: 0; min-height: 0; display: flex; flex-direction: column; }
     .ogrid-layout-footer {
       border-top: 1px solid var(--ogrid-border, #e0e0e0);
       background: var(--ogrid-header-bg, #f5f5f5); padding: 6px 12px;
@@ -61,24 +62,18 @@ import { GRID_BORDER_RADIUS } from '@alaarab/ogrid-core';
           </div>
         }
 
-        <!-- Grid area -->
-        @if (sideBar) {
-          <div class="ogrid-layout-grid-area">
-            @if (sideBar?.position === 'left') {
-              <ogrid-sidebar [sideBarProps]="sideBar"></ogrid-sidebar>
-            }
-            <div class="ogrid-layout-grid-content">
-              <ng-content></ng-content>
-            </div>
-            @if (sideBar?.position !== 'left') {
-              <ogrid-sidebar [sideBarProps]="sideBar"></ogrid-sidebar>
-            }
-          </div>
-        } @else {
+        <!-- Grid area (single ng-content to avoid Angular content projection issues) -->
+        <div class="ogrid-layout-grid-area">
+          @if (sideBar && sideBar.position === 'left') {
+            <ogrid-sidebar [sideBarProps]="sideBar"></ogrid-sidebar>
+          }
           <div class="ogrid-layout-grid-content">
             <ng-content></ng-content>
           </div>
-        }
+          @if (sideBar && sideBar.position !== 'left') {
+            <ogrid-sidebar [sideBarProps]="sideBar"></ogrid-sidebar>
+          }
+        </div>
 
         <!-- Footer strip (pagination) -->
         @if (hasPagination) {

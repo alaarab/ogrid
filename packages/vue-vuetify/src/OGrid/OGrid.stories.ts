@@ -32,7 +32,7 @@ const columns: IColumnDef<Project>[] = [
   { columnId: 'name', name: 'Project Name', sortable: true, filterable: { type: 'text' } },
   { columnId: 'status', name: 'Status', sortable: true, filterable: { type: 'multiSelect', filterField: 'status' } },
   { columnId: 'owner', name: 'Owner', sortable: true, filterable: { type: 'text' } },
-  { columnId: 'budget', name: 'Budget', sortable: true, compare: (a: Project, b: Project) => a.budget - b.budget },
+  { columnId: 'budget', name: 'Budget', sortable: true, compare: (a: Project, b: Project) => a.budget - b.budget, valueFormatter: (v: unknown) => typeof v === 'number' ? `$${v.toLocaleString()}` : String(v ?? '') },
   { columnId: 'startDate', name: 'Start Date', type: 'date', sortable: true, filterable: { type: 'date' } },
   { columnId: 'active', name: 'Active', type: 'boolean', sortable: true },
 ];
@@ -154,7 +154,7 @@ export const Editable: Story = {
         { columnId: 'name', name: 'Project Name', sortable: true, filterable: { type: 'text' }, editable: true, cellEditor: 'text' },
         { columnId: 'status', name: 'Status', sortable: true, filterable: { type: 'multiSelect', filterField: 'status' }, editable: true, cellEditor: 'select', cellEditorParams: { values: STATUSES } },
         { columnId: 'owner', name: 'Owner', sortable: true, filterable: { type: 'text' } },
-        { columnId: 'budget', name: 'Budget', sortable: true, compare: (a: Project, b: Project) => a.budget - b.budget },
+        { columnId: 'budget', name: 'Budget', sortable: true, compare: (a: Project, b: Project) => a.budget - b.budget, valueFormatter: (v: unknown) => typeof v === 'number' ? `$${v.toLocaleString()}` : String(v ?? '') },
         { columnId: 'startDate', name: 'Start Date', type: 'date', sortable: true, filterable: { type: 'date' }, editable: true },
         { columnId: 'active', name: 'Active', type: 'boolean', sortable: true, editable: true },
       ];
@@ -207,8 +207,9 @@ export const SpreadsheetExperience: Story = {
         { columnId: 'name', name: 'Project Name', sortable: true, filterable: { type: 'text' }, editable: true, cellEditor: 'text' },
         { columnId: 'status', name: 'Status', sortable: true, filterable: { type: 'multiSelect', filterField: 'status' }, editable: true, cellEditor: 'richSelect', cellEditorParams: { values: STATUSES } },
         { columnId: 'owner', name: 'Owner', sortable: true, filterable: { type: 'text' } },
-        { columnId: 'budget', name: 'Budget', sortable: true, compare: (a: Project, b: Project) => a.budget - b.budget },
+        { columnId: 'budget', name: 'Budget', sortable: true, compare: (a: Project, b: Project) => a.budget - b.budget, valueFormatter: (v: unknown) => typeof v === 'number' ? `$${v.toLocaleString()}` : String(v ?? '') },
         { columnId: 'startDate', name: 'Start Date', type: 'date', sortable: true, filterable: { type: 'date' }, editable: true },
+        { columnId: 'active', name: 'Active', type: 'boolean', sortable: true, editable: true },
       ];
 
       const gridProps = ref<IOGridProps<Project>>({

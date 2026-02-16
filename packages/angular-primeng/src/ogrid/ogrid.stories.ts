@@ -32,7 +32,7 @@ const columns: IColumnDef<Project>[] = [
   { columnId: 'name', name: 'Project Name', sortable: true, filterable: { type: 'text' } },
   { columnId: 'status', name: 'Status', sortable: true, filterable: { type: 'multiSelect', filterField: 'status' } },
   { columnId: 'owner', name: 'Owner', sortable: true, filterable: { type: 'text' } },
-  { columnId: 'budget', name: 'Budget', sortable: true, compare: (a, b) => a.budget - b.budget },
+  { columnId: 'budget', name: 'Budget', sortable: true, compare: (a, b) => a.budget - b.budget, valueFormatter: (v: unknown) => typeof v === 'number' ? `$${v.toLocaleString()}` : String(v ?? '') },
   { columnId: 'startDate', name: 'Start Date', type: 'date', sortable: true, filterable: { type: 'date' } },
   { columnId: 'active', name: 'Active', type: 'boolean', sortable: true },
 ];
@@ -143,7 +143,7 @@ export const Editable: Story = {
           { columnId: 'name', name: 'Project Name', sortable: true, filterable: { type: 'text' }, editable: true, cellEditor: 'text' } as IColumnDef<Project>,
           { columnId: 'status', name: 'Status', sortable: true, filterable: { type: 'multiSelect', filterField: 'status' }, editable: true, cellEditor: 'select', cellEditorParams: { values: STATUSES } } as IColumnDef<Project>,
           { columnId: 'owner', name: 'Owner', sortable: true, filterable: { type: 'text' } } as IColumnDef<Project>,
-          { columnId: 'budget', name: 'Budget', sortable: true, compare: (a: Project, b: Project) => a.budget - b.budget } as IColumnDef<Project>,
+          { columnId: 'budget', name: 'Budget', sortable: true, compare: (a: Project, b: Project) => a.budget - b.budget, valueFormatter: (v: unknown) => typeof v === 'number' ? `$${v.toLocaleString()}` : String(v ?? '') } as IColumnDef<Project>,
           { columnId: 'startDate', name: 'Start Date', type: 'date', sortable: true, filterable: { type: 'date' }, editable: true } as IColumnDef<Project>,
           { columnId: 'active', name: 'Active', type: 'boolean', sortable: true, editable: true } as IColumnDef<Project>,
         ],
