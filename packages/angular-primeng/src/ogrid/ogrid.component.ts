@@ -21,6 +21,7 @@ import { PaginationControlsComponent } from '../pagination-controls/pagination-c
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   providers: [OGridService],
+  styles: [`:host { display: block; height: 100%; }`],
   template: `
     <ogrid-layout
       [className]="service.className()"
