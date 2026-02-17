@@ -57,7 +57,7 @@ export const PaginationControls = defineComponent({
       }, [
         // Summary text
         h('span', {
-          style: { fontSize: '0.875rem', color: 'rgba(0,0,0,0.6)' },
+          style: { fontSize: '0.875rem', color: 'var(--ogrid-fg-secondary, rgba(0,0,0,0.6))' },
         }, `Showing ${startItem} to ${endItem} of ${props.totalCount.toLocaleString()} ${label}`),
 
         // Page buttons
@@ -90,7 +90,7 @@ export const PaginationControls = defineComponent({
               style: { minWidth: '32px' },
               onClick: () => props.onPageChange(1),
             }, () => '1'),
-            h('span', { style: { margin: '0 4px', color: 'rgba(0,0,0,0.6)' }, 'aria-hidden': 'true' }, '\u2026'),
+            h('span', { style: { margin: '0 4px', color: 'var(--ogrid-fg-secondary, rgba(0,0,0,0.6))' }, 'aria-hidden': 'true' }, '\u2026'),
           ] : []),
 
           // Page numbers
@@ -109,7 +109,7 @@ export const PaginationControls = defineComponent({
 
           // End ellipsis
           ...(showEndEllipsis ? [
-            h('span', { style: { margin: '0 4px', color: 'rgba(0,0,0,0.6)' }, 'aria-hidden': 'true' }, '\u2026'),
+            h('span', { style: { margin: '0 4px', color: 'var(--ogrid-fg-secondary, rgba(0,0,0,0.6))' }, 'aria-hidden': 'true' }, '\u2026'),
             h(VBtn as any, {
               size: 'small',
               variant: 'outlined',
@@ -141,7 +141,7 @@ export const PaginationControls = defineComponent({
 
         // Page size selector
         h('div', { style: { display: 'flex', alignItems: 'center', gap: '8px' } }, [
-          h('span', { style: { fontSize: '0.875rem', color: 'rgba(0,0,0,0.6)' } }, 'Rows'),
+          h('span', { style: { fontSize: '0.875rem', color: 'var(--ogrid-fg-secondary, rgba(0,0,0,0.6))' } }, 'Rows'),
           h(VSelect as any, {
             modelValue: props.pageSize,
             items: v.pageSizeOptions,

@@ -43,25 +43,19 @@ import { getColumnHeaderMenuItems, type ColumnHeaderMenuHandlers } from '@alaara
       display: inline-flex;
     }
     .ogrid-header-menu__trigger {
-      opacity: 0;
-      transition: opacity 0.15s;
       width: 20px;
       height: 20px;
       padding: 0;
       border: none;
       border-radius: 2px;
       background: transparent;
-      color: var(--ogrid-fg, #242424);
+      color: var(--ogrid-fg-secondary, rgba(0, 0, 0, 0.6));
       cursor: pointer;
       font-size: 14px;
       display: flex;
       align-items: center;
       justify-content: center;
       line-height: 1;
-    }
-    :host:hover .ogrid-header-menu__trigger,
-    .ogrid-header-menu__trigger:focus {
-      opacity: 1;
     }
     .ogrid-header-menu__trigger:hover {
       background: var(--ogrid-hover-bg, #f0f0f0);

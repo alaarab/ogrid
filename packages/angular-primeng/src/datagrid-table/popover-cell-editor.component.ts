@@ -36,9 +36,10 @@ import type { IColumnDef, ICellEditorProps } from '@alaarab/ogrid-core';
       display: flex; align-items: center; justify-content: center;
     }
     .ogrid-popover-editor-content {
-      background: #fff; border-radius: 4px; padding: 16px;
-      box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+      background: var(--ogrid-bg, #ffffff); border-radius: 4px; padding: 16px;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
       max-width: 90vw; max-height: 90vh; overflow: auto;
+      color: var(--ogrid-fg, rgba(0, 0, 0, 0.87));
     }
   `],
 })

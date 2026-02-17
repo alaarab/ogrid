@@ -14,7 +14,7 @@
 
 .pagination-info {
   font-size: 13px;
-  color: var(--ogrid-muted, #606060);
+  color: var(--ogrid-fg-secondary, rgba(0, 0, 0, 0.6));
   flex-shrink: 0;
   font-variant-numeric: tabular-nums;
 }
@@ -33,10 +33,10 @@
   min-width: 28px;
   min-height: 28px;
   padding: 4px;
-  border: 1px solid var(--ogrid-border, #ccc);
+  border: 1px solid var(--ogrid-border, rgba(0, 0, 0, 0.12));
   border-radius: 50%;
   background: var(--ogrid-bg, #fff);
-  color: var(--ogrid-fg, #333);
+  color: var(--ogrid-fg, rgba(0, 0, 0, 0.87));
   cursor: pointer;
   display: inline-flex;
   align-items: center;
@@ -44,8 +44,8 @@
   font-size: 14px;
 
   &:hover:not(:disabled) {
-    background: var(--ogrid-bg-hover, #f5f5f5);
-    border-color: var(--ogrid-border-hover, #999);
+    background: var(--ogrid-hover-bg, rgba(0, 0, 0, 0.04));
+    border-color: var(--ogrid-fg-muted, rgba(0, 0, 0, 0.5));
   }
   &:disabled {
     opacity: 0.5;
@@ -64,21 +64,21 @@
   min-width: 28px;
   min-height: 28px;
   padding: 4px 8px;
-  border: 1px solid var(--ogrid-border, #ccc);
+  border: 1px solid var(--ogrid-border, rgba(0, 0, 0, 0.12));
   border-radius: 4px;
   background: var(--ogrid-bg, #fff);
-  color: var(--ogrid-fg, #333);
+  color: var(--ogrid-fg, rgba(0, 0, 0, 0.87));
   cursor: pointer;
   font-size: 13px;
   font-variant-numeric: tabular-nums;
 
   &:hover {
-    background: var(--ogrid-bg-hover, #f5f5f5);
+    background: var(--ogrid-hover-bg, rgba(0, 0, 0, 0.04));
   }
   &.active {
-    background: var(--ogrid-primary, #0066cc);
-    border-color: var(--ogrid-primary, #0066cc);
-    color: var(--ogrid-primary-fg, #fff);
+    background: var(--ogrid-accent, #0078d4);
+    border-color: var(--ogrid-accent, #0078d4);
+    color: #fff;
   }
 }
 
@@ -88,7 +88,7 @@
   justify-content: center;
   min-width: 24px;
   font-size: 12px;
-  color: var(--ogrid-muted, #888);
+  color: var(--ogrid-fg-muted, rgba(0, 0, 0, 0.5));
   user-select: none;
 }
 
@@ -100,7 +100,7 @@
 
   .page-size-label {
     font-size: 13px;
-    color: var(--ogrid-muted, #606060);
+    color: var(--ogrid-fg-secondary, rgba(0, 0, 0, 0.6));
     user-select: none;
     white-space: nowrap;
   }
@@ -108,9 +108,10 @@
   .page-size-select {
     min-width: 72px;
     padding: 4px 8px;
-    border: 1px solid var(--ogrid-border, #ccc);
+    border: 1px solid var(--ogrid-border, rgba(0, 0, 0, 0.12));
     border-radius: 4px;
     background: var(--ogrid-bg, #fff);
+    color: var(--ogrid-fg, rgba(0, 0, 0, 0.87));
     font-size: 13px;
   }
 }

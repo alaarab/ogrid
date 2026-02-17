@@ -50,4 +50,36 @@ for (const jsPath of walkJs(DIST_ESM)) {
   }
 }
 
+// ---------------------------------------------------------------------------
+// Restore CSS imports that Vite strips (replaces with `/* empty css */`)
+// For each .vue.js file, if a sibling .css file exists, inject the import.
+// ---------------------------------------------------------------------------
+
+let restored = 0;
+for (const jsPath of walkJs(DIST_ESM)) {
+  let content = fs.readFileSync(jsPath, 'utf8');
+  if (!content.includes('/* empty css')) continue;
+
+  const dir = path.dirname(jsPath);
+  const baseName = path.basename(jsPath, '.js'); // e.g. "DataGridTable.vue"
+
+  // Derive the CSS filename: DataGridTable.vue.js → DataGridTable.css
+  const cssName = baseName.replace(/\.vue$/, '') + '.css';
+  const cssPath = path.join(dir, cssName);
+
+  if (fs.existsSync(cssPath)) {
+    content = content.replace(
+      /\/\* empty css\s*\*\//g,
+      `import './${cssName}';`
+    );
+    fs.writeFileSync(jsPath, content, 'utf8');
+    restored++;
+    console.log('Restored CSS import:', path.relative(DIST_ESM, jsPath), '→', cssName);
+  }
+}
+
+if (restored > 0) {
+  console.log(`Restored ${restored} CSS import(s).`);
+}
+
 console.log('Styles compiled and dist JS imports updated.');

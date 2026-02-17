@@ -1,4 +1,4 @@
-import { Component, ElementRef, ChangeDetectionStrategy, Input, ViewChild, signal } from '@angular/core';
+import { Component, ElementRef, ChangeDetectionStrategy, ViewEncapsulation, Input, ViewChild, signal } from '@angular/core';
 import {
   BaseDataGridTableComponent,
   DataGridStateService,
@@ -23,9 +23,58 @@ import { PopoverCellEditorComponent } from './popover-cell-editor.component';
   selector: 'ogrid-datagrid-table',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
+  encapsulation: ViewEncapsulation.None,
   imports: [ColumnHeaderFilterComponent, ColumnHeaderMenuComponent, StatusBarComponent, GridContextMenuComponent, MarchingAntsOverlayComponent, EmptyStateComponent, InlineCellEditorComponent, PopoverCellEditorComponent],
   providers: [DataGridStateService],
   styles: [`
+    /* ─── OGrid Theme Variables (light defaults) ─── */
+    :root {
+      --ogrid-bg: #ffffff;
+      --ogrid-fg: rgba(0, 0, 0, 0.87);
+      --ogrid-fg-secondary: rgba(0, 0, 0, 0.6);
+      --ogrid-fg-muted: rgba(0, 0, 0, 0.5);
+      --ogrid-border: rgba(0, 0, 0, 0.12);
+      --ogrid-header-bg: rgba(0, 0, 0, 0.04);
+      --ogrid-hover-bg: rgba(0, 0, 0, 0.04);
+      --ogrid-selected-row-bg: #e6f0fb;
+      --ogrid-active-cell-bg: rgba(0, 0, 0, 0.02);
+      --ogrid-range-bg: rgba(33, 115, 70, 0.12);
+      --ogrid-accent: #0078d4;
+      --ogrid-selection-color: #217346;
+      --ogrid-loading-overlay: rgba(255, 255, 255, 0.7);
+    }
+    @media (prefers-color-scheme: dark) {
+      :root:not([data-theme="light"]) {
+        --ogrid-bg: #1e1e1e;
+        --ogrid-fg: rgba(255, 255, 255, 0.87);
+        --ogrid-fg-secondary: rgba(255, 255, 255, 0.6);
+        --ogrid-fg-muted: rgba(255, 255, 255, 0.5);
+        --ogrid-border: rgba(255, 255, 255, 0.12);
+        --ogrid-header-bg: rgba(255, 255, 255, 0.06);
+        --ogrid-hover-bg: rgba(255, 255, 255, 0.08);
+        --ogrid-selected-row-bg: #1a3a5c;
+        --ogrid-active-cell-bg: rgba(255, 255, 255, 0.06);
+        --ogrid-range-bg: rgba(46, 160, 67, 0.15);
+        --ogrid-accent: #4da6ff;
+        --ogrid-selection-color: #2ea043;
+        --ogrid-loading-overlay: rgba(0, 0, 0, 0.7);
+      }
+    }
+    [data-theme="dark"] {
+      --ogrid-bg: #1e1e1e;
+      --ogrid-fg: rgba(255, 255, 255, 0.87);
+      --ogrid-fg-secondary: rgba(255, 255, 255, 0.6);
+      --ogrid-fg-muted: rgba(255, 255, 255, 0.5);
+      --ogrid-border: rgba(255, 255, 255, 0.12);
+      --ogrid-header-bg: rgba(255, 255, 255, 0.06);
+      --ogrid-hover-bg: rgba(255, 255, 255, 0.08);
+      --ogrid-selected-row-bg: #1a3a5c;
+      --ogrid-active-cell-bg: rgba(255, 255, 255, 0.06);
+      --ogrid-range-bg: rgba(46, 160, 67, 0.15);
+      --ogrid-accent: #4da6ff;
+      --ogrid-selection-color: #2ea043;
+      --ogrid-loading-overlay: rgba(0, 0, 0, 0.7);
+    }
     :host { display: block; }
     .ogrid-datagrid-root {
       position: relative;
@@ -129,7 +178,7 @@ import { PopoverCellEditorComponent } from './popover-cell-editor.component';
       background: var(--ogrid-hover-bg, #f9f9f9);
     }
     .ogrid-datagrid-row--selected {
-      background: rgba(0, 120, 212, 0.08);
+      background: var(--ogrid-selected-row-bg, #e6f0fb);
     }
     .ogrid-datagrid-td {
       position: relative;
@@ -291,7 +340,7 @@ import { PopoverCellEditorComponent } from './popover-cell-editor.component';
       display: flex;
       align-items: center;
       justify-content: center;
-      background: rgba(255,255,255,0.7);
+      background: var(--ogrid-loading-overlay, rgba(255, 255, 255, 0.7));
     }
     .ogrid-datagrid-loading-inner {
       display: flex;
@@ -344,8 +393,8 @@ import { PopoverCellEditorComponent } from './popover-cell-editor.component';
       max-width: 50px;
       text-align: center;
       font-weight: 600;
-      background: var(--ogrid-bg-subtle, #fafafa);
-      color: var(--ogrid-text-secondary, #666);
+      background: var(--ogrid-header-bg, rgba(0, 0, 0, 0.04));
+      color: var(--ogrid-fg-secondary, rgba(0, 0, 0, 0.6));
       position: sticky;
       left: 0;
       z-index: 9;
@@ -362,8 +411,8 @@ import { PopoverCellEditorComponent } from './popover-cell-editor.component';
       text-align: center;
       font-weight: 600;
       font-variant-numeric: tabular-nums;
-      color: var(--ogrid-text-secondary, #666);
-      background: var(--ogrid-bg-subtle, #fafafa);
+      color: var(--ogrid-fg-secondary, rgba(0, 0, 0, 0.6));
+      background: var(--ogrid-header-bg, rgba(0, 0, 0, 0.04));
       padding: 6px;
       position: sticky;
       left: 0;
