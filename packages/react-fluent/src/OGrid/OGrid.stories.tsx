@@ -1,6 +1,6 @@
 import * as React from 'react';
 import type { Meta, StoryObj } from '@storybook/react';
-import { OGrid } from './FluentDataTable';
+import { OGrid } from './OGrid';
 import type { IColumnDef, ICellValueChangedEvent, ISideBarDef } from '@alaarab/ogrid-react';
 
 // ---------------------------------------------------------------------------

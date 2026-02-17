@@ -6,22 +6,30 @@
       "root": "",
       "sourceRoot": "src",
       "architect": {
+        "build": {
+          "builder": "@angular-devkit/build-angular:browser",
+          "options": {
+            "tsConfig": "tsconfig.storybook.json",
+            "main": ".storybook/storybook-entry.ts",
+            "index": ".storybook/index.html",
+            "outputPath": "dist/storybook-build"
+          }
+        },
         "storybook": {
           "builder": "@storybook/angular:start-storybook",
           "options": {
             "configDir": ".storybook",
-            "browserTarget": "angular-radix:build-storybook",
+            "browserTarget": "angular-radix:build",
             "port": 6012,
-            "compodoc": false,
-            "tsConfig": "tsconfig.storybook.json"
+            "compodoc": false
           }
         },
         "build-storybook": {
           "builder": "@storybook/angular:build-storybook",
           "options": {
             "configDir": ".storybook",
-            "compodoc": false,
-            "tsConfig": "tsconfig.storybook.json"
+            "browserTarget": "angular-radix:build",
+            "compodoc": false
           }
         }
       }

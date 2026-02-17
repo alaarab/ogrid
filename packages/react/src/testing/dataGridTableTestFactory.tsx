@@ -90,7 +90,7 @@ export function createDataGridTableTests(DataGridTable: React.ComponentType<IOGr
     renderTable({ onColumnSort });
     const headerButton = screen.getByRole('button', { name: /sort by name/i });
     fireEvent.click(headerButton);
-    expect(onColumnSort).toHaveBeenCalledWith('name');
+    expect(onColumnSort).toHaveBeenCalledWith('name', undefined);
   });
 
   it('shows empty state when no items and emptyState provided', () => {

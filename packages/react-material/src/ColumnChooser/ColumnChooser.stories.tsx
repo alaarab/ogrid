@@ -43,6 +43,32 @@ export const Default: Story = {
   },
 };
 
+export const ManyColumns: Story = {
+  render: () => {
+    const cols = Array.from({ length: 20 }, (_, i) => ({
+      columnId: `col-${i}`,
+      name: `Column ${i + 1}`,
+      required: i === 0,
+    }));
+    const [visible, setVisible] = React.useState(
+      new Set(cols.map((c) => c.columnId)),
+    );
+    return (
+      <ColumnChooser
+        columns={cols}
+        visibleColumns={visible}
+        onVisibilityChange={(key, vis) =>
+          setVisible((prev) => {
+            const next = new Set(prev);
+            vis ? next.add(key) : next.delete(key);
+            return next;
+          })
+        }
+      />
+    );
+  },
+};
+
 export const SomeHidden: Story = {
   render: () => {
     const [visible, setVisible] = React.useState(

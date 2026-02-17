@@ -169,6 +169,16 @@ export { CellErrorBoundary } from './components/CellErrorBoundary';
 export type { CellErrorBoundaryProps } from './components/CellErrorBoundary';
 export { EmptyState } from './components/EmptyState';
 export type { EmptyStateProps } from './components/EmptyState';
+export {
+  DateFilterContent,
+  getColumnHeaderFilterStateParams,
+  getDateFilterContentProps,
+} from './components/ColumnHeaderFilterContent';
+export type {
+  IColumnHeaderFilterProps,
+  DateFilterContentProps,
+  DateFilterClassNames,
+} from './components/ColumnHeaderFilterContent';
 
 // Utilities
 export {

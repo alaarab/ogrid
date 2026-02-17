@@ -1,4 +1,5 @@
 import { useState, useCallback } from 'react';
+import { measureColumnContentWidth } from '../utils';
 
 export interface UseColumnHeaderMenuStateParams {
   pinnedColumns: Record<string, 'left' | 'right'>;
@@ -6,9 +7,10 @@ export interface UseColumnHeaderMenuStateParams {
   onUnpinColumn: (columnId: string) => void;
   sortBy?: string;
   sortDirection: 'asc' | 'desc';
-  onColumnSort: (columnKey: string) => void;
+  onColumnSort: (columnKey: string, direction?: 'asc' | 'desc' | null) => void;
   onColumnResized?: (columnId: string, width: number) => void;
-  columns: Array<{ columnId: string; width?: number; sortable?: boolean; resizable?: boolean }>;
+  onAutosizeColumn?: (columnId: string, width: number) => void;
+  columns: Array<{ columnId: string; width?: number; minWidth?: number; sortable?: boolean; resizable?: boolean }>;
   data: unknown[];
   getRowId: (item: unknown) => string | number;
 }
@@ -50,6 +52,7 @@ export function useColumnHeaderMenuState(
     sortDirection,
     onColumnSort,
     onColumnResized,
+    onAutosizeColumn,
     columns,
     data: _data,
     getRowId: _getRowId,
@@ -104,63 +107,45 @@ export function useColumnHeaderMenuState(
 
   const handleSortAsc = useCallback(() => {
     if (openForColumn && isSortable) {
-      onColumnSort(openForColumn);
+      onColumnSort(openForColumn, 'asc');
       close();
     }
   }, [openForColumn, isSortable, onColumnSort, close]);
 
   const handleSortDesc = useCallback(() => {
     if (openForColumn && isSortable) {
-      onColumnSort(openForColumn);
+      onColumnSort(openForColumn, 'desc');
       close();
     }
   }, [openForColumn, isSortable, onColumnSort, close]);
 
   const handleClearSort = useCallback(() => {
     if (openForColumn && isSortable) {
-      onColumnSort(openForColumn);
+      onColumnSort(openForColumn, null);
       close();
     }
   }, [openForColumn, isSortable, onColumnSort, close]);
 
   const handleAutosizeThis = useCallback(() => {
-    if (!openForColumn || !onColumnResized || !isResizable) return;
+    const resizer = onAutosizeColumn ?? onColumnResized;
+    if (!openForColumn || !resizer || !isResizable) return;
 
-    // Measure column content width
-    const cells = document.querySelectorAll(`[data-column-id="${openForColumn}"]`);
-    let maxWidth = 100; // Minimum width
-
-    cells.forEach((cell) => {
-      const textContent = cell.textContent || '';
-      // Rough estimate: 8px per character + 32px padding
-      const estimatedWidth = Math.min(textContent.length * 8 + 32, 500);
-      maxWidth = Math.max(maxWidth, estimatedWidth);
-    });
-
-    onColumnResized(openForColumn, maxWidth);
+    const col = columns.find((c) => c.columnId === openForColumn);
+    resizer(openForColumn, measureColumnContentWidth(openForColumn, col?.minWidth));
     close();
-  }, [openForColumn, onColumnResized, isResizable, close]);
+  }, [openForColumn, onAutosizeColumn, onColumnResized, isResizable, columns, close]);
 
   const handleAutosizeAll = useCallback(() => {
-    if (!onColumnResized) return;
+    const resizer = onAutosizeColumn ?? onColumnResized;
+    if (!resizer) return;
 
     columns.forEach((col) => {
       if (col.resizable === false) return;
-
-      const cells = document.querySelectorAll(`[data-column-id="${col.columnId}"]`);
-      let maxWidth = 100;
-
-      cells.forEach((cell) => {
-        const textContent = cell.textContent || '';
-        const estimatedWidth = Math.min(textContent.length * 8 + 32, 500);
-        maxWidth = Math.max(maxWidth, estimatedWidth);
-      });
-
-      onColumnResized(col.columnId, maxWidth);
+      resizer(col.columnId, measureColumnContentWidth(col.columnId, col.minWidth));
     });
 
     close();
-  }, [columns, onColumnResized, close]);
+  }, [columns, onAutosizeColumn, onColumnResized, close]);
 
   return {
     isOpen,

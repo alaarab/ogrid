@@ -79,6 +79,9 @@ interface IOGridBaseProps<T> {
   selectedRows?: Set<RowId>;
   onSelectionChange?: (event: IRowSelectionChangeEvent<T>) => void;
 
+  /** Show Excel-style row numbers column at the start of the grid (1, 2, 3...). Default: false. */
+  showRowNumbers?: boolean;
+
   statusBar?: boolean | IStatusBarProps;
 
   defaultPageSize?: number;
@@ -153,17 +156,15 @@ export interface IOGridDataGridProps<T> {
   getRowId: (item: T) => RowId;
   sortBy?: string;
   sortDirection: 'asc' | 'desc';
-  onColumnSort: (columnKey: string) => void;
+  onColumnSort: (columnKey: string, direction?: 'asc' | 'desc' | null) => void;
   visibleColumns: Set<string>;
   /** Optional column display order (column ids). When set, visible columns are ordered by this array. */
   columnOrder?: string[];
   onColumnOrderChange?: (order: string[]) => void;
   /** Called when a column is resized by the user. */
   onColumnResized?: (columnId: string, width: number) => void;
-  /** Called when user requests autosize for a single column. */
-  onAutosizeColumn?: (columnId: string) => void;
-  /** Called when user requests autosize for all columns. */
-  onAutosizeAllColumns?: () => void;
+  /** Called when user requests autosize for a single column (with measured width). */
+  onAutosizeColumn?: (columnId: string, width: number) => void;
   /** Called when a column is pinned or unpinned. */
   onColumnPinned?: (columnId: string, pinned: 'left' | 'right' | null) => void;
   /** Runtime pin overrides (from restored state or programmatic changes). */
