@@ -118,7 +118,7 @@
    which set position: relative. */
 .dataTable .pinnedColLeft {
   position: sticky;
-  left: 0;
+  // left offset is set via inline style (supports multiple pinned columns)
   z-index: 6;
   background: var(--ogrid-bg, #ffffff);
   will-change: transform;
@@ -142,7 +142,7 @@
 
 .dataTable .pinnedColRight {
   position: sticky;
-  right: 0;
+  // right offset is set via inline style (supports multiple pinned columns)
   z-index: 6;
   background: var(--ogrid-bg, #ffffff);
   will-change: transform;

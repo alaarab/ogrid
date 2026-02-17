@@ -76,6 +76,7 @@ import { PaginationControlsComponent } from '../pagination-controls/pagination-c
         [getUserByEmail]="service.dataSource()?.getUserByEmail?.bind(service.dataSource())"
         [layoutMode]="service.layoutMode()"
         [suppressHorizontalScroll]="service.suppressHorizontalScroll()"
+        [columnReorder]="service.columnReorder()"
         [aria-label]="service.ariaLabel()"
         [aria-labelledby]="service.ariaLabelledBy()"
         [emptyState]="emptyStateObj"
@@ -105,7 +106,7 @@ export class OGridComponent<T = unknown> {
   }
 
   // Stable callback references (avoid re-creating every template eval)
-  readonly onColumnSortFn = (columnKey: string) => this.service.handleSort(columnKey);
+  readonly onColumnSortFn = (columnKey: string, direction?: 'asc' | 'desc' | null) => this.service.handleSort(columnKey, direction);
   readonly onColumnResizedFn = (columnId: string, width: number) => this.service.handleColumnResized(columnId, width);
   readonly onColumnPinnedFn = (columnId: string, pinned: 'left' | 'right' | null) => this.service.handleColumnPinned(columnId, pinned);
   readonly onSelectionChangeFn = (event: { selectedRowIds: RowId[]; selectedItems: T[] }) => this.service.handleSelectionChange(event);

@@ -178,5 +178,8 @@ export type {
   CellInteractionProps,
 } from './utils';
 
+// DataGridTable factory (for UI packages)
+export { createDataGridTable, type IDataGridTableUIBindings } from './components/createDataGridTable';
+
 // Component types (for UI packages to implement)
 export type { SideBarProps, SideBarFilterColumn } from './components/SideBar';

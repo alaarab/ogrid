@@ -11,7 +11,6 @@ import {
   TableColumnDefinition,
   createTableColumn,
   TableColumnSizingOptions,
-  Spinner,
   Checkbox,
   Popover,
   PopoverSurface,
@@ -23,6 +22,9 @@ import { ColumnHeaderMenu } from '../ColumnHeaderMenu';
 import { InlineCellEditor, type InlineCellEditorProps } from './InlineCellEditor';
 import { StatusBar } from './StatusBar';
 import { GridContextMenu } from './GridContextMenu';
+import { EmptyState } from './EmptyState';
+import { LoadingOverlay } from './LoadingOverlay';
+import { DropIndicator } from './DropIndicator';
 import type {
   IColumnDef,
   ICellEditorProps,
@@ -78,6 +80,7 @@ interface GridRowProps {
   isSelected: boolean;
   hasCheckboxCol: boolean;
   cellClassMap: Record<string, string>;
+  pinnedStyleMap: Record<string, React.CSSProperties>;
   handleSingleRowClick: (rowId: string | number) => void;
   // Comparator-only props (drive re-render decisions, not used in render body)
   selectionRange: { startRow: number; endRow: number; startCol: number; endCol: number } | null;
@@ -89,7 +92,7 @@ interface GridRowProps {
 }
 
 function GridRowInner(props: GridRowProps) {
-  const { item, rowId, rowIndex, isSelected, cellClassMap, handleSingleRowClick, activeCell } = props;
+  const { item, rowId, rowIndex, isSelected, cellClassMap, pinnedStyleMap, handleSingleRowClick, activeCell } = props;
 
   const rowClassName = `${isSelected ? styles.selectedRow : ''}${activeCell !== null && rowIndex === activeCell.rowIndex ? (isSelected ? ` ${styles.activeRow}` : styles.activeRow) : ''}` || undefined;
 
@@ -100,7 +103,7 @@ function GridRowInner(props: GridRowProps) {
       onClick={() => handleSingleRowClick(rowId)}
     >
       {({ renderCell, columnId }: { renderCell: (item: unknown) => React.ReactNode; columnId: string | number }) => (
-        <DataGridCell className={cellClassMap[String(columnId)] || undefined}>
+        <DataGridCell data-column-id={String(columnId)} className={cellClassMap[String(columnId)] || undefined} style={pinnedStyleMap[String(columnId)]}>
           {renderCell(item)}
         </DataGridCell>
       )}
@@ -208,10 +211,11 @@ function DataGridTableInner<T>(props: IOGridDataGridProps<T>): React.ReactElemen
 
   const allowOverflowX = !suppressHorizontalScroll && containerWidth > 0 && (minTableWidth > containerWidth || desiredTableWidth > containerWidth);
 
-  // Pre-compute column class maps (avoids per-cell .filter(Boolean).join(' '))
-  const { cellClassMap, headerClassMap } = useMemo(() => {
+  // Pre-compute column class maps and pinned inline styles
+  const { cellClassMap, headerClassMap, pinnedStyleMap } = useMemo(() => {
     const cm: Record<string, string> = {};
     const hm: Record<string, string> = {};
+    const pm: Record<string, React.CSSProperties> = {};
 
     for (let i = 0; i < visibleCols.length; i++) {
       const col = visibleCols[i];
@@ -225,13 +229,19 @@ function DataGridTableInner<T>(props: IOGridDataGridProps<T>): React.ReactElemen
       if (isPinnedRight) { parts.push(styles.pinnedCell); parts.push(styles.pinnedRight); }
       cm[col.columnId] = parts.join(' ');
       hm[col.columnId] = parts.join(' ');
+      // Inline styles for sticky offsets
+      if (isPinnedLeft && pinning.leftOffsets[col.columnId] != null) {
+        pm[col.columnId] = { left: pinning.leftOffsets[col.columnId] };
+      } else if (isPinnedRight && pinning.rightOffsets[col.columnId] != null) {
+        pm[col.columnId] = { right: pinning.rightOffsets[col.columnId] };
+      }
     }
 
     cm['__selection__'] = styles.selectionCellWrapper;
     hm['__selection__'] = styles.selectionHeaderCellWrapper;
 
-    return { cellClassMap: cm, headerClassMap: hm };
-  }, [visibleCols, freezeCols]);
+    return { cellClassMap: cm, headerClassMap: hm, pinnedStyleMap: pm };
+  }, [visibleCols, freezeCols, pinning.leftOffsets, pinning.rightOffsets]);
 
   // Refs for volatile state (read inside fluentColumns render closures without adding to deps)
   const cellDescriptorInputRef = useLatestRef(cellDescriptorInput);
@@ -609,6 +619,7 @@ function DataGridTableInner<T>(props: IOGridDataGridProps<T>): React.ReactElemen
                       return (
                         <DataGridHeaderCell
                           className={headerClassMap[String(columnId)] || undefined}
+                          style={pinnedStyleMap[String(columnId)]}
                           aria-sort={ariaSort as 'ascending' | 'descending' | 'none' | undefined}
                         >
                           {renderHeaderCell()}
@@ -630,6 +641,7 @@ function DataGridTableInner<T>(props: IOGridDataGridProps<T>): React.ReactElemen
                         isSelected={selectedRowIds.has(rowId)}
                         hasCheckboxCol={hasCheckboxCol}
                         cellClassMap={cellClassMap}
+                        pinnedStyleMap={pinnedStyleMap}
                         handleSingleRowClick={handleSingleRowClick}
                         selectionRange={selectionRange}
                         activeCell={activeCell}
@@ -646,10 +658,7 @@ function DataGridTableInner<T>(props: IOGridDataGridProps<T>): React.ReactElemen
                 <div style={{ height: visibleRange.offsetBottom }} aria-hidden />
               )}
               {isReorderDragging && dropIndicatorX != null && (
-                <div
-                  className={styles.dropIndicator}
-                  style={{ left: dropIndicatorX - (wrapperRef.current?.getBoundingClientRect().left ?? 0) }}
-                />
+                <DropIndicator dropIndicatorX={dropIndicatorX} wrapperLeft={wrapperRef.current?.getBoundingClientRect().left ?? 0} />
               )}
               <MarchingAntsOverlay
                 containerRef={tableContainerRef}
@@ -663,35 +672,7 @@ function DataGridTableInner<T>(props: IOGridDataGridProps<T>): React.ReactElemen
                 columnOrder={columnOrder}
               />
               {showEmptyInGrid && emptyState && (
-                <div className={styles.emptyStateInGrid}>
-                  <div className={styles.emptyStateInGridMessageSticky}>
-                    {emptyState.render ? (
-                      emptyState.render()
-                    ) : (
-                      <>
-                        <span className={styles.emptyStateInGridIcon} aria-hidden>
-                          📋
-                        </span>
-                        <div className={styles.emptyStateInGridTitle}>No results found</div>
-                        <div className={styles.emptyStateInGridMessage}>
-                          {emptyState.message != null ? (
-                            emptyState.message
-                          ) : emptyState.hasActiveFilters ? (
-                            <>
-                              No items match your current filters. Try adjusting your search or{' '}
-                              <button type="button" className={styles.emptyStateInGridLink} onClick={emptyState.onClearAll}>
-                                clear all filters
-                              </button>{' '}
-                              to see all items.
-                            </>
-                          ) : (
-                            'There are no items available at this time.'
-                          )}
-                        </div>
-                      </>
-                    )}
-                  </div>
-                </div>
+                <EmptyState emptyState={emptyState} />
               )}
             </div>
           </div>
@@ -750,12 +731,7 @@ function DataGridTableInner<T>(props: IOGridDataGridProps<T>): React.ReactElemen
         />
       )}
       {isLoading && (
-        <div className={styles.loadingOverlay} aria-live="polite">
-          <div className={styles.loadingOverlayContent}>
-            <Spinner size="small" />
-            <span className={styles.loadingOverlayText}>{loadingMessage}</span>
-          </div>
-        </div>
+        <LoadingOverlay message={loadingMessage} />
       )}
     </div>
   );

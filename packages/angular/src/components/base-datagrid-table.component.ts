@@ -8,6 +8,7 @@ import {
   CELL_PADDING,
   CHECKBOX_COLUMN_WIDTH,
   ROW_NUMBER_COLUMN_WIDTH,
+  measureColumnContentWidth,
 } from '@alaarab/ogrid-core';
 import {
   getHeaderFilterConfig,
@@ -252,7 +253,7 @@ export abstract class BaseDataGridTableComponent<T = unknown> {
         this.columnReorderService.columns.set(cols);
         this.columnReorderService.columnOrder.set(p.columnOrder);
         this.columnReorderService.onColumnOrderChange.set(p.onColumnOrderChange);
-        this.columnReorderService.enabled.set(!!p.onColumnOrderChange);
+        this.columnReorderService.enabled.set(p.columnReorder === true);
       }
     });
 
@@ -522,18 +523,20 @@ export abstract class BaseDataGridTableComponent<T = unknown> {
 
   onSortAsc(columnId: string): void {
     const props = this.getProps();
-    props?.onColumnSort?.(columnId);
+    props?.onColumnSort?.(columnId, 'asc');
   }
 
   onSortDesc(columnId: string): void {
     const props = this.getProps();
-    props?.onColumnSort?.(columnId);
+    props?.onColumnSort?.(columnId, 'desc');
   }
 
-  onClearSort(): void {
-    // Clearing sort is handled by sorting the same column again
-    // The logic in OGridService.handleSort will toggle: asc -> desc -> (clear via callback)
-    // For now, we don't have an explicit clear, so we just don't call anything
+  onClearSort(columnId?: string): void {
+    const props = this.getProps();
+    const col = columnId ?? props?.sortBy;
+    if (col) {
+      props?.onColumnSort?.(col, null);
+    }
   }
 
   getSortState(columnId: string): 'asc' | 'desc' | null {
@@ -550,7 +553,7 @@ export abstract class BaseDataGridTableComponent<T = unknown> {
     const col = this.visibleCols().find((c) => c.columnId === columnId);
     if (!col) return;
 
-    const width = this.measureColumnContentWidth(columnId);
+    const width = measureColumnContentWidth(columnId, col.minWidth, this.tableContainerEl() ?? undefined);
     this.state().layout.setColumnSizingOverrides({
       ...this.columnSizingOverrides(),
       [columnId]: { widthPx: width },
@@ -559,9 +562,10 @@ export abstract class BaseDataGridTableComponent<T = unknown> {
   }
 
   onAutosizeAllColumns(): void {
+    const tableEl = this.tableContainerEl() ?? undefined;
     const overrides: Record<string, { widthPx: number }> = {};
     for (const col of this.visibleCols()) {
-      const width = this.measureColumnContentWidth(col.columnId);
+      const width = measureColumnContentWidth(col.columnId, col.minWidth, tableEl);
       overrides[col.columnId] = { widthPx: width };
       this.state().layout.onColumnResized?.(col.columnId, width);
     }
@@ -569,20 +573,5 @@ export abstract class BaseDataGridTableComponent<T = unknown> {
       ...this.columnSizingOverrides(),
       ...overrides,
     });
-  }
-
-  private measureColumnContentWidth(columnId: string): number {
-    const tableEl = this.tableContainerEl();
-    if (!tableEl) return DEFAULT_MIN_COLUMN_WIDTH;
-
-    const cells = Array.from(tableEl.querySelectorAll(`[data-column-id="${columnId}"]`));
-    if (cells.length === 0) return DEFAULT_MIN_COLUMN_WIDTH;
-
-    let maxWidth = DEFAULT_MIN_COLUMN_WIDTH;
-    for (const cell of cells) {
-      const rect = cell.getBoundingClientRect();
-      maxWidth = Math.max(maxWidth, Math.ceil(rect.width) + CELL_PADDING);
-    }
-    return maxWidth;
   }
 }

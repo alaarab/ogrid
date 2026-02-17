@@ -107,7 +107,7 @@ export interface DataGridViewModelState<T> {
   headerFilterInput: {
     sortBy?: string;
     sortDirection: 'asc' | 'desc';
-    onColumnSort: (columnKey: string) => void;
+    onColumnSort: (columnKey: string, direction?: 'asc' | 'desc' | null) => void;
     filters: IFilters;
     onFilterChange: (key: string, value: FilterValue | undefined) => void;
     filterOptions: Record<string, string[]>;
@@ -1263,7 +1263,7 @@ export class DataGridStateService<T> {
       headerFilterInput: {
         sortBy: p?.sortBy,
         sortDirection: p?.sortDirection ?? 'asc',
-        onColumnSort: (columnKey: string) => p?.onColumnSort(columnKey),
+        onColumnSort: (columnKey: string, direction?: 'asc' | 'desc' | null) => p?.onColumnSort(columnKey, direction),
         filters: p?.filters ?? {},
         onFilterChange: (key, value) => p?.onFilterChange(key, value),
         filterOptions: p?.filterOptions ?? {},
