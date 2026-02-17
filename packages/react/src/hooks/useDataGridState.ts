@@ -3,6 +3,7 @@ import type { RefObject } from 'react';
 import { flattenColumns, getDataGridStatusBarConfig, parseValue, computeAggregations } from '../utils';
 import type { HeaderFilterConfigInput, CellRenderDescriptorInput } from '../utils';
 import type { RowId, IOGridDataGridProps, IStatusBarProps, IColumnDef } from '../types';
+import { CHECKBOX_COLUMN_WIDTH, DEFAULT_MIN_COLUMN_WIDTH } from '@alaarab/ogrid-core';
 import { useRowSelection } from './useRowSelection';
 import { useCellEditing } from './useCellEditing';
 import { useActiveCell } from './useActiveCell';
@@ -152,18 +153,8 @@ export interface DataGridPinningState {
   pinColumn: (columnId: string, side: 'left' | 'right') => void;
   unpinColumn: (columnId: string) => void;
   isPinned: (columnId: string) => 'left' | 'right' | undefined;
-  computeLeftOffsets: (
-    visibleCols: { columnId: string }[],
-    columnWidths: Record<string, number>,
-    defaultWidth: number,
-    hasCheckboxColumn: boolean,
-    checkboxColumnWidth: number
-  ) => Record<string, number>;
-  computeRightOffsets: (
-    visibleCols: { columnId: string }[],
-    columnWidths: Record<string, number>,
-    defaultWidth: number
-  ) => Record<string, number>;
+  leftOffsets: Record<string, number>;
+  rightOffsets: Record<string, number>;
   headerMenu: {
     isOpen: boolean;
     openForColumn: string | null;
@@ -391,6 +382,28 @@ export function useDataGridState<T>(
     onColumnPinned,
   });
 
+  // Build column width map for pinning offset computation
+  const columnWidthMap = useMemo(() => {
+    const map: Record<string, number> = {};
+    for (const col of visibleCols) {
+      const override = columnSizingOverrides[col.columnId];
+      map[col.columnId] = override
+        ? override.widthPx
+        : (col.idealWidth ?? col.defaultWidth ?? col.minWidth ?? DEFAULT_MIN_COLUMN_WIDTH);
+    }
+    return map;
+  }, [visibleCols, columnSizingOverrides]);
+
+  const leftOffsets = useMemo(
+    () => pinningResult.computeLeftOffsets(visibleCols, columnWidthMap, DEFAULT_MIN_COLUMN_WIDTH, hasCheckboxCol, CHECKBOX_COLUMN_WIDTH),
+    [pinningResult, visibleCols, columnWidthMap, hasCheckboxCol]
+  );
+
+  const rightOffsets = useMemo(
+    () => pinningResult.computeRightOffsets(visibleCols, columnWidthMap, DEFAULT_MIN_COLUMN_WIDTH),
+    [pinningResult, visibleCols, columnWidthMap]
+  );
+
   const aggregation = useMemo(
     () => computeAggregations(items, visibleCols, cellSelection ? selectionRange : null),
     [items, visibleCols, selectionRange, cellSelection]
@@ -433,9 +446,18 @@ export function useDataGridState<T>(
 
   // Stable callback wrappers that delegate to refs
   const stableOnColumnSort = useCallback(
-    (columnKey: string) => onColumnSortRef.current?.(columnKey),
+    (columnKey: string, direction?: 'asc' | 'desc' | null) => onColumnSortRef.current?.(columnKey, direction),
     // eslint-disable-next-line react-hooks/exhaustive-deps
     []
+  );
+
+  // Autosize callback — updates internal column sizing state + notifies external listener
+  const handleAutosizeColumn = useCallback(
+    (columnId: string, width: number) => {
+      setColumnSizingOverrides((prev) => ({ ...prev, [columnId]: { widthPx: width } }));
+      onColumnResized?.(columnId, width);
+    },
+    [setColumnSizingOverrides, onColumnResized]
   );
 
   const headerMenuResult = useColumnHeaderMenuState({
@@ -446,6 +468,7 @@ export function useDataGridState<T>(
     sortDirection,
     onColumnSort: stableOnColumnSort,
     onColumnResized,
+    onAutosizeColumn: handleAutosizeColumn,
     columns: flatColumns,
     data: items,
     getRowId: getRowId as (item: unknown) => string | number,
@@ -636,8 +659,8 @@ export function useDataGridState<T>(
     pinColumn: pinningResult.pinColumn,
     unpinColumn: pinningResult.unpinColumn,
     isPinned: pinningResult.isPinned,
-    computeLeftOffsets: pinningResult.computeLeftOffsets,
-    computeRightOffsets: pinningResult.computeRightOffsets,
+    leftOffsets,
+    rightOffsets,
     headerMenu: {
       isOpen: headerMenuResult.isOpen,
       openForColumn: headerMenuResult.openForColumn,
@@ -661,7 +684,7 @@ export function useDataGridState<T>(
     },
   }), [
     pinningResult.pinnedColumns, pinningResult.pinColumn, pinningResult.unpinColumn,
-    pinningResult.isPinned, pinningResult.computeLeftOffsets, pinningResult.computeRightOffsets,
+    pinningResult.isPinned, leftOffsets, rightOffsets,
     headerMenuResult.isOpen, headerMenuResult.openForColumn, headerMenuResult.anchorElement,
     headerMenuResult.open, headerMenuResult.close, headerMenuResult.handlePinLeft,
     headerMenuResult.handlePinRight, headerMenuResult.handleUnpin,

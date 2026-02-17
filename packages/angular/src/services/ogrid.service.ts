@@ -5,6 +5,7 @@ import {
   getMultiSelectFilterFields,
   flattenColumns,
   processClientSideData,
+  computeNextSortState,
 } from '@alaarab/ogrid-core';
 import type {
   RowId,
@@ -128,6 +129,7 @@ export class OGridService<T> {
   readonly onFirstDataRendered = signal<(() => void) | undefined>(undefined);
   readonly onError = signal<((error: unknown) => void) | undefined>(undefined);
   readonly columnChooserProp = signal<boolean | 'toolbar' | 'sidebar' | undefined>(undefined);
+  readonly columnReorder = signal<boolean | undefined>(undefined);
   readonly virtualScroll = signal<IVirtualScrollConfig | undefined>(undefined);
   readonly ariaLabel = signal<string | undefined>(undefined);
   readonly ariaLabelledBy = signal<string | undefined>(undefined);
@@ -305,7 +307,7 @@ export class OGridService<T> {
     getRowId: this.getRowId(),
     sortBy: this.sort().field,
     sortDirection: this.sort().direction,
-    onColumnSort: (columnKey: string) => this.handleSort(columnKey),
+    onColumnSort: (columnKey: string, direction?: 'asc' | 'desc' | null) => this.handleSort(columnKey, direction),
     visibleColumns: this.visibleColumns(),
     columnOrder: this.columnOrder(),
     onColumnOrderChange: this.onColumnOrderChange(),
@@ -336,6 +338,7 @@ export class OGridService<T> {
     getUserByEmail: this.dataSource()?.getUserByEmail?.bind(this.dataSource()),
     layoutMode: this.layoutMode(),
     suppressHorizontalScroll: this.suppressHorizontalScroll(),
+    columnReorder: this.columnReorder(),
     virtualScroll: this.virtualScroll(),
     'aria-label': this.ariaLabel(),
     'aria-labelledby': this.ariaLabelledBy(),
@@ -504,20 +507,8 @@ export class OGridService<T> {
     this.onVisibleColumnsChange()?.(cols);
   }
 
-  handleSort(columnKey: string): void {
-    const sort = this.sort();
-    if (sort.field === columnKey) {
-      // Cycle: asc → desc → clear
-      if (sort.direction === 'asc') {
-        this.setSort({ field: columnKey, direction: 'desc' });
-      } else {
-        // Clear sort (empty field means no column is sorted)
-        this.setSort({ field: '', direction: 'asc' });
-      }
-    } else {
-      // Start new sort
-      this.setSort({ field: columnKey, direction: 'asc' });
-    }
+  handleSort(columnKey: string, direction?: 'asc' | 'desc' | null): void {
+    this.setSort(computeNextSortState(this.sort(), columnKey, direction));
   }
 
   handleFilterChange(key: string, value: FilterValue | undefined): void {
@@ -598,6 +589,7 @@ export class OGridService<T> {
     if (props.onFirstDataRendered) this.onFirstDataRendered.set(props.onFirstDataRendered);
     if (props.onError) this.onError.set(props.onError);
     if (props.columnChooser !== undefined) this.columnChooserProp.set(props.columnChooser);
+    if (props.columnReorder !== undefined) this.columnReorder.set(props.columnReorder);
     if (props.virtualScroll !== undefined) this.virtualScroll.set(props.virtualScroll);
     if (props.entityLabelPlural !== undefined) this.entityLabelPlural.set(props.entityLabelPlural);
     if (props.className !== undefined) this.className.set(props.className);

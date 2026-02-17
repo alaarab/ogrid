@@ -5,6 +5,7 @@ import {
   getMultiSelectFilterFields,
   flattenColumns,
   processClientSideData,
+  computeNextSortState,
 } from '@alaarab/ogrid-core';
 import { useFilterOptions } from './useFilterOptions';
 import { useSideBarState } from './useSideBarState';
@@ -212,20 +213,8 @@ export function useOGrid<T>(
     callbacks.value.onVisibleColumnsChange?.(cols);
   };
 
-  const handleSort = (columnKey: string) => {
-    const currentSort = sort.value;
-    if (currentSort.field === columnKey) {
-      // Cycle: asc → desc → clear
-      if (currentSort.direction === 'asc') {
-        setSort({ field: columnKey, direction: 'desc' });
-      } else {
-        // Clear sort (empty field means no column is sorted)
-        setSort({ field: '', direction: 'asc' });
-      }
-    } else {
-      // Start new sort
-      setSort({ field: columnKey, direction: 'asc' });
-    }
+  const handleSort = (columnKey: string, direction?: 'asc' | 'desc' | null) => {
+    setSort(computeNextSortState(sort.value, columnKey, direction));
   };
 
   const handleFilterChange = (key: string, value: FilterValue | undefined) => {
@@ -455,6 +444,9 @@ export function useOGrid<T>(
       rowSelection: p.rowSelection ?? 'none',
       selectedRows: effectiveSelectedRows.value,
       onSelectionChange: handleSelectionChange,
+      showRowNumbers: p.showRowNumbers,
+      currentPage: page.value,
+      pageSize: pageSize.value,
       statusBar: statusBarConfig.value,
       isLoading: isLoadingResolved.value,
       filters: filters.value,
@@ -465,7 +457,9 @@ export function useOGrid<T>(
       getUserByEmail: ds?.getUserByEmail,
       layoutMode: p.layoutMode,
       suppressHorizontalScroll: p.suppressHorizontalScroll,
+      columnReorder: p.columnReorder,
       virtualScroll: p.virtualScroll,
+      density: p.density ?? 'normal',
       'aria-label': p['aria-label'],
       'aria-labelledby': p['aria-labelledby'],
       emptyState: {

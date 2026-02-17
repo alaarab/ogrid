@@ -1,9 +1,16 @@
 {
-  "extends": "./tsconfig.json",
   "compilerOptions": {
-    "declaration": false,
-    "declarationDir": null,
-    "outDir": null,
+    "target": "ES2022",
+    "module": "ES2022",
+    "lib": ["ES2022", "DOM"],
+    "moduleResolution": "bundler",
+    "strict": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "experimentalDecorators": true,
+    "useDefineForClassFields": false,
+    "resolveJsonModule": true,
+    "allowSyntheticDefaultImports": true,
     "rootDir": "."
   },
   "include": ["src/**/*.ts", ".storybook/**/*.ts"],

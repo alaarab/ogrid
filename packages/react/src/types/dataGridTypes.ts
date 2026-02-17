@@ -158,7 +158,7 @@ export interface IOGridDataGridProps<T> {
   getRowId: (item: T) => RowId;
   sortBy?: string;
   sortDirection: 'asc' | 'desc';
-  onColumnSort: (columnKey: string) => void;
+  onColumnSort: (columnKey: string, direction?: 'asc' | 'desc' | null) => void;
   visibleColumns: Set<string>;
   /** Optional column display order (column ids). When set, visible columns are ordered by this array. */
   columnOrder?: string[];

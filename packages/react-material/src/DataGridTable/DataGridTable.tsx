@@ -3,9 +3,6 @@ import { useCallback, useRef, useMemo } from 'react';
 import { createPortal } from 'react-dom';
 import {
   Box,
-  CircularProgress,
-  Typography,
-  Button,
   Popover,
   Checkbox,
   Table,
@@ -21,6 +18,9 @@ import { ColumnHeaderMenu } from '../ColumnHeaderMenu';
 import { InlineCellEditor, type InlineCellEditorProps } from './InlineCellEditor';
 import { StatusBar } from './StatusBar';
 import { GridContextMenu } from './GridContextMenu';
+import { EmptyState } from './EmptyState';
+import { LoadingOverlay } from './LoadingOverlay';
+import { DropIndicator } from './DropIndicator';
 import type {
   IColumnDef,
   ICellEditorProps,
@@ -197,19 +197,7 @@ const WRAPPER_SCROLL_SX = { display: 'flex', flexDirection: 'column', minHeight:
 const TABLE_WRAPPER_SX = { position: 'relative', opacity: 1 } as const;
 const TABLE_WRAPPER_LOADING_SX = { position: 'relative', opacity: 0.6 } as const;
 
-// Empty state
-const EMPTY_STATE_SX = { py: 4, px: 2, textAlign: 'center', borderTop: 1, borderColor: 'divider', bgcolor: 'action.hover' } as const;
-
-// Loading overlay
-const LOADING_OVERLAY_SX = {
-  position: 'absolute', inset: 0, zIndex: 2,
-  display: 'flex', alignItems: 'center', justifyContent: 'center',
-  background: 'var(--ogrid-loading-bg, rgba(255,255,255,0.7))',
-} as const;
-const LOADING_INNER_SX = {
-  display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 1,
-  p: 2, bgcolor: 'background.paper', border: 1, borderColor: 'divider', borderRadius: 1,
-} as const;
+// (Empty state and loading overlay styles moved to EmptyState.tsx and LoadingOverlay.tsx)
 
 // Module-scope event handlers
 const STOP_PROPAGATION = (e: React.MouseEvent) => e.stopPropagation();
@@ -302,6 +290,7 @@ function GridRowInner(props: GridRowProps) {
       {columnLayouts.map((cl, colIdx) => (
         <TableCell
           key={cl.col.columnId}
+          data-column-id={cl.col.columnId}
           sx={[cl.tdSx, { minWidth: cl.minWidth, width: cl.width, maxWidth: cl.maxWidth }]}
         >
           {renderCellContent(item, cl.col, rowIndex, colIdx)}
@@ -396,10 +385,16 @@ function DataGridTableInner<T>(props: IOGridDataGridProps<T>): React.ReactElemen
       const isPinnedLeft = col.pinned === 'left';
       const isPinnedRight = col.pinned === 'right';
       const columnWidth = getColumnWidth(col);
-      const tdSx = isPinnedLeft || (isFreezeCol && colIdx === 0) ? CELL_TD_PINNED_LEFT_SX : isPinnedRight ? CELL_TD_PINNED_RIGHT_SX : CELL_TD_BASE_SX;
+      const baseTdSx = isPinnedLeft || (isFreezeCol && colIdx === 0) ? CELL_TD_PINNED_LEFT_SX : isPinnedRight ? CELL_TD_PINNED_RIGHT_SX : CELL_TD_BASE_SX;
+      // Override sticky offset for pinned columns (supports multiple pinned columns)
+      const tdSx = isPinnedLeft && pinning.leftOffsets[col.columnId] != null
+        ? { ...baseTdSx, left: pinning.leftOffsets[col.columnId] } as typeof baseTdSx
+        : isPinnedRight && pinning.rightOffsets[col.columnId] != null
+          ? { ...baseTdSx, right: pinning.rightOffsets[col.columnId] } as typeof baseTdSx
+          : baseTdSx;
       return { col, tdSx, minWidth: col.minWidth ?? DEFAULT_MIN_COLUMN_WIDTH, width: columnWidth, maxWidth: columnWidth };
     }),
-  [visibleCols, freezeCols, getColumnWidth]);
+  [visibleCols, freezeCols, getColumnWidth, pinning.leftOffsets, pinning.rightOffsets]);
 
   const editCallbacks = useMemo(() => ({ commitCellEdit, setEditingCell, setPendingEditorValue, cancelPopoverEdit }), [commitCellEdit, setEditingCell, setPendingEditorValue, cancelPopoverEdit]);
   const interactionHandlers = useMemo(() => ({ handleCellMouseDown, setActiveCell, setEditingCell, handleCellContextMenu }), [handleCellMouseDown, setActiveCell, setEditingCell, handleCellContextMenu]);
@@ -612,7 +607,13 @@ function DataGridTableInner<T>(props: IOGridDataGridProps<T>): React.ReactElemen
                     const isPinnedLeft = col.pinned === 'left';
                     const isPinnedRight = col.pinned === 'right';
                     const columnWidth = getColumnWidth(col);
-                    const headerSx = isPinnedLeft || (isFreezeCol && colIdx === 0) ? HEADER_PINNED_LEFT_SX : isPinnedRight ? HEADER_PINNED_RIGHT_SX : HEADER_BASE_SX;
+                    const baseHeaderSx = isPinnedLeft || (isFreezeCol && colIdx === 0) ? HEADER_PINNED_LEFT_SX : isPinnedRight ? HEADER_PINNED_RIGHT_SX : HEADER_BASE_SX;
+                    // Override sticky offset for pinned columns (supports multiple pinned columns)
+                    const headerSx = isPinnedLeft && pinning.leftOffsets[col.columnId] != null
+                      ? { ...baseHeaderSx, left: pinning.leftOffsets[col.columnId] } as typeof baseHeaderSx
+                      : isPinnedRight && pinning.rightOffsets[col.columnId] != null
+                        ? { ...baseHeaderSx, right: pinning.rightOffsets[col.columnId] } as typeof baseHeaderSx
+                        : baseHeaderSx;
 
                     // Determine aria-sort value for sorted columns
                     const isSorted = props.sortBy === col.columnId;
@@ -754,19 +755,7 @@ function DataGridTableInner<T>(props: IOGridDataGridProps<T>): React.ReactElemen
             )}
           </Table>
           {isReorderDragging && dropIndicatorX != null && (
-            <Box
-              sx={{
-                position: 'absolute',
-                top: 0,
-                bottom: 0,
-                width: 3,
-                bgcolor: 'var(--ogrid-primary, #217346)',
-                pointerEvents: 'none',
-                zIndex: 100,
-                transition: 'left 0.05s',
-                left: dropIndicatorX - (wrapperRef.current?.getBoundingClientRect().left ?? 0),
-              }}
-            />
+            <DropIndicator dropIndicatorX={dropIndicatorX} wrapperLeft={wrapperRef.current?.getBoundingClientRect().left ?? 0} />
           )}
           <MarchingAntsOverlay
             containerRef={tableContainerRef}
@@ -780,28 +769,7 @@ function DataGridTableInner<T>(props: IOGridDataGridProps<T>): React.ReactElemen
             columnOrder={props.columnOrder}
           />
           {showEmptyInGrid && emptyState && (
-            <Box sx={EMPTY_STATE_SX}>
-              {emptyState.render ? (
-                emptyState.render()
-              ) : (
-                <>
-                  <Typography variant="h6" gutterBottom>No results found</Typography>
-                  <Typography variant="body2" color="text.secondary">
-                    {emptyState.message != null ? (
-                      emptyState.message
-                    ) : emptyState.hasActiveFilters ? (
-                      <>
-                        No items match your current filters. Try adjusting your search or{' '}
-                        <Button variant="text" size="small" onClick={emptyState.onClearAll}>clear all filters</Button>{' '}
-                        to see all items.
-                      </>
-                    ) : (
-                      'There are no items available at this time.'
-                    )}
-                  </Typography>
-                </>
-              )}
-            </Box>
+            <EmptyState emptyState={emptyState} />
           )}
         </Box>
       </TableContainer>
@@ -858,12 +826,7 @@ function DataGridTableInner<T>(props: IOGridDataGridProps<T>): React.ReactElemen
         />
       )}
       {isLoading && (
-        <Box sx={LOADING_OVERLAY_SX}>
-          <Box sx={LOADING_INNER_SX}>
-            <CircularProgress size={24} />
-            <Typography variant="body2" color="text.secondary">{loadingMessage}</Typography>
-          </Box>
-        </Box>
+        <LoadingOverlay message={loadingMessage} />
       )}
     </Box>
   );

@@ -532,6 +532,7 @@ import { PopoverCellEditorComponent } from './popover-cell-editor.component';
                         @for (colLayout of columnLayouts(); track colLayout.col.columnId; let colIdx = $index) {
                           <td
                             class="ogrid-datagrid-td"
+                            [attr.data-column-id]="colLayout.col.columnId"
                             [class.ogrid-datagrid-td--pinned-left]="colLayout.pinnedLeft"
                             [class.ogrid-datagrid-td--pinned-right]="colLayout.pinnedRight"
                             [style.minWidth.px]="colLayout.minWidth"
@@ -621,15 +622,12 @@ import { PopoverCellEditorComponent } from './popover-cell-editor.component';
                 <div class="ogrid-datagrid-empty">
                   <div class="ogrid-datagrid-empty__title">No results found</div>
                   <div class="ogrid-datagrid-empty__message">
-                    @if (emptyState()!.message != null) {
-                      {{ emptyState()!.message }}
-                    } @else if (emptyState()!.hasActiveFilters) {
-                      No items match your current filters. Try adjusting your search or
-                      <button class="ogrid-datagrid-empty__clear" (click)="emptyState()!.onClearAll?.()">clear all filters</button>
-                      to see all items.
-                    } @else {
-                      There are no items available at this time.
-                    }
+                    <ogrid-empty-state
+                      [message]="emptyState()?.message"
+                      [hasActiveFilters]="emptyState()?.hasActiveFilters ?? false"
+                      [render]="emptyState()?.render"
+                      (clearAll)="emptyState()?.onClearAll()"
+                    ></ogrid-empty-state>
                   </div>
                 </div>
               }
@@ -725,7 +723,7 @@ export class DataGridTableComponent<T> extends BaseDataGridTableComponent<T> {
       onUnpin: () => this.onUnpinColumn(columnId),
       onSortAsc: () => this.onSortAsc(columnId),
       onSortDesc: () => this.onSortDesc(columnId),
-      onClearSort: () => this.onClearSort(),
+      onClearSort: () => this.onClearSort(columnId),
       onAutosizeThis: () => this.onAutosizeColumn(columnId),
       onAutosizeAll: () => this.onAutosizeAllColumns(),
       onClose: () => {}
