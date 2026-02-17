@@ -40,9 +40,9 @@ export const richSelectDropdownStyle: React.CSSProperties = {
   maxHeight: 200,
   overflowY: 'auto',
   background: 'var(--ogrid-bg, #fff)',
-  border: '1px solid var(--ogrid-border, #ccc)',
+  border: '1px solid var(--ogrid-border, rgba(0, 0, 0, 0.12))',
   zIndex: 10,
-  boxShadow: '0 4px 16px rgba(0,0,0,0.2)',
+  boxShadow: 'var(--ogrid-shadow, 0 4px 16px rgba(0,0,0,0.2))',
 };
 
 export const richSelectOptionStyle: React.CSSProperties = {

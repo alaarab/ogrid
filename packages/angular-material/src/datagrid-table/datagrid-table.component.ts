@@ -1,4 +1,4 @@
-import { Component, ElementRef, ChangeDetectionStrategy, Input, ViewChild, signal } from '@angular/core';
+import { Component, ElementRef, ChangeDetectionStrategy, ViewEncapsulation, Input, ViewChild, signal } from '@angular/core';
 import {
   BaseDataGridTableComponent,
   DataGridStateService,
@@ -25,6 +25,7 @@ import { PopoverCellEditorComponent } from './popover-cell-editor.component';
   selector: 'ogrid-datagrid-table',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
+  encapsulation: ViewEncapsulation.None,
   imports: [ColumnHeaderFilterComponent, ColumnHeaderMenuComponent, StatusBarComponent, GridContextMenuComponent, MarchingAntsOverlayComponent, EmptyStateComponent, InlineCellEditorComponent, PopoverCellEditorComponent],
   providers: [DataGridStateService],
   template: `
@@ -343,14 +344,63 @@ import { PopoverCellEditorComponent } from './popover-cell-editor.component';
     </div>
   `,
   styles: [`
+    /* ─── OGrid Theme Variables ─── */
+    :root {
+      --ogrid-bg: #ffffff;
+      --ogrid-fg: rgba(0, 0, 0, 0.87);
+      --ogrid-fg-secondary: rgba(0, 0, 0, 0.6);
+      --ogrid-fg-muted: rgba(0, 0, 0, 0.5);
+      --ogrid-border: rgba(0, 0, 0, 0.12);
+      --ogrid-header-bg: rgba(0, 0, 0, 0.04);
+      --ogrid-hover-bg: rgba(0, 0, 0, 0.04);
+      --ogrid-selected-row-bg: #e6f0fb;
+      --ogrid-active-cell-bg: rgba(0, 0, 0, 0.02);
+      --ogrid-range-bg: rgba(33, 115, 70, 0.12);
+      --ogrid-accent: #0078d4;
+      --ogrid-selection-color: #217346;
+      --ogrid-loading-overlay: rgba(255, 255, 255, 0.7);
+    }
+    @media (prefers-color-scheme: dark) {
+      :root:not([data-theme="light"]) {
+        --ogrid-bg: #1e1e1e;
+        --ogrid-fg: rgba(255, 255, 255, 0.87);
+        --ogrid-fg-secondary: rgba(255, 255, 255, 0.6);
+        --ogrid-fg-muted: rgba(255, 255, 255, 0.5);
+        --ogrid-border: rgba(255, 255, 255, 0.12);
+        --ogrid-header-bg: rgba(255, 255, 255, 0.06);
+        --ogrid-hover-bg: rgba(255, 255, 255, 0.08);
+        --ogrid-selected-row-bg: #1a3a5c;
+        --ogrid-active-cell-bg: rgba(255, 255, 255, 0.06);
+        --ogrid-range-bg: rgba(46, 160, 67, 0.15);
+        --ogrid-accent: #4da6ff;
+        --ogrid-selection-color: #2ea043;
+        --ogrid-loading-overlay: rgba(0, 0, 0, 0.7);
+      }
+    }
+    [data-theme="dark"] {
+      --ogrid-bg: #1e1e1e;
+      --ogrid-fg: rgba(255, 255, 255, 0.87);
+      --ogrid-fg-secondary: rgba(255, 255, 255, 0.6);
+      --ogrid-fg-muted: rgba(255, 255, 255, 0.5);
+      --ogrid-border: rgba(255, 255, 255, 0.12);
+      --ogrid-header-bg: rgba(255, 255, 255, 0.06);
+      --ogrid-hover-bg: rgba(255, 255, 255, 0.08);
+      --ogrid-selected-row-bg: #1a3a5c;
+      --ogrid-active-cell-bg: rgba(255, 255, 255, 0.06);
+      --ogrid-range-bg: rgba(46, 160, 67, 0.15);
+      --ogrid-accent: #4da6ff;
+      --ogrid-selection-color: #2ea043;
+      --ogrid-loading-overlay: rgba(0, 0, 0, 0.7);
+    }
     :host { display: block; }
     .ogrid-datagrid-root { position: relative; flex: 1; min-height: 0; display: flex; flex-direction: column; }
     .ogrid-datagrid-wrapper {
       position: relative; flex: 1; min-height: 0; width: 100%; max-width: 100%;
-      overflow-x: hidden; overflow-y: auto; background: #fff;
+      overflow-x: hidden; overflow-y: auto; background: var(--ogrid-bg, #ffffff);
+      color: var(--ogrid-fg, rgba(0, 0, 0, 0.87));
       will-change: scroll-position; outline: none;
     }
-    .ogrid-datagrid-wrapper [data-drag-range] { background: rgba(33, 115, 70, 0.12) !important; }
+    .ogrid-datagrid-wrapper [data-drag-range] { background: var(--ogrid-range-bg, rgba(33, 115, 70, 0.12)) !important; }
     .ogrid-datagrid-wrapper--fit { width: fit-content; }
     .ogrid-datagrid-wrapper--overflow-x { overflow-x: auto; }
     .ogrid-datagrid-scroll-wrapper { display: flex; flex-direction: column; min-height: 100%; }
@@ -359,28 +409,29 @@ import { PopoverCellEditorComponent } from './popover-cell-editor.component';
       width: 100%; border-collapse: collapse; table-layout: fixed;
     }
     .ogrid-datagrid-thead {
-      z-index: 8; background: rgba(0,0,0,0.04);
+      z-index: 8; background: var(--ogrid-header-bg, rgba(0, 0, 0, 0.04));
     }
-    .ogrid-datagrid-thead th { background: rgba(0,0,0,0.04); }
-    .ogrid-datagrid-header-row { background: rgba(0,0,0,0.04); }
+    .ogrid-datagrid-thead th { background: var(--ogrid-header-bg, rgba(0, 0, 0, 0.04)); }
+    .ogrid-datagrid-header-row { background: var(--ogrid-header-bg, rgba(0, 0, 0, 0.04)); }
     .ogrid-datagrid-th {
       font-weight: 600; position: sticky; top: 0; padding: 6px 10px; text-align: left;
-      font-size: 14px; border-bottom: 1px solid rgba(0,0,0,0.12);
-      background: rgba(0,0,0,0.04); z-index: 8;
+      font-size: 14px; border-bottom: 1px solid var(--ogrid-border, rgba(0, 0, 0, 0.12));
+      background: var(--ogrid-header-bg, rgba(0, 0, 0, 0.04)); z-index: 8;
+      color: var(--ogrid-fg, rgba(0, 0, 0, 0.87));
     }
     .ogrid-datagrid-th:focus-visible {
-      outline: 2px solid #1976d2; outline-offset: -2px; z-index: 11;
+      outline: 2px solid var(--mat-sys-primary, #1976d2); outline-offset: -2px; z-index: 11;
     }
     .ogrid-datagrid-th--pinned-left {
-      position: sticky; top: 0; left: 0; z-index: 10; background: rgba(0,0,0,0.04); will-change: transform;
-      border-right: 2px solid rgba(0,0,0,0.12);
+      position: sticky; top: 0; left: 0; z-index: 10; background: var(--ogrid-header-bg, rgba(0, 0, 0, 0.04)); will-change: transform;
+      border-right: 2px solid var(--ogrid-border, rgba(0, 0, 0, 0.12));
     }
     .ogrid-datagrid-th--pinned-right {
-      position: sticky; top: 0; right: 0; z-index: 10; background: rgba(0,0,0,0.04); will-change: transform;
-      border-left: 2px solid rgba(0,0,0,0.12);
+      position: sticky; top: 0; right: 0; z-index: 10; background: var(--ogrid-header-bg, rgba(0, 0, 0, 0.04)); will-change: transform;
+      border-left: 2px solid var(--ogrid-border, rgba(0, 0, 0, 0.12));
     }
     .ogrid-datagrid-group-header {
-      text-align: center; font-weight: 600; border-bottom: 2px solid rgba(0,0,0,0.12); padding: 6px;
+      text-align: center; font-weight: 600; border-bottom: 2px solid var(--ogrid-border, rgba(0, 0, 0, 0.12)); padding: 6px;
     }
     .ogrid-datagrid-checkbox-col {
       width: ${CHECKBOX_COLUMN_WIDTH}px; min-width: ${CHECKBOX_COLUMN_WIDTH}px;
@@ -390,8 +441,8 @@ import { PopoverCellEditorComponent } from './popover-cell-editor.component';
     .ogrid-row-number-header, .ogrid-row-number-cell {
       width: ${ROW_NUMBER_COLUMN_WIDTH}px; min-width: ${ROW_NUMBER_COLUMN_WIDTH}px;
       max-width: ${ROW_NUMBER_COLUMN_WIDTH}px; text-align: center;
-      background: rgba(0,0,0,0.04); font-weight: 600;
-      font-variant-numeric: tabular-nums; color: rgba(0,0,0,0.6);
+      background: var(--ogrid-header-bg, rgba(0, 0, 0, 0.04)); font-weight: 600;
+      font-variant-numeric: tabular-nums; color: var(--ogrid-fg-secondary, rgba(0, 0, 0, 0.6));
       position: sticky; left: 0; z-index: 3;
     }
     .ogrid-row-number-header { z-index: 4; }
@@ -399,51 +450,53 @@ import { PopoverCellEditorComponent } from './popover-cell-editor.component';
       display: flex; align-items: center; justify-content: center;
     }
     .ogrid-datagrid-row { }
-    .ogrid-datagrid-row:hover { background: rgba(0,0,0,0.04); }
-    .ogrid-datagrid-row--selected { background: rgba(25,118,210,0.08); }
-    .ogrid-datagrid-td { position: relative; padding: 0; height: 1px; border-bottom: 1px solid rgba(0,0,0,0.06); }
+    .ogrid-datagrid-row:hover { background: var(--ogrid-hover-bg, rgba(0, 0, 0, 0.04)); }
+    .ogrid-datagrid-row--selected { background: var(--ogrid-selected-row-bg, #e6f0fb); }
+    .ogrid-datagrid-td { position: relative; padding: 0; height: 1px; border-bottom: 1px solid var(--ogrid-border, rgba(0, 0, 0, 0.06)); }
     .ogrid-datagrid-td--pinned-left {
-      position: sticky; left: 0; z-index: 6; background: #fff; will-change: transform;
-      border-right: 2px solid rgba(0,0,0,0.12);
+      position: sticky; left: 0; z-index: 6; background: var(--ogrid-bg, #ffffff); will-change: transform;
+      border-right: 2px solid var(--ogrid-border, rgba(0, 0, 0, 0.12));
     }
     .ogrid-datagrid-td--pinned-right {
-      position: sticky; right: 0; z-index: 6; background: #fff; will-change: transform;
-      border-left: 2px solid rgba(0,0,0,0.12);
+      position: sticky; right: 0; z-index: 6; background: var(--ogrid-bg, #ffffff); will-change: transform;
+      border-left: 2px solid var(--ogrid-border, rgba(0, 0, 0, 0.12));
     }
     .ogrid-datagrid-cell {
       width: 100%; height: 100%; display: flex; align-items: center; min-width: 0;
       padding: 6px 10px; box-sizing: border-box; overflow: hidden;
       text-overflow: ellipsis; white-space: nowrap; user-select: none; outline: none;
-      font-size: 14px;
+      font-size: 14px; color: var(--ogrid-fg, rgba(0, 0, 0, 0.87));
     }
     .ogrid-datagrid-cell:focus-visible {
-      outline: 2px solid #1976d2; outline-offset: -2px; z-index: 3;
+      outline: 2px solid var(--mat-sys-primary, #1976d2); outline-offset: -2px; z-index: 3;
     }
     .ogrid-datagrid-cell--numeric { justify-content: flex-end; text-align: right; }
     .ogrid-datagrid-cell--boolean { justify-content: center; text-align: center; }
     .ogrid-datagrid-cell--editable { cursor: cell; }
     .ogrid-datagrid-cell--active {
-      outline: 2px solid var(--ogrid-selection, #217346); outline-offset: -1px;
+      outline: 2px solid var(--ogrid-selection-color, #217346); outline-offset: -1px;
       z-index: 2; position: relative; overflow: visible;
     }
-    .ogrid-datagrid-cell--in-range { background: var(--ogrid-bg-range, rgba(33, 115, 70, 0.12)); }
-    .ogrid-datagrid-cell--in-cut-range { background: rgba(0,0,0,0.04); opacity: 0.7; }
+    .ogrid-datagrid-cell--in-range { background: var(--ogrid-range-bg, rgba(33, 115, 70, 0.12)); }
+    .ogrid-datagrid-cell--in-cut-range { background: var(--ogrid-hover-bg, rgba(0, 0, 0, 0.04)); opacity: 0.7; }
     .ogrid-datagrid-cell--editing { padding: 0; }
     .ogrid-datagrid-editor-input {
-      width: 100%; height: 100%; padding: 6px 10px; border: 2px solid var(--ogrid-selection, #217346);
+      width: 100%; height: 100%; padding: 6px 10px; border: 2px solid var(--ogrid-selection-color, #217346);
       box-sizing: border-box; font-size: 14px; outline: none; font-family: inherit; line-height: inherit;
+      background: var(--ogrid-bg, #ffffff); color: var(--ogrid-fg, rgba(0, 0, 0, 0.87));
     }
     .ogrid-datagrid-cell--numeric .ogrid-datagrid-editor-input {
       text-align: right;
     }
     .ogrid-datagrid-editor-select {
-      width: 100%; height: 100%; padding: 4px 8px; border: 2px solid var(--ogrid-selection, #217346);
+      width: 100%; height: 100%; padding: 4px 8px; border: 2px solid var(--ogrid-selection-color, #217346);
       box-sizing: border-box; font-size: 14px;
+      background: var(--ogrid-bg, #ffffff); color: var(--ogrid-fg, rgba(0, 0, 0, 0.87));
     }
     .ogrid-datagrid-fill-handle {
       position: absolute; right: -3px; bottom: -3px; width: 7px; height: 7px;
-      background: var(--ogrid-selection, #217346);
-      border: 1px solid var(--ogrid-bg, #fff); border-radius: 1px;
+      background: var(--ogrid-selection-color, #217346);
+      border: 1px solid var(--ogrid-bg, #ffffff); border-radius: 1px;
       cursor: crosshair; pointer-events: auto; z-index: 3;
     }
     .ogrid-datagrid-resize-handle {
@@ -452,16 +505,16 @@ import { PopoverCellEditorComponent } from './popover-cell-editor.component';
     }
     .ogrid-datagrid-resize-handle::after {
       content: ''; position: absolute; top: 4px; right: 3px; bottom: 4px; width: 2px;
-      background: rgba(0,0,0,0.12); border-radius: 1px; transition: background 0.15s;
+      background: var(--ogrid-border, rgba(0, 0, 0, 0.12)); border-radius: 1px; transition: background 0.15s;
     }
-    .ogrid-datagrid-resize-handle:hover::after { background: rgba(0,0,0,0.4); }
+    .ogrid-datagrid-resize-handle:hover::after { background: var(--ogrid-fg-muted, rgba(0, 0, 0, 0.4)); }
     .ogrid-datagrid-resize-handle:active::after { background: var(--mat-sys-primary, #1976d2); }
     .ogrid-datagrid-empty {
-      padding: 32px 16px; text-align: center; border-top: 1px solid rgba(0,0,0,0.12);
-      background: rgba(0,0,0,0.04);
+      padding: 32px 16px; text-align: center; border-top: 1px solid var(--ogrid-border, rgba(0, 0, 0, 0.12));
+      background: var(--ogrid-header-bg, rgba(0, 0, 0, 0.04));
     }
-    .ogrid-datagrid-empty__title { font-size: 18px; font-weight: 600; margin-bottom: 8px; }
-    .ogrid-datagrid-empty__message { font-size: 14px; color: rgba(0,0,0,0.6); }
+    .ogrid-datagrid-empty__title { font-size: 18px; font-weight: 600; margin-bottom: 8px; color: var(--ogrid-fg, rgba(0, 0, 0, 0.87)); }
+    .ogrid-datagrid-empty__message { font-size: 14px; color: var(--ogrid-fg-secondary, rgba(0, 0, 0, 0.6)); }
     .ogrid-datagrid-empty__clear {
       background: none; border: none; color: var(--mat-sys-primary, #1976d2);
       cursor: pointer; font-size: inherit; text-decoration: underline; padding: 0;
@@ -469,25 +522,41 @@ import { PopoverCellEditorComponent } from './popover-cell-editor.component';
     .ogrid-datagrid-loading-overlay {
       position: absolute; inset: 0; z-index: 2;
       display: flex; align-items: center; justify-content: center;
-      background: rgba(255,255,255,0.7);
+      background: var(--ogrid-loading-overlay, rgba(255, 255, 255, 0.7));
     }
     .ogrid-datagrid-loading-inner {
       display: flex; flex-direction: column; align-items: center; gap: 8px;
-      padding: 16px; background: #fff; border: 1px solid rgba(0,0,0,0.12); border-radius: 4px;
+      padding: 16px; background: var(--ogrid-bg, #ffffff); border: 1px solid var(--ogrid-border, rgba(0, 0, 0, 0.12)); border-radius: 4px;
+      color: var(--ogrid-fg, rgba(0, 0, 0, 0.87));
     }
     .ogrid-datagrid-spinner {
-      width: 24px; height: 24px; border: 3px solid rgba(0,0,0,0.12);
+      width: 24px; height: 24px; border: 3px solid var(--ogrid-border, rgba(0, 0, 0, 0.12));
       border-top-color: var(--mat-sys-primary, #1976d2);
       border-radius: 50%; animation: ogrid-spin 0.8s linear infinite;
     }
     @keyframes ogrid-spin { to { transform: rotate(360deg); } }
     .ogrid-datagrid-drop-indicator {
       position: absolute; top: 0; bottom: 0; width: 3px;
-      background: var(--ogrid-primary, #217346);
+      background: var(--ogrid-selection-color, #217346);
       pointer-events: none; z-index: 100; transition: left 0.05s;
     }
     .ogrid-datagrid-context-menu-overlay {
       position: fixed; inset: 0; z-index: 1000;
+    }
+
+    /* Angular Material Menu popup dark mode overrides */
+    .mat-mdc-menu-panel {
+      background: var(--ogrid-bg, #ffffff) !important;
+      color: var(--ogrid-fg, rgba(0, 0, 0, 0.87)) !important;
+    }
+    .mat-mdc-menu-item {
+      color: var(--ogrid-fg, rgba(0, 0, 0, 0.87)) !important;
+    }
+    .mat-mdc-menu-item:hover:not([disabled]) {
+      background: var(--ogrid-hover-bg, rgba(0, 0, 0, 0.04)) !important;
+    }
+    .mat-mdc-menu-item .mat-mdc-menu-item-text {
+      color: var(--ogrid-fg, rgba(0, 0, 0, 0.87)) !important;
     }
   `],
 })

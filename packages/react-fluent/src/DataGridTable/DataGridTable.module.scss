@@ -1,3 +1,54 @@
+/* ─── OGrid Theme Variables ─── */
+:global(:root) {
+  --ogrid-bg: #ffffff;
+  --ogrid-fg: rgba(0, 0, 0, 0.87);
+  --ogrid-fg-secondary: rgba(0, 0, 0, 0.6);
+  --ogrid-fg-muted: rgba(0, 0, 0, 0.5);
+  --ogrid-border: rgba(0, 0, 0, 0.12);
+  --ogrid-header-bg: rgba(0, 0, 0, 0.04);
+  --ogrid-hover-bg: rgba(0, 0, 0, 0.04);
+  --ogrid-selected-row-bg: #e6f0fb;
+  --ogrid-active-cell-bg: rgba(0, 0, 0, 0.02);
+  --ogrid-range-bg: rgba(33, 115, 70, 0.12);
+  --ogrid-accent: #0078d4;
+  --ogrid-selection-color: #217346;
+  --ogrid-loading-overlay: rgba(255, 255, 255, 0.7);
+}
+
+@media (prefers-color-scheme: dark) {
+  :global(:root:not([data-theme="light"])) {
+    --ogrid-bg: #1e1e1e;
+    --ogrid-fg: rgba(255, 255, 255, 0.87);
+    --ogrid-fg-secondary: rgba(255, 255, 255, 0.6);
+    --ogrid-fg-muted: rgba(255, 255, 255, 0.5);
+    --ogrid-border: rgba(255, 255, 255, 0.12);
+    --ogrid-header-bg: rgba(255, 255, 255, 0.06);
+    --ogrid-hover-bg: rgba(255, 255, 255, 0.08);
+    --ogrid-selected-row-bg: #1a3a5c;
+    --ogrid-active-cell-bg: rgba(255, 255, 255, 0.06);
+    --ogrid-range-bg: rgba(46, 160, 67, 0.15);
+    --ogrid-accent: #4da6ff;
+    --ogrid-selection-color: #2ea043;
+    --ogrid-loading-overlay: rgba(0, 0, 0, 0.7);
+  }
+}
+
+:global([data-theme="dark"]) {
+  --ogrid-bg: #1e1e1e;
+  --ogrid-fg: rgba(255, 255, 255, 0.87);
+  --ogrid-fg-secondary: rgba(255, 255, 255, 0.6);
+  --ogrid-fg-muted: rgba(255, 255, 255, 0.5);
+  --ogrid-border: rgba(255, 255, 255, 0.12);
+  --ogrid-header-bg: rgba(255, 255, 255, 0.06);
+  --ogrid-hover-bg: rgba(255, 255, 255, 0.08);
+  --ogrid-selected-row-bg: #1a3a5c;
+  --ogrid-active-cell-bg: rgba(255, 255, 255, 0.06);
+  --ogrid-range-bg: rgba(46, 160, 67, 0.15);
+  --ogrid-accent: #4da6ff;
+  --ogrid-selection-color: #2ea043;
+  --ogrid-loading-overlay: rgba(0, 0, 0, 0.7);
+}
+
 .tableScrollContent {
   display: flex;
   flex-direction: column;
@@ -5,14 +56,14 @@
   min-width: 0;
   min-height: 100%;
   /* Match wrapper so any gap to the right is not transparent (no purple stripe showing through) */
-  background-color: var(--colorNeutralBackground1, #ffffff);
+  background-color: var(--colorNeutralBackground1, var(--ogrid-bg, #ffffff));
 }
 
 .tableWidthAnchor {
   position: relative;
   /* When table fits (data-auto-fit): fill 100% so last column gets space. When overflow: size to content for scroll. */
   width: max-content;
-  background-color: var(--colorNeutralBackground1, #ffffff);
+  background-color: var(--colorNeutralBackground1, var(--ogrid-bg, #ffffff));
 }
 
 /* When table fits in container: fill full width so columns (including Tags) use the space, no dead zone on the right */
@@ -35,7 +86,7 @@
   /* Border is applied to the grid itself so we don't draw an empty bordered area
      when the grid content is narrower than the container. */
   border: none;
-  background-color: var(--colorNeutralBackground1, #ffffff);
+  background-color: var(--colorNeutralBackground1, var(--ogrid-bg, #ffffff));
   -webkit-overflow-scrolling: touch;
   will-change: scroll-position;
 
@@ -230,21 +281,21 @@
 
 .groupHeaderRow {
   th {
-    background: var(--ogrid-header-bg, #f5f5f5);
+    background: var(--ogrid-header-bg, rgba(0, 0, 0, 0.04));
   }
 }
 
 .groupHeaderCell {
   text-align: center;
   font-weight: 600;
-  border-bottom: 2px solid var(--ogrid-border, #e0e0e0);
+  border-bottom: 2px solid var(--ogrid-border, rgba(0, 0, 0, 0.12));
   padding: 6px 10px;
 }
 
 .leafHeaderCellSpan {
   font-weight: 600;
   padding: 6px 10px;
-  background: var(--ogrid-header-bg, #f5f5f5);
+  background: var(--ogrid-header-bg, rgba(0, 0, 0, 0.04));
 }
 
 // ─────────────────────────────────────────────────
@@ -312,7 +363,7 @@
 // Selected row highlight
 .selectedRow :global {
   .fui-DataGridCell {
-    background-color: var(--colorNeutralBackground1Selected, #e6f0fb) !important;
+    background-color: var(--colorNeutralBackground1Selected, var(--ogrid-selected-row-bg, #e6f0fb)) !important;
   }
 }
 
@@ -352,39 +403,32 @@
 }
 
 .activeCellContent {
-  outline: 2px solid var(--ogrid-selection, #217346) !important;
+  outline: 2px solid var(--ogrid-selection-color, #217346) !important;
   outline-offset: -1px;
   z-index: 2;
   position: relative;
   overflow: visible;
-  /* Theme-aware: no forced white so dark mode can show dark background */
-  background-color: var(--ogrid-bg-active-cell, transparent) !important;
-}
-
-@media (prefers-color-scheme: dark) {
-  .activeCellContent {
-    background-color: var(--ogrid-bg-active-cell, rgba(255, 255, 255, 0.06)) !important;
-  }
+  background-color: var(--ogrid-active-cell-bg, rgba(0, 0, 0, 0.02)) !important;
 }
 
 // Cell range selection (spreadsheet-style multi-cell highlight) — clearly visible like Excel
 .cellInRange {
-  background-color: var(--ogrid-bg-range, rgba(33, 115, 70, 0.12)) !important;
+  background-color: var(--ogrid-range-bg, rgba(33, 115, 70, 0.12)) !important;
 }
 
 // Drag-range highlight applied via DOM attributes during drag (bypasses React for performance)
 :global([data-drag-range]) {
-  background-color: var(--ogrid-bg-range, rgba(33, 115, 70, 0.12)) !important;
+  background-color: var(--ogrid-range-bg, rgba(33, 115, 70, 0.12)) !important;
 }
 
 // Anchor cell during drag: white/transparent background (like Excel)
 :global([data-drag-anchor]) {
-  background-color: var(--colorNeutralBackground1, #fff) !important;
+  background-color: var(--ogrid-bg, #ffffff) !important;
 }
 
 // Cut range — subtle background only; MarchingAntsOverlay renders the animated border
 .cellCut {
-  background-color: var(--colorNeutralBackground1Hover, rgba(0, 0, 0, 0.04)) !important;
+  background-color: var(--ogrid-hover-bg, rgba(0, 0, 0, 0.04)) !important;
   opacity: 0.7;
 }
 
@@ -400,8 +444,8 @@
   bottom: -3px;
   width: 7px;
   height: 7px;
-  background: var(--ogrid-selection, #217346);
-  border: 1px solid var(--ogrid-bg, #fff);
+  background: var(--ogrid-selection-color, #217346);
+  border: 1px solid var(--ogrid-bg, #ffffff);
   border-radius: 1px;
   cursor: crosshair;
   pointer-events: auto;
@@ -596,7 +640,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  background: var(--ogrid-loading-bg, rgba(255, 255, 255, 0.7));
+  background: var(--ogrid-loading-overlay, rgba(255, 255, 255, 0.7));
   backdrop-filter: blur(1px);
   pointer-events: all;
 }
@@ -695,7 +739,7 @@
   top: 0;
   bottom: 0;
   width: 3px;
-  background: var(--ogrid-primary, #217346);
+  background: var(--ogrid-selection-color, #217346);
   pointer-events: none;
   z-index: 100;
   transition: left 0.05s;
