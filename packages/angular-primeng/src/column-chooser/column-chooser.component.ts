@@ -25,7 +25,7 @@ import { BaseColumnChooserComponent } from '@alaarab/ogrid-angular';
         <div
           style="position:absolute;right:0;top:100%;z-index:100;min-width:220px;max-height:320px;overflow-y:auto;background:var(--ogrid-bg, #fff);border:1px solid var(--ogrid-border, #e0e0e0);border-radius:6px;box-shadow:0 2px 8px rgba(0,0,0,0.12);padding:8px 0"
         >
-          <div style="padding:4px 12px;font-weight:600;font-size:12px;color:var(--ogrid-muted, #666)">
+          <div style="padding:4px 12px;font-weight:600;font-size:12px;color:var(--ogrid-fg-secondary, rgba(0, 0, 0, 0.6))">
             Select Columns ({{ visibleCount() }} of {{ totalCount() }})
           </div>
           @for (col of columns; track col.columnId) {

@@ -172,7 +172,7 @@ export class TableRenderer<T> {
 
     // Background must be set on pinned cells to avoid showing content underneath
     if (!isHeader) {
-      el.style.backgroundColor = el.style.backgroundColor || '#fff';
+      el.style.backgroundColor = el.style.backgroundColor || 'var(--ogrid-bg, #fff)';
     }
   }
 
@@ -514,23 +514,23 @@ export class TableRenderer<T> {
           // Active cell
           if (activeCell && activeCell.rowIndex === rowIndex && activeCell.columnIndex === globalColIndex) {
             td.setAttribute('data-active-cell', 'true');
-            td.style.outline = '2px solid #0078d4';
+            td.style.outline = '2px solid var(--ogrid-accent, #0078d4)';
           }
 
           // Selection range
           if (selectionRange && isInSelectionRange(selectionRange, rowIndex, colIndex)) {
             td.setAttribute('data-in-range', 'true');
-            td.style.backgroundColor = '#e3f2fd';
+            td.style.backgroundColor = 'var(--ogrid-range-bg, rgba(33, 115, 70, 0.12))';
           }
 
           // Copy range
           if (copyRange && isInSelectionRange(copyRange, rowIndex, colIndex)) {
-            td.style.outline = '1px dashed #666';
+            td.style.outline = '1px dashed var(--ogrid-fg-muted, rgba(0, 0, 0, 0.5))';
           }
 
           // Cut range
           if (cutRange && isInSelectionRange(cutRange, rowIndex, colIndex)) {
-            td.style.outline = '1px dashed #d32f2f';
+            td.style.outline = '1px dashed var(--ogrid-accent, #0078d4)';
           }
 
           // Editing cell (hide content, editor overlay will be shown)

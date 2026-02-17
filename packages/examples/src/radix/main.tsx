@@ -3,6 +3,7 @@ import { createRoot } from 'react-dom/client';
 import { OGrid } from '@alaarab/ogrid-react-radix';
 import { makeDemoProjects, makeDemoColumns, getRowId } from '../shared/demoData';
 import type { Project } from '../shared/demoData';
+import { createThemeToggle } from '../shared/themeToggle';
 
 const projects = makeDemoProjects(75);
 const columns = makeDemoColumns<Project>();
@@ -10,8 +11,8 @@ const columns = makeDemoColumns<Project>();
 function App() {
   return (
     <div style={{ padding: 24, maxWidth: 1200, margin: '0 auto' }}>
-      <h1>OGrid - Radix UI Example</h1>
-      <p style={{ color: '#666', marginBottom: 16 }}>
+      <h1>OGrid - React Radix Example</h1>
+      <p style={{ color: 'var(--ogrid-fg-secondary, #666)', marginBottom: 16 }}>
         A fully featured data table powered by <code>@alaarab/ogrid-react-radix</code>.
         Includes sorting, multi-select &amp; text filtering, column chooser, and pagination.
       </p>
@@ -28,3 +29,6 @@ function App() {
 }
 
 createRoot(document.getElementById('root')!).render(<App />);
+
+// Add dark mode toggle
+createThemeToggle();
