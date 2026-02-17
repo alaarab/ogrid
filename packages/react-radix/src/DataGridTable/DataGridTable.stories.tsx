@@ -46,7 +46,7 @@ const getRowId = (r: Row) => r.id;
 const noop = () => {};
 
 const meta: Meta<typeof DataGridTable<Row>> = {
-  title: 'OGrid/Radix/DataGridTable',
+  title: 'OGrid/React Radix/DataGridTable',
   component: DataGridTable as React.ComponentType,
   parameters: { layout: 'padded' },
 };

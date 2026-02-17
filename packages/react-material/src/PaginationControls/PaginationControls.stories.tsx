@@ -3,7 +3,7 @@ import type { Meta, StoryObj } from '@storybook/react';
 import { PaginationControls } from './PaginationControls';
 
 const meta: Meta<typeof PaginationControls> = {
-  title: 'OGrid/Material/PaginationControls',
+  title: 'OGrid/React Material/PaginationControls',
   component: PaginationControls,
   parameters: { layout: 'padded' },
 };

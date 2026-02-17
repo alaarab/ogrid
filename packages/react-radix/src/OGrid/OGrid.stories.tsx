@@ -75,7 +75,7 @@ const columns: IColumnDef<Project>[] = [
 const getRowId = (p: Project) => p.id;
 
 const meta: Meta<typeof OGrid<Project>> = {
-  title: 'OGrid/Radix/OGrid',
+  title: 'OGrid/React Radix/OGrid',
   component: OGrid as React.ComponentType,
   parameters: { layout: 'padded' },
 };
