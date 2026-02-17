@@ -1,5 +1,66 @@
 // OGrid Radix – DataGridTable (Vue)
 
+// ─── OGrid Theme Variables ───
+:global(:root) {
+  --ogrid-bg: #ffffff;
+  --ogrid-fg: rgba(0, 0, 0, 0.87);
+  --ogrid-fg-secondary: rgba(0, 0, 0, 0.6);
+  --ogrid-fg-muted: rgba(0, 0, 0, 0.5);
+  --ogrid-border: rgba(0, 0, 0, 0.12);
+  --ogrid-header-bg: rgba(0, 0, 0, 0.04);
+  --ogrid-hover-bg: rgba(0, 0, 0, 0.04);
+  --ogrid-selected-row-bg: #e6f0fb;
+  --ogrid-active-cell-bg: rgba(0, 0, 0, 0.02);
+  --ogrid-range-bg: rgba(33, 115, 70, 0.12);
+  --ogrid-accent: #0078d4;
+  --ogrid-selection-color: #217346;
+  --ogrid-loading-overlay: rgba(255, 255, 255, 0.7);
+  // Aliases for backward compatibility
+  --ogrid-selected-bg: var(--ogrid-selected-row-bg);
+  --ogrid-header-hover-bg: rgba(0, 0, 0, 0.06);
+  --ogrid-muted: var(--ogrid-fg-muted);
+}
+
+@media (prefers-color-scheme: dark) {
+  :global(:root:not([data-theme="light"])) {
+    --ogrid-bg: #1e1e1e;
+    --ogrid-fg: rgba(255, 255, 255, 0.87);
+    --ogrid-fg-secondary: rgba(255, 255, 255, 0.6);
+    --ogrid-fg-muted: rgba(255, 255, 255, 0.5);
+    --ogrid-border: rgba(255, 255, 255, 0.12);
+    --ogrid-header-bg: rgba(255, 255, 255, 0.06);
+    --ogrid-hover-bg: rgba(255, 255, 255, 0.08);
+    --ogrid-selected-row-bg: #1a3a5c;
+    --ogrid-active-cell-bg: rgba(255, 255, 255, 0.06);
+    --ogrid-range-bg: rgba(46, 160, 67, 0.15);
+    --ogrid-accent: #4da6ff;
+    --ogrid-selection-color: #2ea043;
+    --ogrid-loading-overlay: rgba(0, 0, 0, 0.7);
+    --ogrid-selected-bg: var(--ogrid-selected-row-bg);
+    --ogrid-header-hover-bg: rgba(255, 255, 255, 0.1);
+    --ogrid-muted: var(--ogrid-fg-muted);
+  }
+}
+
+:global([data-theme="dark"]) {
+  --ogrid-bg: #1e1e1e;
+  --ogrid-fg: rgba(255, 255, 255, 0.87);
+  --ogrid-fg-secondary: rgba(255, 255, 255, 0.6);
+  --ogrid-fg-muted: rgba(255, 255, 255, 0.5);
+  --ogrid-border: rgba(255, 255, 255, 0.12);
+  --ogrid-header-bg: rgba(255, 255, 255, 0.06);
+  --ogrid-hover-bg: rgba(255, 255, 255, 0.08);
+  --ogrid-selected-row-bg: #1a3a5c;
+  --ogrid-active-cell-bg: rgba(255, 255, 255, 0.06);
+  --ogrid-range-bg: rgba(46, 160, 67, 0.15);
+  --ogrid-accent: #4da6ff;
+  --ogrid-selection-color: #2ea043;
+  --ogrid-loading-overlay: rgba(0, 0, 0, 0.7);
+  --ogrid-selected-bg: var(--ogrid-selected-row-bg);
+  --ogrid-header-hover-bg: rgba(255, 255, 255, 0.1);
+  --ogrid-muted: var(--ogrid-fg-muted);
+}
+
 .ogrid-table-wrapper {
   position: relative;
   flex: 1;
@@ -28,6 +89,7 @@
   border-collapse: collapse;
   font-size: 14px;
   background: var(--ogrid-bg, #fff);
+  color: var(--ogrid-fg, rgba(0, 0, 0, 0.87));
 
   th {
     position: sticky;

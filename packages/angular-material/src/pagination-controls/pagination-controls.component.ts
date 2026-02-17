@@ -89,25 +89,29 @@ import { BasePaginationControlsComponent } from '@alaarab/ogrid-angular';
     .ogrid-pagination {
       display: flex; align-items: center; justify-content: space-between;
       flex-wrap: wrap; gap: 8px; padding: 6px 12px; font-size: 14px;
+      color: var(--ogrid-fg, rgba(0, 0, 0, 0.87));
     }
-    .ogrid-pagination__info { color: rgba(0,0,0,0.6); }
+    .ogrid-pagination__info { color: var(--ogrid-fg-secondary, rgba(0, 0, 0, 0.6)); }
     .ogrid-pagination__pages { display: flex; align-items: center; gap: 2px; }
     .ogrid-pagination__btn {
       min-width: 32px; height: 32px; padding: 0 6px;
-      border: 1px solid rgba(0,0,0,0.23); border-radius: 4px;
+      border: 1px solid var(--ogrid-border, rgba(0, 0, 0, 0.23)); border-radius: 4px;
       background: transparent; cursor: pointer; font-size: 14px;
+      color: var(--ogrid-fg, rgba(0, 0, 0, 0.87));
     }
+    .ogrid-pagination__btn:hover:not(:disabled) { background: var(--ogrid-hover-bg, rgba(0, 0, 0, 0.04)); }
     .ogrid-pagination__btn:disabled { opacity: 0.38; cursor: default; }
     .ogrid-pagination__btn--active {
       background: var(--mat-sys-primary, #1976d2); color: #fff;
       border-color: var(--mat-sys-primary, #1976d2);
     }
-    .ogrid-pagination__ellipsis { margin: 0 4px; color: rgba(0,0,0,0.6); }
-    .ogrid-pagination__size { display: flex; align-items: center; gap: 8px; }
+    .ogrid-pagination__ellipsis { margin: 0 4px; color: var(--ogrid-fg-secondary, rgba(0, 0, 0, 0.6)); }
+    .ogrid-pagination__size { display: flex; align-items: center; gap: 8px; color: var(--ogrid-fg, rgba(0, 0, 0, 0.87)); }
     .ogrid-pagination__size select {
       min-width: 60px; height: 32px; padding: 4px 8px;
-      border: 1px solid rgba(0,0,0,0.23); border-radius: 4px;
+      border: 1px solid var(--ogrid-border, rgba(0, 0, 0, 0.23)); border-radius: 4px;
       font-size: 14px; margin-left: 8px;
+      background: var(--ogrid-bg, #ffffff); color: var(--ogrid-fg, rgba(0, 0, 0, 0.87));
     }
   `],
 })

@@ -13,7 +13,7 @@
     }
   },
   "scripts": {
-    "build": "rimraf dist && vite build",
+    "build": "rimraf dist && vite build && node scripts/compile-styles.js",
     "test": "jest",
     "storybook": "storybook dev -p 6014 --no-open",
     "build-storybook": "storybook build"

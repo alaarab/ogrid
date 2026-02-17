@@ -1,5 +1,56 @@
 /* OGrid Vue PrimeVue - DataGridTable styles */
 
+/* ─── OGrid Theme Variables ─── */
+:root {
+  --ogrid-bg: #ffffff;
+  --ogrid-fg: rgba(0, 0, 0, 0.87);
+  --ogrid-fg-secondary: rgba(0, 0, 0, 0.6);
+  --ogrid-fg-muted: rgba(0, 0, 0, 0.5);
+  --ogrid-border: rgba(0, 0, 0, 0.12);
+  --ogrid-header-bg: rgba(0, 0, 0, 0.04);
+  --ogrid-hover-bg: rgba(0, 0, 0, 0.04);
+  --ogrid-selected-row-bg: #e6f0fb;
+  --ogrid-active-cell-bg: rgba(0, 0, 0, 0.02);
+  --ogrid-range-bg: rgba(33, 115, 70, 0.12);
+  --ogrid-accent: #0078d4;
+  --ogrid-selection-color: #217346;
+  --ogrid-loading-overlay: rgba(255, 255, 255, 0.7);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --ogrid-bg: #1e1e1e;
+    --ogrid-fg: rgba(255, 255, 255, 0.87);
+    --ogrid-fg-secondary: rgba(255, 255, 255, 0.6);
+    --ogrid-fg-muted: rgba(255, 255, 255, 0.5);
+    --ogrid-border: rgba(255, 255, 255, 0.12);
+    --ogrid-header-bg: rgba(255, 255, 255, 0.06);
+    --ogrid-hover-bg: rgba(255, 255, 255, 0.08);
+    --ogrid-selected-row-bg: #1a3a5c;
+    --ogrid-active-cell-bg: rgba(255, 255, 255, 0.06);
+    --ogrid-range-bg: rgba(46, 160, 67, 0.15);
+    --ogrid-accent: #4da6ff;
+    --ogrid-selection-color: #2ea043;
+    --ogrid-loading-overlay: rgba(0, 0, 0, 0.7);
+  }
+}
+
+[data-theme="dark"] {
+  --ogrid-bg: #1e1e1e;
+  --ogrid-fg: rgba(255, 255, 255, 0.87);
+  --ogrid-fg-secondary: rgba(255, 255, 255, 0.6);
+  --ogrid-fg-muted: rgba(255, 255, 255, 0.5);
+  --ogrid-border: rgba(255, 255, 255, 0.12);
+  --ogrid-header-bg: rgba(255, 255, 255, 0.06);
+  --ogrid-hover-bg: rgba(255, 255, 255, 0.08);
+  --ogrid-selected-row-bg: #1a3a5c;
+  --ogrid-active-cell-bg: rgba(255, 255, 255, 0.06);
+  --ogrid-range-bg: rgba(46, 160, 67, 0.15);
+  --ogrid-accent: #4da6ff;
+  --ogrid-selection-color: #2ea043;
+  --ogrid-loading-overlay: rgba(0, 0, 0, 0.7);
+}
+
 /* Remove focus outline from scrollable wrapper (keyboard nav is handled via cell outlines) */
 [role="region"][tabindex="0"] {
   outline: none !important;
@@ -12,7 +63,7 @@
 
 /* Anchor cell during drag: white/transparent background (like Excel) */
 [data-drag-anchor] {
-  background: var(--ogrid-bg, #fff) !important;
+  background: var(--ogrid-bg) !important;
 }
 
 /* === Layout === */
@@ -23,6 +74,8 @@
   min-height: 0;
   display: flex;
   flex-direction: column;
+  background-color: var(--ogrid-bg);
+  color: var(--ogrid-fg);
 }
 
 .ogrid-scroll-wrapper {
@@ -43,24 +96,26 @@
   width: 100%;
   border-collapse: collapse;
   font-size: 0.875rem;
+  background-color: var(--ogrid-bg);
+  color: var(--ogrid-fg);
 }
 
 /* === Header === */
 
 .ogrid-thead {
   z-index: 8;
-  background-color: rgba(0, 0, 0, 0.04);
+  background-color: var(--ogrid-header-bg);
 }
 
 .ogrid-header-row {
-  background-color: rgba(0, 0, 0, 0.04);
+  background-color: var(--ogrid-header-bg);
 }
 
 .ogrid-header-cell {
   font-weight: 600;
   position: sticky;
   top: 0;
-  background-color: rgba(0, 0, 0, 0.04);
+  background-color: var(--ogrid-header-bg);
   z-index: 8;
 }
 
@@ -83,7 +138,7 @@
 .ogrid-column-group-header {
   text-align: center;
   font-weight: 600;
-  border-bottom: 2px solid rgba(0, 0, 0, 0.12);
+  border-bottom: 2px solid var(--ogrid-border);
   padding: 6px;
 }
 
@@ -93,7 +148,7 @@
   cursor: pointer;
   padding: 2px 4px;
   font-size: 14px;
-  color: rgba(0, 0, 0, 0.5);
+  color: var(--ogrid-fg-muted);
   line-height: 1;
   flex-shrink: 0;
 }
@@ -125,20 +180,20 @@
 .ogrid-row-number-header {
   text-align: center;
   font-weight: 600;
-  background-color: rgba(0, 0, 0, 0.04);
-  color: rgba(0, 0, 0, 0.6);
+  background-color: var(--ogrid-header-bg);
+  color: var(--ogrid-fg-secondary);
 }
 
 .ogrid-row-number-spacer {
-  background-color: rgba(0, 0, 0, 0.04);
+  background-color: var(--ogrid-header-bg);
 }
 
 .ogrid-row-number-cell {
   text-align: center;
   font-weight: 600;
   font-variant-numeric: tabular-nums;
-  background-color: rgba(0, 0, 0, 0.04);
-  color: rgba(0, 0, 0, 0.6);
+  background-color: var(--ogrid-header-bg);
+  color: var(--ogrid-fg-secondary);
 }
 
 /* === Data cells === */
@@ -152,14 +207,14 @@
 .ogrid-data-cell--pinned-left {
   position: sticky;
   z-index: 6;
-  background-color: #fff;
+  background-color: var(--ogrid-bg);
   will-change: transform;
 }
 
 .ogrid-data-cell--pinned-right {
   position: sticky;
   z-index: 6;
-  background-color: #fff;
+  background-color: var(--ogrid-bg);
   will-change: transform;
 }
 
@@ -201,11 +256,11 @@
 }
 
 .ogrid-cell-in-range {
-  background: var(--ogrid-bg-range, rgba(33, 115, 70, 0.12));
+  background: var(--ogrid-bg-range, rgba(33, 115, 70, 0.12)) !important;
 }
 
 .ogrid-cell-cut {
-  background: rgba(0, 0, 0, 0.04);
+  background: var(--ogrid-hover-bg) !important;
   opacity: 0.7;
 }
 
@@ -218,7 +273,7 @@
   width: 7px;
   height: 7px;
   background-color: var(--ogrid-selection, #217346);
-  border: 1px solid var(--ogrid-bg, #fff);
+  border: 1px solid var(--ogrid-bg);
   border-radius: 1px;
   cursor: crosshair;
   pointer-events: auto;
@@ -254,8 +309,8 @@
 .ogrid-empty-state {
   padding: 32px 16px;
   text-align: center;
-  border-top: 1px solid rgba(0, 0, 0, 0.12);
-  background-color: rgba(0, 0, 0, 0.04);
+  border-top: 1px solid var(--ogrid-border);
+  background-color: var(--ogrid-header-bg);
 }
 
 .ogrid-empty-state-title {
@@ -266,7 +321,7 @@
 
 .ogrid-empty-state-message {
   font-size: 0.875rem;
-  color: rgba(0, 0, 0, 0.6);
+  color: var(--ogrid-fg-secondary);
 }
 
 /* === Loading overlay === */
@@ -278,7 +333,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  background-color: rgba(255, 255, 255, 0.7);
+  background-color: var(--ogrid-loading-overlay);
 }
 
 .ogrid-loading-inner {
@@ -287,14 +342,14 @@
   align-items: center;
   gap: 8px;
   padding: 16px;
-  background-color: #fff;
-  border: 1px solid rgba(0, 0, 0, 0.12);
+  background-color: var(--ogrid-bg);
+  border: 1px solid var(--ogrid-border);
   border-radius: 4px;
 }
 
 .ogrid-loading-message {
   font-size: 0.875rem;
-  color: rgba(0, 0, 0, 0.6);
+  color: var(--ogrid-fg-secondary);
 }
 
 /* === Popover editor anchor === */

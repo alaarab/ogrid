@@ -9,7 +9,6 @@
   min-width: 0;
   position: relative;
   box-sizing: border-box;
-  overflow: hidden;
 }
 
 .header-content {
@@ -29,7 +28,7 @@
   white-space: nowrap;
   font-weight: 600;
   font-size: 14px;
-  color: var(--ogrid-fg, #242424);
+  color: var(--ogrid-fg, rgba(0, 0, 0, 0.87));
 }
 
 .header-actions {
@@ -50,18 +49,18 @@
   border: none;
   border-radius: 4px;
   background: transparent;
-  color: var(--ogrid-muted, #616161);
+  color: var(--ogrid-fg-muted, rgba(0, 0, 0, 0.5));
   cursor: pointer;
   flex-shrink: 0;
   font-size: 14px;
 
   &:hover {
-    background: var(--ogrid-bg-hover, #f5f5f5);
-    color: var(--ogrid-fg, #424242);
+    background: var(--ogrid-hover-bg, rgba(0, 0, 0, 0.04));
+    color: var(--ogrid-fg, rgba(0, 0, 0, 0.87));
   }
   &.sort-active {
-    background: var(--ogrid-bg-selected, #e0e0e0);
-    color: var(--ogrid-fg, #333);
+    background: var(--ogrid-header-bg, rgba(0, 0, 0, 0.04));
+    color: var(--ogrid-fg, rgba(0, 0, 0, 0.87));
   }
 }
 
@@ -75,22 +74,22 @@
   border: none;
   border-radius: 4px;
   background: transparent;
-  color: var(--ogrid-muted, #616161);
+  color: var(--ogrid-fg-muted, rgba(0, 0, 0, 0.5));
   cursor: pointer;
   flex-shrink: 0;
   position: relative;
   font-size: 14px;
 
   &:hover {
-    background: var(--ogrid-bg-hover, #f5f5f5);
-    color: var(--ogrid-fg, #424242);
+    background: var(--ogrid-hover-bg, rgba(0, 0, 0, 0.04));
+    color: var(--ogrid-fg, rgba(0, 0, 0, 0.87));
   }
   &.filter-active {
-    background: var(--ogrid-bg-selected, #e0e0e0);
-    color: var(--ogrid-primary, #0066cc);
+    background: var(--ogrid-header-bg, rgba(0, 0, 0, 0.04));
+    color: var(--ogrid-accent, #0078d4);
   }
   &.filter-open {
-    background: var(--ogrid-bg-selected, #e8e8e8);
+    background: var(--ogrid-header-bg, rgba(0, 0, 0, 0.04));
   }
 }
 
@@ -100,7 +99,7 @@
   right: 2px;
   width: 6px;
   height: 6px;
-  background: var(--ogrid-primary, #0066cc);
+  background: var(--ogrid-accent, #0078d4);
   border-radius: 50%;
   border: 1px solid var(--ogrid-bg, #fff);
 }
@@ -114,64 +113,67 @@
   min-width: 280px;
   max-width: 320px;
   background: var(--ogrid-bg, #fff);
-  border: 1px solid var(--ogrid-border, #d1d1d1);
+  border: 1px solid var(--ogrid-border, rgba(0, 0, 0, 0.12));
   border-radius: 8px;
-  box-shadow: var(--ogrid-shadow, 0 4px 16px rgba(0, 0, 0, 0.12));
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
   overflow: hidden;
+  color: var(--ogrid-fg, rgba(0, 0, 0, 0.87));
 }
 
 .popover-header {
   padding: 10px 14px;
   font-size: 12px;
   font-weight: 600;
-  color: var(--ogrid-muted, #616161);
-  border-bottom: 1px solid var(--ogrid-border, #e0e0e0);
-  background: var(--ogrid-bg-subtle, #fafafa);
+  color: var(--ogrid-fg-muted, rgba(0, 0, 0, 0.5));
+  border-bottom: 1px solid var(--ogrid-border, rgba(0, 0, 0, 0.12));
+  background: var(--ogrid-header-bg, rgba(0, 0, 0, 0.04));
 }
 
 .popover-search {
   padding: 10px 12px;
-  border-bottom: 1px solid var(--ogrid-border, #e0e0e0);
+  border-bottom: 1px solid var(--ogrid-border, rgba(0, 0, 0, 0.12));
 }
 
 .search-input {
   width: 100%;
   padding: 6px 10px;
-  border: 1px solid var(--ogrid-border, #d1d1d1);
+  border: 1px solid var(--ogrid-border, rgba(0, 0, 0, 0.12));
   border-radius: 4px;
   font-size: 14px;
   box-sizing: border-box;
+  background: var(--ogrid-bg, #fff);
+  color: var(--ogrid-fg, rgba(0, 0, 0, 0.87));
   &:focus {
     outline: none;
-    border-color: var(--ogrid-primary, #0066cc);
+    border-color: var(--ogrid-accent, #0078d4);
   }
 }
 
 .result-count {
   margin-top: 6px;
   font-size: 11px;
-  color: var(--ogrid-muted, #616161);
+  color: var(--ogrid-fg-muted, rgba(0, 0, 0, 0.5));
 }
 
 .select-all-row {
   display: flex;
   gap: 8px;
   padding: 6px 12px;
-  border-bottom: 1px solid var(--ogrid-border, #e0e0e0);
-  background: var(--ogrid-bg-subtle, #fafafa);
+  border-bottom: 1px solid var(--ogrid-border, rgba(0, 0, 0, 0.12));
+  background: var(--ogrid-header-bg, rgba(0, 0, 0, 0.04));
 }
 
 .select-all-button {
   background: none;
   border: none;
-  color: var(--ogrid-primary, #0066cc);
+  color: var(--ogrid-accent, #0078d4);
   font-size: 12px;
   font-weight: 500;
   cursor: pointer;
   padding: 4px 8px;
   border-radius: 4px;
   &:hover {
-    background: var(--ogrid-bg-hover, #e8f4fc);
+    background: var(--ogrid-hover-bg, rgba(0, 0, 0, 0.04));
   }
 }
 
@@ -186,15 +188,16 @@
   display: flex;
   align-items: center;
   gap: 8px;
+  color: var(--ogrid-fg, rgba(0, 0, 0, 0.87));
   &:hover {
-    background: var(--ogrid-bg-hover, #f5f5f5);
+    background: var(--ogrid-hover-bg, rgba(0, 0, 0, 0.04));
   }
 }
 
 .filter-checkbox {
   width: 16px;
   height: 16px;
-  border: 1px solid var(--ogrid-border, #888);
+  border: 1px solid var(--ogrid-border, rgba(0, 0, 0, 0.12));
   border-radius: 3px;
   cursor: pointer;
   flex-shrink: 0;
@@ -205,21 +208,21 @@
   justify-content: flex-end;
   gap: 8px;
   padding: 8px 12px;
-  border-top: 1px solid var(--ogrid-border, #e0e0e0);
-  background: var(--ogrid-bg-subtle, #f5f5f5);
+  border-top: 1px solid var(--ogrid-border, rgba(0, 0, 0, 0.12));
+  background: var(--ogrid-header-bg, rgba(0, 0, 0, 0.04));
 }
 
 .clear-button {
   padding: 6px 12px;
-  border: 1px solid var(--ogrid-border, #ccc);
+  border: 1px solid var(--ogrid-border, rgba(0, 0, 0, 0.12));
   border-radius: 4px;
   background: var(--ogrid-bg, #fff);
-  color: var(--ogrid-muted, #666);
+  color: var(--ogrid-fg-secondary, rgba(0, 0, 0, 0.6));
   font-size: 12px;
   cursor: pointer;
   &:hover {
-    background: var(--ogrid-bg-hover, #f5f5f5);
-    color: var(--ogrid-fg, #333);
+    background: var(--ogrid-hover-bg, rgba(0, 0, 0, 0.04));
+    color: var(--ogrid-fg, rgba(0, 0, 0, 0.87));
   }
   &:disabled {
     opacity: 0.5;
@@ -231,13 +234,13 @@
   padding: 6px 16px;
   border: none;
   border-radius: 4px;
-  background: var(--ogrid-primary, #0066cc);
-  color: var(--ogrid-primary-fg, #fff);
+  background: var(--ogrid-accent, #0078d4);
+  color: #fff;
   font-size: 12px;
   font-weight: 600;
   cursor: pointer;
   &:hover {
-    background: var(--ogrid-primary-hover, #0052a3);
+    opacity: 0.85;
   }
 }
 
@@ -246,5 +249,5 @@
   padding: 20px;
   text-align: center;
   font-size: 13px;
-  color: var(--ogrid-muted, #666);
+  color: var(--ogrid-fg-secondary, rgba(0, 0, 0, 0.6));
 }

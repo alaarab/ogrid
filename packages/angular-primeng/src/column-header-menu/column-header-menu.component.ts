@@ -33,15 +33,9 @@ import { getColumnHeaderMenuItems, type ColumnHeaderMenuHandlers } from '@alaara
   `,
   styles: [`
     .column-header-menu-trigger {
-      opacity: 0;
-      transition: opacity 0.15s;
       padding: 0.25rem;
       min-width: auto;
-    }
-
-    :host:hover .column-header-menu-trigger,
-    .column-header-menu-trigger:focus {
-      opacity: 1;
+      color: var(--ogrid-fg-secondary, rgba(0, 0, 0, 0.6));
     }
   `],
 })

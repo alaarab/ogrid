@@ -1,5 +1,4 @@
 <script setup lang="ts">
-import { Popover, PopoverButton, PopoverPanel } from '@headlessui/vue';
 import { useColumnHeaderFilterState } from '@alaarab/ogrid-vue';
 import TextFilterPopover from './TextFilterPopover.vue';
 import MultiSelectFilterPopover from './MultiSelectFilterPopover.vue';
@@ -32,6 +31,20 @@ const state = useColumnHeaderFilterState({
   onDateChange: props.onDateChange,
 });
 
+// Destructure refs to top-level so Vue auto-unwraps them in templates
+const {
+  headerRef, popoverRef, isFilterOpen, hasActiveFilter,
+  tempSelected, tempTextValue, searchText, filteredOptions,
+  peopleSearchText, peopleSuggestions, isPeopleLoading, peopleInputRef,
+  tempDateFrom, tempDateTo,
+  setTempTextValue, setSearchText, setPeopleSearchText,
+  setTempDateFrom, setTempDateTo,
+  handlers,
+} = state;
+
+const setHeaderRefEl = (el: any) => { headerRef.value = el as HTMLDivElement; };
+const setPopoverRefEl = (el: any) => { popoverRef.value = el as HTMLDivElement; };
+
 const getSortIcon = () => {
   if (props.isSorted) {
     return props.isSortedDescending ? '\u2193' : '\u2191';
@@ -41,7 +54,7 @@ const getSortIcon = () => {
 </script>
 
 <template>
-  <div class="column-header" ref="state.headerRef">
+  <div class="column-header" :ref="setHeaderRefEl">
     <div class="header-content">
       <span class="column-name" :title="columnName" data-header-label>
         {{ columnName }}
@@ -52,114 +65,109 @@ const getSortIcon = () => {
         v-if="onSort"
         type="button"
         :class="['sort-icon', { 'sort-active': isSorted }]"
-        @click="state.handlers.handleSortClick"
+        @click="handlers.handleSortClick"
         :aria-label="`Sort by ${columnName}`"
         :title="isSorted ? (isSortedDescending ? 'Sorted descending' : 'Sorted ascending') : 'Sort'"
       >
         <span aria-hidden>{{ getSortIcon() }}</span>
       </button>
 
-      <Popover v-if="filterType !== 'none'" v-slot="{ open }">
-        <PopoverButton
-          :class="[
-            'filter-icon',
-            { 'filter-active': state.hasActiveFilter },
-            { 'filter-open': open },
-          ]"
-          @click="state.handlers.handleFilterIconClick"
-          :aria-label="`Filter ${columnName}`"
-          :title="`Filter ${columnName}`"
-        >
-          <span aria-hidden>▼</span>
-          <span v-if="state.hasActiveFilter" class="filter-badge" />
-        </PopoverButton>
+      <button
+        v-if="filterType !== 'none'"
+        :class="[
+          'filter-icon',
+          { 'filter-active': hasActiveFilter },
+          { 'filter-open': isFilterOpen },
+        ]"
+        @click="handlers.handleFilterIconClick"
+        :aria-label="`Filter ${columnName}`"
+        :title="`Filter ${columnName}`"
+      >
+        <span aria-hidden>▼</span>
+        <span v-if="hasActiveFilter" class="filter-badge" />
+      </button>
+    </div>
 
-        <transition
-          enter-active-class="transition duration-200 ease-out"
-          enter-from-class="opacity-0 translate-y-1"
-          enter-to-class="opacity-100 translate-y-0"
-          leave-active-class="transition duration-150 ease-in"
-          leave-from-class="opacity-100 translate-y-0"
-          leave-to-class="opacity-0 translate-y-1"
-        >
-          <PopoverPanel :ref="state.popoverRef" class="popover-content">
-            <div class="popover-header">Filter: {{ columnName }}</div>
+    <div
+      v-if="isFilterOpen && filterType !== 'none'"
+      :ref="setPopoverRefEl"
+      class="popover-content"
+      @click.stop
+    >
+      <div class="popover-header">Filter: {{ columnName }}</div>
 
-            <!-- Text Filter -->
-            <TextFilterPopover
-              v-if="filterType === 'text'"
-              :value="state.tempTextValue"
-              :onValueChange="state.setTempTextValue"
-              :onApply="state.handlers.handleTextApply"
-              :onClear="state.handlers.handleTextClear"
+      <!-- Text Filter -->
+      <TextFilterPopover
+        v-if="filterType === 'text'"
+        :value="tempTextValue"
+        :onValueChange="setTempTextValue"
+        :onApply="handlers.handleTextApply"
+        :onClear="handlers.handleTextClear"
+      />
+
+      <!-- MultiSelect Filter -->
+      <MultiSelectFilterPopover
+        v-else-if="filterType === 'multiSelect'"
+        :searchText="searchText"
+        :onSearchChange="setSearchText"
+        :options="options"
+        :filteredOptions="filteredOptions"
+        :selected="tempSelected"
+        :onOptionToggle="handlers.handleCheckboxChange"
+        :onSelectAll="handlers.handleSelectAll"
+        :onClearSelection="handlers.handleClearSelection"
+        :onApply="handlers.handleApplyMultiSelect"
+        :isLoading="isLoadingOptions"
+      />
+
+      <!-- People Filter -->
+      <PeopleFilterPopover
+        v-else-if="filterType === 'people'"
+        :selectedUser="selectedUser"
+        :searchText="peopleSearchText"
+        :onSearchChange="setPeopleSearchText"
+        :suggestions="peopleSuggestions"
+        :isLoading="isPeopleLoading"
+        :onUserSelect="handlers.handleUserSelect"
+        :onClearUser="handlers.handleClearUser"
+        :inputRef="peopleInputRef"
+      />
+
+      <!-- Date Filter -->
+      <div v-else-if="filterType === 'date'">
+        <div style="padding: 8px 12px; display: flex; flex-direction: column; gap: 6px">
+          <label style="display: flex; align-items: center; gap: 6px; font-size: 12px">
+            From:
+            <input
+              type="date"
+              :value="tempDateFrom"
+              @input="setTempDateFrom(($event.target as HTMLInputElement).value)"
+              style="flex: 1"
             />
-
-            <!-- MultiSelect Filter -->
-            <MultiSelectFilterPopover
-              v-else-if="filterType === 'multiSelect'"
-              :searchText="state.searchText"
-              :onSearchChange="state.setSearchText"
-              :options="options"
-              :filteredOptions="state.filteredOptions"
-              :selected="state.tempSelected"
-              :onOptionToggle="state.handlers.handleCheckboxChange"
-              :onSelectAll="state.handlers.handleSelectAll"
-              :onClearSelection="state.handlers.handleClearSelection"
-              :onApply="state.handlers.handleApplyMultiSelect"
-              :isLoading="isLoadingOptions"
+          </label>
+          <label style="display: flex; align-items: center; gap: 6px; font-size: 12px">
+            To:
+            <input
+              type="date"
+              :value="tempDateTo"
+              @input="setTempDateTo(($event.target as HTMLInputElement).value)"
+              style="flex: 1"
             />
-
-            <!-- People Filter -->
-            <PeopleFilterPopover
-              v-else-if="filterType === 'people'"
-              :selectedUser="selectedUser"
-              :searchText="state.peopleSearchText"
-              :onSearchChange="state.setPeopleSearchText"
-              :suggestions="state.peopleSuggestions"
-              :isLoading="state.isPeopleLoading"
-              :onUserSelect="state.handlers.handleUserSelect"
-              :onClearUser="state.handlers.handleClearUser"
-              :inputRef="state.peopleInputRef"
-            />
-
-            <!-- Date Filter -->
-            <div v-else-if="filterType === 'date'">
-              <div style="padding: 8px 12px; display: flex; flex-direction: column; gap: 6px">
-                <label style="display: flex; align-items: center; gap: 6px; font-size: 12px">
-                  From:
-                  <input
-                    type="date"
-                    :value="state.tempDateFrom"
-                    @input="state.setTempDateFrom(($event.target as HTMLInputElement).value)"
-                    style="flex: 1"
-                  />
-                </label>
-                <label style="display: flex; align-items: center; gap: 6px; font-size: 12px">
-                  To:
-                  <input
-                    type="date"
-                    :value="state.tempDateTo"
-                    @input="state.setTempDateTo(($event.target as HTMLInputElement).value)"
-                    style="flex: 1"
-                  />
-                </label>
-              </div>
-              <div class="popover-actions">
-                <button
-                  class="clear-button"
-                  @click="state.handlers.handleDateClear"
-                  :disabled="!state.tempDateFrom && !state.tempDateTo"
-                >
-                  Clear
-                </button>
-                <button class="apply-button" @click="state.handlers.handleDateApply">
-                  Apply
-                </button>
-              </div>
-            </div>
-          </PopoverPanel>
-        </transition>
-      </Popover>
+          </label>
+        </div>
+        <div class="popover-actions">
+          <button
+            class="clear-button"
+            @click="handlers.handleDateClear"
+            :disabled="!tempDateFrom && !tempDateTo"
+          >
+            Clear
+          </button>
+          <button class="apply-button" @click="handlers.handleDateApply">
+            Apply
+          </button>
+        </div>
+      </div>
     </div>
   </div>
 </template>

@@ -39,8 +39,8 @@ export const StatusBar = defineComponent({
         style: {
           marginTop: 'auto',
           padding: '6px 12px',
-          borderTop: '1px solid rgba(0,0,0,0.12)',
-          backgroundColor: 'rgba(0,0,0,0.04)',
+          borderTop: '1px solid var(--ogrid-border, rgba(0,0,0,0.12))',
+          backgroundColor: 'var(--ogrid-header-bg, rgba(0,0,0,0.04))',
           display: 'flex',
           alignItems: 'center',
           gap: '16px',
@@ -54,11 +54,11 @@ export const StatusBar = defineComponent({
             alignItems: 'center',
             gap: '4px',
             ...(i < parts.length - 1
-              ? { marginRight: '16px', borderRight: '1px solid rgba(0,0,0,0.12)', paddingRight: '16px' }
+              ? { marginRight: '16px', borderRight: '1px solid var(--ogrid-border, rgba(0,0,0,0.12))', paddingRight: '16px' }
               : {}),
           },
         }, [
-          h('span', { style: { color: 'rgba(0,0,0,0.6)' } }, p.label),
+          h('span', { style: { color: 'var(--ogrid-fg-secondary, rgba(0,0,0,0.6))' } }, p.label),
           h('span', { style: { fontWeight: '600' } }, p.value.toLocaleString()),
         ])
       ));
