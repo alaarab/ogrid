@@ -1,4 +1,5 @@
 import { ref, computed, type Ref } from 'vue';
+import { measureColumnContentWidth } from '@alaarab/ogrid-core';
 import type { IColumnDef } from '../types';
 
 export interface UseColumnHeaderMenuStateParams<T = unknown> {
@@ -7,10 +8,12 @@ export interface UseColumnHeaderMenuStateParams<T = unknown> {
   onPinColumn: (columnId: string, side: 'left' | 'right') => void;
   onUnpinColumn: (columnId: string) => void;
   onSort?: (columnId: string, direction: 'asc' | 'desc' | null) => void;
-  onAutosizeColumn?: (columnId: string) => void;
-  onAutosizeAllColumns?: () => void;
+  onColumnResized?: (columnId: string, width: number) => void;
+  onAutosizeColumn?: (columnId: string, width: number) => void;
   sortBy?: Ref<string | undefined>;
   sortDirection?: Ref<'asc' | 'desc' | undefined>;
+  data?: Ref<unknown[]>;
+  getRowId?: (item: unknown) => string | number;
 }
 
 export interface UseColumnHeaderMenuStateResult {
@@ -48,8 +51,8 @@ export function useColumnHeaderMenuState<T = unknown>(
     onPinColumn,
     onUnpinColumn,
     onSort,
+    onColumnResized,
     onAutosizeColumn,
-    onAutosizeAllColumns,
     sortBy,
     sortDirection,
   } = params;
@@ -142,17 +145,23 @@ export function useColumnHeaderMenuState<T = unknown>(
   };
 
   const handleAutosizeThis = () => {
-    if (openForColumn.value && onAutosizeColumn) {
-      onAutosizeColumn(openForColumn.value);
-      close();
-    }
+    const resizer = onAutosizeColumn ?? onColumnResized;
+    if (!openForColumn.value || !resizer || !isResizable.value) return;
+
+    const col = currentColumn.value;
+    resizer(openForColumn.value, measureColumnContentWidth(openForColumn.value, col?.minWidth));
+    close();
   };
 
   const handleAutosizeAll = () => {
-    if (onAutosizeAllColumns) {
-      onAutosizeAllColumns();
-      close();
-    }
+    const resizer = onAutosizeColumn ?? onColumnResized;
+    if (!resizer) return;
+
+    columns.value.forEach((col) => {
+      resizer(col.columnId, measureColumnContentWidth(col.columnId, col.minWidth));
+    });
+
+    close();
   };
 
   return {
