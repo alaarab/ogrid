@@ -83,7 +83,7 @@ const getRowId = (p: Project) => p.id;
 // ---------------------------------------------------------------------------
 
 const meta: Meta<typeof OGrid<Project>> = {
-  title: 'OGrid/Fluent/OGrid',
+  title: 'OGrid/React Fluent/OGrid',
   component: OGrid as React.ComponentType,
   parameters: { layout: 'padded' },
 };

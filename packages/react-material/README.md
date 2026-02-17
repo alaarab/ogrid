@@ -1,5 +1,5 @@
 <p align="center">
-  <strong>OGrid for Material UI</strong> — The lightweight React data grid with enterprise features and zero enterprise cost.
+  <strong>OGrid for React Material</strong> — The lightweight React data grid with enterprise features and zero enterprise cost.
 </p>
 
 <p align="center">
