@@ -46,7 +46,7 @@ const getRowId = (r: Row) => r.id;
 const noop = () => {};
 
 const meta: Meta<typeof DataGridTable<Row>> = {
-  title: 'OGrid/Material/DataGridTable',
+  title: 'OGrid/React Material/DataGridTable',
   component: DataGridTable as React.ComponentType,
   parameters: { layout: 'padded' },
 };

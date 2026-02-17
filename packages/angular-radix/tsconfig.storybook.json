@@ -1,17 +1,15 @@
 {
   "compilerOptions": {
     "target": "ES2022",
-    "module": "ES2022",
-    "lib": ["ES2022", "DOM"],
+    "module": "ESNext",
     "moduleResolution": "bundler",
     "strict": true,
     "esModuleInterop": true,
     "skipLibCheck": true,
+    "types": ["node"],
+    "rootDir": ".",
     "experimentalDecorators": true,
-    "useDefineForClassFields": false,
-    "resolveJsonModule": true,
-    "allowSyntheticDefaultImports": true,
-    "rootDir": "."
+    "useDefineForClassFields": false
   },
   "include": ["src/**/*.ts", ".storybook/**/*.ts"],
   "exclude": ["**/__tests__/**"]
