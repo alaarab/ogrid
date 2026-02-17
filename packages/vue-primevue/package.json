@@ -13,7 +13,7 @@
     }
   },
   "scripts": {
-    "build": "rimraf dist && tsc -p tsconfig.build.json",
+    "build": "rimraf dist && tsc -p tsconfig.build.json && node scripts/copy-css.js",
     "test": "jest --passWithNoTests",
     "storybook": "storybook dev -p 6013 --no-open",
     "build-storybook": "storybook build"
@@ -54,7 +54,9 @@
     "vite-plugin-dts": "^4.5.4",
     "vue": "^3.5.28"
   },
-  "sideEffects": false,
+  "sideEffects": [
+    "**/*.css"
+  ],
   "publishConfig": {
     "access": "public"
   }

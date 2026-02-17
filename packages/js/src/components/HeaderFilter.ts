@@ -33,7 +33,7 @@ export class HeaderFilter {
     this.popoverEl.style.color = 'var(--ogrid-fg, #242424)';
     this.popoverEl.style.border = '1px solid var(--ogrid-border, #e0e0e0)';
     this.popoverEl.style.borderRadius = '4px';
-    this.popoverEl.style.boxShadow = '0 2px 8px rgba(0,0,0,0.15)';
+    this.popoverEl.style.boxShadow = 'var(--ogrid-shadow, 0 2px 8px rgba(0,0,0,0.15))';
     this.popoverEl.style.padding = '8px';
     this.popoverEl.style.minWidth = '200px';
     this.popoverEl.style.maxHeight = '320px';

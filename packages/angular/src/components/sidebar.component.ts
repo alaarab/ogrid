@@ -39,56 +39,56 @@ const PANEL_LABELS: Record<SideBarPanelId, string> = { columns: 'Columns', filte
     .ogrid-sidebar-tab-strip {
       display: flex; flex-direction: column;
       width: var(--ogrid-sidebar-tab-size, 36px);
-      background: var(--ogrid-header-bg, #f5f5f5);
+      background: var(--ogrid-header-bg, rgba(0, 0, 0, 0.04));
     }
-    .ogrid-sidebar-tab-strip--left { border-right: 1px solid var(--ogrid-border, #e0e0e0); }
-    .ogrid-sidebar-tab-strip--right { border-left: 1px solid var(--ogrid-border, #e0e0e0); }
+    .ogrid-sidebar-tab-strip--left { border-right: 1px solid var(--ogrid-border, rgba(0, 0, 0, 0.12)); }
+    .ogrid-sidebar-tab-strip--right { border-left: 1px solid var(--ogrid-border, rgba(0, 0, 0, 0.12)); }
     .ogrid-sidebar-tab {
       width: var(--ogrid-sidebar-tab-size, 36px);
       height: var(--ogrid-sidebar-tab-size, 36px);
       border: none; cursor: pointer;
-      color: var(--ogrid-fg, #242424); font-size: 14px;
+      color: var(--ogrid-fg, rgba(0, 0, 0, 0.87)); font-size: 14px;
       display: flex; align-items: center; justify-content: center;
       background: transparent; font-weight: normal;
     }
-    .ogrid-sidebar-tab--active { background: var(--ogrid-bg, #fff); font-weight: bold; }
+    .ogrid-sidebar-tab--active { background: var(--ogrid-bg, #ffffff); font-weight: bold; }
     .ogrid-sidebar-panel {
       width: var(--ogrid-sidebar-panel-width, 240px);
       display: flex; flex-direction: column; overflow: hidden;
-      background: var(--ogrid-bg, #fff); color: var(--ogrid-fg, #242424);
+      background: var(--ogrid-bg, #ffffff); color: var(--ogrid-fg, rgba(0, 0, 0, 0.87));
     }
-    .ogrid-sidebar-panel--left { border-right: 1px solid var(--ogrid-border, #e0e0e0); }
-    .ogrid-sidebar-panel--right { border-left: 1px solid var(--ogrid-border, #e0e0e0); }
+    .ogrid-sidebar-panel--left { border-right: 1px solid var(--ogrid-border, rgba(0, 0, 0, 0.12)); }
+    .ogrid-sidebar-panel--right { border-left: 1px solid var(--ogrid-border, rgba(0, 0, 0, 0.12)); }
     .ogrid-sidebar-panel-header {
       display: flex; justify-content: space-between; align-items: center;
-      padding: 8px 12px; border-bottom: 1px solid var(--ogrid-border, #e0e0e0); font-weight: 600;
+      padding: 8px 12px; border-bottom: 1px solid var(--ogrid-border, rgba(0, 0, 0, 0.12)); font-weight: 600;
     }
     .ogrid-sidebar-panel-close {
       border: none; background: transparent; cursor: pointer;
-      font-size: 16px; color: var(--ogrid-fg, #242424);
+      font-size: 16px; color: var(--ogrid-fg, rgba(0, 0, 0, 0.87));
     }
     .ogrid-sidebar-panel-body { flex: 1; overflow-y: auto; padding: 8px 12px; }
     .ogrid-sidebar-actions { display: flex; gap: 8px; margin-bottom: 8px; }
     .ogrid-sidebar-action-btn {
       flex: 1; cursor: pointer;
-      background: var(--ogrid-bg-subtle, #f3f2f1); color: var(--ogrid-fg, #242424);
-      border: 1px solid var(--ogrid-border, #e0e0e0); border-radius: 4px; padding: 4px 8px;
+      background: var(--ogrid-header-bg, rgba(0, 0, 0, 0.04)); color: var(--ogrid-fg, rgba(0, 0, 0, 0.87));
+      border: 1px solid var(--ogrid-border, rgba(0, 0, 0, 0.12)); border-radius: 4px; padding: 4px 8px;
     }
     .ogrid-sidebar-col-label { display: flex; align-items: center; gap: 6px; padding: 2px 0; cursor: pointer; }
-    .ogrid-sidebar-empty { color: var(--ogrid-muted, #999); font-style: italic; }
+    .ogrid-sidebar-empty { color: var(--ogrid-fg-muted, rgba(0, 0, 0, 0.5)); font-style: italic; }
     .ogrid-sidebar-filter-group { margin-bottom: 12px; }
     .ogrid-sidebar-filter-label { font-weight: 500; margin-bottom: 4px; font-size: 13px; }
     .ogrid-sidebar-text-input {
       width: 100%; box-sizing: border-box; padding: 4px 6px;
-      background: var(--ogrid-bg, #fff); color: var(--ogrid-fg, #242424);
-      border: 1px solid var(--ogrid-border, #e0e0e0); border-radius: 4px;
+      background: var(--ogrid-bg, #ffffff); color: var(--ogrid-fg, rgba(0, 0, 0, 0.87));
+      border: 1px solid var(--ogrid-border, rgba(0, 0, 0, 0.12)); border-radius: 4px;
     }
     .ogrid-sidebar-date-row { display: flex; flex-direction: column; gap: 4px; }
     .ogrid-sidebar-date-label { display: flex; align-items: center; gap: 4px; font-size: 12px; }
     .ogrid-sidebar-date-input {
       flex: 1; padding: 2px 4px;
-      background: var(--ogrid-bg, #fff); color: var(--ogrid-fg, #242424);
-      border: 1px solid var(--ogrid-border, #e0e0e0); border-radius: 4px;
+      background: var(--ogrid-bg, #ffffff); color: var(--ogrid-fg, rgba(0, 0, 0, 0.87));
+      border: 1px solid var(--ogrid-border, rgba(0, 0, 0, 0.12)); border-radius: 4px;
     }
     .ogrid-sidebar-multiselect-list { max-height: 120px; overflow-y: auto; }
     .ogrid-sidebar-multiselect-item {

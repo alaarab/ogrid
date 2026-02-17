@@ -1,7 +1,7 @@
 <template>
-  <div style="padding: 24px; max-width: 1200px; margin: 0 auto; height: 100vh; display: flex; flex-direction: column;">
+  <div class="app-container">
     <h1>OGrid - Vue Radix Example</h1>
-    <p style="color: #666; margin-bottom: 16px;">
+    <p class="app-subtitle">
       A fully featured data table powered by <code>@alaarab/ogrid-vue-radix</code>.
       Includes sorting, multi-select &amp; text filtering, column chooser, and pagination.
     </p>
@@ -25,3 +25,25 @@ const gridProps: IOGridProps<Project> = {
   defaultPageSize: 25,
 };
 </script>
+
+<style>
+.app-container {
+  padding: 24px;
+  max-width: 1200px;
+  margin: 0 auto;
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  background: var(--ogrid-bg, #fff);
+  color: var(--ogrid-fg, rgba(0,0,0,0.87));
+}
+.app-subtitle {
+  color: var(--ogrid-fg-secondary, #666);
+  margin-bottom: 16px;
+}
+html, body {
+  background: var(--ogrid-bg, #fff);
+  color: var(--ogrid-fg, rgba(0,0,0,0.87));
+  transition: background 0.2s, color 0.2s;
+}
+</style>

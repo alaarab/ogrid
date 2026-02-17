@@ -215,9 +215,9 @@ import { BaseColumnHeaderFilterComponent } from '@alaarab/ogrid-angular';
       width: 24px; height: 24px; padding: 2px; border: none; border-radius: 4px;
       background: transparent; cursor: pointer; font-size: 12px; line-height: 1;
       display: inline-flex; align-items: center; justify-content: center; position: relative;
-      color: rgba(0,0,0,0.54);
+      color: var(--ogrid-fg-secondary, rgba(0, 0, 0, 0.54));
     }
-    .ogrid-header-filter__btn:hover { background: rgba(0,0,0,0.08); }
+    .ogrid-header-filter__btn:hover { background: var(--ogrid-hover-bg, rgba(0, 0, 0, 0.08)); }
     .ogrid-header-filter__btn--active { color: var(--mat-sys-primary, #1976d2); }
     .ogrid-header-filter__filter-btn {
       width: 24px; height: 24px; padding: 2px; border: none; border-radius: 4px;
@@ -226,17 +226,17 @@ import { BaseColumnHeaderFilterComponent } from '@alaarab/ogrid-angular';
       opacity: 0.6; transition: opacity 0.15s;
     }
     .ogrid-header-filter:hover .ogrid-header-filter__filter-btn { opacity: 0.8; }
-    .ogrid-header-filter__filter-btn:hover { background: rgba(0,0,0,0.08); opacity: 1 !important; }
+    .ogrid-header-filter__filter-btn:hover { background: var(--ogrid-hover-bg, rgba(0, 0, 0, 0.08)); opacity: 1 !important; }
     .ogrid-header-filter__filter-btn--active { opacity: 1 !important; }
     .ogrid-header-filter__funnel {
       display: block; width: 0; height: 0;
       border-left: 5px solid transparent; border-right: 5px solid transparent;
-      border-top: 6px solid rgba(0,0,0,0.65);
+      border-top: 6px solid var(--ogrid-fg-secondary, rgba(0, 0, 0, 0.65));
       position: relative;
     }
     .ogrid-header-filter__funnel::after {
       content: ''; display: block; width: 2px; height: 4px;
-      background: rgba(0,0,0,0.65); position: absolute;
+      background: var(--ogrid-fg-secondary, rgba(0, 0, 0, 0.65)); position: absolute;
       top: -1px; left: -1px;
     }
     .ogrid-header-filter__filter-btn--active .ogrid-header-filter__funnel {
@@ -252,24 +252,26 @@ import { BaseColumnHeaderFilterComponent } from '@alaarab/ogrid-angular';
     }
     .ogrid-header-filter__popover {
       position: fixed; z-index: 10000;
-      background: #ffffff; border: 1px solid rgba(0,0,0,0.2);
-      border-radius: 8px; box-shadow: 0 4px 16px rgba(0,0,0,0.2), 0 1px 4px rgba(0,0,0,0.1);
-      margin-top: 4px;
+      background: var(--ogrid-bg, #ffffff); border: 1px solid var(--ogrid-border, rgba(0, 0, 0, 0.2));
+      border-radius: 8px; box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2), 0 1px 4px rgba(0, 0, 0, 0.1);
+      margin-top: 4px; color: var(--ogrid-fg, rgba(0, 0, 0, 0.87));
     }
     .ogrid-header-filter__popover-header {
       padding: 8px 12px; font-size: 14px; font-weight: 600;
-      border-bottom: 1px solid rgba(0,0,0,0.12);
+      border-bottom: 1px solid var(--ogrid-border, rgba(0, 0, 0, 0.12));
+      color: var(--ogrid-fg, rgba(0, 0, 0, 0.87));
     }
     .ogrid-header-filter__popover-body { }
     .ogrid-header-filter__popover-actions {
       display: flex; justify-content: flex-end; gap: 8px; padding: 8px 12px;
     }
     .ogrid-header-filter__input {
-      width: 100%; padding: 8px 12px; border: 1px solid rgba(0,0,0,0.23);
+      width: 100%; padding: 8px 12px; border: 1px solid var(--ogrid-border, rgba(0, 0, 0, 0.23));
       border-radius: 4px; font-size: 14px; box-sizing: border-box;
+      background: var(--ogrid-bg, #ffffff); color: var(--ogrid-fg, rgba(0, 0, 0, 0.87));
     }
     .ogrid-header-filter__input:focus { outline: 2px solid var(--mat-sys-primary, #1976d2); outline-offset: -1px; }
-    .ogrid-header-filter__options-info { margin-top: 4px; font-size: 12px; color: rgba(0,0,0,0.6); }
+    .ogrid-header-filter__options-info { margin-top: 4px; font-size: 12px; color: var(--ogrid-fg-secondary, rgba(0, 0, 0, 0.6)); }
     .ogrid-header-filter__select-actions {
       display: flex; justify-content: space-between; padding: 4px 12px;
     }
@@ -277,40 +279,44 @@ import { BaseColumnHeaderFilterComponent } from '@alaarab/ogrid-angular';
     .ogrid-header-filter__option {
       display: flex; align-items: center; gap: 8px;
       padding: 4px 8px; cursor: pointer; font-size: 14px;
+      color: var(--ogrid-fg, rgba(0, 0, 0, 0.87));
     }
-    .ogrid-header-filter__option:hover { background: rgba(0,0,0,0.04); }
+    .ogrid-header-filter__option:hover { background: var(--ogrid-hover-bg, rgba(0, 0, 0, 0.04)); }
     .ogrid-header-filter__loading, .ogrid-header-filter__empty {
-      padding: 16px; text-align: center; font-size: 14px; color: rgba(0,0,0,0.6);
+      padding: 16px; text-align: center; font-size: 14px; color: var(--ogrid-fg-secondary, rgba(0, 0, 0, 0.6));
     }
     .ogrid-header-filter__action-btn {
       padding: 4px 12px; border: none; border-radius: 4px;
       background: transparent; cursor: pointer; font-size: 13px;
+      color: var(--ogrid-fg, rgba(0, 0, 0, 0.87));
     }
-    .ogrid-header-filter__action-btn:hover { background: rgba(0,0,0,0.04); }
+    .ogrid-header-filter__action-btn:hover { background: var(--ogrid-hover-bg, rgba(0, 0, 0, 0.04)); }
     .ogrid-header-filter__action-btn:disabled { opacity: 0.38; cursor: default; }
     .ogrid-header-filter__action-btn--primary {
       background: var(--mat-sys-primary, #1976d2); color: #fff;
     }
-    .ogrid-header-filter__action-btn--primary:hover { background: var(--mat-sys-primary, #1565c0); }
+    .ogrid-header-filter__action-btn--primary:hover { opacity: 0.9; }
     .ogrid-header-filter__people-selected {
-      padding: 12px; border-bottom: 1px solid rgba(0,0,0,0.12);
+      padding: 12px; border-bottom: 1px solid var(--ogrid-border, rgba(0, 0, 0, 0.12));
     }
-    .ogrid-header-filter__people-info-label { font-size: 12px; color: rgba(0,0,0,0.6); }
+    .ogrid-header-filter__people-info-label { font-size: 12px; color: var(--ogrid-fg-secondary, rgba(0, 0, 0, 0.6)); }
     .ogrid-header-filter__people-card {
       display: flex; align-items: center; gap: 8px; margin-top: 4px;
     }
     .ogrid-header-filter__people-avatar {
-      width: 32px; height: 32px; border-radius: 50%; background: rgba(0,0,0,0.08);
+      width: 32px; height: 32px; border-radius: 50%; background: var(--ogrid-hover-bg, rgba(0, 0, 0, 0.08));
       display: flex; align-items: center; justify-content: center;
       font-size: 14px; font-weight: 600; flex-shrink: 0;
+      color: var(--ogrid-fg, rgba(0, 0, 0, 0.87));
     }
-    .ogrid-header-filter__people-details { flex: 1; min-width: 0; font-size: 14px; }
+    .ogrid-header-filter__people-details { flex: 1; min-width: 0; font-size: 14px; color: var(--ogrid-fg, rgba(0, 0, 0, 0.87)); }
     .ogrid-header-filter__people-details > div { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-    .ogrid-header-filter__people-email { font-size: 12px; color: rgba(0,0,0,0.6); }
+    .ogrid-header-filter__people-email { font-size: 12px; color: var(--ogrid-fg-secondary, rgba(0, 0, 0, 0.6)); }
     .ogrid-header-filter__people-option {
       display: flex; align-items: center; gap: 8px; padding: 8px 12px; cursor: pointer;
+      color: var(--ogrid-fg, rgba(0, 0, 0, 0.87));
     }
-    .ogrid-header-filter__people-option:hover { background: rgba(0,0,0,0.04); }
+    .ogrid-header-filter__people-option:hover { background: var(--ogrid-hover-bg, rgba(0, 0, 0, 0.04)); }
   `],
   host: {
     '(document:click)': 'onDocumentClickWrapper($event)',

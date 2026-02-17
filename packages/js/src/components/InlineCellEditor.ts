@@ -292,6 +292,8 @@ export class InlineCellEditor<T> {
     input.style.outline = 'none';
     input.style.padding = '4px';
     input.style.boxSizing = 'border-box';
+    input.style.background = 'var(--ogrid-bg, #fff)';
+    input.style.color = 'var(--ogrid-fg, rgba(0, 0, 0, 0.87))';
     wrapper.appendChild(input);
 
     const dropdown = document.createElement('div');
@@ -301,8 +303,8 @@ export class InlineCellEditor<T> {
     dropdown.style.width = '100%';
     dropdown.style.maxHeight = '200px';
     dropdown.style.overflowY = 'auto';
-    dropdown.style.backgroundColor = 'white';
-    dropdown.style.border = '1px solid #ccc';
+    dropdown.style.backgroundColor = 'var(--ogrid-bg, #fff)';
+    dropdown.style.border = '1px solid var(--ogrid-border, rgba(0, 0, 0, 0.12))';
     dropdown.style.zIndex = '1001';
     wrapper.appendChild(dropdown);
 
@@ -327,10 +329,10 @@ export class InlineCellEditor<T> {
           this.closeEditor();
         });
         option.addEventListener('mouseenter', () => {
-          option.style.backgroundColor = '#f0f0f0';
+          option.style.backgroundColor = 'var(--ogrid-hover-bg, rgba(0, 0, 0, 0.04))';
         });
         option.addEventListener('mouseleave', () => {
-          option.style.backgroundColor = 'white';
+          option.style.backgroundColor = 'var(--ogrid-bg, #fff)';
         });
         dropdown.appendChild(option);
       }

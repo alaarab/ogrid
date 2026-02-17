@@ -53,20 +53,24 @@ import { BaseColumnChooserComponent } from '@alaarab/ogrid-angular';
     .ogrid-column-chooser { position: relative; }
     .ogrid-column-chooser__trigger {
       display: inline-flex; align-items: center; gap: 6px;
-      padding: 6px 12px; border: 1px solid rgba(0,0,0,0.23); border-radius: 4px;
+      padding: 6px 12px; border: 1px solid var(--ogrid-border, rgba(0, 0, 0, 0.23)); border-radius: 4px;
       background: transparent; cursor: pointer; font-size: 14px; font-weight: 600;
       text-transform: none; white-space: nowrap;
+      color: var(--ogrid-fg, rgba(0, 0, 0, 0.87));
     }
+    .ogrid-column-chooser__trigger:hover { background: var(--ogrid-hover-bg, rgba(0, 0, 0, 0.04)); }
     .ogrid-column-chooser__caret { font-size: 10px; }
     .ogrid-column-chooser__dropdown {
       position: absolute; top: 100%; right: 0; z-index: 10;
       min-width: 220px; margin-top: 4px;
-      background: #fff; border: 1px solid rgba(0,0,0,0.12); border-radius: 4px;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+      background: var(--ogrid-bg, #ffffff); border: 1px solid var(--ogrid-border, rgba(0, 0, 0, 0.12)); border-radius: 4px;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
     }
     .ogrid-column-chooser__header {
       padding: 8px 12px; font-size: 14px; font-weight: 600;
-      border-bottom: 1px solid rgba(0,0,0,0.12); background: #fafafa;
+      border-bottom: 1px solid var(--ogrid-border, rgba(0, 0, 0, 0.12));
+      background: var(--ogrid-header-bg, rgba(0, 0, 0, 0.04));
+      color: var(--ogrid-fg, rgba(0, 0, 0, 0.87));
     }
     .ogrid-column-chooser__list {
       max-height: 320px; overflow-y: auto; padding: 4px 0;
@@ -74,22 +78,25 @@ import { BaseColumnChooserComponent } from '@alaarab/ogrid-angular';
     .ogrid-column-chooser__item {
       display: flex; align-items: center; gap: 8px;
       padding: 4px 12px; min-height: 32px; cursor: pointer; font-size: 14px;
+      color: var(--ogrid-fg, rgba(0, 0, 0, 0.87));
     }
-    .ogrid-column-chooser__item:hover { background: rgba(0,0,0,0.04); }
+    .ogrid-column-chooser__item:hover { background: var(--ogrid-hover-bg, rgba(0, 0, 0, 0.04)); }
     .ogrid-column-chooser__footer {
       display: flex; justify-content: flex-end; gap: 8px;
-      padding: 8px 12px; border-top: 1px solid rgba(0,0,0,0.12); background: #fafafa;
+      padding: 8px 12px; border-top: 1px solid var(--ogrid-border, rgba(0, 0, 0, 0.12));
+      background: var(--ogrid-header-bg, rgba(0, 0, 0, 0.04));
     }
     .ogrid-column-chooser__btn {
       padding: 4px 12px; border: none; border-radius: 4px;
       background: transparent; cursor: pointer; font-size: 13px; text-transform: none;
+      color: var(--ogrid-fg, rgba(0, 0, 0, 0.87));
     }
-    .ogrid-column-chooser__btn:hover { background: rgba(0,0,0,0.04); }
+    .ogrid-column-chooser__btn:hover { background: var(--ogrid-hover-bg, rgba(0, 0, 0, 0.04)); }
     .ogrid-column-chooser__btn--primary {
       background: var(--mat-sys-primary, #1976d2); color: #fff;
     }
     .ogrid-column-chooser__btn--primary:hover {
-      background: var(--mat-sys-primary, #1565c0);
+      opacity: 0.9;
     }
   `],
   host: {

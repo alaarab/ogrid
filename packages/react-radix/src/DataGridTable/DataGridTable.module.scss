@@ -1,5 +1,56 @@
 // OGrid Radix – DataGridTable (native table, minimal default)
 
+/* ─── OGrid Theme Variables ─── */
+:global(:root) {
+  --ogrid-bg: #ffffff;
+  --ogrid-fg: rgba(0, 0, 0, 0.87);
+  --ogrid-fg-secondary: rgba(0, 0, 0, 0.6);
+  --ogrid-fg-muted: rgba(0, 0, 0, 0.5);
+  --ogrid-border: rgba(0, 0, 0, 0.12);
+  --ogrid-header-bg: rgba(0, 0, 0, 0.04);
+  --ogrid-hover-bg: rgba(0, 0, 0, 0.04);
+  --ogrid-selected-row-bg: #e6f0fb;
+  --ogrid-active-cell-bg: rgba(0, 0, 0, 0.02);
+  --ogrid-range-bg: rgba(33, 115, 70, 0.12);
+  --ogrid-accent: #0078d4;
+  --ogrid-selection-color: #217346;
+  --ogrid-loading-overlay: rgba(255, 255, 255, 0.7);
+}
+
+@media (prefers-color-scheme: dark) {
+  :global(:root:not([data-theme="light"])) {
+    --ogrid-bg: #1e1e1e;
+    --ogrid-fg: rgba(255, 255, 255, 0.87);
+    --ogrid-fg-secondary: rgba(255, 255, 255, 0.6);
+    --ogrid-fg-muted: rgba(255, 255, 255, 0.5);
+    --ogrid-border: rgba(255, 255, 255, 0.12);
+    --ogrid-header-bg: rgba(255, 255, 255, 0.06);
+    --ogrid-hover-bg: rgba(255, 255, 255, 0.08);
+    --ogrid-selected-row-bg: #1a3a5c;
+    --ogrid-active-cell-bg: rgba(255, 255, 255, 0.06);
+    --ogrid-range-bg: rgba(46, 160, 67, 0.15);
+    --ogrid-accent: #4da6ff;
+    --ogrid-selection-color: #2ea043;
+    --ogrid-loading-overlay: rgba(0, 0, 0, 0.7);
+  }
+}
+
+:global([data-theme="dark"]) {
+  --ogrid-bg: #1e1e1e;
+  --ogrid-fg: rgba(255, 255, 255, 0.87);
+  --ogrid-fg-secondary: rgba(255, 255, 255, 0.6);
+  --ogrid-fg-muted: rgba(255, 255, 255, 0.5);
+  --ogrid-border: rgba(255, 255, 255, 0.12);
+  --ogrid-header-bg: rgba(255, 255, 255, 0.06);
+  --ogrid-hover-bg: rgba(255, 255, 255, 0.08);
+  --ogrid-selected-row-bg: #1a3a5c;
+  --ogrid-active-cell-bg: rgba(255, 255, 255, 0.06);
+  --ogrid-range-bg: rgba(46, 160, 67, 0.15);
+  --ogrid-accent: #4da6ff;
+  --ogrid-selection-color: #2ea043;
+  --ogrid-loading-overlay: rgba(0, 0, 0, 0.7);
+}
+
 .tableScrollContent {
   display: flex;
   flex-direction: column;
@@ -50,13 +101,15 @@
   border-spacing: 0;
   box-sizing: border-box;
   table-layout: auto;
+  background-color: var(--ogrid-bg, #fff);
+  color: var(--ogrid-fg, rgba(0, 0, 0, 0.87));
 }
 
 .dataTable th,
 .dataTable td {
   min-width: 80px;
   box-sizing: border-box;
-  border-right: 1px solid var(--ogrid-border, #e0e0e0);
+  border-right: 1px solid var(--ogrid-border, rgba(0, 0, 0, 0.12));
   font-size: 13px;
   vertical-align: middle;
 }
@@ -75,7 +128,7 @@
 }
 
 .dataTable thead {
-  background: var(--ogrid-bg-subtle, #f3f2f1);
+  background: var(--ogrid-header-bg, rgba(0, 0, 0, 0.04));
 }
 
 /* Freeze panes: sticky header when freezeRows >= 1 */
@@ -83,11 +136,11 @@
   /* Removed position: sticky; top: 0; - breaks horizontal sticky on pinned columns.
      Instead, apply sticky to individual th cells below. */
   z-index: 8;
-  background: var(--ogrid-bg-subtle, #f3f2f1);
+  background: var(--ogrid-header-bg, rgba(0, 0, 0, 0.04));
 }
 
 .dataTable thead.stickyHeader th {
-  background: var(--ogrid-bg-subtle, #f3f2f1);
+  background: var(--ogrid-header-bg, rgba(0, 0, 0, 0.04));
 }
 
 /* Freeze panes: sticky first column when freezeCols >= 1 */
@@ -110,7 +163,7 @@
 }
 
 .dataTable thead .freezeColFirst {
-  background: var(--ogrid-bg-subtle, #f3f2f1);
+  background: var(--ogrid-header-bg, rgba(0, 0, 0, 0.04));
 }
 
 /* Pinned columns: sticky positioning based on column pinned property.
@@ -137,7 +190,7 @@
 }
 
 .dataTable thead .pinnedColLeft {
-  background: var(--ogrid-bg-subtle, #f3f2f1);
+  background: var(--ogrid-header-bg, rgba(0, 0, 0, 0.04));
 }
 
 .dataTable .pinnedColRight {
@@ -161,19 +214,19 @@
 }
 
 .dataTable thead .pinnedColRight {
-  background: var(--ogrid-bg-subtle, #f3f2f1);
+  background: var(--ogrid-header-bg, rgba(0, 0, 0, 0.04));
 }
 
 .dataTable thead th {
   font-weight: 600;
   font-size: 14px;
-  color: var(--ogrid-fg, #242424);
+  color: var(--ogrid-fg, rgba(0, 0, 0, 0.87));
   white-space: nowrap;
   position: sticky;  /* Changed from relative - enables vertical sticky for all headers */
   top: 0;            /* Sticky vertically */
-  background: var(--ogrid-bg-subtle, #f3f2f1);  /* Required for sticky overlap */
+  background: var(--ogrid-header-bg, rgba(0, 0, 0, 0.04));  /* Required for sticky overlap */
   z-index: 8;        /* Stack above body cells */
-  border-bottom: 1px solid var(--ogrid-border, #e0e0e0);
+  border-bottom: 1px solid var(--ogrid-border, rgba(0, 0, 0, 0.12));
 
   &:focus-visible {
     outline: 2px solid var(--ogrid-accent, #0078d4);
@@ -195,7 +248,7 @@
   padding: 2px 4px;
   font-size: 16px;
   line-height: 1;
-  color: var(--ogrid-fg-secondary, #666);
+  color: var(--ogrid-fg-secondary, rgba(0, 0, 0, 0.6));
   opacity: 1; // Always visible
   transition: background-color 0.15s;
   border-radius: 3px;
@@ -206,37 +259,25 @@
   height: 20px;
 
   &:hover {
-    background: var(--ogrid-hover-bg, #f3f2f1);
+    background: var(--ogrid-hover-bg, rgba(0, 0, 0, 0.04));
   }
 
   &:active {
-    background: var(--ogrid-active-bg, #e1dfdd);
+    background: var(--ogrid-active-bg, rgba(0, 0, 0, 0.08));
   }
 
   &:focus-visible {
     outline: 2px solid var(--ogrid-accent, #0078d4);
     outline-offset: 2px;
   }
-
-  @media (prefers-color-scheme: dark) {
-    color: var(--ogrid-fg-secondary, #aaa);
-
-    &:hover {
-      background: var(--ogrid-hover-bg, #2a2a2a);
-    }
-
-    &:active {
-      background: var(--ogrid-active-bg, #3a3a3a);
-    }
-  }
 }
 
 .groupHeaderCell {
   text-align: center;
   font-weight: 600;
-  border-bottom: 2px solid var(--ogrid-border, #e0e0e0);
+  border-bottom: 2px solid var(--ogrid-border, rgba(0, 0, 0, 0.12));
   padding: 6px 10px;
-  background: var(--ogrid-header-bg, #f5f5f5);
+  background: var(--ogrid-header-bg, rgba(0, 0, 0, 0.04));
 }
 
 /* Column reorder drop indicator */
@@ -245,7 +286,7 @@
   top: 0;
   bottom: 0;
   width: 3px;
-  background: var(--ogrid-primary, #217346);
+  background: var(--ogrid-selection-color, #217346);
   pointer-events: none;
   z-index: 100;
   transition: left 0.05s;
@@ -281,7 +322,7 @@
 }
 
 .dataTable tbody td {
-  border-bottom: 1px solid var(--ogrid-border, #e8e8e8);
+  border-bottom: 1px solid var(--ogrid-border, rgba(0, 0, 0, 0.12));
 }
 
 .dataTable tbody tr:last-child td {
@@ -289,11 +330,11 @@
 }
 
 .dataTable tbody tr:hover td {
-  background: var(--ogrid-bg-hover, #f5f5f5);
+  background: var(--ogrid-hover-bg, rgba(0, 0, 0, 0.04));
 }
 
 .dataTable tbody tr.selectedRow td {
-  background: var(--ogrid-bg-selected, #e6f0fb);
+  background: var(--ogrid-selected-row-bg, #e6f0fb);
 }
 
 .dataTable tbody tr.selectedRow:hover td {
@@ -327,29 +368,21 @@
 }
 
 .activeCellContent {
-  outline: 2px solid var(--ogrid-selection, #217346);
+  outline: 2px solid var(--ogrid-selection-color, #217346);
   outline-offset: -1px;
   z-index: 2;
   position: relative;
   overflow: visible;
-  /* Theme-aware: no forced white so dark mode can show dark background */
-  background: var(--ogrid-bg-active-cell, transparent);
-}
-
-@media (prefers-color-scheme: dark) {
-  .activeCellContent {
-    /* Default in dark mode: subtle highlight that works on dark backgrounds */
-    background: var(--ogrid-bg-active-cell, rgba(255, 255, 255, 0.06));
-  }
+  background: var(--ogrid-active-cell-bg, rgba(0, 0, 0, 0.02));
 }
 
 .cellInRange {
-  background: var(--ogrid-bg-range, rgba(33, 115, 70, 0.12)) !important;
+  background: var(--ogrid-range-bg, rgba(33, 115, 70, 0.12)) !important;
 }
 
 // Drag-range highlight applied via DOM attributes during drag (bypasses React for performance)
 :global([data-drag-range]) {
-  background: var(--ogrid-bg-range, rgba(33, 115, 70, 0.12)) !important;
+  background: var(--ogrid-range-bg, rgba(33, 115, 70, 0.12)) !important;
 }
 
 // Anchor cell during drag: white/transparent background (like Excel)
@@ -358,7 +391,7 @@
 }
 
 .cellCut {
-  background: var(--ogrid-bg-hover, rgba(0, 0, 0, 0.04)) !important;
+  background: var(--ogrid-hover-bg, rgba(0, 0, 0, 0.04)) !important;
   opacity: 0.7;
 }
 
@@ -374,7 +407,7 @@
   bottom: -3px;
   width: 7px;
   height: 7px;
-  background: var(--ogrid-selection, #217346);
+  background: var(--ogrid-selection-color, #217346);
   border: 1px solid var(--ogrid-bg, #fff);
   border-radius: 1px;
   cursor: crosshair;
@@ -407,17 +440,17 @@
   max-width: 50px;
   padding: 4px 8px !important;
   text-align: center;
-  background: var(--ogrid-bg-subtle, #f9f9f9);
+  background: var(--ogrid-header-bg, rgba(0, 0, 0, 0.04));
   font-weight: 600;
-  color: var(--ogrid-text-secondary, #666);
-  border-right: 1px solid var(--ogrid-border, #e0e0e0);
+  color: var(--ogrid-fg-secondary, rgba(0, 0, 0, 0.6));
+  border-right: 1px solid var(--ogrid-border, rgba(0, 0, 0, 0.12));
   position: sticky;
   left: var(--row-number-sticky-left, 0px);
   z-index: 5;
 }
 
 .dataTable th.rowNumberHeaderCell {
-  background: var(--ogrid-bg-subtle, #f3f2f1);
+  background: var(--ogrid-header-bg, rgba(0, 0, 0, 0.04));
   z-index: 9; // Higher than regular header to stay on top
 }
 
@@ -434,7 +467,7 @@
 .rowCheckbox {
   width: 18px;
   height: 18px;
-  border: 1.5px solid var(--ogrid-border-strong, #888);
+  border: 1.5px solid var(--ogrid-border-strong, rgba(0, 0, 0, 0.5));
   border-radius: 3px;
   background: var(--ogrid-bg, #fff);
   cursor: pointer;
@@ -446,8 +479,8 @@
 
   &[data-state='checked'],
   &[data-state='indeterminate'] {
-    background: var(--ogrid-primary, #0066cc);
-    border-color: var(--ogrid-primary, #0066cc);
+    background: var(--ogrid-accent, #0078d4);
+    border-color: var(--ogrid-accent, #0078d4);
   }
 
   &:focus-visible {
@@ -473,9 +506,9 @@
   padding: 6px 12px;
   box-sizing: border-box;
   font-size: 12px;
-  color: var(--ogrid-muted, #616161);
-  background: var(--ogrid-bg-subtle, #f3f2f1);
-  border-top: 1px solid var(--ogrid-border, #e0e0e0);
+  color: var(--ogrid-fg-muted, rgba(0, 0, 0, 0.5));
+  background: var(--ogrid-header-bg, rgba(0, 0, 0, 0.04));
+  border-top: 1px solid var(--ogrid-border, rgba(0, 0, 0, 0.12));
   min-height: 28px;
 }
 
@@ -487,17 +520,17 @@
     content: '';
     width: 1px;
     height: 14px;
-    background: var(--ogrid-border, #c4c4c4);
+    background: var(--ogrid-border, rgba(0, 0, 0, 0.12));
     margin-left: 12px;
   }
 }
 
 .statusBarLabel {
-  color: var(--ogrid-muted, #707070);
+  color: var(--ogrid-fg-muted, rgba(0, 0, 0, 0.5));
 }
 
 .statusBarValue {
-  color: var(--ogrid-fg, #242424);
+  color: var(--ogrid-fg, rgba(0, 0, 0, 0.87));
   font-weight: 600;
 }
 
@@ -507,7 +540,7 @@
   min-width: 160px;
   padding: 4px 0;
   background: var(--ogrid-bg, #fff);
-  border: 1px solid var(--ogrid-border, #e0e0e0);
+  border: 1px solid var(--ogrid-border, rgba(0, 0, 0, 0.12));
   border-radius: 6px;
   box-shadow: var(--ogrid-shadow, 0 4px 16px rgba(0, 0, 0, 0.12));
 }
@@ -524,9 +557,9 @@
   font-size: 13px;
   text-align: left;
   cursor: pointer;
-  color: var(--ogrid-fg, #242424);
+  color: var(--ogrid-fg, rgba(0, 0, 0, 0.87));
   &:hover:not(:disabled) {
-    background: var(--ogrid-bg-hover, #f5f5f5);
+    background: var(--ogrid-hover-bg, rgba(0, 0, 0, 0.04));
   }
   &:disabled {
     opacity: 0.5;
@@ -539,14 +572,14 @@
 }
 
 .contextMenuItemShortcut {
-  color: var(--ogrid-fg-muted, rgba(0, 0, 0, 0.4));
+  color: var(--ogrid-fg-muted, rgba(0, 0, 0, 0.5));
   font-size: 0.85em;
 }
 
 .contextMenuDivider {
   height: 1px;
   margin: 4px 0;
-  background: var(--ogrid-border, #e0e0e0);
+  background: var(--ogrid-border, rgba(0, 0, 0, 0.12));
 }
 
 .loadingOverlay {
@@ -556,7 +589,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  background: var(--ogrid-loading-bg, rgba(255, 255, 255, 0.7));
+  background: var(--ogrid-loading-overlay, rgba(255, 255, 255, 0.7));
   backdrop-filter: blur(1px);
   pointer-events: all;
 }
@@ -568,7 +601,7 @@
   gap: 8px;
   padding: 16px 24px;
   background: var(--ogrid-bg, #fff);
-  border: 1px solid var(--ogrid-border, #c4c4c4);
+  border: 1px solid var(--ogrid-border, rgba(0, 0, 0, 0.12));
   border-radius: 6px;
   box-shadow: var(--ogrid-shadow-sm, 0 2px 4px rgba(0, 0, 0, 0.08));
 }
@@ -576,7 +609,7 @@
 .loadingOverlayText {
   font-size: 13px;
   font-weight: 500;
-  color: var(--ogrid-muted, #616161);
+  color: var(--ogrid-fg-muted, rgba(0, 0, 0, 0.5));
 }
 
 .loadingDimmed {
@@ -594,42 +627,42 @@
   min-height: 88px;
   width: 100%;
   box-sizing: border-box;
-  border-top: 1px solid var(--ogrid-border, #e0e0e0);
-  background: var(--ogrid-bg-subtle, #fafafa);
+  border-top: 1px solid var(--ogrid-border, rgba(0, 0, 0, 0.12));
+  background: var(--ogrid-header-bg, rgba(0, 0, 0, 0.04));
 }
 
 .emptyStateInGridTitle {
   font-size: 14px;
   font-weight: 600;
-  color: var(--ogrid-fg, #242424);
+  color: var(--ogrid-fg, rgba(0, 0, 0, 0.87));
   margin-bottom: 4px;
 }
 
 .emptyStateInGridMessage {
   font-size: 13px;
-  color: var(--ogrid-muted, #616161);
+  color: var(--ogrid-fg-muted, rgba(0, 0, 0, 0.5));
   line-height: 1.5;
 }
 
 .emptyStateInGridLink {
   background: none;
   border: none;
-  color: var(--ogrid-primary, #0066cc);
+  color: var(--ogrid-accent, #0078d4);
   text-decoration: underline;
   cursor: pointer;
   padding: 0;
   font-size: inherit;
   font-family: inherit;
   &:hover {
-    color: var(--ogrid-primary-hover, #0052a3);
+    color: var(--ogrid-accent-dark, #005a9e);
   }
 }
 
 .spinner {
   width: 24px;
   height: 24px;
-  border: 2px solid var(--ogrid-border, #e0e0e0);
-  border-top-color: var(--ogrid-primary, #0066cc);
+  border: 2px solid var(--ogrid-border, rgba(0, 0, 0, 0.12));
+  border-top-color: var(--ogrid-accent, #0078d4);
   border-radius: 50%;
   animation: ogrid-spin 0.8s linear infinite;
 }
@@ -640,7 +673,7 @@
   }
 }
 
-/* ─── Cell Density ───────────────────────────────────────────── */
+/* ─── Cell Density ───────────────────────────────────────────────── */
 
 .density-compact {
   .dataTable th {
