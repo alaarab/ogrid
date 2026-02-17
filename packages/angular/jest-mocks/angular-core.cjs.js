@@ -91,6 +91,7 @@ module.exports = {
   EventEmitter,
   TemplateRef,
   ChangeDetectionStrategy: { OnPush: 0, Default: 1 },
+  ViewEncapsulation: { Emulated: 0, None: 2, ShadowDom: 3 },
   // Lifecycle interface stubs (no-ops, Angular checks implements at runtime)
   OnChanges: {},
   SimpleChanges: {},

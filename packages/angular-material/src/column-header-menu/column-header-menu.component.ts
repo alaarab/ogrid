@@ -51,12 +51,12 @@ import { getColumnHeaderMenuItems, type IColumnHeaderMenuItem, type ColumnHeader
       display: inline-flex;
       align-items: center;
       justify-content: center;
-      color: rgba(0,0,0,0.54);
+      color: var(--ogrid-fg-secondary, rgba(0, 0, 0, 0.54));
     }
 
     .column-header-menu-trigger:hover {
-      background: rgba(0,0,0,0.08);
-      color: rgba(0,0,0,0.87);
+      background: var(--ogrid-hover-bg, rgba(0, 0, 0, 0.08));
+      color: var(--ogrid-fg, rgba(0, 0, 0, 0.87));
     }
   `],
 })

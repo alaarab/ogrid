@@ -14,7 +14,7 @@ interface CellErrorBoundaryState {
 }
 
 const DEFAULT_FALLBACK_STYLE: React.CSSProperties = {
-  color: '#d32f2f',
+  color: 'var(--ogrid-error, #d32f2f)',
   fontSize: '0.75rem',
   padding: '2px 4px',
 };

@@ -26,7 +26,91 @@ import { InlineCellEditor } from './components/InlineCellEditor';
 import { ContextMenu } from './components/ContextMenu';
 import { EventEmitter } from './state/EventEmitter';
 import type { RowId } from '@alaarab/ogrid-core';
-import { normalizeSelectionRange, isInSelectionRange, flattenColumns } from '@alaarab/ogrid-core';
+import { normalizeSelectionRange, isInSelectionRange, flattenColumns, injectGlobalStyles } from '@alaarab/ogrid-core';
+
+/** CSS variable definitions for light and dark themes (injected once per page). */
+const OGRID_THEME_CSS = `
+:root {
+  --ogrid-bg: #ffffff;
+  --ogrid-fg: rgba(0, 0, 0, 0.87);
+  --ogrid-fg-secondary: rgba(0, 0, 0, 0.6);
+  --ogrid-fg-muted: rgba(0, 0, 0, 0.5);
+  --ogrid-border: rgba(0, 0, 0, 0.12);
+  --ogrid-header-bg: rgba(0, 0, 0, 0.04);
+  --ogrid-hover-bg: rgba(0, 0, 0, 0.04);
+  --ogrid-selected-row-bg: #e6f0fb;
+  --ogrid-active-cell-bg: rgba(0, 0, 0, 0.02);
+  --ogrid-range-bg: rgba(33, 115, 70, 0.12);
+  --ogrid-accent: #0078d4;
+  --ogrid-selection-color: #217346;
+  --ogrid-loading-overlay: rgba(255, 255, 255, 0.7);
+  --ogrid-bg-subtle: #f3f2f1;
+  --ogrid-bg-hover: rgba(0, 0, 0, 0.04);
+  --ogrid-bg-selected: #e6f0fb;
+  --ogrid-bg-selected-hover: #dae8f8;
+  --ogrid-bg-range: rgba(33, 115, 70, 0.12);
+  --ogrid-muted: rgba(0, 0, 0, 0.5);
+  --ogrid-selection: #217346;
+  --ogrid-primary: #217346;
+  --ogrid-primary-fg: #fff;
+  --ogrid-loading-bg: rgba(255, 255, 255, 0.7);
+  --ogrid-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
+}
+[data-theme='dark'] {
+  --ogrid-bg: #1e1e1e;
+  --ogrid-fg: rgba(255, 255, 255, 0.87);
+  --ogrid-fg-secondary: rgba(255, 255, 255, 0.6);
+  --ogrid-fg-muted: rgba(255, 255, 255, 0.5);
+  --ogrid-border: rgba(255, 255, 255, 0.12);
+  --ogrid-header-bg: rgba(255, 255, 255, 0.06);
+  --ogrid-hover-bg: rgba(255, 255, 255, 0.08);
+  --ogrid-selected-row-bg: #1a3a5c;
+  --ogrid-active-cell-bg: rgba(255, 255, 255, 0.06);
+  --ogrid-range-bg: rgba(46, 160, 67, 0.15);
+  --ogrid-accent: #4da6ff;
+  --ogrid-selection-color: #2ea043;
+  --ogrid-loading-overlay: rgba(0, 0, 0, 0.7);
+  --ogrid-bg-subtle: #2a2a2a;
+  --ogrid-bg-hover: rgba(255, 255, 255, 0.08);
+  --ogrid-bg-selected: #1a3a5c;
+  --ogrid-bg-selected-hover: #1f426b;
+  --ogrid-bg-range: rgba(46, 160, 67, 0.15);
+  --ogrid-muted: rgba(255, 255, 255, 0.5);
+  --ogrid-selection: #2ea043;
+  --ogrid-primary: #2ea043;
+  --ogrid-primary-fg: #fff;
+  --ogrid-loading-bg: rgba(0, 0, 0, 0.7);
+  --ogrid-shadow: 0 4px 16px rgba(0, 0, 0, 0.35);
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) {
+    --ogrid-bg: #1e1e1e;
+    --ogrid-fg: rgba(255, 255, 255, 0.87);
+    --ogrid-fg-secondary: rgba(255, 255, 255, 0.6);
+    --ogrid-fg-muted: rgba(255, 255, 255, 0.5);
+    --ogrid-border: rgba(255, 255, 255, 0.12);
+    --ogrid-header-bg: rgba(255, 255, 255, 0.06);
+    --ogrid-hover-bg: rgba(255, 255, 255, 0.08);
+    --ogrid-selected-row-bg: #1a3a5c;
+    --ogrid-active-cell-bg: rgba(255, 255, 255, 0.06);
+    --ogrid-range-bg: rgba(46, 160, 67, 0.15);
+    --ogrid-accent: #4da6ff;
+    --ogrid-selection-color: #2ea043;
+    --ogrid-loading-overlay: rgba(0, 0, 0, 0.7);
+    --ogrid-bg-subtle: #2a2a2a;
+    --ogrid-bg-hover: rgba(255, 255, 255, 0.08);
+    --ogrid-bg-selected: #1a3a5c;
+    --ogrid-bg-selected-hover: #1f426b;
+    --ogrid-bg-range: rgba(46, 160, 67, 0.15);
+    --ogrid-muted: rgba(255, 255, 255, 0.5);
+    --ogrid-selection: #2ea043;
+    --ogrid-primary: #2ea043;
+    --ogrid-primary-fg: #fff;
+    --ogrid-loading-bg: rgba(0, 0, 0, 0.7);
+    --ogrid-shadow: 0 4px 16px rgba(0, 0, 0, 0.35);
+  }
+}
+`;
 
 export class OGrid<T> {
   private state: GridState<T>;
@@ -84,6 +168,9 @@ export class OGrid<T> {
     this.options = options;
     this.state = new GridState<T>(options);
     this.api = this.state.getApi();
+
+    // Inject theme CSS variables (light + dark) once per page
+    injectGlobalStyles('ogrid-theme-vars', OGRID_THEME_CSS);
 
     // Build layout
     this.containerEl = document.createElement('div');
@@ -809,7 +896,7 @@ export class OGrid<T> {
         this.loadingOverlay.style.display = 'flex';
         this.loadingOverlay.style.alignItems = 'center';
         this.loadingOverlay.style.justifyContent = 'center';
-        this.loadingOverlay.style.background = 'rgba(255,255,255,0.7)';
+        this.loadingOverlay.style.background = 'var(--ogrid-loading-overlay, rgba(255, 255, 255, 0.7))';
         this.loadingOverlay.style.zIndex = '100';
 
         const spinner = document.createElement('div');

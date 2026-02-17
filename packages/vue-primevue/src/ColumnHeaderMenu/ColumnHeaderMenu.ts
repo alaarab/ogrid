@@ -98,7 +98,7 @@ export const ColumnHeaderMenu = defineComponent({
             role: 'separator',
             style: {
               height: '1px',
-              backgroundColor: 'rgba(0,0,0,0.12)',
+              backgroundColor: 'var(--ogrid-border, rgba(0,0,0,0.12))',
               margin: '4px 0',
             },
           }));
@@ -116,9 +116,10 @@ export const ColumnHeaderMenu = defineComponent({
             cursor: disabled ? 'default' : 'pointer',
             opacity: disabled ? '0.4' : '1',
             fontSize: '0.875rem',
+            color: 'var(--ogrid-fg, rgba(0, 0, 0, 0.87))',
           },
           onMouseenter: (e: MouseEvent) => {
-            if (!disabled) (e.currentTarget as HTMLElement).style.backgroundColor = 'rgba(0,0,0,0.04)';
+            if (!disabled) (e.currentTarget as HTMLElement).style.backgroundColor = 'var(--ogrid-hover-bg, rgba(0,0,0,0.04))';
           },
           onMouseleave: (e: MouseEvent) => {
             (e.currentTarget as HTMLElement).style.backgroundColor = '';
@@ -138,8 +139,9 @@ export const ColumnHeaderMenu = defineComponent({
           top: `${rect.bottom + 4}px`,
           left: `${rect.left}px`,
           zIndex: '9999',
-          backgroundColor: '#fff',
-          border: '1px solid rgba(0,0,0,0.12)',
+          backgroundColor: 'var(--ogrid-bg, #ffffff)',
+          color: 'var(--ogrid-fg, rgba(0, 0, 0, 0.87))',
+          border: '1px solid var(--ogrid-border, rgba(0,0,0,0.12))',
           borderRadius: '4px',
           boxShadow: '0 2px 8px rgba(0,0,0,0.15)',
           minWidth: '160px',

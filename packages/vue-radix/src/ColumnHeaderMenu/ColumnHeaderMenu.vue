@@ -84,8 +84,9 @@ onBeforeUnmount(() => {
 .ogrid-column-header-menu {
   position: fixed;
   z-index: 9999;
-  background-color: #fff;
-  border: 1px solid rgba(0, 0, 0, 0.12);
+  background-color: var(--ogrid-bg, #ffffff);
+  color: var(--ogrid-fg, rgba(0, 0, 0, 0.87));
+  border: 1px solid var(--ogrid-border, rgba(0, 0, 0, 0.12));
   border-radius: 4px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
   min-width: 160px;
@@ -98,10 +99,11 @@ onBeforeUnmount(() => {
   padding: 6px 12px;
   cursor: pointer;
   font-size: 0.875rem;
+  color: var(--ogrid-fg, rgba(0, 0, 0, 0.87));
 }
 
 .ogrid-column-header-menu-item:hover:not(.disabled) {
-  background-color: rgba(0, 0, 0, 0.04);
+  background-color: var(--ogrid-hover-bg, rgba(0, 0, 0, 0.04));
 }
 
 .ogrid-column-header-menu-item.disabled {
@@ -111,7 +113,7 @@ onBeforeUnmount(() => {
 
 .ogrid-column-header-menu-divider {
   height: 1px;
-  background-color: rgba(0, 0, 0, 0.12);
+  background-color: var(--ogrid-border, rgba(0, 0, 0, 0.12));
   margin: 4px 0;
 }
 </style>

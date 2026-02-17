@@ -7,23 +7,31 @@
 /* ── Light Theme (default) ── */
 :root {
   --ogrid-bg: #ffffff;
-  --ogrid-fg: #242424;
-  --ogrid-border: #e0e0e0;
+  --ogrid-fg: rgba(0, 0, 0, 0.87);
+  --ogrid-fg-secondary: rgba(0, 0, 0, 0.6);
+  --ogrid-fg-muted: rgba(0, 0, 0, 0.5);
+  --ogrid-border: rgba(0, 0, 0, 0.12);
+  --ogrid-header-bg: rgba(0, 0, 0, 0.04);
+  --ogrid-hover-bg: rgba(0, 0, 0, 0.04);
+  --ogrid-selected-row-bg: #e6f0fb;
+  --ogrid-active-cell-bg: rgba(0, 0, 0, 0.02);
+  --ogrid-range-bg: rgba(33, 115, 70, 0.12);
+  --ogrid-accent: #0078d4;
+  --ogrid-selection-color: #217346;
+  --ogrid-loading-overlay: rgba(255, 255, 255, 0.7);
+  /* Aliases for backward compat */
   --ogrid-border-strong: #888;
   --ogrid-border-hover: #999;
   --ogrid-bg-subtle: #f3f2f1;
-  --ogrid-bg-hover: #f5f5f5;
+  --ogrid-bg-hover: rgba(0, 0, 0, 0.04);
   --ogrid-bg-selected: #e6f0fb;
   --ogrid-bg-selected-hover: #dae8f8;
   --ogrid-bg-range: rgba(33, 115, 70, 0.12);
-  --ogrid-header-bg: #f5f5f5;
-  --ogrid-muted: #616161;
-  --ogrid-fg-muted: rgba(0, 0, 0, 0.4);
+  --ogrid-muted: rgba(0, 0, 0, 0.5);
   --ogrid-selection: #217346;
   --ogrid-primary: #217346;
   --ogrid-primary-fg: #fff;
   --ogrid-primary-hover: #1b5f39;
-  --ogrid-accent: #217346;
   --ogrid-accent-dark: #1b5f39;
   --ogrid-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
   --ogrid-shadow-sm: 0 2px 4px rgba(0, 0, 0, 0.08);
@@ -33,55 +41,71 @@
 
 /* ── Dark Theme ── */
 [data-theme='dark'] {
-  --ogrid-bg: #1a1a24;
-  --ogrid-fg: #e0e0e0;
-  --ogrid-border: #333340;
+  --ogrid-bg: #1e1e1e;
+  --ogrid-fg: rgba(255, 255, 255, 0.87);
+  --ogrid-fg-secondary: rgba(255, 255, 255, 0.6);
+  --ogrid-fg-muted: rgba(255, 255, 255, 0.5);
+  --ogrid-border: rgba(255, 255, 255, 0.12);
+  --ogrid-header-bg: rgba(255, 255, 255, 0.06);
+  --ogrid-hover-bg: rgba(255, 255, 255, 0.08);
+  --ogrid-selected-row-bg: #1a3a5c;
+  --ogrid-active-cell-bg: rgba(255, 255, 255, 0.06);
+  --ogrid-range-bg: rgba(46, 160, 67, 0.15);
+  --ogrid-accent: #4da6ff;
+  --ogrid-selection-color: #2ea043;
+  --ogrid-loading-overlay: rgba(0, 0, 0, 0.7);
+  /* Aliases for backward compat */
   --ogrid-border-strong: #555;
   --ogrid-border-hover: #666;
-  --ogrid-bg-subtle: #22222e;
-  --ogrid-bg-hover: #2a2a38;
-  --ogrid-bg-selected: #1a2f45;
-  --ogrid-bg-selected-hover: #1f3650;
-  --ogrid-bg-range: rgba(58, 184, 118, 0.12);
-  --ogrid-header-bg: #22222e;
-  --ogrid-muted: #999;
-  --ogrid-fg-muted: rgba(255, 255, 255, 0.3);
-  --ogrid-selection: #3ab876;
-  --ogrid-primary: #3ab876;
-  --ogrid-primary-fg: #0a0a0f;
-  --ogrid-primary-hover: #4ec484;
-  --ogrid-accent: #3ab876;
-  --ogrid-accent-dark: #2fa768;
+  --ogrid-bg-subtle: #2a2a2a;
+  --ogrid-bg-hover: rgba(255, 255, 255, 0.08);
+  --ogrid-bg-selected: #1a3a5c;
+  --ogrid-bg-selected-hover: #1f426b;
+  --ogrid-bg-range: rgba(46, 160, 67, 0.15);
+  --ogrid-muted: rgba(255, 255, 255, 0.5);
+  --ogrid-selection: #2ea043;
+  --ogrid-primary: #2ea043;
+  --ogrid-primary-fg: #fff;
+  --ogrid-primary-hover: #3db852;
+  --ogrid-accent-dark: #3db852;
   --ogrid-shadow: 0 4px 16px rgba(0, 0, 0, 0.35);
   --ogrid-shadow-sm: 0 2px 4px rgba(0, 0, 0, 0.25);
-  --ogrid-loading-bg: rgba(26, 26, 36, 0.7);
+  --ogrid-loading-bg: rgba(0, 0, 0, 0.7);
   --ogrid-pinned-shadow: rgba(0, 0, 0, 0.4);
 }
 
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme='light']) {
-    --ogrid-bg: #1a1a24;
-    --ogrid-fg: #e0e0e0;
-    --ogrid-border: #333340;
+    --ogrid-bg: #1e1e1e;
+    --ogrid-fg: rgba(255, 255, 255, 0.87);
+    --ogrid-fg-secondary: rgba(255, 255, 255, 0.6);
+    --ogrid-fg-muted: rgba(255, 255, 255, 0.5);
+    --ogrid-border: rgba(255, 255, 255, 0.12);
+    --ogrid-header-bg: rgba(255, 255, 255, 0.06);
+    --ogrid-hover-bg: rgba(255, 255, 255, 0.08);
+    --ogrid-selected-row-bg: #1a3a5c;
+    --ogrid-active-cell-bg: rgba(255, 255, 255, 0.06);
+    --ogrid-range-bg: rgba(46, 160, 67, 0.15);
+    --ogrid-accent: #4da6ff;
+    --ogrid-selection-color: #2ea043;
+    --ogrid-loading-overlay: rgba(0, 0, 0, 0.7);
+    /* Aliases for backward compat */
     --ogrid-border-strong: #555;
     --ogrid-border-hover: #666;
-    --ogrid-bg-subtle: #22222e;
-    --ogrid-bg-hover: #2a2a38;
-    --ogrid-bg-selected: #1a2f45;
-    --ogrid-bg-selected-hover: #1f3650;
-    --ogrid-bg-range: rgba(58, 184, 118, 0.12);
-    --ogrid-header-bg: #22222e;
-    --ogrid-muted: #999;
-    --ogrid-fg-muted: rgba(255, 255, 255, 0.3);
-    --ogrid-selection: #3ab876;
-    --ogrid-primary: #3ab876;
-    --ogrid-primary-fg: #0a0a0f;
-    --ogrid-primary-hover: #4ec484;
-    --ogrid-accent: #3ab876;
-    --ogrid-accent-dark: #2fa768;
+    --ogrid-bg-subtle: #2a2a2a;
+    --ogrid-bg-hover: rgba(255, 255, 255, 0.08);
+    --ogrid-bg-selected: #1a3a5c;
+    --ogrid-bg-selected-hover: #1f426b;
+    --ogrid-bg-range: rgba(46, 160, 67, 0.15);
+    --ogrid-muted: rgba(255, 255, 255, 0.5);
+    --ogrid-selection: #2ea043;
+    --ogrid-primary: #2ea043;
+    --ogrid-primary-fg: #fff;
+    --ogrid-primary-hover: #3db852;
+    --ogrid-accent-dark: #3db852;
     --ogrid-shadow: 0 4px 16px rgba(0, 0, 0, 0.35);
     --ogrid-shadow-sm: 0 2px 4px rgba(0, 0, 0, 0.25);
-    --ogrid-loading-bg: rgba(26, 26, 36, 0.7);
+    --ogrid-loading-bg: rgba(0, 0, 0, 0.7);
     --ogrid-pinned-shadow: rgba(0, 0, 0, 0.4);
   }
 }

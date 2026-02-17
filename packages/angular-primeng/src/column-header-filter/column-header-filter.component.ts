@@ -91,7 +91,7 @@ import { BaseColumnHeaderFilterComponent } from '@alaarab/ogrid-angular';
                     [attr.aria-label]="'Search ' + columnName + ' options'"
                   />
                   @if (isLoadingOptions) {
-                    <div style="padding:8px 0;color:var(--ogrid-muted, #999);font-size:12px">Loading...</div>
+                    <div style="padding:8px 0;color:var(--ogrid-fg-muted, rgba(0, 0, 0, 0.5));font-size:12px">Loading...</div>
                   } @else {
                     <div style="display:flex;gap:4px;margin-bottom:6px">
                       <button type="button" class="p-button p-button-text p-button-sm" (click)="handleSelectAllOptions()" style="font-size:11px">All</button>
@@ -138,7 +138,7 @@ import { BaseColumnHeaderFilterComponent } from '@alaarab/ogrid-angular';
                     [attr.aria-label]="'Search people for ' + columnName"
                   />
                   @if (isPeopleLoading()) {
-                    <div style="padding:8px 0;color:var(--ogrid-muted, #999);font-size:12px">Loading...</div>
+                    <div style="padding:8px 0;color:var(--ogrid-fg-muted, rgba(0, 0, 0, 0.5));font-size:12px">Loading...</div>
                   }
                   @for (user of peopleSuggestions(); track user.email) {
                     <button

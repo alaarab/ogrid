@@ -325,7 +325,7 @@ export const OGrid = defineComponent({
         style: {
           display: 'flex',
           flexDirection: 'column',
-          border: '1px solid rgba(0,0,0,0.12)',
+          border: '1px solid var(--ogrid-border, rgba(0,0,0,0.12))',
           borderRadius: '4px',
           overflow: 'hidden',
         },
@@ -338,7 +338,7 @@ export const OGrid = defineComponent({
               alignItems: 'center',
               justifyContent: 'space-between',
               padding: '8px 12px',
-              borderBottom: '1px solid rgba(0,0,0,0.12)',
+              borderBottom: '1px solid var(--ogrid-border, rgba(0,0,0,0.12))',
               gap: '8px',
             },
           }, [
@@ -350,7 +350,7 @@ export const OGrid = defineComponent({
         // Below toolbar strip
         ...(layout.value.toolbarBelow ? [
           h('div', {
-            style: { padding: '8px 12px', borderBottom: '1px solid rgba(0,0,0,0.12)' },
+            style: { padding: '8px 12px', borderBottom: '1px solid var(--ogrid-border, rgba(0,0,0,0.12))' },
           }, [layout.value.toolbarBelow as VNode]),
         ] : []),
 
@@ -363,7 +363,7 @@ export const OGrid = defineComponent({
             display: 'flex',
             alignItems: 'center',
             padding: '8px 0',
-            borderTop: '1px solid rgba(0,0,0,0.12)',
+            borderTop: '1px solid var(--ogrid-border, rgba(0,0,0,0.12))',
           },
         }, [paginationNode]),
       ]);

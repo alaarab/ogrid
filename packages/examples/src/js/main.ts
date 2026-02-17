@@ -2,6 +2,7 @@ import { OGrid } from '@alaarab/ogrid-js';
 import '@alaarab/ogrid-js/styles';
 import { makeDemoProjects, makeDemoColumns, getRowId } from '../shared/demoData';
 import type { Project } from '../shared/demoData';
+import { createThemeToggle } from '../shared/themeToggle';
 
 const projects = makeDemoProjects(75);
 const columns = makeDemoColumns<Project>();
@@ -22,3 +23,6 @@ const grid = new OGrid<Project>(container, {
 // Expose grid API to window for debugging
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 (window as any).gridApi = grid.getApi();
+
+// Add dark mode toggle
+createThemeToggle();
