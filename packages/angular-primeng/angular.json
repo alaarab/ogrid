@@ -20,6 +20,7 @@
           "options": {
             "configDir": ".storybook",
             "browserTarget": "angular-primeng:build",
+            "tsConfig": "tsconfig.storybook.json",
             "port": 6010,
             "compodoc": false
           }
@@ -29,10 +30,14 @@
           "options": {
             "configDir": ".storybook",
             "browserTarget": "angular-primeng:build",
+            "tsConfig": "tsconfig.storybook.json",
             "compodoc": false
           }
         }
       }
     }
+  },
+  "cli": {
+    "analytics": "65c5aa39-3ad7-411f-a97c-20b5652c8071"
   }
 }

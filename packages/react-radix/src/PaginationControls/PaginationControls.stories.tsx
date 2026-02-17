@@ -3,7 +3,7 @@ import type { Meta, StoryObj } from '@storybook/react-vite';
 import { PaginationControls } from './PaginationControls';
 
 const meta: Meta<typeof PaginationControls> = {
-  title: 'OGrid/Radix/PaginationControls',
+  title: 'OGrid/React Radix/PaginationControls',
   component: PaginationControls,
   parameters: { layout: 'padded' },
 };

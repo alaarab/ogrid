@@ -14,7 +14,7 @@ const allColumns = [
 ];
 
 const meta: Meta<typeof ColumnChooser> = {
-  title: 'OGrid/Fluent/ColumnChooser',
+  title: 'OGrid/React Fluent/ColumnChooser',
   component: ColumnChooser,
   parameters: { layout: 'centered' },
 };
