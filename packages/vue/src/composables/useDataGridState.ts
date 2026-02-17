@@ -1,5 +1,5 @@
 import { ref, computed, type Ref, type ShallowRef } from 'vue';
-import { flattenColumns, getDataGridStatusBarConfig, parseValue, computeAggregations } from '@alaarab/ogrid-core';
+import { flattenColumns, getDataGridStatusBarConfig, parseValue, computeAggregations, CHECKBOX_COLUMN_WIDTH, DEFAULT_MIN_COLUMN_WIDTH } from '@alaarab/ogrid-core';
 import type { RowId, IOGridDataGridProps, IStatusBarProps, IColumnDef } from '../types';
 import type { HeaderFilterConfigInput, CellRenderDescriptorInput } from '../utils';
 import { useRowSelection } from './useRowSelection';
@@ -110,18 +110,8 @@ export interface DataGridPinningState {
   pinColumn: (columnId: string, side: 'left' | 'right') => void;
   unpinColumn: (columnId: string) => void;
   isPinned: (columnId: string) => 'left' | 'right' | undefined;
-  computeLeftOffsets: (
-    visibleCols: { columnId: string }[],
-    columnWidths: Record<string, number>,
-    defaultWidth: number,
-    hasCheckboxColumn: boolean,
-    checkboxColumnWidth: number
-  ) => Record<string, number>;
-  computeRightOffsets: (
-    visibleCols: { columnId: string }[],
-    columnWidths: Record<string, number>,
-    defaultWidth: number
-  ) => Record<string, number>;
+  leftOffsets: Record<string, number>;
+  rightOffsets: Record<string, number>;
   headerMenu: {
     isOpen: boolean;
     openForColumn: string | null;
@@ -338,17 +328,43 @@ export function useDataGridState<T>(
     onColumnPinned: onColumnPinnedProp.value,
   });
 
+  // Autosize callback — updates internal column sizing state + notifies external listener
+  const handleAutosizeColumn = (columnId: string, width: number) => {
+    setColumnSizingOverrides({ ...columnSizingOverrides.value, [columnId]: { widthPx: width } });
+    onColumnResizedProp.value?.(columnId, width);
+  };
+
   const headerMenuResult = useColumnHeaderMenuState({
     columns: flatColumns,
     pinnedColumns: pinningResult.pinnedColumns,
     onPinColumn: pinningResult.pinColumn,
     onUnpinColumn: pinningResult.unpinColumn,
     onSort: props.value.onColumnSort,
-    onAutosizeColumn: props.value.onAutosizeColumn,
-    onAutosizeAllColumns: props.value.onAutosizeAllColumns,
+    onColumnResized: onColumnResizedProp.value,
+    onAutosizeColumn: handleAutosizeColumn,
     sortBy: computed(() => props.value.sortBy),
     sortDirection: computed(() => props.value.sortDirection),
   });
+
+  // Build column width map for pinning offset computation
+  const columnWidthMap = computed(() => {
+    const map: Record<string, number> = {};
+    for (const col of visibleCols.value) {
+      const override = columnSizingOverrides.value[col.columnId];
+      map[col.columnId] = override
+        ? override.widthPx
+        : (col.idealWidth ?? col.defaultWidth ?? col.minWidth ?? DEFAULT_MIN_COLUMN_WIDTH);
+    }
+    return map;
+  });
+
+  const leftOffsets = computed(() =>
+    pinningResult.computeLeftOffsets(visibleCols.value, columnWidthMap.value, DEFAULT_MIN_COLUMN_WIDTH, hasCheckboxCol.value, CHECKBOX_COLUMN_WIDTH)
+  );
+
+  const rightOffsets = computed(() =>
+    pinningResult.computeRightOffsets(visibleCols.value, columnWidthMap.value, DEFAULT_MIN_COLUMN_WIDTH)
+  );
 
   const aggregation = computed(() =>
     computeAggregations(items.value, visibleCols.value, cellSelection.value ? selectionRange.value : null)
@@ -523,8 +539,8 @@ export function useDataGridState<T>(
     pinColumn: pinningResult.pinColumn,
     unpinColumn: pinningResult.unpinColumn,
     isPinned: pinningResult.isPinned,
-    computeLeftOffsets: pinningResult.computeLeftOffsets,
-    computeRightOffsets: pinningResult.computeRightOffsets,
+    leftOffsets: leftOffsets.value,
+    rightOffsets: rightOffsets.value,
     headerMenu: {
       isOpen: headerMenuResult.isOpen.value,
       openForColumn: headerMenuResult.openForColumn.value,

@@ -28,6 +28,10 @@ export {
   booleanParser,
   computeAggregations,
   processClientSideData,
+  computeNextSortState,
+  measureColumnContentWidth,
+  AUTOSIZE_EXTRA_PX,
+  AUTOSIZE_MAX_PX,
 } from '@alaarab/ogrid-core';
 export type {
   CsvColumn,

@@ -8,6 +8,9 @@ import { ColumnHeaderMenu } from '../ColumnHeaderMenu';
 import { InlineCellEditor, type InlineCellEditorProps } from './InlineCellEditor';
 import { StatusBar } from './StatusBar';
 import { GridContextMenu } from './GridContextMenu';
+import { EmptyState } from './EmptyState';
+import { LoadingOverlay } from './LoadingOverlay';
+import { DropIndicator } from './DropIndicator';
 import type {
   IColumnDef,
   ICellEditorProps,
@@ -112,6 +115,7 @@ function GridRowInner(props: GridRowProps) {
       {visibleCols.map((col, colIdx) => (
         <td
           key={col.columnId}
+          data-column-id={col.columnId}
           className={columnMeta.cellClasses[col.columnId] || undefined}
           style={columnMeta.cellStyles[col.columnId]}
         >
@@ -227,12 +231,16 @@ function DataGridTableInner<T>(props: IOGridDataGridProps<T>): React.ReactElemen
         width: hasExplicitWidth ? columnWidth : undefined,
         maxWidth: hasExplicitWidth ? columnWidth : undefined,
         textAlign: col.type === 'numeric' ? 'right' : col.type === 'boolean' ? 'center' : undefined,
+        ...(isPinnedLeft && pinning.leftOffsets[col.columnId] != null ? { left: pinning.leftOffsets[col.columnId] } : undefined),
+        ...(isPinnedRight && pinning.rightOffsets[col.columnId] != null ? { right: pinning.rightOffsets[col.columnId] } : undefined),
       };
 
       hdrStyles[col.columnId] = {
         minWidth: col.minWidth ?? DEFAULT_MIN_COLUMN_WIDTH,
         width: hasExplicitWidth ? columnWidth : undefined,
         maxWidth: hasExplicitWidth ? columnWidth : undefined,
+        ...(isPinnedLeft && pinning.leftOffsets[col.columnId] != null ? { left: pinning.leftOffsets[col.columnId] } : undefined),
+        ...(isPinnedRight && pinning.rightOffsets[col.columnId] != null ? { right: pinning.rightOffsets[col.columnId] } : undefined),
       };
 
       const parts: string[] = [];
@@ -246,7 +254,7 @@ function DataGridTableInner<T>(props: IOGridDataGridProps<T>): React.ReactElemen
     }
 
     return { cellStyles, cellClasses, hdrStyles, hdrClasses };
-  }, [visibleCols, getColumnWidth, columnSizingOverrides, freezeCols]);
+  }, [visibleCols, getColumnWidth, columnSizingOverrides, freezeCols, pinning.leftOffsets, pinning.rightOffsets]);
 
   // Stable row-click handler (avoids creating a new arrow function per row)
   const selectedRowIdsRef = useLatestRef(selectedRowIds);
@@ -523,10 +531,7 @@ function DataGridTableInner<T>(props: IOGridDataGridProps<T>): React.ReactElemen
                 )}
               </table>
               {isReorderDragging && dropIndicatorX != null && (
-                <div
-                  className={styles.dropIndicator}
-                  style={{ left: dropIndicatorX - (wrapperRef.current?.getBoundingClientRect().left ?? 0) }}
-                />
+                <DropIndicator dropIndicatorX={dropIndicatorX} wrapperLeft={wrapperRef.current?.getBoundingClientRect().left ?? 0} />
               )}
               <MarchingAntsOverlay
                 containerRef={tableContainerRef}
@@ -540,32 +545,7 @@ function DataGridTableInner<T>(props: IOGridDataGridProps<T>): React.ReactElemen
                 columnOrder={columnOrder}
               />
               {showEmptyInGrid && emptyState && (
-                <div className={styles.emptyStateInGrid}>
-                  <div>
-                    {emptyState.render ? (
-                      emptyState.render()
-                    ) : (
-                      <>
-                        <div className={styles.emptyStateInGridTitle}>No results found</div>
-                        <div className={styles.emptyStateInGridMessage}>
-                          {emptyState.message != null ? (
-                            emptyState.message
-                          ) : emptyState.hasActiveFilters ? (
-                            <>
-                              No items match your current filters. Try adjusting your search or{' '}
-                              <button type="button" className={styles.emptyStateInGridLink} onClick={emptyState.onClearAll}>
-                                clear all filters
-                              </button>{' '}
-                              to see all items.
-                            </>
-                          ) : (
-                            'There are no items available at this time.'
-                          )}
-                        </div>
-                      </>
-                    )}
-                  </div>
-                </div>
+                <EmptyState emptyState={emptyState} />
               )}
             </div>
           </div>
@@ -621,12 +601,7 @@ function DataGridTableInner<T>(props: IOGridDataGridProps<T>): React.ReactElemen
         />
       )}
       {isLoading && (
-        <div className={styles.loadingOverlay} aria-live="polite">
-          <div className={styles.loadingOverlayContent}>
-            <div className={styles.spinner} />
-            <span className={styles.loadingOverlayText}>{loadingMessage}</span>
-          </div>
-        </div>
+        <LoadingOverlay message={loadingMessage} />
       )}
     </div>
   );

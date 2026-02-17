@@ -1,32 +1,18 @@
 import * as React from 'react';
 import { Popover, PopoverSurface, type OpenPopoverEvents, type OnOpenChangeData } from '@fluentui/react-components';
 import { ArrowUpRegular, ArrowDownRegular, ArrowSortRegular, FilterRegular } from '@fluentui/react-icons';
-import type { UserLike, ColumnFilterType, IDateFilterValue } from '@alaarab/ogrid-react';
-import { useColumnHeaderFilterState } from '@alaarab/ogrid-react';
+import type { IColumnHeaderFilterProps } from '@alaarab/ogrid-react';
+import {
+  useColumnHeaderFilterState,
+  getColumnHeaderFilterStateParams,
+  DateFilterContent,
+} from '@alaarab/ogrid-react';
 import { TextFilterPopover } from './TextFilterPopover';
 import { MultiSelectFilterPopover } from './MultiSelectFilterPopover';
 import { PeopleFilterPopover } from './PeopleFilterPopover';
 import styles from './ColumnHeaderFilter.module.scss';
 
-export interface IColumnHeaderFilterProps {
-  columnKey: string;
-  columnName: string;
-  filterType: ColumnFilterType;
-  isSorted?: boolean;
-  isSortedDescending?: boolean;
-  onSort?: () => void;
-  selectedValues?: string[];
-  onFilterChange?: (values: string[]) => void;
-  options?: string[];
-  isLoadingOptions?: boolean;
-  textValue?: string;
-  onTextChange?: (value: string) => void;
-  selectedUser?: UserLike;
-  onUserChange?: (user: UserLike | undefined) => void;
-  peopleSearch?: (query: string) => Promise<UserLike[]>;
-  dateValue?: IDateFilterValue;
-  onDateChange?: (value: IDateFilterValue | undefined) => void;
-}
+export type { IColumnHeaderFilterProps };
 
 export const ColumnHeaderFilter: React.FC<IColumnHeaderFilterProps> = React.memo((props) => {
   const {
@@ -35,36 +21,12 @@ export const ColumnHeaderFilter: React.FC<IColumnHeaderFilterProps> = React.memo
     isSorted = false,
     isSortedDescending = false,
     onSort,
-    selectedValues,
-    onFilterChange,
     options,
     isLoadingOptions = false,
-    textValue = '',
-    onTextChange,
     selectedUser,
-    onUserChange,
-    peopleSearch,
-    dateValue,
-    onDateChange,
   } = props;
 
-  const state = useColumnHeaderFilterState({
-    filterType,
-    isSorted,
-    isSortedDescending,
-    onSort,
-    selectedValues,
-    onFilterChange,
-    options,
-    isLoadingOptions,
-    textValue,
-    onTextChange,
-    selectedUser,
-    onUserChange,
-    peopleSearch,
-    dateValue,
-    onDateChange,
-  });
+  const state = useColumnHeaderFilterState(getColumnHeaderFilterStateParams(props));
 
   const {
     headerRef,
@@ -142,20 +104,19 @@ export const ColumnHeaderFilter: React.FC<IColumnHeaderFilterProps> = React.memo
     if (filterType === 'date') {
       return (
         <div onClick={handlers.handlePopoverClick}>
-          <div style={{ padding: '8px 12px', display: 'flex', flexDirection: 'column', gap: 6 }}>
-            <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12 }}>
-              From:
-              <input type="date" value={state.tempDateFrom} onChange={(e) => state.setTempDateFrom(e.target.value)} style={{ flex: 1 }} />
-            </label>
-            <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12 }}>
-              To:
-              <input type="date" value={state.tempDateTo} onChange={(e) => state.setTempDateTo(e.target.value)} style={{ flex: 1 }} />
-            </label>
-          </div>
-          <div className={styles.popoverActions}>
-            <button className={styles.clearButton} onClick={handlers.handleDateClear} disabled={!state.tempDateFrom && !state.tempDateTo}>Clear</button>
-            <button className={styles.applyButton} onClick={handlers.handleDateApply}>Apply</button>
-          </div>
+          <DateFilterContent
+            tempDateFrom={state.tempDateFrom}
+            setTempDateFrom={state.setTempDateFrom}
+            tempDateTo={state.tempDateTo}
+            setTempDateTo={state.setTempDateTo}
+            onApply={handlers.handleDateApply}
+            onClear={handlers.handleDateClear}
+            classNames={{
+              popoverActions: styles.popoverActions,
+              clearButton: styles.clearButton,
+              applyButton: styles.applyButton,
+            }}
+          />
         </div>
       );
     }

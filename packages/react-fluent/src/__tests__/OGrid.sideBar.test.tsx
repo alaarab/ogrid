@@ -1,4 +1,4 @@
-import { OGrid } from '../FluentDataTable/FluentDataTable';
+import { OGrid } from '../OGrid/OGrid';
 import { createSideBarTests } from '@alaarab/ogrid-react/testing';
 
 describe('OGrid sideBar', () => {

@@ -17,7 +17,7 @@ import { isInSelectionRange } from '../types/dataGridTypes';
 export interface HeaderFilterConfigInput {
   sortBy?: string;
   sortDirection: 'asc' | 'desc';
-  onColumnSort: (columnKey: string) => void;
+  onColumnSort: (columnKey: string, direction?: 'asc' | 'desc' | null) => void;
   filters: IFilters;
   onFilterChange: (key: string, value: FilterValue | undefined) => void;
   filterOptions: Record<string, string[]>;

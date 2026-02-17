@@ -114,6 +114,35 @@ export interface DataGridViewModelState<T> {
     showEmptyInGrid: boolean;
     onCellError?: (error: Error, info: unknown) => void;
 }
+export interface DataGridPinningState {
+    pinnedColumns: Record<string, 'left' | 'right'>;
+    pinColumn: (columnId: string, side: 'left' | 'right') => void;
+    unpinColumn: (columnId: string) => void;
+    isPinned: (columnId: string) => 'left' | 'right' | undefined;
+    leftOffsets: Record<string, number>;
+    rightOffsets: Record<string, number>;
+    headerMenu: {
+        isOpen: boolean;
+        openForColumn: string | null;
+        anchorElement: HTMLElement | null;
+        open: (columnId: string, anchorEl: HTMLElement) => void;
+        close: () => void;
+        handlePinLeft: () => void;
+        handlePinRight: () => void;
+        handleUnpin: () => void;
+        handleSortAsc: () => void;
+        handleSortDesc: () => void;
+        handleClearSort: () => void;
+        handleAutosizeThis: () => void;
+        handleAutosizeAll: () => void;
+        canPinLeft: boolean;
+        canPinRight: boolean;
+        canUnpin: boolean;
+        currentSort: 'asc' | 'desc' | null;
+        isSortable: boolean;
+        isResizable: boolean;
+    };
+}
 export interface UseDataGridStateResult<T> {
     layout: Ref<DataGridLayoutState<T>>;
     rowSelection: Ref<DataGridRowSelectionState>;
@@ -121,6 +150,7 @@ export interface UseDataGridStateResult<T> {
     interaction: Ref<DataGridCellInteractionState>;
     contextMenu: Ref<DataGridContextMenuState>;
     viewModels: Ref<DataGridViewModelState<T>>;
+    pinning: Ref<DataGridPinningState>;
 }
 /**
  * Single orchestration composable for DataGridTable. Takes grid props and wrapper ref,

@@ -94,6 +94,7 @@ interface IOGridBaseProps<T> {
   layoutMode?: 'content' | 'fill';
   suppressHorizontalScroll?: boolean;
   sideBar?: boolean | ISideBarDef;
+  columnReorder?: boolean;
   virtualScroll?: IVirtualScrollConfig;
   pageSizeOptions?: number[];
   onFirstDataRendered?: () => void;
@@ -127,7 +128,7 @@ export interface IOGridDataGridProps<T> {
   getRowId: (item: T) => RowId;
   sortBy?: string;
   sortDirection: 'asc' | 'desc';
-  onColumnSort: (columnKey: string) => void;
+  onColumnSort: (columnKey: string, direction?: 'asc' | 'desc' | null) => void;
   visibleColumns: Set<string>;
   columnOrder?: string[];
   onColumnOrderChange?: (order: string[]) => void;
@@ -162,6 +163,7 @@ export interface IOGridDataGridProps<T> {
   loadingFilterOptions: Record<string, boolean>;
   peopleSearch?: (query: string) => Promise<UserLike[]>;
   getUserByEmail?: (email: string) => Promise<UserLike | undefined>;
+  columnReorder?: boolean;
   virtualScroll?: IVirtualScrollConfig;
   emptyState?: {
     onClearAll: () => void;
