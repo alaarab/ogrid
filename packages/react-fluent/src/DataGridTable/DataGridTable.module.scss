@@ -458,8 +458,7 @@
 }
 
 .pinnedLeft {
-  left: 0;
-  // Shadow to indicate pinned column
+  // left offset is set via inline style (supports multiple pinned columns)
   &::after {
     content: '';
     position: absolute;
@@ -473,7 +472,7 @@
 }
 
 .pinnedRight {
-  right: 0;
+  // right offset is set via inline style (supports multiple pinned columns)
   &::before {
     content: '';
     position: absolute;

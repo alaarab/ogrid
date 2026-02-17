@@ -86,23 +86,11 @@ const allowOverflowX = computed(() => {
     && (l.minTableWidth > l.containerWidth || l.desiredTableWidth > l.containerWidth);
 });
 
-// Compute pinning offsets
-const pinningOffsets = computed(() => {
-  const visibleCols = layout.value.visibleCols;
-  const columnWidthsMap: Record<string, number> = {};
-  visibleCols.forEach((col) => {
-    columnWidthsMap[col.columnId] = getColumnWidth(col);
-  });
-  const leftOffsets = pinning.value.computeLeftOffsets(
-    visibleCols,
-    columnWidthsMap,
-    DEFAULT_MIN_COLUMN_WIDTH,
-    layout.value.hasCheckboxCol,
-    CHECKBOX_COLUMN_WIDTH
-  );
-  const rightOffsets = pinning.value.computeRightOffsets(visibleCols, columnWidthsMap, DEFAULT_MIN_COLUMN_WIDTH);
-  return { leftOffsets, rightOffsets };
-});
+// Read pre-computed pinning offsets
+const pinningOffsets = computed(() => ({
+  leftOffsets: pinning.value.leftOffsets,
+  rightOffsets: pinning.value.rightOffsets,
+}));
 
 const handleSingleRowClick = (e: MouseEvent, rowId: string | number) => {
   if (props.gridProps.rowSelection !== 'single') return;
@@ -459,6 +447,7 @@ const setWrapperRef = (el: any) => {
               <td
                 v-for="(col, colIndex) in layout.visibleCols"
                 :key="col.columnId"
+                :data-column-id="col.columnId"
                 :data-row-index="rowIndex"
                 :data-col-index="layout.colOffset + colIndex"
                 :class="getCellClass(rowIndex, layout.colOffset + colIndex, col, item)"

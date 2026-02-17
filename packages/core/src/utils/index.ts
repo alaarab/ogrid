@@ -69,3 +69,6 @@ export type {
 export { debounce } from './debounce';
 export { measureRange, injectGlobalStyles } from './dom';
 export type { OverlayRect } from './dom';
+export { computeNextSortState } from './sortHelpers';
+export type { ISortState } from './sortHelpers';
+export { measureColumnContentWidth, AUTOSIZE_EXTRA_PX, AUTOSIZE_MAX_PX } from './columnAutosize';

@@ -6,31 +6,16 @@ import {
   SwapVert as SwapVertIcon,
   FilterList as FilterListIcon,
 } from '@mui/icons-material';
-import type { UserLike, ColumnFilterType, IDateFilterValue } from '@alaarab/ogrid-react';
-import { useColumnHeaderFilterState } from '@alaarab/ogrid-react';
+import type { IColumnHeaderFilterProps } from '@alaarab/ogrid-react';
+import {
+  useColumnHeaderFilterState,
+  getColumnHeaderFilterStateParams,
+} from '@alaarab/ogrid-react';
 import { TextFilterPopover } from './TextFilterPopover';
 import { MultiSelectFilterPopover } from './MultiSelectFilterPopover';
 import { PeopleFilterPopover } from './PeopleFilterPopover';
 
-export interface IColumnHeaderFilterProps {
-  columnKey: string;
-  columnName: string;
-  filterType: ColumnFilterType;
-  isSorted?: boolean;
-  isSortedDescending?: boolean;
-  onSort?: () => void;
-  selectedValues?: string[];
-  onFilterChange?: (values: string[]) => void;
-  options?: string[];
-  isLoadingOptions?: boolean;
-  textValue?: string;
-  onTextChange?: (value: string) => void;
-  selectedUser?: UserLike;
-  onUserChange?: (user: UserLike | undefined) => void;
-  peopleSearch?: (query: string) => Promise<UserLike[]>;
-  dateValue?: IDateFilterValue;
-  onDateChange?: (value: IDateFilterValue | undefined) => void;
-}
+export type { IColumnHeaderFilterProps };
 
 export const ColumnHeaderFilter: React.FC<IColumnHeaderFilterProps> = React.memo((props) => {
   const {
@@ -39,36 +24,12 @@ export const ColumnHeaderFilter: React.FC<IColumnHeaderFilterProps> = React.memo
     isSorted = false,
     isSortedDescending = false,
     onSort,
-    selectedValues,
-    onFilterChange,
     options = [],
     isLoadingOptions = false,
-    textValue = '',
-    onTextChange,
     selectedUser,
-    onUserChange,
-    peopleSearch,
-    dateValue,
-    onDateChange,
   } = props;
 
-  const state = useColumnHeaderFilterState({
-    filterType,
-    isSorted,
-    isSortedDescending,
-    onSort,
-    selectedValues,
-    onFilterChange,
-    options,
-    isLoadingOptions,
-    textValue,
-    onTextChange,
-    selectedUser,
-    onUserChange,
-    peopleSearch,
-    dateValue,
-    onDateChange,
-  });
+  const state = useColumnHeaderFilterState(getColumnHeaderFilterStateParams(props));
 
   const {
     headerRef,

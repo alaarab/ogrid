@@ -13,6 +13,7 @@ import {
   getMultiSelectFilterFields,
   flattenColumns,
   processClientSideData,
+  computeNextSortState,
 } from '../utils';
 import { useFilterOptions } from './useFilterOptions';
 import { useSideBarState } from './useSideBarState';
@@ -235,12 +236,8 @@ export function useOGrid<T>(
   );
 
   const handleSort = useCallback(
-    (columnKey: string) => {
-      setSort({
-        field: columnKey,
-        direction:
-          sort.field === columnKey && sort.direction === 'asc' ? 'desc' : 'asc',
-      });
+    (columnKey: string, direction?: 'asc' | 'desc' | null) => {
+      setSort(computeNextSortState(sort, columnKey, direction));
     },
     [sort, setSort]
   );

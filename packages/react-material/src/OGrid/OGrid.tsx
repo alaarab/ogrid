@@ -61,6 +61,3 @@ OGridInner.displayName = 'OGrid';
 
 export const OGrid = React.memo(OGridInner) as typeof OGridInner;
 
-/** @deprecated Use `OGrid` instead. Backward-compat alias. */
-export const MaterialDataTable = OGrid;
-

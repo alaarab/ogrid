@@ -48,11 +48,12 @@ import { PopoverCellEditorComponent } from './popover-cell-editor.component';
   changeDetection: ChangeDetectionStrategy.OnPush,
   providers: [DataGridStateService],
   template: `
-    <div style="position:relative;flex:1;min-height:0;display:flex;flex-direction:column">
+    <div class="ogrid-root">
       <div
         #wrapper
         tabindex="0"
         role="region"
+        class="ogrid-scroll-wrapper"
         [attr.aria-label]="resolvedAriaLabel()"
         [attr.aria-labelledby]="ariaLabelledBy()"
         [attr.data-empty]="showEmptyInGrid() ? 'true' : null"
@@ -65,26 +66,19 @@ import { PopoverCellEditorComponent } from './popover-cell-editor.component';
         (keydown)="onGridKeyDown($event)"
         (mousedown)="onWrapperMouseDown($event)"
         (scroll)="onWrapperScroll($event)"
-        style="flex:1;min-height:0;overflow:auto;outline:none;position:relative;font-size:13px;color:var(--ogrid-fg, #242424)"
         [style.--data-table-column-count]="state().layout.totalColCount"
         [style.--data-table-width]="tableWidthStyle()"
         [style.--data-table-min-width]="tableMinWidthStyle()"
       >
-        <div style="position:relative">
-          <div [class.loading-dimmed]="isLoading() && items().length > 0" style="position:relative">
-            <div #tableContainer style="position:relative">
-              <table
-                style="width:var(--data-table-width, 100%);min-width:var(--data-table-min-width, 100%);border-collapse:collapse;table-layout:fixed"
-              >
-                <thead style="z-index:3;background:var(--ogrid-header-bg, #f5f5f5)">
+        <div class="ogrid-table-wrapper">
+          <div [class.loading-dimmed]="isLoading() && items().length > 0" class="ogrid-table-wrapper">
+            <div #tableContainer class="ogrid-table-wrapper">
+              <table class="ogrid-table">
+                <thead class="ogrid-thead">
                   @for (row of headerRows(); track $index; let rowIdx = $index) {
                     <tr>
                       @if (rowIdx === headerRows().length - 1 && hasCheckboxCol()) {
-                        <th
-                          scope="col"
-                          rowSpan="1"
-                          style="width:48px;min-width:48px;max-width:48px;padding:6px 4px;text-align:center;border-bottom:1px solid var(--ogrid-border, #e0e0e0)"
-                        >
+                        <th scope="col" rowSpan="1" class="ogrid-checkbox-header">
                           <input
                             type="checkbox"
                             [checked]="allSelected()"
@@ -98,23 +92,19 @@ import { PopoverCellEditorComponent } from './popover-cell-editor.component';
                         <th [attr.rowSpan]="headerRows().length - 1"></th>
                       }
                       @if (rowIdx === headerRows().length - 1 && hasRowNumbersCol()) {
-                        <th
-                          scope="col"
-                          rowSpan="1"
-                          style="width:50px;min-width:50px;max-width:50px;padding:6px;text-align:center;font-weight:600;background:var(--ogrid-bg-subtle,#fafafa);color:var(--ogrid-text-secondary,#666);border-bottom:1px solid var(--ogrid-border,#e0e0e0);position:sticky;left:0;z-index:4"
-                        >
+                        <th scope="col" rowSpan="1" class="ogrid-row-number-header">
                           #
                         </th>
                       }
                       @if (rowIdx === 0 && rowIdx < headerRows().length - 1 && hasRowNumbersCol()) {
-                        <th [attr.rowSpan]="headerRows().length - 1" style="width:50px;min-width:50px"></th>
+                        <th [attr.rowSpan]="headerRows().length - 1" class="ogrid-row-number-spacer"></th>
                       }
                       @for (cell of row; track $index; let cellIdx = $index) {
                         @if (cell.isGroup) {
                           <th
                             [attr.colSpan]="cell.colSpan"
                             scope="colgroup"
-                            style="padding:6px 8px;text-align:center;font-weight:600;border-bottom:1px solid var(--ogrid-border, #e0e0e0)"
+                            class="ogrid-column-group-header"
                           >
                             {{ cell.label }}
                           </th>
@@ -123,11 +113,11 @@ import { PopoverCellEditorComponent } from './popover-cell-editor.component';
                           @let pinned = isPinned(col.columnId);
                           <th
                             scope="col"
+                            class="ogrid-header-cell"
                             [attr.data-column-id]="col.columnId"
                             [attr.rowSpan]="headerRows().length > 1 && rowIdx < headerRows().length - 1 ? headerRows().length - rowIdx : null"
                             [class.ogrid-th-pinned-left]="pinned === 'left'"
                             [class.ogrid-th-pinned-right]="pinned === 'right'"
-                            style="padding:6px 8px;text-align:left;font-weight:600;border-bottom:1px solid var(--ogrid-border, #e0e0e0);position:sticky;top:0;background:var(--ogrid-header-bg, #f5f5f5);z-index:3"
                             [style.min-width.px]="col.minWidth ?? defaultMinWidth"
                             [style.width.px]="getColumnWidth(col)"
                             [style.max-width.px]="getColumnWidth(col)"
@@ -136,7 +126,7 @@ import { PopoverCellEditorComponent } from './popover-cell-editor.component';
                             [style.cursor]="columnReorderService.isDragging() ? 'grabbing' : 'grab'"
                             (mousedown)="onHeaderMouseDown(col.columnId, $event)"
                           >
-                            <div style="display:flex;align-items:center;gap:4px;">
+                            <div class="ogrid-header-content">
                               <ogrid-primeng-column-header-filter
                                 [columnKey]="col.columnId"
                                 [columnName]="col.name"
@@ -170,7 +160,7 @@ import { PopoverCellEditorComponent } from './popover-cell-editor.component';
                               />
                             </div>
                             <div
-                              style="position:absolute;top:0;right:0;bottom:0;width:4px;cursor:col-resize"
+                              class="ogrid-resize-handle"
                               (mousedown)="onResizeStartPrimeng($event, col)"
                               [attr.aria-label]="'Resize ' + col.name"
                             ></div>
@@ -197,7 +187,7 @@ import { PopoverCellEditorComponent } from './popover-cell-editor.component';
                       >
                         @if (hasCheckboxCol()) {
                           <td
-                            style="width:48px;min-width:48px;max-width:48px;padding:6px 4px;text-align:center;border-bottom:1px solid var(--ogrid-border, #f0f0f0)"
+                            class="ogrid-checkbox-cell"
                             [attr.data-row-index]="rowIndex"
                             [attr.data-col-index]="0"
                             (click)="$event.stopPropagation()"
@@ -211,18 +201,18 @@ import { PopoverCellEditorComponent } from './popover-cell-editor.component';
                           </td>
                         }
                         @if (hasRowNumbersCol()) {
-                          <td
-                            style="width:50px;min-width:50px;max-width:50px;padding:6px;text-align:center;font-weight:600;font-variant-numeric:tabular-nums;color:var(--ogrid-text-secondary,#666);background:var(--ogrid-bg-subtle,#fafafa);border-bottom:1px solid var(--ogrid-border,#f0f0f0);position:sticky;left:0;z-index:3"
-                          >
+                          <td class="ogrid-row-number-cell">
+
                             {{ rowNumberOffset() + rowIndex + 1 }}
                           </td>
                         }
                         @for (col of visibleCols(); track col.columnId; let colIdx = $index) {
                           @let pinned = isPinned(col.columnId);
                           <td
+                            [attr.data-column-id]="col.columnId"
                             [class.ogrid-td-pinned-left]="pinned === 'left'"
                             [class.ogrid-td-pinned-right]="pinned === 'right'"
-                            style="padding:0;border-bottom:1px solid var(--ogrid-border, #f0f0f0);position:relative"
+                            class="ogrid-data-cell"
                             [style.min-width.px]="col.minWidth ?? defaultMinWidth"
                             [style.width.px]="getColumnWidth(col)"
                             [style.max-width.px]="getColumnWidth(col)"
@@ -258,7 +248,7 @@ import { PopoverCellEditorComponent } from './popover-cell-editor.component';
                                 (mousedown)="onCellMouseDown($event, rowIndex, colIdx + colOffset())"
                                 (dblclick)="onCellDblClickPrimeng(item, col, rowIndex, colIdx)"
                                 (contextmenu)="onCellContextMenu($event)"
-                                style="padding:6px 10px;min-height:20px;cursor:default;overflow:hidden;text-overflow:ellipsis;white-space:nowrap"
+                                class="ogrid-cell-content"
                                 [style.cursor]="canEditCell(col, item) ? 'cell' : 'default'"
                                 [style.background]="getCellBackground(rowIndex, colIdx)"
                                 [style.outline]="isActiveCell(rowIndex, colIdx) ? '2px solid var(--ogrid-selection, #217346)' : null"
@@ -268,7 +258,7 @@ import { PopoverCellEditorComponent } from './popover-cell-editor.component';
                                 @if (canEditCell(col, item) && isSelectionEndCell(rowIndex, colIdx)) {
                                   <div
                                     (mousedown)="onFillHandleMouseDown($event)"
-                                    style="position:absolute;bottom:-3px;right:-3px;width:7px;height:7px;background:var(--ogrid-selection, #217346);cursor:crosshair;z-index:2"
+                                    class="ogrid-fill-handle"
                                     aria-label="Fill handle"
                                   ></div>
                                 }
@@ -298,9 +288,9 @@ import { PopoverCellEditorComponent } from './popover-cell-editor.component';
               ></ogrid-marching-ants-overlay>
 
               @if (showEmptyInGrid() && emptyState()) {
-                <div style="display:flex;align-items:center;justify-content:center;padding:48px 24px;text-align:center;color:var(--ogrid-muted, #999)">
+                <div class="ogrid-empty-container">
                   <div>
-                    <div style="font-weight:600;margin-bottom:8px">No results found</div>
+                    <div class="ogrid-empty-title">No results found</div>
                     <ogrid-empty-state
                       [message]="emptyState()?.message"
                       [hasActiveFilters]="emptyState()?.hasActiveFilters ?? false"
@@ -349,18 +339,178 @@ import { PopoverCellEditorComponent } from './popover-cell-editor.component';
       }
 
       @if (isLoading()) {
-        <div
-          style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;background:rgba(255,255,255,0.7);z-index:10"
-          aria-live="polite"
-        >
-          <div style="display:flex;align-items:center;gap:8px;color:var(--ogrid-fg, #242424)">
-            <span style="font-size:14px">{{ loadingMessage() }}</span>
+        <div class="ogrid-loading-overlay" aria-live="polite">
+          <div class="ogrid-loading-content">
+            <span class="ogrid-loading-text">{{ loadingMessage() }}</span>
           </div>
         </div>
       }
     </div>
   `,
   styles: [`
+    :host { display: block; }
+    .ogrid-root {
+      position: relative;
+      flex: 1;
+      min-height: 0;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+    .ogrid-scroll-wrapper {
+      flex: 1;
+      min-height: 0;
+      overflow: auto;
+      position: relative;
+    }
+    .ogrid-table-wrapper {
+      position: relative;
+    }
+    .ogrid-table {
+      width: var(--data-table-width, 100%);
+      min-width: var(--data-table-min-width, 100%);
+      border-collapse: collapse;
+      table-layout: fixed;
+    }
+    .ogrid-thead {
+      z-index: 3;
+      background: var(--ogrid-header-bg, #f5f5f5);
+      position: sticky;
+      top: 0;
+    }
+    .ogrid-checkbox-header {
+      width: 48px;
+      min-width: 48px;
+      max-width: 48px;
+      text-align: center;
+      background: var(--ogrid-header-bg, #f5f5f5);
+      border-bottom: 2px solid var(--ogrid-border, #e0e0e0);
+      position: sticky;
+      top: 0;
+      z-index: 3;
+    }
+    .ogrid-row-number-header {
+      width: 50px;
+      min-width: 50px;
+      max-width: 50px;
+      text-align: center;
+      font-weight: 600;
+      background: var(--ogrid-header-bg, #f5f5f5);
+      border-bottom: 2px solid var(--ogrid-border, #e0e0e0);
+      position: sticky;
+      top: 0;
+      z-index: 3;
+    }
+    .ogrid-row-number-spacer {
+      width: 50px;
+      min-width: 50px;
+      max-width: 50px;
+      background: var(--ogrid-header-bg, #f5f5f5);
+    }
+    .ogrid-column-group-header {
+      text-align: center;
+      font-weight: 600;
+      background: var(--ogrid-header-bg, #f5f5f5);
+      border-bottom: 2px solid var(--ogrid-border, #e0e0e0);
+      padding: 6px 10px;
+    }
+    .ogrid-header-cell {
+      background: var(--ogrid-header-bg, #f5f5f5);
+      border-bottom: 2px solid var(--ogrid-border, #e0e0e0);
+      padding: 0;
+      position: relative;
+      user-select: none;
+    }
+    .ogrid-header-content {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      padding: 6px 10px;
+    }
+    .ogrid-resize-handle {
+      position: absolute;
+      top: 0;
+      right: 0;
+      bottom: 0;
+      width: 4px;
+      cursor: col-resize;
+    }
+    .ogrid-checkbox-cell {
+      width: 48px;
+      min-width: 48px;
+      max-width: 48px;
+      padding: 6px 4px;
+      text-align: center;
+      border-bottom: 1px solid var(--ogrid-border, #f0f0f0);
+    }
+    .ogrid-row-number-cell {
+      width: 50px;
+      min-width: 50px;
+      max-width: 50px;
+      padding: 6px;
+      text-align: center;
+      font-weight: 600;
+      font-variant-numeric: tabular-nums;
+      color: var(--ogrid-text-secondary, #666);
+      background: var(--ogrid-bg-subtle, #fafafa);
+      border-bottom: 1px solid var(--ogrid-border, #f0f0f0);
+      position: sticky;
+      left: 0;
+      z-index: 3;
+    }
+    .ogrid-data-cell {
+      padding: 0;
+      border-bottom: 1px solid var(--ogrid-border, #f0f0f0);
+      position: relative;
+    }
+    .ogrid-cell-content {
+      padding: 6px 10px;
+      min-height: 20px;
+      cursor: default;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .ogrid-fill-handle {
+      position: absolute;
+      bottom: -3px;
+      right: -3px;
+      width: 7px;
+      height: 7px;
+      background: var(--ogrid-selection, #217346);
+      cursor: crosshair;
+      z-index: 2;
+    }
+    .ogrid-empty-container {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 48px 24px;
+      text-align: center;
+      color: var(--ogrid-muted, #999);
+    }
+    .ogrid-empty-title {
+      font-weight: 600;
+      margin-bottom: 8px;
+    }
+    .ogrid-loading-overlay {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: rgba(255, 255, 255, 0.7);
+      z-index: 10;
+    }
+    .ogrid-loading-content {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      color: var(--ogrid-fg, #242424);
+    }
+    .ogrid-loading-text {
+      font-size: 14px;
+    }
     .loading-dimmed {
       opacity: 0.5;
       pointer-events: none;
@@ -432,7 +582,7 @@ export class DataGridTableComponent<T = unknown> extends BaseDataGridTableCompon
   @Input({ required: true, alias: 'getRowId' }) getRowIdInput!: (item: T) => RowId;
   @Input() sortBy: string | undefined = undefined;
   @Input() sortDirection: 'asc' | 'desc' = 'asc';
-  @Input({ required: true }) onColumnSort!: (columnKey: string) => void;
+  @Input({ required: true }) onColumnSort!: (columnKey: string, direction?: 'asc' | 'desc' | null) => void;
   @Input({ required: true }) visibleColumns!: Set<string>;
   @Input() columnOrder: string[] | undefined = undefined;
   @Input() onColumnOrderChange: ((order: string[]) => void) | undefined = undefined;
@@ -444,6 +594,7 @@ export class DataGridTableComponent<T = unknown> extends BaseDataGridTableCompon
   @Input({ alias: 'freezeCols' }) freezeColsInput: number | undefined = undefined;
   @Input() layoutMode: 'content' | 'fill' = 'fill';
   @Input() suppressHorizontalScroll: boolean | undefined = undefined;
+  @Input() columnReorder: boolean | undefined = undefined;
   @Input({ alias: 'isLoading' }) isLoadingInput: boolean = false;
   @Input({ alias: 'loadingMessage' }) loadingMessageInput: string = 'Loading\u2026';
   @Input() editable: boolean | undefined = undefined;
@@ -670,7 +821,7 @@ export class DataGridTableComponent<T = unknown> extends BaseDataGridTableCompon
       onUnpin: () => this.onUnpinColumn(columnId),
       onSortAsc: () => this.onSortAsc(columnId),
       onSortDesc: () => this.onSortDesc(columnId),
-      onClearSort: () => this.onClearSort(),
+      onClearSort: () => this.onClearSort(columnId),
       onAutosizeThis: () => this.onAutosizeColumn(columnId),
       onAutosizeAll: () => this.onAutosizeAllColumns(),
       onClose: () => {}
@@ -735,6 +886,7 @@ export class DataGridTableComponent<T = unknown> extends BaseDataGridTableCompon
       freezeCols: this.freezeColsInput,
       layoutMode: this.layoutMode,
       suppressHorizontalScroll: this.suppressHorizontalScroll,
+      columnReorder: this.columnReorder,
       isLoading: this.isLoadingInput,
       loadingMessage: this.loadingMessageInput,
       editable: this.editable,
