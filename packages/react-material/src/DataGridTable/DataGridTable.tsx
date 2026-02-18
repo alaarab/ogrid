@@ -378,7 +378,7 @@ function DataGridTableInner<T>(props: IOGridDataGridProps<T>): React.ReactElemen
   const wrapperSx = useMemo(() => ({
     position: 'relative' as const,
     flex: 1,
-    minHeight: 0,
+    minHeight: isLoading && items.length === 0 ? 200 : 0,
     width: fitToContent ? 'fit-content' : '100%',
     maxWidth: '100%',
     overflowX: suppressHorizontalScroll ? 'hidden' as const : allowOverflowX ? 'auto' as const : 'hidden' as const,
@@ -387,7 +387,7 @@ function DataGridTableInner<T>(props: IOGridDataGridProps<T>): React.ReactElemen
     willChange: 'scroll-position',
     '& [data-drag-range]': { bgcolor: 'rgba(33, 115, 70, 0.12) !important' },
     '& [data-drag-anchor]': { bgcolor: 'background.paper !important' },
-  }), [fitToContent, suppressHorizontalScroll, allowOverflowX]);
+  }), [fitToContent, suppressHorizontalScroll, allowOverflowX, isLoading, items.length]);
 
   const renderCellContent = useCallback(
     (item: T, col: IColumnDef<T>, rowIndex: number, colIdx: number): React.ReactNode => {
