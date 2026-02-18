@@ -126,6 +126,7 @@ export interface UseDataGridTableOrchestrationResult<T> {
   desiredTableWidth: number;
   columnSizingOverrides: Record<string, { widthPx: number }>;
   setColumnSizingOverrides: React.Dispatch<React.SetStateAction<Record<string, { widthPx: number }>>>;
+  measuredColumnWidths: Record<string, number>;
 
   // Row selection shortcuts
   selectedRowIds: Set<RowId>;
@@ -201,7 +202,7 @@ export function useDataGridTableOrchestration<T>(
   const {
     visibleCols: visibleColsTyped, totalColCount, hasCheckboxCol, hasRowNumbersCol, colOffset,
     containerWidth, minTableWidth, desiredTableWidth,
-    columnSizingOverrides, setColumnSizingOverrides,
+    columnSizingOverrides, setColumnSizingOverrides, measuredColumnWidths,
   } = layout;
   const visibleCols = visibleColsTyped as IColumnDef<T>[];
 
@@ -383,6 +384,7 @@ export function useDataGridTableOrchestration<T>(
     desiredTableWidth,
     columnSizingOverrides,
     setColumnSizingOverrides,
+    measuredColumnWidths,
 
     // Row selection shortcuts
     selectedRowIds,
