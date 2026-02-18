@@ -58,7 +58,12 @@
 
 /* Drag-range highlight applied via DOM attributes during drag (bypasses Vue for performance) */
 [data-drag-range] {
-  background: var(--ogrid-bg-range, rgba(33, 115, 70, 0.12)) !important;
+  background: var(--ogrid-range-bg, rgba(33, 115, 70, 0.12)) !important;
+}
+
+/* Override PrimeVue Popover default content padding */
+.p-popover-content {
+  padding: 0 !important;
 }
 
 /* Anchor cell during drag: white/transparent background (like Excel) */
@@ -146,11 +151,23 @@
   background: none;
   border: none;
   cursor: pointer;
-  padding: 2px 4px;
-  font-size: 14px;
+  padding: 4px 6px;
+  font-size: 16px;
   color: var(--ogrid-fg-muted);
   line-height: 1;
   flex-shrink: 0;
+  border-radius: 4px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 24px;
+  height: 24px;
+  transition: background-color 0.15s;
+}
+
+.ogrid-column-menu-btn:hover {
+  background: var(--ogrid-hover-bg, rgba(0, 0, 0, 0.04));
+  color: var(--ogrid-fg);
 }
 
 /* === Checkbox column === */

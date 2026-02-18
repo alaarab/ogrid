@@ -7,7 +7,7 @@
   --ogrid-fg-secondary: rgba(0, 0, 0, 0.6);
   --ogrid-fg-muted: rgba(0, 0, 0, 0.5);
   --ogrid-border: rgba(0, 0, 0, 0.12);
-  --ogrid-header-bg: rgba(0, 0, 0, 0.04);
+  --ogrid-header-bg: #f5f5f5;
   --ogrid-hover-bg: rgba(0, 0, 0, 0.04);
   --ogrid-selected-row-bg: #e6f0fb;
   --ogrid-active-cell-bg: rgba(0, 0, 0, 0.02);
@@ -24,7 +24,7 @@
     --ogrid-fg-secondary: rgba(255, 255, 255, 0.6);
     --ogrid-fg-muted: rgba(255, 255, 255, 0.5);
     --ogrid-border: rgba(255, 255, 255, 0.12);
-    --ogrid-header-bg: rgba(255, 255, 255, 0.06);
+    --ogrid-header-bg: #2c2c2c;
     --ogrid-hover-bg: rgba(255, 255, 255, 0.08);
     --ogrid-selected-row-bg: #1a3a5c;
     --ogrid-active-cell-bg: rgba(255, 255, 255, 0.06);
@@ -32,6 +32,14 @@
     --ogrid-accent: #4da6ff;
     --ogrid-selection-color: #2ea043;
     --ogrid-loading-overlay: rgba(0, 0, 0, 0.7);
+    --ogrid-bg-subtle: rgba(255, 255, 255, 0.04);
+    --ogrid-bg-hover: rgba(255, 255, 255, 0.08);
+    --ogrid-muted: rgba(255, 255, 255, 0.5);
+    --ogrid-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
+    --ogrid-primary: #4da6ff;
+    --ogrid-primary-fg: #fff;
+    --ogrid-primary-hover: #66b3ff;
+    --ogrid-border-hover: rgba(255, 255, 255, 0.3);
   }
 }
 
@@ -41,7 +49,7 @@
   --ogrid-fg-secondary: rgba(255, 255, 255, 0.6);
   --ogrid-fg-muted: rgba(255, 255, 255, 0.5);
   --ogrid-border: rgba(255, 255, 255, 0.12);
-  --ogrid-header-bg: rgba(255, 255, 255, 0.06);
+  --ogrid-header-bg: #2c2c2c;
   --ogrid-hover-bg: rgba(255, 255, 255, 0.08);
   --ogrid-selected-row-bg: #1a3a5c;
   --ogrid-active-cell-bg: rgba(255, 255, 255, 0.06);
@@ -49,6 +57,14 @@
   --ogrid-accent: #4da6ff;
   --ogrid-selection-color: #2ea043;
   --ogrid-loading-overlay: rgba(0, 0, 0, 0.7);
+  --ogrid-bg-subtle: rgba(255, 255, 255, 0.04);
+  --ogrid-bg-hover: rgba(255, 255, 255, 0.08);
+  --ogrid-muted: rgba(255, 255, 255, 0.5);
+  --ogrid-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
+  --ogrid-primary: #4da6ff;
+  --ogrid-primary-fg: #fff;
+  --ogrid-primary-hover: #66b3ff;
+  --ogrid-border-hover: rgba(255, 255, 255, 0.3);
 }
 
 .tableScrollContent {
@@ -128,7 +144,7 @@
 }
 
 .dataTable thead {
-  background: var(--ogrid-header-bg, rgba(0, 0, 0, 0.04));
+  background: var(--ogrid-header-bg, #f5f5f5);
 }
 
 /* Freeze panes: sticky header when freezeRows >= 1 */
@@ -136,11 +152,11 @@
   /* Removed position: sticky; top: 0; - breaks horizontal sticky on pinned columns.
      Instead, apply sticky to individual th cells below. */
   z-index: 8;
-  background: var(--ogrid-header-bg, rgba(0, 0, 0, 0.04));
+  background: var(--ogrid-header-bg, #f5f5f5);
 }
 
 .dataTable thead.stickyHeader th {
-  background: var(--ogrid-header-bg, rgba(0, 0, 0, 0.04));
+  background: var(--ogrid-header-bg, #f5f5f5);
 }
 
 /* Freeze panes: sticky first column when freezeCols >= 1 */
@@ -163,7 +179,7 @@
 }
 
 .dataTable thead .freezeColFirst {
-  background: var(--ogrid-header-bg, rgba(0, 0, 0, 0.04));
+  background: var(--ogrid-header-bg, #f5f5f5);
 }
 
 /* Pinned columns: sticky positioning based on column pinned property.
@@ -190,7 +206,7 @@
 }
 
 .dataTable thead .pinnedColLeft {
-  background: var(--ogrid-header-bg, rgba(0, 0, 0, 0.04));
+  background: var(--ogrid-header-bg, #f5f5f5);
 }
 
 .dataTable .pinnedColRight {
@@ -214,7 +230,7 @@
 }
 
 .dataTable thead .pinnedColRight {
-  background: var(--ogrid-header-bg, rgba(0, 0, 0, 0.04));
+  background: var(--ogrid-header-bg, #f5f5f5);
 }
 
 .dataTable thead th {
@@ -224,7 +240,7 @@
   white-space: nowrap;
   position: sticky;  /* Changed from relative - enables vertical sticky for all headers */
   top: 0;            /* Sticky vertically */
-  background: var(--ogrid-header-bg, rgba(0, 0, 0, 0.04));  /* Required for sticky overlap */
+  background: var(--ogrid-header-bg, #f5f5f5);  /* Required for sticky overlap */
   z-index: 8;        /* Stack above body cells */
   border-bottom: 1px solid var(--ogrid-border, rgba(0, 0, 0, 0.12));
 
@@ -277,7 +293,7 @@
   font-weight: 600;
   border-bottom: 2px solid var(--ogrid-border, rgba(0, 0, 0, 0.12));
   padding: 6px 10px;
-  background: var(--ogrid-header-bg, rgba(0, 0, 0, 0.04));
+  background: var(--ogrid-header-bg, #f5f5f5);
 }
 
 /* Column reorder drop indicator */
@@ -361,9 +377,7 @@
   outline: none;
 
   &:focus-visible {
-    outline: 2px solid var(--ogrid-accent, #0078d4);
-    outline-offset: -2px;
-    z-index: 3;
+    outline: none;
   }
 }
 
@@ -440,7 +454,7 @@
   max-width: 50px;
   padding: 4px 8px !important;
   text-align: center;
-  background: var(--ogrid-header-bg, rgba(0, 0, 0, 0.04));
+  background: var(--ogrid-header-bg, #f5f5f5);
   font-weight: 600;
   color: var(--ogrid-fg-secondary, rgba(0, 0, 0, 0.6));
   border-right: 1px solid var(--ogrid-border, rgba(0, 0, 0, 0.12));
@@ -450,7 +464,7 @@
 }
 
 .dataTable th.rowNumberHeaderCell {
-  background: var(--ogrid-header-bg, rgba(0, 0, 0, 0.04));
+  background: var(--ogrid-header-bg, #f5f5f5);
   z-index: 9; // Higher than regular header to stay on top
 }
 
@@ -507,7 +521,7 @@
   box-sizing: border-box;
   font-size: 12px;
   color: var(--ogrid-fg-muted, rgba(0, 0, 0, 0.5));
-  background: var(--ogrid-header-bg, rgba(0, 0, 0, 0.04));
+  background: var(--ogrid-header-bg, #f5f5f5);
   border-top: 1px solid var(--ogrid-border, rgba(0, 0, 0, 0.12));
   min-height: 28px;
 }
@@ -628,7 +642,7 @@
   width: 100%;
   box-sizing: border-box;
   border-top: 1px solid var(--ogrid-border, rgba(0, 0, 0, 0.12));
-  background: var(--ogrid-header-bg, rgba(0, 0, 0, 0.04));
+  background: var(--ogrid-header-bg, #f5f5f5);
 }
 
 .emptyStateInGridTitle {

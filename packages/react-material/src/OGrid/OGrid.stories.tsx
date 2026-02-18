@@ -97,16 +97,13 @@ type Story = StoryObj<typeof OGrid<Project>>;
 
 export const Default: Story = {
   render: () => (
-    <div>
-      <h2 style={{ margin: '0 0 8px 0' }}>Projects</h2>
-      <OGrid<Project>
-        data={makeProjects(50)}
-        columns={columns}
-        getRowId={getRowId}
-        entityLabelPlural="projects"
-        defaultPageSize={10}
-      />
-    </div>
+    <OGrid<Project>
+      data={makeProjects(50)}
+      columns={columns}
+      getRowId={getRowId}
+      entityLabelPlural="projects"
+      defaultPageSize={10}
+    />
   ),
 };
 
@@ -207,17 +204,14 @@ export const Editable: Story = {
       },
     ];
     return (
-      <div>
-        <h2 style={{ margin: '0 0 8px 0' }}>Projects (editable name &amp; status)</h2>
-        <OGrid<Project>
-          data={data}
-          columns={editableColumns}
-          getRowId={getRowId}
-          entityLabelPlural="projects"
-          editable
-          onCellValueChanged={handleCellValueChanged}
-        />
-      </div>
+      <OGrid<Project>
+        data={data}
+        columns={editableColumns}
+        getRowId={getRowId}
+        entityLabelPlural="projects"
+        editable
+        onCellValueChanged={handleCellValueChanged}
+      />
     );
   },
 };
@@ -266,23 +260,17 @@ export const SpreadsheetExperience: Story = {
     ];
 
     return (
-      <div style={{ maxWidth: 900 }}>
-        <h2 style={{ margin: '0 0 8px 0' }}>Employee Directory (OGrid)</h2>
-        <OGrid<SpreadsheetRow>
-          data={data}
-          columns={spreadsheetColumns}
-          getRowId={(r) => r.id}
-          entityLabelPlural="employees"
-          editable
-          onCellValueChanged={handleCellValueChanged}
-          rowSelection="multiple"
-          statusBar
-          defaultPageSize={25}
-        />
-        <p style={{ marginTop: 8, fontSize: 13, color: 'var(--ogrid-muted, #616161)' }}>
-          Spreadsheet behavior: single click = select; double-click or Enter/F2 = edit; drag or Shift+click = range; right-click = context menu (Copy, Cut, Paste, Select all).
-        </p>
-      </div>
+      <OGrid<SpreadsheetRow>
+        data={data}
+        columns={spreadsheetColumns}
+        getRowId={(r) => r.id}
+        entityLabelPlural="employees"
+        editable
+        onCellValueChanged={handleCellValueChanged}
+        rowSelection="multiple"
+        statusBar
+        defaultPageSize={25}
+      />
     );
   },
 };

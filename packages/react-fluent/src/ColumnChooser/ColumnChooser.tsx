@@ -3,8 +3,6 @@ import { useRef, useEffect } from 'react';
 import {
   Button,
   Checkbox,
-  Popover,
-  PopoverSurface,
 } from '@fluentui/react-components';
 import type { CheckboxOnChangeData } from '@fluentui/react-components';
 import { TableSettingsRegular, ChevronDownRegular, ChevronUpRegular } from '@fluentui/react-icons';
@@ -76,8 +74,8 @@ export const ColumnChooser: React.FC<IColumnChooserProps> = (props) => {
         {open ? <ChevronUpRegular /> : <ChevronDownRegular />}
       </Button>
 
-      <Popover open={open}>
-        <PopoverSurface ref={dropdownRef} className={styles.dropdown}>
+      {open && (
+        <div ref={dropdownRef} className={styles.dropdown}>
           <div className={styles.header}>
             Select Columns ({visibleCount} of {totalCount})
           </div>
@@ -100,8 +98,8 @@ export const ColumnChooser: React.FC<IColumnChooserProps> = (props) => {
               Select All
             </Button>
           </div>
-        </PopoverSurface>
-      </Popover>
+        </div>
+      )}
     </div>
   );
 };

@@ -103,7 +103,7 @@ import { BaseColumnHeaderFilterComponent } from '@alaarab/ogrid-angular';
                           <input
                             type="checkbox"
                             [checked]="tempSelected().has(opt)"
-                            (change)="handleCheckboxChange(opt, $any($event.target).checked)"
+                            (change)="handleCheckboxChange(opt, $event)"
                           />
                           {{ opt }}
                         </label>
