@@ -10,12 +10,67 @@ import type { IColumnHeaderFilterProps } from '@alaarab/ogrid-react';
 import {
   useColumnHeaderFilterState,
   getColumnHeaderFilterStateParams,
+  renderFilterContent,
 } from '@alaarab/ogrid-react';
+import type { FilterContentRenderers } from '@alaarab/ogrid-react';
 import { TextFilterPopover } from './TextFilterPopover';
 import { MultiSelectFilterPopover } from './MultiSelectFilterPopover';
 import { PeopleFilterPopover } from './PeopleFilterPopover';
 
 export type { IColumnHeaderFilterProps };
+
+const materialRenderers: FilterContentRenderers = {
+  renderMultiSelect: (p) => (
+    <MultiSelectFilterPopover
+      searchText={p.searchText}
+      onSearchChange={p.onSearchChange}
+      options={p.options}
+      filteredOptions={p.filteredOptions}
+      selected={p.selected}
+      onOptionToggle={p.onOptionToggle}
+      onSelectAll={p.onSelectAll}
+      onClearSelection={p.onClearSelection}
+      onApply={p.onApply}
+      isLoading={p.isLoading}
+    />
+  ),
+  renderText: (p) => (
+    <TextFilterPopover
+      value={p.value}
+      onValueChange={p.onValueChange}
+      onApply={p.onApply}
+      onClear={p.onClear}
+    />
+  ),
+  renderPeople: (p) => (
+    <PeopleFilterPopover
+      selectedUser={p.selectedUser}
+      searchText={p.searchText}
+      onSearchChange={p.onSearchChange}
+      suggestions={p.suggestions}
+      isLoading={p.isLoading}
+      onUserSelect={p.onUserSelect}
+      onClearUser={p.onClearUser}
+      inputRef={p.inputRef}
+    />
+  ),
+  renderDate: (p) => (
+    <Box sx={{ p: 1.5, display: 'flex', flexDirection: 'column', gap: 1 }}>
+      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+        <Typography variant="caption" sx={{ minWidth: 36 }}>From:</Typography>
+        <input type="date" value={p.tempDateFrom} onChange={(e) => p.setTempDateFrom(e.target.value)} style={{ flex: 1, padding: '4px 6px' }} />
+      </Box>
+      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+        <Typography variant="caption" sx={{ minWidth: 36 }}>To:</Typography>
+        <input type="date" value={p.tempDateTo} onChange={(e) => p.setTempDateTo(e.target.value)} style={{ flex: 1, padding: '4px 6px' }} />
+      </Box>
+      <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 1, mt: 0.5 }}>
+        <button onClick={p.onClear} disabled={!p.tempDateFrom && !p.tempDateTo} style={{ padding: '4px 12px', cursor: 'pointer' }}>Clear</button>
+        <button onClick={p.onApply} style={{ padding: '4px 12px', cursor: 'pointer' }}>Apply</button>
+      </Box>
+    </Box>
+  ),
+};
 
 export const ColumnHeaderFilter: React.FC<IColumnHeaderFilterProps> = React.memo((props) => {
   const {
@@ -33,87 +88,12 @@ export const ColumnHeaderFilter: React.FC<IColumnHeaderFilterProps> = React.memo
 
   const {
     headerRef,
-    peopleInputRef,
     isFilterOpen,
     setFilterOpen,
-    tempSelected,
-    tempTextValue,
-    setTempTextValue,
-    searchText,
-    setSearchText,
-    filteredOptions,
-    peopleSuggestions,
-    isPeopleLoading,
-    peopleSearchText,
-    setPeopleSearchText,
     hasActiveFilter,
     popoverPosition,
     handlers,
   } = state;
-
-  const safeOptions = options ?? [];
-
-  const renderPopoverContent = (): React.ReactNode => {
-    if (filterType === 'multiSelect') {
-      return (
-        <MultiSelectFilterPopover
-          searchText={searchText}
-          onSearchChange={setSearchText}
-          options={safeOptions}
-          filteredOptions={filteredOptions}
-          selected={tempSelected}
-          onOptionToggle={handlers.handleCheckboxChange}
-          onSelectAll={handlers.handleSelectAll}
-          onClearSelection={handlers.handleClearSelection}
-          onApply={handlers.handleApplyMultiSelect}
-          isLoading={isLoadingOptions}
-        />
-      );
-    }
-    if (filterType === 'text') {
-      return (
-        <TextFilterPopover
-          value={tempTextValue}
-          onValueChange={setTempTextValue}
-          onApply={handlers.handleTextApply}
-          onClear={handlers.handleTextClear}
-        />
-      );
-    }
-    if (filterType === 'people') {
-      return (
-        <PeopleFilterPopover
-          selectedUser={selectedUser}
-          searchText={peopleSearchText}
-          onSearchChange={setPeopleSearchText}
-          suggestions={peopleSuggestions}
-          isLoading={isPeopleLoading}
-          onUserSelect={handlers.handleUserSelect}
-          onClearUser={handlers.handleClearUser}
-          inputRef={peopleInputRef}
-        />
-      );
-    }
-    if (filterType === 'date') {
-      return (
-        <Box sx={{ p: 1.5, display: 'flex', flexDirection: 'column', gap: 1 }}>
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-            <Typography variant="caption" sx={{ minWidth: 36 }}>From:</Typography>
-            <input type="date" value={state.tempDateFrom} onChange={(e) => state.setTempDateFrom(e.target.value)} style={{ flex: 1, padding: '4px 6px' }} />
-          </Box>
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-            <Typography variant="caption" sx={{ minWidth: 36 }}>To:</Typography>
-            <input type="date" value={state.tempDateTo} onChange={(e) => state.setTempDateTo(e.target.value)} style={{ flex: 1, padding: '4px 6px' }} />
-          </Box>
-          <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 1, mt: 0.5 }}>
-            <button onClick={handlers.handleDateClear} disabled={!state.tempDateFrom && !state.tempDateTo} style={{ padding: '4px 12px', cursor: 'pointer' }}>Clear</button>
-            <button onClick={handlers.handleDateApply} style={{ padding: '4px 12px', cursor: 'pointer' }}>Apply</button>
-          </Box>
-        </Box>
-      );
-    }
-    return null;
-  };
 
   return (
     <Box ref={headerRef as React.RefObject<HTMLDivElement>} sx={{ display: 'flex', alignItems: 'center', width: '100%', minWidth: 0 }}>
@@ -197,7 +177,7 @@ export const ColumnHeaderFilter: React.FC<IColumnHeaderFilterProps> = React.memo
         <Box sx={{ borderBottom: 1, borderColor: 'divider', px: 1.5, py: 1 }}>
           <Typography variant="subtitle2">Filter: {columnName}</Typography>
         </Box>
-        {renderPopoverContent()}
+        {renderFilterContent(filterType, state, options ?? [], isLoadingOptions, selectedUser, materialRenderers)}
       </Popover>
     </Box>
   );

@@ -1,5 +1,11 @@
+// OGrid Fluent -- DataGridTable
+// Imports shared structural styles from @alaarab/ogrid-react, then adds
+// Fluent UI-specific theme variable bridging and component overrides.
+
+@use '../../../react/src/styles/data-grid-table' as *;
+
 /* ─── OGrid Theme Variables ─── */
-/* Bridge Fluent UI tokens → ogrid CSS variables so headless components (SideBar, etc.)
+/* Bridge Fluent UI tokens -> ogrid CSS variables so headless components (SideBar, etc.)
    automatically follow the active FluentProvider theme (light or dark). */
 :global(:root) {
   --ogrid-bg: #ffffff;
@@ -51,78 +57,32 @@
   --ogrid-loading-overlay: rgba(255, 255, 255, 0.7);
 }
 
+// ---- Fluent-specific overrides ----
+
+// Override shared .tableScrollContent to use Fluent bg token
 .tableScrollContent {
-  display: flex;
-  flex-direction: column;
-  width: 100%;
-  min-width: 0;
   min-height: 100%;
-  /* Match wrapper so any gap to the right is not transparent (no purple stripe showing through) */
   background-color: var(--colorNeutralBackground1, var(--ogrid-bg, #ffffff));
 }
 
 .tableWidthAnchor {
-  position: relative;
-  /* When table fits (data-auto-fit): fill 100% so last column gets space. When overflow: size to content for scroll. */
-  width: max-content;
-  /* min-width uses the same CSS var as the table */
-  min-width: var(--data-table-min-width, max-content);
   background-color: var(--colorNeutralBackground1, var(--ogrid-bg, #ffffff));
 }
 
-/* Always use full container width (matches pagination); columns fill the space */
 .tableWrapper {
-  position: relative;
-  flex: 1;
-  min-height: 0;
-  /* Default: no horizontal scroll unless we explicitly allow overflow (wide tables). */
-  overflow-x: hidden;
-  overflow-y: auto;
-  width: 100%;
-  min-width: 0;
-  max-width: 100%;
-  box-sizing: border-box;
-  /* Border is applied to the grid itself so we don't draw an empty bordered area
-     when the grid content is narrower than the container. */
   border: none;
   background-color: var(--colorNeutralBackground1, var(--ogrid-bg, #ffffff));
   -webkit-overflow-scrolling: touch;
-  will-change: scroll-position;
-
-  /* Wide tables: allow horizontal scroll */
-  &[data-overflow-x='true'] {
-    overflow-x: auto;
-  }
-
-  /* Empty state: no horizontal scroll – can't scroll right into white space */
-  &[data-empty='true'] {
-    overflow-x: hidden;
-  }
+  outline: none; // Suppress browser focus ring on the grid wrapper; individual cells handle focus styling
 }
 
-.selectableGrid {
-  // Row click for single selection; cursor handled by tbody tr
-}
-
-// ─────────────────────────────────────────────────
-// Table (Fluent Table primitives — pure visual, no behavior)
-// ─────────────────────────────────────────────────
+// ---- Fluent Table primitives (pure visual, no behavior) ----
 
 .dataTable {
-  width: var(--data-table-width, fit-content);
-  max-width: 100%;
-  min-width: var(--data-table-min-width, max-content);
-  border-collapse: separate;
-  border-spacing: 0;
-  box-sizing: border-box;
-  // Fluent UI's Table component applies `table-layout: fixed` via an atomic CSS class
-  // (e.g. `.f14m3nip`). That single-class selector ties with our module class in
-  // specificity, so Fluent wins when its stylesheet loads later. Use `!important` here
-  // to guarantee `auto` layout — OGrid manages column widths via inline styles and
-  // needs the browser's intrinsic sizing algorithm, not fixed-width equal distribution.
+  // Fluent UI's Table component applies `table-layout: fixed` via an atomic CSS class.
+  // Use `!important` to guarantee `auto` layout.
   table-layout: auto !important;
   background-color: var(--colorNeutralBackground1, var(--ogrid-bg, #ffffff));
-  color: var(--ogrid-fg, rgba(0, 0, 0, 0.87));
 }
 
 .dataTable :global(.fui-TableHeaderCell),
@@ -145,6 +105,13 @@
   background-color: var(--colorSubtleBackgroundSelected, var(--ogrid-header-bg, #f3f2f1));
   z-index: 8;
   border-bottom: 1px solid var(--ogrid-border, rgba(0, 0, 0, 0.12));
+
+  // Fluent's internal __button wrapper has `position: relative` which makes it the
+  // containing block for the resize handle instead of the <th>. Override to static so
+  // the resize handle aligns with the column border (the <th> edge).
+  > :global(.fui-TableHeaderCell__button) {
+    position: static !important;
+  }
 
   &:focus-visible {
     outline: 2px solid var(--colorBrandStroke1, var(--ogrid-accent, #0078d4));
@@ -190,17 +157,7 @@
   background-color: var(--colorSubtleBackgroundHover, var(--ogrid-hover-bg, rgba(0, 0, 0, 0.04)));
 }
 
-// ─────────────────────────────────────────────────
-// Multi-row grouped column headers
-// ─────────────────────────────────────────────────
-
-.groupHeaderCell {
-  text-align: center;
-  font-weight: 600;
-  border-bottom: 2px solid var(--ogrid-border, rgba(0, 0, 0, 0.12));
-  padding: 6px 10px;
-  background: var(--ogrid-header-bg, #f3f2f1);
-}
+// ---- Fluent-specific: column group headers ----
 
 .leafHeaderCellSpan {
   font-weight: 600;
@@ -208,9 +165,7 @@
   background: var(--ogrid-header-bg, #f3f2f1);
 }
 
-// ─────────────────────────────────────────────────
-// Row selection
-// ─────────────────────────────────────────────────
+// ---- Fluent-specific: row selection ----
 
 .selectionHeaderCellWrapper {
   width: 48px;
@@ -226,14 +181,6 @@
   max-width: 48px;
   padding: 4px !important;
   text-align: center;
-}
-
-.selectionHeaderCellInner,
-.selectionCellInner {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 100%;
 }
 
 .rowNumberHeaderCellWrapper {
@@ -260,15 +207,6 @@
   border-right: 1px solid var(--ogrid-border, rgba(0, 0, 0, 0.12));
 }
 
-.rowNumberHeaderCellInner,
-.rowNumberCellInner {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 100%;
-  font-variant-numeric: tabular-nums;
-}
-
 // Selected row highlight
 .dataTable :global(.fui-TableBody) .selectedRow :global(.fui-TableCell) {
   background-color: var(--colorNeutralBackground1Selected, var(--ogrid-selected-row-bg, #e6f0fb));
@@ -289,130 +227,63 @@
   cursor: pointer;
 }
 
-// ─────────────────────────────────────────────────
-// Active cell / keyboard navigation
-// ─────────────────────────────────────────────────
+// ---- Fluent-specific: cell content padding ----
 
 .cellContent {
-  width: 100%;
-  height: 100%;
-  display: flex;
-  align-items: center;
-  min-width: 0;
   padding: 4px 8px;
-  box-sizing: border-box;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  user-select: none;
-  outline: none;
-
-  &:focus-visible {
-    outline: none;
-  }
 }
 
+// Fluent-specific active cell override with !important
 .activeCellContent {
   outline: 2px solid var(--ogrid-selection-color, #217346) !important;
-  outline-offset: -1px;
-  z-index: 2;
-  position: relative;
-  overflow: visible;
   background-color: var(--ogrid-active-cell-bg, rgba(0, 0, 0, 0.02)) !important;
 }
 
-// Cell range selection (spreadsheet-style multi-cell highlight) — clearly visible like Excel
+// Fluent-specific range with background-color
 .cellInRange {
   background-color: var(--ogrid-range-bg, rgba(33, 115, 70, 0.12)) !important;
 }
 
-// Drag-range highlight applied via DOM attributes during drag (bypasses React for performance)
 :global([data-drag-range]) {
   background-color: var(--ogrid-range-bg, rgba(33, 115, 70, 0.12)) !important;
 }
 
-// Anchor cell during drag: white/transparent background (like Excel)
 :global([data-drag-anchor]) {
   background-color: var(--ogrid-bg, #ffffff) !important;
 }
 
-// Cut range — subtle background only; MarchingAntsOverlay renders the animated border
 .cellCut {
   background-color: var(--ogrid-hover-bg, rgba(0, 0, 0, 0.04)) !important;
-  opacity: 0.7;
 }
 
-// cellCopied kept for descriptor compatibility — overlay handles the border
-.cellCopied {
-  // intentionally empty
-}
+// ---- Fluent-specific: sticky header ----
 
-// Fill handle (drag from selection corner to fill range)
-.fillHandle {
-  position: absolute;
-  right: -3px;
-  bottom: -3px;
-  width: 7px;
-  height: 7px;
-  background: var(--ogrid-selection-color, #217346);
-  border: 1px solid var(--ogrid-bg, #ffffff);
-  border-radius: 1px;
-  cursor: crosshair;
-  pointer-events: auto;
-  z-index: 3;
-}
-
-/* Freeze panes: sticky header when freezeRows >= 1 */
 .stickyHeader {
-  /* Apply sticky to individual header cells (via .dataTable :global(.fui-TableHeaderCell) above).
-     The thead itself stays positioned so z-index context works. */
   z-index: 8;
   background-color: var(--colorSubtleBackgroundSelected, var(--ogrid-header-bg, #f3f2f1));
 }
 
-/* Freeze panes: sticky first column(s) when freezeCols >= 1; only first column gets left: 0 (multi-column needs width measurement) */
 .freezeColFirst {
-  position: sticky;
-  left: 0;
-  z-index: 6;
   background-color: var(--colorNeutralBackground1, #ffffff);
-  will-change: transform;
 }
 
 .dataTable :global(.fui-TableHeader) .freezeColFirst {
   background-color: var(--colorSubtleBackgroundSelected, var(--ogrid-header-bg, #f3f2f1));
 }
 
-/* Freeze/pinned header cells need top: 0 + highest z-index so they stick in BOTH
-   directions — left/right (from .freezeCol/.pinnedCol) AND top (from .stickyHeader).
-   Without explicit top, the child's own position: sticky overrides the parent's. */
 .stickyHeader .freezeColFirst,
 .stickyHeader .pinnedColLeft,
 .stickyHeader .pinnedColRight {
   top: 0;
-  z-index: 10; /* Increased from 9 to stack above base header cells (z-index: 8) */
+  z-index: 10;
 }
 
-// ─────────────────────────────────────────────────
-// Pinned columns
-// ─────────────────────────────────────────────────
+// ---- Fluent-specific: pinned columns ----
+// Note: `position: sticky` is applied via inline styles in DataGridTable.tsx because
+// Fluent UI's TableCell injects atomic CSS `position: relative` that overrides CSS classes.
 
 .dataTable .pinnedColLeft {
-  position: sticky;
-  // left offset is set via inline style (supports multiple pinned columns)
-  z-index: 6;
   background-color: var(--colorNeutralBackground1, var(--ogrid-bg, #ffffff));
-  will-change: transform;
-  &::after {
-    content: '';
-    position: absolute;
-    top: 0;
-    right: -4px;
-    bottom: 0;
-    width: 4px;
-    background: linear-gradient(to right, var(--ogrid-pinned-shadow, rgba(0, 0, 0, 0.12)), transparent);
-    pointer-events: none;
-  }
 }
 
 .dataTable :global(.fui-TableHeader) .pinnedColLeft {
@@ -420,53 +291,17 @@
 }
 
 .dataTable .pinnedColRight {
-  position: sticky;
-  // right offset is set via inline style (supports multiple pinned columns)
-  z-index: 6;
   background-color: var(--colorNeutralBackground1, var(--ogrid-bg, #ffffff));
-  will-change: transform;
-  &::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: -4px;
-    bottom: 0;
-    width: 4px;
-    background: linear-gradient(to left, var(--ogrid-pinned-shadow, rgba(0, 0, 0, 0.12)), transparent);
-    pointer-events: none;
-  }
 }
 
 .dataTable :global(.fui-TableHeader) .pinnedColRight {
   background-color: var(--colorSubtleBackgroundSelected, var(--ogrid-header-bg, #f3f2f1));
 }
 
-// ─────────────────────────────────────────────────
-// Column header menu trigger
-// ─────────────────────────────────────────────────
-
-.headerCellContent {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-}
+// ---- Fluent-specific: header menu trigger ----
 
 .headerMenuTrigger {
-  background: transparent;
-  border: none;
-  cursor: pointer;
-  padding: 2px 4px;
-  font-size: 16px;
-  line-height: 1;
   color: var(--colorNeutralForeground3, #666);
-  opacity: 1; // Always visible
-  transition: background-color 0.15s;
-  border-radius: 3px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  min-width: 20px;
-  height: 20px;
 
   &:hover {
     background: var(--colorNeutralBackground1Hover, #f3f2f1);
@@ -478,30 +313,11 @@
 
   &:focus-visible {
     outline: 2px solid var(--colorBrandStroke1, var(--ogrid-accent, #0078d4));
-    outline-offset: 2px;
   }
 }
 
-/* Column resize handle — wide hit area with narrow visual indicator */
+/* Column resize handle -- Fluent token override */
 .resizeHandle {
-  position: absolute;
-  top: 0;
-  right: -3px;
-  bottom: 0;
-  width: 8px;
-  cursor: col-resize;
-  user-select: none;
-  z-index: 1;
-
-  &::after {
-    content: '';
-    position: absolute;
-    top: 0;
-    right: 3px;
-    bottom: 0;
-    width: 2px;
-  }
-
   &:hover::after {
     background-color: var(--colorBrandForeground1, var(--ogrid-accent, #0078d4));
   }
@@ -511,50 +327,20 @@
   }
 }
 
-/* Column reorder drop indicator */
-.dropIndicator {
-  position: absolute;
-  top: 0;
-  bottom: 0;
-  width: 3px;
-  background: var(--ogrid-selection-color, #217346);
-  pointer-events: none;
-  z-index: 100;
-  transition: left 0.05s;
-}
-
-// ─────────────────────────────────────────────────
-// Status bar
-// ─────────────────────────────────────────────────
+// ---- Fluent-specific: status bar ----
 
 .statusBar {
-  display: flex;
-  align-items: center;
-  gap: 16px;
-  width: 100%;
   min-width: 0;
-  box-sizing: border-box;
-  padding: 6px 12px;
-  font-size: 12px;
   color: var(--colorNeutralForeground2, #616161);
   background-color: var(--colorSubtleBackgroundSelected, #f3f2f1);
   border-top: 1px solid var(--colorNeutralStroke2, #e0e0e0);
-  min-height: 28px;
   user-select: none;
 }
 
 .statusBarItem {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-
   &:not(:last-child)::after {
-    content: '';
     display: inline-block;
-    width: 1px;
-    height: 14px;
     background-color: var(--colorNeutralStroke1, #c4c4c4);
-    margin-left: 12px;
   }
 }
 
@@ -565,18 +351,11 @@
 
 .statusBarValue {
   color: var(--colorNeutralForeground1, #242424);
-  font-weight: 600;
 }
 
-// ─────────────────────────────────────────────────
-// Context menu (Copy, Cut, Paste, Select all)
-// ─────────────────────────────────────────────────
+// ---- Fluent-specific: context menu ----
 
 .contextMenu {
-  position: fixed;
-  z-index: 10000;
-  min-width: 160px;
-  padding: 4px 0;
   background: var(--colorNeutralBackground1, #fff);
   border: 1px solid var(--colorNeutralStroke1, #e0e0e0);
   border-radius: var(--borderRadiusMedium, 4px);
@@ -585,66 +364,24 @@
 }
 
 .contextMenuItem {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 24px;
-  width: 100%;
-  padding: 6px 12px;
-  border: none;
-  background: none;
-  font-size: 13px;
-  text-align: left;
-  cursor: pointer;
   color: var(--colorNeutralForeground1, #242424);
 
   &:hover:not(:disabled) {
     background-color: var(--colorSubtleBackgroundHover, #f5f5f5);
   }
-
-  &:disabled {
-    opacity: 0.5;
-    cursor: not-allowed;
-  }
-}
-
-.contextMenuItemLabel {
-  flex: 1;
 }
 
 .contextMenuItemShortcut {
   color: var(--colorNeutralForeground3, rgba(0, 0, 0, 0.4));
-  font-size: 0.85em;
 }
 
 .contextMenuDivider {
-  height: 1px;
-  margin: 4px 0;
   background-color: var(--colorNeutralStroke2, #e0e0e0);
 }
 
-// ─────────────────────────────────────────────────
-// Loading overlay
-// ─────────────────────────────────────────────────
-
-.loadingOverlay {
-  position: absolute;
-  inset: 0;
-  z-index: 2;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: var(--ogrid-loading-overlay, rgba(255, 255, 255, 0.7));
-  backdrop-filter: blur(1px);
-  pointer-events: all;
-}
+// ---- Fluent-specific: loading overlay ----
 
 .loadingOverlayContent {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 8px;
-  padding: 16px 24px;
   background: var(--colorNeutralBackground1, #ffffff);
   border: 1px solid var(--colorNeutralStroke1, #c4c4c4);
   border-radius: var(--borderRadiusMedium, 4px);
@@ -652,32 +389,17 @@
 }
 
 .loadingOverlayText {
-  font-size: 13px;
-  font-weight: 500;
   color: var(--colorNeutralForeground2, #616161);
 }
 
 .loadingDimmed {
-  opacity: 0.6;
-  pointer-events: none;
   transition: opacity 0.15s ease;
 }
 
-// ─────────────────────────────────────────────────
-// Empty state
-// ─────────────────────────────────────────────────
+// ---- Fluent-specific: empty state ----
 
 .emptyStateInGrid {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  text-align: center;
-  padding: 20px 16px;
-  min-height: 88px;
   min-width: 0;
-  width: 100%;
-  box-sizing: border-box;
   border-top: 1px solid var(--colorNeutralStroke2, #e0e0e0);
   background-color: var(--colorNeutralBackground2, #fafafa);
 }
@@ -699,28 +421,16 @@
 }
 
 .emptyStateInGridTitle {
-  font-size: 14px;
-  font-weight: 600;
   color: var(--colorNeutralForeground1, #242424);
-  margin-bottom: 4px;
 }
 
 .emptyStateInGridMessage {
-  font-size: 13px;
   color: var(--colorNeutralForeground2, #616161);
   max-width: 100%;
-  line-height: 1.5;
 }
 
 .emptyStateInGridLink {
-  background: none;
-  border: none;
   color: var(--colorBrandForeground1, #0f6cbd);
-  text-decoration: underline;
-  cursor: pointer;
-  padding: 0;
-  font-size: inherit;
-  font-family: inherit;
 
   &:hover {
     color: var(--colorBrandForeground1Hover, #115ea3);
@@ -743,9 +453,7 @@
   }
 }
 
-// ─────────────────────────────────────────────────
-// Cell Density
-// ─────────────────────────────────────────────────
+// ---- Cell Density ----
 
 .density-compact {
   .dataTable :global(.fui-TableHeaderCell) {
