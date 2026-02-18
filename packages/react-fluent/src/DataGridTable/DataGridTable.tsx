@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { useCallback, useRef, useMemo } from 'react';
+import { useCallback, useMemo } from 'react';
 import { createPortal } from 'react-dom';
 import {
   Table,
@@ -28,14 +28,9 @@ import type {
   IOGridDataGridProps,
 } from '@alaarab/ogrid-react';
 import {
-  useDataGridState,
-  useColumnResize,
-  useColumnReorder,
-  useVirtualScroll,
-  useLatestRef,
+  useDataGridTableOrchestration,
   getHeaderFilterConfig,
   getCellRenderDescriptor,
-  buildHeaderRows,
   MarchingAntsOverlay,
   resolveCellDisplayContent,
   resolveCellStyle,
@@ -45,16 +40,14 @@ import {
   areGridRowPropsEqual,
   CellErrorBoundary,
   DEFAULT_MIN_COLUMN_WIDTH,
+  GRID_ROOT_STYLE,
+  CURSOR_CELL_STYLE,
+  POPOVER_ANCHOR_STYLE,
+  PREVENT_DEFAULT,
+  NOOP,
 } from '@alaarab/ogrid-react';
 import styles from './DataGridTable.module.scss';
 
-
-// Module-scope stable constants (avoid per-render allocations)
-const GRID_ROOT_STYLE: React.CSSProperties = { position: 'relative', flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column' };
-const CURSOR_CELL_STYLE: React.CSSProperties = { cursor: 'cell' };
-const POPOVER_ANCHOR_STYLE: React.CSSProperties = { minHeight: '100%', minWidth: 40 };
-const PREVENT_DEFAULT = (e: React.MouseEvent) => { e.preventDefault(); };
-const NOOP = () => {};
 
 // --- Memoized row component (skips re-render for rows unaffected by selection changes) ---
 
@@ -136,87 +129,30 @@ function GridRowInner(props: GridRowProps) {
 const GridRow = React.memo(GridRowInner, areGridRowPropsEqual);
 
 function DataGridTableInner<T>(props: IOGridDataGridProps<T>): React.ReactElement {
-  const wrapperRef = useRef<HTMLDivElement>(null);
-  const tableContainerRef = useRef<HTMLDivElement>(null);
-  const state = useDataGridState({ props, wrapperRef });
-  const lastMouseShiftRef = useRef(false);
-
-  const { layout, rowSelection: rowSel, editing, interaction, contextMenu: ctxMenu, viewModels, pinning } = state;
-  const { visibleCols, totalColCount, hasCheckboxCol, hasRowNumbersCol, colOffset, containerWidth, minTableWidth, desiredTableWidth, columnSizingOverrides, setColumnSizingOverrides } = layout;
-  const { selectedRowIds, updateSelection, handleRowCheckboxChange, handleSelectAll, allSelected, someSelected } = rowSel;
-  const { editingCell, setEditingCell, pendingEditorValue, setPendingEditorValue, commitCellEdit, cancelPopoverEdit, popoverAnchorEl, setPopoverAnchorEl } = editing;
-  const { setActiveCell, handleCellMouseDown, handleSelectAllCells, selectionRange, hasCellSelection, handleGridKeyDown, handleFillHandleMouseDown, handleCopy, handleCut, handlePaste, cutRange, copyRange, canUndo, canRedo, onUndo, onRedo, isDragging } = interaction;
-  const handlePasteVoid = useCallback(() => { void handlePaste(); }, [handlePaste]);
-  const { menuPosition, handleCellContextMenu, closeContextMenu } = ctxMenu;
-  const { headerFilterInput, cellDescriptorInput, statusBarConfig, showEmptyInGrid, onCellError } = viewModels;
-  const { headerMenu } = pinning;
+  const o = useDataGridTableOrchestration({ props });
 
   const {
-    items,
-    columns,
-    getRowId,
-    emptyState,
-    layoutMode = 'fill',
-    rowSelection = 'none',
-    freezeRows,
-    freezeCols,
-    suppressHorizontalScroll,
-    isLoading = false,
-    loadingMessage = 'Loading\u2026',
-    'aria-label': ariaLabel,
-    'aria-labelledby': ariaLabelledBy,
-    visibleColumns,
-    columnOrder,
-    onColumnOrderChange,
-    columnReorder,
-    virtualScroll,
-    density = 'normal',
-    pinnedColumns,
-    currentPage = 1,
-    pageSize: propPageSize = 25,
-  } = props;
-
-  // Calculate row number offset for pagination
-  const rowNumberOffset = hasRowNumbersCol ? (currentPage - 1) * propPageSize : 0;
-
-  // Memoize header rows (recursive tree traversal -- avoid recomputing every render)
-  const headerRows = useMemo(() => buildHeaderRows(columns, visibleColumns), [columns, visibleColumns]);
-
-  const allowOverflowX = !suppressHorizontalScroll && containerWidth > 0 && (minTableWidth > containerWidth || desiredTableWidth > containerWidth);
-  const fitToContent = layoutMode === 'content';
-
-  const { handleResizeStart, getColumnWidth } = useColumnResize<T>({
-    columnSizingOverrides,
-    setColumnSizingOverrides,
-  });
-
-  const { isDragging: isReorderDragging, dropIndicatorX, handleHeaderMouseDown } = useColumnReorder<T>({
-    columns: visibleCols as IColumnDef<T>[],
-    columnOrder,
-    onColumnOrderChange,
-    enabled: columnReorder === true,
-    pinnedColumns,
-    wrapperRef,
-  });
-
-  const virtualScrollEnabled = virtualScroll?.enabled === true;
-  const virtualRowHeight = virtualScroll?.rowHeight ?? 36;
-  const { visibleRange } = useVirtualScroll({
-    totalRows: items.length,
-    rowHeight: virtualRowHeight,
-    enabled: virtualScrollEnabled,
-    overscan: virtualScroll?.overscan,
-    containerRef: wrapperRef,
-  });
-
-  const editCallbacks = useMemo(() => ({ commitCellEdit, setEditingCell, setPendingEditorValue, cancelPopoverEdit }), [commitCellEdit, setEditingCell, setPendingEditorValue, cancelPopoverEdit]);
-  const interactionHandlers = useMemo(() => ({ handleCellMouseDown, setActiveCell, setEditingCell, handleCellContextMenu }), [handleCellMouseDown, setActiveCell, setEditingCell, handleCellContextMenu]);
-
-  // Refs for volatile state -- lets renderCellContent be stable (same function ref across
-  // selection changes) so that GridRow's React.memo comparator can skip unaffected rows.
-  const cellDescriptorInputRef = useLatestRef(cellDescriptorInput);
-  const pendingEditorValueRef = useLatestRef(pendingEditorValue);
-  const popoverAnchorElRef = useLatestRef(popoverAnchorEl);
+    wrapperRef, tableContainerRef, lastMouseShiftRef,
+    interaction, pinning,
+    handleResizeStart, getColumnWidth, isReorderDragging, dropIndicatorX, handleHeaderMouseDown,
+    virtualScrollEnabled, visibleRange,
+    items, getRowId, emptyState, rowSelection, freezeRows, freezeCols,
+    isLoading, loadingMessage,
+    ariaLabel, ariaLabelledBy, visibleColumns, columnOrder, columnReorder, density,
+    rowNumberOffset, headerRows, allowOverflowX, fitToContent,
+    editCallbacks, interactionHandlers,
+    cellDescriptorInputRef, pendingEditorValueRef, popoverAnchorElRef,
+    handleSingleRowClick, handlePasteVoid,
+    visibleCols, totalColCount, hasCheckboxCol, hasRowNumbersCol, colOffset,
+    containerWidth, minTableWidth, columnSizingOverrides,
+    selectedRowIds, handleRowCheckboxChange, handleSelectAll, allSelected, someSelected,
+    editingCell, setPopoverAnchorEl, cancelPopoverEdit,
+    setActiveCell, selectionRange, hasCellSelection, handleGridKeyDown, handleFillHandleMouseDown,
+    handleCopy, handleCut, cutRange, copyRange, canUndo, canRedo, onUndo, onRedo, isDragging,
+    menuPosition, closeContextMenu,
+    headerFilterInput, statusBarConfig, showEmptyInGrid, onCellError,
+    headerMenu,
+  } = o;
 
   // Pre-compute column styles and classNames (avoids per-cell object creation in the row loop)
   const columnMeta = useMemo(() => {
@@ -234,11 +170,15 @@ function DataGridTableInner<T>(props: IOGridDataGridProps<T>): React.ReactElemen
       const isPinnedRight = pinning.pinnedColumns[col.columnId] === 'right';
 
       const hasResizeOverride = !!columnSizingOverrides[col.columnId];
+      const isPinned = isPinnedLeft || isPinnedRight;
       cellStyles[col.columnId] = {
         minWidth: hasResizeOverride ? columnWidth : (col.minWidth ?? DEFAULT_MIN_COLUMN_WIDTH),
         width: hasExplicitWidth ? columnWidth : undefined,
         maxWidth: hasExplicitWidth ? columnWidth : undefined,
         textAlign: col.type === 'numeric' ? 'right' : col.type === 'boolean' ? 'center' : undefined,
+        // Fluent UI's TableCell injects atomic CSS `position: relative` which overrides the
+        // shared `.pinnedColLeft { position: sticky }` class. Inline style wins over atomic CSS.
+        ...(isPinned ? { position: 'sticky' as const } : undefined),
         ...(isPinnedLeft && pinning.leftOffsets[col.columnId] != null ? { left: pinning.leftOffsets[col.columnId] } : undefined),
         ...(isPinnedRight && pinning.rightOffsets[col.columnId] != null ? { right: pinning.rightOffsets[col.columnId] } : undefined),
       };
@@ -247,6 +187,7 @@ function DataGridTableInner<T>(props: IOGridDataGridProps<T>): React.ReactElemen
         minWidth: hasResizeOverride ? columnWidth : (col.minWidth ?? DEFAULT_MIN_COLUMN_WIDTH),
         width: hasExplicitWidth ? columnWidth : undefined,
         maxWidth: hasExplicitWidth ? columnWidth : undefined,
+        ...(isPinned ? { position: 'sticky' as const } : undefined),
         ...(isPinnedLeft && pinning.leftOffsets[col.columnId] != null ? { left: pinning.leftOffsets[col.columnId] } : undefined),
         ...(isPinnedRight && pinning.rightOffsets[col.columnId] != null ? { right: pinning.rightOffsets[col.columnId] } : undefined),
       };
@@ -262,19 +203,7 @@ function DataGridTableInner<T>(props: IOGridDataGridProps<T>): React.ReactElemen
     }
 
     return { cellStyles, cellClasses, hdrStyles, hdrClasses };
-  }, [visibleCols, getColumnWidth, columnSizingOverrides, freezeCols, pinning.leftOffsets, pinning.rightOffsets]);
-
-  // Stable row-click handler (avoids creating a new arrow function per row)
-  const selectedRowIdsRef = useLatestRef(selectedRowIds);
-
-  const handleSingleRowClick = useCallback((e: React.MouseEvent<HTMLTableRowElement>) => {
-    if (rowSelection !== 'single') return;
-    const rowId = e.currentTarget.dataset.rowId;
-    if (!rowId) return;
-    const ids = selectedRowIdsRef.current;
-    updateSelection(ids.has(rowId) ? new Set() : new Set([rowId]));
-  // eslint-disable-next-line react-hooks/exhaustive-deps -- selectedRowIdsRef is a stable ref
-  }, [rowSelection, updateSelection]);
+  }, [visibleCols, getColumnWidth, columnSizingOverrides, freezeCols, pinning.pinnedColumns, pinning.leftOffsets, pinning.rightOffsets]);
 
   // renderCellContent reads volatile state from refs -- keeps function identity stable so
   // GridRow's React.memo comparator can skip rows whose selection state hasn't changed.
@@ -574,7 +503,7 @@ function DataGridTableInner<T>(props: IOGridDataGridProps<T>): React.ReactElemen
               onCopy={handleCopy}
               onCut={handleCut}
               onPaste={handlePasteVoid}
-              onSelectAll={handleSelectAllCells}
+              onSelectAll={o.interaction.handleSelectAllCells}
               onClose={closeContextMenu}
             />,
             wrapperRef.current?.closest('.fui-FluentProvider') as HTMLElement ?? document.body

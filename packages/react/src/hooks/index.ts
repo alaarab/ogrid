@@ -41,6 +41,7 @@ export type {
   DataGridCellInteractionState,
   DataGridContextMenuState,
   DataGridViewModelState,
+  DataGridPinningState,
 } from './useDataGridState';
 export { useColumnHeaderFilterState } from './useColumnHeaderFilterState';
 export type {
@@ -116,3 +117,8 @@ export type {
   UsePaginationControlsProps,
   UsePaginationControlsResult,
 } from './usePaginationControls';
+export { useDataGridTableOrchestration } from './useDataGridTableOrchestration';
+export type {
+  UseDataGridTableOrchestrationParams,
+  UseDataGridTableOrchestrationResult,
+} from './useDataGridTableOrchestration';
