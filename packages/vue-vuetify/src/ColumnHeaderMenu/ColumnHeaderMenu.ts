@@ -88,11 +88,7 @@ export const ColumnHeaderMenu = defineComponent({
         default: () =>
           h(VList as any, { density: 'compact', 'aria-label': 'Column options' }, () => {
             const children: any[] = [];
-            items.value.forEach((item, index) => {
-              // Add divider before item if needed (but not at the start)
-              if (item.divider && index > 0) {
-                children.push(h(VDivider as any, { key: `divider-${item.id}` }));
-              }
+            items.value.forEach((item) => {
               children.push(
                 h(VListItem as any, {
                   key: item.id,
@@ -100,6 +96,10 @@ export const ColumnHeaderMenu = defineComponent({
                   onClick: () => { getHandler(item.id)(); },
                 }, () => item.label)
               );
+              // Add divider after item to separate sections
+              if (item.divider) {
+                children.push(h(VDivider as any, { key: `divider-${item.id}` }));
+              }
             });
             return children;
           }),

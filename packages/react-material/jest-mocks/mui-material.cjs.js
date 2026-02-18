@@ -107,8 +107,21 @@ function TableCell(props) {
 TableCell.displayName = 'TableCell';
 const TableContainer = passthroughElement('div', 'TableContainer');
 
+function useTheme() {
+  return {
+    palette: {
+      mode: 'light',
+      background: { default: '#ffffff', paper: '#ffffff' },
+      divider: 'rgba(0, 0, 0, 0.12)',
+      action: { hover: 'rgba(0, 0, 0, 0.04)' },
+      text: { primary: 'rgba(0, 0, 0, 0.87)', secondary: 'rgba(0, 0, 0, 0.6)', disabled: 'rgba(0, 0, 0, 0.38)' },
+    },
+  };
+}
+
 // Export as named exports
 module.exports = {
+  useTheme,
   Button,
   IconButton,
   TextField,

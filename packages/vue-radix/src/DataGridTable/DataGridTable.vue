@@ -629,6 +629,11 @@ const setWrapperRef = (el: any) => {
   will-change: scroll-position;
 }
 
+/* Drag-range highlight applied via DOM attributes during drag (bypasses Vue for performance) */
+:deep([data-drag-range]) {
+  background: var(--ogrid-range-bg, rgba(33, 115, 70, 0.12)) !important;
+}
+
 .ogrid-drop-indicator {
   position: absolute;
   top: 0;
@@ -707,14 +712,22 @@ const setWrapperRef = (el: any) => {
   background: none;
   border: none;
   cursor: pointer;
-  padding: 2px 4px;
-  font-size: 14px;
-  color: rgba(0, 0, 0, 0.5);
+  padding: 4px 6px;
+  font-size: 16px;
+  color: var(--ogrid-fg-muted, rgba(0, 0, 0, 0.5));
   line-height: 1;
   flex-shrink: 0;
+  border-radius: 4px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 24px;
+  height: 24px;
+  transition: background-color 0.15s;
 
   &:hover {
-    color: rgba(0, 0, 0, 0.8);
+    background: var(--ogrid-hover-bg, rgba(0, 0, 0, 0.04));
+    color: var(--ogrid-fg, rgba(0, 0, 0, 0.8));
   }
 
   &:focus-visible {

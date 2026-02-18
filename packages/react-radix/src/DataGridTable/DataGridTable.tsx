@@ -226,8 +226,9 @@ function DataGridTableInner<T>(props: IOGridDataGridProps<T>): React.ReactElemen
       const isPinnedLeft = col.pinned === 'left';
       const isPinnedRight = col.pinned === 'right';
 
+      const hasResizeOverride = !!columnSizingOverrides[col.columnId];
       cellStyles[col.columnId] = {
-        minWidth: col.minWidth ?? DEFAULT_MIN_COLUMN_WIDTH,
+        minWidth: hasResizeOverride ? columnWidth : (col.minWidth ?? DEFAULT_MIN_COLUMN_WIDTH),
         width: hasExplicitWidth ? columnWidth : undefined,
         maxWidth: hasExplicitWidth ? columnWidth : undefined,
         textAlign: col.type === 'numeric' ? 'right' : col.type === 'boolean' ? 'center' : undefined,
@@ -236,7 +237,7 @@ function DataGridTableInner<T>(props: IOGridDataGridProps<T>): React.ReactElemen
       };
 
       hdrStyles[col.columnId] = {
-        minWidth: col.minWidth ?? DEFAULT_MIN_COLUMN_WIDTH,
+        minWidth: hasResizeOverride ? columnWidth : (col.minWidth ?? DEFAULT_MIN_COLUMN_WIDTH),
         width: hasExplicitWidth ? columnWidth : undefined,
         maxWidth: hasExplicitWidth ? columnWidth : undefined,
         ...(isPinnedLeft && pinning.leftOffsets[col.columnId] != null ? { left: pinning.leftOffsets[col.columnId] } : undefined),
@@ -453,7 +454,15 @@ function DataGridTableInner<T>(props: IOGridDataGridProps<T>): React.ReactElemen
                             </div>
                             <div
                               className={styles.resizeHandle}
-                              onMouseDown={(e) => handleResizeStart(e, col)}
+                              onMouseDown={(e) => {
+                                // Clear cell selection/focus before resize so green outlines
+                                // and blue :focus-visible rings don't persist during drag.
+                                setActiveCell(null);
+                                interaction.setSelectionRange(null);
+                                // Move DOM focus to wrapper so no cell keeps :focus-visible
+                                wrapperRef.current?.focus({ preventScroll: true });
+                                handleResizeStart(e, col);
+                              }}
                               aria-label={`Resize ${col.name}`}
                             />
                           </th>

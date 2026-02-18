@@ -95,7 +95,7 @@ export const ColumnChooser: React.FC<IColumnChooserProps> = (props) => {
             py: 1,
             borderBottom: 1,
             borderColor: 'divider',
-            bgcolor: 'grey.50',
+            bgcolor: 'action.hover',
           }}
         >
           <Typography variant="subtitle2" fontWeight={600}>
@@ -130,7 +130,7 @@ export const ColumnChooser: React.FC<IColumnChooserProps> = (props) => {
             py: 1,
             borderTop: 1,
             borderColor: 'divider',
-            bgcolor: 'grey.50',
+            bgcolor: 'action.hover',
           }}
         >
           <Button size="small" onClick={handleClearAll} sx={{ textTransform: 'none' }}>
