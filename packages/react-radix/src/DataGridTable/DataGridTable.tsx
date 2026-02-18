@@ -223,8 +223,8 @@ function DataGridTableInner<T>(props: IOGridDataGridProps<T>): React.ReactElemen
       const columnWidth = getColumnWidth(col);
       const hasExplicitWidth = !!(columnSizingOverrides[col.columnId] || col.idealWidth != null || col.defaultWidth != null);
       const isFreezeCol = freezeCols != null && freezeCols >= 1 && i < freezeCols;
-      const isPinnedLeft = col.pinned === 'left';
-      const isPinnedRight = col.pinned === 'right';
+      const isPinnedLeft = pinning.pinnedColumns[col.columnId] === 'left';
+      const isPinnedRight = pinning.pinnedColumns[col.columnId] === 'right';
 
       const hasResizeOverride = !!columnSizingOverrides[col.columnId];
       cellStyles[col.columnId] = {
