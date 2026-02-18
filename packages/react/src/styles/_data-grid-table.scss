@@ -41,6 +41,9 @@
   &[data-empty='true'] {
     overflow-x: hidden;
   }
+  &[data-loading='true'] {
+    min-height: 200px;
+  }
 }
 
 .selectableGrid {

@@ -56,6 +56,7 @@ import { PopoverCellEditorComponent } from './popover-cell-editor.component';
         tabindex="0"
         role="region"
         class="ogrid-scroll-wrapper"
+        [class.ogrid-scroll-wrapper--loading-empty]="isLoading() && items().length === 0"
         [attr.aria-label]="resolvedAriaLabel()"
         [attr.aria-labelledby]="ariaLabelledBy()"
         [attr.data-empty]="showEmptyInGrid() ? 'true' : null"
@@ -416,6 +417,7 @@ import { PopoverCellEditorComponent } from './popover-cell-editor.component';
       background: var(--ogrid-bg, #ffffff);
       color: var(--ogrid-fg, rgba(0, 0, 0, 0.87));
     }
+    .ogrid-scroll-wrapper--loading-empty { min-height: 200px; }
     .ogrid-table-wrapper {
       position: relative;
     }

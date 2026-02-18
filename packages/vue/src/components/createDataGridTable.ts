@@ -261,7 +261,7 @@ export function createDataGridTable(ui: IDataGridTableUIBindings) {
         const wrapperStyle: Record<string, string> = {
           position: 'relative',
           flex: '1',
-          minHeight: '0',
+          minHeight: isLoading && items.length === 0 ? '200px' : '0',
           width: fitToContent ? 'fit-content' : '100%',
           maxWidth: '100%',
           overflowX: suppressHorizontalScroll ? 'hidden' : allowOverflowX ? 'auto' : 'hidden',
