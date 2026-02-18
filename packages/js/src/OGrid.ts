@@ -179,6 +179,9 @@ export class OGrid<T> {
     // Toolbar
     this.toolbarEl = document.createElement('div');
     this.toolbarEl.className = 'ogrid-toolbar';
+    // Left spacer keeps column chooser on the right via justify-content: space-between
+    const toolbarSpacer = document.createElement('div');
+    this.toolbarEl.appendChild(toolbarSpacer);
     this.containerEl.appendChild(this.toolbarEl);
 
     // Body area (holds sidebar + table, side by side)

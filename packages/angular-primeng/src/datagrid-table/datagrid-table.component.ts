@@ -318,6 +318,7 @@ import { PopoverCellEditorComponent } from './popover-cell-editor.component';
           [hasSelection]="hasCellSelection()"
           [canUndoProp]="canUndo()"
           [canRedoProp]="canRedo()"
+          [classNames]="contextMenuClasses"
           (copy)="handleCopy()"
           (cut)="handleCut()"
           (paste)="handlePaste()"
@@ -523,6 +524,7 @@ import { PopoverCellEditorComponent } from './popover-cell-editor.component';
       text-overflow: ellipsis;
       white-space: nowrap;
     }
+    .ogrid-scroll-wrapper [data-drag-range] { background: var(--ogrid-range-bg, rgba(33, 115, 70, 0.12)) !important; }
     .ogrid-fill-handle {
       position: absolute;
       bottom: -3px;
@@ -618,6 +620,51 @@ import { PopoverCellEditorComponent } from './popover-cell-editor.component';
       outline: 2px solid var(--primary-color, #6366f1);
       outline-offset: 2px;
     }
+
+    /* Context menu */
+    .ogrid-context-menu {
+      position: fixed;
+      z-index: 10000;
+      min-width: 160px;
+      padding: 4px 0;
+      background: var(--ogrid-bg, #fff);
+      border: 1px solid var(--ogrid-border, rgba(0, 0, 0, 0.12));
+      border-radius: 6px;
+      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
+    }
+    .ogrid-context-menu-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 24px;
+      width: 100%;
+      padding: 6px 12px;
+      border: none;
+      background: none;
+      font-size: 13px;
+      text-align: left;
+      cursor: pointer;
+      color: var(--ogrid-fg, rgba(0, 0, 0, 0.87));
+    }
+    .ogrid-context-menu-item:hover:not(:disabled) {
+      background: var(--ogrid-hover-bg, rgba(0, 0, 0, 0.04));
+    }
+    .ogrid-context-menu-item:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+    .ogrid-context-menu-item-label {
+      flex: 1;
+    }
+    .ogrid-context-menu-item-shortcut {
+      color: var(--ogrid-fg-muted, rgba(0, 0, 0, 0.5));
+      font-size: 0.85em;
+    }
+    .ogrid-context-menu-divider {
+      height: 1px;
+      margin: 4px 0;
+      background: var(--ogrid-border, rgba(0, 0, 0, 0.12));
+    }
     ::ng-deep .p-checkbox:focus-visible {
       outline: 2px solid var(--primary-color, #6366f1);
       outline-offset: 2px;
@@ -712,6 +759,14 @@ export class DataGridTableComponent<T = unknown> extends BaseDataGridTableCompon
     statusBarItem: 'ogrid-status-bar-item',
     statusBarLabel: 'ogrid-status-bar-label',
     statusBarValue: 'ogrid-status-bar-value',
+  };
+
+  readonly contextMenuClasses = {
+    contextMenu: 'ogrid-context-menu',
+    contextMenuItem: 'ogrid-context-menu-item',
+    contextMenuItemLabel: 'ogrid-context-menu-item-label',
+    contextMenuItemShortcut: 'ogrid-context-menu-item-shortcut',
+    contextMenuDivider: 'ogrid-context-menu-divider',
   };
 
   // PrimeNG uses flat number overrides for column sizing

@@ -1,4 +1,4 @@
-import { defineComponent, h, ref, type PropType, type VNode } from 'vue';
+import { defineComponent, h, ref, watch, type PropType, type VNode } from 'vue';
 import Button from 'primevue/button';
 import Popover from 'primevue/popover';
 import Tooltip from 'primevue/tooltip';
@@ -79,6 +79,13 @@ export const ColumnHeaderFilter = defineComponent({
       filterPopoverRef.value?.toggle(event);
       state.setFilterOpen(!state.isFilterOpen.value);
     };
+
+    // Auto-close PrimeVue Popover when internal state closes (e.g. after Apply)
+    watch(() => state.isFilterOpen.value, (open) => {
+      if (!open) {
+        filterPopoverRef.value?.hide();
+      }
+    });
 
     const renderPopoverContent = (): VNode | null => {
       if (props.filterType === 'multiSelect') {
