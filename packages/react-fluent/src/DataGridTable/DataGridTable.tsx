@@ -144,7 +144,7 @@ function DataGridTableInner<T>(props: IOGridDataGridProps<T>): React.ReactElemen
     cellDescriptorInputRef, pendingEditorValueRef, popoverAnchorElRef,
     handleSingleRowClick, handlePasteVoid,
     visibleCols, totalColCount, hasCheckboxCol, hasRowNumbersCol, colOffset,
-    containerWidth, minTableWidth, columnSizingOverrides,
+    containerWidth, minTableWidth, columnSizingOverrides, measuredColumnWidths,
     selectedRowIds, handleRowCheckboxChange, handleSelectAll, allSelected, someSelected,
     editingCell, setPopoverAnchorEl, cancelPopoverEdit,
     setActiveCell, selectionRange, hasCellSelection, handleGridKeyDown, handleFillHandleMouseDown,
@@ -171,8 +171,14 @@ function DataGridTableInner<T>(props: IOGridDataGridProps<T>): React.ReactElemen
 
       const hasResizeOverride = !!columnSizingOverrides[col.columnId];
       const isPinned = isPinnedLeft || isPinnedRight;
+      // Use previously-measured DOM width as a minWidth floor to prevent columns
+      // from shrinking when new data loads (e.g. server-side pagination).
+      const measuredW = measuredColumnWidths[col.columnId];
+      const baseMinWidth = col.minWidth ?? DEFAULT_MIN_COLUMN_WIDTH;
+      const effectiveMinWidth = hasResizeOverride ? columnWidth : Math.max(baseMinWidth, measuredW ?? 0);
+
       cellStyles[col.columnId] = {
-        minWidth: hasResizeOverride ? columnWidth : (col.minWidth ?? DEFAULT_MIN_COLUMN_WIDTH),
+        minWidth: effectiveMinWidth,
         width: hasExplicitWidth ? columnWidth : undefined,
         maxWidth: hasExplicitWidth ? columnWidth : undefined,
         textAlign: col.type === 'numeric' ? 'right' : col.type === 'boolean' ? 'center' : undefined,
@@ -184,7 +190,7 @@ function DataGridTableInner<T>(props: IOGridDataGridProps<T>): React.ReactElemen
       };
 
       hdrStyles[col.columnId] = {
-        minWidth: hasResizeOverride ? columnWidth : (col.minWidth ?? DEFAULT_MIN_COLUMN_WIDTH),
+        minWidth: effectiveMinWidth,
         width: hasExplicitWidth ? columnWidth : undefined,
         maxWidth: hasExplicitWidth ? columnWidth : undefined,
         ...(isPinned ? { position: 'sticky' as const } : undefined),
@@ -203,7 +209,7 @@ function DataGridTableInner<T>(props: IOGridDataGridProps<T>): React.ReactElemen
     }
 
     return { cellStyles, cellClasses, hdrStyles, hdrClasses };
-  }, [visibleCols, getColumnWidth, columnSizingOverrides, freezeCols, pinning.pinnedColumns, pinning.leftOffsets, pinning.rightOffsets]);
+  }, [visibleCols, getColumnWidth, columnSizingOverrides, measuredColumnWidths, freezeCols, pinning.pinnedColumns, pinning.leftOffsets, pinning.rightOffsets]);
 
   // renderCellContent reads volatile state from refs -- keeps function identity stable so
   // GridRow's React.memo comparator can skip rows whose selection state hasn't changed.

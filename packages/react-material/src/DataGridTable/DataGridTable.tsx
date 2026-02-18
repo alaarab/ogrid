@@ -341,7 +341,7 @@ function DataGridTableInner<T>(props: IOGridDataGridProps<T>): React.ReactElemen
     cellDescriptorInputRef, pendingEditorValueRef, popoverAnchorElRef,
     handleSingleRowClick, handlePasteVoid,
     visibleCols, hasCheckboxCol, hasRowNumbersCol, colOffset,
-    minTableWidth, columnSizingOverrides,
+    minTableWidth, columnSizingOverrides, measuredColumnWidths,
     selectedRowIds, handleRowCheckboxChange, handleSelectAll, allSelected, someSelected,
     editingCell, setPopoverAnchorEl, cancelPopoverEdit,
     setActiveCell, selectionRange, hasCellSelection, handleGridKeyDown, handleFillHandleMouseDown,
@@ -370,9 +370,14 @@ function DataGridTableInner<T>(props: IOGridDataGridProps<T>): React.ReactElemen
           ? { ...baseTdSx, right: pinning.rightOffsets[col.columnId] } as typeof baseTdSx
           : baseTdSx;
       const hasResizeOverride = !!columnSizingOverrides[col.columnId];
-      return { col, tdSx, minWidth: hasResizeOverride ? columnWidth : (col.minWidth ?? DEFAULT_MIN_COLUMN_WIDTH), width: columnWidth, maxWidth: columnWidth };
+      // Use previously-measured DOM width as a minWidth floor to prevent columns
+      // from shrinking when new data loads (e.g. server-side pagination).
+      const measuredW = measuredColumnWidths[col.columnId];
+      const baseMinWidth = col.minWidth ?? DEFAULT_MIN_COLUMN_WIDTH;
+      const effectiveMinWidth = hasResizeOverride ? columnWidth : Math.max(baseMinWidth, measuredW ?? 0);
+      return { col, tdSx, minWidth: effectiveMinWidth, width: columnWidth, maxWidth: columnWidth };
     }),
-  [visibleCols, freezeCols, getColumnWidth, columnSizingOverrides, pinning.pinnedColumns, pinning.leftOffsets, pinning.rightOffsets]);
+  [visibleCols, freezeCols, getColumnWidth, columnSizingOverrides, measuredColumnWidths, pinning.pinnedColumns, pinning.leftOffsets, pinning.rightOffsets]);
 
   // Wrapper sx (depends on dynamic values — memoize to avoid recreation)
   const wrapperSx = useMemo(() => ({
@@ -590,7 +595,7 @@ function DataGridTableInner<T>(props: IOGridDataGridProps<T>): React.ReactElemen
                           sx: {
                             ...headerSx,
                             ...headerCellSx,
-                            minWidth: col.minWidth ?? DEFAULT_MIN_COLUMN_WIDTH,
+                            minWidth: Math.max(col.minWidth ?? DEFAULT_MIN_COLUMN_WIDTH, measuredColumnWidths[col.columnId] ?? 0),
                             width: columnWidth,
                             maxWidth: columnWidth,
                             ...(columnReorder ? { cursor: isReorderDragging ? 'grabbing' : 'grab' } : {}),
