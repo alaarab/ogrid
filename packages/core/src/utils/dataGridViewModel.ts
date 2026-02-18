@@ -196,6 +196,7 @@ export function getCellRenderDescriptor<T>(
     input.editingCell?.rowId === rowId &&
     input.editingCell?.columnId === col.columnId;
   const isActive =
+    !input.isDragging &&
     input.activeCell?.rowIndex === rowIndex &&
     input.activeCell?.columnIndex === globalColIndex;
   const isInRange =

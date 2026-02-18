@@ -183,12 +183,7 @@ export const Editable: Story = {
         deep: true,
       },
     },
-    template: `
-      <div>
-        <h2 style="margin: 0 0 8px 0">Projects (editable name & status)</h2>
-        <OGrid :grid-props="gridProps" />
-      </div>
-    `,
+    template: `<OGrid :grid-props="gridProps" />`,
   }),
 };
 
@@ -238,12 +233,7 @@ export const SpreadsheetExperience: Story = {
         deep: true,
       },
     },
-    template: `
-      <div>
-        <h2 style="margin: 0 0 8px 0">Projects (Spreadsheet)</h2>
-        <OGrid :grid-props="gridProps" />
-      </div>
-    `,
+    template: `<OGrid :grid-props="gridProps" />`,
   }),
 };
 

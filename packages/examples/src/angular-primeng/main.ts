@@ -1,4 +1,5 @@
 import '@angular/compiler';
+import 'primeicons/primeicons.css';
 import { bootstrapApplication } from '@angular/platform-browser';
 import { Component, provideZonelessChangeDetection } from '@angular/core';
 import { provideAnimations } from '@angular/platform-browser/animations';

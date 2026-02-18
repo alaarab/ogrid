@@ -112,6 +112,9 @@ export function ColumnHeaderMenu(props: ColumnHeaderMenuProps) {
 
   if (!isOpen || !position) return null;
 
+  // Portal into the closest FluentProvider so --ogrid-* bridged variables are available
+  const portalTarget = anchorElement?.closest('.fui-FluentProvider') as HTMLElement ?? document.body;
+
   return createPortal(
     <div
       className={styles.content}
@@ -140,6 +143,6 @@ export function ColumnHeaderMenu(props: ColumnHeaderMenuProps) {
         </React.Fragment>
       ))}
     </div>,
-    document.body
+    portalTarget
   );
 }
