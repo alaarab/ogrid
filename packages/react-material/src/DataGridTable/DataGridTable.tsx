@@ -102,8 +102,8 @@ const CELL_CONTENT_BOOLEAN_EDITABLE_SX = { ...CELL_CONTENT_BOOLEAN_SX, cursor: '
 
 // Cell overlay states (only applied to the few active/selected cells)
 // Active cell: theme-aware bg so dark mode doesn't show white (MUI action.hover adapts to theme)
-const CELL_ACTIVE_SX = { outline: '2px solid var(--ogrid-selection, #217346)', outlineOffset: '-1px', zIndex: 2, position: 'relative' as const, overflow: 'visible', bgcolor: 'action.hover' } as const;
-const CELL_IN_RANGE_SX = { bgcolor: 'var(--ogrid-bg-range, rgba(33, 115, 70, 0.12))' } as const;
+const CELL_ACTIVE_SX = { outline: '2px solid var(--ogrid-selection, #217346)', outlineOffset: '-1px', zIndex: 2, position: 'relative' as const, overflow: 'visible', bgcolor: 'action.hover', '&:focus-visible': { outline: '2px solid var(--ogrid-selection, #217346)', outlineOffset: '-1px' } } as const;
+const CELL_IN_RANGE_SX = { bgcolor: 'var(--ogrid-bg-range, rgba(33, 115, 70, 0.12))', '&:focus-visible': { outline: 'none' } } as const;
 const CELL_CUT_RANGE_SX = { bgcolor: 'action.hover', opacity: 0.7 } as const;
 
 // Pre-computed overlay variant arrays (avoid per-cell array allocation + filter)
@@ -392,9 +392,10 @@ function DataGridTableInner<T>(props: IOGridDataGridProps<T>): React.ReactElemen
         : isPinnedRight && pinning.rightOffsets[col.columnId] != null
           ? { ...baseTdSx, right: pinning.rightOffsets[col.columnId] } as typeof baseTdSx
           : baseTdSx;
-      return { col, tdSx, minWidth: col.minWidth ?? DEFAULT_MIN_COLUMN_WIDTH, width: columnWidth, maxWidth: columnWidth };
+      const hasResizeOverride = !!columnSizingOverrides[col.columnId];
+      return { col, tdSx, minWidth: hasResizeOverride ? columnWidth : (col.minWidth ?? DEFAULT_MIN_COLUMN_WIDTH), width: columnWidth, maxWidth: columnWidth };
     }),
-  [visibleCols, freezeCols, getColumnWidth, pinning.leftOffsets, pinning.rightOffsets]);
+  [visibleCols, freezeCols, getColumnWidth, columnSizingOverrides, pinning.leftOffsets, pinning.rightOffsets]);
 
   const editCallbacks = useMemo(() => ({ commitCellEdit, setEditingCell, setPendingEditorValue, cancelPopoverEdit }), [commitCellEdit, setEditingCell, setPendingEditorValue, cancelPopoverEdit]);
   const interactionHandlers = useMemo(() => ({ handleCellMouseDown, setActiveCell, setEditingCell, handleCellContextMenu }), [handleCellMouseDown, setActiveCell, setEditingCell, handleCellContextMenu]);
@@ -681,7 +682,12 @@ function DataGridTableInner<T>(props: IOGridDataGridProps<T>): React.ReactElemen
                             ⋮
                           </Box>
                         </Box>
-                        <Box onMouseDown={(e: React.MouseEvent) => handleResizeStart(e, col)} sx={RESIZE_HANDLE_SX} />
+                        <Box onMouseDown={(e: React.MouseEvent) => {
+                          setActiveCell(null);
+                          interaction.setSelectionRange(null);
+                          wrapperRef.current?.focus({ preventScroll: true });
+                          handleResizeStart(e, col);
+                        }} sx={RESIZE_HANDLE_SX} />
                       </TableCell>
                     );
                   })}

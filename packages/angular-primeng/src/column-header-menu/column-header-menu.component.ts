@@ -34,8 +34,18 @@ import { getColumnHeaderMenuItems, type ColumnHeaderMenuHandlers } from '@alaara
   styles: [`
     .column-header-menu-trigger {
       padding: 0.25rem;
-      min-width: auto;
+      min-width: 24px;
+      height: 24px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
       color: var(--ogrid-fg-secondary, rgba(0, 0, 0, 0.6));
+      border-radius: 4px;
+      transition: background-color 0.15s;
+    }
+    .column-header-menu-trigger:hover {
+      background: var(--ogrid-hover-bg, rgba(0, 0, 0, 0.04));
+      color: var(--ogrid-fg, rgba(0, 0, 0, 0.87));
     }
   `],
 })

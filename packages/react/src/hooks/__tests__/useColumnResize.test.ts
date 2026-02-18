@@ -106,6 +106,7 @@ describe('useColumnResize', () => {
       currentTarget: {
         parentElement: {
           getBoundingClientRect: () => ({ width: 150 }),
+          closest: () => null,
         },
       },
     } as unknown as React.MouseEvent;

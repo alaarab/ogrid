@@ -13,6 +13,11 @@
   min-width: 220px;
   display: flex;
   flex-direction: column;
+  background: var(--colorNeutralBackground1, #fff);
+  border: 1px solid var(--colorNeutralStroke2, #edebe9);
+  border-radius: 6px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
+  padding: 0;
 }
 
 .header {

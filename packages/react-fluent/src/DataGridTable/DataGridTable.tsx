@@ -200,7 +200,7 @@ function DataGridTableInner<T>(props: IOGridDataGridProps<T>): React.ReactElemen
       const w = override ? Math.max(minW, override.widthPx) : base;
 
       acc[c.columnId] = {
-        minWidth: minW,
+        minWidth: override ? w : minW,
         defaultWidth: w,
         idealWidth: w,
       };
@@ -694,31 +694,28 @@ function DataGridTableInner<T>(props: IOGridDataGridProps<T>): React.ReactElemen
               onSelectAll={handleSelectAllCells}
               onClose={closeContextMenu}
             />,
-            document.body
+            wrapperRef.current?.closest('.fui-FluentProvider') as HTMLElement ?? document.body
           )}
 
-        {createPortal(
-          <ColumnHeaderMenu
-            isOpen={pinning.headerMenu.isOpen}
-            anchorElement={pinning.headerMenu.anchorElement}
-            onClose={pinning.headerMenu.close}
-            onPinLeft={pinning.headerMenu.handlePinLeft}
-            onPinRight={pinning.headerMenu.handlePinRight}
-            onUnpin={pinning.headerMenu.handleUnpin}
-            onSortAsc={pinning.headerMenu.handleSortAsc}
-            onSortDesc={pinning.headerMenu.handleSortDesc}
-            onClearSort={pinning.headerMenu.handleClearSort}
-            onAutosizeThis={pinning.headerMenu.handleAutosizeThis}
-            onAutosizeAll={pinning.headerMenu.handleAutosizeAll}
-            canPinLeft={pinning.headerMenu.canPinLeft}
-            canPinRight={pinning.headerMenu.canPinRight}
-            canUnpin={pinning.headerMenu.canUnpin}
-            currentSort={pinning.headerMenu.currentSort}
-            isSortable={pinning.headerMenu.isSortable}
-            isResizable={pinning.headerMenu.isResizable}
-          />,
-          document.body
-        )}
+        <ColumnHeaderMenu
+          isOpen={pinning.headerMenu.isOpen}
+          anchorElement={pinning.headerMenu.anchorElement}
+          onClose={pinning.headerMenu.close}
+          onPinLeft={pinning.headerMenu.handlePinLeft}
+          onPinRight={pinning.headerMenu.handlePinRight}
+          onUnpin={pinning.headerMenu.handleUnpin}
+          onSortAsc={pinning.headerMenu.handleSortAsc}
+          onSortDesc={pinning.headerMenu.handleSortDesc}
+          onClearSort={pinning.headerMenu.handleClearSort}
+          onAutosizeThis={pinning.headerMenu.handleAutosizeThis}
+          onAutosizeAll={pinning.headerMenu.handleAutosizeAll}
+          canPinLeft={pinning.headerMenu.canPinLeft}
+          canPinRight={pinning.headerMenu.canPinRight}
+          canUnpin={pinning.headerMenu.canUnpin}
+          currentSort={pinning.headerMenu.currentSort}
+          isSortable={pinning.headerMenu.isSortable}
+          isResizable={pinning.headerMenu.isResizable}
+        />
       </div>
       {statusBarConfig && (
         <StatusBar

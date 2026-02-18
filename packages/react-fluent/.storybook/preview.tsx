@@ -44,9 +44,25 @@ const preview: Preview = {
   },
   decorators: [
     (Story, context) => {
-      const theme = context.globals?.theme === 'dark' ? webDarkTheme : webLightTheme;
+      const isDark = context.globals?.theme === 'dark';
+      const theme = isDark ? webDarkTheme : webLightTheme;
+
+      // Sync data-theme attribute and body background so dark mode covers the full page
+      React.useEffect(() => {
+        document.documentElement.setAttribute('data-theme', isDark ? 'dark' : 'light');
+        document.body.style.background = isDark ? '#292929' : '#fff';
+        document.body.style.color = isDark ? 'rgba(255,255,255,0.87)' : 'rgba(0,0,0,0.87)';
+      }, [isDark]);
+
       return (
-        <FluentProvider theme={theme}>
+        <FluentProvider
+          theme={theme}
+          style={{
+            minHeight: '100vh',
+            background: 'var(--colorNeutralBackground1)',
+            color: 'var(--colorNeutralForeground1)',
+          }}
+        >
           <Story />
         </FluentProvider>
       );
