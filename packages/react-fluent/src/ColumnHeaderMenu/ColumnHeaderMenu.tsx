@@ -1,4 +1,4 @@
-import React, { useMemo, useEffect, useState } from 'react';
+import React, { useMemo, useEffect, useState, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { getColumnHeaderMenuItems } from '@alaarab/ogrid-core';
 import type { ColumnHeaderMenuInput } from '@alaarab/ogrid-core';
@@ -50,6 +50,7 @@ export function ColumnHeaderMenu(props: ColumnHeaderMenuProps) {
   } = props;
 
   const [position, setPosition] = useState<{ top: number; left: number } | null>(null);
+  const menuRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (!isOpen || !anchorElement) {
@@ -65,6 +66,8 @@ export function ColumnHeaderMenu(props: ColumnHeaderMenuProps) {
 
     const handleClickOutside = (e: MouseEvent) => {
       const target = e.target as Node;
+      // Don't close if clicking inside the menu itself (portal) — let onClick fire first
+      if (menuRef.current && menuRef.current.contains(target)) return;
       if (anchorElement && !anchorElement.contains(target)) {
         onClose();
       }
@@ -117,6 +120,7 @@ export function ColumnHeaderMenu(props: ColumnHeaderMenuProps) {
 
   return createPortal(
     <div
+      ref={menuRef}
       className={styles.content}
       style={{
         position: 'fixed',

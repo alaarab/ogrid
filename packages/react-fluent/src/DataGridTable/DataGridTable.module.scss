@@ -65,12 +65,9 @@
   position: relative;
   /* When table fits (data-auto-fit): fill 100% so last column gets space. When overflow: size to content for scroll. */
   width: max-content;
+  /* min-width uses the same CSS var as the table */
+  min-width: var(--data-table-min-width, max-content);
   background-color: var(--colorNeutralBackground1, var(--ogrid-bg, #ffffff));
-}
-
-/* When table fits in container: fill full width so columns (including Tags) use the space, no dead zone on the right */
-.tableWrapper[data-auto-fit='true'] .tableWidthAnchor {
-  width: 100%;
 }
 
 /* Always use full container width (matches pagination); columns fill the space */
@@ -101,197 +98,108 @@
   &[data-empty='true'] {
     overflow-x: hidden;
   }
+}
 
-  /* Scoped by data-column-count so our overrides apply; variable is set on this wrapper */
-  &[data-column-count] :global {
-    /* Let the grid/table size to its content.
-       This avoids "last column becomes a giant spacer" when the container is wider than the columns,
-       and keeps header actions (sort/filter) from drifting all the way to the far right.
-       The wrapper still stays width:100% so pagination aligns. */
-    .fui-DataGrid {
-      /* Width behavior is controlled by a CSS var from the React wrapper. */
-      width: var(--data-table-width, fit-content) !important;
-      max-width: 100% !important;
-      min-width: var(--data-table-min-width, max-content) !important;
-      box-sizing: border-box !important;
-      overflow: hidden;
-    }
+.selectableGrid {
+  // Row click for single selection; cursor handled by tbody tr
+}
 
-    /* Use auto layout so Fluent sizing/resize works naturally. */
-    .fui-DataGrid .fui-Table {
-      width: var(--data-table-width, fit-content) !important;
-      max-width: 100% !important;
-      min-width: var(--data-table-min-width, max-content) !important;
-      table-layout: auto !important;
-      box-sizing: border-box !important;
-      border: none !important;
-      outline: none !important;
-    }
+// ─────────────────────────────────────────────────
+// Table (Fluent Table primitives — pure visual, no behavior)
+// ─────────────────────────────────────────────────
 
-    /* Rows span full table width */
-    .fui-DataGrid .fui-TableRow,
-    .fui-DataGrid .fui-DataGridRow {
-      width: 100% !important;
-      min-width: 100% !important;
-    }
+.dataTable {
+  width: var(--data-table-width, fit-content);
+  max-width: 100%;
+  min-width: var(--data-table-min-width, max-content);
+  border-collapse: separate;
+  border-spacing: 0;
+  box-sizing: border-box;
+  // Fluent UI's Table component applies `table-layout: fixed` via an atomic CSS class
+  // (e.g. `.f14m3nip`). That single-class selector ties with our module class in
+  // specificity, so Fluent wins when its stylesheet loads later. Use `!important` here
+  // to guarantee `auto` layout — OGrid manages column widths via inline styles and
+  // needs the browser's intrinsic sizing algorithm, not fixed-width equal distribution.
+  table-layout: auto !important;
+  background-color: var(--colorNeutralBackground1, var(--ogrid-bg, #ffffff));
+  color: var(--ogrid-fg, rgba(0, 0, 0, 0.87));
+}
 
-    .fui-DataGridHeader {
-      background-color: var(--colorSubtleBackgroundSelected, #f3f2f1);
-    }
+.dataTable :global(.fui-TableHeaderCell),
+.dataTable :global(.fui-TableCell) {
+  min-width: 80px;
+  box-sizing: border-box;
+  border-right: 1px solid var(--colorNeutralStroke1, #c4c4c4);
+  font-size: 13px;
+  vertical-align: middle;
+}
 
-    /* Let Fluent's column sizing system own widths (resizableColumns + columnSizingOptions).
-       We only enforce a min-width + sane box sizing. */
-    .fui-DataGridHeaderCell,
-    .fui-DataGridCell {
-      /* Do NOT use !important here: Fluent sets inline width/min/max during resize. */
-      min-width: 80px;
-      box-sizing: border-box !important;
-    }
+.dataTable :global(.fui-TableHeaderCell) {
+  padding: 6px 10px;
+  font-weight: 600;
+  font-size: 14px;
+  color: var(--ogrid-fg, rgba(0, 0, 0, 0.87));
+  white-space: nowrap;
+  position: sticky;
+  top: 0;
+  background-color: var(--colorSubtleBackgroundSelected, var(--ogrid-header-bg, #f3f2f1));
+  z-index: 8;
+  border-bottom: 1px solid var(--ogrid-border, rgba(0, 0, 0, 0.12));
 
-    .fui-DataGridHeaderCell {
-      min-width: var(--data-table-cell-min-width, 80px);
-      white-space: nowrap !important;
-      position: sticky; /* Changed from relative - enables vertical sticky for all headers */
-      top: 0; /* Sticky vertically */
-      background-color: var(--colorSubtleBackgroundSelected, #f3f2f1);
-      z-index: 8; /* Stack above body cells */
-      font-size: 14px;
-      border-right: 1px solid var(--colorNeutralStroke1, #c4c4c4);
-    }
-
-    /* No extra right border on last column – wrapper provides right edge (row may have trailing <i> so use last-of-type) */
-    .fui-DataGridHeader .fui-DataGridRow .fui-DataGridHeaderCell:last-of-type,
-    .fui-DataGridBody .fui-DataGridRow .fui-DataGridCell:last-of-type {
-      border-right: none !important;
-    }
-
-    .fui-DataGridCell {
-      min-width: var(--data-table-cell-min-width, 80px);
-      overflow: hidden !important;
-      text-overflow: ellipsis !important;
-      white-space: nowrap !important;
-      font-size: 12px;
-      padding: 0 !important;
-      height: 1px; // CSS table trick: lets children use height: 100%
-      border-right: 1px solid var(--colorNeutralStroke1, #c4c4c4);
-
-      /* Prevent long unbroken content from forcing intrinsic widths / overlap */
-      > * {
-        min-width: 0;
-      }
-
-      .fui-TableCellLayout {
-        font-size: 12px;
-      }
-    }
-
-    /* Resize handle: contained so focus ring doesn't create a purple stripe to the right */
-    .fui-DataGridHeaderCell__aside {
-      display: flex !important;
-      cursor: col-resize !important;
-      position: absolute !important;
-      right: 0 !important;
-      top: 0 !important;
-      bottom: 0 !important;
-      width: 16px !important;
-      z-index: 1 !important;
-      outline: none !important;
-      border-radius: 0 !important;
-    }
-
-    /* Fix: Fluent renders a resize handle on the last header cell.
-       The handle has negative horizontal margins (hit target), which bleeds past the table edge
-       and makes the last header look like it has extra space vs the body cells.
-       Hide the resize affordance on the last column header. */
-    .fui-DataGridHeader .fui-DataGridRow .fui-DataGridHeaderCell:last-of-type {
-      .fui-DataGridHeaderCell__aside,
-      .fui-TableResizeHandle {
-        display: none !important;
-      }
-    }
-
-    /* No extra bottom border: last row (row + cells) – wrapper provides bottom edge so no double line */
-    .fui-DataGridBody .fui-DataGridRow:last-child {
-      border-bottom: none !important;
-    }
-    .fui-DataGridBody .fui-DataGridRow:last-child .fui-DataGridCell {
-      border-bottom: none !important;
-    }
-
-    .fui-Link {
-      color: var(--colorBrandForeground1, #0f6cbd) !important;
-      font-weight: 600 !important;
-      text-decoration: none !important;
-
-      &:hover {
-        text-decoration: underline !important;
-        color: var(--colorBrandForeground1Hover, #115ea3) !important;
-      }
-
-      &:active {
-        color: var(--colorBrandForeground1Pressed, #0c3b5e) !important;
-      }
-    }
-  }
-
-  /* When table fits: fill 100% and distribute column width evenly so last column (e.g. Tags) isn't tiny */
-  &[data-auto-fit='true'][data-column-count] :global {
-    .fui-DataGrid {
-      width: 100% !important;
-    }
-    .fui-DataGrid .fui-Table {
-      width: 100% !important;
-    }
-    /* Let Fluent own column widths via columnSizingOptions + resizableColumns.
-       Do NOT use !important on width — Fluent sets inline width/min/max during resize. */
-    .fui-DataGridHeaderCell,
-    .fui-DataGridCell {
-      min-width: 0 !important;
-      max-width: none !important;
-    }
-  }
-
-  /* Selection column must stay 48px even in auto-fit mode (needs same specificity depth to win) */
-  &[data-auto-fit='true'][data-column-count] .selectionHeaderCellWrapper,
-  &[data-auto-fit='true'][data-column-count] .selectionCellWrapper {
-    width: 48px !important;
-    min-width: 48px !important;
-    max-width: 48px !important;
-  }
-
-  /* Row numbers column must stay 50px even in auto-fit mode */
-  &[data-auto-fit='true'][data-column-count] .rowNumberHeaderCellWrapper,
-  &[data-auto-fit='true'][data-column-count] .rowNumberCellWrapper {
-    width: 50px !important;
-    min-width: 50px !important;
-    max-width: 50px !important;
-  }
-
-  /* Hide resize handle on last column only when table fits (autoFitColumns); when overflow/scroll, last column can resize (Fluent docs) */
-  &[data-column-count][data-auto-fit='true'] :global(.fui-DataGridHeader .fui-DataGridRow .fui-DataGridHeaderCell:last-of-type .fui-DataGridHeaderCell__aside) {
-    display: none !important;
+  &:focus-visible {
+    outline: 2px solid var(--colorBrandStroke1, var(--ogrid-accent, #0078d4));
+    outline-offset: -2px;
+    z-index: 11;
   }
 }
 
-.dataGrid {
-  min-width: 0;
+.dataTable :global(.fui-TableCell) {
+  padding: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 12px;
+  height: 1px; // CSS table trick: lets children use height: 100%
+  border-right: 1px solid var(--colorNeutralStroke1, #c4c4c4);
+  position: relative;
+  border-bottom: 1px solid var(--ogrid-border, rgba(0, 0, 0, 0.12));
+
+  /* Prevent long unbroken content from forcing intrinsic widths / overlap */
+  > * {
+    min-width: 0;
+  }
+
+  &:focus-visible {
+    outline: none;
+  }
+}
+
+/* No extra right border on last column */
+.dataTable :global(.fui-TableHeaderCell:last-of-type),
+.dataTable :global(.fui-TableCell:last-of-type) {
+  border-right: none;
+}
+
+/* No extra bottom border on last row */
+.dataTable :global(.fui-TableBody .fui-TableRow:last-child .fui-TableCell) {
+  border-bottom: none;
+}
+
+/* Row hover */
+.dataTable :global(.fui-TableBody .fui-TableRow:hover .fui-TableCell) {
+  background-color: var(--colorSubtleBackgroundHover, var(--ogrid-hover-bg, rgba(0, 0, 0, 0.04)));
 }
 
 // ─────────────────────────────────────────────────
 // Multi-row grouped column headers
 // ─────────────────────────────────────────────────
 
-.groupHeaderRow {
-  th {
-    background: var(--ogrid-header-bg, #f3f2f1);
-  }
-}
-
 .groupHeaderCell {
   text-align: center;
   font-weight: 600;
   border-bottom: 2px solid var(--ogrid-border, rgba(0, 0, 0, 0.12));
   padding: 6px 10px;
+  background: var(--ogrid-header-bg, #f3f2f1);
 }
 
 .leafHeaderCellSpan {
@@ -305,84 +213,79 @@
 // ─────────────────────────────────────────────────
 
 .selectionHeaderCellWrapper {
-  width: 48px !important;
-  min-width: 48px !important;
-  max-width: 48px !important;
-  padding: 0 !important;
+  width: 48px;
+  min-width: 48px;
+  max-width: 48px;
+  padding: 4px !important;
+  text-align: center;
 }
 
 .selectionCellWrapper {
-  width: 48px !important;
-  min-width: 48px !important;
-  max-width: 48px !important;
-  padding: 0 !important;
+  width: 48px;
+  min-width: 48px;
+  max-width: 48px;
+  padding: 4px !important;
+  text-align: center;
+}
+
+.selectionHeaderCellInner,
+.selectionCellInner {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
 }
 
 .rowNumberHeaderCellWrapper {
-  width: 50px !important;
-  min-width: 50px !important;
-  max-width: 50px !important;
-  padding: 0 !important;
+  width: 50px;
+  min-width: 50px;
+  max-width: 50px;
+  padding: 4px 8px !important;
+  text-align: center;
+  background: var(--ogrid-header-bg, #f5f5f5);
+  font-weight: 600;
+  color: var(--colorNeutralForeground3, #666);
+  border-right: 1px solid var(--ogrid-border, rgba(0, 0, 0, 0.12));
 }
 
 .rowNumberCellWrapper {
-  width: 50px !important;
-  min-width: 50px !important;
-  max-width: 50px !important;
-  padding: 0 !important;
-}
-
-.selectionHeaderCell {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 100%;
-  height: 100%;
-}
-
-.selectionCell {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 100%;
-  height: 100%;
-}
-
-// Row numbers column
-.rowNumberHeaderCell,
-.rowNumberCell {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 100%;
-  height: 100%;
-  font-weight: 600;
-  font-variant-numeric: tabular-nums;
-  color: var(--colorNeutralForeground3, #666);
+  width: 50px;
+  min-width: 50px;
+  max-width: 50px;
+  padding: 4px 8px !important;
+  text-align: center;
   background: var(--colorNeutralBackground3, #f5f5f5);
+  font-weight: 600;
+  color: var(--colorNeutralForeground3, #666);
+  border-right: 1px solid var(--ogrid-border, rgba(0, 0, 0, 0.12));
+}
+
+.rowNumberHeaderCellInner,
+.rowNumberCellInner {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  font-variant-numeric: tabular-nums;
 }
 
 // Selected row highlight
-.selectedRow :global {
-  .fui-DataGridCell {
-    background-color: var(--colorNeutralBackground1Selected, var(--ogrid-selected-row-bg, #e6f0fb)) !important;
-  }
+.dataTable :global(.fui-TableBody) .selectedRow :global(.fui-TableCell) {
+  background-color: var(--colorNeutralBackground1Selected, var(--ogrid-selected-row-bg, #e6f0fb));
 }
 
 // Row hover in selectable grids
-.selectableGrid :global {
-  .fui-DataGridBody .fui-DataGridRow:hover .fui-DataGridCell {
-    background-color: var(--colorSubtleBackgroundHover, #f5f5f5);
-    cursor: pointer;
-  }
+.selectableGrid .dataTable :global(.fui-TableBody .fui-TableRow:hover .fui-TableCell) {
+  background-color: var(--colorSubtleBackgroundHover, #f5f5f5);
+  cursor: pointer;
+}
 
-  .fui-DataGridBody .fui-DataGridRow:hover.selectedRow .fui-DataGridCell {
-    background-color: var(--colorNeutralBackground1Hover, #dae8f8) !important;
-  }
+.selectableGrid .dataTable :global(.fui-TableBody) .selectedRow:hover :global(.fui-TableCell) {
+  background-color: var(--colorNeutralBackground1Hover, #dae8f8);
 }
 
 // Selectable row cursor
-.selectableGrid :global(.fui-DataGridBody .fui-DataGridRow) {
+.selectableGrid .dataTable :global(.fui-TableBody .fui-TableRow) {
   cursor: pointer;
 }
 
@@ -395,6 +298,7 @@
   height: 100%;
   display: flex;
   align-items: center;
+  min-width: 0;
   padding: 4px 8px;
   box-sizing: border-box;
   overflow: hidden;
@@ -402,6 +306,10 @@
   white-space: nowrap;
   user-select: none;
   outline: none;
+
+  &:focus-visible {
+    outline: none;
+  }
 }
 
 .activeCellContent {
@@ -456,10 +364,10 @@
 
 /* Freeze panes: sticky header when freezeRows >= 1 */
 .stickyHeader {
-  /* Removed position: sticky; top: 0; - breaks horizontal sticky on pinned columns.
-     Instead, apply sticky to individual header cells (.fui-DataGridHeaderCell). */
+  /* Apply sticky to individual header cells (via .dataTable :global(.fui-TableHeaderCell) above).
+     The thead itself stays positioned so z-index context works. */
   z-index: 8;
-  background-color: var(--colorSubtleBackgroundSelected, #f3f2f1);
+  background-color: var(--colorSubtleBackgroundSelected, var(--ogrid-header-bg, #f3f2f1));
 }
 
 /* Freeze panes: sticky first column(s) when freezeCols >= 1; only first column gets left: 0 (multi-column needs width measurement) */
@@ -471,40 +379,30 @@
   will-change: transform;
 }
 
-:global(.fui-DataGridHeader) .freezeColFirst {
-  background-color: var(--colorSubtleBackgroundSelected, #f3f2f1);
+.dataTable :global(.fui-TableHeader) .freezeColFirst {
+  background-color: var(--colorSubtleBackgroundSelected, var(--ogrid-header-bg, #f3f2f1));
 }
 
 /* Freeze/pinned header cells need top: 0 + highest z-index so they stick in BOTH
-   directions — left/right (from .freezeCol/.pinnedCell) AND top (from .stickyHeader).
+   directions — left/right (from .freezeCol/.pinnedCol) AND top (from .stickyHeader).
    Without explicit top, the child's own position: sticky overrides the parent's. */
 .stickyHeader .freezeColFirst,
-.stickyHeader .pinnedLeft,
-.stickyHeader .pinnedRight {
+.stickyHeader .pinnedColLeft,
+.stickyHeader .pinnedColRight {
   top: 0;
   z-index: 10; /* Increased from 9 to stack above base header cells (z-index: 8) */
-}
-
-.activeRow :global {
-  // Subtle row highlight for the active row
-  .fui-DataGridCell:not(:has(.activeCellContent)) {
-    background-color: var(--colorSubtleBackgroundSelected, #f3f2f1);
-  }
 }
 
 // ─────────────────────────────────────────────────
 // Pinned columns
 // ─────────────────────────────────────────────────
 
-.pinnedCell {
+.dataTable .pinnedColLeft {
   position: sticky;
-  z-index: 6;
-  background-color: inherit;
-  will-change: transform;
-}
-
-.pinnedLeft {
   // left offset is set via inline style (supports multiple pinned columns)
+  z-index: 6;
+  background-color: var(--colorNeutralBackground1, var(--ogrid-bg, #ffffff));
+  will-change: transform;
   &::after {
     content: '';
     position: absolute;
@@ -517,8 +415,16 @@
   }
 }
 
-.pinnedRight {
+.dataTable :global(.fui-TableHeader) .pinnedColLeft {
+  background-color: var(--colorSubtleBackgroundSelected, var(--ogrid-header-bg, #f3f2f1));
+}
+
+.dataTable .pinnedColRight {
+  position: sticky;
   // right offset is set via inline style (supports multiple pinned columns)
+  z-index: 6;
+  background-color: var(--colorNeutralBackground1, var(--ogrid-bg, #ffffff));
+  will-change: transform;
   &::before {
     content: '';
     position: absolute;
@@ -529,6 +435,92 @@
     background: linear-gradient(to left, var(--ogrid-pinned-shadow, rgba(0, 0, 0, 0.12)), transparent);
     pointer-events: none;
   }
+}
+
+.dataTable :global(.fui-TableHeader) .pinnedColRight {
+  background-color: var(--colorSubtleBackgroundSelected, var(--ogrid-header-bg, #f3f2f1));
+}
+
+// ─────────────────────────────────────────────────
+// Column header menu trigger
+// ─────────────────────────────────────────────────
+
+.headerCellContent {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.headerMenuTrigger {
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  padding: 2px 4px;
+  font-size: 16px;
+  line-height: 1;
+  color: var(--colorNeutralForeground3, #666);
+  opacity: 1; // Always visible
+  transition: background-color 0.15s;
+  border-radius: 3px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 20px;
+  height: 20px;
+
+  &:hover {
+    background: var(--colorNeutralBackground1Hover, #f3f2f1);
+  }
+
+  &:active {
+    background: var(--colorNeutralBackground1Pressed, #e1dfdd);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--colorBrandStroke1, var(--ogrid-accent, #0078d4));
+    outline-offset: 2px;
+  }
+}
+
+/* Column resize handle — wide hit area with narrow visual indicator */
+.resizeHandle {
+  position: absolute;
+  top: 0;
+  right: -3px;
+  bottom: 0;
+  width: 8px;
+  cursor: col-resize;
+  user-select: none;
+  z-index: 1;
+
+  &::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    right: 3px;
+    bottom: 0;
+    width: 2px;
+  }
+
+  &:hover::after {
+    background-color: var(--colorBrandForeground1, var(--ogrid-accent, #0078d4));
+  }
+
+  &:active::after {
+    background-color: var(--colorBrandForeground1Pressed, #005a9e);
+  }
+}
+
+/* Column reorder drop indicator */
+.dropIndicator {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 3px;
+  background: var(--ogrid-selection-color, #217346);
+  pointer-events: none;
+  z-index: 100;
+  transition: left 0.05s;
 }
 
 // ─────────────────────────────────────────────────
@@ -632,7 +624,7 @@
 }
 
 // ─────────────────────────────────────────────────
-// Loading overlay (unchanged)
+// Loading overlay
 // ─────────────────────────────────────────────────
 
 .loadingOverlay {
@@ -672,7 +664,7 @@
 }
 
 // ─────────────────────────────────────────────────
-// Empty state (unchanged)
+// Empty state
 // ─────────────────────────────────────────────────
 
 .emptyStateInGrid {
@@ -735,76 +727,20 @@
   }
 }
 
-/* Column reorder drop indicator */
-.dropIndicator {
-  position: absolute;
-  top: 0;
-  bottom: 0;
-  width: 3px;
-  background: var(--ogrid-selection-color, #217346);
-  pointer-events: none;
-  z-index: 100;
-  transition: left 0.05s;
-}
-
-/* Empty state: hide body, keep header and empty message */
-.tableWrapper[data-empty='true'] :global(.fui-DataGrid) tbody {
-  display: none;
-}
-
-/* Empty state: no extra bottom border (header row is last row, remove its border-bottom) */
-.tableWrapper[data-empty='true'] :global(.fui-DataGridHeader .fui-DataGridRow) {
-  border-bottom: none !important;
-}
-
-// ─────────────────────────────────────────────────
-// Column header menu trigger
-// ─────────────────────────────────────────────────
-
-.headerCellContent {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-}
-
-.headerMenuTrigger {
-  background: transparent;
-  border: none;
-  cursor: pointer;
-  padding: 2px 4px;
-  font-size: 16px;
-  line-height: 1;
-  color: var(--colorNeutralForeground3, #666);
-  opacity: 1; // Always visible
-  transition: background-color 0.15s;
-  border-radius: 3px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  min-width: 20px;
-  height: 20px;
+/* Fluent Link styling within grid */
+.dataTable :global(.fui-Link) {
+  color: var(--colorBrandForeground1, #0f6cbd);
+  font-weight: 600;
+  text-decoration: none;
 
   &:hover {
-    background: var(--colorNeutralBackground1Hover, #f3f2f1);
+    text-decoration: underline;
+    color: var(--colorBrandForeground1Hover, #115ea3);
   }
 
   &:active {
-    background: var(--colorNeutralBackground1Pressed, #e1dfdd);
+    color: var(--colorBrandForeground1Pressed, #0c3b5e);
   }
-}
-
-// ─────────────────────────────────────────────────
-// Pinned column borders
-// ─────────────────────────────────────────────────
-
-.tableWrapper :global(.fui-DataGridHeaderCell.pinnedColLeft),
-.tableWrapper :global(.fui-DataGridCell.pinnedColLeft) {
-  border-left: 2px solid var(--colorBrandForeground1, #0078d4) !important;
-}
-
-.tableWrapper :global(.fui-DataGridHeaderCell.pinnedColRight),
-.tableWrapper :global(.fui-DataGridCell.pinnedColRight) {
-  border-right: 2px solid var(--colorBrandForeground1, #0078d4) !important;
 }
 
 // ─────────────────────────────────────────────────
@@ -812,8 +748,7 @@
 // ─────────────────────────────────────────────────
 
 .density-compact {
-  :global(.fui-DataGridHeaderCell),
-  :global(.fui-DataGridCell) {
+  .dataTable :global(.fui-TableHeaderCell) {
     padding: 4px 8px;
   }
 
@@ -823,12 +758,11 @@
 }
 
 .density-normal {
-  // Default Fluent UI styles
+  // Default styles
 }
 
 .density-comfortable {
-  :global(.fui-DataGridHeaderCell),
-  :global(.fui-DataGridCell) {
+  .dataTable :global(.fui-TableHeaderCell) {
     padding: 12px 16px;
   }
 
@@ -840,16 +774,6 @@
 /* ─── Accessibility: Focus Visible Styles ─────────────────────── */
 
 .tableWrapper :global {
-  .fui-DataGridHeaderCell:focus-visible {
-    outline: 2px solid var(--colorBrandStroke1, #0078d4);
-    outline-offset: -2px;
-    z-index: 11;
-  }
-
-  .fui-DataGridCell:focus-visible {
-    outline: none;
-  }
-
   .fui-Button:focus-visible,
   .fui-MenuButton:focus-visible {
     outline: 2px solid var(--colorBrandStroke1, #0078d4);
@@ -861,8 +785,3 @@
     outline-offset: 2px;
   }
 }
-
-.cellContent:focus-visible {
-  outline: none;
-}
-
