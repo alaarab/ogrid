@@ -77,6 +77,7 @@ export {
   useVirtualScroll,
   useLatestRef,
   usePaginationControls,
+  useDataGridTableOrchestration,
 } from './hooks';
 export type {
   UseFilterOptionsResult,
@@ -111,6 +112,7 @@ export type {
   DataGridCellInteractionState,
   DataGridContextMenuState,
   DataGridViewModelState,
+  DataGridPinningState,
   UseColumnHeaderFilterStateParams,
   UseColumnHeaderFilterStateResult,
   UseTextFilterStateParams,
@@ -140,7 +142,19 @@ export type {
   UseVirtualScrollResult,
   UsePaginationControlsProps,
   UsePaginationControlsResult,
+  UseDataGridTableOrchestrationParams,
+  UseDataGridTableOrchestrationResult,
 } from './hooks';
+
+// Constants
+export {
+  GRID_ROOT_STYLE,
+  CURSOR_CELL_STYLE,
+  POPOVER_ANCHOR_STYLE,
+  PREVENT_DEFAULT,
+  NOOP,
+  STOP_PROPAGATION,
+} from './constants/domHelpers';
 
 // Components
 export { OGridLayout } from './components/OGridLayout';
@@ -237,3 +251,15 @@ export type {
   AggregationResult,
   GridRowComparatorProps,
 } from './utils';
+
+// Shared component props & renderers (for UI packages to consume)
+export { renderFilterContent } from './components/ColumnHeaderFilterRenderers';
+export type {
+  FilterContentRenderers,
+  MultiSelectRendererProps,
+  TextRendererProps,
+  PeopleRendererProps,
+  DateRendererProps,
+} from './components/ColumnHeaderFilterRenderers';
+export type { IColumnChooserProps } from './components/ColumnChooserProps';
+export type { IPaginationControlsProps } from './components/PaginationControlsProps';

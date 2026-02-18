@@ -6,7 +6,9 @@ import {
   useColumnHeaderFilterState,
   getColumnHeaderFilterStateParams,
   DateFilterContent,
+  renderFilterContent,
 } from '@alaarab/ogrid-react';
+import type { FilterContentRenderers } from '@alaarab/ogrid-react';
 import { TextFilterPopover } from './TextFilterPopover';
 import { MultiSelectFilterPopover } from './MultiSelectFilterPopover';
 import { PeopleFilterPopover } from './PeopleFilterPopover';
@@ -31,97 +33,79 @@ export const ColumnHeaderFilter: React.FC<IColumnHeaderFilterProps> = React.memo
   const {
     headerRef,
     popoverRef,
-    peopleInputRef,
     isFilterOpen,
     setFilterOpen,
-    tempSelected,
-    setTempTextValue,
-    searchText,
-    setSearchText,
-    filteredOptions,
-    peopleSuggestions,
-    isPeopleLoading,
-    peopleSearchText,
-    setPeopleSearchText,
     hasActiveFilter,
     handlers,
   } = state;
 
   const filterBtnRef = React.useRef<HTMLButtonElement>(null);
 
-  const renderPopoverContent = (): React.ReactNode => {
-    if (filterType === 'multiSelect') {
-      return (
-        <MultiSelectFilterPopover
-          searchText={searchText}
-          onSearchChange={setSearchText}
-          options={options ?? []}
-          filteredOptions={filteredOptions}
-          selected={tempSelected}
-          onOptionToggle={handlers.handleCheckboxChange}
-          onSelectAll={handlers.handleSelectAll}
-          onClearSelection={handlers.handleClearSelection}
-          onApply={handlers.handleApplyMultiSelect}
-          isLoading={isLoadingOptions}
-          onPopoverClick={handlers.handlePopoverClick}
-          onInputFocus={handlers.handleInputFocus}
-          onInputMouseDown={handlers.handleInputMouseDown}
-          onInputClick={handlers.handleInputClick}
-          onInputKeyDown={handlers.handleInputKeyDown}
+  // Fluent-specific renderers that pass additional event propagation handlers
+  const fluentRenderers: FilterContentRenderers = React.useMemo(() => ({
+    renderMultiSelect: (p) => (
+      <MultiSelectFilterPopover
+        searchText={p.searchText}
+        onSearchChange={p.onSearchChange}
+        options={p.options}
+        filteredOptions={p.filteredOptions}
+        selected={p.selected}
+        onOptionToggle={p.onOptionToggle}
+        onSelectAll={p.onSelectAll}
+        onClearSelection={p.onClearSelection}
+        onApply={p.onApply}
+        isLoading={p.isLoading}
+        onPopoverClick={handlers.handlePopoverClick}
+        onInputFocus={handlers.handleInputFocus}
+        onInputMouseDown={handlers.handleInputMouseDown}
+        onInputClick={handlers.handleInputClick}
+        onInputKeyDown={handlers.handleInputKeyDown}
+      />
+    ),
+    renderText: (p) => (
+      <TextFilterPopover
+        value={p.value}
+        onValueChange={p.onValueChange}
+        onApply={p.onApply}
+        onClear={p.onClear}
+        onPopoverClick={handlers.handlePopoverClick}
+        onInputFocus={handlers.handleInputFocus}
+        onInputMouseDown={handlers.handleInputMouseDown}
+        onInputClick={handlers.handleInputClick}
+        onInputKeyDown={handlers.handleInputKeyDown}
+      />
+    ),
+    renderPeople: (p) => (
+      <PeopleFilterPopover
+        selectedUser={p.selectedUser}
+        searchText={p.searchText}
+        onSearchChange={p.onSearchChange}
+        suggestions={p.suggestions}
+        isLoading={p.isLoading}
+        onUserSelect={p.onUserSelect}
+        onClearUser={p.onClearUser}
+        onPopoverClick={handlers.handlePopoverClick}
+        inputRef={p.inputRef as React.RefObject<HTMLInputElement>}
+      />
+    ),
+    renderDate: (p) => (
+      <div onClick={handlers.handlePopoverClick}>
+        <DateFilterContent
+          tempDateFrom={p.tempDateFrom}
+          setTempDateFrom={p.setTempDateFrom}
+          tempDateTo={p.tempDateTo}
+          setTempDateTo={p.setTempDateTo}
+          onApply={p.onApply}
+          onClear={p.onClear}
+          classNames={{
+            popoverActions: styles.popoverActions,
+            clearButton: styles.clearButton,
+            applyButton: styles.applyButton,
+          }}
         />
-      );
-    }
-    if (filterType === 'text') {
-      return (
-        <TextFilterPopover
-          value={state.tempTextValue}
-          onValueChange={setTempTextValue}
-          onApply={handlers.handleTextApply}
-          onClear={handlers.handleTextClear}
-          onPopoverClick={handlers.handlePopoverClick}
-          onInputFocus={handlers.handleInputFocus}
-          onInputMouseDown={handlers.handleInputMouseDown}
-          onInputClick={handlers.handleInputClick}
-          onInputKeyDown={handlers.handleInputKeyDown}
-        />
-      );
-    }
-    if (filterType === 'people') {
-      return (
-        <PeopleFilterPopover
-          selectedUser={selectedUser}
-          searchText={peopleSearchText}
-          onSearchChange={setPeopleSearchText}
-          suggestions={peopleSuggestions}
-          isLoading={isPeopleLoading}
-          onUserSelect={handlers.handleUserSelect}
-          onClearUser={handlers.handleClearUser}
-          onPopoverClick={handlers.handlePopoverClick}
-          inputRef={peopleInputRef as React.RefObject<HTMLInputElement>}
-        />
-      );
-    }
-    if (filterType === 'date') {
-      return (
-        <div onClick={handlers.handlePopoverClick}>
-          <DateFilterContent
-            tempDateFrom={state.tempDateFrom}
-            setTempDateFrom={state.setTempDateFrom}
-            tempDateTo={state.tempDateTo}
-            setTempDateTo={state.setTempDateTo}
-            onApply={handlers.handleDateApply}
-            onClear={handlers.handleDateClear}
-            classNames={{
-              popoverActions: styles.popoverActions,
-              clearButton: styles.clearButton,
-              applyButton: styles.applyButton,
-            }}
-          />
-        </div>
-      );
-    }
-    return null;
-  };
+      </div>
+    ),
+  }), [handlers]);
 
   return (
     <div className={styles.columnHeader} ref={headerRef as React.RefObject<HTMLDivElement>}>
@@ -174,7 +158,7 @@ export const ColumnHeaderFilter: React.FC<IColumnHeaderFilterProps> = React.memo
                 style={{ padding: 0 }}
               >
                 <div className={styles.popoverHeader}>Filter: {columnName}</div>
-                {renderPopoverContent()}
+                {renderFilterContent(filterType, state, options ?? [], isLoadingOptions, selectedUser, fluentRenderers)}
               </PopoverSurface>
             </Popover>
           </>

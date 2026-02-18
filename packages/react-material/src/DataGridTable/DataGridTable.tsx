@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { useCallback, useRef, useMemo } from 'react';
+import { useCallback, useMemo } from 'react';
 import { createPortal } from 'react-dom';
 import {
   Box,
@@ -27,15 +27,10 @@ import type {
   IOGridDataGridProps,
 } from '@alaarab/ogrid-react';
 import {
-  useDataGridState,
-  useColumnResize,
-  useColumnReorder,
-  useVirtualScroll,
-  useLatestRef,
+  useDataGridTableOrchestration,
   getHeaderFilterConfig,
   getCellRenderDescriptor,
   MarchingAntsOverlay,
-  buildHeaderRows,
   resolveCellDisplayContent,
   resolveCellStyle,
   buildInlineEditorProps,
@@ -46,6 +41,9 @@ import {
   CHECKBOX_COLUMN_WIDTH,
   ROW_NUMBER_COLUMN_WIDTH,
   DEFAULT_MIN_COLUMN_WIDTH,
+  PREVENT_DEFAULT,
+  NOOP,
+  STOP_PROPAGATION,
 } from '@alaarab/ogrid-react';
 
 // ── Type helpers for MUI TableCell HTML attributes ──
@@ -163,19 +161,47 @@ const FILL_HANDLE_SX = {
 
 // Cell <td> positioning variants
 const CELL_TD_BASE_SX = { position: 'relative' as const, p: 0, height: '1px' } as const;
-const CELL_TD_PINNED_LEFT_SX = { ...CELL_TD_BASE_SX, position: 'sticky' as const, left: 0, zIndex: 6, bgcolor: 'background.paper', willChange: 'transform' } as const;
-const CELL_TD_PINNED_RIGHT_SX = { ...CELL_TD_BASE_SX, position: 'sticky' as const, right: 0, zIndex: 6, bgcolor: 'background.paper', willChange: 'transform' } as const;
+const CELL_TD_PINNED_LEFT_SX = {
+  ...CELL_TD_BASE_SX, position: 'sticky' as const, left: 0, zIndex: 6,
+  bgcolor: 'background.paper', willChange: 'transform',
+  '&::after': {
+    content: '""', position: 'absolute', top: '-1px', right: '-4px', bottom: '-1px',
+    width: '4px', background: 'linear-gradient(to right, rgba(0,0,0,0.12), transparent)', pointerEvents: 'none',
+  },
+} as const;
+const CELL_TD_PINNED_RIGHT_SX = {
+  ...CELL_TD_BASE_SX, position: 'sticky' as const, right: 0, zIndex: 6,
+  bgcolor: 'background.paper', willChange: 'transform',
+  '&::before': {
+    content: '""', position: 'absolute', top: '-1px', left: '-4px', bottom: '-1px',
+    width: '4px', background: 'linear-gradient(to left, rgba(0,0,0,0.12), transparent)', pointerEvents: 'none',
+  },
+} as const;
 
 // Header cell positioning variants
 const HEADER_BASE_SX = {
   fontWeight: 600,
-  position: 'sticky' as const, /* Changed from relative - enables vertical sticky for all headers */
+  position: 'sticky' as const, /* Enables vertical sticky for all headers */
   top: 0, /* Sticky vertically */
   zIndex: 8, /* Stack above body cells */
   bgcolor: 'action.hover' /* Required for sticky overlap */
 } as const;
-const HEADER_PINNED_LEFT_SX = { ...HEADER_BASE_SX, position: 'sticky' as const, left: 0, top: 0, zIndex: 10 /* Increased from 9 to stack above base header cells (z-index: 8) */, bgcolor: 'action.hover', willChange: 'transform' } as const;
-const HEADER_PINNED_RIGHT_SX = { ...HEADER_BASE_SX, position: 'sticky' as const, right: 0, top: 0, zIndex: 10 /* Increased from 9 to stack above base header cells (z-index: 8) */, bgcolor: 'action.hover', willChange: 'transform' } as const;
+const HEADER_PINNED_LEFT_SX = {
+  ...HEADER_BASE_SX, position: 'sticky' as const, left: 0, top: 0,
+  zIndex: 10, bgcolor: 'action.hover', willChange: 'transform',
+  '&::after': {
+    content: '""', position: 'absolute', top: '-1px', right: '-4px', bottom: '-1px',
+    width: '4px', background: 'linear-gradient(to right, rgba(0,0,0,0.12), transparent)', pointerEvents: 'none',
+  },
+} as const;
+const HEADER_PINNED_RIGHT_SX = {
+  ...HEADER_BASE_SX, position: 'sticky' as const, right: 0, top: 0,
+  zIndex: 10, bgcolor: 'action.hover', willChange: 'transform',
+  '&::before': {
+    content: '""', position: 'absolute', top: '-1px', left: '-4px', bottom: '-1px',
+    width: '4px', background: 'linear-gradient(to left, rgba(0,0,0,0.12), transparent)', pointerEvents: 'none',
+  },
+} as const;
 
 // Resize handle
 const RESIZE_HANDLE_SX = {
@@ -200,13 +226,6 @@ const TABLE_WRAPPER_LOADING_SX = { position: 'relative', opacity: 0.6 } as const
 // TableBody — remove bottom border from last row so DataGridTable has no outer border
 // (the OGridLayout container provides the border/radius)
 const TABLE_BODY_SX = { '& tr:last-child td': { borderBottom: 'none' } } as const;
-
-// (Empty state and loading overlay styles moved to EmptyState.tsx and LoadingOverlay.tsx)
-
-// Module-scope event handlers
-const STOP_PROPAGATION = (e: React.MouseEvent) => e.stopPropagation();
-const PREVENT_DEFAULT = (e: React.MouseEvent) => { e.preventDefault(); };
-const NOOP = () => {};
 
 // --- Memoized row component (skips re-render for rows unaffected by selection changes) ---
 
@@ -307,80 +326,34 @@ function GridRowInner(props: GridRowProps) {
 const GridRow = React.memo(GridRowInner, areGridRowPropsEqual);
 
 function DataGridTableInner<T>(props: IOGridDataGridProps<T>): React.ReactElement {
-  const wrapperRef = useRef<HTMLDivElement>(null);
-  const tableContainerRef = useRef<HTMLDivElement>(null);
-  const state = useDataGridState({ props, wrapperRef });
-  const lastMouseShiftRef = useRef(false);
-
-  const { layout, rowSelection: rowSel, editing, interaction, contextMenu: ctxMenu, viewModels, pinning } = state;
-  const { visibleCols, hasCheckboxCol, hasRowNumbersCol, colOffset, containerWidth, minTableWidth, desiredTableWidth, columnSizingOverrides, setColumnSizingOverrides } = layout;
-  const { selectedRowIds, updateSelection, handleRowCheckboxChange, handleSelectAll, allSelected, someSelected } = rowSel;
-  const { editingCell, setEditingCell, pendingEditorValue, setPendingEditorValue, commitCellEdit, cancelPopoverEdit, popoverAnchorEl, setPopoverAnchorEl } = editing;
-  const { setActiveCell, handleCellMouseDown, handleSelectAllCells, selectionRange, hasCellSelection, handleGridKeyDown, handleFillHandleMouseDown, handleCopy, handleCut, handlePaste, cutRange, copyRange, canUndo, canRedo, onUndo, onRedo, isDragging } = interaction;
-  const handlePasteVoid = useCallback(() => { void handlePaste(); }, [handlePaste]);
-  const { menuPosition, handleCellContextMenu, closeContextMenu } = ctxMenu;
-  const { headerFilterInput, cellDescriptorInput, statusBarConfig, showEmptyInGrid, onCellError } = viewModels;
+  const o = useDataGridTableOrchestration({ props });
 
   const {
-    items,
-    getRowId,
-    emptyState,
-    layoutMode = 'fill',
-    rowSelection = 'none',
-    freezeRows,
-    freezeCols,
-    suppressHorizontalScroll,
-    isLoading = false,
-    loadingMessage = 'Loading\u2026',
-    'aria-label': ariaLabel,
-    'aria-labelledby': ariaLabelledBy,
-    columnOrder,
-    onColumnOrderChange,
-    columnReorder,
-    virtualScroll,
-    density = 'normal',
-    pinnedColumns,
-    currentPage = 1,
-    pageSize: propPageSize = 25,
-  } = props;
-
-  // Calculate row number offset for pagination
-  const rowNumberOffset = hasRowNumbersCol ? (currentPage - 1) * propPageSize : 0;
-
-  const fitToContent = layoutMode === 'content';
-  const allowOverflowX = !suppressHorizontalScroll && containerWidth > 0 && (minTableWidth > containerWidth || desiredTableWidth > containerWidth);
+    wrapperRef, tableContainerRef, lastMouseShiftRef,
+    interaction, pinning,
+    handleResizeStart, getColumnWidth, isReorderDragging, dropIndicatorX, handleHeaderMouseDown,
+    virtualScrollEnabled, visibleRange,
+    items, getRowId, emptyState, freezeRows, freezeCols,
+    suppressHorizontalScroll, isLoading, loadingMessage,
+    ariaLabel, ariaLabelledBy, columnReorder, density,
+    rowNumberOffset, headerRows, allowOverflowX, fitToContent,
+    editCallbacks, interactionHandlers,
+    cellDescriptorInputRef, pendingEditorValueRef, popoverAnchorElRef,
+    handleSingleRowClick, handlePasteVoid,
+    visibleCols, hasCheckboxCol, hasRowNumbersCol, colOffset,
+    minTableWidth, columnSizingOverrides,
+    selectedRowIds, handleRowCheckboxChange, handleSelectAll, allSelected, someSelected,
+    editingCell, setPopoverAnchorEl, cancelPopoverEdit,
+    setActiveCell, selectionRange, hasCellSelection, handleGridKeyDown, handleFillHandleMouseDown,
+    handleCopy, handleCut, cutRange, copyRange, canUndo, canRedo, onUndo, onRedo, isDragging,
+    menuPosition, closeContextMenu,
+    headerFilterInput, statusBarConfig, showEmptyInGrid, onCellError,
+  } = o;
 
   // Density-aware cell padding
   const densityPadding = useMemo(() => getDensityPadding(density), [density]);
   const _cellSx = useMemo(() => ({ ...CELL_CONTENT_BASE_SX, ...densityPadding }), [densityPadding]);
   const headerCellSx = useMemo(() => ({ px: densityPadding.px, py: densityPadding.py }), [densityPadding]);
-
-  // Memoize header rows (recursive tree traversal)
-  const headerRows = useMemo(() => buildHeaderRows(props.columns, props.visibleColumns), [props.columns, props.visibleColumns]);
-
-  const { handleResizeStart, getColumnWidth } = useColumnResize<T>({
-    columnSizingOverrides,
-    setColumnSizingOverrides,
-  });
-
-  const { isDragging: isReorderDragging, dropIndicatorX, handleHeaderMouseDown } = useColumnReorder<T>({
-    columns: visibleCols as IColumnDef<T>[],
-    columnOrder,
-    onColumnOrderChange,
-    enabled: columnReorder === true,
-    pinnedColumns,
-    wrapperRef,
-  });
-
-  const virtualScrollEnabled = virtualScroll?.enabled === true;
-  const virtualRowHeight = virtualScroll?.rowHeight ?? 36;
-  const { visibleRange } = useVirtualScroll({
-    totalRows: items.length,
-    rowHeight: virtualRowHeight,
-    enabled: virtualScrollEnabled,
-    overscan: virtualScroll?.overscan,
-    containerRef: wrapperRef,
-  });
 
   // Pre-compute per-column layout (tdSx, widths) so GridRow doesn't recalculate per-cell
   const columnLayouts = useMemo<ColumnLayout<T>[]>(() =>
@@ -399,28 +372,7 @@ function DataGridTableInner<T>(props: IOGridDataGridProps<T>): React.ReactElemen
       const hasResizeOverride = !!columnSizingOverrides[col.columnId];
       return { col, tdSx, minWidth: hasResizeOverride ? columnWidth : (col.minWidth ?? DEFAULT_MIN_COLUMN_WIDTH), width: columnWidth, maxWidth: columnWidth };
     }),
-  [visibleCols, freezeCols, getColumnWidth, columnSizingOverrides, pinning.leftOffsets, pinning.rightOffsets]);
-
-  const editCallbacks = useMemo(() => ({ commitCellEdit, setEditingCell, setPendingEditorValue, cancelPopoverEdit }), [commitCellEdit, setEditingCell, setPendingEditorValue, cancelPopoverEdit]);
-  const interactionHandlers = useMemo(() => ({ handleCellMouseDown, setActiveCell, setEditingCell, handleCellContextMenu }), [handleCellMouseDown, setActiveCell, setEditingCell, handleCellContextMenu]);
-
-  // Refs for volatile state — lets renderCellContent be stable (same function ref across
-  // selection changes) so that GridRow's React.memo comparator can skip unaffected rows.
-  const cellDescriptorInputRef = useLatestRef(cellDescriptorInput);
-  const pendingEditorValueRef = useLatestRef(pendingEditorValue);
-  const popoverAnchorElRef = useLatestRef(popoverAnchorEl);
-
-  // Stable row-click handler
-  const selectedRowIdsRef = useLatestRef(selectedRowIds);
-
-  const handleSingleRowClick = useCallback((e: React.MouseEvent<HTMLTableRowElement>) => {
-    if (rowSelection !== 'single') return;
-    const rowId = e.currentTarget.dataset.rowId;
-    if (!rowId) return;
-    const ids = selectedRowIdsRef.current;
-    updateSelection(ids.has(rowId) ? new Set() : new Set([rowId]));
-  // eslint-disable-next-line react-hooks/exhaustive-deps -- selectedRowIdsRef is a stable ref
-  }, [rowSelection, updateSelection]);
+  [visibleCols, freezeCols, getColumnWidth, columnSizingOverrides, pinning.pinnedColumns, pinning.leftOffsets, pinning.rightOffsets]);
 
   // Wrapper sx (depends on dynamic values — memoize to avoid recreation)
   const wrapperSx = useMemo(() => ({
@@ -524,7 +476,7 @@ function DataGridTableInner<T>(props: IOGridDataGridProps<T>): React.ReactElemen
       <Box sx={WRAPPER_SCROLL_SX}>
       <TableContainer sx={{ minWidth: allowOverflowX ? minTableWidth : undefined }}>
         <Box ref={tableContainerRef} sx={isLoading && items.length > 0 ? TABLE_WRAPPER_LOADING_SX : TABLE_WRAPPER_SX}>
-          <Table size="small" sx={{ overflow: 'hidden', minWidth: minTableWidth, borderCollapse: 'separate', borderSpacing: 0 }}
+          <Table size="small" sx={{ minWidth: minTableWidth, borderCollapse: 'separate', borderSpacing: 0 }}
             data-freeze-rows={freezeRows != null && freezeRows >= 1 ? freezeRows : undefined}
             data-freeze-cols={freezeCols != null && freezeCols >= 1 ? freezeCols : undefined}
           >
@@ -798,7 +750,7 @@ function DataGridTableInner<T>(props: IOGridDataGridProps<T>): React.ReactElemen
               onCopy={handleCopy}
               onCut={handleCut}
               onPaste={handlePasteVoid}
-              onSelectAll={handleSelectAllCells}
+              onSelectAll={o.interaction.handleSelectAllCells}
               onClose={closeContextMenu}
             />,
             document.body
