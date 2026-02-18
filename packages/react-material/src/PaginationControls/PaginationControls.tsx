@@ -9,18 +9,10 @@ import {
   ChevronLeft as ChevronLeftIcon,
   ChevronRight as ChevronRightIcon,
 } from '@mui/icons-material';
+import type { IPaginationControlsProps } from '@alaarab/ogrid-react';
 import { usePaginationControls } from '@alaarab/ogrid-react';
 
-export interface IPaginationControlsProps {
-  currentPage: number;
-  pageSize: number;
-  totalCount: number;
-  onPageChange: (page: number) => void;
-  onPageSizeChange: (pageSize: number) => void;
-  pageSizeOptions?: number[];
-  entityLabelPlural?: string;
-  className?: string;
-}
+export type { IPaginationControlsProps };
 
 export const PaginationControls: React.FC<IPaginationControlsProps> = React.memo((props) => {
   const {
