@@ -270,6 +270,7 @@ function DataGridTableInner<T>(props: IOGridDataGridProps<T>): React.ReactElemen
         aria-label={ariaLabel ?? (ariaLabelledBy ? undefined : 'Data grid')}
         aria-labelledby={ariaLabelledBy}
         data-empty={showEmptyInGrid ? 'true' : undefined}
+        data-loading={isLoading && items.length === 0 ? 'true' : undefined}
         data-column-count={totalColCount}
         data-freeze-rows={freezeRows != null && freezeRows >= 1 ? freezeRows : undefined}
         data-freeze-cols={freezeCols != null && freezeCols >= 1 ? freezeCols : undefined}

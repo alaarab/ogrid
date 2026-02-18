@@ -888,6 +888,9 @@ export class OGrid<T> {
 
   private renderLoadingOverlay(): void {
     if (this.state.isLoading) {
+      // Ensure the container has minimum height during loading so overlay is visible
+      const { items } = this.state.getProcessedItems();
+      this.tableContainer.style.minHeight = (!items || items.length === 0) ? '200px' : '';
       if (!this.loadingOverlay) {
         this.loadingOverlay = document.createElement('div');
         this.loadingOverlay.className = 'ogrid-loading-overlay';
@@ -911,6 +914,7 @@ export class OGrid<T> {
         this.tableContainer.appendChild(this.loadingOverlay);
       }
     } else {
+      this.tableContainer.style.minHeight = '';
       if (this.loadingOverlay && this.tableContainer.contains(this.loadingOverlay)) {
         this.loadingOverlay.remove();
       }
