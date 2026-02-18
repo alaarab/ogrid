@@ -50,6 +50,10 @@ export interface DataGridLayoutState<T> {
     React.SetStateAction<Record<string, { widthPx: number }>>
   >;
   onColumnResized?: (columnId: string, width: number) => void;
+  /** DOM-measured column widths from the previous layout pass.
+   *  UI packages use these as a minWidth floor to prevent columns from
+   *  shrinking when new data loads (e.g. during server-side pagination). */
+  measuredColumnWidths: Record<string, number>;
 }
 
 /** Row selection (checkboxes, single-row click). */
@@ -623,10 +627,12 @@ export function useDataGridState<T>(
     flatColumns, visibleCols, visibleColumnCount, totalColCount, colOffset,
     hasCheckboxCol, hasRowNumbersCol, rowIndexByRowId, containerWidth, minTableWidth,
     desiredTableWidth, columnSizingOverrides, setColumnSizingOverrides, onColumnResized,
+    measuredColumnWidths,
   }), [
     flatColumns, visibleCols, visibleColumnCount, totalColCount, colOffset,
     hasCheckboxCol, hasRowNumbersCol, rowIndexByRowId, containerWidth, minTableWidth,
     desiredTableWidth, columnSizingOverrides, setColumnSizingOverrides, onColumnResized,
+    measuredColumnWidths,
   ]);
 
   const rowSelectionState = useMemo<DataGridRowSelectionState>(() => ({
