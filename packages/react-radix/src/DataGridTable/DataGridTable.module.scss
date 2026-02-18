@@ -1,4 +1,8 @@
-// OGrid Radix – DataGridTable (native table, minimal default)
+// OGrid Radix -- DataGridTable (native table, minimal default)
+// Imports shared structural styles from @alaarab/ogrid-react, then adds
+// Radix-specific theme variables and native <table> element styles.
+
+@use '../../../react/src/styles/data-grid-table' as *;
 
 /* ─── OGrid Theme Variables ─── */
 :global(:root) {
@@ -67,59 +71,7 @@
   --ogrid-border-hover: rgba(255, 255, 255, 0.3);
 }
 
-.tableScrollContent {
-  display: flex;
-  flex-direction: column;
-  width: 100%;
-  min-width: 0;
-  background: var(--ogrid-bg, #fff);
-}
-
-.tableWrapper {
-  position: relative;
-  flex: 1;
-  min-height: 0;
-  overflow-x: hidden;
-  overflow-y: auto;
-  width: 100%;
-  min-width: 0;
-  max-width: 100%;
-  box-sizing: border-box;
-  background: var(--ogrid-bg, #fff);
-  will-change: scroll-position;
-
-  &[data-overflow-x='true'] {
-    overflow-x: auto;
-  }
-  &[data-empty='true'] {
-    overflow-x: hidden;
-  }
-}
-
-.selectableGrid {
-  // Row click for single selection; cursor handled by tbody tr
-}
-
-.tableWidthAnchor {
-  position: relative;
-  width: max-content;
-  /* min-width uses the same CSS var as the table: 100% in fill mode, max-content otherwise.
-     Safe now that StatusBar is outside this anchor. */
-  min-width: var(--data-table-min-width, max-content);
-  background: var(--ogrid-bg, #fff);
-}
-
-.dataTable {
-  width: var(--data-table-width, fit-content);
-  max-width: 100%;
-  min-width: var(--data-table-min-width, max-content);
-  border-collapse: separate;
-  border-spacing: 0;
-  box-sizing: border-box;
-  table-layout: auto;
-  background-color: var(--ogrid-bg, #fff);
-  color: var(--ogrid-fg, rgba(0, 0, 0, 0.87));
-}
+// ---- Radix-specific: native <table> element styles ----
 
 .dataTable th,
 .dataTable td {
@@ -149,8 +101,6 @@
 
 /* Freeze panes: sticky header when freezeRows >= 1 */
 .dataTable thead.stickyHeader {
-  /* Removed position: sticky; top: 0; - breaks horizontal sticky on pinned columns.
-     Instead, apply sticky to individual th cells below. */
   z-index: 8;
   background: var(--ogrid-header-bg, #f5f5f5);
 }
@@ -165,38 +115,37 @@
   left: 0;
   z-index: 6;
   background: var(--ogrid-bg, #ffffff);
-  will-change: transform;
 }
 
-/* Freeze/pinned header cells need top: 0 + highest z-index so they stick in BOTH
-   directions — left (from .freezeCol/.pinnedCol) AND top (from .stickyHeader).
-   Without explicit top, the child's own position: sticky overrides the parent's. */
+/* Freeze/pinned header cells need top: 0 + highest z-index */
 .dataTable thead.stickyHeader .freezeColFirst,
 .dataTable thead.stickyHeader .pinnedColLeft,
 .dataTable thead.stickyHeader .pinnedColRight {
   top: 0;
-  z-index: 10; /* Increased from 9 to stack above base th cells (z-index: 8) */
+  z-index: 10;
+}
+
+/* Checkbox header cell in sticky header: highest z-index (sticky both axes) */
+.dataTable thead.stickyHeader .selectionHeaderCell {
+  top: 0;
+  z-index: 12;
 }
 
 .dataTable thead .freezeColFirst {
   background: var(--ogrid-header-bg, #f5f5f5);
 }
 
-/* Pinned columns: sticky positioning based on column pinned property.
-   Selectors use .dataTable qualifier to beat .dataTable thead th / .dataTable tbody td
-   which set position: relative. */
+/* Pinned columns: .dataTable qualifier beats base th/td selectors */
 .dataTable .pinnedColLeft {
   position: sticky;
-  // left offset is set via inline style (supports multiple pinned columns)
   z-index: 6;
   background: var(--ogrid-bg, #ffffff);
-  will-change: transform;
   &::after {
     content: '';
     position: absolute;
-    top: 0;
+    top: -1px;
     right: -4px;
-    bottom: 0;
+    bottom: -1px;
     width: 4px;
     background: linear-gradient(to right, var(--ogrid-pinned-shadow, rgba(0, 0, 0, 0.12)), transparent);
     pointer-events: none;
@@ -209,16 +158,14 @@
 
 .dataTable .pinnedColRight {
   position: sticky;
-  // right offset is set via inline style (supports multiple pinned columns)
   z-index: 6;
   background: var(--ogrid-bg, #ffffff);
-  will-change: transform;
   &::before {
     content: '';
     position: absolute;
-    top: 0;
+    top: -1px;
     left: -4px;
-    bottom: 0;
+    bottom: -1px;
     width: 4px;
     background: linear-gradient(to left, var(--ogrid-pinned-shadow, rgba(0, 0, 0, 0.12)), transparent);
     pointer-events: none;
@@ -234,102 +181,16 @@
   font-size: 14px;
   color: var(--ogrid-fg, rgba(0, 0, 0, 0.87));
   white-space: nowrap;
-  position: sticky;  /* Changed from relative - enables vertical sticky for all headers */
-  top: 0;            /* Sticky vertically */
-  background: var(--ogrid-header-bg, #f5f5f5);  /* Required for sticky overlap */
-  z-index: 8;        /* Stack above body cells */
+  position: sticky;
+  top: 0;
+  background: var(--ogrid-header-bg, #f5f5f5);
+  z-index: 8;
   border-bottom: 1px solid var(--ogrid-border, rgba(0, 0, 0, 0.12));
 
   &:focus-visible {
     outline: 2px solid var(--ogrid-accent, #0078d4);
     outline-offset: -2px;
     z-index: 11;
-  }
-}
-
-.headerCellContent {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-}
-
-.headerMenuTrigger {
-  background: transparent;
-  border: none;
-  cursor: pointer;
-  padding: 2px 4px;
-  font-size: 16px;
-  line-height: 1;
-  color: var(--ogrid-fg-secondary, rgba(0, 0, 0, 0.6));
-  opacity: 1; // Always visible
-  transition: background-color 0.15s;
-  border-radius: 3px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  min-width: 20px;
-  height: 20px;
-
-  &:hover {
-    background: var(--ogrid-hover-bg, rgba(0, 0, 0, 0.04));
-  }
-
-  &:active {
-    background: var(--ogrid-active-bg, rgba(0, 0, 0, 0.08));
-  }
-
-  &:focus-visible {
-    outline: 2px solid var(--ogrid-accent, #0078d4);
-    outline-offset: 2px;
-  }
-}
-
-.groupHeaderCell {
-  text-align: center;
-  font-weight: 600;
-  border-bottom: 2px solid var(--ogrid-border, rgba(0, 0, 0, 0.12));
-  padding: 6px 10px;
-  background: var(--ogrid-header-bg, #f5f5f5);
-}
-
-/* Column reorder drop indicator */
-.dropIndicator {
-  position: absolute;
-  top: 0;
-  bottom: 0;
-  width: 3px;
-  background: var(--ogrid-selection-color, #217346);
-  pointer-events: none;
-  z-index: 100;
-  transition: left 0.05s;
-}
-
-/* Column resize handle — wide hit area with narrow visual indicator */
-.resizeHandle {
-  position: absolute;
-  top: 0;
-  right: -3px;
-  bottom: 0;
-  width: 8px;
-  cursor: col-resize;
-  user-select: none;
-  z-index: 1;
-
-  &::after {
-    content: '';
-    position: absolute;
-    top: 0;
-    right: 3px;
-    bottom: 0;
-    width: 2px;
-  }
-
-  &:hover::after {
-    background-color: var(--ogrid-accent, #0078d4);
-  }
-
-  &:active::after {
-    background-color: var(--ogrid-accent-dark, #005a9e);
   }
 }
 
@@ -345,9 +206,10 @@
   background: var(--ogrid-hover-bg, rgba(0, 0, 0, 0.04));
 }
 
-/* Pinned cells must keep a solid background on hover so scrolled content doesn't show through */
+/* Pinned cells must keep a solid background on hover */
 .dataTable tbody tr:hover td.pinnedColLeft,
-.dataTable tbody tr:hover td.pinnedColRight {
+.dataTable tbody tr:hover td.pinnedColRight,
+.dataTable tbody tr:hover td.selectionCell {
   background: var(--ogrid-bg, #ffffff);
 }
 
@@ -355,7 +217,21 @@
   background: var(--ogrid-selected-row-bg, #e6f0fb);
 }
 
+/* Pinned & checkbox cells on selected rows keep the selected-row background */
+.dataTable tbody tr.selectedRow td.pinnedColLeft,
+.dataTable tbody tr.selectedRow td.pinnedColRight,
+.dataTable tbody tr.selectedRow td.selectionCell {
+  background: var(--ogrid-selected-row-bg, #e6f0fb);
+}
+
 .dataTable tbody tr.selectedRow:hover td {
+  background: var(--ogrid-bg-selected-hover, #dae8f8);
+}
+
+/* Pinned & checkbox cells on selected+hovered rows */
+.dataTable tbody tr.selectedRow:hover td.pinnedColLeft,
+.dataTable tbody tr.selectedRow:hover td.pinnedColRight,
+.dataTable tbody tr.selectedRow:hover td.selectionCell {
   background: var(--ogrid-bg-selected-hover, #dae8f8);
 }
 
@@ -364,7 +240,7 @@
   height: 1px; // CSS table trick: lets children use height: 100%
 }
 
-/* Override position: relative for pinned body cells — sticky must win. */
+/* Override position: relative for pinned body cells -- sticky must win. */
 .dataTable tbody td.pinnedColLeft {
   position: sticky;
 }
@@ -373,72 +249,13 @@
   position: sticky;
 }
 
+// ---- Radix-specific: cell content padding ----
+
 .cellContent {
-  width: 100%;
-  height: 100%;
-  display: flex;
-  align-items: center;
-  min-width: 0;
   padding: 6px 10px;
-  box-sizing: border-box;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  user-select: none;
-  outline: none;
-
-  &:focus-visible {
-    outline: none;
-  }
 }
 
-.activeCellContent {
-  outline: 2px solid var(--ogrid-selection-color, #217346);
-  outline-offset: -1px;
-  z-index: 2;
-  position: relative;
-  overflow: visible;
-  background: var(--ogrid-active-cell-bg, rgba(0, 0, 0, 0.02));
-}
-
-.cellInRange {
-  background: var(--ogrid-range-bg, rgba(33, 115, 70, 0.12)) !important;
-}
-
-// Drag-range highlight applied via DOM attributes during drag (bypasses React for performance)
-:global([data-drag-range]) {
-  background: var(--ogrid-range-bg, rgba(33, 115, 70, 0.12)) !important;
-}
-
-// Anchor cell during drag: white/transparent background (like Excel)
-:global([data-drag-anchor]) {
-  background: var(--ogrid-bg, #fff) !important;
-}
-
-.cellCut {
-  background: var(--ogrid-hover-bg, rgba(0, 0, 0, 0.04)) !important;
-  opacity: 0.7;
-}
-
-// cellCopied kept as a no-op class for descriptor compatibility (overlay handles the border)
-.cellCopied {
-  // intentionally empty — MarchingAntsOverlay renders the animated border
-}
-
-// Fill handle (drag from selection corner to fill range)
-.fillHandle {
-  position: absolute;
-  right: -3px;
-  bottom: -3px;
-  width: 7px;
-  height: 7px;
-  background: var(--ogrid-selection-color, #217346);
-  border: 1px solid var(--ogrid-bg, #fff);
-  border-radius: 1px;
-  cursor: crosshair;
-  pointer-events: auto;
-  z-index: 3;
-}
+// ---- Radix-specific: selection & row number cells ----
 
 .dataTable th.selectionHeaderCell,
 .dataTable td.selectionCell {
@@ -447,14 +264,15 @@
   max-width: 48px;
   padding: 4px !important;
   text-align: center;
+  position: sticky;
+  left: 0;
+  z-index: 7; // above pinned columns (z-index 6)
+  background: var(--ogrid-bg, #ffffff);
 }
 
-.selectionHeaderCellInner,
-.selectionCellInner {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 100%;
+.dataTable th.selectionHeaderCell {
+  background: var(--ogrid-header-bg, #f5f5f5);
+  z-index: 11; // above pinned header cells (z-index 10) and regular headers (z-index 8)
 }
 
 // Row numbers column
@@ -476,19 +294,11 @@
 
 .dataTable th.rowNumberHeaderCell {
   background: var(--ogrid-header-bg, #f5f5f5);
-  z-index: 9; // Higher than regular header to stay on top
+  z-index: 9;
 }
 
-.rowNumberHeaderCellInner,
-.rowNumberCellInner {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 100%;
-  font-variant-numeric: tabular-nums;
-}
+// ---- Radix-specific: Radix Checkbox styling for row-selection checkboxes ----
 
-// Radix Checkbox styling for row-selection checkboxes
 .rowCheckbox {
   width: 18px;
   height: 18px;
@@ -521,181 +331,6 @@
   display: flex;
   align-items: center;
   justify-content: center;
-}
-
-.statusBar {
-  display: flex;
-  align-items: center;
-  gap: 16px;
-  width: 100%;
-  padding: 6px 12px;
-  box-sizing: border-box;
-  font-size: 12px;
-  color: var(--ogrid-fg-muted, rgba(0, 0, 0, 0.5));
-  background: var(--ogrid-header-bg, #f5f5f5);
-  border-top: 1px solid var(--ogrid-border, rgba(0, 0, 0, 0.12));
-  min-height: 28px;
-}
-
-.statusBarItem {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  &:not(:last-child)::after {
-    content: '';
-    width: 1px;
-    height: 14px;
-    background: var(--ogrid-border, rgba(0, 0, 0, 0.12));
-    margin-left: 12px;
-  }
-}
-
-.statusBarLabel {
-  color: var(--ogrid-fg-muted, rgba(0, 0, 0, 0.5));
-}
-
-.statusBarValue {
-  color: var(--ogrid-fg, rgba(0, 0, 0, 0.87));
-  font-weight: 600;
-}
-
-.contextMenu {
-  position: fixed;
-  z-index: 10000;
-  min-width: 160px;
-  padding: 4px 0;
-  background: var(--ogrid-bg, #fff);
-  border: 1px solid var(--ogrid-border, rgba(0, 0, 0, 0.12));
-  border-radius: 6px;
-  box-shadow: var(--ogrid-shadow, 0 4px 16px rgba(0, 0, 0, 0.12));
-}
-
-.contextMenuItem {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 24px;
-  width: 100%;
-  padding: 6px 12px;
-  border: none;
-  background: none;
-  font-size: 13px;
-  text-align: left;
-  cursor: pointer;
-  color: var(--ogrid-fg, rgba(0, 0, 0, 0.87));
-  &:hover:not(:disabled) {
-    background: var(--ogrid-hover-bg, rgba(0, 0, 0, 0.04));
-  }
-  &:disabled {
-    opacity: 0.5;
-    cursor: not-allowed;
-  }
-}
-
-.contextMenuItemLabel {
-  flex: 1;
-}
-
-.contextMenuItemShortcut {
-  color: var(--ogrid-fg-muted, rgba(0, 0, 0, 0.5));
-  font-size: 0.85em;
-}
-
-.contextMenuDivider {
-  height: 1px;
-  margin: 4px 0;
-  background: var(--ogrid-border, rgba(0, 0, 0, 0.12));
-}
-
-.loadingOverlay {
-  position: absolute;
-  inset: 0;
-  z-index: 2;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: var(--ogrid-loading-overlay, rgba(255, 255, 255, 0.7));
-  backdrop-filter: blur(1px);
-  pointer-events: all;
-}
-
-.loadingOverlayContent {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 8px;
-  padding: 16px 24px;
-  background: var(--ogrid-bg, #fff);
-  border: 1px solid var(--ogrid-border, rgba(0, 0, 0, 0.12));
-  border-radius: 6px;
-  box-shadow: var(--ogrid-shadow-sm, 0 2px 4px rgba(0, 0, 0, 0.08));
-}
-
-.loadingOverlayText {
-  font-size: 13px;
-  font-weight: 500;
-  color: var(--ogrid-fg-muted, rgba(0, 0, 0, 0.5));
-}
-
-.loadingDimmed {
-  opacity: 0.6;
-  pointer-events: none;
-}
-
-.emptyStateInGrid {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  text-align: center;
-  padding: 20px 16px;
-  min-height: 88px;
-  width: 100%;
-  box-sizing: border-box;
-  border-top: 1px solid var(--ogrid-border, rgba(0, 0, 0, 0.12));
-  background: var(--ogrid-header-bg, #f5f5f5);
-}
-
-.emptyStateInGridTitle {
-  font-size: 14px;
-  font-weight: 600;
-  color: var(--ogrid-fg, rgba(0, 0, 0, 0.87));
-  margin-bottom: 4px;
-}
-
-.emptyStateInGridMessage {
-  font-size: 13px;
-  color: var(--ogrid-fg-muted, rgba(0, 0, 0, 0.5));
-  line-height: 1.5;
-}
-
-.emptyStateInGridLink {
-  background: none;
-  border: none;
-  color: var(--ogrid-accent, #0078d4);
-  text-decoration: underline;
-  cursor: pointer;
-  padding: 0;
-  font-size: inherit;
-  font-family: inherit;
-  &:hover {
-    color: var(--ogrid-accent-dark, #005a9e);
-  }
-}
-
-.spinner {
-  width: 24px;
-  height: 24px;
-  border: 2px solid var(--ogrid-border, rgba(0, 0, 0, 0.12));
-  border-top-color: var(--ogrid-accent, #0078d4);
-  border-radius: 50%;
-  animation: ogrid-spin 0.8s linear infinite;
-}
-
-@keyframes ogrid-spin {
-  to {
-    transform: rotate(360deg);
-  }
 }
 
 /* ─── Cell Density ───────────────────────────────────────────────── */

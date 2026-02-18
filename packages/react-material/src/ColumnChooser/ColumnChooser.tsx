@@ -8,17 +8,10 @@ import {
   ExpandMore as ExpandMoreIcon,
   ExpandLess as ExpandLessIcon,
 } from '@mui/icons-material';
-import type { IColumnDefinition } from '@alaarab/ogrid-react';
+import type { IColumnChooserProps } from '@alaarab/ogrid-react';
 import { useColumnChooserState } from '@alaarab/ogrid-react';
 
-export type { IColumnDefinition };
-
-export interface IColumnChooserProps {
-  columns: IColumnDefinition[];
-  visibleColumns: Set<string>;
-  onVisibilityChange: (columnKey: string, visible: boolean) => void;
-  className?: string;
-}
+export type { IColumnChooserProps };
 
 export const ColumnChooser: React.FC<IColumnChooserProps> = (props) => {
   const { columns, visibleColumns, onVisibilityChange, className } = props;
