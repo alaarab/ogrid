@@ -35,6 +35,7 @@ import { PopoverCellEditorComponent } from './popover-cell-editor.component';
         class="ogrid-datagrid-wrapper"
         [class.ogrid-datagrid-wrapper--fit]="layoutModeFit()"
         [class.ogrid-datagrid-wrapper--overflow-x]="allowOverflowX()"
+        [class.ogrid-datagrid-wrapper--loading-empty]="isLoading() && items().length === 0"
         tabindex="0"
         role="region"
         [attr.aria-label]="ariaLabel()"
@@ -403,6 +404,7 @@ import { PopoverCellEditorComponent } from './popover-cell-editor.component';
     .ogrid-datagrid-wrapper [data-drag-range] { background: var(--ogrid-range-bg, rgba(33, 115, 70, 0.12)) !important; }
     .ogrid-datagrid-wrapper--fit { width: fit-content; }
     .ogrid-datagrid-wrapper--overflow-x { overflow-x: auto; }
+    .ogrid-datagrid-wrapper--loading-empty { min-height: 200px; }
     .ogrid-datagrid-scroll-wrapper { display: flex; flex-direction: column; min-height: 100%; }
     .ogrid-datagrid-table-wrapper--loading { position: relative; opacity: 0.6; }
     .ogrid-datagrid-table {
