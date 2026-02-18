@@ -151,89 +151,44 @@ function mergeClasses(...args) {
   return args.filter(Boolean).join(' ');
 }
 
-// DataGrid and friends – children-based mock that mirrors real Fluent structure
-function createTableColumn(config) {
-  return config;
+// Table primitives – pure visual wrappers around native HTML table elements.
+// No state management, no items/columns props — just render children.
+
+function Table(props) {
+  const { children, className, style, role, noNativeElements, size, sortable, ...rest } = props || {};
+  return React.createElement('table', { className, style, role, ...rest }, children);
 }
+Table.displayName = 'Table';
 
-const DataGridContext = React.createContext({ columns: [], items: [], getRowId: null });
-
-function DataGrid(props) {
-  const {
-    items = [],
-    columns = [],
-    getRowId,
-    children,
-    className,
-    style,
-    resizableColumns,
-    resizableColumnsOptions,
-    columnSizingOptions,
-    focusMode,
-    onColumnResize,
-    ...rest
-  } = props || {};
-  return React.createElement(
-    DataGridContext.Provider,
-    { value: { columns, items, getRowId } },
-    React.createElement('table', { 'data-mock': 'DataGrid', className, style, ...rest }, children)
-  );
+function TableHeader(props) {
+  const { children, className, ...rest } = props || {};
+  return React.createElement('thead', { className, ...rest }, children);
 }
-DataGrid.displayName = 'DataGrid';
+TableHeader.displayName = 'TableHeader';
 
-function DataGridHeader(props) {
-  const { children, ...rest } = props || {};
-  return React.createElement('thead', { ...rest }, children);
-}
-DataGridHeader.displayName = 'DataGridHeader';
-
-function DataGridRow(props) {
+function TableRow(props) {
   const { children, className, onClick, ...rest } = props || {};
-  const { columns } = React.useContext(DataGridContext);
-  if (typeof children === 'function') {
-    const cells = columns.map((col, idx) => {
-      const el = children({
-        renderHeaderCell: col.renderHeaderCell || (() => null),
-        renderCell: col.renderCell || (() => null),
-        columnId: col.columnId || String(idx),
-      });
-      return React.cloneElement(el, { key: col.columnId || idx });
-    });
-    return React.createElement('tr', { className, onClick }, cells);
-  }
-  return React.createElement('tr', { className, onClick }, children);
+  return React.createElement('tr', { className, onClick, ...rest }, children);
 }
-DataGridRow.displayName = 'DataGridRow';
+TableRow.displayName = 'TableRow';
 
-function DataGridHeaderCell(props) {
-  const { children, className, ...rest } = props || {};
-  return React.createElement('th', { className }, children);
+function TableHeaderCell(props) {
+  const { children, className, style, ...rest } = props || {};
+  return React.createElement('th', { className, style, ...rest }, children);
 }
-DataGridHeaderCell.displayName = 'DataGridHeaderCell';
+TableHeaderCell.displayName = 'TableHeaderCell';
 
-function DataGridBody(props) {
+function TableBody(props) {
   const { children, ...rest } = props || {};
-  const { items, getRowId } = React.useContext(DataGridContext);
-  if (typeof children === 'function') {
-    return React.createElement(
-      'tbody',
-      null,
-      items.map((item, idx) => {
-        const rowId = getRowId ? getRowId(item) : idx;
-        const el = children({ item, rowId });
-        return React.cloneElement(el, { key: rowId });
-      })
-    );
-  }
-  return React.createElement('tbody', null, children);
+  return React.createElement('tbody', rest, children);
 }
-DataGridBody.displayName = 'DataGridBody';
+TableBody.displayName = 'TableBody';
 
-function DataGridCell(props) {
-  const { children, className, ...rest } = props || {};
-  return React.createElement('td', { className }, children);
+function TableCell(props) {
+  const { children, className, style, ...rest } = props || {};
+  return React.createElement('td', { className, style, ...rest }, children);
 }
-DataGridCell.displayName = 'DataGridCell';
+TableCell.displayName = 'TableCell';
 
 // Popover -> renders children only when open
 function Popover(props) {
@@ -269,13 +224,11 @@ module.exports = {
   tokens,
   mergeClasses,
 
-  // DataGrid-related exports used by the table wrapper
-  DataGrid,
-  DataGridHeader,
-  DataGridRow,
-  DataGridHeaderCell,
-  DataGridBody,
-  DataGridCell,
-  createTableColumn,
+  // Table primitives (pure visual, no behavior)
+  Table,
+  TableHeader,
+  TableRow,
+  TableHeaderCell,
+  TableBody,
+  TableCell,
 };
-
