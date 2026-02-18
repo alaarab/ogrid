@@ -163,8 +163,8 @@ const FILL_HANDLE_SX = {
 
 // Cell <td> positioning variants
 const CELL_TD_BASE_SX = { position: 'relative' as const, p: 0, height: '1px' } as const;
-const CELL_TD_PINNED_LEFT_SX = { ...CELL_TD_BASE_SX, position: 'sticky' as const, left: 0, zIndex: 6, bgcolor: 'background.paper', willChange: 'transform', borderLeft: '2px solid', borderLeftColor: 'primary.main' } as const;
-const CELL_TD_PINNED_RIGHT_SX = { ...CELL_TD_BASE_SX, position: 'sticky' as const, right: 0, zIndex: 6, bgcolor: 'background.paper', willChange: 'transform', borderRight: '2px solid', borderRightColor: 'primary.main' } as const;
+const CELL_TD_PINNED_LEFT_SX = { ...CELL_TD_BASE_SX, position: 'sticky' as const, left: 0, zIndex: 6, bgcolor: 'background.paper', willChange: 'transform' } as const;
+const CELL_TD_PINNED_RIGHT_SX = { ...CELL_TD_BASE_SX, position: 'sticky' as const, right: 0, zIndex: 6, bgcolor: 'background.paper', willChange: 'transform' } as const;
 
 // Header cell positioning variants
 const HEADER_BASE_SX = {
@@ -174,8 +174,8 @@ const HEADER_BASE_SX = {
   zIndex: 8, /* Stack above body cells */
   bgcolor: 'action.hover' /* Required for sticky overlap */
 } as const;
-const HEADER_PINNED_LEFT_SX = { ...HEADER_BASE_SX, position: 'sticky' as const, left: 0, top: 0, zIndex: 10 /* Increased from 9 to stack above base header cells (z-index: 8) */, bgcolor: 'action.hover', willChange: 'transform', borderLeft: '2px solid', borderLeftColor: 'primary.main' } as const;
-const HEADER_PINNED_RIGHT_SX = { ...HEADER_BASE_SX, position: 'sticky' as const, right: 0, top: 0, zIndex: 10 /* Increased from 9 to stack above base header cells (z-index: 8) */, bgcolor: 'action.hover', willChange: 'transform', borderRight: '2px solid', borderRightColor: 'primary.main' } as const;
+const HEADER_PINNED_LEFT_SX = { ...HEADER_BASE_SX, position: 'sticky' as const, left: 0, top: 0, zIndex: 10 /* Increased from 9 to stack above base header cells (z-index: 8) */, bgcolor: 'action.hover', willChange: 'transform' } as const;
+const HEADER_PINNED_RIGHT_SX = { ...HEADER_BASE_SX, position: 'sticky' as const, right: 0, top: 0, zIndex: 10 /* Increased from 9 to stack above base header cells (z-index: 8) */, bgcolor: 'action.hover', willChange: 'transform' } as const;
 
 // Resize handle
 const RESIZE_HANDLE_SX = {
@@ -196,6 +196,10 @@ const WRAPPER_SCROLL_SX = { display: 'flex', flexDirection: 'column', minHeight:
 // Table wrapper
 const TABLE_WRAPPER_SX = { position: 'relative', opacity: 1 } as const;
 const TABLE_WRAPPER_LOADING_SX = { position: 'relative', opacity: 0.6 } as const;
+
+// TableBody — remove bottom border from last row so DataGridTable has no outer border
+// (the OGridLayout container provides the border/radius)
+const TABLE_BODY_SX = { '& tr:last-child td': { borderBottom: 'none' } } as const;
 
 // (Empty state and loading overlay styles moved to EmptyState.tsx and LoadingOverlay.tsx)
 
@@ -382,8 +386,8 @@ function DataGridTableInner<T>(props: IOGridDataGridProps<T>): React.ReactElemen
   const columnLayouts = useMemo<ColumnLayout<T>[]>(() =>
     visibleCols.map((col, colIdx) => {
       const isFreezeCol = freezeCols != null && freezeCols >= 1 && colIdx < freezeCols;
-      const isPinnedLeft = col.pinned === 'left';
-      const isPinnedRight = col.pinned === 'right';
+      const isPinnedLeft = pinning.pinnedColumns[col.columnId] === 'left';
+      const isPinnedRight = pinning.pinnedColumns[col.columnId] === 'right';
       const columnWidth = getColumnWidth(col);
       const baseTdSx = isPinnedLeft || (isFreezeCol && colIdx === 0) ? CELL_TD_PINNED_LEFT_SX : isPinnedRight ? CELL_TD_PINNED_RIGHT_SX : CELL_TD_BASE_SX;
       // Override sticky offset for pinned columns (supports multiple pinned columns)
@@ -520,7 +524,7 @@ function DataGridTableInner<T>(props: IOGridDataGridProps<T>): React.ReactElemen
       <Box sx={WRAPPER_SCROLL_SX}>
       <TableContainer sx={{ minWidth: allowOverflowX ? minTableWidth : undefined }}>
         <Box ref={tableContainerRef} sx={isLoading && items.length > 0 ? TABLE_WRAPPER_LOADING_SX : TABLE_WRAPPER_SX}>
-          <Table size="small" sx={{ overflow: 'hidden', minWidth: minTableWidth }}
+          <Table size="small" sx={{ overflow: 'hidden', minWidth: minTableWidth, borderCollapse: 'separate', borderSpacing: 0 }}
             data-freeze-rows={freezeRows != null && freezeRows >= 1 ? freezeRows : undefined}
             data-freeze-cols={freezeCols != null && freezeCols >= 1 ? freezeCols : undefined}
           >
@@ -605,8 +609,8 @@ function DataGridTableInner<T>(props: IOGridDataGridProps<T>): React.ReactElemen
                     const col = cell.columnDef! as IColumnDef<T>;
                     const colIdx = visibleCols.indexOf(col);
                     const isFreezeCol = freezeCols != null && freezeCols >= 1 && colIdx < freezeCols;
-                    const isPinnedLeft = col.pinned === 'left';
-                    const isPinnedRight = col.pinned === 'right';
+                    const isPinnedLeft = pinning.pinnedColumns[col.columnId] === 'left';
+                    const isPinnedRight = pinning.pinnedColumns[col.columnId] === 'right';
                     const columnWidth = getColumnWidth(col);
                     const baseHeaderSx = isPinnedLeft || (isFreezeCol && colIdx === 0) ? HEADER_PINNED_LEFT_SX : isPinnedRight ? HEADER_PINNED_RIGHT_SX : HEADER_BASE_SX;
                     // Override sticky offset for pinned columns (supports multiple pinned columns)
@@ -695,7 +699,7 @@ function DataGridTableInner<T>(props: IOGridDataGridProps<T>): React.ReactElemen
               ))}
             </TableHead>
             {!showEmptyInGrid && (
-              <TableBody>
+              <TableBody sx={TABLE_BODY_SX}>
                 {virtualScrollEnabled && visibleRange.offsetTop > 0 && (
                   <TableRow style={{ height: visibleRange.offsetTop }} aria-hidden />
                 )}

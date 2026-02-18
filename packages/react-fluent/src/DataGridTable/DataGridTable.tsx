@@ -1,16 +1,13 @@
 import * as React from 'react';
-import { useMemo, useRef, useEffect, useCallback } from 'react';
+import { useCallback, useRef, useMemo } from 'react';
 import { createPortal } from 'react-dom';
 import {
-  DataGrid,
-  DataGridHeader,
-  DataGridRow,
-  DataGridHeaderCell,
-  DataGridBody,
-  DataGridCell,
-  TableColumnDefinition,
-  createTableColumn,
-  TableColumnSizingOptions,
+  Table,
+  TableHeader,
+  TableRow,
+  TableHeaderCell,
+  TableBody,
+  TableCell,
   Checkbox,
   Popover,
   PopoverSurface,
@@ -32,6 +29,7 @@ import type {
 } from '@alaarab/ogrid-react';
 import {
   useDataGridState,
+  useColumnResize,
   useColumnReorder,
   useVirtualScroll,
   useLatestRef,
@@ -46,27 +44,14 @@ import {
   getCellInteractionProps,
   areGridRowPropsEqual,
   CellErrorBoundary,
-  CHECKBOX_COLUMN_WIDTH,
-  ROW_NUMBER_COLUMN_WIDTH,
   DEFAULT_MIN_COLUMN_WIDTH,
 } from '@alaarab/ogrid-react';
 import styles from './DataGridTable.module.scss';
 
 
 // Module-scope stable constants (avoid per-render allocations)
-const gridRootStyle: React.CSSProperties = {
-  position: 'relative',
-  flex: 1,
-  minHeight: 0,
-  display: 'flex',
-  flexDirection: 'column',
-};
-
+const GRID_ROOT_STYLE: React.CSSProperties = { position: 'relative', flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column' };
 const CURSOR_CELL_STYLE: React.CSSProperties = { cursor: 'cell' };
-const NUMERIC_STYLE: React.CSSProperties = { justifyContent: 'flex-end', textAlign: 'right' };
-const BOOLEAN_STYLE: React.CSSProperties = { justifyContent: 'center', textAlign: 'center' };
-const EDITABLE_NUMERIC_STYLE: React.CSSProperties = { cursor: 'cell', justifyContent: 'flex-end', textAlign: 'right' };
-const EDITABLE_BOOLEAN_STYLE: React.CSSProperties = { cursor: 'cell', justifyContent: 'center', textAlign: 'center' };
 const POPOVER_ANCHOR_STYLE: React.CSSProperties = { minHeight: '100%', minWidth: 40 };
 const PREVENT_DEFAULT = (e: React.MouseEvent) => { e.preventDefault(); };
 const NOOP = () => {};
@@ -75,13 +60,18 @@ const NOOP = () => {};
 
 interface GridRowProps {
   item: unknown;
-  rowId: string | number;
   rowIndex: number;
+  rowId: string | number;
   isSelected: boolean;
+  visibleCols: IColumnDef<unknown>[];
+  columnMeta: { cellStyles: Record<string, React.CSSProperties>; cellClasses: Record<string, string> };
+  renderCellContent: (item: unknown, col: IColumnDef<unknown>, rowIndex: number, colIdx: number) => React.ReactNode;
+  handleSingleRowClick: (e: React.MouseEvent<HTMLTableRowElement>) => void;
+  handleRowCheckboxChange: (rowId: string | number, checked: boolean, rowIndex: number, shiftKey: boolean) => void;
+  lastMouseShiftRef: React.MutableRefObject<boolean>;
   hasCheckboxCol: boolean;
-  cellClassMap: Record<string, string>;
-  pinnedStyleMap: Record<string, React.CSSProperties>;
-  handleSingleRowClick: (rowId: string | number) => void;
+  hasRowNumbersCol: boolean;
+  rowNumberOffset: number;
   // Comparator-only props (drive re-render decisions, not used in render body)
   selectionRange: { startRow: number; endRow: number; startCol: number; endCol: number } | null;
   activeCell: { rowIndex: number; columnIndex: number } | null;
@@ -92,22 +82,54 @@ interface GridRowProps {
 }
 
 function GridRowInner(props: GridRowProps) {
-  const { item, rowId, rowIndex, isSelected, cellClassMap, pinnedStyleMap, handleSingleRowClick, activeCell } = props;
-
-  const rowClassName = `${isSelected ? styles.selectedRow : ''}${activeCell !== null && rowIndex === activeCell.rowIndex ? (isSelected ? ` ${styles.activeRow}` : styles.activeRow) : ''}` || undefined;
+  const {
+    item, rowIndex, rowId, isSelected, visibleCols, columnMeta,
+    renderCellContent, handleSingleRowClick, handleRowCheckboxChange,
+    lastMouseShiftRef, hasCheckboxCol, hasRowNumbersCol, rowNumberOffset,
+  } = props;
 
   return (
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    <DataGridRow<any>
-      className={rowClassName}
-      onClick={() => handleSingleRowClick(rowId)}
+    <TableRow
+      className={isSelected ? styles.selectedRow : undefined}
+      data-row-id={rowId}
+      onClick={handleSingleRowClick}
     >
-      {({ renderCell, columnId }: { renderCell: (item: unknown) => React.ReactNode; columnId: string | number }) => (
-        <DataGridCell data-column-id={String(columnId)} className={cellClassMap[String(columnId)] || undefined} style={pinnedStyleMap[String(columnId)]}>
-          {renderCell(item)}
-        </DataGridCell>
+      {hasCheckboxCol && (
+        <TableCell className={styles.selectionCellWrapper}>
+          <div
+            className={styles.selectionCellInner}
+            data-row-index={rowIndex}
+            data-col-index={0}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <Checkbox
+              checked={isSelected}
+              onChange={(e, data) => {
+                handleRowCheckboxChange(rowId, !!data.checked, rowIndex, lastMouseShiftRef.current);
+              }}
+              aria-label={`Select row ${rowIndex + 1}`}
+            />
+          </div>
+        </TableCell>
       )}
-    </DataGridRow>
+      {hasRowNumbersCol && (
+        <TableCell className={styles.rowNumberCellWrapper}>
+          <div className={styles.rowNumberCellInner}>
+            {rowNumberOffset + rowIndex + 1}
+          </div>
+        </TableCell>
+      )}
+      {visibleCols.map((col, colIdx) => (
+        <TableCell
+          key={col.columnId}
+          data-column-id={col.columnId}
+          className={columnMeta.cellClasses[col.columnId] || undefined}
+          style={columnMeta.cellStyles[col.columnId]}
+        >
+          {renderCellContent(item, col, rowIndex, colIdx)}
+        </TableCell>
+      ))}
+    </TableRow>
   );
 }
 
@@ -117,15 +139,17 @@ function DataGridTableInner<T>(props: IOGridDataGridProps<T>): React.ReactElemen
   const wrapperRef = useRef<HTMLDivElement>(null);
   const tableContainerRef = useRef<HTMLDivElement>(null);
   const state = useDataGridState({ props, wrapperRef });
+  const lastMouseShiftRef = useRef(false);
 
   const { layout, rowSelection: rowSel, editing, interaction, contextMenu: ctxMenu, viewModels, pinning } = state;
-  const { flatColumns, visibleCols, totalColCount, hasCheckboxCol, hasRowNumbersCol, colOffset, rowIndexByRowId, containerWidth, minTableWidth, desiredTableWidth, columnSizingOverrides, setColumnSizingOverrides } = layout;
+  const { visibleCols, totalColCount, hasCheckboxCol, hasRowNumbersCol, colOffset, containerWidth, minTableWidth, desiredTableWidth, columnSizingOverrides, setColumnSizingOverrides } = layout;
   const { selectedRowIds, updateSelection, handleRowCheckboxChange, handleSelectAll, allSelected, someSelected } = rowSel;
   const { editingCell, setEditingCell, pendingEditorValue, setPendingEditorValue, commitCellEdit, cancelPopoverEdit, popoverAnchorEl, setPopoverAnchorEl } = editing;
-  const { activeCell, setActiveCell, handleCellMouseDown, handleSelectAllCells, selectionRange, hasCellSelection, handleGridKeyDown, handleFillHandleMouseDown, handleCopy, handleCut, handlePaste, cutRange, copyRange, canUndo, canRedo, onUndo, onRedo, isDragging } = interaction;
+  const { setActiveCell, handleCellMouseDown, handleSelectAllCells, selectionRange, hasCellSelection, handleGridKeyDown, handleFillHandleMouseDown, handleCopy, handleCut, handlePaste, cutRange, copyRange, canUndo, canRedo, onUndo, onRedo, isDragging } = interaction;
   const handlePasteVoid = useCallback(() => { void handlePaste(); }, [handlePaste]);
   const { menuPosition, handleCellContextMenu, closeContextMenu } = ctxMenu;
   const { headerFilterInput, cellDescriptorInput, statusBarConfig, showEmptyInGrid, onCellError } = viewModels;
+  const { headerMenu } = pinning;
 
   const {
     items,
@@ -155,11 +179,16 @@ function DataGridTableInner<T>(props: IOGridDataGridProps<T>): React.ReactElemen
   // Calculate row number offset for pagination
   const rowNumberOffset = hasRowNumbersCol ? (currentPage - 1) * propPageSize : 0;
 
-  // Memoize header rows (recursive tree traversal)
+  // Memoize header rows (recursive tree traversal -- avoid recomputing every render)
   const headerRows = useMemo(() => buildHeaderRows(columns, visibleColumns), [columns, visibleColumns]);
-  const hasGroupHeaders = headerRows.length > 1;
 
+  const allowOverflowX = !suppressHorizontalScroll && containerWidth > 0 && (minTableWidth > containerWidth || desiredTableWidth > containerWidth);
   const fitToContent = layoutMode === 'content';
+
+  const { handleResizeStart, getColumnWidth } = useColumnResize<T>({
+    columnSizingOverrides,
+    setColumnSizingOverrides,
+  });
 
   const { isDragging: isReorderDragging, dropIndicatorX, handleHeaderMouseDown } = useColumnReorder<T>({
     columns: visibleCols as IColumnDef<T>[],
@@ -180,354 +209,153 @@ function DataGridTableInner<T>(props: IOGridDataGridProps<T>): React.ReactElemen
     containerRef: wrapperRef,
   });
 
-  const columnSizingOptions: TableColumnSizingOptions = useMemo(() => {
-    const acc: Record<string, { minWidth: number; defaultWidth?: number; idealWidth?: number }> = {};
+  const editCallbacks = useMemo(() => ({ commitCellEdit, setEditingCell, setPendingEditorValue, cancelPopoverEdit }), [commitCellEdit, setEditingCell, setPendingEditorValue, cancelPopoverEdit]);
+  const interactionHandlers = useMemo(() => ({ handleCellMouseDown, setActiveCell, setEditingCell, handleCellContextMenu }), [handleCellMouseDown, setActiveCell, setEditingCell, handleCellContextMenu]);
 
-    if (hasCheckboxCol) {
-      acc['__selection__'] = { minWidth: CHECKBOX_COLUMN_WIDTH, defaultWidth: CHECKBOX_COLUMN_WIDTH, idealWidth: CHECKBOX_COLUMN_WIDTH };
-    }
+  // Refs for volatile state -- lets renderCellContent be stable (same function ref across
+  // selection changes) so that GridRow's React.memo comparator can skip unaffected rows.
+  const cellDescriptorInputRef = useLatestRef(cellDescriptorInput);
+  const pendingEditorValueRef = useLatestRef(pendingEditorValue);
+  const popoverAnchorElRef = useLatestRef(popoverAnchorEl);
 
-    if (hasRowNumbersCol) {
-      acc['__row_number__'] = { minWidth: ROW_NUMBER_COLUMN_WIDTH, defaultWidth: ROW_NUMBER_COLUMN_WIDTH, idealWidth: ROW_NUMBER_COLUMN_WIDTH };
-    }
-
-    visibleCols.forEach((c) => {
-      const minW = c.minWidth ?? DEFAULT_MIN_COLUMN_WIDTH;
-      const defaultW = c.defaultWidth ?? 120;
-      const base = c.idealWidth ?? Math.max(minW, defaultW);
-
-      const override = columnSizingOverrides[c.columnId];
-      const w = override ? Math.max(minW, override.widthPx) : base;
-
-      acc[c.columnId] = {
-        minWidth: override ? w : minW,
-        defaultWidth: w,
-        idealWidth: w,
-      };
-    });
-
-    return acc;
-  }, [visibleCols, columnSizingOverrides, hasCheckboxCol, hasRowNumbersCol]);
-
-  const allowOverflowX = !suppressHorizontalScroll && containerWidth > 0 && (minTableWidth > containerWidth || desiredTableWidth > containerWidth);
-
-  // Pre-compute column class maps and pinned inline styles
-  const { cellClassMap, headerClassMap, pinnedStyleMap } = useMemo(() => {
-    const cm: Record<string, string> = {};
-    const hm: Record<string, string> = {};
-    const pm: Record<string, React.CSSProperties> = {};
+  // Pre-compute column styles and classNames (avoids per-cell object creation in the row loop)
+  const columnMeta = useMemo(() => {
+    const cellStyles: Record<string, React.CSSProperties> = {};
+    const cellClasses: Record<string, string> = {};
+    const hdrStyles: Record<string, React.CSSProperties> = {};
+    const hdrClasses: Record<string, string> = {};
 
     for (let i = 0; i < visibleCols.length; i++) {
       const col = visibleCols[i];
+      const columnWidth = getColumnWidth(col);
+      const hasExplicitWidth = !!(columnSizingOverrides[col.columnId] || col.idealWidth != null || col.defaultWidth != null);
       const isFreezeCol = freezeCols != null && freezeCols >= 1 && i < freezeCols;
-      const isPinnedLeft = col.pinned === 'left';
-      const isPinnedRight = col.pinned === 'right';
+      const isPinnedLeft = pinning.pinnedColumns[col.columnId] === 'left';
+      const isPinnedRight = pinning.pinnedColumns[col.columnId] === 'right';
+
+      const hasResizeOverride = !!columnSizingOverrides[col.columnId];
+      cellStyles[col.columnId] = {
+        minWidth: hasResizeOverride ? columnWidth : (col.minWidth ?? DEFAULT_MIN_COLUMN_WIDTH),
+        width: hasExplicitWidth ? columnWidth : undefined,
+        maxWidth: hasExplicitWidth ? columnWidth : undefined,
+        textAlign: col.type === 'numeric' ? 'right' : col.type === 'boolean' ? 'center' : undefined,
+        ...(isPinnedLeft && pinning.leftOffsets[col.columnId] != null ? { left: pinning.leftOffsets[col.columnId] } : undefined),
+        ...(isPinnedRight && pinning.rightOffsets[col.columnId] != null ? { right: pinning.rightOffsets[col.columnId] } : undefined),
+      };
+
+      hdrStyles[col.columnId] = {
+        minWidth: hasResizeOverride ? columnWidth : (col.minWidth ?? DEFAULT_MIN_COLUMN_WIDTH),
+        width: hasExplicitWidth ? columnWidth : undefined,
+        maxWidth: hasExplicitWidth ? columnWidth : undefined,
+        ...(isPinnedLeft && pinning.leftOffsets[col.columnId] != null ? { left: pinning.leftOffsets[col.columnId] } : undefined),
+        ...(isPinnedRight && pinning.rightOffsets[col.columnId] != null ? { right: pinning.rightOffsets[col.columnId] } : undefined),
+      };
+
       const parts: string[] = [];
       if (isFreezeCol) parts.push(styles.freezeCol);
       if (isFreezeCol && i === 0) parts.push(styles.freezeColFirst);
-      if (isPinnedLeft) { parts.push(styles.pinnedCell); parts.push(styles.pinnedLeft); }
-      if (isPinnedRight) { parts.push(styles.pinnedCell); parts.push(styles.pinnedRight); }
-      cm[col.columnId] = parts.join(' ');
-      hm[col.columnId] = parts.join(' ');
-      // Inline styles for sticky offsets
-      if (isPinnedLeft && pinning.leftOffsets[col.columnId] != null) {
-        pm[col.columnId] = { left: pinning.leftOffsets[col.columnId] };
-      } else if (isPinnedRight && pinning.rightOffsets[col.columnId] != null) {
-        pm[col.columnId] = { right: pinning.rightOffsets[col.columnId] };
-      }
+      if (isPinnedLeft) parts.push(styles.pinnedColLeft);
+      if (isPinnedRight) parts.push(styles.pinnedColRight);
+      const cn = parts.join(' ');
+      cellClasses[col.columnId] = cn;
+      hdrClasses[col.columnId] = cn;
     }
 
-    cm['__selection__'] = styles.selectionCellWrapper;
-    hm['__selection__'] = styles.selectionHeaderCellWrapper;
+    return { cellStyles, cellClasses, hdrStyles, hdrClasses };
+  }, [visibleCols, getColumnWidth, columnSizingOverrides, freezeCols, pinning.leftOffsets, pinning.rightOffsets]);
 
-    return { cellClassMap: cm, headerClassMap: hm, pinnedStyleMap: pm };
-  }, [visibleCols, freezeCols, pinning.leftOffsets, pinning.rightOffsets]);
-
-  // Refs for volatile state (read inside fluentColumns render closures without adding to deps)
-  const cellDescriptorInputRef = useLatestRef(cellDescriptorInput);
+  // Stable row-click handler (avoids creating a new arrow function per row)
   const selectedRowIdsRef = useLatestRef(selectedRowIds);
-  const activeCellRef = useLatestRef(activeCell);
-  const pendingEditorValueRef = useLatestRef(pendingEditorValue);
-  const popoverAnchorElRef = useLatestRef(popoverAnchorEl);
-  const allSelectedRef = useLatestRef(allSelected);
-  const someSelectedRef = useLatestRef(someSelected);
-  // Callback refs — stabilize fluentColumns memo (these change identity on state updates
-  // but the columns structure doesn't need rebuilding for that)
-  const headerFilterInputRef = useLatestRef(headerFilterInput);
-  const commitCellEditRef = useLatestRef(commitCellEdit);
-  const cancelPopoverEditRef = useLatestRef(cancelPopoverEdit);
-  const handleCellMouseDownRef = useLatestRef(handleCellMouseDown);
-  const handleFillHandleMouseDownRef = useLatestRef(handleFillHandleMouseDown);
-  const handleCellContextMenuRef = useLatestRef(handleCellContextMenu);
-  const setActiveCellRef = useLatestRef(setActiveCell);
-  const setEditingCellRef = useLatestRef(setEditingCell);
-  const setPendingEditorValueRef = useLatestRef(setPendingEditorValue);
-  const handleSelectAllRef = useLatestRef(handleSelectAll);
-  const handleRowCheckboxChangeRef = useLatestRef(handleRowCheckboxChange);
-  const rowIndexByRowIdRef = useLatestRef(rowIndexByRowId);
-  const handleHeaderMouseDownRef = useLatestRef(handleHeaderMouseDown);
-  const isReorderDraggingRef = useLatestRef(isReorderDragging);
 
-  const fluentColumns = useMemo<TableColumnDefinition<T>[]>(() => {
-    const dataCols: TableColumnDefinition<T>[] = visibleCols.map((col, colIdx) =>
-      createTableColumn<T>({
-        columnId: col.columnId,
-        compare: col.compare ?? (() => 0),
-        renderHeaderCell: () => (
-          <div
-            data-column-id={col.columnId}
-            style={columnReorder ? { cursor: isReorderDraggingRef.current ? 'grabbing' : 'grab' } : undefined}
-            onMouseDown={columnReorder ? (e) => handleHeaderMouseDownRef.current(col.columnId, e) : undefined}
-          >
-            <div className={styles.headerCellContent}>
-              <ColumnHeaderFilter {...getHeaderFilterConfig(col, headerFilterInputRef.current)} />
-              <button
-                className={styles.headerMenuTrigger}
-                onClick={(e) => {
-                  e.stopPropagation();
-                  pinning.headerMenu.open(col.columnId, e.currentTarget);
-                }}
-                aria-label="Column options"
-                title="Column options"
-              >
-                ⋮
-              </button>
-            </div>
-          </div>
-        ),
-        renderCell: (item) => {
-          const rowId = getRowId(item);
-          const rowIndex = rowIndexByRowIdRef.current.get(rowId) ?? -1;
-          const descriptor = getCellRenderDescriptor(item, col, rowIndex, colIdx, cellDescriptorInputRef.current);
-
-          let cellContent: React.ReactNode;
-
-          if (descriptor.mode === 'editing-inline') {
-            cellContent = <InlineCellEditor<T> {...buildInlineEditorProps(item, col, descriptor, { commitCellEdit: commitCellEditRef.current, setEditingCell: setEditingCellRef.current }) as InlineCellEditorProps<T>} />;
-          } else if (descriptor.mode === 'editing-popover' && typeof col.cellEditor === 'function') {
-            const editorProps = buildPopoverEditorProps(item, col, descriptor, pendingEditorValueRef.current, { setPendingEditorValue: setPendingEditorValueRef.current, commitCellEdit: commitCellEditRef.current, cancelPopoverEdit: cancelPopoverEditRef.current }) as ICellEditorProps<T>;
-            const CustomEditor = col.cellEditor as React.ComponentType<ICellEditorProps<T>>;
-            cellContent = (
-              <>
-                <div
-                  ref={(el) => { if (el) setPopoverAnchorEl(el); }}
-                  style={POPOVER_ANCHOR_STYLE}
-                  aria-hidden
-                />
-                <Popover
-                  open={!!popoverAnchorElRef.current}
-                  onOpenChange={(_: OpenPopoverEvents, data: OnOpenChangeData) => { if (!data.open) cancelPopoverEditRef.current(); }}
-                  positioning={{ target: popoverAnchorElRef.current ?? undefined }}
-                >
-                  <PopoverSurface>
-                    <CustomEditor {...editorProps} />
-                  </PopoverSurface>
-                </Popover>
-              </>
-            );
-          } else {
-            const content = resolveCellDisplayContent(col, item, descriptor.displayValue) as React.ReactNode;
-            const cellStyle = resolveCellStyle(col, item);
-            const styledContent = cellStyle ? <span style={cellStyle}>{content}</span> : content;
-
-            const cellClassNames = `${styles.cellContent}${descriptor.isActive && !descriptor.isInRange ? ` ${styles.activeCellContent}` : ''}${descriptor.isInRange ? ` ${styles.cellInRange}` : ''}${descriptor.isInCutRange ? ` ${styles.cellCut}` : ''}${descriptor.isInCopyRange ? ` ${styles.cellCopied}` : ''}`;
-
-            const colType = col.type;
-            const interactionProps = getCellInteractionProps(descriptor, col.columnId, { handleCellMouseDown: handleCellMouseDownRef.current, setActiveCell: setActiveCellRef.current, setEditingCell: setEditingCellRef.current, handleCellContextMenu: handleCellContextMenuRef.current });
-
-            // Select stable style constant by type + editability
-            const computedStyle = descriptor.canEditAny
-              ? (colType === 'numeric' ? EDITABLE_NUMERIC_STYLE : colType === 'boolean' ? EDITABLE_BOOLEAN_STYLE : CURSOR_CELL_STYLE)
-              : (colType === 'numeric' ? NUMERIC_STYLE : colType === 'boolean' ? BOOLEAN_STYLE : undefined);
-
-            cellContent = (
-              <div
-                className={cellClassNames}
-                {...interactionProps}
-                style={computedStyle}
-              >
-                {styledContent}
-                {descriptor.canEditAny && descriptor.isSelectionEndCell && (
-                  <div
-                    className={styles.fillHandle}
-                    onMouseDown={(e) => handleFillHandleMouseDownRef.current(e)}
-                    aria-label="Fill handle"
-                  />
-                )}
-              </div>
-            );
-          }
-
-          return (
-            <CellErrorBoundary key={`${rowId}-${col.columnId}`} onError={onCellError}>
-              {cellContent}
-            </CellErrorBoundary>
-          );
-        },
-      })
-    );
-
-    if (hasCheckboxCol) {
-      const checkboxCol = createTableColumn<T>({
-        columnId: '__selection__',
-        compare: () => 0,
-        renderHeaderCell: () => (
-          <div className={styles.selectionHeaderCell}>
-            <Checkbox
-              checked={allSelectedRef.current ? true : someSelectedRef.current ? 'mixed' : false}
-              onChange={(_, data) => handleSelectAllRef.current(!!data.checked)}
-              aria-label="Select all rows"
-            />
-          </div>
-        ),
-        renderCell: (item) => {
-          const rowId = getRowId(item);
-          const rowIndex = rowIndexByRowIdRef.current.get(rowId) ?? -1;
-          const isChecked = selectedRowIdsRef.current.has(rowId);
-          const ac = activeCellRef.current;
-          const isActive = ac?.rowIndex === rowIndex && ac?.columnIndex === 0;
-          return (
-            <div
-              className={`${styles.selectionCell} ${isActive ? styles.activeCellContent : ''}`}
-              data-row-index={rowIndex}
-              data-col-index={0}
-              onClick={(e) => {
-                e.stopPropagation();
-                setActiveCellRef.current({ rowIndex, columnIndex: 0 });
-              }}
-            >
-              <Checkbox
-                checked={isChecked}
-                onChange={(e, data) => {
-                  handleRowCheckboxChangeRef.current(rowId, !!data.checked, rowIndex, (e.nativeEvent as MouseEvent).shiftKey);
-                }}
-                aria-label={`Select row ${rowIndex + 1}`}
-              />
-            </div>
-          );
-        },
-      });
-      const cols = [checkboxCol];
-      if (hasRowNumbersCol) {
-        const rowNumberCol = createTableColumn<T>({
-          columnId: '__row_number__',
-          compare: () => 0,
-          renderHeaderCell: () => (
-            <div className={styles.rowNumberHeaderCell}>#</div>
-          ),
-          renderCell: (item) => {
-            const rowId = getRowId(item);
-            const rowIndex = rowIndexByRowIdRef.current.get(rowId) ?? -1;
-            return (
-              <div className={styles.rowNumberCell}>
-                {rowNumberOffset + rowIndex + 1}
-              </div>
-            );
-          },
-        });
-        cols.push(rowNumberCol);
-      }
-      return [...cols, ...dataCols];
-    }
-
-    if (hasRowNumbersCol) {
-      const rowNumberCol = createTableColumn<T>({
-        columnId: '__row_number__',
-        compare: () => 0,
-        renderHeaderCell: () => (
-          <div className={styles.rowNumberHeaderCell}>#</div>
-        ),
-        renderCell: (item) => {
-          const rowId = getRowId(item);
-          const rowIndex = rowIndexByRowIdRef.current.get(rowId) ?? -1;
-          return (
-            <div className={styles.rowNumberCell}>
-              {rowNumberOffset + rowIndex + 1}
-            </div>
-          );
-        },
-      });
-      return [rowNumberCol, ...dataCols];
-    }
-
-    return dataCols;
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [visibleCols, hasCheckboxCol, hasRowNumbersCol, getRowId, setPopoverAnchorEl, columnReorder, rowNumberOffset]); // All volatile state/callbacks read via refs
-
-  // Stable row-click handler
-  const handleSingleRowClick = useCallback((rowId: string | number) => {
+  const handleSingleRowClick = useCallback((e: React.MouseEvent<HTMLTableRowElement>) => {
     if (rowSelection !== 'single') return;
+    const rowId = e.currentTarget.dataset.rowId;
+    if (!rowId) return;
     const ids = selectedRowIdsRef.current;
     updateSelection(ids.has(rowId) ? new Set() : new Set([rowId]));
   // eslint-disable-next-line react-hooks/exhaustive-deps -- selectedRowIdsRef is a stable ref
   }, [rowSelection, updateSelection]);
 
-  // Stable getRowId wrapper for Fluent DataGrid
-  const fluentGetRowId = useCallback((item: T) => String(getRowId(item)), [getRowId]);
+  // renderCellContent reads volatile state from refs -- keeps function identity stable so
+  // GridRow's React.memo comparator can skip rows whose selection state hasn't changed.
+  const renderCellContent = useCallback(
+    (item: T, col: IColumnDef<T>, rowIndex: number, colIdx: number): React.ReactNode => {
+      const descriptor = getCellRenderDescriptor(item, col, rowIndex, colIdx, cellDescriptorInputRef.current);
+      const rowId = getRowId(item);
 
-  // Double-click to auto-fit column width
-  useEffect(() => {
-    const root = wrapperRef.current;
-    if (!root) return;
+      let content: React.ReactNode;
 
-    const onDblClick = (e: MouseEvent) => {
-      const target = e.target as HTMLElement | null;
-      if (!target) return;
-      if (!target.closest('.fui-TableResizeHandle')) return;
+      if (descriptor.mode === 'editing-inline') {
+        content = <InlineCellEditor<T> {...buildInlineEditorProps(item, col, descriptor, editCallbacks) as InlineCellEditorProps<T>} />;
+      } else if (descriptor.mode === 'editing-popover' && typeof col.cellEditor === 'function') {
+        const editorProps = buildPopoverEditorProps(item, col, descriptor, pendingEditorValueRef.current, editCallbacks) as ICellEditorProps<T>;
+        const CustomEditor = col.cellEditor as React.ComponentType<ICellEditorProps<T>>;
+        content = (
+          <>
+            <div
+              ref={(el) => { if (el) setPopoverAnchorEl(el); }}
+              style={POPOVER_ANCHOR_STYLE}
+              aria-hidden
+            />
+            <Popover
+              open={!!popoverAnchorElRef.current}
+              onOpenChange={(_: OpenPopoverEvents, data: OnOpenChangeData) => { if (!data.open) cancelPopoverEdit(); }}
+              positioning={{ target: popoverAnchorElRef.current ?? undefined }}
+            >
+              <PopoverSurface>
+                <CustomEditor {...editorProps} />
+              </PopoverSurface>
+            </Popover>
+          </>
+        );
+      } else {
+        const displayContent = resolveCellDisplayContent(col, item, descriptor.displayValue) as React.ReactNode;
+        const cellStyle = resolveCellStyle(col, item);
+        const styledContent = cellStyle ? <span style={cellStyle}>{displayContent}</span> : displayContent;
 
-      const headerCell = target.closest('[role="columnheader"]') as HTMLElement | null;
-      if (!headerCell) return;
+        const cellClassNames = `${styles.cellContent}${descriptor.isActive && !descriptor.isInRange ? ` ${styles.activeCellContent}` : ''}${descriptor.isInRange ? ` ${styles.cellInRange}` : ''}${descriptor.isInCutRange ? ` ${styles.cellCut}` : ''}${descriptor.isInCopyRange ? ` ${styles.cellCopied}` : ''}`;
 
-      const colId = headerCell.querySelector('[data-column-id]')?.getAttribute('data-column-id');
-      if (!colId) return;
+        const interactionProps = getCellInteractionProps(descriptor, col.columnId, interactionHandlers);
 
-      const label = headerCell.querySelector('[data-header-label]') as HTMLElement | null;
-      const labelWidth = label ? label.scrollWidth : 0;
+        content = (
+          <div
+            className={cellClassNames}
+            {...interactionProps}
+            style={descriptor.canEditAny ? CURSOR_CELL_STYLE : undefined}
+          >
+            {styledContent}
+            {descriptor.canEditAny && descriptor.isSelectionEndCell && (
+              <div
+                className={styles.fillHandle}
+                onMouseDown={handleFillHandleMouseDown}
+                aria-label="Fill handle"
+              />
+            )}
+          </div>
+        );
+      }
 
-      const EXTRA_PX = 44;
-      const MAX_PX = 520;
-
-      const colDef = flatColumns.find((c) => c.columnId === colId);
-      const minW = colDef?.minWidth ?? DEFAULT_MIN_COLUMN_WIDTH;
-
-      const desired = Math.min(MAX_PX, Math.max(minW, Math.ceil(labelWidth + EXTRA_PX)));
-
-      setColumnSizingOverrides((prev) => ({
-        ...prev,
-        [colId]: { widthPx: desired },
-      }));
-
-      e.preventDefault();
-      e.stopPropagation();
-    };
-
-    root.addEventListener('dblclick', onDblClick, true);
-    return () => root.removeEventListener('dblclick', onDblClick, true);
-  }, [flatColumns, setColumnSizingOverrides]);
-
-  // Sync Fluent's internal resize state back to our React state so that
-  // re-renders (e.g. on cell click) don't reset column widths.
-  const handleColumnResize = useCallback(
-    (_e: unknown, data: { columnId: string | number; width: number }) => {
-      setColumnSizingOverrides((prev) => ({
-        ...prev,
-        [String(data.columnId)]: { widthPx: data.width },
-      }));
+      return (
+        <CellErrorBoundary key={`${rowId}-${col.columnId}`} onError={onCellError}>
+          {content}
+        </CellErrorBoundary>
+      );
     },
-    [setColumnSizingOverrides]
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- *Ref vars are stable refs from useLatestRef
+    [editCallbacks, interactionHandlers, handleFillHandleMouseDown, setPopoverAnchorEl, cancelPopoverEdit, getRowId, onCellError]
   );
 
   return (
-    <div style={gridRootStyle}>
+    <div style={GRID_ROOT_STYLE}>
       <div
         ref={wrapperRef}
         tabIndex={0}
+        onMouseDown={(e) => { lastMouseShiftRef.current = e.shiftKey; }}
         className={`${styles.tableWrapper} ${rowSelection !== 'none' ? styles.selectableGrid : ''} ${styles[`density-${density}`] || ''}`}
         role="region"
         aria-label={ariaLabel ?? (ariaLabelledBy ? undefined : 'Data grid')}
         aria-labelledby={ariaLabelledBy}
         data-empty={showEmptyInGrid ? 'true' : undefined}
-        data-auto-fit={layoutMode === 'fill' && !allowOverflowX ? 'true' : undefined}
         data-column-count={totalColCount}
         data-freeze-rows={freezeRows != null && freezeRows >= 1 ? freezeRows : undefined}
         data-freeze-cols={freezeCols != null && freezeCols >= 1 ? freezeCols : undefined}
@@ -536,127 +364,182 @@ function DataGridTableInner<T>(props: IOGridDataGridProps<T>): React.ReactElemen
         data-min-table-width={Math.round(minTableWidth)}
         data-has-selection={rowSelection !== 'none' ? 'true' : undefined}
         onContextMenu={PREVENT_DEFAULT}
+        onKeyDown={handleGridKeyDown}
         style={{
           ['--data-table-column-count' as string]: totalColCount,
-          ['--data-table-width' as string]: showEmptyInGrid
-            ? '100%'
-            : allowOverflowX
-              ? 'fit-content'
-              : fitToContent
-                ? 'fit-content'
-                : '100%',
-          ['--data-table-min-width' as string]: showEmptyInGrid
-            ? '100%'
-            : allowOverflowX
-              ? 'max-content'
-              : fitToContent
-                ? 'max-content'
-                : '100%',
-        }}
-        onKeyDown={handleGridKeyDown}
+          ['--data-table-width' as string]: showEmptyInGrid ? '100%' : allowOverflowX ? 'fit-content' : fitToContent ? 'fit-content' : '100%',
+          ['--data-table-min-width' as string]: showEmptyInGrid ? '100%' : allowOverflowX ? 'max-content' : fitToContent ? 'max-content' : '100%',
+          ['--data-table-total-min-width' as string]: `${minTableWidth}px`,
+        } as React.CSSProperties}
       >
         <div className={styles.tableScrollContent}>
         <div className={isLoading && items.length > 0 ? styles.loadingDimmed : undefined}>
           <div className={styles.tableWidthAnchor} ref={tableContainerRef}>
-              {virtualScrollEnabled && visibleRange.offsetTop > 0 && (
-                <div style={{ height: visibleRange.offsetTop }} aria-hidden />
-              )}
-              <DataGrid
-                items={virtualScrollEnabled ? items.slice(visibleRange.startIndex, visibleRange.endIndex + 1) : items}
-                columns={fluentColumns}
-                resizableColumns
-                resizableColumnsOptions={{ autoFitColumns: layoutMode === 'fill' && !allowOverflowX }}
-                columnSizingOptions={columnSizingOptions}
-                onColumnResize={handleColumnResize}
-                getRowId={fluentGetRowId}
-                focusMode="composite"
-                className={styles.dataGrid}
-              >
-                <DataGridHeader
+              <Table role="grid" className={styles.dataTable}>
+                <TableHeader
                   className={styles.stickyHeader}
                 >
-                  {hasGroupHeaders && headerRows.slice(0, -1).map((row, rowIdx) => (
-                    <tr key={`group-${rowIdx}`} className={styles.groupHeaderRow}>
-                      {rowIdx === 0 && hasCheckboxCol && (
-                        <th rowSpan={headerRows.length - 1} style={{ width: CHECKBOX_COLUMN_WIDTH, minWidth: CHECKBOX_COLUMN_WIDTH }} />
+                  {headerRows.map((row, rowIdx) => (
+                    <TableRow key={rowIdx}>
+                      {/* Checkbox header: show in last row (leaf row) */}
+                      {rowIdx === headerRows.length - 1 && hasCheckboxCol && (
+                        <TableHeaderCell className={styles.selectionHeaderCellWrapper} key="__selection__">
+                          <div className={styles.selectionHeaderCellInner}>
+                            <Checkbox
+                              checked={allSelected ? true : someSelected ? 'mixed' : false}
+                              onChange={(_, data) => handleSelectAll(!!data.checked)}
+                              aria-label="Select all rows"
+                            />
+                          </div>
+                        </TableHeaderCell>
                       )}
-                      {rowIdx === 0 && hasRowNumbersCol && (
-                        <th rowSpan={headerRows.length - 1} style={{ width: ROW_NUMBER_COLUMN_WIDTH, minWidth: ROW_NUMBER_COLUMN_WIDTH }} />
+                      {/* Empty placeholder for checkbox alignment in non-leaf rows */}
+                      {rowIdx === 0 && rowIdx < headerRows.length - 1 && hasCheckboxCol && (
+                        <th rowSpan={headerRows.length - 1} key="__selection_placeholder__" />
+                      )}
+                      {/* Row numbers header: show in last row (leaf row) */}
+                      {rowIdx === headerRows.length - 1 && hasRowNumbersCol && (
+                        <TableHeaderCell className={styles.rowNumberHeaderCellWrapper} key="__row_number__">
+                          <div className={styles.rowNumberHeaderCellInner}>
+                            #
+                          </div>
+                        </TableHeaderCell>
+                      )}
+                      {/* Empty placeholder for row numbers alignment in non-leaf rows */}
+                      {rowIdx === 0 && rowIdx < headerRows.length - 1 && hasRowNumbersCol && (
+                        <th rowSpan={headerRows.length - 1} key="__row_number_placeholder__" />
                       )}
                       {row.map((cell, cellIdx) => {
                         if (cell.isGroup) {
                           return (
-                            <th
-                              key={cellIdx}
-                              colSpan={cell.colSpan}
-                              className={styles.groupHeaderCell}
-                              scope="colgroup"
-                            >
+                            <th key={cellIdx} colSpan={cell.colSpan} className={styles.groupHeaderCell} scope="colgroup">
                               {cell.label}
                             </th>
                           );
                         }
+                        // Leaf cell
+                        const col = cell.columnDef! as IColumnDef<T>;
+
+                        // Determine aria-sort value for sorted columns
+                        const isSorted = props.sortBy === col.columnId;
+                        const ariaSort = isSorted
+                          ? (props.sortDirection === 'asc' ? 'ascending' : 'descending')
+                          : undefined;
+
                         return (
-                          <th
-                            key={cellIdx}
-                            rowSpan={headerRows.length - rowIdx}
-                            className={styles.leafHeaderCellSpan}
-                            scope="col"
+                          <TableHeaderCell
+                            key={col.columnId}
+                            data-column-id={col.columnId}
+                            // rowSpan not supported by TableHeaderCell, use native th for grouped headers
+                            className={columnMeta.hdrClasses[col.columnId] || undefined}
+                            style={{
+                              ...columnMeta.hdrStyles[col.columnId],
+                              ...(columnReorder ? { cursor: isReorderDragging ? 'grabbing' : 'grab' } : undefined),
+                            }}
+                            aria-sort={ariaSort as 'ascending' | 'descending' | 'none' | undefined}
+                            onMouseDown={columnReorder ? (e) => handleHeaderMouseDown(col.columnId, e) : undefined}
                           >
-                            {cell.columnDef?.name}
-                          </th>
+                            <div className={styles.headerCellContent}>
+                              <ColumnHeaderFilter {...getHeaderFilterConfig(col, headerFilterInput)} />
+                              <button
+                                className={styles.headerMenuTrigger}
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  headerMenu.open(col.columnId, e.currentTarget);
+                                }}
+                                aria-label="Column options"
+                                title="Column options"
+                              >
+                                &#x22EE;
+                              </button>
+                            </div>
+                            <div
+                              className={styles.resizeHandle}
+                              onMouseDown={(e) => {
+                                // Clear cell selection/focus before resize so green outlines
+                                // and blue :focus-visible rings don't persist during drag.
+                                setActiveCell(null);
+                                interaction.setSelectionRange(null);
+                                // Move DOM focus to wrapper so no cell keeps :focus-visible
+                                wrapperRef.current?.focus({ preventScroll: true });
+                                handleResizeStart(e, col as IColumnDef<T>);
+                              }}
+                              aria-label={`Resize ${col.name}`}
+                            />
+                          </TableHeaderCell>
                         );
                       })}
-                    </tr>
+                    </TableRow>
                   ))}
-                  <DataGridRow>
-                    {({ renderHeaderCell, columnId }) => {
-                      const isSorted = props.sortBy === String(columnId);
-                      const ariaSort = isSorted
-                        ? (props.sortDirection === 'asc' ? 'ascending' : 'descending')
-                        : undefined;
-
-                      return (
-                        <DataGridHeaderCell
-                          className={headerClassMap[String(columnId)] || undefined}
-                          style={pinnedStyleMap[String(columnId)]}
-                          aria-sort={ariaSort as 'ascending' | 'descending' | 'none' | undefined}
-                        >
-                          {renderHeaderCell()}
-                        </DataGridHeaderCell>
-                      );
-                    }}
-                  </DataGridRow>
-                </DataGridHeader>
-                <DataGridBody<T>>
-                  {({ item }) => {
-                    const rowId = getRowId(item);
-                    const rowIndex = rowIndexByRowId.get(rowId) ?? -1;
-                    return (
-                      <GridRow
-                        key={rowId}
-                        item={item}
-                        rowId={rowId}
-                        rowIndex={rowIndex}
-                        isSelected={selectedRowIds.has(rowId)}
-                        hasCheckboxCol={hasCheckboxCol}
-                        cellClassMap={cellClassMap}
-                        pinnedStyleMap={pinnedStyleMap}
-                        handleSingleRowClick={handleSingleRowClick}
-                        selectionRange={selectionRange}
-                        activeCell={activeCell}
-                        cutRange={cutRange}
-                        copyRange={copyRange}
-                        isDragging={isDragging}
-                        editingRowId={editingCell?.rowId ?? null}
-                      />
-                    );
-                  }}
-                </DataGridBody>
-              </DataGrid>
-              {virtualScrollEnabled && visibleRange.offsetBottom > 0 && (
-                <div style={{ height: visibleRange.offsetBottom }} aria-hidden />
-              )}
+                </TableHeader>
+                {!showEmptyInGrid && (
+                  <TableBody>
+                    {virtualScrollEnabled && visibleRange.offsetTop > 0 && (
+                      <tr style={{ height: visibleRange.offsetTop }} aria-hidden />
+                    )}
+                    {(virtualScrollEnabled
+                      ? items.slice(visibleRange.startIndex, visibleRange.endIndex + 1).map((item, i) => {
+                          const rowIndex = visibleRange.startIndex + i;
+                          const rowIdStr = getRowId(item);
+                          return (
+                            <GridRow
+                              key={rowIdStr}
+                              item={item}
+                              rowIndex={rowIndex}
+                              rowId={rowIdStr}
+                              isSelected={selectedRowIds.has(rowIdStr)}
+                              visibleCols={visibleCols as IColumnDef<unknown>[]}
+                              columnMeta={columnMeta}
+                              renderCellContent={renderCellContent as GridRowProps['renderCellContent']}
+                              handleSingleRowClick={handleSingleRowClick}
+                              handleRowCheckboxChange={handleRowCheckboxChange}
+                              lastMouseShiftRef={lastMouseShiftRef}
+                              hasCheckboxCol={hasCheckboxCol}
+                              hasRowNumbersCol={hasRowNumbersCol}
+                              rowNumberOffset={rowNumberOffset}
+                              selectionRange={selectionRange}
+                              activeCell={interaction.activeCell}
+                              cutRange={cutRange}
+                              copyRange={copyRange}
+                              isDragging={isDragging}
+                              editingRowId={editingCell?.rowId ?? null}
+                            />
+                          );
+                        })
+                      : items.map((item, rowIndex) => {
+                          const rowIdStr = getRowId(item);
+                          return (
+                            <GridRow
+                              key={rowIdStr}
+                              item={item}
+                              rowIndex={rowIndex}
+                              rowId={rowIdStr}
+                              isSelected={selectedRowIds.has(rowIdStr)}
+                              visibleCols={visibleCols as IColumnDef<unknown>[]}
+                              columnMeta={columnMeta}
+                              renderCellContent={renderCellContent as GridRowProps['renderCellContent']}
+                              handleSingleRowClick={handleSingleRowClick}
+                              handleRowCheckboxChange={handleRowCheckboxChange}
+                              lastMouseShiftRef={lastMouseShiftRef}
+                              hasCheckboxCol={hasCheckboxCol}
+                              hasRowNumbersCol={hasRowNumbersCol}
+                              rowNumberOffset={rowNumberOffset}
+                              selectionRange={selectionRange}
+                              activeCell={interaction.activeCell}
+                              cutRange={cutRange}
+                              copyRange={copyRange}
+                              isDragging={isDragging}
+                              editingRowId={editingCell?.rowId ?? null}
+                            />
+                          );
+                        })
+                    )}
+                    {virtualScrollEnabled && visibleRange.offsetBottom > 0 && (
+                      <tr style={{ height: visibleRange.offsetBottom }} aria-hidden />
+                    )}
+                  </TableBody>
+                )}
+              </Table>
               {isReorderDragging && dropIndicatorX != null && (
                 <DropIndicator dropIndicatorX={dropIndicatorX} wrapperLeft={wrapperRef.current?.getBoundingClientRect().left ?? 0} />
               )}
@@ -698,23 +581,23 @@ function DataGridTableInner<T>(props: IOGridDataGridProps<T>): React.ReactElemen
           )}
 
         <ColumnHeaderMenu
-          isOpen={pinning.headerMenu.isOpen}
-          anchorElement={pinning.headerMenu.anchorElement}
-          onClose={pinning.headerMenu.close}
-          onPinLeft={pinning.headerMenu.handlePinLeft}
-          onPinRight={pinning.headerMenu.handlePinRight}
-          onUnpin={pinning.headerMenu.handleUnpin}
-          onSortAsc={pinning.headerMenu.handleSortAsc}
-          onSortDesc={pinning.headerMenu.handleSortDesc}
-          onClearSort={pinning.headerMenu.handleClearSort}
-          onAutosizeThis={pinning.headerMenu.handleAutosizeThis}
-          onAutosizeAll={pinning.headerMenu.handleAutosizeAll}
-          canPinLeft={pinning.headerMenu.canPinLeft}
-          canPinRight={pinning.headerMenu.canPinRight}
-          canUnpin={pinning.headerMenu.canUnpin}
-          currentSort={pinning.headerMenu.currentSort}
-          isSortable={pinning.headerMenu.isSortable}
-          isResizable={pinning.headerMenu.isResizable}
+          isOpen={headerMenu.isOpen}
+          anchorElement={headerMenu.anchorElement}
+          onClose={headerMenu.close}
+          onPinLeft={headerMenu.handlePinLeft}
+          onPinRight={headerMenu.handlePinRight}
+          onUnpin={headerMenu.handleUnpin}
+          onSortAsc={headerMenu.handleSortAsc}
+          onSortDesc={headerMenu.handleSortDesc}
+          onClearSort={headerMenu.handleClearSort}
+          onAutosizeThis={headerMenu.handleAutosizeThis}
+          onAutosizeAll={headerMenu.handleAutosizeAll}
+          canPinLeft={headerMenu.canPinLeft}
+          canPinRight={headerMenu.canPinRight}
+          canUnpin={headerMenu.canUnpin}
+          currentSort={headerMenu.currentSort}
+          isSortable={headerMenu.isSortable}
+          isResizable={headerMenu.isResizable}
         />
       </div>
       {statusBarConfig && (

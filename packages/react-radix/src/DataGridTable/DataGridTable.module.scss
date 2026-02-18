@@ -191,8 +191,6 @@
   z-index: 6;
   background: var(--ogrid-bg, #ffffff);
   will-change: transform;
-  border-left: 2px solid var(--ogrid-accent, #0078d4);
-
   &::after {
     content: '';
     position: absolute;
@@ -215,8 +213,6 @@
   z-index: 6;
   background: var(--ogrid-bg, #ffffff);
   will-change: transform;
-  border-right: 2px solid var(--ogrid-accent, #0078d4);
-
   &::before {
     content: '';
     position: absolute;
@@ -349,6 +345,12 @@
   background: var(--ogrid-hover-bg, rgba(0, 0, 0, 0.04));
 }
 
+/* Pinned cells must keep a solid background on hover so scrolled content doesn't show through */
+.dataTable tbody tr:hover td.pinnedColLeft,
+.dataTable tbody tr:hover td.pinnedColRight {
+  background: var(--ogrid-bg, #ffffff);
+}
+
 .dataTable tbody tr.selectedRow td {
   background: var(--ogrid-selected-row-bg, #e6f0fb);
 }
@@ -360,6 +362,15 @@
 .dataTable tbody td {
   position: relative;
   height: 1px; // CSS table trick: lets children use height: 100%
+}
+
+/* Override position: relative for pinned body cells — sticky must win. */
+.dataTable tbody td.pinnedColLeft {
+  position: sticky;
+}
+
+.dataTable tbody td.pinnedColRight {
+  position: sticky;
 }
 
 .cellContent {
