@@ -66,6 +66,27 @@ export function useColumnResize<T>({
         ?? defaultWidth;
     let latestWidth = startWidth;
 
+    // Lock all column widths to their current DOM widths on first resize.
+    // With table-layout:auto, resizing one column causes the browser to compress others.
+    // Snapshotting all widths prevents this — only the dragged column changes.
+    const thead = thEl?.closest('thead');
+    if (thead) {
+      const allThs = thead.querySelectorAll<HTMLElement>('th[data-column-id]');
+      if (allThs.length > 0) {
+        setColumnSizingOverrides((prev) => {
+          const next = { ...prev };
+          allThs.forEach((th) => {
+            const colId = th.dataset.columnId;
+            if (colId && !next[colId]) {
+              next[colId] = { widthPx: th.getBoundingClientRect().width };
+            }
+          });
+          next[columnId] = { widthPx: startWidth };
+          return next;
+        });
+      }
+    }
+
     // Lock cursor and prevent text selection during drag
     const prevCursor = document.body.style.cursor;
     const prevUserSelect = document.body.style.userSelect;
@@ -110,6 +131,15 @@ export function useColumnResize<T>({
     const onUp = () => {
       cleanup();
       flushWidth();
+
+      // Remove any rogue :focus-visible outlines that appeared during the drag.
+      // Re-focus the grid wrapper so keyboard navigation still works.
+      const wrapper = thEl?.closest('[tabindex]') as HTMLElement | null;
+      if (wrapper) {
+        wrapper.focus({ preventScroll: true });
+      } else if (document.activeElement instanceof HTMLElement) {
+        document.activeElement.blur();
+      }
 
       if (onColumnResizedRef.current) {
         onColumnResizedRef.current(columnId, latestWidth);

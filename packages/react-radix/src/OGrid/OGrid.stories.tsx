@@ -201,17 +201,14 @@ export const Editable: Story = {
       },
     ];
     return (
-      <div>
-        <h2 style={{ margin: '0 0 8px 0' }}>Projects (editable name &amp; status)</h2>
-        <OGrid<Project>
-          data={data}
-          columns={editableColumns}
-          getRowId={getRowId}
-          entityLabelPlural="projects"
-          editable
-          onCellValueChanged={handleCellValueChanged}
-        />
-      </div>
+      <OGrid<Project>
+        data={data}
+        columns={editableColumns}
+        getRowId={getRowId}
+        entityLabelPlural="projects"
+        editable
+        onCellValueChanged={handleCellValueChanged}
+      />
     );
   },
 };
@@ -234,20 +231,17 @@ export const SpreadsheetExperience: Story = {
       { columnId: 'startDate', name: 'Start Date', type: 'date', sortable: true, filterable: { type: 'date' }, editable: true },
     ];
     return (
-      <div>
-        <h2 style={{ margin: '0 0 8px 0' }}>Projects (Spreadsheet)</h2>
-        <OGrid<Project>
-          data={data}
-          columns={editableColumns}
-          getRowId={getRowId}
-          entityLabelPlural="projects"
-          editable
-          onCellValueChanged={handleCellValueChanged}
-          rowSelection="multiple"
-          statusBar
-          defaultPageSize={25}
-        />
-      </div>
+      <OGrid<Project>
+        data={data}
+        columns={editableColumns}
+        getRowId={getRowId}
+        entityLabelPlural="projects"
+        editable
+        onCellValueChanged={handleCellValueChanged}
+        rowSelection="multiple"
+        statusBar
+        defaultPageSize={25}
+      />
     );
   },
 };

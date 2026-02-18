@@ -6,7 +6,7 @@
  *
  * Uses SVG rects positioned via cell data-attribute measurements.
  */
-import { defineComponent, ref, computed, watch, onMounted, onUnmounted, h, type PropType, type Ref } from 'vue';
+import { defineComponent, ref, computed, watch, onMounted, onUnmounted, h, toValue, type PropType, type Ref } from 'vue';
 import { Z_INDEX, measureRange, injectGlobalStyles, type ISelectionRange, type OverlayRect } from '@alaarab/ogrid-core';
 
 export const MarchingAntsOverlay = defineComponent({
@@ -40,7 +40,9 @@ export const MarchingAntsOverlay = defineComponent({
     const clipRange = computed(() => props.copyRange ?? props.cutRange);
 
     const measureAll = () => {
-      const container = props.containerRef.value;
+      // Use toValue to handle both Ref<HTMLElement> and raw HTMLElement
+      // (Vue templates may auto-unwrap refs passed as props)
+      const container = toValue(props.containerRef);
       if (!container) {
         selRect.value = null;
         clipRect.value = null;
@@ -57,7 +59,7 @@ export const MarchingAntsOverlay = defineComponent({
     });
 
     // Measure when any range changes; re-measure on resize, column changes, data changes
-    watch([() => props.selectionRange, clipRange, () => props.containerRef.value, () => props.items, () => props.visibleColumns, () => props.columnSizingOverrides, () => props.columnOrder], () => {
+    watch([() => props.selectionRange, clipRange, () => toValue(props.containerRef), () => props.items, () => props.visibleColumns, () => props.columnSizingOverrides, () => props.columnOrder], () => {
       if (!props.selectionRange && !clipRange.value) {
         selRect.value = null;
         clipRect.value = null;
@@ -67,7 +69,7 @@ export const MarchingAntsOverlay = defineComponent({
       // Delay one frame so cells are rendered
       rafId = requestAnimationFrame(measureAll);
 
-      const container = props.containerRef.value;
+      const container = toValue(props.containerRef);
       if (container) {
         ro?.disconnect();
         ro = new ResizeObserver(measureAll);
