@@ -168,6 +168,12 @@
   max-width: 320px;
   overflow: hidden;
   padding: 0;
+  // Explicit background + shadow so the popover is opaque even when rendered
+  // via a portal outside the FluentProvider (e.g. SPFx web parts).
+  background-color: var(--colorNeutralBackground1, #ffffff);
+  border: 1px solid var(--colorNeutralStroke1, #d1d1d1);
+  border-radius: var(--borderRadiusMedium, 4px);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.14);
 }
 
 .popoverHeader {
