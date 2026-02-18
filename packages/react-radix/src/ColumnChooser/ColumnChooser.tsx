@@ -1,18 +1,11 @@
 import * as React from 'react';
 import * as Popover from '@radix-ui/react-popover';
 import * as Checkbox from '@radix-ui/react-checkbox';
-import type { IColumnDefinition } from '@alaarab/ogrid-react';
+import type { IColumnChooserProps } from '@alaarab/ogrid-react';
 import { useColumnChooserState } from '@alaarab/ogrid-react';
 import styles from './ColumnChooser.module.scss';
 
-export type { IColumnDefinition };
-
-export interface IColumnChooserProps {
-  columns: IColumnDefinition[];
-  visibleColumns: Set<string>;
-  onVisibilityChange: (columnKey: string, visible: boolean) => void;
-  className?: string;
-}
+export type { IColumnChooserProps };
 
 function TableSettingsIcon(): React.ReactElement {
   return (

@@ -7,19 +7,11 @@ import {
   ChevronDoubleLeftRegular,
   ChevronDoubleRightRegular,
 } from '@fluentui/react-icons';
+import type { IPaginationControlsProps } from '@alaarab/ogrid-react';
 import { usePaginationControls } from '@alaarab/ogrid-react';
 import styles from './PaginationControls.module.scss';
 
-export interface IPaginationControlsProps {
-  currentPage: number;
-  pageSize: number;
-  totalCount: number;
-  onPageChange: (page: number) => void;
-  onPageSizeChange: (pageSize: number) => void;
-  pageSizeOptions?: number[];
-  entityLabelPlural?: string;
-  className?: string;
-}
+export type { IPaginationControlsProps };
 
 export const PaginationControls: React.FC<IPaginationControlsProps> = React.memo((props) => {
   const { currentPage, pageSize, totalCount, onPageChange, onPageSizeChange, pageSizeOptions, entityLabelPlural, className } = props;

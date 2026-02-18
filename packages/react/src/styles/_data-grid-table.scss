@@ -1,0 +1,468 @@
+// Shared structural styles for DataGridTable across React UI packages.
+// Each UI package @use's this partial and adds framework-specific overrides
+// (e.g. Fluent token-based colors, MUI component selectors).
+//
+// All styles here use --ogrid-* CSS custom properties which each UI package
+// defines (either directly or bridged from framework tokens).
+
+// ---- Table structure ----
+
+.tableScrollContent {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  min-width: 0;
+  background: var(--ogrid-bg, #fff);
+}
+
+.tableWidthAnchor {
+  position: relative;
+  width: max-content;
+  min-width: var(--data-table-min-width, max-content);
+  background: var(--ogrid-bg, #fff);
+}
+
+.tableWrapper {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+  overflow-x: hidden;
+  overflow-y: auto;
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+  box-sizing: border-box;
+  background: var(--ogrid-bg, #fff);
+  will-change: scroll-position;
+
+  &[data-overflow-x='true'] {
+    overflow-x: auto;
+  }
+  &[data-empty='true'] {
+    overflow-x: hidden;
+  }
+}
+
+.selectableGrid {
+  // Row click for single selection; cursor handled by tbody tr
+}
+
+.dataTable {
+  width: var(--data-table-width, fit-content);
+  max-width: 100%;
+  min-width: var(--data-table-min-width, max-content);
+  border-collapse: separate;
+  border-spacing: 0;
+  box-sizing: border-box;
+  table-layout: auto;
+  background-color: var(--ogrid-bg, #fff);
+  color: var(--ogrid-fg, rgba(0, 0, 0, 0.87));
+}
+
+// ---- Column group headers ----
+
+.groupHeaderCell {
+  text-align: center;
+  font-weight: 600;
+  border-bottom: 2px solid var(--ogrid-border, rgba(0, 0, 0, 0.12));
+  padding: 6px 10px;
+  background: var(--ogrid-header-bg, #f5f5f5);
+}
+
+// ---- Header cell content layout ----
+
+.headerCellContent {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.headerMenuTrigger {
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  padding: 2px 4px;
+  font-size: 16px;
+  line-height: 1;
+  color: var(--ogrid-fg-secondary, rgba(0, 0, 0, 0.6));
+  opacity: 1;
+  transition: background-color 0.15s;
+  border-radius: 3px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 20px;
+  height: 20px;
+
+  &:hover {
+    background: var(--ogrid-hover-bg, rgba(0, 0, 0, 0.04));
+  }
+
+  &:active {
+    background: var(--ogrid-active-bg, rgba(0, 0, 0, 0.08));
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--ogrid-accent, #0078d4);
+    outline-offset: 2px;
+  }
+}
+
+// ---- Column reorder drop indicator ----
+
+.dropIndicator {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 3px;
+  background: var(--ogrid-selection-color, #217346);
+  pointer-events: none;
+  z-index: 100;
+  transition: left 0.05s;
+}
+
+// ---- Column resize handle ----
+
+.resizeHandle {
+  position: absolute;
+  top: 0;
+  right: -3px;
+  bottom: 0;
+  width: 8px;
+  cursor: col-resize;
+  user-select: none;
+  z-index: 1;
+
+  &::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    right: 3px;
+    bottom: 0;
+    width: 2px;
+  }
+
+  &:hover::after {
+    background-color: var(--ogrid-accent, #0078d4);
+  }
+
+  &:active::after {
+    background-color: var(--ogrid-accent-dark, #005a9e);
+  }
+}
+
+// ---- Pinned columns ----
+
+.pinnedColLeft {
+  position: sticky;
+  z-index: 6;
+  background: var(--ogrid-bg, #ffffff);
+  &::after {
+    content: '';
+    position: absolute;
+    top: -1px;
+    right: -4px;
+    bottom: -1px;
+    width: 4px;
+    background: linear-gradient(to right, var(--ogrid-pinned-shadow, rgba(0, 0, 0, 0.12)), transparent);
+    pointer-events: none;
+  }
+}
+
+.pinnedColRight {
+  position: sticky;
+  z-index: 6;
+  background: var(--ogrid-bg, #ffffff);
+  &::before {
+    content: '';
+    position: absolute;
+    top: -1px;
+    left: -4px;
+    bottom: -1px;
+    width: 4px;
+    background: linear-gradient(to left, var(--ogrid-pinned-shadow, rgba(0, 0, 0, 0.12)), transparent);
+    pointer-events: none;
+  }
+}
+
+// ---- Freeze columns ----
+
+.freezeColFirst {
+  position: sticky;
+  left: 0;
+  z-index: 6;
+  background: var(--ogrid-bg, #ffffff);
+}
+
+// ---- Cell content & selection ----
+
+.cellContent {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  min-width: 0;
+  box-sizing: border-box;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  user-select: none;
+  outline: none;
+
+  &:focus-visible {
+    outline: none;
+  }
+}
+
+.activeCellContent {
+  outline: 2px solid var(--ogrid-selection-color, #217346);
+  outline-offset: -1px;
+  z-index: 2;
+  position: relative;
+  overflow: visible;
+  background: var(--ogrid-active-cell-bg, rgba(0, 0, 0, 0.02));
+}
+
+.cellInRange {
+  background: var(--ogrid-range-bg, rgba(33, 115, 70, 0.12)) !important;
+}
+
+// Drag-range highlight applied via DOM attributes during drag (bypasses React for performance)
+:global([data-drag-range]) {
+  background: var(--ogrid-range-bg, rgba(33, 115, 70, 0.12)) !important;
+}
+
+// Anchor cell during drag: white/transparent background (like Excel)
+:global([data-drag-anchor]) {
+  background: var(--ogrid-bg, #fff) !important;
+}
+
+.cellCut {
+  background: var(--ogrid-hover-bg, rgba(0, 0, 0, 0.04)) !important;
+  opacity: 0.7;
+}
+
+// cellCopied kept as a no-op class for descriptor compatibility (overlay handles the border)
+.cellCopied {
+  // intentionally empty -- MarchingAntsOverlay renders the animated border
+}
+
+// ---- Fill handle ----
+
+.fillHandle {
+  position: absolute;
+  right: -3px;
+  bottom: -3px;
+  width: 7px;
+  height: 7px;
+  background: var(--ogrid-selection-color, #217346);
+  border: 1px solid var(--ogrid-bg, #fff);
+  border-radius: 1px;
+  cursor: crosshair;
+  pointer-events: auto;
+  z-index: 3;
+}
+
+// ---- Row selection cells ----
+
+.selectionHeaderCellInner,
+.selectionCellInner {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+}
+
+.rowNumberHeaderCellInner,
+.rowNumberCellInner {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  font-variant-numeric: tabular-nums;
+}
+
+// ---- Status bar ----
+
+.statusBar {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  width: 100%;
+  padding: 6px 12px;
+  box-sizing: border-box;
+  font-size: 12px;
+  color: var(--ogrid-fg-muted, rgba(0, 0, 0, 0.5));
+  background: var(--ogrid-header-bg, #f5f5f5);
+  border-top: 1px solid var(--ogrid-border, rgba(0, 0, 0, 0.12));
+  min-height: 28px;
+}
+
+.statusBarItem {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  &:not(:last-child)::after {
+    content: '';
+    width: 1px;
+    height: 14px;
+    background: var(--ogrid-border, rgba(0, 0, 0, 0.12));
+    margin-left: 12px;
+  }
+}
+
+.statusBarLabel {
+  color: var(--ogrid-fg-muted, rgba(0, 0, 0, 0.5));
+}
+
+.statusBarValue {
+  color: var(--ogrid-fg, rgba(0, 0, 0, 0.87));
+  font-weight: 600;
+}
+
+// ---- Context menu ----
+
+.contextMenu {
+  position: fixed;
+  z-index: 10000;
+  min-width: 160px;
+  padding: 4px 0;
+  background: var(--ogrid-bg, #fff);
+  border: 1px solid var(--ogrid-border, rgba(0, 0, 0, 0.12));
+  border-radius: 6px;
+  box-shadow: var(--ogrid-shadow, 0 4px 16px rgba(0, 0, 0, 0.12));
+}
+
+.contextMenuItem {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+  width: 100%;
+  padding: 6px 12px;
+  border: none;
+  background: none;
+  font-size: 13px;
+  text-align: left;
+  cursor: pointer;
+  color: var(--ogrid-fg, rgba(0, 0, 0, 0.87));
+  &:hover:not(:disabled) {
+    background: var(--ogrid-hover-bg, rgba(0, 0, 0, 0.04));
+  }
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+}
+
+.contextMenuItemLabel {
+  flex: 1;
+}
+
+.contextMenuItemShortcut {
+  color: var(--ogrid-fg-muted, rgba(0, 0, 0, 0.5));
+  font-size: 0.85em;
+}
+
+.contextMenuDivider {
+  height: 1px;
+  margin: 4px 0;
+  background: var(--ogrid-border, rgba(0, 0, 0, 0.12));
+}
+
+// ---- Loading overlay ----
+
+.loadingOverlay {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--ogrid-loading-overlay, rgba(255, 255, 255, 0.7));
+  backdrop-filter: blur(1px);
+  pointer-events: all;
+}
+
+.loadingOverlayContent {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 16px 24px;
+  background: var(--ogrid-bg, #fff);
+  border: 1px solid var(--ogrid-border, rgba(0, 0, 0, 0.12));
+  border-radius: 6px;
+  box-shadow: var(--ogrid-shadow-sm, 0 2px 4px rgba(0, 0, 0, 0.08));
+}
+
+.loadingOverlayText {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--ogrid-fg-muted, rgba(0, 0, 0, 0.5));
+}
+
+.loadingDimmed {
+  opacity: 0.6;
+  pointer-events: none;
+}
+
+// ---- Empty state ----
+
+.emptyStateInGrid {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 20px 16px;
+  min-height: 88px;
+  width: 100%;
+  box-sizing: border-box;
+  border-top: 1px solid var(--ogrid-border, rgba(0, 0, 0, 0.12));
+  background: var(--ogrid-header-bg, #f5f5f5);
+}
+
+.emptyStateInGridTitle {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--ogrid-fg, rgba(0, 0, 0, 0.87));
+  margin-bottom: 4px;
+}
+
+.emptyStateInGridMessage {
+  font-size: 13px;
+  color: var(--ogrid-fg-muted, rgba(0, 0, 0, 0.5));
+  line-height: 1.5;
+}
+
+.emptyStateInGridLink {
+  background: none;
+  border: none;
+  color: var(--ogrid-accent, #0078d4);
+  text-decoration: underline;
+  cursor: pointer;
+  padding: 0;
+  font-size: inherit;
+  font-family: inherit;
+  &:hover {
+    color: var(--ogrid-accent-dark, #005a9e);
+  }
+}
+
+// ---- Spinner ----
+
+.spinner {
+  width: 24px;
+  height: 24px;
+  border: 2px solid var(--ogrid-border, rgba(0, 0, 0, 0.12));
+  border-top-color: var(--ogrid-accent, #0078d4);
+  border-radius: 50%;
+  animation: ogrid-spin 0.8s linear infinite;
+}
+
+@keyframes ogrid-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}

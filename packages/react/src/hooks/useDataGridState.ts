@@ -1,4 +1,4 @@
-import { useMemo, useCallback, useState } from 'react';
+import { useMemo, useCallback, useState, useLayoutEffect } from 'react';
 import type { RefObject } from 'react';
 import { flattenColumns, getDataGridStatusBarConfig, parseValue, computeAggregations } from '../utils';
 import type { HeaderFilterConfigInput, CellRenderDescriptorInput } from '../utils';
@@ -382,6 +382,31 @@ export function useDataGridState<T>(
     onColumnPinned,
   });
 
+  // Measure actual column widths from the DOM for accurate pinning offsets.
+  // With table-layout: auto, rendered widths can exceed declared minimums.
+  const [measuredColumnWidths, setMeasuredColumnWidths] = useState<Record<string, number>>({});
+  useLayoutEffect(() => {
+    const wrapper = wrapperRef.current;
+    if (!wrapper) return;
+    const headerCells = wrapper.querySelectorAll<HTMLElement>('th[data-column-id]');
+    if (headerCells.length === 0) return;
+    const measured: Record<string, number> = {};
+    headerCells.forEach((cell) => {
+      const colId = cell.getAttribute('data-column-id');
+      if (colId) measured[colId] = cell.offsetWidth;
+    });
+    setMeasuredColumnWidths((prev) => {
+      // Only update if widths actually changed to avoid render loops
+      for (const key in measured) {
+        if (prev[key] !== measured[key]) return measured;
+      }
+      if (Object.keys(prev).length !== Object.keys(measured).length) return measured;
+      return prev;
+    });
+  // Re-measure when columns, container size, or resize overrides change
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [visibleCols, containerWidth, columnSizingOverrides]);
+
   // Build column width map for pinning offset computation
   const columnWidthMap = useMemo(() => {
     const map: Record<string, number> = {};
@@ -389,10 +414,10 @@ export function useDataGridState<T>(
       const override = columnSizingOverrides[col.columnId];
       map[col.columnId] = override
         ? override.widthPx
-        : (col.idealWidth ?? col.defaultWidth ?? col.minWidth ?? DEFAULT_MIN_COLUMN_WIDTH);
+        : (measuredColumnWidths[col.columnId] ?? col.idealWidth ?? col.defaultWidth ?? col.minWidth ?? DEFAULT_MIN_COLUMN_WIDTH);
     }
     return map;
-  }, [visibleCols, columnSizingOverrides]);
+  }, [visibleCols, columnSizingOverrides, measuredColumnWidths]);
 
   const leftOffsets = useMemo(
     () => pinningResult.computeLeftOffsets(visibleCols, columnWidthMap, DEFAULT_MIN_COLUMN_WIDTH, hasCheckboxCol, CHECKBOX_COLUMN_WIDTH),
