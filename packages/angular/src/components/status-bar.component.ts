@@ -1,11 +1,10 @@
-import { Component, Input } from '@angular/core';
-import { CommonModule } from '@angular/common';
+import { Component, Input, ChangeDetectionStrategy } from '@angular/core';
 import { getStatusBarParts } from '@alaarab/ogrid-core';
 
 @Component({
   selector: 'ogrid-status-bar',
   standalone: true,
-  imports: [CommonModule],
+  changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <div [class]="classNames?.statusBar ?? ''" role="status" aria-live="polite">
       @for (part of getParts(); track part.key) {

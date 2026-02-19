@@ -22,7 +22,7 @@ const OGridInner = forwardRef(function OGridInner<T>(
   const theme = useTheme();
 
   // Set --ogrid-* CSS variables so the shared OGridLayout adapts to MUI theme (both modes)
-  const containerSx = {
+  const containerSx = React.useMemo(() => ({
     display: 'flex', flexDirection: 'column', gap: 1,
     '--ogrid-bg': theme.palette.background.default,
     '--ogrid-border': theme.palette.divider,
@@ -31,7 +31,7 @@ const OGridInner = forwardRef(function OGridInner<T>(
     '--ogrid-fg-secondary': theme.palette.text.secondary,
     '--ogrid-fg-muted': theme.palette.text.disabled,
     '--ogrid-hover-bg': theme.palette.action.hover,
-  };
+  }), [theme]);
 
   return (
     <OGridLayout

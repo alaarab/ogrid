@@ -8,6 +8,7 @@ import {
   EmptyStateComponent,
   CHECKBOX_COLUMN_WIDTH,
   ROW_NUMBER_COLUMN_WIDTH,
+  OGRID_THEME_VARS_CSS,
 } from '@alaarab/ogrid-angular';
 import type {
   IOGridDataGridProps,
@@ -344,55 +345,7 @@ import { PopoverCellEditorComponent } from './popover-cell-editor.component';
       }
     </div>
   `,
-  styles: [`
-    /* ─── OGrid Theme Variables ─── */
-    :root {
-      --ogrid-bg: #ffffff;
-      --ogrid-fg: rgba(0, 0, 0, 0.87);
-      --ogrid-fg-secondary: rgba(0, 0, 0, 0.6);
-      --ogrid-fg-muted: rgba(0, 0, 0, 0.5);
-      --ogrid-border: rgba(0, 0, 0, 0.12);
-      --ogrid-header-bg: rgba(0, 0, 0, 0.04);
-      --ogrid-hover-bg: rgba(0, 0, 0, 0.04);
-      --ogrid-selected-row-bg: #e6f0fb;
-      --ogrid-active-cell-bg: rgba(0, 0, 0, 0.02);
-      --ogrid-range-bg: rgba(33, 115, 70, 0.12);
-      --ogrid-accent: #0078d4;
-      --ogrid-selection-color: #217346;
-      --ogrid-loading-overlay: rgba(255, 255, 255, 0.7);
-    }
-    @media (prefers-color-scheme: dark) {
-      :root:not([data-theme="light"]) {
-        --ogrid-bg: #1e1e1e;
-        --ogrid-fg: rgba(255, 255, 255, 0.87);
-        --ogrid-fg-secondary: rgba(255, 255, 255, 0.6);
-        --ogrid-fg-muted: rgba(255, 255, 255, 0.5);
-        --ogrid-border: rgba(255, 255, 255, 0.12);
-        --ogrid-header-bg: rgba(255, 255, 255, 0.06);
-        --ogrid-hover-bg: rgba(255, 255, 255, 0.08);
-        --ogrid-selected-row-bg: #1a3a5c;
-        --ogrid-active-cell-bg: rgba(255, 255, 255, 0.06);
-        --ogrid-range-bg: rgba(46, 160, 67, 0.15);
-        --ogrid-accent: #4da6ff;
-        --ogrid-selection-color: #2ea043;
-        --ogrid-loading-overlay: rgba(0, 0, 0, 0.7);
-      }
-    }
-    [data-theme="dark"] {
-      --ogrid-bg: #1e1e1e;
-      --ogrid-fg: rgba(255, 255, 255, 0.87);
-      --ogrid-fg-secondary: rgba(255, 255, 255, 0.6);
-      --ogrid-fg-muted: rgba(255, 255, 255, 0.5);
-      --ogrid-border: rgba(255, 255, 255, 0.12);
-      --ogrid-header-bg: rgba(255, 255, 255, 0.06);
-      --ogrid-hover-bg: rgba(255, 255, 255, 0.08);
-      --ogrid-selected-row-bg: #1a3a5c;
-      --ogrid-active-cell-bg: rgba(255, 255, 255, 0.06);
-      --ogrid-range-bg: rgba(46, 160, 67, 0.15);
-      --ogrid-accent: #4da6ff;
-      --ogrid-selection-color: #2ea043;
-      --ogrid-loading-overlay: rgba(0, 0, 0, 0.7);
-    }
+  styles: [OGRID_THEME_VARS_CSS, `
     :host { display: block; }
     .ogrid-datagrid-root { position: relative; flex: 1; min-height: 0; display: flex; flex-direction: column; }
     .ogrid-datagrid-wrapper {

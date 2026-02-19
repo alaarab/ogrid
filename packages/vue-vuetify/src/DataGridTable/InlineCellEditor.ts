@@ -5,7 +5,7 @@ import { createInlineCellEditor } from '@alaarab/ogrid-vue';
 export type { CreateInlineCellEditorOptions } from '@alaarab/ogrid-vue';
 
 export const InlineCellEditor = createInlineCellEditor({
-  renderCheckbox: (_h, { checked, onChange, onCancel }) =>
+  renderCheckbox: ({ checked, onChange, onCancel }) =>
     h(VCheckbox as any, {
       modelValue: checked,
       hideDetails: true,
@@ -16,7 +16,7 @@ export const InlineCellEditor = createInlineCellEditor({
       },
     }),
 
-  renderDatePicker: (_h, { value, onChange, onCancel }) =>
+  renderDatePicker: ({ value, onChange, onCancel }) =>
     h('input', {
       type: 'date',
       value,

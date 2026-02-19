@@ -18,9 +18,7 @@ import {
   MarchingAntsOverlayComponent,
   EmptyStateComponent,
   DEFAULT_MIN_COLUMN_WIDTH,
-  getCellValue,
-  resolveCellDisplayContent,
-  resolveCellStyle,
+  OGRID_THEME_VARS_CSS,
 } from '@alaarab/ogrid-angular';
 import type {
   IOGridDataGridProps,
@@ -114,10 +112,13 @@ import { PopoverCellEditorComponent } from './popover-cell-editor.component';
                           @let col = asColumnDef(cell.columnDef);
                           @let pinned = isPinned(col.columnId);
                           @let config = getFilterConfig(col);
+                          @let sortState = getSortState(col.columnId);
+                          @let ariaSort = sortState === 'asc' ? 'ascending' : sortState === 'desc' ? 'descending' : null;
                           <th
                             scope="col"
                             class="ogrid-header-cell"
                             [attr.data-column-id]="col.columnId"
+                            [attr.aria-sort]="ariaSort"
                             [attr.rowSpan]="headerRows().length > 1 && rowIdx < headerRows().length - 1 ? headerRows().length - rowIdx : null"
                             [class.ogrid-th-pinned-left]="pinned === 'left'"
                             [class.ogrid-th-pinned-right]="pinned === 'right'"
@@ -150,13 +151,12 @@ import { PopoverCellEditorComponent } from './popover-cell-editor.component';
                                 [onDateChange]="config.onDateChange"
                               ></ogrid-primeng-column-header-filter>
                               @let colPinState = getPinState(col.columnId);
-                              @let colSortState = getSortState(col.columnId);
                               <column-header-menu
                                 [columnId]="col.columnId"
                                 [canPinLeft]="colPinState.canPinLeft"
                                 [canPinRight]="colPinState.canPinRight"
                                 [canUnpin]="colPinState.canUnpin"
-                                [currentSort]="colSortState"
+                                [currentSort]="sortState"
                                 [isSortable]="col.sortable !== false"
                                 [isResizable]="col.resizable !== false"
                                 [handlers]="getColumnMenuHandlersMemoized(col.columnId)"
@@ -223,44 +223,45 @@ import { PopoverCellEditorComponent } from './popover-cell-editor.component';
                             [style.right.px]="pinned === 'right' ? getPinnedRightOffset(col.columnId) : null"
                             [style.text-align]="col.type === 'numeric' ? 'right' : col.type === 'boolean' ? 'center' : null"
                           >
-                            @if (isEditingCellInline(item, col)) {
+                            @let descriptor = getCellDescriptor(item, col, rowIndex, colIdx);
+                            @if (descriptor.mode === 'editing-inline') {
                               <div class="ogrid-editing-cell">
                               <ogrid-primeng-inline-cell-editor
-                                [value]="getCellValueFn(item, col)"
+                                [value]="descriptor.value"
                                 [item]="item"
                                 [column]="col"
                                 [rowIndex]="rowIndex"
-                                [editorType]="getEditorType(col, item)"
-                                (commit)="onCellEditorCommit(item, col, rowIndex, colIdx, $event)"
+                                [editorType]="descriptor.editorType ?? 'text'"
+                                (commit)="commitEdit(item, col.columnId, descriptor.value, $event, rowIndex, descriptor.globalColIndex)"
                                 (cancel)="cancelEdit()"
                               ></ogrid-primeng-inline-cell-editor>
                               </div>
-                            } @else if (isEditingCellPopover(item, col)) {
-                              @let editorProps = buildPopoverEditorPropsForPrimeng(item, col, rowIndex, colIdx);
+                            } @else if (descriptor.mode === 'editing-popover') {
+                              @let editorProps = buildPopoverEditorProps(item, col, descriptor);
                               <ogrid-primeng-popover-cell-editor
                                 [item]="item"
                                 [column]="col"
                                 [rowIndex]="rowIndex"
-                                [globalColIndex]="colIdx + colOffset()"
-                                [displayValue]="getCellValueFn(item, col)"
+                                [globalColIndex]="descriptor.globalColIndex"
+                                [displayValue]="descriptor.displayValue"
                                 [editorProps]="editorProps"
                                 [onCancel]="cancelEditHandler"
                               ></ogrid-primeng-popover-cell-editor>
                             } @else {
                               <div
                                 [attr.data-row-index]="rowIndex"
-                                [attr.data-col-index]="colIdx + colOffset()"
-                                (mousedown)="onCellMouseDown($event, rowIndex, colIdx + colOffset())"
-                                (dblclick)="onCellDblClickPrimeng(item, col, rowIndex, colIdx)"
+                                [attr.data-col-index]="descriptor.globalColIndex"
+                                (mousedown)="onCellMouseDown($event, rowIndex, descriptor.globalColIndex)"
+                                (dblclick)="descriptor.canEditAny ? onCellDblClick(descriptor.rowId, col.columnId) : null"
                                 (contextmenu)="onCellContextMenu($event)"
                                 class="ogrid-cell-content"
-                                [style.cursor]="canEditCell(col, item) ? 'cell' : 'default'"
-                                [style.background]="getCellBackground(rowIndex, colIdx)"
-                                [style.outline]="isActiveCell(rowIndex, colIdx) ? '2px solid var(--ogrid-selection, #217346)' : null"
-                                [style.outline-offset]="isActiveCell(rowIndex, colIdx) ? '-2px' : null"
+                                [style.cursor]="descriptor.canEditAny ? 'cell' : 'default'"
+                                [style.background]="descriptor.isInRange ? 'var(--ogrid-range-bg, rgba(33, 115, 70, 0.08))' : null"
+                                [style.outline]="descriptor.isActive ? '2px solid var(--ogrid-selection, #217346)' : null"
+                                [style.outline-offset]="descriptor.isActive ? '-2px' : null"
                               >
-                                <span [style]="getCellStyleObj(col, item)">{{ resolveCellDisplay(col, item) }}</span>
-                                @if (canEditCell(col, item) && isSelectionEndCell(rowIndex, colIdx)) {
+                                <span [style]="resolveCellStyleFn(col, item)">{{ resolveCellContent(col, item, descriptor.displayValue) }}</span>
+                                @if (descriptor.canEditAny && descriptor.isSelectionEndCell) {
                                   <div
                                     (mousedown)="onFillHandleMouseDown($event)"
                                     class="ogrid-fill-handle"
@@ -354,55 +355,7 @@ import { PopoverCellEditorComponent } from './popover-cell-editor.component';
       }
     </div>
   `,
-  styles: [`
-    /* ─── OGrid Theme Variables ─── */
-    :root {
-      --ogrid-bg: #ffffff;
-      --ogrid-fg: rgba(0, 0, 0, 0.87);
-      --ogrid-fg-secondary: rgba(0, 0, 0, 0.6);
-      --ogrid-fg-muted: rgba(0, 0, 0, 0.5);
-      --ogrid-border: rgba(0, 0, 0, 0.12);
-      --ogrid-header-bg: rgba(0, 0, 0, 0.04);
-      --ogrid-hover-bg: rgba(0, 0, 0, 0.04);
-      --ogrid-selected-row-bg: #e6f0fb;
-      --ogrid-active-cell-bg: rgba(0, 0, 0, 0.02);
-      --ogrid-range-bg: rgba(33, 115, 70, 0.12);
-      --ogrid-accent: #0078d4;
-      --ogrid-selection-color: #217346;
-      --ogrid-loading-overlay: rgba(255, 255, 255, 0.7);
-    }
-    @media (prefers-color-scheme: dark) {
-      :root:not([data-theme="light"]) {
-        --ogrid-bg: #1e1e1e;
-        --ogrid-fg: rgba(255, 255, 255, 0.87);
-        --ogrid-fg-secondary: rgba(255, 255, 255, 0.6);
-        --ogrid-fg-muted: rgba(255, 255, 255, 0.5);
-        --ogrid-border: rgba(255, 255, 255, 0.12);
-        --ogrid-header-bg: rgba(255, 255, 255, 0.06);
-        --ogrid-hover-bg: rgba(255, 255, 255, 0.08);
-        --ogrid-selected-row-bg: #1a3a5c;
-        --ogrid-active-cell-bg: rgba(255, 255, 255, 0.06);
-        --ogrid-range-bg: rgba(46, 160, 67, 0.15);
-        --ogrid-accent: #4da6ff;
-        --ogrid-selection-color: #2ea043;
-        --ogrid-loading-overlay: rgba(0, 0, 0, 0.7);
-      }
-    }
-    [data-theme="dark"] {
-      --ogrid-bg: #1e1e1e;
-      --ogrid-fg: rgba(255, 255, 255, 0.87);
-      --ogrid-fg-secondary: rgba(255, 255, 255, 0.6);
-      --ogrid-fg-muted: rgba(255, 255, 255, 0.5);
-      --ogrid-border: rgba(255, 255, 255, 0.12);
-      --ogrid-header-bg: rgba(255, 255, 255, 0.06);
-      --ogrid-hover-bg: rgba(255, 255, 255, 0.08);
-      --ogrid-selected-row-bg: #1a3a5c;
-      --ogrid-active-cell-bg: rgba(255, 255, 255, 0.06);
-      --ogrid-range-bg: rgba(46, 160, 67, 0.15);
-      --ogrid-accent: #4da6ff;
-      --ogrid-selection-color: #2ea043;
-      --ogrid-loading-overlay: rgba(0, 0, 0, 0.7);
-    }
+  styles: [OGRID_THEME_VARS_CSS, `
     :host { display: block; }
     .ogrid-root {
       position: relative;
@@ -443,7 +396,7 @@ import { PopoverCellEditorComponent } from './popover-cell-editor.component';
       max-width: 48px;
       text-align: center;
       background: var(--ogrid-header-bg, #f5f5f5);
-      border-bottom: 2px solid var(--ogrid-border, #e0e0e0);
+      border-bottom: 2px solid var(--ogrid-border, rgba(0, 0, 0, 0.12));
       position: sticky;
       top: 0;
       z-index: 3;
@@ -455,7 +408,7 @@ import { PopoverCellEditorComponent } from './popover-cell-editor.component';
       text-align: center;
       font-weight: 600;
       background: var(--ogrid-header-bg, #f5f5f5);
-      border-bottom: 2px solid var(--ogrid-border, #e0e0e0);
+      border-bottom: 2px solid var(--ogrid-border, rgba(0, 0, 0, 0.12));
       position: sticky;
       top: 0;
       z-index: 3;
@@ -470,12 +423,12 @@ import { PopoverCellEditorComponent } from './popover-cell-editor.component';
       text-align: center;
       font-weight: 600;
       background: var(--ogrid-header-bg, #f5f5f5);
-      border-bottom: 2px solid var(--ogrid-border, #e0e0e0);
+      border-bottom: 2px solid var(--ogrid-border, rgba(0, 0, 0, 0.12));
       padding: 6px 10px;
     }
     .ogrid-header-cell {
       background: var(--ogrid-header-bg, #f5f5f5);
-      border-bottom: 2px solid var(--ogrid-border, #e0e0e0);
+      border-bottom: 2px solid var(--ogrid-border, rgba(0, 0, 0, 0.12));
       padding: 0;
       position: relative;
       user-select: none;
@@ -500,7 +453,7 @@ import { PopoverCellEditorComponent } from './popover-cell-editor.component';
       max-width: 48px;
       padding: 6px 4px;
       text-align: center;
-      border-bottom: 1px solid var(--ogrid-border, #f0f0f0);
+      border-bottom: 1px solid var(--ogrid-border, rgba(0, 0, 0, 0.12));
     }
     .ogrid-row-number-cell {
       width: 50px;
@@ -512,14 +465,14 @@ import { PopoverCellEditorComponent } from './popover-cell-editor.component';
       font-variant-numeric: tabular-nums;
       color: var(--ogrid-fg-secondary, rgba(0, 0, 0, 0.6));
       background: var(--ogrid-header-bg, rgba(0, 0, 0, 0.04));
-      border-bottom: 1px solid var(--ogrid-border, #f0f0f0);
+      border-bottom: 1px solid var(--ogrid-border, rgba(0, 0, 0, 0.12));
       position: sticky;
       left: 0;
       z-index: 3;
     }
     .ogrid-data-cell {
       padding: 0;
-      border-bottom: 1px solid var(--ogrid-border, #f0f0f0);
+      border-bottom: 1px solid var(--ogrid-border, rgba(0, 0, 0, 0.12));
       position: relative;
     }
     .ogrid-cell-content {
@@ -635,7 +588,7 @@ import { PopoverCellEditorComponent } from './popover-cell-editor.component';
     /* Context menu */
     .ogrid-context-menu {
       position: fixed;
-      z-index: 10000;
+      z-index: 1000;
       min-width: 160px;
       padding: 4px 0;
       background: var(--ogrid-bg, #fff);
@@ -754,7 +707,7 @@ export class DataGridTableComponent<T = unknown> extends BaseDataGridTableCompon
   @Input() peopleSearch: ((query: string) => Promise<unknown[]>) | undefined = undefined;
   @Input() getUserByEmail: ((email: string) => Promise<unknown>) | undefined = undefined;
   @Input({ alias: 'emptyState' }) emptyStateInput: { onClearAll: () => void; hasActiveFilters: boolean; message?: string; render?: unknown } | undefined = undefined;
-  @Input() onCellError: ((error: Error) => void) | undefined = undefined;
+  @Input() onCellError: ((error: Error, info: unknown) => void) | undefined = undefined;
   @Input({ alias: 'aria-label' }) ariaLabelInput: string | undefined = undefined;
   @Input({ alias: 'aria-labelledby' }) ariaLabelledByInput: string | undefined = undefined;
   @Input() showRowNumbers: boolean = false;
@@ -870,102 +823,7 @@ export class DataGridTableComponent<T = unknown> extends BaseDataGridTableCompon
     return this.getRowIdInput(item);
   }
 
-  getCellValueFn(item: T, col: IColumnDef<T>): unknown {
-    return getCellValue(item, col);
-  }
-
-  resolveCellDisplay(col: IColumnDef<T>, item: T): string {
-    const value = getCellValue(item, col);
-    const result = resolveCellDisplayContent(col, item, value);
-    return result != null ? String(result) : '';
-  }
-
-  getCellStyleObj(col: IColumnDef<T>, item: T): Record<string, string> | null {
-    return resolveCellStyle(col, item) ?? null;
-  }
-
-  canEditCell(col: IColumnDef<T>, item: T): boolean {
-    const colEditable = col.editable === true || (typeof col.editable === 'function' && col.editable(item));
-    return this.editable !== false && !!colEditable && this.onCellValueChanged != null && typeof col.cellEditor !== 'function';
-  }
-
-  isEditingCell(item: T, col: IColumnDef<T>): boolean {
-    const editing = this.editingCell();
-    if (!editing) return false;
-    return editing.rowId === this.getRowIdInput(item) && editing.columnId === col.columnId;
-  }
-
-  isEditingCellInline(item: T, col: IColumnDef<T>): boolean {
-    return this.isEditingCell(item, col) && typeof col.cellEditor !== 'function';
-  }
-
-  isEditingCellPopover(item: T, col: IColumnDef<T>): boolean {
-    return this.isEditingCell(item, col) && typeof col.cellEditor === 'function';
-  }
-
-  buildPopoverEditorPropsForPrimeng(item: T, col: IColumnDef<T>, rowIndex: number, colIdx: number): unknown {
-    const oldValue = getCellValue(item, col);
-    const pendingValue = this.pendingEditorValue();
-    const displayValue = pendingValue !== undefined ? pendingValue : oldValue;
-    return {
-      value: displayValue,
-      onValueChange: (value: unknown) => this.setPendingEditorValue(value),
-      item,
-      column: col,
-      rowIndex,
-      onCommit: (newValue: unknown) => this.onCellEditorCommit(item, col, rowIndex, colIdx, newValue),
-      onCancel: () => this.cancelEdit(),
-    };
-  }
-
-  getEditorType(col: IColumnDef<T>, _item: T): 'text' | 'select' | 'checkbox' | 'date' | 'richSelect' {
-    if (col.cellEditor === 'text' || col.cellEditor === 'select' || col.cellEditor === 'checkbox' || col.cellEditor === 'date' || col.cellEditor === 'richSelect') {
-      return col.cellEditor as 'text' | 'select' | 'checkbox' | 'date' | 'richSelect';
-    }
-    if (col.type === 'date') return 'date';
-    if (col.type === 'boolean') return 'checkbox';
-    return 'text';
-  }
-
-  isActiveCell(rowIndex: number, colIdx: number): boolean {
-    const ac = this.activeCell();
-    if (!ac) return false;
-    return ac.rowIndex === rowIndex && ac.columnIndex === colIdx + this.colOffset();
-  }
-
-  isInSelectionRange(rowIndex: number, colIdx: number): boolean {
-    const range = this.selectionRange();
-    if (!range) return false;
-    const minR = Math.min(range.startRow, range.endRow);
-    const maxR = Math.max(range.startRow, range.endRow);
-    const minC = Math.min(range.startCol, range.endCol);
-    const maxC = Math.max(range.startCol, range.endCol);
-    return rowIndex >= minR && rowIndex <= maxR && colIdx >= minC && colIdx <= maxC;
-  }
-
-  isSelectionEndCell(rowIndex: number, colIdx: number): boolean {
-    const range = this.selectionRange();
-    if (!range || this.isDragging() || this.copyRange() || this.cutRange()) return false;
-    return rowIndex === range.endRow && colIdx === range.endCol;
-  }
-
-  getCellBackground(rowIndex: number, colIdx: number): string | null {
-    if (this.isInSelectionRange(rowIndex, colIdx)) return 'var(--ogrid-range-bg, rgba(33, 115, 70, 0.08))';
-    return null;
-  }
-
   // --- PrimeNG-specific event handlers ---
-
-  onCellDblClickPrimeng(item: T, col: IColumnDef<T>, _rowIndex: number, _colIdx: number): void {
-    if (this.canEditCell(col, item)) {
-      this.stateService.setEditingCell({ rowId: this.getRowIdInput(item), columnId: col.columnId });
-    }
-  }
-
-  onCellEditorCommit(item: T, col: IColumnDef<T>, rowIndex: number, colIdx: number, newValue: unknown): void {
-    const oldValue = getCellValue(item, col);
-    this.stateService.commitCellEdit(item, col.columnId, oldValue, newValue, rowIndex, colIdx + this.colOffset());
-  }
 
   onSelectAllChangePrimeng(checked: boolean): void {
     this.state().rowSelection.handleSelectAll(checked);

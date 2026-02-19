@@ -1,5 +1,4 @@
-import { Component, Input, ViewEncapsulation } from '@angular/core';
-import { CommonModule } from '@angular/common';
+import { Component, Input, ViewEncapsulation, ChangeDetectionStrategy } from '@angular/core';
 import { SideBarComponent } from './sidebar.component';
 import type { SideBarProps } from './sidebar.component';
 import { GRID_BORDER_RADIUS } from '@alaarab/ogrid-core';
@@ -8,7 +7,8 @@ import { GRID_BORDER_RADIUS } from '@alaarab/ogrid-core';
   selector: 'ogrid-layout',
   standalone: true,
   encapsulation: ViewEncapsulation.None,
-  imports: [CommonModule, SideBarComponent],
+  changeDetection: ChangeDetectionStrategy.OnPush,
+  imports: [SideBarComponent],
   styles: [`
     /* ─── OGrid Theme Variables ─── */
     :root {

@@ -103,6 +103,11 @@ export { BaseColumnChooserComponent } from './components/base-column-chooser.com
 export type { IColumnChooserProps } from './components/base-column-chooser.component';
 export { BasePaginationControlsComponent } from './components/base-pagination-controls.component';
 export { BaseInlineCellEditorComponent } from './components/base-inline-cell-editor.component';
+export { INLINE_CELL_EDITOR_TEMPLATE, INLINE_CELL_EDITOR_STYLES } from './components/inline-cell-editor-template';
+export { BasePopoverCellEditorComponent, POPOVER_CELL_EDITOR_TEMPLATE, POPOVER_CELL_EDITOR_OVERLAY_STYLES } from './components/base-popover-cell-editor.component';
+
+// Shared styles
+export { OGRID_THEME_VARS_CSS } from './styles/ogrid-theme-vars';
 
 // Utilities (view model helpers)
 export type {

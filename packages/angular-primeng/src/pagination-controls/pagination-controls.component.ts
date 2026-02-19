@@ -1,11 +1,10 @@
-import { Component } from '@angular/core';
-import { CommonModule } from '@angular/common';
+import { Component, ChangeDetectionStrategy } from '@angular/core';
 import { BasePaginationControlsComponent } from '@alaarab/ogrid-angular';
 
 @Component({
   selector: 'ogrid-primeng-pagination-controls',
   standalone: true,
-  imports: [CommonModule],
+  changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     @if (vm()) {
       <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;font-size:13px;color:var(--ogrid-fg, #242424)">
@@ -89,7 +88,7 @@ import { BasePaginationControlsComponent } from '@alaarab/ogrid-angular';
             [value]="'' + pageSize"
             (change)="onPageSizeChange($any($event.target).value)"
             aria-label="Rows per page"
-            style="padding:4px 6px;border:1px solid var(--ogrid-border, #e0e0e0);border-radius:4px;background:var(--ogrid-bg, #fff);color:var(--ogrid-fg, #242424)"
+            style="padding:4px 6px;border:1px solid var(--ogrid-border, rgba(0, 0, 0, 0.12));border-radius:4px;background:var(--ogrid-bg, #fff);color:var(--ogrid-fg, #242424)"
           >
             @for (opt of vm()!.pageSizeOptions; track opt) {
               <option [value]="opt">{{ opt }}</option>

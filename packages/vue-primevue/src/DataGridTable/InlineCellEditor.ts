@@ -9,7 +9,7 @@ const _DatePicker = DatePicker as any;
 export type { CreateInlineCellEditorOptions } from '@alaarab/ogrid-vue';
 
 export const InlineCellEditor = createInlineCellEditor({
-  renderCheckbox: (_h, { checked, onChange, onCancel }) =>
+  renderCheckbox: ({ checked, onChange, onCancel }) =>
     h(_Checkbox, {
       modelValue: checked,
       binary: true,
@@ -20,7 +20,7 @@ export const InlineCellEditor = createInlineCellEditor({
       },
     }),
 
-  renderDatePicker: (_h, { value, onChange, onCancel }) => {
+  renderDatePicker: ({ value, onChange, onCancel }) => {
     let dateVal: Date | null = null;
     if (value) {
       const d = new Date(value);

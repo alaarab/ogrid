@@ -434,6 +434,47 @@ export abstract class BaseDataGridTableComponent<T = unknown> {
     });
   }
 
+  /** Check if a specific cell is the active cell (PrimeNG inline template helper). */
+  isActiveCell(rowIndex: number, colIdx: number): boolean {
+    const ac = this.activeCell();
+    if (!ac) return false;
+    return ac.rowIndex === rowIndex && ac.columnIndex === colIdx + this.colOffset();
+  }
+
+  /** Check if a cell is within the current selection range (PrimeNG inline template helper). */
+  isInSelectionRange(rowIndex: number, colIdx: number): boolean {
+    const range = this.selectionRange();
+    if (!range) return false;
+    const minR = Math.min(range.startRow, range.endRow);
+    const maxR = Math.max(range.startRow, range.endRow);
+    const minC = Math.min(range.startCol, range.endCol);
+    const maxC = Math.max(range.startCol, range.endCol);
+    return rowIndex >= minR && rowIndex <= maxR && colIdx >= minC && colIdx <= maxC;
+  }
+
+  /** Check if a cell is the selection end cell for fill handle display. */
+  isSelectionEndCell(rowIndex: number, colIdx: number): boolean {
+    const range = this.selectionRange();
+    if (!range || this.isDragging() || this.copyRange() || this.cutRange()) return false;
+    return rowIndex === range.endRow && colIdx === range.endCol;
+  }
+
+  /** Get cell background color based on selection state. */
+  getCellBackground(rowIndex: number, colIdx: number): string | null {
+    if (this.isInSelectionRange(rowIndex, colIdx)) return 'var(--ogrid-range-bg, rgba(33, 115, 70, 0.08))';
+    return null;
+  }
+
+  /** Resolve editor type from column definition. */
+  getEditorType(col: IColumnDef<T>, _item: T): 'text' | 'select' | 'checkbox' | 'date' | 'richSelect' {
+    if (col.cellEditor === 'text' || col.cellEditor === 'select' || col.cellEditor === 'checkbox' || col.cellEditor === 'date' || col.cellEditor === 'richSelect') {
+      return col.cellEditor as 'text' | 'select' | 'checkbox' | 'date' | 'richSelect';
+    }
+    if (col.type === 'date') return 'date';
+    if (col.type === 'boolean') return 'checkbox';
+    return 'text';
+  }
+
   getSelectValues(col: IColumnDef<T>): string[] {
     const params = col.cellEditorParams;
     if (params && typeof params === 'object' && 'values' in params) {
@@ -672,7 +713,7 @@ export abstract class BaseDataGridTableComponent<T = unknown> {
       ...this.columnSizingOverrides(),
       [columnId]: { widthPx: width },
     });
-    this.state().layout.onColumnResized?.(columnId, width);
+    (this.state().layout.onAutosizeColumn ?? this.state().layout.onColumnResized)?.(columnId, width);
   }
 
   onAutosizeAllColumns(): void {
@@ -681,7 +722,7 @@ export abstract class BaseDataGridTableComponent<T = unknown> {
     for (const col of this.visibleCols()) {
       const width = measureColumnContentWidth(col.columnId, col.minWidth, tableEl);
       overrides[col.columnId] = { widthPx: width };
-      this.state().layout.onColumnResized?.(col.columnId, width);
+      (this.state().layout.onAutosizeColumn ?? this.state().layout.onColumnResized)?.(col.columnId, width);
     }
     this.state().layout.setColumnSizingOverrides({
       ...this.columnSizingOverrides(),

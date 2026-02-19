@@ -185,10 +185,20 @@ export { MarchingAntsOverlay } from './components/MarchingAntsOverlay';
 export type { MarchingAntsOverlayProps } from './components/MarchingAntsOverlay';
 export { SideBar } from './components/SideBar';
 export type { SideBarProps, SideBarFilterColumn } from './components/SideBar';
+export { BaseColumnHeaderMenu } from './components/BaseColumnHeaderMenu';
+export type { BaseColumnHeaderMenuProps, ColumnHeaderMenuClassNames } from './components/BaseColumnHeaderMenu';
+export { createOGrid } from './components/createOGrid';
+export type { CreateOGridComponents, GridRowProps, InlineCellEditorProps } from './components/createOGrid';
 export { CellErrorBoundary } from './components/CellErrorBoundary';
 export type { CellErrorBoundaryProps } from './components/CellErrorBoundary';
 export { EmptyState } from './components/EmptyState';
 export type { EmptyStateProps } from './components/EmptyState';
+export { BaseEmptyState } from './components/BaseEmptyState';
+export type { BaseEmptyStateProps, BaseEmptyStateClassNames } from './components/BaseEmptyState';
+export { BaseLoadingOverlay } from './components/BaseLoadingOverlay';
+export type { BaseLoadingOverlayProps, BaseLoadingOverlayClassNames } from './components/BaseLoadingOverlay';
+export { BaseDropIndicator } from './components/BaseDropIndicator';
+export type { BaseDropIndicatorProps } from './components/BaseDropIndicator';
 export {
   DateFilterContent,
   getColumnHeaderFilterStateParams,

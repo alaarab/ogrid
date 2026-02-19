@@ -11,10 +11,10 @@ export class PaginationControls<T> {
     this.state = state;
   }
 
-  render(totalCount: number): void {
+  render(totalCount: number, pageSizeOptions?: number[]): void {
     if (this.el) this.el.remove();
 
-    const vm = getPaginationViewModel(this.state.page, this.state.pageSize, totalCount);
+    const vm = getPaginationViewModel(this.state.page, this.state.pageSize, totalCount, pageSizeOptions ? { pageSizeOptions } : undefined);
     if (!vm) return; // No pagination if totalCount is 0
 
     this.el = document.createElement('div');

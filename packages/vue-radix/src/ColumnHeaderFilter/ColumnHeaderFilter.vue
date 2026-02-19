@@ -83,7 +83,7 @@ const setPopoverRefEl = (el: any) => { popoverRef.value = el as HTMLDivElement; 
       <!-- Text Filter -->
       <TextFilterPopover
         v-if="filterType === 'text'"
-        :value="tempTextValue"
+        :value="tempTextValue ?? ''"
         :onValueChange="setTempTextValue"
         :onApply="handlers.handleTextApply"
         :onClear="handlers.handleTextClear"

@@ -106,7 +106,7 @@ import { BaseColumnHeaderFilterComponent } from '@alaarab/ogrid-angular';
                   }
                 }
               </div>
-              <div class="ogrid-header-filter__popover-actions" style="border-top: 1px solid var(--ogrid-border, #e0e0e0);">
+              <div class="ogrid-header-filter__popover-actions" style="border-top: 1px solid var(--ogrid-border, rgba(0, 0, 0, 0.12));">
                 <button class="ogrid-header-filter__action-btn" [disabled]="tempSelected().size === 0" (click)="handleMultiSelectClear()">Clear</button>
                 <button class="ogrid-header-filter__action-btn ogrid-header-filter__action-btn--primary" (click)="handleMultiSelectApply()">Apply</button>
               </div>
@@ -158,7 +158,7 @@ import { BaseColumnHeaderFilterComponent } from '@alaarab/ogrid-angular';
                 }
               </div>
               @if (selectedUser) {
-                <div style="padding: 8px 12px; border-top: 1px solid var(--ogrid-border, #e0e0e0);">
+                <div style="padding: 8px 12px; border-top: 1px solid var(--ogrid-border, rgba(0, 0, 0, 0.12));">
                   <button class="ogrid-header-filter__action-btn" style="width: 100%;" (click)="handleClearUser()">Clear Filter</button>
                 </div>
               }
@@ -244,7 +244,7 @@ import { BaseColumnHeaderFilterComponent } from '@alaarab/ogrid-angular';
     }
     .ogrid-header-filter__btn:hover {
       opacity: 1;
-      background: var(--ogrid-hover-bg, #f0f0f0);
+      background: var(--ogrid-hover-bg, rgba(0, 0, 0, 0.04));
     }
     .ogrid-header-filter__btn--active {
       opacity: 1;
@@ -264,7 +264,7 @@ import { BaseColumnHeaderFilterComponent } from '@alaarab/ogrid-angular';
       position: fixed;
       z-index: 1000;
       background: var(--ogrid-bg, #ffffff);
-      border: 1px solid var(--ogrid-border, #e0e0e0);
+      border: 1px solid var(--ogrid-border, rgba(0, 0, 0, 0.12));
       border-radius: 4px;
       box-shadow: 0 4px 16px rgba(0,0,0,0.15);
       min-width: 200px;
@@ -274,7 +274,7 @@ import { BaseColumnHeaderFilterComponent } from '@alaarab/ogrid-angular';
       font-size: 14px;
       font-weight: 600;
       color: var(--ogrid-fg, #242424);
-      border-bottom: 1px solid var(--ogrid-border, #e0e0e0);
+      border-bottom: 1px solid var(--ogrid-border, rgba(0, 0, 0, 0.12));
       background: var(--ogrid-header-bg, #f5f5f5);
     }
     .ogrid-header-filter__popover-body {
@@ -284,7 +284,7 @@ import { BaseColumnHeaderFilterComponent } from '@alaarab/ogrid-angular';
     .ogrid-header-filter__input {
       width: 100%;
       padding: 6px 8px;
-      border: 1px solid var(--ogrid-border, #e0e0e0);
+      border: 1px solid var(--ogrid-border, rgba(0, 0, 0, 0.12));
       border-radius: 4px;
       font-size: 14px;
       background: var(--ogrid-bg, #ffffff);
@@ -304,7 +304,7 @@ import { BaseColumnHeaderFilterComponent } from '@alaarab/ogrid-angular';
       display: flex;
       gap: 8px;
       padding: 8px 12px;
-      border-bottom: 1px solid var(--ogrid-border, #e0e0e0);
+      border-bottom: 1px solid var(--ogrid-border, rgba(0, 0, 0, 0.12));
     }
     .ogrid-header-filter__options-list {
       max-height: 240px;
@@ -322,7 +322,7 @@ import { BaseColumnHeaderFilterComponent } from '@alaarab/ogrid-angular';
       transition: background 0.15s ease;
     }
     .ogrid-header-filter__option:hover {
-      background: var(--ogrid-hover-bg, #f0f0f0);
+      background: var(--ogrid-hover-bg, rgba(0, 0, 0, 0.04));
     }
     .ogrid-header-filter__loading,
     .ogrid-header-filter__empty {
@@ -341,7 +341,7 @@ import { BaseColumnHeaderFilterComponent } from '@alaarab/ogrid-angular';
     }
     .ogrid-header-filter__action-btn {
       padding: 6px 12px;
-      border: 1px solid var(--ogrid-border, #e0e0e0);
+      border: 1px solid var(--ogrid-border, rgba(0, 0, 0, 0.12));
       border-radius: 4px;
       background: var(--ogrid-bg, #ffffff);
       color: var(--ogrid-fg, #242424);
@@ -350,7 +350,7 @@ import { BaseColumnHeaderFilterComponent } from '@alaarab/ogrid-angular';
       transition: all 0.15s ease;
     }
     .ogrid-header-filter__action-btn:hover:not(:disabled) {
-      background: var(--ogrid-hover-bg, #f0f0f0);
+      background: var(--ogrid-hover-bg, rgba(0, 0, 0, 0.04));
     }
     .ogrid-header-filter__action-btn:disabled {
       opacity: 0.4;
@@ -366,7 +366,7 @@ import { BaseColumnHeaderFilterComponent } from '@alaarab/ogrid-angular';
     }
     .ogrid-header-filter__people-selected {
       padding: 12px;
-      border-bottom: 1px solid var(--ogrid-border, #e0e0e0);
+      border-bottom: 1px solid var(--ogrid-border, rgba(0, 0, 0, 0.12));
     }
     .ogrid-header-filter__people-info-label {
       font-size: 12px;
@@ -417,7 +417,7 @@ import { BaseColumnHeaderFilterComponent } from '@alaarab/ogrid-angular';
       transition: background 0.15s ease;
     }
     .ogrid-header-filter__people-option:hover {
-      background: var(--ogrid-hover-bg, #f0f0f0);
+      background: var(--ogrid-hover-bg, rgba(0, 0, 0, 0.04));
     }
   `],
   host: {

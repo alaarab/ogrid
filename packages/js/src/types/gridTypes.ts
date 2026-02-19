@@ -7,6 +7,7 @@ import type {
   IRowSelectionChangeEvent,
   IOGridApi,
   ISideBarDef,
+  IStatusBarProps,
   IVirtualScrollConfig,
 } from '@alaarab/ogrid-core';
 
@@ -75,6 +76,12 @@ export interface OGridOptions<T> {
   /** Show row numbers column. Default: false. */
   showRowNumbers?: boolean;
 
+  /** Status bar configuration or boolean to enable/disable with defaults. */
+  statusBar?: boolean | IStatusBarProps;
+
+  /** Plural label for the entity type (e.g. 'items'). Used in status bar and empty state. */
+  entityLabelPlural?: string;
+
   rowSelection?: RowSelectionMode;
   /** Callback fired when row selection changes. */
   onSelectionChange?: (event: IRowSelectionChangeEvent<T>) => void;
@@ -94,11 +101,35 @@ export interface OGridOptions<T> {
   /** Accessible label for the grid. */
   'aria-label'?: string;
 
+  /** Accessible label reference for the grid (ID of a labelling element). */
+  'aria-labelledby'?: string;
+
   /** Side bar configuration (columns panel + filters panel). */
   sideBar?: boolean | ISideBarDef;
 
   /** Error callback for server-side data source failures. */
   onError?: (error: unknown) => void;
+
+  /** Called when a cell editor throws an error. JS alternative: listen to the 'cellError' event. */
+  onCellError?: (error: Error, info: unknown) => void;
+
+  /** Called when undo is triggered. JS alternative: listen to the 'undo' event. */
+  onUndo?: () => void;
+
+  /** Called when redo is triggered. JS alternative: listen to the 'redo' event. */
+  onRedo?: () => void;
+
+  /** Whether there are undo operations available. */
+  canUndo?: boolean;
+
+  /** Whether there are redo operations available. */
+  canRedo?: boolean;
+
+  /** Called when the current page changes. JS alternative: listen to the 'pageChange' event. */
+  onPageChange?: (page: number) => void;
+
+  /** Called when the page size changes. JS alternative: listen to the 'pageSizeChange' event. */
+  onPageSizeChange?: (size: number) => void;
 
   /** Callback fired when first data is rendered. */
   onFirstDataRendered?: () => void;
@@ -108,6 +139,33 @@ export interface OGridOptions<T> {
 
   /** Fixed row height in pixels. Overrides default row height (36px). */
   rowHeight?: number;
+
+  /** Cell spacing/density preset. Controls cell padding throughout the grid. Default: 'normal'. */
+  density?: 'compact' | 'normal' | 'comfortable';
+
+  /** Enable column reordering via drag-and-drop on header cells. Default: false. */
+  columnReorder?: boolean;
+
+  /** Page size options shown in the pagination dropdown. Default: [10, 20, 50, 100]. */
+  pageSizeOptions?: number[];
+
+  /** Initial column display order (array of column ids). */
+  columnOrder?: string[];
+
+  /** Callback fired when column order changes. */
+  onColumnOrderChange?: (order: string[]) => void;
+
+  /** Callback fired when a column is resized. */
+  onColumnResized?: (columnId: string, width: number) => void;
+
+  /** Callback fired when a column is pinned or unpinned. */
+  onColumnPinned?: (columnId: string, pin: 'left' | 'right' | null) => void;
+
+  /** Where the column chooser renders. `true` or `'toolbar'` (default): toolbar. `'sidebar'`: sidebar only. `false`: hidden. */
+  columnChooser?: boolean | 'toolbar' | 'sidebar';
+
+  /** Secondary toolbar row rendered below the primary toolbar. */
+  toolbarBelow?: HTMLElement | null;
 }
 
 /** Events emitted by the OGrid instance. */
