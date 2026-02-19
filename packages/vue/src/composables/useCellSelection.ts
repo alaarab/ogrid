@@ -302,14 +302,27 @@ export function useCellSelection(params: UseCellSelectionParams): UseCellSelecti
     if (wasDrag) isDragging.value = false;
   };
 
+  let isUnmounted = false;
+
+  const onMoveSafe = (e: MouseEvent) => {
+    if (isUnmounted) return;
+    onMove(e);
+  };
+
+  const onUpSafe = () => {
+    if (isUnmounted) return;
+    onUp();
+  };
+
   onMounted(() => {
-    window.addEventListener('mousemove', onMove, true);
-    window.addEventListener('mouseup', onUp, true);
+    window.addEventListener('mousemove', onMoveSafe, true);
+    window.addEventListener('mouseup', onUpSafe, true);
   });
 
   onUnmounted(() => {
-    window.removeEventListener('mousemove', onMove, true);
-    window.removeEventListener('mouseup', onUp, true);
+    isUnmounted = true;
+    window.removeEventListener('mousemove', onMoveSafe, true);
+    window.removeEventListener('mouseup', onUpSafe, true);
     if (rafId) cancelAnimationFrame(rafId);
     stopAutoScroll();
   });

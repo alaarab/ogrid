@@ -18,24 +18,6 @@ import { BaseColumnHeaderFilterComponent } from '@alaarab/ogrid-angular';
       </div>
 
       <div class="ogrid-header-filter__actions">
-        @if (onSort) {
-          <button
-            class="ogrid-header-filter__btn"
-            [class.ogrid-header-filter__btn--active]="isSorted"
-            (click)="onSort!()"
-            [attr.aria-label]="'Sort by ' + columnName"
-            [title]="isSorted ? (isSortedDescending ? 'Sorted descending' : 'Sorted ascending') : 'Sort'"
-          >
-            @if (isSorted && isSortedDescending) {
-              &#9660;
-            } @else if (isSorted) {
-              &#9650;
-            } @else {
-              &#8597;
-            }
-          </button>
-        }
-
         @if (filterType !== 'none') {
           <button
             class="ogrid-header-filter__filter-btn"

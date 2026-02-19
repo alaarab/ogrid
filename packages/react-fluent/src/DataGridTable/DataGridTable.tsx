@@ -138,7 +138,7 @@ function DataGridTableInner<T>(props: IOGridDataGridProps<T>): React.ReactElemen
     virtualScrollEnabled, visibleRange,
     items, getRowId, emptyState, rowSelection,
     isLoading, loadingMessage,
-    ariaLabel, ariaLabelledBy, visibleColumns, columnOrder, columnReorder, density,
+    ariaLabel, ariaLabelledBy, visibleColumns, columnOrder, columnReorder, density, rowHeight,
     rowNumberOffset, headerRows, allowOverflowX, fitToContent,
     editCallbacks, interactionHandlers,
     cellDescriptorInputRef, pendingEditorValueRef, popoverAnchorElRef,
@@ -305,6 +305,7 @@ function DataGridTableInner<T>(props: IOGridDataGridProps<T>): React.ReactElemen
           ['--data-table-width' as string]: showEmptyInGrid ? '100%' : allowOverflowX ? 'fit-content' : fitToContent ? 'fit-content' : '100%',
           ['--data-table-min-width' as string]: showEmptyInGrid ? '100%' : allowOverflowX ? 'max-content' : fitToContent ? 'max-content' : '100%',
           ['--data-table-total-min-width' as string]: `${minTableWidth}px`,
+          ...(rowHeight ? { ['--ogrid-row-height' as string]: `${rowHeight}px` } : {}),
         } as React.CSSProperties}
       >
         <div className={styles.tableScrollContent}>

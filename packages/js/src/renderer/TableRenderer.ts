@@ -52,6 +52,28 @@ export class TableRenderer<T> {
   private dropIndicator: HTMLDivElement | null = null;
   private virtualScrollState: VirtualScrollState | null = null;
 
+  // Delegated event handlers bound to tbody
+  private _tbodyClickHandler: ((e: MouseEvent) => void) | null = null;
+  private _tbodyMousedownHandler: ((e: MouseEvent) => void) | null = null;
+  private _tbodyDblclickHandler: ((e: MouseEvent) => void) | null = null;
+  private _tbodyContextmenuHandler: ((e: MouseEvent) => void) | null = null;
+
+  // State tracking for incremental DOM patching
+  private lastActiveCell: IActiveCell | null = null;
+  private lastSelectionRange: ISelectionRange | null = null;
+  private lastCopyRange: ISelectionRange | null = null;
+  private lastCutRange: ISelectionRange | null = null;
+  private lastEditingCell: { rowId: RowId; columnId: string } | null = null;
+  private lastColumnWidths: Record<string, number> = {};
+  private lastHeaderSignature: string = '';
+  private lastRenderedItems: T[] | null = null;
+  private lastRowSelectionMode: string | undefined;
+  private lastSelectedRowIds: Set<RowId> | undefined;
+  private lastShowRowNumbers: boolean | undefined;
+  private lastPinnedColumns: Record<string, 'left' | 'right'> | undefined;
+  private lastAllSelected: boolean | undefined;
+  private lastSomeSelected: boolean | undefined;
+
   constructor(container: HTMLElement, state: GridState<T>) {
     this.container = container;
     this.state = state;
@@ -74,6 +96,67 @@ export class TableRenderer<T> {
     this.interactionState = state;
   }
 
+  private getCellFromEvent(e: MouseEvent): { el: HTMLElement; rowIndex: number; colIndex: number } | null {
+    const target = e.target as HTMLElement;
+    const cell = target.closest('td[data-row-index]') as HTMLElement | null;
+    if (!cell) return null;
+    const rowIndex = parseInt(cell.getAttribute('data-row-index') ?? '', 10);
+    const colIndex = parseInt(cell.getAttribute('data-col-index') ?? '', 10);
+    if (Number.isNaN(rowIndex) || Number.isNaN(colIndex)) return null;
+    return { el: cell, rowIndex, colIndex };
+  }
+
+  private attachBodyDelegation(): void {
+    if (!this.tbody) return;
+
+    this._tbodyClickHandler = (e: MouseEvent) => {
+      const cell = this.getCellFromEvent(e);
+      if (!cell) return;
+      this.interactionState?.onCellClick?.(cell.rowIndex, cell.colIndex, e);
+    };
+
+    this._tbodyMousedownHandler = (e: MouseEvent) => {
+      const cell = this.getCellFromEvent(e);
+      if (!cell) return;
+      this.interactionState?.onCellMouseDown?.(cell.rowIndex, cell.colIndex, e);
+    };
+
+    this._tbodyDblclickHandler = (e: MouseEvent) => {
+      const cell = this.getCellFromEvent(e);
+      if (!cell) return;
+      const columnId = cell.el.getAttribute('data-column-id') ?? '';
+      // Retrieve the typed rowId by looking up the item at the row index (avoids string/number mismatch from data-row-id)
+      const { items } = this.state.getProcessedItems();
+      const item = items[cell.rowIndex];
+      if (!item) return;
+      const rowId = this.state.getRowId(item);
+      this.interactionState?.onCellDoubleClick?.(cell.rowIndex, cell.colIndex, rowId, columnId);
+    };
+
+    this._tbodyContextmenuHandler = (e: MouseEvent) => {
+      const cell = this.getCellFromEvent(e);
+      if (!cell) return;
+      this.interactionState?.onCellContextMenu?.(cell.rowIndex, cell.colIndex, e);
+    };
+
+    this.tbody.addEventListener('click', this._tbodyClickHandler, { passive: true });
+    this.tbody.addEventListener('mousedown', this._tbodyMousedownHandler);
+    this.tbody.addEventListener('dblclick', this._tbodyDblclickHandler, { passive: true });
+    this.tbody.addEventListener('contextmenu', this._tbodyContextmenuHandler);
+  }
+
+  private detachBodyDelegation(): void {
+    if (!this.tbody) return;
+    if (this._tbodyClickHandler) this.tbody.removeEventListener('click', this._tbodyClickHandler);
+    if (this._tbodyMousedownHandler) this.tbody.removeEventListener('mousedown', this._tbodyMousedownHandler);
+    if (this._tbodyDblclickHandler) this.tbody.removeEventListener('dblclick', this._tbodyDblclickHandler);
+    if (this._tbodyContextmenuHandler) this.tbody.removeEventListener('contextmenu', this._tbodyContextmenuHandler);
+    this._tbodyClickHandler = null;
+    this._tbodyMousedownHandler = null;
+    this._tbodyDblclickHandler = null;
+    this._tbodyContextmenuHandler = null;
+  }
+
   getWrapperElement(): HTMLDivElement | null {
     return this.wrapperEl;
   }
@@ -89,6 +172,10 @@ export class TableRenderer<T> {
     wrapper.setAttribute('role', 'grid');
     wrapper.setAttribute('tabindex', '0'); // Make focusable for keyboard nav
     wrapper.style.position = 'relative'; // For MarchingAnts absolute positioning
+    const rowHeight = (this.state as unknown as { _options: { rowHeight?: number } })._options?.rowHeight;
+    if (rowHeight) {
+      wrapper.style.setProperty('--ogrid-row-height', `${rowHeight}px`);
+    }
     const ariaLabel = (this.state as unknown as { _ariaLabel?: string })._ariaLabel;
     if (ariaLabel) {
       wrapper.setAttribute('aria-label', ariaLabel);
@@ -107,6 +194,7 @@ export class TableRenderer<T> {
     // Render body
     this.tbody = document.createElement('tbody');
     this.renderBody();
+    this.attachBodyDelegation();
     this.table.appendChild(this.tbody);
 
     wrapper.appendChild(this.table);
@@ -118,18 +206,235 @@ export class TableRenderer<T> {
     wrapper.appendChild(this.dropIndicator);
 
     this.container.appendChild(wrapper);
+
+    this.snapshotState();
+  }
+
+  /** Compute a signature string that captures header-affecting state. */
+  private computeHeaderSignature(): string {
+    const cols = this.state.visibleColumnDefs;
+    const is = this.interactionState;
+    const parts: string[] = [];
+    for (const col of cols) {
+      parts.push(col.columnId);
+      parts.push(col.name);
+      parts.push(is?.columnWidths[col.columnId]?.toString() ?? '');
+    }
+    // Include sort state
+    const sort = this.state.sort;
+    if (sort) parts.push(`sort:${sort.field}:${sort.direction}`);
+    // Include row selection mode and checkbox header state
+    parts.push(`sel:${is?.rowSelectionMode ?? ''}`);
+    parts.push(`allSel:${is?.allSelected ?? ''}`);
+    parts.push(`someSel:${is?.someSelected ?? ''}`);
+    // Include showRowNumbers
+    parts.push(`rn:${is?.showRowNumbers ?? ''}`);
+    // Include filter active states
+    for (const [colId, config] of this.filterConfigs) {
+      const hasActive = this.headerFilterState?.hasActiveFilter(config);
+      if (hasActive) parts.push(`flt:${colId}`);
+    }
+    return parts.join('|');
+  }
+
+  /** Save current interaction state for next diff comparison. */
+  private snapshotState(): void {
+    const is = this.interactionState;
+    this.lastActiveCell = is?.activeCell ? { ...is.activeCell } : null;
+    this.lastSelectionRange = is?.selectionRange ? { ...is.selectionRange } : null;
+    this.lastCopyRange = is?.copyRange ? { ...is.copyRange } : null;
+    this.lastCutRange = is?.cutRange ? { ...is.cutRange } : null;
+    this.lastEditingCell = is?.editingCell ? { ...is.editingCell } : null;
+    this.lastColumnWidths = is?.columnWidths ? { ...is.columnWidths } : {};
+    this.lastRowSelectionMode = is?.rowSelectionMode;
+    this.lastSelectedRowIds = is?.selectedRowIds ? new Set(is.selectedRowIds) : undefined;
+    this.lastShowRowNumbers = is?.showRowNumbers;
+    this.lastPinnedColumns = is?.pinnedColumns;
+    this.lastAllSelected = is?.allSelected;
+    this.lastSomeSelected = is?.someSelected;
+    this.lastHeaderSignature = this.computeHeaderSignature();
+    const { items } = this.state.getProcessedItems();
+    this.lastRenderedItems = items;
+  }
+
+  /** Check if only selection/active-cell/copy/cut ranges changed (no data or header changes). */
+  private isSelectionOnlyChange(): boolean {
+    if (!this.lastRenderedItems) return false;
+
+    const is = this.interactionState;
+    const { items } = this.state.getProcessedItems();
+
+    // If data items changed, need full body rebuild
+    if (items !== this.lastRenderedItems) return false;
+
+    // If header signature changed, need header rebuild
+    const currentHeaderSig = this.computeHeaderSignature();
+    if (currentHeaderSig !== this.lastHeaderSignature) return false;
+
+    // If editing cell changed, need body rebuild (visibility toggle on the td)
+    const curEdit = is?.editingCell;
+    const lastEdit = this.lastEditingCell;
+    if (curEdit?.rowId !== lastEdit?.rowId || curEdit?.columnId !== lastEdit?.columnId) return false;
+
+    // If row selection changed, need body rebuild (checkbox states, row attrs)
+    if (is?.rowSelectionMode !== this.lastRowSelectionMode) return false;
+    if (is?.selectedRowIds !== this.lastSelectedRowIds) {
+      // Compare sets
+      const curIds = is?.selectedRowIds;
+      const lastIds = this.lastSelectedRowIds;
+      if (!curIds && !lastIds) { /* both null, ok */ }
+      else if (!curIds || !lastIds || curIds.size !== lastIds.size) return false;
+      else {
+        for (const id of curIds) {
+          if (!lastIds.has(id)) return false;
+        }
+      }
+    }
+
+    // If pinning or row numbers changed
+    if (is?.showRowNumbers !== this.lastShowRowNumbers) return false;
+    if (is?.pinnedColumns !== this.lastPinnedColumns) return false;
+
+    // Otherwise it's just selection/active-cell/copy/cut changes
+    return true;
+  }
+
+  /** Patch only CSS classes/styles for selection, active cell, copy/cut ranges without rebuilding DOM. */
+  private patchSelectionClasses(): void {
+    if (!this.tbody || !this.interactionState) return;
+
+    const is = this.interactionState;
+    const { activeCell, selectionRange, copyRange, cutRange } = is;
+    const lastActive = this.lastActiveCell;
+    const lastSelection = this.lastSelectionRange;
+    const lastCopy = this.lastCopyRange;
+    const lastCut = this.lastCutRange;
+
+    const cells = this.tbody.querySelectorAll<HTMLElement>('td[data-row-index][data-col-index]');
+
+    for (let i = 0; i < cells.length; i++) {
+      const el = cells[i];
+      const rowIndex = parseInt(el.getAttribute('data-row-index')!, 10);
+      const globalColIndex = parseInt(el.getAttribute('data-col-index')!, 10);
+      const colOffset = this.getColOffset();
+      const colIndex = globalColIndex - colOffset;
+
+      // --- Active cell ---
+      const wasActive = lastActive && lastActive.rowIndex === rowIndex && lastActive.columnIndex === globalColIndex;
+      const isActive = activeCell && activeCell.rowIndex === rowIndex && activeCell.columnIndex === globalColIndex;
+
+      if (wasActive && !isActive) {
+        el.removeAttribute('data-active-cell');
+        el.style.outline = '';
+      } else if (isActive && !wasActive) {
+        el.setAttribute('data-active-cell', 'true');
+        el.style.outline = '2px solid var(--ogrid-accent, #0078d4)';
+      }
+
+      // --- Selection range ---
+      const wasInRange = lastSelection && isInSelectionRange(lastSelection, rowIndex, colIndex);
+      const isInRange = selectionRange && isInSelectionRange(selectionRange, rowIndex, colIndex);
+
+      if (wasInRange && !isInRange) {
+        el.removeAttribute('data-in-range');
+        el.style.backgroundColor = '';
+      } else if (isInRange && !wasInRange) {
+        el.setAttribute('data-in-range', 'true');
+        el.style.backgroundColor = 'var(--ogrid-range-bg, rgba(33, 115, 70, 0.12))';
+      }
+
+      // --- Copy range ---
+      const wasInCopy = lastCopy && isInSelectionRange(lastCopy, rowIndex, colIndex);
+      const isInCopy = copyRange && isInSelectionRange(copyRange, rowIndex, colIndex);
+
+      if (wasInCopy && !isInCopy) {
+        // Only clear outline if not being set by another range (active/cut)
+        if (!isActive && !(cutRange && isInSelectionRange(cutRange, rowIndex, colIndex))) {
+          el.style.outline = '';
+        }
+      } else if (isInCopy && !wasInCopy) {
+        el.style.outline = '1px dashed var(--ogrid-fg-muted, rgba(0, 0, 0, 0.5))';
+      }
+
+      // --- Cut range ---
+      const wasInCut = lastCut && isInSelectionRange(lastCut, rowIndex, colIndex);
+      const isInCut = cutRange && isInSelectionRange(cutRange, rowIndex, colIndex);
+
+      if (wasInCut && !isInCut) {
+        if (!isActive && !(copyRange && isInSelectionRange(copyRange, rowIndex, colIndex))) {
+          el.style.outline = '';
+        }
+      } else if (isInCut && !wasInCut) {
+        el.style.outline = '1px dashed var(--ogrid-accent, #0078d4)';
+      }
+
+      // --- Fill handle ---
+      // Remove old fill handle if it was on a cell no longer at the bottom-right of selection
+      const oldFill = el.querySelector('.ogrid-fill-handle');
+      const shouldHaveFill = selectionRange && is.onFillHandleMouseDown &&
+        rowIndex === Math.max(selectionRange.startRow, selectionRange.endRow) &&
+        colIndex === Math.max(selectionRange.startCol, selectionRange.endCol);
+      const hadFill = !!oldFill;
+
+      if (hadFill && !shouldHaveFill) {
+        oldFill!.remove();
+      } else if (!hadFill && shouldHaveFill) {
+        const fillHandle = document.createElement('div');
+        fillHandle.className = 'ogrid-fill-handle';
+        fillHandle.setAttribute('data-fill-handle', 'true');
+        fillHandle.style.position = 'absolute';
+        fillHandle.style.right = '-3px';
+        fillHandle.style.bottom = '-3px';
+        fillHandle.style.width = '6px';
+        fillHandle.style.height = '6px';
+        fillHandle.style.backgroundColor = 'var(--ogrid-selection, #217346)';
+        fillHandle.style.cursor = 'crosshair';
+        fillHandle.style.zIndex = '5';
+        el.style.position = el.style.position || 'relative';
+        fillHandle.addEventListener('mousedown', (e) => {
+          this.interactionState?.onFillHandleMouseDown?.(e);
+        });
+        el.appendChild(fillHandle);
+      }
+
+      // Restore pinned cell background if needed (selection removal may have cleared it)
+      if (!isInRange && is.pinnedColumns) {
+        const columnId = el.getAttribute('data-column-id');
+        if (columnId && is.pinnedColumns[columnId]) {
+          el.style.backgroundColor = el.style.backgroundColor || 'var(--ogrid-bg, #fff)';
+        }
+      }
+    }
+
+    this.snapshotState();
   }
 
   /** Re-render body rows and header (after sort/filter/page change). */
   update(): void {
     if (!this.tbody || !this.thead) {
       this.render();
+      this.snapshotState();
       return;
     }
-    this.thead.innerHTML = '';
-    this.renderHeader();
+
+    // Check if only selection-related state changed — if so, patch CSS only
+    if (this.isSelectionOnlyChange()) {
+      this.patchSelectionClasses();
+      return;
+    }
+
+    // Check if header needs rebuild
+    const currentHeaderSig = this.computeHeaderSignature();
+    if (currentHeaderSig !== this.lastHeaderSignature) {
+      this.thead.innerHTML = '';
+      this.renderHeader();
+    }
+
+    // Delegation listeners are on tbody itself — just clear inner HTML, keep listeners
     this.tbody.innerHTML = '';
     this.renderBody();
+
+    this.snapshotState();
   }
 
   private hasCheckboxColumn(): boolean {
@@ -212,15 +517,6 @@ export class TableRenderer<T> {
                 this.state.toggleSort(cell.columnDef.columnId);
               }
             });
-
-            // Sort indicator
-            const sort = this.state.sort;
-            if (sort && cell.columnDef && sort.field === cell.columnDef.columnId) {
-              const indicator = document.createElement('span');
-              indicator.className = 'ogrid-sort-indicator';
-              indicator.textContent = sort.direction === 'asc' ? ' \u25B2' : ' \u25BC';
-              th.appendChild(indicator);
-            }
           }
 
           if (!cell.isGroup && cell.columnDef) {
@@ -285,14 +581,6 @@ export class TableRenderer<T> {
         if (col.sortable) {
           th.classList.add('ogrid-sortable');
           th.addEventListener('click', () => this.state.toggleSort(col.columnId));
-
-          const sort = this.state.sort;
-          if (sort && sort.field === col.columnId) {
-            const indicator = document.createElement('span');
-            indicator.className = 'ogrid-sort-indicator';
-            indicator.textContent = sort.direction === 'asc' ? ' \u25B2' : ' \u25BC';
-            th.appendChild(indicator);
-          }
         }
 
         if (col.type === 'numeric') {
@@ -538,22 +826,7 @@ export class TableRenderer<T> {
             td.style.visibility = 'hidden';
           }
 
-          // Cell interaction handlers
-          td.addEventListener('click', (e) => {
-            this.interactionState?.onCellClick?.(rowIndex, globalColIndex, e);
-          });
-
-          td.addEventListener('mousedown', (e) => {
-            this.interactionState?.onCellMouseDown?.(rowIndex, globalColIndex, e);
-          });
-
-          td.addEventListener('dblclick', () => {
-            this.interactionState?.onCellDoubleClick?.(rowIndex, globalColIndex, rowId, col.columnId);
-          });
-
-          td.addEventListener('contextmenu', (e) => {
-            this.interactionState?.onCellContextMenu?.(rowIndex, globalColIndex, e);
-          });
+          // Cell interaction is handled by delegated listeners on tbody
 
         }
 
@@ -657,6 +930,7 @@ export class TableRenderer<T> {
   }
 
   destroy(): void {
+    this.detachBodyDelegation();
     this.container.innerHTML = '';
     this.table = null;
     this.thead = null;

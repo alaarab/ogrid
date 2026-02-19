@@ -110,12 +110,19 @@ export function useRowSelection<T>(params: UseRowSelectionParams<T>): UseRowSele
   );
 
   const allSelected = useMemo(
-    () => items.length > 0 && items.every((item) => selectedRowIds.has(getRowId(item))),
+    () => {
+      if (selectedRowIds.size === 0 || items.length === 0) return false;
+      return items.every((item) => selectedRowIds.has(getRowId(item)));
+    },
     [items, selectedRowIds, getRowId]
   );
   const someSelected = useMemo(
-    () => !allSelected && items.some((item) => selectedRowIds.has(getRowId(item))),
-    [allSelected, items, selectedRowIds, getRowId]
+    () => {
+      if (allSelected) return false;
+      // No iteration needed — any selected row means "some" are selected
+      return selectedRowIds.size > 0;
+    },
+    [allSelected, selectedRowIds.size]
   );
 
   return {

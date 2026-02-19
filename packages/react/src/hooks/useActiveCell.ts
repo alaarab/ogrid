@@ -1,4 +1,4 @@
-import { useState, useLayoutEffect, useCallback, useRef } from 'react';
+import { useState, useLayoutEffect, useEffect, useCallback, useRef } from 'react';
 import type { IActiveCell, RowId } from '../types';
 
 export interface UseActiveCellResult {
@@ -28,49 +28,61 @@ export function useActiveCell(
     _setActiveCell(cell);
   }, []);
 
-  // useLayoutEffect ensures focus moves synchronously before the browser can
-  // reset focus to body (fixes left/right arrow navigation losing focus)
+  // RAF ref for batching scroll-into-view during rapid keyboard navigation
+  const scrollRafRef = useRef(0);
+
+  // Synchronously focus the cell to prevent the browser from resetting
+  // focus to body between arrow presses.
   useLayoutEffect(() => {
-    if (
-      activeCell == null ||
-      wrapperRef?.current == null ||
-      editingCell != null
-    )
-      return;
+    if (activeCell == null || wrapperRef?.current == null || editingCell != null) return;
     const { rowIndex, columnIndex } = activeCell;
     const selector = `[data-row-index="${rowIndex}"][data-col-index="${columnIndex}"]`;
     const cell = wrapperRef.current.querySelector(selector) as HTMLElement | null;
-    if (cell) {
-      // Scroll the cell into view within the table wrapper only — do NOT
-      // use native scrollIntoView() which scrolls all ancestor containers
-      // including the page, causing an unwanted viewport jump.
-      const wrapper = wrapperRef.current;
-      const thead = wrapper.querySelector('thead');
-      const headerHeight = thead ? thead.getBoundingClientRect().height : 0;
-      const wrapperRect = wrapper.getBoundingClientRect();
-      const cellRect = cell.getBoundingClientRect();
-
-      // Vertical scroll (account for sticky thead)
-      const visibleTop = wrapperRect.top + headerHeight;
-      if (cellRect.top < visibleTop) {
-        wrapper.scrollTop -= visibleTop - cellRect.top;
-      } else if (cellRect.bottom > wrapperRect.bottom) {
-        wrapper.scrollTop += cellRect.bottom - wrapperRect.bottom;
-      }
-
-      // Horizontal scroll
-      if (cellRect.left < wrapperRect.left) {
-        wrapper.scrollLeft -= wrapperRect.left - cellRect.left;
-      } else if (cellRect.right > wrapperRect.right) {
-        wrapper.scrollLeft += cellRect.right - wrapperRect.right;
-      }
-
-      if (document.activeElement !== cell && typeof cell.focus === 'function') {
-        cell.focus({ preventScroll: true });
-      }
+    if (cell && document.activeElement !== cell && typeof cell.focus === 'function') {
+      cell.focus({ preventScroll: true });
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeCell, editingCell]); // wrapperRef excluded — refs are stable across renders
+
+  // Batch scroll-into-view via RAF so rapid keyboard navigation only scrolls once
+  useEffect(() => {
+    if (activeCell == null || wrapperRef?.current == null || editingCell != null) return;
+    cancelAnimationFrame(scrollRafRef.current);
+    scrollRafRef.current = requestAnimationFrame(() => {
+      const wrapper = wrapperRef?.current;
+      if (!wrapper) return;
+      const { rowIndex, columnIndex } = activeCell;
+      const selector = `[data-row-index="${rowIndex}"][data-col-index="${columnIndex}"]`;
+      const cell = wrapper.querySelector(selector) as HTMLElement | null;
+      if (cell) {
+        const thead = wrapper.querySelector('thead');
+        const headerHeight = thead ? thead.getBoundingClientRect().height : 0;
+        const wrapperRect = wrapper.getBoundingClientRect();
+        const cellRect = cell.getBoundingClientRect();
+
+        // Vertical scroll (account for sticky thead)
+        const visibleTop = wrapperRect.top + headerHeight;
+        if (cellRect.top < visibleTop) {
+          wrapper.scrollTop -= visibleTop - cellRect.top;
+        } else if (cellRect.bottom > wrapperRect.bottom) {
+          wrapper.scrollTop += cellRect.bottom - wrapperRect.bottom;
+        }
+
+        // Horizontal scroll
+        if (cellRect.left < wrapperRect.left) {
+          wrapper.scrollLeft -= wrapperRect.left - cellRect.left;
+        } else if (cellRect.right > wrapperRect.right) {
+          wrapper.scrollLeft += cellRect.right - wrapperRect.right;
+        }
+      }
+    });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeCell, editingCell]); // wrapperRef excluded — refs are stable across renders
+
+  // Clean up pending RAF on unmount
+  useEffect(() => {
+    return () => cancelAnimationFrame(scrollRafRef.current);
+  }, []);
 
   return { activeCell, setActiveCell };
 }

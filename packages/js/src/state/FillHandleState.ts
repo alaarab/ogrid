@@ -34,6 +34,7 @@ export class FillHandleState<T> {
   private rafHandle = 0;
   private liveFillRange: ISelectionRange | null = null;
   private lastMousePos: { cx: number; cy: number } | null = null;
+  private cachedCells: NodeListOf<Element> | null = null;
 
   private onMoveBound: (e: MouseEvent) => void;
   private onUpBound: (e: MouseEvent) => void;
@@ -81,9 +82,11 @@ export class FillHandleState<T> {
     this.fillDragStart = { startRow: range.startRow, startCol: range.startCol };
     this.fillDragEnd = { endRow: range.startRow, endCol: range.startCol };
     this.liveFillRange = null;
+    // Cache querySelectorAll result once on drag start
+    this.cachedCells = this.wrapperRef ? this.wrapperRef.querySelectorAll('[data-row-index][data-col-index]') : null;
 
-    window.addEventListener('mousemove', this.onMoveBound, true);
-    window.addEventListener('mouseup', this.onUpBound, true);
+    window.addEventListener('mousemove', this.onMoveBound, { capture: true, passive: true });
+    window.addEventListener('mouseup', this.onUpBound, { capture: true, passive: true });
   }
 
   private onMouseMove(e: MouseEvent): void {
@@ -218,14 +221,13 @@ export class FillHandleState<T> {
   }
 
   private applyDragAttrs(range: ISelectionRange): void {
-    const wrapper = this.wrapperRef;
-    if (!wrapper) return;
+    const cells = this.cachedCells;
+    if (!cells) return;
     const colOff = this.params.colOffset;
     const minR = Math.min(range.startRow, range.endRow);
     const maxR = Math.max(range.startRow, range.endRow);
     const minC = Math.min(range.startCol, range.endCol);
     const maxC = Math.max(range.startCol, range.endCol);
-    const cells = wrapper.querySelectorAll('[data-row-index][data-col-index]');
     for (let i = 0; i < cells.length; i++) {
       const el = cells[i];
       const r = parseInt(el.getAttribute('data-row-index')!, 10);
@@ -240,10 +242,11 @@ export class FillHandleState<T> {
   }
 
   private clearDragAttrs(): void {
-    const wrapper = this.wrapperRef;
-    if (!wrapper) return;
-    const marked = wrapper.querySelectorAll('[data-drag-range]');
-    for (let i = 0; i < marked.length; i++) marked[i].removeAttribute('data-drag-range');
+    const cells = this.cachedCells;
+    if (cells) {
+      for (let i = 0; i < cells.length; i++) cells[i].removeAttribute('data-drag-range');
+    }
+    this.cachedCells = null;
   }
 
   onFillRangeChange(handler: (data: FillHandleEvents['fillRangeChange']) => void): () => void {

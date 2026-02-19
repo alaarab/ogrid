@@ -1,4 +1,6 @@
-// Re-export everything from angular adapter
+// Re-export all from base package for consumer convenience.
+// Note: This prevents tree-shaking of unused utilities.
+// Consider explicit named exports in a future major version.
 export * from '@alaarab/ogrid-angular';
 
 // PrimeNG UI components

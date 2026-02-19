@@ -15,10 +15,6 @@ import styles from './ColumnHeaderFilter.module.scss';
 
 export type { IColumnHeaderFilterProps };
 
-function SortIcon({ isSorted, isDesc }: { isSorted: boolean; isDesc: boolean }): React.ReactElement {
-  if (isSorted) return <span aria-hidden>{isDesc ? '\u2193' : '\u2191'}</span>;
-  return <span aria-hidden>{'\u21C5'}</span>;
-}
 function FilterIcon(): React.ReactElement {
   return <span aria-hidden>{'\u25BE'}</span>;
 }
@@ -79,9 +75,6 @@ export const ColumnHeaderFilter: React.FC<IColumnHeaderFilterProps> = React.memo
   const {
     columnName,
     filterType,
-    isSorted = false,
-    isSortedDescending = false,
-    onSort,
     options = [],
     isLoadingOptions = false,
     selectedUser,
@@ -106,17 +99,6 @@ export const ColumnHeaderFilter: React.FC<IColumnHeaderFilterProps> = React.memo
         </span>
       </div>
       <div className={styles.headerActions}>
-        {onSort && (
-          <button
-            type="button"
-            className={`${styles.sortIcon} ${isSorted ? styles.sortActive : ''}`}
-            onClick={handlers.handleSortClick}
-            aria-label={`Sort by ${columnName}`}
-            title={isSorted ? (isSortedDescending ? 'Sorted descending' : 'Sorted ascending') : 'Sort'}
-          >
-            <SortIcon isSorted={isSorted} isDesc={isSortedDescending} />
-          </button>
-        )}
         {filterType !== 'none' && (
           <Popover.Root open={isFilterOpen} onOpenChange={setFilterOpen}>
             <Popover.Trigger asChild>
