@@ -1,0 +1,33 @@
+import { h } from 'vue';
+import { createInlineCellEditor } from '@alaarab/ogrid-vue';
+
+export type { CreateInlineCellEditorOptions } from '@alaarab/ogrid-vue';
+
+export const InlineCellEditor = createInlineCellEditor({
+  renderCheckbox: ({ checked, onChange, onCancel }) =>
+    h('input', {
+      type: 'checkbox',
+      checked,
+      class: 'ogrid-checkbox',
+      style: { width: '18px', height: '18px', cursor: 'pointer', accentColor: 'var(--ogrid-accent, #0078d4)' },
+      onChange: (e: Event) => onChange((e.target as HTMLInputElement).checked),
+      onKeydown: (e: KeyboardEvent) => {
+        if (e.key === 'Escape') { e.preventDefault(); onCancel(); }
+      },
+    }),
+
+  renderDatePicker: ({ value, onChange, onCancel }) =>
+    h('input', {
+      type: 'date',
+      value,
+      style: { width: '100%', height: '100%', border: 'none', outline: 'none', padding: '0 4px', fontSize: 'inherit' },
+      onKeydown: (e: KeyboardEvent) => {
+        if (e.key === 'Enter') { e.preventDefault(); onChange((e.target as HTMLInputElement).value); }
+        if (e.key === 'Escape') { e.preventDefault(); onCancel(); }
+        if (e.key === 'Tab') { e.preventDefault(); onChange((e.target as HTMLInputElement).value); }
+      },
+      onBlur: (e: FocusEvent) => onChange((e.target as HTMLInputElement).value),
+    }),
+});
+
+export default InlineCellEditor;

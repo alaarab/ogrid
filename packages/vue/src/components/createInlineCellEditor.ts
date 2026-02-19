@@ -2,8 +2,8 @@ import { defineComponent, ref, h, onMounted, nextTick, watch, type PropType, typ
 import type { IColumnDef } from '../types';
 
 export interface CreateInlineCellEditorOptions {
-  renderCheckbox: (hFn: typeof h, props: { checked: boolean; onChange: (val: boolean) => void; onCancel: () => void }) => VNode;
-  renderDatePicker: (hFn: typeof h, props: { value: string; onChange: (val: string) => void; onCancel: () => void }) => VNode;
+  renderCheckbox: (props: { checked: boolean; onChange: (val: boolean) => void; onCancel: () => void }) => VNode;
+  renderDatePicker: (props: { value: string; onChange: (val: string) => void; onCancel: () => void }) => VNode;
 }
 
 const editorWrapperStyle = {
@@ -134,7 +134,7 @@ export function createInlineCellEditor(options: CreateInlineCellEditorOptions) {
         if (props.editorType === 'checkbox') {
           const checked = !!props.value;
           return h('div', { style: { ...editorWrapperStyle, justifyContent: 'center' } },
-            renderCheckbox(h, {
+            renderCheckbox({
               checked,
               onChange: (c: boolean) => props.onCommit(c),
               onCancel: props.onCancel,
@@ -179,7 +179,7 @@ export function createInlineCellEditor(options: CreateInlineCellEditorOptions) {
             }
           }
           return h('div', { style: editorWrapperStyle },
-            renderDatePicker(h, {
+            renderDatePicker({
               value: dateStr,
               onChange: (val: string) => props.onCommit(val),
               onCancel: props.onCancel,

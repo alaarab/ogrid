@@ -61,7 +61,7 @@ import { BaseColumnChooserComponent } from '@alaarab/ogrid-angular';
     .ogrid-column-chooser__trigger:hover { background: var(--ogrid-hover-bg, rgba(0, 0, 0, 0.04)); }
     .ogrid-column-chooser__caret { font-size: 10px; }
     .ogrid-column-chooser__dropdown {
-      position: absolute; top: 100%; right: 0; z-index: 10;
+      position: absolute; top: 100%; right: 0; z-index: 1000;
       min-width: 220px; margin-top: 4px;
       background: var(--ogrid-bg, #ffffff); border: 1px solid var(--ogrid-border, rgba(0, 0, 0, 0.12)); border-radius: 4px;
       box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
