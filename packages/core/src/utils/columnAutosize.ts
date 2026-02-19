@@ -4,8 +4,8 @@
 
 import { DEFAULT_MIN_COLUMN_WIDTH } from '../constants/layout';
 
-/** Extra pixels added to header label width to account for sort/filter icons + padding. */
-export const AUTOSIZE_EXTRA_PX = 44;
+/** Extra pixels added to header label width to account for filter icon + padding. */
+export const AUTOSIZE_EXTRA_PX = 28;
 
 /** Maximum column width from autosize. */
 export const AUTOSIZE_MAX_PX = 520;

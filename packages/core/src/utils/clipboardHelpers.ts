@@ -21,7 +21,7 @@ export function formatCellValueForTsv(
 ): string {
   const val = formatted != null && formatted !== '' ? formatted : raw;
   if (val == null || val === '') return '';
-  return String(val).replace(/\t/g, ' ').replace(/\n/g, ' ');
+  return String(val).replace(/[\t\n]/g, ' ');
 }
 
 /**
@@ -47,7 +47,8 @@ export function formatSelectionAsTsv<T>(
       const item = items[r];
       const col = visibleCols[c];
       const raw = getCellValue(item, col);
-      const formatted = col.valueFormatter ? col.valueFormatter(raw, item) : raw;
+      const clipboard = col.clipboardFormatter ? col.clipboardFormatter(raw, item) : null;
+      const formatted = clipboard ?? (col.valueFormatter ? col.valueFormatter(raw, item) : raw);
       cells.push(formatCellValueForTsv(raw, formatted));
     }
     rows.push(cells.join('\t'));

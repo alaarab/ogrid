@@ -91,6 +91,10 @@
   background: var(--ogrid-bg, #fff);
   color: var(--ogrid-fg, rgba(0, 0, 0, 0.87));
 
+  tbody tr {
+    height: var(--ogrid-row-height, auto);
+  }
+
   th {
     position: sticky;
     top: 0;

@@ -68,41 +68,6 @@
   flex-shrink: 0;
 }
 
-// Sort icon button - matches filter icon style
-.sortIcon {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 24px;
-  height: 24px;
-  padding: 4px;
-  border: none;
-  border-radius: var(--borderRadiusSmall, 4px);
-  background-color: transparent;
-  color: var(--colorNeutralForeground2, #616161);
-  cursor: pointer;
-  flex-shrink: 0;
-  transition: all 0.15s ease;
-
-  svg {
-    font-size: 14px;
-  }
-
-  &:hover {
-    background-color: var(--colorSubtleBackgroundHover, #f5f5f5);
-    color: var(--colorNeutralForeground2Hover, #424242);
-  }
-
-  &.sortActive {
-    background-color: var(--colorSubtleBackgroundSelected, #e0e0e0);
-    color: var(--colorNeutralForeground2, #616161);
-
-    &:hover {
-      background-color: var(--colorSubtleBackgroundHover, #f5f5f5);
-    }
-  }
-}
-
 // =====================
 // Filter Icon Button
 // =====================
@@ -370,6 +335,32 @@
   display: flex;
   align-items: center;
   gap: 8px;
+}
+
+.avatar {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background-color: var(--colorBrandBackground, #0f6cbd);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  overflow: hidden;
+}
+
+.avatarImg {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 50%;
+}
+
+.avatarInitials {
+  color: var(--colorNeutralForegroundOnBrand, #ffffff);
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1;
 }
 
 .userText {

@@ -49,6 +49,8 @@ export interface IColumnDef<T = unknown> extends IColumnMeta {
   valueGetter?: (item: T) => unknown;
   /** Format the cell value for display (used when no renderCell). */
   valueFormatter?: (value: unknown, item: T) => string;
+  /** Format the cell value for clipboard copy. When set, overrides valueFormatter for copy/paste. */
+  clipboardFormatter?: (value: unknown, item: T) => string;
   /**
    * Parse/validate a new value before it is committed to the cell.
    * Called on paste, inline edit commit, fill handle, and delete.

@@ -70,6 +70,7 @@ import { PopoverCellEditorComponent } from './popover-cell-editor.component';
         [style.--data-table-column-count]="state().layout.totalColCount"
         [style.--data-table-width]="tableWidthStyle()"
         [style.--data-table-min-width]="tableMinWidthStyle()"
+        [style.--ogrid-row-height]="rowHeightCssVar()"
       >
         <div class="ogrid-table-wrapper">
           <div [class.loading-dimmed]="isLoading() && items().length > 0" class="ogrid-table-wrapper">
@@ -100,7 +101,7 @@ import { PopoverCellEditorComponent } from './popover-cell-editor.component';
                       @if (rowIdx === 0 && rowIdx < headerRows().length - 1 && hasRowNumbersCol()) {
                         <th [attr.rowSpan]="headerRows().length - 1" class="ogrid-row-number-spacer"></th>
                       }
-                      @for (cell of row; track $index; let cellIdx = $index) {
+                      @for (cell of row; track cell.columnDef?.columnId ?? $index; let cellIdx = $index) {
                         @if (cell.isGroup) {
                           <th
                             [attr.colSpan]="cell.colSpan"
@@ -112,6 +113,7 @@ import { PopoverCellEditorComponent } from './popover-cell-editor.component';
                         } @else {
                           @let col = asColumnDef(cell.columnDef);
                           @let pinned = isPinned(col.columnId);
+                          @let config = getFilterConfig(col);
                           <th
                             scope="col"
                             class="ogrid-header-cell"
@@ -131,21 +133,21 @@ import { PopoverCellEditorComponent } from './popover-cell-editor.component';
                               <ogrid-primeng-column-header-filter
                                 [columnKey]="col.columnId"
                                 [columnName]="col.name"
-                                [filterType]="getFilterConfig(col).filterType"
-                                [isSorted]="getFilterConfig(col).isSorted ?? false"
-                                [isSortedDescending]="getFilterConfig(col).isSortedDescending ?? false"
-                                [onSort]="getFilterConfig(col).onSort"
-                                [selectedValues]="getFilterConfig(col).selectedValues"
-                                [onFilterChange]="getFilterConfig(col).onFilterChange"
-                                [options]="getFilterConfig(col).options ?? []"
-                                [isLoadingOptions]="getFilterConfig(col).isLoadingOptions ?? false"
-                                [textValue]="getFilterConfig(col).textValue ?? ''"
-                                [onTextChange]="getFilterConfig(col).onTextChange"
-                                [selectedUser]="getFilterConfig(col).selectedUser"
-                                [onUserChange]="getFilterConfig(col).onUserChange"
-                                [peopleSearch]="getFilterConfig(col).peopleSearch"
-                                [dateValue]="getFilterConfig(col).dateValue"
-                                [onDateChange]="getFilterConfig(col).onDateChange"
+                                [filterType]="config.filterType"
+                                [isSorted]="config.isSorted ?? false"
+                                [isSortedDescending]="config.isSortedDescending ?? false"
+                                [onSort]="config.onSort"
+                                [selectedValues]="config.selectedValues"
+                                [onFilterChange]="config.onFilterChange"
+                                [options]="config.options ?? []"
+                                [isLoadingOptions]="config.isLoadingOptions ?? false"
+                                [textValue]="config.textValue ?? ''"
+                                [onTextChange]="config.onTextChange"
+                                [selectedUser]="config.selectedUser"
+                                [onUserChange]="config.onUserChange"
+                                [peopleSearch]="config.peopleSearch"
+                                [dateValue]="config.dateValue"
+                                [onDateChange]="config.onDateChange"
                               ></ogrid-primeng-column-header-filter>
                               @let colPinState = getPinState(col.columnId);
                               @let colSortState = getSortState(col.columnId);
@@ -157,7 +159,7 @@ import { PopoverCellEditorComponent } from './popover-cell-editor.component';
                                 [currentSort]="colSortState"
                                 [isSortable]="col.sortable !== false"
                                 [isResizable]="col.resizable !== false"
-                                [handlers]="getColumnHeaderMenuHandlers(col.columnId)"
+                                [handlers]="getColumnMenuHandlersMemoized(col.columnId)"
                               />
                             </div>
                             <div
@@ -330,14 +332,15 @@ import { PopoverCellEditorComponent } from './popover-cell-editor.component';
         ></ogrid-context-menu>
       }
 
-      @if (statusBarConfig()) {
+      @let sbConfig = statusBarConfig();
+      @if (sbConfig) {
         <ogrid-status-bar
-          [totalCount]="statusBarConfig()!.totalCount"
-          [filteredCount]="statusBarConfig()!.filteredCount"
-          [selectedCount]="statusBarConfig()!.selectedCount ?? selectedRowIds().size"
+          [totalCount]="sbConfig.totalCount"
+          [filteredCount]="sbConfig.filteredCount"
+          [selectedCount]="sbConfig.selectedCount ?? selectedRowIds().size"
           [selectedCellCount]="selectionCellCount()"
-          [aggregation]="statusBarConfig()!.aggregation"
-          [suppressRowCount]="statusBarConfig()!.suppressRowCount"
+          [aggregation]="sbConfig.aggregation"
+          [suppressRowCount]="sbConfig.suppressRowCount"
           [classNames]="statusBarClasses"
         ></ogrid-status-bar>
       }
@@ -427,6 +430,7 @@ import { PopoverCellEditorComponent } from './popover-cell-editor.component';
       border-collapse: collapse;
       table-layout: fixed;
     }
+    .ogrid-table tbody tr { height: var(--ogrid-row-height, auto); }
     .ogrid-thead {
       z-index: 3;
       background: var(--ogrid-header-bg, #f5f5f5);
@@ -797,8 +801,25 @@ export class DataGridTableComponent<T = unknown> extends BaseDataGridTableCompon
         this.primengColumnSizingOverrides.set({ ...iw });
       }
     }
-    // Rebuild props signal whenever any input changes so computed chains track it
-    this.propsSignal.set(this.buildProps());
+    // Rebuild props and only set if values actually changed (shallow compare)
+    const next = this.buildProps();
+    const prev = this.propsSignal();
+    if (!prev || !this.shallowEqual(prev, next)) {
+      this.propsSignal.set(next);
+    }
+  }
+
+  /** Shallow-compare two props objects by their top-level keys. */
+  private shallowEqual(a: IOGridDataGridProps<T>, b: IOGridDataGridProps<T>): boolean {
+    const aObj = a as unknown as Record<string, unknown>;
+    const bObj = b as unknown as Record<string, unknown>;
+    const keysA = Object.keys(aObj);
+    const keysB = Object.keys(bObj);
+    if (keysA.length !== keysB.length) return false;
+    for (const key of keysA) {
+      if (aObj[key] !== bObj[key]) return false;
+    }
+    return true;
   }
 
   // --- Abstract method implementations ---
@@ -957,19 +978,6 @@ export class DataGridTableComponent<T = unknown> extends BaseDataGridTableCompon
     this.state().rowSelection.updateSelection(ids.has(rowId) ? new Set() : new Set([rowId]));
   }
 
-  getColumnHeaderMenuHandlers(columnId: string) {
-    return {
-      onPinLeft: () => this.onPinColumn(columnId, 'left'),
-      onPinRight: () => this.onPinColumn(columnId, 'right'),
-      onUnpin: () => this.onUnpinColumn(columnId),
-      onSortAsc: () => this.onSortAsc(columnId),
-      onSortDesc: () => this.onSortDesc(columnId),
-      onClearSort: () => this.onClearSort(columnId),
-      onAutosizeThis: () => this.onAutosizeColumn(columnId),
-      onAutosizeAll: () => this.onAutosizeAllColumns(),
-      onClose: () => {}
-    };
-  }
 
   onRowCheckboxChangePrimeng(item: T, checked: boolean, rowIndex: number, _e: Event): void {
     const rowId = this.getRowIdInput(item);

@@ -1,4 +1,4 @@
-import { ref, computed, watch, nextTick, type Ref, type ShallowRef } from 'vue';
+import { ref, shallowRef, computed, watch, nextTick, triggerRef, type Ref, type ShallowRef } from 'vue';
 import { flattenColumns, getDataGridStatusBarConfig, parseValue, computeAggregations, CHECKBOX_COLUMN_WIDTH, DEFAULT_MIN_COLUMN_WIDTH } from '@alaarab/ogrid-core';
 import type { RowId, IOGridDataGridProps, IStatusBarProps, IColumnDef } from '../types';
 import type { HeaderFilterConfigInput, CellRenderDescriptorInput } from '../utils';
@@ -160,7 +160,7 @@ export function useDataGridState<T>(
 
   const items = computed(() => props.value.items);
   const columnsProp = computed(() => props.value.columns);
-  const getRowId = computed(() => props.value.getRowId).value; // getRowId is stable
+  const getRowId = props.value.getRowId; // stable function reference, no reactivity needed
   const visibleColumnsProp = computed(() => props.value.visibleColumns);
   const columnOrderProp = computed(() => props.value.columnOrder);
   const rowSelectionProp = computed(() => props.value.rowSelection ?? 'none');
@@ -219,13 +219,15 @@ export function useDataGridState<T>(
   const hasRowNumbersCol = computed(() => !!props.value.showRowNumbers);
   const specialColsCount = computed(() => (hasCheckboxCol.value ? 1 : 0) + (hasRowNumbersCol.value ? 1 : 0));
   const totalColCount = computed(() => visibleColumnCount.value + specialColsCount.value);
-  const colOffset = computed(() => specialColsCount.value).value; // stable once computed
+  const colOffset = specialColsCount.value; // snapshot: checkbox/rowNumbers cols are fixed at setup
 
-  const rowIndexByRowId = computed(() => {
-    const m = new Map<RowId, number>();
-    items.value.forEach((item, idx) => m.set(getRowId(item), idx));
-    return m;
-  });
+  const rowIndexByRowId = shallowRef(new Map<RowId, number>());
+  watch(items, (newItems) => {
+    const m = rowIndexByRowId.value;
+    m.clear();
+    newItems.forEach((item, idx) => m.set(getRowId(item), idx));
+    triggerRef(rowIndexByRowId);
+  }, { immediate: true });
 
   const rowSelectionResult = useRowSelection({
     items,

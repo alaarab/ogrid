@@ -93,13 +93,13 @@ export class ContextMenu {
       } else {
         menuItem.addEventListener('mouseenter', () => {
           menuItem.style.backgroundColor = 'var(--ogrid-bg-hover, #f5f5f5)';
-        });
+        }, { passive: true });
         menuItem.addEventListener('mouseleave', () => {
           menuItem.style.backgroundColor = '';
-        });
+        }, { passive: true });
         menuItem.addEventListener('click', () => {
           this.handleItemClick(item.id);
-        });
+        }, { passive: true });
       }
 
       this.menu.appendChild(menuItem);
@@ -114,7 +114,7 @@ export class ContextMenu {
       }
     };
     setTimeout(() => {
-      document.addEventListener('mousedown', handleClickOutside);
+      document.addEventListener('mousedown', handleClickOutside, { passive: true });
     }, 0);
   }
 

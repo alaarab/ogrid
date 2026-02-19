@@ -81,8 +81,8 @@ export class ColumnReorderState {
 
     this.draggedPinState = getPinStateForColumn(columnId, this.pinnedColumns);
 
-    window.addEventListener('mousemove', this.onMoveBound, true);
-    window.addEventListener('mouseup', this.onUpBound, true);
+    window.addEventListener('mousemove', this.onMoveBound, { capture: true, passive: true });
+    window.addEventListener('mouseup', this.onUpBound, { capture: true, passive: true });
 
     this.emitter.emit('stateChange', { isDragging: true, dropIndicatorX: null });
   }

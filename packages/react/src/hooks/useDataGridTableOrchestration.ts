@@ -79,6 +79,7 @@ export interface UseDataGridTableOrchestrationResult<T> {
   columnOrder: IOGridDataGridProps<T>['columnOrder'];
   columnReorder: IOGridDataGridProps<T>['columnReorder'];
   density: 'compact' | 'normal' | 'comfortable';
+  rowHeight: number | undefined;
   pinnedColumns: IOGridDataGridProps<T>['pinnedColumns'];
   currentPage: number;
   propPageSize: number;
@@ -231,6 +232,7 @@ export function useDataGridTableOrchestration<T>(
     onColumnOrderChange,
     columnReorder,
     virtualScroll,
+    rowHeight,
     density = 'normal',
     pinnedColumns,
     currentPage = 1,
@@ -343,6 +345,7 @@ export function useDataGridTableOrchestration<T>(
     columnOrder,
     columnReorder,
     density,
+    rowHeight,
     pinnedColumns,
     currentPage,
     propPageSize,

@@ -39,31 +39,6 @@
   flex-shrink: 0;
 }
 
-.sort-icon {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 24px;
-  height: 24px;
-  padding: 4px;
-  border: none;
-  border-radius: 4px;
-  background: transparent;
-  color: var(--ogrid-fg-muted, rgba(0, 0, 0, 0.5));
-  cursor: pointer;
-  flex-shrink: 0;
-  font-size: 14px;
-
-  &:hover {
-    background: var(--ogrid-hover-bg, rgba(0, 0, 0, 0.04));
-    color: var(--ogrid-fg, rgba(0, 0, 0, 0.87));
-  }
-  &.sort-active {
-    background: var(--ogrid-header-bg, rgba(0, 0, 0, 0.04));
-    color: var(--ogrid-fg, rgba(0, 0, 0, 0.87));
-  }
-}
-
 .filter-icon {
   display: flex;
   align-items: center;

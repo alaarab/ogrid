@@ -137,6 +137,7 @@ export function useOGrid<T>(
     columnChooser: columnChooserProp,
     columnReorder,
     virtualScroll,
+    rowHeight,
     density = 'normal',
     'aria-label': ariaLabel,
     'aria-labelledby': ariaLabelledBy,
@@ -294,12 +295,33 @@ export function useOGrid<T>(
   }, [hasServerFilterOptions, displayData, columns, serverFilterOptions]);
 
   // --- Client-side filtering & sorting ---
+
+  // Stabilize filters ref via shallow comparison so processClientSideData useMemo
+  // doesn't re-run when the filter object reference changes but values are identical.
+  const stableFiltersRef = useRef(filters);
+  const stableFilters = useMemo(() => {
+    const prev = stableFiltersRef.current;
+    const prevKeys = Object.keys(prev);
+    const nextKeys = Object.keys(filters);
+    if (prevKeys.length !== nextKeys.length) {
+      stableFiltersRef.current = filters;
+      return filters;
+    }
+    for (let i = 0; i < nextKeys.length; i++) {
+      if (prev[nextKeys[i]] !== filters[nextKeys[i]]) {
+        stableFiltersRef.current = filters;
+        return filters;
+      }
+    }
+    return prev;
+  }, [filters]);
+
   const clientItemsAndTotal = useMemo(() => {
     if (!isClientSide) return null;
     const rows = processClientSideData(
       displayData,
       columns,
-      filters,
+      stableFilters,
       sort.field,
       sort.direction
     );
@@ -311,7 +333,7 @@ export function useOGrid<T>(
     isClientSide,
     displayData,
     columns,
-    filters,
+    stableFilters,
     sort.field,
     sort.direction,
     page,
@@ -637,6 +659,7 @@ export function useOGrid<T>(
     suppressHorizontalScroll,
     columnReorder,
     virtualScroll,
+    rowHeight,
     density,
     'aria-label': ariaLabel,
     'aria-labelledby': ariaLabelledBy,
@@ -654,7 +677,7 @@ export function useOGrid<T>(
     rowSelection, effectiveSelectedRows, handleSelectionChange, showRowNumbers, page, pageSize, statusBarConfig,
     isLoadingResolved, filters, handleFilterChange, clientFilterOptions, dataSource,
     loadingFilterOptions, layoutMode, suppressHorizontalScroll, columnReorder, virtualScroll,
-    density, ariaLabel, ariaLabelledBy,
+    rowHeight, density, ariaLabel, ariaLabelledBy,
     hasActiveFilters, clearAllFilters, emptyState,
   ]);
 

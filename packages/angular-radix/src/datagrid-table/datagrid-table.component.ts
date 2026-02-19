@@ -115,6 +115,7 @@ import { PopoverCellEditorComponent } from './popover-cell-editor.component';
       border-collapse: collapse;
       table-layout: fixed;
     }
+    .ogrid-datagrid-table tbody tr { height: var(--ogrid-row-height, auto); }
     .ogrid-datagrid-thead {
       z-index: 8;
       background: var(--ogrid-header-bg, #f5f5f5);
@@ -433,6 +434,7 @@ import { PopoverCellEditorComponent } from './popover-cell-editor.component';
         [class.ogrid-datagrid-wrapper--fit]="layoutModeFit()"
         [class.ogrid-datagrid-wrapper--overflow-x]="allowOverflowX()"
         [class.ogrid-datagrid-wrapper--loading-empty]="isLoading() && items().length === 0"
+        [style.--ogrid-row-height]="rowHeightCssVar()"
         tabindex="0"
         role="region"
         [attr.aria-label]="ariaLabel()"
@@ -475,7 +477,7 @@ import { PopoverCellEditorComponent } from './popover-cell-editor.component';
                       @if (rowIdx === 0 && rowIdx < headerRows().length - 1 && hasRowNumbersCol()) {
                         <th [attr.rowSpan]="headerRows().length - 1" class="ogrid-datagrid-th ogrid-datagrid-row-number-spacer"></th>
                       }
-                      @for (cell of row; track $index; let cellIdx = $index) {
+                      @for (cell of row; track cell.columnDef?.columnId ?? $index; let cellIdx = $index) {
                         @if (cell.isGroup) {
                           <th [attr.colSpan]="cell.colSpan" scope="colgroup" class="ogrid-datagrid-th ogrid-datagrid-group-header">
                             {{ cell.label }}
@@ -488,6 +490,7 @@ import { PopoverCellEditorComponent } from './popover-cell-editor.component';
                           @let pinnedRight = pinned === 'right';
                           @let sortState = getSortState(col.columnId);
                           @let ariaSort = sortState === 'asc' ? 'ascending' : sortState === 'desc' ? 'descending' : null;
+                          @let config = getFilterConfig(col);
                           <th scope="col"
                             class="ogrid-datagrid-th"
                             [class.ogrid-datagrid-th--pinned-left]="pinnedLeft"
@@ -508,33 +511,32 @@ import { PopoverCellEditorComponent } from './popover-cell-editor.component';
                               <column-header-filter
                                 [columnKey]="col.columnId"
                                 [columnName]="col.name"
-                                [filterType]="getFilterConfig(col).filterType"
-                                [isSorted]="getFilterConfig(col).isSorted"
-                                [isSortedDescending]="getFilterConfig(col).isSortedDescending"
-                                [onSort]="getFilterConfig(col).onSort"
-                                [selectedValues]="getFilterConfig(col).selectedValues"
-                                [onFilterChange]="getFilterConfig(col).onFilterChange"
-                                [options]="getFilterConfig(col).options"
-                                [isLoadingOptions]="getFilterConfig(col).isLoadingOptions ?? false"
-                                [textValue]="getFilterConfig(col).textValue ?? ''"
-                                [onTextChange]="getFilterConfig(col).onTextChange"
-                                [selectedUser]="getFilterConfig(col).selectedUser"
-                                [onUserChange]="getFilterConfig(col).onUserChange"
-                                [peopleSearch]="getFilterConfig(col).peopleSearch"
-                                [dateValue]="getFilterConfig(col).dateValue"
-                                [onDateChange]="getFilterConfig(col).onDateChange"
+                                [filterType]="config.filterType"
+                                [isSorted]="config.isSorted"
+                                [isSortedDescending]="config.isSortedDescending"
+                                [onSort]="config.onSort"
+                                [selectedValues]="config.selectedValues"
+                                [onFilterChange]="config.onFilterChange"
+                                [options]="config.options"
+                                [isLoadingOptions]="config.isLoadingOptions ?? false"
+                                [textValue]="config.textValue ?? ''"
+                                [onTextChange]="config.onTextChange"
+                                [selectedUser]="config.selectedUser"
+                                [onUserChange]="config.onUserChange"
+                                [peopleSearch]="config.peopleSearch"
+                                [dateValue]="config.dateValue"
+                                [onDateChange]="config.onDateChange"
                               />
                               @let colPinState = getPinState(col.columnId);
-                              @let colSortState = getSortState(col.columnId);
                               <column-header-menu
                                 [columnId]="col.columnId"
                                 [canPinLeft]="colPinState.canPinLeft"
                                 [canPinRight]="colPinState.canPinRight"
                                 [canUnpin]="colPinState.canUnpin"
-                                [currentSort]="colSortState"
+                                [currentSort]="sortState"
                                 [isSortable]="col.sortable !== false"
                                 [isResizable]="col.resizable !== false"
-                                [handlers]="getColumnMenuHandlers(col.columnId)"
+                                [handlers]="getColumnMenuHandlersMemoized(col.columnId)"
                               />
                             </div>
                             <div class="ogrid-datagrid-resize-handle" (mousedown)="onResizeStart($event, col)"></div>
@@ -717,14 +719,15 @@ import { PopoverCellEditorComponent } from './popover-cell-editor.component';
         }
       </div>
 
-      @if (statusBarConfig()) {
+      @let sbConfig = statusBarConfig();
+      @if (sbConfig) {
         <ogrid-status-bar
-          [totalCount]="statusBarConfig()!.totalCount"
-          [filteredCount]="statusBarConfig()!.filteredCount"
-          [selectedCount]="statusBarConfig()!.selectedCount ?? selectedRowIds().size"
+          [totalCount]="sbConfig.totalCount"
+          [filteredCount]="sbConfig.filteredCount"
+          [selectedCount]="sbConfig.selectedCount ?? selectedRowIds().size"
           [selectedCellCount]="selectionCellCount()"
-          [aggregation]="statusBarConfig()!.aggregation"
-          [suppressRowCount]="statusBarConfig()!.suppressRowCount"
+          [aggregation]="sbConfig.aggregation"
+          [suppressRowCount]="sbConfig.suppressRowCount"
         />
       }
 
@@ -769,18 +772,4 @@ export class DataGridTableComponent<T> extends BaseDataGridTableComponent<T> {
     return this.tableContainerRef;
   }
 
-  /** Build column header menu handlers for a given column */
-  protected getColumnMenuHandlers(columnId: string) {
-    return {
-      onPinLeft: () => this.onPinColumn(columnId, 'left'),
-      onPinRight: () => this.onPinColumn(columnId, 'right'),
-      onUnpin: () => this.onUnpinColumn(columnId),
-      onSortAsc: () => this.onSortAsc(columnId),
-      onSortDesc: () => this.onSortDesc(columnId),
-      onClearSort: () => this.onClearSort(columnId),
-      onAutosizeThis: () => this.onAutosizeColumn(columnId),
-      onAutosizeAll: () => this.onAutosizeAllColumns(),
-      onClose: () => {}
-    };
-  }
 }
