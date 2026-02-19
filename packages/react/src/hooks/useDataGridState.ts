@@ -218,6 +218,7 @@ export function useDataGridState<T>(
     onCellValueChanged: onCellValueChangedProp,
     initialColumnWidths,
     onColumnResized,
+    onAutosizeColumn,
     pinnedColumns,
     onColumnPinned,
     onCellError,
@@ -484,9 +485,9 @@ export function useDataGridState<T>(
   const handleAutosizeColumn = useCallback(
     (columnId: string, width: number) => {
       setColumnSizingOverrides((prev) => ({ ...prev, [columnId]: { widthPx: width } }));
-      onColumnResized?.(columnId, width);
+      (onAutosizeColumn ?? onColumnResized)?.(columnId, width);
     },
-    [setColumnSizingOverrides, onColumnResized]
+    [setColumnSizingOverrides, onAutosizeColumn, onColumnResized]
   );
 
   const headerMenuResult = useColumnHeaderMenuState({

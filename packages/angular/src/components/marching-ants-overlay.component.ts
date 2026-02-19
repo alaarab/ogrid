@@ -1,12 +1,11 @@
-import { Component, Input, signal, DestroyRef, inject, OnChanges, SimpleChanges } from '@angular/core';
-import { CommonModule } from '@angular/common';
+import { Component, Input, signal, DestroyRef, inject, OnChanges, SimpleChanges, ChangeDetectionStrategy } from '@angular/core';
 import type { ISelectionRange } from '../types';
 import { measureRange, injectGlobalStyles, type OverlayRect } from '@alaarab/ogrid-core';
 
 @Component({
   selector: 'ogrid-marching-ants-overlay',
   standalone: true,
-  imports: [CommonModule],
+  changeDetection: ChangeDetectionStrategy.OnPush,
   styles: [`
     .ogrid-marching-ants-svg { position: absolute; pointer-events: none; overflow: visible; }
     .ogrid-marching-ants-svg--selection { z-index: 4; }

@@ -25,8 +25,11 @@ export function computeAggregations<T>(
 
   const norm = normalizeSelectionRange(selectionRange);
 
-  const numericValues: number[] = [];
   let totalCells = 0;
+  let sum = 0;
+  let min = Infinity;
+  let max = -Infinity;
+  let count = 0;
 
   for (let r = norm.startRow; r <= norm.endRow; r++) {
     for (let c = norm.startCol; c <= norm.endCol; c++) {
@@ -39,28 +42,22 @@ export function computeAggregations<T>(
       // return NaN instead of partially parsing to 2020
       const num = typeof raw === 'number' ? raw : Number(raw);
       if (!isNaN(num) && isFinite(num)) {
-        numericValues.push(num);
+        sum += num;
+        if (num < min) min = num;
+        if (num > max) max = num;
+        count++;
       }
     }
   }
 
   // Need at least 2 cells selected and at least 1 numeric value to show aggregation
-  if (totalCells < 2 || numericValues.length === 0) return null;
+  if (totalCells < 2 || count === 0) return null;
 
-  let sum = 0;
-  let min = numericValues[0];
-  let max = numericValues[0];
-  for (let i = 0; i < numericValues.length; i++) {
-    const v = numericValues[i];
-    sum += v;
-    if (v < min) min = v;
-    if (v > max) max = v;
-  }
   return {
     sum,
-    avg: sum / numericValues.length,
+    avg: sum / count,
     min,
     max,
-    count: numericValues.length,
+    count,
   };
 }

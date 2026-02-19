@@ -50,6 +50,8 @@ export interface DataGridLayoutState<T> {
   columnSizingOverrides: Record<string, { widthPx: number }>;
   setColumnSizingOverrides: (overrides: Record<string, { widthPx: number }>) => void;
   onColumnResized?: (columnId: string, width: number) => void;
+  /** Called when user requests autosize for a single column (with measured width). */
+  onAutosizeColumn?: (columnId: string, width: number) => void;
 }
 
 export interface DataGridRowSelectionState {
@@ -135,7 +137,7 @@ export interface DataGridViewModelState<T> {
   };
   statusBarConfig: IStatusBarProps | null;
   showEmptyInGrid: boolean;
-  onCellError?: (error: Error) => void;
+  onCellError?: (error: Error, info: unknown) => void;
 }
 
 /** Column pinning state and column header menu. */
@@ -1176,6 +1178,7 @@ export class DataGridStateService<T> {
       columnSizingOverrides: this.columnSizingOverridesSig(),
       setColumnSizingOverrides: (overrides) => this.columnSizingOverridesSig.set(overrides),
       onColumnResized: p?.onColumnResized,
+      onAutosizeColumn: p?.onAutosizeColumn,
     };
 
     const rowSelection: DataGridRowSelectionState = {

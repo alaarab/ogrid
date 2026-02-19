@@ -4,7 +4,6 @@ import { getColumnHeaderMenuItems } from '@alaarab/ogrid-react';
 import type { ColumnHeaderMenuInput } from '@alaarab/ogrid-react';
 
 export interface ColumnHeaderMenuProps {
-  columnId: string;
   isOpen: boolean;
   anchorElement: HTMLElement | null;
   onClose: () => void;
@@ -77,16 +76,19 @@ export function ColumnHeaderMenu(props: ColumnHeaderMenuProps) {
 
   const items = useMemo(() => getColumnHeaderMenuItems(menuInput), [menuInput]);
 
-  const handlers: Record<string, () => void> = {
-    pinLeft: onPinLeft,
-    pinRight: onPinRight,
-    unpin: onUnpin,
-    sortAsc: onSortAsc,
-    sortDesc: onSortDesc,
-    clearSort: onClearSort,
-    autosizeThis: onAutosizeThis,
-    autosizeAll: onAutosizeAll,
-  };
+  const handlers: Record<string, () => void> = useMemo(
+    () => ({
+      pinLeft: onPinLeft,
+      pinRight: onPinRight,
+      unpin: onUnpin,
+      sortAsc: onSortAsc,
+      sortDesc: onSortDesc,
+      clearSort: onClearSort,
+      autosizeThis: onAutosizeThis,
+      autosizeAll: onAutosizeAll,
+    }),
+    [onPinLeft, onPinRight, onUnpin, onSortAsc, onSortDesc, onClearSort, onAutosizeThis, onAutosizeAll]
+  );
 
   return (
     <Menu

@@ -24,6 +24,8 @@ export interface DataGridLayoutState<T> {
         widthPx: number;
     }>) => void;
     onColumnResized?: (columnId: string, width: number) => void;
+    /** Called when user requests autosize for a single column (with measured width). */
+    onAutosizeColumn?: (columnId: string, width: number) => void;
     /** DOM-measured column widths from the previous layout pass.
      *  UI packages use these as a minWidth floor to prevent columns from
      *  shrinking when new data loads (e.g. during server-side pagination). */
