@@ -263,15 +263,6 @@
   background-color: var(--colorSubtleBackgroundSelected, var(--ogrid-header-bg, #f3f2f1));
 }
 
-.freezeColFirst {
-  background-color: var(--colorNeutralBackground1, #ffffff);
-}
-
-.dataTable :global(.fui-TableHeader) .freezeColFirst {
-  background-color: var(--colorSubtleBackgroundSelected, var(--ogrid-header-bg, #f3f2f1));
-}
-
-.stickyHeader .freezeColFirst,
 .stickyHeader .pinnedColLeft,
 .stickyHeader .pinnedColRight {
   top: 0;

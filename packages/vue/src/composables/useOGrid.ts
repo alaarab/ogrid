@@ -432,8 +432,6 @@ export function useOGrid<T>(
       onColumnPinned: handleColumnPinned,
       pinnedColumns: pinnedOverrides.value,
       initialColumnWidths: columnWidthOverrides.value,
-      freezeRows: p.freezeRows,
-      freezeCols: p.freezeCols,
       editable: p.editable,
       cellSelection: p.cellSelection,
       onCellValueChanged: p.onCellValueChanged,

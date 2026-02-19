@@ -70,8 +70,6 @@ export interface UseDataGridTableOrchestrationResult<T> {
   emptyState: IOGridDataGridProps<T>['emptyState'];
   layoutMode: 'fill' | 'content';
   rowSelection: IOGridDataGridProps<T>['rowSelection'];
-  freezeRows: IOGridDataGridProps<T>['freezeRows'];
-  freezeCols: IOGridDataGridProps<T>['freezeCols'];
   suppressHorizontalScroll: IOGridDataGridProps<T>['suppressHorizontalScroll'];
   isLoading: boolean;
   loadingMessage: string;
@@ -223,8 +221,6 @@ export function useDataGridTableOrchestration<T>(
     emptyState,
     layoutMode = 'fill',
     rowSelection = 'none',
-    freezeRows,
-    freezeCols,
     suppressHorizontalScroll,
     isLoading = false,
     loadingMessage = 'Loading\u2026',
@@ -338,8 +334,6 @@ export function useDataGridTableOrchestration<T>(
     emptyState,
     layoutMode,
     rowSelection,
-    freezeRows,
-    freezeCols,
     suppressHorizontalScroll,
     isLoading,
     loadingMessage,

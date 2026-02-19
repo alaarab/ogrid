@@ -61,8 +61,6 @@ import { PopoverCellEditorComponent } from './popover-cell-editor.component';
         [attr.aria-labelledby]="ariaLabelledBy()"
         [attr.data-empty]="showEmptyInGrid() ? 'true' : null"
         [attr.data-column-count]="state().layout.totalColCount"
-        [attr.data-freeze-rows]="freezeRows() != null && freezeRows()! >= 1 ? freezeRows() : null"
-        [attr.data-freeze-cols]="freezeCols() != null && freezeCols()! >= 1 ? freezeCols() : null"
         [attr.data-overflow-x]="allowOverflowX() ? 'true' : 'false'"
         [attr.data-has-selection]="rowSelectionMode !== 'none' ? 'true' : null"
         (contextmenu)="$event.preventDefault()"
@@ -729,8 +727,6 @@ export class DataGridTableComponent<T = unknown> extends BaseDataGridTableCompon
   @Input() onColumnPinned: ((columnId: string, pinned: 'left' | 'right' | null) => void) | undefined = undefined;
   @Input({ alias: 'pinnedColumns' }) pinnedColumnsInput: Record<string, 'left' | 'right'> | undefined = undefined;
   @Input() initialColumnWidths: Record<string, number> | undefined = undefined;
-  @Input({ alias: 'freezeRows' }) freezeRowsInput: number | undefined = undefined;
-  @Input({ alias: 'freezeCols' }) freezeColsInput: number | undefined = undefined;
   @Input() layoutMode: 'content' | 'fill' = 'fill';
   @Input() suppressHorizontalScroll: boolean | undefined = undefined;
   @Input() columnReorder: boolean | undefined = undefined;
@@ -1033,8 +1029,6 @@ export class DataGridTableComponent<T = unknown> extends BaseDataGridTableCompon
       onColumnPinned: this.onColumnPinned,
       pinnedColumns: this.pinnedColumnsInput,
       initialColumnWidths: this.initialColumnWidths,
-      freezeRows: this.freezeRowsInput,
-      freezeCols: this.freezeColsInput,
       layoutMode: this.layoutMode,
       suppressHorizontalScroll: this.suppressHorizontalScroll,
       columnReorder: this.columnReorder,

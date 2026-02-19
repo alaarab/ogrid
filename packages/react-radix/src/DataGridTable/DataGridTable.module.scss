@@ -99,7 +99,7 @@
   background: var(--ogrid-header-bg, #f5f5f5);
 }
 
-/* Freeze panes: sticky header when freezeRows >= 1 */
+/* Sticky header */
 .dataTable thead.stickyHeader {
   z-index: 8;
   background: var(--ogrid-header-bg, #f5f5f5);
@@ -109,16 +109,7 @@
   background: var(--ogrid-header-bg, #f5f5f5);
 }
 
-/* Freeze panes: sticky first column when freezeCols >= 1 */
-.dataTable .freezeColFirst {
-  position: sticky;
-  left: 0;
-  z-index: 6;
-  background: var(--ogrid-bg, #ffffff);
-}
-
-/* Freeze/pinned header cells need top: 0 + highest z-index */
-.dataTable thead.stickyHeader .freezeColFirst,
+/* Pinned header cells need top: 0 + highest z-index */
 .dataTable thead.stickyHeader .pinnedColLeft,
 .dataTable thead.stickyHeader .pinnedColRight {
   top: 0;
@@ -129,10 +120,6 @@
 .dataTable thead.stickyHeader .selectionHeaderCell {
   top: 0;
   z-index: 12;
-}
-
-.dataTable thead .freezeColFirst {
-  background: var(--ogrid-header-bg, #f5f5f5);
 }
 
 /* Pinned columns: .dataTable qualifier beats base th/td selectors */
