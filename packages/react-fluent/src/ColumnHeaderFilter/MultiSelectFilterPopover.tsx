@@ -1,5 +1,4 @@
 import * as React from 'react';
-import { Input, Checkbox } from '@fluentui/react-components';
 import { SearchRegular } from '@fluentui/react-icons';
 import { useListVirtualizer } from '@alaarab/ogrid-react';
 import styles from './ColumnHeaderFilter.module.scss';
@@ -46,18 +45,21 @@ export const MultiSelectFilterPopover: React.FC<MultiSelectFilterPopoverProps> =
   return (
     <>
       <div className={styles.popoverSearch} onClick={onPopoverClick}>
-        <Input
-          placeholder="Search..."
-          value={searchText}
-          onChange={(e, data) => onSearchChange(data.value ?? '')}
-          onFocus={onInputFocus}
-          onMouseDown={onInputMouseDown}
-          onClick={onInputClick}
-          onKeyDown={onInputKeyDown}
-          autoComplete="off"
-          className={styles.searchInput}
-          contentBefore={<SearchRegular />}
-        />
+        <div className={styles.nativeInputWrapper}>
+          <SearchRegular className={styles.nativeInputIcon} />
+          <input
+            type="text"
+            placeholder="Search..."
+            value={searchText}
+            onChange={(e) => onSearchChange(e.target.value)}
+            onFocus={onInputFocus}
+            onMouseDown={onInputMouseDown}
+            onClick={onInputClick}
+            onKeyDown={onInputKeyDown}
+            autoComplete="off"
+            className={styles.nativeInput}
+          />
+        </div>
         <div className={styles.resultCount}>
           {filteredOptions.length} of {options.length} options
         </div>
@@ -87,17 +89,24 @@ export const MultiSelectFilterPopover: React.FC<MultiSelectFilterPopoverProps> =
           <div style={{ height: virt.totalHeight, position: 'relative' }}>
             {virt.visibleItems.map(({ index, offsetTop }) => {
               const option = filteredOptions[index];
+              const isChecked = selected.has(option);
               return (
-                <div key={option} className={styles.popoverOption} style={{ position: 'absolute', top: offsetTop, width: '100%', height: ITEM_HEIGHT, boxSizing: 'border-box', display: 'flex', alignItems: 'center' }}>
-                  <Checkbox
-                    label={option}
-                    checked={selected.has(option)}
-                    onChange={(ev, data) => {
+                <label
+                  key={option}
+                  className={styles.popoverOption}
+                  style={{ position: 'absolute', top: offsetTop, width: '100%', height: ITEM_HEIGHT, boxSizing: 'border-box', display: 'flex', alignItems: 'center' }}
+                >
+                  <input
+                    type="checkbox"
+                    checked={isChecked}
+                    onChange={(ev) => {
                       ev.stopPropagation();
-                      onOptionToggle(option, data.checked === true);
+                      onOptionToggle(option, ev.target.checked);
                     }}
+                    className={styles.nativeCheckbox}
                   />
-                </div>
+                  <span className={styles.checkboxLabel}>{option}</span>
+                </label>
               );
             })}
           </div>
