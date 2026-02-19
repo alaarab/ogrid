@@ -1,32 +1,17 @@
 import * as React from 'react';
-import { getStatusBarParts } from '@alaarab/ogrid-react';
+import { StatusBar as BaseStatusBar } from '@alaarab/ogrid-react';
+import type { StatusBarProps as BaseStatusBarProps } from '@alaarab/ogrid-react';
 import styles from './DataGridTable.module.scss';
 
-export interface StatusBarProps {
-  totalCount: number;
-  filteredCount?: number;
-  selectedCount?: number;
-  selectedCellCount?: number;
-  aggregation?: {
-    sum: number;
-    avg: number;
-    min: number;
-    max: number;
-    count: number;
-  } | null;
-  suppressRowCount?: boolean;
-}
+export type StatusBarProps = Omit<BaseStatusBarProps, 'classNames'>;
+
+const statusBarClassNames = {
+  statusBar: styles.statusBar,
+  statusBarItem: styles.statusBarItem,
+  statusBarLabel: styles.statusBarLabel,
+  statusBarValue: styles.statusBarValue,
+};
 
 export function StatusBar(props: StatusBarProps): React.ReactElement {
-  const parts = getStatusBarParts(props);
-  return (
-    <div className={styles.statusBar} role="status" aria-live="polite">
-      {parts.map((p) => (
-        <span key={p.key} className={styles.statusBarItem}>
-          <span className={styles.statusBarLabel}>{p.label}</span>
-          <span className={styles.statusBarValue}>{p.value.toLocaleString()}</span>
-        </span>
-      ))}
-    </div>
-  );
+  return <BaseStatusBar {...props} classNames={statusBarClassNames} />;
 }

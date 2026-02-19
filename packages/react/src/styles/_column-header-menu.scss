@@ -1,0 +1,48 @@
+.content {
+  min-width: 140px;
+  background: var(--ogrid-bg, #ffffff);
+  border: 1px solid var(--ogrid-border, rgba(0, 0, 0, 0.12));
+  border-radius: 6px;
+  padding: 4px;
+  box-shadow: 0px 10px 38px -10px rgba(22, 23, 24, 0.35), 0px 10px 20px -15px rgba(22, 23, 24, 0.2);
+  z-index: 1000;
+  animation-duration: 400ms;
+  animation-timing-function: cubic-bezier(0.16, 1, 0.3, 1);
+  will-change: transform, opacity;
+}
+
+.item {
+  font-size: 13px;
+  line-height: 1;
+  color: var(--ogrid-fg, rgba(0, 0, 0, 0.87));
+  border-radius: 4px;
+  border: none;
+  background: transparent;
+  display: flex;
+  align-items: center;
+  height: 28px;
+  padding: 0 8px;
+  position: relative;
+  user-select: none;
+  outline: none;
+  cursor: pointer;
+  width: 100%;
+  text-align: left;
+
+  &:disabled {
+    color: var(--ogrid-fg-muted, rgba(0, 0, 0, 0.5));
+    pointer-events: none;
+    cursor: not-allowed;
+  }
+
+  &:hover:not(:disabled) {
+    background-color: var(--ogrid-hover-bg, rgba(0, 0, 0, 0.04));
+    color: var(--ogrid-fg, rgba(0, 0, 0, 0.87));
+  }
+}
+
+.separator {
+  height: 1px;
+  background-color: var(--ogrid-border, rgba(0, 0, 0, 0.12));
+  margin: 4px 0;
+}

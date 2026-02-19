@@ -56,7 +56,7 @@ import { BaseColumnChooserComponent } from '@alaarab/ogrid-angular';
       align-items: center;
       gap: 6px;
       padding: 6px 12px;
-      border: 1px solid var(--ogrid-border, #e0e0e0);
+      border: 1px solid var(--ogrid-border, rgba(0, 0, 0, 0.12));
       border-radius: 4px;
       background: var(--ogrid-bg, #ffffff);
       color: var(--ogrid-fg, #242424);
@@ -68,7 +68,7 @@ import { BaseColumnChooserComponent } from '@alaarab/ogrid-angular';
       transition: all 0.15s ease;
     }
     .ogrid-column-chooser__trigger:hover {
-      background: var(--ogrid-hover-bg, #f0f0f0);
+      background: var(--ogrid-hover-bg, rgba(0, 0, 0, 0.04));
       border-color: var(--ogrid-active-border, #0078d4);
     }
     .ogrid-column-chooser__caret {
@@ -83,7 +83,7 @@ import { BaseColumnChooserComponent } from '@alaarab/ogrid-angular';
       min-width: 220px;
       margin-top: 4px;
       background: var(--ogrid-bg, #ffffff);
-      border: 1px solid var(--ogrid-border, #e0e0e0);
+      border: 1px solid var(--ogrid-border, rgba(0, 0, 0, 0.12));
       border-radius: 4px;
       box-shadow: 0 4px 12px rgba(0,0,0,0.15);
     }
@@ -92,7 +92,7 @@ import { BaseColumnChooserComponent } from '@alaarab/ogrid-angular';
       font-size: 14px;
       font-weight: 600;
       color: var(--ogrid-fg, #242424);
-      border-bottom: 1px solid var(--ogrid-border, #e0e0e0);
+      border-bottom: 1px solid var(--ogrid-border, rgba(0, 0, 0, 0.12));
       background: var(--ogrid-header-bg, #f5f5f5);
     }
     .ogrid-column-chooser__list {
@@ -112,7 +112,7 @@ import { BaseColumnChooserComponent } from '@alaarab/ogrid-angular';
       transition: background 0.15s ease;
     }
     .ogrid-column-chooser__item:hover {
-      background: var(--ogrid-hover-bg, #f0f0f0);
+      background: var(--ogrid-hover-bg, rgba(0, 0, 0, 0.04));
     }
     .ogrid-column-chooser__item input[type="checkbox"] {
       cursor: pointer;
@@ -122,12 +122,12 @@ import { BaseColumnChooserComponent } from '@alaarab/ogrid-angular';
       justify-content: flex-end;
       gap: 8px;
       padding: 8px 12px;
-      border-top: 1px solid var(--ogrid-border, #e0e0e0);
+      border-top: 1px solid var(--ogrid-border, rgba(0, 0, 0, 0.12));
       background: var(--ogrid-header-bg, #f5f5f5);
     }
     .ogrid-column-chooser__btn {
       padding: 6px 12px;
-      border: 1px solid var(--ogrid-border, #e0e0e0);
+      border: 1px solid var(--ogrid-border, rgba(0, 0, 0, 0.12));
       border-radius: 4px;
       background: var(--ogrid-bg, #ffffff);
       color: var(--ogrid-fg, #242424);
@@ -137,7 +137,7 @@ import { BaseColumnChooserComponent } from '@alaarab/ogrid-angular';
       transition: all 0.15s ease;
     }
     .ogrid-column-chooser__btn:hover {
-      background: var(--ogrid-hover-bg, #f0f0f0);
+      background: var(--ogrid-hover-bg, rgba(0, 0, 0, 0.04));
     }
     .ogrid-column-chooser__btn--primary {
       background: var(--ogrid-active-border, #0078d4);

@@ -62,6 +62,8 @@ interface IOGridBaseProps<T> {
   columnOrder?: string[];
   onColumnOrderChange?: (order: string[]) => void;
   onColumnResized?: (columnId: string, width: number) => void;
+  /** Called when user requests autosize for a single column (with measured width). */
+  onAutosizeColumn?: (columnId: string, width: number) => void;
   onColumnPinned?: (columnId: string, pinned: 'left' | 'right' | null) => void;
   editable?: boolean;
   cellSelection?: boolean;
@@ -99,7 +101,9 @@ interface IOGridBaseProps<T> {
   pageSizeOptions?: number[];
   onFirstDataRendered?: () => void;
   onError?: (error: unknown) => void;
-  onCellError?: (error: Error) => void;
+  onCellError?: (error: Error, info: unknown) => void;
+
+  showRowNumbers?: boolean;
 
   'aria-label'?: string;
   'aria-labelledby'?: string;
@@ -133,6 +137,8 @@ export interface IOGridDataGridProps<T> {
   columnOrder?: string[];
   onColumnOrderChange?: (order: string[]) => void;
   onColumnResized?: (columnId: string, width: number) => void;
+  /** Called when user requests autosize for a single column (with measured width). */
+  onAutosizeColumn?: (columnId: string, width: number) => void;
   onColumnPinned?: (columnId: string, pinned: 'left' | 'right' | null) => void;
   pinnedColumns?: Record<string, 'left' | 'right'>;
   initialColumnWidths?: Record<string, number>;
@@ -171,7 +177,7 @@ export interface IOGridDataGridProps<T> {
     message?: string;
     render?: TemplateRef<unknown>;
   };
-  onCellError?: (error: Error) => void;
+  onCellError?: (error: Error, info: unknown) => void;
   'aria-label'?: string;
   'aria-labelledby'?: string;
 }

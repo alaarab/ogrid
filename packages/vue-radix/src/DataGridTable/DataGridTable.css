@@ -1,0 +1,49 @@
+/* OGrid Vue Radix - DataGridTable styles */
+
+/* Shared theme variables (light/dark mode, CSS custom properties) */
+@import '@alaarab/ogrid-vue/styles/ogrid-theme.css';
+
+/* Shared layout styles (table structure, header, cells, pinning, fill handle, etc.) */
+@import '@alaarab/ogrid-vue/styles/ogrid-layout.css';
+
+/* === Radix-specific styles === */
+
+.ogrid-checkbox-label {
+  display: inline-flex;
+  align-items: center;
+  cursor: pointer;
+}
+
+.ogrid-checkbox {
+  cursor: pointer;
+  width: 16px;
+  height: 16px;
+  accent-color: var(--ogrid-accent, #0078d4);
+}
+
+.ogrid-loading-spinner {
+  width: 24px;
+  height: 24px;
+  border: 3px solid var(--ogrid-border, #e0e0e0);
+  border-top-color: var(--ogrid-accent, #0078d4);
+  border-radius: 50%;
+  animation: ogrid-spin 0.8s linear infinite;
+}
+
+@keyframes ogrid-spin {
+  to { transform: rotate(360deg); }
+}
+
+.ogrid-empty-clear-btn {
+  background: none;
+  border: none;
+  color: var(--ogrid-accent, #0078d4);
+  text-decoration: underline;
+  cursor: pointer;
+  padding: 0;
+  font: inherit;
+}
+
+.ogrid-empty-clear-btn:hover {
+  color: var(--ogrid-accent, #005a9e);
+}

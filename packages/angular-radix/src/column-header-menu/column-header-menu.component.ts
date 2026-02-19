@@ -58,7 +58,7 @@ import { getColumnHeaderMenuItems, type ColumnHeaderMenuHandlers } from '@alaara
       line-height: 1;
     }
     .ogrid-header-menu__trigger:hover {
-      background: var(--ogrid-hover-bg, #f0f0f0);
+      background: var(--ogrid-hover-bg, rgba(0, 0, 0, 0.04));
     }
     .ogrid-header-menu__dropdown {
       position: absolute;
@@ -67,7 +67,7 @@ import { getColumnHeaderMenuItems, type ColumnHeaderMenuHandlers } from '@alaara
       z-index: 1000;
       min-width: 140px;
       background: var(--ogrid-bg, #ffffff);
-      border: 1px solid var(--ogrid-border, #e0e0e0);
+      border: 1px solid var(--ogrid-border, rgba(0, 0, 0, 0.12));
       border-radius: 4px;
       box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
       padding: 4px 0;
@@ -85,7 +85,7 @@ import { getColumnHeaderMenuItems, type ColumnHeaderMenuHandlers } from '@alaara
       transition: background 0.15s ease;
     }
     .ogrid-header-menu__item:hover:not(:disabled) {
-      background: var(--ogrid-hover-bg, #f0f0f0);
+      background: var(--ogrid-hover-bg, rgba(0, 0, 0, 0.04));
     }
     .ogrid-header-menu__item:disabled {
       opacity: 0.4;
@@ -94,7 +94,7 @@ import { getColumnHeaderMenuItems, type ColumnHeaderMenuHandlers } from '@alaara
     .ogrid-header-menu__divider {
       height: 1px;
       margin: 4px 0;
-      background: var(--ogrid-border, #e0e0e0);
+      background: var(--ogrid-border, rgba(0, 0, 0, 0.12));
     }
   `],
   host: {

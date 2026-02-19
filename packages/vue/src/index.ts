@@ -184,5 +184,8 @@ export { createDataGridTable, type IDataGridTableUIBindings } from './components
 // InlineCellEditor factory (for UI packages)
 export { createInlineCellEditor, type CreateInlineCellEditorOptions } from './components/createInlineCellEditor';
 
+// OGrid factory (for UI packages)
+export { createOGrid, type IOGridUIBindings } from './components/createOGrid';
+
 // Component types (for UI packages to implement)
 export type { SideBarProps, SideBarFilterColumn } from './components/SideBar';

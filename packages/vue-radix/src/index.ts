@@ -1,6 +1,6 @@
 // Main components
-export { default as OGrid } from './OGrid/OGrid.vue';
-export { default as DataGridTable } from './DataGridTable/DataGridTable.vue';
+export { OGrid } from './OGrid/OGrid';
+export { DataGridTable } from './DataGridTable/DataGridTable';
 export { default as ColumnChooser } from './ColumnChooser/ColumnChooser.vue';
 export type { IColumnChooserProps } from './ColumnChooser/types';
 export { default as ColumnHeaderFilter } from './ColumnHeaderFilter/ColumnHeaderFilter.vue';
@@ -16,7 +16,7 @@ export type { ColumnHeaderMenuProps } from './ColumnHeaderMenu/types';
 export { StatusBar, MarchingAntsOverlay } from '@alaarab/ogrid-vue';
 // DataGridTable sub-components
 export { default as GridContextMenu } from './DataGridTable/GridContextMenu.vue';
-export { default as InlineCellEditor } from './DataGridTable/InlineCellEditor.vue';
+export { InlineCellEditor } from './DataGridTable/InlineCellEditor';
 
 // Re-export all from base package for consumer convenience.
 // Note: This prevents tree-shaking of unused utilities.

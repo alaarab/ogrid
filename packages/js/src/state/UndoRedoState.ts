@@ -1,4 +1,5 @@
 import type { ICellValueChangedEvent } from '@alaarab/ogrid-core';
+import { UndoRedoStack } from '@alaarab/ogrid-core';
 import { EventEmitter } from './EventEmitter';
 
 interface UndoRedoStateEvents extends Record<string, unknown> {
@@ -7,24 +8,18 @@ interface UndoRedoStateEvents extends Record<string, unknown> {
 
 export class UndoRedoState<T> {
   private emitter = new EventEmitter<UndoRedoStateEvents>();
-  private historyStack: ICellValueChangedEvent<T>[][] = [];
-  private redoStack: ICellValueChangedEvent<T>[][] = [];
-  private batch: ICellValueChangedEvent<T>[] | null = null;
-  private maxUndoDepth: number;
+  private stack: UndoRedoStack<ICellValueChangedEvent<T>>;
   private wrappedCallback: ((event: ICellValueChangedEvent<T>) => void) | undefined;
 
   constructor(
     private onCellValueChanged: ((event: ICellValueChangedEvent<T>) => void) | undefined,
     maxUndoDepth = 100
   ) {
-    this.maxUndoDepth = maxUndoDepth;
+    this.stack = new UndoRedoStack<ICellValueChangedEvent<T>>(maxUndoDepth);
     if (onCellValueChanged) {
       this.wrappedCallback = (event: ICellValueChangedEvent<T>) => {
-        if (this.batch !== null) {
-          this.batch.push(event);
-        } else {
-          this.historyStack = [...this.historyStack, [event]].slice(-this.maxUndoDepth);
-          this.redoStack = [];
+        this.stack.record(event);
+        if (!this.stack.isBatching) {
           this.emitStackChange();
         }
         onCellValueChanged(event);
@@ -33,11 +28,11 @@ export class UndoRedoState<T> {
   }
 
   get canUndo(): boolean {
-    return this.historyStack.length > 0;
+    return this.stack.canUndo;
   }
 
   get canRedo(): boolean {
-    return this.redoStack.length > 0;
+    return this.stack.canRedo;
   }
 
   getWrappedCallback(): ((event: ICellValueChangedEvent<T>) => void) | undefined {
@@ -45,23 +40,18 @@ export class UndoRedoState<T> {
   }
 
   beginBatch(): void {
-    this.batch = [];
+    this.stack.beginBatch();
   }
 
   endBatch(): void {
-    const currentBatch = this.batch;
-    this.batch = null;
-    if (!currentBatch || currentBatch.length === 0) return;
-    this.historyStack = [...this.historyStack, currentBatch].slice(-this.maxUndoDepth);
-    this.redoStack = [];
+    this.stack.endBatch();
     this.emitStackChange();
   }
 
   undo(): void {
-    if (!this.onCellValueChanged || this.historyStack.length === 0) return;
-    const lastBatch = this.historyStack[this.historyStack.length - 1];
-    this.historyStack = this.historyStack.slice(0, -1);
-    this.redoStack = [...this.redoStack, lastBatch];
+    if (!this.onCellValueChanged) return;
+    const lastBatch = this.stack.undo();
+    if (!lastBatch) return;
     this.emitStackChange();
     for (let i = lastBatch.length - 1; i >= 0; i--) {
       const ev = lastBatch[i];
@@ -74,10 +64,9 @@ export class UndoRedoState<T> {
   }
 
   redo(): void {
-    if (!this.onCellValueChanged || this.redoStack.length === 0) return;
-    const nextBatch = this.redoStack[this.redoStack.length - 1];
-    this.redoStack = this.redoStack.slice(0, -1);
-    this.historyStack = [...this.historyStack, nextBatch];
+    if (!this.onCellValueChanged) return;
+    const nextBatch = this.stack.redo();
+    if (!nextBatch) return;
     this.emitStackChange();
     for (const ev of nextBatch) {
       this.onCellValueChanged(ev);

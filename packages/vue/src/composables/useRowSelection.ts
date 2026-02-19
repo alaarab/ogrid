@@ -1,4 +1,4 @@
-import { ref, computed, type Ref } from 'vue';
+import { shallowRef, computed, type Ref } from 'vue';
 import type { RowId, RowSelectionMode, IRowSelectionChangeEvent } from '../types';
 
 export interface UseRowSelectionParams<T> {
@@ -30,7 +30,7 @@ export function useRowSelection<T>(params: UseRowSelectionParams<T>): UseRowSele
     onSelectionChange,
   } = params;
 
-  const internalSelectedRows = ref<Set<RowId>>(new Set()) as Ref<Set<RowId>>;
+  const internalSelectedRows = shallowRef<Set<RowId>>(new Set());
   let lastClickedRow = -1;
 
   const selectedRowIds = computed<Set<RowId>>(() => {

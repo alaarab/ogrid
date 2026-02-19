@@ -1,5 +1,4 @@
 import { Component, inject, ChangeDetectionStrategy, Input, signal, effect } from '@angular/core';
-import { CommonModule } from '@angular/common';
 import {
   OGridService,
   OGridLayoutComponent,
@@ -13,7 +12,6 @@ import { PaginationControlsComponent } from '../pagination-controls/pagination-c
   selector: 'ogrid-primeng',
   standalone: true,
   imports: [
-    CommonModule,
     OGridLayoutComponent,
     DataGridTableComponent,
     ColumnChooserComponent,

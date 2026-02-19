@@ -16,7 +16,8 @@ import {
 } from '@fluentui/react-components';
 import { ColumnHeaderFilter } from '../ColumnHeaderFilter';
 import { ColumnHeaderMenu } from '../ColumnHeaderMenu';
-import { InlineCellEditor, type InlineCellEditorProps } from './InlineCellEditor';
+import { InlineCellEditor } from './InlineCellEditor';
+import type { InlineCellEditorProps } from '@alaarab/ogrid-react';
 import { StatusBar } from './StatusBar';
 import { GridContextMenu } from './GridContextMenu';
 import { EmptyState } from './EmptyState';
@@ -45,34 +46,13 @@ import {
   POPOVER_ANCHOR_STYLE,
   PREVENT_DEFAULT,
   NOOP,
+  STOP_PROPAGATION,
 } from '@alaarab/ogrid-react';
+import type { GridRowProps } from '@alaarab/ogrid-react';
 import styles from './DataGridTable.module.scss';
 
 
 // --- Memoized row component (skips re-render for rows unaffected by selection changes) ---
-
-interface GridRowProps {
-  item: unknown;
-  rowIndex: number;
-  rowId: string | number;
-  isSelected: boolean;
-  visibleCols: IColumnDef<unknown>[];
-  columnMeta: { cellStyles: Record<string, React.CSSProperties>; cellClasses: Record<string, string> };
-  renderCellContent: (item: unknown, col: IColumnDef<unknown>, rowIndex: number, colIdx: number) => React.ReactNode;
-  handleSingleRowClick: (e: React.MouseEvent<HTMLTableRowElement>) => void;
-  handleRowCheckboxChange: (rowId: string | number, checked: boolean, rowIndex: number, shiftKey: boolean) => void;
-  lastMouseShiftRef: React.MutableRefObject<boolean>;
-  hasCheckboxCol: boolean;
-  hasRowNumbersCol: boolean;
-  rowNumberOffset: number;
-  // Comparator-only props (drive re-render decisions, not used in render body)
-  selectionRange: { startRow: number; endRow: number; startCol: number; endCol: number } | null;
-  activeCell: { rowIndex: number; columnIndex: number } | null;
-  cutRange: { startRow: number; endRow: number; startCol: number; endCol: number } | null;
-  copyRange: { startRow: number; endRow: number; startCol: number; endCol: number } | null;
-  isDragging: boolean;
-  editingRowId: string | number | null;
-}
 
 function GridRowInner(props: GridRowProps) {
   const {
@@ -93,7 +73,7 @@ function GridRowInner(props: GridRowProps) {
             className={styles.selectionCellInner}
             data-row-index={rowIndex}
             data-col-index={0}
-            onClick={(e) => e.stopPropagation()}
+            onClick={STOP_PROPAGATION}
           >
             <Checkbox
               checked={isSelected}
