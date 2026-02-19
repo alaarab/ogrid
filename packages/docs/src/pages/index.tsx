@@ -186,10 +186,66 @@ const installCommands = [
   { pkg: '@alaarab/ogrid-react-material', label: 'React + Material UI' },
   { pkg: '@alaarab/ogrid-angular-material', label: 'Angular + Material' },
   { pkg: '@alaarab/ogrid-angular-primeng', label: 'Angular + PrimeNG' },
+  { pkg: '@alaarab/ogrid-angular-radix', label: 'Angular + Radix' },
   { pkg: '@alaarab/ogrid-vue-vuetify', label: 'Vue + Vuetify' },
   { pkg: '@alaarab/ogrid-vue-primevue', label: 'Vue + PrimeVue' },
+  { pkg: '@alaarab/ogrid-vue-radix', label: 'Vue + Radix' },
   { pkg: '@alaarab/ogrid-js', label: 'Vanilla JS' },
 ];
+
+const packagesByFramework = [
+  {
+    framework: 'React',
+    packages: [
+      { name: 'ogrid-react-radix', ui: 'Radix UI', default: true },
+      { name: 'ogrid-react-fluent', ui: 'Fluent UI' },
+      { name: 'ogrid-react-material', ui: 'Material UI' },
+    ],
+  },
+  {
+    framework: 'Angular',
+    packages: [
+      { name: 'ogrid-angular-material', ui: 'Material' },
+      { name: 'ogrid-angular-primeng', ui: 'PrimeNG' },
+      { name: 'ogrid-angular-radix', ui: 'Radix UI' },
+    ],
+  },
+  {
+    framework: 'Vue',
+    packages: [
+      { name: 'ogrid-vue-vuetify', ui: 'Vuetify' },
+      { name: 'ogrid-vue-primevue', ui: 'PrimeVue' },
+      { name: 'ogrid-vue-radix', ui: 'Radix UI' },
+    ],
+  },
+  {
+    framework: 'Vanilla',
+    packages: [
+      { name: 'ogrid-js', ui: 'No framework' },
+    ],
+  },
+];
+
+function PackagesGrid() {
+  return (
+    <div className={styles.packagesGrid}>
+      {packagesByFramework.map((group) => (
+        <div key={group.framework} className={styles.packageGroup}>
+          <div className={styles.packageGroupTitle}>{group.framework}</div>
+          {group.packages.map((pkg) => (
+            <div key={pkg.name} className={styles.packageItem}>
+              <code className={styles.packageName}>@alaarab/{pkg.name}</code>
+              <span className={styles.packageUi}>
+                {pkg.ui}
+                {'default' in pkg && pkg.default && <span className={styles.packageDefault}>default</span>}
+              </span>
+            </div>
+          ))}
+        </div>
+      ))}
+    </div>
+  );
+}
 
 function RotatingInstallCommand() {
   const [index, setIndex] = useState(0);
@@ -598,6 +654,7 @@ function CTASection() {
         <p className={styles.ctaSubtitle}>
           Get started in under 5 minutes. Free. MIT licensed. No strings attached.
         </p>
+        <PackagesGrid />
         <RotatingInstallCommand />
         <div className={styles.ctaButtons}>
           <Link className={styles.btnPrimary} to="/docs/getting-started/overview">
