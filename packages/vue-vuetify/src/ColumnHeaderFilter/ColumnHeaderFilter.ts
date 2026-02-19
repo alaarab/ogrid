@@ -174,28 +174,6 @@ export const ColumnHeaderFilter = defineComponent({
 
         // Sort + filter buttons
         h('div', { style: { display: 'flex', alignItems: 'center', marginLeft: '4px', flexShrink: '0' } }, [
-          // Sort button
-          ...(props.onSort ? [
-            h(_VBtn, {
-              icon: true,
-              size: 'x-small',
-              variant: props.isSorted ? 'tonal' : 'text',
-              color: props.isSorted ? 'primary' : 'default',
-              'aria-label': `Sort by ${props.columnName}`,
-              title: props.isSorted ? (props.isSortedDescending ? 'Sorted descending' : 'Sorted ascending') : 'Sort',
-              onClick: state.handlers.handleSortClick,
-              style: {
-                opacity: props.isSorted ? '1' : '0.7',
-              },
-            }, () =>
-              h(_VIcon, { size: '16' },
-                () => props.isSorted
-                  ? (props.isSortedDescending ? 'mdi-arrow-down' : 'mdi-arrow-up')
-                  : 'mdi-swap-vertical'
-              )
-            ),
-          ] : []),
-
           // Filter icon + menu
           ...(props.filterType !== 'none' ? [
             h(_VMenu, {

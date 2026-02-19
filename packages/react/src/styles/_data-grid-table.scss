@@ -60,6 +60,10 @@
   table-layout: auto;
   background-color: var(--ogrid-bg, #fff);
   color: var(--ogrid-fg, rgba(0, 0, 0, 0.87));
+
+  tbody tr {
+    height: var(--ogrid-row-height, auto);
+  }
 }
 
 // ---- Column group headers ----

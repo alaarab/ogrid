@@ -294,6 +294,9 @@ export function createDataGridTable(ui: IDataGridTableUIBindings) {
           backgroundColor: '#fff',
           willChange: 'scroll-position',
         };
+        if (p.rowHeight) {
+          wrapperStyle['--ogrid-row-height'] = `${p.rowHeight}px`;
+        }
 
         return h('div', { class: 'ogrid-outer-container' }, [
           // Scrollable wrapper

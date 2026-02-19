@@ -1,8 +1,13 @@
 import * as React from 'react';
-import { Avatar } from '@fluentui/react-components';
 import { SearchRegular, FilterRegular } from '@fluentui/react-icons';
 import type { UserLike } from '@alaarab/ogrid-react';
 import styles from './ColumnHeaderFilter.module.scss';
+
+function getInitials(name: string): string {
+  const parts = name.trim().split(/\s+/);
+  if (parts.length >= 2) return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+  return (parts[0]?.[0] ?? '').toUpperCase();
+}
 
 export interface PeopleFilterPopoverProps {
   selectedUser: UserLike | undefined;
@@ -33,7 +38,12 @@ export const PeopleFilterPopover: React.FC<PeopleFilterPopoverProps> = ({
         <div className={styles.selectedUserLabel}>Currently filtered by:</div>
         <div className={styles.selectedUser}>
           <div className={styles.userInfo}>
-            <Avatar name={selectedUser.displayName} image={{ src: selectedUser.photo }} size={32} />
+            <div className={styles.avatar}>
+              {selectedUser.photo
+                ? <img src={selectedUser.photo} alt="" className={styles.avatarImg} />
+                : <span className={styles.avatarInitials}>{getInitials(selectedUser.displayName)}</span>
+              }
+            </div>
             <div className={styles.userText}>
               <div>{selectedUser.displayName}</div>
               <div className={styles.userSecondary}>{selectedUser.email}</div>
@@ -82,7 +92,12 @@ export const PeopleFilterPopover: React.FC<PeopleFilterPopoverProps> = ({
             }}
           >
             <div className={styles.userInfo}>
-              <Avatar name={user.displayName} image={{ src: user.photo }} size={32} />
+              <div className={styles.avatar}>
+                {user.photo
+                  ? <img src={user.photo} alt="" className={styles.avatarImg} />
+                  : <span className={styles.avatarInitials}>{getInitials(user.displayName)}</span>
+                }
+              </div>
               <div className={styles.userText}>
                 <div>{user.displayName}</div>
                 <div className={styles.userSecondary}>{user.email}</div>

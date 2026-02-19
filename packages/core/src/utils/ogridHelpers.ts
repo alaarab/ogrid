@@ -33,18 +33,34 @@ export function deriveFilterOptionsFromData<T>(
   items: T[],
   columns: IColumnDef<T>[]
 ): Record<string, string[]> {
-  const out: Record<string, string[]> = {};
-  columns.forEach((col) => {
+  // Collect multiSelect columns upfront
+  const filterCols: { col: IColumnDef<T>; field: string }[] = [];
+  for (let i = 0; i < columns.length; i++) {
+    const col = columns[i];
     const f = col.filterable && typeof col.filterable === 'object' ? col.filterable : null;
-    if (f?.type !== 'multiSelect') return;
-    const field = getFilterField(col);
-    const values = new Set<string>();
-    items.forEach((item) => {
-      const v = getCellValue(item, col);
-      if (v != null && v !== '') values.add(String(v));
-    });
-    out[field] = Array.from(values).sort();
-  });
+    if (f?.type === 'multiSelect') {
+      filterCols.push({ col, field: getFilterField(col) });
+    }
+  }
+  if (filterCols.length === 0) return {};
+
+  // Single pass through items, collecting values for all filter columns simultaneously
+  const valueSets = new Map<string, Set<string>>();
+  for (let i = 0; i < filterCols.length; i++) {
+    valueSets.set(filterCols[i].field, new Set<string>());
+  }
+  for (let i = 0; i < items.length; i++) {
+    const item = items[i];
+    for (let j = 0; j < filterCols.length; j++) {
+      const v = getCellValue(item, filterCols[j].col);
+      if (v != null && v !== '') valueSets.get(filterCols[j].field)!.add(String(v));
+    }
+  }
+
+  const out: Record<string, string[]> = {};
+  for (let i = 0; i < filterCols.length; i++) {
+    out[filterCols[i].field] = Array.from(valueSets.get(filterCols[i].field)!).sort();
+  }
   return out;
 }
 

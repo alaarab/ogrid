@@ -525,8 +525,8 @@ export class OGrid<T> {
       this.resizeState?.startResize(columnId, clientX, currentWidth);
     };
 
-    document.addEventListener('mousemove', handleMouseMove);
-    document.addEventListener('mouseup', handleMouseUp);
+    document.addEventListener('mousemove', handleMouseMove, { passive: true });
+    document.addEventListener('mouseup', handleMouseUp, { passive: true });
 
     // Store references for cleanup
     this.unsubscribes.push(() => {
@@ -640,7 +640,8 @@ export class OGrid<T> {
     const maxC = norm.endCol;
     const cells = wrapper.querySelectorAll('td[data-row-index][data-col-index]');
 
-    for (const cell of Array.from(cells)) {
+    for (let _i = 0; _i < cells.length; _i++) {
+      const cell = cells[_i];
       const el = cell as HTMLElement;
       const rowIndex = parseInt(el.getAttribute('data-row-index') ?? '-1', 10);
       const colIndex = parseInt(el.getAttribute('data-col-index') ?? '-1', 10);

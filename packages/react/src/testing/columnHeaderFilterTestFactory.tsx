@@ -25,15 +25,7 @@ interface ColumnHeaderFilterProps {
 export function createColumnHeaderFilterTests(ColumnHeaderFilter: React.ComponentType<ColumnHeaderFilterProps>): void {
   it('renders no filter button when filterType is none', () => {
     render(<ColumnHeaderFilter columnKey="id" columnName="ID" filterType="none" onSort={() => undefined} />);
-    expect(screen.getByRole('button', { name: /sort by id/i })).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /filter id/i })).not.toBeInTheDocument();
-  });
-
-  it('calls onSort when sort button clicked', () => {
-    const onSort = jest.fn();
-    render(<ColumnHeaderFilter columnKey="name" columnName="Name" filterType="none" onSort={onSort} />);
-    fireEvent.click(screen.getByRole('button', { name: /sort by name/i }));
-    expect(onSort).toHaveBeenCalledTimes(1);
   });
 
   it('closes popover on Escape', () => {

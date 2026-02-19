@@ -318,7 +318,8 @@ export class InlineCellEditor<T> {
 
     let highlightedIndex = Math.max(values.findIndex((v) => String(v) === String(value)), 0);
 
-    const renderOptions = () => {
+    // Build all option elements once
+    const buildOptions = () => {
       dropdown.innerHTML = '';
       for (let i = 0; i < values.length; i++) {
         const val = values[i];
@@ -343,27 +344,45 @@ export class InlineCellEditor<T> {
       }
     };
 
+    // Only update CSS class on old/new highlighted item — avoids rebuilding the DOM
+    const updateHighlight = (prevIndex: number, nextIndex: number) => {
+      const prev = dropdown.children[prevIndex] as HTMLElement | undefined;
+      const next = dropdown.children[nextIndex] as HTMLElement | undefined;
+      if (prev) {
+        prev.style.background = '';
+        prev.setAttribute('aria-selected', 'false');
+      }
+      if (next) {
+        next.style.background = 'var(--ogrid-bg-hover, #e8f0fe)';
+        next.setAttribute('aria-selected', 'true');
+      }
+    };
+
     const scrollHighlightedIntoView = () => {
       const highlighted = dropdown.children[highlightedIndex] as HTMLElement | undefined;
       highlighted?.scrollIntoView({ block: 'nearest' });
     };
 
-    renderOptions();
+    buildOptions();
 
     wrapper.addEventListener('keydown', (e) => {
       switch (e.key) {
-        case 'ArrowDown':
+        case 'ArrowDown': {
           e.preventDefault();
+          const prevDown = highlightedIndex;
           highlightedIndex = Math.min(highlightedIndex + 1, values.length - 1);
-          renderOptions();
+          updateHighlight(prevDown, highlightedIndex);
           scrollHighlightedIntoView();
           break;
-        case 'ArrowUp':
+        }
+        case 'ArrowUp': {
           e.preventDefault();
+          const prevUp = highlightedIndex;
           highlightedIndex = Math.max(highlightedIndex - 1, 0);
-          renderOptions();
+          updateHighlight(prevUp, highlightedIndex);
           scrollHighlightedIntoView();
           break;
+        }
         case 'Enter':
           e.preventDefault();
           e.stopPropagation();
@@ -448,10 +467,10 @@ export class InlineCellEditor<T> {
         });
         option.addEventListener('mouseenter', () => {
           option.style.backgroundColor = 'var(--ogrid-hover-bg, rgba(0, 0, 0, 0.04))';
-        });
+        }, { passive: true });
         option.addEventListener('mouseleave', () => {
           option.style.backgroundColor = 'var(--ogrid-bg, #fff)';
-        });
+        }, { passive: true });
         dropdown.appendChild(option);
       }
     };

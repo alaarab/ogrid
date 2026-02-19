@@ -67,14 +67,16 @@ export function processClientSideData<T>(
       }
       case 'date': {
         const dv = val.value;
+        // Pre-compute filter boundary timestamps to avoid repeated Date parsing in the filter loop
+        const fromTs = dv.from ? new Date(dv.from + 'T00:00:00').getTime() : NaN;
+        const toTs = dv.to ? new Date(dv.to + 'T23:59:59.999').getTime() : NaN;
         predicates.push((r) => {
           const cellVal = getCellValue(r, col);
           if (cellVal == null) return false;
-          const cellDate = new Date(String(cellVal));
-          if (Number.isNaN(cellDate.getTime())) return false;
-          const cellDateStr = cellDate.toISOString().split('T')[0];
-          if (dv.from && cellDateStr < dv.from) return false;
-          if (dv.to && cellDateStr > dv.to) return false;
+          const cellTs = new Date(String(cellVal)).getTime();
+          if (Number.isNaN(cellTs)) return false;
+          if (!Number.isNaN(fromTs) && cellTs < fromTs) return false;
+          if (!Number.isNaN(toTs) && cellTs > toTs) return false;
           return true;
         });
         break;

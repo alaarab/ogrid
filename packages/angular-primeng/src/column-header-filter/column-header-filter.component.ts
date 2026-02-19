@@ -14,19 +14,6 @@ import { BaseColumnHeaderFilterComponent } from '@alaarab/ogrid-angular';
         </span>
       </div>
       <div style="display:flex;align-items:center;gap:2px;flex-shrink:0">
-        @if (onSort) {
-          <button
-            type="button"
-            (click)="handleSortClick()"
-            [attr.aria-label]="'Sort by ' + columnName"
-            [title]="isSorted ? (isSortedDescending ? 'Sorted descending' : 'Sorted ascending') : 'Sort'"
-            style="border:none;background:transparent;cursor:pointer;padding:2px 4px;font-size:12px;color:var(--ogrid-fg, #242424)"
-            [style.font-weight]="isSorted ? 'bold' : 'normal'"
-          >
-            {{ isSorted ? (isSortedDescending ? '\u2193' : '\u2191') : '\u21C5' }}
-          </button>
-        }
-
         @if (filterType !== 'none') {
           <button
             type="button"
