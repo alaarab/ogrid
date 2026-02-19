@@ -23,6 +23,9 @@ function App() {
         entityLabelPlural="projects"
         title={<h2 style={{ margin: 0 }}>Projects</h2>}
         defaultPageSize={25}
+        editable
+        cellSelection
+        statusBar
       />
     </div>
   );
