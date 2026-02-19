@@ -15,7 +15,8 @@ import {
 } from '@mui/material';
 import { ColumnHeaderFilter } from '../ColumnHeaderFilter';
 import { ColumnHeaderMenu } from '../ColumnHeaderMenu';
-import { InlineCellEditor, type InlineCellEditorProps } from './InlineCellEditor';
+import { InlineCellEditor } from './InlineCellEditor';
+import type { InlineCellEditorProps } from '@alaarab/ogrid-react';
 import { StatusBar } from './StatusBar';
 import { GridContextMenu } from './GridContextMenu';
 import { EmptyState } from './EmptyState';
@@ -235,6 +236,31 @@ const POPOVER_CONTENT_SX = { p: 1 } as const;
 // Wrapper
 const WRAPPER_SCROLL_SX = { display: 'flex', flexDirection: 'column', minHeight: '100%' } as const;
 
+// Header cell content wrapper
+const HEADER_CONTENT_FLEX_SX = { display: 'flex', alignItems: 'center', gap: 0.5 } as const;
+
+// Column options button
+const COLUMN_OPTIONS_BUTTON_SX = {
+  background: 'transparent',
+  border: 'none',
+  cursor: 'pointer',
+  padding: '2px 4px',
+  fontSize: '16px',
+  lineHeight: 1,
+  color: 'text.secondary',
+  opacity: 1,
+  transition: 'background-color 0.15s',
+  borderRadius: '3px',
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  minWidth: '20px',
+  height: '20px',
+  '&:hover': {
+    bgcolor: 'action.hover',
+  },
+} as const;
+
 // Table wrapper
 const TABLE_WRAPPER_SX = { position: 'relative', opacity: 1 } as const;
 const TABLE_WRAPPER_LOADING_SX = { position: 'relative', opacity: 0.6 } as const;
@@ -364,11 +390,11 @@ function DataGridTableInner<T>(props: IOGridDataGridProps<T>): React.ReactElemen
     handleCopy, handleCut, cutRange, copyRange, canUndo, canRedo, onUndo, onRedo, isDragging,
     menuPosition, closeContextMenu,
     headerFilterInput, statusBarConfig, showEmptyInGrid, onCellError,
+    headerMenu,
   } = o;
 
   // Density-aware cell padding
   const densityPadding = useMemo(() => getDensityPadding(density), [density]);
-  const _cellSx = useMemo(() => ({ ...CELL_CONTENT_BASE_SX, ...densityPadding }), [densityPadding]);
   const headerCellSx = useMemo(() => ({ px: densityPadding.px, py: densityPadding.py }), [densityPadding]);
 
   // Pre-compute per-column layout (tdSx, widths) so GridRow doesn't recalculate per-cell
@@ -625,36 +651,17 @@ function DataGridTableInner<T>(props: IOGridDataGridProps<T>): React.ReactElemen
                           onMouseDown: columnReorder ? (e: React.MouseEvent) => handleHeaderMouseDown(col.columnId, e) : undefined
                         } as TableCellWithSpan)}
                       >
-                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                        <Box sx={HEADER_CONTENT_FLEX_SX}>
                           <ColumnHeaderFilter {...getHeaderFilterConfig(col, headerFilterInput)} />
                           <Box
                             component="button"
                             onClick={(e: React.MouseEvent<HTMLButtonElement>) => {
                               e.stopPropagation();
-                              pinning.headerMenu.open(col.columnId, e.currentTarget);
+                              headerMenu.open(col.columnId, e.currentTarget);
                             }}
                             aria-label="Column options"
                             title="Column options"
-                            sx={{
-                              background: 'transparent',
-                              border: 'none',
-                              cursor: 'pointer',
-                              padding: '2px 4px',
-                              fontSize: '16px',
-                              lineHeight: 1,
-                              color: 'text.secondary',
-                              opacity: 1,
-                              transition: 'background-color 0.15s',
-                              borderRadius: '3px',
-                              display: 'flex',
-                              alignItems: 'center',
-                              justifyContent: 'center',
-                              minWidth: '20px',
-                              height: '20px',
-                              '&:hover': {
-                                bgcolor: 'action.hover',
-                              },
-                            }}
+                            sx={COLUMN_OPTIONS_BUTTON_SX}
                           >
                             ⋮
                           </Box>
@@ -778,24 +785,23 @@ function DataGridTableInner<T>(props: IOGridDataGridProps<T>): React.ReactElemen
           )}
 
         <ColumnHeaderMenu
-          columnId={pinning.headerMenu.openForColumn || ''}
-          isOpen={pinning.headerMenu.isOpen}
-          anchorElement={pinning.headerMenu.anchorElement}
-          onClose={pinning.headerMenu.close}
-          onPinLeft={pinning.headerMenu.handlePinLeft}
-          onPinRight={pinning.headerMenu.handlePinRight}
-          onUnpin={pinning.headerMenu.handleUnpin}
-          onSortAsc={pinning.headerMenu.handleSortAsc}
-          onSortDesc={pinning.headerMenu.handleSortDesc}
-          onClearSort={pinning.headerMenu.handleClearSort}
-          onAutosizeThis={pinning.headerMenu.handleAutosizeThis}
-          onAutosizeAll={pinning.headerMenu.handleAutosizeAll}
-          canPinLeft={pinning.headerMenu.canPinLeft}
-          canPinRight={pinning.headerMenu.canPinRight}
-          canUnpin={pinning.headerMenu.canUnpin}
-          currentSort={pinning.headerMenu.currentSort}
-          isSortable={pinning.headerMenu.isSortable}
-          isResizable={pinning.headerMenu.isResizable}
+          isOpen={headerMenu.isOpen}
+          anchorElement={headerMenu.anchorElement}
+          onClose={headerMenu.close}
+          onPinLeft={headerMenu.handlePinLeft}
+          onPinRight={headerMenu.handlePinRight}
+          onUnpin={headerMenu.handleUnpin}
+          onSortAsc={headerMenu.handleSortAsc}
+          onSortDesc={headerMenu.handleSortDesc}
+          onClearSort={headerMenu.handleClearSort}
+          onAutosizeThis={headerMenu.handleAutosizeThis}
+          onAutosizeAll={headerMenu.handleAutosizeAll}
+          canPinLeft={headerMenu.canPinLeft}
+          canPinRight={headerMenu.canPinRight}
+          canUnpin={headerMenu.canUnpin}
+          currentSort={headerMenu.currentSort}
+          isSortable={headerMenu.isSortable}
+          isResizable={headerMenu.isResizable}
         />
       </Box>
       {statusBarConfig && (

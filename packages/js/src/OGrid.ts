@@ -984,7 +984,7 @@ export class OGrid<T> {
     // Update virtual scroll with current total row count
     this.virtualScrollState?.setTotalRows(totalCount);
 
-    this.pagination.render(totalCount);
+    this.pagination.render(totalCount, this.options.pageSizeOptions);
     this.statusBar.render({ totalCount });
     this.columnChooser.render();
     this.renderSideBar();

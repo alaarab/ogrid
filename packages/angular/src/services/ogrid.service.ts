@@ -99,6 +99,7 @@ export class OGridService<T> {
   readonly columnOrder = signal<string[] | undefined>(undefined);
   readonly onColumnOrderChange = signal<((order: string[]) => void) | undefined>(undefined);
   readonly onColumnResized = signal<((columnId: string, width: number) => void) | undefined>(undefined);
+  readonly onAutosizeColumn = signal<((columnId: string, width: number) => void) | undefined>(undefined);
   readonly onColumnPinned = signal<((columnId: string, pinned: 'left' | 'right' | null) => void) | undefined>(undefined);
   readonly defaultPageSize = signal<number>(DEFAULT_PAGE_SIZE);
   readonly defaultSortBy = signal<string | undefined>(undefined);
@@ -320,6 +321,7 @@ export class OGridService<T> {
     columnOrder: this.columnOrder(),
     onColumnOrderChange: this.onColumnOrderChange(),
     onColumnResized: this.handleColumnResizedFn,
+    onAutosizeColumn: this.onAutosizeColumn(),
     onColumnPinned: this.handleColumnPinnedFn,
     pinnedColumns: this.pinnedOverrides(),
     initialColumnWidths: this.columnWidthOverrides(),
@@ -492,6 +494,7 @@ export class OGridService<T> {
       this.onVisibleColumnsChange.set(undefined);
       this.onColumnOrderChange.set(undefined);
       this.onColumnResized.set(undefined);
+      this.onAutosizeColumn.set(undefined);
       this.onColumnPinned.set(undefined);
       this.onCellValueChanged.set(undefined);
       this.onSelectionChange.set(undefined);
@@ -591,6 +594,7 @@ export class OGridService<T> {
     if (props.columnOrder !== undefined) this.columnOrder.set(props.columnOrder);
     if (props.onColumnOrderChange) this.onColumnOrderChange.set(props.onColumnOrderChange);
     if (props.onColumnResized) this.onColumnResized.set(props.onColumnResized);
+    if (props.onAutosizeColumn) this.onAutosizeColumn.set(props.onAutosizeColumn);
     if (props.onColumnPinned) this.onColumnPinned.set(props.onColumnPinned);
     if (props.defaultPageSize !== undefined) this.defaultPageSize.set(props.defaultPageSize);
     if (props.defaultSortBy !== undefined) this.defaultSortBy.set(props.defaultSortBy);

@@ -233,7 +233,7 @@ import { BaseColumnHeaderFilterComponent } from '@alaarab/ogrid-angular';
       background: var(--mat-sys-primary, #1976d2);
     }
     .ogrid-header-filter__popover {
-      position: fixed; z-index: 10000;
+      position: fixed; z-index: 1000;
       background: var(--ogrid-bg, #ffffff); border: 1px solid var(--ogrid-border, rgba(0, 0, 0, 0.2));
       border-radius: 8px; box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2), 0 1px 4px rgba(0, 0, 0, 0.1);
       margin-top: 4px; color: var(--ogrid-fg, rgba(0, 0, 0, 0.87));

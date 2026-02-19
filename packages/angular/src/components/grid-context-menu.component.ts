@@ -1,11 +1,10 @@
-import { Component, Input, Output, EventEmitter, ElementRef, ViewChild, DestroyRef, inject } from '@angular/core';
-import { CommonModule } from '@angular/common';
+import { Component, Input, Output, EventEmitter, ElementRef, ViewChild, DestroyRef, inject, ChangeDetectionStrategy } from '@angular/core';
 import { GRID_CONTEXT_MENU_ITEMS, formatShortcut } from '@alaarab/ogrid-core';
 
 @Component({
   selector: 'ogrid-context-menu',
   standalone: true,
-  imports: [CommonModule],
+  changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <div
       #menuRef
