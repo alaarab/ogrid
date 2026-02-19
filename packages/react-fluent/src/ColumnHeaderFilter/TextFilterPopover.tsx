@@ -1,5 +1,4 @@
 import * as React from 'react';
-import { Input } from '@fluentui/react-components';
 import { SearchRegular } from '@fluentui/react-icons';
 import styles from './ColumnHeaderFilter.module.scss';
 
@@ -28,24 +27,27 @@ export const TextFilterPopover: React.FC<TextFilterPopoverProps> = ({
 }) => (
   <>
     <div className={styles.popoverSearch} onClick={onPopoverClick}>
-      <Input
-        placeholder="Enter search term..."
-        value={value}
-        onChange={(e, data) => onValueChange(data.value ?? '')}
-        onKeyDown={(e: React.KeyboardEvent) => {
-          onInputKeyDown(e);
-          if (e.key === 'Enter') {
-            e.preventDefault();
-            onApply();
-          }
-        }}
-        onFocus={onInputFocus}
-        onMouseDown={onInputMouseDown}
-        onClick={onInputClick}
-        autoComplete="off"
-        className={styles.searchInput}
-        contentBefore={<SearchRegular />}
-      />
+      <div className={styles.nativeInputWrapper}>
+        <SearchRegular className={styles.nativeInputIcon} />
+        <input
+          type="text"
+          placeholder="Enter search term..."
+          value={value}
+          onChange={(e) => onValueChange(e.target.value)}
+          onKeyDown={(e: React.KeyboardEvent<HTMLInputElement>) => {
+            onInputKeyDown(e);
+            if (e.key === 'Enter') {
+              e.preventDefault();
+              onApply();
+            }
+          }}
+          onFocus={onInputFocus}
+          onMouseDown={onInputMouseDown}
+          onClick={onInputClick}
+          autoComplete="off"
+          className={styles.nativeInput}
+        />
+      </div>
     </div>
     <div className={styles.popoverActions} onClick={onPopoverClick}>
       <button type="button" className={styles.clearButton} onClick={onClear} disabled={!value}>
