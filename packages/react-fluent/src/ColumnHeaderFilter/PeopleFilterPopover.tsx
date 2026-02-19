@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { Spinner, Avatar } from '@fluentui/react-components';
+import { Avatar } from '@fluentui/react-components';
 import { SearchRegular, FilterRegular } from '@fluentui/react-icons';
 import type { UserLike } from '@alaarab/ogrid-react';
 import styles from './ColumnHeaderFilter.module.scss';
@@ -66,7 +66,8 @@ export const PeopleFilterPopover: React.FC<PeopleFilterPopoverProps> = ({
     <div className={styles.popoverOptions} onClick={onPopoverClick}>
       {isLoading && searchText.trim() ? (
         <div className={styles.loadingContainer}>
-          <Spinner size="small" label="Searching..." />
+          <div className={styles.filterSpinner} />
+          <span style={{ fontSize: 12, color: 'var(--colorNeutralForeground2, #616161)' }}>Searching...</span>
         </div>
       ) : suggestions.length === 0 && searchText.trim() ? (
         <div className={styles.noResults}>No results found</div>
