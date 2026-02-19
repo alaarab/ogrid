@@ -1,6 +1,6 @@
 {
   "name": "@alaarab/ogrid-examples",
-  "version": "2.0.15",
+  "version": "2.0.16",
   "private": true,
   "description": "OGrid example apps for all UI packages (React, Angular, Vue, and Vanilla JS).",
   "scripts": {
