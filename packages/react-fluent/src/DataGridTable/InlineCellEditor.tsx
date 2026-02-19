@@ -1,7 +1,7 @@
 import * as React from 'react';
-import { Select, Checkbox } from '@fluentui/react-components';
+import { Checkbox } from '@fluentui/react-components';
 import type { IColumnDef } from '@alaarab/ogrid-react';
-import { BaseInlineCellEditor, editorWrapperStyle } from '@alaarab/ogrid-react';
+import { BaseInlineCellEditor } from '@alaarab/ogrid-react';
 
 export interface InlineCellEditorProps<T> {
   value: unknown;
@@ -23,21 +23,6 @@ export function InlineCellEditor<T>(props: InlineCellEditorProps<T>): React.Reac
           onChange={(_, data) => onCommit(!!data.checked)}
           onKeyDown={(e: React.KeyboardEvent) => e.key === 'Escape' && (e.preventDefault(), onCancel())}
         />
-      )}
-      renderSelect={(value, values, onCommit, onCancel) => (
-        <div style={editorWrapperStyle}>
-          <Select
-            value={value !== null && value !== undefined ? String(value) : ''}
-            onChange={(_, data) => onCommit(data.value)}
-            onKeyDown={(e: React.KeyboardEvent) => e.key === 'Escape' && (e.preventDefault(), onCancel())}
-          >
-            {values.map((v) => (
-              <option key={String(v)} value={String(v)}>
-                {String(v)}
-              </option>
-            ))}
-          </Select>
-        </div>
       )}
     />
   );

@@ -18,7 +18,9 @@ export {
   PAGE_SIZE_OPTIONS,
   MAX_PAGE_BUTTONS,
   GRID_CONTEXT_MENU_ITEMS,
+  COLUMN_HEADER_MENU_ITEMS,
   getContextMenuHandlers,
+  getColumnHeaderMenuItems,
   formatShortcut,
   parseValue,
   numberParser,
@@ -32,6 +34,15 @@ export {
   measureColumnContentWidth,
   AUTOSIZE_EXTRA_PX,
   AUTOSIZE_MAX_PX,
+  findCtrlArrowTarget,
+  computeTabNavigation,
+  rangesEqual,
+  clampSelectionToBounds,
+  computeAutoScrollSpeed,
+  formatCellValueForTsv,
+  formatSelectionAsTsv,
+  parseTsvClipboard,
+  UndoRedoStack,
 } from '@alaarab/ogrid-core';
 export type {
   CsvColumn,
@@ -42,6 +53,9 @@ export type {
   PaginationViewModel,
   ParseValueResult,
   AggregationResult,
+  IColumnHeaderMenuItem,
+  ColumnHeaderMenuInput,
+  ColumnHeaderMenuHandlers,
 } from '@alaarab/ogrid-core';
 
 // View model utilities (re-exported from core + React-specific getCellInteractionProps)

@@ -221,7 +221,11 @@ function DataGridTableInner<T>(props: IOGridDataGridProps<T>): React.ReactElemen
       let content: React.ReactNode;
 
       if (descriptor.mode === 'editing-inline') {
-        content = <InlineCellEditor<T> {...buildInlineEditorProps(item, col, descriptor, editCallbacks) as InlineCellEditorProps<T>} />;
+        content = (
+          <div className={styles.editingCellContent}>
+            <InlineCellEditor<T> {...buildInlineEditorProps(item, col, descriptor, editCallbacks) as InlineCellEditorProps<T>} />
+          </div>
+        );
       } else if (descriptor.mode === 'editing-popover' && typeof col.cellEditor === 'function') {
         const editorProps = buildPopoverEditorProps(item, col, descriptor, pendingEditorValueRef.current, editCallbacks) as ICellEditorProps<T>;
         const CustomEditor = col.cellEditor as React.ComponentType<ICellEditorProps<T>>;

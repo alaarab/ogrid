@@ -9,6 +9,12 @@ import {
   CHECKBOX_COLUMN_WIDTH,
   DEFAULT_MIN_COLUMN_WIDTH,
   CELL_PADDING,
+  UndoRedoStack,
+  findCtrlArrowTarget,
+  computeTabNavigation,
+  formatSelectionAsTsv,
+  parseTsvClipboard,
+  rangesEqual,
 } from '@alaarab/ogrid-core';
 import type {
   RowId,
@@ -194,10 +200,8 @@ export class DataGridStateService<T> {
   private readonly copyRangeSig = signal<ISelectionRange | null>(null);
   private internalClipboard: string | null = null;
 
-  // Undo/redo state
-  private undoHistory: ICellValueChangedEvent<T>[][] = [];
-  private redoStack: ICellValueChangedEvent<T>[][] = [];
-  private batch: ICellValueChangedEvent<T>[] | null = null;
+  // Undo/redo state (backed by core UndoRedoStack)
+  private readonly undoRedoStack = new UndoRedoStack<ICellValueChangedEvent<T>>(100);
   private readonly undoLengthSig = signal<number>(0);
   private readonly redoLengthSig = signal<number>(0);
 
@@ -239,13 +243,10 @@ export class DataGridStateService<T> {
     const original = p?.onCellValueChanged;
     if (!original) return undefined;
     return (event: ICellValueChangedEvent<T>) => {
-      if (this.batch !== null) {
-        this.batch.push(event);
-      } else {
-        this.undoHistory = [...this.undoHistory, [event]].slice(-100);
-        this.redoStack = [];
-        this.undoLengthSig.set(this.undoHistory.length);
-        this.redoLengthSig.set(0);
+      this.undoRedoStack.record(event);
+      if (!this.undoRedoStack.isBatching) {
+        this.undoLengthSig.set(this.undoRedoStack.historyLength);
+        this.redoLengthSig.set(this.undoRedoStack.redoLength);
       }
       original(event);
     };
@@ -530,10 +531,7 @@ export class DataGridStateService<T> {
 
   setSelectionRange(range: ISelectionRange | null): void {
     const prev = this.selectionRangeSig();
-    if (prev === range) return;
-    if (prev && range &&
-        prev.startRow === range.startRow && prev.endRow === range.endRow &&
-        prev.startCol === range.startCol && prev.endCol === range.endCol) return;
+    if (rangesEqual(prev, range)) return;
     this.selectionRangeSig.set(range);
   }
 
@@ -650,23 +648,7 @@ export class DataGridStateService<T> {
     const range = this.getEffectiveRange();
     if (range == null) return;
     const norm = normalizeSelectionRange(range);
-    const visibleCols = this.visibleCols();
-    const rows: string[] = [];
-    for (let r = norm.startRow; r <= norm.endRow; r++) {
-      const cells: string[] = [];
-      for (let c = norm.startCol; c <= norm.endCol; c++) {
-        if (r >= p.items.length || c >= visibleCols.length) break;
-        const item = p.items[r];
-        const col = visibleCols[c];
-        const raw = getCellValue(item, col);
-        const val = col.valueFormatter ? col.valueFormatter(raw, item) : raw;
-        cells.push(
-          val != null && val !== '' ? String(val).replace(/\t/g, ' ').replace(/\n/g, ' ') : '',
-        );
-      }
-      rows.push(cells.join('\t'));
-    }
-    const tsv = rows.join('\r\n');
+    const tsv = formatSelectionAsTsv(p.items, this.visibleCols(), norm);
     this.internalClipboard = tsv;
     this.copyRangeSig.set(norm);
     void navigator.clipboard.writeText(tsv).catch(() => {});
@@ -705,11 +687,11 @@ export class DataGridStateService<T> {
     const anchorRow = norm ? norm.startRow : 0;
     const anchorCol = norm ? norm.startCol : 0;
     const visibleCols = this.visibleCols();
-    const lines = text.split(/\r?\n/).filter((l) => l.length > 0);
+    const parsedRows = parseTsvClipboard(text);
 
     this.beginBatch();
-    for (let r = 0; r < lines.length; r++) {
-      const cells = lines[r].split('\t');
+    for (let r = 0; r < parsedRows.length; r++) {
+      const cells = parsedRows[r];
       for (let c = 0; c < cells.length; c++) {
         const targetRow = anchorRow + r;
         const targetCol = anchorCol + c;
@@ -755,28 +737,23 @@ export class DataGridStateService<T> {
   // --- Undo/Redo ---
 
   beginBatch(): void {
-    this.batch = [];
+    this.undoRedoStack.beginBatch();
   }
 
   endBatch(): void {
-    const batch = this.batch;
-    this.batch = null;
-    if (!batch || batch.length === 0) return;
-    this.undoHistory = [...this.undoHistory, batch].slice(-100);
-    this.redoStack = [];
-    this.undoLengthSig.set(this.undoHistory.length);
-    this.redoLengthSig.set(0);
+    this.undoRedoStack.endBatch();
+    this.undoLengthSig.set(this.undoRedoStack.historyLength);
+    this.redoLengthSig.set(this.undoRedoStack.redoLength);
   }
 
   undo(): void {
     const p = this.props();
     const original = p?.onCellValueChanged;
-    if (!original || this.undoHistory.length === 0) return;
-    const lastBatch = this.undoHistory[this.undoHistory.length - 1];
-    this.undoHistory = this.undoHistory.slice(0, -1);
-    this.redoStack = [...this.redoStack, lastBatch];
-    this.undoLengthSig.set(this.undoHistory.length);
-    this.redoLengthSig.set(this.redoStack.length);
+    if (!original) return;
+    const lastBatch = this.undoRedoStack.undo();
+    if (!lastBatch) return;
+    this.undoLengthSig.set(this.undoRedoStack.historyLength);
+    this.redoLengthSig.set(this.undoRedoStack.redoLength);
     for (let i = lastBatch.length - 1; i >= 0; i--) {
       const ev = lastBatch[i];
       original({ ...ev, oldValue: ev.newValue, newValue: ev.oldValue });
@@ -786,12 +763,11 @@ export class DataGridStateService<T> {
   redo(): void {
     const p = this.props();
     const original = p?.onCellValueChanged;
-    if (!original || this.redoStack.length === 0) return;
-    const nextBatch = this.redoStack[this.redoStack.length - 1];
-    this.redoStack = this.redoStack.slice(0, -1);
-    this.undoHistory = [...this.undoHistory, nextBatch];
-    this.redoLengthSig.set(this.redoStack.length);
-    this.undoLengthSig.set(this.undoHistory.length);
+    if (!original) return;
+    const nextBatch = this.undoRedoStack.redo();
+    if (!nextBatch) return;
+    this.undoLengthSig.set(this.undoRedoStack.historyLength);
+    this.redoLengthSig.set(this.undoRedoStack.redoLength);
     for (const ev of nextBatch) {
       original(ev);
     }
@@ -839,24 +815,7 @@ export class DataGridStateService<T> {
       return v == null || v === '';
     };
 
-    const findCtrlTarget = (pos: number, edge: number, step: number, isEmpty: (i: number) => boolean): number => {
-      if (pos === edge) return pos;
-      const next = pos + step;
-      if (!isEmpty(pos) && !isEmpty(next)) {
-        let p = next;
-        while (p !== edge) {
-          if (isEmpty(p + step)) return p;
-          p += step;
-        }
-        return edge;
-      }
-      let pp = next;
-      while (pp !== edge) {
-        if (!isEmpty(pp)) return pp;
-        pp += step;
-      }
-      return edge;
-    };
+    const findCtrlTarget = findCtrlArrowTarget;
 
     switch (e.key) {
       case 'c':
@@ -962,18 +921,10 @@ export class DataGridStateService<T> {
       }
       case 'Tab': {
         e.preventDefault();
-        let newRowTab = rowIndex;
-        let newColTab = columnIndex;
-        if (e.shiftKey) {
-          if (columnIndex > colOffset) { newColTab = columnIndex - 1; }
-          else if (rowIndex > 0) { newRowTab = rowIndex - 1; newColTab = maxColIndex; }
-        } else {
-          if (columnIndex < maxColIndex) { newColTab = columnIndex + 1; }
-          else if (rowIndex < maxRowIndex) { newRowTab = rowIndex + 1; newColTab = colOffset; }
-        }
-        const newDataColTab = newColTab - colOffset;
-        this.setSelectionRange({ startRow: newRowTab, startCol: newDataColTab, endRow: newRowTab, endCol: newDataColTab });
-        this.setActiveCell({ rowIndex: newRowTab, columnIndex: newColTab });
+        const tabResult = computeTabNavigation(rowIndex, columnIndex, maxRowIndex, maxColIndex, colOffset, e.shiftKey);
+        const newDataColTab = tabResult.columnIndex - colOffset;
+        this.setSelectionRange({ startRow: tabResult.rowIndex, startCol: newDataColTab, endRow: tabResult.rowIndex, endCol: newDataColTab });
+        this.setActiveCell({ rowIndex: tabResult.rowIndex, columnIndex: tabResult.columnIndex });
         break;
       }
       case 'Home': {
