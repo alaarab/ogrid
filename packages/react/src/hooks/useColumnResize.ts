@@ -57,7 +57,9 @@ export function useColumnResize<T>({
     // Measure the actual rendered width from the DOM. With table-layout: auto,
     // the browser may have auto-sized the column wider than the config values.
     // The resize handle is a direct child of <th>, so parentElement is the header cell.
-    const thEl = (e.currentTarget as HTMLElement).parentElement;
+    // Use closest('th') instead of parentElement to handle frameworks (e.g. Fluent UI)
+    // that wrap header cell children in an internal <button> element.
+    const thEl = (e.currentTarget as HTMLElement).closest('th');
     const startWidth = thEl
       ? thEl.getBoundingClientRect().width
       : columnSizingOverridesRef.current[columnId]?.widthPx

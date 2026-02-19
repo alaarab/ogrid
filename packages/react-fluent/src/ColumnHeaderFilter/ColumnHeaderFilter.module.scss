@@ -133,12 +133,15 @@
   max-width: 320px;
   overflow: hidden;
   padding: 0;
-  // Explicit background + shadow so the popover is opaque even when rendered
-  // via a portal outside the FluentProvider (e.g. SPFx web parts).
+  // Explicit background + shadow + font so the popover renders correctly
+  // even when portaled outside the FluentProvider (e.g. SPFx web parts).
   background-color: var(--colorNeutralBackground1, #ffffff);
   border: 1px solid var(--colorNeutralStroke1, #d1d1d1);
   border-radius: var(--borderRadiusMedium, 4px);
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.14);
+  font-family: var(--fontFamilyBase, 'Segoe UI', -apple-system, BlinkMacSystemFont, 'Helvetica Neue', Arial, sans-serif);
+  font-size: 14px;
+  color: var(--colorNeutralForeground1, #242424);
 }
 
 .popoverHeader {
@@ -153,17 +156,6 @@
 .popoverSearch {
   padding: 10px 12px;
   border-bottom: 1px solid var(--colorNeutralStroke2, #e0e0e0);
-
-  .searchInput {
-    width: 100%;
-
-    // Override Fluent UI Input's thick blue border
-    :global {
-      .fui-Input__input {
-        border-width: 1px !important;
-      }
-    }
-  }
 }
 
 // Native input for people picker to avoid Fluent UI event issues
@@ -264,10 +256,32 @@
 .popoverOption {
   padding: 4px 12px;
   transition: background-color 0.1s ease;
+  cursor: pointer;
 
   &:hover {
     background-color: var(--colorNeutralBackground1Hover, #f5f5f5);
   }
+}
+
+// Native checkbox styling for portal-safe rendering
+.nativeCheckbox {
+  width: 16px;
+  height: 16px;
+  margin: 0;
+  cursor: pointer;
+  accent-color: var(--colorBrandBackground, #0f6cbd);
+  flex-shrink: 0;
+}
+
+.checkboxLabel {
+  margin-left: 8px;
+  font-size: 14px;
+  color: var(--colorNeutralForeground1, #242424);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
+  cursor: pointer;
 }
 
 .personOption {
