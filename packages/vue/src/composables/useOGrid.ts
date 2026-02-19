@@ -1,4 +1,4 @@
-import { ref, computed, watch, type Ref } from 'vue';
+import { ref, computed, watch, onMounted, onUnmounted, type Ref } from 'vue';
 import {
   mergeFilter,
   deriveFilterOptionsFromData,
@@ -273,41 +273,55 @@ export function useOGrid<T>(
   const serverTotalCount = ref(0);
   const loading = ref(true);
   let fetchId = 0;
+  let isDestroyed = false;
   const refreshCounter = ref(0);
 
+  const doFetch = () => {
+    if (!isServerSide.value || !dataProps.value.dataSource) {
+      if (!isServerSide.value) loading.value = false;
+      return;
+    }
+    const id = ++fetchId;
+    loading.value = true;
+    dataProps.value.dataSource
+      .fetchPage({
+        page: page.value,
+        pageSize: pageSize.value,
+        sort: { field: sort.value.field, direction: sort.value.direction },
+        filters: filters.value,
+      })
+      .then((res) => {
+        if (id !== fetchId || isDestroyed) return;
+        serverItems.value = res.items;
+        serverTotalCount.value = res.totalCount;
+      })
+      .catch((err) => {
+        if (id !== fetchId || isDestroyed) return;
+        callbacks.value.onError?.(err);
+        serverItems.value = [];
+        serverTotalCount.value = 0;
+      })
+      .finally(() => {
+        if (id === fetchId && !isDestroyed) loading.value = false;
+      });
+  };
+
+  // Initial fetch on mount
+  onMounted(() => {
+    doFetch();
+  });
+
+  // Subsequent fetches on page/sort/filter changes (no immediate — onMounted handles initial)
   watch(
-    [isServerSide, () => dataProps.value.dataSource, page, pageSize, () => sort.value.field, () => sort.value.direction, filters, refreshCounter],
+    [() => dataProps.value.dataSource, page, pageSize, () => sort.value.field, () => sort.value.direction, filters, refreshCounter],
     () => {
-      if (!isServerSide.value || !dataProps.value.dataSource) {
-        if (!isServerSide.value) loading.value = false;
-        return;
-      }
-      const id = ++fetchId;
-      loading.value = true;
-      dataProps.value.dataSource
-        .fetchPage({
-          page: page.value,
-          pageSize: pageSize.value,
-          sort: { field: sort.value.field, direction: sort.value.direction },
-          filters: filters.value,
-        })
-        .then((res) => {
-          if (id !== fetchId) return;
-          serverItems.value = res.items;
-          serverTotalCount.value = res.totalCount;
-        })
-        .catch((err) => {
-          if (id !== fetchId) return;
-          callbacks.value.onError?.(err);
-          serverItems.value = [];
-          serverTotalCount.value = 0;
-        })
-        .finally(() => {
-          if (id === fetchId) loading.value = false;
-        });
-    },
-    { immediate: true }
+      doFetch();
+    }
   );
+
+  onUnmounted(() => {
+    isDestroyed = true;
+  });
 
   const displayItems = computed<T[]>(() =>
     isClientSide.value && clientItemsAndTotal.value
@@ -457,6 +471,7 @@ export function useOGrid<T>(
       suppressHorizontalScroll: p.suppressHorizontalScroll,
       columnReorder: p.columnReorder,
       virtualScroll: p.virtualScroll,
+      rowHeight: p.rowHeight,
       density: p.density ?? 'normal',
       'aria-label': p['aria-label'],
       'aria-labelledby': p['aria-labelledby'],

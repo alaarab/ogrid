@@ -32,9 +32,16 @@ const output = (opts) => ({ emit: noop, subscribe: noop });
 // viewChild — returns a signal-like function
 const viewChild = (selector) => signal(undefined);
 
+// NgZone stub — runOutsideAngular just executes the callback
+class NgZone {
+  runOutsideAngular(fn) { return fn(); }
+  run(fn) { return fn(); }
+}
+
 // DI — returns stubs for known tokens
 const inject = (token) => {
   if (token === DestroyRef) return new DestroyRef();
+  if (token === NgZone) return new NgZone();
   return undefined;
 };
 
@@ -87,6 +94,7 @@ module.exports = {
   viewChild,
   inject,
   DestroyRef,
+  NgZone,
   ElementRef,
   EventEmitter,
   TemplateRef,

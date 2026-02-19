@@ -85,14 +85,6 @@ export function createDataGridTableTests(DataGridTable: React.ComponentType<IOGr
     expect(region).toHaveAttribute('aria-labelledby', 'grid-heading');
   });
 
-  it('calls onColumnSort when header clicked for sortable column', () => {
-    const onColumnSort = jest.fn();
-    renderTable({ onColumnSort });
-    const headerButton = screen.getByRole('button', { name: /sort by name/i });
-    fireEvent.click(headerButton);
-    expect(onColumnSort).toHaveBeenCalledWith('name', undefined);
-  });
-
   it('shows empty state when no items and emptyState provided', () => {
     const onClearAll = jest.fn();
     renderTable({

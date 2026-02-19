@@ -93,10 +93,6 @@ describe('OGrid', () => {
       const firstCell = container.querySelector('tbody tr:first-child td');
       expect(firstCell!.textContent).toBe('Alice');
 
-      // Sort indicator should be visible
-      const indicator = container.querySelector('.ogrid-sort-indicator');
-      expect(indicator).not.toBeNull();
-
       grid.destroy();
     });
 

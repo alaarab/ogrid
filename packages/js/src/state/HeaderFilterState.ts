@@ -128,7 +128,7 @@ export class HeaderFilterState {
       }
     };
     setTimeout(() => {
-      document.addEventListener('mousedown', this._clickOutsideHandler!);
+      document.addEventListener('mousedown', this._clickOutsideHandler!, { passive: true });
     }, 0);
     document.addEventListener('keydown', this._escapeHandler!, true);
 

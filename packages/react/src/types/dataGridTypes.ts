@@ -117,6 +117,9 @@ interface IOGridBaseProps<T> {
   /** Virtual scrolling configuration. When provided, only visible rows are rendered for large datasets. */
   virtualScroll?: IVirtualScrollConfig;
 
+  /** Fixed row height in pixels. Overrides default row height (36px). */
+  rowHeight?: number;
+
   /** Cell spacing/density preset. Controls cell padding throughout the grid. Default: 'normal'. */
   density?: 'compact' | 'normal' | 'comfortable';
 
@@ -210,6 +213,8 @@ export interface IOGridDataGridProps<T> {
   columnReorder?: boolean;
   /** Virtual scrolling configuration. When provided, only visible rows are rendered for large datasets. */
   virtualScroll?: IVirtualScrollConfig;
+  /** Fixed row height in pixels. Overrides default row height (36px). */
+  rowHeight?: number;
   /** Cell spacing/density preset. Controls cell padding throughout the grid. Default: 'normal'. */
   density?: 'compact' | 'normal' | 'comfortable';
   /** Called when a cell renderer or custom editor throws an error. */
