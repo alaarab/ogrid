@@ -227,8 +227,6 @@ interface PlaygroundArgs {
   cellSelection: boolean;
   layoutMode: 'content' | 'fill';
   suppressHorizontalScroll: boolean;
-  freezeRows: number;
-  freezeCols: number;
   defaultPageSize: number;
   defaultSortBy: string;
   defaultSortDirection: 'asc' | 'desc';
@@ -262,8 +260,6 @@ function buildPlaygroundProps(args: PlaygroundArgs): IOGridProps<Project> {
     cellSelection: args.cellSelection,
     layoutMode: args.layoutMode,
     suppressHorizontalScroll: args.suppressHorizontalScroll,
-    freezeRows: args.freezeRows,
-    freezeCols: args.freezeCols,
     defaultPageSize: args.defaultPageSize,
     defaultSortBy: args.defaultSortBy === 'none' ? undefined : args.defaultSortBy,
     defaultSortDirection: args.defaultSortDirection,
@@ -284,8 +280,6 @@ export const Playground: StoryObj<PlaygroundArgs> = {
     cellSelection: { control: 'boolean' },
     layoutMode: { control: 'radio', options: ['content', 'fill'] },
     suppressHorizontalScroll: { control: 'boolean' },
-    freezeRows: { control: { type: 'range', min: 0, max: 3, step: 1 } },
-    freezeCols: { control: { type: 'range', min: 0, max: 3, step: 1 } },
     defaultPageSize: { control: 'select', options: [10, 25, 50, 100] },
     defaultSortBy: { control: 'select', options: ['none', 'name', 'status', 'owner', 'budget', 'startDate', 'active'] },
     defaultSortDirection: { control: 'radio', options: ['asc', 'desc'] },
@@ -304,8 +298,6 @@ export const Playground: StoryObj<PlaygroundArgs> = {
     cellSelection: true,
     layoutMode: 'fill',
     suppressHorizontalScroll: false,
-    freezeRows: 1,
-    freezeCols: 0,
     defaultPageSize: 10,
     defaultSortBy: 'name',
     defaultSortDirection: 'asc',

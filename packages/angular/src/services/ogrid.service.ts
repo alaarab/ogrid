@@ -100,8 +100,6 @@ export class OGridService<T> {
   readonly onColumnOrderChange = signal<((order: string[]) => void) | undefined>(undefined);
   readonly onColumnResized = signal<((columnId: string, width: number) => void) | undefined>(undefined);
   readonly onColumnPinned = signal<((columnId: string, pinned: 'left' | 'right' | null) => void) | undefined>(undefined);
-  readonly freezeRows = signal<number | undefined>(undefined);
-  readonly freezeCols = signal<number | undefined>(undefined);
   readonly defaultPageSize = signal<number>(DEFAULT_PAGE_SIZE);
   readonly defaultSortBy = signal<string | undefined>(undefined);
   readonly defaultSortDirection = signal<'asc' | 'desc'>('asc');
@@ -315,8 +313,6 @@ export class OGridService<T> {
     onColumnPinned: (columnId: string, pinned: 'left' | 'right' | null) => this.handleColumnPinned(columnId, pinned),
     pinnedColumns: this.pinnedOverrides(),
     initialColumnWidths: this.columnWidthOverrides(),
-    freezeRows: this.freezeRows(),
-    freezeCols: this.freezeCols(),
     editable: this.editable(),
     cellSelection: this.cellSelection(),
     density: this.density(),
@@ -567,8 +563,6 @@ export class OGridService<T> {
     if (props.onColumnOrderChange) this.onColumnOrderChange.set(props.onColumnOrderChange);
     if (props.onColumnResized) this.onColumnResized.set(props.onColumnResized);
     if (props.onColumnPinned) this.onColumnPinned.set(props.onColumnPinned);
-    if (props.freezeRows !== undefined) this.freezeRows.set(props.freezeRows);
-    if (props.freezeCols !== undefined) this.freezeCols.set(props.freezeCols);
     if (props.defaultPageSize !== undefined) this.defaultPageSize.set(props.defaultPageSize);
     if (props.defaultSortBy !== undefined) this.defaultSortBy.set(props.defaultSortBy);
     if (props.defaultSortDirection !== undefined) this.defaultSortDirection.set(props.defaultSortDirection);

@@ -349,7 +349,7 @@ function DataGridTableInner<T>(props: IOGridDataGridProps<T>): React.ReactElemen
     interaction, pinning,
     handleResizeStart, getColumnWidth, isReorderDragging, dropIndicatorX, handleHeaderMouseDown,
     virtualScrollEnabled, visibleRange,
-    items, getRowId, emptyState, freezeRows, freezeCols,
+    items, getRowId, emptyState,
     suppressHorizontalScroll, isLoading, loadingMessage,
     ariaLabel, ariaLabelledBy, columnReorder, density,
     rowNumberOffset, headerRows, allowOverflowX, fitToContent,
@@ -373,12 +373,11 @@ function DataGridTableInner<T>(props: IOGridDataGridProps<T>): React.ReactElemen
 
   // Pre-compute per-column layout (tdSx, widths) so GridRow doesn't recalculate per-cell
   const columnLayouts = useMemo<ColumnLayout<T>[]>(() =>
-    visibleCols.map((col, colIdx) => {
-      const isFreezeCol = freezeCols != null && freezeCols >= 1 && colIdx < freezeCols;
+    visibleCols.map((col) => {
       const isPinnedLeft = pinning.pinnedColumns[col.columnId] === 'left';
       const isPinnedRight = pinning.pinnedColumns[col.columnId] === 'right';
       const columnWidth = getColumnWidth(col);
-      const baseTdSx = isPinnedLeft || (isFreezeCol && colIdx === 0) ? CELL_TD_PINNED_LEFT_SX : isPinnedRight ? CELL_TD_PINNED_RIGHT_SX : CELL_TD_BASE_SX;
+      const baseTdSx = isPinnedLeft ? CELL_TD_PINNED_LEFT_SX : isPinnedRight ? CELL_TD_PINNED_RIGHT_SX : CELL_TD_BASE_SX;
       // Override sticky offset for pinned columns (supports multiple pinned columns)
       const tdSx = isPinnedLeft && pinning.leftOffsets[col.columnId] != null
         ? { ...baseTdSx, left: pinning.leftOffsets[col.columnId] } as typeof baseTdSx
@@ -393,7 +392,7 @@ function DataGridTableInner<T>(props: IOGridDataGridProps<T>): React.ReactElemen
       const effectiveMinWidth = hasResizeOverride ? columnWidth : Math.max(baseMinWidth, measuredW ?? 0);
       return { col, tdSx, minWidth: effectiveMinWidth, width: columnWidth, maxWidth: columnWidth };
     }),
-  [visibleCols, freezeCols, getColumnWidth, columnSizingOverrides, measuredColumnWidths, pinning.pinnedColumns, pinning.leftOffsets, pinning.rightOffsets]);
+  [visibleCols, getColumnWidth, columnSizingOverrides, measuredColumnWidths, pinning.pinnedColumns, pinning.leftOffsets, pinning.rightOffsets]);
 
   // Wrapper sx (depends on dynamic values — memoize to avoid recreation)
   const wrapperSx = useMemo(() => ({
@@ -502,8 +501,6 @@ function DataGridTableInner<T>(props: IOGridDataGridProps<T>): React.ReactElemen
       <TableContainer sx={{ minWidth: allowOverflowX ? minTableWidth : undefined }}>
         <Box ref={tableContainerRef} sx={isLoading && items.length > 0 ? TABLE_WRAPPER_LOADING_SX : TABLE_WRAPPER_SX}>
           <Table size="small" sx={{ minWidth: minTableWidth, borderCollapse: 'separate', borderSpacing: 0 }}
-            data-freeze-rows={freezeRows != null && freezeRows >= 1 ? freezeRows : undefined}
-            data-freeze-cols={freezeCols != null && freezeCols >= 1 ? freezeCols : undefined}
           >
             <TableHead sx={STICKY_HEADER_SX}>
               {headerRows.map((row, rowIdx) => (
@@ -584,12 +581,10 @@ function DataGridTableInner<T>(props: IOGridDataGridProps<T>): React.ReactElemen
                     }
                     // Leaf cell
                     const col = cell.columnDef! as IColumnDef<T>;
-                    const colIdx = visibleCols.indexOf(col);
-                    const isFreezeCol = freezeCols != null && freezeCols >= 1 && colIdx < freezeCols;
                     const isPinnedLeft = pinning.pinnedColumns[col.columnId] === 'left';
                     const isPinnedRight = pinning.pinnedColumns[col.columnId] === 'right';
                     const columnWidth = getColumnWidth(col);
-                    const baseHeaderSx = isPinnedLeft || (isFreezeCol && colIdx === 0) ? HEADER_PINNED_LEFT_SX : isPinnedRight ? HEADER_PINNED_RIGHT_SX : HEADER_BASE_SX;
+                    const baseHeaderSx = isPinnedLeft ? HEADER_PINNED_LEFT_SX : isPinnedRight ? HEADER_PINNED_RIGHT_SX : HEADER_BASE_SX;
                     // Override sticky offset for pinned columns (supports multiple pinned columns)
                     const headerSx = isPinnedLeft && pinning.leftOffsets[col.columnId] != null
                       ? { ...baseHeaderSx, left: pinning.leftOffsets[col.columnId] } as typeof baseHeaderSx

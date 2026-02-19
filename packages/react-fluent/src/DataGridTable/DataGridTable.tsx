@@ -136,7 +136,7 @@ function DataGridTableInner<T>(props: IOGridDataGridProps<T>): React.ReactElemen
     interaction, pinning,
     handleResizeStart, getColumnWidth, isReorderDragging, dropIndicatorX, handleHeaderMouseDown,
     virtualScrollEnabled, visibleRange,
-    items, getRowId, emptyState, rowSelection, freezeRows, freezeCols,
+    items, getRowId, emptyState, rowSelection,
     isLoading, loadingMessage,
     ariaLabel, ariaLabelledBy, visibleColumns, columnOrder, columnReorder, density,
     rowNumberOffset, headerRows, allowOverflowX, fitToContent,
@@ -165,7 +165,6 @@ function DataGridTableInner<T>(props: IOGridDataGridProps<T>): React.ReactElemen
       const col = visibleCols[i];
       const columnWidth = getColumnWidth(col);
       const hasExplicitWidth = !!(columnSizingOverrides[col.columnId] || col.idealWidth != null || col.defaultWidth != null);
-      const isFreezeCol = freezeCols != null && freezeCols >= 1 && i < freezeCols;
       const isPinnedLeft = pinning.pinnedColumns[col.columnId] === 'left';
       const isPinnedRight = pinning.pinnedColumns[col.columnId] === 'right';
 
@@ -199,8 +198,6 @@ function DataGridTableInner<T>(props: IOGridDataGridProps<T>): React.ReactElemen
       };
 
       const parts: string[] = [];
-      if (isFreezeCol) parts.push(styles.freezeCol);
-      if (isFreezeCol && i === 0) parts.push(styles.freezeColFirst);
       if (isPinnedLeft) parts.push(styles.pinnedColLeft);
       if (isPinnedRight) parts.push(styles.pinnedColRight);
       const cn = parts.join(' ');
@@ -209,7 +206,7 @@ function DataGridTableInner<T>(props: IOGridDataGridProps<T>): React.ReactElemen
     }
 
     return { cellStyles, cellClasses, hdrStyles, hdrClasses };
-  }, [visibleCols, getColumnWidth, columnSizingOverrides, measuredColumnWidths, freezeCols, pinning.pinnedColumns, pinning.leftOffsets, pinning.rightOffsets]);
+  }, [visibleCols, getColumnWidth, columnSizingOverrides, measuredColumnWidths, pinning.pinnedColumns, pinning.leftOffsets, pinning.rightOffsets]);
 
   // renderCellContent reads volatile state from refs -- keeps function identity stable so
   // GridRow's React.memo comparator can skip rows whose selection state hasn't changed.
@@ -297,8 +294,6 @@ function DataGridTableInner<T>(props: IOGridDataGridProps<T>): React.ReactElemen
         data-empty={showEmptyInGrid ? 'true' : undefined}
         data-loading={isLoading && items.length === 0 ? 'true' : undefined}
         data-column-count={totalColCount}
-        data-freeze-rows={freezeRows != null && freezeRows >= 1 ? freezeRows : undefined}
-        data-freeze-cols={freezeCols != null && freezeCols >= 1 ? freezeCols : undefined}
         data-overflow-x={allowOverflowX ? 'true' : 'false'}
         data-container-width={containerWidth}
         data-min-table-width={Math.round(minTableWidth)}

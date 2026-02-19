@@ -76,6 +76,7 @@ export {
   useTableLayout,
   useColumnReorder,
   useVirtualScroll,
+  useListVirtualizer,
   useLatestRef,
   usePaginationControls,
   useDataGridTableOrchestration,
