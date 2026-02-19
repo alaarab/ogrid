@@ -246,6 +246,11 @@ import { PopoverCellEditorComponent } from './popover-cell-editor.component';
       opacity: 0.7;
     }
     .ogrid-datagrid-cell--editing { padding: 0; }
+    .ogrid-editing-cell {
+      width: 100%; height: 100%; display: flex; align-items: center; box-sizing: border-box;
+      outline: 2px solid var(--ogrid-selection-color, #217346); outline-offset: -1px;
+      z-index: 2; position: relative; background: var(--ogrid-bg, #fff); overflow: visible; padding: 0;
+    }
     .ogrid-datagrid-editor-input {
       width: 100%;
       height: 100%;
@@ -494,7 +499,7 @@ import { PopoverCellEditorComponent } from './popover-cell-editor.component';
                             [attr.rowSpan]="headerRows().length > 1 ? headerRows().length - rowIdx : null"
                             [attr.data-column-id]="col.columnId"
                             [attr.aria-sort]="ariaSort"
-                            [style.minWidth.px]="col.minWidth ?? 80"
+                            [style.minWidth.px]="getEffectiveMinWidth(col)"
                             [style.width.px]="colW"
                             [style.maxWidth.px]="colW"
                             [style.left.px]="pinnedLeft ? getPinnedLeftOffset(col.columnId) : null"
@@ -594,6 +599,7 @@ import { PopoverCellEditorComponent } from './popover-cell-editor.component';
                           >
                             @let descriptor = getCellDescriptor(item, colLayout.col, rowIndex, colIdx);
                             @if (descriptor.mode === 'editing-inline') {
+                              <div class="ogrid-editing-cell">
                               <ogrid-radix-inline-cell-editor
                                 [value]="descriptor.value"
                                 [item]="item"
@@ -603,6 +609,7 @@ import { PopoverCellEditorComponent } from './popover-cell-editor.component';
                                 (commit)="commitEdit(item, colLayout.col.columnId, descriptor.value, $event, rowIndex, descriptor.globalColIndex)"
                                 (cancel)="cancelEdit()"
                               ></ogrid-radix-inline-cell-editor>
+                              </div>
                             } @else if (descriptor.mode === 'editing-popover') {
                               @let editorProps = buildPopoverEditorProps(item, colLayout.col, descriptor);
                               <ogrid-radix-popover-cell-editor
