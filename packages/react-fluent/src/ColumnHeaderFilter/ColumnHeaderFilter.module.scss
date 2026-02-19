@@ -316,8 +316,24 @@
 }
 
 .loadingContainer {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
   padding: 20px;
-  text-align: center;
+}
+
+.filterSpinner {
+  width: 20px;
+  height: 20px;
+  border: 2px solid var(--colorNeutralStroke1, #d1d1d1);
+  border-top-color: var(--colorBrandBackground, #0f6cbd);
+  border-radius: 50%;
+  animation: ogrid-filter-spin 0.8s linear infinite;
+}
+
+@keyframes ogrid-filter-spin {
+  to { transform: rotate(360deg); }
 }
 
 .noResults {

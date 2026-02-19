@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { Input, Checkbox, Spinner } from '@fluentui/react-components';
+import { Input, Checkbox } from '@fluentui/react-components';
 import { SearchRegular } from '@fluentui/react-icons';
 import { useListVirtualizer } from '@alaarab/ogrid-react';
 import styles from './ColumnHeaderFilter.module.scss';
@@ -78,7 +78,8 @@ export const MultiSelectFilterPopover: React.FC<MultiSelectFilterPopoverProps> =
       >
         {isLoading ? (
           <div className={styles.loadingContainer}>
-            <Spinner size="small" label="Loading..." />
+            <div className={styles.filterSpinner} />
+            <span style={{ fontSize: 12, color: 'var(--colorNeutralForeground2, #616161)' }}>Loading...</span>
           </div>
         ) : filteredOptions.length === 0 ? (
           <div className={styles.noResults}>No options found</div>

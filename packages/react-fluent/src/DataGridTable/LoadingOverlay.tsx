@@ -1,5 +1,4 @@
 import * as React from 'react';
-import { Spinner } from '@fluentui/react-components';
 import styles from './DataGridTable.module.scss';
 
 interface LoadingOverlayProps {
@@ -10,7 +9,7 @@ export function LoadingOverlay({ message }: LoadingOverlayProps): React.ReactEle
   return (
     <div className={styles.loadingOverlay} aria-live="polite">
       <div className={styles.loadingOverlayContent}>
-        <Spinner size="small" />
+        <div className={styles.spinner} />
         <span className={styles.loadingOverlayText}>{message}</span>
       </div>
     </div>
