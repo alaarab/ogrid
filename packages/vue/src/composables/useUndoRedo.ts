@@ -1,4 +1,5 @@
 import { ref, type Ref } from 'vue';
+import { UndoRedoStack } from '@alaarab/ogrid-core';
 import type { ICellValueChangedEvent } from '../types';
 
 export interface UseUndoRedoParams<T> {
@@ -25,24 +26,19 @@ export function useUndoRedo<T>(
   params: UseUndoRedoParams<T>
 ): UseUndoRedoResult<T> {
   const { onCellValueChanged, maxUndoDepth = 100 } = params;
-  let history: ICellValueChangedEvent<T>[][] = [];
-  let redoStack: ICellValueChangedEvent<T>[][] = [];
-  let batch: ICellValueChangedEvent<T>[] | null = null;
+  const stack = new UndoRedoStack<ICellValueChangedEvent<T>>(maxUndoDepth);
   const canUndo = ref(false);
   const canRedo = ref(false);
 
   const updateFlags = () => {
-    canUndo.value = history.length > 0;
-    canRedo.value = redoStack.length > 0;
+    canUndo.value = stack.canUndo;
+    canRedo.value = stack.canRedo;
   };
 
   const wrapped = onCellValueChanged
     ? (event: ICellValueChangedEvent<T>) => {
-        if (batch !== null) {
-          batch.push(event);
-        } else {
-          history = [...history, [event]].slice(-maxUndoDepth);
-          redoStack = [];
+        stack.record(event);
+        if (!stack.isBatching) {
           updateFlags();
         }
         onCellValueChanged(event);
@@ -50,23 +46,18 @@ export function useUndoRedo<T>(
     : undefined;
 
   const beginBatch = () => {
-    batch = [];
+    stack.beginBatch();
   };
 
   const endBatch = () => {
-    const b = batch;
-    batch = null;
-    if (!b || b.length === 0) return;
-    history = [...history, b].slice(-maxUndoDepth);
-    redoStack = [];
+    stack.endBatch();
     updateFlags();
   };
 
   const undo = () => {
-    if (!onCellValueChanged || history.length === 0) return;
-    const lastBatch = history[history.length - 1];
-    history = history.slice(0, -1);
-    redoStack = [...redoStack, lastBatch];
+    if (!onCellValueChanged) return;
+    const lastBatch = stack.undo();
+    if (!lastBatch) return;
     updateFlags();
     for (let i = lastBatch.length - 1; i >= 0; i--) {
       const ev = lastBatch[i];
@@ -75,10 +66,9 @@ export function useUndoRedo<T>(
   };
 
   const redo = () => {
-    if (!onCellValueChanged || redoStack.length === 0) return;
-    const nextBatch = redoStack[redoStack.length - 1];
-    redoStack = redoStack.slice(0, -1);
-    history = [...history, nextBatch];
+    if (!onCellValueChanged) return;
+    const nextBatch = stack.redo();
+    if (!nextBatch) return;
     updateFlags();
     for (const ev of nextBatch) {
       onCellValueChanged(ev);

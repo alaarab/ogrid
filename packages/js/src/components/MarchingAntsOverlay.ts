@@ -1,4 +1,4 @@
-import { injectGlobalStyles, measureRange as measureRangeCore, type ISelectionRange, type OverlayRect } from '@alaarab/ogrid-core';
+import { injectGlobalStyles, measureRange as measureRangeCore, rangesEqual, type ISelectionRange, type OverlayRect } from '@alaarab/ogrid-core';
 
 /**
  * Measure the bounding rect of a range within a container, with scroll offsets.
@@ -19,13 +19,6 @@ function measureRange(
     width: rect.width,
     height: rect.height,
   };
-}
-
-function rangesEqual(a: ISelectionRange | null, b: ISelectionRange | null): boolean {
-  if (a === b) return true;
-  if (!a || !b) return false;
-  return a.startRow === b.startRow && a.endRow === b.endRow &&
-         a.startCol === b.startCol && a.endCol === b.endCol;
 }
 
 /**

@@ -1,14 +1,7 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
 import { normalizeSelectionRange } from '../types';
+import { rangesEqual, computeAutoScrollSpeed } from '../utils';
 import type { ISelectionRange, IActiveCell } from '../types';
-
-/** Compares two selection ranges by value. */
-function rangesEqual(a: ISelectionRange | null, b: ISelectionRange | null): boolean {
-  if (a === b) return true;
-  if (!a || !b) return false;
-  return a.startRow === b.startRow && a.endRow === b.endRow &&
-         a.startCol === b.startCol && a.endCol === b.endCol;
-}
 
 export interface UseCellSelectionParams {
   colOffset: number;
@@ -33,15 +26,7 @@ const DRAG_ANCHOR_ATTR = 'data-drag-anchor';
 
 /** Auto-scroll config */
 const AUTO_SCROLL_EDGE = 40;   // px from wrapper edge to trigger
-const AUTO_SCROLL_MIN_SPEED = 2;
-const AUTO_SCROLL_MAX_SPEED = 20;
 const AUTO_SCROLL_INTERVAL = 16; // ~60fps
-
-/** Compute scroll speed proportional to distance past the edge, capped. */
-function autoScrollSpeed(distance: number): number {
-  const t = Math.min(distance / AUTO_SCROLL_EDGE, 1);
-  return AUTO_SCROLL_MIN_SPEED + t * (AUTO_SCROLL_MAX_SPEED - AUTO_SCROLL_MIN_SPEED);
-}
 
 /**
  * Manages cell selection range with drag-to-select and select-all support.
@@ -231,15 +216,15 @@ export function useCellSelection(params: UseCellSelectionParams): UseCellSelecti
       let dy = 0;
 
       if (pos.cy < rect.top + AUTO_SCROLL_EDGE) {
-        dy = -autoScrollSpeed(rect.top + AUTO_SCROLL_EDGE - pos.cy);
+        dy = -computeAutoScrollSpeed(rect.top + AUTO_SCROLL_EDGE - pos.cy);
       } else if (pos.cy > rect.bottom - AUTO_SCROLL_EDGE) {
-        dy = autoScrollSpeed(pos.cy - (rect.bottom - AUTO_SCROLL_EDGE));
+        dy = computeAutoScrollSpeed(pos.cy - (rect.bottom - AUTO_SCROLL_EDGE));
       }
 
       if (pos.cx < rect.left + AUTO_SCROLL_EDGE) {
-        dx = -autoScrollSpeed(rect.left + AUTO_SCROLL_EDGE - pos.cx);
+        dx = -computeAutoScrollSpeed(rect.left + AUTO_SCROLL_EDGE - pos.cx);
       } else if (pos.cx > rect.right - AUTO_SCROLL_EDGE) {
-        dx = autoScrollSpeed(pos.cx - (rect.right - AUTO_SCROLL_EDGE));
+        dx = computeAutoScrollSpeed(pos.cx - (rect.right - AUTO_SCROLL_EDGE));
       }
 
       if (dx === 0 && dy === 0) {
@@ -257,10 +242,10 @@ export function useCellSelection(params: UseCellSelectionParams): UseCellSelecti
           const r = w.getBoundingClientRect();
           let sdx = 0;
           let sdy = 0;
-          if (p.cy < r.top + AUTO_SCROLL_EDGE) sdy = -autoScrollSpeed(r.top + AUTO_SCROLL_EDGE - p.cy);
-          else if (p.cy > r.bottom - AUTO_SCROLL_EDGE) sdy = autoScrollSpeed(p.cy - (r.bottom - AUTO_SCROLL_EDGE));
-          if (p.cx < r.left + AUTO_SCROLL_EDGE) sdx = -autoScrollSpeed(r.left + AUTO_SCROLL_EDGE - p.cx);
-          else if (p.cx > r.right - AUTO_SCROLL_EDGE) sdx = autoScrollSpeed(p.cx - (r.right - AUTO_SCROLL_EDGE));
+          if (p.cy < r.top + AUTO_SCROLL_EDGE) sdy = -computeAutoScrollSpeed(r.top + AUTO_SCROLL_EDGE - p.cy);
+          else if (p.cy > r.bottom - AUTO_SCROLL_EDGE) sdy = computeAutoScrollSpeed(p.cy - (r.bottom - AUTO_SCROLL_EDGE));
+          if (p.cx < r.left + AUTO_SCROLL_EDGE) sdx = -computeAutoScrollSpeed(r.left + AUTO_SCROLL_EDGE - p.cx);
+          else if (p.cx > r.right - AUTO_SCROLL_EDGE) sdx = computeAutoScrollSpeed(p.cx - (r.right - AUTO_SCROLL_EDGE));
 
           if (sdx === 0 && sdy === 0) { stopAutoScroll(); return; }
 

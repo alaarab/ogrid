@@ -81,6 +81,68 @@ export function createDataGridTable(ui: IDataGridTableUIBindings) {
       const onContextmenu = (e: MouseEvent) => e.preventDefault();
       const stopPropagation = (e: MouseEvent) => e.stopPropagation();
 
+      // Pre-compute per-column layout metadata so it's only recalculated when
+      // column config, sizing, pinning, or measured widths change — not on every
+      // render (parity with React's columnMeta useMemo).
+      const columnMetaCache = computed(() => {
+        const layout = state.layout.value;
+        const pinning = state.pinning.value;
+        const { visibleCols, columnSizingOverrides, measuredColumnWidths } = layout;
+        const { leftOffsets, rightOffsets } = pinning;
+        const freezeCols = propsRef.value.freezeCols;
+
+        const cellStyles: Record<string, Record<string, string>> = {};
+        const cellClasses: Record<string, string> = {};
+        const hdrStyles: Record<string, Record<string, string>> = {};
+        const hdrClasses: Record<string, string> = {};
+
+        for (let colIdx = 0; colIdx < visibleCols.length; colIdx++) {
+          const col = visibleCols[colIdx];
+          const isFreezeCol = freezeCols != null && freezeCols >= 1 && colIdx < freezeCols;
+          const isPinnedLeft = col.pinned === 'left';
+          const isPinnedRight = col.pinned === 'right';
+          const columnWidth = getColumnWidth(col);
+
+          const hasResizeOverride = !!columnSizingOverrides[col.columnId];
+          const measuredW = measuredColumnWidths[col.columnId];
+          const baseMinWidth = col.minWidth ?? DEFAULT_MIN_COLUMN_WIDTH;
+          const effectiveMinWidth = hasResizeOverride ? columnWidth : Math.max(baseMinWidth, measuredW ?? 0);
+
+          const tdStyle: Record<string, string> = {
+            minWidth: `${effectiveMinWidth}px`,
+            width: `${columnWidth}px`,
+            maxWidth: `${columnWidth}px`,
+          };
+          const hdrStyle: Record<string, string> = {
+            minWidth: `${effectiveMinWidth}px`,
+            width: `${columnWidth}px`,
+            maxWidth: `${columnWidth}px`,
+          };
+
+          const tdClassParts: string[] = ['ogrid-data-cell'];
+          const hdrClassParts: string[] = ['ogrid-header-cell'];
+
+          if (isPinnedLeft || (isFreezeCol && colIdx === 0)) {
+            tdClassParts.push('ogrid-data-cell--pinned-left');
+            tdStyle.left = `${leftOffsets[col.columnId] ?? 0}px`;
+            hdrClassParts.push('ogrid-header-cell--pinned-left');
+            hdrStyle.left = `${leftOffsets[col.columnId] ?? 0}px`;
+          } else if (isPinnedRight) {
+            tdClassParts.push('ogrid-data-cell--pinned-right');
+            tdStyle.right = `${rightOffsets[col.columnId] ?? 0}px`;
+            hdrClassParts.push('ogrid-header-cell--pinned-right');
+            hdrStyle.right = `${rightOffsets[col.columnId] ?? 0}px`;
+          }
+
+          cellStyles[col.columnId] = tdStyle;
+          cellClasses[col.columnId] = tdClassParts.join(' ');
+          hdrStyles[col.columnId] = hdrStyle;
+          hdrClasses[col.columnId] = hdrClassParts.join(' ');
+        }
+
+        return { cellStyles, cellClasses, hdrStyles, hdrClasses };
+      });
+
       return () => {
         const p = props.gridProps;
         const layout = state.layout.value;
@@ -103,7 +165,7 @@ export function createDataGridTable(ui: IDataGridTableUIBindings) {
         const { selectedRowIds, handleRowCheckboxChange, handleSelectAll, allSelected, someSelected } = rowSel;
         const { editingCell: _editingCell, setEditingCell, pendingEditorValue, setPendingEditorValue, commitCellEdit, cancelPopoverEdit, popoverAnchorEl, setPopoverAnchorEl } = editing;
         const {
-          setActiveCell, handleCellMouseDown, handleSelectAllCells, selectionRange, hasCellSelection,
+          setActiveCell, setSelectionRange, handleCellMouseDown, handleSelectAllCells, selectionRange, hasCellSelection,
           handleGridKeyDown, handleFillHandleMouseDown, handleCopy, handleCut, handlePaste,
           cutRange: _cutRange, copyRange: _copyRange, canUndo, canRedo, onUndo, onRedo, isDragging: _isDragging,
         } = interaction;
@@ -144,15 +206,17 @@ export function createDataGridTable(ui: IDataGridTableUIBindings) {
 
           if (descriptor.mode === 'editing-inline') {
             const editorProps = buildInlineEditorProps(item, col, descriptor, editCallbacks);
-            return h(ui.InlineCellEditor, {
-              value: editorProps.value,
-              item: editorProps.item,
-              column: editorProps.column,
-              rowIndex: editorProps.rowIndex,
-              editorType: editorProps.editorType,
-              onCommit: editorProps.onCommit,
-              onCancel: editorProps.onCancel,
-            });
+            return h('div', { class: 'ogrid-editing-cell' },
+              h(ui.InlineCellEditor, {
+                value: editorProps.value,
+                item: editorProps.item,
+                column: editorProps.column,
+                rowIndex: editorProps.rowIndex,
+                editorType: editorProps.editorType,
+                onCommit: editorProps.onCommit,
+                onCancel: editorProps.onCancel,
+              })
+            );
           }
 
           if (descriptor.mode === 'editing-popover' && typeof col.cellEditor === 'function') {
@@ -202,59 +266,24 @@ export function createDataGridTable(ui: IDataGridTableUIBindings) {
           ]);
         };
 
-        // Pre-computed pinning offsets
-        const leftOffsets = pinning.leftOffsets;
-        const rightOffsets = pinning.rightOffsets;
+        // Use the pre-computed column metadata cache (computed in setup() for memoization)
+        const { cellStyles: colCellStyles, cellClasses: colCellClasses, hdrStyles: colHdrStyles, hdrClasses: colHdrClasses } = columnMetaCache.value;
 
-        // Build column layouts
-        const columnLayouts = visibleCols.map((col: IColumnDef<unknown>, colIdx: number) => {
-          const isFreezeCol = freezeCols != null && freezeCols >= 1 && colIdx < freezeCols;
-          const isPinnedLeft = col.pinned === 'left';
-          const isPinnedRight = col.pinned === 'right';
-          const columnWidth = getColumnWidth(col);
+        // Build column layouts using cached metadata
+        const columnLayouts = visibleCols.map((col: IColumnDef<unknown>) => ({
+          col,
+          tdClasses: colCellClasses[col.columnId] || 'ogrid-data-cell',
+          tdDynamicStyle: colCellStyles[col.columnId] || {},
+        }));
 
-          const tdClasses: string[] = ['ogrid-data-cell'];
-          const tdDynamicStyle: Record<string, string> = {
-            minWidth: `${col.minWidth ?? DEFAULT_MIN_COLUMN_WIDTH}px`,
-            width: `${columnWidth}px`,
-            maxWidth: `${columnWidth}px`,
+        // Header class+style lookup using cached metadata
+        const getHeaderClassAndStyle = (col: IColumnDef<unknown>): { classes: string; style: Record<string, string> } => {
+          const base = colHdrStyles[col.columnId] || {};
+          // cursor depends on drag state — add it at render time (not cached)
+          return {
+            classes: colHdrClasses[col.columnId] || 'ogrid-header-cell',
+            style: { ...base, cursor: isReorderDragging.value ? 'grabbing' : 'grab' },
           };
-
-          if (isPinnedLeft || (isFreezeCol && colIdx === 0)) {
-            tdClasses.push('ogrid-data-cell--pinned-left');
-            tdDynamicStyle.left = `${leftOffsets[col.columnId] ?? 0}px`;
-          } else if (isPinnedRight) {
-            tdClasses.push('ogrid-data-cell--pinned-right');
-            tdDynamicStyle.right = `${rightOffsets[col.columnId] ?? 0}px`;
-          }
-
-          return { col, tdClasses: tdClasses.join(' '), tdDynamicStyle };
-        });
-
-        // Build header cell classes + dynamic styles
-        const getHeaderClassAndStyle = (col: IColumnDef<unknown>, colIdx: number): { classes: string; style: Record<string, string> } => {
-          const isFreezeCol = freezeCols != null && freezeCols >= 1 && colIdx < freezeCols;
-          const isPinnedLeft = col.pinned === 'left';
-          const isPinnedRight = col.pinned === 'right';
-          const columnWidth = getColumnWidth(col);
-
-          const classes: string[] = ['ogrid-header-cell'];
-          const style: Record<string, string> = {
-            cursor: isReorderDragging.value ? 'grabbing' : 'grab',
-            minWidth: `${col.minWidth ?? DEFAULT_MIN_COLUMN_WIDTH}px`,
-            width: `${columnWidth}px`,
-            maxWidth: `${columnWidth}px`,
-          };
-
-          if (isPinnedLeft || (isFreezeCol && colIdx === 0)) {
-            classes.push('ogrid-header-cell--pinned-left');
-            style.left = `${leftOffsets[col.columnId] ?? 0}px`;
-          } else if (isPinnedRight) {
-            classes.push('ogrid-header-cell--pinned-right');
-            style.right = `${rightOffsets[col.columnId] ?? 0}px`;
-          }
-
-          return { classes: classes.join(' '), style };
         };
 
         // Dynamic wrapper style
@@ -322,7 +351,8 @@ export function createDataGridTable(ui: IDataGridTableUIBindings) {
                             },
                               ui.renderCheckbox({
                                 modelValue: allSelected,
-                                indeterminate: someSelected,
+                                // Indeterminate only when some (but not all) rows are selected
+                                indeterminate: someSelected && !allSelected,
                                 ariaLabel: 'Select all rows',
                                 onChange: (c) => handleSelectAll(!!c),
                               })
@@ -374,8 +404,7 @@ export function createDataGridTable(ui: IDataGridTableUIBindings) {
                               }, cell.label);
                             }
                             const col = cell.columnDef! as IColumnDef<unknown>;
-                            const colIdx = visibleCols.indexOf(col);
-                            const { classes: headerClasses, style: headerStyle } = getHeaderClassAndStyle(col, colIdx);
+                            const { classes: headerClasses, style: headerStyle } = getHeaderClassAndStyle(col);
                             return h('th', {
                               key: col.columnId,
                               scope: 'col',
@@ -398,7 +427,15 @@ export function createDataGridTable(ui: IDataGridTableUIBindings) {
                                 }, '\u22EE'),
                               ]),
                               h('div', {
-                                onMousedown: (e: MouseEvent) => { e.stopPropagation(); handleResizeStart(e, col); },
+                                onMousedown: (e: MouseEvent) => {
+                                  // Clear cell selection/focus before resize so outlines
+                                  // and focus rings don't persist during drag (parity with React).
+                                  setActiveCell(null);
+                                  setSelectionRange(null);
+                                  wrapperRef.value?.focus({ preventScroll: true });
+                                  e.stopPropagation();
+                                  handleResizeStart(e, col);
+                                },
                                 class: 'ogrid-resize-handle',
                               }),
                             ]);

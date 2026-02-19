@@ -58,6 +58,26 @@ export class InlineCellEditor<T> {
     this.editor = editor;
     this.container.appendChild(editor);
     editor.focus();
+
+    // Position dropdown with fixed positioning to escape container overflow
+    const dropdownEl = editor.querySelector('[role="listbox"]') as HTMLElement | null;
+    if (dropdownEl) {
+      const maxH = 200;
+      const spaceBelow = window.innerHeight - rect.bottom;
+      const flipUp = spaceBelow < maxH && rect.top > spaceBelow;
+      dropdownEl.style.position = 'fixed';
+      dropdownEl.style.left = `${rect.left}px`;
+      dropdownEl.style.width = `${rect.width}px`;
+      dropdownEl.style.maxHeight = `${maxH}px`;
+      dropdownEl.style.zIndex = '9999';
+      dropdownEl.style.right = 'auto';
+      if (flipUp) {
+        dropdownEl.style.top = 'auto';
+        dropdownEl.style.bottom = `${window.innerHeight - rect.top}px`;
+      } else {
+        dropdownEl.style.top = `${rect.bottom}px`;
+      }
+    }
   }
 
   /** Returns the cell currently being edited, or null if no editor is open. */
@@ -248,35 +268,133 @@ export class InlineCellEditor<T> {
     return input;
   }
 
-  private createSelectEditor(value: unknown, column: IColumnDef<T>): HTMLSelectElement {
-    const select = document.createElement('select');
+  private createSelectEditor(value: unknown, column: IColumnDef<T>): HTMLElement {
     const values = column.cellEditorParams?.values ?? [];
-    for (const val of values) {
-      const option = document.createElement('option');
-      option.value = String(val);
-      option.textContent = String(val);
-      select.appendChild(option);
-    }
-    select.value = value != null ? String(value) : '';
-    Object.assign(select.style, EDITOR_STYLE);
+    const formatValue = column.cellEditorParams?.formatValue as ((v: unknown) => string) | undefined;
+    const getDisplayText = (v: unknown): string => formatValue ? formatValue(v) : (v != null ? String(v) : '');
 
-    select.addEventListener('change', () => {
-      if (this.editingCell) {
-        this.onCommit?.(this.editingCell.rowId, this.editingCell.columnId, select.value);
+    const wrapper = document.createElement('div');
+    Object.assign(wrapper.style, EDITOR_STYLE);
+    wrapper.style.padding = '6px 10px';
+    wrapper.style.display = 'flex';
+    wrapper.style.alignItems = 'center';
+    wrapper.tabIndex = 0;
+
+    // Display current value + chevron
+    const display = document.createElement('div');
+    display.style.display = 'flex';
+    display.style.alignItems = 'center';
+    display.style.justifyContent = 'space-between';
+    display.style.width = '100%';
+    display.style.cursor = 'pointer';
+    display.style.fontSize = '13px';
+
+    const valueSpan = document.createElement('span');
+    valueSpan.textContent = getDisplayText(value);
+    display.appendChild(valueSpan);
+
+    const chevron = document.createElement('span');
+    chevron.textContent = '\u25BE';
+    chevron.style.marginLeft = '4px';
+    chevron.style.fontSize = '10px';
+    chevron.style.opacity = '0.5';
+    display.appendChild(chevron);
+    wrapper.appendChild(display);
+
+    // Dropdown list
+    const dropdown = document.createElement('div');
+    dropdown.setAttribute('role', 'listbox');
+    dropdown.style.position = 'absolute';
+    dropdown.style.top = '100%';
+    dropdown.style.left = '0';
+    dropdown.style.right = '0';
+    dropdown.style.maxHeight = '200px';
+    dropdown.style.overflowY = 'auto';
+    dropdown.style.backgroundColor = 'var(--ogrid-bg, #fff)';
+    dropdown.style.border = '1px solid var(--ogrid-border, rgba(0, 0, 0, 0.12))';
+    dropdown.style.zIndex = '1001';
+    dropdown.style.boxShadow = '0 4px 16px rgba(0,0,0,0.2)';
+    wrapper.appendChild(dropdown);
+
+    let highlightedIndex = Math.max(values.findIndex((v) => String(v) === String(value)), 0);
+
+    const renderOptions = () => {
+      dropdown.innerHTML = '';
+      for (let i = 0; i < values.length; i++) {
+        const val = values[i];
+        const option = document.createElement('div');
+        option.setAttribute('role', 'option');
+        option.setAttribute('aria-selected', String(i === highlightedIndex));
+        option.textContent = getDisplayText(val);
+        option.style.padding = '6px 8px';
+        option.style.cursor = 'pointer';
+        option.style.color = 'var(--ogrid-fg, #242424)';
+        if (i === highlightedIndex) {
+          option.style.background = 'var(--ogrid-bg-hover, #e8f0fe)';
+        }
+        option.addEventListener('mousedown', (e) => {
+          e.preventDefault();
+          if (this.editingCell) {
+            this.onCommit?.(this.editingCell.rowId, this.editingCell.columnId, val);
+          }
+          this.closeEditor();
+        });
+        dropdown.appendChild(option);
       }
-      this.closeEditor();
+    };
+
+    const scrollHighlightedIntoView = () => {
+      const highlighted = dropdown.children[highlightedIndex] as HTMLElement | undefined;
+      highlighted?.scrollIntoView({ block: 'nearest' });
+    };
+
+    renderOptions();
+
+    wrapper.addEventListener('keydown', (e) => {
+      switch (e.key) {
+        case 'ArrowDown':
+          e.preventDefault();
+          highlightedIndex = Math.min(highlightedIndex + 1, values.length - 1);
+          renderOptions();
+          scrollHighlightedIntoView();
+          break;
+        case 'ArrowUp':
+          e.preventDefault();
+          highlightedIndex = Math.max(highlightedIndex - 1, 0);
+          renderOptions();
+          scrollHighlightedIntoView();
+          break;
+        case 'Enter':
+          e.preventDefault();
+          e.stopPropagation();
+          if (values.length > 0 && highlightedIndex < values.length) {
+            if (this.editingCell) {
+              this.onCommit?.(this.editingCell.rowId, this.editingCell.columnId, values[highlightedIndex]);
+            }
+            const afterCommit = this.onAfterCommit;
+            this.closeEditor();
+            afterCommit?.();
+          }
+          break;
+        case 'Tab':
+          e.preventDefault();
+          if (values.length > 0 && highlightedIndex < values.length) {
+            if (this.editingCell) {
+              this.onCommit?.(this.editingCell.rowId, this.editingCell.columnId, values[highlightedIndex]);
+            }
+            this.closeEditor();
+          }
+          break;
+        case 'Escape':
+          e.preventDefault();
+          e.stopPropagation();
+          this.onCancel?.();
+          this.closeEditor();
+          break;
+      }
     });
 
-    select.addEventListener('keydown', (e) => {
-      if (e.key === 'Escape') {
-        e.preventDefault();
-        e.stopPropagation();
-        this.onCancel?.();
-        this.closeEditor();
-      }
-    });
-
-    return select;
+    return wrapper;
   }
 
   private createRichSelectEditor(value: unknown, column: IColumnDef<T>): HTMLElement {
