@@ -1,6 +1,6 @@
 {
   "name": "@alaarab/ogrid-vue-primevue",
-  "version": "2.0.15",
+  "version": "2.0.16",
   "description": "OGrid PrimeVue – PrimeVue-based data grid with sorting, filtering, pagination, column chooser, and CSV export.",
   "main": "dist/esm/index.js",
   "module": "dist/esm/index.js",
