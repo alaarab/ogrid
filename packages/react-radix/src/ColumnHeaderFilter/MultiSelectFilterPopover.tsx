@@ -3,7 +3,7 @@ import * as Checkbox from '@radix-ui/react-checkbox';
 import { useListVirtualizer } from '@alaarab/ogrid-react';
 import styles from './ColumnHeaderFilter.module.scss';
 
-const ITEM_HEIGHT = 32;
+const ITEM_HEIGHT = 34;
 
 export interface MultiSelectFilterPopoverProps {
   searchText: string;
@@ -65,7 +65,7 @@ export const MultiSelectFilterPopover: React.FC<MultiSelectFilterPopoverProps> =
             {virt.visibleItems.map(({ index, offsetTop }) => {
               const option = filteredOptions[index];
               return (
-                <div key={option} className={styles.popoverOption} style={{ position: 'absolute', top: offsetTop, width: '100%', boxSizing: 'border-box' }}>
+                <div key={option} className={styles.popoverOption} style={{ position: 'absolute', top: offsetTop, width: '100%', height: ITEM_HEIGHT, boxSizing: 'border-box', display: 'flex', alignItems: 'center' }}>
                   <Checkbox.Root
                     checked={selected.has(option)}
                     onCheckedChange={(c: boolean | 'indeterminate') =>

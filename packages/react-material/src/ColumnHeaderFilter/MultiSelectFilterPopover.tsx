@@ -6,7 +6,7 @@ import {
 import { Search as SearchIcon } from '@mui/icons-material';
 import { useListVirtualizer } from '@alaarab/ogrid-react';
 
-const ITEM_HEIGHT = 36;
+const ITEM_HEIGHT = 40;
 
 export interface MultiSelectFilterPopoverProps {
   searchText: string;
@@ -96,7 +96,7 @@ export const MultiSelectFilterPopover: React.FC<MultiSelectFilterPopoverProps> =
                     />
                   }
                   label={<Typography variant="body2">{option}</Typography>}
-                  sx={{ position: 'absolute', top: offsetTop, width: '100%', boxSizing: 'border-box', display: 'flex', mx: 0, '& .MuiFormControlLabel-label': { flex: 1, minWidth: 0 } }}
+                  sx={{ position: 'absolute', top: offsetTop, width: '100%', height: ITEM_HEIGHT, boxSizing: 'border-box', display: 'flex', alignItems: 'center', mx: 0, '& .MuiFormControlLabel-label': { flex: 1, minWidth: 0 } }}
                 />
               );
             })}
