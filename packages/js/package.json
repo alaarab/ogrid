@@ -1,6 +1,6 @@
 {
   "name": "@alaarab/ogrid-js",
-  "version": "2.0.17",
+  "version": "2.0.18",
   "description": "OGrid vanilla JS – framework-free data grid with sorting, filtering, pagination, and spreadsheet-style editing.",
   "main": "dist/esm/index.js",
   "module": "dist/esm/index.js",
@@ -36,7 +36,7 @@
     "node": ">=18"
   },
   "dependencies": {
-    "@alaarab/ogrid-core": "2.0.17"
+    "@alaarab/ogrid-core": "2.0.18"
   },
   "sideEffects": false,
   "publishConfig": {
