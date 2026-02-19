@@ -50,8 +50,6 @@ import { PopoverCellEditorComponent } from './popover-cell-editor.component';
           <div [style.minWidth.px]="allowOverflowX() ? minTableWidth() : undefined">
             <div [class.ogrid-datagrid-table-wrapper--loading]="isLoading() && items().length > 0" #tableContainerEl>
               <table class="ogrid-datagrid-table" [style.minWidth.px]="minTableWidth()"
-                [attr.data-freeze-rows]="freezeRows()"
-                [attr.data-freeze-cols]="freezeCols()"
               >
                 <thead class="ogrid-datagrid-thead">
                   @for (row of headerRows(); track $index; let rowIdx = $index) {
@@ -87,11 +85,9 @@ import { PopoverCellEditorComponent } from './popover-cell-editor.component';
                           </th>
                         } @else {
                           @let col = asColumnDef(cell.columnDef);
-                          @let colIdx = visibleColIndex(col);
-                          @let isFreezeCol = freezeCols() != null && (freezeCols() ?? 0) >= 1 && colIdx < (freezeCols() ?? 0);
                           @let colW = getColumnWidth(col);
                           @let pinned = isPinned(col.columnId);
-                          @let pinnedLeft = pinned === 'left' || (isFreezeCol && colIdx === 0);
+                          @let pinnedLeft = pinned === 'left';
                           @let pinnedRight = pinned === 'right';
                           @let sortState = getSortState(col.columnId);
                           @let ariaSort = sortState === 'asc' ? 'ascending' : sortState === 'desc' ? 'descending' : null;

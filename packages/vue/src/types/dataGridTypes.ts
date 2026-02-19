@@ -64,8 +64,6 @@ interface IOGridBaseProps<T> {
   onColumnResized?: (columnId: string, width: number) => void;
   /** Called when a column is pinned or unpinned. */
   onColumnPinned?: (columnId: string, pinned: 'left' | 'right' | null) => void;
-  freezeRows?: number;
-  freezeCols?: number;
   editable?: boolean;
   /** Enable spreadsheet-like cell selection (active cell, range, fill handle, clipboard, context menu). Default: true. */
   cellSelection?: boolean;
@@ -171,10 +169,6 @@ export interface IOGridDataGridProps<T> {
   pinnedColumns?: Record<string, 'left' | 'right'>;
   /** Initial column width overrides (from restored state). */
   initialColumnWidths?: Record<string, number>;
-  /** Number of rows to freeze (sticky), e.g. 1 = header row. */
-  freezeRows?: number;
-  /** Number of data columns to freeze (sticky left). */
-  freezeCols?: number;
   layoutMode?: 'content' | 'fill';
   /** When true, horizontal scrolling is suppressed (overflow-x hidden). */
   suppressHorizontalScroll?: boolean;
