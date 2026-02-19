@@ -71,6 +71,7 @@ export {
   useInlineCellEditorState,
   useColumnResize,
   useRichSelectState,
+  useSelectState,
   useSideBarState,
   useTableLayout,
   useColumnReorder,
@@ -132,6 +133,8 @@ export type {
   UseColumnResizeResult,
   UseRichSelectStateParams,
   UseRichSelectStateResult,
+  UseSelectStateParams,
+  UseSelectStateResult,
   UseSideBarStateParams,
   UseSideBarStateResult,
   UseTableLayoutParams,
@@ -171,6 +174,8 @@ export {
   richSelectOptionHighlightedStyle,
   richSelectNoMatchesStyle,
   selectEditorStyle,
+  selectDisplayStyle,
+  selectChevronStyle,
 } from './components/BaseInlineCellEditor';
 export type { BaseInlineCellEditorProps } from './components/BaseInlineCellEditor';
 export { GridContextMenu } from './components/GridContextMenu';
@@ -211,7 +216,9 @@ export {
   getStatusBarParts,
   getDataGridStatusBarConfig,
   GRID_CONTEXT_MENU_ITEMS,
+  COLUMN_HEADER_MENU_ITEMS,
   getContextMenuHandlers,
+  getColumnHeaderMenuItems,
   formatShortcut,
   getPaginationViewModel,
   PAGE_SIZE_OPTIONS,
@@ -233,6 +240,15 @@ export {
   computeAggregations,
   processClientSideData,
   areGridRowPropsEqual,
+  findCtrlArrowTarget,
+  computeTabNavigation,
+  rangesEqual,
+  clampSelectionToBounds,
+  computeAutoScrollSpeed,
+  formatCellValueForTsv,
+  formatSelectionAsTsv,
+  parseTsvClipboard,
+  UndoRedoStack,
 } from './utils';
 export type {
   CsvColumn,
@@ -250,6 +266,9 @@ export type {
   ParseValueResult,
   AggregationResult,
   GridRowComparatorProps,
+  IColumnHeaderMenuItem,
+  ColumnHeaderMenuInput,
+  ColumnHeaderMenuHandlers,
 } from './utils';
 
 // Shared component props & renderers (for UI packages to consume)

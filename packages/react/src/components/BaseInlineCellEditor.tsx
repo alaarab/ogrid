@@ -1,6 +1,6 @@
 import * as React from 'react';
 import type { IColumnDef } from '../types';
-import { useInlineCellEditorState, useRichSelectState } from '../hooks';
+import { useInlineCellEditorState, useRichSelectState, useSelectState } from '../hooks';
 
 // ── Shared editor style constants (used across all 3 UI packages) ──
 
@@ -73,6 +73,22 @@ export const selectEditorStyle: React.CSSProperties = {
   outline: 'none',
 };
 
+export const selectDisplayStyle: React.CSSProperties = {
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'space-between',
+  width: '100%',
+  cursor: 'pointer',
+  fontSize: '13px',
+  color: 'inherit',
+};
+
+export const selectChevronStyle: React.CSSProperties = {
+  marginLeft: 4,
+  fontSize: '10px',
+  opacity: 0.5,
+};
+
 // ── BaseInlineCellEditor component ──
 
 export interface BaseInlineCellEditorProps<T> {
@@ -85,8 +101,8 @@ export interface BaseInlineCellEditorProps<T> {
   onCancel: () => void;
   /** Framework-specific checkbox renderer */
   renderCheckbox: (checked: boolean, onCommit: (value: boolean) => void, onCancel: () => void) => React.ReactNode;
-  /** Framework-specific select renderer */
-  renderSelect: (
+  /** @deprecated Built-in custom dropdown is now used. Kept for backward compatibility. */
+  renderSelect?: (
     value: unknown,
     values: unknown[],
     onCommit: (value: unknown) => void,
@@ -95,36 +111,73 @@ export interface BaseInlineCellEditorProps<T> {
 }
 
 /**
- * Base inline cell editor with shared logic for all editor types except checkbox and select
- * (which are framework-specific). Used by all 3 UI packages to avoid duplication.
+ * Base inline cell editor with shared logic for all editor types except checkbox
+ * (which is framework-specific). Used by all 3 UI packages to avoid duplication.
  *
- * Usage:
- * - Radix: Pass Radix Checkbox/native select via render props
- * - Fluent: Pass Fluent Checkbox/Select via render props
- * - Material: Pass MUI Checkbox/Select via render props
+ * Text, date, select, and richSelect editors are fully shared.
+ * Checkbox is delegated via renderCheckbox render prop.
  */
 export function BaseInlineCellEditor<T>(props: BaseInlineCellEditorProps<T>): React.ReactElement {
-  const { value, column, editorType, onCommit, onCancel, renderCheckbox, renderSelect } = props;
+  const { value, column, editorType, onCommit, onCancel, renderCheckbox } = props;
   const wrapperRef = React.useRef<HTMLDivElement>(null);
   const { localValue, setLocalValue, handleKeyDown, handleBlur, commit, cancel } =
     useInlineCellEditorState({ value, editorType, onCommit, onCancel });
 
-  const richSelectValues = (column.cellEditorParams?.values as unknown[]) ?? [];
-  const richSelectFormatValue = column.cellEditorParams?.formatValue as ((v: unknown) => string) | undefined;
+  const editorValues = (column.cellEditorParams?.values as unknown[]) ?? [];
+  const editorFormatValue = column.cellEditorParams?.formatValue as ((v: unknown) => string) | undefined;
   const richSelect = useRichSelectState({
-    values: richSelectValues,
-    formatValue: richSelectFormatValue,
+    values: editorValues,
+    formatValue: editorFormatValue,
+    initialValue: value,
+    onCommit,
+    onCancel,
+  });
+  const selectState = useSelectState({
+    values: editorValues,
+    formatValue: editorFormatValue,
     initialValue: value,
     onCommit,
     onCancel,
   });
 
+  // Fixed dropdown positioning to escape ancestor overflow clipping (.tableWrapper)
+  const [fixedDropdownStyle, setFixedDropdownStyle] = React.useState<React.CSSProperties | null>(null);
+
+  React.useLayoutEffect(() => {
+    if (editorType !== 'select' && editorType !== 'richSelect') return;
+    const wrapper = wrapperRef.current;
+    if (!wrapper) return;
+    const rect = wrapper.getBoundingClientRect();
+    const maxH = 200;
+    const spaceBelow = window.innerHeight - rect.bottom;
+    const flipUp = spaceBelow < maxH && rect.top > spaceBelow;
+    setFixedDropdownStyle({
+      position: 'fixed',
+      ...(flipUp ? { bottom: window.innerHeight - rect.top } : { top: rect.bottom }),
+      left: rect.left,
+      width: rect.width,
+      maxHeight: maxH,
+      overflowY: 'auto',
+      background: 'var(--ogrid-bg, #fff)',
+      border: '1px solid var(--ogrid-border, rgba(0, 0, 0, 0.12))',
+      zIndex: 9999,
+      boxShadow: 'var(--ogrid-shadow, 0 4px 16px rgba(0,0,0,0.2))',
+    });
+  }, [editorType]);
+
+  const computedDropdownStyle = fixedDropdownStyle ?? richSelectDropdownStyle;
+
   React.useEffect(() => {
-    const input = wrapperRef.current?.querySelector('input');
+    const wrapper = wrapperRef.current;
+    if (!wrapper) return;
+    const input = wrapper.querySelector('input');
     if (input) {
       input.focus();
       // Select all text for easy replacement (like Excel)
       input.select();
+    } else {
+      // Focus the wrapper for keyboard events (select editor has no input)
+      wrapper.focus();
     }
   }, []);
 
@@ -141,7 +194,7 @@ export function BaseInlineCellEditor<T>(props: BaseInlineCellEditorProps<T>): Re
           autoFocus
           style={editorInputStyle}
         />
-        <div style={richSelectDropdownStyle} role="listbox">
+        <div style={computedDropdownStyle} role="listbox">
           {richSelect.filteredValues.map((v, i) => (
             <div
               key={String(v)}
@@ -167,10 +220,29 @@ export function BaseInlineCellEditor<T>(props: BaseInlineCellEditorProps<T>): Re
     return <>{renderCheckbox(checked, (val) => commit(val), cancel)}</>;
   }
 
-  // Select (framework-specific)
+  // Select (custom dropdown, shared across all frameworks)
   if (editorType === 'select') {
-    const values = (column.cellEditorParams?.values as unknown[]) ?? [];
-    return <>{renderSelect(value, values, commit, cancel)}</>;
+    return (
+      <div ref={wrapperRef} style={richSelectWrapperStyle} onKeyDown={selectState.handleKeyDown} tabIndex={0}>
+        <div style={selectDisplayStyle}>
+          <span>{selectState.getDisplayText(value)}</span>
+          <span style={selectChevronStyle}>&#9662;</span>
+        </div>
+        <div style={computedDropdownStyle} ref={selectState.dropdownRef} role="listbox">
+          {editorValues.map((v, i) => (
+            <div
+              key={String(v)}
+              role="option"
+              aria-selected={i === selectState.highlightedIndex}
+              onClick={() => selectState.selectValue(v)}
+              style={i === selectState.highlightedIndex ? richSelectOptionHighlightedStyle : richSelectOptionStyle}
+            >
+              {selectState.getDisplayText(v)}
+            </div>
+          ))}
+        </div>
+      </div>
+    );
   }
 
   // Date editor (shared across all frameworks)

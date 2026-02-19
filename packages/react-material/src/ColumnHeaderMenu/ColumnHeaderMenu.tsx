@@ -1,7 +1,7 @@
 import React, { useMemo, useEffect, useState } from 'react';
 import { Menu, MenuItem, Divider } from '@mui/material';
-import { getColumnHeaderMenuItems } from '@alaarab/ogrid-core';
-import type { ColumnHeaderMenuInput } from '@alaarab/ogrid-core';
+import { getColumnHeaderMenuItems } from '@alaarab/ogrid-react';
+import type { ColumnHeaderMenuInput } from '@alaarab/ogrid-react';
 
 export interface ColumnHeaderMenuProps {
   columnId: string;

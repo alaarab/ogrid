@@ -121,7 +121,7 @@ import { PopoverCellEditorComponent } from './popover-cell-editor.component';
                             [attr.rowSpan]="headerRows().length > 1 && rowIdx < headerRows().length - 1 ? headerRows().length - rowIdx : null"
                             [class.ogrid-th-pinned-left]="pinned === 'left'"
                             [class.ogrid-th-pinned-right]="pinned === 'right'"
-                            [style.min-width.px]="col.minWidth ?? defaultMinWidth"
+                            [style.min-width.px]="getEffectiveMinWidth(col)"
                             [style.width.px]="getColumnWidth(col)"
                             [style.max-width.px]="getColumnWidth(col)"
                             [style.left.px]="pinned === 'left' ? getPinnedLeftOffset(col.columnId) : null"
@@ -216,7 +216,7 @@ import { PopoverCellEditorComponent } from './popover-cell-editor.component';
                             [class.ogrid-td-pinned-left]="pinned === 'left'"
                             [class.ogrid-td-pinned-right]="pinned === 'right'"
                             class="ogrid-data-cell"
-                            [style.min-width.px]="col.minWidth ?? defaultMinWidth"
+                            [style.min-width.px]="getEffectiveMinWidth(col)"
                             [style.width.px]="getColumnWidth(col)"
                             [style.max-width.px]="getColumnWidth(col)"
                             [style.left.px]="pinned === 'left' ? getPinnedLeftOffset(col.columnId) : null"
@@ -224,6 +224,7 @@ import { PopoverCellEditorComponent } from './popover-cell-editor.component';
                             [style.text-align]="col.type === 'numeric' ? 'right' : col.type === 'boolean' ? 'center' : null"
                           >
                             @if (isEditingCellInline(item, col)) {
+                              <div class="ogrid-editing-cell">
                               <ogrid-primeng-inline-cell-editor
                                 [value]="getCellValueFn(item, col)"
                                 [item]="item"
@@ -233,6 +234,7 @@ import { PopoverCellEditorComponent } from './popover-cell-editor.component';
                                 (commit)="onCellEditorCommit(item, col, rowIndex, colIdx, $event)"
                                 (cancel)="cancelEdit()"
                               ></ogrid-primeng-inline-cell-editor>
+                              </div>
                             } @else if (isEditingCellPopover(item, col)) {
                               @let editorProps = buildPopoverEditorPropsForPrimeng(item, col, rowIndex, colIdx);
                               <ogrid-primeng-popover-cell-editor
@@ -525,6 +527,11 @@ import { PopoverCellEditorComponent } from './popover-cell-editor.component';
       overflow: hidden;
       text-overflow: ellipsis;
       white-space: nowrap;
+    }
+    .ogrid-editing-cell {
+      width: 100%; height: 100%; display: flex; align-items: center; box-sizing: border-box;
+      outline: 2px solid var(--ogrid-selection-color, #217346); outline-offset: -1px;
+      z-index: 2; position: relative; background: var(--ogrid-bg, #fff); overflow: visible; padding: 0;
     }
     .ogrid-scroll-wrapper [data-drag-range] { background: var(--ogrid-range-bg, rgba(33, 115, 70, 0.12)) !important; }
     .ogrid-fill-handle {
@@ -975,6 +982,10 @@ export class DataGridTableComponent<T = unknown> extends BaseDataGridTableCompon
 
   onResizeStartPrimeng(e: MouseEvent, col: IColumnDef<T>): void {
     e.preventDefault();
+    // Clear cell selection before resize so selection outlines don't persist during drag
+    this.state().interaction.setActiveCell(null);
+    this.state().interaction.setSelectionRange(null);
+    this.getWrapperRef()?.nativeElement.focus({ preventScroll: true });
     this.resizeStartX = e.clientX;
     this.resizeColumnId = col.columnId;
     this.resizeStartWidth = this.getColumnWidth(col);

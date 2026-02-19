@@ -72,3 +72,11 @@ export type { OverlayRect } from './dom';
 export { computeNextSortState } from './sortHelpers';
 export type { ISortState } from './sortHelpers';
 export { measureColumnContentWidth, AUTOSIZE_EXTRA_PX, AUTOSIZE_MAX_PX } from './columnAutosize';
+export { findCtrlArrowTarget, computeTabNavigation } from './keyboardNavigation';
+export { rangesEqual, clampSelectionToBounds, computeAutoScrollSpeed } from './selectionHelpers';
+export {
+  formatCellValueForTsv,
+  formatSelectionAsTsv,
+  parseTsvClipboard,
+} from './clipboardHelpers';
+export { UndoRedoStack } from './undoRedoStack';

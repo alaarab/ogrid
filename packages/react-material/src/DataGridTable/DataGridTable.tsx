@@ -57,6 +57,22 @@ type TableCellWithSpan = TableCellProps & {
 
 const gridRootSx = { position: 'relative', flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column' } as const;
 
+// Editing cell wrapper (plain div, not MUI)
+const EDITING_CELL_STYLE: React.CSSProperties = {
+  width: '100%',
+  height: '100%',
+  display: 'flex',
+  alignItems: 'center',
+  boxSizing: 'border-box',
+  outline: '2px solid var(--ogrid-selection-color, #217346)',
+  outlineOffset: '-1px',
+  zIndex: 2,
+  position: 'relative',
+  background: 'var(--ogrid-bg, #fff)',
+  overflow: 'visible',
+  padding: 0,
+};
+
 // Row
 const ROW_HOVER_SX = { '&:hover': { bgcolor: 'action.hover' } } as const;
 
@@ -402,7 +418,11 @@ function DataGridTableInner<T>(props: IOGridDataGridProps<T>): React.ReactElemen
       let cellContent: React.ReactNode;
 
       if (descriptor.mode === 'editing-inline') {
-        cellContent = <InlineCellEditor<T> {...buildInlineEditorProps(item, col, descriptor, editCallbacks) as InlineCellEditorProps<T>} />;
+        cellContent = (
+          <div style={EDITING_CELL_STYLE}>
+            <InlineCellEditor<T> {...buildInlineEditorProps(item, col, descriptor, editCallbacks) as InlineCellEditorProps<T>} />
+          </div>
+        );
       } else if (descriptor.mode === 'editing-popover' && typeof col.cellEditor === 'function') {
         const editorProps = buildPopoverEditorProps(item, col, descriptor, pendingEditorValueRef.current, editCallbacks) as ICellEditorProps<T>;
         const CustomEditor = col.cellEditor as React.ComponentType<ICellEditorProps<T>>;

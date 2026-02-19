@@ -1,5 +1,5 @@
 import { useCallback, useRef, useState } from 'react';
-import { getCellValue, parseValue } from '../utils';
+import { getCellValue, parseValue, formatSelectionAsTsv, parseTsvClipboard } from '../utils';
 import { normalizeSelectionRange } from '../types';
 import type { ISelectionRange, IActiveCell, ICellValueChangedEvent, IColumnDef } from '../types';
 import { useLatestRef } from './useLatestRef';
@@ -68,24 +68,7 @@ export function useClipboard<T>(params: UseClipboardParams<T>): UseClipboardResu
     const range = getEffectiveRange();
     if (range == null) return;
     const norm = normalizeSelectionRange(range);
-    const items = itemsRef.current;
-    const visibleCols = visibleColsRef.current;
-    const rows: string[] = [];
-    for (let r = norm.startRow; r <= norm.endRow; r++) {
-      const cells: string[] = [];
-      for (let c = norm.startCol; c <= norm.endCol; c++) {
-        if (r >= items.length || c >= visibleCols.length) break;
-        const item = items[r];
-        const col = visibleCols[c];
-        const raw = getCellValue(item, col);
-        const val = col.valueFormatter ? col.valueFormatter(raw, item) : raw;
-        cells.push(
-          val != null && val !== '' ? String(val).replace(/\t/g, ' ').replace(/\n/g, ' ') : ''
-        );
-      }
-      rows.push(cells.join('\t'));
-    }
-    const tsv = rows.join('\r\n');
+    const tsv = formatSelectionAsTsv(itemsRef.current, visibleColsRef.current, norm);
     internalClipboardRef.current = tsv;
     setCopyRange(norm);
     void navigator.clipboard.writeText(tsv).catch(() => {});
@@ -123,10 +106,10 @@ export function useClipboard<T>(params: UseClipboardParams<T>): UseClipboardResu
     const anchorCol = norm ? norm.startCol : 0;
     const items = itemsRef.current;
     const visibleCols = visibleColsRef.current;
-    const lines = text.split(/\r?\n/).filter((l) => l.length > 0);
+    const parsedRows = parseTsvClipboard(text);
     beginBatch?.();
-    for (let r = 0; r < lines.length; r++) {
-      const cells = lines[r].split('\t');
+    for (let r = 0; r < parsedRows.length; r++) {
+      const cells = parsedRows[r];
       for (let c = 0; c < cells.length; c++) {
         const targetRow = anchorRow + r;
         const targetCol = anchorCol + c;

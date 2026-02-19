@@ -1,7 +1,7 @@
 import { Component, ChangeDetectionStrategy, ViewChild, computed, Input } from '@angular/core';
 import { MatMenuModule, MatMenuTrigger } from '@angular/material/menu';
 import { MatDividerModule } from '@angular/material/divider';
-import { getColumnHeaderMenuItems, type IColumnHeaderMenuItem, type ColumnHeaderMenuHandlers } from '@alaarab/ogrid-core';
+import { getColumnHeaderMenuItems, type IColumnHeaderMenuItem, type ColumnHeaderMenuHandlers } from '@alaarab/ogrid-angular';
 
 /**
  * Column header dropdown menu for pin/unpin, sort, and autosize actions.
