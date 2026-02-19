@@ -18,6 +18,9 @@ const grid = new OGrid<Project>(container, {
   getRowId,
   entityLabelPlural: 'projects',
   defaultPageSize: 25,
+  editable: true,
+  cellSelection: true,
+  statusBar: true,
 });
 
 // Expose grid API to window for debugging
