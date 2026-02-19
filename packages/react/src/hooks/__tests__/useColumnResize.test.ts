@@ -99,15 +99,22 @@ describe('useColumnResize', () => {
       })
     );
 
+    const mockWrapper = { focus: jest.fn() };
+    const mockTh = {
+      getBoundingClientRect: () => ({ width: 150 }),
+      closest: (sel: string) => {
+        if (sel === 'thead') return null;
+        if (sel === '[tabindex]') return mockWrapper;
+        return mockTh;
+      },
+      dataset: { columnId: 'name' },
+    };
     const mockEvent = {
       preventDefault: jest.fn(),
       stopPropagation: jest.fn(),
       clientX: 100,
       currentTarget: {
-        parentElement: {
-          getBoundingClientRect: () => ({ width: 150 }),
-          closest: () => null,
-        },
+        closest: (sel: string) => sel === 'th' ? mockTh : null,
       },
     } as unknown as React.MouseEvent;
 
