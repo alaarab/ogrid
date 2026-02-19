@@ -27,5 +27,8 @@ const gridProps: IOGridProps<Project> = {
   getRowId,
   entityLabelPlural: 'projects',
   defaultPageSize: 25,
+  editable: true,
+  cellSelection: true,
+  statusBar: true,
 };
 </script>

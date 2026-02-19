@@ -55,6 +55,9 @@ export class AppComponent {
     getRowId: getRowId,
     entityLabelPlural: 'projects',
     defaultPageSize: 25,
+    editable: true,
+    cellSelection: true,
+    statusBar: true,
   };
 }
 
