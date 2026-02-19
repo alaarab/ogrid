@@ -46,7 +46,7 @@ export class TableLayoutState {
 
   /** Set a column width override (from resize drag). */
   setColumnOverride(columnId: string, widthPx: number): void {
-    this._columnSizingOverrides = { ...this._columnSizingOverrides, [columnId]: widthPx };
+    this._columnSizingOverrides[columnId] = widthPx;
     this.emitter.emit('layoutChange', { type: 'columnOverride' });
   }
 

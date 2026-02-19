@@ -41,6 +41,9 @@ export abstract class BaseDataGridTableComponent<T = unknown> {
   protected lastMouseShift = false;
   readonly columnSizingVersion = signal(0);
 
+  /** Dirty flag — set when column layout changes, cleared after measurement. */
+  private measureDirty = true;
+
   /** DOM-measured column widths from the last layout pass.
    *  Used as a minWidth floor to prevent columns from shrinking
    *  when new data loads (e.g. server-side pagination). */
@@ -72,9 +75,12 @@ export abstract class BaseDataGridTableComponent<T = unknown> {
     this.measureColumnWidths();
   }
 
-  /** Lifecycle hook — re-measure column widths after each view update */
+  /** Lifecycle hook — re-measure column widths only when layout changed */
   ngAfterViewChecked(): void {
-    this.measureColumnWidths();
+    if (this.measureDirty) {
+      this.measureDirty = false;
+      this.measureColumnWidths();
+    }
   }
 
   /** Measure actual th widths from the DOM and update the measuredColumnWidths signal.
@@ -114,6 +120,10 @@ export abstract class BaseDataGridTableComponent<T = unknown> {
   readonly isLoading = computed(() => this.getProps()?.isLoading ?? false);
   readonly loadingMessage = computed(() => 'Loading\u2026');
   readonly layoutModeFit = computed(() => (this.getProps()?.layoutMode ?? 'fill') === 'content');
+  readonly rowHeightCssVar = computed(() => {
+    const rh = this.getProps()?.rowHeight;
+    return rh ? `${rh}px` : null;
+  });
   readonly ariaLabel = computed(() => this.getProps()?.['aria-label'] ?? 'Data grid');
   readonly ariaLabelledBy = computed(() => this.getProps()?.['aria-labelledby']);
   readonly emptyState = computed(() => this.getProps()?.emptyState);
@@ -234,31 +244,31 @@ export abstract class BaseDataGridTableComponent<T = unknown> {
     });
   });
 
-  // Compute sticky offsets for pinned columns (cumulative left/right positions)
+  // Compute sticky offsets for pinned columns (single pass from both ends)
   readonly pinningOffsets = computed(() => {
     const layouts = this.columnLayouts();
     const leftOffsets: Record<string, number> = {};
     const rightOffsets: Record<string, number> = {};
 
-    // Left offsets: start after checkbox and row number columns
     let leftAcc = 0;
     if (this.hasCheckboxCol()) leftAcc += CHECKBOX_COLUMN_WIDTH;
     if (this.hasRowNumbersCol()) leftAcc += ROW_NUMBER_COLUMN_WIDTH;
-
-    for (const layout of layouts) {
-      if (layout.pinnedLeft) {
-        leftOffsets[layout.col.columnId] = leftAcc;
-        leftAcc += layout.width + CELL_PADDING;
-      }
-    }
-
-    // Right offsets: walk from the end
     let rightAcc = 0;
-    for (let i = layouts.length - 1; i >= 0; i--) {
-      const layout = layouts[i];
-      if (layout.pinnedRight) {
-        rightOffsets[layout.col.columnId] = rightAcc;
-        rightAcc += layout.width + CELL_PADDING;
+
+    const len = layouts.length;
+    for (let i = 0; i < len; i++) {
+      // Left-pinned: walk forward
+      const leftLayout = layouts[i];
+      if (leftLayout.pinnedLeft) {
+        leftOffsets[leftLayout.col.columnId] = leftAcc;
+        leftAcc += leftLayout.width + CELL_PADDING;
+      }
+      // Right-pinned: walk backward
+      const ri = len - 1 - i;
+      const rightLayout = layouts[ri];
+      if (rightLayout.pinnedRight) {
+        rightOffsets[rightLayout.col.columnId] = rightAcc;
+        rightAcc += rightLayout.width + CELL_PADDING;
       }
     }
 
@@ -295,6 +305,15 @@ export abstract class BaseDataGridTableComponent<T = unknown> {
         this.columnReorderService.onColumnOrderChange.set(p.onColumnOrderChange);
         this.columnReorderService.enabled.set(p.columnReorder === true);
       }
+    });
+
+    // Mark measurement dirty when column layout changes
+    effect(() => {
+      // Track signals that affect column layout
+      this.visibleCols();
+      this.columnSizingOverrides();
+      this.columnSizingVersion();
+      this.measureDirty = true;
     });
 
     // Wire virtual scroll service inputs
@@ -362,6 +381,36 @@ export abstract class BaseDataGridTableComponent<T = unknown> {
 
   getFilterConfig(col: IColumnDef<T>): HeaderFilterConfig {
     return getHeaderFilterConfig(col, this.headerFilterInput());
+  }
+
+  /** Memoized column menu handlers — avoids recreating objects on every CD cycle */
+  protected readonly columnMenuHandlersMap = computed(() => {
+    const cols = this.visibleCols() as IColumnDef<T>[];
+    const map = new Map<string, ReturnType<typeof this.buildColumnMenuHandlers>>();
+    for (const col of cols) {
+      map.set(col.columnId, this.buildColumnMenuHandlers(col.columnId));
+    }
+    return map;
+  });
+
+  /** Build column menu handler object for a single column */
+  private buildColumnMenuHandlers(columnId: string) {
+    return {
+      onPinLeft: () => this.onPinColumn(columnId, 'left'),
+      onPinRight: () => this.onPinColumn(columnId, 'right'),
+      onUnpin: () => this.onUnpinColumn(columnId),
+      onSortAsc: () => this.onSortAsc(columnId),
+      onSortDesc: () => this.onSortDesc(columnId),
+      onClearSort: () => this.onClearSort(columnId),
+      onAutosizeThis: () => this.onAutosizeColumn(columnId),
+      onAutosizeAll: () => this.onAutosizeAllColumns(),
+      onClose: () => {}
+    };
+  }
+
+  /** Get memoized handlers for a column */
+  getColumnMenuHandlersMemoized(columnId: string) {
+    return this.columnMenuHandlersMap().get(columnId) ?? this.buildColumnMenuHandlers(columnId);
   }
 
   getCellDescriptor(item: T, col: IColumnDef<T>, rowIndex: number, colIdx: number): CellRenderDescriptor {

@@ -6,5 +6,7 @@ export { ColumnHeaderFilter, type IColumnHeaderFilterProps } from './ColumnHeade
 export { ColumnHeaderMenu, type ColumnHeaderMenuProps } from './ColumnHeaderMenu/ColumnHeaderMenu';
 export { PaginationControls, type IPaginationControlsProps } from './PaginationControls/PaginationControls';
 
-// Re-export everything from core
+// Re-export all from base package for consumer convenience.
+// Note: This prevents tree-shaking of unused utilities.
+// Consider explicit named exports in a future major version.
 export * from '@alaarab/ogrid-react';

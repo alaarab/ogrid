@@ -1,0 +1,344 @@
+/* OGrid Shared Layout Styles — consumed by vue-vuetify and vue-primevue */
+
+/* Remove focus outline from scrollable wrapper (keyboard nav is handled via cell outlines) */
+[role="region"][tabindex="0"] {
+  outline: none !important;
+}
+
+/* Cell selection highlighting */
+.ogrid-cell-in-range {
+  background: var(--ogrid-bg-range, rgba(33, 115, 70, 0.12)) !important;
+}
+
+/* Cut range highlighting */
+.ogrid-cell-cut {
+  background: var(--ogrid-hover-bg) !important;
+  opacity: 0.7;
+}
+
+/* Drag-range highlight applied via DOM attributes during drag (bypasses Vue for performance) */
+[data-drag-range] {
+  background: var(--ogrid-range-bg, rgba(33, 115, 70, 0.12)) !important;
+}
+
+/* Anchor cell during drag: white/transparent background (like Excel) */
+[data-drag-anchor] {
+  background: var(--ogrid-bg) !important;
+}
+
+/* === Layout === */
+
+.ogrid-outer-container {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  background-color: var(--ogrid-bg);
+  color: var(--ogrid-fg);
+}
+
+.ogrid-scroll-wrapper {
+  display: flex;
+  flex-direction: column;
+  min-height: 100%;
+}
+
+.ogrid-table-container {
+  position: relative;
+}
+
+.ogrid-table-container--loading {
+  opacity: 0.6;
+}
+
+.ogrid-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.875rem;
+  background-color: var(--ogrid-bg);
+  color: var(--ogrid-fg);
+}
+
+.ogrid-table tbody tr {
+  height: var(--ogrid-row-height, auto);
+}
+
+/* === Header === */
+
+.ogrid-thead {
+  z-index: 8;
+  background-color: var(--ogrid-header-bg);
+}
+
+.ogrid-header-row {
+  background-color: var(--ogrid-header-bg);
+}
+
+.ogrid-header-cell {
+  font-weight: 600;
+  position: sticky;
+  top: 0;
+  background-color: var(--ogrid-header-bg);
+  z-index: 8;
+}
+
+.ogrid-header-cell--pinned-left {
+  z-index: 10;
+  will-change: transform;
+}
+
+.ogrid-header-cell--pinned-right {
+  z-index: 10;
+  will-change: transform;
+}
+
+.ogrid-header-content {
+  display: flex;
+  align-items: center;
+  width: 100%;
+}
+
+.ogrid-column-group-header {
+  text-align: center;
+  font-weight: 600;
+  border-bottom: 2px solid var(--ogrid-border);
+  padding: 6px;
+}
+
+.ogrid-column-menu-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 4px 6px;
+  font-size: 16px;
+  color: var(--ogrid-fg-muted);
+  line-height: 1;
+  flex-shrink: 0;
+  border-radius: 4px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 24px;
+  height: 24px;
+  transition: background-color 0.15s;
+}
+
+.ogrid-column-menu-btn:hover {
+  background: var(--ogrid-hover-bg, rgba(0, 0, 0, 0.04));
+  color: var(--ogrid-fg);
+}
+
+/* === Checkbox column === */
+
+.ogrid-checkbox-header,
+.ogrid-checkbox-cell {
+  text-align: center;
+  padding: 4px;
+}
+
+.ogrid-checkbox-cell {
+  padding: 0;
+}
+
+.ogrid-checkbox-wrapper {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.ogrid-checkbox-spacer {
+  padding: 0;
+}
+
+/* === Row numbers === */
+
+.ogrid-row-number-header {
+  text-align: center;
+  font-weight: 600;
+  background-color: var(--ogrid-header-bg);
+  color: var(--ogrid-fg-secondary);
+}
+
+.ogrid-row-number-spacer {
+  background-color: var(--ogrid-header-bg);
+}
+
+.ogrid-row-number-cell {
+  text-align: center;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  background-color: var(--ogrid-header-bg);
+  color: var(--ogrid-fg-secondary);
+}
+
+/* === Data cells === */
+
+.ogrid-data-cell {
+  position: relative;
+  padding: 0;
+  height: 1px;
+}
+
+.ogrid-data-cell--pinned-left {
+  position: sticky;
+  z-index: 6;
+  background-color: var(--ogrid-bg);
+  will-change: transform;
+}
+
+.ogrid-data-cell--pinned-right {
+  position: sticky;
+  z-index: 6;
+  background-color: var(--ogrid-bg);
+  will-change: transform;
+}
+
+.ogrid-cell-content {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  min-width: 0;
+  padding: 6px 10px;
+  box-sizing: border-box;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  user-select: none;
+  outline: none;
+}
+
+.ogrid-cell-content--numeric {
+  justify-content: flex-end;
+  text-align: right;
+}
+
+.ogrid-cell-content--boolean {
+  justify-content: center;
+  text-align: center;
+}
+
+.ogrid-cell-content--editable {
+  cursor: cell;
+}
+
+.ogrid-cell-content--active {
+  outline: 2px solid var(--ogrid-selection, #217346);
+  outline-offset: -1px;
+  z-index: 2;
+  position: relative;
+  overflow: visible;
+}
+
+/* === Editing cell wrapper === */
+
+.ogrid-editing-cell {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  box-sizing: border-box;
+  outline: 2px solid var(--ogrid-selection-color, #217346);
+  outline-offset: -1px;
+  z-index: 2;
+  position: relative;
+  background: var(--ogrid-bg, #fff);
+  overflow: visible;
+  padding: 0;
+}
+
+/* === Fill handle === */
+
+.ogrid-fill-handle {
+  position: absolute;
+  right: -3px;
+  bottom: -3px;
+  width: 7px;
+  height: 7px;
+  background-color: var(--ogrid-selection, #217346);
+  border: 1px solid var(--ogrid-bg);
+  border-radius: 1px;
+  cursor: crosshair;
+  pointer-events: auto;
+  z-index: 3;
+}
+
+/* === Resize handle === */
+
+.ogrid-resize-handle {
+  position: absolute;
+  top: 0;
+  right: -3px;
+  bottom: 0;
+  width: 8px;
+  cursor: col-resize;
+  user-select: none;
+}
+
+/* === Drop indicator === */
+
+.ogrid-drop-indicator {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 3px;
+  background: var(--ogrid-primary, #217346);
+  pointer-events: none;
+  z-index: 100;
+}
+
+/* === Empty state === */
+
+.ogrid-empty-state {
+  padding: 32px 16px;
+  text-align: center;
+  border-top: 1px solid var(--ogrid-border);
+  background-color: var(--ogrid-header-bg);
+}
+
+.ogrid-empty-state-title {
+  font-size: 1.25rem;
+  font-weight: 600;
+  margin-bottom: 8px;
+}
+
+.ogrid-empty-state-message {
+  font-size: 0.875rem;
+  color: var(--ogrid-fg-secondary);
+}
+
+/* === Loading overlay === */
+
+.ogrid-loading-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: var(--ogrid-loading-overlay);
+}
+
+.ogrid-loading-inner {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 16px;
+  background-color: var(--ogrid-bg);
+  border: 1px solid var(--ogrid-border);
+  border-radius: 4px;
+}
+
+.ogrid-loading-message {
+  font-size: 0.875rem;
+  color: var(--ogrid-fg-secondary);
+}
+
+/* === Popover editor anchor === */
+
+.ogrid-popover-anchor {
+  min-height: 100%;
+  min-width: 40px;
+}

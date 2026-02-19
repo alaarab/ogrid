@@ -307,6 +307,7 @@ const setWrapperRef = (el: any) => {
         overflowX: gridProps.suppressHorizontalScroll ? 'hidden' : allowOverflowX ? 'auto' : 'hidden',
         overflowY: 'auto',
         opacity: gridProps.isLoading && gridProps.items.length > 0 ? '0.6' : '1',
+        '--ogrid-row-height': gridProps.rowHeight ? `${gridProps.rowHeight}px` : undefined,
       }"
       tabindex="0"
       role="region"

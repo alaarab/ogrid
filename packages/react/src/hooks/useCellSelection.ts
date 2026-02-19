@@ -1,6 +1,7 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
 import { normalizeSelectionRange } from '../types';
 import { rangesEqual, computeAutoScrollSpeed } from '../utils';
+import { useLatestRef } from './useLatestRef';
 import type { ISelectionRange, IActiveCell } from '../types';
 
 export interface UseCellSelectionParams {
@@ -36,6 +37,9 @@ const AUTO_SCROLL_INTERVAL = 16; // ~60fps
 export function useCellSelection(params: UseCellSelectionParams): UseCellSelectionResult {
   const { colOffset, rowCount, visibleColCount, setActiveCell, wrapperRef } = params;
 
+  // Use ref for colOffset to prevent drag restart mid-drag when colOffset changes
+  const colOffsetRef = useLatestRef(colOffset);
+
   const [selectionRange, _setSelectionRange] = useState<ISelectionRange | null>(null);
   const isDraggingRef = useRef(false);
   const [isDragging, setIsDragging] = useState(false);
@@ -63,10 +67,11 @@ export function useCellSelection(params: UseCellSelectionParams): UseCellSelecti
     (e: React.MouseEvent, rowIndex: number, globalColIndex: number) => {
       // Only handle primary (left) button — let middle-click scroll and right-click context menu work natively
       if (e.button !== 0) return;
-      if (globalColIndex < colOffset) return;
+      const colOff = colOffsetRef.current;
+      if (globalColIndex < colOff) return;
       // Prevent native text selection during cell drag
       e.preventDefault();
-      const dataColIndex = globalColIndex - colOffset;
+      const dataColIndex = globalColIndex - colOff;
       const currentRange = selectionRangeRef.current;
       if (e.shiftKey && currentRange != null) {
         setSelectionRange(
@@ -99,8 +104,8 @@ export function useCellSelection(params: UseCellSelectionParams): UseCellSelecti
         setTimeout(() => applyDragAttrsRef.current?.(initial), 0);
       }
     },
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- setSelectionRange is a stable callback
-    [colOffset, setActiveCell]
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- setSelectionRange is stable; colOffsetRef is a ref
+    [setActiveCell]
   );
 
   const handleSelectAllCells = useCallback(() => {
@@ -111,9 +116,9 @@ export function useCellSelection(params: UseCellSelectionParams): UseCellSelecti
       endRow: rowCount - 1,
       endCol: visibleColCount - 1,
     });
-    setActiveCell({ rowIndex: 0, columnIndex: colOffset });
-  // eslint-disable-next-line react-hooks/exhaustive-deps -- setSelectionRange is a stable callback
-  }, [rowCount, visibleColCount, colOffset, setActiveCell]);
+    setActiveCell({ rowIndex: 0, columnIndex: colOffsetRef.current });
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- setSelectionRange is stable; colOffsetRef is a ref
+  }, [rowCount, visibleColCount, setActiveCell]);
 
   /** Last known mouse position during drag — used by mouseUp to flush pending RAF work. */
   const lastMousePosRef = useRef<{ cx: number; cy: number } | null>(null);
@@ -125,7 +130,6 @@ export function useCellSelection(params: UseCellSelectionParams): UseCellSelecti
   // Performance: during drag, we update a ref + toggle DOM attributes via rAF.
   // React state is only committed on mouseup (single re-render instead of 60-120/s).
   useEffect(() => {
-    const colOff = colOffset; // capture for closure
 
     /** Toggle DRAG_ATTR on cells to show the range highlight via CSS.
      *  Also sets edge box-shadows for a green border around the selection range,
@@ -142,7 +146,7 @@ export function useCellSelection(params: UseCellSelectionParams): UseCellSelecti
       for (let i = 0; i < cells.length; i++) {
         const el = cells[i] as HTMLElement;
         const r = parseInt(el.getAttribute('data-row-index')!, 10);
-        const c = parseInt(el.getAttribute('data-col-index')!, 10) - colOff;
+        const c = parseInt(el.getAttribute('data-col-index')!, 10) - colOffsetRef.current;
         const inRange = r >= minR && r <= maxR && c >= minC && c <= maxC;
         if (inRange) {
           if (!el.hasAttribute(DRAG_ATTR)) el.setAttribute(DRAG_ATTR, '');
@@ -191,6 +195,7 @@ export function useCellSelection(params: UseCellSelectionParams): UseCellSelecti
       if (!cell) return null;
       const r = parseInt(cell.getAttribute('data-row-index') ?? '', 10);
       const c = parseInt(cell.getAttribute('data-col-index') ?? '', 10);
+      const colOff = colOffsetRef.current;
       if (Number.isNaN(r) || Number.isNaN(c) || c < colOff) return null;
       const dataCol = c - colOff;
       const start = dragStartRef.current;
@@ -341,7 +346,7 @@ export function useCellSelection(params: UseCellSelectionParams): UseCellSelecti
           setSelectionRange(finalRange);
           setActiveCell({
             rowIndex: finalRange.endRow,
-            columnIndex: finalRange.endCol + colOff,
+            columnIndex: finalRange.endCol + colOffsetRef.current,
           });
         }
       }
@@ -365,7 +370,7 @@ export function useCellSelection(params: UseCellSelectionParams): UseCellSelecti
       stopAutoScroll();
     };
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [colOffset, setActiveCell]); // wrapperRef excluded — refs are stable across renders
+  }, [setActiveCell]); // wrapperRef, colOffsetRef excluded — refs are stable across renders
 
   return {
     selectionRange,

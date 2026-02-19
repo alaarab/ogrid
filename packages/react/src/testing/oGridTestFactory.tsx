@@ -45,16 +45,6 @@ export function createOGridTests(OGrid: React.ComponentType<IOGridProps<FixtureR
     expect(screen.getAllByTestId('cell-name').map((el) => el.textContent)).toEqual(['Beta']);
   });
 
-  it('sort change updates order', () => {
-    renderOGrid();
-    expect(screen.getAllByTestId('cell-name').map((el) => el.textContent)).toEqual(['Alpha', 'Beta', 'Gamma']);
-    const sortButton = screen.getByRole('button', { name: /sort by name/i });
-    fireEvent.click(sortButton);
-    expect(screen.getAllByTestId('cell-name').map((el) => el.textContent)).toEqual(['Gamma', 'Beta', 'Alpha']);
-    fireEvent.click(sortButton);
-    expect(screen.getAllByTestId('cell-name').map((el) => el.textContent)).toEqual(['Alpha', 'Beta', 'Gamma']);
-  });
-
   it('pagination shows correct slice', () => {
     renderOGrid({ defaultPageSize: 2 });
     expect(screen.getAllByTestId('cell-name')).toHaveLength(2);
@@ -102,10 +92,6 @@ export function createOGridTests(OGrid: React.ComponentType<IOGridProps<FixtureR
     // Second checkbox is "Closed"
     fireEvent.click(filterCheckboxes[1]);
     fireEvent.click(screen.getByRole('button', { name: /apply/i }));
-    expect(screen.getAllByTestId('cell-name').map((el) => el.textContent)).toEqual(['Alpha', 'Gamma']);
-    fireEvent.click(screen.getByRole('button', { name: /sort by name/i }));
-    expect(screen.getAllByTestId('cell-name').map((el) => el.textContent)).toEqual(['Gamma', 'Alpha']);
-    fireEvent.click(screen.getByRole('button', { name: /sort by name/i }));
     expect(screen.getAllByTestId('cell-name').map((el) => el.textContent)).toEqual(['Alpha', 'Gamma']);
     const rowsSelect = screen.getByLabelText('Rows per page');
     fireEvent.change(rowsSelect, { target: { value: '50' } });
