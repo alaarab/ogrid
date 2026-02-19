@@ -3,7 +3,7 @@ import { ButtonModule } from 'primeng/button';
 import { MenuModule } from 'primeng/menu';
 import type { Menu } from 'primeng/menu';
 import type { MenuItem } from 'primeng/api';
-import { getColumnHeaderMenuItems, type ColumnHeaderMenuHandlers } from '@alaarab/ogrid-core';
+import { getColumnHeaderMenuItems, type ColumnHeaderMenuHandlers } from '@alaarab/ogrid-angular';
 
 /**
  * Column header dropdown menu for pin/unpin, sort, and autosize actions.

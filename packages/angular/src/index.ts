@@ -102,6 +102,7 @@ export type { IColumnHeaderFilterProps } from './components/base-column-header-f
 export { BaseColumnChooserComponent } from './components/base-column-chooser.component';
 export type { IColumnChooserProps } from './components/base-column-chooser.component';
 export { BasePaginationControlsComponent } from './components/base-pagination-controls.component';
+export { BaseInlineCellEditorComponent } from './components/base-inline-cell-editor.component';
 
 // Utilities (view model helpers)
 export type {

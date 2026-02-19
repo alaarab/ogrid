@@ -1,35 +1,6 @@
 import type { IActiveCell, ISelectionRange, IColumnDef, ICellValueChangedEvent, RowId } from '@alaarab/ogrid-core';
-import { normalizeSelectionRange, getCellValue } from '@alaarab/ogrid-core';
+import { normalizeSelectionRange, getCellValue, findCtrlArrowTarget as findCtrlTarget, computeTabNavigation } from '@alaarab/ogrid-core';
 import { parseValue } from '@alaarab/ogrid-core';
-
-/**
- * Excel-style Ctrl+Arrow: find the target position along a 1D axis.
- * - Non-empty current + non-empty next → scan through non-empties, stop at last before empty/edge.
- * - Otherwise → skip empties, land on next non-empty or edge.
- */
-function findCtrlTarget(
-  pos: number,
-  edge: number,
-  step: number,
-  isEmpty: (i: number) => boolean
-): number {
-  if (pos === edge) return pos;
-  const next = pos + step;
-  if (!isEmpty(pos) && !isEmpty(next)) {
-    let p = next;
-    while (p !== edge) {
-      if (isEmpty(p + step)) return p;
-      p += step;
-    }
-    return edge;
-  }
-  let p = next;
-  while (p !== edge) {
-    if (!isEmpty(p)) return p;
-    p += step;
-  }
-  return edge;
-}
 
 export interface KeyboardNavParams<T> {
   items: T[];
@@ -238,29 +209,13 @@ export class KeyboardNavState<T> {
       }
       case 'Tab': {
         e.preventDefault();
-        let newRowTab = rowIndex;
-        let newColTab = columnIndex;
-        if (e.shiftKey) {
-          if (columnIndex > colOffset) {
-            newColTab = columnIndex - 1;
-          } else if (rowIndex > 0) {
-            newRowTab = rowIndex - 1;
-            newColTab = maxColIndex;
-          }
-        } else {
-          if (columnIndex < maxColIndex) {
-            newColTab = columnIndex + 1;
-          } else if (rowIndex < maxRowIndex) {
-            newRowTab = rowIndex + 1;
-            newColTab = colOffset;
-          }
-        }
-        const newDataColTab = newColTab - colOffset;
-        this.setActiveCell({ rowIndex: newRowTab, columnIndex: newColTab });
+        const tabResult = computeTabNavigation(rowIndex, columnIndex, maxRowIndex, maxColIndex, colOffset, e.shiftKey);
+        const newDataColTab = tabResult.columnIndex - colOffset;
+        this.setActiveCell({ rowIndex: tabResult.rowIndex, columnIndex: tabResult.columnIndex });
         this.setSelectionRange({
-          startRow: newRowTab,
+          startRow: tabResult.rowIndex,
           startCol: newDataColTab,
-          endRow: newRowTab,
+          endRow: tabResult.rowIndex,
           endCol: newDataColTab,
         });
         break;

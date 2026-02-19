@@ -158,10 +158,19 @@ const getCellClass = (rowIndex: number, colIndex: number, col: IColumnDef<any>, 
 const getCellStyle = (item: any, col: IColumnDef<any>, rowIndex: number, colIndex: number) => {
   const descriptor = getCellRenderDescriptor(item, col, rowIndex, colIndex, viewModels.value.cellDescriptorInput);
   const columnWidth = getColumnWidth(col);
+
+  // Use previously-measured DOM width as a minWidth floor to prevent columns
+  // from shrinking when new data loads (e.g. server-side pagination).
+  const layoutValue = layout.value;
+  const hasResizeOverride = !!layoutValue.columnSizingOverrides[col.columnId];
+  const measuredW = layoutValue.measuredColumnWidths[col.columnId];
+  const baseMinWidth = col.minWidth ?? DEFAULT_MIN_COLUMN_WIDTH;
+  const effectiveMinWidth = hasResizeOverride ? columnWidth : Math.max(baseMinWidth, measuredW ?? 0);
+
   const style: Record<string, string> = {
     position: 'relative',
     padding: '0',
-    minWidth: `${col.minWidth ?? DEFAULT_MIN_COLUMN_WIDTH}px`,
+    minWidth: `${effectiveMinWidth}px`,
     width: `${columnWidth}px`,
     maxWidth: `${columnWidth}px`,
   };
@@ -210,9 +219,16 @@ const getHeaderCellStyle = (col: IColumnDef<any>, colIndex: number) => {
   const isPinnedLeft = col.pinned === 'left';
   const isPinnedRight = col.pinned === 'right';
 
+  // Apply the same measured-width floor as body cells
+  const layoutValue = layout.value;
+  const hasResizeOverride = !!layoutValue.columnSizingOverrides[col.columnId];
+  const measuredW = layoutValue.measuredColumnWidths[col.columnId];
+  const baseMinWidth = col.minWidth ?? DEFAULT_MIN_COLUMN_WIDTH;
+  const effectiveMinWidth = hasResizeOverride ? columnWidth : Math.max(baseMinWidth, measuredW ?? 0);
+
   const style: Record<string, string> = {
     width: `${columnWidth}px`,
-    minWidth: `${(col.minWidth ?? DEFAULT_MIN_COLUMN_WIDTH)}px`,
+    minWidth: `${effectiveMinWidth}px`,
     maxWidth: `${columnWidth}px`,
   };
 
@@ -340,6 +356,7 @@ const setWrapperRef = (el: any) => {
               >
                 <input
                   v-if="gridProps.rowSelection === 'multiple'"
+                  :ref="(el) => { if (el) (el as HTMLInputElement).indeterminate = rowSel.someSelected && !rowSel.allSelected; }"
                   type="checkbox"
                   :checked="rowSel.allSelected"
                   @change="rowSel.handleSelectAll"
@@ -394,7 +411,14 @@ const setWrapperRef = (el: any) => {
                 <div
                   v-if="cell.columnDef && cell.columnDef.resizable !== false"
                   class="ogrid-resize-handle"
-                  @mousedown.stop="(e) => handleResizeStart(e, cell.columnDef!)"
+                  @mousedown.stop="(e) => {
+                    // Clear cell selection/focus before resize so outlines
+                    // and focus rings don't persist during drag (parity with React).
+                    interaction.setActiveCell(null);
+                    interaction.setSelectionRange(null);
+                    wrapperRef?.focus({ preventScroll: true });
+                    handleResizeStart(e, cell.columnDef!);
+                  }"
                 ></div>
               </th>
             </tr>
@@ -457,11 +481,15 @@ const setWrapperRef = (el: any) => {
               >
                 <div :style="getCellContentStyle(col, item, rowIndex, layout.colOffset + colIndex)">
                   <!-- Inline Editor -->
-                  <component
+                  <div
                     v-if="getCellRenderData(item, col, rowIndex, layout.colOffset + colIndex).type === 'editor'"
-                    :is="InlineCellEditor"
-                    v-bind="getCellRenderData(item, col, rowIndex, layout.colOffset + colIndex).props"
-                  />
+                    class="ogrid-editing-cell"
+                  >
+                    <component
+                      :is="InlineCellEditor"
+                      v-bind="getCellRenderData(item, col, rowIndex, layout.colOffset + colIndex).props"
+                    />
+                  </div>
                   <!-- Popover Editor -->
                   <template v-else-if="getCellRenderData(item, col, rowIndex, layout.colOffset + colIndex).type === 'popover-editor'">
                     <div
@@ -783,6 +811,21 @@ const setWrapperRef = (el: any) => {
 
 .ogrid-selected-cell {
   background: var(--ogrid-bg-range, rgba(33, 115, 70, 0.12));
+}
+
+.ogrid-editing-cell {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  box-sizing: border-box;
+  outline: 2px solid var(--ogrid-selection-color, #217346);
+  outline-offset: -1px;
+  z-index: 2;
+  position: relative;
+  background: var(--ogrid-bg, #fff);
+  overflow: visible;
+  padding: 0;
 }
 
 .ogrid-fill-handle {

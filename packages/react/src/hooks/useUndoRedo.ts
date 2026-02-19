@@ -1,4 +1,5 @@
 import { useCallback, useRef, useState } from 'react';
+import { UndoRedoStack } from '../utils';
 import type { ICellValueChangedEvent } from '../types';
 
 export interface UseUndoRedoParams<T> {
@@ -28,51 +29,45 @@ export function useUndoRedo<T>(
   params: UseUndoRedoParams<T>
 ): UseUndoRedoResult<T> {
   const { onCellValueChanged, maxUndoDepth = 100 } = params;
-  // Each history entry is an array of events (batch). Single edits are [event].
-  const historyRef = useRef<ICellValueChangedEvent<T>[][]>([]);
-  const redoStackRef = useRef<ICellValueChangedEvent<T>[][]>([]);
-  const batchRef = useRef<ICellValueChangedEvent<T>[] | null>(null);
+  const stackRef = useRef<UndoRedoStack<ICellValueChangedEvent<T>> | null>(null);
+  if (stackRef.current === null) {
+    stackRef.current = new UndoRedoStack<ICellValueChangedEvent<T>>(maxUndoDepth);
+  }
   const [historyLength, setHistoryLength] = useState(0);
   const [redoLength, setRedoLength] = useState(0);
 
   const wrapped = useCallback(
     (event: ICellValueChangedEvent<T>) => {
       if (!onCellValueChanged) return;
-      if (batchRef.current !== null) {
-        // Accumulate into the current batch — don't push to history yet
-        batchRef.current.push(event);
-      } else {
-        historyRef.current = [...historyRef.current, [event]].slice(-maxUndoDepth);
-        redoStackRef.current = [];
-        setHistoryLength(historyRef.current.length);
-        setRedoLength(0);
+      const stack = stackRef.current!;
+      stack.record(event);
+      if (!stack.isBatching) {
+        setHistoryLength(stack.historyLength);
+        setRedoLength(stack.redoLength);
       }
       onCellValueChanged(event);
     },
-    [onCellValueChanged, maxUndoDepth]
+    [onCellValueChanged]
   );
 
   const beginBatch = useCallback(() => {
-    batchRef.current = [];
+    stackRef.current!.beginBatch();
   }, []);
 
   const endBatch = useCallback(() => {
-    const batch = batchRef.current;
-    batchRef.current = null;
-    if (!batch || batch.length === 0) return;
-    historyRef.current = [...historyRef.current, batch].slice(-maxUndoDepth);
-    redoStackRef.current = [];
-    setHistoryLength(historyRef.current.length);
-    setRedoLength(0);
-  }, [maxUndoDepth]);
+    const stack = stackRef.current!;
+    stack.endBatch();
+    setHistoryLength(stack.historyLength);
+    setRedoLength(stack.redoLength);
+  }, []);
 
   const undo = useCallback(() => {
-    if (!onCellValueChanged || historyRef.current.length === 0) return;
-    const lastBatch = historyRef.current[historyRef.current.length - 1];
-    historyRef.current = historyRef.current.slice(0, -1);
-    redoStackRef.current = [...redoStackRef.current, lastBatch];
-    setHistoryLength(historyRef.current.length);
-    setRedoLength(redoStackRef.current.length);
+    if (!onCellValueChanged) return;
+    const stack = stackRef.current!;
+    const lastBatch = stack.undo();
+    if (!lastBatch) return;
+    setHistoryLength(stack.historyLength);
+    setRedoLength(stack.redoLength);
     // Revert in reverse order so multi-cell undo is applied correctly
     for (let i = lastBatch.length - 1; i >= 0; i--) {
       const ev = lastBatch[i];
@@ -85,12 +80,12 @@ export function useUndoRedo<T>(
   }, [onCellValueChanged]);
 
   const redo = useCallback(() => {
-    if (!onCellValueChanged || redoStackRef.current.length === 0) return;
-    const nextBatch = redoStackRef.current[redoStackRef.current.length - 1];
-    redoStackRef.current = redoStackRef.current.slice(0, -1);
-    historyRef.current = [...historyRef.current, nextBatch];
-    setRedoLength(redoStackRef.current.length);
-    setHistoryLength(historyRef.current.length);
+    if (!onCellValueChanged) return;
+    const stack = stackRef.current!;
+    const nextBatch = stack.redo();
+    if (!nextBatch) return;
+    setHistoryLength(stack.historyLength);
+    setRedoLength(stack.redoLength);
     // Replay in original order
     for (const ev of nextBatch) {
       onCellValueChanged(ev);

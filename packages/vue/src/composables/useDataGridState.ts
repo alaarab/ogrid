@@ -1,4 +1,4 @@
-import { ref, computed, type Ref, type ShallowRef } from 'vue';
+import { ref, computed, watch, nextTick, type Ref, type ShallowRef } from 'vue';
 import { flattenColumns, getDataGridStatusBarConfig, parseValue, computeAggregations, CHECKBOX_COLUMN_WIDTH, DEFAULT_MIN_COLUMN_WIDTH } from '@alaarab/ogrid-core';
 import type { RowId, IOGridDataGridProps, IStatusBarProps, IColumnDef } from '../types';
 import type { HeaderFilterConfigInput, CellRenderDescriptorInput } from '../utils';
@@ -44,6 +44,10 @@ export interface DataGridLayoutState<T> {
   columnSizingOverrides: Record<string, { widthPx: number }>;
   setColumnSizingOverrides: (value: Record<string, { widthPx: number }>) => void;
   onColumnResized?: (columnId: string, width: number) => void;
+  /** DOM-measured column widths from the previous layout pass.
+   *  UI packages use these as a minWidth floor to prevent columns from
+   *  shrinking when new data loads (e.g. during server-side pagination). */
+  measuredColumnWidths: Record<string, number>;
 }
 
 export interface DataGridRowSelectionState {
@@ -346,6 +350,39 @@ export function useDataGridState<T>(
     sortDirection: computed(() => props.value.sortDirection),
   });
 
+  // Measure actual column widths from the DOM after layout changes.
+  // Used as a minWidth floor to prevent columns from shrinking when new data
+  // loads (e.g. during server-side pagination transitions).
+  const measuredColumnWidths = ref<Record<string, number>>({});
+
+  watch(
+    [visibleCols, containerWidth, columnSizingOverrides],
+    () => {
+      void nextTick(() => {
+        const wrapper = wrapperRef.value;
+        if (!wrapper) return;
+        const headerCells = wrapper.querySelectorAll<HTMLElement>('th[data-column-id]');
+        if (headerCells.length === 0) return;
+        const measured: Record<string, number> = {};
+        headerCells.forEach((cell) => {
+          const colId = cell.getAttribute('data-column-id');
+          if (colId) measured[colId] = cell.offsetWidth;
+        });
+        // Only update if widths actually changed to avoid reactive loops
+        const prev = measuredColumnWidths.value;
+        const keys = Object.keys(measured);
+        let changed = keys.length !== Object.keys(prev).length;
+        if (!changed) {
+          for (const key of keys) {
+            if (prev[key] !== measured[key]) { changed = true; break; }
+          }
+        }
+        if (changed) measuredColumnWidths.value = measured;
+      });
+    },
+    { flush: 'post' }
+  );
+
   // Build column width map for pinning offset computation
   const columnWidthMap = computed(() => {
     const map: Record<string, number> = {};
@@ -474,6 +511,7 @@ export function useDataGridState<T>(
     columnSizingOverrides: columnSizingOverrides.value,
     setColumnSizingOverrides,
     onColumnResized: onColumnResizedProp.value,
+    measuredColumnWidths: measuredColumnWidths.value,
   }));
 
   const rowSelectionState = computed<DataGridRowSelectionState>(() => ({

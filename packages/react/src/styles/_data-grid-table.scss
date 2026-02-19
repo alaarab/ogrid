@@ -226,6 +226,21 @@
   background: var(--ogrid-active-cell-bg, rgba(0, 0, 0, 0.02));
 }
 
+.editingCellContent {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  box-sizing: border-box;
+  outline: 2px solid var(--ogrid-selection-color, #217346);
+  outline-offset: -1px;
+  z-index: 2;
+  position: relative;
+  background: var(--ogrid-bg, #fff);
+  overflow: visible;
+  padding: 0;
+}
+
 .cellInRange {
   background: var(--ogrid-range-bg, rgba(33, 115, 70, 0.12)) !important;
 }

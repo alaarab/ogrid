@@ -1,5 +1,5 @@
 import type { IActiveCell, ISelectionRange, IColumnDef, ICellValueChangedEvent } from '@alaarab/ogrid-core';
-import { normalizeSelectionRange, getCellValue } from '@alaarab/ogrid-core';
+import { normalizeSelectionRange, getCellValue, formatSelectionAsTsv, parseTsvClipboard } from '@alaarab/ogrid-core';
 import { parseValue } from '@alaarab/ogrid-core';
 import { EventEmitter } from './EventEmitter';
 
@@ -59,22 +59,7 @@ export class ClipboardState<T> {
     if (range == null) return;
     const norm = normalizeSelectionRange(range);
     const { items, visibleCols } = this.params;
-    const rows: string[] = [];
-    for (let r = norm.startRow; r <= norm.endRow; r++) {
-      const cells: string[] = [];
-      for (let c = norm.startCol; c <= norm.endCol; c++) {
-        if (r >= items.length || c >= visibleCols.length) break;
-        const item = items[r];
-        const col = visibleCols[c];
-        const raw = getCellValue(item, col as unknown as Parameters<typeof getCellValue>[1]);
-        const val = col.valueFormatter ? col.valueFormatter(raw, item) : raw;
-        cells.push(
-          val != null && val !== '' ? String(val).replace(/\t/g, ' ').replace(/\n/g, ' ') : ''
-        );
-      }
-      rows.push(cells.join('\t'));
-    }
-    const tsv = rows.join('\r\n');
+    const tsv = formatSelectionAsTsv(items, visibleCols as unknown as Parameters<typeof formatSelectionAsTsv>[1], norm);
     this.internalClipboard = tsv;
     this._copyRange = norm;
     this._cutRange = null;
@@ -120,9 +105,9 @@ export class ClipboardState<T> {
     const anchorRow = norm ? norm.startRow : 0;
     const anchorCol = norm ? norm.startCol : 0;
     const { items, visibleCols } = this.params;
-    const lines = text.split(/\r?\n/).filter((l) => l.length > 0);
+    const lines = parseTsvClipboard(text);
     for (let r = 0; r < lines.length; r++) {
-      const cells = lines[r].split('\t');
+      const cells = lines[r];
       for (let c = 0; c < cells.length; c++) {
         const targetRow = anchorRow + r;
         const targetCol = anchorCol + c;

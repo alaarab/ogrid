@@ -1,17 +1,10 @@
 import type { IActiveCell, ISelectionRange, RowId } from '@alaarab/ogrid-core';
+import { rangesEqual } from '@alaarab/ogrid-core';
 import { EventEmitter } from './EventEmitter';
 
 interface SelectionStateEvents extends Record<string, unknown> {
   selectionChange: { activeCell: IActiveCell | null; selectionRange: ISelectionRange | null };
   rowSelectionChange: { selectedRowIds: Set<RowId> };
-}
-
-/** Compares two selection ranges by value to avoid redundant RAF work. */
-function rangesEqual(a: ISelectionRange | null, b: ISelectionRange | null): boolean {
-  if (a === b) return true;
-  if (!a || !b) return false;
-  return a.startRow === b.startRow && a.endRow === b.endRow &&
-         a.startCol === b.startCol && a.endCol === b.endCol;
 }
 
 export class SelectionState {

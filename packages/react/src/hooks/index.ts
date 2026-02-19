@@ -96,6 +96,8 @@ export type {
 } from './useColumnHeaderMenuState';
 export { useRichSelectState } from './useRichSelectState';
 export type { UseRichSelectStateParams, UseRichSelectStateResult } from './useRichSelectState';
+export { useSelectState } from './useSelectState';
+export type { UseSelectStateParams, UseSelectStateResult } from './useSelectState';
 export { useSideBarState } from './useSideBarState';
 export type { UseSideBarStateParams, UseSideBarStateResult } from './useSideBarState';
 export { useTableLayout } from './useTableLayout';

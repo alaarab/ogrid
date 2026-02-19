@@ -102,7 +102,7 @@ import { PopoverCellEditorComponent } from './popover-cell-editor.component';
                             [attr.rowSpan]="headerRows().length > 1 ? headerRows().length - rowIdx : null"
                             [attr.data-column-id]="col.columnId"
                             [attr.aria-sort]="ariaSort"
-                            [style.minWidth.px]="col.minWidth ?? 80"
+                            [style.minWidth.px]="getEffectiveMinWidth(col)"
                             [style.width.px]="colW"
                             [style.maxWidth.px]="colW"
                             [style.cursor]="columnReorderService.isDragging() ? 'grabbing' : 'grab'"
@@ -203,6 +203,7 @@ import { PopoverCellEditorComponent } from './popover-cell-editor.component';
                           >
                             @let descriptor = getCellDescriptor(item, colLayout.col, rowIndex, colIdx);
                             @if (descriptor.mode === 'editing-inline') {
+                              <div class="ogrid-editing-cell">
                               <ogrid-mat-inline-cell-editor
                                 [value]="descriptor.value"
                                 [item]="item"
@@ -212,6 +213,7 @@ import { PopoverCellEditorComponent } from './popover-cell-editor.component';
                                 (commit)="commitEdit(item, colLayout.col.columnId, descriptor.value, $event, rowIndex, descriptor.globalColIndex)"
                                 (cancel)="cancelEdit()"
                               ></ogrid-mat-inline-cell-editor>
+                              </div>
                             } @else if (descriptor.mode === 'editing-popover') {
                               @let editorProps = buildPopoverEditorProps(item, colLayout.col, descriptor);
                               <ogrid-mat-popover-cell-editor
@@ -482,6 +484,11 @@ import { PopoverCellEditorComponent } from './popover-cell-editor.component';
     .ogrid-datagrid-cell--in-range { background: var(--ogrid-range-bg, rgba(33, 115, 70, 0.12)); }
     .ogrid-datagrid-cell--in-cut-range { background: var(--ogrid-hover-bg, rgba(0, 0, 0, 0.04)); opacity: 0.7; }
     .ogrid-datagrid-cell--editing { padding: 0; }
+    .ogrid-editing-cell {
+      width: 100%; height: 100%; display: flex; align-items: center; box-sizing: border-box;
+      outline: 2px solid var(--ogrid-selection-color, #217346); outline-offset: -1px;
+      z-index: 2; position: relative; background: var(--ogrid-bg, #fff); overflow: visible; padding: 0;
+    }
     .ogrid-datagrid-editor-input {
       width: 100%; height: 100%; padding: 6px 10px; border: 2px solid var(--ogrid-selection-color, #217346);
       box-sizing: border-box; font-size: 14px; outline: none; font-family: inherit; line-height: inherit;

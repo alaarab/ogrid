@@ -1,6 +1,6 @@
-import { Component, signal, effect, ElementRef, ViewChild, AfterViewInit, Input, Output, EventEmitter } from '@angular/core';
+import { Component } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import type { IColumnDef } from '@alaarab/ogrid-angular';
+import { BaseInlineCellEditorComponent } from '@alaarab/ogrid-angular';
 
 @Component({
   selector: 'ogrid-radix-inline-cell-editor',
@@ -19,19 +19,53 @@ import type { IColumnDef } from '@alaarab/ogrid-angular';
           [style]="getInputStyle()"
         />
       }
-      @case ('select') {
-        <div style="width:100%;height:100%;display:flex;align-items:center;padding:6px 10px;box-sizing:border-box;overflow:hidden;min-width:0">
-          <select
-            #inputEl
-            [value]="localValue()"
-            (change)="commitValue($any($event.target).value)"
-            (keydown)="onSelectKeyDown($event)"
-            style="width:100%;border:none;outline:none;background:transparent;font:inherit;cursor:pointer;color:var(--ogrid-fg, #242424)"
-          >
-            @for (opt of selectOptions(); track opt) {
-              <option [value]="opt">{{ opt }}</option>
+      @case ('richSelect') {
+        <div #richSelectWrapper
+             style="width:100%;height:100%;display:flex;align-items:center;padding:6px 10px;box-sizing:border-box;min-width:0;position:relative">
+          <input
+            #richSelectInput
+            type="text"
+            [value]="searchText()"
+            (input)="onRichSelectSearch($any($event.target).value)"
+            (keydown)="onRichSelectKeyDown($event)"
+            placeholder="Search..."
+            style="width:100%;padding:0;border:none;background:transparent;color:inherit;font:inherit;font-size:13px;outline:none;min-width:0"
+          />
+          <div #richSelectDropdown role="listbox"
+               style="position:absolute;top:100%;left:0;right:0;max-height:200px;overflow-y:auto;background:var(--ogrid-bg, #fff);border:1px solid var(--ogrid-border, rgba(0,0,0,0.12));z-index:10;box-shadow:0 4px 16px rgba(0,0,0,0.2)">
+            @for (opt of filteredOptions(); track opt; let i = $index) {
+              <div role="option"
+                   [attr.aria-selected]="i === highlightedIndex()"
+                   (click)="commitValue(opt)"
+                   [style]="i === highlightedIndex() ? 'padding:6px 8px;cursor:pointer;color:var(--ogrid-fg, #242424);background:var(--ogrid-bg-hover, #e8f0fe)' : 'padding:6px 8px;cursor:pointer;color:var(--ogrid-fg, #242424)'">
+                {{ getDisplayText(opt) }}
+              </div>
             }
-          </select>
+            @if (filteredOptions().length === 0) {
+              <div style="padding:6px 8px;color:var(--ogrid-muted, #999)">No matches</div>
+            }
+          </div>
+        </div>
+      }
+      @case ('select') {
+        <div #selectWrapper tabindex="0"
+             style="width:100%;height:100%;display:flex;align-items:center;padding:6px 10px;box-sizing:border-box;min-width:0;position:relative"
+             (keydown)="onCustomSelectKeyDown($event)">
+          <div style="display:flex;align-items:center;justify-content:space-between;width:100%;cursor:pointer;font-size:13px;color:inherit">
+            <span>{{ getDisplayText(value) }}</span>
+            <span style="margin-left:4px;font-size:10px;opacity:0.5">&#9662;</span>
+          </div>
+          <div #selectDropdown role="listbox"
+               style="position:absolute;top:100%;left:0;right:0;max-height:200px;overflow-y:auto;background:var(--ogrid-bg, #fff);border:1px solid var(--ogrid-border, rgba(0,0,0,0.12));z-index:10;box-shadow:0 4px 16px rgba(0,0,0,0.2)">
+            @for (opt of selectOptions(); track opt; let i = $index) {
+              <div role="option"
+                   [attr.aria-selected]="i === highlightedIndex()"
+                   (click)="commitValue(opt)"
+                   [style]="i === highlightedIndex() ? 'padding:6px 8px;cursor:pointer;color:var(--ogrid-fg, #242424);background:var(--ogrid-bg-hover, #e8f0fe)' : 'padding:6px 8px;cursor:pointer;color:var(--ogrid-fg, #242424)'">
+                {{ getDisplayText(opt) }}
+              </div>
+            }
+          </div>
         </div>
       }
       @case ('checkbox') {
@@ -76,86 +110,4 @@ import type { IColumnDef } from '@alaarab/ogrid-angular';
     }
   `],
 })
-export class InlineCellEditorComponent<T = unknown> implements AfterViewInit {
-  @Input({ required: true }) value!: unknown;
-  @Input({ required: true }) item!: T;
-  @Input({ required: true }) column!: IColumnDef<T>;
-  @Input({ required: true }) rowIndex!: number;
-  @Input({ required: true }) editorType!: 'text' | 'select' | 'checkbox' | 'date' | 'richSelect';
-  @Output() commit = new EventEmitter<unknown>();
-  @Output() cancel = new EventEmitter<void>();
-
-  @ViewChild('inputEl') inputEl?: ElementRef<HTMLInputElement | HTMLSelectElement>;
-
-  readonly localValue = signal<unknown>('');
-
-  readonly selectOptions = signal<unknown[]>([]);
-
-  constructor() {
-    effect(() => {
-      const v = this.value;
-      this.localValue.set(v != null ? String(v) : '');
-
-      const col = this.column;
-      if (col.cellEditorParams?.values) {
-        this.selectOptions.set(col.cellEditorParams.values as unknown[]);
-      }
-    });
-  }
-
-  ngAfterViewInit(): void {
-    setTimeout(() => {
-      const el = this.inputEl?.nativeElement;
-      if (el) {
-        el.focus();
-        if (el instanceof HTMLInputElement && el.type === 'text') {
-          el.select();
-        }
-      }
-    });
-  }
-
-  commitValue(value: unknown): void {
-    this.commit.emit(value);
-  }
-
-  onTextKeyDown(e: KeyboardEvent): void {
-    if (e.key === 'Enter') {
-      e.preventDefault();
-      this.commitValue(this.localValue());
-    } else if (e.key === 'Escape') {
-      e.preventDefault();
-      this.cancel.emit();
-    } else if (e.key === 'Tab') {
-      e.preventDefault();
-      this.commitValue(this.localValue());
-    }
-  }
-
-  onSelectKeyDown(e: KeyboardEvent): void {
-    if (e.key === 'Escape') {
-      e.preventDefault();
-      this.cancel.emit();
-    }
-  }
-
-  onCheckboxKeyDown(e: KeyboardEvent): void {
-    if (e.key === 'Escape') {
-      e.preventDefault();
-      this.cancel.emit();
-    }
-  }
-
-  onTextBlur(): void {
-    this.commitValue(this.localValue());
-  }
-
-  getInputStyle(): string {
-    const baseStyle = 'width:100%;box-sizing:border-box;padding:6px 10px;border:2px solid var(--ogrid-selection, #217346);border-radius:2px;outline:none;font:inherit;background:var(--ogrid-bg, #fff);color:var(--ogrid-fg, #242424);';
-    const col = this.column;
-    if (col.type === 'numeric') {
-      return baseStyle + 'text-align:right;';
-    }
-    return baseStyle;
-  }
-}
+export class InlineCellEditorComponent<T = unknown> extends BaseInlineCellEditorComponent<T> {}
