@@ -113,6 +113,12 @@ export type {
   UseVirtualScrollParams,
   UseVirtualScrollResult,
 } from './useVirtualScroll';
+export { useListVirtualizer } from './useListVirtualizer';
+export type {
+  UseListVirtualizerOptions,
+  UseListVirtualizerResult,
+  VirtualItem,
+} from './useListVirtualizer';
 export { useLatestRef } from './useLatestRef';
 export { usePaginationControls } from './usePaginationControls';
 export type {

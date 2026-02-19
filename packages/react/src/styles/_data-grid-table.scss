@@ -188,15 +188,6 @@
   }
 }
 
-// ---- Freeze columns ----
-
-.freezeColFirst {
-  position: sticky;
-  left: 0;
-  z-index: 6;
-  background: var(--ogrid-bg, #ffffff);
-}
-
 // ---- Cell content & selection ----
 
 .cellContent {

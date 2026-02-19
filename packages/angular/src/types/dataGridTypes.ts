@@ -63,8 +63,6 @@ interface IOGridBaseProps<T> {
   onColumnOrderChange?: (order: string[]) => void;
   onColumnResized?: (columnId: string, width: number) => void;
   onColumnPinned?: (columnId: string, pinned: 'left' | 'right' | null) => void;
-  freezeRows?: number;
-  freezeCols?: number;
   editable?: boolean;
   cellSelection?: boolean;
   density?: 'compact' | 'normal' | 'comfortable';
@@ -136,8 +134,6 @@ export interface IOGridDataGridProps<T> {
   onColumnPinned?: (columnId: string, pinned: 'left' | 'right' | null) => void;
   pinnedColumns?: Record<string, 'left' | 'right'>;
   initialColumnWidths?: Record<string, number>;
-  freezeRows?: number;
-  freezeCols?: number;
   layoutMode?: 'content' | 'fill';
   suppressHorizontalScroll?: boolean;
   isLoading?: boolean;
