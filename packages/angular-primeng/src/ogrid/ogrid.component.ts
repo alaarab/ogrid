@@ -54,8 +54,6 @@ import { PaginationControlsComponent } from '../pagination-controls/pagination-c
         [onColumnOrderChange]="service.onColumnOrderChange()"
         [onColumnResized]="onColumnResizedFn"
         [onColumnPinned]="onColumnPinnedFn"
-        [freezeRows]="service.freezeRows()"
-        [freezeCols]="service.freezeCols()"
         [editable]="service.editable()"
         [cellSelection]="service.cellSelection()"
         [onCellValueChanged]="service.onCellValueChanged()"

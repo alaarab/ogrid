@@ -89,7 +89,6 @@ export function createDataGridTable(ui: IDataGridTableUIBindings) {
         const pinning = state.pinning.value;
         const { visibleCols, columnSizingOverrides, measuredColumnWidths } = layout;
         const { leftOffsets, rightOffsets } = pinning;
-        const freezeCols = propsRef.value.freezeCols;
 
         const cellStyles: Record<string, Record<string, string>> = {};
         const cellClasses: Record<string, string> = {};
@@ -98,7 +97,6 @@ export function createDataGridTable(ui: IDataGridTableUIBindings) {
 
         for (let colIdx = 0; colIdx < visibleCols.length; colIdx++) {
           const col = visibleCols[colIdx];
-          const isFreezeCol = freezeCols != null && freezeCols >= 1 && colIdx < freezeCols;
           const isPinnedLeft = col.pinned === 'left';
           const isPinnedRight = col.pinned === 'right';
           const columnWidth = getColumnWidth(col);
@@ -122,7 +120,7 @@ export function createDataGridTable(ui: IDataGridTableUIBindings) {
           const tdClassParts: string[] = ['ogrid-data-cell'];
           const hdrClassParts: string[] = ['ogrid-header-cell'];
 
-          if (isPinnedLeft || (isFreezeCol && colIdx === 0)) {
+          if (isPinnedLeft) {
             tdClassParts.push('ogrid-data-cell--pinned-left');
             tdStyle.left = `${leftOffsets[col.columnId] ?? 0}px`;
             hdrClassParts.push('ogrid-header-cell--pinned-left');
@@ -176,8 +174,6 @@ export function createDataGridTable(ui: IDataGridTableUIBindings) {
         const getRowId = p.getRowId;
         const layoutMode = p.layoutMode ?? 'fill';
         const rowSelection = p.rowSelection ?? 'none';
-        const freezeRows = p.freezeRows;
-        const freezeCols = p.freezeCols;
         const suppressHorizontalScroll = p.suppressHorizontalScroll;
         const isLoading = p.isLoading ?? false;
         const loadingMessage = p.loadingMessage ?? 'Loading\u2026';
@@ -332,8 +328,6 @@ export function createDataGridTable(ui: IDataGridTableUIBindings) {
                     ref: (el: unknown) => { tableRef.value = el as HTMLElement; },
                     class: 'ogrid-table',
                     style: { minWidth: `${minTableWidth}px` },
-                    'data-freeze-rows': freezeRows != null && freezeRows >= 1 ? freezeRows : undefined,
-                    'data-freeze-cols': freezeCols != null && freezeCols >= 1 ? freezeCols : undefined,
                   }, [
                     // Header
                     h('thead', { class: 'ogrid-thead' },

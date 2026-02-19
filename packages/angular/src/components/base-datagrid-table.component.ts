@@ -113,8 +113,6 @@ export abstract class BaseDataGridTableComponent<T = unknown> {
   readonly getRowId = computed(() => this.getProps()?.getRowId ?? ((item: T) => (item as Record<string, unknown>)['id'] as RowId));
   readonly isLoading = computed(() => this.getProps()?.isLoading ?? false);
   readonly loadingMessage = computed(() => 'Loading\u2026');
-  readonly freezeRows = computed(() => this.getProps()?.freezeRows);
-  readonly freezeCols = computed(() => this.getProps()?.freezeCols);
   readonly layoutModeFit = computed(() => (this.getProps()?.layoutMode ?? 'fill') === 'content');
   readonly ariaLabel = computed(() => this.getProps()?.['aria-label'] ?? 'Data grid');
   readonly ariaLabelledBy = computed(() => this.getProps()?.['aria-labelledby']);
@@ -211,15 +209,13 @@ export abstract class BaseDataGridTableComponent<T = unknown> {
   // Pre-computed column layouts
   readonly columnLayouts = computed(() => {
     const cols = this.visibleCols() as IColumnDef<T>[];
-    const fc = this.freezeCols();
     const props = this.getProps();
     const pinnedCols = props?.pinnedColumns ?? {};
     const measuredWidths = this.measuredColumnWidths();
     const sizingOverrides = this.columnSizingOverrides();
-    return cols.map((col, colIdx) => {
-      const isFreezeCol = fc != null && fc >= 1 && colIdx < fc;
+    return cols.map((col) => {
       const runtimePinned = pinnedCols[col.columnId];
-      const pinnedLeft = runtimePinned === 'left' || (col as unknown as Record<string, unknown>).pinned === 'left' || (isFreezeCol && colIdx === 0);
+      const pinnedLeft = runtimePinned === 'left' || (col as unknown as Record<string, unknown>).pinned === 'left';
       const pinnedRight = runtimePinned === 'right' || (col as unknown as Record<string, unknown>).pinned === 'right';
       const w = this.getColumnWidth(col);
       // Use previously-measured DOM width as a minWidth floor to prevent columns

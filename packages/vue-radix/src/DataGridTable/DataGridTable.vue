@@ -176,14 +176,10 @@ const getCellStyle = (item: any, col: IColumnDef<any>, rowIndex: number, colInde
   };
 
   // Column pinning
-  const freezeCols = props.gridProps.freezeCols;
-  const visibleCols = layout.value.visibleCols;
-  const visibleColIndex = visibleCols.indexOf(col);
-  const isFreezeCol = freezeCols != null && freezeCols >= 1 && visibleColIndex < freezeCols;
   const isPinnedLeft = col.pinned === 'left';
   const isPinnedRight = col.pinned === 'right';
 
-  if (isPinnedLeft || (isFreezeCol && visibleColIndex === 0)) {
+  if (isPinnedLeft) {
     const offsets = pinningOffsets.value;
     style.position = 'sticky';
     style.left = `${offsets.leftOffsets[col.columnId] ?? 0}px`;
@@ -214,8 +210,6 @@ const getCellStyle = (item: any, col: IColumnDef<any>, rowIndex: number, colInde
 // Header cell style (with pinning support)
 const getHeaderCellStyle = (col: IColumnDef<any>, colIndex: number) => {
   const columnWidth = getColumnWidth(col);
-  const freezeCols = props.gridProps.freezeCols;
-  const isFreezeCol = freezeCols != null && freezeCols >= 1 && colIndex < freezeCols;
   const isPinnedLeft = col.pinned === 'left';
   const isPinnedRight = col.pinned === 'right';
 
@@ -232,7 +226,7 @@ const getHeaderCellStyle = (col: IColumnDef<any>, colIndex: number) => {
     maxWidth: `${columnWidth}px`,
   };
 
-  if (isPinnedLeft || (isFreezeCol && colIndex === 0)) {
+  if (isPinnedLeft) {
     const offsets = pinningOffsets.value;
     style.position = 'sticky';
     style.top = '0';
@@ -337,8 +331,6 @@ const setWrapperRef = (el: any) => {
             width: fitToContent ? 'auto' : '100%',
             minWidth: allowOverflowX ? `${layout.minTableWidth}px` : undefined,
           }"
-          :data-freeze-rows="gridProps.freezeRows != null && gridProps.freezeRows >= 1 ? gridProps.freezeRows : undefined"
-          :data-freeze-cols="gridProps.freezeCols != null && gridProps.freezeCols >= 1 ? gridProps.freezeCols : undefined"
         >
           <!-- Header -->
           <thead>
