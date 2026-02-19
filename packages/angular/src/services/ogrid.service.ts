@@ -113,6 +113,7 @@ export class OGridService<T> {
   readonly editable = signal<boolean | undefined>(undefined);
   readonly cellSelection = signal<boolean | undefined>(undefined);
   readonly density = signal<'compact' | 'normal' | 'comfortable'>('normal');
+  readonly rowHeight = signal<number | undefined>(undefined);
   readonly onCellValueChanged = signal<((event: ICellValueChangedEvent<T>) => void) | undefined>(undefined);
   readonly onUndo = signal<(() => void) | undefined>(undefined);
   readonly onRedo = signal<(() => void) | undefined>(undefined);
@@ -298,6 +299,15 @@ export class OGridService<T> {
     close: () => this.sideBarActivePanel.set(null),
   }));
 
+  // --- Pre-computed stable callback references for dataGridProps ---
+  // These avoid recreating arrow functions on every dataGridProps recomputation.
+  private readonly handleSortFn = (columnKey: string, direction?: 'asc' | 'desc' | null) => this.handleSort(columnKey, direction);
+  private readonly handleColumnResizedFn = (columnId: string, width: number) => this.handleColumnResized(columnId, width);
+  private readonly handleColumnPinnedFn = (columnId: string, pinned: 'left' | 'right' | null) => this.handleColumnPinned(columnId, pinned);
+  private readonly handleSelectionChangeFn = (event: IRowSelectionChangeEvent<T>) => this.handleSelectionChange(event);
+  private readonly handleFilterChangeFn = (key: string, value: FilterValue | undefined) => this.handleFilterChange(key, value);
+  private readonly clearAllFiltersFn = () => this.setFilters({});
+
   // --- Data grid props computed ---
   readonly dataGridProps = computed<IOGridDataGridProps<T>>(() => ({
     items: this.displayItems(),
@@ -305,17 +315,18 @@ export class OGridService<T> {
     getRowId: this.getRowId(),
     sortBy: this.sort().field,
     sortDirection: this.sort().direction,
-    onColumnSort: (columnKey: string, direction?: 'asc' | 'desc' | null) => this.handleSort(columnKey, direction),
+    onColumnSort: this.handleSortFn,
     visibleColumns: this.visibleColumns(),
     columnOrder: this.columnOrder(),
     onColumnOrderChange: this.onColumnOrderChange(),
-    onColumnResized: (columnId: string, width: number) => this.handleColumnResized(columnId, width),
-    onColumnPinned: (columnId: string, pinned: 'left' | 'right' | null) => this.handleColumnPinned(columnId, pinned),
+    onColumnResized: this.handleColumnResizedFn,
+    onColumnPinned: this.handleColumnPinnedFn,
     pinnedColumns: this.pinnedOverrides(),
     initialColumnWidths: this.columnWidthOverrides(),
     editable: this.editable(),
     cellSelection: this.cellSelection(),
     density: this.density(),
+    rowHeight: this.rowHeight(),
     onCellValueChanged: this.onCellValueChanged(),
     onUndo: this.onUndo(),
     onRedo: this.onRedo(),
@@ -323,11 +334,11 @@ export class OGridService<T> {
     canRedo: this.canRedo(),
     rowSelection: this.rowSelection(),
     selectedRows: this.effectiveSelectedRows(),
-    onSelectionChange: (event: IRowSelectionChangeEvent<T>) => this.handleSelectionChange(event),
+    onSelectionChange: this.handleSelectionChangeFn,
     statusBar: this.statusBarConfig(),
     isLoading: this.isLoadingResolved(),
     filters: this.filters(),
-    onFilterChange: (key: string, value: FilterValue | undefined) => this.handleFilterChange(key, value),
+    onFilterChange: this.handleFilterChangeFn,
     filterOptions: this.clientFilterOptions(),
     loadingFilterOptions: this.dataSource()?.fetchFilterOptions ? this.loadingFilterOptions() : EMPTY_LOADING_OPTIONS,
     peopleSearch: this.dataSource()?.searchPeople?.bind(this.dataSource()),
@@ -340,7 +351,7 @@ export class OGridService<T> {
     'aria-labelledby': this.ariaLabelledBy(),
     emptyState: {
       hasActiveFilters: this.hasActiveFilters(),
-      onClearAll: () => this.setFilters({}),
+      onClearAll: this.clearAllFiltersFn,
       message: this.emptyState()?.message,
       render: this.emptyState()?.render as never,
     },
@@ -471,6 +482,24 @@ export class OGridService<T> {
         this.sideBarActivePanel.set(parsed.defaultPanel);
       }
     });
+
+    // Cleanup on destroy — reset callback signals to prevent closure retention
+    this.destroyRef.onDestroy(() => {
+      this.onPageChange.set(undefined);
+      this.onPageSizeChange.set(undefined);
+      this.onSortChange.set(undefined);
+      this.onFiltersChange.set(undefined);
+      this.onVisibleColumnsChange.set(undefined);
+      this.onColumnOrderChange.set(undefined);
+      this.onColumnResized.set(undefined);
+      this.onColumnPinned.set(undefined);
+      this.onCellValueChanged.set(undefined);
+      this.onSelectionChange.set(undefined);
+      this.onFirstDataRendered.set(undefined);
+      this.onError.set(undefined);
+      this.onUndo.set(undefined);
+      this.onRedo.set(undefined);
+    });
   }
 
   // --- Setters ---
@@ -569,6 +598,7 @@ export class OGridService<T> {
     if (props.editable !== undefined) this.editable.set(props.editable);
     if (props.cellSelection !== undefined) this.cellSelection.set(props.cellSelection);
     if (props.density !== undefined) this.density.set(props.density);
+    if (props.rowHeight !== undefined) this.rowHeight.set(props.rowHeight);
     if (props.onCellValueChanged) this.onCellValueChanged.set(props.onCellValueChanged);
     if (props.onUndo) this.onUndo.set(props.onUndo);
     if (props.onRedo) this.onRedo.set(props.onRedo);

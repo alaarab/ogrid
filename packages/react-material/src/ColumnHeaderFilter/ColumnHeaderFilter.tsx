@@ -1,9 +1,6 @@
 import * as React from 'react';
 import { Popover, Tooltip, IconButton, Box, Typography } from '@mui/material';
 import {
-  ArrowUpward as ArrowUpwardIcon,
-  ArrowDownward as ArrowDownwardIcon,
-  SwapVert as SwapVertIcon,
   FilterList as FilterListIcon,
 } from '@mui/icons-material';
 import type { IColumnHeaderFilterProps } from '@alaarab/ogrid-react';
@@ -76,9 +73,6 @@ export const ColumnHeaderFilter: React.FC<IColumnHeaderFilterProps> = React.memo
   const {
     columnName,
     filterType,
-    isSorted = false,
-    isSortedDescending = false,
-    onSort,
     options = [],
     isLoadingOptions = false,
     selectedUser,
@@ -112,27 +106,6 @@ export const ColumnHeaderFilter: React.FC<IColumnHeaderFilterProps> = React.memo
       </Box>
 
       <Box sx={{ display: 'flex', alignItems: 'center', ml: 0.5, flexShrink: 0 }}>
-        {onSort && (
-          <IconButton
-            size="small"
-            onClick={handlers.handleSortClick}
-            aria-label={`Sort by ${columnName}`}
-            title={isSorted ? (isSortedDescending ? 'Sorted descending' : 'Sorted ascending') : 'Sort'}
-            color={isSorted ? 'primary' : 'default'}
-            sx={{ p: 0.25 }}
-          >
-            {isSorted ? (
-              isSortedDescending ? (
-                <ArrowDownwardIcon sx={{ fontSize: 16 }} />
-              ) : (
-                <ArrowUpwardIcon sx={{ fontSize: 16 }} />
-              )
-            ) : (
-              <SwapVertIcon sx={{ fontSize: 16 }} />
-            )}
-          </IconButton>
-        )}
-
         {filterType !== 'none' && (
           <IconButton
             size="small"

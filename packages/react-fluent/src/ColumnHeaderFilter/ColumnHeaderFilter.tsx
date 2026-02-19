@@ -1,6 +1,6 @@
 import * as React from 'react';
 import { Popover, PopoverSurface, type OpenPopoverEvents, type OnOpenChangeData } from '@fluentui/react-components';
-import { ArrowUpRegular, ArrowDownRegular, ArrowSortRegular, FilterRegular } from '@fluentui/react-icons';
+import { FilterRegular } from '@fluentui/react-icons';
 import type { IColumnHeaderFilterProps } from '@alaarab/ogrid-react';
 import {
   useColumnHeaderFilterState,
@@ -20,9 +20,6 @@ export const ColumnHeaderFilter: React.FC<IColumnHeaderFilterProps> = React.memo
   const {
     columnName,
     filterType,
-    isSorted = false,
-    isSortedDescending = false,
-    onSort,
     options,
     isLoadingOptions = false,
     selectedUser,
@@ -116,22 +113,6 @@ export const ColumnHeaderFilter: React.FC<IColumnHeaderFilterProps> = React.memo
       </div>
 
       <div className={styles.headerActions}>
-        {onSort && (
-          <button
-            type="button"
-            className={`${styles.sortIcon} ${isSorted ? styles.sortActive : ''}`}
-            onClick={handlers.handleSortClick}
-            aria-label={`Sort by ${columnName}`}
-            title={isSorted ? (isSortedDescending ? 'Sorted descending' : 'Sorted ascending') : 'Sort'}
-          >
-            {isSorted ? (
-              isSortedDescending ? <ArrowDownRegular /> : <ArrowUpRegular />
-            ) : (
-              <ArrowSortRegular />
-            )}
-          </button>
-        )}
-
         {filterType !== 'none' && (
           <>
             <button

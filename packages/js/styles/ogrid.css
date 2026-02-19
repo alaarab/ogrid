@@ -177,6 +177,10 @@
   table-layout: auto;
 }
 
+.ogrid-table tbody tr {
+  height: var(--ogrid-row-height, auto);
+}
+
 .ogrid-table th,
 .ogrid-table td {
   min-width: 80px;
@@ -218,12 +222,6 @@
 .ogrid-sortable {
   cursor: pointer;
   user-select: none;
-}
-
-.ogrid-sort-indicator {
-  margin-left: 4px;
-  font-size: 12px;
-  color: var(--ogrid-muted, #616161);
 }
 
 .ogrid-group-header {

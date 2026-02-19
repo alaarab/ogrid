@@ -94,6 +94,8 @@ interface IOGridBaseProps<T> {
   sideBar?: boolean | ISideBarDef;
   columnReorder?: boolean;
   virtualScroll?: IVirtualScrollConfig;
+  /** Fixed row height in pixels. Overrides default row height (36px). */
+  rowHeight?: number;
   pageSizeOptions?: number[];
   onFirstDataRendered?: () => void;
   onError?: (error: unknown) => void;
@@ -161,6 +163,8 @@ export interface IOGridDataGridProps<T> {
   getUserByEmail?: (email: string) => Promise<UserLike | undefined>;
   columnReorder?: boolean;
   virtualScroll?: IVirtualScrollConfig;
+  /** Fixed row height in pixels. Overrides default row height (36px). */
+  rowHeight?: number;
   emptyState?: {
     onClearAll: () => void;
     hasActiveFilters: boolean;

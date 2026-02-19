@@ -1,4 +1,4 @@
-import { Injectable, signal, computed, effect, DestroyRef, inject } from '@angular/core';
+import { Injectable, signal, computed, effect, DestroyRef, inject, NgZone } from '@angular/core';
 import {
   flattenColumns,
   getDataGridStatusBarConfig,
@@ -178,6 +178,7 @@ export interface DataGridStateResult<T> {
 @Injectable()
 export class DataGridStateService<T> {
   private destroyRef = inject(DestroyRef);
+  private ngZone = inject(NgZone);
 
   // --- Input signals ---
   readonly props = signal<IOGridDataGridProps<T> | null>(null);
@@ -207,6 +208,9 @@ export class DataGridStateService<T> {
 
   // Fill handle state
   private fillDragStart: { startRow: number; startCol: number } | null = null;
+  private fillRafId = 0;
+  private fillMoveHandler: ((e: MouseEvent) => void) | null = null;
+  private fillUpHandler: (() => void) | null = null;
 
   // Row selection
   private lastClickedRow = -1;
@@ -237,10 +241,13 @@ export class DataGridStateService<T> {
     return p ? p.cellSelection !== false : true;
   });
 
-  // Undo/redo wrapped callback
+  // Narrow signal extractors — prevent full props() dependency in effects/computed
+  private readonly originalOnCellValueChanged = computed(() => this.props()?.onCellValueChanged);
+  private readonly initialColumnWidthsSig = computed(() => this.props()?.initialColumnWidths);
+
+  // Undo/redo wrapped callback — only recomputes when the actual callback reference changes
   private readonly wrappedOnCellValueChanged = computed(() => {
-    const p = this.props();
-    const original = p?.onCellValueChanged;
+    const original = this.originalOnCellValueChanged();
     if (!original) return undefined;
     return (event: ICellValueChangedEvent<T>) => {
       this.undoRedoStack.record(event);
@@ -389,12 +396,14 @@ export class DataGridStateService<T> {
 
   constructor() {
     // Setup window event listeners for cell selection drag
-    // Using effect with cleanup return to ensure proper removal on destroy
+    // Run outside NgZone to avoid 60Hz change detection during drag
     effect((onCleanup) => {
       const onMove = (e: MouseEvent) => this.onWindowMouseMove(e);
       const onUp = () => this.onWindowMouseUp();
-      window.addEventListener('mousemove', onMove, true);
-      window.addEventListener('mouseup', onUp, true);
+      this.ngZone.runOutsideAngular(() => {
+        window.addEventListener('mousemove', onMove, true);
+        window.addEventListener('mouseup', onUp, true);
+      });
 
       onCleanup(() => {
         window.removeEventListener('mousemove', onMove, true);
@@ -403,11 +412,12 @@ export class DataGridStateService<T> {
     });
 
     // Initialize column sizing overrides from initial widths
+    // Only track initialColumnWidths, not all props
     effect(() => {
-      const p = this.props();
-      if (p?.initialColumnWidths) {
+      const widths = this.initialColumnWidthsSig();
+      if (widths) {
         const result: Record<string, { widthPx: number }> = {};
-        for (const [id, width] of Object.entries(p.initialColumnWidths)) {
+        for (const [id, width] of Object.entries(widths)) {
           result[id] = { widthPx: width };
         }
         this.columnSizingOverridesSig.set(result);
@@ -415,6 +425,7 @@ export class DataGridStateService<T> {
     });
 
     // Container width measurement via ResizeObserver
+    // Run outside NgZone — signal.set() inside still triggers Angular reactivity
     effect(() => {
       const el = this.wrapperEl();
       if (this.resizeObserver) {
@@ -430,16 +441,30 @@ export class DataGridStateService<T> {
           (parseFloat(cs.borderRightWidth || '0') || 0);
         this.containerWidthSig.set(Math.max(0, rect.width - borderX));
       };
-      this.resizeObserver = new ResizeObserver(measure);
-      this.resizeObserver.observe(el);
+      this.ngZone.runOutsideAngular(() => {
+        this.resizeObserver = new ResizeObserver(measure);
+        this.resizeObserver.observe(el);
+      });
       measure();
     });
 
-    // Cleanup on destroy — null out refs to prevent accidental reuse after teardown
+    // Cleanup on destroy — cancel pending work and release references
     this.destroyRef.onDestroy(() => {
       if (this.rafId) { cancelAnimationFrame(this.rafId); this.rafId = 0; }
+      if (this.fillRafId) { cancelAnimationFrame(this.fillRafId); this.fillRafId = 0; }
       if (this.autoScrollInterval) { clearInterval(this.autoScrollInterval); this.autoScrollInterval = null; }
       if (this.resizeObserver) { this.resizeObserver.disconnect(); this.resizeObserver = null; }
+      // Remove fill-handle window listeners if active
+      if (this.fillMoveHandler) {
+        window.removeEventListener('mousemove', this.fillMoveHandler, true);
+        this.fillMoveHandler = null;
+      }
+      if (this.fillUpHandler) {
+        window.removeEventListener('mouseup', this.fillUpHandler, true);
+        this.fillUpHandler = null;
+      }
+      // Clear undo/redo stack to release closure references
+      this.undoRedoStack.clear();
     });
 
     // Clean up column sizing overrides for removed columns
@@ -1398,7 +1423,6 @@ export class DataGridStateService<T> {
     const fillStart = this.fillDragStart;
     let fillDragEnd = { endRow: fillStart.startRow, endCol: fillStart.startCol };
     let liveFillRange: ISelectionRange | null = null;
-    let fillRafId = 0;
     let lastFillMousePos: { cx: number; cy: number } | null = null;
 
     const resolveRange = (cx: number, cy: number): ISelectionRange | null => {
@@ -1418,9 +1442,9 @@ export class DataGridStateService<T> {
 
     const onMove = (e: MouseEvent) => {
       lastFillMousePos = { cx: e.clientX, cy: e.clientY };
-      if (fillRafId) cancelAnimationFrame(fillRafId);
-      fillRafId = requestAnimationFrame(() => {
-        fillRafId = 0;
+      if (this.fillRafId) cancelAnimationFrame(this.fillRafId);
+      this.fillRafId = requestAnimationFrame(() => {
+        this.fillRafId = 0;
         if (!lastFillMousePos) return;
         const newRange = resolveRange(lastFillMousePos.cx, lastFillMousePos.cy);
         if (!newRange) return;
@@ -1437,8 +1461,10 @@ export class DataGridStateService<T> {
     const onUp = () => {
       window.removeEventListener('mousemove', onMove, true);
       window.removeEventListener('mouseup', onUp, true);
+      this.fillMoveHandler = null;
+      this.fillUpHandler = null;
 
-      if (fillRafId) { cancelAnimationFrame(fillRafId); fillRafId = 0; }
+      if (this.fillRafId) { cancelAnimationFrame(this.fillRafId); this.fillRafId = 0; }
 
       if (lastFillMousePos) {
         const flushed = resolveRange(lastFillMousePos.cx, lastFillMousePos.cy);
@@ -1482,13 +1508,15 @@ export class DataGridStateService<T> {
         this.endBatch();
       }
       this.fillDragStart = null;
-
-      // Remove event listeners after mouseup completes
-      window.removeEventListener('mousemove', onMove, true);
-      window.removeEventListener('mouseup', onUp, true);
     };
 
-    window.addEventListener('mousemove', onMove, true);
-    window.addEventListener('mouseup', onUp, true);
+    // Track handlers for cleanup on destroy
+    this.fillMoveHandler = onMove;
+    this.fillUpHandler = onUp;
+
+    this.ngZone.runOutsideAngular(() => {
+      window.addEventListener('mousemove', onMove, true);
+      window.addEventListener('mouseup', onUp, true);
+    });
   }
 }

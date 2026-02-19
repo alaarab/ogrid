@@ -351,7 +351,7 @@ function DataGridTableInner<T>(props: IOGridDataGridProps<T>): React.ReactElemen
     virtualScrollEnabled, visibleRange,
     items, getRowId, emptyState,
     suppressHorizontalScroll, isLoading, loadingMessage,
-    ariaLabel, ariaLabelledBy, columnReorder, density,
+    ariaLabel, ariaLabelledBy, columnReorder, density, rowHeight,
     rowNumberOffset, headerRows, allowOverflowX, fitToContent,
     editCallbacks, interactionHandlers,
     cellDescriptorInputRef, pendingEditorValueRef, popoverAnchorElRef,
@@ -407,7 +407,8 @@ function DataGridTableInner<T>(props: IOGridDataGridProps<T>): React.ReactElemen
     willChange: 'scroll-position',
     '& [data-drag-range]': { bgcolor: 'rgba(33, 115, 70, 0.12) !important' },
     '& [data-drag-anchor]': { bgcolor: 'background.paper !important' },
-  }), [fitToContent, suppressHorizontalScroll, allowOverflowX, isLoading, items.length]);
+    ...(rowHeight ? { '& tbody tr': { height: rowHeight } } : {}),
+  }), [fitToContent, suppressHorizontalScroll, allowOverflowX, isLoading, items.length, rowHeight]);
 
   const renderCellContent = useCallback(
     (item: T, col: IColumnDef<T>, rowIndex: number, colIdx: number): React.ReactNode => {

@@ -18,5 +18,7 @@ export { StatusBar, MarchingAntsOverlay } from '@alaarab/ogrid-vue';
 export { default as GridContextMenu } from './DataGridTable/GridContextMenu.vue';
 export { default as InlineCellEditor } from './DataGridTable/InlineCellEditor.vue';
 
-// Re-export everything from @alaarab/ogrid-vue (which re-exports from @alaarab/ogrid-core)
+// Re-export all from base package for consumer convenience.
+// Note: This prevents tree-shaking of unused utilities.
+// Consider explicit named exports in a future major version.
 export * from '@alaarab/ogrid-vue';

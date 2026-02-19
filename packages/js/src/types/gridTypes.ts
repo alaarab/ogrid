@@ -105,6 +105,9 @@ export interface OGridOptions<T> {
 
   /** Virtual scrolling configuration. */
   virtualScroll?: IVirtualScrollConfig;
+
+  /** Fixed row height in pixels. Overrides default row height (36px). */
+  rowHeight?: number;
 }
 
 /** Events emitted by the OGrid instance. */

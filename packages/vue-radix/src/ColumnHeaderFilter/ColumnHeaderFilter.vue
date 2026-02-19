@@ -45,12 +45,7 @@ const {
 const setHeaderRefEl = (el: any) => { headerRef.value = el as HTMLDivElement; };
 const setPopoverRefEl = (el: any) => { popoverRef.value = el as HTMLDivElement; };
 
-const getSortIcon = () => {
-  if (props.isSorted) {
-    return props.isSortedDescending ? '\u2193' : '\u2191';
-  }
-  return '\u21C5';
-};
+
 </script>
 
 <template>
@@ -61,17 +56,6 @@ const getSortIcon = () => {
       </span>
     </div>
     <div class="header-actions">
-      <button
-        v-if="onSort"
-        type="button"
-        :class="['sort-icon', { 'sort-active': isSorted }]"
-        @click="handlers.handleSortClick"
-        :aria-label="`Sort by ${columnName}`"
-        :title="isSorted ? (isSortedDescending ? 'Sorted descending' : 'Sorted ascending') : 'Sort'"
-      >
-        <span aria-hidden>{{ getSortIcon() }}</span>
-      </button>
-
       <button
         v-if="filterType !== 'none'"
         :class="[
