@@ -32,12 +32,16 @@ export function makeDemoColumns<T extends Project>(): IColumnDef<T>[] {
       columnId: 'name',
       name: 'Project Name',
       sortable: true,
+      editable: true,
       filterable: { type: 'text' },
     },
     {
       columnId: 'status',
       name: 'Status',
       sortable: true,
+      editable: true,
+      cellEditor: 'richSelect' as unknown,
+      cellEditorParams: { values: STATUSES },
       filterable: { type: 'multiSelect', filterField: 'status' },
     },
     {
@@ -57,11 +61,14 @@ export function makeDemoColumns<T extends Project>(): IColumnDef<T>[] {
       name: 'Budget',
       sortable: true,
       compare: (a: T, b: T) => a.budget - b.budget,
+      valueFormatter: (v: unknown) => v != null ? `$${Number(v).toLocaleString()}` : '',
     },
     {
       columnId: 'startDate',
       name: 'Start Date',
+      type: 'date' as const,
       sortable: true,
+      editable: true,
     },
   ] as IColumnDef<T>[];
 }
