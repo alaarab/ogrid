@@ -109,7 +109,7 @@ import { BasePaginationControlsComponent } from '@alaarab/ogrid-angular';
       min-width: 32px;
       height: 32px;
       padding: 0 8px;
-      border: 1px solid var(--ogrid-border, #e0e0e0);
+      border: 1px solid var(--ogrid-border, rgba(0, 0, 0, 0.12));
       border-radius: 4px;
       background: var(--ogrid-bg, #ffffff);
       color: var(--ogrid-fg, #242424);
@@ -118,7 +118,7 @@ import { BasePaginationControlsComponent } from '@alaarab/ogrid-angular';
       transition: all 0.15s ease;
     }
     .ogrid-pagination__btn:hover:not(:disabled) {
-      background: var(--ogrid-hover-bg, #f0f0f0);
+      background: var(--ogrid-hover-bg, rgba(0, 0, 0, 0.04));
       border-color: var(--ogrid-active-border, #0078d4);
     }
     .ogrid-pagination__btn:disabled {
@@ -146,7 +146,7 @@ import { BasePaginationControlsComponent } from '@alaarab/ogrid-angular';
       min-width: 60px;
       height: 32px;
       padding: 4px 8px;
-      border: 1px solid var(--ogrid-border, #e0e0e0);
+      border: 1px solid var(--ogrid-border, rgba(0, 0, 0, 0.12));
       border-radius: 4px;
       background: var(--ogrid-bg, #ffffff);
       color: var(--ogrid-fg, #242424);

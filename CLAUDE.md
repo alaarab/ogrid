@@ -11,7 +11,7 @@ See `.claude/skills/README.md` for details.
 
 ## Project Overview
 
-OGrid is a lightweight, multi-framework data grid library. A pure-TypeScript core provides types, algorithms, and utilities. Framework-specific packages wrap the core for **React** (Fluent UI, Material UI, Radix UI), **Angular** (Angular Material, PrimeNG), **Vue** (Vuetify, PrimeVue), and **vanilla JS**.
+OGrid is a lightweight, multi-framework data grid library. A pure-TypeScript core provides types, algorithms, and utilities. Framework-specific packages wrap the core for **React** (Fluent UI, Material UI, Radix UI), **Angular** (Angular Material, PrimeNG, Radix UI), **Vue** (Vuetify, PrimeVue, Radix UI), and **vanilla JS**.
 
 - **Author:** Ala Arab
 - **License:** MIT
@@ -33,9 +33,11 @@ packages/
   angular/            → @alaarab/ogrid-angular           — Angular v21 services with signals, headless components
   angular-material/   → @alaarab/ogrid-angular-material  — Angular Material v21 implementation
   angular-primeng/    → @alaarab/ogrid-angular-primeng   — PrimeNG v21 implementation
+  angular-radix/      → @alaarab/ogrid-angular-radix     — Radix UI v21 implementation (lightweight)
   vue/                → @alaarab/ogrid-vue               — Vue 3 composables, headless components
   vue-vuetify/        → @alaarab/ogrid-vue-vuetify       — Vuetify 3 implementation
   vue-primevue/       → @alaarab/ogrid-vue-primevue      — PrimeVue 4 implementation
+  vue-radix/          → @alaarab/ogrid-vue-radix         — Radix UI Vue implementation (lightweight)
   js/                 → @alaarab/ogrid-js                — Vanilla JS data grid (class-based, no framework)
   docs/               → @alaarab/ogrid-docs              — Docusaurus documentation site (private)
   examples/           → @alaarab/ogrid-examples          — Vite-powered example apps (private)
@@ -50,10 +52,12 @@ packages/
 │   └── @alaarab/ogrid-react-material
 ├── @alaarab/ogrid-angular       → core
 │   ├── @alaarab/ogrid-angular-material
-│   └── @alaarab/ogrid-angular-primeng
+│   ├── @alaarab/ogrid-angular-primeng
+│   └── @alaarab/ogrid-angular-radix
 ├── @alaarab/ogrid-vue           → core
 │   ├── @alaarab/ogrid-vue-vuetify
-│   └── @alaarab/ogrid-vue-primevue
+│   ├── @alaarab/ogrid-vue-primevue
+│   └── @alaarab/ogrid-vue-radix
 └── @alaarab/ogrid-js            → core
 ```
 
@@ -114,9 +118,9 @@ Angular v21 services with signals (`signal()`, `computed()`, `effect()`). Standa
 
 **Components:** `OGridLayoutComponent`, `StatusBarComponent`, `GridContextMenuComponent`, `SideBarComponent`, `MarchingAntsOverlayComponent`, `EmptyStateComponent`
 
-### Angular UI Packages (`packages/angular-material/`, `packages/angular-primeng/`)
+### Angular UI Packages (`packages/angular-material/`, `packages/angular-primeng/`, `packages/angular-radix/`)
 
-Both expose the same component API and depend on `@alaarab/ogrid-angular`:
+All three expose the same component API and depend on `@alaarab/ogrid-angular`:
 - `OGridComponent` — Top-level data table
 - `DataGridTableComponent` — Lower-level grid
 - `ColumnHeaderFilterComponent` — Column filtering UI
@@ -137,9 +141,9 @@ Vue 3 Composition API composables using `ref()`, `computed()`, `watch()`. Depend
 
 **Utilities:** `getHeaderFilterConfig`, `getCellRenderDescriptor`, `resolveCellDisplayContent`, `resolveCellStyle`, `buildInlineEditorProps`, `buildPopoverEditorProps`, `getCellInteractionProps`
 
-### Vue UI Packages (`packages/vue-vuetify/`, `packages/vue-primevue/`)
+### Vue UI Packages (`packages/vue-vuetify/`, `packages/vue-primevue/`, `packages/vue-radix/`)
 
-Both expose the same component API and depend on `@alaarab/ogrid-vue`:
+All three expose the same component API and depend on `@alaarab/ogrid-vue`:
 - `OGrid` — Top-level data table
 - `DataGridTable` — Lower-level grid (with InlineCellEditor, StatusBar, GridContextMenu)
 - `ColumnHeaderFilter` — Column filtering UI (with TextFilterPopover, MultiSelectFilterPopover, PeopleFilterPopover)
@@ -314,7 +318,7 @@ GitHub Actions (`.github/workflows/ci.yml`): push to `main` + PRs. Node 22, ubun
 5. **Naming** — `I` prefix for interfaces (`IColumnDef`, `IDataSource`).
 6. **Test co-location** — Tests in `__tests__/` dirs. Each framework uses native testing tools.
 7. **Headless architecture** — Core owns types and utilities; React owns hooks and state logic; UI packages are thin view layers.
-8. **Feature parity** — All UI packages within each framework must support the same features and pass the same tests. Cross-framework parity: React (3 packages), Angular (2 packages), Vue (2 packages), and JS (1 package) all share the same headless core and expose equivalent APIs.
+8. **Feature parity** — All UI packages within each framework must support the same features and pass the same tests. Cross-framework parity: React (3 packages), Angular (3 packages), Vue (3 packages), and JS (1 package) all share the same headless core and expose equivalent APIs.
 9. **Type deduplication** — React's `IColumnDef<T>` extends Core's `IColumnDef<T>` (not a duplicate). React-specific additions (`renderCell`, `cellStyle`, React `cellEditor` types) are in the extension. `dataGridTypes.ts` re-exports shared types from Core. Safe casts (`as IColumnDef<T>[]`) are used at framework boundaries where Core utilities return Core types.
 
 ## Pre-Commit Verification (MANDATORY)
@@ -367,8 +371,8 @@ git status
 - [ ] Implementation in core (headless hooks/utils) when possible — avoid duplicating logic in UI packages.
 - [ ] If UI package changes are needed, update **all** UI packages equally:
   - **React:** Radix, Fluent, Material (3 packages)
-  - **Angular:** Angular Material, PrimeNG (2 packages)
-  - **Vue:** Vuetify, PrimeVue (2 packages)
+  - **Angular:** Angular Material, PrimeNG, Radix (3 packages)
+  - **Vue:** Vuetify, PrimeVue, Radix (3 packages)
   - **JS:** ogrid-js (1 package)
 - [ ] Types exported from `core/src/types/index.ts` and `core/src/index.ts` as needed.
 
@@ -416,15 +420,15 @@ When any feature changes, these artifacts must stay in sync:
 | **React hooks** | 1 (shared) | `packages/react/src/` |
 | **React UI** | 3 packages | `packages/react-{radix,fluent,material}/` |
 | **Angular services** | 1 (shared) | `packages/angular/src/` |
-| **Angular UI** | 2 packages | `packages/angular-{material,primeng}/` |
+| **Angular UI** | 3 packages | `packages/angular-{material,primeng,radix}/` |
 | **Vue composables** | 1 (shared) | `packages/vue/src/` |
-| **Vue UI** | 2 packages | `packages/vue-{vuetify,primevue}/` |
+| **Vue UI** | 3 packages | `packages/vue-{vuetify,primevue,radix}/` |
 | **Vanilla JS** | 1 package | `packages/js/src/` |
 | **Tests** | 14 packages | All `__tests__/` dirs — native testing tools per framework |
 | **Storybook** | 3 (React UI) | `packages/react-{radix,fluent,material}/src/stories/` |
 | **Feature docs** | 1 file per feature | `packages/docs/docs/features/*.mdx` — 4 framework tabs each |
 | **Demo components** | 1 per feature | `packages/docs/src/components/demos/*Demo.tsx` |
-| **Framework showcase** | 1 page | `packages/docs/docs/guides/framework-showcase.mdx` — all 8 UI packages |
+| **Framework showcase** | 1 page | `packages/docs/docs/guides/framework-showcase.mdx` — all 10 UI packages |
 
 ## View Layer Architecture (Phase 2 Complete)
 

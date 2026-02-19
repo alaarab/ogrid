@@ -1,4 +1,4 @@
-import { Component, Input } from '@angular/core';
+import { Component, Input, ChangeDetectionStrategy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import type { IColumnDefinition, SideBarPanelId, IFilters, FilterValue } from '../types';
 // GRID_BORDER_RADIUS used by ogrid-layout, not sidebar
@@ -33,6 +33,7 @@ const PANEL_LABELS: Record<SideBarPanelId, string> = { columns: 'Columns', filte
 @Component({
   selector: 'ogrid-sidebar',
   standalone: true,
+  changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [CommonModule],
   styles: [`
     .ogrid-sidebar-root { display: flex; flex-direction: row; flex-shrink: 0; }

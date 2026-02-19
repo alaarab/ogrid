@@ -1,4 +1,5 @@
 import * as React from 'react';
+import { BaseDropIndicator } from '@alaarab/ogrid-react';
 import styles from './DataGridTable.module.scss';
 
 interface DropIndicatorProps {
@@ -7,10 +8,5 @@ interface DropIndicatorProps {
 }
 
 export function DropIndicator({ dropIndicatorX, wrapperLeft }: DropIndicatorProps): React.ReactElement {
-  return (
-    <div
-      className={styles.dropIndicator}
-      style={{ left: dropIndicatorX - wrapperLeft }}
-    />
-  );
+  return <BaseDropIndicator dropIndicatorX={dropIndicatorX} wrapperLeft={wrapperLeft} className={styles.dropIndicator} />;
 }

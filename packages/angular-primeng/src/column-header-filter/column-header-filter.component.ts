@@ -1,11 +1,10 @@
-import { Component, ElementRef, ViewChild, DestroyRef, inject, effect } from '@angular/core';
-import { CommonModule } from '@angular/common';
+import { Component, ElementRef, ViewChild, DestroyRef, inject, effect, ChangeDetectionStrategy } from '@angular/core';
 import { BaseColumnHeaderFilterComponent } from '@alaarab/ogrid-angular';
 
 @Component({
   selector: 'ogrid-primeng-column-header-filter',
   standalone: true,
-  imports: [CommonModule],
+  changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <div style="display:flex;align-items:center;flex:1;min-width:0;gap:4px">
       <div style="flex:1;min-width:0;overflow:hidden">
@@ -33,9 +32,9 @@ import { BaseColumnHeaderFilterComponent } from '@alaarab/ogrid-angular';
           @if (isFilterOpen()) {
             <div
               #filterPanel
-              style="position:absolute;top:100%;left:0;z-index:200;min-width:200px;background:var(--ogrid-bg, #fff);border:1px solid var(--ogrid-border, #e0e0e0);border-radius:6px;box-shadow:0 2px 8px rgba(0,0,0,0.12);font-weight:normal"
+              style="position:absolute;top:100%;left:0;z-index:1000;min-width:200px;background:var(--ogrid-bg, #fff);border:1px solid var(--ogrid-border, rgba(0, 0, 0, 0.12));border-radius:6px;box-shadow:0 2px 8px rgba(0,0,0,0.12);font-weight:normal"
             >
-              <div style="padding:8px 12px;font-weight:600;font-size:12px;border-bottom:1px solid var(--ogrid-border, #e0e0e0)">
+              <div style="padding:8px 12px;font-weight:600;font-size:12px;border-bottom:1px solid var(--ogrid-border, rgba(0, 0, 0, 0.12))">
                 Filter: {{ columnName }}
               </div>
 
@@ -46,11 +45,11 @@ import { BaseColumnHeaderFilterComponent } from '@alaarab/ogrid-angular';
                     [value]="tempTextValue()"
                     (input)="tempTextValue.set($any($event.target).value)"
                     placeholder="Filter text..."
-                    style="width:100%;box-sizing:border-box;padding:6px 8px;border:1px solid var(--ogrid-border, #e0e0e0);border-radius:4px;font-size:13px;background:var(--ogrid-bg, #fff);color:var(--ogrid-fg, #242424)"
+                    style="width:100%;box-sizing:border-box;padding:6px 8px;border:1px solid var(--ogrid-border, rgba(0, 0, 0, 0.12));border-radius:4px;font-size:13px;background:var(--ogrid-bg, #fff);color:var(--ogrid-fg, #242424)"
                     [attr.aria-label]="'Filter ' + columnName"
                   />
                 </div>
-                <div style="display:flex;justify-content:flex-end;gap:6px;padding:6px 12px;border-top:1px solid var(--ogrid-border, #e0e0e0)">
+                <div style="display:flex;justify-content:flex-end;gap:6px;padding:6px 12px;border-top:1px solid var(--ogrid-border, rgba(0, 0, 0, 0.12))">
                   <button
                     type="button"
                     class="p-button p-button-text p-button-sm"
@@ -74,7 +73,7 @@ import { BaseColumnHeaderFilterComponent } from '@alaarab/ogrid-angular';
                     [value]="searchText()"
                     (input)="searchText.set($any($event.target).value)"
                     placeholder="Search options..."
-                    style="width:100%;box-sizing:border-box;padding:6px 8px;border:1px solid var(--ogrid-border, #e0e0e0);border-radius:4px;font-size:13px;margin-bottom:6px;background:var(--ogrid-bg, #fff);color:var(--ogrid-fg, #242424)"
+                    style="width:100%;box-sizing:border-box;padding:6px 8px;border:1px solid var(--ogrid-border, rgba(0, 0, 0, 0.12));border-radius:4px;font-size:13px;margin-bottom:6px;background:var(--ogrid-bg, #fff);color:var(--ogrid-fg, #242424)"
                     [attr.aria-label]="'Search ' + columnName + ' options'"
                   />
                   @if (isLoadingOptions) {
@@ -98,7 +97,7 @@ import { BaseColumnHeaderFilterComponent } from '@alaarab/ogrid-angular';
                     </div>
                   }
                 </div>
-                <div style="display:flex;justify-content:flex-end;gap:6px;padding:6px 12px;border-top:1px solid var(--ogrid-border, #e0e0e0)">
+                <div style="display:flex;justify-content:flex-end;gap:6px;padding:6px 12px;border-top:1px solid var(--ogrid-border, rgba(0, 0, 0, 0.12))">
                   <button
                     type="button"
                     class="p-button p-button-sm"
@@ -121,7 +120,7 @@ import { BaseColumnHeaderFilterComponent } from '@alaarab/ogrid-angular';
                     [value]="peopleSearchText()"
                     (input)="onPeopleSearchInput($any($event.target).value)"
                     placeholder="Search people..."
-                    style="width:100%;box-sizing:border-box;padding:6px 8px;border:1px solid var(--ogrid-border, #e0e0e0);border-radius:4px;font-size:13px;background:var(--ogrid-bg, #fff);color:var(--ogrid-fg, #242424)"
+                    style="width:100%;box-sizing:border-box;padding:6px 8px;border:1px solid var(--ogrid-border, rgba(0, 0, 0, 0.12));border-radius:4px;font-size:13px;background:var(--ogrid-bg, #fff);color:var(--ogrid-fg, #242424)"
                     [attr.aria-label]="'Search people for ' + columnName"
                   />
                   @if (isPeopleLoading()) {
@@ -147,7 +146,7 @@ import { BaseColumnHeaderFilterComponent } from '@alaarab/ogrid-angular';
                       type="date"
                       [value]="tempDateFrom()"
                       (change)="tempDateFrom.set($any($event.target).value)"
-                      style="flex:1;padding:4px 6px;border:1px solid var(--ogrid-border, #e0e0e0);border-radius:4px;background:var(--ogrid-bg, #fff);color:var(--ogrid-fg, #242424)"
+                      style="flex:1;padding:4px 6px;border:1px solid var(--ogrid-border, rgba(0, 0, 0, 0.12));border-radius:4px;background:var(--ogrid-bg, #fff);color:var(--ogrid-fg, #242424)"
                     />
                   </label>
                   <label style="display:flex;align-items:center;gap:6px;font-size:12px">
@@ -156,11 +155,11 @@ import { BaseColumnHeaderFilterComponent } from '@alaarab/ogrid-angular';
                       type="date"
                       [value]="tempDateTo()"
                       (change)="tempDateTo.set($any($event.target).value)"
-                      style="flex:1;padding:4px 6px;border:1px solid var(--ogrid-border, #e0e0e0);border-radius:4px;background:var(--ogrid-bg, #fff);color:var(--ogrid-fg, #242424)"
+                      style="flex:1;padding:4px 6px;border:1px solid var(--ogrid-border, rgba(0, 0, 0, 0.12));border-radius:4px;background:var(--ogrid-bg, #fff);color:var(--ogrid-fg, #242424)"
                     />
                   </label>
                 </div>
-                <div style="display:flex;justify-content:flex-end;gap:6px;padding:6px 12px;border-top:1px solid var(--ogrid-border, #e0e0e0)">
+                <div style="display:flex;justify-content:flex-end;gap:6px;padding:6px 12px;border-top:1px solid var(--ogrid-border, rgba(0, 0, 0, 0.12))">
                   <button
                     type="button"
                     class="p-button p-button-text p-button-sm"

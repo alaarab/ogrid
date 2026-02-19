@@ -1,11 +1,10 @@
-import { Component } from '@angular/core';
-import { CommonModule } from '@angular/common';
+import { Component, ChangeDetectionStrategy } from '@angular/core';
 import { BaseColumnChooserComponent } from '@alaarab/ogrid-angular';
 
 @Component({
   selector: 'ogrid-primeng-column-chooser',
   standalone: true,
-  imports: [CommonModule],
+  changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <div style="position:relative;display:inline-block">
       <button
@@ -23,7 +22,7 @@ import { BaseColumnChooserComponent } from '@alaarab/ogrid-angular';
 
       @if (open()) {
         <div
-          style="position:absolute;right:0;top:100%;z-index:100;min-width:220px;max-height:320px;overflow-y:auto;background:var(--ogrid-bg, #fff);border:1px solid var(--ogrid-border, #e0e0e0);border-radius:6px;box-shadow:0 2px 8px rgba(0,0,0,0.12);padding:8px 0"
+          style="position:absolute;right:0;top:100%;z-index:1000;min-width:220px;max-height:320px;overflow-y:auto;background:var(--ogrid-bg, #fff);border:1px solid var(--ogrid-border, rgba(0, 0, 0, 0.12));border-radius:6px;box-shadow:0 2px 8px rgba(0,0,0,0.12);padding:8px 0"
         >
           <div style="padding:4px 12px;font-weight:600;font-size:12px;color:var(--ogrid-fg-secondary, rgba(0, 0, 0, 0.6))">
             Select Columns ({{ visibleCount() }} of {{ totalCount() }})
@@ -39,7 +38,7 @@ import { BaseColumnChooserComponent } from '@alaarab/ogrid-angular';
               {{ col.name }}
             </label>
           }
-          <div style="display:flex;gap:4px;padding:8px 12px;border-top:1px solid var(--ogrid-border, #e0e0e0);margin-top:4px">
+          <div style="display:flex;gap:4px;padding:8px 12px;border-top:1px solid var(--ogrid-border, rgba(0, 0, 0, 0.12));margin-top:4px">
             <button
               type="button"
               class="p-button p-button-text p-button-sm"
