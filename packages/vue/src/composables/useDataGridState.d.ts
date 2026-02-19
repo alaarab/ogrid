@@ -12,6 +12,7 @@ export interface DataGridLayoutState<T> {
     totalColCount: number;
     colOffset: number;
     hasCheckboxCol: boolean;
+    hasRowNumbersCol: boolean;
     rowIndexByRowId: Map<RowId, number>;
     containerWidth: number;
     minTableWidth: number;
@@ -23,6 +24,10 @@ export interface DataGridLayoutState<T> {
         widthPx: number;
     }>) => void;
     onColumnResized?: (columnId: string, width: number) => void;
+    /** DOM-measured column widths from the previous layout pass.
+     *  UI packages use these as a minWidth floor to prevent columns from
+     *  shrinking when new data loads (e.g. during server-side pagination). */
+    measuredColumnWidths: Record<string, number>;
 }
 export interface DataGridRowSelectionState {
     selectedRowIds: Set<RowId>;

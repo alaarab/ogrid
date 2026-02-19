@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue';
+import { ref, computed, onMounted, nextTick } from 'vue';
 import type { IColumnDefinition } from '@alaarab/ogrid-vue';
 import {
   useInlineCellEditorState,
@@ -50,12 +50,91 @@ const handleCheckboxChange = (val: boolean) => {
   commit(val);
 };
 
-const handleSelectChange = (e: Event) => {
-  const target = e.target as HTMLSelectElement;
-  commit(target.value);
+const selectWrapperRef = ref<HTMLDivElement | null>(null);
+const selectDropdownRef = ref<HTMLDivElement | null>(null);
+const highlightedIndex = ref(0);
+
+// Initialize highlighted index to current value
+const initIdx = selectValues.value.findIndex((v: unknown) => String(v) === String(props.value));
+highlightedIndex.value = Math.max(initIdx, 0);
+
+const getDisplayText = (value: unknown): string => {
+  const formatValue = props.column.cellEditorParams?.formatValue as ((v: unknown) => string) | undefined;
+  if (formatValue) return formatValue(value);
+  return value != null ? String(value) : '';
+};
+
+const scrollHighlightedIntoView = () => {
+  nextTick(() => {
+    const dropdown = selectDropdownRef.value;
+    if (!dropdown) return;
+    const highlighted = dropdown.children[highlightedIndex.value] as HTMLElement | undefined;
+    highlighted?.scrollIntoView({ block: 'nearest' });
+  });
+};
+
+const handleSelectKeyDown = (e: KeyboardEvent) => {
+  const options = selectValues.value;
+  switch (e.key) {
+    case 'ArrowDown':
+      e.preventDefault();
+      highlightedIndex.value = Math.min(highlightedIndex.value + 1, options.length - 1);
+      scrollHighlightedIntoView();
+      break;
+    case 'ArrowUp':
+      e.preventDefault();
+      highlightedIndex.value = Math.max(highlightedIndex.value - 1, 0);
+      scrollHighlightedIntoView();
+      break;
+    case 'Enter':
+      e.preventDefault();
+      e.stopPropagation();
+      if (options.length > 0 && highlightedIndex.value < options.length) {
+        commit(options[highlightedIndex.value]);
+      }
+      break;
+    case 'Tab':
+      e.preventDefault();
+      if (options.length > 0 && highlightedIndex.value < options.length) {
+        commit(options[highlightedIndex.value]);
+      }
+      break;
+    case 'Escape':
+      e.preventDefault();
+      e.stopPropagation();
+      cancel();
+      break;
+  }
+};
+
+const positionDropdown = () => {
+  const wrapper = selectWrapperRef.value;
+  const dropdown = selectDropdownRef.value;
+  if (!wrapper || !dropdown) return;
+  const rect = wrapper.getBoundingClientRect();
+  const maxH = 200;
+  const spaceBelow = window.innerHeight - rect.bottom;
+  const flipUp = spaceBelow < maxH && rect.top > spaceBelow;
+  dropdown.style.position = 'fixed';
+  dropdown.style.left = `${rect.left}px`;
+  dropdown.style.width = `${rect.width}px`;
+  dropdown.style.maxHeight = `${maxH}px`;
+  dropdown.style.zIndex = '9999';
+  dropdown.style.right = 'auto';
+  if (flipUp) {
+    dropdown.style.top = 'auto';
+    dropdown.style.bottom = `${window.innerHeight - rect.top}px`;
+  } else {
+    dropdown.style.top = `${rect.bottom}px`;
+  }
 };
 
 onMounted(() => {
+  if (selectWrapperRef.value) {
+    selectWrapperRef.value.focus();
+    positionDropdown();
+    return;
+  }
   const input = wrapperRef.value?.querySelector('input');
   if (input) {
     input.focus();
@@ -105,19 +184,24 @@ onMounted(() => {
     />
   </div>
 
-  <!-- Select -->
-  <div v-else-if="editorType === 'select'" class="select-wrapper">
-    <select
-      :value="value !== null && value !== undefined ? String(value) : ''"
-      @change="handleSelectChange"
-      @keydown.esc.prevent="cancel"
-      class="select-editor"
-      autofocus
-    >
-      <option v-for="v in selectValues" :key="String(v)" :value="String(v)">
-        {{ String(v) }}
-      </option>
-    </select>
+  <!-- Select (custom dropdown) -->
+  <div v-else-if="editorType === 'select'" ref="selectWrapperRef" tabindex="0" class="custom-select-wrapper" @keydown="handleSelectKeyDown">
+    <div class="custom-select-display">
+      <span>{{ getDisplayText(value) }}</span>
+      <span class="custom-select-chevron">&#9662;</span>
+    </div>
+    <div ref="selectDropdownRef" role="listbox" class="custom-select-dropdown">
+      <div
+        v-for="(v, i) in selectValues"
+        :key="String(v)"
+        role="option"
+        :aria-selected="i === highlightedIndex"
+        :class="['custom-select-option', { highlighted: i === highlightedIndex }]"
+        @click="() => commit(v)"
+      >
+        {{ getDisplayText(v) }}
+      </div>
+    </div>
   </div>
 
   <!-- Date -->
@@ -148,8 +232,7 @@ onMounted(() => {
 </template>
 
 <style scoped lang="scss">
-.editor-wrapper,
-.select-wrapper {
+.editor-wrapper {
   width: 100%;
   height: 100%;
   display: flex;
@@ -160,8 +243,7 @@ onMounted(() => {
   min-width: 0;
 }
 
-.editor-input,
-.select-editor {
+.editor-input {
   width: 100%;
   padding: 0;
   border: none;
@@ -173,8 +255,55 @@ onMounted(() => {
   min-width: 0;
 }
 
-.select-editor {
+.custom-select-wrapper {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  padding: 6px 10px;
+  box-sizing: border-box;
+  min-width: 0;
+  position: relative;
+  outline: none;
+}
+
+.custom-select-display {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
   cursor: pointer;
+  font-size: 13px;
+  color: inherit;
+}
+
+.custom-select-chevron {
+  margin-left: 4px;
+  font-size: 10px;
+  opacity: 0.5;
+}
+
+.custom-select-dropdown {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  max-height: 200px;
+  overflow-y: auto;
+  background: var(--ogrid-bg, #fff);
+  border: 1px solid var(--ogrid-border, rgba(0, 0, 0, 0.12));
+  z-index: 10;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
+}
+
+.custom-select-option {
+  padding: 6px 8px;
+  cursor: pointer;
+  color: var(--ogrid-fg, #242424);
+
+  &.highlighted {
+    background: var(--ogrid-bg-hover, #e8f0fe);
+  }
 }
 
 .rich-select-wrapper {

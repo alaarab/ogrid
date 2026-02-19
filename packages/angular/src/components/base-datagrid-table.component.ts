@@ -41,6 +41,11 @@ export abstract class BaseDataGridTableComponent<T = unknown> {
   protected lastMouseShift = false;
   readonly columnSizingVersion = signal(0);
 
+  /** DOM-measured column widths from the last layout pass.
+   *  Used as a minWidth floor to prevent columns from shrinking
+   *  when new data loads (e.g. server-side pagination). */
+  readonly measuredColumnWidths = signal<Record<string, number>>({});
+
   // Signal-backed view child elements — set from ngAfterViewInit.
   // @ViewChild is a plain property (not a signal), so effects/computed that read it
   // only evaluate once during construction when the ref is still undefined.
@@ -64,6 +69,37 @@ export abstract class BaseDataGridTableComponent<T = unknown> {
     const tableContainer = this.getTableContainerRef()?.nativeElement ?? null;
     if (wrapper) this.wrapperElSignal.set(wrapper);
     if (tableContainer) this.tableContainerElSignal.set(tableContainer);
+    this.measureColumnWidths();
+  }
+
+  /** Lifecycle hook — re-measure column widths after each view update */
+  ngAfterViewChecked(): void {
+    this.measureColumnWidths();
+  }
+
+  /** Measure actual th widths from the DOM and update the measuredColumnWidths signal.
+   *  Only updates the signal when values actually change, to avoid render loops. */
+  private measureColumnWidths(): void {
+    const wrapper = this.getWrapperRef()?.nativeElement;
+    if (!wrapper) return;
+    const headerCells = wrapper.querySelectorAll<HTMLElement>('th[data-column-id]');
+    if (headerCells.length === 0) return;
+    const measured: Record<string, number> = {};
+    headerCells.forEach((cell) => {
+      const colId = cell.getAttribute('data-column-id');
+      if (colId) measured[colId] = cell.offsetWidth;
+    });
+    // Only update signal if values changed to avoid triggering computed re-evaluations unnecessarily
+    const prev = this.measuredColumnWidths();
+    let changed = Object.keys(measured).length !== Object.keys(prev).length;
+    if (!changed) {
+      for (const key in measured) {
+        if (prev[key] !== measured[key]) { changed = true; break; }
+      }
+    }
+    if (changed) {
+      this.measuredColumnWidths.set(measured);
+    }
   }
 
   // --- Delegated state ---
@@ -178,17 +214,25 @@ export abstract class BaseDataGridTableComponent<T = unknown> {
     const fc = this.freezeCols();
     const props = this.getProps();
     const pinnedCols = props?.pinnedColumns ?? {};
+    const measuredWidths = this.measuredColumnWidths();
+    const sizingOverrides = this.columnSizingOverrides();
     return cols.map((col, colIdx) => {
       const isFreezeCol = fc != null && fc >= 1 && colIdx < fc;
       const runtimePinned = pinnedCols[col.columnId];
       const pinnedLeft = runtimePinned === 'left' || (col as unknown as Record<string, unknown>).pinned === 'left' || (isFreezeCol && colIdx === 0);
       const pinnedRight = runtimePinned === 'right' || (col as unknown as Record<string, unknown>).pinned === 'right';
       const w = this.getColumnWidth(col);
+      // Use previously-measured DOM width as a minWidth floor to prevent columns
+      // from shrinking when new data loads (e.g. server-side pagination).
+      const hasResizeOverride = !!sizingOverrides[col.columnId];
+      const measuredW = measuredWidths[col.columnId];
+      const baseMinWidth = col.minWidth ?? DEFAULT_MIN_COLUMN_WIDTH;
+      const effectiveMinWidth = hasResizeOverride ? w : Math.max(baseMinWidth, measuredW ?? 0);
       return {
         col,
         pinnedLeft,
         pinnedRight,
-        minWidth: col.minWidth ?? DEFAULT_MIN_COLUMN_WIDTH,
+        minWidth: effectiveMinWidth,
         width: w,
       };
     });
@@ -283,6 +327,27 @@ export abstract class BaseDataGridTableComponent<T = unknown> {
   }
 
   // --- Helper methods ---
+
+  /** Lookup effective min-width for a column (includes measured width floor) */
+  getEffectiveMinWidth(col: IColumnDef<T>): number {
+    const layout = this.columnLayouts().find((l) => l.col.columnId === col.columnId);
+    return layout?.minWidth ?? col.minWidth ?? DEFAULT_MIN_COLUMN_WIDTH;
+  }
+
+  /**
+   * Returns derived cell interaction metadata (non-event attributes) for use in templates.
+   * Mirrors React's getCellInteractionProps for the Angular view layer.
+   * Event handlers (mousedown, click, dblclick, contextmenu) are still bound inline in templates.
+   */
+  getCellInteractionProps(descriptor: { isActive: boolean; isInRange: boolean; canEditAny: boolean; globalColIndex: number; rowIndex: number }) {
+    return {
+      tabIndex: descriptor.isActive ? 0 : -1,
+      dataRowIndex: descriptor.rowIndex,
+      dataColIndex: descriptor.globalColIndex,
+      dataInRange: descriptor.isInRange ? 'true' : null,
+      role: descriptor.canEditAny ? 'button' : null,
+    };
+  }
 
   asColumnDef(colDef: unknown): IColumnDef<T> {
     return colDef as IColumnDef<T>;
@@ -405,6 +470,10 @@ export abstract class BaseDataGridTableComponent<T = unknown> {
 
   onResizeStart(event: MouseEvent, col: IColumnDef<T>): void {
     event.preventDefault();
+    // Clear cell selection before resize (like React) so selection outlines don't persist during drag
+    this.state().interaction.setActiveCell(null);
+    this.state().interaction.setSelectionRange(null);
+    this.getWrapperRef()?.nativeElement.focus({ preventScroll: true });
     const startX = event.clientX;
     const startWidth = this.getColumnWidth(col);
     const minWidth = col.minWidth ?? DEFAULT_MIN_COLUMN_WIDTH;

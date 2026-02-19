@@ -1,7 +1,7 @@
 import React, { useMemo, useEffect, useState, useRef } from 'react';
 import { createPortal } from 'react-dom';
-import { getColumnHeaderMenuItems } from '@alaarab/ogrid-core';
-import type { ColumnHeaderMenuInput } from '@alaarab/ogrid-core';
+import { getColumnHeaderMenuItems } from '@alaarab/ogrid-react';
+import type { ColumnHeaderMenuInput } from '@alaarab/ogrid-react';
 import styles from './ColumnHeaderMenu.module.scss';
 
 export interface ColumnHeaderMenuProps {
