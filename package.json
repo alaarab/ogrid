@@ -55,7 +55,7 @@
   },
   "packageManager": "npm@11.6.2",
   "engines": {
-    "node": ">=18",
+    "node": ">=20",
     "npm": ">=10"
   },
   "devDependencies": {
