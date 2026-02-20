@@ -46,9 +46,9 @@ export function createPaginationControlsTests(PaginationControlsComponent: new (
     const comp = createComponent();
     const vm = comp.vm();
     expect(vm).toBeTruthy();
-    expect(vm!.startItem).toBe(11);
-    expect(vm!.endItem).toBe(20);
-    expect(vm!.totalPages).toBe(5);
+    expect(vm?.startItem).toBe(11);
+    expect(vm?.endItem).toBe(20);
+    expect(vm?.totalPages).toBe(5);
   });
 
   it('vm() returns null when totalCount is 0', () => {
@@ -61,21 +61,21 @@ export function createPaginationControlsTests(PaginationControlsComponent: new (
   it('vm() computes totalPages correctly for non-divisible count', () => {
     const comp = createComponent({ totalCount: 53 });
     const vm = comp.vm();
-    expect(vm!.totalPages).toBe(6);
+    expect(vm?.totalPages).toBe(6);
   });
 
   it('vm() shows correct range on first page', () => {
     const comp = createComponent({ currentPage: 1, pageSize: 10, totalCount: 50 });
     const vm = comp.vm();
-    expect(vm!.startItem).toBe(1);
-    expect(vm!.endItem).toBe(10);
+    expect(vm?.startItem).toBe(1);
+    expect(vm?.endItem).toBe(10);
   });
 
   it('vm() shows correct range on last page', () => {
     const comp = createComponent({ currentPage: 5, pageSize: 10, totalCount: 50 });
     const vm = comp.vm();
-    expect(vm!.startItem).toBe(41);
-    expect(vm!.endItem).toBe(50);
+    expect(vm?.startItem).toBe(41);
+    expect(vm?.endItem).toBe(50);
   });
 
   it('pageChange output emits page number', () => {
@@ -95,7 +95,7 @@ export function createPaginationControlsTests(PaginationControlsComponent: new (
       const event = { target: { value: '25' } } as unknown as Event;
       comp.onPageSizeSelect(event);
     } else {
-      comp.onPageSizeChange!('25');
+      comp.onPageSizeChange?.('25');
     }
     expect(emitted).toEqual([25]);
   });

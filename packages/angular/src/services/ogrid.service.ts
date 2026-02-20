@@ -6,6 +6,8 @@ import {
   flattenColumns,
   processClientSideData,
   computeNextSortState,
+  validateColumns,
+  validateRowIds,
 } from '@alaarab/ogrid-core';
 import type {
   RowId,
@@ -23,7 +25,7 @@ import type {
 } from '../types';
 import type { IOGridProps, IOGridDataGridProps } from '../types';
 import type { IColumnDef, IColumnGroupDef, ICellValueChangedEvent } from '../types';
-import type { SideBarFilterColumn } from '../components/sidebar.component';
+import type { SideBarProps } from '../components/sidebar.component';
 
 const DEFAULT_PAGE_SIZE = 25;
 const EMPTY_LOADING_OPTIONS: Record<string, boolean> = {};
@@ -150,9 +152,10 @@ export class OGridService<T> {
   private readonly serverItems = signal<T[]>([]);
   private readonly serverTotalCount = signal<number>(0);
   private readonly serverLoading = signal<boolean>(true);
-  private fetchId = 0;
+  private fetchAbortController: AbortController | null = null;
+  private filterAbortController: AbortController | null = null;
   private readonly refreshCounter = signal<number>(0);
-  private firstDataRendered = false;
+  private readonly firstDataRendered = signal<boolean>(false);
 
   // Side bar state
   private readonly sideBarActivePanel = signal<SideBarPanelId | null>(null);
@@ -181,8 +184,10 @@ export class OGridService<T> {
   });
   readonly filters = computed(() => this.controlledFilters() ?? this.internalFilters());
   readonly visibleColumns = computed(() => {
-    if (this.controlledVisibleColumns()) return this.controlledVisibleColumns()!;
-    if (this.internalVisibleColumnsOverride()) return this.internalVisibleColumnsOverride()!;
+    const controlled = this.controlledVisibleColumns();
+    if (controlled) return controlled;
+    const override = this.internalVisibleColumnsOverride();
+    if (override) return override;
     const cols = this.columns();
     if (cols.length === 0) return new Set<string>();
     const visible = cols.filter((c) => c.defaultVisible !== false).map((c) => c.columnId);
@@ -284,8 +289,8 @@ export class OGridService<T> {
       .map((c) => ({
         columnId: c.columnId,
         name: c.name,
-        filterField: c.filterable!.filterField ?? c.columnId,
-        filterType: c.filterable!.type as 'text' | 'multiSelect' | 'people' | 'date',
+        filterField: c.filterable?.filterField ?? c.columnId,
+        filterType: c.filterable?.type as 'text' | 'multiSelect' | 'people' | 'date',
       })),
   );
 
@@ -308,6 +313,9 @@ export class OGridService<T> {
   private readonly handleSelectionChangeFn = (event: IRowSelectionChangeEvent<T>) => this.handleSelectionChange(event);
   private readonly handleFilterChangeFn = (key: string, value: FilterValue | undefined) => this.handleFilterChange(key, value);
   private readonly clearAllFiltersFn = () => this.setFilters({});
+  private readonly setPageFn = (p: number) => this.setPage(p);
+  private readonly setPageSizeFn = (size: number) => this.setPageSize(size);
+  private readonly handleVisibilityChangeFn = (columnKey: string, isVisible: boolean) => this.handleVisibilityChange(columnKey, isVisible);
 
   // --- Data grid props computed ---
   readonly dataGridProps = computed<IOGridDataGridProps<T>>(() => ({
@@ -355,7 +363,7 @@ export class OGridService<T> {
       hasActiveFilters: this.hasActiveFilters(),
       onClearAll: this.clearAllFiltersFn,
       message: this.emptyState()?.message,
-      render: this.emptyState()?.render as never,
+      render: this.emptyState()?.render,
     },
   }));
 
@@ -363,8 +371,8 @@ export class OGridService<T> {
     page: this.page(),
     pageSize: this.pageSize(),
     displayTotalCount: this.displayTotalCount(),
-    setPage: (p: number) => this.setPage(p),
-    setPageSize: (size: number) => this.setPageSize(size),
+    setPage: this.setPageFn,
+    setPageSize: this.setPageSizeFn,
     pageSizeOptions: this.pageSizeOptions(),
     entityLabelPlural: this.entityLabelPlural(),
   }));
@@ -372,7 +380,7 @@ export class OGridService<T> {
   readonly columnChooser = computed<OGridColumnChooser>(() => ({
     columns: this.columnChooserColumns(),
     visibleColumns: this.visibleColumns(),
-    onVisibilityChange: (columnKey: string, isVisible: boolean) => this.handleVisibilityChange(columnKey, isVisible),
+    onVisibilityChange: this.handleVisibilityChangeFn,
     placement: this.columnChooserPlacement(),
   }));
 
@@ -381,7 +389,7 @@ export class OGridService<T> {
     setFilters: (f: IFilters) => this.setFilters(f),
   }));
 
-  readonly sideBarProps = computed<SideBarFilterColumn[] extends never ? null : unknown>(() => {
+  readonly sideBarProps = computed<SideBarProps | null>(() => {
     const state = this.sideBarState();
     if (!state.isEnabled) return null;
     return {
@@ -401,8 +409,18 @@ export class OGridService<T> {
   });
 
   constructor() {
-    // Server-side data fetching effect
+    // Validate columns once (on first non-empty columns signal)
+    let columnsValidated = false;
     effect(() => {
+      const cols = this.columns();
+      if (!columnsValidated && cols.length > 0) {
+        columnsValidated = true;
+        validateColumns(cols as Parameters<typeof validateColumns>[0]);
+      }
+    });
+
+    // Server-side data fetching effect
+    effect((onCleanup) => {
       const ds = this.dataSource();
       if (!this.isServerSide() || !ds) {
         if (!this.isServerSide()) this.serverLoading.set(false);
@@ -416,36 +434,47 @@ export class OGridService<T> {
       // Read refreshCounter to trigger re-fetches
       this.refreshCounter();
 
-      const id = ++this.fetchId;
+      const controller = new AbortController();
+      this.fetchAbortController = controller;
       this.serverLoading.set(true);
 
       ds.fetchPage({ page, pageSize, sort: { field: sort.field, direction: sort.direction }, filters })
         .then((res) => {
-          if (id !== this.fetchId) return;
+          if (controller.signal.aborted) return;
           this.serverItems.set(res.items);
           this.serverTotalCount.set(res.totalCount);
         })
         .catch((err) => {
-          if (id !== this.fetchId) return;
+          if (controller.signal.aborted) return;
           this.onError()?.(err);
           this.serverItems.set([]);
           this.serverTotalCount.set(0);
         })
         .finally(() => {
-          if (id === this.fetchId) this.serverLoading.set(false);
+          if (!controller.signal.aborted) this.serverLoading.set(false);
         });
+
+      onCleanup(() => {
+        controller.abort();
+      });
     });
 
-    // Fire onFirstDataRendered once
+    // Fire onFirstDataRendered once; also validate row IDs on first data
+    let rowIdsValidated = false;
     effect(() => {
-      if (!this.firstDataRendered && this.displayItems().length > 0) {
-        this.firstDataRendered = true;
+      const items = this.displayItems();
+      if (!this.firstDataRendered() && items.length > 0) {
+        this.firstDataRendered.set(true);
         this.onFirstDataRendered()?.();
+      }
+      if (!rowIdsValidated && items.length > 0) {
+        rowIdsValidated = true;
+        validateRowIds(items, this.getRowId() as (item: typeof items[0]) => import('@alaarab/ogrid-core').RowId);
       }
     });
 
     // Load server filter options
-    effect(() => {
+    effect((onCleanup) => {
       const ds = this.dataSource();
       const fields = this.multiSelectFilterFields();
       const fetcher = ds && 'fetchFilterOptions' in ds && typeof ds.fetchFilterOptions === 'function'
@@ -457,6 +486,9 @@ export class OGridService<T> {
         this.loadingFilterOptions.set({});
         return;
       }
+
+      const controller = new AbortController();
+      this.filterAbortController = controller;
 
       const loading: Record<string, boolean> = {};
       fields.forEach((f) => { loading[f] = true; });
@@ -472,8 +504,13 @@ export class OGridService<T> {
           }
         }),
       ).then(() => {
+        if (controller.signal.aborted) return;
         this.serverFilterOptions.set(results);
         this.loadingFilterOptions.set({});
+      });
+
+      onCleanup(() => {
+        controller.abort();
       });
     });
 
@@ -485,8 +522,13 @@ export class OGridService<T> {
       }
     });
 
-    // Cleanup on destroy — reset callback signals to prevent closure retention
+    // Cleanup on destroy — abort in-flight requests and reset callback signals
     this.destroyRef.onDestroy(() => {
+      this.fetchAbortController?.abort();
+      this.filterAbortController?.abort();
+      this.fetchAbortController = null;
+      this.filterAbortController = null;
+
       this.onPageChange.set(undefined);
       this.onPageSizeChange.set(undefined);
       this.onSortChange.set(undefined);
@@ -644,8 +686,7 @@ export class OGridService<T> {
    */
   unpinColumn(columnId: string): void {
     this.pinnedOverrides.update((prev) => {
-      const next = { ...prev };
-      delete next[columnId];
+      const { [columnId]: _, ...next } = prev;
       return next;
     });
     this.onColumnPinned()?.(columnId, null);
@@ -722,7 +763,7 @@ export class OGridService<T> {
       applyColumnState: (state: Partial<IGridColumnState>) => {
         if (state.visibleColumns) this.setVisibleColumns(new Set(state.visibleColumns));
         if (state.sort) this.setSort(state.sort);
-        if (state.columnOrder && this.onColumnOrderChange()) this.onColumnOrderChange()!(state.columnOrder);
+        if (state.columnOrder) this.onColumnOrderChange()?.(state.columnOrder);
         if (state.columnWidths) this.columnWidthOverrides.set(state.columnWidths);
         if (state.filters) this.setFilters(state.filters);
         if (state.pinnedColumns) this.pinnedOverrides.set(state.pinnedColumns);

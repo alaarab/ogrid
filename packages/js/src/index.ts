@@ -3,13 +3,17 @@ export * from '@alaarab/ogrid-core';
 
 // Shadow core column types with vanilla JS extensions
 export type { IColumnDef, IColumnGroupDef, ICellEditorContext } from './types/columnTypes';
-export type { OGridOptions, OGridEvents, IJsOGridApi } from './types/gridTypes';
+export type { OGridOptions, OGridEvents, IJsOGridApi, CellEvent } from './types/gridTypes';
 
 // Utils
 export { debounce } from './utils';
 
 // Classes
 export { OGrid } from './OGrid';
+export { OGridEventWiring } from './OGridEventWiring';
+export type { InteractionResult, EventWiringCallbacks } from './OGridEventWiring';
+export { OGridRendering } from './OGridRendering';
+export type { OGridRenderingContext } from './OGridRendering';
 export { GridState } from './state/GridState';
 export { EventEmitter } from './state/EventEmitter';
 export { SelectionState } from './state/SelectionState';
@@ -19,6 +23,7 @@ export { UndoRedoState } from './state/UndoRedoState';
 export { ColumnResizeState } from './state/ColumnResizeState';
 export { TableLayoutState } from './state/TableLayoutState';
 export { TableRenderer } from './renderer/TableRenderer';
+export type { TableRendererInteractionState } from './renderer/TableRenderer';
 export { PaginationControls } from './components/PaginationControls';
 export { StatusBar } from './components/StatusBar';
 export { ColumnChooser } from './components/ColumnChooser';

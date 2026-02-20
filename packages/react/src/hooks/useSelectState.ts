@@ -1,4 +1,5 @@
 import { useState, useCallback, useEffect, useRef } from 'react';
+import { getSelectDisplayText } from './useRichSelectState';
 
 export interface UseSelectStateParams {
   values: unknown[];
@@ -25,10 +26,7 @@ export function useSelectState(params: UseSelectStateParams): UseSelectStateResu
   const dropdownRef = useRef<HTMLDivElement | null>(null);
 
   const getDisplayText = useCallback(
-    (value: unknown): string => {
-      if (formatValue) return formatValue(value);
-      return value != null ? String(value) : '';
-    },
+    (value: unknown): string => getSelectDisplayText(value, formatValue),
     [formatValue]
   );
 

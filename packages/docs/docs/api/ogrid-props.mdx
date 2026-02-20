@@ -70,7 +70,7 @@ import { OGrid } from '@alaarab/ogrid-react-material';
 | Name | Type | Default | Description |
 |------|------|---------|-------------|
 | `editable` | `boolean` | `false` | Whether inline cell editing is enabled globally. Individual columns can override this via `IColumnDef.editable`. |
-| `onCellValueChanged` | `(event: ICellValueChangedEvent<T>) => void` | `undefined` | Callback fired after a cell value is committed. The event contains `item`, `columnId`, `field`, `oldValue`, `newValue`, and `rowIndex`. |
+| `onCellValueChanged` | `(event: ICellValueChangedEvent<T>) => void` | `undefined` | Callback fired after a cell value is committed. The event contains `item`, `columnId`, `oldValue`, `newValue`, and `rowIndex`. |
 | `onUndo` | `() => void` | `undefined` | Callback fired when the user triggers undo (Ctrl+Z or context menu). |
 | `onRedo` | `() => void` | `undefined` | Callback fired when the user triggers redo (Ctrl+Y or context menu). |
 | `canUndo` | `boolean` | `false` | Whether undo is available. Controls the enabled state of the undo context menu item. |
@@ -102,23 +102,52 @@ import { OGrid } from '@alaarab/ogrid-react-material';
 |------|------|---------|-------------|
 | `sideBar` | `boolean \| ISideBarDef` | `undefined` | Controls the side bar panel. Pass `true` for default side bar, or an `ISideBarDef` object to configure panels and position. See [Types](./types) for `ISideBarDef`. |
 
+## Column Chooser
+
+| Name | Type | Default | Description |
+|------|------|---------|-------------|
+| `columnChooser` | `boolean \| 'toolbar' \| 'sidebar'` | `true` | Where to render the column chooser. `true`/`'toolbar'` shows it in the toolbar. `'sidebar'` moves it to the sidebar columns panel. `false` hides it entirely. |
+
+## Column Reordering
+
+| Name | Type | Default | Description |
+|------|------|---------|-------------|
+| `columnReorder` | `boolean` | `false` | Enable drag-and-drop column reordering via header cells. See [Column Reordering](../features/column-reordering). |
+
+## Virtual Scrolling
+
+| Name | Type | Default | Description |
+|------|------|---------|-------------|
+| `virtualScroll` | `IVirtualScrollConfig` | `undefined` | Virtual scrolling configuration. See [Virtual Scrolling](../features/virtual-scrolling) and [Types](./types) for `IVirtualScrollConfig`. |
+
 ## Layout
 
 | Name | Type | Default | Description |
 |------|------|---------|-------------|
 | `layoutMode` | `'content' \| 'fill'` | `'fill'` | How the grid sizes itself. `'content'` sizes to fit content. `'fill'` expands to fill its container. |
 | `suppressHorizontalScroll` | `boolean` | `false` | When `true`, disables horizontal scrolling by setting `overflow-x: hidden` on the grid wrapper. |
+| `rowHeight` | `number` | `36` | Fixed row height in pixels. Affects layout and virtual scrolling row height calculation. |
+| `density` | `'compact' \| 'normal' \| 'comfortable'` | `'normal'` | Cell spacing preset. Controls cell padding throughout the grid. |
+| `showRowNumbers` | `boolean` | `false` | Show Excel-style row number column (1, 2, 3...) at the start of the grid. |
 | `className` | `string` | `undefined` | Additional CSS class name applied to the root grid element. |
 | `toolbar` | `ReactNode` | `undefined` | Custom toolbar content rendered in the left side of the primary toolbar strip. |
 | `toolbarBelow` | `ReactNode` | `undefined` | Secondary toolbar row rendered below the primary toolbar. Use for active filter chips, breadcrumbs, or other contextual controls. |
 | `entityLabelPlural` | `string` | `undefined` | Plural label for the entity type (e.g., `"projects"`, `"users"`). Used in status bar text and empty state messages. |
 | `emptyState` | `{ message?: ReactNode; render?: () => ReactNode }` | `undefined` | Custom empty state configuration. Provide `message` for a simple text override, or `render` for a fully custom empty state component. |
 
+## Callbacks
+
+| Name | Type | Default | Description |
+|------|------|---------|-------------|
+| `onFirstDataRendered` | `() => void` | `undefined` | Fired once when the grid first renders with data. Useful for restoring column state. |
+| `onColumnPinned` | `(columnId: string, pinned: 'left' \| 'right' \| null) => void` | `undefined` | Fired when a column is pinned or unpinned. |
+
 ## Error Handling
 
 | Name | Type | Default | Description |
 |------|------|---------|-------------|
 | `onError` | `(error: unknown) => void` | `undefined` | Callback fired when the grid encounters an error (e.g., a failed server-side fetch). |
+| `onCellError` | `(error: Error, errorInfo: React.ErrorInfo) => void` | `undefined` | Callback fired when a cell renderer or custom editor throws an error. |
 
 ## Accessibility
 

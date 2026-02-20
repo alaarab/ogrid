@@ -1,6 +1,6 @@
 {
   "name": "@alaarab/ogrid-vue",
-  "version": "2.0.23",
+  "version": "2.1.0",
   "description": "OGrid Vue – Vue 3 composables, headless components, and utilities for OGrid data grids.",
   "main": "dist/esm/index.js",
   "module": "dist/esm/index.js",
@@ -36,7 +36,7 @@
     "node": ">=18"
   },
   "dependencies": {
-    "@alaarab/ogrid-core": "2.0.23"
+    "@alaarab/ogrid-core": "2.1.0"
   },
   "peerDependencies": {
     "vue": "^3.3.0"
@@ -53,5 +53,12 @@
   ],
   "publishConfig": {
     "access": "public"
-  }
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/alaarab/ogrid.git",
+    "directory": "packages/vue"
+  },
+  "homepage": "https://ogrid.dev",
+  "bugs": "https://github.com/alaarab/ogrid/issues"
 }

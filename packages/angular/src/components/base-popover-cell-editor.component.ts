@@ -70,30 +70,29 @@ export abstract class BasePopoverCellEditorComponent<T = unknown> {
       }
     });
 
-    // Render custom editor component when container is available
-    effect(() => {
+    // Render custom editor component when container is available.
+    // Angular's effect() ignores return values — use onCleanup() for cleanup.
+    effect((onCleanup) => {
       const container = this.editorContainerRef;
       const props = this.editorProps;
       const col = this.column;
       if (!container || !this.showEditor() || typeof col.cellEditor !== 'function') return;
 
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const EditorComponent = col.cellEditor as unknown as any; // ComponentType
+      const EditorComponent = col.cellEditor as unknown as new (...args: unknown[]) => unknown;
       const componentRef = createComponent(EditorComponent, {
         environmentInjector: this.envInjector,
         elementInjector: this.injector,
       });
 
       // Pass props to component instance
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      Object.assign(componentRef.instance as any, props);
+      Object.assign(componentRef.instance as Record<string, unknown>, props);
       componentRef.changeDetectorRef.detectChanges();
 
       // Append to DOM
       container.nativeElement.appendChild(componentRef.location.nativeElement);
 
-      // Cleanup on destroy
-      return () => componentRef.destroy();
+      // Cleanup when effect re-runs or component is destroyed
+      onCleanup(() => componentRef.destroy());
     });
   }
 

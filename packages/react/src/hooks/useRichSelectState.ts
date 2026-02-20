@@ -1,5 +1,11 @@
 import { useState, useCallback, useMemo } from 'react';
 
+/** Shared display text formatter for select and rich-select editors. */
+export function getSelectDisplayText(value: unknown, formatValue?: (v: unknown) => string): string {
+  if (formatValue) return formatValue(value);
+  return value != null ? String(value) : '';
+}
+
 export interface UseRichSelectStateParams {
   values: unknown[];
   formatValue?: (value: unknown) => string;
@@ -29,10 +35,7 @@ export function useRichSelectState(params: UseRichSelectStateParams): UseRichSel
   const [highlightedIndex, setHighlightedIndex] = useState(0);
 
   const getDisplayText = useCallback(
-    (value: unknown): string => {
-      if (formatValue) return formatValue(value);
-      return value != null ? String(value) : '';
-    },
+    (value: unknown): string => getSelectDisplayText(value, formatValue),
     [formatValue]
   );
 

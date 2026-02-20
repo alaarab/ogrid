@@ -154,13 +154,13 @@ export abstract class BaseColumnHeaderFilterComponent {
   }
 
   handleTextApply(): void {
-    this.onTextChange!(this.tempTextValue());
+    if (this.onTextChange) this.onTextChange(this.tempTextValue());
     this.isFilterOpen.set(false);
   }
 
   handleTextClear(): void {
     this.tempTextValue.set('');
-    this.onTextChange!('');
+    if (this.onTextChange) this.onTextChange('');
     this.isFilterOpen.set(false);
   }
 
@@ -188,7 +188,7 @@ export abstract class BaseColumnHeaderFilterComponent {
   }
 
   handleApplyMultiSelect(): void {
-    this.onFilterChange!(Array.from(this.tempSelected()));
+    if (this.onFilterChange) this.onFilterChange(Array.from(this.tempSelected()));
     this.isFilterOpen.set(false);
   }
 
@@ -220,12 +220,12 @@ export abstract class BaseColumnHeaderFilterComponent {
   }
 
   handleUserSelect(user: UserLike): void {
-    this.onUserChange!(user);
+    if (this.onUserChange) this.onUserChange(user);
     this.isFilterOpen.set(false);
   }
 
   handleClearUser(): void {
-    this.onUserChange!(undefined);
+    if (this.onUserChange) this.onUserChange(undefined);
     this.isFilterOpen.set(false);
   }
 
@@ -233,10 +233,12 @@ export abstract class BaseColumnHeaderFilterComponent {
   handleDateApply(): void {
     const from = this.tempDateFrom();
     const to = this.tempDateTo();
-    if (!from && !to) {
-      this.onDateChange!(undefined);
-    } else {
-      this.onDateChange!({ from: from || undefined, to: to || undefined });
+    if (this.onDateChange) {
+      if (!from && !to) {
+        this.onDateChange(undefined);
+      } else {
+        this.onDateChange({ from: from || undefined, to: to || undefined });
+      }
     }
     this.isFilterOpen.set(false);
   }
@@ -244,8 +246,16 @@ export abstract class BaseColumnHeaderFilterComponent {
   handleDateClear(): void {
     this.tempDateFrom.set('');
     this.tempDateTo.set('');
-    this.onDateChange!(undefined);
+    if (this.onDateChange) this.onDateChange(undefined);
     this.isFilterOpen.set(false);
+  }
+
+  /** Clean up debounce timer on destroy. */
+  ngOnDestroy(): void {
+    if (this.peopleDebounceTimer) {
+      clearTimeout(this.peopleDebounceTimer);
+      this.peopleDebounceTimer = null;
+    }
   }
 
   // --- Document click handler (for click-outside to close) ---

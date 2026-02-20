@@ -1,29 +1,16 @@
-import { useMemo, useCallback, useState, useLayoutEffect } from 'react';
+import { useMemo, useCallback } from 'react';
 import type { RefObject } from 'react';
-import { flattenColumns, getDataGridStatusBarConfig, parseValue, computeAggregations } from '../utils';
+import { getDataGridStatusBarConfig, computeAggregations } from '../utils';
 import type { HeaderFilterConfigInput, CellRenderDescriptorInput } from '../utils';
 import type { RowId, IOGridDataGridProps, IStatusBarProps, IColumnDef } from '../types';
-import { CHECKBOX_COLUMN_WIDTH, DEFAULT_MIN_COLUMN_WIDTH } from '@alaarab/ogrid-core';
 import { useRowSelection } from './useRowSelection';
 import { useCellEditing } from './useCellEditing';
 import { useActiveCell } from './useActiveCell';
-import { useCellSelection } from './useCellSelection';
-import { useContextMenu } from './useContextMenu';
-import { useClipboard } from './useClipboard';
-import { useKeyboardNavigation } from './useKeyboardNavigation';
-import { useFillHandle } from './useFillHandle';
-import { useUndoRedo } from './useUndoRedo';
 import { useLatestRef } from './useLatestRef';
-import { useTableLayout } from './useTableLayout';
-import { useColumnPinning } from './useColumnPinning';
-import { useColumnHeaderMenuState } from './useColumnHeaderMenuState';
-
-// Stable no-op handlers used when cellSelection is disabled (module-scope = no re-renders)
-const NOOP = () => {};
-const NOOP_ASYNC = async () => {};
-const NOOP_MOUSE = (_e: React.MouseEvent, _r: number, _c: number) => {};
-const NOOP_KEY = (_e: React.KeyboardEvent) => {};
-const NOOP_CTX = (_e: { clientX: number; clientY: number; preventDefault?: () => void }) => {};
+import { useDataGridLayout } from './useDataGridLayout';
+import { useDataGridEditing } from './useDataGridEditing';
+import { useDataGridInteraction } from './useDataGridInteraction';
+import { useDataGridContextMenu } from './useDataGridContextMenu';
 
 export interface UseDataGridStateParams<T> {
   props: IOGridDataGridProps<T>;
@@ -130,7 +117,7 @@ export interface DataGridCellInteractionState {
   canRedo: boolean;
   onUndo?: () => void;
   onRedo?: () => void;
-  /** True while user is drag-selecting cells (mousedown → mouseup). */
+  /** True while user is drag-selecting cells (mousedown -> mouseup). */
   isDragging: boolean;
 }
 
@@ -196,6 +183,12 @@ export interface UseDataGridStateResult<T> {
 /**
  * Single orchestration hook for DataGridTable. Takes grid props and wrapper ref,
  * returns all derived state and handlers so Fluent/Material/Radix can be thin view layers.
+ *
+ * Internally delegates to focused sub-hooks:
+ * - useDataGridLayout -- column layout, sizing, pinning, header menu
+ * - useDataGridEditing -- cell editing commit/cancel, popover editor
+ * - useDataGridInteraction -- cell selection, keyboard nav, clipboard, fill handle, undo/redo
+ * - useDataGridContextMenu -- context menu state
  */
 export function useDataGridState<T>(
   params: UseDataGridStateParams<T>
@@ -226,59 +219,44 @@ export function useDataGridState<T>(
 
   const cellSelection = cellSelectionProp !== false;
 
-  // Wrap onCellValueChanged with undo/redo tracking — all edits are recorded automatically
-  const undoRedo = useUndoRedo<T>({ onCellValueChanged: onCellValueChangedProp });
-  const onCellValueChanged = undoRedo.onCellValueChanged;
+  // --- Shared state hooks (called at orchestrator level to break circular deps) ---
+  const {
+    editingCell,
+    setEditingCell,
+    pendingEditorValue,
+    setPendingEditorValue,
+  } = useCellEditing();
 
-  // Cast is safe: input columns are React.IColumnDef instances; flattenColumns only extracts leaves.
-  const flatColumnsRaw = useMemo(() => flattenColumns(columns) as IColumnDef<T>[], [columns]);
+  const { activeCell, setActiveCell } = useActiveCell(wrapperRef, editingCell);
 
-  // Apply runtime pin overrides (from applyColumnState or programmatic changes)
-  const flatColumns = useMemo(() => {
-    if (!pinnedColumns || Object.keys(pinnedColumns).length === 0) return flatColumnsRaw;
-    return flatColumnsRaw.map((col) => {
-      const override = pinnedColumns[col.columnId];
-      if (override && col.pinned !== override) {
-        return { ...col, pinned: override };
-      }
-      // If col was pinned by definition but not in overrides, keep original
-      return col;
-    });
-  }, [flatColumnsRaw, pinnedColumns]);
+  // --- 1. Layout, pinning, header menu ---
+  const layoutResult = useDataGridLayout<T>({
+    columns,
+    items,
+    getRowId,
+    visibleColumns,
+    columnOrder,
+    rowSelection,
+    showRowNumbers,
+    initialColumnWidths,
+    onColumnResized,
+    onAutosizeColumn,
+    pinnedColumns,
+    onColumnPinned,
+    sortBy: props.sortBy,
+    sortDirection: props.sortDirection,
+    onColumnSort: props.onColumnSort,
+    wrapperRef,
+  });
 
-  const visibleCols = useMemo(() => {
-    const filtered = visibleColumns
-      ? flatColumns.filter((c) => visibleColumns.has(c.columnId))
-      : flatColumns;
-    if (!columnOrder?.length) return filtered;
-    // Build index map for O(1) lookup instead of repeated O(n) indexOf
-    const orderMap = new Map<string, number>();
-    for (let i = 0; i < columnOrder.length; i++) {
-      orderMap.set(columnOrder[i], i);
-    }
-    return [...filtered].sort((a, b) => {
-      const ia = orderMap.get(a.columnId) ?? -1;
-      const ib = orderMap.get(b.columnId) ?? -1;
-      if (ia === -1 && ib === -1) return 0;
-      if (ia === -1) return 1;
-      if (ib === -1) return -1;
-      return ia - ib;
-    });
-  }, [flatColumns, visibleColumns, columnOrder]);
+  const {
+    visibleCols,
+    visibleColumnCount,
+    colOffset,
+    hasCheckboxCol,
+  } = layoutResult;
 
-  const visibleColumnCount = visibleCols.length;
-  const hasCheckboxCol = rowSelection === 'multiple';
-  const hasRowNumbersCol = !!showRowNumbers;
-  const specialColsCount = (hasCheckboxCol ? 1 : 0) + (hasRowNumbersCol ? 1 : 0);
-  const totalColCount = visibleColumnCount + specialColsCount;
-  const colOffset = specialColsCount;
-
-  const rowIndexByRowId = useMemo(() => {
-    const m = new Map<RowId, number>();
-    items.forEach((item, idx) => m.set(getRowId(item), idx));
-    return m;
-  }, [items, getRowId]);
-
+  // --- 2. Row selection ---
   const rowSelectionResult = useRowSelection({
     items,
     getRowId,
@@ -296,171 +274,56 @@ export function useDataGridState<T>(
     someSelected,
   } = rowSelectionResult;
 
+  // --- 3. Context menu ---
+  const contextMenuResult = useDataGridContextMenu({ cellSelection });
+  const { setContextMenuPosition } = contextMenuResult;
+
+  // --- 4. Interaction (selection, keyboard, clipboard, fill handle, undo/redo) ---
+  const interactionResult = useDataGridInteraction<T>({
+    items,
+    visibleCols,
+    colOffset,
+    hasCheckboxCol,
+    visibleColumnCount,
+    getRowId,
+    editable,
+    onCellValueChangedProp,
+    cellSelection,
+    rowSelection,
+    selectedRowIds,
+    editingCell,
+    setEditingCell,
+    activeCell,
+    setActiveCell,
+    handleRowCheckboxChange,
+    setContextMenuPosition,
+    wrapperRef,
+  });
+
   const {
+    selectionRange,
+    cutRange,
+    copyRange,
+    isDragging,
+    onCellValueChanged,
+  } = interactionResult;
+
+  // --- 5. Editing (commit/cancel logic) ---
+  const editingResult = useDataGridEditing<T>({
     editingCell,
     setEditingCell,
     pendingEditorValue,
     setPendingEditorValue,
-  } = useCellEditing();
-
-  const { activeCell, setActiveCell } = useActiveCell(wrapperRef, editingCell);
-
-  const {
-    selectionRange,
-    setSelectionRange,
-    handleCellMouseDown: handleCellMouseDownBase,
-    handleSelectAllCells,
-    isDragging,
-  } = useCellSelection({
-    colOffset,
-    rowCount: items.length,
-    visibleColCount: visibleCols.length,
-    setActiveCell,
-    wrapperRef,
-  });
-
-  const { contextMenuPosition, setContextMenuPosition, handleCellContextMenu, closeContextMenu } =
-    useContextMenu();
-
-  const { handleCopy, handleCut, handlePaste, cutRange, copyRange, clearClipboardRanges } = useClipboard({
-    items,
     visibleCols,
-    colOffset,
-    selectionRange,
-    activeCell,
-    editable,
+    itemsLength: items.length,
     onCellValueChanged,
-    beginBatch: undoRedo.beginBatch,
-    endBatch: undoRedo.endBatch,
-  });
-
-  const handleCellMouseDown = useCallback(
-    (e: React.MouseEvent, rowIndex: number, globalColIndex: number) => {
-      if (e.button !== 0) return;
-      (wrapperRef as RefObject<HTMLDivElement | null>).current?.focus({ preventScroll: true });
-      clearClipboardRanges();
-      handleCellMouseDownBase(e, rowIndex, globalColIndex);
-    },
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [handleCellMouseDownBase, clearClipboardRanges] // wrapperRef excluded — refs are stable
-  );
-
-  const { handleGridKeyDown } = useKeyboardNavigation({
-    data: { items, visibleCols, colOffset, hasCheckboxCol, visibleColumnCount, getRowId },
-    state: { activeCell, selectionRange, editingCell, selectedRowIds },
-    handlers: { setActiveCell, setSelectionRange, setEditingCell, handleRowCheckboxChange, handleCopy, handleCut, handlePaste, setContextMenu: setContextMenuPosition, onUndo: undoRedo.undo, onRedo: undoRedo.redo, clearClipboardRanges },
-    features: { editable, onCellValueChanged, rowSelection, wrapperRef },
-  });
-
-  const { handleFillHandleMouseDown } = useFillHandle({
-    items,
-    visibleCols,
-    editable,
-    onCellValueChanged,
-    selectionRange,
-    setSelectionRange,
     setActiveCell,
-    colOffset,
-    wrapperRef,
-    beginBatch: undoRedo.beginBatch,
-    endBatch: undoRedo.endBatch,
   });
 
-  const {
-    containerWidth,
-    minTableWidth,
-    desiredTableWidth,
-    columnSizingOverrides,
-    setColumnSizingOverrides,
-  } = useTableLayout({
-    wrapperRef,
-    visibleCols,
-    flatColumns,
-    hasCheckboxCol,
-    initialColumnWidths,
-    onColumnResized,
-  });
-
-  const pinningResult = useColumnPinning({
-    columns: flatColumns,
-    pinnedColumns,
-    onColumnPinned,
-  });
-
-  // Measure actual column widths from the DOM for accurate pinning offsets.
-  // With table-layout: auto, rendered widths can exceed declared minimums.
-  const [measuredColumnWidths, setMeasuredColumnWidths] = useState<Record<string, number>>({});
-  useLayoutEffect(() => {
-    const wrapper = wrapperRef.current;
-    if (!wrapper) return;
-    const headerCells = wrapper.querySelectorAll<HTMLElement>('th[data-column-id]');
-    if (headerCells.length === 0) return;
-    const measured: Record<string, number> = {};
-    headerCells.forEach((cell) => {
-      const colId = cell.getAttribute('data-column-id');
-      if (colId) measured[colId] = cell.offsetWidth;
-    });
-    setMeasuredColumnWidths((prev) => {
-      // Only update if widths actually changed to avoid render loops
-      for (const key in measured) {
-        if (prev[key] !== measured[key]) return measured;
-      }
-      if (Object.keys(prev).length !== Object.keys(measured).length) return measured;
-      return prev;
-    });
-  // Re-measure when columns, container size, or resize overrides change
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [visibleCols, containerWidth, columnSizingOverrides]);
-
-  // Build column width map for pinning offset computation
-  const columnWidthMap = useMemo(() => {
-    const map: Record<string, number> = {};
-    for (const col of visibleCols) {
-      const override = columnSizingOverrides[col.columnId];
-      map[col.columnId] = override
-        ? override.widthPx
-        : (measuredColumnWidths[col.columnId] ?? col.idealWidth ?? col.defaultWidth ?? col.minWidth ?? DEFAULT_MIN_COLUMN_WIDTH);
-    }
-    return map;
-  }, [visibleCols, columnSizingOverrides, measuredColumnWidths]);
-
-  const leftOffsets = useMemo(
-    () => pinningResult.computeLeftOffsets(visibleCols, columnWidthMap, DEFAULT_MIN_COLUMN_WIDTH, hasCheckboxCol, CHECKBOX_COLUMN_WIDTH),
-    [pinningResult, visibleCols, columnWidthMap, hasCheckboxCol]
-  );
-
-  const rightOffsets = useMemo(
-    () => pinningResult.computeRightOffsets(visibleCols, columnWidthMap, DEFAULT_MIN_COLUMN_WIDTH),
-    [pinningResult, visibleCols, columnWidthMap]
-  );
-
-  const aggregation = useMemo(
-    () => computeAggregations(items, visibleCols, cellSelection ? selectionRange : null),
-    [items, visibleCols, selectionRange, cellSelection]
-  );
-
-  const statusBarConfig = useMemo(
-    () => {
-      const base = getDataGridStatusBarConfig(
-        statusBar as boolean | IStatusBarProps | undefined,
-        items.length,
-        selectedRowIds.size
-      );
-      if (!base) return null;
-      return { ...base, aggregation: aggregation ?? undefined };
-    },
-    [statusBar, items.length, selectedRowIds.size, aggregation]
-  );
-
-  const showEmptyInGrid = items.length === 0 && !!emptyState && !props.isLoading;
-  const hasCellSelection = selectionRange != null || activeCell != null;
-
-  // --- View-model inputs (shared across all 3 DataGridTables) ---
-
+  // --- 6. View models ---
   const {
     sortBy,
     sortDirection,
-    onColumnSort,
     filters,
     onFilterChange,
     filterOptions,
@@ -468,57 +331,23 @@ export function useDataGridState<T>(
     peopleSearch,
   } = props;
 
-  // Stabilize callbacks via refs — headerFilterInput only re-creates when data changes,
-  // not when callback identities change (which happens on unrelated state updates).
-  const onColumnSortRef = useLatestRef(onColumnSort);
   const onFilterChangeRef = useLatestRef(onFilterChange);
   const peopleSearchRef = useLatestRef(peopleSearch);
 
-  // Stable callback wrappers that delegate to refs
-  const stableOnColumnSort = useCallback(
-    (columnKey: string, direction?: 'asc' | 'desc' | null) => onColumnSortRef.current?.(columnKey, direction),
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    []
-  );
-
-  // Autosize callback — updates internal column sizing state + notifies external listener
-  const handleAutosizeColumn = useCallback(
-    (columnId: string, width: number) => {
-      setColumnSizingOverrides((prev) => ({ ...prev, [columnId]: { widthPx: width } }));
-      (onAutosizeColumn ?? onColumnResized)?.(columnId, width);
-    },
-    [setColumnSizingOverrides, onAutosizeColumn, onColumnResized]
-  );
-
-  const headerMenuResult = useColumnHeaderMenuState({
-    pinnedColumns: pinningResult.pinnedColumns,
-    onPinColumn: pinningResult.pinColumn,
-    onUnpinColumn: pinningResult.unpinColumn,
-    sortBy,
-    sortDirection,
-    onColumnSort: stableOnColumnSort,
-    onColumnResized,
-    onAutosizeColumn: handleAutosizeColumn,
-    columns: flatColumns,
-    data: items,
-    getRowId: getRowId as (item: unknown) => string | number,
-  });
   const stableOnFilterChange = useCallback(
     (...args: Parameters<NonNullable<typeof onFilterChange>>) => onFilterChangeRef.current?.(...args),
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    []
+    [onFilterChangeRef]
   );
   const stablePeopleSearch = useCallback(
     (...args: Parameters<NonNullable<typeof peopleSearch>>) => peopleSearchRef.current?.(...args) ?? Promise.resolve([]),
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    []
+    [peopleSearchRef]
   );
 
   const headerFilterInput: HeaderFilterConfigInput = useMemo(
     () => ({
       sortBy,
       sortDirection,
-      onColumnSort: stableOnColumnSort,
+      onColumnSort: layoutResult.stableOnColumnSort,
       filters,
       onFilterChange: stableOnFilterChange,
       filterOptions,
@@ -528,7 +357,7 @@ export function useDataGridState<T>(
     [
       sortBy,
       sortDirection,
-      stableOnColumnSort,
+      layoutResult.stableOnColumnSort,
       filters,
       stableOnFilterChange,
       filterOptions,
@@ -567,146 +396,44 @@ export function useDataGridState<T>(
     ]
   );
 
-  // --- Cell edit helpers ---
-
-  const [popoverAnchorEl, setPopoverAnchorEl] = useState<HTMLElement | null>(null);
-
-  const visibleColsRef = useLatestRef(visibleCols);
-  const itemsLengthRef = useLatestRef(items.length);
-
-  const commitCellEdit = useCallback(
-    (
-      item: T,
-      columnId: string,
-      oldValue: unknown,
-      newValue: unknown,
-      rowIndex: number,
-      globalColIndex: number
-    ) => {
-      // Validate via valueParser before committing
-      const col = visibleColsRef.current.find((c) => c.columnId === columnId);
-      if (col) {
-        const result = parseValue(newValue, oldValue, item, col);
-        if (!result.valid) {
-          // Reject — cancel the edit
-          setEditingCell(null);
-          setPopoverAnchorEl(null);
-          setPendingEditorValue(undefined);
-          return;
-        }
-        newValue = result.value;
-      }
-
-      onCellValueChanged?.({
-        item,
-        columnId,
-        oldValue,
-        newValue,
-        rowIndex,
-      });
-      setEditingCell(null);
-      setPopoverAnchorEl(null);
-      setPendingEditorValue(undefined);
-      // Advance to next row for inline editors
-      if (rowIndex < itemsLengthRef.current - 1) {
-        setActiveCell({ rowIndex: rowIndex + 1, columnIndex: globalColIndex });
-      }
-    },
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [onCellValueChanged, setEditingCell, setPendingEditorValue, setActiveCell]
+  const aggregation = useMemo(
+    () => computeAggregations(items, visibleCols, cellSelection ? selectionRange : null),
+    [items, visibleCols, selectionRange, cellSelection]
   );
 
-  const cancelPopoverEdit = useCallback(() => {
-    setEditingCell(null);
-    setPopoverAnchorEl(null);
-    setPendingEditorValue(undefined);
-  }, [setEditingCell, setPendingEditorValue]);
+  const statusBarConfig = useMemo(
+    () => {
+      const base = getDataGridStatusBarConfig(
+        statusBar as boolean | IStatusBarProps | undefined,
+        items.length,
+        selectedRowIds.size
+      );
+      if (!base) return null;
+      return { ...base, aggregation: aggregation ?? undefined };
+    },
+    [statusBar, items.length, selectedRowIds.size, aggregation]
+  );
 
-  // --- Memoize each sub-object so downstream consumers only re-render when their slice changes ---
+  const showEmptyInGrid = items.length === 0 && !!emptyState && !props.isLoading;
 
-  const layoutState = useMemo<DataGridLayoutState<T>>(() => ({
-    flatColumns, visibleCols, visibleColumnCount, totalColCount, colOffset,
-    hasCheckboxCol, hasRowNumbersCol, rowIndexByRowId, containerWidth, minTableWidth,
-    desiredTableWidth, columnSizingOverrides, setColumnSizingOverrides, onColumnResized,
-    measuredColumnWidths,
-  }), [
-    flatColumns, visibleCols, visibleColumnCount, totalColCount, colOffset,
-    hasCheckboxCol, hasRowNumbersCol, rowIndexByRowId, containerWidth, minTableWidth,
-    desiredTableWidth, columnSizingOverrides, setColumnSizingOverrides, onColumnResized,
-    measuredColumnWidths,
-  ]);
+  // --- Memoize remaining sub-objects ---
 
   const rowSelectionState = useMemo<DataGridRowSelectionState>(() => ({
     selectedRowIds, updateSelection, handleRowCheckboxChange,
     handleSelectAll, allSelected, someSelected,
   }), [selectedRowIds, updateSelection, handleRowCheckboxChange, handleSelectAll, allSelected, someSelected]);
 
-  const editingState = useMemo<DataGridEditingState<T>>(() => ({
-    editingCell, setEditingCell, pendingEditorValue, setPendingEditorValue,
-    commitCellEdit, cancelPopoverEdit, popoverAnchorEl, setPopoverAnchorEl,
-  }), [editingCell, setEditingCell, pendingEditorValue, setPendingEditorValue, commitCellEdit, cancelPopoverEdit, popoverAnchorEl, setPopoverAnchorEl]);
-
-  const interactionState = useMemo<DataGridCellInteractionState>(() => ({
-    activeCell: cellSelection ? activeCell : null,
-    setActiveCell: cellSelection ? setActiveCell : (NOOP as typeof setActiveCell),
-    selectionRange: cellSelection ? selectionRange : null,
-    setSelectionRange: cellSelection ? setSelectionRange : (NOOP as typeof setSelectionRange),
-    handleCellMouseDown: cellSelection ? handleCellMouseDown : (NOOP_MOUSE as typeof handleCellMouseDown),
-    handleSelectAllCells: cellSelection ? handleSelectAllCells : NOOP,
-    hasCellSelection: cellSelection ? hasCellSelection : false,
-    handleGridKeyDown: cellSelection ? handleGridKeyDown : (NOOP_KEY as typeof handleGridKeyDown),
-    handleFillHandleMouseDown: cellSelection ? handleFillHandleMouseDown : (NOOP as typeof handleFillHandleMouseDown),
-    handleCopy: cellSelection ? handleCopy : NOOP,
-    handleCut: cellSelection ? handleCut : NOOP,
-    handlePaste: cellSelection ? handlePaste : (NOOP_ASYNC as typeof handlePaste),
-    cutRange: cellSelection ? cutRange : null,
-    copyRange: cellSelection ? copyRange : null,
-    clearClipboardRanges: cellSelection ? clearClipboardRanges : NOOP,
-    canUndo: undoRedo.canUndo,
-    canRedo: undoRedo.canRedo,
-    onUndo: undoRedo.undo,
-    onRedo: undoRedo.redo,
-    isDragging: cellSelection ? isDragging : false,
-  }), [
-    cellSelection, activeCell, setActiveCell, selectionRange, setSelectionRange,
-    handleCellMouseDown, handleSelectAllCells, hasCellSelection, handleGridKeyDown,
-    handleFillHandleMouseDown, handleCopy, handleCut, handlePaste, cutRange, copyRange,
-    clearClipboardRanges, undoRedo.canUndo, undoRedo.canRedo, undoRedo.undo, undoRedo.redo,
-    isDragging,
-  ]);
-
-  const contextMenuState = useMemo<DataGridContextMenuState>(() => ({
-    menuPosition: cellSelection ? contextMenuPosition : null,
-    setMenuPosition: cellSelection ? setContextMenuPosition : (NOOP as typeof setContextMenuPosition),
-    handleCellContextMenu: cellSelection ? handleCellContextMenu : (NOOP_CTX as typeof handleCellContextMenu),
-    closeContextMenu: cellSelection ? closeContextMenu : NOOP,
-  }), [cellSelection, contextMenuPosition, setContextMenuPosition, handleCellContextMenu, closeContextMenu]);
-
   const viewModelsState = useMemo<DataGridViewModelState<T>>(() => ({
     headerFilterInput, cellDescriptorInput, statusBarConfig, showEmptyInGrid, onCellError,
   }), [headerFilterInput, cellDescriptorInput, statusBarConfig, showEmptyInGrid, onCellError]);
 
-  const pinningState = useMemo<DataGridPinningState>(() => ({
-    pinnedColumns: pinningResult.pinnedColumns,
-    pinColumn: pinningResult.pinColumn,
-    unpinColumn: pinningResult.unpinColumn,
-    isPinned: pinningResult.isPinned,
-    leftOffsets,
-    rightOffsets,
-    headerMenu: headerMenuResult,
-  }), [
-    pinningResult.pinnedColumns, pinningResult.pinColumn, pinningResult.unpinColumn,
-    pinningResult.isPinned, leftOffsets, rightOffsets,
-    headerMenuResult,
-  ]);
-
   return {
-    layout: layoutState,
+    layout: layoutResult.layout,
     rowSelection: rowSelectionState,
-    editing: editingState,
-    interaction: interactionState,
-    contextMenu: contextMenuState,
+    editing: editingResult.editing,
+    interaction: interactionResult.interaction,
+    contextMenu: contextMenuResult.contextMenu,
     viewModels: viewModelsState,
-    pinning: pinningState,
+    pinning: layoutResult.pinning,
   };
 }

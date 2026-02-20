@@ -1,4 +1,4 @@
-import { useMemo, useCallback } from 'react';
+import { useMemo } from 'react';
 import { getPaginationViewModel } from '../utils';
 
 export interface UsePaginationControlsProps {
@@ -14,7 +14,7 @@ export interface UsePaginationControlsProps {
 export interface UsePaginationControlsResult {
   labelPlural: string;
   vm: ReturnType<typeof getPaginationViewModel>;
-  handlePageSizeChange: (value: number) => void;
+  handlePageSizeChange: (pageSize: number) => void;
 }
 
 /**
@@ -31,16 +31,9 @@ export function usePaginationControls(props: UsePaginationControlsProps): UsePag
     [currentPage, pageSize, totalCount, pageSizeOptions]
   );
 
-  const handlePageSizeChange = useCallback(
-    (value: number) => {
-      onPageSizeChange(value);
-    },
-    [onPageSizeChange]
-  );
-
   return {
     labelPlural,
     vm,
-    handlePageSizeChange,
+    handlePageSizeChange: onPageSizeChange,
   };
 }

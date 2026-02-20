@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { useCallback, useMemo } from 'react';
+import { useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import {
   Table,
@@ -30,6 +30,7 @@ import type {
 } from '@alaarab/ogrid-react';
 import {
   useDataGridTableOrchestration,
+  useColumnMeta,
   getHeaderFilterConfig,
   getCellRenderDescriptor,
   MarchingAntsOverlay,
@@ -40,7 +41,6 @@ import {
   getCellInteractionProps,
   areGridRowPropsEqual,
   CellErrorBoundary,
-  DEFAULT_MIN_COLUMN_WIDTH,
   GRID_ROOT_STYLE,
   CURSOR_CELL_STYLE,
   POPOVER_ANCHOR_STYLE,
@@ -134,59 +134,21 @@ function DataGridTableInner<T>(props: IOGridDataGridProps<T>): React.ReactElemen
     headerMenu,
   } = o;
 
-  // Pre-compute column styles and classNames (avoids per-cell object creation in the row loop)
-  const columnMeta = useMemo(() => {
-    const cellStyles: Record<string, React.CSSProperties> = {};
-    const cellClasses: Record<string, string> = {};
-    const hdrStyles: Record<string, React.CSSProperties> = {};
-    const hdrClasses: Record<string, string> = {};
-
-    for (let i = 0; i < visibleCols.length; i++) {
-      const col = visibleCols[i];
-      const columnWidth = getColumnWidth(col);
-      const hasExplicitWidth = !!(columnSizingOverrides[col.columnId] || col.idealWidth != null || col.defaultWidth != null);
-      const isPinnedLeft = pinning.pinnedColumns[col.columnId] === 'left';
-      const isPinnedRight = pinning.pinnedColumns[col.columnId] === 'right';
-
-      const hasResizeOverride = !!columnSizingOverrides[col.columnId];
-      const isPinned = isPinnedLeft || isPinnedRight;
-      // Use previously-measured DOM width as a minWidth floor to prevent columns
-      // from shrinking when new data loads (e.g. server-side pagination).
-      const measuredW = measuredColumnWidths[col.columnId];
-      const baseMinWidth = col.minWidth ?? DEFAULT_MIN_COLUMN_WIDTH;
-      const effectiveMinWidth = hasResizeOverride ? columnWidth : Math.max(baseMinWidth, measuredW ?? 0);
-
-      cellStyles[col.columnId] = {
-        minWidth: effectiveMinWidth,
-        width: hasExplicitWidth ? columnWidth : undefined,
-        maxWidth: hasExplicitWidth ? columnWidth : undefined,
-        textAlign: col.type === 'numeric' ? 'right' : col.type === 'boolean' ? 'center' : undefined,
-        // Fluent UI's TableCell injects atomic CSS `position: relative` which overrides the
-        // shared `.pinnedColLeft { position: sticky }` class. Inline style wins over atomic CSS.
-        ...(isPinned ? { position: 'sticky' as const } : undefined),
-        ...(isPinnedLeft && pinning.leftOffsets[col.columnId] != null ? { left: pinning.leftOffsets[col.columnId] } : undefined),
-        ...(isPinnedRight && pinning.rightOffsets[col.columnId] != null ? { right: pinning.rightOffsets[col.columnId] } : undefined),
-      };
-
-      hdrStyles[col.columnId] = {
-        minWidth: effectiveMinWidth,
-        width: hasExplicitWidth ? columnWidth : undefined,
-        maxWidth: hasExplicitWidth ? columnWidth : undefined,
-        ...(isPinned ? { position: 'sticky' as const } : undefined),
-        ...(isPinnedLeft && pinning.leftOffsets[col.columnId] != null ? { left: pinning.leftOffsets[col.columnId] } : undefined),
-        ...(isPinnedRight && pinning.rightOffsets[col.columnId] != null ? { right: pinning.rightOffsets[col.columnId] } : undefined),
-      };
-
-      const parts: string[] = [];
-      if (isPinnedLeft) parts.push(styles.pinnedColLeft);
-      if (isPinnedRight) parts.push(styles.pinnedColRight);
-      const cn = parts.join(' ');
-      cellClasses[col.columnId] = cn;
-      hdrClasses[col.columnId] = cn;
-    }
-
-    return { cellStyles, cellClasses, hdrStyles, hdrClasses };
-  }, [visibleCols, getColumnWidth, columnSizingOverrides, measuredColumnWidths, pinning.pinnedColumns, pinning.leftOffsets, pinning.rightOffsets]);
+  // Pre-compute column styles and classNames via shared hook (avoids per-cell object creation).
+  // addStickyPosition=true: Fluent UI's TableCell injects atomic `position: relative` via CSS-in-JS,
+  // overriding the shared `.pinnedColLeft { position: sticky }` class. Inline style wins over atomic CSS.
+  const columnMeta = useColumnMeta({
+    visibleCols,
+    getColumnWidth,
+    columnSizingOverrides,
+    measuredColumnWidths,
+    pinnedColumns: pinning.pinnedColumns,
+    leftOffsets: pinning.leftOffsets,
+    rightOffsets: pinning.rightOffsets,
+    pinnedColLeftClass: styles.pinnedColLeft,
+    pinnedColRightClass: styles.pinnedColRight,
+    addStickyPosition: true,
+  });
 
   // renderCellContent reads volatile state from refs -- keeps function identity stable so
   // GridRow's React.memo comparator can skip rows whose selection state hasn't changed.
@@ -257,8 +219,7 @@ function DataGridTableInner<T>(props: IOGridDataGridProps<T>): React.ReactElemen
         </CellErrorBoundary>
       );
     },
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- *Ref vars are stable refs from useLatestRef
-    [editCallbacks, interactionHandlers, handleFillHandleMouseDown, setPopoverAnchorEl, cancelPopoverEdit, getRowId, onCellError]
+    [editCallbacks, interactionHandlers, handleFillHandleMouseDown, setPopoverAnchorEl, cancelPopoverEdit, getRowId, onCellError, cellDescriptorInputRef, pendingEditorValueRef, popoverAnchorElRef]
   );
 
   return (
@@ -334,7 +295,8 @@ function DataGridTableInner<T>(props: IOGridDataGridProps<T>): React.ReactElemen
                           );
                         }
                         // Leaf cell
-                        const col = cell.columnDef! as IColumnDef<T>;
+                        if (!cell.columnDef) return null;
+                        const col = cell.columnDef as IColumnDef<T>;
 
                         // Determine aria-sort value for sorted columns
                         const isSorted = props.sortBy === col.columnId;

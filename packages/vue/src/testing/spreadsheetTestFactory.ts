@@ -318,7 +318,7 @@ export function createSpreadsheetTests(): void {
       const e = new KeyboardEvent('keydown', { key: 'ArrowDown', shiftKey: true });
       Object.defineProperty(e, 'preventDefault', { value: jest.fn() });
       handleGridKeyDown(e);
-      expect(selectionRange.value!.endRow).toBe(1);
+      expect(selectionRange.value?.endRow).toBe(1);
     });
 
     it('Tab moves to next column and wraps rows', () => {
@@ -341,8 +341,8 @@ export function createSpreadsheetTests(): void {
       const e = new KeyboardEvent('keydown', { key: 'Home' });
       Object.defineProperty(e, 'preventDefault', { value: jest.fn() });
       handleGridKeyDown(e);
-      expect(activeCell.value!.columnIndex).toBe(0);
-      expect(activeCell.value!.rowIndex).toBe(1);
+      expect(activeCell.value?.columnIndex).toBe(0);
+      expect(activeCell.value?.rowIndex).toBe(1);
     });
 
     it('End moves to last column', () => {
@@ -350,7 +350,7 @@ export function createSpreadsheetTests(): void {
       const e = new KeyboardEvent('keydown', { key: 'End' });
       Object.defineProperty(e, 'preventDefault', { value: jest.fn() });
       handleGridKeyDown(e);
-      expect(activeCell.value!.columnIndex).toBe(1);
+      expect(activeCell.value?.columnIndex).toBe(1);
     });
 
     it('Enter opens editor on editable cell', () => {
@@ -359,8 +359,8 @@ export function createSpreadsheetTests(): void {
       Object.defineProperty(e, 'preventDefault', { value: jest.fn() });
       handleGridKeyDown(e);
       expect(editingCell.value).not.toBeNull();
-      expect(editingCell.value!.rowId).toBe('1');
-      expect(editingCell.value!.columnId).toBe('name');
+      expect(editingCell.value?.rowId).toBe('1');
+      expect(editingCell.value?.columnId).toBe('name');
     });
 
     it('F2 opens editor on editable cell', () => {
@@ -412,7 +412,7 @@ export function createSpreadsheetTests(): void {
       expect(undoRedo.canRedo.value).toBe(false);
 
       // Make an edit
-      undoRedo.onCellValueChanged!({
+      undoRedo.onCellValueChanged?.({
         item: fixtureRows[0],
         columnId: 'name',
         oldValue: 'Alpha',
@@ -434,7 +434,7 @@ export function createSpreadsheetTests(): void {
       const onCellValueChanged = jest.fn();
       const undoRedo = useUndoRedo<FixtureRow>({ onCellValueChanged });
 
-      undoRedo.onCellValueChanged!({
+      undoRedo.onCellValueChanged?.({
         item: fixtureRows[0],
         columnId: 'name',
         oldValue: 'Alpha',
@@ -455,10 +455,10 @@ export function createSpreadsheetTests(): void {
       const undoRedo = useUndoRedo<FixtureRow>({ onCellValueChanged });
 
       undoRedo.beginBatch();
-      undoRedo.onCellValueChanged!({
+      undoRedo.onCellValueChanged?.({
         item: fixtureRows[0], columnId: 'name', oldValue: 'Alpha', newValue: 'X', rowIndex: 0,
       });
-      undoRedo.onCellValueChanged!({
+      undoRedo.onCellValueChanged?.({
         item: fixtureRows[1], columnId: 'name', oldValue: 'Beta', newValue: 'Y', rowIndex: 1,
       });
       undoRedo.endBatch();

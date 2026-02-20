@@ -104,8 +104,7 @@ export function useCellSelection(params: UseCellSelectionParams): UseCellSelecti
         setTimeout(() => applyDragAttrsRef.current?.(initial), 0);
       }
     },
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- setSelectionRange is stable; colOffsetRef is a ref
-    [setActiveCell]
+    [setActiveCell, colOffsetRef, setSelectionRange]
   );
 
   const handleSelectAllCells = useCallback(() => {
@@ -117,8 +116,7 @@ export function useCellSelection(params: UseCellSelectionParams): UseCellSelecti
       endCol: visibleColCount - 1,
     });
     setActiveCell({ rowIndex: 0, columnIndex: colOffsetRef.current });
-  // eslint-disable-next-line react-hooks/exhaustive-deps -- setSelectionRange is stable; colOffsetRef is a ref
-  }, [rowCount, visibleColCount, setActiveCell]);
+  }, [rowCount, visibleColCount, setActiveCell, colOffsetRef, setSelectionRange]);
 
   /** Last known mouse position during drag — used by mouseUp to flush pending RAF work. */
   const lastMousePosRef = useRef<{ cx: number; cy: number } | null>(null);
@@ -131,7 +129,57 @@ export function useCellSelection(params: UseCellSelectionParams): UseCellSelecti
   // React state is only committed on mouseup (single re-render instead of 60-120/s).
   useEffect(() => {
 
+    /** Set of currently drag-marked HTMLElements — avoids O(n) full DOM scan on each frame. */
+    const markedCells = new Set<HTMLElement>();
+
+    /** Cell lookup index built on drag start — O(1) lookups per frame instead of querySelectorAll. */
+    let cellIndex: Map<string, HTMLElement> | null = null;
+
+    /** Build cell lookup index from a single querySelectorAll scan. */
+    const buildCellIndex = () => {
+      const wrapper = wrapperRef.current;
+      if (!wrapper) return;
+      cellIndex = new Map<string, HTMLElement>();
+      const cells = wrapper.querySelectorAll('[data-row-index][data-col-index]');
+      for (let i = 0; i < cells.length; i++) {
+        const el = cells[i] as HTMLElement;
+        const r = el.getAttribute('data-row-index') ?? '';
+        const c = el.getAttribute('data-col-index') ?? '';
+        cellIndex.set(`${r},${c}`, el);
+      }
+    };
+
+    /** Apply styling to a single in-range cell (attrs + box-shadow). */
+    const styleCellInRange = (
+      el: HTMLElement, r: number, c: number,
+      minR: number, maxR: number, minC: number, maxC: number,
+      anchor: { row: number; col: number } | null
+    ) => {
+      if (!el.hasAttribute(DRAG_ATTR)) el.setAttribute(DRAG_ATTR, '');
+      const isAnchor = anchor && r === anchor.row && c === anchor.col;
+      if (isAnchor) {
+        if (!el.hasAttribute(DRAG_ANCHOR_ATTR)) el.setAttribute(DRAG_ANCHOR_ATTR, '');
+      } else {
+        if (el.hasAttribute(DRAG_ANCHOR_ATTR)) el.removeAttribute(DRAG_ANCHOR_ATTR);
+      }
+      const shadows: string[] = [];
+      if (r === minR) shadows.push('inset 0 2px 0 0 var(--ogrid-selection, #217346)');
+      if (r === maxR) shadows.push('inset 0 -2px 0 0 var(--ogrid-selection, #217346)');
+      if (c === minC) shadows.push('inset 2px 0 0 0 var(--ogrid-selection, #217346)');
+      if (c === maxC) shadows.push('inset -2px 0 0 0 var(--ogrid-selection, #217346)');
+      el.style.boxShadow = shadows.length > 0 ? shadows.join(', ') : '';
+      markedCells.add(el);
+    };
+
+    /** Remove drag styling from a single cell. */
+    const unstyleCell = (el: HTMLElement) => {
+      el.removeAttribute(DRAG_ATTR);
+      el.removeAttribute(DRAG_ANCHOR_ATTR);
+      el.style.boxShadow = '';
+    };
+
     /** Toggle DRAG_ATTR on cells to show the range highlight via CSS.
+     *  Uses a cell index Map for O(1) lookups per cell in the range instead of scanning all cells.
      *  Also sets edge box-shadows for a green border around the selection range,
      *  and marks the anchor cell with DRAG_ANCHOR_ATTR (white background). */
     const applyDragAttrs = (range: ISelectionRange) => {
@@ -142,32 +190,35 @@ export function useCellSelection(params: UseCellSelectionParams): UseCellSelecti
       const minC = Math.min(range.startCol, range.endCol);
       const maxC = Math.max(range.startCol, range.endCol);
       const anchor = dragStartRef.current;
-      const cells = wrapper.querySelectorAll('[data-row-index][data-col-index]');
-      for (let i = 0; i < cells.length; i++) {
-        const el = cells[i] as HTMLElement;
-        const r = parseInt(el.getAttribute('data-row-index')!, 10);
-        const c = parseInt(el.getAttribute('data-col-index')!, 10) - colOffsetRef.current;
-        const inRange = r >= minR && r <= maxR && c >= minC && c <= maxC;
-        if (inRange) {
-          if (!el.hasAttribute(DRAG_ATTR)) el.setAttribute(DRAG_ATTR, '');
-          // Anchor cell gets white background instead of green
-          const isAnchor = anchor && r === anchor.row && c === anchor.col;
-          if (isAnchor) {
-            if (!el.hasAttribute(DRAG_ANCHOR_ATTR)) el.setAttribute(DRAG_ANCHOR_ATTR, '');
-          } else {
-            if (el.hasAttribute(DRAG_ANCHOR_ATTR)) el.removeAttribute(DRAG_ANCHOR_ATTR);
+      const colOff = colOffsetRef.current;
+
+      // 1. Un-mark cells that are no longer in the new range (iterate the small set, not all DOM)
+      for (const el of markedCells) {
+        const r = parseInt(el.getAttribute('data-row-index') ?? '', 10);
+        const c = parseInt(el.getAttribute('data-col-index') ?? '', 10) - colOff;
+        const stillInRange = r >= minR && r <= maxR && c >= minC && c <= maxC;
+        if (!stillInRange) {
+          unstyleCell(el);
+          markedCells.delete(el);
+        }
+      }
+
+      // Build index on first call if not yet initialized
+      if (!cellIndex) buildCellIndex();
+
+      // 2. Look up only the cells in the new range — O(range size) via Map lookup.
+      for (let r = minR; r <= maxR; r++) {
+        for (let c = minC; c <= maxC; c++) {
+          const key = `${r},${c + colOff}`;
+          let el = cellIndex?.get(key);
+          // Handle virtual scroll recycling — if element is stale, rebuild index once
+          if (el && !el.isConnected) {
+            buildCellIndex();
+            el = cellIndex?.get(key);
           }
-          // Edge borders via inset box-shadow (no layout shift)
-          const shadows: string[] = [];
-          if (r === minR) shadows.push('inset 0 2px 0 0 var(--ogrid-selection, #217346)');
-          if (r === maxR) shadows.push('inset 0 -2px 0 0 var(--ogrid-selection, #217346)');
-          if (c === minC) shadows.push('inset 2px 0 0 0 var(--ogrid-selection, #217346)');
-          if (c === maxC) shadows.push('inset -2px 0 0 0 var(--ogrid-selection, #217346)');
-          el.style.boxShadow = shadows.length > 0 ? shadows.join(', ') : '';
-        } else {
-          if (el.hasAttribute(DRAG_ATTR)) el.removeAttribute(DRAG_ATTR);
-          if (el.hasAttribute(DRAG_ANCHOR_ATTR)) el.removeAttribute(DRAG_ANCHOR_ATTR);
-          if (el.style.boxShadow) el.style.boxShadow = '';
+          if (el) {
+            styleCellInRange(el, r, c, minR, maxR, minC, maxC, anchor);
+          }
         }
       }
     };
@@ -175,16 +226,13 @@ export function useCellSelection(params: UseCellSelectionParams): UseCellSelecti
     // Expose applyDragAttrs via ref so mouseDown can access it
     applyDragAttrsRef.current = applyDragAttrs;
 
+    /** Clear all drag styling using the tracked set — O(marked) not O(all cells). */
     const clearDragAttrs = () => {
-      const wrapper = wrapperRef.current;
-      if (!wrapper) return;
-      const marked = wrapper.querySelectorAll(`[${DRAG_ATTR}]`);
-      for (let i = 0; i < marked.length; i++) {
-        const el = marked[i] as HTMLElement;
-        el.removeAttribute(DRAG_ATTR);
-        el.removeAttribute(DRAG_ANCHOR_ATTR);
-        el.style.boxShadow = '';
+      for (const el of markedCells) {
+        unstyleCell(el);
       }
+      markedCells.clear();
+      cellIndex = null;
     };
 
     /** Resolve mouse coordinates to a cell range (shared by RAF callback and mouseUp flush). */
@@ -282,6 +330,8 @@ export function useCellSelection(params: UseCellSelectionParams): UseCellSelecti
       if (!dragMovedRef.current) {
         dragMovedRef.current = true;
         setIsDragging(true);
+        // Build cell index once at drag start for O(1) lookups during drag
+        buildCellIndex();
       }
 
       // Always store latest position so mouseUp can flush if RAF hasn't executed
@@ -369,8 +419,7 @@ export function useCellSelection(params: UseCellSelectionParams): UseCellSelecti
       if (rafRef.current) cancelAnimationFrame(rafRef.current);
       stopAutoScroll();
     };
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [setActiveCell]); // wrapperRef, colOffsetRef excluded — refs are stable across renders
+  }, [setActiveCell, colOffsetRef, setSelectionRange, wrapperRef]);
 
   return {
     selectionRange,

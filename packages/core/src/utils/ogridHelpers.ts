@@ -1,9 +1,14 @@
-import type { IColumnDef, IFilters, FilterValue } from '../types';
+import type { IColumnDef, IColumnFilterDef, IFilters, FilterValue } from '../types';
 import { getCellValue } from './cellValue';
+
+/** Type guard: returns true if val is an IColumnFilterDef (an object with a filter type). */
+export function isFilterConfig(val: unknown): val is IColumnFilterDef {
+  return val != null && typeof val === 'object' && 'type' in val;
+}
 
 /** Resolve the filter field key for a column (filterField or columnId). */
 export function getFilterField<T>(col: IColumnDef<T>): string {
-  const f = col.filterable && typeof col.filterable === 'object' ? col.filterable : null;
+  const f = isFilterConfig(col.filterable) ? col.filterable : null;
   return (f?.filterField ?? col.columnId) as string;
 }
 
@@ -13,7 +18,6 @@ export function mergeFilter(
   key: string,
   value: FilterValue | undefined
 ): IFilters {
-  const next = { ...prev };
   const isEmpty =
     value === undefined ||
     (value.type === 'text' && value.value.trim() === '') ||
@@ -21,11 +25,10 @@ export function mergeFilter(
     (value.type === 'date' && !value.value.from && !value.value.to) ||
     (value.type === 'people' && !value.value);
   if (isEmpty) {
-    delete next[key];
-  } else {
-    next[key] = value;
+    const { [key]: _, ...rest } = prev;
+    return rest;
   }
-  return next;
+  return { ...prev, [key]: value };
 }
 
 /** Derive filter options for multiSelect columns from client-side data. */
@@ -37,7 +40,7 @@ export function deriveFilterOptionsFromData<T>(
   const filterCols: { col: IColumnDef<T>; field: string }[] = [];
   for (let i = 0; i < columns.length; i++) {
     const col = columns[i];
-    const f = col.filterable && typeof col.filterable === 'object' ? col.filterable : null;
+    const f = isFilterConfig(col.filterable) ? col.filterable : null;
     if (f?.type === 'multiSelect') {
       filterCols.push({ col, field: getFilterField(col) });
     }
@@ -53,13 +56,15 @@ export function deriveFilterOptionsFromData<T>(
     const item = items[i];
     for (let j = 0; j < filterCols.length; j++) {
       const v = getCellValue(item, filterCols[j].col);
-      if (v != null && v !== '') valueSets.get(filterCols[j].field)!.add(String(v));
+      const set = valueSets.get(filterCols[j].field);
+      if (v != null && v !== '' && set) set.add(String(v));
     }
   }
 
   const out: Record<string, string[]> = {};
   for (let i = 0; i < filterCols.length; i++) {
-    out[filterCols[i].field] = Array.from(valueSets.get(filterCols[i].field)!).sort();
+    const set = valueSets.get(filterCols[i].field);
+    out[filterCols[i].field] = set ? Array.from(set).sort() : [];
   }
   return out;
 }
@@ -67,9 +72,9 @@ export function deriveFilterOptionsFromData<T>(
 /** Get list of filter fields that use multiSelect (for useFilterOptions). */
 export function getMultiSelectFilterFields<T>(columns: IColumnDef<T>[]): string[] {
   const fields: string[] = [];
-  columns.forEach((col) => {
-    const f = col.filterable && typeof col.filterable === 'object' ? col.filterable : null;
+  for (const col of columns) {
+    const f = isFilterConfig(col.filterable) ? col.filterable : null;
     if (f?.type === 'multiSelect') fields.push(getFilterField(col));
-  });
+  }
   return fields;
 }

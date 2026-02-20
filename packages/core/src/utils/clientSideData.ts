@@ -47,6 +47,9 @@ export function processClientSideData<T>(
 
     switch (val.type) {
       case 'multiSelect':
+        // NOTE: Cell values are coerced to string via String() for set membership checks.
+        // Object-typed column values will produce "[object Object]" — use valueGetter or
+        // valueFormatter on the column def to ensure meaningful string representation.
         if (val.value.length > 0) {
           const allowedSet = new Set(val.value);
           predicates.push((r) => allowedSet.has(String(getCellValue(r, col))));
@@ -84,27 +87,33 @@ export function processClientSideData<T>(
     }
   }
 
-  const rows = predicates.length > 0
+  const filtered = predicates.length > 0;
+  const rows = filtered
     ? data.filter((row) => {
         for (let i = 0; i < predicates.length; i++) {
           if (!predicates[i](row)) return false;
         }
         return true;
       })
-    : data.slice();
+    : data;
 
   // --- Sorting ---
   if (sortBy) {
+    // Copy before sorting if we didn't filter (filter already creates a new array).
+    // This avoids mutating the caller's original data array.
+    const sortable = filtered ? rows : rows.slice();
     const sortCol = columnMap.get(sortBy);
     const compare = sortCol?.compare;
     const dir = sortDirection === 'asc' ? 1 : -1;
     const isDateSort = sortCol?.type === 'date';
 
-    // For date columns, pre-compute timestamps to avoid repeated new Date() in O(n log n) comparisons
+    // For date columns, pre-compute timestamps to avoid repeated new Date() in O(n log n) comparisons.
+    // NOTE: The timestamp cache is scoped to this single sort invocation. It is rebuilt on every call,
+    // so mutating row objects between calls is safe — stale timestamps cannot persist across invocations.
     if (isDateSort && !compare) {
       const timestampCache = new Map<T, number>();
-      for (let i = 0; i < rows.length; i++) {
-        const row = rows[i];
+      for (let i = 0; i < sortable.length; i++) {
+        const row = sortable[i];
         const val = sortCol ? getCellValue(row, sortCol) : (row as Record<string, unknown>)[sortBy];
         if (val == null) {
           timestampCache.set(row, NaN);
@@ -113,16 +122,16 @@ export function processClientSideData<T>(
           timestampCache.set(row, Number.isNaN(t) ? 0 : t);
         }
       }
-      rows.sort((a, b) => {
-        const at = timestampCache.get(a)!;
-        const bt = timestampCache.get(b)!;
+      sortable.sort((a, b) => {
+        const at = timestampCache.get(a) ?? NaN;
+        const bt = timestampCache.get(b) ?? NaN;
         if (Number.isNaN(at) && Number.isNaN(bt)) return 0;
         if (Number.isNaN(at)) return -1 * dir;
         if (Number.isNaN(bt)) return 1 * dir;
         return at === bt ? 0 : at > bt ? dir : -dir;
       });
     } else {
-      rows.sort((a, b) => {
+      sortable.sort((a, b) => {
         if (compare) return compare(a, b) * dir;
         const av = sortCol
           ? getCellValue(a, sortCol)
@@ -140,6 +149,7 @@ export function processClientSideData<T>(
         return as === bs ? 0 : as > bs ? dir : -dir;
       });
     }
+    return sortable;
   }
 
   return rows;

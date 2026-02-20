@@ -28,6 +28,5 @@ export {
 
 // Latest ref utilities
 export {
-  createLatestRef,
   createLatestCallback,
 } from './latestRef';

@@ -1,6 +1,6 @@
 {
   "name": "@alaarab/ogrid-core",
-  "version": "2.0.23",
+  "version": "2.1.0",
   "description": "OGrid core – framework-agnostic types, algorithms, and utilities for OGrid data grids.",
   "main": "dist/esm/index.js",
   "module": "dist/esm/index.js",
@@ -36,5 +36,12 @@
   "sideEffects": false,
   "publishConfig": {
     "access": "public"
-  }
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/alaarab/ogrid.git",
+    "directory": "packages/core"
+  },
+  "homepage": "https://ogrid.dev",
+  "bugs": "https://github.com/alaarab/ogrid/issues"
 }

@@ -141,14 +141,14 @@ export function useColumnReorder<T>(params: UseColumnReorderParams<T>): UseColum
           const currentOrder =
             columnOrderRef.current ?? columnsRef.current.map((c) => c.columnId);
 
-          const result = calculateDropTarget(
-            moveEvent.clientX,
-            currentOrder,
-            columnId,
+          const result = calculateDropTarget({
+            mouseX: moveEvent.clientX,
+            columnOrder: currentOrder,
+            draggedColumnId: columnId,
             draggedPinState,
-            wrapper,
-            pinnedShape
-          );
+            tableElement: wrapper,
+            pinnedColumns: pinnedShape,
+          });
 
           if (result) {
             latestDropTargetIndex = result.targetIndex;

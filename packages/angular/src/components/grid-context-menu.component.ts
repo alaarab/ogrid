@@ -52,13 +52,13 @@ export class GridContextMenuComponent {
     contextMenuDivider?: string;
   } | undefined = undefined;
 
-  @Output() copy = new EventEmitter<void>();
-  @Output() cut = new EventEmitter<void>();
-  @Output() paste = new EventEmitter<void>();
-  @Output() selectAll = new EventEmitter<void>();
+  @Output() copyAction = new EventEmitter<void>();
+  @Output() cutAction = new EventEmitter<void>();
+  @Output() pasteAction = new EventEmitter<void>();
+  @Output() selectAllAction = new EventEmitter<void>();
   @Output() undoAction = new EventEmitter<void>();
   @Output() redoAction = new EventEmitter<void>();
-  @Output() close = new EventEmitter<void>();
+  @Output() closeAction = new EventEmitter<void>();
 
   @ViewChild('menuRef') menuRef?: ElementRef<HTMLDivElement>;
 
@@ -67,11 +67,11 @@ export class GridContextMenuComponent {
 
   private clickOutsideHandler = (e: MouseEvent) => {
     const el = this.menuRef?.nativeElement;
-    if (el && !el.contains(e.target as Node)) this.close.emit();
+    if (el && !el.contains(e.target as Node)) this.closeAction.emit();
   };
 
   private keyDownHandler = (e: KeyboardEvent) => {
-    if (e.key === 'Escape') this.close.emit();
+    if (e.key === 'Escape') this.closeAction.emit();
   };
 
   constructor() {
@@ -94,13 +94,13 @@ export class GridContextMenuComponent {
 
   onItemClick(id: string): void {
     switch (id) {
-      case 'copy': this.copy.emit(); break;
-      case 'cut': this.cut.emit(); break;
-      case 'paste': this.paste.emit(); break;
-      case 'selectAll': this.selectAll.emit(); break;
+      case 'copy': this.copyAction.emit(); break;
+      case 'cut': this.cutAction.emit(); break;
+      case 'paste': this.pasteAction.emit(); break;
+      case 'selectAll': this.selectAllAction.emit(); break;
       case 'undo': this.undoAction.emit(); break;
       case 'redo': this.redoAction.emit(); break;
     }
-    this.close.emit();
+    this.closeAction.emit();
   }
 }

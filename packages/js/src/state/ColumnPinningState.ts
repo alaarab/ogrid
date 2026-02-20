@@ -42,8 +42,7 @@ export class ColumnPinningState {
   }
 
   unpinColumn(columnId: string): void {
-    const next = { ...this._pinnedColumns };
-    delete next[columnId];
+    const { [columnId]: _, ...next } = this._pinnedColumns;
     this._pinnedColumns = next;
     this.emitter.emit('pinningChange', { pinnedColumns: this._pinnedColumns });
   }

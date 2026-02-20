@@ -10,6 +10,8 @@ export interface UseColumnChooserStateParams {
   columns: IColumnDefinition[];
   visibleColumns: Set<string>;
   onVisibilityChange: (columnKey: string, visible: boolean) => void;
+  /** Optional batch setter for select-all / clear-all — avoids N individual callbacks. */
+  onSetVisibleColumns?: (columns: Set<string>) => void;
 }
 
 export interface UseColumnChooserStateResult {
@@ -32,7 +34,7 @@ export interface UseColumnChooserStateResult {
 export function useColumnChooserState(
   params: UseColumnChooserStateParams
 ): UseColumnChooserStateResult {
-  const { columns, visibleColumns, onVisibilityChange } = params;
+  const { columns, visibleColumns, onVisibilityChange, onSetVisibleColumns } = params;
   const [open, setOpen] = useState(false);
 
   useEffect(() => {
@@ -64,20 +66,30 @@ export function useColumnChooserState(
   );
 
   const handleSelectAll = useCallback((): void => {
-    columns.forEach((col) => {
-      if (!visibleColumns.has(col.columnId)) {
-        onVisibilityChange(col.columnId, true);
-      }
-    });
-  }, [columns, visibleColumns, onVisibilityChange]);
+    if (onSetVisibleColumns) {
+      onSetVisibleColumns(new Set(columns.map((col) => col.columnId)));
+    } else {
+      columns.forEach((col) => {
+        if (!visibleColumns.has(col.columnId)) {
+          onVisibilityChange(col.columnId, true);
+        }
+      });
+    }
+  }, [columns, visibleColumns, onVisibilityChange, onSetVisibleColumns]);
 
   const handleClearAll = useCallback((): void => {
-    columns.forEach((col) => {
-      if (!col.required && visibleColumns.has(col.columnId)) {
-        onVisibilityChange(col.columnId, false);
-      }
-    });
-  }, [columns, visibleColumns, onVisibilityChange]);
+    if (onSetVisibleColumns) {
+      // Keep required columns visible
+      const required = new Set(columns.filter((col) => col.required).map((col) => col.columnId));
+      onSetVisibleColumns(required);
+    } else {
+      columns.forEach((col) => {
+        if (!col.required && visibleColumns.has(col.columnId)) {
+          onVisibilityChange(col.columnId, false);
+        }
+      });
+    }
+  }, [columns, visibleColumns, onVisibilityChange, onSetVisibleColumns]);
 
   const visibleCount = visibleColumns.size;
   const totalCount = columns.length;

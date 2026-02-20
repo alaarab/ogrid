@@ -35,45 +35,34 @@ export function useInlineCellEditorState(
     value !== null && value !== undefined ? String(value) : ''
   );
 
-  const commit = useCallback(
-    (v: unknown) => {
-      onCommit(v);
-    },
-    [onCommit]
-  );
-
-  const cancel = useCallback(() => {
-    onCancel();
-  }, [onCancel]);
-
   const handleKeyDown = useCallback(
     (e: React.KeyboardEvent) => {
       if (e.key === 'Escape') {
         e.preventDefault();
         e.stopPropagation(); // Don't let the grid handler clear selection on Escape
-        cancel();
+        onCancel();
       }
       if (e.key === 'Enter' && editorType === 'text') {
         e.preventDefault();
         e.stopPropagation(); // Don't let the grid handler re-open an editor
-        commit(localValue);
+        onCommit(localValue);
       }
     },
-    [cancel, commit, localValue, editorType]
+    [onCancel, onCommit, localValue, editorType]
   );
 
   const handleBlur = useCallback(() => {
     if (editorType === 'text') {
-      commit(localValue);
+      onCommit(localValue);
     }
-  }, [editorType, localValue, commit]);
+  }, [editorType, localValue, onCommit]);
 
   return {
     localValue,
     setLocalValue,
     handleKeyDown,
     handleBlur,
-    commit,
-    cancel,
+    commit: onCommit,
+    cancel: onCancel,
   };
 }
