@@ -24,7 +24,7 @@ export abstract class BaseOGridComponent<T> {
   }
 
   get showToolbar(): boolean {
-    return this.ogridService.columnChooserPlacement() === 'toolbar' || this.ogridService.toolbar() != null;
+    return this.ogridService.columnChooserPlacement() === 'toolbar' || this.ogridService.toolbar() != null || this.ogridService.fullScreen();
   }
 
   onPageSizeChange(size: number): void {

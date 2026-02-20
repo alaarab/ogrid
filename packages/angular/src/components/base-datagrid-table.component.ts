@@ -135,6 +135,7 @@ export abstract class BaseDataGridTableComponent<T = unknown> {
   });
   readonly ariaLabel = computed(() => this.getProps()?.['aria-label'] ?? 'Data grid');
   readonly ariaLabelledBy = computed(() => this.getProps()?.['aria-labelledby']);
+  readonly stickyHeader = computed(() => this.getProps()?.stickyHeader ?? true);
   readonly emptyState = computed(() => this.getProps()?.emptyState);
   readonly currentPage = computed(() => this.getProps()?.currentPage ?? 1);
   readonly pageSize = computed(() => this.getProps()?.pageSize ?? 25);

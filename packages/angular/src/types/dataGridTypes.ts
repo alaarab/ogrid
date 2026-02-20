@@ -93,6 +93,10 @@ interface IOGridBaseProps<T> {
 
   layoutMode?: 'content' | 'fill';
   suppressHorizontalScroll?: boolean;
+  /** When true (default), header row sticks to the top of the scroll container. */
+  stickyHeader?: boolean;
+  /** When true, shows a fullscreen toggle button in the toolbar. Default: false. */
+  fullScreen?: boolean;
   sideBar?: boolean | ISideBarDef;
   columnReorder?: boolean;
   virtualScroll?: IVirtualScrollConfig;
@@ -144,6 +148,8 @@ export interface IOGridDataGridProps<T> {
   initialColumnWidths?: Record<string, number>;
   layoutMode?: 'content' | 'fill';
   suppressHorizontalScroll?: boolean;
+  /** When true (default), header row sticks to the top of the scroll container. */
+  stickyHeader?: boolean;
   isLoading?: boolean;
   loadingMessage?: string;
   editable?: boolean;

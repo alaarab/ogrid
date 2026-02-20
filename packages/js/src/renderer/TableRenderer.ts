@@ -246,6 +246,9 @@ export class TableRenderer<T> {
 
     // Render header
     this.thead = document.createElement('thead');
+    if (this.state.stickyHeader) {
+      this.thead.classList.add('ogrid-sticky-header');
+    }
     this.renderHeader();
     this.attachHeaderDelegation();
     this.table.appendChild(this.thead);

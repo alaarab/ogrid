@@ -27,6 +27,7 @@ import { PaginationControlsComponent } from '../pagination-controls/pagination-c
       [hasToolbarBelow]="false"
       [hasPagination]="true"
       [sideBar]="service.sideBarProps()"
+      [fullScreen]="service.fullScreen()"
     >
       <ng-content select="[toolbar]" toolbar></ng-content>
 
@@ -72,6 +73,7 @@ import { PaginationControlsComponent } from '../pagination-controls/pagination-c
         [getUserByEmail]="service.dataSource()?.getUserByEmail?.bind(service.dataSource())"
         [layoutMode]="service.layoutMode()"
         [suppressHorizontalScroll]="service.suppressHorizontalScroll()"
+        [stickyHeaderInput]="service.stickyHeader()"
         [columnReorder]="service.columnReorder()"
         [aria-label]="service.ariaLabel()"
         [aria-labelledby]="service.ariaLabelledBy()"
@@ -116,7 +118,7 @@ export class OGridComponent<T = unknown> {
   }
 
   get showToolbar(): boolean {
-    return this.service.columnChooserPlacement() === 'toolbar' || this.service.toolbar() != null;
+    return this.service.columnChooserPlacement() === 'toolbar' || this.service.toolbar() != null || this.service.fullScreen();
   }
 
   private readonly clearAllFiltersFn = () => this.service.setFilters({});

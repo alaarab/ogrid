@@ -5,7 +5,7 @@
  * they only differ in which DataGridTable, ColumnChooser, and PaginationControls
  * components they use. This factory extracts all shared logic into one place.
  */
-import { defineComponent, h, type PropType, type VNode, computed, type Component } from 'vue';
+import { defineComponent, h, ref, onMounted, onUnmounted, type PropType, type VNode, computed, type Component } from 'vue';
 import {
   useOGrid,
 } from '../composables';
@@ -292,6 +292,17 @@ export function createOGrid(ui: IOGridUIBindings) {
       // Expose the ref container so parent always gets the latest API value
       expose({ api });
 
+      // Fullscreen state
+      const isFullScreen = ref(false);
+      const toggleFullScreen = () => { isFullScreen.value = !isFullScreen.value; };
+
+      // ESC key to exit fullscreen
+      const handleEscKey = (e: KeyboardEvent) => {
+        if (e.key === 'Escape' && isFullScreen.value) isFullScreen.value = false;
+      };
+      onMounted(() => { document.addEventListener('keydown', handleEscKey); });
+      onUnmounted(() => { document.removeEventListener('keydown', handleEscKey); });
+
       return () => {
         const sideBar = layout.value.sideBarProps;
         const hasSideBar = sideBar != null;
@@ -302,6 +313,32 @@ export function createOGrid(ui: IOGridUIBindings) {
         if (layout.value.toolbar) {
           toolbarChildren.push(layout.value.toolbar as VNode);
         }
+
+        // Fullscreen toggle button
+        const showFullScreen = layout.value.fullScreen === true;
+        const fullscreenButton = showFullScreen
+          ? h('button', {
+              type: 'button',
+              title: isFullScreen.value ? 'Exit fullscreen' : 'Fullscreen',
+              'aria-label': isFullScreen.value ? 'Exit fullscreen' : 'Fullscreen',
+              onClick: toggleFullScreen,
+              style: {
+                background: 'none',
+                border: '1px solid var(--ogrid-border, rgba(0,0,0,0.12))',
+                borderRadius: '4px',
+                padding: '4px 6px',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                color: 'var(--ogrid-fg, rgba(0,0,0,0.87))',
+              },
+            }, [
+              isFullScreen.value
+                ? h('svg', { width: 16, height: 16, viewBox: '0 0 16 16', fill: 'none', stroke: 'currentColor', 'stroke-width': '1.5', 'stroke-linecap': 'round', 'stroke-linejoin': 'round', innerHTML: '<polyline points="4 10 0 10 0 14"/><polyline points="12 6 16 6 16 2"/><line x1="0" y1="10" x2="4" y2="6"/><line x1="16" y1="6" x2="12" y2="10"/>' })
+                : h('svg', { width: 16, height: 16, viewBox: '0 0 16 16', fill: 'none', stroke: 'currentColor', 'stroke-width': '1.5', 'stroke-linecap': 'round', 'stroke-linejoin': 'round', innerHTML: '<polyline points="10 2 14 2 14 6"/><polyline points="6 14 2 14 2 10"/><line x1="14" y1="2" x2="10" y2="6"/><line x1="2" y1="14" x2="6" y2="10"/>' }),
+            ])
+          : null;
 
         // ColumnChooser in toolbar
         const toolbarEnd = columnChooser.value.placement === 'toolbar'
@@ -344,18 +381,24 @@ export function createOGrid(ui: IOGridUIBindings) {
           mainAreaChildren.push(renderSideBar(sideBar));
         }
 
+        const hasToolbar = toolbarChildren.length > 0 || toolbarEnd != null || fullscreenButton != null;
+
+        const rootStyle = isFullScreen.value
+          ? { position: 'fixed' as const, inset: '0', zIndex: 9999, display: 'flex', flexDirection: 'column' as const, background: 'var(--ogrid-bg, #fff)' }
+          : { display: 'flex', flexDirection: 'column' as const, border: '1px solid var(--ogrid-border, rgba(0,0,0,0.12))', borderRadius: '4px', overflow: 'hidden' as const };
+
+        const containerStyle = isFullScreen.value
+          ? { display: 'flex', flexDirection: 'column' as const, flex: '1', minHeight: '0', overflow: 'hidden' as const, background: 'var(--ogrid-bg, #fff)' }
+          : undefined;
+
         return h('div', {
           class: layout.value.className,
-          style: {
-            display: 'flex',
-            flexDirection: 'column',
-            border: '1px solid var(--ogrid-border, rgba(0,0,0,0.12))',
-            borderRadius: '4px',
-            overflow: 'hidden',
-          },
+          style: rootStyle,
         }, [
+          // Inner container (for fullscreen: no border/radius)
+          h('div', { style: containerStyle ?? {} }, [
           // Toolbar strip
-          ...(toolbarChildren.length || toolbarEnd ? [
+          ...(hasToolbar ? [
             h('div', {
               style: {
                 display: 'flex',
@@ -367,7 +410,10 @@ export function createOGrid(ui: IOGridUIBindings) {
               },
             }, [
               h('div', { style: { display: 'flex', alignItems: 'center', gap: '8px', flex: '1' } }, toolbarChildren),
-              ...(toolbarEnd ? [toolbarEnd] : []),
+              h('div', { style: { display: 'flex', alignItems: 'center', gap: '8px' } }, [
+                ...(toolbarEnd ? [toolbarEnd] : []),
+                ...(fullscreenButton ? [fullscreenButton] : []),
+              ]),
             ]),
           ] : []),
 
@@ -390,6 +436,7 @@ export function createOGrid(ui: IOGridUIBindings) {
               borderTop: '1px solid var(--ogrid-border, rgba(0,0,0,0.12))',
             },
           }, [paginationNode]),
+          ]),
         ]);
       };
     },
