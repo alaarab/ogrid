@@ -2,7 +2,6 @@ import { useCallback, useRef, useMemo } from 'react';
 import type { RefObject } from 'react';
 import type { IOGridDataGridProps, IColumnDef } from '../types';
 import type {
-  UseDataGridStateResult,
   DataGridLayoutState,
   DataGridRowSelectionState,
   DataGridEditingState,
@@ -39,8 +38,7 @@ export interface UseDataGridTableOrchestrationResult<T> {
   tableContainerRef: RefObject<HTMLDivElement | null>;
   lastMouseShiftRef: React.MutableRefObject<boolean>;
 
-  // Full state sub-objects (for framework-specific access)
-  state: UseDataGridStateResult<T>;
+  // State sub-objects (for framework-specific access)
   layout: DataGridLayoutState<T>;
   rowSel: DataGridRowSelectionState;
   editing: DataGridEditingState<T>;
@@ -295,8 +293,7 @@ export function useDataGridTableOrchestration<T>(
     if (!rowId) return;
     const ids = selectedRowIdsRef.current;
     updateSelection(ids.has(rowId) ? new Set() : new Set([rowId]));
-  // eslint-disable-next-line react-hooks/exhaustive-deps -- selectedRowIdsRef is a stable ref
-  }, [rowSelection, updateSelection]);
+  }, [rowSelection, updateSelection, selectedRowIdsRef]);
 
   // ── Return ─────────────────────────────────────────────────────────────
   return {
@@ -305,8 +302,7 @@ export function useDataGridTableOrchestration<T>(
     tableContainerRef,
     lastMouseShiftRef,
 
-    // Full state sub-objects
-    state,
+    // State sub-objects
     layout,
     rowSel,
     editing,

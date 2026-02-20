@@ -9,30 +9,14 @@ import { OGridService } from '../services/ogrid.service';
 import { fixtureRows, fixtureColumns, getRowId } from './fixtures';
 import type { FixtureRow } from './fixtures';
 import type { IOGridProps } from '../types';
-
-interface OGridInstance {
-  props?: IOGridProps<FixtureRow>;
-  ogridService?: OGridService<FixtureRow>;
-  service?: OGridService<FixtureRow>;
-  _testService?: OGridService<FixtureRow>;
-}
+import { getService } from './utils';
+import type { OGridInstance } from './utils';
 
 interface OGridTestInstance extends OGridInstance {
   _testService: OGridService<FixtureRow>;
 }
 
 export function createSideBarTests(OGridComponent: new () => OGridInstance): void {
-  // Helper: get OGridService from component (supports both `ogridService` and `service` property names)
-  function getService(instance: OGridInstance): OGridService<FixtureRow> {
-    if (instance.ogridService instanceof OGridService) return instance.ogridService;
-    if (instance.service instanceof OGridService) return instance.service;
-    const svc = new OGridService<FixtureRow>();
-    if ('ogridService' in instance) instance.ogridService = svc;
-    else if ('service' in instance) instance.service = svc;
-    else instance.ogridService = svc;
-    return svc;
-  }
-
   function createComponent(overrides: Partial<IOGridProps<FixtureRow>> = {}): OGridTestInstance {
     const instance = new OGridComponent();
     const svc = getService(instance);

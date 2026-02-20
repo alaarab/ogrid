@@ -29,6 +29,7 @@ import type {
 } from '@alaarab/ogrid-react';
 import {
   useDataGridTableOrchestration,
+  useColumnMeta,
   getHeaderFilterConfig,
   getCellRenderDescriptor,
   MarchingAntsOverlay,
@@ -41,7 +42,6 @@ import {
   CellErrorBoundary,
   CHECKBOX_COLUMN_WIDTH,
   ROW_NUMBER_COLUMN_WIDTH,
-  DEFAULT_MIN_COLUMN_WIDTH,
   PREVENT_DEFAULT,
   NOOP,
   STOP_PROPAGATION,
@@ -397,12 +397,24 @@ function DataGridTableInner<T>(props: IOGridDataGridProps<T>): React.ReactElemen
   const densityPadding = useMemo(() => getDensityPadding(density), [density]);
   const headerCellSx = useMemo(() => ({ px: densityPadding.px, py: densityPadding.py }), [densityPadding]);
 
-  // Pre-compute per-column layout (tdSx, widths) so GridRow doesn't recalculate per-cell
+  // Shared width/minWidth computation (deduped with Radix/Fluent via useColumnMeta)
+  const columnMeta = useColumnMeta({
+    visibleCols,
+    getColumnWidth,
+    columnSizingOverrides,
+    measuredColumnWidths,
+    pinnedColumns: pinning.pinnedColumns,
+    leftOffsets: pinning.leftOffsets,
+    rightOffsets: pinning.rightOffsets,
+    pinnedColLeftClass: '',
+    pinnedColRightClass: '',
+  });
+
+  // Pre-compute per-column layout (tdSx + widths from columnMeta) so GridRow doesn't recalculate per-cell
   const columnLayouts = useMemo<ColumnLayout<T>[]>(() =>
     visibleCols.map((col) => {
       const isPinnedLeft = pinning.pinnedColumns[col.columnId] === 'left';
       const isPinnedRight = pinning.pinnedColumns[col.columnId] === 'right';
-      const columnWidth = getColumnWidth(col);
       const baseTdSx = isPinnedLeft ? CELL_TD_PINNED_LEFT_SX : isPinnedRight ? CELL_TD_PINNED_RIGHT_SX : CELL_TD_BASE_SX;
       // Override sticky offset for pinned columns (supports multiple pinned columns)
       const tdSx = isPinnedLeft && pinning.leftOffsets[col.columnId] != null
@@ -410,15 +422,16 @@ function DataGridTableInner<T>(props: IOGridDataGridProps<T>): React.ReactElemen
         : isPinnedRight && pinning.rightOffsets[col.columnId] != null
           ? { ...baseTdSx, right: pinning.rightOffsets[col.columnId] } as typeof baseTdSx
           : baseTdSx;
-      const hasResizeOverride = !!columnSizingOverrides[col.columnId];
-      // Use previously-measured DOM width as a minWidth floor to prevent columns
-      // from shrinking when new data loads (e.g. server-side pagination).
-      const measuredW = measuredColumnWidths[col.columnId];
-      const baseMinWidth = col.minWidth ?? DEFAULT_MIN_COLUMN_WIDTH;
-      const effectiveMinWidth = hasResizeOverride ? columnWidth : Math.max(baseMinWidth, measuredW ?? 0);
-      return { col, tdSx, minWidth: effectiveMinWidth, width: columnWidth, maxWidth: columnWidth };
+      const cellStyle = columnMeta.cellStyles[col.columnId];
+      return {
+        col,
+        tdSx,
+        minWidth: (cellStyle?.minWidth as number) ?? 0,
+        width: (cellStyle?.width as number) ?? getColumnWidth(col),
+        maxWidth: (cellStyle?.maxWidth as number) ?? getColumnWidth(col),
+      };
     }),
-  [visibleCols, getColumnWidth, columnSizingOverrides, measuredColumnWidths, pinning.pinnedColumns, pinning.leftOffsets, pinning.rightOffsets]);
+  [visibleCols, columnMeta, pinning.pinnedColumns, pinning.leftOffsets, pinning.rightOffsets, getColumnWidth]);
 
   // Wrapper sx (depends on dynamic values — memoize to avoid recreation)
   const wrapperSx = useMemo(() => ({
@@ -488,8 +501,7 @@ function DataGridTableInner<T>(props: IOGridDataGridProps<T>): React.ReactElemen
           <Box
             component="div"
             {...interactionProps}
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            sx={Array.isArray(cellSx) ? [...cellSx, densityPadding] : { ...cellSx, ...densityPadding } as any}
+            sx={Array.isArray(cellSx) ? [...cellSx, densityPadding] : { ...cellSx, ...densityPadding } as Record<string, unknown>}
           >
             {styledContent}
             {descriptor.canEditAny && descriptor.isSelectionEndCell && (
@@ -505,8 +517,7 @@ function DataGridTableInner<T>(props: IOGridDataGridProps<T>): React.ReactElemen
         </CellErrorBoundary>
       );
     },
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- *Ref vars are stable refs from useLatestRef
-    [editCallbacks, interactionHandlers, handleFillHandleMouseDown, setPopoverAnchorEl, cancelPopoverEdit, getRowId, onCellError]
+    [editCallbacks, interactionHandlers, handleFillHandleMouseDown, setPopoverAnchorEl, cancelPopoverEdit, getRowId, onCellError, cellDescriptorInputRef, densityPadding, pendingEditorValueRef, popoverAnchorElRef]
   );
 
   return (
@@ -607,10 +618,10 @@ function DataGridTableInner<T>(props: IOGridDataGridProps<T>): React.ReactElemen
                       );
                     }
                     // Leaf cell
-                    const col = cell.columnDef! as IColumnDef<T>;
+                    if (!cell.columnDef) return null;
+                    const col = cell.columnDef as IColumnDef<T>;
                     const isPinnedLeft = pinning.pinnedColumns[col.columnId] === 'left';
                     const isPinnedRight = pinning.pinnedColumns[col.columnId] === 'right';
-                    const columnWidth = getColumnWidth(col);
                     const baseHeaderSx = isPinnedLeft ? HEADER_PINNED_LEFT_SX : isPinnedRight ? HEADER_PINNED_RIGHT_SX : HEADER_BASE_SX;
                     // Override sticky offset for pinned columns (supports multiple pinned columns)
                     const headerSx = isPinnedLeft && pinning.leftOffsets[col.columnId] != null
@@ -618,6 +629,9 @@ function DataGridTableInner<T>(props: IOGridDataGridProps<T>): React.ReactElemen
                       : isPinnedRight && pinning.rightOffsets[col.columnId] != null
                         ? { ...baseHeaderSx, right: pinning.rightOffsets[col.columnId] } as typeof baseHeaderSx
                         : baseHeaderSx;
+
+                    // Width/minWidth from shared useColumnMeta (avoids duplicate calculation)
+                    const hdrStyle = columnMeta.hdrStyles[col.columnId];
 
                     // Determine aria-sort value for sorted columns
                     const isSorted = props.sortBy === col.columnId;
@@ -637,9 +651,9 @@ function DataGridTableInner<T>(props: IOGridDataGridProps<T>): React.ReactElemen
                           sx: {
                             ...headerSx,
                             ...headerCellSx,
-                            minWidth: Math.max(col.minWidth ?? DEFAULT_MIN_COLUMN_WIDTH, measuredColumnWidths[col.columnId] ?? 0),
-                            width: columnWidth,
-                            maxWidth: columnWidth,
+                            minWidth: hdrStyle?.minWidth,
+                            width: hdrStyle?.width,
+                            maxWidth: hdrStyle?.maxWidth,
                             ...(columnReorder ? { cursor: isReorderDragging ? 'grabbing' : 'grab' } : {}),
                             '&:focus-visible': {
                               outline: '2px solid',

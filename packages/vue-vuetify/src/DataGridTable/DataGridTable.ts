@@ -1,4 +1,4 @@
-import { h } from 'vue';
+import { h, type Component } from 'vue';
 import { VCheckbox, VProgressCircular } from 'vuetify/components';
 import { createDataGridTable } from '@alaarab/ogrid-vue';
 import { ColumnHeaderFilter } from '../ColumnHeaderFilter';
@@ -10,7 +10,7 @@ import './DataGridTable.css';
 
 export const DataGridTable = createDataGridTable({
   renderCheckbox: ({ modelValue, indeterminate, ariaLabel, onChange }) =>
-    h(VCheckbox as any, {
+    h(VCheckbox as Component, {
       modelValue,
       indeterminate,
       hideDetails: true,
@@ -20,7 +20,7 @@ export const DataGridTable = createDataGridTable({
     }),
   renderSpinner: (message) =>
     h('div', { class: 'ogrid-loading-inner' }, [
-      h(VProgressCircular as any, { size: 24, indeterminate: true }),
+      h(VProgressCircular as Component, { size: 24, indeterminate: true }),
       h('span', { class: 'ogrid-loading-message' }, message),
     ]),
   ColumnHeaderFilter,

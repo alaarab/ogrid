@@ -194,13 +194,21 @@ Pass a `ref` to the `OGrid` component. The ref exposes the `IOGridApi<T>` interf
 |---|---|---|
 | `setRowData` | `(data: T[]) => void` | Replace all row data (client-side only; no-op with `dataSource`) |
 | `setLoading` | `(loading: boolean) => void` | Show or hide the loading overlay |
+| `getDisplayedRows` | `() => T[]` | Get the currently displayed (filtered, sorted, paginated) rows |
+| `refreshData` | `() => void` | Re-trigger a data fetch (server-side only; no-op for client-side) |
 | `getColumnState` | `() => IGridColumnState` | Get current column visibility, sort, order, widths, and filters |
 | `applyColumnState` | `(state: Partial<IGridColumnState>) => void` | Bulk-restore any combination of column state fields |
+| `getColumnOrder` | `() => string[]` | Get the current column display order (array of column IDs) |
+| `setColumnOrder` | `(order: string[]) => void` | Programmatically set the column display order |
 | `setFilterModel` | `(filters: IFilters) => void` | Set the active filter model |
+| `clearFilters` | `() => void` | Clear all active filters |
+| `clearSort` | `() => void` | Reset the sort to no active sort |
+| `resetGridState` | `(options?: { keepSelection?: boolean }) => void` | Reset all grid state (filters, sort, and optionally selection) |
 | `getSelectedRows` | `() => RowId[]` | Get the IDs of currently selected rows |
 | `setSelectedRows` | `(rowIds: RowId[]) => void` | Set which rows are selected |
 | `selectAll` | `() => void` | Select all rows |
 | `deselectAll` | `() => void` | Deselect all rows |
+| `scrollToRow` | `(index: number, options?: { align?: 'start' \| 'center' \| 'end' }) => void` | Scroll to a row by index (virtual scrolling only) |
 
 ### Save and Restore Column State
 
@@ -233,6 +241,7 @@ interface IGridColumnState {
   columnOrder?: string[];
   columnWidths?: Record<string, number>;
   filters?: IFilters;
+  pinnedColumns?: Record<string, 'left' | 'right'>;
 }
 ```
 
@@ -243,6 +252,7 @@ interface IGridColumnState {
 | `columnOrder` | Column display order (array of column IDs) |
 | `columnWidths` | Column width overrides in pixels |
 | `filters` | Active filter values by field |
+| `pinnedColumns` | Pinned column positions by column ID |
 
 All fields in `applyColumnState` are optional. Pass only what you want to restore.
 
@@ -250,7 +260,7 @@ All fields in `applyColumnState` are optional. Pass only what you want to restor
 // Restore only sort and filters, leave visibility and widths unchanged
 gridRef.current?.applyColumnState({
   sort: { field: 'salary', direction: 'desc' },
-  filters: { department: ['Engineering'] },
+  filters: { department: { type: 'multiSelect', value: ['Engineering'] } },
 });
 ```
 
@@ -260,15 +270,16 @@ Use `setFilterModel` to apply filters from outside the grid.
 
 ```tsx
 gridRef.current?.setFilterModel({
-  department: ['Engineering', 'Design'],
-  name: 'John',
+  department: { type: 'multiSelect', value: ['Engineering', 'Design'] },
+  name: { type: 'text', value: 'John' },
 });
 ```
 
-Filter values follow the same types as user-applied filters:
-- `string` for text filters
-- `string[]` for multi-select filters
-- `UserLike` for people filters
+Filter values use the `FilterValue` discriminated union type:
+- `{ type: 'text', value: string }` for text filters
+- `{ type: 'multiSelect', value: string[] }` for multi-select filters
+- `{ type: 'people', value: UserLike }` for people filters
+- `{ type: 'date', value: IDateFilterValue }` for date range filters
 
 ### Row Selection Control
 

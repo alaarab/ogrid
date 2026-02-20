@@ -257,4 +257,263 @@ describe('useDataGridState', () => {
     });
     expect(result.current.contextMenu.menuPosition).toBeNull();
   });
+
+  it('hasRowNumbersCol and colOffset with showRowNumbers', () => {
+    const propsWithRowNumbers: IOGridDataGridProps<Row> = {
+      ...defaultProps,
+      showRowNumbers: true,
+    };
+    const wrapperRef = { current: document.createElement('div') };
+    const { result } = renderHook(
+      () => useDataGridState<Row>({ props: propsWithRowNumbers, wrapperRef }),
+      { wrapper: ({ children }: { children: React.ReactNode }) => React.createElement(React.Fragment, null, children) }
+    );
+
+    expect(result.current.layout.hasRowNumbersCol).toBe(true);
+    expect(result.current.layout.colOffset).toBe(1);
+    expect(result.current.layout.totalColCount).toBe(4); // 3 data + 1 row numbers
+  });
+
+  it('colOffset is 2 when both rowSelection multiple and showRowNumbers', () => {
+    const propsBoth: IOGridDataGridProps<Row> = {
+      ...defaultProps,
+      rowSelection: 'multiple',
+      selectedRows: new Set(),
+      onSelectionChange: jest.fn(),
+      showRowNumbers: true,
+    };
+    const wrapperRef = { current: document.createElement('div') };
+    const { result } = renderHook(
+      () => useDataGridState<Row>({ props: propsBoth, wrapperRef }),
+      { wrapper: ({ children }: { children: React.ReactNode }) => React.createElement(React.Fragment, null, children) }
+    );
+
+    expect(result.current.layout.hasCheckboxCol).toBe(true);
+    expect(result.current.layout.hasRowNumbersCol).toBe(true);
+    expect(result.current.layout.colOffset).toBe(2);
+    expect(result.current.layout.totalColCount).toBe(5); // 3 data + 1 checkbox + 1 row numbers
+  });
+
+  it('filters visibleCols by visibleColumns set', () => {
+    const propsPartialVis: IOGridDataGridProps<Row> = {
+      ...defaultProps,
+      visibleColumns: new Set(['name', 'score']),
+    };
+    const wrapperRef = { current: document.createElement('div') };
+    const { result } = renderHook(
+      () => useDataGridState<Row>({ props: propsPartialVis, wrapperRef }),
+      { wrapper: ({ children }: { children: React.ReactNode }) => React.createElement(React.Fragment, null, children) }
+    );
+
+    expect(result.current.layout.visibleCols).toHaveLength(2);
+    expect(result.current.layout.visibleCols.map((c) => c.columnId)).toEqual(['name', 'score']);
+    expect(result.current.layout.visibleColumnCount).toBe(2);
+  });
+
+  it('setEditingCell updates editingCell', () => {
+    const wrapperRef = { current: document.createElement('div') };
+    const { result } = renderHook(
+      () => useDataGridState<Row>({ props: defaultProps, wrapperRef }),
+      { wrapper: ({ children }: { children: React.ReactNode }) => React.createElement(React.Fragment, null, children) }
+    );
+
+    expect(result.current.editing.editingCell).toBeNull();
+
+    act(() => {
+      result.current.editing.setEditingCell({ rowId: '1', columnId: 'name' });
+    });
+
+    expect(result.current.editing.editingCell).toEqual({ rowId: '1', columnId: 'name' });
+  });
+
+  it('cancelPopoverEdit clears editing state', () => {
+    const wrapperRef = { current: document.createElement('div') };
+    const { result } = renderHook(
+      () => useDataGridState<Row>({ props: defaultProps, wrapperRef }),
+      { wrapper: ({ children }: { children: React.ReactNode }) => React.createElement(React.Fragment, null, children) }
+    );
+
+    act(() => {
+      result.current.editing.setEditingCell({ rowId: '1', columnId: 'name' });
+      result.current.editing.setPendingEditorValue('test');
+    });
+
+    expect(result.current.editing.editingCell).not.toBeNull();
+
+    act(() => {
+      result.current.editing.cancelPopoverEdit();
+    });
+
+    expect(result.current.editing.editingCell).toBeNull();
+    expect(result.current.editing.popoverAnchorEl).toBeNull();
+  });
+
+  it('interaction handlers are no-ops when cellSelection is disabled', () => {
+    const propsNoCell: IOGridDataGridProps<Row> = {
+      ...defaultProps,
+      cellSelection: false,
+    };
+    const wrapperRef = { current: document.createElement('div') };
+    const { result } = renderHook(
+      () => useDataGridState<Row>({ props: propsNoCell, wrapperRef }),
+      { wrapper: ({ children }: { children: React.ReactNode }) => React.createElement(React.Fragment, null, children) }
+    );
+
+    // All interaction state should be null/false when cellSelection is disabled
+    expect(result.current.interaction.activeCell).toBeNull();
+    expect(result.current.interaction.selectionRange).toBeNull();
+    expect(result.current.interaction.hasCellSelection).toBe(false);
+    expect(result.current.interaction.cutRange).toBeNull();
+    expect(result.current.interaction.copyRange).toBeNull();
+    expect(result.current.interaction.isDragging).toBe(false);
+
+    // Context menu should also be null
+    expect(result.current.contextMenu.menuPosition).toBeNull();
+  });
+
+  it('rowIndexByRowId maps row IDs to indices', () => {
+    const wrapperRef = { current: document.createElement('div') };
+    const { result } = renderHook(
+      () => useDataGridState<Row>({ props: defaultProps, wrapperRef }),
+      { wrapper: ({ children }: { children: React.ReactNode }) => React.createElement(React.Fragment, null, children) }
+    );
+
+    const map = result.current.layout.rowIndexByRowId;
+    expect(map.get('1')).toBe(0);
+    expect(map.get('2')).toBe(1);
+    expect(map.size).toBe(2);
+  });
+
+  it('showEmptyInGrid is false when isLoading is true even with empty items', () => {
+    const propsLoading: IOGridDataGridProps<Row> = {
+      ...defaultProps,
+      items: [],
+      isLoading: true,
+      emptyState: {
+        onClearAll: jest.fn(),
+        hasActiveFilters: false,
+        message: 'No items',
+      },
+    };
+    const wrapperRef = { current: document.createElement('div') };
+    const { result } = renderHook(
+      () => useDataGridState<Row>({ props: propsLoading, wrapperRef }),
+      { wrapper: ({ children }: { children: React.ReactNode }) => React.createElement(React.Fragment, null, children) }
+    );
+
+    expect(result.current.viewModels.showEmptyInGrid).toBe(false);
+  });
+
+  it('returns statusBarConfig with item count when statusBar has totalCount', () => {
+    const propsStatusBar: IOGridDataGridProps<Row> = {
+      ...defaultProps,
+      statusBar: { totalCount: 2, selectedCount: 0 },
+    };
+    const wrapperRef = { current: document.createElement('div') };
+    const { result } = renderHook(
+      () => useDataGridState<Row>({ props: propsStatusBar, wrapperRef }),
+      { wrapper: ({ children }: { children: React.ReactNode }) => React.createElement(React.Fragment, null, children) }
+    );
+
+    expect(result.current.viewModels.statusBarConfig).not.toBeNull();
+    expect(result.current.viewModels.statusBarConfig!.totalCount).toBe(2);
+  });
+
+  it('applies pinned column overrides', () => {
+    const propsWithPinning: IOGridDataGridProps<Row> = {
+      ...defaultProps,
+      pinnedColumns: { id: 'left' },
+    };
+    const wrapperRef = { current: document.createElement('div') };
+    const { result } = renderHook(
+      () => useDataGridState<Row>({ props: propsWithPinning, wrapperRef }),
+      { wrapper: ({ children }: { children: React.ReactNode }) => React.createElement(React.Fragment, null, children) }
+    );
+
+    // The flat column for 'id' should have pinned set
+    const idCol = result.current.layout.flatColumns.find((c) => c.columnId === 'id');
+    expect(idCol?.pinned).toBe('left');
+
+    // Pinning state should reflect the override
+    expect(result.current.pinning.pinnedColumns).toEqual({ id: 'left' });
+    expect(result.current.pinning.isPinned('id')).toBe('left');
+    expect(result.current.pinning.isPinned('name')).toBeUndefined();
+  });
+
+  it('headerFilterInput passes sort and filter props through', () => {
+    const propsWithFilters: IOGridDataGridProps<Row> = {
+      ...defaultProps,
+      sortBy: 'score',
+      sortDirection: 'desc',
+      filters: { name: { type: 'text', value: 'A' } },
+    };
+    const wrapperRef = { current: document.createElement('div') };
+    const { result } = renderHook(
+      () => useDataGridState<Row>({ props: propsWithFilters, wrapperRef }),
+      { wrapper: ({ children }: { children: React.ReactNode }) => React.createElement(React.Fragment, null, children) }
+    );
+
+    expect(result.current.viewModels.headerFilterInput.sortBy).toBe('score');
+    expect(result.current.viewModels.headerFilterInput.sortDirection).toBe('desc');
+    expect(result.current.viewModels.headerFilterInput.filters).toEqual({
+      name: { type: 'text', value: 'A' },
+    });
+  });
+
+  it('undo/redo state is initialized', () => {
+    const wrapperRef = { current: document.createElement('div') };
+    const { result } = renderHook(
+      () => useDataGridState<Row>({ props: defaultProps, wrapperRef }),
+      { wrapper: ({ children }: { children: React.ReactNode }) => React.createElement(React.Fragment, null, children) }
+    );
+
+    expect(result.current.interaction.canUndo).toBe(false);
+    expect(result.current.interaction.canRedo).toBe(false);
+    expect(typeof result.current.interaction.onUndo).toBe('function');
+    expect(typeof result.current.interaction.onRedo).toBe('function');
+  });
+
+  it('pinning state exposes headerMenu', () => {
+    const wrapperRef = { current: document.createElement('div') };
+    const { result } = renderHook(
+      () => useDataGridState<Row>({ props: defaultProps, wrapperRef }),
+      { wrapper: ({ children }: { children: React.ReactNode }) => React.createElement(React.Fragment, null, children) }
+    );
+
+    expect(result.current.pinning.headerMenu.isOpen).toBe(false);
+    expect(result.current.pinning.headerMenu.openForColumn).toBeNull();
+    expect(typeof result.current.pinning.headerMenu.open).toBe('function');
+    expect(typeof result.current.pinning.headerMenu.close).toBe('function');
+    expect(typeof result.current.pinning.headerMenu.handlePinLeft).toBe('function');
+    expect(typeof result.current.pinning.headerMenu.handlePinRight).toBe('function');
+    expect(typeof result.current.pinning.headerMenu.handleUnpin).toBe('function');
+  });
+
+  it('handles column groups', () => {
+    const groupColumns = [
+      {
+        columnId: 'personal',
+        name: 'Personal',
+        children: [
+          { columnId: 'name', name: 'Name' },
+          { columnId: 'id', name: 'ID' },
+        ],
+      },
+      { columnId: 'score', name: 'Score' },
+    ];
+    const propsWithGroups: IOGridDataGridProps<Row> = {
+      ...defaultProps,
+      columns: groupColumns as IOGridDataGridProps<Row>['columns'],
+      visibleColumns: new Set(['name', 'id', 'score']),
+    };
+    const wrapperRef = { current: document.createElement('div') };
+    const { result } = renderHook(
+      () => useDataGridState<Row>({ props: propsWithGroups, wrapperRef }),
+      { wrapper: ({ children }: { children: React.ReactNode }) => React.createElement(React.Fragment, null, children) }
+    );
+
+    // flatColumns should flatten the group
+    expect(result.current.layout.flatColumns).toHaveLength(3);
+    expect(result.current.layout.flatColumns.map((c) => c.columnId)).toEqual(['name', 'id', 'score']);
+  });
 });

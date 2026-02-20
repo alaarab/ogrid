@@ -33,6 +33,7 @@ export function usePeopleFilterState(
   const { onUserChange, peopleSearch, isFilterOpen, filterType } = params;
 
   const peopleInputRef = useRef<HTMLInputElement | null>(null);
+  const focusTimeoutRef = useRef<number | undefined>(undefined);
   const peopleSearchTimeoutRef = useRef<number | undefined>(undefined);
 
   const [peopleSuggestions, setPeopleSuggestions] = useState<UserLike[]>([]);
@@ -45,9 +46,12 @@ export function usePeopleFilterState(
       setPeopleSearchText('');
       setPeopleSuggestions([]);
       if (filterType === 'people') {
-        setTimeout(() => peopleInputRef.current?.focus(), 50);
+        focusTimeoutRef.current = window.setTimeout(() => peopleInputRef.current?.focus(), 50);
       }
     }
+    return () => {
+      if (focusTimeoutRef.current) window.clearTimeout(focusTimeoutRef.current);
+    };
   }, [isFilterOpen, filterType]);
 
   // People search with debounce

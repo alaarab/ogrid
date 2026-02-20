@@ -1,5 +1,5 @@
-import { computed, type Ref, type ShallowRef } from 'vue';
-import { normalizeSelectionRange, getCellValue, parseValue, findCtrlArrowTarget, computeTabNavigation } from '@alaarab/ogrid-core';
+import { isRef, type Ref } from 'vue';
+import { getCellValue, computeTabNavigation, computeArrowNavigation, applyCellDeletion } from '@alaarab/ogrid-core';
 import type {
   RowId,
   IActiveCell,
@@ -10,17 +10,14 @@ import type {
 } from '../types';
 import type { EditingCell } from './useCellEditing';
 import type { ContextMenuPosition } from './useContextMenu';
-import { useLatestRef } from './useLatestRef';
-
-/** Accept either Ref or ShallowRef for state fields */
-type MaybeShallowRef<T> = Ref<T> | ShallowRef<T>;
+import { useLatestRef, type MaybeShallowRef } from './useLatestRef';
 
 
 export interface UseKeyboardNavigationParams<T> {
   data: {
     items: Ref<T[]>;
     visibleCols: Ref<IColumnDef<T>[]>;
-    colOffset: number;
+    colOffset: Ref<number> | number;
     hasCheckboxCol: Ref<boolean>;
     visibleColumnCount: Ref<number>;
     getRowId: (item: T) => RowId;
@@ -48,7 +45,7 @@ export interface UseKeyboardNavigationParams<T> {
     editable: Ref<boolean | undefined>;
     onCellValueChanged: Ref<((event: ICellValueChangedEvent<T>) => void) | undefined>;
     rowSelection: Ref<RowSelectionMode>;
-    wrapperRef: Ref<HTMLElement | null> | ShallowRef<HTMLElement | null>;
+    wrapperRef: MaybeShallowRef<HTMLElement | null>;
     scrollToRow?: (index: number, align?: 'start' | 'center' | 'end') => void;
   };
 }
@@ -64,13 +61,14 @@ export function useKeyboardNavigation<T>(
   params: UseKeyboardNavigationParams<T>
 ): UseKeyboardNavigationResult {
   // Store latest params in a ref so handleGridKeyDown is a stable callback
-  const paramsRef = useLatestRef(computed(() => params));
+  const paramsRef = useLatestRef(params);
 
   const handleGridKeyDown = (e: KeyboardEvent) => {
     const { data, state, handlers, features } = paramsRef.value;
     const items = data.items.value;
     const visibleCols = data.visibleCols.value;
-    const { colOffset, getRowId } = data;
+    const { getRowId } = data;
+    const colOffset = isRef(data.colOffset) ? data.colOffset.value : data.colOffset;
     const hasCheckboxCol = data.hasCheckboxCol.value;
     const visibleColumnCount = data.visibleColumnCount.value;
     const activeCell = state.activeCell.value;
@@ -128,98 +126,26 @@ export function useKeyboardNavigation<T>(
           void handlePaste();
         }
         break;
-      case 'ArrowDown': {
-        e.preventDefault();
-        const ctrl = e.ctrlKey || e.metaKey;
-        const newRow = ctrl
-          ? findCtrlArrowTarget(rowIndex, maxRowIndex, 1, (r) => isEmptyAt(r, Math.max(0, dataColIndex)))
-          : Math.min(rowIndex + 1, maxRowIndex);
-        if (shift) {
-          setSelectionRange(
-            normalizeSelectionRange({
-              startRow: selectionRange?.startRow ?? rowIndex,
-              startCol: selectionRange?.startCol ?? dataColIndex,
-              endRow: newRow,
-              endCol: selectionRange?.endCol ?? dataColIndex,
-            })
-          );
-        } else {
-          setSelectionRange({ startRow: newRow, startCol: dataColIndex, endRow: newRow, endCol: dataColIndex });
-        }
-        setActiveCell({ rowIndex: newRow, columnIndex });
-        scrollToRow?.(newRow, 'center');
-        break;
-      }
-      case 'ArrowUp': {
-        e.preventDefault();
-        const ctrl = e.ctrlKey || e.metaKey;
-        const newRowUp = ctrl
-          ? findCtrlArrowTarget(rowIndex, 0, -1, (r) => isEmptyAt(r, Math.max(0, dataColIndex)))
-          : Math.max(rowIndex - 1, 0);
-        if (shift) {
-          setSelectionRange(
-            normalizeSelectionRange({
-              startRow: selectionRange?.startRow ?? rowIndex,
-              startCol: selectionRange?.startCol ?? dataColIndex,
-              endRow: newRowUp,
-              endCol: selectionRange?.endCol ?? dataColIndex,
-            })
-          );
-        } else {
-          setSelectionRange({ startRow: newRowUp, startCol: dataColIndex, endRow: newRowUp, endCol: dataColIndex });
-        }
-        setActiveCell({ rowIndex: newRowUp, columnIndex });
-        scrollToRow?.(newRowUp, 'center');
-        break;
-      }
-      case 'ArrowRight': {
-        e.preventDefault();
-        const ctrl = e.ctrlKey || e.metaKey;
-        let newCol: number;
-        if (ctrl && dataColIndex >= 0) {
-          newCol = findCtrlArrowTarget(dataColIndex, visibleCols.length - 1, 1, (c) => isEmptyAt(rowIndex, c)) + colOffset;
-        } else {
-          newCol = Math.min(columnIndex + 1, maxColIndex);
-        }
-        const newDataCol = newCol - colOffset;
-        if (shift) {
-          setSelectionRange(
-            normalizeSelectionRange({
-              startRow: selectionRange?.startRow ?? rowIndex,
-              startCol: selectionRange?.startCol ?? dataColIndex,
-              endRow: selectionRange?.endRow ?? rowIndex,
-              endCol: newDataCol,
-            })
-          );
-        } else {
-          setSelectionRange({ startRow: rowIndex, startCol: newDataCol, endRow: rowIndex, endCol: newDataCol });
-        }
-        setActiveCell({ rowIndex, columnIndex: newCol });
-        break;
-      }
+      case 'ArrowDown':
+      case 'ArrowUp':
+      case 'ArrowRight':
       case 'ArrowLeft': {
         e.preventDefault();
-        const ctrl = e.ctrlKey || e.metaKey;
-        let newColLeft: number;
-        if (ctrl && dataColIndex >= 0) {
-          newColLeft = findCtrlArrowTarget(dataColIndex, 0, -1, (c) => isEmptyAt(rowIndex, c)) + colOffset;
-        } else {
-          newColLeft = Math.max(columnIndex - 1, colOffset);
+        const { newRowIndex, newColumnIndex, newRange } = computeArrowNavigation({
+          direction: e.key as 'ArrowDown' | 'ArrowUp' | 'ArrowLeft' | 'ArrowRight',
+          rowIndex, columnIndex, dataColIndex, colOffset,
+          maxRowIndex, maxColIndex,
+          visibleColCount: visibleCols.length,
+          isCtrl: e.ctrlKey || e.metaKey,
+          isShift: shift,
+          selectionRange,
+          isEmptyAt,
+        });
+        setSelectionRange(newRange);
+        setActiveCell({ rowIndex: newRowIndex, columnIndex: newColumnIndex });
+        if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+          scrollToRow?.(newRowIndex, 'center');
         }
-        const newDataColLeft = newColLeft - colOffset;
-        if (shift) {
-          setSelectionRange(
-            normalizeSelectionRange({
-              startRow: selectionRange?.startRow ?? rowIndex,
-              startCol: selectionRange?.startCol ?? dataColIndex,
-              endRow: selectionRange?.endRow ?? rowIndex,
-              endCol: newDataColLeft,
-            })
-          );
-        } else {
-          setSelectionRange({ startRow: rowIndex, startCol: newDataColLeft, endRow: rowIndex, endCol: newDataColLeft });
-        }
-        setActiveCell({ rowIndex, columnIndex: newColLeft });
         break;
       }
       case 'Tab': {
@@ -327,22 +253,8 @@ export function useKeyboardNavigation<T>(
             : null);
         if (range == null) break;
         e.preventDefault();
-        const norm = normalizeSelectionRange(range);
-        for (let r = norm.startRow; r <= norm.endRow; r++) {
-          for (let c = norm.startCol; c <= norm.endCol; c++) {
-            if (r >= items.length || c >= visibleCols.length) continue;
-            const item = items[r];
-            const col = visibleCols[c];
-            const colEditable =
-              col.editable === true ||
-              (typeof col.editable === 'function' && col.editable(item));
-            if (!colEditable) continue;
-            const oldValue = getCellValue(item, col);
-            const result = parseValue('', oldValue, item, col);
-            if (!result.valid) continue;
-            onCellValueChanged({ item, columnId: col.columnId, oldValue, newValue: result.value, rowIndex: r });
-          }
-        }
+        const deleteEvents = applyCellDeletion(range, items, visibleCols);
+        for (const evt of deleteEvents) onCellValueChanged(evt);
         break;
       }
       case 'F10':

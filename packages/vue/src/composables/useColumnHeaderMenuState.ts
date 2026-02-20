@@ -97,10 +97,8 @@ export function useColumnHeaderMenuState<T = unknown>(
     return col?.sortable !== false;
   });
 
-  const isResizable = computed(() => {
-    // All columns are resizable by default (no per-column resizable flag in core)
-    return true;
-  });
+  // All columns are resizable by default (no per-column resizable flag in core)
+  const isResizable = ref(true);
 
   const handlePinLeft = () => {
     if (openForColumn.value && canPinLeft.value) {

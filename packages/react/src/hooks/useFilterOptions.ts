@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import type { IDataSource } from '../types/dataGridTypes';
 
 export interface UseFilterOptionsResult {
@@ -22,8 +22,6 @@ export function useFilterOptions(
 ): UseFilterOptionsResult {
   const [filterOptions, setFilterOptions] = useState<Record<string, string[]>>({});
   const [loadingOptions, setLoadingOptions] = useState<Record<string, boolean>>({});
-
-  const fieldsKey = useMemo(() => [...fields].sort().join(','), [fields]);
 
   const load = useCallback(async (): Promise<void> => {
     const fetcher =
@@ -53,8 +51,7 @@ export function useFilterOptions(
 
     setFilterOptions(results);
     setLoadingOptions({});
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [dataSource, fieldsKey]);
+  }, [dataSource, fields]);
 
   useEffect(() => {
     load().catch(() => {});

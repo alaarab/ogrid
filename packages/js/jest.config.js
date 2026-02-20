@@ -1,7 +1,7 @@
+const base = require('../../jest.config.base');
+
 module.exports = {
-  testEnvironment: 'jsdom',
-  roots: ['<rootDir>/src'],
-  testMatch: ['**/__tests__/**/*.test.ts'],
+  ...base('js'),
   moduleFileExtensions: ['ts', 'js', 'json'],
   transform: {
     '^.+\\.ts$': ['ts-jest', {
@@ -12,13 +12,14 @@ module.exports = {
         module: 'commonjs',
         target: 'es2019',
         lib: ['ES2020', 'DOM', 'DOM.Iterable'],
-        types: ['jest', 'node']
-      }
-    }]
+        types: ['jest', 'node'],
+      },
+    }],
   },
+  testMatch: ['**/__tests__/**/*.test.ts'],
   moduleNameMapper: {
-    '^@alaarab/ogrid-core$': '<rootDir>/../core/src/index.ts'
+    '^@alaarab/ogrid-core$': '<rootDir>/../core/src/index.ts',
   },
-  setupFilesAfterEnv: ['<rootDir>/../../jest.setup.js'],
-  testTimeout: 10000
+  collectCoverageFrom: ['src/**/*.ts', '!src/**/*.d.ts', '!src/**/__tests__/**'],
+  coverageDirectory: 'coverage',
 };

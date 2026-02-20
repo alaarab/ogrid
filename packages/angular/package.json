@@ -1,6 +1,6 @@
 {
   "name": "@alaarab/ogrid-angular",
-  "version": "2.0.23",
+  "version": "2.1.0",
   "description": "OGrid Angular – Angular services, signals, and headless components for OGrid data grids.",
   "main": "dist/esm/index.js",
   "module": "dist/esm/index.js",
@@ -35,7 +35,7 @@
     "node": ">=18"
   },
   "dependencies": {
-    "@alaarab/ogrid-core": "2.0.23"
+    "@alaarab/ogrid-core": "2.1.0"
   },
   "peerDependencies": {
     "@angular/core": "^21.0.0",
@@ -54,5 +54,12 @@
   "sideEffects": false,
   "publishConfig": {
     "access": "public"
-  }
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/alaarab/ogrid.git",
+    "directory": "packages/angular"
+  },
+  "homepage": "https://ogrid.dev",
+  "bugs": "https://github.com/alaarab/ogrid/issues"
 }

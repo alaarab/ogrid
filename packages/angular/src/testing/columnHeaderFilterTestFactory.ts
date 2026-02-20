@@ -150,7 +150,7 @@ export function createColumnHeaderFilterTests(ColumnHeaderFilterComponent: new (
     if (typeof comp.handleApplyMultiSelect === 'function') {
       comp.handleApplyMultiSelect();
     } else {
-      comp.handleMultiSelectApply!();
+      comp.handleMultiSelectApply?.();
     }
     expect(onFilterChange).toHaveBeenCalledWith(['Active', 'Closed']);
     expect(comp.isFilterOpen()).toBe(false);
@@ -170,7 +170,7 @@ export function createColumnHeaderFilterTests(ColumnHeaderFilterComponent: new (
     if (typeof comp.handleSelectAllFiltered === 'function') {
       comp.handleSelectAllFiltered();
     } else {
-      comp.handleSelectAllOptions!();
+      comp.handleSelectAllOptions?.();
     }
     expect(comp.tempSelected()).toEqual(new Set(['Active', 'Closed']));
   });

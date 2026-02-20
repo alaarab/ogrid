@@ -2,6 +2,8 @@ import { Component, ElementRef, ChangeDetectionStrategy, ViewEncapsulation, Inpu
 import {
   BaseDataGridTableComponent,
   DataGridStateService,
+  ColumnReorderService,
+  VirtualScrollService,
   MarchingAntsOverlayComponent,
   StatusBarComponent,
   GridContextMenuComponent,
@@ -28,7 +30,7 @@ import { PopoverCellEditorComponent } from './popover-cell-editor.component';
   changeDetection: ChangeDetectionStrategy.OnPush,
   encapsulation: ViewEncapsulation.None,
   imports: [ColumnHeaderFilterComponent, ColumnHeaderMenuComponent, StatusBarComponent, GridContextMenuComponent, MarchingAntsOverlayComponent, EmptyStateComponent, InlineCellEditorComponent, PopoverCellEditorComponent],
-  providers: [DataGridStateService],
+  providers: [DataGridStateService, ColumnReorderService, VirtualScrollService],
   template: `
     <div class="ogrid-datagrid-root">
       <div
@@ -267,7 +269,7 @@ import { PopoverCellEditorComponent } from './popover-cell-editor.component';
               </table>
 
               <ogrid-marching-ants-overlay
-                [containerEl]="tableContainerEl"
+                [containerEl]="tableContainerEl()"
                 [selectionRange]="state().interaction.selectionRange"
                 [copyRange]="state().interaction.copyRange"
                 [cutRange]="state().interaction.cutRange"

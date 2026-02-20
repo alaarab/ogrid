@@ -1,0 +1,102 @@
+name: Publish Packages
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version to publish (e.g., 2.0.24)'
+        required: true
+        type: string
+      dry-run:
+        description: 'Dry run (skip actual publish)'
+        required: false
+        type: boolean
+        default: false
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Use Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          registry-url: 'https://registry.npmjs.org'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Verify version sync
+        run: |
+          ROOT_VER=$(node -p "require('./package.json').version")
+          echo "Root version: $ROOT_VER"
+          for pkg in packages/*/package.json; do
+            PKG_VER=$(node -p "require('./$pkg').version")
+            PKG_NAME=$(node -p "require('./$pkg').name")
+            if [ "$PKG_VER" != "$ROOT_VER" ]; then
+              echo "❌ Version mismatch: $PKG_NAME ($PKG_VER) != root ($ROOT_VER)"
+              exit 1
+            fi
+          done
+          echo "✅ All versions in sync: $ROOT_VER"
+
+      - name: Build all packages
+        run: npm run build
+
+      - name: Run all tests
+        run: npx turbo test --concurrency=4
+
+      - name: Lint
+        run: npm run lint
+
+  publish:
+    needs: verify
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Use Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          registry-url: 'https://registry.npmjs.org'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build all packages
+        run: npm run build
+
+      - name: Bump version
+        if: ${{ !inputs.dry-run }}
+        run: npm run version:bump -- ${{ inputs.version }}
+
+      - name: Publish all packages
+        if: ${{ !inputs.dry-run }}
+        run: npm run publish:all
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+      - name: Publish (dry run)
+        if: ${{ inputs.dry-run }}
+        run: |
+          echo "🏃 Dry run — skipping publish"
+          echo "Would publish version: ${{ inputs.version }}"
+
+      - name: Create git tag
+        if: ${{ !inputs.dry-run }}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -m "chore: release v${{ inputs.version }}"
+          git tag "v${{ inputs.version }}"
+          git push origin main --tags

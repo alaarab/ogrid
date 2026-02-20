@@ -123,8 +123,8 @@ export function createSideBarTests(OGrid: React.ComponentType<IOGridProps<Fixtur
       // Click Clear All
       const clearAllBtn = screen.getByRole('button', { name: /clear all/i });
       fireEvent.click(clearAllBtn);
-      // All non-required columns should be hidden
-      expect(screen.queryByTestId('cell-name')).not.toBeInTheDocument();
+      // Required columns (name) remain visible; non-required columns (status) are hidden
+      expect(screen.getAllByTestId('cell-name')).toHaveLength(3);
       expect(screen.queryByTestId('cell-status')).not.toBeInTheDocument();
       // Click Select All
       const selectAllBtn = screen.getByRole('button', { name: /select all/i });

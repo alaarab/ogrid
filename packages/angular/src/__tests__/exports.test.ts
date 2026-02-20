@@ -1,6 +1,5 @@
 describe('@alaarab/ogrid-angular exports', () => {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  let mod: any;
+  let mod: Record<string, unknown>;
 
   beforeAll(() => {
     mod = require('../index');
@@ -92,8 +91,6 @@ describe('@alaarab/ogrid-angular exports', () => {
   });
 
   it('exports latest ref utilities', () => {
-    expect(mod.createLatestRef).toBeDefined();
-    expect(typeof mod.createLatestRef).toBe('function');
     expect(mod.createLatestCallback).toBeDefined();
     expect(typeof mod.createLatestCallback).toBe('function');
   });

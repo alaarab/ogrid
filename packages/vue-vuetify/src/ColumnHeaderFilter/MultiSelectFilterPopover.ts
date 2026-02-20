@@ -1,10 +1,10 @@
-import { defineComponent, h, type PropType } from 'vue';
+import { defineComponent, h, type PropType, type Component } from 'vue';
 import { VBtn, VTextField, VCheckbox, VProgressCircular, VDivider } from 'vuetify/components';
-const _VBtn = VBtn as any;
-const _VTextField = VTextField as any;
-const _VCheckbox = VCheckbox as any;
-const _VProgressCircular = VProgressCircular as any;
-const _VDivider = VDivider as any;
+const _VBtn = VBtn as Component;
+const _VTextField = VTextField as Component;
+const _VCheckbox = VCheckbox as Component;
+const _VProgressCircular = VProgressCircular as Component;
+const _VDivider = VDivider as Component;
 
 export const MultiSelectFilterPopover = defineComponent({
   name: 'MultiSelectFilterPopover',

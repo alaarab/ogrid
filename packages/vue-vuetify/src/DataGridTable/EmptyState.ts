@@ -1,4 +1,4 @@
-import { h, type VNode } from 'vue';
+import { h, type VNode, type Component } from 'vue';
 import { VBtn } from 'vuetify/components';
 
 interface EmptyStateProps {
@@ -22,7 +22,7 @@ export function renderEmptyState({ emptyState }: EmptyStateProps): VNode {
               : emptyState.hasActiveFilters
                 ? [
                     'No items match your current filters. Try adjusting your search or ',
-                    h(VBtn as any, {
+                    h(VBtn as Component, {
                       variant: 'text',
                       size: 'small',
                       onClick: emptyState.onClearAll,

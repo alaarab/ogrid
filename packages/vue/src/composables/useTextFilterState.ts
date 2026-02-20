@@ -1,9 +1,9 @@
-import { ref, watch } from 'vue';
+import { ref, watch, type Ref } from 'vue';
 
 export interface UseTextFilterStateParams {
   textValue?: string;
   onTextChange?: (value: string) => void;
-  isFilterOpen: () => boolean;
+  isFilterOpen: Ref<boolean>;
 }
 
 export interface UseTextFilterStateResult {
@@ -21,7 +21,7 @@ export function useTextFilterState(
   const tempTextValue = ref(textValue);
 
   // Sync temp state when popover opens
-  watch(() => params.isFilterOpen(), (open) => {
+  watch(params.isFilterOpen, (open) => {
     if (open) {
       tempTextValue.value = params.textValue ?? '';
     }

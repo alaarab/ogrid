@@ -40,19 +40,27 @@ export function exportToCsv<T>(
   triggerCsvDownload(csv, filename ?? `export_${new Date().toISOString().slice(0, 10)}.csv`);
 }
 
+/**
+ * Triggers a browser CSV file download.
+ *
+ * NOTE: This function uses DOM APIs (document.createElement, document.body) and therefore
+ * requires a browser environment. It is intentionally kept in the core package because all
+ * framework packages (React, Angular, Vue, JS) need CSV export, and duplicating it would be
+ * worse than the DOM dependency. In server-side rendering (SSR) contexts, call exportToCsv
+ * only from browser-side code (e.g. event handlers), not during server rendering.
+ */
 export function triggerCsvDownload(csvContent: string, filename: string): void {
   const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-  const link = document.createElement('a');
   const url = URL.createObjectURL(blob);
-  link.setAttribute('href', url);
-  link.setAttribute('download', filename);
-  link.style.visibility = 'hidden';
-  document.body.appendChild(link);
-  link.click();
+  const link = document.createElement('a');
   try {
-    document.body.removeChild(link);
-  } catch {
-    // Ignore if removeChild fails (e.g. link was not actually appended in test env)
+    link.setAttribute('href', url);
+    link.setAttribute('download', filename);
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+  } finally {
+    try { document.body.removeChild(link); } catch { /* noop */ }
+    URL.revokeObjectURL(url);
   }
-  URL.revokeObjectURL(url);
 }

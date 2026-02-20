@@ -1,6 +1,7 @@
 import type { IActiveCell, ISelectionRange, IColumnDef, ICellValueChangedEvent } from '@alaarab/ogrid-core';
-import { normalizeSelectionRange, getCellValue, parseValue } from '@alaarab/ogrid-core';
+import { normalizeSelectionRange, applyFillValues } from '@alaarab/ogrid-core';
 import { EventEmitter } from './EventEmitter';
+import { getCellCoordinates } from '../utils/getCellCoordinates';
 
 interface FillHandleEvents extends Record<string, unknown> {
   fillRangeChange: { fillRange: ISelectionRange | null };
@@ -156,7 +157,7 @@ export class FillHandleState<T> {
     this.setActiveCell({ rowIndex: end.endRow, columnIndex: end.endCol + this.params.colOffset });
 
     // Apply fill values
-    this.applyFillValues(norm, start);
+    this.applyFillValuesFromCore(norm, start);
 
     this._isFillDragging = false;
     this.fillDragStart = null;
@@ -165,42 +166,19 @@ export class FillHandleState<T> {
     this.emitter.emit('fillRangeChange', { fillRange: null });
   }
 
-  private applyFillValues(
+  private applyFillValuesFromCore(
     norm: ISelectionRange,
     start: { startRow: number; startCol: number }
   ): void {
     const { items, visibleCols, onCellValueChanged, beginBatch, endBatch } = this.params;
     if (!onCellValueChanged) return;
 
-    const startItem = items[norm.startRow];
-    const startColDef = visibleCols[norm.startCol];
-    if (!startItem || !startColDef) return;
-
-    const startValue = getCellValue(startItem as T, startColDef as unknown as Parameters<typeof getCellValue>[1]);
-    beginBatch?.();
-    for (let row = norm.startRow; row <= norm.endRow; row++) {
-      for (let col = norm.startCol; col <= norm.endCol; col++) {
-        if (row === start.startRow && col === start.startCol) continue;
-        if (row >= items.length || col >= visibleCols.length) continue;
-        const item = items[row];
-        const colDef = visibleCols[col];
-        const colEditable =
-          colDef.editable === true ||
-          (typeof colDef.editable === 'function' && colDef.editable(item));
-        if (!colEditable) continue;
-        const oldValue = getCellValue(item, colDef as unknown as Parameters<typeof getCellValue>[1]);
-        const result = parseValue(startValue, oldValue, item, colDef);
-        if (!result.valid) continue;
-        onCellValueChanged({
-          item,
-          columnId: colDef.columnId,
-          oldValue,
-          newValue: result.value,
-          rowIndex: row,
-        });
-      }
+    const fillEvents = applyFillValues(norm, start.startRow, start.startCol, items, visibleCols);
+    if (fillEvents.length > 0) {
+      beginBatch?.();
+      for (const evt of fillEvents) onCellValueChanged(evt);
+      endBatch?.();
     }
-    endBatch?.();
   }
 
   private resolveRange(cx: number, cy: number): ISelectionRange | null {
@@ -208,10 +186,10 @@ export class FillHandleState<T> {
     const target = document.elementFromPoint(cx, cy) as HTMLElement | null;
     const cell = target?.closest?.('[data-row-index][data-col-index]');
     if (!cell || !this.wrapperRef.contains(cell)) return null;
-    const r = parseInt(cell.getAttribute('data-row-index') ?? '', 10);
-    const c = parseInt(cell.getAttribute('data-col-index') ?? '', 10);
-    if (Number.isNaN(r) || Number.isNaN(c) || c < this.params.colOffset) return null;
-    const dataCol = c - this.params.colOffset;
+    const coords = getCellCoordinates(cell);
+    if (!coords || coords.colIndex < this.params.colOffset) return null;
+    const r = coords.rowIndex;
+    const dataCol = coords.colIndex - this.params.colOffset;
     return normalizeSelectionRange({
       startRow: this.fillDragStart.startRow,
       startCol: this.fillDragStart.startCol,
@@ -230,8 +208,10 @@ export class FillHandleState<T> {
     const maxC = Math.max(range.startCol, range.endCol);
     for (let i = 0; i < cells.length; i++) {
       const el = cells[i];
-      const r = parseInt(el.getAttribute('data-row-index')!, 10);
-      const c = parseInt(el.getAttribute('data-col-index')!, 10) - colOff;
+      const coords = getCellCoordinates(el);
+      if (!coords) continue;
+      const r = coords.rowIndex;
+      const c = coords.colIndex - colOff;
       const inRange = r >= minR && r <= maxR && c >= minC && c <= maxC;
       if (inRange) {
         if (!el.hasAttribute('data-drag-range')) el.setAttribute('data-drag-range', '');
@@ -258,8 +238,13 @@ export class FillHandleState<T> {
     if (this._isFillDragging) {
       window.removeEventListener('mousemove', this.onMoveBound, true);
       window.removeEventListener('mouseup', this.onUpBound, true);
+      this.clearDragAttrs();
+      this._isFillDragging = false;
+      this.fillDragStart = null;
+      this.liveFillRange = null;
+      this.lastMousePos = null;
     }
-    if (this.rafHandle) cancelAnimationFrame(this.rafHandle);
+    if (this.rafHandle) { cancelAnimationFrame(this.rafHandle); this.rafHandle = 0; }
     this.emitter.removeAllListeners();
   }
 }

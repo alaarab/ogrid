@@ -1,4 +1,4 @@
-import { defineComponent, h, type PropType } from 'vue';
+import { defineComponent, h, type PropType, type Component } from 'vue';
 import { VMenu, VList, VListItem, VDivider } from 'vuetify/components';
 import {
   GRID_CONTEXT_MENU_ITEMS,
@@ -48,17 +48,17 @@ export const GridContextMenu = defineComponent({
     };
 
     return () =>
-      h(VMenu as any, {
+      h(VMenu as Component, {
         modelValue: true,
         'onUpdate:modelValue': (v: boolean) => { if (!v) props.onClose(); },
         target: [props.x, props.y] as [number, number],
         location: 'bottom start',
       }, {
         default: () =>
-          h(VList as any, { density: 'compact', 'aria-label': 'Grid context menu' }, () =>
+          h(VList as Component, { density: 'compact', 'aria-label': 'Grid context menu' }, () =>
             GRID_CONTEXT_MENU_ITEMS.map((item) => [
-              ...(item.dividerBefore ? [h(VDivider as any, { key: `${item.id}-div` })] : []),
-              h(VListItem as any, {
+              ...(item.dividerBefore ? [h(VDivider as Component, { key: `${item.id}-div` })] : []),
+              h(VListItem as Component, {
                 key: item.id,
                 disabled: isDisabled(item),
                 onClick: () => { handlers[item.id](); },

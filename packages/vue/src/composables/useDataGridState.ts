@@ -158,31 +158,29 @@ export function useDataGridState<T>(
 ): UseDataGridStateResult<T> {
   const { props, wrapperRef } = params;
 
+  // --- Reactive refs for props consumed by sub-composables ---
+  // Only properties that sub-composables need as Ref<...> get their own computed.
+  // Everything else is read directly from props.value at the point of use to
+  // avoid unnecessary intermediate reactive layers.
   const items = computed(() => props.value.items);
-  const columnsProp = computed(() => props.value.columns);
   const getRowId = props.value.getRowId; // stable function reference, no reactivity needed
-  const visibleColumnsProp = computed(() => props.value.visibleColumns);
-  const columnOrderProp = computed(() => props.value.columnOrder);
   const rowSelectionProp = computed(() => props.value.rowSelection ?? 'none');
   const controlledSelectedRows = computed(() => props.value.selectedRows);
-  const onSelectionChangeProp = computed(() => props.value.onSelectionChange);
-  const statusBarProp = computed(() => props.value.statusBar);
-  const emptyStateProp = computed(() => props.value.emptyState);
   const editableProp = computed(() => props.value.editable);
-  const cellSelectionPropRaw = computed(() => props.value.cellSelection);
-  const cellSelection = computed(() => cellSelectionPropRaw.value !== false);
-  const onCellValueChangedProp = computed(() => props.value.onCellValueChanged);
-  const initialColumnWidths = computed(() => props.value.initialColumnWidths);
-  const onColumnResizedProp = computed(() => props.value.onColumnResized);
+  const cellSelection = computed(() => props.value.cellSelection !== false);
   const pinnedColumnsProp = computed(() => props.value.pinnedColumns);
-  const onColumnPinnedProp = computed(() => props.value.onColumnPinned);
-  const onCellErrorProp = computed(() => props.value.onCellError);
 
   // Undo/redo wrapping
-  const undoRedo = useUndoRedo<T>({ onCellValueChanged: onCellValueChangedProp.value });
+  const undoRedo = useUndoRedo<T>({ onCellValueChanged: props.value.onCellValueChanged });
   const onCellValueChanged = computed(() => undoRedo.onCellValueChanged);
 
-  const flatColumnsRaw = computed(() => flattenColumns(columnsProp.value) as IColumnDef<T>[]);
+  /**
+   * Core's flattenColumns returns IColumnDef<unknown>[] because the generic T
+   * cannot be propagated through the group-flattening algorithm. At this call
+   * site the input is IColumnDef<T>[] (via columnsProp), so the output is
+   * guaranteed to be IColumnDef<T>[] — the cast is safe.
+   */
+  const flatColumnsRaw = computed(() => flattenColumns(props.value.columns) as IColumnDef<T>[]);
 
   const flatColumns = computed(() => {
     const pinned = pinnedColumnsProp.value;
@@ -195,8 +193,8 @@ export function useDataGridState<T>(
   });
 
   const visibleCols = computed(() => {
-    const vis = visibleColumnsProp.value;
-    const order = columnOrderProp.value;
+    const vis = props.value.visibleColumns;
+    const order = props.value.columnOrder;
     const filtered = vis ? flatColumns.value.filter((c) => vis.has(c.columnId)) : flatColumns.value;
     if (!order?.length) return filtered;
     // Build index map for O(1) lookup instead of repeated O(n) indexOf
@@ -219,8 +217,11 @@ export function useDataGridState<T>(
   const hasRowNumbersCol = computed(() => !!props.value.showRowNumbers);
   const specialColsCount = computed(() => (hasCheckboxCol.value ? 1 : 0) + (hasRowNumbersCol.value ? 1 : 0));
   const totalColCount = computed(() => visibleColumnCount.value + specialColsCount.value);
-  const colOffset = specialColsCount.value; // snapshot: checkbox/rowNumbers cols are fixed at setup
+  const colOffset = specialColsCount; // reactive computed ref instead of snapshot
 
+  // shallowRef + mutate-in-place + triggerRef: the Map is mutated (clear/set)
+  // rather than replaced, so Vue's shallow reactivity doesn't detect the change.
+  // triggerRef forces dependents to re-evaluate after the in-place mutation.
   const rowIndexByRowId = shallowRef(new Map<RowId, number>());
   watch(items, (newItems) => {
     const m = rowIndexByRowId.value;
@@ -234,7 +235,7 @@ export function useDataGridState<T>(
     getRowId,
     rowSelection: rowSelectionProp,
     controlledSelectedRows,
-    onSelectionChange: onSelectionChangeProp.value,
+    onSelectionChange: props.value.onSelectionChange,
   });
 
   const { editingCell, setEditingCell, pendingEditorValue, setPendingEditorValue } = useCellEditing();
@@ -323,21 +324,21 @@ export function useDataGridState<T>(
     visibleCols,
     flatColumns,
     hasCheckboxCol,
-    initialColumnWidths: initialColumnWidths.value,
-    onColumnResized: onColumnResizedProp.value,
+    initialColumnWidths: props.value.initialColumnWidths,
+    onColumnResized: (columnId: string, width: number) => props.value.onColumnResized?.(columnId, width),
   });
 
   // --- Column pinning ---
   const pinningResult = useColumnPinning({
     columns: flatColumns,
     pinnedColumns: pinnedColumnsProp,
-    onColumnPinned: onColumnPinnedProp.value,
+    onColumnPinned: props.value.onColumnPinned,
   });
 
   // Autosize callback — updates internal column sizing state + notifies external listener
   const handleAutosizeColumn = (columnId: string, width: number) => {
     setColumnSizingOverrides({ ...columnSizingOverrides.value, [columnId]: { widthPx: width } });
-    onColumnResizedProp.value?.(columnId, width);
+    props.value.onColumnResized?.(columnId, width);
   };
 
   const headerMenuResult = useColumnHeaderMenuState({
@@ -346,7 +347,7 @@ export function useDataGridState<T>(
     onPinColumn: pinningResult.pinColumn,
     onUnpinColumn: pinningResult.unpinColumn,
     onSort: props.value.onColumnSort,
-    onColumnResized: onColumnResizedProp.value,
+    onColumnResized: props.value.onColumnResized,
     onAutosizeColumn: handleAutosizeColumn,
     sortBy: computed(() => props.value.sortBy),
     sortDirection: computed(() => props.value.sortDirection),
@@ -355,6 +356,8 @@ export function useDataGridState<T>(
   // Measure actual column widths from the DOM after layout changes.
   // Used as a minWidth floor to prevent columns from shrinking when new data
   // loads (e.g. during server-side pagination transitions).
+  // nextTick() defers measurement to after Vue has flushed its DOM updates,
+  // ensuring header cells reflect the latest column layout before we read widths.
   const measuredColumnWidths = ref<Record<string, number>>({});
 
   watch(
@@ -411,7 +414,7 @@ export function useDataGridState<T>(
 
   const statusBarConfig = computed(() => {
     const base = getDataGridStatusBarConfig(
-      statusBarProp.value as boolean | IStatusBarProps | undefined,
+      props.value.statusBar as boolean | IStatusBarProps | undefined,
       items.value.length,
       rowSelectionResult.selectedRowIds.value.size
     );
@@ -419,7 +422,7 @@ export function useDataGridState<T>(
     return { ...base, aggregation: aggregation.value ?? undefined };
   });
 
-  const showEmptyInGrid = computed(() => items.value.length === 0 && !!emptyStateProp.value && !props.value.isLoading);
+  const showEmptyInGrid = computed(() => items.value.length === 0 && !!props.value.emptyState && !props.value.isLoading);
   const hasCellSelection = computed(() => selectionRange.value != null || activeCell.value != null);
 
   // --- View-model inputs ---
@@ -440,7 +443,7 @@ export function useDataGridState<T>(
     selectionRange: cellSelection.value ? selectionRange.value : null,
     cutRange: cellSelection.value ? cutRange.value : null,
     copyRange: cellSelection.value ? copyRange.value : null,
-    colOffset,
+    colOffset: colOffset.value,
     itemsLength: items.value.length,
     getRowId,
     editable: editableProp.value,
@@ -503,7 +506,7 @@ export function useDataGridState<T>(
     visibleCols: visibleCols.value,
     visibleColumnCount: visibleColumnCount.value,
     totalColCount: totalColCount.value,
-    colOffset,
+    colOffset: colOffset.value,
     hasCheckboxCol: hasCheckboxCol.value,
     hasRowNumbersCol: hasRowNumbersCol.value,
     rowIndexByRowId: rowIndexByRowId.value,
@@ -512,7 +515,7 @@ export function useDataGridState<T>(
     desiredTableWidth: desiredTableWidth.value,
     columnSizingOverrides: columnSizingOverrides.value,
     setColumnSizingOverrides,
-    onColumnResized: onColumnResizedProp.value,
+    onColumnResized: props.value.onColumnResized,
     measuredColumnWidths: measuredColumnWidths.value,
   }));
 
@@ -571,7 +574,7 @@ export function useDataGridState<T>(
     cellDescriptorInput: cellDescriptorInput.value,
     statusBarConfig: statusBarConfig.value,
     showEmptyInGrid: showEmptyInGrid.value,
-    onCellError: onCellErrorProp.value,
+    onCellError: props.value.onCellError,
   }));
 
   const pinningState = computed<DataGridPinningState>(() => ({

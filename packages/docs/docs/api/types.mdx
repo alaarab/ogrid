@@ -592,8 +592,8 @@ interface IVirtualScrollConfig {
 
 | Field | Type | Default | Description |
 |-------|------|---------|-------------|
-| `enabled` | `boolean` | `false` | Enable virtual scrolling. |
-| `rowHeight` | `number` | **Required when enabled** | Fixed row height in pixels. All rows must have the same height. |
+| `enabled` | `boolean` | `false` | Enable virtual scrolling. Must be `true` to activate. |
+| `rowHeight` | `number` | `36` | Fixed row height in pixels. All rows must have the same height. Required when enabled. |
 | `overscan` | `number` | `5` | Number of extra rows to render above/below the visible area (for smoother scrolling). |
 
 ### Usage Example
@@ -604,7 +604,7 @@ interface IVirtualScrollConfig {
   columns={columns}
   getRowId={(item) => item.id}
   virtualScroll={{
-    enabled: true,
+    enabled: true,  // required to activate virtual scrolling
     rowHeight: 40,
     overscan: 10,
   }}

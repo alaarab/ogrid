@@ -7,14 +7,15 @@ export class EventEmitter<TEvents extends Record<string, unknown> = Record<strin
     if (!this.handlers.has(event)) {
       this.handlers.set(event, new Set());
     }
-    this.handlers.get(event)!.add(handler as EventHandler);
+    this.handlers.get(event)?.add(handler as EventHandler);
   }
 
   off<K extends keyof TEvents>(event: K, handler: EventHandler<TEvents[K]>): void {
     this.handlers.get(event)?.delete(handler as EventHandler);
   }
 
-  emit<K extends keyof TEvents>(event: K, data: TEvents[K]): void {
+  emit<K extends keyof TEvents>(event: K, ...args: TEvents[K] extends undefined ? [] : [TEvents[K]]): void {
+    const data = args[0] as TEvents[K];
     this.handlers.get(event)?.forEach(handler => {
       (handler as EventHandler<TEvents[K]>)(data);
     });

@@ -60,6 +60,7 @@ export { useDebounce, useDebouncedCallback } from './useDebounce';
 export type { DebouncedFn } from './useDebounce';
 
 export { useLatestRef } from './useLatestRef';
+export type { MaybeShallowRef } from './useLatestRef';
 
 export { useTableLayout } from './useTableLayout';
 export type { UseTableLayoutParams, UseTableLayoutResult } from './useTableLayout';

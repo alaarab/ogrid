@@ -57,13 +57,13 @@ export function createColumnGroupTests(): void {
       const groupRow = rows[0];
       const groupCell = groupRow.find((c) => c.isGroup);
       expect(groupCell).toBeTruthy();
-      expect(groupCell!.colSpan).toBe(2);
+      expect(groupCell?.colSpan).toBe(2);
     });
 
     it('group header label is visible in header data', () => {
       const rows = buildHeaderRows(groupedColumns);
       const groupCell = rows[0].find((c) => c.isGroup);
-      expect(groupCell!.label).toBe('Info');
+      expect(groupCell?.label).toBe('Info');
     });
 
     it('body cells (leaf columns) are correct with grouped headers', () => {

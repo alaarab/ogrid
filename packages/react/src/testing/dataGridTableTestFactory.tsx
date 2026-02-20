@@ -25,8 +25,7 @@ export function createDataGridTableTests(DataGridTable: React.ComponentType<IOGr
     },
   ];
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  function renderTable(overrides: Record<string, any> = {}) {
+  function renderTable(overrides: Record<string, unknown> = {}) {
     const defaultProps = {
       items: fixtureRows.slice(0, 2),
       columns: twoColumnColumns,
@@ -250,7 +249,7 @@ export function createDataGridTableTests(DataGridTable: React.ComponentType<IOGr
     const region = container.querySelector('[role="region"]');
     expect(region).toBeTruthy();
     // suppressHorizontalScroll sets data-overflow-x="false" (CSS handles hiding)
-    expect(region!.getAttribute('data-overflow-x')).toBe('false');
+    expect(region?.getAttribute('data-overflow-x')).toBe('false');
   });
 
   it('renders status bar when statusBar is true', () => {

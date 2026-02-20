@@ -1,5 +1,6 @@
 import { useState, useCallback, useRef, useMemo } from 'react';
 import { useLatestRef } from './useLatestRef';
+import { applyRangeRowSelection, computeRowSelectionState } from '../utils';
 
 import type { RowId, RowSelectionMode, IRowSelectionChangeEvent } from '../types';
 
@@ -73,20 +74,13 @@ export function useRowSelection<T>(params: UseRowSelectionParams<T>): UseRowSele
         return;
       }
 
-      const next = new Set(selectedRowIdsRef.current);
       const currentItems = itemsRef.current;
+      let next: Set<RowId>;
 
       if (shiftKey && lastClickedRowRef.current >= 0 && lastClickedRowRef.current !== rowIndex) {
-        const start = Math.min(lastClickedRowRef.current, rowIndex);
-        const end = Math.max(lastClickedRowRef.current, rowIndex);
-        for (let i = start; i <= end; i++) {
-          if (i < currentItems.length) {
-            const id = getRowId(currentItems[i]);
-            if (checked) next.add(id);
-            else next.delete(id);
-          }
-        }
+        next = applyRangeRowSelection(lastClickedRowRef.current, rowIndex, checked, currentItems, getRowId, selectedRowIdsRef.current);
       } else {
+        next = new Set(selectedRowIdsRef.current);
         if (checked) next.add(rowId);
         else next.delete(rowId);
       }
@@ -94,8 +88,7 @@ export function useRowSelection<T>(params: UseRowSelectionParams<T>): UseRowSele
       lastClickedRowRef.current = rowIndex;
       updateSelection(next);
     },
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- itemsRef, selectedRowIdsRef are stable refs
-    [rowSelection, getRowId, updateSelection]
+    [rowSelection, getRowId, updateSelection, itemsRef, selectedRowIdsRef]
   );
 
   const handleSelectAll = useCallback(
@@ -109,20 +102,9 @@ export function useRowSelection<T>(params: UseRowSelectionParams<T>): UseRowSele
     [items, getRowId, updateSelection]
   );
 
-  const allSelected = useMemo(
-    () => {
-      if (selectedRowIds.size === 0 || items.length === 0) return false;
-      return items.every((item) => selectedRowIds.has(getRowId(item)));
-    },
+  const { allSelected, someSelected } = useMemo(
+    () => computeRowSelectionState(selectedRowIds, items, getRowId),
     [items, selectedRowIds, getRowId]
-  );
-  const someSelected = useMemo(
-    () => {
-      if (allSelected) return false;
-      // No iteration needed — any selected row means "some" are selected
-      return selectedRowIds.size > 0;
-    },
-    [allSelected, selectedRowIds.size]
   );
 
   return {

@@ -65,15 +65,15 @@ export function areGridRowPropsEqual(prev: GridRowComparatorProps, next: GridRow
   const prevActive = prev.activeCell?.rowIndex === ri;
   const nextActive = next.activeCell?.rowIndex === ri;
   if (prevActive !== nextActive) return false;
-  if (prevActive && nextActive && prev.activeCell!.columnIndex !== next.activeCell!.columnIndex) return false;
+  if (prevActive && nextActive && prev.activeCell?.columnIndex !== next.activeCell?.columnIndex) return false;
 
   // Selection range touches this row?
   const prevInSel = isRowInRange(prev.selectionRange, ri);
   const nextInSel = isRowInRange(next.selectionRange, ri);
   if (prevInSel !== nextInSel) return false;
   if (prevInSel && nextInSel) {
-    if (prev.selectionRange!.startCol !== next.selectionRange!.startCol ||
-        prev.selectionRange!.endCol !== next.selectionRange!.endCol) return false;
+    if (prev.selectionRange?.startCol !== next.selectionRange?.startCol ||
+        prev.selectionRange?.endCol !== next.selectionRange?.endCol) return false;
   }
 
   // Fill handle (selection end row) + isDragging

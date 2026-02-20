@@ -83,6 +83,7 @@ export function createOGrid(components: CreateOGridComponents) {
               columns={columnChooser.columns as IColumnDefinition[]}
               visibleColumns={columnChooser.visibleColumns}
               onVisibilityChange={columnChooser.onVisibilityChange}
+              onSetVisibleColumns={columnChooser.onSetVisibleColumns}
             />
           ) : undefined
         }
@@ -92,10 +93,7 @@ export function createOGrid(components: CreateOGridComponents) {
             pageSize={pagination.pageSize}
             totalCount={pagination.displayTotalCount}
             onPageChange={pagination.setPage}
-            onPageSizeChange={(size) => {
-              pagination.setPageSize(size);
-              pagination.setPage(1);
-            }}
+            onPageSizeChange={pagination.setPageSize}
             pageSizeOptions={pagination.pageSizeOptions}
             entityLabelPlural={pagination.entityLabelPlural}
           />

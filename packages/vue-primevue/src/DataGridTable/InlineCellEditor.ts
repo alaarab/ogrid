@@ -1,10 +1,10 @@
-import { h } from 'vue';
+import { h, type Component } from 'vue';
 import Checkbox from 'primevue/checkbox';
 import DatePicker from 'primevue/datepicker';
 import { createInlineCellEditor } from '@alaarab/ogrid-vue';
 
-const _Checkbox = Checkbox as any;
-const _DatePicker = DatePicker as any;
+const _Checkbox = Checkbox as Component;
+const _DatePicker = DatePicker as Component;
 
 export type { CreateInlineCellEditorOptions } from '@alaarab/ogrid-vue';
 

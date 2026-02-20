@@ -97,24 +97,28 @@ Access via `grid.api`:
 
 | Method | Signature | Description |
 |--------|-----------|-------------|
-| `setRowData` | `(data: T[]) => void` | Replace the entire dataset. |
+| `setRowData` | `(data: T[]) => void` | Replace the entire dataset (client-side only; no-op with `dataSource`). |
+| `setLoading` | `(loading: boolean) => void` | Show or hide the loading overlay. |
 | `getDisplayedRows` | `() => T[]` | Get the currently visible (filtered, sorted, paginated) rows. |
-| `getRowNode` | `(id: RowId) => T \| undefined` | Find a row by its ID. |
 | `refreshData` | `() => void` | Re-fetch from `dataSource` (server-side only). |
 
 ### Sorting & Filtering
 
 | Method | Signature | Description |
 |--------|-----------|-------------|
-| `setSort` | `(field: string, direction: 'asc' \| 'desc') => void` | Set sort programmatically. |
-| `setFilter` | `(key: string, value: FilterValue \| undefined) => void` | Set or clear a filter. |
+| `setFilterModel` | `(filters: IFilters) => void` | Set the full filter model. Pass `{}` to clear all filters. |
+| `clearFilters` | `() => void` | Clear all active filters. Shorthand for `setFilterModel({})`. |
+| `clearSort` | `() => void` | Reset the sort to no active sort. |
+| `resetGridState` | `(options?: { keepSelection?: boolean }) => void` | Reset all grid state (filters, sort, and optionally selection). |
 
 ### Columns
 
 | Method | Signature | Description |
 |--------|-----------|-------------|
-| `getColumnState` | `() => IGridColumnState[]` | Get column widths, visibility, and order. |
-| `setColumnVisible` | `(columnId: string, visible: boolean) => void` | Show/hide a column. |
+| `getColumnState` | `() => IGridColumnState` | Get current column state (visibility, sort, order, widths, filters). |
+| `applyColumnState` | `(state: Partial<IGridColumnState>) => void` | Bulk-restore any combination of column state fields. |
+| `getColumnOrder` | `() => string[]` | Get the current column display order (array of column IDs). |
+| `setColumnOrder` | `(order: string[]) => void` | Set the column display order programmatically. |
 
 ### Selection
 
@@ -122,7 +126,8 @@ Access via `grid.api`:
 |--------|-----------|-------------|
 | `selectAll` | `() => void` | Select all rows (requires `rowSelection: 'multiple'`). |
 | `deselectAll` | `() => void` | Deselect all rows. |
-| `getSelectedRows` | `() => T[]` | Get the currently selected row data. |
+| `getSelectedRows` | `() => RowId[]` | Get the IDs of currently selected rows. |
+| `setSelectedRows` | `(rowIds: RowId[]) => void` | Set which rows are selected by their IDs. |
 
 ### Export
 
@@ -130,12 +135,11 @@ Access via `grid.api`:
 |--------|-----------|-------------|
 | `exportToCsv` | `(filename?: string) => void` | Export displayed rows to CSV and trigger a browser download. |
 
-### Pagination
+### Virtual Scrolling
 
 | Method | Signature | Description |
 |--------|-----------|-------------|
-| `setPage` | `(page: number) => void` | Navigate to a specific page. |
-| `setPageSize` | `(size: number) => void` | Change rows per page. |
+| `scrollToRow` | `(index: number, options?: { align?: 'start' \| 'center' \| 'end' }) => void` | Scroll to a specific row by index. Only effective when virtual scrolling is enabled. |
 
 ---
 
@@ -159,6 +163,7 @@ Subscribe with `grid.on(eventName, handler)`.
   columnId: string;  // Which column was edited
   oldValue: unknown; // Previous cell value
   newValue: unknown; // New cell value
+  rowIndex: number;  // Row index of the edited cell
 }
 ```
 

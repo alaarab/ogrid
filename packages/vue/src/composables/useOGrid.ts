@@ -1,4 +1,4 @@
-import { ref, computed, watch, onMounted, onUnmounted, type Ref } from 'vue';
+import { ref, computed, watch, shallowRef, onMounted, onUnmounted, type Ref } from 'vue';
 import {
   mergeFilter,
   deriveFilterOptionsFromData,
@@ -6,6 +6,8 @@ import {
   flattenColumns,
   processClientSideData,
   computeNextSortState,
+  validateColumns,
+  validateRowIds,
 } from '@alaarab/ogrid-core';
 import { useFilterOptions } from './useFilterOptions';
 import { useSideBarState } from './useSideBarState';
@@ -98,10 +100,15 @@ export function useOGrid<T>(
   // Group 2: Data identity (stable or rarely changes)
   const dataProps = computed(() => {
     const p = props.value;
+    const data = ('data' in p ? p.data : undefined) as T[] | undefined;
+    const dataSource = ('dataSource' in p ? p.dataSource : undefined);
+    if (data && dataSource) {
+      console.warn('[OGrid] Both data and dataSource provided. dataSource takes precedence.');
+    }
     return {
       getRowId: p.getRowId,
-      data: ('data' in p ? p.data : undefined) as T[] | undefined,
-      dataSource: ('dataSource' in p ? p.dataSource : undefined),
+      data,
+      dataSource,
     };
   });
 
@@ -271,7 +278,7 @@ export function useOGrid<T>(
   // --- Server-side fetching ---
   const serverItems = ref<T[]>([]) as Ref<T[]>;
   const serverTotalCount = ref(0);
-  const loading = ref(true);
+  const loading = ref(false);
   let fetchId = 0;
   let isDestroyed = false;
   const refreshCounter = ref(0);
@@ -306,12 +313,15 @@ export function useOGrid<T>(
       });
   };
 
-  // Initial fetch on mount
+  // Validate columns once on mount
   onMounted(() => {
+    validateColumns(columns.value as Parameters<typeof validateColumns>[0]);
     doFetch();
   });
 
-  // Subsequent fetches on page/sort/filter changes (no immediate — onMounted handles initial)
+  // Subsequent fetches on page/sort/filter changes (no immediate — onMounted handles initial).
+  // Getter functions are used for nested properties (sort.value.field) that Vue
+  // can't track through a raw ref; top-level refs are passed directly.
   watch(
     [() => dataProps.value.dataSource, page, pageSize, () => sort.value.field, () => sort.value.direction, filters, refreshCounter],
     () => {
@@ -334,12 +344,17 @@ export function useOGrid<T>(
       : serverTotalCount.value
   );
 
-  // Fire onFirstDataRendered once
+  // Fire onFirstDataRendered once; also validate row IDs on first data
   let firstDataRendered = false;
+  let rowIdsValidated = false;
   watch(displayItems, (items) => {
     if (!firstDataRendered && items.length > 0) {
       firstDataRendered = true;
       callbacks.value.onFirstDataRendered?.();
+    }
+    if (!rowIdsValidated && items.length > 0) {
+      rowIdsValidated = true;
+      validateRowIds(items, dataProps.value.getRowId as (item: typeof items[0]) => import('@alaarab/ogrid-core').RowId);
     }
   });
 
@@ -384,7 +399,11 @@ export function useOGrid<T>(
   };
 
   // --- Side bar ---
-  const sideBarState = useSideBarState({ config: props.value.sideBar });
+  // Use a shallowRef to hold sideBarState so sideBarProps computed re-runs when config changes
+  const sideBarStateRef = shallowRef(useSideBarState({ config: props.value.sideBar }));
+  watch(() => props.value.sideBar, (newConfig) => {
+    sideBarStateRef.value = useSideBarState({ config: newConfig });
+  });
 
   const filterableColumns = computed(() =>
     columns.value
@@ -392,12 +411,13 @@ export function useOGrid<T>(
       .map((c) => ({
         columnId: c.columnId,
         name: c.name,
-        filterField: c.filterable!.filterField ?? c.columnId,
-        filterType: c.filterable!.type as 'text' | 'multiSelect' | 'people' | 'date',
+        filterField: c.filterable?.filterField ?? c.columnId,
+        filterType: c.filterable?.type as 'text' | 'multiSelect' | 'people' | 'date',
       }))
   );
 
   const sideBarProps = computed<SideBarProps | null>(() => {
+    const sideBarState = sideBarStateRef.value;
     if (!sideBarState.isEnabled) return null;
     // Re-read reactive deps so the computed tracks them, but use getters for
     // activePanel/isOpen so that a stored reference stays current after toggle/close.

@@ -1,4 +1,4 @@
-import { Component, Input, ChangeDetectionStrategy } from '@angular/core';
+import { Component, Input, ChangeDetectionStrategy, OnChanges } from '@angular/core';
 import { getStatusBarParts } from '@alaarab/ogrid-core';
 
 @Component({
@@ -16,7 +16,7 @@ import { getStatusBarParts } from '@alaarab/ogrid-core';
     </div>
   `,
 })
-export class StatusBarComponent {
+export class StatusBarComponent implements OnChanges {
   @Input({ required: true }) totalCount!: number;
   @Input() filteredCount: number | undefined = undefined;
   @Input() selectedCount: number | undefined = undefined;
@@ -36,8 +36,10 @@ export class StatusBarComponent {
     statusBarValue?: string;
   } | undefined = undefined;
 
-  getParts() {
-    return getStatusBarParts({
+  private cachedParts: ReturnType<typeof getStatusBarParts> = [];
+
+  ngOnChanges(): void {
+    this.cachedParts = getStatusBarParts({
       totalCount: this.totalCount,
       filteredCount: this.filteredCount,
       selectedCount: this.selectedCount,
@@ -45,5 +47,9 @@ export class StatusBarComponent {
       aggregation: this.aggregation ?? undefined,
       suppressRowCount: this.suppressRowCount,
     });
+  }
+
+  getParts() {
+    return this.cachedParts;
   }
 }

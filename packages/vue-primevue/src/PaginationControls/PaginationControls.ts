@@ -1,4 +1,4 @@
-import { defineComponent, computed, h, type PropType } from 'vue';
+import { defineComponent, computed, h, type PropType, type Component } from 'vue';
 import Button from 'primevue/button';
 import Select from 'primevue/select';
 import { getPaginationViewModel } from '@alaarab/ogrid-vue';
@@ -147,7 +147,7 @@ export const PaginationControls = defineComponent({
         // Page size selector
         h('div', { style: { display: 'flex', alignItems: 'center', gap: '8px' } }, [
           h('span', { style: { fontSize: '0.875rem', color: 'var(--ogrid-fg-secondary, rgba(0,0,0,0.6))' } }, 'Rows'),
-          h(Select as any, {
+          h(Select as Component, {
             modelValue: props.pageSize,
             options: v.pageSizeOptions,
             'aria-label': 'Rows per page',

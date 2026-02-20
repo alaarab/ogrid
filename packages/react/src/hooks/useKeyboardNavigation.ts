@@ -1,6 +1,5 @@
 import { useCallback, useRef } from 'react';
-import { normalizeSelectionRange } from '../types';
-import { getCellValue, parseValue, findCtrlArrowTarget, computeTabNavigation } from '../utils';
+import { getCellValue, computeTabNavigation, computeArrowNavigation, applyCellDeletion } from '../utils';
 import type {
   RowId,
   IActiveCell,
@@ -11,7 +10,6 @@ import type {
 } from '../types';
 import type { EditingCell } from './useCellEditing';
 import type { ContextMenuPosition } from './useContextMenu';
-
 
 export interface UseKeyboardNavigationParams<T> {
   data: {
@@ -133,116 +131,23 @@ export function useKeyboardNavigation<T>(
             void handlePaste();
           }
           break;
-        case 'ArrowDown': {
-          e.preventDefault();
-          const ctrl = e.ctrlKey || e.metaKey;
-          const newRow = ctrl
-            ? findCtrlArrowTarget(rowIndex, maxRowIndex, 1, (r) => isEmptyAt(r, Math.max(0, dataColIndex)))
-            : Math.min(rowIndex + 1, maxRowIndex);
-          if (shift) {
-            setSelectionRange(
-              normalizeSelectionRange({
-                startRow: selectionRange?.startRow ?? rowIndex,
-                startCol: selectionRange?.startCol ?? dataColIndex,
-                endRow: newRow,
-                endCol: selectionRange?.endCol ?? dataColIndex,
-              })
-            );
-          } else {
-            setSelectionRange({
-              startRow: newRow,
-              startCol: dataColIndex,
-              endRow: newRow,
-              endCol: dataColIndex,
-            });
-          }
-          setActiveCell({ rowIndex: newRow, columnIndex });
-          break;
-        }
-        case 'ArrowUp': {
-          e.preventDefault();
-          const ctrl = e.ctrlKey || e.metaKey;
-          const newRowUp = ctrl
-            ? findCtrlArrowTarget(rowIndex, 0, -1, (r) => isEmptyAt(r, Math.max(0, dataColIndex)))
-            : Math.max(rowIndex - 1, 0);
-          if (shift) {
-            setSelectionRange(
-              normalizeSelectionRange({
-                startRow: selectionRange?.startRow ?? rowIndex,
-                startCol: selectionRange?.startCol ?? dataColIndex,
-                endRow: newRowUp,
-                endCol: selectionRange?.endCol ?? dataColIndex,
-              })
-            );
-          } else {
-            setSelectionRange({
-              startRow: newRowUp,
-              startCol: dataColIndex,
-              endRow: newRowUp,
-              endCol: dataColIndex,
-            });
-          }
-          setActiveCell({ rowIndex: newRowUp, columnIndex });
-          break;
-        }
-        case 'ArrowRight': {
-          e.preventDefault();
-          const ctrl = e.ctrlKey || e.metaKey;
-          let newCol: number;
-          if (ctrl && dataColIndex >= 0) {
-            newCol = findCtrlArrowTarget(dataColIndex, visibleCols.length - 1, 1, (c) => isEmptyAt(rowIndex, c)) + colOffset;
-          } else {
-            newCol = Math.min(columnIndex + 1, maxColIndex);
-          }
-          const newDataCol = newCol - colOffset;
-          if (shift) {
-            setSelectionRange(
-              normalizeSelectionRange({
-                startRow: selectionRange?.startRow ?? rowIndex,
-                startCol: selectionRange?.startCol ?? dataColIndex,
-                endRow: selectionRange?.endRow ?? rowIndex,
-                endCol: newDataCol,
-              })
-            );
-          } else {
-            setSelectionRange({
-              startRow: rowIndex,
-              startCol: newDataCol,
-              endRow: rowIndex,
-              endCol: newDataCol,
-            });
-          }
-          setActiveCell({ rowIndex, columnIndex: newCol });
-          break;
-        }
+        case 'ArrowDown':
+        case 'ArrowUp':
+        case 'ArrowRight':
         case 'ArrowLeft': {
           e.preventDefault();
-          const ctrl = e.ctrlKey || e.metaKey;
-          let newColLeft: number;
-          if (ctrl && dataColIndex >= 0) {
-            newColLeft = findCtrlArrowTarget(dataColIndex, 0, -1, (c) => isEmptyAt(rowIndex, c)) + colOffset;
-          } else {
-            newColLeft = Math.max(columnIndex - 1, colOffset);
-          }
-          const newDataColLeft = newColLeft - colOffset;
-          if (shift) {
-            setSelectionRange(
-              normalizeSelectionRange({
-                startRow: selectionRange?.startRow ?? rowIndex,
-                startCol: selectionRange?.startCol ?? dataColIndex,
-                endRow: selectionRange?.endRow ?? rowIndex,
-                endCol: newDataColLeft,
-              })
-            );
-          } else {
-            setSelectionRange({
-              startRow: rowIndex,
-              startCol: newDataColLeft,
-              endRow: rowIndex,
-              endCol: newDataColLeft,
-            });
-          }
-          setActiveCell({ rowIndex, columnIndex: newColLeft });
+          const { newRowIndex, newColumnIndex, newRange } = computeArrowNavigation({
+            direction: e.key as 'ArrowDown' | 'ArrowUp' | 'ArrowLeft' | 'ArrowRight',
+            rowIndex, columnIndex, dataColIndex, colOffset,
+            maxRowIndex, maxColIndex,
+            visibleColCount: visibleCols.length,
+            isCtrl: e.ctrlKey || e.metaKey,
+            isShift: shift,
+            selectionRange,
+            isEmptyAt,
+          });
+          setSelectionRange(newRange);
+          setActiveCell({ rowIndex: newRowIndex, columnIndex: newColumnIndex });
           break;
         }
         case 'Tab': {
@@ -383,28 +288,8 @@ export function useKeyboardNavigation<T>(
               : null);
           if (range == null) break;
           e.preventDefault();
-          const norm = normalizeSelectionRange(range);
-          for (let r = norm.startRow; r <= norm.endRow; r++) {
-            for (let c = norm.startCol; c <= norm.endCol; c++) {
-              if (r >= items.length || c >= visibleCols.length) continue;
-              const item = items[r];
-              const col = visibleCols[c];
-              const colEditable =
-                col.editable === true ||
-                (typeof col.editable === 'function' && col.editable(item));
-              if (!colEditable) continue;
-              const oldValue = getCellValue(item, col);
-              const result = parseValue('', oldValue, item, col);
-              if (!result.valid) continue;
-              onCellValueChanged({
-                item,
-                columnId: col.columnId,
-                oldValue,
-                newValue: result.value,
-                rowIndex: r,
-              });
-            }
-          }
+          const deleteEvents = applyCellDeletion(range, items, visibleCols);
+          for (const evt of deleteEvents) onCellValueChanged(evt);
           break;
         }
         case 'F10':

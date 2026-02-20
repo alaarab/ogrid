@@ -2,9 +2,10 @@
  * Pure clipboard helpers shared across React, Vue, Angular, and JS.
  * No framework dependencies — operates on plain values and produces strings.
  */
-import type { IColumnDef } from '../types/columnTypes';
+import type { IColumnDef, ICellValueChangedEvent } from '../types/columnTypes';
 import type { ISelectionRange } from '../types/dataGridTypes';
 import { getCellValue } from './cellValue';
+import { parseValue } from './valueParsers';
 import { normalizeSelectionRange } from '../types';
 
 /**
@@ -21,7 +22,11 @@ export function formatCellValueForTsv(
 ): string {
   const val = formatted != null && formatted !== '' ? formatted : raw;
   if (val == null || val === '') return '';
-  return String(val).replace(/[\t\n]/g, ' ');
+  try {
+    return String(val).replace(/[\t\n]/g, ' ');
+  } catch {
+    return '[Object]';
+  }
 }
 
 /**
@@ -67,4 +72,91 @@ export function parseTsvClipboard(text: string): string[][] {
   if (!text.trim()) return [];
   const lines = text.split(/\r?\n/).filter((l) => l.length > 0);
   return lines.map((line) => line.split('\t'));
+}
+
+/**
+ * Apply parsed clipboard rows to the grid starting at anchor position.
+ * For each cell in the parsed rows, validates editability, parses the value,
+ * and produces a cell value changed event.
+ *
+ * @param parsedRows   2D array of string values (from parseTsvClipboard).
+ * @param anchorRow    Target starting row index.
+ * @param anchorCol    Target starting column index (data column, not absolute).
+ * @param items        Array of all row data objects.
+ * @param visibleCols  Visible column definitions.
+ * @returns Array of cell value changed events to apply.
+ */
+export function applyPastedValues<T>(
+  parsedRows: string[][],
+  anchorRow: number,
+  anchorCol: number,
+  items: T[],
+  visibleCols: IColumnDef<T>[]
+): ICellValueChangedEvent<T>[] {
+  const events: ICellValueChangedEvent<T>[] = [];
+  for (let r = 0; r < parsedRows.length; r++) {
+    const cells = parsedRows[r];
+    for (let c = 0; c < cells.length; c++) {
+      const targetRow = anchorRow + r;
+      const targetCol = anchorCol + c;
+      if (targetRow >= items.length || targetCol >= visibleCols.length) continue;
+      const item = items[targetRow];
+      const col = visibleCols[targetCol];
+      const colEditable =
+        col.editable === true ||
+        (typeof col.editable === 'function' && col.editable(item));
+      if (!colEditable) continue;
+      const rawValue = cells[c] ?? '';
+      const oldValue = getCellValue(item, col);
+      const result = parseValue(rawValue, oldValue, item, col);
+      if (!result.valid) continue;
+      events.push({
+        item,
+        columnId: col.columnId,
+        oldValue,
+        newValue: result.value,
+        rowIndex: targetRow,
+      });
+    }
+  }
+  return events;
+}
+
+/**
+ * Clear cells in a cut range by setting each editable cell to an empty-string-parsed value.
+ * Used after pasting cut content to clear the original cells.
+ *
+ * @param cutRange     The normalized range of cells to clear.
+ * @param items        Array of all row data objects.
+ * @param visibleCols  Visible column definitions.
+ * @returns Array of cell value changed events to apply.
+ */
+export function applyCutClear<T>(
+  cutRange: ISelectionRange,
+  items: T[],
+  visibleCols: IColumnDef<T>[]
+): ICellValueChangedEvent<T>[] {
+  const events: ICellValueChangedEvent<T>[] = [];
+  for (let r = cutRange.startRow; r <= cutRange.endRow; r++) {
+    for (let c = cutRange.startCol; c <= cutRange.endCol; c++) {
+      if (r >= items.length || c >= visibleCols.length) continue;
+      const item = items[r];
+      const col = visibleCols[c];
+      const colEditable =
+        col.editable === true ||
+        (typeof col.editable === 'function' && col.editable(item));
+      if (!colEditable) continue;
+      const oldValue = getCellValue(item, col);
+      const result = parseValue('', oldValue, item, col);
+      if (!result.valid) continue;
+      events.push({
+        item,
+        columnId: col.columnId,
+        oldValue,
+        newValue: result.value,
+        rowIndex: r,
+      });
+    }
+  }
+  return events;
 }

@@ -54,8 +54,10 @@ export function useTableLayout<T>(
   onMounted(() => {
     const el = wrapperRef.value;
     if (el) {
-      resizeObserver = new ResizeObserver(measure);
-      resizeObserver.observe(el);
+      if (typeof ResizeObserver !== 'undefined') {
+        resizeObserver = new ResizeObserver(measure);
+        resizeObserver.observe(el);
+      }
       measure();
     }
   });
@@ -91,15 +93,13 @@ export function useTableLayout<T>(
   watch(flatColumns, (cols) => {
     const colIds = new Set(cols.map((c) => c.columnId));
     const prev = columnSizingOverrides.value;
-    const next = { ...prev };
-    let changed = false;
-    for (const id of Object.keys(next)) {
-      if (!colIds.has(id)) {
-        delete next[id];
-        changed = true;
-      }
+    const keys = Object.keys(prev);
+    const kept = keys.filter((id) => colIds.has(id));
+    if (kept.length < keys.length) {
+      const next: Record<string, { widthPx: number }> = {};
+      for (const id of kept) next[id] = prev[id];
+      columnSizingOverrides.value = next;
     }
-    if (changed) columnSizingOverrides.value = next;
   });
 
   // Desired table width calculation

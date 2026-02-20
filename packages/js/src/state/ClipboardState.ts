@@ -1,6 +1,5 @@
 import type { IActiveCell, ISelectionRange, IColumnDef, ICellValueChangedEvent } from '@alaarab/ogrid-core';
-import { normalizeSelectionRange, getCellValue, formatSelectionAsTsv, parseTsvClipboard } from '@alaarab/ogrid-core';
-import { parseValue } from '@alaarab/ogrid-core';
+import { normalizeSelectionRange, formatSelectionAsTsv, parseTsvClipboard, applyPastedValues, applyCutClear } from '@alaarab/ogrid-core';
 import { EventEmitter } from './EventEmitter';
 
 interface ClipboardStateEvents extends Record<string, unknown> {
@@ -105,55 +104,12 @@ export class ClipboardState<T> {
     const anchorRow = norm ? norm.startRow : 0;
     const anchorCol = norm ? norm.startCol : 0;
     const { items, visibleCols } = this.params;
-    const lines = parseTsvClipboard(text);
-    for (let r = 0; r < lines.length; r++) {
-      const cells = lines[r];
-      for (let c = 0; c < cells.length; c++) {
-        const targetRow = anchorRow + r;
-        const targetCol = anchorCol + c;
-        if (targetRow >= items.length || targetCol >= visibleCols.length) continue;
-        const item = items[targetRow];
-        const col = visibleCols[targetCol];
-        const colEditable =
-          col.editable === true ||
-          (typeof col.editable === 'function' && col.editable(item));
-        if (!colEditable) continue;
-        const rawValue = cells[c] ?? '';
-        const oldValue = getCellValue(item, col as unknown as Parameters<typeof getCellValue>[1]);
-        const result = parseValue(rawValue, oldValue, item, col);
-        if (!result.valid) continue;
-        onCellValueChanged({
-          item,
-          columnId: col.columnId,
-          oldValue,
-          newValue: result.value,
-          rowIndex: targetRow,
-        });
-      }
-    }
+    const parsedRows = parseTsvClipboard(text);
+    const pasteEvents = applyPastedValues(parsedRows, anchorRow, anchorCol, items, visibleCols);
+    for (const evt of pasteEvents) onCellValueChanged(evt);
     if (this._cutRange) {
-      const cut = this._cutRange;
-      for (let r = cut.startRow; r <= cut.endRow; r++) {
-        for (let c = cut.startCol; c <= cut.endCol; c++) {
-          if (r >= items.length || c >= visibleCols.length) continue;
-          const item = items[r];
-          const col = visibleCols[c];
-          const colEditable =
-            col.editable === true ||
-            (typeof col.editable === 'function' && col.editable(item));
-          if (!colEditable) continue;
-          const oldValue = getCellValue(item, col as unknown as Parameters<typeof getCellValue>[1]);
-          const result = parseValue('', oldValue, item, col);
-          if (!result.valid) continue;
-          onCellValueChanged({
-            item,
-            columnId: col.columnId,
-            oldValue,
-            newValue: result.value,
-            rowIndex: r,
-          });
-        }
-      }
+      const cutEvents = applyCutClear(this._cutRange, items, visibleCols);
+      for (const evt of cutEvents) onCellValueChanged(evt);
       this._cutRange = null;
     }
     this._copyRange = null;

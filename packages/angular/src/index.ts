@@ -84,6 +84,10 @@ export type {
   DataGridStateResult,
 } from './services/datagrid-state.service';
 
+export { DataGridLayoutHelper } from './services/datagrid-layout.service';
+export { DataGridEditingHelper } from './services/datagrid-editing.service';
+export { DataGridInteractionHelper } from './services/datagrid-interaction.service';
+
 export { ColumnReorderService } from './services/column-reorder.service';
 
 export { VirtualScrollService } from './services/virtual-scroll.service';
@@ -96,6 +100,7 @@ export { SideBarComponent } from './components/sidebar.component';
 export type { SideBarProps, SideBarFilterColumn } from './components/sidebar.component';
 export { MarchingAntsOverlayComponent } from './components/marching-ants-overlay.component';
 export { EmptyStateComponent } from './components/empty-state.component';
+export { BaseOGridComponent } from './components/base-ogrid.component';
 export { BaseDataGridTableComponent } from './components/base-datagrid-table.component';
 export { BaseColumnHeaderFilterComponent } from './components/base-column-header-filter.component';
 export type { IColumnHeaderFilterProps } from './components/base-column-header-filter.component';
@@ -126,6 +131,5 @@ export {
   createDebouncedSignal,
   createDebouncedCallback,
   debounce,
-  createLatestRef,
   createLatestCallback,
 } from './utils';

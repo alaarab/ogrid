@@ -13,7 +13,7 @@ import styles from './ColumnChooser.module.scss';
 export type { IColumnChooserProps };
 
 export const ColumnChooser: React.FC<IColumnChooserProps> = (props) => {
-  const { columns, visibleColumns, onVisibilityChange, className } = props;
+  const { columns, visibleColumns, onVisibilityChange, onSetVisibleColumns, className } = props;
   const buttonRef = useRef<HTMLButtonElement>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
@@ -26,7 +26,7 @@ export const ColumnChooser: React.FC<IColumnChooserProps> = (props) => {
     handleClearAll,
     visibleCount,
     totalCount,
-  } = useColumnChooserState({ columns, visibleColumns, onVisibilityChange });
+  } = useColumnChooserState({ columns, visibleColumns, onVisibilityChange, onSetVisibleColumns });
 
   useEffect(() => {
     if (!open) return;
@@ -79,6 +79,7 @@ export const ColumnChooser: React.FC<IColumnChooserProps> = (props) => {
                   label={column.name}
                   checked={visibleColumns.has(column.columnId)}
                   onChange={handleCheckboxChange(column.columnId)}
+                  disabled={column.required === true}
                 />
               </div>
             ))}

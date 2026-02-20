@@ -26,9 +26,14 @@ for (const { full, rel } of walkDir(SRC_DIR)) {
   const outPath = path.join(DIST_ESM, outRel);
   const outDir = path.dirname(outPath);
   if (!fs.existsSync(outDir)) fs.mkdirSync(outDir, { recursive: true });
-  const result = sass.compile(full);
-  fs.writeFileSync(outPath, result.css, 'utf8');
-  console.log('Compiled:', rel, '→', outRel);
+  try {
+    const result = sass.compile(full);
+    fs.writeFileSync(outPath, result.css, 'utf8');
+    console.log('Compiled:', rel, '→', outRel);
+  } catch (err) {
+    console.error(`Failed to compile ${rel}:`, err.message);
+    process.exit(1);
+  }
 }
 
 function* walkJs(dir) {
