@@ -1,5 +1,5 @@
 import { DataGridStateService } from '../services/datagrid-state.service';
-import type { IOGridDataGridProps, IColumnDef } from '../types';
+import type { IOGridDataGridProps, IColumnDef, IStatusBarProps } from '../types';
 
 type Row = { id: string; name: string; value: number };
 
@@ -144,11 +144,10 @@ describe('DataGridStateService', () => {
     });
 
     it('statusBarConfig is computed when statusBar is set', () => {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      service.props.set(makeProps({ statusBar: true as any }));
+      service.props.set(makeProps({ statusBar: true as unknown as IStatusBarProps }));
       const config = service.statusBarConfig();
       expect(config).toBeTruthy();
-      expect(config!.totalCount).toBe(3);
+      expect(config?.totalCount).toBe(3);
     });
   });
 

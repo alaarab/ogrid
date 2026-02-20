@@ -151,7 +151,8 @@ function renderSideBar(sb: SideBarProps): VNode {
             h('div', { style: { fontWeight: '500', marginBottom: '4px', fontSize: '13px' } }, col.name),
           ];
           if (col.filterType === 'text') {
-            const currentVal = sb.filters[filterKey]?.type === 'text' ? sb.filters[filterKey]!.value : '';
+            const filterEntry = sb.filters[filterKey];
+            const currentVal = filterEntry?.type === 'text' ? filterEntry.value : '';
             groupChildren.push(
               h('input', {
                 type: 'text',
@@ -169,13 +170,15 @@ function renderSideBar(sb: SideBarProps): VNode {
           if (col.filterType === 'multiSelect') {
             const options = sb.filterOptions[filterKey] ?? [];
             const msChildren = options.map((opt) => {
-              const selected = sb.filters[filterKey]?.type === 'multiSelect' ? sb.filters[filterKey]!.value.includes(opt) : false;
+              const msFilter = sb.filters[filterKey];
+              const selected = msFilter?.type === 'multiSelect' ? msFilter.value.includes(opt) : false;
               return h('label', { key: opt, style: { display: 'flex', alignItems: 'center', gap: '4px', padding: '1px 0', cursor: 'pointer', fontSize: '13px' } }, [
                 h('input', {
                   type: 'checkbox',
                   checked: selected,
                   onChange: (e: Event) => {
-                    const current = sb.filters[filterKey]?.type === 'multiSelect' ? sb.filters[filterKey]!.value : [];
+                    const curFilter = sb.filters[filterKey];
+                    const current = curFilter?.type === 'multiSelect' ? curFilter.value : [];
                     const next = (e.target as HTMLInputElement).checked
                       ? [...current, opt]
                       : current.filter((v: string) => v !== opt);
@@ -190,7 +193,8 @@ function renderSideBar(sb: SideBarProps): VNode {
             );
           }
           if (col.filterType === 'date') {
-            const existingValue = sb.filters[filterKey]?.type === 'date' ? sb.filters[filterKey]!.value : { from: undefined, to: undefined };
+            const dateFilter = sb.filters[filterKey];
+            const existingValue = dateFilter?.type === 'date' ? dateFilter.value : { from: undefined, to: undefined };
             groupChildren.push(
               h('div', { style: { display: 'flex', flexDirection: 'column', gap: '4px' } }, [
                 h('label', { style: { display: 'flex', alignItems: 'center', gap: '4px', fontSize: '12px' } }, [
@@ -285,8 +289,8 @@ export function createOGrid(ui: IOGridUIBindings) {
       const propsRef = computed(() => props.gridProps);
       const { dataGridProps, pagination, columnChooser, layout, api } = useOGrid(propsRef);
 
-      // Expose the API for parent refs
-      expose({ api: api.value });
+      // Expose the ref container so parent always gets the latest API value
+      expose({ api });
 
       return () => {
         const sideBar = layout.value.sideBarProps;
@@ -316,7 +320,6 @@ export function createOGrid(ui: IOGridUIBindings) {
           onPageChange: pagination.value.setPage,
           onPageSizeChange: (size: number) => {
             pagination.value.setPageSize(size);
-            pagination.value.setPage(1);
           },
           pageSizeOptions: pagination.value.pageSizeOptions,
           entityLabelPlural: pagination.value.entityLabelPlural,

@@ -1,7 +1,7 @@
-import { defineComponent, h, type PropType } from 'vue';
+import { defineComponent, h, type PropType, type Component } from 'vue';
 import { VBtn, VTextField } from 'vuetify/components';
-const _VBtn = VBtn as any;
-const _VTextField = VTextField as any;
+const _VBtn = VBtn as Component;
+const _VTextField = VTextField as Component;
 
 export const TextFilterPopover = defineComponent({
   name: 'TextFilterPopover',

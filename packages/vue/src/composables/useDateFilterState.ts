@@ -1,10 +1,10 @@
-import { ref, watch } from 'vue';
+import { ref, watch, type Ref } from 'vue';
 import type { IDateFilterValue } from '../types';
 
 export interface UseDateFilterStateParams {
   dateValue?: IDateFilterValue;
   onDateChange?: (value: IDateFilterValue | undefined) => void;
-  isFilterOpen: () => boolean;
+  isFilterOpen: Ref<boolean>;
 }
 
 export interface UseDateFilterStateResult {
@@ -25,7 +25,7 @@ export function useDateFilterState(
   const tempDateTo = ref(params.dateValue?.to ?? '');
 
   // Sync temp state when popover opens
-  watch(() => params.isFilterOpen(), (open) => {
+  watch(params.isFilterOpen, (open) => {
     if (open) {
       tempDateFrom.value = params.dateValue?.from ?? '';
       tempDateTo.value = params.dateValue?.to ?? '';

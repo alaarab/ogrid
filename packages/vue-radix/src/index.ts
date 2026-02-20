@@ -1,3 +1,8 @@
+// Re-export all from base package for consumer convenience.
+// Note: This prevents tree-shaking of unused utilities.
+// Consider explicit named exports in a future major version.
+export * from '@alaarab/ogrid-vue';
+
 // Main components
 export { OGrid } from './OGrid/OGrid';
 export { DataGridTable } from './DataGridTable/DataGridTable';
@@ -17,8 +22,3 @@ export { StatusBar, MarchingAntsOverlay } from '@alaarab/ogrid-vue';
 // DataGridTable sub-components
 export { default as GridContextMenu } from './DataGridTable/GridContextMenu.vue';
 export { InlineCellEditor } from './DataGridTable/InlineCellEditor';
-
-// Re-export all from base package for consumer convenience.
-// Note: This prevents tree-shaking of unused utilities.
-// Consider explicit named exports in a future major version.
-export * from '@alaarab/ogrid-vue';

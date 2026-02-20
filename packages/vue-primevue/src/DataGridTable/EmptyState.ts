@@ -1,4 +1,4 @@
-import { h, type VNode } from 'vue';
+import { h, type VNode, type Component } from 'vue';
 import Button from 'primevue/button';
 
 interface EmptyStateProps {
@@ -22,7 +22,7 @@ export function renderEmptyState({ emptyState }: EmptyStateProps): VNode {
               : emptyState.hasActiveFilters
                 ? [
                     'No items match your current filters. Try adjusting your search or ',
-                    h(Button as any, {
+                    h(Button as Component, {
                       text: true,
                       size: 'small',
                       onClick: emptyState.onClearAll,

@@ -81,11 +81,12 @@ export class TableLayoutState {
 
   /** Remove overrides for columns that no longer exist. */
   cleanupOverrides(validColumnIds: Set<string>): void {
+    const next: Record<string, number> = {};
     let changed = false;
-    const next = { ...this._columnSizingOverrides };
-    for (const key of Object.keys(next)) {
-      if (!validColumnIds.has(key)) {
-        delete next[key];
+    for (const [key, value] of Object.entries(this._columnSizingOverrides)) {
+      if (validColumnIds.has(key)) {
+        next[key] = value;
+      } else {
         changed = true;
       }
     }

@@ -24,8 +24,7 @@ const grid = new OGrid<Project>(container, {
 });
 
 // Expose grid API to window for debugging
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-(window as any).gridApi = grid.getApi();
+(window as unknown as Record<string, unknown>).gridApi = grid.getApi();
 
 // Add dark mode toggle
 createThemeToggle();

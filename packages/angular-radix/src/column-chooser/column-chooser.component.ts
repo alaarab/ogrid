@@ -41,7 +41,7 @@ import { BaseColumnChooserComponent } from '@alaarab/ogrid-angular';
           </div>
 
           <div class="ogrid-column-chooser__footer">
-            <button class="ogrid-column-chooser__btn" (click)="clearAll()">Clear All</button>
+            <button class="ogrid-column-chooser__btn" (click)="onClearAll()">Clear All</button>
             <button class="ogrid-column-chooser__btn ogrid-column-chooser__btn--primary" (click)="selectAll()">Select All</button>
           </div>
         </div>

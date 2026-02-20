@@ -66,7 +66,7 @@ export function useMultiSelectFilterState(
   }, []);
 
   const handleSelectAll = useCallback(() => {
-    setTempSelected(new Set(filteredOptions));
+    setTempSelected((prev) => new Set([...prev, ...filteredOptions]));
   }, [filteredOptions]);
 
   const handleClearSelection = useCallback(() => setTempSelected(new Set()), []);

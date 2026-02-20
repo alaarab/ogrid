@@ -36,10 +36,16 @@ export function useUndoRedo<T>(
   const [historyLength, setHistoryLength] = useState(0);
   const [redoLength, setRedoLength] = useState(0);
 
+  const getStack = useCallback(() => {
+    const s = stackRef.current;
+    if (!s) throw new Error('UndoRedoStack not initialized');
+    return s;
+  }, []);
+
   const wrapped = useCallback(
     (event: ICellValueChangedEvent<T>) => {
       if (!onCellValueChanged) return;
-      const stack = stackRef.current!;
+      const stack = getStack();
       stack.record(event);
       if (!stack.isBatching) {
         setHistoryLength(stack.historyLength);
@@ -47,23 +53,23 @@ export function useUndoRedo<T>(
       }
       onCellValueChanged(event);
     },
-    [onCellValueChanged]
+    [onCellValueChanged, getStack]
   );
 
   const beginBatch = useCallback(() => {
-    stackRef.current!.beginBatch();
-  }, []);
+    getStack().beginBatch();
+  }, [getStack]);
 
   const endBatch = useCallback(() => {
-    const stack = stackRef.current!;
+    const stack = getStack();
     stack.endBatch();
     setHistoryLength(stack.historyLength);
     setRedoLength(stack.redoLength);
-  }, []);
+  }, [getStack]);
 
   const undo = useCallback(() => {
     if (!onCellValueChanged) return;
-    const stack = stackRef.current!;
+    const stack = getStack();
     const lastBatch = stack.undo();
     if (!lastBatch) return;
     setHistoryLength(stack.historyLength);
@@ -77,11 +83,11 @@ export function useUndoRedo<T>(
         newValue: ev.oldValue,
       });
     }
-  }, [onCellValueChanged]);
+  }, [onCellValueChanged, getStack]);
 
   const redo = useCallback(() => {
     if (!onCellValueChanged) return;
-    const stack = stackRef.current!;
+    const stack = getStack();
     const nextBatch = stack.redo();
     if (!nextBatch) return;
     setHistoryLength(stack.historyLength);
@@ -90,7 +96,7 @@ export function useUndoRedo<T>(
     for (const ev of nextBatch) {
       onCellValueChanged(ev);
     }
-  }, [onCellValueChanged]);
+  }, [onCellValueChanged, getStack]);
 
   return {
     onCellValueChanged: onCellValueChanged ? wrapped : undefined,

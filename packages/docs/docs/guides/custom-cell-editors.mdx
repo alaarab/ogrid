@@ -6,7 +6,7 @@ description: Build custom inline and popup cell editors for OGrid columns.
 
 # Custom Cell Editors
 
-OGrid includes built-in editors for common types (`text`, `select`, `checkbox`, `richSelect`), but you can create fully custom editors for any use case. A custom editor is a React component that receives the cell value, update callbacks, and optional params.
+OGrid includes built-in editors for common types (`text`, `select`, `checkbox`, `richSelect`, `date`), but you can create fully custom editors for any use case. A custom editor is a React component that receives the cell value, update callbacks, and optional params.
 
 ## The ICellEditorProps Interface
 
@@ -186,6 +186,7 @@ Before building a custom editor, check if a built-in one fits your needs:
 | `'select'` | Dropdown select | `{ values: ['Option A', 'Option B'] }` |
 | `'checkbox'` | Boolean toggle | -- |
 | `'richSelect'` | Searchable dropdown with keyboard navigation | `{ values: [...], formatValue: (v) => string }` |
+| `'date'` | Native date picker (`<input type="date">`) | -- |
 
 ## Conditional Editability
 

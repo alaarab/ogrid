@@ -14,7 +14,7 @@ import { useColumnChooserState } from '@alaarab/ogrid-react';
 export type { IColumnChooserProps };
 
 export const ColumnChooser: React.FC<IColumnChooserProps> = (props) => {
-  const { columns, visibleColumns, onVisibilityChange, className } = props;
+  const { columns, visibleColumns, onVisibilityChange, onSetVisibleColumns, className } = props;
   const [anchorEl, setAnchorEl] = useState<HTMLElement | null>(null);
   const buttonRef = useRef<HTMLButtonElement>(null);
 
@@ -27,7 +27,7 @@ export const ColumnChooser: React.FC<IColumnChooserProps> = (props) => {
     handleClearAll,
     visibleCount,
     totalCount,
-  } = useColumnChooserState({ columns, visibleColumns, onVisibilityChange });
+  } = useColumnChooserState({ columns, visibleColumns, onVisibilityChange, onSetVisibleColumns });
 
   const handleToggle = (e: React.MouseEvent<HTMLElement>): void => {
     if (isOpen) {
@@ -105,6 +105,7 @@ export const ColumnChooser: React.FC<IColumnChooserProps> = (props) => {
                     size="small"
                     checked={visibleColumns.has(column.columnId)}
                     onChange={handleCheckboxChange(column.columnId)}
+                    disabled={column.required === true}
                   />
                 }
                 label={<Typography variant="body2">{column.name}</Typography>}

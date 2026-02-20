@@ -1,5 +1,5 @@
-import { shallowRef, watch, onUnmounted, type Ref, type ShallowRef } from 'vue';
-import { normalizeSelectionRange, getCellValue, parseValue } from '@alaarab/ogrid-core';
+import { shallowRef, watch, isRef, onUnmounted, type Ref, type ShallowRef } from 'vue';
+import { normalizeSelectionRange, applyFillValues } from '@alaarab/ogrid-core';
 import type { ISelectionRange, IActiveCell, IColumnDef, ICellValueChangedEvent } from '../types';
 import type { IVisibleRange } from '@alaarab/ogrid-core';
 
@@ -11,7 +11,7 @@ export interface UseFillHandleParams<T> {
   selectionRange: Ref<ISelectionRange | null> | ShallowRef<ISelectionRange | null>;
   setSelectionRange: (range: ISelectionRange | null) => void;
   setActiveCell: (cell: IActiveCell | null) => void;
-  colOffset: number;
+  colOffset: Ref<number> | number;
   wrapperRef: Ref<HTMLElement | null> | ShallowRef<HTMLElement | null>;
   beginBatch?: () => void;
   endBatch?: () => void;
@@ -38,12 +38,12 @@ export function useFillHandle<T>(params: UseFillHandleParams<T>): UseFillHandleR
     selectionRange,
     setSelectionRange,
     setActiveCell,
-    colOffset,
     wrapperRef,
     beginBatch,
     endBatch,
     visibleRange,
   } = params;
+  const getColOffset = () => isRef(params.colOffset) ? params.colOffset.value : params.colOffset;
 
   const fillDrag = shallowRef<{ startRow: number; startCol: number } | null>(null);
   let fillDragEnd = { endRow: 0, endCol: 0 };
@@ -71,7 +71,7 @@ export function useFillHandle<T>(params: UseFillHandleParams<T>): UseFillHandleR
     }
   };
 
-  watch(fillDrag, (drag) => {
+  watch(fillDrag, (drag, _oldDrag, onCleanup) => {
     // Guard early before setting up any state
     if (!drag || editable.value === false || !onCellValueChanged.value || !wrapperRef.value) {
       // Still cleanup if transitioning from active to inactive
@@ -82,6 +82,28 @@ export function useFillHandle<T>(params: UseFillHandleParams<T>): UseFillHandleR
     fillDragEnd = { endRow: drag.startRow, endCol: drag.startCol };
     liveFillRange = null;
 
+    /** Set of currently drag-marked HTMLElements — avoids O(n) full DOM scan on clear. */
+    const markedCells = new Set<Element>();
+
+    /** Cell lookup index built on drag start — O(1) lookups per frame. */
+    let fillCellIndex: Map<string, HTMLElement> | null = null;
+
+    const buildFillCellIndex = () => {
+      const wrapper = wrapperRef.value;
+      if (!wrapper) return;
+      fillCellIndex = new Map<string, HTMLElement>();
+      const cells = wrapper.querySelectorAll('[data-row-index][data-col-index]');
+      for (let i = 0; i < cells.length; i++) {
+        const el = cells[i] as HTMLElement;
+        const r = el.getAttribute('data-row-index') ?? '';
+        const c = el.getAttribute('data-col-index') ?? '';
+        fillCellIndex.set(`${r},${c}`, el);
+      }
+    };
+
+    // Build the index once at fill drag start
+    buildFillCellIndex();
+
     const applyDragAttrs = (range: ISelectionRange) => {
       const wrapper = wrapperRef.value;
       if (!wrapper) return;
@@ -89,25 +111,42 @@ export function useFillHandle<T>(params: UseFillHandleParams<T>): UseFillHandleR
       const maxR = Math.max(range.startRow, range.endRow);
       const minC = Math.min(range.startCol, range.endCol);
       const maxC = Math.max(range.startCol, range.endCol);
-      const cells = wrapper.querySelectorAll('[data-row-index][data-col-index]');
-      for (let i = 0; i < cells.length; i++) {
-        const el = cells[i];
-        const r = parseInt(el.getAttribute('data-row-index')!, 10);
-        const c = parseInt(el.getAttribute('data-col-index')!, 10) - colOffset;
-        const inRange = r >= minR && r <= maxR && c >= minC && c <= maxC;
-        if (inRange) {
-          if (!el.hasAttribute(DRAG_ATTR)) el.setAttribute(DRAG_ATTR, '');
-        } else {
-          if (el.hasAttribute(DRAG_ATTR)) el.removeAttribute(DRAG_ATTR);
+      const colOff = getColOffset();
+
+      // Un-mark cells no longer in range
+      for (const el of markedCells) {
+        const r = parseInt(el.getAttribute('data-row-index') ?? '', 10);
+        const c = parseInt(el.getAttribute('data-col-index') ?? '', 10) - colOff;
+        if (!(r >= minR && r <= maxR && c >= minC && c <= maxC)) {
+          el.removeAttribute(DRAG_ATTR);
+          markedCells.delete(el);
+        }
+      }
+
+      // Look up only cells in the new range — O(range size) via Map lookup
+      for (let r = minR; r <= maxR; r++) {
+        for (let c = minC; c <= maxC; c++) {
+          const key = `${r},${c + colOff}`;
+          let el = fillCellIndex?.get(key);
+          // Handle virtual scroll recycling — if element is stale, rebuild index once
+          if (el && !el.isConnected) {
+            buildFillCellIndex();
+            el = fillCellIndex?.get(key);
+          }
+          if (el) {
+            if (!el.hasAttribute(DRAG_ATTR)) el.setAttribute(DRAG_ATTR, '');
+            markedCells.add(el);
+          }
         }
       }
     };
 
     const clearDragAttrs = () => {
-      const wrapper = wrapperRef.value;
-      if (!wrapper) return;
-      const marked = wrapper.querySelectorAll(`[${DRAG_ATTR}]`);
-      for (let i = 0; i < marked.length; i++) marked[i].removeAttribute(DRAG_ATTR);
+      for (const el of markedCells) {
+        el.removeAttribute(DRAG_ATTR);
+      }
+      markedCells.clear();
+      fillCellIndex = null;
     };
 
     let lastFillMousePos: { cx: number; cy: number } | null = null;
@@ -118,6 +157,7 @@ export function useFillHandle<T>(params: UseFillHandleParams<T>): UseFillHandleR
       if (!cell || !wrapperRef.value?.contains(cell)) return null;
       const r = parseInt(cell.getAttribute('data-row-index') ?? '', 10);
       const c = parseInt(cell.getAttribute('data-col-index') ?? '', 10);
+      const colOffset = getColOffset();
       if (Number.isNaN(r) || Number.isNaN(c) || c < colOffset) return null;
       const dataCol = c - colOffset;
       return normalizeSelectionRange({
@@ -179,33 +219,18 @@ export function useFillHandle<T>(params: UseFillHandleParams<T>): UseFillHandleR
       }
 
       setSelectionRange(norm);
-      setActiveCell({ rowIndex: end.endRow, columnIndex: end.endCol + colOffset });
+      setActiveCell({ rowIndex: end.endRow, columnIndex: end.endCol + getColOffset() });
 
       const currentItems = items.value;
       const currentCols = visibleCols.value;
       const callback = onCellValueChanged.value;
-      const startItem = currentItems[norm.startRow];
-      const startColDef = currentCols[norm.startCol];
-      if (startItem && startColDef && callback) {
-        const startValue = getCellValue(startItem as T, startColDef);
-        beginBatch?.();
-        for (let row = norm.startRow; row <= norm.endRow; row++) {
-          for (let col = norm.startCol; col <= norm.endCol; col++) {
-            if (row === drag.startRow && col === drag.startCol) continue;
-            if (row >= currentItems.length || col >= currentCols.length) continue;
-            const item = currentItems[row];
-            const colDef = currentCols[col];
-            const colEditable =
-              colDef.editable === true ||
-              (typeof colDef.editable === 'function' && colDef.editable(item));
-            if (!colEditable) continue;
-            const oldValue = getCellValue(item, colDef);
-            const result = parseValue(startValue, oldValue, item, colDef);
-            if (!result.valid) continue;
-            callback({ item, columnId: colDef.columnId, oldValue, newValue: result.value, rowIndex: row });
-          }
+      if (callback) {
+        const fillEvents = applyFillValues(norm, drag.startRow, drag.startCol, currentItems, currentCols);
+        if (fillEvents.length > 0) {
+          beginBatch?.();
+          for (const evt of fillEvents) callback(evt);
+          endBatch?.();
         }
-        endBatch?.();
       }
       fillDrag.value = null;
       liveFillRange = null;
@@ -215,10 +240,12 @@ export function useFillHandle<T>(params: UseFillHandleParams<T>): UseFillHandleR
     window.addEventListener('mousemove', moveListener, true);
     window.addEventListener('mouseup', upListener, true);
 
-    // Return cleanup function - Vue will call this BEFORE next watch run
-    return () => {
+    // Register cleanup via onCleanup — Vue calls this BEFORE next watch run
+    // and on unmount. Compatible with Vue 3.3+ (unlike return-value cleanup
+    // which requires Vue 3.5+).
+    onCleanup(() => {
       cleanup();
-    };
+    });
   });
 
   onUnmounted(() => cleanup());

@@ -27,8 +27,8 @@ export function computeVisibleRange(
   totalRows: number,
   overscan: number = 5
 ): IVisibleRange {
-  if (totalRows === 0 || rowHeight <= 0 || containerHeight <= 0) {
-    return { startIndex: 0, endIndex: -1, offsetTop: 0, offsetBottom: 0 };
+  if (totalRows <= 0 || rowHeight <= 0 || containerHeight <= 0) {
+    return { startIndex: 0, endIndex: 0, offsetTop: 0, offsetBottom: 0 };
   }
 
   const startIndex = Math.max(0, Math.floor(scrollTop / rowHeight) - overscan);

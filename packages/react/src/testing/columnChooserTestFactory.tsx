@@ -50,4 +50,12 @@ export function createColumnChooserTests(ColumnChooser: React.ComponentType<Colu
     expect(onVisibilityChange).toHaveBeenCalledWith('b', false);
     expect(onVisibilityChange).not.toHaveBeenCalledWith('id', false);
   });
+
+  it('required columns are shown as disabled in the chooser', () => {
+    const requiredColumns = [{ columnId: 'id', name: 'ID', required: true }, ...columns];
+    render(<ColumnChooser columns={requiredColumns} visibleColumns={new Set(['id', 'a', 'b'])} onVisibilityChange={jest.fn()} />);
+    fireEvent.click(screen.getByRole('button', { name: /column visibility/i }));
+    const idCheckbox = screen.getByLabelText('ID');
+    expect(idCheckbox).toBeDisabled();
+  });
 }

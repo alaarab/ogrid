@@ -1,10 +1,10 @@
-import { shallowRef, ref, computed, onMounted, onUnmounted, type Ref, type ShallowRef } from 'vue';
+import { shallowRef, ref, isRef, onMounted, onUnmounted, type Ref, type ShallowRef } from 'vue';
 import { normalizeSelectionRange, rangesEqual, computeAutoScrollSpeed } from '@alaarab/ogrid-core';
 import type { ISelectionRange, IActiveCell } from '../types';
 import { useLatestRef } from './useLatestRef';
 
 export interface UseCellSelectionParams {
-  colOffset: number;
+  colOffset: Ref<number> | number;
   rowCount: Ref<number>;
   visibleColCount: Ref<number>;
   setActiveCell: (cell: IActiveCell | null) => void;
@@ -32,12 +32,14 @@ const AUTO_SCROLL_INTERVAL = 16;
  */
 export function useCellSelection(params: UseCellSelectionParams): UseCellSelectionResult {
   // Store latest params in a ref for stable handler references
-  const paramsRef = useLatestRef(computed(() => params));
-  const { colOffset, wrapperRef, setActiveCell } = params; // These are stable, safe to destructure
+  const paramsRef = useLatestRef(params);
+  const { wrapperRef, setActiveCell } = params; // These are stable, safe to destructure
+  const getColOffset = () => isRef(params.colOffset) ? params.colOffset.value : params.colOffset;
 
   const selectionRange = shallowRef<ISelectionRange | null>(null);
   const isDragging = ref(false);  // boolean primitive, ref is fine
-  let isDraggingInternal = false;
+  const isDraggingInternal = ref(false); // ref so event handlers always read current value
+  const isUnmounted = ref(false); // ref for clean unmount tracking
   let dragMoved = false;
   let dragStart: { row: number; col: number } | null = null;
   let rafId = 0;
@@ -52,6 +54,7 @@ export function useCellSelection(params: UseCellSelectionParams): UseCellSelecti
 
   const handleCellMouseDown = (e: MouseEvent, rowIndex: number, globalColIndex: number) => {
     if (e.button !== 0) return;
+    const colOffset = getColOffset();
     if (globalColIndex < colOffset) return;
     e.preventDefault();
     const dataColIndex = globalColIndex - colOffset;
@@ -78,7 +81,7 @@ export function useCellSelection(params: UseCellSelectionParams): UseCellSelecti
       setSelectionRange(initial);
       liveDragRange = initial;
       setActiveCell({ rowIndex, columnIndex: globalColIndex });
-      isDraggingInternal = true;
+      isDraggingInternal.value = true;
       // Apply drag attrs immediately for the initial cell so the anchor styling shows
       // even before the first mousemove. This ensures instant visual feedback.
       setTimeout(() => applyDragAttrs(initial), 0);
@@ -94,12 +97,62 @@ export function useCellSelection(params: UseCellSelectionParams): UseCellSelecti
       endRow: rowCount.value - 1,
       endCol: visibleColCount.value - 1,
     });
-    setActiveCell({ rowIndex: 0, columnIndex: colOffset });
+    setActiveCell({ rowIndex: 0, columnIndex: getColOffset() });
   };
 
   // --- Window mouse move/up for drag selection ---
 
+  /** Set of currently drag-marked HTMLElements — avoids O(n) full DOM scan on each frame. */
+  const markedCells = new Set<HTMLElement>();
+
+  /** Cell lookup index built on drag start — O(1) lookups per frame instead of querySelectorAll. */
+  let cellIndex: Map<string, HTMLElement> | null = null;
+
+  /** Build cell lookup index from a single querySelectorAll scan. */
+  const buildCellIndex = () => {
+    const wrapper = wrapperRef.value;
+    if (!wrapper) return;
+    cellIndex = new Map<string, HTMLElement>();
+    const cells = wrapper.querySelectorAll('[data-row-index][data-col-index]');
+    for (let i = 0; i < cells.length; i++) {
+      const el = cells[i] as HTMLElement;
+      const r = el.getAttribute('data-row-index') ?? '';
+      const c = el.getAttribute('data-col-index') ?? '';
+      cellIndex.set(`${r},${c}`, el);
+    }
+  };
+
+  /** Apply styling to a single in-range cell (attrs + box-shadow). */
+  const styleCellInRange = (
+    el: HTMLElement, r: number, c: number,
+    minR: number, maxR: number, minC: number, maxC: number,
+    anchor: { row: number; col: number } | null
+  ) => {
+    if (!el.hasAttribute(DRAG_ATTR)) el.setAttribute(DRAG_ATTR, '');
+    const isAnchor = anchor && r === anchor.row && c === anchor.col;
+    if (isAnchor) {
+      if (!el.hasAttribute(DRAG_ANCHOR_ATTR)) el.setAttribute(DRAG_ANCHOR_ATTR, '');
+    } else {
+      if (el.hasAttribute(DRAG_ANCHOR_ATTR)) el.removeAttribute(DRAG_ANCHOR_ATTR);
+    }
+    const shadows: string[] = [];
+    if (r === minR) shadows.push('inset 0 2px 0 0 var(--ogrid-selection, #217346)');
+    if (r === maxR) shadows.push('inset 0 -2px 0 0 var(--ogrid-selection, #217346)');
+    if (c === minC) shadows.push('inset 2px 0 0 0 var(--ogrid-selection, #217346)');
+    if (c === maxC) shadows.push('inset -2px 0 0 0 var(--ogrid-selection, #217346)');
+    el.style.boxShadow = shadows.length > 0 ? shadows.join(', ') : '';
+    markedCells.add(el);
+  };
+
+  /** Remove drag styling from a single cell. */
+  const unstyleCell = (el: HTMLElement) => {
+    el.removeAttribute(DRAG_ATTR);
+    el.removeAttribute(DRAG_ANCHOR_ATTR);
+    el.style.boxShadow = '';
+  };
+
   /** Toggle DRAG_ATTR on cells to show the range highlight via CSS.
+   *  Uses a cell index Map for O(1) lookups per cell in the range instead of scanning all cells.
    *  Also sets edge box-shadows for a green border around the selection range,
    *  and marks the anchor cell with DRAG_ANCHOR_ATTR (white background). */
   const applyDragAttrs = (range: ISelectionRange) => {
@@ -110,46 +163,46 @@ export function useCellSelection(params: UseCellSelectionParams): UseCellSelecti
     const minC = Math.min(range.startCol, range.endCol);
     const maxC = Math.max(range.startCol, range.endCol);
     const anchor = dragStart;
-    const cells = wrapper.querySelectorAll('[data-row-index][data-col-index]');
-    for (let i = 0; i < cells.length; i++) {
-      const el = cells[i] as HTMLElement;
-      const r = parseInt(el.getAttribute('data-row-index')!, 10);
-      const c = parseInt(el.getAttribute('data-col-index')!, 10) - colOffset;
-      const inRange = r >= minR && r <= maxR && c >= minC && c <= maxC;
-      if (inRange) {
-        if (!el.hasAttribute(DRAG_ATTR)) el.setAttribute(DRAG_ATTR, '');
-        // Anchor cell gets white background instead of green
-        const isAnchor = anchor && r === anchor.row && c === anchor.col;
-        if (isAnchor) {
-          if (!el.hasAttribute(DRAG_ANCHOR_ATTR)) el.setAttribute(DRAG_ANCHOR_ATTR, '');
-        } else {
-          if (el.hasAttribute(DRAG_ANCHOR_ATTR)) el.removeAttribute(DRAG_ANCHOR_ATTR);
+    const colOff = getColOffset();
+
+    // 1. Un-mark cells that are no longer in the new range (iterate the small set, not all DOM)
+    for (const el of markedCells) {
+      const r = parseInt(el.getAttribute('data-row-index') ?? '', 10);
+      const c = parseInt(el.getAttribute('data-col-index') ?? '', 10) - colOff;
+      const stillInRange = r >= minR && r <= maxR && c >= minC && c <= maxC;
+      if (!stillInRange) {
+        unstyleCell(el);
+        markedCells.delete(el);
+      }
+    }
+
+    // Build index on first call if not yet initialized
+    if (!cellIndex) buildCellIndex();
+
+    // 2. Look up only the cells in the new range — O(range size) via Map lookup.
+    for (let r = minR; r <= maxR; r++) {
+      for (let c = minC; c <= maxC; c++) {
+        const key = `${r},${c + colOff}`;
+        let el = cellIndex?.get(key);
+        // Handle virtual scroll recycling — if element is stale, rebuild index once
+        if (el && !el.isConnected) {
+          buildCellIndex();
+          el = cellIndex?.get(key);
         }
-        // Edge borders via inset box-shadow (no layout shift)
-        const shadows: string[] = [];
-        if (r === minR) shadows.push('inset 0 2px 0 0 var(--ogrid-selection, #217346)');
-        if (r === maxR) shadows.push('inset 0 -2px 0 0 var(--ogrid-selection, #217346)');
-        if (c === minC) shadows.push('inset 2px 0 0 0 var(--ogrid-selection, #217346)');
-        if (c === maxC) shadows.push('inset -2px 0 0 0 var(--ogrid-selection, #217346)');
-        el.style.boxShadow = shadows.length > 0 ? shadows.join(', ') : '';
-      } else {
-        if (el.hasAttribute(DRAG_ATTR)) el.removeAttribute(DRAG_ATTR);
-        if (el.hasAttribute(DRAG_ANCHOR_ATTR)) el.removeAttribute(DRAG_ANCHOR_ATTR);
-        if (el.style.boxShadow) el.style.boxShadow = '';
+        if (el) {
+          styleCellInRange(el, r, c, minR, maxR, minC, maxC, anchor);
+        }
       }
     }
   };
 
+  /** Clear all drag styling using the tracked set — O(marked) not O(all cells). */
   const clearDragAttrs = () => {
-    const wrapper = wrapperRef.value;
-    if (!wrapper) return;
-    const marked = wrapper.querySelectorAll(`[${DRAG_ATTR}]`);
-    for (let i = 0; i < marked.length; i++) {
-      const el = marked[i] as HTMLElement;
-      el.removeAttribute(DRAG_ATTR);
-      el.removeAttribute(DRAG_ANCHOR_ATTR);
-      el.style.boxShadow = '';
+    for (const el of markedCells) {
+      unstyleCell(el);
     }
+    markedCells.clear();
+    cellIndex = null;
   };
 
   const resolveRange = (cx: number, cy: number): ISelectionRange | null => {
@@ -159,6 +212,7 @@ export function useCellSelection(params: UseCellSelectionParams): UseCellSelecti
     if (!cell) return null;
     const r = parseInt(cell.getAttribute('data-row-index') ?? '', 10);
     const c = parseInt(cell.getAttribute('data-col-index') ?? '', 10);
+    const colOffset = getColOffset();
     if (Number.isNaN(r) || Number.isNaN(c) || c < colOffset) return null;
     const dataCol = c - colOffset;
     return normalizeSelectionRange({
@@ -178,7 +232,7 @@ export function useCellSelection(params: UseCellSelectionParams): UseCellSelecti
 
   const updateAutoScroll = () => {
     const wrapper = wrapperRef.value;
-    if (!wrapper || !lastMousePos || !isDraggingInternal) {
+    if (!wrapper || !lastMousePos || !isDraggingInternal.value) {
       stopAutoScroll();
       return;
     }
@@ -208,7 +262,7 @@ export function useCellSelection(params: UseCellSelectionParams): UseCellSelecti
       autoScrollInterval = setInterval(() => {
         const w = wrapperRef.value;
         const p = lastMousePos;
-        if (!w || !p || !isDraggingInternal) { stopAutoScroll(); return; }
+        if (!w || !p || !isDraggingInternal.value) { stopAutoScroll(); return; }
 
         const r = w.getBoundingClientRect();
         let sdx = 0;
@@ -233,11 +287,13 @@ export function useCellSelection(params: UseCellSelectionParams): UseCellSelecti
   };
 
   const onMove = (e: MouseEvent) => {
-    if (!isDraggingInternal || !dragStart) return;
+    if (!isDraggingInternal.value || !dragStart) return;
 
     if (!dragMoved) {
       dragMoved = true;
       isDragging.value = true;
+      // Build cell index once at drag start for O(1) lookups during drag
+      buildCellIndex();
     }
 
     lastMousePos = { cx: e.clientX, cy: e.clientY };
@@ -267,7 +323,7 @@ export function useCellSelection(params: UseCellSelectionParams): UseCellSelecti
   };
 
   const onUp = () => {
-    if (!isDraggingInternal) return;
+    if (!isDraggingInternal.value) return;
 
     stopAutoScroll();
 
@@ -276,7 +332,7 @@ export function useCellSelection(params: UseCellSelectionParams): UseCellSelecti
       rafId = 0;
     }
 
-    isDraggingInternal = false;
+    isDraggingInternal.value = false;
     const wasDrag = dragMoved;
 
     if (wasDrag) {
@@ -290,7 +346,7 @@ export function useCellSelection(params: UseCellSelectionParams): UseCellSelecti
         setSelectionRange(finalRange);
         setActiveCell({
           rowIndex: finalRange.endRow,
-          columnIndex: finalRange.endCol + colOffset,
+          columnIndex: finalRange.endCol + getColOffset(),
         });
       }
     }
@@ -302,15 +358,13 @@ export function useCellSelection(params: UseCellSelectionParams): UseCellSelecti
     if (wasDrag) isDragging.value = false;
   };
 
-  let isUnmounted = false;
-
   const onMoveSafe = (e: MouseEvent) => {
-    if (isUnmounted) return;
+    if (isUnmounted.value) return;
     onMove(e);
   };
 
   const onUpSafe = () => {
-    if (isUnmounted) return;
+    if (isUnmounted.value) return;
     onUp();
   };
 
@@ -320,7 +374,7 @@ export function useCellSelection(params: UseCellSelectionParams): UseCellSelecti
   });
 
   onUnmounted(() => {
-    isUnmounted = true;
+    isUnmounted.value = true;
     window.removeEventListener('mousemove', onMoveSafe, true);
     window.removeEventListener('mouseup', onUpSafe, true);
     if (rafId) cancelAnimationFrame(rafId);

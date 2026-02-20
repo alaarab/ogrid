@@ -7,7 +7,50 @@ on:
     branches: [ main ]
 
 jobs:
-  test:
+  build-and-test:
+    runs-on: ubuntu-latest
+
+    strategy:
+      matrix:
+        node-version: [18, 20, 22]
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Use Node.js ${{ matrix.node-version }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node-version }}
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build all packages
+        run: npm run build
+        env:
+          TURBO_TOKEN: ${{ secrets.TURBO_TOKEN }}
+          TURBO_TEAM: ${{ vars.TURBO_TEAM }}
+
+      - name: Check bundle size
+        if: matrix.node-version == 22
+        run: npm run size
+
+      - name: Run all workspace tests (parallel via Turbo)
+        run: npx turbo test --concurrency=2
+
+      - name: Upload coverage to Codecov
+        if: matrix.node-version == 22
+        uses: codecov/codecov-action@v4
+        with:
+          directory: ./packages
+          flags: unittests
+          fail_ci_if_error: false
+        env:
+          CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
+
+  lint:
     runs-on: ubuntu-latest
 
     steps:
@@ -22,12 +65,6 @@ jobs:
 
       - name: Install dependencies
         run: npm ci
-
-      - name: Build all packages
-        run: npm run build
-
-      - name: Run all workspace tests
-        run: npm run test:all
 
       - name: Lint
         run: npm run lint

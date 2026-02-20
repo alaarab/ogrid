@@ -280,15 +280,17 @@ export function createSpreadsheetTests(_DataGridTableComponent: new () => unknow
       it('active cell stays null with cellSelection=false', () => {
         stateService.props.set(makeProps({ cellSelection: false }));
         const state = stateService.getState();
-        // The interaction methods are replaced with noops
-        state.interaction.setActiveCell({ rowIndex: 0, columnIndex: 0 });
+        // The interaction methods are undefined when cell selection is disabled
+        state.interaction.setActiveCell?.({ rowIndex: 0, columnIndex: 0 });
+        expect(state.interaction.setActiveCell).toBeUndefined();
         expect(stateService.getState().interaction.activeCell).toBeNull();
       });
 
       it('selection range stays null with cellSelection=false', () => {
         stateService.props.set(makeProps({ cellSelection: false }));
         const state = stateService.getState();
-        state.interaction.setSelectionRange({ startRow: 0, startCol: 0, endRow: 1, endCol: 1 });
+        state.interaction.setSelectionRange?.({ startRow: 0, startCol: 0, endRow: 1, endCol: 1 });
+        expect(state.interaction.setSelectionRange).toBeUndefined();
         expect(stateService.getState().interaction.selectionRange).toBeNull();
       });
 

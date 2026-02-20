@@ -51,6 +51,12 @@ export function useColumnResize<T>({
     e.preventDefault();
     e.stopPropagation();
 
+    // Clean up any in-progress drag before starting a new one
+    if (cleanupRef.current) {
+      cleanupRef.current();
+      cleanupRef.current = null;
+    }
+
     const startX = e.clientX;
     const columnId = col.columnId;
 
@@ -151,8 +157,7 @@ export function useColumnResize<T>({
     document.addEventListener('mousemove', onMove);
     document.addEventListener('mouseup', onUp);
     cleanupRef.current = cleanup;
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [defaultWidth, minWidth, setColumnSizingOverrides]); // columnSizingOverrides read via ref
+  }, [defaultWidth, minWidth, setColumnSizingOverrides, columnSizingOverridesRef]);
 
   const getColumnWidth = useCallback((col: IColumnDef<T>) => {
     return columnSizingOverrides[col.columnId]?.widthPx

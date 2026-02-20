@@ -1,9 +1,9 @@
-import { defineComponent, h, type PropType } from 'vue';
+import { defineComponent, h, type PropType, type Component } from 'vue';
 import InputText from 'primevue/inputtext';
 import Button from 'primevue/button';
 
-const _InputText = InputText as any;
-const _Button = Button as any;
+const _InputText = InputText as Component;
+const _Button = Button as Component;
 
 export const TextFilterPopover = defineComponent({
   name: 'TextFilterPopover',

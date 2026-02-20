@@ -58,7 +58,6 @@ const OGridInner = forwardRef(function OGridInner<T>(
           onPageChange={pagination.setPage}
           onPageSizeChange={(size) => {
             pagination.setPageSize(size);
-            pagination.setPage(1);
           }}
           pageSizeOptions={pagination.pageSizeOptions}
           entityLabelPlural={pagination.entityLabelPlural}

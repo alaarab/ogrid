@@ -42,6 +42,13 @@ export {
   formatCellValueForTsv,
   formatSelectionAsTsv,
   parseTsvClipboard,
+  applyPastedValues,
+  applyCutClear,
+  applyFillValues,
+  computeArrowNavigation,
+  applyCellDeletion,
+  applyRangeRowSelection,
+  computeRowSelectionState,
   UndoRedoStack,
 } from '@alaarab/ogrid-core';
 export type {
@@ -56,6 +63,8 @@ export type {
   IColumnHeaderMenuItem,
   ColumnHeaderMenuInput,
   ColumnHeaderMenuHandlers,
+  ArrowNavigationContext,
+  ArrowNavigationResult,
 } from '@alaarab/ogrid-core';
 
 // View model utilities (re-exported from core + React-specific getCellInteractionProps)

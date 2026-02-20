@@ -38,6 +38,22 @@ export function reorderColumnArray(
   return result;
 }
 
+/** Parameters for {@link calculateDropTarget}. */
+export interface ICalculateDropTargetParams {
+  /** Current mouse X position (client coordinates). */
+  mouseX: number;
+  /** Current column display order (array of column ids). */
+  columnOrder: string[];
+  /** The column being dragged. */
+  draggedColumnId: string;
+  /** Pin state of the dragged column. */
+  draggedPinState: ColumnPinState;
+  /** The table (or grid container) DOM element to query headers from. */
+  tableElement: Element;
+  /** Pinned column configuration. */
+  pinnedColumns?: { left?: string[]; right?: string[] };
+}
+
 /**
  * Calculate the drop target for a dragged column based on mouse position.
  *
@@ -45,22 +61,14 @@ export function reorderColumnArray(
  * finds the midpoint of each header cell, and determines insertion side.
  * Respects pinning zones: a left-pinned column can only drop among left-pinned, etc.
  *
- * @param mouseX - Current mouse X position (client coordinates)
- * @param columnOrder - Current column display order (array of column ids)
- * @param draggedColumnId - The column being dragged
- * @param draggedPinState - Pin state of the dragged column
- * @param tableElement - The table (or grid container) DOM element to query headers from
- * @param pinnedColumns - Pinned column configuration
+ * @param params - Options object containing mouseX, columnOrder, draggedColumnId,
+ *   draggedPinState, tableElement, and optional pinnedColumns.
  * @returns Drop target with insertion index and indicator X, or null if no valid target.
  */
 export function calculateDropTarget(
-  mouseX: number,
-  columnOrder: string[],
-  draggedColumnId: string,
-  draggedPinState: ColumnPinState,
-  tableElement: Element,
-  pinnedColumns?: { left?: string[]; right?: string[] }
+  params: ICalculateDropTargetParams
 ): IDropTarget | null {
+  const { mouseX, columnOrder, draggedColumnId, draggedPinState, tableElement, pinnedColumns } = params;
   const headerCells = tableElement.querySelectorAll<HTMLElement>('[data-column-id]');
   if (headerCells.length === 0) return null;
 

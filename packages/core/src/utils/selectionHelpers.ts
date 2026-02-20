@@ -4,6 +4,11 @@
  */
 import type { ISelectionRange } from '../types/dataGridTypes';
 
+// Re-export normalizeSelectionRange from its canonical location for convenience.
+// The original definition lives in dataGridTypes.ts and is preserved there
+// to avoid breaking existing imports.
+export { normalizeSelectionRange } from '../types/dataGridTypes';
+
 /**
  * Compare two selection ranges by value (deep equality).
  * Returns true if both ranges are equal, including when both are null.
@@ -62,4 +67,59 @@ export function computeAutoScrollSpeed(
 ): number {
   const t = Math.min(distance / edgePx, 1);
   return minSpeed + t * (maxSpeed - minSpeed);
+}
+
+/**
+ * Apply a shift-click range selection to a set of row IDs.
+ * Used by React `useRowSelection`, Vue `useRowSelection`, and JS `RowSelectionState`.
+ *
+ * @param start       Start index of the range (inclusive).
+ * @param end         End index of the range (inclusive).
+ * @param checked     Whether to add (true) or remove (false) the rows.
+ * @param items       Array of all row data objects.
+ * @param getRowId    Function to extract a unique row ID from an item.
+ * @param currentSelection  Current set of selected row IDs (will be shallow-copied).
+ * @returns A new Set of selected row IDs after applying the range.
+ */
+export function applyRangeRowSelection<T>(
+  start: number,
+  end: number,
+  checked: boolean,
+  items: T[],
+  getRowId: (item: T) => string | number,
+  currentSelection: Set<string | number>
+): Set<string | number> {
+  const next = new Set(currentSelection);
+  const lo = Math.min(start, end);
+  const hi = Math.max(start, end);
+  for (let i = lo; i <= hi; i++) {
+    if (i < items.length) {
+      const id = getRowId(items[i]);
+      if (checked) next.add(id);
+      else next.delete(id);
+    }
+  }
+  return next;
+}
+
+/**
+ * Compute the allSelected / someSelected state from a set of selected row IDs.
+ * Used by React `useRowSelection`, Vue `useRowSelection`, and JS `RowSelectionState`.
+ *
+ * @param selectedIds  Current set of selected row IDs.
+ * @param items        Array of all row data objects.
+ * @param getRowId     Function to extract a unique row ID from an item.
+ * @returns An object with `allSelected` and `someSelected` booleans.
+ */
+export function computeRowSelectionState<T>(
+  selectedIds: Set<string | number>,
+  items: T[],
+  getRowId: (item: T) => string | number
+): { allSelected: boolean; someSelected: boolean } {
+  if (selectedIds.size === 0 || items.length === 0) {
+    return { allSelected: false, someSelected: false };
+  }
+  const allSelected = items.every((item) => selectedIds.has(getRowId(item)));
+  const someSelected = !allSelected && selectedIds.size > 0;
+  return { allSelected, someSelected };
 }

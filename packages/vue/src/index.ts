@@ -155,6 +155,7 @@ export type {
   UseColumnHeaderMenuStateResult,
   UseDataGridTableSetupParams,
   UseDataGridTableSetupResult,
+  MaybeShallowRef,
 } from './composables';
 
 // View model utilities (for UI packages)

@@ -22,7 +22,7 @@ function ChevronUp(): React.ReactElement {
 }
 
 export const ColumnChooser: React.FC<IColumnChooserProps> = (props) => {
-  const { columns, visibleColumns, onVisibilityChange, className } = props;
+  const { columns, visibleColumns, onVisibilityChange, onSetVisibleColumns, className } = props;
 
   const {
     open,
@@ -32,7 +32,7 @@ export const ColumnChooser: React.FC<IColumnChooserProps> = (props) => {
     handleClearAll,
     visibleCount,
     totalCount,
-  } = useColumnChooserState({ columns, visibleColumns, onVisibilityChange });
+  } = useColumnChooserState({ columns, visibleColumns, onVisibilityChange, onSetVisibleColumns });
 
   const handleCheckboxChange = (columnKey: string) => (checked: boolean | 'indeterminate') => {
     setColumnVisible(columnKey)(checked === true);

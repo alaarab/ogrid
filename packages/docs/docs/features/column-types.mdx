@@ -158,11 +158,11 @@ Setting `type: 'date'` provides:
 
 ### Date Filter Values
 
-Date filter values use ISO `YYYY-MM-DD` strings:
+Date filter values use ISO `YYYY-MM-DD` strings wrapped in the `FilterValue` discriminated union:
 
 ```ts
 // In IFilters
-{ hireDate: { from: '2024-01-01', to: '2024-12-31' } }
+{ hireDate: { type: 'date', value: { from: '2024-01-01', to: '2024-12-31' } } }
 ```
 
 ## Boolean Columns

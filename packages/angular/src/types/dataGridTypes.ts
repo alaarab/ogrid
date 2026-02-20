@@ -175,7 +175,7 @@ export interface IOGridDataGridProps<T> {
     onClearAll: () => void;
     hasActiveFilters: boolean;
     message?: string;
-    render?: TemplateRef<unknown>;
+    render?: unknown;
   };
   onCellError?: (error: Error, info: unknown) => void;
   'aria-label'?: string;

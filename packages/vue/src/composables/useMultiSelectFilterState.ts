@@ -8,7 +8,7 @@ export interface UseMultiSelectFilterStateParams {
   selectedValues?: string[];
   onFilterChange?: (values: string[]) => void;
   options?: string[];
-  isFilterOpen: () => boolean;
+  isFilterOpen: Ref<boolean>;
 }
 
 export interface UseMultiSelectFilterStateResult {
@@ -34,7 +34,7 @@ export function useMultiSelectFilterState(
   const debouncedSearchText = useDebounce(searchText, SEARCH_DEBOUNCE_MS);
 
   // Sync temp state when popover opens
-  watch(() => params.isFilterOpen(), (open) => {
+  watch(params.isFilterOpen, (open) => {
     if (open) {
       tempSelected.value = new Set(params.selectedValues ?? EMPTY_OPTIONS);
       searchText.value = '';

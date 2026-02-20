@@ -592,4 +592,600 @@ describe('useOGrid', () => {
       expect(sideBar?.isOpen).toBe(false);
     });
   });
+
+  describe('Sorting', () => {
+    it('sorts data ascending by default', () => {
+      const props = ref<IOGridProps<Row>>({
+        columns,
+        getRowId,
+        data,
+        defaultPageSize: 10,
+        defaultSortBy: 'name',
+        defaultSortDirection: 'asc',
+      });
+
+      const { dataGridProps } = useOGrid(props);
+      const names = dataGridProps.value.items.map((r) => r.name);
+      expect(names).toEqual(['Alice', 'Bob', 'Carol']);
+    });
+
+    it('sorts data descending', () => {
+      const props = ref<IOGridProps<Row>>({
+        columns,
+        getRowId,
+        data,
+        defaultPageSize: 10,
+        defaultSortBy: 'name',
+        defaultSortDirection: 'desc',
+      });
+
+      const { dataGridProps } = useOGrid(props);
+      const names = dataGridProps.value.items.map((r) => r.name);
+      expect(names).toEqual(['Carol', 'Bob', 'Alice']);
+    });
+
+    it('handleSort changes sort field and direction', () => {
+      const props = ref<IOGridProps<Row>>({
+        columns,
+        getRowId,
+        data,
+        defaultPageSize: 10,
+        defaultSortBy: 'name',
+        defaultSortDirection: 'asc',
+      });
+
+      const { dataGridProps } = useOGrid(props);
+
+      // Sort by name descending
+      dataGridProps.value.onColumnSort('name', 'desc');
+
+      expect(dataGridProps.value.sortBy).toBe('name');
+      expect(dataGridProps.value.sortDirection).toBe('desc');
+      expect(dataGridProps.value.items.map((r) => r.name)).toEqual(['Carol', 'Bob', 'Alice']);
+    });
+
+    it('sort change resets to page 1', () => {
+      const props = ref<IOGridProps<Row>>({
+        columns,
+        getRowId,
+        data,
+        defaultPageSize: 2,
+      });
+
+      const { pagination, dataGridProps } = useOGrid(props);
+
+      pagination.value.setPage(2);
+      expect(pagination.value.page).toBe(2);
+
+      dataGridProps.value.onColumnSort('name', 'desc');
+      expect(pagination.value.page).toBe(1);
+    });
+
+    it('calls onSortChange callback', () => {
+      const onSortChange = jest.fn();
+      const props = ref<IOGridProps<Row>>({
+        columns,
+        getRowId,
+        data,
+        defaultPageSize: 10,
+        onSortChange,
+      });
+
+      const { dataGridProps } = useOGrid(props);
+      dataGridProps.value.onColumnSort('name', 'desc');
+
+      expect(onSortChange).toHaveBeenCalled();
+    });
+  });
+
+  describe('Text filtering', () => {
+    const filterColumns = [
+      { columnId: 'id', name: 'ID', filterable: { type: 'text' as const } },
+      { columnId: 'name', name: 'Name', filterable: { type: 'text' as const } },
+    ];
+
+    it('applies text filter', () => {
+      const props = ref<IOGridProps<Row>>({
+        columns: filterColumns,
+        getRowId,
+        data,
+        defaultPageSize: 10,
+      });
+
+      const { dataGridProps, filters } = useOGrid(props);
+
+      dataGridProps.value.onFilterChange!('name', { type: 'text', value: 'Ali' });
+
+      expect(filters.value.hasActiveFilters).toBe(true);
+      expect(dataGridProps.value.items.map((r) => r.name)).toEqual(['Alice']);
+    });
+
+    it('clears filter restores all items', () => {
+      const props = ref<IOGridProps<Row>>({
+        columns: filterColumns,
+        getRowId,
+        data,
+        defaultPageSize: 10,
+      });
+
+      const { dataGridProps, filters } = useOGrid(props);
+
+      dataGridProps.value.onFilterChange!('name', { type: 'text', value: 'Ali' });
+      expect(dataGridProps.value.items).toHaveLength(1);
+
+      filters.value.setFilters({});
+      expect(dataGridProps.value.items).toHaveLength(3);
+      expect(filters.value.hasActiveFilters).toBe(false);
+    });
+
+    it('filter change resets to page 1', () => {
+      const props = ref<IOGridProps<Row>>({
+        columns: filterColumns,
+        getRowId,
+        data,
+        defaultPageSize: 2,
+      });
+
+      const { pagination, dataGridProps } = useOGrid(props);
+
+      pagination.value.setPage(2);
+      expect(pagination.value.page).toBe(2);
+
+      dataGridProps.value.onFilterChange!('name', { type: 'text', value: 'A' });
+      expect(pagination.value.page).toBe(1);
+    });
+  });
+
+  describe('Row selection (via API)', () => {
+    it('selectAll selects all displayed rows', () => {
+      const props = ref<IOGridProps<Row>>({
+        columns,
+        getRowId,
+        data,
+        defaultPageSize: 10,
+      });
+
+      const { api } = useOGrid(props);
+
+      api.value.selectAll();
+      const selected = api.value.getSelectedRows();
+      expect(selected).toHaveLength(3);
+      expect(selected).toContain('1');
+      expect(selected).toContain('2');
+      expect(selected).toContain('3');
+    });
+
+    it('selectAll calls onSelectionChange', () => {
+      const onSelectionChange = jest.fn();
+      const props = ref<IOGridProps<Row>>({
+        columns,
+        getRowId,
+        data,
+        defaultPageSize: 10,
+        onSelectionChange,
+      });
+
+      const { api } = useOGrid(props);
+      api.value.selectAll();
+
+      expect(onSelectionChange).toHaveBeenCalled();
+      expect(onSelectionChange.mock.calls[0][0].selectedRowIds).toHaveLength(3);
+    });
+
+    it('deselectAll calls onSelectionChange with empty', () => {
+      const onSelectionChange = jest.fn();
+      const props = ref<IOGridProps<Row>>({
+        columns,
+        getRowId,
+        data,
+        defaultPageSize: 10,
+        onSelectionChange,
+      });
+
+      const { api } = useOGrid(props);
+      api.value.setSelectedRows(['1', '2']);
+      api.value.deselectAll();
+
+      expect(onSelectionChange).toHaveBeenCalledWith({
+        selectedRowIds: [],
+        selectedItems: [],
+      });
+    });
+  });
+
+  describe('Status bar', () => {
+    it('returns undefined when statusBar is not set', () => {
+      const props = ref<IOGridProps<Row>>({
+        columns,
+        getRowId,
+        data,
+        defaultPageSize: 10,
+      });
+
+      const { dataGridProps } = useOGrid(props);
+      expect(dataGridProps.value.statusBar).toBeUndefined();
+    });
+
+    it('returns status bar config when statusBar is true', () => {
+      const props = ref<IOGridProps<Row>>({
+        columns,
+        getRowId,
+        data,
+        defaultPageSize: 10,
+        statusBar: true,
+      });
+
+      const { dataGridProps } = useOGrid(props);
+      expect(dataGridProps.value.statusBar).toBeDefined();
+      expect(dataGridProps.value.statusBar!.totalCount).toBe(3);
+      expect(dataGridProps.value.statusBar!.selectedCount).toBe(0);
+    });
+
+    it('returns custom status bar when statusBar is an object', () => {
+      const customStatus = { totalCount: 100, filteredCount: 50, selectedCount: 5 };
+      const props = ref<IOGridProps<Row>>({
+        columns,
+        getRowId,
+        data,
+        defaultPageSize: 10,
+        statusBar: customStatus,
+      });
+
+      const { dataGridProps } = useOGrid(props);
+      expect(dataGridProps.value.statusBar).toEqual(customStatus);
+    });
+
+    it('includes filteredCount when filters are active', () => {
+      const filterColumns = [
+        { columnId: 'id', name: 'ID', filterable: { type: 'text' as const } },
+        { columnId: 'name', name: 'Name', filterable: { type: 'text' as const } },
+      ];
+      const props = ref<IOGridProps<Row>>({
+        columns: filterColumns,
+        getRowId,
+        data,
+        defaultPageSize: 10,
+        statusBar: true,
+      });
+
+      const { dataGridProps } = useOGrid(props);
+
+      dataGridProps.value.onFilterChange!('name', { type: 'text', value: 'Ali' });
+
+      expect(dataGridProps.value.statusBar).toBeDefined();
+      expect(dataGridProps.value.statusBar!.filteredCount).toBeDefined();
+    });
+  });
+
+  describe('Server-side data source', () => {
+    it('calls fetchPage when watched deps trigger', async () => {
+      const fetchPage = jest.fn().mockResolvedValue({
+        items: [{ id: '1', name: 'ServerAlice' }],
+        totalCount: 1,
+      });
+      const dataSource = { fetchPage };
+
+      const props = ref<IOGridProps<Row>>({
+        columns,
+        getRowId,
+        dataSource,
+      } as IOGridProps<Row>);
+
+      const { dataGridProps, pagination, api } = useOGrid(props);
+
+      // onMounted doesn't fire outside component context, but
+      // refreshData increments the refreshCounter which triggers the watch.
+      api.value.refreshData();
+
+      // Wait for the async fetch
+      await new Promise((r) => setTimeout(r, 50));
+
+      expect(fetchPage).toHaveBeenCalled();
+      expect(fetchPage.mock.calls[0][0]).toMatchObject({
+        page: 1,
+      });
+      expect(dataGridProps.value.items).toEqual([{ id: '1', name: 'ServerAlice' }]);
+      expect(pagination.value.displayTotalCount).toBe(1);
+    });
+  });
+
+  describe('Column chooser placement', () => {
+    it('defaults to toolbar', () => {
+      const props = ref<IOGridProps<Row>>({
+        columns,
+        getRowId,
+        data,
+        defaultPageSize: 10,
+      });
+
+      const { columnChooser } = useOGrid(props);
+      expect(columnChooser.value.placement).toBe('toolbar');
+    });
+
+    it('sets to none when columnChooser is false', () => {
+      const props = ref<IOGridProps<Row>>({
+        columns,
+        getRowId,
+        data,
+        defaultPageSize: 10,
+        columnChooser: false,
+      });
+
+      const { columnChooser } = useOGrid(props);
+      expect(columnChooser.value.placement).toBe('none');
+    });
+
+    it('sets to sidebar when columnChooser is sidebar', () => {
+      const props = ref<IOGridProps<Row>>({
+        columns,
+        getRowId,
+        data,
+        defaultPageSize: 10,
+        columnChooser: 'sidebar',
+      });
+
+      const { columnChooser } = useOGrid(props);
+      expect(columnChooser.value.placement).toBe('sidebar');
+    });
+  });
+
+  describe('Column resize and pin', () => {
+    it('stores column width overrides via onColumnResized', () => {
+      const onColumnResized = jest.fn();
+      const props = ref<IOGridProps<Row>>({
+        columns,
+        getRowId,
+        data,
+        defaultPageSize: 10,
+        onColumnResized,
+      });
+
+      const { dataGridProps } = useOGrid(props);
+      dataGridProps.value.onColumnResized?.('name', 200);
+
+      expect(onColumnResized).toHaveBeenCalledWith('name', 200);
+      expect(dataGridProps.value.initialColumnWidths).toEqual({ name: 200 });
+    });
+
+    it('stores pinned column overrides via onColumnPinned', () => {
+      const onColumnPinned = jest.fn();
+      const props = ref<IOGridProps<Row>>({
+        columns,
+        getRowId,
+        data,
+        defaultPageSize: 10,
+        onColumnPinned,
+      });
+
+      const { dataGridProps } = useOGrid(props);
+      dataGridProps.value.onColumnPinned?.('name', 'left');
+
+      expect(onColumnPinned).toHaveBeenCalledWith('name', 'left');
+      expect(dataGridProps.value.pinnedColumns).toEqual({ name: 'left' });
+    });
+
+    it('removes pinned column override on unpin', () => {
+      const props = ref<IOGridProps<Row>>({
+        columns,
+        getRowId,
+        data,
+        defaultPageSize: 10,
+      });
+
+      const { dataGridProps } = useOGrid(props);
+      dataGridProps.value.onColumnPinned?.('name', 'left');
+      expect(dataGridProps.value.pinnedColumns).toEqual({ name: 'left' });
+
+      dataGridProps.value.onColumnPinned?.('name', null);
+      expect(dataGridProps.value.pinnedColumns).toEqual({});
+    });
+  });
+
+  describe('API: setRowData and setLoading', () => {
+    it('setRowData updates items when no data prop is provided', () => {
+      // When no `data` is passed, useOGrid falls back to internalData.
+      // setRowData sets the internal data array.
+      const props = ref<IOGridProps<Row>>({
+        columns,
+        getRowId,
+        defaultPageSize: 10,
+      } as IOGridProps<Row>);
+
+      const { api, dataGridProps } = useOGrid(props);
+
+      expect(dataGridProps.value.items).toHaveLength(0);
+
+      api.value.setRowData([
+        { id: '10', name: 'NewPerson' },
+      ] as Row[]);
+
+      expect(dataGridProps.value.items).toHaveLength(1);
+      expect(dataGridProps.value.items[0].name).toBe('NewPerson');
+    });
+
+    it('setLoading controls loading state', () => {
+      const props = ref<IOGridProps<Row>>({
+        columns,
+        getRowId,
+        data,
+        defaultPageSize: 10,
+      });
+
+      const { api, dataGridProps } = useOGrid(props);
+
+      api.value.setLoading(true);
+      expect(dataGridProps.value.isLoading).toBe(true);
+
+      api.value.setLoading(false);
+      expect(dataGridProps.value.isLoading).toBe(false);
+    });
+  });
+
+  describe('Empty state', () => {
+    it('passes emptyState through to dataGridProps', () => {
+      const props = ref<IOGridProps<Row>>({
+        columns,
+        getRowId,
+        data,
+        defaultPageSize: 10,
+        emptyState: { message: 'No data found' },
+      });
+
+      const { dataGridProps } = useOGrid(props);
+      expect(dataGridProps.value.emptyState).toBeDefined();
+      expect(dataGridProps.value.emptyState!.message).toBe('No data found');
+    });
+
+    it('emptyState includes hasActiveFilters and onClearAll', () => {
+      const filterColumns = [
+        { columnId: 'id', name: 'ID', filterable: { type: 'text' as const } },
+        { columnId: 'name', name: 'Name', filterable: { type: 'text' as const } },
+      ];
+      const props = ref<IOGridProps<Row>>({
+        columns: filterColumns,
+        getRowId,
+        data,
+        defaultPageSize: 10,
+        emptyState: { message: 'Empty' },
+      });
+
+      const { dataGridProps } = useOGrid(props);
+
+      dataGridProps.value.onFilterChange!('name', { type: 'text', value: 'ZZZ' });
+
+      expect(dataGridProps.value.emptyState!.hasActiveFilters).toBe(true);
+      expect(typeof dataGridProps.value.emptyState!.onClearAll).toBe('function');
+    });
+  });
+
+  describe('Layout pass-through', () => {
+    it('passes toolbar through', () => {
+      const props = ref<IOGridProps<Row>>({
+        columns,
+        getRowId,
+        data,
+        defaultPageSize: 10,
+        toolbar: 'My Toolbar',
+      });
+
+      const { layout } = useOGrid(props);
+      expect(layout.value.toolbar).toBe('My Toolbar');
+    });
+
+    it('passes className through', () => {
+      const props = ref<IOGridProps<Row>>({
+        columns,
+        getRowId,
+        data,
+        defaultPageSize: 10,
+        className: 'custom-class',
+      });
+
+      const { layout } = useOGrid(props);
+      expect(layout.value.className).toBe('custom-class');
+    });
+  });
+
+  describe('API: getColumnOrder and setColumnOrder', () => {
+    it('getColumnOrder returns column IDs when no custom order', () => {
+      const props = ref<IOGridProps<Row>>({
+        columns,
+        getRowId,
+        data,
+        defaultPageSize: 10,
+      });
+
+      const { api } = useOGrid(props);
+      expect(api.value.getColumnOrder()).toEqual(['id', 'name']);
+    });
+
+    it('setColumnOrder calls onColumnOrderChange', () => {
+      const onColumnOrderChange = jest.fn();
+      const props = ref<IOGridProps<Row>>({
+        columns,
+        getRowId,
+        data,
+        defaultPageSize: 10,
+        onColumnOrderChange,
+      });
+
+      const { api } = useOGrid(props);
+      api.value.setColumnOrder(['name', 'id']);
+
+      expect(onColumnOrderChange).toHaveBeenCalledWith(['name', 'id']);
+    });
+  });
+
+  describe('Callbacks', () => {
+    it('calls onPageChange when page changes', () => {
+      const onPageChange = jest.fn();
+      const props = ref<IOGridProps<Row>>({
+        columns,
+        getRowId,
+        data,
+        defaultPageSize: 10,
+        onPageChange,
+      });
+
+      const { pagination } = useOGrid(props);
+      pagination.value.setPage(2);
+
+      expect(onPageChange).toHaveBeenCalledWith(2);
+    });
+
+    it('calls onPageSizeChange when page size changes', () => {
+      const onPageSizeChange = jest.fn();
+      const props = ref<IOGridProps<Row>>({
+        columns,
+        getRowId,
+        data,
+        defaultPageSize: 10,
+        onPageSizeChange,
+      });
+
+      const { pagination } = useOGrid(props);
+      pagination.value.setPageSize(50);
+
+      expect(onPageSizeChange).toHaveBeenCalledWith(50);
+    });
+
+    it('calls onVisibleColumnsChange when visibility changes', () => {
+      const onVisibleColumnsChange = jest.fn();
+      const props = ref<IOGridProps<Row>>({
+        columns,
+        getRowId,
+        data,
+        defaultPageSize: 10,
+        onVisibleColumnsChange,
+      });
+
+      const { columnChooser } = useOGrid(props);
+      columnChooser.value.onVisibilityChange('name', false);
+
+      expect(onVisibleColumnsChange).toHaveBeenCalled();
+      const calledWith = onVisibleColumnsChange.mock.calls[0][0];
+      expect(calledWith.has('name')).toBe(false);
+      expect(calledWith.has('id')).toBe(true);
+    });
+
+    it('calls onFiltersChange when filters change', () => {
+      const onFiltersChange = jest.fn();
+      const filterColumns = [
+        { columnId: 'id', name: 'ID', filterable: { type: 'text' as const } },
+        { columnId: 'name', name: 'Name', filterable: { type: 'text' as const } },
+      ];
+      const props = ref<IOGridProps<Row>>({
+        columns: filterColumns,
+        getRowId,
+        data,
+        defaultPageSize: 10,
+        onFiltersChange,
+      });
+
+      const { dataGridProps } = useOGrid(props);
+      dataGridProps.value.onFilterChange!('name', { type: 'text', value: 'Alice' });
+
+      expect(onFiltersChange).toHaveBeenCalled();
+    });
+  });
 });

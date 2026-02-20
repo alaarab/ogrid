@@ -44,9 +44,3 @@ export function createLatestCallback<T extends (...args: unknown[]) => unknown>(
     return fn()(...args);
   }) as T;
 }
-
-/**
- * Alias for createLatestCallback for consistency with React/Vue naming.
- * @deprecated Use createLatestCallback instead
- */
-export const createLatestRef = createLatestCallback;

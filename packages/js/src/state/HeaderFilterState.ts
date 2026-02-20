@@ -13,7 +13,7 @@ export interface HeaderFilterConfig {
  * Equivalent of React's useColumnHeaderFilterState, but class-based.
  */
 export class HeaderFilterState {
-  private emitter = new EventEmitter<{ change: void }>();
+  private emitter = new EventEmitter<{ change: undefined }>();
 
   // Which column's filter is currently open (null = none)
   private _openColumnId: string | null = null;
@@ -57,6 +57,11 @@ export class HeaderFilterState {
 
   setFilterOptions(options: Record<string, string[]>): void {
     this._filterOptions = options;
+  }
+
+  /** Allow OGrid to update the popover element reference after rendering (for click-outside detection). */
+  setPopoverEl(el: HTMLElement | null): void {
+    this._popoverEl = el;
   }
 
   getFilterOptions(filterField: string): string[] {
@@ -128,11 +133,15 @@ export class HeaderFilterState {
       }
     };
     setTimeout(() => {
-      document.addEventListener('mousedown', this._clickOutsideHandler!, { passive: true });
+      if (this._clickOutsideHandler) {
+        document.addEventListener('mousedown', this._clickOutsideHandler, { passive: true });
+      }
     }, 0);
-    document.addEventListener('keydown', this._escapeHandler!, true);
+    if (this._escapeHandler) {
+      document.addEventListener('keydown', this._escapeHandler, true);
+    }
 
-    this.emitter.emit('change', undefined as unknown as void);
+    this.emitter.emit('change');
   }
 
   close(): void {
@@ -150,29 +159,29 @@ export class HeaderFilterState {
       this._escapeHandler = null;
     }
 
-    this.emitter.emit('change', undefined as unknown as void);
+    this.emitter.emit('change');
   }
 
   // --- Temp state setters ---
 
   setTempTextValue(v: string): void {
     this._tempTextValue = v;
-    this.emitter.emit('change', undefined as unknown as void);
+    this.emitter.emit('change');
   }
 
   setSearchText(v: string): void {
     this._searchText = v;
-    this.emitter.emit('change', undefined as unknown as void);
+    this.emitter.emit('change');
   }
 
   setTempDateFrom(v: string): void {
     this._tempDateFrom = v;
-    this.emitter.emit('change', undefined as unknown as void);
+    this.emitter.emit('change');
   }
 
   setTempDateTo(v: string): void {
     this._tempDateTo = v;
-    this.emitter.emit('change', undefined as unknown as void);
+    this.emitter.emit('change');
   }
 
   // --- Checkbox handlers ---
@@ -182,17 +191,17 @@ export class HeaderFilterState {
     if (checked) next.add(option);
     else next.delete(option);
     this._tempSelected = next;
-    this.emitter.emit('change', undefined as unknown as void);
+    this.emitter.emit('change');
   }
 
   handleSelectAll(filterField: string): void {
     this._tempSelected = new Set(this.getFilterOptions(filterField));
-    this.emitter.emit('change', undefined as unknown as void);
+    this.emitter.emit('change');
   }
 
   handleClearSelection(): void {
     this._tempSelected = new Set();
-    this.emitter.emit('change', undefined as unknown as void);
+    this.emitter.emit('change');
   }
 
   // --- Apply/Clear ---

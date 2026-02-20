@@ -1,6 +1,6 @@
 {
   "name": "@alaarab/ogrid-vue-radix",
-  "version": "2.0.23",
+  "version": "2.1.0",
   "description": "OGrid Vue Radix – Lightweight data grid with sorting, filtering, pagination, column chooser, and CSV export. Built with Headless UI Vue.",
   "main": "dist/esm/index.js",
   "module": "dist/esm/index.js",
@@ -10,7 +10,8 @@
       "types": "./dist/types/index.d.ts",
       "import": "./dist/esm/index.js",
       "require": "./dist/esm/index.js"
-    }
+    },
+    "./styles/*": "./dist/esm/*"
   },
   "scripts": {
     "build": "rimraf dist && vite build && node scripts/compile-styles.js",
@@ -41,7 +42,7 @@
     "node": ">=18"
   },
   "dependencies": {
-    "@alaarab/ogrid-vue": "2.0.23",
+    "@alaarab/ogrid-vue": "2.1.0",
     "@headlessui/vue": "^1.7.23"
   },
   "peerDependencies": {
@@ -55,7 +56,6 @@
     "typescript": "^5.9.3",
     "sass": "^1.97.3",
     "@types/jest": "^29.5.0",
-    "jest": "^29.7.0",
     "jest-environment-jsdom": "^29.7.0",
     "ts-jest": "^29.4.6",
     "@storybook/vue3-vite": "^10.2.8",
@@ -63,5 +63,13 @@
   },
   "publishConfig": {
     "access": "public"
-  }
+  },
+  "_buildNote": "Uses Vite (not tsc) because this package includes Vue SFC (.vue) files that require @vitejs/plugin-vue for compilation. Other vue-* packages that use only .ts files could use tsc.",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/alaarab/ogrid.git",
+    "directory": "packages/vue-radix"
+  },
+  "homepage": "https://ogrid.dev",
+  "bugs": "https://github.com/alaarab/ogrid/issues"
 }

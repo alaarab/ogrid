@@ -40,7 +40,8 @@ function App() {
   );
 }
 
-createRoot(document.getElementById('root')!).render(<App />);
+const rootEl = document.getElementById('root');
+if (rootEl) createRoot(rootEl).render(<App />);
 
 // Add dark mode toggle — also switch Fluent theme
 createThemeToggle((theme) => {

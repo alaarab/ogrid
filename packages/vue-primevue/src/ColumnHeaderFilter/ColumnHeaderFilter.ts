@@ -57,23 +57,8 @@ export const ColumnHeaderFilter = defineComponent({
   setup(props) {
     const filterPopoverRef = ref<InstanceType<typeof Popover> | null>(null);
 
-    const state = useColumnHeaderFilterState({
-      filterType: props.filterType,
-      isSorted: props.isSorted,
-      isSortedDescending: props.isSortedDescending,
-      onSort: props.onSort,
-      selectedValues: props.selectedValues,
-      onFilterChange: props.onFilterChange,
-      options: props.options,
-      isLoadingOptions: props.isLoadingOptions,
-      textValue: props.textValue,
-      onTextChange: props.onTextChange,
-      selectedUser: props.selectedUser,
-      onUserChange: props.onUserChange,
-      peopleSearch: props.peopleSearch,
-      dateValue: props.dateValue,
-      onDateChange: props.onDateChange,
-    });
+    // Pass props directly so useColumnHeaderFilterState accesses reactive prop values
+    const state = useColumnHeaderFilterState(props);
 
     const toggleFilter = (event: Event) => {
       filterPopoverRef.value?.toggle(event);

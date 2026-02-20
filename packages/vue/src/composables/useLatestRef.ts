@@ -1,4 +1,7 @@
-import { customRef, unref, type Ref } from 'vue';
+import { customRef, isRef, unref, type Ref, type ShallowRef } from 'vue';
+
+/** Accept either Ref or ShallowRef for state fields */
+export type MaybeShallowRef<T> = Ref<T> | ShallowRef<T>;
 
 /**
  * Returns a ref that always holds the latest value.
@@ -15,8 +18,8 @@ export function useLatestRef<T>(source: Ref<T> | T): Ref<T> {
   return customRef((track, trigger) => ({
     get() {
       // Update value from source on every read (if source is a ref)
-      if (typeof source === 'object' && source !== null && 'value' in source) {
-        value = (source as Ref<T>).value;
+      if (isRef(source)) {
+        value = source.value;
       }
       // Don't call track() - we don't want to add this to reactive dependencies
       return value;

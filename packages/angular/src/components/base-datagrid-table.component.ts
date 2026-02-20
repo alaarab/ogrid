@@ -1,4 +1,4 @@
-import { signal, computed, effect, ElementRef } from '@angular/core';
+import { signal, computed, effect, ElementRef, inject } from '@angular/core';
 import { DataGridStateService } from '../services/datagrid-state.service';
 import { ColumnReorderService } from '../services/column-reorder.service';
 import { VirtualScrollService } from '../services/virtual-scroll.service';
@@ -34,15 +34,15 @@ import type { HeaderFilterConfig, CellRenderDescriptor } from '../utils';
  * 3. Implement abstract accessors for propsInput, wrapperRef, and tableContainerRef
  */
 export abstract class BaseDataGridTableComponent<T = unknown> {
-  readonly stateService = new DataGridStateService<T>();
-  readonly columnReorderService = new ColumnReorderService<T>();
-  readonly virtualScrollService = new VirtualScrollService();
+  readonly stateService = inject<DataGridStateService<T>>(DataGridStateService);
+  readonly columnReorderService = inject<ColumnReorderService<T>>(ColumnReorderService);
+  readonly virtualScrollService = inject(VirtualScrollService);
 
   protected lastMouseShift = false;
   readonly columnSizingVersion = signal(0);
 
   /** Dirty flag — set when column layout changes, cleared after measurement. */
-  private measureDirty = true;
+  private readonly measureDirty = signal<boolean>(true);
 
   /** DOM-measured column widths from the last layout pass.
    *  Used as a minWidth floor to prevent columns from shrinking
@@ -77,8 +77,8 @@ export abstract class BaseDataGridTableComponent<T = unknown> {
 
   /** Lifecycle hook — re-measure column widths only when layout changed */
   ngAfterViewChecked(): void {
-    if (this.measureDirty) {
-      this.measureDirty = false;
+    if (this.measureDirty()) {
+      this.measureDirty.set(false);
       this.measureColumnWidths();
     }
   }
@@ -112,9 +112,18 @@ export abstract class BaseDataGridTableComponent<T = unknown> {
 
   readonly state = computed(() => this.stateService.getState());
 
+  // Intermediate computed signals — narrow slices of state() so leaf computeds
+  // only recompute when their specific sub-state changes.
+  protected readonly layoutState = computed(() => this.state().layout);
+  protected readonly rowSelectionState = computed(() => this.state().rowSelection);
+  protected readonly editingState = computed(() => this.state().editing);
+  protected readonly interactionState = computed(() => this.state().interaction);
+  protected readonly contextMenuState = computed(() => this.state().contextMenu);
+  protected readonly viewModelsState = computed(() => this.state().viewModels);
+  protected readonly pinningState = computed(() => this.state().pinning);
+
   readonly tableContainerEl = computed(() => this.tableContainerElSignal());
 
-  readonly allItems = computed(() => this.getProps()?.items ?? []);
   readonly items = computed(() => this.getProps()?.items ?? []);
   readonly getRowId = computed(() => this.getProps()?.getRowId ?? ((item: T) => (item as Record<string, unknown>)['id'] as RowId));
   readonly isLoading = computed(() => this.getProps()?.isLoading ?? false);
@@ -133,40 +142,40 @@ export abstract class BaseDataGridTableComponent<T = unknown> {
   readonly propsVisibleColumns = computed(() => this.getProps()?.visibleColumns);
   readonly propsColumnOrder = computed(() => this.getProps()?.columnOrder);
 
-  // State service outputs
-  readonly visibleCols = computed(() => this.state().layout.visibleCols);
-  readonly hasCheckboxCol = computed(() => this.state().layout.hasCheckboxCol);
-  readonly hasRowNumbersCol = computed(() => this.state().layout.hasRowNumbersCol);
-  readonly colOffset = computed(() => this.state().layout.colOffset);
-  readonly containerWidth = computed(() => this.state().layout.containerWidth);
-  readonly minTableWidth = computed(() => this.state().layout.minTableWidth);
-  readonly desiredTableWidth = computed(() => this.state().layout.desiredTableWidth);
-  readonly columnSizingOverrides = computed(() => this.state().layout.columnSizingOverrides);
+  // State service outputs — read from narrow intermediate signals
+  readonly visibleCols = computed(() => this.layoutState().visibleCols);
+  readonly hasCheckboxCol = computed(() => this.layoutState().hasCheckboxCol);
+  readonly hasRowNumbersCol = computed(() => this.layoutState().hasRowNumbersCol);
+  readonly colOffset = computed(() => this.layoutState().colOffset);
+  readonly containerWidth = computed(() => this.layoutState().containerWidth);
+  readonly minTableWidth = computed(() => this.layoutState().minTableWidth);
+  readonly desiredTableWidth = computed(() => this.layoutState().desiredTableWidth);
+  readonly columnSizingOverrides = computed(() => this.layoutState().columnSizingOverrides);
 
-  readonly selectedRowIds = computed(() => this.state().rowSelection.selectedRowIds);
-  readonly allSelected = computed(() => this.state().rowSelection.allSelected);
-  readonly someSelected = computed(() => this.state().rowSelection.someSelected);
+  readonly selectedRowIds = computed(() => this.rowSelectionState().selectedRowIds);
+  readonly allSelected = computed(() => this.rowSelectionState().allSelected);
+  readonly someSelected = computed(() => this.rowSelectionState().someSelected);
 
-  readonly editingCell = computed(() => this.state().editing.editingCell);
-  readonly pendingEditorValue = computed(() => this.state().editing.pendingEditorValue);
+  readonly editingCell = computed(() => this.editingState().editingCell);
+  readonly pendingEditorValue = computed(() => this.editingState().pendingEditorValue);
 
-  readonly activeCell = computed(() => this.state().interaction.activeCell);
-  readonly selectionRange = computed(() => this.state().interaction.selectionRange);
-  readonly hasCellSelection = computed(() => this.state().interaction.hasCellSelection);
-  readonly cutRange = computed(() => this.state().interaction.cutRange);
-  readonly copyRange = computed(() => this.state().interaction.copyRange);
-  readonly canUndo = computed(() => this.state().interaction.canUndo);
-  readonly canRedo = computed(() => this.state().interaction.canRedo);
-  readonly isDragging = computed(() => this.state().interaction.isDragging);
+  readonly activeCell = computed(() => this.interactionState().activeCell);
+  readonly selectionRange = computed(() => this.interactionState().selectionRange);
+  readonly hasCellSelection = computed(() => this.interactionState().hasCellSelection);
+  readonly cutRange = computed(() => this.interactionState().cutRange);
+  readonly copyRange = computed(() => this.interactionState().copyRange);
+  readonly canUndo = computed(() => this.interactionState().canUndo);
+  readonly canRedo = computed(() => this.interactionState().canRedo);
+  readonly isDragging = computed(() => this.interactionState().isDragging);
 
-  readonly menuPosition = computed(() => this.state().contextMenu.menuPosition);
-  readonly statusBarConfig = computed(() => this.state().viewModels.statusBarConfig);
-  readonly showEmptyInGrid = computed(() => this.state().viewModels.showEmptyInGrid);
-  readonly headerFilterInput = computed(() => this.state().viewModels.headerFilterInput);
-  readonly cellDescriptorInput = computed(() => this.state().viewModels.cellDescriptorInput);
+  readonly menuPosition = computed(() => this.contextMenuState().menuPosition);
+  readonly statusBarConfig = computed(() => this.viewModelsState().statusBarConfig);
+  readonly showEmptyInGrid = computed(() => this.viewModelsState().showEmptyInGrid);
+  readonly headerFilterInput = computed(() => this.viewModelsState().headerFilterInput);
+  readonly cellDescriptorInput = computed(() => this.viewModelsState().cellDescriptorInput);
 
   // Pinning state
-  readonly pinnedColumnsMap = computed(() => this.state().pinning.pinnedColumns);
+  readonly pinnedColumnsMap = computed(() => this.pinningState().pinnedColumns);
 
   // Virtual scrolling
   readonly vsEnabled = computed(() => this.virtualScrollService.isActive());
@@ -180,7 +189,7 @@ export abstract class BaseDataGridTableComponent<T = unknown> {
     return this.vsVisibleRange().offsetBottom;
   });
   readonly vsVisibleItems = computed(() => {
-    const items = this.allItems();
+    const items = this.items();
     if (!this.vsEnabled()) return items;
     const range = this.vsVisibleRange();
     return items.slice(range.startIndex, Math.min(range.endIndex + 1, items.length));
@@ -191,8 +200,8 @@ export abstract class BaseDataGridTableComponent<T = unknown> {
   });
 
   // Popover editing
-  readonly popoverAnchorEl = computed(() => this.state().editing.popoverAnchorEl);
-  readonly pendingEditorValueForPopover = computed(() => this.state().editing.pendingEditorValue);
+  readonly popoverAnchorEl = computed(() => this.editingState().popoverAnchorEl);
+  readonly pendingEditorValueForPopover = computed(() => this.editingState().pendingEditorValue);
 
   readonly allowOverflowX = computed(() => {
     const p = this.getProps();
@@ -276,8 +285,18 @@ export abstract class BaseDataGridTableComponent<T = unknown> {
   });
 
   /**
-   * Initialize base wiring effects. Must be called from subclass constructor
-   * (effects need to run inside an injection context).
+   * Initialize base wiring effects. Must be called from subclass constructor.
+   *
+   * **Timing:** Angular requires `effect()` to be created inside an injection
+   * context (constructor or field initializer). On the first run, signals like
+   * `wrapperElSignal()` return `null` because the DOM hasn't been created yet.
+   * After `ngAfterViewInit` sets these signals, Angular's signal graph
+   * automatically re-runs each effect. The null guards inside each effect body
+   * ensure the first (null) run is a safe no-op.
+   *
+   * Sequence:
+   *   1. Constructor → `initBase()` → effects created, first run (signals null → no-ops)
+   *   2. `ngAfterViewInit` → `wrapperElSignal.set(el)` → effects re-run with real values
    */
   protected initBase(): void {
     // Wire props to state service
@@ -313,7 +332,7 @@ export abstract class BaseDataGridTableComponent<T = unknown> {
       this.visibleCols();
       this.columnSizingOverrides();
       this.columnSizingVersion();
-      this.measureDirty = true;
+      this.measureDirty.set(true);
     });
 
     // Wire virtual scroll service inputs
@@ -539,7 +558,7 @@ export abstract class BaseDataGridTableComponent<T = unknown> {
   }
 
   onCellClick(rowIndex: number, globalColIndex: number): void {
-    this.state().interaction.setActiveCell({ rowIndex, columnIndex: globalColIndex });
+    this.state().interaction.setActiveCell?.({ rowIndex, columnIndex: globalColIndex });
   }
 
   onCellContextMenu(event: MouseEvent): void {
@@ -551,14 +570,14 @@ export abstract class BaseDataGridTableComponent<T = unknown> {
   }
 
   onFillHandleMouseDown(event: MouseEvent): void {
-    this.state().interaction.handleFillHandleMouseDown(event);
+    this.state().interaction.handleFillHandleMouseDown?.(event);
   }
 
   onResizeStart(event: MouseEvent, col: IColumnDef<T>): void {
     event.preventDefault();
     // Clear cell selection before resize (like React) so selection outlines don't persist during drag
-    this.state().interaction.setActiveCell(null);
-    this.state().interaction.setSelectionRange(null);
+    this.state().interaction.setActiveCell?.(null);
+    this.state().interaction.setSelectionRange?.(null);
     this.getWrapperRef()?.nativeElement.focus({ preventScroll: true });
     const startX = event.clientX;
     const startWidth = this.getColumnWidth(col);

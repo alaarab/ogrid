@@ -84,8 +84,6 @@ DateFilterContent.displayName = 'DateFilterContent';
 export function getColumnHeaderFilterStateParams(props: IColumnHeaderFilterProps) {
   return {
     filterType: props.filterType,
-    isSorted: props.isSorted ?? false,
-    isSortedDescending: props.isSortedDescending ?? false,
     onSort: props.onSort,
     selectedValues: props.selectedValues,
     onFilterChange: props.onFilterChange,
