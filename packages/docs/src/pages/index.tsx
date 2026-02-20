@@ -19,6 +19,7 @@ interface EmployeeRow {
   startDate: string;
   status: string;
   rating: string;
+  remote: boolean;
 }
 
 const FIRST_NAMES = ['James','Emma','Liam','Olivia','Noah','Ava','William','Sophia','Benjamin','Isabella','Lucas','Mia','Henry','Charlotte','Alexander','Amelia','Daniel','Harper','Matthew','Evelyn','Sebastian','Abigail','Jack','Emily','Aiden','Elizabeth','Owen','Sofia','Samuel','Avery','Ryan','Ella','Nathan','Scarlett','Leo','Grace','Isaac','Lily','Ethan','Chloe','Mason','Penelope','Logan','Layla','Jacob','Riley','Michael','Zoey','Elijah','Nora'];
@@ -47,6 +48,7 @@ function generateData(): EmployeeRow[] {
       startDate: `${2019 + (i % 6)}-${String(1 + (i % 12)).padStart(2, '0')}-${String(1 + ((i * 3) % 28)).padStart(2, '0')}`,
       status: STATUSES[i % 10],
       rating: RATINGS[i % 10],
+      remote: i % 5 === 0 || i % 7 === 0,
     });
   }
   return rows;
@@ -82,10 +84,11 @@ function HeroGrid() {
     { columnId: 'id', name: '#', type: 'numeric' as const, defaultWidth: 50 },
     { columnId: 'name', name: 'Name', sortable: true, editable: true, defaultWidth: 170 },
     { columnId: 'department', name: 'Department', sortable: true, editable: true, filterable: { type: 'multiSelect' as const }, cellEditor: 'richSelect' as const, cellEditorParams: { values: DEPARTMENTS }, defaultWidth: 145 },
-    { columnId: 'title', name: 'Title', sortable: true, editable: true, defaultWidth: 180 },
+    { columnId: 'title', name: 'Title', sortable: true, editable: true, filterable: { type: 'text' as const }, defaultWidth: 180 },
     { columnId: 'email', name: 'Email', editable: true, defaultWidth: 200 },
     { columnId: 'salary', name: 'Salary', type: 'numeric' as const, editable: true, valueFormatter: (v: unknown) => v != null ? `$${Number(v).toLocaleString()}` : '', defaultWidth: 110 },
     { columnId: 'startDate', name: 'Start Date', type: 'date' as const, sortable: true, editable: true, defaultWidth: 130 },
+    { columnId: 'remote', name: 'Remote', type: 'boolean' as const, editable: true, sortable: true, filterable: { type: 'multiSelect' as const }, defaultWidth: 90 },
     { columnId: 'status', name: 'Status', editable: true, filterable: { type: 'multiSelect' as const }, cellEditor: 'richSelect' as const, cellEditorParams: { values: STATUSES_UNIQUE }, defaultWidth: 110 },
     { columnId: 'rating', name: 'Rating', sortable: true, editable: true, filterable: { type: 'multiSelect' as const }, cellEditor: 'richSelect' as const, cellEditorParams: { values: RATINGS_UNIQUE }, defaultWidth: 90 },
   ], []);

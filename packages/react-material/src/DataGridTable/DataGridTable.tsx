@@ -181,21 +181,17 @@ const CELL_TD_BASE_SX = { position: 'relative' as const, p: 0, height: '1px' } a
 const CELL_TD_PINNED_LEFT_SX = {
   ...CELL_TD_BASE_SX, position: 'sticky' as const, left: 0, zIndex: 6,
   bgcolor: 'background.paper', willChange: 'transform',
-  '&::after': {
-    content: '""', position: 'absolute', top: '-1px', right: '-4px', bottom: '-1px',
-    width: '4px', background: 'linear-gradient(to right, rgba(0,0,0,0.12), transparent)', pointerEvents: 'none',
-  },
+  borderRight: '1px solid', borderRightColor: 'divider',
+  boxShadow: '2px 0 4px -1px rgba(0,0,0,0.1)',
 } as const;
 const CELL_TD_PINNED_RIGHT_SX = {
   ...CELL_TD_BASE_SX, position: 'sticky' as const, right: 0, zIndex: 6,
   bgcolor: 'background.paper', willChange: 'transform',
-  '&::before': {
-    content: '""', position: 'absolute', top: '-1px', left: '-4px', bottom: '-1px',
-    width: '4px', background: 'linear-gradient(to left, rgba(0,0,0,0.12), transparent)', pointerEvents: 'none',
-  },
+  borderLeft: '1px solid', borderLeftColor: 'divider',
+  boxShadow: '-2px 0 4px -1px rgba(0,0,0,0.1)',
 } as const;
 
-// Header cell positioning variants
+// Header cell positioning variants (sticky)
 const HEADER_BASE_SX = {
   fontWeight: 600,
   position: 'sticky' as const, /* Enables vertical sticky for all headers */
@@ -206,18 +202,33 @@ const HEADER_BASE_SX = {
 const HEADER_PINNED_LEFT_SX = {
   ...HEADER_BASE_SX, position: 'sticky' as const, left: 0, top: 0,
   zIndex: 10, bgcolor: 'action.hover', willChange: 'transform',
-  '&::after': {
-    content: '""', position: 'absolute', top: '-1px', right: '-4px', bottom: '-1px',
-    width: '4px', background: 'linear-gradient(to right, rgba(0,0,0,0.12), transparent)', pointerEvents: 'none',
-  },
+  borderRight: '1px solid', borderRightColor: 'divider',
+  boxShadow: '2px 0 4px -1px rgba(0,0,0,0.1)',
 } as const;
 const HEADER_PINNED_RIGHT_SX = {
   ...HEADER_BASE_SX, position: 'sticky' as const, right: 0, top: 0,
   zIndex: 10, bgcolor: 'action.hover', willChange: 'transform',
-  '&::before': {
-    content: '""', position: 'absolute', top: '-1px', left: '-4px', bottom: '-1px',
-    width: '4px', background: 'linear-gradient(to left, rgba(0,0,0,0.12), transparent)', pointerEvents: 'none',
-  },
+  borderLeft: '1px solid', borderLeftColor: 'divider',
+  boxShadow: '-2px 0 4px -1px rgba(0,0,0,0.1)',
+} as const;
+
+// Header cell variants (non-sticky — stickyHeader=false)
+const HEADER_BASE_NO_STICKY_SX = {
+  fontWeight: 600,
+  zIndex: 8,
+  bgcolor: 'action.hover',
+} as const;
+const HEADER_PINNED_LEFT_NO_STICKY_SX = {
+  ...HEADER_BASE_NO_STICKY_SX, position: 'sticky' as const, left: 0,
+  zIndex: 10, willChange: 'transform',
+  borderRight: '1px solid', borderRightColor: 'divider',
+  boxShadow: '2px 0 4px -1px rgba(0,0,0,0.1)',
+} as const;
+const HEADER_PINNED_RIGHT_NO_STICKY_SX = {
+  ...HEADER_BASE_NO_STICKY_SX, position: 'sticky' as const, right: 0,
+  zIndex: 10, willChange: 'transform',
+  borderLeft: '1px solid', borderLeftColor: 'divider',
+  boxShadow: '-2px 0 4px -1px rgba(0,0,0,0.1)',
 } as const;
 
 // Resize handle
@@ -622,7 +633,9 @@ function DataGridTableInner<T>(props: IOGridDataGridProps<T>): React.ReactElemen
                     const col = cell.columnDef as IColumnDef<T>;
                     const isPinnedLeft = pinning.pinnedColumns[col.columnId] === 'left';
                     const isPinnedRight = pinning.pinnedColumns[col.columnId] === 'right';
-                    const baseHeaderSx = isPinnedLeft ? HEADER_PINNED_LEFT_SX : isPinnedRight ? HEADER_PINNED_RIGHT_SX : HEADER_BASE_SX;
+                    const baseHeaderSx = o.stickyHeader
+                      ? (isPinnedLeft ? HEADER_PINNED_LEFT_SX : isPinnedRight ? HEADER_PINNED_RIGHT_SX : HEADER_BASE_SX)
+                      : (isPinnedLeft ? HEADER_PINNED_LEFT_NO_STICKY_SX : isPinnedRight ? HEADER_PINNED_RIGHT_NO_STICKY_SX : HEADER_BASE_NO_STICKY_SX);
                     // Override sticky offset for pinned columns (supports multiple pinned columns)
                     const headerSx = isPinnedLeft && pinning.leftOffsets[col.columnId] != null
                       ? { ...baseHeaderSx, left: pinning.leftOffsets[col.columnId] } as typeof baseHeaderSx

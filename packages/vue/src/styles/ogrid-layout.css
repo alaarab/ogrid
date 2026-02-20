@@ -77,20 +77,27 @@
 
 .ogrid-header-cell {
   font-weight: 600;
-  position: sticky;
-  top: 0;
   background-color: var(--ogrid-header-bg);
   z-index: 8;
+}
+
+.ogrid-sticky-header .ogrid-header-cell {
+  position: sticky;
+  top: 0;
 }
 
 .ogrid-header-cell--pinned-left {
   z-index: 10;
   will-change: transform;
+  border-right: 1px solid var(--ogrid-border, rgba(0, 0, 0, 0.12));
+  box-shadow: 2px 0 4px -1px rgba(0, 0, 0, 0.1);
 }
 
 .ogrid-header-cell--pinned-right {
   z-index: 10;
   will-change: transform;
+  border-left: 1px solid var(--ogrid-border, rgba(0, 0, 0, 0.12));
+  box-shadow: -2px 0 4px -1px rgba(0, 0, 0, 0.1);
 }
 
 .ogrid-header-content {
@@ -185,6 +192,8 @@
   z-index: 6;
   background-color: var(--ogrid-bg);
   will-change: transform;
+  border-right: 1px solid var(--ogrid-border, rgba(0, 0, 0, 0.12));
+  box-shadow: 2px 0 4px -1px rgba(0, 0, 0, 0.1);
 }
 
 .ogrid-data-cell--pinned-right {
@@ -192,6 +201,8 @@
   z-index: 6;
   background-color: var(--ogrid-bg);
   will-change: transform;
+  border-left: 1px solid var(--ogrid-border, rgba(0, 0, 0, 0.12));
+  box-shadow: -2px 0 4px -1px rgba(0, 0, 0, 0.1);
 }
 
 .ogrid-cell-content {
