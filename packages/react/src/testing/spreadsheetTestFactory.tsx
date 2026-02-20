@@ -612,6 +612,104 @@ export function createSpreadsheetTests(DataGridTable: React.ComponentType<IOGrid
       });
     });
 
+    describe('cell editing commit', () => {
+      it('Enter commits the editor value and fires onCellValueChanged', async () => {
+        const onCellValueChanged = jest.fn();
+        const { container } = renderSpreadsheetGrid({ onCellValueChanged });
+        const cell = getCellAt(container, 0, 0);
+        const grid = container.querySelector('[role="region"]') as HTMLElement;
+
+        // Open editor via double-click
+        fireEvent.mouseDown(cell);
+        fireEvent.click(cell);
+        fireEvent.doubleClick(cell);
+
+        await waitFor(() => {
+          expect(grid.querySelector('input')).toBeInTheDocument();
+        });
+
+        const input = grid.querySelector('input') as HTMLInputElement;
+        fireEvent.change(input, { target: { value: 'NewValue' } });
+        fireEvent.keyDown(input, { key: 'Enter' });
+
+        await waitFor(() => {
+          expect(onCellValueChanged).toHaveBeenCalled();
+          const call = onCellValueChanged.mock.calls[0][0];
+          expect(call.newValue).toBe('NewValue');
+          expect(call.columnId).toBe('name');
+        });
+      });
+
+      it('Escape discards the editor value without firing onCellValueChanged', async () => {
+        const onCellValueChanged = jest.fn();
+        const { container } = renderSpreadsheetGrid({ onCellValueChanged });
+        const cell = getCellAt(container, 0, 0);
+        const grid = container.querySelector('[role="region"]') as HTMLElement;
+
+        // Open editor
+        fireEvent.mouseDown(cell);
+        fireEvent.click(cell);
+        fireEvent.doubleClick(cell);
+
+        await waitFor(() => {
+          expect(grid.querySelector('input')).toBeInTheDocument();
+        });
+
+        const input = grid.querySelector('input') as HTMLInputElement;
+        fireEvent.change(input, { target: { value: 'Discarded' } });
+        fireEvent.keyDown(input, { key: 'Escape' });
+
+        await waitFor(() => {
+          expect(grid.querySelector('input')).toBeNull();
+        });
+        // onCellValueChanged should NOT be called for Escape
+        expect(onCellValueChanged).not.toHaveBeenCalled();
+      });
+
+      it('blur commits the editor value for text cells', async () => {
+        const onCellValueChanged = jest.fn();
+        const { container } = renderSpreadsheetGrid({ onCellValueChanged });
+        const cell = getCellAt(container, 0, 0);
+        const grid = container.querySelector('[role="region"]') as HTMLElement;
+
+        // Open editor
+        fireEvent.mouseDown(cell);
+        fireEvent.click(cell);
+        fireEvent.doubleClick(cell);
+
+        await waitFor(() => {
+          expect(grid.querySelector('input')).toBeInTheDocument();
+        });
+
+        const input = grid.querySelector('input') as HTMLInputElement;
+        fireEvent.change(input, { target: { value: 'BlurCommit' } });
+        fireEvent.blur(input);
+
+        await waitFor(() => {
+          expect(onCellValueChanged).toHaveBeenCalled();
+          const call = onCellValueChanged.mock.calls[0][0];
+          expect(call.newValue).toBe('BlurCommit');
+        });
+      });
+
+      it('Delete key on selected cell clears value', async () => {
+        const onCellValueChanged = jest.fn();
+        const { container } = renderSpreadsheetGrid({ onCellValueChanged });
+        const cell = getCellAt(container, 0, 0);
+        const grid = container.querySelector('[role="region"]') as HTMLElement;
+
+        fireEvent.mouseDown(cell);
+        grid.focus();
+        fireEvent.keyDown(grid, { key: 'Delete' });
+
+        await waitFor(() => {
+          expect(onCellValueChanged).toHaveBeenCalled();
+          const call = onCellValueChanged.mock.calls[0][0];
+          expect(call.newValue).toBe('');
+        });
+      });
+    });
+
     describe('cellSelection=false disables all selection', () => {
       it('does not show active cell highlight or range on mousedown', async () => {
         const { container } = renderSpreadsheetGrid({ cellSelection: false });

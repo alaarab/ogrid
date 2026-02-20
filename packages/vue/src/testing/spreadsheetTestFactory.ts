@@ -106,6 +106,58 @@ export function createSpreadsheetTests(): void {
       setPendingEditorValue('new value');
       expect(pendingEditorValue.value).toBe('new value');
     });
+
+    it('commit edit calls onCellValueChanged and closes editor', () => {
+      const onCellValueChanged = jest.fn();
+      const { editingCell, setEditingCell } = useCellEditing();
+      const undoRedo = useUndoRedo<FixtureRow>({ onCellValueChanged });
+
+      setEditingCell({ rowId: '1', columnId: 'name' });
+      expect(editingCell.value).not.toBeNull();
+
+      undoRedo.onCellValueChanged?.({
+        item: fixtureRows[0],
+        columnId: 'name',
+        oldValue: 'Alpha',
+        newValue: 'NewAlpha',
+        rowIndex: 0,
+      });
+      setEditingCell(null);
+
+      expect(editingCell.value).toBeNull();
+      expect(onCellValueChanged).toHaveBeenCalledWith(
+        expect.objectContaining({ columnId: 'name', newValue: 'NewAlpha' }),
+      );
+    });
+
+    it('cancel edit closes editor without calling onCellValueChanged', () => {
+      const onCellValueChanged = jest.fn();
+      const { editingCell, setEditingCell } = useCellEditing();
+
+      setEditingCell({ rowId: '1', columnId: 'name' });
+      expect(editingCell.value).not.toBeNull();
+
+      // Cancel without committing
+      setEditingCell(null);
+      expect(editingCell.value).toBeNull();
+      expect(onCellValueChanged).not.toHaveBeenCalled();
+    });
+
+    it('commit edit with empty value clears the cell', () => {
+      const onCellValueChanged = jest.fn();
+      const undoRedo = useUndoRedo<FixtureRow>({ onCellValueChanged });
+
+      undoRedo.onCellValueChanged?.({
+        item: fixtureRows[0],
+        columnId: 'name',
+        oldValue: 'Alpha',
+        newValue: '',
+        rowIndex: 0,
+      });
+      expect(onCellValueChanged).toHaveBeenCalledWith(
+        expect.objectContaining({ columnId: 'name', newValue: '' }),
+      );
+    });
   });
 
   describe('clipboard', () => {

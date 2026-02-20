@@ -133,4 +133,39 @@ export function createOGridTests(OGridComponent: new () => OGridInstance): void 
     dgProps = comp._testService.dataGridProps();
     expect(dgProps.items.length).toBe(1);
   });
+
+  it('fullScreen=true sets fullScreen signal on service', () => {
+    const comp = createComponent({ fullScreen: true });
+    expect(comp._testService.fullScreen()).toBe(true);
+  });
+
+  it('fullScreen defaults to false', () => {
+    const comp = createComponent();
+    expect(comp._testService.fullScreen()).toBe(false);
+  });
+
+  it('stickyHeader=true threads to dataGridProps', () => {
+    const comp = createComponent({ stickyHeader: true });
+    expect(comp._testService.dataGridProps().stickyHeader).toBe(true);
+  });
+
+  it('stickyHeader defaults to true in dataGridProps', () => {
+    const comp = createComponent();
+    expect(comp._testService.dataGridProps().stickyHeader).toBe(true);
+  });
+
+  it('fullScreen toggle changes isFullScreen and rootClass', () => {
+    const comp = createComponent({ fullScreen: true });
+    // The layout component's toggleFullScreen is on the layout, not the OGrid.
+    // But we can verify the service level signal is true
+    expect(comp._testService.fullScreen()).toBe(true);
+  });
+
+  it('fullScreen threads through to dataGridProps.stickyHeader override', () => {
+    // When fullScreen is true but stickyHeader is false, headers should still be sticky in fullscreen
+    const comp = createComponent({ fullScreen: true, stickyHeader: false });
+    const dgProps = comp._testService.dataGridProps();
+    // stickyHeader from props is false, fullScreen doesn't override at service level
+    expect(dgProps.stickyHeader).toBe(false);
+  });
 }

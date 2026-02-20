@@ -128,6 +128,30 @@
   overflow: hidden;
 }
 
+.ogrid-container.ogrid-fullscreen {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  border-radius: 0;
+  border: none;
+}
+
+.ogrid-fullscreen-btn {
+  background: none;
+  border: 1px solid var(--ogrid-border, #e0e0e0);
+  border-radius: 4px;
+  padding: 4px 6px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--ogrid-fg, #242424);
+}
+
+.ogrid-fullscreen-btn:hover {
+  background: var(--ogrid-hover-bg, rgba(0, 0, 0, 0.04));
+}
+
 .ogrid-toolbar {
   display: flex;
   align-items: center;
@@ -199,9 +223,12 @@
 
 .ogrid-table thead {
   background: var(--ogrid-bg-subtle, #f3f2f1);
+  z-index: 8;
+}
+
+.ogrid-table thead.ogrid-sticky-header {
   position: sticky;
   top: 0;
-  z-index: 8;
 }
 
 .ogrid-table thead th {
@@ -378,6 +405,8 @@
   z-index: 6;
   background: var(--ogrid-bg, #fff);
   will-change: transform;
+  border-right: 1px solid var(--ogrid-border, rgba(0, 0, 0, 0.12));
+  box-shadow: 2px 0 4px -1px var(--ogrid-pinned-shadow, rgba(0, 0, 0, 0.1));
 }
 
 .ogrid-table thead th[data-pinned='left'] {
@@ -391,6 +420,8 @@
   z-index: 6;
   background: var(--ogrid-bg, #fff);
   will-change: transform;
+  border-left: 1px solid var(--ogrid-border, rgba(0, 0, 0, 0.12));
+  box-shadow: -2px 0 4px -1px var(--ogrid-pinned-shadow, rgba(0, 0, 0, 0.1));
 }
 
 .ogrid-table thead th[data-pinned='right'] {

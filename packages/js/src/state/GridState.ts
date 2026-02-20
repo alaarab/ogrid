@@ -54,6 +54,8 @@ export class GridState<T> {
   private _firstDataRendered = false;
   private _rowHeight?: number;
   private _ariaLabel?: string;
+  private _stickyHeader: boolean;
+  private _fullScreen: boolean;
 
   // Filter options for client-side data (used by sidebar filters panel & header filter popovers)
   private _filterOptions: Record<string, string[]> = {};
@@ -81,6 +83,8 @@ export class GridState<T> {
     this._onFirstDataRendered = options.onFirstDataRendered;
     this._rowHeight = options.rowHeight;
     this._ariaLabel = options.ariaLabel;
+    this._stickyHeader = options.stickyHeader ?? true;
+    this._fullScreen = options.fullScreen ?? false;
 
     // Derive initial filter options for client-side data
     if (!this._dataSource) {
@@ -117,6 +121,8 @@ export class GridState<T> {
   get allColumns(): (IColumnDef<T> | IColumnGroupDef<T>)[] { return this._allColumns; }
   get getRowId(): (item: T) => RowId { return this._getRowId; }
   get isServerSide(): boolean { return this._dataSource != null; }
+  get stickyHeader(): boolean { return this._stickyHeader; }
+  get fullScreen(): boolean { return this._fullScreen; }
   get filterOptions(): Record<string, string[]> { return this._filterOptions; }
   get columnOrder(): string[] { return this._columnOrder; }
   get rowHeight(): number | undefined { return this._rowHeight; }
