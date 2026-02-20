@@ -81,6 +81,9 @@ export function createDataGridTable(ui: IDataGridTableUIBindings) {
       const onContextmenu = (e: MouseEvent) => e.preventDefault();
       const stopPropagation = (e: MouseEvent) => e.stopPropagation();
 
+      // Pre-compute header rows so buildHeaderRows is not called on every render
+      const headerRowsComputed = computed(() => buildHeaderRows(propsRef.value.columns, propsRef.value.visibleColumns));
+
       // Pre-compute per-column layout metadata so it's only recalculated when
       // column config, sizing, pinning, or measured widths change — not on every
       // render (parity with React's columnMeta useMemo).
@@ -183,7 +186,7 @@ export function createDataGridTable(ui: IDataGridTableUIBindings) {
         const fitToContent = layoutMode === 'content';
         const allowOverflowX = !suppressHorizontalScroll && containerWidth > 0 && (minTableWidth > containerWidth || desiredTableWidth > containerWidth);
 
-        const headerRows = buildHeaderRows(p.columns, p.visibleColumns);
+        const headerRows = headerRowsComputed.value;
 
         const editCallbacks = { commitCellEdit, setEditingCell, setPendingEditorValue, cancelPopoverEdit };
         const interactionHandlers = { handleCellMouseDown, setActiveCell, setEditingCell, handleCellContextMenu };
@@ -400,7 +403,8 @@ export function createDataGridTable(ui: IDataGridTableUIBindings) {
                                 class: 'ogrid-column-group-header',
                               }, cell.label);
                             }
-                            const col = cell.columnDef! as IColumnDef<unknown>;
+                            if (!cell.columnDef) return null;
+                            const col = cell.columnDef as IColumnDef<unknown>;
                             const { classes: headerClasses, style: headerStyle } = getHeaderClassAndStyle(col);
                             return h('th', {
                               key: col.columnId,

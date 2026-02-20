@@ -6,6 +6,7 @@ export class ColumnChooser<T> {
   private el: HTMLElement | null = null;
   private dropdown: HTMLElement | null = null;
   private isOpen = false;
+  private initialized = false;
 
   constructor(container: HTMLElement, state: GridState<T>) {
     this.container = container;
@@ -13,8 +14,18 @@ export class ColumnChooser<T> {
   }
 
   render(): void {
-    if (this.el) this.el.remove();
+    if (!this.initialized) {
+      this.createDOM();
+      this.initialized = true;
+    }
+    // If dropdown is open, update checkbox states without destroying/recreating
+    if (this.isOpen && this.dropdown) {
+      this.updateDropdownState();
+    }
+  }
 
+  /** Initial DOM creation — called once. */
+  private createDOM(): void {
     this.el = document.createElement('div');
     this.el.className = 'ogrid-column-chooser';
 
@@ -25,6 +36,18 @@ export class ColumnChooser<T> {
     this.el.appendChild(btn);
 
     this.container.appendChild(this.el);
+  }
+
+  /** Update checkbox checked states without destroying the dropdown. */
+  private updateDropdownState(): void {
+    if (!this.dropdown) return;
+    const checkboxes = this.dropdown.querySelectorAll<HTMLInputElement>('input[type="checkbox"]');
+    const columns = this.state.columns;
+    checkboxes.forEach((checkbox, idx) => {
+      if (idx < columns.length) {
+        checkbox.checked = this.state.visibleColumns.has(columns[idx].columnId);
+      }
+    });
   }
 
   private toggle(): void {
@@ -65,7 +88,7 @@ export class ColumnChooser<T> {
       this.dropdown.appendChild(label);
     }
 
-    this.el!.appendChild(this.dropdown);
+    this.el?.appendChild(this.dropdown);
   }
 
   private close(): void {
@@ -78,5 +101,6 @@ export class ColumnChooser<T> {
     this.close();
     this.el?.remove();
     this.el = null;
+    this.initialized = false;
   }
 }

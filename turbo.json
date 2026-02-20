@@ -1,13 +1,19 @@
 {
   "$schema": "https://turbo.build/schema.json",
+  "globalDependencies": ["jest.config.base.js"],
   "tasks": {
     "build": {
       "dependsOn": ["^build"],
       "inputs": ["src/**/*.ts", "src/**/*.tsx", "src/**/*.vue", "src/**/*.scss", "package.json", "tsconfig*.json"],
-      "outputs": ["dist/**", "build/**"]
+      "outputs": ["dist/esm/**", "dist/types/**"]
     },
     "test": {
-      "outputs": ["coverage/**"],
+      "dependsOn": ["build"],
+      "cache": true,
+      "inputs": ["src/**", "jest.config.*", "jest-mocks/**", "tsconfig.*"],
+      "outputs": []
+    },
+    "lint": {
       "cache": true
     },
     "storybook": {

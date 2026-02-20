@@ -49,10 +49,18 @@ interface IOGridApi<T> {
   getColumnState: () => IGridColumnState;
   applyColumnState: (state: Partial<IGridColumnState>) => void;
   setFilterModel: (filters: IFilters) => void;
+  clearFilters: () => void;
+  clearSort: () => void;
+  resetGridState: (options?: { keepSelection?: boolean }) => void;
   getSelectedRows: () => RowId[];
   setSelectedRows: (rowIds: RowId[]) => void;
   selectAll: () => void;
   deselectAll: () => void;
+  getDisplayedRows: () => T[];
+  refreshData: () => void;
+  scrollToRow: (index: number, options?: { align?: 'start' | 'center' | 'end' }) => void;
+  getColumnOrder: () => string[];
+  setColumnOrder: (order: string[]) => void;
 }
 ```
 
@@ -62,6 +70,8 @@ interface IOGridApi<T> {
 |--------|-----------|-------------|
 | `setRowData` | `(data: T[]) => void` | Replaces the grid's data with a new array. Useful for client-side mode when you want to update data imperatively rather than through the `data` prop. |
 | `setLoading` | `(loading: boolean) => void` | Sets the loading state of the grid. When `true`, the grid displays a loading indicator. |
+| `getDisplayedRows` | `() => T[]` | Returns the currently displayed (filtered, sorted, paginated) rows. |
+| `refreshData` | `() => void` | Re-triggers a data fetch. Server-side only; no-op for client-side grids. |
 
 ### Column State Methods
 
@@ -69,12 +79,17 @@ interface IOGridApi<T> {
 |--------|-----------|-------------|
 | `getColumnState` | `() => IGridColumnState` | Returns the current column state including visibility, sort, order, widths, and filters. See [IGridColumnState](#igridcolumnstate) below. |
 | `applyColumnState` | `(state: Partial<IGridColumnState>) => void` | Applies a partial column state. Any fields not included in the object are left unchanged. Useful for restoring saved state. |
+| `getColumnOrder` | `() => string[]` | Returns the current column display order as an array of column IDs. |
+| `setColumnOrder` | `(order: string[]) => void` | Programmatically sets the column display order. |
 
 ### Filter Methods
 
 | Method | Signature | Description |
 |--------|-----------|-------------|
 | `setFilterModel` | `(filters: IFilters) => void` | Sets the filter state. Pass an empty object `{}` to clear all filters. See [Types](./types) for `IFilters`. |
+| `clearFilters` | `() => void` | Clears all active filters. Shorthand for `setFilterModel({})`. |
+| `clearSort` | `() => void` | Resets the sort to the default (no active sort). |
+| `resetGridState` | `(options?: { keepSelection?: boolean }) => void` | Resets all grid state (filters, sort, and optionally selection). |
 
 ### Row Selection Methods
 
@@ -84,6 +99,12 @@ interface IOGridApi<T> {
 | `setSelectedRows` | `(rowIds: RowId[]) => void` | Sets the selected rows to the given IDs. Any previously selected rows not in the array are deselected. |
 | `selectAll` | `() => void` | Selects all rows in the current data set. |
 | `deselectAll` | `() => void` | Deselects all rows. |
+
+### Virtual Scrolling Methods
+
+| Method | Signature | Description |
+|--------|-----------|-------------|
+| `scrollToRow` | `(index: number, options?: { align?: 'start' \| 'center' \| 'end' }) => void` | Scrolls to a specific row by index. Only effective when virtual scrolling is enabled. |
 
 ## IGridColumnState
 
@@ -96,6 +117,7 @@ interface IGridColumnState {
   columnOrder?: string[];
   columnWidths?: Record<string, number>;
   filters?: IFilters;
+  pinnedColumns?: Record<string, 'left' | 'right'>;
 }
 ```
 
@@ -106,6 +128,7 @@ interface IGridColumnState {
 | `columnOrder` | `string[]` | Current column display order as an array of column IDs. |
 | `columnWidths` | `Record<string, number>` | Map of column IDs to their current pixel widths. Only includes columns that have been explicitly sized. |
 | `filters` | `IFilters` | Current filter state. |
+| `pinnedColumns` | `Record<string, 'left' \| 'right'>` | Map of column IDs to their pinned position. Only includes columns that are pinned. |
 
 ## Save and Restore State
 
@@ -244,7 +267,7 @@ function FilteredGrid() {
 
   const showOnlyEngineering = () => {
     apiRef.current?.setFilterModel({
-      department: ['Engineering'],
+      department: { type: 'multiSelect', value: ['Engineering'] },
     });
   };
 
@@ -256,8 +279,8 @@ function FilteredGrid() {
     // Apply column state which includes filters along with other state
     apiRef.current?.applyColumnState({
       filters: {
-        department: ['Engineering', 'Product'],
-        name: 'John',
+        department: { type: 'multiSelect', value: ['Engineering', 'Product'] },
+        name: { type: 'text', value: 'John' },
       },
       sort: { field: 'name', direction: 'asc' },
     });

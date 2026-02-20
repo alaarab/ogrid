@@ -23,7 +23,7 @@ describe('useClipboard', () => {
     });
   });
 
-  it('returns handleCopy, handleCut, handlePaste, cutRangeRef and cutRange', () => {
+  it('returns handleCopy, handleCut, handlePaste, cutRange and copyRange', () => {
     const { result } = renderHook(() =>
       useClipboard({
         items,
@@ -38,8 +38,6 @@ describe('useClipboard', () => {
     expect(typeof result.current.handleCopy).toBe('function');
     expect(typeof result.current.handleCut).toBe('function');
     expect(typeof result.current.handlePaste).toBe('function');
-    expect(result.current.cutRangeRef).toHaveProperty('current');
-    expect(result.current.cutRangeRef.current).toBeNull();
     expect(result.current.cutRange).toBeNull();
   });
 
@@ -99,10 +97,10 @@ describe('useClipboard', () => {
     });
 
     expect(writeTextMock).not.toHaveBeenCalled();
-    expect(result.current.cutRangeRef.current).toBeNull();
+    expect(result.current.cutRange).toBeNull();
   });
 
-  it('handleCut with onCellValueChanged sets cutRangeRef and calls handleCopy', () => {
+  it('handleCut with onCellValueChanged sets cutRange and calls handleCopy', () => {
     const onCellValueChanged = jest.fn();
     const { result } = renderHook(() =>
       useClipboard({
@@ -120,12 +118,6 @@ describe('useClipboard', () => {
     });
 
     expect(writeTextMock).toHaveBeenCalled();
-    expect(result.current.cutRangeRef.current).toEqual({
-      startRow: 0,
-      startCol: 0,
-      endRow: 0,
-      endCol: 1,
-    });
     expect(result.current.cutRange).toEqual({
       startRow: 0,
       startCol: 0,

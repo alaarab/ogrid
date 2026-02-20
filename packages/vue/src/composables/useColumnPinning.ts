@@ -62,8 +62,8 @@ export function useColumnPinning<T = unknown>(params: UseColumnPinningParams<T>)
   };
 
   const unpinColumn = (columnId: string) => {
-    const next = { ...pinnedColumns.value };
-    delete next[columnId];
+    const { [columnId]: _removed, ...next } = pinnedColumns.value;
+    void _removed;
     internalPinnedColumns.value = next;
     onColumnPinned?.(columnId, null);
   };

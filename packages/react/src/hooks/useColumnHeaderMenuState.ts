@@ -11,8 +11,6 @@ export interface UseColumnHeaderMenuStateParams {
   onColumnResized?: (columnId: string, width: number) => void;
   onAutosizeColumn?: (columnId: string, width: number) => void;
   columns: Array<{ columnId: string; width?: number; minWidth?: number; sortable?: boolean; resizable?: boolean }>;
-  data: unknown[];
-  getRowId: (item: unknown) => string | number;
 }
 
 export interface UseColumnHeaderMenuStateResult {
@@ -54,8 +52,6 @@ export function useColumnHeaderMenuState(
     onColumnResized,
     onAutosizeColumn,
     columns,
-    data: _data,
-    getRowId: _getRowId,
   } = params;
 
   const [isOpen, setIsOpen] = useState(false);

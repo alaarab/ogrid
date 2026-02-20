@@ -1,9 +1,10 @@
-import type { RowId } from '../types/gridTypes';
+import type { RowId, CellEvent } from '../types/gridTypes';
 import type { IActiveCell, ISelectionRange } from '@alaarab/ogrid-core';
-import { getCellValue, buildHeaderRows, isInSelectionRange, ROW_NUMBER_COLUMN_WIDTH } from '@alaarab/ogrid-core';
+import { getCellValue, buildHeaderRows, isInSelectionRange, ROW_NUMBER_COLUMN_WIDTH, CHECKBOX_COLUMN_WIDTH } from '@alaarab/ogrid-core';
 import type { GridState } from '../state/GridState';
 import type { HeaderFilterState, HeaderFilterConfig } from '../state/HeaderFilterState';
 import type { VirtualScrollState } from '../state/VirtualScrollState';
+import { getCellCoordinates } from '../utils/getCellCoordinates';
 
 export interface TableRendererInteractionState {
   activeCell: IActiveCell | null;
@@ -12,10 +13,10 @@ export interface TableRendererInteractionState {
   cutRange: ISelectionRange | null;
   editingCell: { rowId: RowId; columnId: string } | null;
   columnWidths: Record<string, number>;
-  onCellClick?: (rowIndex: number, colIndex: number, e: MouseEvent) => void;
-  onCellMouseDown?: (rowIndex: number, colIndex: number, e: MouseEvent) => void;
-  onCellDoubleClick?: (rowIndex: number, colIndex: number, rowId: RowId, columnId: string) => void;
-  onCellContextMenu?: (rowIndex: number, colIndex: number, e: MouseEvent) => void;
+  onCellClick?: (cellEvent: CellEvent) => void;
+  onCellMouseDown?: (cellEvent: CellEvent) => void;
+  onCellDoubleClick?: (cellEvent: CellEvent) => void;
+  onCellContextMenu?: (cellEvent: CellEvent) => void;
   onResizeStart?: (columnId: string, clientX: number, currentWidth: number) => void;
   // Fill handle
   onFillHandleMouseDown?: (e: MouseEvent) => void;
@@ -36,7 +37,6 @@ export interface TableRendererInteractionState {
   onColumnReorderStart?: (columnId: string, event: MouseEvent) => void;
 }
 
-const CHECKBOX_COL_WIDTH = 40;
 
 export class TableRenderer<T> {
   private container: HTMLElement;
@@ -57,6 +57,10 @@ export class TableRenderer<T> {
   private _tbodyMousedownHandler: ((e: MouseEvent) => void) | null = null;
   private _tbodyDblclickHandler: ((e: MouseEvent) => void) | null = null;
   private _tbodyContextmenuHandler: ((e: MouseEvent) => void) | null = null;
+
+  // Delegated event handlers bound to thead (avoids per-<th> inline listeners)
+  private _theadClickHandler: ((e: MouseEvent) => void) | null = null;
+  private _theadMousedownHandler: ((e: MouseEvent) => void) | null = null;
 
   // State tracking for incremental DOM patching
   private lastActiveCell: IActiveCell | null = null;
@@ -100,10 +104,9 @@ export class TableRenderer<T> {
     const target = e.target as HTMLElement;
     const cell = target.closest('td[data-row-index]') as HTMLElement | null;
     if (!cell) return null;
-    const rowIndex = parseInt(cell.getAttribute('data-row-index') ?? '', 10);
-    const colIndex = parseInt(cell.getAttribute('data-col-index') ?? '', 10);
-    if (Number.isNaN(rowIndex) || Number.isNaN(colIndex)) return null;
-    return { el: cell, rowIndex, colIndex };
+    const coords = getCellCoordinates(cell);
+    if (!coords) return null;
+    return { el: cell, rowIndex: coords.rowIndex, colIndex: coords.colIndex };
   }
 
   private attachBodyDelegation(): void {
@@ -112,13 +115,19 @@ export class TableRenderer<T> {
     this._tbodyClickHandler = (e: MouseEvent) => {
       const cell = this.getCellFromEvent(e);
       if (!cell) return;
-      this.interactionState?.onCellClick?.(cell.rowIndex, cell.colIndex, e);
+      this.interactionState?.onCellClick?.({ rowIndex: cell.rowIndex, colIndex: cell.colIndex, event: e });
     };
 
     this._tbodyMousedownHandler = (e: MouseEvent) => {
+      // Fill handle mousedown — delegated from per-cell inline listener
+      const target = e.target as HTMLElement;
+      if (target.classList.contains('ogrid-fill-handle') || target.getAttribute('data-fill-handle') === 'true') {
+        this.interactionState?.onFillHandleMouseDown?.(e);
+        return;
+      }
       const cell = this.getCellFromEvent(e);
       if (!cell) return;
-      this.interactionState?.onCellMouseDown?.(cell.rowIndex, cell.colIndex, e);
+      this.interactionState?.onCellMouseDown?.({ rowIndex: cell.rowIndex, colIndex: cell.colIndex, event: e });
     };
 
     this._tbodyDblclickHandler = (e: MouseEvent) => {
@@ -130,13 +139,13 @@ export class TableRenderer<T> {
       const item = items[cell.rowIndex];
       if (!item) return;
       const rowId = this.state.getRowId(item);
-      this.interactionState?.onCellDoubleClick?.(cell.rowIndex, cell.colIndex, rowId, columnId);
+      this.interactionState?.onCellDoubleClick?.({ rowIndex: cell.rowIndex, colIndex: cell.colIndex, rowId, columnId });
     };
 
     this._tbodyContextmenuHandler = (e: MouseEvent) => {
       const cell = this.getCellFromEvent(e);
       if (!cell) return;
-      this.interactionState?.onCellContextMenu?.(cell.rowIndex, cell.colIndex, e);
+      this.interactionState?.onCellContextMenu?.({ rowIndex: cell.rowIndex, colIndex: cell.colIndex, event: e });
     };
 
     this.tbody.addEventListener('click', this._tbodyClickHandler, { passive: true });
@@ -157,6 +166,57 @@ export class TableRenderer<T> {
     this._tbodyContextmenuHandler = null;
   }
 
+  /** Attach delegated event listeners to <thead> for sort clicks, resize, reorder, and filter icon clicks. */
+  private attachHeaderDelegation(): void {
+    if (!this.thead) return;
+
+    // Sort clicks and filter icon clicks use inline listeners for stale-reference compatibility
+    // (tests hold references to <th> elements that become detached after header re-render).
+    // Delegation handles resize and column reorder mousedown events only.
+    this._theadClickHandler = null;
+
+    this._theadMousedownHandler = (e: MouseEvent) => {
+      const target = e.target as HTMLElement;
+
+      // Resize handle mousedown
+      if (target.classList.contains('ogrid-resize-handle')) {
+        e.stopPropagation();
+        const th = target.closest('th[data-column-id]') as HTMLElement | null;
+        if (!th) return;
+        const columnId = th.getAttribute('data-column-id');
+        if (columnId) {
+          const rect = th.getBoundingClientRect();
+          this.interactionState?.onResizeStart?.(columnId, e.clientX, rect.width);
+        }
+        return;
+      }
+
+      // Don't start reorder from filter icon
+      if (target.classList.contains('ogrid-filter-icon')) return;
+
+      // Column reorder mousedown
+      if (this.interactionState?.onColumnReorderStart) {
+        const th = target.closest('th[data-column-id]') as HTMLElement | null;
+        if (!th) return;
+        const columnId = th.getAttribute('data-column-id');
+        if (columnId) {
+          this.interactionState.onColumnReorderStart(columnId, e);
+        }
+      }
+    };
+
+    if (this._theadClickHandler) this.thead.addEventListener('click', this._theadClickHandler);
+    this.thead.addEventListener('mousedown', this._theadMousedownHandler);
+  }
+
+  private detachHeaderDelegation(): void {
+    if (!this.thead) return;
+    if (this._theadClickHandler) this.thead.removeEventListener('click', this._theadClickHandler);
+    if (this._theadMousedownHandler) this.thead.removeEventListener('mousedown', this._theadMousedownHandler);
+    this._theadClickHandler = null;
+    this._theadMousedownHandler = null;
+  }
+
   getWrapperElement(): HTMLDivElement | null {
     return this.wrapperEl;
   }
@@ -172,13 +232,11 @@ export class TableRenderer<T> {
     wrapper.setAttribute('role', 'grid');
     wrapper.setAttribute('tabindex', '0'); // Make focusable for keyboard nav
     wrapper.style.position = 'relative'; // For MarchingAnts absolute positioning
-    const rowHeight = (this.state as unknown as { _options: { rowHeight?: number } })._options?.rowHeight;
-    if (rowHeight) {
-      wrapper.style.setProperty('--ogrid-row-height', `${rowHeight}px`);
+    if (this.state.rowHeight) {
+      wrapper.style.setProperty('--ogrid-row-height', `${this.state.rowHeight}px`);
     }
-    const ariaLabel = (this.state as unknown as { _ariaLabel?: string })._ariaLabel;
-    if (ariaLabel) {
-      wrapper.setAttribute('aria-label', ariaLabel);
+    if (this.state.ariaLabel) {
+      wrapper.setAttribute('aria-label', this.state.ariaLabel);
     }
     this.wrapperEl = wrapper;
 
@@ -189,6 +247,7 @@ export class TableRenderer<T> {
     // Render header
     this.thead = document.createElement('thead');
     this.renderHeader();
+    this.attachHeaderDelegation();
     this.table.appendChild(this.thead);
 
     // Render body
@@ -314,8 +373,10 @@ export class TableRenderer<T> {
 
     for (let i = 0; i < cells.length; i++) {
       const el = cells[i];
-      const rowIndex = parseInt(el.getAttribute('data-row-index')!, 10);
-      const globalColIndex = parseInt(el.getAttribute('data-col-index')!, 10);
+      const coords = getCellCoordinates(el);
+      if (!coords) continue;
+      const rowIndex = coords.rowIndex;
+      const globalColIndex = coords.colIndex;
       const colOffset = this.getColOffset();
       const colIndex = globalColIndex - colOffset;
 
@@ -377,7 +438,7 @@ export class TableRenderer<T> {
       const hadFill = !!oldFill;
 
       if (hadFill && !shouldHaveFill) {
-        oldFill!.remove();
+        oldFill?.remove();
       } else if (!hadFill && shouldHaveFill) {
         const fillHandle = document.createElement('div');
         fillHandle.className = 'ogrid-fill-handle';
@@ -497,7 +558,7 @@ export class TableRenderer<T> {
         if (hasCheckbox) {
           const th = document.createElement('th');
           th.className = 'ogrid-header-cell ogrid-checkbox-header';
-          th.style.width = `${CHECKBOX_COL_WIDTH}px`;
+          th.style.width = `${CHECKBOX_COLUMN_WIDTH}px`;
           // Select-all checkbox only on last header row
           if (row === headerRows[headerRows.length - 1]) {
             this.appendSelectAllCheckbox(th);
@@ -512,37 +573,22 @@ export class TableRenderer<T> {
 
           if (!cell.isGroup && cell.columnDef?.sortable) {
             th.classList.add('ogrid-sortable');
+            // Sort click also inline for compatibility with tests that hold stale <th> references
             th.addEventListener('click', () => {
-              if (cell.columnDef) {
-                this.state.toggleSort(cell.columnDef.columnId);
-              }
+              if (cell.columnDef) this.state.toggleSort(cell.columnDef.columnId);
             });
           }
 
           if (!cell.isGroup && cell.columnDef) {
             th.setAttribute('data-column-id', cell.columnDef.columnId);
             this.applyPinningStyles(th, cell.columnDef.columnId, true);
-
-            // Column reorder in grouped headers
-            if (this.interactionState?.onColumnReorderStart) {
-              th.addEventListener('mousedown', (e) => {
-                const target = e.target as HTMLElement;
-                if (
-                  target.classList.contains('ogrid-resize-handle') ||
-                  target.classList.contains('ogrid-filter-icon')
-                ) {
-                  return;
-                }
-                if (cell.columnDef) {
-                  this.interactionState?.onColumnReorderStart?.(cell.columnDef.columnId, e);
-                }
-              });
-            }
+            // Resize, reorder, and filter icon clicks are handled
+            // via delegated listeners on <thead> (attachHeaderDelegation).
           }
 
           tr.appendChild(th);
         }
-        this.thead!.appendChild(tr);
+        this.thead?.appendChild(tr);
       }
     } else {
       // Single row header
@@ -552,7 +598,7 @@ export class TableRenderer<T> {
       if (hasCheckbox) {
         const th = document.createElement('th');
         th.className = 'ogrid-header-cell ogrid-checkbox-header';
-        th.style.width = `${CHECKBOX_COL_WIDTH}px`;
+        th.style.width = `${CHECKBOX_COLUMN_WIDTH}px`;
         this.appendSelectAllCheckbox(th);
         tr.appendChild(th);
       }
@@ -580,6 +626,7 @@ export class TableRenderer<T> {
 
         if (col.sortable) {
           th.classList.add('ogrid-sortable');
+          // Sort click also inline for compatibility with tests that hold stale <th> references
           th.addEventListener('click', () => this.state.toggleSort(col.columnId));
         }
 
@@ -608,11 +655,7 @@ export class TableRenderer<T> {
         th.style.position = th.style.position || 'relative';
         th.appendChild(resizeHandle);
 
-        resizeHandle.addEventListener('mousedown', (e) => {
-          e.stopPropagation();
-          const rect = th.getBoundingClientRect();
-          this.interactionState?.onResizeStart?.(col.columnId, e.clientX, rect.width);
-        });
+        // Resize mousedown handled via delegated listener on <thead>
 
         // Filter icon (if column is filterable)
         const filterConfig = this.filterConfigs.get(col.columnId);
@@ -642,28 +685,14 @@ export class TableRenderer<T> {
             e.preventDefault();
             this.onFilterIconClick?.(col.columnId, th);
           });
-
           th.appendChild(filterBtn);
         }
 
-        // Column reorder: mousedown on header starts drag
-        if (this.interactionState?.onColumnReorderStart) {
-          th.addEventListener('mousedown', (e) => {
-            // Don't start reorder if clicking resize handle or filter button
-            const target = e.target as HTMLElement;
-            if (
-              target.classList.contains('ogrid-resize-handle') ||
-              target.classList.contains('ogrid-filter-icon')
-            ) {
-              return;
-            }
-            this.interactionState?.onColumnReorderStart?.(col.columnId, e);
-          });
-        }
+        // Column reorder mousedown handled via delegated listener on <thead>
 
         tr.appendChild(th);
       }
-      this.thead!.appendChild(tr);
+      this.thead?.appendChild(tr);
     }
   }
 
@@ -714,7 +743,8 @@ export class TableRenderer<T> {
     let endIndex = items.length - 1;
 
     if (isVirtual) {
-      const range = vs!.visibleRange;
+      const range = vs?.visibleRange;
+      if (!range) return;
       startIndex = Math.max(0, range.startIndex);
       endIndex = Math.min(items.length - 1, range.endIndex);
 
@@ -750,7 +780,7 @@ export class TableRenderer<T> {
       if (hasCheckbox) {
         const td = document.createElement('td');
         td.className = 'ogrid-cell ogrid-checkbox-cell';
-        td.style.width = `${CHECKBOX_COL_WIDTH}px`;
+        td.style.width = `${CHECKBOX_COLUMN_WIDTH}px`;
         td.style.textAlign = 'center';
 
         const checkbox = document.createElement('input');
@@ -876,10 +906,7 @@ export class TableRenderer<T> {
             fillHandle.style.zIndex = '5';
             td.style.position = td.style.position || 'relative';
 
-            fillHandle.addEventListener('mousedown', (e) => {
-              this.interactionState?.onFillHandleMouseDown?.(e);
-            });
-
+            // Fill handle mousedown handled via delegated listener on <tbody>
             td.appendChild(fillHandle);
           }
         }
@@ -891,8 +918,8 @@ export class TableRenderer<T> {
     }
 
     // Virtual scrolling: bottom spacer row
-    if (isVirtual) {
-      const range = vs!.visibleRange;
+    if (isVirtual && vs) {
+      const range = vs.visibleRange;
       if (range.offsetBottom > 0) {
         const bottomSpacer = document.createElement('tr');
         bottomSpacer.className = 'ogrid-virtual-spacer';
@@ -910,6 +937,11 @@ export class TableRenderer<T> {
   /** Get the table element (used by ColumnReorderState for header cell queries). */
   getTableElement(): HTMLTableElement | null {
     return this.table;
+  }
+
+  /** Get the current onResizeStart handler from interaction state (avoids bracket notation access). */
+  getOnResizeStart(): ((columnId: string, clientX: number, currentWidth: number) => void) | undefined {
+    return this.interactionState?.onResizeStart;
   }
 
   /** Update the drop indicator position during column reorder. */
@@ -930,6 +962,7 @@ export class TableRenderer<T> {
   }
 
   destroy(): void {
+    this.detachHeaderDelegation();
     this.detachBodyDelegation();
     this.container.innerHTML = '';
     this.table = null;

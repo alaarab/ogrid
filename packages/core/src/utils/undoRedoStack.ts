@@ -58,8 +58,12 @@ export class UndoRedoStack<T> {
     if (this.batch !== null) {
       this.batch.push(...events);
     } else {
-      this.history = [...this.history, events].slice(-this.maxDepth);
-      this.redoStack = [];
+      this.history.push(events);
+      if (this.history.length > this.maxDepth) {
+        this.history.splice(0, this.history.length - this.maxDepth);
+      }
+      // Clear redo stack in-place — avoids allocating a new array on every edit
+      this.redoStack.length = 0;
     }
   }
 
@@ -89,8 +93,11 @@ export class UndoRedoStack<T> {
     const b = this.batch;
     this.batch = null;
     if (!b || b.length === 0) return;
-    this.history = [...this.history, b].slice(-this.maxDepth);
-    this.redoStack = [];
+    this.history.push(b);
+    if (this.history.length > this.maxDepth) {
+      this.history.splice(0, this.history.length - this.maxDepth);
+    }
+    this.redoStack.length = 0;
   }
 
   /**
@@ -101,10 +108,9 @@ export class UndoRedoStack<T> {
    * The caller is responsible for applying the events in reverse order.
    */
   undo(): T[] | null {
-    if (this.history.length === 0) return null;
-    const lastBatch = this.history[this.history.length - 1];
-    this.history = this.history.slice(0, -1);
-    this.redoStack = [...this.redoStack, lastBatch];
+    const lastBatch = this.history.pop();
+    if (!lastBatch) return null;
+    this.redoStack.push(lastBatch);
     return lastBatch;
   }
 
@@ -114,10 +120,9 @@ export class UndoRedoStack<T> {
    * or null if there is nothing to redo.
    */
   redo(): T[] | null {
-    if (this.redoStack.length === 0) return null;
-    const nextBatch = this.redoStack[this.redoStack.length - 1];
-    this.redoStack = this.redoStack.slice(0, -1);
-    this.history = [...this.history, nextBatch];
+    const nextBatch = this.redoStack.pop();
+    if (!nextBatch) return null;
+    this.history.push(nextBatch);
     return nextBatch;
   }
 

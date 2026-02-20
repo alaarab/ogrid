@@ -9,6 +9,11 @@ import { useOGrid } from '../composables/useOGrid';
 import type { IOGridProps, IOGridClientProps } from '../types';
 import { fixtureRows, fixtureColumns, getRowId, type FixtureRow } from './fixtures';
 
+function assertDefined<T>(value: T | null | undefined): T {
+  expect(value).not.toBeNull();
+  return value as T;
+}
+
 function createOGrid(overrides: Partial<IOGridClientProps<FixtureRow>> = {}) {
   const defaultProps: IOGridClientProps<FixtureRow> = {
     columns: fixtureColumns,
@@ -35,14 +40,14 @@ export function createSideBarTests(): void {
 
     it('Columns and Filters panels are available by default', () => {
       const { layout } = createOGrid({ sideBar: true });
-      const sb = layout.value.sideBarProps!;
+      const sb = assertDefined(layout.value.sideBarProps);
       expect(sb.panels).toContain('columns');
       expect(sb.panels).toContain('filters');
     });
 
     it('toggle opens and closes panels', () => {
       const { layout } = createOGrid({ sideBar: true });
-      const sb = layout.value.sideBarProps!;
+      const sb = assertDefined(layout.value.sideBarProps);
       expect(sb.activePanel).toBeNull();
       expect(sb.isOpen).toBe(false);
 
@@ -57,7 +62,7 @@ export function createSideBarTests(): void {
 
     it('switches between panels', () => {
       const { layout } = createOGrid({ sideBar: true });
-      const sb = layout.value.sideBarProps!;
+      const sb = assertDefined(layout.value.sideBarProps);
 
       sb.toggle('columns');
       expect(sb.activePanel).toBe('columns');
@@ -68,7 +73,7 @@ export function createSideBarTests(): void {
 
     it('close sets activePanel to null', () => {
       const { layout } = createOGrid({ sideBar: true });
-      const sb = layout.value.sideBarProps!;
+      const sb = assertDefined(layout.value.sideBarProps);
 
       sb.toggle('filters');
       expect(sb.isOpen).toBe(true);
@@ -80,14 +85,14 @@ export function createSideBarTests(): void {
 
     it('sidebar columns list matches grid columns', () => {
       const { layout } = createOGrid({ sideBar: true });
-      const sb = layout.value.sideBarProps!;
+      const sb = assertDefined(layout.value.sideBarProps);
       expect(sb.columns).toHaveLength(2);
       expect(sb.columns.map((c) => c.columnId)).toEqual(['name', 'status']);
     });
 
     it('column visibility can be toggled from sidebar', () => {
       const { layout, columnChooser } = createOGrid({ sideBar: true });
-      const sb = layout.value.sideBarProps!;
+      const sb = assertDefined(layout.value.sideBarProps);
 
       expect(sb.visibleColumns.has('status')).toBe(true);
       sb.onVisibilityChange('status', false);
@@ -96,32 +101,32 @@ export function createSideBarTests(): void {
 
     it('respects ISideBarDef with only columns panel', () => {
       const { layout } = createOGrid({ sideBar: { panels: ['columns'] } });
-      const sb = layout.value.sideBarProps!;
+      const sb = assertDefined(layout.value.sideBarProps);
       expect(sb.panels).toEqual(['columns']);
     });
 
     it('respects ISideBarDef with defaultPanel auto-opens', () => {
       const { layout } = createOGrid({ sideBar: { defaultPanel: 'columns' } });
-      const sb = layout.value.sideBarProps!;
+      const sb = assertDefined(layout.value.sideBarProps);
       expect(sb.activePanel).toBe('columns');
       expect(sb.isOpen).toBe(true);
     });
 
     it('renders sidebar on left when position is left', () => {
       const { layout } = createOGrid({ sideBar: { position: 'left' } });
-      const sb = layout.value.sideBarProps!;
+      const sb = assertDefined(layout.value.sideBarProps);
       expect(sb.position).toBe('left');
     });
 
     it('renders sidebar on right by default', () => {
       const { layout } = createOGrid({ sideBar: true });
-      const sb = layout.value.sideBarProps!;
+      const sb = assertDefined(layout.value.sideBarProps);
       expect(sb.position).toBe('right');
     });
 
     it('select all / clear all via sidebar onSetVisibleColumns', () => {
       const { layout, columnChooser } = createOGrid({ sideBar: true });
-      const sb = layout.value.sideBarProps!;
+      const sb = assertDefined(layout.value.sideBarProps);
 
       // Clear all: set empty
       sb.onSetVisibleColumns(new Set());

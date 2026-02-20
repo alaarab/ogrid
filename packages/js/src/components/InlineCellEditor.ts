@@ -91,7 +91,7 @@ export class InlineCellEditor<T> {
     // not re-render before the next click lands, so we clear it explicitly).
     // Look up the cell by data attributes since the original element reference
     // may have been replaced by a re-render.
-    if (this.editingCell) {
+    if (this.editingCell && this.container.isConnected) {
       const { rowId, columnId } = this.editingCell;
       const row = this.container.querySelector(`tr[data-row-id="${rowId}"]`);
       if (row) {
@@ -102,8 +102,10 @@ export class InlineCellEditor<T> {
       }
     }
     if (this.editingCellElement) {
-      // Also reset the original element in case it's still in the DOM
-      this.editingCellElement.style.visibility = '';
+      // Also reset the original element if it's still connected in the DOM
+      if (this.editingCellElement.isConnected) {
+        this.editingCellElement.style.visibility = '';
+      }
       this.editingCellElement = null;
     }
     if (this.editor) {
@@ -166,10 +168,14 @@ export class InlineCellEditor<T> {
     return this.createTextEditor(value);
   }
 
-  private createTextEditor(value: unknown): HTMLInputElement {
+  /**
+   * Shared factory for text/date input editors — both types have identical event handling,
+   * differing only in input.type and initial value formatting.
+   */
+  private createInputEditor(type: 'text' | 'date', initialValue: string): HTMLInputElement {
     const input = document.createElement('input');
-    input.type = 'text';
-    input.value = value != null ? String(value) : '';
+    input.type = type;
+    input.value = initialValue;
     Object.assign(input.style, EDITOR_STYLE);
 
     input.addEventListener('keydown', (e) => {
@@ -199,6 +205,10 @@ export class InlineCellEditor<T> {
 
     setTimeout(() => input.select(), 0);
     return input;
+  }
+
+  private createTextEditor(value: unknown): HTMLInputElement {
+    return this.createInputEditor('text', value != null ? String(value) : '');
   }
 
   private createCheckboxEditor(value: unknown): HTMLInputElement {
@@ -229,43 +239,14 @@ export class InlineCellEditor<T> {
   }
 
   private createDateEditor(value: unknown): HTMLInputElement {
-    const input = document.createElement('input');
-    input.type = 'date';
+    let initialValue = '';
     if (value != null) {
       const dateStr = String(value);
       if (dateStr.match(/^\d{4}-\d{2}-\d{2}/)) {
-        input.value = dateStr.substring(0, 10);
+        initialValue = dateStr.substring(0, 10);
       }
     }
-    Object.assign(input.style, EDITOR_STYLE);
-
-    input.addEventListener('keydown', (e) => {
-      if (e.key === 'Enter') {
-        e.preventDefault();
-        e.stopPropagation(); // Prevent grid wrapper from re-opening the editor
-        if (this.editingCell) {
-          this.onCommit?.(this.editingCell.rowId, this.editingCell.columnId, input.value);
-        }
-        const afterCommit = this.onAfterCommit;
-        this.closeEditor();
-        afterCommit?.(); // Move active cell down after closing
-      } else if (e.key === 'Escape') {
-        e.preventDefault();
-        e.stopPropagation();
-        this.onCancel?.();
-        this.closeEditor();
-      }
-    });
-
-    input.addEventListener('blur', () => {
-      if (this.editingCell) {
-        this.onCommit?.(this.editingCell.rowId, this.editingCell.columnId, input.value);
-      }
-      this.closeEditor();
-    });
-
-    setTimeout(() => input.select(), 0);
-    return input;
+    return this.createInputEditor('date', initialValue);
   }
 
   private createSelectEditor(value: unknown, column: IColumnDef<T>): HTMLElement {

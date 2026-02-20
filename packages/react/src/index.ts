@@ -80,6 +80,7 @@ export {
   useLatestRef,
   usePaginationControls,
   useDataGridTableOrchestration,
+  useColumnMeta,
 } from './hooks';
 export type {
   UseFilterOptionsResult,
@@ -148,6 +149,8 @@ export type {
   UsePaginationControlsResult,
   UseDataGridTableOrchestrationParams,
   UseDataGridTableOrchestrationResult,
+  UseColumnMetaParams,
+  ColumnMetaResult,
 } from './hooks';
 
 // Constants

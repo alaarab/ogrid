@@ -69,7 +69,6 @@ const toolbarBtnStyle: React.CSSProperties = {
 };
 
 function HeroGrid() {
-  // eslint-disable-next-line @typescript-eslint/no-var-requires
   const { OGrid, exportToCsv } = require('@alaarab/ogrid-react-radix') as typeof import('@alaarab/ogrid-react-radix');
   type ApiType = import('@alaarab/ogrid-react-radix').IOGridApi<EmployeeRow>;
   type IFilters = import('@alaarab/ogrid-react-radix').IFilters;

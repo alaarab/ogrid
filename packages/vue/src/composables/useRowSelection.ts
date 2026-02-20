@@ -1,4 +1,5 @@
-import { shallowRef, computed, type Ref } from 'vue';
+import { shallowRef, computed, isReadonly, type Ref } from 'vue';
+import { applyRangeRowSelection, computeRowSelectionState } from '@alaarab/ogrid-core';
 import type { RowId, RowSelectionMode, IRowSelectionChangeEvent } from '../types';
 
 export interface UseRowSelectionParams<T> {
@@ -45,7 +46,12 @@ export function useRowSelection<T>(params: UseRowSelectionParams<T>): UseRowSele
 
   const updateSelection = (newSelectedIds: Set<RowId>) => {
     if (controlledSelectedRows.value !== undefined) {
-      controlledSelectedRows.value = newSelectedIds;
+      // In controlled mode: only fire the callback. The parent is responsible for
+      // updating its selectedRows prop in response. Only write if the ref is writable
+      // (plain ref in tests), not if it's a readonly computed ref from useDataGridState.
+      if (!isReadonly(controlledSelectedRows)) {
+        (controlledSelectedRows as Ref<Set<RowId>>).value = newSelectedIds;
+      }
     } else {
       internalSelectedRows.value = newSelectedIds;
     }
@@ -62,20 +68,13 @@ export function useRowSelection<T>(params: UseRowSelectionParams<T>): UseRowSele
       return;
     }
 
-    const next = new Set(selectedRowIds.value);
     const currentItems = items.value;
+    let next: Set<RowId>;
 
     if (shiftKey && lastClickedRow >= 0 && lastClickedRow !== rowIndex) {
-      const start = Math.min(lastClickedRow, rowIndex);
-      const end = Math.max(lastClickedRow, rowIndex);
-      for (let i = start; i <= end; i++) {
-        if (i < currentItems.length) {
-          const id = getRowId(currentItems[i]);
-          if (checked) next.add(id);
-          else next.delete(id);
-        }
-      }
+      next = applyRangeRowSelection(lastClickedRow, rowIndex, checked, currentItems, getRowId, selectedRowIds.value);
     } else {
+      next = new Set(selectedRowIds.value);
       if (checked) next.add(rowId);
       else next.delete(rowId);
     }
@@ -93,11 +92,11 @@ export function useRowSelection<T>(params: UseRowSelectionParams<T>): UseRowSele
   };
 
   const allSelected = computed(
-    () => items.value.length > 0 && items.value.every((item) => selectedRowIds.value.has(getRowId(item)))
+    () => computeRowSelectionState(selectedRowIds.value, items.value, getRowId).allSelected
   );
 
   const someSelected = computed(
-    () => !allSelected.value && items.value.some((item) => selectedRowIds.value.has(getRowId(item)))
+    () => computeRowSelectionState(selectedRowIds.value, items.value, getRowId).someSelected
   );
 
   return {

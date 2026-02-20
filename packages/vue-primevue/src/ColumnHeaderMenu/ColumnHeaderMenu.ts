@@ -1,4 +1,4 @@
-import { defineComponent, h, ref, computed, onMounted, onBeforeUnmount, type PropType } from 'vue';
+import { defineComponent, h, ref, computed, onMounted, onBeforeUnmount, type PropType, type VNode } from 'vue';
 import { getColumnHeaderMenuItems } from '@alaarab/ogrid-vue';
 
 export interface ColumnHeaderMenuProps {
@@ -89,7 +89,7 @@ export const ColumnHeaderMenu = defineComponent({
       // Position the menu relative to the anchor element
       const rect = props.anchorElement.getBoundingClientRect();
 
-      const children: any[] = [];
+      const children: VNode[] = [];
       items.value.forEach((item, index) => {
         // Add divider before item if needed (but not at the start)
         if (item.divider && index > 0) {

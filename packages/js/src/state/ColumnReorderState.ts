@@ -98,14 +98,14 @@ export class ColumnReorderState {
       this.rafId = 0;
       if (!this._draggedColumnId || !this.tableElement) return;
 
-      const result = calculateDropTarget(
+      const result = calculateDropTarget({
         mouseX,
-        this.columnOrder,
-        this._draggedColumnId,
-        this.draggedPinState,
-        this.tableElement,
-        this.pinnedColumns
-      );
+        columnOrder: this.columnOrder,
+        draggedColumnId: this._draggedColumnId,
+        draggedPinState: this.draggedPinState,
+        tableElement: this.tableElement,
+        pinnedColumns: this.pinnedColumns,
+      });
 
       if (!result) return;
 

@@ -42,12 +42,12 @@ export function createOGridTests(): void {
   it('sort change updates order', () => {
     const { dataGridProps } = createOGrid();
     // Trigger sort via onColumnSort
-    dataGridProps.value.onColumnSort!('name');
+    dataGridProps.value.onColumnSort?.('name');
     // First click -> desc (since default is asc on first column)
     expect(dataGridProps.value.sortDirection).toBe('desc');
     expect(dataGridProps.value.items.map((r) => r.name)).toEqual(['Gamma', 'Beta', 'Alpha']);
     // Click again -> asc
-    dataGridProps.value.onColumnSort!('name');
+    dataGridProps.value.onColumnSort?.('name');
     expect(dataGridProps.value.sortDirection).toBe('asc');
   });
 
@@ -92,11 +92,11 @@ export function createOGridTests(): void {
     const { dataGridProps, pagination, columnChooser } = createOGrid({ defaultPageSize: 10 });
 
     // Filter to only Active rows
-    dataGridProps.value.onFilterChange!('status', { type: 'multiSelect', value: ['Active'] });
+    dataGridProps.value.onFilterChange?.('status', { type: 'multiSelect', value: ['Active'] });
     expect(dataGridProps.value.items.map((r) => r.name)).toEqual(['Alpha', 'Gamma']);
 
     // Sort by name desc
-    dataGridProps.value.onColumnSort!('name');
+    dataGridProps.value.onColumnSort?.('name');
     expect(dataGridProps.value.items.map((r) => r.name)).toEqual(['Gamma', 'Alpha']);
 
     // Verify pagination total reflects filtered count

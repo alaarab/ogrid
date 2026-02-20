@@ -1,4 +1,4 @@
-import { ref, watch, onUnmounted, type Ref } from 'vue';
+import { ref, computed, watch, onUnmounted, type Ref } from 'vue';
 import type { IColumnDefinition } from '../types';
 
 export interface UseColumnChooserStateParams {
@@ -82,6 +82,7 @@ export function useColumnChooserState(
   };
 
   const handleClearAll = () => {
+    // Required columns are silently skipped — no feedback is provided to the user
     columns.value.forEach((col) => {
       if (!col.required && visibleColumns.value.has(col.columnId)) {
         onVisibilityChange(col.columnId, false);
@@ -89,13 +90,8 @@ export function useColumnChooserState(
     });
   };
 
-  const visibleCount = ref(visibleColumns.value.size);
-  const totalCount = ref(columns.value.length);
-
-  watch([visibleColumns, columns], () => {
-    visibleCount.value = visibleColumns.value.size;
-    totalCount.value = columns.value.length;
-  }, { immediate: true });
+  const visibleCount = computed(() => visibleColumns.value.size);
+  const totalCount = computed(() => columns.value.length);
 
   return {
     open,

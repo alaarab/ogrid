@@ -1,9 +1,9 @@
-import { Component, ChangeDetectionStrategy, Input, signal, effect } from '@angular/core';
+import { Component, ChangeDetectionStrategy } from '@angular/core';
 import {
   OGridService,
   OGridLayoutComponent,
+  BaseOGridComponent,
 } from '@alaarab/ogrid-angular';
-import type { IOGridProps } from '@alaarab/ogrid-angular';
 import { DataGridTableComponent } from '../datagrid-table/datagrid-table.component';
 import { ColumnChooserComponent } from '../column-chooser/column-chooser.component';
 import { PaginationControlsComponent } from '../pagination-controls/pagination-controls.component';
@@ -61,29 +61,4 @@ import { PaginationControlsComponent } from '../pagination-controls/pagination-c
     </ogrid-layout>
   `,
 })
-export class OGridComponent<T> {
-  private readonly propsSignal = signal<IOGridProps<T> | undefined>(undefined);
-  readonly ogridService: OGridService<T>;
-
-  @Input({ required: true })
-  set props(value: IOGridProps<T>) {
-    this.propsSignal.set(value);
-  }
-
-  constructor() {
-    this.ogridService = new OGridService<T>();
-    effect(() => {
-      const p = this.propsSignal();
-      if (p) this.ogridService.configure(p);
-    });
-  }
-
-  get showToolbar(): boolean {
-    return this.ogridService.columnChooserPlacement() === 'toolbar' || this.ogridService.toolbar() != null;
-  }
-
-  onPageSizeChange(size: number): void {
-    this.ogridService.pagination().setPageSize(size);
-    this.ogridService.pagination().setPage(1);
-  }
-}
+export class OGridComponent<T> extends BaseOGridComponent<T> {}

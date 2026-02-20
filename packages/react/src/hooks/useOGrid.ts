@@ -3,19 +3,18 @@ import {
   useMemo,
   useCallback,
   useState,
+  useImperativeHandle,
   useEffect,
   useRef,
-  useImperativeHandle,
 } from 'react';
-import {
-  mergeFilter,
-  deriveFilterOptionsFromData,
-  getMultiSelectFilterFields,
-  flattenColumns,
-  processClientSideData,
-  computeNextSortState,
-} from '../utils';
-import { useFilterOptions } from './useFilterOptions';
+
+import { flattenColumns } from '../utils';
+import { validateColumns, validateRowIds } from '@alaarab/ogrid-core';
+import { useOGridPagination } from './useOGridPagination';
+import { useOGridSorting } from './useOGridSorting';
+import { useOGridFilters } from './useOGridFilters';
+import { useOGridDataFetching } from './useOGridDataFetching';
+import { useLatestRef } from './useLatestRef';
 import { useSideBarState } from './useSideBarState';
 import type { SideBarProps } from '../components/SideBar';
 import type {
@@ -23,8 +22,6 @@ import type {
   IOGridProps,
   IOGridDataGridProps,
   IOGridApi,
-  IFilters,
-  FilterValue,
   IRowSelectionChangeEvent,
   IStatusBarProps,
   IColumnDefinition,
@@ -52,6 +49,7 @@ export interface UseOGridColumnChooser {
   columns: IColumnDefinition[];
   visibleColumns: Set<string>;
   onVisibilityChange: (columnKey: string, isVisible: boolean) => void;
+  onSetVisibleColumns: (columns: Set<string>) => void;
   placement: ColumnChooserPlacement;
 }
 
@@ -67,7 +65,7 @@ export interface UseOGridLayout {
 /** Filter state. */
 export interface UseOGridFilters {
   hasActiveFilters: boolean;
-  setFilters: (f: IFilters) => void;
+  setFilters: (f: import('../types').IFilters) => void;
 }
 
 export interface UseOGridResult<T> {
@@ -80,6 +78,7 @@ export interface UseOGridResult<T> {
 
 /**
  * Top-level orchestration hook for OGrid: manages pagination, sorting, filtering, column visibility, and sidebar.
+ * Delegates to focused sub-hooks for each concern.
  * @param props - All OGrid props (columns, data, callbacks, feature flags).
  * @param ref - Forwarded ref for imperative API (refresh, export, applyColumnState).
  * @returns Grouped props for DataGridTable, pagination controls, column chooser, layout, and filters.
@@ -143,7 +142,7 @@ export function useOGrid<T>(
     'aria-labelledby': ariaLabelledBy,
   } = props;
 
-  // Resolve column chooser placement
+  // --- Derived column state ---
   const columnChooserPlacement: ColumnChooserPlacement =
     columnChooserProp === false ? 'none'
     : columnChooserProp === 'sidebar' ? 'sidebar'
@@ -151,26 +150,58 @@ export function useOGrid<T>(
 
   const columns = useMemo(() => flattenColumns(columnsProp), [columnsProp]);
   const isServerSide = dataSource != null;
-  const isClientSide = !isServerSide;
 
+  // --- Runtime validation (dev-only, runs once on mount) ---
+  const rowIdsValidatedRef = useRef(false);
+  useEffect(() => {
+    validateColumns(columns as Parameters<typeof validateColumns>[0]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // intentionally empty — run once at mount
+  const defaultSortField = defaultSortBy ?? columns[0]?.columnId ?? '';
+
+  // --- Internal data state (for imperative setRowData/setLoading API) ---
   const [internalData, setInternalData] = useState<T[]>([]);
   const [internalLoading, setInternalLoading] = useState(false);
-
   const displayData = data ?? internalData;
   const displayLoading = controlledLoading ?? internalLoading;
 
-  const defaultSortField = defaultSortBy ?? columns[0]?.columnId ?? '';
-
-  const [internalPage, setInternalPage] = useState(1);
-  const [internalPageSize, setInternalPageSize] = useState(defaultPageSize);
-  const [internalSort, setInternalSort] = useState<{
-    field: string;
-    direction: 'asc' | 'desc';
-  }>({
-    field: defaultSortField,
-    direction: defaultSortDirection,
+  // --- Sub-hooks ---
+  const paginationState = useOGridPagination({
+    controlledPage, controlledPageSize, defaultPageSize,
+    onPageChange, onPageSizeChange,
   });
-  const [internalFilters, setInternalFilters] = useState<IFilters>({});
+
+  const sortingState = useOGridSorting({
+    controlledSort, defaultSortField, defaultSortDirection,
+    onSortChange, setPage: paginationState.setPage,
+  });
+
+  const filtersState = useOGridFilters({
+    controlledFilters, onFiltersChange,
+    setPage: paginationState.setPage,
+    columns, displayData, dataSource,
+  });
+
+  const dataFetchingState = useOGridDataFetching({
+    isServerSide, dataSource, displayData, columns,
+    stableFilters: filtersState.stableFilters,
+    filters: filtersState.filters,
+    sort: sortingState.sort,
+    page: paginationState.page,
+    pageSize: paginationState.pageSize,
+    onError, onFirstDataRendered,
+  });
+
+  // Validate row IDs once on first data render
+  useEffect(() => {
+    const items = dataFetchingState.displayItems;
+    if (!rowIdsValidatedRef.current && items.length > 0) {
+      rowIdsValidatedRef.current = true;
+      validateRowIds(items, getRowId as (item: T) => import('@alaarab/ogrid-core').RowId);
+    }
+  }, [dataFetchingState.displayItems, getRowId]);
+
+  // --- Column visibility ---
   const [internalVisibleColumns, setInternalVisibleColumns] = useState<Set<string>>(
     () => {
       const visible = columns
@@ -182,49 +213,7 @@ export function useOGrid<T>(
     }
   );
 
-  const [columnWidthOverrides, setColumnWidthOverrides] = useState<Record<string, number>>({});
-  const [pinnedOverrides, setPinnedOverrides] = useState<Record<string, 'left' | 'right'>>({});
-
-  const page = controlledPage ?? internalPage;
-  const pageSize = controlledPageSize ?? internalPageSize;
-  const sort = controlledSort ?? internalSort;
-  const filters = controlledFilters ?? internalFilters;
   const visibleColumns = controlledVisibleColumns ?? internalVisibleColumns;
-
-  const setPage = useCallback(
-    (p: number) => {
-      if (controlledPage === undefined) setInternalPage(p);
-      onPageChange?.(p);
-    },
-    [controlledPage, onPageChange]
-  );
-
-  const setPageSize = useCallback(
-    (size: number) => {
-      if (controlledPageSize === undefined) setInternalPageSize(size);
-      onPageSizeChange?.(size);
-      setPage(1);
-    },
-    [controlledPageSize, onPageSizeChange, setPage]
-  );
-
-  const setSort = useCallback(
-    (s: { field: string; direction: 'asc' | 'desc' }) => {
-      if (controlledSort === undefined) setInternalSort(s);
-      onSortChange?.(s);
-      setPage(1);
-    },
-    [controlledSort, onSortChange, setPage]
-  );
-
-  const setFilters = useCallback(
-    (f: IFilters) => {
-      if (controlledFilters === undefined) setInternalFilters(f);
-      onFiltersChange?.(f);
-      setPage(1);
-    },
-    [controlledFilters, onFiltersChange, setPage]
-  );
 
   const setVisibleColumns = useCallback(
     (cols: Set<string>) => {
@@ -232,21 +221,6 @@ export function useOGrid<T>(
       onVisibleColumnsChange?.(cols);
     },
     [controlledVisibleColumns, onVisibleColumnsChange]
-  );
-
-  const handleSort = useCallback(
-    (columnKey: string, direction?: 'asc' | 'desc' | null) => {
-      setSort(computeNextSortState(sort, columnKey, direction));
-    },
-    [sort, setSort]
-  );
-
-  /** Single filter change handler — wraps discriminated FilterValue into mergeFilter. */
-  const handleFilterChange = useCallback(
-    (key: string, value: FilterValue | undefined) => {
-      setFilters(mergeFilter(filters, key, value));
-    },
-    [filters, setFilters]
   );
 
   const handleVisibilityChange = useCallback(
@@ -259,9 +233,8 @@ export function useOGrid<T>(
     [visibleColumns, setVisibleColumns]
   );
 
-  const [internalSelectedRows, setInternalSelectedRows] = useState<Set<RowId>>(
-    new Set()
-  );
+  // --- Row selection ---
+  const [internalSelectedRows, setInternalSelectedRows] = useState<Set<RowId>>(new Set());
   const effectiveSelectedRows = selectedRows ?? internalSelectedRows;
 
   const handleSelectionChange = useCallback(
@@ -274,278 +247,9 @@ export function useOGrid<T>(
     [selectedRows, onSelectionChange]
   );
 
-  const multiSelectFilterFields = useMemo(
-    () => getMultiSelectFilterFields(columns),
-    [columns]
-  );
-
-  const filterOptionsSource = useMemo(
-    () => dataSource ?? { fetchFilterOptions: undefined },
-    [dataSource]
-  );
-
-  const { filterOptions: serverFilterOptions, loadingOptions: loadingFilterOptions } =
-    useFilterOptions(filterOptionsSource, multiSelectFilterFields);
-
-  const hasServerFilterOptions = dataSource?.fetchFilterOptions != null;
-  const clientFilterOptions = useMemo(() => {
-    if (hasServerFilterOptions)
-      return serverFilterOptions;
-    return deriveFilterOptionsFromData(displayData, columns);
-  }, [hasServerFilterOptions, displayData, columns, serverFilterOptions]);
-
-  // --- Client-side filtering & sorting ---
-
-  // Stabilize filters ref via shallow comparison so processClientSideData useMemo
-  // doesn't re-run when the filter object reference changes but values are identical.
-  const stableFiltersRef = useRef(filters);
-  const stableFilters = useMemo(() => {
-    const prev = stableFiltersRef.current;
-    const prevKeys = Object.keys(prev);
-    const nextKeys = Object.keys(filters);
-    if (prevKeys.length !== nextKeys.length) {
-      stableFiltersRef.current = filters;
-      return filters;
-    }
-    for (let i = 0; i < nextKeys.length; i++) {
-      if (prev[nextKeys[i]] !== filters[nextKeys[i]]) {
-        stableFiltersRef.current = filters;
-        return filters;
-      }
-    }
-    return prev;
-  }, [filters]);
-
-  const clientItemsAndTotal = useMemo(() => {
-    if (!isClientSide) return null;
-    const rows = processClientSideData(
-      displayData,
-      columns,
-      stableFilters,
-      sort.field,
-      sort.direction
-    );
-    const total = rows.length;
-    const start = (page - 1) * pageSize;
-    const paged = rows.slice(start, start + pageSize);
-    return { items: paged, totalCount: total };
-  }, [
-    isClientSide,
-    displayData,
-    columns,
-    stableFilters,
-    sort.field,
-    sort.direction,
-    page,
-    pageSize,
-  ]);
-
-  const [serverItems, setServerItems] = useState<T[]>([]);
-  const [serverTotalCount, setServerTotalCount] = useState(0);
-  const [loading, setLoading] = useState(true);
-  const fetchIdRef = useRef(0);
-
-  // Ref counter to trigger server-side re-fetches
-  const refreshCounterRef = useRef(0);
-  const [refreshCounter, setRefreshCounter] = useState(0);
-
-  useEffect(() => {
-    if (!isServerSide || !dataSource) {
-      if (!isServerSide) setLoading(false);
-      return;
-    }
-    const id = ++fetchIdRef.current;
-    setLoading(true);
-    dataSource
-      .fetchPage({
-        page,
-        pageSize,
-        sort: { field: sort.field, direction: sort.direction },
-        filters,
-      })
-      .then((res) => {
-        if (id !== fetchIdRef.current) return;
-        setServerItems(res.items);
-        setServerTotalCount(res.totalCount);
-      })
-      .catch((err) => {
-        if (id !== fetchIdRef.current) return;
-        onError?.(err);
-        setServerItems([]);
-        setServerTotalCount(0);
-      })
-      .finally(() => {
-        if (id === fetchIdRef.current) setLoading(false);
-      });
-  }, [
-    isServerSide,
-    dataSource,
-    page,
-    pageSize,
-    sort.field,
-    sort.direction,
-    filters,
-    onError,
-    refreshCounter,
-  ]);
-
-  const displayItems =
-    isClientSide && clientItemsAndTotal
-      ? clientItemsAndTotal.items
-      : serverItems;
-  const displayTotalCount =
-    isClientSide && clientItemsAndTotal
-      ? clientItemsAndTotal.totalCount
-      : serverTotalCount;
-
-  // Fire onFirstDataRendered once when the grid first has data
-  const firstDataRenderedRef = useRef(false);
-  useEffect(() => {
-    if (!firstDataRenderedRef.current && displayItems.length > 0) {
-      firstDataRenderedRef.current = true;
-      onFirstDataRendered?.();
-    }
-  }, [displayItems.length, onFirstDataRendered]);
-
-  useImperativeHandle(
-    ref,
-    () => ({
-      setRowData: (d: T[]) => {
-        if (!isServerSide) setInternalData(d);
-      },
-      setLoading: setInternalLoading,
-      getColumnState: () => ({
-        visibleColumns: Array.from(visibleColumns),
-        sort,
-        columnOrder: columnOrder ?? undefined,
-        columnWidths: Object.keys(columnWidthOverrides).length > 0 ? columnWidthOverrides : undefined,
-        filters: Object.keys(filters).length > 0 ? filters : undefined,
-        pinnedColumns: Object.keys(pinnedOverrides).length > 0 ? pinnedOverrides : undefined,
-      }),
-      applyColumnState: (state: Partial<import('../types').IGridColumnState>) => {
-        if (state.visibleColumns) {
-          setVisibleColumns(new Set(state.visibleColumns));
-        }
-        if (state.sort) {
-          setSort(state.sort);
-        }
-        if (state.columnOrder && onColumnOrderChange) {
-          onColumnOrderChange(state.columnOrder);
-        }
-        if (state.columnWidths) {
-          setColumnWidthOverrides(state.columnWidths);
-        }
-        if (state.filters) {
-          setFilters(state.filters);
-        }
-        if (state.pinnedColumns) {
-          setPinnedOverrides(state.pinnedColumns);
-        }
-      },
-      setFilterModel: setFilters,
-      getSelectedRows: () => Array.from(effectiveSelectedRows),
-      setSelectedRows: (rowIds: RowId[]) => {
-        if (selectedRows === undefined) setInternalSelectedRows(new Set(rowIds));
-      },
-      selectAll: () => {
-        const allIds = new Set(displayItems.map((item) => getRowId(item)));
-        if (selectedRows === undefined) setInternalSelectedRows(allIds);
-        onSelectionChange?.({
-          selectedRowIds: Array.from(allIds),
-          selectedItems: displayItems,
-        });
-      },
-      deselectAll: () => {
-        if (selectedRows === undefined) setInternalSelectedRows(new Set());
-        onSelectionChange?.({
-          selectedRowIds: [],
-          selectedItems: [],
-        });
-      },
-      clearFilters: () => setFilters({}),
-      clearSort: () => setSort({ field: defaultSortField, direction: defaultSortDirection }),
-      resetGridState: (options?: { keepSelection?: boolean }) => {
-        setFilters({});
-        setSort({ field: defaultSortField, direction: defaultSortDirection });
-        if (!options?.keepSelection) {
-          if (selectedRows === undefined) setInternalSelectedRows(new Set());
-          onSelectionChange?.({ selectedRowIds: [], selectedItems: [] });
-        }
-      },
-      getDisplayedRows: () => displayItems,
-      refreshData: () => {
-        if (isServerSide) {
-          refreshCounterRef.current += 1;
-          setRefreshCounter(refreshCounterRef.current);
-        }
-      },
-      getColumnOrder: () => columnOrder ?? columns.map((c) => c.columnId),
-      setColumnOrder: (order: string[]) => {
-        onColumnOrderChange?.(order);
-      },
-      scrollToRow: () => {
-        // No-op at orchestration level — DataGridTable components implement
-        // this via useVirtualScroll.scrollToIndex when virtual scrolling is active.
-      },
-    }),
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [
-      visibleColumns,
-      sort,
-      columnOrder,
-      columnWidthOverrides,
-      pinnedOverrides,
-      filters,
-      setFilters,
-      setSort,
-      setVisibleColumns,
-      onColumnOrderChange,
-      isServerSide,
-      effectiveSelectedRows,
-      selectedRows,
-      displayItems,
-      getRowId,
-      onSelectionChange,
-      defaultSortField,
-      defaultSortDirection,
-    ]
-  );
-
-  // With discriminated union, any defined value is active (mergeFilter already strips empties)
-  const hasActiveFilters = useMemo(() => {
-    return Object.values(filters).some((v) => v !== undefined);
-  }, [filters]);
-
-  const columnChooserColumns: IColumnDefinition[] = useMemo(
-    () =>
-      columns.map((c) => ({
-        columnId: c.columnId,
-        name: c.name,
-        required: c.required === true,
-      })),
-    [columns]
-  );
-
-  const statusBarConfig = useMemo((): IStatusBarProps | undefined => {
-    if (!statusBar) return undefined;
-    if (typeof statusBar === 'object') return statusBar;
-    const totalData = isClientSide ? (data?.length ?? 0) : serverTotalCount;
-    const filteredData = displayTotalCount;
-    return {
-      totalCount: totalData,
-      filteredCount: hasActiveFilters ? filteredData : undefined,
-      selectedCount: effectiveSelectedRows.size,
-      suppressRowCount: true, // OGrid always has pagination which shows the total
-    };
-  }, [
-    statusBar,
-    isClientSide,
-    data,
-    serverTotalCount,
-    displayTotalCount,
-    hasActiveFilters,
-    effectiveSelectedRows.size,
-  ]);
+  // --- Column resize & pin ---
+  const [columnWidthOverrides, setColumnWidthOverrides] = useState<Record<string, number>>({});
+  const [pinnedOverrides, setPinnedOverrides] = useState<Record<string, 'left' | 'right'>>({});
 
   const handleColumnResized = useCallback(
     (columnId: string, width: number) => {
@@ -569,8 +273,109 @@ export function useOGrid<T>(
     [onColumnPinned]
   );
 
+  // --- Imperative handle (stabilized via refs to avoid invalidation on every state change) ---
+  const visibleColumnsRef = useLatestRef(visibleColumns);
+  const sortRef = useLatestRef(sortingState.sort);
+  const columnOrderRef = useLatestRef(columnOrder);
+  const columnWidthOverridesRef = useLatestRef(columnWidthOverrides);
+  const pinnedOverridesRef = useLatestRef(pinnedOverrides);
+  const filtersRef = useLatestRef(filtersState.filters);
+  const effectiveSelectedRowsRef = useLatestRef(effectiveSelectedRows);
+  const displayItemsRef = useLatestRef(dataFetchingState.displayItems);
+  const getRowIdRef = useLatestRef(getRowId);
+  const columnsRef = useLatestRef(columns);
+
+  useImperativeHandle(
+    ref,
+    () => ({
+      setRowData: (d: T[]) => {
+        if (!isServerSide) setInternalData(d);
+      },
+      setLoading: setInternalLoading,
+      getColumnState: () => ({
+        visibleColumns: Array.from(visibleColumnsRef.current),
+        sort: sortRef.current,
+        columnOrder: columnOrderRef.current ?? undefined,
+        columnWidths: Object.keys(columnWidthOverridesRef.current).length > 0 ? columnWidthOverridesRef.current : undefined,
+        filters: Object.keys(filtersRef.current).length > 0 ? filtersRef.current : undefined,
+        pinnedColumns: Object.keys(pinnedOverridesRef.current).length > 0 ? pinnedOverridesRef.current : undefined,
+      }),
+      applyColumnState: (state: Partial<import('../types').IGridColumnState>) => {
+        if (state.visibleColumns) setVisibleColumns(new Set(state.visibleColumns));
+        if (state.sort) sortingState.setSort(state.sort);
+        if (state.columnOrder && onColumnOrderChange) onColumnOrderChange(state.columnOrder);
+        if (state.columnWidths) setColumnWidthOverrides(state.columnWidths);
+        if (state.filters) filtersState.setFilters(state.filters);
+        if (state.pinnedColumns) setPinnedOverrides(state.pinnedColumns);
+      },
+      setFilterModel: filtersState.setFilters,
+      getSelectedRows: () => Array.from(effectiveSelectedRowsRef.current),
+      setSelectedRows: (rowIds: RowId[]) => {
+        if (selectedRows === undefined) setInternalSelectedRows(new Set(rowIds));
+      },
+      selectAll: () => {
+        const items = displayItemsRef.current;
+        const allIds = new Set(items.map((item) => getRowIdRef.current(item)));
+        if (selectedRows === undefined) setInternalSelectedRows(allIds);
+        onSelectionChange?.({ selectedRowIds: Array.from(allIds), selectedItems: items });
+      },
+      deselectAll: () => {
+        if (selectedRows === undefined) setInternalSelectedRows(new Set());
+        onSelectionChange?.({ selectedRowIds: [], selectedItems: [] });
+      },
+      clearFilters: () => filtersState.setFilters({}),
+      clearSort: () => sortingState.setSort({ field: sortingState.defaultSortField, direction: sortingState.defaultSortDirection }),
+      resetGridState: (options?: { keepSelection?: boolean }) => {
+        filtersState.setFilters({});
+        sortingState.setSort({ field: sortingState.defaultSortField, direction: sortingState.defaultSortDirection });
+        if (!options?.keepSelection) {
+          if (selectedRows === undefined) setInternalSelectedRows(new Set());
+          onSelectionChange?.({ selectedRowIds: [], selectedItems: [] });
+        }
+      },
+      getDisplayedRows: () => displayItemsRef.current,
+      refreshData: () => {
+        if (isServerSide) dataFetchingState.refreshData();
+      },
+      getColumnOrder: () => columnOrderRef.current ?? columnsRef.current.map((c) => c.columnId),
+      setColumnOrder: (order: string[]) => {
+        onColumnOrderChange?.(order);
+      },
+      scrollToRow: () => {
+        // No-op at orchestration level — DataGridTable components implement
+        // this via useVirtualScroll.scrollToIndex when virtual scrolling is active.
+      },
+    }),
+    [
+      isServerSide, setVisibleColumns, sortingState, filtersState,
+      onColumnOrderChange, selectedRows, onSelectionChange, dataFetchingState,
+      columnOrderRef, columnWidthOverridesRef, columnsRef, displayItemsRef,
+      effectiveSelectedRowsRef, filtersRef, getRowIdRef, pinnedOverridesRef,
+      sortRef, visibleColumnsRef,
+    ]
+  );
+
+  // --- Status bar ---
+  const statusBarConfig = useMemo((): IStatusBarProps | undefined => {
+    if (!statusBar) return undefined;
+    if (typeof statusBar === 'object') return statusBar;
+    const totalData = !isServerSide ? (data?.length ?? 0) : dataFetchingState.displayTotalCount;
+    const filteredData = dataFetchingState.displayTotalCount;
+    return {
+      totalCount: totalData,
+      filteredCount: filtersState.hasActiveFilters ? filteredData : undefined,
+      selectedCount: effectiveSelectedRows.size,
+      suppressRowCount: true,
+    };
+  }, [statusBar, isServerSide, data, dataFetchingState.displayTotalCount, filtersState.hasActiveFilters, effectiveSelectedRows.size]);
+
   // --- Side bar ---
   const sideBarState = useSideBarState({ config: sideBar });
+
+  const columnChooserColumns: IColumnDefinition[] = useMemo(
+    () => columns.map((c) => ({ columnId: c.columnId, name: c.name, required: c.required === true })),
+    [columns]
+  );
 
   const filterableColumns = useMemo(
     () =>
@@ -579,8 +384,8 @@ export function useOGrid<T>(
         .map((c) => ({
           columnId: c.columnId,
           name: c.name,
-          filterField: c.filterable!.filterField ?? c.columnId,
-          filterType: c.filterable!.type as 'text' | 'multiSelect' | 'people' | 'date',
+          filterField: c.filterable?.filterField ?? c.columnId,
+          filterType: c.filterable?.type as 'text' | 'multiSelect' | 'people' | 'date',
         })),
     [columns]
   );
@@ -597,36 +402,28 @@ export function useOGrid<T>(
       onVisibilityChange: handleVisibilityChange,
       onSetVisibleColumns: setVisibleColumns,
       filterableColumns,
-      filters,
-      onFilterChange: handleFilterChange,
-      filterOptions: clientFilterOptions,
+      filters: filtersState.filters,
+      onFilterChange: filtersState.handleFilterChange,
+      filterOptions: filtersState.clientFilterOptions,
     };
   }, [
-    sideBarState.isEnabled,
-    sideBarState.activePanel,
-    sideBarState.setActivePanel,
-    sideBarState.panels,
-    sideBarState.position,
-    columnChooserColumns,
-    visibleColumns,
-    handleVisibilityChange,
-    setVisibleColumns,
-    filterableColumns,
-    filters,
-    handleFilterChange,
-    clientFilterOptions,
+    sideBarState.isEnabled, sideBarState.activePanel, sideBarState.setActivePanel,
+    sideBarState.panels, sideBarState.position,
+    columnChooserColumns, visibleColumns, handleVisibilityChange, setVisibleColumns,
+    filterableColumns, filtersState.filters, filtersState.handleFilterChange, filtersState.clientFilterOptions,
   ]);
 
-  const clearAllFilters = useCallback(() => setFilters({}), [setFilters]);
-  const isLoadingResolved = (isServerSide && loading) || displayLoading;
+  // --- Assembly ---
+  const clearAllFilters = useCallback(() => filtersState.setFilters({}), [filtersState]);
+  const isLoadingResolved = (isServerSide && dataFetchingState.serverLoading) || displayLoading;
 
   const dataGridProps = useMemo<IOGridDataGridProps<T>>(() => ({
-    items: displayItems,
+    items: dataFetchingState.displayItems,
     columns: columnsProp,
     getRowId,
-    sortBy: sort.field,
-    sortDirection: sort.direction,
-    onColumnSort: handleSort,
+    sortBy: sortingState.sort.field,
+    sortDirection: sortingState.sort.direction,
+    onColumnSort: sortingState.handleSort,
     visibleColumns,
     columnOrder,
     onColumnOrderChange,
@@ -645,14 +442,14 @@ export function useOGrid<T>(
     selectedRows: effectiveSelectedRows,
     onSelectionChange: handleSelectionChange,
     showRowNumbers,
-    currentPage: page,
-    pageSize,
+    currentPage: paginationState.page,
+    pageSize: paginationState.pageSize,
     statusBar: statusBarConfig,
     isLoading: isLoadingResolved,
-    filters,
-    onFilterChange: handleFilterChange,
-    filterOptions: clientFilterOptions,
-    loadingFilterOptions: dataSource?.fetchFilterOptions ? loadingFilterOptions : EMPTY_LOADING_OPTIONS,
+    filters: filtersState.filters,
+    onFilterChange: filtersState.handleFilterChange,
+    filterOptions: filtersState.clientFilterOptions,
+    loadingFilterOptions: dataSource?.fetchFilterOptions ? filtersState.loadingFilterOptions : EMPTY_LOADING_OPTIONS,
     peopleSearch: dataSource?.searchPeople,
     getUserByEmail: dataSource?.getUserByEmail,
     layoutMode,
@@ -664,39 +461,43 @@ export function useOGrid<T>(
     'aria-label': ariaLabel,
     'aria-labelledby': ariaLabelledBy,
     emptyState: {
-      hasActiveFilters,
+      hasActiveFilters: filtersState.hasActiveFilters,
       onClearAll: clearAllFilters,
       message: emptyState?.message,
       render: emptyState?.render,
     },
   }), [
-    displayItems, columnsProp, getRowId, sort.field, sort.direction, handleSort,
+    dataFetchingState.displayItems, columnsProp, getRowId,
+    sortingState.sort.field, sortingState.sort.direction, sortingState.handleSort,
     visibleColumns, columnOrder, onColumnOrderChange, handleColumnResized,
     handleColumnPinned, pinnedOverrides, columnWidthOverrides,
     editable, cellSelection, onCellValueChanged, onUndo, onRedo, canUndo, canRedo,
-    rowSelection, effectiveSelectedRows, handleSelectionChange, showRowNumbers, page, pageSize, statusBarConfig,
-    isLoadingResolved, filters, handleFilterChange, clientFilterOptions, dataSource,
-    loadingFilterOptions, layoutMode, suppressHorizontalScroll, columnReorder, virtualScroll,
+    rowSelection, effectiveSelectedRows, handleSelectionChange, showRowNumbers,
+    paginationState.page, paginationState.pageSize, statusBarConfig,
+    isLoadingResolved, filtersState.filters, filtersState.handleFilterChange,
+    filtersState.clientFilterOptions, dataSource, filtersState.loadingFilterOptions,
+    layoutMode, suppressHorizontalScroll, columnReorder, virtualScroll,
     rowHeight, density, ariaLabel, ariaLabelledBy,
-    hasActiveFilters, clearAllFilters, emptyState,
+    filtersState.hasActiveFilters, clearAllFilters, emptyState,
   ]);
 
   const pagination = useMemo<UseOGridPagination>(() => ({
-    page,
-    pageSize,
-    displayTotalCount,
-    setPage,
-    setPageSize,
+    page: paginationState.page,
+    pageSize: paginationState.pageSize,
+    displayTotalCount: dataFetchingState.displayTotalCount,
+    setPage: paginationState.setPage,
+    setPageSize: paginationState.setPageSize,
     pageSizeOptions,
     entityLabelPlural,
-  }), [page, pageSize, displayTotalCount, setPage, setPageSize, pageSizeOptions, entityLabelPlural]);
+  }), [paginationState.page, paginationState.pageSize, dataFetchingState.displayTotalCount, paginationState.setPage, paginationState.setPageSize, pageSizeOptions, entityLabelPlural]);
 
   const columnChooser = useMemo<UseOGridColumnChooser>(() => ({
     columns: columnChooserColumns,
     visibleColumns,
     onVisibilityChange: handleVisibilityChange,
+    onSetVisibleColumns: setVisibleColumns,
     placement: columnChooserPlacement,
-  }), [columnChooserColumns, visibleColumns, handleVisibilityChange, columnChooserPlacement]);
+  }), [columnChooserColumns, visibleColumns, handleVisibilityChange, setVisibleColumns, columnChooserPlacement]);
 
   const layout = useMemo<UseOGridLayout>(() => ({
     toolbar,
@@ -707,9 +508,9 @@ export function useOGrid<T>(
   }), [toolbar, toolbarBelow, className, emptyState, sideBarProps]);
 
   const filtersResult = useMemo<UseOGridFilters>(() => ({
-    hasActiveFilters,
-    setFilters,
-  }), [hasActiveFilters, setFilters]);
+    hasActiveFilters: filtersState.hasActiveFilters,
+    setFilters: filtersState.setFilters,
+  }), [filtersState.hasActiveFilters, filtersState.setFilters]);
 
   return {
     dataGridProps,

@@ -1,4 +1,4 @@
-import { defineComponent, h, computed, type PropType } from 'vue';
+import { defineComponent, h, computed, type PropType, type VNode, type Component } from 'vue';
 import { VMenu, VList, VListItem, VDivider } from 'vuetify/components';
 import { getColumnHeaderMenuItems } from '@alaarab/ogrid-vue';
 
@@ -78,7 +78,7 @@ export const ColumnHeaderMenu = defineComponent({
       // If no anchor element or menu is closed, don't render
       if (!props.anchorElement) return null;
 
-      return h(VMenu as any, {
+      return h(VMenu as Component, {
         modelValue: props.isOpen,
         'onUpdate:modelValue': handleOpenChange,
         location: 'bottom start',
@@ -86,11 +86,11 @@ export const ColumnHeaderMenu = defineComponent({
         target: props.anchorElement,
       }, {
         default: () =>
-          h(VList as any, { density: 'compact', 'aria-label': 'Column options' }, () => {
-            const children: any[] = [];
+          h(VList as Component, { density: 'compact', 'aria-label': 'Column options' }, () => {
+            const children: VNode[] = [];
             items.value.forEach((item) => {
               children.push(
-                h(VListItem as any, {
+                h(VListItem as Component, {
                   key: item.id,
                   disabled: item.disabled,
                   onClick: () => { getHandler(item.id)(); },
@@ -98,7 +98,7 @@ export const ColumnHeaderMenu = defineComponent({
               );
               // Add divider after item to separate sections
               if (item.divider) {
-                children.push(h(VDivider as any, { key: `divider-${item.id}` }));
+                children.push(h(VDivider as Component, { key: `divider-${item.id}` }));
               }
             });
             return children;

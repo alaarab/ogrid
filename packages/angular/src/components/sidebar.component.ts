@@ -1,5 +1,5 @@
 import { Component, Input, ChangeDetectionStrategy } from '@angular/core';
-import { CommonModule } from '@angular/common';
+import { NgTemplateOutlet } from '@angular/common';
 import type { IColumnDefinition, SideBarPanelId, IFilters, FilterValue } from '../types';
 // GRID_BORDER_RADIUS used by ogrid-layout, not sidebar
 
@@ -26,15 +26,13 @@ export interface SideBarProps {
   filterOptions: Record<string, string[]>;
 }
 
-const PANEL_WIDTH = 240;
-const TAB_WIDTH = 36;
 const PANEL_LABELS: Record<SideBarPanelId, string> = { columns: 'Columns', filters: 'Filters' };
 
 @Component({
   selector: 'ogrid-sidebar',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [CommonModule],
+  imports: [NgTemplateOutlet],
   styles: [`
     .ogrid-sidebar-root { display: flex; flex-direction: row; flex-shrink: 0; }
     .ogrid-sidebar-tab-strip {
@@ -211,8 +209,6 @@ export class SideBarComponent {
   @Input() sideBarProps: SideBarProps | null = null;
 
   readonly panelLabels = PANEL_LABELS;
-  readonly tabWidth = TAB_WIDTH;
-  readonly panelWidth = PANEL_WIDTH;
 
   onTabClick(panel: SideBarPanelId): void {
     const props = this.sideBarProps;

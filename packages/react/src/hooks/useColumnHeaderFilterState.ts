@@ -25,8 +25,6 @@ const EMPTY_OPTIONS: string[] = [];
 
 export interface UseColumnHeaderFilterStateParams {
   filterType: ColumnFilterType;
-  isSorted?: boolean;
-  isSortedDescending?: boolean;
   onSort?: () => void;
   selectedValues?: string[];
   onFilterChange?: (values: string[]) => void;
@@ -198,34 +196,47 @@ export function useColumnHeaderFilterState(
     [onSort]
   );
 
+  // Destructure stable callbacks from sub-hooks before using as deps
+  const { handleApplyMultiSelect: _applyMultiSelect } = multiSelectFilterState;
+  const { handleTextApply: _textApply, handleTextClear: _textClear } = textFilterState;
+  const { handleUserSelect: _userSelect, handleClearUser: _clearUser } = peopleFilterState;
+  const { handleDateApply: _dateApply } = dateFilterState;
+
   // Wrap sub-hook handlers to close popover
   const handleApplyMultiSelect = useCallback(() => {
-    multiSelectFilterState.handleApplyMultiSelect();
+    _applyMultiSelect();
     setFilterOpen(false);
-  }, [multiSelectFilterState]);
+  }, [_applyMultiSelect]);
 
   const handleTextApply = useCallback(() => {
-    textFilterState.handleTextApply();
+    _textApply();
     setFilterOpen(false);
-  }, [textFilterState]);
+  }, [_textApply]);
+
+  // Clear immediately commits an empty value and closes the popover (no 2-step clear required)
+  const handleTextClear = useCallback(() => {
+    _textClear();
+    onTextChange?.('');
+    setFilterOpen(false);
+  }, [_textClear, onTextChange]);
 
   const handleUserSelect = useCallback(
     (user: UserLike) => {
-      peopleFilterState.handleUserSelect(user);
+      _userSelect(user);
       setFilterOpen(false);
     },
-    [peopleFilterState]
+    [_userSelect]
   );
 
   const handleClearUser = useCallback(() => {
-    peopleFilterState.handleClearUser();
+    _clearUser();
     setFilterOpen(false);
-  }, [peopleFilterState]);
+  }, [_clearUser]);
 
   const handleDateApply = useCallback(() => {
-    dateFilterState.handleDateApply();
+    _dateApply();
     setFilterOpen(false);
-  }, [dateFilterState]);
+  }, [_dateApply]);
 
   // Event propagation stoppers
   const handlePopoverClick = useCallback((e: React.MouseEvent) => e.stopPropagation(), []);
@@ -273,7 +284,7 @@ export function useColumnHeaderFilterState(
       handleFilterIconClick,
       handleApplyMultiSelect,
       handleTextApply,
-      handleTextClear: textFilterState.handleTextClear,
+      handleTextClear,
       handleUserSelect,
       handleClearUser,
       handleDateApply,

@@ -1,4 +1,4 @@
-import { useState, useCallback, useMemo } from 'react';
+import { useState, useCallback } from 'react';
 import type { IColumnDef } from '@alaarab/ogrid-core';
 
 export interface UseColumnPinningParams<T = unknown> {
@@ -42,8 +42,8 @@ export interface UseColumnPinningResult {
 export function useColumnPinning<T = unknown>(params: UseColumnPinningParams<T>): UseColumnPinningResult {
   const { columns, pinnedColumns: controlledPinnedColumns, onColumnPinned } = params;
 
-  // Initialize internal state from column.pinned definitions
-  const initialPinnedColumns = useMemo(() => {
+  // Initialize internal state from column.pinned definitions (mount only)
+  const [internalPinnedColumns, setInternalPinnedColumns] = useState<Record<string, 'left' | 'right'>>(() => {
     const initial: Record<string, 'left' | 'right'> = {};
     for (const col of columns) {
       if (col.pinned) {
@@ -51,12 +51,7 @@ export function useColumnPinning<T = unknown>(params: UseColumnPinningParams<T>)
       }
     }
     return initial;
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []); // Only on mount
-
-  const [internalPinnedColumns, setInternalPinnedColumns] = useState<Record<string, 'left' | 'right'>>(
-    initialPinnedColumns
-  );
+  });
 
   // Use controlled state if provided, otherwise internal
   const pinnedColumns = controlledPinnedColumns ?? internalPinnedColumns;
@@ -64,20 +59,19 @@ export function useColumnPinning<T = unknown>(params: UseColumnPinningParams<T>)
   const pinColumn = useCallback(
     (columnId: string, side: 'left' | 'right') => {
       const next = { ...pinnedColumns, [columnId]: side };
-      setInternalPinnedColumns(next);
+      if (!controlledPinnedColumns) setInternalPinnedColumns(next);
       onColumnPinned?.(columnId, side);
     },
-    [pinnedColumns, onColumnPinned]
+    [pinnedColumns, controlledPinnedColumns, onColumnPinned]
   );
 
   const unpinColumn = useCallback(
     (columnId: string) => {
-      const next = { ...pinnedColumns };
-      delete next[columnId];
-      setInternalPinnedColumns(next);
+      const { [columnId]: _, ...next } = pinnedColumns;
+      if (!controlledPinnedColumns) setInternalPinnedColumns(next);
       onColumnPinned?.(columnId, null);
     },
-    [pinnedColumns, onColumnPinned]
+    [pinnedColumns, controlledPinnedColumns, onColumnPinned]
   );
 
   const isPinned = useCallback(

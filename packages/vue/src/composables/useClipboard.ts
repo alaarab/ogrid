@@ -1,11 +1,11 @@
-import { ref, shallowRef, type Ref, type ShallowRef } from 'vue';
-import { getCellValue, parseValue, normalizeSelectionRange, formatSelectionAsTsv, parseTsvClipboard } from '@alaarab/ogrid-core';
+import { ref, shallowRef, isRef, type Ref, type ShallowRef } from 'vue';
+import { normalizeSelectionRange, formatSelectionAsTsv, parseTsvClipboard, applyPastedValues, applyCutClear } from '@alaarab/ogrid-core';
 import type { ISelectionRange, IActiveCell, ICellValueChangedEvent, IColumnDef } from '../types';
 
 export interface UseClipboardParams<T> {
   items: Ref<T[]>;
   visibleCols: Ref<IColumnDef<T>[]>;
-  colOffset: number;
+  colOffset: Ref<number> | number;
   selectionRange: Ref<ISelectionRange | null> | ShallowRef<ISelectionRange | null>;
   activeCell: Ref<IActiveCell | null> | ShallowRef<IActiveCell | null>;
   editable: Ref<boolean | undefined>;
@@ -30,7 +30,6 @@ export function useClipboard<T>(params: UseClipboardParams<T>): UseClipboardResu
   const {
     items,
     visibleCols,
-    colOffset,
     selectionRange,
     activeCell,
     editable,
@@ -38,6 +37,7 @@ export function useClipboard<T>(params: UseClipboardParams<T>): UseClipboardResu
     beginBatch,
     endBatch,
   } = params;
+  const getColOffset = () => isRef(params.colOffset) ? params.colOffset.value : params.colOffset;
 
   const cutRange = shallowRef<ISelectionRange | null>(null);
   const copyRange = shallowRef<ISelectionRange | null>(null);
@@ -46,6 +46,7 @@ export function useClipboard<T>(params: UseClipboardParams<T>): UseClipboardResu
   const getEffectiveRange = (): ISelectionRange | null => {
     const sel = selectionRange.value;
     const ac = activeCell.value;
+    const colOffset = getColOffset();
     return sel ?? (ac != null
       ? { startRow: ac.rowIndex, startCol: ac.columnIndex - colOffset, endRow: ac.rowIndex, endCol: ac.columnIndex - colOffset }
       : null);
@@ -58,7 +59,9 @@ export function useClipboard<T>(params: UseClipboardParams<T>): UseClipboardResu
     const tsv = formatSelectionAsTsv(items.value, visibleCols.value, norm);
     internalClipboardRef.value = tsv;
     copyRange.value = norm;
-    void navigator.clipboard.writeText(tsv).catch(() => {});
+    void navigator.clipboard.writeText(tsv).catch((err) => {
+      if (typeof console !== 'undefined') console.warn('[OGrid] Clipboard write failed:', err);
+    });
   };
 
   const handleCut = () => {
@@ -93,54 +96,11 @@ export function useClipboard<T>(params: UseClipboardParams<T>): UseClipboardResu
     const currentCols = visibleCols.value;
     const parsedRows = parseTsvClipboard(text);
     beginBatch?.();
-    for (let r = 0; r < parsedRows.length; r++) {
-      const cells = parsedRows[r];
-      for (let c = 0; c < cells.length; c++) {
-        const targetRow = anchorRow + r;
-        const targetCol = anchorCol + c;
-        if (targetRow >= currentItems.length || targetCol >= currentCols.length) continue;
-        const item = currentItems[targetRow];
-        const col = currentCols[targetCol];
-        const colEditable =
-          col.editable === true ||
-          (typeof col.editable === 'function' && col.editable(item));
-        if (!colEditable) continue;
-        const rawValue = cells[c] ?? '';
-        const oldValue = getCellValue(item, col);
-        const result = parseValue(rawValue, oldValue, item, col);
-        if (!result.valid) continue;
-        callback({
-          item,
-          columnId: col.columnId,
-          oldValue,
-          newValue: result.value,
-          rowIndex: targetRow,
-        });
-      }
-    }
+    const pasteEvents = applyPastedValues(parsedRows, anchorRow, anchorCol, currentItems, currentCols);
+    for (const evt of pasteEvents) callback(evt);
     if (cutRange.value) {
-      const cut = cutRange.value;
-      for (let r = cut.startRow; r <= cut.endRow; r++) {
-        for (let c = cut.startCol; c <= cut.endCol; c++) {
-          if (r >= currentItems.length || c >= currentCols.length) continue;
-          const item = currentItems[r];
-          const col = currentCols[c];
-          const colEditable =
-            col.editable === true ||
-            (typeof col.editable === 'function' && col.editable(item));
-          if (!colEditable) continue;
-          const oldValue = getCellValue(item, col);
-          const result = parseValue('', oldValue, item, col);
-          if (!result.valid) continue;
-          callback({
-            item,
-            columnId: col.columnId,
-            oldValue,
-            newValue: result.value,
-            rowIndex: r,
-          });
-        }
-      }
+      const cutEvents = applyCutClear(cutRange.value, currentItems, currentCols);
+      for (const evt of cutEvents) callback(evt);
       cutRange.value = null;
     }
     endBatch?.();
