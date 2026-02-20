@@ -83,8 +83,6 @@ import { PopoverCellEditorComponent } from './popover-cell-editor.component';
     }
     .ogrid-datagrid-th {
       font-weight: 600;
-      position: sticky;
-      top: 0;
       padding: 6px 10px;
       text-align: left;
       font-size: 14px;
@@ -93,6 +91,7 @@ import { PopoverCellEditorComponent } from './popover-cell-editor.component';
       background: var(--ogrid-header-bg, #f5f5f5);
       z-index: 8;
     }
+    .ogrid-sticky-header .ogrid-datagrid-th { position: sticky; top: 0; }
     .ogrid-datagrid-th:focus-visible {
       outline: 2px solid var(--ogrid-accent, #0078d4);
       outline-offset: -2px;
@@ -105,6 +104,8 @@ import { PopoverCellEditorComponent } from './popover-cell-editor.component';
       z-index: 10;
       background: var(--ogrid-header-bg, #f5f5f5);
       will-change: transform;
+      border-right: 1px solid var(--ogrid-border, rgba(0, 0, 0, 0.12));
+      box-shadow: 2px 0 4px -1px rgba(0, 0, 0, 0.1);
     }
     .ogrid-datagrid-th--pinned-right {
       position: sticky;
@@ -113,6 +114,8 @@ import { PopoverCellEditorComponent } from './popover-cell-editor.component';
       z-index: 10;
       background: var(--ogrid-header-bg, #f5f5f5);
       will-change: transform;
+      border-left: 1px solid var(--ogrid-border, rgba(0, 0, 0, 0.12));
+      box-shadow: -2px 0 4px -1px rgba(0, 0, 0, 0.1);
     }
     .ogrid-datagrid-group-header {
       text-align: center;
@@ -149,6 +152,8 @@ import { PopoverCellEditorComponent } from './popover-cell-editor.component';
       z-index: 6;
       background: var(--ogrid-bg, #ffffff);
       will-change: transform;
+      border-right: 1px solid var(--ogrid-border, rgba(0, 0, 0, 0.12));
+      box-shadow: 2px 0 4px -1px rgba(0, 0, 0, 0.1);
     }
     .ogrid-datagrid-td--pinned-right {
       position: sticky;
@@ -156,6 +161,8 @@ import { PopoverCellEditorComponent } from './popover-cell-editor.component';
       z-index: 6;
       background: var(--ogrid-bg, #ffffff);
       will-change: transform;
+      border-left: 1px solid var(--ogrid-border, rgba(0, 0, 0, 0.12));
+      box-shadow: -2px 0 4px -1px rgba(0, 0, 0, 0.1);
     }
     .ogrid-datagrid-cell {
       width: 100%;
@@ -405,7 +412,7 @@ import { PopoverCellEditorComponent } from './popover-cell-editor.component';
             <div [class.ogrid-datagrid-table-wrapper--loading]="isLoading() && items().length > 0" #tableContainerEl>
               <table class="ogrid-datagrid-table" [style.minWidth.px]="minTableWidth()"
               >
-                <thead class="ogrid-datagrid-thead">
+                <thead [class]="stickyHeader() ? 'ogrid-datagrid-thead ogrid-sticky-header' : 'ogrid-datagrid-thead'">
                   @for (row of headerRows(); track $index; let rowIdx = $index) {
                     <tr class="ogrid-datagrid-header-row">
                       @if (rowIdx === headerRows().length - 1 && hasCheckboxCol()) {

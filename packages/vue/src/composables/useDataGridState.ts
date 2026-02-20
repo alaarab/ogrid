@@ -48,6 +48,7 @@ export interface DataGridLayoutState<T> {
    *  UI packages use these as a minWidth floor to prevent columns from
    *  shrinking when new data loads (e.g. during server-side pagination). */
   measuredColumnWidths: Record<string, number>;
+  stickyHeader: boolean;
 }
 
 export interface DataGridRowSelectionState {
@@ -517,6 +518,7 @@ export function useDataGridState<T>(
     setColumnSizingOverrides,
     onColumnResized: props.value.onColumnResized,
     measuredColumnWidths: measuredColumnWidths.value,
+    stickyHeader: props.value.stickyHeader ?? true,
   }));
 
   const rowSelectionState = computed<DataGridRowSelectionState>(() => ({

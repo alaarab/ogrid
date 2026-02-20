@@ -113,6 +113,8 @@ export class OGridService<T> {
   readonly className = signal<string | undefined>(undefined);
   readonly layoutMode = signal<'content' | 'fill'>('fill');
   readonly suppressHorizontalScroll = signal<boolean | undefined>(undefined);
+  readonly stickyHeader = signal<boolean>(true);
+  readonly fullScreen = signal<boolean>(false);
   readonly editable = signal<boolean | undefined>(undefined);
   readonly cellSelection = signal<boolean | undefined>(undefined);
   readonly density = signal<'compact' | 'normal' | 'comfortable'>('normal');
@@ -355,6 +357,7 @@ export class OGridService<T> {
     getUserByEmail: this.dataSource()?.getUserByEmail?.bind(this.dataSource()),
     layoutMode: this.layoutMode(),
     suppressHorizontalScroll: this.suppressHorizontalScroll(),
+    stickyHeader: this.stickyHeader(),
     columnReorder: this.columnReorder(),
     virtualScroll: this.virtualScroll(),
     'aria-label': this.ariaLabel(),
@@ -665,6 +668,8 @@ export class OGridService<T> {
     if (props.className !== undefined) this.className.set(props.className);
     if (props.layoutMode !== undefined) this.layoutMode.set(props.layoutMode);
     if (props.suppressHorizontalScroll !== undefined) this.suppressHorizontalScroll.set(props.suppressHorizontalScroll);
+    if (props.stickyHeader !== undefined) this.stickyHeader.set(props.stickyHeader);
+    if (props.fullScreen !== undefined) this.fullScreen.set(props.fullScreen);
     if (props['aria-label'] !== undefined) this.ariaLabel.set(props['aria-label']);
     if (props['aria-labelledby'] !== undefined) this.ariaLabelledBy.set(props['aria-labelledby']);
   }

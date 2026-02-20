@@ -103,6 +103,12 @@ interface IOGridBaseProps<T> {
   /** When true, horizontal scrolling is suppressed (overflow-x hidden). */
   suppressHorizontalScroll?: boolean;
 
+  /** When true (default), header row sticks to the top of the scroll container. */
+  stickyHeader?: boolean;
+
+  /** When true, shows a fullscreen toggle button in the toolbar. Default: false. */
+  fullScreen?: boolean;
+
   /** Side bar configuration. `true` shows default panels (columns + filters). Pass ISideBarDef for options. */
   sideBar?: boolean | ISideBarDef;
 
@@ -175,6 +181,8 @@ export interface IOGridDataGridProps<T> {
   layoutMode?: 'content' | 'fill';
   /** When true, horizontal scrolling is suppressed (overflow-x hidden). */
   suppressHorizontalScroll?: boolean;
+  /** When true (default), header row sticks to the top of the scroll container. */
+  stickyHeader?: boolean;
   isLoading?: boolean;
   loadingMessage?: string;
   editable?: boolean;

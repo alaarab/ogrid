@@ -60,6 +60,7 @@ export interface UseOGridLayout {
   className?: string;
   emptyState?: { message?: React.ReactNode; render?: () => React.ReactNode };
   sideBarProps: SideBarProps | null;
+  fullScreen?: boolean;
 }
 
 /** Filter state. */
@@ -131,6 +132,8 @@ export function useOGrid<T>(
     statusBar,
     pageSizeOptions,
     sideBar,
+    stickyHeader,
+    fullScreen,
     onFirstDataRendered,
     onError,
     columnChooser: columnChooserProp,
@@ -453,6 +456,7 @@ export function useOGrid<T>(
     getUserByEmail: dataSource?.getUserByEmail,
     layoutMode,
     suppressHorizontalScroll,
+    stickyHeader: stickyHeader ?? true,
     columnReorder,
     virtualScroll,
     rowHeight,
@@ -475,7 +479,7 @@ export function useOGrid<T>(
     paginationState.page, paginationState.pageSize, statusBarConfig,
     isLoadingResolved, filtersState.filters, filtersState.handleFilterChange,
     filtersState.clientFilterOptions, dataSource, filtersState.loadingFilterOptions,
-    layoutMode, suppressHorizontalScroll, columnReorder, virtualScroll,
+    layoutMode, suppressHorizontalScroll, stickyHeader, columnReorder, virtualScroll,
     rowHeight, density, ariaLabel, ariaLabelledBy,
     filtersState.hasActiveFilters, clearAllFilters, emptyState,
   ]);
@@ -504,7 +508,8 @@ export function useOGrid<T>(
     className,
     emptyState,
     sideBarProps,
-  }), [toolbar, toolbarBelow, className, emptyState, sideBarProps]);
+    fullScreen,
+  }), [toolbar, toolbarBelow, className, emptyState, sideBarProps, fullScreen]);
 
   const filtersResult = useMemo<UseOGridFilters>(() => ({
     hasActiveFilters: filtersState.hasActiveFilters,

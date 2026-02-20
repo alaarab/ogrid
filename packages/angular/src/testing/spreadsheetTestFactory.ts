@@ -167,6 +167,26 @@ export function createSpreadsheetTests(_DataGridTableComponent: new () => unknow
         stateService.setPendingEditorValue('test-value');
         expect(stateService.getState().editing.pendingEditorValue).toBe('test-value');
       });
+
+      it('commitCellEdit with empty value clears the cell', () => {
+        const onCellValueChanged = jest.fn();
+        stateService.props.set(makeProps({ onCellValueChanged }));
+        stateService.setEditingCell({ rowId: '1', columnId: 'name' });
+        stateService.commitCellEdit(fixtureRows[0], 'name', 'Alpha', '', 0, 0);
+        expect(stateService.getState().editing.editingCell).toBeNull();
+        expect(onCellValueChanged).toHaveBeenCalledWith(
+          expect.objectContaining({ columnId: 'name', newValue: '' }),
+        );
+      });
+
+      it('cancelPopoverEdit does not call onCellValueChanged', () => {
+        const onCellValueChanged = jest.fn();
+        stateService.props.set(makeProps({ onCellValueChanged }));
+        stateService.setEditingCell({ rowId: '1', columnId: 'name' });
+        stateService.cancelPopoverEdit();
+        expect(stateService.getState().editing.editingCell).toBeNull();
+        expect(onCellValueChanged).not.toHaveBeenCalled();
+      });
     });
 
     describe('clipboard operations', () => {

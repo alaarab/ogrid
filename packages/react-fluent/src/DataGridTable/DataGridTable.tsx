@@ -254,7 +254,7 @@ function DataGridTableInner<T>(props: IOGridDataGridProps<T>): React.ReactElemen
           <div className={styles.tableWidthAnchor} ref={tableContainerRef}>
               <Table role="grid" className={styles.dataTable}>
                 <TableHeader
-                  className={styles.stickyHeader}
+                  className={o.stickyHeader ? styles.stickyHeader : undefined}
                 >
                   {headerRows.map((row, rowIdx) => (
                     <TableRow key={rowIdx}>

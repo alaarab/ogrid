@@ -41,6 +41,7 @@ const OGridInner = forwardRef(function OGridInner<T>(
       sideBar={layout.sideBarProps}
       toolbar={layout.toolbar}
       toolbarBelow={layout.toolbarBelow}
+      fullScreen={layout.fullScreen}
       toolbarEnd={
         columnChooser.placement === 'toolbar' ? (
           <ColumnChooser

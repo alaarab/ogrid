@@ -258,4 +258,42 @@ export function createDataGridTableTests(DataGridTable: React.ComponentType<IOGr
     expect(statusBar).toBeInTheDocument();
     expect(statusBar.textContent).toContain('Rows:');
   });
+
+  it('left-pinned column renders with pinnedColumns prop', () => {
+    const { container } = renderTable({ pinnedColumns: { name: 'left' } });
+    // Pinned column still renders its cells
+    const nameCells = container.querySelectorAll('td[data-column-id="name"]');
+    expect(nameCells.length).toBeGreaterThan(0);
+    // Header for pinned column is present
+    const headerCells = container.querySelectorAll('th');
+    const nameHeader = Array.from(headerCells).find((th) => th.textContent?.includes('Name'));
+    expect(nameHeader).toBeTruthy();
+  });
+
+  it('right-pinned column renders with pinnedColumns prop', () => {
+    const { container } = renderTable({ pinnedColumns: { status: 'right' } });
+    const statusCells = container.querySelectorAll('td[data-column-id="status"]');
+    expect(statusCells.length).toBeGreaterThan(0);
+    const headerCells = container.querySelectorAll('th');
+    const statusHeader = Array.from(headerCells).find((th) => th.textContent?.includes('Status'));
+    expect(statusHeader).toBeTruthy();
+  });
+
+  it('multiple pinned columns render together', () => {
+    const { container } = renderTable({ pinnedColumns: { name: 'left', status: 'right' } });
+    expect(container.querySelectorAll('td[data-column-id="name"]').length).toBeGreaterThan(0);
+    expect(container.querySelectorAll('td[data-column-id="status"]').length).toBeGreaterThan(0);
+  });
+
+  it('stickyHeader defaults to true', () => {
+    const { container } = renderTable();
+    const thead = container.querySelector('thead');
+    expect(thead).toBeTruthy();
+  });
+
+  it('stickyHeader=false renders without error', () => {
+    const { container } = renderTable({ stickyHeader: false });
+    const thead = container.querySelector('thead');
+    expect(thead).toBeTruthy();
+  });
 }

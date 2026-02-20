@@ -108,6 +108,10 @@ export interface OGridOptions<T> {
   /** Layout mode: 'content' sizes to content, 'fill' fills container. Default: 'fill'. */
   layoutMode?: 'content' | 'fill';
   suppressHorizontalScroll?: boolean;
+  /** When true (default), header row sticks to the top of the scroll container. */
+  stickyHeader?: boolean;
+  /** When true, shows a fullscreen toggle button in the toolbar. Default: false. */
+  fullScreen?: boolean;
 
   /** Custom empty state message. */
   emptyMessage?: string;

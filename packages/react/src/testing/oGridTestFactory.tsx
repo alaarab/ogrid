@@ -101,4 +101,48 @@ export function createOGridTests(OGrid: React.ComponentType<IOGridProps<FixtureR
     expect(screen.queryByTestId('cell-status')).not.toBeInTheDocument();
     expect(screen.getAllByTestId('cell-name')).toHaveLength(2);
   });
+
+  it('fullScreen=true renders a fullscreen toggle button', () => {
+    renderOGrid({ fullScreen: true });
+    expect(screen.getByRole('button', { name: /fullscreen/i })).toBeInTheDocument();
+  });
+
+  it('fullScreen=false (default) does not render fullscreen button', () => {
+    renderOGrid();
+    expect(screen.queryByRole('button', { name: /fullscreen/i })).not.toBeInTheDocument();
+  });
+
+  it('clicking fullscreen button toggles to fullscreen mode', () => {
+    const { container } = renderOGrid({ fullScreen: true });
+    const btn = screen.getByRole('button', { name: /fullscreen/i });
+    fireEvent.click(btn);
+    // After entering fullscreen, button label changes to "Exit fullscreen"
+    expect(screen.getByRole('button', { name: /exit fullscreen/i })).toBeInTheDocument();
+    // Container style should change to fixed positioning
+    const root = container.firstElementChild as HTMLElement;
+    expect(root.style.position).toBe('fixed');
+  });
+
+  it('clicking fullscreen button again exits fullscreen', () => {
+    const { container } = renderOGrid({ fullScreen: true });
+    const btn = screen.getByRole('button', { name: /fullscreen/i });
+    // Enter fullscreen
+    fireEvent.click(btn);
+    expect(screen.getByRole('button', { name: /exit fullscreen/i })).toBeInTheDocument();
+    // Exit fullscreen
+    fireEvent.click(screen.getByRole('button', { name: /exit fullscreen/i }));
+    expect(screen.getByRole('button', { name: /fullscreen/i })).toBeInTheDocument();
+    const root = container.firstElementChild as HTMLElement;
+    expect(root.style.position).not.toBe('fixed');
+  });
+
+  it('Escape key exits fullscreen mode', () => {
+    renderOGrid({ fullScreen: true });
+    const btn = screen.getByRole('button', { name: /fullscreen/i });
+    fireEvent.click(btn);
+    expect(screen.getByRole('button', { name: /exit fullscreen/i })).toBeInTheDocument();
+    // Press Escape to exit fullscreen
+    fireEvent.keyDown(document, { key: 'Escape' });
+    expect(screen.getByRole('button', { name: /fullscreen/i })).toBeInTheDocument();
+  });
 }
