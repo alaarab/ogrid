@@ -74,3 +74,14 @@ export function makeDemoColumns<T extends Project>(): IColumnDef<T>[] {
 }
 
 export const getRowId = (p: Project) => p.id;
+
+/** In-place cell value update for editable examples. */
+export function handleCellValueChanged<T extends Record<string, unknown>>(
+  data: T[],
+  event: { item: T; columnId: string; newValue: unknown },
+): void {
+  const row = data.find((d) => (d as Record<string, unknown>).id === (event.item as Record<string, unknown>).id);
+  if (row) {
+    (row as Record<string, unknown>)[event.columnId] = event.newValue;
+  }
+}
