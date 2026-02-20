@@ -69,6 +69,7 @@ export interface UseDataGridTableOrchestrationResult<T> {
   layoutMode: 'fill' | 'content';
   rowSelection: IOGridDataGridProps<T>['rowSelection'];
   suppressHorizontalScroll: IOGridDataGridProps<T>['suppressHorizontalScroll'];
+  stickyHeader: boolean;
   isLoading: boolean;
   loadingMessage: string;
   ariaLabel: string | undefined;
@@ -221,6 +222,7 @@ export function useDataGridTableOrchestration<T>(
     layoutMode = 'fill',
     rowSelection = 'none',
     suppressHorizontalScroll,
+    stickyHeader = true,
     isLoading = false,
     loadingMessage = 'Loading\u2026',
     'aria-label': ariaLabel,
@@ -333,6 +335,7 @@ export function useDataGridTableOrchestration<T>(
     layoutMode,
     rowSelection,
     suppressHorizontalScroll,
+    stickyHeader,
     isLoading,
     loadingMessage,
     ariaLabel,

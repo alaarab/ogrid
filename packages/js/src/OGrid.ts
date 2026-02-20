@@ -261,6 +261,8 @@ export class OGrid<T> {
   private paginationContainer: HTMLElement;
   private statusBarContainer: HTMLElement;
   private options: OGridOptions<T>;
+  private isFullScreen = false;
+  private fullscreenBtn: HTMLButtonElement | null = null;
 
   // Decomposed helpers
   private renderingHelper: OGridRendering<T>;
@@ -288,6 +290,32 @@ export class OGrid<T> {
     // Left spacer keeps column chooser on the right via justify-content: space-between
     const toolbarSpacer = document.createElement('div');
     this.toolbarEl.appendChild(toolbarSpacer);
+
+    // Fullscreen toggle button
+    if (options.fullScreen) {
+      const toolbarRight = document.createElement('div');
+      toolbarRight.style.display = 'flex';
+      toolbarRight.style.alignItems = 'center';
+      toolbarRight.style.gap = '8px';
+
+      this.fullscreenBtn = document.createElement('button');
+      this.fullscreenBtn.type = 'button';
+      this.fullscreenBtn.className = 'ogrid-fullscreen-btn';
+      this.fullscreenBtn.title = 'Fullscreen';
+      this.fullscreenBtn.setAttribute('aria-label', 'Fullscreen');
+      this.fullscreenBtn.innerHTML = '<svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="10 2 14 2 14 6"/><polyline points="6 14 2 14 2 10"/><line x1="14" y1="2" x2="10" y2="6"/><line x1="2" y1="14" x2="6" y2="10"/></svg>';
+      this.fullscreenBtn.addEventListener('click', () => this.toggleFullScreen());
+      toolbarRight.appendChild(this.fullscreenBtn);
+      this.toolbarEl.appendChild(toolbarRight);
+
+      // ESC key to exit fullscreen
+      const handleEscKey = (e: KeyboardEvent) => {
+        if (e.key === 'Escape' && this.isFullScreen) this.toggleFullScreen();
+      };
+      document.addEventListener('keydown', handleEscKey);
+      this.unsubscribes.push(() => document.removeEventListener('keydown', handleEscKey));
+    }
+
     this.containerEl.appendChild(this.toolbarEl);
 
     // Body area (holds sidebar + table, side by side)
@@ -722,6 +750,24 @@ export class OGrid<T> {
   /** Unsubscribe from grid events. */
   off<K extends keyof OGridEvents<T>>(event: K, handler: (data: OGridEvents<T>[K]) => void): void {
     this.events.off(event, handler);
+  }
+
+  /** Toggle fullscreen mode. */
+  private toggleFullScreen(): void {
+    this.isFullScreen = !this.isFullScreen;
+    if (this.isFullScreen) {
+      this.containerEl.classList.add('ogrid-fullscreen');
+    } else {
+      this.containerEl.classList.remove('ogrid-fullscreen');
+    }
+    // Update button icon + label
+    if (this.fullscreenBtn) {
+      this.fullscreenBtn.title = this.isFullScreen ? 'Exit fullscreen' : 'Fullscreen';
+      this.fullscreenBtn.setAttribute('aria-label', this.isFullScreen ? 'Exit fullscreen' : 'Fullscreen');
+      this.fullscreenBtn.innerHTML = this.isFullScreen
+        ? '<svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="4 10 0 10 0 14"/><polyline points="12 6 16 6 16 2"/><line x1="0" y1="10" x2="4" y2="6"/><line x1="16" y1="6" x2="12" y2="10"/></svg>'
+        : '<svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="10 2 14 2 14 6"/><polyline points="6 14 2 14 2 10"/><line x1="14" y1="2" x2="10" y2="6"/><line x1="2" y1="14" x2="6" y2="10"/></svg>';
+    }
   }
 
   /** Clean up all event listeners and DOM. */

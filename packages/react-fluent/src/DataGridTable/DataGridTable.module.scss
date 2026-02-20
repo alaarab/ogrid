@@ -100,8 +100,6 @@
   font-size: 14px;
   color: var(--ogrid-fg, rgba(0, 0, 0, 0.87));
   white-space: nowrap;
-  position: sticky;
-  top: 0;
   background-color: var(--colorSubtleBackgroundSelected, var(--ogrid-header-bg, #f3f2f1));
   z-index: 8;
   border-bottom: 1px solid var(--ogrid-border, rgba(0, 0, 0, 0.12));
@@ -263,6 +261,11 @@
   background-color: var(--colorSubtleBackgroundSelected, var(--ogrid-header-bg, #f3f2f1));
 }
 
+.stickyHeader :global(.fui-TableHeaderCell) {
+  position: sticky;
+  top: 0;
+}
+
 .stickyHeader .pinnedColLeft,
 .stickyHeader .pinnedColRight {
   top: 0;
@@ -275,6 +278,8 @@
 
 .dataTable .pinnedColLeft {
   background-color: var(--colorNeutralBackground1, var(--ogrid-bg, #ffffff));
+  border-right: 1px solid var(--colorNeutralStroke1, var(--ogrid-border, rgba(0, 0, 0, 0.12)));
+  box-shadow: 2px 0 4px -1px rgba(0, 0, 0, 0.1);
 }
 
 .dataTable :global(.fui-TableHeader) .pinnedColLeft {
@@ -283,6 +288,8 @@
 
 .dataTable .pinnedColRight {
   background-color: var(--colorNeutralBackground1, var(--ogrid-bg, #ffffff));
+  border-left: 1px solid var(--colorNeutralStroke1, var(--ogrid-border, rgba(0, 0, 0, 0.12)));
+  box-shadow: -2px 0 4px -1px rgba(0, 0, 0, 0.1);
 }
 
 .dataTable :global(.fui-TableHeader) .pinnedColRight {

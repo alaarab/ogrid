@@ -57,6 +57,7 @@ export interface UseOGridLayout {
   className?: string;
   emptyState?: { message?: unknown; render?: () => unknown };
   sideBarProps: SideBarProps | null;
+  fullScreen?: boolean;
 }
 
 /** Filter state. */
@@ -489,6 +490,7 @@ export function useOGrid<T>(
       getUserByEmail: ds?.getUserByEmail,
       layoutMode: p.layoutMode,
       suppressHorizontalScroll: p.suppressHorizontalScroll,
+      stickyHeader: p.stickyHeader ?? true,
       columnReorder: p.columnReorder,
       virtualScroll: p.virtualScroll,
       rowHeight: p.rowHeight,
@@ -527,6 +529,7 @@ export function useOGrid<T>(
     className: props.value.className,
     emptyState: props.value.emptyState,
     sideBarProps: sideBarProps.value,
+    fullScreen: props.value.fullScreen,
   }));
 
   const filtersResult = computed<UseOGridFilters>(() => ({

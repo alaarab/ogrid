@@ -178,6 +178,7 @@ export function createDataGridTable(ui: IDataGridTableUIBindings) {
         const layoutMode = p.layoutMode ?? 'fill';
         const rowSelection = p.rowSelection ?? 'none';
         const suppressHorizontalScroll = p.suppressHorizontalScroll;
+        const stickyHeader = p.stickyHeader ?? true;
         const isLoading = p.isLoading ?? false;
         const loadingMessage = p.loadingMessage ?? 'Loading\u2026';
         const ariaLabel = p['aria-label'];
@@ -336,7 +337,7 @@ export function createDataGridTable(ui: IDataGridTableUIBindings) {
                     style: { minWidth: `${minTableWidth}px` },
                   }, [
                     // Header
-                    h('thead', { class: 'ogrid-thead' },
+                    h('thead', { class: stickyHeader ? 'ogrid-thead ogrid-sticky-header' : 'ogrid-thead' },
                       headerRows.map((row, rowIdx) =>
                         h('tr', { key: rowIdx, class: 'ogrid-header-row' }, [
                           // Checkbox header cell

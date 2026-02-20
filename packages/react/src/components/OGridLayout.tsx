@@ -5,6 +5,7 @@
  */
 
 import * as React from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { SideBar } from './SideBar';
 import type { SideBarProps } from './SideBar';
 import { GRID_BORDER_RADIUS } from '@alaarab/ogrid-core';
@@ -27,6 +28,8 @@ export interface OGridLayoutProps {
   pagination?: React.ReactNode;
   /** Side bar props. When provided, renders SideBar alongside the grid. */
   sideBar?: SideBarProps | null;
+  /** When true, render a fullscreen toggle button in the toolbar. */
+  fullScreen?: boolean;
 }
 
 // Stable style objects (avoid re-creating on every render)
@@ -39,6 +42,12 @@ const borderedContainerStyle: React.CSSProperties = {
   flex: 1,
   minHeight: 0,
   background: 'var(--ogrid-bg, #fff)',
+};
+
+const fullscreenContainerStyle: React.CSSProperties = {
+  ...borderedContainerStyle,
+  borderRadius: 0,
+  border: 'none',
 };
 
 const toolbarStripBase: React.CSSProperties = {
@@ -111,6 +120,47 @@ const rootStyle: React.CSSProperties = {
   height: '100%',
 };
 
+const fullscreenRootStyle: React.CSSProperties = {
+  position: 'fixed',
+  inset: 0,
+  zIndex: 9999,
+  display: 'flex',
+  flexDirection: 'column',
+  background: 'var(--ogrid-bg, #fff)',
+};
+
+const fullscreenBtnStyle: React.CSSProperties = {
+  background: 'none',
+  border: '1px solid var(--ogrid-border, #e0e0e0)',
+  borderRadius: 4,
+  padding: '4px 6px',
+  cursor: 'pointer',
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  color: 'var(--ogrid-fg, #242424)',
+};
+
+// SVG expand icon (enter fullscreen)
+const ExpandIcon = () => (
+  <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+    <polyline points="10 2 14 2 14 6" />
+    <polyline points="6 14 2 14 2 10" />
+    <line x1="14" y1="2" x2="10" y2="6" />
+    <line x1="2" y1="14" x2="6" y2="10" />
+  </svg>
+);
+
+// SVG collapse icon (exit fullscreen)
+const CollapseIcon = () => (
+  <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+    <polyline points="4 10 0 10 0 14" />
+    <polyline points="12 6 16 6 16 2" />
+    <line x1="0" y1="10" x2="4" y2="6" />
+    <line x1="16" y1="6" x2="12" y2="10" />
+  </svg>
+);
+
 /**
  * Renders OGrid layout as a unified bordered container:
  *   ┌────────────────────────────────────┐
@@ -132,25 +182,57 @@ export function OGridLayout(props: OGridLayoutProps): React.ReactElement {
     children,
     pagination,
     sideBar,
+    fullScreen,
   } = props;
+
+  const [isFullScreen, setIsFullScreen] = useState(false);
+
+  const toggleFullScreen = useCallback(() => {
+    setIsFullScreen((prev) => !prev);
+  }, []);
+
+  // ESC key to exit fullscreen
+  useEffect(() => {
+    if (!isFullScreen) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setIsFullScreen(false);
+    };
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, [isFullScreen]);
 
   const hasSideBar = sideBar != null;
   const sideBarPosition = sideBar?.position ?? 'right';
-  const hasToolbar = toolbar != null || toolbarEnd != null;
+  const hasToolbar = toolbar != null || toolbarEnd != null || fullScreen;
+
+  const fullscreenButton = fullScreen ? (
+    <button
+      type="button"
+      style={fullscreenBtnStyle}
+      onClick={toggleFullScreen}
+      title={isFullScreen ? 'Exit fullscreen' : 'Fullscreen'}
+      aria-label={isFullScreen ? 'Exit fullscreen' : 'Fullscreen'}
+    >
+      {isFullScreen ? <CollapseIcon /> : <ExpandIcon />}
+    </button>
+  ) : null;
 
   return (
     <Container
       className={className}
-      style={rootStyle}
+      style={isFullScreen ? fullscreenRootStyle : rootStyle}
       {...containerProps}
     >
       {/* === Bordered container === */}
-      <div style={borderedContainerStyle}>
+      <div style={isFullScreen ? fullscreenContainerStyle : borderedContainerStyle}>
         {/* Toolbar strip */}
         {hasToolbar && (
           <div style={toolbarBelow ? toolbarStripNoBorderStyle : toolbarStripStyle}>
             <div style={toolbarSectionStyle}>{toolbar}</div>
-            <div style={toolbarSectionStyle}>{toolbarEnd}</div>
+            <div style={toolbarSectionStyle}>
+              {toolbarEnd}
+              {fullscreenButton}
+            </div>
           </div>
         )}
 

@@ -43,6 +43,7 @@ interface DataGridTableInstance {
   loadingFilterOptions?: Record<string, boolean>;
   isLoadingInput?: boolean;
   suppressHorizontalScroll?: boolean;
+  stickyHeaderInput?: boolean;
   statusBar?: IStatusBarProps;
   emptyStateInput?: {
     onClearAll: () => void;
@@ -56,6 +57,7 @@ interface DataGridTableInstance {
   ngOnChanges?: (changes: SimpleChanges) => void;
   stateService: DataGridStateService<FixtureRow>;
   allowOverflowX: Signal<boolean>;
+  stickyHeader: Signal<boolean>;
   items: Signal<FixtureRow[]>;
   getRowId: Signal<(item: FixtureRow) => string | number>;
   isLoading: Signal<boolean>;
@@ -87,6 +89,7 @@ export function createDataGridTableTests(DataGridTableComponent: new () => unkno
     instance.loadingFilterOptions = props.loadingFilterOptions ?? {};
     if (props.isLoading !== undefined) instance.isLoadingInput = props.isLoading;
     if (props.suppressHorizontalScroll !== undefined) instance.suppressHorizontalScroll = props.suppressHorizontalScroll;
+    if (props.stickyHeader !== undefined) instance.stickyHeaderInput = props.stickyHeader;
     if (props.statusBar !== undefined) instance.statusBar = props.statusBar;
     if (props.emptyState !== undefined) instance.emptyStateInput = props.emptyState;
     if (props.editable !== undefined) instance.editable = props.editable;
@@ -188,5 +191,15 @@ export function createDataGridTableTests(DataGridTableComponent: new () => unkno
     expect(typeof hfi.onColumnSort).toBe('function');
     expect(hfi.filters).toEqual({});
     expect(typeof hfi.onFilterChange).toBe('function');
+  });
+
+  it('stickyHeader defaults to true', () => {
+    const comp = createComponent();
+    expect(comp.stickyHeader()).toBe(true);
+  });
+
+  it('stickyHeader=false is reflected in computed signal', () => {
+    const comp = createComponent({ stickyHeader: false });
+    expect(comp.stickyHeader()).toBe(false);
   });
 }
