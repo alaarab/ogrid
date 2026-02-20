@@ -109,4 +109,35 @@ export function createOGridTests(): void {
     // Items still there (visibility only affects display, not data)
     expect(dataGridProps.value.items.length).toBe(2);
   });
+
+  it('fullScreen=true threads to layout', () => {
+    const { layout } = createOGrid({ fullScreen: true });
+    expect(layout.value.fullScreen).toBe(true);
+  });
+
+  it('fullScreen defaults to undefined/false in layout', () => {
+    const { layout } = createOGrid();
+    expect(layout.value.fullScreen).toBeFalsy();
+  });
+
+  it('stickyHeader=true threads to dataGridProps', () => {
+    const { dataGridProps } = createOGrid({ stickyHeader: true });
+    expect(dataGridProps.value.stickyHeader).toBe(true);
+  });
+
+  it('stickyHeader defaults to true in dataGridProps', () => {
+    const { dataGridProps } = createOGrid();
+    expect(dataGridProps.value.stickyHeader).toBe(true);
+  });
+
+  it('stickyHeader=false threads to dataGridProps', () => {
+    const { dataGridProps } = createOGrid({ stickyHeader: false });
+    expect(dataGridProps.value.stickyHeader).toBe(false);
+  });
+
+  it('fullScreen and stickyHeader can both be set', () => {
+    const { layout, dataGridProps } = createOGrid({ fullScreen: true, stickyHeader: false });
+    expect(layout.value.fullScreen).toBe(true);
+    expect(dataGridProps.value.stickyHeader).toBe(false);
+  });
 }

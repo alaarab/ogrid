@@ -120,4 +120,14 @@ export function createDataGridTableTests(): void {
     expect(result.pinning.value.pinnedColumns).toEqual({});
     expect(result.pinning.value.headerMenu.isOpen).toBe(false);
   });
+
+  it('stickyHeader defaults to true in layout', () => {
+    const { result } = createDataGridState();
+    expect(result.layout.value.stickyHeader).toBe(true);
+  });
+
+  it('stickyHeader=false is reflected in layout', () => {
+    const { result } = createDataGridState({ stickyHeader: false });
+    expect(result.layout.value.stickyHeader).toBe(false);
+  });
 }

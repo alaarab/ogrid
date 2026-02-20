@@ -76,7 +76,7 @@ import { PopoverCellEditorComponent } from './popover-cell-editor.component';
           <div [class.loading-dimmed]="isLoading() && items().length > 0" class="ogrid-table-wrapper">
             <div #tableContainer class="ogrid-table-wrapper">
               <table class="ogrid-table">
-                <thead class="ogrid-thead">
+                <thead [class]="stickyHeader() ? 'ogrid-thead ogrid-sticky-header' : 'ogrid-thead'">
                   @for (row of headerRows(); track $index; let rowIdx = $index) {
                     <tr>
                       @if (rowIdx === headerRows().length - 1 && hasCheckboxCol()) {
@@ -389,9 +389,10 @@ import { PopoverCellEditorComponent } from './popover-cell-editor.component';
     .ogrid-thead {
       z-index: 3;
       background: var(--ogrid-header-bg, #f5f5f5);
-      position: sticky;
-      top: 0;
     }
+    .ogrid-sticky-header { position: sticky; top: 0; }
+    .ogrid-sticky-header .ogrid-checkbox-header,
+    .ogrid-sticky-header .ogrid-row-number-header { position: sticky; top: 0; }
     .ogrid-checkbox-header {
       width: 48px;
       min-width: 48px;
@@ -399,8 +400,6 @@ import { PopoverCellEditorComponent } from './popover-cell-editor.component';
       text-align: center;
       background: var(--ogrid-header-bg, #f5f5f5);
       border-bottom: 2px solid var(--ogrid-border, rgba(0, 0, 0, 0.12));
-      position: sticky;
-      top: 0;
       z-index: 3;
     }
     .ogrid-row-number-header {
@@ -411,8 +410,6 @@ import { PopoverCellEditorComponent } from './popover-cell-editor.component';
       font-weight: 600;
       background: var(--ogrid-header-bg, #f5f5f5);
       border-bottom: 2px solid var(--ogrid-border, rgba(0, 0, 0, 0.12));
-      position: sticky;
-      top: 0;
       z-index: 3;
     }
     .ogrid-row-number-spacer {
@@ -551,7 +548,8 @@ import { PopoverCellEditorComponent } from './popover-cell-editor.component';
       left: 0;
       z-index: 10;
       background: var(--ogrid-header-bg, #f5f5f5);
-      border-left: 2px solid var(--ogrid-primary, #217346);
+      border-right: 1px solid var(--ogrid-border, rgba(0, 0, 0, 0.12));
+      box-shadow: 2px 0 4px -1px rgba(0, 0, 0, 0.1);
     }
     .ogrid-th-pinned-right {
       position: sticky;
@@ -559,21 +557,24 @@ import { PopoverCellEditorComponent } from './popover-cell-editor.component';
       right: 0;
       z-index: 10;
       background: var(--ogrid-header-bg, #f5f5f5);
-      border-right: 2px solid var(--ogrid-primary, #217346);
+      border-left: 1px solid var(--ogrid-border, rgba(0, 0, 0, 0.12));
+      box-shadow: -2px 0 4px -1px rgba(0, 0, 0, 0.1);
     }
     .ogrid-td-pinned-left {
       position: sticky;
       left: 0;
       z-index: 5;
       background: var(--ogrid-bg, #fff);
-      border-left: 2px solid var(--ogrid-primary, #217346);
+      border-right: 1px solid var(--ogrid-border, rgba(0, 0, 0, 0.12));
+      box-shadow: 2px 0 4px -1px rgba(0, 0, 0, 0.1);
     }
     .ogrid-td-pinned-right {
       position: sticky;
       right: 0;
       z-index: 5;
       background: var(--ogrid-bg, #fff);
-      border-right: 2px solid var(--ogrid-primary, #217346);
+      border-left: 1px solid var(--ogrid-border, rgba(0, 0, 0, 0.12));
+      box-shadow: -2px 0 4px -1px rgba(0, 0, 0, 0.1);
     }
     ::ng-deep th:focus-visible,
     ::ng-deep td:focus-visible {
@@ -688,6 +689,7 @@ export class DataGridTableComponent<T = unknown> extends BaseDataGridTableCompon
   @Input() initialColumnWidths: Record<string, number> | undefined = undefined;
   @Input() layoutMode: 'content' | 'fill' = 'fill';
   @Input() suppressHorizontalScroll: boolean | undefined = undefined;
+  @Input() stickyHeaderInput: boolean | undefined = undefined;
   @Input() columnReorder: boolean | undefined = undefined;
   @Input({ alias: 'isLoading' }) isLoadingInput: boolean = false;
   @Input({ alias: 'loadingMessage' }) loadingMessageInput: string = 'Loading\u2026';
@@ -924,6 +926,7 @@ export class DataGridTableComponent<T = unknown> extends BaseDataGridTableCompon
       getUserByEmail: this.getUserByEmail as IOGridDataGridProps<T>['getUserByEmail'],
       emptyState: this.emptyStateInput as IOGridDataGridProps<T>['emptyState'],
       onCellError: this.onCellError,
+      stickyHeader: this.stickyHeaderInput,
       'aria-label': this.ariaLabelInput,
       'aria-labelledby': this.ariaLabelledByInput,
     };
