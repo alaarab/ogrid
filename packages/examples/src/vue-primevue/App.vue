@@ -14,11 +14,12 @@
 <script setup lang="ts">
 import { OGrid } from '@alaarab/ogrid-vue-primevue';
 import type { IOGridProps } from '@alaarab/ogrid-vue-primevue';
-import { makeDemoProjects, makeDemoColumns, getRowId } from '../shared/demoData';
+import { makeDemoProjects, makeDemoColumns, getRowId, handleCellValueChanged } from '../shared/demoData';
 import type { Project } from '../shared/demoData';
 
+const projects = makeDemoProjects(75);
 const gridProps: IOGridProps<Project> = {
-  data: makeDemoProjects(75),
+  data: projects,
   columns: makeDemoColumns<Project>(),
   getRowId,
   entityLabelPlural: 'projects',
@@ -26,6 +27,7 @@ const gridProps: IOGridProps<Project> = {
   editable: true,
   cellSelection: true,
   statusBar: true,
+  onCellValueChanged: (e) => handleCellValueChanged(projects, e),
 };
 </script>
 
