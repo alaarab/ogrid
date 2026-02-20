@@ -8,7 +8,7 @@ export interface UsePeopleFilterStateParams {
   selectedUser?: UserLike;
   onUserChange?: (user: UserLike | undefined) => void;
   peopleSearch?: (query: string) => Promise<UserLike[]>;
-  isFilterOpen: () => boolean;
+  isFilterOpen: Ref<boolean>;
   filterType: ColumnFilterType;
 }
 
@@ -39,7 +39,7 @@ export function usePeopleFilterState(
   };
 
   // Sync temp state when popover opens
-  watch(() => params.isFilterOpen(), (open) => {
+  watch(params.isFilterOpen, (open) => {
     if (open) {
       peopleSearchText.value = '';
       peopleSuggestions.value = [];
@@ -51,7 +51,7 @@ export function usePeopleFilterState(
 
   // People search with debounce
   watch(
-    [peopleSearchText, () => params.peopleSearch, () => params.isFilterOpen()],
+    [peopleSearchText, () => params.peopleSearch, params.isFilterOpen],
     ([searchText, search, isOpen]) => {
       if (peopleSearchTimeout) clearTimeout(peopleSearchTimeout);
       if (!search || !isOpen || filterType !== 'people') return;

@@ -1,4 +1,4 @@
-import { defineComponent, h, type PropType, type VNode } from 'vue';
+import { defineComponent, h, type PropType, type VNode, type Component } from 'vue';
 import { VBtn, VIcon, VMenu, VTooltip, VCard } from 'vuetify/components';
 import {
   useColumnHeaderFilterState,
@@ -11,11 +11,11 @@ import { MultiSelectFilterPopover } from './MultiSelectFilterPopover';
 import { PeopleFilterPopover } from './PeopleFilterPopover';
 
 // Vuetify component types don't align with h() overloads; cast to Component
-const _VBtn = VBtn as any;
-const _VIcon = VIcon as any;
-const _VMenu = VMenu as any;
-const _VTooltip = VTooltip as any;
-const _VCard = VCard as any;
+const _VBtn = VBtn as Component;
+const _VIcon = VIcon as Component;
+const _VMenu = VMenu as Component;
+const _VTooltip = VTooltip as Component;
+const _VCard = VCard as Component;
 
 export interface IColumnHeaderFilterProps {
   columnKey: string;
@@ -59,23 +59,8 @@ export const ColumnHeaderFilter = defineComponent({
     onDateChange: { type: Function as PropType<(value: IDateFilterValue | undefined) => void>, default: undefined },
   },
   setup(props) {
-    const state = useColumnHeaderFilterState({
-      filterType: props.filterType,
-      isSorted: props.isSorted,
-      isSortedDescending: props.isSortedDescending,
-      onSort: props.onSort,
-      selectedValues: props.selectedValues,
-      onFilterChange: props.onFilterChange,
-      options: props.options,
-      isLoadingOptions: props.isLoadingOptions,
-      textValue: props.textValue,
-      onTextChange: props.onTextChange,
-      selectedUser: props.selectedUser,
-      onUserChange: props.onUserChange,
-      peopleSearch: props.peopleSearch,
-      dateValue: props.dateValue,
-      onDateChange: props.onDateChange,
-    });
+    // Pass props directly so useColumnHeaderFilterState accesses reactive prop values
+    const state = useColumnHeaderFilterState(props);
 
     const renderPopoverContent = (): VNode | null => {
       if (props.filterType === 'multiSelect') {
@@ -222,7 +207,7 @@ export const ColumnHeaderFilter = defineComponent({
                     padding: '8px 12px',
                     fontWeight: '600',
                     fontSize: '0.875rem',
-                    backgroundColor: '#fff',
+                    backgroundColor: 'rgb(var(--v-theme-surface))',
                   },
                 }, `Filter: ${props.columnName}`),
                 renderPopoverContent(),

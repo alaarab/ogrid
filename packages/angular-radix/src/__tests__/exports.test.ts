@@ -1,6 +1,5 @@
 describe('@alaarab/ogrid-angular-radix exports', () => {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  let mod: any;
+  let mod: Record<string, unknown>;
 
   beforeAll(() => {
     mod = require('../index');

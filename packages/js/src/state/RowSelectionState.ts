@@ -1,4 +1,5 @@
 import type { RowId, RowSelectionMode, IRowSelectionChangeEvent } from '@alaarab/ogrid-core';
+import { applyRangeRowSelection, computeRowSelectionState } from '@alaarab/ogrid-core';
 import { EventEmitter } from './EventEmitter';
 
 interface RowSelectionEvents<T> extends Record<string, unknown> {
@@ -53,19 +54,12 @@ export class RowSelectionState<T> {
       return;
     }
 
-    const next = new Set(this._selectedRowIds);
+    let next: Set<RowId>;
 
     if (shiftKey && this._lastClickedRow >= 0 && this._lastClickedRow !== rowIndex) {
-      const start = Math.min(this._lastClickedRow, rowIndex);
-      const end = Math.max(this._lastClickedRow, rowIndex);
-      for (let i = start; i <= end; i++) {
-        if (i < items.length) {
-          const id = this._getRowId(items[i]);
-          if (checked) next.add(id);
-          else next.delete(id);
-        }
-      }
+      next = applyRangeRowSelection(this._lastClickedRow, rowIndex, checked, items, this._getRowId, this._selectedRowIds);
     } else {
+      next = new Set(this._selectedRowIds);
       if (checked) next.add(rowId);
       else next.delete(rowId);
     }
@@ -83,12 +77,11 @@ export class RowSelectionState<T> {
   }
 
   isAllSelected(items: T[]): boolean {
-    return items.length > 0 && items.every((item) => this._selectedRowIds.has(this._getRowId(item)));
+    return computeRowSelectionState(this._selectedRowIds, items, this._getRowId).allSelected;
   }
 
   isSomeSelected(items: T[]): boolean {
-    const allSelected = this.isAllSelected(items);
-    return !allSelected && items.some((item) => this._selectedRowIds.has(this._getRowId(item)));
+    return computeRowSelectionState(this._selectedRowIds, items, this._getRowId).someSelected;
   }
 
   getSelectedRows(items: T[]): T[] {

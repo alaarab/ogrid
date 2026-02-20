@@ -8,6 +8,7 @@ export {
 export { getCellValue } from './cellValue';
 export { flattenColumns, buildHeaderRows } from './columnUtils';
 export {
+  isFilterConfig,
   getFilterField,
   mergeFilter,
   deriveFilterOptionsFromData,
@@ -44,7 +45,7 @@ export {
   reorderColumnArray,
   calculateDropTarget,
 } from './columnReorder';
-export type { ColumnPinState, IDropTarget } from './columnReorder';
+export type { ColumnPinState, IDropTarget, ICalculateDropTargetParams } from './columnReorder';
 export {
   computeVisibleRange,
   computeTotalHeight,
@@ -72,11 +73,16 @@ export type { OverlayRect } from './dom';
 export { computeNextSortState } from './sortHelpers';
 export type { ISortState } from './sortHelpers';
 export { measureColumnContentWidth, AUTOSIZE_EXTRA_PX, AUTOSIZE_MAX_PX } from './columnAutosize';
-export { findCtrlArrowTarget, computeTabNavigation } from './keyboardNavigation';
-export { rangesEqual, clampSelectionToBounds, computeAutoScrollSpeed } from './selectionHelpers';
+export { findCtrlArrowTarget, computeTabNavigation, computeArrowNavigation, applyCellDeletion } from './keyboardNavigation';
+export type { ArrowNavigationContext, ArrowNavigationResult } from './keyboardNavigation';
+export { rangesEqual, clampSelectionToBounds, computeAutoScrollSpeed, applyRangeRowSelection, computeRowSelectionState } from './selectionHelpers';
 export {
   formatCellValueForTsv,
   formatSelectionAsTsv,
   parseTsvClipboard,
+  applyPastedValues,
+  applyCutClear,
 } from './clipboardHelpers';
+export { applyFillValues } from './fillHelpers';
 export { UndoRedoStack } from './undoRedoStack';
+export { validateColumns, validateRowIds } from './validation';

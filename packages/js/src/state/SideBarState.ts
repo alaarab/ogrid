@@ -4,7 +4,7 @@ import { EventEmitter } from './EventEmitter';
 const DEFAULT_PANELS: SideBarPanelId[] = ['columns', 'filters'];
 
 export class SideBarState {
-  private emitter = new EventEmitter<{ change: void }>();
+  private emitter = new EventEmitter<{ change: undefined }>();
   private _isEnabled: boolean;
   private _panels: SideBarPanelId[];
   private _position: 'left' | 'right';
@@ -33,7 +33,7 @@ export class SideBarState {
 
   setActivePanel(panel: SideBarPanelId | null): void {
     this._activePanel = panel;
-    this.emitter.emit('change', undefined as unknown as void);
+    this.emitter.emit('change');
   }
 
   toggle(panel: SideBarPanelId): void {

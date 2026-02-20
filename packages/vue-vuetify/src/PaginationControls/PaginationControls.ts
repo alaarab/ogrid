@@ -1,4 +1,4 @@
-import { defineComponent, computed, h, type PropType } from 'vue';
+import { defineComponent, computed, h, type PropType, type Component } from 'vue';
 import { VBtn, VSelect } from 'vuetify/components';
 import { getPaginationViewModel } from '@alaarab/ogrid-vue';
 
@@ -63,7 +63,7 @@ export const PaginationControls = defineComponent({
         // Page buttons
         h('div', { style: { display: 'flex', alignItems: 'center', gap: '4px' } }, [
           // First page
-          h(VBtn as any, {
+          h(VBtn as Component, {
             icon: 'mdi-page-first',
             size: 'small',
             variant: 'text',
@@ -72,7 +72,7 @@ export const PaginationControls = defineComponent({
             onClick: () => props.onPageChange(1),
           }),
           // Previous
-          h(VBtn as any, {
+          h(VBtn as Component, {
             icon: 'mdi-chevron-left',
             size: 'small',
             variant: 'text',
@@ -83,7 +83,7 @@ export const PaginationControls = defineComponent({
 
           // Start ellipsis
           ...(showStartEllipsis ? [
-            h(VBtn as any, {
+            h(VBtn as Component, {
               size: 'small',
               variant: 'outlined',
               'aria-label': 'Page 1',
@@ -95,7 +95,7 @@ export const PaginationControls = defineComponent({
 
           // Page numbers
           ...pageNumbers.map((pageNum) =>
-            h(VBtn as any, {
+            h(VBtn as Component, {
               key: pageNum,
               size: 'small',
               variant: props.currentPage === pageNum ? 'flat' : 'outlined',
@@ -110,7 +110,7 @@ export const PaginationControls = defineComponent({
           // End ellipsis
           ...(showEndEllipsis ? [
             h('span', { style: { margin: '0 4px', color: 'var(--ogrid-fg-secondary, rgba(0,0,0,0.6))' }, 'aria-hidden': 'true' }, '\u2026'),
-            h(VBtn as any, {
+            h(VBtn as Component, {
               size: 'small',
               variant: 'outlined',
               'aria-label': `Page ${totalPages}`,
@@ -120,7 +120,7 @@ export const PaginationControls = defineComponent({
           ] : []),
 
           // Next
-          h(VBtn as any, {
+          h(VBtn as Component, {
             icon: 'mdi-chevron-right',
             size: 'small',
             variant: 'text',
@@ -129,7 +129,7 @@ export const PaginationControls = defineComponent({
             onClick: () => props.onPageChange(props.currentPage + 1),
           }),
           // Last page
-          h(VBtn as any, {
+          h(VBtn as Component, {
             icon: 'mdi-page-last',
             size: 'small',
             variant: 'text',
@@ -142,7 +142,7 @@ export const PaginationControls = defineComponent({
         // Page size selector
         h('div', { style: { display: 'flex', alignItems: 'center', gap: '8px' } }, [
           h('span', { style: { fontSize: '0.875rem', color: 'var(--ogrid-fg-secondary, rgba(0,0,0,0.6))' } }, 'Rows'),
-          h(VSelect as any, {
+          h(VSelect as Component, {
             modelValue: props.pageSize,
             items: v.pageSizeOptions,
             density: 'compact',

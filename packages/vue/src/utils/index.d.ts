@@ -1,2 +1,0 @@
-export type { HeaderFilterConfigInput, HeaderFilterConfig, CellRenderDescriptorInput, CellRenderDescriptor, CellRenderMode, CellInteractionHandlers, CellInteractionProps, } from './dataGridViewModel';
-export { getHeaderFilterConfig, getCellRenderDescriptor, resolveCellDisplayContent, resolveCellStyle, buildInlineEditorProps, buildPopoverEditorProps, getCellInteractionProps, } from './dataGridViewModel';

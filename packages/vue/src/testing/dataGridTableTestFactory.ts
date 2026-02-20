@@ -107,7 +107,7 @@ export function createDataGridTableTests(): void {
   it('returns status bar config when statusBar is provided', () => {
     const { result } = createDataGridState({ statusBar: { totalCount: 2, suppressRowCount: false } });
     expect(result.viewModels.value.statusBarConfig).not.toBeNull();
-    expect(result.viewModels.value.statusBarConfig!.totalCount).toBe(2);
+    expect(result.viewModels.value.statusBarConfig?.totalCount).toBe(2);
   });
 
   it('returns null status bar when not configured', () => {

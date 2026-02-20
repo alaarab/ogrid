@@ -1,20 +1,10 @@
 import { Injectable, signal, computed, effect, DestroyRef, inject, NgZone } from '@angular/core';
 import {
-  flattenColumns,
   getDataGridStatusBarConfig,
   parseValue,
   computeAggregations,
   getCellValue,
   normalizeSelectionRange,
-  CHECKBOX_COLUMN_WIDTH,
-  DEFAULT_MIN_COLUMN_WIDTH,
-  CELL_PADDING,
-  UndoRedoStack,
-  findCtrlArrowTarget,
-  computeTabNavigation,
-  formatSelectionAsTsv,
-  parseTsvClipboard,
-  rangesEqual,
 } from '@alaarab/ogrid-core';
 import type {
   RowId,
@@ -29,9 +19,19 @@ import type {
 import type { IColumnDef as IAngularColumnDef } from '../types';
 import type { IColumnDef as ICoreColumnDef } from '@alaarab/ogrid-core';
 import type { IOGridDataGridProps } from '../types';
+import { DataGridLayoutHelper } from './datagrid-layout.service';
+import { DataGridEditingHelper } from './datagrid-editing.service';
+import { DataGridInteractionHelper } from './datagrid-interaction.service';
 
 // Alias for brevity — Angular's IColumnDef extends Core's, safe cast at framework boundary
 type IColumnDef<T> = IAngularColumnDef<T>;
+
+// Stable no-op functions to avoid allocating new closures on every getState() call
+const NOOP = () => {};
+const NOOP_ASYNC = async () => {};
+const NOOP_MOUSE = (_e: MouseEvent, _r: number, _c: number) => {};
+const NOOP_KEY = (_e: KeyboardEvent) => {};
+const NOOP_CTX = (_e: { clientX: number; clientY: number; preventDefault?: () => void }) => {};
 
 // --- Grouped sub-interfaces (matching React) ---
 
@@ -83,14 +83,17 @@ export interface DataGridEditingState<T> {
 
 export interface DataGridCellInteractionState {
   activeCell: IActiveCell | null;
-  setActiveCell: (cell: IActiveCell | null) => void;
+  /** Set active cell. Undefined when cell selection is disabled. */
+  setActiveCell?: (cell: IActiveCell | null) => void;
   selectionRange: ISelectionRange | null;
-  setSelectionRange: (range: ISelectionRange | null) => void;
+  /** Set selection range. Undefined when cell selection is disabled. */
+  setSelectionRange?: (range: ISelectionRange | null) => void;
   handleCellMouseDown: (e: MouseEvent, rowIndex: number, globalColIndex: number) => void;
   handleSelectAllCells: () => void;
   hasCellSelection: boolean;
   handleGridKeyDown: (e: KeyboardEvent) => void;
-  handleFillHandleMouseDown: (e: MouseEvent) => void;
+  /** Handle fill handle mouse down. Undefined when cell selection is disabled. */
+  handleFillHandleMouseDown?: (e: MouseEvent) => void;
   handleCopy: () => void;
   handleCut: () => void;
   handlePaste: () => Promise<void>;
@@ -106,7 +109,8 @@ export interface DataGridCellInteractionState {
 
 export interface DataGridContextMenuState {
   menuPosition: { x: number; y: number } | null;
-  setMenuPosition: (pos: { x: number; y: number } | null) => void;
+  /** Set menu position. Undefined when cell selection is disabled. */
+  setMenuPosition?: (pos: { x: number; y: number } | null) => void;
   handleCellContextMenu: (e: { clientX: number; clientY: number; preventDefault?: () => void }) => void;
   closeContextMenu: () => void;
 }
@@ -186,48 +190,19 @@ export class DataGridStateService<T> {
   readonly props = signal<IOGridDataGridProps<T> | null>(null);
   readonly wrapperEl = signal<HTMLElement | null>(null);
 
-  // --- Internal state ---
-  private readonly editingCellSig = signal<{ rowId: RowId; columnId: string } | null>(null);
-  private readonly pendingEditorValueSig = signal<unknown>(undefined);
-  private readonly activeCellSig = signal<IActiveCell | null>(null);
-  private readonly selectionRangeSig = signal<ISelectionRange | null>(null);
-  private readonly isDraggingSig = signal<boolean>(false);
-  private readonly contextMenuPositionSig = signal<{ x: number; y: number } | null>(null);
+  // --- Sub-helpers (decomposed for modularity) ---
+  /** Layout helper: column layout, visibility, sizing, container measurement. */
+  readonly layoutHelper: DataGridLayoutHelper<T>;
+  /** Editing helper: cell editing state, commit/cancel logic. */
+  readonly editingHelper: DataGridEditingHelper<T>;
+  /** Interaction helper: cell selection, keyboard nav, clipboard, fill handle, undo/redo. */
+  readonly interactionHelper: DataGridInteractionHelper<T>;
+
+  // --- Internal state (still owned by main service for backward compat) ---
   private readonly internalSelectedRows = signal<Set<RowId>>(new Set());
-  private readonly popoverAnchorElSig = signal<HTMLElement | null>(null);
-  private readonly containerWidthSig = signal<number>(0);
-  private readonly columnSizingOverridesSig = signal<Record<string, { widthPx: number }>>({});
-
-  // Clipboard state
-  private readonly cutRangeSig = signal<ISelectionRange | null>(null);
-  private readonly copyRangeSig = signal<ISelectionRange | null>(null);
-  private internalClipboard: string | null = null;
-
-  // Undo/redo state (backed by core UndoRedoStack)
-  private readonly undoRedoStack = new UndoRedoStack<ICellValueChangedEvent<T>>(100);
-  private readonly undoLengthSig = signal<number>(0);
-  private readonly redoLengthSig = signal<number>(0);
-
-  // Fill handle state
-  private fillDragStart: { startRow: number; startCol: number } | null = null;
-  private fillRafId = 0;
-  private fillMoveHandler: ((e: MouseEvent) => void) | null = null;
-  private fillUpHandler: (() => void) | null = null;
 
   // Row selection
   private lastClickedRow = -1;
-
-  // Drag selection refs
-  private dragStartPos: { row: number; col: number } | null = null;
-  private dragMoved = false;
-  private isDraggingRef = false;
-  private liveDragRange: ISelectionRange | null = null;
-  private rafId = 0;
-  private lastMousePos: { cx: number; cy: number } | null = null;
-  private autoScrollInterval: ReturnType<typeof setInterval> | null = null;
-
-  // ResizeObserver
-  private resizeObserver: ResizeObserver | null = null;
 
   // Header menu state (for column pinning UI)
   private readonly headerMenuIsOpenSig = signal<boolean>(false);
@@ -236,7 +211,11 @@ export class DataGridStateService<T> {
 
   // --- Derived computed ---
 
-  private readonly propsResolved = computed(() => this.props()!);
+  private readonly propsResolved = computed(() => {
+    const p = this.props();
+    if (!p) throw new Error('DataGridStateService: props must be set before use');
+    return p;
+  });
 
   readonly cellSelection = computed(() => {
     const p = this.props();
@@ -245,78 +224,32 @@ export class DataGridStateService<T> {
 
   // Narrow signal extractors — prevent full props() dependency in effects/computed
   private readonly originalOnCellValueChanged = computed(() => this.props()?.onCellValueChanged);
-  private readonly initialColumnWidthsSig = computed(() => this.props()?.initialColumnWidths);
 
   // Undo/redo wrapped callback — only recomputes when the actual callback reference changes
   private readonly wrappedOnCellValueChanged = computed(() => {
     const original = this.originalOnCellValueChanged();
     if (!original) return undefined;
     return (event: ICellValueChangedEvent<T>) => {
-      this.undoRedoStack.record(event);
-      if (!this.undoRedoStack.isBatching) {
-        this.undoLengthSig.set(this.undoRedoStack.historyLength);
-        this.redoLengthSig.set(this.undoRedoStack.redoLength);
+      this.interactionHelper.undoRedoStack.record(event);
+      if (!this.interactionHelper.undoRedoStack.isBatching) {
+        this.interactionHelper.undoLengthSig.set(this.interactionHelper.undoRedoStack.historyLength);
+        this.interactionHelper.redoLengthSig.set(this.interactionHelper.undoRedoStack.redoLength);
       }
       original(event);
     };
   });
 
-  readonly flatColumnsRaw = computed(() => {
-    const p = this.props();
-    if (!p) return [] as IColumnDef<T>[];
-    return flattenColumns(p.columns) as IColumnDef<T>[];
-  });
-
-  readonly flatColumns = computed(() => {
-    const raw = this.flatColumnsRaw();
-    const p = this.props();
-    const pinnedColumns = p?.pinnedColumns;
-    if (!pinnedColumns || Object.keys(pinnedColumns).length === 0) return raw;
-    return raw.map((col) => {
-      const override = pinnedColumns[col.columnId];
-      if (override && col.pinned !== override) return { ...col, pinned: override };
-      return col;
-    });
-  });
-
-  readonly visibleCols = computed(() => {
-    const p = this.props();
-    if (!p) return [] as IColumnDef<T>[];
-    const flatCols = this.flatColumns();
-    const filtered = p.visibleColumns
-      ? flatCols.filter((c) => p.visibleColumns.has(c.columnId))
-      : flatCols;
-    const order = p.columnOrder;
-    if (!order?.length) return filtered;
-    // Build index map for O(1) lookup instead of repeated O(n) indexOf
-    const orderMap = new Map<string, number>();
-    for (let i = 0; i < order.length; i++) {
-      orderMap.set(order[i], i);
-    }
-    return [...filtered].sort((a, b) => {
-      const ia = orderMap.get(a.columnId) ?? -1;
-      const ib = orderMap.get(b.columnId) ?? -1;
-      if (ia === -1 && ib === -1) return 0;
-      if (ia === -1) return 1;
-      if (ib === -1) return -1;
-      return ia - ib;
-    });
-  });
-
-  readonly visibleColumnCount = computed(() => this.visibleCols().length);
-  readonly hasCheckboxCol = computed(() => (this.props()?.rowSelection ?? 'none') === 'multiple');
-  readonly hasRowNumbersCol = computed(() => !!this.props()?.showRowNumbers);
-  readonly specialColsCount = computed(() => (this.hasCheckboxCol() ? 1 : 0) + (this.hasRowNumbersCol() ? 1 : 0));
-  readonly totalColCount = computed(() => this.visibleColumnCount() + this.specialColsCount());
-  readonly colOffset = computed(() => this.specialColsCount());
-
-  readonly rowIndexByRowId = computed(() => {
-    const p = this.props();
-    if (!p) return new Map<RowId, number>();
-    const m = new Map<RowId, number>();
-    p.items.forEach((item, idx) => m.set(p.getRowId(item), idx));
-    return m;
-  });
+  // --- Delegated computed signals from layoutHelper ---
+  readonly flatColumnsRaw = computed(() => this.layoutHelper.flatColumnsRaw());
+  readonly flatColumns = computed(() => this.layoutHelper.flatColumns());
+  readonly visibleCols = computed(() => this.layoutHelper.visibleCols());
+  readonly visibleColumnCount = computed(() => this.layoutHelper.visibleColumnCount());
+  readonly hasCheckboxCol = computed(() => this.layoutHelper.hasCheckboxCol());
+  readonly hasRowNumbersCol = computed(() => this.layoutHelper.hasRowNumbersCol());
+  readonly specialColsCount = computed(() => this.layoutHelper.specialColsCount());
+  readonly totalColCount = computed(() => this.layoutHelper.totalColCount());
+  readonly colOffset = computed(() => this.layoutHelper.colOffset());
+  readonly rowIndexByRowId = computed(() => this.layoutHelper.rowIndexByRowId());
 
   readonly selectedRowIds = computed(() => {
     const p = this.props();
@@ -342,31 +275,14 @@ export class DataGridStateService<T> {
     return !this.allSelected() && p.items.some((item) => selected.has(p.getRowId(item)));
   });
 
-  readonly hasCellSelection = computed(() => this.selectionRangeSig() != null || this.activeCellSig() != null);
+  readonly hasCellSelection = computed(() => this.interactionHelper.hasCellSelection());
 
-  readonly canUndo = computed(() => this.undoLengthSig() > 0);
-  readonly canRedo = computed(() => this.redoLengthSig() > 0);
+  readonly canUndo = computed(() => this.interactionHelper.canUndo());
+  readonly canRedo = computed(() => this.interactionHelper.canRedo());
 
-  // Table layout
-  readonly minTableWidth = computed(() => {
-    const checkboxW = this.hasCheckboxCol() ? CHECKBOX_COLUMN_WIDTH : 0;
-    return this.visibleCols().reduce(
-      (sum, c) => sum + (c.minWidth ?? DEFAULT_MIN_COLUMN_WIDTH) + CELL_PADDING,
-      checkboxW,
-    );
-  });
-
-  readonly desiredTableWidth = computed(() => {
-    const checkboxW = this.hasCheckboxCol() ? CHECKBOX_COLUMN_WIDTH : 0;
-    const overrides = this.columnSizingOverridesSig();
-    return this.visibleCols().reduce((sum, c) => {
-      const override = overrides[c.columnId];
-      const w = override
-        ? override.widthPx
-        : (c.idealWidth ?? c.defaultWidth ?? c.minWidth ?? DEFAULT_MIN_COLUMN_WIDTH);
-      return sum + Math.max(c.minWidth ?? DEFAULT_MIN_COLUMN_WIDTH, w) + CELL_PADDING;
-    }, checkboxW);
-  });
+  // Table layout (delegated to layoutHelper)
+  readonly minTableWidth = computed(() => this.layoutHelper.minTableWidth());
+  readonly desiredTableWidth = computed(() => this.layoutHelper.desiredTableWidth());
 
   readonly aggregation = computed(() => {
     const p = this.props();
@@ -374,7 +290,7 @@ export class DataGridStateService<T> {
     return computeAggregations(
       p.items,
       this.visibleCols(),
-      this.cellSelection() ? this.selectionRangeSig() : null,
+      this.cellSelection() ? this.interactionHelper.selectionRangeSig() : null,
     );
   });
 
@@ -397,6 +313,18 @@ export class DataGridStateService<T> {
   });
 
   constructor() {
+    // --- Instantiate sub-helpers ---
+    this.layoutHelper = new DataGridLayoutHelper<T>(this.props, this.wrapperEl, this.ngZone);
+
+    this.interactionHelper = new DataGridInteractionHelper<T>();
+
+    this.editingHelper = new DataGridEditingHelper<T>(
+      () => this.visibleCols(),
+      () => this.props()?.items ?? [],
+      () => this.wrappedOnCellValueChanged(),
+      (cell) => this.setActiveCell(cell),
+    );
+
     // Setup window event listeners for cell selection drag
     // Run outside NgZone to avoid 60Hz change detection during drag
     effect((onCleanup) => {
@@ -413,76 +341,10 @@ export class DataGridStateService<T> {
       });
     });
 
-    // Initialize column sizing overrides from initial widths
-    // Only track initialColumnWidths, not all props
-    effect(() => {
-      const widths = this.initialColumnWidthsSig();
-      if (widths) {
-        const result: Record<string, { widthPx: number }> = {};
-        for (const [id, width] of Object.entries(widths)) {
-          result[id] = { widthPx: width };
-        }
-        this.columnSizingOverridesSig.set(result);
-      }
-    });
-
-    // Container width measurement via ResizeObserver
-    // Run outside NgZone — signal.set() inside still triggers Angular reactivity
-    effect(() => {
-      const el = this.wrapperEl();
-      if (this.resizeObserver) {
-        this.resizeObserver.disconnect();
-        this.resizeObserver = null;
-      }
-      if (!el) return;
-      const measure = () => {
-        const rect = el.getBoundingClientRect();
-        const cs = window.getComputedStyle(el);
-        const borderX =
-          (parseFloat(cs.borderLeftWidth || '0') || 0) +
-          (parseFloat(cs.borderRightWidth || '0') || 0);
-        this.containerWidthSig.set(Math.max(0, rect.width - borderX));
-      };
-      this.ngZone.runOutsideAngular(() => {
-        this.resizeObserver = new ResizeObserver(measure);
-        this.resizeObserver.observe(el);
-      });
-      measure();
-    });
-
     // Cleanup on destroy — cancel pending work and release references
     this.destroyRef.onDestroy(() => {
-      if (this.rafId) { cancelAnimationFrame(this.rafId); this.rafId = 0; }
-      if (this.fillRafId) { cancelAnimationFrame(this.fillRafId); this.fillRafId = 0; }
-      if (this.autoScrollInterval) { clearInterval(this.autoScrollInterval); this.autoScrollInterval = null; }
-      if (this.resizeObserver) { this.resizeObserver.disconnect(); this.resizeObserver = null; }
-      // Remove fill-handle window listeners if active
-      if (this.fillMoveHandler) {
-        window.removeEventListener('mousemove', this.fillMoveHandler, true);
-        this.fillMoveHandler = null;
-      }
-      if (this.fillUpHandler) {
-        window.removeEventListener('mouseup', this.fillUpHandler, true);
-        this.fillUpHandler = null;
-      }
-      // Clear undo/redo stack to release closure references
-      this.undoRedoStack.clear();
-    });
-
-    // Clean up column sizing overrides for removed columns
-    effect(() => {
-      const colIds = new Set(this.flatColumns().map((c) => c.columnId));
-      this.columnSizingOverridesSig.update((prev) => {
-        const next = { ...prev };
-        let changed = false;
-        for (const id of Object.keys(next)) {
-          if (!colIds.has(id)) {
-            delete next[id];
-            changed = true;
-          }
-        }
-        return changed ? next : prev;
-      });
+      this.interactionHelper.destroy();
+      this.layoutHelper.destroy();
     });
   }
 
@@ -539,27 +401,22 @@ export class DataGridStateService<T> {
     }
   }
 
-  // --- Cell editing ---
+  // --- Cell editing (delegated to editingHelper) ---
 
   setEditingCell(cell: { rowId: RowId; columnId: string } | null): void {
-    this.editingCellSig.set(cell);
+    this.editingHelper.setEditingCell(cell);
   }
 
   setPendingEditorValue(value: unknown): void {
-    this.pendingEditorValueSig.set(value);
+    this.editingHelper.setPendingEditorValue(value);
   }
 
   setActiveCell(cell: IActiveCell | null): void {
-    const prev = this.activeCellSig();
-    if (prev === cell) return;
-    if (prev && cell && prev.rowIndex === cell.rowIndex && prev.columnIndex === cell.columnIndex) return;
-    this.activeCellSig.set(cell);
+    this.interactionHelper.setActiveCell(cell);
   }
 
   setSelectionRange(range: ISelectionRange | null): void {
-    const prev = this.selectionRangeSig();
-    if (rangesEqual(prev, range)) return;
-    this.selectionRangeSig.set(range);
+    this.interactionHelper.setSelectionRange(range);
   }
 
   commitCellEdit(
@@ -570,526 +427,118 @@ export class DataGridStateService<T> {
     rowIndex: number,
     globalColIndex: number,
   ): void {
-    const col = this.visibleCols().find((c) => c.columnId === columnId);
-    if (col) {
-      const result = parseValue(newValue, oldValue, item, col);
-      if (!result.valid) {
-        this.editingCellSig.set(null);
-        this.popoverAnchorElSig.set(null);
-        this.pendingEditorValueSig.set(undefined);
-        return;
-      }
-      newValue = result.value;
-    }
-
-    const onCellValueChanged = this.wrappedOnCellValueChanged();
-    onCellValueChanged?.({ item, columnId, oldValue, newValue, rowIndex });
-    this.editingCellSig.set(null);
-    this.popoverAnchorElSig.set(null);
-    this.pendingEditorValueSig.set(undefined);
-
-    const p = this.props();
-    if (p && rowIndex < p.items.length - 1) {
-      this.setActiveCell({ rowIndex: rowIndex + 1, columnIndex: globalColIndex });
-    }
+    this.editingHelper.commitCellEdit(item, columnId, oldValue, newValue, rowIndex, globalColIndex);
   }
 
   cancelPopoverEdit(): void {
-    this.editingCellSig.set(null);
-    this.popoverAnchorElSig.set(null);
-    this.pendingEditorValueSig.set(undefined);
+    this.editingHelper.cancelPopoverEdit();
   }
 
-  // --- Cell selection / mouse handling ---
+  // --- Cell selection / mouse handling (delegated to interactionHelper) ---
 
   handleCellMouseDown(e: MouseEvent, rowIndex: number, globalColIndex: number): void {
-    if (e.button !== 0) return;
-    const wrapper = this.wrapperEl();
-    wrapper?.focus({ preventScroll: true });
-    this.clearClipboardRanges();
-
-    const colOffset = this.colOffset();
-    if (globalColIndex < colOffset) return;
-    e.preventDefault();
-
-    const dataColIndex = globalColIndex - colOffset;
-    const currentRange = this.selectionRangeSig();
-
-    if (e.shiftKey && currentRange != null) {
-      this.setSelectionRange(
-        normalizeSelectionRange({
-          startRow: currentRange.startRow,
-          startCol: currentRange.startCol,
-          endRow: rowIndex,
-          endCol: dataColIndex,
-        }),
-      );
-      this.setActiveCell({ rowIndex, columnIndex: globalColIndex });
-    } else {
-      this.dragStartPos = { row: rowIndex, col: dataColIndex };
-      this.dragMoved = false;
-      const initial: ISelectionRange = {
-        startRow: rowIndex, startCol: dataColIndex,
-        endRow: rowIndex, endCol: dataColIndex,
-      };
-      this.setSelectionRange(initial);
-      this.liveDragRange = initial;
-      this.setActiveCell({ rowIndex, columnIndex: globalColIndex });
-      this.isDraggingRef = true;
-    }
+    this.interactionHelper.handleCellMouseDown(e, rowIndex, globalColIndex, this.colOffset(), this.wrapperEl());
   }
 
   handleSelectAllCells(): void {
     const p = this.props();
     if (!p) return;
-    const rowCount = p.items.length;
-    const visibleColCount = this.visibleColumnCount();
-    if (rowCount === 0 || visibleColCount === 0) return;
-    this.setSelectionRange({
-      startRow: 0, startCol: 0,
-      endRow: rowCount - 1, endCol: visibleColCount - 1,
-    });
-    this.setActiveCell({ rowIndex: 0, columnIndex: this.colOffset() });
+    this.interactionHelper.handleSelectAllCells(p.items.length, this.visibleColumnCount(), this.colOffset());
   }
 
-  // --- Context menu ---
+  // --- Context menu (delegated to interactionHelper) ---
 
   setContextMenuPosition(pos: { x: number; y: number } | null): void {
-    this.contextMenuPositionSig.set(pos);
+    this.interactionHelper.setContextMenuPosition(pos);
   }
 
   handleCellContextMenu(e: { clientX: number; clientY: number; preventDefault?: () => void }): void {
-    e.preventDefault?.();
-    this.contextMenuPositionSig.set({ x: e.clientX, y: e.clientY });
+    this.interactionHelper.handleCellContextMenu(e);
   }
 
   closeContextMenu(): void {
-    this.contextMenuPositionSig.set(null);
+    this.interactionHelper.closeContextMenu();
   }
 
-  // --- Clipboard ---
+  // --- Clipboard (delegated to interactionHelper) ---
 
   handleCopy(): void {
     const p = this.props();
     if (!p) return;
-    const range = this.getEffectiveRange();
-    if (range == null) return;
-    const norm = normalizeSelectionRange(range);
-    const tsv = formatSelectionAsTsv(p.items, this.visibleCols(), norm);
-    this.internalClipboard = tsv;
-    this.copyRangeSig.set(norm);
-    void navigator.clipboard.writeText(tsv).catch(() => {});
+    this.interactionHelper.handleCopy(p.items, this.visibleCols(), this.colOffset());
   }
 
   handleCut(): void {
     const p = this.props();
-    if (!p || this.props()?.editable === false) return;
-    const range = this.getEffectiveRange();
-    if (range == null || !this.wrappedOnCellValueChanged()) return;
-    const norm = normalizeSelectionRange(range);
-    this.cutRangeSig.set(norm);
-    this.copyRangeSig.set(null);
-    this.handleCopy();
-    this.copyRangeSig.set(null);
+    if (!p) return;
+    this.interactionHelper.handleCut(
+      p.items, this.visibleCols(), this.colOffset(),
+      p.editable, this.wrappedOnCellValueChanged(),
+    );
   }
 
   async handlePaste(): Promise<void> {
     const p = this.props();
-    if (!p || p.editable === false) return;
-    const onCellValueChanged = this.wrappedOnCellValueChanged();
-    if (!onCellValueChanged) return;
-
-    let text: string;
-    try {
-      text = await navigator.clipboard.readText();
-    } catch {
-      text = '';
-    }
-    if (!text.trim() && this.internalClipboard != null) {
-      text = this.internalClipboard;
-    }
-    if (!text.trim()) return;
-
-    const norm = this.getEffectiveRange();
-    const anchorRow = norm ? norm.startRow : 0;
-    const anchorCol = norm ? norm.startCol : 0;
-    const visibleCols = this.visibleCols();
-    const parsedRows = parseTsvClipboard(text);
-
-    this.beginBatch();
-    for (let r = 0; r < parsedRows.length; r++) {
-      const cells = parsedRows[r];
-      for (let c = 0; c < cells.length; c++) {
-        const targetRow = anchorRow + r;
-        const targetCol = anchorCol + c;
-        if (targetRow >= p.items.length || targetCol >= visibleCols.length) continue;
-        const item = p.items[targetRow];
-        const col = visibleCols[targetCol];
-        const colEditable = col.editable === true || (typeof col.editable === 'function' && col.editable(item));
-        if (!colEditable) continue;
-        const rawValue = cells[c] ?? '';
-        const oldValue = getCellValue(item, col);
-        const result = parseValue(rawValue, oldValue, item, col);
-        if (!result.valid) continue;
-        onCellValueChanged({ item, columnId: col.columnId, oldValue, newValue: result.value, rowIndex: targetRow });
-      }
-    }
-
-    const cutRange = this.cutRangeSig();
-    if (cutRange) {
-      for (let r = cutRange.startRow; r <= cutRange.endRow; r++) {
-        for (let c = cutRange.startCol; c <= cutRange.endCol; c++) {
-          if (r >= p.items.length || c >= visibleCols.length) continue;
-          const item = p.items[r];
-          const col = visibleCols[c];
-          const colEditable = col.editable === true || (typeof col.editable === 'function' && col.editable(item));
-          if (!colEditable) continue;
-          const oldValue = getCellValue(item, col);
-          const result = parseValue('', oldValue, item, col);
-          if (!result.valid) continue;
-          onCellValueChanged({ item, columnId: col.columnId, oldValue, newValue: result.value, rowIndex: r });
-        }
-      }
-      this.cutRangeSig.set(null);
-    }
-    this.endBatch();
-    this.copyRangeSig.set(null);
+    if (!p) return;
+    await this.interactionHelper.handlePaste(
+      p.items, this.visibleCols(), this.colOffset(),
+      p.editable, this.wrappedOnCellValueChanged(),
+    );
   }
 
   clearClipboardRanges(): void {
-    this.copyRangeSig.set(null);
-    this.cutRangeSig.set(null);
+    this.interactionHelper.clearClipboardRanges();
   }
 
-  // --- Undo/Redo ---
+  // --- Undo/Redo (delegated to interactionHelper) ---
 
   beginBatch(): void {
-    this.undoRedoStack.beginBatch();
+    this.interactionHelper.beginBatch();
   }
 
   endBatch(): void {
-    this.undoRedoStack.endBatch();
-    this.undoLengthSig.set(this.undoRedoStack.historyLength);
-    this.redoLengthSig.set(this.undoRedoStack.redoLength);
+    this.interactionHelper.endBatch();
   }
 
   undo(): void {
     const p = this.props();
-    const original = p?.onCellValueChanged;
-    if (!original) return;
-    const lastBatch = this.undoRedoStack.undo();
-    if (!lastBatch) return;
-    this.undoLengthSig.set(this.undoRedoStack.historyLength);
-    this.redoLengthSig.set(this.undoRedoStack.redoLength);
-    for (let i = lastBatch.length - 1; i >= 0; i--) {
-      const ev = lastBatch[i];
-      original({ ...ev, oldValue: ev.newValue, newValue: ev.oldValue });
-    }
+    this.interactionHelper.undo(p?.onCellValueChanged);
   }
 
   redo(): void {
     const p = this.props();
-    const original = p?.onCellValueChanged;
-    if (!original) return;
-    const nextBatch = this.undoRedoStack.redo();
-    if (!nextBatch) return;
-    this.undoLengthSig.set(this.undoRedoStack.historyLength);
-    this.redoLengthSig.set(this.undoRedoStack.redoLength);
-    for (const ev of nextBatch) {
-      original(ev);
-    }
+    this.interactionHelper.redo(p?.onCellValueChanged);
   }
 
-  // --- Keyboard navigation ---
+  // --- Keyboard navigation (delegated to interactionHelper) ---
 
   handleGridKeyDown(e: KeyboardEvent): void {
     const p = this.props();
     if (!p) return;
-    const { items, getRowId } = p;
-    const visibleCols = this.visibleCols();
-    const colOffset = this.colOffset();
-    const hasCheckboxCol = this.hasCheckboxCol();
-    const visibleColumnCount = this.visibleColumnCount();
-    const activeCell = this.activeCellSig();
-    const selectionRange = this.selectionRangeSig();
-    const editingCell = this.editingCellSig();
-    const selectedRowIds = this.selectedRowIds();
-    const editable = p.editable;
-    const onCellValueChanged = this.wrappedOnCellValueChanged();
-    const rowSelection = p.rowSelection ?? 'none';
-
-    const maxRowIndex = items.length - 1;
-    const maxColIndex = visibleColumnCount - 1 + colOffset;
-
-    if (items.length === 0) return;
-
-    if (activeCell === null) {
-      if (['ArrowDown', 'ArrowUp', 'ArrowLeft', 'ArrowRight', 'Tab', 'Enter', 'Home', 'End'].includes(e.key)) {
-        this.setActiveCell({ rowIndex: 0, columnIndex: colOffset });
-        e.preventDefault();
-      }
-      return;
-    }
-
-    const { rowIndex, columnIndex } = activeCell;
-    const dataColIndex = columnIndex - colOffset;
-    const shift = e.shiftKey;
-    const ctrl = e.ctrlKey || e.metaKey;
-
-    const isEmptyAt = (r: number, c: number): boolean => {
-      if (r < 0 || r >= items.length || c < 0 || c >= visibleCols.length) return true;
-      const v = getCellValue(items[r], visibleCols[c]);
-      return v == null || v === '';
-    };
-
-    const findCtrlTarget = findCtrlArrowTarget;
-
-    switch (e.key) {
-      case 'c':
-        if (ctrl) {
-          if (editingCell != null) break;
-          e.preventDefault();
-          this.handleCopy();
-        }
-        break;
-      case 'x':
-        if (ctrl) {
-          if (editingCell != null) break;
-          e.preventDefault();
-          this.handleCut();
-        }
-        break;
-      case 'v':
-        if (ctrl) {
-          if (editingCell != null) break;
-          e.preventDefault();
-          void this.handlePaste();
-        }
-        break;
-      case 'ArrowDown': {
-        e.preventDefault();
-        const newRow = ctrl
-          ? findCtrlTarget(rowIndex, maxRowIndex, 1, (r) => isEmptyAt(r, Math.max(0, dataColIndex)))
-          : Math.min(rowIndex + 1, maxRowIndex);
-        if (shift) {
-          this.setSelectionRange(normalizeSelectionRange({
-            startRow: selectionRange?.startRow ?? rowIndex,
-            startCol: selectionRange?.startCol ?? dataColIndex,
-            endRow: newRow,
-            endCol: selectionRange?.endCol ?? dataColIndex,
-          }));
-        } else {
-          this.setSelectionRange({ startRow: newRow, startCol: dataColIndex, endRow: newRow, endCol: dataColIndex });
-        }
-        this.setActiveCell({ rowIndex: newRow, columnIndex });
-        break;
-      }
-      case 'ArrowUp': {
-        e.preventDefault();
-        const newRowUp = ctrl
-          ? findCtrlTarget(rowIndex, 0, -1, (r) => isEmptyAt(r, Math.max(0, dataColIndex)))
-          : Math.max(rowIndex - 1, 0);
-        if (shift) {
-          this.setSelectionRange(normalizeSelectionRange({
-            startRow: selectionRange?.startRow ?? rowIndex,
-            startCol: selectionRange?.startCol ?? dataColIndex,
-            endRow: newRowUp,
-            endCol: selectionRange?.endCol ?? dataColIndex,
-          }));
-        } else {
-          this.setSelectionRange({ startRow: newRowUp, startCol: dataColIndex, endRow: newRowUp, endCol: dataColIndex });
-        }
-        this.setActiveCell({ rowIndex: newRowUp, columnIndex });
-        break;
-      }
-      case 'ArrowRight': {
-        e.preventDefault();
-        let newCol: number;
-        if (ctrl && dataColIndex >= 0) {
-          newCol = findCtrlTarget(dataColIndex, visibleCols.length - 1, 1, (c) => isEmptyAt(rowIndex, c)) + colOffset;
-        } else {
-          newCol = Math.min(columnIndex + 1, maxColIndex);
-        }
-        const newDataCol = newCol - colOffset;
-        if (shift) {
-          this.setSelectionRange(normalizeSelectionRange({
-            startRow: selectionRange?.startRow ?? rowIndex,
-            startCol: selectionRange?.startCol ?? dataColIndex,
-            endRow: selectionRange?.endRow ?? rowIndex,
-            endCol: newDataCol,
-          }));
-        } else {
-          this.setSelectionRange({ startRow: rowIndex, startCol: newDataCol, endRow: rowIndex, endCol: newDataCol });
-        }
-        this.setActiveCell({ rowIndex, columnIndex: newCol });
-        break;
-      }
-      case 'ArrowLeft': {
-        e.preventDefault();
-        let newColLeft: number;
-        if (ctrl && dataColIndex >= 0) {
-          newColLeft = findCtrlTarget(dataColIndex, 0, -1, (c) => isEmptyAt(rowIndex, c)) + colOffset;
-        } else {
-          newColLeft = Math.max(columnIndex - 1, colOffset);
-        }
-        const newDataColLeft = newColLeft - colOffset;
-        if (shift) {
-          this.setSelectionRange(normalizeSelectionRange({
-            startRow: selectionRange?.startRow ?? rowIndex,
-            startCol: selectionRange?.startCol ?? dataColIndex,
-            endRow: selectionRange?.endRow ?? rowIndex,
-            endCol: newDataColLeft,
-          }));
-        } else {
-          this.setSelectionRange({ startRow: rowIndex, startCol: newDataColLeft, endRow: rowIndex, endCol: newDataColLeft });
-        }
-        this.setActiveCell({ rowIndex, columnIndex: newColLeft });
-        break;
-      }
-      case 'Tab': {
-        e.preventDefault();
-        const tabResult = computeTabNavigation(rowIndex, columnIndex, maxRowIndex, maxColIndex, colOffset, e.shiftKey);
-        const newDataColTab = tabResult.columnIndex - colOffset;
-        this.setSelectionRange({ startRow: tabResult.rowIndex, startCol: newDataColTab, endRow: tabResult.rowIndex, endCol: newDataColTab });
-        this.setActiveCell({ rowIndex: tabResult.rowIndex, columnIndex: tabResult.columnIndex });
-        break;
-      }
-      case 'Home': {
-        e.preventDefault();
-        const newRowHome = ctrl ? 0 : rowIndex;
-        this.setSelectionRange({ startRow: newRowHome, startCol: 0, endRow: newRowHome, endCol: 0 });
-        this.setActiveCell({ rowIndex: newRowHome, columnIndex: colOffset });
-        break;
-      }
-      case 'End': {
-        e.preventDefault();
-        const newRowEnd = ctrl ? maxRowIndex : rowIndex;
-        this.setSelectionRange({ startRow: newRowEnd, startCol: visibleColumnCount - 1, endRow: newRowEnd, endCol: visibleColumnCount - 1 });
-        this.setActiveCell({ rowIndex: newRowEnd, columnIndex: maxColIndex });
-        break;
-      }
-      case 'Enter':
-      case 'F2': {
-        e.preventDefault();
-        if (dataColIndex >= 0 && dataColIndex < visibleCols.length) {
-          const col = visibleCols[dataColIndex];
-          const item = items[rowIndex];
-          if (item && col) {
-            const colEditable = col.editable === true || (typeof col.editable === 'function' && col.editable(item));
-            if (editable !== false && colEditable && onCellValueChanged != null) {
-              this.setEditingCell({ rowId: getRowId(item), columnId: col.columnId });
-            }
-          }
-        }
-        break;
-      }
-      case 'Escape':
-        e.preventDefault();
-        if (editingCell != null) {
-          this.setEditingCell(null);
-        } else {
-          this.clearClipboardRanges();
-          this.setActiveCell(null);
-          this.setSelectionRange(null);
-        }
-        break;
-      case ' ':
-        if (rowSelection !== 'none' && columnIndex === 0 && hasCheckboxCol) {
-          e.preventDefault();
-          const item = items[rowIndex];
-          if (item) {
-            const id = getRowId(item);
-            const isSelected = selectedRowIds.has(id);
-            this.handleRowCheckboxChange(id, !isSelected, rowIndex, e.shiftKey);
-          }
-        }
-        break;
-      case 'z':
-        if (ctrl) {
-          if (editingCell == null) {
-            if (e.shiftKey) {
-              e.preventDefault();
-              this.redo();
-            } else {
-              e.preventDefault();
-              this.undo();
-            }
-          }
-        }
-        break;
-      case 'y':
-        if (ctrl && editingCell == null) {
-          e.preventDefault();
-          this.redo();
-        }
-        break;
-      case 'a':
-        if (ctrl) {
-          if (editingCell != null) break;
-          e.preventDefault();
-          if (items.length > 0 && visibleColumnCount > 0) {
-            this.setSelectionRange({ startRow: 0, startCol: 0, endRow: items.length - 1, endCol: visibleColumnCount - 1 });
-            this.setActiveCell({ rowIndex: 0, columnIndex: colOffset });
-          }
-        }
-        break;
-      case 'Delete':
-      case 'Backspace': {
-        if (editingCell != null) break;
-        if (editable === false) break;
-        if (onCellValueChanged == null) break;
-        const range = selectionRange ?? (activeCell != null
-          ? { startRow: activeCell.rowIndex, startCol: activeCell.columnIndex - colOffset, endRow: activeCell.rowIndex, endCol: activeCell.columnIndex - colOffset }
-          : null);
-        if (range == null) break;
-        e.preventDefault();
-        const norm = normalizeSelectionRange(range);
-        for (let r = norm.startRow; r <= norm.endRow; r++) {
-          for (let c = norm.startCol; c <= norm.endCol; c++) {
-            if (r >= items.length || c >= visibleCols.length) continue;
-            const item = items[r];
-            const col = visibleCols[c];
-            const colEditable = col.editable === true || (typeof col.editable === 'function' && col.editable(item));
-            if (!colEditable) continue;
-            const oldValue = getCellValue(item, col);
-            const result = parseValue('', oldValue, item, col);
-            if (!result.valid) continue;
-            onCellValueChanged({ item, columnId: col.columnId, oldValue, newValue: result.value, rowIndex: r });
-          }
-        }
-        break;
-      }
-      case 'F10':
-        if (e.shiftKey) {
-          e.preventDefault();
-          const wrapper = this.wrapperEl();
-          if (activeCell != null && wrapper) {
-            const sel = `[data-row-index="${activeCell.rowIndex}"][data-col-index="${activeCell.columnIndex}"]`;
-            const cell = wrapper.querySelector(sel) as HTMLElement | null;
-            if (cell) {
-              const rect = cell.getBoundingClientRect();
-              this.setContextMenuPosition({ x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 });
-            } else {
-              this.setContextMenuPosition({ x: 100, y: 100 });
-            }
-          } else {
-            this.setContextMenuPosition({ x: 100, y: 100 });
-          }
-        }
-        break;
-      default:
-        break;
-    }
+    this.interactionHelper.handleGridKeyDown(
+      e,
+      p.items,
+      p.getRowId,
+      this.visibleCols(),
+      this.colOffset(),
+      this.hasCheckboxCol(),
+      this.visibleColumnCount(),
+      p.editable,
+      this.wrappedOnCellValueChanged(),
+      p.onCellValueChanged,
+      p.rowSelection ?? 'none',
+      this.selectedRowIds(),
+      this.wrapperEl(),
+      (rowId, checked, rowIndex, shiftKey) => this.handleRowCheckboxChange(rowId, checked, rowIndex, shiftKey),
+      this.editingHelper.editingCellSig(),
+      (cell) => this.setEditingCell(cell),
+    );
   }
 
-  // --- Fill handle ---
+  // --- Fill handle (delegated to interactionHelper + setupFillHandleDrag) ---
 
   handleFillHandleMouseDown(e: MouseEvent): void {
-    e.preventDefault();
-    e.stopPropagation();
-    const range = this.selectionRangeSig();
-    if (!range) return;
-    this.fillDragStart = { startRow: range.startRow, startCol: range.startCol };
+    this.interactionHelper.handleFillHandleMouseDown(e);
     this.setupFillHandleDrag();
   }
 
@@ -1172,11 +621,11 @@ export class DataGridStateService<T> {
       hasCheckboxCol: this.hasCheckboxCol(),
       hasRowNumbersCol: this.hasRowNumbersCol(),
       rowIndexByRowId: this.rowIndexByRowId(),
-      containerWidth: this.containerWidthSig(),
+      containerWidth: this.layoutHelper.containerWidthSig(),
       minTableWidth: this.minTableWidth(),
       desiredTableWidth: this.desiredTableWidth(),
-      columnSizingOverrides: this.columnSizingOverridesSig(),
-      setColumnSizingOverrides: (overrides) => this.columnSizingOverridesSig.set(overrides),
+      columnSizingOverrides: this.layoutHelper.columnSizingOverridesSig(),
+      setColumnSizingOverrides: (overrides) => this.layoutHelper.columnSizingOverridesSig.set(overrides),
       onColumnResized: p?.onColumnResized,
       onAutosizeColumn: p?.onAutosizeColumn,
     };
@@ -1191,51 +640,45 @@ export class DataGridStateService<T> {
     };
 
     const editing: DataGridEditingState<T> = {
-      editingCell: this.editingCellSig(),
+      editingCell: this.editingHelper.editingCellSig(),
       setEditingCell: (cell) => this.setEditingCell(cell),
-      pendingEditorValue: this.pendingEditorValueSig(),
+      pendingEditorValue: this.editingHelper.pendingEditorValueSig(),
       setPendingEditorValue: (v) => this.setPendingEditorValue(v),
       commitCellEdit: (item, colId, oldVal, newVal, rowIdx, globalColIdx) =>
         this.commitCellEdit(item, colId, oldVal, newVal, rowIdx, globalColIdx),
       cancelPopoverEdit: () => this.cancelPopoverEdit(),
-      popoverAnchorEl: this.popoverAnchorElSig(),
-      setPopoverAnchorEl: (el) => this.popoverAnchorElSig.set(el),
+      popoverAnchorEl: this.editingHelper.popoverAnchorElSig(),
+      setPopoverAnchorEl: (el) => this.editingHelper.popoverAnchorElSig.set(el),
     };
 
-    const noop = () => {};
-    const noopAsync = async () => {};
-    const noopMouse = (_e: MouseEvent, _r: number, _c: number) => {};
-    const noopKey = (_e: KeyboardEvent) => {};
-    const noopCtx = (_e: { clientX: number; clientY: number; preventDefault?: () => void }) => {};
-
     const interaction: DataGridCellInteractionState = {
-      activeCell: cellSel ? this.activeCellSig() : null,
-      setActiveCell: cellSel ? (cell) => this.setActiveCell(cell) : noop as never,
-      selectionRange: cellSel ? this.selectionRangeSig() : null,
-      setSelectionRange: cellSel ? (range) => this.setSelectionRange(range) : noop as never,
-      handleCellMouseDown: cellSel ? (e, r, c) => this.handleCellMouseDown(e, r, c) : noopMouse,
-      handleSelectAllCells: cellSel ? () => this.handleSelectAllCells() : noop,
+      activeCell: cellSel ? this.interactionHelper.activeCellSig() : null,
+      setActiveCell: cellSel ? (cell) => this.setActiveCell(cell) : undefined,
+      selectionRange: cellSel ? this.interactionHelper.selectionRangeSig() : null,
+      setSelectionRange: cellSel ? (range) => this.setSelectionRange(range) : undefined,
+      handleCellMouseDown: cellSel ? (e, r, c) => this.handleCellMouseDown(e, r, c) : NOOP_MOUSE,
+      handleSelectAllCells: cellSel ? () => this.handleSelectAllCells() : NOOP,
       hasCellSelection: cellSel ? this.hasCellSelection() : false,
-      handleGridKeyDown: cellSel ? (e) => this.handleGridKeyDown(e) : noopKey,
-      handleFillHandleMouseDown: cellSel ? (e) => this.handleFillHandleMouseDown(e) : noop as never,
-      handleCopy: cellSel ? () => this.handleCopy() : noop,
-      handleCut: cellSel ? () => this.handleCut() : noop,
-      handlePaste: cellSel ? () => this.handlePaste() : noopAsync,
-      cutRange: cellSel ? this.cutRangeSig() : null,
-      copyRange: cellSel ? this.copyRangeSig() : null,
-      clearClipboardRanges: cellSel ? () => this.clearClipboardRanges() : noop,
+      handleGridKeyDown: cellSel ? (e) => this.handleGridKeyDown(e) : NOOP_KEY,
+      handleFillHandleMouseDown: cellSel ? (e) => this.handleFillHandleMouseDown(e) : undefined,
+      handleCopy: cellSel ? () => this.handleCopy() : NOOP,
+      handleCut: cellSel ? () => this.handleCut() : NOOP,
+      handlePaste: cellSel ? () => this.handlePaste() : NOOP_ASYNC,
+      cutRange: cellSel ? this.interactionHelper.cutRangeSig() : null,
+      copyRange: cellSel ? this.interactionHelper.copyRangeSig() : null,
+      clearClipboardRanges: cellSel ? () => this.clearClipboardRanges() : NOOP,
       canUndo: this.canUndo(),
       canRedo: this.canRedo(),
       onUndo: () => this.undo(),
       onRedo: () => this.redo(),
-      isDragging: cellSel ? this.isDraggingSig() : false,
+      isDragging: cellSel ? this.interactionHelper.isDraggingSig() : false,
     };
 
     const contextMenu: DataGridContextMenuState = {
-      menuPosition: cellSel ? this.contextMenuPositionSig() : null,
-      setMenuPosition: cellSel ? (pos) => this.setContextMenuPosition(pos) : noop as never,
-      handleCellContextMenu: cellSel ? (e) => this.handleCellContextMenu(e) : noopCtx,
-      closeContextMenu: cellSel ? () => this.closeContextMenu() : noop,
+      menuPosition: cellSel ? this.interactionHelper.contextMenuPositionSig() : null,
+      setMenuPosition: cellSel ? (pos) => this.setContextMenuPosition(pos) : undefined,
+      handleCellContextMenu: cellSel ? (e) => this.handleCellContextMenu(e) : NOOP_CTX,
+      closeContextMenu: cellSel ? () => this.closeContextMenu() : NOOP,
     };
 
     const viewModels: DataGridViewModelState<T> = {
@@ -1250,17 +693,17 @@ export class DataGridStateService<T> {
         peopleSearch: p?.peopleSearch,
       },
       cellDescriptorInput: {
-        editingCell: this.editingCellSig(),
-        activeCell: cellSel ? this.activeCellSig() : null,
-        selectionRange: cellSel ? this.selectionRangeSig() : null,
-        cutRange: cellSel ? this.cutRangeSig() : null,
-        copyRange: cellSel ? this.copyRangeSig() : null,
+        editingCell: this.editingHelper.editingCellSig(),
+        activeCell: cellSel ? this.interactionHelper.activeCellSig() : null,
+        selectionRange: cellSel ? this.interactionHelper.selectionRangeSig() : null,
+        cutRange: cellSel ? this.interactionHelper.cutRangeSig() : null,
+        copyRange: cellSel ? this.interactionHelper.copyRangeSig() : null,
         colOffset: this.colOffset(),
         itemsLength: p?.items.length ?? 0,
         getRowId: p?.getRowId ?? ((item: T) => (item as Record<string, unknown>)['id'] as RowId),
         editable: p?.editable,
         onCellValueChanged: this.wrappedOnCellValueChanged(),
-        isDragging: cellSel ? this.isDraggingSig() : false,
+        isDragging: cellSel ? this.interactionHelper.isDraggingSig() : false,
       },
       statusBarConfig: this.statusBarConfig(),
       showEmptyInGrid: this.showEmptyInGrid(),
@@ -1294,136 +737,23 @@ export class DataGridStateService<T> {
     return { layout, rowSelection, editing, interaction, contextMenu, viewModels, pinning };
   }
 
-  // --- Private helpers ---
-
-  private getEffectiveRange(): ISelectionRange | null {
-    const sel = this.selectionRangeSig();
-    const ac = this.activeCellSig();
-    const colOffset = this.colOffset();
-    return sel ?? (ac != null
-      ? { startRow: ac.rowIndex, startCol: ac.columnIndex - colOffset, endRow: ac.rowIndex, endCol: ac.columnIndex - colOffset }
-      : null);
-  }
+  // --- Private helpers (drag selection delegated to interactionHelper) ---
 
   private onWindowMouseMove(e: MouseEvent): void {
-    if (!this.isDraggingRef || !this.dragStartPos) return;
-
-    if (!this.dragMoved) {
-      this.dragMoved = true;
-      this.isDraggingSig.set(true);
-    }
-
-    this.lastMousePos = { cx: e.clientX, cy: e.clientY };
-
-    if (this.rafId) cancelAnimationFrame(this.rafId);
-    this.rafId = requestAnimationFrame(() => {
-      this.rafId = 0;
-      const pos = this.lastMousePos;
-      if (!pos) return;
-      const newRange = this.resolveRangeFromMouse(pos.cx, pos.cy);
-      if (!newRange) return;
-
-      const prev = this.liveDragRange;
-      if (prev && prev.startRow === newRange.startRow && prev.startCol === newRange.startCol &&
-          prev.endRow === newRange.endRow && prev.endCol === newRange.endCol) return;
-
-      this.liveDragRange = newRange;
-      this.applyDragAttrs(newRange);
-    });
+    this.interactionHelper.onWindowMouseMove(e, this.colOffset(), this.wrapperEl());
   }
 
   private onWindowMouseUp(): void {
-    if (!this.isDraggingRef) return;
-
-    if (this.autoScrollInterval) {
-      clearInterval(this.autoScrollInterval);
-      this.autoScrollInterval = null;
-    }
-
-    if (this.rafId) {
-      cancelAnimationFrame(this.rafId);
-      this.rafId = 0;
-    }
-
-    this.isDraggingRef = false;
-    const wasDrag = this.dragMoved;
-
-    if (wasDrag) {
-      const pos = this.lastMousePos;
-      if (pos) {
-        const flushed = this.resolveRangeFromMouse(pos.cx, pos.cy);
-        if (flushed) this.liveDragRange = flushed;
-      }
-
-      const finalRange = this.liveDragRange;
-      if (finalRange) {
-        this.setSelectionRange(finalRange);
-        this.setActiveCell({
-          rowIndex: finalRange.endRow,
-          columnIndex: finalRange.endCol + this.colOffset(),
-        });
-      }
-    }
-
-    this.clearDragAttrs();
-    this.liveDragRange = null;
-    this.lastMousePos = null;
-    this.dragStartPos = null;
-    if (wasDrag) this.isDraggingSig.set(false);
-  }
-
-  private resolveRangeFromMouse(cx: number, cy: number): ISelectionRange | null {
-    if (!this.dragStartPos) return null;
-    const target = document.elementFromPoint(cx, cy);
-    const cell = (target as HTMLElement)?.closest?.('[data-row-index][data-col-index]');
-    if (!cell) return null;
-    const r = parseInt(cell.getAttribute('data-row-index') ?? '', 10);
-    const c = parseInt(cell.getAttribute('data-col-index') ?? '', 10);
-    const colOff = this.colOffset();
-    if (Number.isNaN(r) || Number.isNaN(c) || c < colOff) return null;
-    const dataCol = c - colOff;
-    const start = this.dragStartPos;
-    return normalizeSelectionRange({
-      startRow: start.row, startCol: start.col,
-      endRow: r, endCol: dataCol,
-    });
-  }
-
-  private applyDragAttrs(range: ISelectionRange): void {
-    const wrapper = this.wrapperEl();
-    if (!wrapper) return;
-    const colOff = this.colOffset();
-    const minR = Math.min(range.startRow, range.endRow);
-    const maxR = Math.max(range.startRow, range.endRow);
-    const minC = Math.min(range.startCol, range.endCol);
-    const maxC = Math.max(range.startCol, range.endCol);
-    const cells = wrapper.querySelectorAll('[data-row-index][data-col-index]');
-    for (let i = 0; i < cells.length; i++) {
-      const el = cells[i];
-      const r = parseInt(el.getAttribute('data-row-index')!, 10);
-      const c = parseInt(el.getAttribute('data-col-index')!, 10) - colOff;
-      const inRange = r >= minR && r <= maxR && c >= minC && c <= maxC;
-      if (inRange) {
-        if (!el.hasAttribute('data-drag-range')) el.setAttribute('data-drag-range', '');
-      } else {
-        if (el.hasAttribute('data-drag-range')) el.removeAttribute('data-drag-range');
-      }
-    }
-  }
-
-  private clearDragAttrs(): void {
-    const wrapper = this.wrapperEl();
-    if (!wrapper) return;
-    const marked = wrapper.querySelectorAll('[data-drag-range]');
-    for (let i = 0; i < marked.length; i++) marked[i].removeAttribute('data-drag-range');
+    this.interactionHelper.onWindowMouseUp(this.colOffset(), this.wrapperEl());
   }
 
   private setupFillHandleDrag(): void {
     const p = this.props();
-    if (!this.fillDragStart || p?.editable === false || !this.wrappedOnCellValueChanged()) return;
+    const fillDragStart = this.interactionHelper.fillDragStart;
+    if (!fillDragStart || p?.editable === false || !this.wrappedOnCellValueChanged()) return;
 
     const colOff = this.colOffset();
-    const fillStart = this.fillDragStart;
+    const fillStart = fillDragStart;
     let fillDragEnd = { endRow: fillStart.startRow, endCol: fillStart.startCol };
     let liveFillRange: ISelectionRange | null = null;
     let lastFillMousePos: { cx: number; cy: number } | null = null;
@@ -1445,9 +775,9 @@ export class DataGridStateService<T> {
 
     const onMove = (e: MouseEvent) => {
       lastFillMousePos = { cx: e.clientX, cy: e.clientY };
-      if (this.fillRafId) cancelAnimationFrame(this.fillRafId);
-      this.fillRafId = requestAnimationFrame(() => {
-        this.fillRafId = 0;
+      if (this.interactionHelper.fillRafId) cancelAnimationFrame(this.interactionHelper.fillRafId);
+      this.interactionHelper.fillRafId = requestAnimationFrame(() => {
+        this.interactionHelper.fillRafId = 0;
         if (!lastFillMousePos) return;
         const newRange = resolveRange(lastFillMousePos.cx, lastFillMousePos.cy);
         if (!newRange) return;
@@ -1457,24 +787,24 @@ export class DataGridStateService<T> {
             liveFillRange.endCol === newRange.endCol) return;
         liveFillRange = newRange;
         fillDragEnd = { endRow: newRange.endRow, endCol: newRange.endCol };
-        this.applyDragAttrs(newRange);
+        this.interactionHelper.applyDragAttrs(newRange, colOff, this.wrapperEl());
       });
     };
 
     const onUp = () => {
       window.removeEventListener('mousemove', onMove, true);
       window.removeEventListener('mouseup', onUp, true);
-      this.fillMoveHandler = null;
-      this.fillUpHandler = null;
+      this.interactionHelper.fillMoveHandler = null;
+      this.interactionHelper.fillUpHandler = null;
 
-      if (this.fillRafId) { cancelAnimationFrame(this.fillRafId); this.fillRafId = 0; }
+      if (this.interactionHelper.fillRafId) { cancelAnimationFrame(this.interactionHelper.fillRafId); this.interactionHelper.fillRafId = 0; }
 
       if (lastFillMousePos) {
         const flushed = resolveRange(lastFillMousePos.cx, lastFillMousePos.cy);
         if (flushed) { liveFillRange = flushed; fillDragEnd = { endRow: flushed.endRow, endCol: flushed.endCol }; }
       }
 
-      this.clearDragAttrs();
+      this.interactionHelper.clearDragAttrs(this.wrapperEl());
 
       const norm = normalizeSelectionRange({
         startRow: fillStart.startRow, startCol: fillStart.startCol,
@@ -1485,13 +815,14 @@ export class DataGridStateService<T> {
       this.setActiveCell({ rowIndex: fillDragEnd.endRow, columnIndex: fillDragEnd.endCol + colOff });
 
       // Apply fill values
-      const items = p!.items;
+      if (!p) return;
+      const items = p.items;
       const visibleCols = this.visibleCols();
       const startItem = items[norm.startRow];
       const startColDef = visibleCols[norm.startCol];
-      const onCellValueChanged = this.wrappedOnCellValueChanged()!;
+      const onCellValueChanged = this.wrappedOnCellValueChanged();
 
-      if (startItem && startColDef) {
+      if (startItem && startColDef && onCellValueChanged) {
         const startValue = getCellValue(startItem, startColDef as ICoreColumnDef<T>);
         this.beginBatch();
         for (let row = norm.startRow; row <= norm.endRow; row++) {
@@ -1510,12 +841,12 @@ export class DataGridStateService<T> {
         }
         this.endBatch();
       }
-      this.fillDragStart = null;
+      this.interactionHelper.fillDragStart = null;
     };
 
     // Track handlers for cleanup on destroy
-    this.fillMoveHandler = onMove;
-    this.fillUpHandler = onUp;
+    this.interactionHelper.fillMoveHandler = onMove;
+    this.interactionHelper.fillUpHandler = onUp;
 
     this.ngZone.runOutsideAngular(() => {
       window.addEventListener('mousemove', onMove, true);

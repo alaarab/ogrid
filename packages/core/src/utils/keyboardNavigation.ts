@@ -2,6 +2,11 @@
  * Pure keyboard navigation helpers shared across React, Vue, Angular, and JS.
  * No framework dependencies — takes plain values, returns plain values.
  */
+import type { ISelectionRange } from '../types/dataGridTypes';
+import type { IColumnDef, ICellValueChangedEvent } from '../types/columnTypes';
+import { normalizeSelectionRange } from '../types/dataGridTypes';
+import { getCellValue } from './cellValue';
+import { parseValue } from './valueParsers';
 
 /**
  * Excel-style Ctrl+Arrow: find the target position along a 1D axis.
@@ -45,11 +50,11 @@ export function findCtrlArrowTarget(
  *
  * @param rowIndex      Current row index.
  * @param columnIndex   Current absolute column index (includes checkbox offset).
- * @param maxRowIndex   Maximum row index (items.length - 1).
- * @param maxColIndex   Maximum absolute column index.
+ * @param maxRowIndex   Maximum row index (items.length - 1). Must be >= 0.
+ * @param maxColIndex   Maximum absolute column index. Must be >= 0.
  * @param colOffset     Number of non-data leading columns (checkbox column offset).
  * @param shiftKey      True if Shift is held (backward tab).
- * @returns New { rowIndex, columnIndex } after tab.
+ * @returns New { rowIndex, columnIndex } after tab. Caller must ensure maxRowIndex and maxColIndex are non-negative.
  */
 export function computeTabNavigation(
   rowIndex: number,
@@ -77,4 +82,144 @@ export function computeTabNavigation(
     }
   }
   return { rowIndex: newRow, columnIndex: newCol };
+}
+
+/** Input parameters for arrow navigation computation. */
+export interface ArrowNavigationContext {
+  direction: 'ArrowDown' | 'ArrowUp' | 'ArrowLeft' | 'ArrowRight';
+  rowIndex: number;
+  columnIndex: number;
+  dataColIndex: number;
+  colOffset: number;
+  maxRowIndex: number;
+  maxColIndex: number;
+  visibleColCount: number;
+  isCtrl: boolean;
+  isShift: boolean;
+  selectionRange: ISelectionRange | null;
+  isEmptyAt: (r: number, c: number) => boolean;
+}
+
+/** Result of arrow navigation computation. */
+export interface ArrowNavigationResult {
+  newRowIndex: number;
+  newColumnIndex: number;
+  newDataColIndex: number;
+  newRange: ISelectionRange;
+}
+
+/**
+ * Computes the next active cell position and selection range for a single arrow key press.
+ * Handles Ctrl+Arrow (jump to edge), Shift+Arrow (extend selection), and plain Arrow (move).
+ *
+ * Pure function — no framework dependencies.
+ *
+ * @param ctx  Arrow navigation context with current position, direction, modifiers, and grid bounds.
+ * @returns The new row/column indices and selection range.
+ */
+export function computeArrowNavigation(ctx: ArrowNavigationContext): ArrowNavigationResult {
+  const {
+    direction, rowIndex, columnIndex, dataColIndex, colOffset,
+    maxRowIndex, maxColIndex, visibleColCount, isCtrl, isShift,
+    selectionRange, isEmptyAt,
+  } = ctx;
+
+  let newRowIndex = rowIndex;
+  let newColumnIndex = columnIndex;
+
+  if (direction === 'ArrowDown') {
+    newRowIndex = isCtrl
+      ? findCtrlArrowTarget(rowIndex, maxRowIndex, 1, (r) => isEmptyAt(r, Math.max(0, dataColIndex)))
+      : Math.min(rowIndex + 1, maxRowIndex);
+  } else if (direction === 'ArrowUp') {
+    newRowIndex = isCtrl
+      ? findCtrlArrowTarget(rowIndex, 0, -1, (r) => isEmptyAt(r, Math.max(0, dataColIndex)))
+      : Math.max(rowIndex - 1, 0);
+  } else if (direction === 'ArrowRight') {
+    if (isCtrl && dataColIndex >= 0) {
+      newColumnIndex = findCtrlArrowTarget(dataColIndex, visibleColCount - 1, 1, (c) => isEmptyAt(rowIndex, c)) + colOffset;
+    } else {
+      newColumnIndex = Math.min(columnIndex + 1, maxColIndex);
+    }
+  } else { // ArrowLeft
+    if (isCtrl && dataColIndex >= 0) {
+      newColumnIndex = findCtrlArrowTarget(dataColIndex, 0, -1, (c) => isEmptyAt(rowIndex, c)) + colOffset;
+    } else {
+      newColumnIndex = Math.max(columnIndex - 1, colOffset);
+    }
+  }
+
+  const newDataColIndex = newColumnIndex - colOffset;
+  const isVertical = direction === 'ArrowDown' || direction === 'ArrowUp';
+
+  let newRange: ISelectionRange;
+  if (isShift) {
+    if (isVertical) {
+      newRange = normalizeSelectionRange({
+        startRow: selectionRange?.startRow ?? rowIndex,
+        startCol: selectionRange?.startCol ?? dataColIndex,
+        endRow: newRowIndex,
+        endCol: selectionRange?.endCol ?? dataColIndex,
+      });
+    } else {
+      newRange = normalizeSelectionRange({
+        startRow: selectionRange?.startRow ?? rowIndex,
+        startCol: selectionRange?.startCol ?? dataColIndex,
+        endRow: selectionRange?.endRow ?? rowIndex,
+        endCol: newDataColIndex,
+      });
+    }
+  } else {
+    newRange = {
+      startRow: newRowIndex,
+      startCol: newDataColIndex,
+      endRow: newRowIndex,
+      endCol: newDataColIndex,
+    };
+  }
+
+  return { newRowIndex, newColumnIndex, newDataColIndex, newRange };
+}
+
+/**
+ * Apply cell deletion (Delete/Backspace key) across a selection range.
+ * For each editable cell in the range, parses an empty string as the new value
+ * and emits a cell value changed event.
+ *
+ * Pure function — no framework dependencies.
+ *
+ * @param range       The normalized selection range to clear.
+ * @param items       Array of all row data objects.
+ * @param visibleCols Visible column definitions.
+ * @returns Array of cell value changed events to apply.
+ */
+export function applyCellDeletion<T>(
+  range: ISelectionRange,
+  items: T[],
+  visibleCols: IColumnDef<T>[]
+): ICellValueChangedEvent<T>[] {
+  const norm = normalizeSelectionRange(range);
+  const events: ICellValueChangedEvent<T>[] = [];
+  for (let r = norm.startRow; r <= norm.endRow; r++) {
+    for (let c = norm.startCol; c <= norm.endCol; c++) {
+      if (r >= items.length || c >= visibleCols.length) continue;
+      const item = items[r];
+      const col = visibleCols[c];
+      const colEditable =
+        col.editable === true ||
+        (typeof col.editable === 'function' && col.editable(item));
+      if (!colEditable) continue;
+      const oldValue = getCellValue(item, col);
+      const result = parseValue('', oldValue, item, col);
+      if (!result.valid) continue;
+      events.push({
+        item,
+        columnId: col.columnId,
+        oldValue,
+        newValue: result.value,
+        rowIndex: r,
+      });
+    }
+  }
+  return events;
 }

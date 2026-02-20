@@ -1,4 +1,4 @@
-import { Component, inject, ChangeDetectionStrategy, Input, signal, effect } from '@angular/core';
+import { Component, inject, ChangeDetectionStrategy, Input, signal, effect, computed } from '@angular/core';
 import {
   OGridService,
   OGridLayoutComponent,
@@ -119,13 +119,16 @@ export class OGridComponent<T = unknown> {
     return this.service.columnChooserPlacement() === 'toolbar' || this.service.toolbar() != null;
   }
 
+  private readonly clearAllFiltersFn = () => this.service.setFilters({});
+  readonly emptyStateComputed = computed(() => ({
+    hasActiveFilters: this.service.hasActiveFilters(),
+    onClearAll: this.clearAllFiltersFn,
+    message: this.service.emptyState()?.message,
+    render: this.service.emptyState()?.render,
+  }));
+
   get emptyStateObj() {
-    return {
-      hasActiveFilters: this.service.hasActiveFilters(),
-      onClearAll: () => this.service.setFilters({}),
-      message: this.service.emptyState()?.message,
-      render: this.service.emptyState()?.render,
-    };
+    return this.emptyStateComputed();
   }
 
   onPageSizeChange(size: number): void {

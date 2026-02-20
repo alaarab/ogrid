@@ -19,6 +19,7 @@ export const fixtureColumns: IColumnDef<FixtureRow>[] = [
   {
     columnId: 'name',
     name: 'Name',
+    required: true,
     sortable: true,
     filterable: { type: 'text' },
     renderCell: (item) => <span data-testid="cell-name">{item.name}</span>,

@@ -1,11 +1,11 @@
-import { defineComponent, h, type PropType } from 'vue';
+import { defineComponent, h, type PropType, type Component } from 'vue';
 import { VBtn, VTextField, VProgressCircular, VAvatar, VIcon, VDivider } from 'vuetify/components';
-const _VBtn = VBtn as any;
-const _VTextField = VTextField as any;
-const _VProgressCircular = VProgressCircular as any;
-const _VAvatar = VAvatar as any;
-const _VIcon = VIcon as any;
-const _VDivider = VDivider as any;
+const _VBtn = VBtn as Component;
+const _VTextField = VTextField as Component;
+const _VProgressCircular = VProgressCircular as Component;
+const _VAvatar = VAvatar as Component;
+const _VIcon = VIcon as Component;
+const _VDivider = VDivider as Component;
 import type { UserLike } from '@alaarab/ogrid-vue';
 
 export const PeopleFilterPopover = defineComponent({
@@ -28,10 +28,10 @@ export const PeopleFilterPopover = defineComponent({
             h('span', { style: { fontSize: '0.75rem', color: 'rgba(0,0,0,0.6)' } }, 'Currently filtered by:'),
             h('div', { style: { display: 'flex', alignItems: 'center', gap: '8px', marginTop: '4px' } }, [
               h(_VAvatar, { size: 32, image: props.selectedUser.photo },
-                () => props.selectedUser!.displayName?.[0] ?? ''),
+                () => props.selectedUser?.displayName?.[0] ?? ''),
               h('div', { style: { flex: '1', minWidth: '0' } }, [
-                h('div', { style: { fontSize: '0.875rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' } }, props.selectedUser!.displayName),
-                h('div', { style: { fontSize: '0.75rem', color: 'rgba(0,0,0,0.6)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' } }, props.selectedUser!.email),
+                h('div', { style: { fontSize: '0.875rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' } }, props.selectedUser?.displayName),
+                h('div', { style: { fontSize: '0.75rem', color: 'rgba(0,0,0,0.6)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' } }, props.selectedUser?.email),
               ]),
               h(_VBtn, {
                 icon: true,

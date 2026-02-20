@@ -1,6 +1,5 @@
 describe('@alaarab/ogrid-angular-primeng exports', () => {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  let mod: any;
+  let mod: Record<string, unknown>;
 
   beforeAll(() => {
     mod = require('../index');

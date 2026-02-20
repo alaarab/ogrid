@@ -13,6 +13,8 @@ import {
 import {
   BaseDataGridTableComponent,
   DataGridStateService,
+  ColumnReorderService,
+  VirtualScrollService,
   StatusBarComponent,
   GridContextMenuComponent,
   MarchingAntsOverlayComponent,
@@ -46,7 +48,7 @@ import { PopoverCellEditorComponent } from './popover-cell-editor.component';
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   encapsulation: ViewEncapsulation.None,
-  providers: [DataGridStateService],
+  providers: [DataGridStateService, ColumnReorderService, VirtualScrollService],
   template: `
     <div class="ogrid-root">
       <div
@@ -323,13 +325,13 @@ import { PopoverCellEditorComponent } from './popover-cell-editor.component';
           [canUndoProp]="canUndo()"
           [canRedoProp]="canRedo()"
           [classNames]="contextMenuClasses"
-          (copy)="handleCopy()"
-          (cut)="handleCut()"
-          (paste)="handlePaste()"
-          (selectAll)="handleSelectAllCells()"
+          (copyAction)="handleCopy()"
+          (cutAction)="handleCut()"
+          (pasteAction)="handlePaste()"
+          (selectAllAction)="handleSelectAllCells()"
           (undoAction)="onUndo()"
           (redoAction)="onRedo()"
-          (close)="closeContextMenu()"
+          (closeAction)="closeContextMenu()"
         ></ogrid-context-menu>
       }
 
@@ -845,8 +847,8 @@ export class DataGridTableComponent<T = unknown> extends BaseDataGridTableCompon
   onResizeStartPrimeng(e: MouseEvent, col: IColumnDef<T>): void {
     e.preventDefault();
     // Clear cell selection before resize so selection outlines don't persist during drag
-    this.state().interaction.setActiveCell(null);
-    this.state().interaction.setSelectionRange(null);
+    this.state().interaction.setActiveCell?.(null);
+    this.state().interaction.setSelectionRange?.(null);
     this.getWrapperRef()?.nativeElement.focus({ preventScroll: true });
     this.resizeStartX = e.clientX;
     this.resizeColumnId = col.columnId;

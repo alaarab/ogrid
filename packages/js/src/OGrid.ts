@@ -1,3 +1,96 @@
+/**
+ * @module OGrid (Vanilla JS)
+ *
+ * Entry point for the vanilla JS data grid. Full feature parity with the React
+ * package, implemented as class-based state objects wired together by EventEmitter.
+ *
+ * ## Architecture
+ *
+ * ```
+ * OGrid (orchestrator)
+ * |
+ * |-- GridState              Core data state (sorting, filtering, pagination, columns)
+ * |     \-- EventEmitter     emits 'stateChange' --> OGrid.renderAll()
+ * |
+ * |-- TableRenderer          DOM rendering (<table>, <thead>, <tbody>, pinning, selection CSS)
+ * |     \-- reads GridState + InteractionState to build/patch DOM
+ * |
+ * +-- Interaction States (created if cellSelection or editable enabled)
+ * |   |-- SelectionState       Active cell + range selection + drag selection (RAF)
+ * |   |-- KeyboardNavState     Arrow/Tab/Home/End/Enter/Delete key handling
+ * |   |-- ClipboardState       Copy/Cut/Paste with TSV clipboard format
+ * |   |-- UndoRedoState        Edit history stack with batch support
+ * |   |-- FillHandleState      Drag-to-fill (Excel-style) with RAF + batch undo
+ * |   |-- RowSelectionState    Checkbox row selection (single/multiple, shift-range)
+ * |   |-- ColumnResizeState    Drag column borders to resize
+ * |   |-- ColumnPinningState   Sticky left/right column positioning
+ * |   |-- ColumnReorderState   Drag-to-reorder columns
+ * |   \-- VirtualScrollState   Windowed row rendering with overscan
+ * |
+ * +-- Layout & Filter States (always active)
+ * |   |-- TableLayoutState     ResizeObserver container measurement, column width overrides
+ * |   |-- HeaderFilterState    Per-column filter popover state (text/multiSelect/date)
+ * |   \-- SideBarState         Panel management (columns, filters), position (left/right)
+ * |
+ * +-- UI Components
+ *     |-- PaginationControls   Page navigation with page size dropdown
+ *     |-- StatusBar            Row count, filtered count
+ *     |-- ColumnChooser        Show/hide columns dropdown in toolbar
+ *     |-- SideBar              Sidebar with columns panel + filters panel
+ *     |-- HeaderFilter         Positioned filter popovers per column
+ *     |-- InlineCellEditor     Text/select/checkbox/date inline editors
+ *     |-- ContextMenu          Right-click menu (copy/cut/paste/undo/redo/select all)
+ *     \-- MarchingAntsOverlay  SVG animated copy/cut selection border
+ * ```
+ *
+ * ## Event Flow
+ *
+ * Each state class owns a private EventEmitter<TEvents>. State mutations emit
+ * typed events that OGrid subscribes to during construction. The general flow:
+ *
+ * ```
+ * User action (click, keydown, drag, etc.)
+ *   --> State class mutates internal state, emits event
+ *     --> OGrid subscription handler fires
+ *       --> updateRendererInteractionState() or renderAll()
+ *         --> TableRenderer.update() rebuilds or patches DOM
+ * ```
+ *
+ * For performance-critical paths (drag selection, fill handle, column resize),
+ * state classes throttle updates via requestAnimationFrame and use cached
+ * querySelectorAll results to avoid repeated DOM queries.
+ *
+ * ## Rendering Pipeline
+ *
+ * TableRenderer has two update paths:
+ *   1. Full rebuild  -- renderHeader() + renderBody() when data, columns, or
+ *      sorting/filtering changes (triggered by GridState 'stateChange').
+ *   2. CSS-only patch -- patchSelectionClasses() when only active cell,
+ *      selection range, copy/cut range, or fill handle position changed.
+ *      Uses a signature-based diff (isSelectionOnlyChange) to skip DOM rebuild.
+ *
+ * ## Lifecycle
+ *
+ *   1. Constructor: build DOM layout (toolbar, body area, table container,
+ *      status bar, pagination). Create GridState + TableRenderer.
+ *   2. Initialize: header filters, sidebar, column pinning, row selection.
+ *   3. Initial render: TableRenderer.render() creates <table>/<thead>/<tbody>.
+ *   4. Interaction init: if cellSelection/editable, create SelectionState,
+ *      KeyboardNavState, ClipboardState, UndoRedoState, FillHandleState,
+ *      ColumnResizeState, ColumnReorderState. Attach global mouse handlers.
+ *   5. Event wiring: subscribe to all state emitters. Each fires renderAll()
+ *      or updateRendererInteractionState() as appropriate.
+ *   6. Destroy: unsubscribe all listeners, destroy all state + components,
+ *      remove container from DOM.
+ *
+ * ## Public API
+ *
+ * - `api: IJsOGridApi<T>` -- imperative grid API (setRowData, getSelectedRows,
+ *   exportToCsv, scrollToRow, etc.), created by GridState.getApi() and
+ *   extended by OGrid for row selection and virtual scroll methods.
+ * - `on(event, handler)` / `off(event, handler)` -- external event subscription.
+ * - `destroy()` -- full cleanup.
+ */
 import type { OGridOptions, OGridEvents, IJsOGridApi } from './types/gridTypes';
 import type { FilterValue } from '@alaarab/ogrid-core';
 import { GridState } from './state/GridState';
@@ -10,26 +103,35 @@ import { SideBar } from './components/SideBar';
 import { HeaderFilterState } from './state/HeaderFilterState';
 import { HeaderFilter } from './components/HeaderFilter';
 import type { HeaderFilterConfig } from './state/HeaderFilterState';
-import { SelectionState } from './state/SelectionState';
-import { KeyboardNavState } from './state/KeyboardNavState';
-import { ClipboardState } from './state/ClipboardState';
-import { UndoRedoState } from './state/UndoRedoState';
-import { ColumnResizeState } from './state/ColumnResizeState';
+import type { SelectionState } from './state/SelectionState';
+import type { KeyboardNavState } from './state/KeyboardNavState';
+import type { ClipboardState } from './state/ClipboardState';
+import type { UndoRedoState } from './state/UndoRedoState';
+import type { ColumnResizeState } from './state/ColumnResizeState';
 import { TableLayoutState } from './state/TableLayoutState';
-import { FillHandleState } from './state/FillHandleState';
+import type { FillHandleState } from './state/FillHandleState';
 import { RowSelectionState } from './state/RowSelectionState';
 import { ColumnPinningState } from './state/ColumnPinningState';
-import { ColumnReorderState } from './state/ColumnReorderState';
+import type { ColumnReorderState } from './state/ColumnReorderState';
 import { VirtualScrollState } from './state/VirtualScrollState';
-import { MarchingAntsOverlay } from './components/MarchingAntsOverlay';
-import { InlineCellEditor } from './components/InlineCellEditor';
-import { ContextMenu } from './components/ContextMenu';
+import type { MarchingAntsOverlay } from './components/MarchingAntsOverlay';
+import type { InlineCellEditor } from './components/InlineCellEditor';
+import type { ContextMenu } from './components/ContextMenu';
 import { EventEmitter } from './state/EventEmitter';
 import type { RowId } from '@alaarab/ogrid-core';
-import { normalizeSelectionRange, isInSelectionRange, flattenColumns, injectGlobalStyles } from '@alaarab/ogrid-core';
+import { flattenColumns, injectGlobalStyles } from '@alaarab/ogrid-core';
+import { OGridEventWiring } from './OGridEventWiring';
+import { OGridRendering } from './OGridRendering';
+import type { OGridRenderingContext } from './OGridRendering';
 
-/** CSS variable definitions for light and dark themes (injected once per page). */
+/**
+ * CSS variable definitions for light and dark themes (injected once per page).
+ * NOTE: The dark theme variable block appears twice — once for [data-theme='dark'] and once
+ * for @media (prefers-color-scheme: dark). Both blocks must be kept in sync. If you change a
+ * dark-theme variable in one block, update the other block too.
+ */
 const OGRID_THEME_CSS = `
+.ogrid-drag-target { box-shadow: inset 0 0 0 1px var(--ogrid-accent, #0078d4); }
 :root {
   --ogrid-bg: #ffffff;
   --ogrid-fg: rgba(0, 0, 0, 0.87);
@@ -159,7 +261,10 @@ export class OGrid<T> {
   private paginationContainer: HTMLElement;
   private statusBarContainer: HTMLElement;
   private options: OGridOptions<T>;
-  private layoutVersion = 0; // Incremented when items, columns, sizing, or order change
+
+  // Decomposed helpers
+  private renderingHelper: OGridRendering<T>;
+  private eventWiringHelper: OGridEventWiring<T>;
 
   /** The imperative grid API (extends React's IOGridApi with JS-specific methods). */
   readonly api: IJsOGridApi<T>;
@@ -168,6 +273,7 @@ export class OGrid<T> {
     this.options = options;
     this.state = new GridState<T>(options);
     this.api = this.state.getApi();
+    this.eventWiringHelper = new OGridEventWiring<T>();
 
     // Inject theme CSS variables (light + dark) once per page
     injectGlobalStyles('ogrid-theme-vars', OGRID_THEME_CSS);
@@ -229,445 +335,210 @@ export class OGrid<T> {
     this.headerFilterComponent = new HeaderFilter(this.headerFilterState);
     this.buildFilterConfigs();
 
-    // Pass filter config to renderer for filter icons in headers
-    this.renderer.setHeaderFilterState(this.headerFilterState, this.filterConfigs);
-    this.renderer.setOnFilterIconClick((columnId: string, headerEl: HTMLElement) => {
-      this.handleFilterIconClick(columnId, headerEl);
-    });
-
-    // Initialize sidebar if configured
-    if (options.sideBar) {
-      this.sideBarState = new SideBarState(options.sideBar);
-      this.sideBarContainer = document.createElement('div');
-      this.sideBarContainer.className = 'ogrid-sidebar-container';
-      this.sideBarComponent = new SideBar(this.sideBarContainer, this.sideBarState);
-
-      if (this.sideBarState.position === 'left') {
-        this.bodyArea!.insertBefore(this.sideBarContainer, this.tableContainer);
-      } else {
-        this.bodyArea!.appendChild(this.sideBarContainer);
-      }
-
-      this.unsubscribes.push(
-        this.sideBarState.onChange(() => {
-          this.renderSideBar();
-        })
-      );
-    }
-
-    // Initialize column pinning (always active, even without interaction)
-    const flatCols = flattenColumns(options.columns as unknown as Parameters<typeof flattenColumns>[0]);
-    this.pinningState = new ColumnPinningState(
-      options.pinnedColumns,
-      flatCols as unknown as import('@alaarab/ogrid-core').IColumnDef[]
-    );
-
-    // Initialize row selection (always active if rowSelection is set)
-    if (options.rowSelection && options.rowSelection !== 'none') {
-      this.rowSelectionState = new RowSelectionState<T>(
-        options.rowSelection,
-        options.getRowId
-      );
-
-      // Wire row selection API methods
-      this.api.getSelectedRows = () => {
-        return Array.from(this.rowSelectionState?.selectedRowIds ?? []);
-      };
-      this.api.selectAll = () => {
-        const { items } = this.state.getProcessedItems();
-        this.rowSelectionState?.handleSelectAll(true, items);
-      };
-      this.api.deselectAll = () => {
-        const { items } = this.state.getProcessedItems();
-        this.rowSelectionState?.handleSelectAll(false, items);
-      };
-      this.api.setSelectedRows = (rowIds: RowId[]) => {
-        const { items } = this.state.getProcessedItems();
-        this.rowSelectionState?.updateSelection(new Set(rowIds), items);
-      };
-
-      this.unsubscribes.push(
-        this.rowSelectionState.onRowSelectionChange(() => {
-          this.updateRendererInteractionState();
-        })
-      );
-    }
-
-    // Initial render (must happen before interaction init so wrapper DOM exists)
-    this.renderer.render();
-
-    // Initialize interaction features if enabled (default: true for cellSelection)
-    const shouldEnableInteraction = options.cellSelection !== false || options.editable === true;
-    if (shouldEnableInteraction) {
-      this.initializeInteraction();
-    }
-
-    // Subscribe to state changes
-    this.unsubscribes.push(
-      this.state.onStateChange(() => {
-        this.renderAll();
-      })
-    );
-
-    // Subscribe to pinning changes
-    this.unsubscribes.push(
-      this.pinningState.onPinningChange(() => {
-        this.updateRendererInteractionState();
-      })
-    );
-
-    // Subscribe to header filter state changes
-    this.unsubscribes.push(
-      this.headerFilterState.onChange(() => {
-        this.renderHeaderFilterPopover();
-      })
-    );
-
-    // Initialize virtual scrolling if configured
-    if (options.virtualScroll?.enabled) {
-      this.virtualScrollState = new VirtualScrollState(options.virtualScroll);
-      this.virtualScrollState.observeContainer(this.tableContainer);
-      this.renderer.setVirtualScrollState(this.virtualScrollState);
-
-      // Wire scroll event on the table container
-      const handleScroll = () => {
-        this.virtualScrollState?.handleScroll(this.tableContainer.scrollTop);
-      };
-      this.tableContainer.addEventListener('scroll', handleScroll, { passive: true });
-      this.unsubscribes.push(() => {
-        this.tableContainer.removeEventListener('scroll', handleScroll);
+    try {
+      // Pass filter config to renderer for filter icons in headers
+      this.renderer.setHeaderFilterState(this.headerFilterState, this.filterConfigs);
+      this.renderer.setOnFilterIconClick((columnId: string, headerEl: HTMLElement) => {
+        this.handleFilterIconClick(columnId, headerEl);
       });
 
-      // Re-render when visible range changes
+      // Initialize sidebar if configured
+      if (options.sideBar) {
+        this.sideBarState = new SideBarState(options.sideBar);
+        this.sideBarContainer = document.createElement('div');
+        this.sideBarContainer.className = 'ogrid-sidebar-container';
+        this.sideBarComponent = new SideBar(this.sideBarContainer, this.sideBarState);
+
+        if (this.bodyArea) {
+          if (this.sideBarState.position === 'left') {
+            this.bodyArea.insertBefore(this.sideBarContainer, this.tableContainer);
+          } else {
+            this.bodyArea.appendChild(this.sideBarContainer);
+          }
+        }
+
+        this.unsubscribes.push(
+          this.sideBarState.onChange(() => {
+            this.renderingHelper.renderSideBar();
+          })
+        );
+      }
+
+      // Initialize column pinning (always active, even without interaction)
+      const flatCols = flattenColumns(options.columns as unknown as Parameters<typeof flattenColumns>[0]);
+      this.pinningState = new ColumnPinningState(
+        options.pinnedColumns,
+        flatCols as unknown as import('@alaarab/ogrid-core').IColumnDef[]
+      );
+
+      // Initialize row selection (always active if rowSelection is set)
+      if (options.rowSelection && options.rowSelection !== 'none') {
+        this.rowSelectionState = new RowSelectionState<T>(
+          options.rowSelection,
+          options.getRowId
+        );
+
+        // Wire row selection API methods
+        this.api.getSelectedRows = () => {
+          return Array.from(this.rowSelectionState?.selectedRowIds ?? []);
+        };
+        this.api.selectAll = () => {
+          const { items } = this.state.getProcessedItems();
+          this.rowSelectionState?.handleSelectAll(true, items);
+        };
+        this.api.deselectAll = () => {
+          const { items } = this.state.getProcessedItems();
+          this.rowSelectionState?.handleSelectAll(false, items);
+        };
+        this.api.setSelectedRows = (rowIds: RowId[]) => {
+          const { items } = this.state.getProcessedItems();
+          this.rowSelectionState?.updateSelection(new Set(rowIds), items);
+        };
+
+        this.unsubscribes.push(
+          this.rowSelectionState.onRowSelectionChange(() => {
+            this.renderingHelper.updateRendererInteractionState();
+          })
+        );
+      }
+
+      // Create rendering helper (uses lazy context — state objects populated after interaction init)
+      this.renderingHelper = this.createRenderingHelper();
+
+      // Initial render (must happen before interaction init so wrapper DOM exists)
+      this.renderer.render();
+
+      // Initialize interaction features if enabled (default: true for cellSelection)
+      const shouldEnableInteraction = options.cellSelection !== false || options.editable === true;
+      if (shouldEnableInteraction) {
+        const result = this.eventWiringHelper.initializeInteraction(
+          options,
+          this.state,
+          this.renderer,
+          this.tableContainer,
+          this.layoutState,
+          this.rowSelectionState,
+          this.pinningState,
+          {
+            updateRendererInteractionState: () => this.renderingHelper.updateRendererInteractionState(),
+            updateDragAttributes: () => this.renderingHelper.updateDragAttributes(),
+            clearCachedDragCells: () => this.renderingHelper.clearCachedDragCells(),
+            showContextMenu: (x, y) => this.showContextMenu(x, y),
+            startCellEdit: (rowId, columnId) => this.startCellEdit(rowId, columnId),
+          }
+        );
+
+        // Store all created state objects
+        this.selectionState = result.selectionState;
+        this.keyboardNavState = result.keyboardNavState;
+        this.clipboardState = result.clipboardState;
+        this.undoRedoState = result.undoRedoState;
+        this.resizeState = result.resizeState;
+        this.fillHandleState = result.fillHandleState;
+        this.reorderState = result.reorderState;
+        this.marchingAnts = result.marchingAnts;
+        this.cellEditor = result.cellEditor;
+        this.contextMenu = result.contextMenu;
+        this.unsubscribes.push(...result.unsubscribes);
+      }
+
+      // Subscribe to state changes
       this.unsubscribes.push(
-        this.virtualScrollState.onRangeChanged(() => {
-          this.updateRendererInteractionState();
+        this.state.onStateChange(() => {
+          this.renderingHelper.renderAll();
         })
       );
 
-      // Wire scrollToRow API method
-      this.api.scrollToRow = (index: number, opts?: { align?: 'start' | 'center' | 'end' }) => {
-        this.virtualScrollState?.scrollToRow(index, this.tableContainer, opts?.align);
-      };
-    }
+      // Subscribe to pinning changes
+      this.unsubscribes.push(
+        this.pinningState.onPinningChange(() => {
+          this.renderingHelper.updateRendererInteractionState();
+        })
+      );
 
-    // Complete initial render (pagination, status bar, column chooser, sidebar, loading)
-    this.renderAll();
-  }
+      // Subscribe to header filter state changes
+      this.unsubscribes.push(
+        this.headerFilterState.onChange(() => {
+          this.renderingHelper.renderHeaderFilterPopover();
+        })
+      );
 
-  private initializeInteraction(): void {
-    const { editable } = this.options;
-    const colOffset = this.rowSelectionState ? 1 : 0;
+      // Initialize virtual scrolling if configured
+      if (options.virtualScroll?.enabled) {
+        this.virtualScrollState = new VirtualScrollState(options.virtualScroll);
+        this.virtualScrollState.observeContainer(this.tableContainer);
+        this.renderer.setVirtualScrollState(this.virtualScrollState);
 
-    // Create interaction states
-    this.selectionState = new SelectionState();
-    this.resizeState = new ColumnResizeState();
-    this.contextMenu = new ContextMenu();
-    this.cellEditor = new InlineCellEditor<T>(this.tableContainer);
+        // Wire scroll event on the table container
+        const handleScroll = () => {
+          this.virtualScrollState?.handleScroll(this.tableContainer.scrollTop);
+        };
+        this.tableContainer.addEventListener('scroll', handleScroll, { passive: true });
+        this.unsubscribes.push(() => {
+          this.tableContainer.removeEventListener('scroll', handleScroll);
+        });
 
-    // Undo/Redo (wraps onCellValueChanged if editable)
-    const onCellValueChanged = this.options.onCellValueChanged;
-    this.undoRedoState = new UndoRedoState<T>(onCellValueChanged);
-
-    // Clipboard
-    this.clipboardState = new ClipboardState<T>(
-      {
-        items: [],
-        visibleCols: [] as unknown as Parameters<typeof ClipboardState<T>['prototype']['updateParams']>[0]['visibleCols'],
-        colOffset,
-        editable,
-        onCellValueChanged: this.undoRedoState.getWrappedCallback(),
-      },
-      () => this.selectionState?.activeCell ?? null,
-      () => this.selectionState?.selectionRange ?? null
-    );
-
-    // Fill handle
-    this.fillHandleState = new FillHandleState<T>(
-      {
-        items: [],
-        visibleCols: [] as unknown as Parameters<typeof FillHandleState<T>['prototype']['updateParams']>[0]['visibleCols'],
-        editable,
-        onCellValueChanged: this.undoRedoState.getWrappedCallback(),
-        colOffset,
-        beginBatch: () => this.undoRedoState?.beginBatch(),
-        endBatch: () => this.undoRedoState?.endBatch(),
-      },
-      () => this.selectionState?.selectionRange ?? null,
-      (range) => {
-        this.selectionState?.setSelectionRange(range);
-        this.updateRendererInteractionState();
-      },
-      (cell) => {
-        this.selectionState?.setActiveCell(cell);
-      }
-    );
-
-    // Keyboard navigation
-    this.keyboardNavState = new KeyboardNavState<T>(
-      {
-        items: [],
-        visibleCols: [] as unknown as Parameters<typeof KeyboardNavState<T>['prototype']['updateParams']>[0]['visibleCols'],
-        colOffset,
-        getRowId: this.state.getRowId,
-        editable,
-        onCellValueChanged: this.undoRedoState.getWrappedCallback(),
-        onCopy: () => this.clipboardState?.handleCopy(),
-        onCut: () => this.clipboardState?.handleCut(),
-        onPaste: async () => { await this.clipboardState?.handlePaste(); },
-        onUndo: () => this.undoRedoState?.undo(),
-        onRedo: () => this.undoRedoState?.redo(),
-        onContextMenu: (x, y) => this.showContextMenu(x, y),
-        onStartEdit: (rowId, columnId) => this.startCellEdit(rowId, columnId),
-        clearClipboardRanges: () => this.clipboardState?.clearClipboardRanges(),
-      },
-      () => this.selectionState?.activeCell ?? null,
-      () => this.selectionState?.selectionRange ?? null,
-      (cell) => this.selectionState?.setActiveCell(cell),
-      (range) => this.selectionState?.setSelectionRange(range)
-    );
-
-    // Subscribe to selection changes
-    this.unsubscribes.push(
-      this.selectionState.onSelectionChange(() => {
-        this.updateRendererInteractionState();
-      })
-    );
-
-    // Subscribe to clipboard range changes
-    this.unsubscribes.push(
-      this.clipboardState.onRangesChange(() => {
-        this.updateRendererInteractionState();
-      })
-    );
-
-    // Subscribe to column resize changes
-    this.unsubscribes.push(
-      this.resizeState.onColumnWidthChange(() => {
-        this.updateRendererInteractionState();
-      })
-    );
-
-    // Column reorder
-    this.reorderState = new ColumnReorderState();
-    this.unsubscribes.push(
-      this.reorderState.onStateChange(({ isDragging, dropIndicatorX }) => {
-        this.renderer.updateDropIndicator(dropIndicatorX, isDragging);
-      })
-    );
-    this.unsubscribes.push(
-      this.reorderState.onReorder(({ columnOrder }) => {
-        this.state.setColumnOrder(columnOrder);
-      })
-    );
-
-    // Attach keyboard handler to wrapper
-    const wrapper = this.renderer.getWrapperElement();
-    if (wrapper) {
-      wrapper.addEventListener('keydown', this.keyboardNavState.handleKeyDown);
-      this.keyboardNavState.setWrapperRef(wrapper);
-      this.fillHandleState.setWrapperRef(wrapper);
-
-      // Initialize marching ants overlay
-      this.marchingAnts = new MarchingAntsOverlay(wrapper, colOffset);
-    }
-
-    // Attach global mouse handlers for resize and drag
-    this.attachGlobalHandlers();
-
-    // Set initial interaction state on renderer
-    this.updateRendererInteractionState();
-  }
-
-  private attachGlobalHandlers(): void {
-    let resizing = false;
-
-    const handleMouseMove = (e: MouseEvent) => {
-      if (resizing && this.resizeState) {
-        const newWidth = this.resizeState.updateResize(e.clientX);
-        if (newWidth !== null && this.resizeState.resizingColumnId) {
-          this.layoutState.setColumnOverride(this.resizeState.resizingColumnId, newWidth);
-          this.updateRendererInteractionState();
-        }
-      }
-      if (this.selectionState?.isDragging) {
-        const target = e.target as HTMLElement;
-        if (target.tagName === 'TD') {
-          const rowIndex = parseInt(target.getAttribute('data-row-index') ?? '-1', 10);
-          const colIndex = parseInt(target.getAttribute('data-col-index') ?? '-1', 10);
-          if (rowIndex >= 0 && colIndex >= 0) {
-            this.selectionState.updateDrag(rowIndex, colIndex, () => this.updateDragAttributes());
-          }
-        }
-      }
-    };
-
-    const handleMouseUp = (e: MouseEvent) => {
-      if (resizing && this.resizeState) {
-        const colId = this.resizeState.resizingColumnId;
-        this.resizeState.endResize(e.clientX);
-        if (colId) {
-          const width = this.resizeState.getColumnWidth(colId);
-          if (width) this.layoutState.setColumnOverride(colId, width);
-        }
-        resizing = false;
-        document.body.style.cursor = '';
-        this.updateRendererInteractionState();
-      }
-      if (this.selectionState?.isDragging) {
-        this.selectionState.endDrag();
-      }
-    };
-
-    const handleResizeStart = (columnId: string, clientX: number, currentWidth: number) => {
-      resizing = true;
-      document.body.style.cursor = 'col-resize';
-      this.resizeState?.startResize(columnId, clientX, currentWidth);
-    };
-
-    document.addEventListener('mousemove', handleMouseMove, { passive: true });
-    document.addEventListener('mouseup', handleMouseUp, { passive: true });
-
-    // Store references for cleanup
-    this.unsubscribes.push(() => {
-      document.removeEventListener('mousemove', handleMouseMove);
-      document.removeEventListener('mouseup', handleMouseUp);
-    });
-
-    // Pass resize handler to renderer
-    this.renderer.setInteractionState({
-      activeCell: null,
-      selectionRange: null,
-      copyRange: null,
-      cutRange: null,
-      editingCell: null,
-      columnWidths: {},
-      onResizeStart: handleResizeStart,
-    });
-  }
-
-  private updateRendererInteractionState(): void {
-    if (!this.selectionState || !this.clipboardState || !this.resizeState) return;
-
-    const { items } = this.state.getProcessedItems();
-    const visibleCols = this.state.visibleColumnDefs;
-
-    // Compute pinning offsets
-    const columnWidths = this.layoutState.getAllColumnWidths();
-    const leftOffsets = this.pinningState?.computeLeftOffsets(
-      visibleCols,
-      columnWidths,
-      120,
-      !!this.rowSelectionState,
-      40,
-      !!this.options.showRowNumbers
-    ) ?? {};
-    const rightOffsets = this.pinningState?.computeRightOffsets(
-      visibleCols,
-      columnWidths,
-      120
-    ) ?? {};
-
-    this.renderer.setInteractionState({
-      activeCell: this.selectionState.activeCell,
-      selectionRange: this.selectionState.selectionRange,
-      copyRange: this.clipboardState.copyRange,
-      cutRange: this.clipboardState.cutRange,
-      editingCell: this.cellEditor?.getEditingCell() ?? null,
-      columnWidths,
-      onCellClick: (rowIndex, colIndex) => this.handleCellClick(rowIndex, colIndex),
-      onCellMouseDown: (rowIndex, colIndex, e) => this.handleCellMouseDown(rowIndex, colIndex, e),
-      onCellDoubleClick: (rowIndex, colIndex, rowId, columnId) => this.startCellEdit(rowId, columnId),
-      onCellContextMenu: (rowIndex, colIndex, e) => this.handleCellContextMenu(rowIndex, colIndex, e),
-      onResizeStart: this.renderer['interactionState']?.onResizeStart,
-      // Fill handle
-      onFillHandleMouseDown: this.options.editable !== false ? (e) => this.fillHandleState?.startFillDrag(e) : undefined,
-      // Row selection
-      rowSelectionMode: this.rowSelectionState?.rowSelection ?? 'none',
-      selectedRowIds: this.rowSelectionState?.selectedRowIds,
-      onRowCheckboxChange: (rowId, checked, rowIndex, shiftKey) => {
-        this.rowSelectionState?.handleRowCheckboxChange(rowId, checked, rowIndex, shiftKey, items);
-      },
-      onSelectAll: (checked) => {
-        this.rowSelectionState?.handleSelectAll(checked, items);
-      },
-      allSelected: this.rowSelectionState?.isAllSelected(items),
-      someSelected: this.rowSelectionState?.isSomeSelected(items),
-      // Row numbers
-      showRowNumbers: this.options.showRowNumbers,
-      // Column pinning
-      pinnedColumns: this.pinningState?.pinnedColumns,
-      leftOffsets,
-      rightOffsets,
-      // Column reorder
-      onColumnReorderStart: this.reorderState ? (columnId, event) => {
-        const tableEl = this.renderer.getTableElement();
-        if (!tableEl) return;
-        this.reorderState?.startDrag(
-          columnId,
-          event,
-          visibleCols,
-          this.state.columnOrder,
-          this.pinningState?.pinnedColumns,
-          tableEl
+        // Re-render when visible range changes
+        this.unsubscribes.push(
+          this.virtualScrollState.onRangeChanged(() => {
+            this.renderingHelper.updateRendererInteractionState();
+          })
         );
-      } : undefined,
-    });
 
-    this.renderer.update();
+        // Wire scrollToRow API method
+        this.api.scrollToRow = (index: number, opts?: { align?: 'start' | 'center' | 'end' }) => {
+          this.virtualScrollState?.scrollToRow(index, this.tableContainer, opts?.align);
+        };
+      }
 
-    // Update marching ants overlay
-    this.marchingAnts?.update(
-      this.selectionState.selectionRange,
-      this.clipboardState.copyRange,
-      this.clipboardState.cutRange,
-      this.layoutVersion
-    );
+      // Complete initial render (pagination, status bar, column chooser, sidebar, loading)
+      this.renderingHelper.renderAll();
+    } catch (e) {
+      this.destroy();
+      throw e;
+    }
   }
 
-  private updateDragAttributes(): void {
-    const wrapper = this.renderer.getWrapperElement();
-    if (!wrapper || !this.selectionState) return;
-
-    const range = this.selectionState.getDragRange();
-    if (!range) return;
-
-    const norm = normalizeSelectionRange(range);
-    const anchor = this.selectionState.dragAnchor;
-    const minR = norm.startRow;
-    const maxR = norm.endRow;
-    const minC = norm.startCol;
-    const maxC = norm.endCol;
-    const cells = wrapper.querySelectorAll('td[data-row-index][data-col-index]');
-
-    for (let _i = 0; _i < cells.length; _i++) {
-      const cell = cells[_i];
-      const el = cell as HTMLElement;
-      const rowIndex = parseInt(el.getAttribute('data-row-index') ?? '-1', 10);
-      const colIndex = parseInt(el.getAttribute('data-col-index') ?? '-1', 10);
-
-      if (isInSelectionRange(norm, rowIndex, colIndex)) {
-        el.setAttribute('data-drag-range', 'true');
-        // Anchor cell (white background)
-        const isAnchor = anchor && rowIndex === anchor.rowIndex && colIndex === anchor.columnIndex;
-        if (isAnchor) {
-          el.setAttribute('data-drag-anchor', '');
-        } else {
-          el.removeAttribute('data-drag-anchor');
-        }
-        // Edge borders via inset box-shadow
-        const shadows: string[] = [];
-        if (rowIndex === minR) shadows.push('inset 0 2px 0 0 var(--ogrid-selection, #217346)');
-        if (rowIndex === maxR) shadows.push('inset 0 -2px 0 0 var(--ogrid-selection, #217346)');
-        if (colIndex === minC) shadows.push('inset 2px 0 0 0 var(--ogrid-selection, #217346)');
-        if (colIndex === maxC) shadows.push('inset -2px 0 0 0 var(--ogrid-selection, #217346)');
-        el.style.boxShadow = shadows.length > 0 ? shadows.join(', ') : '';
-      } else {
-        el.removeAttribute('data-drag-range');
-        el.removeAttribute('data-drag-anchor');
-        if (el.style.boxShadow) el.style.boxShadow = '';
-      }
-    }
+  /** Creates the OGridRenderingContext that bridges OGrid state to the rendering helper. */
+  private createRenderingHelper(): OGridRendering<T> {
+    const liveGetter = <V>(getter: () => V) => ({ get: getter, enumerable: true, configurable: true });
+    const ctx = {
+      options: this.options,
+      state: this.state,
+      renderer: this.renderer,
+      pagination: this.pagination,
+      statusBar: this.statusBar,
+      columnChooser: this.columnChooser,
+      layoutState: this.layoutState,
+      tableContainer: this.tableContainer,
+      headerFilterState: this.headerFilterState,
+      headerFilterComponent: this.headerFilterComponent,
+      filterConfigs: this.filterConfigs,
+      setLoadingOverlay: (el: HTMLElement | null) => { this.loadingOverlay = el; },
+      handleCellClick: (rowIndex: number, colIndex: number) => this.handleCellClick(rowIndex, colIndex),
+      handleCellMouseDown: (rowIndex: number, colIndex: number, e: MouseEvent) => this.handleCellMouseDown(rowIndex, colIndex, e),
+      handleCellContextMenu: (rowIndex: number, colIndex: number, e: MouseEvent) => this.handleCellContextMenu(rowIndex, colIndex, e),
+      startCellEdit: (rowId: RowId, columnId: string) => this.startCellEdit(rowId, columnId),
+      showContextMenu: (x: number, y: number) => this.showContextMenu(x, y),
+    } as OGridRenderingContext<T>;
+    Object.defineProperties(ctx, {
+      selectionState: liveGetter(() => this.selectionState),
+      keyboardNavState: liveGetter(() => this.keyboardNavState),
+      clipboardState: liveGetter(() => this.clipboardState),
+      undoRedoState: liveGetter(() => this.undoRedoState),
+      resizeState: liveGetter(() => this.resizeState),
+      fillHandleState: liveGetter(() => this.fillHandleState),
+      rowSelectionState: liveGetter(() => this.rowSelectionState),
+      pinningState: liveGetter(() => this.pinningState),
+      reorderState: liveGetter(() => this.reorderState),
+      virtualScrollState: liveGetter(() => this.virtualScrollState),
+      marchingAnts: liveGetter(() => this.marchingAnts),
+      cellEditor: liveGetter(() => this.cellEditor),
+      sideBarState: liveGetter(() => this.sideBarState),
+      sideBarComponent: liveGetter(() => this.sideBarComponent),
+      loadingOverlay: liveGetter(() => this.loadingOverlay),
+    });
+    return new OGridRendering<T>(ctx);
   }
 
   private handleCellClick(rowIndex: number, colIndex: number): void {
@@ -682,7 +553,7 @@ export class OGrid<T> {
     e.preventDefault();
     this.selectionState.startDrag(rowIndex, colIndex);
     // Apply drag attributes immediately for instant visual feedback on the initial cell
-    setTimeout(() => this.updateDragAttributes(), 0);
+    setTimeout(() => this.renderingHelper.updateDragAttributes(), 0);
   }
 
   private handleCellContextMenu(rowIndex: number, colIndex: number, e: MouseEvent): void {
@@ -692,7 +563,7 @@ export class OGrid<T> {
     // Set active cell if not already set
     if (!this.selectionState.activeCell || this.selectionState.activeCell.rowIndex !== rowIndex || this.selectionState.activeCell.columnIndex !== colIndex) {
       this.selectionState.setActiveCell({ rowIndex, columnIndex: colIndex });
-      this.updateRendererInteractionState();
+      this.renderingHelper.updateRendererInteractionState();
     }
 
     this.showContextMenu(e.clientX, e.clientY);
@@ -705,24 +576,24 @@ export class OGrid<T> {
       x,
       y,
       {
-        onCopy: () => this.clipboardState!.handleCopy(),
-        onCut: () => this.clipboardState!.handleCut(),
-        onPaste: () => void this.clipboardState!.handlePaste(),
+        onCopy: () => this.clipboardState?.handleCopy(),
+        onCut: () => this.clipboardState?.handleCut(),
+        onPaste: () => void this.clipboardState?.handlePaste(),
         onSelectAll: () => {
           const { items } = this.state.getProcessedItems();
           const visibleCols = this.state.visibleColumnDefs;
           if (items.length > 0 && visibleCols.length > 0) {
-            this.selectionState!.setSelectionRange({
+            this.selectionState?.setSelectionRange({
               startRow: 0,
               startCol: 0,
               endRow: items.length - 1,
               endCol: visibleCols.length - 1,
             });
-            this.updateRendererInteractionState();
+            this.renderingHelper.updateRendererInteractionState();
           }
         },
-        onUndo: () => this.undoRedoState!.undo(),
-        onRedo: () => this.undoRedoState!.redo(),
+        onUndo: () => this.undoRedoState?.undo(),
+        onRedo: () => this.undoRedoState?.redo(),
       },
       this.undoRedoState.canUndo,
       this.undoRedoState.canRedo,
@@ -750,30 +621,33 @@ export class OGrid<T> {
     const cell = row.querySelector(`td[data-column-id="${columnId}"]`) as HTMLTableCellElement | null;
     if (!cell) return;
 
-    const onCommit = (rid: RowId, cid: string, value: unknown) => {
-      const itm = items.find((i) => this.state.getRowId(i) === rid);
+    const rowIndex = items.indexOf(item);
+    const onCommit = (_rid: RowId, cid: string, value: unknown) => {
+      // Use the already-resolved item and look up the committed column
       const col = visibleCols.find((c) => c.columnId === cid);
-      if (!itm || !col) return;
+      if (!col) return;
 
-      const oldValue = (itm as Record<string, unknown>)[cid];
-      (itm as Record<string, unknown>)[cid] = value;
+      // NOTE: Direct mutation on the item reference. This updates the in-memory data
+      // so subsequent renders reflect the new value before the consumer calls setRowData.
+      const oldValue = (item as Record<string, unknown>)[cid];
+      (item as Record<string, unknown>)[cid] = value;
 
-      const wrapped = this.undoRedoState!.getWrappedCallback();
+      const wrapped = this.undoRedoState?.getWrappedCallback();
       if (wrapped) {
         wrapped({
-          item: itm,
+          item,
           columnId: cid,
           oldValue,
           newValue: value,
-          rowIndex: items.indexOf(itm),
+          rowIndex,
         });
       }
 
-      this.updateRendererInteractionState();
+      this.renderingHelper.updateRendererInteractionState();
     };
 
     const onCancel = () => {
-      this.updateRendererInteractionState();
+      this.renderingHelper.updateRendererInteractionState();
     };
 
     const onAfterCommit = () => {
@@ -832,164 +706,13 @@ export class OGrid<T> {
     this.headerFilterState.open(columnId, config, headerEl, tempPopover);
   }
 
-  private renderHeaderFilterPopover(): void {
-    const openId = this.headerFilterState.openColumnId;
-    if (!openId) {
-      this.headerFilterComponent.cleanup();
-      return;
-    }
-    const config = this.filterConfigs.get(openId);
-    if (!config) return;
-
-    this.headerFilterComponent.render(config);
-
-    // Update the popover element reference for click-outside detection
-    const popoverEl = document.querySelector('.ogrid-header-filter-popover') as HTMLElement | null;
-    if (popoverEl) {
-      (this.headerFilterState as unknown as { _popoverEl: HTMLElement | null })._popoverEl = popoverEl;
-    }
-  }
-
-  private renderSideBar(): void {
-    if (!this.sideBarComponent || !this.sideBarState) return;
-
-    const columns = this.state.columns.map(c => ({
-      columnId: c.columnId,
-      name: c.name,
-      required: c.required === true,
-    }));
-
-    const filterableColumns = this.state.columns
-      .filter(c => c.filterable && typeof c.filterable === 'object' && c.filterable.type)
-      .map(c => ({
-        columnId: c.columnId,
-        name: c.name,
-        filterField: (c.filterable as { filterField?: string }).filterField ?? c.columnId,
-        filterType: (c.filterable as { type: string }).type as 'text' | 'multiSelect' | 'people' | 'date',
-      }));
-
-    this.sideBarComponent.setConfig({
-      columns,
-      visibleColumns: this.state.visibleColumns,
-      onVisibilityChange: (columnKey, visible) => {
-        const next = new Set(this.state.visibleColumns);
-        if (visible) next.add(columnKey);
-        else next.delete(columnKey);
-        this.state.setVisibleColumns(next);
-      },
-      onSetVisibleColumns: (cols) => this.state.setVisibleColumns(cols),
-      filterableColumns,
-      filters: this.state.filters,
-      onFilterChange: (key, value) => this.state.setFilter(key, value),
-      filterOptions: this.state.filterOptions,
-    });
-
-    this.sideBarComponent.render();
-  }
-
-  private renderLoadingOverlay(): void {
-    if (this.state.isLoading) {
-      // Ensure the container has minimum height during loading so overlay is visible
-      const { items } = this.state.getProcessedItems();
-      this.tableContainer.style.minHeight = (!items || items.length === 0) ? '200px' : '';
-      if (!this.loadingOverlay) {
-        this.loadingOverlay = document.createElement('div');
-        this.loadingOverlay.className = 'ogrid-loading-overlay';
-        this.loadingOverlay.style.position = 'absolute';
-        this.loadingOverlay.style.top = '0';
-        this.loadingOverlay.style.left = '0';
-        this.loadingOverlay.style.right = '0';
-        this.loadingOverlay.style.bottom = '0';
-        this.loadingOverlay.style.display = 'flex';
-        this.loadingOverlay.style.alignItems = 'center';
-        this.loadingOverlay.style.justifyContent = 'center';
-        this.loadingOverlay.style.background = 'var(--ogrid-loading-overlay, rgba(255, 255, 255, 0.7))';
-        this.loadingOverlay.style.zIndex = '100';
-
-        const spinner = document.createElement('div');
-        spinner.className = 'ogrid-loading-spinner';
-        spinner.textContent = 'Loading...';
-        this.loadingOverlay.appendChild(spinner);
-      }
-      if (!this.tableContainer.contains(this.loadingOverlay)) {
-        this.tableContainer.appendChild(this.loadingOverlay);
-      }
-    } else {
-      this.tableContainer.style.minHeight = '';
-      if (this.loadingOverlay && this.tableContainer.contains(this.loadingOverlay)) {
-        this.loadingOverlay.remove();
-      }
-    }
-  }
-
-  private renderAll(): void {
-    // Increment layout version to trigger marching ants re-measurement
-    this.layoutVersion++;
-
-    const colOffset = this.rowSelectionState ? 1 : 0;
-
-    // Update header filter state with current filters and options
-    this.headerFilterState.setFilters(this.state.filters);
-    this.headerFilterState.setFilterOptions(this.state.filterOptions);
-
-    // Update interaction states with current data
-    if (this.keyboardNavState && this.clipboardState) {
-      const { items } = this.state.getProcessedItems();
-      const visibleCols = this.state.visibleColumnDefs;
-
-      this.keyboardNavState.updateParams({
-        items,
-        visibleCols: visibleCols as unknown as Parameters<typeof this.keyboardNavState.updateParams>[0]['visibleCols'],
-        colOffset,
-        getRowId: this.state.getRowId,
-        editable: this.options.editable,
-        onCellValueChanged: this.undoRedoState?.getWrappedCallback(),
-        onCopy: () => this.clipboardState?.handleCopy(),
-        onCut: () => this.clipboardState?.handleCut(),
-        onPaste: async () => { await this.clipboardState?.handlePaste(); },
-        onUndo: () => this.undoRedoState?.undo(),
-        onRedo: () => this.undoRedoState?.redo(),
-        onContextMenu: (x, y) => this.showContextMenu(x, y),
-        onStartEdit: (rowId, columnId) => this.startCellEdit(rowId, columnId),
-        clearClipboardRanges: () => this.clipboardState?.clearClipboardRanges(),
-      });
-
-      this.clipboardState.updateParams({
-        items,
-        visibleCols: visibleCols as unknown as Parameters<typeof this.clipboardState.updateParams>[0]['visibleCols'],
-        colOffset,
-        editable: this.options.editable,
-        onCellValueChanged: this.undoRedoState?.getWrappedCallback(),
-      });
-
-      // Update fill handle params
-      this.fillHandleState?.updateParams({
-        items,
-        visibleCols: visibleCols as unknown as Parameters<typeof FillHandleState<T>['prototype']['updateParams']>[0]['visibleCols'],
-        editable: this.options.editable,
-        onCellValueChanged: this.undoRedoState?.getWrappedCallback(),
-        colOffset,
-        beginBatch: () => this.undoRedoState?.beginBatch(),
-        endBatch: () => this.undoRedoState?.endBatch(),
-      });
-
-      // Update renderer interaction state before rendering
-      this.updateRendererInteractionState();
-    } else {
-      this.renderer.update();
-    }
-
-    const { totalCount } = this.state.getProcessedItems();
-
-    // Update virtual scroll with current total row count
-    this.virtualScrollState?.setTotalRows(totalCount);
-
-    this.pagination.render(totalCount, this.options.pageSizeOptions);
-    this.statusBar.render({ totalCount });
-    this.columnChooser.render();
-    this.renderSideBar();
-    this.renderLoadingOverlay();
-  }
+  // Rendering methods delegated to OGridRendering helper:
+  // - updateRendererInteractionState() -> this.renderingHelper.updateRendererInteractionState()
+  // - updateDragAttributes()           -> this.renderingHelper.updateDragAttributes()
+  // - renderAll()                      -> this.renderingHelper.renderAll()
+  // - renderHeaderFilterPopover()      -> this.renderingHelper.renderHeaderFilterPopover()
+  // - renderSideBar()                  -> this.renderingHelper.renderSideBar()
+  // - renderLoadingOverlay()           -> this.renderingHelper.renderLoadingOverlay()
 
   /** Subscribe to grid events. */
   on<K extends keyof OGridEvents<T>>(event: K, handler: (data: OGridEvents<T>[K]) => void): void {
