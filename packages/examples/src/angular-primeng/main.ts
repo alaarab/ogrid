@@ -5,7 +5,7 @@ import { Component, provideZonelessChangeDetection } from '@angular/core';
 import { provideAnimations } from '@angular/platform-browser/animations';
 import { OGridComponent } from '@alaarab/ogrid-angular-primeng';
 import type { IOGridProps } from '@alaarab/ogrid-angular-primeng';
-import { makeDemoProjects, makeDemoColumns, getRowId } from '../shared/demoData';
+import { makeDemoProjects, makeDemoColumns, getRowId, handleCellValueChanged } from '../shared/demoData';
 import type { Project } from '../shared/demoData';
 import { createThemeToggle } from '../shared/themeToggle';
 
@@ -58,6 +58,7 @@ export class AppComponent {
     editable: true,
     cellSelection: true,
     statusBar: true,
+    onCellValueChanged: (e) => handleCellValueChanged(projects, e),
   };
 }
 

@@ -3,7 +3,7 @@ import { bootstrapApplication } from '@angular/platform-browser';
 import { Component, provideZonelessChangeDetection } from '@angular/core';
 import { OGridComponent } from '@alaarab/ogrid-angular-radix';
 import type { IOGridProps } from '@alaarab/ogrid-angular-radix';
-import { makeDemoProjects, makeDemoColumns, getRowId } from '../shared/demoData';
+import { makeDemoProjects, makeDemoColumns, getRowId, handleCellValueChanged } from '../shared/demoData';
 import type { Project } from '../shared/demoData';
 import { createThemeToggle } from '../shared/themeToggle';
 
@@ -56,6 +56,7 @@ export class AppComponent {
     editable: true,
     cellSelection: true,
     statusBar: true,
+    onCellValueChanged: (e) => handleCellValueChanged(projects, e),
   };
 }
 

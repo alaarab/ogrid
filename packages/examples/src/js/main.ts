@@ -1,6 +1,6 @@
 import { OGrid } from '@alaarab/ogrid-js';
 import '@alaarab/ogrid-js/styles';
-import { makeDemoProjects, makeDemoColumns, getRowId } from '../shared/demoData';
+import { makeDemoProjects, makeDemoColumns, getRowId, handleCellValueChanged } from '../shared/demoData';
 import type { Project } from '../shared/demoData';
 import { createThemeToggle } from '../shared/themeToggle';
 
@@ -21,6 +21,7 @@ const grid = new OGrid<Project>(container, {
   editable: true,
   cellSelection: true,
   statusBar: true,
+  onCellValueChanged: (e) => handleCellValueChanged(projects, e),
 });
 
 // Expose grid API to window for debugging
