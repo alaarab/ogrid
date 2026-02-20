@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import type { IDataSource } from '../types/dataGridTypes';
 
 export interface UseFilterOptionsResult {
@@ -11,6 +11,15 @@ type FilterOptionsSource =
   | IDataSource<unknown>
   | { fetchFilterOptions?: (field: string) => Promise<string[]> };
 
+/** Shallow-compare two string arrays by value. */
+function fieldsEqual(a: string[], b: string[]): boolean {
+  if (a.length !== b.length) return false;
+  for (let i = 0; i < a.length; i++) {
+    if (a[i] !== b[i]) return false;
+  }
+  return true;
+}
+
 /**
  * Load filter options for the given fields from a data source.
  *
@@ -20,6 +29,14 @@ export function useFilterOptions(
   dataSource: FilterOptionsSource,
   fields: string[]
 ): UseFilterOptionsResult {
+  // Stabilize the fields array so inline literals (e.g. ['a','b']) don't
+  // cause infinite re-render loops via useCallback/useEffect deps.
+  const fieldsRef = useRef(fields);
+  if (!fieldsEqual(fieldsRef.current, fields)) {
+    fieldsRef.current = fields;
+  }
+  const stableFields = fieldsRef.current;
+
   const [filterOptions, setFilterOptions] = useState<Record<string, string[]>>({});
   const [loadingOptions, setLoadingOptions] = useState<Record<string, boolean>>({});
 
@@ -35,12 +52,12 @@ export function useFilterOptions(
       return;
     }
     const loading: Record<string, boolean> = {};
-    fields.forEach((f) => { loading[f] = true; });
+    stableFields.forEach((f) => { loading[f] = true; });
     setLoadingOptions(loading);
 
     const results: Record<string, string[]> = {};
     await Promise.all(
-      fields.map(async (field) => {
+      stableFields.map(async (field) => {
         try {
           results[field] = await fetcher(field);
         } catch {
@@ -51,7 +68,7 @@ export function useFilterOptions(
 
     setFilterOptions(results);
     setLoadingOptions({});
-  }, [dataSource, fields]);
+  }, [dataSource, stableFields]);
 
   useEffect(() => {
     load().catch(() => {});
