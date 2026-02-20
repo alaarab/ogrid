@@ -185,7 +185,6 @@ export function useOGrid<T>(
   const dataFetchingState = useOGridDataFetching({
     isServerSide, dataSource, displayData, columns,
     stableFilters: filtersState.stableFilters,
-    filters: filtersState.filters,
     sort: sortingState.sort,
     page: paginationState.page,
     pageSize: paginationState.pageSize,

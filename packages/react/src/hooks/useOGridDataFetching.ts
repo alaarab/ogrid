@@ -9,7 +9,6 @@ export interface UseOGridDataFetchingParams<T> {
   displayData: T[];
   columns: ICoreColumnDef<T>[];
   stableFilters: IFilters;
-  filters: IFilters;
   sort: { field: string; direction: 'asc' | 'desc' };
   page: number;
   pageSize: number;
@@ -31,7 +30,7 @@ export interface UseOGridDataFetchingState<T> {
 export function useOGridDataFetching<T>(params: UseOGridDataFetchingParams<T>): UseOGridDataFetchingState<T> {
   const {
     isServerSide, dataSource, displayData, columns, stableFilters,
-    filters, sort, page, pageSize, onError, onFirstDataRendered,
+    sort, page, pageSize, onError, onFirstDataRendered,
   } = params;
 
   const isClientSide = !isServerSide;
@@ -66,7 +65,7 @@ export function useOGridDataFetching<T>(params: UseOGridDataFetchingParams<T>): 
       .fetchPage({
         page, pageSize,
         sort: { field: sort.field, direction: sort.direction },
-        filters,
+        filters: stableFilters,
       })
       .then((res) => {
         if (id !== fetchIdRef.current) return;
@@ -82,7 +81,7 @@ export function useOGridDataFetching<T>(params: UseOGridDataFetchingParams<T>): 
       .finally(() => {
         if (id === fetchIdRef.current) setServerLoading(false);
       });
-  }, [isServerSide, dataSource, page, pageSize, sort.field, sort.direction, filters, onError, refreshCounter]);
+  }, [isServerSide, dataSource, page, pageSize, sort.field, sort.direction, stableFilters, onError, refreshCounter]);
 
   const displayItems = isClientSide && clientItemsAndTotal ? clientItemsAndTotal.items : serverItems;
   const displayTotalCount = isClientSide && clientItemsAndTotal ? clientItemsAndTotal.totalCount : serverTotalCount;
