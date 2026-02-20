@@ -38,10 +38,15 @@ class NgZone {
   run(fn) { return fn(); }
 }
 
-// DI — returns stubs for known tokens
+// DI — returns stubs for known tokens, or constructs @Injectable() classes
 const inject = (token) => {
   if (token === DestroyRef) return new DestroyRef();
   if (token === NgZone) return new NgZone();
+  // For @Injectable() service classes (DataGridStateService, ColumnReorderService, etc.),
+  // construct a new instance so base class inject() calls work in test factories.
+  if (typeof token === 'function') {
+    try { return new token(); } catch { return undefined; }
+  }
   return undefined;
 };
 

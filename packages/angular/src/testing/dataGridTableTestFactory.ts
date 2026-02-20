@@ -10,7 +10,6 @@ import type { FixtureRow } from './fixtures';
 import type { IOGridDataGridProps, IColumnDef, IColumnGroupDef, FilterValue, IStatusBarProps, ICellValueChangedEvent } from '../types';
 import type { DataGridStateService } from '../services/datagrid-state.service';
 import type { Signal, SimpleChanges } from '@angular/core';
-import type { TemplateRef } from '@angular/core';
 
 function makeProps(overrides: Partial<IOGridDataGridProps<FixtureRow>> = {}): IOGridDataGridProps<FixtureRow> {
   return {
@@ -49,7 +48,7 @@ interface DataGridTableInstance {
     onClearAll: () => void;
     hasActiveFilters: boolean;
     message?: string;
-    render?: TemplateRef<unknown>;
+    render?: unknown;
   };
   editable?: boolean;
   onCellValueChanged?: (event: ICellValueChangedEvent<FixtureRow>) => void;

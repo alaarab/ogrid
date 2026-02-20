@@ -59,13 +59,13 @@ export function createColumnGroupTests(_DataGridTableComponent: new () => unknow
       const groupRow = rows[0];
       const groupCell = groupRow.find((c) => c.isGroup);
       expect(groupCell).toBeTruthy();
-      expect(groupCell!.colSpan).toBe(2);
+      expect(groupCell?.colSpan).toBe(2);
     });
 
     it('group header label is correct', () => {
       const rows = buildHeaderRows(groupedColumns, new Set(['name', 'status']));
       const groupCell = rows[0].find((c) => c.isGroup);
-      expect(groupCell!.label).toBe('Info');
+      expect(groupCell?.label).toBe('Info');
     });
 
     it('nested groups produce three header rows', () => {
@@ -90,7 +90,7 @@ export function createColumnGroupTests(_DataGridTableComponent: new () => unknow
       // When only 'name' is visible, the group still shows but colSpan should be 1
       expect(rows.length).toBe(2);
       const groupCell = rows[0].find((c) => c.isGroup);
-      expect(groupCell!.colSpan).toBe(1);
+      expect(groupCell?.colSpan).toBe(1);
     });
   });
 }

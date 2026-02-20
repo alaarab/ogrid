@@ -68,25 +68,25 @@ export function createColumnGroupTests(DataGridTable: React.ComponentType<IOGrid
       const { container } = renderTable(leafColumns);
       const thead = container.querySelector('thead');
       expect(thead).toBeTruthy();
-      const headerRows = thead!.querySelectorAll('tr');
-      expect(headerRows.length).toBe(1);
+      const headerRows = thead?.querySelectorAll('tr');
+      expect(headerRows?.length).toBe(1);
     });
 
     it('renders two header rows when columns have one level of grouping', () => {
       const { container } = renderTable(groupedColumns);
       const thead = container.querySelector('thead');
       expect(thead).toBeTruthy();
-      const headerRows = thead!.querySelectorAll('tr');
+      const headerRows = thead?.querySelectorAll('tr');
       expect(headerRows.length).toBe(2);
     });
 
     it('group header cell has correct colSpan', () => {
       const { container } = renderTable(groupedColumns);
       const thead = container.querySelector('thead');
-      const firstRow = thead!.querySelectorAll('tr')[0];
-      const groupCell = firstRow.querySelector('th[colspan]');
+      const firstRow = thead?.querySelectorAll('tr')[0];
+      const groupCell = firstRow?.querySelector('th[colspan]');
       expect(groupCell).toBeTruthy();
-      expect(groupCell!.getAttribute('colspan')).toBe('2');
+      expect(groupCell?.getAttribute('colspan')).toBe('2');
     });
 
     it('group header label text is visible', () => {
@@ -104,8 +104,8 @@ export function createColumnGroupTests(DataGridTable: React.ComponentType<IOGrid
       const { container } = renderTable(nestedGroupedColumns);
       const thead = container.querySelector('thead');
       expect(thead).toBeTruthy();
-      const headerRows = thead!.querySelectorAll('tr');
-      expect(headerRows.length).toBe(3);
+      const headerRows = thead?.querySelectorAll('tr');
+      expect(headerRows?.length).toBe(3);
     });
 
     it('nested group shows both group labels', () => {

@@ -55,7 +55,7 @@ function App() {
       columns={columns}
       data={data}
       getRowId={(r) => r.id}
-      virtualScroll={{ rowHeight: 36 }}
+      virtualScroll={{ enabled: true, rowHeight: 36 }}
       statusBar
     />
   );
@@ -104,7 +104,7 @@ export class GridComponent {
     ] as IColumnDef<Row>[],
     data,
     getRowId: (item: Row) => item.id,
-    virtualScroll: { rowHeight: 36 },
+    virtualScroll: { enabled: true, rowHeight: 36 },
     statusBar: true,
   };
 }
@@ -150,7 +150,7 @@ const gridProps = {
   columns,
   data,
   getRowId: (item: Row) => item.id,
-  virtualScroll: { rowHeight: 36 },
+  virtualScroll: { enabled: true, rowHeight: 36 },
   statusBar: true,
 };
 </script>
@@ -190,7 +190,7 @@ const grid = new OGrid(document.getElementById('grid'), {
   ],
   data,
   getRowId: (r) => r.id,
-  virtualScroll: { rowHeight: 36 },
+  virtualScroll: { enabled: true, rowHeight: 36 },
   statusBar: true,
 });
 ```
@@ -206,7 +206,7 @@ Pass a `virtualScroll` configuration object to enable virtualization:
 
 ```tsx
 <OGrid
-  virtualScroll={{ rowHeight: 36 }}
+  virtualScroll={{ enabled: true, rowHeight: 36 }}
   // ...other props
 />
 ```
@@ -228,7 +228,7 @@ The `rowHeight` property sets the fixed pixel height for every row. Choose a val
 
 ```tsx
 <OGrid
-  virtualScroll={{ rowHeight: 48 }}  // taller rows
+  virtualScroll={{ enabled: true, rowHeight: 48 }}  // taller rows
   // ...
 />
 ```
@@ -243,7 +243,7 @@ The `overscan` property controls how many extra rows are rendered above and belo
 
 ```tsx
 <OGrid
-  virtualScroll={{ rowHeight: 36, overscan: 10 }}
+  virtualScroll={{ enabled: true, rowHeight: 36, overscan: 10 }}
   // ...
 />
 ```
@@ -278,7 +278,7 @@ function App() {
         columns={columns}
         data={data}
         getRowId={(r) => r.id}
-        virtualScroll={{ rowHeight: 36 }}
+        virtualScroll={{ enabled: true, rowHeight: 36 }}
       />
     </div>
   );
@@ -313,7 +313,7 @@ export class GridComponent {
     columns,
     data,
     getRowId: (item: Row) => item.id,
-    virtualScroll: { rowHeight: 36 },
+    virtualScroll: { enabled: true, rowHeight: 36 },
   };
 }
 ```
@@ -352,7 +352,7 @@ const grid = new OGrid(document.getElementById('grid'), {
   columns,
   data,
   getRowId: (r) => r.id,
-  virtualScroll: { rowHeight: 36 },
+  virtualScroll: { enabled: true, rowHeight: 36 },
 });
 
 const api = grid.getApi();
@@ -406,8 +406,8 @@ Key implementation details:
 
 | Field | Type | Default | Description |
 |-------|------|---------|-------------|
-| `rowHeight` | `number` | -- | Fixed height of each row in pixels (required). |
-| `enabled` | `boolean` | `true` | Whether virtual scrolling is active. Set `false` to disable. |
+| `enabled` | `boolean` | `false` | Enable virtual scrolling. Must be set to `true` to activate. |
+| `rowHeight` | `number` | `36` | Fixed height of each row in pixels. Required when enabled. |
 | `overscan` | `number` | `5` | Extra rows rendered above and below the visible area. |
 
 ### Grid API Methods

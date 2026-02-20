@@ -158,10 +158,10 @@ export function SideBar(props: SideBarProps): React.ReactElement {
     </div>
   );
 
-  const panelContent = isOpen ? (
-    <div role="tabpanel" aria-label={PANEL_LABELS[activePanel!]} style={panelContainerStyle}>
+  const panelContent = isOpen && activePanel ? (
+    <div role="tabpanel" aria-label={PANEL_LABELS[activePanel]} style={panelContainerStyle}>
       <div style={panelHeaderStyle}>
-        <span>{PANEL_LABELS[activePanel!]}</span>
+        <span>{PANEL_LABELS[activePanel]}</span>
         <button onClick={() => onPanelChange(null)} style={closeButtonStyle} aria-label="Close panel">
           &times;
         </button>
@@ -262,13 +262,14 @@ function FiltersPanel(props: {
     <>
       {filterableColumns.map((col) => {
         const filterKey = col.filterField;
+        const fv = filters[filterKey];
         return (
           <div key={col.columnId} style={filterGroupStyle}>
             <div style={filterLabelStyle}>{col.name}</div>
             {col.filterType === 'text' && (
               <input
                 type="text"
-                value={filters[filterKey]?.type === 'text' ? filters[filterKey]!.value : ''}
+                value={fv?.type === 'text' ? fv.value : ''}
                 onChange={(e) => onFilterChange(filterKey, e.target.value ? { type: 'text', value: e.target.value } : undefined)}
                 placeholder={`Filter ${col.name}...`}
                 aria-label={`Filter ${col.name}`}
@@ -281,10 +282,10 @@ function FiltersPanel(props: {
                   From:
                   <input
                     type="date"
-                    value={filters[filterKey]?.type === 'date' ? (filters[filterKey]!.value.from ?? '') : ''}
+                    value={fv?.type === 'date' ? (fv.value.from ?? '') : ''}
                     onChange={(e) => {
                       const from = e.target.value || undefined;
-                      const existingValue = filters[filterKey]?.type === 'date' ? filters[filterKey]!.value : {};
+                      const existingValue = fv?.type === 'date' ? fv.value : {};
                       const to = existingValue.to;
                       onFilterChange(filterKey, from || to ? { type: 'date', value: { from, to } } : undefined);
                     }}
@@ -296,10 +297,10 @@ function FiltersPanel(props: {
                   To:
                   <input
                     type="date"
-                    value={filters[filterKey]?.type === 'date' ? (filters[filterKey]!.value.to ?? '') : ''}
+                    value={fv?.type === 'date' ? (fv.value.to ?? '') : ''}
                     onChange={(e) => {
                       const to = e.target.value || undefined;
-                      const existingValue = filters[filterKey]?.type === 'date' ? filters[filterKey]!.value : {};
+                      const existingValue = fv?.type === 'date' ? fv.value : {};
                       const from = existingValue.from;
                       onFilterChange(filterKey, from || to ? { type: 'date', value: { from, to } } : undefined);
                     }}
@@ -312,14 +313,14 @@ function FiltersPanel(props: {
             {col.filterType === 'multiSelect' && (
               <div style={multiSelectContainerStyle} role="group" aria-label={`${col.name} options`}>
                 {(filterOptions[filterKey] ?? []).map((opt) => {
-                  const selected = filters[filterKey]?.type === 'multiSelect' ? filters[filterKey]!.value.includes(opt) : false;
+                  const selected = fv?.type === 'multiSelect' ? fv.value.includes(opt) : false;
                   return (
                     <label key={opt} style={multiSelectLabelStyle}>
                       <input
                         type="checkbox"
                         checked={selected}
                         onChange={(e) => {
-                          const current = filters[filterKey]?.type === 'multiSelect' ? filters[filterKey]!.value : [];
+                          const current = fv?.type === 'multiSelect' ? fv.value : [];
                           const next = e.target.checked
                             ? [...current, opt]
                             : current.filter((v) => v !== opt);

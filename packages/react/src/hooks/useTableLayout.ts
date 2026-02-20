@@ -56,8 +56,7 @@ export function useTableLayout<T>(
     ro.observe(el);
     measure();
     return () => ro.disconnect();
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []); // wrapperRef excluded — refs are stable
+  }, [wrapperRef]);
 
   // --- Column sizing overrides state ---
   const [columnSizingOverrides, setColumnSizingOverrides] = useState<
@@ -84,15 +83,10 @@ export function useTableLayout<T>(
   useEffect(() => {
     const colIds = new Set(flatColumns.map((c) => c.columnId));
     setColumnSizingOverrides((prev) => {
-      const next = { ...prev };
-      let changed = false;
-      for (const id of Object.keys(next)) {
-        if (!colIds.has(id)) {
-          delete next[id];
-          changed = true;
-        }
-      }
-      return changed ? next : prev;
+      const kept = Object.fromEntries(
+        Object.entries(prev).filter(([id]) => colIds.has(id))
+      );
+      return Object.keys(kept).length !== Object.keys(prev).length ? kept : prev;
     });
   }, [flatColumns]);
 

@@ -1,13 +1,13 @@
-import { defineComponent, h, type PropType } from 'vue';
+import { defineComponent, h, type PropType, type Component } from 'vue';
 import InputText from 'primevue/inputtext';
 import Checkbox from 'primevue/checkbox';
 import Button from 'primevue/button';
 import ProgressSpinner from 'primevue/progressspinner';
 
-const _InputText = InputText as any;
-const _Checkbox = Checkbox as any;
-const _Button = Button as any;
-const _ProgressSpinner = ProgressSpinner as any;
+const _InputText = InputText as Component;
+const _Checkbox = Checkbox as Component;
+const _Button = Button as Component;
+const _ProgressSpinner = ProgressSpinner as Component;
 
 export const MultiSelectFilterPopover = defineComponent({
   name: 'MultiSelectFilterPopover',

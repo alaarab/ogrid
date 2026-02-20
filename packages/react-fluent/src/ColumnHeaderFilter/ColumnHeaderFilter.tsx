@@ -36,6 +36,14 @@ export const ColumnHeaderFilter: React.FC<IColumnHeaderFilterProps> = React.memo
     handlers,
   } = state;
 
+  const {
+    handlePopoverClick,
+    handleInputFocus,
+    handleInputMouseDown,
+    handleInputClick,
+    handleInputKeyDown,
+  } = handlers;
+
   const filterBtnRef = React.useRef<HTMLButtonElement>(null);
 
   // Fluent-specific renderers that pass additional event propagation handlers
@@ -52,11 +60,11 @@ export const ColumnHeaderFilter: React.FC<IColumnHeaderFilterProps> = React.memo
         onClearSelection={p.onClearSelection}
         onApply={p.onApply}
         isLoading={p.isLoading}
-        onPopoverClick={handlers.handlePopoverClick}
-        onInputFocus={handlers.handleInputFocus}
-        onInputMouseDown={handlers.handleInputMouseDown}
-        onInputClick={handlers.handleInputClick}
-        onInputKeyDown={handlers.handleInputKeyDown}
+        onPopoverClick={handlePopoverClick}
+        onInputFocus={handleInputFocus}
+        onInputMouseDown={handleInputMouseDown}
+        onInputClick={handleInputClick}
+        onInputKeyDown={handleInputKeyDown}
       />
     ),
     renderText: (p) => (
@@ -65,11 +73,11 @@ export const ColumnHeaderFilter: React.FC<IColumnHeaderFilterProps> = React.memo
         onValueChange={p.onValueChange}
         onApply={p.onApply}
         onClear={p.onClear}
-        onPopoverClick={handlers.handlePopoverClick}
-        onInputFocus={handlers.handleInputFocus}
-        onInputMouseDown={handlers.handleInputMouseDown}
-        onInputClick={handlers.handleInputClick}
-        onInputKeyDown={handlers.handleInputKeyDown}
+        onPopoverClick={handlePopoverClick}
+        onInputFocus={handleInputFocus}
+        onInputMouseDown={handleInputMouseDown}
+        onInputClick={handleInputClick}
+        onInputKeyDown={handleInputKeyDown}
       />
     ),
     renderPeople: (p) => (
@@ -81,12 +89,12 @@ export const ColumnHeaderFilter: React.FC<IColumnHeaderFilterProps> = React.memo
         isLoading={p.isLoading}
         onUserSelect={p.onUserSelect}
         onClearUser={p.onClearUser}
-        onPopoverClick={handlers.handlePopoverClick}
+        onPopoverClick={handlePopoverClick}
         inputRef={p.inputRef as React.RefObject<HTMLInputElement>}
       />
     ),
     renderDate: (p) => (
-      <div onClick={handlers.handlePopoverClick}>
+      <div onClick={handlePopoverClick}>
         <DateFilterContent
           tempDateFrom={p.tempDateFrom}
           setTempDateFrom={p.setTempDateFrom}
@@ -102,7 +110,7 @@ export const ColumnHeaderFilter: React.FC<IColumnHeaderFilterProps> = React.memo
         />
       </div>
     ),
-  }), [handlers]);
+  }), [handlePopoverClick, handleInputFocus, handleInputMouseDown, handleInputClick, handleInputKeyDown]);
 
   return (
     <div className={styles.columnHeader} ref={headerRef as React.RefObject<HTMLDivElement>}>

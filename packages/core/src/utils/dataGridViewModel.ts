@@ -9,6 +9,7 @@ import type { IColumnDef } from '../types/columnTypes';
 import type { RowId, UserLike, IFilters, FilterValue } from '../types/dataGridTypes';
 import { getCellValue } from './cellValue';
 import { isInSelectionRange } from '../types/dataGridTypes';
+import { isFilterConfig } from './ogridHelpers';
 
 // ---------------------------------------------------------------------------
 // Header filter config
@@ -53,8 +54,7 @@ export function getHeaderFilterConfig<T>(
   col: IColumnDef<T>,
   input: HeaderFilterConfigInput
 ): HeaderFilterConfig {
-  const filterable =
-    col.filterable && typeof col.filterable === 'object' ? col.filterable : null;
+  const filterable = isFilterConfig(col.filterable) ? col.filterable : null;
   const filterType = (filterable?.type ?? 'none') as ColumnFilterType;
   const filterField = filterable?.filterField ?? col.columnId;
   const sortable = col.sortable !== false;
@@ -219,9 +219,11 @@ export function getCellRenderDescriptor<T>(
   const isPinned = col.pinned != null;
   const pinnedSide = col.pinned ?? undefined;
 
+  // Compute cell value once — used in editing and display branches
+  const cellValue = getCellValue(item, col);
+
   let mode: CellRenderMode = 'display';
   let editorType: 'text' | 'select' | 'checkbox' | 'richSelect' | 'date' | undefined;
-  let value: unknown;
 
   if (isEditing && canEditInline) {
     mode = 'editing-inline';
@@ -240,18 +242,14 @@ export function getCellRenderDescriptor<T>(
     } else {
       editorType = 'text';
     }
-    value = getCellValue(item, col);
   } else if (isEditing && canEditPopup && typeof col.cellEditor === 'function') {
     mode = 'editing-popover';
-    value = getCellValue(item, col);
-  } else {
-    value = getCellValue(item, col);
   }
 
   return {
     mode,
     editorType,
-    value,
+    value: cellValue,
     isActive,
     isInRange,
     isInCutRange,
@@ -263,7 +261,7 @@ export function getCellRenderDescriptor<T>(
     globalColIndex,
     rowId,
     rowIndex,
-    displayValue: value,
+    displayValue: cellValue,
   };
 }
 
@@ -274,11 +272,13 @@ export function getCellRenderDescriptor<T>(
 /**
  * Column def with optional framework-specific display fields.
  * Core's IColumnDef doesn't include renderCell/cellStyle; framework packages add them.
- * This type allows the helpers to work with any framework's column def.
+ * This interface extends IColumnDef so the helpers can safely access these optional fields
+ * without requiring framework-specific imports. The `as IColumnDefWithDisplay<T>` casts
+ * below are safe because the extra fields are optional and only read when present.
  */
 interface IColumnDefWithDisplay<T> extends IColumnDef<T> {
-  renderCell?: ((item: T) => unknown) | unknown;
-  cellStyle?: Record<string, string> | ((item: T) => Record<string, string>) | unknown;
+  renderCell?: ((item: T) => unknown) | undefined;
+  cellStyle?: Record<string, string> | ((item: T) => Record<string, string>) | undefined;
 }
 
 /**

@@ -79,6 +79,8 @@ export function useColumnHeaderFilterState(
     onSort,
   } = params;
 
+  // Access params.selectedValues as a getter so hasActiveFilter tracks the reactive prop
+  // (when params is Vue's reactive props object, this is reactive; plain objects are snapshots)
   const safeSelectedValues = () => params.selectedValues ?? EMPTY_OPTIONS;
 
   // Shared state
@@ -91,34 +93,33 @@ export function useColumnHeaderFilterState(
     isFilterOpen.value = open;
   };
 
-  const isFilterOpenGetter = () => isFilterOpen.value;
-
-  // Compose sub-hooks
+  // Compose sub-hooks — pass the ref directly so Vue's reactivity system
+  // can properly track dependencies (instead of a getter function wrapper)
   const textFilterState = useTextFilterState({
     textValue: params.textValue,
     onTextChange: params.onTextChange,
-    isFilterOpen: isFilterOpenGetter,
+    isFilterOpen,
   });
 
   const multiSelectFilterState = useMultiSelectFilterState({
     selectedValues: params.selectedValues,
     onFilterChange: params.onFilterChange,
     options: params.options,
-    isFilterOpen: isFilterOpenGetter,
+    isFilterOpen,
   });
 
   const peopleFilterState = usePeopleFilterState({
     selectedUser: params.selectedUser,
     onUserChange: params.onUserChange,
     peopleSearch: params.peopleSearch,
-    isFilterOpen: isFilterOpenGetter,
+    isFilterOpen,
     filterType,
   });
 
   const dateFilterState = useDateFilterState({
     dateValue: params.dateValue,
     onDateChange: params.onDateChange,
-    isFilterOpen: isFilterOpenGetter,
+    isFilterOpen,
   });
 
   // Close popover resets position
@@ -151,7 +152,7 @@ export function useColumnHeaderFilterState(
         isFilterOpen.value = false;
       }
     };
-    clickOutsideTimeout = setTimeout(() => document.addEventListener('mousedown', clickOutsideHandler!), 0);
+    clickOutsideTimeout = setTimeout(() => { if (clickOutsideHandler) document.addEventListener('mousedown', clickOutsideHandler); }, 0);
     document.addEventListener('keydown', keyDownHandler, true);
   };
 

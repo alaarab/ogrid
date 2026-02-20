@@ -95,14 +95,14 @@ export function useColumnReorder(params: UseColumnReorderParams): UseColumnReord
           const tableEl = tableRef.value;
           if (!tableEl || !draggedColumnId) return;
 
-          const result = calculateDropTarget(
-            latestMouseX,
-            columnOrder.value,
+          const result = calculateDropTarget({
+            mouseX: latestMouseX,
+            columnOrder: columnOrder.value,
             draggedColumnId,
             draggedPinState,
-            tableEl,
-            pinnedColumns?.value
-          );
+            tableElement: tableEl,
+            pinnedColumns: pinnedColumns?.value,
+          });
 
           if (result) {
             targetIndex = result.targetIndex;

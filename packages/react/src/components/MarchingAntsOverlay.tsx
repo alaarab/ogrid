@@ -61,8 +61,7 @@ export function MarchingAntsOverlay({
 
     setSelRect(selectionRange ? measureRange(container, selectionRange, colOffset) : null);
     setClipRect(clipRange ? measureRange(container, clipRange, colOffset) : null);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectionRange, clipRange, containerRef, colOffset, items, visibleColumns, columnSizingOverrides, columnOrder]);
+  }, [selectionRange, clipRange, containerRef, colOffset]);
 
   // Inject keyframes on mount
   useEffect(() => {
@@ -91,7 +90,7 @@ export function MarchingAntsOverlay({
       cancelAnimationFrame(rafRef.current);
       ro?.disconnect();
     };
-  }, [selectionRange, clipRange, measureAll, containerRef]);
+  }, [selectionRange, clipRange, measureAll, containerRef, items, visibleColumns, columnSizingOverrides, columnOrder]);
 
   if (!selRect && !clipRect) return null;
 

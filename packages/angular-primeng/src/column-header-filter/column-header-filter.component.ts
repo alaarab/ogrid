@@ -118,7 +118,7 @@ import { BaseColumnHeaderFilterComponent } from '@alaarab/ogrid-angular';
                   <input
                     type="text"
                     [value]="peopleSearchText()"
-                    (input)="onPeopleSearchInput($any($event.target).value)"
+                    (input)="onPeopleSearchInput($event)"
                     placeholder="Search people..."
                     style="width:100%;box-sizing:border-box;padding:6px 8px;border:1px solid var(--ogrid-border, rgba(0, 0, 0, 0.12));border-radius:4px;font-size:13px;background:var(--ogrid-bg, #fff);color:var(--ogrid-fg, #242424)"
                     [attr.aria-label]="'Search people for ' + columnName"

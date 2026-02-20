@@ -34,6 +34,20 @@ export type {
   IOGridApi,
 } from '@alaarab/ogrid-core';
 
+/** Standardized cell event parameter for cell interaction callbacks. */
+export interface CellEvent {
+  /** Zero-based row index within the current page. */
+  rowIndex: number;
+  /** Zero-based column index among visible columns. */
+  colIndex: number;
+  /** The original DOM mouse event, when available. */
+  event?: MouseEvent;
+  /** Typed row identifier (string or number). Present for double-click events. */
+  rowId?: RowId;
+  /** Column identifier string. Present for double-click events. */
+  columnId?: string;
+}
+
 /** Extended API for the vanilla JS package (adds methods not in the core IOGridApi). */
 export interface IJsOGridApi<T> extends IOGridApi<T> {
   /** Export displayed rows to CSV and trigger a download. */
@@ -151,6 +165,9 @@ export interface OGridOptions<T> {
 
   /** Initial column display order (array of column ids). */
   columnOrder?: string[];
+
+  /** Accessible label for the grid wrapper element. */
+  ariaLabel?: string;
 
   /** Callback fired when column order changes. */
   onColumnOrderChange?: (order: string[]) => void;

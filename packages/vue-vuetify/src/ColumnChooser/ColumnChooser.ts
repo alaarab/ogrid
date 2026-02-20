@@ -1,4 +1,4 @@
-import { defineComponent, ref, computed, h, type PropType } from 'vue';
+import { defineComponent, computed, h, type PropType, type Component } from 'vue';
 import { VBtn, VMenu, VList, VListItem, VDivider } from 'vuetify/components';
 import { useColumnChooserState, type IColumnDefinition } from '@alaarab/ogrid-vue';
 
@@ -16,7 +16,6 @@ export const ColumnChooser = defineComponent({
     onVisibilityChange: { type: Function as PropType<(columnKey: string, visible: boolean) => void>, required: true },
   },
   setup(props) {
-    const menuOpen = ref(false);
     const columnsRef = computed(() => props.columns);
     const visibleColumnsRef = computed(() => props.visibleColumns);
 
@@ -27,19 +26,19 @@ export const ColumnChooser = defineComponent({
     });
 
     return () => {
-      return h(VMenu as any, {
-        modelValue: menuOpen.value,
-        'onUpdate:modelValue': (v: boolean) => { menuOpen.value = v; },
+      return h(VMenu as Component, {
+        modelValue: state.open.value,
+        'onUpdate:modelValue': (v: boolean) => { state.setOpen(v); },
         closeOnContentClick: false,
         location: 'bottom end',
       }, {
         activator: ({ props: activatorProps }: { props: Record<string, unknown> }) =>
-          h(VBtn as any, {
+          h(VBtn as Component, {
             ...activatorProps,
             variant: 'outlined',
             size: 'small',
             prependIcon: 'mdi-view-column',
-            appendIcon: menuOpen.value ? 'mdi-chevron-up' : 'mdi-chevron-down',
+            appendIcon: state.open.value ? 'mdi-chevron-up' : 'mdi-chevron-down',
           }, () => `Column Visibility (${state.visibleCount.value} of ${state.totalCount.value})`),
         default: () => h('div', { style: { minWidth: '220px' } }, [
           // Header
@@ -54,9 +53,9 @@ export const ColumnChooser = defineComponent({
           }, `Select Columns (${state.visibleCount.value} of ${state.totalCount.value})`),
 
           // Column list
-          h(VList as any, { density: 'compact', style: { maxHeight: '320px', overflowY: 'auto' } },
+          h(VList as Component, { density: 'compact', style: { maxHeight: '320px', overflowY: 'auto' } },
             () => props.columns.map((column) =>
-              h(VListItem as any, { key: column.columnId, style: { minHeight: '32px' } }, () =>
+              h(VListItem as Component, { key: column.columnId, style: { minHeight: '32px' } }, () =>
                 h('label', {
                   style: { display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', width: '100%' },
                 }, [
@@ -73,7 +72,7 @@ export const ColumnChooser = defineComponent({
           ),
 
           // Footer with actions
-          h(VDivider as any),
+          h(VDivider as Component),
           h('div', {
             style: {
               display: 'flex',
@@ -83,8 +82,8 @@ export const ColumnChooser = defineComponent({
               backgroundColor: 'rgba(0,0,0,0.04)',
             },
           }, [
-            h(VBtn as any, { size: 'small', variant: 'text', onClick: state.handleClearAll }, () => 'Clear All'),
-            h(VBtn as any, { size: 'small', variant: 'flat', color: 'primary', onClick: state.handleSelectAll }, () => 'Select All'),
+            h(VBtn as Component, { size: 'small', variant: 'text', onClick: state.handleClearAll }, () => 'Clear All'),
+            h(VBtn as Component, { size: 'small', variant: 'flat', color: 'primary', onClick: state.handleSelectAll }, () => 'Select All'),
           ]),
         ]),
       });

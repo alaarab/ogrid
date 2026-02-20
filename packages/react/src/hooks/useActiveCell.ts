@@ -41,8 +41,7 @@ export function useActiveCell(
     if (cell && document.activeElement !== cell && typeof cell.focus === 'function') {
       cell.focus({ preventScroll: true });
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeCell, editingCell]); // wrapperRef excluded — refs are stable across renders
+  }, [activeCell, editingCell, wrapperRef]);
 
   // Batch scroll-into-view via RAF so rapid keyboard navigation only scrolls once
   useEffect(() => {
@@ -76,8 +75,7 @@ export function useActiveCell(
         }
       }
     });
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeCell, editingCell]); // wrapperRef excluded — refs are stable across renders
+  }, [activeCell, editingCell, wrapperRef]);
 
   // Clean up pending RAF on unmount
   useEffect(() => {

@@ -34,11 +34,13 @@ function getBodyCells(container: HTMLElement): HTMLElement[] {
 }
 
 /** Get cell at row and data-column index (col 0 = first data column). */
-function getCellAt(container: HTMLElement, rowIndex: number, colIndex: number): HTMLElement | null {
+function getCellAt(container: HTMLElement, rowIndex: number, colIndex: number): HTMLElement {
   const cells = getBodyCells(container);
-  return cells.find(
+  const cell = cells.find(
     (c) => c.getAttribute('data-row-index') === String(rowIndex) && c.getAttribute('data-col-index') === String(colIndex)
-  ) ?? null;
+  );
+  if (!cell) throw new Error(`Cell not found at row=${rowIndex}, col=${colIndex}`);
+  return cell;
 }
 
 export function createSpreadsheetTests(DataGridTable: React.ComponentType<IOGridDataGridProps<FixtureRow>>): void {
@@ -71,7 +73,7 @@ export function createSpreadsheetTests(DataGridTable: React.ComponentType<IOGrid
         const { container } = renderSpreadsheetGrid();
         const cell = getCellAt(container, 0, 0);
         expect(cell).toBeTruthy();
-        fireEvent.mouseDown(cell!);
+        fireEvent.mouseDown(cell);
         await waitFor(() => {
           const inRange = container.querySelectorAll('[data-in-range="true"]');
           expect(inRange.length).toBeGreaterThanOrEqual(1);
@@ -91,7 +93,7 @@ export function createSpreadsheetTests(DataGridTable: React.ComponentType<IOGrid
           return originalElementFromPoint.call(document, x, y);
         };
 
-        fireEvent.mouseDown(cell00!, { clientX: 0, clientY: 0 });
+        fireEvent.mouseDown(cell00, { clientX: 0, clientY: 0 });
         // Dispatch move/up on window directly — jsdom capture-phase listeners on window
         // may not fire for events dispatched on child nodes.
         act(() => {
@@ -116,12 +118,12 @@ export function createSpreadsheetTests(DataGridTable: React.ComponentType<IOGrid
         expect(cell00).toBeTruthy();
         expect(cell10).toBeTruthy();
 
-        fireEvent.mouseDown(cell00!);
+        fireEvent.mouseDown(cell00);
         await waitFor(() => {
           expect(container.querySelector('[data-in-range="true"]')).toBeInTheDocument();
         });
 
-        fireEvent.mouseDown(cell10!, { shiftKey: true });
+        fireEvent.mouseDown(cell10, { shiftKey: true });
         await waitFor(() => {
           const inRange = container.querySelectorAll('[data-in-range="true"]');
           expect(inRange.length).toBeGreaterThanOrEqual(2);
@@ -132,13 +134,13 @@ export function createSpreadsheetTests(DataGridTable: React.ComponentType<IOGrid
         const { container } = renderSpreadsheetGrid();
         const cell = getCellAt(container, 0, 0);
         expect(cell).toBeTruthy();
-        fireEvent.mouseDown(cell!);
-        fireEvent.click(cell!);
+        fireEvent.mouseDown(cell);
+        fireEvent.click(cell);
         await waitFor(() => {
           expect(container.querySelector('[data-in-range="true"]')).toBeInTheDocument();
         });
-        const cellInput = cell!.querySelector('input');
-        const cellSelect = cell!.querySelector('select');
+        const cellInput = cell.querySelector('input');
+        const cellSelect = cell.querySelector('select');
         expect(cellInput).toBeNull();
         expect(cellSelect).toBeNull();
       });
@@ -147,9 +149,9 @@ export function createSpreadsheetTests(DataGridTable: React.ComponentType<IOGrid
         const { container } = renderSpreadsheetGrid();
         const cell = getCellAt(container, 0, 0);
         expect(cell).toBeTruthy();
-        fireEvent.mouseDown(cell!);
-        fireEvent.click(cell!);
-        fireEvent.doubleClick(cell!);
+        fireEvent.mouseDown(cell);
+        fireEvent.click(cell);
+        fireEvent.doubleClick(cell);
         await waitFor(() => {
           const grid = container.querySelector('[role="region"]');
           const input = grid?.querySelector('input');
@@ -160,7 +162,7 @@ export function createSpreadsheetTests(DataGridTable: React.ComponentType<IOGrid
       it('Enter opens editor when cell is selected', async () => {
         const { container } = renderSpreadsheetGrid();
         const cell = getCellAt(container, 0, 0);
-        fireEvent.mouseDown(cell!);
+        fireEvent.mouseDown(cell);
         const grid = container.querySelector('[role="region"]') as HTMLElement;
         expect(grid).toBeTruthy();
         grid.focus();
@@ -174,7 +176,7 @@ export function createSpreadsheetTests(DataGridTable: React.ComponentType<IOGrid
       it('F2 opens editor when cell is selected', async () => {
         const { container } = renderSpreadsheetGrid();
         const cell = getCellAt(container, 0, 0);
-        fireEvent.mouseDown(cell!);
+        fireEvent.mouseDown(cell);
         const grid = container.querySelector('[role="region"]') as HTMLElement;
         grid.focus();
         fireEvent.keyDown(grid, { key: 'F2' });
@@ -187,7 +189,7 @@ export function createSpreadsheetTests(DataGridTable: React.ComponentType<IOGrid
       it('Escape when editing closes editor', async () => {
         const { container } = renderSpreadsheetGrid();
         const cell = getCellAt(container, 0, 0);
-        fireEvent.mouseDown(cell!);
+        fireEvent.mouseDown(cell);
         const grid = container.querySelector('[role="region"]') as HTMLElement;
         grid.focus();
         fireEvent.keyDown(grid, { key: 'Enter' });
@@ -203,7 +205,7 @@ export function createSpreadsheetTests(DataGridTable: React.ComponentType<IOGrid
       it('Escape when not editing clears selection (no editor, no range)', async () => {
         const { container } = renderSpreadsheetGrid();
         const cell = getCellAt(container, 0, 0);
-        fireEvent.mouseDown(cell!);
+        fireEvent.mouseDown(cell);
         await waitFor(() => {
           expect(container.querySelector('[data-in-range="true"]')).toBeInTheDocument();
         });
@@ -230,12 +232,12 @@ export function createSpreadsheetTests(DataGridTable: React.ComponentType<IOGrid
 
         const { container } = renderSpreadsheetGrid({ onCellValueChanged });
         const cell00 = getCellAt(container, 0, 0);
-        fireEvent.mouseDown(cell00!);
+        fireEvent.mouseDown(cell00);
         const grid = container.querySelector('[role="region"]');
         expect(grid).toBeTruthy();
 
         await act(async () => {
-          fireEvent.keyDown(grid!, { key: 'x', ctrlKey: true });
+          fireEvent.keyDown(grid as Element, { key: 'x', ctrlKey: true });
         });
 
         await waitFor(() => {
@@ -243,7 +245,7 @@ export function createSpreadsheetTests(DataGridTable: React.ComponentType<IOGrid
         });
 
         await act(async () => {
-          fireEvent.keyDown(grid!, { key: 'v', ctrlKey: true });
+          fireEvent.keyDown(grid as Element, { key: 'v', ctrlKey: true });
         });
 
         await waitFor(() => {
@@ -265,13 +267,13 @@ export function createSpreadsheetTests(DataGridTable: React.ComponentType<IOGrid
         const { container } = renderSpreadsheetGrid();
         const cell00 = getCellAt(container, 0, 0);
         const cell01 = getCellAt(container, 0, 1);
-        fireEvent.mouseDown(cell00!);
-        fireEvent.mouseDown(cell01!, { shiftKey: true });
+        fireEvent.mouseDown(cell00);
+        fireEvent.mouseDown(cell01, { shiftKey: true });
         const grid = container.querySelector('[role="region"]');
         expect(grid).toBeTruthy();
 
         await act(async () => {
-          fireEvent.keyDown(grid!, { key: 'c', ctrlKey: true });
+          fireEvent.keyDown(grid as Element, { key: 'c', ctrlKey: true });
         });
 
         await waitFor(() => {
@@ -294,12 +296,12 @@ export function createSpreadsheetTests(DataGridTable: React.ComponentType<IOGrid
 
         const { container } = renderSpreadsheetGrid({ onCellValueChanged });
         const cell00 = getCellAt(container, 0, 0);
-        fireEvent.mouseDown(cell00!);
+        fireEvent.mouseDown(cell00);
         const grid = container.querySelector('[role="region"]');
         expect(grid).toBeTruthy();
 
         await act(async () => {
-          fireEvent.keyDown(grid!, { key: 'v', ctrlKey: true });
+          fireEvent.keyDown(grid as Element, { key: 'v', ctrlKey: true });
         });
 
         await waitFor(() => {
@@ -320,7 +322,7 @@ export function createSpreadsheetTests(DataGridTable: React.ComponentType<IOGrid
         const cell00 = getCellAt(container, 0, 0);
         expect(cell00).toBeTruthy();
 
-        fireEvent.contextMenu(cell00!, { clientX: 100, clientY: 100 });
+        fireEvent.contextMenu(cell00, { clientX: 100, clientY: 100 });
 
         await waitFor(() => {
           expect(screen.getByRole('menu')).toBeInTheDocument();
@@ -333,7 +335,7 @@ export function createSpreadsheetTests(DataGridTable: React.ComponentType<IOGrid
           expect(screen.getByText('Select all')).toBeInTheDocument();
         });
         const grid = container.querySelector('[role="region"]');
-        expect(grid!.querySelector('input')).toBeNull();
+        expect(grid?.querySelector('input')).toBeNull();
       });
 
       it('shows context menu on right-click on a cell (Excel-like)', async () => {
@@ -341,7 +343,7 @@ export function createSpreadsheetTests(DataGridTable: React.ComponentType<IOGrid
         const cell00 = getCellAt(container, 0, 0);
         expect(cell00).toBeTruthy();
 
-        fireEvent.contextMenu(cell00!, { clientX: 50, clientY: 50 });
+        fireEvent.contextMenu(cell00, { clientX: 50, clientY: 50 });
 
         await waitFor(() => {
           expect(screen.getByRole('menu')).toBeInTheDocument();
@@ -359,7 +361,7 @@ export function createSpreadsheetTests(DataGridTable: React.ComponentType<IOGrid
         const grid = container.querySelector('[role="region"]');
         expect(grid).toBeTruthy();
 
-        fireEvent.contextMenu(grid!, { clientX: 100, clientY: 100 });
+        fireEvent.contextMenu(grid as Element, { clientX: 100, clientY: 100 });
 
         await act(async () => {
           await new Promise((r) => setTimeout(r, 50));
@@ -370,7 +372,7 @@ export function createSpreadsheetTests(DataGridTable: React.ComponentType<IOGrid
       it('shows context menu on Shift+F10 when a cell is selected', async () => {
         const { container } = renderSpreadsheetGrid();
         const cell00 = getCellAt(container, 0, 0);
-        fireEvent.mouseDown(cell00!);
+        fireEvent.mouseDown(cell00);
         const grid = container.querySelector('[role="region"]') as HTMLElement;
         expect(grid).toBeTruthy();
         grid.focus();
@@ -391,7 +393,7 @@ export function createSpreadsheetTests(DataGridTable: React.ComponentType<IOGrid
       it('Select all selects all data cells', async () => {
         const { container } = renderSpreadsheetGrid();
         const cell00 = getCellAt(container, 0, 0);
-        fireEvent.contextMenu(cell00!, { clientX: 100, clientY: 100 });
+        fireEvent.contextMenu(cell00, { clientX: 100, clientY: 100 });
 
         await waitFor(() => {
           expect(screen.getByRole('menu')).toBeInTheDocument();
@@ -415,8 +417,8 @@ export function createSpreadsheetTests(DataGridTable: React.ComponentType<IOGrid
 
         const { container } = renderSpreadsheetGrid();
         const cell00 = getCellAt(container, 0, 0);
-        fireEvent.mouseDown(cell00!);
-        fireEvent.contextMenu(cell00!, { clientX: 100, clientY: 100 });
+        fireEvent.mouseDown(cell00);
+        fireEvent.contextMenu(cell00, { clientX: 100, clientY: 100 });
 
         await waitFor(() => {
           expect(screen.getByRole('menu')).toBeInTheDocument();
@@ -440,9 +442,9 @@ export function createSpreadsheetTests(DataGridTable: React.ComponentType<IOGrid
 
         const { container } = renderSpreadsheetGrid({ onCellValueChanged });
         const cell00 = getCellAt(container, 0, 0);
-        fireEvent.mouseDown(cell00!);
+        fireEvent.mouseDown(cell00);
         const grid = container.querySelector('[role="region"]');
-        fireEvent.contextMenu(cell00!, { clientX: 100, clientY: 100 });
+        fireEvent.contextMenu(cell00, { clientX: 100, clientY: 100 });
 
         await waitFor(() => {
           expect(screen.getByRole('menu')).toBeInTheDocument();
@@ -454,7 +456,7 @@ export function createSpreadsheetTests(DataGridTable: React.ComponentType<IOGrid
           expect(writeText).toHaveBeenCalled();
         });
 
-        fireEvent.keyDown(grid!, { key: 'v', ctrlKey: true });
+        fireEvent.keyDown(grid as Element, { key: 'v', ctrlKey: true });
         await waitFor(() => {
           const clearCalls = onCellValueChanged.mock.calls.filter((c: unknown[]) => (c[0] as { newValue: unknown }).newValue === '');
           expect(clearCalls.length).toBeGreaterThanOrEqual(1);
@@ -471,8 +473,8 @@ export function createSpreadsheetTests(DataGridTable: React.ComponentType<IOGrid
 
         const { container } = renderSpreadsheetGrid({ onCellValueChanged });
         const cell00 = getCellAt(container, 0, 0);
-        fireEvent.mouseDown(cell00!);
-        fireEvent.contextMenu(cell00!, { clientX: 100, clientY: 100 });
+        fireEvent.mouseDown(cell00);
+        fireEvent.contextMenu(cell00, { clientX: 100, clientY: 100 });
 
         await waitFor(() => {
           expect(screen.getByRole('menu')).toBeInTheDocument();
@@ -493,12 +495,12 @@ export function createSpreadsheetTests(DataGridTable: React.ComponentType<IOGrid
       it('Arrow key moves active cell and collapses selection', async () => {
         const { container } = renderSpreadsheetGrid();
         const cell00 = getCellAt(container, 0, 0);
-        fireEvent.mouseDown(cell00!);
+        fireEvent.mouseDown(cell00);
         const grid = container.querySelector('[role="region"]');
         expect(grid).toBeTruthy();
         (grid as HTMLElement).focus();
 
-        fireEvent.keyDown(grid!, { key: 'ArrowRight' });
+        fireEvent.keyDown(grid as Element, { key: 'ArrowRight' });
 
         await waitFor(() => {
           const inRange = container.querySelectorAll('[data-in-range="true"]');
@@ -509,11 +511,11 @@ export function createSpreadsheetTests(DataGridTable: React.ComponentType<IOGrid
       it('Shift+Arrow extends selection', async () => {
         const { container } = renderSpreadsheetGrid();
         const cell00 = getCellAt(container, 0, 0);
-        fireEvent.mouseDown(cell00!);
+        fireEvent.mouseDown(cell00);
         const grid = container.querySelector('[role="region"]');
         (grid as HTMLElement).focus();
 
-        fireEvent.keyDown(grid!, { key: 'ArrowDown', shiftKey: true });
+        fireEvent.keyDown(grid as Element, { key: 'ArrowDown', shiftKey: true });
 
         await waitFor(() => {
           const inRange = container.querySelectorAll('[data-in-range="true"]');
@@ -524,7 +526,7 @@ export function createSpreadsheetTests(DataGridTable: React.ComponentType<IOGrid
       it('Tab moves active cell right; at end of row wraps to next row', async () => {
         const { container } = renderSpreadsheetGrid();
         const cell00 = getCellAt(container, 0, 0);
-        fireEvent.mouseDown(cell00!);
+        fireEvent.mouseDown(cell00);
         const grid = container.querySelector('[role="region"]') as HTMLElement;
         grid.focus();
 
@@ -548,7 +550,7 @@ export function createSpreadsheetTests(DataGridTable: React.ComponentType<IOGrid
       it('Shift+Tab moves active cell left; at start of row wraps to previous row', async () => {
         const { container } = renderSpreadsheetGrid();
         const cell10 = getCellAt(container, 1, 0);
-        fireEvent.mouseDown(cell10!);
+        fireEvent.mouseDown(cell10);
         const grid = container.querySelector('[role="region"]') as HTMLElement;
         grid.focus();
 
@@ -564,7 +566,7 @@ export function createSpreadsheetTests(DataGridTable: React.ComponentType<IOGrid
       it('Home moves to first column; Ctrl+Home moves to first cell', async () => {
         const { container } = renderSpreadsheetGrid();
         const cell11 = getCellAt(container, 1, 1);
-        fireEvent.mouseDown(cell11!);
+        fireEvent.mouseDown(cell11);
         const grid = container.querySelector('[role="region"]') as HTMLElement;
         grid.focus();
 
@@ -588,7 +590,7 @@ export function createSpreadsheetTests(DataGridTable: React.ComponentType<IOGrid
       it('End moves to last column; Ctrl+End moves to last cell', async () => {
         const { container } = renderSpreadsheetGrid();
         const cell00 = getCellAt(container, 0, 0);
-        fireEvent.mouseDown(cell00!);
+        fireEvent.mouseDown(cell00);
         const grid = container.querySelector('[role="region"]') as HTMLElement;
         grid.focus();
 
@@ -615,7 +617,7 @@ export function createSpreadsheetTests(DataGridTable: React.ComponentType<IOGrid
         const { container } = renderSpreadsheetGrid({ cellSelection: false });
         const cell = getCellAt(container, 0, 0);
         expect(cell).toBeTruthy();
-        fireEvent.mouseDown(cell!);
+        fireEvent.mouseDown(cell);
 
         // Short wait to confirm no state update occurs
         await act(async () => {
@@ -630,7 +632,7 @@ export function createSpreadsheetTests(DataGridTable: React.ComponentType<IOGrid
         const cell = getCellAt(container, 0, 0);
         expect(cell).toBeTruthy();
 
-        fireEvent.contextMenu(cell!, { clientX: 100, clientY: 100 });
+        fireEvent.contextMenu(cell, { clientX: 100, clientY: 100 });
 
         await act(async () => {
           await new Promise((r) => setTimeout(r, 50));
@@ -641,7 +643,7 @@ export function createSpreadsheetTests(DataGridTable: React.ComponentType<IOGrid
       it('does not respond to keyboard navigation', async () => {
         const { container } = renderSpreadsheetGrid({ cellSelection: false });
         const cell = getCellAt(container, 0, 0);
-        fireEvent.mouseDown(cell!);
+        fireEvent.mouseDown(cell);
         const grid = container.querySelector('[role="region"]') as HTMLElement;
         grid.focus();
 
@@ -657,7 +659,7 @@ export function createSpreadsheetTests(DataGridTable: React.ComponentType<IOGrid
       it('does not show fill handle on cell click', async () => {
         const { container } = renderSpreadsheetGrid({ cellSelection: false });
         const cell = getCellAt(container, 0, 0);
-        fireEvent.mouseDown(cell!);
+        fireEvent.mouseDown(cell);
 
         await act(async () => {
           await new Promise((r) => setTimeout(r, 50));
@@ -670,7 +672,7 @@ export function createSpreadsheetTests(DataGridTable: React.ComponentType<IOGrid
         const { container } = renderSpreadsheetGrid({ cellSelection: false });
         const cell = getCellAt(container, 0, 0);
         expect(cell).toBeTruthy();
-        fireEvent.doubleClick(cell!);
+        fireEvent.doubleClick(cell);
         await waitFor(() => {
           const grid = container.querySelector('[role="region"]');
           const input = grid?.querySelector('input');

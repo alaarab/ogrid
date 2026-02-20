@@ -1,4 +1,4 @@
-import { ref, computed, watch, onMounted, onUnmounted, type Ref } from 'vue';
+import { ref, computed, watch, onUnmounted, type Ref } from 'vue';
 import {
   computeVisibleRange,
   computeTotalHeight,
@@ -33,6 +33,7 @@ export function useVirtualScroll(params: UseVirtualScrollParams): UseVirtualScro
 
   let rafId = 0;
   let resizeObserver: ResizeObserver | undefined;
+  let prevObservedEl: HTMLElement | null = null;
 
   const visibleRange = computed<IVisibleRange>(() => {
     if (!enabled.value) {
@@ -70,27 +71,30 @@ export function useVirtualScroll(params: UseVirtualScrollParams): UseVirtualScro
     containerHeight.value = el.clientHeight;
   };
 
-  // Watch containerRef to attach/detach scroll listener and ResizeObserver
-  watch(containerRef, (el, prevEl) => {
-    if (prevEl) {
-      prevEl.removeEventListener('scroll', onScroll);
-      resizeObserver?.disconnect();
-    }
-    if (el) {
-      el.addEventListener('scroll', onScroll, { passive: true });
-      resizeObserver = new ResizeObserver(measure);
-      resizeObserver.observe(el);
-      measure();
-      scrollTop.value = el.scrollTop;
-    }
-  });
+  // Watch containerRef to attach/detach scroll listener and ResizeObserver.
+  // Track prevObservedEl to avoid re-observing the same element and to
+  // properly disconnect old observers before creating new ones.
+  watch(containerRef, (el) => {
+    if (el === prevObservedEl) return; // skip if same element
 
-  onMounted(() => {
-    const el = containerRef.value;
+    // Teardown previous element
+    if (prevObservedEl) {
+      prevObservedEl.removeEventListener('scroll', onScroll);
+    }
+    if (resizeObserver) {
+      resizeObserver.disconnect();
+      resizeObserver = undefined;
+    }
+
+    prevObservedEl = el;
+
+    // Setup new element
     if (el) {
       el.addEventListener('scroll', onScroll, { passive: true });
-      resizeObserver = new ResizeObserver(measure);
-      resizeObserver.observe(el);
+      if (typeof ResizeObserver !== 'undefined') {
+        resizeObserver = new ResizeObserver(measure);
+        resizeObserver.observe(el);
+      }
       measure();
       scrollTop.value = el.scrollTop;
     }

@@ -1,28 +1,20 @@
-/** @type {import('jest').Config} */
+const base = require('../../jest.config.base');
+
 module.exports = {
-  testEnvironment: 'jsdom',
-  roots: ['<rootDir>/src'],
-  testMatch: [
-    '**/__tests__/**/*.test.ts',
-    '**/__tests__/**/*.test.tsx',
-  ],
-  moduleFileExtensions: ['ts', 'tsx', 'js', 'jsx', 'json'],
+  ...base('react-material'),
   transform: {
-    '^.+\\.tsx?$': [
-      'ts-jest',
-      {
-        useESM: false,
-        diagnostics: false,
-        tsconfig: {
-          jsx: 'react-jsx',
-          esModuleInterop: true,
-          allowSyntheticDefaultImports: true,
-          module: 'commonjs',
-          target: 'es2019',
-          types: ['jest', 'node'],
-        },
+    '^.+\\.tsx?$': ['ts-jest', {
+      useESM: false,
+      diagnostics: false,
+      tsconfig: {
+        jsx: 'react-jsx',
+        esModuleInterop: true,
+        allowSyntheticDefaultImports: true,
+        module: 'commonjs',
+        target: 'es2019',
+        types: ['jest', 'node'],
       },
-    ],
+    }],
   },
   moduleNameMapper: {
     '\\.(css|less|scss|sass)$': 'identity-obj-proxy',
@@ -40,12 +32,7 @@ module.exports = {
     '^@mui/icons-material(.*)$': '<rootDir>/jest-mocks/mui-icons.cjs.js',
     '^@mui/system$': '<rootDir>/jest-mocks/mui-system.cjs.js',
   },
-  collectCoverageFrom: [
-    'src/**/*.{ts,tsx}',
-    '!src/**/*.d.ts',
-    '!src/**/__tests__/**',
-  ],
+  collectCoverageFrom: ['src/**/*.{ts,tsx}', '!src/**/*.d.ts', '!src/**/__tests__/**'],
   coverageDirectory: 'coverage',
   setupFilesAfterEnv: ['<rootDir>/../../jest.setup.js', '<rootDir>/jest.setup.ts'],
-  testTimeout: 10000,
 };

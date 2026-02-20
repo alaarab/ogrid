@@ -1,25 +1,209 @@
-// Types
-export * from './types';
+// Types — columnTypes
+export type {
+  ColumnFilterType,
+  IDateFilterValue,
+  IColumnFilterDef,
+  IColumnMeta,
+  IValueParserParams,
+  IColumnDef,
+  ICellValueChangedEvent,
+  ICellEditorProps,
+  CellEditorParams,
+  IColumnGroupDef,
+  HeaderCell,
+  HeaderRow,
+  IColumnDefinition,
+} from './types';
 
-// Utils
-export * from './utils';
+// Types — dataGridTypes
+export type {
+  RowId,
+  UserLike,
+  UserLikeInput,
+  FilterValue,
+  IFilters,
+  IFetchParams,
+  IPageResult,
+  IDataSource,
+  IGridColumnState,
+  RowSelectionMode,
+  IRowSelectionChangeEvent,
+  StatusBarPanel,
+  IStatusBarProps,
+  IActiveCell,
+  ISelectionRange,
+  SideBarPanelId,
+  ISideBarDef,
+  IVirtualScrollConfig,
+  IColumnReorderConfig,
+  IOGridApi,
+} from './types';
+export {
+  toUserLike,
+  isInSelectionRange,
+  normalizeSelectionRange,
+} from './types';
 
-// Constants
-export * from './constants';
+// Utils — exportToCsv
+export {
+  escapeCsvValue,
+  buildCsvHeader,
+  buildCsvRows,
+  exportToCsv,
+  triggerCsvDownload,
+} from './utils';
+export type { CsvColumn } from './utils';
 
-// Explicit constant exports for better test resolution
+// Utils — cellValue, columnUtils
+export { getCellValue } from './utils';
+export { flattenColumns, buildHeaderRows } from './utils';
+
+// Utils — ogridHelpers
+export {
+  isFilterConfig,
+  getFilterField,
+  mergeFilter,
+  deriveFilterOptionsFromData,
+  getMultiSelectFilterFields,
+} from './utils';
+
+// Utils — statusBarHelpers, dataGridStatusBar
+export { getStatusBarParts } from './utils';
+export { getDataGridStatusBarConfig } from './utils';
+export type { StatusBarPart, StatusBarPartsInput } from './utils';
+
+// Utils — paginationHelpers
+export {
+  getPaginationViewModel,
+  PAGE_SIZE_OPTIONS,
+  MAX_PAGE_BUTTONS,
+} from './utils';
+export type { PaginationViewModel } from './utils';
+
+// Utils — gridContextMenuHelpers
+export {
+  GRID_CONTEXT_MENU_ITEMS,
+  COLUMN_HEADER_MENU_ITEMS,
+  getContextMenuHandlers,
+  getColumnHeaderMenuItems,
+  formatShortcut,
+} from './utils';
+export type {
+  GridContextMenuItem,
+  IColumnHeaderMenuItem,
+  GridContextMenuHandlerProps,
+  ColumnHeaderMenuInput,
+  ColumnHeaderMenuHandlers,
+} from './utils';
+
+// Utils — valueParsers
+export {
+  parseValue,
+  numberParser,
+  currencyParser,
+  dateParser,
+  emailParser,
+  booleanParser,
+} from './utils';
+export type { ParseValueResult } from './utils';
+
+// Utils — aggregationUtils
+export { computeAggregations } from './utils';
+export type { AggregationResult } from './utils';
+
+// Utils — clientSideData
+export { processClientSideData } from './utils';
+
+// Utils — gridRowComparator
+export { areGridRowPropsEqual, isRowInRange } from './utils';
+export type { GridRowComparatorProps } from './utils';
+
+// Utils — columnReorder
+export {
+  getPinStateForColumn,
+  reorderColumnArray,
+  calculateDropTarget,
+} from './utils';
+export type { ColumnPinState, IDropTarget, ICalculateDropTargetParams } from './utils';
+
+// Utils — virtualScroll
+export {
+  computeVisibleRange,
+  computeTotalHeight,
+  getScrollTopForRow,
+} from './utils';
+export type { IVisibleRange } from './utils';
+
+// Utils — dataGridViewModel
+export {
+  getHeaderFilterConfig,
+  getCellRenderDescriptor,
+  resolveCellDisplayContent,
+  resolveCellStyle,
+  buildInlineEditorProps,
+  buildPopoverEditorProps,
+} from './utils';
+export type {
+  HeaderFilterConfigInput,
+  HeaderFilterConfig,
+  CellRenderDescriptorInput,
+  CellRenderDescriptor,
+  CellRenderMode,
+} from './utils';
+
+// Utils — debounce, dom
+export { debounce } from './utils';
+export { measureRange, injectGlobalStyles } from './utils';
+export type { OverlayRect } from './utils';
+
+// Utils — sortHelpers
+export { computeNextSortState } from './utils';
+export type { ISortState } from './utils';
+
+// Utils — columnAutosize
+export { measureColumnContentWidth, AUTOSIZE_EXTRA_PX, AUTOSIZE_MAX_PX } from './utils';
+
+// Utils — keyboardNavigation
+export { findCtrlArrowTarget, computeTabNavigation, computeArrowNavigation, applyCellDeletion } from './utils';
+export type { ArrowNavigationContext, ArrowNavigationResult } from './utils';
+
+// Utils — selectionHelpers
+export { rangesEqual, clampSelectionToBounds, computeAutoScrollSpeed, applyRangeRowSelection, computeRowSelectionState } from './utils';
+
+// Utils — clipboardHelpers
+export {
+  formatCellValueForTsv,
+  formatSelectionAsTsv,
+  parseTsvClipboard,
+  applyPastedValues,
+  applyCutClear,
+} from './utils';
+
+// Utils — fillHelpers
+export { applyFillValues } from './utils';
+
+// Utils — undoRedoStack
+export { UndoRedoStack } from './utils';
+
+// Utils — validation
+export { validateColumns, validateRowIds } from './utils';
+
+// Constants — layout
 export {
   CHECKBOX_COLUMN_WIDTH,
   ROW_NUMBER_COLUMN_WIDTH,
   DEFAULT_MIN_COLUMN_WIDTH,
   CELL_PADDING,
   GRID_BORDER_RADIUS,
-} from './constants/layout';
+} from './constants';
 
+// Constants — timing
 export {
-  PEOPLE_SEARCH_DEBOUNCE_MS,
   DEFAULT_DEBOUNCE_MS,
+  PEOPLE_SEARCH_DEBOUNCE_MS,
   SIDEBAR_TRANSITION_MS,
-} from './constants/timing';
+} from './constants';
 
-export { Z_INDEX } from './constants/zIndex';
+// Constants — zIndex
+export { Z_INDEX } from './constants';
+export type { ZIndexKey } from './constants';
