@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import { ThemeProvider, createTheme, CssBaseline } from '@mui/material';
 import { OGrid } from '@alaarab/ogrid-react-material';
-import { makeDemoProjects, makeDemoColumns, getRowId } from '../shared/demoData';
+import { makeDemoProjects, makeDemoColumns, getRowId, handleCellValueChanged } from '../shared/demoData';
 import type { Project } from '../shared/demoData';
 import { createThemeToggle, getInitialTheme, setTheme } from '../shared/themeToggle';
 
@@ -38,6 +38,7 @@ function App() {
           editable
           cellSelection
           statusBar
+          onCellValueChanged={(e) => handleCellValueChanged(projects, e)}
         />
       </div>
     </ThemeProvider>
