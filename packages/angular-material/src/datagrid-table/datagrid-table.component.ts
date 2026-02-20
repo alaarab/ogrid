@@ -52,7 +52,7 @@ import { PopoverCellEditorComponent } from './popover-cell-editor.component';
       >
         <div class="ogrid-datagrid-scroll-wrapper">
           <div [style.minWidth.px]="allowOverflowX() ? minTableWidth() : undefined">
-            <div [class.ogrid-datagrid-table-wrapper--loading]="isLoading() && items().length > 0" #tableContainerEl>
+            <div [class.ogrid-datagrid-table-wrapper--loading]="isLoading() && items().length > 0" #tableContainerElRef>
               <table class="ogrid-datagrid-table" [style.minWidth.px]="minTableWidth()"
               >
                 <thead [class]="stickyHeader() ? 'ogrid-datagrid-thead ogrid-sticky-header' : 'ogrid-datagrid-thead'">
@@ -537,7 +537,7 @@ export class DataGridTableComponent<T> extends BaseDataGridTableComponent<T> {
   }
 
   @ViewChild('wrapperEl') private wrapperRef?: ElementRef<HTMLElement>;
-  @ViewChild('tableContainerEl') private tableContainerRef?: ElementRef<HTMLElement>;
+  @ViewChild('tableContainerElRef') private tableContainerRef?: ElementRef<HTMLElement>;
 
   constructor() {
     super();

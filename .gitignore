@@ -3,6 +3,8 @@ dist
 coverage
 storybook-static
 .playwright-mcp
+playwright-report
+test-results
 .turbo
 .angular
 *.tsbuildinfo
