@@ -104,9 +104,10 @@ export function ColumnHeaderMenu(props: ColumnHeaderMenuProps) {
         },
       }}
     >
-      {items.map((item, idx) => (
-        <React.Fragment key={item.id}>
+      {items.flatMap((item, idx) => {
+        const elements = [
           <MenuItem
+            key={item.id}
             disabled={item.disabled}
             onClick={() => {
               handlers[item.id]();
@@ -114,10 +115,13 @@ export function ColumnHeaderMenu(props: ColumnHeaderMenuProps) {
             }}
           >
             {item.label}
-          </MenuItem>
-          {item.divider && idx < items.length - 1 && <Divider />}
-        </React.Fragment>
-      ))}
+          </MenuItem>,
+        ];
+        if (item.divider && idx < items.length - 1) {
+          elements.push(<Divider key={`${item.id}-divider`} />);
+        }
+        return elements;
+      })}
     </Menu>
   );
 }

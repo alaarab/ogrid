@@ -11,7 +11,6 @@ import {
   TableRow,
   TableCell,
   type TableCellProps,
-  TableContainer,
 } from '@mui/material';
 import { ColumnHeaderFilter } from '../ColumnHeaderFilter';
 import { ColumnHeaderMenu } from '../ColumnHeaderMenu';
@@ -82,15 +81,18 @@ const CHECKBOX_CELL_SX = { width: CHECKBOX_COLUMN_WIDTH, minWidth: CHECKBOX_COLU
 const CHECKBOX_WRAPPER_SX = { display: 'flex', alignItems: 'center', justifyContent: 'center' } as const;
 const CHECKBOX_PLACEHOLDER_SX = { width: CHECKBOX_COLUMN_WIDTH, minWidth: CHECKBOX_COLUMN_WIDTH, p: 0 } as const;
 
-// Header
+// Header — use opaque var(--ogrid-header-bg) (not semi-transparent action.hover) so sticky
+// headers fully occlude pinned-column content scrolling beneath them.
+// The CSS variable is theme-aware: light=#f5f5f5, dark=#2c2c2c (set by each UI package).
+const HEADER_BG = 'var(--ogrid-header-bg, #f5f5f5)';
 const STICKY_HEADER_SX = {
   /* Removed position: 'sticky', top: 0 - breaks horizontal sticky on pinned columns.
      Instead, apply sticky to individual header cells (HEADER_BASE_SX). */
   zIndex: 8,
-  bgcolor: 'action.hover',
-  '& th': { bgcolor: 'action.hover' }
+  bgcolor: HEADER_BG,
+  '& th': { bgcolor: HEADER_BG }
 } as const;
-const HEADER_ROW_SX = { bgcolor: 'action.hover' } as const;
+const HEADER_ROW_SX = { bgcolor: HEADER_BG } as const;
 const GROUP_HEADER_CELL_SX = { textAlign: 'center', fontWeight: 600, borderBottom: 2, borderColor: 'divider', py: 0.75 } as const;
 
 // Density padding helper
@@ -192,22 +194,23 @@ const CELL_TD_PINNED_RIGHT_SX = {
 } as const;
 
 // Header cell positioning variants (sticky)
+// Use opaque HEADER_BG so headers fully occlude content scrolling beneath them.
 const HEADER_BASE_SX = {
   fontWeight: 600,
   position: 'sticky' as const, /* Enables vertical sticky for all headers */
   top: 0, /* Sticky vertically */
   zIndex: 8, /* Stack above body cells */
-  bgcolor: 'action.hover' /* Required for sticky overlap */
+  bgcolor: HEADER_BG /* Opaque — required for sticky overlap */
 } as const;
 const HEADER_PINNED_LEFT_SX = {
   ...HEADER_BASE_SX, position: 'sticky' as const, left: 0, top: 0,
-  zIndex: 10, bgcolor: 'action.hover', willChange: 'transform',
+  zIndex: 10, bgcolor: HEADER_BG, willChange: 'transform',
   borderRight: '1px solid', borderRightColor: 'divider',
   boxShadow: '2px 0 4px -1px rgba(0,0,0,0.1)',
 } as const;
 const HEADER_PINNED_RIGHT_SX = {
   ...HEADER_BASE_SX, position: 'sticky' as const, right: 0, top: 0,
-  zIndex: 10, bgcolor: 'action.hover', willChange: 'transform',
+  zIndex: 10, bgcolor: HEADER_BG, willChange: 'transform',
   borderLeft: '1px solid', borderLeftColor: 'divider',
   boxShadow: '-2px 0 4px -1px rgba(0,0,0,0.1)',
 } as const;
@@ -216,17 +219,17 @@ const HEADER_PINNED_RIGHT_SX = {
 const HEADER_BASE_NO_STICKY_SX = {
   fontWeight: 600,
   zIndex: 8,
-  bgcolor: 'action.hover',
+  bgcolor: HEADER_BG,
 } as const;
 const HEADER_PINNED_LEFT_NO_STICKY_SX = {
   ...HEADER_BASE_NO_STICKY_SX, position: 'sticky' as const, left: 0,
-  zIndex: 10, willChange: 'transform',
+  zIndex: 10, bgcolor: HEADER_BG, willChange: 'transform',
   borderRight: '1px solid', borderRightColor: 'divider',
   boxShadow: '2px 0 4px -1px rgba(0,0,0,0.1)',
 } as const;
 const HEADER_PINNED_RIGHT_NO_STICKY_SX = {
   ...HEADER_BASE_NO_STICKY_SX, position: 'sticky' as const, right: 0,
-  zIndex: 10, willChange: 'transform',
+  zIndex: 10, bgcolor: HEADER_BG, willChange: 'transform',
   borderLeft: '1px solid', borderLeftColor: 'divider',
   boxShadow: '-2px 0 4px -1px rgba(0,0,0,0.1)',
 } as const;
@@ -547,7 +550,7 @@ function DataGridTableInner<T>(props: IOGridDataGridProps<T>): React.ReactElemen
         sx={wrapperSx}
       >
       <Box sx={WRAPPER_SCROLL_SX}>
-      <TableContainer sx={{ minWidth: allowOverflowX ? minTableWidth : undefined }}>
+      <div style={{ minWidth: allowOverflowX ? minTableWidth : undefined }}>
         <Box ref={tableContainerRef} sx={isLoading && items.length > 0 ? TABLE_WRAPPER_LOADING_SX : TABLE_WRAPPER_SX}>
           <Table size="small" sx={{ minWidth: minTableWidth, borderCollapse: 'separate', borderSpacing: 0 }}
           >
@@ -585,7 +588,7 @@ function DataGridTableInner<T>(props: IOGridDataGridProps<T>): React.ReactElemen
                           maxWidth: ROW_NUMBER_COLUMN_WIDTH,
                           textAlign: 'center',
                           fontWeight: 600,
-                          backgroundColor: 'action.hover',
+                          backgroundColor: HEADER_BG,
                           position: 'sticky',
                           left: hasCheckboxCol ? CHECKBOX_COLUMN_WIDTH : 0,
                           zIndex: 4,
@@ -789,7 +792,7 @@ function DataGridTableInner<T>(props: IOGridDataGridProps<T>): React.ReactElemen
             <EmptyState emptyState={emptyState} />
           )}
         </Box>
-      </TableContainer>
+      </div>
       </Box>
 
         {menuPosition &&
