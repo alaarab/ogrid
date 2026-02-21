@@ -1,6 +1,6 @@
 {
   "name": "@alaarab/ogrid-react-radix",
-  "version": "2.1.3",
+  "version": "2.1.4",
   "description": "OGrid React Radix – Data grid with sorting, filtering, pagination, column chooser, and CSV export. Default lightweight package; no Fluent or Material required.",
   "main": "dist/esm/index.js",
   "module": "dist/esm/index.js",
@@ -9,12 +9,12 @@
     ".": {
       "types": "./dist/types/index.d.ts",
       "import": "./dist/esm/index.js",
-      "require": "./dist/esm/index.js"
+      "default": "./dist/esm/index.js"
     },
     "./styles/*": "./dist/esm/*"
   },
   "scripts": {
-    "build": "rimraf dist && tsc -p tsconfig.build.json && node scripts/compile-styles.js",
+    "build": "rimraf dist && tsup && tsc -p tsconfig.build.json",
     "test": "jest",
     "storybook": "storybook dev -p 6008 --no-open",
     "build-storybook": "storybook build"
@@ -42,7 +42,7 @@
     "node": ">=18"
   },
   "dependencies": {
-    "@alaarab/ogrid-react": "2.1.3"
+    "@alaarab/ogrid-react": "2.1.4"
   },
   "peerDependencies": {
     "@radix-ui/react-checkbox": "^1.0.0",

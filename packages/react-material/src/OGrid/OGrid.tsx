@@ -23,6 +23,9 @@ const MuiThemeContainer = React.forwardRef<HTMLDivElement, React.ComponentPropsW
       '--ogrid-fg-secondary': theme.palette.text.secondary,
       '--ogrid-fg-muted': theme.palette.text.disabled,
       '--ogrid-hover-bg': theme.palette.action.hover,
+      '--ogrid-paper-bg': theme.palette.background.paper,
+      '--ogrid-primary': theme.palette.primary.main,
+      '--ogrid-selection-bg': theme.palette.action.selected,
     }), [theme]);
 
     return <Box ref={ref} sx={sx} {...props} />;
