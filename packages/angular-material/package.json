@@ -1,6 +1,6 @@
 {
   "name": "@alaarab/ogrid-angular-material",
-  "version": "2.1.3",
+  "version": "2.1.4",
   "description": "OGrid Angular Material – MatTable-based data grid with sorting, filtering, pagination, column chooser, and CSV export.",
   "main": "dist/esm/index.js",
   "module": "dist/esm/index.js",
@@ -9,11 +9,11 @@
     ".": {
       "types": "./dist/types/index.d.ts",
       "import": "./dist/esm/index.js",
-      "require": "./dist/esm/index.js"
+      "default": "./dist/esm/index.js"
     }
   },
   "scripts": {
-    "build": "rimraf dist && tsc -p tsconfig.build.json",
+    "build": "rimraf dist && tsup && tsc -p tsconfig.build.json",
     "test": "jest --passWithNoTests",
     "storybook": "ng run angular-material:storybook",
     "build-storybook": "ng run angular-material:build-storybook"
@@ -37,7 +37,7 @@
     "node": ">=18"
   },
   "dependencies": {
-    "@alaarab/ogrid-angular": "2.1.3"
+    "@alaarab/ogrid-angular": "2.1.4"
   },
   "peerDependencies": {
     "@angular/cdk": "^21.0.0",
