@@ -1,5 +1,6 @@
 import { useCallback, useRef, useState } from 'react';
 import { UndoRedoStack } from '../utils';
+import { useLatestRef } from './useLatestRef';
 import type { ICellValueChangedEvent } from '../types';
 
 export interface UseUndoRedoParams<T> {
@@ -29,6 +30,7 @@ export function useUndoRedo<T>(
   params: UseUndoRedoParams<T>
 ): UseUndoRedoResult<T> {
   const { onCellValueChanged, maxUndoDepth = 100 } = params;
+  const onCellValueChangedRef = useLatestRef(onCellValueChanged);
   const stackRef = useRef<UndoRedoStack<ICellValueChangedEvent<T>> | null>(null);
   if (stackRef.current === null) {
     stackRef.current = new UndoRedoStack<ICellValueChangedEvent<T>>(maxUndoDepth);
@@ -44,16 +46,17 @@ export function useUndoRedo<T>(
 
   const wrapped = useCallback(
     (event: ICellValueChangedEvent<T>) => {
-      if (!onCellValueChanged) return;
+      if (!onCellValueChangedRef.current) return;
       const stack = getStack();
       stack.record(event);
       if (!stack.isBatching) {
         setHistoryLength(stack.historyLength);
         setRedoLength(stack.redoLength);
       }
-      onCellValueChanged(event);
+      onCellValueChangedRef.current(event);
     },
-    [onCellValueChanged, getStack]
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [getStack]
   );
 
   const beginBatch = useCallback(() => {
@@ -68,35 +71,35 @@ export function useUndoRedo<T>(
   }, [getStack]);
 
   const undo = useCallback(() => {
-    if (!onCellValueChanged) return;
+    if (!onCellValueChangedRef.current) return;
     const stack = getStack();
     const lastBatch = stack.undo();
     if (!lastBatch) return;
     setHistoryLength(stack.historyLength);
     setRedoLength(stack.redoLength);
-    // Revert in reverse order so multi-cell undo is applied correctly
     for (let i = lastBatch.length - 1; i >= 0; i--) {
       const ev = lastBatch[i];
-      onCellValueChanged({
+      onCellValueChangedRef.current({
         ...ev,
         oldValue: ev.newValue,
         newValue: ev.oldValue,
       });
     }
-  }, [onCellValueChanged, getStack]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [getStack]);
 
   const redo = useCallback(() => {
-    if (!onCellValueChanged) return;
+    if (!onCellValueChangedRef.current) return;
     const stack = getStack();
     const nextBatch = stack.redo();
     if (!nextBatch) return;
     setHistoryLength(stack.historyLength);
     setRedoLength(stack.redoLength);
-    // Replay in original order
     for (const ev of nextBatch) {
-      onCellValueChanged(ev);
+      onCellValueChangedRef.current(ev);
     }
-  }, [onCellValueChanged, getStack]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [getStack]);
 
   return {
     onCellValueChanged: onCellValueChanged ? wrapped : undefined,
