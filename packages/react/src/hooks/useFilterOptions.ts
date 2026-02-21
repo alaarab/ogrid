@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
+import { useLatestRef } from './useLatestRef';
 import type { IDataSource } from '../types/dataGridTypes';
 
 export interface UseFilterOptionsResult {
@@ -20,6 +21,9 @@ function fieldsEqual(a: string[], b: string[]): boolean {
   return true;
 }
 
+const EMPTY_FILTER_OPTIONS: Record<string, string[]> = {};
+const EMPTY_LOADING: Record<string, boolean> = {};
+
 /**
  * Load filter options for the given fields from a data source.
  *
@@ -37,18 +41,23 @@ export function useFilterOptions(
   }
   const stableFields = fieldsRef.current;
 
-  const [filterOptions, setFilterOptions] = useState<Record<string, string[]>>({});
-  const [loadingOptions, setLoadingOptions] = useState<Record<string, boolean>>({});
+  // Stabilize dataSource ref so inline objects don't cause infinite re-fetches.
+  const dataSourceRef = useLatestRef(dataSource);
+
+  const [filterOptions, setFilterOptions] = useState<Record<string, string[]>>(EMPTY_FILTER_OPTIONS);
+  const [loadingOptions, setLoadingOptions] = useState<Record<string, boolean>>(EMPTY_LOADING);
 
   const load = useCallback(async (): Promise<void> => {
+    const ds = dataSourceRef.current;
     const fetcher =
-      'fetchFilterOptions' in dataSource && typeof dataSource.fetchFilterOptions === 'function'
-        ? dataSource.fetchFilterOptions.bind(dataSource)
+      'fetchFilterOptions' in ds && typeof ds.fetchFilterOptions === 'function'
+        ? ds.fetchFilterOptions.bind(ds)
         : undefined;
 
     if (!fetcher) {
-      setFilterOptions({});
-      setLoadingOptions({});
+      // Use stable references to avoid unnecessary re-renders
+      setFilterOptions(EMPTY_FILTER_OPTIONS);
+      setLoadingOptions(EMPTY_LOADING);
       return;
     }
     const loading: Record<string, boolean> = {};
@@ -67,8 +76,9 @@ export function useFilterOptions(
     );
 
     setFilterOptions(results);
-    setLoadingOptions({});
-  }, [dataSource, stableFields]);
+    setLoadingOptions(EMPTY_LOADING);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [stableFields]);
 
   useEffect(() => {
     load().catch(() => {});
