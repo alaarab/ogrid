@@ -11,7 +11,7 @@ import {
   TableCell,
   type TableCellProps,
 } from '@mui/material';
-import './DataGridTable.css';
+import { injectDataGridStyles } from './DataGridTable.styles';
 import { ColumnHeaderFilter } from '../ColumnHeaderFilter';
 import { ColumnHeaderMenu } from '../ColumnHeaderMenu';
 import { InlineCellEditor } from './InlineCellEditor';
@@ -296,6 +296,9 @@ function GridRowInner(props: GridRowProps) {
 }
 
 const GridRow = React.memo(GridRowInner, areGridRowPropsEqual);
+
+// Inject CSS once on first render (no separate CSS file needed by consumers)
+injectDataGridStyles();
 
 function DataGridTableInner<T>(props: IOGridDataGridProps<T>): React.ReactElement {
   const o = useDataGridTableOrchestration({ props });
