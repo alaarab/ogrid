@@ -39,7 +39,7 @@ export function useFillHandle<T>(params: UseFillHandleParams<T>): UseFillHandleR
     items,
     visibleCols,
     editable,
-    onCellValueChanged,
+    onCellValueChanged: onCellValueChangedProp,
     selectionRange,
     setSelectionRange,
     setActiveCell,
@@ -49,6 +49,7 @@ export function useFillHandle<T>(params: UseFillHandleParams<T>): UseFillHandleR
     endBatch,
   } = params;
 
+  const onCellValueChangedRef = useLatestRef(onCellValueChangedProp);
   const [fillDrag, setFillDrag] = useState<{ startRow: number; startCol: number } | null>(null);
   const fillDragEndRef = useRef<{ endRow: number; endCol: number }>({ endRow: 0, endCol: 0 });
   const rafRef = useRef(0);
@@ -56,7 +57,7 @@ export function useFillHandle<T>(params: UseFillHandleParams<T>): UseFillHandleR
   const colOffsetRef = useLatestRef(colOffset);
 
   useEffect(() => {
-    if (!fillDrag || editable === false || !onCellValueChanged || !wrapperRef.current) return;
+    if (!fillDrag || editable === false || !onCellValueChangedRef.current || !wrapperRef.current) return;
     fillDragEndRef.current = { endRow: fillDrag.startRow, endCol: fillDrag.startCol };
     liveFillRangeRef.current = null;
 
@@ -206,7 +207,7 @@ export function useFillHandle<T>(params: UseFillHandleParams<T>): UseFillHandleR
       const fillEvents = applyFillValues(norm, fillDrag.startRow, fillDrag.startCol, items, visibleCols);
       if (fillEvents.length > 0) {
         beginBatch?.();
-        for (const evt of fillEvents) onCellValueChanged(evt);
+        for (const evt of fillEvents) onCellValueChangedRef.current?.(evt);
         endBatch?.();
       }
       setFillDrag(null);
@@ -227,7 +228,6 @@ export function useFillHandle<T>(params: UseFillHandleParams<T>): UseFillHandleR
     visibleCols,
     setSelectionRange,
     setActiveCell,
-    onCellValueChanged,
     beginBatch,
     endBatch,
     colOffsetRef,
