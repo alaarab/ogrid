@@ -215,6 +215,24 @@ export function useOGrid<T>(
     }
   );
 
+  // Re-initialize when columns arrive after starting empty (common pattern: columns
+  // depend on async data, so the initial render passes columns=[] then re-renders
+  // with actual columns once data loads).
+  const prevColumnsLengthRef = useRef(columns.length);
+  useEffect(() => {
+    const prev = prevColumnsLengthRef.current;
+    prevColumnsLengthRef.current = columns.length;
+    if (controlledVisibleColumns !== undefined) return; // controlled — skip
+    if (prev === 0 && columns.length > 0 && internalVisibleColumns.size === 0) {
+      const visible = columns
+        .filter((c) => c.defaultVisible !== false)
+        .map((c) => c.columnId);
+      setInternalVisibleColumns(new Set(
+        visible.length > 0 ? visible : columns.map((c) => c.columnId)
+      ));
+    }
+  }, [columns, controlledVisibleColumns, internalVisibleColumns.size]);
+
   const visibleColumns = controlledVisibleColumns ?? internalVisibleColumns;
 
   const setVisibleColumns = useCallback(
