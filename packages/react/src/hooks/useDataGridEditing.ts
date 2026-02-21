@@ -49,6 +49,7 @@ export function useDataGridEditing<T>(
 
   const visibleColsRef = useLatestRef(params.visibleCols);
   const itemsLengthRef = useLatestRef(params.itemsLength);
+  const onCellValueChangedRef = useLatestRef(onCellValueChanged);
 
   const commitCellEdit = useCallback(
     (
@@ -73,7 +74,7 @@ export function useDataGridEditing<T>(
         newValue = result.value;
       }
 
-      onCellValueChanged?.({
+      onCellValueChangedRef.current?.({
         item,
         columnId,
         oldValue,
@@ -88,7 +89,8 @@ export function useDataGridEditing<T>(
         setActiveCell({ rowIndex: rowIndex + 1, columnIndex: globalColIndex });
       }
     },
-    [onCellValueChanged, setEditingCell, setPendingEditorValue, setActiveCell, visibleColsRef, itemsLengthRef]
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [setEditingCell, setPendingEditorValue, setActiveCell, visibleColsRef, itemsLengthRef]
   );
 
   const cancelPopoverEdit = useCallback(() => {
