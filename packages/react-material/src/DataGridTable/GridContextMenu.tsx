@@ -33,10 +33,14 @@ export function GridContextMenu(props: GridContextMenuProps): React.ReactElement
       anchorPosition={{ top: y, left: x }}
       MenuListProps={{ dense: true, 'aria-label': 'Grid context menu' } as React.HTMLAttributes<HTMLUListElement>}
     >
-      {GRID_CONTEXT_MENU_ITEMS.map((item) => (
-        <React.Fragment key={item.id}>
-          {item.dividerBefore && <Divider />}
+      {GRID_CONTEXT_MENU_ITEMS.flatMap((item) => {
+        const elements: React.ReactElement[] = [];
+        if (item.dividerBefore) {
+          elements.push(<Divider key={`${item.id}-divider`} />);
+        }
+        elements.push(
           <MenuItem
+            key={item.id}
             onClick={handlers[item.id]}
             disabled={isDisabled(item)}
           >
@@ -47,8 +51,9 @@ export function GridContextMenu(props: GridContextMenuProps): React.ReactElement
               </span>
             )}
           </MenuItem>
-        </React.Fragment>
-      ))}
+        );
+        return elements;
+      })}
     </Menu>
   );
 }
