@@ -7,11 +7,11 @@ import {
   Checkbox,
   Table,
   TableHead,
-  TableBody,
   TableRow,
   TableCell,
   type TableCellProps,
 } from '@mui/material';
+import './DataGridTable.css';
 import { ColumnHeaderFilter } from '../ColumnHeaderFilter';
 import { ColumnHeaderMenu } from '../ColumnHeaderMenu';
 import { InlineCellEditor } from './InlineCellEditor';
@@ -73,13 +73,16 @@ const EDITING_CELL_STYLE: React.CSSProperties = {
   padding: 0,
 };
 
-// Row
-const ROW_HOVER_SX = { '&:hover': { bgcolor: 'action.hover' } } as const;
-
-// Checkbox column
+// Checkbox column (header only — body uses native elements + CSS class)
 const CHECKBOX_CELL_SX = { width: CHECKBOX_COLUMN_WIDTH, minWidth: CHECKBOX_COLUMN_WIDTH, maxWidth: CHECKBOX_COLUMN_WIDTH, textAlign: 'center' } as const;
-const CHECKBOX_WRAPPER_SX = { display: 'flex', alignItems: 'center', justifyContent: 'center' } as const;
 const CHECKBOX_PLACEHOLDER_SX = { width: CHECKBOX_COLUMN_WIDTH, minWidth: CHECKBOX_COLUMN_WIDTH, p: 0 } as const;
+
+// Body checkbox td (native element)
+const CHECKBOX_TD_STYLE: React.CSSProperties = {
+  width: CHECKBOX_COLUMN_WIDTH, minWidth: CHECKBOX_COLUMN_WIDTH, maxWidth: CHECKBOX_COLUMN_WIDTH,
+  textAlign: 'center', padding: 0, position: 'relative', height: '1px',
+  borderBottom: '1px solid var(--ogrid-border, rgba(224,224,224,1))',
+};
 
 // Header — use opaque var(--ogrid-header-bg) (not semi-transparent action.hover) so sticky
 // headers fully occlude pinned-column content scrolling beneath them.
@@ -104,94 +107,12 @@ function getDensityPadding(density: 'compact' | 'normal' | 'comfortable') {
   }
 }
 
-// Cell content base variants (selected by column type + editability)
-const CELL_CONTENT_BASE_SX = {
-  width: '100%', height: '100%', display: 'flex', alignItems: 'center', minWidth: 0,
-  px: '10px', py: '6px', boxSizing: 'border-box', overflow: 'hidden',
-  textOverflow: 'ellipsis', whiteSpace: 'nowrap', userSelect: 'none', outline: 'none',
-  '&:focus-visible': { outline: '2px solid', outlineColor: 'primary.main', outlineOffset: '-2px', zIndex: 3 },
-} as const;
-const CELL_CONTENT_NUMERIC_SX = { ...CELL_CONTENT_BASE_SX, justifyContent: 'flex-end', textAlign: 'right' as const } as const;
-const CELL_CONTENT_BOOLEAN_SX = { ...CELL_CONTENT_BASE_SX, justifyContent: 'center', textAlign: 'center' as const } as const;
-const CELL_CONTENT_EDITABLE_SX = { ...CELL_CONTENT_BASE_SX, cursor: 'cell' } as const;
-const CELL_CONTENT_NUMERIC_EDITABLE_SX = { ...CELL_CONTENT_NUMERIC_SX, cursor: 'cell' } as const;
-const CELL_CONTENT_BOOLEAN_EDITABLE_SX = { ...CELL_CONTENT_BOOLEAN_SX, cursor: 'cell' } as const;
-
-// Cell overlay states (only applied to the few active/selected cells)
-// Active cell: theme-aware bg so dark mode doesn't show white (MUI action.hover adapts to theme)
-const CELL_ACTIVE_SX = { outline: '2px solid var(--ogrid-selection, #217346)', outlineOffset: '-1px', zIndex: 2, position: 'relative' as const, overflow: 'visible', bgcolor: 'action.hover', '&:focus-visible': { outline: '2px solid var(--ogrid-selection, #217346)', outlineOffset: '-1px' } } as const;
-const CELL_IN_RANGE_SX = { bgcolor: 'var(--ogrid-bg-range, rgba(33, 115, 70, 0.12))', '&:focus-visible': { outline: 'none' } } as const;
-const CELL_CUT_RANGE_SX = { bgcolor: 'action.hover', opacity: 0.7 } as const;
-
-// Pre-computed overlay variant arrays (avoid per-cell array allocation + filter)
-// Key: `${base}_${overlay}` where overlay is 'active' | 'range' | 'cut'
-const OVERLAY_VARIANTS = {
-  base_active: [CELL_CONTENT_BASE_SX, CELL_ACTIVE_SX],
-  base_range: [CELL_CONTENT_BASE_SX, CELL_IN_RANGE_SX],
-  base_cut: [CELL_CONTENT_BASE_SX, CELL_IN_RANGE_SX, CELL_CUT_RANGE_SX],
-  editable_active: [CELL_CONTENT_EDITABLE_SX, CELL_ACTIVE_SX],
-  editable_range: [CELL_CONTENT_EDITABLE_SX, CELL_IN_RANGE_SX],
-  editable_cut: [CELL_CONTENT_EDITABLE_SX, CELL_IN_RANGE_SX, CELL_CUT_RANGE_SX],
-  numeric_active: [CELL_CONTENT_NUMERIC_SX, CELL_ACTIVE_SX],
-  numeric_range: [CELL_CONTENT_NUMERIC_SX, CELL_IN_RANGE_SX],
-  numeric_cut: [CELL_CONTENT_NUMERIC_SX, CELL_IN_RANGE_SX, CELL_CUT_RANGE_SX],
-  numeric_editable_active: [CELL_CONTENT_NUMERIC_EDITABLE_SX, CELL_ACTIVE_SX],
-  numeric_editable_range: [CELL_CONTENT_NUMERIC_EDITABLE_SX, CELL_IN_RANGE_SX],
-  numeric_editable_cut: [CELL_CONTENT_NUMERIC_EDITABLE_SX, CELL_IN_RANGE_SX, CELL_CUT_RANGE_SX],
-  boolean_active: [CELL_CONTENT_BOOLEAN_SX, CELL_ACTIVE_SX],
-  boolean_range: [CELL_CONTENT_BOOLEAN_SX, CELL_IN_RANGE_SX],
-  boolean_cut: [CELL_CONTENT_BOOLEAN_SX, CELL_IN_RANGE_SX, CELL_CUT_RANGE_SX],
-  boolean_editable_active: [CELL_CONTENT_BOOLEAN_EDITABLE_SX, CELL_ACTIVE_SX],
-  boolean_editable_range: [CELL_CONTENT_BOOLEAN_EDITABLE_SX, CELL_IN_RANGE_SX],
-  boolean_editable_cut: [CELL_CONTENT_BOOLEAN_EDITABLE_SX, CELL_IN_RANGE_SX, CELL_CUT_RANGE_SX],
-} as const;
-
-/** Select pre-computed sx for a cell based on column type, editability, and overlay state. */
-function getCellSx(
-  colType: string | undefined,
-  canEdit: boolean,
-  isActive: boolean,
-  isInRange: boolean,
-  isInCutRange: boolean,
-): object | readonly object[] {
-  // Determine base key
-  let baseKey: string;
-  if (colType === 'numeric') baseKey = canEdit ? 'numeric_editable' : 'numeric';
-  else if (colType === 'boolean') baseKey = canEdit ? 'boolean_editable' : 'boolean';
-  else baseKey = canEdit ? 'editable' : 'base';
-
-  // Determine overlay
-  if (isInCutRange) return OVERLAY_VARIANTS[`${baseKey}_cut` as keyof typeof OVERLAY_VARIANTS];
-  if (isInRange) return OVERLAY_VARIANTS[`${baseKey}_range` as keyof typeof OVERLAY_VARIANTS];
-  if (isActive) return OVERLAY_VARIANTS[`${baseKey}_active` as keyof typeof OVERLAY_VARIANTS];
-
-  // No overlay — return the base sx directly
-  if (colType === 'numeric') return canEdit ? CELL_CONTENT_NUMERIC_EDITABLE_SX : CELL_CONTENT_NUMERIC_SX;
-  if (colType === 'boolean') return canEdit ? CELL_CONTENT_BOOLEAN_EDITABLE_SX : CELL_CONTENT_BOOLEAN_SX;
-  return canEdit ? CELL_CONTENT_EDITABLE_SX : CELL_CONTENT_BASE_SX;
-}
-
-// Fill handle
-const FILL_HANDLE_SX = {
-  position: 'absolute', right: -3, bottom: -3, width: 7, height: 7,
-  bgcolor: 'var(--ogrid-selection, #217346)', border: '1px solid var(--ogrid-bg, #fff)', borderRadius: '1px',
-  cursor: 'crosshair', pointerEvents: 'auto', zIndex: 3,
-} as const;
-
-// Cell <td> positioning variants
-const CELL_TD_BASE_SX = { position: 'relative' as const, p: 0, height: '1px' } as const;
-const CELL_TD_PINNED_LEFT_SX = {
-  ...CELL_TD_BASE_SX, position: 'sticky' as const, left: 0, zIndex: 6,
-  bgcolor: 'background.paper', willChange: 'transform',
-  borderRight: '1px solid', borderRightColor: 'divider',
-  boxShadow: '2px 0 4px -1px rgba(0,0,0,0.1)',
-} as const;
-const CELL_TD_PINNED_RIGHT_SX = {
-  ...CELL_TD_BASE_SX, position: 'sticky' as const, right: 0, zIndex: 6,
-  bgcolor: 'background.paper', willChange: 'transform',
-  borderLeft: '1px solid', borderLeftColor: 'divider',
-  boxShadow: '-2px 0 4px -1px rgba(0,0,0,0.1)',
-} as const;
+// Density padding for body cells (React.CSSProperties for native elements)
+const DENSITY_CELL_STYLES: Record<string, React.CSSProperties> = {
+  compact: { padding: '4px 8px' },
+  normal: { padding: '6px 10px' },
+  comfortable: { padding: '12px 16px' },
+};
 
 // Header cell positioning variants (sticky)
 // Use opaque HEADER_BG so headers fully occlude content scrolling beneath them.
@@ -279,16 +200,13 @@ const COLUMN_OPTIONS_BUTTON_SX = {
 const TABLE_WRAPPER_SX = { position: 'relative', opacity: 1 } as const;
 const TABLE_WRAPPER_LOADING_SX = { position: 'relative', opacity: 0.6 } as const;
 
-// TableBody — remove bottom border from last row so DataGridTable has no outer border
-// (the OGridLayout container provides the border/radius)
-const TABLE_BODY_SX = { '& tr:last-child td': { borderBottom: 'none' } } as const;
-
 // --- Memoized row component (skips re-render for rows unaffected by selection changes) ---
 
 /** Pre-computed per-column layout (avoids per-cell recalculation inside GridRow). */
 interface ColumnLayout<T = unknown> {
   col: IColumnDef<T>;
-  tdSx: object;
+  tdClassName: string;
+  tdStyle: React.CSSProperties;
   minWidth: number;
   width: number;
   maxWidth: number;
@@ -307,6 +225,7 @@ interface GridRowProps {
   hasCheckboxCol: boolean;
   hasRowNumbersCol: boolean;
   rowNumberOffset: number;
+  rowHeight?: number | string;
   // Comparator-only props (drive re-render decisions, not used in render body)
   selectionRange: { startRow: number; endRow: number; startCol: number; endCol: number } | null;
   activeCell: { rowIndex: number; columnIndex: number } | null;
@@ -320,23 +239,24 @@ function GridRowInner(props: GridRowProps) {
   const {
     item, rowIndex, rowId, isSelected, columnLayouts,
     renderCellContent, handleSingleRowClick, handleRowCheckboxChange,
-    lastMouseShiftRef, hasCheckboxCol, hasRowNumbersCol, rowNumberOffset,
+    lastMouseShiftRef, hasCheckboxCol, hasRowNumbersCol, rowNumberOffset, rowHeight,
   } = props;
 
   return (
-    <TableRow
-      selected={isSelected}
+    <tr
       data-row-id={rowId}
       onClick={handleSingleRowClick}
-      sx={ROW_HOVER_SX}
+      aria-selected={isSelected || undefined}
+      className={`ogrid-mat-row${isSelected ? ' ogrid-mat-row--selected' : ''}`}
+      style={rowHeight ? { height: rowHeight } : undefined}
     >
       {hasCheckboxCol && (
-        <TableCell padding="checkbox" sx={CHECKBOX_CELL_SX}>
-          <Box
+        <td style={CHECKBOX_TD_STYLE}>
+          <div
             data-row-index={rowIndex}
             data-col-index={0}
             onClick={STOP_PROPAGATION}
-            sx={CHECKBOX_WRAPPER_SX}
+            className="ogrid-mat-checkbox-wrapper"
           >
             <Checkbox
               checked={isSelected}
@@ -344,38 +264,34 @@ function GridRowInner(props: GridRowProps) {
               size="small"
               aria-label={`Select row ${rowIndex + 1}`}
             />
-          </Box>
-        </TableCell>
+          </div>
+        </td>
       )}
       {hasRowNumbersCol && (
-        <TableCell
-          sx={{
+        <td
+          className="ogrid-mat-td ogrid-mat-row-number"
+          style={{
             width: ROW_NUMBER_COLUMN_WIDTH,
             minWidth: ROW_NUMBER_COLUMN_WIDTH,
             maxWidth: ROW_NUMBER_COLUMN_WIDTH,
-            textAlign: 'center',
-            fontWeight: 600,
-            fontVariantNumeric: 'tabular-nums',
-            color: 'text.secondary',
-            backgroundColor: 'action.hover',
-            position: 'sticky',
             left: hasCheckboxCol ? CHECKBOX_COLUMN_WIDTH : 0,
-            zIndex: 3,
+            borderBottom: '1px solid var(--ogrid-border, rgba(224,224,224,1))',
           }}
         >
           {rowNumberOffset + rowIndex + 1}
-        </TableCell>
+        </td>
       )}
       {columnLayouts.map((cl, colIdx) => (
-        <TableCell
+        <td
           key={cl.col.columnId}
           data-column-id={cl.col.columnId}
-          sx={[cl.tdSx, { minWidth: cl.minWidth, width: cl.width, maxWidth: cl.maxWidth }]}
+          className={cl.tdClassName}
+          style={{ ...cl.tdStyle, minWidth: cl.minWidth, width: cl.width, maxWidth: cl.maxWidth }}
         >
           {renderCellContent(item, cl.col, rowIndex, colIdx)}
-        </TableCell>
+        </td>
       ))}
-    </TableRow>
+    </tr>
   );
 }
 
@@ -424,25 +340,28 @@ function DataGridTableInner<T>(props: IOGridDataGridProps<T>): React.ReactElemen
     pinnedColRightClass: '',
   });
 
-  // Pre-compute per-column layout (tdSx + widths from columnMeta) so GridRow doesn't recalculate per-cell
+  // Pre-compute per-column layout (className + style from columnMeta) so GridRow doesn't recalculate per-cell
   const columnLayouts = useMemo<ColumnLayout<T>[]>(() =>
     visibleCols.map((col) => {
       const isPinnedLeft = pinning.pinnedColumns[col.columnId] === 'left';
       const isPinnedRight = pinning.pinnedColumns[col.columnId] === 'right';
-      const baseTdSx = isPinnedLeft ? CELL_TD_PINNED_LEFT_SX : isPinnedRight ? CELL_TD_PINNED_RIGHT_SX : CELL_TD_BASE_SX;
-      // Override sticky offset for pinned columns (supports multiple pinned columns)
-      const tdSx = isPinnedLeft && pinning.leftOffsets[col.columnId] != null
-        ? { ...baseTdSx, left: pinning.leftOffsets[col.columnId] } as typeof baseTdSx
-        : isPinnedRight && pinning.rightOffsets[col.columnId] != null
-          ? { ...baseTdSx, right: pinning.rightOffsets[col.columnId] } as typeof baseTdSx
-          : baseTdSx;
-      const cellStyle = columnMeta.cellStyles[col.columnId];
+      let tdClassName = 'ogrid-mat-td';
+      const tdStyle: React.CSSProperties = {};
+      if (isPinnedLeft) {
+        tdClassName += ' ogrid-mat-td--pinned-left';
+        if (pinning.leftOffsets[col.columnId] != null) tdStyle.left = pinning.leftOffsets[col.columnId];
+      } else if (isPinnedRight) {
+        tdClassName += ' ogrid-mat-td--pinned-right';
+        if (pinning.rightOffsets[col.columnId] != null) tdStyle.right = pinning.rightOffsets[col.columnId];
+      }
+      const cellMeta = columnMeta.cellStyles[col.columnId];
       return {
         col,
-        tdSx,
-        minWidth: (cellStyle?.minWidth as number) ?? 0,
-        width: (cellStyle?.width as number) ?? getColumnWidth(col),
-        maxWidth: (cellStyle?.maxWidth as number) ?? getColumnWidth(col),
+        tdClassName,
+        tdStyle,
+        minWidth: (cellMeta?.minWidth as number) ?? 0,
+        width: (cellMeta?.width as number) ?? getColumnWidth(col),
+        maxWidth: (cellMeta?.maxWidth as number) ?? getColumnWidth(col),
       };
     }),
   [visibleCols, columnMeta, pinning.pinnedColumns, pinning.leftOffsets, pinning.rightOffsets, getColumnWidth]);
@@ -458,10 +377,10 @@ function DataGridTableInner<T>(props: IOGridDataGridProps<T>): React.ReactElemen
     overflowY: 'auto' as const,
     bgcolor: 'background.paper',
     willChange: 'scroll-position',
-    '& [data-drag-range]': { bgcolor: 'rgba(33, 115, 70, 0.12) !important' },
-    '& [data-drag-anchor]': { bgcolor: 'background.paper !important' },
-    ...(rowHeight ? { '& tbody tr': { height: rowHeight } } : {}),
-  }), [fitToContent, suppressHorizontalScroll, allowOverflowX, isLoading, items.length, rowHeight]);
+  }), [fitToContent, suppressHorizontalScroll, allowOverflowX, isLoading, items.length]);
+
+  // Density padding for native cell content (avoids Emotion)
+  const cellDensityStyle = DENSITY_CELL_STYLES[density] ?? DENSITY_CELL_STYLES.normal;
 
   const renderCellContent = useCallback(
     (item: T, col: IColumnDef<T>, rowIndex: number, colIdx: number): React.ReactNode => {
@@ -498,30 +417,30 @@ function DataGridTableInner<T>(props: IOGridDataGridProps<T>): React.ReactElemen
       } else {
         const content = resolveCellDisplayContent(col, item, descriptor.displayValue) as React.ReactNode;
         const cellStyle = resolveCellStyle(col, item);
-        const styledContent = cellStyle ? <Box component="span" sx={cellStyle}>{content}</Box> : content;
+        const styledContent = cellStyle ? <span style={cellStyle}>{content}</span> : content;
 
-        // Select pre-computed sx variant (module-scope = no per-cell allocation)
-        const cellSx = getCellSx(
-          col.type,
-          descriptor.canEditAny,
-          descriptor.isActive && !descriptor.isInRange,
-          descriptor.isInRange,
-          descriptor.isInCutRange,
-        );
+        // Build className string (CSS classes — zero Emotion overhead)
+        let cls = 'ogrid-mat-cell';
+        if (col.type === 'numeric') cls += ' ogrid-mat-cell--numeric';
+        else if (col.type === 'boolean') cls += ' ogrid-mat-cell--boolean';
+        if (descriptor.canEditAny) cls += ' ogrid-mat-cell--editable';
+        if (descriptor.isActive && !descriptor.isInRange) cls += ' ogrid-mat-cell--active';
+        if (descriptor.isInRange) cls += ' ogrid-mat-cell--range';
+        if (descriptor.isInCutRange) cls += ' ogrid-mat-cell--cut';
 
         const interactionProps = getCellInteractionProps(descriptor, col.columnId, interactionHandlers);
 
         cellContent = (
-          <Box
-            component="div"
+          <div
+            className={cls}
             {...interactionProps}
-            sx={Array.isArray(cellSx) ? [...cellSx, densityPadding] : { ...cellSx, ...densityPadding } as Record<string, unknown>}
+            style={cellDensityStyle}
           >
             {styledContent}
             {descriptor.canEditAny && descriptor.isSelectionEndCell && (
-              <Box component="div" onMouseDown={handleFillHandleMouseDown} aria-label="Fill handle" sx={FILL_HANDLE_SX} />
+              <div className="ogrid-mat-fill-handle" onMouseDown={handleFillHandleMouseDown} aria-label="Fill handle" />
             )}
-          </Box>
+          </div>
         );
       }
 
@@ -531,7 +450,7 @@ function DataGridTableInner<T>(props: IOGridDataGridProps<T>): React.ReactElemen
         </CellErrorBoundary>
       );
     },
-    [editCallbacks, interactionHandlers, handleFillHandleMouseDown, setPopoverAnchorEl, cancelPopoverEdit, getRowId, onCellError, cellDescriptorInputRef, densityPadding, pendingEditorValueRef, popoverAnchorElRef]
+    [editCallbacks, interactionHandlers, handleFillHandleMouseDown, setPopoverAnchorEl, cancelPopoverEdit, getRowId, onCellError, cellDescriptorInputRef, cellDensityStyle, pendingEditorValueRef, popoverAnchorElRef]
   );
 
   return (
@@ -547,6 +466,7 @@ function DataGridTableInner<T>(props: IOGridDataGridProps<T>): React.ReactElemen
         onContextMenu={PREVENT_DEFAULT}
         data-overflow-x={allowOverflowX ? 'true' : 'false'}
         data-density={density}
+        className="ogrid-mat-wrapper"
         sx={wrapperSx}
       >
       <Box sx={WRAPPER_SCROLL_SX}>
@@ -709,9 +629,9 @@ function DataGridTableInner<T>(props: IOGridDataGridProps<T>): React.ReactElemen
               ))}
             </TableHead>
             {!showEmptyInGrid && (
-              <TableBody sx={TABLE_BODY_SX}>
+              <tbody className="ogrid-mat-tbody">
                 {virtualScrollEnabled && visibleRange.offsetTop > 0 && (
-                  <TableRow style={{ height: visibleRange.offsetTop }} aria-hidden />
+                  <tr style={{ height: visibleRange.offsetTop }} aria-hidden />
                 )}
                 {(virtualScrollEnabled
                   ? items.slice(visibleRange.startIndex, visibleRange.endIndex + 1).map((item, i) => {
@@ -737,6 +657,7 @@ function DataGridTableInner<T>(props: IOGridDataGridProps<T>): React.ReactElemen
                           cutRange={cutRange}
                           copyRange={copyRange}
                           isDragging={isDragging}
+                          rowHeight={rowHeight}
                           editingRowId={editingCell?.rowId ?? null}
                         />
                       );
@@ -763,15 +684,16 @@ function DataGridTableInner<T>(props: IOGridDataGridProps<T>): React.ReactElemen
                           cutRange={cutRange}
                           copyRange={copyRange}
                           isDragging={isDragging}
+                          rowHeight={rowHeight}
                           editingRowId={editingCell?.rowId ?? null}
                         />
                       );
                     })
                 )}
                 {virtualScrollEnabled && visibleRange.offsetBottom > 0 && (
-                  <TableRow style={{ height: visibleRange.offsetBottom }} aria-hidden />
+                  <tr style={{ height: visibleRange.offsetBottom }} aria-hidden />
                 )}
-              </TableBody>
+              </tbody>
             )}
           </Table>
           {isReorderDragging && dropIndicatorX != null && (
