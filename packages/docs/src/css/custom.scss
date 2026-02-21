@@ -174,14 +174,16 @@ article h3 {
   font-weight: 600;
 }
 
-/* ── Tables ── */
-table {
+/* ── Tables (Docusaurus markdown tables only — not OGrid grids) ── */
+.markdown table,
+table:not([class]) {
   display: table;
   width: 100%;
   font-size: 0.9rem;
 }
 
-table th {
+.markdown table th,
+table:not([class]) th {
   font-weight: 600;
   text-transform: uppercase;
   font-size: 0.75rem;
@@ -324,7 +326,10 @@ table th {
 
 .live-demo__content {
   width: 100%;
-  overflow: auto;
+  /* Let OGrid's internal tableWrapper handle scrolling — a competing
+     overflow:auto here creates a second scroll container that breaks
+     position:sticky on headers and pinned columns. */
+  overflow: visible;
 
   /* Strip inner grid border/radius — the .live-demo wrapper provides them */
   > div > div:first-child {
