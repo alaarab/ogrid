@@ -90,7 +90,7 @@ export function useOGrid<T>(
 ): UseOGridResult<T> {
   const {
     columns: columnsProp,
-    getRowId,
+    getRowId: getRowIdProp,
     data,
     dataSource,
     page: controlledPage,
@@ -105,7 +105,7 @@ export function useOGrid<T>(
     onFiltersChange,
     onVisibleColumnsChange,
     columnOrder,
-    onColumnOrderChange,
+    onColumnOrderChange: onColumnOrderChangeProp,
     onColumnResized,
     onColumnPinned,
     defaultPageSize = DEFAULT_PAGE_SIZE,
@@ -120,9 +120,9 @@ export function useOGrid<T>(
     suppressHorizontalScroll,
     editable,
     cellSelection,
-    onCellValueChanged,
-    onUndo,
-    onRedo,
+    onCellValueChanged: onCellValueChangedProp,
+    onUndo: onUndoProp,
+    onRedo: onRedoProp,
     canUndo,
     canRedo,
     rowSelection = 'none',
@@ -144,6 +144,35 @@ export function useOGrid<T>(
     'aria-label': ariaLabel,
     'aria-labelledby': ariaLabelledBy,
   } = props;
+
+  // Stabilize consumer callbacks so inline functions don't cause cascading re-renders.
+  // AG Grid does this internally — we need to match that resilience.
+  const getRowIdStableRef = useLatestRef(getRowIdProp);
+  const getRowId = useCallback((item: T) => getRowIdStableRef.current(item), [getRowIdStableRef]) as typeof getRowIdProp;
+  const onColumnOrderChangeRef = useLatestRef(onColumnOrderChangeProp);
+  const onColumnOrderChange = useMemo(
+    () => onColumnOrderChangeProp ? (order: string[]) => onColumnOrderChangeRef.current?.(order) : undefined,
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [!!onColumnOrderChangeProp]
+  );
+  const onCellValueChangedRef = useLatestRef(onCellValueChangedProp);
+  const onCellValueChanged = useMemo(
+    () => onCellValueChangedProp ? (event: import('../types').ICellValueChangedEvent<T>) => onCellValueChangedRef.current?.(event) : undefined,
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [!!onCellValueChangedProp]
+  );
+  const onUndoRef = useLatestRef(onUndoProp);
+  const onUndo = useMemo(
+    () => onUndoProp ? () => onUndoRef.current?.() : undefined,
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [!!onUndoProp]
+  );
+  const onRedoRef = useLatestRef(onRedoProp);
+  const onRedo = useMemo(
+    () => onRedoProp ? () => onRedoRef.current?.() : undefined,
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [!!onRedoProp]
+  );
 
   // --- Derived column state ---
   const columnChooserPlacement: ColumnChooserPlacement =
