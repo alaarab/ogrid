@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, useMemo } from 'react';
 import { processClientSideData } from '../utils';
+import { useLatestRef } from './useLatestRef';
 import type { IFilters, IDataSource } from '../types';
 import type { IColumnDef as ICoreColumnDef } from '@alaarab/ogrid-core';
 
@@ -54,14 +55,19 @@ export function useOGridDataFetching<T>(params: UseOGridDataFetchingParams<T>): 
   const fetchIdRef = useRef(0);
   const [refreshCounter, setRefreshCounter] = useState(0);
 
+  // Stabilize callback refs so inline dataSource/onError don't cause infinite re-fetches.
+  const dataSourceRef = useLatestRef(dataSource);
+  const onErrorRef = useLatestRef(onError);
+
   useEffect(() => {
-    if (!isServerSide || !dataSource) {
+    if (!isServerSide || !dataSourceRef.current) {
       if (!isServerSide) setServerLoading(false);
       return;
     }
+    const ds = dataSourceRef.current;
     const id = ++fetchIdRef.current;
     setServerLoading(true);
-    dataSource
+    ds
       .fetchPage({
         page, pageSize,
         sort: { field: sort.field, direction: sort.direction },
@@ -74,26 +80,29 @@ export function useOGridDataFetching<T>(params: UseOGridDataFetchingParams<T>): 
       })
       .catch((err) => {
         if (id !== fetchIdRef.current) return;
-        onError?.(err);
+        onErrorRef.current?.(err);
         setServerItems([]);
         setServerTotalCount(0);
       })
       .finally(() => {
         if (id === fetchIdRef.current) setServerLoading(false);
       });
-  }, [isServerSide, dataSource, page, pageSize, sort.field, sort.direction, stableFilters, onError, refreshCounter]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isServerSide, page, pageSize, sort.field, sort.direction, stableFilters, refreshCounter]);
 
   const displayItems = isClientSide && clientItemsAndTotal ? clientItemsAndTotal.items : serverItems;
   const displayTotalCount = isClientSide && clientItemsAndTotal ? clientItemsAndTotal.totalCount : serverTotalCount;
 
   // Fire onFirstDataRendered once when the grid first has data
+  const onFirstDataRenderedRef = useLatestRef(onFirstDataRendered);
   const firstDataRenderedRef = useRef(false);
   useEffect(() => {
     if (!firstDataRenderedRef.current && displayItems.length > 0) {
       firstDataRenderedRef.current = true;
-      onFirstDataRendered?.();
+      onFirstDataRenderedRef.current?.();
     }
-  }, [displayItems.length, onFirstDataRendered]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [displayItems.length]);
 
   return {
     displayItems,
