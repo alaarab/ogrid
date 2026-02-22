@@ -4,7 +4,7 @@
  */
 import type { IColumnDef, ICellValueChangedEvent } from '../types/columnTypes';
 import type { ISelectionRange } from '../types/dataGridTypes';
-import { getCellValue } from './cellValue';
+import { getCellValue, isColumnEditable } from './cellValue';
 import { parseValue } from './valueParsers';
 
 /**
@@ -38,10 +38,7 @@ export function applyFillValues<T>(
       if (row >= items.length || col >= visibleCols.length) continue;
       const item = items[row];
       const colDef = visibleCols[col];
-      const colEditable =
-        colDef.editable === true ||
-        (typeof colDef.editable === 'function' && colDef.editable(item));
-      if (!colEditable) continue;
+      if (!isColumnEditable(colDef, item)) continue;
       const oldValue = getCellValue(item, colDef);
       const result = parseValue(startValue, oldValue, item, colDef);
       if (!result.valid) continue;

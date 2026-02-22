@@ -50,6 +50,7 @@ export {
   applyRangeRowSelection,
   computeRowSelectionState,
   UndoRedoStack,
+  buildCellIndex,
 } from '@alaarab/ogrid-core';
 export type {
   CsvColumn,
