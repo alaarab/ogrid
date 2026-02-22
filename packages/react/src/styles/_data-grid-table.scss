@@ -250,6 +250,12 @@
   background: var(--ogrid-bg, #fff) !important;
 }
 
+// Hide active-cell outline during drag — the overlay border handles the range border
+.activeCellContent:global([data-drag-anchor]),
+.activeCellContent:global([data-drag-range]) {
+  outline: none;
+}
+
 .cellCut {
   background: var(--ogrid-hover-bg, rgba(0, 0, 0, 0.04)) !important;
   opacity: 0.7;
