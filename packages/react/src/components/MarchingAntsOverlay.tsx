@@ -32,6 +32,8 @@ export interface MarchingAntsOverlayProps {
   columnSizingOverrides: Record<string, { widthPx: number }>;
   /** Column order — triggers re-measurement when columns are reordered */
   columnOrder: readonly string[] | undefined;
+  /** True while the user is drag-selecting — hides the selection SVG (drag overlay handles it) */
+  isDragging?: boolean;
 }
 
 export function MarchingAntsOverlay({
@@ -44,6 +46,7 @@ export function MarchingAntsOverlay({
   visibleColumns,
   columnSizingOverrides,
   columnOrder,
+  isDragging,
 }: MarchingAntsOverlayProps): React.ReactElement | null {
   const [selRect, setSelRect] = useState<OverlayRect | null>(null);
   const [clipRect, setClipRect] = useState<OverlayRect | null>(null);
@@ -117,8 +120,8 @@ export function MarchingAntsOverlay({
 
   return (
     <>
-      {/* Selection range: solid green border (hidden when clipboard range overlaps) */}
-      {selR && !clipRangeMatchesSel && (
+      {/* Selection range: solid green border (hidden during drag or when clipboard range overlaps) */}
+      {selR && !isDragging && !clipRangeMatchesSel && (
         <svg
           style={{
             position: 'absolute',

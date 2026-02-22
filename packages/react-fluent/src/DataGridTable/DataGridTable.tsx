@@ -431,6 +431,7 @@ function DataGridTableInner<T>(props: IOGridDataGridProps<T>): React.ReactElemen
                 visibleColumns={visibleColumns}
                 columnSizingOverrides={columnSizingOverrides}
                 columnOrder={columnOrder}
+                isDragging={isDragging}
               />
               {showEmptyInGrid && emptyState && (
                 <EmptyState emptyState={emptyState} />
