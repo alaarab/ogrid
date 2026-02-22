@@ -159,7 +159,11 @@ export function useDataGridLayout<T>(
       if (Object.keys(prev).length !== Object.keys(measured).length) return measured;
       return prev;
     });
-  }, [visibleCols, containerWidth, columnSizingOverrides, wrapperRef]);
+  // Note: containerWidth intentionally excluded — it's already reflected in
+  // DOM offsetWidth values. Including it creates a loop: ResizeObserver →
+  // setContainerWidth → useLayoutEffect → setMeasuredColumnWidths → re-render
+  // → ResizeObserver → ...
+  }, [visibleCols, columnSizingOverrides, wrapperRef]);
 
   // Build column width map for pinning offset computation
   const columnWidthMap = useMemo(() => {
