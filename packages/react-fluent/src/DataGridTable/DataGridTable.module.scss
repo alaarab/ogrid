@@ -3,44 +3,10 @@
 // Fluent UI-specific theme variable bridging and component overrides.
 
 @use '../../../react/src/styles/data-grid-table' as *;
+@use '../../../core/src/styles/ogrid-theme' as *;
 
-/* ─── OGrid Theme Variables ─── */
-/* Bridge Fluent UI tokens -> ogrid CSS variables so headless components (SideBar, etc.)
-   automatically follow the active FluentProvider theme (light or dark). */
-:global(:root) {
-  --ogrid-bg: #ffffff;
-  --ogrid-fg: rgba(0, 0, 0, 0.87);
-  --ogrid-fg-secondary: rgba(0, 0, 0, 0.6);
-  --ogrid-fg-muted: rgba(0, 0, 0, 0.5);
-  --ogrid-border: rgba(0, 0, 0, 0.12);
-  --ogrid-header-bg: #f3f2f1;
-  --ogrid-hover-bg: rgba(0, 0, 0, 0.04);
-  --ogrid-selected-row-bg: #e6f0fb;
-  --ogrid-active-cell-bg: rgba(0, 0, 0, 0.02);
-  --ogrid-range-bg: rgba(33, 115, 70, 0.12);
-  --ogrid-accent: #0078d4;
-  --ogrid-selection-color: #217346;
-  --ogrid-loading-overlay: rgba(255, 255, 255, 0.7);
-}
-
-/* Page-level dark mode (for body background, non-FluentProvider elements) */
-:global([data-theme="dark"]) {
-  --ogrid-bg: #1b1b1f;
-  --ogrid-fg: rgba(255, 255, 255, 0.87);
-  --ogrid-fg-secondary: rgba(255, 255, 255, 0.6);
-  --ogrid-fg-muted: rgba(255, 255, 255, 0.5);
-  --ogrid-border: rgba(255, 255, 255, 0.12);
-  --ogrid-header-bg: #2c2c2c;
-  --ogrid-hover-bg: rgba(255, 255, 255, 0.06);
-  --ogrid-selected-row-bg: #1a3a5c;
-  --ogrid-active-cell-bg: rgba(255, 255, 255, 0.04);
-  --ogrid-range-bg: rgba(33, 115, 70, 0.2);
-  --ogrid-accent: #4da6ff;
-  --ogrid-selection-color: #217346;
-  --ogrid-loading-overlay: rgba(0, 0, 0, 0.5);
-}
-
-/* Inside FluentProvider: derive --ogrid-* from Fluent tokens so light/dark follows automatically */
+/* Inside FluentProvider: derive --ogrid-* from Fluent tokens so light/dark follows automatically.
+   Regular specificity (0,1,0) beats the :where() defaults from core theme. */
 :global(.fui-FluentProvider) {
   --ogrid-bg: var(--colorNeutralBackground1, #ffffff);
   --ogrid-fg: var(--colorNeutralForeground1, rgba(0, 0, 0, 0.87));
