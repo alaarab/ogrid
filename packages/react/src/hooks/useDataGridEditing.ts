@@ -19,6 +19,8 @@ export interface UseDataGridEditingParams<T> {
     rowIndex: number;
   }) => void;
   setActiveCell: (cell: { rowIndex: number; columnIndex: number } | null) => void;
+  setSelectionRange: (range: { startRow: number; startCol: number; endRow: number; endCol: number } | null) => void;
+  colOffset: number;
 }
 
 export interface UseDataGridEditingResult<T> {
@@ -43,6 +45,8 @@ export function useDataGridEditing<T>(
     setPendingEditorValue,
     onCellValueChanged,
     setActiveCell,
+    setSelectionRange,
+    colOffset,
   } = params;
 
   const [popoverAnchorEl, setPopoverAnchorEl] = useState<HTMLElement | null>(null);
@@ -86,11 +90,14 @@ export function useDataGridEditing<T>(
       setPendingEditorValue(undefined);
       // Advance to next row for inline editors
       if (rowIndex < itemsLengthRef.current - 1) {
-        setActiveCell({ rowIndex: rowIndex + 1, columnIndex: globalColIndex });
+        const newRow = rowIndex + 1;
+        const localCol = globalColIndex - colOffset;
+        setActiveCell({ rowIndex: newRow, columnIndex: globalColIndex });
+        setSelectionRange({ startRow: newRow, startCol: localCol, endRow: newRow, endCol: localCol });
       }
     },
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [setEditingCell, setPendingEditorValue, setActiveCell, visibleColsRef, itemsLengthRef]
+    [setEditingCell, setPendingEditorValue, setActiveCell, setSelectionRange, colOffset, visibleColsRef, itemsLengthRef]
   );
 
   const cancelPopoverEdit = useCallback(() => {

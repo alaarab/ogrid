@@ -302,6 +302,7 @@ export function useDataGridState<T>(
 
   const {
     selectionRange,
+    setSelectionRange,
     cutRange,
     copyRange,
     isDragging,
@@ -318,6 +319,8 @@ export function useDataGridState<T>(
     itemsLength: items.length,
     onCellValueChanged,
     setActiveCell,
+    setSelectionRange,
+    colOffset,
   });
 
   // --- 6. View models ---
@@ -331,6 +334,7 @@ export function useDataGridState<T>(
     peopleSearch,
   } = props;
 
+  const hasPeopleSearch = !!peopleSearch;
   const onFilterChangeRef = useLatestRef(onFilterChange);
   const peopleSearchRef = useLatestRef(peopleSearch);
 
@@ -352,7 +356,7 @@ export function useDataGridState<T>(
       onFilterChange: stableOnFilterChange,
       filterOptions,
       loadingFilterOptions,
-      peopleSearch: peopleSearch ? stablePeopleSearch : undefined,
+      peopleSearch: hasPeopleSearch ? stablePeopleSearch : undefined,
     }),
     [
       sortBy,
@@ -362,7 +366,7 @@ export function useDataGridState<T>(
       stableOnFilterChange,
       filterOptions,
       loadingFilterOptions,
-      peopleSearch, stablePeopleSearch,
+      hasPeopleSearch, stablePeopleSearch,
     ]
   );
 

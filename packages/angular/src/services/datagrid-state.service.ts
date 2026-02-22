@@ -323,6 +323,8 @@ export class DataGridStateService<T> {
       () => this.props()?.items ?? [],
       () => this.wrappedOnCellValueChanged(),
       (cell) => this.setActiveCell(cell),
+      (range) => this.setSelectionRange(range),
+      () => this.colOffset(),
     );
 
     // Setup window event listeners for cell selection drag

@@ -1,5 +1,5 @@
 import { shallowRef, watch, isRef, onUnmounted, type Ref, type ShallowRef } from 'vue';
-import { normalizeSelectionRange, applyFillValues } from '@alaarab/ogrid-core';
+import { normalizeSelectionRange, applyFillValues, buildCellIndex } from '@alaarab/ogrid-core';
 import type { ISelectionRange, IActiveCell, IColumnDef, ICellValueChangedEvent } from '../types';
 import type { IVisibleRange } from '@alaarab/ogrid-core';
 
@@ -86,23 +86,7 @@ export function useFillHandle<T>(params: UseFillHandleParams<T>): UseFillHandleR
     const markedCells = new Set<Element>();
 
     /** Cell lookup index built on drag start — O(1) lookups per frame. */
-    let fillCellIndex: Map<string, HTMLElement> | null = null;
-
-    const buildFillCellIndex = () => {
-      const wrapper = wrapperRef.value;
-      if (!wrapper) return;
-      fillCellIndex = new Map<string, HTMLElement>();
-      const cells = wrapper.querySelectorAll('[data-row-index][data-col-index]');
-      for (let i = 0; i < cells.length; i++) {
-        const el = cells[i] as HTMLElement;
-        const r = el.getAttribute('data-row-index') ?? '';
-        const c = el.getAttribute('data-col-index') ?? '';
-        fillCellIndex.set(`${r},${c}`, el);
-      }
-    };
-
-    // Build the index once at fill drag start
-    buildFillCellIndex();
+    let fillCellIndex = buildCellIndex(wrapperRef.value);
 
     const applyDragAttrs = (range: ISelectionRange) => {
       const wrapper = wrapperRef.value;
@@ -130,8 +114,8 @@ export function useFillHandle<T>(params: UseFillHandleParams<T>): UseFillHandleR
           let el = fillCellIndex?.get(key);
           // Handle virtual scroll recycling — if element is stale, rebuild index once
           if (el && !el.isConnected) {
-            buildFillCellIndex();
-            el = fillCellIndex?.get(key);
+            fillCellIndex = buildCellIndex(wrapperRef.value);
+            el = fillCellIndex.get(key);
           }
           if (el) {
             if (!el.hasAttribute(DRAG_ATTR)) el.setAttribute(DRAG_ATTR, '');
@@ -146,7 +130,6 @@ export function useFillHandle<T>(params: UseFillHandleParams<T>): UseFillHandleR
         el.removeAttribute(DRAG_ATTR);
       }
       markedCells.clear();
-      fillCellIndex = null;
     };
 
     let lastFillMousePos: { cx: number; cy: number } | null = null;

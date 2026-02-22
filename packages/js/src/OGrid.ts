@@ -126,9 +126,7 @@ import type { OGridRenderingContext } from './OGridRendering';
 
 /**
  * CSS variable definitions for light and dark themes (injected once per page).
- * NOTE: The dark theme variable block appears twice — once for [data-theme='dark'] and once
- * for @media (prefers-color-scheme: dark). Both blocks must be kept in sync. If you change a
- * dark-theme variable in one block, update the other block too.
+ * Dark mode is opt-in only via [data-theme='dark'] on a parent element.
  */
 const OGRID_THEME_CSS = `
 .ogrid-drag-target { box-shadow: inset 0 0 0 1px var(--ogrid-accent, #0078d4); }
@@ -183,34 +181,6 @@ const OGRID_THEME_CSS = `
   --ogrid-primary-fg: #fff;
   --ogrid-loading-bg: rgba(0, 0, 0, 0.7);
   --ogrid-shadow: 0 4px 16px rgba(0, 0, 0, 0.35);
-}
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme='light']) {
-    --ogrid-bg: #1e1e1e;
-    --ogrid-fg: rgba(255, 255, 255, 0.87);
-    --ogrid-fg-secondary: rgba(255, 255, 255, 0.6);
-    --ogrid-fg-muted: rgba(255, 255, 255, 0.5);
-    --ogrid-border: rgba(255, 255, 255, 0.12);
-    --ogrid-header-bg: rgba(255, 255, 255, 0.06);
-    --ogrid-hover-bg: rgba(255, 255, 255, 0.08);
-    --ogrid-selected-row-bg: #1a3a5c;
-    --ogrid-active-cell-bg: rgba(255, 255, 255, 0.06);
-    --ogrid-range-bg: rgba(46, 160, 67, 0.15);
-    --ogrid-accent: #4da6ff;
-    --ogrid-selection-color: #2ea043;
-    --ogrid-loading-overlay: rgba(0, 0, 0, 0.7);
-    --ogrid-bg-subtle: #2a2a2a;
-    --ogrid-bg-hover: rgba(255, 255, 255, 0.08);
-    --ogrid-bg-selected: #1a3a5c;
-    --ogrid-bg-selected-hover: #1f426b;
-    --ogrid-bg-range: rgba(46, 160, 67, 0.15);
-    --ogrid-muted: rgba(255, 255, 255, 0.5);
-    --ogrid-selection: #2ea043;
-    --ogrid-primary: #2ea043;
-    --ogrid-primary-fg: #fff;
-    --ogrid-loading-bg: rgba(0, 0, 0, 0.7);
-    --ogrid-shadow: 0 4px 16px rgba(0, 0, 0, 0.35);
-  }
 }
 `;
 

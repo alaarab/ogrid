@@ -7,7 +7,7 @@
 import type { ColumnFilterType, IDateFilterValue, ICellEditorProps } from '../types/columnTypes';
 import type { IColumnDef } from '../types/columnTypes';
 import type { RowId, UserLike, IFilters, FilterValue } from '../types/dataGridTypes';
-import { getCellValue } from './cellValue';
+import { getCellValue, isColumnEditable } from './cellValue';
 import { isInSelectionRange } from '../types/dataGridTypes';
 import { isFilterConfig } from './ogridHelpers';
 
@@ -176,17 +176,15 @@ export function getCellRenderDescriptor<T>(
   const rowId = input.getRowId(item);
   const globalColIndex = colIdx + input.colOffset;
 
-  const colEditable =
-    col.editable === true ||
-    (typeof col.editable === 'function' && col.editable(item));
+  const colEditable = isColumnEditable(col, item);
   const canEditInline =
     input.editable !== false &&
-    !!colEditable &&
+    colEditable &&
     !!input.onCellValueChanged &&
     typeof col.cellEditor !== 'function';
   const canEditPopup =
     input.editable !== false &&
-    !!colEditable &&
+    colEditable &&
     !!input.onCellValueChanged &&
     typeof col.cellEditor === 'function' &&
     col.cellEditorPopup !== false;

@@ -55,7 +55,7 @@ export {
 export type { CsvColumn } from './utils';
 
 // Utils — cellValue, columnUtils
-export { getCellValue } from './utils';
+export { getCellValue, isColumnEditable } from './utils';
 export { flattenColumns, buildHeaderRows } from './utils';
 
 // Utils — ogridHelpers
@@ -153,7 +153,7 @@ export type {
 
 // Utils — debounce, dom
 export { debounce } from './utils';
-export { measureRange, injectGlobalStyles } from './utils';
+export { measureRange, buildCellIndex, injectGlobalStyles } from './utils';
 export type { OverlayRect } from './utils';
 
 // Utils — sortHelpers

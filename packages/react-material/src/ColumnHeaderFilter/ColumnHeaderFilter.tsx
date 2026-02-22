@@ -8,6 +8,7 @@ import {
   useColumnHeaderFilterState,
   getColumnHeaderFilterStateParams,
   renderFilterContent,
+  DateFilterContent,
 } from '@alaarab/ogrid-react';
 import type { FilterContentRenderers } from '@alaarab/ogrid-react';
 import { TextFilterPopover } from './TextFilterPopover';
@@ -52,20 +53,14 @@ const materialRenderers: FilterContentRenderers = {
     />
   ),
   renderDate: (p) => (
-    <Box sx={{ p: 1.5, display: 'flex', flexDirection: 'column', gap: 1 }}>
-      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-        <Typography variant="caption" sx={{ minWidth: 36 }}>From:</Typography>
-        <input type="date" value={p.tempDateFrom} onChange={(e) => p.setTempDateFrom(e.target.value)} style={{ flex: 1, padding: '4px 6px' }} />
-      </Box>
-      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-        <Typography variant="caption" sx={{ minWidth: 36 }}>To:</Typography>
-        <input type="date" value={p.tempDateTo} onChange={(e) => p.setTempDateTo(e.target.value)} style={{ flex: 1, padding: '4px 6px' }} />
-      </Box>
-      <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 1, mt: 0.5 }}>
-        <button onClick={p.onClear} disabled={!p.tempDateFrom && !p.tempDateTo} style={{ padding: '4px 12px', cursor: 'pointer' }}>Clear</button>
-        <button onClick={p.onApply} style={{ padding: '4px 12px', cursor: 'pointer' }}>Apply</button>
-      </Box>
-    </Box>
+    <DateFilterContent
+      tempDateFrom={p.tempDateFrom}
+      setTempDateFrom={p.setTempDateFrom}
+      tempDateTo={p.tempDateTo}
+      setTempDateTo={p.setTempDateTo}
+      onApply={p.onApply}
+      onClear={p.onClear}
+    />
   ),
 };
 

@@ -5,7 +5,7 @@
 import type { ISelectionRange } from '../types/dataGridTypes';
 import type { IColumnDef, ICellValueChangedEvent } from '../types/columnTypes';
 import { normalizeSelectionRange } from '../types/dataGridTypes';
-import { getCellValue } from './cellValue';
+import { getCellValue, isColumnEditable } from './cellValue';
 import { parseValue } from './valueParsers';
 
 /**
@@ -205,10 +205,7 @@ export function applyCellDeletion<T>(
       if (r >= items.length || c >= visibleCols.length) continue;
       const item = items[r];
       const col = visibleCols[c];
-      const colEditable =
-        col.editable === true ||
-        (typeof col.editable === 'function' && col.editable(item));
-      if (!colEditable) continue;
+      if (!isColumnEditable(col, item)) continue;
       const oldValue = getCellValue(item, col);
       const result = parseValue('', oldValue, item, col);
       if (!result.valid) continue;
