@@ -3,7 +3,7 @@ import type { RefObject } from 'react';
 import { normalizeSelectionRange } from '../types';
 import type { ISelectionRange, IActiveCell } from '../types';
 import type { IColumnDef, ICellValueChangedEvent } from '../types/columnTypes';
-import { applyFillValues } from '../utils';
+import { applyFillValues, buildCellIndex } from '../utils';
 import { useLatestRef } from './useLatestRef';
 
 export interface UseFillHandleParams<T> {
@@ -65,23 +65,7 @@ export function useFillHandle<T>(params: UseFillHandleParams<T>): UseFillHandleR
     const markedCells = new Set<Element>();
 
     /** Cell lookup index built on drag start — O(1) lookups per frame. */
-    let cellIndex: Map<string, HTMLElement> | null = null;
-
-    const buildCellIndex = () => {
-      const wrapper = wrapperRef.current;
-      if (!wrapper) return;
-      cellIndex = new Map<string, HTMLElement>();
-      const cells = wrapper.querySelectorAll('[data-row-index][data-col-index]');
-      for (let i = 0; i < cells.length; i++) {
-        const el = cells[i] as HTMLElement;
-        const r = el.getAttribute('data-row-index') ?? '';
-        const c = el.getAttribute('data-col-index') ?? '';
-        cellIndex.set(`${r},${c}`, el);
-      }
-    };
-
-    // Build the index once at fill drag start
-    buildCellIndex();
+    let cellIndex = buildCellIndex(wrapperRef.current);
 
     const applyDragAttrs = (range: ISelectionRange) => {
       const wrapper = wrapperRef.current;
@@ -109,8 +93,8 @@ export function useFillHandle<T>(params: UseFillHandleParams<T>): UseFillHandleR
           let el = cellIndex?.get(key);
           // Handle virtual scroll recycling — if element is stale, rebuild index once
           if (el && !el.isConnected) {
-            buildCellIndex();
-            el = cellIndex?.get(key);
+            cellIndex = buildCellIndex(wrapperRef.current);
+            el = cellIndex.get(key);
           }
           if (el) {
             if (!el.hasAttribute(DRAG_ATTR)) el.setAttribute(DRAG_ATTR, '');
@@ -125,7 +109,6 @@ export function useFillHandle<T>(params: UseFillHandleParams<T>): UseFillHandleR
         el.removeAttribute(DRAG_ATTR);
       }
       markedCells.clear();
-      cellIndex = null;
     };
 
     let lastFillMousePos: { cx: number; cy: number } | null = null;

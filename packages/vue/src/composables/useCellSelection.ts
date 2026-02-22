@@ -1,5 +1,5 @@
 import { shallowRef, ref, isRef, onMounted, onUnmounted, type Ref, type ShallowRef } from 'vue';
-import { normalizeSelectionRange, rangesEqual, computeAutoScrollSpeed } from '@alaarab/ogrid-core';
+import { normalizeSelectionRange, rangesEqual, computeAutoScrollSpeed, buildCellIndex } from '@alaarab/ogrid-core';
 import type { ISelectionRange, IActiveCell } from '../types';
 import { useLatestRef } from './useLatestRef';
 
@@ -108,20 +108,6 @@ export function useCellSelection(params: UseCellSelectionParams): UseCellSelecti
   /** Cell lookup index built on drag start — O(1) lookups per frame instead of querySelectorAll. */
   let cellIndex: Map<string, HTMLElement> | null = null;
 
-  /** Build cell lookup index from a single querySelectorAll scan. */
-  const buildCellIndex = () => {
-    const wrapper = wrapperRef.value;
-    if (!wrapper) return;
-    cellIndex = new Map<string, HTMLElement>();
-    const cells = wrapper.querySelectorAll('[data-row-index][data-col-index]');
-    for (let i = 0; i < cells.length; i++) {
-      const el = cells[i] as HTMLElement;
-      const r = el.getAttribute('data-row-index') ?? '';
-      const c = el.getAttribute('data-col-index') ?? '';
-      cellIndex.set(`${r},${c}`, el);
-    }
-  };
-
   /** Apply styling to a single in-range cell (attrs + box-shadow). */
   const styleCellInRange = (
     el: HTMLElement, r: number, c: number,
@@ -177,7 +163,7 @@ export function useCellSelection(params: UseCellSelectionParams): UseCellSelecti
     }
 
     // Build index on first call if not yet initialized
-    if (!cellIndex) buildCellIndex();
+    if (!cellIndex) cellIndex = buildCellIndex(wrapperRef.value);
 
     // 2. Look up only the cells in the new range — O(range size) via Map lookup.
     for (let r = minR; r <= maxR; r++) {
@@ -186,7 +172,7 @@ export function useCellSelection(params: UseCellSelectionParams): UseCellSelecti
         let el = cellIndex?.get(key);
         // Handle virtual scroll recycling — if element is stale, rebuild index once
         if (el && !el.isConnected) {
-          buildCellIndex();
+          cellIndex = buildCellIndex(wrapperRef.value);
           el = cellIndex?.get(key);
         }
         if (el) {
@@ -293,7 +279,7 @@ export function useCellSelection(params: UseCellSelectionParams): UseCellSelecti
       dragMoved = true;
       isDragging.value = true;
       // Build cell index once at drag start for O(1) lookups during drag
-      buildCellIndex();
+      cellIndex = buildCellIndex(wrapperRef.value);
     }
 
     lastMousePos = { cx: e.clientX, cy: e.clientY };

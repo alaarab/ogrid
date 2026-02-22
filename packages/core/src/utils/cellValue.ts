@@ -13,3 +13,11 @@ export function getCellValue<T>(item: T, col: IColumnDef<T>): unknown {
   if (col.valueGetter) return col.valueGetter(item);
   return (item as Record<string, unknown>)[col.columnId];
 }
+
+/**
+ * Check whether a column is editable for a given row item.
+ * Handles both boolean and function-based `editable` definitions.
+ */
+export function isColumnEditable<T>(col: IColumnDef<T>, item: T): boolean {
+  return col.editable === true || (typeof col.editable === 'function' && col.editable(item));
+}

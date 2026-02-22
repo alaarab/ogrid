@@ -21,32 +21,6 @@
   --ogrid-loading-overlay: rgba(255, 255, 255, 0.7);
 }
 
-@media (prefers-color-scheme: dark) {
-  :global(:root:not([data-theme="light"])) {
-    --ogrid-bg: #1e1e1e;
-    --ogrid-fg: rgba(255, 255, 255, 0.87);
-    --ogrid-fg-secondary: rgba(255, 255, 255, 0.6);
-    --ogrid-fg-muted: rgba(255, 255, 255, 0.5);
-    --ogrid-border: rgba(255, 255, 255, 0.12);
-    --ogrid-header-bg: #2c2c2c;
-    --ogrid-hover-bg: rgba(255, 255, 255, 0.08);
-    --ogrid-selected-row-bg: #1a3a5c;
-    --ogrid-active-cell-bg: rgba(255, 255, 255, 0.06);
-    --ogrid-range-bg: rgba(46, 160, 67, 0.15);
-    --ogrid-accent: #4da6ff;
-    --ogrid-selection-color: #2ea043;
-    --ogrid-loading-overlay: rgba(0, 0, 0, 0.7);
-    --ogrid-bg-subtle: rgba(255, 255, 255, 0.04);
-    --ogrid-bg-hover: rgba(255, 255, 255, 0.08);
-    --ogrid-muted: rgba(255, 255, 255, 0.5);
-    --ogrid-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
-    --ogrid-primary: #4da6ff;
-    --ogrid-primary-fg: #fff;
-    --ogrid-primary-hover: #66b3ff;
-    --ogrid-border-hover: rgba(255, 255, 255, 0.3);
-  }
-}
-
 :global([data-theme="dark"]) {
   --ogrid-bg: #1e1e1e;
   --ogrid-fg: rgba(255, 255, 255, 0.87);
@@ -166,6 +140,7 @@
 }
 
 .dataTable tbody td {
+  background: var(--ogrid-bg, #ffffff);
   border-bottom: 1px solid var(--ogrid-border, rgba(0, 0, 0, 0.12));
 }
 

@@ -27,17 +27,23 @@ export class DataGridEditingHelper<T> {
   private getItems: () => T[];
   private getWrappedOnCellValueChanged: () => ((event: ICellValueChangedEvent<T>) => void) | undefined;
   private setActiveCellFn: (cell: IActiveCell | null) => void;
+  private setSelectionRangeFn: (range: { startRow: number; startCol: number; endRow: number; endCol: number } | null) => void;
+  private getColOffset: () => number;
 
   constructor(
     getVisibleCols: () => IColumnDef<T>[],
     getItems: () => T[],
     getWrappedOnCellValueChanged: () => ((event: ICellValueChangedEvent<T>) => void) | undefined,
-    setActiveCellFn: (cell: IActiveCell | null) => void
+    setActiveCellFn: (cell: IActiveCell | null) => void,
+    setSelectionRangeFn: (range: { startRow: number; startCol: number; endRow: number; endCol: number } | null) => void,
+    getColOffset: () => number
   ) {
     this.getVisibleCols = getVisibleCols;
     this.getItems = getItems;
     this.getWrappedOnCellValueChanged = getWrappedOnCellValueChanged;
     this.setActiveCellFn = setActiveCellFn;
+    this.setSelectionRangeFn = setSelectionRangeFn;
+    this.getColOffset = getColOffset;
   }
 
   setEditingCell(cell: { rowId: RowId; columnId: string } | null): void {
@@ -76,7 +82,10 @@ export class DataGridEditingHelper<T> {
 
     const items = this.getItems();
     if (rowIndex < items.length - 1) {
-      this.setActiveCellFn({ rowIndex: rowIndex + 1, columnIndex: globalColIndex });
+      const newRow = rowIndex + 1;
+      const localCol = globalColIndex - this.getColOffset();
+      this.setActiveCellFn({ rowIndex: newRow, columnIndex: globalColIndex });
+      this.setSelectionRangeFn({ startRow: newRow, startCol: localCol, endRow: newRow, endCol: localCol });
     }
   }
 
