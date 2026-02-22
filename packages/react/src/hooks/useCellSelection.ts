@@ -135,25 +135,23 @@ export function useCellSelection(params: UseCellSelectionParams): UseCellSelecti
     /** Cell lookup index built on drag start — O(1) lookups per frame instead of querySelectorAll. */
     let cellIndex: Map<string, HTMLElement> | null = null;
 
-    /** Apply styling to a single in-range cell (attrs + box-shadow). */
+    /** Single overlay div for the drag-selection border (replaces per-cell box-shadows). */
+    let overlayEl: HTMLDivElement | null = null;
+    let overlayContainer: HTMLElement | null = null;
+
+    /** Apply data attributes to a single in-range cell (background highlight). */
     const styleCellInRange = (
-      el: HTMLElement, r: number, c: number,
-      minR: number, maxR: number, minC: number, maxC: number,
+      el: HTMLElement, r: number, _c: number,
+      _minR: number, _maxR: number, _minC: number, _maxC: number,
       anchor: { row: number; col: number } | null
     ) => {
       if (!el.hasAttribute(DRAG_ATTR)) el.setAttribute(DRAG_ATTR, '');
-      const isAnchor = anchor && r === anchor.row && c === anchor.col;
+      const isAnchor = anchor && r === anchor.row && _c === anchor.col;
       if (isAnchor) {
         if (!el.hasAttribute(DRAG_ANCHOR_ATTR)) el.setAttribute(DRAG_ANCHOR_ATTR, '');
       } else {
         if (el.hasAttribute(DRAG_ANCHOR_ATTR)) el.removeAttribute(DRAG_ANCHOR_ATTR);
       }
-      const shadows: string[] = [];
-      if (r === minR) shadows.push('inset 0 2px 0 0 var(--ogrid-selection, #217346)');
-      if (r === maxR) shadows.push('inset 0 -2px 0 0 var(--ogrid-selection, #217346)');
-      if (c === minC) shadows.push('inset 2px 0 0 0 var(--ogrid-selection, #217346)');
-      if (c === maxC) shadows.push('inset -2px 0 0 0 var(--ogrid-selection, #217346)');
-      el.style.boxShadow = shadows.length > 0 ? shadows.join(', ') : '';
       markedCells.add(el);
     };
 
@@ -161,16 +159,66 @@ export function useCellSelection(params: UseCellSelectionParams): UseCellSelecti
     const unstyleCell = (el: HTMLElement) => {
       el.removeAttribute(DRAG_ATTR);
       el.removeAttribute(DRAG_ANCHOR_ATTR);
-      el.style.boxShadow = '';
+    };
+
+    /** Position a single overlay div over the drag range for a continuous border. */
+    const positionOverlay = (
+      minR: number, maxR: number, minC: number, maxC: number, colOff: number
+    ) => {
+      const topLeftEl = cellIndex?.get(`${minR},${minC + colOff}`);
+      const bottomRightEl = cellIndex?.get(`${maxR},${maxC + colOff}`);
+      if (!topLeftEl || !bottomRightEl) return;
+
+      // Measure from <td> parents for full cell coverage (no gaps at borders)
+      const topLeftTd = topLeftEl.closest('td') as HTMLElement | null;
+      const bottomRightTd = bottomRightEl.closest('td') as HTMLElement | null;
+      if (!topLeftTd || !bottomRightTd) return;
+
+      // Find positioned container (tableWidthAnchor) on first use
+      if (!overlayContainer) {
+        overlayContainer = topLeftEl.closest('table')?.parentElement as HTMLElement | null;
+        if (!overlayContainer) return;
+      }
+
+      // Create overlay element on first use
+      if (!overlayEl) {
+        overlayEl = document.createElement('div');
+        overlayEl.style.position = 'absolute';
+        overlayEl.style.border = '2px solid var(--ogrid-selection, #217346)';
+        overlayEl.style.pointerEvents = 'none';
+        overlayEl.style.zIndex = '4';
+        overlayEl.style.boxSizing = 'border-box';
+        overlayContainer.appendChild(overlayEl);
+      }
+
+      const cRect = overlayContainer.getBoundingClientRect();
+      const tlRect = topLeftTd.getBoundingClientRect();
+      const brRect = bottomRightTd.getBoundingClientRect();
+
+      overlayEl.style.top = `${Math.round(tlRect.top - cRect.top)}px`;
+      overlayEl.style.left = `${Math.round(tlRect.left - cRect.left)}px`;
+      overlayEl.style.width = `${Math.round(brRect.right - tlRect.left)}px`;
+      overlayEl.style.height = `${Math.round(brRect.bottom - tlRect.top)}px`;
+      overlayEl.style.display = 'block';
+    };
+
+    const hideOverlay = () => {
+      if (overlayEl) overlayEl.style.display = 'none';
+    };
+
+    const removeOverlay = () => {
+      overlayEl?.remove();
+      overlayEl = null;
+      overlayContainer = null;
     };
 
     /** Toggle DRAG_ATTR on cells to show the range highlight via CSS.
      *  Uses a cell index Map for O(1) lookups per cell in the range instead of scanning all cells.
-     *  Also sets edge box-shadows for a green border around the selection range,
+     *  Positions a single overlay div for a continuous green border around the selection range,
      *  and marks the anchor cell with DRAG_ANCHOR_ATTR (white background). */
     const applyDragAttrs = (range: ISelectionRange) => {
       const wrapper = wrapperRef.current;
-      if (!wrapper) return;
+      if (!wrapper || !isDraggingRef.current) return;
       const minR = Math.min(range.startRow, range.endRow);
       const maxR = Math.max(range.startRow, range.endRow);
       const minC = Math.min(range.startCol, range.endCol);
@@ -207,6 +255,9 @@ export function useCellSelection(params: UseCellSelectionParams): UseCellSelecti
           }
         }
       }
+
+      // 3. Position a single overlay div for the continuous selection border
+      positionOverlay(minR, maxR, minC, maxC, colOff);
     };
 
     // Expose applyDragAttrs via ref so mouseDown can access it
@@ -219,6 +270,7 @@ export function useCellSelection(params: UseCellSelectionParams): UseCellSelecti
       }
       markedCells.clear();
       cellIndex = null;
+      hideOverlay();
     };
 
     /** Resolve mouse coordinates to a cell range (shared by RAF callback and mouseUp flush). */
@@ -404,6 +456,7 @@ export function useCellSelection(params: UseCellSelectionParams): UseCellSelecti
       window.removeEventListener('mouseup', onUp, true);
       if (rafRef.current) cancelAnimationFrame(rafRef.current);
       stopAutoScroll();
+      removeOverlay();
     };
   }, [setActiveCell, colOffsetRef, setSelectionRange, wrapperRef]);
 
