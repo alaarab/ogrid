@@ -12,7 +12,6 @@ export default defineConfig({
   target: 'es2020',
   esbuildOptions(options) {
     options.jsx = 'automatic';
-    options.banner = { js: "import './index.css';" };
   },
   esbuildPlugins: [sassPlugin({ type: 'local-css' })],
   outExtension: () => ({ js: '.js' }),
