@@ -66,6 +66,23 @@ export function measureRange(
  * );
  * ```
  */
+/**
+ * Build a Map of `"rowIndex,colIndex"` → HTMLElement for O(1) cell lookups during drag operations.
+ * Scans the container once via querySelectorAll instead of per-frame DOM queries.
+ */
+export function buildCellIndex(container: HTMLElement | null): Map<string, HTMLElement> {
+  const index = new Map<string, HTMLElement>();
+  if (!container) return index;
+  const cells = container.querySelectorAll('[data-row-index][data-col-index]');
+  for (let i = 0; i < cells.length; i++) {
+    const el = cells[i] as HTMLElement;
+    const r = el.getAttribute('data-row-index') ?? '';
+    const c = el.getAttribute('data-col-index') ?? '';
+    index.set(`${r},${c}`, el);
+  }
+  return index;
+}
+
 export function injectGlobalStyles(id: string, css: string): void {
   if (typeof document === 'undefined') return;
   if (document.getElementById(id)) return;

@@ -490,7 +490,10 @@ export function useDataGridState<T>(
     setPopoverAnchorEl(null);
     setPendingEditorValue(undefined);
     if (rowIndex < items.value.length - 1) {
-      setActiveCell({ rowIndex: rowIndex + 1, columnIndex: globalColIndex });
+      const newRow = rowIndex + 1;
+      const localCol = globalColIndex - colOffset.value;
+      setActiveCell({ rowIndex: newRow, columnIndex: globalColIndex });
+      setSelectionRange({ startRow: newRow, startCol: localCol, endRow: newRow, endCol: localCol });
     }
   };
 

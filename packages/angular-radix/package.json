@@ -1,6 +1,6 @@
 {
   "name": "@alaarab/ogrid-angular-radix",
-  "version": "2.1.7",
+  "version": "2.1.8",
   "description": "OGrid Angular Radix – Lightweight data grid with sorting, filtering, pagination, column chooser, and CSV export. Built with Angular CDK.",
   "main": "dist/esm/index.js",
   "module": "dist/esm/index.js",
@@ -44,7 +44,7 @@
     "build-storybook": "ng run angular-radix:build-storybook"
   },
   "dependencies": {
-    "@alaarab/ogrid-angular": "2.1.7"
+    "@alaarab/ogrid-angular": "2.1.8"
   },
   "peerDependencies": {
     "@angular/cdk": "^21.0.0",
