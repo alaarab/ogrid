@@ -5,7 +5,7 @@ export {
   exportToCsv,
   triggerCsvDownload,
 } from './exportToCsv';
-export { getCellValue } from './cellValue';
+export { getCellValue, isColumnEditable } from './cellValue';
 export { flattenColumns, buildHeaderRows } from './columnUtils';
 export {
   isFilterConfig,
@@ -68,7 +68,7 @@ export type {
   CellRenderMode,
 } from './dataGridViewModel';
 export { debounce } from './debounce';
-export { measureRange, injectGlobalStyles } from './dom';
+export { measureRange, buildCellIndex, injectGlobalStyles } from './dom';
 export type { OverlayRect } from './dom';
 export { computeNextSortState } from './sortHelpers';
 export type { ISortState } from './sortHelpers';
