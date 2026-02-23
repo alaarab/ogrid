@@ -1,5 +1,5 @@
 import { defineConfig } from 'tsup';
-import { sassPlugin } from 'esbuild-sass-plugin';
+import { sassPlugin, postcssModules } from 'esbuild-sass-plugin';
 
 export default defineConfig({
   entry: ['src/index.ts'],
@@ -12,7 +12,8 @@ export default defineConfig({
   target: 'es2020',
   esbuildOptions(options) {
     options.jsx = 'automatic';
+    options.banner = { js: "import './index.css';" };
   },
-  esbuildPlugins: [sassPlugin({ type: 'local-css' })],
+  esbuildPlugins: [sassPlugin({ transform: postcssModules({ generateScopedName: 'ogrid-fluent__[name]__[local]' }) })],
   outExtension: () => ({ js: '.js' }),
 });
