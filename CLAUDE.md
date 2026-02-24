@@ -83,7 +83,9 @@ npm run docs:build              # Build docs site
 
 ### Core (`packages/core/src/`) — `@alaarab/ogrid-core`
 
-**Types** — `IColumnDef`, `IColumnGroupDef`, `IDataSource`, `IFilters`, `IDateFilterValue`, `UserLike`, `IOGridApi`, `IOGridProps`, `ICellEditorProps`, `FilterValue`, `IVisibleColumnRange`, etc. in `types/`. Column types: `'text' | 'numeric' | 'date' | 'boolean'`. Filter types: `'none' | 'text' | 'multiSelect' | 'people' | 'date'`. `FilterValue` is a discriminated union: `{ type: 'text', value: string } | { type: 'multiSelect', value: string[] } | { type: 'people', value: UserLike } | { type: 'date', value: IDateFilterValue }`. `IVirtualScrollConfig` has `columns?: boolean` and `columnOverscan?: number` fields. `IOGridBaseProps` has `workerSort?: boolean | 'auto'`.
+**Types** — `IColumnDef`, `IColumnGroupDef`, `IDataSource`, `IFilters`, `IDateFilterValue`, `UserLike`, `IOGridApi`, `IOGridProps`, `ICellEditorProps`, `FilterValue`, `IVisibleColumnRange`, etc. in `types/`. Column types: `'text' | 'numeric' | 'date' | 'boolean'`. Filter types: `'none' | 'text' | 'multiSelect' | 'people' | 'date'`. `FilterValue` is a discriminated union: `{ type: 'text', value: string } | { type: 'multiSelect', value: string[] } | { type: 'people', value: UserLike } | { type: 'date', value: IDateFilterValue }`. `IVirtualScrollConfig` has `columns?: boolean` and `columnOverscan?: number` fields. `IOGridBaseProps` has `workerSort?: boolean | 'auto'`, `cellReferences?: boolean`.
+
+**Cell reference utilities** — `indexToColumnLetter(index)` converts 0→A, 25→Z, 26→AA, 702→AAA; `formatCellReference(colIndex, rowNumber)` returns "A1"-style references. In `utils/cellReference.ts`.
 
 **Performance utilities** — `computeVisibleColumnRange`, `partitionColumnsForVirtualization`, `IVisibleColumnRange` in `utils/virtualScroll.ts`; `processClientSideDataAsync`, `extractValueMatrix`, `createSortFilterWorker`, `terminateSortFilterWorker` in `utils/workerSortFilter.ts`; `sortFilterWorker.ts` in `workers/`.
 
@@ -94,7 +96,8 @@ Core is **pure TypeScript with zero dependencies** — no React, no DOM APIs. It
 React hooks, headless components, and shared test factories. Depends on `@alaarab/ogrid-core`.
 
 **Orchestration hooks:**
-- `useOGrid` — Pagination, sorting, filtering, visibility, editing, row selection, status bar. Exposes `IOGridApi` ref.
+- `useOGrid` — Pagination, sorting, filtering, visibility, editing, row selection, status bar, cell references (name box). Exposes `IOGridApi` ref.
+- `useDataGridTableOrchestration` — Shared orchestration for DataGridTable across all 3 React UI packages. Composes all sub-hooks and returns everything the view layer needs.
 - `useDataGridState` — All DataGridTable state, grouped into 6 sub-objects: `layout`, `rowSelection`, `editing`, `interaction`, `contextMenu`, `viewModels`.
 
 **Headless state hooks** (consumed by UI packages):
@@ -193,7 +196,7 @@ All three expose the same component API and depend on `@alaarab/ogrid-react`:
 
 All re-export everything from `@alaarab/ogrid-react` (which re-exports from `@alaarab/ogrid-core`).
 
-**Feature parity:** All three React UI packages, both Angular UI packages, and both Vue UI packages support the same features and export the same component shapes within their respective framework.
+**Feature parity:** All three React UI packages, all three Angular UI packages, and all three Vue UI packages support the same features and export the same component shapes within their respective framework.
 
 ### Layout Architecture
 
@@ -212,7 +215,9 @@ All re-export everything from `@alaarab/ogrid-react` (which re-exports from `@al
 
 - **`columnChooser`** prop on `IOGridProps`: `boolean | 'toolbar' | 'sidebar'` (default `true`/`'toolbar'`). Controls where column chooser renders.
 - **`toolbar`** prop: `ReactNode` — custom content in left side of toolbar strip.
+- **`toolbarBelow`** prop: `ReactNode` — secondary toolbar row below the primary toolbar (e.g. active filter chips).
 - **`toolbarEnd`** prop on `OGridLayoutProps`: right side of toolbar (column chooser goes here).
+- **`cellReferences`** prop: enables Excel-style column letter headers (A, B, C…), row numbers, and a name box showing the active cell reference (e.g. "A1") in the toolbar. Implies `showRowNumbers`.
 - **`title`** prop: **deprecated** — renders above the bordered container. Consumers should render their own heading outside `<OGrid>`.
 - DataGridTable has **no outer border/radius** (the container provides it).
 - PaginationControls has **no border-top/padding** (the footer strip provides it).
@@ -240,20 +245,20 @@ Three opt-in performance features implemented in core and wired into all framewo
 
 ## Testing
 
-**2,980 tests** across 14 packages (100% pass rate). Each framework uses its native testing tools for maintainability and idiomaticity.
+**3,084 tests** across 14 packages (100% pass rate). Each framework uses its native testing tools for maintainability and idiomaticity.
 
-- **Core:** 377 tests (pure TypeScript utilities, no framework dependencies)
-- **JS:** 313 tests (native DOM testing)
-- **React packages:** ~831 tests using React Testing Library 16
-  - React core: 404 tests
-  - Radix/Fluent/Material: ~142 tests each
-- **Angular packages:** ~617 tests using Angular Testing utilities
-  - Angular base: 145 tests
-  - Angular Material: 157 tests
-  - Angular PrimeNG: 158 tests
-  - Angular Radix: 157 tests
-- **Vue packages:** ~842 tests (composable-level + factory tests)
-  - Vue base: 338 tests
+- **Core:** 437 tests (pure TypeScript utilities, no framework dependencies)
+- **JS:** 374 tests (native DOM testing)
+- **React packages:** ~867 tests using React Testing Library 16
+  - React core: 422 tests
+  - Radix: 148, Fluent: 148, Material: 149 tests
+- **Angular packages:** ~669 tests using Angular Testing utilities
+  - Angular base: 158 tests
+  - Angular Material: 170 tests
+  - Angular PrimeNG: 171 tests
+  - Angular Radix: 170 tests
+- **Vue packages:** ~737 tests (composable-level + factory tests)
+  - Vue base: 356 tests
   - Vuetify: 127 tests
   - PrimeVue: 127 tests
   - Vue Radix: 127 tests
@@ -342,7 +347,7 @@ GitHub Actions (`.github/workflows/ci.yml`): push to `main` + PRs. Node 22, ubun
 # Check root version
 grep '"version"' package.json
 
-# Verify all packages match (should see same version 14 times)
+# Verify all packages match (should see same version 16 times)
 grep -r '"version"' packages/*/package.json | grep -v node_modules
 ```
 ✅ All versions must match
