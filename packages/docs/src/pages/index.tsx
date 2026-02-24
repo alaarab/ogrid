@@ -442,6 +442,9 @@ const features: { title: string; desc: string; icon: string }[] = [
   { icon: '\u{1F310}', title: 'Server-Side Data', desc: 'IDataSource interface for remote pagination and sorting.' },
   { icon: '\u2328\uFE0F', title: 'Keyboard Nav', desc: 'Arrow keys, Tab, Enter, F2, Home/End, Ctrl+Home/End.' },
   { icon: '\u{1F527}', title: 'Grid API', desc: 'Imperative ref API: setRowData, getColumnState, selectAll, and more.' },
+  { icon: '\u{1F4D1}', title: 'Cell References', desc: 'Excel-style column letters (A, B, C...), row numbers, and name box.' },
+  { icon: '\u26A1', title: 'Virtual Scrolling', desc: 'Row and column virtualization for 10K+ row datasets with web worker sort.' },
+  { icon: '\u{1F4D0}', title: 'Sidebar', desc: 'Collapsible sidebar with column visibility and filter panels.' },
 ];
 
 function FeatureGridSection() {
@@ -449,7 +452,7 @@ function FeatureGridSection() {
     <section className={styles.section}>
       <h2 className={styles.sectionTitle}>Everything You Need. Nothing You Don't.</h2>
       <p className={styles.sectionSubtitle}>
-        20+ features built in. No enterprise paywall. No bloat.
+        25+ features built in. No enterprise paywall. No bloat.
       </p>
       <div className={styles.featureGrid}>
         {features.map((f) => (

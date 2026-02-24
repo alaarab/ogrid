@@ -13,7 +13,7 @@ OGrid is a lightweight, open-source data grid library that delivers spreadsheet-
 Most production-grade React data grids fall into one of two camps: free but limited, or feature-rich but locked behind expensive licenses. OGrid bridges that gap.
 
 - **Free and MIT-licensed.** Every feature is included. No enterprise tier, no feature gating.
-- **20+ built-in features.** Sorting, filtering, pagination, cell editing, clipboard, undo/redo, fill handle, row selection, cell range selection, column pinning, column groups, CSV export, context menu, keyboard navigation, status bar, and more.
+- **25+ built-in features.** Sorting, filtering, pagination, cell editing, clipboard, undo/redo, fill handle, row selection, cell range selection, column pinning, column groups, CSV export, context menu, keyboard navigation, cell references, virtual scrolling, status bar, sidebar, and more.
 - **Multiple frameworks.** React, Angular, and Vue adapters with UI library choices for each -- switch later with zero logic changes.
 - **TypeScript-first.** Full strict-mode TypeScript with exported types for every prop, event, and API method.
 - **Lightweight.** The Radix package has no heavy framework dependency. Fluent and Material packages use their respective component libraries as peer dependencies.
@@ -131,11 +131,15 @@ All packages within a framework export the same `OGrid` component with the same 
 | Column Chooser | Show/hide columns with a dropdown |
 | Context Menu | Right-click menu with copy, paste, undo, and export |
 | CSV Export | One-click export to CSV |
-| Keyboard Navigation | Arrow keys, Tab, Enter, Escape for full keyboard control |
+| Keyboard Navigation | Arrow keys, Tab, Enter, Page Down/Up, Ctrl+Home/End |
+| Cell References | Excel-style column letters (A, B, C...), row numbers, name box |
 | Status Bar | Row count, filtered count, selected count, and aggregations |
+| Sidebar | Column visibility and filter panels in a collapsible sidebar |
 | Server-Side Data | `IDataSource` interface for server-side pagination and filtering |
 | Grid API | Imperative `IOGridApi` ref for programmatic control |
 | Column Resize | Drag column borders to resize |
+| Virtual Scrolling | Row and column virtualization for 10K+ row datasets |
+| Web Worker Sort | Background-thread sorting for 50K+ rows |
 | Theming | Inherits your framework's theme automatically |
 
 ## Coming from AG Grid?
