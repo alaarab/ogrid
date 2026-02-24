@@ -1259,6 +1259,152 @@ describe('useOGrid', () => {
     });
   });
 
+  describe('cellReferences', () => {
+    it('cellReferences derives showColumnLetters and showNameBox in dataGridProps', () => {
+      const props = ref<IOGridProps<Row>>({
+        columns,
+        getRowId,
+        data,
+        defaultPageSize: 10,
+        cellReferences: true,
+      });
+
+      const { dataGridProps } = useOGrid(props);
+
+      expect(dataGridProps.value.showColumnLetters).toBe(true);
+      expect(dataGridProps.value.showNameBox).toBe(true);
+    });
+
+    it('cellReferences implies showRowNumbers', () => {
+      const props = ref<IOGridProps<Row>>({
+        columns,
+        getRowId,
+        data,
+        defaultPageSize: 10,
+        cellReferences: true,
+      });
+
+      const { dataGridProps } = useOGrid(props);
+
+      expect(dataGridProps.value.showRowNumbers).toBe(true);
+    });
+
+    it('cellReferences false/undefined omits showColumnLetters/showNameBox', () => {
+      const propsOff = ref<IOGridProps<Row>>({
+        columns,
+        getRowId,
+        data,
+        defaultPageSize: 10,
+        cellReferences: false,
+      });
+
+      const { dataGridProps: propsOffResult } = useOGrid(propsOff);
+
+      expect(propsOffResult.value.showColumnLetters).toBe(false);
+      expect(propsOffResult.value.showNameBox).toBe(false);
+
+      const propsUndefined = ref<IOGridProps<Row>>({
+        columns,
+        getRowId,
+        data,
+        defaultPageSize: 10,
+      });
+
+      const { dataGridProps: propsUndefinedResult } = useOGrid(propsUndefined);
+
+      expect(propsUndefinedResult.value.showColumnLetters).toBe(false);
+      expect(propsUndefinedResult.value.showNameBox).toBe(false);
+    });
+
+    it('onActiveCellChange callback is only provided when cellReferences is true', () => {
+      const propsOn = ref<IOGridProps<Row>>({
+        columns,
+        getRowId,
+        data,
+        defaultPageSize: 10,
+        cellReferences: true,
+      });
+
+      const { dataGridProps: resultOn } = useOGrid(propsOn);
+      expect(typeof resultOn.value.onActiveCellChange).toBe('function');
+
+      const propsOff = ref<IOGridProps<Row>>({
+        columns,
+        getRowId,
+        data,
+        defaultPageSize: 10,
+        cellReferences: false,
+      });
+
+      const { dataGridProps: resultOff } = useOGrid(propsOff);
+      expect(resultOff.value.onActiveCellChange).toBeUndefined();
+
+      const propsUndefined = ref<IOGridProps<Row>>({
+        columns,
+        getRowId,
+        data,
+        defaultPageSize: 10,
+      });
+
+      const { dataGridProps: resultUndefined } = useOGrid(propsUndefined);
+      expect(resultUndefined.value.onActiveCellChange).toBeUndefined();
+    });
+
+    it('layout.toolbar includes name box VNode when cellReferences is true', () => {
+      const props = ref<IOGridProps<Row>>({
+        columns,
+        getRowId,
+        data,
+        defaultPageSize: 10,
+        cellReferences: true,
+      });
+
+      const { layout } = useOGrid(props);
+
+      // When cellReferences is true, toolbar is wrapped in an array with a name box VNode
+      expect(Array.isArray(layout.value.toolbar)).toBe(true);
+      const toolbarArray = layout.value.toolbar as unknown[];
+      expect(toolbarArray.length).toBeGreaterThanOrEqual(1);
+      // First element is the name box VNode
+      const nameBox = toolbarArray[0] as { props?: Record<string, unknown> };
+      expect(nameBox).toBeDefined();
+      expect(nameBox.props?.['aria-label']).toBe('Active cell reference');
+    });
+
+    it('layout.toolbar is not wrapped when cellReferences is false', () => {
+      const props = ref<IOGridProps<Row>>({
+        columns,
+        getRowId,
+        data,
+        defaultPageSize: 10,
+        toolbar: 'My Toolbar',
+      });
+
+      const { layout } = useOGrid(props);
+
+      expect(layout.value.toolbar).toBe('My Toolbar');
+    });
+
+    it('cellReferences does not override explicit showRowNumbers', () => {
+      const props = ref<IOGridProps<Row>>({
+        columns,
+        getRowId,
+        data,
+        defaultPageSize: 10,
+        showRowNumbers: true,
+        cellReferences: false,
+      });
+
+      const { dataGridProps } = useOGrid(props);
+
+      // showRowNumbers is true because of explicit prop, not cellReferences
+      expect(dataGridProps.value.showRowNumbers).toBe(true);
+      // But cellReferences-specific props are false
+      expect(dataGridProps.value.showColumnLetters).toBe(false);
+      expect(dataGridProps.value.showNameBox).toBe(false);
+    });
+  });
+
   describe('workerSort', () => {
     it('items are returned when workerSort is true (async fallback in jsdom)', async () => {
       const props = ref<IOGridProps<Row>>({

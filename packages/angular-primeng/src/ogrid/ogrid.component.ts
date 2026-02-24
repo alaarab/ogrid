@@ -28,6 +28,8 @@ import { PaginationControlsComponent } from '../pagination-controls/pagination-c
       [hasPagination]="true"
       [sideBar]="service.sideBarProps()"
       [fullScreen]="service.fullScreen()"
+      [showNameBox]="!!service.cellReferences()"
+      [activeCellRef]="service.activeCellRef()"
     >
       <ng-content select="[toolbar]" toolbar></ng-content>
 
@@ -78,6 +80,10 @@ import { PaginationControlsComponent } from '../pagination-controls/pagination-c
         [aria-label]="service.ariaLabel()"
         [aria-labelledby]="service.ariaLabelledBy()"
         [emptyState]="emptyStateObj"
+        [showRowNumbers]="service.dataGridProps().showRowNumbers ?? false"
+        [showColumnLetters]="service.dataGridProps().showColumnLetters ?? false"
+        [showNameBox]="service.dataGridProps().showNameBox ?? false"
+        [onActiveCellChange]="service.dataGridProps().onActiveCellChange"
       ></ogrid-primeng-datagrid-table>
 
       <div pagination>

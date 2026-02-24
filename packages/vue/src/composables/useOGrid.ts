@@ -1,4 +1,4 @@
-import { ref, computed, watch, shallowRef, onMounted, onUnmounted, type Ref } from 'vue';
+import { ref, computed, watch, shallowRef, h, onMounted, onUnmounted, type Ref } from 'vue';
 import {
   mergeFilter,
   deriveFilterOptionsFromData,
@@ -503,6 +503,12 @@ export function useOGrid<T>(
   const clearAllFilters = () => setFilters({});
   const isLoadingResolved = computed(() => (isServerSide.value && loading.value) || displayLoading.value);
 
+  // --- Name box (active cell reference) ---
+  const activeCellRef = ref<string | null>(null);
+  const onActiveCellChange = (cellRef: string | null) => {
+    activeCellRef.value = cellRef;
+  };
+
   // --- Build result objects ---
 
   const dataGridProps = computed<IOGridDataGridProps<T>>(() => {
@@ -532,7 +538,10 @@ export function useOGrid<T>(
       rowSelection: p.rowSelection ?? 'none',
       selectedRows: effectiveSelectedRows.value,
       onSelectionChange: handleSelectionChange,
-      showRowNumbers: p.showRowNumbers,
+      showRowNumbers: p.showRowNumbers || p.cellReferences,
+      showColumnLetters: !!p.cellReferences,
+      showNameBox: !!p.cellReferences,
+      onActiveCellChange: p.cellReferences ? onActiveCellChange : undefined,
       currentPage: page.value,
       pageSize: pageSize.value,
       statusBar: statusBarConfig.value,
@@ -578,14 +587,38 @@ export function useOGrid<T>(
     placement: columnChooserPlacement.value,
   }));
 
-  const layout = computed<UseOGridLayout>(() => ({
-    toolbar: props.value.toolbar,
-    toolbarBelow: props.value.toolbarBelow,
-    className: props.value.className,
-    emptyState: props.value.emptyState,
-    sideBarProps: sideBarProps.value,
-    fullScreen: props.value.fullScreen,
-  }));
+  const layout = computed<UseOGridLayout>(() => {
+    const showNameBox = !!props.value.cellReferences;
+    let resolvedToolbar: unknown = props.value.toolbar;
+    if (showNameBox) {
+      const nameBoxEl = h('div', {
+        style: {
+          display: 'inline-flex',
+          alignItems: 'center',
+          padding: '0 8px',
+          fontFamily: "'Consolas', 'Courier New', monospace",
+          fontSize: '12px',
+          border: '1px solid rgba(0,0,0,0.12)',
+          borderRadius: '3px',
+          height: '24px',
+          marginRight: '8px',
+          background: '#fff',
+          minWidth: '40px',
+          color: 'rgba(0,0,0,0.6)',
+        },
+        'aria-label': 'Active cell reference',
+      }, activeCellRef.value ?? '\u2014');
+      resolvedToolbar = [nameBoxEl, resolvedToolbar];
+    }
+    return {
+      toolbar: resolvedToolbar,
+      toolbarBelow: props.value.toolbarBelow,
+      className: props.value.className,
+      emptyState: props.value.emptyState,
+      sideBarProps: sideBarProps.value,
+      fullScreen: props.value.fullScreen,
+    };
+  });
 
   const filtersResult = computed<UseOGridFilters>(() => ({
     hasActiveFilters: hasActiveFilters.value,

@@ -52,6 +52,8 @@ export {
   computeRowSelectionState,
   UndoRedoStack,
   buildCellIndex,
+  indexToColumnLetter,
+  formatCellReference,
 } from '@alaarab/ogrid-core';
 export type {
   CsvColumn,

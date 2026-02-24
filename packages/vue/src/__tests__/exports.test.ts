@@ -110,4 +110,11 @@ describe('@alaarab/ogrid-vue exports', () => {
     expect(mod.normalizeSelectionRange).toBeDefined();
     expect(typeof mod.normalizeSelectionRange).toBe('function');
   });
+
+  it('re-exports cell reference utilities', () => {
+    expect(mod.indexToColumnLetter).toBeDefined();
+    expect(typeof mod.indexToColumnLetter).toBe('function');
+    expect(mod.formatCellReference).toBeDefined();
+    expect(typeof mod.formatCellReference).toBe('function');
+  });
 });

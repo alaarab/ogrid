@@ -164,7 +164,11 @@ export class OGridRendering<T> {
       allSelected: rowSelectionState?.isAllSelected(items),
       someSelected: rowSelectionState?.isSomeSelected(items),
       // Row numbers
-      showRowNumbers: options.showRowNumbers,
+      showRowNumbers: options.showRowNumbers || options.cellReferences,
+      // Column letters
+      showColumnLetters: !!options.cellReferences,
+      // Name box
+      showNameBox: !!options.cellReferences,
       // Column pinning
       pinnedColumns: pinningState?.pinnedColumns,
       leftOffsets,
