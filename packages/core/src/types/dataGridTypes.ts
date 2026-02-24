@@ -180,6 +180,13 @@ export interface IVirtualScrollConfig {
   rowHeight?: number;
   /** Number of extra rows to render above/below the visible area (default: 5). */
   overscan?: number;
+  /**
+   * Minimum row count before virtual scrolling activates (default: 100).
+   * When totalRows < threshold, all rows are rendered without virtualization.
+   * Lower values activate virtualization earlier (more memory-efficient for mid-size grids);
+   * higher values keep small grids fully rendered (no scroll offset artifacts).
+   */
+  threshold?: number;
 }
 
 // --- Column reordering ---

@@ -226,4 +226,6 @@ export interface IOGridDataGridProps<T> {
   density?: 'compact' | 'normal' | 'comfortable';
   'aria-label'?: string;
   'aria-labelledby'?: string;
+  /** Custom keydown handler. Called before grid's built-in handling. Call event.preventDefault() to suppress grid default. */
+  onKeyDown?: (event: KeyboardEvent) => void;
 }

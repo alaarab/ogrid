@@ -6,6 +6,13 @@
 
 /* ─── Light Theme (default) ─── */
 :where(:root) {
+  /* Cell padding — override for row density:
+     --ogrid-cell-padding          : shorthand (default 6px 10px)
+     --ogrid-cell-padding-vertical : vertical only (default 6px)
+     --ogrid-cell-padding-horizontal: horizontal only (default 10px) */
+  --ogrid-cell-padding: 6px 10px;
+  --ogrid-cell-padding-vertical: 6px;
+  --ogrid-cell-padding-horizontal: 10px;
   --ogrid-bg: #ffffff;
   --ogrid-fg: rgba(0, 0, 0, 0.87);
   --ogrid-fg-secondary: rgba(0, 0, 0, 0.6);

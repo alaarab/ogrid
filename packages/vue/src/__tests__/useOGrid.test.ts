@@ -887,6 +887,76 @@ describe('useOGrid', () => {
       expect(dataGridProps.value.items).toEqual([{ id: '1', name: 'ServerAlice' }]);
       expect(pagination.value.displayTotalCount).toBe(1);
     });
+
+    it('onError callback fires when fetchPage rejects', async () => {
+      const fetchError = new Error('Network failure');
+      const fetchPage = jest.fn().mockRejectedValue(fetchError);
+      const onError = jest.fn();
+      const dataSource = { fetchPage };
+
+      const props = ref<IOGridProps<Row>>({
+        columns,
+        getRowId,
+        dataSource,
+        onError,
+      } as IOGridProps<Row>);
+
+      const { dataGridProps, pagination, api } = useOGrid(props);
+
+      // Trigger fetch via refreshData (works outside onMounted context)
+      api.value.refreshData();
+
+      await new Promise((r) => setTimeout(r, 50));
+
+      expect(fetchPage).toHaveBeenCalled();
+      expect(onError).toHaveBeenCalledWith(fetchError);
+      // Items reset to empty on error
+      expect(dataGridProps.value.items).toEqual([]);
+      expect(pagination.value.displayTotalCount).toBe(0);
+    });
+
+    it('onError is not called when fetchPage succeeds', async () => {
+      const fetchPage = jest.fn().mockResolvedValue({
+        items: [{ id: '1', name: 'Alice' }],
+        totalCount: 1,
+      });
+      const onError = jest.fn();
+      const dataSource = { fetchPage };
+
+      const props = ref<IOGridProps<Row>>({
+        columns,
+        getRowId,
+        dataSource,
+        onError,
+      } as IOGridProps<Row>);
+
+      const { api } = useOGrid(props);
+
+      api.value.refreshData();
+      await new Promise((r) => setTimeout(r, 50));
+
+      expect(onError).not.toHaveBeenCalled();
+    });
+
+    it('onError without callback does not crash when fetchPage rejects', async () => {
+      const fetchPage = jest.fn().mockRejectedValue(new Error('Server error'));
+      const dataSource = { fetchPage };
+
+      const props = ref<IOGridProps<Row>>({
+        columns,
+        getRowId,
+        dataSource,
+        // No onError callback
+      } as IOGridProps<Row>);
+
+      const { api } = useOGrid(props);
+
+      api.value.refreshData();
+
+      // Should not throw even without an onError handler
+      await expect(new Promise((r) => setTimeout(r, 50))).resolves.toBeUndefined();
+      expect(fetchPage).toHaveBeenCalled();
+    });
   });
 
   describe('Column chooser placement', () => {

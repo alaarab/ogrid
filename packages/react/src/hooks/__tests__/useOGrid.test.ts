@@ -322,6 +322,163 @@ describe('useOGrid', () => {
         { id: '1', name: 'ServerAlice', age: 30 },
       ]);
     });
+
+    it('calls onError callback when fetchPage throws', async () => {
+      const fetchError = new Error('Server error');
+      const fetchPage = jest.fn().mockRejectedValue(fetchError);
+      const onError = jest.fn();
+      const dataSource = { fetchPage };
+
+      const serverProps = {
+        columns: testColumns,
+        getRowId,
+        dataSource,
+        onError,
+      } as Parameters<typeof useOGrid<Row>>[0];
+
+      renderHook(
+        () => {
+          const apiRef = React.createRef<IOGridApi<Row>>();
+          return useOGrid<Row>(serverProps, apiRef);
+        },
+        { wrapper }
+      );
+
+      await act(async () => {
+        await new Promise((r) => setTimeout(r, 50));
+      });
+
+      expect(onError).toHaveBeenCalledTimes(1);
+      expect(onError).toHaveBeenCalledWith(fetchError);
+    });
+
+    it('isLoading is false after fetch error', async () => {
+      const fetchPage = jest.fn().mockRejectedValue(new Error('Failed'));
+      const dataSource = { fetchPage };
+
+      const serverProps = {
+        columns: testColumns,
+        getRowId,
+        dataSource,
+      } as Parameters<typeof useOGrid<Row>>[0];
+
+      const { result } = renderHook(
+        () => {
+          const apiRef = React.createRef<IOGridApi<Row>>();
+          return useOGrid<Row>(serverProps, apiRef);
+        },
+        { wrapper }
+      );
+
+      await act(async () => {
+        await new Promise((r) => setTimeout(r, 50));
+      });
+
+      expect(result.current.dataGridProps.isLoading).toBe(false);
+    });
+
+    it('grid shows empty items after fetch error (graceful degradation)', async () => {
+      const fetchPage = jest.fn().mockRejectedValue(new Error('Network error'));
+      const dataSource = { fetchPage };
+
+      const serverProps = {
+        columns: testColumns,
+        getRowId,
+        dataSource,
+      } as Parameters<typeof useOGrid<Row>>[0];
+
+      const { result } = renderHook(
+        () => {
+          const apiRef = React.createRef<IOGridApi<Row>>();
+          return useOGrid<Row>(serverProps, apiRef);
+        },
+        { wrapper }
+      );
+
+      await act(async () => {
+        await new Promise((r) => setTimeout(r, 50));
+      });
+
+      expect(result.current.dataGridProps.items).toEqual([]);
+    });
+
+    it('onError receives the exact thrown error object', async () => {
+      const specificError = new Error('Specific network failure');
+      const fetchPage = jest.fn().mockRejectedValue(specificError);
+      const onError = jest.fn();
+      const dataSource = { fetchPage };
+
+      const serverProps = {
+        columns: testColumns,
+        getRowId,
+        dataSource,
+        onError,
+      } as Parameters<typeof useOGrid<Row>>[0];
+
+      renderHook(
+        () => {
+          const apiRef = React.createRef<IOGridApi<Row>>();
+          return useOGrid<Row>(serverProps, apiRef);
+        },
+        { wrapper }
+      );
+
+      await act(async () => {
+        await new Promise((r) => setTimeout(r, 50));
+      });
+
+      expect(onError).toHaveBeenCalledWith(specificError);
+    });
+
+    it('does not call onError on successful fetch', async () => {
+      const fetchPage = jest.fn().mockResolvedValue({ items: testData, totalCount: testData.length });
+      const onError = jest.fn();
+      const dataSource = { fetchPage };
+
+      const serverProps = {
+        columns: testColumns,
+        getRowId,
+        dataSource,
+        onError,
+      } as Parameters<typeof useOGrid<Row>>[0];
+
+      renderHook(
+        () => {
+          const apiRef = React.createRef<IOGridApi<Row>>();
+          return useOGrid<Row>(serverProps, apiRef);
+        },
+        { wrapper }
+      );
+
+      await act(async () => {
+        await new Promise((r) => setTimeout(r, 50));
+      });
+
+      expect(onError).not.toHaveBeenCalled();
+    });
+
+    it('isLoading is true while fetch is in progress', () => {
+      // never resolves — fetch is perpetually in progress
+      const fetchPage = jest.fn().mockReturnValue(new Promise(() => {}));
+      const dataSource = { fetchPage };
+
+      const serverProps = {
+        columns: testColumns,
+        getRowId,
+        dataSource,
+      } as Parameters<typeof useOGrid<Row>>[0];
+
+      const { result } = renderHook(
+        () => {
+          const apiRef = React.createRef<IOGridApi<Row>>();
+          return useOGrid<Row>(serverProps, apiRef);
+        },
+        { wrapper }
+      );
+
+      // Immediately after mount, before fetch resolves, isLoading should be true
+      expect(result.current.dataGridProps.isLoading).toBe(true);
+    });
   });
 
   describe('row selection', () => {

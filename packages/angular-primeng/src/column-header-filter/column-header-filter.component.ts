@@ -19,6 +19,8 @@ import { BaseColumnHeaderFilterComponent } from '@alaarab/ogrid-angular';
             #filterTrigger
             (click)="toggleFilter()"
             [attr.aria-label]="'Filter ' + columnName"
+            [attr.aria-expanded]="isFilterOpen()"
+            aria-haspopup="dialog"
             [title]="'Filter ' + columnName"
             style="border:none;background:transparent;cursor:pointer;padding:2px 4px;font-size:12px;position:relative;color:var(--ogrid-fg, #242424)"
             [style.font-weight]="hasActiveFilter() ? 'bold' : 'normal'"

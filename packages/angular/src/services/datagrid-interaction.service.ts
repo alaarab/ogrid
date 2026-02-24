@@ -9,6 +9,7 @@ import {
   formatSelectionAsTsv,
   parseTsvClipboard,
   rangesEqual,
+  applyFillValues,
 } from '@alaarab/ogrid-core';
 import type {
   RowId,
@@ -306,7 +307,14 @@ export class DataGridInteractionHelper<T> {
     handleRowCheckboxChange: (rowId: RowId, checked: boolean, rowIndex: number, shiftKey: boolean) => void,
     editingCell: { rowId: RowId; columnId: string } | null,
     setEditingCell: (cell: { rowId: RowId; columnId: string } | null) => void,
+    onKeyDown?: (event: KeyboardEvent) => void,
   ): void {
+    // Consumer intercept: call consumer's handler first; skip grid default if preventDefault() was called
+    if (onKeyDown) {
+      onKeyDown(e);
+      if (e.defaultPrevented) return;
+    }
+
     const activeCell = this.activeCellSig();
     const selectionRange = this.selectionRangeSig();
 
@@ -356,6 +364,28 @@ export class DataGridInteractionHelper<T> {
           if (editingCell != null) break;
           e.preventDefault();
           void this.handlePaste(items, visibleCols, colOffset, editable, wrappedOnCellValueChanged);
+        }
+        break;
+      case 'd':
+        if (ctrl) {
+          if (editingCell != null) break;
+          if (editable !== false && wrappedOnCellValueChanged != null) {
+            const fillRange = selectionRange ?? (activeCell != null
+              ? { startRow: activeCell.rowIndex, startCol: activeCell.columnIndex - colOffset, endRow: activeCell.rowIndex, endCol: activeCell.columnIndex - colOffset }
+              : null);
+            if (fillRange != null) {
+              e.preventDefault();
+              const norm = normalizeSelectionRange(fillRange);
+              const fillEvents = applyFillValues(norm, norm.startRow, norm.startCol, items, visibleCols);
+              if (fillEvents.length > 0) {
+                this.undoRedoStack.beginBatch();
+                for (const evt of fillEvents) wrappedOnCellValueChanged(evt);
+                this.undoRedoStack.endBatch();
+                this.undoLengthSig.set(this.undoRedoStack.historyLength);
+                this.redoLengthSig.set(this.undoRedoStack.redoLength);
+              }
+            }
+          }
         }
         break;
       case 'ArrowDown': {

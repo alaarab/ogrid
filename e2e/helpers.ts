@@ -505,10 +505,9 @@ export function supportsClipboardPaste(page: Page): boolean {
 
 /**
  * Returns true if the framework supports aria-sort attribute on sorted column headers.
- * Vue Vuetify does not set aria-sort on th elements.
  */
-export function supportsAriaSort(page: Page): boolean {
-  return getFramework(page) !== 'vue-vuetify';
+export function supportsAriaSort(_page: Page): boolean {
+  return true;
 }
 
 /**

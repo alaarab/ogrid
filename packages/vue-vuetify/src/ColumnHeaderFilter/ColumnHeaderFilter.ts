@@ -176,6 +176,8 @@ export const ColumnHeaderFilter = defineComponent({
                     variant: (state.hasActiveFilter.value || state.isFilterOpen.value) ? 'tonal' : 'text',
                     color: (state.hasActiveFilter.value || state.isFilterOpen.value) ? 'primary' : 'default',
                     'aria-label': `Filter ${props.columnName}`,
+                    'aria-expanded': state.isFilterOpen.value,
+                    'aria-haspopup': 'dialog',
                     title: `Filter ${props.columnName}`,
                     style: {
                       opacity: (state.hasActiveFilter.value || state.isFilterOpen.value) ? '1' : '0.7',

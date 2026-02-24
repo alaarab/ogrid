@@ -55,6 +55,7 @@ function GridRowInner(props: GridRowProps) {
       className={isSelected ? styles.selectedRow : ''}
       data-row-id={rowId}
       onClick={handleSingleRowClick}
+      aria-selected={isSelected || undefined}
     >
       {hasCheckboxCol && (
         <td className={styles.selectionCell}>
@@ -111,9 +112,9 @@ function DataGridTableInner<T>(props: IOGridDataGridProps<T>): React.ReactElemen
     items, getRowId, emptyState, rowSelection,
     isLoading, loadingMessage,
     ariaLabel, ariaLabelledBy, visibleColumns, columnOrder, columnReorder, density, rowHeight,
-    rowNumberOffset, headerRows, allowOverflowX, fitToContent,
+    rowNumberOffset, headerRows, allowOverflowX: _allowOverflowX, fitToContent,
     editCallbacks, interactionHandlers,
-    cellDescriptorInputRef, pendingEditorValueRef, popoverAnchorElRef,
+    cellDescriptorInputRef, cellDescriptorCacheRef, pendingEditorValueRef, popoverAnchorElRef,
     handleSingleRowClick, handlePasteVoid,
     visibleCols, totalColCount, hasCheckboxCol, hasRowNumbersCol, colOffset,
     containerWidth, minTableWidth, columnSizingOverrides, measuredColumnWidths,
@@ -146,7 +147,7 @@ function DataGridTableInner<T>(props: IOGridDataGridProps<T>): React.ReactElemen
   // GridRow's React.memo comparator can skip rows whose selection state hasn't changed.
   const renderCellContent = useCallback(
     (item: T, col: IColumnDef<T>, rowIndex: number, colIdx: number): React.ReactNode => {
-      const descriptor = getCellRenderDescriptor(item, col, rowIndex, colIdx, cellDescriptorInputRef.current);
+      const descriptor = getCellRenderDescriptor(item, col, rowIndex, colIdx, cellDescriptorInputRef.current, cellDescriptorCacheRef.current);
       const rowId = getRowId(item);
 
       let content: React.ReactNode;
@@ -205,7 +206,7 @@ function DataGridTableInner<T>(props: IOGridDataGridProps<T>): React.ReactElemen
         </CellErrorBoundary>
       );
     },
-    [editCallbacks, interactionHandlers, handleFillHandleMouseDown, setPopoverAnchorEl, cancelPopoverEdit, getRowId, onCellError, cellDescriptorInputRef, pendingEditorValueRef, popoverAnchorElRef]
+    [editCallbacks, interactionHandlers, handleFillHandleMouseDown, setPopoverAnchorEl, cancelPopoverEdit, getRowId, onCellError, cellDescriptorInputRef, cellDescriptorCacheRef, pendingEditorValueRef, popoverAnchorElRef]
   );
 
   return (
@@ -221,7 +222,7 @@ function DataGridTableInner<T>(props: IOGridDataGridProps<T>): React.ReactElemen
         data-empty={showEmptyInGrid ? 'true' : undefined}
         data-loading={isLoading && items.length === 0 ? 'true' : undefined}
         data-column-count={totalColCount}
-        data-overflow-x={allowOverflowX ? 'true' : 'false'}
+        data-suppress-scroll={o.suppressHorizontalScroll ? 'true' : undefined}
         data-container-width={containerWidth}
         data-min-table-width={Math.round(minTableWidth)}
         data-has-selection={rowSelection !== 'none' ? 'true' : undefined}
@@ -229,16 +230,14 @@ function DataGridTableInner<T>(props: IOGridDataGridProps<T>): React.ReactElemen
         onKeyDown={handleGridKeyDown}
         style={{
           ['--data-table-column-count' as string]: totalColCount,
-          ['--data-table-width' as string]: showEmptyInGrid ? '100%' : allowOverflowX ? 'fit-content' : fitToContent ? 'fit-content' : '100%',
-          ['--data-table-min-width' as string]: showEmptyInGrid ? '100%' : allowOverflowX ? 'max-content' : fitToContent ? 'max-content' : '100%',
-          ['--data-table-total-min-width' as string]: `${minTableWidth}px`,
+          ['--data-table-width' as string]: showEmptyInGrid ? '100%' : fitToContent ? 'fit-content' : '100%',
           ...(rowHeight ? { ['--ogrid-row-height' as string]: `${rowHeight}px` } : {}),
         } as React.CSSProperties}
       >
         <div className={styles.tableScrollContent}>
         <div className={isLoading && items.length > 0 ? styles.loadingDimmed : undefined}>
           <div className={styles.tableWidthAnchor} ref={tableContainerRef}>
-              <table className={styles.dataTable}>
+              <table className={styles.dataTable} role="grid">
                 <thead
                   className={o.stickyHeader ? styles.stickyHeader : undefined}
                 >
