@@ -473,7 +473,7 @@ function DataGridTableInner<T>(props: IOGridDataGridProps<T>): React.ReactElemen
         sx={wrapperSx}
       >
       <Box sx={WRAPPER_SCROLL_SX}>
-      <div style={{ minWidth: allowOverflowX ? minTableWidth : undefined }}>
+      <div style={{ minWidth: allowOverflowX ? minTableWidth : undefined, overflowX: 'clip' }}>
         <Box ref={tableContainerRef} sx={isLoading && items.length > 0 ? TABLE_WRAPPER_LOADING_SX : TABLE_WRAPPER_SX}>
           <Table size="small" role="grid" sx={{ minWidth: minTableWidth, borderCollapse: 'separate', borderSpacing: 0 }}
           >
