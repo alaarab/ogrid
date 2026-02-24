@@ -112,7 +112,7 @@ function DataGridTableInner<T>(props: IOGridDataGridProps<T>): React.ReactElemen
     items, getRowId, emptyState, rowSelection,
     isLoading, loadingMessage,
     ariaLabel, ariaLabelledBy, visibleColumns, columnOrder, columnReorder, density, rowHeight,
-    rowNumberOffset, headerRows, allowOverflowX: _allowOverflowX, fitToContent,
+    rowNumberOffset, headerRows, allowOverflowX, fitToContent,
     editCallbacks, interactionHandlers,
     cellDescriptorInputRef, cellDescriptorCacheRef, pendingEditorValueRef, popoverAnchorElRef,
     handleSingleRowClick, handlePasteVoid,
@@ -222,7 +222,7 @@ function DataGridTableInner<T>(props: IOGridDataGridProps<T>): React.ReactElemen
         data-empty={showEmptyInGrid ? 'true' : undefined}
         data-loading={isLoading && items.length === 0 ? 'true' : undefined}
         data-column-count={totalColCount}
-        data-suppress-scroll={o.suppressHorizontalScroll ? 'true' : undefined}
+        data-overflow-x={allowOverflowX ? 'true' : 'false'}
         data-container-width={containerWidth}
         data-min-table-width={Math.round(minTableWidth)}
         data-has-selection={rowSelection !== 'none' ? 'true' : undefined}
@@ -230,7 +230,9 @@ function DataGridTableInner<T>(props: IOGridDataGridProps<T>): React.ReactElemen
         onKeyDown={handleGridKeyDown}
         style={{
           ['--data-table-column-count' as string]: totalColCount,
-          ['--data-table-width' as string]: showEmptyInGrid ? '100%' : fitToContent ? 'fit-content' : '100%',
+          ['--data-table-width' as string]: showEmptyInGrid ? '100%' : allowOverflowX ? 'fit-content' : fitToContent ? 'fit-content' : '100%',
+          ['--data-table-min-width' as string]: showEmptyInGrid ? '100%' : allowOverflowX ? 'max-content' : fitToContent ? 'max-content' : '100%',
+          ['--data-table-total-min-width' as string]: `${minTableWidth}px`,
           ...(rowHeight ? { ['--ogrid-row-height' as string]: `${rowHeight}px` } : {}),
         } as React.CSSProperties}
       >
