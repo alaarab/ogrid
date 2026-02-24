@@ -156,7 +156,7 @@ export function createDataGridTable(ui: IDataGridTableUIBindings) {
         const { headerMenu } = pinning;
 
         const {
-          visibleCols, hasCheckboxCol, hasRowNumbersCol, colOffset: _colOffset, containerWidth, minTableWidth, desiredTableWidth,
+          visibleCols, hasCheckboxCol, hasRowNumbersCol, colOffset: _colOffset,
         } = layout;
 
         const currentPage = p.currentPage ?? 1;
@@ -171,7 +171,7 @@ export function createDataGridTable(ui: IDataGridTableUIBindings) {
           cutRange: _cutRange, copyRange: _copyRange, canUndo, canRedo, onUndo, onRedo, isDragging: _isDragging,
         } = interaction;
         const { menuPosition, handleCellContextMenu, closeContextMenu } = ctxMenu;
-        const { headerFilterInput, cellDescriptorInput, statusBarConfig, showEmptyInGrid, onCellError: _onCellError } = viewModels;
+        const { headerFilterInput, cellDescriptorInput, statusBarConfig, showEmptyInGrid, onCellError } = viewModels;
 
         const items = p.items;
         const getRowId = p.getRowId;
@@ -185,7 +185,6 @@ export function createDataGridTable(ui: IDataGridTableUIBindings) {
         const ariaLabelledBy = p['aria-labelledby'];
 
         const fitToContent = layoutMode === 'content';
-        const allowOverflowX = !suppressHorizontalScroll && containerWidth > 0 && (minTableWidth > containerWidth || desiredTableWidth > containerWidth);
 
         const headerRows = headerRowsComputed.value;
 
@@ -202,6 +201,17 @@ export function createDataGridTable(ui: IDataGridTableUIBindings) {
 
         // Render a cell's content
         const renderCellContent = (item: unknown, col: IColumnDef<unknown>, rowIndex: number, colIdx: number): VNode | string | null => {
+          try {
+            return renderCellContentInner(item, col, rowIndex, colIdx);
+          } catch (err) {
+            if (onCellError) {
+              onCellError(err instanceof Error ? err : new Error(String(err)), undefined);
+            }
+            return '';
+          }
+        };
+
+        const renderCellContentInner = (item: unknown, col: IColumnDef<unknown>, rowIndex: number, colIdx: number): VNode | string | null => {
           const descriptor = getCellRenderDescriptor(item, col, rowIndex, colIdx, cellDescriptorInput);
 
           if (descriptor.mode === 'editing-inline') {
@@ -293,7 +303,7 @@ export function createDataGridTable(ui: IDataGridTableUIBindings) {
           minHeight: isLoading && items.length === 0 ? '200px' : '0',
           width: fitToContent ? 'fit-content' : '100%',
           maxWidth: '100%',
-          overflowX: suppressHorizontalScroll ? 'hidden' : allowOverflowX ? 'auto' : 'hidden',
+          overflowX: suppressHorizontalScroll ? 'hidden' : 'auto',
           overflowY: 'auto',
           backgroundColor: '#fff',
           willChange: 'scroll-position',
@@ -313,11 +323,11 @@ export function createDataGridTable(ui: IDataGridTableUIBindings) {
             onMousedown: onWrapperMousedown,
             onKeydown: handleGridKeyDown,
             onContextmenu,
-            'data-overflow-x': allowOverflowX ? 'true' : 'false',
+            'data-suppress-scroll': suppressHorizontalScroll ? 'true' : undefined,
             style: wrapperStyle,
           }, [
             h('div', { class: 'ogrid-scroll-wrapper' }, [
-              h('div', { style: { minWidth: allowOverflowX ? `${minTableWidth}px` : undefined } }, [
+              h('div', { style: { width: 'max-content', minWidth: '100%', overflow: 'clip' } }, [
                 h('div', {
                   ref: (el: unknown) => { tableContainerRef.value = el as HTMLDivElement; },
                   class: ['ogrid-table-container', isLoading && items.length > 0 ? 'ogrid-table-container--loading' : ''],
@@ -334,7 +344,8 @@ export function createDataGridTable(ui: IDataGridTableUIBindings) {
                   h('table', {
                     ref: (el: unknown) => { tableRef.value = el as HTMLElement; },
                     class: 'ogrid-table',
-                    style: { minWidth: `${minTableWidth}px` },
+                    role: 'grid',
+                    style: { width: '100%', minWidth: 'max-content' },
                   }, [
                     // Header
                     h('thead', { class: stickyHeader ? 'ogrid-thead ogrid-sticky-header' : 'ogrid-thead' },
@@ -407,6 +418,10 @@ export function createDataGridTable(ui: IDataGridTableUIBindings) {
                             if (!cell.columnDef) return null;
                             const col = cell.columnDef as IColumnDef<unknown>;
                             const { classes: headerClasses, style: headerStyle } = getHeaderClassAndStyle(col);
+                            const isSorted = p.sortBy === col.columnId;
+                            const ariaSort = isSorted
+                              ? (p.sortDirection === 'asc' ? 'ascending' : 'descending')
+                              : undefined;
                             return h('th', {
                               key: col.columnId,
                               scope: 'col',
@@ -414,6 +429,7 @@ export function createDataGridTable(ui: IDataGridTableUIBindings) {
                               rowSpan: headerRows.length > 1 ? headerRows.length - rowIdx : undefined,
                               class: headerClasses,
                               style: headerStyle,
+                              'aria-sort': ariaSort,
                               onMousedown: (e: MouseEvent) => handleReorderMouseDown(col.columnId, e),
                             }, [
                               h('div', { class: 'ogrid-header-content' }, [
@@ -467,6 +483,7 @@ export function createDataGridTable(ui: IDataGridTableUIBindings) {
                           rows.push(h('tr', {
                             key: rowIdStr,
                             'data-row-id': rowIdStr,
+                            'aria-selected': isSelected || undefined,
                             onClick: handleSingleRowClick,
                             style: { cursor: rowSelection === 'single' ? 'pointer' : undefined },
                           }, [

@@ -239,6 +239,7 @@ export {
   MAX_PAGE_BUTTONS,
   getHeaderFilterConfig,
   getCellRenderDescriptor,
+  CellDescriptorCache,
   isRowInRange,
   resolveCellDisplayContent,
   resolveCellStyle,

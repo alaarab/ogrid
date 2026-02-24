@@ -280,6 +280,20 @@ export function useDataGridState<T>(
     handleCellMouseDownBase(e, rowIndex, globalColIndex);
   };
 
+  const { handleFillHandleMouseDown, fillDown } = useFillHandle({
+    items,
+    visibleCols,
+    editable: editableProp,
+    onCellValueChanged,
+    selectionRange,
+    setSelectionRange,
+    setActiveCell,
+    colOffset,
+    wrapperRef,
+    beginBatch: undoRedo.beginBatch,
+    endBatch: undoRedo.endBatch,
+  });
+
   const { handleGridKeyDown } = useKeyboardNavigation({
     data: { items, visibleCols, colOffset, hasCheckboxCol, visibleColumnCount, getRowId },
     state: { activeCell, selectionRange, editingCell, selectedRowIds: rowSelectionResult.selectedRowIds },
@@ -297,21 +311,9 @@ export function useDataGridState<T>(
       onCellValueChanged,
       rowSelection: rowSelectionProp,
       wrapperRef,
+      fillDown,
+      onKeyDown: computed(() => props.value.onKeyDown),
     },
-  });
-
-  const { handleFillHandleMouseDown } = useFillHandle({
-    items,
-    visibleCols,
-    editable: editableProp,
-    onCellValueChanged,
-    selectionRange,
-    setSelectionRange,
-    setActiveCell,
-    colOffset,
-    wrapperRef,
-    beginBatch: undoRedo.beginBatch,
-    endBatch: undoRedo.endBatch,
   });
 
   const {

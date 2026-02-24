@@ -21,6 +21,7 @@ import { useColumnReorder } from './useColumnReorder';
 import { useVirtualScroll } from './useVirtualScroll';
 import { useLatestRef } from './useLatestRef';
 import { buildHeaderRows } from '../utils';
+import { CellDescriptorCache } from '@alaarab/ogrid-core';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -105,6 +106,8 @@ export interface UseDataGridTableOrchestrationResult<T> {
 
   // Stable refs for volatile state (used in renderCellContent)
   cellDescriptorInputRef: React.MutableRefObject<CellRenderDescriptorInput<T>>;
+  /** Per-grid descriptor cache. Eliminates redundant getCellRenderDescriptor allocations for unchanged cells. */
+  cellDescriptorCacheRef: React.MutableRefObject<CellDescriptorCache>;
   pendingEditorValueRef: React.MutableRefObject<unknown>;
   popoverAnchorElRef: React.MutableRefObject<HTMLElement | null>;
   selectedRowIdsRef: React.MutableRefObject<Set<RowId>>;
@@ -269,6 +272,7 @@ export function useDataGridTableOrchestration<T>(
     rowHeight: virtualRowHeight,
     enabled: virtualScrollEnabled,
     overscan: virtualScroll?.overscan,
+    threshold: virtualScroll?.threshold,
     containerRef: wrapperRef,
   });
 
@@ -287,6 +291,26 @@ export function useDataGridTableOrchestration<T>(
   const pendingEditorValueRef = useLatestRef(pendingEditorValue);
   const popoverAnchorElRef = useLatestRef(popoverAnchorEl);
   const selectedRowIdsRef = useLatestRef(selectedRowIds);
+
+  // ── Descriptor cache ─────────────────────────────────────────────────────
+  // One cache instance per grid lifetime. Keyed by (rowIndex * stride + colIdx),
+  // storing descriptor + volatile version string. Skips recomputation for cells
+  // whose selection/editing state hasn't changed since last render.
+  //
+  // The version is recomputed each render from the cellDescriptorInput volatile fields.
+  // We update it synchronously here (during render) so that renderCellContent — which
+  // reads the cache during the same render — sees the up-to-date version.
+  const cellDescriptorCacheRef = useRef<CellDescriptorCache>(new CellDescriptorCache());
+  const currentVersion = CellDescriptorCache.computeVersion(cellDescriptorInput);
+  cellDescriptorCacheRef.current.updateVersion(currentVersion);
+
+  // Clear the cache when the items array changes (e.g. new data loaded, filter applied).
+  // Cell values come from the item object; a new items reference means data may have changed.
+  const prevItemsRef = useRef(items);
+  if (prevItemsRef.current !== items) {
+    prevItemsRef.current = items;
+    cellDescriptorCacheRef.current.clear();
+  }
 
   // ── Stable row-click handler ───────────────────────────────────────────
   const handleSingleRowClick = useCallback((e: React.MouseEvent<HTMLTableRowElement>) => {
@@ -361,6 +385,7 @@ export function useDataGridTableOrchestration<T>(
 
     // Stable refs for volatile state
     cellDescriptorInputRef,
+    cellDescriptorCacheRef,
     pendingEditorValueRef,
     popoverAnchorElRef,
     selectedRowIdsRef,

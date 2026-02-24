@@ -386,6 +386,40 @@ export function createSpreadsheetTests(_DataGridTableComponent: new () => unknow
       });
     });
 
+    describe('fill-down (Ctrl+D)', () => {
+      it('Ctrl+D fills down from active cell through selection', () => {
+        const onCellValueChanged = jest.fn();
+        stateService.props.set(makeProps({ onCellValueChanged }));
+        // Select rows 0-2 in column 0
+        stateService.setActiveCell({ rowIndex: 0, columnIndex: 0 });
+        stateService.setSelectionRange({ startRow: 0, startCol: 0, endRow: 2, endCol: 0 });
+        const e = new KeyboardEvent('keydown', { key: 'd', ctrlKey: true, bubbles: true });
+        stateService.handleGridKeyDown(e);
+        // onCellValueChanged should have been called for rows 1 and 2 (not row 0, it's the source)
+        expect(onCellValueChanged).toHaveBeenCalled();
+      });
+
+      it('Ctrl+D with no selection does nothing', () => {
+        const onCellValueChanged = jest.fn();
+        stateService.props.set(makeProps({ onCellValueChanged }));
+        // No selection and no active cell
+        const e = new KeyboardEvent('keydown', { key: 'd', ctrlKey: true, bubbles: true });
+        stateService.handleGridKeyDown(e);
+        expect(onCellValueChanged).not.toHaveBeenCalled();
+      });
+
+      it('Ctrl+D with single active cell (no multi-row selection) does nothing', () => {
+        const onCellValueChanged = jest.fn();
+        stateService.props.set(makeProps({ onCellValueChanged }));
+        stateService.setActiveCell({ rowIndex: 0, columnIndex: 0 });
+        stateService.setSelectionRange({ startRow: 0, startCol: 0, endRow: 0, endCol: 0 });
+        const e = new KeyboardEvent('keydown', { key: 'd', ctrlKey: true, bubbles: true });
+        stateService.handleGridKeyDown(e);
+        // Single row selected — source equals target, applyFillValues returns empty array
+        expect(onCellValueChanged).not.toHaveBeenCalled();
+      });
+    });
+
     describe('component class instantiation', () => {
       it('component class instantiates and has stateService', () => {
         const comp = new _DataGridTableComponent() as DataGridTableInstance;

@@ -22,6 +22,8 @@ export interface UseFillHandleResult {
   fillDrag: ShallowRef<{ startRow: number; startCol: number } | null>;
   setFillDrag: (value: { startRow: number; startCol: number } | null) => void;
   handleFillHandleMouseDown: (e: MouseEvent) => void;
+  /** Fill the current selection down from the top row (Ctrl+D). No-op if no selection or editable=false. */
+  fillDown: () => void;
 }
 
 const DRAG_ATTR = 'data-drag-range';
@@ -241,5 +243,20 @@ export function useFillHandle<T>(params: UseFillHandleParams<T>): UseFillHandleR
     fillDrag.value = { startRow: range.startRow, startCol: range.startCol };
   };
 
-  return { fillDrag, setFillDrag, handleFillHandleMouseDown };
+  const fillDown = () => {
+    const range = selectionRange.value;
+    if (!range || editable.value === false || !onCellValueChanged.value) return;
+    const norm = normalizeSelectionRange(range);
+    const currentItems = items.value;
+    const currentCols = visibleCols.value;
+    const callback = onCellValueChanged.value;
+    const fillEvents = applyFillValues(norm, norm.startRow, norm.startCol, currentItems, currentCols);
+    if (fillEvents.length > 0) {
+      beginBatch?.();
+      for (const evt of fillEvents) callback(evt);
+      endBatch?.();
+    }
+  };
+
+  return { fillDrag, setFillDrag, handleFillHandleMouseDown, fillDown };
 }

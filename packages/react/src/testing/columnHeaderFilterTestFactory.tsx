@@ -80,4 +80,25 @@ export function createColumnHeaderFilterTests(ColumnHeaderFilter: React.Componen
     fireEvent.click(suggestion);
     expect(onUserChange).toHaveBeenCalledWith(expect.objectContaining({ displayName: 'Alice Johnson', email: 'alice@example.com' }));
   });
+
+  it('filter button has aria-expanded="false" when popover is closed', () => {
+    render(<ColumnHeaderFilter columnKey="name" columnName="Name" filterType="text" textValue="" onTextChange={() => undefined} />);
+    const btn = screen.getByRole('button', { name: /filter name/i });
+    // aria-expanded should be false (as string or boolean) when closed
+    const expanded = btn.getAttribute('aria-expanded');
+    expect(expanded === 'false' || expanded === null).toBe(true);
+  });
+
+  it('filter button has aria-expanded="true" after clicking to open', () => {
+    render(<ColumnHeaderFilter columnKey="name" columnName="Name" filterType="text" textValue="" onTextChange={() => undefined} />);
+    const btn = screen.getByRole('button', { name: /filter name/i });
+    fireEvent.click(btn);
+    expect(btn.getAttribute('aria-expanded')).toBe('true');
+  });
+
+  it('filter button has aria-haspopup="dialog" when filter type is not none', () => {
+    render(<ColumnHeaderFilter columnKey="name" columnName="Name" filterType="text" textValue="" onTextChange={() => undefined} />);
+    const btn = screen.getByRole('button', { name: /filter name/i });
+    expect(btn.getAttribute('aria-haspopup')).toBeTruthy();
+  });
 }

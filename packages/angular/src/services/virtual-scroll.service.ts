@@ -3,11 +3,16 @@ import {
   computeVisibleRange,
   computeTotalHeight,
   getScrollTopForRow,
+  validateVirtualScrollConfig,
 } from '@alaarab/ogrid-core';
 import type { IVisibleRange, IVirtualScrollConfig } from '@alaarab/ogrid-core';
 
-/** Threshold below which virtual scrolling is a no-op (all rows rendered). */
-const PASSTHROUGH_THRESHOLD = 100;
+/**
+ * Default minimum row count before virtual scrolling activates.
+ * Grids with fewer rows than this render all rows without virtualization
+ * to avoid scroll offset artifacts on small datasets.
+ */
+const DEFAULT_PASSTHROUGH_THRESHOLD = 100;
 
 /**
  * Manages virtual scrolling state using Angular signals.
@@ -37,9 +42,10 @@ export class VirtualScrollService {
   readonly rowHeight = computed(() => this.config().rowHeight ?? 36);
   readonly overscan = computed(() => this.config().overscan ?? 5);
   readonly enabled = computed(() => this.config().enabled !== false);
+  readonly threshold = computed(() => this.config().threshold ?? DEFAULT_PASSTHROUGH_THRESHOLD);
 
   /** Whether virtual scrolling is actually active (enabled + enough rows). */
-  readonly isActive = computed(() => this.enabled() && this.totalRows() >= PASSTHROUGH_THRESHOLD);
+  readonly isActive = computed(() => this.enabled() && this.totalRows() >= this.threshold());
 
   /** The visible range of rows with spacer offsets. */
   readonly visibleRange = computed<IVisibleRange>(() => {
@@ -110,6 +116,10 @@ export class VirtualScrollService {
    * Update the virtual scroll configuration.
    */
   updateConfig(updates: Partial<IVirtualScrollConfig>): void {
-    this.config.update((prev) => ({ ...prev, ...updates }));
+    this.config.update((prev) => {
+      const next = { ...prev, ...updates };
+      validateVirtualScrollConfig(next);
+      return next;
+    });
   }
 }

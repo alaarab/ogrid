@@ -48,6 +48,8 @@ export interface UseDataGridInteractionParams<T> {
   ) => void;
   setContextMenuPosition: (pos: { x: number; y: number } | null) => void;
   wrapperRef: RefObject<HTMLDivElement | null>;
+  /** Custom keydown handler — called before grid default. preventDefault() suppresses grid handling. */
+  onKeyDown?: (event: React.KeyboardEvent) => void;
 }
 
 export interface UseDataGridInteractionResult<T> {
@@ -119,6 +121,7 @@ export function useDataGridInteraction<T>(
     handleRowCheckboxChange,
     setContextMenuPosition,
     wrapperRef,
+    onKeyDown,
   } = params;
 
   // Wrap onCellValueChanged with undo/redo tracking
@@ -161,14 +164,7 @@ export function useDataGridInteraction<T>(
     [handleCellMouseDownBase, clearClipboardRanges, wrapperRef]
   );
 
-  const { handleGridKeyDown } = useKeyboardNavigation({
-    data: { items, visibleCols, colOffset, hasCheckboxCol, visibleColumnCount, getRowId },
-    state: { activeCell, selectionRange, editingCell, selectedRowIds },
-    handlers: { setActiveCell, setSelectionRange, setEditingCell, handleRowCheckboxChange, handleCopy, handleCut, handlePaste, setContextMenu: setContextMenuPosition, onUndo: undoRedo.undo, onRedo: undoRedo.redo, clearClipboardRanges },
-    features: { editable, onCellValueChanged, rowSelection: rowSelection ?? 'none', wrapperRef },
-  });
-
-  const { handleFillHandleMouseDown } = useFillHandle({
+  const { handleFillHandleMouseDown, fillDown } = useFillHandle({
     items,
     visibleCols,
     editable,
@@ -180,6 +176,13 @@ export function useDataGridInteraction<T>(
     wrapperRef,
     beginBatch: undoRedo.beginBatch,
     endBatch: undoRedo.endBatch,
+  });
+
+  const { handleGridKeyDown } = useKeyboardNavigation({
+    data: { items, visibleCols, colOffset, hasCheckboxCol, visibleColumnCount, getRowId },
+    state: { activeCell, selectionRange, editingCell, selectedRowIds },
+    handlers: { setActiveCell, setSelectionRange, setEditingCell, handleRowCheckboxChange, handleCopy, handleCut, handlePaste, setContextMenu: setContextMenuPosition, onUndo: undoRedo.undo, onRedo: undoRedo.redo, clearClipboardRanges },
+    features: { editable, onCellValueChanged, rowSelection: rowSelection ?? 'none', wrapperRef, onKeyDown, fillDown },
   });
 
   const hasCellSelection = selectionRange != null || activeCell != null;

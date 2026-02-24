@@ -130,24 +130,38 @@ export function processClientSideData<T>(
         if (Number.isNaN(bt)) return 1 * dir;
         return at === bt ? 0 : at > bt ? dir : -dir;
       });
-    } else {
+    } else if (!compare) {
+      // Pre-compute sort keys before sort to avoid repeated String().toLowerCase()
+      // in O(n log n) comparisons. Numeric values use their raw form (no string conversion needed).
+      // NOTE: Cache is scoped to this sort invocation — rebuilt on every call, safe for mutations.
+      // We use `undefined` as a sentinel for null/undefined cell values so we can distinguish
+      // them from empty strings (both null and undefined map to undefined here).
+      const keyCache = new Map<T, string | number | undefined>();
+      for (let i = 0; i < sortable.length; i++) {
+        const row = sortable[i];
+        const v = sortCol
+          ? getCellValue(row, sortCol)
+          : (row as Record<string, unknown>)[sortBy];
+        if (v == null) {
+          keyCache.set(row, undefined);
+        } else if (typeof v === 'number') {
+          keyCache.set(row, v);
+        } else {
+          keyCache.set(row, String(v).toLowerCase());
+        }
+      }
       sortable.sort((a, b) => {
-        if (compare) return compare(a, b) * dir;
-        const av = sortCol
-          ? getCellValue(a, sortCol)
-          : (a as Record<string, unknown>)[sortBy];
-        const bv = sortCol
-          ? getCellValue(b, sortCol)
-          : (b as Record<string, unknown>)[sortBy];
-        if (av == null && bv == null) return 0;
-        if (av == null) return -1 * dir;
-        if (bv == null) return 1 * dir;
+        const av = keyCache.get(a);
+        const bv = keyCache.get(b);
+        if (av === undefined && bv === undefined) return 0;
+        if (av === undefined) return -1 * dir;
+        if (bv === undefined) return 1 * dir;
         if (typeof av === 'number' && typeof bv === 'number')
           return av === bv ? 0 : av > bv ? dir : -dir;
-        const as = String(av).toLowerCase();
-        const bs = String(bv).toLowerCase();
-        return as === bs ? 0 : as > bs ? dir : -dir;
+        return av === bv ? 0 : (av as string) > (bv as string) ? dir : -dir;
       });
+    } else {
+      sortable.sort((a, b) => compare(a, b) * dir);
     }
     return sortable;
   }

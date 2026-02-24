@@ -202,4 +202,67 @@ export function createDataGridTableTests(DataGridTableComponent: new () => unkno
     const comp = createComponent({ stickyHeader: false });
     expect(comp.stickyHeader()).toBe(false);
   });
+
+  describe('onKeyDown intercept', () => {
+    it('onKeyDown callback receives keyboard events from handleGridKeyDown', () => {
+      const onKeyDown = jest.fn();
+      const comp = createComponent({ onKeyDown, cellSelection: true });
+      // Set active cell so key handling proceeds
+      comp.stateService.setActiveCell({ rowIndex: 0, columnIndex: 0 });
+      comp.stateService.setSelectionRange({ startRow: 0, startCol: 0, endRow: 0, endCol: 0 });
+      const e = new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true });
+      comp.stateService.handleGridKeyDown(e);
+      expect(onKeyDown).toHaveBeenCalledWith(e);
+    });
+
+    it('preventDefault in onKeyDown suppresses grid default handling', () => {
+      const onKeyDown = jest.fn((e: KeyboardEvent) => e.preventDefault());
+      const comp = createComponent({ onKeyDown, cellSelection: true });
+      comp.stateService.setActiveCell({ rowIndex: 0, columnIndex: 0 });
+      comp.stateService.setSelectionRange({ startRow: 0, startCol: 0, endRow: 0, endCol: 0 });
+      const initialActive = comp.stateService.getState().interaction.activeCell;
+      const e = new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true, cancelable: true });
+      comp.stateService.handleGridKeyDown(e);
+      // Active cell should not have changed since preventDefault was called
+      expect(comp.stateService.getState().interaction.activeCell).toEqual(initialActive);
+      expect(onKeyDown).toHaveBeenCalledWith(e);
+    });
+  });
+
+  describe('aria-sort on sorted columns', () => {
+    it('headerFilterInput reflects ascending sort direction', () => {
+      const comp = createComponent({ sortBy: 'name', sortDirection: 'asc' });
+      const state = comp.stateService.getState();
+      expect(state.viewModels.headerFilterInput.sortBy).toBe('name');
+      expect(state.viewModels.headerFilterInput.sortDirection).toBe('asc');
+    });
+
+    it('headerFilterInput reflects descending sort direction', () => {
+      const comp = createComponent({ sortBy: 'status', sortDirection: 'desc' });
+      const state = comp.stateService.getState();
+      expect(state.viewModels.headerFilterInput.sortBy).toBe('status');
+      expect(state.viewModels.headerFilterInput.sortDirection).toBe('desc');
+    });
+
+    it('headerFilterInput has undefined sortBy when no sort is active', () => {
+      const comp = createComponent({ sortBy: undefined });
+      const state = comp.stateService.getState();
+      expect(state.viewModels.headerFilterInput.sortBy).toBeUndefined();
+    });
+  });
+
+  describe('error handling in cell rendering', () => {
+    it('onCellError callback is threaded through viewModels', () => {
+      const onCellError = jest.fn();
+      const comp = createComponent({ onCellError });
+      const state = comp.stateService.getState();
+      expect(state.viewModels.onCellError).toBe(onCellError);
+    });
+
+    it('onCellError is undefined when not provided', () => {
+      const comp = createComponent();
+      const state = comp.stateService.getState();
+      expect(state.viewModels.onCellError).toBeUndefined();
+    });
+  });
 }

@@ -1,29 +1,33 @@
 /* OGrid Shared Layout Styles — consumed by vue-vuetify and vue-primevue */
 
-/* Remove focus outline from scrollable wrapper (keyboard nav is handled via cell outlines) */
+/* Remove focus outline from scrollable wrapper (keyboard nav is handled via cell outlines).
+   [role="region"][tabindex] has attribute-selector specificity (0,2,0) which beats any
+   framework's single-class or element rule — no !important needed. */
 [role="region"][tabindex="0"] {
-  outline: none !important;
+  outline: none;
 }
 
-/* Cell selection highlighting */
-.ogrid-cell-in-range {
-  background: var(--ogrid-bg-range, rgba(33, 115, 70, 0.12)) !important;
+/* Cell selection highlighting.
+   Qualify with .ogrid-outer-container (specificity 0,2,0) to beat row-level hover backgrounds. */
+.ogrid-outer-container .ogrid-cell-in-range {
+  background: var(--ogrid-bg-range, rgba(33, 115, 70, 0.12));
 }
 
 /* Cut range highlighting */
-.ogrid-cell-cut {
-  background: var(--ogrid-hover-bg) !important;
+.ogrid-outer-container .ogrid-cell-cut {
+  background: var(--ogrid-hover-bg);
   opacity: 0.7;
 }
 
-/* Drag-range highlight applied via DOM attributes during drag (bypasses Vue for performance) */
-[data-drag-range] {
-  background: var(--ogrid-range-bg, rgba(33, 115, 70, 0.12)) !important;
+/* Drag-range highlight applied via DOM attributes during drag (bypasses Vue for performance).
+   Qualifier .ogrid-outer-container raises specificity to 0,2,0, enough to beat row-hover rules. */
+.ogrid-outer-container [data-drag-range] {
+  background: var(--ogrid-range-bg, rgba(33, 115, 70, 0.12));
 }
 
 /* Anchor cell during drag: white/transparent background (like Excel) */
-[data-drag-anchor] {
-  background: var(--ogrid-bg) !important;
+.ogrid-outer-container [data-drag-anchor] {
+  background: var(--ogrid-bg);
 }
 
 /* === Layout === */
@@ -67,7 +71,7 @@
 /* === Header === */
 
 .ogrid-thead {
-  z-index: 8;
+  z-index: var(--ogrid-z-thead, 8);
   background-color: var(--ogrid-header-bg);
 }
 
@@ -78,7 +82,7 @@
 .ogrid-header-cell {
   font-weight: 600;
   background-color: var(--ogrid-header-bg);
-  z-index: 8;
+  z-index: var(--ogrid-z-thead, 8);
 }
 
 .ogrid-sticky-header .ogrid-header-cell {
@@ -87,14 +91,14 @@
 }
 
 .ogrid-header-cell--pinned-left {
-  z-index: 10;
+  z-index: var(--ogrid-z-pinned-header, 10);
   will-change: transform;
   border-right: 1px solid var(--ogrid-border, rgba(0, 0, 0, 0.12));
   box-shadow: 2px 0 4px -1px rgba(0, 0, 0, 0.1);
 }
 
 .ogrid-header-cell--pinned-right {
-  z-index: 10;
+  z-index: var(--ogrid-z-pinned-header, 10);
   will-change: transform;
   border-left: 1px solid var(--ogrid-border, rgba(0, 0, 0, 0.12));
   box-shadow: -2px 0 4px -1px rgba(0, 0, 0, 0.1);
@@ -189,7 +193,7 @@
 
 .ogrid-data-cell--pinned-left {
   position: sticky;
-  z-index: 6;
+  z-index: var(--ogrid-z-pinned, 6);
   background-color: var(--ogrid-bg);
   will-change: transform;
   border-right: 1px solid var(--ogrid-border, rgba(0, 0, 0, 0.12));
@@ -198,7 +202,7 @@
 
 .ogrid-data-cell--pinned-right {
   position: sticky;
-  z-index: 6;
+  z-index: var(--ogrid-z-pinned, 6);
   background-color: var(--ogrid-bg);
   will-change: transform;
   border-left: 1px solid var(--ogrid-border, rgba(0, 0, 0, 0.12));
@@ -211,7 +215,7 @@
   display: flex;
   align-items: center;
   min-width: 0;
-  padding: 6px 10px;
+  padding: var(--ogrid-cell-padding, 6px 10px);
   box-sizing: border-box;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -237,7 +241,7 @@
 .ogrid-cell-content--active {
   outline: 2px solid var(--ogrid-selection, #217346);
   outline-offset: -1px;
-  z-index: 2;
+  z-index: var(--ogrid-z-active-cell, 2);
   position: relative;
   overflow: visible;
 }
@@ -252,7 +256,7 @@
   box-sizing: border-box;
   outline: 2px solid var(--ogrid-selection-color, #217346);
   outline-offset: -1px;
-  z-index: 2;
+  z-index: var(--ogrid-z-active-cell, 2);
   position: relative;
   background: var(--ogrid-bg, #fff);
   overflow: visible;
@@ -272,7 +276,7 @@
   border-radius: 1px;
   cursor: crosshair;
   pointer-events: auto;
-  z-index: 3;
+  z-index: var(--ogrid-z-fill-handle, 3);
 }
 
 /* === Resize handle === */
@@ -296,7 +300,7 @@
   width: 3px;
   background: var(--ogrid-primary, #217346);
   pointer-events: none;
-  z-index: 100;
+  z-index: var(--ogrid-z-drop-indicator, 100);
 }
 
 /* === Empty state === */
@@ -324,7 +328,7 @@
 .ogrid-loading-overlay {
   position: absolute;
   inset: 0;
-  z-index: 2;
+  z-index: var(--ogrid-z-loading, 2);
   display: flex;
   align-items: center;
   justify-content: center;

@@ -710,6 +710,84 @@ export function createSpreadsheetTests(DataGridTable: React.ComponentType<IOGrid
       });
     });
 
+    describe('fill-down (Ctrl+D)', () => {
+      it('fills selection range down from source cell value on Ctrl+D', async () => {
+        const onCellValueChanged = jest.fn();
+        const { container } = renderSpreadsheetGrid({ onCellValueChanged });
+
+        // Select cell at row 0, col 0
+        const cell00 = getCellAt(container, 0, 0);
+        fireEvent.mouseDown(cell00);
+        const grid = container.querySelector('[role="region"]') as HTMLElement;
+        grid.focus();
+
+        // Extend selection down to row 2 via Shift+ArrowDown twice
+        fireEvent.keyDown(grid, { key: 'ArrowDown', shiftKey: true });
+        fireEvent.keyDown(grid, { key: 'ArrowDown', shiftKey: true });
+
+        await waitFor(() => {
+          const inRange = container.querySelectorAll('[data-in-range="true"]');
+          expect(inRange.length).toBeGreaterThanOrEqual(2);
+        });
+
+        await act(async () => {
+          fireEvent.keyDown(grid, { key: 'd', ctrlKey: true });
+        });
+
+        await waitFor(() => {
+          expect(onCellValueChanged).toHaveBeenCalled();
+          const calls = onCellValueChanged.mock.calls;
+          // At least one row below should have been filled with a value
+          expect(calls.length).toBeGreaterThanOrEqual(1);
+        });
+      });
+
+      it('does nothing on Ctrl+D when no selection range exists', async () => {
+        const onCellValueChanged = jest.fn();
+        const { container } = renderSpreadsheetGrid({ onCellValueChanged });
+
+        const grid = container.querySelector('[role="region"]') as HTMLElement;
+        grid.focus();
+
+        await act(async () => {
+          fireEvent.keyDown(grid, { key: 'd', ctrlKey: true });
+        });
+
+        await act(async () => {
+          await new Promise((r) => setTimeout(r, 50));
+        });
+
+        expect(onCellValueChanged).not.toHaveBeenCalled();
+      });
+
+      it('does nothing on Ctrl+D when a single cell is selected (no range to fill)', async () => {
+        const onCellValueChanged = jest.fn();
+        const { container } = renderSpreadsheetGrid({ onCellValueChanged });
+
+        const cell00 = getCellAt(container, 0, 0);
+        fireEvent.mouseDown(cell00);
+
+        await waitFor(() => {
+          expect(container.querySelector('[data-in-range="true"]')).toBeInTheDocument();
+        });
+
+        const grid = container.querySelector('[role="region"]') as HTMLElement;
+        grid.focus();
+
+        // Only a single cell is selected — Ctrl+D fills nothing (source == target)
+        await act(async () => {
+          fireEvent.keyDown(grid, { key: 'd', ctrlKey: true });
+        });
+
+        await act(async () => {
+          await new Promise((r) => setTimeout(r, 50));
+        });
+
+        // No additional cells to fill — onCellValueChanged not called
+        expect(onCellValueChanged).not.toHaveBeenCalled();
+      });
+    });
+
     describe('cellSelection=false disables all selection', () => {
       it('does not show active cell highlight or range on mousedown', async () => {
         const { container } = renderSpreadsheetGrid({ cellSelection: false });

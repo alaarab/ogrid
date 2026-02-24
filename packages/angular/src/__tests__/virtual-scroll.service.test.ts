@@ -41,6 +41,75 @@ describe('VirtualScrollService', () => {
       service.config.set({ rowHeight: 36, enabled: false });
       expect(service.isActive()).toBe(false);
     });
+
+    it('uses default threshold of 100', () => {
+      expect(service.threshold()).toBe(100);
+    });
+
+    it('respects custom threshold: active when totalRows >= custom threshold', () => {
+      service.totalRows.set(50);
+      service.config.set({ rowHeight: 36, threshold: 20 });
+      expect(service.isActive()).toBe(true);
+    });
+
+    it('respects custom threshold: not active when totalRows < custom threshold', () => {
+      service.totalRows.set(50);
+      service.config.set({ rowHeight: 36, threshold: 200 });
+      expect(service.isActive()).toBe(false);
+    });
+
+    it('activates exactly at custom threshold boundary', () => {
+      service.config.set({ rowHeight: 36, threshold: 50 });
+      service.totalRows.set(49);
+      expect(service.isActive()).toBe(false);
+      service.totalRows.set(50);
+      expect(service.isActive()).toBe(true);
+    });
+
+    it('threshold=1 makes virtual scroll active for any non-empty grid', () => {
+      service.config.set({ rowHeight: 36, threshold: 1 });
+      service.totalRows.set(1);
+      expect(service.isActive()).toBe(true);
+    });
+
+    it('threshold=0 means virtual scroll always active (even for 0 rows)', () => {
+      service.config.set({ rowHeight: 36, threshold: 0 });
+      service.totalRows.set(0);
+      expect(service.isActive()).toBe(true);
+    });
+  });
+
+  describe('threshold configuration', () => {
+    it('updateConfig can change threshold', () => {
+      service.updateConfig({ threshold: 50 });
+      expect(service.threshold()).toBe(50);
+    });
+
+    it('custom threshold is preserved when updating other fields', () => {
+      service.config.set({ rowHeight: 36, threshold: 25 });
+      service.updateConfig({ rowHeight: 48 });
+      expect(service.threshold()).toBe(25);
+    });
+
+    it('threshold affects whether passthrough range is returned', () => {
+      // Low threshold: 10 rows makes virtual scroll active
+      service.config.set({ rowHeight: 36, threshold: 10, overscan: 0 });
+      service.totalRows.set(10);
+      service.containerHeight.set(200);
+      service.scrollTop.set(0);
+      const activeRange = service.visibleRange();
+      // Active mode should not return a full range (offsetBottom > 0)
+      expect(service.isActive()).toBe(true);
+
+      // High threshold: 10 rows stays in passthrough
+      service.config.set({ rowHeight: 36, threshold: 1000 });
+      service.totalRows.set(10);
+      const passthroughRange = service.visibleRange();
+      expect(passthroughRange.startIndex).toBe(0);
+      expect(passthroughRange.endIndex).toBe(9);
+      expect(passthroughRange.offsetTop).toBe(0);
+      expect(passthroughRange.offsetBottom).toBe(0);
+    });
   });
 
   describe('visibleRange (passthrough mode)', () => {

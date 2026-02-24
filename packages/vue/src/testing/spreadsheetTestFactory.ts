@@ -13,6 +13,7 @@ import { useContextMenu } from '../composables/useContextMenu';
 import { useKeyboardNavigation } from '../composables/useKeyboardNavigation';
 import { useUndoRedo } from '../composables/useUndoRedo';
 import { useRowSelection } from '../composables/useRowSelection';
+import { useFillHandle } from '../composables/useFillHandle';
 import type { IColumnDef, ICellValueChangedEvent } from '../types';
 import { fixtureRows, getRowId, type FixtureRow } from './fixtures';
 
@@ -454,6 +455,54 @@ export function createSpreadsheetTests(): void {
       handleGridKeyDown(e);
       expect(selectionRange.value).toEqual({ startRow: 0, startCol: 0, endRow: 2, endCol: 1 });
     });
+
+    it('Ctrl+D calls fillDown when fillDown feature is provided', () => {
+      const fillDown = jest.fn();
+      const items = ref(fixtureRows);
+      const visibleCols = ref<IColumnDef<FixtureRow>[]>(editableColumns);
+      const { activeCell, setActiveCell } = useActiveCell();
+      const { editingCell, setEditingCell } = useCellEditing();
+      const selectionRange = shallowRef<{ startRow: number; startCol: number; endRow: number; endCol: number } | null>(null);
+      const selectedRowIds = ref<Set<string>>(new Set());
+      const onCellValueChanged = ref<((e: ICellValueChangedEvent<FixtureRow>) => void) | undefined>(jest.fn());
+
+      setActiveCell({ rowIndex: 0, columnIndex: 0 });
+      selectionRange.value = { startRow: 0, startCol: 0, endRow: 1, endCol: 0 };
+
+      const { handleGridKeyDown } = useKeyboardNavigation({
+        data: {
+          items,
+          visibleCols,
+          colOffset: 0,
+          hasCheckboxCol: ref(false),
+          visibleColumnCount: ref(2),
+          getRowId,
+        },
+        state: { activeCell, selectionRange, editingCell, selectedRowIds },
+        handlers: {
+          setActiveCell,
+          setSelectionRange: (r) => { selectionRange.value = r; },
+          setEditingCell,
+          handleRowCheckboxChange: jest.fn(),
+          handleCopy: jest.fn(),
+          handleCut: jest.fn(),
+          handlePaste: jest.fn().mockResolvedValue(undefined),
+          setContextMenu: jest.fn(),
+        },
+        features: {
+          editable: ref(true),
+          onCellValueChanged,
+          rowSelection: ref('none' as const),
+          wrapperRef: shallowRef(null),
+          fillDown,
+        },
+      });
+
+      const e = new KeyboardEvent('keydown', { key: 'd', ctrlKey: true });
+      Object.defineProperty(e, 'preventDefault', { value: jest.fn() });
+      handleGridKeyDown(e);
+      expect(fillDown).toHaveBeenCalled();
+    });
   });
 
   describe('undo/redo', () => {
@@ -523,6 +572,160 @@ export function createSpreadsheetTests(): void {
       const lastTwoCalls = onCellValueChanged.mock.calls.slice(-2);
       expect(lastTwoCalls[0][0].newValue).toBe('Beta'); // Y -> Beta (reversed)
       expect(lastTwoCalls[1][0].newValue).toBe('Alpha'); // X -> Alpha (reversed)
+    });
+  });
+
+  describe('fill down', () => {
+    function createFillHandle(editable = true) {
+      const items = ref(fixtureRows.map((r) => ({ ...r })));
+      const visibleCols = ref<IColumnDef<FixtureRow>[]>(editableColumns);
+      const selectionRange = shallowRef<{ startRow: number; startCol: number; endRow: number; endCol: number } | null>(null);
+      const onCellValueChanged = jest.fn();
+      const wrapperRef = shallowRef<HTMLElement | null>(null);
+      const setActiveCell = jest.fn();
+
+      const { fillDown } = useFillHandle({
+        items,
+        visibleCols,
+        editable: ref(editable),
+        onCellValueChanged: ref(onCellValueChanged),
+        selectionRange,
+        setSelectionRange: (r) => { selectionRange.value = r; },
+        setActiveCell,
+        colOffset: 0,
+        wrapperRef,
+      });
+
+      return { fillDown, items, selectionRange, onCellValueChanged };
+    }
+
+    it('fillDown with no selection is a no-op', () => {
+      const { fillDown, onCellValueChanged } = createFillHandle();
+      fillDown();
+      expect(onCellValueChanged).not.toHaveBeenCalled();
+    });
+
+    it('fillDown fills values from top row down to selected rows', () => {
+      const { fillDown, selectionRange, onCellValueChanged } = createFillHandle();
+      // Select rows 0–2, col 0 (name column)
+      selectionRange.value = { startRow: 0, startCol: 0, endRow: 2, endCol: 0 };
+      fillDown();
+      // Should have called onCellValueChanged for rows 1 and 2 (filling Alpha from row 0)
+      expect(onCellValueChanged).toHaveBeenCalled();
+      const changedCols = onCellValueChanged.mock.calls.map((c: unknown[]) => (c[0] as { newValue: unknown }).newValue);
+      // All filled cells should have the value from row 0 ('Alpha')
+      expect(changedCols.every((v: unknown) => v === 'Alpha')).toBe(true);
+    });
+
+    it('fillDown is a no-op when editable=false', () => {
+      const { fillDown, selectionRange, onCellValueChanged } = createFillHandle(false);
+      selectionRange.value = { startRow: 0, startCol: 0, endRow: 2, endCol: 0 };
+      fillDown();
+      expect(onCellValueChanged).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('onKeyDown intercept', () => {
+    it('onKeyDown callback receives keyboard events', () => {
+      const onKeyDown = jest.fn();
+      const items = ref(fixtureRows);
+      const visibleCols = ref<IColumnDef<FixtureRow>[]>(editableColumns);
+      const { activeCell, setActiveCell } = useActiveCell();
+      const { editingCell, setEditingCell } = useCellEditing();
+      const selectionRange = shallowRef<{ startRow: number; startCol: number; endRow: number; endCol: number } | null>(null);
+      const selectedRowIds = ref<Set<string>>(new Set());
+      const onCellValueChanged = ref<((e: ICellValueChangedEvent<FixtureRow>) => void) | undefined>(jest.fn());
+
+      setActiveCell({ rowIndex: 0, columnIndex: 0 });
+      selectionRange.value = { startRow: 0, startCol: 0, endRow: 0, endCol: 0 };
+
+      const { handleGridKeyDown } = useKeyboardNavigation({
+        data: {
+          items,
+          visibleCols,
+          colOffset: 0,
+          hasCheckboxCol: ref(false),
+          visibleColumnCount: ref(2),
+          getRowId,
+        },
+        state: { activeCell, selectionRange, editingCell, selectedRowIds },
+        handlers: {
+          setActiveCell,
+          setSelectionRange: (r) => { selectionRange.value = r; },
+          setEditingCell,
+          handleRowCheckboxChange: jest.fn(),
+          handleCopy: jest.fn(),
+          handleCut: jest.fn(),
+          handlePaste: jest.fn().mockResolvedValue(undefined),
+          setContextMenu: jest.fn(),
+        },
+        features: {
+          editable: ref(true),
+          onCellValueChanged,
+          rowSelection: ref('none' as const),
+          wrapperRef: shallowRef(null),
+          onKeyDown: ref(onKeyDown),
+        },
+      });
+
+      const e = new KeyboardEvent('keydown', { key: 'ArrowDown' });
+      Object.defineProperty(e, 'preventDefault', { value: jest.fn() });
+      handleGridKeyDown(e);
+
+      expect(onKeyDown).toHaveBeenCalledWith(e);
+    });
+
+    it('onKeyDown preventDefault stops grid default handling', () => {
+      const onKeyDown = jest.fn((e: KeyboardEvent) => {
+        Object.defineProperty(e, 'defaultPrevented', { value: true, configurable: true });
+      });
+      const items = ref(fixtureRows);
+      const visibleCols = ref<IColumnDef<FixtureRow>[]>(editableColumns);
+      const { activeCell, setActiveCell } = useActiveCell();
+      const { editingCell, setEditingCell } = useCellEditing();
+      const selectionRange = shallowRef<{ startRow: number; startCol: number; endRow: number; endCol: number } | null>(null);
+      const selectedRowIds = ref<Set<string>>(new Set());
+      const onCellValueChanged = ref<((e: ICellValueChangedEvent<FixtureRow>) => void) | undefined>(jest.fn());
+
+      setActiveCell({ rowIndex: 0, columnIndex: 0 });
+      selectionRange.value = { startRow: 0, startCol: 0, endRow: 0, endCol: 0 };
+
+      const { handleGridKeyDown } = useKeyboardNavigation({
+        data: {
+          items,
+          visibleCols,
+          colOffset: 0,
+          hasCheckboxCol: ref(false),
+          visibleColumnCount: ref(2),
+          getRowId,
+        },
+        state: { activeCell, selectionRange, editingCell, selectedRowIds },
+        handlers: {
+          setActiveCell,
+          setSelectionRange: (r) => { selectionRange.value = r; },
+          setEditingCell,
+          handleRowCheckboxChange: jest.fn(),
+          handleCopy: jest.fn(),
+          handleCut: jest.fn(),
+          handlePaste: jest.fn().mockResolvedValue(undefined),
+          setContextMenu: jest.fn(),
+        },
+        features: {
+          editable: ref(true),
+          onCellValueChanged,
+          rowSelection: ref('none' as const),
+          wrapperRef: shallowRef(null),
+          onKeyDown: ref(onKeyDown),
+        },
+      });
+
+      const initialCell = activeCell.value;
+      const e = new KeyboardEvent('keydown', { key: 'ArrowDown' });
+      Object.defineProperty(e, 'preventDefault', { value: jest.fn() });
+      handleGridKeyDown(e);
+
+      // Active cell should NOT have changed because onKeyDown called preventDefault
+      expect(activeCell.value).toBe(initialCell);
     });
   });
 
