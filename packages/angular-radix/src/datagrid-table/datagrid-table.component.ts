@@ -588,8 +588,8 @@ import { PopoverCellEditorComponent } from './popover-cell-editor.component';
                               @let cellStyle = resolveCellStyleFn(colLayout.col, item);
                               <div
                                 class="ogrid-datagrid-cell"
-                                [class.ogrid-datagrid-cell--active]="descriptor.isActive && !descriptor.isInRange"
-                                [class.ogrid-datagrid-cell--in-range]="descriptor.isInRange"
+                                [class.ogrid-datagrid-cell--active]="descriptor.isActive"
+                                [class.ogrid-datagrid-cell--in-range]="descriptor.isInRange && !descriptor.isActive"
                                 [class.ogrid-datagrid-cell--in-cut-range]="descriptor.isInCutRange"
                                 [class.ogrid-datagrid-cell--editable]="descriptor.canEditAny"
                                 [class.ogrid-datagrid-cell--numeric]="colLayout.col.type === 'numeric'"

@@ -119,7 +119,9 @@ export function computeRowSelectionState<T>(
   if (selectedIds.size === 0 || items.length === 0) {
     return { allSelected: false, someSelected: false };
   }
-  const allSelected = items.every((item) => selectedIds.has(getRowId(item)));
+  // Fast path: if counts don't match, can't be all selected (avoids O(n) .every())
+  const allSelected = selectedIds.size >= items.length &&
+    items.every((item) => selectedIds.has(getRowId(item)));
   const someSelected = !allSelected && selectedIds.size > 0;
   return { allSelected, someSelected };
 }

@@ -305,11 +305,14 @@ export function useDataGridTableOrchestration<T>(
   const currentVersion = CellDescriptorCache.computeVersion(cellDescriptorInput);
   cellDescriptorCacheRef.current.updateVersion(currentVersion);
 
-  // Clear the cache when the items array changes (e.g. new data loaded, filter applied).
-  // Cell values come from the item object; a new items reference means data may have changed.
+  // Clear the cache when items or visible columns change. Items change means data may have
+  // changed; visibleCols change means column indices shifted (reorder/visibility toggle),
+  // so cached descriptors with stale colIdx would be incorrect.
   const prevItemsRef = useRef(items);
-  if (prevItemsRef.current !== items) {
+  const prevVisibleColsRef = useRef(visibleCols);
+  if (prevItemsRef.current !== items || prevVisibleColsRef.current !== visibleCols) {
     prevItemsRef.current = items;
+    prevVisibleColsRef.current = visibleCols;
     cellDescriptorCacheRef.current.clear();
   }
 

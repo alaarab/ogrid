@@ -12,7 +12,7 @@ import { measureRange, injectGlobalStyles, type OverlayRect } from '@alaarab/ogr
     .ogrid-marching-ants-svg--clip { z-index: 5; }
   `],
   template: `
-    @if (selRect() && !clipRangeMatchesSel()) {
+    @if (selRect() && !clipRangeMatchesSel() && !isSingleCellSelection()) {
       <svg
         class="ogrid-marching-ants-svg ogrid-marching-ants-svg--selection"
         [style.top.px]="selRect()!.top"
@@ -124,6 +124,11 @@ export class MarchingAntsOverlayComponent implements OnChanges {
       this.resizeObserver = new ResizeObserver(measureAll);
       this.resizeObserver.observe(container);
     }
+  }
+
+  isSingleCellSelection(): boolean {
+    const r = this.selectionRange;
+    return r != null && r.startRow === r.endRow && r.startCol === r.endCol;
   }
 
   clipRangeMatchesSel(): boolean {
