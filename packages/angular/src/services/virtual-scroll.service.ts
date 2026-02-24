@@ -4,8 +4,9 @@ import {
   computeTotalHeight,
   getScrollTopForRow,
   validateVirtualScrollConfig,
+  computeVisibleColumnRange,
 } from '@alaarab/ogrid-core';
-import type { IVisibleRange, IVirtualScrollConfig } from '@alaarab/ogrid-core';
+import type { IVisibleRange, IVisibleColumnRange, IVirtualScrollConfig } from '@alaarab/ogrid-core';
 
 /**
  * Default minimum row count before virtual scrolling activates.
@@ -33,6 +34,11 @@ export class VirtualScrollService {
 
   // --- Internal state ---
   readonly scrollTop = signal<number>(0);
+  readonly scrollLeft = signal<number>(0);
+
+  // --- Column virtualization inputs ---
+  readonly columnWidths = signal<number[]>([]);
+  readonly containerWidth = signal<number>(0);
 
   // Scrollable container reference for programmatic scrolling
   private containerEl: HTMLElement | null = null;
@@ -71,6 +77,24 @@ export class VirtualScrollService {
   /** Total scrollable height in pixels. */
   readonly totalHeight = computed(() => computeTotalHeight(this.totalRows(), this.rowHeight()));
 
+  // --- Column virtualization ---
+
+  readonly columnsEnabled = computed(() => this.config().columns === true);
+  readonly columnOverscan = computed(() => this.config().columnOverscan ?? 2);
+
+  /** The visible column range with spacer widths, or null when column virtualization is off. */
+  readonly columnRange = computed<IVisibleColumnRange | null>(() => {
+    if (!this.columnsEnabled()) return null;
+    const widths = this.columnWidths();
+    if (widths.length === 0) return null;
+    return computeVisibleColumnRange(
+      this.scrollLeft(),
+      widths,
+      this.containerWidth(),
+      this.columnOverscan(),
+    );
+  });
+
   constructor() {
     this.destroyRef.onDestroy(() => {
       this.containerEl = null;
@@ -87,10 +111,12 @@ export class VirtualScrollService {
 
   /**
    * Call this from the container's scroll event handler.
+   * Tracks both vertical and horizontal scroll positions.
    */
   onScroll(event: Event): void {
     const target = event.target as HTMLElement;
     this.scrollTop.set(target.scrollTop);
+    this.scrollLeft.set(target.scrollLeft);
   }
 
   /**

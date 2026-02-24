@@ -155,6 +155,14 @@ export interface OGridOptions<T> {
   /** Virtual scrolling configuration. */
   virtualScroll?: IVirtualScrollConfig;
 
+  /**
+   * Offload sorting to a Web Worker to avoid blocking the main thread.
+   * - `true`: always use worker sort
+   * - `'auto'`: use worker sort when data.length > 5000
+   * - `false` (default): use synchronous sort
+   */
+  workerSort?: boolean | 'auto';
+
   /** Fixed row height in pixels. Overrides default row height (36px). */
   rowHeight?: number;
 

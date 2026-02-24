@@ -412,6 +412,7 @@ import { PopoverCellEditorComponent } from './popover-cell-editor.component';
           <div [style.minWidth.px]="allowOverflowX() ? minTableWidth() : undefined" style="overflow-x: clip">
             <div [class.ogrid-datagrid-table-wrapper--loading]="isLoading() && items().length > 0" #tableContainerElRef>
               <table class="ogrid-datagrid-table" role="grid" [style.minWidth.px]="minTableWidth()"
+                [attr.data-virtual-scroll]="vsEnabled() ? '' : null"
               >
                 <thead [class]="stickyHeader() ? 'ogrid-datagrid-thead ogrid-sticky-header' : 'ogrid-datagrid-thead'">
                   @for (row of headerRows(); track $index; let rowIdx = $index) {
@@ -547,7 +548,10 @@ import { PopoverCellEditorComponent } from './popover-cell-editor.component';
                             {{ rowNumberOffset() + rowIndex + 1 }}
                           </td>
                         }
-                        @for (colLayout of columnLayouts(); track colLayout.col.columnId; let colIdx = $index) {
+                        @if (vsColumnsEnabled() && vsLeftSpacerWidth() > 0) {
+                          <td [style.width.px]="vsLeftSpacerWidth()" [style.minWidth.px]="vsLeftSpacerWidth()" [style.maxWidth.px]="vsLeftSpacerWidth()" [style.padding]="'0'"></td>
+                        }
+                        @for (colLayout of vsColumnLayouts(); track colLayout.col.columnId) {
                           <td
                             class="ogrid-datagrid-td"
                             [attr.data-column-id]="colLayout.col.columnId"
@@ -559,7 +563,7 @@ import { PopoverCellEditorComponent } from './popover-cell-editor.component';
                             [style.left.px]="colLayout.pinnedLeft ? getPinnedLeftOffset(colLayout.col.columnId) : null"
                             [style.right.px]="colLayout.pinnedRight ? getPinnedRightOffset(colLayout.col.columnId) : null"
                           >
-                            @let descriptor = getCellDescriptor(item, colLayout.col, rowIndex, colIdx);
+                            @let descriptor = getCellDescriptor(item, colLayout.col, rowIndex, getGlobalColIndex(colLayout.col));
                             @if (descriptor.mode === 'editing-inline') {
                               <div class="ogrid-editing-cell">
                               <ogrid-radix-inline-cell-editor
@@ -616,6 +620,9 @@ import { PopoverCellEditorComponent } from './popover-cell-editor.component';
                               </div>
                             }
                           </td>
+                        }
+                        @if (vsColumnsEnabled() && vsRightSpacerWidth() > 0) {
+                          <td [style.width.px]="vsRightSpacerWidth()" [style.minWidth.px]="vsRightSpacerWidth()" [style.maxWidth.px]="vsRightSpacerWidth()" [style.padding]="'0'"></td>
                         }
                       </tr>
                     }

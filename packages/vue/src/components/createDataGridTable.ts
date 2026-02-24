@@ -74,6 +74,8 @@ export function createDataGridTable(ui: IDataGridTableUIBindings) {
         virtualScroll: { containerRef: vsContainerRef, visibleRange, totalHeight: _totalHeight, scrollToRow: _scrollToRow },
         virtualScrollEnabled,
         columnResize: { handleResizeStart, handleResizeDoubleClick, getColumnWidth },
+        columnPartition,
+        globalColIndexMap,
       } = useDataGridTableSetup({ props: propsRef }) as UseDataGridTableSetupResult<unknown>;
 
       // Stable handlers — avoid creating new closures per render
@@ -281,11 +283,29 @@ export function createDataGridTable(ui: IDataGridTableUIBindings) {
         const { cellStyles: colCellStyles, cellClasses: colCellClasses, hdrStyles: colHdrStyles, hdrClasses: colHdrClasses } = columnMetaCache.value;
 
         // Build column layouts using cached metadata
-        const columnLayouts = visibleCols.map((col: IColumnDef<unknown>) => ({
+        const allColumnLayouts = visibleCols.map((col: IColumnDef<unknown>) => ({
           col,
           tdClasses: colCellClasses[col.columnId] || 'ogrid-data-cell',
           tdDynamicStyle: colCellStyles[col.columnId] || {},
         }));
+
+        // Filter column layouts by column virtualization partition when active
+        const partition = columnPartition.value;
+        let columnLayouts = allColumnLayouts;
+        let leftSpacerWidth = 0;
+        let rightSpacerWidth = 0;
+        if (partition) {
+          const visibleIds = new Set<string>();
+          for (const col of partition.pinnedLeft) visibleIds.add(col.columnId);
+          for (const col of partition.virtualizedUnpinned) visibleIds.add(col.columnId);
+          for (const col of partition.pinnedRight) visibleIds.add(col.columnId);
+          columnLayouts = allColumnLayouts.filter(cl => visibleIds.has(cl.col.columnId));
+          leftSpacerWidth = partition.leftSpacerWidth;
+          rightSpacerWidth = partition.rightSpacerWidth;
+        }
+
+        // Global column index map for correct cell descriptor indices during column virtualization
+        const colIndexMap = globalColIndexMap.value;
 
         // Header class+style lookup using cached metadata
         const getHeaderClassAndStyle = (col: IColumnDef<unknown>): { classes: string; style: Record<string, string> } => {
@@ -347,6 +367,7 @@ export function createDataGridTable(ui: IDataGridTableUIBindings) {
                     class: 'ogrid-table',
                     role: 'grid',
                     style: { minWidth: `${minTableWidth}px` },
+                    ...(virtualScrollEnabled.value ? { 'data-virtual-scroll': '' } : {}),
                   }, [
                     // Header
                     h('thead', { class: stickyHeader ? 'ogrid-thead ogrid-sticky-header' : 'ogrid-thead' },
@@ -529,15 +550,23 @@ export function createDataGridTable(ui: IDataGridTableUIBindings) {
                                 },
                               }, String(rowNumberOffset + rowIndex + 1)),
                             ] : []),
+                            // Left spacer for column virtualization
+                            ...(leftSpacerWidth > 0 ? [
+                              h('td', { key: '__col-spacer-left', style: { width: `${leftSpacerWidth}px`, minWidth: `${leftSpacerWidth}px`, maxWidth: `${leftSpacerWidth}px`, padding: '0' } }),
+                            ] : []),
                             // Data cells
-                            ...columnLayouts.map((cl: { col: IColumnDef<unknown>; tdClasses: string; tdDynamicStyle: Record<string, string> }, colIdx: number) =>
+                            ...columnLayouts.map((cl: { col: IColumnDef<unknown>; tdClasses: string; tdDynamicStyle: Record<string, string> }) =>
                               h('td', {
                                 key: cl.col.columnId,
                                 'data-column-id': cl.col.columnId,
                                 class: cl.tdClasses,
                                 style: cl.tdDynamicStyle,
-                              }, [renderCellContent(item, cl.col, rowIndex, colIdx)])
+                              }, [renderCellContent(item, cl.col, rowIndex, colIndexMap.get(cl.col.columnId) ?? 0)])
                             ),
+                            // Right spacer for column virtualization
+                            ...(rightSpacerWidth > 0 ? [
+                              h('td', { key: '__col-spacer-right', style: { width: `${rightSpacerWidth}px`, minWidth: `${rightSpacerWidth}px`, maxWidth: `${rightSpacerWidth}px`, padding: '0' } }),
+                            ] : []),
                           ]));
                         }
 
