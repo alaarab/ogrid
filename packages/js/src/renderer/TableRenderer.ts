@@ -18,6 +18,7 @@ export interface TableRendererInteractionState {
   onCellDoubleClick?: (cellEvent: CellEvent) => void;
   onCellContextMenu?: (cellEvent: CellEvent) => void;
   onResizeStart?: (columnId: string, clientX: number, currentWidth: number) => void;
+  onResizeDoubleClick?: (columnId: string) => void;
   // Fill handle
   onFillHandleMouseDown?: (e: MouseEvent) => void;
   // Row selection
@@ -61,6 +62,7 @@ export class TableRenderer<T> {
   // Delegated event handlers bound to thead (avoids per-<th> inline listeners)
   private _theadClickHandler: ((e: MouseEvent) => void) | null = null;
   private _theadMousedownHandler: ((e: MouseEvent) => void) | null = null;
+  private _theadDblclickHandler: ((e: MouseEvent) => void) | null = null;
 
   // State tracking for incremental DOM patching
   private lastActiveCell: IActiveCell | null = null;
@@ -205,16 +207,32 @@ export class TableRenderer<T> {
       }
     };
 
+    this._theadDblclickHandler = (e: MouseEvent) => {
+      const target = e.target as HTMLElement;
+      if (target.classList.contains('ogrid-resize-handle')) {
+        e.stopPropagation();
+        const th = target.closest('th[data-column-id]') as HTMLElement | null;
+        if (!th) return;
+        const columnId = th.getAttribute('data-column-id');
+        if (columnId) {
+          this.interactionState?.onResizeDoubleClick?.(columnId);
+        }
+      }
+    };
+
     if (this._theadClickHandler) this.thead.addEventListener('click', this._theadClickHandler);
     this.thead.addEventListener('mousedown', this._theadMousedownHandler);
+    this.thead.addEventListener('dblclick', this._theadDblclickHandler);
   }
 
   private detachHeaderDelegation(): void {
     if (!this.thead) return;
     if (this._theadClickHandler) this.thead.removeEventListener('click', this._theadClickHandler);
     if (this._theadMousedownHandler) this.thead.removeEventListener('mousedown', this._theadMousedownHandler);
+    if (this._theadDblclickHandler) this.thead.removeEventListener('dblclick', this._theadDblclickHandler);
     this._theadClickHandler = null;
     this._theadMousedownHandler = null;
+    this._theadDblclickHandler = null;
   }
 
   getWrapperElement(): HTMLDivElement | null {

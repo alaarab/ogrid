@@ -1,4 +1,5 @@
 import { onUnmounted, type Ref } from 'vue';
+import { measureColumnContentWidth } from '@alaarab/ogrid-core';
 import type { IColumnDef } from '../types';
 
 export interface UseColumnResizeParams {
@@ -11,6 +12,7 @@ export interface UseColumnResizeParams {
 
 export interface UseColumnResizeResult<T> {
   handleResizeStart: (e: MouseEvent, col: IColumnDef<T>) => void;
+  handleResizeDoubleClick: (e: MouseEvent, col: IColumnDef<T>) => void;
   getColumnWidth: (col: IColumnDef<T>) => number;
 }
 
@@ -99,6 +101,20 @@ export function useColumnResize<T>(params: UseColumnResizeParams): UseColumnResi
     cleanupFn = cleanup;
   };
 
+  const handleResizeDoubleClick = (e: MouseEvent, col: IColumnDef<T>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    const columnId = col.columnId;
+    const thEl = (e.currentTarget as HTMLElement).closest('th') ?? (e.currentTarget as HTMLElement).parentElement;
+    const container = thEl?.closest('table')?.parentElement ?? undefined;
+    const idealWidth = measureColumnContentWidth(columnId, minWidth, container);
+    setColumnSizingOverrides({
+      ...columnSizingOverrides.value,
+      [columnId]: { widthPx: idealWidth },
+    });
+    onColumnResized?.(columnId, idealWidth);
+  };
+
   const getColumnWidth = (col: IColumnDef<T>): number => {
     return columnSizingOverrides.value[col.columnId]?.widthPx
       ?? col.idealWidth
@@ -106,5 +122,5 @@ export function useColumnResize<T>(params: UseColumnResizeParams): UseColumnResi
       ?? defaultWidth;
   };
 
-  return { handleResizeStart, getColumnWidth };
+  return { handleResizeStart, handleResizeDoubleClick, getColumnWidth };
 }
