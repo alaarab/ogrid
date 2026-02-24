@@ -679,6 +679,7 @@
   /* Reset Docusaurus global table styles inside OGrid */
   table {
     font-size: inherit;
+    overflow: visible;
   }
 
   th {
