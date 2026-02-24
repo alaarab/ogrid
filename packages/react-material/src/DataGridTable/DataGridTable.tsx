@@ -306,7 +306,7 @@ function DataGridTableInner<T>(props: IOGridDataGridProps<T>): React.ReactElemen
   const {
     wrapperRef, tableContainerRef, lastMouseShiftRef,
     interaction, pinning,
-    handleResizeStart, getColumnWidth, isReorderDragging, dropIndicatorX, handleHeaderMouseDown,
+    handleResizeStart, handleResizeDoubleClick, getColumnWidth, isReorderDragging, dropIndicatorX, handleHeaderMouseDown,
     virtualScrollEnabled, visibleRange,
     items, getRowId, emptyState,
     suppressHorizontalScroll, isLoading, loadingMessage,
@@ -624,7 +624,7 @@ function DataGridTableInner<T>(props: IOGridDataGridProps<T>): React.ReactElemen
                           interaction.setSelectionRange(null);
                           wrapperRef.current?.focus({ preventScroll: true });
                           handleResizeStart(e, col);
-                        }} sx={RESIZE_HANDLE_SX} />
+                        }} onDoubleClick={(e: React.MouseEvent) => handleResizeDoubleClick(e, col)} sx={RESIZE_HANDLE_SX} />
                       </TableCell>
                     );
                   })}

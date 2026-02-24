@@ -34,7 +34,7 @@ import type { VirtualScrollState } from './state/VirtualScrollState';
 import type { MarchingAntsOverlay } from './components/MarchingAntsOverlay';
 import type { InlineCellEditor } from './components/InlineCellEditor';
 import type { TableLayoutState } from './state/TableLayoutState';
-import { normalizeSelectionRange, isInSelectionRange, CHECKBOX_COLUMN_WIDTH } from '@alaarab/ogrid-core';
+import { normalizeSelectionRange, isInSelectionRange, CHECKBOX_COLUMN_WIDTH, measureColumnContentWidth, DEFAULT_MIN_COLUMN_WIDTH } from '@alaarab/ogrid-core';
 import { getCellCoordinates } from './utils/getCellCoordinates';
 
 /**
@@ -143,6 +143,13 @@ export class OGridRendering<T> {
       onCellDoubleClick: (ce) => { if (ce.rowId != null && ce.columnId) this.ctx.startCellEdit(ce.rowId, ce.columnId); },
       onCellContextMenu: (ce) => { if (ce.event) this.ctx.handleCellContextMenu(ce.rowIndex, ce.colIndex, ce.event); },
       onResizeStart: renderer.getOnResizeStart(),
+      onResizeDoubleClick: (columnId: string) => {
+        const col = visibleCols.find(c => c.columnId === columnId);
+        const minW = col?.minWidth ?? DEFAULT_MIN_COLUMN_WIDTH;
+        const container = renderer.getTableElement()?.parentElement ?? undefined;
+        const idealWidth = measureColumnContentWidth(columnId, minW, container);
+        resizeState.setColumnWidth(columnId, idealWidth);
+      },
       // Fill handle
       onFillHandleMouseDown: options.editable !== false ? (e) => fillHandleState?.startFillDrag(e) : undefined,
       // Row selection

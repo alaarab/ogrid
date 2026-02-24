@@ -165,6 +165,7 @@ import { PopoverCellEditorComponent } from './popover-cell-editor.component';
                             <div
                               class="ogrid-resize-handle"
                               (mousedown)="onResizeStartPrimeng($event, col)"
+                              (dblclick)="onResizeDoubleClick($event, col)"
                               [attr.aria-label]="'Resize ' + col.name"
                             ></div>
                           </th>
