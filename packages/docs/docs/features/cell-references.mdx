@@ -1,0 +1,234 @@
+---
+sidebar_position: 22
+title: Cell References
+description: Excel-style column letters (A, B, C...), row numbers, and a name box showing the active cell reference.
+---
+
+import CellReferencesDemo from '@site/src/components/demos/CellReferencesDemo';
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+
+# Cell References
+
+Enable Excel-style cell references with a single prop. Column letter headers (A, B, C...) appear above the header row, row numbers show in the left gutter, and a name box in the toolbar displays the active cell reference (e.g. "A1", "C15").
+
+## Live Demo
+
+<CellReferencesDemo />
+
+:::tip Framework-Specific Styling
+The live demo above shows **React Radix UI** styling (lightweight default). To see how cell references look in your framework's design system, click the framework buttons above the demo to open online demo:
+- **React** -- Radix UI default theme
+- **Angular** -- Angular Material theme
+- **Vue** -- Vuetify theme
+- **JS** -- Vanilla JS default theme
+
+Each framework renders with its native components, so the styling matches your design system.
+:::
+
+## Quick Example
+
+<Tabs groupId="framework">
+  <TabItem value="react" label="React" default>
+
+```tsx
+import { OGrid } from '@alaarab/ogrid-react-radix';
+
+const columns = [
+  { columnId: 'name', name: 'Name' },
+  { columnId: 'age', name: 'Age', type: 'numeric' as const },
+  { columnId: 'email', name: 'Email' },
+  { columnId: 'department', name: 'Department' },
+  { columnId: 'salary', name: 'Salary', type: 'numeric' as const,
+    valueFormatter: (v) => `$${Number(v).toLocaleString()}` },
+];
+
+function App() {
+  return (
+    <OGrid
+      columns={columns}
+      data={people}
+      getRowId={(item) => item.id}
+      cellReferences
+      defaultPageSize={25}
+      entityLabelPlural="people"
+    />
+  );
+}
+```
+
+:::tip Switching UI libraries
+The `OGrid` component has the same props across all React UI packages. To switch, just change the import:
+
+- **Radix** (lightweight, default): `from '@alaarab/ogrid-react-radix'`
+- **Fluent UI** (Microsoft 365 / SPFx): `from '@alaarab/ogrid-react-fluent'` -- wrap in `<FluentProvider>`
+- **Material UI** (MUI v7): `from '@alaarab/ogrid-react-material'` -- wrap in `<ThemeProvider>`
+:::
+
+  </TabItem>
+  <TabItem value="angular" label="Angular">
+
+```typescript
+import { Component } from '@angular/core';
+import { OGridComponent, type IColumnDef } from '@alaarab/ogrid-angular-material';
+
+@Component({
+  standalone: true,
+  imports: [OGridComponent],
+  template: `<ogrid [props]="gridProps" />`
+})
+export class GridComponent {
+  gridProps = {
+    columns: [
+      { columnId: 'name', name: 'Name' },
+      { columnId: 'age', name: 'Age', type: 'numeric' },
+      { columnId: 'email', name: 'Email' },
+      { columnId: 'department', name: 'Department' },
+      {
+        columnId: 'salary', name: 'Salary', type: 'numeric',
+        valueFormatter: (v: unknown) => `$${Number(v).toLocaleString()}`,
+      },
+    ] as IColumnDef<Person>[],
+    data: people,
+    getRowId: (item: Person) => item.id,
+    cellReferences: true,
+    defaultPageSize: 25,
+    entityLabelPlural: 'people',
+  };
+}
+```
+
+:::tip Switching UI libraries
+Same component API across Angular packages. To switch, just change the import:
+
+- **Radix (CDK)**: `from '@alaarab/ogrid-angular-radix'` *(default, lightweight)*
+- **Angular Material**: `from '@alaarab/ogrid-angular-material'`
+- **PrimeNG**: `from '@alaarab/ogrid-angular-primeng'`
+
+All components are standalone -- no NgModule required.
+:::
+
+  </TabItem>
+  <TabItem value="vue" label="Vue">
+
+```vue
+<script setup lang="ts">
+import { OGrid, type IColumnDef } from '@alaarab/ogrid-vue-vuetify';
+
+const columns: IColumnDef<Person>[] = [
+  { columnId: 'name', name: 'Name' },
+  { columnId: 'age', name: 'Age', type: 'numeric' },
+  { columnId: 'email', name: 'Email' },
+  { columnId: 'department', name: 'Department' },
+  {
+    columnId: 'salary', name: 'Salary', type: 'numeric',
+    valueFormatter: (v) => `$${Number(v).toLocaleString()}`,
+  },
+];
+
+const gridProps = {
+  columns,
+  data: people,
+  getRowId: (item) => item.id,
+  cellReferences: true,
+  defaultPageSize: 25,
+  entityLabelPlural: 'people',
+};
+</script>
+
+<template>
+  <OGrid :gridProps="gridProps" />
+</template>
+```
+
+:::tip Switching UI libraries
+Same component API across Vue packages. To switch, just change the import:
+
+- **Radix (Headless UI)**: `from '@alaarab/ogrid-vue-radix'` *(default, lightweight)*
+- **Vuetify**: `from '@alaarab/ogrid-vue-vuetify'` -- wrap in `<v-app>` for theming
+- **PrimeVue**: `from '@alaarab/ogrid-vue-primevue'`
+:::
+
+  </TabItem>
+  <TabItem value="js" label="Vanilla JS">
+
+```js
+import { OGrid } from '@alaarab/ogrid-js';
+import '@alaarab/ogrid-js/styles';
+
+const grid = new OGrid(document.getElementById('grid'), {
+  columns: [
+    { columnId: 'name', name: 'Name' },
+    { columnId: 'age', name: 'Age', type: 'numeric' },
+    { columnId: 'email', name: 'Email' },
+    { columnId: 'department', name: 'Department' },
+    {
+      columnId: 'salary',
+      name: 'Salary',
+      type: 'numeric',
+      valueFormatter: (v) => `$${Number(v).toLocaleString()}`,
+    },
+  ],
+  data: people,
+  getRowId: (item) => item.id,
+  cellReferences: true,
+  pageSize: 25,
+  entityLabelPlural: 'people',
+});
+```
+
+  </TabItem>
+</Tabs>
+
+## How It Works
+
+Setting `cellReferences` on the `OGrid` component enables three visual features together:
+
+### 1. Column Letter Headers
+
+A row of Excel-style column letters (A, B, C, ..., Z, AA, AB, ...) appears above the normal header row. These letters use base-26 encoding, matching the Excel convention:
+
+| Columns | Letters |
+|---------|---------|
+| 1--26 | A--Z |
+| 27--52 | AA--AZ |
+| 53--78 | BA--BZ |
+| 703+ | AAA, AAB, ... |
+
+### 2. Row Numbers
+
+A numbered gutter column appears on the left side of the grid showing the absolute row number (1, 2, 3, ...). Row numbers are consistent across pages -- page 2 with a page size of 25 starts at row 26, not row 1.
+
+:::info Row numbers without cell references
+You can show row numbers independently without the full cell references feature by using the `showRowNumbers` prop:
+
+```tsx
+<OGrid
+  columns={columns}
+  data={people}
+  getRowId={(item) => item.id}
+  showRowNumbers
+/>
+```
+
+This gives you the numbered gutter column without column letters or the name box.
+:::
+
+### 3. Name Box
+
+A small read-only text field appears in the toolbar showing the currently active cell reference (e.g. "A1", "C15", "G3"). It updates automatically when you click a cell or navigate with the keyboard.
+
+The name box uses the column letter and absolute row number, so clicking the third column on row 5 of page 2 (with a page size of 10) shows "C15", not "C5".
+
+## Props
+
+| Prop | Type | Default | Description |
+|------|------|---------|-------------|
+| `cellReferences` | `boolean` | `false` | Enable Excel-style cell references: column letter headers, row number gutter, and name box. Implies `showRowNumbers`. |
+| `showRowNumbers` | `boolean` | `false` | Show only the row number gutter column (no column letters or name box). Automatically enabled when `cellReferences` is `true`. |
+
+## Related
+
+- [Spreadsheet Selection](./spreadsheet-selection) -- cell-level selection with drag and shift-click
+- [Keyboard Navigation](./keyboard-navigation) -- arrow key navigation updates the name box
+- [Toolbar](./toolbar) -- the name box renders inside the toolbar strip
