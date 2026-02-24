@@ -143,6 +143,17 @@ export const DefaultSortDescending: Story = {
   ),
 };
 
+export const MultiRowSelection: Story = {
+  args: {
+    columns,
+    getRowId,
+    data: makeProjects(20),
+    entityLabelPlural: 'projects',
+    rowSelection: 'multiple',
+    statusBar: true,
+  },
+};
+
 export const Editable: Story = {
   render: function EditableStory() {
     const [data, setData] = React.useState(() => makeProjects(5));
