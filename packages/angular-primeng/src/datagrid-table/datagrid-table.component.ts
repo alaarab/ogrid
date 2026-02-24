@@ -377,6 +377,7 @@ import { PopoverCellEditorComponent } from './popover-cell-editor.component';
     .ogrid-scroll-wrapper--loading-empty { min-height: 200px; }
     .ogrid-table-wrapper {
       position: relative;
+      overflow-x: clip;
     }
     .ogrid-table {
       width: var(--data-table-width, 100%);

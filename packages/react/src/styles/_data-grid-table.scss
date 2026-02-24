@@ -49,6 +49,7 @@
   width: max-content;
   min-width: var(--data-table-min-width, max-content);
   background: var(--ogrid-bg, #fff);
+  overflow-x: clip; // prevent last column's resize handle from extending past table
 }
 
 .tableWrapper {

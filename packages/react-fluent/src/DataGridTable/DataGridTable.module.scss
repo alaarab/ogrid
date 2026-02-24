@@ -33,6 +33,7 @@
 
 .tableWidthAnchor {
   background-color: var(--colorNeutralBackground1, var(--ogrid-bg, #ffffff));
+  overflow-x: clip;
 }
 
 .tableWrapper {
