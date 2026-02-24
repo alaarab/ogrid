@@ -130,6 +130,9 @@ interface IOGridBaseProps<T> {
   /** Virtual scrolling configuration. Set `enabled: true` with a fixed `rowHeight` to virtualize large datasets. */
   virtualScroll?: IVirtualScrollConfig;
 
+  /** Offload sort/filter to a Web Worker for large datasets. Falls back to sync when sort column has a custom compare. */
+  workerSort?: boolean;
+
   /** Fixed row height in pixels. Overrides default row height (36px). */
   rowHeight?: number;
 

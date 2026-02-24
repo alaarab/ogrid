@@ -321,3 +321,82 @@ describe('useVirtualScroll — scrollToIndex', () => {
     expect(() => result.current.scrollToIndex(5)).not.toThrow();
   });
 });
+
+// --- Column virtualization ---
+
+describe('useVirtualScroll — column virtualization', () => {
+  it('returns null columnRange when columnVirtualization is disabled', () => {
+    const { result } = renderHook(() =>
+      useVirtualScroll({
+        totalRows: 50,
+        rowHeight: 36,
+        enabled: false,
+        containerRef: makeContainerRef(),
+      })
+    );
+
+    expect(result.current.columnRange).toBeNull();
+    expect(result.current.onHorizontalScroll).toBeUndefined();
+  });
+
+  it('returns null columnRange when columnVirtualization is true but no widths', () => {
+    const { result } = renderHook(() =>
+      useVirtualScroll({
+        totalRows: 50,
+        rowHeight: 36,
+        enabled: false,
+        containerRef: makeContainerRef(),
+        columnVirtualization: true,
+      })
+    );
+
+    expect(result.current.columnRange).toBeNull();
+  });
+
+  it('returns null columnRange when columnWidths is empty', () => {
+    const { result } = renderHook(() =>
+      useVirtualScroll({
+        totalRows: 50,
+        rowHeight: 36,
+        enabled: false,
+        containerRef: makeContainerRef(),
+        columnVirtualization: true,
+        columnWidths: [],
+      })
+    );
+
+    expect(result.current.columnRange).toBeNull();
+  });
+
+  it('provides onHorizontalScroll callback when columnVirtualization is true', () => {
+    const { result } = renderHook(() =>
+      useVirtualScroll({
+        totalRows: 50,
+        rowHeight: 36,
+        enabled: false,
+        containerRef: makeContainerRef(),
+        columnVirtualization: true,
+        columnWidths: [100, 100, 100],
+      })
+    );
+
+    expect(result.current.onHorizontalScroll).toBeDefined();
+    expect(typeof result.current.onHorizontalScroll).toBe('function');
+  });
+
+  it('returns columnRange and onHorizontalScroll fields', () => {
+    const { result } = renderHook(() =>
+      useVirtualScroll({
+        totalRows: 50,
+        rowHeight: 36,
+        enabled: false,
+        containerRef: makeContainerRef(),
+        columnVirtualization: true,
+        columnWidths: [100, 100, 100],
+      })
+    );
+
+    expect(result.current).toHaveProperty('columnRange');
+    expect(result.current).toHaveProperty('onHorizontalScroll');
+  });
+});

@@ -29,6 +29,7 @@ import {
   buildPopoverEditorProps,
   getCellInteractionProps,
   areGridRowPropsEqual,
+  partitionColumnsForVirtualization,
   CellErrorBoundary,
   GRID_ROOT_STYLE,
   CURSOR_CELL_STYLE,
@@ -40,14 +41,25 @@ import {
 import type { GridRowProps } from '@alaarab/ogrid-react';
 import styles from './DataGridTable.module.scss';
 
+const SPACER_TD_STYLE: React.CSSProperties = { padding: 0, border: 'none' };
+
 
 // --- Memoized row component (skips re-render for rows unaffected by selection changes) ---
 
-function GridRowInner(props: GridRowProps) {
+/** Extended props for column virtualization spacers. */
+interface RadixGridRowProps extends GridRowProps {
+  leftSpacerWidth?: number;
+  rightSpacerWidth?: number;
+  /** Maps local column index to global index in full visibleCols. */
+  globalColIndexMap?: number[];
+}
+
+function GridRowInner(props: RadixGridRowProps) {
   const {
     item, rowIndex, rowId, isSelected, visibleCols, columnMeta,
     renderCellContent, handleSingleRowClick, handleRowCheckboxChange,
     lastMouseShiftRef, hasCheckboxCol, hasRowNumbersCol, rowNumberOffset,
+    leftSpacerWidth, rightSpacerWidth, globalColIndexMap,
   } = props;
 
   return (
@@ -85,21 +97,142 @@ function GridRowInner(props: GridRowProps) {
           </div>
         </td>
       )}
-      {visibleCols.map((col, colIdx) => (
-        <td
-          key={col.columnId}
-          data-column-id={col.columnId}
-          className={columnMeta.cellClasses[col.columnId] || undefined}
-          style={columnMeta.cellStyles[col.columnId]}
-        >
-          {renderCellContent(item, col, rowIndex, colIdx)}
-        </td>
-      ))}
+      {leftSpacerWidth != null && leftSpacerWidth > 0 && (
+        <td style={{ ...SPACER_TD_STYLE, width: leftSpacerWidth, minWidth: leftSpacerWidth }} aria-hidden />
+      )}
+      {visibleCols.map((col, colIdx) => {
+        const globalIdx = globalColIndexMap ? globalColIndexMap[colIdx] : colIdx;
+        return (
+          <td
+            key={col.columnId}
+            data-column-id={col.columnId}
+            className={columnMeta.cellClasses[col.columnId] || undefined}
+            style={columnMeta.cellStyles[col.columnId]}
+          >
+            {renderCellContent(item, col, rowIndex, globalIdx)}
+          </td>
+        );
+      })}
+      {rightSpacerWidth != null && rightSpacerWidth > 0 && (
+        <td style={{ ...SPACER_TD_STYLE, width: rightSpacerWidth, minWidth: rightSpacerWidth }} aria-hidden />
+      )}
     </tr>
   );
 }
 
 const GridRow = React.memo(GridRowInner, areGridRowPropsEqual);
+
+// --- Table body with column virtualization support ---
+
+interface RadixTableBodyProps<T> {
+  virtualScrollEnabled: boolean;
+  visibleRange: { startIndex: number; endIndex: number; offsetTop: number; offsetBottom: number };
+  columnRange: import('@alaarab/ogrid-core').IVisibleColumnRange | null;
+  items: T[];
+  getRowId: (item: T) => string | number;
+  selectedRowIds: Set<string | number>;
+  visibleCols: IColumnDef<T>[];
+  columnMeta: ReturnType<typeof useColumnMeta>;
+  renderCellContent: (item: T, col: IColumnDef<T>, rowIndex: number, colIdx: number) => React.ReactNode;
+  handleSingleRowClick: (e: React.MouseEvent<HTMLTableRowElement>) => void;
+  handleRowCheckboxChange: (rowId: string | number, checked: boolean, rowIndex: number, shiftKey: boolean) => void;
+  lastMouseShiftRef: React.MutableRefObject<boolean>;
+  hasCheckboxCol: boolean;
+  hasRowNumbersCol: boolean;
+  rowNumberOffset: number;
+  selectionRange: GridRowProps['selectionRange'];
+  activeCell: GridRowProps['activeCell'];
+  cutRange: GridRowProps['cutRange'];
+  copyRange: GridRowProps['copyRange'];
+  isDragging: boolean;
+  editingCell: { rowId: string | number; columnId: string } | null;
+  pinnedColumns: Record<string, 'left' | 'right'>;
+}
+
+function RadixTableBody<T>(props: RadixTableBodyProps<T>) {
+  const {
+    virtualScrollEnabled, visibleRange, columnRange,
+    items, getRowId, selectedRowIds, visibleCols, columnMeta,
+    renderCellContent, handleSingleRowClick, handleRowCheckboxChange,
+    lastMouseShiftRef, hasCheckboxCol, hasRowNumbersCol, rowNumberOffset,
+    selectionRange, activeCell, cutRange, copyRange, isDragging,
+    editingCell, pinnedColumns,
+  } = props;
+
+  // Partition columns when column virtualization is active
+  const partition = React.useMemo(() => {
+    if (!columnRange) return null;
+    const p = partitionColumnsForVirtualization(
+      visibleCols as Parameters<typeof partitionColumnsForVirtualization>[0],
+      columnRange,
+      pinnedColumns,
+    );
+    return p as unknown as { pinnedLeft: IColumnDef<T>[]; virtualizedUnpinned: IColumnDef<T>[]; pinnedRight: IColumnDef<T>[]; leftSpacerWidth: number; rightSpacerWidth: number };
+  }, [visibleCols, columnRange, pinnedColumns]);
+
+  // Build global column index map: maps local index in partitioned array to global index in visibleCols
+  const { rowCols, globalColIndexMap, leftSpacerWidth, rightSpacerWidth } = React.useMemo(() => {
+    if (!partition) {
+      return { rowCols: visibleCols, globalColIndexMap: undefined, leftSpacerWidth: undefined, rightSpacerWidth: undefined };
+    }
+    const combined: IColumnDef<T>[] = [...partition.pinnedLeft, ...partition.virtualizedUnpinned, ...partition.pinnedRight];
+    const idxMap = combined.map(col => visibleCols.indexOf(col));
+    return {
+      rowCols: combined,
+      globalColIndexMap: idxMap,
+      leftSpacerWidth: partition.leftSpacerWidth,
+      rightSpacerWidth: partition.rightSpacerWidth,
+    };
+  }, [partition, visibleCols]);
+
+  const renderRow = (item: T, rowIndex: number) => {
+    const rowIdStr = getRowId(item);
+    return (
+      <GridRow
+        key={rowIdStr}
+        item={item}
+        rowIndex={rowIndex}
+        rowId={rowIdStr}
+        isSelected={selectedRowIds.has(rowIdStr)}
+        visibleCols={rowCols as IColumnDef<unknown>[]}
+        columnMeta={columnMeta}
+        renderCellContent={renderCellContent as GridRowProps['renderCellContent']}
+        handleSingleRowClick={handleSingleRowClick}
+        handleRowCheckboxChange={handleRowCheckboxChange}
+        lastMouseShiftRef={lastMouseShiftRef}
+        hasCheckboxCol={hasCheckboxCol}
+        hasRowNumbersCol={hasRowNumbersCol}
+        rowNumberOffset={rowNumberOffset}
+        selectionRange={selectionRange}
+        activeCell={activeCell}
+        cutRange={cutRange}
+        copyRange={copyRange}
+        isDragging={isDragging}
+        editingRowId={editingCell?.rowId ?? null}
+        leftSpacerWidth={leftSpacerWidth}
+        rightSpacerWidth={rightSpacerWidth}
+        globalColIndexMap={globalColIndexMap}
+      />
+    );
+  };
+
+  return (
+    <tbody>
+      {virtualScrollEnabled && visibleRange.offsetTop > 0 && (
+        <tr style={{ height: visibleRange.offsetTop }} aria-hidden />
+      )}
+      {virtualScrollEnabled
+        ? items.slice(visibleRange.startIndex, visibleRange.endIndex + 1).map((item, i) =>
+            renderRow(item, visibleRange.startIndex + i)
+          )
+        : items.map((item, rowIndex) => renderRow(item, rowIndex))
+      }
+      {virtualScrollEnabled && visibleRange.offsetBottom > 0 && (
+        <tr style={{ height: visibleRange.offsetBottom }} aria-hidden />
+      )}
+    </tbody>
+  );
+}
 
 function DataGridTableInner<T>(props: IOGridDataGridProps<T>): React.ReactElement {
   const o = useDataGridTableOrchestration({ props });
@@ -108,7 +241,7 @@ function DataGridTableInner<T>(props: IOGridDataGridProps<T>): React.ReactElemen
     wrapperRef, tableContainerRef, lastMouseShiftRef,
     interaction, pinning,
     handleResizeStart, handleResizeDoubleClick, getColumnWidth, isReorderDragging, dropIndicatorX, handleHeaderMouseDown,
-    virtualScrollEnabled, visibleRange,
+    virtualScrollEnabled, visibleRange, columnRange, onHorizontalScroll,
     items, getRowId, emptyState, rowSelection,
     isLoading, loadingMessage,
     ariaLabel, ariaLabelledBy, visibleColumns, columnOrder, columnReorder, density, rowHeight,
@@ -215,6 +348,7 @@ function DataGridTableInner<T>(props: IOGridDataGridProps<T>): React.ReactElemen
         ref={wrapperRef}
         tabIndex={0}
         onMouseDown={(e) => { lastMouseShiftRef.current = e.shiftKey; }}
+        onScroll={onHorizontalScroll ? (e) => onHorizontalScroll((e.target as HTMLElement).scrollLeft) : undefined}
         className={`${styles.tableWrapper} ${rowSelection !== 'none' ? styles.selectableGrid : ''} ${styles[`density-${density}`] || ''}`}
         role="region"
         aria-label={ariaLabel ?? (ariaLabelledBy ? undefined : 'Data grid')}
@@ -239,7 +373,7 @@ function DataGridTableInner<T>(props: IOGridDataGridProps<T>): React.ReactElemen
         <div className={styles.tableScrollContent}>
         <div className={isLoading && items.length > 0 ? styles.loadingDimmed : undefined}>
           <div className={styles.tableWidthAnchor} ref={tableContainerRef}>
-              <table className={styles.dataTable} role="grid">
+              <table className={styles.dataTable} role="grid" data-virtual-scroll={virtualScrollEnabled ? '' : undefined}>
                 <thead
                   className={o.stickyHeader ? styles.stickyHeader : undefined}
                 >
@@ -350,71 +484,30 @@ function DataGridTableInner<T>(props: IOGridDataGridProps<T>): React.ReactElemen
                   ))}
                 </thead>
                 {!showEmptyInGrid && (
-                  <tbody>
-                    {virtualScrollEnabled && visibleRange.offsetTop > 0 && (
-                      <tr style={{ height: visibleRange.offsetTop }} aria-hidden />
-                    )}
-                    {(virtualScrollEnabled
-                      ? items.slice(visibleRange.startIndex, visibleRange.endIndex + 1).map((item, i) => {
-                          const rowIndex = visibleRange.startIndex + i;
-                          const rowIdStr = getRowId(item);
-                          return (
-                            <GridRow
-                              key={rowIdStr}
-                              item={item}
-                              rowIndex={rowIndex}
-                              rowId={rowIdStr}
-                              isSelected={selectedRowIds.has(rowIdStr)}
-                              visibleCols={visibleCols as IColumnDef<unknown>[]}
-                              columnMeta={columnMeta}
-                              renderCellContent={renderCellContent as GridRowProps['renderCellContent']}
-                              handleSingleRowClick={handleSingleRowClick}
-                              handleRowCheckboxChange={handleRowCheckboxChange}
-                              lastMouseShiftRef={lastMouseShiftRef}
-                              hasCheckboxCol={hasCheckboxCol}
-                              hasRowNumbersCol={hasRowNumbersCol}
-                              rowNumberOffset={rowNumberOffset}
-                              selectionRange={selectionRange}
-                              activeCell={interaction.activeCell}
-                              cutRange={cutRange}
-                              copyRange={copyRange}
-                              isDragging={isDragging}
-                              editingRowId={editingCell?.rowId ?? null}
-                            />
-                          );
-                        })
-                      : items.map((item, rowIndex) => {
-                          const rowIdStr = getRowId(item);
-                          return (
-                            <GridRow
-                              key={rowIdStr}
-                              item={item}
-                              rowIndex={rowIndex}
-                              rowId={rowIdStr}
-                              isSelected={selectedRowIds.has(rowIdStr)}
-                              visibleCols={visibleCols as IColumnDef<unknown>[]}
-                              columnMeta={columnMeta}
-                              renderCellContent={renderCellContent as GridRowProps['renderCellContent']}
-                              handleSingleRowClick={handleSingleRowClick}
-                              handleRowCheckboxChange={handleRowCheckboxChange}
-                              lastMouseShiftRef={lastMouseShiftRef}
-                              hasCheckboxCol={hasCheckboxCol}
-                              hasRowNumbersCol={hasRowNumbersCol}
-                              rowNumberOffset={rowNumberOffset}
-                              selectionRange={selectionRange}
-                              activeCell={interaction.activeCell}
-                              cutRange={cutRange}
-                              copyRange={copyRange}
-                              isDragging={isDragging}
-                              editingRowId={editingCell?.rowId ?? null}
-                            />
-                          );
-                        })
-                    )}
-                    {virtualScrollEnabled && visibleRange.offsetBottom > 0 && (
-                      <tr style={{ height: visibleRange.offsetBottom }} aria-hidden />
-                    )}
-                  </tbody>
+                  <RadixTableBody
+                    virtualScrollEnabled={virtualScrollEnabled}
+                    visibleRange={visibleRange}
+                    columnRange={columnRange}
+                    items={items}
+                    getRowId={getRowId}
+                    selectedRowIds={selectedRowIds}
+                    visibleCols={visibleCols}
+                    columnMeta={columnMeta}
+                    renderCellContent={renderCellContent}
+                    handleSingleRowClick={handleSingleRowClick}
+                    handleRowCheckboxChange={handleRowCheckboxChange}
+                    lastMouseShiftRef={lastMouseShiftRef}
+                    hasCheckboxCol={hasCheckboxCol}
+                    hasRowNumbersCol={hasRowNumbersCol}
+                    rowNumberOffset={rowNumberOffset}
+                    selectionRange={selectionRange}
+                    activeCell={interaction.activeCell}
+                    cutRange={cutRange}
+                    copyRange={copyRange}
+                    isDragging={isDragging}
+                    editingCell={editingCell}
+                    pinnedColumns={pinning.pinnedColumns}
+                  />
                 )}
               </table>
               {isReorderDragging && dropIndicatorX != null && (

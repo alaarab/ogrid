@@ -141,6 +141,7 @@ export function useOGrid<T>(
     virtualScroll,
     rowHeight,
     density = 'normal',
+    workerSort,
     'aria-label': ariaLabel,
     'aria-labelledby': ariaLabelledBy,
   } = props;
@@ -220,6 +221,7 @@ export function useOGrid<T>(
     page: paginationState.page,
     pageSize: paginationState.pageSize,
     onError, onFirstDataRendered,
+    workerSort,
   });
 
   // Validate row IDs once on first data render
@@ -297,7 +299,13 @@ export function useOGrid<T>(
 
   // --- Column resize & pin ---
   const [columnWidthOverrides, setColumnWidthOverrides] = useState<Record<string, number>>({});
-  const [pinnedOverrides, setPinnedOverrides] = useState<Record<string, 'left' | 'right'>>({});
+  const [pinnedOverrides, setPinnedOverrides] = useState<Record<string, 'left' | 'right'>>(() => {
+    const initial: Record<string, 'left' | 'right'> = {};
+    for (const col of flattenColumns(columnsProp)) {
+      if (col.pinned) initial[col.columnId] = col.pinned;
+    }
+    return initial;
+  });
 
   const handleColumnResized = useCallback(
     (columnId: string, width: number) => {

@@ -131,8 +131,19 @@ export {
   computeVisibleRange,
   computeTotalHeight,
   getScrollTopForRow,
+  computeVisibleColumnRange,
+  partitionColumnsForVirtualization,
 } from './utils';
-export type { IVisibleRange } from './utils';
+export type { IVisibleRange, IVisibleColumnRange } from './utils';
+
+// Utils — workerSortFilter
+export {
+  createSortFilterWorker,
+  terminateSortFilterWorker,
+  extractValueMatrix,
+  processClientSideDataAsync,
+} from './utils';
+export type { SortFilterRequest, SortFilterResponse } from './utils';
 
 // Utils — dataGridViewModel
 export {
