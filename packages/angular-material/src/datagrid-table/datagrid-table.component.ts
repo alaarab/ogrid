@@ -143,7 +143,7 @@ import { PopoverCellEditorComponent } from './popover-cell-editor.component';
                                 [handlers]="getColumnMenuHandlersMemoized(col.columnId)"
                               />
                             </div>
-                            <div class="ogrid-datagrid-resize-handle" (mousedown)="onResizeStart($event, col)"></div>
+                            <div class="ogrid-datagrid-resize-handle" (mousedown)="onResizeStart($event, col)" (dblclick)="onResizeDoubleClick($event, col)"></div>
                           </th>
                         }
                       }
