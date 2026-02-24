@@ -8,7 +8,8 @@
 
 /* === PrimeVue-specific overrides === */
 
-/* Override PrimeVue Popover default content padding */
-.p-popover-content {
-  padding: 0 !important;
+/* Override PrimeVue Popover default content padding.
+   Double-class (0,2,0) beats PrimeVue's single-class (0,1,0) default. */
+.p-popover-content.p-popover-content {
+  padding: 0;
 }

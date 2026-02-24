@@ -248,8 +248,8 @@ export function createDataGridTableTests(DataGridTable: React.ComponentType<IOGr
     const { container } = renderTable({ suppressHorizontalScroll: true });
     const region = container.querySelector('[role="region"]');
     expect(region).toBeTruthy();
-    // suppressHorizontalScroll sets data-overflow-x="false" (CSS handles hiding)
-    expect(region?.getAttribute('data-overflow-x')).toBe('false');
+    // suppressHorizontalScroll sets data-suppress-scroll="true" (CSS handles hiding)
+    expect(region?.getAttribute('data-suppress-scroll')).toBe('true');
   });
 
   it('renders status bar when statusBar is true', () => {
@@ -295,5 +295,147 @@ export function createDataGridTableTests(DataGridTable: React.ComponentType<IOGr
     const { container } = renderTable({ stickyHeader: false });
     const thead = container.querySelector('thead');
     expect(thead).toBeTruthy();
+  });
+
+  it('sorted column header has aria-sort="ascending" when sortDirection is asc', () => {
+    const { container } = renderTable({ sortBy: 'name', sortDirection: 'asc' });
+    const sortedTh = container.querySelector('th[aria-sort="ascending"]');
+    expect(sortedTh).toBeInTheDocument();
+  });
+
+  it('sorted column header has aria-sort="descending" when sortDirection is desc', () => {
+    const { container } = renderTable({ sortBy: 'name', sortDirection: 'desc' });
+    const sortedTh = container.querySelector('th[aria-sort="descending"]');
+    expect(sortedTh).toBeInTheDocument();
+  });
+
+  it('unsorted columns do not have aria-sort attribute', () => {
+    const { container } = renderTable({ sortBy: 'name', sortDirection: 'asc' });
+    // status column is not sorted, should have no aria-sort
+    const statusTh = container.querySelector('th[data-column-id="status"]');
+    expect(statusTh).toBeInTheDocument();
+    expect(statusTh?.getAttribute('aria-sort')).toBeNull();
+  });
+
+  it('changing sort column updates aria-sort attributes', () => {
+    const { container, rerender } = renderTable({ sortBy: 'name', sortDirection: 'asc' });
+    expect(container.querySelector('th[aria-sort="ascending"]')).toBeInTheDocument();
+    rerender(
+      <DataGridTable
+        items={fixtureRows.slice(0, 2)}
+        columns={twoColumnColumns}
+        getRowId={getRowId}
+        sortBy="status"
+        sortDirection="desc"
+        onColumnSort={jest.fn()}
+        visibleColumns={new Set(['name', 'status'])}
+        filters={{}}
+        onFilterChange={jest.fn()}
+        filterOptions={{ status: ['Active', 'Closed'] }}
+        loadingFilterOptions={{}}
+      />
+    );
+    expect(container.querySelector('th[aria-sort="descending"]')).toBeInTheDocument();
+    const nameTh = container.querySelector('th[data-column-id="name"]');
+    expect(nameTh?.getAttribute('aria-sort')).toBeNull();
+  });
+
+  it('onKeyDown callback receives keyboard events from the grid', () => {
+    const onKeyDown = jest.fn();
+    const { container } = renderTable({ onKeyDown });
+    const grid = container.querySelector('[role="region"]') as HTMLElement;
+    expect(grid).toBeTruthy();
+    grid.focus();
+    fireEvent.keyDown(grid, { key: 'ArrowDown' });
+    expect(onKeyDown).toHaveBeenCalled();
+    const event = onKeyDown.mock.calls[0][0] as React.KeyboardEvent;
+    expect(event.key).toBe('ArrowDown');
+  });
+
+  it('onKeyDown calling event.preventDefault() suppresses grid default handling', async () => {
+    const onKeyDown = jest.fn((e: React.KeyboardEvent) => { e.preventDefault(); });
+    const { container } = renderTable({ onKeyDown, cellSelection: true });
+    const grid = container.querySelector('[role="region"]') as HTMLElement;
+    grid.focus();
+
+    // Click a cell to establish selection
+    const cells = container.querySelectorAll('[data-row-index][data-col-index]') as NodeListOf<HTMLElement>;
+    const firstCell = Array.from(cells).find(
+      (el) => !(el.closest('[role="columnheader"]') ?? el.closest('thead'))
+    );
+    if (firstCell) fireEvent.mouseDown(firstCell);
+
+    const inRangeBefore = container.querySelectorAll('[data-in-range="true"]').length;
+    // ArrowDown with preventDefault should not move selection
+    fireEvent.keyDown(grid, { key: 'ArrowDown' });
+    const inRangeAfter = container.querySelectorAll('[data-in-range="true"]').length;
+
+    expect(onKeyDown).toHaveBeenCalled();
+    expect(inRangeAfter).toBe(inRangeBefore);
+  });
+
+  it('onKeyDown not calling preventDefault allows grid to handle Escape normally', async () => {
+    const onKeyDown = jest.fn(); // does NOT call preventDefault
+    const { container } = renderTable({ onKeyDown, cellSelection: true });
+    const grid = container.querySelector('[role="region"]') as HTMLElement;
+    grid.focus();
+
+    // Select a cell
+    const cells = container.querySelectorAll('[data-row-index][data-col-index]') as NodeListOf<HTMLElement>;
+    const firstCell = Array.from(cells).find(
+      (el) => !(el.closest('[role="columnheader"]') ?? el.closest('thead'))
+    );
+    if (firstCell) fireEvent.mouseDown(firstCell);
+
+    await waitFor(() => {
+      expect(container.querySelector('[data-in-range="true"]')).toBeInTheDocument();
+    });
+
+    fireEvent.keyDown(grid, { key: 'Escape' });
+    expect(onKeyDown).toHaveBeenCalled();
+    // Grid default runs: Escape clears selection
+    await waitFor(() => {
+      expect(container.querySelectorAll('[data-in-range="true"]').length).toBe(0);
+    });
+  });
+
+  describe('virtualScroll threshold', () => {
+    const manyRows = Array.from({ length: 60 }, (_, i) => ({
+      id: String(i + 1),
+      name: `Row ${i + 1}`,
+      status: i % 2 === 0 ? 'Active' : 'Closed',
+    }));
+
+    it('activates virtualization when item count exceeds threshold', () => {
+      // 60 items, threshold=50 → should virtualize (render fewer rows than total)
+      const { container } = renderTable({
+        items: manyRows,
+        virtualScroll: { enabled: true, rowHeight: 40, threshold: 50 },
+        visibleColumns: new Set(['name', 'status']),
+      });
+      const cells = container.querySelectorAll('[data-testid="cell-name"]');
+      expect(cells.length).toBeLessThan(manyRows.length);
+    });
+
+    it('does not virtualize when item count is below threshold', () => {
+      // 60 items, threshold=100 → should NOT virtualize (all rows rendered)
+      const { container } = renderTable({
+        items: manyRows,
+        virtualScroll: { enabled: true, rowHeight: 40, threshold: 100 },
+        visibleColumns: new Set(['name', 'status']),
+      });
+      const cells = container.querySelectorAll('[data-testid="cell-name"]');
+      expect(cells.length).toBe(manyRows.length);
+    });
+
+    it('accepts virtualScroll config with threshold without error', () => {
+      expect(() => {
+        renderTable({
+          items: manyRows.slice(0, 5),
+          virtualScroll: { enabled: true, rowHeight: 40, threshold: 50 },
+          visibleColumns: new Set(['name', 'status']),
+        });
+      }).not.toThrow();
+    });
   });
 }

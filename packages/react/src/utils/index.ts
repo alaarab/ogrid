@@ -78,6 +78,7 @@ export {
   buildPopoverEditorProps,
   getCellInteractionProps,
 } from './dataGridViewModel';
+export { CellDescriptorCache } from '@alaarab/ogrid-core';
 export type {
   HeaderFilterConfigInput,
   HeaderFilterConfig,

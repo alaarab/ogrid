@@ -1,5 +1,5 @@
 import type { IVirtualScrollConfig, IVisibleRange } from '@alaarab/ogrid-core';
-import { computeVisibleRange, computeTotalHeight, getScrollTopForRow } from '@alaarab/ogrid-core';
+import { computeVisibleRange, computeTotalHeight, getScrollTopForRow, validateVirtualScrollConfig } from '@alaarab/ogrid-core';
 import { EventEmitter } from './EventEmitter';
 
 interface VirtualScrollEvents extends Record<string, unknown> {
@@ -9,6 +9,12 @@ interface VirtualScrollEvents extends Record<string, unknown> {
 
 const DEFAULT_ROW_HEIGHT = 36;
 const DEFAULT_OVERSCAN = 5;
+/**
+ * Default minimum row count before virtual scrolling activates.
+ * Grids with fewer rows than this render all rows without virtualization
+ * to avoid scroll offset artifacts on small datasets.
+ */
+const DEFAULT_PASSTHROUGH_THRESHOLD = 100;
 
 /**
  * Manages virtual scrolling state for the vanilla JS grid.
@@ -27,11 +33,13 @@ export class VirtualScrollState {
 
   constructor(config?: IVirtualScrollConfig) {
     this._config = config ?? { enabled: false };
+    validateVirtualScrollConfig(this._config);
   }
 
-  /** Whether virtual scrolling is active. */
+  /** Whether virtual scrolling is active (enabled + meets the row threshold). */
   get enabled(): boolean {
-    return this._config.enabled === true && this._totalRows > 0;
+    const threshold = this._config.threshold ?? DEFAULT_PASSTHROUGH_THRESHOLD;
+    return this._config.enabled === true && this._totalRows >= threshold;
   }
 
   get config(): IVirtualScrollConfig {
@@ -87,6 +95,7 @@ export class VirtualScrollState {
 
   /** Update the virtual scroll configuration. */
   updateConfig(config: IVirtualScrollConfig): void {
+    validateVirtualScrollConfig(config);
     this._config = config;
     this.recompute();
     this.emitter.emit('configChanged', { config });

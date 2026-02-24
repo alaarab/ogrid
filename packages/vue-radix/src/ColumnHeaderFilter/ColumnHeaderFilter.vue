@@ -65,6 +65,8 @@ const setPopoverRefEl = (el: any) => { popoverRef.value = el as HTMLDivElement; 
         ]"
         @click="handlers.handleFilterIconClick"
         :aria-label="`Filter ${columnName}`"
+        :aria-expanded="isFilterOpen"
+        aria-haspopup="dialog"
         :title="`Filter ${columnName}`"
       >
         <span aria-hidden>▼</span>

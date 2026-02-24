@@ -47,6 +47,8 @@ export interface UseKeyboardNavigationParams<T> {
     rowSelection: Ref<RowSelectionMode>;
     wrapperRef: MaybeShallowRef<HTMLElement | null>;
     scrollToRow?: (index: number, align?: 'start' | 'center' | 'end') => void;
+    fillDown?: () => void;
+    onKeyDown?: Ref<((event: KeyboardEvent) => void) | undefined>;
   };
 }
 
@@ -81,6 +83,14 @@ export function useKeyboardNavigation<T>(
     const rowSelection = features.rowSelection.value;
     const wrapperRef = features.wrapperRef;
     const scrollToRow = features.scrollToRow;
+    const { fillDown } = features;
+    const onKeyDown = features.onKeyDown?.value;
+
+    // Consumer intercept: call consumer's handler first; skip grid default if preventDefault() was called
+    if (onKeyDown) {
+      onKeyDown(e);
+      if (e.defaultPrevented) return;
+    }
 
     const maxRowIndex = items.length - 1;
     const maxColIndex = visibleColumnCount - 1 + colOffset;
@@ -124,6 +134,15 @@ export function useKeyboardNavigation<T>(
           if (editingCell != null) break;
           e.preventDefault();
           void handlePaste();
+        }
+        break;
+      case 'd':
+        if (e.ctrlKey || e.metaKey) {
+          if (editingCell != null) break;
+          if (editable !== false && fillDown) {
+            e.preventDefault();
+            fillDown();
+          }
         }
         break;
       case 'ArrowDown':
