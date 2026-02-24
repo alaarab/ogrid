@@ -59,13 +59,24 @@ export function processClientSideData<T>(
         const trimmed = val.value.trim();
         if (trimmed) {
           const lower = trimmed.toLowerCase();
-          predicates.push((r) => String(getCellValue(r, col) ?? '').toLowerCase().includes(lower));
+          // Schwartzian transform: pre-compute lowercase strings to avoid
+          // O(n) String() + toLowerCase() inside every filter predicate call.
+          const textCache = new Map<T, string>();
+          for (let j = 0; j < data.length; j++) {
+            textCache.set(data[j], String(getCellValue(data[j], col) ?? '').toLowerCase());
+          }
+          predicates.push((r) => (textCache.get(r) ?? '').includes(lower));
         }
         break;
       }
       case 'people': {
         const email = val.value.email.toLowerCase();
-        predicates.push((r) => String(getCellValue(r, col) ?? '').toLowerCase() === email);
+        // Pre-compute lowercase strings for people filter
+        const peopleCache = new Map<T, string>();
+        for (let j = 0; j < data.length; j++) {
+          peopleCache.set(data[j], String(getCellValue(data[j], col) ?? '').toLowerCase());
+        }
+        predicates.push((r) => (peopleCache.get(r) ?? '') === email);
         break;
       }
       case 'date': {
@@ -73,10 +84,19 @@ export function processClientSideData<T>(
         // Pre-compute filter boundary timestamps to avoid repeated Date parsing in the filter loop
         const fromTs = dv.from ? new Date(dv.from + 'T00:00:00').getTime() : NaN;
         const toTs = dv.to ? new Date(dv.to + 'T23:59:59.999').getTime() : NaN;
+        // Pre-compute cell timestamps (same pattern as sort) to avoid N Date allocations
+        const dateCache = new Map<T, number>();
+        for (let j = 0; j < data.length; j++) {
+          const cellVal = getCellValue(data[j], col);
+          if (cellVal == null) {
+            dateCache.set(data[j], NaN);
+          } else {
+            const t = new Date(String(cellVal)).getTime();
+            dateCache.set(data[j], Number.isNaN(t) ? NaN : t);
+          }
+        }
         predicates.push((r) => {
-          const cellVal = getCellValue(r, col);
-          if (cellVal == null) return false;
-          const cellTs = new Date(String(cellVal)).getTime();
+          const cellTs = dateCache.get(r) ?? NaN;
           if (Number.isNaN(cellTs)) return false;
           if (!Number.isNaN(fromTs) && cellTs < fromTs) return false;
           if (!Number.isNaN(toTs) && cellTs > toTs) return false;

@@ -122,14 +122,20 @@ const config: Config = {
           ],
         },
         {
-          title: 'Packages',
+          title: 'React',
           items: [
-            { label: '@alaarab/ogrid-core', href: 'https://npmjs.com/package/@alaarab/ogrid-core' },
-            { label: '@alaarab/ogrid-react', href: 'https://npmjs.com/package/@alaarab/ogrid-react' },
-            { label: '@alaarab/ogrid-react-radix', href: 'https://npmjs.com/package/@alaarab/ogrid-react-radix' },
-            { label: '@alaarab/ogrid-react-fluent', href: 'https://npmjs.com/package/@alaarab/ogrid-react-fluent' },
-            { label: '@alaarab/ogrid-react-material', href: 'https://npmjs.com/package/@alaarab/ogrid-react-material' },
-            { label: '@alaarab/ogrid-js', href: 'https://npmjs.com/package/@alaarab/ogrid-js' },
+            { label: 'Radix UI (default)', href: 'https://npmjs.com/package/@alaarab/ogrid-react-radix' },
+            { label: 'Fluent UI', href: 'https://npmjs.com/package/@alaarab/ogrid-react-fluent' },
+            { label: 'Material UI', href: 'https://npmjs.com/package/@alaarab/ogrid-react-material' },
+          ],
+        },
+        {
+          title: 'Angular / Vue / JS',
+          items: [
+            { label: 'Angular Material', href: 'https://npmjs.com/package/@alaarab/ogrid-angular-material' },
+            { label: 'Vue Vuetify', href: 'https://npmjs.com/package/@alaarab/ogrid-vue-vuetify' },
+            { label: 'Vanilla JS', href: 'https://npmjs.com/package/@alaarab/ogrid-js' },
+            { label: 'All 14 packages', href: 'https://www.npmjs.com/search?q=%40alaarab%2Fogrid' },
           ],
         },
         {

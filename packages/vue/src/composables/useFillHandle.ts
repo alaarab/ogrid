@@ -204,7 +204,7 @@ export function useFillHandle<T>(params: UseFillHandleParams<T>): UseFillHandleR
       }
 
       setSelectionRange(norm);
-      setActiveCell({ rowIndex: end.endRow, columnIndex: end.endCol + getColOffset() });
+      setActiveCell({ rowIndex: drag.startRow, columnIndex: drag.startCol + getColOffset() });
 
       const currentItems = items.value;
       const currentCols = visibleCols.value;

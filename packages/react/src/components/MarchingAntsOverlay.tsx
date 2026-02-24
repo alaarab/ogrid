@@ -120,8 +120,13 @@ export function MarchingAntsOverlay({
 
   return (
     <>
-      {/* Selection range: solid green border (hidden during drag or when clipboard range overlaps) */}
-      {selR && !isDragging && !clipRangeMatchesSel && (
+      {/* Selection range: solid green border (hidden during drag, when clipboard range overlaps,
+          or when it's a single-cell selection — the CSS activeCellContent outline handles that) */}
+      {selR && !isDragging && !clipRangeMatchesSel && !(
+        selectionRange &&
+        selectionRange.startRow === selectionRange.endRow &&
+        selectionRange.startCol === selectionRange.endCol
+      ) && (
         <svg
           style={{
             position: 'absolute',

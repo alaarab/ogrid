@@ -55,8 +55,7 @@ export function useUndoRedo<T>(
       }
       onCellValueChangedRef.current(event);
     },
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [getStack]
+    [getStack, onCellValueChangedRef]
   );
 
   const beginBatch = useCallback(() => {
@@ -85,8 +84,7 @@ export function useUndoRedo<T>(
         newValue: ev.oldValue,
       });
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [getStack]);
+  }, [getStack, onCellValueChangedRef]);
 
   const redo = useCallback(() => {
     if (!onCellValueChangedRef.current) return;
@@ -98,8 +96,7 @@ export function useUndoRedo<T>(
     for (const ev of nextBatch) {
       onCellValueChangedRef.current(ev);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [getStack]);
+  }, [getStack, onCellValueChangedRef]);
 
   return {
     onCellValueChanged: onCellValueChanged ? wrapped : undefined,

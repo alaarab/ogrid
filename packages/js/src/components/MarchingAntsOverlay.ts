@@ -99,7 +99,12 @@ export class MarchingAntsOverlay {
       clipRange != null &&
       rangesEqual(this.selectionRange, clipRange);
 
-    if (selRect && !clipRangeMatchesSel) {
+    // Skip SVG for single-cell selections — CSS outline handles the active cell border
+    const isSingleCell = this.selectionRange != null &&
+      this.selectionRange.startRow === this.selectionRange.endRow &&
+      this.selectionRange.startCol === this.selectionRange.endCol;
+
+    if (selRect && !clipRangeMatchesSel && !isSingleCell) {
       if (!this.selSvg) {
         this.selSvg = this.createSvg(4);
         this.container.appendChild(this.selSvg);

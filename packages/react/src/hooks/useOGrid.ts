@@ -150,28 +150,28 @@ export function useOGrid<T>(
   const getRowIdStableRef = useLatestRef(getRowIdProp);
   const getRowId = useCallback((item: T) => getRowIdStableRef.current(item), [getRowIdStableRef]) as typeof getRowIdProp;
   const onColumnOrderChangeRef = useLatestRef(onColumnOrderChangeProp);
+  const hasColumnOrderChange = onColumnOrderChangeProp != null;
   const onColumnOrderChange = useMemo(
-    () => onColumnOrderChangeProp ? (order: string[]) => onColumnOrderChangeRef.current?.(order) : undefined,
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [!!onColumnOrderChangeProp]
+    () => hasColumnOrderChange ? (order: string[]) => onColumnOrderChangeRef.current?.(order) : undefined,
+    [hasColumnOrderChange, onColumnOrderChangeRef]
   );
   const onCellValueChangedRef = useLatestRef(onCellValueChangedProp);
+  const hasCellValueChanged = onCellValueChangedProp != null;
   const onCellValueChanged = useMemo(
-    () => onCellValueChangedProp ? (event: import('../types').ICellValueChangedEvent<T>) => onCellValueChangedRef.current?.(event) : undefined,
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [!!onCellValueChangedProp]
+    () => hasCellValueChanged ? (event: import('../types').ICellValueChangedEvent<T>) => onCellValueChangedRef.current?.(event) : undefined,
+    [hasCellValueChanged, onCellValueChangedRef]
   );
   const onUndoRef = useLatestRef(onUndoProp);
+  const hasUndo = onUndoProp != null;
   const onUndo = useMemo(
-    () => onUndoProp ? () => onUndoRef.current?.() : undefined,
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [!!onUndoProp]
+    () => hasUndo ? () => onUndoRef.current?.() : undefined,
+    [hasUndo, onUndoRef]
   );
   const onRedoRef = useLatestRef(onRedoProp);
+  const hasRedo = onRedoProp != null;
   const onRedo = useMemo(
-    () => onRedoProp ? () => onRedoRef.current?.() : undefined,
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [!!onRedoProp]
+    () => hasRedo ? () => onRedoRef.current?.() : undefined,
+    [hasRedo, onRedoRef]
   );
 
   // --- Derived column state ---
@@ -187,8 +187,7 @@ export function useOGrid<T>(
   const rowIdsValidatedRef = useRef(false);
   useEffect(() => {
     validateColumns(columns as Parameters<typeof validateColumns>[0]);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []); // intentionally empty — run once at mount
+  }, [columns]);
   const defaultSortField = defaultSortBy ?? columns[0]?.columnId ?? '';
 
   // --- Internal data state (for imperative setRowData/setLoading API) ---

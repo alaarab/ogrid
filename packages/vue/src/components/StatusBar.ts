@@ -45,6 +45,9 @@ export const StatusBar = defineComponent({
           alignItems: 'center',
           gap: '16px',
           fontSize: '0.875rem',
+          lineHeight: '20px',
+          minHeight: '33px',
+          boxSizing: 'border-box',
         },
       }, parts.map((p, i) =>
         h('span', {
