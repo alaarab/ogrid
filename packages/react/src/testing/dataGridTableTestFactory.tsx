@@ -248,8 +248,8 @@ export function createDataGridTableTests(DataGridTable: React.ComponentType<IOGr
     const { container } = renderTable({ suppressHorizontalScroll: true });
     const region = container.querySelector('[role="region"]');
     expect(region).toBeTruthy();
-    // suppressHorizontalScroll sets data-suppress-scroll="true" (CSS handles hiding)
-    expect(region?.getAttribute('data-suppress-scroll')).toBe('true');
+    // suppressHorizontalScroll sets data-overflow-x="false" (CSS handles hiding)
+    expect(region?.getAttribute('data-overflow-x')).toBe('false');
   });
 
   it('renders status bar when statusBar is true', () => {

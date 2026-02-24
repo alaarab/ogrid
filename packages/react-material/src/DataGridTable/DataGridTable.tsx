@@ -311,12 +311,12 @@ function DataGridTableInner<T>(props: IOGridDataGridProps<T>): React.ReactElemen
     items, getRowId, emptyState,
     suppressHorizontalScroll, isLoading, loadingMessage,
     ariaLabel, ariaLabelledBy, columnReorder, density, rowHeight,
-    rowNumberOffset, headerRows, allowOverflowX: _allowOverflowX, fitToContent,
+    rowNumberOffset, headerRows, allowOverflowX, fitToContent,
     editCallbacks, interactionHandlers,
     cellDescriptorInputRef, cellDescriptorCacheRef, pendingEditorValueRef, popoverAnchorElRef,
     handleSingleRowClick, handlePasteVoid,
     visibleCols, hasCheckboxCol, hasRowNumbersCol, colOffset,
-    minTableWidth: _minTableWidth, columnSizingOverrides, measuredColumnWidths,
+    minTableWidth, columnSizingOverrides, measuredColumnWidths,
     selectedRowIds, handleRowCheckboxChange, handleSelectAll, allSelected, someSelected,
     editingCell, setPopoverAnchorEl, cancelPopoverEdit,
     setActiveCell, selectionRange, hasCellSelection, handleGridKeyDown, handleFillHandleMouseDown,
@@ -376,11 +376,11 @@ function DataGridTableInner<T>(props: IOGridDataGridProps<T>): React.ReactElemen
     minHeight: isLoading && items.length === 0 ? 200 : 0,
     width: fitToContent ? 'fit-content' : '100%',
     maxWidth: '100%',
-    overflowX: suppressHorizontalScroll ? 'hidden' as const : 'auto' as const,
+    overflowX: suppressHorizontalScroll ? 'hidden' as const : allowOverflowX ? 'auto' as const : 'hidden' as const,
     overflowY: 'auto' as const,
     bgcolor: 'background.paper',
     willChange: 'scroll-position',
-  }), [fitToContent, suppressHorizontalScroll, isLoading, items.length]);
+  }), [fitToContent, suppressHorizontalScroll, allowOverflowX, isLoading, items.length]);
 
   // Density padding for native cell content (avoids Emotion)
   const cellDensityStyle = DENSITY_CELL_STYLES[density] ?? DENSITY_CELL_STYLES.normal;
@@ -468,14 +468,14 @@ function DataGridTableInner<T>(props: IOGridDataGridProps<T>): React.ReactElemen
         onKeyDown={handleGridKeyDown}
         onContextMenu={PREVENT_DEFAULT}
         data-density={density}
-        data-suppress-scroll={o.suppressHorizontalScroll ? 'true' : undefined}
+        data-overflow-x={allowOverflowX ? 'true' : 'false'}
         className="ogrid-mat-wrapper"
         sx={wrapperSx}
       >
       <Box sx={WRAPPER_SCROLL_SX}>
-      <div style={{ minWidth: '100%' }}>
-        <Box ref={tableContainerRef} sx={isLoading && items.length > 0 ? TABLE_WRAPPER_LOADING_SX : TABLE_WRAPPER_SX} style={{ width: 'max-content', minWidth: '100%', overflow: 'clip' }}>
-          <Table size="small" role="grid" sx={{ minWidth: 'max-content', width: '100%', borderCollapse: 'separate', borderSpacing: 0 }}
+      <div style={{ minWidth: allowOverflowX ? minTableWidth : undefined }}>
+        <Box ref={tableContainerRef} sx={isLoading && items.length > 0 ? TABLE_WRAPPER_LOADING_SX : TABLE_WRAPPER_SX}>
+          <Table size="small" role="grid" sx={{ minWidth: minTableWidth, borderCollapse: 'separate', borderSpacing: 0 }}
           >
             <TableHead sx={STICKY_HEADER_SX}>
               {headerRows.map((row, rowIdx) => (
