@@ -262,6 +262,8 @@ export class OGridRendering<T> {
         onContextMenu: (x, y) => this.ctx.showContextMenu(x, y),
         onStartEdit: (rowId, columnId) => this.ctx.startCellEdit(rowId, columnId),
         clearClipboardRanges: () => clipboardState?.clearClipboardRanges(),
+        onKeyDown: options.onKeyDown,
+        onFillDown: fillHandleState ? () => fillHandleState.fillDown() : undefined,
       });
 
       clipboardState.updateParams({
@@ -302,6 +304,14 @@ export class OGridRendering<T> {
   renderHeaderFilterPopover(): void {
     const { headerFilterState, headerFilterComponent, filterConfigs } = this.ctx;
     const openId = headerFilterState.openColumnId;
+
+    // Sync aria-expanded on all filter buttons
+    const allBtns = this.ctx.tableContainer.querySelectorAll<HTMLElement>('.ogrid-filter-icon[aria-haspopup]');
+    for (const btn of allBtns) {
+      const colId = btn.closest('th[data-column-id]')?.getAttribute('data-column-id');
+      btn.setAttribute('aria-expanded', colId === openId ? 'true' : 'false');
+    }
+
     if (!openId) {
       headerFilterComponent.cleanup();
       return;

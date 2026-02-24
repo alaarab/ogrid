@@ -37,7 +37,6 @@ import { PopoverCellEditorComponent } from './popover-cell-editor.component';
         #wrapperEl
         class="ogrid-datagrid-wrapper"
         [class.ogrid-datagrid-wrapper--fit]="layoutModeFit()"
-        [class.ogrid-datagrid-wrapper--overflow-x]="allowOverflowX()"
         [class.ogrid-datagrid-wrapper--loading-empty]="isLoading() && items().length === 0"
         [style.--ogrid-row-height]="rowHeightCssVar()"
         tabindex="0"
@@ -48,12 +47,12 @@ import { PopoverCellEditorComponent } from './popover-cell-editor.component';
         (keydown)="onGridKeyDown($event)"
         (scroll)="onWrapperScroll($event)"
         (contextmenu)="$event.preventDefault()"
-        [attr.data-overflow-x]="allowOverflowX() ? 'true' : 'false'"
+        [attr.data-suppress-scroll]="getProps()?.suppressHorizontalScroll ? 'true' : null"
       >
         <div class="ogrid-datagrid-scroll-wrapper">
-          <div [style.minWidth.px]="allowOverflowX() ? minTableWidth() : undefined">
+          <div style="width: max-content; min-width: 100%; overflow: clip">
             <div [class.ogrid-datagrid-table-wrapper--loading]="isLoading() && items().length > 0" #tableContainerElRef>
-              <table class="ogrid-datagrid-table" [style.minWidth.px]="minTableWidth()"
+              <table class="ogrid-datagrid-table" role="grid"
               >
                 <thead [class]="stickyHeader() ? 'ogrid-datagrid-thead ogrid-sticky-header' : 'ogrid-datagrid-thead'">
                   @for (row of headerRows(); track $index; let rowIdx = $index) {
@@ -163,6 +162,7 @@ import { PopoverCellEditorComponent } from './popover-cell-editor.component';
                         class="ogrid-datagrid-row"
                         [class.ogrid-datagrid-row--selected]="isSelected"
                         [attr.data-row-id]="rowId"
+                        [attr.aria-selected]="isSelected || null"
                         (click)="onRowClick($event, rowId)"
                       >
                         @if (hasCheckboxCol()) {
@@ -352,18 +352,18 @@ import { PopoverCellEditorComponent } from './popover-cell-editor.component';
     .ogrid-datagrid-root { position: relative; flex: 1; min-height: 0; display: flex; flex-direction: column; }
     .ogrid-datagrid-wrapper {
       position: relative; flex: 1; min-height: 0; width: 100%; max-width: 100%;
-      overflow-x: hidden; overflow-y: auto; background: var(--ogrid-bg, #ffffff);
+      overflow-x: auto; overflow-y: auto; background: var(--ogrid-bg, #ffffff);
       color: var(--ogrid-fg, rgba(0, 0, 0, 0.87));
       will-change: scroll-position; outline: none;
     }
-    .ogrid-datagrid-wrapper [data-drag-range] { background: var(--ogrid-range-bg, rgba(33, 115, 70, 0.12)) !important; }
+    .ogrid-datagrid-wrapper[data-suppress-scroll='true'] { overflow-x: hidden; }
+    .ogrid-datagrid-wrapper [data-drag-range] { background: var(--ogrid-range-bg, rgba(33, 115, 70, 0.12)); }
     .ogrid-datagrid-wrapper--fit { width: fit-content; }
-    .ogrid-datagrid-wrapper--overflow-x { overflow-x: auto; }
     .ogrid-datagrid-wrapper--loading-empty { min-height: 200px; }
     .ogrid-datagrid-scroll-wrapper { display: flex; flex-direction: column; min-height: 100%; }
     .ogrid-datagrid-table-wrapper--loading { position: relative; opacity: 0.6; }
     .ogrid-datagrid-table {
-      width: 100%; border-collapse: collapse; table-layout: fixed;
+      width: 100%; min-width: max-content; border-collapse: collapse; table-layout: fixed;
     }
     .ogrid-datagrid-table tbody tr { height: var(--ogrid-row-height, auto); }
     .ogrid-datagrid-thead {
@@ -426,7 +426,7 @@ import { PopoverCellEditorComponent } from './popover-cell-editor.component';
     }
     .ogrid-datagrid-cell {
       width: 100%; height: 100%; display: flex; align-items: center; min-width: 0;
-      padding: 6px 10px; box-sizing: border-box; overflow: hidden;
+      padding: var(--ogrid-cell-padding, 6px 10px); box-sizing: border-box; overflow: hidden;
       text-overflow: ellipsis; white-space: nowrap; user-select: none; outline: none;
       font-size: 14px; color: var(--ogrid-fg, rgba(0, 0, 0, 0.87));
     }
@@ -512,19 +512,20 @@ import { PopoverCellEditorComponent } from './popover-cell-editor.component';
       position: fixed; inset: 0; z-index: 1000;
     }
 
-    /* Angular Material Menu popup dark mode overrides */
-    .mat-mdc-menu-panel {
-      background: var(--ogrid-bg, #ffffff) !important;
-      color: var(--ogrid-fg, rgba(0, 0, 0, 0.87)) !important;
+    /* Angular Material Menu popup dark mode overrides.
+       Double-class selector (0,2,0) beats MUI's single-class (0,1,0) defaults. */
+    .mat-mdc-menu-panel.mat-mdc-menu-panel {
+      background: var(--ogrid-bg, #ffffff);
+      color: var(--ogrid-fg, rgba(0, 0, 0, 0.87));
     }
-    .mat-mdc-menu-item {
-      color: var(--ogrid-fg, rgba(0, 0, 0, 0.87)) !important;
+    .mat-mdc-menu-item.mat-mdc-menu-item {
+      color: var(--ogrid-fg, rgba(0, 0, 0, 0.87));
     }
-    .mat-mdc-menu-item:hover:not([disabled]) {
-      background: var(--ogrid-hover-bg, rgba(0, 0, 0, 0.04)) !important;
+    .mat-mdc-menu-item.mat-mdc-menu-item:hover:not([disabled]) {
+      background: var(--ogrid-hover-bg, rgba(0, 0, 0, 0.04));
     }
-    .mat-mdc-menu-item .mat-mdc-menu-item-text {
-      color: var(--ogrid-fg, rgba(0, 0, 0, 0.87)) !important;
+    .mat-mdc-menu-item.mat-mdc-menu-item .mat-mdc-menu-item-text {
+      color: var(--ogrid-fg, rgba(0, 0, 0, 0.87));
     }
   `],
 })

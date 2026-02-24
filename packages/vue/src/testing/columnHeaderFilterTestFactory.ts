@@ -125,4 +125,51 @@ export function createColumnHeaderFilterTests(): void {
     expect(onDateChange).toHaveBeenCalledWith({ from: '2024-01-01', to: '2024-12-31' });
     expect(state.isFilterOpen.value).toBe(false);
   });
+
+  it('aria-expanded: isFilterOpen is false initially (aria-expanded=false)', () => {
+    const state = useColumnHeaderFilterState({
+      filterType: 'text',
+      textValue: '',
+      onTextChange: jest.fn(),
+    });
+    // isFilterOpen drives aria-expanded on the filter button
+    expect(state.isFilterOpen.value).toBe(false);
+  });
+
+  it('aria-expanded: isFilterOpen becomes true when filter is opened', () => {
+    const state = useColumnHeaderFilterState({
+      filterType: 'text',
+      textValue: '',
+      onTextChange: jest.fn(),
+    });
+    state.setFilterOpen(true);
+    expect(state.isFilterOpen.value).toBe(true);
+  });
+
+  it('aria-expanded: isFilterOpen returns to false after filter is closed', () => {
+    const state = useColumnHeaderFilterState({
+      filterType: 'multiSelect',
+      selectedValues: [],
+      onFilterChange: jest.fn(),
+      options: ['Active', 'Closed'],
+    });
+    state.setFilterOpen(true);
+    expect(state.isFilterOpen.value).toBe(true);
+
+    state.setFilterOpen(false);
+    expect(state.isFilterOpen.value).toBe(false);
+  });
+
+  it('aria-expanded: applying filter closes popover (aria-expanded returns to false)', () => {
+    const state = useColumnHeaderFilterState({
+      filterType: 'text',
+      textValue: '',
+      onTextChange: jest.fn(),
+    });
+    state.setFilterOpen(true);
+    expect(state.isFilterOpen.value).toBe(true);
+
+    state.handlers.handleTextApply();
+    expect(state.isFilterOpen.value).toBe(false);
+  });
 }

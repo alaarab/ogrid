@@ -129,6 +129,8 @@ export const ColumnHeaderFilter: React.FC<IColumnHeaderFilterProps> = React.memo
               className={`${styles.filterIcon} ${hasActiveFilter ? styles.filterActive : ''} ${isFilterOpen ? styles.filterOpen : ''}`}
               onClick={handlers.handleFilterIconClick}
               aria-label={`Filter ${columnName}`}
+              aria-expanded={isFilterOpen}
+              aria-haspopup="dialog"
               title={`Filter ${columnName}`}
             >
               <FilterRegular />

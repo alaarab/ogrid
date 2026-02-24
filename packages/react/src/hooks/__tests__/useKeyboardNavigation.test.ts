@@ -349,3 +349,225 @@ describe('useKeyboardNavigation', () => {
     });
   });
 });
+
+// ---------------------------------------------------------------------------
+// onKeyDown intercept
+// ---------------------------------------------------------------------------
+
+describe('useKeyboardNavigation — onKeyDown intercept prop', () => {
+  const items = [{ id: '1', name: 'A' }, { id: '2', name: 'B' }];
+  const visibleCols = [{ columnId: 'name', name: 'Name' }] as import('../../types').IColumnDef<{ id: string; name: string }>[];
+  const wrapperRef = { current: document.createElement('div') };
+
+  function makeInterceptParams(overrides: Record<string, unknown> = {}) {
+    return {
+      data: {
+        items,
+        visibleCols,
+        colOffset: 0,
+        hasCheckboxCol: false,
+        visibleColumnCount: 1,
+        getRowId: (item: { id: string }) => item.id,
+      },
+      state: {
+        activeCell: { rowIndex: 0, columnIndex: 0 },
+        selectionRange: null,
+        editingCell: null,
+        selectedRowIds: new Set<string>(),
+      },
+      handlers: {
+        setActiveCell: jest.fn(),
+        setSelectionRange: jest.fn(),
+        setEditingCell: jest.fn(),
+        handleRowCheckboxChange: jest.fn(),
+        handleCopy: jest.fn(),
+        handleCut: jest.fn(),
+        handlePaste: jest.fn().mockResolvedValue(undefined),
+        setContextMenu: jest.fn(),
+      },
+      features: {
+        editable: false,
+        onCellValueChanged: undefined,
+        rowSelection: 'none' as const,
+        wrapperRef,
+        ...overrides,
+      },
+    };
+  }
+
+  function makeEvent(key: string, opts: { cancelable?: boolean; ctrlKey?: boolean } = {}): React.KeyboardEvent {
+    return {
+      key,
+      preventDefault: jest.fn(),
+      defaultPrevented: false,
+      ctrlKey: opts.ctrlKey ?? false,
+      metaKey: false,
+      shiftKey: false,
+      ...(opts.cancelable !== undefined ? { cancelable: opts.cancelable } : {}),
+    } as unknown as React.KeyboardEvent;
+  }
+
+  it('calls onKeyDown prop before handling the event', () => {
+    const onKeyDown = jest.fn();
+    const params = makeInterceptParams({ onKeyDown });
+    const { result } = renderHook(() => useKeyboardNavigation(params));
+
+    const e = makeEvent('ArrowDown');
+    act(() => { result.current.handleGridKeyDown(e); });
+
+    expect(onKeyDown).toHaveBeenCalledTimes(1);
+    expect(onKeyDown).toHaveBeenCalledWith(e);
+  });
+
+  it('does NOT call grid default handler when onKeyDown calls preventDefault()', () => {
+    const setActiveCell = jest.fn();
+    // onKeyDown calls preventDefault which sets defaultPrevented=true on the real event object
+    const onKeyDown = (e: React.KeyboardEvent) => { e.preventDefault(); };
+
+    const params = {
+      data: {
+        items,
+        visibleCols,
+        colOffset: 0,
+        hasCheckboxCol: false,
+        visibleColumnCount: 1,
+        getRowId: (item: { id: string }) => item.id,
+      },
+      state: {
+        activeCell: { rowIndex: 0, columnIndex: 0 },
+        selectionRange: null,
+        editingCell: null,
+        selectedRowIds: new Set<string>(),
+      },
+      handlers: {
+        setActiveCell,
+        setSelectionRange: jest.fn(),
+        setEditingCell: jest.fn(),
+        handleRowCheckboxChange: jest.fn(),
+        handleCopy: jest.fn(),
+        handleCut: jest.fn(),
+        handlePaste: jest.fn().mockResolvedValue(undefined),
+        setContextMenu: jest.fn(),
+      },
+      features: {
+        editable: false,
+        onCellValueChanged: undefined,
+        rowSelection: 'none' as const,
+        wrapperRef,
+        onKeyDown,
+      },
+    };
+    const { result } = renderHook(() => useKeyboardNavigation(params));
+
+    // Use a real event-like object where preventDefault actually sets defaultPrevented
+    const e: React.KeyboardEvent = Object.assign(
+      Object.create({
+        preventDefault() { Object.defineProperty(this, 'defaultPrevented', { value: true, configurable: true, writable: true }); },
+      }),
+      {
+        key: 'ArrowDown',
+        defaultPrevented: false,
+        ctrlKey: false,
+        metaKey: false,
+        shiftKey: false,
+      }
+    ) as unknown as React.KeyboardEvent;
+
+    act(() => { result.current.handleGridKeyDown(e); });
+
+    // setActiveCell should NOT have been called (grid default suppressed)
+    expect(setActiveCell).not.toHaveBeenCalled();
+  });
+
+  it('grid default handler runs normally when onKeyDown does NOT call preventDefault()', () => {
+    const setActiveCell = jest.fn();
+    const onKeyDown = jest.fn(); // does not call preventDefault()
+
+    const params = {
+      data: {
+        items,
+        visibleCols,
+        colOffset: 0,
+        hasCheckboxCol: false,
+        visibleColumnCount: 1,
+        getRowId: (item: { id: string }) => item.id,
+      },
+      state: {
+        activeCell: { rowIndex: 0, columnIndex: 0 },
+        selectionRange: null,
+        editingCell: null,
+        selectedRowIds: new Set<string>(),
+      },
+      handlers: {
+        setActiveCell,
+        setSelectionRange: jest.fn(),
+        setEditingCell: jest.fn(),
+        handleRowCheckboxChange: jest.fn(),
+        handleCopy: jest.fn(),
+        handleCut: jest.fn(),
+        handlePaste: jest.fn().mockResolvedValue(undefined),
+        setContextMenu: jest.fn(),
+      },
+      features: {
+        editable: false,
+        onCellValueChanged: undefined,
+        rowSelection: 'none' as const,
+        wrapperRef,
+        onKeyDown,
+      },
+    };
+
+    const { result } = renderHook(() => useKeyboardNavigation(params));
+
+    const e = makeEvent('ArrowDown');
+    act(() => { result.current.handleGridKeyDown(e); });
+
+    // onKeyDown was called
+    expect(onKeyDown).toHaveBeenCalledTimes(1);
+    // Grid default also ran (active cell moved to row 1)
+    expect(setActiveCell).toHaveBeenCalledWith({ rowIndex: 1, columnIndex: 0 });
+  });
+
+  it('passes the keyboard event to onKeyDown so the consumer can read e.key', () => {
+    const capturedKeys: string[] = [];
+    const onKeyDown = (e: React.KeyboardEvent) => { capturedKeys.push(e.key); };
+
+    const params = makeInterceptParams({ onKeyDown });
+    const { result } = renderHook(() => useKeyboardNavigation(params));
+
+    act(() => { result.current.handleGridKeyDown(makeEvent('Tab')); });
+    act(() => { result.current.handleGridKeyDown(makeEvent('Escape')); });
+
+    expect(capturedKeys).toEqual(['Tab', 'Escape']);
+  });
+
+  it('fillDown is called on Ctrl+D when fillDown prop is provided and editable=true', () => {
+    const fillDown = jest.fn();
+    const params = makeInterceptParams({ fillDown, editable: true });
+    const { result } = renderHook(() => useKeyboardNavigation(params));
+
+    const e = makeEvent('d', { ctrlKey: true });
+    act(() => { result.current.handleGridKeyDown(e); });
+
+    expect(fillDown).toHaveBeenCalledTimes(1);
+  });
+
+  it('fillDown is NOT called on Ctrl+D when editable is false', () => {
+    const fillDown = jest.fn();
+    const params = makeInterceptParams({ fillDown, editable: false });
+    const { result } = renderHook(() => useKeyboardNavigation(params));
+
+    act(() => { result.current.handleGridKeyDown(makeEvent('d', { ctrlKey: true })); });
+
+    expect(fillDown).not.toHaveBeenCalled();
+  });
+
+  it('fillDown is NOT called on Ctrl+D when fillDown prop is not provided', () => {
+    const params = makeInterceptParams({ editable: true }); // no fillDown
+    const { result } = renderHook(() => useKeyboardNavigation(params));
+
+    expect(() => {
+      act(() => { result.current.handleGridKeyDown(makeEvent('d', { ctrlKey: true })); });
+    }).not.toThrow();
+  });
+});

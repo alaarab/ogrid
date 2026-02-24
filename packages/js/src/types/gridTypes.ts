@@ -187,6 +187,9 @@ export interface OGridOptions<T> {
 
   /** Secondary toolbar row rendered below the primary toolbar. */
   toolbarBelow?: HTMLElement | null;
+
+  /** Custom keydown handler. Called before grid's built-in handling. Call event.preventDefault() to suppress grid default. */
+  onKeyDown?: (event: KeyboardEvent) => void;
 }
 
 /** Events emitted by the OGrid instance. */

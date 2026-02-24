@@ -1,8 +1,9 @@
-import { ref, computed, watch, onUnmounted, type Ref } from 'vue';
+import { ref, computed, watch, onMounted, onUnmounted, type Ref } from 'vue';
 import {
   computeVisibleRange,
   computeTotalHeight,
   getScrollTopForRow,
+  validateVirtualScrollConfig,
 } from '@alaarab/ogrid-core';
 import type { IVisibleRange } from '@alaarab/ogrid-core';
 
@@ -11,6 +12,11 @@ export interface UseVirtualScrollParams {
   rowHeight: number;
   enabled: Ref<boolean>;
   overscan?: number;
+  /**
+   * Minimum row count before virtual scrolling activates. Default: 100.
+   * When totalRows < threshold, all rows render without virtualization.
+   */
+  threshold?: number;
 }
 
 export interface UseVirtualScrollResult {
@@ -21,11 +27,23 @@ export interface UseVirtualScrollResult {
 }
 
 /**
+ * Default minimum row count before virtual scrolling activates.
+ * Grids with fewer rows than this render all rows without virtualization
+ * to avoid scroll offset artifacts on small datasets.
+ */
+const DEFAULT_PASSTHROUGH_THRESHOLD = 100;
+
+/**
  * Manages virtual scrolling with RAF-throttled scroll handling and ResizeObserver
  * for container height tracking. Uses core's computeVisibleRange for range calculation.
  */
 export function useVirtualScroll(params: UseVirtualScrollParams): UseVirtualScrollResult {
-  const { totalRows, rowHeight, enabled, overscan = 5 } = params;
+  const { totalRows, rowHeight, enabled, overscan = 5, threshold = DEFAULT_PASSTHROUGH_THRESHOLD } = params;
+
+  // Dev-only validation: warn if enabled but rowHeight is missing or invalid
+  onMounted(() => {
+    validateVirtualScrollConfig({ enabled: enabled.value, rowHeight });
+  });
 
   const containerRef = ref<HTMLElement | null>(null);
   const scrollTop = ref(0);
@@ -35,9 +53,13 @@ export function useVirtualScroll(params: UseVirtualScrollParams): UseVirtualScro
   let resizeObserver: ResizeObserver | undefined;
   let prevObservedEl: HTMLElement | null = null;
 
+  // Virtual scrolling is only active when enabled AND row count meets the threshold.
+  // Below the threshold, render all rows to avoid scroll offset artifacts.
+  const isActive = computed(() => enabled.value && totalRows.value >= threshold);
+
   const visibleRange = computed<IVisibleRange>(() => {
-    if (!enabled.value) {
-      return { startIndex: 0, endIndex: totalRows.value - 1, offsetTop: 0, offsetBottom: 0 };
+    if (!isActive.value) {
+      return { startIndex: 0, endIndex: Math.max(0, totalRows.value - 1), offsetTop: 0, offsetBottom: 0 };
     }
     return computeVisibleRange(
       scrollTop.value,

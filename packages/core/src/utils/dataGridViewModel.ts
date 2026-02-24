@@ -162,11 +162,161 @@ export interface CellRenderDescriptor {
   displayValue?: unknown;
 }
 
+// ---------------------------------------------------------------------------
+// Descriptor cache
+// ---------------------------------------------------------------------------
+
+/**
+ * Per-grid cache for cell render descriptors.
+ *
+ * Problem: A 50-column × 100-row grid calls getCellRenderDescriptor 5,000 times per render.
+ * Most cells don't change between renders — only cells in the active row, selection range,
+ * or editing row need recomputation. The cache skips recomputation for unchanged cells.
+ *
+ * Design:
+ * - Keyed by (rowIndex * MAX_COL_STRIDE + colIdx) for O(1) flat-array-style access.
+ * - Tracks a "volatile version" string derived from all inputs that affect per-cell output.
+ * - On version match (cache hit), returns the cached descriptor without recomputing.
+ * - On version mismatch (cache miss or first render), recomputes and stores the result.
+ *
+ * Usage: Create one instance per grid (e.g. useRef in React) and pass to getCellRenderDescriptor.
+ *
+ * @example
+ *   const descriptorCache = useRef(new CellDescriptorCache());
+ *   // In renderCellContent:
+ *   getCellRenderDescriptor(item, col, rowIndex, colIdx, input, descriptorCache.current);
+ */
+export class CellDescriptorCache {
+  /**
+   * Stride used to compute a flat cache key: rowIndex * MAX_COL_STRIDE + colIdx.
+   * 1024 supports grids up to 1024 columns, which covers all realistic use cases.
+   * Using a power-of-2 stride lets the JS engine optimize the multiplication.
+   */
+  private static readonly MAX_COL_STRIDE = 1024;
+
+  private readonly cache = new Map<number, { version: string; descriptor: CellRenderDescriptor }>();
+
+  /** Last seen volatile version string. Used to detect when to skip per-cell version checks. */
+  private lastVersion = '';
+
+  /**
+   * Compute a version string from the volatile parts of CellRenderDescriptorInput.
+   * This string changes whenever any input that affects per-cell output changes.
+   * Cheap to compute (simple string concat) — O(1) regardless of grid size.
+   */
+  static computeVersion<T>(input: CellRenderDescriptorInput<T>): string {
+    const ec = input.editingCell;
+    const ac = input.activeCell;
+    const sr = input.selectionRange;
+    const cr = input.cutRange;
+    const cp = input.copyRange;
+    return (
+      (ec ? `${String(ec.rowId)}\x00${ec.columnId}` : '') +
+      '\x01' +
+      (ac ? `${ac.rowIndex}\x00${ac.columnIndex}` : '') +
+      '\x01' +
+      (sr ? `${sr.startRow}\x00${sr.startCol}\x00${sr.endRow}\x00${sr.endCol}` : '') +
+      '\x01' +
+      (cr ? `${cr.startRow}\x00${cr.startCol}\x00${cr.endRow}\x00${cr.endCol}` : '') +
+      '\x01' +
+      (cp ? `${cp.startRow}\x00${cp.startCol}\x00${cp.endRow}\x00${cp.endCol}` : '') +
+      '\x01' +
+      (input.isDragging ? '1' : '0') +
+      '\x01' +
+      (input.editable !== false ? '1' : '0') +
+      '\x01' +
+      (input.onCellValueChanged ? '1' : '0')
+    );
+  }
+
+  /**
+   * Get a cached descriptor or compute a new one.
+   *
+   * @param rowIndex - Row index in the dataset.
+   * @param colIdx - Column index within the visible columns.
+   * @param version - Volatile version string (from CellDescriptorCache.computeVersion).
+   * @param compute - Factory function called on cache miss.
+   * @returns The descriptor (cached or freshly computed).
+   */
+  get(
+    rowIndex: number,
+    colIdx: number,
+    version: string,
+    compute: () => CellRenderDescriptor
+  ): CellRenderDescriptor {
+    const key = rowIndex * CellDescriptorCache.MAX_COL_STRIDE + colIdx;
+    const entry = this.cache.get(key);
+
+    if (entry !== undefined && entry.version === version) {
+      // Cache hit: volatile state is unchanged for this cell — return cached descriptor.
+      return entry.descriptor;
+    }
+
+    // Cache miss: recompute and store.
+    const descriptor = compute();
+    this.cache.set(key, { version, descriptor });
+    return descriptor;
+  }
+
+  /**
+   * Update the last-seen version and return it.
+   * Call once per render pass to track whether any volatile state changed.
+   * If the version is unchanged from last render, the entire render is a no-op for all cells.
+   */
+  updateVersion(version: string): void {
+    this.lastVersion = version;
+  }
+
+  /** The last version string set via updateVersion(). */
+  get currentVersion(): string {
+    return this.lastVersion;
+  }
+
+  /**
+   * Clear all cached entries. Call when the grid's data changes (new items array,
+   * different column count, etc.) to prevent stale cell values from being served.
+   */
+  clear(): void {
+    this.cache.clear();
+  }
+}
+
 /**
  * Returns a descriptor for rendering a cell. UI uses this to decide editing-inline vs editing-popover vs display
  * and to apply isActive, isInRange, etc. without duplicating the boolean logic.
+ *
+ * @param item - The row data object.
+ * @param col - The column definition.
+ * @param rowIndex - Row index in the dataset.
+ * @param colIdx - Column index within the visible columns.
+ * @param input - Volatile state inputs (editing cell, active cell, selection ranges, etc.).
+ * @param cache - Optional descriptor cache. When provided and the volatile state is unchanged,
+ *   the cached descriptor is returned without recomputation. Pass a `CellDescriptorCache`
+ *   instance created once per grid (e.g. via `useRef`) and updated each render via
+ *   `CellDescriptorCache.computeVersion`. This eliminates ~5,000 allocations/render on a
+ *   50-col × 100-row grid when selection/editing state hasn't changed for a given cell.
  */
 export function getCellRenderDescriptor<T>(
+  item: T,
+  col: IColumnDef<T>,
+  rowIndex: number,
+  colIdx: number,
+  input: CellRenderDescriptorInput<T>,
+  cache?: { get(rowIndex: number, colIdx: number, version: string, compute: () => CellRenderDescriptor): CellRenderDescriptor; currentVersion: string }
+): CellRenderDescriptor {
+  if (cache !== undefined) {
+    return cache.get(rowIndex, colIdx, cache.currentVersion, () =>
+      computeCellDescriptor(item, col, rowIndex, colIdx, input)
+    );
+  }
+  return computeCellDescriptor(item, col, rowIndex, colIdx, input);
+}
+
+/**
+ * Internal pure computation — separated so cache.get() can call it on miss
+ * without the overhead of the optional cache parameter check.
+ */
+function computeCellDescriptor<T>(
   item: T,
   col: IColumnDef<T>,
   rowIndex: number,

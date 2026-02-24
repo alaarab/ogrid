@@ -24,6 +24,8 @@ import { BaseColumnHeaderFilterComponent } from '@alaarab/ogrid-angular';
             [class.ogrid-header-filter__btn--active]="hasActiveFilter() || isFilterOpen()"
             (click)="toggleFilter($event)"
             [attr.aria-label]="'Filter ' + columnName"
+            [attr.aria-expanded]="isFilterOpen()"
+            aria-haspopup="dialog"
             [title]="'Filter ' + columnName"
           >
             ⏷

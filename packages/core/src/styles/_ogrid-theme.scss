@@ -14,6 +14,50 @@
 
 /* ─── Light Theme (default) ─── */
 :global(:where(:root)) {
+  /* ── Cell padding — override for row density ──
+     --ogrid-cell-padding           : shorthand (default 6px 10px)
+     --ogrid-cell-padding-vertical  : vertical only (default 6px)
+     --ogrid-cell-padding-horizontal: horizontal only (default 10px) */
+  --ogrid-cell-padding: 6px 10px;
+  --ogrid-cell-padding-vertical: 6px;
+  --ogrid-cell-padding-horizontal: 10px;
+
+  /* ── Z-Index Stacking Order ──
+     --ogrid-z-resize-handle       :  1   column resize drag handle
+     --ogrid-z-active-cell         :  2   active/editing cell outline
+     --ogrid-z-fill-handle         :  3   fill handle dot
+     --ogrid-z-row-number          :  5   row number column
+     --ogrid-z-pinned              :  6   sticky pinned body cells
+     --ogrid-z-selection-cell      :  7   selection checkbox column in body
+     --ogrid-z-thead               :  8   sticky thead row
+     --ogrid-z-pinned-header       : 10   pinned header cells (sticky both axes)
+     --ogrid-z-header-focus        : 11   focused header cell
+     --ogrid-z-selection-header-pinned: 12  checkbox column in sticky header (sticky both axes)
+     --ogrid-z-checkbox            : 12   alias — checkbox column in sticky header
+     --ogrid-z-loading             :  2   loading overlay within table
+     --ogrid-z-drop-indicator      : 100  column reorder drop indicator
+     --ogrid-z-filter-popover      : 1000 filter popovers
+     --ogrid-z-popover             : 1000 alias — filter popovers
+     --ogrid-z-fullscreen          : 9999 fullscreen grid container
+     --ogrid-z-context-menu        : 10000 context menu (fixed, above everything) */
+  --ogrid-z-resize-handle: 1;
+  --ogrid-z-active-cell: 2;
+  --ogrid-z-fill-handle: 3;
+  --ogrid-z-row-number: 5;
+  --ogrid-z-pinned: 6;
+  --ogrid-z-selection-cell: 7;
+  --ogrid-z-thead: 8;
+  --ogrid-z-pinned-header: 10;
+  --ogrid-z-header-focus: 11;
+  --ogrid-z-selection-header-pinned: 12;
+  --ogrid-z-checkbox: 12;
+  --ogrid-z-loading: 2;
+  --ogrid-z-drop-indicator: 100;
+  --ogrid-z-filter-popover: 1000;
+  --ogrid-z-popover: 1000;
+  --ogrid-z-fullscreen: 9999;
+  --ogrid-z-context-menu: 10000;
+
   /* Core */
   --ogrid-bg: #ffffff;
   --ogrid-fg: rgba(0, 0, 0, 0.87);

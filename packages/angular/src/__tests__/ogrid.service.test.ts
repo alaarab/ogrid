@@ -392,4 +392,131 @@ describe('OGridService', () => {
       expect(dgProps.filters).toEqual({ name: { type: 'text', value: 'Bob' } });
     });
   });
+
+  describe('onError / onFetchError signal wiring', () => {
+    beforeEach(() => {
+      service.columnsProp.set(columns);
+      service.getRowId.set(getRowId);
+      service.data.set(data);
+      service.defaultPageSize.set(10);
+    });
+
+    it('onError signal defaults to undefined', () => {
+      expect(service.onError()).toBeUndefined();
+    });
+
+    it('configure() sets onError signal from props', () => {
+      const onError = jest.fn();
+      service.configure({
+        columns,
+        getRowId,
+        data,
+        onError,
+      });
+      expect(service.onError()).toBe(onError);
+    });
+
+    it('onError can be updated via direct signal set', () => {
+      const onError = jest.fn();
+      service.onError.set(onError);
+      expect(service.onError()).toBe(onError);
+    });
+
+    it('onError replaces previous callback when updated', () => {
+      const onError1 = jest.fn();
+      const onError2 = jest.fn();
+      service.onError.set(onError1);
+      service.onError.set(onError2);
+      expect(service.onError()).toBe(onError2);
+    });
+
+    it('calling onError() callback directly invokes the function', () => {
+      const onError = jest.fn();
+      service.onError.set(onError);
+      const err = new Error('fetch failed');
+      service.onError()?.(err);
+      expect(onError).toHaveBeenCalledWith(err);
+    });
+
+    it('isLoadingResolved is false for client-side mode (no dataSource)', () => {
+      // Client-side: serverLoading is reset to false, controlledLoading undefined
+      service.data.set(data);
+      expect(service.isLoadingResolved()).toBe(false);
+    });
+
+    it('isLoadingResolved reflects controlledLoading when set', () => {
+      service.controlledLoading.set(true);
+      expect(service.isLoadingResolved()).toBe(true);
+    });
+
+    it('isLoadingResolved returns false when controlledLoading is false', () => {
+      service.controlledLoading.set(false);
+      expect(service.isLoadingResolved()).toBe(false);
+    });
+
+    it('configure() with onError undefined does not overwrite existing onError', () => {
+      const onError = jest.fn();
+      service.onError.set(onError);
+      // configure without onError in props
+      service.configure({ columns, getRowId, data });
+      // onError was set via signal, configure skips undefined onError
+      // check it's still set — configure only sets if truthy
+      expect(service.onError()).toBe(onError);
+    });
+
+    it('isServerSide is false when dataSource is not provided', () => {
+      expect(service.isServerSide()).toBe(false);
+    });
+
+    it('isServerSide is true when dataSource is provided', () => {
+      const dataSource = {
+        fetchPage: jest.fn().mockResolvedValue({ items: [], totalCount: 0 }),
+      };
+      service.dataSource.set(dataSource);
+      expect(service.isServerSide()).toBe(true);
+    });
+
+    it('isClientSide is true when no dataSource', () => {
+      expect(service.isClientSide()).toBe(true);
+    });
+
+    it('isClientSide is false when dataSource is provided', () => {
+      const dataSource = {
+        fetchPage: jest.fn().mockResolvedValue({ items: [], totalCount: 0 }),
+      };
+      service.dataSource.set(dataSource);
+      expect(service.isClientSide()).toBe(false);
+    });
+  });
+
+  describe('Virtual scroll configuration wiring', () => {
+    beforeEach(() => {
+      service.columnsProp.set(columns);
+      service.getRowId.set(getRowId);
+      service.data.set(data);
+      service.defaultPageSize.set(10);
+    });
+
+    it('virtualScroll defaults to undefined', () => {
+      expect(service.virtualScroll()).toBeUndefined();
+    });
+
+    it('configure() sets virtualScroll signal from props', () => {
+      const vsConfig = { rowHeight: 48, threshold: 50 };
+      service.configure({ columns, getRowId, data, virtualScroll: vsConfig });
+      expect(service.virtualScroll()).toEqual(vsConfig);
+    });
+
+    it('virtualScroll is passed through dataGridProps', () => {
+      const vsConfig = { rowHeight: 48 };
+      service.virtualScroll.set(vsConfig);
+      expect(service.dataGridProps().virtualScroll).toEqual(vsConfig);
+    });
+
+    it('virtualScroll threshold is passed through in config', () => {
+      const vsConfig = { rowHeight: 36, threshold: 200 };
+      service.configure({ columns, getRowId, data, virtualScroll: vsConfig });
+      expect(service.dataGridProps().virtualScroll?.threshold).toBe(200);
+    });
+  });
 });

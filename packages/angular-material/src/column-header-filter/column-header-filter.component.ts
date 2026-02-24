@@ -24,6 +24,8 @@ import { BaseColumnHeaderFilterComponent } from '@alaarab/ogrid-angular';
             [class.ogrid-header-filter__filter-btn--active]="hasActiveFilter() || isFilterOpen()"
             (click)="toggleFilter($event)"
             [attr.aria-label]="'Filter ' + columnName"
+            [attr.aria-expanded]="isFilterOpen()"
+            aria-haspopup="dialog"
             [title]="'Filter ' + columnName"
           >
             <span class="ogrid-header-filter__funnel"></span>
@@ -208,8 +210,9 @@ import { BaseColumnHeaderFilterComponent } from '@alaarab/ogrid-angular';
       opacity: 0.6; transition: opacity 0.15s;
     }
     .ogrid-header-filter:hover .ogrid-header-filter__filter-btn { opacity: 0.8; }
-    .ogrid-header-filter__filter-btn:hover { background: var(--ogrid-hover-bg, rgba(0, 0, 0, 0.08)); opacity: 1 !important; }
-    .ogrid-header-filter__filter-btn--active { opacity: 1 !important; }
+    /* :hover and --active must override the parent-hover rule (0,2,0) — double-class raises to 0,3,0 */
+    .ogrid-header-filter .ogrid-header-filter__filter-btn:hover { background: var(--ogrid-hover-bg, rgba(0, 0, 0, 0.08)); opacity: 1; }
+    .ogrid-header-filter .ogrid-header-filter__filter-btn--active { opacity: 1; }
     .ogrid-header-filter__funnel {
       display: block; width: 0; height: 0;
       border-left: 5px solid transparent; border-right: 5px solid transparent;

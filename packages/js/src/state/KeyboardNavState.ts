@@ -16,6 +16,10 @@ export interface KeyboardNavParams<T> {
   onContextMenu?: (x: number, y: number) => void;
   onStartEdit?: (rowId: RowId, columnId: string) => void;
   clearClipboardRanges?: () => void;
+  /** Custom keydown handler. Called before grid default. preventDefault() suppresses grid handling. */
+  onKeyDown?: (event: KeyboardEvent) => void;
+  /** Fill-down callback (Ctrl+D). Provided by FillHandleState. */
+  onFillDown?: () => void;
 }
 
 export class KeyboardNavState<T> {
@@ -49,7 +53,14 @@ export class KeyboardNavState<T> {
   }
 
   handleKeyDown = (e: KeyboardEvent): void => {
-    const { items, visibleCols, colOffset, editable, onCellValueChanged, onCopy, onCut, onPaste, onUndo, onRedo, onContextMenu, onStartEdit, getRowId, clearClipboardRanges } = this.params;
+    const { items, visibleCols, colOffset, editable, onCellValueChanged, onCopy, onCut, onPaste, onUndo, onRedo, onContextMenu, onStartEdit, getRowId, clearClipboardRanges, onKeyDown, onFillDown } = this.params;
+
+    // Consumer intercept: call consumer's handler first; skip grid default if preventDefault() was called
+    if (onKeyDown) {
+      onKeyDown(e);
+      if (e.defaultPrevented) return;
+    }
+
     const activeCell = this.getActiveCell();
     const selectionRange = this.getSelectionRange();
 
@@ -92,6 +103,14 @@ export class KeyboardNavState<T> {
         if (e.ctrlKey || e.metaKey) {
           e.preventDefault();
           void onPaste?.();
+        }
+        break;
+      case 'd':
+        if (e.ctrlKey || e.metaKey) {
+          if (editable !== false && onFillDown) {
+            e.preventDefault();
+            onFillDown();
+          }
         }
         break;
       case 'ArrowDown':

@@ -5,6 +5,35 @@
 // All styles here use --ogrid-* CSS custom properties which each UI package
 // defines (either directly or bridged from framework tokens).
 
+// ============================================================
+// Z-Index Stacking Order
+// ============================================================
+// Use these custom properties to reference z-index values consistently.
+// They are defined here as SCSS variables for use in this partial; framework
+// packages that need them in vanilla CSS can declare them on :root or :host.
+//
+//   --ogrid-z-thead        : 8   -- sticky thead row
+//   --ogrid-z-pinned       : 6   -- sticky pinned body cells
+//   --ogrid-z-pinned-header: 10  -- pinned header cells (sticky both axes)
+//   --ogrid-z-checkbox     : 12  -- checkbox column in sticky header (top + left)
+//   --ogrid-z-active-cell  : 2   -- active/editing cell outline
+//   --ogrid-z-fill-handle  : 3   -- fill handle dot
+//   --ogrid-z-drop-indicator: 100 -- column reorder drop indicator
+//   --ogrid-z-loading      : 2   -- loading overlay (within table)
+//   --ogrid-z-context-menu : 10000 -- context menu (fixed, above everything)
+//   --ogrid-z-popover      : 1000  -- filter popovers
+
+// ============================================================
+// Cell Padding Custom Properties (consumer-overrideable)
+// ============================================================
+// Override these to change row density grid-wide:
+//
+//   --ogrid-cell-padding           : shorthand (default 6px 10px)
+//   --ogrid-cell-padding-vertical  : vertical component (default 6px)
+//   --ogrid-cell-padding-horizontal: horizontal component (default 10px)
+//
+// Usage: .cellContent { padding: var(--ogrid-cell-padding, 6px 10px); }
+
 // ---- Table structure ----
 
 .tableScrollContent {
@@ -18,7 +47,8 @@
 .tableWidthAnchor {
   position: relative;
   width: max-content;
-  min-width: var(--data-table-min-width, max-content);
+  min-width: 100%;
+  overflow: clip;
   background: var(--ogrid-bg, #fff);
 }
 
@@ -26,7 +56,7 @@
   position: relative;
   flex: 1;
   min-height: 0;
-  overflow-x: hidden;
+  overflow-x: auto;
   overflow-y: auto;
   width: 100%;
   min-width: 0;
@@ -35,8 +65,8 @@
   background: var(--ogrid-bg, #fff);
   will-change: scroll-position;
 
-  &[data-overflow-x='true'] {
-    overflow-x: auto;
+  &[data-suppress-scroll='true'] {
+    overflow-x: hidden;
   }
   &[data-empty='true'] {
     overflow-x: hidden;
@@ -51,9 +81,8 @@
 }
 
 .dataTable {
-  width: var(--data-table-width, fit-content);
-  max-width: 100%;
-  min-width: var(--data-table-min-width, max-content);
+  width: var(--data-table-width, 100%);
+  min-width: max-content;
   border-collapse: separate;
   border-spacing: 0;
   box-sizing: border-box;
@@ -72,7 +101,7 @@
   text-align: center;
   font-weight: 600;
   border-bottom: 2px solid var(--ogrid-border, rgba(0, 0, 0, 0.12));
-  padding: 6px 10px;
+  padding: var(--ogrid-cell-padding, 6px 10px);
   background: var(--ogrid-header-bg, #f5f5f5);
 }
 
@@ -124,7 +153,7 @@
   width: 3px;
   background: var(--ogrid-selection-color, #217346);
   pointer-events: none;
-  z-index: 100;
+  z-index: var(--ogrid-z-drop-indicator, 100);
   transition: left 0.05s;
 }
 
@@ -138,7 +167,7 @@
   width: 8px;
   cursor: col-resize;
   user-select: none;
-  z-index: 1;
+  z-index: var(--ogrid-z-resize-handle, 1);
 
   &::after {
     content: '';
@@ -162,7 +191,7 @@
 
 .pinnedColLeft {
   position: sticky;
-  z-index: 6;
+  z-index: var(--ogrid-z-pinned, 6);
   background: var(--ogrid-bg, #ffffff);
   &::after {
     content: '';
@@ -178,7 +207,7 @@
 
 .pinnedColRight {
   position: sticky;
-  z-index: 6;
+  z-index: var(--ogrid-z-pinned, 6);
   background: var(--ogrid-bg, #ffffff);
   &::before {
     content: '';
@@ -215,7 +244,7 @@
 .activeCellContent {
   outline: 2px solid var(--ogrid-selection-color, #217346);
   outline-offset: -1px;
-  z-index: 2;
+  z-index: var(--ogrid-z-active-cell, 2);
   position: relative;
   overflow: visible;
   background: var(--ogrid-active-cell-bg, rgba(0, 0, 0, 0.02));
@@ -229,25 +258,28 @@
   box-sizing: border-box;
   outline: 2px solid var(--ogrid-selection-color, #217346);
   outline-offset: -1px;
-  z-index: 2;
+  z-index: var(--ogrid-z-active-cell, 2);
   position: relative;
   background: var(--ogrid-bg, #fff);
   overflow: visible;
   padding: 0;
 }
 
-.cellInRange {
-  background: var(--ogrid-range-bg, rgba(33, 115, 70, 0.12)) !important;
+// Higher specificity: .tableWrapper qualifies the selector so it wins over
+// row hover/selected backgrounds (which are also scoped under .tableWrapper).
+.tableWrapper .cellInRange {
+  background: var(--ogrid-range-bg, rgba(33, 115, 70, 0.12));
 }
 
 // Drag-range highlight applied via DOM attributes during drag (bypasses React for performance)
-:global([data-drag-range]) {
-  background: var(--ogrid-range-bg, rgba(33, 115, 70, 0.12)) !important;
+// The .tableWrapper parent raises specificity to beat row-level hover/selected backgrounds.
+.tableWrapper :global([data-drag-range]) {
+  background: var(--ogrid-range-bg, rgba(33, 115, 70, 0.12));
 }
 
 // Anchor cell during drag: white/transparent background (like Excel)
-:global([data-drag-anchor]) {
-  background: var(--ogrid-bg, #fff) !important;
+.tableWrapper :global([data-drag-anchor]) {
+  background: var(--ogrid-bg, #fff);
 }
 
 // Hide active-cell outline during drag — the overlay border handles the range border
@@ -256,8 +288,8 @@
   outline: none;
 }
 
-.cellCut {
-  background: var(--ogrid-hover-bg, rgba(0, 0, 0, 0.04)) !important;
+.tableWrapper .cellCut {
+  background: var(--ogrid-hover-bg, rgba(0, 0, 0, 0.04));
   opacity: 0.7;
 }
 
@@ -279,7 +311,7 @@
   border-radius: 1px;
   cursor: crosshair;
   pointer-events: auto;
-  z-index: 3;
+  z-index: var(--ogrid-z-fill-handle, 3);
 }
 
 // ---- Row selection cells ----
@@ -343,7 +375,7 @@
 
 .contextMenu {
   position: fixed;
-  z-index: 10000;
+  z-index: var(--ogrid-z-context-menu, 10000);
   min-width: 160px;
   padding: 4px 0;
   background: var(--ogrid-bg, #fff);
@@ -394,7 +426,7 @@
 .loadingOverlay {
   position: absolute;
   inset: 0;
-  z-index: 2;
+  z-index: var(--ogrid-z-loading, 2);
   display: flex;
   align-items: center;
   justify-content: center;
