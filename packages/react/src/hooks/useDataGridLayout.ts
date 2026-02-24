@@ -141,6 +141,14 @@ export function useDataGridLayout<T>(
   });
 
   // Measure actual column widths from the DOM for accurate pinning offsets.
+  // Use a serialized key of overrides to prevent re-running on every object reference change
+  // during rapid resize drags. Only re-measure when the actual override VALUES change.
+  const overridesKey = useMemo(() => {
+    const entries = Object.entries(columnSizingOverrides);
+    if (entries.length === 0) return '';
+    return entries.map(([id, v]) => `${id}:${Math.round(v.widthPx)}`).join(',');
+  }, [columnSizingOverrides]);
+
   const [measuredColumnWidths, setMeasuredColumnWidths] = useState<Record<string, number>>({});
   useLayoutEffect(() => {
     const wrapper = wrapperRef.current;
@@ -163,7 +171,9 @@ export function useDataGridLayout<T>(
   // DOM offsetWidth values. Including it creates a loop: ResizeObserver →
   // setContainerWidth → useLayoutEffect → setMeasuredColumnWidths → re-render
   // → ResizeObserver → ...
-  }, [visibleCols, columnSizingOverrides, wrapperRef]);
+  // overridesKey is a serialized string so the effect only re-runs when values actually change,
+  // not on every new object reference during rapid resize.
+  }, [visibleCols, overridesKey, wrapperRef]);
 
   // Build column width map for pinning offset computation
   const columnWidthMap = useMemo(() => {
