@@ -52,18 +52,28 @@ import { OGRID_THEME_VARS_CSS } from '../styles/ogrid-theme-vars';
       color: var(--ogrid-fg, rgba(0, 0, 0, 0.87));
     }
     .ogrid-fullscreen-btn:hover { background: var(--ogrid-hover-bg, rgba(0, 0, 0, 0.04)); }
+    .ogrid-name-box {
+      display: inline-flex; align-items: center; padding: 0 8px;
+      font-family: 'Consolas', 'Courier New', monospace; font-size: 12px;
+      border: 1px solid var(--ogrid-border, rgba(0, 0, 0, 0.12)); border-radius: 3px;
+      height: 24px; margin-right: 8px; background: var(--ogrid-bg, #fff);
+      min-width: 40px; color: var(--ogrid-fg-secondary, rgba(0, 0, 0, 0.6));
+    }
   `],
   template: `
     <div [class]="rootClass">
       <div class="ogrid-layout-container" [style.border-radius.px]="isFullScreen ? 0 : borderRadius">
         <!-- Toolbar strip -->
-        @if (hasToolbar || fullScreen) {
+        @if (hasToolbar || fullScreen || showNameBox) {
           <div
             class="ogrid-layout-toolbar"
             [class.ogrid-layout-toolbar--has-below]="hasToolbarBelow"
             [class.ogrid-layout-toolbar--no-below]="!hasToolbarBelow"
           >
             <div class="ogrid-layout-toolbar-left">
+              @if (showNameBox) {
+                <div class="ogrid-name-box">{{ activeCellRef ?? '\u2014' }}</div>
+              }
               <ng-content select="[toolbar]"></ng-content>
             </div>
             <div class="ogrid-layout-toolbar-right">
@@ -131,6 +141,8 @@ export class OGridLayoutComponent {
   @Input() hasPagination = false;
   @Input() sideBar: SideBarProps | null = null;
   @Input() fullScreen = false;
+  @Input() showNameBox = false;
+  @Input() activeCellRef: string | null = null;
 
   isFullScreen = false;
   readonly borderRadius = GRID_BORDER_RADIUS;

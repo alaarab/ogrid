@@ -301,6 +301,14 @@
   outline: none;
 }
 
+// Hide active-cell outline when inside a completed selection range (Excel behavior).
+// The range overlay border is sufficient; the active cell is distinguished by its
+// white background (no green tint) vs. the dimmed range cells.
+.activeCellContent.inRange {
+  outline: none;
+  background: var(--ogrid-bg, #fff);
+}
+
 .tableWrapper .cellCut {
   background: var(--ogrid-hover-bg, rgba(0, 0, 0, 0.04));
   opacity: 0.7;
@@ -343,6 +351,24 @@
   align-items: center;
   justify-content: center;
   width: 100%;
+  font-variant-numeric: tabular-nums;
+}
+
+// ---- Column letter row (cell references) ----
+
+.columnLetterRow {
+  background: var(--ogrid-column-letter-bg, var(--ogrid-header-bg));
+}
+
+.columnLetterCell {
+  text-align: center;
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--ogrid-fg-muted, rgba(0, 0, 0, 0.5));
+  padding: 2px 4px;
+  background: var(--ogrid-column-letter-bg, var(--ogrid-header-bg));
+  border-bottom: 1px solid var(--ogrid-border, rgba(0, 0, 0, 0.12));
+  user-select: none;
   font-variant-numeric: tabular-nums;
 }
 

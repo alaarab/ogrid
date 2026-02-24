@@ -1,4 +1,4 @@
-import { Component, ElementRef, ChangeDetectionStrategy, ViewEncapsulation, Input, ViewChild, signal } from '@angular/core';
+import { Component, ElementRef, ChangeDetectionStrategy, ViewEncapsulation, Input, ViewChild, signal, computed, effect } from '@angular/core';
 import {
   BaseDataGridTableComponent,
   DataGridStateService,
@@ -11,6 +11,8 @@ import {
   CHECKBOX_COLUMN_WIDTH,
   ROW_NUMBER_COLUMN_WIDTH,
   OGRID_THEME_VARS_CSS,
+  indexToColumnLetter,
+  formatCellReference,
 } from '@alaarab/ogrid-angular';
 import type {
   IOGridDataGridProps,
@@ -57,6 +59,21 @@ import { PopoverCellEditorComponent } from './popover-cell-editor.component';
                 [attr.data-virtual-scroll]="vsEnabled() ? '' : null"
               >
                 <thead [class]="stickyHeader() ? 'ogrid-datagrid-thead ogrid-sticky-header' : 'ogrid-datagrid-thead'">
+                  @if (showColumnLetters()) {
+                    <tr class="ogrid-column-letter-row">
+                      @if (hasCheckboxCol()) {
+                        <th class="ogrid-column-letter-cell"></th>
+                      }
+                      @if (hasRowNumbersCol()) {
+                        <th class="ogrid-column-letter-cell"></th>
+                      }
+                      @for (col of visibleCols(); track col.columnId; let colIdx = $index) {
+                        <th class="ogrid-column-letter-cell">
+                          {{ getColumnLetter(colIdx) }}
+                        </th>
+                      }
+                    </tr>
+                  }
                   @for (row of headerRows(); track $index; let rowIdx = $index) {
                     <tr class="ogrid-datagrid-header-row">
                       @if (rowIdx === headerRows().length - 1 && hasCheckboxCol()) {
@@ -236,6 +253,7 @@ import { PopoverCellEditorComponent } from './popover-cell-editor.component';
                               <div
                                 class="ogrid-datagrid-cell"
                                 [class.ogrid-datagrid-cell--active]="descriptor.isActive"
+                                [class.ogrid-datagrid-cell--active-in-range]="descriptor.isActive && descriptor.isInRange"
                                 [class.ogrid-datagrid-cell--in-range]="descriptor.isInRange && !descriptor.isActive"
                                 [class.ogrid-datagrid-cell--in-cut-range]="descriptor.isInCutRange"
                                 [class.ogrid-datagrid-cell--editable]="descriptor.canEditAny"
@@ -448,6 +466,7 @@ import { PopoverCellEditorComponent } from './popover-cell-editor.component';
       outline: 2px solid var(--ogrid-selection-color, #217346); outline-offset: -1px;
       z-index: 2; position: relative; overflow: visible;
     }
+    .ogrid-datagrid-cell--active-in-range { outline: none; background: var(--ogrid-bg, #fff); }
     .ogrid-datagrid-cell--in-range { background: var(--ogrid-range-bg, rgba(33, 115, 70, 0.12)); }
     .ogrid-datagrid-cell--in-cut-range { background: var(--ogrid-hover-bg, rgba(0, 0, 0, 0.04)); opacity: 0.7; }
     .ogrid-datagrid-cell--editing { padding: 0; }
@@ -519,6 +538,17 @@ import { PopoverCellEditorComponent } from './popover-cell-editor.component';
     .ogrid-datagrid-context-menu-overlay {
       position: fixed; inset: 0; z-index: 1000;
     }
+    .ogrid-column-letter-cell {
+      text-align: center;
+      font-size: 11px;
+      font-weight: 500;
+      color: var(--ogrid-fg-muted, rgba(0, 0, 0, 0.4));
+      padding: 2px 4px;
+      background: var(--ogrid-column-letter-bg, var(--ogrid-header-bg, rgba(0, 0, 0, 0.04)));
+      border-bottom: 1px solid var(--ogrid-border, rgba(0, 0, 0, 0.12));
+      user-select: none;
+      font-variant-numeric: tabular-nums;
+    }
 
     /* Angular Material Menu popup dark mode overrides.
        Double-class selector (0,2,0) beats MUI's single-class (0,1,0) defaults. */
@@ -548,9 +578,26 @@ export class DataGridTableComponent<T> extends BaseDataGridTableComponent<T> {
   @ViewChild('wrapperEl') private wrapperRef?: ElementRef<HTMLElement>;
   @ViewChild('tableContainerElRef') private tableContainerRef?: ElementRef<HTMLElement>;
 
+  readonly showColumnLetters = computed(() => !!this.getProps()?.showColumnLetters);
+
   constructor() {
     super();
     this.initBase();
+
+    // Watch active cell and notify parent via onActiveCellChange when cellReferences is enabled
+    effect(() => {
+      const props = this.getProps();
+      const onActiveCellChange = props?.onActiveCellChange;
+      if (!onActiveCellChange) return;
+      const ac = this.activeCell();
+      if (ac) {
+        const colIndex = ac.columnIndex - this.colOffset();
+        const rowNumber = ac.rowIndex + 1;
+        onActiveCellChange(formatCellReference(colIndex, rowNumber));
+      } else {
+        onActiveCellChange(null);
+      }
+    });
   }
 
   protected getProps(): IOGridDataGridProps<T> | undefined {
@@ -563,6 +610,10 @@ export class DataGridTableComponent<T> extends BaseDataGridTableComponent<T> {
 
   protected getTableContainerRef(): ElementRef<HTMLElement> | undefined {
     return this.tableContainerRef;
+  }
+
+  getColumnLetter(colIdx: number): string {
+    return indexToColumnLetter(colIdx);
   }
 
 }

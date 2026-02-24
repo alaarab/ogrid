@@ -139,6 +139,16 @@ export class OGridService<T> {
   readonly ariaLabel = signal<string | undefined>(undefined);
   readonly ariaLabelledBy = signal<string | undefined>(undefined);
   readonly workerSort = signal<boolean>(false);
+  readonly showRowNumbers = signal<boolean>(false);
+  readonly cellReferences = signal<boolean>(false);
+
+  /** Active cell reference string (e.g. 'A1') updated by DataGridTable when cellReferences is enabled. */
+  readonly activeCellRef = signal<string | null>(null);
+
+  /** Stable callback passed to DataGridTable to update activeCellRef. */
+  private readonly handleActiveCellChange = (ref: string | null) => {
+    this.activeCellRef.set(ref);
+  };
 
   // --- Internal state signals ---
   private readonly internalData = signal<T[]>([]);
@@ -363,6 +373,12 @@ export class OGridService<T> {
     rowSelection: this.rowSelection(),
     selectedRows: this.effectiveSelectedRows(),
     onSelectionChange: this.handleSelectionChangeFn,
+    showRowNumbers: this.showRowNumbers() || this.cellReferences(),
+    showColumnLetters: !!this.cellReferences(),
+    showNameBox: !!this.cellReferences(),
+    onActiveCellChange: this.cellReferences() ? this.handleActiveCellChange : undefined,
+    currentPage: this.page(),
+    pageSize: this.pageSize(),
     statusBar: this.statusBarConfig(),
     isLoading: this.isLoadingResolved(),
     filters: this.filters(),
@@ -726,6 +742,8 @@ export class OGridService<T> {
     if (props.columnReorder !== undefined) this.columnReorder.set(props.columnReorder);
     if (props.virtualScroll !== undefined) this.virtualScroll.set(props.virtualScroll);
     if (props.workerSort !== undefined) this.workerSort.set(props.workerSort);
+    if (props.showRowNumbers !== undefined) this.showRowNumbers.set(props.showRowNumbers);
+    if (props.cellReferences !== undefined) this.cellReferences.set(props.cellReferences);
     if (props.entityLabelPlural !== undefined) this.entityLabelPlural.set(props.entityLabelPlural);
     if (props.className !== undefined) this.className.set(props.className);
     if (props.layoutMode !== undefined) this.layoutMode.set(props.layoutMode);

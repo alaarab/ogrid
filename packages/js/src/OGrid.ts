@@ -119,7 +119,7 @@ import type { InlineCellEditor } from './components/InlineCellEditor';
 import type { ContextMenu } from './components/ContextMenu';
 import { EventEmitter } from './state/EventEmitter';
 import type { RowId } from '@alaarab/ogrid-core';
-import { flattenColumns, injectGlobalStyles } from '@alaarab/ogrid-core';
+import { flattenColumns, injectGlobalStyles, formatCellReference } from '@alaarab/ogrid-core';
 import { OGridEventWiring } from './OGridEventWiring';
 import { OGridRendering } from './OGridRendering';
 import type { OGridRenderingContext } from './OGridRendering';
@@ -283,6 +283,7 @@ export class OGrid<T> {
   private options: OGridOptions<T>;
   private isFullScreen = false;
   private fullscreenBtn: HTMLButtonElement | null = null;
+  private nameBoxEl: HTMLElement | null = null;
 
   // Decomposed helpers
   private renderingHelper: OGridRendering<T>;
@@ -310,6 +311,15 @@ export class OGrid<T> {
     // Left spacer keeps column chooser on the right via justify-content: space-between
     const toolbarSpacer = document.createElement('div');
     this.toolbarEl.appendChild(toolbarSpacer);
+
+    // Name box (Excel-style cell reference display) — prepended into toolbar left side
+    if (options.cellReferences) {
+      this.nameBoxEl = document.createElement('div');
+      this.nameBoxEl.className = 'ogrid-name-box';
+      this.nameBoxEl.style.cssText = 'display:inline-flex;align-items:center;padding:0 8px;font-family:\'Consolas\',\'Courier New\',monospace;font-size:12px;border:1px solid var(--ogrid-border, rgba(0,0,0,0.12));border-radius:3px;height:24px;margin-right:8px;background:var(--ogrid-bg, #fff);min-width:40px;color:var(--ogrid-fg-secondary, rgba(0,0,0,0.6));';
+      this.nameBoxEl.textContent = '\u2014';
+      toolbarSpacer.appendChild(this.nameBoxEl);
+    }
 
     // Fullscreen toggle button
     if (options.fullScreen) {
@@ -488,6 +498,26 @@ export class OGrid<T> {
         this.cellEditor = result.cellEditor;
         this.contextMenu = result.contextMenu;
         this.unsubscribes.push(...result.unsubscribes);
+
+        // Wire name box updates on active cell change
+        if (this.nameBoxEl && this.selectionState) {
+          const nameBox = this.nameBoxEl;
+          const sel = this.selectionState;
+          let colOffset = 0;
+          if (this.rowSelectionState) colOffset++;
+          if (options.showRowNumbers || options.cellReferences) colOffset++;
+          this.unsubscribes.push(
+            sel.onSelectionChange(({ activeCell }) => {
+              if (activeCell) {
+                const dataColIndex = activeCell.columnIndex - colOffset;
+                const rowNumber = (this.state.page - 1) * this.state.pageSize + activeCell.rowIndex + 1;
+                nameBox.textContent = formatCellReference(dataColIndex, rowNumber);
+              } else {
+                nameBox.textContent = '\u2014';
+              }
+            })
+          );
+        }
       }
 
       // Subscribe to state changes

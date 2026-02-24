@@ -145,4 +145,36 @@ export function createOGridTests(OGrid: React.ComponentType<IOGridProps<FixtureR
     fireEvent.keyDown(document, { key: 'Escape' });
     expect(screen.getByRole('button', { name: /fullscreen/i })).toBeInTheDocument();
   });
+
+  it('cellReferences=true renders column letters, row numbers, and name box', () => {
+    const { container } = renderOGrid({ cellReferences: true });
+    // Column letters should be present
+    const allTh = container.querySelectorAll('thead th');
+    const letterCells = Array.from(allTh).filter(th => {
+      const text = th.textContent?.trim();
+      return text === 'A' || text === 'B';
+    });
+    expect(letterCells.length).toBeGreaterThanOrEqual(2);
+    // Name box should render with aria-label
+    const nameBox = container.querySelector('[aria-label="Active cell reference"]');
+    expect(nameBox).toBeInTheDocument();
+    // Name box should show em dash when no cell is active
+    expect(nameBox?.textContent).toBe('\u2014');
+  });
+
+  it('cellReferences=false (default) does not render column letters or name box', () => {
+    const { container } = renderOGrid();
+    const nameBox = container.querySelector('[aria-label="Active cell reference"]');
+    expect(nameBox).not.toBeInTheDocument();
+  });
+
+  it('showRowNumbers=true without cellReferences does not render column letters or name box', () => {
+    const { container } = renderOGrid({ showRowNumbers: true });
+    const nameBox = container.querySelector('[aria-label="Active cell reference"]');
+    expect(nameBox).not.toBeInTheDocument();
+    // Row numbers header "#" should be present in thead
+    const allTh = container.querySelectorAll('thead th');
+    const hashHeader = Array.from(allTh).find(th => th.textContent?.trim() === '#');
+    expect(hashHeader).toBeTruthy();
+  });
 }

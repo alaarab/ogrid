@@ -265,6 +265,8 @@ export {
   formatSelectionAsTsv,
   parseTsvClipboard,
   UndoRedoStack,
+  indexToColumnLetter,
+  formatCellReference,
 } from './utils';
 export type {
   CsvColumn,

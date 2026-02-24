@@ -80,6 +80,9 @@ interface IOGridBaseProps<T> {
   /** Show Excel-style row numbers column at the start of the grid (1, 2, 3...). Default: false. */
   showRowNumbers?: boolean;
 
+  /** Enable Excel-style cell references: column letter headers, row numbers, and name box. Implies showRowNumbers. */
+  cellReferences?: boolean;
+
   statusBar?: boolean | IStatusBarProps;
 
   defaultPageSize?: number;
@@ -200,6 +203,10 @@ export interface IOGridDataGridProps<T> {
   selectedRows?: Set<RowId>;
   onSelectionChange?: (event: IRowSelectionChangeEvent<T>) => void;
   showRowNumbers?: boolean;
+  showColumnLetters?: boolean;
+  showNameBox?: boolean;
+  /** Callback when the active cell changes. Used by the name box to display the current cell reference. */
+  onActiveCellChange?: (ref: string | null) => void;
   currentPage?: number;
   pageSize?: number;
   statusBar?: IStatusBarProps;
