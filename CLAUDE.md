@@ -245,7 +245,7 @@ Three opt-in performance features implemented in core and wired into all framewo
 
 ## Testing
 
-**3,084 tests** across 14 packages (100% pass rate). Each framework uses its native testing tools for maintainability and idiomaticity.
+**3,084 tests** across 14 packages (100% pass rate). **Version: 2.3.0** Each framework uses its native testing tools for maintainability and idiomaticity.
 
 - **Core:** 437 tests (pure TypeScript utilities, no framework dependencies)
 - **JS:** 374 tests (native DOM testing)

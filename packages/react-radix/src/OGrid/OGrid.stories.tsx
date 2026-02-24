@@ -280,6 +280,74 @@ export const CellReferences: Story = {
   },
 };
 
+// ---------------------------------------------------------------------------
+// Performance demos — virtual scrolling, worker sort, column virtualization
+// ---------------------------------------------------------------------------
+
+export const VirtualScrolling10K: Story = {
+  render: () => (
+    <div style={{ height: 600 }}>
+      <OGrid<Project>
+        data={makeProjects(10000)}
+        columns={columns}
+        getRowId={getRowId}
+        entityLabelPlural="projects"
+        statusBar
+        pagination={false}
+        layoutMode="fill"
+        virtualScroll={{ columns: false }}
+      />
+    </div>
+  ),
+};
+
+export const WorkerSort50K: Story = {
+  render: function WorkerSortStory() {
+    const [data] = React.useState(() => makeProjects(50000));
+    return (
+      <div style={{ height: 600 }}>
+        <OGrid<Project>
+          data={data}
+          columns={columns}
+          getRowId={getRowId}
+          entityLabelPlural="projects"
+          statusBar
+          pagination={false}
+          layoutMode="fill"
+          workerSort
+        />
+      </div>
+    );
+  },
+};
+
+const manyColumns: IColumnDef<Project>[] = Array.from({ length: 50 }, (_, i) => ({
+  columnId: `col_${i}`,
+  name: `Column ${i + 1}`,
+  defaultWidth: 120,
+  valueGetter: (item: Project) => {
+    const vals = [item.name, item.status, item.owner, String(item.budget), item.startDate, String(item.active)];
+    return vals[i % vals.length];
+  },
+}));
+
+export const ColumnVirtualization50Cols: Story = {
+  render: () => (
+    <div style={{ height: 600 }}>
+      <OGrid<Project>
+        data={makeProjects(1000)}
+        columns={manyColumns}
+        getRowId={getRowId}
+        entityLabelPlural="projects"
+        statusBar
+        pagination={false}
+        layoutMode="fill"
+        virtualScroll={{ columns: true, columnOverscan: 3 }}
+      />
+    </div>
+  ),
+};
+
 export const SideBar: Story = {
   render: () => (
     <OGrid<Project>
