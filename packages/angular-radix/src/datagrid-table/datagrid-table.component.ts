@@ -44,17 +44,17 @@ import { PopoverCellEditorComponent } from './popover-cell-editor.component';
       min-height: 0;
       width: 100%;
       max-width: 100%;
-      overflow-x: auto;
+      overflow-x: hidden;
       overflow-y: auto;
       background: var(--ogrid-bg, #ffffff);
       will-change: scroll-position;
       outline: none;
     }
-    .ogrid-datagrid-wrapper[data-suppress-scroll='true'] { overflow-x: hidden; }
     .ogrid-datagrid-wrapper [data-drag-range] {
       background: rgba(33, 115, 70, 0.12);
     }
     .ogrid-datagrid-wrapper--fit { width: fit-content; }
+    .ogrid-datagrid-wrapper--overflow-x { overflow-x: auto; }
     .ogrid-datagrid-wrapper--loading-empty { min-height: 200px; }
     .ogrid-datagrid-scroll-wrapper {
       display: flex;
@@ -405,12 +405,13 @@ import { PopoverCellEditorComponent } from './popover-cell-editor.component';
         (keydown)="onGridKeyDown($event)"
         (scroll)="onWrapperScroll($event)"
         (contextmenu)="$event.preventDefault()"
-        [attr.data-suppress-scroll]="getProps()?.suppressHorizontalScroll ? 'true' : null"
+        [class.ogrid-datagrid-wrapper--overflow-x]="allowOverflowX()"
+        [attr.data-overflow-x]="allowOverflowX() ? 'true' : 'false'"
       >
         <div class="ogrid-datagrid-scroll-wrapper">
-          <div style="width: max-content; min-width: 100%; overflow: clip">
+          <div [style.minWidth.px]="allowOverflowX() ? minTableWidth() : undefined">
             <div [class.ogrid-datagrid-table-wrapper--loading]="isLoading() && items().length > 0" #tableContainerElRef>
-              <table class="ogrid-datagrid-table" role="grid"
+              <table class="ogrid-datagrid-table" role="grid" [style.minWidth.px]="minTableWidth()"
               >
                 <thead [class]="stickyHeader() ? 'ogrid-datagrid-thead ogrid-sticky-header' : 'ogrid-datagrid-thead'">
                   @for (row of headerRows(); track $index; let rowIdx = $index) {
