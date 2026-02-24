@@ -193,6 +193,9 @@ export class InlineCellEditor<T> {
         e.stopPropagation();
         this.onCancel?.();
         this.closeEditor();
+      } else if ((e.ctrlKey || e.metaKey) && ['c', 'x', 'v', 'a', 'z', 'y'].includes(e.key)) {
+        // Let the input handle clipboard/undo shortcuts natively — don't bubble to grid
+        e.stopPropagation();
       }
     });
 
@@ -475,6 +478,9 @@ export class InlineCellEditor<T> {
         e.stopPropagation();
         this.onCancel?.();
         this.closeEditor();
+      } else if ((e.ctrlKey || e.metaKey) && ['c', 'x', 'v', 'a', 'z', 'y'].includes(e.key)) {
+        // Let the input handle clipboard/undo shortcuts natively — don't bubble to grid
+        e.stopPropagation();
       }
     });
 
