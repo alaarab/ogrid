@@ -351,10 +351,12 @@ table:not([class]) th {
      position:sticky on headers and pinned columns. */
   overflow: visible;
 
-  /* Override Docusaurus global `table { overflow: auto }` which creates
-     a second horizontal scrollbar inside OGrid grids. */
+  /* Override Docusaurus global table styles that leak into OGrid grids:
+     - overflow:auto creates a second horizontal scrollbar
+     - margin-bottom adds empty space below the last row */
   table {
     overflow: visible;
+    margin-bottom: 0;
   }
 
   /* Strip inner grid border/radius — the .live-demo wrapper provides them */
