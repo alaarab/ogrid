@@ -328,7 +328,7 @@ export function createDataGridTable(ui: IDataGridTableUIBindings) {
             style: wrapperStyle,
           }, [
             h('div', { class: 'ogrid-scroll-wrapper' }, [
-              h('div', { style: { minWidth: allowOverflowX ? `${minTableWidth}px` : undefined } }, [
+              h('div', { style: { minWidth: allowOverflowX ? `${minTableWidth}px` : undefined, overflowX: 'clip' } }, [
                 h('div', {
                   ref: (el: unknown) => { tableContainerRef.value = el as HTMLDivElement; },
                   class: ['ogrid-table-container', isLoading && items.length > 0 ? 'ogrid-table-container--loading' : ''],
