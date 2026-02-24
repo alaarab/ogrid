@@ -167,6 +167,17 @@ export const toolbarColumns: IColumnDef<Person>[] = [
   { columnId: 'startDate', name: 'Start Date', defaultVisible: false },
 ];
 
+export const cellReferencesColumns: IColumnDef<Person>[] = [
+  { columnId: 'name', name: 'Name' },
+  { columnId: 'age', name: 'Age', type: 'numeric' },
+  { columnId: 'email', name: 'Email' },
+  { columnId: 'department', name: 'Department' },
+  { columnId: 'salary', name: 'Salary', type: 'numeric',
+    valueFormatter: (v) => `$${Number(v).toLocaleString()}` },
+  { columnId: 'status', name: 'Status' },
+  { columnId: 'startDate', name: 'Start Date' },
+];
+
 /** Button style used by toolbar demos */
 export const btnStyle: React.CSSProperties = {
   padding: '5px 12px',

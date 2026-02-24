@@ -246,6 +246,40 @@ export const SpreadsheetExperience: Story = {
   },
 };
 
+export const CellReferences: Story = {
+  render: function CellReferencesStory() {
+    const [data, setData] = React.useState(() => makeProjects(20));
+    const handleCellValueChanged = React.useCallback((e: ICellValueChangedEvent<Project>) => {
+      setData((prev) =>
+        prev.map((row) =>
+          row.id === e.item.id ? { ...row, [e.field]: e.newValue } : row
+        )
+      );
+    }, []);
+    const editableColumns: IColumnDef<Project>[] = [
+      { columnId: 'name', name: 'Project Name', sortable: true, filterable: { type: 'text' }, editable: true, cellEditor: 'text', renderCell: (item) => <span>{item.name}</span> },
+      { columnId: 'status', name: 'Status', sortable: true, filterable: { type: 'multiSelect', filterField: 'status' }, editable: true, cellEditor: 'select', cellEditorParams: { values: STATUSES }, renderCell: (item) => <span>{item.status}</span> },
+      { columnId: 'owner', name: 'Owner', sortable: true, filterable: { type: 'text' }, renderCell: (item) => <span>{item.owner}</span> },
+      { columnId: 'budget', name: 'Budget', sortable: true, compare: (a, b) => a.budget - b.budget, renderCell: (item) => <span>${item.budget.toLocaleString()}</span> },
+      { columnId: 'startDate', name: 'Start Date', type: 'date', sortable: true, filterable: { type: 'date' }, editable: true },
+      { columnId: 'active', name: 'Active', type: 'boolean', sortable: true, editable: true },
+    ];
+    return (
+      <OGrid<Project>
+        data={data}
+        columns={editableColumns}
+        getRowId={getRowId}
+        entityLabelPlural="projects"
+        cellReferences
+        editable
+        onCellValueChanged={handleCellValueChanged}
+        statusBar
+        defaultPageSize={10}
+      />
+    );
+  },
+};
+
 export const SideBar: Story = {
   render: () => (
     <OGrid<Project>
@@ -381,6 +415,8 @@ interface PlaygroundArgs {
   rowSelection: string;
   editable: boolean;
   cellSelection: boolean;
+  cellReferences: boolean;
+  showRowNumbers: boolean;
   layoutMode: 'content' | 'fill';
   suppressHorizontalScroll: boolean;
   defaultPageSize: number;
@@ -417,6 +453,8 @@ export const Playground: StoryObj<PlaygroundArgs> = {
     },
     editable: { control: 'boolean' },
     cellSelection: { control: 'boolean' },
+    cellReferences: { control: 'boolean' },
+    showRowNumbers: { control: 'boolean' },
     layoutMode: { control: 'radio', options: ['content', 'fill'] },
     suppressHorizontalScroll: { control: 'boolean' },
     defaultPageSize: { control: 'select', options: [10, 25, 50, 100] },
@@ -443,6 +481,8 @@ export const Playground: StoryObj<PlaygroundArgs> = {
     rowSelection: 'multiple',
     editable: true,
     cellSelection: true,
+    cellReferences: false,
+    showRowNumbers: false,
     layoutMode: 'fill',
     suppressHorizontalScroll: false,
     defaultPageSize: 10,
@@ -505,6 +545,8 @@ export const Playground: StoryObj<PlaygroundArgs> = {
         }
         editable={args.editable}
         cellSelection={args.cellSelection}
+        cellReferences={args.cellReferences}
+        showRowNumbers={args.showRowNumbers}
         onCellValueChanged={handleCellValueChanged}
         layoutMode={args.layoutMode}
         suppressHorizontalScroll={args.suppressHorizontalScroll}

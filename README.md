@@ -65,6 +65,7 @@ OGrid gives you every feature AG Grid locks behind an enterprise license -- for 
 - **Fill Handle** -- Drag to fill cells (Excel-style)
 - **Undo / Redo** -- Full edit history with Ctrl+Z / Ctrl+Y; batch operation support
 - **Row Selection** -- Single or multiple with Shift+click range support
+- **Cell References** -- Excel-style column letters (A, B, C…), row numbers, and name box showing active cell (e.g. "A1")
 - **Column Groups** -- Multi-row grouped headers with arbitrary nesting
 - **Column Pinning** -- Sticky left/right columns
 - **Column Resize** -- Drag column borders to resize
