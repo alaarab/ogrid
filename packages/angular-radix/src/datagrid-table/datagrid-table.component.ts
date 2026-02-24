@@ -1,4 +1,4 @@
-import { Component, ElementRef, ChangeDetectionStrategy, ViewEncapsulation, Input, ViewChild, signal } from '@angular/core';
+import { Component, ElementRef, ChangeDetectionStrategy, ViewEncapsulation, Input, ViewChild, signal, computed, effect } from '@angular/core';
 import {
   BaseDataGridTableComponent,
   DataGridStateService,
@@ -9,6 +9,8 @@ import {
   MarchingAntsOverlayComponent,
   EmptyStateComponent,
   OGRID_THEME_VARS_CSS,
+  indexToColumnLetter,
+  formatCellReference,
 } from '@alaarab/ogrid-angular';
 import type {
   IOGridDataGridProps,
@@ -202,6 +204,10 @@ import { PopoverCellEditorComponent } from './popover-cell-editor.component';
       position: relative;
       overflow: visible;
     }
+    .ogrid-datagrid-cell--active-in-range {
+      outline: none;
+      background: var(--ogrid-bg, #fff);
+    }
     .ogrid-datagrid-cell--in-range {
       background: var(--ogrid-bg-range, rgba(33, 115, 70, 0.12));
     }
@@ -346,6 +352,17 @@ import { PopoverCellEditorComponent } from './popover-cell-editor.component';
       inset: 0;
       z-index: 1000;
     }
+    .ogrid-column-letter-cell {
+      text-align: center;
+      font-size: 11px;
+      font-weight: 500;
+      color: var(--ogrid-fg-muted, rgba(0, 0, 0, 0.4));
+      padding: 2px 4px;
+      background: var(--ogrid-column-letter-bg, var(--ogrid-header-bg, #f5f5f5));
+      border-bottom: 1px solid var(--ogrid-border, rgba(0, 0, 0, 0.12));
+      user-select: none;
+      font-variant-numeric: tabular-nums;
+    }
     .ogrid-datagrid-checkbox-spacer {
       width: 48px;
       min-width: 48px;
@@ -415,6 +432,21 @@ import { PopoverCellEditorComponent } from './popover-cell-editor.component';
                 [attr.data-virtual-scroll]="vsEnabled() ? '' : null"
               >
                 <thead [class]="stickyHeader() ? 'ogrid-datagrid-thead ogrid-sticky-header' : 'ogrid-datagrid-thead'">
+                  @if (showColumnLetters()) {
+                    <tr class="ogrid-column-letter-row">
+                      @if (hasCheckboxCol()) {
+                        <th class="ogrid-column-letter-cell"></th>
+                      }
+                      @if (hasRowNumbersCol()) {
+                        <th class="ogrid-column-letter-cell"></th>
+                      }
+                      @for (col of visibleCols(); track col.columnId; let colIdx = $index) {
+                        <th class="ogrid-column-letter-cell">
+                          {{ getColumnLetter(colIdx) }}
+                        </th>
+                      }
+                    </tr>
+                  }
                   @for (row of headerRows(); track $index; let rowIdx = $index) {
                     <tr class="ogrid-datagrid-header-row">
                       @if (rowIdx === headerRows().length - 1 && hasCheckboxCol()) {
@@ -593,6 +625,7 @@ import { PopoverCellEditorComponent } from './popover-cell-editor.component';
                               <div
                                 class="ogrid-datagrid-cell"
                                 [class.ogrid-datagrid-cell--active]="descriptor.isActive"
+                                [class.ogrid-datagrid-cell--active-in-range]="descriptor.isActive && descriptor.isInRange"
                                 [class.ogrid-datagrid-cell--in-range]="descriptor.isInRange && !descriptor.isActive"
                                 [class.ogrid-datagrid-cell--in-cut-range]="descriptor.isInCutRange"
                                 [class.ogrid-datagrid-cell--editable]="descriptor.canEditAny"
@@ -726,9 +759,26 @@ export class DataGridTableComponent<T> extends BaseDataGridTableComponent<T> {
 
   readonly cancelEditBound = () => this.cancelEdit();
 
+  readonly showColumnLetters = computed(() => !!this.getProps()?.showColumnLetters);
+
   constructor() {
     super();
     this.initBase();
+
+    // Watch active cell and notify parent via onActiveCellChange when cellReferences is enabled
+    effect(() => {
+      const props = this.getProps();
+      const onActiveCellChange = props?.onActiveCellChange;
+      if (!onActiveCellChange) return;
+      const ac = this.activeCell();
+      if (ac) {
+        const colIndex = ac.columnIndex - this.colOffset();
+        const rowNumber = ac.rowIndex + 1;
+        onActiveCellChange(formatCellReference(colIndex, rowNumber));
+      } else {
+        onActiveCellChange(null);
+      }
+    });
   }
 
   protected getProps(): IOGridDataGridProps<T> | undefined {
@@ -741,6 +791,10 @@ export class DataGridTableComponent<T> extends BaseDataGridTableComponent<T> {
 
   protected getTableContainerRef(): ElementRef<HTMLElement> | undefined {
     return this.tableContainerRef;
+  }
+
+  getColumnLetter(colIdx: number): string {
+    return indexToColumnLetter(colIdx);
   }
 
 }

@@ -251,6 +251,46 @@ export function createDataGridTableTests(DataGridTableComponent: new () => unkno
     });
   });
 
+  describe('cell references: column letters', () => {
+    it('showColumnLetters=true is threaded through props to state service', () => {
+      const comp = createComponent({ showColumnLetters: true, showRowNumbers: true });
+      const props = comp.stateService.props();
+      expect(props?.showColumnLetters).toBe(true);
+    });
+
+    it('default (no showColumnLetters) does not set showColumnLetters in props', () => {
+      const comp = createComponent();
+      const props = comp.stateService.props();
+      expect(props?.showColumnLetters).toBeFalsy();
+    });
+
+    it('showRowNumbers=true sets hasRowNumbersCol in layout state', () => {
+      const comp = createComponent({ showRowNumbers: true });
+      const state = comp.stateService.getState();
+      expect(state.layout.hasRowNumbersCol).toBe(true);
+    });
+
+    it('default (no showRowNumbers) does not set hasRowNumbersCol', () => {
+      const comp = createComponent();
+      const state = comp.stateService.getState();
+      expect(state.layout.hasRowNumbersCol).toBe(false);
+    });
+
+    it('showColumnLetters with showRowNumbers increases colOffset', () => {
+      const comp = createComponent({ showColumnLetters: true, showRowNumbers: true });
+      const state = comp.stateService.getState();
+      // colOffset should account for the row numbers column
+      expect(state.layout.colOffset).toBeGreaterThanOrEqual(1);
+    });
+
+    it('onActiveCellChange callback is threaded through props', () => {
+      const onActiveCellChange = jest.fn();
+      const comp = createComponent({ showColumnLetters: true, showRowNumbers: true, onActiveCellChange });
+      const props = comp.stateService.props();
+      expect(props?.onActiveCellChange).toBe(onActiveCellChange);
+    });
+  });
+
   describe('error handling in cell rendering', () => {
     it('onCellError callback is threaded through viewModels', () => {
       const onCellError = jest.fn();

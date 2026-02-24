@@ -185,4 +185,66 @@ export function createOGridTests(OGridComponent: new () => OGridInstance): void 
     // Note: async onFetchError tests removed — Angular signal effects don't properly
     // trigger in mocked test context. These need proper TestBed-based tests.
   });
+
+  describe('cell references', () => {
+    it('cellReferences=true enables column letters, row numbers, and name box in dataGridProps', () => {
+      const comp = createComponent({ cellReferences: true });
+      const dgProps = comp._testService.dataGridProps();
+      expect(dgProps.showColumnLetters).toBe(true);
+      expect(dgProps.showRowNumbers).toBe(true);
+      expect(dgProps.showNameBox).toBe(true);
+    });
+
+    it('cellReferences=true includes onActiveCellChange in dataGridProps', () => {
+      const comp = createComponent({ cellReferences: true });
+      const dgProps = comp._testService.dataGridProps();
+      expect(typeof dgProps.onActiveCellChange).toBe('function');
+    });
+
+    it('default (no cellReferences) does not set column letters or name box', () => {
+      const comp = createComponent();
+      const dgProps = comp._testService.dataGridProps();
+      expect(dgProps.showColumnLetters).toBe(false);
+      expect(dgProps.showNameBox).toBe(false);
+      expect(dgProps.onActiveCellChange).toBeUndefined();
+    });
+
+    it('showRowNumbers=true without cellReferences does not enable column letters or name box', () => {
+      const comp = createComponent({ showRowNumbers: true });
+      const dgProps = comp._testService.dataGridProps();
+      expect(dgProps.showRowNumbers).toBe(true);
+      expect(dgProps.showColumnLetters).toBe(false);
+      expect(dgProps.showNameBox).toBe(false);
+      expect(dgProps.onActiveCellChange).toBeUndefined();
+    });
+
+    it('cellReferences signal derives correct values for service signals', () => {
+      const comp = createComponent({ cellReferences: true });
+      expect(comp._testService.cellReferences()).toBe(true);
+      expect(comp._testService.showRowNumbers()).toBe(false); // showRowNumbers signal is separate from cellReferences
+    });
+
+    it('activeCellRef signal updates when handleActiveCellChange is called', () => {
+      const comp = createComponent({ cellReferences: true });
+      // Initially null
+      expect(comp._testService.activeCellRef()).toBeNull();
+      // Call onActiveCellChange from dataGridProps to simulate active cell change
+      const dgProps = comp._testService.dataGridProps();
+      const cb = dgProps.onActiveCellChange;
+      expect(cb).toBeDefined();
+      cb?.('A1');
+      expect(comp._testService.activeCellRef()).toBe('A1');
+      // Update to another cell
+      cb?.('B3');
+      expect(comp._testService.activeCellRef()).toBe('B3');
+      // Clear active cell
+      cb?.(null);
+      expect(comp._testService.activeCellRef()).toBeNull();
+    });
+
+    it('activeCellRef defaults to null', () => {
+      const comp = createComponent();
+      expect(comp._testService.activeCellRef()).toBeNull();
+    });
+  });
 }
