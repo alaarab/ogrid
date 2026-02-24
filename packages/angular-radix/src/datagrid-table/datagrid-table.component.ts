@@ -409,7 +409,7 @@ import { PopoverCellEditorComponent } from './popover-cell-editor.component';
         [attr.data-overflow-x]="allowOverflowX() ? 'true' : 'false'"
       >
         <div class="ogrid-datagrid-scroll-wrapper">
-          <div [style.minWidth.px]="allowOverflowX() ? minTableWidth() : undefined">
+          <div [style.minWidth.px]="allowOverflowX() ? minTableWidth() : undefined" style="overflow-x: clip">
             <div [class.ogrid-datagrid-table-wrapper--loading]="isLoading() && items().length > 0" #tableContainerElRef>
               <table class="ogrid-datagrid-table" role="grid" [style.minWidth.px]="minTableWidth()"
               >
