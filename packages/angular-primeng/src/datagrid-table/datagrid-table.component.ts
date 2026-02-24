@@ -61,7 +61,7 @@ import { PopoverCellEditorComponent } from './popover-cell-editor.component';
         [attr.aria-labelledby]="ariaLabelledBy()"
         [attr.data-empty]="showEmptyInGrid() ? 'true' : null"
         [attr.data-column-count]="state().layout.totalColCount"
-        [attr.data-suppress-scroll]="getProps()?.suppressHorizontalScroll ? 'true' : null"
+        [attr.data-overflow-x]="allowOverflowX() ? 'true' : 'false'"
         [attr.data-has-selection]="rowSelectionMode !== 'none' ? 'true' : null"
         (contextmenu)="$event.preventDefault()"
         (keydown)="onGridKeyDown($event)"
@@ -72,7 +72,7 @@ import { PopoverCellEditorComponent } from './popover-cell-editor.component';
       >
         <div class="ogrid-table-wrapper">
           <div [class.loading-dimmed]="isLoading() && items().length > 0" class="ogrid-table-wrapper">
-            <div #tableContainer class="ogrid-table-anchor">
+            <div #tableContainer class="ogrid-table-wrapper">
               <table class="ogrid-table" role="grid">
                 <thead [class]="stickyHeader() ? 'ogrid-thead ogrid-sticky-header' : 'ogrid-thead'">
                   @for (row of headerRows(); track $index; let rowIdx = $index) {
@@ -374,20 +374,13 @@ import { PopoverCellEditorComponent } from './popover-cell-editor.component';
       background: var(--ogrid-bg, #ffffff);
       color: var(--ogrid-fg, rgba(0, 0, 0, 0.87));
     }
-    .ogrid-scroll-wrapper[data-suppress-scroll='true'] { overflow-x: hidden; }
     .ogrid-scroll-wrapper--loading-empty { min-height: 200px; }
     .ogrid-table-wrapper {
       position: relative;
     }
-    .ogrid-table-anchor {
-      position: relative;
-      width: max-content;
-      min-width: 100%;
-      overflow: clip;
-    }
     .ogrid-table {
-      width: 100%;
-      min-width: max-content;
+      width: var(--data-table-width, 100%);
+      min-width: var(--data-table-min-width, 100%);
       border-collapse: collapse;
       table-layout: fixed;
     }
@@ -808,7 +801,15 @@ export class DataGridTableComponent<T = unknown> extends BaseDataGridTableCompon
 
   readonly tableWidthStyle = computed(() => {
     if (this.showEmptyInGrid()) return '100%';
+    if (this.allowOverflowX()) return 'fit-content';
     if (this.layoutMode === 'content') return 'fit-content';
+    return '100%';
+  });
+
+  readonly tableMinWidthStyle = computed(() => {
+    if (this.showEmptyInGrid()) return '100%';
+    if (this.allowOverflowX()) return 'max-content';
+    if (this.layoutMode === 'content') return 'max-content';
     return '100%';
   });
 
