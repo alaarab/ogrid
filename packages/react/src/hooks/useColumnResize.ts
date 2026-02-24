@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef } from 'react';
+import { measureColumnContentWidth } from '@alaarab/ogrid-core';
 import type { IColumnDef } from '../types';
 import { useLatestRef } from './useLatestRef';
 
@@ -15,6 +16,7 @@ export interface UseColumnResizeParams {
 
 export interface UseColumnResizeResult<T> {
   handleResizeStart: (e: React.MouseEvent, col: IColumnDef<T>) => void;
+  handleResizeDoubleClick: (e: React.MouseEvent, col: IColumnDef<T>) => void;
   getColumnWidth: (col: IColumnDef<T>) => number;
 }
 
@@ -159,6 +161,22 @@ export function useColumnResize<T>({
     cleanupRef.current = cleanup;
   }, [defaultWidth, minWidth, setColumnSizingOverrides, columnSizingOverridesRef]);
 
+  const handleResizeDoubleClick = useCallback((e: React.MouseEvent, col: IColumnDef<T>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    const columnId = col.columnId;
+    const thEl = (e.currentTarget as HTMLElement).closest('th');
+    const container = thEl?.closest('table')?.parentElement ?? undefined;
+    const idealWidth = measureColumnContentWidth(columnId, minWidth, container);
+    setColumnSizingOverrides((prev) => ({
+      ...prev,
+      [columnId]: { widthPx: idealWidth },
+    }));
+    if (onColumnResizedRef.current) {
+      onColumnResizedRef.current(columnId, idealWidth);
+    }
+  }, [minWidth, setColumnSizingOverrides]);
+
   const getColumnWidth = useCallback((col: IColumnDef<T>) => {
     return columnSizingOverrides[col.columnId]?.widthPx
       ?? col.idealWidth
@@ -166,5 +184,5 @@ export function useColumnResize<T>({
       ?? defaultWidth;
   }, [columnSizingOverrides, defaultWidth]);
 
-  return { handleResizeStart, getColumnWidth };
+  return { handleResizeStart, handleResizeDoubleClick, getColumnWidth };
 }

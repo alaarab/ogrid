@@ -50,6 +50,7 @@ export interface UseDataGridTableOrchestrationResult<T> {
 
   // Column resize
   handleResizeStart: UseColumnResizeResult<T>['handleResizeStart'];
+  handleResizeDoubleClick: UseColumnResizeResult<T>['handleResizeDoubleClick'];
   getColumnWidth: UseColumnResizeResult<T>['getColumnWidth'];
 
   // Column reorder
@@ -249,7 +250,7 @@ export function useDataGridTableOrchestration<T>(
   const fitToContent = layoutMode === 'content';
 
   // ── Column resize ──────────────────────────────────────────────────────
-  const { handleResizeStart, getColumnWidth } = useColumnResize<T>({
+  const { handleResizeStart, handleResizeDoubleClick, getColumnWidth } = useColumnResize<T>({
     columnSizingOverrides,
     setColumnSizingOverrides,
   });
@@ -339,6 +340,7 @@ export function useDataGridTableOrchestration<T>(
 
     // Column resize
     handleResizeStart,
+    handleResizeDoubleClick,
     getColumnWidth,
 
     // Column reorder

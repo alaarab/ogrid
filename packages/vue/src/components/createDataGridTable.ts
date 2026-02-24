@@ -73,7 +73,7 @@ export function createDataGridTable(ui: IDataGridTableUIBindings) {
         columnReorder: { isDragging: isReorderDragging, dropIndicatorX, handleHeaderMouseDown: handleReorderMouseDown },
         virtualScroll: { containerRef: vsContainerRef, visibleRange, totalHeight: _totalHeight, scrollToRow: _scrollToRow },
         virtualScrollEnabled,
-        columnResize: { handleResizeStart, getColumnWidth },
+        columnResize: { handleResizeStart, handleResizeDoubleClick, getColumnWidth },
       } = useDataGridTableSetup({ props: propsRef }) as UseDataGridTableSetupResult<unknown>;
 
       // Stable handlers — avoid creating new closures per render
@@ -455,6 +455,7 @@ export function createDataGridTable(ui: IDataGridTableUIBindings) {
                                   e.stopPropagation();
                                   handleResizeStart(e, col);
                                 },
+                                onDblclick: (e: MouseEvent) => handleResizeDoubleClick(e, col),
                                 class: 'ogrid-resize-handle',
                               }),
                             ]);
