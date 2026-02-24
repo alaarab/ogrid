@@ -186,7 +186,7 @@ export function useFillHandle<T>(params: UseFillHandleParams<T>): UseFillHandleR
 
       // Commit range to React state
       setSelectionRange(norm);
-      setActiveCell({ rowIndex: end.endRow, columnIndex: end.endCol + colOffsetRef.current });
+      setActiveCell({ rowIndex: fillDrag.startRow, columnIndex: fillDrag.startCol + colOffsetRef.current });
 
       // Apply fill values
       const fillEvents = applyFillValues(norm, fillDrag.startRow, fillDrag.startCol, items, visibleCols);
@@ -206,7 +206,6 @@ export function useFillHandle<T>(params: UseFillHandleParams<T>): UseFillHandleR
       window.removeEventListener('mouseup', onUp, true);
       if (rafRef.current) cancelAnimationFrame(rafRef.current);
     };
-  // eslint-disable-next-line react-hooks/exhaustive-deps -- onCellValueChangedRef is a stable ref, intentionally excluded
   }, [
     fillDrag,
     editable,
@@ -218,6 +217,7 @@ export function useFillHandle<T>(params: UseFillHandleParams<T>): UseFillHandleR
     endBatch,
     colOffsetRef,
     wrapperRef,
+    onCellValueChangedRef,
   ]);
 
   // Ref mirror — keeps handleFillHandleMouseDown stable across selection changes
@@ -257,8 +257,7 @@ export function useFillHandle<T>(params: UseFillHandleParams<T>): UseFillHandleR
       for (const evt of fillEvents) onCellValueChangedRef.current(evt);
       endBatch?.();
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps -- stable refs + beginBatch/endBatch
-  }, [editable, beginBatch, endBatch]);
+  }, [editable, beginBatch, endBatch, onCellValueChangedRef, itemsRef, visibleColsRef]);
 
   return { fillDrag, setFillDrag, handleFillHandleMouseDown, fillDown };
 }

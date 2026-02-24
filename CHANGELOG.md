@@ -2,6 +2,268 @@
 
 All notable changes to OGrid will be documented in this file.
 
+## [2.1.15] — 2026-02-24
+
+### Added
+- **Double-click column resize auto-fit** across all 10 UI packages (React x3, Angular x3, Vue x3, JS) — Excel-like auto-size to content on double-click of resize handle.
+- Core `measureColumnContentWidth` utility: expands overflow-hidden headers and measures body cells via `position:absolute; width:max-content`.
+- 25 new tests (core autosize, React/Vue double-click resize). **2,882 tests** across 14 packages.
+
+### Fixed
+- React "Maximum update depth exceeded" during column resize — round container width, serialize overridesKey for `useLayoutEffect` deps.
+- Remove 16px empty space below last grid row on docs pages (Docusaurus global `table { margin-bottom }` override).
+
+### Changed
+- Redesigned docs CTA section: replaced 10-package grid with 4 framework cards.
+
+---
+
+## [2.1.11–2.1.13] — 2026-02-23
+
+### Added
+- `role="grid"` on table element across all frameworks (React, Angular, Vue, JS).
+- `aria-selected` on selected rows across all frameworks.
+- `jest-axe` accessibility tests for React Fluent (22 tests) and Material (23 tests).
+- Resize handle ARIA attributes (`role="separator"`, `aria-orientation`) in Fluent.
+- `validateVirtualScrollConfig()` dev-mode warning, wired into all frameworks.
+
+### Fixed
+- Reverted scroll architecture changes from 2.1.11 that caused horizontal scroll locking (`overflow:clip` on tableWidthAnchor).
+- Removed double horizontal scrollbar on docs grids (Docusaurus global `table { overflow: auto }` override).
+- Clipped last column resize handle overhang creating 3px right gap via `overflow-x:clip` on table wrapper.
+
+### Changed
+- Centralized z-index values via CSS custom properties (`--ogrid-z-*`) across all 6 CSS files.
+- Memoized Angular `DataGridStateService.getState()` — 34 stable closures replace inline arrows.
+
+### Performance
+- Pre-compute lowercase/numeric sort keys in `processClientSideData` (like date cache).
+
+---
+
+## [2.1.9–2.1.10] — 2026-02-22
+
+### Fixed
+- **Drag selection border gaps** — replaced per-cell inset box-shadows with a single overlay div positioned over the entire selection range during drag.
+- Hide active cell outline during drag selection.
+- Hide MarchingAntsOverlay selection border during drag (anchor cell green SVG border was persisting).
+- **CSS module class name collisions** — react-fluent and react-radix produced identical class names; switched to `postcssModules` with package-specific `generateScopedName` patterns (`ogrid-fluent__*`, `ogrid-radix__*`).
+- Restored CSS auto-import banner in react-fluent so consumers get styles automatically.
+- `ResizeObserver` -> `useLayoutEffect` infinite loop during column resize.
+
+---
+
+## [2.1.6–2.1.8] — 2026-02-21
+
+### Fixed
+- **Infinite re-fetch loop** — inline `dataSource` objects caused `useEffect` to re-fire every render. Stabilized via `useLatestRef` for `dataSource`, `onError`, and `onFirstDataRendered` callbacks.
+- **Cascading re-renders from consumer callbacks** — `OGrid` now uses `useLatestRef` for `onCellValueChanged`, `getRowId`, `onUndo`, `onRedo`, `onColumnOrderChange` so inline functions don't trigger full grid re-renders.
+- **Cell edit selection desync on Enter** — fixed across React, Angular, and Vue.
+- `peopleSearch` dependency array in `useDataGridState`.
+
+### Changed
+- Extracted `isColumnEditable()` and `buildCellIndex()` helpers to core (dedup 4+ files).
+- Removed auto dark mode CSS from all packages. Canonical dark mode now uses `:where()` zero-specificity defaults in `core/_ogrid-theme.scss`.
+- Dark mode activates via `@media (prefers-color-scheme: dark)` or `[data-theme="dark"]` on any ancestor.
+- Auto-import extracted CSS in react-radix and react-fluent bundles (consumers no longer need manual CSS import).
+
+---
+
+## [2.1.5] — 2026-02-20
+
+### Fixed
+- Material grid CSS injection — replaced separate `.css` file with self-injecting `DataGridTable.styles.ts` so consumers don't need a separate CSS import.
+
+---
+
+## [2.1.4] — 2026-02-20
+
+### Performance
+- **tsup bundling** — migrated all 13 packages from raw `tsc` to tsup (esbuild): single bundled JS file per package instead of 40+ individual files.
+- **Material Emotion elimination** — replaced MUI `<TableRow>/<TableCell>/<Box>` in DataGridTable body with native `<tr>/<td>/<div>` + CSS classes, eliminating ~1,000 Emotion CSS-in-JS resolutions per render.
+
+### Changed
+- Fixed `export *` anti-pattern in all 8 UI packages with explicit named re-exports for proper tree-shaking.
+- Bundled `@alaarab/ogrid-core` into react and js packages via `noExternal`.
+- Updated `moduleResolution` from `"Node"` to `"Bundler"` across all packages.
+- Added MUI theme CSS variables (`--ogrid-paper-bg`, `--ogrid-primary`, `--ogrid-selection-bg`) to `MuiThemeContainer`.
+
+---
+
+## [2.1.3] — 2026-02-20
+
+### Fixed
+- Material `OGrid.tsx` replaced with `createOGrid()` factory to eliminate missing-prop bugs (was missing `onSetVisibleColumns`).
+- Material double horizontal scrollbar — replaced `MUI TableContainer` with plain `<div>`.
+- Material sticky headers now use opaque `var(--ogrid-header-bg)` instead of semi-transparent `action.hover`.
+- Column visibility resetting to 0 on refresh when `columns=[]` on first render then populated later.
+- Docs CSS: `.live-demo__content overflow:auto` -> `visible` (was breaking sticky headers), scoped global `table th` styles to `.markdown` only.
+
+---
+
+## [2.1.0] — 2026-02-20
+
+### Added
+- **stickyHeader and fullScreen props** across all 14 packages.
+- **Pinned column shadows** — border + box-shadow replaces unreliable pseudo-elements.
+- **Playwright E2E test suite** — 208 tests across 4 framework families (React Radix, Angular Material, Vue Vuetify, Vanilla JS) covering 52 scenarios.
+- Cell editor commit/cancel/blur/delete tests in React/Angular/Vue factories.
+- Pinned column rendering tests and fullScreen interaction tests.
+- **2,443 tests** passing across 14 packages (up from 2,028 in 2.0.8).
+
+### Changed
+- **Angular signal architecture** with `OnPush` change detection on every component.
+- Decomposed React/Angular hooks into focused sub-hooks.
+- New shared test factories for Angular (8 factories) and Vue (8 factories).
+- ESLint flat config, shared Jest base config, CI and publish workflows.
+- Husky pre-commit hooks and size-limit configuration.
+- Dropped Node 18 from CI (Vite 6 requires Node 20+).
+- Updated deps: Jest 30, Angular 21.1.5, Storybook 10.2.10, Turbo 2.8.10.
+
+### Fixed
+- Stabilized `useFilterOptions` and `useOGridDataFetching` to prevent infinite re-render loops (inline field arrays created new references every render).
+- Angular PrimeNG pinned borders (wrong side + wrong color).
+
+---
+
+## [2.0.16–2.0.19] — 2026-02-18
+
+### Added
+- **Virtualized MultiSelectFilterPopover** — `useListVirtualizer` hook renders only visible items + overscan buffer, fixing performance with 3,663+ filter options.
+
+### Changed
+- **Core algorithm extraction** — pure algorithms moved to `@alaarab/ogrid-core`: clipboard helpers, keyboard navigation, selection helpers, undo/redo stack. Angular/Vue/JS adopt shared utilities (~900 lines eliminated from Angular alone).
+- Import chain enforced: all 9 UI packages import exclusively from their parent framework package, never directly from `@alaarab/ogrid-core`.
+- Removed `freezeCols`/`freezeRows` from all packages (column pinning fully supersedes positional freeze).
+
+### Fixed
+- Filter popover transparent background in SPFx/portal contexts (explicit opaque background on `.filterPopover`).
+- Column width shrinkage during server-side data transitions (measured widths used as `minWidth` floor).
+- Virtual item height calculation in MultiSelect filter.
+- Replaced Fluent `Spinner` with CSS-only spinners for SPFx portal compatibility (Fluent `Spinner` requires `FluentProvider` context unavailable in portals).
+
+### Performance
+- **Comprehensive optimization pass** across all 14 packages:
+  - Angular: window event listeners and ResizeObserver run outside NgZone; `@let` in templates reduces 160+ redundant calls per render.
+  - React: simplified memoization, RAF-debounced scroll-into-view, filter shallow-diff.
+  - Vue: `shallowRef` + in-place mutation for row index map; split server-side fetch into `onMounted` + `watch`.
+  - JS: `tbody` event delegation (O(1) vs per-cell listeners), incremental DOM patching with selection-only fast path.
+  - Core: pre-cached date filter timestamps, single-pass `deriveFilterOptionsFromData`.
+
+---
+
+## [2.0.12] — 2026-02-18
+
+### Added
+- `useDataGridTableOrchestration` hook for unified state management across DataGridTable implementations.
+- Shared props interfaces for `PaginationControls` and `ColumnChooser`.
+- `renderFilterContent` utility for streamlined filter rendering in `ColumnHeaderFilter`.
+- Shared styles for DataGridTable in `_data-grid-table.scss`.
+
+### Fixed
+- Loading overlay collapsed when table has no data.
+- Column pinning with dynamic state (use `pinning.pinnedColumns` instead of `col.pinned`).
+- Fluent migrated from `DataGrid` to `Table` primitives, eliminating state management conflicts with OGrid hooks.
+- Radix/Fluent menu handlers (mousedown click-outside was closing menu before `onClick` could fire on portal-rendered items).
+- Material `border-collapse:collapse` breaks sticky positioning.
+
+---
+
+## [2.0.11] — 2026-02-15
+
+### Added
+- Storybook configuration and stories for Angular and Vue packages.
+- Value formatting for budget column in example OGrid components.
+- Enhanced ColumnChooser and ColumnHeaderMenu components.
+
+### Changed
+- Cleaned up obsolete documentation files (OPTIMIZATIONS.md, progress reports).
+
+---
+
+## [2.0.9] — 2026-02-13
+
+### Added
+- **Column Header Menu** — sort ascending/descending, clear sort, autosize this column, autosize all columns. Dynamic menu items based on current sort state with dividers between sections. Implemented across all 10 UI packages via shared `getColumnHeaderMenuItems()` core helper.
+
+### Fixed
+- Explicit core constant exports for Jest test resolution.
+- Suppressed all React/Vue test warnings for clean CI output.
+- ESLint globals in `jest.setup.js`.
+
+### Changed
+- Extracted Angular base classes: `ColumnHeaderFilter`, `ColumnChooser`, `PaginationControls` to deduplicate logic across UI packages.
+- Extracted React `usePaginationControls` hook to deduplicate logic.
+
+---
+
+## [2.0.8] — 2026-02-12
+
+### Added
+- **Angular Popover Cell Editor** for all 3 Angular UI packages (Material, PrimeNG, Radix).
+- **Test factories** — factory-based testing infrastructure for Angular (8 factories, ~131 tests per UI package) and Vue (8 factories, ~100 tests per UI package).
+- Shared Vue `MarchingAntsOverlay` and `StatusBar` components extracted to base package.
+- **2,028 tests** across 14 packages (100% pass rate).
+
+### Changed
+- ~1,208 lines of code eliminated via deduplication (debounce to core, shared Vue components, shared constants, shared `dataGridViewModel`).
+- Turbo cache optimized for 3-5x faster incremental builds.
+- Radix UI and TanStack Virtual moved to peer dependencies (2.1MB + 60KB bundle savings).
+- Column map caching with WeakMap (20% faster filtering).
+
+---
+
+## [2.0.5–2.0.7] — 2026-02-12
+
+### Added
+- 7 new example apps (angular-radix/material/primeng, vue-radix/vuetify/primevue, js) with 20 npm scripts for running all variants.
+- Shared Vue `useDataGridTableSetup` composable (dedup across 3 UI packages).
+- Angular `BaseDataGridTableComponent` (39-46% reduction in UI package code).
+- Angular `DataGridPinningState` and header menu state in `DataGridStateService`.
+- Vue `useColumnPinning` and `useColumnHeaderMenuState` composables.
+- Density prop support across Angular and Vue packages.
+- React `useImperativeHandle` stabilized with `useLatestRef` (6 deps instead of 18).
+- Architecture diagram as a React component (replaced Mermaid) on docs overview page.
+- UI library selector added to LiveDemo StackBlitz demos.
+
+### Fixed
+- 8+ Vue-Radix DataGridTable template bugs.
+- Fluent `@fluentui/react-icons` peer dep version (^2.0.417 nonexistent -> ^2.0.318).
+- Angular grid-context-menu `effect()` listener accumulation memory leak.
+- Angular null refs in destroy cleanup.
+- Vue duplicate `cutRangeRef` allocation in `useClipboard`.
+
+### Performance
+- Core: replaced `Math.min/max` spread with loop (prevents stack overflow on large selections), column `Map` for O(1) lookup, pre-computed date timestamps in sorting.
+- React: Map-based column order sorting (O(n log n) vs O(n^2 log n)).
+- Angular: Map-based column order sorting in `DataGridStateService`.
+- Vue: Map-based column order sorting, consolidated 26 `computed()` calls into 5 grouped objects.
+
+### Changed
+- Bumped all 3rd-party deps (Docusaurus 3.9.2, Fluent 9.73, MUI 7.3.8, TypeScript 5.9.3).
+- Added `sideEffects` field to all publishable packages for tree-shaking.
+- Extracted Angular inline styles to CSS (sidebar, ogrid-layout, marching-ants, empty-state).
+- Resolved all ESLint warnings across 14 packages (0 errors, 0 warnings).
+- **1,181 tests** passing across all 14 packages.
+
+---
+
+## [2.0.4] — 2026-02-12
+
+### Added
+- **Angular packages** — 3 new UI packages: `@alaarab/ogrid-angular-material`, `@alaarab/ogrid-angular-primeng`, `@alaarab/ogrid-angular-radix`. Angular v21 services with signals (`signal()`, `computed()`, `effect()`), standalone components with inline templates, zone-less by default.
+- **Vue packages** — 3 new UI packages: `@alaarab/ogrid-vue-vuetify`, `@alaarab/ogrid-vue-primevue`, `@alaarab/ogrid-vue-radix`. Vue 3 Composition API composables using `ref()`, `computed()`, `watch()`.
+- **`@alaarab/ogrid-angular`** — Base Angular package with `OGridService` (signals-based orchestration), `DataGridStateService`, and shared components.
+- **`@alaarab/ogrid-vue`** — Base Vue package with `useOGrid`, `useDataGridState`, and 27 composables.
+- Expanded from **6 packages to 14 packages** (core, react, react-radix, react-fluent, react-material, angular, angular-material, angular-primeng, angular-radix, vue, vue-vuetify, vue-primevue, vue-radix, js).
+- Angular/Vue tabs added to all feature doc pages.
+- Framework showcase updated with all 10 UI packages.
+
+### Changed
+- Grew from 1,162 to 1,181 tests across the newly expanded 14-package monorepo.
+
+---
+
 ## [2.0.3] – 2026-02-11
 
 ### Added

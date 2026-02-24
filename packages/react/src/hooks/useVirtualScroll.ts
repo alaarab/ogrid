@@ -63,8 +63,7 @@ export function useVirtualScroll(params: UseVirtualScrollParams): UseVirtualScro
   // Dev-only validation: warn if enabled but rowHeight is missing or invalid
   useEffect(() => {
     validateVirtualScrollConfig({ enabled, rowHeight });
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [enabled, rowHeight]);
 
   const isActive = enabled && totalRows >= threshold;
 

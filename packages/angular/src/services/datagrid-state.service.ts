@@ -265,6 +265,8 @@ export class DataGridStateService<T> {
     const p = this.props();
     if (!p || p.items.length === 0) return false;
     const selected = this.selectedRowIds();
+    // Fast path: if counts don't match, can't be all selected (avoids O(n) .every())
+    if (selected.size !== p.items.length) return false;
     return p.items.every((item) => selected.has(p.getRowId(item)));
   });
 
@@ -859,7 +861,7 @@ export class DataGridStateService<T> {
       });
 
       this.setSelectionRange(norm);
-      this.setActiveCell({ rowIndex: fillDragEnd.endRow, columnIndex: fillDragEnd.endCol + colOff });
+      this.setActiveCell({ rowIndex: fillStart.startRow, columnIndex: fillStart.startCol + colOff });
 
       // Apply fill values
       if (!p) return;

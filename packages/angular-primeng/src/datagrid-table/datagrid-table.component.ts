@@ -258,7 +258,7 @@ import { PopoverCellEditorComponent } from './popover-cell-editor.component';
                                 (contextmenu)="onCellContextMenu($event)"
                                 class="ogrid-cell-content"
                                 [style.cursor]="descriptor.canEditAny ? 'cell' : 'default'"
-                                [style.background]="descriptor.isInRange ? 'var(--ogrid-range-bg, rgba(33, 115, 70, 0.08))' : null"
+                                [style.background]="descriptor.isInRange && !descriptor.isActive ? 'var(--ogrid-range-bg, rgba(33, 115, 70, 0.08))' : null"
                                 [style.outline]="descriptor.isActive ? '2px solid var(--ogrid-selection, #217346)' : null"
                                 [style.outline-offset]="descriptor.isActive ? '-2px' : null"
                               >

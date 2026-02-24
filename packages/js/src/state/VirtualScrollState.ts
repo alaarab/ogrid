@@ -29,6 +29,7 @@ export class VirtualScrollState {
   private _totalRows = 0;
   private rafId = 0;
   private _ro: ResizeObserver | null = null;
+  private _resizeRafId = 0;
   private _cachedRange: IVisibleRange = { startIndex: 0, endIndex: -1, offsetTop: 0, offsetBottom: 0 };
 
   constructor(config?: IVirtualScrollConfig) {
@@ -113,11 +114,14 @@ export class VirtualScrollState {
 
     if (typeof ResizeObserver !== 'undefined') {
       this._ro = new ResizeObserver((entries) => {
-        for (const entry of entries) {
-          const rect = entry.contentRect;
-          this._containerHeight = rect.height;
+        if (entries.length === 0) return;
+        this._containerHeight = entries[0].contentRect.height;
+        // RAF-throttle recompute to avoid redundant relayouts during resize animations
+        if (this._resizeRafId) cancelAnimationFrame(this._resizeRafId);
+        this._resizeRafId = requestAnimationFrame(() => {
+          this._resizeRafId = 0;
           this.recompute();
-        }
+        });
       });
       this._ro.observe(el);
     }
@@ -171,6 +175,7 @@ export class VirtualScrollState {
 
   destroy(): void {
     if (this.rafId) cancelAnimationFrame(this.rafId);
+    if (this._resizeRafId) cancelAnimationFrame(this._resizeRafId);
     this.disconnectObserver();
     this.emitter.removeAllListeners();
   }
