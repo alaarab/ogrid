@@ -70,7 +70,7 @@ export class KeyboardNavState<T> {
     if (items.length === 0) return;
 
     if (activeCell === null) {
-      if (['ArrowDown', 'ArrowUp', 'ArrowLeft', 'ArrowRight', 'Tab', 'Enter', 'Home', 'End'].includes(e.key)) {
+      if (['ArrowDown', 'ArrowUp', 'ArrowLeft', 'ArrowRight', 'Tab', 'Enter', 'Home', 'End', 'PageDown', 'PageUp'].includes(e.key)) {
         this.setActiveCell({ rowIndex: 0, columnIndex: colOffset });
         e.preventDefault();
       }
@@ -167,6 +167,35 @@ export class KeyboardNavState<T> {
           endRow: newRowEnd,
           endCol: visibleCols.length - 1,
         });
+        break;
+      }
+      case 'PageDown':
+      case 'PageUp': {
+        e.preventDefault();
+        let pageSize = 10;
+        if (this.wrapperRef) {
+          const row = this.wrapperRef.querySelector('tbody tr') as HTMLElement | null;
+          if (row) pageSize = Math.max(1, Math.floor(this.wrapperRef.clientHeight / row.offsetHeight));
+        }
+        const pgDirection = e.key === 'PageDown' ? 1 : -1;
+        const newRowPage = Math.max(0, Math.min(rowIndex + pgDirection * pageSize, maxRowIndex));
+        const pgShift = e.shiftKey;
+        if (pgShift) {
+          this.setSelectionRange({
+            startRow: selectionRange?.startRow ?? rowIndex,
+            startCol: selectionRange?.startCol ?? dataColIndex,
+            endRow: newRowPage,
+            endCol: selectionRange?.endCol ?? dataColIndex,
+          });
+        } else {
+          this.setSelectionRange({
+            startRow: newRowPage,
+            startCol: dataColIndex,
+            endRow: newRowPage,
+            endCol: dataColIndex,
+          });
+        }
+        this.setActiveCell({ rowIndex: newRowPage, columnIndex });
         break;
       }
       case 'Enter':

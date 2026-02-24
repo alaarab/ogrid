@@ -1,6 +1,6 @@
 {
   "name": "@alaarab/ogrid-react-material",
-  "version": "2.2.0",
+  "version": "2.3.0",
   "description": "OGrid React Material implementation – MUI Table–based data grid with sorting, filtering, pagination, column chooser, spreadsheet selection, and CSV export.",
   "main": "dist/esm/index.js",
   "module": "dist/esm/index.js",
@@ -39,7 +39,7 @@
     "node": ">=18"
   },
   "dependencies": {
-    "@alaarab/ogrid-react": "2.2.0"
+    "@alaarab/ogrid-react": "2.3.0"
   },
   "peerDependencies": {
     "@emotion/react": "^11.0.0",

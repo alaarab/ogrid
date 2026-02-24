@@ -100,6 +100,8 @@ export function useKeyboardNavigation<T>(
             'Enter',
             'Home',
             'End',
+            'PageDown',
+            'PageUp',
           ].includes(e.key)
         ) {
           setActiveCell({ rowIndex: 0, columnIndex: colOffset });
@@ -195,6 +197,35 @@ export function useKeyboardNavigation<T>(
             endCol: visibleColumnCount - 1,
           });
           setActiveCell({ rowIndex: newRowEnd, columnIndex: maxColIndex });
+          break;
+        }
+        case 'PageDown':
+        case 'PageUp': {
+          e.preventDefault();
+          const wrapper = wrapperRef.current;
+          let pageSize = 10;
+          if (wrapper) {
+            const row = wrapper.querySelector('tbody tr') as HTMLElement | null;
+            if (row) pageSize = Math.max(1, Math.floor(wrapper.clientHeight / row.offsetHeight));
+          }
+          const pgDirection = e.key === 'PageDown' ? 1 : -1;
+          const newRowPage = Math.max(0, Math.min(rowIndex + pgDirection * pageSize, maxRowIndex));
+          if (shift) {
+            setSelectionRange({
+              startRow: selectionRange?.startRow ?? rowIndex,
+              startCol: selectionRange?.startCol ?? dataColIndex,
+              endRow: newRowPage,
+              endCol: selectionRange?.endCol ?? dataColIndex,
+            });
+          } else {
+            setSelectionRange({
+              startRow: newRowPage,
+              startCol: dataColIndex,
+              endRow: newRowPage,
+              endCol: dataColIndex,
+            });
+          }
+          setActiveCell({ rowIndex: newRowPage, columnIndex });
           break;
         }
         case 'Enter':
