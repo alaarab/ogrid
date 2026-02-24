@@ -49,6 +49,8 @@ export interface UseKeyboardNavigationParams<T> {
     onCellValueChanged: ((event: ICellValueChangedEvent<T>) => void) | undefined;
     rowSelection: RowSelectionMode;
     wrapperRef: React.RefObject<HTMLElement | null>;
+    onKeyDown?: (event: React.KeyboardEvent) => void;
+    fillDown?: () => void;
   };
 }
 
@@ -74,7 +76,13 @@ export function useKeyboardNavigation<T>(
       const { items, visibleCols, colOffset, hasCheckboxCol, visibleColumnCount, getRowId } = data;
       const { activeCell, selectionRange, editingCell, selectedRowIds } = state;
       const { setActiveCell, setSelectionRange, setEditingCell, handleRowCheckboxChange, handleCopy, handleCut, handlePaste, setContextMenu, onUndo, onRedo, clearClipboardRanges } = handlers;
-      const { editable, onCellValueChanged, rowSelection, wrapperRef } = features;
+      const { editable, onCellValueChanged, rowSelection, wrapperRef, onKeyDown, fillDown } = features;
+
+      // Consumer intercept: call consumer's handler first; skip grid default if preventDefault() was called
+      if (onKeyDown) {
+        onKeyDown(e);
+        if (e.defaultPrevented) return;
+      }
 
       const maxRowIndex = items.length - 1;
       const maxColIndex = visibleColumnCount - 1 + colOffset;
@@ -268,6 +276,15 @@ export function useKeyboardNavigation<T>(
                 endCol: visibleColumnCount - 1,
               });
               setActiveCell({ rowIndex: 0, columnIndex: colOffset });
+            }
+          }
+          break;
+        case 'd':
+          if (e.ctrlKey || e.metaKey) {
+            if (editingCell != null) break;
+            if (editable !== false && fillDown) {
+              e.preventDefault();
+              fillDown();
             }
           }
           break;

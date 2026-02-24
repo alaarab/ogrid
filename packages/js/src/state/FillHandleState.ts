@@ -70,6 +70,14 @@ export class FillHandleState<T> {
     this.params = params;
   }
 
+  /** Fill the current selection down from the top row (keyboard Ctrl+D). No-op if no selection or editable=false. */
+  fillDown(): void {
+    const range = this.getSelectionRange();
+    if (!range || this.params.editable === false || !this.params.onCellValueChanged) return;
+    const norm = normalizeSelectionRange(range);
+    this.applyFillValuesFromCore(norm, { startRow: norm.startRow, startCol: norm.startCol });
+  }
+
   /** Called when the fill handle square is mousedown'd. */
   startFillDrag(e: MouseEvent): void {
     e.preventDefault();

@@ -176,6 +176,8 @@ export const ColumnHeaderFilter = defineComponent({
                 rounded: true,
                 severity: state.hasActiveFilter.value || state.isFilterOpen.value ? undefined : 'secondary',
                 'aria-label': `Filter ${props.columnName}`,
+                'aria-expanded': state.isFilterOpen.value,
+                'aria-haspopup': 'dialog',
                 title: `Filter ${props.columnName}`,
                 onClick: toggleFilter,
               }),

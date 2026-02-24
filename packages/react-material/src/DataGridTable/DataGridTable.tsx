@@ -311,12 +311,12 @@ function DataGridTableInner<T>(props: IOGridDataGridProps<T>): React.ReactElemen
     items, getRowId, emptyState,
     suppressHorizontalScroll, isLoading, loadingMessage,
     ariaLabel, ariaLabelledBy, columnReorder, density, rowHeight,
-    rowNumberOffset, headerRows, allowOverflowX, fitToContent,
+    rowNumberOffset, headerRows, allowOverflowX: _allowOverflowX, fitToContent,
     editCallbacks, interactionHandlers,
-    cellDescriptorInputRef, pendingEditorValueRef, popoverAnchorElRef,
+    cellDescriptorInputRef, cellDescriptorCacheRef, pendingEditorValueRef, popoverAnchorElRef,
     handleSingleRowClick, handlePasteVoid,
     visibleCols, hasCheckboxCol, hasRowNumbersCol, colOffset,
-    minTableWidth, columnSizingOverrides, measuredColumnWidths,
+    minTableWidth: _minTableWidth, columnSizingOverrides, measuredColumnWidths,
     selectedRowIds, handleRowCheckboxChange, handleSelectAll, allSelected, someSelected,
     editingCell, setPopoverAnchorEl, cancelPopoverEdit,
     setActiveCell, selectionRange, hasCellSelection, handleGridKeyDown, handleFillHandleMouseDown,
@@ -376,18 +376,18 @@ function DataGridTableInner<T>(props: IOGridDataGridProps<T>): React.ReactElemen
     minHeight: isLoading && items.length === 0 ? 200 : 0,
     width: fitToContent ? 'fit-content' : '100%',
     maxWidth: '100%',
-    overflowX: suppressHorizontalScroll ? 'hidden' as const : allowOverflowX ? 'auto' as const : 'hidden' as const,
+    overflowX: suppressHorizontalScroll ? 'hidden' as const : 'auto' as const,
     overflowY: 'auto' as const,
     bgcolor: 'background.paper',
     willChange: 'scroll-position',
-  }), [fitToContent, suppressHorizontalScroll, allowOverflowX, isLoading, items.length]);
+  }), [fitToContent, suppressHorizontalScroll, isLoading, items.length]);
 
   // Density padding for native cell content (avoids Emotion)
   const cellDensityStyle = DENSITY_CELL_STYLES[density] ?? DENSITY_CELL_STYLES.normal;
 
   const renderCellContent = useCallback(
     (item: T, col: IColumnDef<T>, rowIndex: number, colIdx: number): React.ReactNode => {
-      const descriptor = getCellRenderDescriptor(item, col, rowIndex, colIdx, cellDescriptorInputRef.current);
+      const descriptor = getCellRenderDescriptor(item, col, rowIndex, colIdx, cellDescriptorInputRef.current, cellDescriptorCacheRef.current);
       const rowId = getRowId(item);
 
       let cellContent: React.ReactNode;
@@ -453,7 +453,7 @@ function DataGridTableInner<T>(props: IOGridDataGridProps<T>): React.ReactElemen
         </CellErrorBoundary>
       );
     },
-    [editCallbacks, interactionHandlers, handleFillHandleMouseDown, setPopoverAnchorEl, cancelPopoverEdit, getRowId, onCellError, cellDescriptorInputRef, cellDensityStyle, pendingEditorValueRef, popoverAnchorElRef]
+    [editCallbacks, interactionHandlers, handleFillHandleMouseDown, setPopoverAnchorEl, cancelPopoverEdit, getRowId, onCellError, cellDescriptorInputRef, cellDescriptorCacheRef, cellDensityStyle, pendingEditorValueRef, popoverAnchorElRef]
   );
 
   return (
@@ -467,15 +467,15 @@ function DataGridTableInner<T>(props: IOGridDataGridProps<T>): React.ReactElemen
         onMouseDown={(e: React.MouseEvent) => { lastMouseShiftRef.current = e.shiftKey; }}
         onKeyDown={handleGridKeyDown}
         onContextMenu={PREVENT_DEFAULT}
-        data-overflow-x={allowOverflowX ? 'true' : 'false'}
         data-density={density}
+        data-suppress-scroll={o.suppressHorizontalScroll ? 'true' : undefined}
         className="ogrid-mat-wrapper"
         sx={wrapperSx}
       >
       <Box sx={WRAPPER_SCROLL_SX}>
-      <div style={{ minWidth: allowOverflowX ? minTableWidth : undefined }}>
-        <Box ref={tableContainerRef} sx={isLoading && items.length > 0 ? TABLE_WRAPPER_LOADING_SX : TABLE_WRAPPER_SX}>
-          <Table size="small" sx={{ minWidth: minTableWidth, borderCollapse: 'separate', borderSpacing: 0 }}
+      <div style={{ minWidth: '100%' }}>
+        <Box ref={tableContainerRef} sx={isLoading && items.length > 0 ? TABLE_WRAPPER_LOADING_SX : TABLE_WRAPPER_SX} style={{ width: 'max-content', minWidth: '100%', overflow: 'clip' }}>
+          <Table size="small" role="grid" sx={{ minWidth: 'max-content', width: '100%', borderCollapse: 'separate', borderSpacing: 0 }}
           >
             <TableHead sx={STICKY_HEADER_SX}>
               {headerRows.map((row, rowIdx) => (

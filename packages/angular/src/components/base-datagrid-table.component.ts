@@ -438,7 +438,15 @@ export abstract class BaseDataGridTableComponent<T = unknown> {
   }
 
   resolveCellContent(col: IColumnDef<T>, item: T, displayValue: unknown): unknown {
-    return resolveCellDisplayContent(col, item, displayValue);
+    try {
+      return resolveCellDisplayContent(col, item, displayValue);
+    } catch (err) {
+      const onCellError = this.getProps()?.onCellError;
+      if (onCellError) {
+        onCellError(err instanceof Error ? err : new Error(String(err)), undefined);
+      }
+      return '';
+    }
   }
 
   resolveCellStyleFn(col: IColumnDef<T>, item: T): Record<string, string> | undefined {

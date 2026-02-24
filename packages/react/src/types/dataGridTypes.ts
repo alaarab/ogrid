@@ -231,4 +231,6 @@ export interface IOGridDataGridProps<T> {
   onCellError?: (error: Error, errorInfo: React.ErrorInfo) => void;
   'aria-label'?: string;
   'aria-labelledby'?: string;
+  /** Custom keydown handler. Called before grid's built-in handling. Call event.preventDefault() to suppress grid default. */
+  onKeyDown?: (event: React.KeyboardEvent) => void;
 }

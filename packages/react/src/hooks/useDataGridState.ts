@@ -215,6 +215,7 @@ export function useDataGridState<T>(
     pinnedColumns,
     onColumnPinned,
     onCellError,
+    onKeyDown,
   } = props;
 
   const cellSelection = cellSelectionProp !== false;
@@ -298,6 +299,7 @@ export function useDataGridState<T>(
     handleRowCheckboxChange,
     setContextMenuPosition,
     wrapperRef,
+    onKeyDown,
   });
 
   const {

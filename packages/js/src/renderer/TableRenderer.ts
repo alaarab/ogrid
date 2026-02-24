@@ -229,20 +229,20 @@ export class TableRenderer<T> {
     // Create wrapper
     const wrapper = document.createElement('div');
     wrapper.className = 'ogrid-wrapper';
-    wrapper.setAttribute('role', 'grid');
+    wrapper.setAttribute('role', 'region');
     wrapper.setAttribute('tabindex', '0'); // Make focusable for keyboard nav
     wrapper.style.position = 'relative'; // For MarchingAnts absolute positioning
     if (this.state.rowHeight) {
       wrapper.style.setProperty('--ogrid-row-height', `${this.state.rowHeight}px`);
     }
-    if (this.state.ariaLabel) {
-      wrapper.setAttribute('aria-label', this.state.ariaLabel);
-    }
+    const label = this.state.ariaLabel ?? 'Data grid';
+    wrapper.setAttribute('aria-label', label);
     this.wrapperEl = wrapper;
 
     // Create table
     this.table = document.createElement('table');
     this.table.className = 'ogrid-table';
+    this.table.setAttribute('role', 'grid');
 
     // Render header
     this.thead = document.createElement('thead');
@@ -584,6 +584,11 @@ export class TableRenderer<T> {
 
           if (!cell.isGroup && cell.columnDef) {
             th.setAttribute('data-column-id', cell.columnDef.columnId);
+            th.setAttribute('scope', 'col');
+            const groupSort = this.state.sort;
+            if (groupSort?.field === cell.columnDef.columnId) {
+              th.setAttribute('aria-sort', groupSort.direction === 'asc' ? 'ascending' : 'descending');
+            }
             this.applyPinningStyles(th, cell.columnDef.columnId, true);
             // Resize, reorder, and filter icon clicks are handled
             // via delegated listeners on <thead> (attachHeaderDelegation).
@@ -621,6 +626,13 @@ export class TableRenderer<T> {
         const th = document.createElement('th');
         th.className = 'ogrid-header-cell';
         th.setAttribute('data-column-id', col.columnId);
+        th.setAttribute('scope', 'col');
+
+        // aria-sort
+        const sort = this.state.sort;
+        if (sort?.field === col.columnId) {
+          th.setAttribute('aria-sort', sort.direction === 'asc' ? 'ascending' : 'descending');
+        }
 
         // Text container
         const textSpan = document.createElement('span');
@@ -666,6 +678,8 @@ export class TableRenderer<T> {
           const filterBtn = document.createElement('button');
           filterBtn.className = 'ogrid-filter-icon';
           filterBtn.setAttribute('aria-label', `Filter ${col.name}`);
+          filterBtn.setAttribute('aria-expanded', 'false');
+          filterBtn.setAttribute('aria-haspopup', 'dialog');
           filterBtn.style.border = 'none';
           filterBtn.style.background = 'transparent';
           filterBtn.style.cursor = 'pointer';
@@ -777,6 +791,7 @@ export class TableRenderer<T> {
       const isRowSelected = this.interactionState?.selectedRowIds?.has(rowId) === true;
       if (isRowSelected) {
         tr.setAttribute('data-row-selected', 'true');
+        tr.setAttribute('aria-selected', 'true');
       }
 
       // Checkbox column

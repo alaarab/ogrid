@@ -24,6 +24,8 @@ export interface UseFillHandleResult {
   fillDrag: { startRow: number; startCol: number } | null;
   setFillDrag: (value: { startRow: number; startCol: number } | null) => void;
   handleFillHandleMouseDown: (e: React.MouseEvent) => void;
+  /** Fill the current selection down from the top row (Ctrl+D). No-op if no selection or editable=false. */
+  fillDown: () => void;
 }
 
 /** DOM attribute name for fill-drag range highlighting (same as cell selection drag). */
@@ -204,6 +206,7 @@ export function useFillHandle<T>(params: UseFillHandleParams<T>): UseFillHandleR
       window.removeEventListener('mouseup', onUp, true);
       if (rafRef.current) cancelAnimationFrame(rafRef.current);
     };
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- onCellValueChangedRef is a stable ref, intentionally excluded
   }, [
     fillDrag,
     editable,
@@ -235,5 +238,27 @@ export function useFillHandle<T>(params: UseFillHandleParams<T>): UseFillHandleR
     []
   );
 
-  return { fillDrag, setFillDrag, handleFillHandleMouseDown };
+  const itemsRef = useLatestRef(items);
+  const visibleColsRef = useLatestRef(visibleCols);
+
+  const fillDown = useCallback(() => {
+    const range = selectionRangeRef.current;
+    if (!range || editable === false || !onCellValueChangedRef.current) return;
+    const norm = normalizeSelectionRange(range);
+    const fillEvents = applyFillValues(
+      norm,
+      norm.startRow,
+      norm.startCol,
+      itemsRef.current,
+      visibleColsRef.current
+    );
+    if (fillEvents.length > 0) {
+      beginBatch?.();
+      for (const evt of fillEvents) onCellValueChangedRef.current(evt);
+      endBatch?.();
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- stable refs + beginBatch/endBatch
+  }, [editable, beginBatch, endBatch]);
+
+  return { fillDrag, setFillDrag, handleFillHandleMouseDown, fillDown };
 }

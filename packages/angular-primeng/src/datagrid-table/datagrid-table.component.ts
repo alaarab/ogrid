@@ -61,21 +61,19 @@ import { PopoverCellEditorComponent } from './popover-cell-editor.component';
         [attr.aria-labelledby]="ariaLabelledBy()"
         [attr.data-empty]="showEmptyInGrid() ? 'true' : null"
         [attr.data-column-count]="state().layout.totalColCount"
-        [attr.data-overflow-x]="allowOverflowX() ? 'true' : 'false'"
+        [attr.data-suppress-scroll]="getProps()?.suppressHorizontalScroll ? 'true' : null"
         [attr.data-has-selection]="rowSelectionMode !== 'none' ? 'true' : null"
         (contextmenu)="$event.preventDefault()"
         (keydown)="onGridKeyDown($event)"
         (mousedown)="onWrapperMouseDown($event)"
         (scroll)="onWrapperScroll($event)"
         [style.--data-table-column-count]="state().layout.totalColCount"
-        [style.--data-table-width]="tableWidthStyle()"
-        [style.--data-table-min-width]="tableMinWidthStyle()"
         [style.--ogrid-row-height]="rowHeightCssVar()"
       >
         <div class="ogrid-table-wrapper">
           <div [class.loading-dimmed]="isLoading() && items().length > 0" class="ogrid-table-wrapper">
-            <div #tableContainer class="ogrid-table-wrapper">
-              <table class="ogrid-table">
+            <div #tableContainer class="ogrid-table-anchor">
+              <table class="ogrid-table" role="grid">
                 <thead [class]="stickyHeader() ? 'ogrid-thead ogrid-sticky-header' : 'ogrid-thead'">
                   @for (row of headerRows(); track $index; let rowIdx = $index) {
                     <tr>
@@ -187,6 +185,7 @@ import { PopoverCellEditorComponent } from './popover-cell-editor.component';
                       @let isSelected = selectedRowIds().has(rowId);
                       <tr
                         [attr.data-row-id]="rowId"
+                        [attr.aria-selected]="isSelected || null"
                         [style.background]="isSelected ? 'var(--ogrid-selected-bg, #e8f0fe)' : null"
                         (click)="onRowClickPrimeng($event, item)"
                       >
@@ -375,13 +374,20 @@ import { PopoverCellEditorComponent } from './popover-cell-editor.component';
       background: var(--ogrid-bg, #ffffff);
       color: var(--ogrid-fg, rgba(0, 0, 0, 0.87));
     }
+    .ogrid-scroll-wrapper[data-suppress-scroll='true'] { overflow-x: hidden; }
     .ogrid-scroll-wrapper--loading-empty { min-height: 200px; }
     .ogrid-table-wrapper {
       position: relative;
     }
+    .ogrid-table-anchor {
+      position: relative;
+      width: max-content;
+      min-width: 100%;
+      overflow: clip;
+    }
     .ogrid-table {
-      width: var(--data-table-width, 100%);
-      min-width: var(--data-table-min-width, 100%);
+      width: 100%;
+      min-width: max-content;
       border-collapse: collapse;
       table-layout: fixed;
     }
@@ -475,7 +481,7 @@ import { PopoverCellEditorComponent } from './popover-cell-editor.component';
       position: relative;
     }
     .ogrid-cell-content {
-      padding: 6px 10px;
+      padding: var(--ogrid-cell-padding, 6px 10px);
       min-height: 20px;
       cursor: default;
       overflow: hidden;
@@ -487,7 +493,7 @@ import { PopoverCellEditorComponent } from './popover-cell-editor.component';
       outline: 2px solid var(--ogrid-selection-color, #217346); outline-offset: -1px;
       z-index: 2; position: relative; background: var(--ogrid-bg, #fff); overflow: visible; padding: 0;
     }
-    .ogrid-scroll-wrapper [data-drag-range] { background: var(--ogrid-range-bg, rgba(33, 115, 70, 0.12)) !important; }
+    .ogrid-scroll-wrapper [data-drag-range] { background: var(--ogrid-range-bg, rgba(33, 115, 70, 0.12)); }
     .ogrid-fill-handle {
       position: absolute;
       bottom: -3px;
@@ -637,35 +643,36 @@ import { PopoverCellEditorComponent } from './popover-cell-editor.component';
       outline-offset: 2px;
     }
 
-    /* PrimeNG Menu popup overrides — must use !important to win over PrimeNG's CSS-variable-based defaults */
-    .p-menu {
-      background: var(--ogrid-bg, #ffffff) !important;
-      color: var(--ogrid-fg, rgba(0, 0, 0, 0.87)) !important;
-      border: 1px solid var(--ogrid-border, rgba(0, 0, 0, 0.12)) !important;
-      border-radius: 4px !important;
-      padding: 4px 0 !important;
+    /* PrimeNG Menu popup overrides.
+       Double-class selectors (0,2,0) beat PrimeNG's single-class (0,1,0) defaults. */
+    .p-menu.p-menu {
+      background: var(--ogrid-bg, #ffffff);
+      color: var(--ogrid-fg, rgba(0, 0, 0, 0.87));
+      border: 1px solid var(--ogrid-border, rgba(0, 0, 0, 0.12));
+      border-radius: 4px;
+      padding: 4px 0;
     }
-    .p-menu-overlay {
-      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3), 0 0 0 1px var(--ogrid-border, rgba(0, 0, 0, 0.12)) !important;
+    .p-menu-overlay.p-menu-overlay {
+      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3), 0 0 0 1px var(--ogrid-border, rgba(0, 0, 0, 0.12));
     }
-    .p-menu-item-content {
-      color: var(--ogrid-fg, rgba(0, 0, 0, 0.87)) !important;
+    .p-menu-item-content.p-menu-item-content {
+      color: var(--ogrid-fg, rgba(0, 0, 0, 0.87));
     }
-    .p-menu-item-link {
-      color: var(--ogrid-fg, rgba(0, 0, 0, 0.87)) !important;
-      padding: 6px 12px !important;
+    .p-menu-item-link.p-menu-item-link {
+      color: var(--ogrid-fg, rgba(0, 0, 0, 0.87));
+      padding: 6px 12px;
     }
-    .p-menu-item-label {
-      color: var(--ogrid-fg, rgba(0, 0, 0, 0.87)) !important;
-      font-size: 0.875rem !important;
+    .p-menu-item-label.p-menu-item-label {
+      color: var(--ogrid-fg, rgba(0, 0, 0, 0.87));
+      font-size: 0.875rem;
     }
-    .p-menu-item:not(.p-disabled) .p-menu-item-content:hover {
-      background: var(--ogrid-hover-bg, rgba(0, 0, 0, 0.04)) !important;
-      color: var(--ogrid-fg, rgba(0, 0, 0, 0.87)) !important;
+    .p-menu-item:not(.p-disabled) .p-menu-item-content.p-menu-item-content:hover {
+      background: var(--ogrid-hover-bg, rgba(0, 0, 0, 0.04));
+      color: var(--ogrid-fg, rgba(0, 0, 0, 0.87));
     }
-    .p-menu-separator {
-      border-color: var(--ogrid-border, rgba(0, 0, 0, 0.12)) !important;
-      margin: 4px 0 !important;
+    .p-menu-separator.p-menu-separator {
+      border-color: var(--ogrid-border, rgba(0, 0, 0, 0.12));
+      margin: 4px 0;
     }
   `],
 })
@@ -801,15 +808,7 @@ export class DataGridTableComponent<T = unknown> extends BaseDataGridTableCompon
 
   readonly tableWidthStyle = computed(() => {
     if (this.showEmptyInGrid()) return '100%';
-    if (this.allowOverflowX()) return 'fit-content';
     if (this.layoutMode === 'content') return 'fit-content';
-    return '100%';
-  });
-
-  readonly tableMinWidthStyle = computed(() => {
-    if (this.showEmptyInGrid()) return '100%';
-    if (this.allowOverflowX()) return 'max-content';
-    if (this.layoutMode === 'content') return 'max-content';
     return '100%';
   });
 

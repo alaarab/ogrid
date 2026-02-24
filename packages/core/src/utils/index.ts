@@ -55,6 +55,7 @@ export type { IVisibleRange } from './virtualScroll';
 export {
   getHeaderFilterConfig,
   getCellRenderDescriptor,
+  CellDescriptorCache,
   resolveCellDisplayContent,
   resolveCellStyle,
   buildInlineEditorProps,
@@ -85,4 +86,4 @@ export {
 } from './clipboardHelpers';
 export { applyFillValues } from './fillHelpers';
 export { UndoRedoStack } from './undoRedoStack';
-export { validateColumns, validateRowIds } from './validation';
+export { validateColumns, validateRowIds, validateVirtualScrollConfig } from './validation';

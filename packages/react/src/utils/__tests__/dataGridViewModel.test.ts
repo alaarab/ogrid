@@ -1,6 +1,38 @@
 import { resolveCellDisplayContent, getCellRenderDescriptor } from '../dataGridViewModel';
 import type { IColumnDef } from '../../types';
 
+describe('resolveCellDisplayContent — null/undefined coercion', () => {
+  it('returns null for null value (any column type)', () => {
+    const col: IColumnDef = { columnId: 'name', name: 'Name' };
+    expect(resolveCellDisplayContent(col, {}, null)).toBeNull();
+  });
+
+  it('returns null for undefined value (any column type)', () => {
+    const col: IColumnDef = { columnId: 'name', name: 'Name' };
+    expect(resolveCellDisplayContent(col, {}, undefined)).toBeNull();
+  });
+
+  it('returns empty string as-is (not null)', () => {
+    const col: IColumnDef = { columnId: 'name', name: 'Name' };
+    expect(resolveCellDisplayContent(col, {}, '')).toBe('');
+  });
+
+  it('returns null for null boolean column value', () => {
+    const col: IColumnDef = { columnId: 'active', name: 'Active', type: 'boolean' };
+    expect(resolveCellDisplayContent(col, {}, null)).toBeNull();
+  });
+
+  it('returns null for null date column value', () => {
+    const col: IColumnDef = { columnId: 'created', name: 'Created', type: 'date' };
+    expect(resolveCellDisplayContent(col, {}, null)).toBeNull();
+  });
+
+  it('returns null for null numeric column value', () => {
+    const col: IColumnDef = { columnId: 'amount', name: 'Amount', type: 'numeric' };
+    expect(resolveCellDisplayContent(col, {}, null)).toBeNull();
+  });
+});
+
 describe('resolveCellDisplayContent', () => {
   it('formats date values with toLocaleDateString when type is date', () => {
     const col: IColumnDef = { columnId: 'date', name: 'Date', type: 'date' };
