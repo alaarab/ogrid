@@ -83,7 +83,9 @@ npm run docs:build              # Build docs site
 
 ### Core (`packages/core/src/`) — `@alaarab/ogrid-core`
 
-**Types** — `IColumnDef`, `IColumnGroupDef`, `IDataSource`, `IFilters`, `IDateFilterValue`, `UserLike`, `IOGridApi`, `IOGridProps`, `ICellEditorProps`, `FilterValue`, etc. in `types/`. Column types: `'text' | 'numeric' | 'date' | 'boolean'`. Filter types: `'none' | 'text' | 'multiSelect' | 'people' | 'date'`. `FilterValue` is a discriminated union: `{ type: 'text', value: string } | { type: 'multiSelect', value: string[] } | { type: 'people', value: UserLike } | { type: 'date', value: IDateFilterValue }`.
+**Types** — `IColumnDef`, `IColumnGroupDef`, `IDataSource`, `IFilters`, `IDateFilterValue`, `UserLike`, `IOGridApi`, `IOGridProps`, `ICellEditorProps`, `FilterValue`, `IVisibleColumnRange`, etc. in `types/`. Column types: `'text' | 'numeric' | 'date' | 'boolean'`. Filter types: `'none' | 'text' | 'multiSelect' | 'people' | 'date'`. `FilterValue` is a discriminated union: `{ type: 'text', value: string } | { type: 'multiSelect', value: string[] } | { type: 'people', value: UserLike } | { type: 'date', value: IDateFilterValue }`. `IVirtualScrollConfig` has `columns?: boolean` and `columnOverscan?: number` fields. `IOGridBaseProps` has `workerSort?: boolean | 'auto'`.
+
+**Performance utilities** — `computeVisibleColumnRange`, `partitionColumnsForVirtualization`, `IVisibleColumnRange` in `utils/virtualScroll.ts`; `processClientSideDataAsync`, `extractValueMatrix`, `createSortFilterWorker`, `terminateSortFilterWorker` in `utils/workerSortFilter.ts`; `sortFilterWorker.ts` in `workers/`.
 
 Core is **pure TypeScript with zero dependencies** — no React, no DOM APIs. It contains types, algorithms, and utilities shared by all framework packages.
 
@@ -226,25 +228,35 @@ All re-export everything from `@alaarab/ogrid-react` (which re-exports from `@al
 
 **JS package:** Class-based state with EventEmitter. `GridState` = `useOGrid` + `useDataGridState` combined.
 
+### Performance Features
+
+Three opt-in performance features implemented in core and wired into all framework packages:
+
+**CSS Containment** — `contain: content` on body cells reduces browser paint scope. Pinned columns use `contain: none` to preserve `position: sticky`. Non-virtual rows use `content-visibility: auto` for off-screen skipping. `data-virtual-scroll` attribute on `<table>` signals virtual scroll mode to CSS.
+
+**Column Virtualization** — Opt-in via `virtualScroll: { columns: true, columnOverscan: 2 }`. Core computes the visible column range with `computeVisibleColumnRange()` and `partitionColumnsForVirtualization()` (returns `IVisibleColumnRange`). Off-screen columns are replaced by spacer `<td>` elements on the left and right. Works alongside row virtualization.
+
+**Web Worker Sort/Filter** — Opt-in via `workerSort: true | 'auto'`. Core exposes `processClientSideDataAsync()` which offloads sort+filter to an inline Blob URL worker (`sortFilterWorker.ts`) created by `createSortFilterWorker()`. Falls back to synchronous `processClientSideData` when: a custom `compare` function is used, `people` filters are active, or the Worker API is unavailable. Use `terminateSortFilterWorker()` to clean up on unmount.
+
 ## Testing
 
-**2,028 tests** across 14 packages (100% pass rate). Each framework uses its native testing tools for maintainability and idiomaticity.
+**2,980 tests** across 14 packages (100% pass rate). Each framework uses its native testing tools for maintainability and idiomaticity.
 
-- **Core:** 237 tests (pure TypeScript utilities, no framework dependencies)
-- **JS:** 241 tests (native DOM testing)
-- **React packages:** 523 tests using React Testing Library 16
-  - React core: 247 tests
-  - Radix/Fluent/Material: 92 tests each
-- **Angular packages:** 505 tests using Angular Testing utilities
-  - Angular base: 111 tests
-  - Angular Material: 131 tests
-  - Angular PrimeNG: 132 tests
-  - Angular Radix: 131 tests
-- **Vue packages:** 522 tests (composable-level + factory tests)
-  - Vue base: 222 tests
-  - Vuetify: 100 tests
-  - PrimeVue: 100 tests
-  - Vue Radix: 100 tests
+- **Core:** 377 tests (pure TypeScript utilities, no framework dependencies)
+- **JS:** 313 tests (native DOM testing)
+- **React packages:** ~831 tests using React Testing Library 16
+  - React core: 404 tests
+  - Radix/Fluent/Material: ~142 tests each
+- **Angular packages:** ~617 tests using Angular Testing utilities
+  - Angular base: 145 tests
+  - Angular Material: 157 tests
+  - Angular PrimeNG: 158 tests
+  - Angular Radix: 157 tests
+- **Vue packages:** ~842 tests (composable-level + factory tests)
+  - Vue base: 338 tests
+  - Vuetify: 127 tests
+  - PrimeVue: 127 tests
+  - Vue Radix: 127 tests
   - **Note:** Vue UI packages do NOT have `exports.test.ts` files (intentionally skipped - see `__tests__/README.md` in each package). Vue 3 SFCs are ESM-only and cannot be loaded via CommonJS `require()` which Jest uses for export tests. Factory tests already verify all exports work correctly.
 
 ### Testing Setup

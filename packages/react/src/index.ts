@@ -254,6 +254,7 @@ export {
   booleanParser,
   computeAggregations,
   processClientSideData,
+  partitionColumnsForVirtualization,
   areGridRowPropsEqual,
   findCtrlArrowTarget,
   computeTabNavigation,

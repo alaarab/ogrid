@@ -13,6 +13,7 @@ import type {
 import type { UseColumnResizeResult } from './useColumnResize';
 import type { UseColumnReorderResult } from './useColumnReorder';
 import type { UseVirtualScrollResult } from './useVirtualScroll';
+import type { IVisibleColumnRange } from '@alaarab/ogrid-core';
 import type { HeaderFilterConfigInput, CellRenderDescriptorInput } from '../utils';
 import type { IStatusBarProps, RowId, HeaderRow } from '../types';
 import { useDataGridState } from './useDataGridState';
@@ -62,6 +63,10 @@ export interface UseDataGridTableOrchestrationResult<T> {
   virtualScrollEnabled: boolean;
   virtualRowHeight: number;
   visibleRange: UseVirtualScrollResult['visibleRange'];
+  /** Visible column range for horizontal virtualization (null when disabled). */
+  columnRange: IVisibleColumnRange | null;
+  /** Callback for horizontal scroll events (column virtualization). */
+  onHorizontalScroll?: (scrollLeft: number) => void;
 
   // Derived from props
   items: T[];
@@ -268,13 +273,31 @@ export function useDataGridTableOrchestration<T>(
   // ── Virtual scroll ─────────────────────────────────────────────────────
   const virtualScrollEnabled = virtualScroll?.enabled === true;
   const virtualRowHeight = virtualScroll?.rowHeight ?? 36;
-  const { visibleRange } = useVirtualScroll({
+  const columnVirtualization = virtualScroll?.columns === true;
+
+  // Compute unpinned column widths for horizontal virtualization
+  const unpinnedColumnWidths = useMemo(() => {
+    if (!columnVirtualization) return undefined;
+    const widths: number[] = [];
+    for (const col of visibleCols) {
+      const pin = pinnedColumns?.[col.columnId];
+      if (!pin) {
+        widths.push(getColumnWidth(col));
+      }
+    }
+    return widths;
+  }, [columnVirtualization, visibleCols, pinnedColumns, getColumnWidth]);
+
+  const { visibleRange, columnRange, onHorizontalScroll } = useVirtualScroll({
     totalRows: items.length,
     rowHeight: virtualRowHeight,
     enabled: virtualScrollEnabled,
     overscan: virtualScroll?.overscan,
     threshold: virtualScroll?.threshold,
     containerRef: wrapperRef,
+    columnVirtualization,
+    columnWidths: unpinnedColumnWidths,
+    columnOverscan: virtualScroll?.columnOverscan,
   });
 
   // ── Memoized callback groups ───────────────────────────────────────────
@@ -355,6 +378,8 @@ export function useDataGridTableOrchestration<T>(
     virtualScrollEnabled,
     virtualRowHeight,
     visibleRange,
+    columnRange,
+    onHorizontalScroll,
 
     // Derived from props
     items,

@@ -13,8 +13,10 @@ const STYLES = `
 .ogrid-mat-td--pinned-left { position: sticky; left: 0; z-index: var(--ogrid-z-pinned, 6); background-color: var(--ogrid-paper-bg, #fff); will-change: transform; border-right: 1px solid var(--ogrid-border, rgba(224,224,224,1)); box-shadow: 2px 0 4px -1px rgba(0,0,0,0.1); }
 .ogrid-mat-td--pinned-right { position: sticky; right: 0; z-index: var(--ogrid-z-pinned, 6); background-color: var(--ogrid-paper-bg, #fff); will-change: transform; border-left: 1px solid var(--ogrid-border, rgba(224,224,224,1)); box-shadow: -2px 0 4px -1px rgba(0,0,0,0.1); }
 
-.ogrid-mat-cell { width: 100%; height: 100%; display: flex; align-items: center; min-width: 0; box-sizing: border-box; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; user-select: none; outline: none; }
+.ogrid-mat-cell { width: 100%; height: 100%; display: flex; align-items: center; min-width: 0; box-sizing: border-box; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; user-select: none; outline: none; contain: content; }
 .ogrid-mat-cell:focus-visible { outline: 2px solid var(--ogrid-primary, #1976d2); outline-offset: -2px; z-index: 3; }
+.ogrid-mat-td--pinned-left .ogrid-mat-cell, .ogrid-mat-td--pinned-right .ogrid-mat-cell { contain: none; }
+table:not([data-virtual-scroll]) .ogrid-mat-tbody tr { content-visibility: auto; }
 
 .ogrid-mat-cell--numeric { justify-content: flex-end; text-align: right; }
 .ogrid-mat-cell--boolean { justify-content: center; text-align: center; }

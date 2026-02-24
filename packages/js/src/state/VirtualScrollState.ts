@@ -1,9 +1,10 @@
-import type { IVirtualScrollConfig, IVisibleRange } from '@alaarab/ogrid-core';
-import { computeVisibleRange, computeTotalHeight, getScrollTopForRow, validateVirtualScrollConfig } from '@alaarab/ogrid-core';
+import type { IVirtualScrollConfig, IVisibleRange, IVisibleColumnRange } from '@alaarab/ogrid-core';
+import { computeVisibleRange, computeTotalHeight, getScrollTopForRow, computeVisibleColumnRange, validateVirtualScrollConfig } from '@alaarab/ogrid-core';
 import { EventEmitter } from './EventEmitter';
 
 interface VirtualScrollEvents extends Record<string, unknown> {
   rangeChanged: { visibleRange: IVisibleRange };
+  columnRangeChanged: { columnRange: IVisibleColumnRange | null };
   configChanged: { config: IVirtualScrollConfig };
 }
 
@@ -31,6 +32,15 @@ export class VirtualScrollState {
   private _ro: ResizeObserver | null = null;
   private _resizeRafId = 0;
   private _cachedRange: IVisibleRange = { startIndex: 0, endIndex: -1, offsetTop: 0, offsetBottom: 0 };
+
+  // Column virtualization
+  private _scrollLeft = 0;
+  private _scrollLeftRafId = 0;
+  private _containerWidth = 0;
+  private _columnWidths: number[] = [];
+  private _cachedColumnRange: IVisibleColumnRange | null = null;
+  private _roWidth: ResizeObserver | null = null;
+  private _resizeWidthRafId = 0;
 
   constructor(config?: IVirtualScrollConfig) {
     this._config = config ?? { enabled: false };
@@ -67,6 +77,78 @@ export class VirtualScrollState {
   /** Get the total scrollable height for all rows. */
   get totalHeight(): number {
     return computeTotalHeight(this._totalRows, this._config.rowHeight ?? DEFAULT_ROW_HEIGHT);
+  }
+
+  /** Whether column virtualization is active. */
+  get columnVirtualizationEnabled(): boolean {
+    return this._config.columns === true;
+  }
+
+  /** Get the current visible column range (null when column virtualization is disabled). */
+  get columnRange(): IVisibleColumnRange | null {
+    return this._cachedColumnRange;
+  }
+
+  /** Set the unpinned column widths for horizontal virtualization. */
+  setColumnWidths(widths: number[]): void {
+    this._columnWidths = widths;
+    this.recomputeColumnRange();
+  }
+
+  /** Handle horizontal scroll events. RAF-throttled. */
+  handleHorizontalScroll(scrollLeft: number): void {
+    if (!this.columnVirtualizationEnabled) return;
+    if (this._scrollLeftRafId) cancelAnimationFrame(this._scrollLeftRafId);
+    this._scrollLeftRafId = requestAnimationFrame(() => {
+      this._scrollLeftRafId = 0;
+      this._scrollLeft = scrollLeft;
+      this.recomputeColumnRange();
+    });
+  }
+
+  /** Observe a container element for width changes (column virtualization). */
+  observeContainerWidth(el: HTMLElement): void {
+    this.disconnectWidthObserver();
+    if (typeof ResizeObserver !== 'undefined') {
+      this._roWidth = new ResizeObserver((entries) => {
+        if (entries.length === 0) return;
+        this._containerWidth = entries[0].contentRect.width;
+        if (this._resizeWidthRafId) cancelAnimationFrame(this._resizeWidthRafId);
+        this._resizeWidthRafId = requestAnimationFrame(() => {
+          this._resizeWidthRafId = 0;
+          this.recomputeColumnRange();
+        });
+      });
+      this._roWidth.observe(el);
+    }
+    this._containerWidth = el.clientWidth;
+  }
+
+  private disconnectWidthObserver(): void {
+    if (this._roWidth) {
+      this._roWidth.disconnect();
+      this._roWidth = null;
+    }
+  }
+
+  /** Recompute visible column range and emit if changed. */
+  private recomputeColumnRange(): void {
+    if (!this.columnVirtualizationEnabled || this._columnWidths.length === 0 || this._containerWidth <= 0) {
+      if (this._cachedColumnRange !== null) {
+        this._cachedColumnRange = null;
+        this.emitter.emit('columnRangeChanged', { columnRange: null });
+      }
+      return;
+    }
+    const overscan = this._config.columnOverscan ?? 2;
+    const newRange = computeVisibleColumnRange(this._scrollLeft, this._columnWidths, this._containerWidth, overscan);
+    const prev = this._cachedColumnRange;
+    if (!prev || prev.startIndex !== newRange.startIndex || prev.endIndex !== newRange.endIndex) {
+      this._cachedColumnRange = newRange;
+      this.emitter.emit('columnRangeChanged', { columnRange: newRange });
+    } else {
+      this._cachedColumnRange = newRange;
+    }
   }
 
   /** Handle scroll events from the table container. RAF-throttled. */
@@ -168,6 +250,11 @@ export class VirtualScrollState {
     return () => this.emitter.off('rangeChanged', handler);
   }
 
+  onColumnRangeChanged(handler: (data: VirtualScrollEvents['columnRangeChanged']) => void): () => void {
+    this.emitter.on('columnRangeChanged', handler);
+    return () => this.emitter.off('columnRangeChanged', handler);
+  }
+
   onConfigChanged(handler: (data: VirtualScrollEvents['configChanged']) => void): () => void {
     this.emitter.on('configChanged', handler);
     return () => this.emitter.off('configChanged', handler);
@@ -176,7 +263,10 @@ export class VirtualScrollState {
   destroy(): void {
     if (this.rafId) cancelAnimationFrame(this.rafId);
     if (this._resizeRafId) cancelAnimationFrame(this._resizeRafId);
+    if (this._scrollLeftRafId) cancelAnimationFrame(this._scrollLeftRafId);
+    if (this._resizeWidthRafId) cancelAnimationFrame(this._resizeWidthRafId);
     this.disconnectObserver();
+    this.disconnectWidthObserver();
     this.emitter.removeAllListeners();
   }
 }
