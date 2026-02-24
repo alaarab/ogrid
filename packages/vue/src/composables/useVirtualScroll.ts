@@ -4,8 +4,9 @@ import {
   computeTotalHeight,
   getScrollTopForRow,
   validateVirtualScrollConfig,
+  computeVisibleColumnRange,
 } from '@alaarab/ogrid-core';
-import type { IVisibleRange } from '@alaarab/ogrid-core';
+import type { IVisibleRange, IVisibleColumnRange } from '@alaarab/ogrid-core';
 
 export interface UseVirtualScrollParams {
   totalRows: Ref<number>;
@@ -17,6 +18,12 @@ export interface UseVirtualScrollParams {
    * When totalRows < threshold, all rows render without virtualization.
    */
   threshold?: number;
+  /** Enable column virtualization. */
+  columnsEnabled?: Ref<boolean>;
+  /** Column widths array for unpinned columns. */
+  columnWidths?: Ref<number[]>;
+  /** Number of extra columns to render outside the visible area. Default: 2. */
+  columnOverscan?: number;
 }
 
 export interface UseVirtualScrollResult {
@@ -24,6 +31,10 @@ export interface UseVirtualScrollResult {
   visibleRange: Ref<IVisibleRange>;
   totalHeight: Ref<number>;
   scrollToRow: (index: number, align?: 'start' | 'center' | 'end') => void;
+  /** Visible column range for horizontal virtualization, or null when column virtualization is off. */
+  columnRange: Ref<IVisibleColumnRange | null>;
+  /** Reactive scrollLeft value. */
+  scrollLeft: Ref<number>;
 }
 
 /**
@@ -38,7 +49,10 @@ const DEFAULT_PASSTHROUGH_THRESHOLD = 100;
  * for container height tracking. Uses core's computeVisibleRange for range calculation.
  */
 export function useVirtualScroll(params: UseVirtualScrollParams): UseVirtualScrollResult {
-  const { totalRows, rowHeight, enabled, overscan = 5, threshold = DEFAULT_PASSTHROUGH_THRESHOLD } = params;
+  const {
+    totalRows, rowHeight, enabled, overscan = 5, threshold = DEFAULT_PASSTHROUGH_THRESHOLD,
+    columnsEnabled, columnWidths, columnOverscan = 2,
+  } = params;
 
   // Dev-only validation: warn if enabled but rowHeight is missing or invalid
   onMounted(() => {
@@ -47,7 +61,9 @@ export function useVirtualScroll(params: UseVirtualScrollParams): UseVirtualScro
 
   const containerRef = ref<HTMLElement | null>(null);
   const scrollTop = ref(0);
+  const scrollLeft = ref(0);
   const containerHeight = ref(0);
+  const containerWidth = ref(0);
 
   let rafId = 0;
   let resizeObserver: ResizeObserver | undefined;
@@ -75,6 +91,19 @@ export function useVirtualScroll(params: UseVirtualScrollParams): UseVirtualScro
     return computeTotalHeight(totalRows.value, rowHeight);
   });
 
+  // Column virtualization
+  const columnRange = computed<IVisibleColumnRange | null>(() => {
+    if (!columnsEnabled?.value) return null;
+    const widths = columnWidths?.value;
+    if (!widths || widths.length === 0) return null;
+    return computeVisibleColumnRange(
+      scrollLeft.value,
+      widths,
+      containerWidth.value,
+      columnOverscan,
+    );
+  });
+
   const onScroll = () => {
     if (!rafId) {
       rafId = requestAnimationFrame(() => {
@@ -82,6 +111,7 @@ export function useVirtualScroll(params: UseVirtualScrollParams): UseVirtualScro
         const el = containerRef.value;
         if (el) {
           scrollTop.value = el.scrollTop;
+          scrollLeft.value = el.scrollLeft;
         }
       });
     }
@@ -91,6 +121,7 @@ export function useVirtualScroll(params: UseVirtualScrollParams): UseVirtualScro
     const el = containerRef.value;
     if (!el) return;
     containerHeight.value = el.clientHeight;
+    containerWidth.value = el.clientWidth;
   };
 
   // Watch containerRef to attach/detach scroll listener and ResizeObserver.
@@ -119,6 +150,7 @@ export function useVirtualScroll(params: UseVirtualScrollParams): UseVirtualScro
       }
       measure();
       scrollTop.value = el.scrollTop;
+      scrollLeft.value = el.scrollLeft;
     }
   });
 
@@ -140,5 +172,5 @@ export function useVirtualScroll(params: UseVirtualScrollParams): UseVirtualScro
     el.scrollTop = getScrollTopForRow(index, rowHeight, containerHeight.value, align);
   };
 
-  return { containerRef, visibleRange, totalHeight, scrollToRow };
+  return { containerRef, visibleRange, totalHeight, scrollToRow, columnRange, scrollLeft };
 }

@@ -1258,4 +1258,54 @@ describe('useOGrid', () => {
       expect(onFiltersChange).toHaveBeenCalled();
     });
   });
+
+  describe('workerSort', () => {
+    it('items are returned when workerSort is true (async fallback in jsdom)', async () => {
+      const props = ref<IOGridProps<Row>>({
+        columns,
+        getRowId,
+        data,
+        defaultPageSize: 10,
+        workerSort: true,
+      });
+
+      const { dataGridProps } = useOGrid(props);
+
+      // Give async effect time to resolve (Worker not available in jsdom — falls back to sync)
+      await new Promise(r => setTimeout(r, 100));
+
+      // Either sync or async path should return data
+      expect(dataGridProps.value.items.length).toBeGreaterThan(0);
+    });
+
+    it('sorted items are correct with workerSort enabled', async () => {
+      const sortedData: Row[] = [
+        { id: '3', name: 'Carol' },
+        { id: '1', name: 'Alice' },
+        { id: '2', name: 'Bob' },
+      ];
+
+      const props = ref<IOGridProps<Row>>({
+        columns: [
+          { columnId: 'id', name: 'ID' },
+          { columnId: 'name', name: 'Name', sortable: true },
+        ],
+        getRowId,
+        data: sortedData,
+        defaultPageSize: 10,
+        workerSort: true,
+        defaultSortBy: 'name',
+        defaultSortDirection: 'asc',
+      });
+
+      const { dataGridProps } = useOGrid(props);
+
+      // Give async effect time to resolve
+      await new Promise(r => setTimeout(r, 100));
+
+      // Should be sorted by name ascending: Alice, Bob, Carol
+      const names = dataGridProps.value.items.map(r => r.name);
+      expect(names).toEqual(['Alice', 'Bob', 'Carol']);
+    });
+  });
 });

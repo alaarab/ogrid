@@ -30,6 +30,7 @@ export {
   booleanParser,
   computeAggregations,
   processClientSideData,
+  partitionColumnsForVirtualization,
   computeNextSortState,
   measureColumnContentWidth,
   AUTOSIZE_EXTRA_PX,

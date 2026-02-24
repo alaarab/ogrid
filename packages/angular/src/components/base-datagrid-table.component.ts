@@ -9,6 +9,7 @@ import {
   CHECKBOX_COLUMN_WIDTH,
   ROW_NUMBER_COLUMN_WIDTH,
   measureColumnContentWidth,
+  partitionColumnsForVirtualization,
 } from '@alaarab/ogrid-core';
 import {
   getHeaderFilterConfig,
@@ -200,6 +201,70 @@ export abstract class BaseDataGridTableComponent<T = unknown> {
     return this.vsVisibleRange().startIndex;
   });
 
+  // Column virtualization
+  readonly vsColumnsEnabled = computed(() => this.virtualScrollService.columnsEnabled());
+  readonly vsColumnRange = computed(() => this.virtualScrollService.columnRange());
+
+  /** Partitioned columns for column virtualization: pinned-left, virtualized-unpinned, pinned-right, with spacer widths. */
+  readonly vsColumnPartition = computed(() => {
+    if (!this.vsColumnsEnabled()) return null;
+    const cols = this.visibleCols() as IColumnDef<T>[];
+    const range = this.vsColumnRange();
+    const props = this.getProps();
+    const pinnedCols = props?.pinnedColumns;
+    return partitionColumnsForVirtualization(cols, range, pinnedCols);
+  });
+
+  /** Column layouts filtered by column virtualization range (or all if column virt is off). */
+  readonly vsColumnLayouts = computed(() => {
+    const allLayouts = this.columnLayouts();
+    const partition = this.vsColumnPartition();
+    if (!partition) return allLayouts;
+
+    // Build a set of visible column IDs from the partition
+    const visibleIds = new Set<string>();
+    for (const col of partition.pinnedLeft) visibleIds.add(col.columnId);
+    for (const col of partition.virtualizedUnpinned) visibleIds.add(col.columnId);
+    for (const col of partition.pinnedRight) visibleIds.add(col.columnId);
+
+    return allLayouts.filter(layout => visibleIds.has(layout.col.columnId));
+  });
+
+  /** Visible columns filtered by column virtualization range (or all if column virt is off). */
+  readonly vsVisibleCols = computed(() => {
+    const allCols = this.visibleCols() as IColumnDef<T>[];
+    const partition = this.vsColumnPartition();
+    if (!partition) return allCols;
+
+    const visibleIds = new Set<string>();
+    for (const col of partition.pinnedLeft) visibleIds.add(col.columnId);
+    for (const col of partition.virtualizedUnpinned) visibleIds.add(col.columnId);
+    for (const col of partition.pinnedRight) visibleIds.add(col.columnId);
+
+    return allCols.filter(col => visibleIds.has(col.columnId));
+  });
+
+  /** Left spacer width for column virtualization (in pixels). */
+  readonly vsLeftSpacerWidth = computed(() => this.vsColumnPartition()?.leftSpacerWidth ?? 0);
+
+  /** Right spacer width for column virtualization (in pixels). */
+  readonly vsRightSpacerWidth = computed(() => this.vsColumnPartition()?.rightSpacerWidth ?? 0);
+
+  /** Map from columnId to its global index in visibleCols. Used to maintain correct colIdx for cell descriptors during column virtualization. */
+  readonly globalColIndexMap = computed(() => {
+    const cols = this.visibleCols() as IColumnDef<T>[];
+    const map = new Map<string, number>();
+    for (let i = 0; i < cols.length; i++) {
+      map.set(cols[i].columnId, i);
+    }
+    return map;
+  });
+
+  /** Get global column index for a column (correct even during column virtualization). */
+  getGlobalColIndex(col: IColumnDef<T>): number {
+    return this.globalColIndexMap().get(col.columnId) ?? 0;
+  }
+
   // Popover editing
   readonly popoverAnchorEl = computed(() => this.editingState().popoverAnchorEl);
   readonly pendingEditorValueForPopover = computed(() => this.editingState().pendingEditorValue);
@@ -346,9 +411,23 @@ export abstract class BaseDataGridTableComponent<T = unknown> {
             enabled: p.virtualScroll.enabled,
             rowHeight: p.virtualScroll.rowHeight,
             overscan: p.virtualScroll.overscan,
+            columns: p.virtualScroll.columns,
+            columnOverscan: p.virtualScroll.columnOverscan,
           });
         }
       }
+    });
+
+    // Wire column widths to virtual scroll service for column virtualization
+    effect(() => {
+      const layouts = this.columnLayouts();
+      const props = this.getProps();
+      const pinnedCols = props?.pinnedColumns ?? {};
+      // Only provide widths for unpinned columns (pinned are always rendered)
+      const unpinnedWidths = layouts
+        .filter(l => !l.pinnedLeft && !l.pinnedRight && !pinnedCols[l.col.columnId])
+        .map(l => l.width);
+      this.virtualScrollService.columnWidths.set(unpinnedWidths);
     });
 
     // Wire wrapper element to virtual scroll for scroll events + container height
@@ -357,6 +436,7 @@ export abstract class BaseDataGridTableComponent<T = unknown> {
       if (el) {
         this.virtualScrollService.setContainer(el);
         this.virtualScrollService.containerHeight.set(el.clientHeight);
+        this.virtualScrollService.containerWidth.set(el.clientWidth);
       }
     });
   }

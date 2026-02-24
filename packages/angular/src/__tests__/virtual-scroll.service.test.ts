@@ -204,4 +204,68 @@ describe('VirtualScrollService', () => {
       expect(service.enabled()).toBe(true);
     });
   });
+
+  describe('Column virtualization', () => {
+    it('columnsEnabled is false by default', () => {
+      expect(service.columnsEnabled()).toBe(false);
+    });
+
+    it('columnsEnabled is true when config.columns is true', () => {
+      service.updateConfig({ columns: true });
+      expect(service.columnsEnabled()).toBe(true);
+    });
+
+    it('columnRange is null when columnsEnabled is false', () => {
+      service.columnWidths.set([100, 100, 100]);
+      service.containerWidth.set(200);
+      expect(service.columnRange()).toBeNull();
+    });
+
+    it('columnRange computes a range when columnsEnabled is true', () => {
+      service.updateConfig({ columns: true, columnOverscan: 1 });
+      service.columnWidths.set([100, 100, 100, 100, 100]);
+      service.containerWidth.set(250);
+      service.scrollLeft.set(0);
+      const range = service.columnRange();
+      expect(range).not.toBeNull();
+      expect(range!.startIndex).toBe(0);
+      expect(range!.endIndex).toBeGreaterThanOrEqual(2);
+    });
+
+    it('columnRange shifts when scrollLeft changes', () => {
+      service.updateConfig({ columns: true, columnOverscan: 0 });
+      service.columnWidths.set([100, 100, 100, 100, 100]);
+      service.containerWidth.set(200);
+      service.scrollLeft.set(0);
+      const range1 = service.columnRange();
+      expect(range1!.startIndex).toBe(0);
+
+      service.scrollLeft.set(250);
+      const range2 = service.columnRange();
+      expect(range2!.startIndex).toBeGreaterThan(0);
+    });
+
+    it('columnRange is null when columnWidths is empty', () => {
+      service.updateConfig({ columns: true });
+      service.columnWidths.set([]);
+      expect(service.columnRange()).toBeNull();
+    });
+
+    it('columnOverscan defaults to 2', () => {
+      expect(service.columnOverscan()).toBe(2);
+    });
+
+    it('columnOverscan can be configured', () => {
+      service.updateConfig({ columnOverscan: 5 });
+      expect(service.columnOverscan()).toBe(5);
+    });
+
+    it('onScroll updates scrollLeft', () => {
+      const mockEvent = {
+        target: { scrollTop: 100, scrollLeft: 200 },
+      } as unknown as Event;
+      service.onScroll(mockEvent);
+      expect(service.scrollLeft()).toBe(200);
+    });
+  });
 });

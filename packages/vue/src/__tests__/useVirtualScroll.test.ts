@@ -210,4 +210,87 @@ describe('useVirtualScroll', () => {
       expect(containerRef.value).toBeNull();
     });
   });
+
+  describe('column virtualization', () => {
+    it('columnRange is null when columnsEnabled is false (default)', () => {
+      const totalRows = ref(100);
+      const enabled = ref(true);
+
+      const { columnRange } = useVirtualScroll({
+        totalRows,
+        rowHeight: 40,
+        enabled,
+      });
+
+      expect(columnRange.value).toBeNull();
+    });
+
+    it('columnRange is null when columnsEnabled is false even with widths', () => {
+      const totalRows = ref(100);
+      const enabled = ref(true);
+      const columnsEnabled = ref(false);
+      const columnWidths = ref([100, 100, 100]);
+
+      const { columnRange } = useVirtualScroll({
+        totalRows,
+        rowHeight: 40,
+        enabled,
+        columnsEnabled,
+        columnWidths,
+      });
+
+      expect(columnRange.value).toBeNull();
+    });
+
+    it('columnRange computes a range when columnsEnabled is true', () => {
+      const totalRows = ref(100);
+      const enabled = ref(true);
+      const columnsEnabled = ref(true);
+      const columnWidths = ref([100, 100, 100, 100, 100]);
+
+      const { columnRange } = useVirtualScroll({
+        totalRows,
+        rowHeight: 40,
+        enabled,
+        columnsEnabled,
+        columnWidths,
+        columnOverscan: 1,
+      });
+
+      // containerWidth is 0 initially so range may vary, but it should not be null
+      expect(columnRange.value).not.toBeNull();
+      expect(columnRange.value!.startIndex).toBeDefined();
+      expect(columnRange.value!.endIndex).toBeDefined();
+    });
+
+    it('columnRange is null when columnWidths is empty', () => {
+      const totalRows = ref(100);
+      const enabled = ref(true);
+      const columnsEnabled = ref(true);
+      const columnWidths = ref<number[]>([]);
+
+      const { columnRange } = useVirtualScroll({
+        totalRows,
+        rowHeight: 40,
+        enabled,
+        columnsEnabled,
+        columnWidths,
+      });
+
+      expect(columnRange.value).toBeNull();
+    });
+
+    it('scrollLeft starts at 0', () => {
+      const totalRows = ref(100);
+      const enabled = ref(true);
+
+      const { scrollLeft } = useVirtualScroll({
+        totalRows,
+        rowHeight: 40,
+        enabled,
+      });
+
+      expect(scrollLeft.value).toBe(0);
+    });
+  });
 });

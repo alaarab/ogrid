@@ -189,7 +189,15 @@
   position: relative;
   padding: 0;
   height: 1px;
+  contain: content;
 }
+
+/* Pinned columns need contain: none because contain breaks position: sticky */
+.ogrid-data-cell--pinned-left,
+.ogrid-data-cell--pinned-right { contain: none; }
+
+/* content-visibility: auto on rows for non-virtualized grids */
+.ogrid-table:not([data-virtual-scroll]) tbody tr { content-visibility: auto; }
 
 .ogrid-data-cell--pinned-left {
   position: sticky;
