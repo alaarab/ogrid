@@ -254,8 +254,8 @@ export function createDataGridTable(ui: IDataGridTableUIBindings) {
           if (col.type === 'numeric') cellClasses.push('ogrid-cell-content--numeric');
           else if (col.type === 'boolean') cellClasses.push('ogrid-cell-content--boolean');
           if (descriptor.canEditAny) cellClasses.push('ogrid-cell-content--editable');
-          if (descriptor.isActive && !descriptor.isInRange) cellClasses.push('ogrid-cell-content--active');
-          if (descriptor.isInRange) cellClasses.push('ogrid-cell-in-range');
+          if (descriptor.isActive) cellClasses.push('ogrid-cell-content--active');
+          if (descriptor.isInRange && !descriptor.isActive) cellClasses.push('ogrid-cell-in-range');
           if (descriptor.isInCutRange) cellClasses.push('ogrid-cell-cut');
 
           const styledContent = cellStyle

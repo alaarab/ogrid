@@ -427,8 +427,8 @@ function DataGridTableInner<T>(props: IOGridDataGridProps<T>): React.ReactElemen
         if (col.type === 'numeric') cls += ' ogrid-mat-cell--numeric';
         else if (col.type === 'boolean') cls += ' ogrid-mat-cell--boolean';
         if (descriptor.canEditAny) cls += ' ogrid-mat-cell--editable';
-        if (descriptor.isActive && !descriptor.isInRange) cls += ' ogrid-mat-cell--active';
-        if (descriptor.isInRange) cls += ' ogrid-mat-cell--range';
+        if (descriptor.isActive) cls += ' ogrid-mat-cell--active';
+        if (descriptor.isInRange && !descriptor.isActive) cls += ' ogrid-mat-cell--range';
         if (descriptor.isInCutRange) cls += ' ogrid-mat-cell--cut';
 
         const interactionProps = getCellInteractionProps(descriptor, col.columnId, interactionHandlers);

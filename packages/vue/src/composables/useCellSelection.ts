@@ -166,16 +166,19 @@ export function useCellSelection(params: UseCellSelectionParams): UseCellSelecti
     if (!cellIndex) cellIndex = buildCellIndex(wrapperRef.value);
 
     // 2. Look up only the cells in the new range — O(range size) via Map lookup.
+    //    If a stale (disconnected) element is found, rebuild the index once per
+    //    applyDragAttrs call and retry — avoids per-cell rebuilds during fast scrolling.
+    let rebuilt = false;
     for (let r = minR; r <= maxR; r++) {
       for (let c = minC; c <= maxC; c++) {
         const key = `${r},${c + colOff}`;
         let el = cellIndex?.get(key);
-        // Handle virtual scroll recycling — if element is stale, rebuild index once
-        if (el && !el.isConnected) {
+        if (el && !el.isConnected && !rebuilt) {
+          rebuilt = true;
           cellIndex = buildCellIndex(wrapperRef.value);
           el = cellIndex?.get(key);
         }
-        if (el) {
+        if (el && el.isConnected) {
           styleCellInRange(el, r, c, minR, maxR, minC, maxC, anchor);
         }
       }
@@ -330,10 +333,14 @@ export function useCellSelection(params: UseCellSelectionParams): UseCellSelecti
       const finalRange = liveDragRange;
       if (finalRange) {
         setSelectionRange(finalRange);
-        setActiveCell({
-          rowIndex: finalRange.endRow,
-          columnIndex: finalRange.endCol + getColOffset(),
-        });
+        // Keep the active cell at the drag anchor (start), not the endpoint.
+        const anchor = dragStart;
+        if (anchor) {
+          setActiveCell({
+            rowIndex: anchor.row,
+            columnIndex: anchor.col + getColOffset(),
+          });
+        }
       }
     }
 
