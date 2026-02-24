@@ -611,6 +611,20 @@ export abstract class BaseDataGridTableComponent<T = unknown> {
     window.addEventListener('mouseup', onUp);
   }
 
+  onResizeDoubleClick(event: MouseEvent, col: IColumnDef<T>): void {
+    event.preventDefault();
+    event.stopPropagation();
+    const columnId = col.columnId;
+    const thEl = (event.currentTarget as HTMLElement).closest('th') ?? (event.currentTarget as HTMLElement).parentElement;
+    const container = thEl?.closest('table')?.parentElement ?? undefined;
+    const minWidth = col.minWidth ?? DEFAULT_MIN_COLUMN_WIDTH;
+    const idealWidth = measureColumnContentWidth(columnId, minWidth, container);
+    const overrides = { ...this.columnSizingOverrides(), [columnId]: { widthPx: idealWidth } };
+    this.state().layout.setColumnSizingOverrides(overrides);
+    this.columnSizingVersion.update(v => v + 1);
+    this.state().layout.onColumnResized?.(columnId, idealWidth);
+  }
+
   onSelectAllChange(event: Event): void {
     const checked = (event.target as HTMLInputElement).checked;
     this.state().rowSelection.handleSelectAll(!!checked);

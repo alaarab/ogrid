@@ -171,7 +171,6 @@ function HeroGrid() {
         onFiltersChange={setFilters}
         density={density}
         defaultPageSize={100}
-        layoutMode="fill"
         entityLabelPlural="employees"
       />
     </div>
@@ -195,54 +194,21 @@ const installCommands = [
   { pkg: '@alaarab/ogrid-js', label: 'Vanilla JS' },
 ];
 
-const packagesByFramework = [
-  {
-    framework: 'React',
-    packages: [
-      { name: 'ogrid-react-radix', ui: 'Radix UI', default: true },
-      { name: 'ogrid-react-fluent', ui: 'Fluent UI' },
-      { name: 'ogrid-react-material', ui: 'Material UI' },
-    ],
-  },
-  {
-    framework: 'Angular',
-    packages: [
-      { name: 'ogrid-angular-material', ui: 'Material' },
-      { name: 'ogrid-angular-primeng', ui: 'PrimeNG' },
-      { name: 'ogrid-angular-radix', ui: 'Radix UI' },
-    ],
-  },
-  {
-    framework: 'Vue',
-    packages: [
-      { name: 'ogrid-vue-vuetify', ui: 'Vuetify' },
-      { name: 'ogrid-vue-primevue', ui: 'PrimeVue' },
-      { name: 'ogrid-vue-radix', ui: 'Radix UI' },
-    ],
-  },
-  {
-    framework: 'Vanilla',
-    packages: [
-      { name: 'ogrid-js', ui: 'No framework' },
-    ],
-  },
+const frameworkCards = [
+  { name: 'React', detail: 'Radix \u00b7 Fluent \u00b7 Material', count: '3 UI kits' },
+  { name: 'Angular', detail: 'Material \u00b7 PrimeNG \u00b7 Radix', count: '3 UI kits' },
+  { name: 'Vue', detail: 'Vuetify \u00b7 PrimeVue \u00b7 Radix', count: '3 UI kits' },
+  { name: 'Vanilla JS', detail: 'Zero dependencies', count: '1 package' },
 ];
 
-function PackagesGrid() {
+function FrameworkCards() {
   return (
-    <div className={styles.packagesGrid}>
-      {packagesByFramework.map((group) => (
-        <div key={group.framework} className={styles.packageGroup}>
-          <div className={styles.packageGroupTitle}>{group.framework}</div>
-          {group.packages.map((pkg) => (
-            <div key={pkg.name} className={styles.packageItem}>
-              <code className={styles.packageName}>@alaarab/{pkg.name}</code>
-              <span className={styles.packageUi}>
-                {pkg.ui}
-                {'default' in pkg && pkg.default && <span className={styles.packageDefault}>default</span>}
-              </span>
-            </div>
-          ))}
+    <div className={styles.frameworkCards}>
+      {frameworkCards.map((fw) => (
+        <div key={fw.name} className={styles.frameworkCard}>
+          <div className={styles.frameworkCardName}>{fw.name}</div>
+          <div className={styles.frameworkCardDetail}>{fw.detail}</div>
+          <div className={styles.frameworkCardCount}>{fw.count}</div>
         </div>
       ))}
     </div>
@@ -654,22 +620,19 @@ function CTASection() {
       <div className={styles.ctaContent}>
         <h2 className={styles.ctaTitle}>Ready to Ship?</h2>
         <p className={styles.ctaSubtitle}>
-          Get started in under 5 minutes. Free. MIT licensed. No strings attached.
+          Pick your framework. Pick your UI library. Ship in under 5 minutes.
         </p>
-        <PackagesGrid />
+        <FrameworkCards />
         <RotatingInstallCommand />
         <div className={styles.ctaButtons}>
           <Link className={styles.btnPrimary} to="/docs/getting-started/overview">
-            Read the Docs
+            Get Started
           </Link>
           <Link
             className={styles.btnGhost}
             href="https://github.com/alaarab/ogrid"
           >
-            View on GitHub
-          </Link>
-          <Link className={styles.btnGhost} to="/docs/guides/framework-showcase">
-            Framework Showcase
+            GitHub
           </Link>
         </div>
       </div>

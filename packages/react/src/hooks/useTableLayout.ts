@@ -50,7 +50,10 @@ export function useTableLayout<T>(
       const borderX =
         (parseFloat(cs.borderLeftWidth || '0') || 0) +
         (parseFloat(cs.borderRightWidth || '0') || 0);
-      setContainerWidth(Math.max(0, rect.width - borderX));
+      const next = Math.round(Math.max(0, rect.width - borderX));
+      // Round to integer to prevent sub-pixel oscillation that causes
+      // infinite re-render loops during column resize.
+      setContainerWidth((prev) => (prev === next ? prev : next));
     };
     const ro = new ResizeObserver(measure);
     ro.observe(el);

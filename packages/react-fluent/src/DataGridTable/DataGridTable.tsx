@@ -115,7 +115,7 @@ function DataGridTableInner<T>(props: IOGridDataGridProps<T>): React.ReactElemen
   const {
     wrapperRef, tableContainerRef, lastMouseShiftRef,
     interaction, pinning,
-    handleResizeStart, getColumnWidth, isReorderDragging, dropIndicatorX, handleHeaderMouseDown,
+    handleResizeStart, handleResizeDoubleClick, getColumnWidth, isReorderDragging, dropIndicatorX, handleHeaderMouseDown,
     virtualScrollEnabled, visibleRange,
     items, getRowId, emptyState, rowSelection,
     isLoading, loadingMessage,
@@ -346,6 +346,7 @@ function DataGridTableInner<T>(props: IOGridDataGridProps<T>): React.ReactElemen
                                 wrapperRef.current?.focus({ preventScroll: true });
                                 handleResizeStart(e, col as IColumnDef<T>);
                               }}
+                              onDoubleClick={(e) => handleResizeDoubleClick(e, col as IColumnDef<T>)}
                               aria-label={`Resize ${col.name}`}
                             />
                           </TableHeaderCell>

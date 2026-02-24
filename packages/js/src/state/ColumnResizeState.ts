@@ -53,6 +53,12 @@ export class ColumnResizeState {
     this.resizeColumnId = null;
   }
 
+  /** Set a column width directly (used by double-click auto-fit). */
+  setColumnWidth(columnId: string, widthPx: number): void {
+    this.columnWidths.set(columnId, widthPx);
+    this.emitter.emit('columnWidthChange', { columnId, widthPx });
+  }
+
   onColumnWidthChange(handler: (data: ColumnResizeStateEvents['columnWidthChange']) => void): () => void {
     this.emitter.on('columnWidthChange', handler);
     return () => this.emitter.off('columnWidthChange', handler);

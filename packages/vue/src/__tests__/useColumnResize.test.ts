@@ -1,6 +1,17 @@
 import { ref } from 'vue';
+import { measureColumnContentWidth } from '@alaarab/ogrid-core';
 import { useColumnResize } from '../composables/useColumnResize';
 import type { IColumnDef } from '../types';
+
+jest.mock('@alaarab/ogrid-core', () => {
+  const actual = jest.requireActual('@alaarab/ogrid-core');
+  return {
+    ...actual,
+    measureColumnContentWidth: jest.fn(() => 200),
+  };
+});
+
+const mockedMeasure = measureColumnContentWidth as jest.MockedFunction<typeof measureColumnContentWidth>;
 
 type Row = { id: string; name: string };
 
@@ -61,5 +72,85 @@ describe('useColumnResize', () => {
 
     const col = { columnId: 'name', name: 'Name' } as IColumnDef<Row>;
     expect(getColumnWidth(col)).toBe(200);
+  });
+
+  describe('handleResizeDoubleClick', () => {
+    const mockColumn = { columnId: 'name', name: 'Name' } as IColumnDef<Row>;
+
+    // Build a real DOM structure: container > table > th > resizeHandle
+    // so that closest('th') and closest('table')?.parentElement work
+    let container: HTMLDivElement;
+    let resizeHandle: HTMLSpanElement;
+
+    beforeEach(() => {
+      container = document.createElement('div');
+      const table = document.createElement('table');
+      const th = document.createElement('th');
+      resizeHandle = document.createElement('span');
+      th.appendChild(resizeHandle);
+      table.appendChild(th);
+      container.appendChild(table);
+
+      mockedMeasure.mockClear();
+      mockedMeasure.mockReturnValue(200);
+    });
+
+    function createDoubleClickEvent(): MouseEvent {
+      const event = new MouseEvent('dblclick', { bubbles: true });
+      // Override currentTarget since it's read-only on real events —
+      // define it as a property pointing to our resizeHandle element
+      Object.defineProperty(event, 'currentTarget', { value: resizeHandle });
+      // Override preventDefault and stopPropagation so we can assert on them
+      event.preventDefault = jest.fn();
+      event.stopPropagation = jest.fn();
+      return event;
+    }
+
+    it('handleResizeDoubleClick calls measureColumnContentWidth and updates overrides', () => {
+      const overrides = ref<Record<string, { widthPx: number }>>({});
+      const setOverrides = jest.fn((v: Record<string, { widthPx: number }>) => { overrides.value = v; });
+      const { handleResizeDoubleClick } = useColumnResize<Row>({
+        columnSizingOverrides: overrides,
+        setColumnSizingOverrides: setOverrides,
+      });
+
+      const event = createDoubleClickEvent();
+      handleResizeDoubleClick(event, mockColumn);
+
+      expect(mockedMeasure).toHaveBeenCalledWith('name', 80, container);
+      expect(setOverrides).toHaveBeenCalledTimes(1);
+      expect(setOverrides).toHaveBeenCalledWith({ name: { widthPx: 200 } });
+    });
+
+    it('handleResizeDoubleClick calls onColumnResized callback', () => {
+      const overrides = ref<Record<string, { widthPx: number }>>({});
+      const onColumnResized = jest.fn();
+      mockedMeasure.mockReturnValue(175);
+
+      const { handleResizeDoubleClick } = useColumnResize<Row>({
+        columnSizingOverrides: overrides,
+        setColumnSizingOverrides: (v) => { overrides.value = v; },
+        onColumnResized,
+      });
+
+      const event = createDoubleClickEvent();
+      handleResizeDoubleClick(event, mockColumn);
+
+      expect(onColumnResized).toHaveBeenCalledWith('name', 175);
+    });
+
+    it('handleResizeDoubleClick prevents default and stops propagation', () => {
+      const overrides = ref<Record<string, { widthPx: number }>>({});
+      const { handleResizeDoubleClick } = useColumnResize<Row>({
+        columnSizingOverrides: overrides,
+        setColumnSizingOverrides: (v) => { overrides.value = v; },
+      });
+
+      const event = createDoubleClickEvent();
+      handleResizeDoubleClick(event, mockColumn);
+
+      expect(event.preventDefault).toHaveBeenCalled();
+      expect(event.stopPropagation).toHaveBeenCalled();
+    });
   });
 });
