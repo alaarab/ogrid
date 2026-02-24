@@ -156,7 +156,7 @@ export function createDataGridTable(ui: IDataGridTableUIBindings) {
         const { headerMenu } = pinning;
 
         const {
-          visibleCols, hasCheckboxCol, hasRowNumbersCol, colOffset: _colOffset,
+          visibleCols, hasCheckboxCol, hasRowNumbersCol, colOffset: _colOffset, containerWidth, minTableWidth, desiredTableWidth,
         } = layout;
 
         const currentPage = p.currentPage ?? 1;
@@ -185,6 +185,7 @@ export function createDataGridTable(ui: IDataGridTableUIBindings) {
         const ariaLabelledBy = p['aria-labelledby'];
 
         const fitToContent = layoutMode === 'content';
+        const allowOverflowX = !suppressHorizontalScroll && containerWidth > 0 && (minTableWidth > containerWidth || desiredTableWidth > containerWidth);
 
         const headerRows = headerRowsComputed.value;
 
@@ -303,7 +304,7 @@ export function createDataGridTable(ui: IDataGridTableUIBindings) {
           minHeight: isLoading && items.length === 0 ? '200px' : '0',
           width: fitToContent ? 'fit-content' : '100%',
           maxWidth: '100%',
-          overflowX: suppressHorizontalScroll ? 'hidden' : 'auto',
+          overflowX: suppressHorizontalScroll ? 'hidden' : allowOverflowX ? 'auto' : 'hidden',
           overflowY: 'auto',
           backgroundColor: '#fff',
           willChange: 'scroll-position',
@@ -323,11 +324,11 @@ export function createDataGridTable(ui: IDataGridTableUIBindings) {
             onMousedown: onWrapperMousedown,
             onKeydown: handleGridKeyDown,
             onContextmenu,
-            'data-suppress-scroll': suppressHorizontalScroll ? 'true' : undefined,
+            'data-overflow-x': allowOverflowX ? 'true' : 'false',
             style: wrapperStyle,
           }, [
             h('div', { class: 'ogrid-scroll-wrapper' }, [
-              h('div', { style: { width: 'max-content', minWidth: '100%', overflow: 'clip' } }, [
+              h('div', { style: { minWidth: allowOverflowX ? `${minTableWidth}px` : undefined } }, [
                 h('div', {
                   ref: (el: unknown) => { tableContainerRef.value = el as HTMLDivElement; },
                   class: ['ogrid-table-container', isLoading && items.length > 0 ? 'ogrid-table-container--loading' : ''],
@@ -345,7 +346,7 @@ export function createDataGridTable(ui: IDataGridTableUIBindings) {
                     ref: (el: unknown) => { tableRef.value = el as HTMLElement; },
                     class: 'ogrid-table',
                     role: 'grid',
-                    style: { width: '100%', minWidth: 'max-content' },
+                    style: { minWidth: `${minTableWidth}px` },
                   }, [
                     // Header
                     h('thead', { class: stickyHeader ? 'ogrid-thead ogrid-sticky-header' : 'ogrid-thead' },
