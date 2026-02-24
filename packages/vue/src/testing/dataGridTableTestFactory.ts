@@ -130,4 +130,40 @@ export function createDataGridTableTests(): void {
     const { result } = createDataGridState({ stickyHeader: false });
     expect(result.layout.value.stickyHeader).toBe(false);
   });
+
+  it('aria-sort: headerFilterInput reflects sortBy and sortDirection', () => {
+    const { result } = createDataGridState({ sortBy: 'name', sortDirection: 'asc' });
+    expect(result.viewModels.value.headerFilterInput.sortBy).toBe('name');
+    expect(result.viewModels.value.headerFilterInput.sortDirection).toBe('asc');
+  });
+
+  it('aria-sort: headerFilterInput reflects descending sort', () => {
+    const { result } = createDataGridState({ sortBy: 'status', sortDirection: 'desc' });
+    expect(result.viewModels.value.headerFilterInput.sortBy).toBe('status');
+    expect(result.viewModels.value.headerFilterInput.sortDirection).toBe('desc');
+  });
+
+  it('aria-sort: unsorted column has undefined sortBy', () => {
+    const { result } = createDataGridState({ sortBy: undefined });
+    expect(result.viewModels.value.headerFilterInput.sortBy).toBeUndefined();
+  });
+
+  it('onCellError callback is threaded through viewModels', () => {
+    const onCellError = jest.fn();
+    const { result } = createDataGridState({ onCellError });
+    expect(result.viewModels.value.onCellError).toBe(onCellError);
+  });
+
+  it('onCellError is undefined when not provided', () => {
+    const { result } = createDataGridState();
+    expect(result.viewModels.value.onCellError).toBeUndefined();
+  });
+
+  it('onCellError callback is callable with error and info', () => {
+    const onCellError = jest.fn();
+    const { result } = createDataGridState({ onCellError });
+    const err = new Error('render error');
+    result.viewModels.value.onCellError?.(err, { componentStack: 'stack' });
+    expect(onCellError).toHaveBeenCalledWith(err, { componentStack: 'stack' });
+  });
 }

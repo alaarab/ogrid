@@ -24,7 +24,7 @@ import { OGRID_THEME_VARS_CSS } from '../styles/ogrid-theme-vars';
       color: var(--ogrid-fg, rgba(0, 0, 0, 0.87));
     }
     .ogrid-layout-root--fullscreen .ogrid-layout-container {
-      border: none; border-radius: 0 !important;
+      border: none;
     }
     .ogrid-layout-toolbar {
       display: flex; justify-content: space-between; align-items: center;
@@ -55,7 +55,7 @@ import { OGRID_THEME_VARS_CSS } from '../styles/ogrid-theme-vars';
   `],
   template: `
     <div [class]="rootClass">
-      <div class="ogrid-layout-container" [style.border-radius.px]="borderRadius">
+      <div class="ogrid-layout-container" [style.border-radius.px]="isFullScreen ? 0 : borderRadius">
         <!-- Toolbar strip -->
         @if (hasToolbar || fullScreen) {
           <div

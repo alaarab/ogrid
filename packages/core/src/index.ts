@@ -138,6 +138,7 @@ export type { IVisibleRange } from './utils';
 export {
   getHeaderFilterConfig,
   getCellRenderDescriptor,
+  CellDescriptorCache,
   resolveCellDisplayContent,
   resolveCellStyle,
   buildInlineEditorProps,
@@ -186,7 +187,7 @@ export { applyFillValues } from './utils';
 export { UndoRedoStack } from './utils';
 
 // Utils — validation
-export { validateColumns, validateRowIds } from './utils';
+export { validateColumns, validateRowIds, validateVirtualScrollConfig } from './utils';
 
 // Constants — layout
 export {

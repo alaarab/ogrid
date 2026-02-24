@@ -1,7 +1,8 @@
-import { useMemo, useCallback, useRef } from 'react';
+import { useMemo, useCallback, useRef, useEffect } from 'react';
 import { useVirtualizer } from '@tanstack/react-virtual';
 import type { Virtualizer } from '@tanstack/react-virtual';
 import type { RefObject } from 'react';
+import { validateVirtualScrollConfig } from '@alaarab/ogrid-core';
 import type { IVisibleRange } from '@alaarab/ogrid-core';
 
 // Re-export core's IVirtualScrollConfig for convenience
@@ -16,6 +17,11 @@ export interface UseVirtualScrollParams {
   enabled: boolean;
   /** Number of extra rows to render outside the visible area. Default: 5. */
   overscan?: number;
+  /**
+   * Minimum row count before virtual scrolling activates. Default: 100.
+   * When totalRows < threshold, all rows render without virtualization.
+   */
+  threshold?: number;
   /** Ref to the scrollable container element. */
   containerRef: RefObject<HTMLElement | null>;
 }
@@ -31,13 +37,17 @@ export interface UseVirtualScrollResult {
   scrollToIndex: (index: number) => void;
 }
 
-/** Threshold below which virtual scrolling is a no-op (all rows rendered). */
-const PASSTHROUGH_THRESHOLD = 100;
+/**
+ * Default minimum row count before virtual scrolling activates.
+ * Grids with fewer rows than this render all rows without virtualization
+ * to avoid scroll offset artifacts on small datasets.
+ */
+const DEFAULT_PASSTHROUGH_THRESHOLD = 100;
 
 /**
  * Wraps TanStack Virtual for row virtualization.
  * When disabled or when totalRows < threshold, returns a pass-through (all rows visible).
- * @param params - Total rows, row height, enabled flag, overscan, and container ref.
+ * @param params - Total rows, row height, enabled flag, overscan, threshold, and container ref.
  * @returns Virtualizer instance, total height, visible range, and scrollToIndex helper.
  */
 export function useVirtualScroll(params: UseVirtualScrollParams): UseVirtualScrollResult {
@@ -46,10 +56,17 @@ export function useVirtualScroll(params: UseVirtualScrollParams): UseVirtualScro
     rowHeight,
     enabled,
     overscan = 5,
+    threshold = DEFAULT_PASSTHROUGH_THRESHOLD,
     containerRef,
   } = params;
 
-  const isActive = enabled && totalRows >= PASSTHROUGH_THRESHOLD;
+  // Dev-only validation: warn if enabled but rowHeight is missing or invalid
+  useEffect(() => {
+    validateVirtualScrollConfig({ enabled, rowHeight });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const isActive = enabled && totalRows >= threshold;
 
   const getScrollElement = useCallback(
     () => containerRef.current,

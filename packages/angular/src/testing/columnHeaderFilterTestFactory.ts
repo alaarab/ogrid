@@ -209,4 +209,34 @@ export function createColumnHeaderFilterTests(ColumnHeaderFilterComponent: new (
     const comp = createComponent({ columnKey: 'owner', columnName: 'Owner', filterType: 'people' });
     expect(comp.hasActiveFilter()).toBe(false);
   });
+
+  describe('aria-expanded on filter buttons', () => {
+    it('isFilterOpen is false initially (aria-expanded="false")', () => {
+      const comp = createComponent({ columnKey: 'name', columnName: 'Name', filterType: 'text' });
+      expect(comp.isFilterOpen()).toBe(false);
+    });
+
+    it('isFilterOpen becomes true after setting it (aria-expanded="true")', () => {
+      const comp = createComponent({ columnKey: 'name', columnName: 'Name', filterType: 'text' });
+      comp.isFilterOpen.set(true);
+      expect(comp.isFilterOpen()).toBe(true);
+    });
+
+    it('isFilterOpen is false after text filter apply', () => {
+      const onTextChange = jest.fn();
+      const comp = createComponent({ columnKey: 'name', columnName: 'Name', filterType: 'text', textValue: '', onTextChange });
+      comp.isFilterOpen.set(true);
+      comp.tempTextValue.set('test');
+      comp.handleTextApply();
+      expect(comp.isFilterOpen()).toBe(false);
+    });
+
+    it('isFilterOpen is false after text filter clear', () => {
+      const onTextChange = jest.fn();
+      const comp = createComponent({ columnKey: 'name', columnName: 'Name', filterType: 'text', textValue: 'x', onTextChange });
+      comp.isFilterOpen.set(true);
+      comp.handleTextClear();
+      expect(comp.isFilterOpen()).toBe(false);
+    });
+  });
 }

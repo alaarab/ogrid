@@ -6,6 +6,13 @@
 
 /* ── Light Theme (default) — :where() for zero specificity ── */
 :where(:root) {
+  /* Cell padding — override for row density:
+     --ogrid-cell-padding          : shorthand (default 6px 10px)
+     --ogrid-cell-padding-vertical : vertical only (default 6px)
+     --ogrid-cell-padding-horizontal: horizontal only (default 10px) */
+  --ogrid-cell-padding: 6px 10px;
+  --ogrid-cell-padding-vertical: 6px;
+  --ogrid-cell-padding-horizontal: 10px;
   --ogrid-bg: #ffffff;
   --ogrid-fg: rgba(0, 0, 0, 0.87);
   --ogrid-fg-secondary: rgba(0, 0, 0, 0.6);
@@ -132,7 +139,7 @@
 .ogrid-container.ogrid-fullscreen {
   position: fixed;
   inset: 0;
-  z-index: 9999;
+  z-index: var(--ogrid-z-fullscreen, 9999);
   border-radius: 0;
   border: none;
 }
@@ -224,7 +231,7 @@
 
 .ogrid-table thead {
   background: var(--ogrid-bg-subtle, #f3f2f1);
-  z-index: 8;
+  z-index: var(--ogrid-z-thead, 8);
 }
 
 .ogrid-table thead.ogrid-sticky-header {
@@ -270,7 +277,7 @@
   width: 8px;
   cursor: col-resize;
   user-select: none;
-  z-index: 1;
+  z-index: var(--ogrid-z-resize-handle, 1);
 }
 
 .ogrid-resize-handle::after {
@@ -316,7 +323,7 @@
 /* ── Body Rows ── */
 
 .ogrid-table tbody td {
-  padding: 6px 10px;
+  padding: var(--ogrid-cell-padding, 6px 10px);
   background: var(--ogrid-bg, #ffffff);
   border-bottom: 1px solid var(--ogrid-border, #e8e8e8);
   position: relative;
@@ -345,12 +352,15 @@
   background: var(--ogrid-bg-selected-hover, #dae8f8);
 }
 
-.ogrid-checkbox-header,
-.ogrid-checkbox-cell {
+/* Element-type selector (th.ogrid-checkbox-header, td.ogrid-checkbox-cell) has specificity
+   0,1,1 which beats the generic .ogrid-table tbody td (0,1,2) — wait, 0,1,1 < 0,1,2.
+   Qualify with .ogrid-table to reach 0,2,1, beating the base td padding rule (0,1,2). */
+.ogrid-table th.ogrid-checkbox-header,
+.ogrid-table td.ogrid-checkbox-cell {
   width: 48px;
   min-width: 48px;
   max-width: 48px;
-  padding: 4px !important;
+  padding: 4px;
   text-align: center;
 }
 
@@ -367,20 +377,22 @@
 .ogrid-cell[data-active-cell='true'] {
   outline: 2px solid var(--ogrid-selection, #217346);
   outline-offset: -1px;
-  z-index: 2;
+  z-index: var(--ogrid-z-active-cell, 2);
   position: relative;
 }
 
-.ogrid-cell[data-in-range='true'] {
-  background: var(--ogrid-bg-range, rgba(33, 115, 70, 0.12)) !important;
+/* Cell range/drag highlights: qualify with .ogrid-container to reach specificity 0,3,0,
+   beating row-hover rules (.ogrid-table tbody tr:hover td = 0,2,3). */
+.ogrid-container .ogrid-cell[data-in-range='true'] {
+  background: var(--ogrid-bg-range, rgba(33, 115, 70, 0.12));
 }
 
-[data-drag-range] {
-  background: var(--ogrid-bg-range, rgba(33, 115, 70, 0.12)) !important;
+.ogrid-container [data-drag-range] {
+  background: var(--ogrid-bg-range, rgba(33, 115, 70, 0.12));
 }
 
-[data-drag-anchor] {
-  background: var(--ogrid-bg, #fff) !important;
+.ogrid-container [data-drag-anchor] {
+  background: var(--ogrid-bg, #fff);
 }
 
 /* ── Fill Handle ── */
@@ -396,7 +408,7 @@
   border-radius: 1px;
   cursor: crosshair;
   pointer-events: auto;
-  z-index: 3;
+  z-index: var(--ogrid-z-fill-handle, 3);
 }
 
 /* ── Pinned Columns ── */
@@ -404,7 +416,7 @@
 .ogrid-table th[data-pinned='left'],
 .ogrid-table td[data-pinned='left'] {
   position: sticky;
-  z-index: 6;
+  z-index: var(--ogrid-z-pinned, 6);
   background: var(--ogrid-bg, #fff);
   will-change: transform;
   border-right: 1px solid var(--ogrid-border, rgba(0, 0, 0, 0.12));
@@ -413,13 +425,13 @@
 
 .ogrid-table thead th[data-pinned='left'] {
   background: var(--ogrid-bg-subtle, #f3f2f1);
-  z-index: 9;
+  z-index: var(--ogrid-z-pinned-header, 10);
 }
 
 .ogrid-table th[data-pinned='right'],
 .ogrid-table td[data-pinned='right'] {
   position: sticky;
-  z-index: 6;
+  z-index: var(--ogrid-z-pinned, 6);
   background: var(--ogrid-bg, #fff);
   will-change: transform;
   border-left: 1px solid var(--ogrid-border, rgba(0, 0, 0, 0.12));
@@ -428,7 +440,7 @@
 
 .ogrid-table thead th[data-pinned='right'] {
   background: var(--ogrid-bg-subtle, #f3f2f1);
-  z-index: 9;
+  z-index: var(--ogrid-z-pinned-header, 10);
 }
 
 /* ── Empty State ── */
@@ -445,7 +457,7 @@
 .ogrid-loading-overlay {
   position: absolute;
   inset: 0;
-  z-index: 100;
+  z-index: var(--ogrid-z-drop-indicator, 100);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -589,10 +601,20 @@
   cursor: not-allowed;
 }
 
-.ogrid-pagination-active {
-  background: var(--ogrid-primary, #217346) !important;
-  border-color: var(--ogrid-primary, #217346) !important;
-  color: var(--ogrid-primary-fg, #fff) !important;
+/* Active pagination button: compound selector (0,2,0) beats base (0,1,0).
+   The :hover rule (.ogrid-pagination-btn:hover:not(:disabled), 0,3,0) still wins on hover,
+   but that is the correct UX — hovered active page shows hover style. */
+.ogrid-pagination-btn.ogrid-pagination-active {
+  background: var(--ogrid-primary, #217346);
+  border-color: var(--ogrid-primary, #217346);
+  color: var(--ogrid-primary-fg, #fff);
+}
+
+/* Keep active state even when hovered */
+.ogrid-pagination-btn.ogrid-pagination-active:hover:not(:disabled) {
+  background: var(--ogrid-primary, #217346);
+  border-color: var(--ogrid-primary, #217346);
+  color: var(--ogrid-primary-fg, #fff);
 }
 
 .ogrid-pagination-ellipsis {
@@ -797,7 +819,7 @@
 
 .ogrid-header-filter-popover {
   position: fixed;
-  z-index: 1000;
+  z-index: var(--ogrid-z-filter-popover, 1000);
   min-width: 280px;
   max-width: 320px;
   background: var(--ogrid-bg, #fff);
@@ -909,7 +931,7 @@
 
 .ogrid-context-menu {
   position: fixed;
-  z-index: 10000;
+  z-index: var(--ogrid-z-context-menu, 10000);
   min-width: 160px;
   padding: 4px 0;
   background: var(--ogrid-bg, #fff);
@@ -952,7 +974,7 @@
 
 .ogrid-cell-editor {
   position: absolute;
-  z-index: 10;
+  z-index: var(--ogrid-z-filter-popover, 1000);
   background: var(--ogrid-bg, #fff);
   border: 2px solid var(--ogrid-selection, #217346);
   border-radius: 0;
@@ -982,7 +1004,7 @@
   width: 3px;
   background: var(--ogrid-primary, #217346);
   pointer-events: none;
-  z-index: 100;
+  z-index: var(--ogrid-z-drop-indicator, 100);
   transition: left 0.05s;
 }
 
@@ -996,9 +1018,11 @@
 
 /* ── Virtual Scrolling ── */
 
-.ogrid-virtual-spacer td {
-  padding: 0 !important;
-  border: none !important;
+/* Virtual spacer: element+class selector (0,1,1) beats plain td rules (0,0,1).
+   But .ogrid-table tbody td (0,1,2) has higher specificity so we qualify with the table. */
+.ogrid-table .ogrid-virtual-spacer td {
+  padding: 0;
+  border: none;
   line-height: 0;
 }
 

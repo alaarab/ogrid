@@ -534,6 +534,7 @@ export class DataGridStateService<T> {
       (rowId, checked, rowIndex, shiftKey) => this.handleRowCheckboxChange(rowId, checked, rowIndex, shiftKey),
       this.editingHelper.editingCellSig(),
       (cell) => this.setEditingCell(cell),
+      p.onKeyDown,
     );
   }
 
@@ -608,6 +609,51 @@ export class DataGridStateService<T> {
     }
   }
 
+  // --- Stable handler closures (defined once, reused in getState()) ---
+  // These arrow properties ensure Angular change detection receives the same
+  // function reference on every getState() call, avoiding unnecessary re-renders.
+
+  private readonly _setColumnSizingOverrides = (overrides: Record<string, { widthPx: number }>) =>
+    this.layoutHelper.columnSizingOverridesSig.set(overrides);
+  private readonly _updateSelection = (ids: Set<RowId>) => this.updateSelection(ids);
+  private readonly _handleRowCheckboxChange = (rowId: RowId, checked: boolean, rowIndex: number, shiftKey: boolean) =>
+    this.handleRowCheckboxChange(rowId, checked, rowIndex, shiftKey);
+  private readonly _handleSelectAll = (checked: boolean) => this.handleSelectAll(checked);
+  private readonly _setEditingCell = (cell: { rowId: RowId; columnId: string } | null) => this.setEditingCell(cell);
+  private readonly _setPendingEditorValue = (v: unknown) => this.setPendingEditorValue(v);
+  private readonly _commitCellEdit = (item: T, colId: string, oldVal: unknown, newVal: unknown, rowIdx: number, globalColIdx: number) =>
+    this.commitCellEdit(item, colId, oldVal, newVal, rowIdx, globalColIdx);
+  private readonly _cancelPopoverEdit = () => this.cancelPopoverEdit();
+  private readonly _setPopoverAnchorEl = (el: HTMLElement | null) => this.editingHelper.popoverAnchorElSig.set(el);
+  private readonly _setActiveCell = (cell: IActiveCell | null) => this.setActiveCell(cell);
+  private readonly _setSelectionRange = (range: ISelectionRange | null) => this.setSelectionRange(range);
+  private readonly _handleCellMouseDown = (e: MouseEvent, r: number, c: number) => this.handleCellMouseDown(e, r, c);
+  private readonly _handleSelectAllCells = () => this.handleSelectAllCells();
+  private readonly _handleGridKeyDown = (e: KeyboardEvent) => this.handleGridKeyDown(e);
+  private readonly _handleFillHandleMouseDown = (e: MouseEvent) => this.handleFillHandleMouseDown(e);
+  private readonly _handleCopy = () => this.handleCopy();
+  private readonly _handleCut = () => this.handleCut();
+  private readonly _handlePaste = () => this.handlePaste();
+  private readonly _clearClipboardRanges = () => this.clearClipboardRanges();
+  private readonly _onUndo = () => this.undo();
+  private readonly _onRedo = () => this.redo();
+  private readonly _setContextMenuPosition = (pos: { x: number; y: number } | null) => this.setContextMenuPosition(pos);
+  private readonly _handleCellContextMenu = (e: { clientX: number; clientY: number; preventDefault?: () => void }) =>
+    this.handleCellContextMenu(e);
+  private readonly _closeContextMenu = () => this.closeContextMenu();
+  private readonly _headerFilterOnColumnSort = (columnKey: string, direction?: 'asc' | 'desc' | null) =>
+    this.props()?.onColumnSort(columnKey, direction);
+  private readonly _headerFilterOnFilterChange = (key: string, value: FilterValue | undefined) =>
+    this.props()?.onFilterChange(key, value);
+  private readonly _pinColumn = (columnId: string, side: 'left' | 'right') => this.pinColumn(columnId, side);
+  private readonly _unpinColumn = (columnId: string) => this.unpinColumn(columnId);
+  private readonly _isPinned = (columnId: string) => this.isPinned(columnId);
+  private readonly _openHeaderMenu = (columnId: string, anchorEl: HTMLElement) => this.openHeaderMenu(columnId, anchorEl);
+  private readonly _closeHeaderMenu = () => this.closeHeaderMenu();
+  private readonly _headerMenuPinLeft = () => this.headerMenuPinLeft();
+  private readonly _headerMenuPinRight = () => this.headerMenuPinRight();
+  private readonly _headerMenuUnpin = () => this.headerMenuUnpin();
+
   // --- Get state result ---
 
   getState(): DataGridStateResult<T> {
@@ -627,69 +673,68 @@ export class DataGridStateService<T> {
       minTableWidth: this.minTableWidth(),
       desiredTableWidth: this.desiredTableWidth(),
       columnSizingOverrides: this.layoutHelper.columnSizingOverridesSig(),
-      setColumnSizingOverrides: (overrides) => this.layoutHelper.columnSizingOverridesSig.set(overrides),
+      setColumnSizingOverrides: this._setColumnSizingOverrides,
       onColumnResized: p?.onColumnResized,
       onAutosizeColumn: p?.onAutosizeColumn,
     };
 
     const rowSelection: DataGridRowSelectionState = {
       selectedRowIds: this.selectedRowIds(),
-      updateSelection: (ids) => this.updateSelection(ids),
-      handleRowCheckboxChange: (rowId, checked, rowIndex, shiftKey) => this.handleRowCheckboxChange(rowId, checked, rowIndex, shiftKey),
-      handleSelectAll: (checked) => this.handleSelectAll(checked),
+      updateSelection: this._updateSelection,
+      handleRowCheckboxChange: this._handleRowCheckboxChange,
+      handleSelectAll: this._handleSelectAll,
       allSelected: this.allSelected(),
       someSelected: this.someSelected(),
     };
 
     const editing: DataGridEditingState<T> = {
       editingCell: this.editingHelper.editingCellSig(),
-      setEditingCell: (cell) => this.setEditingCell(cell),
+      setEditingCell: this._setEditingCell,
       pendingEditorValue: this.editingHelper.pendingEditorValueSig(),
-      setPendingEditorValue: (v) => this.setPendingEditorValue(v),
-      commitCellEdit: (item, colId, oldVal, newVal, rowIdx, globalColIdx) =>
-        this.commitCellEdit(item, colId, oldVal, newVal, rowIdx, globalColIdx),
-      cancelPopoverEdit: () => this.cancelPopoverEdit(),
+      setPendingEditorValue: this._setPendingEditorValue,
+      commitCellEdit: this._commitCellEdit,
+      cancelPopoverEdit: this._cancelPopoverEdit,
       popoverAnchorEl: this.editingHelper.popoverAnchorElSig(),
-      setPopoverAnchorEl: (el) => this.editingHelper.popoverAnchorElSig.set(el),
+      setPopoverAnchorEl: this._setPopoverAnchorEl,
     };
 
     const interaction: DataGridCellInteractionState = {
       activeCell: cellSel ? this.interactionHelper.activeCellSig() : null,
-      setActiveCell: cellSel ? (cell) => this.setActiveCell(cell) : undefined,
+      setActiveCell: cellSel ? this._setActiveCell : undefined,
       selectionRange: cellSel ? this.interactionHelper.selectionRangeSig() : null,
-      setSelectionRange: cellSel ? (range) => this.setSelectionRange(range) : undefined,
-      handleCellMouseDown: cellSel ? (e, r, c) => this.handleCellMouseDown(e, r, c) : NOOP_MOUSE,
-      handleSelectAllCells: cellSel ? () => this.handleSelectAllCells() : NOOP,
+      setSelectionRange: cellSel ? this._setSelectionRange : undefined,
+      handleCellMouseDown: cellSel ? this._handleCellMouseDown : NOOP_MOUSE,
+      handleSelectAllCells: cellSel ? this._handleSelectAllCells : NOOP,
       hasCellSelection: cellSel ? this.hasCellSelection() : false,
-      handleGridKeyDown: cellSel ? (e) => this.handleGridKeyDown(e) : NOOP_KEY,
-      handleFillHandleMouseDown: cellSel ? (e) => this.handleFillHandleMouseDown(e) : undefined,
-      handleCopy: cellSel ? () => this.handleCopy() : NOOP,
-      handleCut: cellSel ? () => this.handleCut() : NOOP,
-      handlePaste: cellSel ? () => this.handlePaste() : NOOP_ASYNC,
+      handleGridKeyDown: cellSel ? this._handleGridKeyDown : NOOP_KEY,
+      handleFillHandleMouseDown: cellSel ? this._handleFillHandleMouseDown : undefined,
+      handleCopy: cellSel ? this._handleCopy : NOOP,
+      handleCut: cellSel ? this._handleCut : NOOP,
+      handlePaste: cellSel ? this._handlePaste : NOOP_ASYNC,
       cutRange: cellSel ? this.interactionHelper.cutRangeSig() : null,
       copyRange: cellSel ? this.interactionHelper.copyRangeSig() : null,
-      clearClipboardRanges: cellSel ? () => this.clearClipboardRanges() : NOOP,
+      clearClipboardRanges: cellSel ? this._clearClipboardRanges : NOOP,
       canUndo: this.canUndo(),
       canRedo: this.canRedo(),
-      onUndo: () => this.undo(),
-      onRedo: () => this.redo(),
+      onUndo: this._onUndo,
+      onRedo: this._onRedo,
       isDragging: cellSel ? this.interactionHelper.isDraggingSig() : false,
     };
 
     const contextMenu: DataGridContextMenuState = {
       menuPosition: cellSel ? this.interactionHelper.contextMenuPositionSig() : null,
-      setMenuPosition: cellSel ? (pos) => this.setContextMenuPosition(pos) : undefined,
-      handleCellContextMenu: cellSel ? (e) => this.handleCellContextMenu(e) : NOOP_CTX,
-      closeContextMenu: cellSel ? () => this.closeContextMenu() : NOOP,
+      setMenuPosition: cellSel ? this._setContextMenuPosition : undefined,
+      handleCellContextMenu: cellSel ? this._handleCellContextMenu : NOOP_CTX,
+      closeContextMenu: cellSel ? this._closeContextMenu : NOOP,
     };
 
     const viewModels: DataGridViewModelState<T> = {
       headerFilterInput: {
         sortBy: p?.sortBy,
         sortDirection: p?.sortDirection ?? 'asc',
-        onColumnSort: (columnKey: string, direction?: 'asc' | 'desc' | null) => p?.onColumnSort(columnKey, direction),
+        onColumnSort: this._headerFilterOnColumnSort,
         filters: p?.filters ?? {},
-        onFilterChange: (key, value) => p?.onFilterChange(key, value),
+        onFilterChange: this._headerFilterOnFilterChange,
         filterOptions: p?.filterOptions ?? {},
         loadingFilterOptions: p?.loadingFilterOptions ?? {},
         peopleSearch: p?.peopleSearch,
@@ -718,18 +763,18 @@ export class DataGridStateService<T> {
 
     const pinning: DataGridPinningState = {
       pinnedColumns: p?.pinnedColumns ?? {},
-      pinColumn: (columnId, side) => this.pinColumn(columnId, side),
-      unpinColumn: (columnId) => this.unpinColumn(columnId),
-      isPinned: (columnId) => this.isPinned(columnId),
+      pinColumn: this._pinColumn,
+      unpinColumn: this._unpinColumn,
+      isPinned: this._isPinned,
       headerMenu: {
         isOpen: this.headerMenuIsOpenSig(),
         openForColumn,
         anchorElement: this.headerMenuAnchorElementSig(),
-        open: (columnId, anchorEl) => this.openHeaderMenu(columnId, anchorEl),
-        close: () => this.closeHeaderMenu(),
-        handlePinLeft: () => this.headerMenuPinLeft(),
-        handlePinRight: () => this.headerMenuPinRight(),
-        handleUnpin: () => this.headerMenuUnpin(),
+        open: this._openHeaderMenu,
+        close: this._closeHeaderMenu,
+        handlePinLeft: this._headerMenuPinLeft,
+        handlePinRight: this._headerMenuPinRight,
+        handleUnpin: this._headerMenuUnpin,
         canPinLeft: currentPinState !== 'left',
         canPinRight: currentPinState !== 'right',
         canUnpin: !!currentPinState,
