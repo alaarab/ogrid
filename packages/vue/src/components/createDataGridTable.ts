@@ -5,7 +5,7 @@
  * they only differ in which checkbox and spinner components they render.
  * This factory extracts all shared logic into one place.
  */
-import { defineComponent, computed, h, type PropType, type VNode, Teleport, type Component } from 'vue';
+import { defineComponent, computed, h, watch, type PropType, type VNode, Teleport, type Component } from 'vue';
 import {
   useDataGridTableSetup,
   type UseDataGridTableSetupResult,
@@ -19,7 +19,7 @@ import {
   buildPopoverEditorProps,
   getCellInteractionProps,
 } from '../utils';
-import { buildHeaderRows, CHECKBOX_COLUMN_WIDTH, ROW_NUMBER_COLUMN_WIDTH, DEFAULT_MIN_COLUMN_WIDTH } from '@alaarab/ogrid-core';
+import { buildHeaderRows, CHECKBOX_COLUMN_WIDTH, ROW_NUMBER_COLUMN_WIDTH, DEFAULT_MIN_COLUMN_WIDTH, indexToColumnLetter, formatCellReference } from '@alaarab/ogrid-core';
 import { StatusBar } from './StatusBar';
 import { MarchingAntsOverlay } from './MarchingAntsOverlay';
 import type { IOGridDataGridProps, IColumnDef, ICellEditorProps } from '../types';
@@ -77,6 +77,26 @@ export function createDataGridTable(ui: IDataGridTableUIBindings) {
         columnPartition,
         globalColIndexMap,
       } = useDataGridTableSetup({ props: propsRef }) as UseDataGridTableSetupResult<unknown>;
+
+      // --- Name box: notify parent when active cell changes ---
+      const rowNumberOffset = computed(() => {
+        const p = propsRef.value;
+        const hasRowNumbers = p.showRowNumbers || p.showColumnLetters;
+        return hasRowNumbers ? ((p.currentPage ?? 1) - 1) * (p.pageSize ?? 25) : 0;
+      });
+      watch(
+        [() => state.interaction.value.activeCell, rowNumberOffset],
+        ([ac, offset]) => {
+          const cb = propsRef.value.onActiveCellChange;
+          if (!cb) return;
+          if (ac) {
+            cb(formatCellReference(ac.columnIndex, offset + ac.rowIndex + 1));
+          } else {
+            cb(null);
+          }
+        },
+        { immediate: true },
+      );
 
       // Stable handlers — avoid creating new closures per render
       const onWrapperMousedown = (e: MouseEvent) => { lastMouseShift.value = e.shiftKey; };
@@ -257,6 +277,7 @@ export function createDataGridTable(ui: IDataGridTableUIBindings) {
           else if (col.type === 'boolean') cellClasses.push('ogrid-cell-content--boolean');
           if (descriptor.canEditAny) cellClasses.push('ogrid-cell-content--editable');
           if (descriptor.isActive) cellClasses.push('ogrid-cell-content--active');
+          if (descriptor.isActive && descriptor.isInRange) cellClasses.push('ogrid-cell-content--active-in-range');
           if (descriptor.isInRange && !descriptor.isActive) cellClasses.push('ogrid-cell-in-range');
           if (descriptor.isInCutRange) cellClasses.push('ogrid-cell-cut');
 
@@ -370,8 +391,23 @@ export function createDataGridTable(ui: IDataGridTableUIBindings) {
                     ...(virtualScrollEnabled.value ? { 'data-virtual-scroll': '' } : {}),
                   }, [
                     // Header
-                    h('thead', { class: stickyHeader ? 'ogrid-thead ogrid-sticky-header' : 'ogrid-thead' },
-                      headerRows.map((row, rowIdx) =>
+                    h('thead', { class: stickyHeader ? 'ogrid-thead ogrid-sticky-header' : 'ogrid-thead' }, [
+                      // Column letter row (A, B, C...) for cell references
+                      ...(p.showColumnLetters ? [
+                        h('tr', { class: 'ogrid-column-letter-row' }, [
+                          ...(hasCheckboxCol ? [h('th', { class: 'ogrid-column-letter-cell' })] : []),
+                          ...(hasRowNumbersCol ? [h('th', { class: 'ogrid-column-letter-cell' })] : []),
+                          ...visibleCols.map((col: IColumnDef<unknown>, colIdx: number) => {
+                            const { classes: hdrCls, style: hdrSty } = getHeaderClassAndStyle(col);
+                            return h('th', {
+                              key: col.columnId,
+                              class: `ogrid-column-letter-cell ${hdrCls}`,
+                              style: hdrSty,
+                            }, indexToColumnLetter(colIdx));
+                          }),
+                        ]),
+                      ] : []),
+                      ...headerRows.map((row, rowIdx) =>
                         h('tr', { key: rowIdx, class: 'ogrid-header-row' }, [
                           // Checkbox header cell
                           ...(rowIdx === headerRows.length - 1 && hasCheckboxCol ? [
@@ -482,8 +518,8 @@ export function createDataGridTable(ui: IDataGridTableUIBindings) {
                             ]);
                           }),
                         ])
-                      )
-                    ),
+                      ),
+                    ]),
 
                     // Body
                     ...(!showEmptyInGrid ? [

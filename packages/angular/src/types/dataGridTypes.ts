@@ -111,6 +111,9 @@ interface IOGridBaseProps<T> {
 
   showRowNumbers?: boolean;
 
+  /** Enable Excel-style cell references: column letter headers, row numbers, and name box. Implies showRowNumbers. */
+  cellReferences?: boolean;
+
   'aria-label'?: string;
   'aria-labelledby'?: string;
 }
@@ -166,6 +169,9 @@ export interface IOGridDataGridProps<T> {
   selectedRows?: Set<RowId>;
   onSelectionChange?: (event: IRowSelectionChangeEvent<T>) => void;
   showRowNumbers?: boolean;
+  showColumnLetters?: boolean;
+  showNameBox?: boolean;
+  onActiveCellChange?: (ref: string | null) => void;
   currentPage?: number;
   pageSize?: number;
   statusBar?: IStatusBarProps;

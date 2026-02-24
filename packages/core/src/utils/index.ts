@@ -96,3 +96,4 @@ export {
 export { applyFillValues } from './fillHelpers';
 export { UndoRedoStack } from './undoRedoStack';
 export { validateColumns, validateRowIds, validateVirtualScrollConfig } from './validation';
+export { indexToColumnLetter, formatCellReference } from './cellReference';

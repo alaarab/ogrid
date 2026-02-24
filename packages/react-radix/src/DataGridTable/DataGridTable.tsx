@@ -37,6 +37,7 @@ import {
   PREVENT_DEFAULT,
   NOOP,
   STOP_PROPAGATION,
+  indexToColumnLetter,
 } from '@alaarab/ogrid-react';
 import type { GridRowProps } from '@alaarab/ogrid-react';
 import styles from './DataGridTable.module.scss';
@@ -245,7 +246,7 @@ function DataGridTableInner<T>(props: IOGridDataGridProps<T>): React.ReactElemen
     items, getRowId, emptyState, rowSelection,
     isLoading, loadingMessage,
     ariaLabel, ariaLabelledBy, visibleColumns, columnOrder, columnReorder, density, rowHeight,
-    rowNumberOffset, headerRows, allowOverflowX, fitToContent,
+    rowNumberOffset, headerRows, allowOverflowX, fitToContent, showColumnLetters,
     editCallbacks, interactionHandlers,
     cellDescriptorInputRef, cellDescriptorCacheRef, pendingEditorValueRef, popoverAnchorElRef,
     handleSingleRowClick, handlePasteVoid,
@@ -311,7 +312,7 @@ function DataGridTableInner<T>(props: IOGridDataGridProps<T>): React.ReactElemen
         const cellStyle = resolveCellStyle(col, item);
         const styledContent = cellStyle ? <span style={cellStyle}>{displayContent}</span> : displayContent;
 
-        const cellClassNames = `${styles.cellContent}${descriptor.isActive ? ` ${styles.activeCellContent}` : ''}${descriptor.isInRange && !descriptor.isActive ? ` ${styles.cellInRange}` : ''}${descriptor.isInCutRange ? ` ${styles.cellCut}` : ''}${descriptor.isInCopyRange ? ` ${styles.cellCopied}` : ''}`;
+        const cellClassNames = `${styles.cellContent}${descriptor.isActive ? ` ${styles.activeCellContent}` : ''}${descriptor.isActive && descriptor.isInRange ? ` ${styles.inRange}` : ''}${descriptor.isInRange && !descriptor.isActive ? ` ${styles.cellInRange}` : ''}${descriptor.isInCutRange ? ` ${styles.cellCut}` : ''}${descriptor.isInCopyRange ? ` ${styles.cellCopied}` : ''}`;
 
         const interactionProps = getCellInteractionProps(descriptor, col.columnId, interactionHandlers);
 
@@ -377,6 +378,21 @@ function DataGridTableInner<T>(props: IOGridDataGridProps<T>): React.ReactElemen
                 <thead
                   className={o.stickyHeader ? styles.stickyHeader : undefined}
                 >
+                  {showColumnLetters && (
+                    <tr className={styles.columnLetterRow}>
+                      {hasCheckboxCol && <th className={styles.columnLetterCell} />}
+                      {hasRowNumbersCol && <th className={styles.columnLetterCell} />}
+                      {visibleCols.map((col, colIdx) => (
+                        <th
+                          key={col.columnId}
+                          className={`${styles.columnLetterCell}${columnMeta.hdrClasses[col.columnId] ? ` ${columnMeta.hdrClasses[col.columnId]}` : ''}`}
+                          style={columnMeta.hdrStyles[col.columnId]}
+                        >
+                          {indexToColumnLetter(colIdx)}
+                        </th>
+                      ))}
+                    </tr>
+                  )}
                   {headerRows.map((row, rowIdx) => (
                     <tr key={rowIdx}>
                       {/* Checkbox header: show in last row (leaf row) */}

@@ -268,6 +268,24 @@
   background: var(--ogrid-header-bg, #f5f5f5);
 }
 
+/* ── Column Letter Row (A, B, C...) ── */
+
+.ogrid-column-letter-row {
+  background: var(--ogrid-column-letter-bg, var(--ogrid-header-bg));
+}
+
+.ogrid-column-letter-cell {
+  text-align: center;
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--ogrid-fg-muted, rgba(0, 0, 0, 0.5));
+  padding: 2px 4px;
+  background: var(--ogrid-column-letter-bg, var(--ogrid-header-bg));
+  border-bottom: 1px solid var(--ogrid-border, rgba(0, 0, 0, 0.12));
+  user-select: none;
+  font-variant-numeric: tabular-nums;
+}
+
 /* ── Resize Handle ── */
 
 .ogrid-resize-handle {
@@ -392,6 +410,12 @@
 
 /* Cell range/drag highlights: qualify with .ogrid-container to reach specificity 0,3,0,
    beating row-hover rules (.ogrid-table tbody tr:hover td = 0,2,3). */
+/* Active cell inside a selection range: suppress outline (Excel behavior) */
+.ogrid-cell[data-active-cell='true'][data-in-range='true'] {
+  outline: none;
+  background: var(--ogrid-bg, #fff);
+}
+
 .ogrid-container .ogrid-cell[data-in-range='true'] {
   background: var(--ogrid-bg-range, rgba(33, 115, 70, 0.12));
 }
@@ -402,6 +426,12 @@
 
 .ogrid-container [data-drag-anchor] {
   background: var(--ogrid-bg, #fff);
+}
+
+/* Hide active cell outline during drag */
+.ogrid-cell[data-active-cell='true'][data-drag-range],
+.ogrid-cell[data-active-cell='true'][data-drag-anchor] {
+  outline: none;
 }
 
 /* ── Fill Handle ── */

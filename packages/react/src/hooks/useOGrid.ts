@@ -30,6 +30,22 @@ import type {
 const DEFAULT_PAGE_SIZE = 25;
 const EMPTY_LOADING_OPTIONS: Record<string, boolean> = {};
 
+/** Inline style for the name box (active cell reference display). */
+const NAME_BOX_STYLE: React.CSSProperties = {
+  fontFamily: 'monospace',
+  fontSize: '12px',
+  fontWeight: 500,
+  padding: '2px 8px',
+  border: '1px solid var(--ogrid-border, #e0e0e0)',
+  borderRadius: 3,
+  background: 'var(--ogrid-bg, #fff)',
+  color: 'var(--ogrid-fg, #242424)',
+  minWidth: 48,
+  textAlign: 'center',
+  lineHeight: '20px',
+  userSelect: 'none',
+};
+
 /** Resolved column chooser placement. */
 export type ColumnChooserPlacement = 'toolbar' | 'sidebar' | 'none';
 
@@ -129,6 +145,7 @@ export function useOGrid<T>(
     selectedRows,
     onSelectionChange,
     showRowNumbers,
+    cellReferences,
     statusBar,
     pageSizeOptions,
     sideBar,
@@ -473,6 +490,12 @@ export function useOGrid<T>(
   const clearAllFilters = useCallback(() => filtersState.setFilters({}), [filtersState]);
   const isLoadingResolved = (isServerSide && dataFetchingState.serverLoading) || displayLoading;
 
+  // --- Name box (active cell reference) ---
+  const [activeCellRef, setActiveCellRef] = useState<string | null>(null);
+  const onActiveCellChange = useCallback((ref: string | null) => {
+    setActiveCellRef(ref);
+  }, []);
+
   const dataGridProps = useMemo<IOGridDataGridProps<T>>(() => ({
     items: dataFetchingState.displayItems,
     columns: columnsProp,
@@ -497,7 +520,10 @@ export function useOGrid<T>(
     rowSelection,
     selectedRows: effectiveSelectedRows,
     onSelectionChange: handleSelectionChange,
-    showRowNumbers,
+    showRowNumbers: showRowNumbers || cellReferences,
+    showColumnLetters: !!cellReferences,
+    showNameBox: !!cellReferences,
+    onActiveCellChange: cellReferences ? onActiveCellChange : undefined,
     currentPage: paginationState.page,
     pageSize: paginationState.pageSize,
     statusBar: statusBarConfig,
@@ -529,7 +555,7 @@ export function useOGrid<T>(
     visibleColumns, columnOrder, onColumnOrderChange, handleColumnResized,
     handleColumnPinned, pinnedOverrides, columnWidthOverrides,
     editable, cellSelection, onCellValueChanged, onUndo, onRedo, canUndo, canRedo,
-    rowSelection, effectiveSelectedRows, handleSelectionChange, showRowNumbers,
+    rowSelection, effectiveSelectedRows, handleSelectionChange, showRowNumbers, cellReferences, onActiveCellChange,
     paginationState.page, paginationState.pageSize, statusBarConfig,
     isLoadingResolved, filtersState.filters, filtersState.handleFilterChange,
     filtersState.clientFilterOptions, dataSource, filtersState.loadingFilterOptions,
@@ -556,14 +582,24 @@ export function useOGrid<T>(
     placement: columnChooserPlacement,
   }), [columnChooserColumns, visibleColumns, handleVisibilityChange, setVisibleColumns, columnChooserPlacement]);
 
+  const showNameBox = !!cellReferences;
+  const nameBoxEl = useMemo(() => showNameBox ? React.createElement('div', {
+    style: NAME_BOX_STYLE,
+    'aria-label': 'Active cell reference',
+  }, activeCellRef ?? '\u2014') : null, [showNameBox, activeCellRef]);
+
+  const resolvedToolbar = useMemo(() => showNameBox
+    ? React.createElement(React.Fragment, null, nameBoxEl, toolbar)
+    : toolbar, [showNameBox, nameBoxEl, toolbar]);
+
   const layout = useMemo<UseOGridLayout>(() => ({
-    toolbar,
+    toolbar: resolvedToolbar,
     toolbarBelow,
     className,
     emptyState,
     sideBarProps,
     fullScreen,
-  }), [toolbar, toolbarBelow, className, emptyState, sideBarProps, fullScreen]);
+  }), [resolvedToolbar, toolbarBelow, className, emptyState, sideBarProps, fullScreen]);
 
   const filtersResult = useMemo<UseOGridFilters>(() => ({
     hasActiveFilters: filtersState.hasActiveFilters,

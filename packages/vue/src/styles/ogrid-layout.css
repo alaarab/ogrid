@@ -140,6 +140,24 @@
   color: var(--ogrid-fg);
 }
 
+/* === Column letter row (cell references) === */
+
+.ogrid-column-letter-row {
+  background: var(--ogrid-column-letter-bg, var(--ogrid-header-bg));
+}
+
+.ogrid-column-letter-cell {
+  text-align: center;
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--ogrid-fg-muted, rgba(0, 0, 0, 0.5));
+  padding: 2px 4px;
+  background: var(--ogrid-column-letter-bg, var(--ogrid-header-bg));
+  border-bottom: 1px solid var(--ogrid-border, rgba(0, 0, 0, 0.12));
+  user-select: none;
+  font-variant-numeric: tabular-nums;
+}
+
 /* === Checkbox column === */
 
 .ogrid-checkbox-header,
@@ -252,6 +270,14 @@
   z-index: var(--ogrid-z-active-cell, 2);
   position: relative;
   overflow: visible;
+}
+
+/* Active cell inside a selection range: suppress outline (Excel behavior).
+   The range overlay border is sufficient; the active cell is distinguished
+   by its white background vs. the dimmed range cells. */
+.ogrid-cell-content--active-in-range {
+  outline: none;
+  background: var(--ogrid-bg, #fff);
 }
 
 /* === Editing cell wrapper === */
