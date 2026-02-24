@@ -1,7 +1,7 @@
 ---
 sidebar_position: 19
 title: Virtual Scrolling
-description: Render thousands of rows with smooth scrolling by only mounting visible rows in the DOM
+description: Render thousands of rows and columns with smooth scrolling by only mounting visible content in the DOM
 ---
 
 import VirtualScrollingDemo from '@site/src/components/demos/VirtualScrollingDemo';
@@ -10,7 +10,12 @@ import TabItem from '@theme/TabItem';
 
 # Virtual Scrolling
 
-Render tens of thousands of rows without degrading performance. Virtual scrolling only mounts the rows currently visible in the viewport (plus a small overscan buffer), keeping the DOM lightweight regardless of dataset size.
+Render tens of thousands of rows — and hundreds of columns — without degrading performance. Virtual scrolling only mounts the content currently visible in the viewport (plus a small overscan buffer), keeping the DOM lightweight regardless of dataset size.
+
+OGrid supports two independent virtualization axes that can be combined:
+
+- **Row virtualization** — only visible rows are rendered. Available for all datasets.
+- **Column virtualization** — only visible columns are rendered. Opt-in, useful for wide grids with many columns.
 
 ## Live Demo
 
@@ -400,15 +405,230 @@ Key implementation details:
 - **Overscan buffer** -- Extra rows above and below the viewport prevent blank flashes during fast scrolling.
 - **Passthrough threshold** -- Datasets under 100 rows skip virtualization entirely, avoiding unnecessary spacer elements for small lists.
 
+## Column Virtualization
+
+For grids with many columns, column virtualization renders only the columns visible in the horizontal viewport. This keeps the DOM width-independent of the total column count.
+
+Enable it by setting `columns: true` inside the `virtualScroll` config:
+
+```tsx
+<OGrid
+  virtualScroll={{ enabled: true, rowHeight: 36, columns: true }}
+  // ...
+/>
+```
+
+Row virtualization and column virtualization are independent. You can enable either or both:
+
+| Config | Behavior |
+|--------|----------|
+| `{ enabled: true, rowHeight: 36 }` | Row virtualization only |
+| `{ enabled: true, rowHeight: 36, columns: true }` | Row + column virtualization |
+| `{ enabled: false, columns: true }` | Column virtualization only (static rows) |
+
+### Quick Example
+
+<Tabs groupId="framework">
+  <TabItem value="react" label="React" default>
+
+```tsx
+import { OGrid } from '@alaarab/ogrid-react-radix';
+import type { IColumnDef } from '@alaarab/ogrid-react-radix';
+
+interface Row {
+  id: number;
+  [key: string]: number | string;
+}
+
+// Generate 50 columns
+const columns: IColumnDef<Row>[] = [
+  { columnId: 'id', name: 'ID', type: 'numeric', pinned: 'left', defaultWidth: 80 },
+  ...Array.from({ length: 49 }, (_, i) => ({
+    columnId: `col${i}`,
+    name: `Column ${i + 1}`,
+    type: 'numeric' as const,
+  })),
+];
+
+function App() {
+  return (
+    <OGrid
+      columns={columns}
+      data={data}
+      getRowId={(r) => r.id}
+      virtualScroll={{ enabled: true, rowHeight: 36, columns: true, columnOverscan: 2 }}
+    />
+  );
+}
+```
+
+:::tip Switching UI libraries
+The `OGrid` component has the same props across all React UI packages. To switch, just change the import:
+
+- **Radix** (lightweight, default): `from '@alaarab/ogrid-react-radix'`
+- **Fluent UI** (Microsoft 365 / SPFx): `from '@alaarab/ogrid-react-fluent'` — wrap in `<FluentProvider>`
+- **Material UI** (MUI v7): `from '@alaarab/ogrid-react-material'` — wrap in `<ThemeProvider>`
+:::
+
+  </TabItem>
+  <TabItem value="angular" label="Angular">
+
+```typescript
+import { Component } from '@angular/core';
+import { OGridComponent, type IColumnDef } from '@alaarab/ogrid-angular-material';
+
+interface Row {
+  id: number;
+  [key: string]: number | string;
+}
+
+@Component({
+  standalone: true,
+  imports: [OGridComponent],
+  template: `<ogrid [props]="gridProps" />`
+})
+export class GridComponent {
+  gridProps = {
+    columns: [
+      { columnId: 'id', name: 'ID', type: 'numeric', pinned: 'left', defaultWidth: 80 },
+      ...Array.from({ length: 49 }, (_, i) => ({
+        columnId: `col${i}`,
+        name: `Column ${i + 1}`,
+        type: 'numeric' as const,
+      })),
+    ] as IColumnDef<Row>[],
+    data,
+    getRowId: (item: Row) => item.id,
+    virtualScroll: { enabled: true, rowHeight: 36, columns: true, columnOverscan: 2 },
+  };
+}
+```
+
+:::tip Switching UI libraries
+Same component API across Angular packages. To switch, just change the import:
+
+- **Radix (CDK)**: `from '@alaarab/ogrid-angular-radix'` *(default, lightweight)*
+- **Angular Material**: `from '@alaarab/ogrid-angular-material'`
+- **PrimeNG**: `from '@alaarab/ogrid-angular-primeng'`
+
+All components are standalone — no NgModule required.
+:::
+
+  </TabItem>
+  <TabItem value="vue" label="Vue">
+
+```vue
+<script setup lang="ts">
+import { OGrid, type IColumnDef } from '@alaarab/ogrid-vue-vuetify';
+
+interface Row {
+  id: number;
+  [key: string]: number | string;
+}
+
+const columns: IColumnDef<Row>[] = [
+  { columnId: 'id', name: 'ID', type: 'numeric', pinned: 'left', defaultWidth: 80 },
+  ...Array.from({ length: 49 }, (_, i) => ({
+    columnId: `col${i}`,
+    name: `Column ${i + 1}`,
+    type: 'numeric' as const,
+  })),
+];
+
+const gridProps = {
+  columns,
+  data,
+  getRowId: (item: Row) => item.id,
+  virtualScroll: { enabled: true, rowHeight: 36, columns: true, columnOverscan: 2 },
+};
+</script>
+
+<template>
+  <OGrid :gridProps="gridProps" />
+</template>
+```
+
+:::tip Switching UI libraries
+Same component API across Vue packages. To switch, just change the import:
+
+- **Radix (Headless UI)**: `from '@alaarab/ogrid-vue-radix'` *(default, lightweight)*
+- **Vuetify**: `from '@alaarab/ogrid-vue-vuetify'` — wrap in `<v-app>` for theming
+- **PrimeVue**: `from '@alaarab/ogrid-vue-primevue'`
+:::
+
+  </TabItem>
+  <TabItem value="js" label="Vanilla JS">
+
+```js
+import { OGrid } from '@alaarab/ogrid-js';
+import '@alaarab/ogrid-js/styles';
+
+const columns = [
+  { columnId: 'id', name: 'ID', type: 'numeric', pinned: 'left', defaultWidth: 80 },
+  ...Array.from({ length: 49 }, (_, i) => ({
+    columnId: `col${i}`,
+    name: `Column ${i + 1}`,
+    type: 'numeric',
+  })),
+];
+
+const grid = new OGrid(document.getElementById('grid'), {
+  columns,
+  data,
+  getRowId: (r) => r.id,
+  virtualScroll: { enabled: true, rowHeight: 36, columns: true, columnOverscan: 2 },
+});
+```
+
+  </TabItem>
+</Tabs>
+
+### How Column Virtualization Works
+
+1. On each horizontal scroll event, the grid calculates which columns fall within the visible horizontal range.
+2. Only those columns — plus `columnOverscan` extra columns on each side — are rendered as real `<td>` elements.
+3. A **left spacer `<td>`** and a **right spacer `<td>`** maintain the correct total table width so the scrollbar reflects the true column span.
+4. **Pinned columns always render**, regardless of scroll position.
+
+### Column Overscan
+
+The `columnOverscan` option controls how many extra columns are rendered beyond the visible area on each side. The default is **2**. Increasing it reduces blank flashes when scrolling quickly across many columns:
+
+```tsx
+// Render 4 extra columns on each side of the visible range
+virtualScroll={{ enabled: true, rowHeight: 36, columns: true, columnOverscan: 4 }}
+```
+
+### Pinned Columns with Column Virtualization
+
+Pinned columns are excluded from virtualization and always rendered. This ensures sticky columns are never hidden during horizontal scroll:
+
+```tsx
+const columns = [
+  // This column always renders — not subject to column virtualization
+  { columnId: 'name', name: 'Name', pinned: 'left' },
+  // These columns are virtualized
+  { columnId: 'col1', name: 'Column 1' },
+  { columnId: 'col2', name: 'Column 2' },
+  // ...
+];
+```
+
+:::caution
+Column virtualization requires that all columns have a defined width (via `defaultWidth`). Columns without a width may cause layout shifts during horizontal scroll. Set a reasonable `defaultWidth` on each column definition.
+:::
+
 ## Props Reference
 
 ### `virtualScroll`
 
 | Field | Type | Default | Description |
 |-------|------|---------|-------------|
-| `enabled` | `boolean` | `false` | Enable virtual scrolling. Must be set to `true` to activate. |
-| `rowHeight` | `number` | `36` | Fixed height of each row in pixels. Required when enabled. |
+| `enabled` | `boolean` | `false` | Enable row virtual scrolling. Must be set to `true` to activate. |
+| `rowHeight` | `number` | `36` | Fixed height of each row in pixels. Required when row virtualization is enabled. |
 | `overscan` | `number` | `5` | Extra rows rendered above and below the visible area. |
+| `columns` | `boolean` | `false` | Enable column virtualization. Renders only columns visible in the horizontal viewport. |
+| `columnOverscan` | `number` | `2` | Extra columns rendered beyond the visible horizontal range on each side. |
 
 ### Grid API Methods
 
@@ -426,3 +646,4 @@ For the best experience with virtual scrolling, ensure your CSS row height match
 - [Server-Side Data](./server-side-data) -- combine with virtual scrolling for server-paged data
 - [Keyboard Navigation](./keyboard-navigation) -- auto-scrolls during virtual scrolling
 - [Status Bar](./status-bar) -- shows total row count even when most rows are virtualized
+- [Performance](./performance) -- worker-based sort/filter and CSS containment for large datasets

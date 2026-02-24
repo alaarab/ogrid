@@ -5,6 +5,7 @@ import {
   getMultiSelectFilterFields,
   flattenColumns,
   processClientSideData,
+  processClientSideDataAsync,
   computeNextSortState,
   validateColumns,
   validateRowIds,
@@ -185,7 +186,11 @@ export function useOGrid<T>(
   })()) as Ref<Set<string>>;
 
   const columnWidthOverrides = ref<Record<string, number>>({});
-  const pinnedOverrides = ref<Record<string, 'left' | 'right'>>({});
+  const initialPinned: Record<string, 'left' | 'right'> = {};
+  for (const col of flattenColumns(props.value.columns)) {
+    if (col.pinned) initialPinned[col.columnId] = col.pinned;
+  }
+  const pinnedOverrides = ref<Record<string, 'left' | 'right'>>(initialPinned);
 
   const page = computed(() => controlledState.value.page ?? internalPage.value);
   const pageSize = computed(() => controlledState.value.pageSize ?? internalPageSize.value);
@@ -261,8 +266,11 @@ export function useOGrid<T>(
   });
 
   // --- Client-side filtering & sorting ---
+  const workerSortEnabled = computed(() => !!props.value.workerSort);
+
+  /** Sync path: used when workerSort is off. */
   const clientItemsAndTotal = computed(() => {
-    if (!isClientSide.value) return null;
+    if (!isClientSide.value || workerSortEnabled.value) return null;
     const rows = processClientSideData(
       displayData.value,
       columns.value,
@@ -274,6 +282,53 @@ export function useOGrid<T>(
     const start = (page.value - 1) * pageSize.value;
     const paged = rows.slice(start, start + pageSize.value);
     return { items: paged, totalCount: total };
+  });
+
+  /** Async path: worker sort result. */
+  const asyncClientItems = ref<{ items: T[]; totalCount: number } | null>(null) as Ref<{ items: T[]; totalCount: number } | null>;
+  let workerSortAbortId = 0;
+
+  // Worker sort effect
+  watch(
+    [isClientSide, workerSortEnabled, displayData, columns, filters, () => sort.value.field, () => sort.value.direction, page, pageSize],
+    () => {
+      if (!isClientSide.value || !workerSortEnabled.value) return;
+
+      const data = displayData.value;
+      const cols = columns.value;
+      const f = filters.value;
+      const sf = sort.value.field;
+      const sd = sort.value.direction;
+      const p = page.value;
+      const ps = pageSize.value;
+      const abortId = ++workerSortAbortId;
+
+      processClientSideDataAsync(data, cols, f, sf, sd)
+        .then((rows) => {
+          if (abortId !== workerSortAbortId || isDestroyed) return;
+          const total = rows.length;
+          const start = (p - 1) * ps;
+          const paged = rows.slice(start, start + ps);
+          asyncClientItems.value = { items: paged, totalCount: total };
+        })
+        .catch(() => {
+          if (abortId !== workerSortAbortId || isDestroyed) return;
+          // Fallback: sync
+          const rows = processClientSideData(data, cols, f, sf, sd);
+          const total = rows.length;
+          const start = (p - 1) * ps;
+          const paged = rows.slice(start, start + ps);
+          asyncClientItems.value = { items: paged, totalCount: total };
+        });
+    },
+    { immediate: true }
+  );
+
+  /** Resolved client items — sync or async depending on workerSort. */
+  const resolvedClientItems = computed(() => {
+    const syncResult = clientItemsAndTotal.value;
+    if (syncResult) return syncResult;
+    return asyncClientItems.value;
   });
 
   // --- Server-side fetching ---
@@ -335,13 +390,13 @@ export function useOGrid<T>(
   });
 
   const displayItems = computed<T[]>(() =>
-    isClientSide.value && clientItemsAndTotal.value
-      ? clientItemsAndTotal.value.items
+    isClientSide.value && resolvedClientItems.value
+      ? resolvedClientItems.value.items
       : serverItems.value
   );
   const displayTotalCount = computed(() =>
-    isClientSide.value && clientItemsAndTotal.value
-      ? clientItemsAndTotal.value.totalCount
+    isClientSide.value && resolvedClientItems.value
+      ? resolvedClientItems.value.totalCount
       : serverTotalCount.value
   );
 

@@ -16,6 +16,7 @@ import type {
 import {
   flattenColumns,
   processClientSideData,
+  processClientSideDataAsync,
   exportToCsv as coreExportToCsv,
   getCellValue,
   deriveFilterOptionsFromData,
@@ -56,6 +57,7 @@ export class GridState<T> {
   private _ariaLabel?: string;
   private _stickyHeader: boolean;
   private _fullScreen: boolean;
+  private _workerSort: boolean | 'auto';
 
   // Filter options for client-side data (used by sidebar filters panel & header filter popovers)
   private _filterOptions: Record<string, string[]> = {};
@@ -85,6 +87,7 @@ export class GridState<T> {
     this._ariaLabel = options.ariaLabel;
     this._stickyHeader = options.stickyHeader ?? true;
     this._fullScreen = options.fullScreen ?? false;
+    this._workerSort = options.workerSort ?? false;
 
     // Derive initial filter options for client-side data
     if (!this._dataSource) {
@@ -155,6 +158,36 @@ export class GridState<T> {
     const filtered = processClientSideData(
       this._data,
       this._columns as unknown as Parameters<typeof processClientSideData>[1],
+      this._filters,
+      this._sort?.field,
+      this._sort?.direction
+    ) as T[];
+
+    const totalCount = filtered.length;
+    const startIdx = (this._page - 1) * this._pageSize;
+    const endIdx = startIdx + this._pageSize;
+    const items = filtered.slice(startIdx, endIdx);
+
+    return { items, totalCount };
+  }
+
+  /** Whether worker sort should be used for the current data set. */
+  get useWorkerSort(): boolean {
+    return this._workerSort === true || (this._workerSort === 'auto' && this._data.length > 5000);
+  }
+
+  /**
+   * Async version of getProcessedItems that offloads sort/filter to a Web Worker.
+   * Falls back to sync when worker sort is not active.
+   */
+  async getProcessedItemsAsync(): Promise<{ items: T[]; totalCount: number }> {
+    if (this.isServerSide || !this.useWorkerSort) {
+      return this.getProcessedItems();
+    }
+
+    const filtered = await processClientSideDataAsync(
+      this._data,
+      this._columns as unknown as Parameters<typeof processClientSideDataAsync>[1],
       this._filters,
       this._sort?.field,
       this._sort?.direction

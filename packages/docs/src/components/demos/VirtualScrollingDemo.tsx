@@ -42,7 +42,7 @@ export default function VirtualScrollingDemo() {
         columns={columns}
         data={data}
         getRowId={(r) => r.id}
-        virtualScroll={{ rowHeight: 36 }}
+        virtualScroll={{ enabled: true, rowHeight: 36 }}
         statusBar
       />
     </LiveDemo>

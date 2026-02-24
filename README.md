@@ -12,7 +12,7 @@
   <a href="https://www.npmjs.com/package/@alaarab/ogrid-core"><img src="https://img.shields.io/npm/v/@alaarab/ogrid-core?color=%23217346&label=npm" alt="npm version" /></a>
   <a href="https://github.com/alaarab/ogrid/actions/workflows/ci.yml"><img src="https://github.com/alaarab/ogrid/actions/workflows/ci.yml/badge.svg?branch=main" alt="CI" /></a>
   <a href="https://github.com/alaarab/ogrid/blob/main/LICENSE"><img src="https://img.shields.io/badge/license-MIT-green" alt="MIT License" /></a>
-  <img src="https://img.shields.io/badge/tests-2%2C443%20passing-brightgreen" alt="2,443 tests passing" />
+  <img src="https://img.shields.io/badge/tests-2%2C980%20passing-brightgreen" alt="2,980 tests passing" />
   <img src="https://img.shields.io/badge/gzip-12.2%20KB%20core-blue" alt="12.2 KB gzipped core" />
 </p>
 
@@ -79,7 +79,9 @@ OGrid gives you every feature AG Grid locks behind an enterprise license -- for 
 - **Server-Side Data** -- `IDataSource` pattern for remote pagination, sorting, filtering
 - **Column State Persistence** -- Save/restore visibility, sort, order, widths, filters
 - **Empty State** -- Custom message or render function
-- **Virtual Scrolling** -- Efficient rendering for large datasets
+- **Virtual Scrolling** -- Row and column virtualization for large datasets
+- **Web Worker Sort/Filter** -- Offload sort and filter to a background thread (`workerSort: true`)
+- **CSS Containment** -- Automatic `contain: content` on cells; `content-visibility: auto` on off-screen rows
 - **TypeScript Strict** -- Fully generic `<T>` with strict mode; zero `any` leaks
 
 ## Framework Support
@@ -324,7 +326,8 @@ Every feature works the same across all frameworks. Ship consistent behavior reg
 | CSV export | Yes | Yes | Yes | Yes |
 | Server-side data | Yes | Yes | Yes | Yes |
 | Column state persistence | Yes | Yes | Yes | Yes |
-| Virtual scrolling | Yes | Yes | Yes | Yes |
+| Virtual scrolling (row + column) | Yes | Yes | Yes | Yes |
+| Web Worker sort/filter | Yes | Yes | Yes | Yes |
 | Grid API (`IOGridApi`) | Yes | Yes | Yes | Yes |
 
 ## Architecture
@@ -375,16 +378,16 @@ UI packages re-export everything from their adapter package (which re-exports fr
 
 ## Testing
 
-**2,443 tests** across 14 packages with 100% pass rate. Each framework uses its native testing tools:
+**2,980 tests** across 14 packages with 100% pass rate. Each framework uses its native testing tools:
 
 | Framework | Tool | Packages | Tests |
 |-----------|------|----------|------:|
-| Core | Jest + ts-jest | 1 | 321 |
-| React | React Testing Library | 4 | 687 |
-| Angular | Angular Testing utilities | 4 | 729 |
-| Vue | Vue Test Utils | 4 | 444 |
-| Vanilla JS | Native DOM + jsdom | 1 | 262 |
-| **Total** | | **14** | **2,443** |
+| Core | Jest + ts-jest | 1 | 377 |
+| React | React Testing Library | 4 | 831 |
+| Angular | Angular Testing utilities | 4 | 617 |
+| Vue | Vue Test Utils | 4 | 719 |
+| Vanilla JS | Native DOM + jsdom | 1 | 313 |
+| **Total** | | **14** | **2,980** |
 
 Cross-package parity is enforced through **shared test factories** -- 8 factories per framework that generate identical test scenarios for every UI package.
 
@@ -395,7 +398,7 @@ git clone https://github.com/alaarab/ogrid.git
 cd ogrid
 npm install
 npm run build                       # Build all packages (Turborepo)
-npm run test:all                    # Run all 2,443 tests
+npm run test:all                    # Run all 2,980 tests
 npm run lint                        # ESLint
 
 # Storybook
