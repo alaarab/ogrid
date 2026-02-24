@@ -438,4 +438,34 @@ export function createDataGridTableTests(DataGridTable: React.ComponentType<IOGr
       }).not.toThrow();
     });
   });
+
+  // Cell references: column letter row
+  it('does not render column letter row when showColumnLetters is false (default)', () => {
+    const { container } = renderTable();
+    const allTh = container.querySelectorAll('thead th');
+    const letterCells = Array.from(allTh).filter(th => {
+      const text = th.textContent?.trim();
+      return text === 'A' || text === 'B';
+    });
+    expect(letterCells.length).toBe(0);
+  });
+
+  it('renders column letter row when showColumnLetters is true', () => {
+    const { container } = renderTable({ showColumnLetters: true, showRowNumbers: true });
+    const allTh = container.querySelectorAll('thead th');
+    const letterCells = Array.from(allTh).filter(th => {
+      const text = th.textContent?.trim();
+      return text === 'A' || text === 'B';
+    });
+    expect(letterCells.length).toBeGreaterThanOrEqual(2);
+  });
+
+  it('column letter cells show correct letters for visible columns', () => {
+    const { container } = renderTable({ showColumnLetters: true, showRowNumbers: true });
+    const allTh = container.querySelectorAll('thead th');
+    const letterTexts = Array.from(allTh)
+      .map(th => th.textContent?.trim())
+      .filter(text => text === 'A' || text === 'B');
+    expect(letterTexts).toEqual(['A', 'B']);
+  });
 }

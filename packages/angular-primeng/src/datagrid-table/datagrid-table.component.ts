@@ -3,6 +3,7 @@ import {
   Input,
   signal,
   computed,
+  effect,
   ElementRef,
   ViewChild,
   ChangeDetectionStrategy,
@@ -21,6 +22,8 @@ import {
   EmptyStateComponent,
   DEFAULT_MIN_COLUMN_WIDTH,
   OGRID_THEME_VARS_CSS,
+  indexToColumnLetter,
+  formatCellReference,
 } from '@alaarab/ogrid-angular';
 import type {
   IOGridDataGridProps,
@@ -75,6 +78,21 @@ import { PopoverCellEditorComponent } from './popover-cell-editor.component';
             <div #tableContainer class="ogrid-table-wrapper">
               <table class="ogrid-table" role="grid" [attr.data-virtual-scroll]="vsEnabled() ? '' : null">
                 <thead [class]="stickyHeader() ? 'ogrid-thead ogrid-sticky-header' : 'ogrid-thead'">
+                  @if (showColumnLetters()) {
+                    <tr class="ogrid-column-letter-row">
+                      @if (hasCheckboxCol()) {
+                        <th class="ogrid-column-letter-cell"></th>
+                      }
+                      @if (hasRowNumbersCol()) {
+                        <th class="ogrid-column-letter-cell"></th>
+                      }
+                      @for (col of visibleCols(); track col.columnId; let colIdx = $index) {
+                        <th class="ogrid-column-letter-cell">
+                          {{ getColumnLetter(colIdx) }}
+                        </th>
+                      }
+                    </tr>
+                  }
                   @for (row of headerRows(); track $index; let rowIdx = $index) {
                     <tr>
                       @if (rowIdx === headerRows().length - 1 && hasCheckboxCol()) {
@@ -261,9 +279,9 @@ import { PopoverCellEditorComponent } from './popover-cell-editor.component';
                                 (contextmenu)="onCellContextMenu($event)"
                                 class="ogrid-cell-content"
                                 [style.cursor]="descriptor.canEditAny ? 'cell' : 'default'"
-                                [style.background]="descriptor.isInRange && !descriptor.isActive ? 'var(--ogrid-range-bg, rgba(33, 115, 70, 0.08))' : null"
-                                [style.outline]="descriptor.isActive ? '2px solid var(--ogrid-selection, #217346)' : null"
-                                [style.outline-offset]="descriptor.isActive ? '-2px' : null"
+                                [style.background]="descriptor.isInRange && !descriptor.isActive ? 'var(--ogrid-range-bg, rgba(33, 115, 70, 0.08))' : (descriptor.isActive && descriptor.isInRange ? 'var(--ogrid-bg, #fff)' : null)"
+                                [style.outline]="descriptor.isActive && !descriptor.isInRange ? '2px solid var(--ogrid-selection, #217346)' : null"
+                                [style.outline-offset]="descriptor.isActive && !descriptor.isInRange ? '-2px' : null"
                               >
                                 <span [style]="resolveCellStyleFn(col, item)">{{ resolveCellContent(col, item, descriptor.displayValue) }}</span>
                                 @if (descriptor.canEditAny && descriptor.isSelectionEndCell) {
@@ -675,6 +693,17 @@ import { PopoverCellEditorComponent } from './popover-cell-editor.component';
       border-color: var(--ogrid-border, rgba(0, 0, 0, 0.12));
       margin: 4px 0;
     }
+    .ogrid-column-letter-cell {
+      text-align: center;
+      font-size: 11px;
+      font-weight: 500;
+      color: var(--ogrid-fg-muted, rgba(0, 0, 0, 0.4));
+      padding: 2px 4px;
+      background: var(--ogrid-column-letter-bg, var(--ogrid-header-bg, #f5f5f5));
+      border-bottom: 1px solid var(--ogrid-border, rgba(0, 0, 0, 0.12));
+      user-select: none;
+      font-variant-numeric: tabular-nums;
+    }
   `],
 })
 export class DataGridTableComponent<T = unknown> extends BaseDataGridTableComponent<T> implements OnChanges {
@@ -723,6 +752,9 @@ export class DataGridTableComponent<T = unknown> extends BaseDataGridTableCompon
   @Input({ alias: 'aria-label' }) ariaLabelInput: string | undefined = undefined;
   @Input({ alias: 'aria-labelledby' }) ariaLabelledByInput: string | undefined = undefined;
   @Input() showRowNumbers: boolean = false;
+  @Input({ alias: 'showColumnLetters' }) showColumnLettersInput: boolean = false;
+  @Input({ alias: 'showNameBox' }) showNameBoxInput: boolean = false;
+  @Input() onActiveCellChange: ((ref: string | null) => void) | undefined = undefined;
   @Input({ alias: 'currentPage' }) currentPageInput: number = 1;
   @Input({ alias: 'pageSize' }) pageSizeInput: number = 25;
 
@@ -753,9 +785,26 @@ export class DataGridTableComponent<T = unknown> extends BaseDataGridTableCompon
   // Bound method reference for template
   readonly cancelEditHandler = () => this.cancelEdit();
 
+  readonly showColumnLetters = computed(() => !!this.getProps()?.showColumnLetters);
+
   constructor() {
     super();
     this.initBase();
+
+    // Watch active cell and notify parent via onActiveCellChange when cellReferences is enabled
+    effect(() => {
+      const props = this.getProps();
+      const onActiveCellChange = props?.onActiveCellChange;
+      if (!onActiveCellChange) return;
+      const ac = this.activeCell();
+      if (ac) {
+        const colIndex = ac.columnIndex - this.colOffset();
+        const rowNumber = ac.rowIndex + 1;
+        onActiveCellChange(formatCellReference(colIndex, rowNumber));
+      } else {
+        onActiveCellChange(null);
+      }
+    });
   }
 
   ngOnChanges(changes: SimpleChanges): void {
@@ -923,6 +972,9 @@ export class DataGridTableComponent<T = unknown> extends BaseDataGridTableCompon
       selectedRows: this.selectedRows,
       onSelectionChange: this.onSelectionChange as IOGridDataGridProps<T>['onSelectionChange'],
       showRowNumbers: this.showRowNumbers,
+      showColumnLetters: this.showColumnLettersInput,
+      showNameBox: this.showNameBoxInput,
+      onActiveCellChange: this.onActiveCellChange,
       currentPage: this.currentPageInput,
       pageSize: this.pageSizeInput,
       statusBar: this.statusBar as IOGridDataGridProps<T>['statusBar'],
@@ -938,5 +990,9 @@ export class DataGridTableComponent<T = unknown> extends BaseDataGridTableCompon
       'aria-label': this.ariaLabelInput,
       'aria-labelledby': this.ariaLabelledByInput,
     };
+  }
+
+  getColumnLetter(colIdx: number): string {
+    return indexToColumnLetter(colIdx);
   }
 }

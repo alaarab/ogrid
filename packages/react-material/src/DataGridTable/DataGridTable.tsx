@@ -45,6 +45,7 @@ import {
   NOOP,
   STOP_PROPAGATION,
   partitionColumnsForVirtualization,
+  indexToColumnLetter,
 } from '@alaarab/ogrid-react';
 
 // ── Type helpers for MUI TableCell HTML attributes ──
@@ -97,6 +98,19 @@ const STICKY_HEADER_SX = {
   '& th': { bgcolor: HEADER_BG }
 } as const;
 const HEADER_ROW_SX = { bgcolor: HEADER_BG } as const;
+const COLUMN_LETTER_CELL_SX = {
+  textAlign: 'center',
+  fontSize: '11px',
+  fontWeight: 500,
+  color: 'text.secondary',
+  py: '2px',
+  px: '4px',
+  bgcolor: HEADER_BG,
+  borderBottom: 1,
+  borderColor: 'divider',
+  userSelect: 'none',
+  fontVariantNumeric: 'tabular-nums',
+} as const;
 const GROUP_HEADER_CELL_SX = { textAlign: 'center', fontWeight: 600, borderBottom: 2, borderColor: 'divider', py: 0.75 } as const;
 
 // Density padding helper
@@ -445,7 +459,7 @@ function DataGridTableInner<T>(props: IOGridDataGridProps<T>): React.ReactElemen
     items, getRowId, emptyState,
     suppressHorizontalScroll, isLoading, loadingMessage,
     ariaLabel, ariaLabelledBy, columnReorder, density, rowHeight,
-    rowNumberOffset, headerRows, allowOverflowX, fitToContent,
+    rowNumberOffset, headerRows, allowOverflowX, fitToContent, showColumnLetters,
     editCallbacks, interactionHandlers,
     cellDescriptorInputRef, cellDescriptorCacheRef, pendingEditorValueRef, popoverAnchorElRef,
     handleSingleRowClick, handlePasteVoid,
@@ -562,6 +576,7 @@ function DataGridTableInner<T>(props: IOGridDataGridProps<T>): React.ReactElemen
         else if (col.type === 'boolean') cls += ' ogrid-mat-cell--boolean';
         if (descriptor.canEditAny) cls += ' ogrid-mat-cell--editable';
         if (descriptor.isActive) cls += ' ogrid-mat-cell--active';
+        if (descriptor.isActive && descriptor.isInRange) cls += ' ogrid-mat-cell--active-in-range';
         if (descriptor.isInRange && !descriptor.isActive) cls += ' ogrid-mat-cell--range';
         if (descriptor.isInCutRange) cls += ' ogrid-mat-cell--cut';
 
@@ -614,6 +629,31 @@ function DataGridTableInner<T>(props: IOGridDataGridProps<T>): React.ReactElemen
             data-virtual-scroll={virtualScrollEnabled ? '' : undefined}
           >
             <TableHead sx={STICKY_HEADER_SX}>
+              {showColumnLetters && (
+                <TableRow sx={HEADER_ROW_SX}>
+                  {hasCheckboxCol && <TableCell sx={COLUMN_LETTER_CELL_SX} />}
+                  {hasRowNumbersCol && <TableCell sx={COLUMN_LETTER_CELL_SX} />}
+                  {visibleCols.map((col, colIdx) => {
+                    const hdrStyle = columnMeta.hdrStyles[col.columnId];
+                    return (
+                      <TableCell
+                        key={col.columnId}
+                        {...({
+                          component: 'th',
+                          sx: {
+                            ...COLUMN_LETTER_CELL_SX,
+                            minWidth: hdrStyle?.minWidth,
+                            width: hdrStyle?.width,
+                            maxWidth: hdrStyle?.maxWidth,
+                          },
+                        } as TableCellWithSpan)}
+                      >
+                        {indexToColumnLetter(colIdx)}
+                      </TableCell>
+                    );
+                  })}
+                </TableRow>
+              )}
               {headerRows.map((row, rowIdx) => (
                 <TableRow key={rowIdx} sx={HEADER_ROW_SX}>
                   {/* Checkbox column in the last (leaf) row only */}

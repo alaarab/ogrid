@@ -200,6 +200,9 @@ export { UndoRedoStack } from './utils';
 // Utils — validation
 export { validateColumns, validateRowIds, validateVirtualScrollConfig } from './utils';
 
+// Utils — cellReference
+export { indexToColumnLetter, formatCellReference } from './utils';
+
 // Constants — layout
 export {
   CHECKBOX_COLUMN_WIDTH,
