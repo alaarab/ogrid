@@ -50,8 +50,17 @@ export {
   computeVisibleRange,
   computeTotalHeight,
   getScrollTopForRow,
+  computeVisibleColumnRange,
+  partitionColumnsForVirtualization,
 } from './virtualScroll';
-export type { IVisibleRange } from './virtualScroll';
+export type { IVisibleRange, IVisibleColumnRange } from './virtualScroll';
+export {
+  createSortFilterWorker,
+  terminateSortFilterWorker,
+  extractValueMatrix,
+  processClientSideDataAsync,
+} from './workerSortFilter';
+export type { SortFilterRequest, SortFilterResponse } from '../workers/sortFilterWorker';
 export {
   getHeaderFilterConfig,
   getCellRenderDescriptor,

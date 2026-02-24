@@ -1,3 +1,124 @@
+import type { IColumnDef } from '../types';
+
+/** The visible column range for horizontal virtualization. */
+export interface IVisibleColumnRange {
+  /** First visible unpinned column index (inclusive, accounting for overscan). */
+  startIndex: number;
+  /** Last visible unpinned column index (inclusive, accounting for overscan). */
+  endIndex: number;
+  /** Pixel width of the left spacer (for columns before the visible range). */
+  leftOffset: number;
+  /** Pixel width of the right spacer (for columns after the visible range). */
+  rightOffset: number;
+}
+
+/**
+ * Compute the range of columns visible in the horizontal viewport.
+ * Linear scan over cumulative widths to find first/last visible column.
+ *
+ * @param scrollLeft - Current horizontal scroll offset (px)
+ * @param columnWidths - Array of widths for each unpinned column (px)
+ * @param containerWidth - Visible width of the scroll container (px)
+ * @param overscan - Number of extra columns to render on each side (default: 2)
+ * @returns The visible column range with start/end indices and left/right spacer widths
+ */
+export function computeVisibleColumnRange(
+  scrollLeft: number,
+  columnWidths: number[],
+  containerWidth: number,
+  overscan: number = 2
+): IVisibleColumnRange {
+  if (columnWidths.length === 0 || containerWidth <= 0) {
+    return { startIndex: 0, endIndex: -1, leftOffset: 0, rightOffset: 0 };
+  }
+
+  let cumWidth = 0;
+  let rawStart = columnWidths.length; // will be set when we find the first visible
+  let rawEnd = -1;
+
+  for (let i = 0; i < columnWidths.length; i++) {
+    const colStart = cumWidth;
+    cumWidth += columnWidths[i];
+
+    // Column is visible if its right edge is past scrollLeft
+    if (cumWidth > scrollLeft && rawStart === columnWidths.length) {
+      rawStart = i;
+    }
+    // Column is visible if its left edge is before the right edge of the viewport
+    if (colStart < scrollLeft + containerWidth) {
+      rawEnd = i;
+    }
+  }
+
+  if (rawStart > rawEnd) {
+    return { startIndex: 0, endIndex: -1, leftOffset: 0, rightOffset: 0 };
+  }
+
+  // Apply overscan
+  const startIndex = Math.max(0, rawStart - overscan);
+  const endIndex = Math.min(columnWidths.length - 1, rawEnd + overscan);
+
+  // Calculate spacer offsets
+  let leftOffset = 0;
+  for (let i = 0; i < startIndex; i++) {
+    leftOffset += columnWidths[i];
+  }
+
+  let rightOffset = 0;
+  for (let i = endIndex + 1; i < columnWidths.length; i++) {
+    rightOffset += columnWidths[i];
+  }
+
+  return { startIndex, endIndex, leftOffset, rightOffset };
+}
+
+/**
+ * Partition visible columns into pinned-left, virtualized-unpinned, and pinned-right.
+ * Pinned columns always render. Only unpinned columns in the visible range render.
+ */
+export function partitionColumnsForVirtualization<T>(
+  visibleCols: IColumnDef<T>[],
+  columnRange: IVisibleColumnRange | null,
+  pinnedColumns?: Record<string, 'left' | 'right'>
+): {
+  pinnedLeft: IColumnDef<T>[];
+  virtualizedUnpinned: IColumnDef<T>[];
+  pinnedRight: IColumnDef<T>[];
+  leftSpacerWidth: number;
+  rightSpacerWidth: number;
+} {
+  const pinnedLeft: IColumnDef<T>[] = [];
+  const pinnedRight: IColumnDef<T>[] = [];
+  const unpinned: IColumnDef<T>[] = [];
+
+  for (const col of visibleCols) {
+    const pin = pinnedColumns?.[col.columnId];
+    if (pin === 'left') pinnedLeft.push(col);
+    else if (pin === 'right') pinnedRight.push(col);
+    else unpinned.push(col);
+  }
+
+  if (!columnRange || columnRange.endIndex < 0) {
+    return {
+      pinnedLeft,
+      virtualizedUnpinned: unpinned,
+      pinnedRight,
+      leftSpacerWidth: 0,
+      rightSpacerWidth: 0,
+    };
+  }
+
+  const virtualizedUnpinned = unpinned.slice(columnRange.startIndex, columnRange.endIndex + 1);
+
+  return {
+    pinnedLeft,
+    virtualizedUnpinned,
+    pinnedRight,
+    leftSpacerWidth: columnRange.leftOffset,
+    rightSpacerWidth: columnRange.rightOffset,
+  };
+}
+
 /** The visible row range and spacer offsets for virtual scrolling. */
 export interface IVisibleRange {
   /** First visible row index (inclusive, accounting for overscan). */

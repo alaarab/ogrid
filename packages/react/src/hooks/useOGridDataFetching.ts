@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, useMemo } from 'react';
 import { processClientSideData } from '../utils';
+import { processClientSideDataAsync } from '@alaarab/ogrid-core';
 import { useLatestRef } from './useLatestRef';
 import type { IFilters, IDataSource } from '../types';
 import type { IColumnDef as ICoreColumnDef } from '@alaarab/ogrid-core';
@@ -15,6 +16,8 @@ export interface UseOGridDataFetchingParams<T> {
   pageSize: number;
   onError?: (err: unknown) => void;
   onFirstDataRendered?: () => void;
+  /** Worker sort mode: true=always, 'auto'=when data > 5000 rows, false=sync. */
+  workerSort?: boolean | 'auto';
 }
 
 export interface UseOGridDataFetchingState<T> {
@@ -31,14 +34,17 @@ export interface UseOGridDataFetchingState<T> {
 export function useOGridDataFetching<T>(params: UseOGridDataFetchingParams<T>): UseOGridDataFetchingState<T> {
   const {
     isServerSide, dataSource, displayData, columns, stableFilters,
-    sort, page, pageSize, onError, onFirstDataRendered,
+    sort, page, pageSize, onError, onFirstDataRendered, workerSort,
   } = params;
 
   const isClientSide = !isServerSide;
 
-  // --- Client-side filtering & sorting ---
+  // Determine if worker sort should be used
+  const useWorker = workerSort === true || (workerSort === 'auto' && displayData.length > 5000);
+
+  // --- Client-side filtering & sorting (sync path) ---
   const clientItemsAndTotal = useMemo(() => {
-    if (!isClientSide) return null;
+    if (!isClientSide || useWorker) return null;
     const rows = processClientSideData(
       displayData, columns, stableFilters, sort.field, sort.direction
     );
@@ -46,7 +52,32 @@ export function useOGridDataFetching<T>(params: UseOGridDataFetchingParams<T>): 
     const start = (page - 1) * pageSize;
     const paged = rows.slice(start, start + pageSize);
     return { items: paged, totalCount: total };
-  }, [isClientSide, displayData, columns, stableFilters, sort.field, sort.direction, page, pageSize]);
+  }, [isClientSide, useWorker, displayData, columns, stableFilters, sort.field, sort.direction, page, pageSize]);
+
+  // --- Client-side filtering & sorting (async worker path) ---
+  const [asyncItems, setAsyncItems] = useState<{ items: T[]; totalCount: number } | null>(null);
+  const asyncIdRef = useRef(0);
+
+  useEffect(() => {
+    if (!isClientSide || !useWorker) {
+      setAsyncItems(null);
+      return;
+    }
+    const id = ++asyncIdRef.current;
+    processClientSideDataAsync(
+      displayData,
+      columns as Parameters<typeof processClientSideDataAsync>[1],
+      stableFilters,
+      sort.field,
+      sort.direction,
+    ).then((rows) => {
+      if (id !== asyncIdRef.current) return; // stale
+      const total = rows.length;
+      const start = (page - 1) * pageSize;
+      const paged = rows.slice(start, start + pageSize) as T[];
+      setAsyncItems({ items: paged, totalCount: total });
+    });
+  }, [isClientSide, useWorker, displayData, columns, stableFilters, sort.field, sort.direction, page, pageSize]);
 
   // --- Server-side data fetching ---
   const [serverItems, setServerItems] = useState<T[]>([]);
@@ -89,8 +120,9 @@ export function useOGridDataFetching<T>(params: UseOGridDataFetchingParams<T>): 
       });
   }, [isServerSide, page, pageSize, sort.field, sort.direction, stableFilters, refreshCounter, dataSourceRef, onErrorRef]);
 
-  const displayItems = isClientSide && clientItemsAndTotal ? clientItemsAndTotal.items : serverItems;
-  const displayTotalCount = isClientSide && clientItemsAndTotal ? clientItemsAndTotal.totalCount : serverTotalCount;
+  const clientResult = clientItemsAndTotal ?? asyncItems;
+  const displayItems = isClientSide && clientResult ? clientResult.items : serverItems;
+  const displayTotalCount = isClientSide && clientResult ? clientResult.totalCount : serverTotalCount;
 
   // Fire onFirstDataRendered once when the grid first has data
   const onFirstDataRenderedRef = useLatestRef(onFirstDataRendered);

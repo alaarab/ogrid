@@ -1,6 +1,6 @@
 import { ref, computed, type Ref } from 'vue';
-import { flattenColumns } from '@alaarab/ogrid-core';
-import type { IOGridDataGridProps } from '../types';
+import { flattenColumns, DEFAULT_MIN_COLUMN_WIDTH, partitionColumnsForVirtualization } from '@alaarab/ogrid-core';
+import type { IOGridDataGridProps, IColumnDef } from '../types';
 import { useDataGridState, type UseDataGridStateResult } from './useDataGridState';
 import { useColumnResize, type UseColumnResizeResult } from './useColumnResize';
 import { useColumnReorder, type UseColumnReorderResult } from './useColumnReorder';
@@ -34,6 +34,18 @@ export interface UseDataGridTableSetupResult<T> {
 
   /** Column resize handlers (handleResizeStart, getColumnWidth). */
   columnResize: UseColumnResizeResult<T>;
+
+  /** Column virtualization partition (or null when column virtualization is off). */
+  columnPartition: Ref<{
+    pinnedLeft: IColumnDef<T>[];
+    virtualizedUnpinned: IColumnDef<T>[];
+    pinnedRight: IColumnDef<T>[];
+    leftSpacerWidth: number;
+    rightSpacerWidth: number;
+  } | null>;
+
+  /** Map from columnId to its global index in visibleCols. */
+  globalColIndexMap: Ref<Map<string, number>>;
 }
 
 /**
@@ -79,11 +91,59 @@ export function useDataGridTableSetup<T>(
   const rowHeight = propsRef.value.virtualScroll?.rowHeight ?? 36;
   const overscan = propsRef.value.virtualScroll?.overscan ?? 5;
 
+  // Column virtualization inputs
+  const columnsVirtEnabled = computed(() => propsRef.value.virtualScroll?.columns === true);
+  const columnOverscan = propsRef.value.virtualScroll?.columnOverscan ?? 2;
+
+  // Compute unpinned column widths for column virtualization
+  const unpinnedColumnWidths = computed(() => {
+    const layout = state.layout.value;
+    const { visibleCols, columnSizingOverrides } = layout;
+    const pinnedCols = propsRef.value.pinnedColumns ?? {};
+    const widths: number[] = [];
+    for (const col of visibleCols) {
+      if (pinnedCols[col.columnId] || col.pinned) continue;
+      const override = columnSizingOverrides[col.columnId];
+      widths.push(override ? override.widthPx : (col.defaultWidth ?? col.minWidth ?? DEFAULT_MIN_COLUMN_WIDTH));
+    }
+    return widths;
+  });
+
   const virtualScroll = useVirtualScroll({
     totalRows: totalRowsRef,
     rowHeight,
     enabled: virtualScrollEnabled,
     overscan,
+    columnsEnabled: columnsVirtEnabled,
+    columnWidths: unpinnedColumnWidths,
+    columnOverscan,
+  });
+
+  // Column virtualization partition
+  const columnPartition = computed(() => {
+    if (!columnsVirtEnabled.value) return null;
+    const layout = state.layout.value;
+    const cols = layout.visibleCols as IColumnDef<T>[];
+    const range = virtualScroll.columnRange.value;
+    const pinnedCols = propsRef.value.pinnedColumns;
+    return partitionColumnsForVirtualization(cols, range, pinnedCols) as {
+      pinnedLeft: IColumnDef<T>[];
+      virtualizedUnpinned: IColumnDef<T>[];
+      pinnedRight: IColumnDef<T>[];
+      leftSpacerWidth: number;
+      rightSpacerWidth: number;
+    };
+  });
+
+  // Global column index map
+  const globalColIndexMap = computed(() => {
+    const layout = state.layout.value;
+    const cols = layout.visibleCols;
+    const map = new Map<string, number>();
+    for (let i = 0; i < cols.length; i++) {
+      map.set(cols[i].columnId, i);
+    }
+    return map;
   });
 
   // --- Column resize ---
@@ -104,5 +164,7 @@ export function useDataGridTableSetup<T>(
     virtualScroll,
     virtualScrollEnabled,
     columnResize,
+    columnPartition,
+    globalColIndexMap,
   };
 }

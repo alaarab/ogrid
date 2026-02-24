@@ -1,6 +1,6 @@
 import type { RowId, CellEvent } from '../types/gridTypes';
 import type { IActiveCell, ISelectionRange } from '@alaarab/ogrid-core';
-import { getCellValue, buildHeaderRows, isInSelectionRange, ROW_NUMBER_COLUMN_WIDTH, CHECKBOX_COLUMN_WIDTH } from '@alaarab/ogrid-core';
+import { getCellValue, buildHeaderRows, isInSelectionRange, ROW_NUMBER_COLUMN_WIDTH, CHECKBOX_COLUMN_WIDTH, partitionColumnsForVirtualization } from '@alaarab/ogrid-core';
 import type { GridState } from '../state/GridState';
 import type { HeaderFilterState, HeaderFilterConfig } from '../state/HeaderFilterState';
 import type { VirtualScrollState } from '../state/VirtualScrollState';
@@ -277,6 +277,9 @@ export class TableRenderer<T> {
     this.table = document.createElement('table');
     this.table.className = 'ogrid-table';
     this.table.setAttribute('role', 'grid');
+    if (this.virtualScrollState) {
+      this.table.setAttribute('data-virtual-scroll', '');
+    }
 
     // Render header
     this.thead = document.createElement('thead');
@@ -824,6 +827,26 @@ export class TableRenderer<T> {
       }
     }
 
+    // Column virtualization: partition columns (computed once before the row loop)
+    const colVirtActive = vs?.columnVirtualizationEnabled === true && vs.columnRange != null;
+    let renderCols = visibleCols;
+    let colGlobalIndexMap: number[] | null = null;
+    let colLeftSpacerWidth = 0;
+    let colRightSpacerWidth = 0;
+
+    if (colVirtActive && vs) {
+      const partition = partitionColumnsForVirtualization(
+        visibleCols as unknown as Parameters<typeof partitionColumnsForVirtualization>[0],
+        vs.columnRange,
+        this.interactionState?.pinnedColumns,
+      );
+      const combined = [...partition.pinnedLeft, ...partition.virtualizedUnpinned, ...partition.pinnedRight] as unknown as typeof visibleCols;
+      colGlobalIndexMap = combined.map(c => visibleCols.indexOf(c));
+      renderCols = combined;
+      colLeftSpacerWidth = partition.leftSpacerWidth;
+      colRightSpacerWidth = partition.rightSpacerWidth;
+    }
+
     for (let rowIndex = startIndex; rowIndex <= endIndex; rowIndex++) {
       const item = items[rowIndex];
       if (!item) continue;
@@ -871,9 +894,20 @@ export class TableRenderer<T> {
         tr.appendChild(td);
       }
 
-      for (let colIndex = 0; colIndex < visibleCols.length; colIndex++) {
-        const col = visibleCols[colIndex];
-        const globalColIndex = colIndex + colOffset;
+      // Left column spacer
+      if (colLeftSpacerWidth > 0) {
+        const spacerTd = document.createElement('td');
+        spacerTd.style.width = `${colLeftSpacerWidth}px`;
+        spacerTd.style.minWidth = `${colLeftSpacerWidth}px`;
+        spacerTd.style.padding = '0';
+        spacerTd.style.border = 'none';
+        spacerTd.setAttribute('aria-hidden', 'true');
+        tr.appendChild(spacerTd);
+      }
+
+      for (let colIndex = 0; colIndex < renderCols.length; colIndex++) {
+        const col = renderCols[colIndex];
+        const globalColIndex = (colGlobalIndexMap ? colGlobalIndexMap[colIndex] : colIndex) + colOffset;
         const td = document.createElement('td');
         td.className = 'ogrid-cell';
         td.setAttribute('data-column-id', col.columnId);
@@ -975,6 +1009,17 @@ export class TableRenderer<T> {
         }
 
         tr.appendChild(td);
+      }
+
+      // Right column spacer
+      if (colRightSpacerWidth > 0) {
+        const spacerTd = document.createElement('td');
+        spacerTd.style.width = `${colRightSpacerWidth}px`;
+        spacerTd.style.minWidth = `${colRightSpacerWidth}px`;
+        spacerTd.style.padding = '0';
+        spacerTd.style.border = 'none';
+        spacerTd.setAttribute('aria-hidden', 'true');
+        tr.appendChild(spacerTd);
       }
 
       this.tbody.appendChild(tr);

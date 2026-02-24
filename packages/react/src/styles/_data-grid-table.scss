@@ -236,10 +236,22 @@
   white-space: nowrap;
   user-select: none;
   outline: none;
+  contain: content;
 
   &:focus-visible {
     outline: none;
   }
+}
+
+// Pinned columns need contain: none because contain breaks position: sticky
+.pinnedColLeft .cellContent,
+.pinnedColRight .cellContent {
+  contain: none;
+}
+
+// content-visibility: auto on rows for non-virtualized grids (virtual grids handle row visibility)
+.dataTable:not([data-virtual-scroll]) tbody tr {
+  content-visibility: auto;
 }
 
 .activeCellContent {

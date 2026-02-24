@@ -517,18 +517,31 @@ export class OGrid<T> {
         this.virtualScrollState.observeContainer(this.tableContainer);
         this.renderer.setVirtualScrollState(this.virtualScrollState);
 
-        // Wire scroll event on the table container
+        // Wire scroll event on the table container (vertical + horizontal)
         const handleScroll = () => {
           this.virtualScrollState?.handleScroll(this.tableContainer.scrollTop);
+          this.virtualScrollState?.handleHorizontalScroll(this.tableContainer.scrollLeft);
         };
         this.tableContainer.addEventListener('scroll', handleScroll, { passive: true });
         this.unsubscribes.push(() => {
           this.tableContainer.removeEventListener('scroll', handleScroll);
         });
 
+        // Column virtualization: observe container width
+        if (options.virtualScroll?.columns) {
+          this.virtualScrollState.observeContainerWidth(this.tableContainer);
+        }
+
         // Re-render when visible range changes
         this.unsubscribes.push(
           this.virtualScrollState.onRangeChanged(() => {
+            this.renderingHelper.updateRendererInteractionState();
+          })
+        );
+
+        // Re-render when column range changes
+        this.unsubscribes.push(
+          this.virtualScrollState.onColumnRangeChanged(() => {
             this.renderingHelper.updateRendererInteractionState();
           })
         );

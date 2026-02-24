@@ -129,6 +129,15 @@ interface IOGridBaseProps<T> {
   /** Cell spacing/density preset. Controls cell padding throughout the grid. Default: 'normal'. */
   density?: 'compact' | 'normal' | 'comfortable';
 
+  /**
+   * Offload sorting to a Web Worker to avoid blocking the main thread.
+   * - `true`: always use worker sort
+   * - `'auto'`: use worker sort when data.length > 5000
+   * - `false` (default): use synchronous sort
+   * Columns with custom `compare` functions fall back to synchronous sort.
+   */
+  workerSort?: boolean | 'auto';
+
   /** Fires once when the grid first renders with data (useful for restoring column state). */
   onFirstDataRendered?: () => void;
 

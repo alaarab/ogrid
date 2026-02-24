@@ -5,6 +5,7 @@ import {
   getMultiSelectFilterFields,
   flattenColumns,
   processClientSideData,
+  processClientSideDataAsync,
   computeNextSortState,
   validateColumns,
   validateRowIds,
@@ -137,6 +138,7 @@ export class OGridService<T> {
   readonly virtualScroll = signal<IVirtualScrollConfig | undefined>(undefined);
   readonly ariaLabel = signal<string | undefined>(undefined);
   readonly ariaLabelledBy = signal<string | undefined>(undefined);
+  readonly workerSort = signal<boolean>(false);
 
   // --- Internal state signals ---
   private readonly internalData = signal<T[]>([]);
@@ -158,6 +160,10 @@ export class OGridService<T> {
   private filterAbortController: AbortController | null = null;
   private readonly refreshCounter = signal<number>(0);
   private readonly firstDataRendered = signal<boolean>(false);
+
+  // Worker sort async state
+  private readonly asyncClientItems = signal<{ items: unknown[]; totalCount: number } | null>(null);
+  private workerSortAbortId = 0;
 
   // Side bar state
   private readonly sideBarActivePanel = signal<SideBarPanelId | null>(null);
@@ -211,8 +217,9 @@ export class OGridService<T> {
     return deriveFilterOptionsFromData(this.displayData(), this.columns());
   });
 
+  /** Sync path: used when workerSort is off. */
   readonly clientItemsAndTotal = computed(() => {
-    if (!this.isClientSide()) return null;
+    if (!this.isClientSide() || this.workerSort()) return null;
     const rows = processClientSideData(
       this.displayData(),
       this.columns(),
@@ -226,13 +233,22 @@ export class OGridService<T> {
     return { items: paged, totalCount: total };
   });
 
+  /** Resolved client items — sync or async depending on workerSort. */
+  readonly resolvedClientItems = computed(() => {
+    // Sync path
+    const syncResult = this.clientItemsAndTotal();
+    if (syncResult) return syncResult;
+    // Async path
+    return this.asyncClientItems() as { items: T[]; totalCount: number } | null;
+  });
+
   readonly displayItems = computed(() => {
-    const cit = this.clientItemsAndTotal();
+    const cit = this.resolvedClientItems();
     return this.isClientSide() && cit ? cit.items : this.serverItems();
   });
 
   readonly displayTotalCount = computed(() => {
-    const cit = this.clientItemsAndTotal();
+    const cit = this.resolvedClientItems();
     return this.isClientSide() && cit ? cit.totalCount : this.serverTotalCount();
   });
 
@@ -420,6 +436,43 @@ export class OGridService<T> {
         columnsValidated = true;
         validateColumns(cols as Parameters<typeof validateColumns>[0]);
       }
+    });
+
+    // Worker sort async effect — runs processClientSideDataAsync when workerSort is on
+    effect((onCleanup) => {
+      if (!this.isClientSide() || !this.workerSort()) return;
+
+      const data = this.displayData();
+      const cols = this.columns();
+      const filters = this.filters();
+      const sortField = this.sort().field;
+      const sortDir = this.sort().direction;
+      const page = this.page();
+      const ps = this.pageSize();
+
+      const abortId = ++this.workerSortAbortId;
+
+      processClientSideDataAsync(data, cols, filters, sortField, sortDir)
+        .then((rows) => {
+          if (abortId !== this.workerSortAbortId) return; // stale
+          const total = rows.length;
+          const start = (page - 1) * ps;
+          const paged = rows.slice(start, start + ps);
+          this.asyncClientItems.set({ items: paged, totalCount: total });
+        })
+        .catch(() => {
+          if (abortId !== this.workerSortAbortId) return;
+          // Fallback: use sync
+          const rows = processClientSideData(data, cols, filters, sortField, sortDir);
+          const total = rows.length;
+          const start = (page - 1) * ps;
+          const paged = rows.slice(start, start + ps);
+          this.asyncClientItems.set({ items: paged, totalCount: total });
+        });
+
+      onCleanup(() => {
+        this.workerSortAbortId++;
+      });
     });
 
     // Server-side data fetching effect
@@ -622,6 +675,14 @@ export class OGridService<T> {
 
   configure(props: IOGridProps<T>): void {
     this.columnsProp.set(props.columns);
+    // Initialize pinned overrides from column definitions on first configure
+    if (Object.keys(this.pinnedOverrides()).length === 0) {
+      const initial: Record<string, 'left' | 'right'> = {};
+      for (const col of flattenColumns(props.columns)) {
+        if (col.pinned) initial[col.columnId] = col.pinned;
+      }
+      if (Object.keys(initial).length > 0) this.pinnedOverrides.set(initial);
+    }
     this.getRowId.set(props.getRowId);
     if ('data' in props && props.data !== undefined) this.data.set(props.data);
     if ('dataSource' in props && props.dataSource !== undefined) this.dataSource.set(props.dataSource);
@@ -664,6 +725,7 @@ export class OGridService<T> {
     if (props.columnChooser !== undefined) this.columnChooserProp.set(props.columnChooser);
     if (props.columnReorder !== undefined) this.columnReorder.set(props.columnReorder);
     if (props.virtualScroll !== undefined) this.virtualScroll.set(props.virtualScroll);
+    if (props.workerSort !== undefined) this.workerSort.set(props.workerSort);
     if (props.entityLabelPlural !== undefined) this.entityLabelPlural.set(props.entityLabelPlural);
     if (props.className !== undefined) this.className.set(props.className);
     if (props.layoutMode !== undefined) this.layoutMode.set(props.layoutMode);
