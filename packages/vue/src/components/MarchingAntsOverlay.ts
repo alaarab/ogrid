@@ -99,8 +99,12 @@ export const MarchingAntsOverlay = defineComponent({
       if (!selRect.value && !clipRect.value) return null;
 
       return h('div', { style: { position: 'relative' } }, [
-        // Selection range: solid green border (hidden when clipboard range overlaps)
-        selRect.value && !clipRangeMatchesSel.value ? h('svg', {
+        // Selection range: solid green border (hidden when clipboard range overlaps or single-cell — CSS outline handles that)
+        selRect.value && !clipRangeMatchesSel.value && !(
+          props.selectionRange &&
+          props.selectionRange.startRow === props.selectionRange.endRow &&
+          props.selectionRange.startCol === props.selectionRange.endCol
+        ) ? h('svg', {
           style: {
             position: 'absolute',
             top: `${selRect.value.top}px`,

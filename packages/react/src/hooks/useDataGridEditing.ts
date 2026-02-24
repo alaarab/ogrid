@@ -96,8 +96,7 @@ export function useDataGridEditing<T>(
         setSelectionRange({ startRow: newRow, startCol: localCol, endRow: newRow, endCol: localCol });
       }
     },
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [setEditingCell, setPendingEditorValue, setActiveCell, setSelectionRange, colOffset, visibleColsRef, itemsLengthRef]
+    [setEditingCell, setPendingEditorValue, setActiveCell, setSelectionRange, colOffset, visibleColsRef, itemsLengthRef, onCellValueChangedRef]
   );
 
   const cancelPopoverEdit = useCallback(() => {

@@ -87,8 +87,7 @@ export function useOGridDataFetching<T>(params: UseOGridDataFetchingParams<T>): 
       .finally(() => {
         if (id === fetchIdRef.current) setServerLoading(false);
       });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isServerSide, page, pageSize, sort.field, sort.direction, stableFilters, refreshCounter]);
+  }, [isServerSide, page, pageSize, sort.field, sort.direction, stableFilters, refreshCounter, dataSourceRef, onErrorRef]);
 
   const displayItems = isClientSide && clientItemsAndTotal ? clientItemsAndTotal.items : serverItems;
   const displayTotalCount = isClientSide && clientItemsAndTotal ? clientItemsAndTotal.totalCount : serverTotalCount;
@@ -101,8 +100,7 @@ export function useOGridDataFetching<T>(params: UseOGridDataFetchingParams<T>): 
       firstDataRenderedRef.current = true;
       onFirstDataRenderedRef.current?.();
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [displayItems.length]);
+  }, [displayItems.length, onFirstDataRenderedRef]);
 
   return {
     displayItems,

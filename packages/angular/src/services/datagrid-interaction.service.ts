@@ -657,10 +657,14 @@ export class DataGridInteractionHelper<T> {
       const finalRange = this.liveDragRange;
       if (finalRange) {
         this.setSelectionRange(finalRange);
-        this.setActiveCell({
-          rowIndex: finalRange.endRow,
-          columnIndex: finalRange.endCol + colOffset,
-        });
+        // Keep the active cell at the drag anchor (start), not the endpoint.
+        const anchor = this.dragStartPos;
+        if (anchor) {
+          this.setActiveCell({
+            rowIndex: anchor.row,
+            columnIndex: anchor.col + colOffset,
+          });
+        }
       }
     }
 
