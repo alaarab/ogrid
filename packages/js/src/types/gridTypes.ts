@@ -90,6 +90,9 @@ export interface OGridOptions<T> {
   /** Show row numbers column. Default: false. */
   showRowNumbers?: boolean;
 
+  /** Enable Excel-style cell references: column letter headers, row numbers, and name box. Implies showRowNumbers. */
+  cellReferences?: boolean;
+
   /** Status bar configuration or boolean to enable/disable with defaults. */
   statusBar?: boolean | IStatusBarProps;
 

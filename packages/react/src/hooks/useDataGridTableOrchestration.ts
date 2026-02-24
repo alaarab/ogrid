@@ -1,5 +1,6 @@
-import { useCallback, useRef, useMemo } from 'react';
+import { useCallback, useRef, useMemo, useEffect } from 'react';
 import type { RefObject } from 'react';
+import { formatCellReference } from '../utils';
 import type { IOGridDataGridProps, IColumnDef } from '../types';
 import type {
   DataGridLayoutState,
@@ -95,6 +96,8 @@ export interface UseDataGridTableOrchestrationResult<T> {
   headerRows: HeaderRow<T>[];
   allowOverflowX: boolean;
   fitToContent: boolean;
+  showColumnLetters: boolean;
+  showNameBox: boolean;
 
   // Memoized callback groups (for renderCellContent)
   editCallbacks: {
@@ -246,6 +249,9 @@ export function useDataGridTableOrchestration<T>(
     pinnedColumns,
     currentPage = 1,
     pageSize: propPageSize = 25,
+    showColumnLetters = false,
+    showNameBox = false,
+    onActiveCellChange,
   } = props;
 
   // ── Derived values ──────────────────────────────────────────────────────
@@ -253,6 +259,19 @@ export function useDataGridTableOrchestration<T>(
   const headerRows = useMemo(() => buildHeaderRows(columns, visibleColumns), [columns, visibleColumns]);
   const allowOverflowX = !suppressHorizontalScroll && containerWidth > 0 && (minTableWidth > containerWidth || desiredTableWidth > containerWidth);
   const fitToContent = layoutMode === 'content';
+
+  // ── Name box: notify parent when active cell changes ──────────────────
+  const onActiveCellChangeRef = useRef(onActiveCellChange);
+  onActiveCellChangeRef.current = onActiveCellChange;
+  useEffect(() => {
+    if (!onActiveCellChangeRef.current) return;
+    const ac = interaction.activeCell;
+    if (ac) {
+      onActiveCellChangeRef.current(formatCellReference(ac.columnIndex, rowNumberOffset + ac.rowIndex + 1));
+    } else {
+      onActiveCellChangeRef.current(null);
+    }
+  }, [interaction.activeCell, rowNumberOffset]);
 
   // ── Column resize ──────────────────────────────────────────────────────
   const { handleResizeStart, handleResizeDoubleClick, getColumnWidth } = useColumnResize<T>({
@@ -408,6 +427,8 @@ export function useDataGridTableOrchestration<T>(
     headerRows,
     allowOverflowX,
     fitToContent,
+    showColumnLetters,
+    showNameBox,
 
     // Memoized callback groups
     editCallbacks,

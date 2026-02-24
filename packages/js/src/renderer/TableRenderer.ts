@@ -1,6 +1,6 @@
 import type { RowId, CellEvent } from '../types/gridTypes';
 import type { IActiveCell, ISelectionRange } from '@alaarab/ogrid-core';
-import { getCellValue, buildHeaderRows, isInSelectionRange, ROW_NUMBER_COLUMN_WIDTH, CHECKBOX_COLUMN_WIDTH, partitionColumnsForVirtualization } from '@alaarab/ogrid-core';
+import { getCellValue, buildHeaderRows, isInSelectionRange, ROW_NUMBER_COLUMN_WIDTH, CHECKBOX_COLUMN_WIDTH, partitionColumnsForVirtualization, indexToColumnLetter } from '@alaarab/ogrid-core';
 import type { GridState } from '../state/GridState';
 import type { HeaderFilterState, HeaderFilterConfig } from '../state/HeaderFilterState';
 import type { VirtualScrollState } from '../state/VirtualScrollState';
@@ -46,6 +46,10 @@ export interface TableRendererInteractionState {
   someSelected?: boolean;
   // Row numbers
   showRowNumbers?: boolean;
+  // Column letters
+  showColumnLetters?: boolean;
+  // Name box
+  showNameBox?: boolean;
   // Column pinning
   pinnedColumns?: Record<string, 'left' | 'right'>;
   leftOffsets?: Record<string, number>;
@@ -328,6 +332,8 @@ export class TableRenderer<T> {
     parts.push(`someSel:${is?.someSelected ?? ''}`);
     // Include showRowNumbers
     parts.push(`rn:${is?.showRowNumbers ?? ''}`);
+    // Include showColumnLetters
+    parts.push(`cl:${is?.showColumnLetters ?? ''}`);
     // Include filter active states
     for (const [colId, config] of this.filterConfigs) {
       const hasActive = this.headerFilterState?.hasActiveFilter(config);
@@ -599,6 +605,38 @@ export class TableRenderer<T> {
 
     const visibleCols = this.state.visibleColumnDefs;
     const hasCheckbox = this.hasCheckboxColumn();
+    const hasRowNumbers = this.hasRowNumbersColumn();
+
+    // Column letter row (A, B, C...) — prepended before normal header rows
+    if (this.interactionState?.showColumnLetters) {
+      const letterTr = document.createElement('tr');
+      letterTr.className = 'ogrid-column-letter-row';
+
+      // Empty gutter cells for checkbox and row number columns
+      if (hasCheckbox) {
+        const th = document.createElement('th');
+        th.className = 'ogrid-column-letter-cell';
+        th.style.width = `${CHECKBOX_COLUMN_WIDTH}px`;
+        letterTr.appendChild(th);
+      }
+      if (hasRowNumbers) {
+        const th = document.createElement('th');
+        th.className = 'ogrid-column-letter-cell';
+        th.style.width = `${ROW_NUMBER_COLUMN_WIDTH}px`;
+        letterTr.appendChild(th);
+      }
+
+      // One letter cell per visible column
+      for (let colIdx = 0; colIdx < visibleCols.length; colIdx++) {
+        const th = document.createElement('th');
+        th.className = 'ogrid-column-letter-cell';
+        th.textContent = indexToColumnLetter(colIdx);
+        letterTr.appendChild(th);
+      }
+
+      this.thead.appendChild(letterTr);
+    }
+
     // buildHeaderRows expects core column types - cast through unknown
     const headerRows = buildHeaderRows(this.state.allColumns as unknown as Parameters<typeof buildHeaderRows>[0], this.state.visibleColumns);
 
