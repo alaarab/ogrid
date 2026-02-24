@@ -162,7 +162,7 @@ export class FillHandleState<T> {
 
     // Commit range
     this.setSelectionRange(norm);
-    this.setActiveCell({ rowIndex: end.endRow, columnIndex: end.endCol + this.params.colOffset });
+    this.setActiveCell({ rowIndex: start.startRow, columnIndex: start.startCol + this.params.colOffset });
 
     // Apply fill values
     this.applyFillValuesFromCore(norm, start);

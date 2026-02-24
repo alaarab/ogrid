@@ -6,6 +6,22 @@ import type { HeaderFilterState, HeaderFilterConfig } from '../state/HeaderFilte
 import type { VirtualScrollState } from '../state/VirtualScrollState';
 import { getCellCoordinates } from '../utils/getCellCoordinates';
 
+/** Pre-computed range bounds for fast in-range checks (avoids repeated Math.min/max). */
+interface RangeBounds { minR: number; maxR: number; minC: number; maxC: number; }
+
+function rangeBounds(r: ISelectionRange): RangeBounds {
+  return {
+    minR: Math.min(r.startRow, r.endRow),
+    maxR: Math.max(r.startRow, r.endRow),
+    minC: Math.min(r.startCol, r.endCol),
+    maxC: Math.max(r.startCol, r.endCol),
+  };
+}
+
+function inBounds(b: RangeBounds, row: number, col: number): boolean {
+  return row >= b.minR && row <= b.maxR && col >= b.minC && col <= b.maxC;
+}
+
 export interface TableRendererInteractionState {
   activeCell: IActiveCell | null;
   selectionRange: ISelectionRange | null;
@@ -390,6 +406,15 @@ export class TableRenderer<T> {
     const lastCopy = this.lastCopyRange;
     const lastCut = this.lastCutRange;
 
+    // Pre-compute range bounds once (avoids repeated Math.min/max in isInSelectionRange per cell)
+    const selBounds = selectionRange ? rangeBounds(selectionRange) : null;
+    const lastSelBounds = lastSelection ? rangeBounds(lastSelection) : null;
+    const copyBounds = copyRange ? rangeBounds(copyRange) : null;
+    const lastCopyBounds = lastCopy ? rangeBounds(lastCopy) : null;
+    const cutBounds = cutRange ? rangeBounds(cutRange) : null;
+    const lastCutBounds = lastCut ? rangeBounds(lastCut) : null;
+
+    const colOffset = this.getColOffset();
     const cells = this.tbody.querySelectorAll<HTMLElement>('td[data-row-index][data-col-index]');
 
     for (let i = 0; i < cells.length; i++) {
@@ -398,7 +423,6 @@ export class TableRenderer<T> {
       if (!coords) continue;
       const rowIndex = coords.rowIndex;
       const globalColIndex = coords.colIndex;
-      const colOffset = this.getColOffset();
       const colIndex = globalColIndex - colOffset;
 
       // --- Active cell ---
@@ -413,25 +437,28 @@ export class TableRenderer<T> {
         el.style.outline = '2px solid var(--ogrid-accent, #0078d4)';
       }
 
-      // --- Selection range ---
-      const wasInRange = lastSelection && isInSelectionRange(lastSelection, rowIndex, colIndex);
-      const isInRange = selectionRange && isInSelectionRange(selectionRange, rowIndex, colIndex);
+      // --- Selection range (use pre-computed bounds) ---
+      const wasInRange = lastSelBounds && inBounds(lastSelBounds, rowIndex, colIndex);
+      const isInRange = selBounds && inBounds(selBounds, rowIndex, colIndex);
 
-      if (wasInRange && !isInRange) {
+      // Active cell should NOT get the range background (Excel-like: anchor cell stays white)
+      const showRange = isInRange && !isActive;
+      const showedRange = wasInRange && !(lastActive && lastActive.rowIndex === rowIndex && lastActive.columnIndex === globalColIndex);
+      if (showedRange && !showRange) {
         el.removeAttribute('data-in-range');
         el.style.backgroundColor = '';
-      } else if (isInRange && !wasInRange) {
+      } else if (showRange && !showedRange) {
         el.setAttribute('data-in-range', 'true');
         el.style.backgroundColor = 'var(--ogrid-range-bg, rgba(33, 115, 70, 0.12))';
       }
 
       // --- Copy range ---
-      const wasInCopy = lastCopy && isInSelectionRange(lastCopy, rowIndex, colIndex);
-      const isInCopy = copyRange && isInSelectionRange(copyRange, rowIndex, colIndex);
+      const wasInCopy = lastCopyBounds && inBounds(lastCopyBounds, rowIndex, colIndex);
+      const isInCopy = copyBounds && inBounds(copyBounds, rowIndex, colIndex);
 
       if (wasInCopy && !isInCopy) {
         // Only clear outline if not being set by another range (active/cut)
-        if (!isActive && !(cutRange && isInSelectionRange(cutRange, rowIndex, colIndex))) {
+        if (!isActive && !(cutBounds && inBounds(cutBounds, rowIndex, colIndex))) {
           el.style.outline = '';
         }
       } else if (isInCopy && !wasInCopy) {
@@ -439,11 +466,11 @@ export class TableRenderer<T> {
       }
 
       // --- Cut range ---
-      const wasInCut = lastCut && isInSelectionRange(lastCut, rowIndex, colIndex);
-      const isInCut = cutRange && isInSelectionRange(cutRange, rowIndex, colIndex);
+      const wasInCut = lastCutBounds && inBounds(lastCutBounds, rowIndex, colIndex);
+      const isInCut = cutBounds && inBounds(cutBounds, rowIndex, colIndex);
 
       if (wasInCut && !isInCut) {
-        if (!isActive && !(copyRange && isInSelectionRange(copyRange, rowIndex, colIndex))) {
+        if (!isActive && !(copyBounds && inBounds(copyBounds, rowIndex, colIndex))) {
           el.style.outline = '';
         }
       } else if (isInCut && !wasInCut) {

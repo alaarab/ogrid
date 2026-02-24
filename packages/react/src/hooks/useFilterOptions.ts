@@ -77,8 +77,7 @@ export function useFilterOptions(
 
     setFilterOptions(results);
     setLoadingOptions(EMPTY_LOADING);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [stableFields]);
+  }, [stableFields, dataSourceRef]);
 
   useEffect(() => {
     load().catch(() => {});
