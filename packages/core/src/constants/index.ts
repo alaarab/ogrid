@@ -12,4 +12,4 @@ export {
 } from './timing';
 export { Z_INDEX } from './zIndex';
 export type { ZIndexKey } from './zIndex';
-export { FORMULA_REF_COLORS, FORMULA_BAR_CSS } from './formulaBar';
+export { FORMULA_REF_COLORS, FORMULA_BAR_CSS, FORMULA_BAR_STYLES } from './formulaBar';

@@ -2,7 +2,7 @@
   {
     "name": "core",
     "path": "packages/core/dist/esm/index.js",
-    "limit": "20 kB"
+    "limit": "20.5 kB"
   },
   {
     "name": "react",

@@ -17,6 +17,7 @@ import {
   ElementRef,
   effect,
 } from '@angular/core';
+import { handleFormulaBarKeyDown } from '@alaarab/ogrid-core';
 
 @Component({
   selector: 'ogrid-formula-bar',
@@ -131,13 +132,12 @@ export class FormulaBarComponent {
   }
 
   onKeyDown(event: KeyboardEvent): void {
-    if (event.key === 'Enter') {
-      event.preventDefault();
-      this.commit.emit();
-    } else if (event.key === 'Escape') {
-      event.preventDefault();
-      this.cancel.emit();
-    }
+    handleFormulaBarKeyDown(
+      event.key,
+      () => event.preventDefault(),
+      () => this.commit.emit(),
+      () => this.cancel.emit(),
+    );
   }
 
   onClick(): void {

@@ -7,7 +7,7 @@
  * component behavior exactly.
  */
 
-import { FORMULA_BAR_CSS } from '@alaarab/ogrid-core';
+import { FORMULA_BAR_CSS, handleFormulaBarKeyDown } from '@alaarab/ogrid-core';
 
 export interface FormulaBarCallbacks {
   /** Called when the user presses Enter to commit the formula/value. */
@@ -114,13 +114,7 @@ export class FormulaBar {
   // --- Private event handlers (arrow functions for stable `this`) ---
 
   private handleKeyDown = (e: KeyboardEvent): void => {
-    if (e.key === 'Enter') {
-      e.preventDefault();
-      this.callbacks.onCommit();
-    } else if (e.key === 'Escape') {
-      e.preventDefault();
-      this.callbacks.onCancel();
-    }
+    handleFormulaBarKeyDown(e.key, () => e.preventDefault(), this.callbacks.onCommit, this.callbacks.onCancel);
   };
 
   private handleInput = (): void => {

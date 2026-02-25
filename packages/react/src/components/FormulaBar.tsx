@@ -7,7 +7,8 @@
  */
 
 import * as React from 'react';
-import { useRef, useCallback, useEffect } from 'react';
+import { useRef, useEffect } from 'react';
+import { FORMULA_BAR_STYLES, handleFormulaBarKeyDown } from '@alaarab/ogrid-core';
 
 export interface FormulaBarProps {
   /** Active cell reference (e.g. "A1"). */
@@ -25,54 +26,6 @@ export interface FormulaBarProps {
   /** Start editing the formula bar. */
   startEditing: () => void;
 }
-
-const barStyle: React.CSSProperties = {
-  display: 'flex',
-  alignItems: 'center',
-  borderBottom: '1px solid var(--ogrid-border, #e0e0e0)',
-  background: 'var(--ogrid-bg, #fff)',
-  minHeight: 28,
-  fontSize: 13,
-};
-
-const nameBoxStyle: React.CSSProperties = {
-  fontFamily: 'monospace',
-  fontSize: 12,
-  fontWeight: 500,
-  padding: '2px 8px',
-  borderRight: '1px solid var(--ogrid-border, #e0e0e0)',
-  background: 'var(--ogrid-bg, #fff)',
-  color: 'var(--ogrid-fg, #242424)',
-  minWidth: 52,
-  textAlign: 'center',
-  lineHeight: '24px',
-  userSelect: 'none',
-  whiteSpace: 'nowrap',
-};
-
-const fxLabelStyle: React.CSSProperties = {
-  padding: '2px 8px',
-  fontStyle: 'italic',
-  fontWeight: 600,
-  color: 'var(--ogrid-muted-fg, #888)',
-  userSelect: 'none',
-  borderRight: '1px solid var(--ogrid-border, #e0e0e0)',
-  lineHeight: '24px',
-  fontSize: 12,
-};
-
-const inputStyle: React.CSSProperties = {
-  flex: 1,
-  border: 'none',
-  outline: 'none',
-  padding: '2px 8px',
-  fontFamily: 'monospace',
-  fontSize: 12,
-  lineHeight: '24px',
-  background: 'transparent',
-  color: 'var(--ogrid-fg, #242424)',
-  minWidth: 0,
-};
 
 export function FormulaBar({
   cellRef,
@@ -92,40 +45,22 @@ export function FormulaBar({
     }
   }, [isEditing]);
 
-  const handleKeyDown = useCallback((e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === 'Enter') {
-      e.preventDefault();
-      onCommit();
-    } else if (e.key === 'Escape') {
-      e.preventDefault();
-      onCancel();
-    }
-  }, [onCommit, onCancel]);
-
-  const handleChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-    onInputChange(e.target.value);
-  }, [onInputChange]);
-
-  const handleClick = useCallback(() => {
-    if (!isEditing) startEditing();
-  }, [isEditing, startEditing]);
-
   return (
-    <div style={barStyle} role="toolbar" aria-label="Formula bar">
-      <div style={nameBoxStyle} aria-label="Active cell reference">
+    <div style={FORMULA_BAR_STYLES.bar as React.CSSProperties} role="toolbar" aria-label="Formula bar">
+      <div style={FORMULA_BAR_STYLES.nameBox as React.CSSProperties} aria-label="Active cell reference">
         {cellRef ?? '\u2014'}
       </div>
-      <div style={fxLabelStyle} aria-hidden="true">fx</div>
+      <div style={FORMULA_BAR_STYLES.fxLabel as React.CSSProperties} aria-hidden="true">fx</div>
       <input
         ref={inputRef}
         type="text"
-        style={inputStyle}
+        style={FORMULA_BAR_STYLES.input as React.CSSProperties}
         value={formulaText}
         readOnly={!isEditing}
-        onChange={handleChange}
-        onKeyDown={handleKeyDown}
-        onClick={handleClick}
-        onDoubleClick={handleClick}
+        onChange={(e) => onInputChange(e.target.value)}
+        onKeyDown={(e) => handleFormulaBarKeyDown(e.key, () => e.preventDefault(), onCommit, onCancel)}
+        onClick={() => { if (!isEditing) startEditing(); }}
+        onDoubleClick={() => { if (!isEditing) startEditing(); }}
         aria-label="Formula input"
         spellCheck={false}
         autoComplete="off"
