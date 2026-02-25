@@ -267,11 +267,11 @@ export function useDataGridTableOrchestration<T>(
     if (!onActiveCellChangeRef.current) return;
     const ac = interaction.activeCell;
     if (ac) {
-      onActiveCellChangeRef.current(formatCellReference(ac.columnIndex, rowNumberOffset + ac.rowIndex + 1));
+      onActiveCellChangeRef.current(formatCellReference(ac.columnIndex - colOffset, rowNumberOffset + ac.rowIndex + 1));
     } else {
       onActiveCellChangeRef.current(null);
     }
-  }, [interaction.activeCell, rowNumberOffset]);
+  }, [interaction.activeCell, rowNumberOffset, colOffset]);
 
   // ── Column resize ──────────────────────────────────────────────────────
   const { handleResizeStart, handleResizeDoubleClick, getColumnWidth } = useColumnResize<T>({

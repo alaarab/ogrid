@@ -1,30 +1,37 @@
 import React, { useState, useCallback } from 'react';
 import { OGrid } from '@alaarab/ogrid-react-radix';
-import type { ICellValueChangedEvent, IColumnDef } from '@alaarab/ogrid-react-radix';
+import type { ICellValueChangedEvent, IColumnDef, ISheetDef } from '@alaarab/ogrid-react-radix';
 import { LiveDemo } from '../LiveDemo';
 
 interface Row {
   id: string;
-  a: number;
-  b: number;
-  c: number;
+  revenue: number;
+  cost: number;
+  profit: number;
 }
 
 const initialData: Row[] = [
-  { id: 'r1', a: 10, b: 20, c: 0 },
-  { id: 'r2', a: 30, b: 40, c: 0 },
-  { id: 'r3', a: 50, b: 60, c: 0 },
-  { id: 'r4', a: 0, b: 0, c: 0 },
+  { id: 'r1', revenue: 1200, cost: 800, profit: 0 },
+  { id: 'r2', revenue: 3400, cost: 1500, profit: 0 },
+  { id: 'r3', revenue: 2100, cost: 900, profit: 0 },
+  { id: 'r4', revenue: 0, cost: 0, profit: 0 },
 ];
 
 const formulaColumns: IColumnDef<Row>[] = [
-  { columnId: 'a', name: 'A', type: 'numeric', editable: true },
-  { columnId: 'b', name: 'B', type: 'numeric', editable: true },
-  { columnId: 'c', name: 'C', type: 'numeric', editable: true },
+  { columnId: 'revenue', name: 'Revenue', type: 'numeric', editable: true },
+  { columnId: 'cost', name: 'Cost', type: 'numeric', editable: true },
+  { columnId: 'profit', name: 'Profit', type: 'numeric', editable: true },
+];
+
+const sheetDefs: ISheetDef[] = [
+  { id: 'sheet1', name: 'Sheet1' },
+  { id: 'sheet2', name: 'Sheet2' },
+  { id: 'sheet3', name: 'Sheet3' },
 ];
 
 export default function FormulasDemo() {
   const [data, setData] = useState<Row[]>(() => initialData.map((r) => ({ ...r })));
+  const [activeSheet, setActiveSheet] = useState('sheet1');
 
   const handleChange = useCallback((event: ICellValueChangedEvent<Row>) => {
     setData((prev) =>
@@ -35,7 +42,7 @@ export default function FormulasDemo() {
   }, []);
 
   return (
-    <LiveDemo height={320} title="Type =A1+B1 in C1 or =SUM(A1:A3) in A4. Formulas recalculate live.">
+    <LiveDemo height={380} title="Click a cell, then edit in the formula bar. Type =A1+B1 in C1 or =SUM(A1:A3) in A4.">
       <OGrid
         columns={formulaColumns}
         data={data}
@@ -43,7 +50,6 @@ export default function FormulasDemo() {
         editable
         formulas
         onCellValueChanged={handleChange}
-        cellReferences
         initialFormulas={[
           { col: 2, row: 0, formula: '=A1+B1' },
           { col: 2, row: 1, formula: '=A2+B2' },
@@ -52,7 +58,9 @@ export default function FormulasDemo() {
           { col: 1, row: 3, formula: '=SUM(B1:B3)' },
           { col: 2, row: 3, formula: '=SUM(C1:C3)' },
         ]}
-        pagination={false}
+        sheetDefs={sheetDefs}
+        activeSheet={activeSheet}
+        onSheetChange={setActiveSheet}
         statusBar
       />
     </LiveDemo>

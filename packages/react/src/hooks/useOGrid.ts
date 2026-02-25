@@ -8,9 +8,12 @@ import {
   useRef,
 } from 'react';
 
-import { flattenColumns } from '../utils';
-import { validateColumns, validateRowIds } from '@alaarab/ogrid-core';
+import { flattenColumns, getCellValue } from '../utils';
+import { validateColumns, validateRowIds, columnLetterToIndex } from '@alaarab/ogrid-core';
 import { useFormulaEngine } from './useFormulaEngine';
+import { useFormulaBar } from './useFormulaBar';
+import { FormulaBar } from '../components/FormulaBar';
+import { SheetTabs } from '../components/SheetTabs';
 import { useOGridPagination } from './useOGridPagination';
 import { useOGridSorting } from './useOGridSorting';
 import { useOGridFilters } from './useOGridFilters';
@@ -78,6 +81,10 @@ export interface UseOGridLayout {
   emptyState?: { message?: React.ReactNode; render?: () => React.ReactNode };
   sideBarProps: SideBarProps | null;
   fullScreen?: boolean;
+  /** Formula bar element (rendered between toolbar and grid when formulas are enabled). */
+  formulaBar?: React.ReactNode;
+  /** Sheet tabs element (rendered between grid and footer when sheetDefs are provided). */
+  sheetTabs?: React.ReactNode;
 }
 
 /** Filter state. */
@@ -166,6 +173,10 @@ export function useOGrid<T>(
     formulaFunctions,
     namedRanges,
     sheets,
+    sheetDefs,
+    activeSheet,
+    onSheetChange,
+    onSheetAdd,
     'aria-label': ariaLabel,
     'aria-labelledby': ariaLabelledBy,
   } = props;
@@ -494,12 +505,17 @@ export function useOGrid<T>(
   ]);
 
   // --- Formula engine (opt-in, tree-shakeable) ---
+  const [formulaVersion, setFormulaVersion] = useState(0);
+  const wrappedOnFormulaRecalc = useCallback((result: import('@alaarab/ogrid-core').IRecalcResult) => {
+    setFormulaVersion(v => v + 1);
+    onFormulaRecalc?.(result);
+  }, [onFormulaRecalc]);
   const formulaEngine = useFormulaEngine({
     formulas,
     items: dataFetchingState.displayItems,
     flatColumns: columns,
     initialFormulas,
-    onFormulaRecalc,
+    onFormulaRecalc: wrappedOnFormulaRecalc,
     formulaFunctions,
     namedRanges,
     sheets,
@@ -508,12 +524,45 @@ export function useOGrid<T>(
   // --- Assembly ---
   const clearAllFilters = useCallback(() => filtersState.setFilters({}), [filtersState]);
   const isLoadingResolved = (isServerSide && dataFetchingState.serverLoading) || displayLoading;
+  const showRowNumbersResolved = showRowNumbers || cellReferences || formulas;
+  const showColumnLettersResolved = !!(cellReferences || formulas);
+  const showNameBox = !!cellReferences && !formulas; // formula bar has its own name box
+  const showActiveCellChange = !!(cellReferences || formulas);
 
-  // --- Name box (active cell reference) ---
+  // --- Name box / formula bar (active cell reference + coordinates) ---
   const [activeCellRef, setActiveCellRef] = useState<string | null>(null);
+  const [activeCellCoords, setActiveCellCoords] = useState<{ col: number; row: number } | null>(null);
   const onActiveCellChange = useCallback((ref: string | null) => {
     setActiveCellRef(ref);
+    if (ref) {
+      // Parse "A1" → { col: 0, row: 0 }
+      const m = ref.match(/^([A-Z]+)(\d+)$/);
+      if (m) {
+        setActiveCellCoords({ col: columnLetterToIndex(m[1]), row: parseInt(m[2], 10) - 1 });
+      } else {
+        setActiveCellCoords(null);
+      }
+    } else {
+      setActiveCellCoords(null);
+    }
   }, []);
+
+  // --- Formula bar hook (only when formulas are enabled) ---
+  const getRawValue = useCallback((col: number, row: number): unknown => {
+    const items = displayItemsRef.current;
+    const cols = columnsRef.current;
+    if (row < 0 || row >= items.length || col < 0 || col >= cols.length) return undefined;
+    return getCellValue(items[row], cols[col]);
+  }, [displayItemsRef, columnsRef]);
+
+  const formulaBarState = useFormulaBar({
+    activeCol: activeCellCoords?.col ?? null,
+    activeRow: activeCellCoords?.row ?? null,
+    activeCellRef,
+    getFormula: formulaEngine.enabled ? formulaEngine.getFormula : undefined,
+    getRawValue,
+    setFormula: formulaEngine.enabled ? formulaEngine.setFormula : undefined,
+  });
 
   const dataGridProps = useMemo<IOGridDataGridProps<T>>(() => ({
     items: dataFetchingState.displayItems,
@@ -539,10 +588,10 @@ export function useOGrid<T>(
     rowSelection,
     selectedRows: effectiveSelectedRows,
     onSelectionChange: handleSelectionChange,
-    showRowNumbers: showRowNumbers || cellReferences,
-    showColumnLetters: !!cellReferences,
-    showNameBox: !!cellReferences,
-    onActiveCellChange: cellReferences ? onActiveCellChange : undefined,
+    showRowNumbers: showRowNumbersResolved,
+    showColumnLetters: showColumnLettersResolved,
+    showNameBox,
+    onActiveCellChange: showActiveCellChange ? onActiveCellChange : undefined,
     currentPage: paginationState.page,
     pageSize: paginationState.pageSize,
     statusBar: statusBarConfig,
@@ -577,20 +626,23 @@ export function useOGrid<T>(
     getPrecedents: formulaEngine.enabled ? formulaEngine.getPrecedents : undefined,
     getDependents: formulaEngine.enabled ? formulaEngine.getDependents : undefined,
     getAuditTrail: formulaEngine.enabled ? formulaEngine.getAuditTrail : undefined,
+    formulaVersion,
+    formulaReferences: formulaBarState.referencedCells.length > 0 ? formulaBarState.referencedCells : undefined,
   }), [
     dataFetchingState.displayItems, columnsProp, getRowId,
     sortingState.sort.field, sortingState.sort.direction, sortingState.handleSort,
     visibleColumns, columnOrder, onColumnOrderChange, handleColumnResized,
     handleColumnPinned, pinnedOverrides, columnWidthOverrides,
     editable, cellSelection, onCellValueChanged, onUndo, onRedo, canUndo, canRedo,
-    rowSelection, effectiveSelectedRows, handleSelectionChange, showRowNumbers, cellReferences, onActiveCellChange,
+    rowSelection, effectiveSelectedRows, handleSelectionChange,
+    showRowNumbersResolved, showColumnLettersResolved, showNameBox, showActiveCellChange, onActiveCellChange,
     paginationState.page, paginationState.pageSize, statusBarConfig,
     isLoadingResolved, filtersState.filters, filtersState.handleFilterChange,
     filtersState.clientFilterOptions, dataSource, filtersState.loadingFilterOptions,
     layoutMode, suppressHorizontalScroll, stickyHeader, columnReorder, virtualScroll,
     rowHeight, density, ariaLabel, ariaLabelledBy,
     filtersState.hasActiveFilters, clearAllFilters, emptyState,
-    formulas, formulaEngine,
+    formulas, formulaEngine, formulaVersion, formulaBarState.referencedCells,
   ]);
 
   const pagination = useMemo<UseOGridPagination>(() => ({
@@ -611,7 +663,6 @@ export function useOGrid<T>(
     placement: columnChooserPlacement,
   }), [columnChooserColumns, visibleColumns, handleVisibilityChange, setVisibleColumns, columnChooserPlacement]);
 
-  const showNameBox = !!cellReferences;
   const nameBoxEl = useMemo(() => showNameBox ? React.createElement('div', {
     style: NAME_BOX_STYLE,
     'aria-label': 'Active cell reference',
@@ -621,6 +672,31 @@ export function useOGrid<T>(
     ? React.createElement(React.Fragment, null, nameBoxEl, toolbar)
     : toolbar, [showNameBox, nameBoxEl, toolbar]);
 
+  // Formula bar element (only when formulas are enabled)
+  const formulaBarEl = useMemo(() => {
+    if (!formulas) return undefined;
+    return React.createElement(FormulaBar, {
+      cellRef: formulaBarState.cellRef,
+      formulaText: formulaBarState.formulaText,
+      isEditing: formulaBarState.isEditing,
+      onInputChange: formulaBarState.onInputChange,
+      onCommit: formulaBarState.onCommit,
+      onCancel: formulaBarState.onCancel,
+      startEditing: formulaBarState.startEditing,
+    });
+  }, [formulas, formulaBarState.cellRef, formulaBarState.formulaText, formulaBarState.isEditing, formulaBarState.onInputChange, formulaBarState.onCommit, formulaBarState.onCancel, formulaBarState.startEditing]);
+
+  // Sheet tabs element (only when sheetDefs are provided)
+  const sheetTabsEl = useMemo(() => {
+    if (!sheetDefs || sheetDefs.length === 0 || !activeSheet || !onSheetChange) return undefined;
+    return React.createElement(SheetTabs, {
+      sheets: sheetDefs,
+      activeSheet,
+      onSheetChange,
+      onSheetAdd,
+    });
+  }, [sheetDefs, activeSheet, onSheetChange, onSheetAdd]);
+
   const layout = useMemo<UseOGridLayout>(() => ({
     toolbar: resolvedToolbar,
     toolbarBelow,
@@ -628,7 +704,9 @@ export function useOGrid<T>(
     emptyState,
     sideBarProps,
     fullScreen,
-  }), [resolvedToolbar, toolbarBelow, className, emptyState, sideBarProps, fullScreen]);
+    formulaBar: formulaBarEl,
+    sheetTabs: sheetTabsEl,
+  }), [resolvedToolbar, toolbarBelow, className, emptyState, sideBarProps, fullScreen, formulaBarEl, sheetTabsEl]);
 
   const filtersResult = useMemo<UseOGridFilters>(() => ({
     hasActiveFilters: filtersState.hasActiveFilters,
