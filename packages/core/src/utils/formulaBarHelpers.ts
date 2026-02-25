@@ -36,6 +36,25 @@ function parseCellRefCoords(ref: string): { col: number; row: number } | null {
  * @returns Array of references found in the formula.
  */
 /**
+ * Handle Enter/Escape key events in the formula bar input.
+ * Shared across React, Angular, Vue, and JS.
+ */
+export function handleFormulaBarKeyDown(
+  key: string,
+  preventDefault: () => void,
+  onCommit: () => void,
+  onCancel: () => void,
+): void {
+  if (key === 'Enter') {
+    preventDefault();
+    onCommit();
+  } else if (key === 'Escape') {
+    preventDefault();
+    onCancel();
+  }
+}
+
+/**
  * Process a formula bar commit: if the text starts with '=', set as formula;
  * otherwise clear any existing formula and commit as a plain value.
  */

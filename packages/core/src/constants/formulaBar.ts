@@ -20,3 +20,51 @@ export const FORMULA_BAR_CSS = {
   fxLabel: 'padding:2px 8px;font-style:italic;font-weight:600;color:var(--ogrid-muted-fg, #888);user-select:none;border-right:1px solid var(--ogrid-border, #e0e0e0);line-height:24px;font-size:12px;',
   input: 'flex:1;border:none;outline:none;padding:2px 8px;font-family:monospace;font-size:12px;line-height:24px;background:transparent;color:var(--ogrid-fg, #242424);min-width:0;',
 } as const;
+
+/** Style objects for the formula bar — used by React and Vue (CSSProperties-compatible). */
+export const FORMULA_BAR_STYLES = {
+  bar: {
+    display: 'flex',
+    alignItems: 'center',
+    borderBottom: '1px solid var(--ogrid-border, #e0e0e0)',
+    background: 'var(--ogrid-bg, #fff)',
+    minHeight: '28px',
+    fontSize: '13px',
+  },
+  nameBox: {
+    fontFamily: 'monospace',
+    fontSize: '12px',
+    fontWeight: 500,
+    padding: '2px 8px',
+    borderRight: '1px solid var(--ogrid-border, #e0e0e0)',
+    background: 'var(--ogrid-bg, #fff)',
+    color: 'var(--ogrid-fg, #242424)',
+    minWidth: '52px',
+    textAlign: 'center' as const,
+    lineHeight: '24px',
+    userSelect: 'none' as const,
+    whiteSpace: 'nowrap' as const,
+  },
+  fxLabel: {
+    padding: '2px 8px',
+    fontStyle: 'italic',
+    fontWeight: 600,
+    color: 'var(--ogrid-muted-fg, #888)',
+    userSelect: 'none' as const,
+    borderRight: '1px solid var(--ogrid-border, #e0e0e0)',
+    lineHeight: '24px',
+    fontSize: '12px',
+  },
+  input: {
+    flex: 1,
+    border: 'none',
+    outline: 'none',
+    padding: '2px 8px',
+    fontFamily: 'monospace',
+    fontSize: '12px',
+    lineHeight: '24px',
+    background: 'transparent',
+    color: 'var(--ogrid-fg, #242424)',
+    minWidth: 0,
+  },
+} as const;

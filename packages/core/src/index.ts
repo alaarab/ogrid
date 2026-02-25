@@ -204,7 +204,7 @@ export { validateColumns, validateRowIds, validateVirtualScrollConfig } from './
 
 // Utils — cellReference
 export { indexToColumnLetter, formatCellReference } from './utils';
-export { extractFormulaReferences, processFormulaBarCommit, deriveFormulaBarText } from './utils';
+export { extractFormulaReferences, processFormulaBarCommit, deriveFormulaBarText, handleFormulaBarKeyDown } from './utils';
 export type { FormulaReference } from './utils';
 
 // Constants — layout
@@ -228,7 +228,7 @@ export { Z_INDEX } from './constants';
 export type { ZIndexKey } from './constants';
 
 // Constants — formulaBar
-export { FORMULA_REF_COLORS, FORMULA_BAR_CSS } from './constants';
+export { FORMULA_REF_COLORS, FORMULA_BAR_CSS, FORMULA_BAR_STYLES } from './constants';
 
 // Formula system
 export {

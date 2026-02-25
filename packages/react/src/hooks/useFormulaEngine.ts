@@ -6,7 +6,7 @@
  * Tree-shakeable: if `formulas` is false, no formula code is loaded.
  */
 
-import { useRef, useCallback, useMemo, useEffect } from 'react';
+import { useRef, useCallback, useEffect } from 'react';
 import {
   FormulaEngine,
   type IGridDataAccessor,
@@ -187,18 +187,16 @@ export function useFormulaEngine<T>(
     return engineRef.current?.getAuditTrail(col, row) ?? null;
   }, []);
 
-  return useMemo<UseFormulaEngineResult>(() => {
-    if (!formulas) return NOOP_RESULT;
-    return {
-      getFormulaValue,
-      hasFormula,
-      getFormula,
-      setFormula,
-      onCellChanged,
-      getPrecedents,
-      getDependents,
-      getAuditTrail,
-      enabled: true,
-    };
-  }, [formulas, getFormulaValue, hasFormula, getFormula, setFormula, onCellChanged, getPrecedents, getDependents, getAuditTrail]);
+  if (!formulas) return NOOP_RESULT;
+  return {
+    getFormulaValue,
+    hasFormula,
+    getFormula,
+    setFormula,
+    onCellChanged,
+    getPrecedents,
+    getDependents,
+    getAuditTrail,
+    enabled: true,
+  };
 }
