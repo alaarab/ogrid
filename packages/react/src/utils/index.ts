@@ -54,6 +54,7 @@ export {
   buildCellIndex,
   indexToColumnLetter,
   formatCellReference,
+  getScrollTopForRow,
 } from '@alaarab/ogrid-core';
 export type {
   CsvColumn,

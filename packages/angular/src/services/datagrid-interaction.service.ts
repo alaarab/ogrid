@@ -10,6 +10,8 @@ import {
   parseTsvClipboard,
   rangesEqual,
   applyFillValues,
+  applyCellDeletion,
+  getScrollTopForRow,
 } from '@alaarab/ogrid-core';
 import type {
   RowId,
@@ -494,9 +496,13 @@ export class DataGridInteractionHelper<T> {
       case 'PageUp': {
         e.preventDefault();
         let pageSize = 10;
+        let rowHeight = 36;
         if (wrapperEl) {
-          const row = wrapperEl.querySelector('tbody tr') as HTMLElement | null;
-          if (row) pageSize = Math.max(1, Math.floor(wrapperEl.clientHeight / row.offsetHeight));
+          const firstRow = wrapperEl.querySelector('tbody tr') as HTMLElement | null;
+          if (firstRow && firstRow.offsetHeight > 0) {
+            rowHeight = firstRow.offsetHeight;
+            pageSize = Math.max(1, Math.floor(wrapperEl.clientHeight / rowHeight));
+          }
         }
         const pgDir = e.key === 'PageDown' ? 1 : -1;
         const newRowPage = Math.max(0, Math.min(rowIndex + pgDir * pageSize, maxRowIndex));
@@ -511,6 +517,10 @@ export class DataGridInteractionHelper<T> {
           this.setSelectionRange({ startRow: newRowPage, startCol: dataColIndex, endRow: newRowPage, endCol: dataColIndex });
         }
         this.setActiveCell({ rowIndex: newRowPage, columnIndex });
+        // Scroll the new row into view
+        if (wrapperEl) {
+          wrapperEl.scrollTop = getScrollTopForRow(newRowPage, rowHeight, wrapperEl.clientHeight, 'center');
+        }
         break;
       }
       case 'Enter':
@@ -588,20 +598,8 @@ export class DataGridInteractionHelper<T> {
           : null);
         if (range == null) break;
         e.preventDefault();
-        const norm = normalizeSelectionRange(range);
-        for (let r = norm.startRow; r <= norm.endRow; r++) {
-          for (let c = norm.startCol; c <= norm.endCol; c++) {
-            if (r >= items.length || c >= visibleCols.length) continue;
-            const item = items[r];
-            const col = visibleCols[c];
-            const colEditable = col.editable === true || (typeof col.editable === 'function' && col.editable(item));
-            if (!colEditable) continue;
-            const oldValue = getCellValue(item, col);
-            const result = parseValue('', oldValue, item, col);
-            if (!result.valid) continue;
-            wrappedOnCellValueChanged({ item, columnId: col.columnId, oldValue, newValue: result.value, rowIndex: r });
-          }
-        }
+        const deleteEvents = applyCellDeletion(normalizeSelectionRange(range), items, visibleCols);
+        for (const evt of deleteEvents) wrappedOnCellValueChanged(evt);
         break;
       }
       case 'F10':
