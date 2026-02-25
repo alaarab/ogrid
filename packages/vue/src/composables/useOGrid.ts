@@ -9,10 +9,14 @@ import {
   computeNextSortState,
   validateColumns,
   validateRowIds,
+  columnLetterToIndex,
+  getCellValue,
 } from '@alaarab/ogrid-core';
 import { useFilterOptions } from './useFilterOptions';
 import { useFormulaEngine } from './useFormulaEngine';
+import { useFormulaBar } from './useFormulaBar';
 import { useSideBarState } from './useSideBarState';
+import { FormulaBar } from '../components/FormulaBar';
 import type { SideBarProps } from '../components/SideBar';
 import type {
   RowId,
@@ -60,6 +64,8 @@ export interface UseOGridLayout {
   emptyState?: { message?: unknown; render?: () => unknown };
   sideBarProps: SideBarProps | null;
   fullScreen?: boolean;
+  /** Formula bar element (rendered between toolbar and grid). */
+  formulaBar?: unknown;
 }
 
 /** Filter state. */
@@ -403,12 +409,17 @@ export function useOGrid<T>(
 
   // --- Formula engine (opt-in, tree-shakeable) ---
   const formulasRef = computed(() => !!props.value.formulas);
+  const formulaVersionRef = ref(0);
+  const wrappedOnFormulaRecalc = (result: import('@alaarab/ogrid-core').IRecalcResult) => {
+    formulaVersionRef.value += 1;
+    props.value.onFormulaRecalc?.(result);
+  };
   const formulaEngine = useFormulaEngine({
     formulas: formulasRef,
     items: displayItems,
     flatColumns: columns,
     initialFormulas: props.value.initialFormulas,
-    onFormulaRecalc: props.value.onFormulaRecalc,
+    onFormulaRecalc: wrappedOnFormulaRecalc,
     formulaFunctions: props.value.formulaFunctions,
     namedRanges: props.value.namedRanges,
     sheets: props.value.sheets,
@@ -517,11 +528,43 @@ export function useOGrid<T>(
   const clearAllFilters = () => setFilters({});
   const isLoadingResolved = computed(() => (isServerSide.value && loading.value) || displayLoading.value);
 
-  // --- Name box (active cell reference) ---
+  // --- Name box / formula bar (active cell reference + coordinates) ---
   const activeCellRef = ref<string | null>(null);
+  const activeCellCoords = ref<{ col: number; row: number } | null>(null);
   const onActiveCellChange = (cellRef: string | null) => {
     activeCellRef.value = cellRef;
+    if (cellRef) {
+      // Parse "A1" -> { col: 0, row: 0 }
+      const m = cellRef.match(/^([A-Z]+)(\d+)$/);
+      if (m) {
+        activeCellCoords.value = { col: columnLetterToIndex(m[1]), row: parseInt(m[2], 10) - 1 };
+      } else {
+        activeCellCoords.value = null;
+      }
+    } else {
+      activeCellCoords.value = null;
+    }
   };
+
+  // --- Formula bar composable (only meaningful when formulas are enabled) ---
+  const formulaBarActiveCol = computed(() => activeCellCoords.value?.col ?? null);
+  const formulaBarActiveRow = computed(() => activeCellCoords.value?.row ?? null);
+
+  const getRawValue = (col: number, row: number): unknown => {
+    const items = displayItems.value;
+    const cols = columns.value;
+    if (row < 0 || row >= items.length || col < 0 || col >= cols.length) return undefined;
+    return getCellValue(items[row], cols[col]);
+  };
+
+  const formulaBarState = useFormulaBar({
+    activeCol: formulaBarActiveCol,
+    activeRow: formulaBarActiveRow,
+    activeCellRef,
+    getFormula: formulaEngine.enabled.value ? formulaEngine.getFormula : undefined,
+    getRawValue,
+    setFormula: formulaEngine.enabled.value ? formulaEngine.setFormula : undefined,
+  });
 
   // --- Build result objects ---
 
@@ -552,10 +595,10 @@ export function useOGrid<T>(
       rowSelection: p.rowSelection ?? 'none',
       selectedRows: effectiveSelectedRows.value,
       onSelectionChange: handleSelectionChange,
-      showRowNumbers: p.showRowNumbers || p.cellReferences,
-      showColumnLetters: !!p.cellReferences,
-      showNameBox: !!p.cellReferences,
-      onActiveCellChange: p.cellReferences ? onActiveCellChange : undefined,
+      showRowNumbers: p.showRowNumbers || p.cellReferences || p.formulas,
+      showColumnLetters: !!(p.cellReferences || p.formulas),
+      showNameBox: !!(p.cellReferences && !p.formulas), // formula bar includes name box
+      onActiveCellChange: (p.cellReferences || p.formulas) ? onActiveCellChange : undefined,
       currentPage: page.value,
       pageSize: pageSize.value,
       statusBar: statusBarConfig.value,
@@ -582,6 +625,7 @@ export function useOGrid<T>(
         render: p.emptyState?.render,
       },
       formulas: p.formulas,
+      formulaVersion: formulaVersionRef.value,
       ...(formulaEngine.enabled.value ? {
         getFormulaValue: formulaEngine.getFormulaValue,
         hasFormula: formulaEngine.hasFormula,
@@ -613,8 +657,10 @@ export function useOGrid<T>(
   }));
 
   const layout = computed<UseOGridLayout>(() => {
-    const showNameBox = !!props.value.cellReferences;
-    let resolvedToolbar: unknown = props.value.toolbar;
+    const p = props.value;
+    const formulas = !!p.formulas;
+    const showNameBox = !!p.cellReferences && !formulas; // formula bar has its own name box
+    let resolvedToolbar: unknown = p.toolbar;
     if (showNameBox) {
       const nameBoxEl = h('div', {
         style: {
@@ -635,13 +681,28 @@ export function useOGrid<T>(
       }, activeCellRef.value ?? '\u2014');
       resolvedToolbar = [nameBoxEl, resolvedToolbar];
     }
+
+    // Formula bar element (only when formulas are enabled)
+    const formulaBarEl = formulas
+      ? h(FormulaBar, {
+          cellRef: formulaBarState.cellRef.value,
+          formulaText: formulaBarState.formulaText.value,
+          isEditing: formulaBarState.isEditing.value,
+          onInputChange: formulaBarState.onInputChange,
+          onCommit: formulaBarState.onCommit,
+          onCancel: formulaBarState.onCancel,
+          onStartEditing: formulaBarState.startEditing,
+        })
+      : undefined;
+
     return {
       toolbar: resolvedToolbar,
-      toolbarBelow: props.value.toolbarBelow,
-      className: props.value.className,
-      emptyState: props.value.emptyState,
+      toolbarBelow: p.toolbarBelow,
+      className: p.className,
+      emptyState: p.emptyState,
       sideBarProps: sideBarProps.value,
-      fullScreen: props.value.fullScreen,
+      fullScreen: p.fullScreen,
+      formulaBar: formulaBarEl,
     };
   });
 
