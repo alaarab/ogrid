@@ -141,6 +141,100 @@ describe('useKeyboardNavigation', () => {
     expect(e.preventDefault).toHaveBeenCalled();
   });
 
+  describe('PageDown / PageUp', () => {
+    // 15 rows so PageDown (fallback pageSize=10) can move meaningfully
+    type PgItem = { id: string; name: string };
+    const pgItems: PgItem[] = Array.from({ length: 15 }, (_, i) => ({ id: String(i), name: `Row${i}` }));
+    const pgCols = [
+      { columnId: 'name', name: 'Name' },
+    ] as import('../../types').IColumnDef<PgItem>[];
+
+    function makePgParams(activeRow: number, sel?: any) {
+      return makeParams({
+        items: pgItems,
+        visibleCols: pgCols,
+        visibleColumnCount: 1,
+        activeCell: { rowIndex: activeRow, columnIndex: 0 },
+        setActiveCell: jest.fn(),
+        setSelectionRange: jest.fn(),
+        selectionRange: sel ?? null,
+        getRowId: (item: PgItem) => item.id,
+      });
+    }
+
+    function firePgKey(handler: (e: React.KeyboardEvent) => void, key: string, opts: { shift?: boolean } = {}) {
+      const e = {
+        key,
+        preventDefault: jest.fn(),
+        ctrlKey: false,
+        metaKey: false,
+        shiftKey: opts.shift ?? false,
+      } as unknown as React.KeyboardEvent;
+      act(() => handler(e));
+      return e;
+    }
+
+    it('PageDown moves active cell down by pageSize (fallback 10)', () => {
+      const p = makePgParams(0);
+      const { result } = renderHook(() => useKeyboardNavigation(p));
+      firePgKey(result.current.handleGridKeyDown, 'PageDown');
+      expect(p.handlers.setActiveCell).toHaveBeenCalledWith({ rowIndex: 10, columnIndex: 0 });
+    });
+
+    it('PageDown clamps to last row', () => {
+      const p = makePgParams(10);
+      const { result } = renderHook(() => useKeyboardNavigation(p));
+      firePgKey(result.current.handleGridKeyDown, 'PageDown');
+      expect(p.handlers.setActiveCell).toHaveBeenCalledWith({ rowIndex: 14, columnIndex: 0 });
+    });
+
+    it('PageUp moves active cell up by pageSize', () => {
+      const p = makePgParams(14);
+      const { result } = renderHook(() => useKeyboardNavigation(p));
+      firePgKey(result.current.handleGridKeyDown, 'PageUp');
+      expect(p.handlers.setActiveCell).toHaveBeenCalledWith({ rowIndex: 4, columnIndex: 0 });
+    });
+
+    it('PageUp clamps to first row', () => {
+      const p = makePgParams(3);
+      const { result } = renderHook(() => useKeyboardNavigation(p));
+      firePgKey(result.current.handleGridKeyDown, 'PageUp');
+      expect(p.handlers.setActiveCell).toHaveBeenCalledWith({ rowIndex: 0, columnIndex: 0 });
+    });
+
+    it('Shift+PageDown extends selection downward', () => {
+      const p = makePgParams(2);
+      const { result } = renderHook(() => useKeyboardNavigation(p));
+      firePgKey(result.current.handleGridKeyDown, 'PageDown', { shift: true });
+      expect(p.handlers.setSelectionRange).toHaveBeenCalledWith(
+        expect.objectContaining({ startRow: 2, endRow: 12 })
+      );
+    });
+
+    it('Shift+PageUp extends selection upward', () => {
+      const p = makePgParams(14);
+      const { result } = renderHook(() => useKeyboardNavigation(p));
+      firePgKey(result.current.handleGridKeyDown, 'PageUp', { shift: true });
+      expect(p.handlers.setSelectionRange).toHaveBeenCalledWith(
+        expect.objectContaining({ startRow: 14, endRow: 4 })
+      );
+    });
+
+    it('PageDown prevents default', () => {
+      const p = makePgParams(0);
+      const { result } = renderHook(() => useKeyboardNavigation(p));
+      const e = firePgKey(result.current.handleGridKeyDown, 'PageDown');
+      expect(e.preventDefault).toHaveBeenCalled();
+    });
+
+    it('PageDown when no active cell sets initial cell', () => {
+      const p = makeParams({ items: pgItems, visibleCols: pgCols, visibleColumnCount: 1, setActiveCell: jest.fn() });
+      const { result } = renderHook(() => useKeyboardNavigation(p));
+      firePgKey(result.current.handleGridKeyDown, 'PageDown');
+      expect(p.handlers.setActiveCell).toHaveBeenCalledWith({ rowIndex: 0, columnIndex: 0 });
+    });
+  });
+
   describe('Ctrl+Arrow (Excel-style jump)', () => {
     // 6 rows, 3 columns — some cells empty to test data-boundary navigation
     // Row 0: A, 1, X
