@@ -1,5 +1,5 @@
 import { useCallback, useRef } from 'react';
-import { getCellValue, computeTabNavigation, computeArrowNavigation, applyCellDeletion } from '../utils';
+import { getCellValue, computeTabNavigation, computeArrowNavigation, applyCellDeletion, getScrollTopForRow } from '../utils';
 import type {
   RowId,
   IActiveCell,
@@ -204,9 +204,13 @@ export function useKeyboardNavigation<T>(
           e.preventDefault();
           const wrapper = wrapperRef.current;
           let pageSize = 10;
+          let rowHeight = 36;
           if (wrapper) {
-            const row = wrapper.querySelector('tbody tr') as HTMLElement | null;
-            if (row) pageSize = Math.max(1, Math.floor(wrapper.clientHeight / row.offsetHeight));
+            const firstRow = wrapper.querySelector('tbody tr') as HTMLElement | null;
+            if (firstRow && firstRow.offsetHeight > 0) {
+              rowHeight = firstRow.offsetHeight;
+              pageSize = Math.max(1, Math.floor(wrapper.clientHeight / rowHeight));
+            }
           }
           const pgDirection = e.key === 'PageDown' ? 1 : -1;
           const newRowPage = Math.max(0, Math.min(rowIndex + pgDirection * pageSize, maxRowIndex));
@@ -226,6 +230,10 @@ export function useKeyboardNavigation<T>(
             });
           }
           setActiveCell({ rowIndex: newRowPage, columnIndex });
+          // Scroll the new row into view
+          if (wrapper) {
+            wrapper.scrollTop = getScrollTopForRow(newRowPage, rowHeight, wrapper.clientHeight, 'center');
+          }
           break;
         }
         case 'Enter':
