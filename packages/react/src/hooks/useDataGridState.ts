@@ -300,6 +300,11 @@ export function useDataGridState<T>(
     setContextMenuPosition,
     wrapperRef,
     onKeyDown,
+    formulas: props.formulas,
+    flatColumns: layoutResult.layout.flatColumns,
+    getFormula: props.getFormula,
+    hasFormula: props.hasFormula,
+    setFormula: props.setFormula,
   });
 
   const {
@@ -323,6 +328,10 @@ export function useDataGridState<T>(
     setActiveCell,
     setSelectionRange,
     colOffset,
+    setFormula: props.setFormula,
+    onFormulaCellChanged: props.onFormulaCellChanged,
+    formulas: props.formulas,
+    flatColumns: layoutResult.layout.flatColumns,
   });
 
   // --- 6. View models ---

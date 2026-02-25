@@ -18,24 +18,51 @@ export function buildCsvHeader(columns: CsvColumn[]): string {
   return columns.map((c) => escapeCsvValue(c.name)).join(',');
 }
 
+export interface FormulaExportOptions {
+  getFormula?: (col: number, row: number) => string | undefined;
+  hasFormula?: (col: number, row: number) => boolean;
+  /** Map from columnId to flat column index */
+  columnIdToIndex?: Map<string, number>;
+  /** Export mode: 'values' (default) exports computed results, 'formulas' exports formula strings */
+  exportMode?: 'values' | 'formulas';
+}
+
 export function buildCsvRows<T>(
   items: T[],
   columns: CsvColumn[],
-  getValue: (item: T, columnId: string) => string
+  getValue: (item: T, columnId: string) => unknown,
+  formulaOptions?: FormulaExportOptions
 ): string[] {
-  return items.map((item) =>
-    columns.map((c) => escapeCsvValue(getValue(item, c.columnId))).join(',')
+  return items.map((item, rowIdx) =>
+    columns.map((col) => {
+      // If exporting formulas and cell has a formula, use formula string
+      if (
+        formulaOptions?.exportMode === 'formulas' &&
+        formulaOptions.hasFormula &&
+        formulaOptions.getFormula &&
+        formulaOptions.columnIdToIndex
+      ) {
+        const colIdx = formulaOptions.columnIdToIndex.get(col.columnId);
+        if (colIdx !== undefined && formulaOptions.hasFormula(colIdx, rowIdx)) {
+          const formula = formulaOptions.getFormula(colIdx, rowIdx);
+          if (formula) return escapeCsvValue(formula);
+        }
+      }
+      // Default: export computed value
+      return escapeCsvValue(getValue(item, col.columnId));
+    }).join(',')
   );
 }
 
 export function exportToCsv<T>(
   items: T[],
   columns: CsvColumn[],
-  getValue: (item: T, columnId: string) => string,
-  filename?: string
+  getValue: (item: T, columnId: string) => unknown,
+  filename?: string,
+  formulaOptions?: FormulaExportOptions
 ): void {
   const header = buildCsvHeader(columns);
-  const rows = buildCsvRows(items, columns, getValue);
+  const rows = buildCsvRows(items, columns, getValue, formulaOptions);
   const csv = [header, ...rows].join('\n');
   triggerCsvDownload(csv, filename ?? `export_${new Date().toISOString().slice(0, 10)}.csv`);
 }

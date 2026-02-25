@@ -254,7 +254,10 @@
   content-visibility: auto;
 }
 
-.activeCellContent {
+// Qualify with .tableWrapper to raise specificity above host-page focus resets
+// (e.g. Docusaurus `body:not(.navigation-with-keyboard) :not(input):focus { outline: none }`
+// has specificity (0,2,2). We need (0,3,0) or higher to beat it).
+.tableWrapper .activeCellContent.activeCellContent {
   outline: 2px solid var(--ogrid-selection-color, #217346);
   outline-offset: -1px;
   z-index: var(--ogrid-z-active-cell, 2);
@@ -263,7 +266,7 @@
   background: var(--ogrid-active-cell-bg, rgba(0, 0, 0, 0.02));
 }
 
-.editingCellContent {
+.tableWrapper .editingCellContent.editingCellContent {
   width: 100%;
   height: 100%;
   display: flex;
@@ -296,15 +299,14 @@
 }
 
 // Hide active-cell outline during drag — the overlay border handles the range border
-.activeCellContent:global([data-drag-anchor]),
-.activeCellContent:global([data-drag-range]) {
+.tableWrapper .activeCellContent.activeCellContent:global([data-drag-anchor]),
+.tableWrapper .activeCellContent.activeCellContent:global([data-drag-range]) {
   outline: none;
 }
 
-// Hide active-cell outline when inside a completed selection range (Excel behavior).
-// The range overlay border is sufficient; the active cell is distinguished by its
-// white background (no green tint) vs. the dimmed range cells.
-.activeCellContent.inRange {
+// Active cell inside a multi-cell selection: hide green outline (Excel behavior).
+// Single-cell clicks never set inRange, so this only applies to multi-cell drags.
+.tableWrapper .activeCellContent.activeCellContent.inRange {
   outline: none;
   background: var(--ogrid-bg, #fff);
 }

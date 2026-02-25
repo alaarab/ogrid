@@ -20,6 +20,7 @@ function createBaseConfig(displayName) {
         'ts-jest',
         {
           useESM: false,
+          isolatedModules: true, // Skip type-checking — build handles that. Saves ~40% memory per worker.
           tsconfig: {
             esModuleInterop: true,
             allowSyntheticDefaultImports: true,
@@ -32,6 +33,7 @@ function createBaseConfig(displayName) {
     },
     setupFilesAfterEnv: ['<rootDir>/../../jest.setup.js'],
     testTimeout: 10000,
+    maxWorkers: 4, // Cap workers to limit memory — 4 workers × ~300MB ≈ 1.2GB per package
     coverageThreshold: {
       global: {
         branches: 70,

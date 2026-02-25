@@ -33,6 +33,12 @@ export const InlineCellEditor = createInlineCellEditor({
       dateFormat: 'yy-mm-dd',
       showIcon: false,
       style: { width: '100%' },
+      onVnodeMounted: (vnode: unknown) => {
+        try {
+          const node = vnode as { component?: { proxy?: { show?: () => void } } };
+          node.component?.proxy?.show?.();
+        } catch { /* PrimeVue version may not support programmatic show */ }
+      },
       'onUpdate:modelValue': (v: Date | null) => {
         if (v) {
           onChange(v.toISOString().slice(0, 10));

@@ -274,7 +274,11 @@ import { PopoverCellEditorComponent } from './popover-cell-editor.component';
                               <div
                                 [attr.data-row-index]="rowIndex"
                                 [attr.data-col-index]="descriptor.globalColIndex"
+                                [attr.data-active-cell]="descriptor.isActive ? 'true' : null"
+                                [attr.data-in-range]="descriptor.isInRange ? 'true' : null"
+                                [attr.tabindex]="descriptor.isActive ? 0 : -1"
                                 (mousedown)="onCellMouseDown($event, rowIndex, descriptor.globalColIndex)"
+                                (click)="onCellClick(rowIndex, descriptor.globalColIndex)"
                                 (dblclick)="descriptor.canEditAny ? onCellDblClick(descriptor.rowId, col.columnId) : null"
                                 (contextmenu)="onCellContextMenu($event)"
                                 class="ogrid-cell-content"
@@ -283,7 +287,7 @@ import { PopoverCellEditorComponent } from './popover-cell-editor.component';
                                 [style.outline]="descriptor.isActive && !descriptor.isInRange ? '2px solid var(--ogrid-selection, #217346)' : null"
                                 [style.outline-offset]="descriptor.isActive && !descriptor.isInRange ? '-2px' : null"
                               >
-                                <span [style]="resolveCellStyleFn(col, item)">{{ resolveCellContent(col, item, descriptor.displayValue) }}</span>
+                                <span [style]="resolveCellStyleFn(col, item, descriptor.displayValue)">{{ resolveCellContent(col, item, descriptor.displayValue) }}</span>
                                 @if (descriptor.canEditAny && descriptor.isSelectionEndCell) {
                                   <div
                                     (mousedown)="onFillHandleMouseDown($event)"

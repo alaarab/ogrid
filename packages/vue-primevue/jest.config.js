@@ -5,6 +5,7 @@ module.exports = {
   transform: {
     '^.+\\.tsx?$': ['ts-jest', {
       useESM: false,
+      isolatedModules: true,
       tsconfig: {
         esModuleInterop: true,
         allowSyntheticDefaultImports: true,

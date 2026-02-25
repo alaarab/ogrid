@@ -10,6 +10,7 @@ import type { RowId, UserLike, IFilters, FilterValue } from '../types/dataGridTy
 import { getCellValue, isColumnEditable } from './cellValue';
 import { isInSelectionRange } from '../types/dataGridTypes';
 import { isFilterConfig } from './ogridHelpers';
+import { FormulaError } from '../formula/types';
 
 // ---------------------------------------------------------------------------
 // Header filter config
@@ -347,8 +348,13 @@ function computeCellDescriptor<T>(
     !input.isDragging &&
     input.activeCell?.rowIndex === rowIndex &&
     input.activeCell?.columnIndex === globalColIndex;
+  const isSingleCellRange =
+    input.selectionRange != null &&
+    input.selectionRange.startRow === input.selectionRange.endRow &&
+    input.selectionRange.startCol === input.selectionRange.endCol;
   const isInRange =
     input.selectionRange != null &&
+    !isSingleCellRange &&
     isInSelectionRange(input.selectionRange, rowIndex, colIdx);
   const isInCutRange =
     input.cutRange != null &&
@@ -439,6 +445,10 @@ export function resolveCellDisplayContent<T>(
   item: T,
   displayValue: unknown
 ): unknown {
+  // Formula errors display as their error type string (e.g. "#DIV/0!")
+  if (displayValue instanceof FormulaError) {
+    return displayValue.toString();
+  }
   const c = col as IColumnDefWithDisplay<T>;
   if (c.renderCell && typeof c.renderCell === 'function') {
     return c.renderCell(item);
@@ -457,14 +467,20 @@ export function resolveCellDisplayContent<T>(
 
 /**
  * Resolves the cellStyle from a column def, handling both function and static values.
+ * When displayValue is a FormulaError, merges red error color styling.
  */
 export function resolveCellStyle<T>(
   col: IColumnDef<T>,
-  item: T
+  item: T,
+  displayValue?: unknown
 ): Record<string, string> | undefined {
   const c = col as IColumnDefWithDisplay<T>;
-  if (!c.cellStyle) return undefined;
-  return typeof c.cellStyle === 'function' ? c.cellStyle(item) : c.cellStyle as Record<string, string>;
+  const isError = displayValue instanceof FormulaError;
+  const base = c.cellStyle ? (typeof c.cellStyle === 'function' ? c.cellStyle(item) : c.cellStyle) : undefined;
+  if (isError) {
+    return { ...base, color: 'var(--ogrid-formula-error-color, #d32f2f)' } as Record<string, string>;
+  }
+  return base;
 }
 
 /**

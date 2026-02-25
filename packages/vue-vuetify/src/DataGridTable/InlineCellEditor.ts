@@ -21,6 +21,10 @@ export const InlineCellEditor = createInlineCellEditor({
       type: 'date',
       value,
       style: { width: '100%', height: '100%', border: 'none', outline: 'none', padding: '0 4px', fontSize: 'inherit' },
+      onVnodeMounted: (vnode: { el: unknown }) => {
+        const el = vnode.el as HTMLInputElement | null;
+        if (el) { el.focus(); try { el.showPicker(); } catch { /* older browsers */ } }
+      },
       onKeydown: (e: KeyboardEvent) => {
         if (e.key === 'Enter') { e.preventDefault(); onChange((e.target as HTMLInputElement).value); }
         if (e.key === 'Escape') { e.preventDefault(); onCancel(); }

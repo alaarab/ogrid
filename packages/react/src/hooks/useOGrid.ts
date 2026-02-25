@@ -10,6 +10,7 @@ import {
 
 import { flattenColumns } from '../utils';
 import { validateColumns, validateRowIds } from '@alaarab/ogrid-core';
+import { useFormulaEngine } from './useFormulaEngine';
 import { useOGridPagination } from './useOGridPagination';
 import { useOGridSorting } from './useOGridSorting';
 import { useOGridFilters } from './useOGridFilters';
@@ -159,6 +160,12 @@ export function useOGrid<T>(
     rowHeight,
     density = 'normal',
     workerSort,
+    formulas,
+    initialFormulas,
+    onFormulaRecalc,
+    formulaFunctions,
+    namedRanges,
+    sheets,
     'aria-label': ariaLabel,
     'aria-labelledby': ariaLabelledBy,
   } = props;
@@ -486,6 +493,18 @@ export function useOGrid<T>(
     filterableColumns, filtersState.filters, filtersState.handleFilterChange, filtersState.clientFilterOptions,
   ]);
 
+  // --- Formula engine (opt-in, tree-shakeable) ---
+  const formulaEngine = useFormulaEngine({
+    formulas,
+    items: dataFetchingState.displayItems,
+    flatColumns: columns,
+    initialFormulas,
+    onFormulaRecalc,
+    formulaFunctions,
+    namedRanges,
+    sheets,
+  });
+
   // --- Assembly ---
   const clearAllFilters = useCallback(() => filtersState.setFilters({}), [filtersState]);
   const isLoadingResolved = (isServerSide && dataFetchingState.serverLoading) || displayLoading;
@@ -549,6 +568,15 @@ export function useOGrid<T>(
       message: emptyState?.message,
       render: emptyState?.render,
     },
+    formulas,
+    getFormulaValue: formulaEngine.enabled ? formulaEngine.getFormulaValue : undefined,
+    hasFormula: formulaEngine.enabled ? formulaEngine.hasFormula : undefined,
+    getFormula: formulaEngine.enabled ? formulaEngine.getFormula : undefined,
+    setFormula: formulaEngine.enabled ? formulaEngine.setFormula : undefined,
+    onFormulaCellChanged: formulaEngine.enabled ? formulaEngine.onCellChanged : undefined,
+    getPrecedents: formulaEngine.enabled ? formulaEngine.getPrecedents : undefined,
+    getDependents: formulaEngine.enabled ? formulaEngine.getDependents : undefined,
+    getAuditTrail: formulaEngine.enabled ? formulaEngine.getAuditTrail : undefined,
   }), [
     dataFetchingState.displayItems, columnsProp, getRowId,
     sortingState.sort.field, sortingState.sort.direction, sortingState.handleSort,
@@ -562,6 +590,7 @@ export function useOGrid<T>(
     layoutMode, suppressHorizontalScroll, stickyHeader, columnReorder, virtualScroll,
     rowHeight, density, ariaLabel, ariaLabelledBy,
     filtersState.hasActiveFilters, clearAllFilters, emptyState,
+    formulas, formulaEngine,
   ]);
 
   const pagination = useMemo<UseOGridPagination>(() => ({

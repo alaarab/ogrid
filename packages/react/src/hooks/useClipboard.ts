@@ -14,6 +14,16 @@ export interface UseClipboardParams<T> {
   onCellValueChanged: ((event: ICellValueChangedEvent<T>) => void) | undefined;
   beginBatch?: () => void;
   endBatch?: () => void;
+  /** When true, enables formula-aware copy/paste. */
+  formulas?: boolean;
+  /** Flat (unfiltered) column list used to map visible col to flat col index. */
+  flatColumns?: IColumnDef<T>[];
+  /** Returns the formula string for a flat column + row, or undefined if none. */
+  getFormula?: (col: number, row: number) => string | undefined;
+  /** Returns true if a flat column + row has a formula. */
+  hasFormula?: (col: number, row: number) => boolean;
+  /** Sets or clears a formula for a flat column + row. */
+  setFormula?: (col: number, row: number, formula: string | null) => void;
 }
 
 export interface UseClipboardResult {
@@ -47,6 +57,11 @@ export function useClipboard<T>(params: UseClipboardParams<T>): UseClipboardResu
   const activeCellRef = useLatestRef(params.activeCell);
   const editableRef = useLatestRef(params.editable);
   const onCellValueChangedRef = useLatestRef(params.onCellValueChanged);
+  const formulasRef = useLatestRef(params.formulas);
+  const flatColumnsRef = useLatestRef(params.flatColumns);
+  const getFormulaRef = useLatestRef(params.getFormula);
+  const hasFormulaRef = useLatestRef(params.hasFormula);
+  const setFormulaRef = useLatestRef(params.setFormula);
 
   const cutRangeRef = useRef<ISelectionRange | null>(null);
   const [cutRange, setCutRange] = useState<ISelectionRange | null>(null);
@@ -70,11 +85,19 @@ export function useClipboard<T>(params: UseClipboardParams<T>): UseClipboardResu
     const range = getEffectiveRange();
     if (range == null) return;
     const norm = normalizeSelectionRange(range);
-    const tsv = formatSelectionAsTsv(itemsRef.current, visibleColsRef.current, norm);
+    const formulaOptions = formulasRef.current && flatColumnsRef.current
+      ? {
+          colOffset,
+          flatColumns: flatColumnsRef.current,
+          getFormula: getFormulaRef.current,
+          hasFormula: hasFormulaRef.current,
+        }
+      : undefined;
+    const tsv = formatSelectionAsTsv(itemsRef.current, visibleColsRef.current, norm, formulaOptions);
     internalClipboardRef.current = tsv;
     setCopyRange(norm);
     void navigator.clipboard.writeText(tsv).catch(() => {});
-  }, [getEffectiveRange, itemsRef, visibleColsRef]);
+  }, [getEffectiveRange, itemsRef, visibleColsRef, formulasRef, flatColumnsRef, getFormulaRef, hasFormulaRef, colOffset]);
 
   const handleCut = useCallback(() => {
     if (editableRef.current === false) return;
@@ -111,8 +134,15 @@ export function useClipboard<T>(params: UseClipboardParams<T>): UseClipboardResu
     const items = itemsRef.current;
     const visibleCols = visibleColsRef.current;
     const parsedRows = parseTsvClipboard(text);
+    const formulaOptions = formulasRef.current && flatColumnsRef.current
+      ? {
+          colOffset,
+          flatColumns: flatColumnsRef.current,
+          setFormula: setFormulaRef.current,
+        }
+      : undefined;
     beginBatch?.();
-    const pasteEvents = applyPastedValues(parsedRows, anchorRow, anchorCol, items, visibleCols);
+    const pasteEvents = applyPastedValues(parsedRows, anchorRow, anchorCol, items, visibleCols, formulaOptions);
     for (const evt of pasteEvents) onCellValueChanged(evt);
     if (cutRangeRef.current) {
       const cutEvents = applyCutClear(cutRangeRef.current, items, visibleCols);
@@ -122,7 +152,7 @@ export function useClipboard<T>(params: UseClipboardParams<T>): UseClipboardResu
     }
     endBatch?.();
     setCopyRange(null);
-  }, [getEffectiveRange, itemsRef, visibleColsRef, editableRef, onCellValueChangedRef, beginBatch, endBatch]);
+  }, [getEffectiveRange, itemsRef, visibleColsRef, editableRef, onCellValueChangedRef, beginBatch, endBatch, formulasRef, flatColumnsRef, setFormulaRef, colOffset]);
 
   const clearClipboardRanges = useCallback(() => {
     setCopyRange(null);
