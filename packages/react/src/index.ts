@@ -44,6 +44,7 @@ export type {
   IDateFilterValue,
   IVirtualScrollConfig,
   IColumnReorderConfig,
+  ISheetDef,
 } from './types';
 export { toUserLike, isInSelectionRange, normalizeSelectionRange } from './types';
 
@@ -82,6 +83,7 @@ export {
   useDataGridTableOrchestration,
   useColumnMeta,
   useFormulaEngine,
+  useFormulaBar,
 } from './hooks';
 export type {
   UseFilterOptionsResult,
@@ -154,6 +156,8 @@ export type {
   ColumnMetaResult,
   UseFormulaEngineParams,
   UseFormulaEngineResult,
+  UseFormulaBarParams,
+  UseFormulaBarResult,
 } from './hooks';
 
 // Constants
@@ -189,6 +193,12 @@ export { GridContextMenu } from './components/GridContextMenu';
 export type { GridContextMenuProps, GridContextMenuClassNames } from './components/GridContextMenu';
 export { MarchingAntsOverlay } from './components/MarchingAntsOverlay';
 export type { MarchingAntsOverlayProps } from './components/MarchingAntsOverlay';
+export { FormulaBar } from './components/FormulaBar';
+export type { FormulaBarProps } from './components/FormulaBar';
+export { FormulaRefOverlay } from './components/FormulaRefOverlay';
+export type { FormulaRefOverlayProps } from './components/FormulaRefOverlay';
+export { SheetTabs } from './components/SheetTabs';
+export type { SheetTabsProps } from './components/SheetTabs';
 export { SideBar } from './components/SideBar';
 export type { SideBarProps, SideBarFilterColumn } from './components/SideBar';
 export { BaseColumnHeaderMenu } from './components/BaseColumnHeaderMenu';

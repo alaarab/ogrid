@@ -9,7 +9,12 @@ import {
   computeNextSortState,
   validateColumns,
   validateRowIds,
+  columnLetterToIndex,
+  getCellValue,
+  extractFormulaReferences,
+  deriveFormulaBarText,
 } from '@alaarab/ogrid-core';
+import type { FormulaReference } from '@alaarab/ogrid-core';
 import type {
   RowId,
   IOGridApi,
@@ -62,6 +67,18 @@ export interface OGridColumnChooser {
 export interface OGridFilters {
   hasActiveFilters: boolean;
   setFilters: (f: IFilters) => void;
+}
+
+/** Formula bar state and handlers. */
+export interface OGridFormulaBarState {
+  cellRef: string | null;
+  formulaText: string;
+  isEditing: boolean;
+  onInputChange: (text: string) => void;
+  onCommit: () => void;
+  onCancel: () => void;
+  startEditing: () => void;
+  referencedCells: FormulaReference[];
 }
 
 /** Side bar state. */
@@ -155,13 +172,32 @@ export class OGridService<T> {
   /** Active cell reference string (e.g. 'A1') updated by DataGridTable when cellReferences is enabled. */
   readonly activeCellRef = signal<string | null>(null);
 
-  /** Stable callback passed to DataGridTable to update activeCellRef. */
+  /** Active cell coordinates (0-based col/row). */
+  readonly activeCellCoords = signal<{ col: number; row: number } | null>(null);
+
+  /** Stable callback passed to DataGridTable to update activeCellRef + coords. */
   private readonly handleActiveCellChange = (ref: string | null) => {
     this.activeCellRef.set(ref);
+    if (ref) {
+      const m = ref.match(/^([A-Z]+)(\d+)$/);
+      if (m) {
+        this.activeCellCoords.set({ col: columnLetterToIndex(m[1]), row: parseInt(m[2], 10) - 1 });
+      } else {
+        this.activeCellCoords.set(null);
+      }
+    } else {
+      this.activeCellCoords.set(null);
+    }
   };
+
+  // --- Formula bar state ---
+  private readonly formulaBarEditing = signal(false);
+  private readonly formulaBarEditText = signal('');
 
   // --- Formula engine ---
   private readonly formulaService = new FormulaEngineService<T>();
+  /** Monotonic counter incremented on formula recalculation — drives cache invalidation. */
+  readonly formulaVersion = signal(0);
 
   // Stable formula method references for dataGridProps (avoid per-recompute arrow functions)
   private readonly getFormulaValueFn = (col: number, row: number) => this.formulaService.getValue(col, row);
@@ -356,6 +392,52 @@ export class OGridService<T> {
     close: () => this.sideBarActivePanel.set(null),
   }));
 
+  // --- Formula bar derived state ---
+
+  /** Display text derived from active cell (formula string or raw value). */
+  private readonly formulaBarDisplayText = computed(() => {
+    const coords = this.activeCellCoords();
+    if (!coords) return '';
+    const getFormula = this.formulaService.enabled()
+      ? (c: number, r: number) => this.formulaService.getFormula(c, r)
+      : undefined;
+    const items = this.displayItems();
+    const cols = this.columns();
+    const getRawValue = (c: number, r: number): unknown => {
+      if (r < 0 || r >= items.length || c < 0 || c >= cols.length) return undefined;
+      return getCellValue(items[r], cols[c]);
+    };
+    return deriveFormulaBarText(coords.col, coords.row, getFormula, getRawValue);
+  });
+
+  /** Formula text shown in the bar: edit text when editing, display text otherwise. */
+  readonly formulaBarText = computed(() =>
+    this.formulaBarEditing() ? this.formulaBarEditText() : this.formulaBarDisplayText(),
+  );
+
+  /** References extracted from the current formula text (for highlighting). */
+  readonly formulaBarReferences = computed(() =>
+    extractFormulaReferences(this.formulaBarText()),
+  );
+
+  // Stable formula bar callbacks (avoid new closures per computed)
+  private readonly formulaBarOnInputChangeFn = (text: string) => { this.formulaBarEditText.set(text); };
+  private readonly formulaBarOnCommitFn = () => { this.commitFormulaBar(); };
+  private readonly formulaBarOnCancelFn = () => { this.cancelFormulaBar(); };
+  private readonly formulaBarStartEditingFn = () => { this.startFormulaBarEditing(); };
+
+  /** Aggregate formula bar state for template consumption. */
+  readonly formulaBarState = computed<OGridFormulaBarState>(() => ({
+    cellRef: this.activeCellRef(),
+    formulaText: this.formulaBarText(),
+    isEditing: this.formulaBarEditing(),
+    onInputChange: this.formulaBarOnInputChangeFn,
+    onCommit: this.formulaBarOnCommitFn,
+    onCancel: this.formulaBarOnCancelFn,
+    startEditing: this.formulaBarStartEditingFn,
+    referencedCells: this.formulaBarReferences(),
+  }));
+
   // --- Pre-computed stable callback references for dataGridProps ---
   // These avoid recreating arrow functions on every dataGridProps recomputation.
   private readonly handleSortFn = (columnKey: string, direction?: 'asc' | 'desc' | null) => this.handleSort(columnKey, direction);
@@ -396,10 +478,10 @@ export class OGridService<T> {
     rowSelection: this.rowSelection(),
     selectedRows: this.effectiveSelectedRows(),
     onSelectionChange: this.handleSelectionChangeFn,
-    showRowNumbers: this.showRowNumbers() || this.cellReferences(),
-    showColumnLetters: !!this.cellReferences(),
-    showNameBox: !!this.cellReferences(),
-    onActiveCellChange: this.cellReferences() ? this.handleActiveCellChange : undefined,
+    showRowNumbers: this.showRowNumbers() || this.cellReferences() || this.formulasEnabled(),
+    showColumnLetters: !!(this.cellReferences() || this.formulasEnabled()),
+    showNameBox: !!(this.cellReferences() && !this.formulasEnabled()),
+    onActiveCellChange: (this.cellReferences() || this.formulasEnabled()) ? this.handleActiveCellChange : undefined,
     currentPage: this.page(),
     pageSize: this.pageSize(),
     statusBar: this.statusBarConfig(),
@@ -424,6 +506,7 @@ export class OGridService<T> {
       render: this.emptyState()?.render,
     },
     formulas: this.formulasEnabled(),
+    formulaVersion: this.formulaVersion(),
     ...(this.formulaService.enabled() ? {
       getFormulaValue: this.getFormulaValueFn,
       hasFormula: this.hasFormulaFn,
@@ -628,13 +711,24 @@ export class OGridService<T> {
       }
     });
 
+    // Reset formula bar editing when active cell changes
+    effect(() => {
+      // Read active cell coords to trigger on cell change
+      this.activeCellCoords();
+      this.formulaBarEditing.set(false);
+    });
+
     // Formula engine: configure when formula signals change
     effect(() => {
+      const userRecalcCb = this.onFormulaRecalc();
       this.formulaService.configure({
         formulas: this.formulasEnabled(),
         initialFormulas: this.initialFormulas(),
         formulaFunctions: this.formulaFunctions(),
-        onFormulaRecalc: this.onFormulaRecalc(),
+        onFormulaRecalc: (result) => {
+          this.formulaVersion.update((v) => v + 1);
+          userRecalcCb?.(result);
+        },
         namedRanges: this.namedRanges(),
         sheets: this.sheets(),
       });
@@ -738,6 +832,37 @@ export class OGridService<T> {
       return { ...prev, [columnId]: pinned };
     });
     this.onColumnPinned()?.(columnId, pinned);
+  }
+
+  // --- Formula bar methods ---
+
+  private startFormulaBarEditing(): void {
+    this.formulaBarEditText.set(this.formulaBarDisplayText());
+    this.formulaBarEditing.set(true);
+  }
+
+  private commitFormulaBar(): void {
+    const coords = this.activeCellCoords();
+    if (!coords) return;
+    const text = this.formulaBarEditText().trim();
+    if (text.startsWith('=')) {
+      this.formulaService.setFormula(coords.col, coords.row, text);
+      this.formulaVersion.update((v) => v + 1);
+    } else {
+      this.formulaService.setFormula(coords.col, coords.row, null);
+      this.onCellValueChanged()?.({
+        rowIndex: coords.row,
+        columnId: this.columns()[coords.col]?.columnId ?? '',
+        oldValue: undefined,
+        newValue: text,
+      } as ICellValueChangedEvent<T>);
+    }
+    this.formulaBarEditing.set(false);
+  }
+
+  private cancelFormulaBar(): void {
+    this.formulaBarEditing.set(false);
+    this.formulaBarEditText.set('');
   }
 
   // --- Configure from props ---

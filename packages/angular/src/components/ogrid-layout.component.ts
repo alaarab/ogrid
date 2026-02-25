@@ -1,6 +1,8 @@
 import { Component, Input, ViewEncapsulation, ChangeDetectionStrategy } from '@angular/core';
 import { SideBarComponent } from './sidebar.component';
 import type { SideBarProps } from './sidebar.component';
+import { FormulaBarComponent } from './formula-bar.component';
+import type { OGridFormulaBarState } from '../services/ogrid.service';
 import { GRID_BORDER_RADIUS } from '@alaarab/ogrid-core';
 import { OGRID_THEME_VARS_CSS } from '../styles/ogrid-theme-vars';
 
@@ -9,7 +11,7 @@ import { OGRID_THEME_VARS_CSS } from '../styles/ogrid-theme-vars';
   standalone: true,
   encapsulation: ViewEncapsulation.None,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [SideBarComponent],
+  imports: [SideBarComponent, FormulaBarComponent],
   styles: [OGRID_THEME_VARS_CSS, `
     :host { display: block; height: 100%; }
     .ogrid-layout-root { display: flex; flex-direction: column; height: 100%; }
@@ -111,6 +113,19 @@ import { OGRID_THEME_VARS_CSS } from '../styles/ogrid-theme-vars';
           </div>
         }
 
+        <!-- Formula bar (between toolbar and grid) -->
+        @if (formulaBar) {
+          <ogrid-formula-bar
+            [cellRef]="formulaBar.cellRef"
+            [formulaText]="formulaBar.formulaText"
+            [isEditing]="formulaBar.isEditing"
+            (inputChange)="formulaBar.onInputChange($event)"
+            (commit)="formulaBar.onCommit()"
+            (cancel)="formulaBar.onCancel()"
+            (startEditing)="formulaBar.startEditing()"
+          />
+        }
+
         <!-- Grid area -->
         <div class="ogrid-layout-grid-area">
           @if (sideBar && sideBar.position === 'left') {
@@ -143,6 +158,7 @@ export class OGridLayoutComponent {
   @Input() fullScreen = false;
   @Input() showNameBox = false;
   @Input() activeCellRef: string | null = null;
+  @Input() formulaBar: OGridFormulaBarState | null = null;
 
   isFullScreen = false;
   readonly borderRadius = GRID_BORDER_RADIUS;

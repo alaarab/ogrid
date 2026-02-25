@@ -34,6 +34,7 @@ export type {
   ISelectionRange,
   SideBarPanelId,
   ISideBarDef,
+  ISheetDef,
   IVirtualScrollConfig,
   IColumnReorderConfig,
   IOGridApi,

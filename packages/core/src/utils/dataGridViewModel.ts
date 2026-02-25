@@ -142,6 +142,12 @@ export interface CellRenderDescriptorInput<T> {
   onCellValueChanged?: unknown;
   /** True while user is drag-selecting cells — hides fill handle during drag. */
   isDragging?: boolean;
+  /** Get the formula engine's computed value for a cell (colIdx, rowIndex). */
+  getFormulaValue?: (col: number, row: number) => unknown;
+  /** Check if a cell has a formula at the given coordinate. */
+  hasFormula?: (col: number, row: number) => boolean;
+  /** Monotonic counter incremented on each formula recalculation — used for cache invalidation. */
+  formulaVersion?: number;
 }
 
 export interface CellRenderDescriptor {
@@ -226,7 +232,9 @@ export class CellDescriptorCache {
       '\x01' +
       (input.editable !== false ? '1' : '0') +
       '\x01' +
-      (input.onCellValueChanged ? '1' : '0')
+      (input.onCellValueChanged ? '1' : '0') +
+      '\x01' +
+      (input.formulaVersion ?? 0)
     );
   }
 
@@ -376,6 +384,11 @@ function computeCellDescriptor<T>(
   // Compute cell value once — used in editing and display branches
   const cellValue = getCellValue(item, col);
 
+  // Resolve formula display value: if this cell has a formula, show the computed result
+  const formulaDisplay = input.hasFormula?.(colIdx, rowIndex)
+    ? input.getFormulaValue?.(colIdx, rowIndex)
+    : undefined;
+
   let mode: CellRenderMode = 'display';
   let editorType: 'text' | 'select' | 'checkbox' | 'richSelect' | 'date' | undefined;
 
@@ -415,7 +428,7 @@ function computeCellDescriptor<T>(
     globalColIndex,
     rowId,
     rowIndex,
-    displayValue: cellValue,
+    displayValue: formulaDisplay !== undefined ? formulaDisplay : cellValue,
   };
 }
 

@@ -30,6 +30,10 @@ export interface OGridLayoutProps {
   sideBar?: SideBarProps | null;
   /** When true, render a fullscreen toggle button in the toolbar. */
   fullScreen?: boolean;
+  /** Formula bar element (rendered between toolbar and grid). */
+  formulaBar?: React.ReactNode;
+  /** Sheet tabs element (rendered between grid and footer). */
+  sheetTabs?: React.ReactNode;
 }
 
 // Stable style objects (avoid re-creating on every render)
@@ -183,6 +187,8 @@ export function OGridLayout(props: OGridLayoutProps): React.ReactElement {
     pagination,
     sideBar,
     fullScreen,
+    formulaBar,
+    sheetTabs,
   } = props;
 
   const [isFullScreen, setIsFullScreen] = useState(false);
@@ -241,6 +247,9 @@ export function OGridLayout(props: OGridLayoutProps): React.ReactElement {
           <div style={toolbarBelowStyle}>{toolbarBelow}</div>
         )}
 
+        {/* Formula bar (between toolbar and grid) */}
+        {formulaBar}
+
         {/* Grid area (with optional sidebar) */}
         {hasSideBar ? (
           <div style={gridAreaFlexStyle}>
@@ -251,6 +260,9 @@ export function OGridLayout(props: OGridLayoutProps): React.ReactElement {
         ) : (
           <div style={gridAreaSoloStyle}>{children}</div>
         )}
+
+        {/* Sheet tabs (between grid and footer) */}
+        {sheetTabs}
 
         {/* Footer strip (pagination) */}
         {pagination && (

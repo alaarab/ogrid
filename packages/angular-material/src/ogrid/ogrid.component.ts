@@ -35,8 +35,9 @@ import { PaginationControlsComponent } from '../pagination-controls/pagination-c
       [hasToolbarBelow]="false"
       [hasPagination]="true"
       [fullScreen]="ogridService.fullScreen()"
-      [showNameBox]="!!ogridService.cellReferences()"
+      [showNameBox]="!!(ogridService.cellReferences() && !ogridService.formulasEnabled())"
       [activeCellRef]="ogridService.activeCellRef()"
+      [formulaBar]="ogridService.formulasEnabled() ? ogridService.formulaBarState() : null"
     >
       <ng-container toolbarEnd>
         @if (ogridService.columnChooserPlacement() === 'toolbar') {

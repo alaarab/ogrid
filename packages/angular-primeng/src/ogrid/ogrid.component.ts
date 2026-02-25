@@ -28,8 +28,9 @@ import { PaginationControlsComponent } from '../pagination-controls/pagination-c
       [hasPagination]="true"
       [sideBar]="service.sideBarProps()"
       [fullScreen]="service.fullScreen()"
-      [showNameBox]="!!service.cellReferences()"
+      [showNameBox]="!!(service.cellReferences() && !service.formulasEnabled())"
       [activeCellRef]="service.activeCellRef()"
+      [formulaBar]="service.formulasEnabled() ? service.formulaBarState() : null"
     >
       <ng-content select="[toolbar]" toolbar></ng-content>
 

@@ -34,6 +34,7 @@ export type {
   ISelectionRange,
   SideBarPanelId,
   ISideBarDef,
+  ISheetDef,
   IVirtualScrollConfig,
   IColumnReorderConfig,
   IOGridApi,
@@ -203,6 +204,8 @@ export { validateColumns, validateRowIds, validateVirtualScrollConfig } from './
 
 // Utils — cellReference
 export { indexToColumnLetter, formatCellReference } from './utils';
+export { extractFormulaReferences, processFormulaBarCommit, deriveFormulaBarText } from './utils';
+export type { FormulaReference } from './utils';
 
 // Constants — layout
 export {
@@ -223,6 +226,9 @@ export {
 // Constants — zIndex
 export { Z_INDEX } from './constants';
 export type { ZIndexKey } from './constants';
+
+// Constants — formulaBar
+export { FORMULA_REF_COLORS, FORMULA_BAR_CSS } from './constants';
 
 // Formula system
 export {

@@ -138,6 +138,9 @@ export interface DataGridViewModelState<T> {
     editable?: boolean;
     onCellValueChanged?: (event: ICellValueChangedEvent<T>) => void;
     isDragging: boolean;
+    getFormulaValue?: (col: number, row: number) => unknown;
+    hasFormula?: (col: number, row: number) => boolean;
+    formulaVersion?: number;
   };
   statusBarConfig: IStatusBarProps | null;
   showEmptyInGrid: boolean;
@@ -753,6 +756,9 @@ export class DataGridStateService<T> {
         editable: p?.editable,
         onCellValueChanged: this.wrappedOnCellValueChanged(),
         isDragging: cellSel ? this.interactionHelper.isDraggingSig() : false,
+        getFormulaValue: p?.getFormulaValue,
+        hasFormula: p?.hasFormula,
+        formulaVersion: p?.formulaVersion,
       },
       statusBarConfig: this.statusBarConfig(),
       showEmptyInGrid: this.showEmptyInGrid(),

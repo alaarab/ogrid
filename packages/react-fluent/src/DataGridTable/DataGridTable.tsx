@@ -34,6 +34,7 @@ import {
   getHeaderFilterConfig,
   getCellRenderDescriptor,
   MarchingAntsOverlay,
+  FormulaRefOverlay,
   resolveCellDisplayContent,
   resolveCellStyle,
   buildInlineEditorProps,
@@ -545,6 +546,13 @@ function DataGridTableInner<T>(props: IOGridDataGridProps<T>): React.ReactElemen
                 columnOrder={columnOrder}
                 isDragging={isDragging}
               />
+              {props.formulaReferences && props.formulaReferences.length > 0 && (
+                <FormulaRefOverlay
+                  containerRef={tableContainerRef}
+                  references={props.formulaReferences}
+                  colOffset={colOffset}
+                />
+              )}
               {showEmptyInGrid && emptyState && (
                 <EmptyState emptyState={emptyState} />
               )}
