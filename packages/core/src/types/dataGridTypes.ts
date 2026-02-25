@@ -170,6 +170,16 @@ export interface ISideBarDef {
   position?: 'left' | 'right';
 }
 
+// --- Sheet tabs ---
+
+/** Definition for a sheet tab. */
+export interface ISheetDef {
+  id: string;
+  name: string;
+  /** Optional tab color (CSS value). */
+  color?: string;
+}
+
 // --- Virtual scrolling ---
 
 /** Configuration for virtual scrolling. */

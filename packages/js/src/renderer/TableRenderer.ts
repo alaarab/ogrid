@@ -4,6 +4,7 @@ import { getCellValue, buildHeaderRows, isInSelectionRange, ROW_NUMBER_COLUMN_WI
 import type { GridState } from '../state/GridState';
 import type { HeaderFilterState, HeaderFilterConfig } from '../state/HeaderFilterState';
 import type { VirtualScrollState } from '../state/VirtualScrollState';
+import type { FormulaEngineState } from '../state/FormulaEngineState';
 import { getCellCoordinates } from '../utils/getCellCoordinates';
 
 /** Pre-computed range bounds for fast in-range checks (avoids repeated Math.min/max). */
@@ -99,10 +100,15 @@ export class TableRenderer<T> {
   private lastPinnedColumns: Record<string, 'left' | 'right'> | undefined;
   private lastAllSelected: boolean | undefined;
   private lastSomeSelected: boolean | undefined;
+  private formulaEngine: FormulaEngineState | null = null;
 
   constructor(container: HTMLElement, state: GridState<T>) {
     this.container = container;
     this.state = state;
+  }
+
+  setFormulaEngine(engine: FormulaEngineState): void {
+    this.formulaEngine = engine;
   }
 
   setVirtualScrollState(vs: VirtualScrollState): void {
@@ -998,11 +1004,19 @@ export class TableRenderer<T> {
         // Custom DOM render
         if (col.renderCell) {
           // Cast col to unknown first to work around structural differences
-          const value = getCellValue(item, col as unknown as Parameters<typeof getCellValue>[1]);
+          const rawValue = getCellValue(item, col as unknown as Parameters<typeof getCellValue>[1]);
+          // Use formula result if available
+          const value = this.formulaEngine?.isEnabled() && this.formulaEngine.hasFormula(colIndex, rowIndex)
+            ? (this.formulaEngine.getValue(colIndex, rowIndex) ?? rawValue)
+            : rawValue;
           col.renderCell(td, item, value);
         } else {
           // Default: text content via valueFormatter or toString
-          const value = getCellValue(item, col as unknown as Parameters<typeof getCellValue>[1]);
+          const rawValue = getCellValue(item, col as unknown as Parameters<typeof getCellValue>[1]);
+          // Use formula result if available
+          const value = this.formulaEngine?.isEnabled() && this.formulaEngine.hasFormula(colIndex, rowIndex)
+            ? (this.formulaEngine.getValue(colIndex, rowIndex) ?? rawValue)
+            : rawValue;
           if (col.valueFormatter) {
             td.textContent = col.valueFormatter(value, item);
           } else if (value != null) {

@@ -123,6 +123,8 @@ import { flattenColumns, injectGlobalStyles, formatCellReference } from '@alaara
 import { OGridEventWiring } from './OGridEventWiring';
 import { OGridRendering } from './OGridRendering';
 import type { OGridRenderingContext } from './OGridRendering';
+import { FormulaEngineState } from './state/FormulaEngineState';
+import { FormulaBar } from './components/FormulaBar';
 
 /**
  * CSS variable definitions for light and dark themes (injected once per page).
@@ -272,6 +274,13 @@ export class OGrid<T> {
   private cellEditor: InlineCellEditor<T> | null = null;
   private contextMenu: ContextMenu | null = null;
   private layoutState: TableLayoutState;
+  private formulaEngine: FormulaEngineState | null = null;
+  private formulaBar: FormulaBar | null = null;
+  private formulaBarContainer: HTMLElement | null = null;
+  /** Tracks the text currently displayed/edited in the formula bar. */
+  private formulaBarText = '';
+  /** Whether the formula bar input is currently in editing mode. */
+  private formulaBarEditing = false;
 
   private events = new EventEmitter<OGridEvents<T>>();
   private unsubscribes: (() => void)[] = [];
@@ -297,6 +306,19 @@ export class OGrid<T> {
     this.state = new GridState<T>(options);
     this.api = this.state.getApi();
     this.eventWiringHelper = new OGridEventWiring<T>();
+
+    // Formula engine (opt-in)
+    if (options.formulas) {
+      this.formulaEngine = new FormulaEngineState({
+        formulas: true,
+        initialFormulas: options.initialFormulas,
+        onFormulaRecalc: options.onFormulaRecalc,
+        formulaFunctions: options.formulaFunctions,
+        namedRanges: options.namedRanges,
+        sheets: options.sheets,
+      });
+      this.state.setFormulaEngine(this.formulaEngine);
+    }
 
     // Inject theme CSS variables (light + dark) once per page
     injectGlobalStyles('ogrid-theme-vars', OGRID_THEME_CSS);
@@ -348,6 +370,20 @@ export class OGrid<T> {
 
     this.containerEl.appendChild(this.toolbarEl);
 
+    // Formula bar (opt-in, mounted between toolbar and body area)
+    if (options.formulas) {
+      this.formulaBarContainer = document.createElement('div');
+      this.formulaBarContainer.className = 'ogrid-formula-bar-container';
+      this.formulaBar = new FormulaBar({
+        onCommit: () => this.handleFormulaBarCommit(),
+        onCancel: () => this.handleFormulaBarCancel(),
+        onInputChange: (text) => { this.formulaBarText = text; },
+        onStartEditing: () => this.handleFormulaBarStartEditing(),
+      });
+      this.formulaBar.mount(this.formulaBarContainer);
+      this.containerEl.appendChild(this.formulaBarContainer);
+    }
+
     // Body area (holds sidebar + table, side by side)
     this.bodyArea = document.createElement('div');
     this.bodyArea.className = 'ogrid-body-area';
@@ -382,6 +418,9 @@ export class OGrid<T> {
 
     // Create sub-components
     this.renderer = new TableRenderer<T>(this.tableContainer, this.state);
+    if (this.formulaEngine) {
+      this.renderer.setFormulaEngine(this.formulaEngine);
+    }
     this.pagination = new PaginationControls<T>(this.paginationContainer, this.state);
     this.statusBar = new StatusBar(this.statusBarContainer);
     this.columnChooser = new ColumnChooser<T>(this.toolbarEl, this.state);
@@ -514,6 +553,44 @@ export class OGrid<T> {
                 nameBox.textContent = formatCellReference(dataColIndex, rowNumber);
               } else {
                 nameBox.textContent = '\u2014';
+              }
+            })
+          );
+        }
+
+        // Wire formula bar updates on active cell change
+        if (this.formulaBar && this.selectionState && this.formulaEngine) {
+          const fBar = this.formulaBar;
+          const sel = this.selectionState;
+          const fEngine = this.formulaEngine;
+          let colOffset = 0;
+          if (this.rowSelectionState) colOffset++;
+          if (options.showRowNumbers || options.cellReferences || options.formulas) colOffset++;
+          this.unsubscribes.push(
+            sel.onSelectionChange(({ activeCell }) => {
+              this.formulaBarEditing = false;
+              fBar.setEditing(false);
+              if (activeCell) {
+                const dataCol = activeCell.columnIndex - colOffset;
+                const dataRow = (this.state.page - 1) * this.state.pageSize + activeCell.rowIndex;
+                const cellRef = formatCellReference(dataCol, dataRow + 1);
+                const formula = fEngine.getFormula(dataCol, dataRow);
+                if (formula) {
+                  this.formulaBarText = formula;
+                  fBar.update(cellRef, formula);
+                } else {
+                  // Show the cell's raw value
+                  const { items } = this.state.getProcessedItems();
+                  const visibleCols = this.state.visibleColumnDefs;
+                  const item = items[activeCell.rowIndex];
+                  const col = visibleCols[dataCol];
+                  const value = item && col ? String((item as Record<string, unknown>)[col.columnId] ?? '') : '';
+                  this.formulaBarText = value;
+                  fBar.update(cellRef, value);
+                }
+              } else {
+                this.formulaBarText = '';
+                fBar.update(null, '');
               }
             })
           );
@@ -797,6 +874,97 @@ export class OGrid<T> {
     this.headerFilterState.open(columnId, config, headerEl, tempPopover);
   }
 
+  // --- Formula bar handlers ---
+
+  /** Build a grid data accessor for the formula engine from current state. */
+  private buildFormulaAccessor(): import('@alaarab/ogrid-core').IGridDataAccessor {
+    const { items } = this.state.getProcessedItems();
+    const visibleCols = this.state.visibleColumnDefs;
+    return {
+      getCellValue: (col: number, row: number) => {
+        const item = items[row];
+        const colDef = visibleCols[col];
+        if (!item || !colDef) return undefined;
+        return (item as Record<string, unknown>)[colDef.columnId];
+      },
+      getRowCount: () => items.length,
+      getColumnCount: () => visibleCols.length,
+    };
+  }
+
+  private handleFormulaBarCommit(): void {
+    if (!this.formulaEngine || !this.selectionState) return;
+    const ac = this.selectionState.activeCell;
+    if (!ac) return;
+
+    let colOffset = 0;
+    if (this.rowSelectionState) colOffset++;
+    if (this.options.showRowNumbers || this.options.cellReferences || this.options.formulas) colOffset++;
+    const dataCol = ac.columnIndex - colOffset;
+    const dataRow = (this.state.page - 1) * this.state.pageSize + ac.rowIndex;
+    const text = this.formulaBarText;
+
+    const accessor = this.buildFormulaAccessor();
+
+    if (text.startsWith('=')) {
+      // Set as formula
+      this.formulaEngine.setFormula(dataCol, dataRow, text, accessor);
+    } else {
+      // Clear any existing formula, then write plain value
+      if (this.formulaEngine.hasFormula(dataCol, dataRow)) {
+        this.formulaEngine.setFormula(dataCol, dataRow, null, accessor);
+      }
+      const { items } = this.state.getProcessedItems();
+      const visibleCols = this.state.visibleColumnDefs;
+      const item = items[ac.rowIndex];
+      const col = visibleCols[dataCol];
+      if (item && col) {
+        (item as Record<string, unknown>)[col.columnId] = text;
+      }
+    }
+
+    this.formulaBarEditing = false;
+    this.formulaBar?.setEditing(false);
+    this.renderingHelper.updateRendererInteractionState();
+    // Re-focus the grid wrapper so keyboard nav continues
+    this.renderer.getWrapperElement()?.focus();
+  }
+
+  private handleFormulaBarCancel(): void {
+    // Revert the formula bar text to the active cell's current value
+    if (this.selectionState?.activeCell && this.formulaEngine) {
+      const ac = this.selectionState.activeCell;
+      let colOffset = 0;
+      if (this.rowSelectionState) colOffset++;
+      if (this.options.showRowNumbers || this.options.cellReferences || this.options.formulas) colOffset++;
+      const dataCol = ac.columnIndex - colOffset;
+      const dataRow = (this.state.page - 1) * this.state.pageSize + ac.rowIndex;
+      const formula = this.formulaEngine.getFormula(dataCol, dataRow);
+      if (formula) {
+        this.formulaBarText = formula;
+        this.formulaBar?.update(formatCellReference(dataCol, dataRow + 1), formula);
+      } else {
+        const { items } = this.state.getProcessedItems();
+        const visibleCols = this.state.visibleColumnDefs;
+        const item = items[ac.rowIndex];
+        const col = visibleCols[dataCol];
+        const value = item && col ? String((item as Record<string, unknown>)[col.columnId] ?? '') : '';
+        this.formulaBarText = value;
+        this.formulaBar?.update(formatCellReference(dataCol, dataRow + 1), value);
+      }
+    }
+    this.formulaBarEditing = false;
+    this.formulaBar?.setEditing(false);
+    // Re-focus the grid wrapper
+    this.renderer.getWrapperElement()?.focus();
+  }
+
+  private handleFormulaBarStartEditing(): void {
+    if (!this.selectionState?.activeCell) return;
+    this.formulaBarEditing = true;
+    this.formulaBar?.setEditing(true);
+  }
+
   // Rendering methods delegated to OGridRendering helper:
   // - updateRendererInteractionState() -> this.renderingHelper.updateRendererInteractionState()
   // - updateDragAttributes()           -> this.renderingHelper.updateDragAttributes()
@@ -858,6 +1026,8 @@ export class OGrid<T> {
     this.layoutState.destroy();
     this.cellEditor?.closeEditor();
     this.contextMenu?.close();
+    this.formulaBar?.destroy();
+    this.formulaEngine?.destroy();
     this.events.removeAllListeners();
     this.containerEl.remove();
   }

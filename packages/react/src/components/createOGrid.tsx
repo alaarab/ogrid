@@ -78,6 +78,8 @@ export function createOGrid(components: CreateOGridComponents) {
         toolbar={layout.toolbar}
         toolbarBelow={layout.toolbarBelow}
         fullScreen={layout.fullScreen}
+        formulaBar={layout.formulaBar}
+        sheetTabs={layout.sheetTabs}
         toolbarEnd={
           columnChooser.placement === 'toolbar' ? (
             <ColumnChooser

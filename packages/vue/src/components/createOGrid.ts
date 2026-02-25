@@ -424,6 +424,9 @@ export function createOGrid(ui: IOGridUIBindings) {
             }, [layout.value.toolbarBelow as VNode]),
           ] : []),
 
+          // Formula bar (between toolbar and grid)
+          ...(layout.value.formulaBar ? [layout.value.formulaBar as VNode] : []),
+
           // Main content area (sidebar + grid)
           h('div', { style: { display: 'flex', flex: '1', minHeight: '0' } }, mainAreaChildren),
 
