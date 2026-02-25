@@ -36,12 +36,21 @@ export function formatCellValueForTsv(
  * @param items       Flat array of all row data objects.
  * @param visibleCols Visible column definitions.
  * @param range       The selection range to serialize (will be normalized).
+ * @param formulaOptions  Optional formula-aware options. When provided, cells with
+ *                        formulas will have their formula string copied instead of
+ *                        the computed value.
  * @returns TSV string with rows separated by \\r\\n and columns by \\t.
  */
 export function formatSelectionAsTsv<T>(
   items: T[],
   visibleCols: IColumnDef<T>[],
-  range: ISelectionRange
+  range: ISelectionRange,
+  formulaOptions?: {
+    colOffset: number;
+    flatColumns: IColumnDef<T>[];
+    getFormula?: (col: number, row: number) => string | undefined;
+    hasFormula?: (col: number, row: number) => boolean;
+  }
 ): string {
   const norm = normalizeSelectionRange(range);
   const rows: string[] = [];
@@ -51,6 +60,17 @@ export function formatSelectionAsTsv<T>(
       if (r >= items.length || c >= visibleCols.length) break;
       const item = items[r];
       const col = visibleCols[c];
+      // Check formula first — copy formula text instead of computed value
+      if (formulaOptions?.hasFormula && formulaOptions?.getFormula) {
+        const flatColIndex = formulaOptions.flatColumns.findIndex(fc => fc.columnId === col.columnId);
+        if (flatColIndex >= 0 && formulaOptions.hasFormula(flatColIndex, r)) {
+          const formulaStr = formulaOptions.getFormula(flatColIndex, r);
+          if (formulaStr) {
+            cells.push(formulaStr);
+            continue;
+          }
+        }
+      }
       const raw = getCellValue(item, col);
       const clipboard = col.clipboardFormatter ? col.clipboardFormatter(raw, item) : null;
       const formatted = clipboard ?? (col.valueFormatter ? col.valueFormatter(raw, item) : raw);
@@ -79,11 +99,15 @@ export function parseTsvClipboard(text: string): string[][] {
  * For each cell in the parsed rows, validates editability, parses the value,
  * and produces a cell value changed event.
  *
+ * When `formulaOptions` is provided, cells whose pasted text starts with "="
+ * are routed through `setFormula` instead of the normal value parse path.
+ *
  * @param parsedRows   2D array of string values (from parseTsvClipboard).
  * @param anchorRow    Target starting row index.
  * @param anchorCol    Target starting column index (data column, not absolute).
  * @param items        Array of all row data objects.
  * @param visibleCols  Visible column definitions.
+ * @param formulaOptions  Optional formula-aware options.
  * @returns Array of cell value changed events to apply.
  */
 export function applyPastedValues<T>(
@@ -91,7 +115,12 @@ export function applyPastedValues<T>(
   anchorRow: number,
   anchorCol: number,
   items: T[],
-  visibleCols: IColumnDef<T>[]
+  visibleCols: IColumnDef<T>[],
+  formulaOptions?: {
+    colOffset: number;
+    flatColumns: IColumnDef<T>[];
+    setFormula?: (col: number, row: number, formula: string | null) => void;
+  }
 ): ICellValueChangedEvent<T>[] {
   const events: ICellValueChangedEvent<T>[] = [];
   for (let r = 0; r < parsedRows.length; r++) {
@@ -103,9 +132,17 @@ export function applyPastedValues<T>(
       const item = items[targetRow];
       const col = visibleCols[targetCol];
       if (!isColumnEditable(col, item)) continue;
-      const rawValue = cells[c] ?? '';
+      const cellText = cells[c] ?? '';
+      // Detect formula paste — route through setFormula instead of normal value path
+      if (cellText.startsWith('=') && formulaOptions?.setFormula) {
+        const flatColIndex = formulaOptions.flatColumns.findIndex(fc => fc.columnId === col.columnId);
+        if (flatColIndex >= 0) {
+          formulaOptions.setFormula(flatColIndex, targetRow, cellText);
+          continue;
+        }
+      }
       const oldValue = getCellValue(item, col);
-      const result = parseValue(rawValue, oldValue, item, col);
+      const result = parseValue(cellText, oldValue, item, col);
       if (!result.valid) continue;
       events.push({
         item,

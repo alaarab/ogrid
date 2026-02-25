@@ -81,6 +81,7 @@ export {
   usePaginationControls,
   useDataGridTableOrchestration,
   useColumnMeta,
+  useFormulaEngine,
 } from './hooks';
 export type {
   UseFilterOptionsResult,
@@ -151,6 +152,8 @@ export type {
   UseDataGridTableOrchestrationResult,
   UseColumnMetaParams,
   ColumnMetaResult,
+  UseFormulaEngineParams,
+  UseFormulaEngineResult,
 } from './hooks';
 
 // Constants

@@ -5,6 +5,7 @@ import {
   exportToCsv,
   triggerCsvDownload,
   type CsvColumn,
+  type FormulaExportOptions,
 } from '../exportToCsv';
 
 describe('exportToCsv', () => {
@@ -148,6 +149,44 @@ describe('exportToCsv', () => {
     it('uses default filename when not provided', () => {
       exportToCsv([], [{ columnId: 'a', name: 'A' }], (): string => '', undefined);
       expect(mockLink.setAttribute).toHaveBeenCalledWith('download', expect.stringMatching(/^export_\d{4}-\d{2}-\d{2}\.csv$/));
+    });
+  });
+
+  describe('formula-aware CSV export', () => {
+    const items = [{ id: 1, a: 10, b: 20 }, { id: 2, a: 30, b: 40 }];
+    const columns: CsvColumn[] = [
+      { columnId: 'a', name: 'A' },
+      { columnId: 'b', name: 'B' },
+    ];
+    const getValue = (item: { id: number; a: number; b: number }, columnId: string): string =>
+      String(item[columnId as keyof typeof item]);
+
+    it('buildCsvRows exports computed values by default', () => {
+      const rows = buildCsvRows(items, columns, getValue);
+      expect(rows[0]).toBe('10,20');
+    });
+
+    it('buildCsvRows exports formula strings when exportMode is formulas', () => {
+      const formulaOptions: FormulaExportOptions = {
+        exportMode: 'formulas',
+        hasFormula: (col, row) => col === 0 && row === 0,
+        getFormula: (col, row) => (col === 0 && row === 0 ? '=SUM(B1:B2)' : undefined),
+        columnIdToIndex: new Map([['a', 0], ['b', 1]]),
+      };
+      const rows = buildCsvRows(items, columns, getValue, formulaOptions);
+      expect(rows[0]).toContain('=SUM(B1:B2)');
+      expect(rows[0]).toContain('20'); // non-formula cell exports value
+    });
+
+    it('buildCsvRows exports values when exportMode is values', () => {
+      const formulaOptions: FormulaExportOptions = {
+        exportMode: 'values',
+        hasFormula: () => true,
+        getFormula: () => '=FORMULA',
+        columnIdToIndex: new Map([['a', 0], ['b', 1]]),
+      };
+      const rows = buildCsvRows(items, columns, getValue, formulaOptions);
+      expect(rows[0]).toBe('10,20');
     });
   });
 

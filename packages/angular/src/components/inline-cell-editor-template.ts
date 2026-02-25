@@ -28,7 +28,7 @@ export const INLINE_CELL_EDITOR_TEMPLATE = `
             style="width:100%;padding:0;border:none;background:transparent;color:inherit;font:inherit;font-size:13px;outline:none;min-width:0"
           />
           <div #richSelectDropdown role="listbox"
-               style="position:absolute;top:100%;left:0;right:0;max-height:200px;overflow-y:auto;background:var(--ogrid-bg, #fff);border:1px solid var(--ogrid-border, rgba(0,0,0,0.12));z-index:10;box-shadow:0 4px 16px rgba(0,0,0,0.2)">
+               style="position:absolute;top:100%;left:0;right:0;max-height:200px;overflow-y:auto;background:var(--ogrid-bg, #fff);border:1px solid var(--ogrid-border, rgba(0,0,0,0.12));z-index:10;box-shadow:0 4px 16px rgba(0,0,0,0.2);text-align:left">
             @for (opt of filteredOptions(); track opt; let i = $index) {
               <div role="option"
                    [attr.aria-selected]="i === highlightedIndex()"
@@ -52,7 +52,7 @@ export const INLINE_CELL_EDITOR_TEMPLATE = `
             <span style="margin-left:4px;font-size:10px;opacity:0.5">&#9662;</span>
           </div>
           <div #selectDropdown role="listbox"
-               style="position:absolute;top:100%;left:0;right:0;max-height:200px;overflow-y:auto;background:var(--ogrid-bg, #fff);border:1px solid var(--ogrid-border, rgba(0,0,0,0.12));z-index:10;box-shadow:0 4px 16px rgba(0,0,0,0.2)">
+               style="position:absolute;top:100%;left:0;right:0;max-height:200px;overflow-y:auto;background:var(--ogrid-bg, #fff);border:1px solid var(--ogrid-border, rgba(0,0,0,0.12));z-index:10;box-shadow:0 4px 16px rgba(0,0,0,0.2);text-align:left">
             @for (opt of selectOptions(); track opt; let i = $index) {
               <div role="option"
                    [attr.aria-selected]="i === highlightedIndex()"

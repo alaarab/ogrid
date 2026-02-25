@@ -21,6 +21,11 @@ export type {
   ISideBarDef,
   IOGridApi,
   IVirtualScrollConfig,
+  IFormulaFunction,
+  IRecalcResult,
+  IGridDataAccessor,
+  IAuditEntry,
+  IAuditTrail,
 } from '@alaarab/ogrid-core';
 
 export { toUserLike, isInSelectionRange, normalizeSelectionRange } from '@alaarab/ogrid-core';
@@ -37,6 +42,11 @@ import type {
   IDataSource,
   ISideBarDef,
   IVirtualScrollConfig,
+  IFormulaFunction,
+  IRecalcResult,
+  IGridDataAccessor,
+  IAuditEntry,
+  IAuditTrail,
 } from '@alaarab/ogrid-core';
 
 // --- OGrid / useOGrid ---
@@ -142,6 +152,19 @@ interface IOGridBaseProps<T> {
   /** Cell spacing/density preset. Controls cell padding throughout the grid. Default: 'normal'. */
   density?: 'compact' | 'normal' | 'comfortable';
 
+  /** Enable Excel-like formula support. When true, cells starting with '=' are treated as formulas. Default: false. */
+  formulas?: boolean;
+  /** Initial formulas to load when the formula engine initializes. */
+  initialFormulas?: Array<{ col: number; row: number; formula: string }>;
+  /** Called when formula recalculation produces updated cell values (e.g. cascade from an edited cell). */
+  onFormulaRecalc?: (result: IRecalcResult) => void;
+  /** Custom formula functions to register with the formula engine (e.g. { MYFUNC: { minArgs: 1, maxArgs: 1, evaluate: ... } }). */
+  formulaFunctions?: Record<string, IFormulaFunction>;
+  /** Named ranges for the formula engine: name → cell/range ref string (e.g. { Revenue: 'A1:A10' }). */
+  namedRanges?: Record<string, string>;
+  /** Sheet accessors for cross-sheet formula references (e.g. { Sheet2: accessor }). */
+  sheets?: Record<string, IGridDataAccessor>;
+
   'aria-label'?: string;
   'aria-labelledby'?: string;
 }
@@ -238,4 +261,23 @@ export interface IOGridDataGridProps<T> {
   'aria-labelledby'?: string;
   /** Custom keydown handler. Called before grid's built-in handling. Call event.preventDefault() to suppress grid default. */
   onKeyDown?: (event: KeyboardEvent) => void;
+
+  /** Enable formula support. When true, cell values starting with '=' are treated as formulas. */
+  formulas?: boolean;
+  /** Get the formula engine's computed value for a cell, or undefined if no formula. */
+  getFormulaValue?: (col: number, row: number) => unknown;
+  /** Check if a cell has a formula. */
+  hasFormula?: (col: number, row: number) => boolean;
+  /** Get the formula string for a cell. */
+  getFormula?: (col: number, row: number) => string | undefined;
+  /** Set a formula for a cell (called from edit commit when value starts with '='). */
+  setFormula?: (col: number, row: number, formula: string | null) => void;
+  /** Notify the formula engine that a non-formula cell changed. */
+  onFormulaCellChanged?: (col: number, row: number) => void;
+  /** Get all cells that a cell depends on (deep, transitive). */
+  getPrecedents?: (col: number, row: number) => IAuditEntry[];
+  /** Get all cells that depend on a cell (deep, transitive). */
+  getDependents?: (col: number, row: number) => IAuditEntry[];
+  /** Get full audit trail for a cell. */
+  getAuditTrail?: (col: number, row: number) => IAuditTrail | null;
 }

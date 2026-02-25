@@ -65,6 +65,9 @@ export type { MaybeShallowRef } from './useLatestRef';
 export { useTableLayout } from './useTableLayout';
 export type { UseTableLayoutParams, UseTableLayoutResult } from './useTableLayout';
 
+export { useFormulaEngine } from './useFormulaEngine';
+export type { UseFormulaEngineParams, UseFormulaEngineResult } from './useFormulaEngine';
+
 // Headless state composables
 export { useColumnHeaderFilterState } from './useColumnHeaderFilterState';
 export type {

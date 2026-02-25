@@ -1,4 +1,4 @@
-import type { IActiveCell, ISelectionRange, IColumnDef, ICellValueChangedEvent } from '@alaarab/ogrid-core';
+import type { IActiveCell, ISelectionRange, IColumnDef, ICellValueChangedEvent, IFillFormulaOptions } from '@alaarab/ogrid-core';
 import { normalizeSelectionRange, applyFillValues } from '@alaarab/ogrid-core';
 import { EventEmitter } from './EventEmitter';
 import { getCellCoordinates } from '../utils/getCellCoordinates';
@@ -15,6 +15,8 @@ export interface FillHandleParams<T> {
   colOffset: number;
   beginBatch?: () => void;
   endBatch?: () => void;
+  /** Optional formula-aware fill options. When provided, cells with formulas adjust references during fill. */
+  formulaOptions?: IFillFormulaOptions<T>;
 }
 
 /**
@@ -178,10 +180,10 @@ export class FillHandleState<T> {
     norm: ISelectionRange,
     start: { startRow: number; startCol: number }
   ): void {
-    const { items, visibleCols, onCellValueChanged, beginBatch, endBatch } = this.params;
+    const { items, visibleCols, onCellValueChanged, beginBatch, endBatch, formulaOptions } = this.params;
     if (!onCellValueChanged) return;
 
-    const fillEvents = applyFillValues(norm, start.startRow, start.startCol, items, visibleCols);
+    const fillEvents = applyFillValues(norm, start.startRow, start.startCol, items, visibleCols, formulaOptions);
     if (fillEvents.length > 0) {
       beginBatch?.();
       for (const evt of fillEvents) onCellValueChanged(evt);

@@ -206,7 +206,11 @@ export class InlineCellEditor<T> {
       this.closeEditor();
     });
 
-    setTimeout(() => input.select(), 0);
+    if (type === 'date') {
+      setTimeout(() => { try { input.showPicker(); } catch { /* older browsers */ } }, 0);
+    } else {
+      setTimeout(() => input.select(), 0);
+    }
     return input;
   }
 
@@ -298,6 +302,7 @@ export class InlineCellEditor<T> {
     dropdown.style.border = '1px solid var(--ogrid-border, rgba(0, 0, 0, 0.12))';
     dropdown.style.zIndex = '1001';
     dropdown.style.boxShadow = '0 4px 16px rgba(0,0,0,0.2)';
+    dropdown.style.textAlign = 'left';
     wrapper.appendChild(dropdown);
 
     let highlightedIndex = Math.max(values.findIndex((v) => String(v) === String(value)), 0);
@@ -427,6 +432,7 @@ export class InlineCellEditor<T> {
     dropdown.style.backgroundColor = 'var(--ogrid-bg, #fff)';
     dropdown.style.border = '1px solid var(--ogrid-border, rgba(0, 0, 0, 0.12))';
     dropdown.style.zIndex = '1001';
+    dropdown.style.textAlign = 'left';
     wrapper.appendChild(dropdown);
 
     const values = column.cellEditorParams?.values ?? [];
