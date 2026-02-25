@@ -98,3 +98,5 @@ export type { IFillFormulaOptions } from './fillHelpers';
 export { UndoRedoStack } from './undoRedoStack';
 export { validateColumns, validateRowIds, validateVirtualScrollConfig } from './validation';
 export { indexToColumnLetter, formatCellReference } from './cellReference';
+export { extractFormulaReferences, processFormulaBarCommit, deriveFormulaBarText } from './formulaBarHelpers';
+export type { FormulaReference } from './formulaBarHelpers';

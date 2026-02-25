@@ -50,6 +50,7 @@ export { toUserLike, isInSelectionRange, normalizeSelectionRange } from './types
 // Shared components
 export { MarchingAntsOverlay } from './components/MarchingAntsOverlay';
 export { StatusBar, type StatusBarProps } from './components/StatusBar';
+export { FormulaBar, type FormulaBarProps } from './components/FormulaBar';
 
 // Composables
 export {
@@ -83,6 +84,7 @@ export {
   useColumnPinning,
   useColumnHeaderMenuState,
   useDataGridTableSetup,
+  useFormulaBar,
 } from './composables';
 
 // Composable types
@@ -156,6 +158,8 @@ export type {
   UseDataGridTableSetupParams,
   UseDataGridTableSetupResult,
   MaybeShallowRef,
+  UseFormulaBarParams,
+  UseFormulaBarResult,
 } from './composables';
 
 // View model utilities (for UI packages)

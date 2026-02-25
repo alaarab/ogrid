@@ -452,6 +452,9 @@ export function useDataGridState<T>(
     editable: editableProp.value,
     onCellValueChanged: onCellValueChanged.value,
     isDragging: cellSelection.value ? isDragging.value : false,
+    getFormulaValue: props.value.getFormulaValue,
+    hasFormula: props.value.hasFormula,
+    formulaVersion: props.value.formulaVersion,
   }));
 
   // --- Cell edit helpers ---

@@ -39,6 +39,7 @@ export type {
   ISideBarDef,
   IVirtualScrollConfig,
   IColumnReorderConfig,
+  ISheetDef,
 } from './dataGridTypes';
 
 export { toUserLike, isInSelectionRange, normalizeSelectionRange } from './dataGridTypes';
