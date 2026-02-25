@@ -37,5 +37,7 @@ export { VirtualScrollState } from './state/VirtualScrollState';
 export { MarchingAntsOverlay } from './components/MarchingAntsOverlay';
 export { SideBarState } from './state/SideBarState';
 export { HeaderFilterState } from './state/HeaderFilterState';
+export { FormulaEngineState } from './state/FormulaEngineState';
+export type { FormulaEngineStateOptions } from './state/FormulaEngineState';
 export { SideBar } from './components/SideBar';
 export { HeaderFilter } from './components/HeaderFilter';

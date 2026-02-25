@@ -365,13 +365,13 @@ export function createDataGridTableTests(DataGridTable: React.ComponentType<IOGr
     );
     if (firstCell) fireEvent.mouseDown(firstCell);
 
-    const inRangeBefore = container.querySelectorAll('[data-in-range="true"]').length;
+    const activeBefore = container.querySelectorAll('[data-active-cell="true"]').length;
     // ArrowDown with preventDefault should not move selection
     fireEvent.keyDown(grid, { key: 'ArrowDown' });
-    const inRangeAfter = container.querySelectorAll('[data-in-range="true"]').length;
+    const activeAfter = container.querySelectorAll('[data-active-cell="true"]').length;
 
     expect(onKeyDown).toHaveBeenCalled();
-    expect(inRangeAfter).toBe(inRangeBefore);
+    expect(activeAfter).toBe(activeBefore);
   });
 
   it('onKeyDown not calling preventDefault allows grid to handle Escape normally', async () => {
@@ -388,14 +388,14 @@ export function createDataGridTableTests(DataGridTable: React.ComponentType<IOGr
     if (firstCell) fireEvent.mouseDown(firstCell);
 
     await waitFor(() => {
-      expect(container.querySelector('[data-in-range="true"]')).toBeInTheDocument();
+      expect(container.querySelector('[data-active-cell="true"]')).toBeInTheDocument();
     });
 
     fireEvent.keyDown(grid, { key: 'Escape' });
     expect(onKeyDown).toHaveBeenCalled();
     // Grid default runs: Escape clears selection
     await waitFor(() => {
-      expect(container.querySelectorAll('[data-in-range="true"]').length).toBe(0);
+      expect(container.querySelectorAll('[data-active-cell="true"]').length).toBe(0);
     });
   });
 

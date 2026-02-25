@@ -52,7 +52,7 @@ export {
   exportToCsv,
   triggerCsvDownload,
 } from './utils';
-export type { CsvColumn } from './utils';
+export type { CsvColumn, FormulaExportOptions } from './utils';
 
 // Utils — cellValue, columnUtils
 export { getCellValue, isColumnEditable } from './utils';
@@ -193,6 +193,7 @@ export {
 
 // Utils — fillHelpers
 export { applyFillValues } from './utils';
+export type { IFillFormulaOptions } from './utils';
 
 // Utils — undoRedoStack
 export { UndoRedoStack } from './utils';
@@ -222,3 +223,52 @@ export {
 // Constants — zIndex
 export { Z_INDEX } from './constants';
 export type { ZIndexKey } from './constants';
+
+// Formula system
+export {
+  FormulaError,
+  FormulaEngine,
+  FormulaEvaluator,
+  DependencyGraph,
+  tokenize,
+  parse,
+  createBuiltInFunctions,
+  columnLetterToIndex,
+  parseCellRef,
+  parseRange,
+  formatAddress,
+  toCellKey,
+  fromCellKey,
+  adjustFormulaReferences,
+  toNumber,
+  toString as formulaToString,
+  toBoolean,
+  flattenArgs,
+  isFormulaError,
+  REF_ERROR,
+  DIV_ZERO_ERROR,
+  VALUE_ERROR,
+  NAME_ERROR,
+  CIRC_ERROR,
+  GENERAL_ERROR,
+  NA_ERROR,
+} from './formula';
+export type {
+  ICellAddress,
+  ICellRange,
+  CellKey,
+  FormulaErrorType,
+  TokenType,
+  Token,
+  ASTNode,
+  BinaryOp,
+  IFormulaContext,
+  IFormulaFunction,
+  IEvaluator,
+  IRecalcResult,
+  IFormulaEngineConfig,
+  IGridDataAccessor,
+  INamedRange,
+  IAuditEntry,
+  IAuditTrail,
+} from './formula';

@@ -149,3 +149,5 @@ export type {
 } from './useDataGridTableOrchestration';
 export { useColumnMeta } from './useColumnMeta';
 export type { UseColumnMetaParams, ColumnMetaResult } from './useColumnMeta';
+export { useFormulaEngine } from './useFormulaEngine';
+export type { UseFormulaEngineParams, UseFormulaEngineResult } from './useFormulaEngine';

@@ -92,6 +92,9 @@ export { ColumnReorderService } from './services/column-reorder.service';
 
 export { VirtualScrollService } from './services/virtual-scroll.service';
 
+export { FormulaEngineService } from './services/formula-engine.service';
+export type { FormulaEngineConfig } from './services/formula-engine.service';
+
 // Components
 export { OGridLayoutComponent } from './components/ogrid-layout.component';
 export { StatusBarComponent } from './components/status-bar.component';

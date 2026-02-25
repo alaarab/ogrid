@@ -43,6 +43,7 @@ export const richSelectDropdownStyle: React.CSSProperties = {
   border: '1px solid var(--ogrid-border, rgba(0, 0, 0, 0.12))',
   zIndex: 10,
   boxShadow: 'var(--ogrid-shadow, 0 4px 16px rgba(0,0,0,0.2))',
+  textAlign: 'left',
 };
 
 export const richSelectOptionStyle: React.CSSProperties = {
@@ -162,6 +163,7 @@ export function BaseInlineCellEditor<T>(props: BaseInlineCellEditorProps<T>): Re
       border: '1px solid var(--ogrid-border, rgba(0, 0, 0, 0.12))',
       zIndex: 9999,
       boxShadow: 'var(--ogrid-shadow, 0 4px 16px rgba(0,0,0,0.2))',
+      textAlign: 'left',
     });
   }, [editorType]);
 
@@ -173,8 +175,13 @@ export function BaseInlineCellEditor<T>(props: BaseInlineCellEditorProps<T>): Re
     const input = wrapper.querySelector('input');
     if (input) {
       input.focus();
-      // Select all text for easy replacement (like Excel)
-      input.select();
+      if (editorType === 'date') {
+        // Auto-open the native date picker (like Excel)
+        try { input.showPicker(); } catch { /* older browsers */ }
+      } else {
+        // Select all text for easy replacement (like Excel)
+        input.select();
+      }
     } else {
       // Focus the wrapper for keyboard events (select editor has no input)
       wrapper.focus();

@@ -23,10 +23,14 @@ import type {
   ISideBarDef,
   IVirtualScrollConfig,
   SideBarPanelId,
+  IFormulaFunction,
+  IRecalcResult,
+  IGridDataAccessor,
 } from '../types';
 import type { IOGridProps, IOGridDataGridProps } from '../types';
 import type { IColumnDef, IColumnGroupDef, ICellValueChangedEvent } from '../types';
 import type { SideBarProps } from '../components/sidebar.component';
+import { FormulaEngineService } from './formula-engine.service';
 
 const DEFAULT_PAGE_SIZE = 25;
 const EMPTY_LOADING_OPTIONS: Record<string, boolean> = {};
@@ -141,6 +145,12 @@ export class OGridService<T> {
   readonly workerSort = signal<boolean>(false);
   readonly showRowNumbers = signal<boolean>(false);
   readonly cellReferences = signal<boolean>(false);
+  readonly formulasEnabled = signal<boolean>(false);
+  readonly initialFormulas = signal<Array<{ col: number; row: number; formula: string }> | undefined>(undefined);
+  readonly onFormulaRecalc = signal<((result: IRecalcResult) => void) | undefined>(undefined);
+  readonly formulaFunctions = signal<Record<string, IFormulaFunction> | undefined>(undefined);
+  readonly namedRanges = signal<Record<string, string> | undefined>(undefined);
+  readonly sheets = signal<Record<string, IGridDataAccessor> | undefined>(undefined);
 
   /** Active cell reference string (e.g. 'A1') updated by DataGridTable when cellReferences is enabled. */
   readonly activeCellRef = signal<string | null>(null);
@@ -149,6 +159,19 @@ export class OGridService<T> {
   private readonly handleActiveCellChange = (ref: string | null) => {
     this.activeCellRef.set(ref);
   };
+
+  // --- Formula engine ---
+  private readonly formulaService = new FormulaEngineService<T>();
+
+  // Stable formula method references for dataGridProps (avoid per-recompute arrow functions)
+  private readonly getFormulaValueFn = (col: number, row: number) => this.formulaService.getValue(col, row);
+  private readonly hasFormulaFn = (col: number, row: number) => this.formulaService.hasFormula(col, row);
+  private readonly getFormulaFn = (col: number, row: number) => this.formulaService.getFormula(col, row);
+  private readonly setFormulaFn = (col: number, row: number, formula: string | null) => this.formulaService.setFormula(col, row, formula ?? '');
+  private readonly onFormulaCellChangedFn = (col: number, row: number) => this.formulaService.onCellChanged(col, row);
+  private readonly getPrecedentsFn = (col: number, row: number) => this.formulaService.getPrecedents(col, row);
+  private readonly getDependentsFn = (col: number, row: number) => this.formulaService.getDependents(col, row);
+  private readonly getAuditTrailFn = (col: number, row: number) => this.formulaService.getAuditTrail(col, row);
 
   // --- Internal state signals ---
   private readonly internalData = signal<T[]>([]);
@@ -400,6 +423,17 @@ export class OGridService<T> {
       message: this.emptyState()?.message,
       render: this.emptyState()?.render,
     },
+    formulas: this.formulasEnabled(),
+    ...(this.formulaService.enabled() ? {
+      getFormulaValue: this.getFormulaValueFn,
+      hasFormula: this.hasFormulaFn,
+      getFormula: this.getFormulaFn,
+      setFormula: this.setFormulaFn,
+      onFormulaCellChanged: this.onFormulaCellChangedFn,
+      getPrecedents: this.getPrecedentsFn,
+      getDependents: this.getDependentsFn,
+      getAuditTrail: this.getAuditTrailFn,
+    } : {}),
   }));
 
   readonly pagination = computed<OGridPagination>(() => ({
@@ -594,6 +628,25 @@ export class OGridService<T> {
       }
     });
 
+    // Formula engine: configure when formula signals change
+    effect(() => {
+      this.formulaService.configure({
+        formulas: this.formulasEnabled(),
+        initialFormulas: this.initialFormulas(),
+        formulaFunctions: this.formulaFunctions(),
+        onFormulaRecalc: this.onFormulaRecalc(),
+        namedRanges: this.namedRanges(),
+        sheets: this.sheets(),
+      });
+    });
+
+    // Formula engine: keep data in sync with display items + columns
+    effect(() => {
+      const items = this.displayItems();
+      const cols = this.columns();
+      this.formulaService.setData(items, cols);
+    });
+
     // Cleanup on destroy — abort in-flight requests and reset callback signals
     this.destroyRef.onDestroy(() => {
       this.fetchAbortController?.abort();
@@ -744,6 +797,12 @@ export class OGridService<T> {
     if (props.workerSort !== undefined) this.workerSort.set(props.workerSort);
     if (props.showRowNumbers !== undefined) this.showRowNumbers.set(props.showRowNumbers);
     if (props.cellReferences !== undefined) this.cellReferences.set(props.cellReferences);
+    if (props.formulas !== undefined) this.formulasEnabled.set(props.formulas);
+    if (props.initialFormulas !== undefined) this.initialFormulas.set(props.initialFormulas);
+    if (props.onFormulaRecalc) this.onFormulaRecalc.set(props.onFormulaRecalc);
+    if (props.formulaFunctions !== undefined) this.formulaFunctions.set(props.formulaFunctions);
+    if (props.namedRanges !== undefined) this.namedRanges.set(props.namedRanges);
+    if (props.sheets !== undefined) this.sheets.set(props.sheets);
     if (props.entityLabelPlural !== undefined) this.entityLabelPlural.set(props.entityLabelPlural);
     if (props.className !== undefined) this.className.set(props.className);
     if (props.layoutMode !== undefined) this.layoutMode.set(props.layoutMode);

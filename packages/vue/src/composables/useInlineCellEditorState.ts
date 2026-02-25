@@ -47,7 +47,7 @@ export function useInlineCellEditorState(
       e.stopPropagation();
       cancel();
     }
-    if (e.key === 'Enter' && editorType === 'text') {
+    if (e.key === 'Enter' && (editorType === 'text' || editorType === 'date')) {
       e.preventDefault();
       e.stopPropagation();
       commit(localValue.value);
@@ -55,7 +55,7 @@ export function useInlineCellEditorState(
   };
 
   const handleBlur = () => {
-    if (editorType === 'text') {
+    if (editorType === 'text' || editorType === 'date') {
       commit(localValue.value);
     }
   };

@@ -1,6 +1,7 @@
 import { useMemo, useCallback } from 'react';
 import type { RefObject } from 'react';
 import type { RowId, IColumnDef } from '../types';
+import type { IFillFormulaOptions } from '../utils';
 import { useCellSelection } from './useCellSelection';
 import { useClipboard } from './useClipboard';
 import { useKeyboardNavigation } from './useKeyboardNavigation';
@@ -50,6 +51,16 @@ export interface UseDataGridInteractionParams<T> {
   wrapperRef: RefObject<HTMLDivElement | null>;
   /** Custom keydown handler — called before grid default. preventDefault() suppresses grid handling. */
   onKeyDown?: (event: React.KeyboardEvent) => void;
+  /** When true, enables formula-aware clipboard and fill handle. */
+  formulas?: boolean;
+  /** Flat column list for formula coordinate mapping. */
+  flatColumns?: IColumnDef<T>[];
+  /** Returns the formula string for a flat column + row. */
+  getFormula?: (col: number, row: number) => string | undefined;
+  /** Returns true if a flat column + row has a formula. */
+  hasFormula?: (col: number, row: number) => boolean;
+  /** Sets or clears a formula for a flat column + row. */
+  setFormula?: (col: number, row: number, formula: string | null) => void;
 }
 
 export interface UseDataGridInteractionResult<T> {
@@ -122,6 +133,11 @@ export function useDataGridInteraction<T>(
     setContextMenuPosition,
     wrapperRef,
     onKeyDown,
+    formulas,
+    flatColumns,
+    getFormula,
+    hasFormula,
+    setFormula,
   } = params;
 
   // Wrap onCellValueChanged with undo/redo tracking
@@ -152,6 +168,11 @@ export function useDataGridInteraction<T>(
     onCellValueChanged,
     beginBatch: undoRedo.beginBatch,
     endBatch: undoRedo.endBatch,
+    formulas,
+    flatColumns,
+    getFormula,
+    hasFormula,
+    setFormula,
   });
 
   const handleCellMouseDown = useCallback(
@@ -163,6 +184,11 @@ export function useDataGridInteraction<T>(
     },
     [handleCellMouseDownBase, clearClipboardRanges, wrapperRef]
   );
+
+  const fillFormulaOptions = useMemo<IFillFormulaOptions<T> | undefined>(() => {
+    if (!formulas || !flatColumns) return undefined;
+    return { flatColumns, getFormula, hasFormula, setFormula };
+  }, [formulas, flatColumns, getFormula, hasFormula, setFormula]);
 
   const { handleFillHandleMouseDown, fillDown } = useFillHandle({
     items,
@@ -176,6 +202,7 @@ export function useDataGridInteraction<T>(
     wrapperRef,
     beginBatch: undoRedo.beginBatch,
     endBatch: undoRedo.endBatch,
+    formulaOptions: fillFormulaOptions,
   });
 
   const { handleGridKeyDown } = useKeyboardNavigation({
