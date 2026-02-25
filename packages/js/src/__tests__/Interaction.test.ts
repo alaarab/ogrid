@@ -198,6 +198,90 @@ describe('Interaction - Active Cell', () => {
 
     grid.destroy();
   });
+
+  it('PageDown moves active cell down by default page size', () => {
+    // Use 15 rows so PageDown (fallback 10) can move meaningfully
+    const manyRows: TestRow[] = Array.from({ length: 15 }, (_, i) => ({
+      id: i + 1, name: `R${i}`, age: 20 + i, email: `r${i}@e.com`, active: true,
+    }));
+    const { container, grid } = createGrid({ data: manyRows });
+    const cell = getCellElement(container, 0, 0);
+    cell!.click();
+
+    const wrapper = getWrapperElement(container);
+    wrapper!.dispatchEvent(new KeyboardEvent('keydown', { key: 'PageDown', bubbles: true }));
+
+    const ac = container.querySelector('td[data-active-cell="true"]');
+    // Default fallback pageSize=10 (jsdom has no layout), so row should be 10
+    expect(Number(ac?.getAttribute('data-row-index'))).toBe(10);
+
+    grid.destroy();
+  });
+
+  it('PageUp moves active cell up by default page size', () => {
+    const manyRows: TestRow[] = Array.from({ length: 15 }, (_, i) => ({
+      id: i + 1, name: `R${i}`, age: 20 + i, email: `r${i}@e.com`, active: true,
+    }));
+    const { container, grid } = createGrid({ data: manyRows });
+    // Click last row
+    const cell = getCellElement(container, 14, 0);
+    cell!.click();
+
+    const wrapper = getWrapperElement(container);
+    wrapper!.dispatchEvent(new KeyboardEvent('keydown', { key: 'PageUp', bubbles: true }));
+
+    const ac = container.querySelector('td[data-active-cell="true"]');
+    expect(Number(ac?.getAttribute('data-row-index'))).toBe(4);
+
+    grid.destroy();
+  });
+
+  it('PageDown clamps to last row', () => {
+    const { container, grid } = createGrid(); // 5 rows
+    const cell = getCellElement(container, 0, 0);
+    cell!.click();
+
+    const wrapper = getWrapperElement(container);
+    wrapper!.dispatchEvent(new KeyboardEvent('keydown', { key: 'PageDown', bubbles: true }));
+
+    const ac = container.querySelector('td[data-active-cell="true"]');
+    // 5 rows, pageSize=10 → clamped to row 4
+    expect(Number(ac?.getAttribute('data-row-index'))).toBe(4);
+
+    grid.destroy();
+  });
+
+  it('PageUp clamps to first row', () => {
+    const { container, grid } = createGrid(); // 5 rows
+    const cell = getCellElement(container, 2, 0);
+    cell!.click();
+
+    const wrapper = getWrapperElement(container);
+    wrapper!.dispatchEvent(new KeyboardEvent('keydown', { key: 'PageUp', bubbles: true }));
+
+    const ac = container.querySelector('td[data-active-cell="true"]');
+    expect(Number(ac?.getAttribute('data-row-index'))).toBe(0);
+
+    grid.destroy();
+  });
+
+  it('Shift+PageDown extends selection', () => {
+    const manyRows: TestRow[] = Array.from({ length: 15 }, (_, i) => ({
+      id: i + 1, name: `R${i}`, age: 20 + i, email: `r${i}@e.com`, active: true,
+    }));
+    const { container, grid } = createGrid({ data: manyRows });
+    const cell = getCellElement(container, 2, 0);
+    cell!.click();
+
+    const wrapper = getWrapperElement(container);
+    wrapper!.dispatchEvent(new KeyboardEvent('keydown', { key: 'PageDown', shiftKey: true, bubbles: true }));
+
+    // Active cell should move to row 12
+    const ac = container.querySelector('td[data-active-cell="true"]');
+    expect(Number(ac?.getAttribute('data-row-index'))).toBe(12);
+
+    grid.destroy();
+  });
 });
 
 describe('Interaction - Range Selection', () => {
