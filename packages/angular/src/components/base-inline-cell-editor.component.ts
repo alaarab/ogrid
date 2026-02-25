@@ -79,7 +79,9 @@ export abstract class BaseInlineCellEditorComponent<T = unknown> {
       const el = this.inputEl?.nativeElement;
       if (el) {
         el.focus();
-        if (el instanceof HTMLInputElement && el.type === 'text') {
+        if (el instanceof HTMLInputElement && el.type === 'date') {
+          try { el.showPicker(); } catch { /* older browsers */ }
+        } else if (el instanceof HTMLInputElement && el.type === 'text') {
           el.select();
         }
       }
@@ -214,6 +216,7 @@ export abstract class BaseInlineCellEditorComponent<T = unknown> {
     dropdown.style.maxHeight = `${maxH}px`;
     dropdown.style.zIndex = '9999';
     dropdown.style.right = 'auto';
+    dropdown.style.textAlign = 'left';
     if (flipUp) {
       dropdown.style.top = 'auto';
       dropdown.style.bottom = `${window.innerHeight - rect.top}px`;

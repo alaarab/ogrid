@@ -38,6 +38,11 @@ export type {
   SideBarPanelId,
   ISideBarDef,
   IVirtualScrollConfig,
+  IFormulaFunction,
+  IRecalcResult,
+  IGridDataAccessor,
+  IAuditEntry,
+  IAuditTrail,
 } from './dataGridTypes';
 
 export { toUserLike, isInSelectionRange, normalizeSelectionRange } from './dataGridTypes';

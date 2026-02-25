@@ -12,6 +12,16 @@ export interface ClipboardParams<T> {
   colOffset: number;
   editable?: boolean;
   onCellValueChanged?: (event: ICellValueChangedEvent<T>) => void;
+  /** When true, enables formula-aware copy/paste. */
+  formulas?: boolean;
+  /** Flat (unfiltered) column list used to map visible col to flat col index. */
+  flatColumns?: IColumnDef<T>[];
+  /** Returns the formula string for a flat column + row, or undefined if none. */
+  getFormula?: (col: number, row: number) => string | undefined;
+  /** Returns true if a flat column + row has a formula. */
+  hasFormula?: (col: number, row: number) => boolean;
+  /** Sets or clears a formula for a flat column + row. */
+  setFormula?: (col: number, row: number, formula: string | null) => void;
 }
 
 export class ClipboardState<T> {
@@ -57,8 +67,11 @@ export class ClipboardState<T> {
     const range = this.getEffectiveRange();
     if (range == null) return;
     const norm = normalizeSelectionRange(range);
-    const { items, visibleCols } = this.params;
-    const tsv = formatSelectionAsTsv(items, visibleCols as unknown as Parameters<typeof formatSelectionAsTsv>[1], norm);
+    const { items, visibleCols, formulas, flatColumns, getFormula, hasFormula, colOffset } = this.params;
+    const formulaOptions = formulas && flatColumns
+      ? { colOffset, flatColumns, getFormula, hasFormula }
+      : undefined;
+    const tsv = formatSelectionAsTsv(items, visibleCols as unknown as Parameters<typeof formatSelectionAsTsv>[1], norm, formulaOptions as Parameters<typeof formatSelectionAsTsv>[3]);
     this.internalClipboard = tsv;
     this._copyRange = norm;
     this._cutRange = null;
@@ -103,9 +116,12 @@ export class ClipboardState<T> {
     const norm = this.getEffectiveRange();
     const anchorRow = norm ? norm.startRow : 0;
     const anchorCol = norm ? norm.startCol : 0;
-    const { items, visibleCols } = this.params;
+    const { items, visibleCols, formulas, flatColumns, setFormula, colOffset } = this.params;
+    const formulaOptions = formulas && flatColumns
+      ? { colOffset, flatColumns, setFormula }
+      : undefined;
     const parsedRows = parseTsvClipboard(text);
-    const pasteEvents = applyPastedValues(parsedRows, anchorRow, anchorCol, items, visibleCols);
+    const pasteEvents = applyPastedValues(parsedRows, anchorRow, anchorCol, items, visibleCols, formulaOptions);
     for (const evt of pasteEvents) onCellValueChanged(evt);
     if (this._cutRange) {
       const cutEvents = applyCutClear(this._cutRange, items, visibleCols);

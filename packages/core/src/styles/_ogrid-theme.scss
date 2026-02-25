@@ -101,6 +101,9 @@
   /* Loading */
   --ogrid-loading-overlay: rgba(255, 255, 255, 0.7);
 
+  /* Formula errors */
+  --ogrid-formula-error-color: #d32f2f;
+
   /* Aliases (backward compat — same values as canonical names) */
   --ogrid-selection: #217346;
   --ogrid-bg-range: rgba(33, 115, 70, 0.12);
@@ -154,6 +157,9 @@
     /* Loading */
     --ogrid-loading-overlay: rgba(0, 0, 0, 0.7);
 
+    /* Formula errors */
+    --ogrid-formula-error-color: #ef5350;
+
     /* Aliases */
     --ogrid-selection: #2ea043;
     --ogrid-bg-range: rgba(46, 160, 67, 0.15);
@@ -206,6 +212,9 @@
 
   /* Loading */
   --ogrid-loading-overlay: rgba(0, 0, 0, 0.7);
+
+  /* Formula errors */
+  --ogrid-formula-error-color: #ef5350;
 
   /* Aliases */
   --ogrid-selection: #2ea043;

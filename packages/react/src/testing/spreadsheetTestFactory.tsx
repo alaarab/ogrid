@@ -69,14 +69,14 @@ export function createSpreadsheetTests(DataGridTable: React.ComponentType<IOGrid
     });
 
     describe('range selection', () => {
-      it('selects a single cell on mousedown and marks it in range', async () => {
+      it('selects a single cell on mousedown and marks it active', async () => {
         const { container } = renderSpreadsheetGrid();
         const cell = getCellAt(container, 0, 0);
         expect(cell).toBeTruthy();
         fireEvent.mouseDown(cell);
         await waitFor(() => {
-          const inRange = container.querySelectorAll('[data-in-range="true"]');
-          expect(inRange.length).toBeGreaterThanOrEqual(1);
+          const active = container.querySelectorAll('[data-active-cell="true"]');
+          expect(active.length).toBe(1);
         });
       });
 
@@ -120,7 +120,7 @@ export function createSpreadsheetTests(DataGridTable: React.ComponentType<IOGrid
 
         fireEvent.mouseDown(cell00);
         await waitFor(() => {
-          expect(container.querySelector('[data-in-range="true"]')).toBeInTheDocument();
+          expect(container.querySelector('[data-active-cell="true"]')).toBeInTheDocument();
         });
 
         fireEvent.mouseDown(cell10, { shiftKey: true });
@@ -137,7 +137,7 @@ export function createSpreadsheetTests(DataGridTable: React.ComponentType<IOGrid
         fireEvent.mouseDown(cell);
         fireEvent.click(cell);
         await waitFor(() => {
-          expect(container.querySelector('[data-in-range="true"]')).toBeInTheDocument();
+          expect(container.querySelector('[data-active-cell="true"]')).toBeInTheDocument();
         });
         const cellInput = cell.querySelector('input');
         const cellSelect = cell.querySelector('select');
@@ -207,7 +207,7 @@ export function createSpreadsheetTests(DataGridTable: React.ComponentType<IOGrid
         const cell = getCellAt(container, 0, 0);
         fireEvent.mouseDown(cell);
         await waitFor(() => {
-          expect(container.querySelector('[data-in-range="true"]')).toBeInTheDocument();
+          expect(container.querySelector('[data-active-cell="true"]')).toBeInTheDocument();
         });
         const grid = container.querySelector('[role="region"]') as HTMLElement;
         grid.focus();
@@ -503,8 +503,9 @@ export function createSpreadsheetTests(DataGridTable: React.ComponentType<IOGrid
         fireEvent.keyDown(grid as Element, { key: 'ArrowRight' });
 
         await waitFor(() => {
-          const inRange = container.querySelectorAll('[data-in-range="true"]');
-          expect(inRange.length).toBe(1);
+          const active = container.querySelectorAll('[data-active-cell="true"]');
+          expect(active.length).toBe(1);
+          expect(active[0].getAttribute('data-col-index')).toBe('1');
         });
       });
 
@@ -532,18 +533,18 @@ export function createSpreadsheetTests(DataGridTable: React.ComponentType<IOGrid
 
         fireEvent.keyDown(grid, { key: 'Tab' });
         await waitFor(() => {
-          const inRange = container.querySelectorAll('[data-in-range="true"]');
-          expect(inRange.length).toBe(1);
-          expect(inRange[0].getAttribute('data-row-index')).toBe('0');
-          expect(inRange[0].getAttribute('data-col-index')).toBe('1');
+          const active = container.querySelectorAll('[data-active-cell="true"]');
+          expect(active.length).toBe(1);
+          expect(active[0].getAttribute('data-row-index')).toBe('0');
+          expect(active[0].getAttribute('data-col-index')).toBe('1');
         });
 
         fireEvent.keyDown(grid, { key: 'Tab' });
         await waitFor(() => {
-          const inRange = container.querySelectorAll('[data-in-range="true"]');
-          expect(inRange.length).toBe(1);
-          expect(inRange[0].getAttribute('data-row-index')).toBe('1');
-          expect(inRange[0].getAttribute('data-col-index')).toBe('0');
+          const active = container.querySelectorAll('[data-active-cell="true"]');
+          expect(active.length).toBe(1);
+          expect(active[0].getAttribute('data-row-index')).toBe('1');
+          expect(active[0].getAttribute('data-col-index')).toBe('0');
         });
       });
 
@@ -556,10 +557,10 @@ export function createSpreadsheetTests(DataGridTable: React.ComponentType<IOGrid
 
         fireEvent.keyDown(grid, { key: 'Tab', shiftKey: true });
         await waitFor(() => {
-          const inRange = container.querySelectorAll('[data-in-range="true"]');
-          expect(inRange.length).toBe(1);
-          expect(inRange[0].getAttribute('data-row-index')).toBe('0');
-          expect(inRange[0].getAttribute('data-col-index')).toBe('1');
+          const active = container.querySelectorAll('[data-active-cell="true"]');
+          expect(active.length).toBe(1);
+          expect(active[0].getAttribute('data-row-index')).toBe('0');
+          expect(active[0].getAttribute('data-col-index')).toBe('1');
         });
       });
 
@@ -572,18 +573,18 @@ export function createSpreadsheetTests(DataGridTable: React.ComponentType<IOGrid
 
         fireEvent.keyDown(grid, { key: 'Home' });
         await waitFor(() => {
-          const inRange = container.querySelectorAll('[data-in-range="true"]');
-          expect(inRange.length).toBe(1);
-          expect(inRange[0].getAttribute('data-row-index')).toBe('1');
-          expect(inRange[0].getAttribute('data-col-index')).toBe('0');
+          const active = container.querySelectorAll('[data-active-cell="true"]');
+          expect(active.length).toBe(1);
+          expect(active[0].getAttribute('data-row-index')).toBe('1');
+          expect(active[0].getAttribute('data-col-index')).toBe('0');
         });
 
         fireEvent.keyDown(grid, { key: 'Home', ctrlKey: true });
         await waitFor(() => {
-          const inRange = container.querySelectorAll('[data-in-range="true"]');
-          expect(inRange.length).toBe(1);
-          expect(inRange[0].getAttribute('data-row-index')).toBe('0');
-          expect(inRange[0].getAttribute('data-col-index')).toBe('0');
+          const active = container.querySelectorAll('[data-active-cell="true"]');
+          expect(active.length).toBe(1);
+          expect(active[0].getAttribute('data-row-index')).toBe('0');
+          expect(active[0].getAttribute('data-col-index')).toBe('0');
         });
       });
 
@@ -596,18 +597,18 @@ export function createSpreadsheetTests(DataGridTable: React.ComponentType<IOGrid
 
         fireEvent.keyDown(grid, { key: 'End' });
         await waitFor(() => {
-          const inRange = container.querySelectorAll('[data-in-range="true"]');
-          expect(inRange.length).toBe(1);
-          expect(inRange[0].getAttribute('data-row-index')).toBe('0');
-          expect(inRange[0].getAttribute('data-col-index')).toBe('1');
+          const active = container.querySelectorAll('[data-active-cell="true"]');
+          expect(active.length).toBe(1);
+          expect(active[0].getAttribute('data-row-index')).toBe('0');
+          expect(active[0].getAttribute('data-col-index')).toBe('1');
         });
 
         fireEvent.keyDown(grid, { key: 'End', ctrlKey: true });
         await waitFor(() => {
-          const inRange = container.querySelectorAll('[data-in-range="true"]');
-          expect(inRange.length).toBe(1);
-          expect(inRange[0].getAttribute('data-row-index')).toBe('2');
-          expect(inRange[0].getAttribute('data-col-index')).toBe('1');
+          const active = container.querySelectorAll('[data-active-cell="true"]');
+          expect(active.length).toBe(1);
+          expect(active[0].getAttribute('data-row-index')).toBe('2');
+          expect(active[0].getAttribute('data-col-index')).toBe('1');
         });
       });
     });
@@ -768,7 +769,7 @@ export function createSpreadsheetTests(DataGridTable: React.ComponentType<IOGrid
         fireEvent.mouseDown(cell00);
 
         await waitFor(() => {
-          expect(container.querySelector('[data-in-range="true"]')).toBeInTheDocument();
+          expect(container.querySelector('[data-active-cell="true"]')).toBeInTheDocument();
         });
 
         const grid = container.querySelector('[role="region"]') as HTMLElement;

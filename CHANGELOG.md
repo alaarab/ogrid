@@ -2,6 +2,59 @@
 
 All notable changes to OGrid will be documented in this file.
 
+## [Unreleased]
+
+### Added
+- **Formula engine expansion: 93 built-in functions** (up from 39). Added 54 new functions across all categories:
+  - **Math (17 new):** `ROUNDUP`, `ROUNDDOWN`, `INT`, `TRUNC`, `PRODUCT`, `SUMPRODUCT`, `MEDIAN`, `LARGE`, `SMALL`, `RANK`, `SIGN`, `LOG`, `LN`, `EXP`, `PI`, `RAND`, `RANDBETWEEN`
+  - **Text (12 new):** `FIND`, `SEARCH`, `REPLACE`, `REPT`, `EXACT`, `PROPER`, `CLEAN`, `CHAR`, `CODE`, `TEXT`, `VALUE`, `TEXTJOIN`
+  - **Logical (5 new):** `IFNA`, `IFS`, `SWITCH`, `CHOOSE`, `XOR`
+  - **Lookup (2 new):** `HLOOKUP`, `XLOOKUP`
+  - **Date (9 new):** `DATE`, `DATEDIF`, `EDATE`, `EOMONTH`, `WEEKDAY`, `HOUR`, `MINUTE`, `SECOND`, `NETWORKDAYS`
+  - **Statistics (3 new):** `SUMIFS`, `COUNTIFS`, `AVERAGEIFS`
+  - **Information (6 new):** `ISBLANK`, `ISNUMBER`, `ISTEXT`, `ISERROR`, `ISNA`, `TYPE`
+- `#NUM!` error type for invalid numeric operations (LARGE/SMALL out of range, LOG of negative, etc.)
+- 148 new formula function tests. **3,834 tests** across 14 packages.
+- Storybook `Formulas` stories for React Fluent and React Material packages.
+
+### Fixed
+- `PROPER` now correctly lowercases remaining characters (not just capitalizes first letters).
+- `VALUE` now correctly converts percentage strings (e.g., `"75%"` → `0.75`).
+- Angular `OGridService` and Vue `useOGrid` now auto-wire formula engine props (parity with React).
+- Angular `types/index.ts` now re-exports formula types (`IFormulaFunction`, `IRecalcResult`, `IGridDataAccessor`, `IAuditEntry`, `IAuditTrail`).
+- Column autosize header measurement now includes `<th>` border widths for correct `border-box` sizing.
+- Date inline editor now commits value on Enter key and blur (was silently discarding edits in React and Vue).
+- Hero grid on docs homepage is now editable with persisted state.
+
+---
+
+## [2.3.0] — 2026-02-24
+
+### Added
+- **PageDown/PageUp keyboard navigation** across all frameworks — jumps one visible page of rows.
+- Performance Storybook stories (large dataset rendering).
+- Documentation polish and feature page updates.
+
+### Fixed
+- Cross-framework parity: `scrollToRow`, PageDown NaN guard, Angular Delete key refactor.
+- JS package clipboard during editing, Storybook story parity.
+
+---
+
+## [2.2.0] — 2026-02-24
+
+### Added
+- **CSS containment** (`contain: content`) on body cells for reduced paint scope.
+- **Column virtualization** — opt-in via `virtualScroll: { columns: true }`, replaces off-screen columns with spacer `<td>` elements.
+- **Web Worker sort/filter** — opt-in via `workerSort: true`, offloads sort+filter to inline Blob URL worker.
+- **Excel-style cell references** — column letter headers (A, B, C…), row numbers, name box showing active cell.
+- Cell references Storybook stories and feature docs page.
+
+### Fixed
+- Column pinning initialization across all frameworks.
+
+---
+
 ## [2.1.15] — 2026-02-24
 
 ### Added

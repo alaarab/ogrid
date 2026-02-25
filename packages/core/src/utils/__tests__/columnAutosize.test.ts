@@ -473,6 +473,81 @@ describe('measureColumnContentWidth', () => {
     expect(headerLabel.style.flexShrink).toBe('1');
     expect(headerLabel.style.width).toBe('100px');
     expect(headerLabel.style.minWidth).toBe('50px');
+    expect(headerLabel.style.maxWidth).toBe('');
+    csSpy.mockRestore();
+  });
+
+  it('clears max-width on overflow-hidden descendants during header measurement', () => {
+    // Simulates the real DOM structure: .columnHeader and .columnName both have
+    // max-width: 100% in CSS, which was preventing full text measurement.
+    const columnName = createMockElement({
+      offsetWidth: 200,
+      className: 'columnName',
+      children: [],
+    });
+    columnName.style.maxWidth = '100%';
+
+    const headerContent = createMockElement({
+      offsetWidth: 200,
+      className: 'headerContent',
+      children: [columnName],
+      firstElementChild: columnName,
+    });
+
+    const headerActions = createMockElement({
+      offsetWidth: 24,
+      className: 'headerActions',
+      children: [],
+    });
+
+    const columnHeader = createMockElement({
+      offsetWidth: 200,
+      className: 'columnHeader',
+      children: [headerContent, headerActions],
+      firstElementChild: headerContent,
+    });
+    columnHeader.style.maxWidth = '100%';
+
+    const headerCellContent = createMockElement({
+      offsetWidth: 250,
+      children: [columnHeader],
+      firstElementChild: columnHeader,
+    });
+
+    const headerCell = createMockElement({
+      offsetWidth: 100,
+      isHeader: true,
+      children: [headerCellContent] as unknown as HTMLElement[],
+      firstElementChild: headerCellContent,
+    });
+
+    const csSpy = jest.spyOn(window, 'getComputedStyle').mockImplementation(
+      (el) => {
+        if (el === headerCell) {
+          return { paddingLeft: '10', paddingRight: '10', overflow: 'visible', flexShrink: '0' } as unknown as CSSStyleDeclaration;
+        }
+        if (el === columnHeader) {
+          return { overflow: 'hidden', flexShrink: '1', paddingLeft: '0', paddingRight: '0' } as unknown as CSSStyleDeclaration;
+        }
+        if (el === headerContent) {
+          return { overflow: 'hidden', flexShrink: '1', paddingLeft: '0', paddingRight: '0' } as unknown as CSSStyleDeclaration;
+        }
+        if (el === columnName) {
+          return { overflow: 'hidden', flexShrink: '1', paddingLeft: '0', paddingRight: '0' } as unknown as CSSStyleDeclaration;
+        }
+        if (el === headerActions) {
+          return { overflow: 'visible', flexShrink: '0', paddingLeft: '0', paddingRight: '0' } as unknown as CSSStyleDeclaration;
+        }
+        return { overflow: 'visible', flexShrink: '0', paddingLeft: '0', paddingRight: '0' } as unknown as CSSStyleDeclaration;
+      }
+    );
+
+    const container = createContainer([headerCell]);
+    measureColumnContentWidth('col1', 50, container);
+
+    // Verify max-width was cleared during measurement (set to 'none') and restored after
+    expect(columnHeader.style.maxWidth).toBe('100%');
+    expect(columnName.style.maxWidth).toBe('100%');
     csSpy.mockRestore();
   });
 
@@ -539,6 +614,45 @@ describe('measureColumnContentWidth', () => {
 
     // contentContainer.offsetWidth (150) + resizeHandle (10) + padding (0) = 160
     expect(result).toBe(160);
+    csSpy.mockRestore();
+  });
+
+  it('includes th border widths in header measurement for border-box sizing', () => {
+    const contentContainer = createMockElement({ offsetWidth: 150 });
+    const resizeHandle = createMockElement({
+      offsetWidth: 8,
+      className: 'ogrid-resize-handle',
+      children: [],
+    });
+
+    const headerCell = createMockElement({
+      offsetWidth: 100,
+      isHeader: true,
+      children: [contentContainer, resizeHandle] as unknown as HTMLElement[],
+      firstElementChild: contentContainer,
+    });
+
+    const csSpy = jest.spyOn(window, 'getComputedStyle').mockImplementation(
+      (el) => {
+        if (el === headerCell) {
+          return {
+            paddingLeft: '10',
+            paddingRight: '10',
+            borderLeftWidth: '1',
+            borderRightWidth: '1',
+            overflow: 'visible',
+            flexShrink: '0',
+          } as unknown as CSSStyleDeclaration;
+        }
+        return { overflow: 'visible', flexShrink: '0', paddingLeft: '0', paddingRight: '0' } as unknown as CSSStyleDeclaration;
+      }
+    );
+
+    const container = createContainer([headerCell]);
+    const result = measureColumnContentWidth('col1', 50, container);
+
+    // contentContainer.offsetWidth (150) + resizeHandle (8) + padding (10+10=20) + borders (1+1=2) = 180
+    expect(result).toBe(180);
     csSpy.mockRestore();
   });
 });

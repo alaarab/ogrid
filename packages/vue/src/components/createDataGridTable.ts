@@ -269,7 +269,7 @@ export function createDataGridTable(ui: IDataGridTableUIBindings) {
 
           // Display mode
           const content = resolveCellDisplayContent(col, item, descriptor.displayValue);
-          const cellStyle = resolveCellStyle(col, item);
+          const cellStyle = resolveCellStyle(col, item, descriptor.displayValue);
           const interactionProps2 = getCellInteractionProps(descriptor, col.columnId, interactionHandlers);
 
           const cellClasses: string[] = ['ogrid-cell-content'];

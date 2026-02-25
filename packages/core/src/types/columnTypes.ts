@@ -75,6 +75,8 @@ export interface ICellValueChangedEvent<T> {
   oldValue: unknown;
   newValue: unknown;
   rowIndex: number;
+  /** True when the newValue was produced by the formula engine (not a direct user edit). */
+  isFormulaResult?: boolean;
 }
 
 /** Props passed to custom cell editor components. */

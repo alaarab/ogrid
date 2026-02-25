@@ -529,8 +529,8 @@ export abstract class BaseDataGridTableComponent<T = unknown> {
     }
   }
 
-  resolveCellStyleFn(col: IColumnDef<T>, item: T): Record<string, string> | undefined {
-    return resolveCellStyle(col, item);
+  resolveCellStyleFn(col: IColumnDef<T>, item: T, displayValue?: unknown): Record<string, string> | undefined {
+    return resolveCellStyle(col, item, displayValue);
   }
 
   buildPopoverEditorProps(item: T, col: IColumnDef<T>, descriptor: CellRenderDescriptor): unknown {
