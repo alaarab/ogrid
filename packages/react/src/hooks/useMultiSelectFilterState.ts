@@ -51,8 +51,9 @@ export function useMultiSelectFilterState(
 
   // Filtered options for multiSelect (search within options)
   const filteredOptions = useMemo(() => {
-    if (!debouncedSearchText.trim()) return safeOptions;
-    const searchLower = debouncedSearchText.toLowerCase().trim();
+    const trimmed = debouncedSearchText.trim();
+    if (!trimmed) return safeOptions;
+    const searchLower = trimmed.toLowerCase();
     return safeOptions.filter((opt) => opt.toLowerCase().includes(searchLower));
   }, [safeOptions, debouncedSearchText]);
 
@@ -66,7 +67,11 @@ export function useMultiSelectFilterState(
   }, []);
 
   const handleSelectAll = useCallback(() => {
-    setTempSelected((prev) => new Set([...prev, ...filteredOptions]));
+    setTempSelected((prev) => {
+      const next = new Set(prev);
+      for (const opt of filteredOptions) next.add(opt);
+      return next;
+    });
   }, [filteredOptions]);
 
   const handleClearSelection = useCallback(() => setTempSelected(new Set()), []);

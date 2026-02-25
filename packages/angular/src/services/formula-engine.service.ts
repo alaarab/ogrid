@@ -11,7 +11,7 @@
 import { Injectable, signal, computed, DestroyRef, inject } from '@angular/core';
 import {
   FormulaEngine,
-  getCellValue,
+  createGridDataAccessor,
 } from '@alaarab/ogrid-core';
 import type {
   IGridDataAccessor,
@@ -265,20 +265,8 @@ export class FormulaEngineService<T = unknown> {
 
   // --- Private helpers ---
 
-  /**
-   * Create a data accessor that bridges grid data to formula coordinates.
-   */
+  /** Create a data accessor that bridges grid data to formula coordinates. */
   private createAccessor(): IGridDataAccessor {
-    const items = this.items;
-    const cols = this.flatColumns;
-    return {
-      getCellValue: (col: number, row: number): unknown => {
-        if (row < 0 || row >= items.length) return null;
-        if (col < 0 || col >= cols.length) return null;
-        return getCellValue(items[row], cols[col]);
-      },
-      getRowCount: () => items.length,
-      getColumnCount: () => cols.length,
-    };
+    return createGridDataAccessor(this.items, this.flatColumns);
   }
 }
