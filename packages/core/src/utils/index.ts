@@ -5,7 +5,7 @@ export {
   exportToCsv,
   triggerCsvDownload,
 } from './exportToCsv';
-export { getCellValue, isColumnEditable } from './cellValue';
+export { getCellValue, isColumnEditable, createGridDataAccessor } from './cellValue';
 export { flattenColumns, buildHeaderRows } from './columnUtils';
 export {
   isFilterConfig,
