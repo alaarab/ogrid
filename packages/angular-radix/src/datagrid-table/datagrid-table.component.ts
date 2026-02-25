@@ -621,7 +621,7 @@ import { PopoverCellEditorComponent } from './popover-cell-editor.component';
                               ></ogrid-radix-popover-cell-editor>
                             } @else {
                               @let content = resolveCellContent(colLayout.col, item, descriptor.displayValue);
-                              @let cellStyle = resolveCellStyleFn(colLayout.col, item);
+                              @let cellStyle = resolveCellStyleFn(colLayout.col, item, descriptor.displayValue);
                               <div
                                 class="ogrid-datagrid-cell"
                                 [class.ogrid-datagrid-cell--active]="descriptor.isActive"

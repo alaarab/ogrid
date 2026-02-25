@@ -8,6 +8,7 @@ test-results
 .turbo
 .angular
 *.tsbuildinfo
+tsup.config.bundled_*.mjs
 *.log
 *.tgz
 *.local

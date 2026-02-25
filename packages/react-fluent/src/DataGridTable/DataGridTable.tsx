@@ -321,7 +321,7 @@ function DataGridTableInner<T>(props: IOGridDataGridProps<T>): React.ReactElemen
         );
       } else {
         const displayContent = resolveCellDisplayContent(col, item, descriptor.displayValue) as React.ReactNode;
-        const cellStyle = resolveCellStyle(col, item);
+        const cellStyle = resolveCellStyle(col, item, descriptor.displayValue);
         const styledContent = cellStyle ? <span style={cellStyle}>{displayContent}</span> : displayContent;
 
         const cellClassNames = `${styles.cellContent}${descriptor.isActive ? ` ${styles.activeCellContent}` : ''}${descriptor.isActive && descriptor.isInRange ? ` ${styles.inRange}` : ''}${descriptor.isInRange && !descriptor.isActive ? ` ${styles.cellInRange}` : ''}${descriptor.isInCutRange ? ` ${styles.cellCut}` : ''}${descriptor.isInCopyRange ? ` ${styles.cellCopied}` : ''}`;

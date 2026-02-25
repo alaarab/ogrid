@@ -567,7 +567,7 @@ function DataGridTableInner<T>(props: IOGridDataGridProps<T>): React.ReactElemen
         );
       } else {
         const content = resolveCellDisplayContent(col, item, descriptor.displayValue) as React.ReactNode;
-        const cellStyle = resolveCellStyle(col, item);
+        const cellStyle = resolveCellStyle(col, item, descriptor.displayValue);
         const styledContent = cellStyle ? <span style={cellStyle}>{content}</span> : content;
 
         // Build className string (CSS classes — zero Emotion overhead)

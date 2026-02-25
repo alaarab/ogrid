@@ -18,6 +18,7 @@ export const AUTOSIZE_MAX_PX = 520;
 function measureHeaderWidth(th: HTMLElement): number {
   const cs = getComputedStyle(th);
   const thPadding = (parseFloat(cs.paddingLeft) || 0) + (parseFloat(cs.paddingRight) || 0);
+  const thBorders = (parseFloat(cs.borderLeftWidth) || 0) + (parseFloat(cs.borderRightWidth) || 0);
 
   // Find resize handle width (sibling of the content container)
   let resizeHandleWidth = 0;
@@ -35,7 +36,7 @@ function measureHeaderWidth(th: HTMLElement): number {
   if (!contentContainer) return th.offsetWidth;
 
   // Collect modified elements for restoration
-  const modified: { el: HTMLElement; overflow: string; flexShrink: string; width: string; minWidth: string }[] = [];
+  const modified: { el: HTMLElement; overflow: string; flexShrink: string; width: string; minWidth: string; maxWidth: string }[] = [];
 
   const expandDescendants = (parent: HTMLElement) => {
     for (let i = 0; i < parent.children.length; i++) {
@@ -48,11 +49,13 @@ function measureHeaderWidth(th: HTMLElement): number {
           flexShrink: child.style.flexShrink,
           width: child.style.width,
           minWidth: child.style.minWidth,
+          maxWidth: child.style.maxWidth,
         });
         child.style.overflow = 'visible';
         child.style.flexShrink = '0';
         child.style.width = 'max-content';
         child.style.minWidth = 'max-content';
+        child.style.maxWidth = 'none';
       }
       expandDescendants(child);
     }
@@ -76,9 +79,10 @@ function measureHeaderWidth(th: HTMLElement): number {
     m.el.style.flexShrink = m.flexShrink;
     m.el.style.width = m.width;
     m.el.style.minWidth = m.minWidth;
+    m.el.style.maxWidth = m.maxWidth;
   }
 
-  return expandedWidth + resizeHandleWidth + thPadding;
+  return expandedWidth + resizeHandleWidth + thPadding + thBorders;
 }
 
 /**

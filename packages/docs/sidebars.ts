@@ -22,6 +22,7 @@ const sidebars: SidebarsConfig = {
         'features/filtering',
         'features/pagination',
         'features/editing',
+        'features/formulas',
         'features/spreadsheet-selection',
         'features/row-selection',
         'features/column-groups',

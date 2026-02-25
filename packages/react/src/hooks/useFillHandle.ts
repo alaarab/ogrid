@@ -4,6 +4,7 @@ import { normalizeSelectionRange } from '../types';
 import type { ISelectionRange, IActiveCell } from '../types';
 import type { IColumnDef, ICellValueChangedEvent } from '../types/columnTypes';
 import { applyFillValues, buildCellIndex } from '../utils';
+import type { IFillFormulaOptions } from '../utils';
 import { useLatestRef } from './useLatestRef';
 
 export interface UseFillHandleParams<T> {
@@ -18,6 +19,8 @@ export interface UseFillHandleParams<T> {
   wrapperRef: RefObject<HTMLDivElement | null>;
   beginBatch?: () => void;
   endBatch?: () => void;
+  /** Optional formula-aware fill options. When provided, cells with formulas adjust references during fill. */
+  formulaOptions?: IFillFormulaOptions<T>;
 }
 
 export interface UseFillHandleResult {
@@ -49,6 +52,7 @@ export function useFillHandle<T>(params: UseFillHandleParams<T>): UseFillHandleR
     wrapperRef,
     beginBatch,
     endBatch,
+    formulaOptions,
   } = params;
 
   const onCellValueChangedRef = useLatestRef(onCellValueChangedProp);
@@ -189,7 +193,7 @@ export function useFillHandle<T>(params: UseFillHandleParams<T>): UseFillHandleR
       setActiveCell({ rowIndex: fillDrag.startRow, columnIndex: fillDrag.startCol + colOffsetRef.current });
 
       // Apply fill values
-      const fillEvents = applyFillValues(norm, fillDrag.startRow, fillDrag.startCol, items, visibleCols);
+      const fillEvents = applyFillValues(norm, fillDrag.startRow, fillDrag.startCol, items, visibleCols, formulaOptions);
       if (fillEvents.length > 0) {
         beginBatch?.();
         for (const evt of fillEvents) onCellValueChangedRef.current?.(evt);
@@ -250,7 +254,8 @@ export function useFillHandle<T>(params: UseFillHandleParams<T>): UseFillHandleR
       norm.startRow,
       norm.startCol,
       itemsRef.current,
-      visibleColsRef.current
+      visibleColsRef.current,
+      formulaOptions
     );
     if (fillEvents.length > 0) {
       beginBatch?.();

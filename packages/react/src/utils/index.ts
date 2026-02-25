@@ -70,6 +70,7 @@ export type {
   ColumnHeaderMenuHandlers,
   ArrowNavigationContext,
   ArrowNavigationResult,
+  IFillFormulaOptions,
 } from '@alaarab/ogrid-core';
 
 // View model utilities (re-exported from core + React-specific getCellInteractionProps)

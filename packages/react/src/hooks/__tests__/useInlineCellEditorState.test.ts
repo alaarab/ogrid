@@ -279,7 +279,7 @@ describe('useInlineCellEditorState', () => {
     expect(onCommit).not.toHaveBeenCalled();
   });
 
-  it('handleBlur for date editor does not commit', () => {
+  it('handleBlur for date editor commits localValue', () => {
     const onCommit = jest.fn();
     const onCancel = jest.fn();
     const { result } = renderHook(() =>
@@ -293,7 +293,7 @@ describe('useInlineCellEditorState', () => {
     act(() => {
       result.current.handleBlur();
     });
-    expect(onCommit).not.toHaveBeenCalled();
+    expect(onCommit).toHaveBeenCalledWith('2024-01-15');
   });
 
   it('handleKeyDown ignores other keys', () => {

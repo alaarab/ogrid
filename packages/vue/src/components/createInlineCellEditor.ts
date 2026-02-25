@@ -50,6 +50,7 @@ export function createInlineCellEditor(options: CreateInlineCellEditorOptions) {
         dropdown.style.maxHeight = `${maxH}px`;
         dropdown.style.zIndex = '9999';
         dropdown.style.right = 'auto';
+        dropdown.style.textAlign = 'left';
         if (flipUp) {
           dropdown.style.top = 'auto';
           dropdown.style.bottom = `${window.innerHeight - rect.top}px`;
@@ -157,7 +158,7 @@ export function createInlineCellEditor(options: CreateInlineCellEditorOptions) {
             h('div', {
               ref: (el: unknown) => { selectDropdownRef.value = el as HTMLDivElement; },
               role: 'listbox',
-              style: { position: 'absolute', top: '100%', left: '0', right: '0', maxHeight: '200px', overflowY: 'auto', background: 'var(--ogrid-bg, #fff)', border: '1px solid var(--ogrid-border, rgba(0,0,0,0.12))', zIndex: '10', boxShadow: '0 4px 16px rgba(0,0,0,0.2)' },
+              style: { position: 'absolute', top: '100%', left: '0', right: '0', maxHeight: '200px', overflowY: 'auto', background: 'var(--ogrid-bg, #fff)', border: '1px solid var(--ogrid-border, rgba(0,0,0,0.12))', zIndex: '10', boxShadow: '0 4px 16px rgba(0,0,0,0.2)', textAlign: 'left' },
             }, values.map((v, i) =>
               h('div', {
                 key: String(v),
