@@ -34,6 +34,10 @@ export interface IColumnHeaderFilterProps {
 
 // ---- Date Filter Content ----
 
+const dateContainerStyle: React.CSSProperties = { padding: '8px 12px', display: 'flex', flexDirection: 'column', gap: 6 };
+const dateLabelStyle: React.CSSProperties = { display: 'flex', alignItems: 'center', gap: 6, fontSize: 12 };
+const dateInputFlexStyle: React.CSSProperties = { flex: 1 };
+
 export interface DateFilterContentProps {
   tempDateFrom: string;
   setTempDateFrom: (v: string) => void;
@@ -60,14 +64,14 @@ export const DateFilterContent: React.FC<DateFilterContentProps> = ({
   classNames,
 }) => (
   <>
-    <div style={{ padding: '8px 12px', display: 'flex', flexDirection: 'column', gap: 6 }}>
-      <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12 }}>
+    <div style={dateContainerStyle}>
+      <label style={dateLabelStyle}>
         From:
-        <input type="date" value={tempDateFrom} onChange={(e) => setTempDateFrom(e.target.value)} style={{ flex: 1 }} />
+        <input type="date" value={tempDateFrom} onChange={(e) => setTempDateFrom(e.target.value)} style={dateInputFlexStyle} />
       </label>
-      <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12 }}>
+      <label style={dateLabelStyle}>
         To:
-        <input type="date" value={tempDateTo} onChange={(e) => setTempDateTo(e.target.value)} style={{ flex: 1 }} />
+        <input type="date" value={tempDateTo} onChange={(e) => setTempDateTo(e.target.value)} style={dateInputFlexStyle} />
       </label>
     </div>
     <div className={classNames?.popoverActions}>

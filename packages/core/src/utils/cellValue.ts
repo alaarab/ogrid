@@ -1,4 +1,5 @@
 import type { IColumnDef } from '../types/columnTypes';
+import type { IGridDataAccessor } from '../formula/types';
 
 /**
  * Get the cell value for a row/column, using valueGetter when defined otherwise item[columnId].
@@ -20,4 +21,23 @@ export function getCellValue<T>(item: T, col: IColumnDef<T>): unknown {
  */
 export function isColumnEditable<T>(col: IColumnDef<T>, item: T): boolean {
   return col.editable === true || (typeof col.editable === 'function' && col.editable(item));
+}
+
+/**
+ * Create an IGridDataAccessor from items and flat columns.
+ * Shared factory used by React, Angular, Vue, and JS formula engine integrations.
+ */
+export function createGridDataAccessor<T>(
+  items: T[],
+  flatColumns: IColumnDef<T>[],
+): IGridDataAccessor {
+  return {
+    getCellValue: (col: number, row: number): unknown => {
+      if (row < 0 || row >= items.length) return null;
+      if (col < 0 || col >= flatColumns.length) return null;
+      return getCellValue(items[row], flatColumns[col]);
+    },
+    getRowCount: () => items.length,
+    getColumnCount: () => flatColumns.length,
+  };
 }

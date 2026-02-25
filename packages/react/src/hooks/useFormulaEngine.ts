@@ -16,7 +16,7 @@ import {
   type IAuditTrail,
 } from '@alaarab/ogrid-core';
 import type { IColumnDef } from '@alaarab/ogrid-core';
-import { getCellValue } from '../utils';
+import { createGridDataAccessor } from '@alaarab/ogrid-core';
 import { useLatestRef } from './useLatestRef';
 
 export interface UseFormulaEngineParams<T> {
@@ -118,19 +118,10 @@ export function useFormulaEngine<T>(
   }, [sheets]);
 
   // Create a data accessor that bridges grid data → formula coordinates
-  const createAccessor = useCallback((): IGridDataAccessor => {
-    const currentItems = itemsRef.current;
-    const currentCols = flatColumnsRef.current;
-    return {
-      getCellValue: (col: number, row: number): unknown => {
-        if (row < 0 || row >= currentItems.length) return null;
-        if (col < 0 || col >= currentCols.length) return null;
-        return getCellValue(currentItems[row], currentCols[col]);
-      },
-      getRowCount: () => currentItems.length,
-      getColumnCount: () => currentCols.length,
-    };
-  }, [itemsRef, flatColumnsRef]);
+  const createAccessor = useCallback(
+    (): IGridDataAccessor => createGridDataAccessor(itemsRef.current, flatColumnsRef.current),
+    [itemsRef, flatColumnsRef],
+  );
 
   // Load initial formulas on first enable
   const initialLoadedRef = useRef(false);

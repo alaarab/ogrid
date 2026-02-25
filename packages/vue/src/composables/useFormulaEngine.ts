@@ -9,7 +9,7 @@
 import { computed, watch, shallowRef, type Ref } from 'vue';
 import {
   FormulaEngine,
-  getCellValue,
+  createGridDataAccessor,
   type IGridDataAccessor,
   type IFormulaFunction,
   type IRecalcResult,
@@ -84,22 +84,9 @@ export function useFormulaEngine<T>(
 
   const enabled = computed(() => formulas?.value ?? false);
 
-  /**
-   * Create a data accessor that bridges grid data -> formula coordinates.
-   * Built fresh on each call so it reads the latest items/columns.
-   */
+  /** Create a data accessor that bridges grid data -> formula coordinates. */
   function createAccessor(): IGridDataAccessor {
-    const currentItems = itemsRef.value;
-    const currentCols = flatColumnsRef.value;
-    return {
-      getCellValue: (col: number, row: number): unknown => {
-        if (row < 0 || row >= currentItems.length) return null;
-        if (col < 0 || col >= currentCols.length) return null;
-        return getCellValue(currentItems[row], currentCols[col]);
-      },
-      getRowCount: () => currentItems.length,
-      getColumnCount: () => currentCols.length,
-    };
+    return createGridDataAccessor(itemsRef.value, flatColumnsRef.value);
   }
 
   // Watch the formulas flag to create/destroy engine
