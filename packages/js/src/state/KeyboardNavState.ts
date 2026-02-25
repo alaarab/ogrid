@@ -1,5 +1,5 @@
 import type { IActiveCell, ISelectionRange, IColumnDef, ICellValueChangedEvent, RowId } from '@alaarab/ogrid-core';
-import { getCellValue, computeTabNavigation, computeArrowNavigation, applyCellDeletion } from '@alaarab/ogrid-core';
+import { getCellValue, computeTabNavigation, computeArrowNavigation, applyCellDeletion, getScrollTopForRow } from '@alaarab/ogrid-core';
 
 export interface KeyboardNavParams<T> {
   items: T[];
@@ -172,10 +172,15 @@ export class KeyboardNavState<T> {
       case 'PageDown':
       case 'PageUp': {
         e.preventDefault();
+        const wrapper = this.wrapperRef;
         let pageSize = 10;
-        if (this.wrapperRef) {
-          const row = this.wrapperRef.querySelector('tbody tr') as HTMLElement | null;
-          if (row) pageSize = Math.max(1, Math.floor(this.wrapperRef.clientHeight / row.offsetHeight));
+        let rowHeight = 36;
+        if (wrapper) {
+          const firstRow = wrapper.querySelector('tbody tr') as HTMLElement | null;
+          if (firstRow && firstRow.offsetHeight > 0) {
+            rowHeight = firstRow.offsetHeight;
+            pageSize = Math.max(1, Math.floor(wrapper.clientHeight / rowHeight));
+          }
         }
         const pgDirection = e.key === 'PageDown' ? 1 : -1;
         const newRowPage = Math.max(0, Math.min(rowIndex + pgDirection * pageSize, maxRowIndex));
@@ -196,6 +201,10 @@ export class KeyboardNavState<T> {
           });
         }
         this.setActiveCell({ rowIndex: newRowPage, columnIndex });
+        // Scroll the new row into view
+        if (wrapper) {
+          wrapper.scrollTop = getScrollTopForRow(newRowPage, rowHeight, wrapper.clientHeight, 'center');
+        }
         break;
       }
       case 'Enter':

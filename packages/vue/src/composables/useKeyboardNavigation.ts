@@ -198,7 +198,7 @@ export function useKeyboardNavigation<T>(
         let pageSize = 10;
         if (wrapperEl) {
           const row = wrapperEl.querySelector('tbody tr') as HTMLElement | null;
-          if (row) pageSize = Math.max(1, Math.floor(wrapperEl.clientHeight / row.offsetHeight));
+          if (row && row.offsetHeight > 0) pageSize = Math.max(1, Math.floor(wrapperEl.clientHeight / row.offsetHeight));
         }
         const pgDirection = e.key === 'PageDown' ? 1 : -1;
         const newRowPage = Math.max(0, Math.min(rowIndex + pgDirection * pageSize, maxRowIndex));
