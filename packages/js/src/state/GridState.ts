@@ -25,6 +25,7 @@ import {
   validateRowIds,
 } from '@alaarab/ogrid-core';
 import { EventEmitter } from './EventEmitter';
+import type { FormulaEngineState } from './FormulaEngineState';
 
 interface StateChangeEvent {
   type: 'data' | 'sort' | 'filter' | 'page' | 'columns' | 'loading';
@@ -58,6 +59,9 @@ export class GridState<T> {
   private _stickyHeader: boolean;
   private _fullScreen: boolean;
   private _workerSort: boolean | 'auto';
+
+  // Formula engine (optional — wired by OGrid when formulas option is enabled)
+  private _formulaEngine: FormulaEngineState | null = null;
 
   // Filter options for client-side data (used by sidebar filters panel & header filter popovers)
   private _filterOptions: Record<string, string[]> = {};
@@ -409,18 +413,29 @@ export class GridState<T> {
       scrollToRow: () => { /* no-op for non-virtual-scroll grids */ },
       getColumnOrder: () => [...this._columnOrder],
       setColumnOrder: (order: string[]) => this.setColumnOrder(order),
-      exportToCsv: (filename?: string) => {
+      exportToCsv: (filename?: string, options?: { exportMode?: 'values' | 'formulas' }) => {
         const { items } = this.getProcessedItems();
         const cols = this.visibleColumnDefs.map(c => ({ columnId: c.columnId, name: c.name }));
+        const formulaOptions = this._formulaEngine?.isEnabled() ? {
+          getFormula: this._formulaEngine.getFormula.bind(this._formulaEngine),
+          hasFormula: this._formulaEngine.hasFormula.bind(this._formulaEngine),
+          columnIdToIndex: new Map(this.visibleColumnDefs.map((c, i) => [c.columnId, i])),
+          exportMode: options?.exportMode ?? 'values',
+        } : undefined;
         coreExportToCsv(items, cols, (item, colId) => {
           const col = this._columns.find(c => c.columnId === colId);
           if (!col) return '';
           const val = getCellValue(item, col as unknown as Parameters<typeof getCellValue>[1]);
           if (col.valueFormatter) return col.valueFormatter(val, item);
           return val != null ? String(val) : '';
-        }, filename);
+        }, filename, formulaOptions);
       },
     };
+  }
+
+  /** Wire in the formula engine so exportToCsv can use it. */
+  setFormulaEngine(engine: FormulaEngineState): void {
+    this._formulaEngine = engine;
   }
 
   destroy(): void {

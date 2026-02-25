@@ -49,9 +49,10 @@ export function resolveCellDisplayContent<T>(
  */
 export function resolveCellStyle<T>(
   col: IColumnDef<T>,
-  item: T
+  item: T,
+  displayValue?: unknown
 ): React.CSSProperties | undefined {
-  return coreResolveCellStyle(col, item) as React.CSSProperties | undefined;
+  return coreResolveCellStyle(col, item, displayValue) as React.CSSProperties | undefined;
 }
 
 /**
@@ -113,6 +114,7 @@ export function getCellInteractionProps(
   return {
     'data-row-index': descriptor.rowIndex,
     'data-col-index': descriptor.globalColIndex,
+    ...(descriptor.isActive ? { 'data-active-cell': 'true' as const } : {}),
     ...(descriptor.isInRange ? { 'data-in-range': 'true' as const } : {}),
     tabIndex: descriptor.isActive ? 0 : -1,
     onMouseDown: (e: React.MouseEvent) =>

@@ -27,7 +27,8 @@
   <a href="https://alaarab.github.io/ogrid/">Documentation</a> &middot;
   <a href="https://alaarab.github.io/ogrid/docs/getting-started/overview">Getting Started</a> &middot;
   <a href="https://alaarab.github.io/ogrid/docs/api/ogrid-props">API Reference</a> &middot;
-  <a href="https://alaarab.github.io/ogrid/docs/guides/migration-from-ag-grid">Migrate from AG Grid</a>
+  <a href="https://alaarab.github.io/ogrid/docs/guides/migration-from-ag-grid">Migrate from AG Grid</a> &middot;
+  <a href="https://discord.gg/KMajyx9j4m">Discord Community</a>
 </p>
 
 ---

@@ -76,9 +76,16 @@ function HeroGrid() {
   type IFilters = import('@alaarab/ogrid-react-radix').IFilters;
 
   const apiRef = useRef<ApiType>(null);
-  const data = useMemo(() => generateData(), []);
+  const [data, setData] = useState<EmployeeRow[]>(() => generateData());
   const [filters, setFilters] = useState<IFilters>({});
   const [density, setDensity] = useState<'compact' | 'normal' | 'comfortable'>('normal');
+
+  // Persist edits so double-click editing actually works in the demo
+  const handleCellValueChanged = useCallback((e: { item: EmployeeRow; columnId: string; newValue: unknown }) => {
+    setData(prev => prev.map(row =>
+      row.id === e.item.id ? { ...row, [e.columnId]: e.newValue } : row
+    ));
+  }, []);
 
   const columns = useMemo(() => [
     { columnId: 'id', name: '#', type: 'numeric' as const, defaultWidth: 50 },
@@ -169,6 +176,7 @@ function HeroGrid() {
         toolbar={toolbar}
         filters={filters}
         onFiltersChange={setFilters}
+        onCellValueChanged={handleCellValueChanged}
         density={density}
         defaultPageSize={100}
         entityLabelPlural="employees"

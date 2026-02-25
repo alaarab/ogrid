@@ -9,6 +9,9 @@ import type {
   ISideBarDef,
   IStatusBarProps,
   IVirtualScrollConfig,
+  IFormulaFunction,
+  IRecalcResult,
+  IGridDataAccessor,
 } from '@alaarab/ogrid-core';
 
 // Re-export core types
@@ -32,6 +35,11 @@ export type {
   ISideBarDef,
   IVirtualScrollConfig,
   IOGridApi,
+  IFormulaFunction,
+  IRecalcResult,
+  IGridDataAccessor,
+  IAuditEntry,
+  IAuditTrail,
 } from '@alaarab/ogrid-core';
 
 /** Standardized cell event parameter for cell interaction callbacks. */
@@ -51,7 +59,7 @@ export interface CellEvent {
 /** Extended API for the vanilla JS package (adds methods not in the core IOGridApi). */
 export interface IJsOGridApi<T> extends IOGridApi<T> {
   /** Export displayed rows to CSV and trigger a download. */
-  exportToCsv: (filename?: string) => void;
+  exportToCsv: (filename?: string, options?: { exportMode?: 'values' | 'formulas' }) => void;
   /** Scroll to a specific row by index (virtual scrolling). */
   scrollToRow: (index: number, options?: { align?: 'start' | 'center' | 'end' }) => void;
   /** Get the current column display order (array of column ids). */
@@ -201,6 +209,19 @@ export interface OGridOptions<T> {
 
   /** Custom keydown handler. Called before grid's built-in handling. Call event.preventDefault() to suppress grid default. */
   onKeyDown?: (event: KeyboardEvent) => void;
+
+  /** Enable Excel-like formula support. When true, cells starting with '=' are treated as formulas. Default: false. */
+  formulas?: boolean;
+  /** Initial formulas to load when the formula engine initializes. */
+  initialFormulas?: Array<{ col: number; row: number; formula: string }>;
+  /** Called when formula recalculation produces updated cell values (e.g. cascade from an edited cell). */
+  onFormulaRecalc?: (result: IRecalcResult) => void;
+  /** Custom formula functions to register with the formula engine (e.g. { MYFUNC: { minArgs: 1, maxArgs: 1, evaluate: ... } }). */
+  formulaFunctions?: Record<string, IFormulaFunction>;
+  /** Named ranges for the formula engine: name → cell/range ref string (e.g. { Revenue: 'A1:A10' }). */
+  namedRanges?: Record<string, string>;
+  /** Sheet accessors for cross-sheet formula references (e.g. { Sheet2: accessor }). */
+  sheets?: Record<string, IGridDataAccessor>;
 }
 
 /** Events emitted by the OGrid instance. */

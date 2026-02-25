@@ -42,7 +42,7 @@ export function useInlineCellEditorState(
         e.stopPropagation(); // Don't let the grid handler clear selection on Escape
         onCancel();
       }
-      if (e.key === 'Enter' && editorType === 'text') {
+      if (e.key === 'Enter' && (editorType === 'text' || editorType === 'date')) {
         e.preventDefault();
         e.stopPropagation(); // Don't let the grid handler re-open an editor
         onCommit(localValue);
@@ -52,7 +52,7 @@ export function useInlineCellEditorState(
   );
 
   const handleBlur = useCallback(() => {
-    if (editorType === 'text') {
+    if (editorType === 'text' || editorType === 'date') {
       onCommit(localValue);
     }
   }, [editorType, localValue, onCommit]);

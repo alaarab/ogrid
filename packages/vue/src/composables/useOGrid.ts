@@ -11,6 +11,7 @@ import {
   validateRowIds,
 } from '@alaarab/ogrid-core';
 import { useFilterOptions } from './useFilterOptions';
+import { useFormulaEngine } from './useFormulaEngine';
 import { useSideBarState } from './useSideBarState';
 import type { SideBarProps } from '../components/SideBar';
 import type {
@@ -400,6 +401,19 @@ export function useOGrid<T>(
       : serverTotalCount.value
   );
 
+  // --- Formula engine (opt-in, tree-shakeable) ---
+  const formulasRef = computed(() => !!props.value.formulas);
+  const formulaEngine = useFormulaEngine({
+    formulas: formulasRef,
+    items: displayItems,
+    flatColumns: columns,
+    initialFormulas: props.value.initialFormulas,
+    onFormulaRecalc: props.value.onFormulaRecalc,
+    formulaFunctions: props.value.formulaFunctions,
+    namedRanges: props.value.namedRanges,
+    sheets: props.value.sheets,
+  });
+
   // Fire onFirstDataRendered once; also validate row IDs on first data
   let firstDataRendered = false;
   let rowIdsValidated = false;
@@ -567,6 +581,17 @@ export function useOGrid<T>(
         message: p.emptyState?.message,
         render: p.emptyState?.render,
       },
+      formulas: p.formulas,
+      ...(formulaEngine.enabled.value ? {
+        getFormulaValue: formulaEngine.getFormulaValue,
+        hasFormula: formulaEngine.hasFormula,
+        getFormula: formulaEngine.getFormula,
+        setFormula: formulaEngine.setFormula,
+        onFormulaCellChanged: formulaEngine.onCellChanged,
+        getPrecedents: formulaEngine.getPrecedents,
+        getDependents: formulaEngine.getDependents,
+        getAuditTrail: formulaEngine.getAuditTrail,
+      } : {}),
     };
   });
 

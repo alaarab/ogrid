@@ -38,6 +38,7 @@ export interface CellInteractionHandlers {
 export interface CellInteractionProps {
   'data-row-index': number;
   'data-col-index': number;
+  'data-active-cell'?: 'true';
   'data-in-range'?: 'true';
   tabindex: number;
   role?: 'button';
@@ -55,6 +56,7 @@ export function getCellInteractionProps(
   const base: CellInteractionProps = {
     'data-row-index': descriptor.rowIndex,
     'data-col-index': descriptor.globalColIndex,
+    ...(descriptor.isActive ? { 'data-active-cell': 'true' as const } : {}),
     ...(descriptor.isInRange ? { 'data-in-range': 'true' as const } : {}),
     tabindex: descriptor.isActive ? 0 : -1,
     onMousedown: (e: MouseEvent) =>
