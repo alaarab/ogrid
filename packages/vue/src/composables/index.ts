@@ -68,6 +68,9 @@ export type { UseTableLayoutParams, UseTableLayoutResult } from './useTableLayou
 export { useFormulaEngine } from './useFormulaEngine';
 export type { UseFormulaEngineParams, UseFormulaEngineResult } from './useFormulaEngine';
 
+export { useFormulaBar } from './useFormulaBar';
+export type { UseFormulaBarParams, UseFormulaBarResult } from './useFormulaBar';
+
 // Headless state composables
 export { useColumnHeaderFilterState } from './useColumnHeaderFilterState';
 export type {

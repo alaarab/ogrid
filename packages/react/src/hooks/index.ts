@@ -151,3 +151,5 @@ export { useColumnMeta } from './useColumnMeta';
 export type { UseColumnMetaParams, ColumnMetaResult } from './useColumnMeta';
 export { useFormulaEngine } from './useFormulaEngine';
 export type { UseFormulaEngineParams, UseFormulaEngineResult } from './useFormulaEngine';
+export { useFormulaBar } from './useFormulaBar';
+export type { UseFormulaBarParams, UseFormulaBarResult } from './useFormulaBar';

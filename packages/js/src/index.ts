@@ -41,3 +41,5 @@ export { FormulaEngineState } from './state/FormulaEngineState';
 export type { FormulaEngineStateOptions } from './state/FormulaEngineState';
 export { SideBar } from './components/SideBar';
 export { HeaderFilter } from './components/HeaderFilter';
+export { FormulaBar } from './components/FormulaBar';
+export type { FormulaBarCallbacks } from './components/FormulaBar';

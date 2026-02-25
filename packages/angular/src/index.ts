@@ -70,6 +70,7 @@ export type {
   OGridColumnChooser,
   OGridFilters,
   OGridSideBarState,
+  OGridFormulaBarState,
 } from './services/ogrid.service';
 
 export { DataGridStateService } from './services/datagrid-state.service';
@@ -102,6 +103,7 @@ export { GridContextMenuComponent } from './components/grid-context-menu.compone
 export { SideBarComponent } from './components/sidebar.component';
 export type { SideBarProps, SideBarFilterColumn } from './components/sidebar.component';
 export { MarchingAntsOverlayComponent } from './components/marching-ants-overlay.component';
+export { FormulaBarComponent } from './components/formula-bar.component';
 export { EmptyStateComponent } from './components/empty-state.component';
 export { BaseOGridComponent } from './components/base-ogrid.component';
 export { BaseDataGridTableComponent } from './components/base-datagrid-table.component';

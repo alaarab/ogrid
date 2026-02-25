@@ -90,7 +90,7 @@ export function createDataGridTable(ui: IDataGridTableUIBindings) {
           const cb = propsRef.value.onActiveCellChange;
           if (!cb) return;
           if (ac) {
-            cb(formatCellReference(ac.columnIndex, offset + ac.rowIndex + 1));
+            cb(formatCellReference(ac.columnIndex - state.layout.value.colOffset, offset + ac.rowIndex + 1));
           } else {
             cb(null);
           }

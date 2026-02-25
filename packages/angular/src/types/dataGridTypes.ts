@@ -238,4 +238,6 @@ export interface IOGridDataGridProps<T> {
   getDependents?: (col: number, row: number) => IAuditEntry[];
   /** Get full audit trail for a cell. */
   getAuditTrail?: (col: number, row: number) => IAuditTrail | null;
+  /** Monotonic counter incremented on each formula recalculation — used for cache invalidation. */
+  formulaVersion?: number;
 }

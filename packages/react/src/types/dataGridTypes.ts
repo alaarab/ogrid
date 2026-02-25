@@ -21,6 +21,7 @@ export type {
   ISelectionRange,
   SideBarPanelId,
   ISideBarDef,
+  ISheetDef,
   IVirtualScrollConfig,
   IColumnReorderConfig,
   IOGridApi,
@@ -39,6 +40,7 @@ import type {
   IStatusBarProps,
   IDataSource,
   ISideBarDef,
+  ISheetDef,
   IVirtualScrollConfig,
 } from '@alaarab/ogrid-core';
 
@@ -164,6 +166,15 @@ interface IOGridBaseProps<T> {
   /** Sheet accessors for cross-sheet formula references (e.g. { Sheet2: accessor }). */
   sheets?: Record<string, IGridDataAccessor>;
 
+  /** Sheet definitions for bottom tab bar. When set, renders Excel-style sheet tabs. */
+  sheetDefs?: ISheetDef[];
+  /** Currently active sheet id. */
+  activeSheet?: string;
+  /** Called when the user switches sheets. */
+  onSheetChange?: (sheetId: string) => void;
+  /** Called when the user clicks the add-sheet button. */
+  onSheetAdd?: () => void;
+
   'aria-label'?: string;
   'aria-labelledby'?: string;
 }
@@ -284,4 +295,8 @@ export interface IOGridDataGridProps<T> {
   getDependents?: (col: number, row: number) => IAuditEntry[];
   /** Get full audit trail for a cell. */
   getAuditTrail?: (col: number, row: number) => IAuditTrail | null;
+  /** Monotonic counter incremented on each formula recalculation — used for cache invalidation. */
+  formulaVersion?: number;
+  /** Cell references to highlight (from active formula in formula bar). */
+  formulaReferences?: import('@alaarab/ogrid-core').FormulaReference[];
 }
