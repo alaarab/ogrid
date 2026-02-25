@@ -56,7 +56,7 @@ export {
 export type { CsvColumn, FormulaExportOptions } from './utils';
 
 // Utils — cellValue, columnUtils
-export { getCellValue, isColumnEditable } from './utils';
+export { getCellValue, isColumnEditable, createGridDataAccessor } from './utils';
 export { flattenColumns, buildHeaderRows } from './utils';
 
 // Utils — ogridHelpers
