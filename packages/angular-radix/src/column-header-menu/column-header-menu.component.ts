@@ -1,10 +1,6 @@
-import { Component, ChangeDetectionStrategy, signal, computed, Input } from '@angular/core';
-import { getColumnHeaderMenuItems, type ColumnHeaderMenuHandlers } from '@alaarab/ogrid-angular';
+import { Component, ChangeDetectionStrategy, signal } from '@angular/core';
+import { BaseColumnHeaderMenuComponent } from '@alaarab/ogrid-angular';
 
-/**
- * Column header dropdown menu for pin/unpin, sort, and autosize actions.
- * Uses native HTML elements with lightweight styling.
- */
 @Component({
   selector: 'column-header-menu',
   standalone: true,
@@ -101,52 +97,16 @@ import { getColumnHeaderMenuItems, type ColumnHeaderMenuHandlers } from '@alaara
     '(document:click)': 'onDocumentClick($event)',
   },
 })
-export class ColumnHeaderMenuComponent {
-  @Input({ required: true }) columnId!: string;
-  @Input() canPinLeft: boolean = true;
-  @Input() canPinRight: boolean = true;
-  @Input() canUnpin: boolean = false;
-  @Input() currentSort: 'asc' | 'desc' | null = null;
-  @Input() isSortable: boolean = true;
-  @Input() isResizable: boolean = true;
-
-  @Input() handlers: Partial<ColumnHeaderMenuHandlers> = {};
-
+export class ColumnHeaderMenuComponent extends BaseColumnHeaderMenuComponent {
   readonly isOpen = signal(false);
-
-  readonly menuItems = computed(() =>
-    getColumnHeaderMenuItems({
-      canPinLeft: this.canPinLeft,
-      canPinRight: this.canPinRight,
-      canUnpin: this.canUnpin,
-      currentSort: this.currentSort,
-      isSortable: this.isSortable,
-      isResizable: this.isResizable,
-    })
-  );
 
   toggleMenu(event: MouseEvent): void {
     event.stopPropagation();
     this.isOpen.update(v => !v);
   }
 
-  handleMenuItemClick(itemId: string): void {
-    const h = this.handlers;
-    const actionMap: Record<string, (() => void) | undefined> = {
-      pinLeft: h.onPinLeft,
-      pinRight: h.onPinRight,
-      unpin: h.onUnpin,
-      sortAsc: h.onSortAsc,
-      sortDesc: h.onSortDesc,
-      clearSort: h.onClearSort,
-      autosizeThis: h.onAutosizeThis,
-      autosizeAll: h.onAutosizeAll,
-    };
-    const action = actionMap[itemId];
-    if (action) {
-      action();
-      h.onClose?.();
-    }
+  override handleMenuItemClick(itemId: string): void {
+    super.handleMenuItemClick(itemId);
     this.isOpen.set(false);
   }
 
