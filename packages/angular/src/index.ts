@@ -113,6 +113,7 @@ export { BaseColumnChooserComponent } from './components/base-column-chooser.com
 export type { IColumnChooserProps } from './components/base-column-chooser.component';
 export { BasePaginationControlsComponent } from './components/base-pagination-controls.component';
 export { BaseInlineCellEditorComponent } from './components/base-inline-cell-editor.component';
+export { BaseColumnHeaderMenuComponent } from './components/base-column-header-menu.component';
 export { INLINE_CELL_EDITOR_TEMPLATE, INLINE_CELL_EDITOR_STYLES } from './components/inline-cell-editor-template';
 export { BasePopoverCellEditorComponent, POPOVER_CELL_EDITOR_TEMPLATE, POPOVER_CELL_EDITOR_OVERLAY_STYLES } from './components/base-popover-cell-editor.component';
 

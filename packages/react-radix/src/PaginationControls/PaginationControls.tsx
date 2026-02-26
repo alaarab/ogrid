@@ -1,154 +1,60 @@
 import * as React from 'react';
 import type { IPaginationControlsProps } from '@alaarab/ogrid-react';
-import { usePaginationControls } from '@alaarab/ogrid-react';
+import {
+  PaginationControlsBase,
+  type INavButtonSlotProps,
+  type IPageButtonSlotProps,
+  type IPageSizeSelectSlotProps,
+  type IPaginationControlsSlots,
+  type PaginationControlsBaseClassNames,
+} from '@alaarab/ogrid-react';
 import styles from './PaginationControls.module.scss';
 
 export type { IPaginationControlsProps };
 
-function ChevronLeft(): React.ReactElement {
-  return <span aria-hidden>‹</span>;
-}
-function ChevronRight(): React.ReactElement {
-  return <span aria-hidden>›</span>;
-}
-function ChevronDoubleLeft(): React.ReactElement {
-  return <span aria-hidden>«</span>;
-}
-function ChevronDoubleRight(): React.ReactElement {
-  return <span aria-hidden>»</span>;
-}
+const VARIANTS = { first: '«', prev: '‹', next: '›', last: '»' } as const;
 
-export const PaginationControls: React.FC<IPaginationControlsProps> = React.memo((props) => {
-  const { currentPage, pageSize, totalCount, onPageChange, onPageSizeChange, pageSizeOptions, entityLabelPlural, className } = props;
+const NavButton: React.FC<INavButtonSlotProps> = ({ variant, onClick, disabled, 'aria-label': ariaLabel, className }) => (
+  <button type="button" className={className} onClick={onClick} disabled={disabled} aria-label={ariaLabel}>
+    <span aria-hidden>{VARIANTS[variant]}</span>
+  </button>
+);
 
-  const { labelPlural, vm, handlePageSizeChange } = usePaginationControls({
-    currentPage,
-    pageSize,
-    totalCount,
-    onPageChange,
-    onPageSizeChange,
-    pageSizeOptions,
-    entityLabelPlural,
-  });
+const PageButton: React.FC<IPageButtonSlotProps> = ({ onClick, active, 'aria-label': ariaLabel, 'aria-current': ariaCurrent, children, className }) => (
+  <button
+    type="button"
+    className={`${className ?? ''} ${active ? styles.active : ''}`.trim()}
+    onClick={onClick}
+    aria-label={ariaLabel}
+    aria-current={ariaCurrent}
+  >
+    {children}
+  </button>
+);
 
-  const handlePageSizeChangeEvent = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    handlePageSizeChange(Number(e.target.value));
-  };
+const PageSizeSelect: React.FC<IPageSizeSelectSlotProps> = ({ value, options, onChange, 'aria-label': ariaLabel, className }) => (
+  <select className={className} value={String(value)} onChange={(e) => onChange(Number(e.target.value))} aria-label={ariaLabel}>
+    {options.map((n) => <option key={n} value={n}>{n}</option>)}
+  </select>
+);
 
-  if (!vm) {
-    return null;
-  }
+const SLOTS: IPaginationControlsSlots = { NavButton, PageButton, PageSizeSelect };
 
-  const { pageNumbers, showStartEllipsis, showEndEllipsis, totalPages, startItem, endItem } = vm;
+const CLASS_NAMES: PaginationControlsBaseClassNames = {
+  pagination: styles.pagination,
+  paginationInfo: styles.paginationInfo,
+  paginationControls: styles.paginationControls,
+  pageNumbers: styles.pageNumbers,
+  ellipsis: styles.ellipsis,
+  navBtn: styles.navBtn,
+  pageBtn: styles.pageBtn,
+  pageSizeSelector: styles.pageSizeSelector,
+  pageSizeLabel: styles.pageSizeLabel,
+  pageSizeSelect: styles.pageSizeSelect,
+};
 
-  return (
-    <div className={`${styles.pagination} ${className || ''}`} role="navigation" aria-label="Pagination">
-      <div className={styles.paginationInfo}>
-        Showing {startItem} to {endItem} of {totalCount.toLocaleString()} {labelPlural}
-      </div>
-
-      <div className={styles.paginationControls}>
-        <button
-          type="button"
-          className={styles.navBtn}
-          onClick={() => onPageChange(1)}
-          disabled={currentPage === 1}
-          aria-label="First page"
-        >
-          <ChevronDoubleLeft />
-        </button>
-        <button
-          type="button"
-          className={styles.navBtn}
-          onClick={() => onPageChange(currentPage - 1)}
-          disabled={currentPage === 1}
-          aria-label="Previous page"
-        >
-          <ChevronLeft />
-        </button>
-
-        <div className={styles.pageNumbers}>
-          {showStartEllipsis && (
-            <>
-              <button
-                type="button"
-                className={styles.pageBtn}
-                onClick={() => onPageChange(1)}
-                aria-label="Page 1"
-              >
-                1
-              </button>
-              <span className={styles.ellipsis} aria-hidden>
-                …
-              </span>
-            </>
-          )}
-          {pageNumbers.map((pageNum) => (
-            <button
-              key={pageNum}
-              type="button"
-              className={`${styles.pageBtn} ${currentPage === pageNum ? styles.active : ''}`}
-              onClick={() => onPageChange(pageNum)}
-              aria-label={`Page ${pageNum}`}
-              aria-current={currentPage === pageNum ? 'page' : undefined}
-            >
-              {pageNum}
-            </button>
-          ))}
-          {showEndEllipsis && (
-            <>
-              <span className={styles.ellipsis} aria-hidden>
-                …
-              </span>
-              <button
-                type="button"
-                className={styles.pageBtn}
-                onClick={() => onPageChange(totalPages)}
-                aria-label={`Page ${totalPages}`}
-              >
-                {totalPages}
-              </button>
-            </>
-          )}
-        </div>
-
-        <button
-          type="button"
-          className={styles.navBtn}
-          onClick={() => onPageChange(currentPage + 1)}
-          disabled={currentPage >= totalPages}
-          aria-label="Next page"
-        >
-          <ChevronRight />
-        </button>
-        <button
-          type="button"
-          className={styles.navBtn}
-          onClick={() => onPageChange(totalPages)}
-          disabled={currentPage >= totalPages}
-          aria-label="Last page"
-        >
-          <ChevronDoubleRight />
-        </button>
-      </div>
-
-      <div className={styles.pageSizeSelector}>
-        <span className={styles.pageSizeLabel}>Rows</span>
-        <select
-          className={styles.pageSizeSelect}
-          value={String(pageSize)}
-          onChange={handlePageSizeChangeEvent}
-          aria-label="Rows per page"
-        >
-          {vm.pageSizeOptions.map((n) => (
-            <option key={n} value={n}>
-              {n}
-            </option>
-          ))}
-        </select>
-      </div>
-    </div>
-  );
-});
+export const PaginationControls: React.FC<IPaginationControlsProps> = React.memo((props) => (
+  <PaginationControlsBase {...props} slots={SLOTS} classNames={CLASS_NAMES} />
+));
 
 PaginationControls.displayName = 'PaginationControls';

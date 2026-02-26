@@ -165,3 +165,29 @@ export function useColumnHeaderMenuState(
     isResizable,
   };
 }
+
+/**
+ * Maps a UseColumnHeaderMenuStateResult to the flat ColumnHeaderMenuProps shape.
+ * Eliminates the 18-prop spread that each DataGridTable package repeats.
+ */
+export function getColumnHeaderMenuProps(headerMenu: UseColumnHeaderMenuStateResult) {
+  return {
+    isOpen: headerMenu.isOpen,
+    anchorElement: headerMenu.anchorElement,
+    onClose: headerMenu.close,
+    onPinLeft: headerMenu.handlePinLeft,
+    onPinRight: headerMenu.handlePinRight,
+    onUnpin: headerMenu.handleUnpin,
+    onSortAsc: headerMenu.handleSortAsc,
+    onSortDesc: headerMenu.handleSortDesc,
+    onClearSort: headerMenu.handleClearSort,
+    onAutosizeThis: headerMenu.handleAutosizeThis,
+    onAutosizeAll: headerMenu.handleAutosizeAll,
+    canPinLeft: headerMenu.canPinLeft,
+    canPinRight: headerMenu.canPinRight,
+    canUnpin: headerMenu.canUnpin,
+    currentSort: headerMenu.currentSort,
+    isSortable: headerMenu.isSortable,
+    isResizable: headerMenu.isResizable,
+  };
+}
