@@ -39,6 +39,7 @@ import {
   NOOP,
   STOP_PROPAGATION,
   indexToColumnLetter,
+  getColumnHeaderMenuProps,
 } from '@alaarab/ogrid-react';
 import type { GridRowProps } from '@alaarab/ogrid-react';
 import styles from './DataGridTable.module.scss';
@@ -575,25 +576,7 @@ function DataGridTableInner<T>(props: IOGridDataGridProps<T>): React.ReactElemen
             document.body
           )}
 
-        <ColumnHeaderMenu
-          isOpen={headerMenu.isOpen}
-          anchorElement={headerMenu.anchorElement}
-          onClose={headerMenu.close}
-          onPinLeft={headerMenu.handlePinLeft}
-          onPinRight={headerMenu.handlePinRight}
-          onUnpin={headerMenu.handleUnpin}
-          onSortAsc={headerMenu.handleSortAsc}
-          onSortDesc={headerMenu.handleSortDesc}
-          onClearSort={headerMenu.handleClearSort}
-          onAutosizeThis={headerMenu.handleAutosizeThis}
-          onAutosizeAll={headerMenu.handleAutosizeAll}
-          canPinLeft={headerMenu.canPinLeft}
-          canPinRight={headerMenu.canPinRight}
-          canUnpin={headerMenu.canUnpin}
-          currentSort={headerMenu.currentSort}
-          isSortable={headerMenu.isSortable}
-          isResizable={headerMenu.isResizable}
-        />
+        <ColumnHeaderMenu {...getColumnHeaderMenuProps(headerMenu)} />
       </div>
       {statusBarConfig && (
         <StatusBar
