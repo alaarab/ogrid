@@ -7,10 +7,11 @@
  * that was previously in each UI package's ColumnHeaderFilter component.
  */
 
-import type * as React from 'react';
+import * as React from 'react';
 import type { ColumnFilterType } from '../types/columnTypes';
 import type { UserLike } from '../types/dataGridTypes';
 import type { UseColumnHeaderFilterStateResult } from '../hooks/useColumnHeaderFilterState';
+import { DateFilterContent, type DateFilterClassNames } from './ColumnHeaderFilterContent';
 
 /**
  * Framework-specific renderers for each filter type.
@@ -128,4 +129,28 @@ export function renderFilterContent(
     });
   }
   return null;
+}
+
+/**
+ * Factory that creates the standard FilterContentRenderers for packages that use
+ * the default prop-passthrough pattern (Radix, Material). Fluent keeps its own
+ * memoized renderers because it adds extra event-propagation handlers.
+ *
+ * @param components - The framework-specific sub-filter popover components
+ * @param dateClassNames - Optional CSS class names for the date filter buttons (used by packages with CSS modules)
+ */
+export function createBaseFilterRenderers(
+  components: {
+    MultiSelectFilterPopover: React.ComponentType<MultiSelectRendererProps>;
+    TextFilterPopover: React.ComponentType<TextRendererProps>;
+    PeopleFilterPopover: React.ComponentType<PeopleRendererProps>;
+  },
+  dateClassNames?: DateFilterClassNames
+): FilterContentRenderers {
+  return {
+    renderMultiSelect: (p) => <components.MultiSelectFilterPopover {...p} />,
+    renderText: (p) => <components.TextFilterPopover {...p} />,
+    renderPeople: (p) => <components.PeopleFilterPopover {...p} />,
+    renderDate: (p) => <DateFilterContent {...p} classNames={dateClassNames} />,
+  };
 }

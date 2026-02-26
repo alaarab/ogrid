@@ -8,7 +8,7 @@ import {
   useColumnHeaderFilterState,
   getColumnHeaderFilterStateParams,
   renderFilterContent,
-  DateFilterContent,
+  createBaseFilterRenderers,
 } from '@alaarab/ogrid-react';
 import type { FilterContentRenderers } from '@alaarab/ogrid-react';
 import { TextFilterPopover } from './TextFilterPopover';
@@ -17,52 +17,9 @@ import { PeopleFilterPopover } from './PeopleFilterPopover';
 
 export type { IColumnHeaderFilterProps };
 
-const materialRenderers: FilterContentRenderers = {
-  renderMultiSelect: (p) => (
-    <MultiSelectFilterPopover
-      searchText={p.searchText}
-      onSearchChange={p.onSearchChange}
-      options={p.options}
-      filteredOptions={p.filteredOptions}
-      selected={p.selected}
-      onOptionToggle={p.onOptionToggle}
-      onSelectAll={p.onSelectAll}
-      onClearSelection={p.onClearSelection}
-      onApply={p.onApply}
-      isLoading={p.isLoading}
-    />
-  ),
-  renderText: (p) => (
-    <TextFilterPopover
-      value={p.value}
-      onValueChange={p.onValueChange}
-      onApply={p.onApply}
-      onClear={p.onClear}
-    />
-  ),
-  renderPeople: (p) => (
-    <PeopleFilterPopover
-      selectedUser={p.selectedUser}
-      searchText={p.searchText}
-      onSearchChange={p.onSearchChange}
-      suggestions={p.suggestions}
-      isLoading={p.isLoading}
-      onUserSelect={p.onUserSelect}
-      onClearUser={p.onClearUser}
-      inputRef={p.inputRef}
-    />
-  ),
-  renderDate: (p) => (
-    <DateFilterContent
-      tempDateFrom={p.tempDateFrom}
-      setTempDateFrom={p.setTempDateFrom}
-      tempDateTo={p.tempDateTo}
-      setTempDateTo={p.setTempDateTo}
-      onApply={p.onApply}
-      onClear={p.onClear}
-    />
-  ),
-};
+const materialRenderers: FilterContentRenderers = createBaseFilterRenderers(
+  { MultiSelectFilterPopover, TextFilterPopover, PeopleFilterPopover }
+);
 
 export const ColumnHeaderFilter: React.FC<IColumnHeaderFilterProps> = React.memo((props) => {
   const {
