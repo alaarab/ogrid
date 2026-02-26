@@ -1,16 +1,42 @@
 import * as React from 'react';
 import { useRef, useEffect } from 'react';
-import {
-  Button,
-  Checkbox,
-} from '@fluentui/react-components';
+import { Button, Checkbox } from '@fluentui/react-components';
 import type { CheckboxOnChangeData } from '@fluentui/react-components';
 import { TableSettingsRegular, ChevronDownRegular, ChevronUpRegular } from '@fluentui/react-icons';
 import type { IColumnChooserProps } from '@alaarab/ogrid-react';
-import { useColumnChooserState } from '@alaarab/ogrid-react';
+import {
+  useColumnChooserState,
+  ColumnChooserContent,
+  type IColumnChooserCheckboxItemProps,
+  type IColumnChooserActionsProps,
+  type ColumnChooserContentClassNames,
+} from '@alaarab/ogrid-react';
 import styles from './ColumnChooser.module.scss';
 
 export type { IColumnChooserProps };
+
+const CheckboxItem: React.FC<IColumnChooserCheckboxItemProps> = ({ columnId, columnName, checked, disabled, onChange }) => (
+  <Checkbox
+    id={`col-${columnId}`}
+    label={columnName}
+    checked={checked}
+    onChange={(_ev: React.ChangeEvent<HTMLInputElement>, data: CheckboxOnChangeData) => onChange(data.checked === true)}
+    disabled={disabled}
+  />
+);
+
+const Actions: React.FC<IColumnChooserActionsProps> = ({ onClearAll, onSelectAll }) => (
+  <div className={styles.actions}>
+    <Button appearance="subtle" size="small" onClick={onClearAll}>Clear All</Button>
+    <Button appearance="primary" size="small" onClick={onSelectAll}>Select All</Button>
+  </div>
+);
+
+const CLASS_NAMES: ColumnChooserContentClassNames = {
+  header: styles.header,
+  optionsList: styles.optionsList,
+  optionItem: styles.optionItem,
+};
 
 export const ColumnChooser: React.FC<IColumnChooserProps> = (props) => {
   const { columns, visibleColumns, onVisibilityChange, onSetVisibleColumns, className } = props;
@@ -18,14 +44,10 @@ export const ColumnChooser: React.FC<IColumnChooserProps> = (props) => {
   const dropdownRef = useRef<HTMLDivElement>(null);
 
   const {
-    open,
-    handleToggle,
-    handleClose,
+    open, handleToggle, handleClose,
     handleCheckboxChange: setColumnVisible,
-    handleSelectAll,
-    handleClearAll,
-    visibleCount,
-    totalCount,
+    handleSelectAll, handleClearAll,
+    visibleCount, totalCount,
   } = useColumnChooserState({ columns, visibleColumns, onVisibilityChange, onSetVisibleColumns });
 
   useEffect(() => {
@@ -39,19 +61,11 @@ export const ColumnChooser: React.FC<IColumnChooserProps> = (props) => {
         handleClose();
       }
     };
-    const timeoutId = setTimeout(() => {
-      document.addEventListener('mousedown', handleClickOutside);
-    }, 0);
-    return () => {
-      clearTimeout(timeoutId);
-      document.removeEventListener('mousedown', handleClickOutside);
-    };
+    const timeoutId = setTimeout(() => { document.addEventListener('mousedown', handleClickOutside); }, 0);
+    return () => { clearTimeout(timeoutId); document.removeEventListener('mousedown', handleClickOutside); };
   }, [open, handleClose]);
 
-  const handleCheckboxChange = (columnKey: string) =>
-    (_ev: React.ChangeEvent<HTMLInputElement>, data: CheckboxOnChangeData) => {
-      setColumnVisible(columnKey)(data.checked === true);
-    };
+  const handleCheckboxChange = (columnKey: string) => (checked: boolean) => setColumnVisible(columnKey)(checked);
 
   return (
     <div className={`${styles.container} ${className || ''}`}>
@@ -69,29 +83,18 @@ export const ColumnChooser: React.FC<IColumnChooserProps> = (props) => {
 
       {open && (
         <div ref={dropdownRef} className={styles.dropdown}>
-          <div className={styles.header}>
-            Select Columns ({visibleCount} of {totalCount})
-          </div>
-          <div className={styles.optionsList}>
-            {columns.map((column) => (
-              <div key={column.columnId} className={styles.optionItem}>
-                <Checkbox
-                  label={column.name}
-                  checked={visibleColumns.has(column.columnId)}
-                  onChange={handleCheckboxChange(column.columnId)}
-                  disabled={column.required === true}
-                />
-              </div>
-            ))}
-          </div>
-          <div className={styles.actions}>
-            <Button appearance="subtle" size="small" onClick={handleClearAll}>
-              Clear All
-            </Button>
-            <Button appearance="primary" size="small" onClick={handleSelectAll}>
-              Select All
-            </Button>
-          </div>
+          <ColumnChooserContent
+            columns={columns}
+            visibleColumns={visibleColumns}
+            visibleCount={visibleCount}
+            totalCount={totalCount}
+            handleSelectAll={handleSelectAll}
+            handleClearAll={handleClearAll}
+            handleCheckboxChange={handleCheckboxChange}
+            CheckboxItem={CheckboxItem}
+            classNames={CLASS_NAMES}
+            Actions={Actions}
+          />
         </div>
       )}
     </div>

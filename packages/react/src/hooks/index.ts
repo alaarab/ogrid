@@ -105,7 +105,7 @@ export type {
   UseColumnPinningParams,
   UseColumnPinningResult,
 } from './useColumnPinning';
-export { useColumnHeaderMenuState } from './useColumnHeaderMenuState';
+export { useColumnHeaderMenuState, getColumnHeaderMenuProps } from './useColumnHeaderMenuState';
 export type {
   UseColumnHeaderMenuStateParams,
   UseColumnHeaderMenuStateResult,

@@ -84,6 +84,7 @@ export {
   useColumnMeta,
   useFormulaEngine,
   useFormulaBar,
+  getColumnHeaderMenuProps,
 } from './hooks';
 export type {
   UseFilterOptionsResult,
@@ -203,6 +204,24 @@ export { SideBar } from './components/SideBar';
 export type { SideBarProps, SideBarFilterColumn } from './components/SideBar';
 export { BaseColumnHeaderMenu } from './components/BaseColumnHeaderMenu';
 export type { BaseColumnHeaderMenuProps, ColumnHeaderMenuClassNames } from './components/BaseColumnHeaderMenu';
+export { PaginationControlsBase } from './components/PaginationControlsBase';
+export type {
+  PaginationControlsBaseProps,
+  PaginationControlsBaseClassNames,
+  IPaginationControlsSlots,
+  INavButtonSlotProps,
+  IPageButtonSlotProps,
+  IPageSizeSelectSlotProps,
+  IOuterContainerSlotProps,
+} from './components/PaginationControlsBase';
+export { ColumnChooserContent } from './components/ColumnChooserContent';
+export type {
+  ColumnChooserContentProps,
+  ColumnChooserContentClassNames,
+  IColumnChooserCheckboxItemProps,
+  IColumnChooserActionsProps,
+  IColumnChooserHeaderProps,
+} from './components/ColumnChooserContent';
 export { createOGrid } from './components/createOGrid';
 export type { CreateOGridComponents, GridRowProps, InlineCellEditorProps } from './components/createOGrid';
 export { CellErrorBoundary } from './components/CellErrorBoundary';
@@ -303,7 +322,7 @@ export type {
 } from './utils';
 
 // Shared component props & renderers (for UI packages to consume)
-export { renderFilterContent } from './components/ColumnHeaderFilterRenderers';
+export { renderFilterContent, createBaseFilterRenderers } from './components/ColumnHeaderFilterRenderers';
 export type {
   FilterContentRenderers,
   MultiSelectRendererProps,

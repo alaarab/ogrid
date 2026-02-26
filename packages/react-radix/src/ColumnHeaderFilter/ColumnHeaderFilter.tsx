@@ -4,8 +4,8 @@ import type { IColumnHeaderFilterProps } from '@alaarab/ogrid-react';
 import {
   useColumnHeaderFilterState,
   getColumnHeaderFilterStateParams,
-  DateFilterContent,
   renderFilterContent,
+  createBaseFilterRenderers,
 } from '@alaarab/ogrid-react';
 import type { FilterContentRenderers } from '@alaarab/ogrid-react';
 import { TextFilterPopover } from './TextFilterPopover';
@@ -19,57 +19,10 @@ function FilterIcon(): React.ReactElement {
   return <span aria-hidden>{'\u25BE'}</span>;
 }
 
-const radixRenderers: FilterContentRenderers = {
-  renderMultiSelect: (p) => (
-    <MultiSelectFilterPopover
-      searchText={p.searchText}
-      onSearchChange={p.onSearchChange}
-      options={p.options}
-      filteredOptions={p.filteredOptions}
-      selected={p.selected}
-      onOptionToggle={p.onOptionToggle}
-      onSelectAll={p.onSelectAll}
-      onClearSelection={p.onClearSelection}
-      onApply={p.onApply}
-      isLoading={p.isLoading}
-    />
-  ),
-  renderText: (p) => (
-    <TextFilterPopover
-      value={p.value}
-      onValueChange={p.onValueChange}
-      onApply={p.onApply}
-      onClear={p.onClear}
-    />
-  ),
-  renderPeople: (p) => (
-    <PeopleFilterPopover
-      selectedUser={p.selectedUser}
-      searchText={p.searchText}
-      onSearchChange={p.onSearchChange}
-      suggestions={p.suggestions}
-      isLoading={p.isLoading}
-      onUserSelect={p.onUserSelect}
-      onClearUser={p.onClearUser}
-      inputRef={p.inputRef}
-    />
-  ),
-  renderDate: (p) => (
-    <DateFilterContent
-      tempDateFrom={p.tempDateFrom}
-      setTempDateFrom={p.setTempDateFrom}
-      tempDateTo={p.tempDateTo}
-      setTempDateTo={p.setTempDateTo}
-      onApply={p.onApply}
-      onClear={p.onClear}
-      classNames={{
-        popoverActions: styles.popoverActions,
-        clearButton: styles.clearButton,
-        applyButton: styles.applyButton,
-      }}
-    />
-  ),
-};
+const radixRenderers: FilterContentRenderers = createBaseFilterRenderers(
+  { MultiSelectFilterPopover, TextFilterPopover, PeopleFilterPopover },
+  { popoverActions: styles.popoverActions, clearButton: styles.clearButton, applyButton: styles.applyButton }
+);
 
 export const ColumnHeaderFilter: React.FC<IColumnHeaderFilterProps> = React.memo((props) => {
   const {
