@@ -121,6 +121,8 @@ export interface BaseInlineCellEditorProps<T> {
 export function BaseInlineCellEditor<T>(props: BaseInlineCellEditorProps<T>): React.ReactElement {
   const { value, column, editorType, onCommit, onCancel, renderCheckbox } = props;
   const wrapperRef = React.useRef<HTMLDivElement>(null);
+  const onCancelRef = React.useRef(onCancel);
+  onCancelRef.current = onCancel;
   const { localValue, setLocalValue, handleKeyDown, handleBlur, commit, cancel } =
     useInlineCellEditorState({ value, editorType, onCommit, onCancel });
 
@@ -165,6 +167,18 @@ export function BaseInlineCellEditor<T>(props: BaseInlineCellEditorProps<T>): Re
       boxShadow: 'var(--ogrid-shadow, 0 4px 16px rgba(0,0,0,0.2))',
       textAlign: 'left',
     });
+
+    // Close editor on scroll so the fixed dropdown doesn't drift away from the cell
+    const scrollParent = wrapper.closest('.ogrid-table-wrapper') ?? wrapper.closest('[style*="overflow"]');
+    const handleScroll = () => onCancelRef.current();
+    if (scrollParent) {
+      scrollParent.addEventListener('scroll', handleScroll, { passive: true });
+    }
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    return () => {
+      if (scrollParent) scrollParent.removeEventListener('scroll', handleScroll);
+      window.removeEventListener('scroll', handleScroll);
+    };
   }, [editorType]);
 
   const computedDropdownStyle = fixedDropdownStyle ?? richSelectDropdownStyle;
