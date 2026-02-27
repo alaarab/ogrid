@@ -475,9 +475,7 @@ export class FormulaEngine {
     return {
       getCellValue: (addr: ICellAddress): unknown => {
         const key = toCellKey(addr.col, addr.row, addr.sheet);
-        // Single Map.get instead of has+get
-        const cached = this.values.get(key);
-        if (cached !== undefined) return cached;
+        if (this.values.has(key)) return this.values.get(key);
         // Use sheet accessor if sheet is specified
         if (addr.sheet) {
           const sheetAccessor = this.sheetAccessors.get(addr.sheet);
@@ -504,10 +502,8 @@ export class FormulaEngine {
           const row: unknown[] = [];
           for (let c = minCol; c <= maxCol; c++) {
             const key = toCellKey(c, r, sheet);
-            // Single Map.get instead of has+get
-            const cached = this.values.get(key);
-            if (cached !== undefined) {
-              row.push(cached);
+            if (this.values.has(key)) {
+              row.push(this.values.get(key));
             } else {
               row.push(rangeAccessor!.getCellValue(c, r));
             }
