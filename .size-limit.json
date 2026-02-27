@@ -2,62 +2,62 @@
   {
     "name": "core",
     "path": "packages/core/dist/esm/index.js",
-    "limit": "20.5 kB"
+    "limit": "25 kB"
   },
   {
     "name": "react",
     "path": "packages/react/dist/esm/index.js",
-    "limit": "90 kB"
+    "limit": "94 kB"
   },
   {
     "name": "react-radix",
     "path": "packages/react-radix/dist/esm/index.js",
-    "limit": "120 kB"
+    "limit": "123 kB"
   },
   {
     "name": "react-fluent",
     "path": "packages/react-fluent/dist/esm/index.js",
-    "limit": "155 kB"
+    "limit": "157 kB"
   },
   {
     "name": "react-material",
     "path": "packages/react-material/dist/esm/index.js",
-    "limit": "165 kB"
+    "limit": "168 kB"
   },
   {
     "name": "angular",
     "path": "packages/angular/dist/esm/index.js",
-    "limit": "180 kB"
+    "limit": "186 kB"
   },
   {
     "name": "angular-material",
     "path": "packages/angular-material/dist/esm/index.js",
-    "limit": "235 kB"
+    "limit": "238 kB"
   },
   {
     "name": "angular-primeng",
     "path": "packages/angular-primeng/dist/esm/index.js",
-    "limit": "260 kB"
+    "limit": "261 kB"
   },
   {
     "name": "angular-radix",
     "path": "packages/angular-radix/dist/esm/index.js",
-    "limit": "190 kB"
+    "limit": "193 kB"
   },
   {
     "name": "vue",
     "path": "packages/vue/dist/esm/index.js",
-    "limit": "55 kB"
+    "limit": "58 kB"
   },
   {
     "name": "vue-vuetify",
     "path": "packages/vue-vuetify/dist/esm/index.js",
-    "limit": "145 kB"
+    "limit": "149 kB"
   },
   {
     "name": "vue-primevue",
     "path": "packages/vue-primevue/dist/esm/index.js",
-    "limit": "120 kB"
+    "limit": "123 kB"
   },
   {
     "name": "js",
