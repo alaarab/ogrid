@@ -1,4 +1,4 @@
-import { DEFAULT_MIN_COLUMN_WIDTH } from '@alaarab/ogrid-core';
+import { DEFAULT_MIN_COLUMN_WIDTH, ROW_NUMBER_COLUMN_ID, ROW_NUMBER_COLUMN_MIN_WIDTH } from '@alaarab/ogrid-core';
 import { EventEmitter } from './EventEmitter';
 
 interface ColumnResizeStateEvents extends Record<string, unknown> {
@@ -39,14 +39,16 @@ export class ColumnResizeState {
   updateResize(clientX: number): number | null {
     if (!this.isResizing || !this.resizeColumnId) return null;
     const delta = clientX - this.resizeStartX;
-    const newWidth = Math.max(DEFAULT_MIN_COLUMN_WIDTH, this.resizeStartWidth + delta);
+    const minW = this.resizeColumnId === ROW_NUMBER_COLUMN_ID ? ROW_NUMBER_COLUMN_MIN_WIDTH : DEFAULT_MIN_COLUMN_WIDTH;
+    const newWidth = Math.max(minW, this.resizeStartWidth + delta);
     return newWidth;
   }
 
   endResize(clientX: number): void {
     if (!this.isResizing || !this.resizeColumnId) return;
     const delta = clientX - this.resizeStartX;
-    const newWidth = Math.max(DEFAULT_MIN_COLUMN_WIDTH, this.resizeStartWidth + delta);
+    const minW = this.resizeColumnId === ROW_NUMBER_COLUMN_ID ? ROW_NUMBER_COLUMN_MIN_WIDTH : DEFAULT_MIN_COLUMN_WIDTH;
+    const newWidth = Math.max(minW, this.resizeStartWidth + delta);
     this.columnWidths.set(this.resizeColumnId, newWidth);
     this.emitter.emit('columnWidthChange', { columnId: this.resizeColumnId, widthPx: newWidth });
     this.isResizing = false;
