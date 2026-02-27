@@ -505,7 +505,7 @@ export class FormulaEngine {
             if (this.values.has(key)) {
               row.push(this.values.get(key));
             } else {
-              row.push(rangeAccessor!.getCellValue(c, r));
+              row.push(rangeAccessor?.getCellValue(c, r));
             }
           }
           result.push(row);
@@ -513,6 +513,10 @@ export class FormulaEngine {
         return result;
       },
       now: () => contextNow,
+      getCellFormula: (addr: ICellAddress): string | undefined => {
+        const key = toCellKey(addr.col, addr.row, addr.sheet);
+        return this.formulas.get(key);
+      },
     };
   }
 
