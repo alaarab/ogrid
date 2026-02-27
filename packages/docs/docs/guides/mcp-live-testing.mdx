@@ -1,0 +1,304 @@
+---
+title: MCP Live Testing Bridge
+description: Connect AI assistants (Claude, Cursor) to a running OGrid instance for real-time testing and inspection.
+---
+
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+
+# MCP Live Testing Bridge
+
+The `@alaarab/ogrid-mcp` package includes a **live testing bridge** that lets AI assistants connected via MCP read your grid's current state, update cell values, apply filters, and navigate pages — all in real time while your dev app is running.
+
+## How it works
+
+```
+Claude (MCP client)
+    │ MCP tools
+    ▼
+ogrid-mcp (stdio process + HTTP bridge on :7890)
+    │ HTTP polling every 500ms
+    ▼
+Your dev app (localhost:3001)
+    └── connectGridToBridge() — pushes state + handles commands
+```
+
+The bridge is **opt-in** and **dev-only** — it only runs when you explicitly start the MCP server with the `--bridge` flag or `OGRID_BRIDGE_PORT` env var.
+
+---
+
+## Quick start
+
+### 1. Start the MCP server with bridge enabled
+
+```bash
+# Option A: use --bridge flag (port 7890)
+npx @alaarab/ogrid-mcp --bridge
+
+# Option B: use env var (custom port)
+OGRID_BRIDGE_PORT=7890 npx @alaarab/ogrid-mcp
+
+# Claude Desktop / claude mcp add
+claude mcp add ogrid -- npx -y @alaarab/ogrid-mcp --bridge
+```
+
+### 2. Connect your dev app
+
+<Tabs groupId="framework">
+<TabItem value="react" label="React">
+
+```tsx
+import { useEffect, useRef } from 'react';
+import { OGrid, type IOGridApi } from '@alaarab/ogrid-react-radix';
+import { connectGridToBridge } from '@alaarab/ogrid-mcp/bridge-client';
+
+export function MyGrid() {
+  const [data, setData] = useState(myRows);
+  const apiRef = useRef<IOGridApi | null>(null);
+
+  useEffect(() => {
+    // Only connect in development
+    if (process.env.NODE_ENV !== 'development') return;
+
+    const bridge = connectGridToBridge({
+      gridId: 'my-grid',
+      getData: () => data,
+      getColumns: () => columns,
+      api: apiRef.current ?? undefined,
+      // Handle update_cell commands from Claude
+      onCellUpdate: (rowIndex, columnId, value) => {
+        setData(prev =>
+          prev.map((row, i) => i === rowIndex ? { ...row, [columnId]: value } : row)
+        );
+      },
+    });
+
+    return () => bridge.disconnect();
+  }, [data]);
+
+  return <OGrid ref={apiRef} data={data} columns={columns} />;
+}
+```
+
+</TabItem>
+<TabItem value="angular" label="Angular">
+
+```typescript
+import { Component, OnInit, OnDestroy } from '@angular/core';
+import { OGridService } from '@alaarab/ogrid-angular-material';
+import { connectGridToBridge, type BridgeConnection } from '@alaarab/ogrid-mcp/bridge-client';
+
+@Component({ /* ... */ })
+export class MyGridComponent implements OnInit, OnDestroy {
+  data = myRows;
+  columns = myColumns;
+  service = new OGridService();
+  private bridge?: BridgeConnection;
+
+  ngOnInit() {
+    if (!isDevMode()) return;
+    this.bridge = connectGridToBridge({
+      gridId: 'my-grid',
+      getData: () => this.data,
+      getColumns: () => this.columns,
+      onCellUpdate: (rowIndex, columnId, value) => {
+        this.data = this.data.map((row, i) =>
+          i === rowIndex ? { ...row, [columnId]: value } : row
+        );
+      },
+    });
+  }
+
+  ngOnDestroy() {
+    this.bridge?.disconnect();
+  }
+}
+```
+
+</TabItem>
+<TabItem value="vue" label="Vue">
+
+```vue
+<script setup lang="ts">
+import { ref, onMounted, onUnmounted } from 'vue';
+import { OGrid } from '@alaarab/ogrid-vue-vuetify';
+import { connectGridToBridge } from '@alaarab/ogrid-mcp/bridge-client';
+
+const data = ref(myRows);
+let bridge: ReturnType<typeof connectGridToBridge> | null = null;
+
+onMounted(() => {
+  if (import.meta.env.DEV) {
+    bridge = connectGridToBridge({
+      gridId: 'my-grid',
+      getData: () => data.value,
+      getColumns: () => columns,
+      onCellUpdate: (rowIndex, columnId, value) => {
+        data.value = data.value.map((row, i) =>
+          i === rowIndex ? { ...row, [columnId]: value } : row
+        );
+      },
+    });
+  }
+});
+
+onUnmounted(() => bridge?.disconnect());
+</script>
+```
+
+</TabItem>
+<TabItem value="js" label="Vanilla JS">
+
+```js
+import { OGrid } from '@alaarab/ogrid-js';
+import { connectGridToBridge } from '@alaarab/ogrid-mcp/bridge-client';
+
+const grid = new OGrid(container, { data: myRows, columns });
+
+// Only in development
+if (location.hostname === 'localhost') {
+  const bridge = connectGridToBridge({
+    gridId: 'my-grid',
+    getData: () => grid.getApi().getData(),
+    getColumns: () => columns,
+    onCellUpdate: (rowIndex, columnId, value) => {
+      // Update your data source and refresh
+      myRows[rowIndex][columnId] = value;
+      grid.getApi().refresh();
+    },
+  });
+}
+```
+
+</TabItem>
+</Tabs>
+
+---
+
+## MCP tools
+
+Once connected, these tools are available to your AI assistant:
+
+### `list_grids`
+
+Lists all OGrid instances currently connected to the bridge.
+
+```
+> list_grids
+
+2 connected grid(s):
+
+**my-grid**
+  Rows: 50 displayed / 1247 total
+  Page: 1 / 25 (50 per page)
+  Columns: id, name, email, department, salary
+  Active filters: 0
+  Last seen: 0s ago
+```
+
+### `get_grid_state`
+
+Returns the current state of a grid: columns, pagination, sort, filters, selection, and optionally the row data.
+
+```
+> get_grid_state gridId="my-grid" includeData=true maxRows=5
+
+# Grid: my-grid
+Last seen: 0s ago
+
+## Pagination
+Page 1 of 25 | 50 rows displayed | 1247 total
+
+## Columns (5)
+id (numeric), name (text), email (text), department (text), salary (numeric)
+
+## Sort
+salary desc
+
+## Data (first 5 of 50 rows)
+[
+  { "id": 1, "name": "Alice", "salary": 120000 },
+  ...
+]
+```
+
+### `send_grid_command`
+
+Sends a command to a connected grid and waits for the result.
+
+**Update a cell:**
+```
+> send_grid_command gridId="my-grid" type="update_cell"
+    payload={ "rowIndex": 0, "columnId": "salary", "value": 130000 }
+
+✅ Command executed successfully
+Type: update_cell
+Payload: {"rowIndex":0,"columnId":"salary","value":130000}
+```
+
+**Apply a filter:**
+```
+> send_grid_command gridId="my-grid" type="set_filter"
+    payload={ "columnId": "department", "value": "Engineering" }
+```
+
+**Clear all filters:**
+```
+> send_grid_command gridId="my-grid" type="clear_filters" payload={}
+```
+
+**Change sort:**
+```
+> send_grid_command gridId="my-grid" type="set_sort"
+    payload={ "sortModel": [{ "columnId": "name", "direction": "asc" }] }
+```
+
+**Navigate to page:**
+```
+> send_grid_command gridId="my-grid" type="go_to_page" payload={ "page": 3 }
+```
+
+---
+
+## connectGridToBridge() options
+
+| Option | Type | Description |
+|--------|------|-------------|
+| `gridId` | `string` | Unique ID shown in `list_grids` |
+| `getData` | `() => unknown[]` | Returns current displayed rows |
+| `getColumns` | `() => BridgeColumnInfo[]` | Returns current columns |
+| `getPagination` | `() => { page, pageSize, totalCount, pageCount }` | (optional) Pagination state |
+| `api` | `BridgeGridApi` | (optional) Grid API for filter/sort/page commands |
+| `onCellUpdate` | `(rowIndex, columnId, value) => void` | (optional) Handle `update_cell` commands |
+| `bridgeUrl` | `string` | Bridge URL (default: `http://localhost:7890`) |
+| `pollIntervalMs` | `number` | Poll frequency in ms (default: `500`) |
+
+---
+
+## Example AI testing session
+
+Here's what a typical Claude testing session looks like with the bridge active:
+
+```
+Me: The salary column seems wrong. Can you check?
+
+Claude: Let me look at the current grid state.
+[calls get_grid_state gridId="employees" includeData=true maxRows=10]
+
+The grid shows salary values like "120" instead of "120000".
+It looks like the values are being divided by 1000 somewhere.
+
+Let me update a cell to verify:
+[calls send_grid_command type="update_cell" payload={rowIndex:0, columnId:"salary", value:120000}]
+✅ Done. Now let me re-read to confirm:
+[calls get_grid_state]
+
+The update worked. Row 0 now shows 120000. The issue is in your
+valueGetter — it's dividing by 1000. Here's the fix: ...
+```
+
+---
+
+## Security note
+
+The bridge server only listens on `127.0.0.1` (localhost) and is designed for local development only. **Never run with `--bridge` in production.** The bridge has no authentication — anyone on localhost can read your grid data and send commands.

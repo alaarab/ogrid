@@ -11,6 +11,10 @@
     ".": {
       "import": "./dist/esm/index.js",
       "default": "./dist/esm/index.js"
+    },
+    "./bridge-client": {
+      "import": "./dist/esm/bridge-client.js",
+      "default": "./dist/esm/bridge-client.js"
     }
   },
   "files": ["dist", "bundled-docs"],

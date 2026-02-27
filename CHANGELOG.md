@@ -15,6 +15,14 @@ All notable changes to OGrid will be documented in this file.
   - **Info additions (6 new):** `ISODD`, `ISEVEN`, `ISFORMULA`, `ISLOGICAL`, `ISNONTEXT`, `ISREF`
 - **Vue + Angular formula bar UI parity** — `SheetTabsComponent` and `FormulaRefOverlayComponent` added to `@alaarab/ogrid-angular` and wired into all 3 Angular UI packages. Vue equivalents added to `@alaarab/ogrid-vue` and wired into all 3 Vue UI packages.
 - **MCP migration prompt** — `ogrid://migration-guide` resource and `migrate-from-ag-grid` prompt added to `@alaarab/ogrid-mcp`. AI assistants can now provide step-by-step AG Grid → OGrid migration guidance using real code examples from the docs.
+- **MCP Live Testing Bridge** — AI assistants can now read and control a running OGrid instance in real time:
+  - Start bridge: `npx @alaarab/ogrid-mcp --bridge` (HTTP server on port 7890, localhost-only)
+  - Connect your app: `import { connectGridToBridge } from '@alaarab/ogrid-mcp/bridge-client'`
+  - New MCP tools: `list_grids` (discover connected grids), `get_grid_state` (read rows/columns/filters/pagination), `send_grid_command` (update cells, apply filters, change sort, navigate pages)
+  - Bridge client polls every 500ms, pushes current state, handles commands sent by the AI
+  - Zero config in the app — just call `connectGridToBridge({ gridId, getData, getColumns, onCellUpdate, api })`
+  - `bridge-client` exported as separate browser-safe entry point: `@alaarab/ogrid-mcp/bridge-client`
+  - Documentation: `guides/mcp-live-testing.mdx`
 - **276 new formula function tests**. **4,189 tests** across 14 packages.
 
 ### Fixed
