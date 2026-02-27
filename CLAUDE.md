@@ -420,10 +420,13 @@ git status
 - [ ] If adding a **new UI package**, add its section to `packages/docs/docs/guides/framework-showcase.mdx` with install command and code example.
 - [ ] Update the comparison table in framework-showcase.mdx to include the new package.
 
-### 7. Memory
+### 7. Changelog
+- [ ] Update `CHANGELOG.md` — add an entry under `[Unreleased]` for every user-visible change: features go in `### Added`, behavior changes in `### Changed`, bug fixes in `### Fixed`. Include the framework scope (which packages were affected) and any new test counts.
+
+### 8. Memory
 - [ ] Update `MEMORY.md` with key decisions, patterns, and test counts.
 
-### 8. No Unnecessary Duplication
+### 9. No Unnecessary Duplication
 - [ ] State logic stays in core hooks — UI packages should only add view-layer code.
 - [ ] If the same pattern appears in 2+ UI packages, consider a shared factory or headless component.
 
