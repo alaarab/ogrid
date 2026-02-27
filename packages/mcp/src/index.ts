@@ -3,11 +3,16 @@ import { loadDocsIndex } from './docsLoader.js';
 import { createOGridMcpServer } from './server.js';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { existsSync } from 'node:fs';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
+
+// Try monorepo path first, fall back to bundled docs
+const monorepoDocs = join(__dirname, '../../../docs/docs');
+const bundledDocs = join(__dirname, '../../bundled-docs');
 const docsDir =
   process.env['OGRID_DOCS_PATH'] ??
-  join(__dirname, '../../../docs/docs');
+  (existsSync(monorepoDocs) ? monorepoDocs : bundledDocs);
 
 const index = loadDocsIndex(docsDir);
 const server = createOGridMcpServer(index);
