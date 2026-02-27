@@ -85,6 +85,8 @@ OGrid gives you every feature AG Grid locks behind an enterprise license -- for 
 - **Web Worker Sort/Filter** -- Offload sort and filter to a background thread (`workerSort: true`)
 - **CSS Containment** -- Automatic `contain: content` on cells; `content-visibility: auto` on off-screen rows
 - **TypeScript Strict** -- Fully generic `<T>` with strict mode; zero `any` leaks
+- **Formula Engine** -- 145 built-in functions (math, stats, text, date, logical, lookup); Excel-like formula bar, cell reference highlighting, dependency graph, and cross-cell recalculation
+- **AI / MCP Integration** -- `@alaarab/ogrid-mcp` connects Claude, Cursor, and other AI assistants to OGrid docs and your running grid
 
 ## Framework Support
 
@@ -378,18 +380,80 @@ Every feature works the same across all frameworks. Ship consistent behavior reg
 
 UI packages re-export everything from their adapter package (which re-exports from `@alaarab/ogrid-core`) -- one import is all you need.
 
+## AI Integration (MCP)
+
+`@alaarab/ogrid-mcp` is a standalone MCP server that gives AI assistants full access to OGrid documentation and lets them read and control a running grid in real time.
+
+### Connect Claude or Cursor to OGrid docs
+
+```bash
+# Claude Code (one-time setup)
+claude mcp add ogrid -- npx -y @alaarab/ogrid-mcp
+
+# Claude Desktop — add to claude_desktop_config.json
+{
+  "mcpServers": {
+    "ogrid": { "command": "npx", "args": ["-y", "@alaarab/ogrid-mcp"] }
+  }
+}
+```
+
+Once connected, your AI assistant can search and read the full OGrid documentation:
+
+```
+> Which filtering modes does OGrid support?
+> Show me a server-side data source example in Angular
+> How do I pin columns in Vue?
+```
+
+Available tools: `search_docs`, `list_docs`, `get_docs`, `get_code_example`, `detect_version`
+Available resources: `ogrid://quick-reference`, `ogrid://docs/{path}`, `ogrid://migration-guide`
+
+### Live testing bridge
+
+Add `--bridge` to let the AI read and control a **running** OGrid instance:
+
+```bash
+npx @alaarab/ogrid-mcp --bridge
+```
+
+Then connect your dev app with one `useEffect`:
+
+```tsx
+import { connectGridToBridge } from '@alaarab/ogrid-mcp/bridge-client';
+
+useEffect(() => {
+  const bridge = connectGridToBridge({
+    gridId: 'my-grid',
+    getData: () => data,
+    getColumns: () => columns,
+    onCellUpdate: (rowIndex, columnId, value) =>
+      setData(prev => prev.map((row, i) => i === rowIndex ? { ...row, [columnId]: value } : row)),
+  });
+  return () => bridge.disconnect();
+}, [data]);
+```
+
+Now Claude can inspect what's actually rendering, update cells, apply filters, and navigate pages — while you watch the grid update live.
+
+Bridge tools: `list_grids`, `get_grid_state`, `send_grid_command`
+
+> **Note:** The bridge is dev-only and localhost-only. Never run `--bridge` in production.
+
+See the [MCP guide](packages/docs/docs/guides/mcp.mdx) and [live testing bridge guide](packages/docs/docs/guides/mcp-live-testing.mdx) for full documentation.
+
 ## Testing
 
-**2,980 tests** across 14 packages with 100% pass rate. Each framework uses its native testing tools:
+**4,189 tests** across 14 packages with 100% pass rate. Each framework uses its native testing tools:
 
 | Framework | Tool | Packages | Tests |
 |-----------|------|----------|------:|
-| Core | Jest + ts-jest | 1 | 377 |
-| React | React Testing Library | 4 | 831 |
-| Angular | Angular Testing utilities | 4 | 617 |
-| Vue | Vue Test Utils | 4 | 719 |
-| Vanilla JS | Native DOM + jsdom | 1 | 313 |
-| **Total** | | **14** | **2,980** |
+| Core | Jest + ts-jest | 1 | ~1,418 |
+| React | React Testing Library | 4 | ~903 |
+| Angular | Angular Testing utilities | 4 | ~706 |
+| Vue | Vue Test Utils | 4 | ~768 |
+| Vanilla JS | Native DOM + jsdom | 1 | 394 |
+| **Total** | | **14** | **~4,189** |
 
 Cross-package parity is enforced through **shared test factories** -- 8 factories per framework that generate identical test scenarios for every UI package.
 
@@ -400,7 +464,7 @@ git clone https://github.com/alaarab/ogrid.git
 cd ogrid
 npm install
 npm run build                       # Build all packages (Turborepo)
-npm run test:all                    # Run all 2,980 tests
+npm run test:all                    # Run all ~4,189 tests
 npm run lint                        # ESLint
 
 # Storybook

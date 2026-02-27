@@ -4,7 +4,15 @@ import { createOGridMcpServer } from './server.js';
 import { BridgeStore, startBridgeServer } from './bridge.js';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { existsSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
+
+// --version flag
+if (process.argv.includes('--version') || process.argv.includes('-v')) {
+  const pkgPath = join(dirname(fileURLToPath(import.meta.url)), '../../package.json');
+  const pkg = JSON.parse(readFileSync(pkgPath, 'utf-8')) as { version: string };
+  process.stdout.write(`${pkg.version}\n`);
+  process.exit(0);
+}
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
