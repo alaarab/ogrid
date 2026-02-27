@@ -107,13 +107,13 @@ export class FormulaBarComponent {
   readonly inputChange = output<string>();
 
   /** Commit the formula bar value. */
-  readonly commit = output<void>();
+  readonly commit = output();
 
   /** Cancel editing. */
-  readonly cancel = output<void>();
+  readonly cancel = output();
 
   /** Start editing the formula bar. */
-  readonly startEditing = output<void>();
+  readonly startEditing = output();
 
   private readonly inputEl = viewChild<ElementRef<HTMLInputElement>>('formulaInput');
 

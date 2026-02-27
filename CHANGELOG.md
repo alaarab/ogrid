@@ -5,7 +5,24 @@ All notable changes to OGrid will be documented in this file.
 ## [Unreleased]
 
 ### Added
-- **Formula engine expansion: 93 built-in functions** (up from 39). Added 54 new functions across all categories:
+- **Formula engine expansion: 145 built-in functions** (up from 93). Added 52 new functions:
+  - **Financial (8 new):** `PMT`, `FV`, `PV`, `NPER`, `RATE`, `NPV`, `IRR`, `SLN`
+  - **Statistical (10 new):** `STDEV`/`STDEV.S`, `STDEVP`/`STDEV.P`, `VAR`/`VAR.S`, `VARP`/`VAR.P`, `CORREL`, `PERCENTILE`/`PERCENTILE.INC`, `QUARTILE`/`QUARTILE.INC`, `MODE`/`MODE.SNGL`, `GEOMEAN`, `HARMEAN`
+  - **Dynamic Reference (12 new):** `INDIRECT`, `OFFSET`, `ADDRESS`, `ROW`, `COLUMN`, `ROWS`, `COLUMNS`, `SEQUENCE`, `TRANSPOSE`, `MMULT`, `MDETERM`, `MINVERSE`
+  - **Math additions (7 new):** `MROUND`, `QUOTIENT`, `COMBIN`, `PERMUT`, `FACT`, `GCD`, `LCM`
+  - **Date additions (9 new):** `DAYS`, `DAYS360`, `ISOWEEKNUM`, `YEARFRAC`, `DATEVALUE`, `TIMEVALUE`, `TIME`, `WORKDAY`, `WORKDAY.INTL`
+  - **Text additions (5 new):** `DOLLAR`, `FIXED`, `T`, `N`, `FORMULATEXT`
+  - **Info additions (6 new):** `ISODD`, `ISEVEN`, `ISFORMULA`, `ISLOGICAL`, `ISNONTEXT`, `ISREF`
+- **Vue + Angular formula bar UI parity** — `SheetTabsComponent` and `FormulaRefOverlayComponent` added to `@alaarab/ogrid-angular` and wired into all 3 Angular UI packages. Vue equivalents added to `@alaarab/ogrid-vue` and wired into all 3 Vue UI packages.
+- **MCP migration prompt** — `ogrid://migration-guide` resource and `migrate-from-ag-grid` prompt added to `@alaarab/ogrid-mcp`. AI assistants can now provide step-by-step AG Grid → OGrid migration guidance using real code examples from the docs.
+- **276 new formula function tests**. **4,189 tests** across 14 packages.
+
+### Fixed
+- **Date cell editor shows wrong date or appears empty** — Two related bugs fixed across React, Vue, and Angular:
+  1. `<input type="date">` requires `YYYY-MM-DD` format; stored ISO strings like `"2024-03-15T00:00:00.000Z"` were passed as-is, leaving the date picker blank. Now extracts the first 10 characters (matches JS package behavior).
+  2. `toLocaleDateString()` was converting UTC-midnight dates to local time, shifting the displayed date backward in negative-offset timezones (e.g., March 15 UTC showing as March 14 in UTC-5). Fixed by passing `{ timeZone: 'UTC' }` to all date column display calls in `@alaarab/ogrid-core`.
+
+### Also added with formula engine expansion: 93 built-in functions (up from 39). Added 54 new functions across all categories:
   - **Math (17 new):** `ROUNDUP`, `ROUNDDOWN`, `INT`, `TRUNC`, `PRODUCT`, `SUMPRODUCT`, `MEDIAN`, `LARGE`, `SMALL`, `RANK`, `SIGN`, `LOG`, `LN`, `EXP`, `PI`, `RAND`, `RANDBETWEEN`
   - **Text (12 new):** `FIND`, `SEARCH`, `REPLACE`, `REPT`, `EXACT`, `PROPER`, `CLEAN`, `CHAR`, `CODE`, `TEXT`, `VALUE`, `TEXTJOIN`
   - **Logical (5 new):** `IFNA`, `IFS`, `SWITCH`, `CHOOSE`, `XOR`

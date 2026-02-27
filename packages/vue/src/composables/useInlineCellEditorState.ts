@@ -25,9 +25,14 @@ export function useInlineCellEditorState(
   params: UseInlineCellEditorStateParams
 ): UseInlineCellEditorStateResult {
   const { value, editorType, onCommit, onCancel } = params;
-  const localValue = ref<string>(
-    value !== null && value !== undefined ? String(value) : ''
-  );
+  const localValue = ref<string>((() => {
+    if (value === null || value === undefined) return '';
+    if (editorType === 'date') {
+      const str = String(value);
+      return str.match(/^\d{4}-\d{2}-\d{2}/) ? str.substring(0, 10) : str;
+    }
+    return String(value);
+  })());
 
   const setLocalValue = (v: string) => {
     localValue.value = v;
