@@ -1,6 +1,6 @@
 {
   "name": "@alaarab/ogrid-docs",
-  "version": "2.4.1",
+  "version": "2.4.2",
   "private": true,
   "scripts": {
     "start": "docusaurus start",
@@ -9,11 +9,11 @@
     "clear": "docusaurus clear"
   },
   "dependencies": {
-    "@alaarab/ogrid-js": "2.4.1",
-    "@alaarab/ogrid-react": "2.4.1",
-    "@alaarab/ogrid-react-fluent": "2.4.1",
-    "@alaarab/ogrid-react-material": "2.4.1",
-    "@alaarab/ogrid-react-radix": "2.4.1",
+    "@alaarab/ogrid-js": "2.4.2",
+    "@alaarab/ogrid-react": "2.4.2",
+    "@alaarab/ogrid-react-fluent": "2.4.2",
+    "@alaarab/ogrid-react-material": "2.4.2",
+    "@alaarab/ogrid-react-radix": "2.4.2",
     "@docusaurus/core": "^3.9.2",
     "@docusaurus/preset-classic": "^3.9.2",
     "@docusaurus/theme-mermaid": "^3.9.2",
