@@ -1,6 +1,6 @@
 import type { RowId, CellEvent } from '../types/gridTypes';
 import type { IActiveCell, ISelectionRange } from '@alaarab/ogrid-core';
-import { getCellValue, buildHeaderRows, isInSelectionRange, ROW_NUMBER_COLUMN_WIDTH, CHECKBOX_COLUMN_WIDTH, partitionColumnsForVirtualization, indexToColumnLetter } from '@alaarab/ogrid-core';
+import { getCellValue, buildHeaderRows, isInSelectionRange, ROW_NUMBER_COLUMN_WIDTH, ROW_NUMBER_COLUMN_ID, CHECKBOX_COLUMN_WIDTH, partitionColumnsForVirtualization, indexToColumnLetter } from '@alaarab/ogrid-core';
 import type { GridState } from '../state/GridState';
 import type { HeaderFilterState, HeaderFilterConfig } from '../state/HeaderFilterState';
 import type { VirtualScrollState } from '../state/VirtualScrollState';
@@ -209,12 +209,15 @@ export class TableRenderer<T> {
       // Resize handle mousedown
       if (target.classList.contains('ogrid-resize-handle')) {
         e.stopPropagation();
+        // Check for data-column-id on the resize handle itself (row number column)
+        // or on the parent <th>
+        const handleColumnId = target.getAttribute('data-column-id');
         const th = target.closest('th[data-column-id]') as HTMLElement | null;
-        if (!th) return;
-        const columnId = th.getAttribute('data-column-id');
+        const columnId = handleColumnId ?? th?.getAttribute('data-column-id');
         if (columnId) {
-          const rect = th.getBoundingClientRect();
-          this.interactionState?.onResizeStart?.(columnId, e.clientX, rect.width);
+          const parentTh = target.closest('th') as HTMLElement | null;
+          const rect = parentTh?.getBoundingClientRect();
+          this.interactionState?.onResizeStart?.(columnId, e.clientX, rect?.width ?? ROW_NUMBER_COLUMN_WIDTH);
         }
         return;
       }
@@ -237,9 +240,9 @@ export class TableRenderer<T> {
       const target = e.target as HTMLElement;
       if (target.classList.contains('ogrid-resize-handle')) {
         e.stopPropagation();
+        const handleColumnId = target.getAttribute('data-column-id');
         const th = target.closest('th[data-column-id]') as HTMLElement | null;
-        if (!th) return;
-        const columnId = th.getAttribute('data-column-id');
+        const columnId = handleColumnId ?? th?.getAttribute('data-column-id');
         if (columnId) {
           this.interactionState?.onResizeDoubleClick?.(columnId);
         }
@@ -336,8 +339,11 @@ export class TableRenderer<T> {
     parts.push(`sel:${is?.rowSelectionMode ?? ''}`);
     parts.push(`allSel:${is?.allSelected ?? ''}`);
     parts.push(`someSel:${is?.someSelected ?? ''}`);
-    // Include showRowNumbers
+    // Include showRowNumbers and row number column width
     parts.push(`rn:${is?.showRowNumbers ?? ''}`);
+    if (is?.showRowNumbers) {
+      parts.push(`rnw:${is?.columnWidths[ROW_NUMBER_COLUMN_ID] ?? ''}`);
+    }
     // Include showColumnLetters
     parts.push(`cl:${is?.showColumnLetters ?? ''}`);
     // Include filter active states
@@ -628,7 +634,8 @@ export class TableRenderer<T> {
       if (hasRowNumbers) {
         const th = document.createElement('th');
         th.className = 'ogrid-column-letter-cell';
-        th.style.width = `${ROW_NUMBER_COLUMN_WIDTH}px`;
+        const rnw = this.interactionState?.columnWidths[ROW_NUMBER_COLUMN_ID] ?? ROW_NUMBER_COLUMN_WIDTH;
+        th.style.width = `${rnw}px`;
         letterTr.appendChild(th);
       }
 
@@ -648,17 +655,52 @@ export class TableRenderer<T> {
 
     // If we have grouped headers (more than 1 row), render all rows
     if (headerRows.length > 1) {
-      for (const row of headerRows) {
+      for (let rowIdx = 0; rowIdx < headerRows.length; rowIdx++) {
+        const row = headerRows[rowIdx];
+        const isLastRow = rowIdx === headerRows.length - 1;
         const tr = document.createElement('tr');
         if (hasCheckbox) {
           const th = document.createElement('th');
           th.className = 'ogrid-header-cell ogrid-checkbox-header';
           th.style.width = `${CHECKBOX_COLUMN_WIDTH}px`;
           // Select-all checkbox only on last header row
-          if (row === headerRows[headerRows.length - 1]) {
+          if (isLastRow) {
             this.appendSelectAllCheckbox(th);
           }
           tr.appendChild(th);
+        }
+        if (hasRowNumbers) {
+          if (isLastRow) {
+            const rnw = this.interactionState?.columnWidths[ROW_NUMBER_COLUMN_ID] ?? ROW_NUMBER_COLUMN_WIDTH;
+            const th = document.createElement('th');
+            th.className = 'ogrid-header-cell ogrid-row-number-header';
+            th.style.width = `${rnw}px`;
+            th.style.minWidth = `${rnw}px`;
+            th.style.maxWidth = `${rnw}px`;
+            th.style.textAlign = 'center';
+            th.style.position = th.style.position || 'relative';
+            th.textContent = '#';
+            // Add resize handle
+            const resizeHandle = document.createElement('div');
+            resizeHandle.className = 'ogrid-resize-handle';
+            resizeHandle.style.position = 'absolute';
+            resizeHandle.style.right = '0';
+            resizeHandle.style.top = '0';
+            resizeHandle.style.bottom = '0';
+            resizeHandle.style.width = '4px';
+            resizeHandle.style.cursor = 'col-resize';
+            resizeHandle.style.userSelect = 'none';
+            resizeHandle.setAttribute('data-column-id', ROW_NUMBER_COLUMN_ID);
+            th.appendChild(resizeHandle);
+            tr.appendChild(th);
+          } else if (rowIdx === 0) {
+            // First non-last row: spacer with rowSpan covering all rows except the last
+            const th = document.createElement('th');
+            th.rowSpan = headerRows.length - 1;
+            th.style.padding = '0';
+            tr.appendChild(th);
+          }
+          // Middle rows (rowIdx > 0 && !isLastRow): no cell needed — covered by rowSpan from first row
         }
         for (const cell of row) {
           const th = document.createElement('th');
@@ -705,11 +747,27 @@ export class TableRenderer<T> {
 
       // Row numbers header
       if (this.hasRowNumbersColumn()) {
+        const rnw = this.interactionState?.columnWidths[ROW_NUMBER_COLUMN_ID] ?? ROW_NUMBER_COLUMN_WIDTH;
         const th = document.createElement('th');
         th.className = 'ogrid-header-cell ogrid-row-number-header';
-        th.style.width = `${ROW_NUMBER_COLUMN_WIDTH}px`;
+        th.style.width = `${rnw}px`;
+        th.style.minWidth = `${rnw}px`;
+        th.style.maxWidth = `${rnw}px`;
         th.style.textAlign = 'center';
+        th.style.position = th.style.position || 'relative';
         th.textContent = '#';
+        // Add resize handle
+        const resizeHandle = document.createElement('div');
+        resizeHandle.className = 'ogrid-resize-handle';
+        resizeHandle.style.position = 'absolute';
+        resizeHandle.style.right = '0';
+        resizeHandle.style.top = '0';
+        resizeHandle.style.bottom = '0';
+        resizeHandle.style.width = '4px';
+        resizeHandle.style.cursor = 'col-resize';
+        resizeHandle.style.userSelect = 'none';
+        resizeHandle.setAttribute('data-column-id', ROW_NUMBER_COLUMN_ID);
+        th.appendChild(resizeHandle);
         tr.appendChild(th);
       }
 
@@ -928,9 +986,12 @@ export class TableRenderer<T> {
 
       // Row numbers column
       if (hasRowNumbers) {
+        const rnw = this.interactionState?.columnWidths[ROW_NUMBER_COLUMN_ID] ?? ROW_NUMBER_COLUMN_WIDTH;
         const td = document.createElement('td');
         td.className = 'ogrid-cell ogrid-row-number-cell';
-        td.style.width = `${ROW_NUMBER_COLUMN_WIDTH}px`;
+        td.style.width = `${rnw}px`;
+        td.style.minWidth = `${rnw}px`;
+        td.style.maxWidth = `${rnw}px`;
         td.style.textAlign = 'center';
         td.style.color = 'var(--ogrid-fg-muted, #666)';
         td.style.fontSize = '0.9em';
@@ -1017,7 +1078,16 @@ export class TableRenderer<T> {
           const value = this.formulaEngine?.isEnabled() && this.formulaEngine.hasFormula(colIndex, rowIndex)
             ? (this.formulaEngine.getValue(colIndex, rowIndex) ?? rawValue)
             : rawValue;
-          if (col.valueFormatter) {
+          if (col.type === 'boolean') {
+            const checkbox = document.createElement('input');
+            checkbox.type = 'checkbox';
+            checkbox.checked = Boolean(value);
+            checkbox.disabled = true;
+            checkbox.style.margin = '0';
+            checkbox.style.pointerEvents = 'none';
+            checkbox.setAttribute('aria-label', value ? 'True' : 'False');
+            td.appendChild(checkbox);
+          } else if (col.valueFormatter) {
             td.textContent = col.valueFormatter(value, item);
           } else if (value != null) {
             td.textContent = String(value);

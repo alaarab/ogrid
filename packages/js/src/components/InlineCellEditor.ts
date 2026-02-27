@@ -193,6 +193,9 @@ export class InlineCellEditor<T> {
         e.stopPropagation();
         this.onCancel?.();
         this.closeEditor();
+      } else if (['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'].includes(e.key)) {
+        // Let the input handle cursor movement — don't bubble to grid navigation
+        e.stopPropagation();
       } else if ((e.ctrlKey || e.metaKey) && ['c', 'x', 'v', 'a', 'z', 'y'].includes(e.key)) {
         // Let the input handle clipboard/undo shortcuts natively — don't bubble to grid
         e.stopPropagation();
@@ -239,6 +242,8 @@ export class InlineCellEditor<T> {
         e.stopPropagation();
         this.onCancel?.();
         this.closeEditor();
+      } else if (['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'].includes(e.key)) {
+        e.stopPropagation();
       }
     });
 
@@ -355,6 +360,7 @@ export class InlineCellEditor<T> {
     buildOptions();
 
     wrapper.addEventListener('keydown', (e) => {
+      e.stopPropagation(); // Prevent grid navigation while select editor is open
       switch (e.key) {
         case 'ArrowDown': {
           e.preventDefault();
@@ -484,6 +490,9 @@ export class InlineCellEditor<T> {
         e.stopPropagation();
         this.onCancel?.();
         this.closeEditor();
+      } else if (['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'].includes(e.key)) {
+        // Let the input handle cursor movement — don't bubble to grid navigation
+        e.stopPropagation();
       } else if ((e.ctrlKey || e.metaKey) && ['c', 'x', 'v', 'a', 'z', 'y'].includes(e.key)) {
         // Let the input handle clipboard/undo shortcuts natively — don't bubble to grid
         e.stopPropagation();

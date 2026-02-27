@@ -167,6 +167,8 @@ export interface CellRenderDescriptor {
   rowIndex: number;
   /** Raw value for display (when mode === 'display'). UI uses col.renderCell or col.valueFormatter. */
   displayValue?: unknown;
+  /** The column's declared type (text, numeric, date, boolean). */
+  columnType?: 'text' | 'numeric' | 'date' | 'boolean';
 }
 
 // ---------------------------------------------------------------------------
@@ -429,6 +431,7 @@ function computeCellDescriptor<T>(
     rowId,
     rowIndex,
     displayValue: formulaDisplay !== undefined ? formulaDisplay : cellValue,
+    columnType: col.type,
   };
 }
 

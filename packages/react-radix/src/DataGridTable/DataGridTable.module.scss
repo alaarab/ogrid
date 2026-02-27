@@ -183,12 +183,9 @@
   z-index: var(--ogrid-z-header-focus, 11); // above pinned header cells (z-index 10) and regular headers (z-index 8)
 }
 
-// Row numbers column
+// Row numbers column — widths are set via inline styles (dynamic when resized)
 .dataTable th.rowNumberHeaderCell,
 .dataTable td.rowNumberCell {
-  width: 50px;
-  min-width: 50px;
-  max-width: 50px;
   padding: 4px 8px;
   text-align: center;
   background: var(--ogrid-header-bg, #f5f5f5);

@@ -22,9 +22,10 @@ export interface UseRichSelectStateResult {
  * Manages searchable rich select editor state with keyboard navigation.
  */
 export function useRichSelectState(params: UseRichSelectStateParams): UseRichSelectStateResult {
-  const { values, formatValue, onCommit, onCancel } = params;
+  const { values, formatValue, initialValue, onCommit, onCancel } = params;
   const searchText = ref('');
-  const highlightedIndex = ref(0);
+  const initialIndex = values.findIndex((v) => String(v) === String(initialValue));
+  const highlightedIndex = ref(Math.max(initialIndex, 0));
 
   const setSearchText = (text: string) => {
     searchText.value = text;

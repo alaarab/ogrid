@@ -157,21 +157,16 @@
 }
 
 .dataTable .rowNumberHeaderCellWrapper {
-  width: 50px;
-  min-width: 50px;
-  max-width: 50px;
   padding: 4px 8px;
   text-align: center;
   background: var(--ogrid-header-bg, #f5f5f5);
   font-weight: 600;
   color: var(--colorNeutralForeground3, #666);
   border-right: 1px solid var(--ogrid-border, rgba(0, 0, 0, 0.12));
+  position: relative;
 }
 
 .dataTable .rowNumberCellWrapper {
-  width: 50px;
-  min-width: 50px;
-  max-width: 50px;
   padding: 4px 8px;
   text-align: center;
   background: var(--colorNeutralBackground3, #f5f5f5);

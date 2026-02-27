@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef } from 'react';
-import { measureColumnContentWidth } from '@alaarab/ogrid-core';
+import { measureColumnContentWidth, ROW_NUMBER_COLUMN_ID, ROW_NUMBER_COLUMN_MIN_WIDTH } from '@alaarab/ogrid-core';
 import type { IColumnDef } from '../types';
 import { useLatestRef } from './useLatestRef';
 
@@ -110,9 +110,11 @@ export function useColumnResize<T>({
       }));
     };
 
+    const effectiveMinWidth = columnId === ROW_NUMBER_COLUMN_ID ? ROW_NUMBER_COLUMN_MIN_WIDTH : minWidth;
+
     const onMove = (moveEvent: MouseEvent) => {
       const deltaX = moveEvent.clientX - startX;
-      latestWidth = Math.max(minWidth, startWidth + deltaX);
+      latestWidth = Math.max(effectiveMinWidth, startWidth + deltaX);
 
       if (!rafRef.current) {
         rafRef.current = requestAnimationFrame(() => {

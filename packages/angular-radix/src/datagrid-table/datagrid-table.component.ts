@@ -9,12 +9,14 @@ import {
   MarchingAntsOverlayComponent,
   EmptyStateComponent,
   FormulaRefOverlayComponent,
+  ROW_NUMBER_COLUMN_ID,
   OGRID_THEME_VARS_CSS,
   indexToColumnLetter,
   formatCellReference,
 } from '@alaarab/ogrid-angular';
 import type {
   IOGridDataGridProps,
+  IColumnDef,
 } from '@alaarab/ogrid-angular';
 import { ColumnHeaderFilterComponent } from '../column-header-filter/column-header-filter.component';
 import { ColumnHeaderMenuComponent } from '../column-header-menu/column-header-menu.component';
@@ -376,9 +378,6 @@ import { PopoverCellEditorComponent } from './popover-cell-editor.component';
       cursor: grabbing;
     }
     .ogrid-datagrid-row-number-header {
-      width: 50px;
-      min-width: 50px;
-      max-width: 50px;
       text-align: center;
       font-weight: 600;
       background: var(--ogrid-header-bg, rgba(0, 0, 0, 0.04));
@@ -388,14 +387,9 @@ import { PopoverCellEditorComponent } from './popover-cell-editor.component';
       z-index: 9;
     }
     .ogrid-datagrid-row-number-spacer {
-      width: 50px;
-      min-width: 50px;
       padding: 0;
     }
     .ogrid-datagrid-row-number-cell {
-      width: 50px;
-      min-width: 50px;
-      max-width: 50px;
       text-align: center;
       font-weight: 600;
       font-variant-numeric: tabular-nums;
@@ -467,8 +461,13 @@ import { PopoverCellEditorComponent } from './popover-cell-editor.component';
                         <th [attr.rowSpan]="headerRows().length - 1" class="ogrid-datagrid-th ogrid-datagrid-checkbox-spacer"></th>
                       }
                       @if (rowIdx === headerRows().length - 1 && hasRowNumbersCol()) {
-                        <th class="ogrid-datagrid-th ogrid-datagrid-row-number-header" [attr.rowSpan]="headerRows().length > 1 ? 1 : null">
+                        <th class="ogrid-datagrid-th ogrid-datagrid-row-number-header" [attr.rowSpan]="headerRows().length > 1 ? 1 : null"
+                          [style.width.px]="getRowNumberWidth()"
+                          [style.min-width.px]="getRowNumberWidth()"
+                          [style.max-width.px]="getRowNumberWidth()"
+                        >
                           #
+                          <div class="ogrid-datagrid-resize-handle" (mousedown)="onResizeRowNumber($event)" (dblclick)="$event.stopPropagation()"></div>
                         </th>
                       }
                       @if (rowIdx === 0 && rowIdx < headerRows().length - 1 && hasRowNumbersCol()) {
@@ -577,7 +576,11 @@ import { PopoverCellEditorComponent } from './popover-cell-editor.component';
                           </td>
                         }
                         @if (hasRowNumbersCol()) {
-                          <td class="ogrid-datagrid-td ogrid-datagrid-row-number-cell">
+                          <td class="ogrid-datagrid-td ogrid-datagrid-row-number-cell"
+                            [style.width.px]="getRowNumberWidth()"
+                            [style.min-width.px]="getRowNumberWidth()"
+                            [style.max-width.px]="getRowNumberWidth()"
+                          >
                             {{ rowNumberOffset() + rowIndex + 1 }}
                           </td>
                         }
@@ -643,7 +646,11 @@ import { PopoverCellEditorComponent } from './popover-cell-editor.component';
                                 [attr.role]="descriptor.canEditAny ? 'button' : null"
                                 [style]="cellStyle ?? undefined"
                               >
-                                {{ content }}
+                                @if (colLayout.col.type === 'boolean') {
+                                  <input type="checkbox" [checked]="!!descriptor.displayValue" disabled style="margin:0;pointer-events:none" [attr.aria-label]="descriptor.displayValue ? 'True' : 'False'" />
+                                } @else {
+                                  {{ content }}
+                                }
                                 @if (descriptor.canEditAny && descriptor.isSelectionEndCell) {
                                   <div
                                     class="ogrid-datagrid-fill-handle"
@@ -805,6 +812,11 @@ export class DataGridTableComponent<T> extends BaseDataGridTableComponent<T> {
 
   getColumnLetter(colIdx: number): string {
     return indexToColumnLetter(colIdx);
+  }
+
+  onResizeRowNumber(event: MouseEvent): void {
+    event.stopPropagation();
+    this.onResizeStart(event, { columnId: ROW_NUMBER_COLUMN_ID, name: '#' } as IColumnDef<T>);
   }
 
 }

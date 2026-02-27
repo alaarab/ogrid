@@ -8,6 +8,8 @@ import {
   CELL_PADDING,
   CHECKBOX_COLUMN_WIDTH,
   ROW_NUMBER_COLUMN_WIDTH,
+  ROW_NUMBER_COLUMN_ID,
+  ROW_NUMBER_COLUMN_MIN_WIDTH,
   measureColumnContentWidth,
   partitionColumnsForVirtualization,
 } from '@alaarab/ogrid-core';
@@ -319,6 +321,13 @@ export abstract class BaseDataGridTableComponent<T = unknown> {
     });
   });
 
+  /** Returns the effective row number column width (from overrides or default). */
+  getRowNumberWidth(): number {
+    const overrides = this.columnSizingOverrides();
+    const override = overrides[ROW_NUMBER_COLUMN_ID];
+    return override ? override.widthPx : ROW_NUMBER_COLUMN_WIDTH;
+  }
+
   // Compute sticky offsets for pinned columns (single pass from both ends)
   readonly pinningOffsets = computed(() => {
     const layouts = this.columnLayouts();
@@ -327,7 +336,7 @@ export abstract class BaseDataGridTableComponent<T = unknown> {
 
     let leftAcc = 0;
     if (this.hasCheckboxCol()) leftAcc += CHECKBOX_COLUMN_WIDTH;
-    if (this.hasRowNumbersCol()) leftAcc += ROW_NUMBER_COLUMN_WIDTH;
+    if (this.hasRowNumbersCol()) leftAcc += this.getRowNumberWidth();
     let rightAcc = 0;
 
     const len = layouts.length;
@@ -669,8 +678,9 @@ export abstract class BaseDataGridTableComponent<T = unknown> {
     this.state().interaction.setSelectionRange?.(null);
     this.getWrapperRef()?.nativeElement.focus({ preventScroll: true });
     const startX = event.clientX;
-    const startWidth = this.getColumnWidth(col);
-    const minWidth = col.minWidth ?? DEFAULT_MIN_COLUMN_WIDTH;
+    const columnId = col.columnId;
+    const startWidth = columnId === ROW_NUMBER_COLUMN_ID ? this.getRowNumberWidth() : this.getColumnWidth(col);
+    const minWidth = columnId === ROW_NUMBER_COLUMN_ID ? ROW_NUMBER_COLUMN_MIN_WIDTH : (col.minWidth ?? DEFAULT_MIN_COLUMN_WIDTH);
 
     const onMove = (e: MouseEvent) => {
       const delta = e.clientX - startX;

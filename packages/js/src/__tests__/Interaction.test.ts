@@ -758,7 +758,7 @@ describe('Interaction - Feature Gating', () => {
     const event = new KeyboardEvent('keydown', { key: 'F2', bubbles: true });
     wrapper!.dispatchEvent(event);
 
-    const editor = container.querySelector('input');
+    const editor = container.querySelector('input:not([type="checkbox"])');
     expect(editor).toBeNull();
 
     grid.destroy();

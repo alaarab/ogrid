@@ -4,6 +4,13 @@ All notable changes to OGrid will be documented in this file.
 
 ## [Unreleased]
 
+### Fixed
+
+- **Select editor highlight** — Select and rich-select editors now highlight the current cell value when opened, instead of always defaulting to the first option (React, Vue)
+- **Arrow keys during editing** — Arrow keys no longer navigate away from the cell while actively editing text; they now move the cursor within the editor as expected (React, Angular, Vue, JS)
+- **Row number column resize** — The row number column (`cellReferences` mode) is now resizable via drag, matching the behavior of regular columns (React, Angular, Vue, JS)
+- **Boolean cell display** — Boolean columns now render a disabled checkbox instead of "True"/"False" text in display mode (React, Angular, Vue, JS)
+
 ---
 
 ## [2.4.0] — 2026-02-27
