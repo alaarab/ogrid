@@ -16,6 +16,33 @@ All notable changes to OGrid will be documented in this file.
 - `#NUM!` error type for invalid numeric operations (LARGE/SMALL out of range, LOG of negative, etc.)
 - 148 new formula function tests. **3,834 tests** across 14 packages.
 - Storybook `Formulas` stories for React Fluent and React Material packages.
+- **Formula Engine Phase 4** — Advanced formula features across all 4 frameworks (React, Angular, Vue, JS):
+  - **Named ranges**: `defineNamedRange(name, range)` / `removeNamedRange(name)` — use descriptive names in formulas (e.g., `=SUM(Revenue)`)
+  - **Formula auditing**: `getPrecedents(cell)`, `getDependents(cell)`, `getAuditTrail(cell)` using BFS traversal for tracing formula dependencies
+  - **Cross-sheet references**: `=Sheet2!A1`, `='Sheet Name'!B2:C5` syntax for referencing cells across grid tabs
+  - Formula-aware clipboard (copies formula strings with cell reference offset adjustment), fill handle, and CSV export
+  - Error rendering via `--ogrid-formula-error-color` CSS variable (default `#d32f2f`)
+  - Formula engine docs page and Storybook stories
+- **Excel-like formula bar UI** across all 4 frameworks — enabled alongside `cellReferences={true}` when `formulas={true}`:
+  - **Formula bar**: `[Name Box][fx][Input]` strip showing the active cell's formula string (or raw value for non-formula cells)
+  - Live editing: typing in the formula bar updates the cell on Enter, discards on Escape
+  - **Cell reference highlighting**: referenced cells and ranges are highlighted with distinct colored borders while a formula is being edited (`FormulaRefOverlay` component)
+  - **Sheet tabs**: clickable tab bar at the bottom of the grid for cross-sheet navigation (`SheetTabs` component)
+  - `ISheetDef` type exported from `@alaarab/ogrid-react`
+- **`@alaarab/ogrid-mcp`** — New standalone MCP (Model Context Protocol) documentation server. Lets AI assistants (Claude Desktop, Claude Code, Cursor, etc.) search and retrieve OGrid docs, code examples, and API references across all frameworks. Install: `claude mcp add ogrid -- npx -y @alaarab/ogrid-mcp`.
+  - **Tools**: `search_docs` (keyword search with optional `framework` filter), `list_docs` (list pages by category), `get_docs` (full page content by path), `get_code_example` (find code examples), `detect_version` (reads project's `package.json` tree to identify installed OGrid version and framework)
+  - **Resources**: `ogrid://quick-reference` (install commands, `IOGridProps` reference, `IColumnDef` fields, common patterns); `ogrid://docs/{path}` template exposing all documentation pages with list support
+  - Docs are bundled into the npm package for zero-config `npx @alaarab/ogrid-mcp` usage (no monorepo required); three-tier path resolution: `OGRID_DOCS_PATH` env var → monorepo path → bundled fallback
+
+### Changed
+- **Cross-framework UI deduplication** — Eliminated redundant view-layer code across all frameworks:
+  - **React**: `PaginationControlsBase` and `ColumnChooserContent` headless slot components extracted to `@alaarab/ogrid-react`; all 3 React UI packages refactored to use them, removing ~40 lines of duplication per package.
+  - **React**: `createBaseFilterRenderers(components, dateClassNames?)` factory in `ColumnHeaderFilterRenderers.tsx` — Radix and Material share one implementation; Fluent keeps its own (has extra event handler deps in `useMemo`).
+  - **React**: `getColumnHeaderMenuProps(headerMenu)` utility in `useColumnHeaderMenuState.ts` — flattens the 18-prop `headerMenu` state spread across all 3 `DataGridTable` files.
+  - **Angular**: `BaseColumnHeaderMenuComponent` abstract class in `packages/angular/src/components/` — all 3 Angular UI packages extend it (signals-backed inputs via `@Input` setter + `signal()`, `menuItems` computed property, `handleMenuItemClick`). Eliminates ~170 lines of duplication.
+- **`createGridDataAccessor` extracted to core** — `IGridDataAccessor` interface and factory moved from per-framework hook files to `@alaarab/ogrid-core`, shared by React/Angular/Vue/JS formula engine integrations.
+- **Formula bar code deduplication** — `processFormulaBarCommit` and `deriveFormulaBarText` extracted to `@alaarab/ogrid-core` as cross-framework utilities; `FORMULA_BAR_CSS` and `FORMULA_REF_COLORS` constants centralized for shared styling.
+- **Jest config optimization** — `isolatedModules: true` across all 14 packages (faster transforms); `maxWorkers: 4` in base config (caps memory ~1.2 GB vs ~9 GB default unbounded).
 
 ### Fixed
 - `PROPER` now correctly lowercases remaining characters (not just capitalizes first letters).
@@ -25,33 +52,37 @@ All notable changes to OGrid will be documented in this file.
 - Column autosize header measurement now includes `<th>` border widths for correct `border-box` sizing.
 - Date inline editor now commits value on Enter key and blur (was silently discarding edits in React and Vue).
 - Hero grid on docs homepage is now editable with persisted state.
+- Formula bar showing `==` when clicking on a formula cell — `deriveFormulaBarText` was prepending a second `=` to formula strings that already include their leading `=` sign.
+- Formula `#ERROR!` on re-entering a cell formula via the formula bar — downstream consequence of the double-`=` bug: the engine received `==SUM(...)` and failed to parse the comparison-style leading `=` as a valid expression start.
+- Formula cache miss for cells with computed `undefined` values — replaced `values.get(key) !== undefined` guard with `values.has(key)` to correctly distinguish "not yet cached" from "cached as undefined".
 
 ---
 
 ## [2.3.0] — 2026-02-24
 
 ### Added
-- **PageDown/PageUp keyboard navigation** across all frameworks — jumps one visible page of rows.
-- Performance Storybook stories (large dataset rendering).
+- **Excel-style cell references** (`cellReferences` prop) across all 4 frameworks — column letter headers (A, B, C…), row numbers in leftmost column, name box in toolbar showing the active cell reference (e.g., "A1"). Enabling `cellReferences` implies `showRowNumbers`. `indexToColumnLetter` and `formatCellReference` utilities in `@alaarab/ogrid-core`.
+- Cell references Storybook stories and feature documentation page.
+- **PageDown/PageUp keyboard navigation** across all frameworks — jumps one visible page of rows at a time, clamped to valid row bounds.
+- Performance Storybook stories (large dataset rendering benchmarks).
 - Documentation polish and feature page updates.
 
 ### Fixed
-- Cross-framework parity: `scrollToRow`, PageDown NaN guard, Angular Delete key refactor.
-- JS package clipboard during editing, Storybook story parity.
+- Cross-framework parity: `scrollToRow` alignment options, PageDown NaN guard when row count is zero, Angular Delete key handler refactored to match React/Vue behavior.
+- JS package clipboard paste during active cell edit.
+- Storybook story parity across React UI packages.
 
 ---
 
 ## [2.2.0] — 2026-02-24
 
 ### Added
-- **CSS containment** (`contain: content`) on body cells for reduced paint scope.
-- **Column virtualization** — opt-in via `virtualScroll: { columns: true }`, replaces off-screen columns with spacer `<td>` elements.
-- **Web Worker sort/filter** — opt-in via `workerSort: true`, offloads sort+filter to inline Blob URL worker.
-- **Excel-style cell references** — column letter headers (A, B, C…), row numbers, name box showing active cell.
-- Cell references Storybook stories and feature docs page.
+- **CSS containment** (`contain: content`) on body cells for reduced paint scope; `contain: none` on pinned columns to preserve `position: sticky`; `content-visibility: auto` on non-virtual rows for off-screen skipping.
+- **Column virtualization** — opt-in via `virtualScroll: { columns: true, columnOverscan: 2 }`. Core utilities: `computeVisibleColumnRange()` and `partitionColumnsForVirtualization()` (returns `IVisibleColumnRange`). Off-screen columns replaced with spacer `<td>` elements on left and right. Works alongside row virtualization.
+- **Web Worker sort/filter** — opt-in via `workerSort: true | 'auto'`. Core exposes `processClientSideDataAsync()` which offloads sort+filter to an inline Blob URL worker. Falls back to synchronous path when: a custom `compare` function is used, `people` filters are active, or the Worker API is unavailable. `terminateSortFilterWorker()` for cleanup on unmount.
 
 ### Fixed
-- Column pinning initialization across all frameworks.
+- Column pinning initialization across all frameworks (pinned columns were not applying sticky positioning on first render).
 
 ---
 
