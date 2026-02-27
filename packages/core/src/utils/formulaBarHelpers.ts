@@ -87,7 +87,7 @@ export function deriveFormulaBarText(
 ): string {
   if (col == null || row == null) return '';
   const formula = getFormula?.(col, row);
-  if (formula) return '=' + formula;
+  if (formula) return formula; // formula already includes the leading '='
   const raw = getRawValue?.(col, row);
   return raw != null ? String(raw) : '';
 }
