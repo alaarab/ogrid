@@ -1,11 +1,13 @@
 import '@angular/compiler';
 import { bootstrapApplication } from '@angular/platform-browser';
-import { Component, provideZonelessChangeDetection } from '@angular/core';
+import { Component, OnInit, OnDestroy, provideZonelessChangeDetection } from '@angular/core';
 import { OGridComponent } from '@alaarab/ogrid-angular-radix';
 import type { IOGridProps } from '@alaarab/ogrid-angular-radix';
 import { makeDemoProjects, makeDemoColumns, getRowId, handleCellValueChanged } from '../shared/demoData';
 import type { Project } from '../shared/demoData';
 import { createThemeToggle } from '../shared/themeToggle';
+import { connectGridToBridge } from '@alaarab/ogrid-mcp/bridge-client';
+import type { BridgeConnection } from '@alaarab/ogrid-mcp/bridge-client';
 
 const projects = makeDemoProjects(75);
 const columns = makeDemoColumns<Project>();
@@ -46,7 +48,10 @@ const columns = makeDemoColumns<Project>();
     }
   `],
 })
-export class AppComponent {
+export class AppComponent implements OnInit, OnDestroy {
+  private bridge: BridgeConnection | null = null;
+  private data = projects;
+
   gridProps: IOGridProps<Project> = {
     data: projects,
     columns: columns,
@@ -58,6 +63,29 @@ export class AppComponent {
     statusBar: true,
     onCellValueChanged: (e) => handleCellValueChanged(projects, e),
   };
+
+  ngOnInit() {
+    this.bridge = connectGridToBridge({
+      gridId: 'angular-radix-demo',
+      getData: () => this.data,
+      getColumns: () => columns.map((c) => ({
+        columnId: c.columnId,
+        headerName: c.name ?? c.columnId,
+        type: c.type,
+      })),
+      getSort: () => [],
+      getFilters: () => ({}),
+      onCellUpdate: (rowIndex, columnId, value) => {
+        if (this.data[rowIndex]) {
+          (this.data[rowIndex] as Record<string, unknown>)[columnId] = value;
+        }
+      },
+    });
+  }
+
+  ngOnDestroy() {
+    this.bridge?.disconnect();
+  }
 }
 
 bootstrapApplication(AppComponent, {

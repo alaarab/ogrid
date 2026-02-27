@@ -29,9 +29,20 @@ function App() {
       getData: () => data,
       getColumns: () => columns.map((c) => ({
         columnId: c.columnId,
-        headerName: c.headerName ?? c.columnId,
+        headerName: c.name ?? c.columnId,
         type: c.type,
       })),
+      getSort: () => {
+        const state = apiRef.current?.getColumnState();
+        if (state?.sort) {
+          return [{ columnId: state.sort.field, direction: state.sort.direction }];
+        }
+        return [];
+      },
+      getFilters: () => {
+        const state = apiRef.current?.getColumnState();
+        return state?.filters ?? {};
+      },
       api: apiRef.current ?? undefined,
       onCellUpdate: (rowIndex, columnId, value) => {
         setData((prev) =>
@@ -40,7 +51,7 @@ function App() {
       },
     });
     return () => bridge.disconnect();
-   
+
   }, [data]);
 
   return (
