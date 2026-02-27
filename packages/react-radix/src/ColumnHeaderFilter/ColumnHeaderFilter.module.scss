@@ -189,6 +189,8 @@
   padding: 4px 12px;
   display: flex;
   align-items: center;
+  font-size: 13px;
+  gap: 8px;
   &:hover {
     background: var(--ogrid-hover-bg, rgba(0, 0, 0, 0.04));
   }

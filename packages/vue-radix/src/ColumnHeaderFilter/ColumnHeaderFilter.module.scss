@@ -163,6 +163,7 @@
   display: flex;
   align-items: center;
   gap: 8px;
+  font-size: 13px;
   color: var(--ogrid-fg, rgba(0, 0, 0, 0.87));
   &:hover {
     background: var(--ogrid-hover-bg, rgba(0, 0, 0, 0.04));

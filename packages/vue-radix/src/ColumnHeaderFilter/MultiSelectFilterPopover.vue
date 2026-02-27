@@ -55,7 +55,7 @@ const props = defineProps<MultiSelectFilterPopoverProps>();
           @change="onOptionToggle(option, ($event.target as HTMLInputElement).checked)"
           class="filter-checkbox"
         />
-        <label style="margin-left: 8px; cursor: pointer">{{ option }}</label>
+        <label style="margin-left: 8px; cursor: pointer; font-size: 13px">{{ option }}</label>
       </div>
     </div>
     <div class="popover-actions">
