@@ -319,7 +319,7 @@ import { BaseColumnHeaderFilterComponent } from '@alaarab/ogrid-angular';
       gap: 8px;
       padding: 6px 12px;
       cursor: pointer;
-      font-size: 14px;
+      font-size: 13px;
       color: var(--ogrid-fg, #242424);
       transition: background 0.15s ease;
     }

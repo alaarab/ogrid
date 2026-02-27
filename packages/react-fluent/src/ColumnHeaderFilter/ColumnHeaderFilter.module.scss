@@ -255,6 +255,10 @@
 
 .popoverOption {
   padding: 4px 12px;
+  font-size: 13px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
   transition: background-color 0.1s ease;
   cursor: pointer;
 
