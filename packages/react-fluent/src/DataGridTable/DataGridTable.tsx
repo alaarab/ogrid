@@ -51,6 +51,8 @@ import {
   STOP_PROPAGATION,
   indexToColumnLetter,
   getColumnHeaderMenuProps,
+  ROW_NUMBER_COLUMN_ID,
+  ROW_NUMBER_COLUMN_WIDTH,
 } from '@alaarab/ogrid-react';
 import type { GridRowProps } from '@alaarab/ogrid-react';
 import styles from './DataGridTable.module.scss';
@@ -66,6 +68,8 @@ interface FluentGridRowProps extends GridRowProps {
   rightSpacerWidth?: number;
   /** Maps local column index to global index in full visibleCols. */
   globalColIndexMap?: number[];
+  /** Dynamic width for the row number column (from resize overrides). */
+  rowNumWidth?: number;
 }
 
 function GridRowInner(props: FluentGridRowProps) {
@@ -73,7 +77,7 @@ function GridRowInner(props: FluentGridRowProps) {
     item, rowIndex, rowId, isSelected, visibleCols, columnMeta,
     renderCellContent, handleSingleRowClick, handleRowCheckboxChange,
     lastMouseShiftRef, hasCheckboxCol, hasRowNumbersCol, rowNumberOffset,
-    leftSpacerWidth, rightSpacerWidth, globalColIndexMap,
+    leftSpacerWidth, rightSpacerWidth, globalColIndexMap, rowNumWidth,
   } = props;
 
   return (
@@ -102,7 +106,7 @@ function GridRowInner(props: FluentGridRowProps) {
         </TableCell>
       )}
       {hasRowNumbersCol && (
-        <TableCell className={styles.rowNumberCellWrapper}>
+        <TableCell className={styles.rowNumberCellWrapper} style={rowNumWidth ? { width: rowNumWidth, minWidth: rowNumWidth, maxWidth: rowNumWidth } : undefined}>
           <div className={styles.rowNumberCellInner}>
             {rowNumberOffset + rowIndex + 1}
           </div>
@@ -158,6 +162,7 @@ interface FluentTableBodyProps<T> {
   isDragging: boolean;
   editingCell: { rowId: string | number; columnId: string } | null;
   pinnedColumns: Record<string, 'left' | 'right'>;
+  rowNumWidth?: number;
 }
 
 function FluentTableBody<T>(props: FluentTableBodyProps<T>) {
@@ -167,7 +172,7 @@ function FluentTableBody<T>(props: FluentTableBodyProps<T>) {
     renderCellContent, handleSingleRowClick, handleRowCheckboxChange,
     lastMouseShiftRef, hasCheckboxCol, hasRowNumbersCol, rowNumberOffset,
     selectionRange, activeCell, cutRange, copyRange, isDragging,
-    editingCell, pinnedColumns,
+    editingCell, pinnedColumns, rowNumWidth,
   } = props;
 
   const partition = React.useMemo(() => {
@@ -221,6 +226,7 @@ function FluentTableBody<T>(props: FluentTableBodyProps<T>) {
         leftSpacerWidth={leftSpacerWidth}
         rightSpacerWidth={rightSpacerWidth}
         globalColIndexMap={globalColIndexMap}
+        rowNumWidth={rowNumWidth}
       />
     );
   };
@@ -322,9 +328,14 @@ function DataGridTableInner<T>(props: IOGridDataGridProps<T>): React.ReactElemen
           </>
         );
       } else {
-        const displayContent = resolveCellDisplayContent(col, item, descriptor.displayValue) as React.ReactNode;
-        const cellStyle = resolveCellStyle(col, item, descriptor.displayValue);
-        const styledContent = cellStyle ? <span style={cellStyle}>{displayContent}</span> : displayContent;
+        let displayNode: React.ReactNode;
+        if (descriptor.columnType === 'boolean') {
+          displayNode = <input type="checkbox" checked={!!descriptor.displayValue} disabled style={{ margin: 0, pointerEvents: 'none' }} aria-label={descriptor.displayValue ? 'True' : 'False'} />;
+        } else {
+          const displayContent = resolveCellDisplayContent(col, item, descriptor.displayValue) as React.ReactNode;
+          const cellStyle = resolveCellStyle(col, item, descriptor.displayValue);
+          displayNode = cellStyle ? <span style={cellStyle}>{displayContent}</span> : displayContent;
+        }
 
         const cellClassNames = `${styles.cellContent}${descriptor.isActive ? ` ${styles.activeCellContent}` : ''}${descriptor.isActive && descriptor.isInRange ? ` ${styles.inRange}` : ''}${descriptor.isInRange && !descriptor.isActive ? ` ${styles.cellInRange}` : ''}${descriptor.isInCutRange ? ` ${styles.cellCut}` : ''}${descriptor.isInCopyRange ? ` ${styles.cellCopied}` : ''}`;
 
@@ -336,7 +347,7 @@ function DataGridTableInner<T>(props: IOGridDataGridProps<T>): React.ReactElemen
             {...interactionProps}
             style={descriptor.canEditAny ? CURSOR_CELL_STYLE : undefined}
           >
-            {styledContent}
+            {displayNode}
             {descriptor.canEditAny && descriptor.isSelectionEndCell && (
               <div
                 className={styles.fillHandle}
@@ -426,13 +437,28 @@ function DataGridTableInner<T>(props: IOGridDataGridProps<T>): React.ReactElemen
                         <th rowSpan={headerRows.length - 1} key="__selection_placeholder__" />
                       )}
                       {/* Row numbers header: show in last row (leaf row) */}
-                      {rowIdx === headerRows.length - 1 && hasRowNumbersCol && (
-                        <TableHeaderCell className={styles.rowNumberHeaderCellWrapper} key="__row_number__">
-                          <div className={styles.rowNumberHeaderCellInner}>
-                            #
-                          </div>
-                        </TableHeaderCell>
-                      )}
+                      {rowIdx === headerRows.length - 1 && hasRowNumbersCol && (() => {
+                        const rowNumW = columnSizingOverrides?.[ROW_NUMBER_COLUMN_ID]?.widthPx ?? ROW_NUMBER_COLUMN_WIDTH;
+                        return (
+                          <TableHeaderCell className={styles.rowNumberHeaderCellWrapper} key="__row_number__" style={{ width: rowNumW, minWidth: rowNumW, maxWidth: rowNumW }}>
+                            <div className={styles.rowNumberHeaderCellInner}>
+                              #
+                            </div>
+                            <div
+                              className={styles.resizeHandle}
+                              role="separator"
+                              aria-orientation="vertical"
+                              aria-label="Resize row number column"
+                              onMouseDown={(e) => {
+                                setActiveCell(null);
+                                interaction.setSelectionRange(null);
+                                wrapperRef.current?.focus({ preventScroll: true });
+                                handleResizeStart(e, { columnId: ROW_NUMBER_COLUMN_ID, name: '#' } as IColumnDef<T>);
+                              }}
+                            />
+                          </TableHeaderCell>
+                        );
+                      })()}
                       {/* Empty placeholder for row numbers alignment in non-leaf rows */}
                       {rowIdx === 0 && rowIdx < headerRows.length - 1 && hasRowNumbersCol && (
                         <th rowSpan={headerRows.length - 1} key="__row_number_placeholder__" />
@@ -529,6 +555,7 @@ function DataGridTableInner<T>(props: IOGridDataGridProps<T>): React.ReactElemen
                     isDragging={isDragging}
                     editingCell={editingCell}
                     pinnedColumns={pinning.pinnedColumns}
+                    rowNumWidth={hasRowNumbersCol ? (columnSizingOverrides?.[ROW_NUMBER_COLUMN_ID]?.widthPx ?? ROW_NUMBER_COLUMN_WIDTH) : undefined}
                   />
                 )}
               </Table>

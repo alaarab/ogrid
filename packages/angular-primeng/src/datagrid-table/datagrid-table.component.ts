@@ -22,6 +22,8 @@ import {
   EmptyStateComponent,
   FormulaRefOverlayComponent,
   DEFAULT_MIN_COLUMN_WIDTH,
+  ROW_NUMBER_COLUMN_ID,
+  ROW_NUMBER_COLUMN_MIN_WIDTH,
   OGRID_THEME_VARS_CSS,
   indexToColumnLetter,
   formatCellReference,
@@ -112,8 +114,17 @@ import { PopoverCellEditorComponent } from './popover-cell-editor.component';
                         <th [attr.rowSpan]="headerRows().length - 1"></th>
                       }
                       @if (rowIdx === headerRows().length - 1 && hasRowNumbersCol()) {
-                        <th scope="col" rowSpan="1" class="ogrid-row-number-header">
+                        <th scope="col" rowSpan="1" class="ogrid-row-number-header"
+                          [style.width.px]="getRowNumberWidth()"
+                          [style.min-width.px]="getRowNumberWidth()"
+                          [style.max-width.px]="getRowNumberWidth()"
+                        >
                           #
+                          <div
+                            class="ogrid-resize-handle"
+                            (mousedown)="onResizeRowNumber($event)"
+                            (dblclick)="$event.stopPropagation()"
+                          ></div>
                         </th>
                       }
                       @if (rowIdx === 0 && rowIdx < headerRows().length - 1 && hasRowNumbersCol()) {
@@ -226,8 +237,11 @@ import { PopoverCellEditorComponent } from './popover-cell-editor.component';
                           </td>
                         }
                         @if (hasRowNumbersCol()) {
-                          <td class="ogrid-row-number-cell">
-
+                          <td class="ogrid-row-number-cell"
+                            [style.width.px]="getRowNumberWidth()"
+                            [style.min-width.px]="getRowNumberWidth()"
+                            [style.max-width.px]="getRowNumberWidth()"
+                          >
                             {{ rowNumberOffset() + rowIndex + 1 }}
                           </td>
                         }
@@ -289,7 +303,11 @@ import { PopoverCellEditorComponent } from './popover-cell-editor.component';
                                 [style.outline]="descriptor.isActive && !descriptor.isInRange ? '2px solid var(--ogrid-selection, #217346)' : null"
                                 [style.outline-offset]="descriptor.isActive && !descriptor.isInRange ? '-2px' : null"
                               >
-                                <span [style]="resolveCellStyleFn(col, item, descriptor.displayValue)">{{ resolveCellContent(col, item, descriptor.displayValue) }}</span>
+                                @if (col.type === 'boolean') {
+                                  <input type="checkbox" [checked]="!!descriptor.displayValue" disabled style="margin:0;pointer-events:none" [attr.aria-label]="descriptor.displayValue ? 'True' : 'False'" />
+                                } @else {
+                                  <span [style]="resolveCellStyleFn(col, item, descriptor.displayValue)">{{ resolveCellContent(col, item, descriptor.displayValue) }}</span>
+                                }
                                 @if (descriptor.canEditAny && descriptor.isSelectionEndCell) {
                                   <div
                                     (mousedown)="onFillHandleMouseDown($event)"
@@ -442,19 +460,14 @@ import { PopoverCellEditorComponent } from './popover-cell-editor.component';
       z-index: 3;
     }
     .ogrid-row-number-header {
-      width: 50px;
-      min-width: 50px;
-      max-width: 50px;
       text-align: center;
       font-weight: 600;
       background: var(--ogrid-header-bg, #f5f5f5);
       border-bottom: 2px solid var(--ogrid-border, rgba(0, 0, 0, 0.12));
       z-index: 3;
+      position: relative;
     }
     .ogrid-row-number-spacer {
-      width: 50px;
-      min-width: 50px;
-      max-width: 50px;
       background: var(--ogrid-header-bg, #f5f5f5);
     }
     .ogrid-column-group-header {
@@ -494,9 +507,6 @@ import { PopoverCellEditorComponent } from './popover-cell-editor.component';
       border-bottom: 1px solid var(--ogrid-border, rgba(0, 0, 0, 0.12));
     }
     .ogrid-row-number-cell {
-      width: 50px;
-      min-width: 50px;
-      max-width: 50px;
       padding: 6px;
       text-align: center;
       font-weight: 600;
@@ -927,11 +937,11 @@ export class DataGridTableComponent<T = unknown> extends BaseDataGridTableCompon
     this.getWrapperRef()?.nativeElement.focus({ preventScroll: true });
     this.resizeStartX = e.clientX;
     this.resizeColumnId = col.columnId;
-    this.resizeStartWidth = this.getColumnWidth(col);
+    this.resizeStartWidth = col.columnId === ROW_NUMBER_COLUMN_ID ? this.getRowNumberWidth() : this.getColumnWidth(col);
 
     const onMove = (me: MouseEvent) => {
       const delta = me.clientX - this.resizeStartX;
-      const minW = col.minWidth ?? DEFAULT_MIN_COLUMN_WIDTH;
+      const minW = col.columnId === ROW_NUMBER_COLUMN_ID ? ROW_NUMBER_COLUMN_MIN_WIDTH : (col.minWidth ?? DEFAULT_MIN_COLUMN_WIDTH);
       const newWidth = Math.max(minW, this.resizeStartWidth + delta);
       this.primengColumnSizingOverrides.update((prev) => ({ ...prev, [this.resizeColumnId]: newWidth }));
       this.columnSizingVersion.update(v => v + 1);
@@ -953,6 +963,17 @@ export class DataGridTableComponent<T = unknown> extends BaseDataGridTableCompon
 
     window.addEventListener('mousemove', onMove, true);
     window.addEventListener('mouseup', onUp, true);
+  }
+
+  onResizeRowNumber(event: MouseEvent): void {
+    event.stopPropagation();
+    this.onResizeStartPrimeng(event, { columnId: ROW_NUMBER_COLUMN_ID, name: '#' } as IColumnDef<T>);
+  }
+
+  override getRowNumberWidth(): number {
+    const override = this.primengColumnSizingOverrides()[ROW_NUMBER_COLUMN_ID];
+    if (override) return override;
+    return super.getRowNumberWidth();
   }
 
   // --- Build props ---
