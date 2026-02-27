@@ -1,17 +1,98 @@
-import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
+import { McpServer, ResourceTemplate } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { z } from 'zod';
+import { existsSync, readFileSync } from 'node:fs';
+import { join, dirname } from 'node:path';
 import type { DocsIndex } from './docsLoader.js';
+
+// ---------------------------------------------------------------------------
+// detect_version helpers
+// ---------------------------------------------------------------------------
+
+interface VersionDetectResult {
+  found: boolean;
+  version?: string;
+  framework?: string;
+  packages?: Array<{ name: string; version: string }>;
+  packageJsonPath?: string;
+}
+
+function detectFramework(packageNames: string[]): string {
+  if (packageNames.some((n) => n.includes('-react'))) return 'react';
+  if (packageNames.some((n) => n.includes('-angular'))) return 'angular';
+  if (packageNames.some((n) => n.includes('-vue'))) return 'vue';
+  if (packageNames.some((n) => n.endsWith('-js'))) return 'js';
+  return 'unknown';
+}
+
+function detectOGridVersion(searchPath: string): VersionDetectResult {
+  let dir = searchPath;
+  for (let i = 0; i < 10; i++) {
+    const pkgPath = join(dir, 'package.json');
+    if (existsSync(pkgPath)) {
+      try {
+        const raw = readFileSync(pkgPath, 'utf-8');
+        const pkg = JSON.parse(raw) as Record<string, unknown>;
+        const allDeps: Record<string, string> = {
+          ...((pkg['dependencies'] as Record<string, string>) ?? {}),
+          ...((pkg['devDependencies'] as Record<string, string>) ?? {}),
+          ...((pkg['peerDependencies'] as Record<string, string>) ?? {}),
+        };
+        const ogridPkgs = Object.entries(allDeps)
+          .filter(([name]) => name.startsWith('@alaarab/ogrid-'))
+          .map(([name, version]) => ({ name, version: String(version) }));
+
+        if (ogridPkgs.length > 0) {
+          const framework = detectFramework(ogridPkgs.map((p) => p.name));
+          const version = ogridPkgs[0].version.replace(/^[\^~>=<]+/, '');
+          return { found: true, version, framework, packages: ogridPkgs, packageJsonPath: pkgPath };
+        }
+      } catch {
+        // malformed package.json — keep walking up
+      }
+    }
+    const parent = dirname(dir);
+    if (parent === dir) break;
+    dir = parent;
+  }
+  return { found: false };
+}
+
+// ---------------------------------------------------------------------------
+// Resource URI helpers
+// ---------------------------------------------------------------------------
+
+/** Strip file extension from a doc path to create a clean resource URI segment. */
+function toResourcePath(docPath: string): string {
+  return docPath.replace(/\.(mdx|md)$/, '');
+}
+
+/** Reverse: add back .mdx suffix for index lookup (try both). */
+function fromResourcePath(resourcePath: string, index: DocsIndex): ReturnType<DocsIndex['getByPath']> {
+  return (
+    index.getByPath(resourcePath + '.mdx') ??
+    index.getByPath(resourcePath + '.md') ??
+    index.getByPath(resourcePath)
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Server factory
+// ---------------------------------------------------------------------------
 
 export function createOGridMcpServer(index: DocsIndex): McpServer {
   const server = new McpServer({
     name: 'ogrid-docs',
     version: '2.3.0',
     instructions: `OGrid documentation server. OGrid is a lightweight multi-framework data grid for React, Angular, Vue, and vanilla JS.
-Use search_docs to find relevant docs, list_docs to browse by category, get_docs to read a full page, get_code_example for code samples.
+
+Tools: search_docs (keyword search), list_docs (browse by category), get_docs (full page), get_code_example (code snippets), detect_version (detect OGrid version in your project).
+Resources: ogrid://quick-reference (key API overview), ogrid://docs/{path} (any doc page by path).
 Categories: features, getting-started, guides, api.`,
   });
 
-  // --- Tool 1: search_docs ---
+  // -------------------------------------------------------------------------
+  // Tool: search_docs
+  // -------------------------------------------------------------------------
   server.tool(
     'search_docs',
     'Search OGrid documentation by keyword. Returns matching docs with title, description, and content excerpt.',
@@ -24,8 +105,12 @@ Categories: features, getting-started, guides, api.`,
         .max(20)
         .optional()
         .describe('Max results to return (default 5)'),
+      framework: z
+        .enum(['react', 'angular', 'vue', 'js'])
+        .optional()
+        .describe('Filter code examples to this framework'),
     },
-    async ({ query, limit }) => {
+    async ({ query, limit, framework }) => {
       const results = index.search(query, limit ?? 5);
 
       if (results.length === 0) {
@@ -42,17 +127,28 @@ Categories: features, getting-started, guides, api.`,
       const formatted = results
         .map((entry, i) => {
           const excerpt =
-            entry.content.length > 400
-              ? entry.content.slice(0, 400) + '...'
-              : entry.content;
+            entry.content.length > 400 ? entry.content.slice(0, 400) + '...' : entry.content;
+
+          // If framework filter given, show only code blocks for that framework
+          const relevantCode = framework
+            ? entry.codeBlocks.filter((b) => !b.framework || b.framework === framework).slice(0, 1)
+            : [];
+
+          const codeSnippet =
+            relevantCode.length > 0
+              ? `\n\`\`\`${relevantCode[0].language}\n${relevantCode[0].code.slice(0, 300)}\n\`\`\``
+              : '';
+
           return [
             `## ${i + 1}. ${entry.title}`,
-            `**Path:** ${entry.path}`,
-            `**Category:** ${entry.category}`,
+            `**Path:** ${entry.path}  |  **Category:** ${entry.category}`,
             `**Description:** ${entry.description}`,
             '',
             excerpt,
-          ].join('\n');
+            codeSnippet,
+          ]
+            .filter(Boolean)
+            .join('\n');
         })
         .join('\n\n---\n\n');
 
@@ -67,7 +163,9 @@ Categories: features, getting-started, guides, api.`,
     },
   );
 
-  // --- Tool 2: list_docs ---
+  // -------------------------------------------------------------------------
+  // Tool: list_docs
+  // -------------------------------------------------------------------------
   server.tool(
     'list_docs',
     'List available OGrid documentation pages, optionally filtered by category (features, getting-started, guides, api).',
@@ -75,25 +173,19 @@ Categories: features, getting-started, guides, api.`,
       category: z
         .string()
         .optional()
-        .describe(
-          'Filter by category: features, getting-started, guides, api',
-        ),
+        .describe('Filter by category: features, getting-started, guides, api'),
     },
     async ({ category }) => {
-      const entries = category
-        ? index.getByCategory(category)
-        : index.entries;
+      const entries = category ? index.getByCategory(category) : index.entries;
 
       if (entries.length === 0) {
-        const availableCategories = [
-          ...new Set(index.entries.map((e) => e.category)),
-        ];
+        const available = [...new Set(index.entries.map((e) => e.category))];
         return {
           content: [
             {
               type: 'text' as const,
               text: category
-                ? `No docs found in category "${category}". Available categories: ${availableCategories.join(', ')}`
+                ? `No docs found in category "${category}". Available categories: ${available.join(', ')}`
                 : 'No documentation entries found.',
             },
           ],
@@ -103,7 +195,7 @@ Categories: features, getting-started, guides, api.`,
       const formatted = entries
         .map(
           (entry) =>
-            `- **${entry.title}** — ${entry.description}\n  Path: \`${entry.path}\` | Category: ${entry.category}`,
+            `- **${entry.title}** — ${entry.description}\n  Path: \`${entry.path}\` | Resource: \`ogrid://docs/${toResourcePath(entry.path)}\``,
         )
         .join('\n');
 
@@ -112,29 +204,25 @@ Categories: features, getting-started, guides, api.`,
         : `All documentation (${entries.length} pages):`;
 
       return {
-        content: [
-          { type: 'text' as const, text: `${header}\n\n${formatted}` },
-        ],
+        content: [{ type: 'text' as const, text: `${header}\n\n${formatted}` }],
       };
     },
   );
 
-  // --- Tool 3: get_docs ---
+  // -------------------------------------------------------------------------
+  // Tool: get_docs
+  // -------------------------------------------------------------------------
   server.tool(
     'get_docs',
     'Get the full content of an OGrid documentation page by its path.',
     {
-      path: z
-        .string()
-        .describe('Document path (e.g. "features/sorting")'),
+      path: z.string().describe('Document path (e.g. "features/sorting" or "api/column-def")'),
     },
     async ({ path }) => {
-      const entry = index.getByPath(path);
+      const entry = fromResourcePath(path, index);
 
       if (!entry) {
-        const available = index.entries
-          .map((e) => `  - ${e.path}`)
-          .join('\n');
+        const available = index.entries.map((e) => `  - ${toResourcePath(e.path)}`).join('\n');
         return {
           content: [
             {
@@ -155,14 +243,14 @@ Categories: features, getting-started, guides, api.`,
       ].join('\n');
 
       return {
-        content: [
-          { type: 'text' as const, text: header + entry.content },
-        ],
+        content: [{ type: 'text' as const, text: header + entry.content }],
       };
     },
   );
 
-  // --- Tool 4: get_code_example ---
+  // -------------------------------------------------------------------------
+  // Tool: get_code_example
+  // -------------------------------------------------------------------------
   server.tool(
     'get_code_example',
     'Find code examples from OGrid docs matching a query, optionally filtered by framework.',
@@ -177,9 +265,7 @@ Categories: features, getting-started, guides, api.`,
       const examples = index.getCodeExamples(query, framework);
 
       if (examples.length === 0) {
-        const hint = framework
-          ? ` for framework "${framework}"`
-          : '';
+        const hint = framework ? ` for framework "${framework}"` : '';
         return {
           content: [
             {
@@ -191,12 +277,9 @@ Categories: features, getting-started, guides, api.`,
       }
 
       const limited = examples.slice(0, 5);
-
       const formatted = limited
         .map((example, i) => {
-          const frameworkLabel = example.block.framework
-            ? ` (${example.block.framework})`
-            : '';
+          const frameworkLabel = example.block.framework ? ` (${example.block.framework})` : '';
           return [
             `### Example ${i + 1}: ${example.entry.title}${frameworkLabel}`,
             '',
@@ -212,6 +295,229 @@ Categories: features, getting-started, guides, api.`,
           {
             type: 'text' as const,
             text: `Found ${examples.length} code example(s) for "${query}"${framework ? ` (${framework})` : ''}:\n\n${formatted}`,
+          },
+        ],
+      };
+    },
+  );
+
+  // -------------------------------------------------------------------------
+  // Tool: detect_version
+  // -------------------------------------------------------------------------
+  server.tool(
+    'detect_version',
+    'Detect which OGrid version and framework is installed in the user\'s project by reading their package.json.',
+    {
+      path: z
+        .string()
+        .optional()
+        .describe(
+          'Directory to search from (defaults to current working directory). The tool walks up the directory tree to find the nearest package.json with OGrid dependencies.',
+        ),
+    },
+    async ({ path }) => {
+      const searchPath = path ?? process.cwd();
+      const result = detectOGridVersion(searchPath);
+
+      if (!result.found) {
+        return {
+          content: [
+            {
+              type: 'text' as const,
+              text: [
+                `No OGrid packages found in package.json (searched from: ${searchPath}).`,
+                '',
+                'Install OGrid for your framework:',
+                '  React (Radix):    npm install @alaarab/ogrid-react-radix',
+                '  React (Material): npm install @alaarab/ogrid-react-material',
+                '  React (Fluent):   npm install @alaarab/ogrid-react-fluent',
+                '  Angular Material: npm install @alaarab/ogrid-angular-material',
+                '  Angular PrimeNG:  npm install @alaarab/ogrid-angular-primeng',
+                '  Vue Vuetify:      npm install @alaarab/ogrid-vue-vuetify',
+                '  Vue PrimeVue:     npm install @alaarab/ogrid-vue-primevue',
+                '  Vanilla JS:       npm install @alaarab/ogrid-js',
+              ].join('\n'),
+            },
+          ],
+        };
+      }
+
+      const pkgList = result.packages!
+        .map((p) => `  - ${p.name}: ${p.version}`)
+        .join('\n');
+
+      const frameworkTip =
+        result.framework !== 'unknown'
+          ? `\n\nTip: use \`get_code_example\` with framework="${result.framework}" or \`search_docs\` with framework="${result.framework}" to get framework-specific results.`
+          : '';
+
+      return {
+        content: [
+          {
+            type: 'text' as const,
+            text: [
+              `✅ OGrid detected in ${result.packageJsonPath}`,
+              '',
+              `Version:   ${result.version}`,
+              `Framework: ${result.framework}`,
+              '',
+              'Packages installed:',
+              pkgList,
+              frameworkTip,
+            ]
+              .filter((l) => l !== undefined)
+              .join('\n'),
+          },
+        ],
+      };
+    },
+  );
+
+  // -------------------------------------------------------------------------
+  // Resource: ogrid://quick-reference (static)
+  // -------------------------------------------------------------------------
+  server.resource(
+    'quick-reference',
+    'ogrid://quick-reference',
+    { description: 'OGrid quick-reference: key props, install commands, and common patterns', mimeType: 'text/markdown' },
+    async (uri) => ({
+      contents: [
+        {
+          uri: uri.href,
+          mimeType: 'text/markdown',
+          text: [
+            '# OGrid Quick Reference',
+            '',
+            '## Install',
+            '```bash',
+            '# React (choose one)',
+            'npm install @alaarab/ogrid-react-radix',
+            'npm install @alaarab/ogrid-react-material',
+            'npm install @alaarab/ogrid-react-fluent',
+            '',
+            '# Angular (choose one)',
+            'npm install @alaarab/ogrid-angular-material',
+            'npm install @alaarab/ogrid-angular-primeng',
+            'npm install @alaarab/ogrid-angular-radix',
+            '',
+            '# Vue (choose one)',
+            'npm install @alaarab/ogrid-vue-vuetify',
+            'npm install @alaarab/ogrid-vue-primevue',
+            'npm install @alaarab/ogrid-vue-radix',
+            '',
+            '# Vanilla JS',
+            'npm install @alaarab/ogrid-js',
+            '```',
+            '',
+            '## Core Props (IOGridProps)',
+            '| Prop | Type | Description |',
+            '|------|------|-------------|',
+            '| `data` | `T[]` | Client-side row data |',
+            '| `columns` | `IColumnDef<T>[]` | Column definitions |',
+            '| `dataSource` | `IDataSource<T>` | Server-side data source |',
+            '| `pagination` | `boolean \\| number` | Enable pagination (number = page size) |',
+            '| `rowSelection` | `"single" \\| "multiple"` | Row selection mode |',
+            '| `formulas` | `boolean` | Enable formula engine (=SUM, =IF, etc.) |',
+            '| `cellReferences` | `boolean` | Excel-style A1 column headers + name box |',
+            '| `workerSort` | `boolean \\| "auto"` | Web Worker sort/filter |',
+            '| `columnChooser` | `boolean \\| "toolbar" \\| "sidebar"` | Column visibility control |',
+            '| `sideBar` | `boolean \\| ISideBarDef` | Sidebar panel |',
+            '| `toolbar` | `ReactNode` | Custom toolbar content |',
+            '| `onRowSelectionChanged` | `(rows: T[]) => void` | Row selection callback |',
+            '| `onCellValueChanged` | `(e: ICellValueChangedEvent) => void` | Cell edit callback |',
+            '',
+            '## IColumnDef Key Fields',
+            '| Field | Type | Description |',
+            '|-------|------|-------------|',
+            '| `columnId` | `string` | Unique column ID (maps to data key) |',
+            '| `headerName` | `string` | Column header label |',
+            '| `type` | `"text" \\| "numeric" \\| "date" \\| "boolean"` | Data type |',
+            '| `filter` | `"none" \\| "text" \\| "multiSelect" \\| "date"` | Filter type |',
+            '| `editable` | `boolean \\| (row) => boolean` | Enable inline editing |',
+            '| `width` | `number` | Column width in px |',
+            '| `pinned` | `"left" \\| "right"` | Pin column |',
+            '| `sortable` | `boolean` | Enable sorting |',
+            '| `hidden` | `boolean` | Hide column by default |',
+            '| `valueGetter` | `(row: T) => unknown` | Custom value extractor |',
+            '| `renderCell` | `(value, row) => ReactNode` | Custom cell renderer (React) |',
+            '',
+            '## Common Patterns',
+            '',
+            '### Client-side data',
+            '```tsx',
+            'import { OGrid } from "@alaarab/ogrid-react-radix";',
+            'const columns = [',
+            '  { columnId: "name", headerName: "Name", type: "text", filter: "text" },',
+            '  { columnId: "age",  headerName: "Age",  type: "numeric", sortable: true },',
+            '];',
+            '<OGrid data={rows} columns={columns} pagination={50} />',
+            '```',
+            '',
+            '### Server-side data',
+            '```tsx',
+            'const dataSource = {',
+            '  fetchPage: async ({ page, pageSize, sortModel, filterModel }) => {',
+            '    const res = await fetch(`/api/data?page=${page}&size=${pageSize}`);',
+            '    const json = await res.json();',
+            '    return { rows: json.data, totalCount: json.total };',
+            '  }',
+            '};',
+            '<OGrid dataSource={dataSource} columns={columns} pagination={50} />',
+            '```',
+            '',
+            '### Formula support',
+            '```tsx',
+            '<OGrid data={rows} columns={columns} formulas cellReferences />',
+            '// Users can type =SUM(A1:C3), =IF(A1>0,"yes","no"), etc.',
+            '```',
+          ].join('\n'),
+        },
+      ],
+    }),
+  );
+
+  // -------------------------------------------------------------------------
+  // Resource template: ogrid://docs/{path} — any doc page by path
+  // -------------------------------------------------------------------------
+  server.resource(
+    'doc-page',
+    new ResourceTemplate('ogrid://docs/{path}', {
+      list: async () => ({
+        resources: index.entries.map((entry) => ({
+          uri: `ogrid://docs/${toResourcePath(entry.path)}`,
+          name: entry.title,
+          description: entry.description,
+          mimeType: 'text/markdown',
+        })),
+      }),
+    }),
+    { description: 'OGrid documentation page. Use path like "features/filtering" or "api/column-def".', mimeType: 'text/markdown' },
+    async (uri, { path }) => {
+      const entry = fromResourcePath(path as string, index);
+
+      if (!entry) {
+        return {
+          contents: [
+            {
+              uri: uri.href,
+              mimeType: 'text/markdown',
+              text: `# Not Found\n\nNo documentation found at path: "${path}"\n\nUse \`list_docs\` tool or \`resources/list\` to see available paths.`,
+            },
+          ],
+        };
+      }
+
+      return {
+        contents: [
+          {
+            uri: uri.href,
+            mimeType: 'text/markdown',
+            text: [
+              `# ${entry.title}`,
+              `> ${entry.description}`,
+              '',
+              entry.content,
+            ].join('\n'),
           },
         ],
       };
