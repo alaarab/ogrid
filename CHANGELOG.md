@@ -4,82 +4,47 @@ All notable changes to OGrid will be documented in this file.
 
 ## [Unreleased]
 
+---
+
+## [2.4.0] — 2026-02-27
+
 ### Added
-- **Formula engine expansion: 145 built-in functions** (up from 93). Added 52 new functions:
-  - **Financial (8 new):** `PMT`, `FV`, `PV`, `NPER`, `RATE`, `NPV`, `IRR`, `SLN`
-  - **Statistical (10 new):** `STDEV`/`STDEV.S`, `STDEVP`/`STDEV.P`, `VAR`/`VAR.S`, `VARP`/`VAR.P`, `CORREL`, `PERCENTILE`/`PERCENTILE.INC`, `QUARTILE`/`QUARTILE.INC`, `MODE`/`MODE.SNGL`, `GEOMEAN`, `HARMEAN`
-  - **Dynamic Reference (12 new):** `INDIRECT`, `OFFSET`, `ADDRESS`, `ROW`, `COLUMN`, `ROWS`, `COLUMNS`, `SEQUENCE`, `TRANSPOSE`, `MMULT`, `MDETERM`, `MINVERSE`
-  - **Math additions (7 new):** `MROUND`, `QUOTIENT`, `COMBIN`, `PERMUT`, `FACT`, `GCD`, `LCM`
-  - **Date additions (9 new):** `DAYS`, `DAYS360`, `ISOWEEKNUM`, `YEARFRAC`, `DATEVALUE`, `TIMEVALUE`, `TIME`, `WORKDAY`, `WORKDAY.INTL`
-  - **Text additions (5 new):** `DOLLAR`, `FIXED`, `T`, `N`, `FORMULATEXT`
-  - **Info additions (6 new):** `ISODD`, `ISEVEN`, `ISFORMULA`, `ISLOGICAL`, `ISNONTEXT`, `ISREF`
-- **Vue + Angular formula bar UI parity** — `SheetTabsComponent` and `FormulaRefOverlayComponent` added to `@alaarab/ogrid-angular` and wired into all 3 Angular UI packages. Vue equivalents added to `@alaarab/ogrid-vue` and wired into all 3 Vue UI packages.
-- **MCP migration prompt** — `ogrid://migration-guide` resource and `migrate-from-ag-grid` prompt added to `@alaarab/ogrid-mcp`. AI assistants can now provide step-by-step AG Grid → OGrid migration guidance using real code examples from the docs.
-- **MCP Live Testing Bridge** — AI assistants can now read and control a running OGrid instance in real time:
-  - Start bridge: `npx @alaarab/ogrid-mcp --bridge` (HTTP server on port 7890, localhost-only)
-  - Connect your app: `import { connectGridToBridge } from '@alaarab/ogrid-mcp/bridge-client'`
-  - New MCP tools: `list_grids` (discover connected grids), `get_grid_state` (read rows/columns/filters/pagination), `send_grid_command` (update cells, apply filters, change sort, navigate pages)
-  - Bridge client polls every 500ms, pushes current state, handles commands sent by the AI
-  - Zero config in the app — just call `connectGridToBridge({ gridId, getData, getColumns, onCellUpdate, api })`
-  - `bridge-client` exported as separate browser-safe entry point: `@alaarab/ogrid-mcp/bridge-client`
-  - Documentation: `guides/mcp-live-testing.mdx`
-- **276 new formula function tests**. **4,189 tests** across 14 packages.
 
-### Fixed
-- **Date cell editor shows wrong date or appears empty** — Two related bugs fixed across React, Vue, and Angular:
-  1. `<input type="date">` requires `YYYY-MM-DD` format; stored ISO strings like `"2024-03-15T00:00:00.000Z"` were passed as-is, leaving the date picker blank. Now extracts the first 10 characters (matches JS package behavior).
-  2. `toLocaleDateString()` was converting UTC-midnight dates to local time, shifting the displayed date backward in negative-offset timezones (e.g., March 15 UTC showing as March 14 in UTC-5). Fixed by passing `{ timeZone: 'UTC' }` to all date column display calls in `@alaarab/ogrid-core`.
+**Formula engine — 145 built-in functions** (up from 39 in 2.2.0):
+- **Phase 1 (54 functions):** `ROUNDUP`, `ROUNDDOWN`, `INT`, `TRUNC`, `PRODUCT`, `SUMPRODUCT`, `MEDIAN`, `LARGE`, `SMALL`, `RANK`, `SIGN`, `LOG`, `LN`, `EXP`, `PI`, `RAND`, `RANDBETWEEN`, `FIND`, `SEARCH`, `REPLACE`, `REPT`, `EXACT`, `PROPER`, `CLEAN`, `CHAR`, `CODE`, `TEXT`, `VALUE`, `TEXTJOIN`, `IFNA`, `IFS`, `SWITCH`, `CHOOSE`, `XOR`, `HLOOKUP`, `XLOOKUP`, `DATE`, `DATEDIF`, `EDATE`, `EOMONTH`, `WEEKDAY`, `HOUR`, `MINUTE`, `SECOND`, `NETWORKDAYS`, `SUMIFS`, `COUNTIFS`, `AVERAGEIFS`, `ISBLANK`, `ISNUMBER`, `ISTEXT`, `ISERROR`, `ISNA`, `TYPE`, `#NUM!` error type
+- **Phase 2 (52 functions):** `PMT`, `FV`, `PV`, `NPER`, `RATE`, `NPV`, `IRR`, `SLN`, `STDEV`/`STDEV.S`, `STDEVP`/`STDEV.P`, `VAR`/`VAR.S`, `VARP`/`VAR.P`, `CORREL`, `PERCENTILE`/`PERCENTILE.INC`, `QUARTILE`/`QUARTILE.INC`, `MODE`/`MODE.SNGL`, `GEOMEAN`, `HARMEAN`, `INDIRECT`, `OFFSET`, `ADDRESS`, `ROW`, `COLUMN`, `ROWS`, `COLUMNS`, `SEQUENCE`, `TRANSPOSE`, `MMULT`, `MDETERM`, `MINVERSE`, `MROUND`, `QUOTIENT`, `COMBIN`, `PERMUT`, `FACT`, `GCD`, `LCM`, `DAYS`, `DAYS360`, `ISOWEEKNUM`, `YEARFRAC`, `DATEVALUE`, `TIMEVALUE`, `TIME`, `WORKDAY`, `WORKDAY.INTL`, `DOLLAR`, `FIXED`, `T`, `N`, `FORMULATEXT`, `ISODD`, `ISEVEN`, `ISFORMULA`, `ISLOGICAL`, `ISNONTEXT`, `ISREF`
+- **Phase 3 (named ranges, auditing, cross-sheet):** `defineNamedRange` / `removeNamedRange`, `getPrecedents` / `getDependents` / `getAuditTrail`, cross-sheet references (`=Sheet2!A1`, `='Sheet Name'!B2:C5`), formula-aware clipboard + fill handle + CSV export
+- **Phase 4 (Excel-like UI):** Formula bar (`[Name Box][fx][Input]`), cell reference highlighting (`FormulaRefOverlay`), sheet tabs (`SheetTabs`), `ISheetDef` type — all 4 frameworks (React, Angular, Vue, JS)
+- **Vue + Angular formula bar parity** — `SheetTabsComponent` and `FormulaRefOverlayComponent` ported to `@alaarab/ogrid-angular` (all 3 Angular UI packages) and `@alaarab/ogrid-vue` (all 3 Vue UI packages)
+- Storybook `Formulas` stories for React Fluent and React Material packages
 
-### Also added with formula engine expansion: 93 built-in functions (up from 39). Added 54 new functions across all categories:
-  - **Math (17 new):** `ROUNDUP`, `ROUNDDOWN`, `INT`, `TRUNC`, `PRODUCT`, `SUMPRODUCT`, `MEDIAN`, `LARGE`, `SMALL`, `RANK`, `SIGN`, `LOG`, `LN`, `EXP`, `PI`, `RAND`, `RANDBETWEEN`
-  - **Text (12 new):** `FIND`, `SEARCH`, `REPLACE`, `REPT`, `EXACT`, `PROPER`, `CLEAN`, `CHAR`, `CODE`, `TEXT`, `VALUE`, `TEXTJOIN`
-  - **Logical (5 new):** `IFNA`, `IFS`, `SWITCH`, `CHOOSE`, `XOR`
-  - **Lookup (2 new):** `HLOOKUP`, `XLOOKUP`
-  - **Date (9 new):** `DATE`, `DATEDIF`, `EDATE`, `EOMONTH`, `WEEKDAY`, `HOUR`, `MINUTE`, `SECOND`, `NETWORKDAYS`
-  - **Statistics (3 new):** `SUMIFS`, `COUNTIFS`, `AVERAGEIFS`
-  - **Information (6 new):** `ISBLANK`, `ISNUMBER`, `ISTEXT`, `ISERROR`, `ISNA`, `TYPE`
-- `#NUM!` error type for invalid numeric operations (LARGE/SMALL out of range, LOG of negative, etc.)
-- 148 new formula function tests. **3,834 tests** across 14 packages.
-- Storybook `Formulas` stories for React Fluent and React Material packages.
-- **Formula Engine Phase 4** — Advanced formula features across all 4 frameworks (React, Angular, Vue, JS):
-  - **Named ranges**: `defineNamedRange(name, range)` / `removeNamedRange(name)` — use descriptive names in formulas (e.g., `=SUM(Revenue)`)
-  - **Formula auditing**: `getPrecedents(cell)`, `getDependents(cell)`, `getAuditTrail(cell)` using BFS traversal for tracing formula dependencies
-  - **Cross-sheet references**: `=Sheet2!A1`, `='Sheet Name'!B2:C5` syntax for referencing cells across grid tabs
-  - Formula-aware clipboard (copies formula strings with cell reference offset adjustment), fill handle, and CSV export
-  - Error rendering via `--ogrid-formula-error-color` CSS variable (default `#d32f2f`)
-  - Formula engine docs page and Storybook stories
-- **Excel-like formula bar UI** across all 4 frameworks — enabled alongside `cellReferences={true}` when `formulas={true}`:
-  - **Formula bar**: `[Name Box][fx][Input]` strip showing the active cell's formula string (or raw value for non-formula cells)
-  - Live editing: typing in the formula bar updates the cell on Enter, discards on Escape
-  - **Cell reference highlighting**: referenced cells and ranges are highlighted with distinct colored borders while a formula is being edited (`FormulaRefOverlay` component)
-  - **Sheet tabs**: clickable tab bar at the bottom of the grid for cross-sheet navigation (`SheetTabs` component)
-  - `ISheetDef` type exported from `@alaarab/ogrid-react`
-- **`@alaarab/ogrid-mcp`** — New standalone MCP (Model Context Protocol) documentation server. Lets AI assistants (Claude Desktop, Claude Code, Cursor, etc.) search and retrieve OGrid docs, code examples, and API references across all frameworks. Install: `claude mcp add ogrid -- npx -y @alaarab/ogrid-mcp`.
-  - **Tools**: `search_docs` (keyword search with optional `framework` filter), `list_docs` (list pages by category), `get_docs` (full page content by path), `get_code_example` (find code examples), `detect_version` (reads project's `package.json` tree to identify installed OGrid version and framework)
-  - **Resources**: `ogrid://quick-reference` (install commands, `IOGridProps` reference, `IColumnDef` fields, common patterns); `ogrid://docs/{path}` template exposing all documentation pages with list support
-  - Docs are bundled into the npm package for zero-config `npx @alaarab/ogrid-mcp` usage (no monorepo required); three-tier path resolution: `OGRID_DOCS_PATH` env var → monorepo path → bundled fallback
+**MCP (`@alaarab/ogrid-mcp`):**
+- **Documentation server** — `search_docs`, `list_docs`, `get_docs`, `get_code_example`, `detect_version` tools; `ogrid://quick-reference` and `ogrid://docs/{path}` resources; docs bundled for zero-config `npx @alaarab/ogrid-mcp` usage
+- **Live Testing Bridge** — `npx @alaarab/ogrid-mcp --bridge` starts an HTTP server (port 7890, localhost-only) that running OGrid instances connect to; new tools: `list_grids`, `get_grid_state`, `send_grid_command`; `bridge-client` browser-safe entry point: `@alaarab/ogrid-mcp/bridge-client`
+- **Bridge wired into all 10 example apps** — React (Radix, Fluent, Material), Angular (Material, PrimeNG, Radix), Vue (Vuetify, PrimeVue, Radix), and Vanilla JS; each example connects with its own `gridId` and full `getSort`/`getFilters` state reporting where the API is available
+- **`getSort` and `getFilters` callbacks** added to `ConnectGridOptions` — bridge now reports active sort model and filter model on every state push; React and JS examples use `api.getColumnState()` for live state; Angular/Vue examples default to empty (no api ref in template-binding pattern)
+- **AG Grid migration prompt** — `ogrid://migration-guide` resource and `migrate-from-ag-grid` prompt
+- **`--version` / `-v` flag** — `npx @alaarab/ogrid-mcp --version` prints the installed version
+- Documentation: `guides/mcp.mdx` (setup guide for Claude, Cursor, Claude Desktop) and `guides/mcp-live-testing.mdx` (bridge guide)
+- 4,189 tests across 14 packages (424 new formula + date tests added this cycle)
 
 ### Changed
-- **Cross-framework UI deduplication** — Eliminated redundant view-layer code across all frameworks:
-  - **React**: `PaginationControlsBase` and `ColumnChooserContent` headless slot components extracted to `@alaarab/ogrid-react`; all 3 React UI packages refactored to use them, removing ~40 lines of duplication per package.
-  - **React**: `createBaseFilterRenderers(components, dateClassNames?)` factory in `ColumnHeaderFilterRenderers.tsx` — Radix and Material share one implementation; Fluent keeps its own (has extra event handler deps in `useMemo`).
-  - **React**: `getColumnHeaderMenuProps(headerMenu)` utility in `useColumnHeaderMenuState.ts` — flattens the 18-prop `headerMenu` state spread across all 3 `DataGridTable` files.
-  - **Angular**: `BaseColumnHeaderMenuComponent` abstract class in `packages/angular/src/components/` — all 3 Angular UI packages extend it (signals-backed inputs via `@Input` setter + `signal()`, `menuItems` computed property, `handleMenuItemClick`). Eliminates ~170 lines of duplication.
-- **`createGridDataAccessor` extracted to core** — `IGridDataAccessor` interface and factory moved from per-framework hook files to `@alaarab/ogrid-core`, shared by React/Angular/Vue/JS formula engine integrations.
-- **Formula bar code deduplication** — `processFormulaBarCommit` and `deriveFormulaBarText` extracted to `@alaarab/ogrid-core` as cross-framework utilities; `FORMULA_BAR_CSS` and `FORMULA_REF_COLORS` constants centralized for shared styling.
-- **Jest config optimization** — `isolatedModules: true` across all 14 packages (faster transforms); `maxWorkers: 4` in base config (caps memory ~1.2 GB vs ~9 GB default unbounded).
+- **Cross-framework UI deduplication** — `PaginationControlsBase` and `ColumnChooserContent` extracted to `@alaarab/ogrid-react`; `createBaseFilterRenderers` factory shared by Radix and Material; `getColumnHeaderMenuProps` utility eliminates 18-prop spread; `BaseColumnHeaderMenuComponent` abstract class shared by all 3 Angular UI packages (~170 lines removed)
+- **`createGridDataAccessor` extracted to core** — shared by React/Angular/Vue/JS formula integrations
+- **Formula bar utilities extracted to core** — `processFormulaBarCommit`, `deriveFormulaBarText`, `FORMULA_BAR_CSS`, `FORMULA_REF_COLORS` centralized in `@alaarab/ogrid-core`
+- **Jest config optimization** — `isolatedModules: true` across all 14 packages; `maxWorkers: 4` caps memory at ~1.2 GB
 
 ### Fixed
-- `PROPER` now correctly lowercases remaining characters (not just capitalizes first letters).
-- `VALUE` now correctly converts percentage strings (e.g., `"75%"` → `0.75`).
-- Angular `OGridService` and Vue `useOGrid` now auto-wire formula engine props (parity with React).
-- Angular `types/index.ts` now re-exports formula types (`IFormulaFunction`, `IRecalcResult`, `IGridDataAccessor`, `IAuditEntry`, `IAuditTrail`).
-- Column autosize header measurement now includes `<th>` border widths for correct `border-box` sizing.
-- Date inline editor now commits value on Enter key and blur (was silently discarding edits in React and Vue).
-- Hero grid on docs homepage is now editable with persisted state.
-- Formula bar showing `==` when clicking on a formula cell — `deriveFormulaBarText` was prepending a second `=` to formula strings that already include their leading `=` sign.
-- Formula `#ERROR!` on re-entering a cell formula via the formula bar — downstream consequence of the double-`=` bug: the engine received `==SUM(...)` and failed to parse the comparison-style leading `=` as a valid expression start.
-- Formula cache miss for cells with computed `undefined` values — replaced `values.get(key) !== undefined` guard with `values.has(key)` to correctly distinguish "not yet cached" from "cached as undefined".
+- **Date cell editor empty / wrong date** — `<input type="date">` requires `YYYY-MM-DD`; ISO strings now truncated to first 10 chars on editor open (React, Vue, Angular). `toLocaleDateString()` now passes `{ timeZone: 'UTC' }` to prevent UTC-midnight dates shifting one day backward in negative-offset timezones
+- `PROPER` now correctly lowercases remaining characters
+- `VALUE` now correctly converts percentage strings (`"75%"` → `0.75`)
+- Angular `OGridService` and Vue `useOGrid` now auto-wire formula engine props (parity with React)
+- Angular `types/index.ts` re-exports formula types (`IFormulaFunction`, `IRecalcResult`, `IGridDataAccessor`, `IAuditEntry`, `IAuditTrail`)
+- Column autosize header measurement includes `<th>` border widths for correct `border-box` sizing
+- Date inline editor commits on Enter/blur (was silently discarding edits in React and Vue)
+- Formula bar double-`=` bug — `deriveFormulaBarText` was prepending a second `=` to formula strings
+- Formula `#ERROR!` on re-entering a formula via the bar — downstream consequence of the double-`=` bug
+- Formula cache miss for `undefined` computed values — `values.has(key)` replaces `values.get(key) !== undefined`
 
 ---
 
