@@ -58,7 +58,10 @@ describe('OGrid', () => {
       const cells = container.querySelectorAll('tbody tr:first-child td');
       expect(cells[0].textContent).toBe('Alice');
       expect(cells[1].textContent).toBe('30');
-      expect(cells[2].textContent).toBe('true');
+      const checkbox = cells[2].querySelector('input[type="checkbox"]') as HTMLInputElement;
+      expect(checkbox).not.toBeNull();
+      expect(checkbox.checked).toBe(true);
+      expect(checkbox.disabled).toBe(true);
 
       grid.destroy();
     });

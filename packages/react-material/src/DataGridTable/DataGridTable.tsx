@@ -42,6 +42,7 @@ import {
   CellErrorBoundary,
   CHECKBOX_COLUMN_WIDTH,
   ROW_NUMBER_COLUMN_WIDTH,
+  ROW_NUMBER_COLUMN_ID,
   PREVENT_DEFAULT,
   NOOP,
   STOP_PROPAGATION,
@@ -256,6 +257,7 @@ interface GridRowProps {
   copyRange: { startRow: number; endRow: number; startCol: number; endCol: number } | null;
   isDragging: boolean;
   editingRowId: string | number | null;
+  rowNumWidth?: number;
 }
 
 function GridRowInner(props: GridRowProps) {
@@ -263,7 +265,7 @@ function GridRowInner(props: GridRowProps) {
     item, rowIndex, rowId, isSelected, columnLayouts,
     renderCellContent, handleSingleRowClick, handleRowCheckboxChange,
     lastMouseShiftRef, hasCheckboxCol, hasRowNumbersCol, rowNumberOffset, rowHeight,
-    leftSpacerWidth, rightSpacerWidth, globalColIndexMap,
+    leftSpacerWidth, rightSpacerWidth, globalColIndexMap, rowNumWidth,
   } = props;
 
   return (
@@ -291,20 +293,23 @@ function GridRowInner(props: GridRowProps) {
           </div>
         </td>
       )}
-      {hasRowNumbersCol && (
-        <td
-          className="ogrid-mat-td ogrid-mat-row-number"
-          style={{
-            width: ROW_NUMBER_COLUMN_WIDTH,
-            minWidth: ROW_NUMBER_COLUMN_WIDTH,
-            maxWidth: ROW_NUMBER_COLUMN_WIDTH,
-            left: hasCheckboxCol ? CHECKBOX_COLUMN_WIDTH : 0,
-            borderBottom: '1px solid var(--ogrid-border, rgba(224,224,224,1))',
-          }}
-        >
-          {rowNumberOffset + rowIndex + 1}
-        </td>
-      )}
+      {hasRowNumbersCol && (() => {
+        const rnw = rowNumWidth ?? ROW_NUMBER_COLUMN_WIDTH;
+        return (
+          <td
+            className="ogrid-mat-td ogrid-mat-row-number"
+            style={{
+              width: rnw,
+              minWidth: rnw,
+              maxWidth: rnw,
+              left: hasCheckboxCol ? CHECKBOX_COLUMN_WIDTH : 0,
+              borderBottom: '1px solid var(--ogrid-border, rgba(224,224,224,1))',
+            }}
+          >
+            {rowNumberOffset + rowIndex + 1}
+          </td>
+        );
+      })()}
       {leftSpacerWidth != null && leftSpacerWidth > 0 && (
         <td style={{ ...SPACER_TD_STYLE, width: leftSpacerWidth, minWidth: leftSpacerWidth }} aria-hidden />
       )}
@@ -359,6 +364,7 @@ interface MaterialTableBodyProps<T> {
   isDragging: boolean;
   editingCell: { rowId: string | number; columnId: string } | null;
   pinnedColumns: Record<string, 'left' | 'right'>;
+  rowNumWidth?: number;
 }
 
 function MaterialTableBody<T>(props: MaterialTableBodyProps<T>) {
@@ -368,7 +374,7 @@ function MaterialTableBody<T>(props: MaterialTableBodyProps<T>) {
     renderCellContent, handleSingleRowClick, handleRowCheckboxChange,
     lastMouseShiftRef, hasCheckboxCol, hasRowNumbersCol, rowNumberOffset, rowHeight,
     selectionRange, activeCell, cutRange, copyRange, isDragging,
-    editingCell, pinnedColumns,
+    editingCell, pinnedColumns, rowNumWidth,
   } = props;
 
   // Partition columns and produce matching columnLayouts when column virtualization is active
@@ -428,6 +434,7 @@ function MaterialTableBody<T>(props: MaterialTableBodyProps<T>) {
         leftSpacerWidth={leftSpacerWidth}
         rightSpacerWidth={rightSpacerWidth}
         globalColIndexMap={globalColIndexMap}
+        rowNumWidth={rowNumWidth}
       />
     );
   };
@@ -568,9 +575,14 @@ function DataGridTableInner<T>(props: IOGridDataGridProps<T>): React.ReactElemen
           </>
         );
       } else {
-        const content = resolveCellDisplayContent(col, item, descriptor.displayValue) as React.ReactNode;
-        const cellStyle = resolveCellStyle(col, item, descriptor.displayValue);
-        const styledContent = cellStyle ? <span style={cellStyle}>{content}</span> : content;
+        let displayNode: React.ReactNode;
+        if (descriptor.columnType === 'boolean') {
+          displayNode = <input type="checkbox" checked={!!descriptor.displayValue} disabled style={{ margin: 0, pointerEvents: 'none' }} aria-label={descriptor.displayValue ? 'True' : 'False'} />;
+        } else {
+          const content = resolveCellDisplayContent(col, item, descriptor.displayValue) as React.ReactNode;
+          const cellStyle = resolveCellStyle(col, item, descriptor.displayValue);
+          displayNode = cellStyle ? <span style={cellStyle}>{content}</span> : content;
+        }
 
         // Build className string (CSS classes — zero Emotion overhead)
         let cls = 'ogrid-mat-cell';
@@ -590,7 +602,7 @@ function DataGridTableInner<T>(props: IOGridDataGridProps<T>): React.ReactElemen
             {...interactionProps}
             style={cellDensityStyle}
           >
-            {styledContent}
+            {displayNode}
             {descriptor.canEditAny && descriptor.isSelectionEndCell && (
               <div className="ogrid-mat-fill-handle" onMouseDown={handleFillHandleMouseDown} aria-label="Fill handle" />
             )}
@@ -677,37 +689,48 @@ function DataGridTableInner<T>(props: IOGridDataGridProps<T>): React.ReactElemen
                     <TableCell {...({ rowSpan: headerRows.length - 1, sx: CHECKBOX_PLACEHOLDER_SX } as TableCellWithSpan)} />
                   )}
                   {/* Row numbers column in the last (leaf) row only */}
-                  {rowIdx === headerRows.length - 1 && hasRowNumbersCol && (
-                    <TableCell
-                      {...({
-                        component: "th",
-                        scope: "col",
-                        rowSpan: headerRows.length > 1 ? 1 : undefined,
-                        sx: {
-                          width: ROW_NUMBER_COLUMN_WIDTH,
-                          minWidth: ROW_NUMBER_COLUMN_WIDTH,
-                          maxWidth: ROW_NUMBER_COLUMN_WIDTH,
-                          textAlign: 'center',
-                          fontWeight: 600,
-                          backgroundColor: HEADER_BG,
-                          position: 'sticky',
-                          left: hasCheckboxCol ? CHECKBOX_COLUMN_WIDTH : 0,
-                          zIndex: 4,
-                          ...headerCellSx,
-                        }
-                      } as TableCellWithSpan)}
-                    >
-                      #
-                    </TableCell>
-                  )}
+                  {rowIdx === headerRows.length - 1 && hasRowNumbersCol && (() => {
+                    const rnw = columnSizingOverrides?.[ROW_NUMBER_COLUMN_ID]?.widthPx ?? ROW_NUMBER_COLUMN_WIDTH;
+                    return (
+                      <TableCell
+                        {...({
+                          component: "th",
+                          scope: "col",
+                          rowSpan: headerRows.length > 1 ? 1 : undefined,
+                          sx: {
+                            width: rnw,
+                            minWidth: rnw,
+                            maxWidth: rnw,
+                            textAlign: 'center',
+                            fontWeight: 600,
+                            backgroundColor: HEADER_BG,
+                            position: 'sticky',
+                            left: hasCheckboxCol ? CHECKBOX_COLUMN_WIDTH : 0,
+                            zIndex: 4,
+                            ...headerCellSx,
+                          }
+                        } as TableCellWithSpan)}
+                      >
+                        #
+                        <Box onMouseDown={(e: React.MouseEvent) => {
+                          setActiveCell(null);
+                          interaction.setSelectionRange(null);
+                          wrapperRef.current?.focus({ preventScroll: true });
+                          handleResizeStart(e, { columnId: ROW_NUMBER_COLUMN_ID, name: '#' } as IColumnDef<T>);
+                        }} sx={RESIZE_HANDLE_SX} />
+                      </TableCell>
+                    );
+                  })()}
                   {/* Empty placeholder for row numbers in the first group row */}
-                  {rowIdx === 0 && rowIdx < headerRows.length - 1 && hasRowNumbersCol && (
+                  {rowIdx === 0 && rowIdx < headerRows.length - 1 && hasRowNumbersCol && (() => {
+                    const spacerRnw = columnSizingOverrides?.[ROW_NUMBER_COLUMN_ID]?.widthPx ?? ROW_NUMBER_COLUMN_WIDTH;
+                    return (
                     <TableCell
                       {...({
                         rowSpan: headerRows.length - 1,
                         sx: {
-                          width: ROW_NUMBER_COLUMN_WIDTH,
-                          minWidth: ROW_NUMBER_COLUMN_WIDTH,
+                          width: spacerRnw,
+                          minWidth: spacerRnw,
                           position: 'sticky',
                           left: hasCheckboxCol ? CHECKBOX_COLUMN_WIDTH : 0,
                           zIndex: 4,
@@ -715,7 +738,8 @@ function DataGridTableInner<T>(props: IOGridDataGridProps<T>): React.ReactElemen
                         }
                       } as TableCellWithSpan)}
                     />
-                  )}
+                    );
+                  })()}
                   {row.map((cell, cellIdx) => {
                     if (cell.isGroup) {
                       return (
@@ -834,6 +858,7 @@ function DataGridTableInner<T>(props: IOGridDataGridProps<T>): React.ReactElemen
                 isDragging={isDragging}
                 editingCell={editingCell}
                 pinnedColumns={pinning.pinnedColumns}
+                rowNumWidth={hasRowNumbersCol ? (columnSizingOverrides?.[ROW_NUMBER_COLUMN_ID]?.widthPx ?? ROW_NUMBER_COLUMN_WIDTH) : undefined}
               />
             )}
           </Table>

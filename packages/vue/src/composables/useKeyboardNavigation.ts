@@ -149,6 +149,7 @@ export function useKeyboardNavigation<T>(
       case 'ArrowUp':
       case 'ArrowRight':
       case 'ArrowLeft': {
+        if (editingCell != null) break;
         e.preventDefault();
         const { newRowIndex, newColumnIndex, newRange } = computeArrowNavigation({
           direction: e.key as 'ArrowDown' | 'ArrowUp' | 'ArrowLeft' | 'ArrowRight',
