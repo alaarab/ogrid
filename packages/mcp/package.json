@@ -13,8 +13,9 @@
       "default": "./dist/esm/index.js"
     }
   },
-  "files": ["dist"],
+  "files": ["dist", "bundled-docs"],
   "scripts": {
+    "prebuild": "node scripts/bundle-docs.mjs",
     "build": "tsup",
     "dev": "tsup --watch"
   },
