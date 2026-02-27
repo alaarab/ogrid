@@ -342,7 +342,7 @@ Categories: features, getting-started, guides, api.`,
         };
       }
 
-      const pkgList = result.packages!
+      const pkgList = (result.packages ?? [])
         .map((p) => `  - ${p.name}: ${p.version}`)
         .join('\n');
 
@@ -474,6 +474,75 @@ Categories: features, getting-started, guides, api.`,
         },
       ],
     }),
+  );
+
+  // -------------------------------------------------------------------------
+  // Resource: ogrid://migration-guide (static)
+  // -------------------------------------------------------------------------
+  server.resource(
+    'migration-guide',
+    'ogrid://migration-guide',
+    { description: 'Full migration guide from AG Grid to OGrid with side-by-side API mapping', mimeType: 'text/markdown' },
+    async (uri) => {
+      const entry =
+        index.getByPath('guides/migration-from-ag-grid.mdx') ??
+        index.getByPath('guides/migration-from-ag-grid.md') ??
+        index.getByPath('guides/migration-from-ag-grid');
+
+      const text = entry
+        ? `# ${entry.title}\n> ${entry.description}\n\n${entry.content}`
+        : '# Migration from AG Grid\n\nMigration guide not found in docs index. Use `search_docs` with query "migration" to find available migration content.';
+
+      return {
+        contents: [
+          {
+            uri: uri.href,
+            mimeType: 'text/markdown',
+            text,
+          },
+        ],
+      };
+    },
+  );
+
+  // -------------------------------------------------------------------------
+  // Prompt: migrate-from-ag-grid
+  // -------------------------------------------------------------------------
+  server.prompt(
+    'migrate-from-ag-grid',
+    'Step-by-step guide to migrate from AG Grid to OGrid',
+    async () => {
+      const entry =
+        index.getByPath('guides/migration-from-ag-grid.mdx') ??
+        index.getByPath('guides/migration-from-ag-grid.md') ??
+        index.getByPath('guides/migration-from-ag-grid');
+
+      const guideContent = entry
+        ? entry.content
+        : 'Migration guide not found. Please use `search_docs` with query "migration" to find available content.';
+
+      return {
+        messages: [
+          {
+            role: 'user' as const,
+            content: {
+              type: 'text' as const,
+              text: [
+                'I want to migrate my project from AG Grid to OGrid. Use the following migration guide to help me step by step.',
+                '',
+                '---',
+                '',
+                guideContent,
+                '',
+                '---',
+                '',
+                'Please analyze my current AG Grid usage and provide specific migration steps. For each AG Grid API, prop, or pattern I use, show me the OGrid equivalent with a code example.',
+              ].join('\n'),
+            },
+          },
+        ],
+      };
+    },
   );
 
   // -------------------------------------------------------------------------

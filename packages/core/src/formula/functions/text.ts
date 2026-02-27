@@ -426,4 +426,179 @@ export function registerTextFunctions(registry: Map<string, IFormulaFunction>): 
       return parts.join(delimiter);
     },
   });
+
+  // --- DOLLAR ---
+  registry.set('DOLLAR', {
+    minArgs: 1,
+    maxArgs: 2,
+    evaluate(args: ASTNode[], context: IFormulaContext, evaluator: IEvaluator): unknown {
+      const rawNum = evaluator.evaluate(args[0], context);
+      if (rawNum instanceof FormulaError) return rawNum;
+      const num = toNumber(rawNum);
+      if (num instanceof FormulaError) return num;
+      let decimals = 2;
+      if (args.length >= 2) {
+        const rawDec = evaluator.evaluate(args[1], context);
+        if (rawDec instanceof FormulaError) return rawDec;
+        const d = toNumber(rawDec);
+        if (d instanceof FormulaError) return d;
+        decimals = Math.trunc(d);
+      }
+      const absNum = Math.abs(num);
+      const rounded = decimals >= 0
+        ? absNum.toFixed(decimals)
+        : (Math.round(absNum / Math.pow(10, -decimals)) * Math.pow(10, -decimals)).toFixed(0);
+      const [intPart, decPart] = rounded.split('.');
+      const withCommas = intPart.replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+      const formatted = decPart !== undefined ? `${withCommas}.${decPart}` : withCommas;
+      return num < 0 ? `($${formatted})` : `$${formatted}`;
+    },
+  });
+
+  // --- FIXED ---
+  registry.set('FIXED', {
+    minArgs: 1,
+    maxArgs: 3,
+    evaluate(args: ASTNode[], context: IFormulaContext, evaluator: IEvaluator): unknown {
+      const rawNum = evaluator.evaluate(args[0], context);
+      if (rawNum instanceof FormulaError) return rawNum;
+      const num = toNumber(rawNum);
+      if (num instanceof FormulaError) return num;
+      let decimals = 2;
+      if (args.length >= 2) {
+        const rawDec = evaluator.evaluate(args[1], context);
+        if (rawDec instanceof FormulaError) return rawDec;
+        const d = toNumber(rawDec);
+        if (d instanceof FormulaError) return d;
+        decimals = Math.trunc(d);
+      }
+      let noCommas = false;
+      if (args.length >= 3) {
+        const rawNoCommas = evaluator.evaluate(args[2], context);
+        if (rawNoCommas instanceof FormulaError) return rawNoCommas;
+        noCommas = !!rawNoCommas;
+      }
+      const absNum = Math.abs(num);
+      const rounded = decimals >= 0
+        ? absNum.toFixed(decimals)
+        : (Math.round(absNum / Math.pow(10, -decimals)) * Math.pow(10, -decimals)).toFixed(0);
+      if (noCommas) {
+        return num < 0 ? `-${rounded}` : rounded;
+      }
+      const [intPart, decPart] = rounded.split('.');
+      const withCommas = intPart.replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+      const formatted = decPart !== undefined ? `${withCommas}.${decPart}` : withCommas;
+      return num < 0 ? `-${formatted}` : formatted;
+    },
+  });
+
+  // --- T ---
+  registry.set('T', {
+    minArgs: 1,
+    maxArgs: 1,
+    evaluate(args: ASTNode[], context: IFormulaContext, evaluator: IEvaluator): unknown {
+      const val = evaluator.evaluate(args[0], context);
+      if (val instanceof FormulaError) return val;
+      return typeof val === 'string' ? val : '';
+    },
+  });
+
+  // --- N ---
+  registry.set('N', {
+    minArgs: 1,
+    maxArgs: 1,
+    evaluate(args: ASTNode[], context: IFormulaContext, evaluator: IEvaluator): unknown {
+      const val = evaluator.evaluate(args[0], context);
+      if (val instanceof FormulaError) return val;
+      if (typeof val === 'number') return val;
+      if (typeof val === 'boolean') return val ? 1 : 0;
+      if (val instanceof Date) return val.getTime();
+      // string, null, undefined → 0
+      return 0;
+    },
+  });
+
+  // --- FORMULATEXT ---
+  registry.set('FORMULATEXT', {
+    minArgs: 1,
+    maxArgs: 1,
+    evaluate(args: ASTNode[], context: IFormulaContext, _evaluator: IEvaluator): unknown {
+      const arg = args[0];
+      if (arg.kind !== 'cellRef') {
+        return new FormulaError('#N/A', 'FORMULATEXT requires a cell reference');
+      }
+      if (!context.getCellFormula) {
+        return new FormulaError('#N/A', 'FORMULATEXT not supported in this context');
+      }
+      const formula = context.getCellFormula(arg.address);
+      if (formula === undefined) {
+        return new FormulaError('#N/A', 'Cell does not contain a formula');
+      }
+      return formula;
+    },
+  });
+
+  // --- NUMBERVALUE ---
+  registry.set('NUMBERVALUE', {
+    minArgs: 1,
+    maxArgs: 3,
+    evaluate(args: ASTNode[], context: IFormulaContext, evaluator: IEvaluator): unknown {
+      const rawText = evaluator.evaluate(args[0], context);
+      if (rawText instanceof FormulaError) return rawText;
+      if (typeof rawText === 'number') return rawText;
+      let text = toString(rawText).trim();
+
+      let decimalSep = '.';
+      let groupSep = ','; // default
+      const hasDecimalArg = args.length >= 2;
+      const hasGroupArg = args.length >= 3;
+
+      if (hasDecimalArg) {
+        const rawDec = evaluator.evaluate(args[1], context);
+        if (rawDec instanceof FormulaError) return rawDec;
+        decimalSep = toString(rawDec);
+        if (decimalSep.length !== 1) return new FormulaError('#VALUE!', 'NUMBERVALUE decimal separator must be 1 character');
+        // When only decimal sep is specified, default group sep adjusts to avoid clash
+        if (!hasGroupArg) {
+          groupSep = decimalSep === ',' ? '.' : ',';
+        }
+      }
+      if (hasGroupArg) {
+        const rawGrp = evaluator.evaluate(args[2], context);
+        if (rawGrp instanceof FormulaError) return rawGrp;
+        groupSep = toString(rawGrp);
+        if (groupSep.length !== 1) return new FormulaError('#VALUE!', 'NUMBERVALUE group separator must be 1 character');
+      }
+      if (decimalSep === groupSep) return new FormulaError('#VALUE!', 'NUMBERVALUE separators must be different');
+
+      // Remove percent sign (will divide by 100 at end)
+      const isPercent = text.endsWith('%');
+      if (isPercent) text = text.slice(0, -1).trim();
+
+      // Remove group separators using RegExp, replace decimal separator with '.'
+      const escapedGroup = groupSep.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      text = text.replace(new RegExp(escapedGroup, 'g'), '');
+      if (decimalSep !== '.') {
+        const escapedDec = decimalSep.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        text = text.replace(new RegExp(escapedDec), '.');
+      }
+
+      const n = Number(text);
+      if (isNaN(n)) return new FormulaError('#VALUE!', `NUMBERVALUE cannot parse "${toString(rawText)}"`);
+      return isPercent ? n / 100 : n;
+    },
+  });
+
+  // --- PHONETIC ---
+  registry.set('PHONETIC', {
+    minArgs: 1,
+    maxArgs: 1,
+    evaluate(args: ASTNode[], context: IFormulaContext, evaluator: IEvaluator): unknown {
+      // Phonetic reading is language-specific (Japanese furigana etc.)
+      // Return the text as-is as a stub
+      const val = evaluator.evaluate(args[0], context);
+      if (val instanceof FormulaError) return val;
+      return toString(val);
+    },
+  });
 }

@@ -31,6 +31,10 @@ import { PaginationControlsComponent } from '../pagination-controls/pagination-c
       [showNameBox]="!!(service.cellReferences() && !service.formulasEnabled())"
       [activeCellRef]="service.activeCellRef()"
       [formulaBar]="service.formulasEnabled() ? service.formulaBarState() : null"
+      [sheetDefs]="service.sheetDefs()"
+      [activeSheet]="service.activeSheet()"
+      [onSheetChange]="service.onSheetChange()"
+      [onSheetAdd]="service.onSheetAdd()"
     >
       <ng-content select="[toolbar]" toolbar></ng-content>
 
@@ -85,6 +89,7 @@ import { PaginationControlsComponent } from '../pagination-controls/pagination-c
         [showColumnLetters]="service.dataGridProps().showColumnLetters ?? false"
         [showNameBox]="service.dataGridProps().showNameBox ?? false"
         [onActiveCellChange]="service.dataGridProps().onActiveCellChange"
+        [formulaReferences]="service.dataGridProps().formulaReferences"
       ></ogrid-primeng-datagrid-table>
 
       <div pagination>

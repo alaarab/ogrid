@@ -160,7 +160,7 @@ export class DependencyGraph {
     visited.add(start);
 
     while (stack.length > 0) {
-      const current = stack.pop()!;
+      const current = stack.pop() as string;
       const deps = this.dependencies.get(current);
       if (!deps) continue;
 
@@ -262,7 +262,7 @@ export class DependencyGraph {
       if (cellDependents) {
         for (const dependent of cellDependents) {
           if (affected.has(dependent)) {
-            const newDegree = inDegree.get(dependent)! - 1;
+            const newDegree = (inDegree.get(dependent) ?? 0) - 1;
             inDegree.set(dependent, newDegree);
             if (newDegree === 0) {
               queue.push(dependent);

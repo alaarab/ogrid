@@ -38,6 +38,10 @@ import { PaginationControlsComponent } from '../pagination-controls/pagination-c
       [showNameBox]="!!(ogridService.cellReferences() && !ogridService.formulasEnabled())"
       [activeCellRef]="ogridService.activeCellRef()"
       [formulaBar]="ogridService.formulasEnabled() ? ogridService.formulaBarState() : null"
+      [sheetDefs]="ogridService.sheetDefs()"
+      [activeSheet]="ogridService.activeSheet()"
+      [onSheetChange]="ogridService.onSheetChange()"
+      [onSheetAdd]="ogridService.onSheetAdd()"
     >
       <ng-container toolbarEnd>
         @if (ogridService.columnChooserPlacement() === 'toolbar') {

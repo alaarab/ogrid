@@ -88,4 +88,28 @@ describe('resolveCellDisplayContent', () => {
     const result = resolveCellDisplayContent(col, item, null);
     expect(result).toBeNull();
   });
+
+  describe('date column formatting', () => {
+    const dateCol: IColumnDef<Row> = { columnId: 'value', name: 'Date', type: 'date' };
+
+    it('formats date using UTC timezone to prevent off-by-one day shifts', () => {
+      // Regression: without { timeZone: 'UTC' }, toLocaleDateString() converts UTC midnight
+      // to local time, shifting the date backward in negative-offset timezones (e.g. UTC-5).
+      const spy = jest.spyOn(Date.prototype, 'toLocaleDateString');
+      resolveCellDisplayContent(dateCol, item, '2024-03-15T00:00:00.000Z');
+      expect(spy).toHaveBeenCalledWith(undefined, { timeZone: 'UTC' });
+      spy.mockRestore();
+    });
+
+    it('returns a string for a valid ISO date', () => {
+      const result = resolveCellDisplayContent(dateCol, item, '2024-03-15T00:00:00.000Z');
+      expect(typeof result).toBe('string');
+      expect(result).not.toBeNull();
+    });
+
+    it('returns null for null date value', () => {
+      const result = resolveCellDisplayContent(dateCol, item, null);
+      expect(result).toBeNull();
+    });
+  });
 });
