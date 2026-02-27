@@ -39,6 +39,7 @@
     "@alaarab/ogrid-vue-vuetify": "2.3.0",
     "@alaarab/ogrid-vue-primevue": "2.3.0",
     "@alaarab/ogrid-js": "2.3.0",
+    "@alaarab/ogrid-mcp": "2.3.0",
     "@angular/common": "^21.0.0",
     "@angular/compiler": "^21.0.0",
     "@angular/core": "^21.0.0",
