@@ -51,6 +51,8 @@ export { toUserLike, isInSelectionRange, normalizeSelectionRange } from './types
 export { MarchingAntsOverlay } from './components/MarchingAntsOverlay';
 export { StatusBar, type StatusBarProps } from './components/StatusBar';
 export { FormulaBar, type FormulaBarProps } from './components/FormulaBar';
+export { SheetTabs, type SheetTabsProps } from './components/SheetTabs';
+export { FormulaRefOverlay } from './components/FormulaRefOverlay';
 
 // Composables
 export {

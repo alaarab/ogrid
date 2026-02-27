@@ -1,5 +1,5 @@
 import { readdirSync, readFileSync, statSync } from 'node:fs';
-import { join, relative, extname, dirname } from 'node:path';
+import { join, relative, extname } from 'node:path';
 
 // ---------------------------------------------------------------------------
 // Types

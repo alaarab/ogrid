@@ -296,6 +296,45 @@ describe('useInlineCellEditorState', () => {
     expect(onCommit).toHaveBeenCalledWith('2024-01-15');
   });
 
+  // --- Date editor initial value ---
+  it('extracts YYYY-MM-DD from full ISO string for date editor (prevents empty date input)', () => {
+    // Regression: <input type="date"> requires "YYYY-MM-DD", not a full ISO string.
+    // Passing "2024-03-15T00:00:00.000Z" left the date picker empty.
+    const { result } = renderHook(() =>
+      useInlineCellEditorState({
+        value: '2024-03-15T00:00:00.000Z',
+        editorType: 'date',
+        onCommit: jest.fn(),
+        onCancel: jest.fn(),
+      })
+    );
+    expect(result.current.localValue).toBe('2024-03-15');
+  });
+
+  it('keeps plain YYYY-MM-DD value as-is for date editor', () => {
+    const { result } = renderHook(() =>
+      useInlineCellEditorState({
+        value: '2024-03-15',
+        editorType: 'date',
+        onCommit: jest.fn(),
+        onCancel: jest.fn(),
+      })
+    );
+    expect(result.current.localValue).toBe('2024-03-15');
+  });
+
+  it('returns empty string for null date value', () => {
+    const { result } = renderHook(() =>
+      useInlineCellEditorState({
+        value: null,
+        editorType: 'date',
+        onCommit: jest.fn(),
+        onCancel: jest.fn(),
+      })
+    );
+    expect(result.current.localValue).toBe('');
+  });
+
   it('handleKeyDown ignores other keys', () => {
     const onCommit = jest.fn();
     const onCancel = jest.fn();
