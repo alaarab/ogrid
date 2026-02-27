@@ -19,7 +19,7 @@ import {
   buildPopoverEditorProps,
   getCellInteractionProps,
 } from '../utils';
-import { buildHeaderRows, CHECKBOX_COLUMN_WIDTH, ROW_NUMBER_COLUMN_WIDTH, DEFAULT_MIN_COLUMN_WIDTH, indexToColumnLetter, formatCellReference } from '@alaarab/ogrid-core';
+import { buildHeaderRows, CHECKBOX_COLUMN_WIDTH, ROW_NUMBER_COLUMN_WIDTH, ROW_NUMBER_COLUMN_ID, DEFAULT_MIN_COLUMN_WIDTH, indexToColumnLetter, formatCellReference } from '@alaarab/ogrid-core';
 import { StatusBar } from './StatusBar';
 import { MarchingAntsOverlay } from './MarchingAntsOverlay';
 import { FormulaRefOverlay } from './FormulaRefOverlay';
@@ -269,8 +269,6 @@ export function createDataGridTable(ui: IDataGridTableUIBindings) {
           }
 
           // Display mode
-          const content = resolveCellDisplayContent(col, item, descriptor.displayValue);
-          const cellStyle = resolveCellStyle(col, item, descriptor.displayValue);
           const interactionProps2 = getCellInteractionProps(descriptor, col.columnId, interactionHandlers);
 
           const cellClasses: string[] = ['ogrid-cell-content'];
@@ -282,15 +280,28 @@ export function createDataGridTable(ui: IDataGridTableUIBindings) {
           if (descriptor.isInRange && !descriptor.isActive) cellClasses.push('ogrid-cell-in-range');
           if (descriptor.isInCutRange) cellClasses.push('ogrid-cell-cut');
 
-          const styledContent = cellStyle
-            ? h('span', { style: cellStyle }, content as string)
-            : content as string;
+          let displayNode: VNode | string | null;
+          if (descriptor.columnType === 'boolean') {
+            displayNode = h('input', {
+              type: 'checkbox',
+              checked: !!descriptor.displayValue,
+              disabled: true,
+              style: 'margin:0;pointer-events:none',
+              'aria-label': descriptor.displayValue ? 'True' : 'False',
+            });
+          } else {
+            const content = resolveCellDisplayContent(col, item, descriptor.displayValue);
+            const cellStyle = resolveCellStyle(col, item, descriptor.displayValue);
+            displayNode = cellStyle
+              ? h('span', { style: cellStyle }, content as string)
+              : content as string;
+          }
 
           return h('div', {
             ...interactionProps2,
             class: cellClasses.join(' '),
           }, [
-            styledContent,
+            displayNode,
             ...(descriptor.canEditAny && descriptor.isSelectionEndCell ? [
               h('div', {
                 onMousedown: handleFillHandleMouseDown,
@@ -438,32 +449,46 @@ export function createDataGridTable(ui: IDataGridTableUIBindings) {
                             }),
                           ] : []),
                           // Row numbers header
-                          ...(rowIdx === headerRows.length - 1 && hasRowNumbersCol ? [
-                            h('th', {
+                          ...(rowIdx === headerRows.length - 1 && hasRowNumbersCol ? [(() => {
+                            const rnw = layout.columnSizingOverrides[ROW_NUMBER_COLUMN_ID]?.widthPx ?? ROW_NUMBER_COLUMN_WIDTH;
+                            return h('th', {
                               class: 'ogrid-row-number-header',
                               style: {
-                                width: `${ROW_NUMBER_COLUMN_WIDTH}px`,
-                                minWidth: `${ROW_NUMBER_COLUMN_WIDTH}px`,
-                                maxWidth: `${ROW_NUMBER_COLUMN_WIDTH}px`,
+                                width: `${rnw}px`,
+                                minWidth: `${rnw}px`,
+                                maxWidth: `${rnw}px`,
                                 position: 'sticky',
                                 left: hasCheckboxCol ? `${CHECKBOX_COLUMN_WIDTH}px` : '0',
                                 zIndex: 3,
                               },
-                            }, '#'),
-                          ] : []),
+                            }, [
+                              '#',
+                              h('div', {
+                                onMousedown: (e: MouseEvent) => {
+                                  setActiveCell(null);
+                                  setSelectionRange(null);
+                                  wrapperRef.value?.focus({ preventScroll: true });
+                                  e.stopPropagation();
+                                  handleResizeStart(e, { columnId: ROW_NUMBER_COLUMN_ID, name: '#' } as IColumnDef<unknown>);
+                                },
+                                class: 'ogrid-resize-handle',
+                              }),
+                            ]);
+                          })()] : []),
                           // Row numbers spacer
-                          ...(rowIdx === 0 && rowIdx < headerRows.length - 1 && hasRowNumbersCol ? [
-                            h('th', {
+                          ...(rowIdx === 0 && rowIdx < headerRows.length - 1 && hasRowNumbersCol ? [(() => {
+                            const spacerRnw = layout.columnSizingOverrides[ROW_NUMBER_COLUMN_ID]?.widthPx ?? ROW_NUMBER_COLUMN_WIDTH;
+                            return h('th', {
                               rowSpan: headerRows.length - 1,
                               class: 'ogrid-row-number-spacer',
                               style: {
-                                width: `${ROW_NUMBER_COLUMN_WIDTH}px`,
+                                width: `${spacerRnw}px`,
                                 position: 'sticky',
                                 left: hasCheckboxCol ? `${CHECKBOX_COLUMN_WIDTH}px` : '0',
                                 zIndex: 3,
                               },
-                            }),
-                          ] : []),
+                            });
+                          })()] : []),
                           // Header cells
                           ...row.map((cell, cellIdx) => {
                             if (cell.isGroup) {
@@ -573,20 +598,21 @@ export function createDataGridTable(ui: IDataGridTableUIBindings) {
                               ),
                             ] : []),
                             // Row numbers cell
-                            ...(hasRowNumbersCol ? [
-                              h('td', {
+                            ...(hasRowNumbersCol ? [(() => {
+                              const rnw = layout.columnSizingOverrides[ROW_NUMBER_COLUMN_ID]?.widthPx ?? ROW_NUMBER_COLUMN_WIDTH;
+                              return h('td', {
                                 class: 'ogrid-row-number-cell',
                                 style: {
-                                  width: `${ROW_NUMBER_COLUMN_WIDTH}px`,
-                                  minWidth: `${ROW_NUMBER_COLUMN_WIDTH}px`,
-                                  maxWidth: `${ROW_NUMBER_COLUMN_WIDTH}px`,
+                                  width: `${rnw}px`,
+                                  minWidth: `${rnw}px`,
+                                  maxWidth: `${rnw}px`,
                                   padding: '6px',
                                   position: 'sticky',
                                   left: hasCheckboxCol ? `${CHECKBOX_COLUMN_WIDTH}px` : '0',
                                   zIndex: 2,
                                 },
-                              }, String(rowNumberOffset + rowIndex + 1)),
-                            ] : []),
+                              }, String(rowNumberOffset + rowIndex + 1));
+                            })()] : []),
                             // Left spacer for column virtualization
                             ...(leftSpacerWidth > 0 ? [
                               h('td', { key: '__col-spacer-left', style: { width: `${leftSpacerWidth}px`, minWidth: `${leftSpacerWidth}px`, maxWidth: `${leftSpacerWidth}px`, padding: '0' } }),

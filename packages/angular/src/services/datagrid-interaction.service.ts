@@ -391,6 +391,7 @@ export class DataGridInteractionHelper<T> {
         }
         break;
       case 'ArrowDown': {
+        if (editingCell != null) break;
         e.preventDefault();
         const newRow = ctrl
           ? findCtrlTarget(rowIndex, maxRowIndex, 1, (r) => isEmptyAt(r, Math.max(0, dataColIndex)))
@@ -409,6 +410,7 @@ export class DataGridInteractionHelper<T> {
         break;
       }
       case 'ArrowUp': {
+        if (editingCell != null) break;
         e.preventDefault();
         const newRowUp = ctrl
           ? findCtrlTarget(rowIndex, 0, -1, (r) => isEmptyAt(r, Math.max(0, dataColIndex)))
@@ -427,6 +429,7 @@ export class DataGridInteractionHelper<T> {
         break;
       }
       case 'ArrowRight': {
+        if (editingCell != null) break;
         e.preventDefault();
         let newCol: number;
         if (ctrl && dataColIndex >= 0) {
@@ -449,6 +452,7 @@ export class DataGridInteractionHelper<T> {
         break;
       }
       case 'ArrowLeft': {
+        if (editingCell != null) break;
         e.preventDefault();
         let newColLeft: number;
         if (ctrl && dataColIndex >= 0) {

@@ -34,6 +34,12 @@ export function useSelectState(params: UseSelectStateParams): UseSelectStateResu
   const initialIndex = values.findIndex((v) => String(v) === String(initialValue));
   const [highlightedIndex, setHighlightedIndex] = useState(Math.max(initialIndex, 0));
 
+  // Reset highlighted index when initialValue changes (e.g., opening editor on a different cell)
+  useEffect(() => {
+    const idx = values.findIndex((v) => String(v) === String(initialValue));
+    setHighlightedIndex(Math.max(idx, 0));
+  }, [initialValue, values]);
+
   // Scroll highlighted option into view
   useEffect(() => {
     const dropdown = dropdownRef.current;
