@@ -1,0 +1,172 @@
+---
+title: AI Integration (MCP)
+description: Connect Claude, Cursor, and other AI assistants to OGrid documentation and your running grid.
+sidebar_position: 1
+---
+
+# AI Integration (MCP)
+
+`@alaarab/ogrid-mcp` is a standalone [Model Context Protocol (MCP)](https://modelcontextprotocol.io) server that gives AI assistants full access to OGrid documentation across all frameworks. It also includes a **live testing bridge** that lets the AI read and control a running OGrid instance in real time.
+
+## Installation
+
+The MCP server is published as `@alaarab/ogrid-mcp` and requires no configuration — docs are bundled into the package.
+
+```bash
+npm install -g @alaarab/ogrid-mcp
+# or use npx directly (no install needed)
+npx @alaarab/ogrid-mcp
+```
+
+---
+
+## Connect to your AI assistant
+
+### Claude Code
+
+```bash
+claude mcp add ogrid -- npx -y @alaarab/ogrid-mcp
+```
+
+### Claude Desktop
+
+Add to your `claude_desktop_config.json`:
+
+```json
+{
+  "mcpServers": {
+    "ogrid": {
+      "command": "npx",
+      "args": ["-y", "@alaarab/ogrid-mcp"]
+    }
+  }
+}
+```
+
+### Cursor
+
+Add to your Cursor MCP settings:
+
+```json
+{
+  "ogrid": {
+    "command": "npx",
+    "args": ["-y", "@alaarab/ogrid-mcp"]
+  }
+}
+```
+
+---
+
+## What your AI can do
+
+Once connected, the AI assistant has access to the full OGrid documentation for all frameworks. Example prompts:
+
+```
+Show me how to set up server-side pagination in React
+How do I pin columns in Angular Material?
+What's the difference between multiSelect and text filters?
+How do I use the formula engine?
+Help me migrate from AG Grid to OGrid
+```
+
+---
+
+## MCP tools
+
+### `search_docs`
+
+Full-text search across all OGrid documentation.
+
+```
+search_docs query="server-side data" framework="react"
+```
+
+Parameters:
+- `query` (required) — search terms
+- `framework` (optional) — filter to `react`, `angular`, `vue`, or `js`
+- `category` (optional) — filter to `features`, `getting-started`, `guides`, or `api`
+
+### `list_docs`
+
+Browse available documentation pages by category.
+
+```
+list_docs category="features"
+```
+
+### `get_docs`
+
+Read a full documentation page by path.
+
+```
+get_docs path="features/filtering"
+```
+
+### `get_code_example`
+
+Extract code snippets from a documentation page, optionally filtered by framework.
+
+```
+get_code_example path="features/editing" framework="angular"
+```
+
+### `detect_version`
+
+Detect which OGrid packages are installed in the user's project by reading their `package.json`.
+
+```
+detect_version path="/path/to/project"
+```
+
+---
+
+## MCP resources
+
+Resources can be read directly by the AI assistant without calling a tool.
+
+| Resource | Description |
+|----------|-------------|
+| `ogrid://quick-reference` | Key API overview — props, column definitions, IOGridApi, filter types |
+| `ogrid://docs/{path}` | Any documentation page by path (e.g. `ogrid://docs/features/filtering`) |
+| `ogrid://migration-guide` | Step-by-step guide for migrating from AG Grid to OGrid |
+
+---
+
+## MCP prompts
+
+### `migrate-from-ag-grid`
+
+Guides the AI through an AG Grid → OGrid migration. Provide your existing AG Grid code and the AI will produce equivalent OGrid code with explanations.
+
+---
+
+## Live testing bridge
+
+For real-time AI-assisted development, the MCP server includes a bridge that connects to a running OGrid instance. This lets the AI:
+
+- Read the current grid state (rows, columns, pagination, filters, sort)
+- Update cell values
+- Apply or clear filters
+- Change sort order
+- Navigate pages
+
+See the **[MCP Live Testing Bridge](./mcp-live-testing)** guide for full setup instructions.
+
+```bash
+# Start with bridge enabled
+npx @alaarab/ogrid-mcp --bridge
+
+# Or with a custom port
+OGRID_BRIDGE_PORT=7890 npx @alaarab/ogrid-mcp
+```
+
+---
+
+## Version
+
+The MCP server is published separately from the grid packages and versioned independently. Check the installed version:
+
+```bash
+npx @alaarab/ogrid-mcp --version
+```
