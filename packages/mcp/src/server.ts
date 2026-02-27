@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { existsSync, readFileSync } from 'node:fs';
 import { join, dirname } from 'node:path';
 import type { DocsIndex } from './docsLoader.js';
+import type { BridgeStore } from './bridge.js';
 
 // ---------------------------------------------------------------------------
 // detect_version helpers
@@ -79,7 +80,7 @@ function fromResourcePath(resourcePath: string, index: DocsIndex): ReturnType<Do
 // Server factory
 // ---------------------------------------------------------------------------
 
-export function createOGridMcpServer(index: DocsIndex): McpServer {
+export function createOGridMcpServer(index: DocsIndex, bridge?: BridgeStore): McpServer {
   const server = new McpServer({
     name: 'ogrid-docs',
     version: '2.3.0',
@@ -592,6 +593,264 @@ Categories: features, getting-started, guides, api.`,
       };
     },
   );
+
+  // -------------------------------------------------------------------------
+  // Bridge tools (only registered when a BridgeStore is provided)
+  // -------------------------------------------------------------------------
+
+  if (bridge) {
+    // -----------------------------------------------------------------------
+    // Tool: list_grids
+    // -----------------------------------------------------------------------
+    server.tool(
+      'list_grids',
+      'List OGrid instances currently connected to the live testing bridge. Returns grid IDs, row counts, page info, and last-seen timestamps.',
+      {},
+      async () => {
+        const grids = bridge.listGrids();
+        if (grids.length === 0) {
+          return {
+            content: [
+              {
+                type: 'text' as const,
+                text: [
+                  'No OGrid instances connected.',
+                  '',
+                  'To connect your app, add the bridge client:',
+                  '```js',
+                  "import { connectGridToBridge } from '@alaarab/ogrid-mcp/bridge-client';",
+                  "const bridge = connectGridToBridge({ gridId: 'my-grid', getData: () => rows, getColumns: () => columns });",
+                  '```',
+                  '',
+                  'Then start the MCP server with bridge enabled:',
+                  '  OGRID_BRIDGE_PORT=7890 npx @alaarab/ogrid-mcp',
+                  '  — or —',
+                  '  npx @alaarab/ogrid-mcp --bridge',
+                ].join('\n'),
+              },
+            ],
+          };
+        }
+
+        const formatted = grids
+          .map((g) => {
+            const age = Math.round((Date.now() - g.lastSeen) / 1000);
+            return [
+              `**${g.gridId}**`,
+              `  Rows: ${g.rowCount} displayed / ${g.totalCount} total`,
+              `  Page: ${g.page} / ${g.pageCount} (${g.pageSize} per page)`,
+              `  Columns: ${g.columns.map((c) => c.columnId).join(', ')}`,
+              `  Active filters: ${Object.keys(g.filterModel).length}`,
+              `  Last seen: ${age}s ago`,
+            ].join('\n');
+          })
+          .join('\n\n');
+
+        return {
+          content: [
+            {
+              type: 'text' as const,
+              text: `${grids.length} connected grid(s):\n\n${formatted}`,
+            },
+          ],
+        };
+      },
+    );
+
+    // -----------------------------------------------------------------------
+    // Tool: get_grid_state
+    // -----------------------------------------------------------------------
+    server.tool(
+      'get_grid_state',
+      'Get the current state of a connected OGrid instance: displayed rows, columns, sort, filters, pagination, and selection.',
+      {
+        gridId: z.string().describe('Grid ID as registered by connectGridToBridge()'),
+        includeData: z
+          .boolean()
+          .optional()
+          .describe('Whether to include the full row data (default: false — shows only summary)'),
+        maxRows: z
+          .number()
+          .int()
+          .min(1)
+          .max(200)
+          .optional()
+          .describe('Max rows to include when includeData=true (default: 20)'),
+      },
+      async ({ gridId, includeData, maxRows }) => {
+        const state = bridge.getState(gridId);
+        if (!state) {
+          const available = bridge.listGrids().map((g) => g.gridId);
+          return {
+            content: [
+              {
+                type: 'text' as const,
+                text:
+                  available.length > 0
+                    ? `Grid "${gridId}" not found. Available grids: ${available.join(', ')}`
+                    : `Grid "${gridId}" not found. No grids are currently connected.`,
+              },
+            ],
+          };
+        }
+
+        const age = Math.round((Date.now() - state.lastSeen) / 1000);
+        const colNames = state.columns
+          .map((c) => `${c.columnId}${c.type ? ` (${c.type})` : ''}`)
+          .join(', ');
+        const sortDesc =
+          state.sortModel.length > 0
+            ? state.sortModel.map((s) => `${s.columnId} ${s.direction}`).join(', ')
+            : 'none';
+        const filterDesc =
+          Object.keys(state.filterModel).length > 0
+            ? JSON.stringify(state.filterModel)
+            : 'none';
+
+        const sections: string[] = [
+          `# Grid: ${gridId}`,
+          `Last seen: ${age}s ago`,
+          '',
+          `## Pagination`,
+          `Page ${state.page} of ${state.pageCount} | ${state.rowCount} rows displayed | ${state.totalCount} total`,
+          `Page size: ${state.pageSize}`,
+          '',
+          `## Columns (${state.columns.length})`,
+          colNames,
+          '',
+          `## Sort`,
+          sortDesc,
+          '',
+          `## Filters`,
+          filterDesc,
+          '',
+          `## Selection`,
+          state.selectedRowIndices.length > 0
+            ? `${state.selectedRowIndices.length} row(s) selected: indices [${state.selectedRowIndices.slice(0, 10).join(', ')}${state.selectedRowIndices.length > 10 ? ', ...' : ''}]`
+            : 'None',
+        ];
+
+        if (includeData) {
+          const limit = maxRows ?? 20;
+          const rows = state.data.slice(0, limit);
+          sections.push('', `## Data (first ${rows.length} of ${state.rowCount} rows)`);
+          sections.push('```json');
+          sections.push(JSON.stringify(rows, null, 2));
+          sections.push('```');
+          if (state.rowCount > limit) {
+            sections.push(`\n_${state.rowCount - limit} more rows not shown. Increase maxRows to see more._`);
+          }
+        }
+
+        return {
+          content: [{ type: 'text' as const, text: sections.join('\n') }],
+        };
+      },
+    );
+
+    // -----------------------------------------------------------------------
+    // Tool: send_grid_command
+    // -----------------------------------------------------------------------
+    server.tool(
+      'send_grid_command',
+      [
+        'Send a command to a connected OGrid instance and wait for the result.',
+        '',
+        'Command types:',
+        '  update_cell   — { rowIndex: number, columnId: string, value: unknown }',
+        '  set_filter    — { columnId: string, value: string | string[] }',
+        '  clear_filters — {}',
+        '  set_sort      — { sortModel: [{ columnId, direction: "asc"|"desc" }] }',
+        '  go_to_page    — { page: number }',
+      ].join('\n'),
+      {
+        gridId: z.string().describe('Grid ID as registered by connectGridToBridge()'),
+        type: z
+          .enum(['update_cell', 'set_filter', 'clear_filters', 'set_sort', 'go_to_page'])
+          .describe('Command type'),
+        payload: z
+          .record(z.unknown())
+          .describe('Command-specific payload (see tool description for fields per type)'),
+        timeoutMs: z
+          .number()
+          .int()
+          .min(100)
+          .max(30000)
+          .optional()
+          .describe('How long to wait for the app to execute the command (default: 5000ms)'),
+      },
+      async ({ gridId, type, payload, timeoutMs }) => {
+        const state = bridge.getState(gridId);
+        if (!state) {
+          const available = bridge.listGrids().map((g) => g.gridId);
+          return {
+            content: [
+              {
+                type: 'text' as const,
+                text:
+                  available.length > 0
+                    ? `Grid "${gridId}" not found. Available: ${available.join(', ')}`
+                    : `Grid "${gridId}" not found. No grids are currently connected.`,
+              },
+            ],
+          };
+        }
+
+        const cmd = bridge.enqueueCommand(gridId, type, payload as Record<string, unknown>);
+        if (!cmd) {
+          return {
+            content: [{ type: 'text' as const, text: `Failed to enqueue command for grid "${gridId}".` }],
+          };
+        }
+
+        try {
+          const result = await bridge.waitForResult(cmd.id, timeoutMs ?? 5000);
+          if (result.status === 'error') {
+            return {
+              content: [
+                {
+                  type: 'text' as const,
+                  text: `Command failed: ${result.error ?? 'unknown error'}\n\nCommand: ${JSON.stringify({ type, payload }, null, 2)}`,
+                },
+              ],
+            };
+          }
+          return {
+            content: [
+              {
+                type: 'text' as const,
+                text: [
+                  `✅ Command executed successfully`,
+                  '',
+                  `Type: ${type}`,
+                  `Payload: ${JSON.stringify(payload)}`,
+                  `Result: ${JSON.stringify(result.result)}`,
+                  '',
+                  `Call get_grid_state to see the updated grid state.`,
+                ].join('\n'),
+              },
+            ],
+          };
+        } catch {
+          return {
+            content: [
+              {
+                type: 'text' as const,
+                text: [
+                  `⏱️ Command timed out after ${timeoutMs ?? 5000}ms.`,
+                  '',
+                  'The OGrid app may not be polling for commands. Check that:',
+                  '1. connectGridToBridge() is active in your app',
+                  '2. The pollIntervalMs is not too large (default: 500ms)',
+                  `3. The grid ID matches: "${gridId}"`,
+                ].join('\n'),
+              },
+            ],
+          };
+        }
+      },
+    );
+  }
 
   return server;
 }
