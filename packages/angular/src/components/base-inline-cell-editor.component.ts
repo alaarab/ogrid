@@ -28,6 +28,7 @@ export abstract class BaseInlineCellEditorComponent<T = unknown> {
   readonly highlightedIndex = signal(0);
   readonly selectOptions = signal<unknown[]>([]);
   readonly searchText = signal('');
+  private scrollCleanup: (() => void) | null = null;
   readonly filteredOptions = computed(() => {
     const options = this.selectOptions();
     const search = this.searchText().trim().toLowerCase();
@@ -72,12 +73,14 @@ export abstract class BaseInlineCellEditorComponent<T = unknown> {
         richSelectInput.focus();
         richSelectInput.select();
         this.positionFixedDropdown(this.richSelectWrapper, this.richSelectDropdown);
+        this.attachScrollClose(this.richSelectWrapper?.nativeElement);
         return;
       }
       const selectWrap = this.selectWrapper?.nativeElement;
       if (selectWrap) {
         selectWrap.focus();
         this.positionFixedDropdown(this.selectWrapper, this.selectDropdown);
+        this.attachScrollClose(selectWrap);
         return;
       }
       const el = this.inputEl?.nativeElement;
@@ -90,6 +93,23 @@ export abstract class BaseInlineCellEditorComponent<T = unknown> {
         }
       }
     });
+  }
+
+  ngOnDestroy(): void {
+    this.scrollCleanup?.();
+  }
+
+  /** Attach scroll listeners to close the editor when the grid scrolls. */
+  private attachScrollClose(wrapper: HTMLElement | undefined): void {
+    if (!wrapper) return;
+    const scrollParent = wrapper.closest('.ogrid-table-wrapper') ?? wrapper.closest('[style*="overflow"]');
+    const handleScroll = () => this.cancel.emit();
+    if (scrollParent) scrollParent.addEventListener('scroll', handleScroll, { passive: true });
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    this.scrollCleanup = () => {
+      if (scrollParent) scrollParent.removeEventListener('scroll', handleScroll);
+      window.removeEventListener('scroll', handleScroll);
+    };
   }
 
   commitValue(value: unknown): void {
