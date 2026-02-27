@@ -1,5 +1,5 @@
 import { onUnmounted, type Ref } from 'vue';
-import { measureColumnContentWidth } from '@alaarab/ogrid-core';
+import { measureColumnContentWidth, ROW_NUMBER_COLUMN_ID, ROW_NUMBER_COLUMN_MIN_WIDTH } from '@alaarab/ogrid-core';
 import type { IColumnDef } from '../types';
 
 export interface UseColumnResizeParams {
@@ -64,9 +64,11 @@ export function useColumnResize<T>(params: UseColumnResizeParams): UseColumnResi
       });
     };
 
+    const effectiveMinWidth = columnId === ROW_NUMBER_COLUMN_ID ? ROW_NUMBER_COLUMN_MIN_WIDTH : minWidth;
+
     const onMove = (moveEvent: MouseEvent) => {
       const deltaX = moveEvent.clientX - startX;
-      latestWidth = Math.max(minWidth, startWidth + deltaX);
+      latestWidth = Math.max(effectiveMinWidth, startWidth + deltaX);
 
       if (!rafId) {
         rafId = requestAnimationFrame(() => {

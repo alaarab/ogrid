@@ -1,4 +1,4 @@
-import { useState, useCallback, useMemo } from 'react';
+import { useState, useCallback, useMemo, useEffect } from 'react';
 
 /** Shared display text formatter for select and rich-select editors. */
 export function getSelectDisplayText(value: unknown, formatValue?: (v: unknown) => string): string {
@@ -30,9 +30,16 @@ export interface UseRichSelectStateResult {
  * @returns Search text, filtered values, highlighted index, keyboard handler, and select function.
  */
 export function useRichSelectState(params: UseRichSelectStateParams): UseRichSelectStateResult {
-  const { values, formatValue, onCommit, onCancel } = params;
+  const { values, formatValue, initialValue, onCommit, onCancel } = params;
   const [searchText, setSearchText] = useState('');
-  const [highlightedIndex, setHighlightedIndex] = useState(0);
+  const initialIndex = values.findIndex((v) => String(v) === String(initialValue));
+  const [highlightedIndex, setHighlightedIndex] = useState(Math.max(initialIndex, 0));
+
+  // Reset highlighted index when initialValue changes (e.g., opening editor on a different cell)
+  useEffect(() => {
+    const idx = values.findIndex((v) => String(v) === String(initialValue));
+    setHighlightedIndex(Math.max(idx, 0));
+  }, [initialValue, values]);
 
   const getDisplayText = useCallback(
     (value: unknown): string => getSelectDisplayText(value, formatValue),
