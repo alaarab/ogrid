@@ -812,7 +812,11 @@ function DataGridTableInner<T>(props: IOGridDataGridProps<T>): React.ReactElemen
                             component="button"
                             onClick={(e: React.MouseEvent<HTMLButtonElement>) => {
                               e.stopPropagation();
-                              headerMenu.open(col.columnId, e.currentTarget);
+                              if (headerMenu.isOpen && headerMenu.openForColumn === col.columnId) {
+                                headerMenu.close();
+                              } else {
+                                headerMenu.open(col.columnId, e.currentTarget);
+                              }
                             }}
                             aria-label="Column options"
                             title="Column options"

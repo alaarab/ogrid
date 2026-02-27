@@ -521,7 +521,11 @@ export function createDataGridTable(ui: IDataGridTableUIBindings) {
                                 h('button', {
                                   onClick: (e: MouseEvent) => {
                                     e.stopPropagation();
-                                    headerMenu.open(col.columnId, e.currentTarget as HTMLElement);
+                                    if (headerMenu.isOpen && headerMenu.openForColumn === col.columnId) {
+                                      headerMenu.close();
+                                    } else {
+                                      headerMenu.open(col.columnId, e.currentTarget as HTMLElement);
+                                    }
                                   },
                                   'aria-label': 'Column options',
                                   title: 'Column options',
