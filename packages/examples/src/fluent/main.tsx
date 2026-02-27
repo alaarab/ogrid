@@ -1,12 +1,14 @@
-import React, { useState } from 'react';
+import React, { useState, useCallback, useEffect, useRef } from 'react';
 import { createRoot } from 'react-dom/client';
 import { FluentProvider, webLightTheme, webDarkTheme } from '@fluentui/react-components';
 import { OGrid } from '@alaarab/ogrid-react-fluent';
-import { makeDemoProjects, makeDemoColumns, getRowId, handleCellValueChanged } from '../shared/demoData';
+import type { IOGridApi } from '@alaarab/ogrid-react-fluent';
+import { makeDemoProjects, makeDemoColumns, getRowId } from '../shared/demoData';
 import type { Project } from '../shared/demoData';
 import { createThemeToggle, getInitialTheme, setTheme } from '../shared/themeToggle';
+import { connectGridToBridge } from '@alaarab/ogrid-mcp/bridge-client';
 
-const projects = makeDemoProjects(75);
+const initialProjects = makeDemoProjects(75);
 const columns = makeDemoColumns<Project>();
 
 // Track theme state for React re-renders
@@ -14,7 +16,48 @@ let setAppTheme: ((t: 'light' | 'dark') => void) | null = null;
 
 function App() {
   const [theme, setThemeState] = useState(getInitialTheme());
+  const [data, setData] = useState(initialProjects);
+  const apiRef = useRef<IOGridApi<Project> | null>(null);
   setAppTheme = (t) => { setThemeState(t); setTheme(t); };
+
+  const onCellValueChanged = useCallback((e: { item: Project; columnId: string; newValue: unknown }) => {
+    setData((prev) =>
+      prev.map((row) =>
+        row.id === e.item.id ? { ...row, [e.columnId]: e.newValue } : row,
+      ),
+    );
+  }, []);
+
+  // MCP Live Testing Bridge — connects this grid to Claude/Cursor for real-time inspection
+  useEffect(() => {
+    const bridge = connectGridToBridge({
+      gridId: 'fluent-demo',
+      getData: () => data,
+      getColumns: () => columns.map((c) => ({
+        columnId: c.columnId,
+        headerName: c.name ?? c.columnId,
+        type: c.type,
+      })),
+      getSort: () => {
+        const state = apiRef.current?.getColumnState();
+        if (state?.sort) {
+          return [{ columnId: state.sort.field, direction: state.sort.direction }];
+        }
+        return [];
+      },
+      getFilters: () => {
+        const state = apiRef.current?.getColumnState();
+        return state?.filters ?? {};
+      },
+      api: apiRef.current ?? undefined,
+      onCellUpdate: (rowIndex, columnId, value) => {
+        setData((prev) =>
+          prev.map((row, i) => (i === rowIndex ? { ...row, [columnId]: value } : row)),
+        );
+      },
+    });
+    return () => bridge.disconnect();
+  }, [data]);
 
   return (
     <FluentProvider theme={theme === 'dark' ? webDarkTheme : webLightTheme}>
@@ -25,7 +68,8 @@ function App() {
           Includes sorting, multi-select &amp; text filtering, column chooser, and pagination.
         </p>
         <OGrid<Project>
-          data={projects}
+          ref={apiRef}
+          data={data}
           columns={columns}
           getRowId={getRowId}
           entityLabelPlural="projects"
@@ -34,7 +78,7 @@ function App() {
           editable
           cellSelection
           statusBar
-          onCellValueChanged={(e) => handleCellValueChanged(projects, e)}
+          onCellValueChanged={onCellValueChanged}
         />
       </div>
     </FluentProvider>

@@ -60,6 +60,10 @@ export interface ConnectGridOptions {
   getColumns: () => BridgeColumnInfo[];
   /** Current pagination state. */
   getPagination?: () => { page: number; pageSize: number; totalCount: number; pageCount: number };
+  /** Returns the current sort model. Called on every state push. */
+  getSort?: () => Array<{ columnId: string; direction: 'asc' | 'desc' }>;
+  /** Returns the current filter model. Called on every state push. */
+  getFilters?: () => Record<string, unknown>;
   /** IOGridApi reference for filter/sort/page commands. */
   api?: BridgeGridApi;
   /** Called when the AI sends an update_cell command. */
@@ -87,6 +91,8 @@ export function connectGridToBridge(options: ConnectGridOptions): BridgeConnecti
     getData,
     getColumns,
     getPagination,
+    getSort,
+    getFilters,
     api,
     onCellUpdate,
     bridgeUrl = 'http://localhost:7890',
@@ -106,11 +112,16 @@ export function connectGridToBridge(options: ConnectGridOptions): BridgeConnecti
       totalCount: data.length,
       pageCount: 1,
     };
+    const sortModel = getSort?.() ?? [];
+    const filterModel = getFilters?.() ?? {};
+
     return {
       gridId,
       rowCount: data.length,
       data: data.slice(0, 200), // cap at 200 rows to keep payload small
       columns,
+      sortModel,
+      filterModel,
       ...pagination,
     };
   }

@@ -16,8 +16,11 @@
 </template>
 
 <script setup lang="ts">
+import { onMounted, onUnmounted } from 'vue';
 import { OGrid } from '@alaarab/ogrid-vue-vuetify';
 import type { IOGridProps } from '@alaarab/ogrid-vue-vuetify';
+import { connectGridToBridge } from '@alaarab/ogrid-mcp/bridge-client';
+import type { BridgeConnection } from '@alaarab/ogrid-mcp/bridge-client';
 import { makeDemoProjects, makeDemoColumns, getRowId, handleCellValueChanged } from '../shared/demoData';
 import type { Project } from '../shared/demoData';
 
@@ -33,4 +36,29 @@ const gridProps: IOGridProps<Project> = {
   statusBar: true,
   onCellValueChanged: (e) => handleCellValueChanged(projects, e),
 };
+
+let bridge: BridgeConnection | null = null;
+
+onMounted(() => {
+  bridge = connectGridToBridge({
+    gridId: 'vue-vuetify-demo',
+    getData: () => projects,
+    getColumns: () => gridProps.columns.map((c) => ({
+      columnId: c.columnId,
+      headerName: c.name ?? c.columnId,
+      type: c.type,
+    })),
+    getSort: () => [],
+    getFilters: () => ({}),
+    onCellUpdate: (rowIndex, columnId, value) => {
+      if (projects[rowIndex]) {
+        (projects[rowIndex] as Record<string, unknown>)[columnId] = value;
+      }
+    },
+  });
+});
+
+onUnmounted(() => {
+  bridge?.disconnect();
+});
 </script>
