@@ -2,8 +2,10 @@ import { Component, Input, ViewEncapsulation, ChangeDetectionStrategy } from '@a
 import { SideBarComponent } from './sidebar.component';
 import type { SideBarProps } from './sidebar.component';
 import { FormulaBarComponent } from './formula-bar.component';
+import { SheetTabsComponent } from './sheet-tabs.component';
 import type { OGridFormulaBarState } from '../services/ogrid.service';
 import { GRID_BORDER_RADIUS } from '@alaarab/ogrid-core';
+import type { ISheetDef } from '@alaarab/ogrid-core';
 import { OGRID_THEME_VARS_CSS } from '../styles/ogrid-theme-vars';
 
 @Component({
@@ -11,7 +13,7 @@ import { OGRID_THEME_VARS_CSS } from '../styles/ogrid-theme-vars';
   standalone: true,
   encapsulation: ViewEncapsulation.None,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [SideBarComponent, FormulaBarComponent],
+  imports: [SideBarComponent, FormulaBarComponent, SheetTabsComponent],
   styles: [OGRID_THEME_VARS_CSS, `
     :host { display: block; height: 100%; }
     .ogrid-layout-root { display: flex; flex-direction: column; height: 100%; }
@@ -139,6 +141,17 @@ import { OGRID_THEME_VARS_CSS } from '../styles/ogrid-theme-vars';
           }
         </div>
 
+        <!-- Sheet tabs (between grid and footer) -->
+        @if (sheetDefs && sheetDefs.length > 0 && activeSheet) {
+          <ogrid-sheet-tabs
+            [sheets]="sheetDefs"
+            [activeSheet]="activeSheet"
+            [showAddButton]="!!onSheetAdd"
+            (sheetChange)="onSheetChange?.($event)"
+            (sheetAdd)="onSheetAdd?.()"
+          />
+        }
+
         <!-- Footer strip (pagination) -->
         @if (hasPagination) {
           <div class="ogrid-layout-footer">
@@ -159,6 +172,10 @@ export class OGridLayoutComponent {
   @Input() showNameBox = false;
   @Input() activeCellRef: string | null = null;
   @Input() formulaBar: OGridFormulaBarState | null = null;
+  @Input() sheetDefs: ISheetDef[] | undefined;
+  @Input() activeSheet: string | undefined;
+  @Input() onSheetChange: ((sheetId: string) => void) | undefined;
+  @Input() onSheetAdd: (() => void) | undefined;
 
   isFullScreen = false;
   readonly borderRadius = GRID_BORDER_RADIUS;

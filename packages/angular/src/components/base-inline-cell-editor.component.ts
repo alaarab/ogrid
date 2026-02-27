@@ -50,7 +50,11 @@ export abstract class BaseInlineCellEditorComponent<T = unknown> {
 
   private syncFromInputs(): void {
     const v = this.value;
-    this.localValue.set(v != null ? String(v) : '');
+    let strVal = v != null ? String(v) : '';
+    if (this.editorType === 'date' && strVal.match(/^\d{4}-\d{2}-\d{2}/)) {
+      strVal = strVal.substring(0, 10);
+    }
+    this.localValue.set(strVal);
 
     const col = this.column;
     if (col?.cellEditorParams?.values) {

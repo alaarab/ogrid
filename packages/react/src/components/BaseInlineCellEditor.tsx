@@ -186,7 +186,8 @@ export function BaseInlineCellEditor<T>(props: BaseInlineCellEditorProps<T>): Re
       // Focus the wrapper for keyboard events (select editor has no input)
       wrapper.focus();
     }
-  }, []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // Mount-only: intentionally runs once to focus/open picker on editor open
 
   // Rich select (shared across all frameworks)
   if (editorType === 'richSelect') {

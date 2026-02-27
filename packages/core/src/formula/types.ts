@@ -156,6 +156,8 @@ export interface IFormulaContext {
   getCellValue(address: ICellAddress): unknown;
   getRangeValues(range: ICellRange): unknown[][];
   now(): Date;
+  /** Optional: return the formula string for a cell, or undefined if not a formula cell. */
+  getCellFormula?(address: ICellAddress): string | undefined;
 }
 
 /** A registered formula function. */

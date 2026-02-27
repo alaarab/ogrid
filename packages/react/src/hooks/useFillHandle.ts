@@ -61,6 +61,9 @@ export function useFillHandle<T>(params: UseFillHandleParams<T>): UseFillHandleR
   const rafRef = useRef(0);
   const liveFillRangeRef = useRef<ISelectionRange | null>(null);
   const colOffsetRef = useLatestRef(colOffset);
+  const itemsRef = useLatestRef(items);
+  const visibleColsRef = useLatestRef(visibleCols);
+  const formulaOptionsRef = useLatestRef(formulaOptions);
 
   useEffect(() => {
     if (!fillDrag || editable === false || !onCellValueChangedRef.current || !wrapperRef.current) return;
@@ -193,7 +196,7 @@ export function useFillHandle<T>(params: UseFillHandleParams<T>): UseFillHandleR
       setActiveCell({ rowIndex: fillDrag.startRow, columnIndex: fillDrag.startCol + colOffsetRef.current });
 
       // Apply fill values
-      const fillEvents = applyFillValues(norm, fillDrag.startRow, fillDrag.startCol, items, visibleCols, formulaOptions);
+      const fillEvents = applyFillValues(norm, fillDrag.startRow, fillDrag.startCol, items, visibleCols, formulaOptionsRef.current);
       if (fillEvents.length > 0) {
         beginBatch?.();
         for (const evt of fillEvents) onCellValueChangedRef.current?.(evt);
@@ -222,6 +225,7 @@ export function useFillHandle<T>(params: UseFillHandleParams<T>): UseFillHandleR
     colOffsetRef,
     wrapperRef,
     onCellValueChangedRef,
+    formulaOptionsRef,
   ]);
 
   // Ref mirror — keeps handleFillHandleMouseDown stable across selection changes
@@ -242,9 +246,6 @@ export function useFillHandle<T>(params: UseFillHandleParams<T>): UseFillHandleR
     []
   );
 
-  const itemsRef = useLatestRef(items);
-  const visibleColsRef = useLatestRef(visibleCols);
-
   const fillDown = useCallback(() => {
     const range = selectionRangeRef.current;
     if (!range || editable === false || !onCellValueChangedRef.current) return;
@@ -255,14 +256,14 @@ export function useFillHandle<T>(params: UseFillHandleParams<T>): UseFillHandleR
       norm.startCol,
       itemsRef.current,
       visibleColsRef.current,
-      formulaOptions
+      formulaOptionsRef.current
     );
     if (fillEvents.length > 0) {
       beginBatch?.();
       for (const evt of fillEvents) onCellValueChangedRef.current(evt);
       endBatch?.();
     }
-  }, [editable, beginBatch, endBatch, onCellValueChangedRef, itemsRef, visibleColsRef]);
+  }, [editable, beginBatch, endBatch, onCellValueChangedRef, itemsRef, visibleColsRef, formulaOptionsRef]);
 
   return { fillDrag, setFillDrag, handleFillHandleMouseDown, fillDown };
 }

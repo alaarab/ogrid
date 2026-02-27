@@ -470,7 +470,7 @@ export function resolveCellDisplayContent<T>(
   if (displayValue == null) return null;
   if (col.type === 'date') {
     const d = new Date(String(displayValue));
-    if (!Number.isNaN(d.getTime())) return d.toLocaleDateString();
+    if (!Number.isNaN(d.getTime())) return d.toLocaleDateString(undefined, { timeZone: 'UTC' });
   }
   if (col.type === 'boolean') {
     return displayValue ? 'True' : 'False';

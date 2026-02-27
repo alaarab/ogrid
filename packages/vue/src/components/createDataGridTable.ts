@@ -22,6 +22,7 @@ import {
 import { buildHeaderRows, CHECKBOX_COLUMN_WIDTH, ROW_NUMBER_COLUMN_WIDTH, DEFAULT_MIN_COLUMN_WIDTH, indexToColumnLetter, formatCellReference } from '@alaarab/ogrid-core';
 import { StatusBar } from './StatusBar';
 import { MarchingAntsOverlay } from './MarchingAntsOverlay';
+import { FormulaRefOverlay } from './FormulaRefOverlay';
 import type { IOGridDataGridProps, IColumnDef, ICellEditorProps } from '../types';
 
 const NOOP = () => {};
@@ -656,6 +657,15 @@ export function createDataGridTable(ui: IDataGridTableUIBindings) {
             columnSizingOverrides: layout.columnSizingOverrides,
             columnOrder: p.columnOrder,
           }),
+
+          // Formula reference overlay
+          ...(p.formulaReferences && p.formulaReferences.length > 0 ? [
+            h(FormulaRefOverlay, {
+              containerEl: tableContainerRef.value,
+              references: p.formulaReferences,
+              colOffset: _colOffset,
+            }),
+          ] : []),
 
           // Column header menu
           h(ui.ColumnHeaderMenu, {

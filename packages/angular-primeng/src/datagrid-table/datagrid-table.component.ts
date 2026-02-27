@@ -20,6 +20,7 @@ import {
   GridContextMenuComponent,
   MarchingAntsOverlayComponent,
   EmptyStateComponent,
+  FormulaRefOverlayComponent,
   DEFAULT_MIN_COLUMN_WIDTH,
   OGRID_THEME_VARS_CSS,
   indexToColumnLetter,
@@ -44,6 +45,7 @@ import { PopoverCellEditorComponent } from './popover-cell-editor.component';
     GridContextMenuComponent,
     MarchingAntsOverlayComponent,
     EmptyStateComponent,
+    FormulaRefOverlayComponent,
     ColumnHeaderFilterComponent,
     ColumnHeaderMenuComponent,
     InlineCellEditorComponent,
@@ -322,6 +324,14 @@ import { PopoverCellEditorComponent } from './popover-cell-editor.component';
                 [visibleColumns]="propsVisibleColumns()"
                 [columnOrder]="propsColumnOrder()"
               ></ogrid-marching-ants-overlay>
+
+              @if (formulaReferences() && formulaReferences()!.length > 0) {
+                <ogrid-formula-ref-overlay
+                  [containerEl]="tableContainerEl()"
+                  [references]="formulaReferences()!"
+                  [colOffset]="colOffset()"
+                />
+              }
 
               @if (showEmptyInGrid() && emptyState()) {
                 <div class="ogrid-empty-container">
@@ -759,6 +769,7 @@ export class DataGridTableComponent<T = unknown> extends BaseDataGridTableCompon
   @Input({ alias: 'showColumnLetters' }) showColumnLettersInput: boolean = false;
   @Input({ alias: 'showNameBox' }) showNameBoxInput: boolean = false;
   @Input() onActiveCellChange: ((ref: string | null) => void) | undefined = undefined;
+  @Input({ alias: 'formulaReferences' }) formulaReferencesInput: import('@alaarab/ogrid-core').FormulaReference[] | undefined = undefined;
   @Input({ alias: 'currentPage' }) currentPageInput: number = 1;
   @Input({ alias: 'pageSize' }) pageSizeInput: number = 25;
 
@@ -790,6 +801,7 @@ export class DataGridTableComponent<T = unknown> extends BaseDataGridTableCompon
   readonly cancelEditHandler = () => this.cancelEdit();
 
   readonly showColumnLetters = computed(() => !!this.getProps()?.showColumnLetters);
+  readonly formulaReferences = computed(() => this.getProps()?.formulaReferences);
 
   constructor() {
     super();
@@ -993,6 +1005,7 @@ export class DataGridTableComponent<T = unknown> extends BaseDataGridTableCompon
       stickyHeader: this.stickyHeaderInput,
       'aria-label': this.ariaLabelInput,
       'aria-labelledby': this.ariaLabelledByInput,
+      formulaReferences: this.formulaReferencesInput,
     };
   }
 

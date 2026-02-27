@@ -31,9 +31,15 @@ export function useInlineCellEditorState(
   params: UseInlineCellEditorStateParams
 ): UseInlineCellEditorStateResult {
   const { value, editorType, onCommit, onCancel } = params;
-  const [localValue, setLocalValue] = useState<string>(
-    value !== null && value !== undefined ? String(value) : ''
-  );
+  const [localValue, setLocalValue] = useState<string>(() => {
+    if (value === null || value === undefined) return '';
+    if (editorType === 'date') {
+      const str = String(value);
+      // Extract YYYY-MM-DD so <input type="date"> recognises the value
+      return str.match(/^\d{4}-\d{2}-\d{2}/) ? str.substring(0, 10) : str;
+    }
+    return String(value);
+  });
 
   const handleKeyDown = useCallback(
     (e: React.KeyboardEvent) => {

@@ -43,6 +43,8 @@ export type {
   IGridDataAccessor,
   IAuditEntry,
   IAuditTrail,
+  ISheetDef,
+  FormulaReference,
 } from './dataGridTypes';
 
 export { toUserLike, isInSelectionRange, normalizeSelectionRange } from './dataGridTypes';

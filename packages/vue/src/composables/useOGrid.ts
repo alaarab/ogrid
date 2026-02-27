@@ -17,6 +17,7 @@ import { useFormulaEngine } from './useFormulaEngine';
 import { useFormulaBar } from './useFormulaBar';
 import { useSideBarState } from './useSideBarState';
 import { FormulaBar } from '../components/FormulaBar';
+import { SheetTabs } from '../components/SheetTabs';
 import type { SideBarProps } from '../components/SideBar';
 import type {
   RowId,
@@ -66,6 +67,8 @@ export interface UseOGridLayout {
   fullScreen?: boolean;
   /** Formula bar element (rendered between toolbar and grid). */
   formulaBar?: unknown;
+  /** Sheet tabs element (rendered between grid and footer). */
+  sheetTabs?: unknown;
 }
 
 /** Filter state. */
@@ -636,6 +639,7 @@ export function useOGrid<T>(
         getDependents: formulaEngine.getDependents,
         getAuditTrail: formulaEngine.getAuditTrail,
       } : {}),
+      formulaReferences: formulaBarState.referencedCells.value.length > 0 ? formulaBarState.referencedCells.value : undefined,
     };
   });
 
@@ -695,6 +699,17 @@ export function useOGrid<T>(
         })
       : undefined;
 
+    // Sheet tabs element (only when sheetDefs are provided)
+    const sheetTabsEl = (p.sheetDefs && p.sheetDefs.length > 0 && p.activeSheet && p.onSheetChange)
+      ? h(SheetTabs, {
+          sheets: p.sheetDefs,
+          activeSheet: p.activeSheet,
+          showAddButton: !!p.onSheetAdd,
+          onSheetChange: p.onSheetChange,
+          onSheetAdd: p.onSheetAdd ?? (() => {}),
+        })
+      : undefined;
+
     return {
       toolbar: resolvedToolbar,
       toolbarBelow: p.toolbarBelow,
@@ -703,6 +718,7 @@ export function useOGrid<T>(
       sideBarProps: sideBarProps.value,
       fullScreen: p.fullScreen,
       formulaBar: formulaBarEl,
+      sheetTabs: sheetTabsEl,
     };
   });
 

@@ -168,6 +168,10 @@ export class OGridService<T> {
   readonly formulaFunctions = signal<Record<string, IFormulaFunction> | undefined>(undefined);
   readonly namedRanges = signal<Record<string, string> | undefined>(undefined);
   readonly sheets = signal<Record<string, IGridDataAccessor> | undefined>(undefined);
+  readonly sheetDefs = signal<import('@alaarab/ogrid-core').ISheetDef[] | undefined>(undefined);
+  readonly activeSheet = signal<string | undefined>(undefined);
+  readonly onSheetChange = signal<((sheetId: string) => void) | undefined>(undefined);
+  readonly onSheetAdd = signal<(() => void) | undefined>(undefined);
 
   /** Active cell reference string (e.g. 'A1') updated by DataGridTable when cellReferences is enabled. */
   readonly activeCellRef = signal<string | null>(null);
@@ -507,6 +511,7 @@ export class OGridService<T> {
     },
     formulas: this.formulasEnabled(),
     formulaVersion: this.formulaVersion(),
+    formulaReferences: this.formulaBarReferences().length > 0 ? this.formulaBarReferences() : undefined,
     ...(this.formulaService.enabled() ? {
       getFormulaValue: this.getFormulaValueFn,
       hasFormula: this.hasFormulaFn,
@@ -928,6 +933,10 @@ export class OGridService<T> {
     if (props.formulaFunctions !== undefined) this.formulaFunctions.set(props.formulaFunctions);
     if (props.namedRanges !== undefined) this.namedRanges.set(props.namedRanges);
     if (props.sheets !== undefined) this.sheets.set(props.sheets);
+    if (props.sheetDefs !== undefined) this.sheetDefs.set(props.sheetDefs);
+    if (props.activeSheet !== undefined) this.activeSheet.set(props.activeSheet);
+    if (props.onSheetChange) this.onSheetChange.set(props.onSheetChange);
+    if (props.onSheetAdd) this.onSheetAdd.set(props.onSheetAdd);
     if (props.entityLabelPlural !== undefined) this.entityLabelPlural.set(props.entityLabelPlural);
     if (props.className !== undefined) this.className.set(props.className);
     if (props.layoutMode !== undefined) this.layoutMode.set(props.layoutMode);

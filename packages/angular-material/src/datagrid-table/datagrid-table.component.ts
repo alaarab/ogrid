@@ -8,6 +8,7 @@ import {
   StatusBarComponent,
   GridContextMenuComponent,
   EmptyStateComponent,
+  FormulaRefOverlayComponent,
   CHECKBOX_COLUMN_WIDTH,
   ROW_NUMBER_COLUMN_WIDTH,
   OGRID_THEME_VARS_CSS,
@@ -31,7 +32,7 @@ import { PopoverCellEditorComponent } from './popover-cell-editor.component';
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
   encapsulation: ViewEncapsulation.None,
-  imports: [ColumnHeaderFilterComponent, ColumnHeaderMenuComponent, StatusBarComponent, GridContextMenuComponent, MarchingAntsOverlayComponent, EmptyStateComponent, InlineCellEditorComponent, PopoverCellEditorComponent],
+  imports: [ColumnHeaderFilterComponent, ColumnHeaderMenuComponent, StatusBarComponent, GridContextMenuComponent, MarchingAntsOverlayComponent, EmptyStateComponent, FormulaRefOverlayComponent, InlineCellEditorComponent, PopoverCellEditorComponent],
   providers: [DataGridStateService, ColumnReorderService, VirtualScrollService],
   template: `
     <div class="ogrid-datagrid-root">
@@ -306,6 +307,14 @@ import { PopoverCellEditorComponent } from './popover-cell-editor.component';
                 [columnOrder]="propsColumnOrder()"
               ></ogrid-marching-ants-overlay>
 
+              @if (formulaReferences() && formulaReferences()!.length > 0) {
+                <ogrid-formula-ref-overlay
+                  [containerEl]="tableContainerEl()"
+                  [references]="formulaReferences()!"
+                  [colOffset]="colOffset()"
+                />
+              }
+
               @if (showEmptyInGrid() && emptyState()) {
                 <div class="ogrid-datagrid-empty">
                   <div class="ogrid-datagrid-empty__title">No results found</div>
@@ -579,6 +588,7 @@ export class DataGridTableComponent<T> extends BaseDataGridTableComponent<T> {
   @ViewChild('tableContainerElRef') private tableContainerRef?: ElementRef<HTMLElement>;
 
   readonly showColumnLetters = computed(() => !!this.getProps()?.showColumnLetters);
+  readonly formulaReferences = computed(() => this.getProps()?.formulaReferences);
 
   constructor() {
     super();

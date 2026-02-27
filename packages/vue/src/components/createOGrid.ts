@@ -430,6 +430,9 @@ export function createOGrid(ui: IOGridUIBindings) {
           // Main content area (sidebar + grid)
           h('div', { style: { display: 'flex', flex: '1', minHeight: '0' } }, mainAreaChildren),
 
+          // Sheet tabs (between grid and footer)
+          ...(layout.value.sheetTabs ? [layout.value.sheetTabs as VNode] : []),
+
           // Footer strip (pagination)
           h('div', {
             style: {
