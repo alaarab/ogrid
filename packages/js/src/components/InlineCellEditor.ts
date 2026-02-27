@@ -22,6 +22,7 @@ export class InlineCellEditor<T> {
   private onCommit: ((rowId: RowId, columnId: string, value: unknown) => void) | null = null;
   private onCancel: (() => void) | null = null;
   private onAfterCommit: (() => void) | null = null;
+  private scrollCleanup: (() => void) | null = null;
 
   constructor(container: HTMLElement) {
     this.container = container;
@@ -77,6 +78,16 @@ export class InlineCellEditor<T> {
       } else {
         dropdownEl.style.top = `${rect.bottom}px`;
       }
+
+      // Close editor on scroll so the fixed dropdown doesn't drift
+      const scrollParent = editor.closest('.ogrid-table-wrapper') ?? editor.closest('[style*="overflow"]');
+      const handleScroll = () => this.closeEditor();
+      if (scrollParent) scrollParent.addEventListener('scroll', handleScroll, { passive: true });
+      window.addEventListener('scroll', handleScroll, { passive: true });
+      this.scrollCleanup = () => {
+        if (scrollParent) scrollParent.removeEventListener('scroll', handleScroll);
+        window.removeEventListener('scroll', handleScroll);
+      };
     }
   }
 
@@ -86,6 +97,8 @@ export class InlineCellEditor<T> {
   }
 
   closeEditor(): void {
+    this.scrollCleanup?.();
+    this.scrollCleanup = null;
     // Reset visibility on the cell that was being edited (Bug 1 & 2 fix:
     // the renderer sets visibility:hidden on the editing cell, and it may
     // not re-render before the next click lands, so we clear it explicitly).
