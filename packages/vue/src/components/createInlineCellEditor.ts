@@ -1,4 +1,4 @@
-import { defineComponent, ref, h, onMounted, nextTick, watch, type PropType, type VNode } from 'vue';
+import { defineComponent, ref, h, onMounted, onUnmounted, nextTick, watch, type PropType, type VNode } from 'vue';
 import type { IColumnDef } from '../types';
 
 export interface CreateInlineCellEditorOptions {
@@ -59,17 +59,32 @@ export function createInlineCellEditor(options: CreateInlineCellEditorOptions) {
         }
       };
 
+      // Close select/richSelect on scroll so the fixed dropdown doesn't drift
+      let scrollCleanup: (() => void) | null = null;
+
       onMounted(() => {
         nextTick(() => {
           if (selectWrapperRef.value) {
             selectWrapperRef.value.focus();
             positionDropdown();
+            // Listen for scroll to close the editor
+            const wrapper = selectWrapperRef.value;
+            const scrollParent = wrapper.closest('.ogrid-table-wrapper') ?? wrapper.closest('[style*="overflow"]');
+            const handleScroll = () => { if (props.onCancel) props.onCancel(); };
+            if (scrollParent) scrollParent.addEventListener('scroll', handleScroll, { passive: true });
+            window.addEventListener('scroll', handleScroll, { passive: true });
+            scrollCleanup = () => {
+              if (scrollParent) scrollParent.removeEventListener('scroll', handleScroll);
+              window.removeEventListener('scroll', handleScroll);
+            };
             return;
           }
           inputRef.value?.focus();
           inputRef.value?.select();
         });
       });
+
+      onUnmounted(() => { scrollCleanup?.(); });
 
       // Sync local value when prop changes
       watch(() => props.value, (v) => { localValue.value = v; });
