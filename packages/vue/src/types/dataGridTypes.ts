@@ -26,6 +26,8 @@ export type {
   IGridDataAccessor,
   IAuditEntry,
   IAuditTrail,
+  ISheetDef,
+  FormulaReference,
 } from '@alaarab/ogrid-core';
 
 export { toUserLike, isInSelectionRange, normalizeSelectionRange } from '@alaarab/ogrid-core';
@@ -47,6 +49,8 @@ import type {
   IGridDataAccessor,
   IAuditEntry,
   IAuditTrail,
+  ISheetDef,
+  FormulaReference,
 } from '@alaarab/ogrid-core';
 
 // --- OGrid / useOGrid ---
@@ -165,6 +169,15 @@ interface IOGridBaseProps<T> {
   /** Sheet accessors for cross-sheet formula references (e.g. { Sheet2: accessor }). */
   sheets?: Record<string, IGridDataAccessor>;
 
+  /** Sheet definitions for the tab bar at grid bottom. */
+  sheetDefs?: ISheetDef[];
+  /** Active sheet ID (controlled). */
+  activeSheet?: string;
+  /** Called when user clicks a sheet tab. */
+  onSheetChange?: (sheetId: string) => void;
+  /** Called when user clicks the "+" add sheet button. */
+  onSheetAdd?: () => void;
+
   'aria-label'?: string;
   'aria-labelledby'?: string;
 }
@@ -282,4 +295,6 @@ export interface IOGridDataGridProps<T> {
   getAuditTrail?: (col: number, row: number) => IAuditTrail | null;
   /** Monotonic counter incremented on each formula recalculation — used for cache invalidation. */
   formulaVersion?: number;
+  /** Cell references to highlight (from active formula in formula bar). */
+  formulaReferences?: FormulaReference[];
 }

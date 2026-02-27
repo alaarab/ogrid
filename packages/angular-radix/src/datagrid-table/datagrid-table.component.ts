@@ -8,6 +8,7 @@ import {
   GridContextMenuComponent,
   MarchingAntsOverlayComponent,
   EmptyStateComponent,
+  FormulaRefOverlayComponent,
   OGRID_THEME_VARS_CSS,
   indexToColumnLetter,
   formatCellReference,
@@ -29,7 +30,7 @@ import { PopoverCellEditorComponent } from './popover-cell-editor.component';
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
   encapsulation: ViewEncapsulation.None,
-  imports: [ColumnHeaderFilterComponent, ColumnHeaderMenuComponent, StatusBarComponent, GridContextMenuComponent, MarchingAntsOverlayComponent, EmptyStateComponent, InlineCellEditorComponent, PopoverCellEditorComponent],
+  imports: [ColumnHeaderFilterComponent, ColumnHeaderMenuComponent, StatusBarComponent, GridContextMenuComponent, MarchingAntsOverlayComponent, EmptyStateComponent, FormulaRefOverlayComponent, InlineCellEditorComponent, PopoverCellEditorComponent],
   providers: [DataGridStateService, ColumnReorderService, VirtualScrollService],
   styles: [OGRID_THEME_VARS_CSS, `
     :host { display: block; }
@@ -678,6 +679,14 @@ import { PopoverCellEditorComponent } from './popover-cell-editor.component';
                 [columnOrder]="propsColumnOrder()"
               ></ogrid-marching-ants-overlay>
 
+              @if (formulaReferences() && formulaReferences()!.length > 0) {
+                <ogrid-formula-ref-overlay
+                  [containerEl]="tableContainerEl()"
+                  [references]="formulaReferences()!"
+                  [colOffset]="colOffset()"
+                />
+              }
+
               @if (showEmptyInGrid() && emptyState()) {
                 <div class="ogrid-datagrid-empty">
                   <div class="ogrid-datagrid-empty__title">No results found</div>
@@ -760,6 +769,7 @@ export class DataGridTableComponent<T> extends BaseDataGridTableComponent<T> {
   readonly cancelEditBound = () => this.cancelEdit();
 
   readonly showColumnLetters = computed(() => !!this.getProps()?.showColumnLetters);
+  readonly formulaReferences = computed(() => this.getProps()?.formulaReferences);
 
   constructor() {
     super();

@@ -160,6 +160,25 @@ export function tokenize(input: string): Token[] {
       ) {
         pos++;
       }
+      // Allow a single dot in function names (e.g. STDEV.S, PERCENTILE.INC)
+      // Only consume the dot if it is followed by more letters (not a decimal number)
+      if (
+        pos < input.length &&
+        input[pos] === '.' &&
+        pos + 1 < input.length &&
+        ((input[pos + 1] >= 'A' && input[pos + 1] <= 'Z') || (input[pos + 1] >= 'a' && input[pos + 1] <= 'z'))
+      ) {
+        pos++; // consume '.'
+        while (
+          pos < input.length &&
+          ((input[pos] >= 'A' && input[pos] <= 'Z') ||
+            (input[pos] >= 'a' && input[pos] <= 'z') ||
+            (input[pos] >= '0' && input[pos] <= '9') ||
+            input[pos] === '_')
+        ) {
+          pos++;
+        }
+      }
       const word = input.slice(start, pos);
 
       // If immediately followed by '!' → SHEET_REF token (unquoted sheet name)
