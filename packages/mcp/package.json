@@ -1,0 +1,30 @@
+{
+  "name": "@alaarab/ogrid-mcp",
+  "version": "2.3.0",
+  "description": "MCP server for OGrid documentation",
+  "type": "module",
+  "bin": {
+    "ogrid-mcp": "./dist/esm/index.js"
+  },
+  "main": "./dist/esm/index.js",
+  "exports": {
+    ".": {
+      "import": "./dist/esm/index.js",
+      "default": "./dist/esm/index.js"
+    }
+  },
+  "files": ["dist"],
+  "scripts": {
+    "build": "tsup",
+    "dev": "tsup --watch"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.0.0",
+    "zod": "^3.22.0"
+  },
+  "devDependencies": {
+    "tsup": "^8.0.0",
+    "typescript": "^5.7.0"
+  },
+  "engines": { "node": ">=18" }
+}
