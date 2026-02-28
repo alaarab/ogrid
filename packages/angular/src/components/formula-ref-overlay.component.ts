@@ -13,7 +13,7 @@ import {
   signal,
   effect,
 } from '@angular/core';
-import { FORMULA_REF_COLORS, type FormulaReference } from '@alaarab/ogrid-core';
+import { FORMULA_REF_COLORS, type FormulaReference } from '@alaarab/ogrid-core/formula';
 
 interface RefRect {
   top: number;

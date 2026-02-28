@@ -7,7 +7,7 @@
  */
 
 import { defineComponent, h, ref, watch, type PropType } from 'vue';
-import { FORMULA_BAR_STYLES, handleFormulaBarKeyDown } from '@alaarab/ogrid-core';
+import { FORMULA_BAR_STYLES, handleFormulaBarKeyDown } from '@alaarab/ogrid-core/formula';
 
 export interface FormulaBarProps {
   /** Active cell reference (e.g. "A1"). */

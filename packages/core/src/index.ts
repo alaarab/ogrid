@@ -203,8 +203,9 @@ export { UndoRedoStack } from './utils';
 export { validateColumns, validateRowIds, validateVirtualScrollConfig } from './utils';
 
 // Utils — cellReference
-export { indexToColumnLetter, formatCellReference } from './utils';
-export { extractFormulaReferences, processFormulaBarCommit, deriveFormulaBarText, handleFormulaBarKeyDown, canInsertReference, insertReferenceAtCursor } from './utils';
+export { indexToColumnLetter, columnLetterToIndex, formatCellReference } from './utils';
+
+// Utils — formulaBarHelpers (type-only; runtime moved to @alaarab/ogrid-core/formula)
 export type { FormulaReference } from './utils';
 
 // Utils — responsiveColumns
@@ -233,38 +234,7 @@ export {
 export { Z_INDEX } from './constants';
 export type { ZIndexKey } from './constants';
 
-// Constants — formulaBar
-export { FORMULA_REF_COLORS, FORMULA_BAR_CSS, FORMULA_BAR_STYLES } from './constants';
-
-// Formula system
-export {
-  FormulaError,
-  FormulaEngine,
-  FormulaEvaluator,
-  DependencyGraph,
-  tokenize,
-  parse,
-  createBuiltInFunctions,
-  columnLetterToIndex,
-  parseCellRef,
-  parseRange,
-  formatAddress,
-  toCellKey,
-  fromCellKey,
-  adjustFormulaReferences,
-  toNumber,
-  toString as formulaToString,
-  toBoolean,
-  flattenArgs,
-  isFormulaError,
-  REF_ERROR,
-  DIV_ZERO_ERROR,
-  VALUE_ERROR,
-  NAME_ERROR,
-  CIRC_ERROR,
-  GENERAL_ERROR,
-  NA_ERROR,
-} from './formula';
+// Formula types (type-only — zero runtime cost; runtime is in @alaarab/ogrid-core/formula)
 export type {
   ICellAddress,
   ICellRange,

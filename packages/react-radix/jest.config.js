@@ -20,6 +20,7 @@ module.exports = {
   moduleNameMapper: {
     '\\.(css|less|scss|sass)$': 'identity-obj-proxy',
     '^@alaarab/ogrid-core$': '<rootDir>/../core/src/index.ts',
+    '^@alaarab/ogrid-core/formula$': '<rootDir>/../core/src/formula/index.ts',
     '^@alaarab/ogrid-react$': '<rootDir>/../react/src/index.ts',
     '^@alaarab/ogrid-react/testing$': '<rootDir>/../react/src/testing/index.ts',
     '^@alaarab/ogrid-react/storybook$': '<rootDir>/../react/src/storybook/index.ts',

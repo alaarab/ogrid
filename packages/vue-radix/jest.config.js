@@ -14,6 +14,7 @@ module.exports = {
         baseUrl: '.',
         paths: {
           '@alaarab/ogrid-core': ['../core/src/index.ts'],
+          '@alaarab/ogrid-core/formula': ['../core/src/formula/index.ts'],
           '@alaarab/ogrid-core/testing': ['../core/src/testing/index.ts'],
           '@alaarab/ogrid-vue': ['../vue/src/index.ts'],
           '@alaarab/ogrid-vue/testing': ['../vue/src/testing/index.ts'],
@@ -23,6 +24,7 @@ module.exports = {
   },
   moduleNameMapper: {
     '^@alaarab/ogrid-core$': '<rootDir>/../core/src/index.ts',
+    '^@alaarab/ogrid-core/formula$': '<rootDir>/../core/src/formula/index.ts',
     '^@alaarab/ogrid-core/testing$': '<rootDir>/../core/src/testing/index.ts',
     '^@alaarab/ogrid-vue$': '<rootDir>/../vue/src/index.ts',
     '^@alaarab/ogrid-vue/testing$': '<rootDir>/../vue/src/testing/index.ts',

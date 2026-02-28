@@ -69,6 +69,7 @@ export {
   FormulaEvaluator,
   toNumber,
   toString,
+  toString as formulaToString,
   toBoolean,
   flattenArgs,
 } from './evaluator';
@@ -81,3 +82,17 @@ export { FormulaEngine } from './formulaEngine';
 
 // Built-in functions registry
 export { createBuiltInFunctions } from './functions';
+
+// Formula bar helpers (depend on tokenizer, bundled with formula subpath)
+export {
+  extractFormulaReferences,
+  processFormulaBarCommit,
+  deriveFormulaBarText,
+  handleFormulaBarKeyDown,
+  canInsertReference,
+  insertReferenceAtCursor,
+} from '../utils/formulaBarHelpers';
+export type { FormulaReference } from '../utils/formulaBarHelpers';
+
+// Formula bar constants
+export { FORMULA_REF_COLORS, FORMULA_BAR_CSS, FORMULA_BAR_STYLES } from '../constants/formulaBar';

@@ -3,24 +3,11 @@
  * Extends the existing cellReference.ts with reverse parsing and absolute reference support.
  */
 
-import { indexToColumnLetter } from '../utils/cellReference';
+import { indexToColumnLetter, columnLetterToIndex } from '../utils/cellReference';
 import type { ICellAddress, ICellRange, CellKey } from './types';
 
-/**
- * Parse a column letter string to a 0-based index.
- * @example columnLetterToIndex('A')  // 0
- * @example columnLetterToIndex('Z')  // 25
- * @example columnLetterToIndex('AA') // 26
- * @example columnLetterToIndex('AZ') // 51
- */
-export function columnLetterToIndex(letters: string): number {
-  let result = 0;
-  const upper = letters.toUpperCase();
-  for (let i = 0; i < upper.length; i++) {
-    result = result * 26 + (upper.charCodeAt(i) - 64);
-  }
-  return result - 1;
-}
+// Re-export columnLetterToIndex so existing formula/index.ts barrel keeps working
+export { columnLetterToIndex };
 
 /** Regex for a cell reference: optional $ before letters, optional $ before digits. */
 const CELL_REF_RE = /^(\$?)([A-Za-z]+)(\$?)(\d+)$/;

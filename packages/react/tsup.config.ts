@@ -10,6 +10,7 @@ export default defineConfig({
   dts: false,
   target: 'es2020',
   minify: true,
+  external: ['@alaarab/ogrid-core', '@alaarab/ogrid-core/formula', '@tanstack/react-virtual', 'react', 'react-dom'],
   esbuildOptions(options) {
     options.jsx = 'automatic';
   },

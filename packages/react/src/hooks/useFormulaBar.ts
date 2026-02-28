@@ -5,7 +5,7 @@
  */
 
 import { useState, useCallback, useMemo, useRef, useEffect } from 'react';
-import { extractFormulaReferences, processFormulaBarCommit, deriveFormulaBarText, insertReferenceAtCursor, type FormulaReference } from '@alaarab/ogrid-core';
+import { extractFormulaReferences, processFormulaBarCommit, deriveFormulaBarText, insertReferenceAtCursor, type FormulaReference } from '@alaarab/ogrid-core/formula';
 
 export interface UseFormulaBarParams {
   /** Active cell column index (0-based). */
