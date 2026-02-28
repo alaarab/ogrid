@@ -4,6 +4,10 @@ All notable changes to OGrid will be documented in this file.
 
 ## [Unreleased]
 
+### Added
+
+- **Mobile touch support** — Migrated all drag interactions from Mouse Events to the Pointer Events API (`pointerdown`, `pointermove`, `pointerup`), unifying mouse, touch, and pen input across all 14 packages (React, Angular, Vue, JS). Affected interactions: cell drag-selection, fill handle drag-to-fill, column resize, and column reorder. Added `touch-action: none` CSS on interactive handles to prevent browser default gestures during drag. Added `@media (pointer: coarse)` rules to increase touch target sizes on touch devices (fill handle 7px→14px, resize handle 8px→16px).
+
 ### Fixed
 
 - **Select editor highlight** — Select and rich-select editors now highlight the current cell value when opened, instead of always defaulting to the first option (React, Vue)

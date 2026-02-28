@@ -163,7 +163,7 @@ interface ISelectionRange {
 
 ### Performance
 
-Drag selection is optimized with `requestAnimationFrame` and DOM attribute toggling. During a drag, React state is not updated on every mouse move -- only on mouse up. This keeps the grid responsive even with thousands of cells.
+Drag selection is optimized with `requestAnimationFrame` and DOM attribute toggling. During a drag, React state is not updated on every pointer move — only on pointer up. This keeps the grid responsive even with thousands of cells. All drag interactions use the [Pointer Events API](./mobile-touch), so cell selection works with mouse, touch, and stylus input.
 
 ### Disabling Cell Selection
 
