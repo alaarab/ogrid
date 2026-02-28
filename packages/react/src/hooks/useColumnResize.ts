@@ -112,7 +112,7 @@ export function useColumnResize<T>({
 
     const effectiveMinWidth = columnId === ROW_NUMBER_COLUMN_ID ? ROW_NUMBER_COLUMN_MIN_WIDTH : minWidth;
 
-    const onMove = (moveEvent: MouseEvent) => {
+    const onMove = (moveEvent: PointerEvent) => {
       const deltaX = moveEvent.clientX - startX;
       latestWidth = Math.max(effectiveMinWidth, startWidth + deltaX);
 
@@ -125,8 +125,8 @@ export function useColumnResize<T>({
     };
 
     const cleanup = () => {
-      document.removeEventListener('mousemove', onMove);
-      document.removeEventListener('mouseup', onUp);
+      document.removeEventListener('pointermove', onMove);
+      document.removeEventListener('pointerup', onUp);
       cleanupRef.current = null;
 
       // Restore cursor and user-select
@@ -158,8 +158,8 @@ export function useColumnResize<T>({
       }
     };
 
-    document.addEventListener('mousemove', onMove);
-    document.addEventListener('mouseup', onUp);
+    document.addEventListener('pointermove', onMove);
+    document.addEventListener('pointerup', onUp);
     cleanupRef.current = cleanup;
   }, [defaultWidth, minWidth, setColumnSizingOverrides, columnSizingOverridesRef]);
 

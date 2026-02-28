@@ -37,7 +37,7 @@ export interface TableRendererInteractionState {
   onResizeStart?: (columnId: string, clientX: number, currentWidth: number) => void;
   onResizeDoubleClick?: (columnId: string) => void;
   // Fill handle
-  onFillHandleMouseDown?: (e: MouseEvent) => void;
+  onFillHandleMouseDown?: (e: PointerEvent) => void;
   // Row selection
   rowSelectionMode?: 'single' | 'multiple' | 'none';
   selectedRowIds?: Set<RowId>;
@@ -56,7 +56,7 @@ export interface TableRendererInteractionState {
   leftOffsets?: Record<string, number>;
   rightOffsets?: Record<string, number>;
   // Column reorder
-  onColumnReorderStart?: (columnId: string, event: MouseEvent) => void;
+  onColumnReorderStart?: (columnId: string, event: PointerEvent) => void;
 }
 
 
@@ -76,13 +76,13 @@ export class TableRenderer<T> {
 
   // Delegated event handlers bound to tbody
   private _tbodyClickHandler: ((e: MouseEvent) => void) | null = null;
-  private _tbodyMousedownHandler: ((e: MouseEvent) => void) | null = null;
+  private _tbodyPointerdownHandler: ((e: PointerEvent) => void) | null = null;
   private _tbodyDblclickHandler: ((e: MouseEvent) => void) | null = null;
   private _tbodyContextmenuHandler: ((e: MouseEvent) => void) | null = null;
 
   // Delegated event handlers bound to thead (avoids per-<th> inline listeners)
   private _theadClickHandler: ((e: MouseEvent) => void) | null = null;
-  private _theadMousedownHandler: ((e: MouseEvent) => void) | null = null;
+  private _theadPointerdownHandler: ((e: PointerEvent) => void) | null = null;
   private _theadDblclickHandler: ((e: MouseEvent) => void) | null = null;
 
   // State tracking for incremental DOM patching
@@ -128,7 +128,7 @@ export class TableRenderer<T> {
     this.interactionState = state;
   }
 
-  private getCellFromEvent(e: MouseEvent): { el: HTMLElement; rowIndex: number; colIndex: number } | null {
+  private getCellFromEvent(e: MouseEvent | PointerEvent): { el: HTMLElement; rowIndex: number; colIndex: number } | null {
     const target = e.target as HTMLElement;
     const cell = target.closest('td[data-row-index]') as HTMLElement | null;
     if (!cell) return null;
@@ -146,8 +146,8 @@ export class TableRenderer<T> {
       this.interactionState?.onCellClick?.({ rowIndex: cell.rowIndex, colIndex: cell.colIndex, event: e });
     };
 
-    this._tbodyMousedownHandler = (e: MouseEvent) => {
-      // Fill handle mousedown — delegated from per-cell inline listener
+    this._tbodyPointerdownHandler = (e: PointerEvent) => {
+      // Fill handle pointerdown — delegated from per-cell inline listener
       const target = e.target as HTMLElement;
       if (target.classList.contains('ogrid-fill-handle') || target.getAttribute('data-fill-handle') === 'true') {
         this.interactionState?.onFillHandleMouseDown?.(e);
@@ -177,7 +177,7 @@ export class TableRenderer<T> {
     };
 
     this.tbody.addEventListener('click', this._tbodyClickHandler, { passive: true });
-    this.tbody.addEventListener('mousedown', this._tbodyMousedownHandler);
+    this.tbody.addEventListener('pointerdown', this._tbodyPointerdownHandler);
     this.tbody.addEventListener('dblclick', this._tbodyDblclickHandler, { passive: true });
     this.tbody.addEventListener('contextmenu', this._tbodyContextmenuHandler);
   }
@@ -185,11 +185,11 @@ export class TableRenderer<T> {
   private detachBodyDelegation(): void {
     if (!this.tbody) return;
     if (this._tbodyClickHandler) this.tbody.removeEventListener('click', this._tbodyClickHandler);
-    if (this._tbodyMousedownHandler) this.tbody.removeEventListener('mousedown', this._tbodyMousedownHandler);
+    if (this._tbodyPointerdownHandler) this.tbody.removeEventListener('pointerdown', this._tbodyPointerdownHandler);
     if (this._tbodyDblclickHandler) this.tbody.removeEventListener('dblclick', this._tbodyDblclickHandler);
     if (this._tbodyContextmenuHandler) this.tbody.removeEventListener('contextmenu', this._tbodyContextmenuHandler);
     this._tbodyClickHandler = null;
-    this._tbodyMousedownHandler = null;
+    this._tbodyPointerdownHandler = null;
     this._tbodyDblclickHandler = null;
     this._tbodyContextmenuHandler = null;
   }
@@ -200,13 +200,13 @@ export class TableRenderer<T> {
 
     // Sort clicks and filter icon clicks use inline listeners for stale-reference compatibility
     // (tests hold references to <th> elements that become detached after header re-render).
-    // Delegation handles resize and column reorder mousedown events only.
+    // Delegation handles resize and column reorder pointerdown events only.
     this._theadClickHandler = null;
 
-    this._theadMousedownHandler = (e: MouseEvent) => {
+    this._theadPointerdownHandler = (e: PointerEvent) => {
       const target = e.target as HTMLElement;
 
-      // Resize handle mousedown
+      // Resize handle pointerdown
       if (target.classList.contains('ogrid-resize-handle')) {
         e.stopPropagation();
         // Check for data-column-id on the resize handle itself (row number column)
@@ -225,7 +225,7 @@ export class TableRenderer<T> {
       // Don't start reorder from filter icon
       if (target.classList.contains('ogrid-filter-icon')) return;
 
-      // Column reorder mousedown
+      // Column reorder pointerdown
       if (this.interactionState?.onColumnReorderStart) {
         const th = target.closest('th[data-column-id]') as HTMLElement | null;
         if (!th) return;
@@ -250,17 +250,17 @@ export class TableRenderer<T> {
     };
 
     if (this._theadClickHandler) this.thead.addEventListener('click', this._theadClickHandler);
-    this.thead.addEventListener('mousedown', this._theadMousedownHandler);
+    this.thead.addEventListener('pointerdown', this._theadPointerdownHandler);
     this.thead.addEventListener('dblclick', this._theadDblclickHandler);
   }
 
   private detachHeaderDelegation(): void {
     if (!this.thead) return;
     if (this._theadClickHandler) this.thead.removeEventListener('click', this._theadClickHandler);
-    if (this._theadMousedownHandler) this.thead.removeEventListener('mousedown', this._theadMousedownHandler);
+    if (this._theadPointerdownHandler) this.thead.removeEventListener('pointerdown', this._theadPointerdownHandler);
     if (this._theadDblclickHandler) this.thead.removeEventListener('dblclick', this._theadDblclickHandler);
     this._theadClickHandler = null;
-    this._theadMousedownHandler = null;
+    this._theadPointerdownHandler = null;
     this._theadDblclickHandler = null;
   }
 
@@ -521,7 +521,7 @@ export class TableRenderer<T> {
         fillHandle.style.cursor = 'crosshair';
         fillHandle.style.zIndex = '5';
         el.style.position = el.style.position || 'relative';
-        fillHandle.addEventListener('mousedown', (e) => {
+        fillHandle.addEventListener('pointerdown', (e) => {
           this.interactionState?.onFillHandleMouseDown?.(e);
         });
         el.appendChild(fillHandle);
@@ -820,7 +820,7 @@ export class TableRenderer<T> {
         th.style.position = th.style.position || 'relative';
         th.appendChild(resizeHandle);
 
-        // Resize mousedown handled via delegated listener on <thead>
+        // Resize pointerdown handled via delegated listener on <thead>
 
         // Filter icon (if column is filterable)
         const filterConfig = this.filterConfigs.get(col.columnId);
@@ -855,7 +855,7 @@ export class TableRenderer<T> {
           th.appendChild(filterBtn);
         }
 
-        // Column reorder mousedown handled via delegated listener on <thead>
+        // Column reorder pointerdown handled via delegated listener on <thead>
 
         tr.appendChild(th);
       }
@@ -1125,7 +1125,7 @@ export class TableRenderer<T> {
             fillHandle.style.zIndex = '5';
             td.style.position = td.style.position || 'relative';
 
-            // Fill handle mousedown handled via delegated listener on <tbody>
+            // Fill handle pointerdown handled via delegated listener on <tbody>
             td.appendChild(fillHandle);
           }
         }
