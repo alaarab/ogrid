@@ -67,3 +67,30 @@ export function getResponsiveHiddenColumns<T extends IColumnMeta>(
 
   return hidden;
 }
+
+/**
+ * Normalize the `responsiveColumns` prop value (boolean | config | undefined)
+ * into a config object or undefined. Used by all framework packages so they
+ * don't each duplicate the `true → {}` coercion.
+ */
+export function resolveResponsiveConfig(
+  value: boolean | IResponsiveColumnsConfig | undefined,
+): IResponsiveColumnsConfig | undefined {
+  if (value === true) return {};
+  return value || undefined;
+}
+
+/**
+ * Apply responsive column hiding to an already-filtered column list.
+ * Returns the input array unchanged when no columns need hiding (avoids allocation).
+ */
+export function applyResponsiveHiding<T extends IColumnMeta>(
+  columns: readonly T[],
+  containerWidth: number,
+  config: IResponsiveColumnsConfig | undefined,
+): readonly T[] {
+  if (!config || containerWidth <= 0) return columns;
+  const hidden = getResponsiveHiddenColumns(containerWidth, columns, config);
+  if (hidden.size === 0) return columns;
+  return columns.filter((c) => !hidden.has(c.columnId));
+}
