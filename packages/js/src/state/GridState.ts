@@ -24,7 +24,8 @@ import {
   mergeFilter,
   validateColumns,
   validateRowIds,
-  getResponsiveHiddenColumns,
+  resolveResponsiveConfig,
+  applyResponsiveHiding,
 } from '@alaarab/ogrid-core';
 import { EventEmitter } from './EventEmitter';
 import type { FormulaEngineState } from './FormulaEngineState';
@@ -100,9 +101,7 @@ export class GridState<T> {
     this._workerSort = options.workerSort ?? false;
 
     // Responsive columns config
-    if (options.responsiveColumns) {
-      this._responsiveColumns = options.responsiveColumns === true ? {} : options.responsiveColumns;
-    }
+    this._responsiveColumns = resolveResponsiveConfig(options.responsiveColumns) ?? null;
 
     // Derive initial filter options for client-side data
     if (!this._dataSource) {
@@ -150,19 +149,8 @@ export class GridState<T> {
   /** Get the visible columns in display order (respects column reorder and responsive hiding). Memoized via dirty flag. */
   get visibleColumnDefs(): IColumnDef<T>[] {
     if (!this._visibleColsDirty && this._visibleColsCache) return this._visibleColsCache;
-    let visible = this._columns.filter(c => this._visibleColumns.has(c.columnId));
-
-    // Apply responsive column hiding
-    if (this._responsiveColumns && this._containerWidth > 0) {
-      const responsiveHidden = getResponsiveHiddenColumns(
-        this._containerWidth,
-        visible as unknown as Parameters<typeof getResponsiveHiddenColumns>[1],
-        this._responsiveColumns,
-      );
-      if (responsiveHidden.size > 0) {
-        visible = visible.filter(c => !responsiveHidden.has(c.columnId));
-      }
-    }
+    const userVisible = this._columns.filter(c => this._visibleColumns.has(c.columnId));
+    const visible = applyResponsiveHiding(userVisible, this._containerWidth, this._responsiveColumns ?? undefined) as IColumnDef<T>[];
 
     if (this._columnOrder.length === 0) {
       this._visibleColsCache = visible;
