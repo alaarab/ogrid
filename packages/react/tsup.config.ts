@@ -9,11 +9,9 @@ export default defineConfig({
   clean: false,
   dts: false,
   target: 'es2020',
+  minify: true,
   esbuildOptions(options) {
     options.jsx = 'automatic';
   },
-  // Bundle these into the react package so consumers don't need to
-  // traverse extra packages during their build.
-  noExternal: ['@alaarab/ogrid-core', '@tanstack/react-virtual'],
   outExtension: () => ({ js: '.js' }),
 });
