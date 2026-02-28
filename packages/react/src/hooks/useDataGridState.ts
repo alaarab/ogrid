@@ -307,6 +307,7 @@ export function useDataGridState<T>(
     getFormula: props.getFormula,
     hasFormula: props.hasFormula,
     setFormula: props.setFormula,
+    onFormulaInsertReference: props.onFormulaInsertReference,
   });
 
   const {
@@ -398,6 +399,7 @@ export function useDataGridState<T>(
       isDragging: cellSelection ? isDragging : false,
       getFormulaValue: props.getFormulaValue,
       hasFormula: props.hasFormula,
+      getFormula: props.getFormula,
       formulaVersion: props.formulaVersion,
     }),
     [
@@ -415,6 +417,7 @@ export function useDataGridState<T>(
       isDragging,
       props.getFormulaValue,
       props.hasFormula,
+      props.getFormula,
       props.formulaVersion,
     ]
   );

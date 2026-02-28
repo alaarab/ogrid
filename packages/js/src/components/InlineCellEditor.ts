@@ -36,7 +36,8 @@ export class InlineCellEditor<T> {
     cell: HTMLTableCellElement,
     onCommit: (rowId: RowId, columnId: string, value: unknown) => void,
     onCancel: () => void,
-    onAfterCommit?: () => void
+    onAfterCommit?: () => void,
+    overrideValue?: unknown
   ): void {
     this.closeEditor();
     this.editingCell = { rowId, columnId };
@@ -45,7 +46,9 @@ export class InlineCellEditor<T> {
     this.onCancel = onCancel;
     this.onAfterCommit = onAfterCommit ?? null;
 
-    const value = getCellValue(item, column as unknown as Parameters<typeof getCellValue>[1]);
+    const value = overrideValue !== undefined
+      ? overrideValue
+      : getCellValue(item, column as unknown as Parameters<typeof getCellValue>[1]);
     const rect = cell.getBoundingClientRect();
     const containerRect = this.container.getBoundingClientRect();
 
