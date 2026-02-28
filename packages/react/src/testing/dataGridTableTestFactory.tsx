@@ -363,7 +363,7 @@ export function createDataGridTableTests(DataGridTable: React.ComponentType<IOGr
     const firstCell = Array.from(cells).find(
       (el) => !(el.closest('[role="columnheader"]') ?? el.closest('thead'))
     );
-    if (firstCell) fireEvent.mouseDown(firstCell);
+    if (firstCell) fireEvent.pointerDown(firstCell);
 
     const activeBefore = container.querySelectorAll('[data-active-cell="true"]').length;
     // ArrowDown with preventDefault should not move selection
@@ -385,7 +385,7 @@ export function createDataGridTableTests(DataGridTable: React.ComponentType<IOGr
     const firstCell = Array.from(cells).find(
       (el) => !(el.closest('[role="columnheader"]') ?? el.closest('thead'))
     );
-    if (firstCell) fireEvent.mouseDown(firstCell);
+    if (firstCell) fireEvent.pointerDown(firstCell);
 
     await waitFor(() => {
       expect(container.querySelector('[data-active-cell="true"]')).toBeInTheDocument();

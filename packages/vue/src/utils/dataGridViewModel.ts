@@ -26,10 +26,10 @@ export type {
 // Re-import CellRenderDescriptor for use in getCellInteractionProps
 import type { CellRenderDescriptor } from '@alaarab/ogrid-core';
 
-// --- Vue-specific: getCellInteractionProps uses native MouseEvent + Vue event naming ---
+// --- Vue-specific: getCellInteractionProps uses native PointerEvent + Vue event naming ---
 
 export interface CellInteractionHandlers {
-  handleCellMouseDown: (e: MouseEvent, rowIndex: number, colIndex: number) => void;
+  handleCellMouseDown: (e: PointerEvent, rowIndex: number, colIndex: number) => void;
   setActiveCell: (cell: { rowIndex: number; columnIndex: number }) => void;
   setEditingCell: (cell: { rowId: RowId; columnId: string } | null) => void;
   handleCellContextMenu: (e: { clientX: number; clientY: number; preventDefault?: () => void }) => void;
@@ -42,7 +42,7 @@ export interface CellInteractionProps {
   'data-in-range'?: 'true';
   tabindex: number;
   role?: 'button';
-  onMousedown: (e: MouseEvent) => void;
+  onPointerdown: (e: PointerEvent) => void;
   onClick: () => void;
   onContextmenu: (e: MouseEvent) => void;
   onDblclick?: () => void;
@@ -59,7 +59,7 @@ export function getCellInteractionProps(
     ...(descriptor.isActive ? { 'data-active-cell': 'true' as const } : {}),
     ...(descriptor.isInRange ? { 'data-in-range': 'true' as const } : {}),
     tabindex: descriptor.isActive ? 0 : -1,
-    onMousedown: (e: MouseEvent) =>
+    onPointerdown: (e: PointerEvent) =>
       handlers.handleCellMouseDown(e, descriptor.rowIndex, descriptor.globalColIndex),
     onClick: () =>
       handlers.setActiveCell({ rowIndex: descriptor.rowIndex, columnIndex: descriptor.globalColIndex }),
