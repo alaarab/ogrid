@@ -2,11 +2,13 @@ import { useMemo, useCallback } from 'react';
 import type { RefObject } from 'react';
 import type { RowId, IColumnDef } from '../types';
 import type { IFillFormulaOptions } from '../utils';
+import { formatCellReference } from '../utils';
 import { useCellSelection } from './useCellSelection';
 import { useClipboard } from './useClipboard';
 import { useKeyboardNavigation } from './useKeyboardNavigation';
 import { useFillHandle } from './useFillHandle';
 import { useUndoRedo } from './useUndoRedo';
+import { useLatestRef } from './useLatestRef';
 import type { DataGridCellInteractionState } from './useDataGridState';
 
 // Stable no-op handlers used when cellSelection is disabled (module-scope = no re-renders)
@@ -61,6 +63,8 @@ export interface UseDataGridInteractionParams<T> {
   hasFormula?: (col: number, row: number) => boolean;
   /** Sets or clears a formula for a flat column + row. */
   setFormula?: (col: number, row: number, formula: string | null) => void;
+  /** Called when a cell is clicked during formula editing to insert a cell reference. */
+  onFormulaInsertReference?: (reference: string) => boolean;
 }
 
 export interface UseDataGridInteractionResult<T> {
@@ -138,7 +142,10 @@ export function useDataGridInteraction<T>(
     getFormula,
     hasFormula,
     setFormula,
+    onFormulaInsertReference,
   } = params;
+
+  const onFormulaInsertReferenceRef = useLatestRef(onFormulaInsertReference);
 
   // Wrap onCellValueChanged with undo/redo tracking
   const undoRedo = useUndoRedo<T>({ onCellValueChanged: onCellValueChangedProp });
@@ -178,11 +185,26 @@ export function useDataGridInteraction<T>(
   const handleCellMouseDown = useCallback(
     (e: React.MouseEvent, rowIndex: number, globalColIndex: number) => {
       if (e.button !== 0) return;
+
+      // When a formula is being edited in the formula bar, clicking a cell inserts
+      // its reference (e.g. "A1") into the formula instead of navigating.
+      const insertRef = onFormulaInsertReferenceRef.current;
+      if (insertRef) {
+        const dataColIndex = globalColIndex - colOffset;
+        if (dataColIndex >= 0) {
+          const ref = formatCellReference(dataColIndex, rowIndex + 1);
+          if (insertRef(ref)) {
+            e.preventDefault();
+            return; // Reference inserted — skip normal cell selection
+          }
+        }
+      }
+
       (wrapperRef as RefObject<HTMLDivElement | null>).current?.focus({ preventScroll: true });
       clearClipboardRanges();
       handleCellMouseDownBase(e, rowIndex, globalColIndex);
     },
-    [handleCellMouseDownBase, clearClipboardRanges, wrapperRef]
+    [handleCellMouseDownBase, clearClipboardRanges, wrapperRef, onFormulaInsertReferenceRef, colOffset]
   );
 
   const fillFormulaOptions = useMemo<IFillFormulaOptions<T> | undefined>(() => {

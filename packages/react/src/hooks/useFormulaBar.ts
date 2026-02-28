@@ -5,7 +5,7 @@
  */
 
 import { useState, useCallback, useMemo, useRef, useEffect } from 'react';
-import { extractFormulaReferences, processFormulaBarCommit, deriveFormulaBarText, type FormulaReference } from '@alaarab/ogrid-core';
+import { extractFormulaReferences, processFormulaBarCommit, deriveFormulaBarText, insertReferenceAtCursor, type FormulaReference } from '@alaarab/ogrid-core';
 
 export interface UseFormulaBarParams {
   /** Active cell column index (0-based). */
@@ -43,6 +43,14 @@ export interface UseFormulaBarResult {
   referencedCells: FormulaReference[];
   /** Whether the formula bar is actively being edited (for click-to-insert-ref guards). */
   isFormulaBarEditing: React.MutableRefObject<boolean>;
+  /**
+   * Insert a cell reference into the formula text at the current cursor position.
+   * Called by cell click handlers when the formula bar is in formula-edit mode.
+   * Returns true if the reference was inserted, false if not in formula-edit mode.
+   */
+  insertReference: (reference: string) => boolean;
+  /** Ref to the formula bar input element — set by the FormulaBar component for cursor tracking. */
+  inputRef: React.RefObject<HTMLInputElement | null>;
 }
 
 export function useFormulaBar(params: UseFormulaBarParams): UseFormulaBarResult {
@@ -51,6 +59,7 @@ export function useFormulaBar(params: UseFormulaBarParams): UseFormulaBarResult 
   const [isEditing, setIsEditing] = useState(false);
   const [editText, setEditText] = useState('');
   const isFormulaBarEditing = useRef(false);
+  const inputRef = useRef<HTMLInputElement>(null);
 
   // Derive display text from active cell
   const displayText = useMemo(
@@ -87,6 +96,23 @@ export function useFormulaBar(params: UseFormulaBarParams): UseFormulaBarResult 
     setEditText('');
   }, []);
 
+  // Insert a cell reference at the cursor position
+  const insertReference = useCallback((reference: string): boolean => {
+    if (!isFormulaBarEditing.current || !editText.startsWith('=')) return false;
+    const cursorPos = inputRef.current?.selectionStart ?? editText.length;
+    const result = insertReferenceAtCursor(editText, cursorPos, reference);
+    setEditText(result.text);
+    // Restore cursor position after React re-render
+    setTimeout(() => {
+      if (inputRef.current) {
+        inputRef.current.selectionStart = result.cursorPos;
+        inputRef.current.selectionEnd = result.cursorPos;
+        inputRef.current.focus();
+      }
+    }, 0);
+    return true;
+  }, [editText]);
+
   // Extract references from current text (for highlighting)
   const currentText = isEditing ? editText : displayText;
   const referencedCells = useMemo(
@@ -104,5 +130,7 @@ export function useFormulaBar(params: UseFormulaBarParams): UseFormulaBarResult 
     startEditing,
     referencedCells,
     isFormulaBarEditing,
+    insertReference,
+    inputRef,
   };
 }

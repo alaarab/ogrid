@@ -98,7 +98,7 @@ export type { IFillFormulaOptions } from './fillHelpers';
 export { UndoRedoStack } from './undoRedoStack';
 export { validateColumns, validateRowIds, validateVirtualScrollConfig } from './validation';
 export { indexToColumnLetter, formatCellReference } from './cellReference';
-export { extractFormulaReferences, processFormulaBarCommit, deriveFormulaBarText, handleFormulaBarKeyDown } from './formulaBarHelpers';
+export { extractFormulaReferences, processFormulaBarCommit, deriveFormulaBarText, handleFormulaBarKeyDown, canInsertReference, insertReferenceAtCursor } from './formulaBarHelpers';
 export type { FormulaReference } from './formulaBarHelpers';
 export { getResponsiveHiddenColumns, RESPONSIVE_BREAKPOINTS, resolveResponsiveConfig, applyResponsiveHiding } from './responsiveColumns';
 export type { IResponsiveColumnsConfig } from './responsiveColumns';
