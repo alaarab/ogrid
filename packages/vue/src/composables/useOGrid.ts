@@ -616,6 +616,7 @@ export function useOGrid<T>(
       suppressHorizontalScroll: p.suppressHorizontalScroll,
       stickyHeader: p.stickyHeader ?? true,
       columnReorder: p.columnReorder,
+      responsiveColumns: p.responsiveColumns,
       virtualScroll: p.virtualScroll,
       rowHeight: p.rowHeight,
       density: p.density ?? 'normal',

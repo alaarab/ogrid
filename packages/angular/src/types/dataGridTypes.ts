@@ -1,5 +1,6 @@
 import type { TemplateRef } from '@angular/core';
 import type { IColumnDef, IColumnGroupDef, ICellValueChangedEvent } from './columnTypes';
+import type { IResponsiveColumnsConfig } from '@alaarab/ogrid-core';
 
 // Re-export all shared types and functions from core (no Angular-specific changes)
 export type {
@@ -113,6 +114,8 @@ interface IOGridBaseProps<T> {
   fullScreen?: boolean;
   sideBar?: boolean | ISideBarDef;
   columnReorder?: boolean;
+  /** Enable responsive column hiding based on container width. Columns with `responsivePriority` are auto-hidden on narrow containers. */
+  responsiveColumns?: boolean | IResponsiveColumnsConfig;
   virtualScroll?: IVirtualScrollConfig;
   /** Offload sort/filter to a Web Worker for large datasets. Falls back to sync when sort column has a custom compare. */
   workerSort?: boolean;
@@ -218,6 +221,8 @@ export interface IOGridDataGridProps<T> {
   peopleSearch?: (query: string) => Promise<UserLike[]>;
   getUserByEmail?: (email: string) => Promise<UserLike | undefined>;
   columnReorder?: boolean;
+  /** Responsive column hiding config. */
+  responsiveColumns?: boolean | IResponsiveColumnsConfig;
   virtualScroll?: IVirtualScrollConfig;
   /** Fixed row height in pixels. Overrides default row height (36px). */
   rowHeight?: number;

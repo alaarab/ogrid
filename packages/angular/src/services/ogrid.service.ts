@@ -156,6 +156,7 @@ export class OGridService<T> {
   readonly onError = signal<((error: unknown) => void) | undefined>(undefined);
   readonly columnChooserProp = signal<boolean | 'toolbar' | 'sidebar' | undefined>(undefined);
   readonly columnReorder = signal<boolean | undefined>(undefined);
+  readonly responsiveColumns = signal<boolean | import('@alaarab/ogrid-core').IResponsiveColumnsConfig | undefined>(undefined);
   readonly virtualScroll = signal<IVirtualScrollConfig | undefined>(undefined);
   readonly ariaLabel = signal<string | undefined>(undefined);
   readonly ariaLabelledBy = signal<string | undefined>(undefined);
@@ -500,6 +501,7 @@ export class OGridService<T> {
     suppressHorizontalScroll: this.suppressHorizontalScroll(),
     stickyHeader: this.stickyHeader(),
     columnReorder: this.columnReorder(),
+    responsiveColumns: this.responsiveColumns(),
     virtualScroll: this.virtualScroll(),
     'aria-label': this.ariaLabel(),
     'aria-labelledby': this.ariaLabelledBy(),
@@ -923,6 +925,7 @@ export class OGridService<T> {
     if (props.onError) this.onError.set(props.onError);
     if (props.columnChooser !== undefined) this.columnChooserProp.set(props.columnChooser);
     if (props.columnReorder !== undefined) this.columnReorder.set(props.columnReorder);
+    if (props.responsiveColumns !== undefined) this.responsiveColumns.set(props.responsiveColumns);
     if (props.virtualScroll !== undefined) this.virtualScroll.set(props.virtualScroll);
     if (props.workerSort !== undefined) this.workerSort.set(props.workerSort);
     if (props.showRowNumbers !== undefined) this.showRowNumbers.set(props.showRowNumbers);

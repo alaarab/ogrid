@@ -207,6 +207,10 @@ export { indexToColumnLetter, formatCellReference } from './utils';
 export { extractFormulaReferences, processFormulaBarCommit, deriveFormulaBarText, handleFormulaBarKeyDown } from './utils';
 export type { FormulaReference } from './utils';
 
+// Utils — responsiveColumns
+export { getResponsiveHiddenColumns, RESPONSIVE_BREAKPOINTS } from './utils';
+export type { IResponsiveColumnsConfig } from './utils';
+
 // Constants — layout
 export {
   CHECKBOX_COLUMN_WIDTH,

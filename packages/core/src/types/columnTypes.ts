@@ -24,6 +24,12 @@ export interface IColumnMeta {
   filterable?: IColumnFilterDef;
   defaultVisible?: boolean;
   required?: boolean;
+  /**
+   * Responsive priority (0 = highest). Columns with higher numbers are hidden
+   * first when the container is narrow. Columns without a priority are never
+   * auto-hidden. `required` columns are never auto-hidden regardless of priority.
+   */
+  responsivePriority?: number;
   minWidth?: number;
   defaultWidth?: number;
   idealWidth?: number;
