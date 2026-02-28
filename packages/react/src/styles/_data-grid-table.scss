@@ -168,6 +168,7 @@
   width: 8px;
   cursor: col-resize;
   user-select: none;
+  touch-action: none; // Prevent browser scroll/zoom during column resize drag
   z-index: var(--ogrid-z-resize-handle, 1);
 
   &::after {
@@ -185,6 +186,12 @@
 
   &:active::after {
     background-color: var(--ogrid-accent-dark, #005a9e);
+  }
+
+  // Increase touch target on touch-capable devices
+  @media (pointer: coarse) {
+    width: 16px;
+    right: -8px;
   }
 }
 
@@ -334,7 +341,17 @@
   border-radius: 1px;
   cursor: crosshair;
   pointer-events: auto;
+  touch-action: none; // Prevent browser scroll/zoom during fill handle drag
   z-index: var(--ogrid-z-fill-handle, 3);
+
+  // Increase touch target on touch-capable devices
+  @media (pointer: coarse) {
+    width: 14px;
+    height: 14px;
+    right: -7px;
+    bottom: -7px;
+    border-radius: 2px;
+  }
 }
 
 // ---- Row selection cells ----

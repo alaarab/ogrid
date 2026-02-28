@@ -18,7 +18,7 @@ import { useColumnHeaderMenuState } from './useColumnHeaderMenuState';
 // Stable no-op handlers
 const NOOP = () => {};
 const NOOP_ASYNC = async () => {};
-const NOOP_MOUSE = (_e: MouseEvent, _r: number, _c: number) => {};
+const NOOP_MOUSE = (_e: PointerEvent, _r: number, _c: number) => {};
 const NOOP_KEY = (_e: KeyboardEvent) => {};
 const NOOP_CTX = (_e: { clientX: number; clientY: number; preventDefault?: () => void }) => {};
 
@@ -76,11 +76,11 @@ export interface DataGridCellInteractionState {
   setActiveCell: (cell: { rowIndex: number; columnIndex: number } | null) => void;
   selectionRange: { startRow: number; startCol: number; endRow: number; endCol: number } | null;
   setSelectionRange: (range: DataGridCellInteractionState['selectionRange']) => void;
-  handleCellMouseDown: (e: MouseEvent, rowIndex: number, globalColIndex: number) => void;
+  handleCellMouseDown: (e: PointerEvent, rowIndex: number, globalColIndex: number) => void;
   handleSelectAllCells: () => void;
   hasCellSelection: boolean;
   handleGridKeyDown: (e: KeyboardEvent) => void;
-  handleFillHandleMouseDown: (e: MouseEvent) => void;
+  handleFillHandleMouseDown: (e: PointerEvent) => void;
   handleCopy: () => void;
   handleCut: () => void;
   handlePaste: () => Promise<void>;
@@ -273,7 +273,7 @@ export function useDataGridState<T>(
     endBatch: undoRedo.endBatch,
   });
 
-  const handleCellMouseDown = (e: MouseEvent, rowIndex: number, globalColIndex: number) => {
+  const handleCellMouseDown = (e: PointerEvent, rowIndex: number, globalColIndex: number) => {
     if (e.button !== 0) return;
     wrapperRef.value?.focus({ preventScroll: true });
     clearClipboardRanges();

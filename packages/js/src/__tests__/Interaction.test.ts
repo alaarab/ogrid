@@ -712,16 +712,16 @@ describe('Interaction - Column Resize', () => {
     expect(resizeHandle).not.toBeNull();
 
     // Start resize
-    const mouseDownEvent = new MouseEvent('mousedown', { bubbles: true, clientX: 100 });
-    resizeHandle!.dispatchEvent(mouseDownEvent);
+    const pointerDownEvent = new PointerEvent('pointerdown', { bubbles: true, clientX: 100 });
+    resizeHandle!.dispatchEvent(pointerDownEvent);
 
-    // Move mouse (would normally update width)
-    const mouseMoveEvent = new MouseEvent('mousemove', { bubbles: true, clientX: 150 });
-    document.dispatchEvent(mouseMoveEvent);
+    // Move pointer (would normally update width)
+    const pointerMoveEvent = new PointerEvent('pointermove', { bubbles: true, clientX: 150 });
+    document.dispatchEvent(pointerMoveEvent);
 
     // End resize
-    const mouseUpEvent = new MouseEvent('mouseup', { bubbles: true });
-    document.dispatchEvent(mouseUpEvent);
+    const pointerUpEvent = new PointerEvent('pointerup', { bubbles: true });
+    document.dispatchEvent(pointerUpEvent);
 
     // Column width should have changed (check for width style)
     // Note: In real implementation, the width would be applied

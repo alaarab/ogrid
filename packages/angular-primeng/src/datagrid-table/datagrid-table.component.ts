@@ -72,7 +72,7 @@ import { PopoverCellEditorComponent } from './popover-cell-editor.component';
         [attr.data-has-selection]="rowSelectionMode !== 'none' ? 'true' : null"
         (contextmenu)="$event.preventDefault()"
         (keydown)="onGridKeyDown($event)"
-        (mousedown)="onWrapperMouseDown($event)"
+        (pointerdown)="onWrapperMouseDown($event)"
         (scroll)="onWrapperScroll($event)"
         [style.--data-table-column-count]="state().layout.totalColCount"
         [style.--ogrid-row-height]="rowHeightCssVar()"
@@ -122,7 +122,7 @@ import { PopoverCellEditorComponent } from './popover-cell-editor.component';
                           #
                           <div
                             class="ogrid-resize-handle"
-                            (mousedown)="onResizeRowNumber($event)"
+                            (pointerdown)="onResizeRowNumber($event)"
                             (dblclick)="$event.stopPropagation()"
                           ></div>
                         </th>
@@ -159,7 +159,7 @@ import { PopoverCellEditorComponent } from './popover-cell-editor.component';
                             [style.left.px]="pinned === 'left' ? getPinnedLeftOffset(col.columnId) : null"
                             [style.right.px]="pinned === 'right' ? getPinnedRightOffset(col.columnId) : null"
                             [style.cursor]="columnReorderService.isDragging() ? 'grabbing' : 'grab'"
-                            (mousedown)="onHeaderMouseDown(col.columnId, $event)"
+                            (pointerdown)="onHeaderMouseDown(col.columnId, $event)"
                           >
                             <div class="ogrid-header-content">
                               <ogrid-primeng-column-header-filter
@@ -195,7 +195,7 @@ import { PopoverCellEditorComponent } from './popover-cell-editor.component';
                             </div>
                             <div
                               class="ogrid-resize-handle"
-                              (mousedown)="onResizeStartPrimeng($event, col)"
+                              (pointerdown)="onResizeStartPrimeng($event, col)"
                               (dblclick)="onResizeDoubleClick($event, col)"
                               [attr.aria-label]="'Resize ' + col.name"
                             ></div>
@@ -293,7 +293,7 @@ import { PopoverCellEditorComponent } from './popover-cell-editor.component';
                                 [attr.data-active-cell]="descriptor.isActive ? 'true' : null"
                                 [attr.data-in-range]="descriptor.isInRange ? 'true' : null"
                                 [attr.tabindex]="descriptor.isActive ? 0 : -1"
-                                (mousedown)="onCellMouseDown($event, rowIndex, descriptor.globalColIndex)"
+                                (pointerdown)="onCellMouseDown($event, rowIndex, descriptor.globalColIndex)"
                                 (click)="onCellClick(rowIndex, descriptor.globalColIndex)"
                                 (dblclick)="descriptor.canEditAny ? onCellDblClick(descriptor.rowId, col.columnId) : null"
                                 (contextmenu)="onCellContextMenu($event)"
@@ -310,7 +310,7 @@ import { PopoverCellEditorComponent } from './popover-cell-editor.component';
                                 }
                                 @if (descriptor.canEditAny && descriptor.isSelectionEndCell) {
                                   <div
-                                    (mousedown)="onFillHandleMouseDown($event)"
+                                    (pointerdown)="onFillHandleMouseDown($event)"
                                     class="ogrid-fill-handle"
                                     aria-label="Fill handle"
                                   ></div>
@@ -497,6 +497,10 @@ import { PopoverCellEditorComponent } from './popover-cell-editor.component';
       bottom: 0;
       width: 4px;
       cursor: col-resize;
+      touch-action: none;
+    }
+    @media (pointer: coarse) {
+      .ogrid-resize-handle { width: 16px; right: -6px; }
     }
     .ogrid-checkbox-cell {
       width: 48px;
@@ -545,7 +549,11 @@ import { PopoverCellEditorComponent } from './popover-cell-editor.component';
       height: 7px;
       background: var(--ogrid-selection, #217346);
       cursor: crosshair;
+      touch-action: none;
       z-index: 2;
+    }
+    @media (pointer: coarse) {
+      .ogrid-fill-handle { width: 14px; height: 14px; right: -7px; bottom: -7px; border-radius: 2px; }
     }
     .ogrid-empty-container {
       display: flex;
@@ -929,7 +937,7 @@ export class DataGridTableComponent<T = unknown> extends BaseDataGridTableCompon
     this.state().rowSelection.handleRowCheckboxChange(rowId, checked, rowIndex, this.lastMouseShift);
   }
 
-  onResizeStartPrimeng(e: MouseEvent, col: IColumnDef<T>): void {
+  onResizeStartPrimeng(e: PointerEvent, col: IColumnDef<T>): void {
     e.preventDefault();
     // Clear cell selection before resize so selection outlines don't persist during drag
     this.state().interaction.setActiveCell?.(null);
@@ -939,7 +947,7 @@ export class DataGridTableComponent<T = unknown> extends BaseDataGridTableCompon
     this.resizeColumnId = col.columnId;
     this.resizeStartWidth = col.columnId === ROW_NUMBER_COLUMN_ID ? this.getRowNumberWidth() : this.getColumnWidth(col);
 
-    const onMove = (me: MouseEvent) => {
+    const onMove = (me: PointerEvent) => {
       const delta = me.clientX - this.resizeStartX;
       const minW = col.columnId === ROW_NUMBER_COLUMN_ID ? ROW_NUMBER_COLUMN_MIN_WIDTH : (col.minWidth ?? DEFAULT_MIN_COLUMN_WIDTH);
       const newWidth = Math.max(minW, this.resizeStartWidth + delta);
@@ -948,8 +956,8 @@ export class DataGridTableComponent<T = unknown> extends BaseDataGridTableCompon
     };
 
     const onUp = () => {
-      window.removeEventListener('mousemove', onMove, true);
-      window.removeEventListener('mouseup', onUp, true);
+      window.removeEventListener('pointermove', onMove, true);
+      window.removeEventListener('pointerup', onUp, true);
       const finalWidth = this.primengColumnSizingOverrides()[this.resizeColumnId];
       if (finalWidth) {
         this.onColumnResized?.(this.resizeColumnId, finalWidth);
@@ -961,11 +969,11 @@ export class DataGridTableComponent<T = unknown> extends BaseDataGridTableCompon
       }
     };
 
-    window.addEventListener('mousemove', onMove, true);
-    window.addEventListener('mouseup', onUp, true);
+    window.addEventListener('pointermove', onMove, true);
+    window.addEventListener('pointerup', onUp, true);
   }
 
-  onResizeRowNumber(event: MouseEvent): void {
+  onResizeRowNumber(event: PointerEvent): void {
     event.stopPropagation();
     this.onResizeStartPrimeng(event, { columnId: ROW_NUMBER_COLUMN_ID, name: '#' } as IColumnDef<T>);
   }
