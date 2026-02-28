@@ -9,6 +9,7 @@ export default defineConfig({
   clean: false,
   dts: false,
   target: 'es2020',
+  minify: true,
   esbuildOptions(options) {
     options.jsx = 'automatic';
   },

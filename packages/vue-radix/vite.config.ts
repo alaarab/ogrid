@@ -37,7 +37,7 @@ export default defineConfig({
       },
     },
     cssCodeSplit: true,
-    minify: false,
+    minify: 'esbuild',
   },
   css: {
     preprocessorOptions: {
