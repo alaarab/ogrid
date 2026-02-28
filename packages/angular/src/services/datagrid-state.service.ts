@@ -140,6 +140,7 @@ export interface DataGridViewModelState<T> {
     isDragging: boolean;
     getFormulaValue?: (col: number, row: number) => unknown;
     hasFormula?: (col: number, row: number) => boolean;
+    getFormula?: (col: number, row: number) => string | undefined;
     formulaVersion?: number;
   };
   statusBarConfig: IStatusBarProps | null;
@@ -758,6 +759,7 @@ export class DataGridStateService<T> {
         isDragging: cellSel ? this.interactionHelper.isDraggingSig() : false,
         getFormulaValue: p?.getFormulaValue,
         hasFormula: p?.hasFormula,
+        getFormula: p?.getFormula,
         formulaVersion: p?.formulaVersion,
       },
       statusBarConfig: this.statusBarConfig(),

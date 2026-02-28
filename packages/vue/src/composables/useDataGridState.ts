@@ -467,6 +467,7 @@ export function useDataGridState<T>(
     isDragging: cellSelection.value ? isDragging.value : false,
     getFormulaValue: props.value.getFormulaValue,
     hasFormula: props.value.hasFormula,
+    getFormula: props.value.getFormula,
     formulaVersion: props.value.formulaVersion,
   }));
 
