@@ -6,7 +6,7 @@
  */
 
 import { tokenize } from '../formula/tokenizer';
-import { columnLetterToIndex } from '../formula/cellAddressUtils';
+import { columnLetterToIndex } from './cellReference';
 
 /** A parsed reference from a formula — either a single cell or a range. */
 export interface FormulaReference {

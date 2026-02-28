@@ -8,7 +8,6 @@
 
 import { computed, watch, shallowRef, type Ref } from 'vue';
 import {
-  FormulaEngine,
   createGridDataAccessor,
   type IGridDataAccessor,
   type IFormulaFunction,
@@ -17,6 +16,7 @@ import {
   type IAuditEntry,
   type IAuditTrail,
 } from '@alaarab/ogrid-core';
+import { FormulaEngine } from '@alaarab/ogrid-core/formula';
 import { useLatestRef } from './useLatestRef';
 
 export interface UseFormulaEngineParams<T> {

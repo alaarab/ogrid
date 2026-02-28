@@ -1,7 +1,7 @@
 import { FormulaEngineState } from '../state/FormulaEngineState';
 import type { FormulaEngineStateOptions } from '../state/FormulaEngineState';
 import type { IGridDataAccessor, IRecalcResult } from '@alaarab/ogrid-core';
-import { FormulaError } from '@alaarab/ogrid-core';
+import { FormulaError } from '@alaarab/ogrid-core/formula';
 
 function createAccessor(data: Record<string, unknown> = {}): IGridDataAccessor {
   return {

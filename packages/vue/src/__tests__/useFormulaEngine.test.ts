@@ -2,7 +2,7 @@ import { ref } from 'vue';
 import { useFormulaEngine } from '../composables/useFormulaEngine';
 import type { UseFormulaEngineParams } from '../composables/useFormulaEngine';
 import type { IColumnDef } from '@alaarab/ogrid-core';
-import { FormulaError } from '@alaarab/ogrid-core';
+import { FormulaError } from '@alaarab/ogrid-core/formula';
 
 // ---------------------------------------------------------------------------
 // Test helpers

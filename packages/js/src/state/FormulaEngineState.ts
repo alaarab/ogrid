@@ -5,7 +5,7 @@ import type {
   IAuditEntry,
   IAuditTrail,
 } from '@alaarab/ogrid-core';
-import { FormulaEngine } from '@alaarab/ogrid-core';
+import { FormulaEngine } from '@alaarab/ogrid-core/formula';
 import { EventEmitter } from './EventEmitter';
 
 /** Options for FormulaEngineState. */

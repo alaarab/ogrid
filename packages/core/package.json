@@ -10,6 +10,11 @@
       "types": "./dist/types/index.d.ts",
       "import": "./dist/esm/index.js",
       "default": "./dist/esm/index.js"
+    },
+    "./formula": {
+      "types": "./dist/types/formula/index.d.ts",
+      "import": "./dist/esm/formula/index.js",
+      "default": "./dist/esm/formula/index.js"
     }
   },
   "scripts": {
