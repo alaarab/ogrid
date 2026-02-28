@@ -630,6 +630,7 @@ export function useOGrid<T>(
     getAuditTrail: formulaEngine.enabled ? formulaEngine.getAuditTrail : undefined,
     formulaVersion,
     formulaReferences: formulaBarState.referencedCells.length > 0 ? formulaBarState.referencedCells : undefined,
+    onFormulaInsertReference: formulaBarState.insertReference,
   }), [
     dataFetchingState.displayItems, columnsProp, getRowId,
     sortingState.sort.field, sortingState.sort.direction, sortingState.handleSort,
@@ -644,7 +645,7 @@ export function useOGrid<T>(
     layoutMode, suppressHorizontalScroll, stickyHeader, columnReorder, responsiveColumns, virtualScroll,
     rowHeight, density, ariaLabel, ariaLabelledBy,
     filtersState.hasActiveFilters, clearAllFilters, emptyState,
-    formulas, formulaEngine, formulaVersion, formulaBarState.referencedCells,
+    formulas, formulaEngine, formulaVersion, formulaBarState.referencedCells, formulaBarState.insertReference,
   ]);
 
   const pagination = useMemo<UseOGridPagination>(() => ({
@@ -685,8 +686,9 @@ export function useOGrid<T>(
       onCommit: formulaBarState.onCommit,
       onCancel: formulaBarState.onCancel,
       startEditing: formulaBarState.startEditing,
+      inputRef: formulaBarState.inputRef,
     });
-  }, [formulas, formulaBarState.cellRef, formulaBarState.formulaText, formulaBarState.isEditing, formulaBarState.onInputChange, formulaBarState.onCommit, formulaBarState.onCancel, formulaBarState.startEditing]);
+  }, [formulas, formulaBarState.cellRef, formulaBarState.formulaText, formulaBarState.isEditing, formulaBarState.onInputChange, formulaBarState.onCommit, formulaBarState.onCancel, formulaBarState.startEditing, formulaBarState.inputRef]);
 
   // Sheet tabs element (only when sheetDefs are provided)
   const sheetTabsEl = useMemo(() => {

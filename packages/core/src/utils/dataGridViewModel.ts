@@ -146,6 +146,8 @@ export interface CellRenderDescriptorInput<T> {
   getFormulaValue?: (col: number, row: number) => unknown;
   /** Check if a cell has a formula at the given coordinate. */
   hasFormula?: (col: number, row: number) => boolean;
+  /** Get the formula string for a cell (e.g. '=SUM(A1:A5)'). Used to populate the editor with the formula instead of the computed value. */
+  getFormula?: (col: number, row: number) => string | undefined;
   /** Monotonic counter incremented on each formula recalculation — used for cache invalidation. */
   formulaVersion?: number;
 }
@@ -387,7 +389,8 @@ function computeCellDescriptor<T>(
   const cellValue = getCellValue(item, col);
 
   // Resolve formula display value: if this cell has a formula, show the computed result
-  const formulaDisplay = input.hasFormula?.(colIdx, rowIndex)
+  const cellHasFormula = input.hasFormula?.(colIdx, rowIndex) ?? false;
+  const formulaDisplay = cellHasFormula
     ? input.getFormulaValue?.(colIdx, rowIndex)
     : undefined;
 
@@ -415,10 +418,16 @@ function computeCellDescriptor<T>(
     mode = 'editing-popover';
   }
 
+  // When editing a formula cell, show the formula string (e.g. '=SUM(A1:A5)')
+  // instead of the raw cell value so users can edit the formula directly.
+  const editValue = isEditing && cellHasFormula
+    ? (input.getFormula?.(colIdx, rowIndex) ?? cellValue)
+    : cellValue;
+
   return {
     mode,
     editorType,
-    value: cellValue,
+    value: editValue,
     isActive,
     isInRange,
     isInCutRange,
