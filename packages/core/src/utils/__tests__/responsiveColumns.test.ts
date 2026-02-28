@@ -1,4 +1,4 @@
-import { getResponsiveHiddenColumns, RESPONSIVE_BREAKPOINTS } from '../responsiveColumns';
+import { getResponsiveHiddenColumns, RESPONSIVE_BREAKPOINTS, resolveResponsiveConfig, applyResponsiveHiding } from '../responsiveColumns';
 
 // Helper to create minimal column metas
 function col(id, opts = {}) {
@@ -101,5 +101,53 @@ describe('getResponsiveHiddenColumns', () => {
     for (let i = 1; i < RESPONSIVE_BREAKPOINTS.length; i++) {
       expect(RESPONSIVE_BREAKPOINTS[i].minWidth).toBeGreaterThan(RESPONSIVE_BREAKPOINTS[i - 1].minWidth);
     }
+  });
+});
+
+describe('resolveResponsiveConfig', () => {
+  it('returns empty object for true', () => {
+    expect(resolveResponsiveConfig(true)).toEqual({});
+  });
+
+  it('returns undefined for false', () => {
+    expect(resolveResponsiveConfig(false)).toBeUndefined();
+  });
+
+  it('returns undefined for undefined', () => {
+    expect(resolveResponsiveConfig(undefined)).toBeUndefined();
+  });
+
+  it('passes through config object', () => {
+    const config = { breakpoints: [{ minWidth: 0, maxPriority: 1 }] };
+    expect(resolveResponsiveConfig(config)).toBe(config);
+  });
+});
+
+describe('applyResponsiveHiding', () => {
+  const columns = [
+    col('name', { responsivePriority: 0 }),
+    col('email', { responsivePriority: 1 }),
+    col('phone', { responsivePriority: 3 }),
+    col('id'),
+  ];
+
+  it('returns input array unchanged when config is undefined', () => {
+    const result = applyResponsiveHiding(columns, 400, undefined);
+    expect(result).toBe(columns); // same reference
+  });
+
+  it('returns input array unchanged when containerWidth is 0', () => {
+    const result = applyResponsiveHiding(columns, 0, {});
+    expect(result).toBe(columns);
+  });
+
+  it('filters columns when hiding is needed', () => {
+    const result = applyResponsiveHiding(columns, 400, {});
+    expect(result.map(c => c.columnId)).toEqual(['name', 'id']);
+  });
+
+  it('returns input array when no columns need hiding', () => {
+    const result = applyResponsiveHiding(columns, 1400, {});
+    expect(result).toBe(columns);
   });
 });
