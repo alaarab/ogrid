@@ -16,7 +16,7 @@ export interface UseColumnReorderParams {
 export interface UseColumnReorderResult {
   isDragging: Ref<boolean>;
   dropIndicatorX: Ref<number | null>;
-  handleHeaderMouseDown: (columnId: string, event: MouseEvent) => void;
+  handleHeaderMouseDown: (columnId: string, event: PointerEvent) => void;
 }
 
 /** Width of the resize handle zone on the right edge of each header cell. */
@@ -27,7 +27,7 @@ const MIN_DRAG_DISTANCE = 5;
 
 /**
  * Manages column reordering via drag-and-drop on header cells.
- * Uses RAF-throttled mouse tracking and core's calculateDropTarget/reorderColumnArray.
+ * Uses RAF-throttled pointer tracking and core's calculateDropTarget/reorderColumnArray.
  */
 export function useColumnReorder(params: UseColumnReorderParams): UseColumnReorderResult {
   const { columnOrder, onColumnOrderChange, tableRef, pinnedColumns } = params;
@@ -45,7 +45,7 @@ export function useColumnReorder(params: UseColumnReorderParams): UseColumnReord
     cleanupFn = null;
   });
 
-  const handleHeaderMouseDown = (columnId: string, event: MouseEvent) => {
+  const handleHeaderMouseDown = (columnId: string, event: PointerEvent) => {
     if (event.button !== 0) return;
 
     // Skip if in resize handle zone (right 8px of the header cell)
@@ -78,7 +78,7 @@ export function useColumnReorder(params: UseColumnReorderParams): UseColumnReord
     document.body.style.cursor = 'grabbing';
     document.body.style.userSelect = 'none';
 
-    const onMove = (moveEvent: MouseEvent) => {
+    const onMove = (moveEvent: PointerEvent) => {
       // Require minimum drag distance before activating
       if (!hasMoved && Math.abs(moveEvent.clientX - startX) < MIN_DRAG_DISTANCE) return;
 
@@ -115,8 +115,8 @@ export function useColumnReorder(params: UseColumnReorderParams): UseColumnReord
     };
 
     const cleanup = () => {
-      window.removeEventListener('mousemove', onMove, true);
-      window.removeEventListener('mouseup', onUp, true);
+      window.removeEventListener('pointermove', onMove, true);
+      window.removeEventListener('pointerup', onUp, true);
       cleanupFn = null;
 
       document.body.style.cursor = prevCursor;
@@ -146,8 +146,8 @@ export function useColumnReorder(params: UseColumnReorderParams): UseColumnReord
       targetIndex = -1;
     };
 
-    window.addEventListener('mousemove', onMove, true);
-    window.addEventListener('mouseup', onUp, true);
+    window.addEventListener('pointermove', onMove, true);
+    window.addEventListener('pointerup', onUp, true);
     cleanupFn = cleanup;
   };
 

@@ -51,7 +51,7 @@ export class DataGridInteractionHelper<T> {
   // Fill handle state
   fillDragStart: { startRow: number; startCol: number } | null = null;
   fillRafId = 0;
-  fillMoveHandler: ((e: MouseEvent) => void) | null = null;
+  fillMoveHandler: ((e: PointerEvent) => void) | null = null;
   fillUpHandler: (() => void) | null = null;
 
   // Drag selection refs
@@ -229,7 +229,7 @@ export class DataGridInteractionHelper<T> {
 
   // --- Cell selection / mouse handling ---
   handleCellMouseDown(
-    e: MouseEvent,
+    e: PointerEvent,
     rowIndex: number,
     globalColIndex: number,
     colOffset: number,
@@ -283,7 +283,7 @@ export class DataGridInteractionHelper<T> {
   }
 
   // --- Fill handle ---
-  handleFillHandleMouseDown(e: MouseEvent): void {
+  handleFillHandleMouseDown(e: PointerEvent): void {
     e.preventDefault();
     e.stopPropagation();
     const range = this.selectionRangeSig();
@@ -629,7 +629,7 @@ export class DataGridInteractionHelper<T> {
   }
 
   // --- Drag helpers ---
-  onWindowMouseMove(e: MouseEvent, colOffset: number, wrapperEl: HTMLElement | null): void {
+  onWindowMouseMove(e: PointerEvent, colOffset: number, wrapperEl: HTMLElement | null): void {
     if (!this.isDraggingRef || !this.dragStartPos) return;
 
     if (!this.dragMoved) {
@@ -756,11 +756,11 @@ export class DataGridInteractionHelper<T> {
     if (this.fillRafId) { cancelAnimationFrame(this.fillRafId); this.fillRafId = 0; }
     if (this.autoScrollInterval) { clearInterval(this.autoScrollInterval); this.autoScrollInterval = null; }
     if (this.fillMoveHandler) {
-      window.removeEventListener('mousemove', this.fillMoveHandler, true);
+      window.removeEventListener('pointermove', this.fillMoveHandler, true);
       this.fillMoveHandler = null;
     }
     if (this.fillUpHandler) {
-      window.removeEventListener('mouseup', this.fillUpHandler, true);
+      window.removeEventListener('pointerup', this.fillUpHandler, true);
       this.fillUpHandler = null;
     }
     this.undoRedoStack.clear();

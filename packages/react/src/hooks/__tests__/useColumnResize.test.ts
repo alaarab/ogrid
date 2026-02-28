@@ -134,12 +134,12 @@ describe('useColumnResize', () => {
     });
 
     act(() => {
-      const moveEvent = new MouseEvent('mousemove', { clientX: 130, bubbles: true });
+      const moveEvent = new PointerEvent('pointermove', { clientX: 130, bubbles: true });
       document.dispatchEvent(moveEvent);
     });
 
     act(() => {
-      const upEvent = new MouseEvent('mouseup', { bubbles: true });
+      const upEvent = new PointerEvent('pointerup', { bubbles: true });
       document.dispatchEvent(upEvent);
     });
 

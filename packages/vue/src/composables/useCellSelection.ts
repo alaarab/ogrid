@@ -14,7 +14,7 @@ export interface UseCellSelectionParams {
 export interface UseCellSelectionResult {
   selectionRange: ShallowRef<ISelectionRange | null>;
   setSelectionRange: (range: ISelectionRange | null) => void;
-  handleCellMouseDown: (e: MouseEvent, rowIndex: number, globalColIndex: number) => void;
+  handleCellMouseDown: (e: PointerEvent, rowIndex: number, globalColIndex: number) => void;
   handleSelectAllCells: () => void;
   isDragging: Ref<boolean>;
 }
@@ -52,7 +52,7 @@ export function useCellSelection(params: UseCellSelectionParams): UseCellSelecti
     selectionRange.value = next;
   };
 
-  const handleCellMouseDown = (e: MouseEvent, rowIndex: number, globalColIndex: number) => {
+  const handleCellMouseDown = (e: PointerEvent, rowIndex: number, globalColIndex: number) => {
     if (e.button !== 0) return;
     const colOffset = getColOffset();
     if (globalColIndex < colOffset) return;
@@ -83,7 +83,7 @@ export function useCellSelection(params: UseCellSelectionParams): UseCellSelecti
       setActiveCell({ rowIndex, columnIndex: globalColIndex });
       isDraggingInternal.value = true;
       // Apply drag attrs immediately for the initial cell so the anchor styling shows
-      // even before the first mousemove. This ensures instant visual feedback.
+      // even before the first pointermove. This ensures instant visual feedback.
       setTimeout(() => applyDragAttrs(initial), 0);
     }
   };
@@ -275,7 +275,7 @@ export function useCellSelection(params: UseCellSelectionParams): UseCellSelecti
     }
   };
 
-  const onMove = (e: MouseEvent) => {
+  const onMove = (e: PointerEvent) => {
     if (!isDraggingInternal.value || !dragStart) return;
 
     if (!dragMoved) {
@@ -351,7 +351,7 @@ export function useCellSelection(params: UseCellSelectionParams): UseCellSelecti
     if (wasDrag) isDragging.value = false;
   };
 
-  const onMoveSafe = (e: MouseEvent) => {
+  const onMoveSafe = (e: PointerEvent) => {
     if (isUnmounted.value) return;
     onMove(e);
   };
@@ -362,14 +362,14 @@ export function useCellSelection(params: UseCellSelectionParams): UseCellSelecti
   };
 
   onMounted(() => {
-    window.addEventListener('mousemove', onMoveSafe, true);
-    window.addEventListener('mouseup', onUpSafe, true);
+    window.addEventListener('pointermove', onMoveSafe, true);
+    window.addEventListener('pointerup', onUpSafe, true);
   });
 
   onUnmounted(() => {
     isUnmounted.value = true;
-    window.removeEventListener('mousemove', onMoveSafe, true);
-    window.removeEventListener('mouseup', onUpSafe, true);
+    window.removeEventListener('pointermove', onMoveSafe, true);
+    window.removeEventListener('pointerup', onUpSafe, true);
     if (rafId) cancelAnimationFrame(rafId);
     stopAutoScroll();
   });

@@ -3,7 +3,7 @@
  *
  * Extracts event subscription setup from OGrid for modularity:
  *   - initializeInteraction() — creates interaction states and subscribes events
- *   - attachGlobalHandlers() — global mouse handlers for resize and drag
+ *   - attachGlobalHandlers() — global pointer handlers for resize and drag
  *
  * Not exported publicly — instantiated and owned by OGrid.
  */
@@ -187,7 +187,7 @@ export class OGridEventWiring<T> {
       marchingAnts = new MarchingAntsOverlay(wrapper, colOffset);
     }
 
-    // Attach global mouse handlers for resize and drag
+    // Attach global pointer handlers for resize and drag
     const globalUnsubs = this.attachGlobalHandlers(
       selectionState,
       resizeState,
@@ -222,7 +222,7 @@ export class OGridEventWiring<T> {
     const unsubs: (() => void)[] = [];
     let resizing = false;
 
-    const handleMouseMove = (e: MouseEvent) => {
+    const handleMouseMove = (e: PointerEvent) => {
       if (resizing && resizeState) {
         const newWidth = resizeState.updateResize(e.clientX);
         if (newWidth !== null && resizeState.resizingColumnId) {
@@ -241,7 +241,7 @@ export class OGridEventWiring<T> {
       }
     };
 
-    const handleMouseUp = (e: MouseEvent) => {
+    const handleMouseUp = (e: PointerEvent) => {
       if (resizing && resizeState) {
         const colId = resizeState.resizingColumnId;
         resizeState.endResize(e.clientX);
@@ -265,12 +265,12 @@ export class OGridEventWiring<T> {
       resizeState.startResize(columnId, clientX, currentWidth);
     };
 
-    document.addEventListener('mousemove', handleMouseMove, { passive: true });
-    document.addEventListener('mouseup', handleMouseUp, { passive: true });
+    document.addEventListener('pointermove', handleMouseMove, { passive: true });
+    document.addEventListener('pointerup', handleMouseUp, { passive: true });
 
     unsubs.push(() => {
-      document.removeEventListener('mousemove', handleMouseMove);
-      document.removeEventListener('mouseup', handleMouseUp);
+      document.removeEventListener('pointermove', handleMouseMove);
+      document.removeEventListener('pointerup', handleMouseUp);
     });
 
     // Pass resize handler to renderer

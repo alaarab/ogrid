@@ -11,8 +11,8 @@ export interface UseColumnResizeParams {
 }
 
 export interface UseColumnResizeResult<T> {
-  handleResizeStart: (e: MouseEvent, col: IColumnDef<T>) => void;
-  handleResizeDoubleClick: (e: MouseEvent, col: IColumnDef<T>) => void;
+  handleResizeStart: (e: PointerEvent, col: IColumnDef<T>) => void;
+  handleResizeDoubleClick: (e: PointerEvent, col: IColumnDef<T>) => void;
   getColumnWidth: (col: IColumnDef<T>) => number;
 }
 
@@ -36,7 +36,7 @@ export function useColumnResize<T>(params: UseColumnResizeParams): UseColumnResi
     cleanupFn = null;
   });
 
-  const handleResizeStart = (e: MouseEvent, col: IColumnDef<T>) => {
+  const handleResizeStart = (e: PointerEvent, col: IColumnDef<T>) => {
     e.preventDefault();
     e.stopPropagation();
 
@@ -66,7 +66,7 @@ export function useColumnResize<T>(params: UseColumnResizeParams): UseColumnResi
 
     const effectiveMinWidth = columnId === ROW_NUMBER_COLUMN_ID ? ROW_NUMBER_COLUMN_MIN_WIDTH : minWidth;
 
-    const onMove = (moveEvent: MouseEvent) => {
+    const onMove = (moveEvent: PointerEvent) => {
       const deltaX = moveEvent.clientX - startX;
       latestWidth = Math.max(effectiveMinWidth, startWidth + deltaX);
 
@@ -79,8 +79,8 @@ export function useColumnResize<T>(params: UseColumnResizeParams): UseColumnResi
     };
 
     const cleanup = () => {
-      document.removeEventListener('mousemove', onMove);
-      document.removeEventListener('mouseup', onUp);
+      document.removeEventListener('pointermove', onMove);
+      document.removeEventListener('pointerup', onUp);
       cleanupFn = null;
 
       document.body.style.cursor = prevCursor;
@@ -98,12 +98,12 @@ export function useColumnResize<T>(params: UseColumnResizeParams): UseColumnResi
       onColumnResized?.(columnId, latestWidth);
     };
 
-    document.addEventListener('mousemove', onMove);
-    document.addEventListener('mouseup', onUp);
+    document.addEventListener('pointermove', onMove);
+    document.addEventListener('pointerup', onUp);
     cleanupFn = cleanup;
   };
 
-  const handleResizeDoubleClick = (e: MouseEvent, col: IColumnDef<T>) => {
+  const handleResizeDoubleClick = (e: PointerEvent, col: IColumnDef<T>) => {
     e.preventDefault();
     e.stopPropagation();
     const columnId = col.columnId;

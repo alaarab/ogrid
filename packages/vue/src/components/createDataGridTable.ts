@@ -100,7 +100,7 @@ export function createDataGridTable(ui: IDataGridTableUIBindings) {
       );
 
       // Stable handlers — avoid creating new closures per render
-      const onWrapperMousedown = (e: MouseEvent) => { lastMouseShift.value = e.shiftKey; };
+      const onWrapperPointerdown = (e: PointerEvent) => { lastMouseShift.value = e.shiftKey; };
       const onContextmenu = (e: MouseEvent) => e.preventDefault();
       const stopPropagation = (e: MouseEvent) => e.stopPropagation();
 
@@ -304,7 +304,7 @@ export function createDataGridTable(ui: IDataGridTableUIBindings) {
             displayNode,
             ...(descriptor.canEditAny && descriptor.isSelectionEndCell ? [
               h('div', {
-                onMousedown: handleFillHandleMouseDown,
+                onPointerdown: handleFillHandleMouseDown,
                 'aria-label': 'Fill handle',
                 class: 'ogrid-fill-handle',
               }),
@@ -374,7 +374,7 @@ export function createDataGridTable(ui: IDataGridTableUIBindings) {
             role: 'region',
             'aria-label': ariaLabel ?? (ariaLabelledBy ? undefined : 'Data grid'),
             'aria-labelledby': ariaLabelledBy,
-            onMousedown: onWrapperMousedown,
+            onPointerdown: onWrapperPointerdown,
             onKeydown: handleGridKeyDown,
             onContextmenu,
             'data-overflow-x': allowOverflowX ? 'true' : 'false',
@@ -464,7 +464,7 @@ export function createDataGridTable(ui: IDataGridTableUIBindings) {
                             }, [
                               '#',
                               h('div', {
-                                onMousedown: (e: MouseEvent) => {
+                                onPointerdown: (e: PointerEvent) => {
                                   setActiveCell(null);
                                   setSelectionRange(null);
                                   wrapperRef.value?.focus({ preventScroll: true });
@@ -514,7 +514,7 @@ export function createDataGridTable(ui: IDataGridTableUIBindings) {
                               class: headerClasses,
                               style: headerStyle,
                               'aria-sort': ariaSort,
-                              onMousedown: (e: MouseEvent) => handleReorderMouseDown(col.columnId, e),
+                              onPointerdown: (e: PointerEvent) => handleReorderMouseDown(col.columnId, e),
                             }, [
                               h('div', { class: 'ogrid-header-content' }, [
                                 h(ui.ColumnHeaderFilter, getHeaderFilterConfig(col, headerFilterInput)),
@@ -533,7 +533,7 @@ export function createDataGridTable(ui: IDataGridTableUIBindings) {
                                 }, '\u22EE'),
                               ]),
                               h('div', {
-                                onMousedown: (e: MouseEvent) => {
+                                onPointerdown: (e: PointerEvent) => {
                                   // Clear cell selection/focus before resize so outlines
                                   // and focus rings don't persist during drag (parity with React).
                                   setActiveCell(null);
@@ -542,7 +542,7 @@ export function createDataGridTable(ui: IDataGridTableUIBindings) {
                                   e.stopPropagation();
                                   handleResizeStart(e, col);
                                 },
-                                onDblclick: (e: MouseEvent) => handleResizeDoubleClick(e, col),
+                                onDblclick: (e: PointerEvent) => handleResizeDoubleClick(e, col),
                                 class: 'ogrid-resize-handle',
                               }),
                             ]);

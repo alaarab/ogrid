@@ -339,7 +339,7 @@ function DataGridTableInner<T>(props: IOGridDataGridProps<T>): React.ReactElemen
             {descriptor.canEditAny && descriptor.isSelectionEndCell && (
               <div
                 className={styles.fillHandle}
-                onMouseDown={handleFillHandleMouseDown}
+                onPointerDown={handleFillHandleMouseDown}
                 aria-label="Fill handle"
               />
             )}
@@ -442,7 +442,7 @@ function DataGridTableInner<T>(props: IOGridDataGridProps<T>): React.ReactElemen
                               role="separator"
                               aria-orientation="vertical"
                               aria-label="Resize row number column"
-                              onMouseDown={(e) => {
+                              onPointerDown={(e) => {
                                 setActiveCell(null);
                                 interaction.setSelectionRange(null);
                                 wrapperRef.current?.focus({ preventScroll: true });
@@ -489,7 +489,7 @@ function DataGridTableInner<T>(props: IOGridDataGridProps<T>): React.ReactElemen
                               ...(columnReorder ? { cursor: isReorderDragging ? 'grabbing' : 'grab' } : undefined),
                             }}
                             aria-sort={ariaSort as 'ascending' | 'descending' | 'none' | undefined}
-                            onMouseDown={columnReorder ? (e) => handleHeaderMouseDown(col.columnId, e) : undefined}
+                            onPointerDown={columnReorder ? (e) => handleHeaderMouseDown(col.columnId, e) : undefined}
                           >
                             <div className={styles.headerCellContent}>
                               <ColumnHeaderFilter {...getHeaderFilterConfig(col, headerFilterInput)} />
@@ -514,7 +514,7 @@ function DataGridTableInner<T>(props: IOGridDataGridProps<T>): React.ReactElemen
                               role="separator"
                               aria-orientation="vertical"
                               aria-label={`Resize ${col.name}`}
-                              onMouseDown={(e) => {
+                              onPointerDown={(e) => {
                                 // Clear cell selection/focus before resize so green outlines
                                 // and blue :focus-visible rings don't persist during drag.
                                 setActiveCell(null);

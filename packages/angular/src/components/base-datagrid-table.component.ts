@@ -461,7 +461,7 @@ export abstract class BaseDataGridTableComponent<T = unknown> {
   /**
    * Returns derived cell interaction metadata (non-event attributes) for use in templates.
    * Mirrors React's getCellInteractionProps for the Angular view layer.
-   * Event handlers (mousedown, click, dblclick, contextmenu) are still bound inline in templates.
+   * Event handlers (pointerdown, click, dblclick, contextmenu) are still bound inline in templates.
    */
   getCellInteractionProps(descriptor: { isActive: boolean; isInRange: boolean; canEditAny: boolean; globalColIndex: number; rowIndex: number }) {
     return {
@@ -643,7 +643,7 @@ export abstract class BaseDataGridTableComponent<T = unknown> {
 
   // --- Event handlers ---
 
-  onWrapperMouseDown(event: MouseEvent): void {
+  onWrapperMouseDown(event: PointerEvent): void {
     this.lastMouseShift = event.shiftKey;
   }
 
@@ -651,7 +651,7 @@ export abstract class BaseDataGridTableComponent<T = unknown> {
     this.state().interaction.handleGridKeyDown(event);
   }
 
-  onCellMouseDown(event: MouseEvent, rowIndex: number, globalColIndex: number): void {
+  onCellMouseDown(event: PointerEvent, rowIndex: number, globalColIndex: number): void {
     this.state().interaction.handleCellMouseDown(event, rowIndex, globalColIndex);
   }
 
@@ -667,11 +667,11 @@ export abstract class BaseDataGridTableComponent<T = unknown> {
     this.state().editing.setEditingCell({ rowId, columnId });
   }
 
-  onFillHandleMouseDown(event: MouseEvent): void {
+  onFillHandleMouseDown(event: PointerEvent): void {
     this.state().interaction.handleFillHandleMouseDown?.(event);
   }
 
-  onResizeStart(event: MouseEvent, col: IColumnDef<T>): void {
+  onResizeStart(event: PointerEvent, col: IColumnDef<T>): void {
     event.preventDefault();
     // Clear cell selection before resize (like React) so selection outlines don't persist during drag
     this.state().interaction.setActiveCell?.(null);
@@ -682,7 +682,7 @@ export abstract class BaseDataGridTableComponent<T = unknown> {
     const startWidth = columnId === ROW_NUMBER_COLUMN_ID ? this.getRowNumberWidth() : this.getColumnWidth(col);
     const minWidth = columnId === ROW_NUMBER_COLUMN_ID ? ROW_NUMBER_COLUMN_MIN_WIDTH : (col.minWidth ?? DEFAULT_MIN_COLUMN_WIDTH);
 
-    const onMove = (e: MouseEvent) => {
+    const onMove = (e: PointerEvent) => {
       const delta = e.clientX - startX;
       const newWidth = Math.max(minWidth, startWidth + delta);
       const overrides = { ...this.columnSizingOverrides(), [col.columnId]: { widthPx: newWidth } };
@@ -691,14 +691,14 @@ export abstract class BaseDataGridTableComponent<T = unknown> {
     };
 
     const onUp = () => {
-      window.removeEventListener('mousemove', onMove);
-      window.removeEventListener('mouseup', onUp);
+      window.removeEventListener('pointermove', onMove);
+      window.removeEventListener('pointerup', onUp);
       const finalWidth = this.getColumnWidth(col);
       this.state().layout.onColumnResized?.(col.columnId, finalWidth);
     };
 
-    window.addEventListener('mousemove', onMove);
-    window.addEventListener('mouseup', onUp);
+    window.addEventListener('pointermove', onMove);
+    window.addEventListener('pointerup', onUp);
   }
 
   onResizeDoubleClick(event: MouseEvent, col: IColumnDef<T>): void {
@@ -779,7 +779,7 @@ export abstract class BaseDataGridTableComponent<T = unknown> {
     this.state().interaction.onRedo?.();
   }
 
-  onHeaderMouseDown(columnId: string, event: MouseEvent): void {
+  onHeaderMouseDown(columnId: string, event: PointerEvent): void {
     this.columnReorderService.handleHeaderMouseDown(columnId, event);
   }
 

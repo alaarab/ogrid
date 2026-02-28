@@ -122,7 +122,7 @@ export function useColumnReorder<T>(params: UseColumnReorderParams<T>): UseColum
       document.body.style.userSelect = 'none';
       document.body.style.cursor = 'grabbing';
 
-      const onMove = (moveEvent: MouseEvent) => {
+      const onMove = (moveEvent: PointerEvent) => {
         // Require a small minimum drag distance before activating
         if (!hasMoved && Math.abs(moveEvent.clientX - startX) < 5) return;
 
@@ -158,8 +158,8 @@ export function useColumnReorder<T>(params: UseColumnReorderParams<T>): UseColum
       };
 
       const cleanup = () => {
-        window.removeEventListener('mousemove', onMove, true);
-        window.removeEventListener('mouseup', onUp, true);
+        window.removeEventListener('pointermove', onMove, true);
+        window.removeEventListener('pointerup', onUp, true);
         cleanupRef.current = null;
 
         // Restore user-select and cursor
@@ -187,8 +187,8 @@ export function useColumnReorder<T>(params: UseColumnReorderParams<T>): UseColum
         setDropIndicatorX(null);
       };
 
-      window.addEventListener('mousemove', onMove, true);
-      window.addEventListener('mouseup', onUp, true);
+      window.addEventListener('pointermove', onMove, true);
+      window.addEventListener('pointerup', onUp, true);
       cleanupRef.current = cleanup;
     },
     [enabled, wrapperRef]

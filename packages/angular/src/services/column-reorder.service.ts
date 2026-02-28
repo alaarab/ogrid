@@ -49,7 +49,7 @@ export class ColumnReorderService<T> {
    * @param columnId - The column being dragged
    * @param event - The native MouseEvent
    */
-  handleHeaderMouseDown(columnId: string, event: MouseEvent): void {
+  handleHeaderMouseDown(columnId: string, event: PointerEvent): void {
     if (!this.enabled()) return;
     if (!this.onColumnOrderChange()) return;
 
@@ -76,7 +76,7 @@ export class ColumnReorderService<T> {
     const prevUserSelect = document.body.style.userSelect;
     document.body.style.userSelect = 'none';
 
-    const onMove = (moveEvent: MouseEvent) => {
+    const onMove = (moveEvent: PointerEvent) => {
       // Require a small minimum drag distance before activating
       if (!hasMoved && Math.abs(moveEvent.clientX - startX) < 5) return;
 
@@ -115,8 +115,8 @@ export class ColumnReorderService<T> {
     };
 
     const cleanup = () => {
-      window.removeEventListener('mousemove', onMove, true);
-      window.removeEventListener('mouseup', onUp, true);
+      window.removeEventListener('pointermove', onMove, true);
+      window.removeEventListener('pointerup', onUp, true);
       this.cleanupFn = null;
 
       // Restore user-select
@@ -143,8 +143,8 @@ export class ColumnReorderService<T> {
       this.dropIndicatorX.set(null);
     };
 
-    window.addEventListener('mousemove', onMove, true);
-    window.addEventListener('mouseup', onUp, true);
+    window.addEventListener('pointermove', onMove, true);
+    window.addEventListener('pointerup', onUp, true);
     this.cleanupFn = cleanup;
   }
 

@@ -604,7 +604,7 @@ function DataGridTableInner<T>(props: IOGridDataGridProps<T>): React.ReactElemen
           >
             {displayNode}
             {descriptor.canEditAny && descriptor.isSelectionEndCell && (
-              <div className="ogrid-mat-fill-handle" onMouseDown={handleFillHandleMouseDown} aria-label="Fill handle" />
+              <div className="ogrid-mat-fill-handle" onPointerDown={handleFillHandleMouseDown} aria-label="Fill handle" />
             )}
           </div>
         );
@@ -712,7 +712,7 @@ function DataGridTableInner<T>(props: IOGridDataGridProps<T>): React.ReactElemen
                         } as TableCellWithSpan)}
                       >
                         #
-                        <Box onMouseDown={(e: React.MouseEvent) => {
+                        <Box onPointerDown={(e: React.PointerEvent) => {
                           setActiveCell(null);
                           interaction.setSelectionRange(null);
                           wrapperRef.current?.focus({ preventScroll: true });
@@ -803,7 +803,7 @@ function DataGridTableInner<T>(props: IOGridDataGridProps<T>): React.ReactElemen
                               zIndex: 11,
                             },
                           },
-                          onMouseDown: columnReorder ? (e: React.MouseEvent) => handleHeaderMouseDown(col.columnId, e) : undefined
+                          onPointerDown: columnReorder ? (e: React.PointerEvent) => handleHeaderMouseDown(col.columnId, e) : undefined
                         } as TableCellWithSpan)}
                       >
                         <Box sx={HEADER_CONTENT_FLEX_SX}>
@@ -825,7 +825,7 @@ function DataGridTableInner<T>(props: IOGridDataGridProps<T>): React.ReactElemen
                             ⋮
                           </Box>
                         </Box>
-                        <Box onMouseDown={(e: React.MouseEvent) => {
+                        <Box onPointerDown={(e: React.PointerEvent) => {
                           setActiveCell(null);
                           interaction.setSelectionRange(null);
                           wrapperRef.current?.focus({ preventScroll: true });
