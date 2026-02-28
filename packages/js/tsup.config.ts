@@ -9,7 +9,6 @@ export default defineConfig({
   clean: false,
   dts: false,
   target: 'es2020',
-  // Bundle core into js so consumers only traverse one package.
-  noExternal: ['@alaarab/ogrid-core'],
+  minify: true,
   outExtension: () => ({ js: '.js' }),
 });
