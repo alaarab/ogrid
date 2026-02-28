@@ -4,9 +4,9 @@ import {
   CHECKBOX_COLUMN_WIDTH,
   DEFAULT_MIN_COLUMN_WIDTH,
   CELL_PADDING,
-  getResponsiveHiddenColumns,
+  resolveResponsiveConfig,
+  applyResponsiveHiding,
 } from '@alaarab/ogrid-core';
-import type { IResponsiveColumnsConfig } from '@alaarab/ogrid-core';
 import type { RowId } from '../types';
 import type { IColumnDef as IAngularColumnDef } from '../types';
 import type { IOGridDataGridProps } from '../types';
@@ -101,14 +101,7 @@ export class DataGridLayoutHelper<T> {
         });
       }
       // Responsive column hiding
-      const rc = p.responsiveColumns;
-      if (!rc) return ordered;
-      const cw = this.containerWidthSig();
-      if (cw <= 0) return ordered;
-      const config: IResponsiveColumnsConfig | undefined = rc === true ? {} : rc;
-      const hidden = getResponsiveHiddenColumns(cw, ordered, config);
-      if (hidden.size === 0) return ordered;
-      return ordered.filter((c) => !hidden.has(c.columnId));
+      return applyResponsiveHiding(ordered, this.containerWidthSig(), resolveResponsiveConfig(p.responsiveColumns)) as IColumnDef<T>[];
     });
 
     this.visibleColumnCount = computed(() => this.visibleCols().length);

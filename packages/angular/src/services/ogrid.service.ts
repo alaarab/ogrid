@@ -27,6 +27,7 @@ import type {
   IDataSource,
   ISideBarDef,
   IVirtualScrollConfig,
+  IResponsiveColumnsConfig,
   SideBarPanelId,
   IFormulaFunction,
   IRecalcResult,
@@ -156,7 +157,7 @@ export class OGridService<T> {
   readonly onError = signal<((error: unknown) => void) | undefined>(undefined);
   readonly columnChooserProp = signal<boolean | 'toolbar' | 'sidebar' | undefined>(undefined);
   readonly columnReorder = signal<boolean | undefined>(undefined);
-  readonly responsiveColumns = signal<boolean | import('@alaarab/ogrid-core').IResponsiveColumnsConfig | undefined>(undefined);
+  readonly responsiveColumns = signal<boolean | IResponsiveColumnsConfig | undefined>(undefined);
   readonly virtualScroll = signal<IVirtualScrollConfig | undefined>(undefined);
   readonly ariaLabel = signal<string | undefined>(undefined);
   readonly ariaLabelledBy = signal<string | undefined>(undefined);

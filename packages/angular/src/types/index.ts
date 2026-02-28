@@ -38,6 +38,7 @@ export type {
   SideBarPanelId,
   ISideBarDef,
   IVirtualScrollConfig,
+  IResponsiveColumnsConfig,
   IFormulaFunction,
   IRecalcResult,
   IGridDataAccessor,

@@ -2,7 +2,7 @@ import { useMemo, useState, useLayoutEffect, useCallback } from 'react';
 import type { RefObject } from 'react';
 import { flattenColumns } from '../utils';
 import type { RowId, IColumnDef } from '../types';
-import { CHECKBOX_COLUMN_WIDTH, DEFAULT_MIN_COLUMN_WIDTH, getResponsiveHiddenColumns } from '@alaarab/ogrid-core';
+import { CHECKBOX_COLUMN_WIDTH, DEFAULT_MIN_COLUMN_WIDTH, resolveResponsiveConfig, applyResponsiveHiding } from '@alaarab/ogrid-core';
 import type { IResponsiveColumnsConfig } from '@alaarab/ogrid-core';
 import { useTableLayout } from './useTableLayout';
 import { useColumnPinning } from './useColumnPinning';
@@ -90,9 +90,8 @@ export function useDataGridLayout<T>(
     });
   }, [flatColumnsRaw, pinnedColumns]);
 
-  // Resolve responsive config once
-  const responsiveConfig = useMemo<IResponsiveColumnsConfig | undefined>(
-    () => responsiveColumns === true ? {} : responsiveColumns || undefined,
+  const responsiveConfig = useMemo(
+    () => resolveResponsiveConfig(responsiveColumns),
     [responsiveColumns],
   );
 
@@ -141,12 +140,10 @@ export function useDataGridLayout<T>(
   });
 
   // Second pass: apply responsive column hiding based on measured container width
-  const visibleCols = useMemo(() => {
-    if (!responsiveConfig || containerWidth <= 0) return userVisibleCols;
-    const hidden = getResponsiveHiddenColumns(containerWidth, userVisibleCols, responsiveConfig);
-    if (hidden.size === 0) return userVisibleCols;
-    return userVisibleCols.filter((c) => !hidden.has(c.columnId));
-  }, [userVisibleCols, containerWidth, responsiveConfig]);
+  const visibleCols = useMemo(
+    () => applyResponsiveHiding(userVisibleCols, containerWidth, responsiveConfig) as IColumnDef<T>[],
+    [userVisibleCols, containerWidth, responsiveConfig],
+  );
 
   const visibleColumnCount = visibleCols.length;
   const specialColsCount = (hasCheckboxCol ? 1 : 0) + (hasRowNumbersCol ? 1 : 0);

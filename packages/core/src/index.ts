@@ -208,7 +208,7 @@ export { extractFormulaReferences, processFormulaBarCommit, deriveFormulaBarText
 export type { FormulaReference } from './utils';
 
 // Utils — responsiveColumns
-export { getResponsiveHiddenColumns, RESPONSIVE_BREAKPOINTS } from './utils';
+export { getResponsiveHiddenColumns, RESPONSIVE_BREAKPOINTS, resolveResponsiveConfig, applyResponsiveHiding } from './utils';
 export type { IResponsiveColumnsConfig } from './utils';
 
 // Constants — layout

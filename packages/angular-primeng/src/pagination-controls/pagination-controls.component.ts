@@ -7,12 +7,12 @@ import { BasePaginationControlsComponent } from '@alaarab/ogrid-angular';
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     @if (vm()) {
-      <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;font-size:13px;color:var(--ogrid-fg, #242424)">
-        <div>
+      <div class="ogrid-pagination" style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;font-size:13px;color:var(--ogrid-fg, #242424)">
+        <div class="ogrid-pagination__info">
           Showing {{ vm()!.startItem }} to {{ vm()!.endItem }} of {{ totalCount.toLocaleString() }} {{ labelPlural() }}
         </div>
 
-        <div style="display:flex;align-items:center;gap:4px" role="navigation" aria-label="Pagination">
+        <div class="ogrid-pagination__pages" style="display:flex;align-items:center;gap:4px" role="navigation" aria-label="Pagination">
           <button
             type="button"
             class="p-button p-button-text p-button-sm"
@@ -82,7 +82,7 @@ import { BasePaginationControlsComponent } from '@alaarab/ogrid-angular';
           >&raquo;</button>
         </div>
 
-        <div style="display:flex;align-items:center;gap:6px">
+        <div class="ogrid-pagination__size" style="display:flex;align-items:center;gap:6px">
           <span style="font-size:12px">Rows</span>
           <select
             [value]="'' + pageSize"
@@ -101,10 +101,10 @@ import { BasePaginationControlsComponent } from '@alaarab/ogrid-angular';
   styles: [`
     :host { display: block; }
     @media (max-width: 576px) {
-      :host ::ng-deep > div { flex-direction: column; align-items: stretch !important; gap: 6px !important; padding: 6px 8px; font-size: 12px !important; }
-      :host ::ng-deep > div > div:nth-child(2) { order: -1; justify-content: center; }
-      :host ::ng-deep > div > div:first-child { text-align: center; font-size: 11px !important; }
-      :host ::ng-deep > div > div:last-child { font-size: 11px !important; justify-content: center; }
+      .ogrid-pagination { flex-direction: column; align-items: stretch; gap: 6px; padding: 6px 8px; font-size: 12px; }
+      .ogrid-pagination__pages { order: -1; justify-content: center; }
+      .ogrid-pagination__info { text-align: center; font-size: 11px; }
+      .ogrid-pagination__size { font-size: 11px; justify-content: center; }
     }
   `],
 })
