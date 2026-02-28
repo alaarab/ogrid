@@ -1,0 +1,178 @@
+---
+sidebar_position: 26
+title: Responsive Columns
+description: Automatically hide columns based on container width using responsive priority levels and configurable breakpoints.
+---
+
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+import Admonition from '@theme/Admonition';
+
+# Responsive Columns
+
+OGrid can automatically hide lower-priority columns when the grid container becomes narrow, keeping the most important data visible on smaller screens. Columns are progressively hidden based on `responsivePriority` values and configurable width breakpoints.
+
+## How It Works
+
+1. Assign `responsivePriority` to columns (0 = highest priority, always visible).
+2. Enable `responsiveColumns` on the grid.
+3. As the container width shrinks below breakpoint thresholds, columns with higher priority numbers are hidden first.
+
+### Default Breakpoints
+
+| Container Width | Max Priority Shown |
+|----------------|--------------------|
+| < 576px        | 0 only             |
+| 576–767px      | 0–1                |
+| 768–991px      | 0–2                |
+| 992–1199px     | 0–3                |
+| >= 1200px      | All columns        |
+
+### Rules
+
+- Columns **without** `responsivePriority` are never auto-hidden.
+- Columns with `required: true` are never auto-hidden regardless of priority.
+- Responsive hiding works alongside the Column Chooser — columns hidden by the user stay hidden.
+
+## Quick Example
+
+<Tabs groupId="framework">
+  <TabItem value="react" label="React" default>
+
+```tsx
+import { OGrid } from '@alaarab/ogrid-react-radix';
+
+const columns = [
+  { columnId: 'name', name: 'Name', responsivePriority: 0 },        // always visible
+  { columnId: 'email', name: 'Email', responsivePriority: 1 },      // hidden < 576px
+  { columnId: 'department', name: 'Dept', responsivePriority: 2 },   // hidden < 768px
+  { columnId: 'phone', name: 'Phone', responsivePriority: 3 },       // hidden < 992px
+  { columnId: 'address', name: 'Address', responsivePriority: 4 },   // hidden < 1200px
+];
+
+function App() {
+  return (
+    <OGrid
+      columns={columns}
+      data={items}
+      getRowId={(item) => item.id}
+      responsiveColumns
+    />
+  );
+}
+```
+
+<Admonition type="tip">
+Also available from `@alaarab/ogrid-react-fluent` and `@alaarab/ogrid-react-material`.
+</Admonition>
+
+  </TabItem>
+  <TabItem value="angular" label="Angular">
+
+```typescript
+import { OGridComponent } from '@alaarab/ogrid-angular-material';
+
+@Component({
+  template: `
+    <ogrid-component
+      [columns]="columns"
+      [data]="items"
+      [getRowId]="getRowId"
+      [responsiveColumns]="true"
+    />
+  `,
+})
+export class AppComponent {
+  columns = [
+    { columnId: 'name', name: 'Name', responsivePriority: 0 },
+    { columnId: 'email', name: 'Email', responsivePriority: 1 },
+    { columnId: 'phone', name: 'Phone', responsivePriority: 3 },
+  ];
+  items = [...];
+  getRowId = (item: any) => item.id;
+}
+```
+
+<Admonition type="tip">
+Also available from `@alaarab/ogrid-angular-primeng` and `@alaarab/ogrid-angular-radix`.
+</Admonition>
+
+  </TabItem>
+  <TabItem value="vue" label="Vue">
+
+```vue
+<template>
+  <OGrid
+    :columns="columns"
+    :data="items"
+    :getRowId="(item) => item.id"
+    :responsiveColumns="true"
+  />
+</template>
+
+<script setup>
+import { OGrid } from '@alaarab/ogrid-vue-vuetify';
+
+const columns = [
+  { columnId: 'name', name: 'Name', responsivePriority: 0 },
+  { columnId: 'email', name: 'Email', responsivePriority: 1 },
+  { columnId: 'phone', name: 'Phone', responsivePriority: 3 },
+];
+const items = [...];
+</script>
+```
+
+<Admonition type="tip">
+Also available from `@alaarab/ogrid-vue-primevue` and `@alaarab/ogrid-vue-radix`.
+</Admonition>
+
+  </TabItem>
+  <TabItem value="js" label="Vanilla JS">
+
+```typescript
+import { OGrid } from '@alaarab/ogrid-js';
+
+const grid = new OGrid(document.getElementById('grid')!, {
+  columns: [
+    { columnId: 'name', name: 'Name', responsivePriority: 0 },
+    { columnId: 'email', name: 'Email', responsivePriority: 1 },
+    { columnId: 'phone', name: 'Phone', responsivePriority: 3 },
+  ],
+  data: items,
+  getRowId: (item) => item.id,
+  responsiveColumns: true,
+});
+```
+
+  </TabItem>
+</Tabs>
+
+## Custom Breakpoints
+
+Override the default breakpoints by passing a config object instead of `true`:
+
+```tsx
+<OGrid
+  columns={columns}
+  data={items}
+  getRowId={(item) => item.id}
+  responsiveColumns={{
+    breakpoints: [
+      { minWidth: 0, maxPriority: 0 },       // < 480px: only priority 0
+      { minWidth: 480, maxPriority: 2 },      // 480-799px: priority 0-2
+      { minWidth: 800, maxPriority: Infinity }, // >= 800px: all columns
+    ],
+  }}
+/>
+```
+
+## Core Utility
+
+The responsive column logic is available as a standalone pure function for advanced use cases:
+
+```typescript
+import { getResponsiveHiddenColumns } from '@alaarab/ogrid-core';
+
+const hidden = getResponsiveHiddenColumns(containerWidth, columns);
+// Returns Set<string> of column IDs to hide
+```

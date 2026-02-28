@@ -21,6 +21,7 @@ export type {
   ISideBarDef,
   IOGridApi,
   IVirtualScrollConfig,
+  IResponsiveColumnsConfig,
   IFormulaFunction,
   IRecalcResult,
   IGridDataAccessor,
@@ -44,6 +45,7 @@ import type {
   IDataSource,
   ISideBarDef,
   IVirtualScrollConfig,
+  IResponsiveColumnsConfig,
   IFormulaFunction,
   IRecalcResult,
   IGridDataAccessor,
@@ -143,6 +145,14 @@ interface IOGridBaseProps<T> {
 
   /** Enable column reordering via drag-and-drop on header cells. Default: false. */
   columnReorder?: boolean;
+
+  /**
+   * Responsive column hiding. Columns with `responsivePriority` are hidden at narrower widths.
+   * - `true`: enable with default breakpoints
+   * - `IResponsiveColumnsConfig`: custom breakpoints
+   * - `false` / omitted: disabled
+   */
+  responsiveColumns?: boolean | IResponsiveColumnsConfig;
 
   /** Virtual scrolling configuration. Set `enabled: true` with a fixed `rowHeight` to virtualize large datasets. */
   virtualScroll?: IVirtualScrollConfig;
@@ -264,6 +274,8 @@ export interface IOGridDataGridProps<T> {
   onCellError?: (error: Error, info: unknown) => void;
   /** Enable column reordering via drag-and-drop on header cells. Default: false. */
   columnReorder?: boolean;
+  /** Responsive column hiding config (passed from IOGridBaseProps). */
+  responsiveColumns?: boolean | IResponsiveColumnsConfig;
   /** Virtual scrolling configuration. */
   virtualScroll?: IVirtualScrollConfig;
   /** Fixed row height in pixels. Overrides default row height (36px). */

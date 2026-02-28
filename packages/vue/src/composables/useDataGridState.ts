@@ -1,5 +1,6 @@
 import { ref, shallowRef, computed, watch, nextTick, triggerRef, type Ref, type ShallowRef } from 'vue';
-import { flattenColumns, getDataGridStatusBarConfig, parseValue, computeAggregations, CHECKBOX_COLUMN_WIDTH, DEFAULT_MIN_COLUMN_WIDTH } from '@alaarab/ogrid-core';
+import { flattenColumns, getDataGridStatusBarConfig, parseValue, computeAggregations, CHECKBOX_COLUMN_WIDTH, DEFAULT_MIN_COLUMN_WIDTH, getResponsiveHiddenColumns } from '@alaarab/ogrid-core';
+import type { IResponsiveColumnsConfig } from '@alaarab/ogrid-core';
 import type { RowId, IOGridDataGridProps, IStatusBarProps, IColumnDef } from '../types';
 import type { HeaderFilterConfigInput, CellRenderDescriptorInput } from '../utils';
 import { useRowSelection } from './useRowSelection';
@@ -193,7 +194,14 @@ export function useDataGridState<T>(
     });
   });
 
-  const visibleCols = computed(() => {
+  // Resolve responsive config once: true → {}, falsy → undefined
+  const responsiveConfig = computed<IResponsiveColumnsConfig | undefined>(() => {
+    const rc = props.value.responsiveColumns;
+    return rc === true ? {} : rc || undefined;
+  });
+
+  // First pass: user-visible columns (before responsive hiding)
+  const userVisibleCols = computed(() => {
     const vis = props.value.visibleColumns;
     const order = props.value.columnOrder;
     const filtered = vis ? flatColumns.value.filter((c) => vis.has(c.columnId)) : flatColumns.value;
@@ -211,6 +219,21 @@ export function useDataGridState<T>(
       if (ib === -1) return -1;
       return ia - ib;
     });
+  });
+
+  // visibleCols is a computed that applies responsive column hiding on top of
+  // userVisibleCols. It depends on containerWidth from useTableLayout (defined
+  // below), so we use a ref that gets populated after useTableLayout runs.
+  // All sub-composables receive visibleCols (which is lazily evaluated), so by
+  // the time any .value access happens, the ref will be populated.
+  const _containerWidthRef = ref(0);
+  const visibleCols = computed(() => {
+    const config = responsiveConfig.value;
+    const cw = _containerWidthRef.value;
+    if (!config || cw <= 0) return userVisibleCols.value;
+    const hidden = getResponsiveHiddenColumns(cw, userVisibleCols.value, config);
+    if (hidden.size === 0) return userVisibleCols.value;
+    return userVisibleCols.value.filter((c) => !hidden.has(c.columnId));
   });
 
   const visibleColumnCount = computed(() => visibleCols.value.length);
@@ -324,12 +347,15 @@ export function useDataGridState<T>(
     setColumnSizingOverrides,
   } = useTableLayout({
     wrapperRef,
-    visibleCols,
+    visibleCols: userVisibleCols,
     flatColumns,
     hasCheckboxCol,
     initialColumnWidths: props.value.initialColumnWidths,
     onColumnResized: (columnId: string, width: number) => props.value.onColumnResized?.(columnId, width),
   });
+
+  // Wire up container width for responsive column hiding (ref declared above visibleCols)
+  watch(containerWidth, (cw) => { _containerWidthRef.value = cw; }, { immediate: true });
 
   // --- Column pinning ---
   const pinningResult = useColumnPinning({

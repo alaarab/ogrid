@@ -1093,3 +1093,50 @@
 .ogrid-table td[data-type='numeric'] {
   text-align: right;
 }
+
+/* ── Responsive Layout ── */
+
+/* Compact pagination on small screens */
+@media (max-width: 576px) {
+  .ogrid-pagination {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 8px;
+    padding: 6px 8px;
+  }
+
+  .ogrid-pagination-nav {
+    order: -1;
+    justify-content: center;
+  }
+
+  .ogrid-pagination-info {
+    font-size: 11px;
+    text-align: center;
+  }
+
+  .ogrid-pagination-size {
+    font-size: 11px;
+    justify-content: center;
+  }
+
+  .ogrid-toolbar {
+    flex-wrap: wrap;
+    gap: 4px;
+    padding: 4px 8px;
+  }
+
+  /* Sidebar becomes overlay on narrow viewports */
+  .ogrid-sidebar-container {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    right: 0;
+    z-index: 50;
+    box-shadow: -2px 0 8px rgba(0, 0, 0, 0.15);
+  }
+
+  .ogrid-body-area {
+    position: relative;
+  }
+}

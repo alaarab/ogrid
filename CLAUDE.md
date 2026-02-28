@@ -83,11 +83,13 @@ npm run docs:build              # Build docs site
 
 ### Core (`packages/core/src/`) — `@alaarab/ogrid-core`
 
-**Types** — `IColumnDef`, `IColumnGroupDef`, `IDataSource`, `IFilters`, `IDateFilterValue`, `UserLike`, `IOGridApi`, `IOGridProps`, `ICellEditorProps`, `FilterValue`, `IVisibleColumnRange`, etc. in `types/`. Column types: `'text' | 'numeric' | 'date' | 'boolean'`. Filter types: `'none' | 'text' | 'multiSelect' | 'people' | 'date'`. `FilterValue` is a discriminated union: `{ type: 'text', value: string } | { type: 'multiSelect', value: string[] } | { type: 'people', value: UserLike } | { type: 'date', value: IDateFilterValue }`. `IVirtualScrollConfig` has `columns?: boolean` and `columnOverscan?: number` fields. `IOGridBaseProps` has `workerSort?: boolean | 'auto'`, `cellReferences?: boolean`.
+**Types** — `IColumnDef`, `IColumnGroupDef`, `IDataSource`, `IFilters`, `IDateFilterValue`, `UserLike`, `IOGridApi`, `IOGridProps`, `ICellEditorProps`, `FilterValue`, `IVisibleColumnRange`, etc. in `types/`. Column types: `'text' | 'numeric' | 'date' | 'boolean'`. Filter types: `'none' | 'text' | 'multiSelect' | 'people' | 'date'`. `FilterValue` is a discriminated union: `{ type: 'text', value: string } | { type: 'multiSelect', value: string[] } | { type: 'people', value: UserLike } | { type: 'date', value: IDateFilterValue }`. `IVirtualScrollConfig` has `columns?: boolean` and `columnOverscan?: number` fields. `IOGridBaseProps` has `workerSort?: boolean | 'auto'`, `cellReferences?: boolean`, `responsiveColumns?: boolean | IResponsiveColumnsConfig`. `IColumnMeta` has `responsivePriority?: number` (0 = highest; columns with higher numbers are hidden first on narrow containers).
 
 **Cell reference utilities** — `indexToColumnLetter(index)` converts 0→A, 25→Z, 26→AA, 702→AAA; `formatCellReference(colIndex, rowNumber)` returns "A1"-style references. In `utils/cellReference.ts`.
 
 **Performance utilities** — `computeVisibleColumnRange`, `partitionColumnsForVirtualization`, `IVisibleColumnRange` in `utils/virtualScroll.ts`; `processClientSideDataAsync`, `extractValueMatrix`, `createSortFilterWorker`, `terminateSortFilterWorker` in `utils/workerSortFilter.ts`; `sortFilterWorker.ts` in `workers/`.
+
+**Responsive utilities** — `getResponsiveHiddenColumns(containerWidth, columns, config?)` returns a `Set<string>` of column IDs to hide based on `responsivePriority`. `RESPONSIVE_BREAKPOINTS` defines default thresholds (576/768/992/1200px). `IResponsiveColumnsConfig` allows custom breakpoints. In `utils/responsiveColumns.ts`.
 
 Core is **pure TypeScript with zero dependencies** — no React, no DOM APIs. It contains types, algorithms, and utilities shared by all framework packages.
 
