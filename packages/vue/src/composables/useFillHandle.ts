@@ -21,7 +21,7 @@ export interface UseFillHandleParams<T> {
 export interface UseFillHandleResult {
   fillDrag: ShallowRef<{ startRow: number; startCol: number } | null>;
   setFillDrag: (value: { startRow: number; startCol: number } | null) => void;
-  handleFillHandleMouseDown: (e: MouseEvent) => void;
+  handleFillHandleMouseDown: (e: PointerEvent) => void;
   /** Fill the current selection down from the top row (Ctrl+D). No-op if no selection or editable=false. */
   fillDown: () => void;
 }
@@ -51,7 +51,7 @@ export function useFillHandle<T>(params: UseFillHandleParams<T>): UseFillHandleR
   let fillDragEnd = { endRow: 0, endCol: 0 };
   let rafId = 0;
   let liveFillRange: ISelectionRange | null = null;
-  let moveListener: ((e: MouseEvent) => void) | null = null;
+  let moveListener: ((e: PointerEvent) => void) | null = null;
   let upListener: (() => void) | null = null;
 
   const setFillDrag = (value: { startRow: number; startCol: number } | null) => {
@@ -60,11 +60,11 @@ export function useFillHandle<T>(params: UseFillHandleParams<T>): UseFillHandleR
 
   const cleanup = () => {
     if (moveListener) {
-      window.removeEventListener('mousemove', moveListener, true);
+      window.removeEventListener('pointermove', moveListener, true);
       moveListener = null;
     }
     if (upListener) {
-      window.removeEventListener('mouseup', upListener, true);
+      window.removeEventListener('pointerup', upListener, true);
       upListener = null;
     }
     if (rafId) {
@@ -153,7 +153,7 @@ export function useFillHandle<T>(params: UseFillHandleParams<T>): UseFillHandleR
       });
     };
 
-    moveListener = (e: MouseEvent) => {
+    moveListener = (e: PointerEvent) => {
       lastFillMousePos = { cx: e.clientX, cy: e.clientY };
       if (rafId) cancelAnimationFrame(rafId);
 
@@ -222,8 +222,8 @@ export function useFillHandle<T>(params: UseFillHandleParams<T>): UseFillHandleR
       cleanup();
     };
 
-    window.addEventListener('mousemove', moveListener, true);
-    window.addEventListener('mouseup', upListener, true);
+    window.addEventListener('pointermove', moveListener, true);
+    window.addEventListener('pointerup', upListener, true);
 
     // Register cleanup via onCleanup — Vue calls this BEFORE next watch run
     // and on unmount. Compatible with Vue 3.3+ (unlike return-value cleanup
@@ -235,7 +235,7 @@ export function useFillHandle<T>(params: UseFillHandleParams<T>): UseFillHandleR
 
   onUnmounted(() => cleanup());
 
-  const handleFillHandleMouseDown = (e: MouseEvent) => {
+  const handleFillHandleMouseDown = (e: PointerEvent) => {
     e.preventDefault();
     e.stopPropagation();
     const range = selectionRange.value;

@@ -25,8 +25,8 @@ export class ColumnReorderState {
   private draggedPinState: ColumnPinState = 'unpinned';
   private tableElement: Element | null = null;
 
-  private onMoveBound: (e: MouseEvent) => void;
-  private onUpBound: (e: MouseEvent) => void;
+  private onMoveBound: (e: PointerEvent) => void;
+  private onUpBound: (e: PointerEvent) => void;
 
   constructor() {
     this.onMoveBound = this.handleMouseMove.bind(this);
@@ -43,11 +43,11 @@ export class ColumnReorderState {
 
   /**
    * Begin a column drag operation.
-   * Called from mousedown on a header cell.
+   * Called from pointerdown on a header cell.
    */
   startDrag(
     columnId: string,
-    event: MouseEvent,
+    event: PointerEvent,
     columns: { columnId: string }[],
     columnOrder: string[],
     pinnedColumns: Record<string, 'left' | 'right'> | undefined,
@@ -81,13 +81,13 @@ export class ColumnReorderState {
 
     this.draggedPinState = getPinStateForColumn(columnId, this.pinnedColumns);
 
-    window.addEventListener('mousemove', this.onMoveBound, { capture: true, passive: true });
-    window.addEventListener('mouseup', this.onUpBound, { capture: true, passive: true });
+    window.addEventListener('pointermove', this.onMoveBound, { capture: true, passive: true });
+    window.addEventListener('pointerup', this.onUpBound, { capture: true, passive: true });
 
     this.emitter.emit('stateChange', { isDragging: true, dropIndicatorX: null });
   }
 
-  private handleMouseMove(event: MouseEvent): void {
+  private handleMouseMove(event: PointerEvent): void {
     if (!this._isDragging || !this._draggedColumnId || !this.tableElement) return;
 
     if (this.rafId) cancelAnimationFrame(this.rafId);
@@ -126,8 +126,8 @@ export class ColumnReorderState {
   }
 
   private handleMouseUp(): void {
-    window.removeEventListener('mousemove', this.onMoveBound, true);
-    window.removeEventListener('mouseup', this.onUpBound, true);
+    window.removeEventListener('pointermove', this.onMoveBound, true);
+    window.removeEventListener('pointerup', this.onUpBound, true);
 
     if (this.rafId) {
       cancelAnimationFrame(this.rafId);
@@ -170,8 +170,8 @@ export class ColumnReorderState {
 
   destroy(): void {
     if (this._isDragging) {
-      window.removeEventListener('mousemove', this.onMoveBound, true);
-      window.removeEventListener('mouseup', this.onUpBound, true);
+      window.removeEventListener('pointermove', this.onMoveBound, true);
+      window.removeEventListener('pointerup', this.onUpBound, true);
     }
     if (this.rafId) cancelAnimationFrame(this.rafId);
     this.emitter.removeAllListeners();

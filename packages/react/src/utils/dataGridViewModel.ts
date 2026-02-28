@@ -97,7 +97,7 @@ export function buildPopoverEditorProps<T>(
   return { ...result, column: col };
 }
 
-// --- React-specific: getCellInteractionProps uses React.MouseEvent ---
+// --- React-specific: getCellInteractionProps uses React.PointerEvent for touch+mouse support ---
 
 export interface CellInteractionHandlers {
   handleCellMouseDown: (e: React.MouseEvent, rowIndex: number, colIndex: number) => void;
@@ -117,7 +117,7 @@ export function getCellInteractionProps(
     ...(descriptor.isActive ? { 'data-active-cell': 'true' as const } : {}),
     ...(descriptor.isInRange ? { 'data-in-range': 'true' as const } : {}),
     tabIndex: descriptor.isActive ? 0 : -1,
-    onMouseDown: (e: React.MouseEvent) =>
+    onPointerDown: (e: React.PointerEvent) =>
       handlers.handleCellMouseDown(e, descriptor.rowIndex, descriptor.globalColIndex),
     onClick: () =>
       handlers.setActiveCell({ rowIndex: descriptor.rowIndex, columnIndex: descriptor.globalColIndex }),

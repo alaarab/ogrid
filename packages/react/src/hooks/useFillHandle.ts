@@ -138,7 +138,7 @@ export function useFillHandle<T>(params: UseFillHandleParams<T>): UseFillHandleR
       });
     };
 
-    const onMove = (e: MouseEvent) => {
+    const onMove = (e: PointerEvent) => {
       lastFillMousePos = { cx: e.clientX, cy: e.clientY };
       if (rafRef.current) cancelAnimationFrame(rafRef.current);
 
@@ -206,11 +206,11 @@ export function useFillHandle<T>(params: UseFillHandleParams<T>): UseFillHandleR
       liveFillRangeRef.current = null;
     };
 
-    window.addEventListener('mousemove', onMove, true);
-    window.addEventListener('mouseup', onUp, true);
+    window.addEventListener('pointermove', onMove, true);
+    window.addEventListener('pointerup', onUp, true);
     return () => {
-      window.removeEventListener('mousemove', onMove, true);
-      window.removeEventListener('mouseup', onUp, true);
+      window.removeEventListener('pointermove', onMove, true);
+      window.removeEventListener('pointerup', onUp, true);
       if (rafRef.current) cancelAnimationFrame(rafRef.current);
     };
   }, [

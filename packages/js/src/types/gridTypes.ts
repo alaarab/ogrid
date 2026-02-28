@@ -48,8 +48,8 @@ export interface CellEvent {
   rowIndex: number;
   /** Zero-based column index among visible columns. */
   colIndex: number;
-  /** The original DOM mouse event, when available. */
-  event?: MouseEvent;
+  /** The original DOM event (MouseEvent for click/dblclick/contextmenu, PointerEvent for pointerdown). */
+  event?: MouseEvent | PointerEvent;
   /** Typed row identifier (string or number). Present for double-click events. */
   rowId?: RowId;
   /** Column identifier string. Present for double-click events. */

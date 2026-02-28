@@ -523,7 +523,7 @@ describe('Fill Handle', () => {
         () => {},
         () => {}
       );
-      const event = new MouseEvent('mousedown', { bubbles: true });
+      const event = new PointerEvent('pointerdown', { bubbles: true });
       state.startFillDrag(event);
       expect(state.isFillDragging).toBe(false);
       state.destroy();
@@ -536,7 +536,7 @@ describe('Fill Handle', () => {
         () => {},
         () => {}
       );
-      const event = new MouseEvent('mousedown', { bubbles: true });
+      const event = new PointerEvent('pointerdown', { bubbles: true });
       state.startFillDrag(event);
       expect(state.isFillDragging).toBe(false);
       state.destroy();
@@ -555,12 +555,12 @@ describe('Fill Handle', () => {
         () => {},
         () => {}
       );
-      const event = new MouseEvent('mousedown', { bubbles: true });
+      const event = new PointerEvent('pointerdown', { bubbles: true });
       state.startFillDrag(event);
       expect(state.isFillDragging).toBe(true);
 
-      // Clean up by triggering mouseup
-      window.dispatchEvent(new MouseEvent('mouseup', { bubbles: true }));
+      // Clean up by triggering pointerup
+      window.dispatchEvent(new PointerEvent('pointerup', { bubbles: true }));
 
       state.destroy();
     });

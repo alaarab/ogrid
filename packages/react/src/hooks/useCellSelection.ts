@@ -43,11 +43,11 @@ export function useCellSelection(params: UseCellSelectionParams): UseCellSelecti
   const [selectionRange, _setSelectionRange] = useState<ISelectionRange | null>(null);
   const isDraggingRef = useRef(false);
   const [isDragging, setIsDragging] = useState(false);
-  /** True once a mousemove has been seen during the current drag gesture. */
+  /** True once a pointermove has been seen during the current drag gesture. */
   const dragMovedRef = useRef(false);
   const dragStartRef = useRef<{ row: number; col: number } | null>(null);
   const rafRef = useRef(0);
-  /** Live drag range kept in a ref — only committed to React state on mouseup. */
+  /** Live drag range kept in a ref — only committed to React state on pointerup. */
   const liveDragRangeRef = useRef<ISelectionRange | null>(null);
   /** Auto-scroll interval during drag. */
   const autoScrollRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -118,15 +118,15 @@ export function useCellSelection(params: UseCellSelectionParams): UseCellSelecti
     setActiveCell({ rowIndex: 0, columnIndex: colOffsetRef.current });
   }, [rowCount, visibleColCount, setActiveCell, colOffsetRef, setSelectionRange]);
 
-  /** Last known mouse position during drag — used by mouseUp to flush pending RAF work. */
+  /** Last known pointer position during drag — used by pointerUp to flush pending RAF work. */
   const lastMousePosRef = useRef<{ cx: number; cy: number } | null>(null);
 
-  // Ref to expose applyDragAttrs outside useEffect so it can be called from mouseDown
+  // Ref to expose applyDragAttrs outside useEffect so it can be called from pointerDown
   const applyDragAttrsRef = useRef<((range: ISelectionRange) => void) | null>(null);
 
-  // Window mouse move/up for drag selection.
+  // Window pointer move/up for drag selection (supports mouse + touch via Pointer Events API).
   // Performance: during drag, we update a ref + toggle DOM attributes via rAF.
-  // React state is only committed on mouseup (single re-render instead of 60-120/s).
+  // React state is only committed on pointerup (single re-render instead of 60-120/s).
   useEffect(() => {
 
     /** Set of currently drag-marked HTMLElements — avoids O(n) full DOM scan on each frame. */
@@ -276,7 +276,7 @@ export function useCellSelection(params: UseCellSelectionParams): UseCellSelecti
       hideOverlay();
     };
 
-    /** Resolve mouse coordinates to a cell range (shared by RAF callback and mouseUp flush). */
+    /** Resolve pointer coordinates to a cell range (shared by RAF callback and pointerUp flush). */
     const resolveRange = (cx: number, cy: number): ISelectionRange | null => {
       if (!dragStartRef.current) return null;
       const target = document.elementFromPoint(cx, cy);
@@ -296,7 +296,7 @@ export function useCellSelection(params: UseCellSelectionParams): UseCellSelecti
       });
     };
 
-    /** Start or update auto-scroll interval based on mouse position relative to wrapper edges. */
+    /** Start or update auto-scroll interval based on pointer position relative to wrapper edges. */
     const updateAutoScroll = () => {
       const wrapper = wrapperRef.current;
       const pos = lastMousePosRef.current;
@@ -346,7 +346,7 @@ export function useCellSelection(params: UseCellSelectionParams): UseCellSelecti
           w.scrollTop += sdy;
           w.scrollLeft += sdx;
 
-          // After scrolling, re-resolve the cell under the mouse and update drag range
+          // After scrolling, re-resolve the cell under the pointer and update drag range
           const newRange = resolveRange(p.cx, p.cy);
           if (newRange) {
             liveDragRangeRef.current = newRange;
@@ -363,10 +363,10 @@ export function useCellSelection(params: UseCellSelectionParams): UseCellSelecti
       }
     };
 
-    const onMove = (e: MouseEvent) => {
+    const onMove = (e: PointerEvent) => {
       if (!isDraggingRef.current || !dragStartRef.current) return;
 
-      // Promote to a real drag on first mousemove (deferred from mouseDown
+      // Promote to a real drag on first pointermove (deferred from pointerDown
       // to avoid a true→false toggle on simple clicks).
       if (!dragMovedRef.current) {
         dragMovedRef.current = true;
@@ -375,10 +375,10 @@ export function useCellSelection(params: UseCellSelectionParams): UseCellSelecti
         cellIndex = buildCellIndex(wrapperRef.current);
       }
 
-      // Always store latest position so mouseUp can flush if RAF hasn't executed
+      // Always store latest position so pointerUp can flush if RAF hasn't executed
       lastMousePosRef.current = { cx: e.clientX, cy: e.clientY };
 
-      // Update auto-scroll based on mouse proximity to edges
+      // Update auto-scroll based on pointer proximity to edges
       updateAutoScroll();
 
       // Cancel previous pending frame
@@ -404,7 +404,7 @@ export function useCellSelection(params: UseCellSelectionParams): UseCellSelecti
         }
 
         liveDragRangeRef.current = newRange;
-        // DOM-only highlighting — no React state update until mouseup
+        // DOM-only highlighting — no React state update until pointerup
         applyDragAttrs(newRange);
       });
     };
@@ -424,7 +424,7 @@ export function useCellSelection(params: UseCellSelectionParams): UseCellSelecti
 
       if (wasDrag) {
         // Flush: if the last RAF hasn't executed yet, resolve the range now from the
-        // last known mouse position so the final committed range is always accurate.
+        // last known pointer position so the final committed range is always accurate.
         const pos = lastMousePosRef.current;
         if (pos) {
           const flushed = resolveRange(pos.cx, pos.cy);
@@ -446,7 +446,7 @@ export function useCellSelection(params: UseCellSelectionParams): UseCellSelecti
           }
         }
       }
-      // For simple clicks (no drag movement), mouseDown already set
+      // For simple clicks (no drag movement), pointerDown already set
       // selectionRange + activeCell — skip redundant state updates.
 
       // Clean up DOM attributes — React will apply CSS-module classes on the same paint
@@ -457,11 +457,11 @@ export function useCellSelection(params: UseCellSelectionParams): UseCellSelecti
       if (wasDrag) setIsDragging(false);
     };
 
-    window.addEventListener('mousemove', onMove, true);
-    window.addEventListener('mouseup', onUp, true);
+    window.addEventListener('pointermove', onMove, true);
+    window.addEventListener('pointerup', onUp, true);
     return () => {
-      window.removeEventListener('mousemove', onMove, true);
-      window.removeEventListener('mouseup', onUp, true);
+      window.removeEventListener('pointermove', onMove, true);
+      window.removeEventListener('pointerup', onUp, true);
       if (rafRef.current) cancelAnimationFrame(rafRef.current);
       stopAutoScroll();
       removeOverlay();

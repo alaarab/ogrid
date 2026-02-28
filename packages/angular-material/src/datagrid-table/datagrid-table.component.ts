@@ -47,7 +47,7 @@ import { PopoverCellEditorComponent } from './popover-cell-editor.component';
         role="region"
         [attr.aria-label]="ariaLabel()"
         [attr.aria-labelledby]="ariaLabelledBy()"
-        (mousedown)="onWrapperMouseDown($event)"
+        (pointerdown)="onWrapperMouseDown($event)"
         (keydown)="onGridKeyDown($event)"
         (scroll)="onWrapperScroll($event)"
         (contextmenu)="$event.preventDefault()"
@@ -101,7 +101,7 @@ import { PopoverCellEditorComponent } from './popover-cell-editor.component';
                           [style.max-width.px]="getRowNumberWidth()"
                         >
                           <div class="ogrid-row-number-header-content">#</div>
-                          <div class="ogrid-datagrid-resize-handle" (mousedown)="onResizeRowNumber($event)" (dblclick)="$event.stopPropagation()"></div>
+                          <div class="ogrid-datagrid-resize-handle" (pointerdown)="onResizeRowNumber($event)" (dblclick)="$event.stopPropagation()"></div>
                         </th>
                       }
                       @if (rowIdx === 0 && rowIdx < headerRows().length - 1 && hasRowNumbersCol()) {
@@ -134,7 +134,7 @@ import { PopoverCellEditorComponent } from './popover-cell-editor.component';
                             [style.cursor]="columnReorderService.isDragging() ? 'grabbing' : 'grab'"
                             [style.left.px]="pinnedLeft ? getPinnedLeftOffset(col.columnId) : null"
                             [style.right.px]="pinnedRight ? getPinnedRightOffset(col.columnId) : null"
-                            (mousedown)="onHeaderMouseDown(col.columnId, $event)"
+                            (pointerdown)="onHeaderMouseDown(col.columnId, $event)"
                           >
                             <div style="display:flex;align-items:center;gap:4px;">
                               <ogrid-column-header-filter
@@ -168,7 +168,7 @@ import { PopoverCellEditorComponent } from './popover-cell-editor.component';
                                 [handlers]="getColumnMenuHandlersMemoized(col.columnId)"
                               />
                             </div>
-                            <div class="ogrid-datagrid-resize-handle" (mousedown)="onResizeStart($event, col)" (dblclick)="onResizeDoubleClick($event, col)"></div>
+                            <div class="ogrid-datagrid-resize-handle" (pointerdown)="onResizeStart($event, col)" (dblclick)="onResizeDoubleClick($event, col)"></div>
                           </th>
                         }
                       }
@@ -274,7 +274,7 @@ import { PopoverCellEditorComponent } from './popover-cell-editor.component';
                                 [attr.data-col-index]="descriptor.globalColIndex"
                                 [attr.data-in-range]="descriptor.isInRange ? 'true' : null"
                                 [attr.tabindex]="descriptor.isActive ? 0 : -1"
-                                (mousedown)="onCellMouseDown($event, rowIndex, descriptor.globalColIndex)"
+                                (pointerdown)="onCellMouseDown($event, rowIndex, descriptor.globalColIndex)"
                                 (click)="onCellClick(rowIndex, descriptor.globalColIndex)"
                                 (contextmenu)="onCellContextMenu($event)"
                                 (dblclick)="descriptor.canEditAny ? onCellDblClick(descriptor.rowId, colLayout.col.columnId) : null"
@@ -289,7 +289,7 @@ import { PopoverCellEditorComponent } from './popover-cell-editor.component';
                                 @if (descriptor.canEditAny && descriptor.isSelectionEndCell) {
                                   <div
                                     class="ogrid-datagrid-fill-handle"
-                                    (mousedown)="onFillHandleMouseDown($event)"
+                                    (pointerdown)="onFillHandleMouseDown($event)"
                                     aria-label="Fill handle"
                                   ></div>
                                 }
@@ -514,11 +514,17 @@ import { PopoverCellEditorComponent } from './popover-cell-editor.component';
       position: absolute; right: -3px; bottom: -3px; width: 7px; height: 7px;
       background: var(--ogrid-selection-color, #217346);
       border: 1px solid var(--ogrid-bg, #ffffff); border-radius: 1px;
-      cursor: crosshair; pointer-events: auto; z-index: 3;
+      cursor: crosshair; pointer-events: auto; touch-action: none; z-index: 3;
+    }
+    @media (pointer: coarse) {
+      .ogrid-datagrid-fill-handle { width: 14px; height: 14px; right: -7px; bottom: -7px; border-radius: 2px; }
     }
     .ogrid-datagrid-resize-handle {
       position: absolute; top: 0; right: -3px; bottom: 0; width: 8px;
-      cursor: col-resize; user-select: none;
+      cursor: col-resize; user-select: none; touch-action: none;
+    }
+    @media (pointer: coarse) {
+      .ogrid-datagrid-resize-handle { width: 16px; right: -8px; }
     }
     .ogrid-datagrid-resize-handle::after {
       content: ''; position: absolute; top: 4px; right: 3px; bottom: 4px; width: 2px;
@@ -639,7 +645,7 @@ export class DataGridTableComponent<T> extends BaseDataGridTableComponent<T> {
     return indexToColumnLetter(colIdx);
   }
 
-  onResizeRowNumber(event: MouseEvent): void {
+  onResizeRowNumber(event: PointerEvent): void {
     event.stopPropagation();
     this.onResizeStart(event, { columnId: ROW_NUMBER_COLUMN_ID, name: '#' } as IColumnDef<T>);
   }
