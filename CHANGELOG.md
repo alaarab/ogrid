@@ -4,19 +4,32 @@ All notable changes to OGrid will be documented in this file.
 
 ## [Unreleased]
 
+---
+
+## [2.5.0] — 2026-02-28
+
 ### Added
 
 - **Responsive column hiding** — New `responsiveColumns` prop on OGrid enables automatic column hiding based on container width. Columns with `responsivePriority` (0 = highest) are progressively hidden as the container narrows below configurable breakpoints (default: 576/768/992/1200px). `required` columns are never hidden. Supported across all 14 packages (React 3, Angular 3, Vue 3, JS 1). Core utility `getResponsiveHiddenColumns()` is framework-agnostic and can be used standalone.
 - **Responsive pagination layout** — Pagination controls stack vertically with centered navigation on narrow viewports (< 576px) across all UI packages (React, Angular Material/PrimeNG/Radix, Vue, JS).
 - **Mobile touch support** — Migrated all drag interactions from Mouse Events to the Pointer Events API (`pointerdown`, `pointermove`, `pointerup`), unifying mouse, touch, and pen input across all 14 packages (React, Angular, Vue, JS). Affected interactions: cell drag-selection, fill handle drag-to-fill, column resize, and column reorder. Added `touch-action: none` CSS on interactive handles to prevent browser default gestures during drag. Added `@media (pointer: coarse)` rules to increase touch target sizes on touch devices (fill handle 7px→14px, resize handle 8px→16px).
+- **Formula engine subpath export** — `@alaarab/ogrid-core/formula` subpath export for tree-shaking formula engine code separately.
+- **Bundle size optimizations** — Improved tree-shaking externals and subpath exports across all packages.
 
 ### Fixed
 
+- **Inline formula editing** — Fixed cell reference insertion during formula editing and formula bar helpers.
 - **Select editor highlight** — Select and rich-select editors now highlight the current cell value when opened, instead of always defaulting to the first option (React, Vue)
 - **Arrow keys during editing** — Arrow keys no longer navigate away from the cell while actively editing text; they now move the cursor within the editor as expected (React, Angular, Vue, JS)
 - **Row number column resize** — The row number column (`cellReferences` mode) is now resizable via drag, matching the behavior of regular columns (React, Angular, Vue, JS)
 - **Boolean cell display** — Boolean columns now render a disabled checkbox instead of "True"/"False" text in display mode (React, Angular, Vue, JS)
 - **Column header menu toggle** — Clicking the 3-dot menu button again now closes the menu instead of re-opening it (React, Vue)
+- **Select/richSelect editor on scroll** — Select and rich-select editors now close when the grid scrolls, preventing dropdown drift from its anchor cell
+- **Multiselect filter font size** — Reduced multiselect filter option font size from 14px to 13px for better density
+
+### Changed
+
+- **Responsive column logic deduplicated** — Shared responsive column utilities moved to core, reducing duplication across all framework packages.
 
 ---
 
