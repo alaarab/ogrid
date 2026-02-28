@@ -416,6 +416,11 @@ export class OGrid<T> {
     this.layoutState = new TableLayoutState();
     this.layoutState.observeContainer(this.tableContainer);
 
+    // Seed initial container width for responsive column hiding
+    if (options.responsiveColumns) {
+      this.state.setContainerWidth(this.layoutState.containerWidth);
+    }
+
     // Create sub-components
     this.renderer = new TableRenderer<T>(this.tableContainer, this.state);
     if (this.formulaEngine) {
@@ -617,6 +622,17 @@ export class OGrid<T> {
           this.renderingHelper.renderHeaderFilterPopover();
         })
       );
+
+      // Subscribe to layout changes for responsive column hiding
+      if (options.responsiveColumns) {
+        this.unsubscribes.push(
+          this.layoutState.onLayoutChange((event) => {
+            if (event.type === 'containerResize') {
+              this.state.setContainerWidth(this.layoutState.containerWidth);
+            }
+          })
+        );
+      }
 
       // Initialize virtual scrolling if configured
       if (options.virtualScroll?.enabled) {

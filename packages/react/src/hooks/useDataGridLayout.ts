@@ -2,7 +2,8 @@ import { useMemo, useState, useLayoutEffect, useCallback } from 'react';
 import type { RefObject } from 'react';
 import { flattenColumns } from '../utils';
 import type { RowId, IColumnDef } from '../types';
-import { CHECKBOX_COLUMN_WIDTH, DEFAULT_MIN_COLUMN_WIDTH } from '@alaarab/ogrid-core';
+import { CHECKBOX_COLUMN_WIDTH, DEFAULT_MIN_COLUMN_WIDTH, getResponsiveHiddenColumns } from '@alaarab/ogrid-core';
+import type { IResponsiveColumnsConfig } from '@alaarab/ogrid-core';
 import { useTableLayout } from './useTableLayout';
 import { useColumnPinning } from './useColumnPinning';
 import { useColumnHeaderMenuState } from './useColumnHeaderMenuState';
@@ -25,6 +26,7 @@ export interface UseDataGridLayoutParams<T> {
   sortBy?: string;
   sortDirection?: 'asc' | 'desc';
   onColumnSort?: (columnKey: string, direction?: 'asc' | 'desc' | null) => void;
+  responsiveColumns?: boolean | IResponsiveColumnsConfig;
   wrapperRef: RefObject<HTMLDivElement | null>;
 }
 
@@ -69,6 +71,7 @@ export function useDataGridLayout<T>(
     sortBy,
     sortDirection,
     onColumnSort,
+    responsiveColumns,
     wrapperRef,
   } = params;
 
@@ -87,7 +90,14 @@ export function useDataGridLayout<T>(
     });
   }, [flatColumnsRaw, pinnedColumns]);
 
-  const visibleCols = useMemo(() => {
+  // Resolve responsive config once
+  const responsiveConfig = useMemo<IResponsiveColumnsConfig | undefined>(
+    () => responsiveColumns === true ? {} : responsiveColumns || undefined,
+    [responsiveColumns],
+  );
+
+  // First pass: user-visible columns (before responsive hiding)
+  const userVisibleCols = useMemo(() => {
     const filtered = visibleColumns
       ? flatColumns.filter((c) => visibleColumns.has(c.columnId))
       : flatColumns;
@@ -106,12 +116,8 @@ export function useDataGridLayout<T>(
     });
   }, [flatColumns, visibleColumns, columnOrder]);
 
-  const visibleColumnCount = visibleCols.length;
   const hasCheckboxCol = rowSelection === 'multiple';
   const hasRowNumbersCol = !!showRowNumbers;
-  const specialColsCount = (hasCheckboxCol ? 1 : 0) + (hasRowNumbersCol ? 1 : 0);
-  const totalColCount = visibleColumnCount + specialColsCount;
-  const colOffset = specialColsCount;
 
   const rowIndexByRowId = useMemo(() => {
     const m = new Map<RowId, number>();
@@ -127,12 +133,25 @@ export function useDataGridLayout<T>(
     setColumnSizingOverrides,
   } = useTableLayout({
     wrapperRef,
-    visibleCols,
+    visibleCols: userVisibleCols,
     flatColumns,
     hasCheckboxCol,
     initialColumnWidths,
     onColumnResized,
   });
+
+  // Second pass: apply responsive column hiding based on measured container width
+  const visibleCols = useMemo(() => {
+    if (!responsiveConfig || containerWidth <= 0) return userVisibleCols;
+    const hidden = getResponsiveHiddenColumns(containerWidth, userVisibleCols, responsiveConfig);
+    if (hidden.size === 0) return userVisibleCols;
+    return userVisibleCols.filter((c) => !hidden.has(c.columnId));
+  }, [userVisibleCols, containerWidth, responsiveConfig]);
+
+  const visibleColumnCount = visibleCols.length;
+  const specialColsCount = (hasCheckboxCol ? 1 : 0) + (hasRowNumbersCol ? 1 : 0);
+  const totalColCount = visibleColumnCount + specialColsCount;
+  const colOffset = specialColsCount;
 
   const pinningResult = useColumnPinning({
     columns: flatColumns,

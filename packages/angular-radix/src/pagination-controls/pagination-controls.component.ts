@@ -158,6 +158,12 @@ import { BasePaginationControlsComponent } from '@alaarab/ogrid-angular';
       outline: 2px solid var(--ogrid-active-border, #0078d4);
       outline-offset: 1px;
     }
+    @media (max-width: 576px) {
+      .ogrid-pagination { flex-direction: column; align-items: stretch; gap: 6px; padding: 6px 8px; font-size: 12px; }
+      .ogrid-pagination__pages { order: -1; justify-content: center; }
+      .ogrid-pagination__info { text-align: center; font-size: 11px; }
+      .ogrid-pagination__size { font-size: 11px; justify-content: center; }
+    }
   `],
 })
 export class PaginationControlsComponent extends BasePaginationControlsComponent {}
