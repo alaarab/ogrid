@@ -1,7 +1,7 @@
 import { FormulaEngineService } from '../services/formula-engine.service';
 import type { FormulaEngineConfig } from '../services/formula-engine.service';
 import type { IColumnDef } from '../types';
-import { FormulaError } from '@alaarab/ogrid-core';
+import { FormulaError } from '@alaarab/ogrid-core/formula';
 
 // ---------------------------------------------------------------------------
 // Test helpers

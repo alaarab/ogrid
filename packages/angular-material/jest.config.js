@@ -17,6 +17,7 @@ module.exports = {
         baseUrl: '.',
         paths: {
           '@alaarab/ogrid-core': ['../core/src/index.ts'],
+          '@alaarab/ogrid-core/formula': ['../core/src/formula/index.ts'],
           '@alaarab/ogrid-angular': ['../angular/src/index.ts'],
           '@alaarab/ogrid-angular/testing': ['../angular/src/testing/index.ts'],
         },
@@ -25,6 +26,7 @@ module.exports = {
   },
   moduleNameMapper: {
     '^@alaarab/ogrid-core$': '<rootDir>/../core/src/index.ts',
+    '^@alaarab/ogrid-core/formula$': '<rootDir>/../core/src/formula/index.ts',
     '^@alaarab/ogrid-angular$': '<rootDir>/../angular/src/index.ts',
     '^@alaarab/ogrid-angular/testing$': '<rootDir>/../angular/src/testing/index.ts',
     '^@angular/core$': '<rootDir>/../angular/jest-mocks/angular-core.cjs.js',

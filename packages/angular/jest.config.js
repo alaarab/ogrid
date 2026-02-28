@@ -19,6 +19,7 @@ module.exports = {
   },
   moduleNameMapper: {
     '^@alaarab/ogrid-core$': '<rootDir>/../core/src/index.ts',
+    '^@alaarab/ogrid-core/formula$': '<rootDir>/../core/src/formula/index.ts',
     '^@angular/core$': '<rootDir>/jest-mocks/angular-core.cjs.js',
     '^@angular/common$': '<rootDir>/jest-mocks/angular-common.cjs.js',
   },

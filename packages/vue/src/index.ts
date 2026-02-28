@@ -129,13 +129,8 @@ export {
   validateRowIds,
   validateVirtualScrollConfig,
   indexToColumnLetter,
+  columnLetterToIndex,
   formatCellReference,
-  extractFormulaReferences,
-  processFormulaBarCommit,
-  deriveFormulaBarText,
-  handleFormulaBarKeyDown,
-  canInsertReference,
-  insertReferenceAtCursor,
   getResponsiveHiddenColumns,
   RESPONSIVE_BREAKPOINTS,
   resolveResponsiveConfig,
@@ -155,12 +150,9 @@ export {
   PEOPLE_SEARCH_DEBOUNCE_MS,
   SIDEBAR_TRANSITION_MS,
   Z_INDEX,
-  FORMULA_REF_COLORS,
-  FORMULA_BAR_CSS,
-  FORMULA_BAR_STYLES,
 } from '@alaarab/ogrid-core';
 
-// Core formula system
+// Formula system (from @alaarab/ogrid-core/formula subpath)
 export {
   FormulaError,
   FormulaEngine,
@@ -169,7 +161,6 @@ export {
   tokenize,
   parse,
   createBuiltInFunctions,
-  columnLetterToIndex,
   parseCellRef,
   parseRange,
   formatAddress,
@@ -188,7 +179,16 @@ export {
   CIRC_ERROR,
   GENERAL_ERROR,
   NA_ERROR,
-} from '@alaarab/ogrid-core';
+  extractFormulaReferences,
+  processFormulaBarCommit,
+  deriveFormulaBarText,
+  handleFormulaBarKeyDown,
+  canInsertReference,
+  insertReferenceAtCursor,
+  FORMULA_REF_COLORS,
+  FORMULA_BAR_CSS,
+  FORMULA_BAR_STYLES,
+} from '@alaarab/ogrid-core/formula';
 
 // Vue-specific types (override core's IColumnDef with Vue-specific version)
 export type {
