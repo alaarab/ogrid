@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react';
 import type { IColumnDef, IColumnGroupDef, ICellValueChangedEvent } from './columnTypes';
-import type { IFormulaFunction, IRecalcResult, IGridDataAccessor, IAuditEntry, IAuditTrail } from '@alaarab/ogrid-core';
+import type { IFormulaFunction, IRecalcResult, IGridDataAccessor, IAuditEntry, IAuditTrail, IResponsiveColumnsConfig } from '@alaarab/ogrid-core';
 
 // Re-export all shared types and functions from core (no React-specific changes)
 export type {
@@ -125,6 +125,15 @@ interface IOGridBaseProps<T> {
 
   /** Enable column reordering via drag-and-drop on header cells. Default: false. */
   columnReorder?: boolean;
+
+  /**
+   * Enable responsive column hiding. Columns with `responsivePriority` are
+   * auto-hidden when the container narrows below breakpoint thresholds.
+   * - `true`: use default breakpoints (576/768/992/1200px)
+   * - `IResponsiveColumnsConfig`: custom breakpoints
+   * - `false` / omitted: disabled
+   */
+  responsiveColumns?: boolean | IResponsiveColumnsConfig;
 
   /** Virtual scrolling configuration. When provided, only visible rows are rendered for large datasets. */
   virtualScroll?: IVirtualScrollConfig;
@@ -264,6 +273,8 @@ export interface IOGridDataGridProps<T> {
   };
   /** Enable column reordering via drag-and-drop on header cells. Default: false. */
   columnReorder?: boolean;
+  /** Responsive column hiding config (passed from IOGridBaseProps). */
+  responsiveColumns?: boolean | IResponsiveColumnsConfig;
   /** Virtual scrolling configuration. When provided, only visible rows are rendered for large datasets. */
   virtualScroll?: IVirtualScrollConfig;
   /** Fixed row height in pixels. Overrides default row height (36px). */

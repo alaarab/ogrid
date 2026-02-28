@@ -12,6 +12,7 @@ import type {
   IGridColumnState,
   FilterValue,
   IDataSource,
+  IResponsiveColumnsConfig,
 } from '@alaarab/ogrid-core';
 import {
   flattenColumns,
@@ -23,6 +24,7 @@ import {
   mergeFilter,
   validateColumns,
   validateRowIds,
+  getResponsiveHiddenColumns,
 } from '@alaarab/ogrid-core';
 import { EventEmitter } from './EventEmitter';
 import type { FormulaEngineState } from './FormulaEngineState';
@@ -69,6 +71,10 @@ export class GridState<T> {
   // Column display order (array of columnIds)
   private _columnOrder: string[] = [];
 
+  // Responsive column hiding
+  private _responsiveColumns: IResponsiveColumnsConfig | null = null;
+  private _containerWidth = 0;
+
   // Dirty-flag memoization for visibleColumnDefs getter
   private _visibleColsCache: IColumnDef<T>[] | null = null;
   private _visibleColsDirty = true;
@@ -92,6 +98,11 @@ export class GridState<T> {
     this._stickyHeader = options.stickyHeader ?? true;
     this._fullScreen = options.fullScreen ?? false;
     this._workerSort = options.workerSort ?? false;
+
+    // Responsive columns config
+    if (options.responsiveColumns) {
+      this._responsiveColumns = options.responsiveColumns === true ? {} : options.responsiveColumns;
+    }
 
     // Derive initial filter options for client-side data
     if (!this._dataSource) {
@@ -134,11 +145,25 @@ export class GridState<T> {
   get columnOrder(): string[] { return this._columnOrder; }
   get rowHeight(): number | undefined { return this._rowHeight; }
   get ariaLabel(): string | undefined { return this._ariaLabel; }
+  get responsiveColumns(): IResponsiveColumnsConfig | null { return this._responsiveColumns; }
 
-  /** Get the visible columns in display order (respects column reorder). Memoized via dirty flag. */
+  /** Get the visible columns in display order (respects column reorder and responsive hiding). Memoized via dirty flag. */
   get visibleColumnDefs(): IColumnDef<T>[] {
     if (!this._visibleColsDirty && this._visibleColsCache) return this._visibleColsCache;
-    const visible = this._columns.filter(c => this._visibleColumns.has(c.columnId));
+    let visible = this._columns.filter(c => this._visibleColumns.has(c.columnId));
+
+    // Apply responsive column hiding
+    if (this._responsiveColumns && this._containerWidth > 0) {
+      const responsiveHidden = getResponsiveHiddenColumns(
+        this._containerWidth,
+        visible as unknown as Parameters<typeof getResponsiveHiddenColumns>[1],
+        this._responsiveColumns,
+      );
+      if (responsiveHidden.size > 0) {
+        visible = visible.filter(c => !responsiveHidden.has(c.columnId));
+      }
+    }
+
     if (this._columnOrder.length === 0) {
       this._visibleColsCache = visible;
     } else {
@@ -343,6 +368,16 @@ export class GridState<T> {
     this._columnOrder = order;
     this._visibleColsDirty = true;
     this.emitter.emit('stateChange', { type: 'columns' });
+  }
+
+  /** Update the container width for responsive column hiding. Invalidates the visible-cols cache. */
+  setContainerWidth(width: number): void {
+    if (this._containerWidth === width) return;
+    this._containerWidth = width;
+    if (this._responsiveColumns) {
+      this._visibleColsDirty = true;
+      this.emitter.emit('stateChange', { type: 'columns' });
+    }
   }
 
   setLoading(loading: boolean): void {

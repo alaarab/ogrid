@@ -214,6 +214,7 @@ export function useDataGridState<T>(
     onAutosizeColumn,
     pinnedColumns,
     onColumnPinned,
+    responsiveColumns,
     onCellError,
     onKeyDown,
   } = props;
@@ -247,6 +248,7 @@ export function useDataGridState<T>(
     sortBy: props.sortBy,
     sortDirection: props.sortDirection,
     onColumnSort: props.onColumnSort,
+    responsiveColumns,
     wrapperRef,
   });
 

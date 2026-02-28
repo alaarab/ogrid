@@ -100,3 +100,5 @@ export { validateColumns, validateRowIds, validateVirtualScrollConfig } from './
 export { indexToColumnLetter, formatCellReference } from './cellReference';
 export { extractFormulaReferences, processFormulaBarCommit, deriveFormulaBarText, handleFormulaBarKeyDown } from './formulaBarHelpers';
 export type { FormulaReference } from './formulaBarHelpers';
+export { getResponsiveHiddenColumns, RESPONSIVE_BREAKPOINTS } from './responsiveColumns';
+export type { IResponsiveColumnsConfig } from './responsiveColumns';

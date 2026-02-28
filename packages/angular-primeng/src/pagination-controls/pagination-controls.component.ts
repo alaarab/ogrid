@@ -98,5 +98,14 @@ import { BasePaginationControlsComponent } from '@alaarab/ogrid-angular';
       </div>
     }
   `,
+  styles: [`
+    :host { display: block; }
+    @media (max-width: 576px) {
+      :host ::ng-deep > div { flex-direction: column; align-items: stretch !important; gap: 6px !important; padding: 6px 8px; font-size: 12px !important; }
+      :host ::ng-deep > div > div:nth-child(2) { order: -1; justify-content: center; }
+      :host ::ng-deep > div > div:first-child { text-align: center; font-size: 11px !important; }
+      :host ::ng-deep > div > div:last-child { font-size: 11px !important; justify-content: center; }
+    }
+  `],
 })
 export class PaginationControlsComponent extends BasePaginationControlsComponent {}

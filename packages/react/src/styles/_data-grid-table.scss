@@ -576,3 +576,26 @@
     transform: rotate(360deg);
   }
 }
+
+// ============================================================
+// Responsive Layout
+// ============================================================
+
+// Compact pagination on small screens: stack vertically, reduce font
+@media (max-width: 576px) {
+  .paginationNav {
+    order: -1;
+    width: 100%;
+    justify-content: center;
+  }
+
+  .paginationInfo {
+    font-size: 11px;
+    text-align: center;
+    width: 100%;
+  }
+
+  .paginationSize {
+    font-size: 11px;
+  }
+}
