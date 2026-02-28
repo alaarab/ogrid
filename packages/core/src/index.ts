@@ -204,7 +204,7 @@ export { validateColumns, validateRowIds, validateVirtualScrollConfig } from './
 
 // Utils — cellReference
 export { indexToColumnLetter, formatCellReference } from './utils';
-export { extractFormulaReferences, processFormulaBarCommit, deriveFormulaBarText, handleFormulaBarKeyDown } from './utils';
+export { extractFormulaReferences, processFormulaBarCommit, deriveFormulaBarText, handleFormulaBarKeyDown, canInsertReference, insertReferenceAtCursor } from './utils';
 export type { FormulaReference } from './utils';
 
 // Utils — responsiveColumns

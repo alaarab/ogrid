@@ -92,6 +92,44 @@ export function deriveFormulaBarText(
   return raw != null ? String(raw) : '';
 }
 
+/**
+ * Check whether a formula text is in a position where a cell reference can be inserted
+ * at the cursor. Returns true when the text starts with '=' and the character before the
+ * cursor is an operator, paren, comma, colon, whitespace, or the cursor is right after '='.
+ */
+export function canInsertReference(text: string, cursorPos: number): boolean {
+  if (!text.startsWith('=')) return false;
+  if (cursorPos <= 1) return true; // Right after '='
+  const before = text[cursorPos - 1];
+  return /[+\-*/^%&=<>(,:\s]/.test(before);
+}
+
+/**
+ * Insert a cell reference into formula text at the given cursor position.
+ * If `canInsertReference` returns false (cursor is adjacent to a token), the reference
+ * replaces the preceding token back to the last operator/delimiter.
+ *
+ * @returns Updated text and new cursor position after the inserted reference.
+ */
+export function insertReferenceAtCursor(
+  text: string,
+  cursorPos: number,
+  reference: string,
+): { text: string; cursorPos: number } {
+  if (canInsertReference(text, cursorPos)) {
+    // Simple insertion
+    const newText = text.substring(0, cursorPos) + reference + text.substring(cursorPos);
+    return { text: newText, cursorPos: cursorPos + reference.length };
+  }
+  // Replace the preceding token (e.g., a partial cell ref the user started typing)
+  let replaceStart = cursorPos;
+  while (replaceStart > 1 && /[A-Za-z0-9$]/.test(text[replaceStart - 1])) {
+    replaceStart--;
+  }
+  const newText = text.substring(0, replaceStart) + reference + text.substring(cursorPos);
+  return { text: newText, cursorPos: replaceStart + reference.length };
+}
+
 export function extractFormulaReferences(formula: string): FormulaReference[] {
   if (!formula || formula[0] !== '=') return [];
   const refs: FormulaReference[] = [];

@@ -284,6 +284,96 @@ describe('getCellRenderDescriptor — with cache', () => {
   });
 });
 
+describe('getCellRenderDescriptor — formula editing', () => {
+  it('returns formula string as value when editing a formula cell', () => {
+    const col: IColumnDef<TestRow> = { columnId: 'name', name: 'Name', cellEditor: 'text', editable: true };
+    const item: TestRow = { id: '1', name: 'computed-15' };
+
+    const input = baseInput();
+    input.editingCell = { rowId: '1', columnId: 'name' };
+    input.hasFormula = () => true;
+    input.getFormula = () => '=SUM(A1:A5)';
+    input.getFormulaValue = () => 15;
+
+    const descriptor = getCellRenderDescriptor(item, col, 0, 0, input);
+    expect(descriptor.mode).toBe('editing-inline');
+    // value should be the formula string, not the raw cell value
+    expect(descriptor.value).toBe('=SUM(A1:A5)');
+    // displayValue should be the formula computed value
+    expect(descriptor.displayValue).toBe(15);
+  });
+
+  it('returns raw cell value when editing a non-formula cell', () => {
+    const col: IColumnDef<TestRow> = { columnId: 'name', name: 'Name', cellEditor: 'text', editable: true };
+    const item: TestRow = { id: '1', name: 'Alice' };
+
+    const input = baseInput();
+    input.editingCell = { rowId: '1', columnId: 'name' };
+    input.hasFormula = () => false;
+    input.getFormula = () => undefined;
+
+    const descriptor = getCellRenderDescriptor(item, col, 0, 0, input);
+    expect(descriptor.mode).toBe('editing-inline');
+    expect(descriptor.value).toBe('Alice');
+  });
+
+  it('falls back to raw cell value when getFormula returns undefined for formula cell', () => {
+    const col: IColumnDef<TestRow> = { columnId: 'name', name: 'Name', cellEditor: 'text', editable: true };
+    const item: TestRow = { id: '1', name: 'fallback-value' };
+
+    const input = baseInput();
+    input.editingCell = { rowId: '1', columnId: 'name' };
+    input.hasFormula = () => true;
+    input.getFormula = () => undefined; // formula engine can't find the formula
+    input.getFormulaValue = () => 15;
+
+    const descriptor = getCellRenderDescriptor(item, col, 0, 0, input);
+    // Should fall back to raw cell value when getFormula returns undefined
+    expect(descriptor.value).toBe('fallback-value');
+  });
+
+  it('uses raw cell value in display mode even if cell has formula', () => {
+    const col: IColumnDef<TestRow> = { columnId: 'name', name: 'Name' };
+    const item: TestRow = { id: '1', name: 'raw-data' };
+
+    const input = baseInput();
+    input.hasFormula = () => true;
+    input.getFormula = () => '=A1+B1';
+    input.getFormulaValue = () => 42;
+
+    const descriptor = getCellRenderDescriptor(item, col, 0, 0, input);
+    expect(descriptor.mode).toBe('display');
+    // In display mode, value should be the raw cell value (not the formula string)
+    expect(descriptor.value).toBe('raw-data');
+    // displayValue should be the formula's computed value
+    expect(descriptor.displayValue).toBe(42);
+  });
+
+  it('uses formula computed value as displayValue when cell has formula', () => {
+    const col: IColumnDef<TestRow> = { columnId: 'name', name: 'Name' };
+    const item: TestRow = { id: '1', name: 'original' };
+
+    const input = baseInput();
+    input.hasFormula = (col, row) => col === 0 && row === 0;
+    input.getFormulaValue = (col, row) => col === 0 && row === 0 ? 'computed' : undefined;
+
+    const descriptor = getCellRenderDescriptor(item, col, 0, 0, input);
+    expect(descriptor.displayValue).toBe('computed');
+  });
+
+  it('uses raw cell value as displayValue when cell has no formula', () => {
+    const col: IColumnDef<TestRow> = { columnId: 'name', name: 'Name' };
+    const item: TestRow = { id: '1', name: 'plain text' };
+
+    const input = baseInput();
+    input.hasFormula = () => false;
+    input.getFormulaValue = () => undefined;
+
+    const descriptor = getCellRenderDescriptor(item, col, 0, 0, input);
+    expect(descriptor.displayValue).toBe('plain text');
+  });
+});
+
 describe('getCellRenderDescriptor — rowId and rowIndex', () => {
   it('sets rowId from getRowId function', () => {
     const col: IColumnDef<TestRow> = { columnId: 'name', name: 'Name' };

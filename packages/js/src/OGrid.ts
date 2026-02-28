@@ -857,7 +857,18 @@ export class OGrid<T> {
       wrapper?.focus();
     };
 
-    this.cellEditor.startEdit(rowId, columnId, item, column, cell, onCommit, onCancel, onAfterCommit);
+    // If the cell has a formula, pass the formula string as the editor value
+    // so the user edits the formula (e.g. '=SUM(A1:A5)') instead of the computed result.
+    let formulaOverride: unknown;
+    if (this.formulaEngine) {
+      const flatCols = this.state.columns;
+      const dataCol = flatCols.findIndex((c) => c.columnId === columnId);
+      if (dataCol >= 0 && this.formulaEngine.hasFormula(dataCol, rowIndex)) {
+        formulaOverride = this.formulaEngine.getFormula(dataCol, rowIndex);
+      }
+    }
+
+    this.cellEditor.startEdit(rowId, columnId, item, column, cell, onCommit, onCancel, onAfterCommit, formulaOverride);
   }
 
   private buildFilterConfigs(): void {
