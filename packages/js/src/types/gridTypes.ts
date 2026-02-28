@@ -12,6 +12,7 @@ import type {
   IFormulaFunction,
   IRecalcResult,
   IGridDataAccessor,
+  IResponsiveColumnsConfig,
 } from '@alaarab/ogrid-core';
 
 // Re-export core types
@@ -40,6 +41,7 @@ export type {
   IGridDataAccessor,
   IAuditEntry,
   IAuditTrail,
+  IResponsiveColumnsConfig,
 } from '@alaarab/ogrid-core';
 
 /** Standardized cell event parameter for cell interaction callbacks. */
@@ -165,6 +167,15 @@ export interface OGridOptions<T> {
 
   /** Virtual scrolling configuration. */
   virtualScroll?: IVirtualScrollConfig;
+
+  /**
+   * Enable responsive column hiding based on container width.
+   * Columns with `responsivePriority` are hidden/shown as the container resizes.
+   * - `true`: use default breakpoints
+   * - `IResponsiveColumnsConfig`: custom breakpoints
+   * - `false` or omitted: disabled
+   */
+  responsiveColumns?: boolean | IResponsiveColumnsConfig;
 
   /**
    * Offload sorting to a Web Worker to avoid blocking the main thread.

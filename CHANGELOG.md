@@ -6,6 +6,8 @@ All notable changes to OGrid will be documented in this file.
 
 ### Added
 
+- **Responsive column hiding** — New `responsiveColumns` prop on OGrid enables automatic column hiding based on container width. Columns with `responsivePriority` (0 = highest) are progressively hidden as the container narrows below configurable breakpoints (default: 576/768/992/1200px). `required` columns are never hidden. Supported across all 14 packages (React 3, Angular 3, Vue 3, JS 1). Core utility `getResponsiveHiddenColumns()` is framework-agnostic and can be used standalone.
+- **Responsive pagination layout** — Pagination controls stack vertically with centered navigation on narrow viewports (< 576px) across all UI packages (React, Angular Material/PrimeNG/Radix, Vue, JS).
 - **Mobile touch support** — Migrated all drag interactions from Mouse Events to the Pointer Events API (`pointerdown`, `pointermove`, `pointerup`), unifying mouse, touch, and pen input across all 14 packages (React, Angular, Vue, JS). Affected interactions: cell drag-selection, fill handle drag-to-fill, column resize, and column reorder. Added `touch-action: none` CSS on interactive handles to prevent browser default gestures during drag. Added `@media (pointer: coarse)` rules to increase touch target sizes on touch devices (fill handle 7px→14px, resize handle 8px→16px).
 
 ### Fixed

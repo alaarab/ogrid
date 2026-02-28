@@ -4,7 +4,9 @@ import {
   CHECKBOX_COLUMN_WIDTH,
   DEFAULT_MIN_COLUMN_WIDTH,
   CELL_PADDING,
+  getResponsiveHiddenColumns,
 } from '@alaarab/ogrid-core';
+import type { IResponsiveColumnsConfig } from '@alaarab/ogrid-core';
 import type { RowId } from '../types';
 import type { IColumnDef as IAngularColumnDef } from '../types';
 import type { IOGridDataGridProps } from '../types';
@@ -80,20 +82,33 @@ export class DataGridLayoutHelper<T> {
       const filtered = p.visibleColumns
         ? flatCols.filter((c) => p.visibleColumns.has(c.columnId))
         : flatCols;
+      let ordered: IColumnDef<T>[];
       const order = p.columnOrder;
-      if (!order?.length) return filtered;
-      const orderMap = new Map<string, number>();
-      for (let i = 0; i < order.length; i++) {
-        orderMap.set(order[i], i);
+      if (!order?.length) {
+        ordered = filtered;
+      } else {
+        const orderMap = new Map<string, number>();
+        for (let i = 0; i < order.length; i++) {
+          orderMap.set(order[i], i);
+        }
+        ordered = [...filtered].sort((a, b) => {
+          const ia = orderMap.get(a.columnId) ?? -1;
+          const ib = orderMap.get(b.columnId) ?? -1;
+          if (ia === -1 && ib === -1) return 0;
+          if (ia === -1) return 1;
+          if (ib === -1) return -1;
+          return ia - ib;
+        });
       }
-      return [...filtered].sort((a, b) => {
-        const ia = orderMap.get(a.columnId) ?? -1;
-        const ib = orderMap.get(b.columnId) ?? -1;
-        if (ia === -1 && ib === -1) return 0;
-        if (ia === -1) return 1;
-        if (ib === -1) return -1;
-        return ia - ib;
-      });
+      // Responsive column hiding
+      const rc = p.responsiveColumns;
+      if (!rc) return ordered;
+      const cw = this.containerWidthSig();
+      if (cw <= 0) return ordered;
+      const config: IResponsiveColumnsConfig | undefined = rc === true ? {} : rc;
+      const hidden = getResponsiveHiddenColumns(cw, ordered, config);
+      if (hidden.size === 0) return ordered;
+      return ordered.filter((c) => !hidden.has(c.columnId));
     });
 
     this.visibleColumnCount = computed(() => this.visibleCols().length);
