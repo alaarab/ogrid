@@ -1,0 +1,182 @@
+---
+sidebar_position: 25
+title: Mobile Touch Support
+description: Touch-friendly interactions using the Pointer Events API for cell selection, fill handle, column resize, and column reorder on mobile and tablet devices.
+---
+
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+
+# Mobile Touch Support
+
+OGrid uses the [Pointer Events API](https://developer.mozilla.org/en-US/docs/Web/API/Pointer_events) for all drag interactions, providing unified input handling across mouse, touch, and pen devices. All interactions — cell drag-selection, fill handle drag-to-fill, column resize, and column reorder — work on touch devices out of the box with no additional configuration.
+
+## How It Works
+
+### Pointer Events API
+
+All drag-based interactions use `pointerdown`, `pointermove`, and `pointerup` instead of mouse-specific events. The Pointer Events API automatically handles mouse, touch, and stylus input through a single event model, so every interaction works identically regardless of input device.
+
+### Touch-Optimized Sizing
+
+On touch devices (`@media (pointer: coarse)`), interactive handles are automatically enlarged for easier targeting:
+
+| Element | Desktop Size | Touch Size |
+|---------|-------------|------------|
+| Fill handle | 7×7px | 14×14px |
+| Column resize handle | 8px wide | 16px wide |
+
+### Gesture Prevention
+
+Interactive drag surfaces apply `touch-action: none` to prevent the browser from interpreting drags as scroll or zoom gestures. This ensures that dragging a fill handle or resizing a column doesn't accidentally scroll the page.
+
+## Supported Touch Interactions
+
+| Interaction | Gesture | Description |
+|-------------|---------|-------------|
+| **Cell selection** | Tap + drag | Tap a cell, then drag to select a range |
+| **Fill handle** | Tap + drag the handle | Drag the green square at the bottom-right of the selection to fill cells |
+| **Column resize** | Tap + drag the column border | Drag the right edge of a column header to resize |
+| **Column reorder** | Tap + drag a column header | Drag a column header to reorder columns |
+
+## Quick Example
+
+No special props are needed — touch support is built in. The same code works on desktop and mobile:
+
+<Tabs groupId="framework">
+  <TabItem value="react" label="React" default>
+
+```tsx
+import { OGrid } from '@alaarab/ogrid-react-radix';
+
+function App() {
+  return (
+    <OGrid
+      columns={columns}
+      data={items}
+      getRowId={(item) => item.id}
+      cellSelection  // drag-select works with touch
+    />
+  );
+}
+```
+
+:::tip Switching UI libraries
+The `OGrid` component has the same props across all React UI packages. To switch, just change the import:
+
+- **Radix** (lightweight, default): `from '@alaarab/ogrid-react-radix'`
+- **Fluent UI** (Microsoft 365 / SPFx): `from '@alaarab/ogrid-react-fluent'` — wrap in `<FluentProvider>`
+- **Material UI** (MUI v7): `from '@alaarab/ogrid-react-material'` — wrap in `<ThemeProvider>`
+:::
+
+  </TabItem>
+  <TabItem value="angular" label="Angular">
+
+```typescript
+import { Component } from '@angular/core';
+import { OGridComponent } from '@alaarab/ogrid-angular-material';
+
+@Component({
+  standalone: true,
+  imports: [OGridComponent],
+  template: `<ogrid [props]="gridProps" />`
+})
+export class GridComponent {
+  gridProps = {
+    columns,
+    data: items,
+    getRowId: (item: any) => item.id,
+    cellSelection: true,
+  };
+}
+```
+
+:::tip Switching UI libraries
+Same component API across Angular packages. To switch, just change the import:
+
+- **Radix (CDK)**: `from '@alaarab/ogrid-angular-radix'` *(default, lightweight)*
+- **Angular Material**: `from '@alaarab/ogrid-angular-material'`
+- **PrimeNG**: `from '@alaarab/ogrid-angular-primeng'`
+
+All components are standalone — no NgModule required.
+:::
+
+  </TabItem>
+  <TabItem value="vue" label="Vue">
+
+```vue
+<script setup lang="ts">
+import { OGrid } from '@alaarab/ogrid-vue-vuetify';
+
+const gridProps = {
+  columns,
+  data: items,
+  getRowId: (item) => item.id,
+  cellSelection: true,
+};
+</script>
+
+<template>
+  <OGrid :gridProps="gridProps" />
+</template>
+```
+
+:::tip Switching UI libraries
+Same component API across Vue packages. To switch, just change the import:
+
+- **Radix (Headless UI)**: `from '@alaarab/ogrid-vue-radix'` *(default, lightweight)*
+- **Vuetify**: `from '@alaarab/ogrid-vue-vuetify'` — wrap in `<v-app>` for theming
+- **PrimeVue**: `from '@alaarab/ogrid-vue-primevue'`
+:::
+
+  </TabItem>
+  <TabItem value="js" label="Vanilla JS">
+
+```js
+import { OGrid } from '@alaarab/ogrid-js';
+import '@alaarab/ogrid-js/styles';
+
+const grid = new OGrid(document.getElementById('grid'), {
+  columns: columns,
+  data: items,
+  getRowId: (item) => item.id,
+  cellSelection: true,
+});
+```
+
+  </TabItem>
+</Tabs>
+
+## CSS Custom Properties
+
+The touch target sizes can be customized with CSS if you need different sizing:
+
+```css
+/* Example: make fill handle even larger on touch devices */
+@media (pointer: coarse) {
+  .fillHandle,
+  .ogrid-fill-handle {
+    width: 18px;
+    height: 18px;
+  }
+}
+```
+
+## Browser Support
+
+The Pointer Events API is supported in all modern browsers:
+
+| Browser | Version |
+|---------|---------|
+| Chrome | 55+ |
+| Firefox | 59+ |
+| Safari | 13+ |
+| Edge | 79+ |
+| iOS Safari | 13+ |
+| Chrome Android | 55+ |
+
+## Related
+
+- [Spreadsheet Selection](./spreadsheet-selection) — cell selection and drag-to-select
+- [Editing & Clipboard](./editing) — fill handle drag-to-fill
+- [Column Reordering](./column-reordering) — drag column headers to reorder
