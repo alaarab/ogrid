@@ -10,5 +10,6 @@ export default defineConfig({
   dts: false,
   target: 'es2020',
   minify: true,
+  external: ['@alaarab/ogrid-core', '@alaarab/ogrid-core/formula', 'vue'],
   outExtension: () => ({ js: '.js' }),
 });

@@ -9,10 +9,7 @@
  */
 
 import { Injectable, signal, computed, DestroyRef, inject } from '@angular/core';
-import {
-  FormulaEngine,
-  createGridDataAccessor,
-} from '@alaarab/ogrid-core';
+import { createGridDataAccessor } from '@alaarab/ogrid-core';
 import type {
   IGridDataAccessor,
   IFormulaFunction,
@@ -21,6 +18,7 @@ import type {
   IAuditEntry,
   IAuditTrail,
 } from '@alaarab/ogrid-core';
+import { FormulaEngine } from '@alaarab/ogrid-core/formula';
 
 export interface FormulaEngineConfig {
   /** Enable formula support. */

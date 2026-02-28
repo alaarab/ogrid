@@ -5,7 +5,7 @@ import { useDataGridEditing } from '../hooks/useDataGridEditing';
 import type { UseDataGridEditingParams } from '../hooks/useDataGridEditing';
 import type { IColumnDef } from '@alaarab/ogrid-core';
 import type { IColumnDef as IReactColumnDef } from '../types';
-import { FormulaError } from '@alaarab/ogrid-core';
+import { FormulaError } from '@alaarab/ogrid-core/formula';
 
 // ---------------------------------------------------------------------------
 // Test helpers

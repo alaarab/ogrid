@@ -7,7 +7,7 @@
 
 import * as React from 'react';
 import { useEffect, useState, useCallback, useRef, memo } from 'react';
-import { FORMULA_REF_COLORS, type FormulaReference } from '@alaarab/ogrid-core';
+import { FORMULA_REF_COLORS, type FormulaReference } from '@alaarab/ogrid-core/formula';
 
 interface RefRect {
   top: number;

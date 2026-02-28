@@ -8,7 +8,7 @@
 
 import { useRef, useCallback, useEffect } from 'react';
 import {
-  FormulaEngine,
+  createGridDataAccessor,
   type IGridDataAccessor,
   type IFormulaFunction,
   type IRecalcResult,
@@ -16,7 +16,7 @@ import {
   type IAuditTrail,
 } from '@alaarab/ogrid-core';
 import type { IColumnDef } from '@alaarab/ogrid-core';
-import { createGridDataAccessor } from '@alaarab/ogrid-core';
+import { FormulaEngine } from '@alaarab/ogrid-core/formula';
 import { useLatestRef } from './useLatestRef';
 
 export interface UseFormulaEngineParams<T> {
