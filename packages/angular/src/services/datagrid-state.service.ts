@@ -29,7 +29,7 @@ type IColumnDef<T> = IAngularColumnDef<T>;
 // Stable no-op functions to avoid allocating new closures on every getState() call
 const NOOP = () => {};
 const NOOP_ASYNC = async () => {};
-const NOOP_MOUSE = (_e: MouseEvent, _r: number, _c: number) => {};
+const NOOP_MOUSE = (_e: PointerEvent, _r: number, _c: number) => {};
 const NOOP_KEY = (_e: KeyboardEvent) => {};
 const NOOP_CTX = (_e: { clientX: number; clientY: number; preventDefault?: () => void }) => {};
 
@@ -88,12 +88,12 @@ export interface DataGridCellInteractionState {
   selectionRange: ISelectionRange | null;
   /** Set selection range. Undefined when cell selection is disabled. */
   setSelectionRange?: (range: ISelectionRange | null) => void;
-  handleCellMouseDown: (e: MouseEvent, rowIndex: number, globalColIndex: number) => void;
+  handleCellMouseDown: (e: PointerEvent, rowIndex: number, globalColIndex: number) => void;
   handleSelectAllCells: () => void;
   hasCellSelection: boolean;
   handleGridKeyDown: (e: KeyboardEvent) => void;
   /** Handle fill handle mouse down. Undefined when cell selection is disabled. */
-  handleFillHandleMouseDown?: (e: MouseEvent) => void;
+  handleFillHandleMouseDown?: (e: PointerEvent) => void;
   handleCopy: () => void;
   handleCut: () => void;
   handlePaste: () => Promise<void>;
@@ -335,16 +335,16 @@ export class DataGridStateService<T> {
     // Setup window event listeners for cell selection drag
     // Run outside NgZone to avoid 60Hz change detection during drag
     effect((onCleanup) => {
-      const onMove = (e: MouseEvent) => this.onWindowMouseMove(e);
+      const onMove = (e: PointerEvent) => this.onWindowMouseMove(e);
       const onUp = () => this.onWindowMouseUp();
       this.ngZone.runOutsideAngular(() => {
-        window.addEventListener('mousemove', onMove, true);
-        window.addEventListener('mouseup', onUp, true);
+        window.addEventListener('pointermove', onMove, true);
+        window.addEventListener('pointerup', onUp, true);
       });
 
       onCleanup(() => {
-        window.removeEventListener('mousemove', onMove, true);
-        window.removeEventListener('mouseup', onUp, true);
+        window.removeEventListener('pointermove', onMove, true);
+        window.removeEventListener('pointerup', onUp, true);
       });
     });
 
@@ -443,7 +443,7 @@ export class DataGridStateService<T> {
 
   // --- Cell selection / mouse handling (delegated to interactionHelper) ---
 
-  handleCellMouseDown(e: MouseEvent, rowIndex: number, globalColIndex: number): void {
+  handleCellMouseDown(e: PointerEvent, rowIndex: number, globalColIndex: number): void {
     this.interactionHelper.handleCellMouseDown(e, rowIndex, globalColIndex, this.colOffset(), this.wrapperEl());
   }
 
@@ -545,7 +545,7 @@ export class DataGridStateService<T> {
 
   // --- Fill handle (delegated to interactionHelper + setupFillHandleDrag) ---
 
-  handleFillHandleMouseDown(e: MouseEvent): void {
+  handleFillHandleMouseDown(e: PointerEvent): void {
     this.interactionHelper.handleFillHandleMouseDown(e);
     this.setupFillHandleDrag();
   }
@@ -632,10 +632,10 @@ export class DataGridStateService<T> {
   private readonly _setPopoverAnchorEl = (el: HTMLElement | null) => this.editingHelper.popoverAnchorElSig.set(el);
   private readonly _setActiveCell = (cell: IActiveCell | null) => this.setActiveCell(cell);
   private readonly _setSelectionRange = (range: ISelectionRange | null) => this.setSelectionRange(range);
-  private readonly _handleCellMouseDown = (e: MouseEvent, r: number, c: number) => this.handleCellMouseDown(e, r, c);
+  private readonly _handleCellMouseDown = (e: PointerEvent, r: number, c: number) => this.handleCellMouseDown(e, r, c);
   private readonly _handleSelectAllCells = () => this.handleSelectAllCells();
   private readonly _handleGridKeyDown = (e: KeyboardEvent) => this.handleGridKeyDown(e);
-  private readonly _handleFillHandleMouseDown = (e: MouseEvent) => this.handleFillHandleMouseDown(e);
+  private readonly _handleFillHandleMouseDown = (e: PointerEvent) => this.handleFillHandleMouseDown(e);
   private readonly _handleCopy = () => this.handleCopy();
   private readonly _handleCut = () => this.handleCut();
   private readonly _handlePaste = () => this.handlePaste();
@@ -794,7 +794,7 @@ export class DataGridStateService<T> {
 
   // --- Private helpers (drag selection delegated to interactionHelper) ---
 
-  private onWindowMouseMove(e: MouseEvent): void {
+  private onWindowMouseMove(e: PointerEvent): void {
     this.interactionHelper.onWindowMouseMove(e, this.colOffset(), this.wrapperEl());
   }
 
@@ -828,7 +828,7 @@ export class DataGridStateService<T> {
       });
     };
 
-    const onMove = (e: MouseEvent) => {
+    const onMove = (e: PointerEvent) => {
       lastFillMousePos = { cx: e.clientX, cy: e.clientY };
       if (this.interactionHelper.fillRafId) cancelAnimationFrame(this.interactionHelper.fillRafId);
       this.interactionHelper.fillRafId = requestAnimationFrame(() => {
@@ -847,8 +847,8 @@ export class DataGridStateService<T> {
     };
 
     const onUp = () => {
-      window.removeEventListener('mousemove', onMove, true);
-      window.removeEventListener('mouseup', onUp, true);
+      window.removeEventListener('pointermove', onMove, true);
+      window.removeEventListener('pointerup', onUp, true);
       this.interactionHelper.fillMoveHandler = null;
       this.interactionHelper.fillUpHandler = null;
 
@@ -904,8 +904,8 @@ export class DataGridStateService<T> {
     this.interactionHelper.fillUpHandler = onUp;
 
     this.ngZone.runOutsideAngular(() => {
-      window.addEventListener('mousemove', onMove, true);
-      window.addEventListener('mouseup', onUp, true);
+      window.addEventListener('pointermove', onMove, true);
+      window.addEventListener('pointerup', onUp, true);
     });
   }
 }

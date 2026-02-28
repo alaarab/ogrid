@@ -39,8 +39,8 @@ export class FillHandleState<T> {
   private lastMousePos: { cx: number; cy: number } | null = null;
   private cachedCells: NodeListOf<Element> | null = null;
 
-  private onMoveBound: (e: MouseEvent) => void;
-  private onUpBound: (e: MouseEvent) => void;
+  private onMoveBound: (e: PointerEvent) => void;
+  private onUpBound: (e: PointerEvent) => void;
 
   constructor(
     params: FillHandleParams<T>,
@@ -80,8 +80,8 @@ export class FillHandleState<T> {
     this.applyFillValuesFromCore(norm, { startRow: norm.startRow, startCol: norm.startCol });
   }
 
-  /** Called when the fill handle square is mousedown'd. */
-  startFillDrag(e: MouseEvent): void {
+  /** Called when the fill handle square is pointerdown'd. */
+  startFillDrag(e: PointerEvent): void {
     e.preventDefault();
     e.stopPropagation();
 
@@ -96,11 +96,11 @@ export class FillHandleState<T> {
     // Cache querySelectorAll result once on drag start
     this.cachedCells = this.wrapperRef ? this.wrapperRef.querySelectorAll('[data-row-index][data-col-index]') : null;
 
-    window.addEventListener('mousemove', this.onMoveBound, { capture: true, passive: true });
-    window.addEventListener('mouseup', this.onUpBound, { capture: true, passive: true });
+    window.addEventListener('pointermove', this.onMoveBound, { capture: true, passive: true });
+    window.addEventListener('pointerup', this.onUpBound, { capture: true, passive: true });
   }
 
-  private onMouseMove(e: MouseEvent): void {
+  private onMouseMove(e: PointerEvent): void {
     if (!this._isFillDragging || !this.fillDragStart) return;
 
     this.lastMousePos = { cx: e.clientX, cy: e.clientY };
@@ -134,8 +134,8 @@ export class FillHandleState<T> {
   private onMouseUp(): void {
     if (!this._isFillDragging || !this.fillDragStart) return;
 
-    window.removeEventListener('mousemove', this.onMoveBound, true);
-    window.removeEventListener('mouseup', this.onUpBound, true);
+    window.removeEventListener('pointermove', this.onMoveBound, true);
+    window.removeEventListener('pointerup', this.onUpBound, true);
 
     if (this.rafHandle) {
       cancelAnimationFrame(this.rafHandle);
@@ -246,8 +246,8 @@ export class FillHandleState<T> {
 
   destroy(): void {
     if (this._isFillDragging) {
-      window.removeEventListener('mousemove', this.onMoveBound, true);
-      window.removeEventListener('mouseup', this.onUpBound, true);
+      window.removeEventListener('pointermove', this.onMoveBound, true);
+      window.removeEventListener('pointerup', this.onUpBound, true);
       this.clearDragAttrs();
       this._isFillDragging = false;
       this.fillDragStart = null;
