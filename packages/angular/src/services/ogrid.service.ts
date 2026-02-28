@@ -11,10 +11,9 @@ import {
   validateRowIds,
   columnLetterToIndex,
   getCellValue,
-  extractFormulaReferences,
-  deriveFormulaBarText,
 } from '@alaarab/ogrid-core';
 import type { FormulaReference } from '@alaarab/ogrid-core';
+import { extractFormulaReferences, deriveFormulaBarText } from '@alaarab/ogrid-core/formula';
 import type {
   RowId,
   IOGridApi,

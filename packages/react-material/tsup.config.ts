@@ -10,6 +10,7 @@ export default defineConfig({
   dts: false,
   target: 'es2020',
   minify: true,
+  external: ['@alaarab/ogrid-react', '@alaarab/ogrid-core', '@alaarab/ogrid-core/formula', '@tanstack/react-virtual', '@mui/material', '@mui/icons-material', '@emotion/react', '@emotion/styled', 'react', 'react-dom'],
   esbuildOptions(options) {
     options.jsx = 'automatic';
   },

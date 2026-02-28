@@ -33,6 +33,7 @@ module.exports = {
     '^@fluentui/react-avatar(.*)$': '<rootDir>/jest-mocks/fluent-avatar.cjs.js',
     '^@fluentui/react-badge(.*)$': '<rootDir>/jest-mocks/fluent-badge.cjs.js',
     '^@alaarab/ogrid-core$': '<rootDir>/../core/src/index.ts',
+    '^@alaarab/ogrid-core/formula$': '<rootDir>/../core/src/formula/index.ts',
     '^@alaarab/ogrid-react$': '<rootDir>/../react/src/index.ts',
     '^@alaarab/ogrid-react/testing$': '<rootDir>/../react/src/testing/index.ts',
     '^@alaarab/ogrid-react/storybook$': '<rootDir>/../react/src/storybook/index.ts',
