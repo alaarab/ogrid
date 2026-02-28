@@ -8,7 +8,7 @@
 
 import * as React from 'react';
 import { useRef, useEffect } from 'react';
-import { FORMULA_BAR_STYLES, handleFormulaBarKeyDown } from '@alaarab/ogrid-core';
+import { FORMULA_BAR_STYLES, handleFormulaBarKeyDown } from '@alaarab/ogrid-core/formula';
 
 export interface FormulaBarProps {
   /** Active cell reference (e.g. "A1"). */

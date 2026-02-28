@@ -5,7 +5,7 @@
  */
 
 import { ref, computed, watch, type Ref } from 'vue';
-import { extractFormulaReferences, processFormulaBarCommit, deriveFormulaBarText, type FormulaReference } from '@alaarab/ogrid-core';
+import { extractFormulaReferences, processFormulaBarCommit, deriveFormulaBarText, type FormulaReference } from '@alaarab/ogrid-core/formula';
 
 export interface UseFormulaBarParams {
   /** Active cell column index (0-based). */

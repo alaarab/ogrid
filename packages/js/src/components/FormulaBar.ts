@@ -7,7 +7,7 @@
  * component behavior exactly.
  */
 
-import { FORMULA_BAR_CSS, handleFormulaBarKeyDown } from '@alaarab/ogrid-core';
+import { FORMULA_BAR_CSS, handleFormulaBarKeyDown } from '@alaarab/ogrid-core/formula';
 
 export interface FormulaBarCallbacks {
   /** Called when the user presses Enter to commit the formula/value. */

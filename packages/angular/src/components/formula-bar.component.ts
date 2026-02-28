@@ -17,7 +17,7 @@ import {
   ElementRef,
   effect,
 } from '@angular/core';
-import { handleFormulaBarKeyDown } from '@alaarab/ogrid-core';
+import { handleFormulaBarKeyDown } from '@alaarab/ogrid-core/formula';
 
 @Component({
   selector: 'ogrid-formula-bar',
