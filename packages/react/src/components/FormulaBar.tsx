@@ -25,6 +25,8 @@ export interface FormulaBarProps {
   onCancel: () => void;
   /** Start editing the formula bar. */
   startEditing: () => void;
+  /** External ref for the input element (for cursor position tracking). */
+  inputRef?: React.RefObject<HTMLInputElement | null>;
 }
 
 export function FormulaBar({
@@ -35,15 +37,17 @@ export function FormulaBar({
   onCommit,
   onCancel,
   startEditing,
+  inputRef: externalInputRef,
 }: FormulaBarProps): React.ReactElement {
-  const inputRef = useRef<HTMLInputElement>(null);
+  const internalInputRef = useRef<HTMLInputElement>(null);
+  const inputRef = externalInputRef ?? internalInputRef;
 
   // Focus input when entering edit mode
   useEffect(() => {
     if (isEditing && inputRef.current) {
       inputRef.current.focus();
     }
-  }, [isEditing]);
+  }, [isEditing, inputRef]);
 
   return (
     <div style={FORMULA_BAR_STYLES.bar as React.CSSProperties} role="toolbar" aria-label="Formula bar">

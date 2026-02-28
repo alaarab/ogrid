@@ -310,4 +310,9 @@ export interface IOGridDataGridProps<T> {
   formulaVersion?: number;
   /** Cell references to highlight (from active formula in formula bar). */
   formulaReferences?: import('@alaarab/ogrid-core').FormulaReference[];
+  /**
+   * Called when a cell is clicked during formula editing to insert a cell reference.
+   * Accepts a cell reference string (e.g. "A1") and returns true if the reference was inserted.
+   */
+  onFormulaInsertReference?: (reference: string) => boolean;
 }
