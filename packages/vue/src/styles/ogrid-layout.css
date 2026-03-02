@@ -270,6 +270,7 @@
   z-index: var(--ogrid-z-active-cell, 2);
   position: relative;
   overflow: visible;
+  contain: none;
 }
 
 /* Active cell inside a selection range: suppress outline (Excel behavior).

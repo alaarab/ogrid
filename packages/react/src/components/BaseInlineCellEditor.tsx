@@ -1,4 +1,5 @@
 import * as React from 'react';
+import { createPortal } from 'react-dom';
 import type { IColumnDef } from '../types';
 import { useInlineCellEditorState, useRichSelectState, useSelectState } from '../hooks';
 
@@ -203,8 +204,30 @@ export function BaseInlineCellEditor<T>(props: BaseInlineCellEditorProps<T>): Re
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []); // Mount-only: intentionally runs once to focus/open picker on editor open
 
+  // Helper: portal dropdown to document.body when using fixed positioning
+  // to escape ancestor `contain: content` which clips even fixed elements
+  const usePortal = fixedDropdownStyle != null;
+
   // Rich select (shared across all frameworks)
   if (editorType === 'richSelect') {
+    const dropdownContent = (
+      <div style={computedDropdownStyle} role="listbox">
+        {richSelect.filteredValues.map((v, i) => (
+          <div
+            key={String(v)}
+            role="option"
+            aria-selected={i === richSelect.highlightedIndex}
+            onClick={() => richSelect.selectValue(v)}
+            style={i === richSelect.highlightedIndex ? richSelectOptionHighlightedStyle : richSelectOptionStyle}
+          >
+            {richSelect.getDisplayText(v)}
+          </div>
+        ))}
+        {richSelect.filteredValues.length === 0 && (
+          <div style={richSelectNoMatchesStyle}>No matches</div>
+        )}
+      </div>
+    );
     return (
       <div ref={wrapperRef} style={richSelectWrapperStyle}>
         <input
@@ -216,22 +239,7 @@ export function BaseInlineCellEditor<T>(props: BaseInlineCellEditorProps<T>): Re
           autoFocus
           style={editorInputStyle}
         />
-        <div style={computedDropdownStyle} role="listbox">
-          {richSelect.filteredValues.map((v, i) => (
-            <div
-              key={String(v)}
-              role="option"
-              aria-selected={i === richSelect.highlightedIndex}
-              onClick={() => richSelect.selectValue(v)}
-              style={i === richSelect.highlightedIndex ? richSelectOptionHighlightedStyle : richSelectOptionStyle}
-            >
-              {richSelect.getDisplayText(v)}
-            </div>
-          ))}
-          {richSelect.filteredValues.length === 0 && (
-            <div style={richSelectNoMatchesStyle}>No matches</div>
-          )}
-        </div>
+        {usePortal ? createPortal(dropdownContent, document.body) : dropdownContent}
       </div>
     );
   }
@@ -244,25 +252,28 @@ export function BaseInlineCellEditor<T>(props: BaseInlineCellEditorProps<T>): Re
 
   // Select (custom dropdown, shared across all frameworks)
   if (editorType === 'select') {
+    const dropdownContent = (
+      <div style={computedDropdownStyle} ref={selectState.dropdownRef} role="listbox">
+        {editorValues.map((v, i) => (
+          <div
+            key={String(v)}
+            role="option"
+            aria-selected={i === selectState.highlightedIndex}
+            onClick={() => selectState.selectValue(v)}
+            style={i === selectState.highlightedIndex ? richSelectOptionHighlightedStyle : richSelectOptionStyle}
+          >
+            {selectState.getDisplayText(v)}
+          </div>
+        ))}
+      </div>
+    );
     return (
       <div ref={wrapperRef} style={richSelectWrapperStyle} onKeyDown={selectState.handleKeyDown} tabIndex={0}>
         <div style={selectDisplayStyle}>
           <span>{selectState.getDisplayText(value)}</span>
           <span style={selectChevronStyle}>&#9662;</span>
         </div>
-        <div style={computedDropdownStyle} ref={selectState.dropdownRef} role="listbox">
-          {editorValues.map((v, i) => (
-            <div
-              key={String(v)}
-              role="option"
-              aria-selected={i === selectState.highlightedIndex}
-              onClick={() => selectState.selectValue(v)}
-              style={i === selectState.highlightedIndex ? richSelectOptionHighlightedStyle : richSelectOptionStyle}
-            >
-              {selectState.getDisplayText(v)}
-            </div>
-          ))}
-        </div>
+        {usePortal ? createPortal(dropdownContent, document.body) : dropdownContent}
       </div>
     );
   }
