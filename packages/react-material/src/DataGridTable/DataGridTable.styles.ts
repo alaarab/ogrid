@@ -22,7 +22,7 @@ table:not([data-virtual-scroll]) .ogrid-mat-tbody tr { content-visibility: auto;
 .ogrid-mat-cell--boolean { justify-content: center; text-align: center; }
 .ogrid-mat-cell--editable { cursor: cell; }
 
-.ogrid-mat-cell--active { outline: 2px solid var(--ogrid-selection, #217346); outline-offset: -1px; z-index: var(--ogrid-z-active-cell, 2); position: relative; overflow: visible; background-color: var(--ogrid-hover-bg); }
+.ogrid-mat-cell--active { outline: 2px solid var(--ogrid-selection, #217346); outline-offset: -1px; z-index: var(--ogrid-z-active-cell, 2); position: relative; overflow: visible; contain: none; background-color: var(--ogrid-hover-bg); }
 .ogrid-mat-cell--active:focus-visible { outline: 2px solid var(--ogrid-selection, #217346); outline-offset: -1px; }
 .ogrid-mat-cell--active-in-range { outline: none; background-color: var(--ogrid-bg, #fff); }
 .ogrid-mat-cell--range { background-color: var(--ogrid-bg-range, rgba(33,115,70,0.12)); }

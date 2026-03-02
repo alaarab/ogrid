@@ -6,6 +6,15 @@ All notable changes to OGrid will be documented in this file.
 
 ---
 
+## [2.5.1] — 2026-03-01
+
+### Fixed
+
+- **Select/richSelect editor clipped by CSS containment** — Fixed dropdown disappearing when clicking select-type cells. The root cause was `contain: content` on grid cells, which clips all descendants (including `position: fixed` elements). Active/editing cells now set `contain: none` to allow dropdown overflow. Affected all frameworks: React (Material, Radix, Fluent), Angular, Vue, JS.
+- **Portal dropdown to document.body** — Select and richSelect editor dropdowns are now portaled to `document.body` via `createPortal` when using fixed positioning, fully escaping the table's containment and stacking context hierarchy (React).
+
+---
+
 ## [2.5.0] — 2026-02-28
 
 ### Added
