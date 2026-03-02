@@ -415,6 +415,7 @@
   outline-offset: -1px;
   z-index: var(--ogrid-z-active-cell, 2);
   position: relative;
+  contain: none;
 }
 
 /* Cell range/drag highlights: qualify with .ogrid-container to reach specificity 0,3,0,

@@ -270,6 +270,7 @@
   z-index: var(--ogrid-z-active-cell, 2);
   position: relative;
   overflow: visible;
+  contain: none;
   background: var(--ogrid-active-cell-bg, rgba(0, 0, 0, 0.02));
 }
 
