@@ -188,6 +188,7 @@ export {
   richSelectOptionHighlightedStyle,
   richSelectNoMatchesStyle,
   richSelectSearchInputStyle,
+  richSelectFooterStyle,
   selectEditorStyle,
   selectDisplayStyle,
   selectChevronStyle,

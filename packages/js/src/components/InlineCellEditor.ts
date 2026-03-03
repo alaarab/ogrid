@@ -327,6 +327,8 @@ export class InlineCellEditor<T> {
     dropdown.style.zIndex = '1001';
     dropdown.style.boxShadow = '0 4px 16px rgba(0,0,0,0.2)';
     dropdown.style.textAlign = 'left';
+    dropdown.style.fontSize = '13px';
+    dropdown.style.fontFamily = 'inherit';
     wrapper.appendChild(dropdown);
 
     let highlightedIndex = Math.max(values.findIndex((v) => String(v) === String(value)), 0);
@@ -343,6 +345,7 @@ export class InlineCellEditor<T> {
         option.style.padding = '6px 8px';
         option.style.cursor = 'pointer';
         option.style.color = 'var(--ogrid-fg, #242424)';
+        option.style.fontSize = '13px';
         if (i === highlightedIndex) {
           option.style.background = 'var(--ogrid-bg-hover, #e8f0fe)';
         }
@@ -355,6 +358,19 @@ export class InlineCellEditor<T> {
         });
         dropdown.appendChild(option);
       }
+
+      // Footer hint
+      const footer = document.createElement('div');
+      footer.textContent = 'Click or Enter to apply';
+      footer.style.padding = '4px 8px';
+      footer.style.borderTop = '1px solid var(--ogrid-border, rgba(0, 0, 0, 0.12))';
+      footer.style.fontSize = '11px';
+      footer.style.color = 'var(--ogrid-muted, #999)';
+      footer.style.textAlign = 'right';
+      footer.style.position = 'sticky';
+      footer.style.bottom = '0';
+      footer.style.background = 'var(--ogrid-bg, #fff)';
+      dropdown.appendChild(footer);
     };
 
     // Only update CSS class on old/new highlighted item — avoids rebuilding the DOM
@@ -476,6 +492,8 @@ export class InlineCellEditor<T> {
     dropdown.style.zIndex = '1001';
     dropdown.style.textAlign = 'left';
     dropdown.style.boxShadow = '0 4px 16px rgba(0,0,0,0.2)';
+    dropdown.style.fontSize = '13px';
+    dropdown.style.fontFamily = 'inherit';
 
     // Search input inside the dropdown
     const input = document.createElement('input');
@@ -517,6 +535,7 @@ export class InlineCellEditor<T> {
         option.style.padding = '6px 8px';
         option.style.cursor = 'pointer';
         option.style.color = 'var(--ogrid-fg, #242424)';
+        option.style.fontSize = '13px';
         if (i === highlightedIndex) {
           option.style.background = 'var(--ogrid-bg-hover, #e8f0fe)';
         }
@@ -611,6 +630,20 @@ export class InlineCellEditor<T> {
     });
 
     renderOptions('');
+
+    // Footer hint
+    const richFooter = document.createElement('div');
+    richFooter.textContent = 'Click or Enter to apply';
+    richFooter.style.padding = '4px 8px';
+    richFooter.style.borderTop = '1px solid var(--ogrid-border, rgba(0, 0, 0, 0.12))';
+    richFooter.style.fontSize = '11px';
+    richFooter.style.color = 'var(--ogrid-muted, #999)';
+    richFooter.style.textAlign = 'right';
+    richFooter.style.position = 'sticky';
+    richFooter.style.bottom = '0';
+    richFooter.style.background = 'var(--ogrid-bg, #fff)';
+    dropdown.appendChild(richFooter);
+
     setTimeout(() => input.focus(), 0);
 
     return wrapper;
