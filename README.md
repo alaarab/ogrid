@@ -1,35 +1,16 @@
-<p align="center">
-  <img src="packages/docs/static/img/favicon.svg" width="80" height="80" alt="OGrid" />
-</p>
+![OGrid](packages/docs/static/img/favicon.svg)
 
-<h1 align="center">OGrid</h1>
+# OGrid
 
-<p align="center">
-  <strong>The lightweight, multi-framework data grid with enterprise features and zero enterprise cost.</strong>
-</p>
+A lightweight, multi-framework data grid. One headless core, 10 UI packages across React, Angular, Vue, and vanilla JS.
 
-<p align="center">
-  <a href="https://www.npmjs.com/package/@alaarab/ogrid-core"><img src="https://img.shields.io/npm/v/@alaarab/ogrid-core?color=%23217346&label=npm" alt="npm version" /></a>
-  <a href="https://github.com/alaarab/ogrid/actions/workflows/ci.yml"><img src="https://github.com/alaarab/ogrid/actions/workflows/ci.yml/badge.svg?branch=main" alt="CI" /></a>
-  <a href="https://github.com/alaarab/ogrid/blob/main/LICENSE"><img src="https://img.shields.io/badge/license-MIT-green" alt="MIT License" /></a>
-  <img src="https://img.shields.io/badge/tests-2%2C980%20passing-brightgreen" alt="2,980 tests passing" />
-  <img src="https://img.shields.io/badge/gzip-12.2%20KB%20core-blue" alt="12.2 KB gzipped core" />
-</p>
+[![npm](https://img.shields.io/npm/v/@alaarab/ogrid-core?color=%23217346&label=npm)](https://www.npmjs.com/package/@alaarab/ogrid-core) [![CI](https://github.com/alaarab/ogrid/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/alaarab/ogrid/actions/workflows/ci.yml) [![MIT License](https://img.shields.io/badge/license-MIT-green)](https://github.com/alaarab/ogrid/blob/main/LICENSE) ![tests passing](https://img.shields.io/badge/tests-2%2C980%20passing-brightgreen) ![gzip](https://img.shields.io/badge/gzip-12.2%20KB%20core-blue) ![React 17 | 18 | 19](https://img.shields.io/badge/React-17%20%7C%2018%20%7C%2019-61DAFB?logo=react&logoColor=white) ![Angular 21](https://img.shields.io/badge/Angular-21-DD0031?logo=angular&logoColor=white) ![Vue 3.3+](https://img.shields.io/badge/Vue-3.3+-4FC08D?logo=vuedotjs&logoColor=white) ![TypeScript strict](https://img.shields.io/badge/TypeScript-strict-3178C6?logo=typescript&logoColor=white)
 
-<p align="center">
-  <img src="https://img.shields.io/badge/React-17%20%7C%2018%20%7C%2019-61DAFB?logo=react&logoColor=white" alt="React 17, 18, 19" />
-  <img src="https://img.shields.io/badge/Angular-21-DD0031?logo=angular&logoColor=white" alt="Angular 21" />
-  <img src="https://img.shields.io/badge/Vue-3.3+-4FC08D?logo=vuedotjs&logoColor=white" alt="Vue 3.3+" />
-  <img src="https://img.shields.io/badge/TypeScript-strict-3178C6?logo=typescript&logoColor=white" alt="TypeScript strict" />
-</p>
-
-<p align="center">
-  <a href="https://alaarab.github.io/ogrid/">Documentation</a> &middot;
-  <a href="https://alaarab.github.io/ogrid/docs/getting-started/overview">Getting Started</a> &middot;
-  <a href="https://alaarab.github.io/ogrid/docs/api/ogrid-props">API Reference</a> &middot;
-  <a href="https://alaarab.github.io/ogrid/docs/guides/migration-from-ag-grid">Migrate from AG Grid</a> &middot;
-  <a href="https://discord.gg/KMajyx9j4m">Discord Community</a>
-</p>
+[Documentation](https://alaarab.github.io/ogrid/) &middot;
+[Getting Started](https://alaarab.github.io/ogrid/docs/getting-started/overview) &middot;
+[API Reference](https://alaarab.github.io/ogrid/docs/api/ogrid-props) &middot;
+[Migrate from AG Grid](https://alaarab.github.io/ogrid/docs/guides/migration-from-ag-grid) &middot;
+[Discord Community](https://discord.gg/KMajyx9j4m)
 
 ---
 
@@ -52,42 +33,51 @@ Pick the framework and UI library you already use -- **React** (Radix UI, Fluent
 | **License** | **MIT (free)** | MIT | Commercial |
 | **Cost** | **$0** | $0 | **$999/dev/year** |
 
-OGrid gives you every feature AG Grid locks behind an enterprise license -- for free, forever.
-
 ## Features
 
-- **Sorting** -- Click headers to sort; multi-column sort; custom comparators
-- **Column Types** -- Built-in `text`, `numeric`, `date`, `boolean` with auto-formatting, alignment, editors, and filters
-- **Filtering** -- Text search, multi-select checkboxes, date range, people picker; client or server-side
-- **Pagination** -- Configurable page sizes; client-side or server-side via `IDataSource`
-- **Cell Editing** -- Inline text, select, checkbox, rich select, and custom popup editors
-- **Premium Inputs** -- Optional calendar date picker and more via `@alaarab/ogrid-{react,angular,vue,js}-inputs` (tree-shakeable, zero impact when unused)
-- **Spreadsheet Selection** -- Click-and-drag range selection with active cell highlight
-- **Clipboard** -- Ctrl+C / X / V with multi-cell copy/paste; respects `valueFormatter` / `valueParser`
-- **Fill Handle** -- Drag to fill cells (Excel-style)
-- **Undo / Redo** -- Full edit history with Ctrl+Z / Ctrl+Y; batch operation support
-- **Row Selection** -- Single or multiple with Shift+click range support
-- **Cell References** -- Excel-style column letters (A, B, C…), row numbers, and name box showing active cell (e.g. "A1")
-- **Column Groups** -- Multi-row grouped headers with arbitrary nesting
-- **Column Pinning** -- Sticky left/right columns
-- **Column Resize** -- Drag column borders to resize
-- **Column Chooser** -- Show/hide columns via toolbar dropdown or sidebar panel
-- **Toolbar & Layout** -- Unified bordered container with primary toolbar, secondary `toolbarBelow` row, and footer
-- **Side Bar** -- Toggle-able panel with Columns (show/hide) and Filters (inline controls) panels
-- **Context Menu** -- Right-click: copy, paste, cut, export, undo/redo with keyboard shortcuts
-- **Status Bar** -- Row count, filtered count, selection aggregations (sum, avg, min, max)
-- **Keyboard Navigation** -- Arrow keys, Tab, Enter, F2, Home/End, Ctrl+Home/End, Ctrl+Arrow (Excel-style data region jump)
-- **CSV Export** -- One-click export with formatted values
-- **Grid API** -- `ref`-based imperative API: `setRowData`, `getColumnState`, `selectAll`, etc.
-- **Server-Side Data** -- `IDataSource` pattern for remote pagination, sorting, filtering
-- **Column State Persistence** -- Save/restore visibility, sort, order, widths, filters
-- **Empty State** -- Custom message or render function
-- **Virtual Scrolling** -- Row and column virtualization for large datasets
-- **Web Worker Sort/Filter** -- Offload sort and filter to a background thread (`workerSort: true`)
-- **CSS Containment** -- Automatic `contain: content` on cells; `content-visibility: auto` on off-screen rows
-- **TypeScript Strict** -- Fully generic `<T>` with strict mode; zero `any` leaks
-- **Formula Engine** -- 145 built-in functions (math, stats, text, date, logical, lookup); Excel-like formula bar, cell reference highlighting, dependency graph, and cross-cell recalculation
-- **Editor Integration (MCP)** -- `@alaarab/ogrid-mcp` connects your IDE to OGrid docs and lets it read and control a running grid in real time
+**Data**
+- Sorting -- click headers to sort; multi-column sort; custom comparators
+- Filtering -- text search, multi-select checkboxes, date range, people picker; client or server-side
+- Pagination -- configurable page sizes; client-side or server-side via `IDataSource`
+- Virtual scrolling -- row and column virtualization for large datasets
+- Web worker sort/filter -- offload sort and filter to a background thread (`workerSort: true`)
+- Server-side data -- `IDataSource` pattern for remote pagination, sorting, filtering
+- Column types -- built-in `text`, `numeric`, `date`, `boolean` with auto-formatting and filters
+
+**Editing**
+- Cell editing -- inline text, select, checkbox, rich select, and custom popup editors
+- Clipboard -- Ctrl+C / X / V with multi-cell copy/paste; respects `valueFormatter` / `valueParser`
+- Fill handle -- drag to fill cells (Excel-style)
+- Undo / redo -- full edit history with Ctrl+Z / Ctrl+Y; batch operation support
+- Premium inputs -- optional calendar date picker and more via `@alaarab/ogrid-{react,angular,vue,js}-inputs`
+
+**Selection & Navigation**
+- Spreadsheet selection -- click-and-drag range selection with active cell highlight
+- Row selection -- single or multiple with Shift+click range support
+- Keyboard navigation -- Arrow keys, Tab, Enter, F2, Home/End, Ctrl+Home/End, Ctrl+Arrow (Excel-style)
+- Cell references -- Excel-style column letters (A, B, C...), row numbers, name box showing active cell
+
+**Columns**
+- Column groups -- multi-row grouped headers with arbitrary nesting
+- Column pinning -- sticky left/right columns
+- Column resize -- drag column borders to resize
+- Column chooser -- show/hide columns via toolbar dropdown or sidebar panel
+- Column state persistence -- save/restore visibility, sort, order, widths, filters
+
+**UI**
+- Toolbar & layout -- unified bordered container with primary toolbar, secondary `toolbarBelow` row, and footer
+- Side bar -- toggle-able panel with Columns and Filters panels
+- Context menu -- right-click: copy, paste, cut, export, undo/redo with keyboard shortcuts
+- Status bar -- row count, filtered count, selection aggregations (sum, avg, min, max)
+- Empty state -- custom message or render function
+- CSV export -- one-click export with formatted values
+
+**Advanced**
+- Grid API -- `ref`-based imperative API: `setRowData`, `getColumnState`, `selectAll`, etc.
+- Formula engine -- 145 built-in functions; Excel-like formula bar, cell reference highlighting, cross-cell recalculation
+- Editor integration (MCP) -- `@alaarab/ogrid-mcp` connects your IDE to OGrid docs and lets it read and control a running grid
+- CSS containment -- automatic `contain: content` on cells; `content-visibility: auto` on off-screen rows
+- TypeScript strict -- fully generic `<T>` with strict mode; zero `any` leaks
 
 ## Framework Support
 
@@ -314,35 +304,7 @@ const dataSource: IDataSource<Product> = {
 <OGrid dataSource={dataSource} columns={columns} getRowId={(r) => r.id} />
 ```
 
-## Feature Parity Matrix
-
-Every feature works the same across all frameworks. Ship consistent behavior regardless of your stack.
-
-| Feature | React | Angular | Vue | Vanilla JS |
-|---------|:-----:|:-------:|:---:|:----------:|
-| Sorting | Yes | Yes | Yes | Yes |
-| Filtering (text, multiSelect, date, people) | Yes | Yes | Yes | Yes |
-| Pagination (client & server) | Yes | Yes | Yes | Yes |
-| Cell editing (text, select, checkbox, date, richSelect) | Yes | Yes | Yes | Yes |
-| Spreadsheet selection | Yes | Yes | Yes | Yes |
-| Clipboard (copy/cut/paste) | Yes | Yes | Yes | Yes |
-| Fill handle | Yes | Yes | Yes | Yes |
-| Undo / Redo | Yes | Yes | Yes | Yes |
-| Row selection (single & multi) | Yes | Yes | Yes | Yes |
-| Column groups | Yes | Yes | Yes | Yes |
-| Column pinning | Yes | Yes | Yes | Yes |
-| Column resize | Yes | Yes | Yes | Yes |
-| Column chooser | Yes | Yes | Yes | Yes |
-| Context menu | Yes | Yes | Yes | Yes |
-| Status bar | Yes | Yes | Yes | Yes |
-| Side bar | Yes | Yes | Yes | Yes |
-| Keyboard navigation | Yes | Yes | Yes | Yes |
-| CSV export | Yes | Yes | Yes | Yes |
-| Server-side data | Yes | Yes | Yes | Yes |
-| Column state persistence | Yes | Yes | Yes | Yes |
-| Virtual scrolling (row + column) | Yes | Yes | Yes | Yes |
-| Web Worker sort/filter | Yes | Yes | Yes | Yes |
-| Grid API (`IOGridApi`) | Yes | Yes | Yes | Yes |
+All features work identically across React, Angular, Vue, and vanilla JS.
 
 ## Architecture
 
@@ -444,7 +406,7 @@ useEffect(() => {
 }, [data]);
 ```
 
-Now your editor can inspect what's actually rendering, update cells, apply filters, and navigate pages — while you watch the grid update live.
+Now your editor can inspect what's actually rendering, update cells, apply filters, and navigate pages -- while you watch the grid update live.
 
 Bridge tools: `list_grids`, `get_grid_state`, `send_grid_command`
 
@@ -513,10 +475,8 @@ See [ARCHITECTURE.md](./ARCHITECTURE.md) for detailed architecture documentation
 
 ## License
 
-[MIT](./LICENSE) -- Free forever. No enterprise tiers. No feature paywalls. No license keys.
+[MIT](./LICENSE) -- free for everything.
 
 ---
 
-<p align="center">
-  Built by <a href="https://github.com/alaarab">Ala Arab</a>
-</p>
+Built by [Ala Arab](https://github.com/alaarab)
