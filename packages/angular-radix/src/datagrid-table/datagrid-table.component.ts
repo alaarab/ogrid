@@ -658,7 +658,7 @@ import { PopoverCellEditorComponent } from './popover-cell-editor.component';
                                 [style]="cellStyle ?? undefined"
                               >
                                 @if (colLayout.col.type === 'boolean') {
-                                  <input type="checkbox" [checked]="!!descriptor.displayValue" [disabled]="!descriptor.canEditAny" (change)="descriptor.canEditAny ? commitEdit(item, colLayout.col.columnId, !!descriptor.displayValue, !descriptor.displayValue, rowIndex, descriptor.globalColIndex) : null" (click)="$event.stopPropagation()" [style.margin]="'0'" [style.cursor]="descriptor.canEditAny ? 'pointer' : 'default'" [attr.aria-label]="descriptor.displayValue ? 'Checked' : 'Unchecked'" />
+                                  <input type="checkbox" [checked]="!!descriptor.displayValue" [disabled]="!descriptor.canEditAny" (change)="descriptor.canEditAny ? commitEdit(item, colLayout.col.columnId, !!descriptor.displayValue, !descriptor.displayValue, rowIndex, descriptor.globalColIndex) : null" (click)="$event.stopPropagation()" style="margin:0;outline:none" [style.cursor]="descriptor.canEditAny ? 'pointer' : 'default'" [attr.aria-label]="descriptor.displayValue ? 'Checked' : 'Unchecked'" />
                                 } @else {
                                   {{ content }}
                                 }

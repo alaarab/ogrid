@@ -193,9 +193,9 @@ export class InlineCellEditor<T> {
    * Shared factory for text/date input editors — both types have identical event handling,
    * differing only in input.type and initial value formatting.
    */
-  private createInputEditor(initialValue: string): HTMLInputElement {
+  private createInputEditor(type: 'text' | 'date', initialValue: string): HTMLInputElement {
     const input = document.createElement('input');
-    input.type = 'text';
+    input.type = type;
     input.value = initialValue;
     Object.assign(input.style, EDITOR_STYLE);
 
@@ -235,7 +235,7 @@ export class InlineCellEditor<T> {
   }
 
   private createTextEditor(value: unknown): HTMLInputElement {
-    return this.createInputEditor(value != null ? String(value) : '');
+    return this.createInputEditor('text', value != null ? String(value) : '');
   }
 
   private createCheckboxEditor(value: unknown): HTMLInputElement {
@@ -275,7 +275,7 @@ export class InlineCellEditor<T> {
         initialValue = dateStr.substring(0, 10);
       }
     }
-    return this.createInputEditor(initialValue);
+    return this.createInputEditor('date', initialValue);
   }
 
   private createSelectEditor(value: unknown, column: IColumnDef<T>): HTMLElement {
