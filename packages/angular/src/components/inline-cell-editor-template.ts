@@ -23,7 +23,7 @@ export const INLINE_CELL_EDITOR_TEMPLATE = `
             <span style="margin-left:4px;font-size:10px;opacity:0.5">&#9662;</span>
           </div>
           <div #richSelectDropdown role="listbox"
-               style="position:absolute;top:100%;left:0;right:0;max-height:200px;overflow-y:auto;background:var(--ogrid-bg, #fff);border:1px solid var(--ogrid-border, rgba(0,0,0,0.12));z-index:10;box-shadow:0 4px 16px rgba(0,0,0,0.2);text-align:left">
+               style="position:absolute;top:100%;left:0;right:0;max-height:200px;overflow-y:auto;background:var(--ogrid-bg, #fff);border:1px solid var(--ogrid-border, rgba(0,0,0,0.12));z-index:10;box-shadow:0 4px 16px rgba(0,0,0,0.2);text-align:left;font-size:13px;font-family:inherit">
             <input
               #richSelectInput
               type="text"
@@ -38,14 +38,15 @@ export const INLINE_CELL_EDITOR_TEMPLATE = `
                 <div role="option"
                      [attr.aria-selected]="i === highlightedIndex()"
                      (click)="commitValue(opt)"
-                     [style]="i === highlightedIndex() ? 'padding:6px 8px;cursor:pointer;color:var(--ogrid-fg, #242424);background:var(--ogrid-bg-hover, #e8f0fe)' : 'padding:6px 8px;cursor:pointer;color:var(--ogrid-fg, #242424)'">
+                     [style]="i === highlightedIndex() ? 'padding:6px 8px;cursor:pointer;color:var(--ogrid-fg, #242424);font-size:13px;background:var(--ogrid-bg-hover, #e8f0fe)' : 'padding:6px 8px;cursor:pointer;color:var(--ogrid-fg, #242424);font-size:13px'">
                   {{ getDisplayText(opt) }}
                 </div>
               }
               @if (filteredOptions().length === 0) {
-                <div style="padding:6px 8px;color:var(--ogrid-muted, #999)">No matches</div>
+                <div style="padding:6px 8px;color:var(--ogrid-muted, #999);font-size:13px">No matches</div>
               }
             </div>
+            <div style="padding:4px 8px;border-top:1px solid var(--ogrid-border, rgba(0,0,0,0.12));font-size:11px;color:var(--ogrid-muted, #999);text-align:right;position:sticky;bottom:0;background:var(--ogrid-bg, #fff)">Click or Enter to apply</div>
           </div>
         </div>
       }
@@ -58,15 +59,16 @@ export const INLINE_CELL_EDITOR_TEMPLATE = `
             <span style="margin-left:4px;font-size:10px;opacity:0.5">&#9662;</span>
           </div>
           <div #selectDropdown role="listbox"
-               style="position:absolute;top:100%;left:0;right:0;max-height:200px;overflow-y:auto;background:var(--ogrid-bg, #fff);border:1px solid var(--ogrid-border, rgba(0,0,0,0.12));z-index:10;box-shadow:0 4px 16px rgba(0,0,0,0.2);text-align:left">
+               style="position:absolute;top:100%;left:0;right:0;max-height:200px;overflow-y:auto;background:var(--ogrid-bg, #fff);border:1px solid var(--ogrid-border, rgba(0,0,0,0.12));z-index:10;box-shadow:0 4px 16px rgba(0,0,0,0.2);text-align:left;font-size:13px;font-family:inherit">
             @for (opt of selectOptions(); track opt; let i = $index) {
               <div role="option"
                    [attr.aria-selected]="i === highlightedIndex()"
                    (click)="commitValue(opt)"
-                   [style]="i === highlightedIndex() ? 'padding:6px 8px;cursor:pointer;color:var(--ogrid-fg, #242424);background:var(--ogrid-bg-hover, #e8f0fe)' : 'padding:6px 8px;cursor:pointer;color:var(--ogrid-fg, #242424)'">
+                   [style]="i === highlightedIndex() ? 'padding:6px 8px;cursor:pointer;color:var(--ogrid-fg, #242424);font-size:13px;background:var(--ogrid-bg-hover, #e8f0fe)' : 'padding:6px 8px;cursor:pointer;color:var(--ogrid-fg, #242424);font-size:13px'">
                 {{ getDisplayText(opt) }}
               </div>
             }
+            <div style="padding:4px 8px;border-top:1px solid var(--ogrid-border, rgba(0,0,0,0.12));font-size:11px;color:var(--ogrid-muted, #999);text-align:right;position:sticky;bottom:0;background:var(--ogrid-bg, #fff)">Click or Enter to apply</div>
           </div>
         </div>
       }
