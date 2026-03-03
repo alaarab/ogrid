@@ -2,6 +2,7 @@ import * as React from 'react';
 import type { Meta, StoryObj } from '@storybook/react';
 import { DataGridTable } from './DataGridTable';
 import type { IColumnDef, ICellValueChangedEvent, ICellEditorProps, IRowSelectionChangeEvent } from '@alaarab/ogrid-react';
+import { DatePickerEditor, RatingEditor, ColorPickerEditor, SliderEditor, TagsEditor } from '@alaarab/ogrid-react-inputs';
 
 interface Row {
   id: string;
@@ -766,6 +767,196 @@ export const SpreadsheetExperience: Story = {
             department: ['Engineering', 'Marketing', 'Sales', 'HR'],
             status: ['Active', 'On Leave', 'Inactive'],
           }}
+          loadingFilterOptions={{}}
+        />
+      </div>
+    );
+  },
+};
+
+// ─────────────────────────────────────────────────
+// DatePickerEditor (premium popup editor)
+// ─────────────────────────────────────────────────
+
+interface DatePickerRow {
+  id: string;
+  name: string;
+  startDate: string;
+  status: string;
+}
+
+const datePickerRows: DatePickerRow[] = [
+  { id: '1', name: 'Project Alpha', startDate: '2024-03-15', status: 'Active' },
+  { id: '2', name: 'Project Beta', startDate: '2024-06-01', status: 'Planning' },
+  { id: '3', name: 'Project Gamma', startDate: '2024-09-22', status: 'Active' },
+  { id: '4', name: 'Project Delta', startDate: '2025-01-10', status: 'On Hold' },
+];
+
+export const DatePickerEditorStory: Story = {
+  name: 'DatePickerEditor',
+  render: function DatePickerEditorStory() {
+    const [items, setItems] = React.useState<DatePickerRow[]>(datePickerRows);
+    const handleCellValueChanged = React.useCallback((e: ICellValueChangedEvent<DatePickerRow>) => {
+      setItems((prev) =>
+        prev.map((row) =>
+          row.id === e.item.id ? { ...row, [e.columnId]: e.newValue } : row
+        )
+      );
+    }, []);
+
+    const cols: IColumnDef<DatePickerRow>[] = [
+      {
+        columnId: 'name',
+        name: 'Project Name',
+        editable: true,
+        cellEditor: 'text',
+        minWidth: 160,
+      },
+      {
+        columnId: 'startDate',
+        name: 'Start Date',
+        type: 'date',
+        editable: true,
+        cellEditor: DatePickerEditor as React.ComponentType<ICellEditorProps<DatePickerRow>>,
+        cellEditorPopup: true,
+        minWidth: 140,
+      },
+      {
+        columnId: 'status',
+        name: 'Status',
+        editable: true,
+        cellEditor: 'select',
+        cellEditorParams: { values: ['Active', 'Planning', 'On Hold', 'Completed'] },
+      },
+    ];
+
+    return (
+      <div>
+        <p style={{ marginBottom: 8, fontSize: 14 }}>
+          Click a cell in the <strong>Start Date</strong> column to open the premium DatePicker popup.
+          Other columns use the default inline text and select editors.
+        </p>
+        <DataGridTable<DatePickerRow>
+          items={items}
+          columns={cols}
+          getRowId={(r) => r.id}
+          sortBy="name"
+          sortDirection="asc"
+          onColumnSort={noop}
+          visibleColumns={new Set(['name', 'startDate', 'status'])}
+          editable
+          onCellValueChanged={handleCellValueChanged}
+          filters={{}}
+          onFilterChange={noop}
+          filterOptions={{ status: ['Active', 'Planning', 'On Hold', 'Completed'] }}
+          loadingFilterOptions={{}}
+        />
+      </div>
+    );
+  },
+};
+
+// ─────────────────────────────────────────────────
+// Premium Inputs (Rating, ColorPicker, Slider, Tags)
+// ─────────────────────────────────────────────────
+
+interface PremiumInputsItem {
+  id: number;
+  name: string;
+  rating: number;
+  color: string;
+  progress: number;
+  tags: string;
+}
+
+const premiumInputsInitialData: PremiumInputsItem[] = [
+  { id: 1, name: 'Project Alpha', rating: 4, color: '#FF6B6B', progress: 75, tags: 'React, TypeScript' },
+  { id: 2, name: 'Project Beta', rating: 3, color: '#4D96FF', progress: 45, tags: 'Vue, Python' },
+  { id: 3, name: 'Project Gamma', rating: 5, color: '#6BCB77', progress: 90, tags: 'Angular, Java' },
+  { id: 4, name: 'Project Delta', rating: 2, color: '#FFD93D', progress: 30, tags: 'React, Node' },
+  { id: 5, name: 'Project Epsilon', rating: 4, color: '#A66DD4', progress: 60, tags: 'Go, Docker' },
+  { id: 6, name: 'Project Zeta', rating: 1, color: '#FF8E72', progress: 15, tags: 'Python, ML' },
+  { id: 7, name: 'Project Eta', rating: 5, color: '#00B894', progress: 95, tags: 'Rust, WASM' },
+  { id: 8, name: 'Project Theta', rating: 3, color: '#0984E3', progress: 50, tags: 'React, GraphQL' },
+];
+
+export const PremiumInputs: Story = {
+  name: 'PremiumInputsStory',
+  render: function PremiumInputsStory() {
+    const [items, setItems] = React.useState<PremiumInputsItem[]>(premiumInputsInitialData);
+
+    const handleCellValueChanged = React.useCallback((e: ICellValueChangedEvent<PremiumInputsItem>) => {
+      setItems((prev) =>
+        prev.map((row) =>
+          row.id === e.item.id ? { ...row, [e.columnId]: e.newValue } : row
+        )
+      );
+    }, []);
+
+    const cols: IColumnDef<PremiumInputsItem>[] = [
+      { columnId: 'name', name: 'Project', sortable: true, editable: true, defaultWidth: 160 },
+      {
+        columnId: 'rating',
+        name: 'Rating',
+        editable: true,
+        cellEditor: RatingEditor as React.ComponentType<ICellEditorProps<PremiumInputsItem>>,
+        cellEditorPopup: true,
+        cellEditorParams: { maxStars: 5 },
+        defaultWidth: 100,
+      },
+      {
+        columnId: 'color',
+        name: 'Color',
+        editable: true,
+        cellEditor: ColorPickerEditor as React.ComponentType<ICellEditorProps<PremiumInputsItem>>,
+        cellEditorPopup: true,
+        defaultWidth: 100,
+      },
+      {
+        columnId: 'progress',
+        name: 'Progress',
+        editable: true,
+        cellEditor: SliderEditor as React.ComponentType<ICellEditorProps<PremiumInputsItem>>,
+        cellEditorPopup: true,
+        cellEditorParams: { min: 0, max: 100, step: 5 },
+        valueFormatter: (v: unknown) => v != null ? `${v}%` : '',
+        defaultWidth: 100,
+      },
+      {
+        columnId: 'tags',
+        name: 'Tags',
+        editable: true,
+        cellEditor: TagsEditor as React.ComponentType<ICellEditorProps<PremiumInputsItem>>,
+        cellEditorPopup: true,
+        cellEditorParams: {
+          suggestions: ['React', 'Angular', 'Vue', 'TypeScript', 'Python', 'Java', 'Go', 'Rust', 'Node', 'Docker', 'GraphQL', 'ML', 'WASM'],
+        },
+        defaultWidth: 180,
+      },
+    ];
+
+    return (
+      <div>
+        <p style={{ marginBottom: 8, fontSize: 14 }}>
+          Click a cell to open a premium popup editor. <strong>Rating</strong> — star picker.{' '}
+          <strong>Color</strong> — swatch grid + hex input. <strong>Progress</strong> — range slider.{' '}
+          <strong>Tags</strong> — multi-value chip editor with autocomplete.
+        </p>
+        <DataGridTable<PremiumInputsItem>
+          items={items}
+          columns={cols}
+          getRowId={(r) => String(r.id)}
+          sortBy="name"
+          sortDirection="asc"
+          onColumnSort={noop}
+          visibleColumns={new Set(['name', 'rating', 'color', 'progress', 'tags'])}
+          editable
+          cellSelection
+          statusBar
+          onCellValueChanged={handleCellValueChanged}
+          filters={{}}
+          onFilterChange={noop}
+          filterOptions={{}}
           loadingFilterOptions={{}}
         />
       </div>

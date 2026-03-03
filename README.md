@@ -61,6 +61,7 @@ OGrid gives you every feature AG Grid locks behind an enterprise license -- for 
 - **Filtering** -- Text search, multi-select checkboxes, date range, people picker; client or server-side
 - **Pagination** -- Configurable page sizes; client-side or server-side via `IDataSource`
 - **Cell Editing** -- Inline text, select, checkbox, rich select, and custom popup editors
+- **Premium Inputs** -- Optional calendar date picker and more via `@alaarab/ogrid-{react,angular,vue,js}-inputs` (tree-shakeable, zero impact when unused)
 - **Spreadsheet Selection** -- Click-and-drag range selection with active cell highlight
 - **Clipboard** -- Ctrl+C / X / V with multi-cell copy/paste; respects `valueFormatter` / `valueParser`
 - **Fill Handle** -- Drag to fill cells (Excel-style)
@@ -104,6 +105,15 @@ OGrid provides **10 UI packages** across 4 frameworks, all sharing a single head
 | | PrimeVue 4 | `@alaarab/ogrid-vue-primevue` | `primevue` |
 | | Radix UI | `@alaarab/ogrid-vue-radix` | -- |
 | **Vanilla JS** | None needed | `@alaarab/ogrid-js` | None |
+
+**Optional premium inputs** (calendar date picker, etc.) are available as add-on packages:
+
+| Framework | Package | Dependencies |
+|-----------|---------|--------------|
+| React | `@alaarab/ogrid-react-inputs` | `@alaarab/ogrid-core`, `react` |
+| Angular | `@alaarab/ogrid-angular-inputs` | `@alaarab/ogrid-core`, `@angular/core` |
+| Vue | `@alaarab/ogrid-vue-inputs` | `@alaarab/ogrid-core`, `vue` |
+| Vanilla JS | `@alaarab/ogrid-js-inputs` | `@alaarab/ogrid-core` |
 
 All UI packages within a framework expose the **same API** -- switch UI libraries by changing one import.
 
