@@ -39,7 +39,7 @@ Pick the framework and UI library you already use and get sorting, filtering, pa
 | Side bar | Built-in | No | $999/dev/year |
 | Cell editing | Built-in | Built-in | Built-in |
 | Sorting & filtering | Built-in | Built-in | Built-in |
-| **Bundle size (gzip)** | **42-58 KB** | ~339 KB | ~339 KB+ |
+| **Bundle size (gzip)** | **44-61 KB** | ~339 KB | ~339 KB+ |
 | **License** | **MIT (free)** | MIT | Commercial |
 | **Cost** | **$0** | $0 | **$999/dev/year** |
 
@@ -118,16 +118,16 @@ These are the actual sizes you ship. Each row is core + adapter + UI layer combi
 
 | Setup | Gzip |
 |-------|------|
-| React + Radix | 51 KB |
-| React + Fluent | 52 KB |
-| React + Material | 53 KB |
-| Angular + Material | 57 KB |
-| Angular + PrimeNG | 58 KB |
-| Angular + Radix | 57 KB |
-| Vue + Vuetify | 45 KB |
-| Vue + PrimeVue | 45 KB |
-| Vue + Radix | 42 KB |
-| Vanilla JS | 43 KB |
+| React + Radix | 54 KB |
+| React + Fluent | 55 KB |
+| React + Material | 57 KB |
+| Angular + Material | 59 KB |
+| Angular + PrimeNG | 61 KB |
+| Angular + Radix | 59 KB |
+| Vue + Vuetify | 47 KB |
+| Vue + PrimeVue | 47 KB |
+| Vue + Radix | 44 KB |
+| Vanilla JS | 45 KB |
 | AG Grid Community (comparison) | ~339 KB |
 
 ## Quick Start
