@@ -275,7 +275,9 @@ export class InlineCellEditor<T> {
         initialValue = dateStr.substring(0, 10);
       }
     }
-    return this.createInputEditor('date', initialValue);
+    const input = this.createInputEditor('text', initialValue);
+    input.placeholder = 'YYYY-MM-DD';
+    return input;
   }
 
   private createSelectEditor(value: unknown, column: IColumnDef<T>): HTMLElement {

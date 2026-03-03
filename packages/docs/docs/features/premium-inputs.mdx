@@ -1,0 +1,604 @@
+---
+sidebar_position: 19
+title: Premium Inputs
+description: Optional premium cell editors with zero bundle impact when not installed
+---
+
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+
+# Premium Inputs
+
+OGrid's premium inputs are optional cell editor components distributed in a separate package. They are fully tree-shakeable and have **zero bundle impact** when not installed -- your grid stays lightweight until you explicitly opt in.
+
+## Installation
+
+<Tabs groupId="framework">
+  <TabItem value="react" label="React" default>
+
+```bash
+npm install @alaarab/ogrid-react-inputs
+```
+
+Works with any OGrid React UI package (Radix, Fluent, Material).
+
+  </TabItem>
+  <TabItem value="angular" label="Angular">
+
+```bash
+npm install @alaarab/ogrid-angular-inputs
+```
+
+Works with any OGrid Angular UI package (Angular Material, PrimeNG, Radix).
+
+  </TabItem>
+  <TabItem value="vue" label="Vue">
+
+```bash
+npm install @alaarab/ogrid-vue-inputs
+```
+
+Works with any OGrid Vue UI package (Vuetify, PrimeVue, Radix).
+
+  </TabItem>
+  <TabItem value="js" label="Vanilla JS">
+
+```bash
+npm install @alaarab/ogrid-js-inputs
+```
+
+  </TabItem>
+</Tabs>
+
+All premium input packages depend only on `@alaarab/ogrid-core` and their framework peer dependency. They share calendar utilities via `@alaarab/ogrid-inputs` (headless, zero deps).
+
+## DatePickerEditor
+
+A full calendar-based date picker that renders as a popover cell editor. Features include:
+
+- Month/year navigation with previous/next buttons
+- Direct text input (YYYY-MM-DD format) with live calendar sync
+- "Today" and "Clear" quick actions
+- Keyboard support: Enter to commit, Escape to cancel
+- Auto-commit on date selection
+
+### Usage
+
+<Tabs groupId="framework">
+  <TabItem value="react" label="React" default>
+
+```tsx
+import { OGrid } from '@alaarab/ogrid-react-radix';
+import { DatePickerEditor } from '@alaarab/ogrid-react-inputs';
+
+const columns = [
+  { columnId: 'name', name: 'Name' },
+  {
+    columnId: 'dueDate',
+    name: 'Due Date',
+    editable: true,
+    cellEditor: DatePickerEditor,
+    cellEditorPopup: true,
+  },
+];
+
+function App() {
+  return (
+    <OGrid
+      columns={columns}
+      data={data}
+      getRowId={(item) => item.id}
+      editable
+    />
+  );
+}
+```
+
+:::tip Switching UI libraries
+`DatePickerEditor` works with all React UI packages. Just change the `OGrid` import:
+
+- **Radix** (lightweight, default): `from '@alaarab/ogrid-react-radix'`
+- **Fluent UI** (Microsoft 365 / SPFx): `from '@alaarab/ogrid-react-fluent'`
+- **Material UI** (MUI v7): `from '@alaarab/ogrid-react-material'`
+:::
+
+  </TabItem>
+  <TabItem value="angular" label="Angular">
+
+```typescript
+import { DatePickerEditorComponent } from '@alaarab/ogrid-angular-inputs';
+
+const columns = [
+  { columnId: 'name', name: 'Name' },
+  {
+    columnId: 'dueDate',
+    name: 'Due Date',
+    editable: true,
+    cellEditor: DatePickerEditorComponent,
+    cellEditorPopup: true,
+  },
+];
+```
+
+:::tip Switching UI libraries
+`DatePickerEditorComponent` works with all Angular UI packages:
+
+- **Angular Material**: `from '@alaarab/ogrid-angular-material'`
+- **PrimeNG**: `from '@alaarab/ogrid-angular-primeng'`
+- **Radix** (lightweight): `from '@alaarab/ogrid-angular-radix'`
+:::
+
+  </TabItem>
+  <TabItem value="vue" label="Vue">
+
+```typescript
+import { OGrid } from '@alaarab/ogrid-vue-vuetify';
+import { DatePickerEditor } from '@alaarab/ogrid-vue-inputs';
+
+const columns = [
+  { columnId: 'name', name: 'Name' },
+  {
+    columnId: 'dueDate',
+    name: 'Due Date',
+    editable: true,
+    cellEditor: DatePickerEditor,
+    cellEditorPopup: true,
+  },
+];
+```
+
+:::tip Switching UI libraries
+`DatePickerEditor` works with all Vue UI packages:
+
+- **Vuetify**: `from '@alaarab/ogrid-vue-vuetify'`
+- **PrimeVue**: `from '@alaarab/ogrid-vue-primevue'`
+- **Radix** (lightweight): `from '@alaarab/ogrid-vue-radix'`
+:::
+
+  </TabItem>
+  <TabItem value="js" label="Vanilla JS">
+
+```typescript
+import { OGrid } from '@alaarab/ogrid-js';
+import { createDatePickerEditor } from '@alaarab/ogrid-js-inputs';
+
+const grid = new OGrid(container, {
+  columns: [
+    { columnId: 'name', name: 'Name' },
+    {
+      columnId: 'dueDate',
+      name: 'Due Date',
+      editable: true,
+      cellEditor: createDatePickerEditor,
+      cellEditorPopup: true,
+    },
+  ],
+  data,
+  getRowId: (item) => item.id,
+  editable: true,
+});
+```
+
+  </TabItem>
+</Tabs>
+
+## RatingEditor
+
+A star-based rating editor (1-5 stars) that renders as a popover cell editor. Features include:
+
+- Click stars to set rating (1-5)
+- Half-star support via `allowHalf` option
+- Hover preview shows rating before selection
+- Clear button to remove rating
+- Auto-commit on star click
+
+### Usage
+
+<Tabs groupId="framework">
+  <TabItem value="react" label="React" default>
+
+```tsx
+import { RatingEditor } from '@alaarab/ogrid-react-inputs';
+
+const columns = [
+  {
+    columnId: 'rating',
+    name: 'Rating',
+    editable: true,
+    cellEditor: RatingEditor,
+    cellEditorPopup: true,
+    cellEditorParams: { maxStars: 5, allowHalf: false },
+  },
+];
+```
+
+  </TabItem>
+  <TabItem value="angular" label="Angular">
+
+```typescript
+import { RatingEditorComponent } from '@alaarab/ogrid-angular-inputs';
+
+const columns = [
+  {
+    columnId: 'rating',
+    name: 'Rating',
+    editable: true,
+    cellEditor: RatingEditorComponent,
+    cellEditorPopup: true,
+    cellEditorParams: { maxStars: 5, allowHalf: false },
+  },
+];
+```
+
+  </TabItem>
+  <TabItem value="vue" label="Vue">
+
+```typescript
+import { RatingEditor } from '@alaarab/ogrid-vue-inputs';
+
+const columns = [
+  {
+    columnId: 'rating',
+    name: 'Rating',
+    editable: true,
+    cellEditor: RatingEditor,
+    cellEditorPopup: true,
+    cellEditorParams: { maxStars: 5, allowHalf: false },
+  },
+];
+```
+
+  </TabItem>
+  <TabItem value="js" label="Vanilla JS">
+
+```typescript
+import { createRatingEditor } from '@alaarab/ogrid-js-inputs';
+
+const columns = [
+  {
+    columnId: 'rating',
+    name: 'Rating',
+    editable: true,
+    cellEditor: createRatingEditor,
+    cellEditorPopup: true,
+    cellEditorParams: { maxStars: 5, allowHalf: false },
+  },
+];
+```
+
+  </TabItem>
+</Tabs>
+
+## ColorPickerEditor
+
+A color swatch grid with hex input that renders as a popover cell editor. Features include:
+
+- Preset color swatch grid for quick selection
+- Hex color text input for custom values
+- `allowCustom` option to enable/disable arbitrary hex input
+- Configurable color palette via `colors` param
+- Auto-commit on swatch click or hex input Enter
+
+### Usage
+
+<Tabs groupId="framework">
+  <TabItem value="react" label="React" default>
+
+```tsx
+import { ColorPickerEditor } from '@alaarab/ogrid-react-inputs';
+
+const columns = [
+  {
+    columnId: 'color',
+    name: 'Color',
+    editable: true,
+    cellEditor: ColorPickerEditor,
+    cellEditorPopup: true,
+    cellEditorParams: { allowCustom: true },
+  },
+];
+```
+
+  </TabItem>
+  <TabItem value="angular" label="Angular">
+
+```typescript
+import { ColorPickerEditorComponent } from '@alaarab/ogrid-angular-inputs';
+
+const columns = [
+  {
+    columnId: 'color',
+    name: 'Color',
+    editable: true,
+    cellEditor: ColorPickerEditorComponent,
+    cellEditorPopup: true,
+    cellEditorParams: { allowCustom: true },
+  },
+];
+```
+
+  </TabItem>
+  <TabItem value="vue" label="Vue">
+
+```typescript
+import { ColorPickerEditor } from '@alaarab/ogrid-vue-inputs';
+
+const columns = [
+  {
+    columnId: 'color',
+    name: 'Color',
+    editable: true,
+    cellEditor: ColorPickerEditor,
+    cellEditorPopup: true,
+    cellEditorParams: { allowCustom: true },
+  },
+];
+```
+
+  </TabItem>
+  <TabItem value="js" label="Vanilla JS">
+
+```typescript
+import { createColorPickerEditor } from '@alaarab/ogrid-js-inputs';
+
+const columns = [
+  {
+    columnId: 'color',
+    name: 'Color',
+    editable: true,
+    cellEditor: createColorPickerEditor,
+    cellEditorPopup: true,
+    cellEditorParams: { allowCustom: true },
+  },
+];
+```
+
+  </TabItem>
+</Tabs>
+
+## SliderEditor
+
+A range slider for numeric values that renders as a popover cell editor. Features include:
+
+- Drag handle to set value within a range
+- Direct numeric input for precise values
+- Configurable `min`, `max`, and `step` parameters
+- Real-time value preview while dragging
+- Auto-commit on drag end or input Enter
+
+### Usage
+
+<Tabs groupId="framework">
+  <TabItem value="react" label="React" default>
+
+```tsx
+import { SliderEditor } from '@alaarab/ogrid-react-inputs';
+
+const columns = [
+  {
+    columnId: 'progress',
+    name: 'Progress',
+    editable: true,
+    cellEditor: SliderEditor,
+    cellEditorPopup: true,
+    cellEditorParams: { min: 0, max: 100, step: 1 },
+  },
+];
+```
+
+  </TabItem>
+  <TabItem value="angular" label="Angular">
+
+```typescript
+import { SliderEditorComponent } from '@alaarab/ogrid-angular-inputs';
+
+const columns = [
+  {
+    columnId: 'progress',
+    name: 'Progress',
+    editable: true,
+    cellEditor: SliderEditorComponent,
+    cellEditorPopup: true,
+    cellEditorParams: { min: 0, max: 100, step: 1 },
+  },
+];
+```
+
+  </TabItem>
+  <TabItem value="vue" label="Vue">
+
+```typescript
+import { SliderEditor } from '@alaarab/ogrid-vue-inputs';
+
+const columns = [
+  {
+    columnId: 'progress',
+    name: 'Progress',
+    editable: true,
+    cellEditor: SliderEditor,
+    cellEditorPopup: true,
+    cellEditorParams: { min: 0, max: 100, step: 1 },
+  },
+];
+```
+
+  </TabItem>
+  <TabItem value="js" label="Vanilla JS">
+
+```typescript
+import { createSliderEditor } from '@alaarab/ogrid-js-inputs';
+
+const columns = [
+  {
+    columnId: 'progress',
+    name: 'Progress',
+    editable: true,
+    cellEditor: createSliderEditor,
+    cellEditorPopup: true,
+    cellEditorParams: { min: 0, max: 100, step: 1 },
+  },
+];
+```
+
+  </TabItem>
+</Tabs>
+
+## TagsEditor
+
+A multi-value tag/chip editor with suggestions that renders as a popover cell editor. Features include:
+
+- Add tags by typing and pressing Enter or selecting from suggestions
+- Remove tags by clicking the X button or pressing Backspace
+- Searchable suggestion dropdown with fuzzy matching
+- `allowCreate` option to permit or restrict free-form tags
+- Comma-separated string storage for easy data handling
+- Auto-commit on popover close
+
+### Usage
+
+<Tabs groupId="framework">
+  <TabItem value="react" label="React" default>
+
+```tsx
+import { TagsEditor } from '@alaarab/ogrid-react-inputs';
+
+const columns = [
+  {
+    columnId: 'skills',
+    name: 'Skills',
+    editable: true,
+    cellEditor: TagsEditor,
+    cellEditorPopup: true,
+    cellEditorParams: {
+      suggestions: ['React', 'Angular', 'Vue', 'TypeScript', 'Python'],
+      allowCreate: true,
+    },
+  },
+];
+```
+
+  </TabItem>
+  <TabItem value="angular" label="Angular">
+
+```typescript
+import { TagsEditorComponent } from '@alaarab/ogrid-angular-inputs';
+
+const columns = [
+  {
+    columnId: 'skills',
+    name: 'Skills',
+    editable: true,
+    cellEditor: TagsEditorComponent,
+    cellEditorPopup: true,
+    cellEditorParams: {
+      suggestions: ['React', 'Angular', 'Vue', 'TypeScript', 'Python'],
+      allowCreate: true,
+    },
+  },
+];
+```
+
+  </TabItem>
+  <TabItem value="vue" label="Vue">
+
+```typescript
+import { TagsEditor } from '@alaarab/ogrid-vue-inputs';
+
+const columns = [
+  {
+    columnId: 'skills',
+    name: 'Skills',
+    editable: true,
+    cellEditor: TagsEditor,
+    cellEditorPopup: true,
+    cellEditorParams: {
+      suggestions: ['React', 'Angular', 'Vue', 'TypeScript', 'Python'],
+      allowCreate: true,
+    },
+  },
+];
+```
+
+  </TabItem>
+  <TabItem value="js" label="Vanilla JS">
+
+```typescript
+import { createTagsEditor } from '@alaarab/ogrid-js-inputs';
+
+const columns = [
+  {
+    columnId: 'skills',
+    name: 'Skills',
+    editable: true,
+    cellEditor: createTagsEditor,
+    cellEditorPopup: true,
+    cellEditorParams: {
+      suggestions: ['React', 'Angular', 'Vue', 'TypeScript', 'Python'],
+      allowCreate: true,
+    },
+  },
+];
+```
+
+  </TabItem>
+</Tabs>
+
+## Default vs Premium Editing
+
+OGrid includes built-in cell editors out of the box. The premium input packages extend these with richer, more visual editors:
+
+| | Default (built-in) | Premium (add-on packages) |
+|---|---|---|
+| **Package** | Included in all OGrid packages | `@alaarab/ogrid-{react,angular,vue,js}-inputs` |
+| **Editors** | Text, Select, Rich Select, Checkbox, Date (inline) | DatePicker, Rating, ColorPicker, Slider, Tags |
+| **Bundle cost** | Zero (built-in) | Only added when you `npm install` the package |
+
+You can use both in the same grid -- for example, a text-based date input on one column and the calendar picker on another:
+
+```tsx
+const columns = [
+  // Default: inline text input for dates
+  { columnId: 'startDate', name: 'Start', editable: true, cellEditor: 'date' },
+
+  // Premium: calendar popover
+  {
+    columnId: 'endDate',
+    name: 'End',
+    editable: true,
+    cellEditor: DatePickerEditor,
+    cellEditorPopup: true,
+  },
+];
+```
+
+## Theming
+
+All premium editors use OGrid CSS variables for consistent theming across light and dark modes. No additional CSS imports are required -- styles are fully inlined.
+
+| CSS Variable | Purpose | Used by | Default |
+|---|---|---|---|
+| `--ogrid-accent` | Selected/active highlight, action buttons | All editors | `#0078d4` |
+| `--ogrid-bg` | Popover background | All editors | `#fff` |
+| `--ogrid-fg` | Text color | All editors | `#242424` |
+| `--ogrid-border` | Popover border and dividers | All editors | `rgba(0,0,0,0.12)` |
+| `--ogrid-shadow` | Drop shadow on the popover | All editors | `0 4px 16px rgba(0,0,0,0.15)` |
+| `--ogrid-muted` | Secondary text, placeholders | DatePicker, Tags | `#888` |
+| `--ogrid-bg-hover` | Hovered item background | All editors | `#f0f0f0` |
+| `--ogrid-danger` | Remove/clear button hover | Tags, Rating | `#d13438` |
+
+If your app already sets OGrid theme variables, all premium editors will inherit them automatically.
+
+## Future Inputs
+
+The premium input packages are structured to host additional editors over time. Planned inputs include:
+
+- **PeoplePickerEditor** -- search and select users with avatar display
+
+Each new editor will follow the same pattern: import the component, assign it to `cellEditor`, and optionally set `cellEditorPopup: true`. The package remains tree-shakeable, so unused editors are excluded from your bundle.
+
+## Related
+
+- [Editing & Clipboard](./editing) -- built-in editors, clipboard, fill handle, undo/redo
+- [Custom Cell Editors](../guides/custom-cell-editors) -- build your own editors from scratch
+- [Column Types](./column-types) -- type-based formatting and filtering
+- [Theming](../guides/theming) -- CSS variable reference for all OGrid components

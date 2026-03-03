@@ -43,6 +43,7 @@ const sidebars: SidebarsConfig = {
         'features/responsive-columns',
         'features/performance',
         'features/grid-api',
+        'features/premium-inputs',
       ],
     },
     {

@@ -3,7 +3,6 @@ import type { IColumnDef } from '../types';
 
 export interface CreateInlineCellEditorOptions {
   renderCheckbox: (props: { checked: boolean; onChange: (val: boolean) => void; onCancel: () => void }) => VNode;
-  renderDatePicker: (props: { value: string; onChange: (val: string) => void; onCancel: () => void }) => VNode;
 }
 
 const editorWrapperStyle = {
@@ -16,7 +15,7 @@ const editorWrapperStyle = {
 } as const;
 
 export function createInlineCellEditor(options: CreateInlineCellEditorOptions) {
-  const { renderCheckbox, renderDatePicker } = options;
+  const { renderCheckbox } = options;
 
   return defineComponent({
     name: 'InlineCellEditor',
@@ -193,17 +192,25 @@ export function createInlineCellEditor(options: CreateInlineCellEditorOptions) {
 
         if (props.editorType === 'date') {
           let dateStr = '';
-          if (localValue.value) {
-            const d = new Date(String(localValue.value));
-            if (!Number.isNaN(d.getTime())) {
-              dateStr = d.toISOString().slice(0, 10);
-            }
+          if (localValue.value != null) {
+            const s = String(localValue.value);
+            if (s.match(/^\d{4}-\d{2}-\d{2}/)) dateStr = s.substring(0, 10);
+            else dateStr = s;
           }
           return h('div', { style: editorWrapperStyle },
-            renderDatePicker({
+            h('input', {
+              ref: (el: unknown) => { inputRef.value = el as HTMLInputElement; },
+              type: 'text',
               value: dateStr,
-              onChange: (val: string) => props.onCommit(val),
-              onCancel: props.onCancel,
+              placeholder: 'YYYY-MM-DD',
+              style: { width: '100%', height: '100%', border: 'none', outline: 'none', padding: '0 4px', fontSize: 'inherit', boxSizing: 'border-box' },
+              onInput: (e: Event) => { localValue.value = (e.target as HTMLInputElement).value; },
+              onKeydown: (e: KeyboardEvent) => {
+                if (e.key === 'Enter') { e.preventDefault(); props.onCommit(localValue.value); }
+                if (e.key === 'Escape') { e.preventDefault(); props.onCancel(); }
+                if (e.key === 'Tab') { e.preventDefault(); props.onCommit(localValue.value); }
+              },
+              onBlur: () => props.onCommit(localValue.value),
             })
           );
         }
