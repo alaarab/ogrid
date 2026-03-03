@@ -1,0 +1,1 @@
+export { TagsEditorComponent } from './TagsEditor';
