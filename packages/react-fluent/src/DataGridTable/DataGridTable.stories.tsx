@@ -222,7 +222,7 @@ export const EditableInline: Story = {
     const handleCellValueChanged = React.useCallback((e: ICellValueChangedEvent<EditableRow>) => {
       setItems((prev) =>
         prev.map((row) =>
-          row.id === e.item.id ? { ...row, [e.field]: e.newValue } : row
+          row.id === e.item.id ? { ...row, [e.columnId]: e.newValue } : row
         )
       );
     }, []);
@@ -286,7 +286,7 @@ export const EditableCustomPopup: Story = {
     const handleCellValueChanged = React.useCallback((e: ICellValueChangedEvent<RowWithNotes>) => {
       setItems((prev) =>
         prev.map((row) =>
-          row.id === e.item.id ? { ...row, [e.field]: e.newValue } : row
+          row.id === e.item.id ? { ...row, [e.columnId]: e.newValue } : row
         )
       );
     }, []);
@@ -332,7 +332,7 @@ export const EditablePerRow: Story = {
     const handleCellValueChanged = React.useCallback((e: ICellValueChangedEvent<EditableRow>) => {
       setItems((prev) =>
         prev.map((row) =>
-          row.id === e.item.id ? { ...row, [e.field]: e.newValue } : row
+          row.id === e.item.id ? { ...row, [e.columnId]: e.newValue } : row
         )
       );
     }, []);
@@ -512,7 +512,7 @@ export const KeyboardNavigation: Story = {
     const handleCellValueChanged = React.useCallback((e: ICellValueChangedEvent<SpreadsheetRow>) => {
       setItems((prev) =>
         prev.map((row) =>
-          row.id === e.item.id ? { ...row, [e.field]: e.newValue } : row
+          row.id === e.item.id ? { ...row, [e.columnId]: e.newValue } : row
         )
       );
     }, []);
@@ -668,7 +668,7 @@ export const SpreadsheetExperience: Story = {
     const handleCellValueChanged = React.useCallback((e: ICellValueChangedEvent<SpreadsheetRow>) => {
       setItems((prev) =>
         prev.map((row) =>
-          row.id === e.item.id ? { ...row, [e.field]: e.newValue } : row
+          row.id === e.item.id ? { ...row, [e.columnId]: e.newValue } : row
         )
       );
     }, []);

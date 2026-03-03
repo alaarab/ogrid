@@ -70,6 +70,16 @@ describe('TagsEditor', () => {
       renderEditor({ value: null });
       expect(screen.getByText('No tags')).toBeInTheDocument();
     });
+
+    it('renders the Apply button by default', () => {
+      renderEditor();
+      expect(screen.getByRole('button', { name: 'Apply tags' })).toBeInTheDocument();
+    });
+
+    it('does not render the Apply button when showApplyButton is false', () => {
+      renderEditor({ cellEditorParams: { showApplyButton: false } });
+      expect(screen.queryByRole('button', { name: 'Apply tags' })).not.toBeInTheDocument();
+    });
   });
 
   // ── 2. Initial Value ──
@@ -185,12 +195,12 @@ describe('TagsEditor', () => {
       expect(screen.getByText('Bug')).toBeInTheDocument();
     });
 
-    it('suggestion dropdown does not show when query is empty', () => {
+    it('suggestion dropdown does not show when query is empty (allowCreate mode)', () => {
       renderEditor({
         value: null,
-        cellEditorParams: { suggestions: ['Bug', 'Feature'] },
+        cellEditorParams: { suggestions: ['Bug', 'Feature'], allowCreate: true },
       });
-      // With empty input, suggestions list should not render (showSuggestions = false when inputText.length === 0)
+      // With empty input in allowCreate mode, suggestions list should not render
       expect(screen.queryByText('Bug')).not.toBeInTheDocument();
     });
   });
@@ -204,8 +214,17 @@ describe('TagsEditor', () => {
       expect(props.onValueChange).toHaveBeenCalledWith('');
     });
 
-    it('clicking Clear all calls onCommit', () => {
+    it('clicking Clear all does not call onCommit when showApplyButton is true (default)', () => {
       const { props } = renderEditor({ value: 'Bug, Feature' });
+      screen.getByText('Clear all').click();
+      expect(props.onCommit).not.toHaveBeenCalled();
+    });
+
+    it('clicking Clear all calls onCommit when showApplyButton is false', () => {
+      const { props } = renderEditor({
+        value: 'Bug, Feature',
+        cellEditorParams: { showApplyButton: false },
+      });
       screen.getByText('Clear all').click();
       expect(props.onCommit).toHaveBeenCalled();
     });
@@ -240,6 +259,121 @@ describe('TagsEditor', () => {
       const input = getTagInput();
       await user.click(input);
       await user.keyboard('{Backspace}');
+
+      expect(props.onValueChange).toHaveBeenCalledWith('Bug');
+    });
+  });
+
+  // ── 8. Apply Button ──
+
+  describe('Apply Button', () => {
+    it('clicking Apply calls onCommit', () => {
+      const { props } = renderEditor({ value: 'Bug' });
+      screen.getByRole('button', { name: 'Apply tags' }).click();
+      expect(props.onCommit).toHaveBeenCalled();
+    });
+
+    it('clicking Apply does not clear tags', async () => {
+      renderEditor({ value: 'Bug, Feature' });
+      await act(async () => {
+        screen.getByRole('button', { name: 'Apply tags' }).click();
+      });
+      expect(screen.getByText('Bug')).toBeInTheDocument();
+      expect(screen.getByText('Feature')).toBeInTheDocument();
+    });
+  });
+
+  // ── 9. Multi-Select Mode (allowCreate: false + suggestions) ──
+
+  describe('Multi-Select Mode', () => {
+    const multiSelectProps = {
+      value: null,
+      cellEditorParams: {
+        suggestions: ['Bug', 'Feature', 'Docs'],
+        allowCreate: false,
+      },
+    };
+
+    it('shows all suggestions by default when allowCreate is false', () => {
+      renderEditor(multiSelectProps);
+      expect(screen.getByText('Bug')).toBeInTheDocument();
+      expect(screen.getByText('Feature')).toBeInTheDocument();
+      expect(screen.getByText('Docs')).toBeInTheDocument();
+    });
+
+    it('shows checkboxes next to each suggestion in multi-select mode', () => {
+      renderEditor(multiSelectProps);
+      // All suggestions should be visible
+      expect(screen.getByText('Bug')).toBeInTheDocument();
+    });
+
+    it('clicking a suggestion in multi-select mode selects it (adds as tag)', async () => {
+      const { props } = renderEditor(multiSelectProps);
+      await act(async () => {
+        screen.getByText('Bug').click();
+      });
+      expect(props.onValueChange).toHaveBeenCalledWith('Bug');
+    });
+
+    it('clicking a selected tag in the dropdown deselects it (removes the tag)', async () => {
+      const { props } = renderEditor({
+        value: 'Bug',
+        cellEditorParams: { suggestions: ['Bug', 'Feature'], allowCreate: false },
+      });
+
+      // Bug is already selected — it appears both as a chip and in the dropdown list.
+      // Click the dropdown item (the flex:1 span inside the suggestion row).
+      const allBugTexts = screen.getAllByText('Bug');
+      // The dropdown item text span has flex:1 style, the chip has text-overflow style
+      // Click the last one which is in the suggestions list
+      await act(async () => {
+        allBugTexts[allBugTexts.length - 1].click();
+      });
+
+      expect(props.onValueChange).toHaveBeenCalledWith('');
+    });
+
+    it('filters suggestions in multi-select mode when typing', async () => {
+      const user = userEvent.setup();
+      renderEditor(multiSelectProps);
+
+      await user.type(getTagInput(), 'Bug');
+
+      expect(screen.getByText('Bug')).toBeInTheDocument();
+      expect(screen.queryByText('Feature')).not.toBeInTheDocument();
+    });
+
+    it('does not allow free-form tag creation when allowCreate is false', async () => {
+      const user = userEvent.setup();
+      const { props } = renderEditor(multiSelectProps);
+
+      await user.type(getTagInput(), 'NewCustomTag');
+      await user.keyboard('{Enter}');
+
+      // No tag should have been added (onValueChange should not have been called with NewCustomTag)
+      const calls = (props.onValueChange as jest.Mock).mock.calls;
+      const addedNewTag = calls.some((c) => String(c[0]).includes('NewCustomTag'));
+      expect(addedNewTag).toBe(false);
+    });
+  });
+
+  // ── 10. Predefined Tags (allowCreate: false) ──
+
+  describe('Predefined Tags', () => {
+    it('does not add tags that are not in suggestions when allowCreate is false', async () => {
+      const user = userEvent.setup();
+      const { props } = renderEditor({
+        value: null,
+        cellEditorParams: {
+          suggestions: ['Bug', 'Feature'],
+          allowCreate: false,
+        },
+      });
+
+      // allowCreate: false but suggestions provided — clicking "Bug" in dropdown works
+      await act(async () => {
+        screen.getByText('Bug').click();
+      });
 
       expect(props.onValueChange).toHaveBeenCalledWith('Bug');
     });

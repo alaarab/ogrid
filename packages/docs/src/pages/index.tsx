@@ -85,7 +85,6 @@ function HeroGrid() {
   const [filters, setFilters] = useState<IFilters>({});
   const [density, setDensity] = useState<'compact' | 'normal' | 'comfortable'>('normal');
 
-  // Persist edits so double-click editing actually works in the demo
   const handleCellValueChanged = useCallback((e: { item: EmployeeRow; columnId: string; newValue: unknown }) => {
     setData(prev => prev.map(row =>
       row.id === e.item.id ? { ...row, [e.columnId]: e.newValue } : row
@@ -193,6 +192,34 @@ function HeroGrid() {
 }
 
 /* ──────────────────────────────────────────────
+   Feature Ticker
+   ────────────────────────────────────────────── */
+
+const tickerFeatures = [
+  'Virtual Scrolling', 'Cell Editing', 'Multi-Select Filters', 'Clipboard', 'Fill Handle',
+  'Undo / Redo', 'Column Pinning', 'Row Selection', 'Server-Side Data', 'CSV Export',
+  'Context Menu', 'Status Bar', 'Sidebar', 'Column Groups', 'Keyboard Nav',
+  'Formula Engine', 'Cell References', 'Sort', 'Pagination', 'Grid API',
+];
+
+function FeatureTicker() {
+  // Duplicate for seamless loop
+  const items = [...tickerFeatures, ...tickerFeatures];
+  return (
+    <div className={styles.ticker} aria-hidden="true">
+      <div className={styles.tickerTrack}>
+        {items.map((f, i) => (
+          <span key={i} className={styles.tickerItem}>
+            <span className={styles.tickerDot} />
+            {f}
+          </span>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+/* ──────────────────────────────────────────────
    Rotating Install Command
    ────────────────────────────────────────────── */
 
@@ -209,44 +236,28 @@ const installCommands = [
   { pkg: '@alaarab/ogrid-js', label: 'Vanilla JS' },
 ];
 
-const frameworkCards = [
-  { name: 'React', detail: 'Radix \u00b7 Fluent \u00b7 Material', count: '3 UI kits' },
-  { name: 'Angular', detail: 'Material \u00b7 PrimeNG \u00b7 Radix', count: '3 UI kits' },
-  { name: 'Vue', detail: 'Vuetify \u00b7 PrimeVue \u00b7 Radix', count: '3 UI kits' },
-  { name: 'Vanilla JS', detail: 'Zero dependencies', count: '1 package' },
-];
-
-function FrameworkCards() {
-  return (
-    <div className={styles.frameworkCards}>
-      {frameworkCards.map((fw) => (
-        <div key={fw.name} className={styles.frameworkCard}>
-          <div className={styles.frameworkCardName}>{fw.name}</div>
-          <div className={styles.frameworkCardDetail}>{fw.detail}</div>
-          <div className={styles.frameworkCardCount}>{fw.count}</div>
-        </div>
-      ))}
-    </div>
-  );
-}
-
 function RotatingInstallCommand() {
   const [index, setIndex] = useState(0);
+  const [visible, setVisible] = useState(true);
 
   useEffect(() => {
     const interval = setInterval(() => {
-      setIndex((prev) => (prev + 1) % installCommands.length);
-    }, 2500);
+      setVisible(false);
+      setTimeout(() => {
+        setIndex((prev) => (prev + 1) % installCommands.length);
+        setVisible(true);
+      }, 200);
+    }, 2800);
     return () => clearInterval(interval);
   }, []);
 
   return (
     <div className={styles.heroInstall}>
-      <span className={styles.heroInstallDollar}>$</span>
-      <span className={styles.heroInstallCommand}>
-        npm install {installCommands[index].pkg}
+      <span className={styles.heroInstallPrompt}>$</span>
+      <span className={styles.heroInstallText} style={{ opacity: visible ? 1 : 0, transition: 'opacity 0.2s' }}>
+        npm i {installCommands[index].pkg}
       </span>
-      <span className={styles.heroInstallLabel}>
+      <span className={styles.heroInstallBadge} style={{ opacity: visible ? 1 : 0, transition: 'opacity 0.2s' }}>
         {installCommands[index].label}
       </span>
     </div>
@@ -260,33 +271,71 @@ function RotatingInstallCommand() {
 function Hero() {
   return (
     <section className={styles.hero}>
-      <div className={styles.heroGradientMesh} />
-      <div className={styles.heroContent}>
-        <h1 className={styles.heroTitle}>
-          Every Spreadsheet Feature.<br />Zero Enterprise Tax.
-        </h1>
-        <p className={styles.heroSubtitle}>
-          A lightweight data grid for React, Angular, Vue, and vanilla JS with sorting,
-          filtering, editing, selection, clipboard, and more. Free forever.
-        </p>
+      {/* Background layers */}
+      <div className={styles.heroBg} />
+      <div className={styles.heroGrid} />
 
-        <BrowserOnly fallback={<div className={styles.heroGridPlaceholder} />}>
-          {() => <HeroGrid />}
-        </BrowserOnly>
+      <div className={styles.heroInner}>
+        {/* Left column: editorial text */}
+        <div className={styles.heroLeft}>
+          <div className={styles.heroPill}>
+            <span className={styles.heroPillDot} />
+            MIT License &mdash; Free Forever
+          </div>
 
-        <div className={styles.heroButtons}>
-          <Link className={styles.btnPrimary} to="/docs/getting-started/overview">
-            Get Started
-          </Link>
-          <Link
-            className={styles.btnGhost}
-            href="https://github.com/alaarab/ogrid"
-          >
-            GitHub
-          </Link>
+          <h1 className={styles.heroHeadline}>
+            The data grid<br />
+            <em className={styles.heroHeadlineEm}>developers</em><br />
+            actually want.
+          </h1>
+
+          <p className={styles.heroLead}>
+            React, Angular, Vue, or Vanilla JS.
+            Sorting, filtering, editing, spreadsheet
+            selection, clipboard, formulas — all free.
+            No enterprise tier.
+          </p>
+
+          <div className={styles.heroCta}>
+            <Link className={styles.btnPrimary} to="/docs/getting-started/overview">
+              Get started free
+            </Link>
+            <Link className={styles.btnGhost} href="https://github.com/alaarab/ogrid">
+              View on GitHub
+            </Link>
+          </div>
+
+          <RotatingInstallCommand />
+
+          {/* Stat strip */}
+          <div className={styles.heroStats}>
+            <div className={styles.heroStat}>
+              <span className={styles.heroStatNum}>10</span>
+              <span className={styles.heroStatLabel}>Frameworks & UI kits</span>
+            </div>
+            <div className={styles.heroStatDivider} />
+            <div className={styles.heroStat}>
+              <span className={styles.heroStatNum}>25+</span>
+              <span className={styles.heroStatLabel}>Built-in features</span>
+            </div>
+            <div className={styles.heroStatDivider} />
+            <div className={styles.heroStat}>
+              <span className={styles.heroStatNum}>$0</span>
+              <span className={styles.heroStatLabel}>Enterprise cost</span>
+            </div>
+          </div>
         </div>
-        <RotatingInstallCommand />
+
+        {/* Right column: live grid */}
+        <div className={styles.heroRight}>
+          <BrowserOnly fallback={<div className={styles.heroGridPlaceholder} />}>
+            {() => <HeroGrid />}
+          </BrowserOnly>
+        </div>
       </div>
+
+      {/* Feature ticker below hero */}
+      <FeatureTicker />
     </section>
   );
 }
@@ -306,8 +355,7 @@ function getCodeExample(fw: typeof frameworks[number]) {
   switch (fw.id) {
     case 'react':
       return `import { OGrid } from '@alaarab/ogrid-react-radix';
-// Also available: '@alaarab/ogrid-react-fluent'
-//                 '@alaarab/ogrid-react-material'
+// Also: '@alaarab/ogrid-react-fluent' | '@alaarab/ogrid-react-material'
 
 const columns = [
   { columnId: 'name', name: 'Name', sortable: true },
@@ -330,27 +378,23 @@ function App() {
 }`;
     case 'angular':
       return `import { OGridComponent } from '@alaarab/ogrid-angular-material';
-// Also available: '@alaarab/ogrid-angular-primeng'
+// Also: '@alaarab/ogrid-angular-primeng' | '@alaarab/ogrid-angular-radix'
 
 @Component({
   standalone: true,
   imports: [OGridComponent],
   template: \`
     <ogrid
-      [columns]="columns"
-      [data]="employees"
-      [getRowId]="getRowId"
-      [editable]="true"
-      [cellSelection]="true"
-      [statusBar]="true"
+      [columns]="columns" [data]="employees"
+      [getRowId]="getRowId" [editable]="true"
+      [cellSelection]="true" [statusBar]="true"
     />
   \`,
 })
 export class AppComponent {
   columns = [
     { columnId: 'name', name: 'Name', sortable: true },
-    { columnId: 'role', name: 'Role',
-      filterable: { type: 'multiSelect' } },
+    { columnId: 'role', name: 'Role', filterable: { type: 'multiSelect' } },
     { columnId: 'salary', name: 'Salary', editable: true,
       valueFormatter: (v) => \`$\${v.toLocaleString()}\` },
   ];
@@ -359,26 +403,19 @@ export class AppComponent {
     case 'vue':
       return `<script setup lang="ts">
 import { OGrid } from '@alaarab/ogrid-vue-vuetify';
-// Also available: '@alaarab/ogrid-vue-primevue'
+// Also: '@alaarab/ogrid-vue-primevue' | '@alaarab/ogrid-vue-radix'
 
 const columns = [
   { columnId: 'name', name: 'Name', sortable: true },
-  { columnId: 'role', name: 'Role',
-    filterable: { type: 'multiSelect' } },
+  { columnId: 'role', name: 'Role', filterable: { type: 'multiSelect' } },
   { columnId: 'salary', name: 'Salary', editable: true,
     valueFormatter: (v) => \`$\${v.toLocaleString()}\` },
 ];
 </script>
 
 <template>
-  <OGrid
-    :columns="columns"
-    :data="employees"
-    :getRowId="(e) => e.id"
-    editable
-    cellSelection
-    statusBar
-  />
+  <OGrid :columns="columns" :data="employees"
+    :getRowId="(e) => e.id" editable cellSelection statusBar />
 </template>`;
     case 'js':
       return `import { OGrid } from '@alaarab/ogrid-js';
@@ -387,8 +424,7 @@ import '@alaarab/ogrid-js/styles';
 const grid = new OGrid(document.getElementById('grid'), {
   columns: [
     { columnId: 'name', name: 'Name', sortable: true },
-    { columnId: 'role', name: 'Role',
-      filterable: { type: 'multiSelect' } },
+    { columnId: 'role', name: 'Role', filterable: { type: 'multiSelect' } },
     { columnId: 'salary', name: 'Salary', editable: true,
       valueFormatter: (v) => \`$\${v.toLocaleString()}\` },
   ],
@@ -405,28 +441,138 @@ function CodePreviewSection() {
   const [active, setActive] = useState(0);
 
   return (
-    <section className={styles.codePreview}>
-      <div className={styles.codePreviewInner}>
-        <h2 className={styles.sectionTitle}>One API. Four Frameworks.</h2>
-        <p className={styles.sectionSubtitle}>
-          Same props, same behavior. Just swap the import.
+    <section className={styles.codeSection}>
+      <div className={styles.codeSectionInner}>
+        <div className={styles.codeSectionLabel}>One API. Four frameworks.</div>
+        <h2 className={styles.codeSectionTitle}>
+          Same props.<br />Same behavior.<br />Just swap the import.
+        </h2>
+        <p className={styles.codeSectionSub}>
+          10 packages across React, Angular, Vue, and Vanilla JS.
+          All share an identical column definition and prop API.
         </p>
-        <div className={styles.codeCard}>
-          <div className={styles.codeTabs}>
+      </div>
+
+      <div className={styles.codeWindow}>
+        <div className={styles.codeWindowChrome}>
+          <span className={styles.chromeDot} />
+          <span className={styles.chromeDot} />
+          <span className={styles.chromeDot} />
+          <div className={styles.codeWindowTabs}>
             {frameworks.map((fw, i) => (
               <button
                 key={fw.id}
-                className={`${styles.codeTab} ${i === active ? styles.codeTabActive : ''}`}
+                className={`${styles.codeWindowTab} ${i === active ? styles.codeWindowTabActive : ''}`}
                 onClick={() => setActive(i)}
               >
                 {fw.label}
               </button>
             ))}
           </div>
-          <div className={styles.codeBody}>
-            <CodeBlock language={frameworks[active].id === 'vue' ? 'html' : frameworks[active].id === 'react' ? 'tsx' : 'typescript'}>
-              {getCodeExample(frameworks[active])}
-            </CodeBlock>
+        </div>
+        <div className={styles.codeWindowBody}>
+          <CodeBlock language={frameworks[active].id === 'vue' ? 'html' : frameworks[active].id === 'react' ? 'tsx' : 'typescript'}>
+            {getCodeExample(frameworks[active])}
+          </CodeBlock>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+/* ──────────────────────────────────────────────
+   Feature Bento
+   ────────────────────────────────────────────── */
+
+function FeatureBentoSection() {
+  return (
+    <section className={styles.bentoSection}>
+      <div className={styles.bentoHeader}>
+        <div className={styles.bentoLabel}>Features</div>
+        <h2 className={styles.bentoTitle}>
+          Enterprise features.<br />MIT license.
+        </h2>
+        <p className={styles.bentoSub}>
+          25+ features shipped. Zero paywalls.
+          Everything you'd pay $999/dev for elsewhere — built in.
+        </p>
+      </div>
+
+      <div className={styles.bentoGrid}>
+        {/* Large card: Spreadsheet Selection */}
+        <div className={`${styles.bentoCard} ${styles.bentoCardWide} ${styles.bentoCardGreen}`}>
+          <div className={styles.bentoCardTag}>Core differentiator</div>
+          <h3 className={styles.bentoCardTitle}>Spreadsheet Selection</h3>
+          <p className={styles.bentoCardDesc}>
+            Click-and-drag cell ranges, active cell highlight, multi-cell clipboard.
+            This is an $999/dev enterprise feature in AG Grid. It's built in here.
+          </p>
+          <div className={styles.bentoCardIllustration}>
+            <div className={styles.bentoSelectionGrid}>
+              {Array.from({ length: 20 }).map((_, i) => (
+                <div key={i} className={`${styles.bentoSelCell} ${i >= 6 && i <= 13 && i !== 10 && i !== 11 ? styles.bentoSelCellActive : ''} ${i === 8 ? styles.bentoSelCellFocused : ''}`} />
+              ))}
+            </div>
+          </div>
+        </div>
+
+        {/* Tall card: Fill Handle */}
+        <div className={`${styles.bentoCard} ${styles.bentoCardTall} ${styles.bentoCardDark}`}>
+          <div className={styles.bentoCardTag}>Excel-style</div>
+          <h3 className={styles.bentoCardTitle}>Fill Handle</h3>
+          <p className={styles.bentoCardDesc}>
+            Drag the corner to fill values down entire columns.
+          </p>
+          <div className={styles.bentoFillIllustration}>
+            {['$42,000', '$43,000', '$44,000', '...'].map((v, i) => (
+              <div key={i} className={`${styles.bentoFillRow} ${i === 3 ? styles.bentoFillRowGhost : ''}`}>{v}</div>
+            ))}
+            <div className={styles.bentoFillHandle} />
+          </div>
+        </div>
+
+        {/* Small card: Virtual Scrolling */}
+        <div className={`${styles.bentoCard} ${styles.bentoCardSmall}`}>
+          <div className={styles.bentoCardTag}>Performance</div>
+          <h3 className={styles.bentoCardTitle}>Virtual Scrolling</h3>
+          <p className={styles.bentoCardDesc}>10,000+ rows with web worker sort.</p>
+          <div className={styles.bentoStatBig}>10K+</div>
+        </div>
+
+        {/* Small card: Frameworks */}
+        <div className={`${styles.bentoCard} ${styles.bentoCardSmall} ${styles.bentoCardBlue}`}>
+          <div className={styles.bentoCardTag}>Cross-framework</div>
+          <h3 className={styles.bentoCardTitle}>10 packages</h3>
+          <p className={styles.bentoCardDesc}>React · Angular · Vue · Vanilla JS</p>
+          <div className={styles.bentoFrameworkDots}>
+            {['R', 'A', 'V', 'JS'].map(f => <span key={f} className={styles.bentoFrameworkDot}>{f}</span>)}
+          </div>
+        </div>
+
+        {/* Medium card: Undo/Redo + Clipboard */}
+        <div className={`${styles.bentoCard} ${styles.bentoCardMedium}`}>
+          <div className={styles.bentoCardTag}>Productivity</div>
+          <h3 className={styles.bentoCardTitle}>Full edit history</h3>
+          <p className={styles.bentoCardDesc}>
+            Ctrl+Z / Ctrl+Y undo stack. Ctrl+C/V/X clipboard with multi-cell paste.
+          </p>
+          <div className={styles.bentoKbdRow}>
+            {['Ctrl+Z', 'Ctrl+Y', 'Ctrl+C', 'Ctrl+V'].map(k => (
+              <kbd key={k} className={styles.bentoKbd}>{k}</kbd>
+            ))}
+          </div>
+        </div>
+
+        {/* Medium card: Formula Engine */}
+        <div className={`${styles.bentoCard} ${styles.bentoCardMedium} ${styles.bentoCardPurple}`}>
+          <div className={styles.bentoCardTag}>Built-in</div>
+          <h3 className={styles.bentoCardTitle}>Formula Engine</h3>
+          <p className={styles.bentoCardDesc}>
+            93 functions. SUM, IF, VLOOKUP, and more. Excel-style cell references.
+          </p>
+          <div className={styles.bentoFormulaBar}>
+            <span className={styles.bentoFx}>fx</span>
+            <span className={styles.bentoFormula}>=SUM(B2:B1000)</span>
           </div>
         </div>
       </div>
@@ -435,194 +581,94 @@ function CodePreviewSection() {
 }
 
 /* ──────────────────────────────────────────────
-   Feature Grid (Bento)
+   Comparison — horizontal price cliff
    ────────────────────────────────────────────── */
 
-const features: { title: string; desc: string; icon: string }[] = [
-  { icon: '\u2195', title: 'Sorting', desc: 'Single-column sort with asc/desc toggle. Controlled or uncontrolled.' },
-  { icon: '\u{1F50D}', title: 'Filtering', desc: 'Text, multi-select, and people picker filters with server-side support.' },
-  { icon: '\u270F\uFE0F', title: 'Cell Editing', desc: 'Inline text, select, checkbox, and rich select editors with search.' },
-  { icon: '\u2B1C', title: 'Spreadsheet Selection', desc: 'Click-and-drag cell range selection with active cell highlight.' },
-  { icon: '\u{1F4CB}', title: 'Clipboard', desc: 'Ctrl+C / Ctrl+V / Ctrl+X with multi-cell paste support.' },
-  { icon: '\u271A', title: 'Fill Handle', desc: 'Drag the cell corner to fill values down, just like Excel.' },
-  { icon: '\u21A9\uFE0F', title: 'Undo / Redo', desc: 'Full undo/redo stack for cell edits. Ctrl+Z / Ctrl+Y.' },
-  { icon: '\u2714\uFE0F', title: 'Row Selection', desc: 'Single or multi-select with Shift+click range support.' },
-  { icon: '\u{1F4CB}', title: 'Pagination', desc: 'Client-side and server-side with configurable page sizes.' },
-  { icon: '\u{1F4CA}', title: 'Column Groups', desc: 'Multi-row grouped headers with arbitrary nesting depth.' },
-  { icon: '\u{1F4CC}', title: 'Column Pinning', desc: 'Pin columns to the left or right edge with sticky positioning.' },
-  { icon: '\u2630', title: 'Column Chooser', desc: 'Show/hide columns with a dropdown picker.' },
-  { icon: '\u{1F5B1}\uFE0F', title: 'Context Menu', desc: 'Right-click menu with copy, paste, export, undo/redo.' },
-  { icon: '\u{1F4C8}', title: 'Status Bar', desc: 'Row count and selection aggregations (sum, avg, min, max).' },
-  { icon: '\u{1F4E5}', title: 'CSV Export', desc: 'One-click export to CSV with formatted values.' },
-  { icon: '\u{1F310}', title: 'Server-Side Data', desc: 'IDataSource interface for remote pagination and sorting.' },
-  { icon: '\u2328\uFE0F', title: 'Keyboard Nav', desc: 'Arrow keys, Tab, Enter, F2, Home/End, Ctrl+Home/End.' },
-  { icon: '\u{1F527}', title: 'Grid API', desc: 'Imperative ref API: setRowData, getColumnState, selectAll, and more.' },
-  { icon: '\u{1F4D1}', title: 'Cell References', desc: 'Excel-style column letters (A, B, C...), row numbers, and name box.' },
-  { icon: '\u26A1', title: 'Virtual Scrolling', desc: 'Row and column virtualization for 10K+ row datasets with web worker sort.' },
-  { icon: '\u{1F4D0}', title: 'Sidebar', desc: 'Collapsible sidebar with column visibility and filter panels.' },
-  { icon: '\u{1F4C5}', title: 'Premium Inputs', desc: 'Optional date pickers, star ratings, color pickers, sliders, and tag editors.' },
+const comparisonRows = [
+  { name: 'Sorting & Filtering', ogrid: true, aggrid: 'free' as const },
+  { name: 'Cell Editing', ogrid: true, aggrid: 'free' as const },
+  { name: 'CSV Export', ogrid: true, aggrid: 'free' as const },
+  { name: 'Keyboard Navigation', ogrid: true, aggrid: 'free' as const },
+  { name: 'Spreadsheet Selection', ogrid: true, aggrid: 'paid' as const },
+  { name: 'Clipboard Copy/Paste', ogrid: true, aggrid: 'paid' as const },
+  { name: 'Fill Handle', ogrid: true, aggrid: 'paid' as const },
+  { name: 'Undo / Redo', ogrid: true, aggrid: 'paid' as const },
+  { name: 'Context Menu', ogrid: true, aggrid: 'paid' as const },
+  { name: 'Status Bar', ogrid: true, aggrid: 'paid' as const },
+  { name: 'Side Bar', ogrid: true, aggrid: 'paid' as const },
+  { name: 'Server-Side Data', ogrid: true, aggrid: 'paid' as const },
+  { name: 'Formula Engine', ogrid: true, aggrid: 'paid' as const },
+  { name: 'Headless Core', ogrid: true, aggrid: 'no' as const },
+  { name: 'License', ogrid: true, aggrid: 'neutral' as const },
+  { name: 'Price', ogrid: true, aggrid: 'paid' as const },
 ];
-
-function FeatureGridSection() {
-  return (
-    <section className={styles.section}>
-      <h2 className={styles.sectionTitle}>Everything You Need. Nothing You Don't.</h2>
-      <p className={styles.sectionSubtitle}>
-        25+ features built in. No enterprise paywall. No bloat.
-      </p>
-      <div className={styles.featureGrid}>
-        {features.map((f) => (
-          <div key={f.title} className={styles.featureCard}>
-            <span className={styles.featureIcon}>{f.icon}</span>
-            <div className={styles.featureTitle}>{f.title}</div>
-            <div className={styles.featureDesc}>{f.desc}</div>
-          </div>
-        ))}
-      </div>
-    </section>
-  );
-}
-
-/* ──────────────────────────────────────────────
-   Comparison Table
-   ────────────────────────────────────────────── */
-
-type CellType = 'check' | 'enterprise' | 'text';
-interface CompRow {
-  feature: string;
-  ogrid: [CellType, string];
-  aggrid: [CellType, string];
-}
-
-const compRows: CompRow[] = [
-  { feature: 'Sorting & Filtering', ogrid: ['check', 'Built-in'], aggrid: ['check', 'Community (free)'] },
-  { feature: 'Pagination', ogrid: ['check', 'Built-in'], aggrid: ['check', 'Community (free)'] },
-  { feature: 'Cell Editing', ogrid: ['check', 'Built-in'], aggrid: ['check', 'Community (free)'] },
-  { feature: 'Row Selection', ogrid: ['check', 'Built-in'], aggrid: ['check', 'Community (free)'] },
-  { feature: 'Column Groups', ogrid: ['check', 'Built-in'], aggrid: ['check', 'Community (free)'] },
-  { feature: 'CSV Export', ogrid: ['check', 'Built-in'], aggrid: ['check', 'Community (free)'] },
-  { feature: 'Keyboard Navigation', ogrid: ['check', 'Built-in'], aggrid: ['check', 'Community (free)'] },
-  { feature: 'Spreadsheet Selection', ogrid: ['check', 'Built-in'], aggrid: ['enterprise', 'Enterprise $999+/dev'] },
-  { feature: 'Clipboard', ogrid: ['check', 'Built-in'], aggrid: ['enterprise', 'Enterprise $999+/dev'] },
-  { feature: 'Fill Handle', ogrid: ['check', 'Built-in'], aggrid: ['enterprise', 'Enterprise $999+/dev'] },
-  { feature: 'Undo / Redo', ogrid: ['check', 'Built-in'], aggrid: ['enterprise', 'Enterprise $999+/dev'] },
-  { feature: 'Context Menu', ogrid: ['check', 'Built-in'], aggrid: ['enterprise', 'Enterprise $999+/dev'] },
-  { feature: 'Status Bar', ogrid: ['check', 'Built-in'], aggrid: ['enterprise', 'Enterprise $999+/dev'] },
-  { feature: 'Side Bar', ogrid: ['check', 'Built-in'], aggrid: ['enterprise', 'Enterprise $999+/dev'] },
-  { feature: 'Server-Side Data', ogrid: ['check', 'Built-in'], aggrid: ['enterprise', 'Enterprise $999+/dev'] },
-  { feature: 'Headless Core', ogrid: ['check', 'Yes'], aggrid: ['text', 'No'] },
-  { feature: 'License', ogrid: ['check', 'MIT (free)'], aggrid: ['text', 'MIT / Commercial'] },
-  { feature: 'Enterprise Cost', ogrid: ['check', '$0 (free forever)'], aggrid: ['enterprise', 'From $999/dev'] },
-];
-
-function renderCell(type: CellType, text: string) {
-  switch (type) {
-    case 'check': return <span className={styles.checkGreen}>{text}</span>;
-    case 'enterprise': return <span className={styles.enterprise}>{text}</span>;
-    default: return <span>{text}</span>;
-  }
-}
 
 function ComparisonSection() {
-  const ogridFeatures: Array<{ name: string; value: string; type: 'check' | 'free' }> = [
-    { name: 'Sorting & Filtering', value: 'Built-in', type: 'check' },
-    { name: 'Cell Editing', value: 'Built-in', type: 'check' },
-    { name: 'Spreadsheet Selection', value: 'Built-in', type: 'check' },
-    { name: 'Clipboard (Copy/Paste)', value: 'Built-in', type: 'check' },
-    { name: 'Fill Handle', value: 'Built-in', type: 'check' },
-    { name: 'Undo / Redo', value: 'Built-in', type: 'check' },
-    { name: 'Context Menu', value: 'Built-in', type: 'check' },
-    { name: 'Status Bar', value: 'Built-in', type: 'check' },
-    { name: 'Side Bar', value: 'Built-in', type: 'check' },
-    { name: 'Server-Side Data', value: 'Built-in', type: 'check' },
-    { name: 'Premium Cell Editors', value: 'Optional add-on', type: 'check' },
-    { name: 'Headless Core', value: 'Yes', type: 'check' },
-    { name: 'License', value: 'MIT (free forever)', type: 'free' },
-    { name: 'Enterprise Cost', value: '$0', type: 'free' },
-  ];
-
-  const aggridFeatures: Array<{ name: string; value: string; type: 'check' | 'paid' | 'neutral' }> = [
-    { name: 'Sorting & Filtering', value: 'Community (free)', type: 'check' },
-    { name: 'Cell Editing', value: 'Community (free)', type: 'check' },
-    { name: 'Spreadsheet Selection', value: 'Enterprise $999+/dev', type: 'paid' },
-    { name: 'Clipboard (Copy/Paste)', value: 'Enterprise $999+/dev', type: 'paid' },
-    { name: 'Fill Handle', value: 'Enterprise $999+/dev', type: 'paid' },
-    { name: 'Undo / Redo', value: 'Enterprise $999+/dev', type: 'paid' },
-    { name: 'Context Menu', value: 'Enterprise $999+/dev', type: 'paid' },
-    { name: 'Status Bar', value: 'Enterprise $999+/dev', type: 'paid' },
-    { name: 'Side Bar', value: 'Enterprise $999+/dev', type: 'paid' },
-    { name: 'Server-Side Data', value: 'Enterprise $999+/dev', type: 'paid' },
-    { name: 'Premium Cell Editors', value: 'Enterprise $999+/dev', type: 'paid' },
-    { name: 'Headless Core', value: 'No', type: 'neutral' },
-    { name: 'License', value: 'MIT / Commercial', type: 'neutral' },
-    { name: 'Enterprise Cost', value: 'From $999/dev', type: 'paid' },
-  ];
-
   return (
-    <section className={styles.comparison}>
-      <div className={styles.comparisonInner}>
-        <h2 className={styles.sectionTitle}>How OGrid Compares</h2>
-        <p className={styles.sectionSubtitle}>
-          Enterprise-grade features without the enterprise price tag.
-        </p>
+    <section className={styles.compSection}>
+      <div className={styles.compInner}>
+        <div className={styles.compHeader}>
+          <div className={styles.compLabel}>Comparison</div>
+          <h2 className={styles.compTitle}>
+            Why pay $999/dev<br />for features that should be free?
+          </h2>
+          <p className={styles.compSub}>
+            AG Grid charges enterprise rates for spreadsheet-grade UX.
+            OGrid ships all of it — free, forever.
+          </p>
+        </div>
 
-        <div className={styles.comparisonGrid}>
-          {/* OGrid Card */}
-          <div className={`${styles.comparisonCard} ${styles.comparisonCardOGrid}`}>
-            <div className={styles.comparisonCardHeader}>
-              <div className={`${styles.comparisonCardIcon} ${styles.comparisonCardIconOGrid}`}>
-                OG
-              </div>
-              <div className={styles.comparisonCardTitle}>OGrid</div>
+        <div className={styles.compTable}>
+          <div className={styles.compTableHead}>
+            <div className={styles.compTableFeatureCol}>Feature</div>
+            <div className={`${styles.compTableCol} ${styles.compTableColOGrid}`}>
+              <span className={styles.compTableLogo}>OGrid</span>
+              <span className={styles.compTablePrice}>$0 / forever</span>
             </div>
-            <ul className={styles.comparisonFeatureList}>
-              {ogridFeatures.map((f) => (
-                <li key={f.name} className={styles.comparisonFeatureItem}>
-                  <span className={`${styles.comparisonFeatureIcon} ${styles.comparisonFeatureIconCheck}`}>
-                    ✓
-                  </span>
-                  <div className={styles.comparisonFeatureText}>
-                    <span className={styles.comparisonFeatureName}>{f.name}</span>
-                    <span className={`${styles.comparisonFeatureValue} ${f.type === 'free' ? styles.comparisonFeatureValueFree : ''}`}>
-                      {f.value}
-                    </span>
-                  </div>
-                </li>
-              ))}
-            </ul>
+            <div className={styles.compTableCol}>
+              <span className={styles.compTableLogo}>AG Grid</span>
+              <span className={styles.compTablePricePaid}>from $999 / dev</span>
+            </div>
           </div>
 
-          {/* AG Grid Card */}
-          <div className={`${styles.comparisonCard} ${styles.comparisonCardAggrid}`}>
-            <div className={styles.comparisonCardHeader}>
-              <div className={`${styles.comparisonCardIcon} ${styles.comparisonCardIconAggrid}`}>
-                AG
+          <div className={styles.compTableBody}>
+            {comparisonRows.map((row, i) => (
+              <div key={row.name} className={`${styles.compRow} ${i % 2 === 0 ? styles.compRowEven : ''}`}>
+                <div className={styles.compRowFeature}>{row.name}</div>
+                <div className={`${styles.compRowCell} ${styles.compRowCellOGrid}`}>
+                  <span className={styles.compCheck}>✓</span>
+                  <span className={styles.compCheckLabel}>Included</span>
+                </div>
+                <div className={styles.compRowCell}>
+                  {row.aggrid === 'free' && (
+                    <><span className={styles.compCheck}>✓</span><span className={styles.compCheckLabel}>Community</span></>
+                  )}
+                  {row.aggrid === 'paid' && (
+                    <><span className={styles.compLock}>$</span><span className={styles.compLockLabel}>Enterprise only</span></>
+                  )}
+                  {row.aggrid === 'no' && (
+                    <><span className={styles.compNo}>–</span><span className={styles.compNoLabel}>Not available</span></>
+                  )}
+                  {row.aggrid === 'neutral' && (
+                    <span className={styles.compNeutral}>MIT / Commercial</span>
+                  )}
+                </div>
               </div>
-              <div className={styles.comparisonCardTitle}>AG Grid</div>
+            ))}
+          </div>
+
+          <div className={styles.compTableFoot}>
+            <div className={styles.compTableFeatureCol} />
+            <div className={`${styles.compFootCell} ${styles.compFootCellOGrid}`}>
+              <span className={styles.compFootPrice}>$0</span>
+              <Link className={styles.btnPrimary} to="/docs/getting-started/overview">
+                Start building
+              </Link>
             </div>
-            <ul className={styles.comparisonFeatureList}>
-              {aggridFeatures.map((f) => (
-                <li key={f.name} className={styles.comparisonFeatureItem}>
-                  <span
-                    className={`${styles.comparisonFeatureIcon} ${
-                      f.type === 'check'
-                        ? styles.comparisonFeatureIconCheck
-                        : f.type === 'paid'
-                        ? styles.comparisonFeatureIconEnterprise
-                        : styles.comparisonFeatureIconNeutral
-                    }`}
-                  >
-                    {f.type === 'check' ? '✓' : f.type === 'paid' ? '$' : ' - '}
-                  </span>
-                  <div className={styles.comparisonFeatureText}>
-                    <span className={styles.comparisonFeatureName}>{f.name}</span>
-                    <span className={`${styles.comparisonFeatureValue} ${f.type === 'paid' ? styles.comparisonFeatureValuePaid : ''}`}>
-                      {f.value}
-                    </span>
-                  </div>
-                </li>
-              ))}
-            </ul>
+            <div className={styles.compFootCell}>
+              <span className={styles.compFootPricePaid}>$999+/dev</span>
+              <span className={styles.compFootNote}>per developer per year</span>
+            </div>
           </div>
         </div>
       </div>
@@ -634,25 +680,42 @@ function ComparisonSection() {
    CTA
    ────────────────────────────────────────────── */
 
+const frameworkCards = [
+  { name: 'React', detail: 'Radix · Fluent · Material', count: '3 UI kits' },
+  { name: 'Angular', detail: 'Material · PrimeNG · Radix', count: '3 UI kits' },
+  { name: 'Vue', detail: 'Vuetify · PrimeVue · Radix', count: '3 UI kits' },
+  { name: 'Vanilla JS', detail: 'Zero dependencies', count: '1 package' },
+];
+
 function CTASection() {
   return (
-    <section className={styles.cta}>
-      <div className={styles.ctaGradient} />
-      <div className={styles.ctaContent}>
-        <h2 className={styles.ctaTitle}>Ready to Ship?</h2>
-        <p className={styles.ctaSubtitle}>
-          Pick your framework. Pick your UI library. Ship in under 5 minutes.
+    <section className={styles.ctaSection}>
+      <div className={styles.ctaBg} />
+      <div className={styles.ctaInner}>
+        <h2 className={styles.ctaTitle}>
+          Pick your stack.<br />Ship in minutes.
+        </h2>
+        <p className={styles.ctaSub}>
+          Every package has the same API. Drop it in, configure columns, done.
         </p>
-        <FrameworkCards />
+
+        <div className={styles.ctaFrameworks}>
+          {frameworkCards.map((fw) => (
+            <div key={fw.name} className={styles.ctaFrameworkCard}>
+              <div className={styles.ctaFrameworkName}>{fw.name}</div>
+              <div className={styles.ctaFrameworkDetail}>{fw.detail}</div>
+              <div className={styles.ctaFrameworkCount}>{fw.count}</div>
+            </div>
+          ))}
+        </div>
+
         <RotatingInstallCommand />
-        <div className={styles.ctaButtons}>
+
+        <div className={styles.ctaActions}>
           <Link className={styles.btnPrimary} to="/docs/getting-started/overview">
-            Get Started
+            Read the docs
           </Link>
-          <Link
-            className={styles.btnGhost}
-            href="https://github.com/alaarab/ogrid"
-          >
+          <Link className={styles.btnGhost} href="https://github.com/alaarab/ogrid">
             GitHub
           </Link>
         </div>
@@ -668,12 +731,12 @@ function CTASection() {
 export default function Home() {
   return (
     <Layout
-      title="Every Spreadsheet Feature. Zero Enterprise Tax."
-      description="Lightweight, framework-agnostic React data grid with sorting, filtering, editing, spreadsheet selection, clipboard, and more. Free and open source."
+      title="The data grid developers actually want."
+      description="Lightweight data grid for React, Angular, Vue, and vanilla JS. Sorting, filtering, editing, spreadsheet selection, clipboard, formulas — all free. No enterprise tier."
     >
       <Hero />
       <CodePreviewSection />
-      <FeatureGridSection />
+      <FeatureBentoSection />
       <ComparisonSection />
       <CTASection />
     </Layout>

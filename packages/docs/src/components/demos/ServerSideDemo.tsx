@@ -1,11 +1,13 @@
 import React, { useMemo } from 'react';
-import { OGrid } from '@alaarab/ogrid-react-radix';
-import type { IDataSource, IFetchParams } from '@alaarab/ogrid-react-radix';
 import { LiveDemo } from '../LiveDemo';
 import { people, getRowId, sortingColumns, type Person } from './demoData';
 
-export default function ServerSideDemo() {
-  const dataSource = useMemo<IDataSource<Person>>(() => ({
+function Inner() {
+  const { OGrid } = require('@alaarab/ogrid-react-radix') as typeof import('@alaarab/ogrid-react-radix');
+  type IDataSource = import('@alaarab/ogrid-react-radix').IDataSource<Person>;
+  type IFetchParams = import('@alaarab/ogrid-react-radix').IFetchParams;
+
+  const dataSource = useMemo<IDataSource>(() => ({
     async fetchPage({ page, pageSize, sort }: IFetchParams) {
       await new Promise(r => setTimeout(r, 300));
       let items = [...people];
@@ -22,10 +24,14 @@ export default function ServerSideDemo() {
     },
   }), []);
 
+  return <OGrid columns={sortingColumns} dataSource={dataSource} getRowId={getRowId}
+    defaultPageSize={5} entityLabelPlural="people" />;
+}
+
+export default function ServerSideDemo() {
   return (
     <LiveDemo height={420} title="Simulated 300ms server latency  -  watch the loading state">
-      <OGrid columns={sortingColumns} dataSource={dataSource} getRowId={getRowId}
-        defaultPageSize={5} entityLabelPlural="people" />
+      {() => <Inner />}
     </LiveDemo>
   );
 }
