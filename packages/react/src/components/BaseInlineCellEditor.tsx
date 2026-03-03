@@ -11,7 +11,12 @@ export const editorWrapperStyle: React.CSSProperties = {
   height: '100%',
   display: 'flex',
   alignItems: 'center',
-  padding: '6px 10px',
+  // Use density-aware CSS variables so the editor padding matches the cell padding
+  // at all density settings (compact/normal/comfortable). Fallback to normal values.
+  paddingTop: 'var(--ogrid-cell-padding-vertical, 6px)',
+  paddingBottom: 'var(--ogrid-cell-padding-vertical, 6px)',
+  paddingLeft: 'var(--ogrid-cell-padding-horizontal, 10px)',
+  paddingRight: 'var(--ogrid-cell-padding-horizontal, 10px)',
   boxSizing: 'border-box',
   overflow: 'hidden',
   minWidth: 0,
@@ -32,7 +37,17 @@ export const editorInputStyle: React.CSSProperties = {
 };
 
 export const richSelectWrapperStyle: React.CSSProperties = {
-  ...editorWrapperStyle,
+  width: '100%',
+  height: '100%',
+  display: 'flex',
+  alignItems: 'center',
+  paddingTop: 'var(--ogrid-cell-padding-vertical, 6px)',
+  paddingBottom: 'var(--ogrid-cell-padding-vertical, 6px)',
+  paddingLeft: 'var(--ogrid-cell-padding-horizontal, 10px)',
+  paddingRight: 'var(--ogrid-cell-padding-horizontal, 10px)',
+  boxSizing: 'border-box',
+  overflow: 'hidden',
+  minWidth: 0,
   position: 'relative',
 };
 
@@ -48,7 +63,7 @@ export const richSelectDropdownStyle: React.CSSProperties = {
   zIndex: 10,
   boxShadow: 'var(--ogrid-shadow, 0 4px 16px rgba(0,0,0,0.2))',
   textAlign: 'left',
-  fontSize: '13px',
+  fontSize: 'var(--ogrid-cell-font-size, 13px)',
   fontFamily: 'inherit',
 };
 
@@ -56,19 +71,19 @@ export const richSelectOptionStyle: React.CSSProperties = {
   padding: '6px 8px',
   cursor: 'pointer',
   color: 'var(--ogrid-fg, #242424)',
-  fontSize: '13px',
+  fontSize: 'var(--ogrid-cell-font-size, 13px)',
 };
 
 export const richSelectOptionHighlightedStyle: React.CSSProperties = {
   ...richSelectOptionStyle,
   background: 'var(--ogrid-bg-hover, #e8f0fe)',
-  fontSize: '13px',
+  fontSize: 'var(--ogrid-cell-font-size, 13px)',
 };
 
 export const richSelectNoMatchesStyle: React.CSSProperties = {
   padding: '6px 8px',
   color: 'var(--ogrid-muted, #999)',
-  fontSize: '13px',
+  fontSize: 'var(--ogrid-cell-font-size, 13px)',
 };
 
 export const richSelectFooterStyle: React.CSSProperties = {
@@ -90,7 +105,7 @@ export const richSelectSearchInputStyle: React.CSSProperties = {
   background: 'var(--ogrid-bg, #fff)',
   color: 'inherit',
   font: 'inherit',
-  fontSize: '13px',
+  fontSize: 'var(--ogrid-cell-font-size, 13px)',
   outline: 'none',
   boxSizing: 'border-box',
   position: 'sticky',
@@ -105,7 +120,7 @@ export const selectEditorStyle: React.CSSProperties = {
   background: 'transparent',
   color: 'inherit',
   font: 'inherit',
-  fontSize: '13px',
+  fontSize: 'var(--ogrid-cell-font-size, 13px)',
   cursor: 'pointer',
   outline: 'none',
 };
@@ -116,7 +131,7 @@ export const selectDisplayStyle: React.CSSProperties = {
   justifyContent: 'space-between',
   width: '100%',
   cursor: 'pointer',
-  fontSize: '13px',
+  fontSize: 'var(--ogrid-cell-font-size, 13px)',
   color: 'inherit',
 };
 
@@ -195,7 +210,10 @@ export function BaseInlineCellEditor<T>(props: BaseInlineCellEditorProps<T>): Re
     const maxH = 200;
     const spaceBelow = window.innerHeight - rect.bottom;
     const flipUp = spaceBelow < maxH && rect.top > spaceBelow;
-    const computedStyle = wrapper.closest('table') ? getComputedStyle(wrapper) : null;
+    const computedStyle = getComputedStyle(wrapper);
+    // Read density-aware font size from the CSS variable (set by .density-* on .tableWrapper).
+    // The portal renders outside the tableWrapper so we must resolve it here and pass it inline.
+    const cellFontSize = computedStyle.getPropertyValue('--ogrid-cell-font-size').trim() || '13px';
     setFixedDropdownStyle({
       position: 'fixed',
       ...(flipUp ? { bottom: window.innerHeight - rect.top } : { top: rect.bottom }),
@@ -208,8 +226,8 @@ export function BaseInlineCellEditor<T>(props: BaseInlineCellEditorProps<T>): Re
       zIndex: 9999,
       boxShadow: 'var(--ogrid-shadow, 0 4px 16px rgba(0,0,0,0.2))',
       textAlign: 'left',
-      fontSize: '13px',
-      fontFamily: computedStyle?.fontFamily ?? 'inherit',
+      fontSize: cellFontSize,
+      fontFamily: computedStyle.fontFamily ?? 'inherit',
     });
 
     // Close editor on scroll so the fixed dropdown doesn't drift away from the cell.
@@ -331,7 +349,7 @@ export function BaseInlineCellEditor<T>(props: BaseInlineCellEditorProps<T>): Re
     );
   }
 
-  // Date editor — native browser picker or plain text input (Excel-style)
+  // Date editor - native browser picker or plain text input (Excel-style)
   if (editorType === 'date') {
     const placeholder = getDateInputPlaceholder(dateFormat);
     if (dateEditorType === 'native') {

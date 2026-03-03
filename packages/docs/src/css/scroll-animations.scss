@@ -1,0 +1,70 @@
+// Scroll reveal animations
+// Usage: add .scrollReveal (or variant) to an element, then apply .revealed when in viewport.
+// The useScrollReveal hook handles toggling the .revealed class via isRevealed.
+
+$reveal-duration: 0.6s;
+$reveal-easing: cubic-bezier(0.22, 1, 0.36, 1);
+
+// Base - hidden state
+.scrollReveal {
+  opacity: 0;
+  transform: translateY(30px);
+  transition:
+    opacity $reveal-duration $reveal-easing,
+    transform $reveal-duration $reveal-easing;
+
+  // Visible state
+  &.revealed {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+// Slides in from left
+.scrollRevealLeft {
+  opacity: 0;
+  transform: translateX(-40px);
+  transition:
+    opacity $reveal-duration $reveal-easing,
+    transform $reveal-duration $reveal-easing;
+
+  &.revealed {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+// Slides in from right
+.scrollRevealRight {
+  opacity: 0;
+  transform: translateX(40px);
+  transition:
+    opacity $reveal-duration $reveal-easing,
+    transform $reveal-duration $reveal-easing;
+
+  &.revealed {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+// Scales up from 0.9
+.scrollRevealScale {
+  opacity: 0;
+  transform: scale(0.9);
+  transition:
+    opacity $reveal-duration $reveal-easing,
+    transform $reveal-duration $reveal-easing;
+
+  &.revealed {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+// Stagger delays - apply alongside any reveal class
+@for $i from 1 through 6 {
+  .stagger-#{$i} {
+    transition-delay: #{$i * 0.1}s;
+  }
+}

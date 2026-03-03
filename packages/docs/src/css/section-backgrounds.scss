@@ -1,0 +1,278 @@
+/* ─────────────────────────────────────────────────────────
+   OGrid Landing - Section Background Textures
+   Layered via ::before / ::after pseudo-elements so they
+   sit behind all content (z-index: 0 on pseudo, z-index: 1
+   on children via position: relative).
+   ───────────────────────────────────────────────────────── */
+
+/* ══════════════════════════════════════════════════════════
+   NOISE OVERLAY - subtle feTurbulence SVG texture
+   Apply on top of any section for organic depth (~3% opacity)
+   ══════════════════════════════════════════════════════════ */
+
+.sectionNoise {
+  position: relative;
+
+  &::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    z-index: 0;
+    opacity: 0.03;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='300' height='300'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.75' numOctaves='4' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='300' height='300' filter='url(%23noise)'/%3E%3C/svg%3E");
+    background-repeat: repeat;
+    background-size: 300px 300px;
+  }
+}
+
+[data-theme='dark'] .sectionNoise::after {
+  opacity: 0.04;
+}
+
+
+/* ══════════════════════════════════════════════════════════
+   HERO BACKGROUND - animated gradient mesh (green/teal)
+   ══════════════════════════════════════════════════════════ */
+
+@keyframes heroMeshDrift1 {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  33%       { transform: translate(3%, -4%) scale(1.04); }
+  66%       { transform: translate(-2%, 3%) scale(0.97); }
+}
+
+@keyframes heroMeshDrift2 {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  40%       { transform: translate(-4%, 3%) scale(1.05); }
+  75%       { transform: translate(3%, -2%) scale(0.96); }
+}
+
+@keyframes heroMeshDrift3 {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  50%       { transform: translate(2%, 4%) scale(1.03); }
+}
+
+.heroBackground {
+  position: relative;
+  overflow: hidden;
+
+  /* Blob 1 - left-center teal */
+  &::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    z-index: 0;
+    background:
+      radial-gradient(ellipse 55% 55% at 15% 45%, rgba(33, 115, 70, 0.10) 0%, transparent 65%),
+      radial-gradient(ellipse 40% 50% at 80% 20%, rgba(0, 102, 204, 0.07) 0%, transparent 60%),
+      radial-gradient(ellipse 50% 40% at 90% 85%, rgba(58, 184, 118, 0.08) 0%, transparent 60%);
+    animation: heroMeshDrift1 18s ease-in-out infinite;
+    will-change: transform;
+  }
+
+  /* Blob 2 - right-top accent */
+  &::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    z-index: 0;
+    background:
+      radial-gradient(ellipse 45% 60% at 65% 70%, rgba(58, 184, 118, 0.07) 0%, transparent 60%),
+      radial-gradient(ellipse 35% 35% at 5% 10%, rgba(33, 115, 70, 0.06) 0%, transparent 55%);
+    animation: heroMeshDrift2 24s ease-in-out infinite;
+    will-change: transform;
+  }
+}
+
+[data-theme='dark'] .heroBackground {
+  &::before {
+    background:
+      radial-gradient(ellipse 55% 55% at 15% 45%, rgba(58, 184, 118, 0.12) 0%, transparent 65%),
+      radial-gradient(ellipse 40% 50% at 80% 20%, rgba(77, 159, 236, 0.10) 0%, transparent 60%),
+      radial-gradient(ellipse 50% 40% at 90% 85%, rgba(33, 115, 70, 0.09) 0%, transparent 60%);
+  }
+
+  &::after {
+    background:
+      radial-gradient(ellipse 45% 60% at 65% 70%, rgba(78, 196, 132, 0.09) 0%, transparent 60%),
+      radial-gradient(ellipse 35% 35% at 5% 10%, rgba(58, 184, 118, 0.08) 0%, transparent 55%);
+  }
+}
+
+
+/* ══════════════════════════════════════════════════════════
+   FEATURES BACKGROUND - dot grid (graph paper)
+   Light: subtle gray dots. Dark: faded green dots.
+   ══════════════════════════════════════════════════════════ */
+
+.featuresBackground {
+  position: relative;
+
+  &::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    z-index: 0;
+    background-image: radial-gradient(circle, rgba(0, 0, 0, 0.12) 1px, transparent 1px);
+    background-size: 24px 24px;
+    mask-image: radial-gradient(ellipse 100% 100% at 50% 50%, rgba(0,0,0,0.5) 30%, transparent 80%);
+    -webkit-mask-image: radial-gradient(ellipse 100% 100% at 50% 50%, rgba(0,0,0,0.5) 30%, transparent 80%);
+  }
+}
+
+[data-theme='dark'] .featuresBackground::before {
+  background-image: radial-gradient(circle, rgba(58, 184, 118, 0.18) 1px, transparent 1px);
+}
+
+
+/* ══════════════════════════════════════════════════════════
+   CODE BACKGROUND - always dark, deep blue-black + vignette
+   ══════════════════════════════════════════════════════════ */
+
+.codeBackground {
+  position: relative;
+  background: #06060f;
+
+  &::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    z-index: 0;
+    background:
+      radial-gradient(ellipse 60% 50% at 25% 35%, rgba(10, 20, 80, 0.55) 0%, transparent 65%),
+      radial-gradient(ellipse 40% 45% at 80% 70%, rgba(0, 60, 130, 0.35) 0%, transparent 60%),
+      radial-gradient(ellipse 30% 35% at 60% 10%, rgba(30, 60, 120, 0.25) 0%, transparent 55%);
+  }
+
+  /* Vignette overlay */
+  &::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    z-index: 0;
+    background: radial-gradient(ellipse 90% 80% at 50% 50%, transparent 40%, rgba(0, 0, 8, 0.65) 100%);
+  }
+}
+
+/* Even in light mode, codeBackground stays dark */
+[data-theme='dark'] .codeBackground {
+  background: #04040c;
+
+  &::before {
+    background:
+      radial-gradient(ellipse 60% 50% at 25% 35%, rgba(15, 30, 100, 0.60) 0%, transparent 65%),
+      radial-gradient(ellipse 40% 45% at 80% 70%, rgba(0, 70, 150, 0.40) 0%, transparent 60%),
+      radial-gradient(ellipse 30% 35% at 60% 10%, rgba(40, 80, 160, 0.30) 0%, transparent 55%);
+  }
+}
+
+
+/* ══════════════════════════════════════════════════════════
+   COMPARISON BACKGROUND - single accent blob on OGrid side
+   Light: white with green tint. Dark: dark with green glow.
+   ══════════════════════════════════════════════════════════ */
+
+.comparisonBackground {
+  position: relative;
+
+  &::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    z-index: 0;
+    /* Accent blob biased to the right (OGrid column side) */
+    background:
+      radial-gradient(ellipse 50% 70% at 72% 50%, rgba(33, 115, 70, 0.07) 0%, transparent 65%),
+      radial-gradient(ellipse 30% 40% at 85% 20%, rgba(58, 184, 118, 0.05) 0%, transparent 55%);
+  }
+}
+
+[data-theme='dark'] .comparisonBackground::before {
+  background:
+    radial-gradient(ellipse 50% 70% at 72% 50%, rgba(58, 184, 118, 0.10) 0%, transparent 65%),
+    radial-gradient(ellipse 30% 40% at 85% 20%, rgba(78, 196, 132, 0.07) 0%, transparent 55%);
+}
+
+
+/* ══════════════════════════════════════════════════════════
+   CTA BACKGROUND - rich dark gradient, animated
+   Always dramatic (dark even in light mode)
+   ══════════════════════════════════════════════════════════ */
+
+@keyframes ctaGradientShift {
+  0%, 100% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+}
+
+@keyframes ctaOrb1 {
+  0%, 100% { transform: translate(0, 0) scale(1); opacity: 0.8; }
+  40%       { transform: translate(4%, -5%) scale(1.08); opacity: 1; }
+  70%       { transform: translate(-3%, 3%) scale(0.94); opacity: 0.75; }
+}
+
+@keyframes ctaOrb2 {
+  0%, 100% { transform: translate(0, 0) scale(1); opacity: 0.7; }
+  35%       { transform: translate(-5%, 4%) scale(1.06); opacity: 0.95; }
+  65%       { transform: translate(4%, -2%) scale(0.96); opacity: 0.65; }
+}
+
+.ctaBackground {
+  position: relative;
+  /* Rich dark base even in light mode */
+  background: #0b1220;
+
+  /* Moving gradient orbs */
+  &::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    z-index: 0;
+    background:
+      radial-gradient(ellipse 55% 65% at 30% 55%, rgba(33, 115, 70, 0.22) 0%, transparent 60%),
+      radial-gradient(ellipse 40% 50% at 75% 30%, rgba(0, 80, 160, 0.18) 0%, transparent 55%),
+      radial-gradient(ellipse 35% 40% at 85% 80%, rgba(58, 184, 118, 0.12) 0%, transparent 50%);
+    animation: ctaOrb1 20s ease-in-out infinite;
+    will-change: transform;
+  }
+
+  &::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    z-index: 0;
+    background:
+      radial-gradient(ellipse 45% 55% at 65% 65%, rgba(77, 159, 236, 0.10) 0%, transparent 55%),
+      radial-gradient(ellipse 30% 40% at 15% 25%, rgba(58, 184, 118, 0.09) 0%, transparent 50%);
+    animation: ctaOrb2 26s ease-in-out infinite;
+    will-change: transform;
+  }
+}
+
+[data-theme='dark'] .ctaBackground {
+  background: #07090f;
+
+  &::before {
+    background:
+      radial-gradient(ellipse 55% 65% at 30% 55%, rgba(58, 184, 118, 0.18) 0%, transparent 60%),
+      radial-gradient(ellipse 40% 50% at 75% 30%, rgba(0, 100, 200, 0.15) 0%, transparent 55%),
+      radial-gradient(ellipse 35% 40% at 85% 80%, rgba(78, 196, 132, 0.12) 0%, transparent 50%);
+  }
+
+  &::after {
+    background:
+      radial-gradient(ellipse 45% 55% at 65% 65%, rgba(77, 159, 236, 0.10) 0%, transparent 55%),
+      radial-gradient(ellipse 30% 40% at 15% 25%, rgba(58, 184, 118, 0.08) 0%, transparent 50%);
+  }
+}
