@@ -64,6 +64,8 @@
   box-sizing: border-box;
   background: var(--ogrid-bg, #fff);
   will-change: scroll-position;
+  // Momentum scrolling on iOS
+  -webkit-overflow-scrolling: touch;
 
   // Suppress browser focus outline — the active cell outline handles focus indication.
   &:focus {
@@ -140,6 +142,13 @@
   // Touch devices keep it always visible (no hover support).
   @media (hover: hover) {
     display: none;
+  }
+
+  // Expand touch target on coarse-pointer (touch) devices
+  @media (pointer: coarse) {
+    min-width: 36px;
+    height: 36px;
+    padding: 4px 8px;
   }
 
   &:hover {
@@ -480,6 +489,11 @@
   text-align: left;
   cursor: pointer;
   color: var(--ogrid-fg, rgba(0, 0, 0, 0.87));
+  // Minimum 44px touch target height on touch devices
+  min-height: 44px;
+  @media (pointer: fine) {
+    min-height: auto;
+  }
   &:hover:not(:disabled) {
     background: var(--ogrid-hover-bg, rgba(0, 0, 0, 0.04));
   }

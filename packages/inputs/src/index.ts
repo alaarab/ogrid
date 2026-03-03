@@ -14,3 +14,17 @@ export { clampValue, snapToStep, getPercentage, getValueFromOffset, DEFAULT_MIN,
 
 // Tags
 export { parseTags, formatTags, getTagColor, filterTagSuggestions, DEFAULT_TAG_COLORS } from './tags';
+
+// TimePicker
+export {
+  parseTime,
+  formatTime12,
+  formatTime24,
+  toHour12,
+  toAmPm,
+  fromHour12,
+  clampTime,
+  getMinuteOptions,
+  getHour12Options,
+} from './timepicker';
+export type { TimeValue, AmPm } from './timepicker';

@@ -8,8 +8,16 @@
  *     columnId: 'labels',
  *     cellEditor: TagsEditor,
  *     cellEditorPopup: true,
- *     cellEditorParams: { suggestions: ['Bug', 'Feature', 'Docs'], allowCreate: true },
+ *     cellEditorParams: {
+ *       suggestions: ['Bug', 'Feature', 'Docs'],
+ *       allowCreate: true,   // default: true — set to false to restrict to suggestions
+ *       showApplyButton: true, // default: true — shows an Apply button to commit
+ *     },
  *   }];
+ *
+ * When `allowCreate: false`, users can only select from the provided `suggestions`.
+ * When suggestions are provided and `allowCreate: false`, the dropdown shows multi-select
+ * behavior (checkboxes) similar to Select2 — all options shown by default, filtered as user types.
  *
  * Implements ICellEditorProps<T>  -  works with cellEditorPopup: true.
  * Tags are stored as a comma-separated string.
@@ -87,10 +95,11 @@ const inputStyle: React.CSSProperties = {
   background: 'var(--ogrid-bg, #fff)',
   color: 'inherit',
   marginTop: '6px',
+  boxSizing: 'border-box',
 };
 
 const suggestionsStyle: React.CSSProperties = {
-  maxHeight: '120px',
+  maxHeight: '160px',
   overflowY: 'auto',
   marginTop: '4px',
   border: '1px solid var(--ogrid-border, rgba(0,0,0,0.1))',
@@ -103,10 +112,32 @@ const suggestionItemStyle: React.CSSProperties = {
   cursor: 'pointer',
   fontSize: '12px',
   borderBottom: '1px solid var(--ogrid-border, rgba(0,0,0,0.04))',
+  display: 'flex',
+  alignItems: 'center',
+  gap: '8px',
 };
 
 const suggestionItemHoveredStyle: React.CSSProperties = {
   background: 'var(--ogrid-bg-hover, #f0f0f0)',
+};
+
+const suggestionCheckStyle: React.CSSProperties = {
+  width: '14px',
+  height: '14px',
+  borderRadius: '3px',
+  border: '1.5px solid var(--ogrid-border, rgba(0,0,0,0.3))',
+  display: 'inline-flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  flexShrink: 0,
+  fontSize: '10px',
+  background: 'var(--ogrid-bg, #fff)',
+};
+
+const suggestionCheckCheckedStyle: React.CSSProperties = {
+  background: 'var(--ogrid-accent, #0078d4)',
+  border: '1.5px solid var(--ogrid-accent, #0078d4)',
+  color: '#fff',
 };
 
 const emptyLabelStyle: React.CSSProperties = {
@@ -136,6 +167,17 @@ const footerBtnStyle: React.CSSProperties = {
   fontWeight: 500,
 };
 
+const applyBtnStyle: React.CSSProperties = {
+  background: 'var(--ogrid-accent, #0078d4)',
+  color: '#fff',
+  border: 'none',
+  cursor: 'pointer',
+  padding: '5px 12px',
+  borderRadius: '4px',
+  fontSize: '12px',
+  fontWeight: 600,
+};
+
 const tagCountStyle: React.CSSProperties = {
   fontSize: '11px',
   color: 'var(--ogrid-muted, #888)',
@@ -146,8 +188,13 @@ const tagCountStyle: React.CSSProperties = {
 export function TagsEditor<T>(props: ICellEditorProps<T>): React.ReactElement {
   const { value, onValueChange, onCommit, onCancel, cellEditorParams } = props;
 
-  const suggestions = (cellEditorParams as Record<string, unknown> | undefined)?.suggestions as string[] | undefined;
-  const allowCreate = (cellEditorParams as Record<string, unknown> | undefined)?.allowCreate as boolean | undefined ?? true;
+  const params = cellEditorParams as Record<string, unknown> | undefined;
+  const suggestions = params?.suggestions as string[] | undefined;
+  const allowCreate = (params?.allowCreate as boolean | undefined) ?? true;
+  const showApplyButton = (params?.showApplyButton as boolean | undefined) ?? true;
+
+  // Multi-select mode: suggestions provided and allowCreate is false
+  const isMultiSelectMode = !!suggestions && !allowCreate;
 
   const [tags, setTags] = React.useState<string[]>(() => parseTags(value));
   const [inputText, setInputText] = React.useState('');
@@ -155,12 +202,21 @@ export function TagsEditor<T>(props: ICellEditorProps<T>): React.ReactElement {
   const rootRef = React.useRef<HTMLDivElement>(null);
   const inputRef = React.useRef<HTMLInputElement>(null);
 
+  // In multi-select mode: show all available suggestions (not yet selected) when input is empty,
+  // or filter them when user types. In regular mode: only show suggestions when typing.
   const filteredSuggestions = React.useMemo(() => {
     if (!suggestions) return [];
+    if (isMultiSelectMode) {
+      // Show all suggestions (with selected state tracked separately) filtered by search
+      const q = inputText.toLowerCase().trim();
+      return suggestions.filter((s) => !q || s.toLowerCase().includes(q));
+    }
     return filterTagSuggestions(inputText, suggestions, tags);
-  }, [inputText, suggestions, tags]);
+  }, [inputText, suggestions, tags, isMultiSelectMode]);
 
-  const showSuggestions = filteredSuggestions.length > 0 && inputText.length > 0;
+  const showSuggestions = isMultiSelectMode
+    ? filteredSuggestions.length > 0
+    : filteredSuggestions.length > 0 && inputText.length > 0;
 
   const updateTags = React.useCallback(
     (newTags: string[]) => {
@@ -192,11 +248,30 @@ export function TagsEditor<T>(props: ICellEditorProps<T>): React.ReactElement {
     [tags, updateTags],
   );
 
+  const toggleTag = React.useCallback(
+    (tag: string) => {
+      if (tags.includes(tag)) {
+        const newTags = tags.filter((t) => t !== tag);
+        updateTags(newTags);
+      } else {
+        const newTags = [...tags, tag];
+        updateTags(newTags);
+      }
+    },
+    [tags, updateTags],
+  );
+
+  const handleApply = () => {
+    onCommit();
+  };
+
   const handleClearAll = () => {
     updateTags([]);
     setInputText('');
     onValueChange('');
-    onCommit();
+    if (!showApplyButton) {
+      onCommit();
+    }
   };
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -208,24 +283,37 @@ export function TagsEditor<T>(props: ICellEditorProps<T>): React.ReactElement {
     if (e.key === 'Enter') {
       e.preventDefault();
       e.stopPropagation();
-      if (showSuggestions && highlightedIndex >= 0) {
+      if (isMultiSelectMode) {
+        // In multi-select mode, Enter toggles the highlighted suggestion or applies
+        if (showSuggestions && highlightedIndex >= 0) {
+          toggleTag(filteredSuggestions[highlightedIndex]);
+        } else if (!showApplyButton) {
+          onCommit();
+        } else {
+          onCommit();
+        }
+      } else if (showSuggestions && highlightedIndex >= 0) {
         addTag(filteredSuggestions[highlightedIndex]);
       } else if (inputText.trim()) {
         addTag(inputText);
       } else {
-        // Enter with empty input commits
-        onCommit();
+        // Enter with empty input: commit if no apply button, otherwise do nothing
+        if (!showApplyButton) {
+          onCommit();
+        } else {
+          onCommit();
+        }
       }
     } else if (e.key === 'Escape') {
       e.preventDefault();
       e.stopPropagation();
       onCancel();
-    } else if (e.key === ',' || e.key === 'Tab') {
+    } else if (!isMultiSelectMode && (e.key === ',' || e.key === 'Tab')) {
       if (inputText.trim()) {
         e.preventDefault();
         addTag(inputText);
       }
-    } else if (e.key === 'Backspace' && inputText === '' && tags.length > 0) {
+    } else if (e.key === 'Backspace' && inputText === '' && tags.length > 0 && !isMultiSelectMode) {
       removeTag(tags.length - 1);
     } else if (e.key === 'ArrowDown' && showSuggestions) {
       e.preventDefault();
@@ -241,8 +329,13 @@ export function TagsEditor<T>(props: ICellEditorProps<T>): React.ReactElement {
   };
 
   const handleSuggestionClick = (suggestion: string) => {
-    addTag(suggestion);
-    inputRef.current?.focus();
+    if (isMultiSelectMode) {
+      toggleTag(suggestion);
+      inputRef.current?.focus();
+    } else {
+      addTag(suggestion);
+      inputRef.current?.focus();
+    }
   };
 
   // Focus input on mount
@@ -290,6 +383,49 @@ export function TagsEditor<T>(props: ICellEditorProps<T>): React.ReactElement {
     );
   };
 
+  const renderSuggestionItem = (suggestion: string, i: number) => {
+    const isSelected = tags.includes(suggestion);
+    const isHighlighted = i === highlightedIndex;
+
+    if (isMultiSelectMode) {
+      return (
+        <div
+          key={suggestion}
+          style={{
+            ...suggestionItemStyle,
+            ...(isHighlighted ? suggestionItemHoveredStyle : {}),
+          }}
+          onClick={() => handleSuggestionClick(suggestion)}
+          onMouseEnter={() => setHighlightedIndex(i)}
+        >
+          <span
+            style={{
+              ...suggestionCheckStyle,
+              ...(isSelected ? suggestionCheckCheckedStyle : {}),
+            }}
+          >
+            {isSelected ? '\u2713' : ''}
+          </span>
+          <span style={{ flex: 1 }}>{suggestion}</span>
+        </div>
+      );
+    }
+
+    return (
+      <div
+        key={suggestion}
+        style={{
+          ...suggestionItemStyle,
+          ...(isHighlighted ? suggestionItemHoveredStyle : {}),
+        }}
+        onClick={() => handleSuggestionClick(suggestion)}
+        onMouseEnter={() => setHighlightedIndex(i)}
+      >
+        {suggestion}
+      </div>
+    );
+  };
+
   return (
     <div
       ref={rootRef}
@@ -303,44 +439,40 @@ export function TagsEditor<T>(props: ICellEditorProps<T>): React.ReactElement {
           : <span style={emptyLabelStyle}>No tags</span>}
       </div>
 
-      {/* Input for new tags */}
+      {/* Search/input for tags */}
       <input
         ref={inputRef}
         type="text"
         value={inputText}
         onChange={handleInputChange}
         onKeyDown={handleInputKeyDown}
-        placeholder={allowCreate ? 'Type to add tag...' : 'Search tags...'}
+        placeholder={isMultiSelectMode ? 'Search...' : allowCreate ? 'Type to add tag...' : 'Search tags...'}
         style={inputStyle}
+        aria-label="Tag search input"
       />
 
       {/* Suggestions dropdown */}
       {showSuggestions && (
         <div style={suggestionsStyle}>
-          {filteredSuggestions.map((suggestion, i) => (
-            <div
-              key={suggestion}
-              style={{
-                ...suggestionItemStyle,
-                ...(i === highlightedIndex ? suggestionItemHoveredStyle : {}),
-              }}
-              onClick={() => handleSuggestionClick(suggestion)}
-              onMouseEnter={() => setHighlightedIndex(i)}
-            >
-              {suggestion}
-            </div>
-          ))}
+          {filteredSuggestions.map((suggestion, i) => renderSuggestionItem(suggestion, i))}
         </div>
       )}
 
       {/* Footer */}
       <div style={footerStyle}>
-        <span style={tagCountStyle}>
-          {tags.length} tag{tags.length !== 1 ? 's' : ''}
-        </span>
-        <button type="button" style={footerBtnStyle} onClick={handleClearAll}>
-          Clear all
-        </button>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <span style={tagCountStyle}>
+            {tags.length} tag{tags.length !== 1 ? 's' : ''}
+          </span>
+          <button type="button" style={footerBtnStyle} onClick={handleClearAll}>
+            Clear all
+          </button>
+        </div>
+        {showApplyButton && (
+          <button type="button" style={applyBtnStyle} onClick={handleApply} aria-label="Apply tags">
+            Apply
+          </button>
+        )}
       </div>
     </div>
   );

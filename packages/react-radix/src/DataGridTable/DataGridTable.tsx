@@ -295,9 +295,27 @@ function DataGridTableInner<T>(props: IOGridDataGridProps<T>): React.ReactElemen
       let content: React.ReactNode;
 
       if (descriptor.mode === 'editing-inline') {
+        const isCheckbox = (descriptor.editorType ?? (col.type === 'boolean' ? 'checkbox' : 'text')) === 'checkbox';
+        const editorProps = buildInlineEditorProps(item, col, descriptor, editCallbacks) as InlineCellEditorProps<T>;
+        // Checkbox toggle should not advance selection to the next row
+        if (isCheckbox) {
+          const origCommit = editorProps.onCommit;
+          const savedRow = descriptor.rowIndex;
+          const savedCol = descriptor.globalColIndex;
+          const savedLocalCol = descriptor.globalColIndex - colOffset;
+          editorProps.onCommit = (newValue: unknown) => {
+            origCommit(newValue);
+            // commitCellEdit advances to next row; undo that for checkbox.
+            // setTimeout(0) ensures this runs after React finishes the commit's state batch.
+            setTimeout(() => {
+              setActiveCell({ rowIndex: savedRow, columnIndex: savedCol });
+              interaction.setSelectionRange({ startRow: savedRow, startCol: savedLocalCol, endRow: savedRow, endCol: savedLocalCol });
+            }, 0);
+          };
+        }
         content = (
-          <div className={styles.editingCellContent}>
-            <InlineCellEditor<T> {...buildInlineEditorProps(item, col, descriptor, editCallbacks) as InlineCellEditorProps<T>} />
+          <div className={styles.editingCellContent} style={isCheckbox ? { justifyContent: 'center' } : undefined}>
+            <InlineCellEditor<T> {...editorProps} />
           </div>
         );
       } else if (descriptor.mode === 'editing-popover' && typeof col.cellEditor === 'function') {
@@ -329,7 +347,14 @@ function DataGridTableInner<T>(props: IOGridDataGridProps<T>): React.ReactElemen
               checked={boolVal}
               disabled={!descriptor.canEditAny}
               onCheckedChange={descriptor.canEditAny ? () => {
-                editCallbacks.commitCellEdit(item, col.columnId, boolVal, !boolVal, descriptor.rowIndex, descriptor.globalColIndex);
+                const savedRow = descriptor.rowIndex;
+                const savedCol = descriptor.globalColIndex;
+                const savedLocalCol = descriptor.globalColIndex - colOffset;
+                editCallbacks.commitCellEdit(item, col.columnId, boolVal, !boolVal, savedRow, savedCol);
+                setTimeout(() => {
+                  setActiveCell({ rowIndex: savedRow, columnIndex: savedCol });
+                  interaction.setSelectionRange({ startRow: savedRow, startCol: savedLocalCol, endRow: savedRow, endCol: savedLocalCol });
+                }, 0);
               } : undefined}
               onClick={(e: React.MouseEvent) => e.stopPropagation()}
               aria-label={boolVal ? 'Checked' : 'Unchecked'}
