@@ -282,12 +282,17 @@ export function createDataGridTable(ui: IDataGridTableUIBindings) {
 
           let displayNode: VNode | string | null;
           if (descriptor.columnType === 'boolean') {
+            const boolVal = !!descriptor.displayValue;
             displayNode = h('input', {
               type: 'checkbox',
-              checked: !!descriptor.displayValue,
-              disabled: true,
-              style: 'margin:0;pointer-events:none',
-              'aria-label': descriptor.displayValue ? 'True' : 'False',
+              checked: boolVal,
+              disabled: !descriptor.canEditAny,
+              onChange: descriptor.canEditAny ? () => {
+                editCallbacks.commitCellEdit(item, col.columnId, boolVal, !boolVal, descriptor.rowIndex, descriptor.globalColIndex);
+              } : undefined,
+              onClick: (e: Event) => e.stopPropagation(),
+              style: `margin:0;cursor:${descriptor.canEditAny ? 'pointer' : 'default'}`,
+              'aria-label': boolVal ? 'Checked' : 'Unchecked',
             });
           } else {
             const content = resolveCellDisplayContent(col, item, descriptor.displayValue);
@@ -378,6 +383,7 @@ export function createDataGridTable(ui: IDataGridTableUIBindings) {
             onKeydown: handleGridKeyDown,
             onContextmenu,
             'data-overflow-x': allowOverflowX ? 'true' : 'false',
+            'data-ogrid-scroll-container': '',
             style: wrapperStyle,
           }, [
             h('div', { class: 'ogrid-scroll-wrapper' }, [

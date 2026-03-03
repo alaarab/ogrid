@@ -330,7 +330,20 @@ function DataGridTableInner<T>(props: IOGridDataGridProps<T>): React.ReactElemen
       } else {
         let displayNode: React.ReactNode;
         if (descriptor.columnType === 'boolean') {
-          displayNode = <input type="checkbox" checked={!!descriptor.displayValue} disabled style={{ margin: 0, pointerEvents: 'none' }} aria-label={descriptor.displayValue ? 'True' : 'False'} />;
+          const boolVal = !!descriptor.displayValue;
+          displayNode = (
+            <input
+              type="checkbox"
+              checked={boolVal}
+              disabled={!descriptor.canEditAny}
+              onChange={descriptor.canEditAny ? () => {
+                editCallbacks.commitCellEdit(item, col.columnId, boolVal, !boolVal, descriptor.rowIndex, descriptor.globalColIndex);
+              } : undefined}
+              onClick={(e) => e.stopPropagation()}
+              style={{ margin: 0, cursor: descriptor.canEditAny ? 'pointer' : 'default' }}
+              aria-label={boolVal ? 'Checked' : 'Unchecked'}
+            />
+          );
         } else {
           const displayContent = resolveCellDisplayContent(col, item, descriptor.displayValue) as React.ReactNode;
           const cellStyle = resolveCellStyle(col, item, descriptor.displayValue);
@@ -379,6 +392,7 @@ function DataGridTableInner<T>(props: IOGridDataGridProps<T>): React.ReactElemen
         role="region"
         aria-label={ariaLabel ?? (ariaLabelledBy ? undefined : 'Data grid')}
         aria-labelledby={ariaLabelledBy}
+        data-ogrid-scroll-container=""
         data-empty={showEmptyInGrid ? 'true' : undefined}
         data-loading={isLoading && items.length === 0 ? 'true' : undefined}
         data-column-count={totalColCount}
