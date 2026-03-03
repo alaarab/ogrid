@@ -104,7 +104,7 @@ All notable changes to OGrid will be documented in this file.
 - **`getSort` and `getFilters` callbacks** added to `ConnectGridOptions` — bridge now reports active sort model and filter model on every state push; React and JS examples use `api.getColumnState()` for live state; Angular/Vue examples default to empty (no api ref in template-binding pattern)
 - **AG Grid migration prompt** — `ogrid://migration-guide` resource and `migrate-from-ag-grid` prompt
 - **`--version` / `-v` flag** — `npx @alaarab/ogrid-mcp --version` prints the installed version
-- Documentation: `guides/mcp.mdx` (setup guide for Claude, Cursor, Claude Desktop) and `guides/mcp-live-testing.mdx` (bridge guide)
+- Documentation: `guides/mcp.mdx` (editor setup guide) and `guides/mcp-live-testing.mdx` (bridge guide)
 - 4,189 tests across 14 packages (424 new formula + date tests added this cycle)
 
 ### Changed

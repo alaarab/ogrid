@@ -14,7 +14,5 @@ tsup.config.bundled_*.mjs
 *.tgz
 *.local
 .cursor
-.claude/*
-!.claude/skills
 .docusaurus
 packages/docs/build

@@ -22,7 +22,7 @@ function App() {
     );
   }, []);
 
-  // MCP Live Testing Bridge — connects this grid to Claude/Cursor for real-time inspection
+  // MCP Live Testing Bridge — connects this grid to your editor for real-time inspection
   useEffect(() => {
     const bridge = connectGridToBridge({
       gridId: 'radix-demo',

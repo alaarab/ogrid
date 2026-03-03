@@ -1,6 +1,6 @@
 ---
 title: MCP Live Testing Bridge
-description: Connect AI assistants (Claude, Cursor) to a running OGrid instance for real-time testing and inspection.
+description: Connect your editor (Claude Code, Cursor, etc.) to a running OGrid instance for real-time testing and inspection.
 ---
 
 import Tabs from '@theme/Tabs';
@@ -8,12 +8,12 @@ import TabItem from '@theme/TabItem';
 
 # MCP Live Testing Bridge
 
-The `@alaarab/ogrid-mcp` package includes a **live testing bridge** that lets AI assistants connected via MCP read your grid's current state, update cell values, apply filters, and navigate pages — all in real time while your dev app is running.
+The `@alaarab/ogrid-mcp` package includes a **live testing bridge** that lets MCP-connected editors read your grid's current state, update cell values, apply filters, and navigate pages — all in real time while your dev app is running.
 
 ## How it works
 
 ```
-Claude (MCP client)
+Editor (MCP client)
     │ MCP tools
     ▼
 ogrid-mcp (stdio process + HTTP bridge on :7890)
@@ -65,7 +65,7 @@ export function MyGrid() {
       getData: () => data,
       getColumns: () => columns,
       api: apiRef.current ?? undefined,
-      // Handle update_cell commands from Claude
+      // Handle update_cell commands
       onCellUpdate: (rowIndex, columnId, value) => {
         setData(prev =>
           prev.map((row, i) => i === rowIndex ? { ...row, [columnId]: value } : row)
@@ -177,7 +177,7 @@ if (location.hostname === 'localhost') {
 
 ## MCP tools
 
-Once connected, these tools are available to your AI assistant:
+Once connected, these tools are available via MCP:
 
 ### `list_grids`
 
@@ -275,14 +275,14 @@ Payload: {"rowIndex":0,"columnId":"salary","value":130000}
 
 ---
 
-## Example AI testing session
+## Example testing session
 
-Here's what a typical Claude testing session looks like with the bridge active:
+Here's what a typical testing session looks like with the bridge active:
 
 ```
 Me: The salary column seems wrong. Can you check?
 
-Claude: Let me look at the current grid state.
+Editor: Let me look at the current grid state.
 [calls get_grid_state gridId="employees" includeData=true maxRows=10]
 
 The grid shows salary values like "120" instead of "120000".
