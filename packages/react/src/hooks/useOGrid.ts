@@ -254,6 +254,7 @@ export function useOGrid<T>(
     isServerSide, dataSource, displayData, columns,
     stableFilters: filtersState.stableFilters,
     sort: sortingState.sort,
+    sortVersion: sortingState.sortVersion,
     page: paginationState.page,
     pageSize: paginationState.pageSize,
     onError, onFirstDataRendered,

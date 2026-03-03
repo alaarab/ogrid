@@ -53,6 +53,11 @@ import { BaseColumnHeaderMenuComponent } from '@alaarab/ogrid-angular';
       justify-content: center;
       line-height: 1;
     }
+    /* Always reserve space; hide on hover-capable devices until column is hovered.
+       The th:hover rule lives in the parent (ViewEncapsulation.None) styles. */
+    @media (hover: hover) {
+      .ogrid-header-menu__trigger { visibility: hidden; }
+    }
     .ogrid-header-menu__trigger:hover {
       background: var(--ogrid-hover-bg, rgba(0, 0, 0, 0.04));
     }

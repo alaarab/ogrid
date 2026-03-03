@@ -46,7 +46,7 @@
 // ---- Fluent Table primitives (pure visual, no behavior) ----
 
 // Fluent UI's Table component applies `table-layout: fixed` via an atomic CSS class
-// (specificity 0,1,0). Qualifying with .tableWrapper raises to 0,2,0 — wins without !important.
+// (specificity 0,1,0). Qualifying with .tableWrapper raises to 0,2,0 - wins without !important.
 .tableWrapper .dataTable {
   table-layout: auto;
 }
@@ -78,7 +78,7 @@
   // containing block for the resize handle instead of the <th>. Override to static so
   // the resize handle aligns with the column border (the <th> edge).
   // Fluent sets `position: relative` via a class selector (0,1,0); qualifying with
-  // .dataTable .fui-TableHeaderCell raises specificity to 0,3,0 — wins without !important.
+  // .dataTable .fui-TableHeaderCell raises specificity to 0,3,0 - wins without !important.
   > :global(.fui-TableHeaderCell__button) {
     position: static;
   }
@@ -436,7 +436,13 @@
 
 // ---- Cell Density ----
 
+// Default density vars are set on .tableWrapper in the shared _data-grid-table.scss partial.
+// These classes override them per density setting.
 .density-compact {
+  --ogrid-cell-padding-vertical: 4px;
+  --ogrid-cell-padding-horizontal: 8px;
+  --ogrid-cell-font-size: 12px;
+
   .dataTable :global(.fui-TableHeaderCell) {
     padding: 4px 8px;
   }
@@ -451,6 +457,10 @@
 }
 
 .density-comfortable {
+  --ogrid-cell-padding-vertical: 12px;
+  --ogrid-cell-padding-horizontal: 16px;
+  --ogrid-cell-font-size: 14px;
+
   .dataTable :global(.fui-TableHeaderCell) {
     padding: 12px 16px;
   }

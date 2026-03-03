@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useMemo, useRef, useCallback, type MouseEvent as ReactMouseEvent } from 'react';
 import BrowserOnly from '@docusaurus/BrowserOnly';
 import Layout from '@theme/Layout';
 import CodeBlock from '@theme/CodeBlock';
@@ -186,6 +186,15 @@ function HeroGrid() {
         density={density}
         defaultPageSize={100}
         entityLabelPlural="employees"
+        formulas
+        cellReferences
+        initialFormulas={[
+          { col: 5, row: 4, formula: '=SUM(F1:F4)' },
+          { col: 5, row: 5, formula: '=AVERAGE(F1:F4)' },
+          { col: 5, row: 6, formula: '=MAX(F1:F4)' },
+          { col: 5, row: 7, formula: '=MIN(F1:F4)' },
+          { col: 9, row: 4, formula: '=AVERAGE(J1:J4)' },
+        ]}
       />
     </div>
   );
@@ -268,15 +277,68 @@ function RotatingInstallCommand() {
    Hero
    ────────────────────────────────────────────── */
 
-function Hero() {
+function SpreadsheetBackground() {
+  const shimmerCells = useMemo(() => {
+    const cells: Array<{ col: number; row: number; delay: number; duration: number; type: 'shimmer' | 'select' | 'data' }> = [];
+    for (let i = 0; i < 18; i++) {
+      cells.push({ col: ((i * 7 + 3) % 20), row: ((i * 13 + 5) % 14), delay: (i * 0.8) % 6, duration: 2.5 + (i % 3) * 0.7, type: 'shimmer' });
+    }
+    for (let r = 3; r <= 6; r++) {
+      for (let c = 4; c <= 7; c++) {
+        cells.push({ col: c, row: r, delay: 0, duration: 4, type: 'select' });
+      }
+    }
+    for (let i = 0; i < 8; i++) {
+      cells.push({ col: 12, row: i + 2, delay: i * 0.3, duration: 3, type: 'data' });
+    }
+    return cells;
+  }, []);
+
   return (
-    <section className={styles.hero}>
-      {/* Background layers */}
+    <div className={styles.spreadsheetBg} aria-hidden="true">
+      <div className={styles.gridLines}>
+        {Array.from({ length: 22 }).map((_, i) => (
+          <div key={`v${i}`} className={styles.gridLineV} style={{ left: `${(i + 1) * 4.76}%` }} />
+        ))}
+        {Array.from({ length: 16 }).map((_, i) => (
+          <div key={`h${i}`} className={styles.gridLineH} style={{ top: `${(i + 1) * 6.25}%` }} />
+        ))}
+      </div>
+      {shimmerCells.map((cell, i) => (
+        <div
+          key={i}
+          className={`${styles.gridCell} ${styles[`gridCell--${cell.type}`]}`}
+          style={{ left: `${cell.col * 4.76}%`, top: `${cell.row * 6.25}%`, animationDelay: `${cell.delay}s`, animationDuration: `${cell.duration}s` }}
+        />
+      ))}
+    </div>
+  );
+}
+
+function Hero() {
+  const heroRef = useRef<HTMLElement>(null);
+  const glowRef = useRef<HTMLDivElement>(null);
+
+  const handleMouseMove = useCallback((e: ReactMouseEvent<HTMLElement>) => {
+    if (!glowRef.current || !heroRef.current) return;
+    const rect = heroRef.current.getBoundingClientRect();
+    glowRef.current.style.setProperty('--glow-x', `${e.clientX - rect.left}px`);
+    glowRef.current.style.setProperty('--glow-y', `${e.clientY - rect.top}px`);
+    glowRef.current.style.opacity = '1';
+  }, []);
+
+  const handleMouseLeave = useCallback(() => {
+    if (glowRef.current) glowRef.current.style.opacity = '0';
+  }, []);
+
+  return (
+    <section className={styles.hero} ref={heroRef} onMouseMove={handleMouseMove} onMouseLeave={handleMouseLeave}>
+      <SpreadsheetBackground />
       <div className={styles.heroBg} />
-      <div className={styles.heroGrid} />
+      <div className={styles.heroGlow} ref={glowRef} />
+      <div className={styles.heroVignette} />
 
       <div className={styles.heroInner}>
-        {/* Left column: editorial text */}
         <div className={styles.heroLeft}>
           <div className={styles.heroPill}>
             <span className={styles.heroPillDot} />
@@ -284,60 +346,166 @@ function Hero() {
           </div>
 
           <h1 className={styles.heroHeadline}>
-            The data grid<br />
-            <em className={styles.heroHeadlineEm}>developers</em><br />
-            actually want.
+            Your spreadsheet.<br />
+            <em className={styles.heroHeadlineEm}>Your framework.</em><br />
+            <span className={styles.heroHeadlineThin}>Zero compromises.</span>
           </h1>
 
           <p className={styles.heroLead}>
-            React, Angular, Vue, or Vanilla JS.
-            Sorting, filtering, editing, spreadsheet
-            selection, clipboard, formulas — all free.
-            No enterprise tier.
+            Every enterprise feature AG Grid locks behind a paywall,
+            shipped free. React, Angular, Vue, Vanilla JS.
+            One API. No asterisks.
           </p>
 
           <div className={styles.heroCta}>
             <Link className={styles.btnPrimary} to="/docs/getting-started/overview">
-              Get started free
+              <span>Get started</span>
+              <span className={styles.btnArrow}>&rarr;</span>
             </Link>
             <Link className={styles.btnGhost} href="https://github.com/alaarab/ogrid">
-              View on GitHub
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z" /></svg>
+              <span>GitHub</span>
             </Link>
           </div>
 
           <RotatingInstallCommand />
 
-          {/* Stat strip */}
           <div className={styles.heroStats}>
             <div className={styles.heroStat}>
               <span className={styles.heroStatNum}>10</span>
-              <span className={styles.heroStatLabel}>Frameworks & UI kits</span>
+              <span className={styles.heroStatLabel}>Packages</span>
             </div>
             <div className={styles.heroStatDivider} />
             <div className={styles.heroStat}>
-              <span className={styles.heroStatNum}>25+</span>
-              <span className={styles.heroStatLabel}>Built-in features</span>
+              <span className={styles.heroStatNum}>93</span>
+              <span className={styles.heroStatLabel}>Formula functions</span>
             </div>
             <div className={styles.heroStatDivider} />
             <div className={styles.heroStat}>
               <span className={styles.heroStatNum}>$0</span>
-              <span className={styles.heroStatLabel}>Enterprise cost</span>
+              <span className={styles.heroStatLabel}>Forever</span>
             </div>
           </div>
         </div>
 
-        {/* Right column: live grid */}
         <div className={styles.heroRight}>
+          <div className={styles.heroGridGlow} />
           <BrowserOnly fallback={<div className={styles.heroGridPlaceholder} />}>
             {() => <HeroGrid />}
           </BrowserOnly>
         </div>
       </div>
 
-      {/* Feature ticker below hero */}
       <FeatureTicker />
     </section>
   );
+}
+
+/* ──────────────────────────────────────────────
+   Scroll Reveal Hook
+   ────────────────────────────────────────────── */
+
+function useScrollReveal<T extends HTMLElement = HTMLElement>(threshold = 0.15) {
+  const ref = useRef<T>(null);
+  const [visible, setVisible] = useState(false);
+
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const observer = new IntersectionObserver(
+      ([entry]) => { if (entry.isIntersecting) { setVisible(true); observer.unobserve(el); } },
+      { threshold }
+    );
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [threshold]);
+
+  return { ref, visible };
+}
+
+/* ──────────────────────────────────────────────
+   Noise Texture SVG Overlay
+   ────────────────────────────────────────────── */
+
+let noiseId = 0;
+function NoiseOverlay({ opacity = 0.03 }: { opacity?: number }) {
+  const id = useMemo(() => `noise-${++noiseId}`, []);
+  return (
+    <svg className={styles.noiseOverlay} style={{ opacity }} aria-hidden="true">
+      <filter id={id}>
+        <feTurbulence type="fractalNoise" baseFrequency="0.65" numOctaves="3" stitchTiles="stitch" />
+      </filter>
+      <rect width="100%" height="100%" filter={`url(#${id})`} />
+    </svg>
+  );
+}
+
+/* ──────────────────────────────────────────────
+   Matrix Rain Canvas (CTA background)
+   ────────────────────────────────────────────── */
+
+const MATRIX_CHARS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+
+function MatrixRain() {
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+
+    let animId: number;
+    const fontSize = 14;
+    let columns: number;
+    let drops: number[];
+
+    function resize() {
+      const dpr = window.devicePixelRatio || 1;
+      canvas.width = canvas.offsetWidth * dpr;
+      canvas.height = canvas.offsetHeight * dpr;
+      ctx!.setTransform(dpr, 0, 0, dpr, 0, 0);
+      columns = Math.floor(canvas.offsetWidth / fontSize);
+      drops = Array(columns).fill(0).map(() => Math.random() * -50);
+    }
+
+    resize();
+    window.addEventListener('resize', resize);
+
+    function draw() {
+      ctx!.fillStyle = 'rgba(0, 0, 0, 0.05)';
+      ctx!.fillRect(0, 0, canvas.offsetWidth, canvas.offsetHeight);
+      ctx!.font = `${fontSize}px monospace`;
+
+      for (let i = 0; i < columns; i++) {
+        const char = MATRIX_CHARS[Math.floor(Math.random() * MATRIX_CHARS.length)];
+        const x = i * fontSize;
+        const y = drops[i] * fontSize;
+        const alpha = 0.06 + Math.random() * 0.1;
+        ctx!.fillStyle = `rgba(58, 184, 118, ${alpha})`;
+        ctx!.fillText(char, x, y);
+
+        if (Math.random() > 0.975) {
+          ctx!.fillStyle = 'rgba(78, 196, 132, 0.45)';
+          ctx!.fillText(char, x, y);
+        }
+
+        if (y > canvas.offsetHeight && Math.random() > 0.985) {
+          drops[i] = 0;
+        }
+        drops[i] += 0.35 + Math.random() * 0.25;
+      }
+      animId = requestAnimationFrame(draw);
+    }
+
+    draw();
+    return () => {
+      cancelAnimationFrame(animId);
+      window.removeEventListener('resize', resize);
+    };
+  }, []);
+
+  return <canvas ref={canvasRef} className={styles.matrixCanvas} />;
 }
 
 /* ──────────────────────────────────────────────
@@ -439,9 +607,11 @@ const grid = new OGrid(document.getElementById('grid'), {
 
 function CodePreviewSection() {
   const [active, setActive] = useState(0);
+  const { ref, visible } = useScrollReveal<HTMLElement>(0.1);
 
   return (
-    <section className={styles.codeSection}>
+    <section ref={ref} className={`${styles.codeSection} ${visible ? styles.revealed : ''}`}>
+      <NoiseOverlay opacity={0.025} />
       <div className={styles.codeSectionInner}>
         <div className={styles.codeSectionLabel}>One API. Four frameworks.</div>
         <h2 className={styles.codeSectionTitle}>
@@ -453,28 +623,32 @@ function CodePreviewSection() {
         </p>
       </div>
 
-      <div className={styles.codeWindow}>
-        <div className={styles.codeWindowChrome}>
-          <span className={styles.chromeDot} />
-          <span className={styles.chromeDot} />
-          <span className={styles.chromeDot} />
-          <div className={styles.codeWindowTabs}>
-            {frameworks.map((fw, i) => (
-              <button
-                key={fw.id}
-                className={`${styles.codeWindowTab} ${i === active ? styles.codeWindowTabActive : ''}`}
-                onClick={() => setActive(i)}
-              >
-                {fw.label}
-              </button>
-            ))}
+      <div className={styles.codeWindowFloat}>
+        <div className={styles.codeWindow}>
+          <div className={styles.codeWindowChrome}>
+            <span className={styles.chromeDot} />
+            <span className={styles.chromeDot} />
+            <span className={styles.chromeDot} />
+            <div className={styles.codeWindowTabs}>
+              {frameworks.map((fw, i) => (
+                <button
+                  key={fw.id}
+                  className={`${styles.codeWindowTab} ${i === active ? styles.codeWindowTabActive : ''}`}
+                  onClick={() => setActive(i)}
+                >
+                  {fw.label}
+                </button>
+              ))}
+            </div>
+          </div>
+          <div className={styles.codeWindowBody}>
+            <CodeBlock language={frameworks[active].id === 'vue' ? 'html' : frameworks[active].id === 'react' ? 'tsx' : 'typescript'}>
+              {getCodeExample(frameworks[active])}
+            </CodeBlock>
           </div>
         </div>
-        <div className={styles.codeWindowBody}>
-          <CodeBlock language={frameworks[active].id === 'vue' ? 'html' : frameworks[active].id === 'react' ? 'tsx' : 'typescript'}>
-            {getCodeExample(frameworks[active])}
-          </CodeBlock>
-        </div>
+        {/* Reflection */}
+        <div className={styles.codeReflection} aria-hidden="true" />
       </div>
     </section>
   );
@@ -485,8 +659,12 @@ function CodePreviewSection() {
    ────────────────────────────────────────────── */
 
 function FeatureBentoSection() {
+  const { ref, visible } = useScrollReveal<HTMLElement>(0.08);
+
   return (
-    <section className={styles.bentoSection}>
+    <section ref={ref} className={`${styles.bentoSection} ${visible ? styles.revealed : ''}`}>
+      <div className={styles.bentoMesh} />
+      <NoiseOverlay opacity={0.035} />
       <div className={styles.bentoHeader}>
         <div className={styles.bentoLabel}>Features</div>
         <h2 className={styles.bentoTitle}>
@@ -494,13 +672,14 @@ function FeatureBentoSection() {
         </h2>
         <p className={styles.bentoSub}>
           25+ features shipped. Zero paywalls.
-          Everything you'd pay $999/dev for elsewhere — built in.
+          Everything you'd pay $999/dev for elsewhere - built in.
         </p>
       </div>
 
       <div className={styles.bentoGrid}>
         {/* Large card: Spreadsheet Selection */}
         <div className={`${styles.bentoCard} ${styles.bentoCardWide} ${styles.bentoCardGreen}`}>
+          <div className={styles.bentoCardInner} />
           <div className={styles.bentoCardTag}>Core differentiator</div>
           <h3 className={styles.bentoCardTitle}>Spreadsheet Selection</h3>
           <p className={styles.bentoCardDesc}>
@@ -518,6 +697,7 @@ function FeatureBentoSection() {
 
         {/* Tall card: Fill Handle */}
         <div className={`${styles.bentoCard} ${styles.bentoCardTall} ${styles.bentoCardDark}`}>
+          <div className={styles.bentoCardInner} />
           <div className={styles.bentoCardTag}>Excel-style</div>
           <h3 className={styles.bentoCardTitle}>Fill Handle</h3>
           <p className={styles.bentoCardDesc}>
@@ -533,6 +713,7 @@ function FeatureBentoSection() {
 
         {/* Small card: Virtual Scrolling */}
         <div className={`${styles.bentoCard} ${styles.bentoCardSmall}`}>
+          <div className={styles.bentoCardInner} />
           <div className={styles.bentoCardTag}>Performance</div>
           <h3 className={styles.bentoCardTitle}>Virtual Scrolling</h3>
           <p className={styles.bentoCardDesc}>10,000+ rows with web worker sort.</p>
@@ -541,6 +722,7 @@ function FeatureBentoSection() {
 
         {/* Small card: Frameworks */}
         <div className={`${styles.bentoCard} ${styles.bentoCardSmall} ${styles.bentoCardBlue}`}>
+          <div className={styles.bentoCardInner} />
           <div className={styles.bentoCardTag}>Cross-framework</div>
           <h3 className={styles.bentoCardTitle}>10 packages</h3>
           <p className={styles.bentoCardDesc}>React · Angular · Vue · Vanilla JS</p>
@@ -551,6 +733,7 @@ function FeatureBentoSection() {
 
         {/* Medium card: Undo/Redo + Clipboard */}
         <div className={`${styles.bentoCard} ${styles.bentoCardMedium}`}>
+          <div className={styles.bentoCardInner} />
           <div className={styles.bentoCardTag}>Productivity</div>
           <h3 className={styles.bentoCardTitle}>Full edit history</h3>
           <p className={styles.bentoCardDesc}>
@@ -565,6 +748,7 @@ function FeatureBentoSection() {
 
         {/* Medium card: Formula Engine */}
         <div className={`${styles.bentoCard} ${styles.bentoCardMedium} ${styles.bentoCardPurple}`}>
+          <div className={styles.bentoCardInner} />
           <div className={styles.bentoCardTag}>Built-in</div>
           <h3 className={styles.bentoCardTitle}>Formula Engine</h3>
           <p className={styles.bentoCardDesc}>
@@ -581,7 +765,38 @@ function FeatureBentoSection() {
 }
 
 /* ──────────────────────────────────────────────
-   Comparison — horizontal price cliff
+   Live Data
+   ────────────────────────────────────────────── */
+
+function LiveDataSection() {
+  const { ref, visible } = useScrollReveal<HTMLElement>(0.08);
+
+  return (
+    <section ref={ref} className={`${styles.liveDataSection} ${visible ? styles.revealed : ''}`}>
+      <div className={styles.liveDataInner}>
+        <div className={styles.liveDataHeader}>
+          <div className={styles.liveDataLabel}>Real-time</div>
+          <h2 className={styles.liveDataTitle}>
+            Built for live data.
+          </h2>
+          <p className={styles.liveDataSub}>
+            Financial dashboards, trading terminals, monitoring systems.
+            OGrid handles high-frequency updates without breaking a sweat.
+          </p>
+        </div>
+        <BrowserOnly fallback={<div style={{ height: 500 }} />}>
+          {() => {
+            const LiveDataDemo = require('../components/LiveDataDemo').default;
+            return <LiveDataDemo />;
+          }}
+        </BrowserOnly>
+      </div>
+    </section>
+  );
+}
+
+/* ──────────────────────────────────────────────
+   Comparison - horizontal price cliff
    ────────────────────────────────────────────── */
 
 const comparisonRows = [
@@ -604,8 +819,11 @@ const comparisonRows = [
 ];
 
 function ComparisonSection() {
+  const { ref, visible } = useScrollReveal<HTMLElement>(0.08);
+
   return (
-    <section className={styles.compSection}>
+    <section ref={ref} className={`${styles.compSection} ${visible ? styles.revealed : ''}`}>
+      <NoiseOverlay opacity={0.02} />
       <div className={styles.compInner}>
         <div className={styles.compHeader}>
           <div className={styles.compLabel}>Comparison</div>
@@ -614,7 +832,7 @@ function ComparisonSection() {
           </h2>
           <p className={styles.compSub}>
             AG Grid charges enterprise rates for spreadsheet-grade UX.
-            OGrid ships all of it — free, forever.
+            OGrid ships all of it - free, forever.
           </p>
         </div>
 
@@ -633,7 +851,11 @@ function ComparisonSection() {
 
           <div className={styles.compTableBody}>
             {comparisonRows.map((row, i) => (
-              <div key={row.name} className={`${styles.compRow} ${i % 2 === 0 ? styles.compRowEven : ''}`}>
+              <div
+                key={row.name}
+                className={`${styles.compRow} ${i % 2 === 0 ? styles.compRowEven : ''}`}
+                style={{ transitionDelay: visible ? `${i * 40}ms` : '0ms' }}
+              >
                 <div className={styles.compRowFeature}>{row.name}</div>
                 <div className={`${styles.compRowCell} ${styles.compRowCellOGrid}`}>
                   <span className={styles.compCheck}>✓</span>
@@ -688,20 +910,31 @@ const frameworkCards = [
 ];
 
 function CTASection() {
+  const { ref, visible } = useScrollReveal<HTMLElement>(0.1);
+
   return (
-    <section className={styles.ctaSection}>
+    <section ref={ref} className={`${styles.ctaSection} ${visible ? styles.revealed : ''}`}>
       <div className={styles.ctaBg} />
+      <BrowserOnly fallback={null}>
+        {() => <MatrixRain />}
+      </BrowserOnly>
+      <div className={styles.ctaVignette} />
       <div className={styles.ctaInner}>
         <h2 className={styles.ctaTitle}>
-          Pick your stack.<br />Ship in minutes.
+          Pick your stack.<br />
+          <span className={styles.ctaTitleGlow}>Ship in minutes.</span>
         </h2>
         <p className={styles.ctaSub}>
           Every package has the same API. Drop it in, configure columns, done.
         </p>
 
         <div className={styles.ctaFrameworks}>
-          {frameworkCards.map((fw) => (
-            <div key={fw.name} className={styles.ctaFrameworkCard}>
+          {frameworkCards.map((fw, i) => (
+            <div
+              key={fw.name}
+              className={styles.ctaFrameworkCard}
+              style={{ transitionDelay: visible ? `${200 + i * 80}ms` : '0ms' }}
+            >
               <div className={styles.ctaFrameworkName}>{fw.name}</div>
               <div className={styles.ctaFrameworkDetail}>{fw.detail}</div>
               <div className={styles.ctaFrameworkCount}>{fw.count}</div>
@@ -709,10 +942,12 @@ function CTASection() {
           ))}
         </div>
 
-        <RotatingInstallCommand />
+        <div className={styles.ctaInstallPulse}>
+          <RotatingInstallCommand />
+        </div>
 
         <div className={styles.ctaActions}>
-          <Link className={styles.btnPrimary} to="/docs/getting-started/overview">
+          <Link className={`${styles.btnPrimary} ${styles.btnPrimaryGlow}`} to="/docs/getting-started/overview">
             Read the docs
           </Link>
           <Link className={styles.btnGhost} href="https://github.com/alaarab/ogrid">
@@ -731,12 +966,13 @@ function CTASection() {
 export default function Home() {
   return (
     <Layout
-      title="The data grid developers actually want."
-      description="Lightweight data grid for React, Angular, Vue, and vanilla JS. Sorting, filtering, editing, spreadsheet selection, clipboard, formulas — all free. No enterprise tier."
+      title="Your spreadsheet. Your framework. Zero compromises."
+      description="Lightweight data grid for React, Angular, Vue, and vanilla JS. Sorting, filtering, editing, spreadsheet selection, clipboard, formulas - all free. No enterprise tier."
     >
       <Hero />
       <CodePreviewSection />
       <FeatureBentoSection />
+      <LiveDataSection />
       <ComparisonSection />
       <CTASection />
     </Layout>

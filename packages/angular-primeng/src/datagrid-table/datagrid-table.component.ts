@@ -739,6 +739,11 @@ import { PopoverCellEditorComponent } from './popover-cell-editor.component';
       user-select: none;
       font-variant-numeric: tabular-nums;
     }
+    /* Reveal column menu trigger on header hover without layout shift.
+       The button always takes up space (visibility: hidden); shown when column is hovered. */
+    @media (hover: hover) {
+      th:hover .column-header-menu-trigger { visibility: visible; }
+    }
   `],
 })
 export class DataGridTableComponent<T = unknown> extends BaseDataGridTableComponent<T> implements OnChanges {

@@ -132,6 +132,14 @@ const DENSITY_CELL_STYLES: Record<string, React.CSSProperties> = {
   comfortable: { padding: '12px 16px' },
 };
 
+// CSS variables injected on the wrapper so inline editors (BaseInlineCellEditor)
+// can inherit density-aware padding/font-size via var(--ogrid-cell-*).
+const DENSITY_CSS_VARS: Record<string, React.CSSProperties> = {
+  compact: { ['--ogrid-cell-padding-vertical' as string]: '4px', ['--ogrid-cell-padding-horizontal' as string]: '8px', ['--ogrid-cell-font-size' as string]: '12px' },
+  normal: { ['--ogrid-cell-padding-vertical' as string]: '6px', ['--ogrid-cell-padding-horizontal' as string]: '10px', ['--ogrid-cell-font-size' as string]: '13px' },
+  comfortable: { ['--ogrid-cell-padding-vertical' as string]: '12px', ['--ogrid-cell-padding-horizontal' as string]: '16px', ['--ogrid-cell-font-size' as string]: '14px' },
+};
+
 // Header cell positioning variants (sticky)
 // Use opaque HEADER_BG so headers fully occlude content scrolling beneath them.
 const HEADER_BASE_SX = {
@@ -201,7 +209,8 @@ const WRAPPER_SCROLL_SX = { display: 'flex', flexDirection: 'column', minHeight:
 // Header cell content wrapper
 const HEADER_CONTENT_FLEX_SX = { display: 'flex', alignItems: 'center', gap: 0.5 } as const;
 
-// Column options button
+// Column options button - always reserves space (visibility: hidden) so it never shifts the sort arrow.
+// On hover-capable devices: hidden by default, revealed when the parent th is hovered.
 const COLUMN_OPTIONS_BUTTON_SX = {
   background: 'transparent',
   border: 'none',
@@ -210,7 +219,6 @@ const COLUMN_OPTIONS_BUTTON_SX = {
   fontSize: '16px',
   lineHeight: 1,
   color: 'text.secondary',
-  opacity: 1,
   transition: 'background-color 0.15s',
   borderRadius: '3px',
   display: 'flex',
@@ -218,10 +226,17 @@ const COLUMN_OPTIONS_BUTTON_SX = {
   justifyContent: 'center',
   minWidth: '20px',
   height: '20px',
+  flexShrink: 0,
+  '@media (hover: hover)': {
+    visibility: 'hidden',
+  },
   '&:hover': {
     bgcolor: 'action.hover',
   },
-} as const;
+  'th:hover &': {
+    visibility: 'visible',
+  },
+};
 
 // Table wrapper
 const TABLE_WRAPPER_SX = { position: 'relative', opacity: 1 } as const;
@@ -550,6 +565,8 @@ function DataGridTableInner<T>(props: IOGridDataGridProps<T>): React.ReactElemen
 
   // Density padding for native cell content (avoids Emotion)
   const cellDensityStyle = DENSITY_CELL_STYLES[density] ?? DENSITY_CELL_STYLES.normal;
+  // CSS variables for density - injected on the wrapper so BaseInlineCellEditor inherits them
+  const densityCssVars = DENSITY_CSS_VARS[density] ?? DENSITY_CSS_VARS.normal;
 
   const renderCellContent = useCallback(
     (item: T, col: IColumnDef<T>, rowIndex: number, colIdx: number): React.ReactNode => {
@@ -662,6 +679,7 @@ function DataGridTableInner<T>(props: IOGridDataGridProps<T>): React.ReactElemen
         className="ogrid-mat-wrapper"
         data-ogrid-scroll-container=""
         sx={wrapperSx}
+        style={densityCssVars}
       >
       <Box sx={WRAPPER_SCROLL_SX}>
       <div style={{ minWidth: allowOverflowX ? minTableWidth : undefined, overflowX: 'clip' }}>

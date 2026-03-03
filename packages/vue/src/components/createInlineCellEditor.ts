@@ -12,7 +12,10 @@ const editorWrapperStyle = {
   height: '100%',
   display: 'flex',
   alignItems: 'center',
-  padding: '0 2px',
+  paddingTop: 'var(--ogrid-cell-padding-vertical, 6px)',
+  paddingBottom: 'var(--ogrid-cell-padding-vertical, 6px)',
+  paddingLeft: 'var(--ogrid-cell-padding-horizontal, 10px)',
+  paddingRight: 'var(--ogrid-cell-padding-horizontal, 10px)',
   boxSizing: 'border-box',
 } as const;
 

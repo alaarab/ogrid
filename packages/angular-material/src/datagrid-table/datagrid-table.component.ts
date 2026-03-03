@@ -581,6 +581,12 @@ import { PopoverCellEditorComponent } from './popover-cell-editor.component';
       font-variant-numeric: tabular-nums;
     }
 
+    /* Reveal column menu trigger on header hover without layout shift.
+       The button always takes up space (visibility: hidden); shown when column is hovered. */
+    @media (hover: hover) {
+      th:hover .column-header-menu-trigger { visibility: visible; }
+    }
+
     /* Angular Material Menu popup dark mode overrides.
        Double-class selector (0,2,0) beats MUI's single-class (0,1,0) defaults. */
     .mat-mdc-menu-panel.mat-mdc-menu-panel {
