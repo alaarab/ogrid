@@ -1,76 +1,32 @@
 # @alaarab/ogrid-angular-radix
 
-Lightweight Angular data grid with sorting, filtering, pagination, column chooser, and CSV export. Built with Angular CDK for overlays.
+OGrid data grid for Angular, built with Angular CDK.
 
-## Installation
+## Install
 
 ```bash
 npm install @alaarab/ogrid-angular-radix
 ```
 
-## Features
-
-- ✅ **Lightweight**: Uses Angular CDK only - no heavy UI framework dependency
-- ✅ **Full-featured**: Sorting, filtering, pagination, column management
-- ✅ **Cell Selection**: Excel-like spreadsheet selection and editing
-- ✅ **Keyboard Navigation**: Arrow keys, Enter, Escape, Tab
-- ✅ **Copy/Paste**: Clipboard integration with Excel-compatible formats
-- ✅ **Fill Handle**: Drag to fill cells like Excel
-- ✅ **Undo/Redo**: Full edit history support
-- ✅ **Context Menu**: Right-click menu for common operations
-- ✅ **Column Resize**: Drag column borders to resize
-- ✅ **Column Reorder**: Drag column headers to reorder
-- ✅ **Customizable**: CSS variables for theming
-
-## Quick Start
+## Usage
 
 ```typescript
 import { Component } from '@angular/core';
 import { OGridComponent } from '@alaarab/ogrid-angular-radix';
 
-interface Employee {
-  id: number;
-  name: string;
-  department: string;
-  salary: number;
-}
-
 @Component({
   selector: 'app-root',
   standalone: true,
   imports: [OGridComponent],
-  template: `
-    <ogrid
-      [props]="{
-        columns: columns,
-        data: data,
-        cellSelection: true,
-        editable: true,
-        statusBar: true
-      }"
-    />
-  `
+  template: `<ogrid [props]="{ columns: columns, data: data, editable: true }" />`,
 })
 export class AppComponent {
   columns = [
-    { columnId: 'id', name: 'ID', type: 'numeric' as const },
-    { columnId: 'name', name: 'Name', type: 'text' as const },
-    { columnId: 'department', name: 'Department', type: 'text' as const, filterable: { type: 'multiSelect' as const } },
-    { columnId: 'salary', name: 'Salary', type: 'numeric' as const, editable: true }
+    { columnId: 'name', name: 'Name', sortable: true },
+    { columnId: 'department', name: 'Department', filterable: { type: 'multiSelect' as const } },
   ];
-
-  data: Employee[] = [
-    { id: 1, name: 'Alice', department: 'Engineering', salary: 120000 },
-    { id: 2, name: 'Bob', department: 'Marketing', salary: 90000 },
-    { id: 3, name: 'Carol', department: 'Engineering', salary: 115000 }
-  ];
+  data = [{ name: 'Alice', department: 'Engineering' }];
 }
 ```
 
-## Documentation
-
-Full documentation available at: https://alaarab.github.io/ogrid
-
-## License
-
-MIT © Ala Arab
+See the [OGrid docs](https://alaarab.github.io/ogrid/) for full documentation.
