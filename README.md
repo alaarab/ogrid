@@ -87,7 +87,7 @@ OGrid gives you every feature AG Grid locks behind an enterprise license -- for 
 - **CSS Containment** -- Automatic `contain: content` on cells; `content-visibility: auto` on off-screen rows
 - **TypeScript Strict** -- Fully generic `<T>` with strict mode; zero `any` leaks
 - **Formula Engine** -- 145 built-in functions (math, stats, text, date, logical, lookup); Excel-like formula bar, cell reference highlighting, dependency graph, and cross-cell recalculation
-- **AI / MCP Integration** -- `@alaarab/ogrid-mcp` connects Claude, Cursor, and other AI assistants to OGrid docs and your running grid
+- **Editor Integration (MCP)** -- `@alaarab/ogrid-mcp` connects your IDE to OGrid docs and lets it read and control a running grid in real time
 
 ## Framework Support
 
@@ -390,17 +390,17 @@ Every feature works the same across all frameworks. Ship consistent behavior reg
 
 UI packages re-export everything from their adapter package (which re-exports from `@alaarab/ogrid-core`) -- one import is all you need.
 
-## AI Integration (MCP)
+## Editor Integration (MCP)
 
-`@alaarab/ogrid-mcp` is a standalone MCP server that gives AI assistants full access to OGrid documentation and lets them read and control a running grid in real time.
+`@alaarab/ogrid-mcp` is a standalone [MCP server](https://modelcontextprotocol.io) that gives your IDE full access to OGrid documentation and lets it read and control a running grid in real time.
 
-### Connect Claude or Cursor to OGrid docs
+### Connect your editor to OGrid docs
 
 ```bash
-# Claude Code (one-time setup)
-claude mcp add ogrid -- npx -y @alaarab/ogrid-mcp
+# One-time setup (any MCP-compatible editor)
+npx -y @alaarab/ogrid-mcp
 
-# Claude Desktop — add to claude_desktop_config.json
+# Or add to your editor's MCP config
 {
   "mcpServers": {
     "ogrid": { "command": "npx", "args": ["-y", "@alaarab/ogrid-mcp"] }
@@ -408,7 +408,7 @@ claude mcp add ogrid -- npx -y @alaarab/ogrid-mcp
 }
 ```
 
-Once connected, your AI assistant can search and read the full OGrid documentation:
+Once connected, your editor can search and read the full OGrid documentation:
 
 ```
 > Which filtering modes does OGrid support?
@@ -421,7 +421,7 @@ Available resources: `ogrid://quick-reference`, `ogrid://docs/{path}`, `ogrid://
 
 ### Live testing bridge
 
-Add `--bridge` to let the AI read and control a **running** OGrid instance:
+Add `--bridge` to let your editor read and control a **running** OGrid instance:
 
 ```bash
 npx @alaarab/ogrid-mcp --bridge
@@ -444,7 +444,7 @@ useEffect(() => {
 }, [data]);
 ```
 
-Now Claude can inspect what's actually rendering, update cells, apply filters, and navigate pages — while you watch the grid update live.
+Now your editor can inspect what's actually rendering, update cells, apply filters, and navigate pages — while you watch the grid update live.
 
 Bridge tools: `list_grids`, `get_grid_state`, `send_grid_command`
 
@@ -509,7 +509,7 @@ npm run build && npm run test:all && npm run lint
 
 6. Open a pull request with a clear description of what changed and why.
 
-See [CLAUDE.md](./CLAUDE.md) for detailed architecture documentation and conventions.
+See [ARCHITECTURE.md](./ARCHITECTURE.md) for detailed architecture documentation and conventions.
 
 ## License
 
