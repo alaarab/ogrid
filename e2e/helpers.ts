@@ -136,7 +136,7 @@ export async function sortColumn(
   const th = page.locator('thead th').filter({ hasText: columnName }).first();
 
   if (isJS(page)) {
-    // JS: click header directly (toggles asc → desc → none)
+    // JS: click header directly (toggles asc  to  desc  to  none)
     await th.click();
     await page.waitForTimeout(300);
     // If we need descending and current is ascending, click again
@@ -201,7 +201,7 @@ export async function changePageSize(page: Page, size: number): Promise<void> {
   const fw = getFramework(page);
 
   if (fw === 'vue-vuetify') {
-    // Vuetify uses a custom VSelect — click to open, then select the option
+    // Vuetify uses a custom VSelect  -  click to open, then select the option
     const selectWrapper = page.locator('.v-select').last();
     await selectWrapper.click();
     await page.waitForTimeout(200);
@@ -273,7 +273,7 @@ export async function clearFilter(page: Page): Promise<void> {
   if (isJS(page)) {
     // Text filter popovers have .ogrid-filter-clear-btn (Apply + Clear row).
     // Multiselect popovers have .ogrid-filter-clear-sel-btn (in-list clear) but no
-    // dedicated "clear all and close" button — click Clear then Apply.
+    // dedicated "clear all and close" button  -  click Clear then Apply.
     const clearBtn = page.locator('.ogrid-filter-clear-btn').first();
     if (await clearBtn.isVisible({ timeout: 500 }).catch(() => false)) {
       await clearBtn.click();
@@ -290,7 +290,7 @@ export async function clearFilter(page: Page): Promise<void> {
     if (isEnabled) {
       await clearBtn.click();
     } else {
-      // Input is already empty in popover — just apply to clear the active filter
+      // Input is already empty in popover  -  just apply to clear the active filter
       await page.getByRole('button', { name: /^apply$/i }).click();
     }
   } else {
@@ -317,7 +317,7 @@ export async function openColumnChooser(page: Page): Promise<void> {
 /**
  * Close the column chooser dropdown.
  * React/Angular/Vue: Escape key dismisses the popover.
- * JS: The dropdown is a toggle — click the "Columns" button again to close.
+ * JS: The dropdown is a toggle  -  click the "Columns" button again to close.
  *     (Escape and clicking outside do NOT close the JS dropdown.)
  */
 export async function closeColumnChooser(page: Page): Promise<void> {
@@ -325,7 +325,7 @@ export async function closeColumnChooser(page: Page): Promise<void> {
   if (fw === 'js') {
     await page.locator('button:has-text("Columns")').click();
   } else if (fw === 'angular-material') {
-    // Angular Material column chooser is a toggle dropdown — click the button
+    // Angular Material column chooser is a toggle dropdown  -  click the button
     // again to close (Escape does not dismiss it).
     await page.getByRole('button', { name: /column visibility/i }).click();
   } else {
@@ -386,7 +386,7 @@ export async function enterCellEdit(page: Page, rowIdx: number, colIdx: number):
 /**
  * Open the column options (⋮) menu for a named column.
  * React/Angular/Vue: button with aria-label "Column options" inside the th.
- * JS: not applicable — skip tests that call this when isJS(page).
+ * JS: not applicable  -  skip tests that call this when isJS(page).
  */
 export async function openColumnOptions(page: Page, columnName: string): Promise<void> {
   const th = page.locator('thead th').filter({ hasText: columnName }).first();
@@ -413,7 +413,7 @@ export async function rightClickCell(page: Page, rowIdx: number, colIdx: number)
 /**
  * Dismiss an open context menu by clicking outside it.
  * Angular Material: the overlay is position:fixed;inset:0 and covers the
- * whole page — click the overlay directly at its top-left corner (which is
+ * whole page  -  click the overlay directly at its top-left corner (which is
  * safely outside the context menu that appears near the right-clicked cell).
  * Other frameworks: click the h1 heading or press Escape.
  */
@@ -549,7 +549,7 @@ export function supportsRichSelect(page: Page): boolean {
 export function supportsEscapeCancel(page: Page): boolean {
   const fw = getFramework(page);
   // Vue Vuetify inline editor does not cancel on Escape.
-  // JS inline editor commits (not cancels) on Escape — cancel not supported.
+  // JS inline editor commits (not cancels) on Escape  -  cancel not supported.
   return fw !== 'vue-vuetify' && fw !== 'js';
 }
 

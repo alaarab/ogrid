@@ -1,19 +1,19 @@
 /**
  * Recursive descent parser: converts Token[] to an ASTNode.
  *
- * Grammar (precedence low → high):
- *   expression     → comparison
- *   comparison     → concat (('>' | '<' | '>=' | '<=' | '=' | '<>') concat)*
- *   concat         → addition ('&' addition)*
- *   addition       → multiplication (('+' | '-') multiplication)*
- *   multiplication → power (('*' | '/') power)*
- *   power          → unary ('^' unary)*
- *   unary          → ('-' | '+') unary | postfix
- *   postfix        → primary '%'?
- *   primary        → NUMBER | STRING | BOOLEAN | cellRefOrRange | functionCall
+ * Grammar (precedence low  to  high):
+ *   expression      to  comparison
+ *   comparison      to  concat (('>' | '<' | '>=' | '<=' | '=' | '<>') concat)*
+ *   concat          to  addition ('&' addition)*
+ *   addition        to  multiplication (('+' | '-') multiplication)*
+ *   multiplication  to  power (('*' | '/') power)*
+ *   power           to  unary ('^' unary)*
+ *   unary           to  ('-' | '+') unary | postfix
+ *   postfix         to  primary '%'?
+ *   primary         to  NUMBER | STRING | BOOLEAN | cellRefOrRange | functionCall
  *                   | '(' expression ')'
- *   cellRefOrRange → CELL_REF (':' CELL_REF)?
- *   functionCall   → FUNCTION '(' (expression (',' expression)*)? ')'
+ *   cellRefOrRange  to  CELL_REF (':' CELL_REF)?
+ *   functionCall    to  FUNCTION '(' (expression (',' expression)*)? ')'
  */
 
 import type { Token, ASTNode, BinaryOp } from './types';
@@ -22,10 +22,10 @@ import { parseCellRef, parseRange } from './cellAddressUtils';
 
 /**
  * Parse an array of tokens into an AST.
- * Never throws — returns an ErrorNode on parse errors.
+ * Never throws  -  returns an ErrorNode on parse errors.
  *
  * @param tokens - The token array from the tokenizer.
- * @param namedRanges - Optional map of named ranges (name → ref string like "A1:B10").
+ * @param namedRanges - Optional map of named ranges (name  to  ref string like "A1:B10").
  */
 export function parse(tokens: Token[], namedRanges?: Map<string, string>): ASTNode {
   let pos = 0;

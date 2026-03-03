@@ -33,7 +33,7 @@ export abstract class BaseColumnHeaderFilterComponent {
   @Input({ required: true }) columnKey!: string;
   @Input({ required: true }) columnName!: string;
 
-  // Signal-backed inputs used by computed() — plain @Input properties aren't tracked by computed()
+  // Signal-backed inputs used by computed()  -  plain @Input properties aren't tracked by computed()
   private readonly _filterType = signal<ColumnFilterType>('none');
   private readonly _selectedValues = signal<string[] | undefined>(undefined);
   private readonly _options = signal<string[] | undefined>(undefined);
@@ -65,7 +65,7 @@ export abstract class BaseColumnHeaderFilterComponent {
   set dateValue(v: IDateFilterValue | undefined) { this._dateValue.set(v); }
   get dateValue(): IDateFilterValue | undefined { return this._dateValue(); }
 
-  // Plain inputs (not used in computed() — no signal wrapper needed)
+  // Plain inputs (not used in computed()  -  no signal wrapper needed)
   @Input() isSorted: boolean = false;
   @Input() isSortedDescending: boolean = false;
   @Input() onSort: (() => void) | undefined = undefined;

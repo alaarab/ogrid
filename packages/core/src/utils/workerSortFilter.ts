@@ -164,7 +164,7 @@ export function processClientSideDataAsync<T>(
       case 'date':
         workerFilters[colIdx] = { type: 'date', value: { from: val.value.from, to: val.value.to } };
         break;
-      // 'people' filter has a UserLike object — fall back to sync
+      // 'people' filter has a UserLike object  -  fall back to sync
       case 'people':
         return Promise.resolve(processClientSideData(data, columns, filters, sortBy, sortDirection));
     }

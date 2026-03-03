@@ -78,7 +78,7 @@ export function useColumnResize<T>({
 
     // Lock all column widths to their current DOM widths on first resize.
     // With table-layout:auto, resizing one column causes the browser to compress others.
-    // Snapshotting all widths prevents this — only the dragged column changes.
+    // Snapshotting all widths prevents this  -  only the dragged column changes.
     const thead = thEl?.closest('thead');
     if (thead) {
       const allThs = thead.querySelectorAll<HTMLElement>('th[data-column-id]');

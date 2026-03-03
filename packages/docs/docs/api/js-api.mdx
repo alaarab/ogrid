@@ -6,7 +6,7 @@ description: Full API reference for @alaarab/ogrid-js
 
 # Vanilla JS API
 
-Complete reference for `@alaarab/ogrid-js` — the framework-free data grid.
+Complete reference for `@alaarab/ogrid-js`  -  the framework-free data grid.
 
 ## OGrid Class
 
@@ -31,7 +31,7 @@ const grid = new OGrid(container, options);
 | `grid.api` | The imperative API object (see [API Methods](#api-methods) below). |
 | `grid.on(event, handler)` | Subscribe to a grid event. Returns `void`. |
 | `grid.off(event, handler)` | Unsubscribe from a grid event. |
-| `grid.destroy()` | Tear down the grid — removes DOM, listeners, and ResizeObservers. |
+| `grid.destroy()` | Tear down the grid  -  removes DOM, listeners, and ResizeObservers. |
 
 ---
 
@@ -45,8 +45,8 @@ All configuration is passed to the constructor.
 |--------|------|---------|-------------|
 | `columns` | `(IColumnDef<T> \| IColumnGroupDef<T>)[]` | **required** | Column definitions. |
 | `getRowId` | `(item: T) => RowId` | **required** | Returns a unique `string \| number` per row. |
-| `data` | `T[]` | — | Client-side data. Mutually exclusive with `dataSource`. |
-| `dataSource` | `IDataSource<T>` | — | Server-side data source. Mutually exclusive with `data`. |
+| `data` | `T[]` |  -  | Client-side data. Mutually exclusive with `dataSource`. |
+| `dataSource` | `IDataSource<T>` |  -  | Server-side data source. Mutually exclusive with `data`. |
 
 ### Pagination & Sorting
 
@@ -54,8 +54,8 @@ All configuration is passed to the constructor.
 |--------|------|---------|-------------|
 | `page` | `number` | `1` | Initial page (1-based). |
 | `pageSize` | `number` | `20` | Rows per page. |
-| `sort` | `{ field: string; direction: 'asc' \| 'desc' }` | — | Initial sort state. |
-| `filters` | `IFilters` | — | Initial filter state. |
+| `sort` | `{ field: string; direction: 'asc' \| 'desc' }` |  -  | Initial sort state. |
+| `filters` | `IFilters` |  -  | Initial filter state. |
 
 ### Interaction
 
@@ -63,9 +63,9 @@ All configuration is passed to the constructor.
 |--------|------|---------|-------------|
 | `editable` | `boolean` | `false` | Enable inline cell editing. |
 | `cellSelection` | `boolean` | `false` | Enable spreadsheet-style cell/range selection. |
-| `rowSelection` | `'single' \| 'multiple'` | — | Row checkbox selection mode. |
-| `selectedRows` | `Set<RowId>` | — | Controlled selected row IDs. |
-| `pinnedColumns` | `Record<string, 'left' \| 'right'>` | — | Pin columns to left/right edges. |
+| `rowSelection` | `'single' \| 'multiple'` |  -  | Row checkbox selection mode. |
+| `selectedRows` | `Set<RowId>` |  -  | Controlled selected row IDs. |
+| `pinnedColumns` | `Record<string, 'left' \| 'right'>` |  -  | Pin columns to left/right edges. |
 | `visibleColumns` | `Set<string>` | all | Initially visible column IDs. |
 
 ### Layout
@@ -74,9 +74,9 @@ All configuration is passed to the constructor.
 |--------|------|---------|-------------|
 | `layoutMode` | `'fill' \| 'content'` | `'fill'` | `'fill'` stretches to container; `'content'` sizes to data. |
 | `suppressHorizontalScroll` | `boolean` | `false` | Prevent horizontal scrollbar. |
-| `sideBar` | `boolean \| ISideBarDef` | — | Show sidebar with columns/filters panels. |
+| `sideBar` | `boolean \| ISideBarDef` |  -  | Show sidebar with columns/filters panels. |
 | `emptyMessage` | `string` | `'No data'` | Custom empty state text. |
-| `aria-label` | `string` | — | Accessible label for the grid. |
+| `aria-label` | `string` |  -  | Accessible label for the grid. |
 
 ### Callbacks
 
@@ -175,11 +175,11 @@ The JS package extends the core `IColumnDef<T>` with DOM-aware fields:
 
 | Field | Type | Description |
 |-------|------|-------------|
-| `renderCell` | `(cell: HTMLTableCellElement, item: T, value: unknown) => void` | Custom cell renderer — mutate the `<td>` DOM directly. |
+| `renderCell` | `(cell: HTMLTableCellElement, item: T, value: unknown) => void` | Custom cell renderer  -  mutate the `<td>` DOM directly. |
 | `cellStyle` | `Partial<CSSStyleDeclaration>` | Inline styles applied to each cell. |
 | `cellEditor` | `string \| (container: HTMLElement, params: object) => { getValue: () => unknown; destroy: () => void }` | Built-in editor name (`'text'`, `'select'`, `'richSelect'`, `'checkbox'`, `'date'`) or a factory function for custom editors. |
 
-All other `IColumnDef` fields (`columnId`, `name`, `sortable`, `filterable`, `type`, `editable`, `valueFormatter`, `valueGetter`, `valueParser`, `minWidth`, `defaultWidth`, `idealWidth`, `pinned`, `required`, `defaultVisible`) are identical to the React version — see [Column Definitions](./column-def).
+All other `IColumnDef` fields (`columnId`, `name`, `sortable`, `filterable`, `type`, `editable`, `valueFormatter`, `valueGetter`, `valueParser`, `minWidth`, `defaultWidth`, `idealWidth`, `pinned`, `required`, `defaultVisible`) are identical to the React version  -  see [Column Definitions](./column-def).
 
 ---
 

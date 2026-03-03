@@ -10,7 +10,7 @@ export interface IColumnChooserProps {
   columns: IColumnDefinition[];
   visibleColumns: Set<string>;
   onVisibilityChange: (columnKey: string, visible: boolean) => void;
-  /** Optional batch setter — used by select-all / clear-all for a single state update. */
+  /** Optional batch setter  -  used by select-all / clear-all for a single state update. */
   onSetVisibleColumns?: (columns: Set<string>) => void;
   className?: string;
 }

@@ -114,7 +114,7 @@ export function calculateDropTarget(
     targetIndex = last.orderIndex + 1;
     indicatorX = last.right;
   } else {
-    // Between two targets — find the boundary
+    // Between two targets  -  find the boundary
     let matchIndex = -1;
     for (let i = 0; i < targets.length - 1; i++) {
       if (mouseX >= targets[i].midX && mouseX < targets[i + 1].midX) {

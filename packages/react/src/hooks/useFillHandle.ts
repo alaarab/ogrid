@@ -70,10 +70,10 @@ export function useFillHandle<T>(params: UseFillHandleParams<T>): UseFillHandleR
     fillDragEndRef.current = { endRow: fillDrag.startRow, endCol: fillDrag.startCol };
     liveFillRangeRef.current = null;
 
-    /** Set of currently drag-marked HTMLElements — avoids O(n) full DOM scan on clear. */
+    /** Set of currently drag-marked HTMLElements  -  avoids O(n) full DOM scan on clear. */
     const markedCells = new Set<Element>();
 
-    /** Cell lookup index built on drag start — O(1) lookups per frame. */
+    /** Cell lookup index built on drag start  -  O(1) lookups per frame. */
     let cellIndex = buildCellIndex(wrapperRef.current);
 
     const applyDragAttrs = (range: ISelectionRange) => {
@@ -95,12 +95,12 @@ export function useFillHandle<T>(params: UseFillHandleParams<T>): UseFillHandleR
         }
       }
 
-      // Look up only cells in the new range — O(range size) via Map lookup
+      // Look up only cells in the new range  -  O(range size) via Map lookup
       for (let r = minR; r <= maxR; r++) {
         for (let c = minC; c <= maxC; c++) {
           const key = `${r},${c + colOff}`;
           let el = cellIndex?.get(key);
-          // Handle virtual scroll recycling — if element is stale, rebuild index once
+          // Handle virtual scroll recycling  -  if element is stale, rebuild index once
           if (el && !el.isConnected) {
             cellIndex = buildCellIndex(wrapperRef.current);
             el = cellIndex.get(key);
@@ -228,7 +228,7 @@ export function useFillHandle<T>(params: UseFillHandleParams<T>): UseFillHandleR
     formulaOptionsRef,
   ]);
 
-  // Ref mirror — keeps handleFillHandleMouseDown stable across selection changes
+  // Ref mirror  -  keeps handleFillHandleMouseDown stable across selection changes
   const selectionRangeRef = useRef(selectionRange);
   selectionRangeRef.current = selectionRange;
 

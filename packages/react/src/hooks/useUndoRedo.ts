@@ -14,9 +14,9 @@ export interface UseUndoRedoResult<T> {
   redo: () => void;
   canUndo: boolean;
   canRedo: boolean;
-  /** Start a batch — all changes until endBatch() are grouped as one undo step. */
+  /** Start a batch  -  all changes until endBatch() are grouped as one undo step. */
   beginBatch: () => void;
-  /** End a batch — commits the accumulated changes as a single undo entry. */
+  /** End a batch  -  commits the accumulated changes as a single undo entry. */
   endBatch: () => void;
   /** The configured maximum undo stack depth. */
   maxUndoDepth: number;

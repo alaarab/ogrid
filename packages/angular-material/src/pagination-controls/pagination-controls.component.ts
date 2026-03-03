@@ -3,7 +3,7 @@ import { BasePaginationControlsComponent } from '@alaarab/ogrid-angular';
 
 /**
  * Pagination controls component using Angular Material styling.
- * Standalone component with inline template — no Angular Material dependency for pagination.
+ * Standalone component with inline template  -  no Angular Material dependency for pagination.
  */
 @Component({
   selector: 'ogrid-pagination-controls',

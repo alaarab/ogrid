@@ -178,11 +178,11 @@ export function createOGridTests(OGridComponent: new () => OGridInstance): void 
 
     it('isLoadingResolved is false for client-side mode', () => {
       const comp = createComponent();
-      // Client-side data — serverLoading is false, no dataSource
+      // Client-side data  -  serverLoading is false, no dataSource
       expect(comp._testService.isLoadingResolved()).toBe(false);
     });
 
-    // Note: async onFetchError tests removed — Angular signal effects don't properly
+    // Note: async onFetchError tests removed  -  Angular signal effects don't properly
     // trigger in mocked test context. These need proper TestBed-based tests.
   });
 

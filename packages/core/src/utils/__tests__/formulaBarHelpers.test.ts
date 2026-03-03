@@ -150,7 +150,7 @@ describe('insertReferenceAtCursor', () => {
   });
 
   it('handles dollar-sign tokens when replacing', () => {
-    // Partial $A typed → replaces $A with B2
+    // Partial $A typed  to  replaces $A with B2
     const result = insertReferenceAtCursor('=SUM($A', 7, 'B2');
     expect(result.text).toBe('=SUM(B2');
     expect(result.cursorPos).toBe(7);

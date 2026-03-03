@@ -5,62 +5,56 @@ title: Accessibility
 
 # Accessibility
 
-OGrid is built with accessibility as a core principle, meeting WCAG 2.1 AA standards. All components support keyboard navigation, screen readers, and high contrast modes.
+Good accessibility isn't just compliance — it's building software that works for everyone. A keyboard user in a tight workflow shouldn't have to reach for the mouse. A screen reader user deserves the same experience as anyone else.
 
-## WCAG 2.1 AA Compliance
+OGrid is built with this in mind. Keyboard navigation, screen reader support, high contrast mode, and ARIA semantics are all baked in — you don't configure them, you just benefit from them.
 
-OGrid implements the following WCAG 2.1 AA guidelines:
+## What's built in by default
 
-### Perceivable
+You get all of this without any extra setup:
 
-- **1.3.1 Info and Relationships** — Semantic HTML (`<table>`, `<thead>`, `<tbody>`, `<th>`, `<td>`) with proper ARIA roles
-- **1.4.1 Use of Color** — Focus indicators use both color and visible outlines (2px solid)
-- **1.4.3 Contrast (Minimum)** — All text and interactive elements meet 4.5:1 contrast ratio
-- **1.4.11 Non-text Contrast** — Focus indicators and UI components meet 3:1 contrast
+- Full keyboard navigation — arrow keys, Tab, Home/End, Ctrl+Arrow, all working like a spreadsheet
+- Screen reader announcements for sort, filter, edit, selection, and pagination changes
+- Proper ARIA roles and attributes on the grid, rows, cells, and headers
+- `:focus-visible` indicators so keyboard users always know where they are
+- Focus trapping in dropdowns and popovers (Escape always gets you out)
+- High contrast mode support via CSS custom properties with system color fallbacks
+- Semantic HTML — real `<table>`, `<thead>`, `<th>`, `<td>` elements that assistive tech understands
 
-### Operable
+The one thing you do need to add: an `aria-label` on the grid. It's one prop.
 
-- **2.1.1 Keyboard** — All functionality available via keyboard
-- **2.1.2 No Keyboard Trap** — Focus can always escape modal dialogs and popovers
-- **2.4.3 Focus Order** — Logical tab order through interactive elements
-- **2.4.7 Focus Visible** — `:focus-visible` styles on all interactive elements
+```tsx
+<OGrid
+  data={products}
+  columns={columns}
+  getRowId={(item) => item.id}
+  aria-label="Product catalog"
+/>
+```
 
-### Understandable
+## Keyboard navigation
 
-- **3.2.1 On Focus** — No unexpected context changes when elements receive focus
-- **3.2.2 On Input** — No automatic context changes during user input
-- **3.3.2 Labels or Instructions** — All form controls have associated `<label>` elements
+OGrid uses Excel-style keyboard shortcuts, so if your users know spreadsheets, they already know how to navigate.
 
-### Robust
-
-- **4.1.2 Name, Role, Value** — All UI components use proper ARIA attributes
-- **4.1.3 Status Messages** — ARIA live regions announce dynamic content changes
-
-## Keyboard Navigation
-
-OGrid provides Excel-style keyboard navigation for all grid interactions.
-
-### Arrow Key Navigation
+### Moving around
 
 | Key | Action |
 |-----|--------|
-| `↑` `↓` `←` `→` | Move active cell one cell in the direction pressed |
-| `Ctrl+↑` / `Ctrl+↓` | Jump to first/last row in current column |
-| `Ctrl+←` / `Ctrl+→` | Jump to first/last column in current row |
-| `Home` | Jump to first column in current row |
-| `End` | Jump to last column in current row |
-| `Ctrl+Home` | Jump to first cell (top-left) |
-| `Ctrl+End` | Jump to last cell (bottom-right) |
+| `↑` `↓` `←` `→` | Move active cell |
+| `Ctrl+↑` / `Ctrl+↓` | Jump to first/last row in column |
+| `Ctrl+←` / `Ctrl+→` | Jump to first/last column in row |
+| `Home` | First column in row |
+| `End` | Last column in row |
+| `Ctrl+Home` | Top-left cell |
+| `Ctrl+End` | Bottom-right cell |
 
-### Selection
+### Selecting cells
 
 | Key | Action |
 |-----|--------|
-| `Shift+↑` `↓` `←` `→` | Extend cell selection range |
-| `Shift+Home` | Extend selection to first column |
-| `Shift+End` | Extend selection to last column |
-| `Shift+Ctrl+Home` | Extend selection to top-left corner |
-| `Shift+Ctrl+End` | Extend selection to bottom-right corner |
+| `Shift+↑↓←→` | Extend selection |
+| `Shift+Home` / `Shift+End` | Extend selection to row edge |
+| `Shift+Ctrl+Home` / `Shift+Ctrl+End` | Extend to grid corner |
 | `Ctrl+A` | Select all cells |
 | `Space` (on checkbox column) | Toggle row selection |
 
@@ -68,77 +62,24 @@ OGrid provides Excel-style keyboard navigation for all grid interactions.
 
 | Key | Action |
 |-----|--------|
-| `Enter` | Start editing active cell (if editable) |
-| `F2` | Start editing active cell (if editable) |
-| `Escape` | Cancel editing and revert changes |
-| `Enter` (while editing) | Commit changes and move down |
-| `Tab` (while editing) | Commit changes and move right |
-| `Shift+Tab` (while editing) | Commit changes and move left |
+| `Enter` or `F2` | Start editing the active cell |
+| `Escape` | Cancel edit, revert value |
+| `Enter` (while editing) | Commit and move down |
+| `Tab` / `Shift+Tab` | Commit and move right/left |
 
-### Clipboard
+### Everything else
 
 | Key | Action |
 |-----|--------|
-| `Ctrl+C` / `Cmd+C` | Copy selected cells |
-| `Ctrl+X` / `Cmd+X` | Cut selected cells |
-| `Ctrl+V` / `Cmd+V` | Paste clipboard content |
+| `Ctrl+C` / `Ctrl+X` / `Ctrl+V` | Copy, cut, paste |
 | `Delete` | Clear selected cells |
+| `Ctrl+Z` / `Ctrl+Y` | Undo / redo |
+| `Shift+F10` | Open context menu |
+| `Enter` / `Space` on column header | Toggle sort |
 
-### Undo/Redo
+## ARIA markup
 
-| Key | Action |
-|-----|--------|
-| `Ctrl+Z` / `Cmd+Z` | Undo last edit |
-| `Ctrl+Y` / `Cmd+Shift+Z` | Redo last undone edit |
-
-### Context Menu
-
-| Key | Action |
-|-----|--------|
-| `Shift+F10` | Open context menu for active cell |
-| `Escape` | Close context menu |
-| `↑` `↓` | Navigate menu items |
-| `Enter` | Execute selected menu item |
-
-### Column Headers
-
-| Key | Action |
-|-----|--------|
-| `Enter` / `Space` | Toggle sort on focused column header |
-| `Tab` | Move focus to next interactive element (sort/filter buttons) |
-| `Shift+Tab` | Move focus to previous interactive element |
-
-### Pagination
-
-| Key | Action |
-|-----|--------|
-| `Tab` | Navigate between pagination buttons and page size dropdown |
-| `Enter` / `Space` | Activate focused button |
-| `←` `→` | Navigate page number buttons |
-
-### Column Chooser
-
-| Key | Action |
-|-----|--------|
-| `Enter` / `Space` | Open/close column chooser dropdown |
-| `↑` `↓` | Navigate column list |
-| `Space` | Toggle column visibility |
-| `Escape` | Close dropdown |
-
-### Filters
-
-| Key | Action |
-|-----|--------|
-| `Enter` / `Space` | Open filter popover |
-| `Tab` | Navigate filter inputs |
-| `Enter` | Apply filter |
-| `Escape` | Close filter popover |
-
-## ARIA Attributes
-
-OGrid uses comprehensive ARIA attributes for screen reader support.
-
-### DataGridTable
+The grid renders with full ARIA attributes so assistive technologies have the context they need.
 
 ```html
 <div role="grid" aria-label="Product catalog" aria-rowcount="1000">
@@ -151,286 +92,89 @@ OGrid uses comprehensive ARIA attributes for screen reader support.
       </tr>
     </thead>
     <tbody>
-      <tr role="row" aria-rowindex="1">
-        <td role="gridcell" tabindex="-1">Widget</td>
+      <tr role="row" aria-rowindex="1" aria-selected="false">
+        <td role="gridcell" tabindex="-1">Widget A</td>
       </tr>
     </tbody>
   </table>
 </div>
 ```
 
-| Attribute | Element | Purpose |
-|-----------|---------|---------|
-| `role="grid"` | Grid wrapper | Identifies the grid container |
-| `role="row"` | `<tr>` | Identifies table rows |
-| `role="columnheader"` | `<th>` | Identifies column headers |
-| `role="gridcell"` | `<td>` | Identifies data cells |
-| `aria-label` | Grid wrapper | Provides accessible name for the grid |
-| `aria-rowcount` | Grid wrapper | Total number of rows (server-side pagination) |
-| `aria-rowindex` | `<tr>` | Row's position in the full dataset (1-indexed) |
-| `aria-sort` | `<th>` | Current sort state (`"ascending"`, `"descending"`, `"none"`) |
-| `aria-colindex` | `<th>`, `<td>` | Column's position (1-indexed) |
-| `tabindex="-1"` | `<td>` | Enables programmatic focus for keyboard navigation |
-
-### StatusBar
-
-```html
-<div role="status" aria-live="polite">
-  <span>Rows: 1,000</span>
-  <span>Selected: 5</span>
-</div>
-```
+Key attributes and what they do:
 
 | Attribute | Purpose |
 |-----------|---------|
-| `role="status"` | Identifies status information |
-| `aria-live="polite"` | Announces changes when user is idle (non-intrusive) |
+| `role="grid"` | Identifies the interactive grid container |
+| `aria-label` | Gives the grid an accessible name |
+| `aria-rowcount` | Total rows (useful for server-side pagination where not all rows are in the DOM) |
+| `aria-rowindex` | Row position in the full dataset |
+| `aria-sort` | Current sort state on column headers |
+| `aria-selected` | Whether a row is selected |
+| `aria-expanded` | Open/closed state of filter dropdowns |
+| `aria-current="page"` | Current page in pagination |
 
-### PaginationControls
+The status bar uses `role="status"` with `aria-live="polite"` — it announces changes without interrupting what the user is doing.
 
-```html
-<nav role="navigation" aria-label="Pagination">
-  <button aria-label="First page" aria-disabled="true">«</button>
-  <button aria-label="Previous page" aria-disabled="true">‹</button>
-  <button aria-label="Page 1" aria-current="page">1</button>
-  <button aria-label="Page 2">2</button>
-  <button aria-label="Next page">›</button>
-  <button aria-label="Last page">»</button>
-</nav>
-```
+## Screen reader support
 
-| Attribute | Purpose |
-|-----------|---------|
-| `role="navigation"` | Identifies pagination controls |
-| `aria-label="Pagination"` | Provides context for screen readers |
-| `aria-label` (buttons) | Descriptive labels for icon-only buttons |
-| `aria-current="page"` | Identifies the current page |
-| `aria-disabled` | Indicates disabled state |
+OGrid announces meaningful state changes:
 
-### ColumnChooser
-
-```html
-<button aria-expanded="false" aria-haspopup="listbox">
-  Column Visibility (3 of 5)
-</button>
-<div role="dialog" aria-label="Column visibility">
-  <input type="checkbox" id="col-name" />
-  <label for="col-name">Product Name</label>
-</div>
-```
-
-| Attribute | Purpose |
-|-----------|---------|
-| `aria-expanded` | Indicates dropdown open/closed state |
-| `aria-haspopup="listbox"` | Indicates the button triggers a listbox |
-| `role="dialog"` | Identifies the dropdown as a dialog |
-| `aria-label="Column visibility"` | Provides context for the dialog |
-
-### ColumnHeaderFilter
-
-```html
-<th scope="col">
-  <button aria-label="Sort by Product Name, currently unsorted">
-    Product Name
-  </button>
-  <button aria-label="Filter Product Name" aria-expanded="false">
-    ▼
-  </button>
-</th>
-```
-
-| Attribute | Purpose |
-|-----------|---------|
-| `scope="col"` | Associates header with its column |
-| `aria-label` (sort button) | Describes current sort state |
-| `aria-label` (filter button) | Describes filter action |
-| `aria-expanded` | Indicates filter popover open/closed state |
-
-### Editable Cells
-
-```html
-<td role="gridcell" aria-readonly="false" tabindex="-1">
-  <input aria-label="Edit Product Name" />
-</td>
-```
-
-| Attribute | Purpose |
-|-----------|---------|
-| `aria-readonly="false"` | Indicates cell is editable |
-| `aria-label` (input) | Provides context for screen readers |
-
-## Screen Reader Support
-
-OGrid is tested with the following screen readers:
-
-- **NVDA** (Windows) — Latest version
-- **JAWS** (Windows) — Latest version
-- **VoiceOver** (macOS) — Built-in
-- **Narrator** (Windows) — Built-in
-- **TalkBack** (Android) — Built-in
-
-### Announcements
-
-Screen readers announce the following information:
-
-#### Grid Navigation
-
-- **Cell activation:** "Product Name, cell, row 1, column 2"
-- **Sort change:** "Sorted by Product Name, ascending"
-- **Filter applied:** "Filtered by Status, 3 results"
+- **Navigation:** "Product Name, cell, row 1, column 2"
+- **Sort:** "Sorted by Product Name, ascending"
+- **Edit:** "Editing Salary, row 3"
+- **Value change:** "Salary changed from $68,000 to $72,000"
+- **Pagination:** "Showing 21 to 40 of 250 rows, page 2 of 13"
 - **Selection:** "5 rows selected"
 
-#### Editing
+Tested with: NVDA and JAWS (Windows), VoiceOver (macOS), Narrator (Windows).
 
-- **Edit mode:** "Editing Product Name, row 1, column 2"
-- **Value changed:** "Product Name changed from Widget to Gadget"
-- **Validation error:** "Invalid value: Price must be a positive number"
+## Providing extra context
 
-#### Pagination
-
-- **Page change:** "Showing 21 to 40 of 250 rows, page 2 of 13"
-- **Page size change:** "Page size changed to 50 rows per page"
-
-#### Column Visibility
-
-- **Column hidden:** "Product Name column hidden"
-- **Column shown:** "Product Name column shown"
-
-## Focus Management
-
-OGrid implements advanced focus management for optimal keyboard experience.
-
-### Focus Visible
-
-All interactive elements use `:focus-visible` (not `:focus`) to show focus indicators only when navigating via keyboard, not when clicking with a mouse.
-
-```scss
-.dataTable tbody tr {
-  outline: none;
-
-  &:focus-visible {
-    outline: 2px solid var(--ogrid-accent, #0078d4);
-    outline-offset: -2px;
-  }
-}
-```
-
-### Focus Trap
-
-Modal dialogs and popovers trap focus within their boundaries:
-- `Tab` cycles through interactive elements inside the dialog
-- `Shift+Tab` cycles backwards
-- `Escape` closes the dialog and returns focus to the trigger element
-
-### Focus Restoration
-
-When closing dialogs, popovers, or exiting edit mode:
-- Focus returns to the element that triggered the action
-- Active cell focus is restored after pagination or sorting
-
-## High Contrast Mode
-
-OGrid supports Windows High Contrast Mode and other forced color schemes.
-
-### Custom Properties
-
-All colors use CSS custom properties with fallbacks:
-
-```css
---ogrid-bg: #ffffff;              /* Background */
---ogrid-fg: #242424;              /* Foreground text */
---ogrid-border: #e0e0e0;          /* Borders */
---ogrid-accent: #0078d4;          /* Focus indicators, primary actions */
---ogrid-bg-subtle: #f3f2f1;       /* Header background */
-```
-
-### High Contrast Support
-
-In high contrast mode:
-- Focus indicators use system colors (`Highlight`, `HighlightText`)
-- Borders use system colors (`ButtonText`, `GrayText`)
-- Icons and text remain visible
-
-## Accessible Usage Examples
-
-### Basic Accessible Grid
+For grids embedded in a page with other content, it helps to connect the grid to surrounding descriptive text:
 
 ```tsx
-import { OGrid } from '@alaarab/ogrid-react-radix';
-
-function AccessibleGrid() {
-  return (
-    <OGrid
-      data={products}
-      columns={columns}
-      getRowId={(item) => item.id}
-      aria-label="Product catalog"
-      rowSelection="multiple"
-      editable={true}
-    />
-  );
-}
+<div>
+  <h2 id="orders-heading">Recent Orders</h2>
+  <p id="orders-description">
+    Your last 30 days of orders. Use arrow keys to navigate, Enter to edit.
+  </p>
+  <OGrid
+    data={orders}
+    columns={columns}
+    getRowId={(item) => item.id}
+    aria-labelledby="orders-heading"
+    aria-describedby="orders-description"
+  />
+</div>
 ```
 
-### With Descriptive Labels
+If you need to announce dynamic state changes from outside the grid (selection counts, save confirmations), use an ARIA live region alongside it:
 
 ```tsx
-import { OGrid } from '@alaarab/ogrid-react-radix';
-
-function GridWithLabels() {
-  return (
-    <div>
-      <h2 id="product-grid-heading">Product Catalog</h2>
-      <p id="product-grid-description">
-        Browse and manage your product inventory. Use arrow keys to navigate,
-        Enter to edit, and Space to select rows.
-      </p>
-      <OGrid
-        data={products}
-        columns={columns}
-        getRowId={(item) => item.id}
-        aria-labelledby="product-grid-heading"
-        aria-describedby="product-grid-description"
-      />
-    </div>
-  );
-}
-```
-
-### Announcing Status Changes
-
-```tsx
-import { OGrid } from '@alaarab/ogrid-react-radix';
-import { useRef, useState } from 'react';
-
 function GridWithAnnouncements() {
-  const [announcement, setAnnouncement] = useState('');
-
-  const handleSelectionChange = (event) => {
-    const count = event.selectedRowIds.length;
-    setAnnouncement(`${count} ${count === 1 ? 'row' : 'rows'} selected`);
-  };
+  const [status, setStatus] = useState('');
 
   return (
     <>
       <div role="status" aria-live="polite" className="sr-only">
-        {announcement}
+        {status}
       </div>
       <OGrid
-        data={products}
+        data={orders}
         columns={columns}
         getRowId={(item) => item.id}
         rowSelection="multiple"
-        onSelectionChange={handleSelectionChange}
+        onSelectionChange={({ selectedRowIds }) => {
+          const count = selectedRowIds.length;
+          setStatus(`${count} ${count === 1 ? 'order' : 'orders'} selected`);
+        }}
       />
     </>
   );
 }
 ```
 
-### Screen Reader Only Text
-
-Use a `.sr-only` class for screen reader only content:
+The `.sr-only` pattern keeps the announcement visually hidden but readable by assistive tech:
 
 ```css
 .sr-only {
@@ -446,19 +190,9 @@ Use a `.sr-only` class for screen reader only content:
 }
 ```
 
-## Testing Accessibility
+## Automated accessibility testing
 
-### Automated Testing
-
-Use automated accessibility testing tools:
-
-```bash
-# Install axe-core for automated testing
-npm install --save-dev @axe-core/react
-
-# Install jest-axe for Jest integration
-npm install --save-dev jest-axe
-```
+OGrid's test suite includes `jest-axe` accessibility tests. You can do the same in your own tests:
 
 ```tsx
 import { render } from '@testing-library/react';
@@ -467,7 +201,7 @@ import { OGrid } from '@alaarab/ogrid-react-radix';
 
 expect.extend(toHaveNoViolations);
 
-test('OGrid has no accessibility violations', async () => {
+test('grid has no accessibility violations', async () => {
   const { container } = render(
     <OGrid
       data={products}
@@ -482,76 +216,30 @@ test('OGrid has no accessibility violations', async () => {
 });
 ```
 
-### Manual Testing
+```bash
+npm install --save-dev jest-axe
+```
 
-1. **Keyboard Navigation**
-   - Disconnect your mouse
-   - Navigate the entire grid using only keyboard
-   - Verify all features are accessible
+## Manual testing checklist
 
-2. **Screen Reader Testing**
-   - Enable VoiceOver (macOS: `Cmd+F5`) or NVDA (Windows)
-   - Navigate the grid and verify announcements
-   - Test editing, filtering, and selection
+Automated tests catch structural issues but can't cover everything. Before shipping:
 
-3. **High Contrast Mode**
-   - Windows: `Alt+Left Shift+Print Screen`
-   - Verify all content is visible
-   - Check focus indicators are clear
+- [ ] Navigate the entire grid using only the keyboard — no mouse
+- [ ] Enable VoiceOver (`Cmd+F5`) or NVDA and navigate through sort, filter, edit
+- [ ] Test at 200% zoom — nothing should overflow or become unusable
+- [ ] Toggle Windows High Contrast Mode — all content should remain visible
+- [ ] Verify `aria-label` is set on the grid (one of the most common misses)
 
-4. **Zoom Testing**
-   - Zoom to 200% (`Ctrl++` or `Cmd++`)
-   - Verify layout remains usable
-   - No horizontal scrolling on text content
+## Known limitations
 
-### Checklist
+**Virtual scrolling:** When `virtualScroll.enabled` is true, only visible rows are in the DOM. Screen readers won't know the full dataset size unless you set `aria-rowcount` on the grid wrapper manually.
 
-Use this checklist when building accessible grids:
-
-- [ ] Grid has `aria-label` or `aria-labelledby`
-- [ ] All interactive elements are keyboard accessible
-- [ ] Focus indicators are visible (`:focus-visible`)
-- [ ] Column headers have `scope="col"`
-- [ ] Sorted columns have `aria-sort` attribute
-- [ ] Edit mode inputs have descriptive `aria-label`
-- [ ] Status changes are announced (ARIA live regions)
-- [ ] High contrast mode is supported
-- [ ] Tested with screen reader
-- [ ] Automated accessibility tests pass
-
-## Known Limitations
-
-### Virtual Scrolling
-
-When virtual scrolling is enabled (`virtualScroll.enabled: true`), screen readers may not announce the total row count accurately because only visible rows are rendered in the DOM. Use `aria-rowcount` on the grid wrapper to communicate the full dataset size.
-
-### Large Datasets
-
-For grids with 10,000+ rows, consider server-side pagination instead of client-side filtering to improve screen reader performance.
-
-### Custom Cell Renderers
-
-When using custom `renderCell` functions, ensure your custom markup:
-- Includes appropriate ARIA attributes
-- Maintains keyboard navigability
-- Announces changes to screen readers
+**Custom cell renderers:** If you use `renderCell` to render custom content inside cells, you're responsible for making that content accessible — ARIA attributes, keyboard interaction, announcements. The grid provides the structure; your custom content needs to carry its own accessibility.
 
 ## Resources
 
-- [WCAG 2.1 Guidelines](https://www.w3.org/WAI/WCAG21/quickref/)
-- [ARIA Authoring Practices Guide - Grid Pattern](https://www.w3.org/WAI/ARIA/apg/patterns/grid/)
-- [WebAIM Screen Reader Testing](https://webaim.org/articles/screenreader_testing/)
-- [axe DevTools Browser Extension](https://www.deque.com/axe/devtools/)
+- [ARIA Grid Pattern](https://www.w3.org/WAI/ARIA/apg/patterns/grid/) — the spec OGrid follows
+- [WCAG 2.1 Quick Reference](https://www.w3.org/WAI/WCAG21/quickref/)
+- [axe DevTools Browser Extension](https://www.deque.com/axe/devtools/) — free in-browser auditing
 
-## Support
-
-If you encounter accessibility issues or have suggestions for improvements:
-
-1. Check the [GitHub Issues](https://github.com/alaarab/ogrid/issues) for known issues
-2. Report new issues with:
-   - Browser and screen reader versions
-   - Steps to reproduce
-   - Expected vs. actual behavior
-3. Tag issues with `accessibility` label
-
-We're committed to maintaining WCAG 2.1 AA compliance and improving accessibility based on user feedback.
+Found an accessibility issue? [Open an issue](https://github.com/alaarab/ogrid/issues) and tag it `accessibility` with your browser, screen reader version, and reproduction steps.

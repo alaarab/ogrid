@@ -6,7 +6,7 @@ import Link from '@docusaurus/Link';
 import styles from './index.module.scss';
 
 /* ──────────────────────────────────────────────
-   Hero Grid — Real OGrid with 10K rows
+   Hero Grid  -  Real OGrid with 10K rows
    ────────────────────────────────────────────── */
 
 interface EmployeeRow {
@@ -612,7 +612,7 @@ function ComparisonSection() {
                         : styles.comparisonFeatureIconNeutral
                     }`}
                   >
-                    {f.type === 'check' ? '✓' : f.type === 'paid' ? '$' : '—'}
+                    {f.type === 'check' ? '✓' : f.type === 'paid' ? '$' : ' - '}
                   </span>
                   <div className={styles.comparisonFeatureText}>
                     <span className={styles.comparisonFeatureName}>{f.name}</span>

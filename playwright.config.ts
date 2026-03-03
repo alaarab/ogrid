@@ -4,12 +4,12 @@ import { defineConfig, devices } from '@playwright/test';
  * Playwright E2E configuration for OGrid.
  *
  * Tests run against 4 representative example apps (one per framework family):
- *   - React Radix    → port 3003
- *   - Angular Material → port 3011
- *   - Vue Vuetify     → port 3021
- *   - Vanilla JS      → port 3030
+ *   - React Radix     to  port 3003
+ *   - Angular Material  to  port 3011
+ *   - Vue Vuetify      to  port 3021
+ *   - Vanilla JS       to  port 3030
  *
- * Each project shares the same test suite in e2e/ — tests are parameterised
+ * Each project shares the same test suite in e2e/  -  tests are parameterised
  * via baseURL so identical user-journeys are verified across every framework.
  */
 export default defineConfig({

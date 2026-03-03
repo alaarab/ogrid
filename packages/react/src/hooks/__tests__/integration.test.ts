@@ -8,7 +8,7 @@ import { useKeyboardNavigation } from '../useKeyboardNavigation';
 import type { IOGridApi, IOGridDataGridProps, ICellValueChangedEvent, IColumnDef } from '../../types';
 
 /**
- * Integration tests — multi-step user flows that exercise multiple hooks together.
+ * Integration tests  -  multi-step user flows that exercise multiple hooks together.
  * Each test simulates a complete user interaction sequence, not isolated hook behavior.
  */
 
@@ -111,7 +111,7 @@ describe('Integration: Selection + Copy + Paste flow', () => {
       { wrapper }
     );
 
-    // Step 1: Click on cell (0,0) — sets active cell and selection range
+    // Step 1: Click on cell (0,0)  -  sets active cell and selection range
     act(() => {
       result.current.interaction.setActiveCell({ rowIndex: 0, columnIndex: 0 });
       result.current.interaction.setSelectionRange({
@@ -332,7 +332,7 @@ describe('Integration: Edit + Undo + Redo flow', () => {
     expect(changes).toHaveLength(3);
     expect(result.current.canUndo).toBe(true);
 
-    // Step 2: Undo the entire batch — all 3 edits revert in one step
+    // Step 2: Undo the entire batch  -  all 3 edits revert in one step
     const changeCountBefore = changes.length;
     act(() => {
       result.current.undo();
@@ -556,7 +556,7 @@ describe('Integration: Keyboard navigation at grid boundaries', () => {
         preventDefault: jest.fn(),
       }) as unknown as React.KeyboardEvent;
 
-    // No active cell — ArrowDown should set it to (0, 0)
+    // No active cell  -  ArrowDown should set it to (0, 0)
     act(() => {
       result.current.handleGridKeyDown(makeKeyEvent('ArrowDown'));
     });
@@ -575,7 +575,7 @@ describe('Integration: Filter + Sort + Paginate flow', () => {
     expect(result.current.dataGridProps.items).toHaveLength(3);
     expect(result.current.pagination.displayTotalCount).toBe(8);
 
-    // Step 1: Apply text filter on 'name' — filter for names containing 'a'
+    // Step 1: Apply text filter on 'name'  -  filter for names containing 'a'
     act(() => {
       result.current.dataGridProps.onFilterChange!('name', {
         type: 'text',
@@ -603,7 +603,7 @@ describe('Integration: Filter + Sort + Paginate flow', () => {
       expect(scores[i]).toBeLessThanOrEqual(scores[i - 1]);
     }
 
-    // Step 3: Page resets to 1 after sort — now navigate to page 2 if there are enough items
+    // Step 3: Page resets to 1 after sort  -  now navigate to page 2 if there are enough items
     expect(result.current.pagination.page).toBe(1);
     const totalPages = Math.ceil(filteredTotal / 3);
     if (totalPages > 1) {
@@ -618,7 +618,7 @@ describe('Integration: Filter + Sort + Paginate flow', () => {
       }
     }
 
-    // Step 4: Clear the filter — should go back to all items
+    // Step 4: Clear the filter  -  should go back to all items
     act(() => {
       result.current.filters.setFilters({});
     });
@@ -639,7 +639,7 @@ describe('Integration: Filter + Sort + Paginate flow', () => {
     });
     expect(result.current.pagination.page).toBe(3);
 
-    // Apply filter — page should reset to 1
+    // Apply filter  -  page should reset to 1
     act(() => {
       result.current.dataGridProps.onFilterChange!('name', {
         type: 'text',
@@ -1257,7 +1257,7 @@ describe('Integration: Server-side data source with sort and filter', () => {
       pageSize: 25,
     });
 
-    // Sort by score — should trigger a new fetch
+    // Sort by score  -  should trigger a new fetch
     act(() => {
       result.current.dataGridProps.onColumnSort('score', 'desc');
     });

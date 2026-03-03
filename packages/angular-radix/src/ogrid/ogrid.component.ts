@@ -11,7 +11,7 @@ import { PaginationControlsComponent } from '../pagination-controls/pagination-c
 /**
  * Top-level OGrid component for Angular Radix (lightweight Angular CDK-based implementation).
  * This is the recommended default option for Angular developers.
- * Standalone component — provides OGridService and renders OGridLayout with all sub-components.
+ * Standalone component  -  provides OGridService and renders OGridLayout with all sub-components.
  *
  * Uses @Input with signal setter for JIT compatibility (project builds with tsc, not ngc).
  * The effect() reactively configures the service when the input signal changes.

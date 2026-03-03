@@ -243,7 +243,7 @@ describe('tokenizer', () => {
 
     it('tokenizes mixed case (True, False) as BOOLEAN', () => {
       // "True" and "False" match the cell ref pattern (/^\$?[A-Za-z]+\$?\d+$/) only if they contain digits.
-      // "True" has no digits, so it goes to toUpperCase() check → BOOLEAN.
+      // "True" has no digits, so it goes to toUpperCase() check  to  BOOLEAN.
       expect(tokenPairs('True')).toEqual([['BOOLEAN', 'TRUE']]);
       expect(tokenPairs('False')).toEqual([['BOOLEAN', 'FALSE']]);
     });

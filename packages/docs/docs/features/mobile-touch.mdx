@@ -9,7 +9,7 @@ import TabItem from '@theme/TabItem';
 
 # Mobile Touch Support
 
-OGrid uses the [Pointer Events API](https://developer.mozilla.org/en-US/docs/Web/API/Pointer_events) for all drag interactions, providing unified input handling across mouse, touch, and pen devices. All interactions — cell drag-selection, fill handle drag-to-fill, column resize, and column reorder — work on touch devices out of the box with no additional configuration.
+OGrid uses the [Pointer Events API](https://developer.mozilla.org/en-US/docs/Web/API/Pointer_events) for all drag interactions, providing unified input handling across mouse, touch, and pen devices. All interactions  -  cell drag-selection, fill handle drag-to-fill, column resize, and column reorder  -  work on touch devices out of the box with no additional configuration.
 
 ## How It Works
 
@@ -41,7 +41,7 @@ Interactive drag surfaces apply `touch-action: none` to prevent the browser from
 
 ## Quick Example
 
-No special props are needed — touch support is built in. The same code works on desktop and mobile:
+No special props are needed  -  touch support is built in. The same code works on desktop and mobile:
 
 <Tabs groupId="framework">
   <TabItem value="react" label="React" default>
@@ -65,8 +65,8 @@ function App() {
 The `OGrid` component has the same props across all React UI packages. To switch, just change the import:
 
 - **Radix** (lightweight, default): `from '@alaarab/ogrid-react-radix'`
-- **Fluent UI** (Microsoft 365 / SPFx): `from '@alaarab/ogrid-react-fluent'` — wrap in `<FluentProvider>`
-- **Material UI** (MUI v7): `from '@alaarab/ogrid-react-material'` — wrap in `<ThemeProvider>`
+- **Fluent UI** (Microsoft 365 / SPFx): `from '@alaarab/ogrid-react-fluent'`  -  wrap in `<FluentProvider>`
+- **Material UI** (MUI v7): `from '@alaarab/ogrid-react-material'`  -  wrap in `<ThemeProvider>`
 :::
 
   </TabItem>
@@ -98,7 +98,7 @@ Same component API across Angular packages. To switch, just change the import:
 - **Angular Material**: `from '@alaarab/ogrid-angular-material'`
 - **PrimeNG**: `from '@alaarab/ogrid-angular-primeng'`
 
-All components are standalone — no NgModule required.
+All components are standalone  -  no NgModule required.
 :::
 
   </TabItem>
@@ -125,7 +125,7 @@ const gridProps = {
 Same component API across Vue packages. To switch, just change the import:
 
 - **Radix (Headless UI)**: `from '@alaarab/ogrid-vue-radix'` *(default, lightweight)*
-- **Vuetify**: `from '@alaarab/ogrid-vue-vuetify'` — wrap in `<v-app>` for theming
+- **Vuetify**: `from '@alaarab/ogrid-vue-vuetify'`  -  wrap in `<v-app>` for theming
 - **PrimeVue**: `from '@alaarab/ogrid-vue-primevue'`
 :::
 
@@ -177,6 +177,6 @@ The Pointer Events API is supported in all modern browsers:
 
 ## Related
 
-- [Spreadsheet Selection](./spreadsheet-selection) — cell selection and drag-to-select
-- [Editing & Clipboard](./editing) — fill handle drag-to-fill
-- [Column Reordering](./column-reordering) — drag column headers to reorder
+- [Spreadsheet Selection](./spreadsheet-selection)  -  cell selection and drag-to-select
+- [Editing & Clipboard](./editing)  -  fill handle drag-to-fill
+- [Column Reordering](./column-reordering)  -  drag column headers to reorder

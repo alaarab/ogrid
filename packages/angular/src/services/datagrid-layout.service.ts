@@ -17,7 +17,7 @@ type IColumnDef<T> = IAngularColumnDef<T>;
  * Manages column layout, visibility, sizing, and container measurement.
  * Extracted from DataGridStateService for modularity.
  *
- * Not @Injectable — instantiated and owned by DataGridStateService.
+ * Not @Injectable  -  instantiated and owned by DataGridStateService.
  */
 export class DataGridLayoutHelper<T> {
   // --- Input signals (shared with parent) ---

@@ -102,10 +102,10 @@ export function useCellSelection(params: UseCellSelectionParams): UseCellSelecti
 
   // --- Window mouse move/up for drag selection ---
 
-  /** Set of currently drag-marked HTMLElements — avoids O(n) full DOM scan on each frame. */
+  /** Set of currently drag-marked HTMLElements  -  avoids O(n) full DOM scan on each frame. */
   const markedCells = new Set<HTMLElement>();
 
-  /** Cell lookup index built on drag start — O(1) lookups per frame instead of querySelectorAll. */
+  /** Cell lookup index built on drag start  -  O(1) lookups per frame instead of querySelectorAll. */
   let cellIndex: Map<string, HTMLElement> | null = null;
 
   /** Apply styling to a single in-range cell (attrs + box-shadow). */
@@ -165,9 +165,9 @@ export function useCellSelection(params: UseCellSelectionParams): UseCellSelecti
     // Build index on first call if not yet initialized
     if (!cellIndex) cellIndex = buildCellIndex(wrapperRef.value);
 
-    // 2. Look up only the cells in the new range — O(range size) via Map lookup.
+    // 2. Look up only the cells in the new range  -  O(range size) via Map lookup.
     //    If a stale (disconnected) element is found, rebuild the index once per
-    //    applyDragAttrs call and retry — avoids per-cell rebuilds during fast scrolling.
+    //    applyDragAttrs call and retry  -  avoids per-cell rebuilds during fast scrolling.
     let rebuilt = false;
     for (let r = minR; r <= maxR; r++) {
       for (let c = minC; c <= maxC; c++) {
@@ -185,7 +185,7 @@ export function useCellSelection(params: UseCellSelectionParams): UseCellSelecti
     }
   };
 
-  /** Clear all drag styling using the tracked set — O(marked) not O(all cells). */
+  /** Clear all drag styling using the tracked set  -  O(marked) not O(all cells). */
   const clearDragAttrs = () => {
     for (const el of markedCells) {
       unstyleCell(el);

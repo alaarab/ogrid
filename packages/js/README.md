@@ -1,6 +1,6 @@
 # @alaarab/ogrid-js
 
-OGrid data grid for vanilla JavaScript — no framework required.
+OGrid data grid for vanilla JavaScript  -  no framework required.
 
 ## Install
 

@@ -7,7 +7,7 @@ export type ColumnHeaderMenuProps = Omit<BaseColumnHeaderMenuProps, 'classNames'
 
 /**
  * Column header dropdown menu for pin/sort/autosize actions.
- * Thin wrapper over BaseColumnHeaderMenu — portals to document.body.
+ * Thin wrapper over BaseColumnHeaderMenu  -  portals to document.body.
  */
 export function ColumnHeaderMenu(props: ColumnHeaderMenuProps) {
   return (

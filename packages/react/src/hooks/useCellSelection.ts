@@ -17,7 +17,7 @@ export interface UseCellSelectionResult {
   setSelectionRange: (range: ISelectionRange | null) => void;
   handleCellMouseDown: (e: React.MouseEvent, rowIndex: number, globalColIndex: number) => void;
   handleSelectAllCells: () => void;
-  /** True while the user is drag-selecting cells (mousedown → mousemove → mouseup). */
+  /** True while the user is drag-selecting cells (mousedown  to  mousemove  to  mouseup). */
   isDragging: boolean;
 }
 
@@ -47,17 +47,17 @@ export function useCellSelection(params: UseCellSelectionParams): UseCellSelecti
   const dragMovedRef = useRef(false);
   const dragStartRef = useRef<{ row: number; col: number } | null>(null);
   const rafRef = useRef(0);
-  /** Live drag range kept in a ref — only committed to React state on pointerup. */
+  /** Live drag range kept in a ref  -  only committed to React state on pointerup. */
   const liveDragRangeRef = useRef<ISelectionRange | null>(null);
   /** Auto-scroll interval during drag. */
   const autoScrollRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
-  // Ref mirror of selectionRange — lets handleCellMouseDown read current value
+  // Ref mirror of selectionRange  -  lets handleCellMouseDown read current value
   // without adding selectionRange to its useCallback deps (keeps it stable).
   const selectionRangeRef = useRef(selectionRange);
   selectionRangeRef.current = selectionRange;
 
-  // Deduplicating setter — skips re-render when the range hasn't actually changed.
+  // Deduplicating setter  -  skips re-render when the range hasn't actually changed.
   const setSelectionRange = useCallback((next: ISelectionRange | null) => {
     if (rangesEqual(selectionRangeRef.current, next)) return;
     _setSelectionRange(next);
@@ -65,7 +65,7 @@ export function useCellSelection(params: UseCellSelectionParams): UseCellSelecti
 
   const handleCellMouseDown = useCallback(
     (e: React.MouseEvent, rowIndex: number, globalColIndex: number) => {
-      // Only handle primary (left) button — let middle-click scroll and right-click context menu work natively
+      // Only handle primary (left) button  -  let middle-click scroll and right-click context menu work natively
       if (e.button !== 0) return;
       const colOff = colOffsetRef.current;
       if (globalColIndex < colOff) return;
@@ -95,9 +95,9 @@ export function useCellSelection(params: UseCellSelectionParams): UseCellSelecti
         setSelectionRange(initial);
         liveDragRangeRef.current = initial;
         setActiveCell({ rowIndex, columnIndex: globalColIndex });
-        // Mark drag as "started" but don't set isDragging state yet —
+        // Mark drag as "started" but don't set isDragging state yet  - 
         // setIsDragging(true) is deferred to the first mousemove to avoid
-        // a true→false toggle on simple clicks (which causes 2 extra renders).
+        // a true to false toggle on simple clicks (which causes 2 extra renders).
         isDraggingRef.current = true;
         // Apply drag attrs immediately for the initial cell so the anchor styling shows
         // even before the first mousemove. This ensures instant visual feedback.
@@ -118,7 +118,7 @@ export function useCellSelection(params: UseCellSelectionParams): UseCellSelecti
     setActiveCell({ rowIndex: 0, columnIndex: colOffsetRef.current });
   }, [rowCount, visibleColCount, setActiveCell, colOffsetRef, setSelectionRange]);
 
-  /** Last known pointer position during drag — used by pointerUp to flush pending RAF work. */
+  /** Last known pointer position during drag  -  used by pointerUp to flush pending RAF work. */
   const lastMousePosRef = useRef<{ cx: number; cy: number } | null>(null);
 
   // Ref to expose applyDragAttrs outside useEffect so it can be called from pointerDown
@@ -129,10 +129,10 @@ export function useCellSelection(params: UseCellSelectionParams): UseCellSelecti
   // React state is only committed on pointerup (single re-render instead of 60-120/s).
   useEffect(() => {
 
-    /** Set of currently drag-marked HTMLElements — avoids O(n) full DOM scan on each frame. */
+    /** Set of currently drag-marked HTMLElements  -  avoids O(n) full DOM scan on each frame. */
     const markedCells = new Set<HTMLElement>();
 
-    /** Cell lookup index built on drag start — O(1) lookups per frame instead of querySelectorAll. */
+    /** Cell lookup index built on drag start  -  O(1) lookups per frame instead of querySelectorAll. */
     let cellIndex: Map<string, HTMLElement> | null = null;
 
     /** Single overlay div for the drag-selection border (replaces per-cell box-shadows). */
@@ -240,9 +240,9 @@ export function useCellSelection(params: UseCellSelectionParams): UseCellSelecti
       // Build index on first call if not yet initialized
       if (!cellIndex) cellIndex = buildCellIndex(wrapperRef.current);
 
-      // 2. Look up only the cells in the new range — O(range size) via Map lookup.
+      // 2. Look up only the cells in the new range  -  O(range size) via Map lookup.
       //    If a stale (disconnected) element is found, rebuild the index once per
-      //    applyDragAttrs call and retry — avoids per-cell rebuilds during fast scrolling.
+      //    applyDragAttrs call and retry  -  avoids per-cell rebuilds during fast scrolling.
       let rebuilt = false;
       for (let r = minR; r <= maxR; r++) {
         for (let c = minC; c <= maxC; c++) {
@@ -266,7 +266,7 @@ export function useCellSelection(params: UseCellSelectionParams): UseCellSelecti
     // Expose applyDragAttrs via ref so mouseDown can access it
     applyDragAttrsRef.current = applyDragAttrs;
 
-    /** Clear all drag styling using the tracked set — O(marked) not O(all cells). */
+    /** Clear all drag styling using the tracked set  -  O(marked) not O(all cells). */
     const clearDragAttrs = () => {
       for (const el of markedCells) {
         unstyleCell(el);
@@ -367,7 +367,7 @@ export function useCellSelection(params: UseCellSelectionParams): UseCellSelecti
       if (!isDraggingRef.current || !dragStartRef.current) return;
 
       // Promote to a real drag on first pointermove (deferred from pointerDown
-      // to avoid a true→false toggle on simple clicks).
+      // to avoid a true to false toggle on simple clicks).
       if (!dragMovedRef.current) {
         dragMovedRef.current = true;
         setIsDragging(true);
@@ -404,7 +404,7 @@ export function useCellSelection(params: UseCellSelectionParams): UseCellSelecti
         }
 
         liveDragRangeRef.current = newRange;
-        // DOM-only highlighting — no React state update until pointerup
+        // DOM-only highlighting  -  no React state update until pointerup
         applyDragAttrs(newRange);
       });
     };
@@ -447,14 +447,20 @@ export function useCellSelection(params: UseCellSelectionParams): UseCellSelecti
         }
       }
       // For simple clicks (no drag movement), pointerDown already set
-      // selectionRange + activeCell — skip redundant state updates.
+      // selectionRange + activeCell  -  skip redundant state updates.
 
-      // Clean up DOM attributes — React will apply CSS-module classes on the same paint
-      clearDragAttrs();
       liveDragRangeRef.current = null;
       lastMousePosRef.current = null;
       dragStartRef.current = null;
       if (wasDrag) setIsDragging(false);
+
+      // Defer DOM attr cleanup by one rAF so React's re-render (which paints the
+      // CSS-module selection classes) happens before we remove the drag highlights.
+      // Clearing synchronously leaves a frame where neither drag attrs nor React
+      // classes are present — causing the "stutter" flash on the anchor cell.
+      requestAnimationFrame(() => {
+        clearDragAttrs();
+      });
     };
 
     window.addEventListener('pointermove', onMove, true);

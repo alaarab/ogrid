@@ -81,10 +81,10 @@ describe('createRatingEditor', () => {
   // ── 3. Initial value display ──
 
   describe('Initial value display', () => {
-    it('shows "—" value display for rating 0', () => {
+    it('shows " - " value display for rating 0', () => {
       const { root } = renderEditor(0);
-      // The value display shows "—" when rating is 0
-      expect(root.textContent).toContain('—');
+      // The value display shows " - " when rating is 0
+      expect(root.textContent).toContain(' - ');
     });
 
     it('shows "X / maxStars" for non-zero rating', () => {
@@ -92,9 +92,9 @@ describe('createRatingEditor', () => {
       expect(root.textContent).toContain('3 / 5');
     });
 
-    it('null value shows "—"', () => {
+    it('null value shows " - "', () => {
       const { root } = renderEditor(null);
-      expect(root.textContent).toContain('—');
+      expect(root.textContent).toContain(' - ');
     });
 
     it('value exceeding maxStars is clamped', () => {
@@ -103,7 +103,7 @@ describe('createRatingEditor', () => {
     });
   });
 
-  // ── 4. Star click — calls onValueChange and onCommit ──
+  // ── 4. Star click  -  calls onValueChange and onCommit ──
 
   describe('Star click', () => {
     it('clicking a star calls onValueChange', async () => {
@@ -130,7 +130,7 @@ describe('createRatingEditor', () => {
       const { root, context } = renderEditor(1);
       const starButtons = getStarButtons(root);
 
-      // Click star 0 (value = 1) when current is already 1 → toggles to 0
+      // Click star 0 (value = 1) when current is already 1  to  toggles to 0
       starButtons[0]!.click();
 
       expect(context.onValueChange).toHaveBeenCalledWith(0);

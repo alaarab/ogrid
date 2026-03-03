@@ -8,7 +8,7 @@
 import { tokenize } from '../formula/tokenizer';
 import { columnLetterToIndex } from './cellReference';
 
-/** A parsed reference from a formula — either a single cell or a range. */
+/** A parsed reference from a formula  -  either a single cell or a range. */
 export interface FormulaReference {
   type: 'cell' | 'range';
   col: number;
@@ -19,7 +19,7 @@ export interface FormulaReference {
   colorIndex: number;
 }
 
-/** Regex matching $?LETTERS$?DIGITS — same as the tokenizer's CELL_REF pattern. */
+/** Regex matching $?LETTERS$?DIGITS  -  same as the tokenizer's CELL_REF pattern. */
 const CELL_REF_RE = /^\$?([A-Za-z]+)\$?(\d+)$/;
 
 function parseCellRefCoords(ref: string): { col: number; row: number } | null {
@@ -169,7 +169,7 @@ export function extractFormulaReferences(formula: string): FormulaReference[] {
       }
     }
   } catch {
-    // Tokenizer may fail on partial formulas — return what we have
+    // Tokenizer may fail on partial formulas  -  return what we have
   }
   return refs;
 }

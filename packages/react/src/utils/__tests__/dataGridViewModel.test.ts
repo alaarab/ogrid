@@ -1,7 +1,7 @@
 import { resolveCellDisplayContent, getCellRenderDescriptor } from '../dataGridViewModel';
 import type { IColumnDef } from '../../types';
 
-describe('resolveCellDisplayContent — null/undefined coercion', () => {
+describe('resolveCellDisplayContent  -  null/undefined coercion', () => {
   it('returns null for null value (any column type)', () => {
     const col: IColumnDef = { columnId: 'name', name: 'Name' };
     expect(resolveCellDisplayContent(col, {}, null)).toBeNull();
@@ -34,13 +34,24 @@ describe('resolveCellDisplayContent — null/undefined coercion', () => {
 });
 
 describe('resolveCellDisplayContent', () => {
-  it('formats date values with toLocaleDateString when type is date', () => {
+  it('formats date values using DEFAULT_DATE_FORMAT (YYYY-MM-DD) when no dateFormat set', () => {
     const col: IColumnDef = { columnId: 'date', name: 'Date', type: 'date' };
     const result = resolveCellDisplayContent(col, {}, '2024-06-15');
-    // toLocaleDateString varies by locale, just verify it's not the raw ISO string
-    expect(result).toBeDefined();
-    expect(result).not.toBe('2024-06-15');
+    // Default format is YYYY-MM-DD, so ISO date strings display as-is
+    expect(result).toBe('2024-06-15');
     expect(typeof result).toBe('string');
+  });
+
+  it('formats date values with MM/DD/YYYY when dateFormat is set', () => {
+    const col: IColumnDef = { columnId: 'date', name: 'Date', type: 'date', dateFormat: 'MM/DD/YYYY' };
+    const result = resolveCellDisplayContent(col, {}, '2024-06-15');
+    expect(result).toBe('06/15/2024');
+  });
+
+  it('formats date values with DD/MM/YYYY when dateFormat is set', () => {
+    const col: IColumnDef = { columnId: 'date', name: 'Date', type: 'date', dateFormat: 'DD/MM/YYYY' };
+    const result = resolveCellDisplayContent(col, {}, '2024-06-15');
+    expect(result).toBe('15/06/2024');
   });
 
   it('returns null for null date values', () => {

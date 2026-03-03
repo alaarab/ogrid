@@ -9,65 +9,63 @@ import TabItem from '@theme/TabItem';
 
 # Performance
 
-OGrid is built with performance as a first-class concern. Three complementary features cover the main bottlenecks in large data grids:
+A grid that handles 100 rows fine but chokes at 50,000 isn't production-ready. OGrid ships with three complementary features to handle large datasets without framework-level heroics:
 
-| Feature | Opt-in? | Benefit |
+| Feature | Opt-in? | What it does |
 |---------|---------|---------|
-| **CSS Containment** | No (automatic) | Isolates cell layout and paint — prevents off-screen style recalculation |
+| **CSS Containment** | No (automatic) | Browser skips layout and paint for off-screen cells |
 | **Column Virtualization** | Yes | Renders only visible columns — scales to hundreds of columns |
-| **Web Worker Sort/Filter** | Yes | Offloads sort and filter work to a background thread — keeps the UI thread free |
+| **Web Worker Sort/Filter** | Yes | Sort and filter run in a background thread — UI stays responsive |
 
-For row virtualization (rendering only visible rows), see [Virtual Scrolling](./virtual-scrolling).
+For rendering only visible rows (usually the most impactful optimization for tall datasets), see [Virtual Scrolling](./virtual-scrolling).
 
 ---
 
-## CSS Containment (Automatic)
+## CSS Containment — you get this for free
 
-OGrid applies CSS containment automatically to every grid cell — no configuration needed.
+Every grid cell already has `contain: content` applied — you don't configure anything. This tells the browser that what happens inside a cell doesn't affect anything outside it, so it can skip layout and paint work for cells not visible in the viewport.
 
 ```css
 /* Applied automatically to every body cell */
 td.ogrid-cell {
-  contain: content;        /* isolate layout + paint + style */
+  contain: content;   /* isolate layout + paint + style */
 }
 
-/* Pinned columns use position: sticky — containment is relaxed to avoid conflicts */
+/* Pinned columns use position: sticky — containment relaxed to avoid conflicts */
 td.ogrid-cell[data-pinned] {
   contain: none;
 }
 ```
 
-The browser uses `contain: content` to skip layout and paint work for cells that are not visible in the viewport. Combined with `content-visibility: auto` on non-virtualized rows, the browser can skip off-screen row layout entirely:
+Without row virtualization, OGrid also sets `content-visibility: auto` on rows, letting the browser skip off-screen row layout entirely:
 
 ```css
-/* Non-virtualized rows: browser skips layout for off-screen rows */
+/* Browser skips layout for rows not in the viewport */
 tr[data-row]:not([data-virtual-scroll]) {
   content-visibility: auto;
 }
 ```
 
-The `data-virtual-scroll` attribute on the `<table>` element gates this behavior — when row virtualization is active, spacer rows already handle positioning, so `content-visibility` is not applied.
+When row virtualization is active, spacer rows handle positioning instead — so `content-visibility` is not applied there. The `data-virtual-scroll` attribute on `<table>` controls this automatically.
 
-**You do not need to configure anything.** These rules are included in the default stylesheet for every framework package.
+**Net result**: even without opting into anything, a 500-row grid renders measurably faster than without these rules.
 
 ---
 
-## Web Worker Sort/Filter (Opt-in)
+## Web Worker Sort/Filter — keeps the UI responsive
 
-Enable background thread sorting and filtering by setting `workerSort: true` on the grid:
+Sorting 50,000 rows on the main thread can freeze the UI for a visible moment. With `workerSort: true`, the work happens in a background thread — the grid stays interactive while it processes.
 
 ```tsx
 <OGrid
   columns={columns}
-  data={data}
+  data={largeDataset}   // 50,000 rows
   getRowId={(r) => r.id}
   workerSort={true}
 />
 ```
 
-When enabled, sort and filter operations run in an inline Web Worker (created from a `Blob` URL) instead of on the main thread. The UI remains fully interactive while the worker processes the data.
-
-### Quick Example
+### Full example
 
 <Tabs groupId="framework">
   <TabItem value="react" label="React" default>
@@ -94,7 +92,7 @@ function App() {
   return (
     <OGrid
       columns={columns}
-      data={largeDataset}    // e.g. 50,000 rows
+      data={largeDataset}   // e.g. 50,000 rows
       getRowId={(r) => r.id}
       workerSort={true}
       statusBar
@@ -104,11 +102,11 @@ function App() {
 ```
 
 :::tip Switching UI libraries
-The `OGrid` component has the same props across all React UI packages. To switch, just change the import:
+Same props across all React packages — just change the import:
 
 - **Radix** (lightweight, default): `from '@alaarab/ogrid-react-radix'`
-- **Fluent UI** (Microsoft 365 / SPFx): `from '@alaarab/ogrid-react-fluent'` — wrap in `<FluentProvider>`
-- **Material UI** (MUI v7): `from '@alaarab/ogrid-react-material'` — wrap in `<ThemeProvider>`
+- **Fluent UI** (Microsoft 365 / SPFx): `from '@alaarab/ogrid-react-fluent'`  -  wrap in `<FluentProvider>`
+- **Material UI** (MUI v7): `from '@alaarab/ogrid-react-material'`  -  wrap in `<ThemeProvider>`
 :::
 
   </TabItem>
@@ -147,7 +145,7 @@ export class GridComponent {
 ```
 
 :::tip Switching UI libraries
-Same component API across Angular packages. To switch, just change the import:
+Same API across Angular packages. Change the import:
 
 - **Radix (CDK)**: `from '@alaarab/ogrid-angular-radix'` *(default, lightweight)*
 - **Angular Material**: `from '@alaarab/ogrid-angular-material'`
@@ -192,10 +190,10 @@ const gridProps = {
 ```
 
 :::tip Switching UI libraries
-Same component API across Vue packages. To switch, just change the import:
+Same API across Vue packages. Change the import:
 
 - **Radix (Headless UI)**: `from '@alaarab/ogrid-vue-radix'` *(default, lightweight)*
-- **Vuetify**: `from '@alaarab/ogrid-vue-vuetify'` — wrap in `<v-app>` for theming
+- **Vuetify**: `from '@alaarab/ogrid-vue-vuetify'`  -  wrap in `<v-app>` for theming
 - **PrimeVue**: `from '@alaarab/ogrid-vue-primevue'`
 :::
 
@@ -223,59 +221,52 @@ const grid = new OGrid(document.getElementById('grid'), {
   </TabItem>
 </Tabs>
 
-### `'auto'` Mode
+### Not sure about your data size? Use `'auto'`
 
-Set `workerSort: 'auto'` to let the grid decide. The worker is used only when the dataset exceeds **5,000 rows**; smaller datasets use synchronous processing:
+`workerSort: 'auto'` uses the worker only when your dataset exceeds 5,000 rows. For smaller datasets it runs synchronously — no overhead, no complexity:
 
 ```tsx
-<OGrid
-  workerSort="auto"
-  // ...
-/>
+<OGrid workerSort="auto" ... />
 ```
 
-This is the safest choice if you do not know the data size ahead of time.
+This is the right default if you're not sure how large your data will get.
 
-### How It Works
+### How it works under the hood
 
-1. Before sorting or filtering, the grid extracts a flat value matrix from the row data.
-2. The matrix is transferred to an inline `Blob` Web Worker via `postMessage`.
-3. The worker performs the sort and filter computation and returns the sorted/filtered row indices.
-4. The grid uses those indices to re-render the visible rows — no data is copied back, only indices.
+1. Before sort/filter, the grid extracts a flat value matrix from your row data.
+2. The matrix is sent to an inline Blob Web Worker via `postMessage`.
+3. The worker sorts/filters and returns the resulting row indices.
+4. The grid re-renders using those indices — no row data is ever copied back, only the index array.
 
-The worker is created once and reused for subsequent sort/filter operations in the same grid instance.
+The worker is created once per grid instance and reused for all subsequent sort/filter operations.
 
-### Automatic Fallback
+### When the worker falls back to sync
 
-The worker is bypassed automatically in situations where it cannot run:
+The worker can't run in every situation. It falls back silently in these cases:
 
-| Situation | Behavior |
-|-----------|----------|
-| Custom `compare` function on a column | Falls back to synchronous sort (custom functions cannot cross the worker boundary) |
-| `people` filter type | Falls back to synchronous filter (requires rich object comparison) |
-| `Worker` API unavailable (e.g. old browser or sandboxed iframe) | Falls back to synchronous processing silently |
+| Situation | Why |
+|-----------|-----|
+| Column has a custom `compare` function | Functions can't cross the worker boundary |
+| `people` filter type | Requires rich object comparison |
+| `Worker` API unavailable (old browser, sandboxed iframe) | No Worker API to use |
 
-The fallback is transparent — the grid sorts and filters correctly in all cases.
+In all cases, the grid sorts and filters correctly — just on the main thread.
 
-### Content Security Policy (CSP)
+### CSP gotcha
 
-The worker is created from an inline `Blob` URL. If your application enforces a `Content-Security-Policy` header, you must allow `blob:` in the `worker-src` directive:
+The worker uses an inline `Blob` URL. If your app has a `Content-Security-Policy` header, add `blob:` to `worker-src`:
 
 ```
 Content-Security-Policy: worker-src 'self' blob:;
 ```
 
-Without this directive, the browser will block the worker and the grid will fall back to synchronous processing automatically.
-
-:::caution
-If your CSP does not permit `blob:` and you require worker-based processing, contact your security team about the CSP configuration before enabling `workerSort`.
-:::
+Without it, the browser blocks the worker and the grid falls back to synchronous processing. If you can't change the CSP, `workerSort` still works — it just runs on the main thread.
 
 ---
 
-## Combining All Three Features
+## Putting it all together
 
-Row virtualization, column virtualization, and worker sort/filter are fully compatible and can be enabled together for maximum throughput on very wide, very tall datasets:
+Row virtualization, column virtualization, and worker sort/filter stack together cleanly. For a 100-column, 100,000-row dataset, enable all three:
 
 <Tabs groupId="framework">
   <TabItem value="react" label="React" default>
@@ -286,17 +277,17 @@ import { OGrid } from '@alaarab/ogrid-react-radix';
 function App() {
   return (
     <OGrid
-      columns={columns}      // e.g. 100 columns
-      data={data}            // e.g. 100,000 rows
+      columns={columns}   // 100 columns
+      data={data}         // 100,000 rows
       getRowId={(r) => r.id}
       virtualScroll={{
-        enabled: true,       // row virtualization: renders ~30 rows instead of 100,000
+        enabled: true,    // renders ~30 rows instead of 100,000
         rowHeight: 36,
         overscan: 5,
-        columns: true,       // column virtualization: renders only visible columns
+        columns: true,    // renders only visible columns
         columnOverscan: 2,
       }}
-      workerSort={true}      // keeps the UI thread free during sort/filter
+      workerSort={true}   // sort/filter off the main thread
       statusBar
     />
   );
@@ -304,11 +295,11 @@ function App() {
 ```
 
 :::tip Switching UI libraries
-The `OGrid` component has the same props across all React UI packages. To switch, just change the import:
+Same props across all React packages — just change the import:
 
 - **Radix** (lightweight, default): `from '@alaarab/ogrid-react-radix'`
-- **Fluent UI** (Microsoft 365 / SPFx): `from '@alaarab/ogrid-react-fluent'` — wrap in `<FluentProvider>`
-- **Material UI** (MUI v7): `from '@alaarab/ogrid-react-material'` — wrap in `<ThemeProvider>`
+- **Fluent UI** (Microsoft 365 / SPFx): `from '@alaarab/ogrid-react-fluent'`  -  wrap in `<FluentProvider>`
+- **Material UI** (MUI v7): `from '@alaarab/ogrid-react-material'`  -  wrap in `<ThemeProvider>`
 :::
 
   </TabItem>
@@ -316,8 +307,8 @@ The `OGrid` component has the same props across all React UI packages. To switch
 
 ```typescript
 gridProps = {
-  columns,           // e.g. 100 columns
-  data: largeData,   // e.g. 100,000 rows
+  columns,           // 100 columns
+  data: largeData,   // 100,000 rows
   getRowId: (item: Row) => item.id,
   virtualScroll: {
     enabled: true,
@@ -332,7 +323,7 @@ gridProps = {
 ```
 
 :::tip Switching UI libraries
-Same component API across Angular packages. To switch, just change the import:
+Same API across Angular packages. Change the import:
 
 - **Radix (CDK)**: `from '@alaarab/ogrid-angular-radix'` *(default, lightweight)*
 - **Angular Material**: `from '@alaarab/ogrid-angular-material'`
@@ -347,8 +338,8 @@ All components are standalone — no NgModule required.
 ```vue
 <script setup lang="ts">
 const gridProps = {
-  columns,          // e.g. 100 columns
-  data: largeData,  // e.g. 100,000 rows
+  columns,          // 100 columns
+  data: largeData,  // 100,000 rows
   getRowId: (item: Row) => item.id,
   virtualScroll: {
     enabled: true,
@@ -368,10 +359,10 @@ const gridProps = {
 ```
 
 :::tip Switching UI libraries
-Same component API across Vue packages. To switch, just change the import:
+Same API across Vue packages. Change the import:
 
 - **Radix (Headless UI)**: `from '@alaarab/ogrid-vue-radix'` *(default, lightweight)*
-- **Vuetify**: `from '@alaarab/ogrid-vue-vuetify'` — wrap in `<v-app>` for theming
+- **Vuetify**: `from '@alaarab/ogrid-vue-vuetify'`  -  wrap in `<v-app>` for theming
 - **PrimeVue**: `from '@alaarab/ogrid-vue-primevue'`
 :::
 
@@ -383,8 +374,8 @@ import { OGrid } from '@alaarab/ogrid-js';
 import '@alaarab/ogrid-js/styles';
 
 const grid = new OGrid(document.getElementById('grid'), {
-  columns,           // e.g. 100 columns
-  data: largeData,   // e.g. 100,000 rows
+  columns,           // 100 columns
+  data: largeData,   // 100,000 rows
   getRowId: (r) => r.id,
   virtualScroll: {
     enabled: true,
@@ -403,43 +394,49 @@ const grid = new OGrid(document.getElementById('grid'), {
 
 ---
 
-## Props Reference
+## Which features do I actually need?
+
+Start here, add as needed:
+
+| Dataset | Recommended setup |
+|---|---|
+| < 1,000 rows, < 20 columns | Nothing — CSS containment handles it automatically. |
+| 1,000 – 10,000 rows | Add row virtualization: `virtualScroll: { enabled: true, rowHeight: 36 }`. |
+| > 10,000 rows | Row virtualization + `workerSort: 'auto'`. |
+| > 30 columns with horizontal scroll | Add `columns: true` to the `virtualScroll` config. |
+| Very large + very wide | All three: row virtualization, column virtualization, and `workerSort: true`. |
+
+:::tip Pro tip
+If you're unsure whether you need column virtualization, open DevTools and look at how many `<td>` elements render in a single row. If it's more than you can count comfortably, add `columns: true`.
+:::
+
+---
+
+## Props reference
 
 ### `workerSort`
 
-| Value | Behavior |
+| Value | When to use it |
 |-------|----------|
-| `false` (default) | Synchronous sort/filter on the main thread |
-| `true` | Always use Web Worker for sort and filter |
-| `'auto'` | Use Web Worker only when `data.length > 5000` |
+| `false` (default) | Small datasets, or when you have custom `compare` functions |
+| `true` | Large datasets where you want the worker always active |
+| `'auto'` | You don't know the data size ahead of time — use this as the safe default |
 
-### `virtualScroll` (Performance Fields)
+### Column virtualization fields (inside `virtualScroll`)
 
 | Field | Type | Default | Description |
 |-------|------|---------|-------------|
-| `columns` | `boolean` | `false` | Enable column virtualization alongside row virtualization |
-| `columnOverscan` | `number` | `2` | Extra columns rendered beyond the visible horizontal range on each side |
+| `columns` | `boolean` | `false` | Enable column virtualization. Requires row virtualization to also be enabled. |
+| `columnOverscan` | `number` | `2` | Extra columns rendered beyond the visible range on each side (prevents blank flash on fast scroll). |
 
-For the full `virtualScroll` props table, see [Virtual Scrolling — Props Reference](./virtual-scrolling#props-reference).
-
----
-
-## When to Use Each Feature
-
-| Dataset Size | Recommendation |
-|---|---|
-| < 1,000 rows, < 20 columns | No performance features needed. CSS containment applies automatically. |
-| 1,000 – 10,000 rows | Enable row virtualization (`virtualScroll: { enabled: true, rowHeight: 36 }`). |
-| > 10,000 rows | Row virtualization + `workerSort: 'auto'` or `workerSort: true`. |
-| > 30 columns with horizontal scroll | Add `columns: true` to the `virtualScroll` config. |
-| All of the above | Combine all three: row + column virtualization and `workerSort: true`. |
+For the full `virtualScroll` API, see [Virtual Scrolling — Props Reference](./virtual-scrolling#props-reference).
 
 ---
 
-## Related
+## Next steps
 
-- [Virtual Scrolling](./virtual-scrolling) -- row virtualization, programmatic scrolling, and the full `virtualScroll` API
-- [Sorting](./sorting) -- configure sortable columns and custom comparators
-- [Filtering](./filtering) -- filter types and server-side filtering
-- [Server-Side Data](./server-side-data) -- move sort and filter to the server entirely
-- [Column Pinning](./column-pinning) -- pinned columns always render regardless of column virtualization
+- [Virtual Scrolling](./virtual-scrolling) — row virtualization, scroll-to-row, and the full virtualScroll API
+- [Sorting](./sorting) — configure sortable columns and custom comparators
+- [Filtering](./filtering) — filter types and server-side filtering
+- [Server-Side Data](./server-side-data) — skip client-side processing entirely for the largest datasets
+- [Column Pinning](./column-pinning) — pinned columns always render regardless of column virtualization

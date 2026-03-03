@@ -129,9 +129,9 @@ describe('slider-utils', () => {
 
     it('snaps to step increments', () => {
       // Track is 300px wide, range 0-100, step=10
-      // offset=155 → ratio ~0.517 → raw ~51.7 → snapped to 50
+      // offset=155  to  ratio ~0.517  to  raw ~51.7  to  snapped to 50
       expect(getValueFromOffset(155, 300, 0, 100, 10)).toBe(50);
-      // offset=175 → ratio ~0.583 → raw ~58.3 → snapped to 60
+      // offset=175  to  ratio ~0.583  to  raw ~58.3  to  snapped to 60
       expect(getValueFromOffset(175, 300, 0, 100, 10)).toBe(60);
     });
 

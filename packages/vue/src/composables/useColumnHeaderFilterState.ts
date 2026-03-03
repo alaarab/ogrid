@@ -93,7 +93,7 @@ export function useColumnHeaderFilterState(
     isFilterOpen.value = open;
   };
 
-  // Compose sub-hooks — pass the ref directly so Vue's reactivity system
+  // Compose sub-hooks  -  pass the ref directly so Vue's reactivity system
   // can properly track dependencies (instead of a getter function wrapper)
   const textFilterState = useTextFilterState({
     textValue: params.textValue,

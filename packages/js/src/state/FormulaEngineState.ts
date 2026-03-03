@@ -18,21 +18,21 @@ export interface FormulaEngineStateOptions {
   formulaFunctions?: Record<string, IFormulaFunction>;
   /** Callback invoked after every recalculation. */
   onFormulaRecalc?: (result: IRecalcResult) => void;
-  /** Named ranges: name → cell/range reference string. */
+  /** Named ranges: name  to  cell/range reference string. */
   namedRanges?: Record<string, string>;
   /** Sheet accessors for cross-sheet references. */
   sheets?: Record<string, IGridDataAccessor>;
 }
 
 /**
- * FormulaEngineState — wraps the core `FormulaEngine` for the vanilla JS grid.
+ * FormulaEngineState  -  wraps the core `FormulaEngine` for the vanilla JS grid.
  *
  * Follows the same EventEmitter pattern as other JS state classes. The engine
  * is lazily created only when `formulas` is true in the options, keeping the
  * cost at zero for grids that don't use formulas.
  *
  * ## Events
- * - `formulaRecalc` — emitted after every recalculation with `IRecalcResult`.
+ * - `formulaRecalc`  -  emitted after every recalculation with `IRecalcResult`.
  */
 export class FormulaEngineState {
   private emitter = new EventEmitter<{ formulaRecalc: IRecalcResult }>();
@@ -57,7 +57,7 @@ export class FormulaEngineState {
   }
 
   /**
-   * Initialize with an accessor — loads `initialFormulas` if provided.
+   * Initialize with an accessor  -  loads `initialFormulas` if provided.
    * Must be called after the grid data is available so the accessor is valid.
    */
   initialize(accessor: IGridDataAccessor): void {

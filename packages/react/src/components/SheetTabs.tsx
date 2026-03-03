@@ -1,5 +1,5 @@
 /**
- * SheetTabs — Excel-style sheet tab bar at the bottom of the grid.
+ * SheetTabs  -  Excel-style sheet tab bar at the bottom of the grid.
  *
  * Layout: [+] [Sheet1] [Sheet2] [Sheet3]
  */

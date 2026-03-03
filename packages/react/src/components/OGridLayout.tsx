@@ -71,7 +71,7 @@ const toolbarStripStyle: React.CSSProperties = {
   borderBottom: '1px solid var(--ogrid-border, rgba(0, 0, 0, 0.12))',
 };
 
-/** Toolbar strip without border-bottom (when toolbarBelow follows — it owns the border). */
+/** Toolbar strip without border-bottom (when toolbarBelow follows  -  it owns the border). */
 const toolbarStripNoBorderStyle: React.CSSProperties = toolbarStripBase;
 
 const toolbarSectionStyle: React.CSSProperties = {

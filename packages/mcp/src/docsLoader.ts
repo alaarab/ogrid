@@ -180,8 +180,8 @@ function stripMdxContent(raw: string): string {
   text = text.replace(/<[A-Z]\w*\s*\/>/g, '');
 
   // Strip JSX opening/closing tags but keep text content inside
-  // e.g. <TabItem value="react" label="React" default> → ''
-  // e.g. </TabItem> → ''
+  // e.g. <TabItem value="react" label="React" default>  to  ''
+  // e.g. </TabItem>  to  ''
   text = text.replace(/<\/?[A-Z][\w.]*(?:\s[^>]*)?>/g, '');
 
   // Strip HTML-style tags too (lowercase like <br />, <hr />)
@@ -229,7 +229,7 @@ function scoreEntry(entry: DocEntry, queryLower: string): number {
   const descLower = entry.description.toLowerCase();
   const contentLower = entry.content.toLowerCase();
 
-  // Title match — highest weight
+  // Title match  -  highest weight
   if (titleLower.includes(queryLower)) {
     score += 100;
     // Bonus for exact title match
@@ -238,12 +238,12 @@ function scoreEntry(entry: DocEntry, queryLower: string): number {
     if (titleLower.startsWith(queryLower)) score += 25;
   }
 
-  // Description match — medium weight
+  // Description match  -  medium weight
   if (descLower.includes(queryLower)) {
     score += 50;
   }
 
-  // Content match — base weight, plus density bonus
+  // Content match  -  base weight, plus density bonus
   if (contentLower.includes(queryLower)) {
     score += 10;
     // Count occurrences (up to 10) for density bonus
@@ -265,7 +265,7 @@ function scoreEntry(entry: DocEntry, queryLower: string): number {
   return score;
 }
 
-/** Score for code example search — checks code content and language. */
+/** Score for code example search  -  checks code content and language. */
 function scoreCodeBlock(
   entry: DocEntry,
   block: CodeBlock,

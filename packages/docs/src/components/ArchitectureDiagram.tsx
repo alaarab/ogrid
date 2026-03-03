@@ -1,10 +1,10 @@
 import React from 'react';
 
 /* ─────────────────────────────────────────────────────────────
-   Architecture Diagram — Dependency tree showing OGrid's
+   Architecture Diagram  -  Dependency tree showing OGrid's
    3-layer architecture across all 14 packages.
 
-   Layout (4 columns, top → bottom = UI → Adapter → Core):
+   Layout (4 columns, top  to  bottom = UI  to  Adapter  to  Core):
 
    React col     Angular col    Vue col       JS col
    ┌──────────┐  ┌──────────┐  ┌──────────┐
@@ -130,7 +130,7 @@ function FrameworkColumn({ uiPackages, adapterName, adapterDescription, colors }
         ))}
       </div>
 
-      {/* Connector: UI tier → adapter */}
+      {/* Connector: UI tier  to  adapter */}
       <VertConnector color={colors.border} />
 
       {/* Adapter tier */}
@@ -163,7 +163,7 @@ function JsColumn() {
   );
 }
 
-// ─── Multi-column connector (adapter row → core) ─────────────
+// ─── Multi-column connector (adapter row  to  core) ─────────────
 function AdapterToCoreConnector() {
   /*
     Draws a horizontal bar connecting 4 columns with a vertical
@@ -355,13 +355,13 @@ export function ArchitectureDiagram() {
       {/* Layer label */}
       <LayerLabel style={{ marginTop: 0 }}>Framework Adapters</LayerLabel>
 
-      {/* Connector: 4 adapters → core */}
+      {/* Connector: 4 adapters  to  core */}
       <AdapterToCoreConnector />
 
       {/* Layer label */}
       <LayerLabel style={{ marginTop: 0 }}>Core</LayerLabel>
 
-      {/* Core box — centered, narrower */}
+      {/* Core box  -  centered, narrower */}
       <div style={{ display: 'flex', justifyContent: 'center' }}>
         <div style={{ width: '60%', minWidth: 300 }}>
           <CoreBox />

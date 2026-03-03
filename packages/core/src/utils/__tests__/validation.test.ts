@@ -6,7 +6,7 @@ interface Row {
   name: string;
 }
 
-describe('validateColumns — editable column validation', () => {
+describe('validateColumns  -  editable column validation', () => {
   let warnSpy: jest.SpyInstance;
 
   beforeEach(() => {

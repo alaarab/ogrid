@@ -146,7 +146,7 @@ describe('OGridService', () => {
       expect(before.visibleColumns).toContain('id');
       expect(before.visibleColumns).toContain('name');
 
-      // Only change filters — visibility and sort should remain
+      // Only change filters  -  visibility and sort should remain
       service.getApi().applyColumnState({ filters: { id: { type: 'text', value: '2' } } });
 
       const after = service.getApi().getColumnState();
@@ -460,7 +460,7 @@ describe('OGridService', () => {
       // configure without onError in props
       service.configure({ columns, getRowId, data });
       // onError was set via signal, configure skips undefined onError
-      // check it's still set — configure only sets if truthy
+      // check it's still set  -  configure only sets if truthy
       expect(service.onError()).toBe(onError);
     });
 

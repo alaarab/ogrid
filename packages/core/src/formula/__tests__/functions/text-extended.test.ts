@@ -226,7 +226,7 @@ describe('Info extended functions', () => {
     });
 
     it('should truncate decimal before checking', () => {
-      expect(evalFormula('=ISODD(3.9)')).toBe(true); // trunc(3.9)=3 → odd
+      expect(evalFormula('=ISODD(3.9)')).toBe(true); // trunc(3.9)=3  to  odd
     });
 
     it('should return #VALUE! for boolean', () => {
@@ -251,7 +251,7 @@ describe('Info extended functions', () => {
     });
 
     it('should truncate decimal before checking', () => {
-      expect(evalFormula('=ISEVEN(4.9)')).toBe(true); // trunc(4.9)=4 → even
+      expect(evalFormula('=ISEVEN(4.9)')).toBe(true); // trunc(4.9)=4  to  even
     });
 
     it('should return #VALUE! for boolean', () => {

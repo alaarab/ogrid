@@ -1,6 +1,6 @@
 /**
  * Pure undo/redo stack data structure shared across React, Vue, Angular, and JS.
- * No framework dependencies — all state is plain arrays.
+ * No framework dependencies  -  all state is plain arrays.
  *
  * Usage:
  *   const stack = new UndoRedoStack<MyEvent>(100);
@@ -62,7 +62,7 @@ export class UndoRedoStack<T> {
       if (this.history.length > this.maxDepth) {
         this.history.splice(0, this.history.length - this.maxDepth);
       }
-      // Clear redo stack in-place — avoids allocating a new array on every edit
+      // Clear redo stack in-place  -  avoids allocating a new array on every edit
       this.redoStack.length = 0;
     }
   }
@@ -76,7 +76,7 @@ export class UndoRedoStack<T> {
   }
 
   /**
-   * Start a batch — subsequent record/push calls accumulate into one undo step.
+   * Start a batch  -  subsequent record/push calls accumulate into one undo step.
    * Has no effect if a batch is already open.
    */
   beginBatch(): void {
@@ -86,7 +86,7 @@ export class UndoRedoStack<T> {
   }
 
   /**
-   * End a batch — commits all accumulated events as one undo step.
+   * End a batch  -  commits all accumulated events as one undo step.
    * Has no effect if no batch is open or if the batch is empty.
    */
   endBatch(): void {
@@ -128,7 +128,7 @@ export class UndoRedoStack<T> {
 
   /**
    * Clear all history and redo state.
-   * Does not affect any open batch — call endBatch() first if needed.
+   * Does not affect any open batch  -  call endBatch() first if needed.
    */
   clear(): void {
     this.history = [];

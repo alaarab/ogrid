@@ -1,6 +1,6 @@
 /**
  * Lightweight list virtualizer for fixed-height items in a scrollable container.
- * Zero external dependencies — uses only React state and refs.
+ * Zero external dependencies  -  uses only React state and refs.
  */
 
 import { useRef, useState, useCallback, useMemo } from 'react';

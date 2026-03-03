@@ -1,5 +1,5 @@
 /**
- * DatePickerEditor — Premium calendar-based date picker for OGrid (Vue).
+ * DatePickerEditor  -  Premium calendar-based date picker for OGrid (Vue).
  *
  * Usage:
  *   import { DatePickerEditor } from '@alaarab/ogrid-vue-inputs';
@@ -10,13 +10,13 @@
  *     cellEditorPopup: true,
  *   }];
  *
- * Implements ICellEditorProps<T> — works with cellEditorPopup: true.
+ * Implements ICellEditorProps<T>  -  works with cellEditorPopup: true.
  */
 import { defineComponent, ref, computed, onMounted, h, type PropType, type CSSProperties } from 'vue';
 import type { IColumnDef } from '@alaarab/ogrid-core';
 import { getCalendarGrid, formatDate, parseDate, DAY_NAMES, MONTH_NAMES } from '@alaarab/ogrid-inputs';
 
-// ── Styles (inline to avoid CSS file dependency — keeps package sideEffects: false) ──
+// ── Styles (inline to avoid CSS file dependency  -  keeps package sideEffects: false) ──
 
 const rootStyle: CSSProperties = {
   fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',

@@ -3,6 +3,7 @@ export type {
   ColumnFilterType,
   IDateFilterValue,
   IColumnFilterDef,
+  DateFormat,
   IColumnMeta,
   IValueParserParams,
   IColumnDef,

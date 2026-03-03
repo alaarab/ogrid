@@ -1,5 +1,5 @@
 /**
- * TagsEditor — Premium multi-value tag/chip cell editor for OGrid.
+ * TagsEditor  -  Premium multi-value tag/chip cell editor for OGrid.
  *
  * Usage:
  *   import { TagsEditor } from '@alaarab/ogrid-react-inputs';
@@ -11,7 +11,7 @@
  *     cellEditorParams: { suggestions: ['Bug', 'Feature', 'Docs'], allowCreate: true },
  *   }];
  *
- * Implements ICellEditorProps<T> — works with cellEditorPopup: true.
+ * Implements ICellEditorProps<T>  -  works with cellEditorPopup: true.
  * Tags are stored as a comma-separated string.
  */
 import * as React from 'react';
@@ -23,7 +23,7 @@ import {
   filterTagSuggestions,
 } from '@alaarab/ogrid-inputs';
 
-// ── Styles (inline to avoid CSS file dependency — keeps package sideEffects: false) ──
+// ── Styles (inline to avoid CSS file dependency  -  keeps package sideEffects: false) ──
 
 const rootStyle: React.CSSProperties = {
   fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
@@ -192,6 +192,13 @@ export function TagsEditor<T>(props: ICellEditorProps<T>): React.ReactElement {
     [tags, updateTags],
   );
 
+  const handleClearAll = () => {
+    updateTags([]);
+    setInputText('');
+    onValueChange('');
+    onCommit();
+  };
+
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setInputText(e.target.value);
     setHighlightedIndex(-1);
@@ -236,13 +243,6 @@ export function TagsEditor<T>(props: ICellEditorProps<T>): React.ReactElement {
   const handleSuggestionClick = (suggestion: string) => {
     addTag(suggestion);
     inputRef.current?.focus();
-  };
-
-  const handleClearAll = () => {
-    updateTags([]);
-    setInputText('');
-    onValueChange('');
-    onCommit();
   };
 
   // Focus input on mount

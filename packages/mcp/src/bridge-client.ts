@@ -23,7 +23,7 @@
  *     return () => bridge.disconnect();
  *   }, []);
  *
- * This module contains NO Node.js-specific imports — safe to bundle in browsers.
+ * This module contains NO Node.js-specific imports  -  safe to bundle in browsers.
  */
 
 // ---------------------------------------------------------------------------
@@ -135,7 +135,7 @@ export function connectGridToBridge(options: ConnectGridOptions): BridgeConnecti
         body: JSON.stringify(buildState()),
       });
     } catch {
-      // Bridge not running — silently ignore
+      // Bridge not running  -  silently ignore
     }
   }
 
@@ -252,7 +252,7 @@ export function connectGridToBridge(options: ConnectGridOptions): BridgeConnecti
         }
       }
     } catch {
-      // Bridge not available — keep trying
+      // Bridge not available  -  keep trying
     }
     // Push state
     await push();

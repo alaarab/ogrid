@@ -183,7 +183,7 @@ export function useOGrid<T>(
   } = props;
 
   // Stabilize consumer callbacks so inline functions don't cause cascading re-renders.
-  // AG Grid does this internally — we need to match that resilience.
+  // AG Grid does this internally  -  we need to match that resilience.
   const getRowIdStableRef = useLatestRef(getRowIdProp);
   const getRowId = useCallback((item: T) => getRowIdStableRef.current(item), [getRowIdStableRef]) as typeof getRowIdProp;
   const onColumnOrderChangeRef = useLatestRef(onColumnOrderChangeProp);
@@ -288,7 +288,7 @@ export function useOGrid<T>(
   useEffect(() => {
     const prev = prevColumnsLengthRef.current;
     prevColumnsLengthRef.current = columns.length;
-    if (controlledVisibleColumns !== undefined) return; // controlled — skip
+    if (controlledVisibleColumns !== undefined) return; // controlled  -  skip
     if (prev === 0 && columns.length > 0 && internalVisibleColumns.size === 0) {
       const visible = columns
         .filter((c) => c.defaultVisible !== false)
@@ -434,7 +434,7 @@ export function useOGrid<T>(
         onColumnOrderChange?.(order);
       },
       scrollToRow: () => {
-        // No-op at orchestration level — DataGridTable components implement
+        // No-op at orchestration level  -  DataGridTable components implement
         // this via useVirtualScroll.scrollToIndex when virtual scrolling is active.
       },
     }),
@@ -536,7 +536,7 @@ export function useOGrid<T>(
   const onActiveCellChange = useCallback((ref: string | null) => {
     setActiveCellRef(ref);
     if (ref) {
-      // Parse "A1" → { col: 0, row: 0 }
+      // Parse "A1"  to  { col: 0, row: 0 }
       const m = ref.match(/^([A-Z]+)(\d+)$/);
       if (m) {
         setActiveCellCoords({ col: columnLetterToIndex(m[1]), row: parseInt(m[2], 10) - 1 });
