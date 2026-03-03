@@ -1,10 +1,10 @@
-![OGrid](packages/docs/static/img/favicon.svg)
+<img src="packages/docs/static/img/favicon.svg" width="64" height="64" alt="OGrid" />
 
 # OGrid
 
 A lightweight, multi-framework data grid. One headless core, 10 UI packages across React, Angular, Vue, and vanilla JS.
 
-[![npm](https://img.shields.io/npm/v/@alaarab/ogrid-core?color=%23217346&label=npm)](https://www.npmjs.com/package/@alaarab/ogrid-core) [![CI](https://github.com/alaarab/ogrid/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/alaarab/ogrid/actions/workflows/ci.yml) [![MIT License](https://img.shields.io/badge/license-MIT-green)](https://github.com/alaarab/ogrid/blob/main/LICENSE) ![tests passing](https://img.shields.io/badge/tests-2%2C980%20passing-brightgreen) ![gzip](https://img.shields.io/badge/gzip-12.2%20KB%20core-blue) ![React 17 | 18 | 19](https://img.shields.io/badge/React-17%20%7C%2018%20%7C%2019-61DAFB?logo=react&logoColor=white) ![Angular 21](https://img.shields.io/badge/Angular-21-DD0031?logo=angular&logoColor=white) ![Vue 3.3+](https://img.shields.io/badge/Vue-3.3+-4FC08D?logo=vuedotjs&logoColor=white) ![TypeScript strict](https://img.shields.io/badge/TypeScript-strict-3178C6?logo=typescript&logoColor=white)
+[![npm](https://img.shields.io/npm/v/@alaarab/ogrid-core?color=%23217346&label=npm)](https://www.npmjs.com/package/@alaarab/ogrid-core) [![CI](https://github.com/alaarab/ogrid/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/alaarab/ogrid/actions/workflows/ci.yml) [![MIT License](https://img.shields.io/badge/license-MIT-green)](https://github.com/alaarab/ogrid/blob/main/LICENSE)
 
 [Documentation](https://alaarab.github.io/ogrid/) &middot;
 [Getting Started](https://alaarab.github.io/ogrid/docs/getting-started/overview) &middot;
@@ -14,98 +14,111 @@ A lightweight, multi-framework data grid. One headless core, 10 UI packages acro
 
 ---
 
-Pick the framework and UI library you already use -- **React** (Radix UI, Fluent UI, Material UI), **Angular** (Angular Material, PrimeNG, Radix UI), **Vue** (Vuetify, PrimeVue, Radix UI), or **vanilla JS** -- and get sorting, filtering, pagination, cell editing, spreadsheet selection, and more out of the box.
+Pick the framework and UI library you already use and get sorting, filtering, pagination, cell editing, spreadsheet selection, and more out of the box.
 
 ## Why OGrid?
 
 | | OGrid | AG Grid Community | AG Grid Enterprise |
 |---|---|---|---|
-| Spreadsheet selection | Built-in | -- | $999/dev/year |
-| Clipboard (copy/paste) | Built-in | -- | $999/dev/year |
-| Fill handle (drag to fill) | Built-in | -- | $999/dev/year |
-| Undo / Redo | Built-in | -- | $999/dev/year |
-| Context menu | Built-in | -- | $999/dev/year |
-| Status bar | Built-in | -- | $999/dev/year |
-| Side bar | Built-in | -- | $999/dev/year |
+| Spreadsheet selection | Built-in | No | $999/dev/year |
+| Clipboard (copy/paste) | Built-in | No | $999/dev/year |
+| Fill handle (drag to fill) | Built-in | No | $999/dev/year |
+| Undo / Redo | Built-in | No | $999/dev/year |
+| Context menu | Built-in | No | $999/dev/year |
+| Status bar | Built-in | No | $999/dev/year |
+| Side bar | Built-in | No | $999/dev/year |
 | Cell editing | Built-in | Built-in | Built-in |
 | Sorting & filtering | Built-in | Built-in | Built-in |
-| **Bundle size (gzip)** | **12.2 KB** core | ~339 KB | ~339 KB+ |
+| **Bundle size (gzip)** | **42-58 KB** | ~339 KB | ~339 KB+ |
 | **License** | **MIT (free)** | MIT | Commercial |
 | **Cost** | **$0** | $0 | **$999/dev/year** |
+
+Bundle size is what you actually install (core + framework adapter + UI layer). See the [architecture section](#architecture) for per-setup sizes.
 
 ## Features
 
 **Data**
-- Sorting -- click headers to sort; multi-column sort; custom comparators
-- Filtering -- text search, multi-select checkboxes, date range, people picker; client or server-side
-- Pagination -- configurable page sizes; client-side or server-side via `IDataSource`
-- Virtual scrolling -- row and column virtualization for large datasets
-- Web worker sort/filter -- offload sort and filter to a background thread (`workerSort: true`)
-- Server-side data -- `IDataSource` pattern for remote pagination, sorting, filtering
-- Column types -- built-in `text`, `numeric`, `date`, `boolean` with auto-formatting and filters
+- Sorting: click headers to sort, multi-column sort, custom comparators
+- Filtering: text search, multi-select checkboxes, date range, people picker (client or server-side)
+- Pagination: configurable page sizes, client-side or server-side via `IDataSource`
+- Virtual scrolling: row and column virtualization for large datasets
+- Web worker sort/filter: offload to a background thread with `workerSort: true`
+- Server-side data: `IDataSource` pattern for remote pagination, sorting, filtering
+- Column types: built-in `text`, `numeric`, `date`, `boolean` with auto-formatting and filters
 
 **Editing**
-- Cell editing -- inline text, select, checkbox, rich select, and custom popup editors
-- Clipboard -- Ctrl+C / X / V with multi-cell copy/paste; respects `valueFormatter` / `valueParser`
-- Fill handle -- drag to fill cells (Excel-style)
-- Undo / redo -- full edit history with Ctrl+Z / Ctrl+Y; batch operation support
-- Premium inputs -- optional calendar date picker and more via `@alaarab/ogrid-{react,angular,vue,js}-inputs`
+- Cell editing: inline text, select, checkbox, rich select, and custom popup editors
+- Clipboard: Ctrl+C / X / V with multi-cell copy/paste, respects `valueFormatter` / `valueParser`
+- Fill handle: drag to fill cells (Excel-style)
+- Undo / redo: full edit history with Ctrl+Z / Ctrl+Y, batch operation support
+- Premium inputs: optional calendar date picker and more via `@alaarab/ogrid-{react,angular,vue,js}-inputs`
 
 **Selection & Navigation**
-- Spreadsheet selection -- click-and-drag range selection with active cell highlight
-- Row selection -- single or multiple with Shift+click range support
-- Keyboard navigation -- Arrow keys, Tab, Enter, F2, Home/End, Ctrl+Home/End, Ctrl+Arrow (Excel-style)
-- Cell references -- Excel-style column letters (A, B, C...), row numbers, name box showing active cell
+- Spreadsheet selection: click-and-drag range selection with active cell highlight
+- Row selection: single or multiple with Shift+click range support
+- Keyboard navigation: Arrow keys, Tab, Enter, F2, Home/End, Ctrl+Home/End, Ctrl+Arrow (Excel-style)
+- Cell references: Excel-style column letters (A, B, C...), row numbers, name box showing active cell
 
 **Columns**
-- Column groups -- multi-row grouped headers with arbitrary nesting
-- Column pinning -- sticky left/right columns
-- Column resize -- drag column borders to resize
-- Column chooser -- show/hide columns via toolbar dropdown or sidebar panel
-- Column state persistence -- save/restore visibility, sort, order, widths, filters
+- Column groups: multi-row grouped headers with arbitrary nesting
+- Column pinning: sticky left/right columns
+- Column resize: drag column borders to resize
+- Column chooser: show/hide columns via toolbar dropdown or sidebar panel
+- Column state persistence: save/restore visibility, sort, order, widths, filters
 
 **UI**
-- Toolbar & layout -- unified bordered container with primary toolbar, secondary `toolbarBelow` row, and footer
-- Side bar -- toggle-able panel with Columns and Filters panels
-- Context menu -- right-click: copy, paste, cut, export, undo/redo with keyboard shortcuts
-- Status bar -- row count, filtered count, selection aggregations (sum, avg, min, max)
-- Empty state -- custom message or render function
-- CSV export -- one-click export with formatted values
+- Toolbar & layout: unified bordered container with primary toolbar, secondary `toolbarBelow` row, and footer
+- Side bar: toggle-able panel with Columns and Filters panels
+- Context menu: right-click with copy, paste, cut, export, undo/redo and keyboard shortcuts
+- Status bar: row count, filtered count, selection aggregations (sum, avg, min, max)
+- Empty state: custom message or render function
+- CSV export: one-click export with formatted values
 
 **Advanced**
-- Grid API -- `ref`-based imperative API: `setRowData`, `getColumnState`, `selectAll`, etc.
-- Formula engine -- 145 built-in functions; Excel-like formula bar, cell reference highlighting, cross-cell recalculation
-- Editor integration (MCP) -- `@alaarab/ogrid-mcp` connects your IDE to OGrid docs and lets it read and control a running grid
-- CSS containment -- automatic `contain: content` on cells; `content-visibility: auto` on off-screen rows
-- TypeScript strict -- fully generic `<T>` with strict mode; zero `any` leaks
+- Grid API: `ref`-based imperative API for `setRowData`, `getColumnState`, `selectAll`, etc.
+- Formula engine: 145 built-in functions, Excel-like formula bar, cell reference highlighting, cross-cell recalculation
+- Editor integration (MCP): `@alaarab/ogrid-mcp` connects your IDE to OGrid docs and lets it read and control a running grid
+- CSS containment: automatic `contain: content` on cells, `content-visibility: auto` on off-screen rows
+- TypeScript strict: fully generic `<T>` with strict mode, zero `any` leaks
 
-## Framework Support
+## Architecture
 
-OGrid provides **10 UI packages** across 4 frameworks, all sharing a single headless core:
+```
+@alaarab/ogrid-core          (pure TS, zero deps)
+├── @alaarab/ogrid-react          hooks + headless components
+│   ├── ogrid-react-radix         Radix UI views
+│   ├── ogrid-react-fluent        Fluent UI views
+│   └── ogrid-react-material      Material UI views
+├── @alaarab/ogrid-angular        signals + services
+│   ├── ogrid-angular-material    Angular Material views
+│   ├── ogrid-angular-primeng     PrimeNG views
+│   └── ogrid-angular-radix       Radix UI views
+├── @alaarab/ogrid-vue            composables
+│   ├── ogrid-vue-vuetify         Vuetify views
+│   ├── ogrid-vue-primevue        PrimeVue views
+│   └── ogrid-vue-radix           Radix UI views
+└── @alaarab/ogrid-js             vanilla JS (class-based)
+```
 
-| Framework | UI Library | Package | Peer Dependencies |
-|-----------|-----------|---------|-------------------|
-| **React** | Radix UI (default) | `@alaarab/ogrid-react-radix` | `react`, `react-dom` |
-| | Fluent UI v9 | `@alaarab/ogrid-react-fluent` | + `@fluentui/react-components`, `@fluentui/react-icons` |
-| | Material UI v7 | `@alaarab/ogrid-react-material` | + `@mui/material`, `@mui/icons-material`, `@emotion/*` |
-| **Angular** | Angular Material v21 | `@alaarab/ogrid-angular-material` | `@angular/material`, `@angular/cdk` |
-| | PrimeNG v21 | `@alaarab/ogrid-angular-primeng` | `primeng` |
-| | Radix UI | `@alaarab/ogrid-angular-radix` | -- |
-| **Vue** | Vuetify 3 | `@alaarab/ogrid-vue-vuetify` | `vuetify` |
-| | PrimeVue 4 | `@alaarab/ogrid-vue-primevue` | `primevue` |
-| | Radix UI | `@alaarab/ogrid-vue-radix` | -- |
-| **Vanilla JS** | None needed | `@alaarab/ogrid-js` | None |
+**Core** owns types and pure TypeScript utilities with zero dependencies. **Framework adapters** (React hooks, Angular services, Vue composables) own state logic and headless components. **UI packages** are thin view layers (~50 lines of framework-specific rendering per component). All UI packages within a framework pass the same test suite via shared test factories.
 
-**Optional premium inputs** (calendar date picker, etc.) are available as add-on packages:
+### Installed sizes (gzip)
 
-| Framework | Package | Dependencies |
-|-----------|---------|--------------|
-| React | `@alaarab/ogrid-react-inputs` | `@alaarab/ogrid-core`, `react` |
-| Angular | `@alaarab/ogrid-angular-inputs` | `@alaarab/ogrid-core`, `@angular/core` |
-| Vue | `@alaarab/ogrid-vue-inputs` | `@alaarab/ogrid-core`, `vue` |
-| Vanilla JS | `@alaarab/ogrid-js-inputs` | `@alaarab/ogrid-core` |
+These are the actual sizes you ship. Each row is core + adapter + UI layer combined:
 
-All UI packages within a framework expose the **same API** -- switch UI libraries by changing one import.
+| Setup | Gzip |
+|-------|------|
+| React + Radix | 51 KB |
+| React + Fluent | 52 KB |
+| React + Material | 53 KB |
+| Angular + Material | 57 KB |
+| Angular + PrimeNG | 58 KB |
+| Angular + Radix | 57 KB |
+| Vue + Vuetify | 45 KB |
+| Vue + PrimeVue | 45 KB |
+| Vue + Radix | 42 KB |
+| Vanilla JS | 43 KB |
+| AG Grid Community (comparison) | ~339 KB |
 
 ## Quick Start
 
@@ -231,18 +244,6 @@ grid.getApi().setRowData(newData);
 grid.destroy();
 ```
 
-## Bundle Size
-
-| Package | Gzipped | Notes |
-|---------|---------|-------|
-| `@alaarab/ogrid-core` | **12.2 KB** | Pure TS, zero dependencies |
-| `@alaarab/ogrid-react` (+ virtual scroll) | **40.0 KB** | Includes `@tanstack/react-virtual` |
-| `@alaarab/ogrid-react-material` | **12.9 KB** | Thin UI layer |
-| `@alaarab/ogrid-js` | **33.8 KB** | Full standalone grid |
-| AG Grid Community (comparison) | **~339 KB** | -- |
-
-Core + a UI package gives you a full-featured data grid at a fraction of the size of alternatives.
-
 ## Cell Editing
 
 OGrid supports multiple editor types out of the box:
@@ -306,51 +307,32 @@ const dataSource: IDataSource<Product> = {
 
 All features work identically across React, Angular, Vue, and vanilla JS.
 
-## Architecture
-
-```
-@alaarab/ogrid-core          (pure TS, zero deps)
-├── @alaarab/ogrid-react          hooks + headless components
-│   ├── ogrid-react-radix         Radix UI views
-│   ├── ogrid-react-fluent        Fluent UI views
-│   └── ogrid-react-material      Material UI views
-├── @alaarab/ogrid-angular        signals + services
-│   ├── ogrid-angular-material    Angular Material views
-│   ├── ogrid-angular-primeng     PrimeNG views
-│   └── ogrid-angular-radix       Radix UI views
-├── @alaarab/ogrid-vue            composables
-│   ├── ogrid-vue-vuetify         Vuetify views
-│   ├── ogrid-vue-primevue        PrimeVue views
-│   └── ogrid-vue-radix           Radix UI views
-└── @alaarab/ogrid-js             vanilla JS (class-based)
-```
-
-**Core** owns types and pure TypeScript utilities with zero dependencies. **Framework adapters** (React hooks, Angular services, Vue composables) own state logic and headless components. **UI packages** are thin view layers (~50 lines of framework-specific rendering per component). All UI packages within a framework pass the same test suite via shared test factories.
-
 ## Packages
 
-| Package | npm | Description |
-|---------|-----|-------------|
-| [`@alaarab/ogrid-core`](./packages/core) | [![npm](https://img.shields.io/npm/v/@alaarab/ogrid-core)](https://www.npmjs.com/package/@alaarab/ogrid-core) | Pure TS types, algorithms, utilities (zero deps) |
+| Package | npm | Peer Dependencies |
+|---------|-----|-------------------|
+| [`@alaarab/ogrid-core`](./packages/core) | [![npm](https://img.shields.io/npm/v/@alaarab/ogrid-core)](https://www.npmjs.com/package/@alaarab/ogrid-core) | None |
 | **React** | | |
-| [`@alaarab/ogrid-react`](./packages/react) | [![npm](https://img.shields.io/npm/v/@alaarab/ogrid-react)](https://www.npmjs.com/package/@alaarab/ogrid-react) | React hooks, headless components, shared test factories |
-| [`@alaarab/ogrid-react-radix`](./packages/react-radix) | [![npm](https://img.shields.io/npm/v/@alaarab/ogrid-react-radix)](https://www.npmjs.com/package/@alaarab/ogrid-react-radix) | Radix UI implementation (default, lightweight) |
-| [`@alaarab/ogrid-react-fluent`](./packages/react-fluent) | [![npm](https://img.shields.io/npm/v/@alaarab/ogrid-react-fluent)](https://www.npmjs.com/package/@alaarab/ogrid-react-fluent) | Fluent UI v9 implementation |
-| [`@alaarab/ogrid-react-material`](./packages/react-material) | [![npm](https://img.shields.io/npm/v/@alaarab/ogrid-react-material)](https://www.npmjs.com/package/@alaarab/ogrid-react-material) | Material UI v7 implementation |
+| [`@alaarab/ogrid-react`](./packages/react) | [![npm](https://img.shields.io/npm/v/@alaarab/ogrid-react)](https://www.npmjs.com/package/@alaarab/ogrid-react) | `react`, `react-dom` |
+| [`@alaarab/ogrid-react-radix`](./packages/react-radix) | [![npm](https://img.shields.io/npm/v/@alaarab/ogrid-react-radix)](https://www.npmjs.com/package/@alaarab/ogrid-react-radix) | `react`, `react-dom` |
+| [`@alaarab/ogrid-react-fluent`](./packages/react-fluent) | [![npm](https://img.shields.io/npm/v/@alaarab/ogrid-react-fluent)](https://www.npmjs.com/package/@alaarab/ogrid-react-fluent) | + `@fluentui/react-components`, `@fluentui/react-icons` |
+| [`@alaarab/ogrid-react-material`](./packages/react-material) | [![npm](https://img.shields.io/npm/v/@alaarab/ogrid-react-material)](https://www.npmjs.com/package/@alaarab/ogrid-react-material) | + `@mui/material`, `@mui/icons-material`, `@emotion/*` |
 | **Angular** | | |
-| [`@alaarab/ogrid-angular`](./packages/angular) | [![npm](https://img.shields.io/npm/v/@alaarab/ogrid-angular)](https://www.npmjs.com/package/@alaarab/ogrid-angular) | Angular v21 services with signals |
-| [`@alaarab/ogrid-angular-material`](./packages/angular-material) | [![npm](https://img.shields.io/npm/v/@alaarab/ogrid-angular-material)](https://www.npmjs.com/package/@alaarab/ogrid-angular-material) | Angular Material v21 implementation |
-| [`@alaarab/ogrid-angular-primeng`](./packages/angular-primeng) | [![npm](https://img.shields.io/npm/v/@alaarab/ogrid-angular-primeng)](https://www.npmjs.com/package/@alaarab/ogrid-angular-primeng) | PrimeNG v21 implementation |
-| [`@alaarab/ogrid-angular-radix`](./packages/angular-radix) | [![npm](https://img.shields.io/npm/v/@alaarab/ogrid-angular-radix)](https://www.npmjs.com/package/@alaarab/ogrid-angular-radix) | Radix UI v21 implementation (lightweight) |
+| [`@alaarab/ogrid-angular`](./packages/angular) | [![npm](https://img.shields.io/npm/v/@alaarab/ogrid-angular)](https://www.npmjs.com/package/@alaarab/ogrid-angular) | `@angular/core`, `@angular/common` |
+| [`@alaarab/ogrid-angular-material`](./packages/angular-material) | [![npm](https://img.shields.io/npm/v/@alaarab/ogrid-angular-material)](https://www.npmjs.com/package/@alaarab/ogrid-angular-material) | + `@angular/material`, `@angular/cdk` |
+| [`@alaarab/ogrid-angular-primeng`](./packages/angular-primeng) | [![npm](https://img.shields.io/npm/v/@alaarab/ogrid-angular-primeng)](https://www.npmjs.com/package/@alaarab/ogrid-angular-primeng) | + `primeng` |
+| [`@alaarab/ogrid-angular-radix`](./packages/angular-radix) | [![npm](https://img.shields.io/npm/v/@alaarab/ogrid-angular-radix)](https://www.npmjs.com/package/@alaarab/ogrid-angular-radix) | None extra |
 | **Vue** | | |
-| [`@alaarab/ogrid-vue`](./packages/vue) | [![npm](https://img.shields.io/npm/v/@alaarab/ogrid-vue)](https://www.npmjs.com/package/@alaarab/ogrid-vue) | Vue 3 composables with Composition API |
-| [`@alaarab/ogrid-vue-vuetify`](./packages/vue-vuetify) | [![npm](https://img.shields.io/npm/v/@alaarab/ogrid-vue-vuetify)](https://www.npmjs.com/package/@alaarab/ogrid-vue-vuetify) | Vuetify 3 implementation |
-| [`@alaarab/ogrid-vue-primevue`](./packages/vue-primevue) | [![npm](https://img.shields.io/npm/v/@alaarab/ogrid-vue-primevue)](https://www.npmjs.com/package/@alaarab/ogrid-vue-primevue) | PrimeVue 4 implementation |
-| [`@alaarab/ogrid-vue-radix`](./packages/vue-radix) | [![npm](https://img.shields.io/npm/v/@alaarab/ogrid-vue-radix)](https://www.npmjs.com/package/@alaarab/ogrid-vue-radix) | Radix UI Vue implementation (lightweight) |
+| [`@alaarab/ogrid-vue`](./packages/vue) | [![npm](https://img.shields.io/npm/v/@alaarab/ogrid-vue)](https://www.npmjs.com/package/@alaarab/ogrid-vue) | `vue` |
+| [`@alaarab/ogrid-vue-vuetify`](./packages/vue-vuetify) | [![npm](https://img.shields.io/npm/v/@alaarab/ogrid-vue-vuetify)](https://www.npmjs.com/package/@alaarab/ogrid-vue-vuetify) | + `vuetify` |
+| [`@alaarab/ogrid-vue-primevue`](./packages/vue-primevue) | [![npm](https://img.shields.io/npm/v/@alaarab/ogrid-vue-primevue)](https://www.npmjs.com/package/@alaarab/ogrid-vue-primevue) | + `primevue` |
+| [`@alaarab/ogrid-vue-radix`](./packages/vue-radix) | [![npm](https://img.shields.io/npm/v/@alaarab/ogrid-vue-radix)](https://www.npmjs.com/package/@alaarab/ogrid-vue-radix) | None extra |
 | **Vanilla JS** | | |
-| [`@alaarab/ogrid-js`](./packages/js) | [![npm](https://img.shields.io/npm/v/@alaarab/ogrid-js)](https://www.npmjs.com/package/@alaarab/ogrid-js) | Vanilla JS data grid (no framework needed) |
+| [`@alaarab/ogrid-js`](./packages/js) | [![npm](https://img.shields.io/npm/v/@alaarab/ogrid-js)](https://www.npmjs.com/package/@alaarab/ogrid-js) | None |
 
-UI packages re-export everything from their adapter package (which re-exports from `@alaarab/ogrid-core`) -- one import is all you need.
+UI packages re-export everything from their adapter (which re-exports from core), so one import is all you need.
+
+**Optional premium inputs** (calendar date picker, rating, color picker, slider, tags) are available as add-on packages: `@alaarab/ogrid-react-inputs`, `@alaarab/ogrid-angular-inputs`, `@alaarab/ogrid-vue-inputs`, `@alaarab/ogrid-js-inputs`.
 
 ## Editor Integration (MCP)
 
@@ -406,7 +388,7 @@ useEffect(() => {
 }, [data]);
 ```
 
-Now your editor can inspect what's actually rendering, update cells, apply filters, and navigate pages -- while you watch the grid update live.
+Now your editor can inspect what's actually rendering, update cells, apply filters, and navigate pages while you watch the grid update live.
 
 Bridge tools: `list_grids`, `get_grid_state`, `send_grid_command`
 
@@ -416,18 +398,17 @@ See the [MCP guide](packages/docs/docs/guides/mcp.mdx) and [live testing bridge 
 
 ## Testing
 
-**4,189 tests** across 14 packages with 100% pass rate. Each framework uses its native testing tools:
+4,728 tests across all packages. Each framework uses its native testing tools:
 
-| Framework | Tool | Packages | Tests |
-|-----------|------|----------|------:|
-| Core | Jest + ts-jest | 1 | ~1,418 |
-| React | React Testing Library | 4 | ~903 |
-| Angular | Angular Testing utilities | 4 | ~706 |
-| Vue | Vue Test Utils | 4 | ~768 |
-| Vanilla JS | Native DOM + jsdom | 1 | 394 |
-| **Total** | | **14** | **~4,189** |
+| Framework | Tool | Tests |
+|-----------|------|------:|
+| Core | Jest + ts-jest | ~1,501 |
+| React | React Testing Library | ~903 |
+| Angular | Angular Testing utilities | ~706 |
+| Vue | Vue Test Utils | ~768 |
+| Vanilla JS | Native DOM + jsdom | ~394 |
 
-Cross-package parity is enforced through **shared test factories** -- 8 factories per framework that generate identical test scenarios for every UI package.
+Cross-package parity is enforced through shared test factories: 8 factories per framework that generate identical test scenarios for every UI package.
 
 ## Development
 
@@ -436,7 +417,7 @@ git clone https://github.com/alaarab/ogrid.git
 cd ogrid
 npm install
 npm run build                       # Build all packages (Turborepo)
-npm run test:all                    # Run all ~4,189 tests
+npm run test:all                    # Run all tests
 npm run lint                        # ESLint
 
 # Storybook
@@ -475,7 +456,7 @@ See [ARCHITECTURE.md](./ARCHITECTURE.md) for detailed architecture documentation
 
 ## License
 
-[MIT](./LICENSE) -- free for everything.
+[MIT](./LICENSE)
 
 ---
 
