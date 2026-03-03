@@ -18,8 +18,10 @@ interface EmployeeRow {
   salary: number;
   startDate: string;
   status: string;
-  rating: string;
+  rating: number;
   remote: boolean;
+  color: string;
+  tags: string;
 }
 
 const FIRST_NAMES = ['James','Emma','Liam','Olivia','Noah','Ava','William','Sophia','Benjamin','Isabella','Lucas','Mia','Henry','Charlotte','Alexander','Amelia','Daniel','Harper','Matthew','Evelyn','Sebastian','Abigail','Jack','Emily','Aiden','Elizabeth','Owen','Sofia','Samuel','Avery','Ryan','Ella','Nathan','Scarlett','Leo','Grace','Isaac','Lily','Ethan','Chloe','Mason','Penelope','Logan','Layla','Jacob','Riley','Michael','Zoey','Elijah','Nora'];
@@ -27,9 +29,9 @@ const LAST_NAMES = ['Smith','Johnson','Williams','Brown','Jones','Garcia','Mille
 const DEPARTMENTS = ['Engineering','Product','Design','Marketing','Sales','Finance','HR','Legal','Operations','Support'];
 const TITLES = ['Software Engineer','Product Manager','UX Designer','Data Analyst','Sales Executive','Account Manager','HR Specialist','Legal Counsel','DevOps Engineer','Support Lead','Frontend Developer','Backend Developer','QA Engineer','Scrum Master','Tech Lead','Marketing Manager','Content Strategist','BD Manager','Recruiter','Finance Analyst'];
 const STATUSES: string[] = ['Active','Active','Active','Active','Active','Active','Active','Remote','Remote','On Leave'];
-const RATINGS = ['A+','A','A','A-','B+','B+','B','B','A','A-'];
 const STATUSES_UNIQUE = [...new Set(STATUSES)];
-const RATINGS_UNIQUE = [...new Set(RATINGS)];
+const COLORS = ['#FF6B6B', '#4D96FF', '#6BCB77', '#FFD93D', '#A66DD4', '#FF8E72', '#00B894', '#0984E3', '#FD79A8', '#E17055'];
+const TAGS = ['React, TypeScript', 'Angular, Java', 'Vue, Python', 'React, Node', 'Python, ML', 'Go, Docker', 'React, AWS', 'Angular, Azure', 'Vue, GraphQL', 'TypeScript, Rust'];
 
 const ROW_COUNT = 10_000;
 
@@ -47,8 +49,10 @@ function generateData(): EmployeeRow[] {
       salary: 52000 + ((i * 137) % 148) * 1000,
       startDate: `${2019 + (i % 6)}-${String(1 + (i % 12)).padStart(2, '0')}-${String(1 + ((i * 3) % 28)).padStart(2, '0')}`,
       status: STATUSES[i % 10],
-      rating: RATINGS[i % 10],
+      rating: 1 + (i % 5),
       remote: i % 5 === 0 || i % 7 === 0,
+      color: COLORS[i % 10],
+      tags: TAGS[i % 10],
     });
   }
   return rows;
@@ -72,6 +76,7 @@ const toolbarBtnStyle: React.CSSProperties = {
 
 function HeroGrid() {
   const { OGrid, exportToCsv } = require('@alaarab/ogrid-react-radix') as typeof import('@alaarab/ogrid-react-radix');
+  const { RatingEditor, ColorPickerEditor, SliderEditor, TagsEditor } = require('@alaarab/ogrid-react-inputs') as typeof import('@alaarab/ogrid-react-inputs');
   type ApiType = import('@alaarab/ogrid-react-radix').IOGridApi<EmployeeRow>;
   type IFilters = import('@alaarab/ogrid-react-radix').IFilters;
 
@@ -97,8 +102,10 @@ function HeroGrid() {
     { columnId: 'startDate', name: 'Start Date', type: 'date' as const, sortable: true, editable: true, defaultWidth: 130 },
     { columnId: 'remote', name: 'Remote', type: 'boolean' as const, editable: true, sortable: true, filterable: { type: 'multiSelect' as const }, defaultWidth: 90 },
     { columnId: 'status', name: 'Status', editable: true, filterable: { type: 'multiSelect' as const }, cellEditor: 'richSelect' as const, cellEditorParams: { values: STATUSES_UNIQUE }, defaultWidth: 110 },
-    { columnId: 'rating', name: 'Rating', sortable: true, editable: true, filterable: { type: 'multiSelect' as const }, cellEditor: 'richSelect' as const, cellEditorParams: { values: RATINGS_UNIQUE }, defaultWidth: 90 },
-  ], []);
+    { columnId: 'rating', name: 'Rating', sortable: true, editable: true, filterable: { type: 'multiSelect' as const }, cellEditor: RatingEditor, cellEditorPopup: true, cellEditorParams: { maxStars: 5 }, defaultWidth: 90 },
+    { columnId: 'color', name: 'Color', editable: true, cellEditor: ColorPickerEditor, cellEditorPopup: true, defaultWidth: 80, valueFormatter: (v: unknown) => v ? String(v) : '' },
+    { columnId: 'tags', name: 'Skills', editable: true, cellEditor: TagsEditor, cellEditorPopup: true, cellEditorParams: { suggestions: ['React', 'Angular', 'Vue', 'TypeScript', 'Python', 'Java', 'Go', 'Rust', 'Node', 'Docker', 'AWS', 'Azure', 'GraphQL', 'ML'] }, defaultWidth: 160 },
+  ], [RatingEditor, ColorPickerEditor, TagsEditor]);
 
   const handleExportCsv = useCallback(() => {
     const api = apiRef.current;
@@ -453,6 +460,7 @@ const features: { title: string; desc: string; icon: string }[] = [
   { icon: '\u{1F4D1}', title: 'Cell References', desc: 'Excel-style column letters (A, B, C...), row numbers, and name box.' },
   { icon: '\u26A1', title: 'Virtual Scrolling', desc: 'Row and column virtualization for 10K+ row datasets with web worker sort.' },
   { icon: '\u{1F4D0}', title: 'Sidebar', desc: 'Collapsible sidebar with column visibility and filter panels.' },
+  { icon: '\u{1F4C5}', title: 'Premium Inputs', desc: 'Optional date pickers, star ratings, color pickers, sliders, and tag editors.' },
 ];
 
 function FeatureGridSection() {
@@ -527,6 +535,7 @@ function ComparisonSection() {
     { name: 'Status Bar', value: 'Built-in', type: 'check' },
     { name: 'Side Bar', value: 'Built-in', type: 'check' },
     { name: 'Server-Side Data', value: 'Built-in', type: 'check' },
+    { name: 'Premium Cell Editors', value: 'Optional add-on', type: 'check' },
     { name: 'Headless Core', value: 'Yes', type: 'check' },
     { name: 'License', value: 'MIT (free forever)', type: 'free' },
     { name: 'Enterprise Cost', value: '$0', type: 'free' },
@@ -543,6 +552,7 @@ function ComparisonSection() {
     { name: 'Status Bar', value: 'Enterprise $999+/dev', type: 'paid' },
     { name: 'Side Bar', value: 'Enterprise $999+/dev', type: 'paid' },
     { name: 'Server-Side Data', value: 'Enterprise $999+/dev', type: 'paid' },
+    { name: 'Premium Cell Editors', value: 'Enterprise $999+/dev', type: 'paid' },
     { name: 'Headless Core', value: 'No', type: 'neutral' },
     { name: 'License', value: 'MIT / Commercial', type: 'neutral' },
     { name: 'Enterprise Cost', value: 'From $999/dev', type: 'paid' },
