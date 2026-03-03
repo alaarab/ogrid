@@ -111,6 +111,8 @@ export interface UseDataGridTableOrchestrationResult<T> {
     setActiveCell: DataGridCellInteractionState['setActiveCell'];
     setEditingCell: DataGridEditingState<T>['setEditingCell'];
     handleCellContextMenu: DataGridContextMenuState['handleCellContextMenu'];
+    handleLongPressStart: DataGridContextMenuState['handleLongPressStart'];
+    handleLongPressEnd: DataGridContextMenuState['handleLongPressEnd'];
   };
 
   // Stable refs for volatile state (used in renderCellContent)
@@ -219,7 +221,7 @@ export function useDataGridTableOrchestration<T>(
   const { selectedRowIds, updateSelection, handleRowCheckboxChange, handleSelectAll, allSelected, someSelected } = rowSel;
   const { editingCell, setEditingCell, pendingEditorValue, setPendingEditorValue, commitCellEdit, cancelPopoverEdit, popoverAnchorEl, setPopoverAnchorEl } = editing;
   const { setActiveCell, handleCellMouseDown, selectionRange, hasCellSelection, handleGridKeyDown, handleFillHandleMouseDown, handleCopy, handleCut, handlePaste, cutRange, copyRange, canUndo, canRedo, onUndo, onRedo, isDragging } = interaction;
-  const { menuPosition, handleCellContextMenu, closeContextMenu } = ctxMenu;
+  const { menuPosition, handleCellContextMenu, closeContextMenu, handleLongPressStart, handleLongPressEnd } = ctxMenu;
   const { headerFilterInput, cellDescriptorInput, statusBarConfig, showEmptyInGrid, onCellError } = viewModels;
   const { headerMenu } = pinning;
 
@@ -325,8 +327,8 @@ export function useDataGridTableOrchestration<T>(
     [commitCellEdit, setEditingCell, setPendingEditorValue, cancelPopoverEdit],
   );
   const interactionHandlers = useMemo(
-    () => ({ handleCellMouseDown, setActiveCell, setEditingCell, handleCellContextMenu }),
-    [handleCellMouseDown, setActiveCell, setEditingCell, handleCellContextMenu],
+    () => ({ handleCellMouseDown, setActiveCell, setEditingCell, handleCellContextMenu, handleLongPressStart, handleLongPressEnd }),
+    [handleCellMouseDown, setActiveCell, setEditingCell, handleCellContextMenu, handleLongPressStart, handleLongPressEnd],
   );
 
   // ── Stable refs for volatile state ─────────────────────────────────────

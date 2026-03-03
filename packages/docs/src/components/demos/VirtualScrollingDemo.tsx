@@ -1,6 +1,4 @@
 import React, { useMemo } from 'react';
-import { OGrid } from '@alaarab/ogrid-react-radix';
-import type { IColumnDef } from '@alaarab/ogrid-react-radix';
 import { LiveDemo } from '../LiveDemo';
 
 interface Row {
@@ -14,16 +12,19 @@ interface Row {
 const DEPTS = ['Engineering', 'Marketing', 'Sales', 'Finance', 'Operations'];
 const STATUSES = ['Active', 'Draft', 'Archived'];
 
-const columns: IColumnDef<Row>[] = [
-  { columnId: 'id', name: 'ID', type: 'numeric' },
-  { columnId: 'name', name: 'Name' },
-  { columnId: 'department', name: 'Department' },
-  { columnId: 'salary', name: 'Salary', type: 'numeric',
-    valueFormatter: (v) => `$${Number(v).toLocaleString()}` },
-  { columnId: 'status', name: 'Status' },
-];
+function Inner() {
+  const { OGrid } = require('@alaarab/ogrid-react-radix') as typeof import('@alaarab/ogrid-react-radix');
+  type IColumnDef = import('@alaarab/ogrid-react-radix').IColumnDef<Row>;
 
-export default function VirtualScrollingDemo() {
+  const columns: IColumnDef[] = [
+    { columnId: 'id', name: 'ID', type: 'numeric' },
+    { columnId: 'name', name: 'Name' },
+    { columnId: 'department', name: 'Department' },
+    { columnId: 'salary', name: 'Salary', type: 'numeric',
+      valueFormatter: (v) => `$${Number(v).toLocaleString()}` },
+    { columnId: 'status', name: 'Status' },
+  ];
+
   const data = useMemo<Row[]>(
     () =>
       Array.from({ length: 10_000 }, (_, i) => ({
@@ -37,14 +38,20 @@ export default function VirtualScrollingDemo() {
   );
 
   return (
+    <OGrid
+      columns={columns}
+      data={data}
+      getRowId={(r) => r.id}
+      virtualScroll={{ enabled: true, rowHeight: 36 }}
+      statusBar
+    />
+  );
+}
+
+export default function VirtualScrollingDemo() {
+  return (
     <LiveDemo height={460} title="10,000 rows  -  only visible rows are in the DOM">
-      <OGrid
-        columns={columns}
-        data={data}
-        getRowId={(r) => r.id}
-        virtualScroll={{ enabled: true, rowHeight: 36 }}
-        statusBar
-      />
+      {() => <Inner />}
     </LiveDemo>
   );
 }

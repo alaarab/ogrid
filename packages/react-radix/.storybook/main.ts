@@ -17,6 +17,10 @@ const config: StorybookConfig = {
   },
   async viteFinal(config) {
     return mergeConfig(config, {
+      optimizeDeps: {
+        // Don't prebundle workspace packages so source changes take effect immediately
+        exclude: ['@alaarab/ogrid-core', '@alaarab/ogrid-react'],
+      },
       resolve: {
         alias: {
           // Force single React instance to avoid "Cannot read properties of null" errors

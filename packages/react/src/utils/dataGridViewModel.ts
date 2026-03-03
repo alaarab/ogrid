@@ -63,7 +63,7 @@ export function buildInlineEditorProps<T>(
   col: IColumnDef<T>,
   descriptor: CellRenderDescriptor,
   callbacks: {
-    commitCellEdit: (item: T, columnId: string, oldValue: unknown, newValue: unknown, rowIndex: number, globalColIndex: number) => void;
+    commitCellEdit: (item: T, columnId: string, oldValue: unknown, newValue: unknown, rowIndex: number, globalColIndex: number, options?: { skipAdvance?: boolean }) => void;
     setEditingCell: (cell: null) => void;
   }
 ): {
@@ -104,6 +104,10 @@ export interface CellInteractionHandlers {
   setActiveCell: (cell: { rowIndex: number; columnIndex: number }) => void;
   setEditingCell: (cell: { rowId: RowId; columnId: string } | null) => void;
   handleCellContextMenu: (e: React.MouseEvent) => void;
+  /** Long-press start for touch context menu. */
+  handleLongPressStart?: (e: React.PointerEvent) => void;
+  /** Long-press cancel. */
+  handleLongPressEnd?: () => void;
 }
 
 export function getCellInteractionProps(
@@ -120,7 +124,11 @@ export function getCellInteractionProps(
     onPointerDown: (e: React.PointerEvent) => {
       handlers.setEditingCell(null);
       handlers.handleCellMouseDown(e, descriptor.rowIndex, descriptor.globalColIndex);
+      handlers.handleLongPressStart?.(e);
     },
+    onPointerUp: () => handlers.handleLongPressEnd?.(),
+    onPointerLeave: () => handlers.handleLongPressEnd?.(),
+    onPointerCancel: () => handlers.handleLongPressEnd?.(),
     onClick: () =>
       handlers.setActiveCell({ rowIndex: descriptor.rowIndex, columnIndex: descriptor.globalColIndex }),
     onContextMenu: handlers.handleCellContextMenu,

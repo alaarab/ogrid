@@ -2,7 +2,7 @@ import * as React from 'react';
 import type { Meta, StoryObj } from '@storybook/react-vite';
 import { DataGridTable } from './DataGridTable';
 import type { IColumnDef, ICellValueChangedEvent, ICellEditorProps, IRowSelectionChangeEvent } from '@alaarab/ogrid-react';
-import { DatePickerEditor, RatingEditor, ColorPickerEditor, SliderEditor, TagsEditor } from '@alaarab/ogrid-react-inputs';
+import { DatePickerEditor, RatingEditor, ColorPickerEditor, SliderEditor, TagsEditor, TimePickerEditor, DateTimePickerEditor } from '@alaarab/ogrid-react-inputs';
 
 interface Row {
   id: string;
@@ -217,7 +217,7 @@ export const EditableInline: Story = {
     const handleCellValueChanged = React.useCallback((e: ICellValueChangedEvent<EditableRow>) => {
       setItems((prev) =>
         prev.map((row) =>
-          row.id === e.item.id ? { ...row, [e.field]: e.newValue } : row
+          row.id === e.item.id ? { ...row, [e.columnId]: e.newValue } : row
         )
       );
     }, []);
@@ -281,7 +281,7 @@ export const EditableCustomPopup: Story = {
     const handleCellValueChanged = React.useCallback((e: ICellValueChangedEvent<RowWithNotes>) => {
       setItems((prev) =>
         prev.map((row) =>
-          row.id === e.item.id ? { ...row, [e.field]: e.newValue } : row
+          row.id === e.item.id ? { ...row, [e.columnId]: e.newValue } : row
         )
       );
     }, []);
@@ -327,7 +327,7 @@ export const EditablePerRow: Story = {
     const handleCellValueChanged = React.useCallback((e: ICellValueChangedEvent<EditableRow>) => {
       setItems((prev) =>
         prev.map((row) =>
-          row.id === e.item.id ? { ...row, [e.field]: e.newValue } : row
+          row.id === e.item.id ? { ...row, [e.columnId]: e.newValue } : row
         )
       );
     }, []);
@@ -507,7 +507,7 @@ export const KeyboardNavigation: Story = {
     const handleCellValueChanged = React.useCallback((e: ICellValueChangedEvent<SpreadsheetRow>) => {
       setItems((prev) =>
         prev.map((row) =>
-          row.id === e.item.id ? { ...row, [e.field]: e.newValue } : row
+          row.id === e.item.id ? { ...row, [e.columnId]: e.newValue } : row
         )
       );
     }, []);
@@ -663,7 +663,7 @@ export const SpreadsheetExperience: Story = {
     const handleCellValueChanged = React.useCallback((e: ICellValueChangedEvent<SpreadsheetRow>) => {
       setItems((prev) =>
         prev.map((row) =>
-          row.id === e.item.id ? { ...row, [e.field]: e.newValue } : row
+          row.id === e.item.id ? { ...row, [e.columnId]: e.newValue } : row
         )
       );
     }, []);
@@ -924,7 +924,11 @@ export const PremiumInputs: Story = {
         cellEditor: TagsEditor as React.ComponentType<ICellEditorProps<PremiumInputsItem>>,
         cellEditorPopup: true,
         cellEditorParams: {
+          // Predefined tag set - allowCreate: false restricts to these values only.
+          // This also enables multi-select dropdown mode (all options shown, checkboxes).
           suggestions: ['React', 'Angular', 'Vue', 'TypeScript', 'Python', 'Java', 'Go', 'Rust', 'Node', 'Docker', 'GraphQL', 'ML', 'WASM'],
+          allowCreate: false,
+          showApplyButton: true,
         },
         defaultWidth: 180,
       },
@@ -935,7 +939,7 @@ export const PremiumInputs: Story = {
         <p style={{ marginBottom: 8, fontSize: 14 }}>
           Click a cell to open a premium popup editor. <strong>Rating</strong>  -  star picker.{' '}
           <strong>Color</strong>  -  swatch grid + hex input. <strong>Progress</strong>  -  range slider.{' '}
-          <strong>Tags</strong>  -  multi-value chip editor with autocomplete.
+          <strong>Tags</strong>  -  multi-select dropdown with predefined tag set (checkboxes) + Apply button.
         </p>
         <DataGridTable<PremiumInputsItem>
           items={items}
@@ -948,6 +952,172 @@ export const PremiumInputs: Story = {
           editable
           cellSelection
           statusBar
+          onCellValueChanged={handleCellValueChanged}
+          filters={{}}
+          onFilterChange={noop}
+          filterOptions={{}}
+          loadingFilterOptions={{}}
+        />
+      </div>
+    );
+  },
+};
+
+// ─────────────────────────────────────────────────
+// TimePickerEditor story
+// ─────────────────────────────────────────────────
+
+interface ScheduleRow {
+  id: string;
+  name: string;
+  meetingTime: string;
+  status: string;
+}
+
+const scheduleRows: ScheduleRow[] = [
+  { id: '1', name: 'Daily Standup', meetingTime: '9:00 AM', status: 'Active' },
+  { id: '2', name: 'Design Review', meetingTime: '2:30 PM', status: 'Active' },
+  { id: '3', name: 'Sprint Planning', meetingTime: '10:00 AM', status: 'Active' },
+  { id: '4', name: 'Team Retrospective', meetingTime: '4:00 PM', status: 'Active' },
+];
+
+export const TimePickerEditorStory: Story = {
+  name: 'TimePickerEditor',
+  render: function TimePickerEditorStoryFn() {
+    const [items, setItems] = React.useState<ScheduleRow[]>(scheduleRows);
+    const handleCellValueChanged = React.useCallback((e: ICellValueChangedEvent<ScheduleRow>) => {
+      setItems((prev) =>
+        prev.map((row) =>
+          row.id === e.item.id ? { ...row, [e.columnId]: e.newValue } : row
+        )
+      );
+    }, []);
+
+    const cols: IColumnDef<ScheduleRow>[] = [
+      {
+        columnId: 'name',
+        name: 'Meeting Name',
+        editable: true,
+        cellEditor: 'text',
+        minWidth: 180,
+      },
+      {
+        columnId: 'meetingTime',
+        name: 'Time (US 12-hr)',
+        editable: true,
+        cellEditor: TimePickerEditor as React.ComponentType<ICellEditorProps<ScheduleRow>>,
+        cellEditorPopup: true,
+        cellEditorParams: { minuteStep: 15 },
+        minWidth: 140,
+      },
+      {
+        columnId: 'status',
+        name: 'Status',
+        editable: true,
+        cellEditor: 'select',
+        cellEditorParams: { values: ['Active', 'Cancelled', 'On Hold'] },
+        minWidth: 110,
+      },
+    ];
+
+    return (
+      <div>
+        <p style={{ marginBottom: 8, fontSize: 14 }}>
+          Click a cell in the <strong>Time</strong> column to open the premium TimePicker popup.
+          Values are stored in US 12-hour AM/PM format (e.g. &quot;2:30 PM&quot;). Minute step: 15 min.
+        </p>
+        <DataGridTable<ScheduleRow>
+          items={items}
+          columns={cols}
+          getRowId={(r) => r.id}
+          sortBy="name"
+          sortDirection="asc"
+          onColumnSort={noop}
+          visibleColumns={new Set(['name', 'meetingTime', 'status'])}
+          editable
+          onCellValueChanged={handleCellValueChanged}
+          filters={{}}
+          onFilterChange={noop}
+          filterOptions={{ status: ['Active', 'Cancelled', 'On Hold'] }}
+          loadingFilterOptions={{}}
+        />
+      </div>
+    );
+  },
+};
+
+// ─────────────────────────────────────────────────
+// DateTimePickerEditor story
+// ─────────────────────────────────────────────────
+
+interface EventRow {
+  id: string;
+  name: string;
+  scheduledAt: string;
+  location: string;
+}
+
+const eventRows: EventRow[] = [
+  { id: '1', name: 'Product Launch', scheduledAt: '2024-06-15 10:00 AM', location: 'Main Stage' },
+  { id: '2', name: 'Team Offsite', scheduledAt: '2024-07-20 9:00 AM', location: 'Conference Room A' },
+  { id: '3', name: 'Client Demo', scheduledAt: '2024-08-05 2:30 PM', location: 'Zoom' },
+  { id: '4', name: 'Board Meeting', scheduledAt: '2024-09-10 11:00 AM', location: 'HQ Boardroom' },
+];
+
+export const DateTimePickerEditorStory: Story = {
+  name: 'DateTimePickerEditor',
+  render: function DateTimePickerEditorStoryFn() {
+    const [items, setItems] = React.useState<EventRow[]>(eventRows);
+    const handleCellValueChanged = React.useCallback((e: ICellValueChangedEvent<EventRow>) => {
+      setItems((prev) =>
+        prev.map((row) =>
+          row.id === e.item.id ? { ...row, [e.columnId]: e.newValue } : row
+        )
+      );
+    }, []);
+
+    const cols: IColumnDef<EventRow>[] = [
+      {
+        columnId: 'name',
+        name: 'Event',
+        editable: true,
+        cellEditor: 'text',
+        minWidth: 160,
+      },
+      {
+        columnId: 'scheduledAt',
+        name: 'Date & Time',
+        editable: true,
+        cellEditor: DateTimePickerEditor as React.ComponentType<ICellEditorProps<EventRow>>,
+        cellEditorPopup: true,
+        cellEditorParams: { minuteStep: 15 },
+        minWidth: 180,
+      },
+      {
+        columnId: 'location',
+        name: 'Location',
+        editable: true,
+        cellEditor: 'text',
+        minWidth: 160,
+      },
+    ];
+
+    return (
+      <div>
+        <p style={{ marginBottom: 8, fontSize: 14 }}>
+          Click a cell in <strong>Date &amp; Time</strong> to open the combined DateTimePicker popup.
+          Pick a day on the calendar, then choose Hour / Minute / AM-PM. Values stored as
+          &quot;YYYY-MM-DD h:mm AM/PM&quot;. Press <strong>Apply</strong> or <strong>Now</strong> to commit.
+        </p>
+        <DataGridTable<EventRow>
+          items={items}
+          columns={cols}
+          getRowId={(r) => r.id}
+          sortBy="name"
+          sortDirection="asc"
+          onColumnSort={noop}
+          visibleColumns={new Set(['name', 'scheduledAt', 'location'])}
+          editable
           onCellValueChanged={handleCellValueChanged}
           filters={{}}
           onFilterChange={noop}

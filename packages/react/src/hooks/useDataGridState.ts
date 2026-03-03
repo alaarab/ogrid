@@ -70,7 +70,8 @@ export interface DataGridEditingState<T> {
     oldValue: unknown,
     newValue: unknown,
     rowIndex: number,
-    globalColIndex: number
+    globalColIndex: number,
+    options?: { skipAdvance?: boolean }
   ) => void;
   cancelPopoverEdit: () => void;
   popoverAnchorEl: HTMLElement | null;
@@ -127,6 +128,10 @@ export interface DataGridContextMenuState {
   setMenuPosition: (pos: { x: number; y: number } | null) => void;
   handleCellContextMenu: (e: { clientX: number; clientY: number; preventDefault?: () => void }) => void;
   closeContextMenu: () => void;
+  /** Long-press start handler for touch-based context menu. Attach to onPointerDown. */
+  handleLongPressStart: (e: React.PointerEvent) => void;
+  /** Long-press cancel handler. Attach to onPointerUp/onPointerCancel/onPointerLeave. */
+  handleLongPressEnd: () => void;
 }
 
 /** View model inputs and derived display state. */

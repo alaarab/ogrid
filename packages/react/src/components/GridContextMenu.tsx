@@ -19,8 +19,6 @@ export interface GridContextMenuProps extends GridContextMenuHandlerProps {
   classNames?: GridContextMenuClassNames;
 }
 
-const menuPositionStyle = (x: number, y: number): React.CSSProperties => ({ left: x, top: y });
-
 export function GridContextMenu(props: GridContextMenuProps): React.ReactElement {
   const { x, y, hasSelection, canUndo, canRedo, onClose, onCopy, onCut, onPaste, onSelectAll, onUndo, onRedo, classNames } = props;
   const ref = React.useRef<HTMLDivElement>(null);
@@ -40,26 +38,38 @@ export function GridContextMenu(props: GridContextMenuProps): React.ReactElement
   );
 
   React.useEffect(() => {
-    const handleClickOutside = (e: MouseEvent) => {
+    // Handle both mouse and touch click-outside to close the menu
+    const handlePointerOutside = (e: PointerEvent) => {
       if (ref.current && !ref.current.contains(e.target as Node)) onClose();
     };
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') onClose();
     };
-    document.addEventListener('mousedown', handleClickOutside, true);
+    document.addEventListener('pointerdown', handlePointerOutside, true);
     document.addEventListener('keydown', handleKeyDown, true);
     return () => {
-      document.removeEventListener('mousedown', handleClickOutside, true);
+      document.removeEventListener('pointerdown', handlePointerOutside, true);
       document.removeEventListener('keydown', handleKeyDown, true);
     };
   }, [onClose]);
+
+  // Compute viewport-aware menu position to prevent overflow on small screens
+  const menuStyle = React.useMemo((): React.CSSProperties => {
+    const menuWidth = 200;
+    const menuHeight = GRID_CONTEXT_MENU_ITEMS.length * 44 + 16; // approx
+    const vw = window.innerWidth;
+    const vh = window.innerHeight;
+    const left = x + menuWidth > vw ? Math.max(0, vw - menuWidth - 8) : x;
+    const top = y + menuHeight > vh ? Math.max(0, vh - menuHeight - 8) : y;
+    return { left, top };
+  }, [x, y]);
 
   return (
     <div
       ref={ref}
       className={classNames?.contextMenu}
       role="menu"
-      style={menuPositionStyle(x, y)}
+      style={menuStyle}
       aria-label="Grid context menu"
     >
       {GRID_CONTEXT_MENU_ITEMS.map((item) => (

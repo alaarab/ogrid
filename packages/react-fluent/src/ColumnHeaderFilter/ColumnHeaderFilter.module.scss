@@ -66,17 +66,6 @@
   /* Keep actions in normal flow so they never overflow the header cell. */
   margin-left: auto;
   flex-shrink: 0;
-
-  @media (hover: hover) {
-    &:not(:has(.filterActive)) {
-      display: none;
-    }
-  }
-}
-
-:global(th:hover) .headerActions,
-:global(.fui-TableHeaderCell:hover) .headerActions {
-  display: flex;
 }
 
 // =====================
@@ -87,9 +76,9 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 24px;
+  width: 28px;
   height: 24px;
-  padding: 4px;
+  padding: 4px 6px;
   margin-left: 2px;
   border: none;
   border-radius: var(--borderRadiusSmall, 4px);
@@ -99,6 +88,13 @@
   flex-shrink: 0;
   position: relative;
   transition: all 0.15s ease;
+
+  // Enlarge touch target on touch devices to meet 44px minimum
+  @media (pointer: coarse) {
+    width: 36px;
+    height: 36px;
+    padding: 6px;
+  }
 
   svg {
     font-size: 14px;
@@ -112,7 +108,7 @@
   &.filterActive {
     background-color: var(--colorSubtleBackgroundSelected, #e0e0e0);
     color: var(--colorNeutralForeground2, #616161);
-    
+
     &:hover {
       background-color: var(--colorSubtleBackgroundHover, #f5f5f5);
     }
@@ -272,6 +268,10 @@
   gap: 8px;
   transition: background-color 0.1s ease;
   cursor: pointer;
+  // Minimum 44px height on touch devices
+  @media (pointer: coarse) {
+    min-height: 44px;
+  }
 
   &:hover {
     background-color: var(--colorNeutralBackground1Hover, #f5f5f5);
@@ -445,6 +445,11 @@
   font-weight: 500;
   cursor: pointer;
   transition: all 0.15s ease;
+  // 44px minimum touch target on touch devices
+  @media (pointer: coarse) {
+    min-height: 44px;
+    padding: 10px 16px;
+  }
 
   &:hover:not(:disabled) {
     background-color: var(--colorNeutralBackground1Hover, #f5f5f5);
@@ -467,6 +472,11 @@
   font-weight: 600;
   cursor: pointer;
   transition: all 0.15s ease;
+  // 44px minimum touch target on touch devices
+  @media (pointer: coarse) {
+    min-height: 44px;
+    padding: 10px 20px;
+  }
 
   &:hover {
     background-color: var(--colorBrandBackgroundHover, #115ea3);

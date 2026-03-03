@@ -38,28 +38,15 @@
   gap: 2px;
   margin-left: auto;
   flex-shrink: 0;
-
-  // Hide filter trigger by default on hover-capable devices; show on column hover.
-  // Always visible on touch devices and when a filter is active.
-  @media (hover: hover) {
-    &:not(:has(.filterActive)) {
-      display: none;
-    }
-  }
-}
-
-// Show filter actions on header cell hover (th is a native element, no module scoping needed)
-:global(th:hover) .headerActions {
-  display: flex;
 }
 
 .filterIcon {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 24px;
+  width: 28px;
   height: 24px;
-  padding: 4px;
+  padding: 4px 6px;
   border: none;
   border-radius: 4px;
   background: transparent;
@@ -68,6 +55,13 @@
   flex-shrink: 0;
   position: relative;
   font-size: 14px;
+
+  // Enlarge touch target on touch devices to meet 44px minimum
+  @media (pointer: coarse) {
+    width: 36px;
+    height: 36px;
+    padding: 6px;
+  }
 
   &:hover {
     background: var(--ogrid-hover-bg, rgba(0, 0, 0, 0.04));
@@ -98,6 +92,11 @@
   z-index: 1000;
   min-width: 280px;
   max-width: 320px;
+  // On small screens, constrain width to viewport with safe margin
+  @media (max-width: 360px) {
+    min-width: calc(100vw - 24px);
+    max-width: calc(100vw - 24px);
+  }
   background: var(--ogrid-bg, #fff);
   border: 1px solid var(--ogrid-border, #d1d1d1);
   border-radius: 8px;
@@ -204,6 +203,10 @@
   align-items: center;
   font-size: 13px;
   gap: 8px;
+  // Minimum 44px height on touch devices
+  @media (pointer: coarse) {
+    min-height: 44px;
+  }
   &:hover {
     background: var(--ogrid-hover-bg, rgba(0, 0, 0, 0.04));
   }
@@ -306,6 +309,11 @@
   color: var(--ogrid-muted, #666);
   font-size: 12px;
   cursor: pointer;
+  // 44px minimum touch target height on touch devices
+  @media (pointer: coarse) {
+    min-height: 44px;
+    padding: 10px 16px;
+  }
   &:hover {
     background: var(--ogrid-hover-bg, rgba(0, 0, 0, 0.04));
     color: var(--ogrid-fg, #333);
@@ -321,6 +329,11 @@
   font-size: 12px;
   font-weight: 600;
   cursor: pointer;
+  // 44px minimum touch target height on touch devices
+  @media (pointer: coarse) {
+    min-height: 44px;
+    padding: 10px 20px;
+  }
   &:hover {
     background: var(--ogrid-primary-hover, #0052a3);
   }

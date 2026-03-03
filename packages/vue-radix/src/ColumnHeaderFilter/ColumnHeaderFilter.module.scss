@@ -55,6 +55,13 @@
   position: relative;
   font-size: 14px;
 
+  // Enlarge touch target on touch devices to meet 44px minimum
+  @media (pointer: coarse) {
+    width: 36px;
+    height: 36px;
+    padding: 6px;
+  }
+
   &:hover {
     background: var(--ogrid-hover-bg, rgba(0, 0, 0, 0.04));
     color: var(--ogrid-fg, rgba(0, 0, 0, 0.87));
@@ -87,6 +94,13 @@
   z-index: 1000;
   min-width: 280px;
   max-width: 320px;
+  // On very small screens, constrain to viewport
+  @media (max-width: 360px) {
+    min-width: calc(100vw - 24px);
+    max-width: calc(100vw - 24px);
+    right: auto;
+    left: 0;
+  }
   background: var(--ogrid-bg, #fff);
   border: 1px solid var(--ogrid-border, rgba(0, 0, 0, 0.12));
   border-radius: 8px;
@@ -165,6 +179,10 @@
   gap: 8px;
   font-size: 13px;
   color: var(--ogrid-fg, rgba(0, 0, 0, 0.87));
+  // Minimum 44px height on touch devices
+  @media (pointer: coarse) {
+    min-height: 44px;
+  }
   &:hover {
     background: var(--ogrid-hover-bg, rgba(0, 0, 0, 0.04));
   }
@@ -196,6 +214,11 @@
   color: var(--ogrid-fg-secondary, rgba(0, 0, 0, 0.6));
   font-size: 12px;
   cursor: pointer;
+  // 44px minimum touch target on touch devices
+  @media (pointer: coarse) {
+    min-height: 44px;
+    padding: 10px 16px;
+  }
   &:hover {
     background: var(--ogrid-hover-bg, rgba(0, 0, 0, 0.04));
     color: var(--ogrid-fg, rgba(0, 0, 0, 0.87));
@@ -215,6 +238,11 @@
   font-size: 12px;
   font-weight: 600;
   cursor: pointer;
+  // 44px minimum touch target on touch devices
+  @media (pointer: coarse) {
+    min-height: 44px;
+    padding: 10px 20px;
+  }
   &:hover {
     opacity: 0.85;
   }
