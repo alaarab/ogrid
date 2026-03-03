@@ -256,12 +256,17 @@ export function createDataGridTable(ui: IDataGridTableUIBindings) {
           if (descriptor.mode === 'editing-popover' && typeof col.cellEditor === 'function') {
             const editorProps = buildPopoverEditorProps(item, col, descriptor, pendingEditorValue, editCallbacks);
             const CustomEditor = col.cellEditor as unknown as ReturnType<typeof defineComponent>;
+            const popoverDisplayContent = resolveCellDisplayContent(col, item, descriptor.displayValue);
+            const popoverCellStyle = resolveCellStyle(col, item, descriptor.displayValue);
             return h('div', [
               h('div', {
                 ref: (el: unknown) => { if (el) setPopoverAnchorEl(el as HTMLElement); },
                 class: 'ogrid-popover-anchor',
-                'aria-hidden': 'true',
-              }),
+              }, [
+                popoverCellStyle
+                  ? h('span', { style: popoverCellStyle }, [popoverDisplayContent as VNode | string])
+                  : popoverDisplayContent as VNode | string,
+              ]),
               popoverAnchorEl
                 ? h(CustomEditor, editorProps as ICellEditorProps<unknown>)
                 : null,
