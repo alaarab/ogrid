@@ -195,7 +195,7 @@
   z-index: var(--ogrid-z-header-focus, 11); // above pinned header cells (z-index 10) and regular headers (z-index 8)
 }
 
-// Row numbers column — widths are set via inline styles (dynamic when resized)
+// Row numbers column - widths are set via inline styles (dynamic when resized)
 .dataTable th.rowNumberHeaderCell,
 .dataTable td.rowNumberCell {
   padding: 4px 8px;
@@ -252,7 +252,13 @@
 
 /* ─── Cell Density ───────────────────────────────────────────────── */
 
+// Default density vars are set on .tableWrapper in the shared _data-grid-table.scss partial.
+// These classes override them per density setting.
 .density-compact {
+  --ogrid-cell-padding-vertical: 4px;
+  --ogrid-cell-padding-horizontal: 8px;
+  --ogrid-cell-font-size: 12px;
+
   .dataTable th {
     padding: 4px 8px;
   }
@@ -267,6 +273,10 @@
 }
 
 .density-comfortable {
+  --ogrid-cell-padding-vertical: 12px;
+  --ogrid-cell-padding-horizontal: 16px;
+  --ogrid-cell-font-size: 14px;
+
   .dataTable th {
     padding: 12px 16px;
   }

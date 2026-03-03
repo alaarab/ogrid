@@ -1,0 +1,510 @@
+/* ─────────────────────────────────────────────────────────
+   AnimatedGridDemo - CSS-animated mock spreadsheet
+   ───────────────────────────────────────────────────────── */
+
+/* ══════════════════════════════════════════════════════════
+   Wrapper
+   ══════════════════════════════════════════════════════════ */
+
+.wrapper {
+  position: relative;
+  width: 100%;
+  border-radius: 10px;
+  overflow: hidden;
+  box-shadow:
+    0 1px 3px rgba(0, 0, 0, 0.08),
+    0 4px 20px rgba(0, 0, 0, 0.08),
+    0 0 0 1px rgba(0, 0, 0, 0.06);
+  background: var(--ifm-background-color, #fff);
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  font-size: 12px;
+  user-select: none;
+
+  opacity: 0;
+  transform: translateY(6px);
+  transition: opacity 0.5s ease, transform 0.5s ease;
+
+  [data-theme='dark'] & {
+    box-shadow:
+      0 1px 3px rgba(0, 0, 0, 0.35),
+      0 4px 24px rgba(0, 0, 0, 0.3),
+      0 0 0 1px rgba(255, 255, 255, 0.07);
+  }
+}
+
+.wrapperVisible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.wrapperFading {
+  opacity: 0;
+  transform: translateY(-4px);
+  transition: opacity 0.9s ease, transform 0.9s ease;
+}
+
+/* ══════════════════════════════════════════════════════════
+   Formula Bar  - the hero element
+   ══════════════════════════════════════════════════════════ */
+
+.formulaBar {
+  display: flex;
+  align-items: center;
+  height: 34px;
+  border-bottom: 1px solid var(--ifm-color-emphasis-300, #e2e2e2);
+  background: var(--ifm-background-surface-color, #f8f8f8);
+  padding: 0;
+  gap: 0;
+  transition: background 0.25s ease, border-color 0.25s ease;
+}
+
+.formulaBarActive {
+  background: #f0faf4 !important;
+  border-bottom-color: rgba(33, 115, 70, 0.3) !important;
+}
+
+[data-theme='dark'] .formulaBar {
+  background: #181818;
+  border-bottom-color: #272727;
+}
+
+[data-theme='dark'] .formulaBarActive {
+  background: #0e1f15 !important;
+  border-bottom-color: rgba(58, 184, 118, 0.25) !important;
+}
+
+/* Name box - shows cell address */
+.formulaNameBox {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 48px;
+  height: 100%;
+  padding: 0 10px;
+  font-size: 11.5px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: var(--ifm-color-emphasis-700, #444);
+  background: var(--ifm-background-surface-color, #f2f2f2);
+  border-right: 1px solid var(--ifm-color-emphasis-300, #e2e2e2);
+  letter-spacing: 0.02em;
+  transition: background 0.25s ease, color 0.25s ease;
+}
+
+.formulaNameBoxActive {
+  color: #217346 !important;
+  background: rgba(33, 115, 70, 0.08) !important;
+}
+
+[data-theme='dark'] .formulaNameBox {
+  color: #888;
+  background: #141414;
+  border-right-color: #252525;
+}
+
+[data-theme='dark'] .formulaNameBoxActive {
+  color: #3ab876 !important;
+  background: rgba(58, 184, 118, 0.1) !important;
+}
+
+/* fx button */
+.formulaFx {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 100%;
+  border-right: 1px solid var(--ifm-color-emphasis-200, #e8e8e8);
+  flex-shrink: 0;
+}
+
+[data-theme='dark'] .formulaFx {
+  border-right-color: #252525;
+}
+
+.formulaFxIcon {
+  font-size: 12px;
+  font-style: italic;
+  font-weight: 800;
+  color: #217346;
+  opacity: 0.75;
+  letter-spacing: -0.03em;
+}
+
+[data-theme='dark'] .formulaFxIcon {
+  color: #3ab876;
+}
+
+/* Input area */
+.formulaInput {
+  flex: 1;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  padding: 0 10px;
+  font-size: 12.5px;
+  min-width: 0;
+}
+
+.formulaInputText {
+  color: #1a5c34;
+  font-weight: 600;
+  font-family: 'Fira Code', 'Cascadia Code', 'JetBrains Mono', 'Menlo', monospace;
+  font-size: 12px;
+  letter-spacing: 0.01em;
+}
+
+[data-theme='dark'] .formulaInputText {
+  color: #4eca84;
+}
+
+.formulaInputPlaceholder {
+  color: var(--ifm-color-emphasis-400, #bbb);
+  font-size: 11px;
+  font-style: italic;
+}
+
+/* Engine badge */
+.formulaEngineBadge {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 10px 3px 8px;
+  margin-right: 8px;
+  border-radius: 20px;
+  font-size: 10.5px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  color: rgba(33, 115, 70, 0.6);
+  background: rgba(33, 115, 70, 0.06);
+  border: 1px solid rgba(33, 115, 70, 0.15);
+  white-space: nowrap;
+  flex-shrink: 0;
+  transition: color 0.3s ease, background 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease;
+}
+
+.formulaEngineBadgeActive {
+  color: #217346 !important;
+  background: rgba(33, 115, 70, 0.1) !important;
+  border-color: rgba(33, 115, 70, 0.35) !important;
+  box-shadow: 0 0 8px rgba(33, 115, 70, 0.18);
+}
+
+[data-theme='dark'] .formulaEngineBadge {
+  color: rgba(58, 184, 118, 0.5);
+  background: rgba(58, 184, 118, 0.06);
+  border-color: rgba(58, 184, 118, 0.15);
+}
+
+[data-theme='dark'] .formulaEngineBadgeActive {
+  color: #3ab876 !important;
+  background: rgba(58, 184, 118, 0.12) !important;
+  border-color: rgba(58, 184, 118, 0.3) !important;
+  box-shadow: 0 0 10px rgba(58, 184, 118, 0.2);
+}
+
+.formulaEngineDot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: currentColor;
+  flex-shrink: 0;
+}
+
+.formulaEngineBadgeActive .formulaEngineDot {
+  animation: dotPulse 1.2s ease-in-out infinite;
+}
+
+@keyframes dotPulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50%       { opacity: 0.5; transform: scale(0.7); }
+}
+
+/* Typewriter cursor */
+.cursor {
+  display: inline-block;
+  width: 2px;
+  height: 1.1em;
+  background: #217346;
+  vertical-align: middle;
+  margin-left: 2px;
+  border-radius: 1px;
+  animation: blink 0.75s step-end infinite;
+}
+
+[data-theme='dark'] .cursor {
+  background: #3ab876;
+}
+
+@keyframes blink {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0; }
+}
+
+/* ══════════════════════════════════════════════════════════
+   Grid
+   ══════════════════════════════════════════════════════════ */
+
+.grid {
+  display: flex;
+  flex-direction: column;
+}
+
+/* ── Column headers ── */
+
+.headerRow {
+  display: grid;
+  grid-template-columns: 32px 1fr 68px 68px 68px 84px;
+  border-bottom: 2px solid var(--ifm-color-emphasis-300, #e0e0e0);
+}
+
+[data-theme='dark'] .headerRow {
+  border-bottom-color: #2a2a2a;
+}
+
+.headerCell {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 26px;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--ifm-color-emphasis-600, #666);
+  background: var(--ifm-background-surface-color, #f4f4f4);
+  border-right: 1px solid var(--ifm-color-emphasis-200, #e4e4e4);
+  letter-spacing: 0.03em;
+  transition: background 0.3s ease, color 0.3s ease;
+  gap: 3px;
+
+  &:last-child { border-right: none; }
+}
+
+[data-theme='dark'] .headerCell {
+  background: #1c1c1c;
+  color: #888;
+  border-right-color: #272727;
+}
+
+.rowNumHeader {
+  background: var(--ifm-background-surface-color, #eeeeee);
+}
+
+[data-theme='dark'] .rowNumHeader {
+  background: #181818;
+}
+
+.headerSortActive {
+  background: rgba(33, 115, 70, 0.1) !important;
+  color: #217346 !important;
+}
+
+[data-theme='dark'] .headerSortActive {
+  color: #3ab876 !important;
+}
+
+.sortIcon {
+  font-size: 10px;
+  color: #217346;
+  animation: sortBounce 0.4s ease forwards;
+}
+
+[data-theme='dark'] .sortIcon {
+  color: #3ab876;
+}
+
+@keyframes sortBounce {
+  0%   { transform: translateY(-3px); opacity: 0; }
+  60%  { transform: translateY(1px);  opacity: 1; }
+  100% { transform: translateY(0);    opacity: 1; }
+}
+
+/* ── Data rows ── */
+
+.dataRow {
+  display: grid;
+  grid-template-columns: 32px 1fr 68px 68px 68px 84px;
+  border-bottom: 1px solid var(--ifm-color-emphasis-200, #ebebeb);
+  transition: transform 0.45s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+
+  &:last-child { border-bottom: none; }
+}
+
+[data-theme='dark'] .dataRow {
+  border-bottom-color: #1e1e1e;
+}
+
+.dataRowSorting {
+  transition: transform 0.5s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+}
+
+/* ── Row numbers ── */
+
+.rowNum {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 4px;
+  font-size: 10.5px;
+  color: var(--ifm-color-emphasis-400, #bbb);
+  background: var(--ifm-background-surface-color, #f7f7f7);
+  border-right: 1px solid var(--ifm-color-emphasis-200, #e8e8e8);
+}
+
+[data-theme='dark'] .rowNum {
+  color: #444;
+  background: #161616;
+  border-right-color: #222;
+}
+
+/* ── Cells ── */
+
+.cell {
+  display: flex;
+  align-items: center;
+  padding: 0 8px;
+  height: 30px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  color: var(--ifm-font-color-base, #1a1a1a);
+  background: var(--ifm-background-color, #fff);
+  border-right: 1px solid var(--ifm-color-emphasis-200, #ebebeb);
+  transition: background 0.12s ease;
+
+  &:last-child { border-right: none; }
+}
+
+[data-theme='dark'] .cell {
+  color: #ddd;
+  background: #111;
+  border-right-color: #1c1c1c;
+}
+
+.cellA {
+  font-size: 11.5px;
+  font-weight: 500;
+}
+
+.cellNum {
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+  justify-content: flex-end;
+}
+
+.cellE {
+  position: relative;
+  justify-content: center;
+  font-family: 'Fira Code', 'Cascadia Code', 'Menlo', monospace;
+}
+
+.cellTotal {
+  font-weight: 700;
+  background: rgba(33, 115, 70, 0.04) !important;
+  color: #217346 !important;
+}
+
+[data-theme='dark'] .cellTotal {
+  background: rgba(58, 184, 118, 0.06) !important;
+  color: #3ab876 !important;
+}
+
+/* ── Selection ── */
+
+.cellSel {
+  background: rgba(33, 115, 70, 0.11) !important;
+  box-shadow: inset 0 0 0 1px rgba(33, 115, 70, 0.25);
+}
+
+[data-theme='dark'] .cellSel {
+  background: rgba(58, 184, 118, 0.14) !important;
+  box-shadow: inset 0 0 0 1px rgba(58, 184, 118, 0.22);
+}
+
+/* ── Active cell (thick border) ── */
+
+.cellActive {
+  background: rgba(33, 115, 70, 0.07) !important;
+  box-shadow: inset 0 0 0 2px #217346 !important;
+}
+
+[data-theme='dark'] .cellActive {
+  background: rgba(58, 184, 118, 0.08) !important;
+  box-shadow: inset 0 0 0 2px #3ab876 !important;
+}
+
+/* ── Formula cell (E column with result) ── */
+
+.cellFormula {
+  background: rgba(33, 115, 70, 0.05) !important;
+}
+
+[data-theme='dark'] .cellFormula {
+  background: rgba(58, 184, 118, 0.07) !important;
+}
+
+.formulaValue {
+  font-weight: 700;
+  font-size: 12px;
+  color: #1a5c34;
+  animation: popIn 0.22s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+}
+
+[data-theme='dark'] .formulaValue {
+  color: #4eca84;
+}
+
+@keyframes popIn {
+  0%   { transform: scale(0.55); opacity: 0; }
+  100% { transform: scale(1);    opacity: 1; }
+}
+
+/* ── Formula preview in cell while typing ── */
+
+.formulaPreview {
+  color: #217346;
+  font-weight: 500;
+  font-size: 11px;
+  font-family: 'Fira Code', 'Cascadia Code', 'Menlo', monospace;
+}
+
+[data-theme='dark'] .formulaPreview {
+  color: #3ab876;
+}
+
+/* ── Fill handle ── */
+
+.fillHandle {
+  position: absolute;
+  bottom: 2px;
+  right: 2px;
+  width: 7px;
+  height: 7px;
+  background: #217346;
+  border: 1.5px solid var(--ifm-background-color, #fff);
+  border-radius: 1px;
+  animation: handleAppear 0.25s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+  z-index: 2;
+}
+
+[data-theme='dark'] .fillHandle {
+  background: #3ab876;
+  border-color: #111;
+}
+
+@keyframes handleAppear {
+  0%   { transform: scale(0); opacity: 0; }
+  100% { transform: scale(1); opacity: 1; }
+}
+
+/* ══════════════════════════════════════════════════════════
+   Ambient glow overlay
+   ══════════════════════════════════════════════════════════ */
+
+.glow {
+  pointer-events: none;
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(ellipse 50% 25% at 88% 8%, rgba(33, 115, 70, 0.04) 0%, transparent 70%);
+  z-index: 10;
+}

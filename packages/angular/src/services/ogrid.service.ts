@@ -239,6 +239,17 @@ export class OGridService<T> {
   private readonly asyncClientItems = signal<{ items: unknown[]; totalCount: number } | null>(null);
   private workerSortAbortId = 0;
 
+  // Stable sorted order (index-based, same approach as React/Vue).
+  // sortedIndices stores indices into displayData() from the last explicit sort/filter pass.
+  // When only displayData changes (cell edit), we reuse these indices to look up updated row
+  // objects - preserving order without re-sorting. Matches Excel behavior.
+  private sortedIndices: number[] | null = null;
+  private sortedPrevSortVersion = -1;
+  private sortedPrevFilters: IFilters | null = null;
+  private sortedPrevColumns: IColumnDef<T>[] | null = null;
+  private sortedPrevDataLength = -1;
+  private readonly sortSnapshotVersion = signal(0);
+
   // Side bar state
   private readonly sideBarActivePanel = signal<SideBarPanelId | null>(null);
 
@@ -294,16 +305,44 @@ export class OGridService<T> {
   /** Sync path: used when workerSort is off. */
   readonly clientItemsAndTotal = computed(() => {
     if (!this.isClientSide() || this.workerSort()) return null;
-    const rows = processClientSideData(
-      this.displayData(),
-      this.columns(),
-      this.filters(),
-      this.sort().field,
-      this.sort().direction,
-    );
-    const total = rows.length;
+
+    const data = this.displayData();
+    const cols = this.columns();
+    const f = this.filters();
+    const sv = this.sortSnapshotVersion(); // reactive: increments on explicit sort
+    const sortField = this.sort().field;
+    const sortDir = this.sort().direction;
+
+    const needsResort =
+      sv !== this.sortedPrevSortVersion ||
+      f !== this.sortedPrevFilters ||
+      cols !== this.sortedPrevColumns ||
+      data.length !== this.sortedPrevDataLength;
+
+    let orderedRows: T[];
+
+    if (needsResort || this.sortedIndices === null) {
+      this.sortedPrevSortVersion = sv;
+      this.sortedPrevFilters = f;
+      this.sortedPrevColumns = cols;
+      this.sortedPrevDataLength = data.length;
+
+      const sorted = processClientSideData(data, cols, f, sortField, sortDir);
+      const indexMap = new Map<T, number>();
+      for (let i = 0; i < data.length; i++) indexMap.set(data[i], i);
+      this.sortedIndices = sorted.map((row) => {
+        const idx = indexMap.get(row);
+        return idx !== undefined ? idx : -1;
+      }).filter((idx) => idx !== -1);
+      orderedRows = sorted;
+    } else {
+      // Cell edit: preserve existing order, look up updated row objects by index.
+      orderedRows = this.sortedIndices.map((idx) => data[idx]).filter((r) => r !== undefined) as T[];
+    }
+
+    const total = orderedRows.length;
     const start = (this.page() - 1) * this.pageSize();
-    const paged = rows.slice(start, start + this.pageSize());
+    const paged = orderedRows.slice(start, start + this.pageSize());
     return { items: paged, totalCount: total };
   });
 
@@ -579,36 +618,77 @@ export class OGridService<T> {
     });
 
     // Worker sort async effect  -  runs processClientSideDataAsync when workerSort is on
+    // Uses the same index-based snapshot approach as the sync path.
+    let asyncSortedIndices: number[] | null = null;
+    let asyncPrevSortVersion = -1;
+    let asyncPrevFilters: IFilters | null = null;
+    let asyncPrevColumns: IColumnDef<T>[] | null = null;
+    let asyncPrevDataLength = -1;
+
     effect((onCleanup) => {
       if (!this.isClientSide() || !this.workerSort()) return;
 
       const data = this.displayData();
       const cols = this.columns();
       const filters = this.filters();
+      const sv = this.sortSnapshotVersion(); // reactive trigger for explicit sort changes
       const sortField = this.sort().field;
       const sortDir = this.sort().direction;
       const page = this.page();
       const ps = this.pageSize();
 
+      const needsResortAsync =
+        sv !== asyncPrevSortVersion ||
+        filters !== asyncPrevFilters ||
+        cols !== asyncPrevColumns ||
+        data.length !== asyncPrevDataLength;
+
       const abortId = ++this.workerSortAbortId;
 
-      processClientSideDataAsync(data, cols, filters, sortField, sortDir)
-        .then((rows) => {
-          if (abortId !== this.workerSortAbortId) return; // stale
-          const total = rows.length;
-          const start = (page - 1) * ps;
-          const paged = rows.slice(start, start + ps);
-          this.asyncClientItems.set({ items: paged, totalCount: total });
-        })
-        .catch(() => {
-          if (abortId !== this.workerSortAbortId) return;
-          // Fallback: use sync
-          const rows = processClientSideData(data, cols, filters, sortField, sortDir);
-          const total = rows.length;
-          const start = (page - 1) * ps;
-          const paged = rows.slice(start, start + ps);
-          this.asyncClientItems.set({ items: paged, totalCount: total });
-        });
+      if (needsResortAsync || asyncSortedIndices === null) {
+        asyncPrevSortVersion = sv;
+        asyncPrevFilters = filters;
+        asyncPrevColumns = cols;
+        asyncPrevDataLength = data.length;
+        asyncSortedIndices = null;
+
+        processClientSideDataAsync(data, cols, filters, sortField, sortDir)
+          .then((rows) => {
+            if (abortId !== this.workerSortAbortId) return; // stale
+            const indexMap = new Map<T, number>();
+            for (let i = 0; i < data.length; i++) indexMap.set(data[i], i);
+            asyncSortedIndices = (rows as T[]).map((row) => {
+              const idx = indexMap.get(row);
+              return idx !== undefined ? idx : -1;
+            }).filter((idx) => idx !== -1);
+            const total = rows.length;
+            const start = (page - 1) * ps;
+            const paged = rows.slice(start, start + ps);
+            this.asyncClientItems.set({ items: paged, totalCount: total });
+          })
+          .catch(() => {
+            if (abortId !== this.workerSortAbortId) return;
+            // Fallback: use sync
+            const rows = processClientSideData(data, cols, filters, sortField, sortDir);
+            const indexMap = new Map<T, number>();
+            for (let i = 0; i < data.length; i++) indexMap.set(data[i], i);
+            asyncSortedIndices = rows.map((row) => {
+              const idx = indexMap.get(row);
+              return idx !== undefined ? idx : -1;
+            }).filter((idx) => idx !== -1);
+            const total = rows.length;
+            const start = (page - 1) * ps;
+            const paged = rows.slice(start, start + ps);
+            this.asyncClientItems.set({ items: paged, totalCount: total });
+          });
+      } else {
+        // Preserve order: look up updated rows by stored indices.
+        const orderedRows = asyncSortedIndices.map((idx) => data[idx]).filter((r) => r !== undefined) as T[];
+        const total = orderedRows.length;
+        const start = (page - 1) * ps;
+        const paged = orderedRows.slice(start, start + ps);
+        this.asyncClientItems.set({ items: paged, totalCount: total });
+      }
 
       onCleanup(() => {
         this.workerSortAbortId++;
@@ -790,6 +870,9 @@ export class OGridService<T> {
     if (this.controlledSort() === undefined) this.internalSortOverride.set(s);
     this.onSortChange()?.(s);
     this.setPage(1);
+    // Invalidate sorted indices so clientItemsAndTotal re-sorts with the new field/direction.
+    this.sortedIndices = null;
+    this.sortSnapshotVersion.update((v) => v + 1);
   }
 
   setFilters(f: IFilters): void {
@@ -876,6 +959,7 @@ export class OGridService<T> {
 
   configure(props: IOGridProps<T>): void {
     this.columnsProp.set(props.columns);
+
     // Initialize pinned overrides from column definitions on first configure
     if (Object.keys(this.pinnedOverrides()).length === 0) {
       const initial: Record<string, 'left' | 'right'> = {};

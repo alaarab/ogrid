@@ -67,7 +67,12 @@
   // Momentum scrolling on iOS
   -webkit-overflow-scrolling: touch;
 
-  // Suppress browser focus outline — the active cell outline handles focus indication.
+  // Default density CSS variables (normal). Override via .density-* classes on this same element.
+  --ogrid-cell-padding-vertical: 6px;
+  --ogrid-cell-padding-horizontal: 10px;
+  --ogrid-cell-font-size: 13px;
+
+  // Suppress browser focus outline - the active cell outline handles focus indication.
   &:focus {
     outline: none;
   }
@@ -137,11 +142,13 @@
   justify-content: center;
   min-width: 20px;
   height: 20px;
+  flex-shrink: 0;
 
-  // Hide by default on hover-capable devices; show on column hover.
+  // Always reserve space so the sort arrow never shifts when menu appears.
+  // On hover-capable devices: invisible until the column is hovered.
   // Touch devices keep it always visible (no hover support).
   @media (hover: hover) {
-    display: none;
+    visibility: hidden;
   }
 
   // Expand touch target on coarse-pointer (touch) devices
@@ -162,12 +169,13 @@
   &:focus-visible {
     outline: 2px solid var(--ogrid-accent, #0078d4);
     outline-offset: 2px;
+    visibility: visible;
   }
 }
 
 // Show column options button on header cell hover
 .dataTable thead th:hover .headerMenuTrigger {
-  display: flex;
+  visibility: visible;
 }
 
 // ---- Column reorder drop indicator ----
@@ -338,7 +346,7 @@
   background: var(--ogrid-bg, #fff);
 }
 
-// Hide active-cell outline during drag — the overlay border handles the range border
+// Hide active-cell outline during drag - the overlay border handles the range border
 .tableWrapper .activeCellContent.activeCellContent:global([data-drag-anchor]),
 .tableWrapper .activeCellContent.activeCellContent:global([data-drag-range]) {
   outline: none;

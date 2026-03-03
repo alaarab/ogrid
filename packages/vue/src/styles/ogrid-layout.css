@@ -1,8 +1,8 @@
-/* OGrid Shared Layout Styles — consumed by vue-vuetify and vue-primevue */
+/* OGrid Shared Layout Styles - consumed by vue-vuetify and vue-primevue */
 
 /* Remove focus outline from scrollable wrapper (keyboard nav is handled via cell outlines).
    [role="region"][tabindex] has attribute-selector specificity (0,2,0) which beats any
-   framework's single-class or element rule — no !important needed. */
+   framework's single-class or element rule - no !important needed. */
 [role="region"][tabindex="0"] {
   outline: none;
 }
@@ -133,6 +133,22 @@
   min-width: 24px;
   height: 24px;
   transition: background-color 0.15s;
+  /* Always reserve space so the sort arrow never shifts when the menu button appears.
+     On hover-capable devices: hidden by default, revealed on column hover. */
+}
+
+@media (hover: hover) {
+  .ogrid-column-menu-btn {
+    visibility: hidden;
+  }
+
+  th:hover .ogrid-column-menu-btn {
+    visibility: visible;
+  }
+}
+
+.ogrid-column-menu-btn:focus-visible {
+  visibility: visible;
 }
 
 .ogrid-column-menu-btn:hover {
