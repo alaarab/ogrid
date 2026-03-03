@@ -66,7 +66,9 @@ export function useColumnMeta<T>(params: UseColumnMetaParams<T>): ColumnMetaResu
       const hasResizeOverride = !!columnSizingOverrides[col.columnId];
       const measuredW = measuredColumnWidths[col.columnId];
       const baseMinWidth = col.minWidth ?? DEFAULT_MIN_COLUMN_WIDTH;
-      const effectiveMinWidth = hasResizeOverride ? columnWidth : Math.max(baseMinWidth, measuredW ?? 0);
+      const effectiveMinWidth = hasResizeOverride || hasExplicitWidth
+        ? columnWidth
+        : Math.max(baseMinWidth, measuredW ?? 0);
 
       const stickyOverride = addStickyPosition && isPinned ? { position: 'sticky' as const } : undefined;
 

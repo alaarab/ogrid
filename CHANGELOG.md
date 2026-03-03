@@ -6,6 +6,30 @@ All notable changes to OGrid will be documented in this file.
 
 ---
 
+## [2.5.3] — 2026-03-02
+
+### Added
+
+- **Type-safe fill and paste tests** — 12 new integration tests verifying that fill handle and clipboard paste respect column types (numeric, boolean, date). Invalid values are silently rejected.
+- **Missing documentation pages** — Added 8 feature pages (column reordering, column types, cell references, mobile touch, virtual scrolling, responsive columns, performance), 3 guide pages (accessibility, MCP server, MCP live testing), and 6 API component pages to the docs sidebar.
+
+### Changed
+
+- **Boolean checkbox single-click toggle** — Boolean cells now render an enabled checkbox that toggles on single click, instead of requiring double-click to enter edit mode. Read-only columns keep the disabled checkbox. Affects all 10 UI packages (React 3, Angular 3, Vue 3, JS 1).
+- **Date editor uses text input** — Date cell editors now use a plain text input for Excel-like UX (type the date directly) instead of the native browser date picker, which had confusing month-selection and highlight behavior. Affects all frameworks.
+
+### Fixed
+
+- **Select/richSelect dropdown not closing on scroll** — Fixed scroll close detection in Angular, Vue, and JS inline cell editors. The selector was using `.ogrid-table-wrapper` (a CSS module class that compiles to a hash) instead of the stable `data-ogrid-scroll-container` attribute. React was already fixed; Angular, Vue, and JS are now consistent.
+- **Editor not closing when clicking other cells** — Open inline editors (select, text, date) now close when clicking a different cell, matching Excel behavior. Affects all 4 frameworks.
+- **Fluent body cell font size** — Normalized from 12px to 13px to match Radix and other packages.
+- **Active/editing cell z-index** — The `<td>` containing the active or editing cell is now elevated via `z-index: 2` so the cell outline paints above adjacent cells on hovered rows. Affects all frameworks.
+- **OGridLayout border color** — Changed fallback from `#e0e0e0` to `rgba(0, 0, 0, 0.12)` for consistency with framework defaults.
+- **Header menu/filter trigger visibility** — Filter and menu trigger buttons now hide by default and appear on column header hover (hover-capable devices only). Always visible on touch devices and when a filter is active.
+- **Row number cell background** — Row number cells now maintain their header-like background during row hover and selection states.
+
+---
+
 ## [2.5.1] — 2026-03-01
 
 ### Fixed

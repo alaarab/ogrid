@@ -86,9 +86,7 @@ export abstract class BaseInlineCellEditorComponent<T = unknown> {
       const el = this.inputEl?.nativeElement;
       if (el) {
         el.focus();
-        if (el instanceof HTMLInputElement && el.type === 'date') {
-          try { el.showPicker(); } catch { /* older browsers */ }
-        } else if (el instanceof HTMLInputElement && el.type === 'text') {
+        if (el instanceof HTMLInputElement && el.type === 'text') {
           el.select();
         }
       }
@@ -99,14 +97,19 @@ export abstract class BaseInlineCellEditorComponent<T = unknown> {
     this.scrollCleanup?.();
   }
 
-  /** Attach scroll listeners to close the editor when the grid scrolls. */
+  /** Attach scroll listeners to close the editor when the grid scrolls.
+   *  Delayed via RAF to skip spurious scroll events fired during mount
+   *  (e.g. focus-triggered scroll, layout-shift scroll from DOM changes). */
   private attachScrollClose(wrapper: HTMLElement | undefined): void {
     if (!wrapper) return;
-    const scrollParent = wrapper.closest('.ogrid-table-wrapper') ?? wrapper.closest('[style*="overflow"]');
+    const scrollParent = wrapper.closest('[data-ogrid-scroll-container]') ?? wrapper.closest('[style*="overflow"]');
     const handleScroll = () => this.cancel.emit();
-    if (scrollParent) scrollParent.addEventListener('scroll', handleScroll, { passive: true });
-    window.addEventListener('scroll', handleScroll, { passive: true });
+    const raf = requestAnimationFrame(() => {
+      if (scrollParent) scrollParent.addEventListener('scroll', handleScroll, { passive: true });
+      window.addEventListener('scroll', handleScroll, { passive: true });
+    });
     this.scrollCleanup = () => {
+      cancelAnimationFrame(raf);
       if (scrollParent) scrollParent.removeEventListener('scroll', handleScroll);
       window.removeEventListener('scroll', handleScroll);
     };

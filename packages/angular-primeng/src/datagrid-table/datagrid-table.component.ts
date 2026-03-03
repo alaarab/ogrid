@@ -69,6 +69,7 @@ import { PopoverCellEditorComponent } from './popover-cell-editor.component';
         [attr.data-empty]="showEmptyInGrid() ? 'true' : null"
         [attr.data-column-count]="state().layout.totalColCount"
         [attr.data-overflow-x]="allowOverflowX() ? 'true' : 'false'"
+        data-ogrid-scroll-container
         [attr.data-has-selection]="rowSelectionMode !== 'none' ? 'true' : null"
         (contextmenu)="$event.preventDefault()"
         (keydown)="onGridKeyDown($event)"
@@ -304,7 +305,7 @@ import { PopoverCellEditorComponent } from './popover-cell-editor.component';
                                 [style.outline-offset]="descriptor.isActive && !descriptor.isInRange ? '-2px' : null"
                               >
                                 @if (col.type === 'boolean') {
-                                  <input type="checkbox" [checked]="!!descriptor.displayValue" disabled style="margin:0;pointer-events:none" [attr.aria-label]="descriptor.displayValue ? 'True' : 'False'" />
+                                  <input type="checkbox" [checked]="!!descriptor.displayValue" [disabled]="!descriptor.canEditAny" (change)="descriptor.canEditAny ? commitEdit(item, col.columnId, !!descriptor.displayValue, !descriptor.displayValue, rowIndex, descriptor.globalColIndex) : null" (click)="$event.stopPropagation()" [style.margin]="'0'" [style.cursor]="descriptor.canEditAny ? 'pointer' : 'default'" [attr.aria-label]="descriptor.displayValue ? 'Checked' : 'Unchecked'" />
                                 } @else {
                                   <span [style]="resolveCellStyleFn(col, item, descriptor.displayValue)">{{ resolveCellContent(col, item, descriptor.displayValue) }}</span>
                                 }
@@ -527,6 +528,8 @@ import { PopoverCellEditorComponent } from './popover-cell-editor.component';
       border-bottom: 1px solid var(--ogrid-border, rgba(0, 0, 0, 0.12));
       position: relative;
     }
+    .ogrid-data-cell:has(> [data-active-cell]),
+    .ogrid-data-cell:has(> .ogrid-editing-cell) { z-index: 2; }
     .ogrid-cell-content {
       padding: var(--ogrid-cell-padding, 6px 10px);
       min-height: 20px;

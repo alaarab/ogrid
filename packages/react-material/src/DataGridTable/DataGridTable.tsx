@@ -551,7 +551,7 @@ function DataGridTableInner<T>(props: IOGridDataGridProps<T>): React.ReactElemen
 
       if (descriptor.mode === 'editing-inline') {
         cellContent = (
-          <div style={EDITING_CELL_STYLE}>
+          <div className="ogrid-mat-editing-cell" style={EDITING_CELL_STYLE}>
             <InlineCellEditor<T> {...buildInlineEditorProps(item, col, descriptor, editCallbacks) as InlineCellEditorProps<T>} />
           </div>
         );
@@ -577,7 +577,20 @@ function DataGridTableInner<T>(props: IOGridDataGridProps<T>): React.ReactElemen
       } else {
         let displayNode: React.ReactNode;
         if (descriptor.columnType === 'boolean') {
-          displayNode = <input type="checkbox" checked={!!descriptor.displayValue} disabled style={{ margin: 0, pointerEvents: 'none' }} aria-label={descriptor.displayValue ? 'True' : 'False'} />;
+          const boolVal = !!descriptor.displayValue;
+          displayNode = (
+            <input
+              type="checkbox"
+              checked={boolVal}
+              disabled={!descriptor.canEditAny}
+              onChange={descriptor.canEditAny ? () => {
+                editCallbacks.commitCellEdit(item, col.columnId, boolVal, !boolVal, descriptor.rowIndex, descriptor.globalColIndex);
+              } : undefined}
+              onClick={(e) => e.stopPropagation()}
+              style={{ margin: 0, cursor: descriptor.canEditAny ? 'pointer' : 'default' }}
+              aria-label={boolVal ? 'Checked' : 'Unchecked'}
+            />
+          );
         } else {
           const content = resolveCellDisplayContent(col, item, descriptor.displayValue) as React.ReactNode;
           const cellStyle = resolveCellStyle(col, item, descriptor.displayValue);
@@ -634,6 +647,7 @@ function DataGridTableInner<T>(props: IOGridDataGridProps<T>): React.ReactElemen
         data-density={density}
         data-overflow-x={allowOverflowX ? 'true' : 'false'}
         className="ogrid-mat-wrapper"
+        data-ogrid-scroll-container=""
         sx={wrapperSx}
       >
       <Box sx={WRAPPER_SCROLL_SX}>

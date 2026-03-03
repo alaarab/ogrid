@@ -7,7 +7,9 @@
 
 const STYLES = `
 .ogrid-mat-row:hover > td { background-color: var(--ogrid-hover-bg); }
+.ogrid-mat-row:hover > td.ogrid-mat-row-number { background-color: var(--ogrid-header-bg, #f5f5f5); }
 .ogrid-mat-row--selected > td { background-color: var(--ogrid-selection-bg, rgba(25, 118, 210, 0.08)); }
+.ogrid-mat-row--selected > td.ogrid-mat-row-number { background-color: var(--ogrid-header-bg, #f5f5f5); }
 
 .ogrid-mat-td { position: relative; padding: 0; height: 1px; border-bottom: 1px solid var(--ogrid-border, rgba(224,224,224,1)); }
 .ogrid-mat-td--pinned-left { position: sticky; left: 0; z-index: var(--ogrid-z-pinned, 6); background-color: var(--ogrid-paper-bg, #fff); will-change: transform; border-right: 1px solid var(--ogrid-border, rgba(224,224,224,1)); box-shadow: 2px 0 4px -1px rgba(0,0,0,0.1); }
@@ -23,6 +25,8 @@ table:not([data-virtual-scroll]) .ogrid-mat-tbody tr { content-visibility: auto;
 .ogrid-mat-cell--editable { cursor: cell; }
 
 .ogrid-mat-cell--active { outline: 2px solid var(--ogrid-selection, #217346); outline-offset: -1px; z-index: var(--ogrid-z-active-cell, 2); position: relative; overflow: visible; contain: none; background-color: var(--ogrid-hover-bg); }
+.ogrid-mat-td:has(> .ogrid-mat-cell--active),
+.ogrid-mat-td:has(> .ogrid-mat-editing-cell) { z-index: var(--ogrid-z-active-cell, 2); }
 .ogrid-mat-cell--active:focus-visible { outline: 2px solid var(--ogrid-selection, #217346); outline-offset: -1px; }
 .ogrid-mat-cell--active-in-range { outline: none; background-color: var(--ogrid-bg, #fff); }
 .ogrid-mat-cell--range { background-color: var(--ogrid-bg-range, rgba(33,115,70,0.12)); }
