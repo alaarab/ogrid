@@ -22,6 +22,9 @@ table:not([data-virtual-scroll]) .ogrid-mat-tbody tr { content-visibility: auto;
 
 .ogrid-mat-cell--numeric { justify-content: flex-end; text-align: right; }
 .ogrid-mat-cell--boolean { justify-content: center; text-align: center; }
+.ogrid-mat-boolean-checkbox { width: 18px; height: 18px; margin: 0; cursor: pointer; accent-color: var(--ogrid-accent, #1976d2); }
+.ogrid-mat-boolean-checkbox:disabled { cursor: default; opacity: 0.5; }
+.ogrid-mat-boolean-checkbox:focus-visible { outline: 2px solid var(--ogrid-accent, #1976d2); outline-offset: 2px; }
 .ogrid-mat-cell--editable { cursor: cell; }
 
 .ogrid-mat-cell--active { outline: 2px solid var(--ogrid-selection, #217346); outline-offset: -1px; z-index: var(--ogrid-z-active-cell, 2); position: relative; overflow: visible; contain: none; background-color: var(--ogrid-hover-bg); }

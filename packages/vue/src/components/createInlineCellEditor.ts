@@ -1,4 +1,4 @@
-import { defineComponent, ref, h, onMounted, onUnmounted, nextTick, watch, type PropType, type VNode } from 'vue';
+import { defineComponent, ref, computed, h, onMounted, onUnmounted, nextTick, watch, type PropType, type VNode } from 'vue';
 import type { IColumnDef } from '../types';
 
 export interface CreateInlineCellEditorOptions {
@@ -64,7 +64,12 @@ export function createInlineCellEditor(options: CreateInlineCellEditorOptions) {
       onMounted(() => {
         nextTick(() => {
           if (selectWrapperRef.value) {
-            selectWrapperRef.value.focus({ preventScroll: true });
+            // For richSelect, focus the search input inside the dropdown
+            if (props.editorType === 'richSelect' && richSelectInputRef.value) {
+              richSelectInputRef.value.focus({ preventScroll: true });
+            } else {
+              selectWrapperRef.value.focus({ preventScroll: true });
+            }
             positionDropdown();
             // Listen for scroll to close the editor.
             // Delay attachment via RAF to skip spurious scroll events fired during mount
@@ -150,6 +155,55 @@ export function createInlineCellEditor(options: CreateInlineCellEditorOptions) {
         }
       };
 
+      // Rich select state
+      const richSelectSearchText = ref('');
+      const richSelectInputRef = ref<HTMLInputElement | null>(null);
+      const richSelectOptionsRef = ref<HTMLDivElement | null>(null);
+
+      const richSelectFilteredValues = computed(() => {
+        const values = (props.column.cellEditorParams?.values as unknown[]) ?? [];
+        const search = richSelectSearchText.value.trim().toLowerCase();
+        if (!search) return values;
+        return values.filter((v) => getDisplayText(v).toLowerCase().includes(search));
+      });
+
+      const scrollRichSelectHighlightedIntoView = () => {
+        nextTick(() => {
+          const container = richSelectOptionsRef.value;
+          if (!container) return;
+          const highlighted = container.children[highlightedIndex.value] as HTMLElement | undefined;
+          highlighted?.scrollIntoView({ block: 'nearest' });
+        });
+      };
+
+      const handleRichSelectKeyDown = (e: KeyboardEvent) => {
+        const filtered = richSelectFilteredValues.value;
+        switch (e.key) {
+          case 'ArrowDown':
+            e.preventDefault();
+            highlightedIndex.value = Math.min(highlightedIndex.value + 1, filtered.length - 1);
+            scrollRichSelectHighlightedIntoView();
+            break;
+          case 'ArrowUp':
+            e.preventDefault();
+            highlightedIndex.value = Math.max(highlightedIndex.value - 1, 0);
+            scrollRichSelectHighlightedIntoView();
+            break;
+          case 'Enter':
+            e.preventDefault();
+            e.stopPropagation();
+            if (filtered.length > 0 && highlightedIndex.value < filtered.length) {
+              props.onCommit(filtered[highlightedIndex.value]);
+            }
+            break;
+          case 'Escape':
+            e.preventDefault();
+            e.stopPropagation();
+            props.onCancel();
+            break;
+        }
+      };
+
       return () => {
         if (props.editorType === 'checkbox') {
           const checked = !!props.value;
@@ -187,6 +241,49 @@ export function createInlineCellEditor(options: CreateInlineCellEditorOptions) {
                 style: { padding: '6px 8px', cursor: 'pointer', color: 'var(--ogrid-fg, #242424)', ...(i === highlightedIndex.value ? { background: 'var(--ogrid-bg-hover, #e8f0fe)' } : {}) },
               }, getDisplayText(v))
             )),
+          ]);
+        }
+
+        if (props.editorType === 'richSelect') {
+          const filtered = richSelectFilteredValues.value;
+          return h('div', {
+            ref: (el: unknown) => { selectWrapperRef.value = el as HTMLDivElement; },
+            style: { ...editorWrapperStyle, position: 'relative' },
+          }, [
+            h('div', { style: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', cursor: 'pointer', fontSize: '13px', color: 'inherit' } }, [
+              h('span', getDisplayText(props.value)),
+              h('span', { style: { marginLeft: '4px', fontSize: '10px', opacity: '0.5' } }, '\u25BE'),
+            ]),
+            h('div', {
+              ref: (el: unknown) => { selectDropdownRef.value = el as HTMLDivElement; },
+              role: 'listbox',
+              style: { position: 'absolute', top: '100%', left: '0', right: '0', maxHeight: '200px', overflowY: 'auto', background: 'var(--ogrid-bg, #fff)', border: '1px solid var(--ogrid-border, rgba(0,0,0,0.12))', zIndex: '10', boxShadow: '0 4px 16px rgba(0,0,0,0.2)', textAlign: 'left' },
+            }, [
+              h('input', {
+                ref: (el: unknown) => { richSelectInputRef.value = el as HTMLInputElement; },
+                type: 'text',
+                value: richSelectSearchText.value,
+                placeholder: 'Search...',
+                onInput: (e: Event) => {
+                  richSelectSearchText.value = (e.target as HTMLInputElement).value;
+                  highlightedIndex.value = 0;
+                },
+                onKeydown: handleRichSelectKeyDown,
+                style: { width: '100%', padding: '6px 8px', border: 'none', borderBottom: '1px solid var(--ogrid-border, rgba(0,0,0,0.12))', background: 'var(--ogrid-bg, #fff)', color: 'inherit', font: 'inherit', fontSize: '13px', outline: 'none', boxSizing: 'border-box', position: 'sticky', top: '0', zIndex: '1' },
+              }),
+              h('div', {
+                ref: (el: unknown) => { richSelectOptionsRef.value = el as HTMLDivElement; },
+              }, filtered.map((v, i) =>
+                h('div', {
+                  key: String(v),
+                  role: 'option',
+                  'aria-selected': i === highlightedIndex.value,
+                  onClick: () => props.onCommit(v),
+                  style: { padding: '6px 8px', cursor: 'pointer', color: 'var(--ogrid-fg, #242424)', ...(i === highlightedIndex.value ? { background: 'var(--ogrid-bg-hover, #e8f0fe)' } : {}) },
+                }, getDisplayText(v))
+              )),
+              ...(filtered.length === 0 ? [h('div', { style: { padding: '6px 8px', color: 'var(--ogrid-muted, #999)' } }, 'No matches')] : []),
+            ]),
           ]);
         }
 

@@ -431,23 +431,40 @@ export class InlineCellEditor<T> {
   }
 
   private createRichSelectEditor(value: unknown, column: IColumnDef<T>): HTMLElement {
+    const values = column.cellEditorParams?.values ?? [];
+    const formatValue = column.cellEditorParams?.formatValue ?? ((v: unknown) => String(v));
+    const getDisplayText = (v: unknown): string => v != null ? String(formatValue(v)) : '';
+
     const wrapper = document.createElement('div');
     Object.assign(wrapper.style, EDITOR_STYLE);
-    wrapper.style.padding = '0';
+    wrapper.style.padding = '6px 10px';
+    wrapper.style.display = 'flex';
+    wrapper.style.alignItems = 'center';
 
-    const input = document.createElement('input');
-    input.type = 'text';
-    input.value = value != null ? String(value) : '';
-    input.style.width = '100%';
-    input.style.border = 'none';
-    input.style.outline = 'none';
-    input.style.padding = '4px';
-    input.style.boxSizing = 'border-box';
-    input.style.background = 'var(--ogrid-bg, #fff)';
-    input.style.color = 'var(--ogrid-fg, rgba(0, 0, 0, 0.87))';
-    wrapper.appendChild(input);
+    // Display current value + chevron (same as select editor)
+    const display = document.createElement('div');
+    display.style.display = 'flex';
+    display.style.alignItems = 'center';
+    display.style.justifyContent = 'space-between';
+    display.style.width = '100%';
+    display.style.cursor = 'pointer';
+    display.style.fontSize = '13px';
 
+    const valueSpan = document.createElement('span');
+    valueSpan.textContent = getDisplayText(value);
+    display.appendChild(valueSpan);
+
+    const chevron = document.createElement('span');
+    chevron.textContent = '\u25BE';
+    chevron.style.marginLeft = '4px';
+    chevron.style.fontSize = '10px';
+    chevron.style.opacity = '0.5';
+    display.appendChild(chevron);
+    wrapper.appendChild(display);
+
+    // Dropdown with search input at the top
     const dropdown = document.createElement('div');
+    dropdown.setAttribute('role', 'listbox');
     dropdown.style.position = 'absolute';
     dropdown.style.top = '100%';
     dropdown.style.left = '0';
@@ -458,21 +475,51 @@ export class InlineCellEditor<T> {
     dropdown.style.border = '1px solid var(--ogrid-border, rgba(0, 0, 0, 0.12))';
     dropdown.style.zIndex = '1001';
     dropdown.style.textAlign = 'left';
+    dropdown.style.boxShadow = '0 4px 16px rgba(0,0,0,0.2)';
+
+    // Search input inside the dropdown
+    const input = document.createElement('input');
+    input.type = 'text';
+    input.placeholder = 'Search...';
+    input.style.width = '100%';
+    input.style.padding = '6px 8px';
+    input.style.border = 'none';
+    input.style.borderBottom = '1px solid var(--ogrid-border, rgba(0, 0, 0, 0.12))';
+    input.style.outline = 'none';
+    input.style.boxSizing = 'border-box';
+    input.style.background = 'var(--ogrid-bg, #fff)';
+    input.style.color = 'var(--ogrid-fg, rgba(0, 0, 0, 0.87))';
+    input.style.font = 'inherit';
+    input.style.fontSize = '13px';
+    input.style.position = 'sticky';
+    input.style.top = '0';
+    input.style.zIndex = '1';
+    dropdown.appendChild(input);
+
+    // Options container (below the search input)
+    const optionsContainer = document.createElement('div');
+    dropdown.appendChild(optionsContainer);
     wrapper.appendChild(dropdown);
 
-    const values = column.cellEditorParams?.values ?? [];
-    const formatValue = column.cellEditorParams?.formatValue ?? ((v: unknown) => String(v));
+    let highlightedIndex = Math.max(values.findIndex((v) => String(v) === String(value)), 0);
+    let filteredValues = [...values];
 
     const renderOptions = (filter: string) => {
-      dropdown.innerHTML = '';
-      const filtered = values.filter((v) =>
+      optionsContainer.innerHTML = '';
+      filteredValues = values.filter((v) =>
         String(formatValue(v)).toLowerCase().includes(filter.toLowerCase())
       );
-      for (const val of filtered) {
+      highlightedIndex = Math.min(highlightedIndex, Math.max(filteredValues.length - 1, 0));
+      for (let i = 0; i < filteredValues.length; i++) {
+        const val = filteredValues[i];
         const option = document.createElement('div');
         option.textContent = String(formatValue(val));
-        option.style.padding = '4px 8px';
+        option.style.padding = '6px 8px';
         option.style.cursor = 'pointer';
+        option.style.color = 'var(--ogrid-fg, #242424)';
+        if (i === highlightedIndex) {
+          option.style.background = 'var(--ogrid-bg-hover, #e8f0fe)';
+        }
         option.addEventListener('mousedown', (e) => {
           e.preventDefault();
           if (this.editingCell) {
@@ -481,12 +528,24 @@ export class InlineCellEditor<T> {
           this.closeEditor();
         });
         option.addEventListener('mouseenter', () => {
-          option.style.backgroundColor = 'var(--ogrid-hover-bg, rgba(0, 0, 0, 0.04))';
+          option.style.backgroundColor = 'var(--ogrid-bg-hover, #e8f0fe)';
         }, { passive: true });
         option.addEventListener('mouseleave', () => {
-          option.style.backgroundColor = 'var(--ogrid-bg, #fff)';
+          option.style.backgroundColor = '';
         }, { passive: true });
-        dropdown.appendChild(option);
+        optionsContainer.appendChild(option);
+      }
+    };
+
+    const updateHighlight = (prevIndex: number, nextIndex: number) => {
+      const prev = optionsContainer.children[prevIndex] as HTMLElement | undefined;
+      const next = optionsContainer.children[nextIndex] as HTMLElement | undefined;
+      if (prev) {
+        prev.style.background = '';
+      }
+      if (next) {
+        next.style.background = 'var(--ogrid-bg-hover, #e8f0fe)';
+        next.scrollIntoView({ block: 'nearest' });
       }
     };
 
@@ -495,42 +554,64 @@ export class InlineCellEditor<T> {
     });
 
     input.addEventListener('keydown', (e) => {
-      if (e.key === 'Enter') {
-        e.preventDefault();
-        e.stopPropagation(); // Prevent grid wrapper from re-opening the editor
-        if (this.editingCell) {
-          this.onCommit?.(this.editingCell.rowId, this.editingCell.columnId, input.value);
+      switch (e.key) {
+        case 'ArrowDown': {
+          e.preventDefault();
+          e.stopPropagation();
+          const prevDown = highlightedIndex;
+          highlightedIndex = Math.min(highlightedIndex + 1, filteredValues.length - 1);
+          updateHighlight(prevDown, highlightedIndex);
+          break;
         }
-        const afterCommit = this.onAfterCommit;
-        this.closeEditor();
-        afterCommit?.(); // Move active cell down after closing
-      } else if (e.key === 'Escape') {
-        e.preventDefault();
-        e.stopPropagation();
-        this.onCancel?.();
-        this.closeEditor();
-      } else if (['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'].includes(e.key)) {
-        // Let the input handle cursor movement — don't bubble to grid navigation
-        e.stopPropagation();
-      } else if ((e.ctrlKey || e.metaKey) && ['c', 'x', 'v', 'a', 'z', 'y'].includes(e.key)) {
-        // Let the input handle clipboard/undo shortcuts natively — don't bubble to grid
-        e.stopPropagation();
+        case 'ArrowUp': {
+          e.preventDefault();
+          e.stopPropagation();
+          const prevUp = highlightedIndex;
+          highlightedIndex = Math.max(highlightedIndex - 1, 0);
+          updateHighlight(prevUp, highlightedIndex);
+          break;
+        }
+        case 'Enter':
+          e.preventDefault();
+          e.stopPropagation();
+          if (filteredValues.length > 0 && highlightedIndex < filteredValues.length) {
+            if (this.editingCell) {
+              this.onCommit?.(this.editingCell.rowId, this.editingCell.columnId, filteredValues[highlightedIndex]);
+            }
+            const afterCommit = this.onAfterCommit;
+            this.closeEditor();
+            afterCommit?.();
+          }
+          break;
+        case 'Escape':
+          e.preventDefault();
+          e.stopPropagation();
+          this.onCancel?.();
+          this.closeEditor();
+          break;
+        case 'ArrowLeft':
+        case 'ArrowRight':
+          e.stopPropagation();
+          break;
+        default:
+          if ((e.ctrlKey || e.metaKey) && ['c', 'x', 'v', 'a', 'z', 'y'].includes(e.key)) {
+            e.stopPropagation();
+          }
+          break;
       }
     });
 
     input.addEventListener('blur', (e: FocusEvent) => {
       const related = e.relatedTarget as HTMLElement | null;
       if (related && this.editor?.contains(related)) {
-        return; // Focus moved within the editor (e.g., to dropdown), don't close
+        return;
       }
-      if (this.editingCell) {
-        this.onCommit?.(this.editingCell.rowId, this.editingCell.columnId, input.value);
-      }
+      this.onCancel?.();
       this.closeEditor();
     });
 
     renderOptions('');
-    setTimeout(() => input.select(), 0);
+    setTimeout(() => input.focus(), 0);
 
     return wrapper;
   }
