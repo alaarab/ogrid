@@ -518,18 +518,19 @@ export function buildInlineEditorProps<T>(
   col: IColumnDef<T>,
   descriptor: CellRenderDescriptor,
   callbacks: {
-    commitCellEdit: (item: T, columnId: string, oldValue: unknown, newValue: unknown, rowIndex: number, globalColIndex: number) => void;
+    commitCellEdit: (item: T, columnId: string, oldValue: unknown, newValue: unknown, rowIndex: number, globalColIndex: number, options?: { skipAdvance?: boolean }) => void;
     setEditingCell: (cell: null) => void;
   }
 ) {
+  const editorType = (descriptor.editorType ?? 'text') as 'text' | 'select' | 'checkbox' | 'richSelect' | 'date';
   return {
     value: descriptor.value,
     item,
     column: col,
     rowIndex: descriptor.rowIndex,
-    editorType: (descriptor.editorType ?? 'text') as 'text' | 'select' | 'checkbox' | 'richSelect' | 'date',
+    editorType,
     onCommit: (newValue: unknown) =>
-      callbacks.commitCellEdit(item, col.columnId, descriptor.value, newValue, descriptor.rowIndex, descriptor.globalColIndex),
+      callbacks.commitCellEdit(item, col.columnId, descriptor.value, newValue, descriptor.rowIndex, descriptor.globalColIndex, editorType === 'checkbox' ? { skipAdvance: true } : undefined),
     onCancel: () => callbacks.setEditingCell(null),
   };
 }

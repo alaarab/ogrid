@@ -15,7 +15,7 @@ export interface UseColumnResizeParams {
 }
 
 export interface UseColumnResizeResult<T> {
-  handleResizeStart: (e: React.MouseEvent, col: IColumnDef<T>) => void;
+  handleResizeStart: (e: React.MouseEvent | React.PointerEvent, col: IColumnDef<T>) => void;
   handleResizeDoubleClick: (e: React.MouseEvent, col: IColumnDef<T>) => void;
   getColumnWidth: (col: IColumnDef<T>) => number;
 }
@@ -49,7 +49,7 @@ export function useColumnResize<T>({
     };
   }, []);
 
-  const handleResizeStart = useCallback((e: React.MouseEvent, col: IColumnDef<T>) => {
+  const handleResizeStart = useCallback((e: React.MouseEvent | React.PointerEvent, col: IColumnDef<T>) => {
     e.preventDefault();
     e.stopPropagation();
 

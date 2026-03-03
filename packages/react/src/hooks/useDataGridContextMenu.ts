@@ -5,6 +5,7 @@ import type { DataGridContextMenuState } from './useDataGridState';
 // Stable no-op handlers used when cellSelection is disabled
 const NOOP = () => {};
 const NOOP_CTX = (_e: { clientX: number; clientY: number; preventDefault?: () => void }) => {};
+const NOOP_PTR = (_e: React.PointerEvent) => {};
 
 export interface UseDataGridContextMenuParams {
   cellSelection: boolean;
@@ -25,7 +26,7 @@ export function useDataGridContextMenu(
 ): UseDataGridContextMenuResult {
   const { cellSelection } = params;
 
-  const { contextMenuPosition, setContextMenuPosition, handleCellContextMenu, closeContextMenu } =
+  const { contextMenuPosition, setContextMenuPosition, handleCellContextMenu, closeContextMenu, handleLongPressStart, handleLongPressEnd } =
     useContextMenu();
 
   const contextMenuState = useMemo<DataGridContextMenuState>(() => ({
@@ -33,7 +34,9 @@ export function useDataGridContextMenu(
     setMenuPosition: cellSelection ? setContextMenuPosition : (NOOP as typeof setContextMenuPosition),
     handleCellContextMenu: cellSelection ? handleCellContextMenu : (NOOP_CTX as typeof handleCellContextMenu),
     closeContextMenu: cellSelection ? closeContextMenu : NOOP,
-  }), [cellSelection, contextMenuPosition, setContextMenuPosition, handleCellContextMenu, closeContextMenu]);
+    handleLongPressStart: cellSelection ? handleLongPressStart : (NOOP_PTR as typeof handleLongPressStart),
+    handleLongPressEnd: cellSelection ? handleLongPressEnd : NOOP,
+  }), [cellSelection, contextMenuPosition, setContextMenuPosition, handleCellContextMenu, closeContextMenu, handleLongPressStart, handleLongPressEnd]);
 
   return {
     contextMenu: contextMenuState,

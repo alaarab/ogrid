@@ -6,13 +6,15 @@
  *
  * Available editors:
  * - DatePickerEditor  -  Calendar-based date picker (use with cellEditorPopup: true)
+ * - TimePickerEditor  -  12-hour US time picker (use with cellEditorPopup: true)
+ * - DateTimePickerEditor  -  Combined date + time picker (use with cellEditorPopup: true)
  * - RatingEditor  -  Star rating editor (use with cellEditorPopup: true)
  * - ColorPickerEditor  -  Color swatch grid + hex input (use with cellEditorPopup: true)
  * - SliderEditor  -  Range slider for numeric values (use with cellEditorPopup: true)
  * - TagsEditor  -  Multi-value tag/chip editor (use with cellEditorPopup: true)
  *
  * Usage:
- *   import { DatePickerEditor } from '@alaarab/ogrid-react-inputs';
+ *   import { DatePickerEditor, TimePickerEditor, DateTimePickerEditor } from '@alaarab/ogrid-react-inputs';
  *
  *   const columns = [{
  *     columnId: 'dueDate',
@@ -24,6 +26,14 @@
 // DatePicker
 export { DatePickerEditor } from './DatePicker';
 export type { CalendarDay } from './DatePicker';
+
+// TimePicker
+export { TimePickerEditor } from './TimePicker';
+export type { TimePickerEditorParams, TimeValue, AmPm } from './TimePicker';
+
+// DateTimePicker
+export { DateTimePickerEditor } from './DateTimePicker';
+export type { DateTimePickerEditorParams, DateTimeValue } from './DateTimePicker';
 
 // Rating
 export { RatingEditor } from './Rating';

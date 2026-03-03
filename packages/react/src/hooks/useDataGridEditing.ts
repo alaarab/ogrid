@@ -77,7 +77,8 @@ export function useDataGridEditing<T>(
       oldValue: unknown,
       newValue: unknown,
       rowIndex: number,
-      globalColIndex: number
+      globalColIndex: number,
+      options?: { skipAdvance?: boolean }
     ) => {
       // --- Formula detection ---
       if (formulas && typeof newValue === 'string' && newValue.startsWith('=') && setFormulaRef.current) {
@@ -134,8 +135,8 @@ export function useDataGridEditing<T>(
       setEditingCell(null);
       setPopoverAnchorEl(null);
       setPendingEditorValue(undefined);
-      // Advance to next row for inline editors
-      if (rowIndex < itemsLengthRef.current - 1) {
+      // Advance to next row for inline editors (skip for checkbox — toggling shouldn't move selection)
+      if (!options?.skipAdvance && rowIndex < itemsLengthRef.current - 1) {
         const newRow = rowIndex + 1;
         const localCol = globalColIndex - colOffset;
         setActiveCell({ rowIndex: newRow, columnIndex: globalColIndex });
