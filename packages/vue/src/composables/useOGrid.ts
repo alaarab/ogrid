@@ -219,10 +219,15 @@ export function useOGrid<T>(
     setPage(1);
   };
 
+  // Increments each time the user explicitly sorts. Used to snapshot sort state so that
+  // subsequent cell edits (which change displayData) don't trigger a re-sort (Excel-like behavior).
+  const sortVersion = ref(0);
+
   const setSort = (s: { field: string; direction: 'asc' | 'desc' }) => {
     if (controlledState.value.sort === undefined) internalSort.value = s;
     callbacks.value.onSortChange?.(s);
     setPage(1);
+    sortVersion.value++;
   };
 
   const setFilters = (f: IFilters) => {
@@ -278,58 +283,135 @@ export function useOGrid<T>(
   // --- Client-side filtering & sorting ---
   const workerSortEnabled = computed(() => !!props.value.workerSort);
 
+  // Stable sorted order (index-based, same approach as React).
+  // sortedIndices stores indices into displayData from the last explicit sort/filter pass.
+  // When only displayData changes (cell edit, sortVersion/filters unchanged), we reuse
+  // these indices to look up updated row objects - preserving order without re-sorting.
+  let sortedIndices: number[] | null = null;
+  let prevSortVersion = -1;
+  let prevFilters: IFilters | null = null;
+  let prevColumns: typeof columns.value | null = null;
+  let prevDataLength = -1;
+
   /** Sync path: used when workerSort is off. */
   const clientItemsAndTotal = computed(() => {
     if (!isClientSide.value || workerSortEnabled.value) return null;
-    const rows = processClientSideData(
-      displayData.value,
-      columns.value,
-      filters.value,
-      sort.value.field,
-      sort.value.direction
-    );
-    const total = rows.length;
+
+    const data = displayData.value;
+    const cols = columns.value;
+    const f = filters.value;
+    const sv = sortVersion.value;
+    const sf = sort.value.field;
+    const sd = sort.value.direction;
+
+    const needsResort =
+      sv !== prevSortVersion ||
+      f !== prevFilters ||
+      cols !== prevColumns ||
+      data.length !== prevDataLength;
+
+    let orderedRows: T[];
+
+    if (needsResort || sortedIndices === null) {
+      prevSortVersion = sv;
+      prevFilters = f;
+      prevColumns = cols;
+      prevDataLength = data.length;
+
+      const sorted = processClientSideData(data, cols, f, sf, sd);
+      const indexMap = new Map<T, number>();
+      for (let i = 0; i < data.length; i++) indexMap.set(data[i], i);
+      sortedIndices = sorted.map((row) => {
+        const idx = indexMap.get(row);
+        return idx !== undefined ? idx : -1;
+      }).filter((idx) => idx !== -1);
+      orderedRows = sorted;
+    } else {
+      // Cell edit: preserve existing order, look up updated row objects by index.
+      orderedRows = sortedIndices.map((idx) => data[idx]).filter((r) => r !== undefined) as T[];
+    }
+
+    const total = orderedRows.length;
     const start = (page.value - 1) * pageSize.value;
-    const paged = rows.slice(start, start + pageSize.value);
+    const paged = orderedRows.slice(start, start + pageSize.value);
     return { items: paged, totalCount: total };
   });
 
   /** Async path: worker sort result. */
   const asyncClientItems = ref<{ items: T[]; totalCount: number } | null>(null) as Ref<{ items: T[]; totalCount: number } | null>;
   let workerSortAbortId = 0;
+  let asyncSortedIndices: number[] | null = null;
+  let asyncPrevSortVersion = -1;
+  let asyncPrevFilters: IFilters | null = null;
+  let asyncPrevColumns: typeof columns.value | null = null;
+  let asyncPrevDataLength = -1;
 
   // Worker sort effect
   watch(
-    [isClientSide, workerSortEnabled, displayData, columns, filters, () => sort.value.field, () => sort.value.direction, page, pageSize],
+    [isClientSide, workerSortEnabled, displayData, columns, filters, sortVersion, page, pageSize],
     () => {
       if (!isClientSide.value || !workerSortEnabled.value) return;
 
       const data = displayData.value;
       const cols = columns.value;
       const f = filters.value;
+      const sv = sortVersion.value;
       const sf = sort.value.field;
       const sd = sort.value.direction;
       const p = page.value;
       const ps = pageSize.value;
       const abortId = ++workerSortAbortId;
 
-      processClientSideDataAsync(data, cols, f, sf, sd)
-        .then((rows) => {
-          if (abortId !== workerSortAbortId || isDestroyed) return;
-          const total = rows.length;
-          const start = (p - 1) * ps;
-          const paged = rows.slice(start, start + ps);
-          asyncClientItems.value = { items: paged, totalCount: total };
-        })
-        .catch(() => {
-          if (abortId !== workerSortAbortId || isDestroyed) return;
-          // Fallback: sync
-          const rows = processClientSideData(data, cols, f, sf, sd);
-          const total = rows.length;
-          const start = (p - 1) * ps;
-          const paged = rows.slice(start, start + ps);
-          asyncClientItems.value = { items: paged, totalCount: total };
-        });
+      const needsResortAsync =
+        sv !== asyncPrevSortVersion ||
+        f !== asyncPrevFilters ||
+        cols !== asyncPrevColumns ||
+        data.length !== asyncPrevDataLength;
+
+      if (needsResortAsync || asyncSortedIndices === null) {
+        asyncPrevSortVersion = sv;
+        asyncPrevFilters = f;
+        asyncPrevColumns = cols;
+        asyncPrevDataLength = data.length;
+        asyncSortedIndices = null;
+
+        processClientSideDataAsync(data, cols, f, sf, sd)
+          .then((rows) => {
+            if (abortId !== workerSortAbortId || isDestroyed) return;
+            const indexMap = new Map<T, number>();
+            for (let i = 0; i < data.length; i++) indexMap.set(data[i], i);
+            asyncSortedIndices = (rows as T[]).map((row) => {
+              const idx = indexMap.get(row);
+              return idx !== undefined ? idx : -1;
+            }).filter((idx) => idx !== -1);
+            const total = rows.length;
+            const start = (p - 1) * ps;
+            const paged = rows.slice(start, start + ps);
+            asyncClientItems.value = { items: paged as T[], totalCount: total };
+          })
+          .catch(() => {
+            if (abortId !== workerSortAbortId || isDestroyed) return;
+            // Fallback: sync
+            const rows = processClientSideData(data, cols, f, sf, sd);
+            const indexMap = new Map<T, number>();
+            for (let i = 0; i < data.length; i++) indexMap.set(data[i], i);
+            asyncSortedIndices = rows.map((row) => {
+              const idx = indexMap.get(row);
+              return idx !== undefined ? idx : -1;
+            }).filter((idx) => idx !== -1);
+            const total = rows.length;
+            const start = (p - 1) * ps;
+            const paged = rows.slice(start, start + ps);
+            asyncClientItems.value = { items: paged, totalCount: total };
+          });
+      } else {
+        // Preserve order: look up updated rows by stored indices.
+        const orderedRows = asyncSortedIndices.map((idx) => data[idx]).filter((r) => r !== undefined) as T[];
+        const total = orderedRows.length;
+        const start = (p - 1) * ps;
+        const paged = orderedRows.slice(start, start + ps);
+        asyncClientItems.value = { items: paged, totalCount: total };
+      }
     },
     { immediate: true }
   );

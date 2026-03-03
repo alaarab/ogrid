@@ -80,6 +80,13 @@ export class GridState<T> {
   private _visibleColsCache: IColumnDef<T>[] | null = null;
   private _visibleColsDirty = true;
 
+  // Stable sorted order (index-based) - same approach as React/Vue/Angular.
+  // sortedIndices stores indices into _data from the last explicit sort/filter pass.
+  // When only _data changes (cell edit via setData), we reuse these indices so rows
+  // stay in place rather than jumping to a new sorted position (Excel-like behavior).
+  private _sortedIndices: number[] | null = null;
+  private _sortDirty = true; // true = must re-sort on next getProcessedItems call
+
   constructor(options: OGridOptions<T>) {
     this._allColumns = options.columns;
     this._columns = flattenColumns(options.columns as unknown as Parameters<typeof flattenColumns>[0]) as IColumnDef<T>[];
@@ -172,18 +179,36 @@ export class GridState<T> {
       return { items: this._serverItems, totalCount: this._serverTotalCount };
     }
 
-    const filtered = processClientSideData(
-      this._data,
-      this._columns as unknown as Parameters<typeof processClientSideData>[1],
-      this._filters,
-      this._sort?.field,
-      this._sort?.direction
-    ) as T[];
+    let orderedRows: T[];
 
-    const totalCount = filtered.length;
+    if (this._sortDirty || this._sortedIndices === null) {
+      // Sort/filter changed: rebuild the sorted order from scratch.
+      const sorted = processClientSideData(
+        this._data,
+        this._columns as unknown as Parameters<typeof processClientSideData>[1],
+        this._filters,
+        this._sort?.field,
+        this._sort?.direction
+      ) as T[];
+
+      // Store as indices into _data so we can look up updated rows on the next call.
+      const indexMap = new Map<T, number>();
+      for (let i = 0; i < this._data.length; i++) indexMap.set(this._data[i], i);
+      this._sortedIndices = sorted.map((row) => {
+        const idx = indexMap.get(row);
+        return idx !== undefined ? idx : -1;
+      }).filter((idx) => idx !== -1);
+      this._sortDirty = false;
+      orderedRows = sorted;
+    } else {
+      // Only data values changed (cell edit): preserve existing order.
+      orderedRows = this._sortedIndices.map((idx) => this._data[idx]).filter((r) => r !== undefined) as T[];
+    }
+
+    const totalCount = orderedRows.length;
     const startIdx = (this._page - 1) * this._pageSize;
     const endIdx = startIdx + this._pageSize;
-    const items = filtered.slice(startIdx, endIdx);
+    const items = orderedRows.slice(startIdx, endIdx);
 
     return { items, totalCount };
   }
@@ -196,13 +221,23 @@ export class GridState<T> {
   /**
    * Async version of getProcessedItems that offloads sort/filter to a Web Worker.
    * Falls back to sync when worker sort is not active.
+   * Uses the same index-based snapshot approach as getProcessedItems.
    */
   async getProcessedItemsAsync(): Promise<{ items: T[]; totalCount: number }> {
     if (this.isServerSide || !this.useWorkerSort) {
       return this.getProcessedItems();
     }
 
-    const filtered = await processClientSideDataAsync(
+    if (!this._sortDirty && this._sortedIndices !== null) {
+      // Only data values changed (cell edit): preserve existing order.
+      const orderedRows = this._sortedIndices.map((idx) => this._data[idx]).filter((r) => r !== undefined) as T[];
+      const totalCount = orderedRows.length;
+      const startIdx = (this._page - 1) * this._pageSize;
+      const endIdx = startIdx + this._pageSize;
+      return { items: orderedRows.slice(startIdx, endIdx), totalCount };
+    }
+
+    const sorted = await processClientSideDataAsync(
       this._data,
       this._columns as unknown as Parameters<typeof processClientSideDataAsync>[1],
       this._filters,
@@ -210,10 +245,19 @@ export class GridState<T> {
       this._sort?.direction
     ) as T[];
 
-    const totalCount = filtered.length;
+    // Store sorted indices for subsequent data-only changes.
+    const indexMap = new Map<T, number>();
+    for (let i = 0; i < this._data.length; i++) indexMap.set(this._data[i], i);
+    this._sortedIndices = sorted.map((row) => {
+      const idx = indexMap.get(row);
+      return idx !== undefined ? idx : -1;
+    }).filter((idx) => idx !== -1);
+    this._sortDirty = false;
+
+    const totalCount = sorted.length;
     const startIdx = (this._page - 1) * this._pageSize;
     const endIdx = startIdx + this._pageSize;
-    const items = filtered.slice(startIdx, endIdx);
+    const items = sorted.slice(startIdx, endIdx);
 
     return { items, totalCount };
   }
@@ -271,12 +315,18 @@ export class GridState<T> {
   // --- Setters ---
 
   setData(data: T[]): void {
+    const prevLength = this._data.length;
     this._data = data;
     if (!this.isServerSide) {
       this._filterOptions = deriveFilterOptionsFromData(
         data,
         this._columns as unknown as Parameters<typeof deriveFilterOptionsFromData>[1]
       );
+    }
+    // If row count changed (add/remove), the existing sorted indices are invalid - re-sort.
+    // If only values changed (cell edit), preserve the existing sort order (Excel-like behavior).
+    if (data.length !== prevLength) {
+      this._sortDirty = true;
     }
     this.emitter.emit('stateChange', { type: 'data' });
   }
@@ -303,6 +353,7 @@ export class GridState<T> {
   setSort(sort: { field: string; direction: 'asc' | 'desc' } | undefined): void {
     this._sort = sort;
     this._page = 1;
+    this._sortDirty = true; // explicit sort change: re-sort on next getProcessedItems call
     if (this.isServerSide) {
       this.fetchServerData();
     } else {
@@ -319,6 +370,7 @@ export class GridState<T> {
       this._sort = { field, direction: 'asc' };
     }
     this._page = 1;
+    this._sortDirty = true; // explicit sort change: re-sort on next getProcessedItems call
     if (this.isServerSide) {
       this.fetchServerData();
     } else {
@@ -329,6 +381,7 @@ export class GridState<T> {
   setFilter(key: string, value: FilterValue | undefined): void {
     this._filters = mergeFilter(this._filters, key, value);
     this._page = 1;
+    this._sortDirty = true; // filter change requires re-sort to get the right subset
     if (this.isServerSide) {
       this.fetchServerData();
     } else {
@@ -339,6 +392,7 @@ export class GridState<T> {
   clearFilters(): void {
     this._filters = {};
     this._page = 1;
+    this._sortDirty = true; // filter change requires re-sort to get the right subset
     if (this.isServerSide) {
       this.fetchServerData();
     } else {

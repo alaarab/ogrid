@@ -1,0 +1,300 @@
+/* ─────────────────────────────────────────────────────────
+   OGrid Micro-Interaction Utilities
+   Composable CSS classes for hover effects, animations,
+   and visual polish across the docs site.
+   ───────────────────────────────────────────────────────── */
+
+/* ══════════════════════════════════════════════════════════
+   HOVER LIFT - translateY + enhanced shadow
+   ══════════════════════════════════════════════════════════ */
+
+.hoverLift {
+  transition:
+    transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1),
+    box-shadow 0.3s ease;
+  will-change: transform;
+
+  &:hover {
+    transform: translateY(-4px);
+    box-shadow:
+      0 12px 40px rgba(0, 0, 0, 0.14),
+      0 4px 12px rgba(0, 0, 0, 0.08);
+  }
+
+  &:active {
+    transform: translateY(-1px);
+    transition-duration: 0.1s;
+  }
+}
+
+[data-theme='dark'] .hoverLift:hover {
+  box-shadow:
+    0 12px 40px rgba(0, 0, 0, 0.45),
+    0 4px 12px rgba(0, 0, 0, 0.25);
+}
+
+/* ══════════════════════════════════════════════════════════
+   HOVER GLOW - green accent box-shadow glow
+   ══════════════════════════════════════════════════════════ */
+
+.hoverGlow {
+  transition: box-shadow 0.3s ease;
+
+  &:hover {
+    box-shadow:
+      0 0 0 1px rgba(33, 115, 70, 0.3),
+      0 0 20px rgba(33, 115, 70, 0.2),
+      0 0 40px rgba(33, 115, 70, 0.1);
+  }
+}
+
+[data-theme='dark'] .hoverGlow:hover {
+  box-shadow:
+    0 0 0 1px rgba(58, 184, 118, 0.35),
+    0 0 20px rgba(58, 184, 118, 0.25),
+    0 0 40px rgba(58, 184, 118, 0.12);
+}
+
+/* ══════════════════════════════════════════════════════════
+   HOVER TILT - CSS perspective tilt toward cursor
+   Requires --mouse-x and --mouse-y custom properties set
+   by JS (e.g. via useCursorGlow hook)
+   ══════════════════════════════════════════════════════════ */
+
+.hoverTilt {
+  transform-style: preserve-3d;
+  transition: transform 0.15s ease;
+  will-change: transform;
+
+  &:hover {
+    transform:
+      perspective(600px)
+      rotateX(calc((var(--mouse-y, 0.5) - 0.5) * -8deg))
+      rotateY(calc((var(--mouse-x, 0.5) - 0.5) * 8deg));
+  }
+
+  &:not(:hover) {
+    transition: transform 0.4s ease;
+    transform: perspective(600px) rotateX(0deg) rotateY(0deg);
+  }
+}
+
+/* ══════════════════════════════════════════════════════════
+   LINK ANIMATED UNDERLINE - slides in from left
+   ══════════════════════════════════════════════════════════ */
+
+.linkAnimatedUnderline {
+  position: relative;
+  text-decoration: none;
+  background-image: linear-gradient(currentColor, currentColor);
+  background-position: 0% 100%;
+  background-size: 0% 1.5px;
+  background-repeat: no-repeat;
+  transition: background-size 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+
+  &:hover {
+    background-size: 100% 1.5px;
+    text-decoration: none;
+  }
+}
+
+/* Green variant for accent links */
+.linkAnimatedUnderline--accent {
+  background-image: linear-gradient(var(--ogrid-accent, #217346), var(--ogrid-accent, #217346));
+}
+
+/* ══════════════════════════════════════════════════════════
+   BUTTON SHINE - shine sweep on hover
+   ══════════════════════════════════════════════════════════ */
+
+.buttonShine {
+  position: relative;
+  overflow: hidden;
+
+  &::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 60%;
+    height: 100%;
+    background: linear-gradient(
+      105deg,
+      transparent 20%,
+      rgba(255, 255, 255, 0.18) 50%,
+      transparent 80%
+    );
+    transform: skewX(-15deg);
+    transition: left 0s;
+    pointer-events: none;
+  }
+
+  &:hover::before {
+    left: 160%;
+    transition: left 0.55s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+}
+
+/* ══════════════════════════════════════════════════════════
+   CARD GLASS - glassmorphism card
+   ══════════════════════════════════════════════════════════ */
+
+.cardGlass {
+  background: rgba(255, 255, 255, 0.7);
+  backdrop-filter: blur(12px) saturate(1.4);
+  -webkit-backdrop-filter: blur(12px) saturate(1.4);
+  border: 1px solid rgba(255, 255, 255, 0.6);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.8),
+    0 8px 32px rgba(0, 0, 0, 0.08);
+}
+
+[data-theme='dark'] .cardGlass {
+  background: rgba(20, 20, 30, 0.6);
+  border-color: rgba(255, 255, 255, 0.1);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.08),
+    0 8px 32px rgba(0, 0, 0, 0.4);
+}
+
+/* ══════════════════════════════════════════════════════════
+   PULSE SUBTLE - gentle scale pulse, infinite
+   ══════════════════════════════════════════════════════════ */
+
+.pulseSubtle {
+  animation: pulseSubtleAnim 2.8s ease-in-out infinite;
+  will-change: transform;
+}
+
+@keyframes pulseSubtleAnim {
+  0%, 100% {
+    transform: scale(1.0);
+  }
+  50% {
+    transform: scale(1.02);
+  }
+}
+
+/* Pause on hover so it doesn't feel jittery while interacting */
+.pulseSubtle:hover {
+  animation-play-state: paused;
+}
+
+/* ══════════════════════════════════════════════════════════
+   GRADIENT TEXT - animated moving gradient on text
+   ══════════════════════════════════════════════════════════ */
+
+.gradientText {
+  background: linear-gradient(
+    135deg,
+    #217346 0%,
+    #3ab876 25%,
+    #4d9fec 50%,
+    #8b5cf6 75%,
+    #217346 100%
+  );
+  background-size: 300% 300%;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  animation: gradientShift 5s ease infinite;
+}
+
+[data-theme='dark'] .gradientText {
+  background: linear-gradient(
+    135deg,
+    #4ec484 0%,
+    #7fd9a6 25%,
+    #6db8f5 50%,
+    #c4b5fd 75%,
+    #4ec484 100%
+  );
+  background-size: 300% 300%;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  animation: gradientShift 5s ease infinite;
+}
+
+@keyframes gradientShift {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
+/* ══════════════════════════════════════════════════════════
+   COUNT UP - CSS counter scroll animation
+   Usage: set --count-start and --count-end CSS vars,
+   or use the default 0→100 range.
+   The element should contain a CSS counter display.
+   ══════════════════════════════════════════════════════════ */
+
+.countUp {
+  display: inline-block;
+  overflow: hidden;
+  height: 1.1em;
+  vertical-align: text-bottom;
+
+  &::after {
+    content: counter(countup-value);
+    display: block;
+    counter-reset: countup-value var(--count-end, 100);
+    animation: countUpAnim var(--count-duration, 1.5s) ease-out forwards;
+    animation-play-state: paused;
+  }
+}
+
+/* Trigger via IntersectionObserver or .is-visible class */
+.countUp.is-visible::after {
+  animation-play-state: running;
+}
+
+@keyframes countUpAnim {
+  from {
+    counter-reset: countup-value var(--count-start, 0);
+    transform: translateY(100%);
+  }
+  to {
+    counter-reset: countup-value var(--count-end, 100);
+    transform: translateY(0%);
+  }
+}
+
+/* ══════════════════════════════════════════════════════════
+   CURSOR GLOW - used with useCursorGlow hook
+   Sets up radial gradient at cursor position via
+   --cursor-x and --cursor-y custom properties
+   ══════════════════════════════════════════════════════════ */
+
+.cursorGlow {
+  position: relative;
+  isolation: isolate;
+
+  &::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    background: radial-gradient(
+      400px circle at calc(var(--cursor-x, 50%) * 1px) calc(var(--cursor-y, 50%) * 1px),
+      rgba(33, 115, 70, 0.08),
+      transparent 70%
+    );
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+    z-index: 0;
+  }
+
+  &:hover::before {
+    opacity: 1;
+  }
+}
+
+[data-theme='dark'] .cursorGlow::before {
+  background: radial-gradient(
+    400px circle at calc(var(--cursor-x, 50%) * 1px) calc(var(--cursor-y, 50%) * 1px),
+    rgba(58, 184, 118, 0.1),
+    transparent 70%
+  );
+}

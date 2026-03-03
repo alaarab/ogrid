@@ -1,0 +1,243 @@
+/* ─────────────────────────────────────────────────────────
+   HeroGridBackground - Animated spreadsheet background layer
+   Light mode: subtle gray lines on white
+   Dark mode: subtle green/white lines on dark
+   ───────────────────────────────────────────────────────── */
+
+/* Layout constants */
+$col-header-height: 22px;
+$row-number-width: 32px;
+$cell-width: 80px;
+$cell-height: 28px;
+$cols: 8;
+$rows: 10;
+
+/* Color tokens */
+$line-light: rgba(0, 0, 0, 0.07);
+$line-dark: rgba(255, 255, 255, 0.07);
+$header-bg-light: rgba(0, 0, 0, 0.025);
+$header-bg-dark: rgba(255, 255, 255, 0.025);
+$header-text-light: rgba(0, 0, 0, 0.22);
+$header-text-dark: rgba(255, 255, 255, 0.2);
+$selection-color: rgba(33, 115, 70, 0.5);
+$selection-color-dark: rgba(58, 184, 118, 0.55);
+$shimmer-light: rgba(33, 115, 70, 0.06);
+$shimmer-dark: rgba(58, 184, 118, 0.1);
+
+/* ── Wrapper ── */
+.gridBg {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+  user-select: none;
+
+  /* Fade edges so the grid blends into the hero */
+  mask-image:
+    radial-gradient(ellipse 85% 80% at 75% 50%, rgba(0,0,0,0.35) 0%, transparent 75%);
+
+  font-family: var(--ifm-font-family-monospace, monospace);
+}
+
+/* ── Column headers row ── */
+.colHeaders {
+  display: flex;
+  height: $col-header-height;
+  border-bottom: 1px solid $line-light;
+  background: $header-bg-light;
+
+  [data-theme='dark'] & {
+    border-bottom-color: $line-dark;
+    background: $header-bg-dark;
+  }
+}
+
+.cornerCell {
+  width: $row-number-width;
+  flex-shrink: 0;
+  border-right: 1px solid $line-light;
+
+  [data-theme='dark'] & {
+    border-right-color: $line-dark;
+  }
+}
+
+.colHeader {
+  width: $cell-width;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 9px;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  color: $header-text-light;
+  border-right: 1px solid $line-light;
+
+  [data-theme='dark'] & {
+    color: $header-text-dark;
+    border-right-color: $line-dark;
+  }
+}
+
+/* ── Rows container ── */
+.rowsContainer {
+  display: flex;
+  flex-direction: column;
+}
+
+.row {
+  display: flex;
+  height: $cell-height;
+  border-bottom: 1px solid $line-light;
+
+  [data-theme='dark'] & {
+    border-bottom-color: $line-dark;
+  }
+}
+
+/* ── Row number ── */
+.rowNumber {
+  width: $row-number-width;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 9px;
+  font-weight: 500;
+  color: $header-text-light;
+  border-right: 1px solid $line-light;
+  background: $header-bg-light;
+
+  [data-theme='dark'] & {
+    color: $header-text-dark;
+    border-right-color: $line-dark;
+    background: $header-bg-dark;
+  }
+}
+
+/* ── Cell ── */
+.cell {
+  width: $cell-width;
+  flex-shrink: 0;
+  border-right: 1px solid $line-light;
+  animation: cellShimmer 6s ease-in-out infinite;
+  /* stagger each cell by its index */
+  animation-delay: calc(var(--cell-idx) * 0.18s);
+  opacity: 0;
+
+  [data-theme='dark'] & {
+    border-right-color: $line-dark;
+  }
+}
+
+@keyframes cellShimmer {
+  0%   { background: transparent; opacity: 0; }
+  8%   { background: $shimmer-light; opacity: 1; }
+  18%  { background: transparent; opacity: 0; }
+  100% { background: transparent; opacity: 0; }
+}
+
+[data-theme='dark'] .cell {
+  animation-name: cellShimmerDark;
+}
+
+@keyframes cellShimmerDark {
+  0%   { background: transparent; opacity: 0; }
+  8%   { background: $shimmer-dark; opacity: 1; }
+  18%  { background: transparent; opacity: 0; }
+  100% { background: transparent; opacity: 0; }
+}
+
+/* ── Selection rectangles ── */
+/* Each rectangle glides across a few cells, fades in/out */
+.selection1,
+.selection2 {
+  position: absolute;
+  border-radius: 2px;
+  pointer-events: none;
+}
+
+/* Selection 1: starts around col B row 2, moves right then down */
+.selection1 {
+  width: calc($cell-width * 3);
+  height: calc($cell-height * 2);
+  top: calc($col-header-height + $cell-height * 1);
+  left: calc($row-number-width + $cell-width * 1);
+  border: 1.5px solid $selection-color;
+  background: rgba(33, 115, 70, 0.04);
+  box-shadow: 0 0 0 0.5px rgba(33, 115, 70, 0.15) inset;
+  animation: sel1Move 8s ease-in-out infinite;
+  animation-delay: 0s;
+
+  [data-theme='dark'] & {
+    border-color: $selection-color-dark;
+    background: rgba(58, 184, 118, 0.05);
+    box-shadow: 0 0 0 0.5px rgba(58, 184, 118, 0.15) inset;
+    animation-name: sel1MoveDark;
+  }
+}
+
+/* Selection 2: starts around col E row 5, different timing */
+.selection2 {
+  width: calc($cell-width * 2);
+  height: calc($cell-height * 3);
+  top: calc($col-header-height + $cell-height * 4);
+  left: calc($row-number-width + $cell-width * 4);
+  border: 1.5px solid $selection-color;
+  background: rgba(33, 115, 70, 0.04);
+  box-shadow: 0 0 0 0.5px rgba(33, 115, 70, 0.15) inset;
+  animation: sel2Move 10s ease-in-out infinite;
+  animation-delay: -3s;
+
+  [data-theme='dark'] & {
+    border-color: $selection-color-dark;
+    background: rgba(58, 184, 118, 0.05);
+    box-shadow: 0 0 0 0.5px rgba(58, 184, 118, 0.15) inset;
+    animation-name: sel2MoveDark;
+  }
+}
+
+@keyframes sel1Move {
+  0%   { transform: translate(0, 0);                          opacity: 0; }
+  5%   { transform: translate(0, 0);                          opacity: 1; }
+  35%  { transform: translate(#{$cell-width * 2}, 0);         opacity: 1; }
+  55%  { transform: translate(#{$cell-width * 2}, #{$cell-height * 2}); opacity: 1; }
+  75%  { transform: translate(0, #{$cell-height * 2});        opacity: 1; }
+  90%  { transform: translate(0, 0);                          opacity: 1; }
+  95%  { transform: translate(0, 0);                          opacity: 0; }
+  100% { transform: translate(0, 0);                          opacity: 0; }
+}
+
+@keyframes sel1MoveDark {
+  0%   { transform: translate(0, 0);                          opacity: 0; }
+  5%   { transform: translate(0, 0);                          opacity: 1; }
+  35%  { transform: translate(#{$cell-width * 2}, 0);         opacity: 1; }
+  55%  { transform: translate(#{$cell-width * 2}, #{$cell-height * 2}); opacity: 1; }
+  75%  { transform: translate(0, #{$cell-height * 2});        opacity: 1; }
+  90%  { transform: translate(0, 0);                          opacity: 1; }
+  95%  { transform: translate(0, 0);                          opacity: 0; }
+  100% { transform: translate(0, 0);                          opacity: 0; }
+}
+
+@keyframes sel2Move {
+  0%   { transform: translate(0, 0);                          opacity: 0; }
+  8%   { transform: translate(0, 0);                          opacity: 1; }
+  30%  { transform: translate(#{-$cell-width * 2}, 0);        opacity: 1; }
+  55%  { transform: translate(#{-$cell-width * 2}, #{-$cell-height * 2}); opacity: 1; }
+  78%  { transform: translate(#{$cell-width}, #{-$cell-height * 2}); opacity: 1; }
+  90%  { transform: translate(0, 0);                          opacity: 1; }
+  96%  { transform: translate(0, 0);                          opacity: 0; }
+  100% { transform: translate(0, 0);                          opacity: 0; }
+}
+
+@keyframes sel2MoveDark {
+  0%   { transform: translate(0, 0);                          opacity: 0; }
+  8%   { transform: translate(0, 0);                          opacity: 1; }
+  30%  { transform: translate(#{-$cell-width * 2}, 0);        opacity: 1; }
+  55%  { transform: translate(#{-$cell-width * 2}, #{-$cell-height * 2}); opacity: 1; }
+  78%  { transform: translate(#{$cell-width}, #{-$cell-height * 2}); opacity: 1; }
+  90%  { transform: translate(0, 0);                          opacity: 1; }
+  96%  { transform: translate(0, 0);                          opacity: 0; }
+  100% { transform: translate(0, 0);                          opacity: 0; }
+}
