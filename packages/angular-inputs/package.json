@@ -1,0 +1,48 @@
+{
+  "name": "@alaarab/ogrid-angular-inputs",
+  "version": "2.5.5",
+  "description": "OGrid Angular Inputs – Optional premium cell editors (DatePicker, and more). Zero impact when not installed.",
+  "main": "dist/esm/index.js",
+  "module": "dist/esm/index.js",
+  "types": "dist/types/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/types/index.d.ts",
+      "import": "./dist/esm/index.js",
+      "default": "./dist/esm/index.js"
+    }
+  },
+  "scripts": {
+    "build": "rimraf dist && tsup && tsc -p tsconfig.build.json",
+    "test": "jest"
+  },
+  "keywords": ["ogrid", "datepicker", "cell-editor", "angular", "typescript", "grid", "inputs"],
+  "author": "Ala Arab",
+  "license": "MIT",
+  "files": ["dist", "README.md", "LICENSE"],
+  "sideEffects": false,
+  "engines": { "node": ">=18" },
+  "dependencies": {
+    "@alaarab/ogrid-core": "2.5.5",
+    "@alaarab/ogrid-inputs": "2.5.5"
+  },
+  "peerDependencies": {
+    "@angular/core": "^21.0.0",
+    "@angular/common": "^21.0.0"
+  },
+  "devDependencies": {
+    "@angular/core": "^21.1.4",
+    "@angular/common": "^21.1.4",
+    "@angular/compiler": "^21.1.4",
+    "@angular/platform-browser": "^21.1.4",
+    "@angular/platform-browser-dynamic": "^21.1.4"
+  },
+  "publishConfig": { "access": "public" },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/alaarab/ogrid.git",
+    "directory": "packages/angular-inputs"
+  },
+  "homepage": "https://ogrid.dev",
+  "bugs": "https://github.com/alaarab/ogrid/issues"
+}

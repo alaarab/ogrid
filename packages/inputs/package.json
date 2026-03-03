@@ -1,0 +1,49 @@
+{
+  "name": "@alaarab/ogrid-inputs",
+  "version": "2.5.5",
+  "description": "OGrid Inputs – Headless utilities for premium cell editors (calendar, date parsing). Framework-agnostic.",
+  "main": "dist/esm/index.js",
+  "module": "dist/esm/index.js",
+  "types": "dist/types/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/types/index.d.ts",
+      "import": "./dist/esm/index.js",
+      "default": "./dist/esm/index.js"
+    }
+  },
+  "scripts": {
+    "build": "rimraf dist && tsup && tsc -p tsconfig.build.json",
+    "test": "jest"
+  },
+  "keywords": [
+    "ogrid",
+    "datepicker",
+    "calendar",
+    "cell-editor",
+    "typescript",
+    "grid",
+    "inputs"
+  ],
+  "author": "Ala Arab",
+  "license": "MIT",
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "engines": {
+    "node": ">=18"
+  },
+  "sideEffects": false,
+  "publishConfig": {
+    "access": "public"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/alaarab/ogrid.git",
+    "directory": "packages/inputs"
+  },
+  "homepage": "https://ogrid.dev",
+  "bugs": "https://github.com/alaarab/ogrid/issues"
+}

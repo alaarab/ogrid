@@ -4,6 +4,25 @@ All notable changes to OGrid will be documented in this file.
 
 ## [Unreleased]
 
+### Added
+
+- **New premium input packages** — Optional cell editors with zero bundle impact when not installed. First component: `DatePickerEditor` — a calendar-based date picker that renders as a popover (`cellEditorPopup: true`). Built from scratch with zero external dependencies. Fully themed via OGrid CSS variables.
+  - `@alaarab/ogrid-react-inputs` — React (works with Radix, Fluent, Material)
+  - `@alaarab/ogrid-angular-inputs` — Angular (works with Angular Material, PrimeNG, Radix)
+  - `@alaarab/ogrid-vue-inputs` — Vue (works with Vuetify, PrimeVue, Radix)
+  - `@alaarab/ogrid-js-inputs` — Vanilla JS
+- **New package: `@alaarab/ogrid-inputs`** — Headless calendar/date utilities shared across framework-specific input packages. Framework-agnostic, zero dependencies. Provides `getCalendarGrid`, `formatDate`, `parseDate` utilities.
+- **RatingEditor** — Star-based rating editor (1-5 stars) with hover preview and half-star support
+- **ColorPickerEditor** — Color swatch grid with hex input and custom color support
+- **SliderEditor** — Range slider for numeric values with drag and direct input
+- **TagsEditor** — Multi-value tag/chip editor with suggestions and search
+- Premium editors added to hero grid on docs site front page
+
+### Changed
+
+- **Default date editor uses text input** — The built-in `'date'` cell editor now renders `<input type="text">` with a `YYYY-MM-DD` placeholder instead of the native `<input type="date">` with its browser calendar icon. Affects all 10 UI packages across React, Angular, Vue, and JS. Premium `DatePickerEditor` from `@alaarab/ogrid-react-inputs` provides the full calendar UI for those who want it.
+- **Vue `renderDatePicker` callback removed** — The `createInlineCellEditor` factory no longer accepts `renderDatePicker` since date editing is now a plain text input. The `renderCheckbox` callback remains.
+
 ---
 
 ## [2.5.4] — 2026-03-02

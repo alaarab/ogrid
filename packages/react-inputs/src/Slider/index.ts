@@ -1,0 +1,1 @@
+export { SliderEditor } from './SliderEditor';

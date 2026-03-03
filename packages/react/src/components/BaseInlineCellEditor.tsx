@@ -195,15 +195,12 @@ export function BaseInlineCellEditor<T>(props: BaseInlineCellEditorProps<T>): Re
     const input = wrapper.querySelector('input');
     if (input) {
       input.focus({ preventScroll: true });
-      if (editorType !== 'date') {
-        // Select all text for easy replacement (like Excel)
-        input.select();
-      }
+      // Select all text for easy replacement (like Excel)
+      input.select();
     } else {
       // Focus the wrapper for keyboard events (select editor has no input)
       wrapper.focus({ preventScroll: true });
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []); // Mount-only: intentionally runs once to focus/open picker on editor open
 
   // Helper: portal dropdown to document.body when using fixed positioning
@@ -280,16 +277,17 @@ export function BaseInlineCellEditor<T>(props: BaseInlineCellEditorProps<T>): Re
     );
   }
 
-  // Date editor — native date input with calendar icon (no auto-open picker)
+  // Date editor — plain text input (Excel-style: type the date, no native calendar)
   if (editorType === 'date') {
     return (
       <div ref={wrapperRef} style={editorWrapperStyle}>
         <input
-          type="date"
+          type="text"
           value={localValue}
           onChange={(e) => setLocalValue(e.target.value)}
           onBlur={handleBlur}
           onKeyDown={handleKeyDown}
+          placeholder="YYYY-MM-DD"
           style={editorInputStyle}
           autoFocus
         />
