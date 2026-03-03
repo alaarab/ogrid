@@ -45,22 +45,38 @@ export const richSelectDropdownStyle: React.CSSProperties = {
   zIndex: 10,
   boxShadow: 'var(--ogrid-shadow, 0 4px 16px rgba(0,0,0,0.2))',
   textAlign: 'left',
+  fontSize: '13px',
+  fontFamily: 'inherit',
 };
 
 export const richSelectOptionStyle: React.CSSProperties = {
   padding: '6px 8px',
   cursor: 'pointer',
   color: 'var(--ogrid-fg, #242424)',
+  fontSize: '13px',
 };
 
 export const richSelectOptionHighlightedStyle: React.CSSProperties = {
   ...richSelectOptionStyle,
   background: 'var(--ogrid-bg-hover, #e8f0fe)',
+  fontSize: '13px',
 };
 
 export const richSelectNoMatchesStyle: React.CSSProperties = {
   padding: '6px 8px',
   color: 'var(--ogrid-muted, #999)',
+  fontSize: '13px',
+};
+
+export const richSelectFooterStyle: React.CSSProperties = {
+  padding: '4px 8px',
+  borderTop: '1px solid var(--ogrid-border, rgba(0, 0, 0, 0.12))',
+  fontSize: '11px',
+  color: 'var(--ogrid-muted, #999)',
+  textAlign: 'right',
+  position: 'sticky',
+  bottom: 0,
+  background: 'var(--ogrid-bg, #fff)',
 };
 
 export const richSelectSearchInputStyle: React.CSSProperties = {
@@ -171,6 +187,7 @@ export function BaseInlineCellEditor<T>(props: BaseInlineCellEditorProps<T>): Re
     const maxH = 200;
     const spaceBelow = window.innerHeight - rect.bottom;
     const flipUp = spaceBelow < maxH && rect.top > spaceBelow;
+    const computedStyle = wrapper.closest('table') ? getComputedStyle(wrapper) : null;
     setFixedDropdownStyle({
       position: 'fixed',
       ...(flipUp ? { bottom: window.innerHeight - rect.top } : { top: rect.bottom }),
@@ -183,6 +200,8 @@ export function BaseInlineCellEditor<T>(props: BaseInlineCellEditorProps<T>): Re
       zIndex: 9999,
       boxShadow: 'var(--ogrid-shadow, 0 4px 16px rgba(0,0,0,0.2))',
       textAlign: 'left',
+      fontSize: '13px',
+      fontFamily: computedStyle?.fontFamily ?? 'inherit',
     });
 
     // Close editor on scroll so the fixed dropdown doesn't drift away from the cell.
@@ -253,6 +272,7 @@ export function BaseInlineCellEditor<T>(props: BaseInlineCellEditorProps<T>): Re
         {richSelect.filteredValues.length === 0 && (
           <div style={richSelectNoMatchesStyle}>No matches</div>
         )}
+        <div style={richSelectFooterStyle}>Click or Enter to apply</div>
       </div>
     );
     return (
@@ -287,6 +307,7 @@ export function BaseInlineCellEditor<T>(props: BaseInlineCellEditorProps<T>): Re
             {selectState.getDisplayText(v)}
           </div>
         ))}
+        <div style={richSelectFooterStyle}>Click or Enter to apply</div>
       </div>
     );
     return (

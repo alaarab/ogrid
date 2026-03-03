@@ -71,11 +71,13 @@ export function useActiveCell(
             wrapper.scrollTop += cellRect.bottom - wrapperRect.bottom;
           }
 
-          // Horizontal scroll
-          if (cellRect.left < wrapperRect.left) {
-            wrapper.scrollLeft -= wrapperRect.left - cellRect.left;
-          } else if (cellRect.right > wrapperRect.right) {
-            wrapper.scrollLeft += cellRect.right - wrapperRect.right;
+          // Horizontal scroll — only when the wrapper actually scrolls horizontally
+          if (wrapper.scrollWidth > wrapper.clientWidth) {
+            if (cellRect.left < wrapperRect.left) {
+              wrapper.scrollLeft -= wrapperRect.left - cellRect.left;
+            } else if (cellRect.right > wrapperRect.right) {
+              wrapper.scrollLeft += cellRect.right - wrapperRect.right;
+            }
           }
 
           if (document.activeElement !== cell && typeof cell.focus === 'function') {
