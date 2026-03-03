@@ -1,7 +1,7 @@
 /**
  * Shared OGrid factory for Vue UI packages.
  *
- * Both vue-vuetify and vue-primevue OGrid components are 100% identical —
+ * Both vue-vuetify and vue-primevue OGrid components are 100% identical  - 
  * they only differ in which DataGridTable, ColumnChooser, and PaginationControls
  * components they use. This factory extracts all shared logic into one place.
  */

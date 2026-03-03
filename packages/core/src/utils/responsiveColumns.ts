@@ -7,11 +7,11 @@ import type { IColumnMeta } from '../types/columnTypes';
  * wider containers show progressively more columns.
  *
  * Example with default thresholds:
- *   container < 576px  → show only priority 0
- *   container < 768px  → show priority 0–1
- *   container < 992px  → show priority 0–2
- *   container < 1200px → show priority 0–3
- *   container ≥ 1200px → show all (no limit)
+ *   container < 576px   to  show only priority 0
+ *   container < 768px   to  show priority 0–1
+ *   container < 992px   to  show priority 0–2
+ *   container < 1200px  to  show priority 0–3
+ *   container ≥ 1200px  to  show all (no limit)
  */
 export const RESPONSIVE_BREAKPOINTS: readonly { minWidth: number; maxPriority: number }[] = [
   { minWidth: 0, maxPriority: 0 },
@@ -58,8 +58,8 @@ export function getResponsiveHiddenColumns<T extends IColumnMeta>(
   if (maxPriority === Infinity) return hidden; // show everything
 
   for (const col of columns) {
-    if (col.responsivePriority == null) continue; // no priority → always visible
-    if (col.required) continue; // required → never hidden
+    if (col.responsivePriority == null) continue; // no priority  to  always visible
+    if (col.required) continue; // required  to  never hidden
     if (col.responsivePriority > maxPriority) {
       hidden.add(col.columnId);
     }
@@ -71,7 +71,7 @@ export function getResponsiveHiddenColumns<T extends IColumnMeta>(
 /**
  * Normalize the `responsiveColumns` prop value (boolean | config | undefined)
  * into a config object or undefined. Used by all framework packages so they
- * don't each duplicate the `true → {}` coercion.
+ * don't each duplicate the `true  to  {}` coercion.
  */
 export function resolveResponsiveConfig(
   value: boolean | IResponsiveColumnsConfig | undefined,

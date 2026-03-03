@@ -23,7 +23,7 @@ export default function ServerSideDemo() {
   }), []);
 
   return (
-    <LiveDemo height={420} title="Simulated 300ms server latency — watch the loading state">
+    <LiveDemo height={420} title="Simulated 300ms server latency  -  watch the loading state">
       <OGrid columns={sortingColumns} dataSource={dataSource} getRowId={getRowId}
         defaultPageSize={5} entityLabelPlural="people" />
     </LiveDemo>

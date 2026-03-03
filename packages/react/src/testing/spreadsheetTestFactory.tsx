@@ -94,7 +94,7 @@ export function createSpreadsheetTests(DataGridTable: React.ComponentType<IOGrid
         };
 
         fireEvent.pointerDown(cell00, { clientX: 0, clientY: 0 });
-        // Dispatch move/up on window directly — jsdom capture-phase listeners on window
+        // Dispatch move/up on window directly  -  jsdom capture-phase listeners on window
         // may not fire for events dispatched on child nodes.
         act(() => {
           window.dispatchEvent(new PointerEvent('pointermove', { clientX: 50, clientY: 50, bubbles: true }));
@@ -775,7 +775,7 @@ export function createSpreadsheetTests(DataGridTable: React.ComponentType<IOGrid
         const grid = container.querySelector('[role="region"]') as HTMLElement;
         grid.focus();
 
-        // Only a single cell is selected — Ctrl+D fills nothing (source == target)
+        // Only a single cell is selected  -  Ctrl+D fills nothing (source == target)
         await act(async () => {
           fireEvent.keyDown(grid, { key: 'd', ctrlKey: true });
         });
@@ -784,7 +784,7 @@ export function createSpreadsheetTests(DataGridTable: React.ComponentType<IOGrid
           await new Promise((r) => setTimeout(r, 50));
         });
 
-        // No additional cells to fill — onCellValueChanged not called
+        // No additional cells to fill  -  onCellValueChanged not called
         expect(onCellValueChanged).not.toHaveBeenCalled();
       });
     });

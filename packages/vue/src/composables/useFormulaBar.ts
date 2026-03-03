@@ -1,5 +1,5 @@
 /**
- * useFormulaBar — Vue composable for formula bar state.
+ * useFormulaBar  -  Vue composable for formula bar state.
  *
  * Manages the formula bar text, editing mode, and reference extraction.
  */

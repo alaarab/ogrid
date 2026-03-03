@@ -1,5 +1,5 @@
 /**
- * Formula system — barrel export.
+ * Formula system  -  barrel export.
  */
 
 // Core types

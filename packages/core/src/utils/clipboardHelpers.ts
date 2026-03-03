@@ -1,6 +1,6 @@
 /**
  * Pure clipboard helpers shared across React, Vue, Angular, and JS.
- * No framework dependencies — operates on plain values and produces strings.
+ * No framework dependencies  -  operates on plain values and produces strings.
  */
 import type { IColumnDef, ICellValueChangedEvent } from '../types/columnTypes';
 import type { ISelectionRange } from '../types/dataGridTypes';
@@ -60,7 +60,7 @@ export function formatSelectionAsTsv<T>(
       if (r >= items.length || c >= visibleCols.length) break;
       const item = items[r];
       const col = visibleCols[c];
-      // Check formula first — copy formula text instead of computed value
+      // Check formula first  -  copy formula text instead of computed value
       if (formulaOptions?.hasFormula && formulaOptions?.getFormula) {
         const flatColIndex = formulaOptions.flatColumns.findIndex(fc => fc.columnId === col.columnId);
         if (flatColIndex >= 0 && formulaOptions.hasFormula(flatColIndex, r)) {
@@ -133,7 +133,7 @@ export function applyPastedValues<T>(
       const col = visibleCols[targetCol];
       if (!isColumnEditable(col, item)) continue;
       const cellText = cells[c] ?? '';
-      // Detect formula paste — route through setFormula instead of normal value path
+      // Detect formula paste  -  route through setFormula instead of normal value path
       if (cellText.startsWith('=') && formulaOptions?.setFormula) {
         const flatColIndex = formulaOptions.flatColumns.findIndex(fc => fc.columnId === col.columnId);
         if (flatColIndex >= 0) {

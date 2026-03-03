@@ -1,5 +1,5 @@
 /**
- * SliderEditorComponent — Premium range slider cell editor for OGrid (Angular).
+ * SliderEditorComponent  -  Premium range slider cell editor for OGrid (Angular).
  *
  * Usage:
  *   import { SliderEditorComponent } from '@alaarab/ogrid-angular-inputs';
@@ -12,7 +12,7 @@
  *     cellEditorParams: { min: 0, max: 100, step: 1 },
  *   }];
  *
- * Implements ICellEditorProps<T> via @Input() decorators — works with cellEditorPopup: true.
+ * Implements ICellEditorProps<T> via @Input() decorators  -  works with cellEditorPopup: true.
  */
 import { Component, Input, signal, computed, ElementRef, ViewChild, afterNextRender } from '@angular/core';
 import type { IColumnDef, CellEditorParams } from '@alaarab/ogrid-core';
@@ -26,7 +26,7 @@ import {
   DEFAULT_STEP,
 } from '@alaarab/ogrid-inputs';
 
-// ── Styles (inline objects to avoid CSS file dependency — keeps package sideEffects: false) ──
+// ── Styles (inline objects to avoid CSS file dependency  -  keeps package sideEffects: false) ──
 
 const rootStyleObj: Record<string, string> = {
   'font-family': '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',

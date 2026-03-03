@@ -1,5 +1,5 @@
 /**
- * DatePickerEditor — Premium calendar-based date picker for OGrid.
+ * DatePickerEditor  -  Premium calendar-based date picker for OGrid.
  *
  * Usage:
  *   import { DatePickerEditor } from '@alaarab/ogrid-react-inputs';
@@ -10,13 +10,13 @@
  *     cellEditorPopup: true,
  *   }];
  *
- * Implements ICellEditorProps<T> — works with cellEditorPopup: true.
+ * Implements ICellEditorProps<T>  -  works with cellEditorPopup: true.
  */
 import * as React from 'react';
 import type { ICellEditorProps } from '@alaarab/ogrid-core';
 import { getCalendarGrid, formatDate, parseDate, DAY_NAMES, MONTH_NAMES } from './calendar-utils';
 
-// ── Styles (inline to avoid CSS file dependency — keeps package sideEffects: false) ──
+// ── Styles (inline to avoid CSS file dependency  -  keeps package sideEffects: false) ──
 
 const rootStyle: React.CSSProperties = {
   fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',

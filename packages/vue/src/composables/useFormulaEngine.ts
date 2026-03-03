@@ -1,5 +1,5 @@
 /**
- * useFormulaEngine — Vue composable for integrating the formula engine with the grid.
+ * useFormulaEngine  -  Vue composable for integrating the formula engine with the grid.
  *
  * Lazily creates a FormulaEngine instance when `formulas` ref is true.
  * Provides accessor bridge between grid data and formula coordinates.
@@ -32,7 +32,7 @@ export interface UseFormulaEngineParams<T> {
   onFormulaRecalc?: (result: IRecalcResult) => void;
   /** Custom formula functions. */
   formulaFunctions?: Record<string, IFormulaFunction>;
-  /** Named ranges: name → cell/range reference string. */
+  /** Named ranges: name  to  cell/range reference string. */
   namedRanges?: Record<string, string>;
   /** Sheet accessors for cross-sheet references. */
   sheets?: Record<string, IGridDataAccessor>;
@@ -78,7 +78,7 @@ export function useFormulaEngine<T>(
   const flatColumnsRef = useLatestRef(flatColumns);
   const onFormulaRecalcRef = useLatestRef(onFormulaRecalc);
 
-  // Lazy engine instance — shallowRef avoids deep-reactivity on the class
+  // Lazy engine instance  -  shallowRef avoids deep-reactivity on the class
   const engineRef = shallowRef<FormulaEngine | null>(null);
   let initialLoaded = false;
 

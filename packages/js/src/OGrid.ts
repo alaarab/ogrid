@@ -128,7 +128,7 @@ import { FormulaBar } from './components/FormulaBar';
 
 /**
  * CSS variable definitions for light and dark themes (injected once per page).
- * Uses :where() for zero specificity — consumer overrides always win.
+ * Uses :where() for zero specificity  -  consumer overrides always win.
  * Dark mode: auto via prefers-color-scheme, explicit via [data-theme='dark'].
  */
 const OGRID_THEME_CSS = `
@@ -334,7 +334,7 @@ export class OGrid<T> {
     const toolbarSpacer = document.createElement('div');
     this.toolbarEl.appendChild(toolbarSpacer);
 
-    // Name box (Excel-style cell reference display) — prepended into toolbar left side
+    // Name box (Excel-style cell reference display)  -  prepended into toolbar left side
     if (options.cellReferences) {
       this.nameBoxEl = document.createElement('div');
       this.nameBoxEl.className = 'ogrid-name-box';
@@ -504,7 +504,7 @@ export class OGrid<T> {
         );
       }
 
-      // Create rendering helper (uses lazy context — state objects populated after interaction init)
+      // Create rendering helper (uses lazy context  -  state objects populated after interaction init)
       this.renderingHelper = this.createRenderingHelper();
 
       // Initial render (must happen before interaction init so wrapper DOM exists)

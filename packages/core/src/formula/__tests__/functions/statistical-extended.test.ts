@@ -269,7 +269,7 @@ describe('Statistical Extended functions', () => {
     });
 
     it('should return first mode on tie', () => {
-      // [1, 2, 2, 3, 3] — 2 appears first
+      // [1, 2, 2, 3, 3]  -  2 appears first
       const tieData: Record<string, unknown> = {
         '0,0': 1,
         '0,1': 2,

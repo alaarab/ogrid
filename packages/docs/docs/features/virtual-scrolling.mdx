@@ -10,12 +10,12 @@ import TabItem from '@theme/TabItem';
 
 # Virtual Scrolling
 
-Render tens of thousands of rows — and hundreds of columns — without degrading performance. Virtual scrolling only mounts the content currently visible in the viewport (plus a small overscan buffer), keeping the DOM lightweight regardless of dataset size.
+Render tens of thousands of rows  -  and hundreds of columns  -  without degrading performance. Virtual scrolling only mounts the content currently visible in the viewport (plus a small overscan buffer), keeping the DOM lightweight regardless of dataset size.
 
 OGrid supports two independent virtualization axes that can be combined:
 
-- **Row virtualization** — only visible rows are rendered. Available for all datasets.
-- **Column virtualization** — only visible columns are rendered. Opt-in, useful for wide grids with many columns.
+- **Row virtualization**  -  only visible rows are rendered. Available for all datasets.
+- **Column virtualization**  -  only visible columns are rendered. Opt-in, useful for wide grids with many columns.
 
 ## Live Demo
 
@@ -71,8 +71,8 @@ function App() {
 The `OGrid` component has the same props across all React UI packages. To switch, just change the import:
 
 - **Radix** (lightweight, default): `from '@alaarab/ogrid-react-radix'`
-- **Fluent UI** (Microsoft 365 / SPFx): `from '@alaarab/ogrid-react-fluent'` — wrap in `<FluentProvider>`
-- **Material UI** (MUI v7): `from '@alaarab/ogrid-react-material'` — wrap in `<ThemeProvider>`
+- **Fluent UI** (Microsoft 365 / SPFx): `from '@alaarab/ogrid-react-fluent'`  -  wrap in `<FluentProvider>`
+- **Material UI** (MUI v7): `from '@alaarab/ogrid-react-material'`  -  wrap in `<ThemeProvider>`
 :::
 
   </TabItem>
@@ -122,7 +122,7 @@ Same component API across Angular packages. To switch, just change the import:
 - **Angular Material**: `from '@alaarab/ogrid-angular-material'`
 - **PrimeNG**: `from '@alaarab/ogrid-angular-primeng'`
 
-All components are standalone — no NgModule required.
+All components are standalone  -  no NgModule required.
 :::
 
   </TabItem>
@@ -169,7 +169,7 @@ const gridProps = {
 Same component API across Vue packages. To switch, just change the import:
 
 - **Radix (Headless UI)**: `from '@alaarab/ogrid-vue-radix'` *(default, lightweight)*
-- **Vuetify**: `from '@alaarab/ogrid-vue-vuetify'` — wrap in `<v-app>` for theming
+- **Vuetify**: `from '@alaarab/ogrid-vue-vuetify'`  -  wrap in `<v-app>` for theming
 - **PrimeVue**: `from '@alaarab/ogrid-vue-primevue'`
 :::
 
@@ -466,8 +466,8 @@ function App() {
 The `OGrid` component has the same props across all React UI packages. To switch, just change the import:
 
 - **Radix** (lightweight, default): `from '@alaarab/ogrid-react-radix'`
-- **Fluent UI** (Microsoft 365 / SPFx): `from '@alaarab/ogrid-react-fluent'` — wrap in `<FluentProvider>`
-- **Material UI** (MUI v7): `from '@alaarab/ogrid-react-material'` — wrap in `<ThemeProvider>`
+- **Fluent UI** (Microsoft 365 / SPFx): `from '@alaarab/ogrid-react-fluent'`  -  wrap in `<FluentProvider>`
+- **Material UI** (MUI v7): `from '@alaarab/ogrid-react-material'`  -  wrap in `<ThemeProvider>`
 :::
 
   </TabItem>
@@ -511,7 +511,7 @@ Same component API across Angular packages. To switch, just change the import:
 - **Angular Material**: `from '@alaarab/ogrid-angular-material'`
 - **PrimeNG**: `from '@alaarab/ogrid-angular-primeng'`
 
-All components are standalone — no NgModule required.
+All components are standalone  -  no NgModule required.
 :::
 
   </TabItem>
@@ -552,7 +552,7 @@ const gridProps = {
 Same component API across Vue packages. To switch, just change the import:
 
 - **Radix (Headless UI)**: `from '@alaarab/ogrid-vue-radix'` *(default, lightweight)*
-- **Vuetify**: `from '@alaarab/ogrid-vue-vuetify'` — wrap in `<v-app>` for theming
+- **Vuetify**: `from '@alaarab/ogrid-vue-vuetify'`  -  wrap in `<v-app>` for theming
 - **PrimeVue**: `from '@alaarab/ogrid-vue-primevue'`
 :::
 
@@ -586,7 +586,7 @@ const grid = new OGrid(document.getElementById('grid'), {
 ### How Column Virtualization Works
 
 1. On each horizontal scroll event, the grid calculates which columns fall within the visible horizontal range.
-2. Only those columns — plus `columnOverscan` extra columns on each side — are rendered as real `<td>` elements.
+2. Only those columns  -  plus `columnOverscan` extra columns on each side  -  are rendered as real `<td>` elements.
 3. A **left spacer `<td>`** and a **right spacer `<td>`** maintain the correct total table width so the scrollbar reflects the true column span.
 4. **Pinned columns always render**, regardless of scroll position.
 
@@ -605,7 +605,7 @@ Pinned columns are excluded from virtualization and always rendered. This ensure
 
 ```tsx
 const columns = [
-  // This column always renders — not subject to column virtualization
+  // This column always renders  -  not subject to column virtualization
   { columnId: 'name', name: 'Name', pinned: 'left' },
   // These columns are virtualized
   { columnId: 'col1', name: 'Column 1' },

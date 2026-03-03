@@ -71,7 +71,7 @@ export abstract class BasePopoverCellEditorComponent<T = unknown> {
     });
 
     // Render custom editor component when container is available.
-    // Angular's effect() ignores return values — use onCleanup() for cleanup.
+    // Angular's effect() ignores return values  -  use onCleanup() for cleanup.
     effect((onCleanup) => {
       const container = this.editorContainerRef;
       const props = this.editorProps;

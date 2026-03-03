@@ -101,7 +101,7 @@ export function useColumnReorder<T>(params: UseColumnReorderParams<T>): UseColum
       const rect = target.getBoundingClientRect();
       if (event.clientX > rect.right - RESIZE_HANDLE_ZONE) return;
 
-      // Skip column groups — only reorder leaf columns
+      // Skip column groups  -  only reorder leaf columns
       const cols = columnsRef.current;
       const colIndex = cols.findIndex((c) => c.columnId === columnId);
       if (colIndex === -1) return;

@@ -1,15 +1,15 @@
 /**
- * @alaarab/ogrid-react-inputs — Premium cell editors for OGrid.
+ * @alaarab/ogrid-react-inputs  -  Premium cell editors for OGrid.
  *
  * This package provides optional, opt-in cell editor components.
  * Zero bundle impact when not installed.
  *
  * Available editors:
- * - DatePickerEditor — Calendar-based date picker (use with cellEditorPopup: true)
- * - RatingEditor — Star rating editor (use with cellEditorPopup: true)
- * - ColorPickerEditor — Color swatch grid + hex input (use with cellEditorPopup: true)
- * - SliderEditor — Range slider for numeric values (use with cellEditorPopup: true)
- * - TagsEditor — Multi-value tag/chip editor (use with cellEditorPopup: true)
+ * - DatePickerEditor  -  Calendar-based date picker (use with cellEditorPopup: true)
+ * - RatingEditor  -  Star rating editor (use with cellEditorPopup: true)
+ * - ColorPickerEditor  -  Color swatch grid + hex input (use with cellEditorPopup: true)
+ * - SliderEditor  -  Range slider for numeric values (use with cellEditorPopup: true)
+ * - TagsEditor  -  Multi-value tag/chip editor (use with cellEditorPopup: true)
  *
  * Usage:
  *   import { DatePickerEditor } from '@alaarab/ogrid-react-inputs';

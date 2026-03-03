@@ -68,7 +68,7 @@ import { OGrid } from '@alaarab/ogrid-js';
 | `sortBy` | `string` | `undefined` | Currently sorted column ID. |
 | `sortDirection` | `'asc' \| 'desc'` | `undefined` | Sort direction. |
 | `onSortChange` | `(field: string, direction: 'asc' \| 'desc') => void` | `undefined` | Callback when user clicks a sortable column header. |
-| `filters` | `IFilters` | `{}` | Active filter values (column ID → FilterValue). |
+| `filters` | `IFilters` | `{}` | Active filter values (column ID  to  FilterValue). |
 | `onFiltersChange` | `(filters: IFilters) => void` | `undefined` | Callback when filters are applied or cleared. |
 | `visibleColumns` | `Set<string>` | All columns | Set of visible column IDs. |
 | `onVisibilityChange` | `(columnId: string, visible: boolean) => void` | `undefined` | Callback when column visibility changes. |
@@ -248,35 +248,35 @@ The grid uses semantic HTML with proper ARIA roles:
 Complete Excel-style keyboard navigation:
 
 **Arrow Keys:**
-- `↑` `↓` `←` `→` — Move active cell one cell in the direction pressed
-- `Ctrl+↑` / `Ctrl+↓` — Jump to first/last row
-- `Ctrl+←` / `Ctrl+→` — Jump to first/last column
-- `Home` / `End` — Jump to start/end of row
-- `Ctrl+Home` / `Ctrl+End` — Jump to first/last cell in grid
+- `↑` `↓` `←` ` to `  -  Move active cell one cell in the direction pressed
+- `Ctrl+↑` / `Ctrl+↓`  -  Jump to first/last row
+- `Ctrl+←` / `Ctrl+ to `  -  Jump to first/last column
+- `Home` / `End`  -  Jump to start/end of row
+- `Ctrl+Home` / `Ctrl+End`  -  Jump to first/last cell in grid
 
 **Selection:**
-- `Shift+Arrows` — Extend cell selection range
-- `Ctrl+A` — Select all cells
-- `Space` (on checkbox column) — Toggle row selection
+- `Shift+Arrows`  -  Extend cell selection range
+- `Ctrl+A`  -  Select all cells
+- `Space` (on checkbox column)  -  Toggle row selection
 
 **Editing:**
-- `Enter` or `F2` — Start editing active cell
-- `Escape` — Cancel editing and revert
-- `Enter` (while editing) — Commit and move down
-- `Tab` (while editing) — Commit and move right
+- `Enter` or `F2`  -  Start editing active cell
+- `Escape`  -  Cancel editing and revert
+- `Enter` (while editing)  -  Commit and move down
+- `Tab` (while editing)  -  Commit and move right
 
 **Clipboard:**
-- `Ctrl+C` / `Cmd+C` — Copy selected cells
-- `Ctrl+X` / `Cmd+X` — Cut selected cells
-- `Ctrl+V` / `Cmd+V` — Paste
-- `Delete` — Clear selected cells
+- `Ctrl+C` / `Cmd+C`  -  Copy selected cells
+- `Ctrl+X` / `Cmd+X`  -  Cut selected cells
+- `Ctrl+V` / `Cmd+V`  -  Paste
+- `Delete`  -  Clear selected cells
 
 **Undo/Redo:**
-- `Ctrl+Z` / `Cmd+Z` — Undo last edit
-- `Ctrl+Y` / `Cmd+Shift+Z` — Redo
+- `Ctrl+Z` / `Cmd+Z`  -  Undo last edit
+- `Ctrl+Y` / `Cmd+Shift+Z`  -  Redo
 
 **Context Menu:**
-- `Shift+F10` — Open context menu for active cell
+- `Shift+F10`  -  Open context menu for active cell
 
 See the [Accessibility Guide](/docs/guides/accessibility) for complete keyboard shortcuts.
 
@@ -326,13 +326,13 @@ For complete accessibility documentation, see the [Accessibility Guide](/docs/gu
 
 ## Related Components
 
-- [OGrid](./ogrid-props.mdx) — Top-level wrapper that includes toolbar and pagination
-- [ColumnHeaderFilter](./components-column-header-filter.mdx) — Column filtering UI
-- [StatusBar](./components-status-bar.mdx) — Status bar below the grid
-- [PaginationControls](./components-pagination-controls.mdx) — Pagination UI
+- [OGrid](./ogrid-props.mdx)  -  Top-level wrapper that includes toolbar and pagination
+- [ColumnHeaderFilter](./components-column-header-filter.mdx)  -  Column filtering UI
+- [StatusBar](./components-status-bar.mdx)  -  Status bar below the grid
+- [PaginationControls](./components-pagination-controls.mdx)  -  Pagination UI
 
 ## See Also
 
-- [Column Definition](./column-def.mdx) — Complete column definition reference
-- [Grid API](./grid-api.mdx) — Imperative grid API reference
-- [Accessibility Guide](/docs/guides/accessibility) — Complete accessibility documentation
+- [Column Definition](./column-def.mdx)  -  Complete column definition reference
+- [Grid API](./grid-api.mdx)  -  Imperative grid API reference
+- [Accessibility Guide](/docs/guides/accessibility)  -  Complete accessibility documentation

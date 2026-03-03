@@ -26,7 +26,7 @@ const docsDir =
 const index = loadDocsIndex(docsDir);
 
 // ---------------------------------------------------------------------------
-// Bridge server (optional — enabled by OGRID_BRIDGE_PORT or --bridge flag)
+// Bridge server (optional  -  enabled by OGRID_BRIDGE_PORT or --bridge flag)
 // ---------------------------------------------------------------------------
 
 const bridgeStore = new BridgeStore();

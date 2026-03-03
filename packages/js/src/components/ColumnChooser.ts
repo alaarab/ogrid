@@ -24,7 +24,7 @@ export class ColumnChooser<T> {
     }
   }
 
-  /** Initial DOM creation — called once. */
+  /** Initial DOM creation  -  called once. */
   private createDOM(): void {
     this.el = document.createElement('div');
     this.el.className = 'ogrid-column-chooser';

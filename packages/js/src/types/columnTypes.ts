@@ -15,7 +15,7 @@ export type {
   IColumnDefinition,
 } from '@alaarab/ogrid-core';
 
-/** Vanilla JS column definition — extends core with DOM rendering capabilities. */
+/** Vanilla JS column definition  -  extends core with DOM rendering capabilities. */
 export interface IColumnDef<T = unknown> extends Omit<ICoreColumnDef<T>, 'cellEditor'> {
   /** Render cell content by mutating the cell's DOM. Return void. */
   renderCell?: (cell: HTMLTableCellElement, item: T, value: unknown) => void;

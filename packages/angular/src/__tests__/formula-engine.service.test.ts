@@ -35,7 +35,7 @@ function makeService(
 // 1. Basic initialization
 // ==========================================================================
 
-describe('FormulaEngineService — basic initialization', () => {
+describe('FormulaEngineService  -  basic initialization', () => {
   it('returns enabled()=false when formulas is not provided', () => {
     const service = new FormulaEngineService<TestRow>();
     service.setData(items, columns);
@@ -73,7 +73,7 @@ describe('FormulaEngineService — basic initialization', () => {
 // 2. setFormula and getValue
 // ==========================================================================
 
-describe('FormulaEngineService — setFormula and getValue', () => {
+describe('FormulaEngineService  -  setFormula and getValue', () => {
   it('evaluates a simple arithmetic formula =1+2 to 3', () => {
     const service = makeService();
     service.setFormula(0, 0, '=1+2');
@@ -82,7 +82,7 @@ describe('FormulaEngineService — setFormula and getValue', () => {
 
   it('evaluates a cell reference =A1 to the value of items[0].a', () => {
     const service = makeService();
-    // =A1 → col 0, row 0 → items[0].a = 10
+    // =A1  to  col 0, row 0  to  items[0].a = 10
     service.setFormula(1, 0, '=A1');
     expect(service.getValue(1, 0)).toBe(10);
   });
@@ -116,7 +116,7 @@ describe('FormulaEngineService — setFormula and getValue', () => {
 // 3. hasFormula and getFormula
 // ==========================================================================
 
-describe('FormulaEngineService — hasFormula and getFormula', () => {
+describe('FormulaEngineService  -  hasFormula and getFormula', () => {
   it('hasFormula returns false for a cell without a formula', () => {
     const service = makeService();
     expect(service.hasFormula(0, 0)).toBe(false);
@@ -144,7 +144,7 @@ describe('FormulaEngineService — hasFormula and getFormula', () => {
 // 4. onCellChanged cascade
 // ==========================================================================
 
-describe('FormulaEngineService — onCellChanged cascade', () => {
+describe('FormulaEngineService  -  onCellChanged cascade', () => {
   it('recalculates a dependent formula when a referenced cell changes', () => {
     const mutableItems: TestRow[] = [
       { id: 1, a: 10, b: 20, c: 'hello' },
@@ -155,7 +155,7 @@ describe('FormulaEngineService — onCellChanged cascade', () => {
     service.setData(mutableItems, columns);
     service.configure({ formulas: true });
 
-    // Formula at (0,0) references B1 = col 1, row 0 → items[0].b = 20 → 20+5=25
+    // Formula at (0,0) references B1 = col 1, row 0  to  items[0].b = 20  to  20+5=25
     service.setFormula(0, 0, '=B1+5');
     expect(service.getValue(0, 0)).toBe(25);
 
@@ -163,7 +163,7 @@ describe('FormulaEngineService — onCellChanged cascade', () => {
     mutableItems[0] = { ...mutableItems[0], b: 100 };
     service.setData(mutableItems, columns);
 
-    // Notify the engine that cell (1, 0) changed — col 1 (B), row 0
+    // Notify the engine that cell (1, 0) changed  -  col 1 (B), row 0
     service.onCellChanged(1, 0);
 
     // Formula should recalculate: 100+5=105
@@ -211,7 +211,7 @@ describe('FormulaEngineService — onCellChanged cascade', () => {
     const onRecalc = jest.fn();
     const service = makeService({ onFormulaRecalc: onRecalc });
 
-    // No formulas set — changing a cell has no dependents
+    // No formulas set  -  changing a cell has no dependents
     service.onCellChanged(0, 0);
     expect(onRecalc).not.toHaveBeenCalled();
   });
@@ -238,7 +238,7 @@ describe('FormulaEngineService — onCellChanged cascade', () => {
 // 5. initialFormulas
 // ==========================================================================
 
-describe('FormulaEngineService — initialFormulas', () => {
+describe('FormulaEngineService  -  initialFormulas', () => {
   it('loads initial formulas on configure', () => {
     const service = makeService({
       initialFormulas: [{ col: 0, row: 0, formula: '=1+1' }],
@@ -298,7 +298,7 @@ describe('FormulaEngineService — initialFormulas', () => {
 // 6. Custom formula functions
 // ==========================================================================
 
-describe('FormulaEngineService — custom formulaFunctions', () => {
+describe('FormulaEngineService  -  custom formulaFunctions', () => {
   it('makes a custom function available via config', () => {
     const service = makeService({
       formulaFunctions: {
@@ -327,17 +327,17 @@ describe('FormulaEngineService — custom formulaFunctions', () => {
       },
     });
 
-    // =TRIPLE(A2) → items[1].a = 30 → 30*3 = 90
+    // =TRIPLE(A2)  to  items[1].a = 30  to  30*3 = 90
     service.setFormula(0, 0, '=TRIPLE(A2)');
     expect(service.getValue(0, 0)).toBe(90);
   });
 });
 
 // ==========================================================================
-// 7. Lifecycle — configure toggle, clear, recalcAll
+// 7. Lifecycle  -  configure toggle, clear, recalcAll
 // ==========================================================================
 
-describe('FormulaEngineService — lifecycle', () => {
+describe('FormulaEngineService  -  lifecycle', () => {
   it('toggling formulas off resets enabled to false', () => {
     const service = makeService();
     expect(service.enabled()).toBe(true);
@@ -360,7 +360,7 @@ describe('FormulaEngineService — lifecycle', () => {
     service.configure({ formulas: true });
 
     expect(service.enabled()).toBe(true);
-    // New engine — old formula is gone
+    // New engine  -  old formula is gone
     expect(service.hasFormula(0, 0)).toBe(false);
     expect(service.getValue(0, 0)).toBeUndefined();
   });
@@ -407,13 +407,13 @@ describe('FormulaEngineService — lifecycle', () => {
 });
 
 // ==========================================================================
-// 8. Audit trail — getPrecedents, getDependents, getAuditTrail
+// 8. Audit trail  -  getPrecedents, getDependents, getAuditTrail
 // ==========================================================================
 
-describe('FormulaEngineService — audit trail', () => {
+describe('FormulaEngineService  -  audit trail', () => {
   it('getPrecedents returns cells that a formula depends on', () => {
     const service = makeService();
-    // C1 = A1 + B1 → depends on A1 and B1
+    // C1 = A1 + B1  to  depends on A1 and B1
     service.setFormula(2, 0, '=A1+B1');
 
     const precedents = service.getPrecedents(2, 0);
@@ -424,7 +424,7 @@ describe('FormulaEngineService — audit trail', () => {
 
   it('getDependents returns formulas that reference a cell', () => {
     const service = makeService();
-    // C1 = A1 + B1 → A1 is a dependency of C1
+    // C1 = A1 + B1  to  A1 is a dependency of C1
     service.setFormula(2, 0, '=A1+B1');
 
     const dependents = service.getDependents(0, 0); // dependents of A1
@@ -470,14 +470,14 @@ describe('FormulaEngineService — audit trail', () => {
 // 9. Named ranges and sheet registration
 // ==========================================================================
 
-describe('FormulaEngineService — named ranges', () => {
+describe('FormulaEngineService  -  named ranges', () => {
   it('defineNamedRange makes a named range usable in formulas', () => {
     const service = makeService();
     // Name 'Revenue' to refer to A1
     service.defineNamedRange('Revenue', 'A1');
     service.setFormula(2, 0, '=Revenue+5');
 
-    // A1 = items[0].a = 10 → 10+5=15
+    // A1 = items[0].a = 10  to  10+5=15
     expect(service.getValue(2, 0)).toBe(15);
   });
 

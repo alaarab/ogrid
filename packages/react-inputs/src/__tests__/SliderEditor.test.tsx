@@ -159,7 +159,7 @@ describe('SliderEditor', () => {
       expect(screen.getByText('Value:')).toBeInTheDocument();
     });
 
-    it('respects step snapping — value typed snaps to step', async () => {
+    it('respects step snapping  -  value typed snaps to step', async () => {
       const user = userEvent.setup();
       const { props } = renderEditor({
         value: 0,

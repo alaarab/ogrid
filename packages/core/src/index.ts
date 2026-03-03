@@ -1,8 +1,9 @@
-// Types — columnTypes
+// Types  -  columnTypes
 export type {
   ColumnFilterType,
   IDateFilterValue,
   IColumnFilterDef,
+  DateFormat,
   IColumnMeta,
   IValueParserParams,
   IColumnDef,
@@ -15,7 +16,7 @@ export type {
   IColumnDefinition,
 } from './types';
 
-// Types — dataGridTypes
+// Types  -  dataGridTypes
 export type {
   RowId,
   UserLike,
@@ -45,7 +46,7 @@ export {
   normalizeSelectionRange,
 } from './types';
 
-// Utils — exportToCsv
+// Utils  -  exportToCsv
 export {
   escapeCsvValue,
   buildCsvHeader,
@@ -55,11 +56,11 @@ export {
 } from './utils';
 export type { CsvColumn, FormulaExportOptions } from './utils';
 
-// Utils — cellValue, columnUtils
+// Utils  -  cellValue, columnUtils
 export { getCellValue, isColumnEditable, createGridDataAccessor } from './utils';
 export { flattenColumns, buildHeaderRows } from './utils';
 
-// Utils — ogridHelpers
+// Utils  -  ogridHelpers
 export {
   isFilterConfig,
   getFilterField,
@@ -68,12 +69,12 @@ export {
   getMultiSelectFilterFields,
 } from './utils';
 
-// Utils — statusBarHelpers, dataGridStatusBar
+// Utils  -  statusBarHelpers, dataGridStatusBar
 export { getStatusBarParts } from './utils';
 export { getDataGridStatusBarConfig } from './utils';
 export type { StatusBarPart, StatusBarPartsInput } from './utils';
 
-// Utils — paginationHelpers
+// Utils  -  paginationHelpers
 export {
   getPaginationViewModel,
   PAGE_SIZE_OPTIONS,
@@ -81,7 +82,7 @@ export {
 } from './utils';
 export type { PaginationViewModel } from './utils';
 
-// Utils — gridContextMenuHelpers
+// Utils  -  gridContextMenuHelpers
 export {
   GRID_CONTEXT_MENU_ITEMS,
   COLUMN_HEADER_MENU_ITEMS,
@@ -97,7 +98,7 @@ export type {
   ColumnHeaderMenuHandlers,
 } from './utils';
 
-// Utils — valueParsers
+// Utils  -  valueParsers
 export {
   parseValue,
   numberParser,
@@ -108,18 +109,18 @@ export {
 } from './utils';
 export type { ParseValueResult } from './utils';
 
-// Utils — aggregationUtils
+// Utils  -  aggregationUtils
 export { computeAggregations } from './utils';
 export type { AggregationResult } from './utils';
 
-// Utils — clientSideData
+// Utils  -  clientSideData
 export { processClientSideData } from './utils';
 
-// Utils — gridRowComparator
+// Utils  -  gridRowComparator
 export { areGridRowPropsEqual, isRowInRange } from './utils';
 export type { GridRowComparatorProps } from './utils';
 
-// Utils — columnReorder
+// Utils  -  columnReorder
 export {
   getPinStateForColumn,
   reorderColumnArray,
@@ -127,7 +128,7 @@ export {
 } from './utils';
 export type { ColumnPinState, IDropTarget, ICalculateDropTargetParams } from './utils';
 
-// Utils — virtualScroll
+// Utils  -  virtualScroll
 export {
   computeVisibleRange,
   computeTotalHeight,
@@ -137,7 +138,7 @@ export {
 } from './utils';
 export type { IVisibleRange, IVisibleColumnRange } from './utils';
 
-// Utils — workerSortFilter
+// Utils  -  workerSortFilter
 export {
   createSortFilterWorker,
   terminateSortFilterWorker,
@@ -146,7 +147,7 @@ export {
 } from './utils';
 export type { SortFilterRequest, SortFilterResponse } from './utils';
 
-// Utils — dataGridViewModel
+// Utils  -  dataGridViewModel
 export {
   getHeaderFilterConfig,
   getCellRenderDescriptor,
@@ -164,26 +165,26 @@ export type {
   CellRenderMode,
 } from './utils';
 
-// Utils — debounce, dom
+// Utils  -  debounce, dom
 export { debounce } from './utils';
 export { measureRange, buildCellIndex, injectGlobalStyles } from './utils';
 export type { OverlayRect } from './utils';
 
-// Utils — sortHelpers
+// Utils  -  sortHelpers
 export { computeNextSortState } from './utils';
 export type { ISortState } from './utils';
 
-// Utils — columnAutosize
+// Utils  -  columnAutosize
 export { measureColumnContentWidth, AUTOSIZE_EXTRA_PX, AUTOSIZE_MAX_PX } from './utils';
 
-// Utils — keyboardNavigation
+// Utils  -  keyboardNavigation
 export { findCtrlArrowTarget, computeTabNavigation, computeArrowNavigation, applyCellDeletion } from './utils';
 export type { ArrowNavigationContext, ArrowNavigationResult } from './utils';
 
-// Utils — selectionHelpers
+// Utils  -  selectionHelpers
 export { rangesEqual, clampSelectionToBounds, computeAutoScrollSpeed, applyRangeRowSelection, computeRowSelectionState } from './utils';
 
-// Utils — clipboardHelpers
+// Utils  -  clipboardHelpers
 export {
   formatCellValueForTsv,
   formatSelectionAsTsv,
@@ -192,27 +193,30 @@ export {
   applyCutClear,
 } from './utils';
 
-// Utils — fillHelpers
+// Utils  -  fillHelpers
 export { applyFillValues } from './utils';
 export type { IFillFormulaOptions } from './utils';
 
-// Utils — undoRedoStack
+// Utils  -  undoRedoStack
 export { UndoRedoStack } from './utils';
 
-// Utils — validation
+// Utils  -  validation
 export { validateColumns, validateRowIds, validateVirtualScrollConfig } from './utils';
 
-// Utils — cellReference
+// Utils  -  cellReference
 export { indexToColumnLetter, columnLetterToIndex, formatCellReference } from './utils';
 
-// Utils — formulaBarHelpers (type-only; runtime moved to @alaarab/ogrid-core/formula)
+// Utils  -  formulaBarHelpers (type-only; runtime moved to @alaarab/ogrid-core/formula)
 export type { FormulaReference } from './utils';
 
-// Utils — responsiveColumns
+// Utils  -  responsiveColumns
 export { getResponsiveHiddenColumns, RESPONSIVE_BREAKPOINTS, resolveResponsiveConfig, applyResponsiveHiding } from './utils';
 export type { IResponsiveColumnsConfig } from './utils';
 
-// Constants — layout
+// Utils  -  dateFormatter
+export { formatDateForDisplay, parseUserInputDate, getDateInputPlaceholder, DEFAULT_DATE_FORMAT } from './utils';
+
+// Constants  -  layout
 export {
   CHECKBOX_COLUMN_WIDTH,
   ROW_NUMBER_COLUMN_WIDTH,
@@ -223,18 +227,18 @@ export {
   GRID_BORDER_RADIUS,
 } from './constants';
 
-// Constants — timing
+// Constants  -  timing
 export {
   DEFAULT_DEBOUNCE_MS,
   PEOPLE_SEARCH_DEBOUNCE_MS,
   SIDEBAR_TRANSITION_MS,
 } from './constants';
 
-// Constants — zIndex
+// Constants  -  zIndex
 export { Z_INDEX } from './constants';
 export type { ZIndexKey } from './constants';
 
-// Formula types (type-only — zero runtime cost; runtime is in @alaarab/ogrid-core/formula)
+// Formula types (type-only  -  zero runtime cost; runtime is in @alaarab/ogrid-core/formula)
 export type {
   ICellAddress,
   ICellRange,

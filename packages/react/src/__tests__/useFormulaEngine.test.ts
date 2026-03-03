@@ -41,7 +41,7 @@ function makeParams(
 // 1. Basic initialization
 // ==========================================================================
 
-describe('useFormulaEngine — basic initialization', () => {
+describe('useFormulaEngine  -  basic initialization', () => {
   it('returns enabled=false when formulas is undefined', () => {
     const { result } = renderHook(() =>
       useFormulaEngine(makeParams({ formulas: undefined }))
@@ -83,7 +83,7 @@ describe('useFormulaEngine — basic initialization', () => {
 // 2. setFormula and getValue
 // ==========================================================================
 
-describe('useFormulaEngine — setFormula and getFormulaValue', () => {
+describe('useFormulaEngine  -  setFormula and getFormulaValue', () => {
   it('evaluates a simple arithmetic formula =1+2 to 3', () => {
     const { result } = renderHook(() => useFormulaEngine(makeParams()));
 
@@ -148,7 +148,7 @@ describe('useFormulaEngine — setFormula and getFormulaValue', () => {
 // 3. hasFormula and getFormula
 // ==========================================================================
 
-describe('useFormulaEngine — hasFormula and getFormula', () => {
+describe('useFormulaEngine  -  hasFormula and getFormula', () => {
   it('hasFormula returns false for a cell without a formula', () => {
     const { result } = renderHook(() => useFormulaEngine(makeParams()));
     expect(result.current.hasFormula(0, 0)).toBe(false);
@@ -179,7 +179,7 @@ describe('useFormulaEngine — hasFormula and getFormula', () => {
 // 4. onCellChanged cascade
 // ==========================================================================
 
-describe('useFormulaEngine — onCellChanged cascade', () => {
+describe('useFormulaEngine  -  onCellChanged cascade', () => {
   it('recalculates a dependent formula when a referenced cell changes', () => {
     // We need mutable data so the accessor picks up the new value.
     const mutableItems: TestRow[] = [
@@ -204,7 +204,7 @@ describe('useFormulaEngine — onCellChanged cascade', () => {
     mutableItems[0] = { ...mutableItems[0], b: 100 };
     rerender(makeParams({ items: mutableItems }));
 
-    // Notify the engine that cell (1, 0) changed — col 1 (B), row 0
+    // Notify the engine that cell (1, 0) changed  -  col 1 (B), row 0
     act(() => {
       result.current.onCellChanged(1, 0);
     });
@@ -287,7 +287,7 @@ describe('useFormulaEngine — onCellChanged cascade', () => {
 // 5. initialFormulas
 // ==========================================================================
 
-describe('useFormulaEngine — initialFormulas', () => {
+describe('useFormulaEngine  -  initialFormulas', () => {
   it('loads initial formulas on first render', () => {
     const initial = [{ col: 0, row: 0, formula: '=1+1' }];
 
@@ -334,7 +334,7 @@ describe('useFormulaEngine — initialFormulas', () => {
 // 6. formulaFunctions
 // ==========================================================================
 
-describe('useFormulaEngine — custom formulaFunctions', () => {
+describe('useFormulaEngine  -  custom formulaFunctions', () => {
   it('makes a custom function available in formulas', () => {
     const customFunctions = {
       DOUBLE: {
@@ -387,7 +387,7 @@ describe('useFormulaEngine — custom formulaFunctions', () => {
 // 7. Lifecycle
 // ==========================================================================
 
-describe('useFormulaEngine — lifecycle', () => {
+describe('useFormulaEngine  -  lifecycle', () => {
   it('toggling formulas off resets enabled to false', () => {
     const { result, rerender } = renderHook(
       (props: UseFormulaEngineParams<TestRow>) => useFormulaEngine(props),
@@ -425,7 +425,7 @@ describe('useFormulaEngine — lifecycle', () => {
     rerender(makeParams({ formulas: true }));
 
     expect(result.current.enabled).toBe(true);
-    // The old formula should be gone — new engine is empty
+    // The old formula should be gone  -  new engine is empty
     expect(result.current.hasFormula(0, 0)).toBe(false);
     expect(result.current.getFormulaValue(0, 0)).toBeUndefined();
   });
@@ -453,7 +453,7 @@ describe('useFormulaEngine — lifecycle', () => {
 // 8. Edit lifecycle integration (useDataGridEditing)
 // ==========================================================================
 
-describe('useDataGridEditing — formula integration', () => {
+describe('useDataGridEditing  -  formula integration', () => {
   // Cast columns to React's extended IColumnDef for useDataGridEditing compatibility
   const reactColumns = columns as unknown as IReactColumnDef<TestRow>[];
 
@@ -488,7 +488,7 @@ describe('useDataGridEditing — formula integration', () => {
         items[0],   // item
         'a',        // columnId
         10,         // oldValue
-        '=B1+5',   // newValue — starts with '='
+        '=B1+5',   // newValue  -  starts with '='
         0,          // rowIndex
         0           // globalColIndex
       );
@@ -496,7 +496,7 @@ describe('useDataGridEditing — formula integration', () => {
 
     // setFormula should be called with (colIndex for 'a' = 0, rowIndex = 0, formula)
     expect(params.setFormula).toHaveBeenCalledWith(0, 0, '=B1+5');
-    // onCellValueChanged should NOT be called — this is a formula, not a normal edit
+    // onCellValueChanged should NOT be called  -  this is a formula, not a normal edit
     expect(params.onCellValueChanged).not.toHaveBeenCalled();
     // Editing should be cleared
     expect(params.setEditingCell).toHaveBeenCalledWith(null);
@@ -511,7 +511,7 @@ describe('useDataGridEditing — formula integration', () => {
         items[0],   // item
         'a',        // columnId
         10,         // oldValue
-        99,         // newValue — not a formula
+        99,         // newValue  -  not a formula
         0,          // rowIndex
         0           // globalColIndex
       );

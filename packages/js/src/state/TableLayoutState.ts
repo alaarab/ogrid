@@ -74,7 +74,7 @@ export class TableLayoutState {
     return total;
   }
 
-  /** Get all column widths (overrides only — non-overridden columns use CSS defaults). */
+  /** Get all column widths (overrides only  -  non-overridden columns use CSS defaults). */
   getAllColumnWidths(): Record<string, number> {
     return { ...this._columnSizingOverrides };
   }

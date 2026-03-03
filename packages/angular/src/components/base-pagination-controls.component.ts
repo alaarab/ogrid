@@ -9,7 +9,7 @@ import { getPaginationViewModel } from '@alaarab/ogrid-core';
  * 1. Provide a @Component decorator with template and styles
  *
  * Uses @Input setter + signal pattern so computed() can track dependencies.
- * (Plain @Input properties are NOT tracked by computed() — only signals are.)
+ * (Plain @Input properties are NOT tracked by computed()  -  only signals are.)
  */
 export abstract class BasePaginationControlsComponent {
   private readonly _currentPage = signal(1);

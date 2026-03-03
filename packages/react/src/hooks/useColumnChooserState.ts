@@ -10,7 +10,7 @@ export interface UseColumnChooserStateParams {
   columns: IColumnDefinition[];
   visibleColumns: Set<string>;
   onVisibilityChange: (columnKey: string, visible: boolean) => void;
-  /** Optional batch setter for select-all / clear-all — avoids N individual callbacks. */
+  /** Optional batch setter for select-all / clear-all  -  avoids N individual callbacks. */
   onSetVisibleColumns?: (columns: Set<string>) => void;
 }
 

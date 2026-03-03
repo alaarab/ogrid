@@ -89,7 +89,7 @@ export class ClipboardState<T> {
     this._cutRange = norm;
     this._copyRange = null;
     this.handleCopy();
-    // handleCopy sets copyRange — override it back since this is a cut
+    // handleCopy sets copyRange  -  override it back since this is a cut
     this._copyRange = null;
     this._cutRange = norm;
     this.emitter.emit('rangesChange', { copyRange: null, cutRange: this._cutRange });

@@ -1,5 +1,5 @@
 /**
- * StatusBar component — Shows row counts and aggregations at the bottom of the data grid.
+ * StatusBar component  -  Shows row counts and aggregations at the bottom of the data grid.
  * Displays filteredCount, totalCount, and optional aggregations (sum, avg, min, max, count).
  */
 import { defineComponent, h, type PropType } from 'vue';

@@ -72,7 +72,7 @@ export function parseValue<T>(
     return parsed === undefined ? { valid: false, value: undefined } : { valid: true, value: parsed };
   }
 
-  // 4. No parser, not a select column, no built-in type — pass through unchanged
+  // 4. No parser, not a select column, no built-in type  -  pass through unchanged
   return { valid: true, value: newValue };
 }
 

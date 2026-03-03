@@ -1,5 +1,5 @@
 /**
- * TagsEditorComponent — Premium multi-value tag/chip cell editor for OGrid (Angular).
+ * TagsEditorComponent  -  Premium multi-value tag/chip cell editor for OGrid (Angular).
  *
  * Usage:
  *   import { TagsEditorComponent } from '@alaarab/ogrid-angular-inputs';
@@ -12,7 +12,7 @@
  *     cellEditorParams: { suggestions: ['Design', 'Engineering', 'QA'], allowCreate: true },
  *   }];
  *
- * Implements ICellEditorProps<T> via @Input() decorators — works with cellEditorPopup: true.
+ * Implements ICellEditorProps<T> via @Input() decorators  -  works with cellEditorPopup: true.
  */
 import { Component, Input, signal, computed, ElementRef, ViewChild, afterNextRender } from '@angular/core';
 import type { IColumnDef, CellEditorParams } from '@alaarab/ogrid-core';
@@ -24,7 +24,7 @@ import {
   DEFAULT_TAG_COLORS,
 } from '@alaarab/ogrid-inputs';
 
-// ── Styles (inline objects to avoid CSS file dependency — keeps package sideEffects: false) ──
+// ── Styles (inline objects to avoid CSS file dependency  -  keeps package sideEffects: false) ──
 
 const rootStyleObj: Record<string, string> = {
   'font-family': '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
@@ -207,8 +207,8 @@ function toStyleString(obj: Record<string, string>): string {
       <div [style]="footerStyle">
         <span [style]="countLabelStyle">{{ tags().length }} tag{{ tags().length !== 1 ? 's' : '' }}</span>
         <div style="display: flex; gap: 4px;">
-          <button type="button" [style]="footerBtnStyle" (click)="handleCommit()">Done</button>
-          <button type="button" [style]="footerBtnStyle" (click)="handleClear()">Clear</button>
+          <button type="button" [style]="footerBtnStyle" (click)="onCancel()">Cancel</button>
+          <button type="button" [style]="footerBtnStyle + '; background: var(--ogrid-primary, #0078d4); color: #fff; border-radius: 4px; padding: 4px 12px;'" (click)="handleCommit()">Apply</button>
         </div>
       </div>
     </div>

@@ -71,7 +71,7 @@ describe('tags-utils', () => {
       expect(DEFAULT_TAG_COLORS).toContain(color);
     });
 
-    it('is deterministic — same tag always returns same color', () => {
+    it('is deterministic  -  same tag always returns same color', () => {
       const color1 = getTagColor('Bug');
       const color2 = getTagColor('Bug');
       const color3 = getTagColor('Bug');

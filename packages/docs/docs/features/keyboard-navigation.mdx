@@ -44,8 +44,8 @@ function App() {
 The `OGrid` component has the same props across all React UI packages. To switch, just change the import:
 
 - **Radix** (lightweight, default): `from '@alaarab/ogrid-react-radix'`
-- **Fluent UI** (Microsoft 365 / SPFx): `from '@alaarab/ogrid-react-fluent'` — wrap in `<FluentProvider>`
-- **Material UI** (MUI v7): `from '@alaarab/ogrid-react-material'` — wrap in `<ThemeProvider>`
+- **Fluent UI** (Microsoft 365 / SPFx): `from '@alaarab/ogrid-react-fluent'`  -  wrap in `<FluentProvider>`
+- **Material UI** (MUI v7): `from '@alaarab/ogrid-react-material'`  -  wrap in `<ThemeProvider>`
 :::
 
   </TabItem>
@@ -77,7 +77,7 @@ Same component API across Angular packages. To switch, just change the import:
 - **Angular Material**: `from '@alaarab/ogrid-angular-material'`
 - **PrimeNG**: `from '@alaarab/ogrid-angular-primeng'`
 
-All components are standalone — no NgModule required.
+All components are standalone  -  no NgModule required.
 :::
 
   </TabItem>
@@ -104,7 +104,7 @@ const gridProps = {
 Same component API across Vue packages. To switch, just change the import:
 
 - **Radix (Headless UI)**: `from '@alaarab/ogrid-vue-radix'` *(default, lightweight)*
-- **Vuetify**: `from '@alaarab/ogrid-vue-vuetify'` — wrap in `<v-app>` for theming
+- **Vuetify**: `from '@alaarab/ogrid-vue-vuetify'`  -  wrap in `<v-app>` for theming
 - **PrimeVue**: `from '@alaarab/ogrid-vue-primevue'`
 :::
 
@@ -165,8 +165,8 @@ Ctrl+A selects all **cells** in the grid for spreadsheet operations (copy/paste/
 
 Ctrl+Arrow navigates the same way Excel does:
 
-- **Non-empty cell → non-empty neighbor**: Jumps to the last non-empty cell before a gap (empty cell) or the grid edge.
-- **Non-empty cell → empty neighbor**: Skips over the empty cells and lands on the next non-empty cell, or the grid edge if all remaining cells are empty.
+- **Non-empty cell  to  non-empty neighbor**: Jumps to the last non-empty cell before a gap (empty cell) or the grid edge.
+- **Non-empty cell  to  empty neighbor**: Skips over the empty cells and lands on the next non-empty cell, or the grid edge if all remaining cells are empty.
 - **Empty cell**: Jumps to the next non-empty cell in that direction, or the grid edge.
 
 Combine with **Shift** to extend the selection range to the same target.

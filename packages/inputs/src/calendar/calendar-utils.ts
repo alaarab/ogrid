@@ -1,4 +1,4 @@
-/** Calendar utility functions — zero dependencies. */
+/** Calendar utility functions  -  zero dependencies. */
 
 const DAY_NAMES = ['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'] as const;
 const MONTH_NAMES = [

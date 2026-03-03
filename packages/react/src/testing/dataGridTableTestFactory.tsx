@@ -407,7 +407,7 @@ export function createDataGridTableTests(DataGridTable: React.ComponentType<IOGr
     }));
 
     it('activates virtualization when item count exceeds threshold', () => {
-      // 60 items, threshold=50 → should virtualize (render fewer rows than total)
+      // 60 items, threshold=50  to  should virtualize (render fewer rows than total)
       const { container } = renderTable({
         items: manyRows,
         virtualScroll: { enabled: true, rowHeight: 40, threshold: 50 },
@@ -418,7 +418,7 @@ export function createDataGridTableTests(DataGridTable: React.ComponentType<IOGr
     });
 
     it('does not virtualize when item count is below threshold', () => {
-      // 60 items, threshold=100 → should NOT virtualize (all rows rendered)
+      // 60 items, threshold=100  to  should NOT virtualize (all rows rendered)
       const { container } = renderTable({
         items: manyRows,
         virtualScroll: { enabled: true, rowHeight: 40, threshold: 100 },

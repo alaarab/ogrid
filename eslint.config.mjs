@@ -14,6 +14,7 @@ export default [
       '**/node_modules/**', '**/dist/**', '**/coverage/**', '**/storybook-static/**', '**/.turbo/**',
       '**/*.config.js', '**/*.config.cjs', 'jest.config.base.js', '**/jest-mocks/**', '**/scripts/**', '**/*.stories.tsx', '**/__tests__/**',
       '**/.docusaurus/**', '**/build/**', 'packages/docs/**', '**/*.mjs', '**/*.d.ts',
+      '**/playwright-report/**', '**/test-results/**',
     ],
   },
   js.configs.recommended,

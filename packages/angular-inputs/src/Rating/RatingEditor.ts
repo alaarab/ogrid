@@ -1,5 +1,5 @@
 /**
- * RatingEditorComponent — Premium star rating cell editor for OGrid (Angular).
+ * RatingEditorComponent  -  Premium star rating cell editor for OGrid (Angular).
  *
  * Usage:
  *   import { RatingEditorComponent } from '@alaarab/ogrid-angular-inputs';
@@ -12,13 +12,13 @@
  *     cellEditorParams: { maxStars: 5, allowHalf: false },
  *   }];
  *
- * Implements ICellEditorProps<T> via @Input() decorators — works with cellEditorPopup: true.
+ * Implements ICellEditorProps<T> via @Input() decorators  -  works with cellEditorPopup: true.
  */
 import { Component, Input, signal, computed, ElementRef, ViewChild, afterNextRender } from '@angular/core';
 import type { IColumnDef, CellEditorParams } from '@alaarab/ogrid-core';
 import { clampRating, getStarFill, getRatingFromPosition, DEFAULT_MAX_STARS } from '@alaarab/ogrid-inputs';
 
-// ── Styles (inline objects to avoid CSS file dependency — keeps package sideEffects: false) ──
+// ── Styles (inline objects to avoid CSS file dependency  -  keeps package sideEffects: false) ──
 
 const rootStyleObj: Record<string, string> = {
   'font-family': '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',

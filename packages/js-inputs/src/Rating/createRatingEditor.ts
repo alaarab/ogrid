@@ -116,7 +116,7 @@ export function createRatingEditor(context: RatingEditorContext): HTMLElement {
   }
 
   function updateValueDisplay(rating: number) {
-    valueDisplay.textContent = rating === 0 ? '—' : `${rating} / ${maxStars}`;
+    valueDisplay.textContent = rating === 0 ? ' - ' : `${rating} / ${maxStars}`;
   }
 
   for (let i = 0; i < maxStars; i++) {

@@ -1,5 +1,5 @@
 /**
- * SliderEditor — Premium range slider cell editor for OGrid.
+ * SliderEditor  -  Premium range slider cell editor for OGrid.
  *
  * Usage:
  *   import { SliderEditor } from '@alaarab/ogrid-react-inputs';
@@ -11,7 +11,7 @@
  *     cellEditorParams: { min: 0, max: 100, step: 5 },
  *   }];
  *
- * Implements ICellEditorProps<T> — works with cellEditorPopup: true.
+ * Implements ICellEditorProps<T>  -  works with cellEditorPopup: true.
  */
 import * as React from 'react';
 import type { ICellEditorProps } from '@alaarab/ogrid-core';
@@ -25,7 +25,7 @@ import {
   DEFAULT_STEP,
 } from '@alaarab/ogrid-inputs';
 
-// ── Styles (inline to avoid CSS file dependency — keeps package sideEffects: false) ──
+// ── Styles (inline to avoid CSS file dependency  -  keeps package sideEffects: false) ──
 
 const rootStyle: React.CSSProperties = {
   fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
