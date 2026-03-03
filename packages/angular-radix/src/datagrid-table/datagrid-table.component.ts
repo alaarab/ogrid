@@ -410,6 +410,11 @@ import { PopoverCellEditorComponent } from './popover-cell-editor.component';
       left: 0;
       z-index: 6;
     }
+    /* Reveal column menu trigger on header hover without layout shift.
+       The button always takes up space (visibility: hidden); shown when column is hovered. */
+    @media (hover: hover) {
+      th:hover .ogrid-header-menu__trigger { visibility: visible; }
+    }
   `],
   template: `
     <div class="ogrid-datagrid-root">
