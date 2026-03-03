@@ -79,6 +79,7 @@ export interface OGridRenderingContext<T> {
   handleCellMouseDown: (rowIndex: number, colIndex: number, e: MouseEvent) => void;
   handleCellContextMenu: (rowIndex: number, colIndex: number, e: MouseEvent) => void;
   startCellEdit: (rowId: import('@alaarab/ogrid-core').RowId, columnId: string) => void;
+  toggleBooleanCell: (rowId: import('@alaarab/ogrid-core').RowId, columnId: string, currentValue: boolean) => void;
   showContextMenu: (x: number, y: number) => void;
 }
 
@@ -150,6 +151,8 @@ export class OGridRendering<T> {
         const idealWidth = measureColumnContentWidth(columnId, minW, container);
         resizeState.setColumnWidth(columnId, idealWidth);
       },
+      // Boolean toggle
+      onBooleanToggle: options.editable !== false ? (rowId, columnId, currentValue) => this.ctx.toggleBooleanCell(rowId, columnId, currentValue) : undefined,
       // Fill handle
       onFillHandleMouseDown: options.editable !== false ? (e) => fillHandleState?.startFillDrag(e) : undefined,
       // Row selection

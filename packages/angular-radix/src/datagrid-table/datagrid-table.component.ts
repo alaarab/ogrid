@@ -207,6 +207,8 @@ import { PopoverCellEditorComponent } from './popover-cell-editor.component';
       position: relative;
       overflow: visible;
     }
+    .ogrid-datagrid-td:has(> .ogrid-datagrid-cell--active),
+    .ogrid-datagrid-td:has(> .ogrid-editing-cell) { z-index: 2; }
     .ogrid-datagrid-cell--active-in-range {
       outline: none;
       background: var(--ogrid-bg, #fff);
@@ -427,6 +429,7 @@ import { PopoverCellEditorComponent } from './popover-cell-editor.component';
         (contextmenu)="$event.preventDefault()"
         [class.ogrid-datagrid-wrapper--overflow-x]="allowOverflowX()"
         [attr.data-overflow-x]="allowOverflowX() ? 'true' : 'false'"
+        data-ogrid-scroll-container
       >
         <div class="ogrid-datagrid-scroll-wrapper">
           <div [style.minWidth.px]="allowOverflowX() ? minTableWidth() : undefined" style="overflow-x: clip">
@@ -655,7 +658,7 @@ import { PopoverCellEditorComponent } from './popover-cell-editor.component';
                                 [style]="cellStyle ?? undefined"
                               >
                                 @if (colLayout.col.type === 'boolean') {
-                                  <input type="checkbox" [checked]="!!descriptor.displayValue" disabled style="margin:0;pointer-events:none" [attr.aria-label]="descriptor.displayValue ? 'True' : 'False'" />
+                                  <input type="checkbox" [checked]="!!descriptor.displayValue" [disabled]="!descriptor.canEditAny" (change)="descriptor.canEditAny ? commitEdit(item, colLayout.col.columnId, !!descriptor.displayValue, !descriptor.displayValue, rowIndex, descriptor.globalColIndex) : null" (click)="$event.stopPropagation()" [style.margin]="'0'" [style.cursor]="descriptor.canEditAny ? 'pointer' : 'default'" [attr.aria-label]="descriptor.displayValue ? 'Checked' : 'Unchecked'" />
                                 } @else {
                                   {{ content }}
                                 }

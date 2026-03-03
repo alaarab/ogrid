@@ -66,6 +66,17 @@
   /* Keep actions in normal flow so they never overflow the header cell. */
   margin-left: auto;
   flex-shrink: 0;
+
+  @media (hover: hover) {
+    &:not(:has(.filterActive)) {
+      display: none;
+    }
+  }
+}
+
+:global(th:hover) .headerActions,
+:global(.fui-TableHeaderCell:hover) .headerActions {
+  display: flex;
 }
 
 // =====================

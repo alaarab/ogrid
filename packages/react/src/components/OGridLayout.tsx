@@ -38,7 +38,7 @@ export interface OGridLayoutProps {
 
 // Stable style objects (avoid re-creating on every render)
 const borderedContainerStyle: React.CSSProperties = {
-  border: '1px solid var(--ogrid-border, #e0e0e0)',
+  border: '1px solid var(--ogrid-border, rgba(0, 0, 0, 0.12))',
   borderRadius: GRID_BORDER_RADIUS,
   overflow: 'hidden',
   display: 'flex',
@@ -68,7 +68,7 @@ const toolbarStripBase: React.CSSProperties = {
 /** Toolbar strip with border-bottom (when it's the only toolbar row). */
 const toolbarStripStyle: React.CSSProperties = {
   ...toolbarStripBase,
-  borderBottom: '1px solid var(--ogrid-border, #e0e0e0)',
+  borderBottom: '1px solid var(--ogrid-border, rgba(0, 0, 0, 0.12))',
 };
 
 /** Toolbar strip without border-bottom (when toolbarBelow follows — it owns the border). */
@@ -82,13 +82,13 @@ const toolbarSectionStyle: React.CSSProperties = {
 
 /** Secondary toolbar row (e.g. active filter chips). Matches toolbar strip styling. */
 const toolbarBelowStyle: React.CSSProperties = {
-  borderBottom: '1px solid var(--ogrid-border, #e0e0e0)',
+  borderBottom: '1px solid var(--ogrid-border, rgba(0, 0, 0, 0.12))',
   padding: '6px 12px',
   background: 'var(--ogrid-header-bg, #f5f5f5)',
 };
 
 const footerStripStyle: React.CSSProperties = {
-  borderTop: '1px solid var(--ogrid-border, #e0e0e0)',
+  borderTop: '1px solid var(--ogrid-border, rgba(0, 0, 0, 0.12))',
   background: 'var(--ogrid-header-bg, #f5f5f5)',
   padding: '6px 12px',
 };
@@ -135,7 +135,7 @@ const fullscreenRootStyle: React.CSSProperties = {
 
 const fullscreenBtnStyle: React.CSSProperties = {
   background: 'none',
-  border: '1px solid var(--ogrid-border, #e0e0e0)',
+  border: '1px solid var(--ogrid-border, rgba(0, 0, 0, 0.12))',
   borderRadius: 4,
   padding: '4px 6px',
   cursor: 'pointer',

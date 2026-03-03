@@ -169,14 +169,19 @@ export function BaseInlineCellEditor<T>(props: BaseInlineCellEditorProps<T>): Re
       textAlign: 'left',
     });
 
-    // Close editor on scroll so the fixed dropdown doesn't drift away from the cell
-    const scrollParent = wrapper.closest('.ogrid-table-wrapper') ?? wrapper.closest('[style*="overflow"]');
+    // Close editor on scroll so the fixed dropdown doesn't drift away from the cell.
+    // Delay attachment via RAF to skip spurious scroll events fired during mount
+    // (e.g. focus-triggered scroll, layout-shift scroll from DOM changes).
+    const scrollParent = wrapper.closest('[data-ogrid-scroll-container]') ?? wrapper.closest('[style*="overflow"]');
     const handleScroll = () => onCancelRef.current();
-    if (scrollParent) {
-      scrollParent.addEventListener('scroll', handleScroll, { passive: true });
-    }
-    window.addEventListener('scroll', handleScroll, { passive: true });
+    const raf = requestAnimationFrame(() => {
+      if (scrollParent) {
+        scrollParent.addEventListener('scroll', handleScroll, { passive: true });
+      }
+      window.addEventListener('scroll', handleScroll, { passive: true });
+    });
     return () => {
+      cancelAnimationFrame(raf);
       if (scrollParent) scrollParent.removeEventListener('scroll', handleScroll);
       window.removeEventListener('scroll', handleScroll);
     };
@@ -189,17 +194,14 @@ export function BaseInlineCellEditor<T>(props: BaseInlineCellEditorProps<T>): Re
     if (!wrapper) return;
     const input = wrapper.querySelector('input');
     if (input) {
-      input.focus();
-      if (editorType === 'date') {
-        // Auto-open the native date picker (like Excel)
-        try { input.showPicker(); } catch { /* older browsers */ }
-      } else {
+      input.focus({ preventScroll: true });
+      if (editorType !== 'date') {
         // Select all text for easy replacement (like Excel)
         input.select();
       }
     } else {
       // Focus the wrapper for keyboard events (select editor has no input)
-      wrapper.focus();
+      wrapper.focus({ preventScroll: true });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []); // Mount-only: intentionally runs once to focus/open picker on editor open
@@ -278,12 +280,12 @@ export function BaseInlineCellEditor<T>(props: BaseInlineCellEditorProps<T>): Re
     );
   }
 
-  // Date editor (shared across all frameworks)
+  // Date editor — uses text input for Excel-like UX (type the date directly)
   if (editorType === 'date') {
     return (
       <div ref={wrapperRef} style={editorWrapperStyle}>
         <input
-          type="date"
+          type="text"
           value={localValue}
           onChange={(e) => setLocalValue(e.target.value)}
           onBlur={handleBlur}

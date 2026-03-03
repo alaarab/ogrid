@@ -77,9 +77,9 @@ export const INLINE_CELL_EDITOR_TEMPLATE = `
       @case ('date') {
         <input
           #inputEl
-          type="date"
+          type="text"
           [value]="localValue()"
-          (change)="commitValue($any($event.target).value)"
+          (input)="localValue.set($any($event.target).value)"
           (keydown)="onTextKeyDown($event)"
           (blur)="onTextBlur()"
           [style]="getInputStyle()"

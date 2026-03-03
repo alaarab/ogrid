@@ -129,4 +129,69 @@ describe('applyFillValues', () => {
       expect(events[0].newValue).toBe('hello');
     });
   });
+
+  describe('type-safe fill (respects column types)', () => {
+    interface TypedRow { text: string; num: number | null; bool: boolean | null; date: string | null; }
+    const textCol: IColumnDef<TypedRow> = { columnId: 'text', name: 'Text', editable: true, type: 'text' };
+    const numCol: IColumnDef<TypedRow> = { columnId: 'num', name: 'Num', editable: true, type: 'numeric' };
+    const boolCol: IColumnDef<TypedRow> = { columnId: 'bool', name: 'Bool', editable: true, type: 'boolean' };
+    const dateCol: IColumnDef<TypedRow> = { columnId: 'date', name: 'Date', editable: true, type: 'date' };
+    const typedCols: IColumnDef<TypedRow>[] = [textCol, numCol, boolCol, dateCol];
+
+    it('rejects text value when filling into a numeric column', () => {
+      const items: TypedRow[] = [
+        { text: 'hello', num: null, bool: null, date: null },
+        { text: '', num: null, bool: null, date: null },
+      ];
+      // Fill from text column (col 0) across to numeric column (col 1)
+      const range = makeRange(0, 0, 0, 1);
+      const events = applyFillValues(range, 0, 0, items, typedCols);
+      // 'hello' cannot be parsed as a number → should be skipped
+      expect(events).toHaveLength(0);
+    });
+
+    it('rejects text value when filling into a boolean column', () => {
+      const items: TypedRow[] = [
+        { text: 'hello', num: null, bool: null, date: null },
+        { text: '', num: null, bool: null, date: null },
+      ];
+      const range = makeRange(0, 0, 0, 2);
+      const events = applyFillValues(range, 0, 0, items, typedCols);
+      // 'hello' is not a valid boolean → both numeric and boolean targets should be skipped
+      expect(events).toHaveLength(0);
+    });
+
+    it('allows numeric value when filling into a numeric column', () => {
+      const items: TypedRow[] = [
+        { text: '', num: 42, bool: null, date: null },
+        { text: '', num: null, bool: null, date: null },
+      ];
+      const range = makeRange(0, 1, 1, 1);
+      const events = applyFillValues(range, 0, 1, items, typedCols);
+      expect(events).toHaveLength(1);
+      expect(events[0].newValue).toBe(42);
+    });
+
+    it('rejects non-date value when filling into a date column', () => {
+      const items: TypedRow[] = [
+        { text: 'not-a-date', num: null, bool: null, date: null },
+        { text: '', num: null, bool: null, date: null },
+      ];
+      const range = makeRange(0, 0, 0, 3);
+      const events = applyFillValues(range, 0, 0, items, typedCols);
+      // 'not-a-date' fails date parsing → skipped for numeric, boolean, AND date targets
+      expect(events).toHaveLength(0);
+    });
+
+    it('allows boolean value when filling into a boolean column', () => {
+      const items: TypedRow[] = [
+        { text: '', num: null, bool: true, date: null },
+        { text: '', num: null, bool: null, date: null },
+      ];
+      const range = makeRange(0, 2, 1, 2);
+      const events = applyFillValues(range, 0, 2, items, typedCols);
+      expect(events).toHaveLength(1);
+      expect(events[0].newValue).toBe(true);
+    });
+  });
 });

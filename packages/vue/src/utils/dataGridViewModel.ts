@@ -59,8 +59,10 @@ export function getCellInteractionProps(
     ...(descriptor.isActive ? { 'data-active-cell': 'true' as const } : {}),
     ...(descriptor.isInRange ? { 'data-in-range': 'true' as const } : {}),
     tabindex: descriptor.isActive ? 0 : -1,
-    onPointerdown: (e: PointerEvent) =>
-      handlers.handleCellMouseDown(e, descriptor.rowIndex, descriptor.globalColIndex),
+    onPointerdown: (e: PointerEvent) => {
+      handlers.setEditingCell(null);
+      handlers.handleCellMouseDown(e, descriptor.rowIndex, descriptor.globalColIndex);
+    },
     onClick: () =>
       handlers.setActiveCell({ rowIndex: descriptor.rowIndex, columnIndex: descriptor.globalColIndex }),
     onContextmenu: (e: MouseEvent) => handlers.handleCellContextMenu(e),

@@ -38,6 +38,19 @@
   gap: 2px;
   margin-left: auto;
   flex-shrink: 0;
+
+  // Hide filter trigger by default on hover-capable devices; show on column hover.
+  // Always visible on touch devices and when a filter is active.
+  @media (hover: hover) {
+    &:not(:has(.filterActive)) {
+      display: none;
+    }
+  }
+}
+
+// Show filter actions on header cell hover (th is a native element, no module scoping needed)
+:global(th:hover) .headerActions {
+  display: flex;
 }
 
 .filterIcon {

@@ -65,6 +65,11 @@
   background: var(--ogrid-bg, #fff);
   will-change: scroll-position;
 
+  // Suppress browser focus outline — the active cell outline handles focus indication.
+  &:focus {
+    outline: none;
+  }
+
   &[data-overflow-x='true'] {
     overflow-x: auto;
   }
@@ -131,6 +136,12 @@
   min-width: 20px;
   height: 20px;
 
+  // Hide by default on hover-capable devices; show on column hover.
+  // Touch devices keep it always visible (no hover support).
+  @media (hover: hover) {
+    display: none;
+  }
+
   &:hover {
     background: var(--ogrid-hover-bg, rgba(0, 0, 0, 0.04));
   }
@@ -143,6 +154,11 @@
     outline: 2px solid var(--ogrid-accent, #0078d4);
     outline-offset: 2px;
   }
+}
+
+// Show column options button on header cell hover
+.dataTable thead th:hover .headerMenuTrigger {
+  display: flex;
 }
 
 // ---- Column reorder drop indicator ----
@@ -272,6 +288,13 @@
   overflow: visible;
   contain: none;
   background: var(--ogrid-active-cell-bg, rgba(0, 0, 0, 0.02));
+}
+
+// Elevate the td containing the active/editing cell so its outline paints above
+// adjacent tds on hovered rows (all tds have position: relative).
+.dataTable tbody td:has(> .activeCellContent),
+.dataTable tbody td:has(> .editingCellContent) {
+  z-index: var(--ogrid-z-active-cell, 2);
 }
 
 .tableWrapper .editingCellContent.editingCellContent {

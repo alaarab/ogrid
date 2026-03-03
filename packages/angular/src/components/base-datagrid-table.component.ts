@@ -652,6 +652,7 @@ export abstract class BaseDataGridTableComponent<T = unknown> {
   }
 
   onCellMouseDown(event: PointerEvent, rowIndex: number, globalColIndex: number): void {
+    this.state().editing.setEditingCell(null);
     this.state().interaction.handleCellMouseDown(event, rowIndex, globalColIndex);
   }
 

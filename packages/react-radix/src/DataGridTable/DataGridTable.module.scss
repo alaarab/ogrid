@@ -119,6 +119,10 @@
   background: var(--ogrid-bg, #ffffff);
 }
 
+.dataTable tbody tr:hover td.rowNumberCell {
+  background: var(--ogrid-header-bg, #f5f5f5);
+}
+
 .dataTable tbody tr.selectedRow td {
   background: var(--ogrid-selected-row-bg, #e6f0fb);
 }
@@ -130,6 +134,10 @@
   background: var(--ogrid-selected-row-bg, #e6f0fb);
 }
 
+.dataTable tbody tr.selectedRow td.rowNumberCell {
+  background: var(--ogrid-header-bg, #f5f5f5);
+}
+
 .dataTable tbody tr.selectedRow:hover td {
   background: var(--ogrid-bg-selected-hover, #dae8f8);
 }
@@ -139,6 +147,10 @@
 .dataTable tbody tr.selectedRow:hover td.pinnedColRight,
 .dataTable tbody tr.selectedRow:hover td.selectionCell {
   background: var(--ogrid-bg-selected-hover, #dae8f8);
+}
+
+.dataTable tbody tr.selectedRow:hover td.rowNumberCell {
+  background: var(--ogrid-header-bg, #f5f5f5);
 }
 
 .dataTable tbody td {
