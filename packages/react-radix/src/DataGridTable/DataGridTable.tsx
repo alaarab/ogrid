@@ -303,10 +303,14 @@ function DataGridTableInner<T>(props: IOGridDataGridProps<T>): React.ReactElemen
       } else if (descriptor.mode === 'editing-popover' && typeof col.cellEditor === 'function') {
         const editorProps = buildPopoverEditorProps(item, col, descriptor, pendingEditorValueRef.current, editCallbacks) as ICellEditorProps<T>;
         const CustomEditor = col.cellEditor as React.ComponentType<ICellEditorProps<T>>;
+        const popoverDisplayContent = resolveCellDisplayContent(col, item, descriptor.displayValue) as React.ReactNode;
+        const popoverCellStyle = resolveCellStyle(col, item, descriptor.displayValue);
         content = (
           <Popover.Root open={!!popoverAnchorElRef.current} onOpenChange={(open: boolean) => { if (!open) cancelPopoverEdit(); }}>
             <Popover.Anchor asChild>
-              <div ref={(el: HTMLDivElement | null) => { if (el) setPopoverAnchorEl(el); }} style={POPOVER_ANCHOR_STYLE} aria-hidden />
+              <div ref={(el: HTMLDivElement | null) => { if (el) setPopoverAnchorEl(el); }} style={POPOVER_ANCHOR_STYLE}>
+                {popoverCellStyle ? <span style={popoverCellStyle}>{popoverDisplayContent}</span> : popoverDisplayContent}
+              </div>
             </Popover.Anchor>
             <Popover.Portal>
               <Popover.Content sideOffset={4} onOpenAutoFocus={(e: Event) => e.preventDefault()}>
@@ -320,17 +324,18 @@ function DataGridTableInner<T>(props: IOGridDataGridProps<T>): React.ReactElemen
         if (descriptor.columnType === 'boolean') {
           const boolVal = !!descriptor.displayValue;
           displayNode = (
-            <input
-              type="checkbox"
+            <Checkbox.Root
+              className={styles.rowCheckbox}
               checked={boolVal}
               disabled={!descriptor.canEditAny}
-              onChange={descriptor.canEditAny ? () => {
+              onCheckedChange={descriptor.canEditAny ? () => {
                 editCallbacks.commitCellEdit(item, col.columnId, boolVal, !boolVal, descriptor.rowIndex, descriptor.globalColIndex);
               } : undefined}
-              onClick={(e) => e.stopPropagation()}
-              style={{ margin: 0, cursor: descriptor.canEditAny ? 'pointer' : 'default', outline: 'none' }}
+              onClick={(e: React.MouseEvent) => e.stopPropagation()}
               aria-label={boolVal ? 'Checked' : 'Unchecked'}
-            />
+            >
+              <Checkbox.Indicator className={styles.rowCheckboxIndicator}>✓</Checkbox.Indicator>
+            </Checkbox.Root>
           );
         } else {
           const displayContent = resolveCellDisplayContent(col, item, descriptor.displayValue) as React.ReactNode;

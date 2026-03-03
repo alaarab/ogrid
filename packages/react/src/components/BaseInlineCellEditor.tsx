@@ -63,6 +63,22 @@ export const richSelectNoMatchesStyle: React.CSSProperties = {
   color: 'var(--ogrid-muted, #999)',
 };
 
+export const richSelectSearchInputStyle: React.CSSProperties = {
+  width: '100%',
+  padding: '6px 8px',
+  border: 'none',
+  borderBottom: '1px solid var(--ogrid-border, rgba(0, 0, 0, 0.12))',
+  background: 'var(--ogrid-bg, #fff)',
+  color: 'inherit',
+  font: 'inherit',
+  fontSize: '13px',
+  outline: 'none',
+  boxSizing: 'border-box',
+  position: 'sticky',
+  top: 0,
+  zIndex: 1,
+};
+
 export const selectEditorStyle: React.CSSProperties = {
   width: '100%',
   padding: 0,
@@ -190,6 +206,9 @@ export function BaseInlineCellEditor<T>(props: BaseInlineCellEditorProps<T>): Re
   const computedDropdownStyle = fixedDropdownStyle ?? richSelectDropdownStyle;
 
   React.useEffect(() => {
+    // richSelect search input lives inside the (possibly portaled) dropdown,
+    // so autoFocus on the <input> handles focus. Skip the wrapper query here.
+    if (editorType === 'richSelect') return;
     const wrapper = wrapperRef.current;
     if (!wrapper) return;
     const input = wrapper.querySelector('input');
@@ -211,6 +230,15 @@ export function BaseInlineCellEditor<T>(props: BaseInlineCellEditorProps<T>): Re
   if (editorType === 'richSelect') {
     const dropdownContent = (
       <div style={computedDropdownStyle} role="listbox">
+        <input
+          type="text"
+          value={richSelect.searchText}
+          onChange={(e) => richSelect.setSearchText(e.target.value)}
+          onKeyDown={richSelect.handleKeyDown}
+          placeholder="Search..."
+          autoFocus
+          style={richSelectSearchInputStyle}
+        />
         {richSelect.filteredValues.map((v, i) => (
           <div
             key={String(v)}
@@ -229,15 +257,10 @@ export function BaseInlineCellEditor<T>(props: BaseInlineCellEditorProps<T>): Re
     );
     return (
       <div ref={wrapperRef} style={richSelectWrapperStyle}>
-        <input
-          type="text"
-          value={richSelect.searchText}
-          onChange={(e) => richSelect.setSearchText(e.target.value)}
-          onKeyDown={richSelect.handleKeyDown}
-          placeholder="Search..."
-          autoFocus
-          style={editorInputStyle}
-        />
+        <div style={selectDisplayStyle}>
+          <span>{richSelect.getDisplayText(value)}</span>
+          <span style={selectChevronStyle}>&#9662;</span>
+        </div>
         {usePortal ? createPortal(dropdownContent, document.body) : dropdownContent}
       </div>
     );

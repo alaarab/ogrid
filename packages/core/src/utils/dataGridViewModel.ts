@@ -548,11 +548,18 @@ export function buildPopoverEditorProps<T>(
 ): ICellEditorProps<T> {
   const oldValue = descriptor.value;
   const displayValue = pendingEditorValue !== undefined ? pendingEditorValue : oldValue;
+  // Track the latest value set via onValueChange so onCommit always reads
+  // the most recent value, even when called synchronously (or via setTimeout)
+  // before React has re-rendered with the updated pendingEditorValue state.
+  let latestValue = pendingEditorValue;
   return {
     value: displayValue,
-    onValueChange: callbacks.setPendingEditorValue,
+    onValueChange: (value: unknown) => {
+      latestValue = value;
+      callbacks.setPendingEditorValue(value);
+    },
     onCommit: () => {
-      const newValue = pendingEditorValue !== undefined ? pendingEditorValue : oldValue;
+      const newValue = latestValue !== undefined ? latestValue : oldValue;
       callbacks.commitCellEdit(item, col.columnId, oldValue, newValue, descriptor.rowIndex, descriptor.globalColIndex);
     },
     onCancel: callbacks.cancelPopoverEdit,
