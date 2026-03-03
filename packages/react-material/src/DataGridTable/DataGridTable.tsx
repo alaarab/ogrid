@@ -78,7 +78,7 @@ const EDITING_CELL_STYLE: React.CSSProperties = {
   padding: 0,
 };
 
-// Checkbox column (header only — body uses native elements + CSS class)
+// Checkbox column (header only  -  body uses native elements + CSS class)
 const CHECKBOX_CELL_SX = { width: CHECKBOX_COLUMN_WIDTH, minWidth: CHECKBOX_COLUMN_WIDTH, maxWidth: CHECKBOX_COLUMN_WIDTH, textAlign: 'center' } as const;
 const CHECKBOX_PLACEHOLDER_SX = { width: CHECKBOX_COLUMN_WIDTH, minWidth: CHECKBOX_COLUMN_WIDTH, p: 0 } as const;
 
@@ -89,7 +89,7 @@ const CHECKBOX_TD_STYLE: React.CSSProperties = {
   borderBottom: '1px solid var(--ogrid-border, rgba(224,224,224,1))',
 };
 
-// Header — use opaque var(--ogrid-header-bg) (not semi-transparent action.hover) so sticky
+// Header  -  use opaque var(--ogrid-header-bg) (not semi-transparent action.hover) so sticky
 // headers fully occlude pinned-column content scrolling beneath them.
 // The CSS variable is theme-aware: light=#f5f5f5, dark=#2c2c2c (set by each UI package).
 const HEADER_BG = 'var(--ogrid-header-bg, #f5f5f5)';
@@ -139,7 +139,7 @@ const HEADER_BASE_SX = {
   position: 'sticky' as const, /* Enables vertical sticky for all headers */
   top: 0, /* Sticky vertically */
   zIndex: 8, /* Stack above body cells */
-  bgcolor: HEADER_BG /* Opaque — required for sticky overlap */
+  bgcolor: HEADER_BG /* Opaque  -  required for sticky overlap */
 } as const;
 const HEADER_PINNED_LEFT_SX = {
   ...HEADER_BASE_SX, position: 'sticky' as const, left: 0, top: 0,
@@ -154,7 +154,7 @@ const HEADER_PINNED_RIGHT_SX = {
   boxShadow: '-2px 0 4px -1px rgba(0,0,0,0.1)',
 } as const;
 
-// Header cell variants (non-sticky — stickyHeader=false)
+// Header cell variants (non-sticky  -  stickyHeader=false)
 const HEADER_BASE_NO_STICKY_SX = {
   fontWeight: 600,
   zIndex: 8,
@@ -182,8 +182,17 @@ const RESIZE_HANDLE_SX = {
   '&:active::after': { bgcolor: 'primary.dark' },
 } as const;
 
-// Popover
-const POPOVER_ANCHOR_SX = { minHeight: '100%', minWidth: 40 } as const;
+// Popover anchor base layout (density-specific padding is merged at render time)
+const POPOVER_ANCHOR_BASE_SX = {
+  width: '100%',
+  height: '100%',
+  minHeight: '100%',
+  minWidth: 40,
+  display: 'flex',
+  alignItems: 'center',
+  boxSizing: 'border-box',
+  overflow: 'hidden',
+} as const;
 const POPOVER_CONTENT_SX = { p: 1 } as const;
 
 // Wrapper
@@ -526,7 +535,7 @@ function DataGridTableInner<T>(props: IOGridDataGridProps<T>): React.ReactElemen
     }),
   [visibleCols, columnMeta, pinning.pinnedColumns, pinning.leftOffsets, pinning.rightOffsets, getColumnWidth]);
 
-  // Wrapper sx (depends on dynamic values — memoize to avoid recreation)
+  // Wrapper sx (depends on dynamic values  -  memoize to avoid recreation)
   const wrapperSx = useMemo(() => ({
     position: 'relative' as const,
     flex: 1,
@@ -562,7 +571,7 @@ function DataGridTableInner<T>(props: IOGridDataGridProps<T>): React.ReactElemen
         const popoverCellStyle = resolveCellStyle(col, item, descriptor.displayValue);
         cellContent = (
           <>
-            <Box ref={(el: HTMLDivElement | null) => { if (el) setPopoverAnchorEl(el); }} sx={POPOVER_ANCHOR_SX}>
+            <Box ref={(el: HTMLDivElement | null) => { if (el) setPopoverAnchorEl(el); }} sx={POPOVER_ANCHOR_BASE_SX} style={cellDensityStyle}>
               {popoverCellStyle ? <span style={popoverCellStyle}>{popoverDisplayContent}</span> : popoverDisplayContent}
             </Box>
             <Popover
@@ -601,7 +610,7 @@ function DataGridTableInner<T>(props: IOGridDataGridProps<T>): React.ReactElemen
           displayNode = cellStyle ? <span style={cellStyle}>{content}</span> : content;
         }
 
-        // Build className string (CSS classes — zero Emotion overhead)
+        // Build className string (CSS classes  -  zero Emotion overhead)
         let cls = 'ogrid-mat-cell';
         if (col.type === 'numeric') cls += ' ogrid-mat-cell--numeric';
         else if (col.type === 'boolean') cls += ' ogrid-mat-cell--boolean';

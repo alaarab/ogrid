@@ -76,7 +76,7 @@ describe('useClipboard', () => {
       result.current.handleCopy();
     });
 
-    // Single cell (row 0, col 0) → only first column value
+    // Single cell (row 0, col 0)  to  only first column value
     expect(writeTextMock).toHaveBeenCalledWith('Alice');
   });
 

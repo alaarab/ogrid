@@ -71,7 +71,7 @@ describe('formatSelectionAsTsv', () => {
       hasFormula: (col, row) => col === 1 && row === 0,
       getFormula: (col, row) => (col === 1 && row === 0 ? '=SUM(A1:A5)' : undefined),
     });
-    // col 0 (id) has no formula → raw value; col 1 (value) has formula → formula text
+    // col 0 (id) has no formula  to  raw value; col 1 (value) has formula  to  formula text
     expect(tsv).toBe('a\t=SUM(A1:A5)');
   });
 
@@ -166,7 +166,7 @@ describe('applyPastedValues', () => {
 
   it('skips formula routing when setFormula is not provided', () => {
     const flatColumns = [...VISIBLE_COLS];
-    // formulaOptions present but no setFormula — should fall through to normal parse
+    // formulaOptions present but no setFormula  -  should fall through to normal parse
     const events = applyPastedValues(
       [['a', '=BADFORMULA']],
       0,
@@ -175,7 +175,7 @@ describe('applyPastedValues', () => {
       VISIBLE_COLS,
       { colOffset: 0, flatColumns }
     );
-    // "=BADFORMULA" is not a valid number/date but is a valid string for text columns —
+    // "=BADFORMULA" is not a valid number/date but is a valid string for text columns  - 
     // it should be treated as a raw string value (parseValue decides)
     // The key assertion is that no formula was called (no setFormula provided)
     expect(events.some(e => e.columnId === 'value')).toBeDefined();
@@ -245,7 +245,7 @@ describe('applyPastedValues type safety', () => {
     // Pasting "hello\thello\thello\thello" across name, age, active, joined columns
     const parsed = [['hello', 'hello', 'hello', 'hello']];
     const events = applyPastedValues(parsed, 0, 0, typedItems, typedCols);
-    // Only name (text) accepts "hello" — age, active, joined all reject
+    // Only name (text) accepts "hello"  -  age, active, joined all reject
     expect(events).toHaveLength(1);
     expect(events[0].columnId).toBe('name');
   });

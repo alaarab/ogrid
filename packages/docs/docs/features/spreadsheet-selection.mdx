@@ -18,10 +18,10 @@ OGrid provides Excel-like cell selection out of the box. Click a cell to make it
 
 :::tip Framework-Specific Styling
 The live demo above shows **React Radix UI** styling (lightweight default). To see how this feature looks in your framework's design system, click the framework buttons above the demo to open online demo:
-- **React** — Radix UI styling
-- **Angular** — Angular Material styling
-- **Vue** — Vuetify styling
-- **JS** — Vanilla JS default theme
+- **React**  -  Radix UI styling
+- **Angular**  -  Angular Material styling
+- **Vue**  -  Vuetify styling
+- **JS**  -  Vanilla JS default theme
 
 Each framework renders OGrid with its native components, so the look and feel matches your design system.
 :::
@@ -50,8 +50,8 @@ function App() {
 The `OGrid` component has the same props across all React UI packages. To switch, just change the import:
 
 - **Radix** (lightweight, default): `from '@alaarab/ogrid-react-radix'`
-- **Fluent UI** (Microsoft 365 / SPFx): `from '@alaarab/ogrid-react-fluent'` — wrap in `<FluentProvider>`
-- **Material UI** (MUI v7): `from '@alaarab/ogrid-react-material'` — wrap in `<ThemeProvider>`
+- **Fluent UI** (Microsoft 365 / SPFx): `from '@alaarab/ogrid-react-fluent'`  -  wrap in `<FluentProvider>`
+- **Material UI** (MUI v7): `from '@alaarab/ogrid-react-material'`  -  wrap in `<ThemeProvider>`
 :::
 
   </TabItem>
@@ -83,7 +83,7 @@ Same component API across Angular packages. To switch, just change the import:
 - **Angular Material**: `from '@alaarab/ogrid-angular-material'`
 - **PrimeNG**: `from '@alaarab/ogrid-angular-primeng'`
 
-All components are standalone — no NgModule required.
+All components are standalone  -  no NgModule required.
 :::
 
   </TabItem>
@@ -110,7 +110,7 @@ const gridProps = {
 Same component API across Vue packages. To switch, just change the import:
 
 - **Radix (Headless UI)**: `from '@alaarab/ogrid-vue-radix'` *(default, lightweight)*
-- **Vuetify**: `from '@alaarab/ogrid-vue-vuetify'` — wrap in `<v-app>` for theming
+- **Vuetify**: `from '@alaarab/ogrid-vue-vuetify'`  -  wrap in `<v-app>` for theming
 - **PrimeVue**: `from '@alaarab/ogrid-vue-primevue'`
 :::
 
@@ -163,7 +163,7 @@ interface ISelectionRange {
 
 ### Performance
 
-Drag selection is optimized with `requestAnimationFrame` and DOM attribute toggling. During a drag, React state is not updated on every pointer move — only on pointer up. This keeps the grid responsive even with thousands of cells. All drag interactions use the [Pointer Events API](./mobile-touch), so cell selection works with mouse, touch, and stylus input.
+Drag selection is optimized with `requestAnimationFrame` and DOM attribute toggling. During a drag, React state is not updated on every pointer move  -  only on pointer up. This keeps the grid responsive even with thousands of cells. All drag interactions use the [Pointer Events API](./mobile-touch), so cell selection works with mouse, touch, and stylus input.
 
 ### Disabling Cell Selection
 

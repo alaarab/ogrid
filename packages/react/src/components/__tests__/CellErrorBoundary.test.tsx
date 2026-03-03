@@ -161,7 +161,7 @@ describe('CellErrorBoundary', () => {
       </div>
     );
 
-    // Both boundaries caught their errors — default fallback ⚠ Error appears twice
+    // Both boundaries caught their errors  -  default fallback ⚠ Error appears twice
     const errorElements = screen.getAllByText('⚠ Error');
     expect(errorElements).toHaveLength(2);
   });
@@ -198,7 +198,7 @@ describe('CellErrorBoundary', () => {
     expect(screen.getByText('cell unavailable')).toBeInTheDocument();
   });
 
-  it('sibling boundaries are independent — one error does not prevent others from rendering', () => {
+  it('sibling boundaries are independent  -  one error does not prevent others from rendering', () => {
     const ThrowError = () => { throw new Error('isolated'); };
     const Fine = ({ label }: { label: string }) => <div data-testid={label}>{label}</div>;
 

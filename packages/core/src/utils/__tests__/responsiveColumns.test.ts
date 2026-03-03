@@ -12,7 +12,7 @@ describe('getResponsiveHiddenColumns', () => {
     col('department', { responsivePriority: 2 }),   // hidden < 768px
     col('phone', { responsivePriority: 3 }),        // hidden < 992px
     col('address', { responsivePriority: 4 }),      // hidden < 1200px
-    col('id', {}),                                  // no priority → never hidden
+    col('id', {}),                                  // no priority  to  never hidden
   ];
 
   it('returns empty set when containerWidth is 0', () => {
@@ -73,10 +73,10 @@ describe('getResponsiveHiddenColumns', () => {
         { minWidth: 500, maxPriority: Infinity },
       ],
     };
-    // At 400px → only priority 0
+    // At 400px  to  only priority 0
     const hidden400 = getResponsiveHiddenColumns(400, columns, config);
     expect(hidden400).toEqual(new Set(['email', 'department', 'phone', 'address']));
-    // At 500px → all shown
+    // At 500px  to  all shown
     const hidden500 = getResponsiveHiddenColumns(500, columns, config);
     expect(hidden500.size).toBe(0);
   });
@@ -89,7 +89,7 @@ describe('getResponsiveHiddenColumns', () => {
 
   it('handles exact breakpoint boundary (576px)', () => {
     const hidden = getResponsiveHiddenColumns(576, columns);
-    // At exactly 576px, maxPriority=1 → email (priority 1) visible, department+ hidden
+    // At exactly 576px, maxPriority=1  to  email (priority 1) visible, department+ hidden
     expect(hidden.has('name')).toBe(false);
     expect(hidden.has('email')).toBe(false);
     expect(hidden.has('department')).toBe(true);

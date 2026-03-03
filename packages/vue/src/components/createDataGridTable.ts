@@ -1,7 +1,7 @@
 /**
  * Shared DataGridTable factory for Vue UI packages.
  *
- * Both vue-vuetify and vue-primevue DataGridTable components are 97% identical —
+ * Both vue-vuetify and vue-primevue DataGridTable components are 97% identical  - 
  * they only differ in which checkbox and spinner components they render.
  * This factory extracts all shared logic into one place.
  */
@@ -99,7 +99,7 @@ export function createDataGridTable(ui: IDataGridTableUIBindings) {
         { immediate: true },
       );
 
-      // Stable handlers — avoid creating new closures per render
+      // Stable handlers  -  avoid creating new closures per render
       const onWrapperPointerdown = (e: PointerEvent) => { lastMouseShift.value = e.shiftKey; };
       const onContextmenu = (e: MouseEvent) => e.preventDefault();
       const stopPropagation = (e: MouseEvent) => e.stopPropagation();
@@ -108,7 +108,7 @@ export function createDataGridTable(ui: IDataGridTableUIBindings) {
       const headerRowsComputed = computed(() => buildHeaderRows(propsRef.value.columns, propsRef.value.visibleColumns));
 
       // Pre-compute per-column layout metadata so it's only recalculated when
-      // column config, sizing, pinning, or measured widths change — not on every
+      // column config, sizing, pinning, or measured widths change  -  not on every
       // render (parity with React's columnMeta useMemo).
       const columnMetaCache = computed(() => {
         const layout = state.layout.value;
@@ -353,7 +353,7 @@ export function createDataGridTable(ui: IDataGridTableUIBindings) {
         // Header class+style lookup using cached metadata
         const getHeaderClassAndStyle = (col: IColumnDef<unknown>): { classes: string; style: Record<string, string> } => {
           const base = colHdrStyles[col.columnId] || {};
-          // cursor depends on drag state — add it at render time (not cached)
+          // cursor depends on drag state  -  add it at render time (not cached)
           return {
             classes: colHdrClasses[col.columnId] || 'ogrid-header-cell',
             style: { ...base, cursor: isReorderDragging.value ? 'grabbing' : 'grab' },

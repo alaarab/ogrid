@@ -266,7 +266,7 @@ export const EditableCustomPopup: Story = {
         editable: true,
         cellEditor: NotesPopupEditor as React.ComponentType<ICellEditorProps<RowWithNotes>>,
         cellEditorPopup: true,
-        renderCell: (item) => <span>{item.notes || '—'}</span>,
+        renderCell: (item) => <span>{item.notes || ' - '}</span>,
       },
     ];
     return (
@@ -826,9 +826,9 @@ export const PremiumInputs: Story = {
     return (
       <div>
         <p style={{ marginBottom: 8, fontSize: 14 }}>
-          Click a cell to open a premium popup editor. <strong>Rating</strong> — star picker.{' '}
-          <strong>Color</strong> — swatch grid + hex input. <strong>Progress</strong> — range slider.{' '}
-          <strong>Tags</strong> — multi-value chip editor with autocomplete.
+          Click a cell to open a premium popup editor. <strong>Rating</strong>  -  star picker.{' '}
+          <strong>Color</strong>  -  swatch grid + hex input. <strong>Progress</strong>  -  range slider.{' '}
+          <strong>Tags</strong>  -  multi-value chip editor with autocomplete.
         </p>
         <DataGridTable<PremiumInputsItem>
           items={items}

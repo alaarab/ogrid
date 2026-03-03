@@ -149,7 +149,7 @@ export class TableRenderer<T> {
     };
 
     this._tbodyPointerdownHandler = (e: PointerEvent) => {
-      // Fill handle pointerdown — delegated from per-cell inline listener
+      // Fill handle pointerdown  -  delegated from per-cell inline listener
       const target = e.target as HTMLElement;
       if (target.classList.contains('ogrid-fill-handle') || target.getAttribute('data-fill-handle') === 'true') {
         this.interactionState?.onFillHandleMouseDown?.(e);
@@ -270,7 +270,7 @@ export class TableRenderer<T> {
     return this.wrapperEl;
   }
 
-  /** Full render — creates the table structure from scratch. */
+  /** Full render  -  creates the table structure from scratch. */
   render(): void {
     // Clear container
     this.container.innerHTML = '';
@@ -553,7 +553,7 @@ export class TableRenderer<T> {
       return;
     }
 
-    // Check if only selection-related state changed — if so, patch CSS only
+    // Check if only selection-related state changed  -  if so, patch CSS only
     if (this.isSelectionOnlyChange()) {
       this.patchSelectionClasses();
       return;
@@ -566,7 +566,7 @@ export class TableRenderer<T> {
       this.renderHeader();
     }
 
-    // Delegation listeners are on tbody itself — just clear inner HTML, keep listeners
+    // Delegation listeners are on tbody itself  -  just clear inner HTML, keep listeners
     this.tbody.innerHTML = '';
     this.renderBody();
 
@@ -625,7 +625,7 @@ export class TableRenderer<T> {
     const hasCheckbox = this.hasCheckboxColumn();
     const hasRowNumbers = this.hasRowNumbersColumn();
 
-    // Column letter row (A, B, C...) — prepended before normal header rows
+    // Column letter row (A, B, C...)  -  prepended before normal header rows
     if (this.interactionState?.showColumnLetters) {
       const letterTr = document.createElement('tr');
       letterTr.className = 'ogrid-column-letter-row';
@@ -706,7 +706,7 @@ export class TableRenderer<T> {
             th.style.padding = '0';
             tr.appendChild(th);
           }
-          // Middle rows (rowIdx > 0 && !isLastRow): no cell needed — covered by rowSpan from first row
+          // Middle rows (rowIdx > 0 && !isLastRow): no cell needed  -  covered by rowSpan from first row
         }
         for (const cell of row) {
           const th = document.createElement('th');

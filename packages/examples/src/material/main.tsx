@@ -31,7 +31,7 @@ function App() {
     );
   }, []);
 
-  // MCP Live Testing Bridge — connects this grid to your editor for real-time inspection
+  // MCP Live Testing Bridge  -  connects this grid to your editor for real-time inspection
   useEffect(() => {
     const bridge = connectGridToBridge({
       gridId: 'material-demo',
@@ -92,7 +92,7 @@ function App() {
 const rootEl = document.getElementById('root');
 if (rootEl) createRoot(rootEl).render(<App />);
 
-// Add dark mode toggle — also switch MUI theme
+// Add dark mode toggle  -  also switch MUI theme
 createThemeToggle((theme) => {
   setAppTheme?.(theme);
 });

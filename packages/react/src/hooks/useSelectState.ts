@@ -19,7 +19,7 @@ export interface UseSelectStateResult {
 
 /**
  * Manages select editor state with keyboard navigation (arrow keys, enter, escape).
- * Simpler than useRichSelectState — no search, just a dropdown list.
+ * Simpler than useRichSelectState  -  no search, just a dropdown list.
  */
 export function useSelectState(params: UseSelectStateParams): UseSelectStateResult {
   const { values, formatValue, initialValue, onCommit, onCancel } = params;

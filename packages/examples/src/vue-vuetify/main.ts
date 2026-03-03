@@ -12,7 +12,7 @@ const vuetify = createVuetify({
 
 createApp(App).use(vuetify).mount('#app');
 
-// Add dark mode toggle — also switch Vuetify theme
+// Add dark mode toggle  -  also switch Vuetify theme
 createThemeToggle((theme) => {
   vuetify.theme.global.name.value = theme;
 });

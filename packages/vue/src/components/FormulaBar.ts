@@ -1,5 +1,5 @@
 /**
- * FormulaBar — Headless Excel-style formula bar component.
+ * FormulaBar  -  Headless Excel-style formula bar component.
  *
  * Layout: [Name Box] [fx] [Formula Input]
  *

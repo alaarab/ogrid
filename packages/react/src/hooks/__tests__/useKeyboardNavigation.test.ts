@@ -236,7 +236,7 @@ describe('useKeyboardNavigation', () => {
   });
 
   describe('Ctrl+Arrow (Excel-style jump)', () => {
-    // 6 rows, 3 columns — some cells empty to test data-boundary navigation
+    // 6 rows, 3 columns  -  some cells empty to test data-boundary navigation
     // Row 0: A, 1, X
     // Row 1: B, 2, (empty)
     // Row 2: C, (empty), (empty)
@@ -284,7 +284,7 @@ describe('useKeyboardNavigation', () => {
 
     // --- Ctrl+Down ---
     it('Ctrl+Down from non-empty cell with non-empty below jumps to last non-empty before gap', () => {
-      // col0: A(0), B(1), C(2), ''(3) → from row 0 should land on row 2
+      // col0: A(0), B(1), C(2), ''(3)  to  from row 0 should land on row 2
       const p = makeCtrlParams(0, 0);
       const { result } = renderHook(() => useKeyboardNavigation(p));
       fireKey(result.current.handleGridKeyDown, 'ArrowDown', { ctrl: true });
@@ -292,7 +292,7 @@ describe('useKeyboardNavigation', () => {
     });
 
     it('Ctrl+Down from non-empty cell with empty below jumps to next non-empty', () => {
-      // col0: C(2), ''(3), D(4) → from row 2, next is empty, should land on row 4
+      // col0: C(2), ''(3), D(4)  to  from row 2, next is empty, should land on row 4
       const p = makeCtrlParams(2, 0);
       const { result } = renderHook(() => useKeyboardNavigation(p));
       fireKey(result.current.handleGridKeyDown, 'ArrowDown', { ctrl: true });
@@ -300,7 +300,7 @@ describe('useKeyboardNavigation', () => {
     });
 
     it('Ctrl+Down from empty cell jumps to next non-empty', () => {
-      // col0: ''(3), D(4) → from row 3, should land on row 4
+      // col0: ''(3), D(4)  to  from row 3, should land on row 4
       const p = makeCtrlParams(3, 0);
       const { result } = renderHook(() => useKeyboardNavigation(p));
       fireKey(result.current.handleGridKeyDown, 'ArrowDown', { ctrl: true });
@@ -308,7 +308,7 @@ describe('useKeyboardNavigation', () => {
     });
 
     it('Ctrl+Down from last non-empty runs to edge', () => {
-      // col0: D(4), E(5) → from row 4, should land on row 5 (edge)
+      // col0: D(4), E(5)  to  from row 4, should land on row 5 (edge)
       const p = makeCtrlParams(4, 0);
       const { result } = renderHook(() => useKeyboardNavigation(p));
       fireKey(result.current.handleGridKeyDown, 'ArrowDown', { ctrl: true });
@@ -324,7 +324,7 @@ describe('useKeyboardNavigation', () => {
 
     // --- Ctrl+Up ---
     it('Ctrl+Up from non-empty cell with non-empty above jumps to last non-empty before gap', () => {
-      // col0: D(4), E(5) → from row 5 should land on row 4 (then ''(3) is gap)
+      // col0: D(4), E(5)  to  from row 5 should land on row 4 (then ''(3) is gap)
       const p = makeCtrlParams(5, 0);
       const { result } = renderHook(() => useKeyboardNavigation(p));
       fireKey(result.current.handleGridKeyDown, 'ArrowUp', { ctrl: true });
@@ -332,7 +332,7 @@ describe('useKeyboardNavigation', () => {
     });
 
     it('Ctrl+Up from non-empty cell with empty above jumps to next non-empty', () => {
-      // col0: C(2), ''(3), D(4) → from row 4, above is empty at row 3, should land on row 2
+      // col0: C(2), ''(3), D(4)  to  from row 4, above is empty at row 3, should land on row 2
       const p = makeCtrlParams(4, 0);
       const { result } = renderHook(() => useKeyboardNavigation(p));
       fireKey(result.current.handleGridKeyDown, 'ArrowUp', { ctrl: true });
@@ -340,7 +340,7 @@ describe('useKeyboardNavigation', () => {
     });
 
     it('Ctrl+Up from empty cell jumps to next non-empty above', () => {
-      // col0: C(2), ''(3) → from row 3, should land on row 2
+      // col0: C(2), ''(3)  to  from row 3, should land on row 2
       const p = makeCtrlParams(3, 0);
       const { result } = renderHook(() => useKeyboardNavigation(p));
       fireKey(result.current.handleGridKeyDown, 'ArrowUp', { ctrl: true });
@@ -356,7 +356,7 @@ describe('useKeyboardNavigation', () => {
 
     // --- Ctrl+Right ---
     it('Ctrl+Right from non-empty cell scans to last non-empty before gap', () => {
-      // Row 0: A(col0), 1(col1), X(col2) — all non-empty → jumps to col2 (edge)
+      // Row 0: A(col0), 1(col1), X(col2)  -  all non-empty  to  jumps to col2 (edge)
       const p = makeCtrlParams(0, 0);
       const { result } = renderHook(() => useKeyboardNavigation(p));
       fireKey(result.current.handleGridKeyDown, 'ArrowRight', { ctrl: true });
@@ -364,7 +364,7 @@ describe('useKeyboardNavigation', () => {
     });
 
     it('Ctrl+Right from non-empty with empty next jumps to edge when all empty after', () => {
-      // Row 2: C(col0), ''(col1), ''(col2) → from col0 jumps to col2 (edge, all empty)
+      // Row 2: C(col0), ''(col1), ''(col2)  to  from col0 jumps to col2 (edge, all empty)
       const p = makeCtrlParams(2, 0);
       const { result } = renderHook(() => useKeyboardNavigation(p));
       fireKey(result.current.handleGridKeyDown, 'ArrowRight', { ctrl: true });
@@ -372,7 +372,7 @@ describe('useKeyboardNavigation', () => {
     });
 
     it('Ctrl+Right stops at boundary between non-empty and empty', () => {
-      // Row 1: B(col0), 2(col1), ''(col2) → from col0, next is non-empty → lands on col1
+      // Row 1: B(col0), 2(col1), ''(col2)  to  from col0, next is non-empty  to  lands on col1
       const p = makeCtrlParams(1, 0);
       const { result } = renderHook(() => useKeyboardNavigation(p));
       fireKey(result.current.handleGridKeyDown, 'ArrowRight', { ctrl: true });
@@ -388,7 +388,7 @@ describe('useKeyboardNavigation', () => {
 
     // --- Ctrl+Left ---
     it('Ctrl+Left from non-empty cell scans to left edge when all non-empty', () => {
-      // Row 0: A(col0), 1(col1), X(col2) — all non-empty → from col2, jumps to col0 (edge)
+      // Row 0: A(col0), 1(col1), X(col2)  -  all non-empty  to  from col2, jumps to col0 (edge)
       const p = makeCtrlParams(0, 2);
       const { result } = renderHook(() => useKeyboardNavigation(p));
       fireKey(result.current.handleGridKeyDown, 'ArrowLeft', { ctrl: true });
@@ -396,7 +396,7 @@ describe('useKeyboardNavigation', () => {
     });
 
     it('Ctrl+Left from empty cell jumps to next non-empty on the left', () => {
-      // Row 1: B(col0), 2(col1), ''(col2) → from col2, should land on col1
+      // Row 1: B(col0), 2(col1), ''(col2)  to  from col2, should land on col1
       const p = makeCtrlParams(1, 2);
       const { result } = renderHook(() => useKeyboardNavigation(p));
       fireKey(result.current.handleGridKeyDown, 'ArrowLeft', { ctrl: true });
@@ -412,7 +412,7 @@ describe('useKeyboardNavigation', () => {
 
     // --- Ctrl+Shift+Arrow (extend selection) ---
     it('Ctrl+Shift+Down extends selection to the ctrl-target row', () => {
-      // col0: A(0), B(1), C(2), ''(3) → from row 0, ctrl-target = row 2
+      // col0: A(0), B(1), C(2), ''(3)  to  from row 0, ctrl-target = row 2
       const p = makeCtrlParams(0, 0);
       const { result } = renderHook(() => useKeyboardNavigation(p));
       fireKey(result.current.handleGridKeyDown, 'ArrowDown', { ctrl: true, shift: true });
@@ -423,7 +423,7 @@ describe('useKeyboardNavigation', () => {
     });
 
     it('Ctrl+Shift+Right extends selection to the ctrl-target column', () => {
-      // Row 0: A, 1, X — all non-empty → from col0, ctrl-target = col2
+      // Row 0: A, 1, X  -  all non-empty  to  from col0, ctrl-target = col2
       const p = makeCtrlParams(0, 0);
       const { result } = renderHook(() => useKeyboardNavigation(p));
       fireKey(result.current.handleGridKeyDown, 'ArrowRight', { ctrl: true, shift: true });
@@ -435,7 +435,7 @@ describe('useKeyboardNavigation', () => {
 
     // --- Column with all empties in the middle ---
     it('Ctrl+Down in column with gap skips empties to next non-empty', () => {
-      // col2: X(0), ''(1), ''(2), ''(3), Y(4), Z(5) → from row 1 (empty), should land on row 4
+      // col2: X(0), ''(1), ''(2), ''(3), Y(4), Z(5)  to  from row 1 (empty), should land on row 4
       const p = makeCtrlParams(1, 2);
       const { result } = renderHook(() => useKeyboardNavigation(p));
       fireKey(result.current.handleGridKeyDown, 'ArrowDown', { ctrl: true });
@@ -448,7 +448,7 @@ describe('useKeyboardNavigation', () => {
 // onKeyDown intercept
 // ---------------------------------------------------------------------------
 
-describe('useKeyboardNavigation — onKeyDown intercept prop', () => {
+describe('useKeyboardNavigation  -  onKeyDown intercept prop', () => {
   const items = [{ id: '1', name: 'A' }, { id: '2', name: 'B' }];
   const visibleCols = [{ columnId: 'name', name: 'Name' }] as import('../../types').IColumnDef<{ id: string; name: string }>[];
   const wrapperRef = { current: document.createElement('div') };

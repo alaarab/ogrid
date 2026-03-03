@@ -1,6 +1,6 @@
 import type { IColumnDef, ICellEditorContext } from '../types/columnTypes';
 import type { RowId } from '@alaarab/ogrid-core';
-import { getCellValue } from '@alaarab/ogrid-core';
+import { getCellValue, formatDateForDisplay, parseUserInputDate, getDateInputPlaceholder } from '@alaarab/ogrid-core';
 
 const EDITOR_STYLE: Partial<CSSStyleDeclaration> = {
   position: 'absolute',
@@ -182,7 +182,7 @@ export class InlineCellEditor<T> {
     }
 
     if (editorType === 'date' || column.type === 'date') {
-      return this.createDateEditor(value);
+      return this.createDateEditor(value, column);
     }
 
     // Default: text editor
@@ -190,7 +190,7 @@ export class InlineCellEditor<T> {
   }
 
   /**
-   * Shared factory for text/date input editors — both types have identical event handling,
+   * Shared factory for text/date input editors  -  both types have identical event handling,
    * differing only in input.type and initial value formatting.
    */
   private createInputEditor(type: 'text' | 'date', initialValue: string): HTMLInputElement {
@@ -215,10 +215,10 @@ export class InlineCellEditor<T> {
         this.onCancel?.();
         this.closeEditor();
       } else if (['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'].includes(e.key)) {
-        // Let the input handle cursor movement — don't bubble to grid navigation
+        // Let the input handle cursor movement  -  don't bubble to grid navigation
         e.stopPropagation();
       } else if ((e.ctrlKey || e.metaKey) && ['c', 'x', 'v', 'a', 'z', 'y'].includes(e.key)) {
-        // Let the input handle clipboard/undo shortcuts natively — don't bubble to grid
+        // Let the input handle clipboard/undo shortcuts natively  -  don't bubble to grid
         e.stopPropagation();
       }
     });
@@ -267,16 +267,95 @@ export class InlineCellEditor<T> {
     return input;
   }
 
-  private createDateEditor(value: unknown): HTMLInputElement {
-    let initialValue = '';
-    if (value != null) {
-      const dateStr = String(value);
-      if (dateStr.match(/^\d{4}-\d{2}-\d{2}/)) {
-        initialValue = dateStr.substring(0, 10);
+  private createDateEditor(value: unknown, column?: IColumnDef<T>): HTMLInputElement {
+    const dateFormat = (column?.cellEditorParams?.['dateFormat'] as string | undefined) ?? (column?.dateFormat as string | undefined) ?? 'YYYY-MM-DD';
+    const editorType = column?.cellEditorParams?.['editorType'] as string | undefined;
+
+    // 'native' editor: browser native <input type="date"> (YYYY-MM-DD only)
+    if (editorType === 'native') {
+      let initialValue = '';
+      if (value != null) {
+        const dateStr = String(value);
+        // Extract YYYY-MM-DD portion for native date input
+        const match = dateStr.match(/^(\d{4})-(\d{2})-(\d{2})/);
+        if (match) {
+          initialValue = `${match[1]}-${match[2]}-${match[3]}`;
+        }
       }
+      const input = this.createInputEditor('date', initialValue);
+      return input;
     }
-    const input = this.createInputEditor('text', initialValue);
-    input.placeholder = 'YYYY-MM-DD';
+
+    // 'text' editor (default): plain text input with configurable format
+    // formatDateForDisplay returns string | null; fall back to '' for null
+    const displayValue = value != null ? (formatDateForDisplay(value, dateFormat) ?? '') : '';
+    const placeholder = getDateInputPlaceholder(dateFormat);
+
+    const input = this.createDateTextEditor(displayValue, placeholder, dateFormat);
+    return input;
+  }
+
+  /**
+   * Create a text-based date editor with format-aware commit/blur handling.
+   * Parses user input with parseUserInputDate before committing.
+   * The committed value is either a YYYY-MM-DD ISO string (when parseable)
+   * or the raw user input (to allow downstream valueParser to handle it).
+   */
+  private createDateTextEditor(initialValue: string, placeholder: string, dateFormat: string): HTMLInputElement {
+    const input = document.createElement('input');
+    input.type = 'text';
+    input.value = initialValue;
+    input.placeholder = placeholder;
+    Object.assign(input.style, EDITOR_STYLE);
+
+    const getCommitValue = (): unknown => {
+      const raw = input.value;
+      if (!raw.trim()) return '';
+      // parseUserInputDate returns Date | null
+      const parsed = parseUserInputDate(raw, dateFormat);
+      if (parsed instanceof Date) {
+        // Commit as YYYY-MM-DD ISO date string
+        const y = parsed.getUTCFullYear().toString().padStart(4, '0');
+        const m = (parsed.getUTCMonth() + 1).toString().padStart(2, '0');
+        const d = parsed.getUTCDate().toString().padStart(2, '0');
+        return `${y}-${m}-${d}`;
+      }
+      // Return raw input if we couldn't parse it
+      return raw;
+    };
+
+    const commitValue = () => {
+      if (this.editingCell) {
+        this.onCommit?.(this.editingCell.rowId, this.editingCell.columnId, getCommitValue());
+      }
+    };
+
+    input.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        e.stopPropagation();
+        commitValue();
+        const afterCommit = this.onAfterCommit;
+        this.closeEditor();
+        afterCommit?.();
+      } else if (e.key === 'Escape') {
+        e.preventDefault();
+        e.stopPropagation();
+        this.onCancel?.();
+        this.closeEditor();
+      } else if (['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'].includes(e.key)) {
+        e.stopPropagation();
+      } else if ((e.ctrlKey || e.metaKey) && ['c', 'x', 'v', 'a', 'z', 'y'].includes(e.key)) {
+        e.stopPropagation();
+      }
+    });
+
+    input.addEventListener('blur', () => {
+      commitValue();
+      this.closeEditor();
+    });
+
+    setTimeout(() => input.select(), 0);
     return input;
   }
 
@@ -358,22 +437,9 @@ export class InlineCellEditor<T> {
         });
         dropdown.appendChild(option);
       }
-
-      // Footer hint
-      const footer = document.createElement('div');
-      footer.textContent = 'Click or Enter to apply';
-      footer.style.padding = '4px 8px';
-      footer.style.borderTop = '1px solid var(--ogrid-border, rgba(0, 0, 0, 0.12))';
-      footer.style.fontSize = '11px';
-      footer.style.color = 'var(--ogrid-muted, #999)';
-      footer.style.textAlign = 'right';
-      footer.style.position = 'sticky';
-      footer.style.bottom = '0';
-      footer.style.background = 'var(--ogrid-bg, #fff)';
-      dropdown.appendChild(footer);
     };
 
-    // Only update CSS class on old/new highlighted item — avoids rebuilding the DOM
+    // Only update CSS class on old/new highlighted item  -  avoids rebuilding the DOM
     const updateHighlight = (prevIndex: number, nextIndex: number) => {
       const prev = dropdown.children[prevIndex] as HTMLElement | undefined;
       const next = dropdown.children[nextIndex] as HTMLElement | undefined;
@@ -630,19 +696,6 @@ export class InlineCellEditor<T> {
     });
 
     renderOptions('');
-
-    // Footer hint
-    const richFooter = document.createElement('div');
-    richFooter.textContent = 'Click or Enter to apply';
-    richFooter.style.padding = '4px 8px';
-    richFooter.style.borderTop = '1px solid var(--ogrid-border, rgba(0, 0, 0, 0.12))';
-    richFooter.style.fontSize = '11px';
-    richFooter.style.color = 'var(--ogrid-muted, #999)';
-    richFooter.style.textAlign = 'right';
-    richFooter.style.position = 'sticky';
-    richFooter.style.bottom = '0';
-    richFooter.style.background = 'var(--ogrid-bg, #fff)';
-    dropdown.appendChild(richFooter);
 
     setTimeout(() => input.focus(), 0);
 

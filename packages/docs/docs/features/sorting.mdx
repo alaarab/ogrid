@@ -10,17 +10,17 @@ import TabItem from '@theme/TabItem';
 
 # Sorting
 
-Add sortable columns to your grid with a single prop. Users click a column header to cycle through ascending, descending, and unsorted states. A sort indicator arrow shows the current direction.
-
-## Live Demo
+Click a column header to sort. Click again to reverse. Click a third time to clear. An arrow shows the current direction. That's the whole interaction — no configuration beyond `sortable: true`.
 
 <SortingDemo />
 
 :::tip Try it in your framework
-The demo above uses Radix UI for styling. To see this feature with your framework's design system (Fluent UI, Material UI, Vuetify, PrimeNG, etc.), click **"Open in online demo"** below the demo.
+The demo uses Radix UI styling. Your framework's design system (Fluent, Material, Vuetify, PrimeNG) will render the sort indicator in its own style.
 :::
 
-## Quick Example
+## Make a column sortable
+
+Add `sortable: true` to any column definition:
 
 <Tabs groupId="framework">
   <TabItem value="react" label="React" default>
@@ -54,11 +54,11 @@ function App() {
 ```
 
 :::tip Switching UI libraries
-The `OGrid` component has the same props across all React UI packages. To switch, just change the import:
+Same props across all React packages — just change the import:
 
 - **Radix** (lightweight, default): `from '@alaarab/ogrid-react-radix'`
-- **Fluent UI** (Microsoft 365 / SPFx): `from '@alaarab/ogrid-react-fluent'` — wrap in `<FluentProvider>`
-- **Material UI** (MUI v7): `from '@alaarab/ogrid-react-material'` — wrap in `<ThemeProvider>`
+- **Fluent UI** (Microsoft 365 / SPFx): `from '@alaarab/ogrid-react-fluent'`  -  wrap in `<FluentProvider>`
+- **Material UI** (MUI v7): `from '@alaarab/ogrid-react-material'`  -  wrap in `<ThemeProvider>`
 :::
 
   </TabItem>
@@ -95,7 +95,7 @@ export class GridComponent {
 ```
 
 :::tip Switching UI libraries
-Same component API across Angular packages. To switch, just change the import:
+Same API across Angular packages. Change the import:
 
 - **Radix (CDK)**: `from '@alaarab/ogrid-angular-radix'` *(default, lightweight)*
 - **Angular Material**: `from '@alaarab/ogrid-angular-material'`
@@ -138,10 +138,10 @@ const gridProps = {
 ```
 
 :::tip Switching UI libraries
-Same component API across Vue packages. To switch, just change the import:
+Same API across Vue packages. Change the import:
 
 - **Radix (Headless UI)**: `from '@alaarab/ogrid-vue-radix'` *(default, lightweight)*
-- **Vuetify**: `from '@alaarab/ogrid-vue-vuetify'` — wrap in `<v-app>` for theming
+- **Vuetify**: `from '@alaarab/ogrid-vue-vuetify'`  -  wrap in `<v-app>` for theming
 - **PrimeVue**: `from '@alaarab/ogrid-vue-primevue'`
 :::
 
@@ -174,18 +174,23 @@ const grid = new OGrid(document.getElementById('grid'), {
   </TabItem>
 </Tabs>
 
-## How It Works
+## Set a default sort
 
-Set `sortable: true` on any column definition to make it sortable. When a user clicks the column header, OGrid toggles the sort direction: unsorted, ascending, then descending.
+Use `defaultSortBy` and `defaultSortDirection` to pre-sort the grid on mount — useful when there's an obvious "right" order for your data, like newest-first for a log or alphabetical for a directory:
 
-OGrid supports both **uncontrolled** and **controlled** sorting:
+```tsx
+<OGrid
+  columns={columns}
+  data={employees}
+  getRowId={(item) => item.id}
+  defaultSortBy="name"
+  defaultSortDirection="asc"
+/>
+```
 
-- **Uncontrolled** -- the grid manages sort state internally. Use `defaultSortBy` and `defaultSortDirection` to set the initial sort.
-- **Controlled** -- you own the state. Pass `sort` and `onSortChange` to the grid.
+## Custom sort order
 
-### Custom Comparator
-
-For columns that need custom sort logic (e.g., sorting by a nested field or special ordering), provide a `compare` function on the column definition:
+By default, text columns sort alphabetically and numeric columns sort numerically. When that isn't right — priority levels, custom status orderings, anything domain-specific — provide a `compare` function:
 
 ```tsx
 const columns = [
@@ -193,33 +198,39 @@ const columns = [
     columnId: 'priority',
     name: 'Priority',
     sortable: true,
+    // "High" should sort before "Medium" which sorts before "Low"
     compare: (a, b) => {
       const order = { High: 0, Medium: 1, Low: 2 };
       return order[a.priority] - order[b.priority];
     },
   },
+  {
+    columnId: 'status',
+    name: 'Status',
+    sortable: true,
+    // Custom business logic: "In Progress" first, then "Open", then "Closed"
+    compare: (a, b) => {
+      const order = { 'In Progress': 0, Open: 1, Closed: 2 };
+      return (order[a.status] ?? 99) - (order[b.status] ?? 99);
+    },
+  },
 ];
 ```
 
-### Server-Side Sorting
+:::tip Pro tip
+Custom `compare` functions receive the full row objects — not just the cell values. That means you can sort by computed values, nested fields, or anything else you can derive from the row.
+:::
 
-When using a `dataSource`, the sort parameter is forwarded to `fetchPage()`. The grid does not sort the data itself -- your server handles it:
+## Keep sort state in your app
 
-```tsx
-const dataSource: IDataSource<Project> = {
-  fetchPage: async ({ sort, page, pageSize, filters }) => {
-    const res = await fetch(`/api/projects?sort=${sort?.field}&dir=${sort?.direction}&page=${page}`);
-    const json = await res.json();
-    return { items: json.data, totalCount: json.total };
-  },
-};
-```
-
-### Controlled Example
+If you need to sync sort state to the URL, read it from an API, or share it between components, use controlled mode:
 
 ```tsx
 function App() {
   const [sort, setSort] = useState({ field: 'name', direction: 'asc' as const });
+
+  // Persist to URL:
+  // useEffect(() => { setSearchParam('sort', sort.field); }, [sort]);
 
   return (
     <OGrid
@@ -233,18 +244,50 @@ function App() {
 }
 ```
 
-## Props
+When `sort` and `onSortChange` are both present, the grid is fully controlled — it never manages sort state internally.
+
+## Server-side sorting
+
+Sending sort state to your API is straightforward. The grid passes sort info to `fetchPage()` — your server does the actual ordering:
+
+```tsx
+const dataSource: IDataSource<Project> = {
+  fetchPage: async ({ sort, page, pageSize, filters }) => {
+    const params = new URLSearchParams({
+      page: String(page),
+      pageSize: String(pageSize),
+    });
+
+    // Wire sort directly to your query params or request body
+    if (sort) {
+      params.set('sortBy', sort.field);
+      params.set('sortDir', sort.direction);  // 'asc' | 'desc'
+    }
+
+    const res = await fetch(`/api/projects?${params}`);
+    const json = await res.json();
+    return { items: json.data, totalCount: json.total };
+  },
+};
+```
+
+:::tip Pro tip
+Server-side sorting disables client-side sort entirely — the grid just re-fetches when the user clicks a header. This pairs perfectly with large datasets where you never want all rows in the browser at once. See [Server-Side Data](./server-side-data) for the full setup.
+:::
+
+## Props reference
 
 | Prop | Type | Default | Description |
 |------|------|---------|-------------|
-| `sortable` | `boolean` | `false` | Set on `IColumnDef` to enable sorting for that column. |
-| `compare` | `(a: T, b: T) => number` | -- | Custom sort comparator on `IColumnDef`. |
-| `sort` | `{ field: string; direction: 'asc' \| 'desc' }` | -- | Controlled sort state on `OGrid`. |
-| `onSortChange` | `(sort: { field: string; direction: 'asc' \| 'desc' }) => void` | -- | Called when sort changes (controlled mode). |
-| `defaultSortBy` | `string` | -- | Initial sort column (uncontrolled mode). |
-| `defaultSortDirection` | `'asc' \| 'desc'` | `'asc'` | Initial sort direction (uncontrolled mode). |
+| `sortable` | `boolean` | `false` | Set on `IColumnDef`. Enables click-to-sort on that column header. |
+| `compare` | `(a: T, b: T) => number` | — | Custom sort comparator on `IColumnDef`. Receives full row objects. |
+| `sort` | `{ field: string; direction: 'asc' \| 'desc' }` | — | Controlled sort state on `OGrid`. |
+| `onSortChange` | `(sort) => void` | — | Called when the user changes the sort. Required for controlled mode. |
+| `defaultSortBy` | `string` | — | Initial sort column (uncontrolled only). |
+| `defaultSortDirection` | `'asc' \| 'desc'` | `'asc'` | Initial sort direction (uncontrolled only). |
 
-## Related
+## Next steps
 
-- [Filtering](./filtering) -- filter rows by column values
-- [Pagination](./pagination) -- paginate sorted results
+- [Filtering](./filtering) — filter rows before sorting
+- [Pagination](./pagination) — paginate sorted results
+- [Performance](./performance) — offload sort to a Web Worker for large datasets

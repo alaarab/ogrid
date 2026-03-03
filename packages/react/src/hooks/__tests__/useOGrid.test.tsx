@@ -259,7 +259,7 @@ describe('useOGrid', () => {
     expect(before.visibleColumns).toContain('id');
     expect(before.visibleColumns).toContain('name');
 
-    // Only change filters — visibility and sort should remain
+    // Only change filters  -  visibility and sort should remain
     act(() => {
       ref.current!.applyColumnState({ filters: { id: { type: 'text', value: '2' } } });
     });
@@ -388,7 +388,7 @@ describe('useOGrid', () => {
 
     expect(onFirstDataRendered).toHaveBeenCalledTimes(1);
 
-    // Re-render with different data — should NOT fire again
+    // Re-render with different data  -  should NOT fire again
     rerender({ d: [...data, { id: '4', name: 'Dave' }] });
     expect(onFirstDataRendered).toHaveBeenCalledTimes(1);
   });

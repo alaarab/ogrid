@@ -6,10 +6,10 @@
  * tools like list_grids / get_grid_state / send_grid_command are invoked.
  *
  * Protocol (used by bridge-client.ts in the browser):
- *   POST   /grids/connect               — register / heartbeat
- *   PUT    /grids/:id/state             — push current grid state
- *   GET    /grids/:id/commands          — poll for pending commands
- *   POST   /grids/:id/commands/:cmdId/result  — post command result
+ *   POST   /grids/connect                -  register / heartbeat
+ *   PUT    /grids/:id/state              -  push current grid state
+ *   GET    /grids/:id/commands           -  poll for pending commands
+ *   POST   /grids/:id/commands/:cmdId/result   -  post command result
  *
  * Internal (used by MCP tools via BridgeStore directly):
  *   bridgeStore.listGrids()
@@ -64,7 +64,7 @@ export interface GridCommand {
 }
 
 // ---------------------------------------------------------------------------
-// BridgeStore — in-process state, shared between HTTP handler and MCP tools
+// BridgeStore  -  in-process state, shared between HTTP handler and MCP tools
 // ---------------------------------------------------------------------------
 
 export class BridgeStore {
@@ -93,7 +93,7 @@ export class BridgeStore {
       selectedRowIndices: [],
       ...existing,
       ...partial,
-      // gridId must always be the canonical value — set last so partial can't override it
+      // gridId must always be the canonical value  -  set last so partial can't override it
       gridId,
     });
     if (!this.commandQueues.has(gridId)) {
@@ -257,7 +257,7 @@ export function startBridgeServer(
         // GET /grids/:id/commands
         if (req.method === 'GET' && parts[0] === 'grids' && parts[2] === 'commands') {
           const gridId = parts[1];
-          // Heartbeat — update lastSeen
+          // Heartbeat  -  update lastSeen
           const state = store.getState(gridId);
           if (state) store.upsertGrid(gridId, {});
           const cmds = store.popPendingCommands(gridId);

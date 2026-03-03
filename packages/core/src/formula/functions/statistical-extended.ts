@@ -22,7 +22,7 @@ function mean(nums: number[]): number {
 }
 
 export function registerStatisticalExtendedFunctions(registry: Map<string, IFormulaFunction>): void {
-  // STDEV / STDEV.S — sample standard deviation: sqrt(sum((x - mean)^2) / (n-1))
+  // STDEV / STDEV.S  -  sample standard deviation: sqrt(sum((x - mean)^2) / (n-1))
   const stdevImpl: IFormulaFunction = {
     minArgs: 1,
     maxArgs: -1,
@@ -39,7 +39,7 @@ export function registerStatisticalExtendedFunctions(registry: Map<string, IForm
   registry.set('STDEV', stdevImpl);
   registry.set('STDEV.S', stdevImpl);
 
-  // STDEVP / STDEV.P — population standard deviation: sqrt(sum((x - mean)^2) / n)
+  // STDEVP / STDEV.P  -  population standard deviation: sqrt(sum((x - mean)^2) / n)
   const stdevpImpl: IFormulaFunction = {
     minArgs: 1,
     maxArgs: -1,
@@ -56,7 +56,7 @@ export function registerStatisticalExtendedFunctions(registry: Map<string, IForm
   registry.set('STDEVP', stdevpImpl);
   registry.set('STDEV.P', stdevpImpl);
 
-  // VAR / VAR.S — sample variance
+  // VAR / VAR.S  -  sample variance
   const varImpl: IFormulaFunction = {
     minArgs: 1,
     maxArgs: -1,
@@ -73,7 +73,7 @@ export function registerStatisticalExtendedFunctions(registry: Map<string, IForm
   registry.set('VAR', varImpl);
   registry.set('VAR.S', varImpl);
 
-  // VARP / VAR.P — population variance
+  // VARP / VAR.P  -  population variance
   const varpImpl: IFormulaFunction = {
     minArgs: 1,
     maxArgs: -1,
@@ -90,7 +90,7 @@ export function registerStatisticalExtendedFunctions(registry: Map<string, IForm
   registry.set('VARP', varpImpl);
   registry.set('VAR.P', varpImpl);
 
-  // CORREL(array1, array2) — Pearson correlation coefficient
+  // CORREL(array1, array2)  -  Pearson correlation coefficient
   registry.set('CORREL', {
     minArgs: 2,
     maxArgs: 2,
@@ -127,7 +127,7 @@ export function registerStatisticalExtendedFunctions(registry: Map<string, IForm
     },
   });
 
-  // PERCENTILE / PERCENTILE.INC(array, k) — interpolated k-th percentile, k in [0,1]
+  // PERCENTILE / PERCENTILE.INC(array, k)  -  interpolated k-th percentile, k in [0,1]
   function percentileCalc(nums: number[], k: number): number | FormulaError {
     if (k < 0 || k > 1) return new FormulaError('#NUM!', 'PERCENTILE: k must be between 0 and 1');
     if (nums.length === 0) return new FormulaError('#NUM!', 'PERCENTILE: empty array');
@@ -158,7 +158,7 @@ export function registerStatisticalExtendedFunctions(registry: Map<string, IForm
   registry.set('PERCENTILE', percentileImpl);
   registry.set('PERCENTILE.INC', percentileImpl);
 
-  // QUARTILE / QUARTILE.INC(array, quart) — uses PERCENTILE internally (quart*0.25)
+  // QUARTILE / QUARTILE.INC(array, quart)  -  uses PERCENTILE internally (quart*0.25)
   const quartileImpl: IFormulaFunction = {
     minArgs: 2,
     maxArgs: 2,
@@ -182,7 +182,7 @@ export function registerStatisticalExtendedFunctions(registry: Map<string, IForm
   registry.set('QUARTILE', quartileImpl);
   registry.set('QUARTILE.INC', quartileImpl);
 
-  // MODE / MODE.SNGL — most frequent value (first one if tie)
+  // MODE / MODE.SNGL  -  most frequent value (first one if tie)
   const modeImpl: IFormulaFunction = {
     minArgs: 1,
     maxArgs: -1,
@@ -214,7 +214,7 @@ export function registerStatisticalExtendedFunctions(registry: Map<string, IForm
   registry.set('MODE', modeImpl);
   registry.set('MODE.SNGL', modeImpl);
 
-  // GEOMEAN — geometric mean: exp(sum(ln(x)) / n)
+  // GEOMEAN  -  geometric mean: exp(sum(ln(x)) / n)
   registry.set('GEOMEAN', {
     minArgs: 1,
     maxArgs: -1,
@@ -232,7 +232,7 @@ export function registerStatisticalExtendedFunctions(registry: Map<string, IForm
     },
   });
 
-  // HARMEAN — harmonic mean: n / sum(1/x)
+  // HARMEAN  -  harmonic mean: n / sum(1/x)
   registry.set('HARMEAN', {
     minArgs: 1,
     maxArgs: -1,

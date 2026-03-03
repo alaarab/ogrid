@@ -14,11 +14,15 @@ export interface IColumnFilterDef {
   yearsCount?: number;
 }
 
+export type DateFormat = 'MM/DD/YYYY' | 'DD/MM/YYYY' | 'YYYY-MM-DD' | string;
+
 export interface IColumnMeta {
   columnId: string;
   name: string;
   /** Column type shorthand. Affects alignment, default editor, filter type, sorting, and display formatting. */
   type?: 'text' | 'numeric' | 'date' | 'boolean';
+  /** Display format for date columns. Overrides the grid-level defaultDateFormat. Supported: 'MM/DD/YYYY', 'DD/MM/YYYY', 'YYYY-MM-DD', or a custom pattern. */
+  dateFormat?: DateFormat;
   sortable?: boolean;
   /** Omit for not filterable; set to IColumnFilterDef for filterable. */
   filterable?: IColumnFilterDef;
@@ -66,7 +70,7 @@ export interface IColumnDef<T = unknown> extends IColumnMeta {
   /** Whether the cell is editable (per-column or per-row). */
   editable?: boolean | ((item: T) => boolean);
   /** Built-in editor type or framework-specific custom editor (e.g. React component).
-   *  Core utilities never inspect this value — framework packages narrow the type. */
+   *  Core utilities never inspect this value  -  framework packages narrow the type. */
   cellEditor?: unknown;
   /** When true, custom cell editor is rendered in a popover/popper instead of inline. */
   cellEditorPopup?: boolean;
@@ -102,6 +106,17 @@ export interface CellEditorParams {
   values?: unknown[];
   /** Format a value for display in rich select editor. */
   formatValue?: (value: unknown) => string;
+  /**
+   * Date editor display/input format. Supported: 'MM/DD/YYYY', 'DD/MM/YYYY', 'YYYY-MM-DD'.
+   * Defaults to 'YYYY-MM-DD'. Only used when editorType is 'date' or column type is 'date'.
+   */
+  dateFormat?: DateFormat;
+  /**
+   * Type of date editor widget to render.
+   * - 'text': plain text input with custom format parsing (default, Excel-style)
+   * - 'native': browser native <input type="date"> (always YYYY-MM-DD input)
+   */
+  editorType?: 'text' | 'native';
 }
 
 /** Column group for multi-row header (has children, no columnId for data). */

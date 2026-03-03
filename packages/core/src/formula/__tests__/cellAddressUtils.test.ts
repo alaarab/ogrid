@@ -194,27 +194,27 @@ describe('cellAddressUtils', () => {
   // adjustFormulaReferences
   // ---------------------------------------------------------------------------
   describe('adjustFormulaReferences', () => {
-    it('adjusts relative row references: "=A1+B1" with rowDelta=1 → "=A2+B2"', () => {
+    it('adjusts relative row references: "=A1+B1" with rowDelta=1  to  "=A2+B2"', () => {
       expect(adjustFormulaReferences('=A1+B1', 0, 1)).toBe('=A2+B2');
     });
 
-    it('adjusts relative column reference: "=A1" with colDelta=1 → "=B1"', () => {
+    it('adjusts relative column reference: "=A1" with colDelta=1  to  "=B1"', () => {
       expect(adjustFormulaReferences('=A1', 1, 0)).toBe('=B1');
     });
 
-    it('preserves absolute row ($): "=A$1" with rowDelta=1 → "=A$1"', () => {
+    it('preserves absolute row ($): "=A$1" with rowDelta=1  to  "=A$1"', () => {
       expect(adjustFormulaReferences('=A$1', 0, 1)).toBe('=A$1');
     });
 
-    it('preserves absolute col ($): "=$A1" with rowDelta=1 → "=$A2"', () => {
+    it('preserves absolute col ($): "=$A1" with rowDelta=1  to  "=$A2"', () => {
       expect(adjustFormulaReferences('=$A1', 0, 1)).toBe('=$A2');
     });
 
-    it('preserves fully absolute ($A$1): "=$A$1" with any delta → "=$A$1"', () => {
+    it('preserves fully absolute ($A$1): "=$A$1" with any delta  to  "=$A$1"', () => {
       expect(adjustFormulaReferences('=$A$1', 3, 5)).toBe('=$A$1');
     });
 
-    it('handles mixed references: "=$A1+B$2" with rowDelta=1 → "=$A2+B$2"', () => {
+    it('handles mixed references: "=$A1+B$2" with rowDelta=1  to  "=$A2+B$2"', () => {
       expect(adjustFormulaReferences('=$A1+B$2', 0, 1)).toBe('=$A2+B$2');
     });
 
@@ -226,11 +226,11 @@ describe('cellAddressUtils', () => {
       expect(adjustFormulaReferences('=A1', -1, 0)).toContain('#REF!');
     });
 
-    it('works with multi-letter columns: "=AA10" with colDelta=1 → "=AB10"', () => {
+    it('works with multi-letter columns: "=AA10" with colDelta=1  to  "=AB10"', () => {
       expect(adjustFormulaReferences('=AA10', 1, 0)).toBe('=AB10');
     });
 
-    it('handles ranges: "=SUM(A1:A5)" with rowDelta=1 → "=SUM(A2:A6)"', () => {
+    it('handles ranges: "=SUM(A1:A5)" with rowDelta=1  to  "=SUM(A2:A6)"', () => {
       expect(adjustFormulaReferences('=SUM(A1:A5)', 0, 1)).toBe('=SUM(A2:A6)');
     });
 

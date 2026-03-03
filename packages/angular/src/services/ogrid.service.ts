@@ -201,7 +201,7 @@ export class OGridService<T> {
 
   // --- Formula engine ---
   private readonly formulaService = new FormulaEngineService<T>();
-  /** Monotonic counter incremented on formula recalculation — drives cache invalidation. */
+  /** Monotonic counter incremented on formula recalculation  -  drives cache invalidation. */
   readonly formulaVersion = signal(0);
 
   // Stable formula method references for dataGridProps (avoid per-recompute arrow functions)
@@ -307,7 +307,7 @@ export class OGridService<T> {
     return { items: paged, totalCount: total };
   });
 
-  /** Resolved client items — sync or async depending on workerSort. */
+  /** Resolved client items  -  sync or async depending on workerSort. */
   readonly resolvedClientItems = computed(() => {
     // Sync path
     const syncResult = this.clientItemsAndTotal();
@@ -578,7 +578,7 @@ export class OGridService<T> {
       }
     });
 
-    // Worker sort async effect — runs processClientSideDataAsync when workerSort is on
+    // Worker sort async effect  -  runs processClientSideDataAsync when workerSort is on
     effect((onCleanup) => {
       if (!this.isClientSide() || !this.workerSort()) return;
 
@@ -748,7 +748,7 @@ export class OGridService<T> {
       this.formulaService.setData(items, cols);
     });
 
-    // Cleanup on destroy — abort in-flight requests and reset callback signals
+    // Cleanup on destroy  -  abort in-flight requests and reset callback signals
     this.destroyRef.onDestroy(() => {
       this.fetchAbortController?.abort();
       this.filterAbortController?.abort();

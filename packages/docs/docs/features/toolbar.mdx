@@ -15,13 +15,13 @@ import { LayoutDiagram } from '@site/src/components/LayoutDiagram';
 
 # Toolbar & Layout
 
-OGrid wraps your grid in a **single bordered container** with three sections: a toolbar strip, the grid area, and a footer. Every section is optional — the container adapts to what you enable.
+OGrid wraps your grid in a **single bordered container** with three sections: a toolbar strip, the grid area, and a footer. Every section is optional  -  the container adapts to what you enable.
 
 ## Layout Anatomy
 
 <LayoutDiagram />
 
-Every combination is valid — you can use just the grid, add a toolbar, add pagination, enable the sidebar, or use all of them together. The bordered container handles spacing and borders automatically.
+Every combination is valid  -  you can use just the grid, add a toolbar, add pagination, enable the sidebar, or use all of them together. The bordered container handles spacing and borders automatically.
 
 ## Default Layout
 
@@ -52,8 +52,8 @@ import { OGrid } from '@alaarab/ogrid-react-radix';
 The `OGrid` component has the same props across all React UI packages. To switch, just change the import:
 
 - **Radix** (lightweight, default): `from '@alaarab/ogrid-react-radix'`
-- **Fluent UI** (Microsoft 365 / SPFx): `from '@alaarab/ogrid-react-fluent'` — wrap in `<FluentProvider>`
-- **Material UI** (MUI v7): `from '@alaarab/ogrid-react-material'` — wrap in `<ThemeProvider>`
+- **Fluent UI** (Microsoft 365 / SPFx): `from '@alaarab/ogrid-react-fluent'`  -  wrap in `<FluentProvider>`
+- **Material UI** (MUI v7): `from '@alaarab/ogrid-react-material'`  -  wrap in `<ThemeProvider>`
 :::
 
   </TabItem>
@@ -86,7 +86,7 @@ Same component API across Angular packages. To switch, just change the import:
 - **Angular Material**: `from '@alaarab/ogrid-angular-material'`
 - **PrimeNG**: `from '@alaarab/ogrid-angular-primeng'`
 
-All components are standalone — no NgModule required.
+All components are standalone  -  no NgModule required.
 :::
 
   </TabItem>
@@ -114,7 +114,7 @@ const gridProps = {
 Same component API across Vue packages. To switch, just change the import:
 
 - **Radix (Headless UI)**: `from '@alaarab/ogrid-vue-radix'` *(default, lightweight)*
-- **Vuetify**: `from '@alaarab/ogrid-vue-vuetify'` — wrap in `<v-app>` for theming
+- **Vuetify**: `from '@alaarab/ogrid-vue-vuetify'`  -  wrap in `<v-app>` for theming
 - **PrimeVue**: `from '@alaarab/ogrid-vue-primevue'`
 :::
 
@@ -193,7 +193,7 @@ The `toolbarBelow` prop renders a **secondary row** below the primary toolbar st
 ```
 
 :::tip
-The secondary toolbar row shares the same background and border styling as the primary toolbar. It only renders when `toolbarBelow` is provided — no empty space when omitted.
+The secondary toolbar row shares the same background and border styling as the primary toolbar. It only renders when `toolbarBelow` is provided  -  no empty space when omitted.
 :::
 
 ## Column Chooser Placement
@@ -204,7 +204,7 @@ The `columnChooser` prop controls where the column visibility control appears:
 |-------|----------|
 | `true` or `'toolbar'` | Column chooser button in the toolbar strip (default) |
 | `'sidebar'` | Column chooser moves to the sidebar's Columns panel |
-| `false` | Hidden entirely — columns are locked |
+| `false` | Hidden entirely  -  columns are locked |
 
 ### Sidebar Mode
 
@@ -242,7 +242,7 @@ Set `columnChooser={false}` when you want to lock the visible columns and preven
 
 ## Full Layout
 
-Here is every layout feature enabled at once — toolbar with custom buttons, column chooser, sidebar, cell selection with status bar aggregations, and pagination:
+Here is every layout feature enabled at once  -  toolbar with custom buttons, column chooser, sidebar, cell selection with status bar aggregations, and pagination:
 
 <ToolbarFullDemo />
 

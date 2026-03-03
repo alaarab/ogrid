@@ -211,7 +211,7 @@ describe('useOGrid', () => {
       expect(before.visibleColumns).toContain('id');
       expect(before.visibleColumns).toContain('name');
 
-      // Only change filters — visibility and sort should remain
+      // Only change filters  -  visibility and sort should remain
       api.value.applyColumnState({ filters: { id: { type: 'text', value: '2' } } });
 
       const after = api.value.getColumnState();
@@ -1417,7 +1417,7 @@ describe('useOGrid', () => {
 
       const { dataGridProps } = useOGrid(props);
 
-      // Give async effect time to resolve (Worker not available in jsdom — falls back to sync)
+      // Give async effect time to resolve (Worker not available in jsdom  -  falls back to sync)
       await new Promise(r => setTimeout(r, 100));
 
       // Either sync or async path should return data

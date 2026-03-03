@@ -1,7 +1,7 @@
 ---
 sidebar_position: 2
 title: Filtering
-description: Column-level filtering with text, multi-select, and people filter types.
+description: Column-level filtering with text, multi-select, date, and people filter types.
 ---
 
 import FilteringDemo from '@site/src/components/demos/FilteringDemo';
@@ -10,17 +10,17 @@ import TabItem from '@theme/TabItem';
 
 # Filtering
 
-OGrid supports four built-in filter types -- **text**, **multiSelect**, **people**, and **date** -- configured per column. Filters appear as popovers triggered from column headers.
-
-## Live Demo
+You have 3,000 support tickets and need to find the ones assigned to Alice that were opened last week. Click the filter icon on "Assignee", pick Alice. Click the filter on "Created Date", set the range. Done — two clicks, no code.
 
 <FilteringDemo />
 
 :::tip Framework-Specific Styling
-The live demo above shows **React Radix UI** styling (lightweight default). To see how filter popovers look in your framework's design system, click the framework buttons above the demo to open online demo. Each framework renders filter UI with its native components (dropdowns, inputs, date pickers, etc.), so the styling matches your design system.
+The demo uses React Radix styling. Each framework renders filter UI with its native components — dropdowns, date pickers, and inputs that match your design system.
 :::
 
-## Quick Example
+## Add filters to any column
+
+Set `filterable` on a column definition. The `type` field picks the filter UI:
 
 <Tabs groupId="framework">
   <TabItem value="react" label="React" default>
@@ -65,11 +65,11 @@ function App() {
 ```
 
 :::tip Switching UI libraries
-The `OGrid` component has the same props across all React UI packages. To switch, just change the import:
+Same props across all React packages — just change the import:
 
 - **Radix** (lightweight, default): `from '@alaarab/ogrid-react-radix'`
-- **Fluent UI** (Microsoft 365 / SPFx): `from '@alaarab/ogrid-react-fluent'` — wrap in `<FluentProvider>`
-- **Material UI** (MUI v7): `from '@alaarab/ogrid-react-material'` — wrap in `<ThemeProvider>`
+- **Fluent UI** (Microsoft 365 / SPFx): `from '@alaarab/ogrid-react-fluent'`  -  wrap in `<FluentProvider>`
+- **Material UI** (MUI v7): `from '@alaarab/ogrid-react-material'`  -  wrap in `<ThemeProvider>`
 :::
 
   </TabItem>
@@ -109,7 +109,7 @@ export class GridComponent {
 ```
 
 :::tip Switching UI libraries
-Same component API across Angular packages. To switch, just change the import:
+Same API across Angular packages. Change the import:
 
 - **Radix (CDK)**: `from '@alaarab/ogrid-angular-radix'` *(default, lightweight)*
 - **Angular Material**: `from '@alaarab/ogrid-angular-material'`
@@ -155,10 +155,10 @@ const gridProps = {
 ```
 
 :::tip Switching UI libraries
-Same component API across Vue packages. To switch, just change the import:
+Same API across Vue packages. Change the import:
 
 - **Radix (Headless UI)**: `from '@alaarab/ogrid-vue-radix'` *(default, lightweight)*
-- **Vuetify**: `from '@alaarab/ogrid-vue-vuetify'` — wrap in `<v-app>` for theming
+- **Vuetify**: `from '@alaarab/ogrid-vue-vuetify'`  -  wrap in `<v-app>` for theming
 - **PrimeVue**: `from '@alaarab/ogrid-vue-primevue'`
 :::
 
@@ -171,11 +171,7 @@ import '@alaarab/ogrid-js/styles';
 
 const grid = new OGrid(document.getElementById('grid'), {
   columns: [
-    {
-      columnId: 'name',
-      name: 'Name',
-      filterable: { type: 'text' },
-    },
+    { columnId: 'name', name: 'Name', filterable: { type: 'text' } },
     {
       columnId: 'department',
       name: 'Department',
@@ -202,21 +198,21 @@ const grid = new OGrid(document.getElementById('grid'), {
   </TabItem>
 </Tabs>
 
-## How It Works
+## Filter types
 
-Set the `filterable` property on a column definition to an `IColumnFilterDef` object. The `type` field determines the filter UI:
+### Text filter
 
-### Text Filter
-
-A simple text input. Filters rows where the column value contains the search string (case-insensitive).
+A case-insensitive substring search. Good for names, descriptions, anything freeform:
 
 ```tsx
 { columnId: 'name', name: 'Name', filterable: { type: 'text' } }
 ```
 
-### Multi-Select Filter
+Type "john" and it matches "John Smith", "Johnny", and "Johnathan".
 
-A checkbox list with **Select All** and **Clear All** buttons. Users pick one or more values to include.
+### Multi-select filter
+
+A checkbox list — users pick one or more values, the grid shows only matching rows. Has built-in "Select All" and "Clear All" buttons.
 
 ```tsx
 {
@@ -225,40 +221,24 @@ A checkbox list with **Select All** and **Clear All** buttons. Users pick one or
   filterable: {
     type: 'multiSelect',
     filterField: 'status',       // field to filter on (defaults to columnId)
-    optionsSource: 'static',     // 'static' | 'api' | 'years'
+    optionsSource: 'static',     // where options come from
     options: ['Active', 'Draft', 'Archived'],
   },
 }
 ```
 
-**Options sources:**
+**Where do the options come from?**
 
-| `optionsSource` | Behavior |
+| `optionsSource` | How it works |
 |-----------------|----------|
-| `'static'` | Uses the `options` array you provide. |
-| `'api'` | Calls `dataSource.fetchFilterOptions(field)` to load options dynamically. |
-| `'years'` | Auto-generates a year list (current year down, configurable via `yearsCount`). |
-| _(omitted)_ | Client-side: unique values extracted from the data array. Server-side: uses `'api'`. |
+| _(omitted)_ | Client-side: unique values extracted from your data. Server-side: calls your API. |
+| `'static'` | Uses the `options` array you provide — great for known enums. |
+| `'api'` | Calls `dataSource.fetchFilterOptions(field)` — for dynamic option lists. |
+| `'years'` | Auto-generates a year list from the current year down. |
 
-### People Filter
+### Date filter
 
-A search-as-you-type input that finds users via `dataSource.searchPeople(query)`. Displays `UserLike` objects with name, email, and photo.
-
-```tsx
-{
-  columnId: 'assignee',
-  name: 'Assignee',
-  filterable: { type: 'people' },
-}
-```
-
-:::info
-The people filter requires a `dataSource` with a `searchPeople` method. It is designed for directory lookups (e.g., Microsoft Graph, LDAP).
-:::
-
-### Date Filter
-
-A date range picker with **From** and **To** date inputs. Filters rows where the column value falls within the specified range.
+A date range picker with "From" and "To" inputs. Shows only rows where the column value falls within the range:
 
 ```tsx
 {
@@ -270,13 +250,28 @@ A date range picker with **From** and **To** date inputs. Filters rows where the
 ```
 
 :::tip
-Columns with `type: 'date'` automatically get date formatting, chronological sorting, and a native date input editor — no additional configuration needed.
+A column with `type: 'date'` automatically gets date formatting, chronological sorting, and a native date input editor — you don't need to configure those separately.
 :::
 
-### Controlled vs. Uncontrolled
+### People filter
 
-- **Uncontrolled** -- the grid manages filter state internally. Filters reset when the component unmounts.
-- **Controlled** -- pass `filters` and `onFiltersChange` to own the filter state externally (e.g., for URL sync or persistence).
+A search-as-you-type lookup that hits your directory API. Designed for Microsoft Graph, LDAP, or any endpoint that returns users:
+
+```tsx
+{
+  columnId: 'assignee',
+  name: 'Assignee',
+  filterable: { type: 'people' },
+}
+```
+
+:::info
+The people filter requires a `dataSource` with a `searchPeople` method that returns `UserLike` objects (name, email, optional photo).
+:::
+
+## Keeping filter state outside the grid
+
+By default the grid owns its filter state — filters reset when the component unmounts. To persist them (URL sync, page reload survival), pass `filters` and `onFiltersChange`:
 
 ```tsx
 function App() {
@@ -297,43 +292,64 @@ function App() {
 }
 ```
 
-### Server-Side Filtering
+Now you can serialize `filters` to the URL, localStorage, or a server — and the grid will restore the exact filter state when the user comes back.
 
-When using a `dataSource`, filter values are passed to `fetchPage()` in the `filters` param. The grid does not filter client-side.
+## Server-side filtering
+
+When you're using a `dataSource`, the grid hands off filter values to your `fetchPage()` function. You decide what to do with them — query params, request body, whatever your API expects:
 
 ```tsx
 const dataSource: IDataSource<Task> = {
   fetchPage: async ({ filters, page, pageSize, sort }) => {
-    const params = new URLSearchParams({ page: String(page), pageSize: String(pageSize) });
-    if (filters.status?.type === 'multiSelect') params.set('status', filters.status.value.join(','));
+    const params = new URLSearchParams({
+      page: String(page),
+      pageSize: String(pageSize),
+    });
+
+    if (filters.status?.type === 'multiSelect') {
+      params.set('status', filters.status.value.join(','));
+    }
+    if (filters.name?.type === 'text') {
+      params.set('search', filters.name.value);
+    }
+
     const res = await fetch(`/api/tasks?${params}`);
-    return res.json();
+    return res.json(); // { items: Task[], totalCount: number }
   },
+
+  // For 'api' option source on multiSelect filters:
   fetchFilterOptions: async (field) => {
     const res = await fetch(`/api/tasks/filter-options/${field}`);
-    return res.json();
+    return res.json(); // string[]
   },
+
+  // For people filters:
   searchPeople: async (query) => {
     const res = await fetch(`/api/users/search?q=${query}`);
-    return res.json();
+    return res.json(); // UserLike[]
   },
 };
 ```
 
-## Props
+:::tip Pro tip
+Server-side filtering pairs naturally with [pagination](./pagination). The `totalCount` in your `fetchPage` response tells the grid how many pages there are — so pagination stays accurate even when filters narrow the result set.
+:::
+
+## Props reference
 
 | Prop | Type | Default | Description |
 |------|------|---------|-------------|
-| `filterable` | `IColumnFilterDef` | -- | Set on `IColumnDef`. Defines filter type and options. |
-| `filterable.type` | `'text' \| 'multiSelect' \| 'people' \| 'date'` | -- | Filter UI type. |
-| `filterable.filterField` | `string` | `columnId` | Field name used in the filter model. |
+| `filterable` | `IColumnFilterDef` | — | Set on `IColumnDef`. Enables the filter icon and defines the filter UI. |
+| `filterable.type` | `'text' \| 'multiSelect' \| 'people' \| 'date'` | — | Which filter UI to show. |
+| `filterable.filterField` | `string` | `columnId` | Data field to filter on (useful when column key differs from data key). |
 | `filterable.optionsSource` | `'api' \| 'static' \| 'years'` | auto | Where multi-select options come from. |
-| `filterable.options` | `string[]` | -- | Static options for multi-select. |
-| `filterable.yearsCount` | `number` | -- | Number of years to generate for `'years'` source. |
-| `filters` | `IFilters` | -- | Controlled filter state on `OGrid`. |
-| `onFiltersChange` | `(filters: IFilters) => void` | -- | Called when filters change (controlled mode). |
+| `filterable.options` | `string[]` | — | Static option list for `'static'` source. |
+| `filterable.yearsCount` | `number` | — | How many years to generate for `'years'` source. |
+| `filters` | `IFilters` | — | Controlled filter state (pass to own state externally). |
+| `onFiltersChange` | `(filters: IFilters) => void` | — | Called whenever filters change. |
 
-## Related
+## Next steps
 
-- [Sorting](./sorting) -- sort filtered results
-- [Pagination](./pagination) -- paginate filtered results
+- [Sorting](./sorting) — sort filtered results by any column
+- [Pagination](./pagination) — paginate filtered results server-side or client-side
+- [Server-Side Data](./server-side-data) — move all filtering, sorting, and paging to the server

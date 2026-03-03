@@ -1,6 +1,6 @@
 # OGrid Architecture
 
-High-level overview of the OGrid monorepo — 21 packages, headless core, 4 frameworks.
+High-level overview of the OGrid monorepo  -  21 packages, headless core, 4 frameworks.
 
 - **Monorepo:** npm workspaces + Turborepo
 - **Build:** TypeScript 5.7 strict, ESM-only, tree-shakeable
@@ -11,18 +11,18 @@ High-level overview of the OGrid monorepo — 21 packages, headless core, 4 fram
 
 ```
 packages/
-  core/                    → @alaarab/ogrid-core (zero deps)
-  react/                   → @alaarab/ogrid-react (hooks + shared logic)
-  react-{radix,fluent,material}/  → UI implementations (3 packages)
-  angular/                 → @alaarab/ogrid-angular (services + signals)
-  angular-{material,primeng,radix}/  → UI implementations (3 packages)
-  vue/                     → @alaarab/ogrid-vue (composables)
-  vue-{vuetify,primevue,radix}/  → UI implementations (3 packages)
-  js/                      → @alaarab/ogrid-js (vanilla JS, class-based)
-  inputs/                  → @alaarab/ogrid-inputs (headless utils: calendar, rating, color, slider, tags)
-  {react,angular,vue,js}-inputs/  → Premium editors (5 total per framework)
-  docs/                    → Docusaurus site + demos
-  examples/                → Vite example apps
+  core/                     to  @alaarab/ogrid-core (zero deps)
+  react/                    to  @alaarab/ogrid-react (hooks + shared logic)
+  react-{radix,fluent,material}/   to  UI implementations (3 packages)
+  angular/                  to  @alaarab/ogrid-angular (services + signals)
+  angular-{material,primeng,radix}/   to  UI implementations (3 packages)
+  vue/                      to  @alaarab/ogrid-vue (composables)
+  vue-{vuetify,primevue,radix}/   to  UI implementations (3 packages)
+  js/                       to  @alaarab/ogrid-js (vanilla JS, class-based)
+  inputs/                   to  @alaarab/ogrid-inputs (headless utils: calendar, rating, color, slider, tags)
+  {react,angular,vue,js}-inputs/   to  Premium editors (5 total per framework)
+  docs/                     to  Docusaurus site + demos
+  examples/                 to  Vite example apps
 ```
 
 ## Core Concepts
@@ -40,17 +40,17 @@ packages/
 - Vue: composables + render functions (NO SFCs)
 - JS: class-based state + DOM manipulation
 
-**UI packages** are the thinnest layer — just visual mapping from framework state to framework components.
+**UI packages** are the thinnest layer  -  just visual mapping from framework state to framework components.
 
 ### Premium Inputs (v2.5.5+)
 
 5 optional cell editors (`cellEditorPopup: true`) available across all 4 frameworks:
 
-1. **DatePickerEditor** — Calendar popup with month nav, text input, Today/Clear buttons
-2. **RatingEditor** — Star rating (1-5, configurable `maxStars`, `allowHalf` support)
-3. **ColorPickerEditor** — 5×4 swatch grid + hex input + contrast detection
-4. **SliderEditor** — Custom drag slider with step snapping + number input sync
-5. **TagsEditor** — Multi-chip tags with suggestions dropdown + search
+1. **DatePickerEditor**  -  Calendar popup with month nav, text input, Today/Clear buttons
+2. **RatingEditor**  -  Star rating (1-5, configurable `maxStars`, `allowHalf` support)
+3. **ColorPickerEditor**  -  5×4 swatch grid + hex input + contrast detection
+4. **SliderEditor**  -  Custom drag slider with step snapping + number input sync
+5. **TagsEditor**  -  Multi-chip tags with suggestions dropdown + search
 
 All editors:
 - Share headless utilities in `@alaarab/ogrid-inputs` (zero deps)
@@ -75,7 +75,7 @@ Custom headless engine in `packages/core/src/formula/` with 93 functions:
 - Info (6): `ISNUMBER`, `ISTEXT`, `ISBLANK`, `ISERROR`, `ISNA`, `TYPEOF`
 - Lookup (5): `VLOOKUP`, `INDEX`, `MATCH`, `XLOOKUP`, `FILTER`
 
-**Architecture:** Tokenizer → Parser → Evaluator with dependency graph (cycle detection). Tree-shakeable via `formulas` prop (only compile used functions).
+**Architecture:** Tokenizer  to  Parser  to  Evaluator with dependency graph (cycle detection). Tree-shakeable via `formulas` prop (only compile used functions).
 
 **Features:** Named ranges, formula auditing (BFS precedents/dependents), cross-sheet references, cell reference formatting, clipboard/fill handle/CSV export awareness.
 
@@ -119,19 +119,19 @@ npm run docs:build              # Build static docs site
 ### File Structure per Package
 ```
 src/
-  components/        → Reusable headless components
-  hooks/             → React hooks (React package only)
-  services/          → Angular services (Angular package only)
-  composables/       → Vue composables (Vue package only)
-  types/             → TypeScript interfaces
-  utils/             → Utility functions
-  workers/           → Web workers (core only)
-  __tests__/         → Tests co-located with code
-tsconfig.json        → Dev config (includes tests)
-tsconfig.build.json  → Build config (excludes tests)
-tsup.config.ts       → ESM + types bundling
-jest.config.js       → Jest setup with moduleNameMapper for deps
-package.json         → ESM, no CJS, tree-shakeable, peer deps
+  components/         to  Reusable headless components
+  hooks/              to  React hooks (React package only)
+  services/           to  Angular services (Angular package only)
+  composables/        to  Vue composables (Vue package only)
+  types/              to  TypeScript interfaces
+  utils/              to  Utility functions
+  workers/            to  Web workers (core only)
+  __tests__/          to  Tests co-located with code
+tsconfig.json         to  Dev config (includes tests)
+tsconfig.build.json   to  Build config (excludes tests)
+tsup.config.ts        to  ESM + types bundling
+jest.config.js        to  Jest setup with moduleNameMapper for deps
+package.json          to  ESM, no CJS, tree-shakeable, peer deps
 ```
 
 ## Architecture Decisions
@@ -144,7 +144,7 @@ package.json         → ESM, no CJS, tree-shakeable, peer deps
 
 ### Why Three UI Kits per Framework?
 - Users pick their design system (Radix, Material, Fluent, Vuetify, PrimeNG, etc.)
-- Same API, different look → easy migration
+- Same API, different look  to  easy migration
 - Proves the headless architecture works
 - Encourages community contributions for more UI kits
 
@@ -155,7 +155,7 @@ package.json         → ESM, no CJS, tree-shakeable, peer deps
 - Inline styles + CSS variables = consistent theming without CSS files
 
 ### Why Inline Styles in Input Packages?
-- `sideEffects: false` — no CSS files to import
+- `sideEffects: false`  -  no CSS files to import
 - Smaller footprint for optional packages
 - CSS variables for theming (light/dark mode aware)
 - Matches DatePicker pattern (battle-tested)

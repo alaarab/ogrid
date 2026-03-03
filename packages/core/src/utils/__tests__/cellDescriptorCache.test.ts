@@ -4,7 +4,7 @@ import {
   type CellRenderDescriptor,
 } from '../dataGridViewModel';
 
-// Minimal input factory — only fields used by computeVersion
+// Minimal input factory  -  only fields used by computeVersion
 function makeInput(overrides: Partial<CellRenderDescriptorInput<{ id: string }>> = {}): CellRenderDescriptorInput<{ id: string }> {
   return {
     editingCell: null,
@@ -126,7 +126,7 @@ describe('CellDescriptorCache', () => {
     });
   });
 
-  describe('get — cache hit and miss', () => {
+  describe('get  -  cache hit and miss', () => {
     it('calls compute on first access (cache miss)', () => {
       const cache = new CellDescriptorCache();
       const version = 'v1';

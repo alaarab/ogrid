@@ -5,7 +5,7 @@ import { people, getRowId, toolbarColumns } from './demoData';
 
 export default function ToolbarSidebarDemo() {
   return (
-    <LiveDemo height={480} title="Sidebar mode — column chooser moves to the sidebar Columns panel">
+    <LiveDemo height={480} title="Sidebar mode  -  column chooser moves to the sidebar Columns panel">
       <OGrid
         columns={toolbarColumns}
         data={people}

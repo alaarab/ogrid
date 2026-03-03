@@ -23,7 +23,7 @@ import { DataGridLayoutHelper } from './datagrid-layout.service';
 import { DataGridEditingHelper } from './datagrid-editing.service';
 import { DataGridInteractionHelper } from './datagrid-interaction.service';
 
-// Alias for brevity — Angular's IColumnDef extends Core's, safe cast at framework boundary
+// Alias for brevity  -  Angular's IColumnDef extends Core's, safe cast at framework boundary
 type IColumnDef<T> = IAngularColumnDef<T>;
 
 // Stable no-op functions to avoid allocating new closures on every getState() call
@@ -226,10 +226,10 @@ export class DataGridStateService<T> {
     return p ? p.cellSelection !== false : true;
   });
 
-  // Narrow signal extractors — prevent full props() dependency in effects/computed
+  // Narrow signal extractors  -  prevent full props() dependency in effects/computed
   private readonly originalOnCellValueChanged = computed(() => this.props()?.onCellValueChanged);
 
-  // Undo/redo wrapped callback — only recomputes when the actual callback reference changes
+  // Undo/redo wrapped callback  -  only recomputes when the actual callback reference changes
   private readonly wrappedOnCellValueChanged = computed(() => {
     const original = this.originalOnCellValueChanged();
     if (!original) return undefined;
@@ -349,7 +349,7 @@ export class DataGridStateService<T> {
       });
     });
 
-    // Cleanup on destroy — cancel pending work and release references
+    // Cleanup on destroy  -  cancel pending work and release references
     this.destroyRef.onDestroy(() => {
       this.interactionHelper.destroy();
       this.layoutHelper.destroy();

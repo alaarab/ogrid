@@ -84,7 +84,7 @@ describe('ColorPickerEditor', () => {
       expect(input.value).toBe('');
     });
 
-    it('invalid hex value falls back — input shows raw value without #', () => {
+    it('invalid hex value falls back  -  input shows raw value without #', () => {
       // When value is not a valid hex, normalizeHex returns null
       // and initialColor = String(value), so inputText = value without '#'
       renderEditor({ value: 'not-a-color' });

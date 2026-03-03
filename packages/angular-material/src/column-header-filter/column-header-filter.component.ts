@@ -210,7 +210,7 @@ import { BaseColumnHeaderFilterComponent } from '@alaarab/ogrid-angular';
       opacity: 0.6; transition: opacity 0.15s;
     }
     .ogrid-header-filter:hover .ogrid-header-filter__filter-btn { opacity: 0.8; }
-    /* :hover and --active must override the parent-hover rule (0,2,0) — double-class raises to 0,3,0 */
+    /* :hover and --active must override the parent-hover rule (0,2,0)  -  double-class raises to 0,3,0 */
     .ogrid-header-filter .ogrid-header-filter__filter-btn:hover { background: var(--ogrid-hover-bg, rgba(0, 0, 0, 0.08)); opacity: 1; }
     .ogrid-header-filter .ogrid-header-filter__filter-btn--active { opacity: 1; }
     .ogrid-header-filter__funnel {

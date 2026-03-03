@@ -1,5 +1,5 @@
 /**
- * RatingEditor — Premium star-rating cell editor for OGrid.
+ * RatingEditor  -  Premium star-rating cell editor for OGrid.
  *
  * Usage:
  *   import { RatingEditor } from '@alaarab/ogrid-react-inputs';
@@ -11,7 +11,7 @@
  *     cellEditorParams: { maxStars: 5, allowHalf: false },
  *   }];
  *
- * Implements ICellEditorProps<T> — works with cellEditorPopup: true.
+ * Implements ICellEditorProps<T>  -  works with cellEditorPopup: true.
  */
 import * as React from 'react';
 import type { ICellEditorProps } from '@alaarab/ogrid-core';
@@ -22,7 +22,7 @@ import {
   DEFAULT_MAX_STARS,
 } from '@alaarab/ogrid-inputs';
 
-// ── Styles (inline to avoid CSS file dependency — keeps package sideEffects: false) ──
+// ── Styles (inline to avoid CSS file dependency  -  keeps package sideEffects: false) ──
 
 const rootStyle: React.CSSProperties = {
   fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
@@ -40,7 +40,6 @@ const starsRowStyle: React.CSSProperties = {
   display: 'flex',
   alignItems: 'center',
   gap: '2px',
-  justifyContent: 'center',
   padding: '8px 0',
 };
 
@@ -56,7 +55,6 @@ const starBtnStyle: React.CSSProperties = {
 };
 
 const labelStyle: React.CSSProperties = {
-  textAlign: 'center',
   fontSize: '12px',
   color: 'var(--ogrid-muted, #888)',
   padding: '4px 0 0',
@@ -64,7 +62,7 @@ const labelStyle: React.CSSProperties = {
 
 const footerStyle: React.CSSProperties = {
   display: 'flex',
-  justifyContent: 'center',
+  justifyContent: 'flex-start',
   marginTop: '8px',
   paddingTop: '8px',
   borderTop: '1px solid var(--ogrid-border, rgba(0,0,0,0.08))',

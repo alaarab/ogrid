@@ -410,7 +410,7 @@ describe('measureColumnContentWidth', () => {
     const container = createContainer([bodyCell]);
     const result = measureColumnContentWidth('col1', 50, container);
 
-    // 100 + 16 = 116, Math.ceil(116) = 116 — result is always an integer
+    // 100 + 16 = 116, Math.ceil(116) = 116  -  result is always an integer
     expect(result).toBe(Math.ceil(result));
     csSpy.mockRestore();
   });

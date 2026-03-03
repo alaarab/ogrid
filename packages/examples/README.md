@@ -5,7 +5,7 @@ Example applications for all OGrid UI packages across React, Angular, Vue, and v
 ## Running an example
 
 ```bash
-# From the monorepo root — build packages first
+# From the monorepo root  -  build packages first
 npm run build
 
 # Then start any example dev server

@@ -105,7 +105,7 @@ function MaterialGrid() {
 
 export default function ShowcaseMaterialDemo() {
   return (
-    <LiveDemo height={480} title="Material UI — Google's design system">
+    <LiveDemo height={480} title="Material UI  -  Google's design system">
       <BrowserOnly>{() => <MaterialGrid />}</BrowserOnly>
     </LiveDemo>
   );

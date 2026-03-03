@@ -341,8 +341,8 @@ export function useDataGridTableOrchestration<T>(
   // whose selection/editing state hasn't changed since last render.
   //
   // The version is recomputed each render from the cellDescriptorInput volatile fields.
-  // We update it synchronously here (during render) so that renderCellContent — which
-  // reads the cache during the same render — sees the up-to-date version.
+  // We update it synchronously here (during render) so that renderCellContent  -  which
+  // reads the cache during the same render  -  sees the up-to-date version.
   const cellDescriptorCacheRef = useRef<CellDescriptorCache>(new CellDescriptorCache());
   const currentVersion = CellDescriptorCache.computeVersion(cellDescriptorInput);
   cellDescriptorCacheRef.current.updateVersion(currentVersion);

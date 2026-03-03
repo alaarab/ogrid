@@ -1,14 +1,16 @@
 ---
 sidebar_position: 4
 title: Vanilla JS
-description: Use OGrid without React — pure JavaScript, class-based API
+description: OGrid without a framework — pure JavaScript, class-based API
 ---
 
 import VanillaJSDemo from '@site/src/components/demos/VanillaJSDemo';
 
-# Vanilla JS Quick Start
+# Vanilla JS
 
-OGrid's vanilla JS package provides the same features as the React packages with a class-based, imperative API. No React, no virtual DOM — just a container element and an options object.
+You don't need React, Angular, or Vue to use OGrid. The `@alaarab/ogrid-js` package gives you a full-featured, sortable, filterable, editable data grid using a simple class-based API — just a container element and an options object.
+
+It's a good fit if you're working on an internal tool, a dashboard that can't take on a framework, or you're embedding a grid inside an existing non-framework app.
 
 ## Install
 
@@ -16,57 +18,83 @@ OGrid's vanilla JS package provides the same features as the React packages with
 npm install @alaarab/ogrid-js
 ```
 
-## Basic Example
+Or drop it into an HTML file directly using a CDN (no build tools needed):
 
 ```html
-<div id="grid" style="height: 400px;"></div>
+<script type="module">
+  import { OGrid } from 'https://cdn.jsdelivr.net/npm/@alaarab/ogrid-js/dist/esm/index.js';
+</script>
+```
+
+## Build a real example
+
+Let's make an order management dashboard. It tracks orders by status, amount, and customer — sortable, filterable, and editable inline.
+
+```html
+<div id="orders-grid" style="height: 500px;"></div>
 
 <script type="module">
   import { OGrid } from '@alaarab/ogrid-js';
-  import '@alaarab/ogrid-js/styles'; // default theme (light + dark mode)
+  import '@alaarab/ogrid-js/styles';
 
-  const grid = new OGrid(document.getElementById('grid'), {
+  const grid = new OGrid(document.getElementById('orders-grid'), {
     columns: [
-      { columnId: 'name', name: 'Name', sortable: true },
-      { columnId: 'department', name: 'Department', sortable: true },
+      { columnId: 'orderId', name: 'Order #', sortable: true },
+      { columnId: 'customer', name: 'Customer', sortable: true },
       {
-        columnId: 'salary',
-        name: 'Salary',
+        columnId: 'status',
+        name: 'Status',
+        sortable: true,
+        filterable: { type: 'multiSelect', options: ['Pending', 'Shipped', 'Delivered', 'Cancelled'] },
+      },
+      {
+        columnId: 'amount',
+        name: 'Amount',
         type: 'numeric',
         sortable: true,
         editable: true,
         valueFormatter: (v) => `$${Number(v).toLocaleString()}`,
       },
+      {
+        columnId: 'date',
+        name: 'Order Date',
+        type: 'date',
+        sortable: true,
+      },
     ],
     data: [
-      { id: 1, name: 'Alice Johnson', department: 'Engineering', salary: 95000 },
-      { id: 2, name: 'Bob Smith', department: 'Marketing', salary: 72000 },
-      { id: 3, name: 'Carol Williams', department: 'Sales', salary: 110000 },
-      { id: 4, name: 'David Brown', department: 'Engineering', salary: 68000 },
-      { id: 5, name: 'Eva Martinez', department: 'Marketing', salary: 78000 },
+      { orderId: 'ORD-1001', customer: 'Acme Corp', status: 'Shipped', amount: 4200, date: '2024-03-01' },
+      { orderId: 'ORD-1002', customer: 'Globex Inc', status: 'Pending', amount: 1850, date: '2024-03-03' },
+      { orderId: 'ORD-1003', customer: 'Initech', status: 'Delivered', amount: 9300, date: '2024-02-28' },
+      { orderId: 'ORD-1004', customer: 'Umbrella LLC', status: 'Cancelled', amount: 620, date: '2024-03-05' },
+      { orderId: 'ORD-1005', customer: 'Acme Corp', status: 'Delivered', amount: 7100, date: '2024-02-20' },
     ],
-    getRowId: (row) => row.id,
-    pageSize: 10,
-    editable: true,
+    getRowId: (row) => row.orderId,
+    pageSize: 20,
     cellSelection: true,
     statusBar: true,
+  });
+
+  // React to edits in real time
+  grid.on('cellValueChanged', ({ item, columnId, newValue }) => {
+    console.log(`Order ${item.orderId}: ${columnId} updated to ${newValue}`);
+    // sync to your backend here
   });
 </script>
 ```
 
-## Live Demo
+## Live demo
 
 <VanillaJSDemo />
 
-## What You Get
-
-With this code you have:
+## What you get out of the box
 
 - **Sorting** — click column headers
-- **Inline editing** — double-click any salary cell
+- **Filtering** — multi-select dropdown on the Status column
+- **Inline editing** — double-click any Amount cell to edit
 - **Cell selection** — click and drag to select ranges
 - **Keyboard navigation** — arrow keys, Tab, Home/End, Ctrl+Arrow
-- **Clipboard** — Ctrl+C/V/X
+- **Clipboard** — Ctrl+C/V/X works like a spreadsheet
 - **Undo/redo** — Ctrl+Z/Y
 - **Status bar** — row count and selection aggregations
 - **Pagination** — page controls at the bottom
@@ -77,78 +105,77 @@ With this code you have:
 const grid = new OGrid(containerElement, options);
 ```
 
-| Parameter | Type | Description |
-|-----------|------|-------------|
-| `container` | `HTMLElement` | The DOM element to render into. OGrid fills this element. |
-| `options` | `OGridOptions<T>` | Grid configuration (see below). |
+The container element defines where the grid renders. OGrid fills it completely — give it an explicit height (CSS or inline).
 
-## Key Options
+## Key options
 
 | Option | Type | Default | Description |
 |--------|------|---------|-------------|
 | `columns` | `IColumnDef<T>[]` | **required** | Column definitions |
-| `data` | `T[]` | — | Client-side data array |
-| `dataSource` | `IDataSource<T>` | — | Server-side data source (mutually exclusive with `data`) |
-| `getRowId` | `(item: T) => RowId` | **required** | Unique row identifier |
+| `data` | `T[]` | — | Client-side row data |
+| `dataSource` | `IDataSource<T>` | — | Server-side data source (use instead of `data`) |
+| `getRowId` | `(item: T) => RowId` | **required** | Returns a unique identifier per row |
 | `pageSize` | `number` | `20` | Rows per page |
-| `sort` | `{ field, direction }` | — | Initial sort |
+| `sort` | `{ field, direction }` | — | Initial sort state |
 | `filters` | `IFilters` | — | Initial filters |
 | `editable` | `boolean` | `false` | Enable cell editing |
-| `cellSelection` | `boolean` | `false` | Enable spreadsheet-style selection |
+| `cellSelection` | `boolean` | `false` | Spreadsheet-style range selection |
 | `rowSelection` | `'single' \| 'multiple'` | — | Row selection mode |
-| `sideBar` | `boolean \| ISideBarDef` | — | Show sidebar (columns + filters panels) |
-| `layoutMode` | `'fill' \| 'content'` | `'fill'` | `'fill'` stretches to container; `'content'` sizes to data |
-| `pinnedColumns` | `Record<string, 'left' \| 'right'>` | — | Pin columns to edges |
+| `sideBar` | `boolean \| ISideBarDef` | — | Column visibility + filter panel |
+| `layoutMode` | `'fill' \| 'content'` | `'fill'` | `'fill'` fills the container; `'content'` sizes to data |
+| `pinnedColumns` | `Record<string, 'left' \| 'right'>` | — | Pin columns to left or right edge |
 
-## Events
+## Listening to events
 
-Listen for events with `.on()`:
+Use `.on()` to subscribe to grid events:
 
 ```js
-grid.on('cellValueChanged', (event) => {
-  console.log(`Cell ${event.columnId} changed from ${event.oldValue} to ${event.newValue}`);
+grid.on('cellValueChanged', ({ item, columnId, oldValue, newValue }) => {
+  console.log(`${columnId} changed: ${oldValue} → ${newValue}`);
+  // save to backend
+});
+
+grid.on('selectionChange', ({ selectedRows }) => {
+  console.log(`${selectedRows.length} rows selected`);
+  updateActionBar(selectedRows);
 });
 
 grid.on('sortChange', ({ field, direction }) => {
   console.log(`Sorted by ${field} ${direction}`);
 });
-
-grid.on('selectionChange', ({ selectedRows }) => {
-  console.log(`${selectedRows.length} rows selected`);
-});
 ```
 
-| Event | Payload | Fired when |
-|-------|---------|------------|
+| Event | Payload | When it fires |
+|-------|---------|---------------|
 | `cellValueChanged` | `{ item, columnId, oldValue, newValue }` | A cell edit is committed |
-| `sortChange` | `{ field, direction }` | Sort changes |
-| `filterChange` | `{ filters }` | Filters change |
-| `pageChange` | `{ page }` | Page changes |
+| `sortChange` | `{ field, direction }` | User changes sort |
+| `filterChange` | `{ filters }` | User changes filters |
+| `pageChange` | `{ page }` | User navigates pages |
 | `selectionChange` | `{ selectedRows, selectedRowIds }` | Row selection changes |
 
-## Grid API
+## Programmatic control
 
-Access the imperative API via `grid.api`:
+The grid API lives on `grid.api`:
 
 ```js
-// Update data
-grid.api.setRowData(newData);
+// Swap in new data (re-renders efficiently)
+grid.api.setRowData(freshData);
 
-// Get current state
+// Export what's currently displayed (respects active filters/sort)
+grid.api.exportToCsv('orders.csv');
+
+// Set sort programmatically
+grid.api.setSort('amount', 'desc');
+
+// Get current column state (widths, visibility, order)
 const state = grid.api.getColumnState();
-
-// Export to CSV
-grid.api.exportToCsv('my-data.csv');
-
-// Programmatic sort
-grid.api.setSort('salary', 'desc');
 ```
 
-See the full [JS API Reference](../api/js-api) for all methods.
+See the full [JS API Reference](../api/js-api) for all available methods.
 
 ## Theming
 
-The default theme uses CSS custom properties. Override them to match your design:
+The default theme uses CSS custom properties. Override any of them to match your design system:
 
 ```css
 :root {
@@ -156,37 +183,34 @@ The default theme uses CSS custom properties. Override them to match your design
   --ogrid-selection: #0078d4;     /* active cell outline */
   --ogrid-bg: #ffffff;            /* background */
   --ogrid-fg: #242424;            /* text color */
-  --ogrid-border: #e0e0e0;       /* borders */
-  --ogrid-bg-subtle: #f3f2f1;    /* header background */
-  --ogrid-bg-hover: #f5f5f5;     /* row hover */
+  --ogrid-border: #e0e0e0;        /* borders */
+  --ogrid-bg-subtle: #f3f2f1;     /* header background */
+  --ogrid-bg-hover: #f5f5f5;      /* row hover */
 }
 ```
 
-For dark mode, set `data-theme="dark"` on a parent element or rely on `prefers-color-scheme`:
+Dark mode works automatically if you rely on `prefers-color-scheme`, or you can opt into it explicitly:
 
 ```css
 [data-theme='dark'] {
   --ogrid-bg: #1a1a24;
   --ogrid-fg: #e0e0e0;
   --ogrid-border: #333340;
-  /* ... */
 }
 ```
 
-Or skip the default theme entirely and write your own CSS targeting the `ogrid-*` class names.
+Or skip the built-in theme entirely and write your own CSS targeting `ogrid-*` class names.
 
 ## Cleanup
 
-Always destroy the grid when you're done:
+When your grid is no longer needed (navigating away, SPA route change, etc.), call `destroy()` to remove all DOM elements and event listeners:
 
 ```js
 grid.destroy();
 ```
 
-This removes all DOM elements, event listeners, and ResizeObservers.
-
-## Next Steps
+## What's next?
 
 - [JS API Reference](../api/js-api) — full method and options reference
-- [Features](../features/sorting) — all grid features work identically in JS
+- [Features](../features/sorting) — all features work identically in the JS package
 - [Theming Guide](../guides/theming) — deep dive into CSS customization

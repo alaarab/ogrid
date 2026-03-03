@@ -1,6 +1,6 @@
 /**
  * Pure fill handle helpers shared across React, Vue, Angular, and JS.
- * No framework dependencies — operates on plain arrays and column definitions.
+ * No framework dependencies  -  operates on plain arrays and column definitions.
  */
 import type { IColumnDef, ICellValueChangedEvent } from '../types/columnTypes';
 import type { ISelectionRange } from '../types/dataGridTypes';
@@ -82,7 +82,7 @@ export function applyFillValues<T>(
           const targetFlatColIdx = formulaOptions.flatColumns.findIndex(c => c.columnId === colDef.columnId);
           if (targetFlatColIdx >= 0) {
             formulaOptions.setFormula(targetFlatColIdx, row, adjusted);
-            // Skip normal value fill — formula evaluation will provide the value
+            // Skip normal value fill  -  formula evaluation will provide the value
             continue;
           }
         }

@@ -48,7 +48,7 @@ export interface IPaginationControlsSlots {
   NavButton: React.ComponentType<INavButtonSlotProps>;
   PageButton: React.ComponentType<IPageButtonSlotProps>;
   PageSizeSelect: React.ComponentType<IPageSizeSelectSlotProps>;
-  // Optional container overrides — used by frameworks with Box/sx layout (e.g. Material)
+  // Optional container overrides  -  used by frameworks with Box/sx layout (e.g. Material)
   OuterContainer?: React.ComponentType<IOuterContainerSlotProps>;
   InfoText?: React.ComponentType<{ children: React.ReactNode }>;
   NavButtonsContainer?: React.ComponentType<{ children: React.ReactNode; className?: string }>;

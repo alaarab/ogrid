@@ -48,7 +48,7 @@ export function processClientSideData<T>(
     switch (val.type) {
       case 'multiSelect':
         // NOTE: Cell values are coerced to string via String() for set membership checks.
-        // Object-typed column values will produce "[object Object]" — use valueGetter or
+        // Object-typed column values will produce "[object Object]"  -  use valueGetter or
         // valueFormatter on the column def to ensure meaningful string representation.
         if (val.value.length > 0) {
           const allowedSet = new Set(val.value);
@@ -129,7 +129,7 @@ export function processClientSideData<T>(
 
     // For date columns, pre-compute timestamps to avoid repeated new Date() in O(n log n) comparisons.
     // NOTE: The timestamp cache is scoped to this single sort invocation. It is rebuilt on every call,
-    // so mutating row objects between calls is safe — stale timestamps cannot persist across invocations.
+    // so mutating row objects between calls is safe  -  stale timestamps cannot persist across invocations.
     if (isDateSort && !compare) {
       const timestampCache = new Map<T, number>();
       for (let i = 0; i < sortable.length; i++) {
@@ -153,7 +153,7 @@ export function processClientSideData<T>(
     } else if (!compare) {
       // Pre-compute sort keys before sort to avoid repeated String().toLowerCase()
       // in O(n log n) comparisons. Numeric values use their raw form (no string conversion needed).
-      // NOTE: Cache is scoped to this sort invocation — rebuilt on every call, safe for mutations.
+      // NOTE: Cache is scoped to this sort invocation  -  rebuilt on every call, safe for mutations.
       // We use `undefined` as a sentinel for null/undefined cell values so we can distinguish
       // them from empty strings (both null and undefined map to undefined here).
       const keyCache = new Map<T, string | number | undefined>();

@@ -5,7 +5,7 @@ import { people, getRowId, pinningColumns } from './demoData';
 
 export default function ColumnPinningDemo() {
   return (
-    <LiveDemo height={420} title="Scroll horizontally — the Name column stays pinned">
+    <LiveDemo height={420} title="Scroll horizontally  -  the Name column stays pinned">
       <OGrid
         columns={pinningColumns}
         data={people}

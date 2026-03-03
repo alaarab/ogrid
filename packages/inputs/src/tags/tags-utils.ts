@@ -1,7 +1,7 @@
-/** Tags/chip utility functions — zero dependencies. */
+/** Tags/chip utility functions  -  zero dependencies. */
 
 /**
- * Default tag colors — soft pastels that work in light and dark modes.
+ * Default tag colors  -  soft pastels that work in light and dark modes.
  */
 export const DEFAULT_TAG_COLORS: readonly string[] = [
   '#E3F2FD', '#FCE4EC', '#E8F5E9', '#FFF3E0', '#F3E5F5',

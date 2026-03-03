@@ -14,7 +14,7 @@ export default defineConfig([
       js: '#!/usr/bin/env node',
     },
   },
-  // Bridge client — browser-safe (no Node.js imports), separate entry point
+  // Bridge client  -  browser-safe (no Node.js imports), separate entry point
   {
     entry: { 'bridge-client': 'src/bridge-client.ts' },
     format: ['esm'],

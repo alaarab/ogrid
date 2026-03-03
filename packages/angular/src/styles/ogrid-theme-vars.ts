@@ -2,7 +2,7 @@
  * Shared OGrid CSS theme variables (light + dark mode).
  * Used by all Angular UI packages (Material, PrimeNG, Radix) to avoid duplication.
  *
- * Uses :where() selectors for ZERO specificity — consumer overrides always win.
+ * Uses :where() selectors for ZERO specificity  -  consumer overrides always win.
  * Dark mode: auto via prefers-color-scheme, explicit via [data-theme="dark"].
  */
 export const OGRID_THEME_VARS_CSS = `

@@ -116,7 +116,7 @@ describe('INDIRECT', () => {
 
 describe('OFFSET', () => {
   it('returns cell at row+offset, col+offset from a cell reference', () => {
-    // OFFSET(A1, 1, 0) → B1 (row 0+1=1, col 0) → cell at 0,1
+    // OFFSET(A1, 1, 0)  to  B1 (row 0+1=1, col 0)  to  cell at 0,1
     const cells = { '0,1': 'shifted' };
     const result = evalFn('OFFSET', [cell(0, 0), num(1), num(0)], cells);
     expect(result).toBe('shifted');
@@ -151,7 +151,7 @@ describe('OFFSET', () => {
 
   it('supports range as reference (uses start cell)', () => {
     const cells = { '1,2': 'rangeBase' };
-    // OFFSET(A1:B3, 2, 1) uses start of range (0,0) + offset (2,1) → (1,2)
+    // OFFSET(A1:B3, 2, 1) uses start of range (0,0) + offset (2,1)  to  (1,2)
     const result = evalFn('OFFSET', [range(0, 0, 1, 2), num(2), num(1)], cells);
     expect(result).toBe('rangeBase');
   });
@@ -184,7 +184,7 @@ describe('ADDRESS', () => {
   });
 
   it('handles multi-letter columns', () => {
-    // Column 27 → AA
+    // Column 27  to  AA
     expect(evalFn('ADDRESS', [num(1), num(27), num(4)])).toBe('AA1');
   });
 
@@ -224,9 +224,9 @@ describe('ROW', () => {
   });
 
   it('returns 1-based row for a cell reference', () => {
-    // cell at row=0 → ROW returns 1
+    // cell at row=0  to  ROW returns 1
     expect(evalFn('ROW', [cell(0, 0)])).toBe(1);
-    // cell at row=4 → ROW returns 5
+    // cell at row=4  to  ROW returns 5
     expect(evalFn('ROW', [cell(0, 4)])).toBe(5);
   });
 
@@ -329,7 +329,7 @@ describe('SEQUENCE', () => {
   });
 
   it('returns first element for multi-row sequence', () => {
-    // SEQUENCE(5) → first value is 1
+    // SEQUENCE(5)  to  first value is 1
     expect(evalFn('SEQUENCE', [num(5)])).toBe(1);
   });
 
@@ -346,7 +346,7 @@ describe('SEQUENCE', () => {
 
 describe('TRANSPOSE', () => {
   it('returns top-left element after transposing', () => {
-    // Range A1:B2 → [[1,2],[3,4]], transposed → [[1,3],[2,4]], top-left = 1
+    // Range A1:B2  to  [[1,2],[3,4]], transposed  to  [[1,3],[2,4]], top-left = 1
     const cells = { '0,0': 1, '1,0': 2, '0,1': 3, '1,1': 4 };
     expect(evalFn('TRANSPOSE', [range(0, 0, 1, 1)], cells)).toBe(1);
   });
@@ -375,7 +375,7 @@ describe('MMULT', () => {
   });
 
   it('multiplies 2x2 matrices', () => {
-    // A=[1,2;3,4] B=[5,6;7,8] → C[0][0] = 1*5 + 2*7 = 5+14 = 19
+    // A=[1,2;3,4] B=[5,6;7,8]  to  C[0][0] = 1*5 + 2*7 = 5+14 = 19
     const cells: Record<string, number> = {
       '0,0': 1, '1,0': 2,  // row 0 of A
       '0,1': 3, '1,1': 4,  // row 1 of A
@@ -386,7 +386,7 @@ describe('MMULT', () => {
   });
 
   it('returns #VALUE! if column count of A does not equal row count of B', () => {
-    // A is 2x1, B is 2x1 — incompatible
+    // A is 2x1, B is 2x1  -  incompatible
     const cells = { '0,0': 1, '0,1': 2, '1,0': 3, '1,1': 4 };
     const result = evalFn('MMULT', [range(0, 0, 0, 1), range(1, 0, 1, 1)], cells);
     expect(result).toBeInstanceOf(FormulaError);
@@ -416,7 +416,7 @@ describe('MDETERM', () => {
   });
 
   it('returns determinant of 3x3 matrix', () => {
-    // Identity matrix → det = 1
+    // Identity matrix  to  det = 1
     const cells: Record<string, number> = {
       '0,0': 1, '1,0': 0, '2,0': 0,
       '0,1': 0, '1,1': 1, '2,1': 0,
@@ -428,7 +428,7 @@ describe('MDETERM', () => {
   it('returns #VALUE! for non-square matrix', () => {
     const cells = { '0,0': 1, '1,0': 2, '0,1': 3 };
     const result = evalFn('MDETERM', [range(0, 0, 1, 0)], cells); // 1x2, not square for 2-row range
-    // Actually a 1x2 range is non-square: 1 row, 2 cols → expect #VALUE!
+    // Actually a 1x2 range is non-square: 1 row, 2 cols  to  expect #VALUE!
     expect(evalFn('MDETERM', [range(0, 0, 1, 1)], { '0,0': 1, '1,0': 2, '0,1': 3, '1,1': 4 })).toBe(-2);
   });
 
@@ -450,7 +450,7 @@ describe('MINVERSE', () => {
   });
 
   it('returns top-left element of inverse of 2x2 matrix', () => {
-    // [[1,2],[3,4]]^-1 = [[-2, 1],[1.5, -0.5]] / det(-2) → top-left = -2
+    // [[1,2],[3,4]]^-1 = [[-2, 1],[1.5, -0.5]] / det(-2)  to  top-left = -2
     const cells = { '0,0': 1, '1,0': 2, '0,1': 3, '1,1': 4 };
     expect(evalFn('MINVERSE', [range(0, 0, 1, 1)], cells)).toBeCloseTo(-2);
   });

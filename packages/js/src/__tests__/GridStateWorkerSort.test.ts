@@ -50,7 +50,7 @@ beforeEach(() => {
   (processClientSideDataAsync as jest.Mock).mockClear();
 });
 
-describe('GridState — useWorkerSort getter', () => {
+describe('GridState  -  useWorkerSort getter', () => {
   it('is false by default (workerSort not set)', () => {
     const state = new GridState(makeOptions());
     expect(state.useWorkerSort).toBe(false);
@@ -81,7 +81,7 @@ describe('GridState — useWorkerSort getter', () => {
   });
 });
 
-describe('GridState — getProcessedItemsAsync', () => {
+describe('GridState  -  getProcessedItemsAsync', () => {
   it('falls back to sync when workerSort is false', async () => {
     const state = new GridState(makeOptions({ workerSort: false }));
     const result = await state.getProcessedItemsAsync();
@@ -139,7 +139,7 @@ describe('GridState — getProcessedItemsAsync', () => {
   });
 });
 
-describe('GridState — getProcessedItems (sync)', () => {
+describe('GridState  -  getProcessedItems (sync)', () => {
   it('returns all items with default config', () => {
     const state = new GridState(makeOptions());
     const result = state.getProcessedItems();

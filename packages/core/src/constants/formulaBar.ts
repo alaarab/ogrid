@@ -21,7 +21,7 @@ export const FORMULA_BAR_CSS = {
   input: 'flex:1;border:none;outline:none;padding:2px 8px;font-family:monospace;font-size:12px;line-height:24px;background:transparent;color:var(--ogrid-fg, #242424);min-width:0;',
 } as const;
 
-/** Style objects for the formula bar — used by React and Vue (CSSProperties-compatible). */
+/** Style objects for the formula bar  -  used by React and Vue (CSSProperties-compatible). */
 export const FORMULA_BAR_STYLES = {
   bar: {
     display: 'flex',

@@ -66,7 +66,7 @@ import { OGrid } from '@alaarab/ogrid-js';
 | `filterableColumns` | `SideBarFilterColumn[]` | **Required** | Filterable columns (for the filters panel). |
 | `filters` | `IFilters` | **Required** | Active filter values. |
 | `onFilterChange` | `(key: string, value: FilterValue \| undefined) => void` | **Required** | Callback when a filter value changes. |
-| `filterOptions` | `Record<string, string[]>` | **Required** | Available options for multi-select filters (column ID → options array). |
+| `filterOptions` | `Record<string, string[]>` | **Required** | Available options for multi-select filters (column ID  to  options array). |
 
 ## SideBarFilterColumn
 
@@ -298,13 +298,13 @@ const columns = [...];
 ### Tab Strip
 
 The sidebar has a vertical tab strip with one button per panel:
-- **C** — Columns panel button
-- **F** — Filters panel button
+- **C**  -  Columns panel button
+- **F**  -  Filters panel button
 
 Clicking a tab toggles the panel:
-- If the panel is closed → open it
-- If the panel is open → close it
-- If another panel is open → close it and open the clicked panel
+- If the panel is closed  to  open it
+- If the panel is open  to  close it
+- If another panel is open  to  close it and open the clicked panel
 
 ### Panel Content
 
@@ -312,8 +312,8 @@ The panel content area has a fixed width (240px) and scrollable content. The pan
 
 ### Keyboard Navigation
 
-- `Tab` / `Shift+Tab` — Move focus between interactive elements
-- `Enter` / `Space` — Toggle panel buttons, checkboxes, and other controls
+- `Tab` / `Shift+Tab`  -  Move focus between interactive elements
+- `Enter` / `Space`  -  Toggle panel buttons, checkboxes, and other controls
 
 ## Accessibility
 
@@ -366,25 +366,25 @@ The panel content area has a fixed width (240px) and scrollable content. The pan
 ### Keyboard Navigation
 
 **Tab Strip:**
-- `Tab` / `Shift+Tab` — Navigate between tab buttons
-- `Enter` / `Space` — Toggle focused panel (open/close)
-- `←` `→` — Navigate between tab buttons (alternative to Tab)
+- `Tab` / `Shift+Tab`  -  Navigate between tab buttons
+- `Enter` / `Space`  -  Toggle focused panel (open/close)
+- `←` ` to `  -  Navigate between tab buttons (alternative to Tab)
 
 **Columns Panel:**
-- `Tab` / `Shift+Tab` — Navigate between checkboxes and action buttons
-- `Space` — Toggle focused checkbox
-- `Enter` (on action buttons) — Execute "Select All" or "Clear All"
+- `Tab` / `Shift+Tab`  -  Navigate between checkboxes and action buttons
+- `Space`  -  Toggle focused checkbox
+- `Enter` (on action buttons)  -  Execute "Select All" or "Clear All"
 
 **Filters Panel:**
-- `Tab` / `Shift+Tab` — Navigate between filter inputs
+- `Tab` / `Shift+Tab`  -  Navigate between filter inputs
 - Type to enter filter values
-- `Enter` — Apply filter (for text filters)
-- `Space` — Toggle checkboxes (for multi-select filters)
+- `Enter`  -  Apply filter (for text filters)
+- `Space`  -  Toggle checkboxes (for multi-select filters)
 
 ### Focus Management
 
 - **Focus visible:** `:focus-visible` styles show 2px solid outline (`--ogrid-accent`) on keyboard navigation
-- **Focus order:** Tab buttons → panel content (top to bottom)
+- **Focus order:** Tab buttons  to  panel content (top to bottom)
 - **Panel closure:** Closing a panel does not move focus; it remains on the tab button
 
 ### Screen Reader Support
@@ -412,10 +412,10 @@ See the [Accessibility Guide](/docs/guides/accessibility) for complete documenta
 The `SideBar` component uses **inline styles** (no external CSS) to remain framework-agnostic. All styles use CSS custom properties for theming:
 
 **CSS custom properties:**
-- `--ogrid-header-bg` — Tab strip and panel header background color
-- `--ogrid-bg` — Panel content background color
-- `--ogrid-border` — Border color
-- `--ogrid-fg` — Foreground text color
+- `--ogrid-header-bg`  -  Tab strip and panel header background color
+- `--ogrid-bg`  -  Panel content background color
+- `--ogrid-border`  -  Border color
+- `--ogrid-fg`  -  Foreground text color
 
 ## Layout Integration
 
@@ -431,11 +431,11 @@ When `position: 'left'`, the sidebar is on the left. When `position: 'right'`, i
 
 ## Related Components
 
-- [OGrid](./ogrid-props.mdx) — Top-level wrapper with `sideBar` prop
-- [ColumnChooser](./components-column-chooser.mdx) — Alternative column visibility UI (toolbar dropdown)
-- [ColumnHeaderFilter](./components-column-header-filter.mdx) — Alternative filter UI (column header popovers)
+- [OGrid](./ogrid-props.mdx)  -  Top-level wrapper with `sideBar` prop
+- [ColumnChooser](./components-column-chooser.mdx)  -  Alternative column visibility UI (toolbar dropdown)
+- [ColumnHeaderFilter](./components-column-header-filter.mdx)  -  Alternative filter UI (column header popovers)
 
 ## See Also
 
-- [Types: ISideBarDef](./types.mdx#isidebardef) — Sidebar configuration reference
-- [Sidebar Feature Guide](/docs/features/sidebar) — Complete sidebar documentation
+- [Types: ISideBarDef](./types.mdx#isidebardef)  -  Sidebar configuration reference
+- [Sidebar Feature Guide](/docs/features/sidebar)  -  Complete sidebar documentation

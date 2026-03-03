@@ -97,7 +97,7 @@ describe('useColumnResize', () => {
 
     function createDoubleClickEvent(): MouseEvent {
       const event = new MouseEvent('dblclick', { bubbles: true });
-      // Override currentTarget since it's read-only on real events —
+      // Override currentTarget since it's read-only on real events  - 
       // define it as a property pointing to our resizeHandle element
       Object.defineProperty(event, 'currentTarget', { value: resizeHandle });
       // Override preventDefault and stopPropagation so we can assert on them

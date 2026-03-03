@@ -1,5 +1,5 @@
 /**
- * MarchingAntsOverlay — Renders range overlays on top of the grid:
+ * MarchingAntsOverlay  -  Renders range overlays on top of the grid:
  *
  * 1. **Selection range**: solid green border around the current selection
  * 2. **Copy/Cut range**: animated dashed border (marching ants) like Excel
@@ -18,23 +18,23 @@ const MARCHING_ANTS_RECT_STYLE: React.CSSProperties = { ...MARCHING_ANTS_ANIMATI
 export interface MarchingAntsOverlayProps {
   /** Ref to the positioned container that wraps the table (must have position: relative) */
   containerRef: React.RefObject<HTMLElement | null>;
-  /** Current selection range — solid green border */
+  /** Current selection range  -  solid green border */
   selectionRange: ISelectionRange | null;
-  /** Copy range — animated dashed border */
+  /** Copy range  -  animated dashed border */
   copyRange: ISelectionRange | null;
-  /** Cut range — animated dashed border */
+  /** Cut range  -  animated dashed border */
   cutRange: ISelectionRange | null;
-  /** Column offset — 1 when checkbox column is present, else 0 */
+  /** Column offset  -  1 when checkbox column is present, else 0 */
   colOffset: number;
-  /** Items array — triggers re-measurement when data changes (e.g., sorting) */
+  /** Items array  -  triggers re-measurement when data changes (e.g., sorting) */
   items: readonly unknown[];
-  /** Visible columns — triggers re-measurement when columns are hidden/shown */
+  /** Visible columns  -  triggers re-measurement when columns are hidden/shown */
   visibleColumns: Set<string> | undefined;
-  /** Column sizing overrides — triggers re-measurement when columns are resized */
+  /** Column sizing overrides  -  triggers re-measurement when columns are resized */
   columnSizingOverrides: Record<string, { widthPx: number }>;
-  /** Column order — triggers re-measurement when columns are reordered */
+  /** Column order  -  triggers re-measurement when columns are reordered */
   columnOrder: readonly string[] | undefined;
-  /** True while the user is drag-selecting — hides the selection SVG (drag overlay handles it) */
+  /** True while the user is drag-selecting  -  hides the selection SVG (drag overlay handles it) */
   isDragging?: boolean;
 }
 
@@ -123,7 +123,7 @@ export function MarchingAntsOverlay({
   return (
     <>
       {/* Selection range: solid green border (hidden during drag, when clipboard range overlaps,
-          or when it's a single-cell selection — the CSS activeCellContent outline handles that) */}
+          or when it's a single-cell selection  -  the CSS activeCellContent outline handles that) */}
       {selR && !isDragging && !clipRangeMatchesSel && !(
         selectionRange &&
         selectionRange.startRow === selectionRange.endRow &&

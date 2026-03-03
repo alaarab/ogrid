@@ -183,10 +183,10 @@ export function useDataGridLayout<T>(
       if (Object.keys(prev).length !== Object.keys(measured).length) return measured;
       return prev;
     });
-  // Note: containerWidth intentionally excluded — it's already reflected in
-  // DOM offsetWidth values. Including it creates a loop: ResizeObserver →
-  // setContainerWidth → useLayoutEffect → setMeasuredColumnWidths → re-render
-  // → ResizeObserver → ...
+  // Note: containerWidth intentionally excluded  -  it's already reflected in
+  // DOM offsetWidth values. Including it creates a loop: ResizeObserver  to 
+  // setContainerWidth  to  useLayoutEffect  to  setMeasuredColumnWidths  to  re-render
+  //  to  ResizeObserver  to  ...
   // overridesKey is a serialized string so the effect only re-runs when values actually change,
   // not on every new object reference during rapid resize.
   }, [visibleCols, overridesKey, wrapperRef]);

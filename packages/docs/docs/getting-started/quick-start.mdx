@@ -1,7 +1,7 @@
 ---
 sidebar_position: 3
 title: Quick Start
-description: Build a fully functional data grid in minutes
+description: A sortable, filterable, editable data grid in under 50 lines
 ---
 
 import Tabs from '@theme/Tabs';
@@ -9,9 +9,11 @@ import TabItem from '@theme/TabItem';
 
 # Quick Start
 
-Build a sortable, filterable, editable data grid in under 50 lines.
+Here's a grid in 60 seconds — sorting, filtering, editing, pagination, and keyboard navigation, all working out of the box.
 
 ## Install
+
+Pick your framework and UI library:
 
 <Tabs groupId="framework">
   <TabItem value="react" label="React" default>
@@ -90,7 +92,9 @@ npm install @alaarab/ogrid-js
   </TabItem>
 </Tabs>
 
-## Full Example
+## Your first grid
+
+This example renders an employee directory with sortable columns, a department filter, and an editable salary column. Copy it and it'll just work.
 
 <Tabs groupId="framework">
   <TabItem value="react" label="React" default>
@@ -148,11 +152,11 @@ export default function App() {
 ```
 
 :::tip Switching UI libraries
-The `OGrid` component has the same props across all React UI packages. To switch, just change the import:
+The `OGrid` component has identical props across all React UI packages. To switch, change one import:
 
-- **Radix** (lightweight, default): `from '@alaarab/ogrid-react-radix'`
-- **Fluent UI** (Microsoft 365 / SPFx): `from '@alaarab/ogrid-react-fluent'` — wrap in `<FluentProvider>`
-- **Material UI** (MUI v7): `from '@alaarab/ogrid-react-material'` — wrap in `<ThemeProvider>`
+- **Radix** (lightweight, no peer deps): `from '@alaarab/ogrid-react-radix'`
+- **Fluent UI** (Microsoft 365 / SPFx): `from '@alaarab/ogrid-react-fluent'`  -  wrap in `<FluentProvider>`
+- **Material UI** (MUI v7): `from '@alaarab/ogrid-react-material'`  -  wrap in `<ThemeProvider>`
 :::
 
   </TabItem>
@@ -208,7 +212,7 @@ export class EmployeeGridComponent {
 ```
 
 :::tip Switching UI libraries
-Same component API across Angular packages. To switch, just change the import:
+All Angular packages share the same component API. Change one import:
 
 - **Radix (CDK)** (lightweight): `from '@alaarab/ogrid-angular-radix'`
 - **Angular Material**: `from '@alaarab/ogrid-angular-material'`
@@ -268,10 +272,10 @@ const gridProps = {
 ```
 
 :::tip Switching UI libraries
-Same component API across Vue packages. To switch, just change the import:
+All Vue packages share the same API. Change one import:
 
 - **Radix (Headless UI)** (lightweight): `from '@alaarab/ogrid-vue-radix'`
-- **Vuetify**: `from '@alaarab/ogrid-vue-vuetify'` — wrap in `<v-app>` for theming
+- **Vuetify**: `from '@alaarab/ogrid-vue-vuetify'`  -  wrap in `<v-app>` for theming
 - **PrimeVue**: `from '@alaarab/ogrid-vue-primevue'`
 :::
 
@@ -315,31 +319,33 @@ const grid = new OGrid(document.getElementById('grid'), {
 ```
 
 :::tip
-The JS package uses a class-based imperative API. See the [Vanilla JS guide](./vanilla-js) for the full API including events, grid methods, and theming.
+The JS package has a class-based imperative API. See the [Vanilla JS guide](./vanilla-js) for events, grid methods, and theming.
 :::
 
   </TabItem>
 </Tabs>
 
-## What You Get
+## What you get for free
 
-With just this code:
+Paste those ~40 lines and you have:
 
-- **Sorting** -- click column headers to sort ascending/descending
-- **Filtering** -- click the filter icon on Department to filter by value
-- **Inline editing** -- double-click any salary cell to edit
-- **Numeric formatting** -- `type: 'numeric'` right-aligns; `valueFormatter` displays currency
-- **Pagination, keyboard nav, cell selection, status bar** -- all built in
+- **Sorting** — click any column header, ascending/descending, shift-click for multi-sort
+- **Filtering** — the Department column gets a multi-select dropdown filter
+- **Inline editing** — double-click any salary cell to edit in place
+- **Currency formatting** — `valueFormatter` formats numbers on display without affecting stored values
+- **Pagination, keyboard nav, cell selection, status bar** — all there, no extra config
 
-## Key Concepts
+## Three concepts worth knowing
 
-| Concept | Description |
-|---------|-------------|
-| `IColumnDef<T>` | Column config. `columnId` matches a key on `T` (or use `valueGetter`). |
-| `getRowId` | Returns a unique `string \| number` per row for selection, editing, and re-rendering. |
-| `layoutMode` | `'fill'` (default) fills container; `'content'` sizes to content. |
+| | Description |
+|--|--|
+| `IColumnDef<T>` | Describes a column. `columnId` must match a key on your row type (or use `valueGetter` for computed values). |
+| `getRowId` | Returns a stable unique identifier per row. Used for selection, editing, and efficient re-renders. |
+| `layoutMode` | `'fill'` (default) stretches the grid to fill its container. `'content'` sizes to the data. |
 
-## Using the Grid API
+## Programmatic control
+
+Need to interact with the grid from outside? Use the API:
 
 <Tabs groupId="framework">
   <TabItem value="react" label="React" default>
@@ -353,8 +359,8 @@ function App() {
 
   return (
     <>
-      <button onClick={() => console.log(gridRef.current?.getColumnState())}>
-        Log State
+      <button onClick={() => gridRef.current?.exportToCsv('employees.csv')}>
+        Export CSV
       </button>
       <OGrid<Employee> ref={gridRef} columns={columns} data={data} getRowId={(row) => row.id} />
     </>
@@ -366,22 +372,22 @@ function App() {
   <TabItem value="angular" label="Angular">
 
 ```typescript
-import { Component, ViewChild } from '@angular/core';
+import { Component } from '@angular/core';
 import { OGridComponent, OGridService } from '@alaarab/ogrid-angular-material';
 
 @Component({
   standalone: true,
   imports: [OGridComponent],
   template: `
-    <button (click)="logState()">Log State</button>
+    <button (click)="exportCsv()">Export CSV</button>
     <ogrid [props]="gridProps" />
   `
 })
 export class AppComponent {
   constructor(private gridService: OGridService) {}
 
-  logState() {
-    console.log(this.gridService.getColumnState());
+  exportCsv() {
+    this.gridService.exportToCsv('employees.csv');
   }
 
   gridProps = { columns, data, getRowId: (row: any) => row.id };
@@ -393,18 +399,13 @@ export class AppComponent {
 
 ```vue
 <script setup lang="ts">
-import { ref } from 'vue';
 import { OGrid, useOGrid } from '@alaarab/ogrid-vue-vuetify';
 
-const { getColumnState } = useOGrid({ columns, data, getRowId: (row) => row.id });
-
-function logState() {
-  console.log(getColumnState());
-}
+const { exportToCsv } = useOGrid({ columns, data, getRowId: (row) => row.id });
 </script>
 
 <template>
-  <button @click="logState">Log State</button>
+  <button @click="exportToCsv('employees.csv')">Export CSV</button>
   <OGrid :gridProps="{ columns, data, getRowId: (row) => row.id }" />
 </template>
 ```
@@ -419,22 +420,20 @@ const grid = new OGrid(document.getElementById('grid'), {
   columns, data, getRowId: (row) => row.id,
 });
 
-// Programmatic control
-const api = grid.getApi();
-console.log(api.getColumnState());
-api.setRowData(newData);
+document.getElementById('export-btn').addEventListener('click', () => {
+  grid.api.exportToCsv('employees.csv');
+});
 
-// Cleanup
+// Cleanup when done
 grid.destroy();
 ```
 
   </TabItem>
 </Tabs>
 
-## Next Steps
+## What's next?
 
-- [Sorting](../features/sorting), [Filtering](../features/filtering), [Editing](../features/editing) -- core features
-- [Grid API](../api/grid-api) -- imperative methods
-- [Column Definitions](../api/column-def) -- all column options
-- [Controlled vs Uncontrolled](../guides/controlled-vs-uncontrolled) -- managing state externally
-- [Server-Side Data](../features/server-side-data) -- connect to REST APIs or GraphQL
+- [Sorting](../features/sorting), [Filtering](../features/filtering), [Editing](../features/editing) — dig into individual features
+- [Server-Side Data](../features/server-side-data) — connect to a REST API or GraphQL endpoint
+- [Grid API](../api/js-api) — full reference for programmatic control
+- [Column Definitions](../api/types) — every column option explained

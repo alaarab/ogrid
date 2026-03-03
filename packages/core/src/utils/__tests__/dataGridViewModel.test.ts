@@ -92,13 +92,24 @@ describe('resolveCellDisplayContent', () => {
   describe('date column formatting', () => {
     const dateCol: IColumnDef<Row> = { columnId: 'value', name: 'Date', type: 'date' };
 
-    it('formats date using UTC timezone to prevent off-by-one day shifts', () => {
-      // Regression: without { timeZone: 'UTC' }, toLocaleDateString() converts UTC midnight
-      // to local time, shifting the date backward in negative-offset timezones (e.g. UTC-5).
-      const spy = jest.spyOn(Date.prototype, 'toLocaleDateString');
-      resolveCellDisplayContent(dateCol, item, '2024-03-15T00:00:00.000Z');
-      expect(spy).toHaveBeenCalledWith(undefined, { timeZone: 'UTC' });
-      spy.mockRestore();
+    it('formats UTC midnight date as YYYY-MM-DD (default format) without off-by-one day shifts', () => {
+      // Regression: old toLocaleDateString() without { timeZone: 'UTC' } shifted UTC midnight
+      // dates backward in negative-offset timezones (e.g. UTC-5). The new formatDateForDisplay()
+      // always uses UTC date parts, so the displayed date always matches the stored UTC date.
+      const result = resolveCellDisplayContent(dateCol, item, '2024-03-15T00:00:00.000Z');
+      expect(result).toBe('2024-03-15');
+    });
+
+    it('formats date with column-level dateFormat override (MM/DD/YYYY)', () => {
+      const colWithFormat: IColumnDef<Row> = { columnId: 'value', name: 'Date', type: 'date', dateFormat: 'MM/DD/YYYY' };
+      const result = resolveCellDisplayContent(colWithFormat, item, '2024-03-15T00:00:00.000Z');
+      expect(result).toBe('03/15/2024');
+    });
+
+    it('formats date with column-level dateFormat override (DD/MM/YYYY)', () => {
+      const colWithFormat: IColumnDef<Row> = { columnId: 'value', name: 'Date', type: 'date', dateFormat: 'DD/MM/YYYY' };
+      const result = resolveCellDisplayContent(colWithFormat, item, '2024-03-15T00:00:00.000Z');
+      expect(result).toBe('15/03/2024');
     });
 
     it('returns a string for a valid ISO date', () => {

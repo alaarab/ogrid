@@ -86,7 +86,7 @@ describe('Fill-down (Ctrl+D)', () => {
     const onCellValueChanged = jest.fn();
     const { container, grid } = createGrid({ onCellValueChanged });
 
-    // Select cell (0, 0) — "Alice"
+    // Select cell (0, 0)  -  "Alice"
     const cell = getCellElement(container, 0, 0);
     cell!.click();
 
@@ -126,7 +126,7 @@ describe('Fill-down (Ctrl+D)', () => {
     const onCellValueChanged = jest.fn();
     const { container, grid } = createGrid({ onCellValueChanged });
 
-    // No cell selected — dispatch Ctrl+D directly on wrapper
+    // No cell selected  -  dispatch Ctrl+D directly on wrapper
     const wrapper = getWrapperElement(container);
     wrapper!.dispatchEvent(new KeyboardEvent('keydown', { key: 'd', ctrlKey: true, bubbles: true }));
 
@@ -139,7 +139,7 @@ describe('Fill-down (Ctrl+D)', () => {
     const onCellValueChanged = jest.fn();
     const { container, grid } = createGrid({ onCellValueChanged });
 
-    // Select a single cell — row 0, col 0
+    // Select a single cell  -  row 0, col 0
     const cell = getCellElement(container, 0, 0);
     cell!.click();
 
@@ -344,7 +344,7 @@ describe('aria-sort on column headers', () => {
     const nameHeader = container.querySelector('th[data-column-id="name"]') as HTMLElement;
     nameHeader.click();
 
-    // Re-query after click — header DOM is rebuilt on sort change
+    // Re-query after click  -  header DOM is rebuilt on sort change
     const updatedHeader = container.querySelector('th[data-column-id="name"]');
     expect(updatedHeader!.getAttribute('aria-sort')).toBe('ascending');
 
@@ -354,9 +354,9 @@ describe('aria-sort on column headers', () => {
   it('sorted column gets aria-sort="descending" on second click', () => {
     const { container, grid } = createGrid();
 
-    // First click — ascending
+    // First click  -  ascending
     container.querySelector<HTMLElement>('th[data-column-id="name"]')!.click();
-    // Second click on new DOM element — descending
+    // Second click on new DOM element  -  descending
     container.querySelector<HTMLElement>('th[data-column-id="name"]')!.click();
 
     const updatedHeader = container.querySelector('th[data-column-id="name"]');
@@ -395,10 +395,10 @@ describe('aria-sort on column headers', () => {
 });
 
 // ===========================================================================
-// 5. Error handling — bad data does not crash
+// 5. Error handling  -  bad data does not crash
 // ===========================================================================
 
-describe('Error handling — bad data resilience', () => {
+describe('Error handling  -  bad data resilience', () => {
   it('renders without crashing when a cell value is null', () => {
     const columns: IColumnDef<{ id: number; name: string | null }>[] = [
       { columnId: 'name', name: 'Name' },
@@ -511,7 +511,7 @@ describe('Error handling — bad data resilience', () => {
 });
 
 // ===========================================================================
-// 6. onFetchError callback — mock dataSource that throws
+// 6. onFetchError callback  -  mock dataSource that throws
 // ===========================================================================
 
 describe('onFetchError / onError callback with failing dataSource', () => {

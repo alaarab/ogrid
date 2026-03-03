@@ -26,7 +26,7 @@ import { PopoverCellEditorComponent } from './popover-cell-editor.component';
 
 /**
  * DataGridTable component using native HTML table with Material Design-inspired styling.
- * Standalone component — this is the workhorse of the grid.
+ * Standalone component  -  this is the workhorse of the grid.
  */
 @Component({
   selector: 'ogrid-datagrid-table',

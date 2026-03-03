@@ -310,7 +310,7 @@ export const ToolbarWithSecondaryRow: Story = {
 };
 
 // ---------------------------------------------------------------------------
-// Playground — fully interactive with Storybook controls
+// Playground  -  fully interactive with Storybook controls
 // ---------------------------------------------------------------------------
 
 const playgroundColumns: IColumnDef<Project>[] = [
