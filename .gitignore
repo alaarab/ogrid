@@ -16,3 +16,9 @@ tsup.config.bundled_*.mjs
 .cursor
 .docusaurus
 packages/docs/build
+
+# AI context / internal docs — not for public repo
+.claude/
+CLAUDE.md
+KNOWLEDGE.md
+LEARNINGS.md
