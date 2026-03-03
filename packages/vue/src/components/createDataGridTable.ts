@@ -291,7 +291,7 @@ export function createDataGridTable(ui: IDataGridTableUIBindings) {
                 editCallbacks.commitCellEdit(item, col.columnId, boolVal, !boolVal, descriptor.rowIndex, descriptor.globalColIndex);
               } : undefined,
               onClick: (e: Event) => e.stopPropagation(),
-              style: `margin:0;cursor:${descriptor.canEditAny ? 'pointer' : 'default'}`,
+              style: `margin:0;cursor:${descriptor.canEditAny ? 'pointer' : 'default'};outline:none`,
               'aria-label': boolVal ? 'Checked' : 'Unchecked',
             });
           } else {

@@ -280,12 +280,12 @@ export function BaseInlineCellEditor<T>(props: BaseInlineCellEditorProps<T>): Re
     );
   }
 
-  // Date editor — uses text input for Excel-like UX (type the date directly)
+  // Date editor — native date input with calendar icon (no auto-open picker)
   if (editorType === 'date') {
     return (
       <div ref={wrapperRef} style={editorWrapperStyle}>
         <input
-          type="text"
+          type="date"
           value={localValue}
           onChange={(e) => setLocalValue(e.target.value)}
           onBlur={handleBlur}
