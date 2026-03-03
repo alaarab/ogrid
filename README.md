@@ -1,16 +1,26 @@
-<img src="packages/docs/static/img/favicon.svg" width="64" height="64" alt="OGrid" />
+<p align="center">
+  <img src="packages/docs/static/img/favicon.svg" width="64" height="64" alt="OGrid" />
+</p>
 
-# OGrid
+<h1 align="center">OGrid</h1>
 
-A lightweight, multi-framework data grid. One headless core, 10 UI packages across React, Angular, Vue, and vanilla JS.
+<p align="center">
+  A lightweight, multi-framework data grid. One headless core, 10 UI packages across React, Angular, Vue, and vanilla JS.
+</p>
 
-[![npm](https://img.shields.io/npm/v/@alaarab/ogrid-core?color=%23217346&label=npm)](https://www.npmjs.com/package/@alaarab/ogrid-core) [![CI](https://github.com/alaarab/ogrid/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/alaarab/ogrid/actions/workflows/ci.yml) [![MIT License](https://img.shields.io/badge/license-MIT-green)](https://github.com/alaarab/ogrid/blob/main/LICENSE)
+<p align="center">
+  <a href="https://www.npmjs.com/package/@alaarab/ogrid-core"><img src="https://img.shields.io/npm/v/@alaarab/ogrid-core?color=%23217346&label=npm" alt="npm" /></a>
+  <a href="https://github.com/alaarab/ogrid/actions/workflows/ci.yml"><img src="https://github.com/alaarab/ogrid/actions/workflows/ci.yml/badge.svg?branch=main" alt="CI" /></a>
+  <a href="https://github.com/alaarab/ogrid/blob/main/LICENSE"><img src="https://img.shields.io/badge/license-MIT-green" alt="MIT License" /></a>
+</p>
 
-[Documentation](https://alaarab.github.io/ogrid/) &middot;
-[Getting Started](https://alaarab.github.io/ogrid/docs/getting-started/overview) &middot;
-[API Reference](https://alaarab.github.io/ogrid/docs/api/ogrid-props) &middot;
-[Migrate from AG Grid](https://alaarab.github.io/ogrid/docs/guides/migration-from-ag-grid) &middot;
-[Discord Community](https://discord.gg/KMajyx9j4m)
+<p align="center">
+  <a href="https://alaarab.github.io/ogrid/">Documentation</a> &middot;
+  <a href="https://alaarab.github.io/ogrid/docs/getting-started/overview">Getting Started</a> &middot;
+  <a href="https://alaarab.github.io/ogrid/docs/api/ogrid-props">API Reference</a> &middot;
+  <a href="https://alaarab.github.io/ogrid/docs/guides/migration-from-ag-grid">Migrate from AG Grid</a> &middot;
+  <a href="https://discord.gg/KMajyx9j4m">Discord Community</a>
+</p>
 
 ---
 
