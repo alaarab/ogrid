@@ -57,6 +57,8 @@ export interface TableRendererInteractionState {
   rightOffsets?: Record<string, number>;
   // Column reorder
   onColumnReorderStart?: (columnId: string, event: PointerEvent) => void;
+  // Boolean toggle
+  onBooleanToggle?: (rowId: RowId, columnId: string, currentValue: boolean) => void;
 }
 
 
@@ -277,6 +279,7 @@ export class TableRenderer<T> {
     const wrapper = document.createElement('div');
     wrapper.className = 'ogrid-wrapper';
     wrapper.setAttribute('role', 'region');
+    wrapper.setAttribute('data-ogrid-scroll-container', '');
     wrapper.setAttribute('tabindex', '0'); // Make focusable for keyboard nav
     wrapper.style.position = 'relative'; // For MarchingAnts absolute positioning
     if (this.state.rowHeight) {
@@ -453,9 +456,12 @@ export class TableRenderer<T> {
       if (wasActive && !isActive) {
         el.removeAttribute('data-active-cell');
         el.style.outline = '';
+        el.style.zIndex = '';
       } else if (isActive && !wasActive) {
         el.setAttribute('data-active-cell', 'true');
         el.style.outline = '2px solid var(--ogrid-accent, #0078d4)';
+        el.style.position = 'relative';
+        el.style.zIndex = 'var(--ogrid-z-active-cell, 2)';
       }
 
       // --- Selection range (use pre-computed bounds) ---
@@ -1035,6 +1041,8 @@ export class TableRenderer<T> {
           if (activeCell && activeCell.rowIndex === rowIndex && activeCell.columnIndex === globalColIndex) {
             td.setAttribute('data-active-cell', 'true');
             td.style.outline = '2px solid var(--ogrid-accent, #0078d4)';
+            td.style.position = 'relative';
+            td.style.zIndex = 'var(--ogrid-z-active-cell, 2)';
           }
 
           // Selection range
@@ -1079,13 +1087,21 @@ export class TableRenderer<T> {
             ? (this.formulaEngine.getValue(colIndex, rowIndex) ?? rawValue)
             : rawValue;
           if (col.type === 'boolean') {
+            const boolVal = Boolean(value);
+            const editable = !!col.editable;
             const checkbox = document.createElement('input');
             checkbox.type = 'checkbox';
-            checkbox.checked = Boolean(value);
-            checkbox.disabled = true;
+            checkbox.checked = boolVal;
+            checkbox.disabled = !editable;
             checkbox.style.margin = '0';
-            checkbox.style.pointerEvents = 'none';
-            checkbox.setAttribute('aria-label', value ? 'True' : 'False');
+            checkbox.style.cursor = editable ? 'pointer' : 'default';
+            checkbox.setAttribute('aria-label', boolVal ? 'Checked' : 'Unchecked');
+            if (editable) {
+              checkbox.addEventListener('change', () => {
+                this.interactionState?.onBooleanToggle?.(rowId, col.columnId, boolVal);
+              });
+              checkbox.addEventListener('click', (e) => e.stopPropagation());
+            }
             td.appendChild(checkbox);
           } else if (col.valueFormatter) {
             td.textContent = col.valueFormatter(value, item);

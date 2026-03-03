@@ -95,7 +95,7 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  font-size: 12px;
+  font-size: 13px;
   height: 1px; // CSS table trick: lets children use height: 100%
   border-right: 1px solid var(--colorNeutralStroke1, #c4c4c4);
   position: relative;
@@ -180,14 +180,26 @@
   background-color: var(--colorNeutralBackground1Selected, var(--ogrid-selected-row-bg, #e6f0fb));
 }
 
+.dataTable :global(.fui-TableBody) .selectedRow .rowNumberCellWrapper {
+  background: var(--colorNeutralBackground3, #f5f5f5);
+}
+
 // Row hover in selectable grids
 .selectableGrid .dataTable :global(.fui-TableBody .fui-TableRow:hover .fui-TableCell) {
   background-color: var(--colorSubtleBackgroundHover, #f5f5f5);
   cursor: pointer;
 }
 
+.selectableGrid .dataTable :global(.fui-TableBody .fui-TableRow:hover) .rowNumberCellWrapper {
+  background: var(--colorNeutralBackground3, #f5f5f5);
+}
+
 .selectableGrid .dataTable :global(.fui-TableBody) .selectedRow:hover :global(.fui-TableCell) {
   background-color: var(--colorNeutralBackground1Hover, #dae8f8);
+}
+
+.selectableGrid .dataTable :global(.fui-TableBody) .selectedRow:hover .rowNumberCellWrapper {
+  background: var(--colorNeutralBackground3, #f5f5f5);
 }
 
 // Selectable row cursor

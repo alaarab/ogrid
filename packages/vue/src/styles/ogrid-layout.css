@@ -273,6 +273,13 @@
   contain: none;
 }
 
+/* Elevate the td containing the active/editing cell so its outline paints above
+   adjacent tds on hovered rows (all tds have position: relative). */
+.ogrid-data-cell:has(> .ogrid-cell-content--active),
+.ogrid-data-cell:has(> .ogrid-editing-cell) {
+  z-index: var(--ogrid-z-active-cell, 2);
+}
+
 /* Active cell inside a selection range: suppress outline (Excel behavior).
    The range overlay border is sufficient; the active cell is distinguished
    by its white background vs. the dimmed range cells. */

@@ -18,12 +18,12 @@ export const InlineCellEditor = createInlineCellEditor({
 
   renderDatePicker: ({ value, onChange, onCancel }) =>
     h('input', {
-      type: 'date',
+      type: 'text',
       value,
       style: { width: '100%', height: '100%', border: 'none', outline: 'none', padding: '0 4px', fontSize: 'inherit' },
       onVnodeMounted: (vnode: { el: unknown }) => {
         const el = vnode.el as HTMLInputElement | null;
-        if (el) { el.focus(); try { el.showPicker(); } catch { /* older browsers */ } }
+        if (el) { el.focus(); el.select(); }
       },
       onKeydown: (e: KeyboardEvent) => {
         if (e.key === 'Enter') { e.preventDefault(); onChange((e.target as HTMLInputElement).value); }

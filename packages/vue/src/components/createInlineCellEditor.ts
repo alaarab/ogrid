@@ -65,21 +65,26 @@ export function createInlineCellEditor(options: CreateInlineCellEditorOptions) {
       onMounted(() => {
         nextTick(() => {
           if (selectWrapperRef.value) {
-            selectWrapperRef.value.focus();
+            selectWrapperRef.value.focus({ preventScroll: true });
             positionDropdown();
-            // Listen for scroll to close the editor
+            // Listen for scroll to close the editor.
+            // Delay attachment via RAF to skip spurious scroll events fired during mount
+            // (e.g. focus-triggered scroll, layout-shift scroll from DOM changes).
             const wrapper = selectWrapperRef.value;
-            const scrollParent = wrapper.closest('.ogrid-table-wrapper') ?? wrapper.closest('[style*="overflow"]');
+            const scrollParent = wrapper.closest('[data-ogrid-scroll-container]') ?? wrapper.closest('[style*="overflow"]');
             const handleScroll = () => { if (props.onCancel) props.onCancel(); };
-            if (scrollParent) scrollParent.addEventListener('scroll', handleScroll, { passive: true });
-            window.addEventListener('scroll', handleScroll, { passive: true });
+            const raf = requestAnimationFrame(() => {
+              if (scrollParent) scrollParent.addEventListener('scroll', handleScroll, { passive: true });
+              window.addEventListener('scroll', handleScroll, { passive: true });
+            });
             scrollCleanup = () => {
+              cancelAnimationFrame(raf);
               if (scrollParent) scrollParent.removeEventListener('scroll', handleScroll);
               window.removeEventListener('scroll', handleScroll);
             };
             return;
           }
-          inputRef.value?.focus();
+          inputRef.value?.focus({ preventScroll: true });
           inputRef.value?.select();
         });
       });

@@ -117,8 +117,10 @@ export function getCellInteractionProps(
     ...(descriptor.isActive ? { 'data-active-cell': 'true' as const } : {}),
     ...(descriptor.isInRange ? { 'data-in-range': 'true' as const } : {}),
     tabIndex: descriptor.isActive ? 0 : -1,
-    onPointerDown: (e: React.PointerEvent) =>
-      handlers.handleCellMouseDown(e, descriptor.rowIndex, descriptor.globalColIndex),
+    onPointerDown: (e: React.PointerEvent) => {
+      handlers.setEditingCell(null);
+      handlers.handleCellMouseDown(e, descriptor.rowIndex, descriptor.globalColIndex);
+    },
     onClick: () =>
       handlers.setActiveCell({ rowIndex: descriptor.rowIndex, columnIndex: descriptor.globalColIndex }),
     onContextMenu: handlers.handleCellContextMenu,
