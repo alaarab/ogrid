@@ -6,7 +6,7 @@ All notable changes to OGrid will be documented in this file.
 
 ---
 
-## [2.5.3] — 2026-03-02
+## [2.5.4] — 2026-03-02
 
 ### Added
 
