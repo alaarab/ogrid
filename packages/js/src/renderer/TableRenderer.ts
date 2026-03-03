@@ -1095,6 +1095,7 @@ export class TableRenderer<T> {
             checkbox.disabled = !editable;
             checkbox.style.margin = '0';
             checkbox.style.cursor = editable ? 'pointer' : 'default';
+            checkbox.style.outline = 'none';
             checkbox.setAttribute('aria-label', boolVal ? 'Checked' : 'Unchecked');
             if (editable) {
               checkbox.addEventListener('change', () => {

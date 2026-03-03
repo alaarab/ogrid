@@ -1,6 +1,6 @@
 {
   "name": "@alaarab/ogrid-mcp",
-  "version": "2.5.4",
+  "version": "2.5.5",
   "description": "MCP server for OGrid documentation",
   "type": "module",
   "bin": {
