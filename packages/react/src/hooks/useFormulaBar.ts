@@ -1,5 +1,5 @@
 /**
- * useFormulaBar — React hook for formula bar state.
+ * useFormulaBar  -  React hook for formula bar state.
  *
  * Manages the formula bar text, editing mode, and reference extraction.
  */
@@ -49,7 +49,7 @@ export interface UseFormulaBarResult {
    * Returns true if the reference was inserted, false if not in formula-edit mode.
    */
   insertReference: (reference: string) => boolean;
-  /** Ref to the formula bar input element — set by the FormulaBar component for cursor tracking. */
+  /** Ref to the formula bar input element  -  set by the FormulaBar component for cursor tracking. */
   inputRef: React.RefObject<HTMLInputElement | null>;
 }
 

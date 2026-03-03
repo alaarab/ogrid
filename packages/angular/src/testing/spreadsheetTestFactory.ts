@@ -3,7 +3,7 @@
  * Each UI package calls createSpreadsheetTests(DataGridTableComponent) to run these.
  *
  * Since Angular mocks do not support DOM rendering, these tests verify behavior
- * through the DataGridStateService directly — testing active cell, selection range,
+ * through the DataGridStateService directly  -  testing active cell, selection range,
  * editing state, clipboard, context menu, keyboard navigation state, fill handle,
  * and undo/redo state.
  */
@@ -415,7 +415,7 @@ export function createSpreadsheetTests(_DataGridTableComponent: new () => unknow
         stateService.setSelectionRange({ startRow: 0, startCol: 0, endRow: 0, endCol: 0 });
         const e = new KeyboardEvent('keydown', { key: 'd', ctrlKey: true, bubbles: true });
         stateService.handleGridKeyDown(e);
-        // Single row selected — source equals target, applyFillValues returns empty array
+        // Single row selected  -  source equals target, applyFillValues returns empty array
         expect(onCellValueChanged).not.toHaveBeenCalled();
       });
     });

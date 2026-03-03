@@ -22,7 +22,7 @@ export default function ToolbarCustomDemo() {
   }, []);
 
   return (
-    <LiveDemo height={420} title="Custom toolbar — buttons on the left, column chooser on the right">
+    <LiveDemo height={420} title="Custom toolbar  -  buttons on the left, column chooser on the right">
       <OGrid
         ref={gridRef}
         columns={toolbarColumns}

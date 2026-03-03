@@ -50,7 +50,7 @@ export function useClipboard<T>(params: UseClipboardParams<T>): UseClipboardResu
     endBatch,
   } = params;
 
-  // Volatile values accessed via refs — keeps callbacks stable
+  // Volatile values accessed via refs  -  keeps callbacks stable
   const itemsRef = useLatestRef(params.items);
   const visibleColsRef = useLatestRef(params.visibleCols);
   const selectionRangeRef = useLatestRef(params.selectionRange);
@@ -108,7 +108,7 @@ export function useClipboard<T>(params: UseClipboardParams<T>): UseClipboardResu
     setCutRange(norm);
     setCopyRange(null);
     handleCopy();
-    // handleCopy sets copyRange — override it back since this is a cut
+    // handleCopy sets copyRange  -  override it back since this is a cut
     setCopyRange(null);
   }, [getEffectiveRange, handleCopy, editableRef, onCellValueChangedRef]);
 

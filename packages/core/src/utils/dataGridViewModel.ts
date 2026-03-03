@@ -1,11 +1,12 @@
 /**
  * View model helpers for DataGridTable.
- * Pure TypeScript — no framework dependencies (React, Angular, Vue).
+ * Pure TypeScript  -  no framework dependencies (React, Angular, Vue).
  * Framework packages re-export these and may add thin framework-specific wrappers.
  */
 
 import type { ColumnFilterType, IDateFilterValue, ICellEditorProps } from '../types/columnTypes';
 import type { IColumnDef } from '../types/columnTypes';
+import { formatDateForDisplay, DEFAULT_DATE_FORMAT } from './dateFormatter';
 import type { RowId, UserLike, IFilters, FilterValue } from '../types/dataGridTypes';
 import { getCellValue, isColumnEditable } from './cellValue';
 import { isInSelectionRange } from '../types/dataGridTypes';
@@ -140,7 +141,7 @@ export interface CellRenderDescriptorInput<T> {
   getRowId: (item: T) => RowId;
   editable?: boolean;
   onCellValueChanged?: unknown;
-  /** True while user is drag-selecting cells — hides fill handle during drag. */
+  /** True while user is drag-selecting cells  -  hides fill handle during drag. */
   isDragging?: boolean;
   /** Get the formula engine's computed value for a cell (colIdx, rowIndex). */
   getFormulaValue?: (col: number, row: number) => unknown;
@@ -148,7 +149,7 @@ export interface CellRenderDescriptorInput<T> {
   hasFormula?: (col: number, row: number) => boolean;
   /** Get the formula string for a cell (e.g. '=SUM(A1:A5)'). Used to populate the editor with the formula instead of the computed value. */
   getFormula?: (col: number, row: number) => string | undefined;
-  /** Monotonic counter incremented on each formula recalculation — used for cache invalidation. */
+  /** Monotonic counter incremented on each formula recalculation  -  used for cache invalidation. */
   formulaVersion?: number;
 }
 
@@ -181,7 +182,7 @@ export interface CellRenderDescriptor {
  * Per-grid cache for cell render descriptors.
  *
  * Problem: A 50-column × 100-row grid calls getCellRenderDescriptor 5,000 times per render.
- * Most cells don't change between renders — only cells in the active row, selection range,
+ * Most cells don't change between renders  -  only cells in the active row, selection range,
  * or editing row need recomputation. The cache skips recomputation for unchanged cells.
  *
  * Design:
@@ -213,7 +214,7 @@ export class CellDescriptorCache {
   /**
    * Compute a version string from the volatile parts of CellRenderDescriptorInput.
    * This string changes whenever any input that affects per-cell output changes.
-   * Cheap to compute (simple string concat) — O(1) regardless of grid size.
+   * Cheap to compute (simple string concat)  -  O(1) regardless of grid size.
    */
   static computeVersion<T>(input: CellRenderDescriptorInput<T>): string {
     const ec = input.editingCell;
@@ -261,7 +262,7 @@ export class CellDescriptorCache {
     const entry = this.cache.get(key);
 
     if (entry !== undefined && entry.version === version) {
-      // Cache hit: volatile state is unchanged for this cell — return cached descriptor.
+      // Cache hit: volatile state is unchanged for this cell  -  return cached descriptor.
       return entry.descriptor;
     }
 
@@ -326,7 +327,7 @@ export function getCellRenderDescriptor<T>(
 }
 
 /**
- * Internal pure computation — separated so cache.get() can call it on miss
+ * Internal pure computation  -  separated so cache.get() can call it on miss
  * without the overhead of the optional cache parameter check.
  */
 function computeCellDescriptor<T>(
@@ -385,7 +386,7 @@ function computeCellDescriptor<T>(
   const isPinned = col.pinned != null;
   const pinnedSide = col.pinned ?? undefined;
 
-  // Compute cell value once — used in editing and display branches
+  // Compute cell value once  -  used in editing and display branches
   const cellValue = getCellValue(item, col);
 
   // Resolve formula display value: if this cell has a formula, show the computed result
@@ -463,7 +464,7 @@ interface IColumnDefWithDisplay<T> extends IColumnDef<T> {
 /**
  * Resolves display content for a cell in display mode.
  * Handles the renderCell -> valueFormatter -> String() fallback chain.
- * Returns `unknown` — framework packages may narrow to their own node type.
+ * Returns `unknown`  -  framework packages may narrow to their own node type.
  */
 export function resolveCellDisplayContent<T>(
   col: IColumnDef<T>,
@@ -481,8 +482,9 @@ export function resolveCellDisplayContent<T>(
   if (col.valueFormatter) return col.valueFormatter(displayValue, item);
   if (displayValue == null) return null;
   if (col.type === 'date') {
-    const d = new Date(String(displayValue));
-    if (!Number.isNaN(d.getTime())) return d.toLocaleDateString(undefined, { timeZone: 'UTC' });
+    const format = col.dateFormat ?? DEFAULT_DATE_FORMAT;
+    const formatted = formatDateForDisplay(displayValue, format);
+    if (formatted !== null) return formatted;
   }
   if (col.type === 'boolean') {
     return displayValue ? 'True' : 'False';

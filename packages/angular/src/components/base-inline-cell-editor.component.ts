@@ -1,5 +1,6 @@
 import { Input, Output, EventEmitter, signal, computed, ElementRef, ViewChild } from '@angular/core';
 import type { IColumnDef } from '@alaarab/ogrid-core';
+import { formatDateForDisplay, parseUserInputDate, getDateInputPlaceholder } from '@alaarab/ogrid-core';
 
 /**
  * Abstract base class for Angular inline cell editors.
@@ -53,8 +54,16 @@ export abstract class BaseInlineCellEditorComponent<T = unknown> {
   private syncFromInputs(): void {
     const v = this.value;
     let strVal = v != null ? String(v) : '';
-    if (this.editorType === 'date' && strVal.match(/^\d{4}-\d{2}-\d{2}/)) {
-      strVal = strVal.substring(0, 10);
+    if (this.editorType === 'date') {
+      const dateFormat = this.getDateFormat();
+      const cellEditorType = this.getCellEditorType();
+      if (cellEditorType === 'native') {
+        // Native <input type="date"> requires YYYY-MM-DD
+        strVal = strVal.match(/^\d{4}-\d{2}-\d{2}/) ? strVal.substring(0, 10) : strVal;
+      } else {
+        // text/calendar: format for display
+        strVal = formatDateForDisplay(strVal, dateFormat) ?? strVal;
+      }
     }
     this.localValue.set(strVal);
 
@@ -123,14 +132,45 @@ export abstract class BaseInlineCellEditorComponent<T = unknown> {
   onTextKeyDown(e: KeyboardEvent): void {
     if (e.key === 'Enter') {
       e.preventDefault();
-      this.commitValue(this.localValue());
+      this.commitDateOrValue();
     } else if (e.key === 'Escape') {
       e.preventDefault();
       this.cancel.emit();
     } else if (e.key === 'Tab') {
       e.preventDefault();
-      this.commitValue(this.localValue());
+      this.commitDateOrValue();
     }
+  }
+
+  private commitDateOrValue(): void {
+    if (this.editorType === 'date') {
+      const cellEditorType = this.getCellEditorType();
+      if (cellEditorType !== 'native') {
+        const rawStr = String(this.localValue());
+        if (!rawStr.trim()) {
+          this.commitValue(null);
+          return;
+        }
+        const parsed = parseUserInputDate(rawStr, this.getDateFormat());
+        // Convert Date to YYYY-MM-DD format; if parsing fails, pass through raw string
+        const toCommit = parsed instanceof Date ? parsed.toISOString().substring(0, 10) : rawStr;
+        this.commitValue(toCommit);
+        return;
+      }
+    }
+    this.commitValue(this.localValue());
+  }
+
+  getDateFormat(): string {
+    return (this.column?.cellEditorParams?.['dateFormat'] as string | undefined) ?? (this.column?.dateFormat as string | undefined) ?? 'YYYY-MM-DD';
+  }
+
+  getCellEditorType(): 'native' | 'text' | 'calendar' {
+    return (this.column?.cellEditorParams?.['editorType'] as 'native' | 'text' | 'calendar' | undefined) ?? 'text';
+  }
+
+  getDatePlaceholder(): string {
+    return getDateInputPlaceholder(this.getDateFormat());
   }
 
   getDisplayText(value: unknown): string {
@@ -214,6 +254,20 @@ export abstract class BaseInlineCellEditorComponent<T = unknown> {
   }
 
   onTextBlur(): void {
+    if (this.editorType === 'date') {
+      const cellEditorType = this.getCellEditorType();
+      if (cellEditorType !== 'native') {
+        const rawStr = String(this.localValue());
+        if (!rawStr.trim()) {
+          this.commitValue(null);
+          return;
+        }
+        const parsed = parseUserInputDate(rawStr, this.getDateFormat());
+        const toCommit = parsed instanceof Date ? parsed.toISOString() : rawStr;
+        this.commitValue(toCommit);
+        return;
+      }
+    }
     this.commitValue(this.localValue());
   }
 

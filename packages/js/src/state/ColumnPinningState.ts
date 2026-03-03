@@ -7,7 +7,7 @@ interface ColumnPinningEvents extends Record<string, unknown> {
 }
 
 /**
- * Manages column pinning state — tracks which columns are pinned left/right.
+ * Manages column pinning state  -  tracks which columns are pinned left/right.
  * Computes sticky offsets for the renderer.
  */
 export class ColumnPinningState {

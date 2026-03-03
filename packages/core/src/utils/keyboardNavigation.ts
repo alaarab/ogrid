@@ -1,6 +1,6 @@
 /**
  * Pure keyboard navigation helpers shared across React, Vue, Angular, and JS.
- * No framework dependencies — takes plain values, returns plain values.
+ * No framework dependencies  -  takes plain values, returns plain values.
  */
 import type { ISelectionRange } from '../types/dataGridTypes';
 import type { IColumnDef, ICellValueChangedEvent } from '../types/columnTypes';
@@ -10,8 +10,8 @@ import { parseValue } from './valueParsers';
 
 /**
  * Excel-style Ctrl+Arrow: find the target position along a 1D axis.
- * - Non-empty current + non-empty next → scan through non-empties, stop at last before empty/edge.
- * - Otherwise → skip empties, land on next non-empty or edge.
+ * - Non-empty current + non-empty next  to  scan through non-empties, stop at last before empty/edge.
+ * - Otherwise  to  skip empties, land on next non-empty or edge.
  *
  * @param pos   Current position (row or column index).
  * @param edge  The boundary position (0 for backward, max for forward).
@@ -112,7 +112,7 @@ export interface ArrowNavigationResult {
  * Computes the next active cell position and selection range for a single arrow key press.
  * Handles Ctrl+Arrow (jump to edge), Shift+Arrow (extend selection), and plain Arrow (move).
  *
- * Pure function — no framework dependencies.
+ * Pure function  -  no framework dependencies.
  *
  * @param ctx  Arrow navigation context with current position, direction, modifiers, and grid bounds.
  * @returns The new row/column indices and selection range.
@@ -186,7 +186,7 @@ export function computeArrowNavigation(ctx: ArrowNavigationContext): ArrowNaviga
  * For each editable cell in the range, parses an empty string as the new value
  * and emits a cell value changed event.
  *
- * Pure function — no framework dependencies.
+ * Pure function  -  no framework dependencies.
  *
  * @param range       The normalized selection range to clear.
  * @param items       Array of all row data objects.

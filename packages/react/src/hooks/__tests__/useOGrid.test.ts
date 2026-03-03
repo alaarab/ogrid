@@ -458,7 +458,7 @@ describe('useOGrid', () => {
     });
 
     it('isLoading is true while fetch is in progress', () => {
-      // never resolves — fetch is perpetually in progress
+      // never resolves  -  fetch is perpetually in progress
       const fetchPage = jest.fn().mockReturnValue(new Promise(() => {}));
       const dataSource = { fetchPage };
 

@@ -308,7 +308,7 @@ interface IFetchParams {
 | `page` | `number` | Current page number (1-indexed). |
 | `pageSize` | `number` | Number of items per page. |
 | `sort` | `{ field, direction }` | Active sort (field name + direction). Omit if no sort. |
-| `filters` | `IFilters` | Active filters (field → FilterValue). |
+| `filters` | `IFilters` | Active filters (field  to  FilterValue). |
 
 ### IPageResult&lt;T&gt;
 
@@ -539,9 +539,9 @@ interface IGridColumnState {
 | `visibleColumns` | `string[]` | Array of visible column IDs. |
 | `sort` | `{ field, direction }` | Active sort (field name + direction). |
 | `columnOrder` | `string[]` | Column display order (array of column IDs). |
-| `columnWidths` | `Record<string, number>` | Column widths in pixels (column ID → width). |
-| `filters` | `IFilters` | Active filters (field → FilterValue). |
-| `pinnedColumns` | `Record<string, 'left' \| 'right'>` | Pinned columns (column ID → position). |
+| `columnWidths` | `Record<string, number>` | Column widths in pixels (column ID  to  width). |
+| `filters` | `IFilters` | Active filters (field  to  FilterValue). |
+| `pinnedColumns` | `Record<string, 'left' \| 'right'>` | Pinned columns (column ID  to  position). |
 
 ### Usage Example
 

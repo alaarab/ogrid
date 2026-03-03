@@ -22,7 +22,7 @@ function measureRange(
 }
 
 /**
- * MarchingAntsOverlay — renders SVG overlays on top of the grid:
+ * MarchingAntsOverlay  -  renders SVG overlays on top of the grid:
  * 1. Selection range: solid green border
  * 2. Copy/Cut range: animated dashed border (marching ants)
  *
@@ -99,7 +99,7 @@ export class MarchingAntsOverlay {
       clipRange != null &&
       rangesEqual(this.selectionRange, clipRange);
 
-    // Skip SVG for single-cell selections — CSS outline handles the active cell border
+    // Skip SVG for single-cell selections  -  CSS outline handles the active cell border
     const isSingleCell = this.selectionRange != null &&
       this.selectionRange.startRow === this.selectionRange.endRow &&
       this.selectionRange.startCol === this.selectionRange.endCol;

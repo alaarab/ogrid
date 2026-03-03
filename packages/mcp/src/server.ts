@@ -48,7 +48,7 @@ function detectOGridVersion(searchPath: string): VersionDetectResult {
           return { found: true, version, framework, packages: ogridPkgs, packageJsonPath: pkgPath };
         }
       } catch {
-        // malformed package.json — keep walking up
+        // malformed package.json  -  keep walking up
       }
     }
     const parent = dirname(dir);
@@ -196,7 +196,7 @@ Categories: features, getting-started, guides, api.`,
       const formatted = entries
         .map(
           (entry) =>
-            `- **${entry.title}** — ${entry.description}\n  Path: \`${entry.path}\` | Resource: \`ogrid://docs/${toResourcePath(entry.path)}\``,
+            `- **${entry.title}**  -  ${entry.description}\n  Path: \`${entry.path}\` | Resource: \`ogrid://docs/${toResourcePath(entry.path)}\``,
         )
         .join('\n');
 
@@ -547,7 +547,7 @@ Categories: features, getting-started, guides, api.`,
   );
 
   // -------------------------------------------------------------------------
-  // Resource template: ogrid://docs/{path} — any doc page by path
+  // Resource template: ogrid://docs/{path}  -  any doc page by path
   // -------------------------------------------------------------------------
   server.resource(
     'doc-page',
@@ -624,7 +624,7 @@ Categories: features, getting-started, guides, api.`,
                   '',
                   'Then start the MCP server with bridge enabled:',
                   '  OGRID_BRIDGE_PORT=7890 npx @alaarab/ogrid-mcp',
-                  '  — or —',
+                  '   -  or  - ',
                   '  npx @alaarab/ogrid-mcp --bridge',
                 ].join('\n'),
               },
@@ -668,7 +668,7 @@ Categories: features, getting-started, guides, api.`,
         includeData: z
           .boolean()
           .optional()
-          .describe('Whether to include the full row data (default: false — shows only summary)'),
+          .describe('Whether to include the full row data (default: false  -  shows only summary)'),
         maxRows: z
           .number()
           .int()
@@ -757,11 +757,11 @@ Categories: features, getting-started, guides, api.`,
         'Send a command to a connected OGrid instance and wait for the result.',
         '',
         'Command types:',
-        '  update_cell   — { rowIndex: number, columnId: string, value: unknown }',
-        '  set_filter    — { columnId: string, value: string | string[] }',
-        '  clear_filters — {}',
-        '  set_sort      — { sortModel: [{ columnId, direction: "asc"|"desc" }] }',
-        '  go_to_page    — { page: number }',
+        '  update_cell    -  { rowIndex: number, columnId: string, value: unknown }',
+        '  set_filter     -  { columnId: string, value: string | string[] }',
+        '  clear_filters  -  {}',
+        '  set_sort       -  { sortModel: [{ columnId, direction: "asc"|"desc" }] }',
+        '  go_to_page     -  { page: number }',
       ].join('\n'),
       {
         gridId: z.string().describe('Grid ID as registered by connectGridToBridge()'),

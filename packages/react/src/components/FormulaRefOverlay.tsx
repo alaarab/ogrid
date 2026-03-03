@@ -1,5 +1,5 @@
 /**
- * FormulaRefOverlay — Renders colored border overlays on cells referenced by
+ * FormulaRefOverlay  -  Renders colored border overlays on cells referenced by
  * the active formula, like Excel's reference highlighting.
  *
  * Uses the same container measurement pattern as MarchingAntsOverlay.
@@ -26,7 +26,7 @@ export interface FormulaRefOverlayProps {
   colOffset: number;
 }
 
-/** Shared SVG rect style — avoids recreating on every render. */
+/** Shared SVG rect style  -  avoids recreating on every render. */
 const CRISP_EDGES: React.CSSProperties = { shapeRendering: 'crispEdges' };
 
 function measureRef(

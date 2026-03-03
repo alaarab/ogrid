@@ -1,6 +1,6 @@
 /**
  * Pure selection helpers shared across React, Vue, Angular, and JS.
- * No framework dependencies — operates only on plain ISelectionRange values.
+ * No framework dependencies  -  operates only on plain ISelectionRange values.
  */
 import type { ISelectionRange } from '../types/dataGridTypes';
 

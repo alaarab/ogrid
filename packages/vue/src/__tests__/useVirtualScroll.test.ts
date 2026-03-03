@@ -1,14 +1,14 @@
 import { ref } from 'vue';
 import { useVirtualScroll } from '../composables/useVirtualScroll';
 
-// ResizeObserver is not in jsdom — provide a no-op mock
+// ResizeObserver is not in jsdom  -  provide a no-op mock
 global.ResizeObserver = class ResizeObserver {
   observe() {}
   unobserve() {}
   disconnect() {}
 };
 
-// requestAnimationFrame is not in jsdom — synchronous mock for tests
+// requestAnimationFrame is not in jsdom  -  synchronous mock for tests
 global.requestAnimationFrame = ((cb: FrameRequestCallback) => {
   cb(0);
   return 0;
@@ -28,7 +28,7 @@ describe('useVirtualScroll', () => {
         enabled,
       });
 
-      // Below threshold — passthrough: all rows visible
+      // Below threshold  -  passthrough: all rows visible
       expect(visibleRange.value.startIndex).toBe(0);
       expect(visibleRange.value.endIndex).toBe(49);
       expect(visibleRange.value.offsetTop).toBe(0);
@@ -45,7 +45,7 @@ describe('useVirtualScroll', () => {
         enabled,
       });
 
-      // 99 < 100 (default threshold) — passthrough
+      // 99 < 100 (default threshold)  -  passthrough
       expect(visibleRange.value.startIndex).toBe(0);
       expect(visibleRange.value.endIndex).toBe(98);
     });
@@ -60,7 +60,7 @@ describe('useVirtualScroll', () => {
         enabled,
       });
 
-      // At threshold — virtual scrolling is active
+      // At threshold  -  virtual scrolling is active
       // With 0 containerHeight and scrollTop=0, visible range depends on core's computeVisibleRange
       expect(visibleRange.value).toBeDefined();
     });
@@ -76,7 +76,7 @@ describe('useVirtualScroll', () => {
         threshold: 40, // custom threshold: 50 >= 40, so virtual scroll activates
       });
 
-      // 50 >= 40, virtual scroll active — not a simple passthrough
+      // 50 >= 40, virtual scroll active  -  not a simple passthrough
       // The passthrough returns offsetTop=0 and offsetBottom=0 and endIndex=totalRows-1
       // virtual scroll with 0 container height will render 0+ rows
       // Just verify it's not in passthrough mode by checking it's a real computed range
@@ -126,7 +126,7 @@ describe('useVirtualScroll', () => {
         enabled,
       });
 
-      // enabled=false → passthrough
+      // enabled=false  to  passthrough
       expect(visibleRange.value.startIndex).toBe(0);
       expect(visibleRange.value.endIndex).toBe(999);
       expect(visibleRange.value.offsetTop).toBe(0);
@@ -197,7 +197,7 @@ describe('useVirtualScroll', () => {
 
       const { visibleRange } = useVirtualScroll({ totalRows, rowHeight: 40, enabled });
 
-      // 0 < 100 threshold → passthrough, endIndex = max(0, 0-1) = 0
+      // 0 < 100 threshold  to  passthrough, endIndex = max(0, 0-1) = 0
       expect(visibleRange.value.startIndex).toBe(0);
       expect(visibleRange.value.endIndex).toBe(0);
     });

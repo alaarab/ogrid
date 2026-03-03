@@ -1,5 +1,5 @@
 /**
- * ColorPickerEditor — Premium color swatch picker for OGrid.
+ * ColorPickerEditor  -  Premium color swatch picker for OGrid.
  *
  * Usage:
  *   import { ColorPickerEditor } from '@alaarab/ogrid-react-inputs';
@@ -11,7 +11,7 @@
  *     cellEditorParams: { allowCustom: true },
  *   }];
  *
- * Implements ICellEditorProps<T> — works with cellEditorPopup: true.
+ * Implements ICellEditorProps<T>  -  works with cellEditorPopup: true.
  */
 import * as React from 'react';
 import type { ICellEditorProps } from '@alaarab/ogrid-core';
@@ -22,7 +22,7 @@ import {
   isLightColor,
 } from '@alaarab/ogrid-inputs';
 
-// ── Styles (inline to avoid CSS file dependency — keeps package sideEffects: false) ──
+// ── Styles (inline to avoid CSS file dependency  -  keeps package sideEffects: false) ──
 
 const rootStyle: React.CSSProperties = {
   fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
@@ -96,7 +96,7 @@ const swatchStyle: React.CSSProperties = {
 
 const footerStyle: React.CSSProperties = {
   display: 'flex',
-  justifyContent: 'center',
+  justifyContent: 'flex-start',
   marginTop: '8px',
   paddingTop: '8px',
   borderTop: '1px solid var(--ogrid-border, rgba(0,0,0,0.08))',

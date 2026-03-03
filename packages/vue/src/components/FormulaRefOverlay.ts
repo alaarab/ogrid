@@ -1,5 +1,5 @@
 /**
- * FormulaRefOverlay — Renders colored border overlays on cells referenced by
+ * FormulaRefOverlay  -  Renders colored border overlays on cells referenced by
  * the active formula, like Excel's reference highlighting.
  *
  * Port of React's FormulaRefOverlay component.

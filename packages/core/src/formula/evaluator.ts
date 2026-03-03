@@ -1,5 +1,5 @@
 /**
- * Formula evaluator — walks an AST and computes the result.
+ * Formula evaluator  -  walks an AST and computes the result.
  */
 
 import type {
@@ -93,7 +93,7 @@ export class FormulaEvaluator implements IEvaluator {
       }
 
       case 'range':
-        // Standalone range reference outside a function — evaluate as the top-left cell
+        // Standalone range reference outside a function  -  evaluate as the top-left cell
         return context.getCellValue(node.start);
 
       case 'functionCall':

@@ -130,7 +130,7 @@ test.describe('Sorting', () => {
   });
 
   test('sorted column shows aria-sort attribute', async ({ page }) => {
-    // Skip on JS and Vue Vuetify — these frameworks do not set aria-sort on th elements
+    // Skip on JS and Vue Vuetify  -  these frameworks do not set aria-sort on th elements
     if (isJS(page) || !supportsAriaSort(page)) {
       test.skip();
       return;
@@ -240,7 +240,7 @@ test.describe('MultiSelect filter', () => {
       // React/Angular/Vue: dialog or popover with checkboxes
       const popover = getFilterPopover(page);
       await expect(popover).toBeVisible({ timeout: 2000 });
-      // "Active" is first alphabetically — click first checkbox.
+      // "Active" is first alphabetically  -  click first checkbox.
       // Vue Vuetify uses input[type="checkbox"] with aria-label (no role="checkbox").
       const activeCheckbox = (await popover.getByRole('checkbox').count()) > 0
         ? popover.getByRole('checkbox').first()
@@ -357,7 +357,7 @@ test.describe('Cell editing', () => {
   });
 
   test('Escape discards the edit', async ({ page }) => {
-    // Vue Vuetify inline editor does not cancel on Escape — skip for that framework
+    // Vue Vuetify inline editor does not cancel on Escape  -  skip for that framework
     if (!supportsEscapeCancel(page)) {
       test.skip();
       return;
@@ -397,7 +397,7 @@ test.describe('Keyboard navigation', () => {
   });
 
   test('Escape closes editor without changing value', async ({ page }) => {
-    // Vue Vuetify inline editor does not close on Escape — skip for that framework
+    // Vue Vuetify inline editor does not close on Escape  -  skip for that framework
     if (!supportsEscapeCancel(page)) {
       test.skip();
       return;
@@ -476,7 +476,7 @@ test.describe('Sticky header', () => {
     await page.waitForTimeout(300);
 
     await expect(thead).toBeVisible();
-    // Vue Vuetify uses page-level scroll — the header scrolls off-screen (box.y < 0)
+    // Vue Vuetify uses page-level scroll  -  the header scrolls off-screen (box.y < 0)
     // but the thead element is still attached to the DOM. Skip the y-position check.
     if (getFramework(page) !== 'vue-vuetify') {
       const box = await thead.boundingBox();
@@ -733,7 +733,7 @@ test.describe('Status bar aggregations', () => {
     await page.waitForTimeout(200);
 
     const statusText = await getStatusBar(page).textContent();
-    // 2x2 = 4 cells selected — status bar should show cell count
+    // 2x2 = 4 cells selected  -  status bar should show cell count
     expect(statusText).toMatch(/cells?.*4|4.*cells?/i);
   });
 });
@@ -841,7 +841,7 @@ test.describe('Clipboard', () => {
   });
 
   test('Ctrl+C shows marching ants overlay on selected cells', async ({ page }) => {
-    // Skip on JS and Angular Material — Angular's marching ants overlay does
+    // Skip on JS and Angular Material  -  Angular's marching ants overlay does
     // not render a visible SVG in headless Playwright after Ctrl+C.
     if (isJS(page) || getFramework(page) === 'angular-material') {
       test.skip();

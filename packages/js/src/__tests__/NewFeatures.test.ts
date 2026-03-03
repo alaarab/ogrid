@@ -198,7 +198,7 @@ describe('Row Selection', () => {
       const { container, grid } = createGrid({ rowSelection: 'multiple' });
 
       const checkbox = container.querySelector('.ogrid-row-checkbox') as HTMLInputElement;
-      // Simulate checking the checkbox — click() toggles checked, then our handler reads it
+      // Simulate checking the checkbox  -  click() toggles checked, then our handler reads it
       checkbox.click();
 
       const selectedRow = container.querySelector('tr[data-row-selected="true"]');
@@ -223,7 +223,7 @@ describe('Row Selection', () => {
     it('api.getSelectedRows returns selected row IDs', () => {
       const { container, grid } = createGrid({ rowSelection: 'multiple' });
 
-      // Click the first checkbox — click() toggles checked, then our handler reads it
+      // Click the first checkbox  -  click() toggles checked, then our handler reads it
       const checkbox = container.querySelector('.ogrid-row-checkbox') as HTMLInputElement;
       checkbox.click();
 
@@ -628,7 +628,7 @@ describe('Marching Ants Overlay', () => {
     wrapper.dispatchEvent(new KeyboardEvent('keydown', { key: 'c', ctrlKey: true, bubbles: true }));
 
     // The overlay should create SVG elements inside the wrapper
-    // (measured via rAF — in jsdom this happens synchronously)
+    // (measured via rAF  -  in jsdom this happens synchronously)
     expect(mockClipboard.writeText).toHaveBeenCalledWith('Alice');
 
     grid.destroy();

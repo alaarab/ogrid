@@ -84,10 +84,10 @@ export function useFillHandle<T>(params: UseFillHandleParams<T>): UseFillHandleR
     fillDragEnd = { endRow: drag.startRow, endCol: drag.startCol };
     liveFillRange = null;
 
-    /** Set of currently drag-marked HTMLElements — avoids O(n) full DOM scan on clear. */
+    /** Set of currently drag-marked HTMLElements  -  avoids O(n) full DOM scan on clear. */
     const markedCells = new Set<Element>();
 
-    /** Cell lookup index built on drag start — O(1) lookups per frame. */
+    /** Cell lookup index built on drag start  -  O(1) lookups per frame. */
     let fillCellIndex = buildCellIndex(wrapperRef.value);
 
     const applyDragAttrs = (range: ISelectionRange) => {
@@ -109,12 +109,12 @@ export function useFillHandle<T>(params: UseFillHandleParams<T>): UseFillHandleR
         }
       }
 
-      // Look up only cells in the new range — O(range size) via Map lookup
+      // Look up only cells in the new range  -  O(range size) via Map lookup
       for (let r = minR; r <= maxR; r++) {
         for (let c = minC; c <= maxC; c++) {
           const key = `${r},${c + colOff}`;
           let el = fillCellIndex?.get(key);
-          // Handle virtual scroll recycling — if element is stale, rebuild index once
+          // Handle virtual scroll recycling  -  if element is stale, rebuild index once
           if (el && !el.isConnected) {
             fillCellIndex = buildCellIndex(wrapperRef.value);
             el = fillCellIndex.get(key);
@@ -225,7 +225,7 @@ export function useFillHandle<T>(params: UseFillHandleParams<T>): UseFillHandleR
     window.addEventListener('pointermove', moveListener, true);
     window.addEventListener('pointerup', upListener, true);
 
-    // Register cleanup via onCleanup — Vue calls this BEFORE next watch run
+    // Register cleanup via onCleanup  -  Vue calls this BEFORE next watch run
     // and on unmount. Compatible with Vue 3.3+ (unlike return-value cleanup
     // which requires Vue 3.5+).
     onCleanup(() => {

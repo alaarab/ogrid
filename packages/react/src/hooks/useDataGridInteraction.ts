@@ -51,7 +51,7 @@ export interface UseDataGridInteractionParams<T> {
   ) => void;
   setContextMenuPosition: (pos: { x: number; y: number } | null) => void;
   wrapperRef: RefObject<HTMLDivElement | null>;
-  /** Custom keydown handler — called before grid default. preventDefault() suppresses grid handling. */
+  /** Custom keydown handler  -  called before grid default. preventDefault() suppresses grid handling. */
   onKeyDown?: (event: React.KeyboardEvent) => void;
   /** When true, enables formula-aware clipboard and fill handle. */
   formulas?: boolean;
@@ -195,7 +195,7 @@ export function useDataGridInteraction<T>(
           const ref = formatCellReference(dataColIndex, rowIndex + 1);
           if (insertRef(ref)) {
             e.preventDefault();
-            return; // Reference inserted — skip normal cell selection
+            return; // Reference inserted  -  skip normal cell selection
           }
         }
       }

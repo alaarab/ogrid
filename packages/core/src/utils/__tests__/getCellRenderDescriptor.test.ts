@@ -26,7 +26,7 @@ const baseInput = (): CellRenderDescriptorInput<TestRow> => ({
   isDragging: false,
 });
 
-describe('getCellRenderDescriptor — null/undefined cell value coercion', () => {
+describe('getCellRenderDescriptor  -  null/undefined cell value coercion', () => {
   it('handles null cell value without throwing', () => {
     const col: IColumnDef<TestRow> = { columnId: 'name', name: 'Name' };
     const item: TestRow = { id: '1', name: null };
@@ -51,7 +51,7 @@ describe('getCellRenderDescriptor — null/undefined cell value coercion', () =>
 
     const descriptor = getCellRenderDescriptor(item, col, 0, 0, baseInput());
 
-    // displayValue should be null — not coerced to empty string
+    // displayValue should be null  -  not coerced to empty string
     expect(descriptor.displayValue).toBeNull();
   });
 
@@ -84,7 +84,7 @@ describe('getCellRenderDescriptor — null/undefined cell value coercion', () =>
   });
 });
 
-describe('getCellRenderDescriptor — mode computation', () => {
+describe('getCellRenderDescriptor  -  mode computation', () => {
   it('returns display mode when not editing', () => {
     const col: IColumnDef<TestRow> = { columnId: 'name', name: 'Name', cellEditor: 'text' };
     const item: TestRow = { id: '1', name: 'Alice' };
@@ -126,7 +126,7 @@ describe('getCellRenderDescriptor — mode computation', () => {
     input.editingCell = { rowId: '1', columnId: 'name' };
 
     const descriptor = getCellRenderDescriptor(item, col, 0, 0, input);
-    // canEditInline requires cellEditor to not be a function — undefined is fine
+    // canEditInline requires cellEditor to not be a function  -  undefined is fine
     // editorType falls through to 'text' as default
     expect(descriptor.mode).toBe('editing-inline');
     expect(descriptor.editorType).toBe('text');
@@ -156,7 +156,7 @@ describe('getCellRenderDescriptor — mode computation', () => {
   });
 });
 
-describe('getCellRenderDescriptor — isActive / isInRange', () => {
+describe('getCellRenderDescriptor  -  isActive / isInRange', () => {
   it('isActive is true when activeCell matches row/col', () => {
     const col: IColumnDef<TestRow> = { columnId: 'name', name: 'Name' };
     const item: TestRow = { id: '1', name: 'Alice' };
@@ -236,7 +236,7 @@ describe('getCellRenderDescriptor — isActive / isInRange', () => {
   });
 });
 
-describe('getCellRenderDescriptor — with cache', () => {
+describe('getCellRenderDescriptor  -  with cache', () => {
   it('uses cache to avoid recomputation on second call with same version', () => {
     const col: IColumnDef<TestRow> = { columnId: 'name', name: 'Name' };
     const item: TestRow = { id: '1', name: 'Alice' };
@@ -284,7 +284,7 @@ describe('getCellRenderDescriptor — with cache', () => {
   });
 });
 
-describe('getCellRenderDescriptor — formula editing', () => {
+describe('getCellRenderDescriptor  -  formula editing', () => {
   it('returns formula string as value when editing a formula cell', () => {
     const col: IColumnDef<TestRow> = { columnId: 'name', name: 'Name', cellEditor: 'text', editable: true };
     const item: TestRow = { id: '1', name: 'computed-15' };
@@ -374,7 +374,7 @@ describe('getCellRenderDescriptor — formula editing', () => {
   });
 });
 
-describe('getCellRenderDescriptor — rowId and rowIndex', () => {
+describe('getCellRenderDescriptor  -  rowId and rowIndex', () => {
   it('sets rowId from getRowId function', () => {
     const col: IColumnDef<TestRow> = { columnId: 'name', name: 'Name' };
     const item: TestRow = { id: 'row-42', name: 'Test' };

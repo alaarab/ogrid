@@ -1,5 +1,5 @@
 /**
- * MarchingAntsOverlay — Renders range overlays on top of the grid:
+ * MarchingAntsOverlay  -  Renders range overlays on top of the grid:
  *
  * 1. **Selection range**: solid green border around the current selection
  * 2. **Copy/Cut range**: animated dashed border (marching ants) like Excel
@@ -14,21 +14,21 @@ export const MarchingAntsOverlay = defineComponent({
   props: {
     /** Ref to the positioned container that wraps the table (must have position: relative) */
     containerRef: { type: Object as PropType<Ref<HTMLElement | null>>, required: true },
-    /** Current selection range — solid green border */
+    /** Current selection range  -  solid green border */
     selectionRange: { type: Object as PropType<ISelectionRange | null>, default: null },
-    /** Copy range — animated dashed border */
+    /** Copy range  -  animated dashed border */
     copyRange: { type: Object as PropType<ISelectionRange | null>, default: null },
-    /** Cut range — animated dashed border */
+    /** Cut range  -  animated dashed border */
     cutRange: { type: Object as PropType<ISelectionRange | null>, default: null },
-    /** Column offset — 1 when checkbox column is present, else 0 */
+    /** Column offset  -  1 when checkbox column is present, else 0 */
     colOffset: { type: Number, required: true },
-    /** Items array — triggers re-measurement when data changes (e.g., sorting) */
+    /** Items array  -  triggers re-measurement when data changes (e.g., sorting) */
     items: { type: Array as PropType<readonly unknown[]>, required: true },
-    /** Visible columns — triggers re-measurement when columns are hidden/shown */
+    /** Visible columns  -  triggers re-measurement when columns are hidden/shown */
     visibleColumns: { type: Array as PropType<readonly string[] | undefined>, default: undefined },
-    /** Column sizing overrides — triggers re-measurement when columns are resized */
+    /** Column sizing overrides  -  triggers re-measurement when columns are resized */
     columnSizingOverrides: { type: Object as PropType<Record<string, { widthPx: number }>>, required: true },
-    /** Column order — triggers re-measurement when columns are reordered */
+    /** Column order  -  triggers re-measurement when columns are reordered */
     columnOrder: { type: Array as PropType<readonly string[] | undefined>, default: undefined },
   },
   setup(props) {
@@ -99,7 +99,7 @@ export const MarchingAntsOverlay = defineComponent({
       if (!selRect.value && !clipRect.value) return null;
 
       return h('div', { style: { position: 'relative' } }, [
-        // Selection range: solid green border (hidden when clipboard range overlaps or single-cell — CSS outline handles that)
+        // Selection range: solid green border (hidden when clipboard range overlaps or single-cell  -  CSS outline handles that)
         selRect.value && !clipRangeMatchesSel.value && !(
           props.selectionRange &&
           props.selectionRange.startRow === props.selectionRange.endRow &&

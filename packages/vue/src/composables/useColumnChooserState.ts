@@ -82,7 +82,7 @@ export function useColumnChooserState(
   };
 
   const handleClearAll = () => {
-    // Required columns are silently skipped — no feedback is provided to the user
+    // Required columns are silently skipped  -  no feedback is provided to the user
     columns.value.forEach((col) => {
       if (!col.required && visibleColumns.value.has(col.columnId)) {
         onVisibilityChange(col.columnId, false);

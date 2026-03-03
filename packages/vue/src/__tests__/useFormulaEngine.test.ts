@@ -38,7 +38,7 @@ function makeParams(
 // 1. Basic initialization
 // ==========================================================================
 
-describe('useFormulaEngine — basic initialization', () => {
+describe('useFormulaEngine  -  basic initialization', () => {
   it('returns enabled=false when formulas is undefined', () => {
     const { enabled } = useFormulaEngine(makeParams({ formulas: undefined }));
     expect(enabled.value).toBe(false);
@@ -78,7 +78,7 @@ describe('useFormulaEngine — basic initialization', () => {
 // 2. setFormula and getFormulaValue
 // ==========================================================================
 
-describe('useFormulaEngine — setFormula and getFormulaValue', () => {
+describe('useFormulaEngine  -  setFormula and getFormulaValue', () => {
   it('evaluates a simple arithmetic formula =1+2 to 3', () => {
     const { setFormula, getFormulaValue } = useFormulaEngine(makeParams());
 
@@ -90,7 +90,7 @@ describe('useFormulaEngine — setFormula and getFormulaValue', () => {
   it('evaluates a cell reference =A1 to the value of items[0].a', () => {
     const { setFormula, getFormulaValue } = useFormulaEngine(makeParams());
 
-    // =A1 → col 0, row 0 → items[0].a = 10
+    // =A1  to  col 0, row 0  to  items[0].a = 10
     setFormula(1, 0, '=A1');
 
     expect(getFormulaValue(1, 0)).toBe(10);
@@ -119,7 +119,7 @@ describe('useFormulaEngine — setFormula and getFormulaValue', () => {
   it('returns a FormulaError for an invalid formula', () => {
     const { setFormula, getFormulaValue } = useFormulaEngine(makeParams());
 
-    // Unclosed parenthesis — parse error
+    // Unclosed parenthesis  -  parse error
     setFormula(0, 0, '=SUM(A1:A3');
 
     const value = getFormulaValue(0, 0);
@@ -131,7 +131,7 @@ describe('useFormulaEngine — setFormula and getFormulaValue', () => {
 // 3. hasFormula and getFormula
 // ==========================================================================
 
-describe('useFormulaEngine — hasFormula and getFormula', () => {
+describe('useFormulaEngine  -  hasFormula and getFormula', () => {
   it('hasFormula returns false for a cell without a formula', () => {
     const { hasFormula } = useFormulaEngine(makeParams());
     expect(hasFormula(0, 0)).toBe(false);
@@ -163,7 +163,7 @@ describe('useFormulaEngine — hasFormula and getFormula', () => {
 // 4. onCellChanged cascade
 // ==========================================================================
 
-describe('useFormulaEngine — onCellChanged cascade', () => {
+describe('useFormulaEngine  -  onCellChanged cascade', () => {
   it('recalculates a dependent formula when a referenced cell changes', () => {
     const mutableItems = ref<TestRow[]>([
       { id: 1, a: 10, b: 20, c: 'hello' },
@@ -175,7 +175,7 @@ describe('useFormulaEngine — onCellChanged cascade', () => {
       makeParams({ items: mutableItems })
     );
 
-    // Formula at (0,0) references B1 = col 1, row 0 → items[0].b = 20 → 20+5=25
+    // Formula at (0,0) references B1 = col 1, row 0  to  items[0].b = 20  to  20+5=25
     setFormula(0, 0, '=B1+5');
     expect(getFormulaValue(0, 0)).toBe(25);
 
@@ -185,7 +185,7 @@ describe('useFormulaEngine — onCellChanged cascade', () => {
       ...mutableItems.value.slice(1),
     ];
 
-    // Notify the engine that cell (1, 0) changed — col 1 (B), row 0
+    // Notify the engine that cell (1, 0) changed  -  col 1 (B), row 0
     onCellChanged(1, 0);
 
     // Formula recalculates: 100+5=105
@@ -238,7 +238,7 @@ describe('useFormulaEngine — onCellChanged cascade', () => {
       makeParams({ onFormulaRecalc: onRecalc })
     );
 
-    // No formulas set — no dependents to recalculate
+    // No formulas set  -  no dependents to recalculate
     onCellChanged(0, 0);
 
     expect(onRecalc).not.toHaveBeenCalled();
@@ -249,7 +249,7 @@ describe('useFormulaEngine — onCellChanged cascade', () => {
 // 5. initialFormulas
 // ==========================================================================
 
-describe('useFormulaEngine — initialFormulas', () => {
+describe('useFormulaEngine  -  initialFormulas', () => {
   it('loads initial formulas on first enable', () => {
     const { hasFormula, getFormula } = useFormulaEngine(
       makeParams({ initialFormulas: [{ col: 0, row: 0, formula: '=1+1' }] })
@@ -292,7 +292,7 @@ describe('useFormulaEngine — initialFormulas', () => {
 // 6. Custom formulaFunctions
 // ==========================================================================
 
-describe('useFormulaEngine — custom formulaFunctions', () => {
+describe('useFormulaEngine  -  custom formulaFunctions', () => {
   it('makes a custom function available in formulas', () => {
     const { setFormula, getFormulaValue } = useFormulaEngine(
       makeParams({
@@ -327,7 +327,7 @@ describe('useFormulaEngine — custom formulaFunctions', () => {
       })
     );
 
-    // =TRIPLE(A2) → items[1].a = 30 → 30*3 = 90
+    // =TRIPLE(A2)  to  items[1].a = 30  to  30*3 = 90
     setFormula(0, 0, '=TRIPLE(A2)');
     expect(getFormulaValue(0, 0)).toBe(90);
   });
@@ -337,7 +337,7 @@ describe('useFormulaEngine — custom formulaFunctions', () => {
 // 7. Lifecycle
 // ==========================================================================
 
-describe('useFormulaEngine — lifecycle', () => {
+describe('useFormulaEngine  -  lifecycle', () => {
   it('disabled composable all methods return safe defaults', () => {
     const result = useFormulaEngine(makeParams({ formulas: ref(false) }));
 
@@ -375,14 +375,14 @@ describe('useFormulaEngine — lifecycle', () => {
 });
 
 // ==========================================================================
-// 8. Audit trail — getPrecedents, getDependents, getAuditTrail
+// 8. Audit trail  -  getPrecedents, getDependents, getAuditTrail
 // ==========================================================================
 
-describe('useFormulaEngine — audit trail', () => {
+describe('useFormulaEngine  -  audit trail', () => {
   it('getPrecedents returns cells that a formula depends on', () => {
     const { setFormula, getPrecedents } = useFormulaEngine(makeParams());
 
-    // C1 = A1 + B1 → depends on A1 and B1
+    // C1 = A1 + B1  to  depends on A1 and B1
     setFormula(2, 0, '=A1+B1');
 
     const precedents = getPrecedents(2, 0);

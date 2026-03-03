@@ -281,7 +281,7 @@ export const CellReferences: Story = {
 };
 
 // ---------------------------------------------------------------------------
-// Performance demos — virtual scrolling, worker sort, column virtualization
+// Performance demos  -  virtual scrolling, worker sort, column virtualization
 // ---------------------------------------------------------------------------
 
 export const VirtualScrolling10K: Story = {
@@ -415,7 +415,7 @@ export const ToolbarWithSecondaryRow: Story = {
 };
 
 // ---------------------------------------------------------------------------
-// Playground — fully interactive with Storybook controls
+// Playground  -  fully interactive with Storybook controls
 // ---------------------------------------------------------------------------
 
 const playgroundColumns: IColumnDef<Project>[] = [

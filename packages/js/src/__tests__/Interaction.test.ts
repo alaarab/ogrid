@@ -245,7 +245,7 @@ describe('Interaction - Active Cell', () => {
     wrapper!.dispatchEvent(new KeyboardEvent('keydown', { key: 'PageDown', bubbles: true }));
 
     const ac = container.querySelector('td[data-active-cell="true"]');
-    // 5 rows, pageSize=10 → clamped to row 4
+    // 5 rows, pageSize=10  to  clamped to row 4
     expect(Number(ac?.getAttribute('data-row-index'))).toBe(4);
 
     grid.destroy();

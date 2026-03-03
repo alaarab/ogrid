@@ -1,5 +1,6 @@
 import * as React from 'react';
 import { createPortal } from 'react-dom';
+import { getDateInputPlaceholder, DEFAULT_DATE_FORMAT } from '@alaarab/ogrid-core';
 import type { IColumnDef } from '../types';
 import { useInlineCellEditorState, useRichSelectState, useSelectState } from '../hooks';
 
@@ -156,8 +157,13 @@ export function BaseInlineCellEditor<T>(props: BaseInlineCellEditorProps<T>): Re
   const wrapperRef = React.useRef<HTMLDivElement>(null);
   const onCancelRef = React.useRef(onCancel);
   onCancelRef.current = onCancel;
+
+  // Date editor configuration from cellEditorParams or column-level dateFormat
+  const dateFormat = column.cellEditorParams?.dateFormat ?? column.dateFormat ?? DEFAULT_DATE_FORMAT;
+  const dateEditorType = column.cellEditorParams?.editorType ?? 'text';
+
   const { localValue, setLocalValue, handleKeyDown, handleBlur, commit, cancel } =
-    useInlineCellEditorState({ value, editorType, onCommit, onCancel });
+    useInlineCellEditorState({ value, editorType, onCommit, onCancel, dateFormat, dateEditorType });
 
   const editorValues = (column.cellEditorParams?.values as unknown[]) ?? [];
   const editorFormatValue = column.cellEditorParams?.formatValue as ((v: unknown) => string) | undefined;
@@ -239,7 +245,7 @@ export function BaseInlineCellEditor<T>(props: BaseInlineCellEditorProps<T>): Re
       // Focus the wrapper for keyboard events (select editor has no input)
       wrapper.focus({ preventScroll: true });
     }
-  }, []); // Mount-only: intentionally runs once to focus/open picker on editor open
+  }, [editorType]); // Run when editorType changes to focus appropriate element
 
   // Helper: portal dropdown to document.body when using fixed positioning
   // to escape ancestor `contain: content` which clips even fixed elements
@@ -272,7 +278,6 @@ export function BaseInlineCellEditor<T>(props: BaseInlineCellEditorProps<T>): Re
         {richSelect.filteredValues.length === 0 && (
           <div style={richSelectNoMatchesStyle}>No matches</div>
         )}
-        <div style={richSelectFooterStyle}>Click or Enter to apply</div>
       </div>
     );
     return (
@@ -307,7 +312,6 @@ export function BaseInlineCellEditor<T>(props: BaseInlineCellEditorProps<T>): Re
             {selectState.getDisplayText(v)}
           </div>
         ))}
-        <div style={richSelectFooterStyle}>Click or Enter to apply</div>
       </div>
     );
     return (
@@ -321,8 +325,24 @@ export function BaseInlineCellEditor<T>(props: BaseInlineCellEditorProps<T>): Re
     );
   }
 
-  // Date editor — plain text input (Excel-style: type the date, no native calendar)
+  // Date editor — native browser picker or plain text input (Excel-style)
   if (editorType === 'date') {
+    const placeholder = getDateInputPlaceholder(dateFormat);
+    if (dateEditorType === 'native') {
+      return (
+        <div ref={wrapperRef} style={editorWrapperStyle}>
+          <input
+            type="date"
+            value={localValue}
+            onChange={(e) => setLocalValue(e.target.value)}
+            onBlur={handleBlur}
+            onKeyDown={handleKeyDown}
+            style={editorInputStyle}
+            autoFocus
+          />
+        </div>
+      );
+    }
     return (
       <div ref={wrapperRef} style={editorWrapperStyle}>
         <input
@@ -331,7 +351,7 @@ export function BaseInlineCellEditor<T>(props: BaseInlineCellEditorProps<T>): Re
           onChange={(e) => setLocalValue(e.target.value)}
           onBlur={handleBlur}
           onKeyDown={handleKeyDown}
-          placeholder="YYYY-MM-DD"
+          placeholder={placeholder}
           style={editorInputStyle}
           autoFocus
         />

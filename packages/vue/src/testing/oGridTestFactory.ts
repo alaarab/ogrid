@@ -141,6 +141,6 @@ export function createOGridTests(): void {
     expect(dataGridProps.value.stickyHeader).toBe(false);
   });
 
-  // Note: onFetchError async tests removed — useOGrid triggers fetch in onMounted()
+  // Note: onFetchError async tests removed  -  useOGrid triggers fetch in onMounted()
   // which doesn't fire outside component context. These need proper component-based tests.
 }

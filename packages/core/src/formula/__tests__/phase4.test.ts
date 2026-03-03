@@ -210,7 +210,7 @@ describe('Formula Auditing', () => {
 
     it('returns empty for non-formula cell', () => {
       const { engine } = createAuditEngine();
-      const precs = engine.getPrecedents(0, 0); // A1 — data cell
+      const precs = engine.getPrecedents(0, 0); // A1  -  data cell
       expect(precs).toEqual([]);
     });
 

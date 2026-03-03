@@ -190,7 +190,7 @@ describe('toBoolean', () => {
 // Literal evaluation
 // ---------------------------------------------------------------------------
 
-describe('evaluate — literals', () => {
+describe('evaluate  -  literals', () => {
   const ctx = createMockContext();
 
   it('evaluates a number literal', () => {
@@ -221,7 +221,7 @@ describe('evaluate — literals', () => {
 // Cell references
 // ---------------------------------------------------------------------------
 
-describe('evaluate — cell references', () => {
+describe('evaluate  -  cell references', () => {
   it('resolves a cell value from context', () => {
     const ctx = createMockContext({ '2,3': 100 });
     const node: ASTNode = {
@@ -254,10 +254,10 @@ describe('evaluate — cell references', () => {
 });
 
 // ---------------------------------------------------------------------------
-// Range evaluation (standalone — returns top-left cell)
+// Range evaluation (standalone  -  returns top-left cell)
 // ---------------------------------------------------------------------------
 
-describe('evaluate — standalone range', () => {
+describe('evaluate  -  standalone range', () => {
   it('returns the top-left cell value for a standalone range', () => {
     const ctx = createMockContext({ '0,0': 'top-left', '1,0': 'top-right' });
     const node: ASTNode = {
@@ -271,10 +271,10 @@ describe('evaluate — standalone range', () => {
 });
 
 // ---------------------------------------------------------------------------
-// Binary operators — arithmetic
+// Binary operators  -  arithmetic
 // ---------------------------------------------------------------------------
 
-describe('evaluate — arithmetic binary operators', () => {
+describe('evaluate  -  arithmetic binary operators', () => {
   const ctx = createMockContext();
 
   function binOp(op: '+' | '-' | '*' | '/' | '^' | '%', left: number, right: number): ASTNode {
@@ -319,10 +319,10 @@ describe('evaluate — arithmetic binary operators', () => {
 });
 
 // ---------------------------------------------------------------------------
-// Binary operators — string concatenation
+// Binary operators  -  string concatenation
 // ---------------------------------------------------------------------------
 
-describe('evaluate — string concatenation (&)', () => {
+describe('evaluate  -  string concatenation (&)', () => {
   const ctx = createMockContext();
 
   it('concatenates two strings', () => {
@@ -369,10 +369,10 @@ describe('evaluate — string concatenation (&)', () => {
 });
 
 // ---------------------------------------------------------------------------
-// Binary operators — comparisons
+// Binary operators  -  comparisons
 // ---------------------------------------------------------------------------
 
-describe('evaluate — comparison operators', () => {
+describe('evaluate  -  comparison operators', () => {
   const ctx = createMockContext();
 
   function cmp(op: '>' | '<' | '>=' | '<=' | '=' | '<>', left: ASTNode, right: ASTNode): ASTNode {
@@ -446,7 +446,7 @@ describe('evaluate — comparison operators', () => {
 // Comparison with mixed types
 // ---------------------------------------------------------------------------
 
-describe('evaluate — mixed-type comparisons', () => {
+describe('evaluate  -  mixed-type comparisons', () => {
   const ctx = createMockContext();
   const num = (v: number): ASTNode => ({ kind: 'number', value: v });
   const str = (v: string): ASTNode => ({ kind: 'string', value: v });
@@ -477,7 +477,7 @@ describe('evaluate — mixed-type comparisons', () => {
 // Unary operators
 // ---------------------------------------------------------------------------
 
-describe('evaluate — unary operators', () => {
+describe('evaluate  -  unary operators', () => {
   const ctx = createMockContext();
 
   it('negates a number', () => {
@@ -524,7 +524,7 @@ describe('evaluate — unary operators', () => {
 // Error propagation through binary arithmetic
 // ---------------------------------------------------------------------------
 
-describe('evaluate — error propagation in arithmetic', () => {
+describe('evaluate  -  error propagation in arithmetic', () => {
   const ctx = createMockContext();
 
   it('propagates left-side error in addition', () => {
@@ -566,7 +566,7 @@ describe('evaluate — error propagation in arithmetic', () => {
 // Function calls
 // ---------------------------------------------------------------------------
 
-describe('evaluate — function calls', () => {
+describe('evaluate  -  function calls', () => {
   it('returns #NAME? for unknown function', () => {
     const ctx = createMockContext();
     const node: ASTNode = {
@@ -729,7 +729,7 @@ describe('flattenArgs', () => {
 // Arithmetic with cell references
 // ---------------------------------------------------------------------------
 
-describe('evaluate — arithmetic with cell references', () => {
+describe('evaluate  -  arithmetic with cell references', () => {
   it('adds two cell values', () => {
     const ctx = createMockContext({ '0,0': 10, '1,0': 20 });
     const node: ASTNode = {

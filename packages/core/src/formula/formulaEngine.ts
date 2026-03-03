@@ -1,5 +1,5 @@
 /**
- * FormulaEngine — orchestrates parser, evaluator, dependency graph, and formula storage.
+ * FormulaEngine  -  orchestrates parser, evaluator, dependency graph, and formula storage.
  */
 
 import type {
@@ -57,7 +57,7 @@ function extractDependencies(node: ASTNode): Set<CellKey> {
       case 'unaryOp':
         walk(n.operand);
         break;
-      // number, string, boolean, error — no dependencies
+      // number, string, boolean, error  -  no dependencies
     }
   }
 
@@ -323,7 +323,7 @@ export class FormulaEngine {
   // --- Named Ranges ---
 
   /**
-   * Define a named range (e.g. "Revenue" → "A1:A10").
+   * Define a named range (e.g. "Revenue"  to  "A1:A10").
    */
   defineNamedRange(name: string, ref: string): void {
     this.namedRanges.set(name.toUpperCase(), ref);
@@ -337,7 +337,7 @@ export class FormulaEngine {
   }
 
   /**
-   * Get all named ranges as a Map (name → ref).
+   * Get all named ranges as a Map (name  to  ref).
    */
   getNamedRanges(): ReadonlyMap<string, string> {
     return this.namedRanges;
@@ -491,7 +491,7 @@ export class FormulaEngine {
           ? this.sheetAccessors.get(sheet)
           : accessor;
         if (sheet && !rangeAccessor) {
-          // Unknown sheet — return single-cell array with error
+          // Unknown sheet  -  return single-cell array with error
           return [[new FormulaError('#REF!', `Unknown sheet: ${sheet}`)]];
         }
         const minRow = Math.min(range.start.row, range.end.row);
@@ -530,7 +530,7 @@ export class FormulaEngine {
 
     for (const key of order) {
       if (count++ > this.maxChainLength) {
-        // Safety limit — mark remaining as circular
+        // Safety limit  -  mark remaining as circular
         const { col, row } = fromCellKey(key);
         const oldValue = this.values.get(key);
         const circError = new FormulaError('#CIRC!', 'Dependency chain too long');
@@ -540,7 +540,7 @@ export class FormulaEngine {
       }
 
       const ast = this.parsedFormulas.get(key);
-      if (!ast) continue; // Not a formula cell — skip
+      if (!ast) continue; // Not a formula cell  -  skip
 
       const { col, row } = fromCellKey(key);
       const oldValue = this.values.get(key);

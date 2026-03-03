@@ -5,7 +5,7 @@
 import { renderHook } from '@testing-library/react';
 import { useVirtualScroll } from '../useVirtualScroll';
 
-// Mock @tanstack/react-virtual — useVirtualizer is DOM-dependent; we test the logic layer
+// Mock @tanstack/react-virtual  -  useVirtualizer is DOM-dependent; we test the logic layer
 jest.mock('@tanstack/react-virtual', () => ({
   useVirtualizer: jest.fn(() => ({
     getVirtualItems: jest.fn(() => []),
@@ -35,7 +35,7 @@ function makeContainerRef(el: HTMLElement | null = null) {
   return { current: el };
 }
 
-describe('useVirtualScroll — return shape', () => {
+describe('useVirtualScroll  -  return shape', () => {
   it('returns all expected fields', () => {
     const { result } = renderHook(() =>
       useVirtualScroll({
@@ -54,7 +54,7 @@ describe('useVirtualScroll — return shape', () => {
   });
 });
 
-describe('useVirtualScroll — disabled (enabled=false)', () => {
+describe('useVirtualScroll  -  disabled (enabled=false)', () => {
   it('returns null virtualizer when enabled is false', () => {
     const { result } = renderHook(() =>
       useVirtualScroll({
@@ -99,19 +99,19 @@ describe('useVirtualScroll — disabled (enabled=false)', () => {
   });
 });
 
-describe('useVirtualScroll — threshold (enabled=true)', () => {
+describe('useVirtualScroll  -  threshold (enabled=true)', () => {
   it('is inactive (pass-through) when totalRows < default threshold (100)', () => {
     const { result } = renderHook(() =>
       useVirtualScroll({
         totalRows: 99,
         rowHeight: 36,
         enabled: true,
-        // No threshold provided — defaults to 100
+        // No threshold provided  -  defaults to 100
         containerRef: makeContainerRef(),
       })
     );
 
-    // Below threshold → pass-through: virtualizer is null
+    // Below threshold  to  pass-through: virtualizer is null
     expect(result.current.virtualizer).toBeNull();
   });
 
@@ -218,7 +218,7 @@ describe('useVirtualScroll — threshold (enabled=true)', () => {
   });
 });
 
-describe('useVirtualScroll — totalHeight', () => {
+describe('useVirtualScroll  -  totalHeight', () => {
   it('returns rowHeight * totalRows when pass-through (below threshold)', () => {
     const { result } = renderHook(() =>
       useVirtualScroll({
@@ -247,7 +247,7 @@ describe('useVirtualScroll — totalHeight', () => {
   });
 });
 
-describe('useVirtualScroll — visibleRange pass-through edge cases', () => {
+describe('useVirtualScroll  -  visibleRange pass-through edge cases', () => {
   it('endIndex is -1 when totalRows is 0 (pass-through)', () => {
     const { result } = renderHook(() =>
       useVirtualScroll({
@@ -290,7 +290,7 @@ describe('useVirtualScroll — visibleRange pass-through edge cases', () => {
   });
 });
 
-describe('useVirtualScroll — scrollToIndex', () => {
+describe('useVirtualScroll  -  scrollToIndex', () => {
   it('scrolls container directly when not virtual (pass-through mode)', () => {
     const container = document.createElement('div');
     container.scrollTo = jest.fn();
@@ -324,7 +324,7 @@ describe('useVirtualScroll — scrollToIndex', () => {
 
 // --- Column virtualization ---
 
-describe('useVirtualScroll — column virtualization', () => {
+describe('useVirtualScroll  -  column virtualization', () => {
   it('returns null columnRange when columnVirtualization is disabled', () => {
     const { result } = renderHook(() =>
       useVirtualScroll({

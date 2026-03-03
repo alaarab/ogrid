@@ -65,7 +65,7 @@ describe('computeAggregations', () => {
       endRow: 1,
       endCol: 1,
     });
-    // Only name column selected — no numbers
+    // Only name column selected  -  no numbers
     expect(result).toBeNull();
   });
 

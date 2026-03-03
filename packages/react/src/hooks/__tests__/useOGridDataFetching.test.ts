@@ -51,7 +51,7 @@ function makeParams(overrides?: Partial<UseOGridDataFetchingParams<TestRow>>): U
   };
 }
 
-describe('useOGridDataFetching — client-side sync path', () => {
+describe('useOGridDataFetching  -  client-side sync path', () => {
   it('returns all items when no filter/sort is applied', () => {
     const { result } = renderHook(() => useOGridDataFetching(makeParams()));
 
@@ -82,7 +82,7 @@ describe('useOGridDataFetching — client-side sync path', () => {
   });
 });
 
-describe('useOGridDataFetching — worker sort', () => {
+describe('useOGridDataFetching  -  worker sort', () => {
   beforeEach(() => {
     (processClientSideDataAsync as jest.Mock).mockClear();
   });
@@ -146,7 +146,7 @@ describe('useOGridDataFetching — worker sort', () => {
   });
 });
 
-describe('useOGridDataFetching — onFirstDataRendered', () => {
+describe('useOGridDataFetching  -  onFirstDataRendered', () => {
   it('fires onFirstDataRendered once when items first appear', async () => {
     const onFirstDataRendered = jest.fn();
 
@@ -161,7 +161,7 @@ describe('useOGridDataFetching — onFirstDataRendered', () => {
   });
 });
 
-describe('useOGridDataFetching — refreshData', () => {
+describe('useOGridDataFetching  -  refreshData', () => {
   it('refreshData is a function', () => {
     const { result } = renderHook(() => useOGridDataFetching(makeParams()));
 

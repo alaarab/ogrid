@@ -373,7 +373,7 @@ export function useKeyboardNavigation<T>(
           break;
       }
     },
-    [] // stable — reads latest values from paramsRef
+    [] // stable  -  reads latest values from paramsRef
   );
 
   return { handleGridKeyDown };

@@ -1,24 +1,24 @@
 ---
 title: Editor Integration (MCP)
-description: Connect your editor to OGrid documentation and your running grid.
+description: Connect your editor to OGrid docs and your live running grid.
 sidebar_position: 1
 ---
 
 # Editor Integration (MCP)
 
-`@alaarab/ogrid-mcp` is a standalone [Model Context Protocol (MCP)](https://modelcontextprotocol.io) server that gives your editor full access to OGrid documentation across all frameworks. It also includes a **live testing bridge** that lets your editor read and control a running OGrid instance in real time.
+`@alaarab/ogrid-mcp` connects your AI coding assistant to OGrid documentation — so instead of switching tabs to look things up, you can just ask your editor while you code.
 
-## Installation
+It also includes a **live testing bridge** that lets your editor read and control an OGrid instance running in your browser in real time.
 
-The MCP server is published as `@alaarab/ogrid-mcp` and requires no configuration — docs are bundled into the package.
+## How it works
 
-```bash
-npm install -g @alaarab/ogrid-mcp
-# or use npx directly (no install needed)
-npx @alaarab/ogrid-mcp
-```
+MCP (Model Context Protocol) is a standard that lets editors like Claude Code and Cursor talk to external tools. When you connect the OGrid MCP server, your editor can:
 
----
+- Search through OGrid docs while you're writing code
+- Pull up specific API references without leaving your editor
+- Inspect and interact with a running grid during development
+
+You don't need to understand the protocol to use it — just run one command and your editor gains access.
 
 ## Connect to your editor
 
@@ -27,6 +27,8 @@ npx @alaarab/ogrid-mcp
 ```bash
 claude mcp add ogrid -- npx -y @alaarab/ogrid-mcp
 ```
+
+That's it. The docs are bundled in the package — no config file needed.
 
 ### Claude Desktop
 
@@ -58,34 +60,38 @@ Add to your Cursor MCP settings:
 
 ---
 
-## What it can do
+## What you can ask
 
-Once connected, your editor has access to the full OGrid documentation for all frameworks. Example queries:
+Once connected, you can ask your editor questions like:
 
 ```
-Show me how to set up server-side pagination in React
+How do I set up server-side pagination in React?
 How do I pin columns in Angular Material?
 What's the difference between multiSelect and text filters?
-How do I use the formula engine?
-Help me migrate from AG Grid to OGrid
+Show me how to use the formula engine in Vue.
+Help me migrate from AG Grid to OGrid.
 ```
+
+The MCP server searches through the full documentation — features, API references, getting started guides, and code examples — and returns the relevant sections along with your context.
 
 ---
 
-## MCP tools
+## Available tools
+
+These are what the MCP server provides to your editor. You don't call them directly — your editor uses them automatically when you ask questions.
 
 ### `search_docs`
 
-Full-text search across all OGrid documentation.
+Full-text search across all OGrid documentation. Optionally filter by framework or category.
 
 ```
 search_docs query="server-side data" framework="react"
 ```
 
 Parameters:
-- `query` (required) — search terms
-- `framework` (optional) — filter to `react`, `angular`, `vue`, or `js`
-- `category` (optional) — filter to `features`, `getting-started`, `guides`, or `api`
+- `query` (required) — what you're looking for
+- `framework` (optional) — `react`, `angular`, `vue`, or `js`
+- `category` (optional) — `features`, `getting-started`, `guides`, or `api`
 
 ### `list_docs`
 
@@ -97,7 +103,7 @@ list_docs category="features"
 
 ### `get_docs`
 
-Read a full documentation page by path.
+Read a full documentation page by its path.
 
 ```
 get_docs path="features/filtering"
@@ -105,7 +111,7 @@ get_docs path="features/filtering"
 
 ### `get_code_example`
 
-Extract code snippets from a documentation page, optionally filtered by framework.
+Pull code snippets from a doc page, optionally filtered by framework.
 
 ```
 get_code_example path="features/editing" framework="angular"
@@ -113,7 +119,7 @@ get_code_example path="features/editing" framework="angular"
 
 ### `detect_version`
 
-Detect which OGrid packages are installed in the user's project by reading their `package.json`.
+Checks which OGrid packages are installed in your project.
 
 ```
 detect_version path="/path/to/project"
@@ -123,7 +129,7 @@ detect_version path="/path/to/project"
 
 ## MCP resources
 
-Resources can be read directly by the MCP client without calling a tool.
+Resources can be read by your editor without calling a tool explicitly.
 
 | Resource | Description |
 |----------|-------------|
@@ -133,39 +139,34 @@ Resources can be read directly by the MCP client without calling a tool.
 
 ---
 
-## MCP prompts
-
-### `migrate-from-ag-grid`
-
-Provides step-by-step guidance for an AG Grid → OGrid migration. Provide your existing AG Grid code and it will produce equivalent OGrid code with explanations.
-
----
-
 ## Live testing bridge
 
-For real-time development, the MCP server includes a bridge that connects to a running OGrid instance. This lets your editor:
+The live bridge lets your editor see and control an OGrid instance running in your browser.
 
-- Read the current grid state (rows, columns, pagination, filters, sort)
-- Update cell values
-- Apply or clear filters
-- Change sort order
-- Navigate pages
-
-See the **[MCP Live Testing Bridge](./mcp-live-testing)** guide for full setup instructions.
+Start the MCP server with the bridge enabled:
 
 ```bash
-# Start with bridge enabled
 npx @alaarab/ogrid-mcp --bridge
 
-# Or with a custom port
+# Custom port if needed
 OGRID_BRIDGE_PORT=7890 npx @alaarab/ogrid-mcp
 ```
+
+Once running, your editor can:
+
+- Read the current grid state (visible rows, active filters, sort, pagination)
+- Update individual cell values
+- Apply or clear filters
+- Change sort order
+- Navigate to a specific page
+
+See the [Live Testing Bridge guide](./mcp-live-testing) for the full setup and available commands.
 
 ---
 
 ## Version
 
-The MCP server is published separately from the grid packages and versioned independently. Check the installed version:
+The MCP server is published and versioned independently from the grid packages:
 
 ```bash
 npx @alaarab/ogrid-mcp --version

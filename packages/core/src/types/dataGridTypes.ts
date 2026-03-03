@@ -1,6 +1,6 @@
 import type { IDateFilterValue } from './columnTypes';
 
-/** Row identifier type — grids accept string or number IDs. */
+/** Row identifier type  -  grids accept string or number IDs. */
 export type RowId = string | number;
 
 export interface UserLike {
@@ -197,7 +197,7 @@ export interface IVirtualScrollConfig {
    * higher values keep small grids fully rendered (no scroll offset artifacts).
    */
   threshold?: number;
-  /** Enable column virtualization — only render visible columns (default: false). */
+  /** Enable column virtualization  -  only render visible columns (default: false). */
   columns?: boolean;
   /** Number of extra columns to render outside the visible area (default: 2). */
   columnOverscan?: number;

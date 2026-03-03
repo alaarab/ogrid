@@ -26,15 +26,15 @@ import { ArchitectureDiagram } from '@site/src/components/ArchitectureDiagram';
 
 <ArchitectureDiagram />
 
-### Core Layer — `@alaarab/ogrid-core`
+### Core Layer  -  `@alaarab/ogrid-core`
 
 Pure TypeScript with zero dependencies. Provides the type system (`IOGridProps`, `IColumnDef`, `IOGridApi`, `FilterValue`, etc.) and shared algorithms (`getCellValue`, `buildHeaderRows`, `parseValue`, `normalizeSelectionRange`, etc.) used by both the React and JS packages.
 
 ### Framework Adapter Layers
 
-Each framework adapter translates Core's algorithms into idiomatic framework patterns — React hooks, Angular services with signals, or Vue composables with refs.
+Each framework adapter translates Core's algorithms into idiomatic framework patterns  -  React hooks, Angular services with signals, or Vue composables with refs.
 
-**React** — `@alaarab/ogrid-react`
+**React**  -  `@alaarab/ogrid-react`
 
 | Domain | Hooks |
 |---|---|
@@ -46,16 +46,16 @@ Each framework adapter translates Core's algorithms into idiomatic framework pat
 | **Layout** | `useColumnResize` · `useSideBarState` · `useColumnChooserState` |
 | **Filtering** | `useColumnHeaderFilterState` · `useFilterOptions` |
 
-**Angular** — `@alaarab/ogrid-angular`
+**Angular**  -  `@alaarab/ogrid-angular`
 
 Angular v21 services using signals (`signal()`, `computed()`, `effect()`). Standalone components with inline templates. Zone-less by default.
 
 | Service | Equivalent |
 |---|---|
-| `OGridService` | `useOGrid` — pagination, sorting, filtering, visibility, editing |
-| `DataGridStateService` | `useDataGridState` — layout, selection, editing, interaction |
+| `OGridService` | `useOGrid`  -  pagination, sorting, filtering, visibility, editing |
+| `DataGridStateService` | `useDataGridState`  -  layout, selection, editing, interaction |
 
-**Vue** — `@alaarab/ogrid-vue`
+**Vue**  -  `@alaarab/ogrid-vue`
 
 Vue 3 Composition API composables using `ref()`, `computed()`, `watch()`.
 
@@ -65,7 +65,7 @@ Vue 3 Composition API composables using `ref()`, `computed()`, `watch()`.
 | `useDataGridState` | Layout, cell selection, editing, clipboard, keyboard nav |
 | 20+ feature composables | `useCellEditing`, `useCellSelection`, `useClipboard`, etc. |
 
-### UI Layer — Pick Your Framework
+### UI Layer  -  Pick Your Framework
 
 Each UI package is a thin shell (~1,500 lines) that calls the same core logic and renders into native components:
 
@@ -81,7 +81,7 @@ Each UI package is a thin shell (~1,500 lines) that calls the same core logic an
 | `@alaarab/ogrid-vue-vuetify` | Vuetify 3 | Vue + Material Design |
 | `@alaarab/ogrid-vue-primevue` | PrimeVue 4 | Vue + PrimeVue ecosystem |
 
-All packages within a framework export the same `OGrid` component with the same props. Switching UI libraries is a one-line import change — your column definitions, event handlers, data sources, and API calls stay identical.
+All packages within a framework export the same `OGrid` component with the same props. Switching UI libraries is a one-line import change  -  your column definitions, event handlers, data sources, and API calls stay identical.
 
 ### Why This Matters
 

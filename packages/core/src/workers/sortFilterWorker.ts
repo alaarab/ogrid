@@ -51,7 +51,7 @@ export function workerBody(): void {
     const filterEntries = Object.entries(filters);
 
     if (filterEntries.length === 0) {
-      // No filters — all rows pass
+      // No filters  -  all rows pass
       indices = new Array(rowCount);
       for (let i = 0; i < rowCount; i++) indices[i] = i;
     } else {

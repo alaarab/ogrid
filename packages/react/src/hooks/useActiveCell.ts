@@ -18,7 +18,7 @@ export function useActiveCell(
   const activeCellRef = useRef(activeCell);
   activeCellRef.current = activeCell;
 
-  // Deduplicating setter — skips state update (and all downstream effects) when
+  // Deduplicating setter  -  skips state update (and all downstream effects) when
   // the cell coordinates haven't actually changed. This prevents re-renders when
   // rapidly clicking the same cell.
   const setActiveCell = useCallback((cell: IActiveCell | null) => {
@@ -67,7 +67,7 @@ export function useActiveCell(
           wrapper.scrollTop += cellRect.bottom - wrapperRect.bottom;
         }
 
-        // Horizontal scroll — only when the wrapper actually scrolls horizontally
+        // Horizontal scroll  -  only when the wrapper actually scrolls horizontally
         if (wrapper.scrollWidth > wrapper.clientWidth) {
           if (cellRect.left < wrapperRect.left) {
             wrapper.scrollLeft -= wrapperRect.left - cellRect.left;

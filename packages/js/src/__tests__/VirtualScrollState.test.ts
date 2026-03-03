@@ -30,7 +30,7 @@ afterEach(() => {
   jest.useRealTimers();
 });
 
-describe('VirtualScrollState — enabled getter', () => {
+describe('VirtualScrollState  -  enabled getter', () => {
   it('is disabled when config.enabled is false', () => {
     const state = new VirtualScrollState({ enabled: false });
     state.setTotalRows(500);
@@ -71,14 +71,14 @@ describe('VirtualScrollState — enabled getter', () => {
   });
 
   it('stays disabled when totalRows is 0 and threshold is 0', () => {
-    // 0 >= 0 is true → enabled
+    // 0 >= 0 is true  to  enabled
     const state = new VirtualScrollState({ enabled: true, threshold: 0 });
     state.setTotalRows(0);
     expect(state.enabled).toBe(true);
   });
 });
 
-describe('VirtualScrollState — constructor defaults', () => {
+describe('VirtualScrollState  -  constructor defaults', () => {
   it('creates with enabled=false by default (no config)', () => {
     const state = new VirtualScrollState();
     state.setTotalRows(500);
@@ -101,7 +101,7 @@ describe('VirtualScrollState — constructor defaults', () => {
   });
 });
 
-describe('VirtualScrollState — setTotalRows', () => {
+describe('VirtualScrollState  -  setTotalRows', () => {
   it('updates totalRows', () => {
     const state = new VirtualScrollState({ enabled: true });
     state.setTotalRows(150);
@@ -122,7 +122,7 @@ describe('VirtualScrollState — setTotalRows', () => {
   });
 });
 
-describe('VirtualScrollState — totalHeight', () => {
+describe('VirtualScrollState  -  totalHeight', () => {
   it('returns totalRows * rowHeight (default 36)', () => {
     const state = new VirtualScrollState({ enabled: true });
     state.setTotalRows(100);
@@ -141,7 +141,7 @@ describe('VirtualScrollState — totalHeight', () => {
   });
 });
 
-describe('VirtualScrollState — updateConfig', () => {
+describe('VirtualScrollState  -  updateConfig', () => {
   it('updates the config', () => {
     const state = new VirtualScrollState({ enabled: false });
     state.setTotalRows(200);
@@ -172,7 +172,7 @@ describe('VirtualScrollState — updateConfig', () => {
   });
 });
 
-describe('VirtualScrollState — onConfigChanged', () => {
+describe('VirtualScrollState  -  onConfigChanged', () => {
   it('onConfigChanged returns an unsubscribe function', () => {
     const state = new VirtualScrollState({ enabled: true, threshold: 1 });
     const listener = jest.fn();
@@ -184,11 +184,11 @@ describe('VirtualScrollState — onConfigChanged', () => {
     // Unsubscribe
     unsub();
     state.updateConfig({ enabled: true });
-    expect(listener).toHaveBeenCalledTimes(1); // still 1 — not called again
+    expect(listener).toHaveBeenCalledTimes(1); // still 1  -  not called again
   });
 });
 
-describe('VirtualScrollState — visibleRange (pass-through when disabled)', () => {
+describe('VirtualScrollState  -  visibleRange (pass-through when disabled)', () => {
   it('returns initial cachedRange (startIndex=0, endIndex=-1) before any scroll', () => {
     const state = new VirtualScrollState({ enabled: false });
     state.setTotalRows(50);
@@ -201,7 +201,7 @@ describe('VirtualScrollState — visibleRange (pass-through when disabled)', () 
   });
 });
 
-describe('VirtualScrollState — config getter', () => {
+describe('VirtualScrollState  -  config getter', () => {
   it('returns the current config', () => {
     const config = { enabled: true, rowHeight: 40, threshold: 75 };
     const state = new VirtualScrollState(config);
@@ -211,7 +211,7 @@ describe('VirtualScrollState — config getter', () => {
 
 // --- Column virtualization ---
 
-describe('VirtualScrollState — columnVirtualizationEnabled', () => {
+describe('VirtualScrollState  -  columnVirtualizationEnabled', () => {
   it('is false when columns config is not set', () => {
     const state = new VirtualScrollState({ enabled: true });
     expect(state.columnVirtualizationEnabled).toBe(false);
@@ -228,7 +228,7 @@ describe('VirtualScrollState — columnVirtualizationEnabled', () => {
   });
 });
 
-describe('VirtualScrollState — columnRange', () => {
+describe('VirtualScrollState  -  columnRange', () => {
   it('returns null initially', () => {
     const state = new VirtualScrollState({ enabled: true, columns: true });
     expect(state.columnRange).toBeNull();
@@ -241,7 +241,7 @@ describe('VirtualScrollState — columnRange', () => {
   });
 });
 
-describe('VirtualScrollState — setColumnWidths', () => {
+describe('VirtualScrollState  -  setColumnWidths', () => {
   it('triggers recomputeColumnRange and emits columnRangeChanged', () => {
     const state = new VirtualScrollState({ enabled: true, columns: true });
     const listener = jest.fn();
@@ -252,7 +252,7 @@ describe('VirtualScrollState — setColumnWidths', () => {
     Object.defineProperty(el, 'clientWidth', { value: 500 });
     state.observeContainerWidth(el);
 
-    // Now set widths — triggers recompute
+    // Now set widths  -  triggers recompute
     state.setColumnWidths([100, 150, 200, 250, 300]);
 
     // Should have computed a column range
@@ -270,7 +270,7 @@ describe('VirtualScrollState — setColumnWidths', () => {
   });
 });
 
-describe('VirtualScrollState — handleHorizontalScroll', () => {
+describe('VirtualScrollState  -  handleHorizontalScroll', () => {
   it('is no-op when column virtualization is disabled', () => {
     const state = new VirtualScrollState({ enabled: true });
     const listener = jest.fn();
@@ -328,7 +328,7 @@ describe('VirtualScrollState — handleHorizontalScroll', () => {
   });
 });
 
-describe('VirtualScrollState — observeContainerWidth', () => {
+describe('VirtualScrollState  -  observeContainerWidth', () => {
   it('sets initial containerWidth from clientWidth', () => {
     const state = new VirtualScrollState({ enabled: true, columns: true });
     const el = document.createElement('div');
@@ -367,7 +367,7 @@ describe('VirtualScrollState — observeContainerWidth', () => {
   });
 });
 
-describe('VirtualScrollState — onColumnRangeChanged', () => {
+describe('VirtualScrollState  -  onColumnRangeChanged', () => {
   it('returns an unsubscribe function', () => {
     const state = new VirtualScrollState({ enabled: true, columns: true });
     const listener = jest.fn();
@@ -384,11 +384,11 @@ describe('VirtualScrollState — onColumnRangeChanged', () => {
 
     // Clear widths to trigger another emission
     state.setColumnWidths([200, 200]);
-    expect(listener).toHaveBeenCalledTimes(1); // still 1 — unsubscribed
+    expect(listener).toHaveBeenCalledTimes(1); // still 1  -  unsubscribed
   });
 });
 
-describe('VirtualScrollState — destroy cleans up column virtualization', () => {
+describe('VirtualScrollState  -  destroy cleans up column virtualization', () => {
   it('does not throw after destroy', () => {
     const state = new VirtualScrollState({ enabled: true, columns: true });
     const el = document.createElement('div');
