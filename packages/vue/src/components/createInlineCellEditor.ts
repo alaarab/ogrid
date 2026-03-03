@@ -231,16 +231,19 @@ export function createInlineCellEditor(options: CreateInlineCellEditorOptions) {
             h('div', {
               ref: (el: unknown) => { selectDropdownRef.value = el as HTMLDivElement; },
               role: 'listbox',
-              style: { position: 'absolute', top: '100%', left: '0', right: '0', maxHeight: '200px', overflowY: 'auto', background: 'var(--ogrid-bg, #fff)', border: '1px solid var(--ogrid-border, rgba(0,0,0,0.12))', zIndex: '10', boxShadow: '0 4px 16px rgba(0,0,0,0.2)', textAlign: 'left' },
-            }, values.map((v, i) =>
-              h('div', {
-                key: String(v),
-                role: 'option',
-                'aria-selected': i === highlightedIndex.value,
-                onClick: () => props.onCommit(v),
-                style: { padding: '6px 8px', cursor: 'pointer', color: 'var(--ogrid-fg, #242424)', ...(i === highlightedIndex.value ? { background: 'var(--ogrid-bg-hover, #e8f0fe)' } : {}) },
-              }, getDisplayText(v))
-            )),
+              style: { position: 'absolute', top: '100%', left: '0', right: '0', maxHeight: '200px', overflowY: 'auto', background: 'var(--ogrid-bg, #fff)', border: '1px solid var(--ogrid-border, rgba(0,0,0,0.12))', zIndex: '10', boxShadow: '0 4px 16px rgba(0,0,0,0.2)', textAlign: 'left', fontSize: '13px', fontFamily: 'inherit' },
+            }, [
+              ...values.map((v, i) =>
+                h('div', {
+                  key: String(v),
+                  role: 'option',
+                  'aria-selected': i === highlightedIndex.value,
+                  onClick: () => props.onCommit(v),
+                  style: { padding: '6px 8px', cursor: 'pointer', color: 'var(--ogrid-fg, #242424)', fontSize: '13px', ...(i === highlightedIndex.value ? { background: 'var(--ogrid-bg-hover, #e8f0fe)' } : {}) },
+                }, getDisplayText(v))
+              ),
+              h('div', { style: { padding: '4px 8px', borderTop: '1px solid var(--ogrid-border, rgba(0,0,0,0.12))', fontSize: '11px', color: 'var(--ogrid-muted, #999)', textAlign: 'right', position: 'sticky', bottom: '0', background: 'var(--ogrid-bg, #fff)' } }, 'Click or Enter to apply'),
+            ]),
           ]);
         }
 
@@ -257,7 +260,7 @@ export function createInlineCellEditor(options: CreateInlineCellEditorOptions) {
             h('div', {
               ref: (el: unknown) => { selectDropdownRef.value = el as HTMLDivElement; },
               role: 'listbox',
-              style: { position: 'absolute', top: '100%', left: '0', right: '0', maxHeight: '200px', overflowY: 'auto', background: 'var(--ogrid-bg, #fff)', border: '1px solid var(--ogrid-border, rgba(0,0,0,0.12))', zIndex: '10', boxShadow: '0 4px 16px rgba(0,0,0,0.2)', textAlign: 'left' },
+              style: { position: 'absolute', top: '100%', left: '0', right: '0', maxHeight: '200px', overflowY: 'auto', background: 'var(--ogrid-bg, #fff)', border: '1px solid var(--ogrid-border, rgba(0,0,0,0.12))', zIndex: '10', boxShadow: '0 4px 16px rgba(0,0,0,0.2)', textAlign: 'left', fontSize: '13px', fontFamily: 'inherit' },
             }, [
               h('input', {
                 ref: (el: unknown) => { richSelectInputRef.value = el as HTMLInputElement; },
@@ -279,10 +282,11 @@ export function createInlineCellEditor(options: CreateInlineCellEditorOptions) {
                   role: 'option',
                   'aria-selected': i === highlightedIndex.value,
                   onClick: () => props.onCommit(v),
-                  style: { padding: '6px 8px', cursor: 'pointer', color: 'var(--ogrid-fg, #242424)', ...(i === highlightedIndex.value ? { background: 'var(--ogrid-bg-hover, #e8f0fe)' } : {}) },
+                  style: { padding: '6px 8px', cursor: 'pointer', color: 'var(--ogrid-fg, #242424)', fontSize: '13px', ...(i === highlightedIndex.value ? { background: 'var(--ogrid-bg-hover, #e8f0fe)' } : {}) },
                 }, getDisplayText(v))
               )),
-              ...(filtered.length === 0 ? [h('div', { style: { padding: '6px 8px', color: 'var(--ogrid-muted, #999)' } }, 'No matches')] : []),
+              ...(filtered.length === 0 ? [h('div', { style: { padding: '6px 8px', color: 'var(--ogrid-muted, #999)', fontSize: '13px' } }, 'No matches')] : []),
+              h('div', { style: { padding: '4px 8px', borderTop: '1px solid var(--ogrid-border, rgba(0,0,0,0.12))', fontSize: '11px', color: 'var(--ogrid-muted, #999)', textAlign: 'right', position: 'sticky', bottom: '0', background: 'var(--ogrid-bg, #fff)' } }, 'Click or Enter to apply'),
             ]),
           ]);
         }
