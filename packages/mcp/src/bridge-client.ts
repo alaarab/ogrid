@@ -2,7 +2,7 @@
  * OGrid MCP Bridge Client
  *
  * Include this in your dev app to connect a running OGrid instance to the
- * MCP bridge server, enabling AI assistants (Claude, Cursor, etc.) to read
+ * MCP bridge server, enabling MCP-connected editors to read
  * grid state and send test commands in real time.
  *
  * Usage (React):
@@ -66,7 +66,7 @@ export interface ConnectGridOptions {
   getFilters?: () => Record<string, unknown>;
   /** IOGridApi reference for filter/sort/page commands. */
   api?: BridgeGridApi;
-  /** Called when the AI sends an update_cell command. */
+  /** Called when the editor sends an update_cell command. */
   onCellUpdate?: (rowIndex: number, columnId: string, value: unknown) => void;
   /** Bridge server URL (default: http://localhost:7890). */
   bridgeUrl?: string;

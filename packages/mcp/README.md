@@ -1,12 +1,10 @@
 # @alaarab/ogrid-mcp
 
-MCP (Model Context Protocol) server for OGrid documentation. Lets AI assistants search and retrieve OGrid docs, code examples, and API references across all supported frameworks (React, Angular, Vue, vanilla JS).
+MCP (Model Context Protocol) server for OGrid documentation. Lets MCP-compatible editors search and retrieve OGrid docs, code examples, and API references across all supported frameworks (React, Angular, Vue, vanilla JS).
 
 ## Usage
 
-### Claude Desktop
-
-Add this to your Claude Desktop config (`claude_desktop_config.json`):
+Add to your editor's MCP configuration:
 
 ```json
 {
@@ -17,12 +15,6 @@ Add this to your Claude Desktop config (`claude_desktop_config.json`):
     }
   }
 }
-```
-
-### Claude Code
-
-```bash
-claude mcp add ogrid -- npx -y @alaarab/ogrid-mcp
 ```
 
 ### Direct execution
@@ -55,7 +47,7 @@ The server exposes 5 tools:
 
 | Name | Description |
 |------|-------------|
-| `migrate-from-ag-grid` | Step-by-step guide to migrate from AG Grid to OGrid. Returns the full migration guide with instructions for the AI to analyze your AG Grid usage and provide specific migration steps. |
+| `migrate-from-ag-grid` | Step-by-step guide to migrate from AG Grid to OGrid. Returns the full migration guide with side-by-side API mapping and specific migration steps. |
 
 ## Environment Variables
 

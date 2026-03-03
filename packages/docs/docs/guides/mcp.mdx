@@ -1,12 +1,12 @@
 ---
-title: AI Integration (MCP)
-description: Connect Claude, Cursor, and other AI assistants to OGrid documentation and your running grid.
+title: Editor Integration (MCP)
+description: Connect your editor to OGrid documentation and your running grid.
 sidebar_position: 1
 ---
 
-# AI Integration (MCP)
+# Editor Integration (MCP)
 
-`@alaarab/ogrid-mcp` is a standalone [Model Context Protocol (MCP)](https://modelcontextprotocol.io) server that gives AI assistants full access to OGrid documentation across all frameworks. It also includes a **live testing bridge** that lets the AI read and control a running OGrid instance in real time.
+`@alaarab/ogrid-mcp` is a standalone [Model Context Protocol (MCP)](https://modelcontextprotocol.io) server that gives your editor full access to OGrid documentation across all frameworks. It also includes a **live testing bridge** that lets your editor read and control a running OGrid instance in real time.
 
 ## Installation
 
@@ -20,7 +20,7 @@ npx @alaarab/ogrid-mcp
 
 ---
 
-## Connect to your AI assistant
+## Connect to your editor
 
 ### Claude Code
 
@@ -58,9 +58,9 @@ Add to your Cursor MCP settings:
 
 ---
 
-## What your AI can do
+## What it can do
 
-Once connected, the AI assistant has access to the full OGrid documentation for all frameworks. Example prompts:
+Once connected, your editor has access to the full OGrid documentation for all frameworks. Example queries:
 
 ```
 Show me how to set up server-side pagination in React
@@ -123,7 +123,7 @@ detect_version path="/path/to/project"
 
 ## MCP resources
 
-Resources can be read directly by the AI assistant without calling a tool.
+Resources can be read directly by the MCP client without calling a tool.
 
 | Resource | Description |
 |----------|-------------|
@@ -137,13 +137,13 @@ Resources can be read directly by the AI assistant without calling a tool.
 
 ### `migrate-from-ag-grid`
 
-Guides the AI through an AG Grid → OGrid migration. Provide your existing AG Grid code and the AI will produce equivalent OGrid code with explanations.
+Provides step-by-step guidance for an AG Grid → OGrid migration. Provide your existing AG Grid code and it will produce equivalent OGrid code with explanations.
 
 ---
 
 ## Live testing bridge
 
-For real-time AI-assisted development, the MCP server includes a bridge that connects to a running OGrid instance. This lets the AI:
+For real-time development, the MCP server includes a bridge that connects to a running OGrid instance. This lets your editor:
 
 - Read the current grid state (rows, columns, pagination, filters, sort)
 - Update cell values
