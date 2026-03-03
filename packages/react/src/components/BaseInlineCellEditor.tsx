@@ -24,7 +24,9 @@ export const editorInputStyle: React.CSSProperties = {
   background: 'transparent',
   color: 'inherit',
   font: 'inherit',
-  fontSize: '13px',
+  // Use at least 16px so iOS Safari does not auto-zoom when the input is focused.
+  // On desktop this is overridden to 13px via CSS (see _data-grid-table.scss).
+  fontSize: '16px',
   outline: 'none',
   minWidth: 0,
 };
@@ -294,7 +296,11 @@ export function BaseInlineCellEditor<T>(props: BaseInlineCellEditorProps<T>): Re
   // Checkbox (framework-specific)
   if (editorType === 'checkbox') {
     const checked = value === true;
-    return <>{renderCheckbox(checked, (val) => commit(val), cancel)}</>;
+    return (
+      <div style={{ ...editorWrapperStyle, justifyContent: 'center' }}>
+        {renderCheckbox(checked, (val) => commit(val), cancel)}
+      </div>
+    );
   }
 
   // Select (custom dropdown, shared across all frameworks)

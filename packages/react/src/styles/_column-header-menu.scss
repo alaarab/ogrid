@@ -29,6 +29,11 @@
   width: 100%;
   text-align: left;
 
+  // Minimum 44px touch target on touch devices
+  @media (pointer: coarse) {
+    height: 44px;
+  }
+
   &:disabled {
     color: var(--ogrid-fg-muted, rgba(0, 0, 0, 0.5));
     pointer-events: none;
