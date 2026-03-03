@@ -82,12 +82,17 @@ export class InlineCellEditor<T> {
         dropdownEl.style.top = `${rect.bottom}px`;
       }
 
-      // Close editor on scroll so the fixed dropdown doesn't drift
-      const scrollParent = editor.closest('.ogrid-table-wrapper') ?? editor.closest('[style*="overflow"]');
+      // Close editor on scroll so the fixed dropdown doesn't drift.
+      // Delay attachment via RAF to skip spurious scroll events fired during mount
+      // (e.g. focus-triggered scroll, layout-shift scroll from DOM changes).
+      const scrollParent = editor.closest('[data-ogrid-scroll-container]') ?? editor.closest('[style*="overflow"]');
       const handleScroll = () => this.closeEditor();
-      if (scrollParent) scrollParent.addEventListener('scroll', handleScroll, { passive: true });
-      window.addEventListener('scroll', handleScroll, { passive: true });
+      const raf = requestAnimationFrame(() => {
+        if (scrollParent) scrollParent.addEventListener('scroll', handleScroll, { passive: true });
+        window.addEventListener('scroll', handleScroll, { passive: true });
+      });
       this.scrollCleanup = () => {
+        cancelAnimationFrame(raf);
         if (scrollParent) scrollParent.removeEventListener('scroll', handleScroll);
         window.removeEventListener('scroll', handleScroll);
       };
@@ -188,9 +193,9 @@ export class InlineCellEditor<T> {
    * Shared factory for text/date input editors — both types have identical event handling,
    * differing only in input.type and initial value formatting.
    */
-  private createInputEditor(type: 'text' | 'date', initialValue: string): HTMLInputElement {
+  private createInputEditor(initialValue: string): HTMLInputElement {
     const input = document.createElement('input');
-    input.type = type;
+    input.type = 'text';
     input.value = initialValue;
     Object.assign(input.style, EDITOR_STYLE);
 
@@ -225,16 +230,12 @@ export class InlineCellEditor<T> {
       this.closeEditor();
     });
 
-    if (type === 'date') {
-      setTimeout(() => { try { input.showPicker(); } catch { /* older browsers */ } }, 0);
-    } else {
-      setTimeout(() => input.select(), 0);
-    }
+    setTimeout(() => input.select(), 0);
     return input;
   }
 
   private createTextEditor(value: unknown): HTMLInputElement {
-    return this.createInputEditor('text', value != null ? String(value) : '');
+    return this.createInputEditor(value != null ? String(value) : '');
   }
 
   private createCheckboxEditor(value: unknown): HTMLInputElement {
@@ -274,7 +275,7 @@ export class InlineCellEditor<T> {
         initialValue = dateStr.substring(0, 10);
       }
     }
-    return this.createInputEditor('date', initialValue);
+    return this.createInputEditor(initialValue);
   }
 
   private createSelectEditor(value: unknown, column: IColumnDef<T>): HTMLElement {

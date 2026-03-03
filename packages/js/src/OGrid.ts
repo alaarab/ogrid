@@ -703,6 +703,7 @@ export class OGrid<T> {
       handleCellMouseDown: (rowIndex: number, colIndex: number, e: MouseEvent) => this.handleCellMouseDown(rowIndex, colIndex, e),
       handleCellContextMenu: (rowIndex: number, colIndex: number, e: MouseEvent) => this.handleCellContextMenu(rowIndex, colIndex, e),
       startCellEdit: (rowId: RowId, columnId: string) => this.startCellEdit(rowId, columnId),
+      toggleBooleanCell: (rowId: RowId, columnId: string, currentValue: boolean) => this.toggleBooleanCell(rowId, columnId, currentValue),
       showContextMenu: (x: number, y: number) => this.showContextMenu(x, y),
     } as OGridRenderingContext<T>;
     Object.defineProperties(ctx, {
@@ -734,6 +735,8 @@ export class OGrid<T> {
 
   private handleCellMouseDown(rowIndex: number, colIndex: number, e: MouseEvent): void {
     if (!this.selectionState) return;
+    // Close any open editor when clicking a different cell
+    this.cellEditor?.closeEditor();
     e.preventDefault();
     this.selectionState.startDrag(rowIndex, colIndex);
     // Apply drag attributes immediately for instant visual feedback on the initial cell
@@ -783,6 +786,20 @@ export class OGrid<T> {
       this.undoRedoState.canRedo,
       this.selectionState.selectionRange
     );
+  }
+
+  private toggleBooleanCell(rowId: RowId, columnId: string, currentValue: boolean): void {
+    const { items } = this.state.getProcessedItems();
+    const rowIndex = items.findIndex((it) => this.state.getRowId(it) === rowId);
+    if (rowIndex < 0) return;
+    const item = items[rowIndex];
+    const newValue = !currentValue;
+    (item as Record<string, unknown>)[columnId] = newValue;
+    const wrapped = this.undoRedoState?.getWrappedCallback();
+    if (wrapped) {
+      wrapped({ item, columnId, oldValue: currentValue, newValue, rowIndex });
+    }
+    this.renderingHelper.updateRendererInteractionState();
   }
 
   private startCellEdit(rowId: RowId, columnId: string): void {

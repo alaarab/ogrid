@@ -1,10 +1,8 @@
 import { h, type Component } from 'vue';
 import Checkbox from 'primevue/checkbox';
-import DatePicker from 'primevue/datepicker';
 import { createInlineCellEditor } from '@alaarab/ogrid-vue';
 
 const _Checkbox = Checkbox as Component;
-const _DatePicker = DatePicker as Component;
 
 export type { CreateInlineCellEditorOptions } from '@alaarab/ogrid-vue';
 
@@ -20,33 +18,20 @@ export const InlineCellEditor = createInlineCellEditor({
       },
     }),
 
-  renderDatePicker: ({ value, onChange, onCancel }) => {
-    let dateVal: Date | null = null;
-    if (value) {
-      const d = new Date(value);
-      if (!Number.isNaN(d.getTime())) {
-        dateVal = d;
-      }
-    }
-    return h(_DatePicker, {
-      modelValue: dateVal,
-      dateFormat: 'yy-mm-dd',
-      showIcon: false,
-      style: { width: '100%' },
-      onVnodeMounted: (vnode: unknown) => {
-        try {
-          const node = vnode as { component?: { proxy?: { show?: () => void } } };
-          node.component?.proxy?.show?.();
-        } catch { /* PrimeVue version may not support programmatic show */ }
-      },
-      'onUpdate:modelValue': (v: Date | null) => {
-        if (v) {
-          onChange(v.toISOString().slice(0, 10));
-        }
+  renderDatePicker: ({ value, onChange, onCancel }) =>
+    h('input', {
+      type: 'text',
+      value,
+      style: { width: '100%', height: '100%', border: 'none', outline: 'none', padding: '0 4px', fontSize: 'inherit' },
+      onVnodeMounted: (vnode: { el: unknown }) => {
+        const el = vnode.el as HTMLInputElement | null;
+        if (el) { el.focus(); el.select(); }
       },
       onKeydown: (e: KeyboardEvent) => {
+        if (e.key === 'Enter') { e.preventDefault(); onChange((e.target as HTMLInputElement).value); }
         if (e.key === 'Escape') { e.preventDefault(); onCancel(); }
+        if (e.key === 'Tab') { e.preventDefault(); onChange((e.target as HTMLInputElement).value); }
       },
-    });
-  },
+      onBlur: (e: FocusEvent) => onChange((e.target as HTMLInputElement).value),
+    }),
 });

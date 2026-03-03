@@ -192,3 +192,61 @@ describe('applyCutClear', () => {
     }
   });
 });
+
+describe('applyPastedValues type safety', () => {
+  interface TypedRow { name: string; age: number | null; active: boolean | null; joined: string | null; }
+  const nameCol: IColumnDef<TypedRow> = { columnId: 'name', name: 'Name', editable: true, type: 'text' };
+  const ageCol: IColumnDef<TypedRow> = { columnId: 'age', name: 'Age', editable: true, type: 'numeric' };
+  const activeCol: IColumnDef<TypedRow> = { columnId: 'active', name: 'Active', editable: true, type: 'boolean' };
+  const joinedCol: IColumnDef<TypedRow> = { columnId: 'joined', name: 'Joined', editable: true, type: 'date' };
+  const typedCols: IColumnDef<TypedRow>[] = [nameCol, ageCol, activeCol, joinedCol];
+  const typedItems: TypedRow[] = [{ name: 'Alice', age: 30, active: true, joined: '2024-01-01' }];
+
+  it('rejects non-numeric text pasted into numeric column', () => {
+    const parsed = [['hello']]; // pasting "hello" into the age column
+    const events = applyPastedValues(parsed, 0, 1, typedItems, typedCols);
+    expect(events).toHaveLength(0);
+  });
+
+  it('accepts valid number pasted into numeric column', () => {
+    const parsed = [['42']];
+    const events = applyPastedValues(parsed, 0, 1, typedItems, typedCols);
+    expect(events).toHaveLength(1);
+    expect(events[0].newValue).toBe(42);
+  });
+
+  it('rejects arbitrary text pasted into boolean column', () => {
+    const parsed = [['hello']];
+    const events = applyPastedValues(parsed, 0, 2, typedItems, typedCols);
+    expect(events).toHaveLength(0);
+  });
+
+  it('accepts valid boolean string pasted into boolean column', () => {
+    const parsed = [['false']];
+    const events = applyPastedValues(parsed, 0, 2, typedItems, typedCols);
+    expect(events).toHaveLength(1);
+    expect(events[0].newValue).toBe(false);
+  });
+
+  it('rejects invalid date pasted into date column', () => {
+    const parsed = [['not-a-date']];
+    const events = applyPastedValues(parsed, 0, 3, typedItems, typedCols);
+    expect(events).toHaveLength(0);
+  });
+
+  it('accepts valid date string pasted into date column', () => {
+    const parsed = [['2024-06-15']];
+    const events = applyPastedValues(parsed, 0, 3, typedItems, typedCols);
+    expect(events).toHaveLength(1);
+    expect(events[0].newValue).toContain('2024-06-15');
+  });
+
+  it('rejects cross-type paste across multiple columns', () => {
+    // Pasting "hello\thello\thello\thello" across name, age, active, joined columns
+    const parsed = [['hello', 'hello', 'hello', 'hello']];
+    const events = applyPastedValues(parsed, 0, 0, typedItems, typedCols);
+    // Only name (text) accepts "hello" — age, active, joined all reject
+    expect(events).toHaveLength(1);
+    expect(events[0].columnId).toBe('name');
+  });
+});
