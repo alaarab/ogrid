@@ -60,7 +60,7 @@
     "@angular/common": "^21.1.4",
     "@angular/compiler": "^21.1.4",
     "@angular/compiler-cli": "^21.1.4",
-    "@angular/core": "^21.1.4",
+    "@angular/core": "^21.1.6",
     "@angular/platform-browser": "^21.1.4",
     "@angular/platform-browser-dynamic": "^21.1.4",
     "@storybook/angular": "^10.2.8",
