@@ -334,7 +334,7 @@ export function useOGrid<T>(
     { immediate: true }
   );
 
-  /** Resolved client items — sync or async depending on workerSort. */
+  /** Resolved client items  -  sync or async depending on workerSort. */
   const resolvedClientItems = computed(() => {
     const syncResult = clientItemsAndTotal.value;
     if (syncResult) return syncResult;
@@ -385,7 +385,7 @@ export function useOGrid<T>(
     doFetch();
   });
 
-  // Subsequent fetches on page/sort/filter changes (no immediate — onMounted handles initial).
+  // Subsequent fetches on page/sort/filter changes (no immediate  -  onMounted handles initial).
   // Getter functions are used for nested properties (sort.value.field) that Vue
   // can't track through a raw ref; top-level refs are passed directly.
   watch(
@@ -779,7 +779,7 @@ export function useOGrid<T>(
       if (isServerSide.value) refreshCounter.value++;
     },
     scrollToRow: () => {
-      // No-op at orchestration level — DataGridTable components implement
+      // No-op at orchestration level  -  DataGridTable components implement
       // this via useVirtualScroll.scrollToRow when virtual scrolling is active.
     },
     getColumnOrder: () => columnProps.value.columnOrder ?? columns.value.map((c) => c.columnId),

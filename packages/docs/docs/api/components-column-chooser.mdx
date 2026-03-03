@@ -232,8 +232,8 @@ const handleVisibilityChange = (columnKey: string, visible: boolean) => {
 ### Select All / Clear All
 
 The dropdown includes two action buttons:
-- **Select All** — Shows all columns (except those marked as `required: false` — these remain hidden)
-- **Clear All** — Hides all optional columns (required columns remain visible)
+- **Select All**  -  Shows all columns (except those marked as `required: false`  -  these remain hidden)
+- **Clear All**  -  Hides all optional columns (required columns remain visible)
 
 ### Visual Indicator
 
@@ -241,9 +241,9 @@ The trigger button shows the current visibility count: `"Column Visibility (3 of
 
 ### Checkbox States
 
-- **Checked** — Column is visible
-- **Unchecked** — Column is hidden
-- **Disabled + Checked** — Column is required and cannot be hidden
+- **Checked**  -  Column is visible
+- **Unchecked**  -  Column is hidden
+- **Disabled + Checked**  -  Column is required and cannot be hidden
 
 ## Accessibility
 
@@ -272,11 +272,11 @@ The trigger button shows the current visibility count: `"Column Visibility (3 of
 
 ### Keyboard Navigation
 
-- `Enter` / `Space` (on trigger button) — Open/close dropdown
-- `Tab` / `Shift+Tab` — Navigate between checkboxes and action buttons
-- `Space` — Toggle focused checkbox
-- `Enter` (on action buttons) — Execute "Select All" or "Clear All"
-- `Escape` — Close dropdown
+- `Enter` / `Space` (on trigger button)  -  Open/close dropdown
+- `Tab` / `Shift+Tab`  -  Navigate between checkboxes and action buttons
+- `Space`  -  Toggle focused checkbox
+- `Enter` (on action buttons)  -  Execute "Select All" or "Clear All"
+- `Escape`  -  Close dropdown
 
 ### Focus Management
 
@@ -307,25 +307,25 @@ See the [Accessibility Guide](/docs/guides/accessibility) for complete documenta
 All UI packages provide default styles matching their design system. Styles are scoped to avoid conflicts.
 
 **CSS custom properties** (all packages):
-- `--ogrid-header-bg` — Trigger button and popover background color
-- `--ogrid-border` — Border color
-- `--ogrid-fg` — Foreground text color
+- `--ogrid-header-bg`  -  Trigger button and popover background color
+- `--ogrid-border`  -  Border color
+- `--ogrid-fg`  -  Foreground text color
 
 ## Placement in OGrid
 
 The `columnChooser` prop on `OGrid` controls where the column chooser renders:
 
-- `true` or `'toolbar'` (default) — Renders in the toolbar strip (recommended)
-- `'sidebar'` — Only available via the sidebar columns panel (no toolbar button)
-- `false` — Hidden entirely (useful when you want full control over visibility)
+- `true` or `'toolbar'` (default)  -  Renders in the toolbar strip (recommended)
+- `'sidebar'`  -  Only available via the sidebar columns panel (no toolbar button)
+- `false`  -  Hidden entirely (useful when you want full control over visibility)
 
 ## Related Components
 
-- [DataGridTable](./components-datagrid-table.mdx) — Main grid component
-- [SideBar](./components-sidebar.mdx) — Sidebar with columns panel (alternative placement)
-- [OGrid](./ogrid-props.mdx) — Top-level wrapper that integrates the column chooser
+- [DataGridTable](./components-datagrid-table.mdx)  -  Main grid component
+- [SideBar](./components-sidebar.mdx)  -  Sidebar with columns panel (alternative placement)
+- [OGrid](./ogrid-props.mdx)  -  Top-level wrapper that integrates the column chooser
 
 ## See Also
 
-- [Column Definition](./column-def.mdx#icolumnmeta) — Column metadata reference
-- [Grid API](./grid-api.mdx) — `getColumnState()` and `applyColumnState()` methods
+- [Column Definition](./column-def.mdx#icolumnmeta)  -  Column metadata reference
+- [Grid API](./grid-api.mdx)  -  `getColumnState()` and `applyColumnState()` methods

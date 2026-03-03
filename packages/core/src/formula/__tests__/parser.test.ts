@@ -106,7 +106,7 @@ describe('parser', () => {
       expect(ast.kind).toBe('cellRef');
       const ref = ast as CellRefNode;
       expect(ref.address.col).toBe(0); // A = 0
-      expect(ref.address.row).toBe(0); // 1 → 0 (0-based)
+      expect(ref.address.row).toBe(0); // 1  to  0 (0-based)
       expect(ref.address.absCol).toBe(false);
       expect(ref.address.absRow).toBe(false);
       expect(ref.raw).toBe('A1');
@@ -143,7 +143,7 @@ describe('parser', () => {
       expect(ast.kind).toBe('cellRef');
       const ref = ast as CellRefNode;
       expect(ref.address.col).toBe(1); // B = 1
-      expect(ref.address.row).toBe(9); // 10 → 9 (0-based)
+      expect(ref.address.row).toBe(9); // 10  to  9 (0-based)
     });
 
     it('parses Z26 correctly', () => {
@@ -151,7 +151,7 @@ describe('parser', () => {
       expect(ast.kind).toBe('cellRef');
       const ref = ast as CellRefNode;
       expect(ref.address.col).toBe(25); // Z = 25
-      expect(ref.address.row).toBe(25); // 26 → 25 (0-based)
+      expect(ref.address.row).toBe(25); // 26  to  25 (0-based)
     });
   });
 

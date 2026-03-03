@@ -1,5 +1,5 @@
 /**
- * SliderEditor — Premium range slider cell editor for OGrid (Vue).
+ * SliderEditor  -  Premium range slider cell editor for OGrid (Vue).
  *
  * Usage:
  *   import { SliderEditor } from '@alaarab/ogrid-vue-inputs';
@@ -11,7 +11,7 @@
  *     cellEditorParams: { min: 0, max: 100, step: 5 },
  *   }];
  *
- * Implements ICellEditorProps<T> — works with cellEditorPopup: true.
+ * Implements ICellEditorProps<T>  -  works with cellEditorPopup: true.
  */
 import { defineComponent, ref, computed, onMounted, onUnmounted, h, type PropType, type CSSProperties } from 'vue';
 import type { IColumnDef } from '@alaarab/ogrid-core';

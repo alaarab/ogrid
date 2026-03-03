@@ -37,7 +37,7 @@ export default function VirtualScrollingDemo() {
   );
 
   return (
-    <LiveDemo height={460} title="10,000 rows — only visible rows are in the DOM">
+    <LiveDemo height={460} title="10,000 rows  -  only visible rows are in the DOM">
       <OGrid
         columns={columns}
         data={data}

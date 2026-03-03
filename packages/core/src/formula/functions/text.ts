@@ -513,7 +513,7 @@ export function registerTextFunctions(registry: Map<string, IFormulaFunction>): 
       if (typeof val === 'number') return val;
       if (typeof val === 'boolean') return val ? 1 : 0;
       if (val instanceof Date) return val.getTime();
-      // string, null, undefined → 0
+      // string, null, undefined  to  0
       return 0;
     },
   });

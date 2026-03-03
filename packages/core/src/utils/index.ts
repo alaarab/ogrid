@@ -102,3 +102,4 @@ export { extractFormulaReferences, processFormulaBarCommit, deriveFormulaBarText
 export type { FormulaReference } from './formulaBarHelpers';
 export { getResponsiveHiddenColumns, RESPONSIVE_BREAKPOINTS, resolveResponsiveConfig, applyResponsiveHiding } from './responsiveColumns';
 export type { IResponsiveColumnsConfig } from './responsiveColumns';
+export { formatDateForDisplay, parseUserInputDate, getDateInputPlaceholder, DEFAULT_DATE_FORMAT } from './dateFormatter';

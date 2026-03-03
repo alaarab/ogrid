@@ -9,7 +9,7 @@
  *   - renderSideBar()
  *   - renderLoadingOverlay()
  *
- * Not exported publicly — instantiated and owned by OGrid.
+ * Not exported publicly  -  instantiated and owned by OGrid.
  */
 import type { OGridOptions } from './types/gridTypes';
 import type { GridState } from './state/GridState';

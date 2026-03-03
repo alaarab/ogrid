@@ -46,7 +46,6 @@ export const INLINE_CELL_EDITOR_TEMPLATE = `
                 <div style="padding:6px 8px;color:var(--ogrid-muted, #999);font-size:13px">No matches</div>
               }
             </div>
-            <div style="padding:4px 8px;border-top:1px solid var(--ogrid-border, rgba(0,0,0,0.12));font-size:11px;color:var(--ogrid-muted, #999);text-align:right;position:sticky;bottom:0;background:var(--ogrid-bg, #fff)">Click or Enter to apply</div>
           </div>
         </div>
       }
@@ -68,7 +67,6 @@ export const INLINE_CELL_EDITOR_TEMPLATE = `
                 {{ getDisplayText(opt) }}
               </div>
             }
-            <div style="padding:4px 8px;border-top:1px solid var(--ogrid-border, rgba(0,0,0,0.12));font-size:11px;color:var(--ogrid-muted, #999);text-align:right;position:sticky;bottom:0;background:var(--ogrid-bg, #fff)">Click or Enter to apply</div>
           </div>
         </div>
       }
@@ -83,16 +81,28 @@ export const INLINE_CELL_EDITOR_TEMPLATE = `
         </div>
       }
       @case ('date') {
-        <input
-          #inputEl
-          type="text"
-          placeholder="YYYY-MM-DD"
-          [value]="localValue()"
-          (input)="localValue.set($any($event.target).value)"
-          (keydown)="onTextKeyDown($event)"
-          (blur)="onTextBlur()"
-          [style]="getInputStyle()"
-        />
+        @if (getCellEditorType() === 'native') {
+          <input
+            #inputEl
+            type="date"
+            [value]="localValue()"
+            (input)="localValue.set($any($event.target).value)"
+            (keydown)="onTextKeyDown($event)"
+            (blur)="onTextBlur()"
+            [style]="getInputStyle()"
+          />
+        } @else {
+          <input
+            #inputEl
+            type="text"
+            [placeholder]="getDatePlaceholder()"
+            [value]="localValue()"
+            (input)="localValue.set($any($event.target).value)"
+            (keydown)="onTextKeyDown($event)"
+            (blur)="onTextBlur()"
+            [style]="getInputStyle()"
+          />
+        }
       }
       @default {
         <input

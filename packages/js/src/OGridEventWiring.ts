@@ -2,10 +2,10 @@
  * Event wiring helper for OGrid (Vanilla JS).
  *
  * Extracts event subscription setup from OGrid for modularity:
- *   - initializeInteraction() — creates interaction states and subscribes events
- *   - attachGlobalHandlers() — global pointer handlers for resize and drag
+ *   - initializeInteraction()  -  creates interaction states and subscribes events
+ *   - attachGlobalHandlers()  -  global pointer handlers for resize and drag
  *
- * Not exported publicly — instantiated and owned by OGrid.
+ * Not exported publicly  -  instantiated and owned by OGrid.
  */
 import type { OGridOptions } from './types/gridTypes';
 import type { GridState } from './state/GridState';
@@ -27,7 +27,7 @@ import type { RowId } from '@alaarab/ogrid-core';
 import { getCellCoordinates } from './utils/getCellCoordinates';
 
 /**
- * Result of initializeInteraction — the created state objects and subscriptions.
+ * Result of initializeInteraction  -  the created state objects and subscriptions.
  */
 export interface InteractionResult<T> {
   selectionState: SelectionState;

@@ -1,4 +1,4 @@
-/** Rating utility functions — zero dependencies. */
+/** Rating utility functions  -  zero dependencies. */
 
 export const DEFAULT_MAX_STARS = 5;
 

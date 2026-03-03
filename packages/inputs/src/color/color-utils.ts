@@ -1,7 +1,7 @@
-/** Color picker utility functions — zero dependencies. */
+/** Color picker utility functions  -  zero dependencies. */
 
 /**
- * Default color palette — 20 commonly used colors arranged in a 5×4 grid.
+ * Default color palette  -  20 commonly used colors arranged in a 5×4 grid.
  */
 export const DEFAULT_COLOR_PALETTE: readonly string[] = [
   '#FF6B6B', '#FF8E72', '#FFC078', '#FFD93D', '#6BCB77',

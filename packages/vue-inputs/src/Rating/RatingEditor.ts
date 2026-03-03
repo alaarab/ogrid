@@ -1,5 +1,5 @@
 /**
- * RatingEditor — Premium star rating cell editor for OGrid (Vue).
+ * RatingEditor  -  Premium star rating cell editor for OGrid (Vue).
  *
  * Usage:
  *   import { RatingEditor } from '@alaarab/ogrid-vue-inputs';
@@ -11,7 +11,7 @@
  *     cellEditorParams: { maxStars: 5, allowHalf: false },
  *   }];
  *
- * Implements ICellEditorProps<T> — works with cellEditorPopup: true.
+ * Implements ICellEditorProps<T>  -  works with cellEditorPopup: true.
  */
 import { defineComponent, ref, computed, onMounted, h, type PropType, type CSSProperties } from 'vue';
 import type { IColumnDef } from '@alaarab/ogrid-core';
@@ -41,7 +41,6 @@ const starsRowStyle: CSSProperties = {
   display: 'flex',
   alignItems: 'center',
   gap: '4px',
-  justifyContent: 'center',
   marginBottom: '8px',
 };
 

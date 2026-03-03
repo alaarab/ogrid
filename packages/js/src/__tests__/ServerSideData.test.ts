@@ -226,7 +226,7 @@ describe('GridState (server-side)', () => {
       pageSize: 10,
     });
 
-    // Initial fetch is pending — trigger another fetch
+    // Initial fetch is pending  -  trigger another fetch
     state.setPage(2);
 
     // Resolve the second fetch first
@@ -328,7 +328,7 @@ describe('GridState (server-side)', () => {
 
     api.setRowData(generateData(5));
 
-    // Should not have triggered a new fetch — it's a no-op
+    // Should not have triggered a new fetch  -  it's a no-op
     expect(ds.fetchMock).toHaveBeenCalledTimes(initialCount);
     // Items should still be server-side data
     const { totalCount } = state.getProcessedItems();

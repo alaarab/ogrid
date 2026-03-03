@@ -1,5 +1,5 @@
 /**
- * TagsEditor — Premium multi-value tag/chip cell editor for OGrid (Vue).
+ * TagsEditor  -  Premium multi-value tag/chip cell editor for OGrid (Vue).
  *
  * Usage:
  *   import { TagsEditor } from '@alaarab/ogrid-vue-inputs';
@@ -14,7 +14,7 @@
  *     },
  *   }];
  *
- * Implements ICellEditorProps<T> — works with cellEditorPopup: true.
+ * Implements ICellEditorProps<T>  -  works with cellEditorPopup: true.
  */
 import { defineComponent, ref, computed, onMounted, nextTick, h, type PropType, type CSSProperties } from 'vue';
 import type { IColumnDef } from '@alaarab/ogrid-core';

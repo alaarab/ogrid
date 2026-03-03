@@ -1,5 +1,5 @@
 /**
- * FormulaBar — DOM-based Excel-style formula bar for the vanilla JS grid.
+ * FormulaBar  -  DOM-based Excel-style formula bar for the vanilla JS grid.
  *
  * Layout: [Name Box] [fx] [Formula Input]
  *

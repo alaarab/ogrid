@@ -67,7 +67,7 @@ export function measureRange(
  * ```
  */
 /**
- * Build a Map of `"rowIndex,colIndex"` → HTMLElement for O(1) cell lookups during drag operations.
+ * Build a Map of `"rowIndex,colIndex"`  to  HTMLElement for O(1) cell lookups during drag operations.
  * Scans the container once via querySelectorAll instead of per-frame DOM queries.
  */
 export function buildCellIndex(container: HTMLElement | null): Map<string, HTMLElement> {

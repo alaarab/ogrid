@@ -35,7 +35,7 @@ export interface ICellEditorProps<T = unknown> {
  * with renderCell, cellStyle, and a narrowed cellEditor type.
  */
 export interface IColumnDef<T = unknown> extends ICoreColumnDef<T> {
-  /** Custom cell renderer — TemplateRef or string function (Angular-specific). */
+  /** Custom cell renderer  -  TemplateRef or string function (Angular-specific). */
   renderCell?: TemplateRef<{ $implicit: T }> | ((item: T) => string);
   /** Static or per-row cell inline styles (Angular-specific). */
   cellStyle?: Record<string, string> | ((item: T) => Record<string, string>);

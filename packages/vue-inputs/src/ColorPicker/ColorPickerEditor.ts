@@ -1,5 +1,5 @@
 /**
- * ColorPickerEditor — Premium color swatch picker with hex input for OGrid (Vue).
+ * ColorPickerEditor  -  Premium color swatch picker with hex input for OGrid (Vue).
  *
  * Usage:
  *   import { ColorPickerEditor } from '@alaarab/ogrid-vue-inputs';
@@ -11,7 +11,7 @@
  *     cellEditorParams: { allowCustom: true },
  *   }];
  *
- * Implements ICellEditorProps<T> — works with cellEditorPopup: true.
+ * Implements ICellEditorProps<T>  -  works with cellEditorPopup: true.
  */
 import { defineComponent, ref, computed, onMounted, h, type PropType, type CSSProperties } from 'vue';
 import type { IColumnDef } from '@alaarab/ogrid-core';

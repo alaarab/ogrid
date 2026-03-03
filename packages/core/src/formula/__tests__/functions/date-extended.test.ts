@@ -67,7 +67,7 @@ describe('Date extended functions', () => {
     });
 
     it('should handle month boundary with 31st day (US)', () => {
-      // US: start=Jan 31 → 30; end=Mar 31 → 30 (since start was capped to 30)
+      // US: start=Jan 31  to  30; end=Mar 31  to  30 (since start was capped to 30)
       const result = evalFormula('=DAYS360("2024-01-31T00:00:00", "2024-03-31T00:00:00")');
       expect(result).toBe(60);
     });
@@ -87,7 +87,7 @@ describe('Date extended functions', () => {
     });
 
     it('should return correct week for mid-year date', () => {
-      // 2024-06-15 (Saturday) → week 24
+      // 2024-06-15 (Saturday)  to  week 24
       const result = evalFormula('=ISOWEEKNUM("2024-06-15T00:00:00")');
       expect(result).toBe(24);
     });
@@ -266,9 +266,9 @@ describe('Date extended functions', () => {
     });
 
     it('should treat Friday as weekend with "0000100" mask', () => {
-      // 2024-01-05 (Friday) — Fri is weekend → +1 skips Fri, counts Mon
-      // mask "0000100" = [Mon,Tue,Wed,Thu,Fri,Sat,Sun] → Fri=1 (weekend)
-      // Starting 2024-01-05 (Fri), +1 workday → skip Sat(already in mask?), next non-weekend from Fri+1=Sat → Sat not in mask → Sat is a workday
+      // 2024-01-05 (Friday)  -  Fri is weekend  to  +1 skips Fri, counts Mon
+      // mask "0000100" = [Mon,Tue,Wed,Thu,Fri,Sat,Sun]  to  Fri=1 (weekend)
+      // Starting 2024-01-05 (Fri), +1 workday  to  skip Sat(already in mask?), next non-weekend from Fri+1=Sat  to  Sat not in mask  to  Sat is a workday
       // Actually mask[4]=1 means Fri is weekend, mask[5]=0 means Sat is workday
       // So +1 from Fri = Sat
       const result = evalFormula('=WORKDAY.INTL("2024-01-05T00:00:00", 1, "0000100")') as Date;

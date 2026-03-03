@@ -61,7 +61,7 @@ export class ColumnReorderService<T> {
     const rect = target.getBoundingClientRect();
     if (event.clientX > rect.right - RESIZE_HANDLE_ZONE) return;
 
-    // Skip column groups — only reorder leaf columns
+    // Skip column groups  -  only reorder leaf columns
     const cols = this.columns();
     const colIndex = cols.findIndex((c) => c.columnId === columnId);
     if (colIndex === -1) return;

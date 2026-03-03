@@ -228,7 +228,7 @@ export const Editable: Story = {
 };
 
 // ---------------------------------------------------------------------------
-// Spreadsheet Experience (OGrid) — same behavior as DataGridTable Spreadsheet Experience
+// Spreadsheet Experience (OGrid)  -  same behavior as DataGridTable Spreadsheet Experience
 // Single click = select cell; double-click or Enter/F2 = edit. Drag & Shift+click = range. Right-click = context menu.
 // ---------------------------------------------------------------------------
 
@@ -326,7 +326,7 @@ export const CellReferences: Story = {
 };
 
 // ---------------------------------------------------------------------------
-// Performance demos — virtual scrolling, worker sort, column virtualization
+// Performance demos  -  virtual scrolling, worker sort, column virtualization
 // ---------------------------------------------------------------------------
 
 export const VirtualScrolling10K: Story = {
@@ -460,7 +460,7 @@ export const ToolbarWithSecondaryRow: Story = {
 };
 
 // ---------------------------------------------------------------------------
-// Playground — fully interactive with Storybook controls
+// Playground  -  fully interactive with Storybook controls
 // ---------------------------------------------------------------------------
 
 const playgroundColumns: IColumnDef<Project>[] = [

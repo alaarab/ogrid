@@ -33,13 +33,13 @@ export function tokenize(input: string): Token[] {
   while (pos < input.length) {
     const ch = input[pos];
 
-    // 1. Whitespace — skip
+    // 1. Whitespace  -  skip
     if (ch === ' ' || ch === '\t' || ch === '\r' || ch === '\n') {
       pos++;
       continue;
     }
 
-    // 2. Numbers — \d+(\.\d+)? including leading '.' (like .5)
+    // 2. Numbers  -  \d+(\.\d+)? including leading '.' (like .5)
     if (ch >= '0' && ch <= '9' || (ch === '.' && pos + 1 < input.length && input[pos + 1] >= '0' && input[pos + 1] <= '9')) {
       const start = pos;
       while (pos < input.length && input[pos] >= '0' && input[pos] <= '9') {
@@ -55,7 +55,7 @@ export function tokenize(input: string): Token[] {
       continue;
     }
 
-    // 3. Quoted sheet reference — 'Sheet Name'!
+    // 3. Quoted sheet reference  -  'Sheet Name'!
     if (ch === "'") {
       const start = pos;
       pos++; // skip opening quote
@@ -72,11 +72,11 @@ export function tokenize(input: string): Token[] {
           continue;
         }
       }
-      // Invalid quoted sheet ref — error
+      // Invalid quoted sheet ref  -  error
       throw new FormulaError('#ERROR!', `Invalid sheet reference at position ${start}`);
     }
 
-    // 4. Strings — "..." with "" for escaped quotes (Excel convention)
+    // 4. Strings  -  "..." with "" for escaped quotes (Excel convention)
     if (ch === '"') {
       const start = pos;
       pos++; // skip opening quote
@@ -97,10 +97,10 @@ export function tokenize(input: string): Token[] {
       }
       let value: string;
       if (!hasEscapes) {
-        // No escaped quotes — single slice
+        // No escaped quotes  -  single slice
         value = input.slice(scanStart, pos);
       } else {
-        // Has escaped quotes — replace "" with "
+        // Has escaped quotes  -  replace "" with "
         value = input.slice(scanStart, pos).replace(/""/g, '"');
       }
       if (pos < input.length) pos++; // skip closing quote
@@ -108,7 +108,7 @@ export function tokenize(input: string): Token[] {
       continue;
     }
 
-    // 4. Multi-char operators — >=, <=, <>
+    // 4. Multi-char operators  -  >=, <=, <>
     if (ch === '>' && pos + 1 < input.length && input[pos + 1] === '=') {
       tokens.push({ type: 'GTE', value: '>=', position: pos });
       pos += 2;
@@ -139,14 +139,14 @@ export function tokenize(input: string): Token[] {
       continue;
     }
 
-    // 6. Delimiters — (, ), ,, :
+    // 6. Delimiters  -  (, ), ,, :
     if (DELIMITERS[ch]) {
       tokens.push({ type: DELIMITERS[ch], value: ch, position: pos });
       pos++;
       continue;
     }
 
-    // 7. Cell references / identifiers — start with $ or letter
+    // 7. Cell references / identifiers  -  start with $ or letter
     if (ch === '$' || (ch >= 'A' && ch <= 'Z') || (ch >= 'a' && ch <= 'z')) {
       const start = pos;
       // Consume identifier: letters, digits, $, _
@@ -181,33 +181,33 @@ export function tokenize(input: string): Token[] {
       }
       const word = input.slice(start, pos);
 
-      // If immediately followed by '!' → SHEET_REF token (unquoted sheet name)
+      // If immediately followed by '!'  to  SHEET_REF token (unquoted sheet name)
       if (pos < input.length && input[pos] === '!') {
         pos++; // skip '!'
         tokens.push({ type: 'SHEET_REF', value: word, position: start });
         continue;
       }
 
-      // If immediately followed by '(' → FUNCTION token
+      // If immediately followed by '('  to  FUNCTION token
       if (pos < input.length && input[pos] === '(') {
         tokens.push({ type: 'FUNCTION', value: word, position: start });
         continue;
       }
 
-      // If TRUE or FALSE (case-insensitive) → BOOLEAN token
+      // If TRUE or FALSE (case-insensitive)  to  BOOLEAN token
       const upper = word.toUpperCase();
       if (upper === 'TRUE' || upper === 'FALSE') {
         tokens.push({ type: 'BOOLEAN', value: upper, position: start });
         continue;
       }
 
-      // If matches cell ref pattern → CELL_REF token
+      // If matches cell ref pattern  to  CELL_REF token
       if (CELL_REF_PATTERN.test(word)) {
         tokens.push({ type: 'CELL_REF', value: word, position: start });
         continue;
       }
 
-      // Otherwise → IDENTIFIER token (may be a named range)
+      // Otherwise  to  IDENTIFIER token (may be a named range)
       tokens.push({ type: 'IDENTIFIER', value: word, position: start });
       continue;
     }

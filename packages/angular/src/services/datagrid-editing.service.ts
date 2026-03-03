@@ -15,7 +15,7 @@ type IColumnDef<T> = IAngularColumnDef<T>;
  * Manages cell editing state, inline/popover editor, and commit/cancel logic.
  * Extracted from DataGridStateService for modularity.
  *
- * Not @Injectable — instantiated and owned by DataGridStateService.
+ * Not @Injectable  -  instantiated and owned by DataGridStateService.
  */
 export class DataGridEditingHelper<T> {
   readonly editingCellSig = signal<{ rowId: RowId; columnId: string } | null>(null);

@@ -182,7 +182,7 @@ function runBenchmarks(): void {
   const rows50k = generateRows(50_000);
   const columns = makeColumns();
 
-  // Text filter — matches ~50% of rows (names starting with A-E = Alice/Bob/Carol/Dave/Eve)
+  // Text filter  -  matches ~50% of rows (names starting with A-E = Alice/Bob/Carol/Dave/Eve)
   const textFilter: IFilters = { name: { type: 'text', value: 'a' } };
   results.push(bench('processClientSideData (text filter)', '10k rows', () => {
     processClientSideData(rows10k, columns, textFilter);
@@ -191,7 +191,7 @@ function runBenchmarks(): void {
     processClientSideData(rows50k, columns, textFilter);
   }));
 
-  // MultiSelect filter — 3 values, matches ~30% of rows (3/10 categories cycling)
+  // MultiSelect filter  -  3 values, matches ~30% of rows (3/10 categories cycling)
   const multiFilter: IFilters = { category: { type: 'multiSelect', value: ['Electronics', 'Food', 'Sports'] } };
   results.push(bench('processClientSideData (multiSelect)', '10k rows', () => {
     processClientSideData(rows10k, columns, multiFilter);

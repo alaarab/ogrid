@@ -17,7 +17,7 @@ export function registerReferenceFunctions(registry: Map<string, IFormulaFunctio
       const refText = String(rawRef ?? '');
 
       // a1 style is the default (true); R1C1 not supported here
-      // (arg 1 is ignored — we always parse A1 style)
+      // (arg 1 is ignored  -  we always parse A1 style)
 
       // Try as a range first
       const range = parseRange(refText);
@@ -145,7 +145,7 @@ export function registerReferenceFunctions(registry: Map<string, IFormulaFunctio
         absNum = Math.trunc(a);
       }
 
-      // a1 param (arg 3) — only A1 style supported, R1C1 returns same result
+      // a1 param (arg 3)  -  only A1 style supported, R1C1 returns same result
       // sheet_text (arg 4)
       let sheetText = '';
       if (args.length >= 5) {
@@ -175,7 +175,7 @@ export function registerReferenceFunctions(registry: Map<string, IFormulaFunctio
   });
 
   // ---------------------------------------------------------------------------
-  // ROW([reference]) — 1-based row number
+  // ROW([reference])  -  1-based row number
   // ---------------------------------------------------------------------------
   registry.set('ROW', {
     minArgs: 0,
@@ -210,7 +210,7 @@ export function registerReferenceFunctions(registry: Map<string, IFormulaFunctio
   });
 
   // ---------------------------------------------------------------------------
-  // COLUMN([reference]) — 1-based column number
+  // COLUMN([reference])  -  1-based column number
   // ---------------------------------------------------------------------------
   registry.set('COLUMN', {
     minArgs: 0,
@@ -242,7 +242,7 @@ export function registerReferenceFunctions(registry: Map<string, IFormulaFunctio
   });
 
   // ---------------------------------------------------------------------------
-  // ROWS(array) — count rows in a range
+  // ROWS(array)  -  count rows in a range
   // ---------------------------------------------------------------------------
   registry.set('ROWS', {
     minArgs: 1,
@@ -260,7 +260,7 @@ export function registerReferenceFunctions(registry: Map<string, IFormulaFunctio
   });
 
   // ---------------------------------------------------------------------------
-  // COLUMNS(array) — count columns in a range
+  // COLUMNS(array)  -  count columns in a range
   // ---------------------------------------------------------------------------
   registry.set('COLUMNS', {
     minArgs: 1,
@@ -344,14 +344,14 @@ export function registerReferenceFunctions(registry: Map<string, IFormulaFunctio
         return result[0][0];
       }
 
-      // Return the array structure — callers can inspect it
+      // Return the array structure  -  callers can inspect it
       // For a single-cell context, return the first element
       return result[0][0];
     },
   });
 
   // ---------------------------------------------------------------------------
-  // TRANSPOSE(array) — transpose a 2D range
+  // TRANSPOSE(array)  -  transpose a 2D range
   // ---------------------------------------------------------------------------
   registry.set('TRANSPOSE', {
     minArgs: 1,
@@ -382,7 +382,7 @@ export function registerReferenceFunctions(registry: Map<string, IFormulaFunctio
   });
 
   // ---------------------------------------------------------------------------
-  // MMULT(array1, array2) — matrix multiplication
+  // MMULT(array1, array2)  -  matrix multiplication
   // ---------------------------------------------------------------------------
   registry.set('MMULT', {
     minArgs: 2,
@@ -435,7 +435,7 @@ export function registerReferenceFunctions(registry: Map<string, IFormulaFunctio
   });
 
   // ---------------------------------------------------------------------------
-  // MDETERM(array) — matrix determinant
+  // MDETERM(array)  -  matrix determinant
   // ---------------------------------------------------------------------------
   registry.set('MDETERM', {
     minArgs: 1,
@@ -470,7 +470,7 @@ export function registerReferenceFunctions(registry: Map<string, IFormulaFunctio
   });
 
   // ---------------------------------------------------------------------------
-  // MINVERSE(array) — matrix inverse (Gauss-Jordan elimination)
+  // MINVERSE(array)  -  matrix inverse (Gauss-Jordan elimination)
   // ---------------------------------------------------------------------------
   registry.set('MINVERSE', {
     minArgs: 1,

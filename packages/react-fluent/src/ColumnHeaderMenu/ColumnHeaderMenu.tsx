@@ -11,7 +11,7 @@ const getFluentPortalTarget = (anchorElement: HTMLElement): HTMLElement =>
 
 /**
  * Column header dropdown menu for pin/sort/autosize actions.
- * Thin wrapper over BaseColumnHeaderMenu — portals into FluentProvider.
+ * Thin wrapper over BaseColumnHeaderMenu  -  portals into FluentProvider.
  */
 export function ColumnHeaderMenu(props: ColumnHeaderMenuProps) {
   return (

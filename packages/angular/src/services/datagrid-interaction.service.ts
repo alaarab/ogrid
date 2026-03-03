@@ -28,7 +28,7 @@ type IColumnDef<T> = IAngularColumnDef<T>;
  * Manages cell selection, keyboard navigation, clipboard, fill handle, and undo/redo.
  * Extracted from DataGridStateService for modularity.
  *
- * Not @Injectable — instantiated and owned by DataGridStateService.
+ * Not @Injectable  -  instantiated and owned by DataGridStateService.
  */
 export class DataGridInteractionHelper<T> {
   // --- Signals ---

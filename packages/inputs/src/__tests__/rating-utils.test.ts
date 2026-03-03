@@ -51,10 +51,10 @@ describe('rating-utils', () => {
 
     it('returns "empty" when rating does not reach star threshold', () => {
       expect(getStarFill(0, 0)).toBe('empty');
-      // starIndex=1, rating=1: 1 >= 1+1=2 is false; 1 >= 1+0.5 is true but allowHalf=false → empty
+      // starIndex=1, rating=1: 1 >= 1+1=2 is false; 1 >= 1+0.5 is true but allowHalf=false  to  empty
       expect(getStarFill(1, 1)).toBe('empty');
       expect(getStarFill(2, 0)).toBe('empty');
-      // starIndex=3, rating=2.5 with allowHalf: 2.5 < 3+0.5=3.5 and < 3+1=4 → empty
+      // starIndex=3, rating=2.5 with allowHalf: 2.5 < 3+0.5=3.5 and < 3+1=4  to  empty
       expect(getStarFill(3, 2.5, true)).toBe('empty');
     });
 
@@ -94,10 +94,10 @@ describe('rating-utils', () => {
     });
 
     it('uses offsetX exactly at midpoint boundary', () => {
-      // offsetX < starWidth/2 → half; offsetX >= starWidth/2 → full
+      // offsetX < starWidth/2  to  half; offsetX >= starWidth/2  to  full
       // starWidth = 30, mid = 15
       expect(getRatingFromPosition(0, 14, 30, true)).toBe(0.5); // just before mid
-      expect(getRatingFromPosition(0, 15, 30, true)).toBe(1); // exactly at mid → full
+      expect(getRatingFromPosition(0, 15, 30, true)).toBe(1); // exactly at mid  to  full
       expect(getRatingFromPosition(0, 16, 30, true)).toBe(1); // just after mid
     });
 

@@ -142,7 +142,7 @@ describe('buildHeaderRows', () => {
       { columnId: 'b', name: 'B' },
     ];
     const rows = buildHeaderRows(cols, new Set(['b']));
-    // Group is empty (a is hidden), so only B remains — single row
+    // Group is empty (a is hidden), so only B remains  -  single row
     expect(rows).toHaveLength(1);
     expect(rows[0]).toHaveLength(1);
     expect(rows[0][0]).toMatchObject({ label: 'B' });

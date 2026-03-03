@@ -439,7 +439,7 @@ describe('Logical functions (new)', () => {
     it('does NOT catch #VALUE! error', () => {
       // IFERROR would catch this, IFNA should not
       const ctx = createMockContext({});
-      const badLookup: ASTNode = fn('VLOOKUP', num(1), num(2), num(1)); // arg 1 is not a range → #VALUE!
+      const badLookup: ASTNode = fn('VLOOKUP', num(1), num(2), num(1)); // arg 1 is not a range  to  #VALUE!
       const result = evaluator.evaluate(fn('IFNA', badLookup, str('caught')), ctx);
       expect(result).toBeInstanceOf(FormulaError);
     });
@@ -721,7 +721,7 @@ describe('Info functions', () => {
 
   describe('ISERROR', () => {
     it('returns true for error', () => {
-      // 1/0 → #DIV/0!
+      // 1/0  to  #DIV/0!
       const ctx = createMockContext({});
       const divByZero: ASTNode = { kind: 'binaryOp', op: '/', left: num(1), right: num(0) };
       const result = evaluator.evaluate(fn('ISERROR', divByZero), ctx);
@@ -788,11 +788,11 @@ describe('Stats functions (multi-criteria)', () => {
 
   describe('SUMIFS', () => {
     it('sums with single criteria', () => {
-      // Sum values where category = A → 10 + 30 + 50 = 90
+      // Sum values where category = A  to  10 + 30 + 50 = 90
       expect(evalFn('SUMIFS', [range(2, 0, 2, 4), range(0, 0, 0, 4), str('A')], multiCells)).toBe(90);
     });
     it('sums with multiple criteria', () => {
-      // Sum values where category = A AND region = N → 10 + 50 = 60
+      // Sum values where category = A AND region = N  to  10 + 50 = 60
       expect(evalFn('SUMIFS', [
         range(2, 0, 2, 4),
         range(0, 0, 0, 4), str('A'),
@@ -806,11 +806,11 @@ describe('Stats functions (multi-criteria)', () => {
 
   describe('COUNTIFS', () => {
     it('counts with single criteria', () => {
-      // Count where category = B → 2
+      // Count where category = B  to  2
       expect(evalFn('COUNTIFS', [range(0, 0, 0, 4), str('B')], multiCells)).toBe(2);
     });
     it('counts with multiple criteria', () => {
-      // Count where category = A AND region = N → 2
+      // Count where category = A AND region = N  to  2
       expect(evalFn('COUNTIFS', [
         range(0, 0, 0, 4), str('A'),
         range(1, 0, 1, 4), str('N'),
@@ -820,11 +820,11 @@ describe('Stats functions (multi-criteria)', () => {
 
   describe('AVERAGEIFS', () => {
     it('averages with single criteria', () => {
-      // Average values where category = A → (10+30+50)/3 = 30
+      // Average values where category = A  to  (10+30+50)/3 = 30
       expect(evalFn('AVERAGEIFS', [range(2, 0, 2, 4), range(0, 0, 0, 4), str('A')], multiCells)).toBe(30);
     });
     it('averages with multiple criteria', () => {
-      // Average values where category = A AND region = N → (10+50)/2 = 30
+      // Average values where category = A AND region = N  to  (10+50)/2 = 30
       expect(evalFn('AVERAGEIFS', [
         range(2, 0, 2, 4),
         range(0, 0, 0, 4), str('A'),

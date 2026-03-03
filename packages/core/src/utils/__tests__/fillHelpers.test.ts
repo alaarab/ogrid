@@ -146,7 +146,7 @@ describe('applyFillValues', () => {
       // Fill from text column (col 0) across to numeric column (col 1)
       const range = makeRange(0, 0, 0, 1);
       const events = applyFillValues(range, 0, 0, items, typedCols);
-      // 'hello' cannot be parsed as a number → should be skipped
+      // 'hello' cannot be parsed as a number  to  should be skipped
       expect(events).toHaveLength(0);
     });
 
@@ -157,7 +157,7 @@ describe('applyFillValues', () => {
       ];
       const range = makeRange(0, 0, 0, 2);
       const events = applyFillValues(range, 0, 0, items, typedCols);
-      // 'hello' is not a valid boolean → both numeric and boolean targets should be skipped
+      // 'hello' is not a valid boolean  to  both numeric and boolean targets should be skipped
       expect(events).toHaveLength(0);
     });
 
@@ -179,7 +179,7 @@ describe('applyFillValues', () => {
       ];
       const range = makeRange(0, 0, 0, 3);
       const events = applyFillValues(range, 0, 0, items, typedCols);
-      // 'not-a-date' fails date parsing → skipped for numeric, boolean, AND date targets
+      // 'not-a-date' fails date parsing  to  skipped for numeric, boolean, AND date targets
       expect(events).toHaveLength(0);
     });
 

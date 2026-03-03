@@ -1,5 +1,7 @@
 import { defineComponent, ref, computed, h, onMounted, onUnmounted, nextTick, watch, type PropType, type VNode } from 'vue';
 import type { IColumnDef } from '../types';
+import { formatDateForDisplay, parseUserInputDate, getDateInputPlaceholder, DEFAULT_DATE_FORMAT } from '@alaarab/ogrid-core';
+import type { DateFormat } from '@alaarab/ogrid-core';
 
 export interface CreateInlineCellEditorOptions {
   renderCheckbox: (props: { checked: boolean; onChange: (val: boolean) => void; onCancel: () => void }) => VNode;
@@ -242,7 +244,6 @@ export function createInlineCellEditor(options: CreateInlineCellEditorOptions) {
                   style: { padding: '6px 8px', cursor: 'pointer', color: 'var(--ogrid-fg, #242424)', fontSize: '13px', ...(i === highlightedIndex.value ? { background: 'var(--ogrid-bg-hover, #e8f0fe)' } : {}) },
                 }, getDisplayText(v))
               ),
-              h('div', { style: { padding: '4px 8px', borderTop: '1px solid var(--ogrid-border, rgba(0,0,0,0.12))', fontSize: '11px', color: 'var(--ogrid-muted, #999)', textAlign: 'right', position: 'sticky', bottom: '0', background: 'var(--ogrid-bg, #fff)' } }, 'Click or Enter to apply'),
             ]),
           ]);
         }
@@ -286,32 +287,72 @@ export function createInlineCellEditor(options: CreateInlineCellEditorOptions) {
                 }, getDisplayText(v))
               )),
               ...(filtered.length === 0 ? [h('div', { style: { padding: '6px 8px', color: 'var(--ogrid-muted, #999)', fontSize: '13px' } }, 'No matches')] : []),
-              h('div', { style: { padding: '4px 8px', borderTop: '1px solid var(--ogrid-border, rgba(0,0,0,0.12))', fontSize: '11px', color: 'var(--ogrid-muted, #999)', textAlign: 'right', position: 'sticky', bottom: '0', background: 'var(--ogrid-bg, #fff)' } }, 'Click or Enter to apply'),
             ]),
           ]);
         }
 
         if (props.editorType === 'date') {
-          let dateStr = '';
-          if (localValue.value != null) {
-            const s = String(localValue.value);
-            if (s.match(/^\d{4}-\d{2}-\d{2}/)) dateStr = s.substring(0, 10);
-            else dateStr = s;
+          const dateFormat = (props.column.cellEditorParams?.['dateFormat'] as DateFormat | undefined) ?? (props.column.dateFormat as DateFormat | undefined) ?? DEFAULT_DATE_FORMAT;
+          const dateEditorType = (props.column.cellEditorParams?.['editorType'] as string | undefined) ?? 'text';
+
+          const commitDate = (raw: string) => {
+            if (dateEditorType !== 'native') {
+              const parsed = parseUserInputDate(raw, dateFormat);
+              if (parsed !== null) {
+                const yyyy = parsed.getUTCFullYear().toString().padStart(4, '0');
+                const mm = (parsed.getUTCMonth() + 1).toString().padStart(2, '0');
+                const dd = parsed.getUTCDate().toString().padStart(2, '0');
+                props.onCommit(`${yyyy}-${mm}-${dd}`);
+              } else {
+                props.onCommit(raw || null);
+              }
+            } else {
+              props.onCommit(raw);
+            }
+          };
+
+          const handleDateKeyDown = (e: KeyboardEvent) => {
+            if (e.key === 'Enter') { e.preventDefault(); commitDate(String(localValue.value ?? '')); }
+            if (e.key === 'Escape') { e.preventDefault(); props.onCancel(); }
+            if (e.key === 'Tab') { e.preventDefault(); commitDate(String(localValue.value ?? '')); }
+          };
+
+          if (dateEditorType === 'native') {
+            // Native browser date picker: always uses YYYY-MM-DD
+            const isoStr = (() => {
+              if (localValue.value == null) return '';
+              const s = String(localValue.value);
+              return s.match(/^\d{4}-\d{2}-\d{2}/) ? s.substring(0, 10) : s;
+            })();
+            return h('div', { style: editorWrapperStyle },
+              h('input', {
+                ref: (el: unknown) => { inputRef.value = el as HTMLInputElement; },
+                type: 'date',
+                value: isoStr,
+                style: { width: '100%', height: '100%', border: 'none', outline: 'none', padding: '0 4px', fontSize: 'inherit', boxSizing: 'border-box' },
+                onInput: (e: Event) => { localValue.value = (e.target as HTMLInputElement).value; },
+                onKeydown: handleDateKeyDown,
+                onBlur: () => commitDate(String(localValue.value ?? '')),
+              })
+            );
           }
+
+          // Default: text input with configurable date format
+          const displayValue = formatDateForDisplay(props.value, dateFormat) ?? '';
+          if (localValue.value == null || localValue.value === '') {
+            localValue.value = displayValue;
+          }
+          const placeholder = getDateInputPlaceholder(dateFormat);
           return h('div', { style: editorWrapperStyle },
             h('input', {
               ref: (el: unknown) => { inputRef.value = el as HTMLInputElement; },
               type: 'text',
-              value: dateStr,
-              placeholder: 'YYYY-MM-DD',
+              value: localValue.value,
+              placeholder,
               style: { width: '100%', height: '100%', border: 'none', outline: 'none', padding: '0 4px', fontSize: 'inherit', boxSizing: 'border-box' },
               onInput: (e: Event) => { localValue.value = (e.target as HTMLInputElement).value; },
-              onKeydown: (e: KeyboardEvent) => {
-                if (e.key === 'Enter') { e.preventDefault(); props.onCommit(localValue.value); }
-                if (e.key === 'Escape') { e.preventDefault(); props.onCancel(); }
-                if (e.key === 'Tab') { e.preventDefault(); props.onCommit(localValue.value); }
-              },
-              onBlur: () => props.onCommit(localValue.value),
+              onKeydown: handleDateKeyDown,
+              onBlur: () => commitDate(String(localValue.value ?? '')),
             })
           );
         }

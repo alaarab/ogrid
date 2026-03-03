@@ -1,5 +1,5 @@
 /**
- * FormulaEngineService — Angular service for integrating the formula engine with the grid.
+ * FormulaEngineService  -  Angular service for integrating the formula engine with the grid.
  *
  * Lazily creates a FormulaEngine instance when configured with `formulas: true`.
  * Provides an accessor bridge between grid data and formula coordinates.
@@ -29,7 +29,7 @@ export interface FormulaEngineConfig {
   formulaFunctions?: Record<string, IFormulaFunction>;
   /** Called when recalculation produces cascading updates. */
   onFormulaRecalc?: (result: IRecalcResult) => void;
-  /** Named ranges: name → cell/range reference string. */
+  /** Named ranges: name  to  cell/range reference string. */
   namedRanges?: Record<string, string>;
   /** Sheet accessors for cross-sheet references. */
   sheets?: Record<string, IGridDataAccessor>;
@@ -38,7 +38,7 @@ export interface FormulaEngineConfig {
 /**
  * Per-component injectable service that wraps FormulaEngine from @alaarab/ogrid-core.
  *
- * Not providedIn: 'root' — provide it per component so each grid instance
+ * Not providedIn: 'root'  -  provide it per component so each grid instance
  * gets its own formula engine.
  */
 @Injectable()

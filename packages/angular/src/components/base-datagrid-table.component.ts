@@ -44,7 +44,7 @@ export abstract class BaseDataGridTableComponent<T = unknown> {
   protected lastMouseShift = false;
   readonly columnSizingVersion = signal(0);
 
-  /** Dirty flag — set when column layout changes, cleared after measurement. */
+  /** Dirty flag  -  set when column layout changes, cleared after measurement. */
   private readonly measureDirty = signal<boolean>(true);
 
   /** DOM-measured column widths from the last layout pass.
@@ -52,7 +52,7 @@ export abstract class BaseDataGridTableComponent<T = unknown> {
    *  when new data loads (e.g. server-side pagination). */
   readonly measuredColumnWidths = signal<Record<string, number>>({});
 
-  // Signal-backed view child elements — set from ngAfterViewInit.
+  // Signal-backed view child elements  -  set from ngAfterViewInit.
   // @ViewChild is a plain property (not a signal), so effects/computed that read it
   // only evaluate once during construction when the ref is still undefined.
   protected readonly wrapperElSignal = signal<HTMLElement | null>(null);
@@ -69,7 +69,7 @@ export abstract class BaseDataGridTableComponent<T = unknown> {
   /** Return the table container element ref */
   protected abstract getTableContainerRef(): ElementRef<HTMLElement> | undefined;
 
-  /** Lifecycle hook — populate element signals from @ViewChild refs */
+  /** Lifecycle hook  -  populate element signals from @ViewChild refs */
   ngAfterViewInit(): void {
     const wrapper = this.getWrapperRef()?.nativeElement ?? null;
     const tableContainer = this.getTableContainerRef()?.nativeElement ?? null;
@@ -78,7 +78,7 @@ export abstract class BaseDataGridTableComponent<T = unknown> {
     this.measureColumnWidths();
   }
 
-  /** Lifecycle hook — re-measure column widths only when layout changed */
+  /** Lifecycle hook  -  re-measure column widths only when layout changed */
   ngAfterViewChecked(): void {
     if (this.measureDirty()) {
       this.measureDirty.set(false);
@@ -115,7 +115,7 @@ export abstract class BaseDataGridTableComponent<T = unknown> {
 
   readonly state = computed(() => this.stateService.getState());
 
-  // Intermediate computed signals — narrow slices of state() so leaf computeds
+  // Intermediate computed signals  -  narrow slices of state() so leaf computeds
   // only recompute when their specific sub-state changes.
   protected readonly layoutState = computed(() => this.state().layout);
   protected readonly rowSelectionState = computed(() => this.state().rowSelection);
@@ -146,7 +146,7 @@ export abstract class BaseDataGridTableComponent<T = unknown> {
   readonly propsVisibleColumns = computed(() => this.getProps()?.visibleColumns);
   readonly propsColumnOrder = computed(() => this.getProps()?.columnOrder);
 
-  // State service outputs — read from narrow intermediate signals
+  // State service outputs  -  read from narrow intermediate signals
   readonly visibleCols = computed(() => this.layoutState().visibleCols);
   readonly hasCheckboxCol = computed(() => this.layoutState().hasCheckboxCol);
   readonly hasRowNumbersCol = computed(() => this.layoutState().hasRowNumbersCol);
@@ -370,8 +370,8 @@ export abstract class BaseDataGridTableComponent<T = unknown> {
    * ensure the first (null) run is a safe no-op.
    *
    * Sequence:
-   *   1. Constructor → `initBase()` → effects created, first run (signals null → no-ops)
-   *   2. `ngAfterViewInit` → `wrapperElSignal.set(el)` → effects re-run with real values
+   *   1. Constructor  to  `initBase()`  to  effects created, first run (signals null  to  no-ops)
+   *   2. `ngAfterViewInit`  to  `wrapperElSignal.set(el)`  to  effects re-run with real values
    */
   protected initBase(): void {
     // Wire props to state service
@@ -492,7 +492,7 @@ export abstract class BaseDataGridTableComponent<T = unknown> {
     return getHeaderFilterConfig(col, this.headerFilterInput());
   }
 
-  /** Memoized column menu handlers — avoids recreating objects on every CD cycle */
+  /** Memoized column menu handlers  -  avoids recreating objects on every CD cycle */
   protected readonly columnMenuHandlersMap = computed(() => {
     const cols = this.visibleCols() as IColumnDef<T>[];
     const map = new Map<string, ReturnType<typeof this.buildColumnMenuHandlers>>();

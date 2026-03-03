@@ -8,7 +8,7 @@ export default function ToolbarFullDemo() {
   const gridRef = useRef<IOGridApi<Person>>(null);
 
   return (
-    <LiveDemo height={520} title="Full layout — toolbar, sidebar, status bar, and pagination together">
+    <LiveDemo height={520} title="Full layout  -  toolbar, sidebar, status bar, and pagination together">
       <OGrid
         ref={gridRef}
         columns={toolbarColumns}

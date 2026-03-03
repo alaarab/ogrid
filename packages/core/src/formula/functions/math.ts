@@ -554,7 +554,7 @@ export function registerMathFunctions(registry: Map<string, IFormulaFunction>): 
   });
 
   // ---------------------------------------------------------------------------
-  // MROUND(number, multiple) — round to nearest multiple
+  // MROUND(number, multiple)  -  round to nearest multiple
   // ---------------------------------------------------------------------------
   registry.set('MROUND', {
     minArgs: 2,
@@ -579,7 +579,7 @@ export function registerMathFunctions(registry: Map<string, IFormulaFunction>): 
   });
 
   // ---------------------------------------------------------------------------
-  // QUOTIENT(numerator, denominator) — integer part of division
+  // QUOTIENT(numerator, denominator)  -  integer part of division
   // ---------------------------------------------------------------------------
   registry.set('QUOTIENT', {
     minArgs: 2,
@@ -601,7 +601,7 @@ export function registerMathFunctions(registry: Map<string, IFormulaFunction>): 
   });
 
   // ---------------------------------------------------------------------------
-  // COMBIN(n, k) — n! / (k! * (n-k)!)
+  // COMBIN(n, k)  -  n! / (k! * (n-k)!)
   // ---------------------------------------------------------------------------
   registry.set('COMBIN', {
     minArgs: 2,
@@ -635,7 +635,7 @@ export function registerMathFunctions(registry: Map<string, IFormulaFunction>): 
   });
 
   // ---------------------------------------------------------------------------
-  // PERMUT(n, k) — n! / (n-k)!
+  // PERMUT(n, k)  -  n! / (n-k)!
   // ---------------------------------------------------------------------------
   registry.set('PERMUT', {
     minArgs: 2,
@@ -666,7 +666,7 @@ export function registerMathFunctions(registry: Map<string, IFormulaFunction>): 
   });
 
   // ---------------------------------------------------------------------------
-  // FACT(number) — factorial
+  // FACT(number)  -  factorial
   // ---------------------------------------------------------------------------
   registry.set('FACT', {
     minArgs: 1,
@@ -690,7 +690,7 @@ export function registerMathFunctions(registry: Map<string, IFormulaFunction>): 
   });
 
   // ---------------------------------------------------------------------------
-  // GCD(number1, [number2], ...) — greatest common divisor
+  // GCD(number1, [number2], ...)  -  greatest common divisor
   // ---------------------------------------------------------------------------
   registry.set('GCD', {
     minArgs: 1,
@@ -717,7 +717,7 @@ export function registerMathFunctions(registry: Map<string, IFormulaFunction>): 
   });
 
   // ---------------------------------------------------------------------------
-  // LCM(number1, [number2], ...) — least common multiple
+  // LCM(number1, [number2], ...)  -  least common multiple
   // ---------------------------------------------------------------------------
   registry.set('LCM', {
     minArgs: 1,

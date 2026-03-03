@@ -190,11 +190,11 @@ export interface IRecalcResult {
 export interface IFormulaEngineConfig {
   maxChainLength?: number;
   customFunctions?: Record<string, IFormulaFunction>;
-  /** Named ranges: name → cell/range reference string (e.g. "A1:B10"). */
+  /** Named ranges: name  to  cell/range reference string (e.g. "A1:B10"). */
   namedRanges?: Record<string, string>;
 }
 
-/** Grid data accessor — bridge between FormulaEngine and the grid's data model. */
+/** Grid data accessor  -  bridge between FormulaEngine and the grid's data model. */
 export interface IGridDataAccessor {
   getCellValue(col: number, row: number): unknown;
   getRowCount(): number;

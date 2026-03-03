@@ -99,7 +99,7 @@ describe('RatingEditor', () => {
     });
   });
 
-  // ── 3. User Interaction — Star Click ──
+  // ── 3. User Interaction  -  Star Click ──
 
   describe('Star Click', () => {
     it('clicking a star calls onValueChange', async () => {

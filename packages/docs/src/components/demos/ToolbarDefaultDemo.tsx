@@ -5,7 +5,7 @@ import { people, getRowId, toolbarColumns } from './demoData';
 
 export default function ToolbarDefaultDemo() {
   return (
-    <LiveDemo height={420} title="Default layout — column chooser button in the toolbar strip">
+    <LiveDemo height={420} title="Default layout  -  column chooser button in the toolbar strip">
       <OGrid
         columns={toolbarColumns}
         data={people}

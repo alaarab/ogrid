@@ -1,7 +1,7 @@
 ---
 sidebar_position: 12.5
 title: Column Types
-description: Built-in column types for common data patterns — text, numeric, date, and boolean.
+description: Built-in column types for common data patterns  -  text, numeric, date, and boolean.
 ---
 
 import Tabs from '@theme/Tabs';
@@ -18,7 +18,7 @@ OGrid provides built-in column types that automatically configure alignment, dis
 | `'text'` | Left (default) | Text input | Text search | `String()` |
 | `'numeric'` | Right | Text input | Text search | `String()` |
 | `'date'` | Left | Date picker | Date range (from/to) | `toLocaleDateString()` |
-| `'boolean'` | Center | Checkbox | — | `True` / `False` |
+| `'boolean'` | Center | Checkbox |  -  | `True` / `False` |
 
 ## Quick Example
 
@@ -65,8 +65,8 @@ function App() {
 The `OGrid` component has the same props across all React UI packages. To switch, just change the import:
 
 - **Radix** (lightweight, default): `from '@alaarab/ogrid-react-radix'`
-- **Fluent UI** (Microsoft 365 / SPFx): `from '@alaarab/ogrid-react-fluent'` — wrap in `<FluentProvider>`
-- **Material UI** (MUI v7): `from '@alaarab/ogrid-react-material'` — wrap in `<ThemeProvider>`
+- **Fluent UI** (Microsoft 365 / SPFx): `from '@alaarab/ogrid-react-fluent'`  -  wrap in `<FluentProvider>`
+- **Material UI** (MUI v7): `from '@alaarab/ogrid-react-material'`  -  wrap in `<ThemeProvider>`
 :::
 
   </TabItem>
@@ -98,7 +98,7 @@ Same component API across Angular packages. To switch, just change the import:
 - **Angular Material**: `from '@alaarab/ogrid-angular-material'`
 - **PrimeNG**: `from '@alaarab/ogrid-angular-primeng'`
 
-All components are standalone — no NgModule required.
+All components are standalone  -  no NgModule required.
 :::
 
   </TabItem>
@@ -125,7 +125,7 @@ const gridProps = {
 Same component API across Vue packages. To switch, just change the import:
 
 - **Radix (Headless UI)**: `from '@alaarab/ogrid-vue-radix'` *(default, lightweight)*
-- **Vuetify**: `from '@alaarab/ogrid-vue-vuetify'` — wrap in `<v-app>` for theming
+- **Vuetify**: `from '@alaarab/ogrid-vue-vuetify'`  -  wrap in `<v-app>` for theming
 - **PrimeVue**: `from '@alaarab/ogrid-vue-primevue'`
 :::
 
@@ -154,7 +154,7 @@ Setting `type: 'date'` provides:
 - **Display**: Values are automatically formatted via `toLocaleDateString()` (unless you provide a custom `valueFormatter` or `renderCell`).
 - **Sorting**: Dates are compared chronologically via `Date.getTime()`, not alphabetically.
 - **Cell editor**: Uses `<input type="date">` (native browser date picker) by default.
-- **Filter**: When `filterable: { type: 'date' }` is set, the column header filter shows **From** and **To** date inputs. Both are optional — you can filter by "after", "before", or a range.
+- **Filter**: When `filterable: { type: 'date' }` is set, the column header filter shows **From** and **To** date inputs. Both are optional  -  you can filter by "after", "before", or a range.
 
 ### Date Filter Values
 

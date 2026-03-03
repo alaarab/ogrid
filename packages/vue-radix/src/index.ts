@@ -1,5 +1,5 @@
 // Explicit named re-exports from base package (replaces export * for better tree-shaking).
-// Types from core (via @alaarab/ogrid-vue → @alaarab/ogrid-core)
+// Types from core (via @alaarab/ogrid-vue  to  @alaarab/ogrid-core)
 export type {
   ColumnFilterType,
   IDateFilterValue,

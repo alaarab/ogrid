@@ -315,7 +315,6 @@ export function createColorPickerEditor(context: ColorPickerEditorContext): HTML
     const colorLabel = document.createElement('div');
     colorLabel.textContent = selectedColor.toUpperCase();
     Object.assign(colorLabel.style, {
-      textAlign: 'center',
       fontSize: '11px',
       color: 'var(--ogrid-muted, #888)',
       marginTop: '4px',
@@ -333,7 +332,7 @@ export function createColorPickerEditor(context: ColorPickerEditorContext): HTML
     }
   });
 
-  // Suppress unused import warning — isLightColor is available for consumer use
+  // Suppress unused import warning  -  isLightColor is available for consumer use
   void isLightColor;
 
   return root;

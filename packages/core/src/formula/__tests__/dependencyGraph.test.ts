@@ -4,7 +4,7 @@ import { DependencyGraph } from '../dependencyGraph';
 // setDependencies
 // ---------------------------------------------------------------------------
 
-describe('DependencyGraph — setDependencies', () => {
+describe('DependencyGraph  -  setDependencies', () => {
   it('creates a simple A depends on B relationship', () => {
     const g = new DependencyGraph();
     g.setDependencies('A', new Set(['B']));
@@ -48,7 +48,7 @@ describe('DependencyGraph — setDependencies', () => {
 // getDependents
 // ---------------------------------------------------------------------------
 
-describe('DependencyGraph — getDependents', () => {
+describe('DependencyGraph  -  getDependents', () => {
   it('returns direct dependents', () => {
     const g = new DependencyGraph();
     g.setDependencies('B', new Set(['A']));
@@ -75,7 +75,7 @@ describe('DependencyGraph — getDependents', () => {
 // getDependencies
 // ---------------------------------------------------------------------------
 
-describe('DependencyGraph — getDependencies', () => {
+describe('DependencyGraph  -  getDependencies', () => {
   it('returns the dependencies of a cell', () => {
     const g = new DependencyGraph();
     g.setDependencies('C', new Set(['A', 'B']));
@@ -93,7 +93,7 @@ describe('DependencyGraph — getDependencies', () => {
 // removeDependencies
 // ---------------------------------------------------------------------------
 
-describe('DependencyGraph — removeDependencies', () => {
+describe('DependencyGraph  -  removeDependencies', () => {
   it('removes forward and reverse maps for a cell', () => {
     const g = new DependencyGraph();
     g.setDependencies('A', new Set(['B', 'C']));
@@ -124,7 +124,7 @@ describe('DependencyGraph — removeDependencies', () => {
 // getRecalcOrder
 // ---------------------------------------------------------------------------
 
-describe('DependencyGraph — getRecalcOrder', () => {
+describe('DependencyGraph  -  getRecalcOrder', () => {
   it('returns an empty array when no cells depend on the changed cell', () => {
     const g = new DependencyGraph();
     expect(g.getRecalcOrder('A')).toEqual([]);
@@ -172,7 +172,7 @@ describe('DependencyGraph — getRecalcOrder', () => {
 // getRecalcOrderBatch
 // ---------------------------------------------------------------------------
 
-describe('DependencyGraph — getRecalcOrderBatch', () => {
+describe('DependencyGraph  -  getRecalcOrderBatch', () => {
   it('handles multiple changed cells', () => {
     const g = new DependencyGraph();
     g.setDependencies('C', new Set(['A']));
@@ -213,7 +213,7 @@ describe('DependencyGraph — getRecalcOrderBatch', () => {
 // wouldCreateCycle
 // ---------------------------------------------------------------------------
 
-describe('DependencyGraph — wouldCreateCycle', () => {
+describe('DependencyGraph  -  wouldCreateCycle', () => {
   it('detects self-reference', () => {
     const g = new DependencyGraph();
     expect(g.wouldCreateCycle('A', new Set(['A']))).toBe(true);
@@ -237,7 +237,7 @@ describe('DependencyGraph — wouldCreateCycle', () => {
   it('does not report false positives for valid dependencies', () => {
     const g = new DependencyGraph();
     g.setDependencies('A', new Set(['B']));
-    // C depending on A is perfectly valid — no cycle
+    // C depending on A is perfectly valid  -  no cycle
     expect(g.wouldCreateCycle('C', new Set(['A']))).toBe(false);
   });
 
@@ -245,16 +245,16 @@ describe('DependencyGraph — wouldCreateCycle', () => {
     const g = new DependencyGraph();
     g.setDependencies('A', new Set(['B']));
     g.setDependencies('C', new Set(['D']));
-    // A depending on D is fine — different chains
+    // A depending on D is fine  -  different chains
     expect(g.wouldCreateCycle('A', new Set(['D']))).toBe(false);
   });
 
   it('handles checking multiple proposed dependencies', () => {
     const g = new DependencyGraph();
     g.setDependencies('A', new Set(['B']));
-    // C depending on both A and X — no cycle
+    // C depending on both A and X  -  no cycle
     expect(g.wouldCreateCycle('C', new Set(['A', 'X']))).toBe(false);
-    // B depending on A — A -> B -> A cycle
+    // B depending on A  -  A -> B -> A cycle
     expect(g.wouldCreateCycle('B', new Set(['A', 'X']))).toBe(true);
   });
 });
@@ -263,7 +263,7 @@ describe('DependencyGraph — wouldCreateCycle', () => {
 // clear
 // ---------------------------------------------------------------------------
 
-describe('DependencyGraph — clear', () => {
+describe('DependencyGraph  -  clear', () => {
   it('empties all internal state', () => {
     const g = new DependencyGraph();
     g.setDependencies('A', new Set(['B']));
@@ -291,7 +291,7 @@ describe('DependencyGraph — clear', () => {
 // Complex graph topologies
 // ---------------------------------------------------------------------------
 
-describe('DependencyGraph — complex graphs', () => {
+describe('DependencyGraph  -  complex graphs', () => {
   it('handles diamond dependency: A,B -> C; A -> D; D -> C', () => {
     const g = new DependencyGraph();
     // C depends on A and B
@@ -346,7 +346,7 @@ describe('DependencyGraph — complex graphs', () => {
 // Topological ordering guarantee
 // ---------------------------------------------------------------------------
 
-describe('DependencyGraph — topological ordering guarantee', () => {
+describe('DependencyGraph  -  topological ordering guarantee', () => {
   it('dependents always appear after their dependencies in recalc order', () => {
     const g = new DependencyGraph();
     // Build a more complex graph

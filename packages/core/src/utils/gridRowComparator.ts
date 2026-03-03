@@ -1,6 +1,6 @@
 /**
  * Checks whether a given row index falls within a selection range.
- * O(1) — used by React.memo comparators to skip unchanged rows.
+ * O(1)  -  used by React.memo comparators to skip unchanged rows.
  */
 export function isRowInRange(range: { startRow: number; endRow: number } | null, rowIndex: number): boolean {
   if (!range) return false;
@@ -43,7 +43,7 @@ export interface GridRowComparatorProps {
  * - packages/material/src/DataGridTable/DataGridTable.tsx
  */
 export function areGridRowPropsEqual(prev: GridRowComparatorProps, next: GridRowComparatorProps): boolean {
-  // Data / structure changes — always re-render
+  // Data / structure changes  -  always re-render
   if (prev.item !== next.item) return false;
   if (prev.isSelected !== next.isSelected) return false;
   if (prev.hasCheckboxCol !== next.hasCheckboxCol) return false;

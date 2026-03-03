@@ -285,10 +285,10 @@ The `aria-live="polite"` setting ensures announcements don't interrupt the user'
 ### Semantic HTML
 
 The status bar uses semantic `<span>` elements with clear text labels:
-- "Rows: 1,000" — Total row count
-- "Filtered: 250" — Filtered row count
-- "Selected: 5" — Selected row count
-- "Sum: 450" — Aggregation values
+- "Rows: 1,000"  -  Total row count
+- "Filtered: 250"  -  Filtered row count
+- "Selected: 5"  -  Selected row count
+- "Sum: 450"  -  Aggregation values
 
 No additional ARIA labels are needed because the text content is already descriptive.
 
@@ -305,9 +305,9 @@ See the [Accessibility Guide](/docs/guides/accessibility) for complete documenta
 All UI packages provide default styles matching their design system. The status bar is styled with a subtle background and border-top.
 
 **CSS custom properties** (all packages):
-- `--ogrid-header-bg` — Background color (matches header)
-- `--ogrid-border` — Border color
-- `--ogrid-fg` — Foreground text color
+- `--ogrid-header-bg`  -  Background color (matches header)
+- `--ogrid-border`  -  Border color
+- `--ogrid-fg`  -  Foreground text color
 
 ## Layout Integration
 
@@ -315,11 +315,11 @@ The status bar is rendered inside `DataGridTable` at the bottom, just above the 
 
 ## Related Components
 
-- [DataGridTable](./components-datagrid-table.mdx) — Main grid component that renders the status bar
-- [PaginationControls](./components-pagination-controls.mdx) — Pagination UI below the status bar
-- [OGrid](./ogrid-props.mdx) — Top-level wrapper with `statusBar` prop
+- [DataGridTable](./components-datagrid-table.mdx)  -  Main grid component that renders the status bar
+- [PaginationControls](./components-pagination-controls.mdx)  -  Pagination UI below the status bar
+- [OGrid](./ogrid-props.mdx)  -  Top-level wrapper with `statusBar` prop
 
 ## See Also
 
-- [Types: IStatusBarProps](./types.mdx#istatusbarprops) — Status bar props reference
-- [Spreadsheet Selection Feature Guide](/docs/features/spreadsheet-selection) — How aggregations are computed
+- [Types: IStatusBarProps](./types.mdx#istatusbarprops)  -  Status bar props reference
+- [Spreadsheet Selection Feature Guide](/docs/features/spreadsheet-selection)  -  How aggregations are computed

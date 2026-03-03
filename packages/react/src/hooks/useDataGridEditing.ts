@@ -27,7 +27,7 @@ export interface UseDataGridEditingParams<T> {
   onFormulaCellChanged?: (col: number, row: number) => void;
   /** Whether formula support is enabled. */
   formulas?: boolean;
-  /** All flat columns (for mapping columnId → column index). */
+  /** All flat columns (for mapping columnId  to  column index). */
   flatColumns?: IColumnDef<T>[];
 }
 

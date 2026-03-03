@@ -63,7 +63,7 @@ export class GridState<T> {
   private _fullScreen: boolean;
   private _workerSort: boolean | 'auto';
 
-  // Formula engine (optional — wired by OGrid when formulas option is enabled)
+  // Formula engine (optional  -  wired by OGrid when formulas option is enabled)
   private _formulaEngine: FormulaEngineState | null = null;
 
   // Filter options for client-side data (used by sidebar filters panel & header filter popovers)
@@ -111,7 +111,7 @@ export class GridState<T> {
       );
     }
 
-    // Runtime validation — runs once at construction
+    // Runtime validation  -  runs once at construction
     validateColumns(this._columns as Parameters<typeof validateColumns>[0]);
     if (!this._dataSource && this._data.length > 0) {
       validateRowIds(this._data, this._getRowId as (item: T) => import('@alaarab/ogrid-core').RowId);

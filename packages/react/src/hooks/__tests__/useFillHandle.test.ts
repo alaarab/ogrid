@@ -49,7 +49,7 @@ describe('useFillHandle', () => {
 // fillDown (Ctrl+D) tests
 // ---------------------------------------------------------------------------
 
-describe('useFillHandle — fillDown (Ctrl+D)', () => {
+describe('useFillHandle  -  fillDown (Ctrl+D)', () => {
   type Item = { id: string; name: string };
   const items: Item[] = [
     { id: '1', name: 'Alice' },
@@ -162,7 +162,7 @@ describe('useFillHandle — fillDown (Ctrl+D)', () => {
 
   it('fillDown handles reversed selection (endRow < startRow) by normalizing', () => {
     const onCellValueChanged = jest.fn();
-    // Selection from row 2 up to row 0 (reversed) — should still fill rows 1,2 with row 0's value
+    // Selection from row 2 up to row 0 (reversed)  -  should still fill rows 1,2 with row 0's value
     const params = createFillDownParams({
       selectionRange: { startRow: 2, startCol: 0, endRow: 0, endCol: 0 },
       onCellValueChanged,
@@ -173,7 +173,7 @@ describe('useFillHandle — fillDown (Ctrl+D)', () => {
       result.current.fillDown();
     });
 
-    // normalizeSelectionRange makes startRow=0, endRow=2 — same as forward selection
+    // normalizeSelectionRange makes startRow=0, endRow=2  -  same as forward selection
     expect(onCellValueChanged).toHaveBeenCalledTimes(2);
   });
 });

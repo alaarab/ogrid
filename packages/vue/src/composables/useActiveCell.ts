@@ -17,7 +17,7 @@ export function useActiveCell(
   const activeCell = shallowRef<IActiveCell | null>(null);
   let pendingRaf = 0;
 
-  // Deduplicating setter — skips update when the cell coordinates haven't actually changed.
+  // Deduplicating setter  -  skips update when the cell coordinates haven't actually changed.
   const setActiveCell = (cell: IActiveCell | null) => {
     const prev = activeCell.value;
     if (prev === cell) return;
@@ -71,7 +71,7 @@ export function useActiveCell(
             wrapper.scrollTop += cellRect.bottom - wrapperRect.bottom;
           }
 
-          // Horizontal scroll — only when the wrapper actually scrolls horizontally
+          // Horizontal scroll  -  only when the wrapper actually scrolls horizontally
           if (wrapper.scrollWidth > wrapper.clientWidth) {
             if (cellRect.left < wrapperRect.left) {
               wrapper.scrollLeft -= wrapperRect.left - cellRect.left;

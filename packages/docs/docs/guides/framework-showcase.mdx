@@ -1,7 +1,7 @@
 ---
 sidebar_position: 5
 title: Framework Showcase
-description: See OGrid in action with React, Angular, Vue, and Vanilla JS — 8 UI implementations, one API
+description: OGrid in React, Angular, Vue, and Vanilla JS — same API, native components
 ---
 
 import ShowcaseRadixDemo from '@site/src/components/demos/ShowcaseRadixDemo';
@@ -12,40 +12,97 @@ import BrowserOnly from '@docusaurus/BrowserOnly';
 
 # Framework Showcase
 
-OGrid renders with your design system's native components. Same API, same features — different look and feel. Every grid below is **fully interactive**: sort, filter, edit, select cells, copy/paste, and undo/redo.
+OGrid works with your existing design system — not against it. React, Angular, Vue, and Vanilla JS are all fully supported, and every framework shares the same headless core so features stay in sync across all of them.
+
+Every grid below is live. Sort, filter, edit, select, copy-paste, undo — it all works.
+
+---
+
+## Picking the right package
+
+The short version:
+
+- **Starting from scratch?** Pick the Radix variant for your framework — it's the lightest, with no peer dependencies beyond the framework itself.
+- **Already using a design system?** Pick the matching package — Fluent, Material, Angular Material, PrimeNG, Vuetify, or PrimeVue — and the grid components will use your existing components for buttons, inputs, and popovers.
+- **No framework?** Use `@alaarab/ogrid-js` for a full-featured grid with just a CDN import.
+
+Switching between UI libraries later is straightforward — you change the import and the wrapper provider if required. The grid configuration (columns, data, event handlers) doesn't change.
 
 ---
 
 ## React
 
-Three design-system implementations, all sharing the same hooks and headless logic from `@alaarab/ogrid-react`.
+Three design systems, all sharing the same hooks from `@alaarab/ogrid-react`. Your column definitions, event handlers, and grid API calls work identically across all three.
 
-### Radix UI <small>(Default)</small>
+### Radix UI — lightweight default
 
-The lightest option — Radix primitives are bundled with zero peer dependencies beyond React.
+The default React package. Radix primitives are bundled in — no separate peer dependency to install. It's a good starting point for new projects or when you want minimal overhead.
 
 ```bash
 npm install @alaarab/ogrid-react-radix
 ```
 
+```tsx
+import { OGrid } from '@alaarab/ogrid-react-radix';
+
+export default function App() {
+  return (
+    <OGrid
+      columns={columns}
+      data={data}
+      getRowId={(row) => row.id}
+      statusBar
+    />
+  );
+}
+```
+
 <ShowcaseRadixDemo />
 
-### Fluent UI
+### Fluent UI — Microsoft ecosystem
 
-Microsoft's Fluent UI v9 components. Best for **Microsoft 365 and SharePoint** projects.
+If you're building for Microsoft Teams, SharePoint, or any Microsoft 365 integration, Fluent is your pick. The grid uses native Fluent components for headers, filters, and inputs so it blends naturally.
 
 ```bash
 npm install @alaarab/ogrid-react-fluent @fluentui/react-components
 ```
 
+```tsx
+import { FluentProvider, webLightTheme } from '@fluentui/react-components';
+import { OGrid } from '@alaarab/ogrid-react-fluent';
+
+export default function App() {
+  return (
+    <FluentProvider theme={webLightTheme}>
+      <OGrid columns={columns} data={data} getRowId={(row) => row.id} />
+    </FluentProvider>
+  );
+}
+```
+
 <ShowcaseFluentDemo />
 
-### Material UI
+### Material UI — Google's Material Design
 
-Google's Material Design via MUI v7. Best for apps already on **Material Design**.
+If your app already uses MUI, this drops right in. The grid uses MUI components and respects your `ThemeProvider` — including custom palettes and typography.
 
 ```bash
 npm install @alaarab/ogrid-react-material @mui/material @emotion/react @emotion/styled
+```
+
+```tsx
+import { ThemeProvider, createTheme } from '@mui/material/styles';
+import { OGrid } from '@alaarab/ogrid-react-material';
+
+const theme = createTheme({ palette: { primary: { main: '#6750a4' } } });
+
+export default function App() {
+  return (
+    <ThemeProvider theme={theme}>
+      <OGrid columns={columns} data={data} getRowId={(row) => row.id} />
+    </ThemeProvider>
+  );
+}
 ```
 
 <ShowcaseMaterialDemo />
@@ -54,11 +111,11 @@ npm install @alaarab/ogrid-react-material @mui/material @emotion/react @emotion/
 
 ## Angular
 
-Signals-based reactivity with standalone components. Zone-less by default, no NgModule boilerplate. All three packages share the same services from `@alaarab/ogrid-angular`.
+Signals-based reactivity with standalone components — no NgModule, no boilerplate. All three packages share the same services from `@alaarab/ogrid-angular`.
 
-### Radix (Angular CDK) <small>(Default)</small>
+### Radix (Angular CDK) — lightweight default
 
-The lightest option — Angular CDK for overlays with zero heavy UI framework dependencies.
+Angular CDK handles overlays (dropdowns, popovers) with no heavy UI framework required. Good default for new Angular projects.
 
 ```bash
 npm install @alaarab/ogrid-angular-radix @angular/cdk
@@ -74,16 +131,13 @@ import { OGridComponent } from '@alaarab/ogrid-angular-radix';
   template: `<ogrid [props]="gridProps" />`
 })
 export class GridComponent {
-  gridProps = { columns, data, getRowId: (row) => row.id, defaultPageSize: 10 };
+  gridProps = { columns, data, getRowId: (row) => row.id };
 }
 ```
 
-<div style={{ marginTop: '0.75rem' }}>
-</div>
-
 ### Angular Material
 
-Angular Material v21 components. Best for projects already using **Material Design**.
+If you're already on Angular Material, the grid components match your existing theme automatically.
 
 ```bash
 npm install @alaarab/ogrid-angular-material @angular/material @angular/cdk
@@ -91,12 +145,12 @@ npm install @alaarab/ogrid-angular-material @angular/material @angular/cdk
 
 ```typescript
 import { OGridComponent } from '@alaarab/ogrid-angular-material';
-// Same API — just change the import
+// Same props — just change the import
 ```
 
 ### PrimeNG
 
-PrimeNG v21 components for teams already using the PrimeFaces ecosystem.
+For teams in the PrimeFaces ecosystem, PrimeNG integration means dialogs, dropdowns, and inputs all look native.
 
 ```bash
 npm install @alaarab/ogrid-angular-primeng primeng
@@ -104,18 +158,18 @@ npm install @alaarab/ogrid-angular-primeng primeng
 
 ```typescript
 import { OGridComponent } from '@alaarab/ogrid-angular-primeng';
-// Same API — just change the import
+// Same props — just change the import
 ```
 
 ---
 
 ## Vue
 
-Composition API composables using `ref()` and `computed()`. All three packages share the same composables from `@alaarab/ogrid-vue`.
+Composition API composables built with `ref()` and `computed()`. All three packages share composables from `@alaarab/ogrid-vue`.
 
-### Radix (Headless UI) <small>(Default)</small>
+### Radix (Headless UI) — lightweight default
 
-The lightest option — Headless UI Vue components are bundled with zero peer dependencies beyond Vue.
+Headless UI Vue components bundled in — no peer dependencies beyond Vue 3. Good starting point for new Vue projects.
 
 ```bash
 npm install @alaarab/ogrid-vue-radix
@@ -125,7 +179,7 @@ npm install @alaarab/ogrid-vue-radix
 <script setup lang="ts">
 import { OGrid } from '@alaarab/ogrid-vue-radix';
 
-const gridProps = { columns, data, getRowId: (row) => row.id, defaultPageSize: 10 };
+const gridProps = { columns, data, getRowId: (row) => row.id };
 </script>
 
 <template>
@@ -133,12 +187,9 @@ const gridProps = { columns, data, getRowId: (row) => row.id, defaultPageSize: 1
 </template>
 ```
 
-<div style={{ marginTop: '0.75rem' }}>
-</div>
-
 ### Vuetify
 
-Vuetify 3 components. Best for projects already using **Vuetify and Material Design**.
+If your app is built on Vuetify 3, the grid's buttons, selects, and inputs all use Vuetify components and adopt your existing theme.
 
 ```bash
 npm install @alaarab/ogrid-vue-vuetify vuetify
@@ -147,13 +198,13 @@ npm install @alaarab/ogrid-vue-vuetify vuetify
 ```vue
 <script setup lang="ts">
 import { OGrid } from '@alaarab/ogrid-vue-vuetify';
-// Same API — just change the import
+// Same gridProps — just change the import, wrap in <v-app> for theming
 </script>
 ```
 
 ### PrimeVue
 
-PrimeVue 4 components for teams already using the PrimeFaces ecosystem.
+PrimeVue 4 integration for teams already on the PrimeFaces stack.
 
 ```bash
 npm install @alaarab/ogrid-vue-primevue primevue
@@ -162,7 +213,7 @@ npm install @alaarab/ogrid-vue-primevue primevue
 ```vue
 <script setup lang="ts">
 import { OGrid } from '@alaarab/ogrid-vue-primevue';
-// Same API — just change the import
+// Same gridProps — just change the import
 </script>
 ```
 
@@ -170,7 +221,7 @@ import { OGrid } from '@alaarab/ogrid-vue-primevue';
 
 ## Vanilla JS / TypeScript
 
-No framework, no virtual DOM. A class-based imperative API that renders directly to the DOM with a built-in CSS theme supporting light and dark mode.
+No framework, no virtual DOM — just a container element and a class constructor. A built-in CSS theme covers light and dark mode with CSS custom properties you can override.
 
 ```bash
 npm install @alaarab/ogrid-js
@@ -180,47 +231,33 @@ npm install @alaarab/ogrid-js
 
 ---
 
-## At a Glance
+## At a glance
 
-| Framework | Design Systems | Reactivity |
-|-----------|---------------|------------|
-| **React** 17–19 | Radix *(default, bundled)* · Fluent UI v9 · MUI v7 | Hooks |
+| Framework | Design Systems | Reactivity model |
+|-----------|----------------|-----------------|
+| **React** 17–19 | Radix *(bundled)* · Fluent UI v9 · MUI v7 | Hooks |
 | **Angular** 21 | Radix (CDK) *(default)* · Angular Material · PrimeNG | Signals |
-| **Vue** 3.3+ | Radix (Headless UI) *(default, bundled)* · Vuetify 3 · PrimeVue 4 | Composition API |
+| **Vue** 3.3+ | Radix (Headless UI) *(bundled)* · Vuetify 3 · PrimeVue 4 | Composition API |
 | **Vanilla JS/TS** | Built-in CSS theme *(zero deps)* | EventEmitter |
 
-All 10 packages share the same **headless core** (`@alaarab/ogrid-core`) and pass the same **2,135 tests**. Switching design systems is a matter of changing imports.
+All 10 packages share the same `@alaarab/ogrid-core` and pass the same test suite. Switching design systems is a one-line import change.
 
-## Choosing a Package
+## Premium inputs (optional)
 
-- **Starting fresh with React?** → **Radix** — lightest weight, zero peer deps, full feature parity.
-- **Microsoft ecosystem?** → **Fluent** — native look in Teams, SharePoint, Outlook.
-- **Already using MUI?** → **Material** — matches your existing theme and components.
-- **Starting fresh with Angular?** → **Radix (CDK)** — lightest weight with Angular CDK for overlays.
-- **Already using Angular Material?** → **Angular Material** — matches your existing theme.
-- **Already using PrimeNG?** → **PrimeNG** — integrates with PrimeFaces ecosystem.
-- **Starting fresh with Vue?** → **Radix (Headless UI)** — lightest weight, zero peer deps, Composition API.
-- **Already using Vuetify?** → **Vuetify** — matches your existing theme and components.
-- **Already using PrimeVue?** → **PrimeVue** — integrates with PrimeFaces ecosystem.
-- **No framework?** → **Vanilla JS** — works anywhere, class-based API, CSS-only theming.
+Each framework has an optional inputs package with advanced cell editors: calendar date pickers, sliders, color pickers, ratings, and tag inputs. They're tree-shakeable and have no impact on bundle size unless you use them.
 
-## Premium Inputs (Optional Add-ons)
+| Framework | Package |
+|-----------|---------|
+| React | `@alaarab/ogrid-react-inputs` |
+| Angular | `@alaarab/ogrid-angular-inputs` |
+| Vue | `@alaarab/ogrid-vue-inputs` |
+| Vanilla JS | `@alaarab/ogrid-js-inputs` |
 
-All frameworks have optional premium input packages with advanced cell editors like the calendar-based `DatePickerEditor`. These are tree-shakeable and have **zero bundle impact** when not installed.
-
-| Framework | Package | Install |
-|-----------|---------|---------|
-| React | `@alaarab/ogrid-react-inputs` | `npm install @alaarab/ogrid-react-inputs` |
-| Angular | `@alaarab/ogrid-angular-inputs` | `npm install @alaarab/ogrid-angular-inputs` |
-| Vue | `@alaarab/ogrid-vue-inputs` | `npm install @alaarab/ogrid-vue-inputs` |
-| Vanilla JS | `@alaarab/ogrid-js-inputs` | `npm install @alaarab/ogrid-js-inputs` |
-
-See the [Premium Inputs](../features/premium-inputs) feature page for usage examples and the full list of available editors.
+See [Premium Inputs](../features/premium-inputs) for usage and the full list of available editors.
 
 ## Related
 
-- [Installation](../getting-started/installation) — install instructions for all packages
-- [Quick Start](../getting-started/quick-start) — build your first grid
-- [Theming Guide](./theming) — customize colors and styling
+- [Quick Start](../getting-started/quick-start) — get a grid running in 60 seconds
 - [Vanilla JS Guide](../getting-started/vanilla-js) — full JS API documentation
-- [Premium Inputs](../features/premium-inputs) — optional advanced cell editors
+- [Theming Guide](./theming) — customize colors and styling
+- [Premium Inputs](../features/premium-inputs) — advanced cell editors

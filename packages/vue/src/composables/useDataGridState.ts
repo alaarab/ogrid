@@ -179,7 +179,7 @@ export function useDataGridState<T>(
    * Core's flattenColumns returns IColumnDef<unknown>[] because the generic T
    * cannot be propagated through the group-flattening algorithm. At this call
    * site the input is IColumnDef<T>[] (via columnsProp), so the output is
-   * guaranteed to be IColumnDef<T>[] — the cast is safe.
+   * guaranteed to be IColumnDef<T>[]  -  the cast is safe.
    */
   const flatColumnsRaw = computed(() => flattenColumns(props.value.columns) as IColumnDef<T>[]);
 
@@ -351,7 +351,7 @@ export function useDataGridState<T>(
     onColumnPinned: props.value.onColumnPinned,
   });
 
-  // Autosize callback — updates internal column sizing state + notifies external listener
+  // Autosize callback  -  updates internal column sizing state + notifies external listener
   const handleAutosizeColumn = (columnId: string, width: number) => {
     setColumnSizingOverrides({ ...columnSizingOverrides.value, [columnId]: { widthPx: width } });
     props.value.onColumnResized?.(columnId, width);

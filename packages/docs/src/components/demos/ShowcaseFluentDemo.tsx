@@ -104,7 +104,7 @@ function FluentGrid() {
 
 export default function ShowcaseFluentDemo() {
   return (
-    <LiveDemo height={480} title="Fluent UI — Microsoft design system">
+    <LiveDemo height={480} title="Fluent UI  -  Microsoft design system">
       <BrowserOnly>{() => <FluentGrid />}</BrowserOnly>
     </LiveDemo>
   );

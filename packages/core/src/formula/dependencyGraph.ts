@@ -17,7 +17,7 @@ export class DependencyGraph {
     // Remove old dependencies first (clean up reverse index)
     this.removeDependenciesInternal(cell);
 
-    // Set new forward dependencies (take ownership — caller should not reuse `deps`)
+    // Set new forward dependencies (take ownership  -  caller should not reuse `deps`)
     this.dependencies.set(cell, deps);
 
     // Update reverse index: for each dep, record that `cell` depends on it
@@ -40,11 +40,11 @@ export class DependencyGraph {
     // Also remove from dependents map as a key (cells that depend on this cell
     // still exist, but if the cell itself is removed, its dependents entry
     // for other cells referencing it is cleaned up by removeDependenciesInternal).
-    // Here we also need to clean up any cell that listed `cell` as a dependent —
+    // Here we also need to clean up any cell that listed `cell` as a dependent  - 
     // but that's about other cells' formulas referencing this cell, which is the
     // reverse direction. We remove the dependents entry for `cell` itself only
     // if no other cells reference it. Since removeDependenciesInternal handles
-    // the forward→reverse cleanup, we just need to remove the dependents key.
+    // the forward to reverse cleanup, we just need to remove the dependents key.
     // But other cells might still depend on `cell`, so we keep that entry.
     // We do remove the forward dependencies entry.
     this.dependencies.delete(cell);
@@ -186,7 +186,7 @@ export class DependencyGraph {
    *    cells or the changed cells themselves).
    * 4. Process queue: for each cell, reduce in-degree of its dependents,
    *    add to queue when in-degree reaches 0.
-   * 5. If any cells remain unprocessed, they're in a cycle — append them
+   * 5. If any cells remain unprocessed, they're in a cycle  -  append them
    *    at the end (engine marks as #CIRC!).
    */
   private topologicalSort(changedCells: Set<CellKey>): CellKey[] {
@@ -272,7 +272,7 @@ export class DependencyGraph {
       }
     }
 
-    // Step 5: Any remaining cells are in a cycle — append at the end
+    // Step 5: Any remaining cells are in a cycle  -  append at the end
     if (result.length < affected.size) {
       const resultSet = new Set(result);
       for (const cell of affected) {

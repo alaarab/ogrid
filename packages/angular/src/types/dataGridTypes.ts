@@ -140,7 +140,7 @@ interface IOGridBaseProps<T> {
   onFormulaRecalc?: (result: IRecalcResult) => void;
   /** Custom formula functions to register with the formula engine (e.g. { MYFUNC: { minArgs: 1, maxArgs: 1, evaluate: ... } }). */
   formulaFunctions?: Record<string, IFormulaFunction>;
-  /** Named ranges for the formula engine: name → cell/range ref string (e.g. { Revenue: 'A1:A10' }). */
+  /** Named ranges for the formula engine: name  to  cell/range ref string (e.g. { Revenue: 'A1:A10' }). */
   namedRanges?: Record<string, string>;
   /** Sheet accessors for cross-sheet formula references (e.g. { Sheet2: accessor }). */
   sheets?: Record<string, IGridDataAccessor>;
@@ -257,7 +257,7 @@ export interface IOGridDataGridProps<T> {
   getDependents?: (col: number, row: number) => IAuditEntry[];
   /** Get full audit trail for a cell. */
   getAuditTrail?: (col: number, row: number) => IAuditTrail | null;
-  /** Monotonic counter incremented on each formula recalculation — used for cache invalidation. */
+  /** Monotonic counter incremented on each formula recalculation  -  used for cache invalidation. */
   formulaVersion?: number;
   /** Cell references to highlight (from active formula in formula bar). */
   formulaReferences?: FormulaReference[];
