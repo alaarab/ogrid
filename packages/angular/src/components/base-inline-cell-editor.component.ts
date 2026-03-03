@@ -23,6 +23,7 @@ export abstract class BaseInlineCellEditorComponent<T = unknown> {
   @ViewChild('richSelectWrapper') richSelectWrapper?: ElementRef<HTMLDivElement>;
   @ViewChild('richSelectInput') richSelectInput?: ElementRef<HTMLInputElement>;
   @ViewChild('richSelectDropdown') richSelectDropdown?: ElementRef<HTMLDivElement>;
+  @ViewChild('richSelectOptions') richSelectOptions?: ElementRef<HTMLDivElement>;
 
   readonly localValue = signal<unknown>('');
   readonly highlightedIndex = signal(0);
@@ -183,12 +184,12 @@ export abstract class BaseInlineCellEditorComponent<T = unknown> {
       case 'ArrowDown':
         e.preventDefault();
         this.highlightedIndex.set(Math.min(this.highlightedIndex() + 1, options.length - 1));
-        this.scrollOptionIntoView(this.richSelectDropdown);
+        this.scrollOptionIntoView(this.richSelectOptions);
         break;
       case 'ArrowUp':
         e.preventDefault();
         this.highlightedIndex.set(Math.max(this.highlightedIndex() - 1, 0));
-        this.scrollOptionIntoView(this.richSelectDropdown);
+        this.scrollOptionIntoView(this.richSelectOptions);
         break;
       case 'Enter':
         e.preventDefault();

@@ -309,13 +309,16 @@ function DataGridTableInner<T>(props: IOGridDataGridProps<T>): React.ReactElemen
       } else if (descriptor.mode === 'editing-popover' && typeof col.cellEditor === 'function') {
         const editorProps = buildPopoverEditorProps(item, col, descriptor, pendingEditorValueRef.current, editCallbacks) as ICellEditorProps<T>;
         const CustomEditor = col.cellEditor as React.ComponentType<ICellEditorProps<T>>;
+        const popoverDisplayContent = resolveCellDisplayContent(col, item, descriptor.displayValue) as React.ReactNode;
+        const popoverCellStyle = resolveCellStyle(col, item, descriptor.displayValue);
         content = (
           <>
             <div
               ref={(el) => { if (el) setPopoverAnchorEl(el); }}
               style={POPOVER_ANCHOR_STYLE}
-              aria-hidden
-            />
+            >
+              {popoverCellStyle ? <span style={popoverCellStyle}>{popoverDisplayContent}</span> : popoverDisplayContent}
+            </div>
             <Popover
               open={!!popoverAnchorElRef.current}
               onOpenChange={(_: OpenPopoverEvents, data: OnOpenChangeData) => { if (!data.open) cancelPopoverEdit(); }}
@@ -340,7 +343,7 @@ function DataGridTableInner<T>(props: IOGridDataGridProps<T>): React.ReactElemen
                 editCallbacks.commitCellEdit(item, col.columnId, boolVal, !boolVal, descriptor.rowIndex, descriptor.globalColIndex);
               } : undefined}
               onClick={(e) => e.stopPropagation()}
-              style={{ margin: 0, cursor: descriptor.canEditAny ? 'pointer' : 'default', outline: 'none' }}
+              className={styles.booleanCheckbox}
               aria-label={boolVal ? 'Checked' : 'Unchecked'}
             />
           );

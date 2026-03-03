@@ -18,28 +18,34 @@ export const INLINE_CELL_EDITOR_TEMPLATE = `
       @case ('richSelect') {
         <div #richSelectWrapper
              style="width:100%;height:100%;display:flex;align-items:center;padding:6px 10px;box-sizing:border-box;min-width:0;position:relative">
-          <input
-            #richSelectInput
-            type="text"
-            [value]="searchText()"
-            (input)="onRichSelectSearch($any($event.target).value)"
-            (keydown)="onRichSelectKeyDown($event)"
-            placeholder="Search..."
-            style="width:100%;padding:0;border:none;background:transparent;color:inherit;font:inherit;font-size:13px;outline:none;min-width:0"
-          />
+          <div style="display:flex;align-items:center;justify-content:space-between;width:100%;cursor:pointer;font-size:13px;color:inherit">
+            <span>{{ getDisplayText(value) }}</span>
+            <span style="margin-left:4px;font-size:10px;opacity:0.5">&#9662;</span>
+          </div>
           <div #richSelectDropdown role="listbox"
                style="position:absolute;top:100%;left:0;right:0;max-height:200px;overflow-y:auto;background:var(--ogrid-bg, #fff);border:1px solid var(--ogrid-border, rgba(0,0,0,0.12));z-index:10;box-shadow:0 4px 16px rgba(0,0,0,0.2);text-align:left">
-            @for (opt of filteredOptions(); track opt; let i = $index) {
-              <div role="option"
-                   [attr.aria-selected]="i === highlightedIndex()"
-                   (click)="commitValue(opt)"
-                   [style]="i === highlightedIndex() ? 'padding:6px 8px;cursor:pointer;color:var(--ogrid-fg, #242424);background:var(--ogrid-bg-hover, #e8f0fe)' : 'padding:6px 8px;cursor:pointer;color:var(--ogrid-fg, #242424)'">
-                {{ getDisplayText(opt) }}
-              </div>
-            }
-            @if (filteredOptions().length === 0) {
-              <div style="padding:6px 8px;color:var(--ogrid-muted, #999)">No matches</div>
-            }
+            <input
+              #richSelectInput
+              type="text"
+              [value]="searchText()"
+              (input)="onRichSelectSearch($any($event.target).value)"
+              (keydown)="onRichSelectKeyDown($event)"
+              placeholder="Search..."
+              style="width:100%;padding:6px 8px;border:none;border-bottom:1px solid var(--ogrid-border, rgba(0,0,0,0.12));background:var(--ogrid-bg, #fff);color:inherit;font:inherit;font-size:13px;outline:none;box-sizing:border-box;position:sticky;top:0;z-index:1"
+            />
+            <div #richSelectOptions>
+              @for (opt of filteredOptions(); track opt; let i = $index) {
+                <div role="option"
+                     [attr.aria-selected]="i === highlightedIndex()"
+                     (click)="commitValue(opt)"
+                     [style]="i === highlightedIndex() ? 'padding:6px 8px;cursor:pointer;color:var(--ogrid-fg, #242424);background:var(--ogrid-bg-hover, #e8f0fe)' : 'padding:6px 8px;cursor:pointer;color:var(--ogrid-fg, #242424)'">
+                  {{ getDisplayText(opt) }}
+                </div>
+              }
+              @if (filteredOptions().length === 0) {
+                <div style="padding:6px 8px;color:var(--ogrid-muted, #999)">No matches</div>
+              }
+            </div>
           </div>
         </div>
       }
