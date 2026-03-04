@@ -346,15 +346,13 @@ function Hero() {
           </div>
 
           <h1 className={styles.heroHeadline}>
-            Your spreadsheet.<br />
-            <em className={styles.heroHeadlineEm}>Your framework.</em><br />
-            <span className={styles.heroHeadlineThin}>Zero compromises.</span>
+            The data grid<br />
+            <em className={styles.heroHeadlineEm}>AG Grid charges for.</em>
           </h1>
 
           <p className={styles.heroLead}>
-            Every enterprise feature AG Grid locks behind a paywall,
-            shipped free. React, Angular, Vue, Vanilla JS.
-            One API. No asterisks.
+            Sorting, filtering, editing, formulas, clipboard, virtual scroll.
+            React, Angular, Vue, Vanilla JS. MIT licensed.
           </p>
 
           <div className={styles.heroCta}>
@@ -370,22 +368,6 @@ function Hero() {
 
           <RotatingInstallCommand />
 
-          <div className={styles.heroStats}>
-            <div className={styles.heroStat}>
-              <span className={styles.heroStatNum}>10</span>
-              <span className={styles.heroStatLabel}>Packages</span>
-            </div>
-            <div className={styles.heroStatDivider} />
-            <div className={styles.heroStat}>
-              <span className={styles.heroStatNum}>93</span>
-              <span className={styles.heroStatLabel}>Formula functions</span>
-            </div>
-            <div className={styles.heroStatDivider} />
-            <div className={styles.heroStat}>
-              <span className={styles.heroStatNum}>$0</span>
-              <span className={styles.heroStatLabel}>Forever</span>
-            </div>
-          </div>
         </div>
 
         <div className={styles.heroRight}>
