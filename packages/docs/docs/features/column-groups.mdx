@@ -227,9 +227,9 @@ const grid = new OGrid(document.getElementById('grid'), {
 
 This renders a two-row header: the first row shows "Personal Info" spanning three columns and "Employment" spanning three columns, with the individual column names in the second row.
 
-## How It Works
+## How it works
 
-Column groups use the `IColumnGroupDef<T>` type. A group has a `headerName` (the text displayed in the group header cell) and a `children` array that can contain either `IColumnDef` items or nested `IColumnGroupDef` items.
+Column groups use the `IColumnGroupDef<T>` type. A group has a `headerName` and a `children` array that can contain `IColumnDef` items or nested `IColumnGroupDef` items.
 
 ```tsx
 // IColumnGroupDef<T>
@@ -277,14 +277,7 @@ Standalone `IColumnDef` items at the top level are valid alongside groups. They 
 
 ## Group Header Behavior
 
-Group headers are display-only:
-
-- **Not sortable.** Clicking a group header does nothing.
-- **Not filterable.** No filter icon or popover appears on group headers.
-- **Not resizable.** Group headers cannot be dragged to resize.
-- **Centered text.** Group header labels are centered over their children by default.
-
-Sorting, filtering, and resizing remain available on the leaf column headers beneath the groups.
+Group headers are display-only. Clicking them does nothing -- no sort, no filter icon, no resize handle. Labels are centered over their children by default. Sorting, filtering, and resizing all work normally on the leaf column headers below.
 
 ## Props Reference
 

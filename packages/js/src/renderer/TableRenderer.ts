@@ -1,6 +1,6 @@
 import type { RowId, CellEvent } from '../types/gridTypes';
 import type { IActiveCell, ISelectionRange } from '@alaarab/ogrid-core';
-import { getCellValue, buildHeaderRows, isInSelectionRange, ROW_NUMBER_COLUMN_WIDTH, ROW_NUMBER_COLUMN_ID, CHECKBOX_COLUMN_WIDTH, partitionColumnsForVirtualization, indexToColumnLetter, estimateHeaderMinWidth } from '@alaarab/ogrid-core';
+import { getCellValue, buildHeaderRows, isInSelectionRange, ROW_NUMBER_COLUMN_WIDTH, ROW_NUMBER_COLUMN_ID, CHECKBOX_COLUMN_WIDTH, partitionColumnsForVirtualization, indexToColumnLetter, estimateHeaderMinWidth, formatDateForDisplay, DEFAULT_DATE_FORMAT } from '@alaarab/ogrid-core';
 import type { GridState } from '../state/GridState';
 import type { HeaderFilterState, HeaderFilterConfig } from '../state/HeaderFilterState';
 import type { VirtualScrollState } from '../state/VirtualScrollState';
@@ -1115,6 +1115,9 @@ export class TableRenderer<T> {
             td.appendChild(checkbox);
           } else if (col.valueFormatter) {
             td.textContent = col.valueFormatter(value, item);
+          } else if (col.type === 'date' && value != null) {
+            const fmt = col.dateFormat ?? DEFAULT_DATE_FORMAT;
+            td.textContent = formatDateForDisplay(value, fmt) ?? String(value);
           } else if (value != null) {
             td.textContent = String(value);
           }

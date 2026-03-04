@@ -2,6 +2,19 @@
 
 All notable changes to OGrid will be documented in this file.
 
+## [Unreleased]
+
+### Fixed
+
+- **Date cell display format** - Date columns now show values using the configured `dateFormat` (default `YYYY-MM-DD`) instead of the locale-dependent `toLocaleDateString()` output. Affected all frameworks via a stale `@alaarab/ogrid-core` dist. JS `TableRenderer` had a separate gap where `dateFormat` was never applied at all — both fixed.
+- **React Material checkbox sizing** - Row selection checkboxes no longer have extra padding and ripple effects in the Material UI implementation. `disableRipple` + `sx={{ p: 0 }}` applied to row and header checkboxes.
+- **React Material column width fallback** - Columns no longer get capped at their default width when `columnMeta` doesn't specify a width. The `getColumnWidth(col)` fallback was removed so `width`/`maxWidth` can stay `undefined` and let the layout stretch naturally.
+- **Inline editor font size** - Restored `fontSize: 16px` on editor inputs to prevent iOS Safari auto-zoom on focus. Added a `@media (hover: hover) and (pointer: fine)` rule in `_data-grid-table.scss` to override back to the cell font size on desktop.
+
+### Changed
+
+- **Docs** - Copy and clarity pass across all feature, guide, and API reference pages.
+
 ## [2.5.8] - 2026-03-04
 
 ### Added

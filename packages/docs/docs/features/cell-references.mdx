@@ -180,13 +180,13 @@ const grid = new OGrid(document.getElementById('grid'), {
   </TabItem>
 </Tabs>
 
-## How It Works
+## How it works
 
-Setting `cellReferences` on the `OGrid` component enables three visual features together:
+`cellReferences` turns on three things at once:
 
-### 1. Column Letter Headers
+### 1. Column letter headers
 
-A row of Excel-style column letters (A, B, C, ..., Z, AA, AB, ...) appears above the normal header row. These letters use base-26 encoding, matching the Excel convention:
+A row of Excel-style column letters (A, B, C, ..., Z, AA, AB, ...) appears above the normal header row. They use base-26 encoding:
 
 | Columns | Letters |
 |---------|---------|
@@ -195,9 +195,9 @@ A row of Excel-style column letters (A, B, C, ..., Z, AA, AB, ...) appears above
 | 53--78 | BA--BZ |
 | 703+ | AAA, AAB, ... |
 
-### 2. Row Numbers
+### 2. Row numbers
 
-A numbered gutter column appears on the left side of the grid showing the absolute row number (1, 2, 3, ...). Row numbers are consistent across pages -- page 2 with a page size of 25 starts at row 26, not row 1.
+A numbered gutter column on the left shows the absolute row number (1, 2, 3, ...). Numbers are consistent across pages -- page 2 with a page size of 25 starts at row 26, not row 1.
 
 :::info Row numbers without cell references
 You can show row numbers independently without the full cell references feature by using the `showRowNumbers` prop:
@@ -214,11 +214,11 @@ You can show row numbers independently without the full cell references feature 
 This gives you the numbered gutter column without column letters or the name box.
 :::
 
-### 3. Name Box
+### 3. Name box
 
-A small read-only text field appears in the toolbar showing the currently active cell reference (e.g. "A1", "C15", "G3"). It updates automatically when you click a cell or navigate with the keyboard.
+A read-only field in the toolbar shows the active cell reference (e.g. "A1", "C15"). It updates on click or keyboard navigation.
 
-The name box uses the column letter and absolute row number, so clicking the third column on row 5 of page 2 (with a page size of 10) shows "C15", not "C5".
+The name box uses the absolute row number, so clicking the third column on row 5 of page 2 (page size 10) shows "C15", not "C5".
 
 ## Props
 

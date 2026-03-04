@@ -5,21 +5,21 @@ title: Accessibility
 
 # Accessibility
 
-Good accessibility isn't just compliance — it's building software that works for everyone. A keyboard user in a tight workflow shouldn't have to reach for the mouse. A screen reader user deserves the same experience as anyone else.
+Good accessibility isn't just compliance. It's building software that works for everyone. A keyboard user in a tight workflow shouldn't have to reach for the mouse. A screen reader user deserves the same experience as anyone else.
 
-OGrid is built with this in mind. Keyboard navigation, screen reader support, high contrast mode, and ARIA semantics are all baked in — you don't configure them, you just benefit from them.
+OGrid is built with this in mind. Keyboard navigation, screen reader support, high contrast mode, and ARIA semantics are all baked in. You don't configure them; you just benefit from them.
 
 ## What's built in by default
 
 You get all of this without any extra setup:
 
-- Full keyboard navigation — arrow keys, Tab, Home/End, Ctrl+Arrow, all working like a spreadsheet
+- Full keyboard navigation: arrow keys, Tab, Home/End, Ctrl+Arrow, all working like a spreadsheet
 - Screen reader announcements for sort, filter, edit, selection, and pagination changes
 - Proper ARIA roles and attributes on the grid, rows, cells, and headers
 - `:focus-visible` indicators so keyboard users always know where they are
 - Focus trapping in dropdowns and popovers (Escape always gets you out)
 - High contrast mode support via CSS custom properties with system color fallbacks
-- Semantic HTML — real `<table>`, `<thead>`, `<th>`, `<td>` elements that assistive tech understands
+- Semantic HTML: real `<table>`, `<thead>`, `<th>`, `<td>` elements that assistive tech understands
 
 The one thing you do need to add: an `aria-label` on the grid. It's one prop.
 
@@ -113,7 +113,7 @@ Key attributes and what they do:
 | `aria-expanded` | Open/closed state of filter dropdowns |
 | `aria-current="page"` | Current page in pagination |
 
-The status bar uses `role="status"` with `aria-live="polite"` — it announces changes without interrupting what the user is doing.
+The status bar uses `role="status"` with `aria-live="polite"`, so it announces changes without interrupting what the user is doing.
 
 ## Screen reader support
 
@@ -224,22 +224,22 @@ npm install --save-dev jest-axe
 
 Automated tests catch structural issues but can't cover everything. Before shipping:
 
-- [ ] Navigate the entire grid using only the keyboard — no mouse
+- [ ] Navigate the entire grid using only the keyboard (no mouse)
 - [ ] Enable VoiceOver (`Cmd+F5`) or NVDA and navigate through sort, filter, edit
-- [ ] Test at 200% zoom — nothing should overflow or become unusable
-- [ ] Toggle Windows High Contrast Mode — all content should remain visible
+- [ ] Test at 200% zoom: nothing should overflow or become unusable
+- [ ] Toggle Windows High Contrast Mode: all content should remain visible
 - [ ] Verify `aria-label` is set on the grid (one of the most common misses)
 
 ## Known limitations
 
 **Virtual scrolling:** When `virtualScroll.enabled` is true, only visible rows are in the DOM. Screen readers won't know the full dataset size unless you set `aria-rowcount` on the grid wrapper manually.
 
-**Custom cell renderers:** If you use `renderCell` to render custom content inside cells, you're responsible for making that content accessible — ARIA attributes, keyboard interaction, announcements. The grid provides the structure; your custom content needs to carry its own accessibility.
+**Custom cell renderers:** If you use `renderCell` to render custom content inside cells, you're responsible for making that content accessible: ARIA attributes, keyboard interaction, announcements. The grid provides the structure; your custom content needs to carry its own accessibility.
 
 ## Resources
 
-- [ARIA Grid Pattern](https://www.w3.org/WAI/ARIA/apg/patterns/grid/) — the spec OGrid follows
+- [ARIA Grid Pattern](https://www.w3.org/WAI/ARIA/apg/patterns/grid/) -- the spec OGrid follows
 - [WCAG 2.1 Quick Reference](https://www.w3.org/WAI/WCAG21/quickref/)
-- [axe DevTools Browser Extension](https://www.deque.com/axe/devtools/) — free in-browser auditing
+- [axe DevTools Browser Extension](https://www.deque.com/axe/devtools/) -- free in-browser auditing
 
 Found an accessibility issue? [Open an issue](https://github.com/alaarab/ogrid/issues) and tag it `accessibility` with your browser, screen reader version, and reproduction steps.

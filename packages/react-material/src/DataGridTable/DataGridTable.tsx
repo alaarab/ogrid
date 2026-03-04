@@ -182,7 +182,6 @@ const HEADER_PINNED_RIGHT_NO_STICKY_SX = {
   boxShadow: '-2px 0 4px -1px rgba(0,0,0,0.1)',
 } as const;
 
-// Resize handle
 const RESIZE_HANDLE_SX = {
   position: 'absolute', top: 0, right: '-3px', bottom: 0, width: '8px',
   cursor: 'col-resize', userSelect: 'none',
@@ -204,10 +203,8 @@ const POPOVER_ANCHOR_BASE_SX = {
 } as const;
 const POPOVER_CONTENT_SX = { p: 1 } as const;
 
-// Wrapper
 const WRAPPER_SCROLL_SX = { display: 'flex', flexDirection: 'column', minHeight: '100%' } as const;
 
-// Header cell content wrapper
 const HEADER_CONTENT_FLEX_SX = { display: 'flex', alignItems: 'center', gap: 0.5 } as const;
 
 // Column options button - always reserves space (visibility: hidden) so it never shifts the sort arrow.
@@ -251,8 +248,8 @@ interface ColumnLayout<T = unknown> {
   tdClassName: string;
   tdStyle: React.CSSProperties;
   minWidth: number;
-  width: number;
-  maxWidth: number;
+  width: number | undefined;
+  maxWidth: number | undefined;
 }
 
 const SPACER_TD_STYLE: React.CSSProperties = { padding: 0, border: 'none' };
@@ -313,6 +310,8 @@ function GridRowInner(props: GridRowProps) {
               checked={isSelected}
               onChange={(_, checked) => handleRowCheckboxChange(rowId, checked, rowIndex, lastMouseShiftRef.current)}
               size="small"
+              disableRipple
+              sx={{ p: 0 }}
               aria-label={`Select row ${rowIndex + 1}`}
             />
           </div>
@@ -545,11 +544,11 @@ function DataGridTableInner<T>(props: IOGridDataGridProps<T>): React.ReactElemen
         tdClassName,
         tdStyle,
         minWidth: (cellMeta?.minWidth as number) ?? 0,
-        width: (cellMeta?.width as number) ?? getColumnWidth(col),
-        maxWidth: (cellMeta?.maxWidth as number) ?? getColumnWidth(col),
+        width: cellMeta?.width as number | undefined,
+        maxWidth: cellMeta?.maxWidth as number | undefined,
       };
     }),
-  [visibleCols, columnMeta, pinning.pinnedColumns, pinning.leftOffsets, pinning.rightOffsets, getColumnWidth]);
+  [visibleCols, columnMeta, pinning.pinnedColumns, pinning.leftOffsets, pinning.rightOffsets]);
 
   // Wrapper sx (depends on dynamic values  -  memoize to avoid recreation)
   const wrapperSx = useMemo(() => ({
@@ -734,6 +733,8 @@ function DataGridTableInner<T>(props: IOGridDataGridProps<T>): React.ReactElemen
                         indeterminate={someSelected}
                         onChange={(_, c) => handleSelectAll(!!c)}
                         size="small"
+                        disableRipple
+                        sx={{ p: 0 }}
                         aria-label="Select all rows"
                       />
                     </TableCell>

@@ -342,6 +342,14 @@
   padding: 0;
 }
 
+// On pointer devices, shrink editor input font to match cell size.
+// The inline 16px is needed to block iOS Safari auto-zoom on focus.
+.tableWrapper .editingCellContent input {
+  @media (hover: hover) and (pointer: fine) {
+    font-size: var(--ogrid-cell-font-size, 13px) !important;
+  }
+}
+
 // Higher specificity: .tableWrapper qualifies the selector so it wins over
 // row hover/selected backgrounds (which are also scoped under .tableWrapper).
 .tableWrapper .cellInRange {
