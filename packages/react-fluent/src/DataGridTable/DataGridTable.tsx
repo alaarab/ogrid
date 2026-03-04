@@ -53,6 +53,7 @@ import {
   getColumnHeaderMenuProps,
   ROW_NUMBER_COLUMN_ID,
   ROW_NUMBER_COLUMN_WIDTH,
+  handleBooleanCellPointerDown,
 } from '@alaarab/ogrid-react';
 import type { GridRowProps } from '@alaarab/ogrid-react';
 import styles from './DataGridTable.module.scss';
@@ -301,22 +302,7 @@ function DataGridTableInner<T>(props: IOGridDataGridProps<T>): React.ReactElemen
       let content: React.ReactNode;
 
       if (descriptor.mode === 'editing-inline') {
-        const isCheckbox = (descriptor.editorType ?? (col.type === 'boolean' ? 'checkbox' : 'text')) === 'checkbox';
         const editorProps = buildInlineEditorProps(item, col, descriptor, editCallbacks) as InlineCellEditorProps<T>;
-        // Checkbox toggle should not advance selection to the next row
-        if (isCheckbox) {
-          const origCommit = editorProps.onCommit;
-          const savedRow = descriptor.rowIndex;
-          const savedCol = descriptor.globalColIndex;
-          const savedLocalCol = descriptor.globalColIndex - colOffset;
-          editorProps.onCommit = (newValue: unknown) => {
-            origCommit(newValue);
-            setTimeout(() => {
-              setActiveCell({ rowIndex: savedRow, columnIndex: savedCol });
-              interaction.setSelectionRange({ startRow: savedRow, startCol: savedLocalCol, endRow: savedRow, endCol: savedLocalCol });
-            }, 0);
-          };
-        }
         content = (
           <div className={styles.editingCellContent}>
             <InlineCellEditor<T> {...editorProps} />
@@ -358,23 +344,14 @@ function DataGridTableInner<T>(props: IOGridDataGridProps<T>): React.ReactElemen
               onChange={descriptor.canEditAny ? () => {
                 const savedRow = descriptor.rowIndex;
                 const savedCol = descriptor.globalColIndex;
-                const savedLocalCol = descriptor.globalColIndex - colOffset;
-                editCallbacks.commitCellEdit(item, col.columnId, boolVal, !boolVal, savedRow, savedCol);
-                setTimeout(() => {
-                  setActiveCell({ rowIndex: savedRow, columnIndex: savedCol });
-                  interaction.setSelectionRange({ startRow: savedRow, startCol: savedLocalCol, endRow: savedRow, endCol: savedLocalCol });
-                }, 0);
+                editCallbacks.commitCellEdit(item, col.columnId, boolVal, !boolVal, savedRow, savedCol, { skipAdvance: true });
               } : undefined}
-              onPointerDown={(e) => {
-                e.stopPropagation();
-                setActiveCell({ rowIndex: descriptor.rowIndex, columnIndex: descriptor.globalColIndex });
-                interaction.setSelectionRange({
-                  startRow: descriptor.rowIndex,
-                  startCol: descriptor.globalColIndex - colOffset,
-                  endRow: descriptor.rowIndex,
-                  endCol: descriptor.globalColIndex - colOffset,
-                });
-              }}
+              onPointerDown={(e) =>
+                handleBooleanCellPointerDown(e, descriptor.rowIndex, descriptor.globalColIndex, colOffset, {
+                  setActiveCell,
+                  setSelectionRange: (r) => interaction.setSelectionRange(r),
+                })
+              }
               onClick={(e) => e.stopPropagation()}
               className={styles.booleanCheckbox}
               aria-label={boolVal ? 'Checked' : 'Unchecked'}

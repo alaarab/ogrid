@@ -541,7 +541,7 @@ import { PopoverCellEditorComponent } from './popover-cell-editor.component';
     .ogrid-editing-cell {
       width: 100%; height: 100%; display: flex; align-items: center; box-sizing: border-box;
       outline: 2px solid var(--ogrid-selection-color, #217346); outline-offset: -1px;
-      z-index: 2; position: relative; background: var(--ogrid-bg, #fff); overflow: visible; padding: 0;
+      z-index: 2; position: relative; background: var(--ogrid-bg, #fff); overflow: hidden; padding: 0;
     }
     .ogrid-scroll-wrapper [data-drag-range] { background: var(--ogrid-range-bg, rgba(33, 115, 70, 0.12)); }
     .ogrid-fill-handle {

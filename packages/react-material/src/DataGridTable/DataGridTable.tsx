@@ -49,6 +49,7 @@ import {
   partitionColumnsForVirtualization,
   indexToColumnLetter,
   getColumnHeaderMenuProps,
+  handleBooleanCellPointerDown,
 } from '@alaarab/ogrid-react';
 
 // ── Type helpers for MUI TableCell HTML attributes ──
@@ -616,23 +617,14 @@ function DataGridTableInner<T>(props: IOGridDataGridProps<T>): React.ReactElemen
               onChange={descriptor.canEditAny ? () => {
                 const savedRow = descriptor.rowIndex;
                 const savedCol = descriptor.globalColIndex;
-                const savedLocalCol = descriptor.globalColIndex - colOffset;
-                editCallbacks.commitCellEdit(item, col.columnId, boolVal, !boolVal, savedRow, savedCol);
-                setTimeout(() => {
-                  setActiveCell({ rowIndex: savedRow, columnIndex: savedCol });
-                  interaction.setSelectionRange({ startRow: savedRow, startCol: savedLocalCol, endRow: savedRow, endCol: savedLocalCol });
-                }, 0);
+                editCallbacks.commitCellEdit(item, col.columnId, boolVal, !boolVal, savedRow, savedCol, { skipAdvance: true });
               } : undefined}
-              onPointerDown={(e) => {
-                e.stopPropagation();
-                setActiveCell({ rowIndex: descriptor.rowIndex, columnIndex: descriptor.globalColIndex });
-                interaction.setSelectionRange({
-                  startRow: descriptor.rowIndex,
-                  startCol: descriptor.globalColIndex - colOffset,
-                  endRow: descriptor.rowIndex,
-                  endCol: descriptor.globalColIndex - colOffset,
-                });
-              }}
+              onPointerDown={(e) =>
+                handleBooleanCellPointerDown(e, descriptor.rowIndex, descriptor.globalColIndex, colOffset, {
+                  setActiveCell,
+                  setSelectionRange: (r) => interaction.setSelectionRange(r),
+                })
+              }
               onClick={(e) => e.stopPropagation()}
               className="ogrid-mat-boolean-checkbox"
               aria-label={boolVal ? 'Checked' : 'Unchecked'}
