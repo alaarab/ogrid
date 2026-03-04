@@ -15,7 +15,7 @@
   },
   "scripts": {
     "build": "rimraf dist && tsup && tsc -p tsconfig.build.json",
-    "test": "jest --passWithNoTests",
+    "test": "jest",
     "storybook": "storybook dev -p 6011 --no-open",
     "build-storybook": "storybook build"
   },
