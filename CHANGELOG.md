@@ -2,6 +2,23 @@
 
 All notable changes to OGrid will be documented in this file.
 
+## [2.5.7] - 2026-03-04
+
+### Added
+
+- **Fill handle type protection** - Fill handle now blocks dragging values across incompatible column types (e.g., text onto a color picker or rating cell). New `areFillCompatible()` utility in core. All frameworks get this automatically.
+- **Boolean column in demo data** - Added `active` boolean column to shared demo data for checkbox testing.
+
+### Fixed
+
+- **Checkbox alignment** - Boolean cells no longer force center justification. Checkboxes align naturally like other cell content. Fixed across all 10 UI packages (React x3, Angular x3, Vue x3, JS).
+- **Checkbox click behavior** - Clicking the cell area around a checkbox no longer causes unexpected active cell movement. Added `onPointerDown` stop propagation.
+- **Hero text wrapping** - Fixed words breaking mid-word on the docs site hero ("spreadshee t.", "compromis es."). Added `word-break: normal` and `hyphens: none`.
+
+### Changed
+
+- **Docs hero visual polish** - Reduced top padding, adjusted dark theme gradients, thinned "Zero compromises." weight, added right-edge fade mask on hero grid.
+
 ## [2.5.6] - 2026-03-03
 
 ### Added

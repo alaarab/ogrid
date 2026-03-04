@@ -283,7 +283,7 @@ import { PopoverCellEditorComponent } from './popover-cell-editor.component';
                                 [style]="cellStyle ?? undefined"
                               >
                                 @if (colLayout.col.type === 'boolean') {
-                                  <input type="checkbox" [checked]="!!descriptor.displayValue" [disabled]="!descriptor.canEditAny" (change)="descriptor.canEditAny ? commitEdit(item, colLayout.col.columnId, !!descriptor.displayValue, !descriptor.displayValue, rowIndex, descriptor.globalColIndex) : null" (click)="$event.stopPropagation()" style="margin:0;outline:none" [style.cursor]="descriptor.canEditAny ? 'pointer' : 'default'" [attr.aria-label]="descriptor.displayValue ? 'Checked' : 'Unchecked'" />
+                                  <input type="checkbox" [checked]="!!descriptor.displayValue" [disabled]="!descriptor.canEditAny" (change)="descriptor.canEditAny ? commitBooleanEdit(item, colLayout.col.columnId, !!descriptor.displayValue, rowIndex, descriptor.globalColIndex) : null" (pointerdown)="onBooleanCheckboxPointerDown($event, rowIndex, descriptor.globalColIndex)" (click)="$event.stopPropagation()" style="margin:0;outline:none" [style.cursor]="descriptor.canEditAny ? 'pointer' : 'default'" [attr.aria-label]="descriptor.displayValue ? 'Checked' : 'Unchecked'" />
                                 } @else {
                                   {{ content }}
                                 }
@@ -483,7 +483,7 @@ import { PopoverCellEditorComponent } from './popover-cell-editor.component';
       outline: 2px solid var(--mat-sys-primary, #1976d2); outline-offset: -2px; z-index: 3;
     }
     .ogrid-datagrid-cell--numeric { justify-content: flex-end; text-align: right; }
-    .ogrid-datagrid-cell--boolean { justify-content: center; text-align: center; }
+    .ogrid-datagrid-cell--boolean { justify-content: flex-start; }
     .ogrid-datagrid-cell--editable { cursor: cell; }
     .ogrid-datagrid-cell--active {
       outline: 2px solid var(--ogrid-selection-color, #217346); outline-offset: -1px;

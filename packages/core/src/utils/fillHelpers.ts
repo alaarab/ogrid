@@ -9,6 +9,32 @@ import { parseValue } from './valueParsers';
 import { adjustFormulaReferences } from '../formula/cellAddressUtils';
 
 /**
+ * Check whether two columns are type-compatible for fill operations.
+ * Returns true if a value from the source column can be filled into the target column.
+ *
+ * Columns are compatible when they share the same built-in type AND the same cellEditor.
+ * This prevents dragging a text value onto a color picker, or a rating onto a date field.
+ * Same-column fills (different rows) always pass because both sides are identical.
+ */
+export function areFillCompatible<T>(source: IColumnDef<T>, target: IColumnDef<T>): boolean {
+  // Same column is always compatible
+  if (source.columnId === target.columnId) return true;
+
+  // Built-in type must match (undefined counts as 'text')
+  const srcType = source.type ?? 'text';
+  const tgtType = target.type ?? 'text';
+  if (srcType !== tgtType) return false;
+
+  // If either column uses a custom cell editor, they must use the same one.
+  // Built-in string editors (like 'select') are compared by value equality.
+  // Framework component editors are compared by reference equality, which works
+  // because column defs reuse the same component import.
+  if (source.cellEditor !== target.cellEditor) return false;
+
+  return true;
+}
+
+/**
  * Options for formula-aware fill. When provided, source cells with formulas will
  * have their relative references adjusted instead of copying raw values.
  */
@@ -64,6 +90,9 @@ export function applyFillValues<T>(
       const item = items[row];
       const colDef = visibleCols[col];
       if (!isColumnEditable(colDef, item)) continue;
+
+      // Block fill across incompatible column types (e.g. text -> color picker)
+      if (!areFillCompatible(startColDef, colDef)) continue;
 
       // Formula-aware path: if source cell has a formula, adjust and propagate it
       if (
