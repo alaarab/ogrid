@@ -8,6 +8,7 @@ export interface Project {
   budget: number;
   startDate: string;
   department: string;
+  active: boolean;
 }
 
 const STATUSES = ['Active', 'Planning', 'On Hold', 'Completed', 'Cancelled'];
@@ -23,6 +24,7 @@ export function makeDemoProjects(count: number): Project[] {
     budget: Math.round((5000 + Math.random() * 95000) * 100) / 100,
     startDate: new Date(2024, i % 12, 1 + (i % 28)).toISOString().slice(0, 10),
     department: DEPARTMENTS[i % DEPARTMENTS.length],
+    active: i % 3 !== 0,
   }));
 }
 
@@ -67,6 +69,13 @@ export function makeDemoColumns<T extends Project>(): IColumnDef<T>[] {
       columnId: 'startDate',
       name: 'Start Date',
       type: 'date' as const,
+      sortable: true,
+      editable: true,
+    },
+    {
+      columnId: 'active',
+      name: 'Active',
+      type: 'boolean' as const,
       sortable: true,
       editable: true,
     },

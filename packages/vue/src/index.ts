@@ -124,6 +124,7 @@ export {
   applyPastedValues,
   applyCutClear,
   applyFillValues,
+  areFillCompatible,
   UndoRedoStack,
   validateColumns,
   validateRowIds,

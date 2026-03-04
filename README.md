@@ -86,7 +86,7 @@ Bundle size is what you actually install (core + framework adapter + UI layer). 
 
 **Advanced**
 - Grid API: `ref`-based imperative API for `setRowData`, `getColumnState`, `selectAll`, etc.
-- Formula engine: 145 built-in functions, Excel-like formula bar, cell reference highlighting, cross-cell recalculation
+- Formula engine: 159 built-in functions, Excel-like formula bar, cell reference highlighting, cross-cell recalculation
 - Editor integration (MCP): `@alaarab/ogrid-mcp` connects your IDE to OGrid docs and lets it read and control a running grid
 - CSS containment: automatic `contain: content` on cells, `content-visibility: auto` on off-screen rows
 - TypeScript strict: fully generic `<T>` with strict mode, zero `any` leaks
@@ -408,7 +408,7 @@ See the [MCP guide](packages/docs/docs/guides/mcp.mdx) and [live testing bridge 
 
 ## Testing
 
-4,728 tests across all packages. Each framework uses its native testing tools:
+4,999 tests across all packages. Each framework uses its native testing tools:
 
 | Framework | Tool | Tests |
 |-----------|------|------:|

@@ -1,6 +1,6 @@
 {
   "name": "@alaarab/ogrid-vue-inputs",
-  "version": "2.5.6",
+  "version": "2.5.7",
   "description": "OGrid Vue Inputs – Optional premium cell editors (DatePicker, and more). Zero impact when not installed.",
   "main": "dist/esm/index.js",
   "module": "dist/esm/index.js",
@@ -16,15 +16,29 @@
     "build": "rimraf dist && tsup && tsc -p tsconfig.build.json",
     "test": "jest"
   },
-  "keywords": ["ogrid", "datepicker", "cell-editor", "vue", "typescript", "grid", "inputs"],
+  "keywords": [
+    "ogrid",
+    "datepicker",
+    "cell-editor",
+    "vue",
+    "typescript",
+    "grid",
+    "inputs"
+  ],
   "author": "Ala Arab",
   "license": "MIT",
-  "files": ["dist", "README.md", "LICENSE"],
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
   "sideEffects": false,
-  "engines": { "node": ">=18" },
+  "engines": {
+    "node": ">=18"
+  },
   "dependencies": {
-    "@alaarab/ogrid-core": "2.5.6",
-    "@alaarab/ogrid-inputs": "2.5.6"
+    "@alaarab/ogrid-core": "2.5.7",
+    "@alaarab/ogrid-inputs": "2.5.7"
   },
   "peerDependencies": {
     "vue": "^3.3.0"
@@ -33,7 +47,9 @@
     "vue": "^3.5.28",
     "@vue/test-utils": "^2.4.6"
   },
-  "publishConfig": { "access": "public" },
+  "publishConfig": {
+    "access": "public"
+  },
   "repository": {
     "type": "git",
     "url": "https://github.com/alaarab/ogrid.git",
