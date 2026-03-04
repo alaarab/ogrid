@@ -2,7 +2,7 @@
 
 All notable changes to OGrid will be documented in this file.
 
-## [Unreleased]
+## [2.5.9] - 2026-03-03
 
 ### Fixed
 
