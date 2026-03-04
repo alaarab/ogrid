@@ -11,7 +11,9 @@ import {
   ROW_NUMBER_COLUMN_ID,
   ROW_NUMBER_COLUMN_MIN_WIDTH,
   measureColumnContentWidth,
+  estimateHeaderMinWidth,
   partitionColumnsForVirtualization,
+  handleBooleanCellPointerDown,
 } from '@alaarab/ogrid-core';
 import {
   getHeaderFilterConfig,
@@ -309,7 +311,7 @@ export abstract class BaseDataGridTableComponent<T = unknown> {
       // from shrinking when new data loads (e.g. server-side pagination).
       const hasResizeOverride = !!sizingOverrides[col.columnId];
       const measuredW = measuredWidths[col.columnId];
-      const baseMinWidth = col.minWidth ?? DEFAULT_MIN_COLUMN_WIDTH;
+      const baseMinWidth = col.minWidth ?? estimateHeaderMinWidth(col.name);
       const effectiveMinWidth = hasResizeOverride ? w : Math.max(baseMinWidth, measuredW ?? 0);
       return {
         col,
@@ -738,21 +740,14 @@ export abstract class BaseDataGridTableComponent<T = unknown> {
   }
 
   commitBooleanEdit(item: T, columnId: string, oldValue: boolean, rowIndex: number, globalColIndex: number): void {
-    this.state().editing.commitCellEdit(item, columnId, oldValue, !oldValue, rowIndex, globalColIndex);
-    // commitCellEdit advances to the next row; undo that for checkbox toggles.
-    // setTimeout(0) ensures this runs after the framework finishes the commit's state batch.
-    setTimeout(() => { this.selectCell(rowIndex, globalColIndex); }, 0);
+    this.state().editing.commitCellEdit(item, columnId, oldValue, !oldValue, rowIndex, globalColIndex, { skipAdvance: true });
   }
 
   onBooleanCheckboxPointerDown(event: PointerEvent, rowIndex: number, globalColIndex: number): void {
-    event.stopPropagation();
-    this.selectCell(rowIndex, globalColIndex);
-  }
-
-  private selectCell(rowIndex: number, globalColIndex: number): void {
-    const localCol = globalColIndex - this.colOffset();
-    this.state().interaction.setActiveCell?.({ rowIndex, columnIndex: globalColIndex });
-    this.state().interaction.setSelectionRange?.({ startRow: rowIndex, startCol: localCol, endRow: rowIndex, endCol: localCol });
+    handleBooleanCellPointerDown(event, rowIndex, globalColIndex, this.colOffset(), {
+      setActiveCell: (c) => this.state().interaction.setActiveCell?.(c),
+      setSelectionRange: (r) => this.state().interaction.setSelectionRange?.(r),
+    });
   }
 
   cancelEdit(): void {

@@ -66,6 +66,11 @@ export class SelectionState {
     this.dragStartCell = { rowIndex, columnIndex: colIndex };
     this._activeCell = { rowIndex, columnIndex: colIndex };
     this._selectionRange = { startRow: rowIndex, startCol: colIndex, endRow: rowIndex, endCol: colIndex };
+    // Set pendingRange to the initial cell so getDragRange() is non-null immediately.
+    // This allows updateDragAttributes() called from handleCellMouseDown to apply
+    // data-drag-anchor on the origin cell before the first pointermove, eliminating
+    // the flicker where the old selection persisted visually during drag start.
+    this.pendingRange = this._selectionRange;
   }
 
   updateDrag(rowIndex: number, colIndex: number, applyFn: (range: ISelectionRange) => void): void {

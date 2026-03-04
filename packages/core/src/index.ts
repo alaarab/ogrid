@@ -120,6 +120,10 @@ export { processClientSideData } from './utils';
 export { areGridRowPropsEqual, isRowInRange } from './utils';
 export type { GridRowComparatorProps } from './utils';
 
+// Utils  -  checkboxUtils
+export { handleBooleanCellPointerDown } from './utils';
+export type { BooleanCellSelectHandlers } from './utils';
+
 // Utils  -  columnReorder
 export {
   getPinStateForColumn,
@@ -175,7 +179,7 @@ export { computeNextSortState } from './utils';
 export type { ISortState } from './utils';
 
 // Utils  -  columnAutosize
-export { measureColumnContentWidth, AUTOSIZE_EXTRA_PX, AUTOSIZE_MAX_PX } from './utils';
+export { measureColumnContentWidth, estimateHeaderMinWidth, AUTOSIZE_EXTRA_PX, AUTOSIZE_MAX_PX } from './utils';
 
 // Utils  -  keyboardNavigation
 export { findCtrlArrowTarget, computeTabNavigation, computeArrowNavigation, applyCellDeletion } from './utils';

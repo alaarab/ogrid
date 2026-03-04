@@ -82,9 +82,12 @@ export function useCellSelection(params: UseCellSelectionParams): UseCellSelecti
       liveDragRange = initial;
       setActiveCell({ rowIndex, columnIndex: globalColIndex });
       isDraggingInternal.value = true;
-      // Apply drag attrs immediately for the initial cell so the anchor styling shows
-      // even before the first pointermove. This ensures instant visual feedback.
-      setTimeout(() => applyDragAttrs(initial), 0);
+      // Apply drag attrs synchronously so the anchor cell styling is in place
+      // before Vue commits its re-render and before the next browser paint.
+      // Using setTimeout here caused a 1-frame flicker: Vue would paint the
+      // origin cell with a green tint (data-in-range) before the timeout fired
+      // and added data-drag-anchor (which overrides it with white background).
+      applyDragAttrs(initial);
     }
   };
 
