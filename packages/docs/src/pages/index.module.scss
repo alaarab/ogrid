@@ -194,10 +194,10 @@
 }
 
 .heroHeadline {
-  font-size: clamp(3rem, 5vw, 5.5rem);
-  font-weight: 900;
-  letter-spacing: -0.05em;
-  line-height: 1.02;
+  font-size: clamp(2.25rem, 4vw, 3.75rem);
+  font-weight: 700;
+  letter-spacing: -0.035em;
+  line-height: 1.1;
   color: var(--ifm-font-color-base);
   margin: 0 0 1.75rem;
   word-break: normal;
