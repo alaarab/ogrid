@@ -614,8 +614,25 @@ function DataGridTableInner<T>(props: IOGridDataGridProps<T>): React.ReactElemen
               checked={boolVal}
               disabled={!descriptor.canEditAny}
               onChange={descriptor.canEditAny ? () => {
-                editCallbacks.commitCellEdit(item, col.columnId, boolVal, !boolVal, descriptor.rowIndex, descriptor.globalColIndex);
+                const savedRow = descriptor.rowIndex;
+                const savedCol = descriptor.globalColIndex;
+                const savedLocalCol = descriptor.globalColIndex - colOffset;
+                editCallbacks.commitCellEdit(item, col.columnId, boolVal, !boolVal, savedRow, savedCol);
+                setTimeout(() => {
+                  setActiveCell({ rowIndex: savedRow, columnIndex: savedCol });
+                  interaction.setSelectionRange({ startRow: savedRow, startCol: savedLocalCol, endRow: savedRow, endCol: savedLocalCol });
+                }, 0);
               } : undefined}
+              onPointerDown={(e) => {
+                e.stopPropagation();
+                setActiveCell({ rowIndex: descriptor.rowIndex, columnIndex: descriptor.globalColIndex });
+                interaction.setSelectionRange({
+                  startRow: descriptor.rowIndex,
+                  startCol: descriptor.globalColIndex - colOffset,
+                  endRow: descriptor.rowIndex,
+                  endCol: descriptor.globalColIndex - colOffset,
+                });
+              }}
               onClick={(e) => e.stopPropagation()}
               className="ogrid-mat-boolean-checkbox"
               aria-label={boolVal ? 'Checked' : 'Unchecked'}

@@ -737,6 +737,28 @@ export abstract class BaseDataGridTableComponent<T = unknown> {
     this.state().editing.commitCellEdit(item, columnId, oldValue, newValue, rowIndex, globalColIndex);
   }
 
+  commitBooleanEdit(item: T, columnId: string, oldValue: boolean, rowIndex: number, globalColIndex: number): void {
+    this.state().editing.commitCellEdit(item, columnId, oldValue, !oldValue, rowIndex, globalColIndex);
+    const colOff = this.colOffset();
+    const localCol = globalColIndex - colOff;
+    setTimeout(() => {
+      this.state().interaction.setActiveCell?.({ rowIndex, columnIndex: globalColIndex });
+      this.state().interaction.setSelectionRange?.({ startRow: rowIndex, startCol: localCol, endRow: rowIndex, endCol: localCol });
+    }, 0);
+  }
+
+  onBooleanCheckboxPointerDown(event: PointerEvent, rowIndex: number, globalColIndex: number): void {
+    event.stopPropagation();
+    const colOff = this.colOffset();
+    this.state().interaction.setActiveCell?.({ rowIndex, columnIndex: globalColIndex });
+    this.state().interaction.setSelectionRange?.({
+      startRow: rowIndex,
+      startCol: globalColIndex - colOff,
+      endRow: rowIndex,
+      endCol: globalColIndex - colOff,
+    });
+  }
+
   cancelEdit(): void {
     this.state().editing.setEditingCell(null);
   }

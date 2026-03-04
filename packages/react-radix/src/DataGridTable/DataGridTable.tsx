@@ -314,7 +314,7 @@ function DataGridTableInner<T>(props: IOGridDataGridProps<T>): React.ReactElemen
           };
         }
         content = (
-          <div className={styles.editingCellContent} style={isCheckbox ? { justifyContent: 'center' } : undefined}>
+          <div className={styles.editingCellContent}>
             <InlineCellEditor<T> {...editorProps} />
           </div>
         );
@@ -356,6 +356,18 @@ function DataGridTableInner<T>(props: IOGridDataGridProps<T>): React.ReactElemen
                   interaction.setSelectionRange({ startRow: savedRow, startCol: savedLocalCol, endRow: savedRow, endCol: savedLocalCol });
                 }, 0);
               } : undefined}
+              onPointerDown={(e: React.PointerEvent) => {
+                e.stopPropagation();
+                // Select this cell when the checkbox itself is clicked
+                // (parent onPointerDown is suppressed to avoid triggering drag)
+                setActiveCell({ rowIndex: descriptor.rowIndex, columnIndex: descriptor.globalColIndex });
+                interaction.setSelectionRange({
+                  startRow: descriptor.rowIndex,
+                  startCol: descriptor.globalColIndex - colOffset,
+                  endRow: descriptor.rowIndex,
+                  endCol: descriptor.globalColIndex - colOffset,
+                });
+              }}
               onClick={(e: React.MouseEvent) => e.stopPropagation()}
               aria-label={boolVal ? 'Checked' : 'Unchecked'}
             >
