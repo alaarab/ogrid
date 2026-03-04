@@ -10,14 +10,11 @@ import { adjustFormulaReferences } from '../formula/cellAddressUtils';
 
 /**
  * Check whether two columns are type-compatible for fill operations.
- * Returns true if a value from the source column can be filled into the target column.
  *
  * Columns are compatible when they share the same built-in type AND the same cellEditor.
  * This prevents dragging a text value onto a color picker, or a rating onto a date field.
- * Same-column fills (different rows) always pass because both sides are identical.
  */
 export function areFillCompatible<T>(source: IColumnDef<T>, target: IColumnDef<T>): boolean {
-  // Same column is always compatible
   if (source.columnId === target.columnId) return true;
 
   // Built-in type must match (undefined counts as 'text')
@@ -83,7 +80,6 @@ export function applyFillValues<T>(
     ? formulaOptions.flatColumns.findIndex(c => c.columnId === startColDef.columnId)
     : -1;
 
-  // Pre-compute column compatibility so we check once per column, not once per cell
   const compatibleCols = new Set<number>();
   for (let col = range.startCol; col <= range.endCol; col++) {
     if (col < visibleCols.length && areFillCompatible(startColDef, visibleCols[col])) {
