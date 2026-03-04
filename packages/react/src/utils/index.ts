@@ -94,3 +94,5 @@ export type {
 } from './dataGridViewModel';
 export { areGridRowPropsEqual, isRowInRange } from './gridRowComparator';
 export type { GridRowComparatorProps } from './gridRowComparator';
+export { handleBooleanCellPointerDown } from '@alaarab/ogrid-core';
+export type { BooleanCellSelectHandlers } from '@alaarab/ogrid-core';

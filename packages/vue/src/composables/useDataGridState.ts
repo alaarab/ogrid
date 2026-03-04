@@ -65,7 +65,7 @@ export interface DataGridEditingState<T> {
   setEditingCell: (cell: { rowId: RowId; columnId: string } | null) => void;
   pendingEditorValue: unknown;
   setPendingEditorValue: (value: unknown) => void;
-  commitCellEdit: (item: T, columnId: string, oldValue: unknown, newValue: unknown, rowIndex: number, globalColIndex: number) => void;
+  commitCellEdit: (item: T, columnId: string, oldValue: unknown, newValue: unknown, rowIndex: number, globalColIndex: number, options?: { skipAdvance?: boolean }) => void;
   cancelPopoverEdit: () => void;
   popoverAnchorEl: HTMLElement | null;
   setPopoverAnchorEl: (el: HTMLElement | null) => void;
@@ -484,7 +484,8 @@ export function useDataGridState<T>(
     oldValue: unknown,
     newValue: unknown,
     rowIndex: number,
-    globalColIndex: number
+    globalColIndex: number,
+    options?: { skipAdvance?: boolean }
   ) => {
     const col = visibleCols.value.find((c) => c.columnId === columnId);
     if (col) {
@@ -508,7 +509,7 @@ export function useDataGridState<T>(
     setEditingCell(null);
     setPopoverAnchorEl(null);
     setPendingEditorValue(undefined);
-    if (rowIndex < items.value.length - 1) {
+    if (!options?.skipAdvance && rowIndex < items.value.length - 1) {
       const newRow = rowIndex + 1;
       const localCol = globalColIndex - colOffset.value;
       setActiveCell({ rowIndex: newRow, columnIndex: globalColIndex });

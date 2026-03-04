@@ -317,7 +317,7 @@
   z-index: var(--ogrid-z-active-cell, 2);
   position: relative;
   background: var(--ogrid-bg, #fff);
-  overflow: visible;
+  overflow: hidden;
   padding: 0;
 }
 

@@ -8,7 +8,7 @@
  */
 
 import { useMemo } from 'react';
-import { DEFAULT_MIN_COLUMN_WIDTH } from '@alaarab/ogrid-core';
+import { DEFAULT_MIN_COLUMN_WIDTH, estimateHeaderMinWidth } from '@alaarab/ogrid-core';
 import type { IColumnDef } from '../types';
 
 export interface UseColumnMetaParams<T> {
@@ -65,7 +65,7 @@ export function useColumnMeta<T>(params: UseColumnMetaParams<T>): ColumnMetaResu
 
       const hasResizeOverride = !!columnSizingOverrides[col.columnId];
       const measuredW = measuredColumnWidths[col.columnId];
-      const baseMinWidth = col.minWidth ?? DEFAULT_MIN_COLUMN_WIDTH;
+      const baseMinWidth = col.minWidth ?? estimateHeaderMinWidth(col.name);
       const effectiveMinWidth = hasResizeOverride || hasExplicitWidth
         ? columnWidth
         : Math.max(baseMinWidth, measuredW ?? 0);
