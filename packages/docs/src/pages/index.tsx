@@ -212,7 +212,6 @@ const tickerFeatures = [
 ];
 
 function FeatureTicker() {
-  // Duplicate for seamless loop
   const items = [...tickerFeatures, ...tickerFeatures];
   return (
     <div className={styles.ticker} aria-hidden="true">
@@ -342,7 +341,7 @@ function Hero() {
         <div className={styles.heroLeft}>
           <div className={styles.heroPill}>
             <span className={styles.heroPillDot} />
-            MIT License &mdash; Free Forever
+            MIT License · Free Forever
           </div>
 
           <h1 className={styles.heroHeadline}>
@@ -666,7 +665,7 @@ function FeatureBentoSection() {
           <h3 className={styles.bentoCardTitle}>Spreadsheet Selection</h3>
           <p className={styles.bentoCardDesc}>
             Click-and-drag cell ranges, active cell highlight, multi-cell clipboard.
-            This is an $999/dev enterprise feature in AG Grid. It's built in here.
+            AG Grid charges $999/dev for this. Here it ships by default.
           </p>
           <div className={styles.bentoCardIllustration}>
             <div className={styles.bentoSelectionGrid}>
@@ -763,7 +762,7 @@ function LiveDataSection() {
           </h2>
           <p className={styles.liveDataSub}>
             Financial dashboards, trading terminals, monitoring systems.
-            OGrid handles high-frequency updates without breaking a sweat.
+            OGrid handles high-frequency updates without skipping a frame.
           </p>
         </div>
         <BrowserOnly fallback={<div style={{ height: 500 }} />}>
