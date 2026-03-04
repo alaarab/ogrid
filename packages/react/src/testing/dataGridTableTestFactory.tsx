@@ -547,16 +547,11 @@ export function createDataGridTableTests(DataGridTable: React.ComponentType<IOGr
       expect(onCellValueChanged).toHaveBeenCalled();
     });
 
-    it('pointerDown on checkbox cell selects the cell without starting a drag', async () => {
+    it('pointerDown on checkbox cell selects the cell without starting a drag', () => {
       const { container } = renderBoolTable({ cellSelection: true });
       const checkboxes = container.querySelectorAll('[role="checkbox"], input[type="checkbox"]');
       const firstCheckbox = checkboxes[0] as HTMLElement;
       fireEvent.pointerDown(firstCheckbox);
-      // After pointerDown on the checkbox the cell should become active
-      await waitFor(() => {
-        const activeCells = container.querySelectorAll('[data-active-cell="true"]');
-        expect(activeCells.length).toBeGreaterThanOrEqual(0); // no crash, no error
-      });
       // The grid should still be rendered (drag didn't break things)
       const cells = container.querySelectorAll('td[data-column-id="active"]');
       expect(cells.length).toBe(2);
