@@ -24,7 +24,8 @@
   "scripts": {
     "prebuild": "node scripts/bundle-docs.mjs",
     "build": "tsup",
-    "dev": "tsup --watch"
+    "dev": "tsup --watch",
+    "test": "jest"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.0.0",
