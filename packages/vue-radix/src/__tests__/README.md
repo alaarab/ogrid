@@ -1,11 +1,17 @@
 # Vue Radix Tests
 
-## Why No Export Tests?
+## Export Tests
 
-Vue UI packages (vue-vuetify, vue-primevue, vue-radix) intentionally **do not** have `exports.test.ts` files.
+`exports.test.ts` verifies the public API surface using Jest with the existing CommonJS transform.
 
-**Reason**: Vue 3 Single File Components (`.vue`) are ESM-only and cannot be loaded via CommonJS `require()`, which Jest uses for export tests. The tests would fail with silent import errors.
+Vue 3 SFC files (`.vue`) are mapped to `jest-mocks/vue-component.cjs.js`, which returns `{ default: {} }`.
+This means SFC component exports like `ColumnChooser` show up as `{}` objects in the test rather than
+full Vue component definitions — but `toBeDefined()` still passes, which is enough to confirm the export
+exists and the name is correct.
 
-**Why it's okay**: The factory tests (`factories.test.ts` - 100+ tests) already verify all exports work correctly by actually importing and using them. Export tests would be redundant sanity checks.
+Components defined in `.ts` files (`OGrid`, `DataGridTable`, `InlineCellEditor`) resolve normally.
 
-**Don't add them back!** If you think export tests are missing, they're intentionally skipped. Use factory tests instead.
+## Factory Tests
+
+`factories.test.ts` runs 127 tests covering composable behavior through Vue's reactivity system.
+These import from `@alaarab/ogrid-vue/testing` and don't touch the local index, so SFCs are irrelevant.
