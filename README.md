@@ -110,7 +110,7 @@ Bundle size is what you actually install (core + framework adapter + UI layer). 
 └── @alaarab/ogrid-js             vanilla JS (class-based)
 ```
 
-**Core** owns types and pure TypeScript utilities with zero dependencies. **Framework adapters** (React hooks, Angular services, Vue composables) own state logic and headless components. **UI packages** are thin view layers (~50 lines of framework-specific rendering per component). All UI packages within a framework pass the same test suite via shared test factories.
+Core owns types and pure TypeScript utilities with zero dependencies. Framework adapters (React hooks, Angular services, Vue composables) own state logic and headless components. UI packages are thin view layers, around 50 lines of framework-specific rendering per component. All UI packages within a framework pass the same test suite via shared test factories.
 
 ### Installed sizes (gzip)
 
@@ -342,7 +342,7 @@ All features work identically across React, Angular, Vue, and vanilla JS.
 
 UI packages re-export everything from their adapter (which re-exports from core), so one import is all you need.
 
-**Optional premium inputs** (calendar date picker, rating, color picker, slider, tags) are available as add-on packages: `@alaarab/ogrid-react-inputs`, `@alaarab/ogrid-angular-inputs`, `@alaarab/ogrid-vue-inputs`, `@alaarab/ogrid-js-inputs`.
+Optional premium inputs (calendar date picker, rating, color picker, slider, tags) are available as add-on packages: `@alaarab/ogrid-react-inputs`, `@alaarab/ogrid-angular-inputs`, `@alaarab/ogrid-vue-inputs`, `@alaarab/ogrid-js-inputs`.
 
 ## Editor Integration (MCP)
 
@@ -443,8 +443,8 @@ npm run docs:build                  # Build docs site
 
 ### Requirements
 
-- **Node.js** >= 18 (developed with Node 22)
-- **npm** workspaces + **Turborepo** for monorepo management
+- Node.js >= 18 (developed with Node 22)
+- npm workspaces + Turborepo for monorepo management
 
 ## Contributing
 
