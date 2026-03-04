@@ -213,7 +213,27 @@ import { PopoverCellEditorComponent } from './popover-cell-editor.component';
                     @if (vsEnabled() && vsTopSpacerHeight() > 0) {
                       <tr [style.height.px]="vsTopSpacerHeight()"></tr>
                     }
-                    @for (item of vsVisibleItems(); track trackByRowId($index, item); let localIdx = $index) {
+                    @for (item of vsVisibleItems(); track trackRow(localIdx, item); let localIdx = $index) {
+                      @if (isRowGroupHeader(item)) {
+                        <tr
+                          style="background: var(--ogrid-bg-row-group, var(--ogrid-bg-hover, #f5f5f5)); font-weight: 500"
+                        >
+                          <td [attr.colspan]="totalColCount()" [style.padding-left.px]="$any(item).group.depth * 16 + 8">
+                            <button
+                              (click)="toggleGroup($any(item).group.groupKey)"
+                              (keydown.enter)="$event.preventDefault(); toggleGroup($any(item).group.groupKey)"
+                              (keydown.space)="$event.preventDefault(); toggleGroup($any(item).group.groupKey)"
+                              tabindex="0"
+                              style="background: none; border: none; cursor: pointer; padding: 2px 6px; font: inherit; display: inline-flex; align-items: center; gap: 6px"
+                            >
+                              <span style="display: inline-block; transition: transform 0.15s; font-size: 12px"
+                                [style.transform]="rowGroupExpandedGroups().has($any(item).group.groupKey) ? 'rotate(90deg)' : 'rotate(0deg)'"
+                              >&#9654;</span>
+                              <span>{{ $any(item).group.displayText }} ({{ $any(item).group.itemCount }})</span>
+                            </button>
+                          </td>
+                        </tr>
+                      } @else {
                       @let rowIndex = vsStartIndex() + localIdx;
                       @let rowId = getRowIdInput(item);
                       @let isSelected = selectedRowIds().has(rowId);
@@ -325,6 +345,7 @@ import { PopoverCellEditorComponent } from './popover-cell-editor.component';
                           <td [style.width.px]="vsRightSpacerWidth()" [style.minWidth.px]="vsRightSpacerWidth()" [style.maxWidth.px]="vsRightSpacerWidth()" [style.padding]="'0'"></td>
                         }
                       </tr>
+                      }
                     }
                     @if (vsEnabled() && vsBottomSpacerHeight() > 0) {
                       <tr [style.height.px]="vsBottomSpacerHeight()"></tr>
@@ -794,6 +815,7 @@ export class DataGridTableComponent<T = unknown> extends BaseDataGridTableCompon
   @Input({ alias: 'aria-label' }) ariaLabelInput: string | undefined = undefined;
   @Input({ alias: 'aria-labelledby' }) ariaLabelledByInput: string | undefined = undefined;
   @Input() showRowNumbers: boolean = false;
+  @Input({ alias: 'groupBy' }) groupByInput: string[] | undefined = undefined;
   @Input({ alias: 'showColumnLetters' }) showColumnLettersInput: boolean = false;
   @Input({ alias: 'showNameBox' }) showNameBoxInput: boolean = false;
   @Input() onActiveCellChange: ((ref: string | null) => void) | undefined = undefined;
@@ -1042,6 +1064,7 @@ export class DataGridTableComponent<T = unknown> extends BaseDataGridTableCompon
       emptyState: this.emptyStateInput as IOGridDataGridProps<T>['emptyState'],
       onCellError: this.onCellError,
       stickyHeader: this.stickyHeaderInput,
+      groupBy: this.groupByInput,
       'aria-label': this.ariaLabelInput,
       'aria-labelledby': this.ariaLabelledByInput,
       formulaReferences: this.formulaReferencesInput,

@@ -59,6 +59,10 @@ export interface IColumnDef<T = unknown> extends IColumnMeta {
   valueGetter?: (item: T) => unknown;
   /** Format the cell value for display (used when no renderCell). */
   valueFormatter?: (value: unknown, item: T) => string;
+  /** When true, this column is used as a grouping dimension. */
+  rowGroup?: boolean;
+  /** When true, keep the column visible even when it's being grouped by (default: hidden). */
+  showRowGroup?: boolean;
   /** Format the cell value for clipboard copy. When set, overrides valueFormatter for copy/paste. */
   clipboardFormatter?: (value: unknown, item: T) => string;
   /**

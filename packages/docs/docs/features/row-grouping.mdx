@@ -1,0 +1,325 @@
+---
+sidebar_position: 12
+title: Row Grouping
+description: Group rows by one or more columns with collapsible group headers
+---
+
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+
+# Row Grouping
+
+Group your data by one or more columns. Each group gets a collapsible header row showing the group value and item count. Multi-level grouping nests groups inside each other.
+
+## Basic usage
+
+Pass a `groupBy` array with the column IDs you want to group on. Groups start collapsed -- users click the header to expand.
+
+<Tabs groupId="framework">
+  <TabItem value="react" label="React" default>
+
+```tsx
+import { OGrid } from '@alaarab/ogrid-react-radix';
+
+const columns = [
+  { columnId: 'name', name: 'Name', sortable: true },
+  { columnId: 'department', name: 'Department', sortable: true },
+  { columnId: 'country', name: 'Country', sortable: true },
+];
+
+function App() {
+  return (
+    <OGrid
+      columns={columns}
+      data={employees}
+      getRowId={(item) => item.id}
+      groupBy={['department']}
+    />
+  );
+}
+```
+
+:::tip Switching UI libraries
+Same props across all React packages -- just change the import:
+
+- **Radix** (lightweight, default): `from '@alaarab/ogrid-react-radix'`
+- **Fluent UI** (Microsoft 365 / SPFx): `from '@alaarab/ogrid-react-fluent'` - wrap in `<FluentProvider>`
+- **Material UI** (MUI v7): `from '@alaarab/ogrid-react-material'` - wrap in `<ThemeProvider>`
+:::
+
+  </TabItem>
+  <TabItem value="angular" label="Angular">
+
+```typescript
+import { Component } from '@angular/core';
+import { OGridComponent, type IColumnDef } from '@alaarab/ogrid-angular-material';
+
+@Component({
+  standalone: true,
+  imports: [OGridComponent],
+  template: `<ogrid [props]="gridProps" />`
+})
+export class GridComponent {
+  gridProps = {
+    columns: [
+      { columnId: 'name', name: 'Name', sortable: true },
+      { columnId: 'department', name: 'Department', sortable: true },
+      { columnId: 'country', name: 'Country', sortable: true },
+    ] as IColumnDef<Employee>[],
+    data: employees,
+    getRowId: (item: Employee) => item.id,
+    groupBy: ['department'],
+  };
+}
+```
+
+:::tip Switching UI libraries
+Same component API across Angular packages. Change the import:
+
+- **Radix (CDK)**: `from '@alaarab/ogrid-angular-radix'` *(default, lightweight)*
+- **Angular Material**: `from '@alaarab/ogrid-angular-material'`
+- **PrimeNG**: `from '@alaarab/ogrid-angular-primeng'`
+
+All components are standalone, no NgModule required.
+:::
+
+  </TabItem>
+  <TabItem value="vue" label="Vue">
+
+```vue
+<script setup lang="ts">
+import { OGrid, type IColumnDef } from '@alaarab/ogrid-vue-vuetify';
+
+const columns: IColumnDef<Employee>[] = [
+  { columnId: 'name', name: 'Name', sortable: true },
+  { columnId: 'department', name: 'Department', sortable: true },
+  { columnId: 'country', name: 'Country', sortable: true },
+];
+
+const gridProps = {
+  columns,
+  data: employees,
+  getRowId: (item: Employee) => item.id,
+  groupBy: ['department'],
+};
+</script>
+
+<template>
+  <OGrid :gridProps="gridProps" />
+</template>
+```
+
+:::tip Switching UI libraries
+Same API across Vue packages. Change the import:
+
+- **Radix (Headless UI)**: `from '@alaarab/ogrid-vue-radix'` *(default, lightweight)*
+- **Vuetify**: `from '@alaarab/ogrid-vue-vuetify'` - wrap in `<v-app>` for theming
+- **PrimeVue**: `from '@alaarab/ogrid-vue-primevue'`
+:::
+
+  </TabItem>
+  <TabItem value="js" label="Vanilla JS">
+
+```js
+import { OGrid } from '@alaarab/ogrid-js';
+import '@alaarab/ogrid-js/styles';
+
+const grid = new OGrid(document.getElementById('grid'), {
+  columns: [
+    { columnId: 'name', name: 'Name', sortable: true },
+    { columnId: 'department', name: 'Department', sortable: true },
+    { columnId: 'country', name: 'Country', sortable: true },
+  ],
+  data: employees,
+  getRowId: (item) => item.id,
+  groupBy: ['department'],
+});
+```
+
+  </TabItem>
+</Tabs>
+
+## Multi-level grouping
+
+Pass multiple column IDs to create nested groups. The first column is the top-level group, the second is nested within it, and so on.
+
+<Tabs groupId="framework">
+  <TabItem value="react" label="React" default>
+
+```tsx
+<OGrid
+  columns={columns}
+  data={employees}
+  getRowId={(item) => item.id}
+  groupBy={['country', 'department']}
+/>
+```
+
+  </TabItem>
+  <TabItem value="angular" label="Angular">
+
+```typescript
+gridProps = {
+  // ...columns, data, getRowId
+  groupBy: ['country', 'department'],
+};
+```
+
+  </TabItem>
+  <TabItem value="vue" label="Vue">
+
+```vue
+<script setup>
+const gridProps = {
+  // ...columns, data, getRowId
+  groupBy: ['country', 'department'],
+};
+</script>
+```
+
+  </TabItem>
+  <TabItem value="js" label="Vanilla JS">
+
+```js
+const grid = new OGrid(container, {
+  // ...columns, data, getRowId
+  groupBy: ['country', 'department'],
+});
+```
+
+  </TabItem>
+</Tabs>
+
+## Programmatic control
+
+You can expand, collapse, and toggle groups through the API.
+
+<Tabs groupId="framework">
+  <TabItem value="react" label="React" default>
+
+```tsx
+import { useRef } from 'react';
+import { OGrid, type IOGridApi } from '@alaarab/ogrid-react-radix';
+
+function App() {
+  const apiRef = useRef<IOGridApi<Employee>>(null);
+
+  return (
+    <>
+      <button onClick={() => apiRef.current?.expandAllGroups()}>
+        Expand All
+      </button>
+      <button onClick={() => apiRef.current?.collapseAllGroups()}>
+        Collapse All
+      </button>
+      <OGrid
+        ref={apiRef}
+        columns={columns}
+        data={employees}
+        getRowId={(item) => item.id}
+        groupBy={['department']}
+      />
+    </>
+  );
+}
+```
+
+  </TabItem>
+  <TabItem value="angular" label="Angular">
+
+```typescript
+@Component({
+  standalone: true,
+  imports: [OGridComponent],
+  template: `
+    <button (click)="expandAll()">Expand All</button>
+    <button (click)="collapseAll()">Collapse All</button>
+    <ogrid [props]="gridProps" />
+  `
+})
+export class GridComponent {
+  // Use the OGridService or template ref to access the API
+  expandAll() { /* apiRef.expandAllGroups() */ }
+  collapseAll() { /* apiRef.collapseAllGroups() */ }
+}
+```
+
+  </TabItem>
+  <TabItem value="vue" label="Vue">
+
+```vue
+<script setup>
+import { ref } from 'vue';
+import { OGrid } from '@alaarab/ogrid-vue-vuetify';
+
+const ogridRef = ref(null);
+
+function expandAll() {
+  ogridRef.value?.api?.expandAllGroups();
+}
+function collapseAll() {
+  ogridRef.value?.api?.collapseAllGroups();
+}
+</script>
+
+<template>
+  <button @click="expandAll">Expand All</button>
+  <button @click="collapseAll">Collapse All</button>
+  <OGrid ref="ogridRef" :gridProps="gridProps" />
+</template>
+```
+
+  </TabItem>
+  <TabItem value="js" label="Vanilla JS">
+
+```js
+const grid = new OGrid(container, {
+  columns,
+  data: employees,
+  getRowId: (item) => item.id,
+  groupBy: ['department'],
+});
+
+// Expand/collapse all
+grid.expandAllGroups();
+grid.collapseAllGroups();
+
+// Toggle a specific group
+grid.toggleGroup('department::Engineering');
+
+// Change grouping at runtime
+grid.setGroupBy(['country', 'department']);
+
+// Clear grouping
+grid.setGroupBy([]);
+```
+
+  </TabItem>
+</Tabs>
+
+## API reference
+
+| Prop / Method | Type | Description |
+|---|---|---|
+| `groupBy` | `string[]` | Column IDs to group by. Order matters for nesting. |
+| `setGroupBy(ids)` | method | Change grouping at runtime. Resets expanded state. |
+| `toggleGroup(key)` | method | Toggle a specific group open/closed. |
+| `expandAllGroups()` | method | Expand every group at all nesting levels. |
+| `collapseAllGroups()` | method | Collapse every group. |
+
+### Group key format
+
+Group keys follow the pattern `columnId::value`. For nested groups, keys are joined with `>`:
+
+- Single level: `department::Engineering`
+- Nested: `country::US>department::Engineering`
+
+## Styling
+
+Group header rows use the `.ogrid-group-header-row` CSS class. Override the background with the `--ogrid-bg-row-group` CSS variable:
+
+```css
+:root {
+  --ogrid-bg-row-group: #f0f4f8;
+}
+```

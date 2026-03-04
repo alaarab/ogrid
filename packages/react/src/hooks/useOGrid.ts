@@ -178,6 +178,7 @@ export function useOGrid<T>(
     activeSheet,
     onSheetChange,
     onSheetAdd,
+    groupBy,
     'aria-label': ariaLabel,
     'aria-labelledby': ariaLabelledBy,
   } = props;
@@ -612,6 +613,7 @@ export function useOGrid<T>(
     virtualScroll,
     rowHeight,
     density,
+    groupBy,
     'aria-label': ariaLabel,
     'aria-labelledby': ariaLabelledBy,
     emptyState: {
@@ -647,6 +649,7 @@ export function useOGrid<T>(
     rowHeight, density, ariaLabel, ariaLabelledBy,
     filtersState.hasActiveFilters, clearAllFilters, emptyState,
     formulas, formulaEngine, formulaVersion, formulaBarState.referencedCells, formulaBarState.insertReference,
+    groupBy,
   ]);
 
   const pagination = useMemo<UseOGridPagination>(() => ({

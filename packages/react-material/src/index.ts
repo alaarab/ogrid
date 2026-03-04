@@ -8,6 +8,10 @@ export { ColumnHeaderMenu, type ColumnHeaderMenuProps } from './ColumnHeaderMenu
 
 // Re-exports from @alaarab/ogrid-react
 
+// Row grouping
+export { isGroupHeader, buildGroupedRows } from '@alaarab/ogrid-react';
+export type { IRowGroup, IRowGroupingConfig, RowGroupingDisplayRow } from '@alaarab/ogrid-react';
+
 // Constants (re-exported from core)
 export {
   CHECKBOX_COLUMN_WIDTH,
@@ -79,6 +83,7 @@ export {
   useColumnChooserState,
   useInlineCellEditorState,
   useColumnResize,
+  useRowGrouping,
   useRichSelectState,
   useSelectState,
   useSideBarState,
@@ -142,6 +147,8 @@ export type {
   InlineCellEditorType,
   UseColumnResizeParams,
   UseColumnResizeResult,
+  UseRowGroupingParams,
+  UseRowGroupingResult,
   UseRichSelectStateParams,
   UseRichSelectStateResult,
   UseSelectStateParams,

@@ -2,6 +2,12 @@
 
 All notable changes to OGrid will be documented in this file.
 
+## [2.6.0] - 2026-03-04
+
+### Added
+
+- **Row grouping** - Group rows by one or more columns with expand/collapse. Set `groupBy={['department']}` (React/Angular/Vue) or `setGroupBy(['department'])` (JS). Multi-level grouping supported via multiple column IDs. API: `toggleGroup`, `expandAll`, `collapseAll`. Available across all 10 framework packages.
+
 ## [2.5.9] - 2026-03-03
 
 ### Fixed

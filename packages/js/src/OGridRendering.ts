@@ -257,7 +257,10 @@ export class OGridRendering<T> {
     headerFilterState.setFilterOptions(state.filterOptions);
 
     // Update interaction states with current data
+    // When grouping is active, use grouped total for pagination but ungrouped items for interaction
+    const groupedResult = state.isGrouped ? state.getGroupedDisplayRows() : null;
     const { items, totalCount } = state.getProcessedItems();
+    const paginationTotal = groupedResult ? groupedResult.totalCount : totalCount;
     if (keyboardNavState && clipboardState) {
       const visibleCols = state.visibleColumnDefs;
 
@@ -308,7 +311,7 @@ export class OGridRendering<T> {
     // Update virtual scroll with current total row count
     virtualScrollState?.setTotalRows(totalCount);
 
-    pagination.render(totalCount, options.pageSizeOptions);
+    pagination.render(paginationTotal, options.pageSizeOptions);
     statusBar.render({ totalCount });
     columnChooser.render();
     this.renderSideBar();

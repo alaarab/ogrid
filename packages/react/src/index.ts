@@ -9,6 +9,10 @@ export {
   GRID_BORDER_RADIUS,
 } from '@alaarab/ogrid-core';
 
+// Row grouping (re-exported from core)
+export { isGroupHeader, buildGroupedRows } from '@alaarab/ogrid-core';
+export type { IRowGroup, IRowGroupingConfig, RowGroupingDisplayRow } from '@alaarab/ogrid-core';
+
 // Types
 export type {
   ColumnFilterType,
@@ -87,6 +91,7 @@ export {
   useFormulaEngine,
   useFormulaBar,
   getColumnHeaderMenuProps,
+  useRowGrouping,
 } from './hooks';
 export type {
   UseFilterOptionsResult,
@@ -161,6 +166,8 @@ export type {
   UseFormulaEngineResult,
   UseFormulaBarParams,
   UseFormulaBarResult,
+  UseRowGroupingParams,
+  UseRowGroupingResult,
 } from './hooks';
 
 // Constants

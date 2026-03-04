@@ -26,7 +26,10 @@ import {
   validateRowIds,
   resolveResponsiveConfig,
   applyResponsiveHiding,
+  buildGroupedRows,
+  isGroupHeader,
 } from '@alaarab/ogrid-core';
+import type { IRowGroup, RowGroupingDisplayRow } from '@alaarab/ogrid-core';
 import { EventEmitter } from './EventEmitter';
 import type { FormulaEngineState } from './FormulaEngineState';
 
@@ -72,6 +75,10 @@ export class GridState<T> {
   // Column display order (array of columnIds)
   private _columnOrder: string[] = [];
 
+  // Row grouping
+  private _groupByColumnIds: string[] = [];
+  private _expandedGroups: Set<string> = new Set();
+
   // Responsive column hiding
   private _responsiveColumns: IResponsiveColumnsConfig | null = null;
   private _containerWidth = 0;
@@ -106,6 +113,9 @@ export class GridState<T> {
     this._stickyHeader = options.stickyHeader ?? true;
     this._fullScreen = options.fullScreen ?? false;
     this._workerSort = options.workerSort ?? false;
+
+    // Row grouping config
+    this._groupByColumnIds = options.groupBy ?? [];
 
     // Responsive columns config
     this._responsiveColumns = resolveResponsiveConfig(options.responsiveColumns) ?? null;
@@ -152,6 +162,8 @@ export class GridState<T> {
   get rowHeight(): number | undefined { return this._rowHeight; }
   get ariaLabel(): string | undefined { return this._ariaLabel; }
   get responsiveColumns(): IResponsiveColumnsConfig | null { return this._responsiveColumns; }
+  get groupByColumnIds(): string[] { return this._groupByColumnIds; }
+  get expandedGroups(): Set<string> { return this._expandedGroups; }
 
   /** Get the visible columns in display order (respects column reorder and responsive hiding). Memoized via dirty flag. */
   get visibleColumnDefs(): IColumnDef<T>[] {
@@ -211,6 +223,60 @@ export class GridState<T> {
     const items = orderedRows.slice(startIdx, endIdx);
 
     return { items, totalCount };
+  }
+
+  /** Whether row grouping is currently active. */
+  get isGrouped(): boolean {
+    return this._groupByColumnIds.length > 0;
+  }
+
+  /**
+   * Get display rows with group headers interleaved when grouping is active.
+   * When groupBy is empty, returns the same items as getProcessedItems.
+   * When groupBy is set, returns a flat array of RowGroupingDisplayRow<T>
+   * (group headers + data rows) with pagination applied to the flat list.
+   */
+  getGroupedDisplayRows(): { displayRows: RowGroupingDisplayRow<T>[]; totalCount: number } {
+    if (!this.isGrouped) {
+      const result = this.getProcessedItems();
+      return { displayRows: result.items, totalCount: result.totalCount };
+    }
+
+    // Get all sorted/filtered items (no pagination yet)
+    let allItems: T[];
+    if (this._sortDirty || this._sortedIndices === null) {
+      allItems = processClientSideData(
+        this._data,
+        this._columns as unknown as Parameters<typeof processClientSideData>[1],
+        this._filters,
+        this._sort?.field,
+        this._sort?.direction
+      ) as T[];
+
+      const indexMap = new Map<T, number>();
+      for (let i = 0; i < this._data.length; i++) indexMap.set(this._data[i], i);
+      this._sortedIndices = allItems.map((row) => {
+        const idx = indexMap.get(row);
+        return idx !== undefined ? idx : -1;
+      }).filter((idx) => idx !== -1);
+      this._sortDirty = false;
+    } else {
+      allItems = this._sortedIndices.map((idx) => this._data[idx]).filter((r) => r !== undefined) as T[];
+    }
+
+    // Build grouped rows (group headers + data rows flattened)
+    const { displayRows } = buildGroupedRows<T>(
+      allItems,
+      this._columns as unknown as import('@alaarab/ogrid-core').IColumnDef<T>[],
+      this._groupByColumnIds,
+      this._expandedGroups,
+    );
+
+    // Paginate over the flat display rows
+    const totalCount = displayRows.length;
+    const startIdx = (this._page - 1) * this._pageSize;
+    const endIdx = startIdx + this._pageSize;
+    return { displayRows: displayRows.slice(startIdx, endIdx), totalCount };
   }
 
   /** Whether worker sort should be used for the current data set. */
@@ -328,6 +394,49 @@ export class GridState<T> {
     if (data.length !== prevLength) {
       this._sortDirty = true;
     }
+    this.emitter.emit('stateChange', { type: 'data' });
+  }
+
+  setGroupBy(columnIds: string[]): void {
+    this._groupByColumnIds = columnIds;
+    this._expandedGroups = new Set();
+    this._page = 1;
+    this._sortDirty = true;
+    this.emitter.emit('stateChange', { type: 'data' });
+  }
+
+  toggleGroup(groupKey: string): void {
+    if (this._expandedGroups.has(groupKey)) {
+      this._expandedGroups.delete(groupKey);
+    } else {
+      this._expandedGroups.add(groupKey);
+    }
+    this.emitter.emit('stateChange', { type: 'data' });
+  }
+
+  expandAllGroups(): void {
+    // Build the group tree to get all group keys
+    const allItems = this._sortedIndices
+      ? this._sortedIndices.map((idx) => this._data[idx]).filter((r) => r !== undefined) as T[]
+      : this._data;
+    const { groupTree } = buildGroupedRows<T>(
+      allItems,
+      this._columns as unknown as import('@alaarab/ogrid-core').IColumnDef<T>[],
+      this._groupByColumnIds,
+      new Set<string>(),
+    );
+    const collectKeys = (groups: IRowGroup<T>[]): void => {
+      for (const g of groups) {
+        this._expandedGroups.add(g.groupKey);
+        if (g.subGroups) collectKeys(g.subGroups);
+      }
+    };
+    collectKeys(groupTree);
+    this.emitter.emit('stateChange', { type: 'data' });
+  }
+
+  collapseAllGroups(): void {
+    this._expandedGroups.clear();
     this.emitter.emit('stateChange', { type: 'data' });
   }
 

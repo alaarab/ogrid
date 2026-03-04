@@ -235,6 +235,14 @@ export {
   FORMULA_BAR_STYLES,
 } from '@alaarab/ogrid-core/formula';
 
+// Grouping types (re-export from core)
+export type {
+  IRowGroup,
+  IRowGroupingConfig,
+  RowGroupingDisplayRow,
+} from '@alaarab/ogrid-core';
+export { isGroupHeader, buildGroupedRows } from '@alaarab/ogrid-core';
+
 // Shadow core column types with vanilla JS extensions
 export type { IColumnDef, IColumnGroupDef, ICellEditorContext } from './types/columnTypes';
 export type { OGridOptions, OGridEvents, IJsOGridApi, CellEvent } from './types/gridTypes';

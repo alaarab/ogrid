@@ -702,6 +702,7 @@ export function useOGrid<T>(
       virtualScroll: p.virtualScroll,
       rowHeight: p.rowHeight,
       density: p.density ?? 'normal',
+      groupBy: p.groupBy,
       'aria-label': p['aria-label'],
       'aria-labelledby': p['aria-labelledby'],
       emptyState: {

@@ -11,7 +11,10 @@ import {
   validateRowIds,
   columnLetterToIndex,
   getCellValue,
+  buildGroupedRows,
+  isGroupHeader,
 } from '@alaarab/ogrid-core';
+import type { RowGroupingDisplayRow } from '@alaarab/ogrid-core';
 import type { FormulaReference } from '@alaarab/ogrid-core';
 import { extractFormulaReferences, deriveFormulaBarText } from '@alaarab/ogrid-core/formula';
 import type {
@@ -162,6 +165,8 @@ export class OGridService<T> {
   readonly ariaLabelledBy = signal<string | undefined>(undefined);
   readonly workerSort = signal<boolean>(false);
   readonly showRowNumbers = signal<boolean>(false);
+  readonly groupBy = signal<string[]>([]);
+  readonly expandedGroups = signal<Set<string>>(new Set());
   readonly cellReferences = signal<boolean>(false);
   readonly formulasEnabled = signal<boolean>(false);
   readonly initialFormulas = signal<Array<{ col: number; row: number; formula: string }> | undefined>(undefined);
@@ -365,6 +370,17 @@ export class OGridService<T> {
     return this.isClientSide() && cit ? cit.totalCount : this.serverTotalCount();
   });
 
+  /** When groupBy is active, returns grouped display rows (with group headers). Otherwise returns displayItems as-is. */
+  readonly displayRows = computed<RowGroupingDisplayRow<T>[]>(() => {
+    const items = this.displayItems();
+    const groupByIds = this.groupBy();
+    if (groupByIds.length === 0) return items;
+    const { displayRows } = buildGroupedRows(items, this.columns(), groupByIds, this.expandedGroups());
+    return displayRows;
+  });
+
+  readonly isGroupingActive = computed(() => this.groupBy().length > 0);
+
   readonly hasActiveFilters = computed(() => {
     return Object.values(this.filters()).some((v) => v !== undefined);
   });
@@ -542,6 +558,7 @@ export class OGridService<T> {
     columnReorder: this.columnReorder(),
     responsiveColumns: this.responsiveColumns(),
     virtualScroll: this.virtualScroll(),
+    groupBy: this.groupBy(),
     'aria-label': this.ariaLabel(),
     'aria-labelledby': this.ariaLabelledBy(),
     emptyState: {
@@ -955,6 +972,40 @@ export class OGridService<T> {
     this.formulaBarEditText.set('');
   }
 
+  // --- Row grouping methods ---
+
+  toggleGroup(groupKey: string): void {
+    this.expandedGroups.update((prev) => {
+      const next = new Set(prev);
+      if (next.has(groupKey)) {
+        next.delete(groupKey);
+      } else {
+        next.add(groupKey);
+      }
+      return next;
+    });
+  }
+
+  expandAllGroups(): void {
+    const items = this.displayItems();
+    const groupByIds = this.groupBy();
+    if (groupByIds.length === 0) return;
+    const { groupTree } = buildGroupedRows(items, this.columns(), groupByIds, new Set());
+    const allKeys = new Set<string>();
+    const collectKeys = (groups: import('@alaarab/ogrid-core').IRowGroup<T>[]) => {
+      for (const g of groups) {
+        allKeys.add(g.groupKey);
+        if (g.subGroups) collectKeys(g.subGroups);
+      }
+    };
+    collectKeys(groupTree);
+    this.expandedGroups.set(allKeys);
+  }
+
+  collapseAllGroups(): void {
+    this.expandedGroups.set(new Set());
+  }
+
   // --- Configure from props ---
 
   configure(props: IOGridProps<T>): void {
@@ -1013,6 +1064,7 @@ export class OGridService<T> {
     if (props.virtualScroll !== undefined) this.virtualScroll.set(props.virtualScroll);
     if (props.workerSort !== undefined) this.workerSort.set(props.workerSort);
     if (props.showRowNumbers !== undefined) this.showRowNumbers.set(props.showRowNumbers);
+    if (props.groupBy !== undefined) this.groupBy.set(props.groupBy);
     if (props.cellReferences !== undefined) this.cellReferences.set(props.cellReferences);
     if (props.formulas !== undefined) this.formulasEnabled.set(props.formulas);
     if (props.initialFormulas !== undefined) this.initialFormulas.set(props.initialFormulas);

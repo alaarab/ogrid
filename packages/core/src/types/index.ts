@@ -41,6 +41,13 @@ export type {
   IOGridApi,
 } from './dataGridTypes';
 
+// Grouping types
+export type {
+  IRowGroup,
+  IRowGroupingConfig,
+  RowGroupingDisplayRow,
+} from './groupingTypes';
+
 // Utility functions
 export {
   toUserLike,

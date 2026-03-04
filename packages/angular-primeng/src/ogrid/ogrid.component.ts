@@ -85,6 +85,7 @@ import { PaginationControlsComponent } from '../pagination-controls/pagination-c
         [aria-label]="service.ariaLabel()"
         [aria-labelledby]="service.ariaLabelledBy()"
         [emptyState]="emptyStateObj"
+        [groupBy]="service.groupBy()"
         [showRowNumbers]="service.dataGridProps().showRowNumbers ?? false"
         [showColumnLetters]="service.dataGridProps().showColumnLetters ?? false"
         [showNameBox]="service.dataGridProps().showNameBox ?? false"

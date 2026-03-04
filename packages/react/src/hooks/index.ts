@@ -153,3 +153,5 @@ export { useFormulaEngine } from './useFormulaEngine';
 export type { UseFormulaEngineParams, UseFormulaEngineResult } from './useFormulaEngine';
 export { useFormulaBar } from './useFormulaBar';
 export type { UseFormulaBarParams, UseFormulaBarResult } from './useFormulaBar';
+export { useRowGrouping } from './useRowGrouping';
+export type { UseRowGroupingParams, UseRowGroupingResult } from './useRowGrouping';

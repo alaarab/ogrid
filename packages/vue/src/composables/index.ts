@@ -123,3 +123,6 @@ export type { UseColumnHeaderMenuStateParams, UseColumnHeaderMenuStateResult } f
 
 export { useDataGridTableSetup } from './useDataGridTableSetup';
 export type { UseDataGridTableSetupParams, UseDataGridTableSetupResult } from './useDataGridTableSetup';
+
+export { useRowGrouping } from './useRowGrouping';
+export type { UseRowGroupingParams, UseRowGroupingResult } from './useRowGrouping';
