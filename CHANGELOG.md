@@ -2,6 +2,34 @@
 
 All notable changes to OGrid will be documented in this file.
 
+## [2.5.8] - 2026-03-04
+
+### Added
+
+- **Premium input editors** - Five optional cell editors with zero bundle impact: `DatePickerEditor`, `RatingEditor`, `ColorPickerEditor`, `SliderEditor`, `TagsEditor`. Available as separate packages for React, Angular, Vue, and vanilla JS. All use `cellEditorPopup: true` and theme via OGrid CSS variables.
+  - `@alaarab/ogrid-react-inputs`, `@alaarab/ogrid-angular-inputs`, `@alaarab/ogrid-vue-inputs`, `@alaarab/ogrid-js-inputs`
+  - `@alaarab/ogrid-inputs` — headless utilities (calendar, rating, color, slider, tags) shared across framework packages
+- **`handleBooleanCellPointerDown` utility** - Extracted the repeated checkbox pointerdown pattern (stopPropagation + select cell) into a shared utility in `@alaarab/ogrid-core`. All 9 UI packages and vanilla JS use it.
+- **`estimateHeaderMinWidth` utility** - New function in `@alaarab/ogrid-core` that estimates the minimum column width needed to show a header name without truncation. Used by React, Vue, Angular, and JS layout calculations.
+- **E2E tests for fill handle type protection** - Playwright tests verifying that dragging across incompatible column types (text → richSelect, date → boolean) leaves target cells unchanged. Covers React, Angular, and Vue.
+- **MCP package test suite** - 42 tests covering search indexing, doc parsing, category filtering, code block extraction, and version detection. The MCP package previously had zero tests.
+- **Storybook premium inputs stories** - `PremiumInputs.stories` added to all 9 UI packages (React x3, Angular x3, Vue x3) showing all 5 editors in a grid context.
+- **Angular Storybook parity** - Angular Storybook stories updated across all 3 packages to match React story coverage.
+
+### Fixed
+
+- **Checkbox click selection flicker** - Clicking a boolean checkbox no longer briefly selects the next cell. Replaced the `setTimeout`-based commit-then-restore pattern with a `skipAdvance` option on `commitCellEdit`. Affects all frameworks.
+- **Drag-select origin cell flicker** - Starting a click-drag selection no longer briefly shows the old active cell outline on the origin cell. Drag attributes are now applied synchronously on pointerdown instead of via `setTimeout`. Affects React, Vue, Angular, and JS.
+- **Inline cell editor overflow** - The inline editor no longer bleeds into adjacent columns. Editor cell container changed from `overflow: visible` to `overflow: hidden` across all frameworks.
+- **Column headers truncating with ellipsis** - Columns like "Department" and "Rating" no longer show as "Depart..." by default. Column minimum width is now estimated from header text length at initialization using `estimateHeaderMinWidth`.
+- **Grid empty space below rows** - When fewer rows are displayed than the grid's allocated height, the grid body now collapses to the height of actual content. `flex: 1; min-height: 0` is only applied when the `[data-virtual-scroll]` attribute is present. Affects all frameworks.
+- **Leftmost cell double border** - The first column no longer shows a double border on its left edge. Added `border-left: none` on the first `th`/`td` in each row across all framework table styles.
+
+### Changed
+
+- **Default date editor uses text input** - The built-in `'date'` cell editor now renders `<input type="text">` with a `YYYY-MM-DD` placeholder instead of the native date picker. Premium `DatePickerEditor` from the inputs packages provides the full calendar UI.
+- **Vue `renderDatePicker` callback removed** - The `createInlineCellEditor` factory no longer accepts `renderDatePicker`. The `renderCheckbox` callback remains.
+
 ## [2.5.7] - 2026-03-04
 
 ### Added
@@ -36,29 +64,6 @@ All notable changes to OGrid will be documented in this file.
 ### Changed
 
 - **Vue inline editor padding** - Updated from hardcoded `padding: '0 2px'` to density-aware CSS vars with fallbacks
-
-## [Unreleased]
-
-### Added
-
-- **New premium input packages** - Optional cell editors with zero bundle impact when not installed. First component: `DatePickerEditor` - a calendar-based date picker that renders as a popover (`cellEditorPopup: true`). Built from scratch with zero external dependencies. Fully themed via OGrid CSS variables.
-  - `@alaarab/ogrid-react-inputs` - React (works with Radix, Fluent, Material)
-  - `@alaarab/ogrid-angular-inputs` - Angular (works with Angular Material, PrimeNG, Radix)
-  - `@alaarab/ogrid-vue-inputs` - Vue (works with Vuetify, PrimeVue, Radix)
-  - `@alaarab/ogrid-js-inputs` - Vanilla JS
-- **New package: `@alaarab/ogrid-inputs`** - Headless calendar/date utilities shared across framework-specific input packages. Framework-agnostic, zero dependencies. Provides `getCalendarGrid`, `formatDate`, `parseDate` utilities.
-- **RatingEditor** - Star-based rating editor (1-5 stars) with hover preview and half-star support
-- **ColorPickerEditor** - Color swatch grid with hex input and custom color support
-- **SliderEditor** - Range slider for numeric values with drag and direct input
-- **TagsEditor** - Multi-value tag/chip editor with suggestions and search
-- Premium editors added to hero grid on docs site front page
-
-### Changed
-
-- **Default date editor uses text input** - The built-in `'date'` cell editor now renders `<input type="text">` with a `YYYY-MM-DD` placeholder instead of the native `<input type="date">` with its browser calendar icon. Affects all 10 UI packages across React, Angular, Vue, and JS. Premium `DatePickerEditor` from `@alaarab/ogrid-react-inputs` provides the full calendar UI for those who want it.
-- **Vue `renderDatePicker` callback removed** - The `createInlineCellEditor` factory no longer accepts `renderDatePicker` since date editing is now a plain text input. The `renderCheckbox` callback remains.
-
----
 
 ## [2.5.4]  -  2026-03-02
 

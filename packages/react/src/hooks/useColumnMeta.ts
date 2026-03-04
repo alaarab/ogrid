@@ -8,7 +8,7 @@
  */
 
 import { useMemo } from 'react';
-import { DEFAULT_MIN_COLUMN_WIDTH, estimateHeaderMinWidth } from '@alaarab/ogrid-core';
+import { estimateHeaderMinWidth } from '@alaarab/ogrid-core';
 import type { IColumnDef } from '../types';
 
 export interface UseColumnMetaParams<T> {
