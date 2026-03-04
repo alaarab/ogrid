@@ -1,6 +1,6 @@
 {
   "name": "@alaarab/ogrid-angular-inputs",
-  "version": "2.5.7",
+  "version": "2.5.8",
   "description": "OGrid Angular Inputs – Optional premium cell editors (DatePicker, and more). Zero impact when not installed.",
   "main": "dist/esm/index.js",
   "module": "dist/esm/index.js",

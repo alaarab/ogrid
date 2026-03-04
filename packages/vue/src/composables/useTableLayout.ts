@@ -1,6 +1,6 @@
 import { ref, computed, watch, onMounted, onUnmounted, type Ref, type ShallowRef } from 'vue';
 import type { IColumnDef } from '../types';
-import { CHECKBOX_COLUMN_WIDTH, DEFAULT_MIN_COLUMN_WIDTH, CELL_PADDING, estimateHeaderMinWidth } from '@alaarab/ogrid-core';
+import { CHECKBOX_COLUMN_WIDTH, CELL_PADDING, estimateHeaderMinWidth } from '@alaarab/ogrid-core';
 
 export interface UseTableLayoutParams<T> {
   wrapperRef: Ref<HTMLElement | null> | ShallowRef<HTMLElement | null>;
