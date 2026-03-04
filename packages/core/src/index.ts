@@ -46,6 +46,13 @@ export {
   normalizeSelectionRange,
 } from './types';
 
+// Types  -  groupingTypes
+export type {
+  IRowGroup,
+  IRowGroupingConfig,
+  RowGroupingDisplayRow,
+} from './types';
+
 // Utils  -  exportToCsv
 export {
   escapeCsvValue,
@@ -219,6 +226,9 @@ export type { IResponsiveColumnsConfig } from './utils';
 
 // Utils  -  dateFormatter
 export { formatDateForDisplay, parseUserInputDate, getDateInputPlaceholder, DEFAULT_DATE_FORMAT } from './utils';
+
+// Utils  -  rowGrouping
+export { isGroupHeader, getGroupKey, buildGroupedRows } from './utils';
 
 // Constants  -  layout
 export {

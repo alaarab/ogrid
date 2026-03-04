@@ -1,5 +1,9 @@
 // Explicit named re-exports from core (replaces export * for better tree-shaking).
 
+// Row grouping
+export { isGroupHeader, buildGroupedRows } from '@alaarab/ogrid-core';
+export type { IRowGroup, IRowGroupingConfig, RowGroupingDisplayRow } from '@alaarab/ogrid-core';
+
 // Core types not already re-exported from ./types
 export type {
   ISheetDef,

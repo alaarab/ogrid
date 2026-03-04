@@ -129,6 +129,9 @@ interface IOGridBaseProps<T> {
 
   showRowNumbers?: boolean;
 
+  /** Column IDs to group rows by. When non-empty, rows are grouped and group header rows are inserted. */
+  groupBy?: string[];
+
   /** Enable Excel-style cell references: column letter headers, row numbers, and name box. Implies showRowNumbers. */
   cellReferences?: boolean;
 
@@ -236,6 +239,8 @@ export interface IOGridDataGridProps<T> {
   onCellError?: (error: Error, info: unknown) => void;
   'aria-label'?: string;
   'aria-labelledby'?: string;
+  /** Column IDs to group rows by. Groups are nested in the order provided. */
+  groupBy?: string[];
   /** Custom keydown handler. Called before grid's built-in handling. Call event.preventDefault() to suppress grid default. */
   onKeyDown?: (event: KeyboardEvent) => void;
 

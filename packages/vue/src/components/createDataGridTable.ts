@@ -19,7 +19,9 @@ import {
   buildPopoverEditorProps,
   getCellInteractionProps,
 } from '../utils';
-import { buildHeaderRows, CHECKBOX_COLUMN_WIDTH, ROW_NUMBER_COLUMN_WIDTH, ROW_NUMBER_COLUMN_ID, estimateHeaderMinWidth, indexToColumnLetter, formatCellReference, handleBooleanCellPointerDown } from '@alaarab/ogrid-core';
+import { buildHeaderRows, CHECKBOX_COLUMN_WIDTH, ROW_NUMBER_COLUMN_WIDTH, ROW_NUMBER_COLUMN_ID, estimateHeaderMinWidth, indexToColumnLetter, formatCellReference, handleBooleanCellPointerDown, isGroupHeader } from '@alaarab/ogrid-core';
+import type { IRowGroup, RowGroupingDisplayRow } from '@alaarab/ogrid-core';
+import { useRowGrouping } from '../composables/useRowGrouping';
 import { StatusBar } from './StatusBar';
 import { MarchingAntsOverlay } from './MarchingAntsOverlay';
 import { FormulaRefOverlay } from './FormulaRefOverlay';
@@ -98,6 +100,16 @@ export function createDataGridTable(ui: IDataGridTableUIBindings) {
         },
         { immediate: true },
       );
+
+      // Row grouping
+      const rowGroupItems = computed(() => propsRef.value.items);
+      const rowGroupColumns = computed(() => propsRef.value.columns);
+      const rowGroupBy = computed(() => propsRef.value.groupBy);
+      const rowGrouping = useRowGrouping({
+        items: rowGroupItems,
+        columns: rowGroupColumns,
+        groupBy: rowGroupBy,
+      });
 
       // Stable handlers  -  avoid creating new closures per render
       const onWrapperPointerdown = (e: PointerEvent) => { lastMouseShift.value = e.shiftKey; };
@@ -198,6 +210,9 @@ export function createDataGridTable(ui: IDataGridTableUIBindings) {
 
         const items = p.items;
         const getRowId = p.getRowId;
+        const displayRows = rowGrouping.displayRows.value;
+        const groupingActive = rowGrouping.isGroupingActive.value;
+        const expandedGroups = rowGrouping.expandedGroups.value;
         const layoutMode = p.layoutMode ?? 'fill';
         const rowSelection = p.rowSelection ?? 'none';
         const suppressHorizontalScroll = p.suppressHorizontalScroll;
@@ -578,17 +593,61 @@ export function createDataGridTable(ui: IDataGridTableUIBindings) {
                       h('tbody', {}, (() => {
                         const vsEnabled = virtualScrollEnabled.value;
                         const vr = visibleRange.value;
+                        const rowSource = groupingActive ? displayRows : items;
                         const startIdx = vsEnabled ? vr.startIndex : 0;
-                        const endIdx = vsEnabled ? Math.min(vr.endIndex, items.length - 1) : items.length - 1;
+                        const endIdx = vsEnabled ? Math.min(vr.endIndex, rowSource.length - 1) : rowSource.length - 1;
+                        const totalColCount = visibleCols.length + (hasCheckboxCol ? 1 : 0) + (hasRowNumbersCol ? 1 : 0);
                         const rows: VNode[] = [];
 
                         if (vsEnabled && vr.offsetTop > 0) {
                           rows.push(h('tr', { key: '__vs-top', style: { height: `${vr.offsetTop}px` } }));
                         }
 
+                        let dataRowIndex = 0;
                         for (let rowIndex = startIdx; rowIndex <= endIdx; rowIndex++) {
-                          const item = items[rowIndex];
-                          if (!item) continue;
+                          const row = rowSource[rowIndex];
+                          if (!row) continue;
+
+                          if (isGroupHeader(row as RowGroupingDisplayRow<unknown>)) {
+                            const group = (row as { group: IRowGroup<unknown> }).group;
+                            const isExpanded = expandedGroups.has(group.groupKey);
+                            rows.push(h('tr', {
+                              key: `__group__${group.groupKey}`,
+                              style: {
+                                background: 'var(--ogrid-bg-row-group, var(--ogrid-bg-hover, #f5f5f5))',
+                                fontWeight: '500',
+                              },
+                            }, [
+                              h('td', { colspan: totalColCount, style: { paddingLeft: `${group.depth * 16 + 8}px` } }, [
+                                h('button', {
+                                  onClick: () => rowGrouping.toggleGroup(group.groupKey),
+                                  onKeydown: (e: KeyboardEvent) => {
+                                    if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); rowGrouping.toggleGroup(group.groupKey); }
+                                  },
+                                  tabindex: 0,
+                                  style: {
+                                    background: 'none', border: 'none', cursor: 'pointer',
+                                    padding: '2px 6px', font: 'inherit',
+                                    display: 'inline-flex', alignItems: 'center', gap: '6px',
+                                  },
+                                }, [
+                                  h('span', {
+                                    style: {
+                                      display: 'inline-block',
+                                      transition: 'transform 0.15s',
+                                      fontSize: '12px',
+                                      transform: isExpanded ? 'rotate(90deg)' : 'rotate(0deg)',
+                                    },
+                                  }, '\u25B6'),
+                                  h('span', {}, `${group.displayText} (${group.itemCount})`),
+                                ]),
+                              ]),
+                            ]));
+                            continue;
+                          }
+
+                          const item = row as unknown;
+                          const effectiveRowIndex = dataRowIndex++;
                           const rowIdStr = getRowId(item);
                           const isSelected = selectedRowIds.has(rowIdStr);
                           rows.push(h('tr', {
@@ -609,16 +668,16 @@ export function createDataGridTable(ui: IDataGridTableUIBindings) {
                                 },
                               },
                                 h('div', {
-                                  'data-row-index': rowIndex,
+                                  'data-row-index': effectiveRowIndex,
                                   'data-col-index': 0,
                                   onClick: stopPropagation,
                                   class: 'ogrid-checkbox-wrapper',
                                 },
                                   ui.renderCheckbox({
                                     modelValue: isSelected,
-                                    ariaLabel: `Select row ${rowIndex + 1}`,
+                                    ariaLabel: `Select row ${effectiveRowIndex + 1}`,
                                     onChange: (checked) =>
-                                      handleRowCheckboxChange(rowIdStr, checked, rowIndex, lastMouseShift.value),
+                                      handleRowCheckboxChange(rowIdStr, checked, effectiveRowIndex, lastMouseShift.value),
                                   })
                                 )
                               ),
@@ -637,7 +696,7 @@ export function createDataGridTable(ui: IDataGridTableUIBindings) {
                                   left: hasCheckboxCol ? `${CHECKBOX_COLUMN_WIDTH}px` : '0',
                                   zIndex: 2,
                                 },
-                              }, String(rowNumberOffset + rowIndex + 1));
+                              }, String(rowNumberOffset + effectiveRowIndex + 1));
                             })()] : []),
                             // Left spacer for column virtualization
                             ...(leftSpacerWidth > 0 ? [
@@ -650,7 +709,7 @@ export function createDataGridTable(ui: IDataGridTableUIBindings) {
                                 'data-column-id': cl.col.columnId,
                                 class: cl.tdClasses,
                                 style: cl.tdDynamicStyle,
-                              }, [renderCellContent(item, cl.col, rowIndex, colIndexMap.get(cl.col.columnId) ?? 0)])
+                              }, [renderCellContent(item, cl.col, effectiveRowIndex, colIndexMap.get(cl.col.columnId) ?? 0)])
                             ),
                             // Right spacer for column virtualization
                             ...(rightSpacerWidth > 0 ? [

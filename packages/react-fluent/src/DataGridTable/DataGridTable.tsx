@@ -28,8 +28,11 @@ import type {
   ICellEditorProps,
   IOGridDataGridProps,
 } from '@alaarab/ogrid-react';
+import { isGroupHeader } from '@alaarab/ogrid-core';
+import type { IRowGroup, RowGroupingDisplayRow } from '@alaarab/ogrid-core';
 import {
   useDataGridTableOrchestration,
+  useRowGrouping,
   useColumnMeta,
   getHeaderFilterConfig,
   getCellRenderDescriptor,
@@ -145,6 +148,10 @@ interface FluentTableBodyProps<T> {
   visibleRange: { startIndex: number; endIndex: number; offsetTop: number; offsetBottom: number };
   columnRange: import('@alaarab/ogrid-core').IVisibleColumnRange | null;
   items: T[];
+  displayRows: RowGroupingDisplayRow<T>[];
+  isGroupingActive: boolean;
+  expandedGroups: Set<string>;
+  toggleGroup: (groupKey: string) => void;
   getRowId: (item: T) => string | number;
   selectedRowIds: Set<string | number>;
   visibleCols: IColumnDef<T>[];
@@ -156,6 +163,7 @@ interface FluentTableBodyProps<T> {
   hasCheckboxCol: boolean;
   hasRowNumbersCol: boolean;
   rowNumberOffset: number;
+  totalColCount: number;
   selectionRange: GridRowProps['selectionRange'];
   activeCell: GridRowProps['activeCell'];
   cutRange: GridRowProps['cutRange'];
@@ -169,9 +177,11 @@ interface FluentTableBodyProps<T> {
 function FluentTableBody<T>(props: FluentTableBodyProps<T>) {
   const {
     virtualScrollEnabled, visibleRange, columnRange,
-    items, getRowId, selectedRowIds, visibleCols, columnMeta,
+    items, displayRows, isGroupingActive, expandedGroups, toggleGroup,
+    getRowId, selectedRowIds, visibleCols, columnMeta,
     renderCellContent, handleSingleRowClick, handleRowCheckboxChange,
     lastMouseShiftRef, hasCheckboxCol, hasRowNumbersCol, rowNumberOffset,
+    totalColCount,
     selectionRange, activeCell, cutRange, copyRange, isDragging,
     editingCell, pinnedColumns, rowNumWidth,
   } = props;
@@ -232,18 +242,65 @@ function FluentTableBody<T>(props: FluentTableBodyProps<T>) {
     );
   };
 
+  const renderGroupHeaderRow = (group: IRowGroup<T>) => {
+    const isExpanded = expandedGroups.has(group.groupKey);
+    return (
+      <tr
+        key={`group-${group.groupKey}`}
+        style={{
+          background: 'var(--ogrid-bg-row-group, var(--ogrid-bg-hover, #f5f5f5))',
+          fontWeight: 500,
+        }}
+      >
+        <td colSpan={totalColCount} style={{ paddingLeft: `${group.depth * 16 + 8}px` }}>
+          <button
+            onClick={() => toggleGroup(group.groupKey)}
+            onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggleGroup(group.groupKey); } }}
+            tabIndex={0}
+            style={{
+              background: 'none',
+              border: 'none',
+              cursor: 'pointer',
+              padding: '2px 4px',
+              font: 'inherit',
+              fontWeight: 500,
+            }}
+          >
+            {isExpanded ? '\u25BC' : '\u25B6'} {group.displayText} ({group.itemCount})
+          </button>
+        </td>
+      </tr>
+    );
+  };
+
+  const renderDisplayRows = () => {
+    if (!isGroupingActive) {
+      if (virtualScrollEnabled) {
+        return items.slice(visibleRange.startIndex, visibleRange.endIndex + 1).map((item, i) =>
+          renderRow(item, visibleRange.startIndex + i)
+        );
+      }
+      return items.map((item, rowIndex) => renderRow(item, rowIndex));
+    }
+
+    let dataRowIndex = 0;
+    return displayRows.map((row, idx) => {
+      if (isGroupHeader(row)) {
+        return renderGroupHeaderRow(row.group);
+      }
+      const item = row as T;
+      const currentIndex = dataRowIndex++;
+      return renderRow(item, currentIndex);
+    });
+  };
+
   return (
     <TableBody>
-      {virtualScrollEnabled && visibleRange.offsetTop > 0 && (
+      {virtualScrollEnabled && !isGroupingActive && visibleRange.offsetTop > 0 && (
         <tr style={{ height: visibleRange.offsetTop }} aria-hidden />
       )}
-      {virtualScrollEnabled
-        ? items.slice(visibleRange.startIndex, visibleRange.endIndex + 1).map((item, i) =>
-            renderRow(item, visibleRange.startIndex + i)
-          )
-        : items.map((item, rowIndex) => renderRow(item, rowIndex))
-      }
-      {virtualScrollEnabled && visibleRange.offsetBottom > 0 && (
+      {renderDisplayRows()}
+      {virtualScrollEnabled && !isGroupingActive && visibleRange.offsetBottom > 0 && (
         <tr style={{ height: visibleRange.offsetBottom }} aria-hidden />
       )}
     </TableBody>
@@ -274,7 +331,10 @@ function DataGridTableInner<T>(props: IOGridDataGridProps<T>): React.ReactElemen
     menuPosition, closeContextMenu,
     headerFilterInput, statusBarConfig, showEmptyInGrid, onCellError,
     headerMenu,
+    groupBy,
   } = o;
+
+  const rowGrouping = useRowGrouping({ items, columns: props.columns, groupBy });
 
   // Pre-compute column styles and classNames via shared hook (avoids per-cell object creation).
   // addStickyPosition=true: Fluent UI's TableCell injects atomic `position: relative` via CSS-in-JS,
@@ -568,6 +628,10 @@ function DataGridTableInner<T>(props: IOGridDataGridProps<T>): React.ReactElemen
                     visibleRange={visibleRange}
                     columnRange={columnRange}
                     items={items}
+                    displayRows={rowGrouping.displayRows}
+                    isGroupingActive={rowGrouping.isGroupingActive}
+                    expandedGroups={rowGrouping.expandedGroups}
+                    toggleGroup={rowGrouping.toggleGroup}
                     getRowId={getRowId}
                     selectedRowIds={selectedRowIds}
                     visibleCols={visibleCols}
@@ -579,6 +643,7 @@ function DataGridTableInner<T>(props: IOGridDataGridProps<T>): React.ReactElemen
                     hasCheckboxCol={hasCheckboxCol}
                     hasRowNumbersCol={hasRowNumbersCol}
                     rowNumberOffset={rowNumberOffset}
+                    totalColCount={totalColCount}
                     selectionRange={selectionRange}
                     activeCell={interaction.activeCell}
                     cutRange={cutRange}

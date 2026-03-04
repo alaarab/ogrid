@@ -52,6 +52,10 @@ export type {
   BooleanCellSelectHandlers,
 } from '@alaarab/ogrid-core';
 
+// Row grouping
+export { isGroupHeader, buildGroupedRows } from '@alaarab/ogrid-core';
+export type { IRowGroup, IRowGroupingConfig, RowGroupingDisplayRow } from '@alaarab/ogrid-core';
+
 // Core utilities
 export {
   escapeCsvValue,
@@ -278,6 +282,7 @@ export {
   useColumnHeaderMenuState,
   useDataGridTableSetup,
   useFormulaBar,
+  useRowGrouping,
 } from './composables';
 
 // Composable types
@@ -353,6 +358,8 @@ export type {
   MaybeShallowRef,
   UseFormulaBarParams,
   UseFormulaBarResult,
+  UseRowGroupingParams,
+  UseRowGroupingResult,
 } from './composables';
 
 // View model utilities (for UI packages)

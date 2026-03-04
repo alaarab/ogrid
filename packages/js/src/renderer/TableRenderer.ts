@@ -1,6 +1,7 @@
 import type { RowId, CellEvent } from '../types/gridTypes';
 import type { IActiveCell, ISelectionRange } from '@alaarab/ogrid-core';
-import { getCellValue, buildHeaderRows, isInSelectionRange, ROW_NUMBER_COLUMN_WIDTH, ROW_NUMBER_COLUMN_ID, CHECKBOX_COLUMN_WIDTH, partitionColumnsForVirtualization, indexToColumnLetter, estimateHeaderMinWidth, formatDateForDisplay, DEFAULT_DATE_FORMAT } from '@alaarab/ogrid-core';
+import { getCellValue, buildHeaderRows, isInSelectionRange, ROW_NUMBER_COLUMN_WIDTH, ROW_NUMBER_COLUMN_ID, CHECKBOX_COLUMN_WIDTH, partitionColumnsForVirtualization, indexToColumnLetter, estimateHeaderMinWidth, formatDateForDisplay, DEFAULT_DATE_FORMAT, isGroupHeader } from '@alaarab/ogrid-core';
+import type { IRowGroup, RowGroupingDisplayRow } from '@alaarab/ogrid-core';
 import type { GridState } from '../state/GridState';
 import type { HeaderFilterState, HeaderFilterConfig } from '../state/HeaderFilterState';
 import type { VirtualScrollState } from '../state/VirtualScrollState';
@@ -889,11 +890,55 @@ export class TableRenderer<T> {
     th.appendChild(checkbox);
   }
 
+  private renderGroupHeaderRow(group: IRowGroup<unknown>, totalColSpan: number): HTMLTableRowElement {
+    const tr = document.createElement('tr');
+    tr.className = 'ogrid-group-header-row';
+    tr.setAttribute('data-group-key', group.groupKey);
+
+    const td = document.createElement('td');
+    td.colSpan = totalColSpan;
+
+    const isExpanded = this.state.expandedGroups.has(group.groupKey);
+    const indent = group.depth * 16;
+
+    const toggle = document.createElement('span');
+    toggle.className = 'ogrid-group-toggle';
+    toggle.textContent = isExpanded ? '\u25BC ' : '\u25B6 ';
+    toggle.style.marginLeft = `${indent}px`;
+
+    const label = document.createElement('span');
+    label.textContent = `${group.displayText} (${group.itemCount})`;
+
+    td.appendChild(toggle);
+    td.appendChild(label);
+    td.style.cursor = 'pointer';
+    td.addEventListener('click', () => {
+      this.state.toggleGroup(group.groupKey);
+    });
+
+    tr.appendChild(td);
+    return tr;
+  }
+
   private renderBody(): void {
     if (!this.tbody) return;
 
     const visibleCols = this.state.visibleColumnDefs;
-    const { items } = this.state.getProcessedItems();
+    const isGrouped = this.state.isGrouped;
+
+    // When grouped, use grouped display rows; otherwise use regular items
+    let items: T[];
+    let groupedDisplayRows: RowGroupingDisplayRow<T>[] | null = null;
+    if (isGrouped) {
+      const result = this.state.getGroupedDisplayRows();
+      groupedDisplayRows = result.displayRows;
+      // Cast to T[] for length/indexing - group headers are filtered out in the loop
+      items = groupedDisplayRows as unknown as T[];
+    } else {
+      const result = this.state.getProcessedItems();
+      items = result.items;
+    }
+
     const hasCheckbox = this.hasCheckboxColumn();
     const hasRowNumbers = this.hasRowNumbersColumn();
     const colOffset = this.getColOffset();
@@ -962,6 +1007,14 @@ export class TableRenderer<T> {
     for (let rowIndex = startIndex; rowIndex <= endIndex; rowIndex++) {
       const item = items[rowIndex];
       if (!item) continue;
+
+      // Handle group header rows
+      if (isGrouped && groupedDisplayRows && isGroupHeader(groupedDisplayRows[rowIndex])) {
+        const groupRow = groupedDisplayRows[rowIndex] as { __ogridGroupHeader: true; group: IRowGroup<T> };
+        this.tbody.appendChild(this.renderGroupHeaderRow(groupRow.group as IRowGroup<unknown>, totalColSpan));
+        continue;
+      }
+
       const rowId = this.state.getRowId(item);
       const tr = document.createElement('tr');
       tr.className = 'ogrid-row';

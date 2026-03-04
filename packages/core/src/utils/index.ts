@@ -105,3 +105,4 @@ export type { IResponsiveColumnsConfig } from './responsiveColumns';
 export { formatDateForDisplay, parseUserInputDate, getDateInputPlaceholder, DEFAULT_DATE_FORMAT } from './dateFormatter';
 export { handleBooleanCellPointerDown } from './checkboxUtils';
 export type { BooleanCellSelectHandlers } from './checkboxUtils';
+export { isGroupHeader, getGroupKey, buildGroupedRows } from './rowGrouping';

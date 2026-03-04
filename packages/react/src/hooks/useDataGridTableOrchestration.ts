@@ -98,6 +98,7 @@ export interface UseDataGridTableOrchestrationResult<T> {
   fitToContent: boolean;
   showColumnLetters: boolean;
   showNameBox: boolean;
+  groupBy: string[] | undefined;
 
   // Memoized callback groups (for renderCellContent)
   editCallbacks: {
@@ -254,6 +255,7 @@ export function useDataGridTableOrchestration<T>(
     showColumnLetters = false,
     showNameBox = false,
     onActiveCellChange,
+    groupBy,
   } = props;
 
   // ── Derived values ──────────────────────────────────────────────────────
@@ -431,6 +433,7 @@ export function useDataGridTableOrchestration<T>(
     fitToContent,
     showColumnLetters,
     showNameBox,
+    groupBy,
 
     // Memoized callback groups
     editCallbacks,

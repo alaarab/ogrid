@@ -234,6 +234,9 @@ const OGRID_THEME_CSS = `
   --ogrid-bg-selected: #1a3a5c;
   --ogrid-loading-bg: rgba(0, 0, 0, 0.7);
 }
+.ogrid-group-header-row { background: var(--ogrid-bg-row-group, var(--ogrid-bg-hover, #f5f5f5)); font-weight: 500; }
+.ogrid-group-header-row td { padding: 6px 10px; cursor: pointer; }
+.ogrid-group-toggle { display: inline-block; width: 16px; font-size: 10px; }
 `;
 
 export class OGrid<T> {
@@ -1019,6 +1022,26 @@ export class OGrid<T> {
   // - renderHeaderFilterPopover()      -> this.renderingHelper.renderHeaderFilterPopover()
   // - renderSideBar()                  -> this.renderingHelper.renderSideBar()
   // - renderLoadingOverlay()           -> this.renderingHelper.renderLoadingOverlay()
+
+  /** Set which columns to group by. Pass empty array to clear grouping. */
+  setGroupBy(columnIds: string[]): void {
+    this.state.setGroupBy(columnIds);
+  }
+
+  /** Toggle a group open/closed by its key. */
+  toggleGroup(groupKey: string): void {
+    this.state.toggleGroup(groupKey);
+  }
+
+  /** Expand all groups. */
+  expandAllGroups(): void {
+    this.state.expandAllGroups();
+  }
+
+  /** Collapse all groups. */
+  collapseAllGroups(): void {
+    this.state.collapseAllGroups();
+  }
 
   /** Subscribe to grid events. */
   on<K extends keyof OGridEvents<T>>(event: K, handler: (data: OGridEvents<T>[K]) => void): void {

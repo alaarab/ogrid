@@ -185,6 +185,9 @@ export interface OGridOptions<T> {
    */
   workerSort?: boolean | 'auto';
 
+  /** Column IDs to group rows by. Groups are collapsed by default. */
+  groupBy?: string[];
+
   /** Fixed row height in pixels. Overrides default row height (36px). */
   rowHeight?: number;
 

@@ -14,7 +14,11 @@ import {
   estimateHeaderMinWidth,
   partitionColumnsForVirtualization,
   handleBooleanCellPointerDown,
+  buildGroupedRows,
+  isGroupHeader,
+  flattenColumns,
 } from '@alaarab/ogrid-core';
+import type { IRowGroup, RowGroupingDisplayRow } from '@alaarab/ogrid-core';
 import {
   getHeaderFilterConfig,
   getCellRenderDescriptor,
@@ -131,6 +135,76 @@ export abstract class BaseDataGridTableComponent<T = unknown> {
 
   readonly items = computed(() => this.getProps()?.items ?? []);
   readonly getRowId = computed(() => this.getProps()?.getRowId ?? ((item: T) => (item as Record<string, unknown>)['id'] as RowId));
+
+  // Row grouping
+  readonly groupBy = computed(() => this.getProps()?.groupBy);
+  readonly isGroupingActive = computed(() => {
+    const gb = this.groupBy();
+    return !!gb && gb.length > 0;
+  });
+  readonly rowGroupExpandedGroups = signal<Set<string>>(new Set());
+  private prevGroupByKey = '';
+
+  /** Flat columns for grouping (buildGroupedRows needs IColumnDef[]). */
+  private readonly flatGroupingCols = computed(
+    () => flattenColumns((this.getProps()?.columns ?? []) as IColumnDef<T>[]) as IColumnDef<T>[],
+  );
+
+  /** Group tree (without expansion applied) for auto-expand and expandAll. */
+  private readonly groupTree = computed<IRowGroup<T>[]>(() => {
+    if (!this.isGroupingActive()) return [];
+    const { groupTree: tree } = buildGroupedRows(this.items(), this.flatGroupingCols(), this.groupBy()!, new Set());
+    return tree;
+  });
+
+  /** Display rows with group headers interspersed. Falls back to items when not grouping. */
+  readonly displayRows = computed<RowGroupingDisplayRow<T>[]>(() => {
+    const items = this.items();
+    if (!this.isGroupingActive()) return items;
+
+    // Auto-expand top-level groups when groupBy changes
+    const key = this.groupBy()?.join(',') ?? '';
+    if (key !== this.prevGroupByKey) {
+      this.prevGroupByKey = key;
+      if (key) {
+        const topKeys = new Set(this.groupTree().map((g) => g.groupKey));
+        this.rowGroupExpandedGroups.set(topKeys);
+      } else {
+        this.rowGroupExpandedGroups.set(new Set());
+      }
+    }
+
+    const { displayRows: rows } = buildGroupedRows(items, this.flatGroupingCols(), this.groupBy()!, this.rowGroupExpandedGroups());
+    return rows;
+  });
+
+  toggleGroup(groupKey: string): void {
+    const next = new Set(this.rowGroupExpandedGroups());
+    if (next.has(groupKey)) {
+      next.delete(groupKey);
+    } else {
+      next.add(groupKey);
+    }
+    this.rowGroupExpandedGroups.set(next);
+  }
+
+  isRowGroupHeader = isGroupHeader;
+
+  /** Track function for @for loop that handles both group headers and data rows. */
+  trackRow(index: number, row: unknown): string | number {
+    if (isGroupHeader(row as RowGroupingDisplayRow<T>)) {
+      return `__group__${(row as { group: IRowGroup<T> }).group.groupKey}`;
+    }
+    return this.getRowId()(row as T);
+  }
+
+  /** Total column count including checkbox and row number columns. Used for group header colspan. */
+  readonly totalColCount = computed(() => {
+    let count = this.visibleCols().length;
+    if (this.hasCheckboxCol()) count++;
+    if (this.hasRowNumbersCol()) count++;
+    return count;
+  });
   readonly isLoading = computed(() => this.getProps()?.isLoading ?? false);
   readonly loadingMessage = computed(() => 'Loading\u2026');
   readonly layoutModeFit = computed(() => (this.getProps()?.layoutMode ?? 'fill') === 'content');
@@ -195,10 +269,10 @@ export abstract class BaseDataGridTableComponent<T = unknown> {
     return this.vsVisibleRange().offsetBottom;
   });
   readonly vsVisibleItems = computed(() => {
-    const items = this.items();
-    if (!this.vsEnabled()) return items;
+    const rows = this.isGroupingActive() ? this.displayRows() : this.items();
+    if (!this.vsEnabled()) return rows;
     const range = this.vsVisibleRange();
-    return items.slice(range.startIndex, Math.min(range.endIndex + 1, items.length));
+    return rows.slice(range.startIndex, Math.min(range.endIndex + 1, rows.length));
   });
   readonly vsStartIndex = computed(() => {
     if (!this.vsEnabled()) return 0;
