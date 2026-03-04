@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import type { RefObject } from 'react';
 import type { IColumnDef } from '../types';
-import { CHECKBOX_COLUMN_WIDTH, DEFAULT_MIN_COLUMN_WIDTH, CELL_PADDING } from '@alaarab/ogrid-core';
+import { CHECKBOX_COLUMN_WIDTH, DEFAULT_MIN_COLUMN_WIDTH, CELL_PADDING, estimateHeaderMinWidth } from '@alaarab/ogrid-core';
 
 export interface UseTableLayoutParams<T> {
   wrapperRef: RefObject<HTMLDivElement | null>;
@@ -77,7 +77,7 @@ export function useTableLayout<T>(
   const minTableWidth = useMemo(() => {
     const checkboxW = hasCheckboxCol ? CHECKBOX_COLUMN_WIDTH : 0;
     return visibleCols.reduce(
-      (sum, c) => sum + (c.minWidth ?? DEFAULT_MIN_COLUMN_WIDTH) + CELL_PADDING,
+      (sum, c) => sum + (c.minWidth ?? estimateHeaderMinWidth(c.name)) + CELL_PADDING,
       checkboxW
     );
   }, [visibleCols, hasCheckboxCol]);
@@ -98,10 +98,11 @@ export function useTableLayout<T>(
     const checkboxW = hasCheckboxCol ? CHECKBOX_COLUMN_WIDTH : 0;
     return visibleCols.reduce((sum, c) => {
       const override = columnSizingOverrides[c.columnId];
+      const headerMin = c.minWidth ?? estimateHeaderMinWidth(c.name);
       const w = override
         ? override.widthPx
-        : (c.idealWidth ?? c.defaultWidth ?? c.minWidth ?? DEFAULT_MIN_COLUMN_WIDTH);
-      return sum + Math.max(c.minWidth ?? DEFAULT_MIN_COLUMN_WIDTH, w) + CELL_PADDING;
+        : (c.idealWidth ?? c.defaultWidth ?? headerMin);
+      return sum + Math.max(headerMin, w) + CELL_PADDING;
     }, checkboxW);
   }, [visibleCols, columnSizingOverrides, hasCheckboxCol]);
 

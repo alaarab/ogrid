@@ -11,6 +11,43 @@ export const AUTOSIZE_EXTRA_PX = 16;
 export const AUTOSIZE_MAX_PX = 520;
 
 /**
+ * Pixels of overhead added on top of estimated text width when computing the
+ * header-based minimum column width. Accounts for:
+ *   - 20px horizontal cell padding (10px × 2 sides)
+ *   - 20px column-options menu button (visibility: hidden, but still occupies layout space)
+ *   - 4px flex gap between text and menu button
+ */
+const HEADER_OVERHEAD_PX = 44;
+
+/**
+ * Approximate character width for the header font (14px bold).
+ * Used to estimate the minimum column width needed to avoid header text truncation
+ * without requiring a DOM measurement.
+ */
+const HEADER_CHAR_WIDTH_PX = 8;
+
+/**
+ * Estimate the minimum column width (in pixels) needed to display the given
+ * header name without truncation.
+ *
+ * This is a DOM-free approximation used at initialization time, before any
+ * actual measurements are available. It uses a fixed character-width estimate
+ * for the default header font (14px bold), plus overhead for padding and the
+ * column-options menu button.
+ *
+ * The result is always at least DEFAULT_MIN_COLUMN_WIDTH.
+ *
+ * @param headerName - The column's display name (used for text-length estimation).
+ * @returns Estimated minimum pixel width to fit the header without ellipsis.
+ */
+export function estimateHeaderMinWidth(headerName: string): number {
+  return Math.max(
+    DEFAULT_MIN_COLUMN_WIDTH,
+    Math.ceil(headerName.length * HEADER_CHAR_WIDTH_PX + HEADER_OVERHEAD_PX)
+  );
+}
+
+/**
  * Measure the ideal width for a header cell by temporarily expanding all
  * overflow-hidden descendants to their natural width, then measuring the
  * content container. Adds resize handle width + th padding.
