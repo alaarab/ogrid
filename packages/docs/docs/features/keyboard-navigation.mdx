@@ -10,7 +10,7 @@ import TabItem from '@theme/TabItem';
 
 # Keyboard Navigation
 
-OGrid supports comprehensive keyboard navigation for moving between cells, editing values, selecting ranges, and performing clipboard and undo operations -- all without touching the mouse.
+Navigate, edit, select, and operate on cells entirely from the keyboard. Click a cell to make it active, then use the shortcuts below.
 
 ## Live Demo
 
@@ -128,7 +128,7 @@ const grid = new OGrid(document.getElementById('grid'), {
   </TabItem>
 </Tabs>
 
-Click any cell to make it the active cell, then use the keyboard to navigate and edit.
+Click a cell to focus it, then use the keyboard to navigate and edit.
 
 ## Navigation
 
@@ -206,9 +206,9 @@ Copied data uses tab-separated format compatible with Excel and Google Sheets. M
 
 Undo/redo requires the `onUndo`, `onRedo`, `canUndo`, and `canRedo` props to be wired up (typically via the `useUndoRedo` hook).
 
-## How It Works
+## How it works
 
-Keyboard navigation is handled by the `useKeyboardNavigation` hook in core, which is automatically wired into the grid when `cellSelection` is enabled (the default). The hook listens for `keydown` events on the grid wrapper element and translates them into active cell movements, selection range changes, or editing actions.
+The `useKeyboardNavigation` hook fires automatically when `cellSelection` is enabled (the default). It listens for `keydown` events on the grid wrapper and translates them into cell movement, selection range changes, or editing actions.
 
 ### Disabling Cell Selection
 
@@ -242,4 +242,4 @@ On macOS, Ctrl is replaced by the Command key for all shortcuts (Cmd+C, Cmd+V, C
 
 - [Context Menu](./context-menu) -- right-click menu mirrors keyboard shortcuts
 - [Status Bar](./status-bar) -- shows aggregations for keyboard-selected ranges
-- [Column Pinning](./column-pinning) -- navigation works seamlessly across pinned and scrollable columns
+- [Column Pinning](./column-pinning) -- navigation works across pinned and scrollable columns

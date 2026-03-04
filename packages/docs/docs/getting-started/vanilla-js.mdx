@@ -1,14 +1,14 @@
 ---
 sidebar_position: 4
 title: Vanilla JS
-description: OGrid without a framework — pure JavaScript, class-based API
+description: OGrid without a framework, pure JavaScript, class-based API
 ---
 
 import VanillaJSDemo from '@site/src/components/demos/VanillaJSDemo';
 
 # Vanilla JS
 
-You don't need React, Angular, or Vue to use OGrid. The `@alaarab/ogrid-js` package gives you a full-featured, sortable, filterable, editable data grid using a simple class-based API — just a container element and an options object.
+You don't need React, Angular, or Vue to use OGrid. The `@alaarab/ogrid-js` package gives you a full-featured data grid using a class-based API: pass a container element and an options object.
 
 It's a good fit if you're working on an internal tool, a dashboard that can't take on a framework, or you're embedding a grid inside an existing non-framework app.
 
@@ -28,7 +28,7 @@ Or drop it into an HTML file directly using a CDN (no build tools needed):
 
 ## Build a real example
 
-Let's make an order management dashboard. It tracks orders by status, amount, and customer — sortable, filterable, and editable inline.
+Let's make an order management dashboard. It tracks orders by status, amount, and customer, with sorting, filtering, and inline editing.
 
 ```html
 <div id="orders-grid" style="height: 500px;"></div>
@@ -89,15 +89,15 @@ Let's make an order management dashboard. It tracks orders by status, amount, an
 
 ## What you get out of the box
 
-- **Sorting** — click column headers
-- **Filtering** — multi-select dropdown on the Status column
-- **Inline editing** — double-click any Amount cell to edit
-- **Cell selection** — click and drag to select ranges
-- **Keyboard navigation** — arrow keys, Tab, Home/End, Ctrl+Arrow
-- **Clipboard** — Ctrl+C/V/X works like a spreadsheet
-- **Undo/redo** — Ctrl+Z/Y
-- **Status bar** — row count and selection aggregations
-- **Pagination** — page controls at the bottom
+- **Sorting** -- click column headers
+- **Filtering** -- multi-select dropdown on the Status column
+- **Inline editing** -- double-click any Amount cell to edit
+- **Cell selection** -- click and drag to select ranges
+- **Keyboard navigation** -- arrow keys, Tab, Home/End, Ctrl+Arrow
+- **Clipboard** -- Ctrl+C/V/X works like a spreadsheet
+- **Undo/redo** -- Ctrl+Z/Y
+- **Status bar** -- row count and selection aggregations
+- **Pagination** -- page controls at the bottom
 
 ## Constructor
 
@@ -105,7 +105,7 @@ Let's make an order management dashboard. It tracks orders by status, amount, an
 const grid = new OGrid(containerElement, options);
 ```
 
-The container element defines where the grid renders. OGrid fills it completely — give it an explicit height (CSS or inline).
+The container element defines where the grid renders. OGrid fills it completely, so give it an explicit height (CSS or inline).
 
 ## Key options
 
@@ -211,6 +211,6 @@ grid.destroy();
 
 ## What's next?
 
-- [JS API Reference](../api/js-api) — full method and options reference
-- [Features](../features/sorting) — all features work identically in the JS package
-- [Theming Guide](../guides/theming) — deep dive into CSS customization
+- [JS API Reference](../api/js-api) -- full method and options reference
+- [Features](../features/sorting) -- all features work identically in the JS package
+- [Theming Guide](../guides/theming) -- deep dive into CSS customization

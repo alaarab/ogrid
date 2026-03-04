@@ -10,21 +10,21 @@ import TabItem from '@theme/TabItem';
 
 # Formulas
 
-Type `=SUM(A1:A5)` into any editable cell and it evaluates instantly. Change a value in A1 and everything that depends on it recalculates. It works like Excel, built right into your grid — no external library, no backend call, no wiring required.
+Type `=SUM(A1:A5)` into any editable cell and it evaluates instantly. Change a value in A1 and everything that depends on it recalculates. No external library, no backend call, no wiring required.
 
-The engine adds ~12KB gzipped and is completely **tree-shakeable** — grids without `formulas={true}` don't pay any cost.
+The engine adds ~12KB gzipped and is completely tree-shakeable. Grids without `formulas={true}` don't pay any cost.
 
 ## Live Demo
 
 <FormulasDemo />
 
 :::tip Try it in your framework
-The demo uses Radix UI styling. The formula engine itself is framework-agnostic — same behavior in React, Angular, Vue, and Vanilla JS.
+The demo uses Radix UI styling. The formula engine is framework-agnostic -- same behavior in React, Angular, Vue, and Vanilla JS.
 :::
 
 ## Why bother with in-grid formulas?
 
-If you've ever had users copy grid data into Excel to calculate totals or derived fields — then paste it back — formulas solve that. Users can build their own calculations directly in the table, results stay live, and you don't have to build a calculator UI.
+If you've ever had users copy grid data into Excel to calculate totals, then paste it back, formulas solve that. Users build their own calculations directly in the table, results stay live, and you don't have to ship a calculator UI.
 
 ## Enable formulas
 
@@ -68,7 +68,7 @@ function App() {
 ```
 
 :::tip Switching UI libraries
-Same props across all React packages — just change the import:
+Same props across all React packages -- just change the import:
 
 - **Radix** (lightweight, default): `from '@alaarab/ogrid-react-radix'`
 - **Fluent UI** (Microsoft 365 / SPFx): `from '@alaarab/ogrid-react-fluent'`  -  wrap in `<FluentProvider>`
@@ -113,7 +113,7 @@ Same API across Angular packages. Change the import:
 - **Angular Material**: `from '@alaarab/ogrid-angular-material'`
 - **PrimeNG**: `from '@alaarab/ogrid-angular-primeng'`
 
-All components are standalone — no NgModule required.
+All components are standalone, no NgModule required.
 :::
 
   </TabItem>
@@ -185,7 +185,7 @@ formulaState.setFormula(2, 0, '=A1+B1', grid.getApi().getDataAccessor());
 
 ## Entering formulas
 
-Type any value starting with `=` into an editable cell. The engine parses and evaluates it, then shows the result. The formula string is stored separately from your data — your `data[]` array is never modified by formulas.
+Type any value starting with `=` into an editable cell. The engine parses and evaluates it, then shows the result. The formula string is stored separately from your data. Your `data[]` array is never modified by formulas.
 
 ```
 =A1+B1                        → adds two cells
@@ -196,7 +196,7 @@ Type any value starting with `=` into an editable cell. The engine parses and ev
 
 ## Pre-loading formulas
 
-Use `initialFormulas` to seed formulas when the grid mounts — useful for reports with fixed summary rows:
+Use `initialFormulas` to seed formulas when the grid mounts, useful for reports with fixed summary rows:
 
 ```tsx
 <OGrid
@@ -213,24 +213,24 @@ Coordinates are 0-based: `col` is the position in your flat columns array, `row`
 
 ## How recalculation works
 
-The engine builds a dependency graph. When A1 changes, it finds every formula that references A1, then recalculates them in topological order — dependents of dependents are handled correctly. Circular references produce a `#CIRC!` error instead of an infinite loop.
+The engine maintains a dependency graph. When A1 changes, it recalculates every formula that depends on it in topological order, including dependents of dependents. Circular references produce a `#CIRC!` error rather than an infinite loop.
 
 ## Formula-aware copy, paste, and fill
 
 When `formulas` is enabled:
 
-- **Copy** — copies the formula string (`=SUM(A1:A5)`), not the computed value
-- **Paste** — if the pasted value starts with `=`, it becomes a formula in the target cell
-- **Fill handle** — dragging a formula cell down adjusts relative references. `=A1+B1` dragged down becomes `=A2+B2`. Lock references with `$`: `=$A$1` never adjusts.
+- **Copy** -- copies the formula string (`=SUM(A1:A5)`), not the computed value
+- **Paste** -- if the pasted value starts with `=`, it becomes a formula in the target cell
+- **Fill handle** -- dragging a formula cell down adjusts relative references. `=A1+B1` dragged down becomes `=A2+B2`. Lock references with `$`: `=$A$1` never adjusts.
 
 ## Cell reference syntax
 
 | Syntax | Example | What it means |
 |--------|---------|---------|
-| Relative | `A1` | Column A, Row 1 — adjusts when filled |
+| Relative | `A1` | Column A, Row 1 -- adjusts when filled |
 | Absolute column | `$A1` | Column A locked, row adjusts |
 | Absolute row | `A$1` | Row 1 locked, column adjusts |
-| Fully absolute | `$A$1` | Both locked — never adjusts |
+| Fully absolute | `$A$1` | Both locked -- never adjusts |
 | Range | `A1:B5` | Rectangular block from A1 to B5 |
 | Named range | `Revenue` | Resolves to a defined cell or range |
 | Cross-sheet | `Sheet2!A1` | Cell A1 from another sheet |
@@ -249,7 +249,7 @@ Give meaningful names to cells or ranges you reference often:
 />
 ```
 
-Now write `=SUM(Revenue)` or `=A1*TaxRate` instead of cryptic coordinates. Named ranges are case-insensitive — `Revenue`, `revenue`, and `REVENUE` all resolve to the same range.
+Now write `=SUM(Revenue)` or `=A1*TaxRate` instead of cryptic coordinates. Named ranges are case-insensitive -- `Revenue`, `revenue`, and `REVENUE` all resolve to the same range.
 
 You can also manage them at runtime:
 
@@ -304,9 +304,9 @@ Reference cells from other grids by registering sheet accessors:
 ```
 
 Then write:
-- `=Sheet2!A1` — single cell from Sheet2
-- `=SUM(Sheet2!A1:A10)` — range from Sheet2
-- `='Sales Data'!B5` — quoted name for sheets with spaces
+- `=Sheet2!A1` -- single cell from Sheet2
+- `=SUM(Sheet2!A1:A10)` -- range from Sheet2
+- `='Sales Data'!B5` -- quoted name for sheets with spaces
 
 Referencing an unregistered sheet produces a `#REF!` error.
 
@@ -331,15 +331,15 @@ Formula errors display in red (controlled by `--ogrid-formula-error-color`):
 |-------|---------|
 | `#REF!` | Cell reference points outside the grid, or unregistered sheet |
 | `#DIV/0!` | Division by zero |
-| `#VALUE!` | Wrong argument type — text where a number was expected |
-| `#NAME?` | Unknown function name — check spelling |
+| `#VALUE!` | Wrong argument type -- text where a number was expected |
+| `#NAME?` | Unknown function name -- check spelling |
 | `#CIRC!` | Circular reference detected |
 | `#N/A` | No match found (VLOOKUP, MATCH, XLOOKUP) |
-| `#NUM!` | Invalid numeric argument — e.g., LARGE with k larger than the list |
+| `#NUM!` | Invalid numeric argument -- e.g., LARGE with k larger than the list |
 | `#ERROR!` | General parse or eval error |
 
 :::tip Pro tip
-`#NAME?` is almost always a typo. Formula function names are case-insensitive — `sum`, `SUM`, and `Sum` all work — but `=SUMM(A1:A5)` gives `#NAME?`.
+`#NAME?` is almost always a typo. Formula function names are case-insensitive (`sum`, `SUM`, and `Sum` all work), but `=SUMM(A1:A5)` gives `#NAME?`.
 :::
 
 ## All 93 built-in functions
@@ -369,7 +369,7 @@ Formula errors display in red (controlled by `--ogrid-formula-error-color`):
 
 | Prop | Type | Default | Description |
 |------|------|---------|-------------|
-| `formulas` | `boolean` | `false` | Enable formula support. Tree-shakeable — zero cost when not used. |
+| `formulas` | `boolean` | `false` | Enable formula support. Tree-shakeable -- zero cost when not used. |
 | `initialFormulas` | `Array<{ col, row, formula }>` | — | Pre-load formulas on mount (0-based col/row indices). |
 | `onFormulaRecalc` | `(result: IRecalcResult) => void` | — | Called after each recalculation with the updated cell list. |
 | `formulaFunctions` | `Record<string, IFormulaFunction>` | — | Custom functions to register alongside built-ins. |
@@ -378,10 +378,10 @@ Formula errors display in red (controlled by `--ogrid-formula-error-color`):
 
 ## Next steps
 
-- [Editing & Clipboard](./editing) — formula-aware copy, paste, and fill handle
-- [Cell References](./cell-references) — Excel-style column letters and the name box
-- [CSV Export](./csv-export) — export formula strings or computed values
-- [Status Bar](./status-bar) — live SUM/AVERAGE/COUNT on selected cells
+- [Editing & Clipboard](./editing) -- formula-aware copy, paste, and fill handle
+- [Cell References](./cell-references) -- Excel-style column letters and the name box
+- [CSV Export](./csv-export) -- export formula strings or computed values
+- [Status Bar](./status-bar) -- live SUM/AVERAGE/COUNT on selected cells
 
 ## Community
 

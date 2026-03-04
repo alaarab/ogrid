@@ -161,9 +161,9 @@ const grid = new OGrid(document.getElementById('grid'), {
 
 Right-click a cell to see the context menu with all available actions.
 
-## How It Works
+## How it works
 
-The context menu is built in and requires no additional configuration. It appears when the user right-clicks on a data cell. Right-clicking on headers, empty space, or outside the grid does not open the menu.
+The context menu is built in. It appears on data cell right-clicks -- no configuration needed.
 
 ### Built-in Menu Items
 
@@ -198,13 +198,9 @@ The Undo and Redo items reflect their availability through the `canUndo` and `ca
 
 If `onUndo` and `onRedo` are not provided, the undo/redo items still appear but do nothing.
 
-### Cell-Only Activation
+### Cell-only activation
 
-The context menu only opens on cell right-clicks. This is intentional:
-
-- **Header right-click**: default browser context menu (no grid menu).
-- **Empty space right-click**: default browser context menu.
-- **Cell right-click**: grid context menu with actions scoped to the current selection.
+Right-clicking a header or empty space shows the browser's default context menu. The grid menu only appears on data cell right-clicks, with actions scoped to the current selection.
 
 ### Copy/Cut Disabled State
 

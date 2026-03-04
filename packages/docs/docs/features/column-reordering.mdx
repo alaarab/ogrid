@@ -180,9 +180,9 @@ const grid = new OGrid(document.getElementById('grid'), {
 
 Drag any column header to rearrange it. A vertical indicator line shows where the column will be placed.
 
-## How It Works
+## How it works
 
-Set `columnReorder` to `true` on the grid to enable drag-and-drop column reordering. When a user presses and drags a column header at least 5 pixels horizontally, the grid enters reorder mode:
+Set `columnReorder` to `true`. When a user drags a column header at least 5 pixels horizontally, the grid enters reorder mode:
 
 1. A vertical drop indicator appears between columns as the user drags.
 2. On mouse-up, the column is moved to the target position.
@@ -318,11 +318,9 @@ const columns = [
 
 In this example, "ID" and "Name" can be swapped with each other but cannot be dragged into the unpinned section. The unpinned columns ("Email", "Department", "Salary") can be freely rearranged among themselves.
 
-### Edge Cases
+### Edge cases
 
-- **Column groups:** Group headers are not draggable. Only leaf columns (with a `columnId`) participate in reordering.
-- **Resize handle zone:** The rightmost 8 pixels of each header cell are reserved for column resizing. Dragging in that zone starts a resize, not a reorder.
-- **Minimum drag distance:** A 5-pixel horizontal threshold prevents accidental reorders from clicks.
+Group headers are not draggable -- only leaf columns with a `columnId` can be reordered. The rightmost 8 pixels of each header cell are reserved for column resizing, so dragging there starts a resize instead. The 5-pixel horizontal threshold prevents accidental reorders from ordinary clicks.
 
 ## Grid API
 

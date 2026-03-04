@@ -6,7 +6,7 @@ sidebar_position: 1
 
 # Editor Integration (MCP)
 
-`@alaarab/ogrid-mcp` connects your AI coding assistant to OGrid documentation — so instead of switching tabs to look things up, you can just ask your editor while you code.
+`@alaarab/ogrid-mcp` connects your AI coding assistant to OGrid documentation. Instead of switching tabs to look things up, you can ask your editor while you code.
 
 It also includes a **live testing bridge** that lets your editor read and control an OGrid instance running in your browser in real time.
 
@@ -18,7 +18,7 @@ MCP (Model Context Protocol) is a standard that lets editors like Claude Code an
 - Pull up specific API references without leaving your editor
 - Inspect and interact with a running grid during development
 
-You don't need to understand the protocol to use it — just run one command and your editor gains access.
+You don't need to understand the protocol to use it. Run one command and your editor gains access.
 
 ## Connect to your editor
 
@@ -28,7 +28,7 @@ You don't need to understand the protocol to use it — just run one command and
 claude mcp add ogrid -- npx -y @alaarab/ogrid-mcp
 ```
 
-That's it. The docs are bundled in the package — no config file needed.
+That's it. The docs are bundled in the package, no config file needed.
 
 ### Claude Desktop
 
@@ -72,13 +72,13 @@ Show me how to use the formula engine in Vue.
 Help me migrate from AG Grid to OGrid.
 ```
 
-The MCP server searches through the full documentation — features, API references, getting started guides, and code examples — and returns the relevant sections along with your context.
+The MCP server searches through the full documentation (features, API references, getting started guides, and code examples) and returns the relevant sections along with your context.
 
 ---
 
 ## Available tools
 
-These are what the MCP server provides to your editor. You don't call them directly — your editor uses them automatically when you ask questions.
+These are what the MCP server provides to your editor. You don't call them directly; your editor uses them automatically when you ask questions.
 
 ### `search_docs`
 
@@ -89,9 +89,9 @@ search_docs query="server-side data" framework="react"
 ```
 
 Parameters:
-- `query` (required) — what you're looking for
-- `framework` (optional) — `react`, `angular`, `vue`, or `js`
-- `category` (optional) — `features`, `getting-started`, `guides`, or `api`
+- `query` (required): what you're looking for
+- `framework` (optional): `react`, `angular`, `vue`, or `js`
+- `category` (optional): `features`, `getting-started`, `guides`, or `api`
 
 ### `list_docs`
 
@@ -133,7 +133,7 @@ Resources can be read by your editor without calling a tool explicitly.
 
 | Resource | Description |
 |----------|-------------|
-| `ogrid://quick-reference` | Key API overview — props, column definitions, IOGridApi, filter types |
+| `ogrid://quick-reference` | Key API overview: props, column definitions, IOGridApi, filter types |
 | `ogrid://docs/{path}` | Any documentation page by path (e.g. `ogrid://docs/features/filtering`) |
 | `ogrid://migration-guide` | Step-by-step guide for migrating from AG Grid to OGrid |
 

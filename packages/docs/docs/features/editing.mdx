@@ -12,17 +12,17 @@ import TabItem from '@theme/TabItem';
 
 # Editing & Clipboard
 
-Double-click a cell to edit it. Hit Enter to save, Escape to cancel. It feels like a spreadsheet because it's built to work like one — with clipboard paste, drag-to-fill, and full undo/redo out of the box.
+Double-click a cell to edit it. Enter saves, Escape cancels. Clipboard paste, drag-to-fill, and full undo/redo are all included.
 
 <CellEditingDemo />
 
 :::tip Try it in your framework
-The demo above uses Radix UI for styling. Each framework renders editors with its native components — dropdowns, date pickers, and inputs that match your design system.
+The demo above uses Radix UI for styling. Each framework renders editors with its native components: dropdowns, date pickers, and inputs that match your design system.
 :::
 
 ## Get started in 5 minutes
 
-Here's a realistic setup: an employee table with text, dropdown, and numeric columns — including validation that rejects bad salary values before they're saved.
+Here's a realistic setup: an employee table with text, dropdown, and numeric columns, including validation that rejects bad salary values before they're saved.
 
 <Tabs groupId="framework">
   <TabItem value="react" label="React" default>
@@ -86,7 +86,7 @@ function App() {
 ```
 
 :::tip Switching UI libraries
-Same props across all React packages — just change the import:
+Same props across all React packages -- just change the import:
 
 - **Radix** (lightweight, default): `from '@alaarab/ogrid-react-radix'`
 - **Fluent UI** (Microsoft 365 / SPFx): `from '@alaarab/ogrid-react-fluent'`  -  wrap in `<FluentProvider>`
@@ -143,7 +143,7 @@ Same component API across Angular packages. Change the import:
 - **Angular Material**: `from '@alaarab/ogrid-angular-material'`
 - **PrimeNG**: `from '@alaarab/ogrid-angular-primeng'`
 
-All components are standalone — no NgModule required.
+All components are standalone, no NgModule required.
 :::
 
   </TabItem>
@@ -256,18 +256,18 @@ That single setup gives you inline editing, clipboard paste, fill handle, and fu
 
 Double-click or press **F2** to open the editor. When you're done:
 
-- **Enter** — saves and moves focus down
-- **Tab** — saves and moves focus right
-- **Escape** — cancels, restores the original value
+- **Enter** -- saves and moves focus down
+- **Tab** -- saves and moves focus right
+- **Escape** -- cancels, restores the original value
 
 ### Which editor should I use?
 
 | `cellEditor` | When to use it |
 |--------------|----------------|
-| `'text'` (default) | Freeform text — names, notes, anything open-ended |
+| `'text'` (default) | Freeform text -- names, notes, anything open-ended |
 | `'select'` | Small, fixed list where the user picks exactly one value |
-| `'richSelect'` | Longer list with keyboard search — much nicer UX than a plain dropdown |
-| `'checkbox'` | Boolean toggle — renders as a checkbox, commits on click |
+| `'richSelect'` | Longer list with keyboard search -- much nicer UX than a plain dropdown |
+| `'checkbox'` | Boolean toggle -- renders as a checkbox, commits on click |
 
 ### Searchable dropdown (richSelect)
 
@@ -293,7 +293,7 @@ Use a function for `editable` to make it conditional:
 { columnId: 'name', editable: (item) => item.status !== 'locked' }
 ```
 
-The cell still renders normally — it just won't open an editor when you click it.
+The cell still renders normally. It just won't open an editor when you click it.
 
 ### Custom editor (popup)
 
@@ -321,7 +321,7 @@ function DateEditor({ value, onValueChange, onCommit, onCancel }: ICellEditorPro
 
 ### Validating input with `valueParser`
 
-`valueParser` runs on every edit, paste, fill, and delete. Return `undefined` to silently reject the value — the cell snaps back to its previous state:
+`valueParser` runs on every edit, paste, fill, and delete. Return `undefined` to silently reject the value. The cell snaps back to its previous state:
 
 ```tsx
 {
@@ -336,14 +336,14 @@ function DateEditor({ value, onValueChange, onCommit, onCancel }: ICellEditorPro
 ```
 
 :::tip Pro tip
-`valueParser` is your single source of truth for validation — it runs on inline edits, clipboard paste, fill handle, and delete. You don't need separate logic for each.
+`valueParser` is your single validation point -- it covers inline edits, clipboard paste, fill handle, and delete. You don't need separate logic for each.
 :::
 
 ## Clipboard
 
 <ClipboardDemo />
 
-Standard shortcuts work on any selection — no configuration needed:
+Standard shortcuts work on any selection with no configuration:
 
 | Key | Action | Requires `editable` |
 |-----|--------|-------------------|
@@ -352,13 +352,13 @@ Standard shortcuts work on any selection — no configuration needed:
 | Ctrl+X / Cmd+X | Cut (copy then clear) | Yes |
 | Delete / Backspace | Clear selected cells | Yes |
 
-Copy respects `valueFormatter` — what you see is what you get in the clipboard. Paste calls `valueParser` on each value, so bad data is rejected before it lands in your rows.
+Copy respects `valueFormatter`, so what you see is what ends up in the clipboard. Paste calls `valueParser` on each value, so bad data is rejected before it lands in your rows.
 
 ## Fill handle
 
 <FillHandleDemo />
 
-The small square in the bottom-right corner of a selection — drag it down to fill cells. Works exactly like Excel. Each filled cell goes through `valueParser`, so validation still applies.
+The small square in the bottom-right corner of a selection. Drag it down to fill cells, just like Excel. Each filled cell goes through `valueParser`, so validation still applies.
 
 :::tip Pro tip
 Select a range of cells before dragging the fill handle to populate multiple columns at once. The fill handle uses `requestAnimationFrame` internally, so it stays smooth even on large selections.
@@ -376,7 +376,7 @@ const { handleCellValueChanged, undo, redo, canUndo, canRedo } = useUndoRedo({
 });
 ```
 
-Pass `handleCellValueChanged` as `onCellValueChanged` — it intercepts changes and pushes them onto the undo stack before updating your state. Undo/redo are also available in the right-click [context menu](./context-menu).
+Pass `handleCellValueChanged` as `onCellValueChanged`. It intercepts changes and pushes them onto the undo stack before updating your state. Undo/redo are also available in the right-click [context menu](./context-menu).
 
 ## Props reference
 
@@ -395,6 +395,6 @@ Pass `handleCellValueChanged` as `onCellValueChanged` — it intercepts changes 
 
 ## Next steps
 
-- [Spreadsheet Selection](./spreadsheet-selection) — select ranges before editing or pasting
-- [Context Menu](./context-menu) — right-click to undo, copy, and more
-- [Formulas](./formulas) — formula-aware editing with `=SUM(A1:A5)` syntax
+- [Spreadsheet Selection](./spreadsheet-selection) -- select ranges before editing or pasting
+- [Context Menu](./context-menu) -- right-click to undo, copy, and more
+- [Formulas](./formulas) -- formula-aware editing with `=SUM(A1:A5)` syntax

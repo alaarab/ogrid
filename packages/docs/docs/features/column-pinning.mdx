@@ -192,19 +192,15 @@ const grid = new OGrid(document.getElementById('grid'), {
 
 The "Name" column stays fixed on the left while all other columns scroll normally.
 
-## How It Works
+## How it works
 
-Set `pinned: 'left'` on any `IColumnDef` to pin it. The grid renders pinned columns with CSS `position: sticky` and a calculated `left` offset so multiple pinned columns stack correctly.
+Set `pinned: 'left'` on any `IColumnDef`. The grid uses CSS `position: sticky` with a calculated `left` offset so multiple pinned columns stack correctly.
 
 ```tsx
 { columnId: 'name', name: 'Name', pinned: 'left' }
 ```
 
-Pinned columns:
-
-- Use **sticky positioning** so they stay visible during horizontal scroll.
-- Stack left-to-right in the order they appear in the `columns` array.
-- Work with all grid features: sorting, filtering, editing, cell selection, and context menu.
+Pinned columns use sticky positioning, stack in the order they appear in the `columns` array, and work with all features: sorting, filtering, editing, cell selection, and context menu.
 
 ### With Row Selection
 

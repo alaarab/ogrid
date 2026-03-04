@@ -1,6 +1,6 @@
 import * as React from 'react';
 import { createPortal } from 'react-dom';
-import { getDateInputPlaceholder, DEFAULT_DATE_FORMAT } from '@alaarab/ogrid-core';
+import { getDateInputPlaceholder, DEFAULT_DATE_FORMAT, Z_INDEX } from '@alaarab/ogrid-core';
 import type { IColumnDef } from '../types';
 import { useInlineCellEditorState, useRichSelectState, useSelectState } from '../hooks';
 
@@ -29,9 +29,7 @@ export const editorInputStyle: React.CSSProperties = {
   background: 'transparent',
   color: 'inherit',
   font: 'inherit',
-  // Use at least 16px so iOS Safari does not auto-zoom when the input is focused.
-  // On desktop this is overridden to 13px via CSS (see _data-grid-table.scss).
-  fontSize: '16px',
+  fontSize: '16px', // ≥16px prevents iOS Safari auto-zoom; CSS overrides to cell font size on desktop
   outline: 'none',
   minWidth: 0,
 };
@@ -223,7 +221,7 @@ export function BaseInlineCellEditor<T>(props: BaseInlineCellEditorProps<T>): Re
       overflowY: 'auto',
       background: 'var(--ogrid-bg, #fff)',
       border: '1px solid var(--ogrid-border, rgba(0, 0, 0, 0.12))',
-      zIndex: 9999,
+      zIndex: Z_INDEX.FULLSCREEN,
       boxShadow: 'var(--ogrid-shadow, 0 4px 16px rgba(0,0,0,0.2))',
       textAlign: 'left',
       fontSize: cellFontSize,

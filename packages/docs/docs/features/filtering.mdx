@@ -10,12 +10,12 @@ import TabItem from '@theme/TabItem';
 
 # Filtering
 
-You have 3,000 support tickets and need to find the ones assigned to Alice that were opened last week. Click the filter icon on "Assignee", pick Alice. Click the filter on "Created Date", set the range. Done — two clicks, no code.
+You have 3,000 support tickets and need to find the ones assigned to Alice that were opened last week. Click the filter icon on "Assignee", pick Alice. Click the filter on "Created Date", set the range. Two clicks, no code.
 
 <FilteringDemo />
 
 :::tip Framework-Specific Styling
-The demo uses React Radix styling. Each framework renders filter UI with its native components — dropdowns, date pickers, and inputs that match your design system.
+The demo uses React Radix styling. Each framework renders filter UI with its native components: dropdowns, date pickers, and inputs that match your design system.
 :::
 
 ## Add filters to any column
@@ -65,7 +65,7 @@ function App() {
 ```
 
 :::tip Switching UI libraries
-Same props across all React packages — just change the import:
+Same props across all React packages -- just change the import:
 
 - **Radix** (lightweight, default): `from '@alaarab/ogrid-react-radix'`
 - **Fluent UI** (Microsoft 365 / SPFx): `from '@alaarab/ogrid-react-fluent'`  -  wrap in `<FluentProvider>`
@@ -115,7 +115,7 @@ Same API across Angular packages. Change the import:
 - **Angular Material**: `from '@alaarab/ogrid-angular-material'`
 - **PrimeNG**: `from '@alaarab/ogrid-angular-primeng'`
 
-All components are standalone — no NgModule required.
+All components are standalone, no NgModule required.
 :::
 
   </TabItem>
@@ -212,7 +212,7 @@ Type "john" and it matches "John Smith", "Johnny", and "Johnathan".
 
 ### Multi-select filter
 
-A checkbox list — users pick one or more values, the grid shows only matching rows. Has built-in "Select All" and "Clear All" buttons.
+A checkbox list. Users pick one or more values and the grid shows only matching rows. Has built-in "Select All" and "Clear All" buttons.
 
 ```tsx
 {
@@ -232,8 +232,8 @@ A checkbox list — users pick one or more values, the grid shows only matching 
 | `optionsSource` | How it works |
 |-----------------|----------|
 | _(omitted)_ | Client-side: unique values extracted from your data. Server-side: calls your API. |
-| `'static'` | Uses the `options` array you provide — great for known enums. |
-| `'api'` | Calls `dataSource.fetchFilterOptions(field)` — for dynamic option lists. |
+| `'static'` | Uses the `options` array you provide -- great for known enums. |
+| `'api'` | Calls `dataSource.fetchFilterOptions(field)` -- for dynamic option lists. |
 | `'years'` | Auto-generates a year list from the current year down. |
 
 ### Date filter
@@ -250,7 +250,7 @@ A date range picker with "From" and "To" inputs. Shows only rows where the colum
 ```
 
 :::tip
-A column with `type: 'date'` automatically gets date formatting, chronological sorting, and a native date input editor — you don't need to configure those separately.
+A column with `type: 'date'` automatically gets date formatting, chronological sorting, and a native date input editor. You don't need to configure those separately.
 :::
 
 ### People filter
@@ -271,7 +271,7 @@ The people filter requires a `dataSource` with a `searchPeople` method that retu
 
 ## Keeping filter state outside the grid
 
-By default the grid owns its filter state — filters reset when the component unmounts. To persist them (URL sync, page reload survival), pass `filters` and `onFiltersChange`:
+By default the grid owns its filter state, and filters reset when the component unmounts. To persist them (URL sync, page reload survival), pass `filters` and `onFiltersChange`:
 
 ```tsx
 function App() {
@@ -292,11 +292,11 @@ function App() {
 }
 ```
 
-Now you can serialize `filters` to the URL, localStorage, or a server — and the grid will restore the exact filter state when the user comes back.
+Now you can serialize `filters` to the URL, localStorage, or a server. The grid will restore the exact filter state when the user comes back.
 
 ## Server-side filtering
 
-When you're using a `dataSource`, the grid hands off filter values to your `fetchPage()` function. You decide what to do with them — query params, request body, whatever your API expects:
+When you're using a `dataSource`, the grid passes filter values to your `fetchPage()` function. You decide what to do with them -- query params, request body, whatever your API expects:
 
 ```tsx
 const dataSource: IDataSource<Task> = {
@@ -332,7 +332,7 @@ const dataSource: IDataSource<Task> = {
 ```
 
 :::tip Pro tip
-Server-side filtering pairs naturally with [pagination](./pagination). The `totalCount` in your `fetchPage` response tells the grid how many pages there are — so pagination stays accurate even when filters narrow the result set.
+Server-side filtering pairs naturally with [pagination](./pagination). The `totalCount` in your `fetchPage` response tells the grid how many pages exist, so pagination stays accurate even when filters narrow the result set.
 :::
 
 ## Props reference
@@ -350,6 +350,6 @@ Server-side filtering pairs naturally with [pagination](./pagination). The `tota
 
 ## Next steps
 
-- [Sorting](./sorting) — sort filtered results by any column
-- [Pagination](./pagination) — paginate filtered results server-side or client-side
-- [Server-Side Data](./server-side-data) — move all filtering, sorting, and paging to the server
+- [Sorting](./sorting) -- sort filtered results by any column
+- [Pagination](./pagination) -- paginate filtered results server-side or client-side
+- [Server-Side Data](./server-side-data) -- move all filtering, sorting, and paging to the server

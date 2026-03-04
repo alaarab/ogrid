@@ -165,9 +165,9 @@ document.getElementById('export-btn').addEventListener('click', () => {
   </TabItem>
 </Tabs>
 
-## How It Works
+## How it works
 
-### The `exportToCsv` Function
+### The `exportToCsv` function
 
 ```tsx
 exportToCsv<T>(
@@ -191,11 +191,11 @@ The function:
 3. Escapes values containing commas, quotes, or newlines.
 4. Triggers a browser download with the specified filename.
 
-### Context Menu Integration
+### Context menu
 
-When `cellSelection` is enabled (the default), the context menu does not include a dedicated "Export to CSV" item. Use the `exportToCsv` utility directly from a toolbar button or custom UI element.
+The context menu doesn't include an "Export to CSV" item. Use `exportToCsv` from a toolbar button or any other UI you control.
 
-### Exporting Visible Columns Only
+### Exporting visible columns only
 
 Filter the columns array to only include visible columns before passing to `exportToCsv`.
 
@@ -210,9 +210,9 @@ exportToCsv(
 );
 ```
 
-### Formatted Values
+### Matching display formatting
 
-Use `valueFormatter` in your `getValue` function so exported data matches the display. For example, a currency column that shows "$1,234.56" in the grid will export that same string.
+Apply `valueFormatter` in your `getValue` so the export matches what users see -- a currency column showing "$1,234.56" will export that same string.
 
 ```tsx
 const getValue = (item: Row, columnId: string) => {
