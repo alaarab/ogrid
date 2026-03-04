@@ -76,6 +76,8 @@ import { PopoverCellEditorComponent } from './popover-cell-editor.component';
       border-collapse: collapse;
       table-layout: fixed;
     }
+    .ogrid-datagrid-table tr th:first-child,
+    .ogrid-datagrid-table tr td:first-child { border-left: none; }
     .ogrid-datagrid-table tbody tr { height: var(--ogrid-row-height, auto); }
     .ogrid-datagrid-thead {
       z-index: 8;

@@ -64,6 +64,10 @@
   color: var(--ogrid-fg);
 }
 
+/* No left border on first column — the grid container provides the left edge */
+.ogrid-table tr th:first-child,
+.ogrid-table tr td:first-child { border-left: none; }
+
 .ogrid-table tbody tr {
   height: var(--ogrid-row-height, auto);
 }

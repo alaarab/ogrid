@@ -117,6 +117,12 @@
   border-right: none;
 }
 
+/* No left border on first column — the grid container provides the left edge */
+.dataTable :global(.fui-TableHeaderCell:first-of-type),
+.dataTable :global(.fui-TableCell:first-of-type) {
+  border-left: none;
+}
+
 /* No extra bottom border on last row */
 .dataTable :global(.fui-TableBody .fui-TableRow:last-child .fui-TableCell) {
   border-bottom: none;
