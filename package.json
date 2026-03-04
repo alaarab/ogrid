@@ -27,6 +27,7 @@
     "test:angular-inputs": "npm test -w @alaarab/ogrid-angular-inputs",
     "test:vue-inputs": "npm test -w @alaarab/ogrid-vue-inputs",
     "test:js-inputs": "npm test -w @alaarab/ogrid-js-inputs",
+    "test:mcp": "npm test -w @alaarab/ogrid-mcp",
     "dev:react-fluent": "npm run dev:react-fluent -w @alaarab/ogrid-examples",
     "dev:react-material": "npm run dev:react-material -w @alaarab/ogrid-examples",
     "dev:react-radix": "npm run dev:react-radix -w @alaarab/ogrid-examples",
