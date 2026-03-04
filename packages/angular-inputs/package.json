@@ -37,8 +37,8 @@
     "node": ">=18"
   },
   "dependencies": {
-    "@alaarab/ogrid-core": "2.5.7",
-    "@alaarab/ogrid-inputs": "2.5.7"
+    "@alaarab/ogrid-core": "2.5.8",
+    "@alaarab/ogrid-inputs": "2.5.8"
   },
   "peerDependencies": {
     "@angular/core": "^21.0.0",

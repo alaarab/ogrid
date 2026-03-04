@@ -39,7 +39,7 @@
     "node": ">=18"
   },
   "dependencies": {
-    "@alaarab/ogrid-core": "2.5.7",
+    "@alaarab/ogrid-core": "2.5.8",
     "@tanstack/react-virtual": "^3.0.0"
   },
   "peerDependencies": {
