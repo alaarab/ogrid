@@ -358,8 +358,7 @@ function DataGridTableInner<T>(props: IOGridDataGridProps<T>): React.ReactElemen
               } : undefined}
               onPointerDown={(e: React.PointerEvent) => {
                 e.stopPropagation();
-                // Select this cell when the checkbox itself is clicked
-                // (parent onPointerDown is suppressed to avoid triggering drag)
+                // Bypass parent's pointerdown (which starts drag) and select this cell
                 setActiveCell({ rowIndex: descriptor.rowIndex, columnIndex: descriptor.globalColIndex });
                 interaction.setSelectionRange({
                   startRow: descriptor.rowIndex,
