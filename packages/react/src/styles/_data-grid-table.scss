@@ -54,8 +54,9 @@
 
 .tableWrapper {
   position: relative;
-  flex: 1;
-  min-height: 0;
+  // Non-virtual-scroll: height auto so the grid shrinks to fit its rows.
+  // Virtual scroll (data-virtual-scroll): flex: 1 + min-height: 0 so the
+  // scroll container fills the available parent space (required for VS math).
   overflow-x: hidden;
   overflow-y: auto;
   width: 100%;
@@ -85,6 +86,12 @@
   }
   &[data-loading='true'] {
     min-height: 200px;
+  }
+
+  // Virtual scroll: fill the flex parent so the container has a measurable height.
+  &[data-virtual-scroll] {
+    flex: 1;
+    min-height: 0;
   }
 }
 
@@ -325,7 +332,7 @@
   z-index: var(--ogrid-z-active-cell, 2);
   position: relative;
   background: var(--ogrid-bg, #fff);
-  overflow: visible;
+  overflow: hidden;
   padding: 0;
 }
 
