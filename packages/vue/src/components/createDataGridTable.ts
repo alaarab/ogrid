@@ -293,8 +293,25 @@ export function createDataGridTable(ui: IDataGridTableUIBindings) {
               checked: boolVal,
               disabled: !descriptor.canEditAny,
               onChange: descriptor.canEditAny ? () => {
-                editCallbacks.commitCellEdit(item, col.columnId, boolVal, !boolVal, descriptor.rowIndex, descriptor.globalColIndex);
+                const savedRow = descriptor.rowIndex;
+                const savedCol = descriptor.globalColIndex;
+                const savedLocalCol = descriptor.globalColIndex - _colOffset;
+                editCallbacks.commitCellEdit(item, col.columnId, boolVal, !boolVal, savedRow, savedCol);
+                setTimeout(() => {
+                  setActiveCell({ rowIndex: savedRow, columnIndex: savedCol });
+                  setSelectionRange({ startRow: savedRow, startCol: savedLocalCol, endRow: savedRow, endCol: savedLocalCol });
+                }, 0);
               } : undefined,
+              onPointerdown: (e: PointerEvent) => {
+                e.stopPropagation();
+                setActiveCell({ rowIndex: descriptor.rowIndex, columnIndex: descriptor.globalColIndex });
+                setSelectionRange({
+                  startRow: descriptor.rowIndex,
+                  startCol: descriptor.globalColIndex - _colOffset,
+                  endRow: descriptor.rowIndex,
+                  endCol: descriptor.globalColIndex - _colOffset,
+                });
+              },
               onClick: (e: Event) => e.stopPropagation(),
               style: `margin:0;cursor:${descriptor.canEditAny ? 'pointer' : 'default'};outline:none`,
               'aria-label': boolVal ? 'Checked' : 'Unchecked',

@@ -261,7 +261,7 @@ import { PopoverCellEditorComponent } from './popover-cell-editor.component';
                             [style.max-width.px]="getColumnWidth(col)"
                             [style.left.px]="pinned === 'left' ? getPinnedLeftOffset(col.columnId) : null"
                             [style.right.px]="pinned === 'right' ? getPinnedRightOffset(col.columnId) : null"
-                            [style.text-align]="col.type === 'numeric' ? 'right' : col.type === 'boolean' ? 'center' : null"
+                            [style.text-align]="col.type === 'numeric' ? 'right' : null"
                           >
                             @let descriptor = getCellDescriptor(item, col, rowIndex, getGlobalColIndex(col));
                             @if (descriptor.mode === 'editing-inline') {
@@ -305,7 +305,7 @@ import { PopoverCellEditorComponent } from './popover-cell-editor.component';
                                 [style.outline-offset]="descriptor.isActive && !descriptor.isInRange ? '-2px' : null"
                               >
                                 @if (col.type === 'boolean') {
-                                  <input type="checkbox" [checked]="!!descriptor.displayValue" [disabled]="!descriptor.canEditAny" (change)="descriptor.canEditAny ? commitEdit(item, col.columnId, !!descriptor.displayValue, !descriptor.displayValue, rowIndex, descriptor.globalColIndex) : null" (click)="$event.stopPropagation()" style="margin:0;outline:none" [style.cursor]="descriptor.canEditAny ? 'pointer' : 'default'" [attr.aria-label]="descriptor.displayValue ? 'Checked' : 'Unchecked'" />
+                                  <input type="checkbox" [checked]="!!descriptor.displayValue" [disabled]="!descriptor.canEditAny" (change)="descriptor.canEditAny ? commitBooleanEdit(item, col.columnId, !!descriptor.displayValue, rowIndex, descriptor.globalColIndex) : null" (pointerdown)="onBooleanCheckboxPointerDown($event, rowIndex, descriptor.globalColIndex)" (click)="$event.stopPropagation()" style="margin:0;outline:none" [style.cursor]="descriptor.canEditAny ? 'pointer' : 'default'" [attr.aria-label]="descriptor.displayValue ? 'Checked' : 'Unchecked'" />
                                 } @else {
                                   <span [style]="resolveCellStyleFn(col, item, descriptor.displayValue)">{{ resolveCellContent(col, item, descriptor.displayValue) }}</span>
                                 }

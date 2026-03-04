@@ -1097,6 +1097,11 @@ export class TableRenderer<T> {
             checkbox.style.cursor = editable ? 'pointer' : 'default';
             checkbox.style.outline = 'none';
             checkbox.setAttribute('aria-label', boolVal ? 'Checked' : 'Unchecked');
+            checkbox.addEventListener('pointerdown', (e) => {
+              e.stopPropagation();
+              // Manually trigger cell selection so the parent td's pointerdown (which starts drag) is bypassed
+              this.interactionState?.onCellMouseDown?.({ rowIndex, colIndex, event: e as unknown as MouseEvent });
+            });
             if (editable) {
               checkbox.addEventListener('change', () => {
                 this.interactionState?.onBooleanToggle?.(rowId, col.columnId, boolVal);
