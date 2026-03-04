@@ -29,6 +29,12 @@
   border-right: none;
 }
 
+/* No left border on first column — the grid container provides the left edge */
+.dataTable th:first-of-type,
+.dataTable td:first-of-type {
+  border-left: none;
+}
+
 .dataTable thead {
   background: var(--ogrid-header-bg, #f5f5f5);
 }
