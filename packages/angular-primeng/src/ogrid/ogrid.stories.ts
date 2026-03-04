@@ -2,6 +2,7 @@ import type { Meta, StoryObj } from '@storybook/angular';
 import { moduleMetadata } from '@storybook/angular';
 import { OGridComponent } from './ogrid.component';
 import type { IOGridProps, IColumnDef, ISideBarDef } from '@alaarab/ogrid-angular';
+import { DatePickerEditorComponent, RatingEditorComponent, ColorPickerEditorComponent, SliderEditorComponent, TagsEditorComponent } from '@alaarab/ogrid-angular-inputs';
 
 interface Project {
   id: string;
@@ -203,6 +204,209 @@ export const SideBarLeftPosition: Story = {
 };
 
 // ---------------------------------------------------------------------------
+// Cell references  (spreadsheet-style A1/B2 headers + name box)
+// ---------------------------------------------------------------------------
+
+export const CellReferences: Story = {
+  render: () => ({
+    template: `<ogrid-primeng [props]="gridProps" />`,
+    props: {
+      gridProps: makeGridProps({
+        data: makeProjects(20),
+        editable: true,
+        cellReferences: true,
+        statusBar: true,
+        defaultPageSize: 10,
+        columns: [
+          { columnId: 'name', name: 'Project Name', sortable: true, filterable: { type: 'text' }, editable: true, cellEditor: 'text' } as IColumnDef<Project>,
+          { columnId: 'status', name: 'Status', sortable: true, filterable: { type: 'multiSelect', filterField: 'status' }, editable: true, cellEditor: 'select', cellEditorParams: { values: STATUSES } } as IColumnDef<Project>,
+          { columnId: 'owner', name: 'Owner', sortable: true, filterable: { type: 'text' } } as IColumnDef<Project>,
+          { columnId: 'budget', name: 'Budget', sortable: true, compare: (a: Project, b: Project) => a.budget - b.budget, valueFormatter: (v: unknown) => typeof v === 'number' ? `$${v.toLocaleString()}` : String(v ?? '') } as IColumnDef<Project>,
+          { columnId: 'startDate', name: 'Start Date', type: 'date', sortable: true, filterable: { type: 'date' }, editable: true } as IColumnDef<Project>,
+          { columnId: 'active', name: 'Active', type: 'boolean', sortable: true, editable: true } as IColumnDef<Project>,
+        ],
+      }),
+    },
+  }),
+};
+
+// ---------------------------------------------------------------------------
+// Performance demos  -  virtual scrolling, worker sort, column virtualization
+// ---------------------------------------------------------------------------
+
+export const VirtualScrolling10K: Story = {
+  render: () => ({
+    template: `<div style="height:600px"><ogrid-primeng [props]="gridProps" /></div>`,
+    props: {
+      gridProps: makeGridProps({
+        data: makeProjects(10000),
+        statusBar: true,
+        pagination: false,
+        layoutMode: 'fill',
+        virtualScroll: { columns: false },
+      }),
+    },
+  }),
+};
+
+export const WorkerSort50K: Story = {
+  render: () => ({
+    template: `<div style="height:600px"><ogrid-primeng [props]="gridProps" /></div>`,
+    props: {
+      gridProps: makeGridProps({
+        data: makeProjects(50000),
+        statusBar: true,
+        pagination: false,
+        layoutMode: 'fill',
+        workerSort: true,
+      }),
+    },
+  }),
+};
+
+const manyColumns: IColumnDef<Project>[] = Array.from({ length: 50 }, (_, i) => ({
+  columnId: `col_${i}`,
+  name: `Column ${i + 1}`,
+  defaultWidth: 120,
+  valueGetter: (item: Project) => {
+    const vals = [item.name, item.status, item.owner, String(item.budget), item.startDate, String(item.active)];
+    return vals[i % vals.length];
+  },
+} as IColumnDef<Project>));
+
+export const ColumnVirtualization50Cols: Story = {
+  render: () => ({
+    template: `<div style="height:600px"><ogrid-primeng [props]="gridProps" /></div>`,
+    props: {
+      gridProps: {
+        data: makeProjects(1000),
+        columns: manyColumns,
+        getRowId,
+        entityLabelPlural: 'projects',
+        statusBar: true,
+        pagination: false,
+        layoutMode: 'fill',
+        virtualScroll: { columns: true, columnOverscan: 3 },
+      } as IOGridProps<Project>,
+    },
+  }),
+};
+
+export const ToolbarWithSecondaryRow: Story = {
+  render: () => ({
+    template: `<ogrid-primeng [props]="gridProps" />`,
+    props: {
+      gridProps: makeGridProps({
+        data: makeProjects(20),
+        columnChooser: 'toolbar',
+        pagination: true,
+        defaultPageSize: 10,
+      }),
+    },
+  }),
+};
+
+// ---------------------------------------------------------------------------
+// Formula engine
+// ---------------------------------------------------------------------------
+
+interface FormulaRow {
+  id: string;
+  a: number;
+  b: number;
+  c: number;
+}
+
+const formulaColumns: IColumnDef<FormulaRow>[] = [
+  { columnId: 'a', name: 'A', type: 'numeric', editable: true } as IColumnDef<FormulaRow>,
+  { columnId: 'b', name: 'B', type: 'numeric', editable: true } as IColumnDef<FormulaRow>,
+  { columnId: 'c', name: 'C', type: 'numeric', editable: true } as IColumnDef<FormulaRow>,
+];
+
+const formulaData: FormulaRow[] = [
+  { id: 'r1', a: 10, b: 20, c: 0 },
+  { id: 'r2', a: 30, b: 40, c: 0 },
+  { id: 'r3', a: 50, b: 60, c: 0 },
+  { id: 'r4', a: 0, b: 0, c: 0 },
+];
+
+export const Formulas: StoryObj<OGridComponent<FormulaRow>> = {
+  render: () => ({
+    template: `<ogrid-primeng [props]="gridProps" />`,
+    props: {
+      gridProps: {
+        data: formulaData,
+        columns: formulaColumns,
+        getRowId: (r: FormulaRow) => r.id,
+        editable: true,
+        formulas: true,
+        cellReferences: true,
+        pagination: false,
+        statusBar: true,
+        initialFormulas: [
+          { col: 2, row: 0, formula: '=A1+B1' },
+          { col: 2, row: 1, formula: '=A2+B2' },
+          { col: 2, row: 2, formula: '=A3+B3' },
+          { col: 0, row: 3, formula: '=SUM(A1:A3)' },
+          { col: 1, row: 3, formula: '=SUM(B1:B3)' },
+          { col: 2, row: 3, formula: '=SUM(C1:C3)' },
+        ],
+      },
+    },
+  }),
+};
+
+// ---------------------------------------------------------------------------
+// Premium inputs  (DatePicker, Rating, ColorPicker, Slider, Tags)
+// ---------------------------------------------------------------------------
+
+interface InputsRow {
+  id: string;
+  name: string;
+  dueDate: string;
+  rating: number;
+  color: string;
+  progress: number;
+  tags: string[];
+}
+
+const inputsData: InputsRow[] = [
+  { id: '1', name: 'Alpha', dueDate: '2024-06-01', rating: 4, color: '#4f46e5', progress: 75, tags: ['frontend', 'urgent'] },
+  { id: '2', name: 'Beta', dueDate: '2024-09-15', rating: 3, color: '#10b981', progress: 40, tags: ['backend'] },
+  { id: '3', name: 'Gamma', dueDate: '2024-12-31', rating: 5, color: '#f59e0b', progress: 90, tags: ['design', 'review'] },
+];
+
+const inputsColumns: IColumnDef<InputsRow>[] = [
+  { columnId: 'name', name: 'Name', sortable: true, filterable: { type: 'text' }, editable: true, cellEditor: 'text' } as IColumnDef<InputsRow>,
+  { columnId: 'dueDate', name: 'Due Date', type: 'date', sortable: true, editable: true, cellEditor: DatePickerEditorComponent, cellEditorPopup: true } as unknown as IColumnDef<InputsRow>,
+  { columnId: 'rating', name: 'Rating', type: 'numeric', sortable: true, editable: true, cellEditor: RatingEditorComponent, cellEditorPopup: true } as unknown as IColumnDef<InputsRow>,
+  { columnId: 'color', name: 'Color', sortable: false, editable: true, cellEditor: ColorPickerEditorComponent, cellEditorPopup: true } as unknown as IColumnDef<InputsRow>,
+  { columnId: 'progress', name: 'Progress', type: 'numeric', sortable: true, editable: true, cellEditor: SliderEditorComponent, cellEditorPopup: true } as unknown as IColumnDef<InputsRow>,
+  { columnId: 'tags', name: 'Tags', sortable: false, editable: true, cellEditor: TagsEditorComponent, cellEditorPopup: true } as unknown as IColumnDef<InputsRow>,
+];
+
+export const PremiumInputs: StoryObj<OGridComponent<InputsRow>> = {
+  decorators: [
+    moduleMetadata({
+      imports: [OGridComponent, DatePickerEditorComponent, RatingEditorComponent, ColorPickerEditorComponent, SliderEditorComponent, TagsEditorComponent],
+    }),
+  ],
+  render: () => ({
+    template: `<ogrid-primeng [props]="gridProps" />`,
+    props: {
+      gridProps: {
+        data: inputsData,
+        columns: inputsColumns,
+        getRowId: (r: InputsRow) => r.id,
+        editable: true,
+        entityLabelPlural: 'items',
+        defaultPageSize: 10,
+      },
+    },
+  }),
+};
+
+// ---------------------------------------------------------------------------
 // Playground  -  fully interactive with Storybook controls
 // ---------------------------------------------------------------------------
 
@@ -225,6 +429,8 @@ interface PlaygroundArgs {
   rowSelection: string;
   editable: boolean;
   cellSelection: boolean;
+  cellReferences: boolean;
+  showRowNumbers: boolean;
   layoutMode: 'content' | 'fill';
   suppressHorizontalScroll: boolean;
   defaultPageSize: number;
@@ -258,6 +464,8 @@ function buildPlaygroundProps(args: PlaygroundArgs): IOGridProps<Project> {
     rowSelection: args.rowSelection === 'none' ? undefined : (args.rowSelection as 'single' | 'multiple'),
     editable: args.editable,
     cellSelection: args.cellSelection,
+    cellReferences: args.cellReferences,
+    showRowNumbers: args.showRowNumbers,
     layoutMode: args.layoutMode,
     suppressHorizontalScroll: args.suppressHorizontalScroll,
     defaultPageSize: args.defaultPageSize,
@@ -278,6 +486,8 @@ export const Playground: StoryObj<PlaygroundArgs> = {
     rowSelection: { control: 'select', options: ['none', 'single', 'multiple'] },
     editable: { control: 'boolean' },
     cellSelection: { control: 'boolean' },
+    cellReferences: { control: 'boolean' },
+    showRowNumbers: { control: 'boolean' },
     layoutMode: { control: 'radio', options: ['content', 'fill'] },
     suppressHorizontalScroll: { control: 'boolean' },
     defaultPageSize: { control: 'select', options: [10, 25, 50, 100] },
@@ -296,6 +506,8 @@ export const Playground: StoryObj<PlaygroundArgs> = {
     rowSelection: 'multiple',
     editable: true,
     cellSelection: true,
+    cellReferences: false,
+    showRowNumbers: false,
     layoutMode: 'fill',
     suppressHorizontalScroll: false,
     defaultPageSize: 10,
