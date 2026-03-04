@@ -58,6 +58,7 @@ import { PopoverCellEditorComponent } from './popover-cell-editor.component';
     .ogrid-datagrid-wrapper [data-drag-range] {
       background: rgba(33, 115, 70, 0.12);
     }
+    .ogrid-datagrid-cell--active[data-drag-range] { outline: none; }
     .ogrid-datagrid-wrapper--fit { width: fit-content; }
     .ogrid-datagrid-wrapper--overflow-x { overflow-x: auto; }
     .ogrid-datagrid-wrapper--loading-empty { min-height: 200px; }
@@ -223,7 +224,7 @@ import { PopoverCellEditorComponent } from './popover-cell-editor.component';
     .ogrid-editing-cell {
       width: 100%; height: 100%; display: flex; align-items: center; box-sizing: border-box;
       outline: 2px solid var(--ogrid-selection-color, #217346); outline-offset: -1px;
-      z-index: 2; position: relative; background: var(--ogrid-bg, #fff); overflow: visible; padding: 0;
+      z-index: 2; position: relative; background: var(--ogrid-bg, #fff); overflow: hidden; padding: 0;
     }
     .ogrid-datagrid-editor-input {
       width: 100%;

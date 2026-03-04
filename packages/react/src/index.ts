@@ -303,6 +303,7 @@ export {
   UndoRedoStack,
   indexToColumnLetter,
   formatCellReference,
+  handleBooleanCellPointerDown,
 } from './utils';
 export type {
   CsvColumn,
@@ -323,6 +324,7 @@ export type {
   IColumnHeaderMenuItem,
   ColumnHeaderMenuInput,
   ColumnHeaderMenuHandlers,
+  BooleanCellSelectHandlers,
 } from './utils';
 
 // Shared component props & renderers (for UI packages to consume)

@@ -49,6 +49,7 @@ export type {
   INamedRange,
   IAuditEntry,
   IAuditTrail,
+  BooleanCellSelectHandlers,
 } from '@alaarab/ogrid-core';
 
 // Core utilities
@@ -135,6 +136,7 @@ export {
   RESPONSIVE_BREAKPOINTS,
   resolveResponsiveConfig,
   applyResponsiveHiding,
+  handleBooleanCellPointerDown,
 } from '@alaarab/ogrid-core';
 
 // Core constants
