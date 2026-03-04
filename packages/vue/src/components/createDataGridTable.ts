@@ -19,7 +19,7 @@ import {
   buildPopoverEditorProps,
   getCellInteractionProps,
 } from '../utils';
-import { buildHeaderRows, CHECKBOX_COLUMN_WIDTH, ROW_NUMBER_COLUMN_WIDTH, ROW_NUMBER_COLUMN_ID, DEFAULT_MIN_COLUMN_WIDTH, estimateHeaderMinWidth, indexToColumnLetter, formatCellReference, handleBooleanCellPointerDown } from '@alaarab/ogrid-core';
+import { buildHeaderRows, CHECKBOX_COLUMN_WIDTH, ROW_NUMBER_COLUMN_WIDTH, ROW_NUMBER_COLUMN_ID, estimateHeaderMinWidth, indexToColumnLetter, formatCellReference, handleBooleanCellPointerDown } from '@alaarab/ogrid-core';
 import { StatusBar } from './StatusBar';
 import { MarchingAntsOverlay } from './MarchingAntsOverlay';
 import { FormulaRefOverlay } from './FormulaRefOverlay';
