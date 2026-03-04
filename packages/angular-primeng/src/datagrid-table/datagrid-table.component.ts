@@ -443,6 +443,8 @@ import { PopoverCellEditorComponent } from './popover-cell-editor.component';
       border-collapse: collapse;
       table-layout: fixed;
     }
+    .ogrid-table tr th:first-child,
+    .ogrid-table tr td:first-child { border-left: none; }
     .ogrid-table tbody tr { height: var(--ogrid-row-height, auto); }
     .ogrid-thead {
       z-index: 3;
