@@ -23,6 +23,7 @@ module.exports = {
     }],
   },
   moduleNameMapper: {
+    '\\.(css|less|scss|sass)$': 'identity-obj-proxy',
     '^@alaarab/ogrid-core$': '<rootDir>/../core/src/index.ts',
     '^@alaarab/ogrid-core/formula$': '<rootDir>/../core/src/formula/index.ts',
     '^@alaarab/ogrid-core/testing$': '<rootDir>/../core/src/testing/index.ts',
