@@ -17,6 +17,8 @@ const editorWrapperStyle = {
   paddingLeft: 'var(--ogrid-cell-padding-horizontal, 10px)',
   paddingRight: 'var(--ogrid-cell-padding-horizontal, 10px)',
   boxSizing: 'border-box',
+  overflow: 'hidden',
+  minWidth: '0',
 } as const;
 
 export function createInlineCellEditor(options: CreateInlineCellEditorOptions) {

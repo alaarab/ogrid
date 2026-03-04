@@ -69,6 +69,7 @@ import { PopoverCellEditorComponent } from './popover-cell-editor.component';
         [attr.data-empty]="showEmptyInGrid() ? 'true' : null"
         [attr.data-column-count]="state().layout.totalColCount"
         [attr.data-overflow-x]="allowOverflowX() ? 'true' : 'false'"
+        [attr.data-virtual-scroll]="vsEnabled() ? '' : null"
         data-ogrid-scroll-container
         [attr.data-has-selection]="rowSelectionMode !== 'none' ? 'true' : null"
         (contextmenu)="$event.preventDefault()"
@@ -425,13 +426,12 @@ import { PopoverCellEditorComponent } from './popover-cell-editor.component';
       overflow: hidden;
     }
     .ogrid-scroll-wrapper {
-      flex: 1;
-      min-height: 0;
       overflow: auto;
       position: relative;
       background: var(--ogrid-bg, #ffffff);
       color: var(--ogrid-fg, rgba(0, 0, 0, 0.87));
     }
+    .ogrid-scroll-wrapper[data-virtual-scroll] { flex: 1; min-height: 0; }
     .ogrid-scroll-wrapper--loading-empty { min-height: 200px; }
     .ogrid-table-wrapper {
       position: relative;

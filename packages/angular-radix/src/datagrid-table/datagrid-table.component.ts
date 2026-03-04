@@ -45,8 +45,6 @@ import { PopoverCellEditorComponent } from './popover-cell-editor.component';
     }
     .ogrid-datagrid-wrapper {
       position: relative;
-      flex: 1;
-      min-height: 0;
       width: 100%;
       max-width: 100%;
       overflow-x: hidden;
@@ -55,6 +53,7 @@ import { PopoverCellEditorComponent } from './popover-cell-editor.component';
       will-change: scroll-position;
       outline: none;
     }
+    .ogrid-datagrid-wrapper[data-virtual-scroll] { flex: 1; min-height: 0; }
     .ogrid-datagrid-wrapper [data-drag-range] {
       background: rgba(33, 115, 70, 0.12);
     }
@@ -434,6 +433,7 @@ import { PopoverCellEditorComponent } from './popover-cell-editor.component';
         (contextmenu)="$event.preventDefault()"
         [class.ogrid-datagrid-wrapper--overflow-x]="allowOverflowX()"
         [attr.data-overflow-x]="allowOverflowX() ? 'true' : 'false'"
+        [attr.data-virtual-scroll]="vsEnabled() ? '' : null"
         data-ogrid-scroll-container
       >
         <div class="ogrid-datagrid-scroll-wrapper">
