@@ -83,16 +83,21 @@ export function applyFillValues<T>(
     ? formulaOptions.flatColumns.findIndex(c => c.columnId === startColDef.columnId)
     : -1;
 
+  // Pre-compute column compatibility so we check once per column, not once per cell
+  const compatibleCols = new Set<number>();
+  for (let col = range.startCol; col <= range.endCol; col++) {
+    if (col < visibleCols.length && areFillCompatible(startColDef, visibleCols[col])) {
+      compatibleCols.add(col);
+    }
+  }
+
   for (let row = range.startRow; row <= range.endRow; row++) {
     for (let col = range.startCol; col <= range.endCol; col++) {
       if (row === sourceRow && col === sourceCol) continue;
-      if (row >= items.length || col >= visibleCols.length) continue;
+      if (row >= items.length || !compatibleCols.has(col)) continue;
       const item = items[row];
       const colDef = visibleCols[col];
       if (!isColumnEditable(colDef, item)) continue;
-
-      // Block fill across incompatible column types (e.g. text -> color picker)
-      if (!areFillCompatible(startColDef, colDef)) continue;
 
       // Formula-aware path: if source cell has a formula, adjust and propagate it
       if (
