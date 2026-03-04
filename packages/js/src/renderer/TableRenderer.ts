@@ -1,6 +1,6 @@
 import type { RowId, CellEvent } from '../types/gridTypes';
 import type { IActiveCell, ISelectionRange } from '@alaarab/ogrid-core';
-import { getCellValue, buildHeaderRows, isInSelectionRange, ROW_NUMBER_COLUMN_WIDTH, ROW_NUMBER_COLUMN_ID, CHECKBOX_COLUMN_WIDTH, partitionColumnsForVirtualization, indexToColumnLetter } from '@alaarab/ogrid-core';
+import { getCellValue, buildHeaderRows, isInSelectionRange, ROW_NUMBER_COLUMN_WIDTH, ROW_NUMBER_COLUMN_ID, CHECKBOX_COLUMN_WIDTH, partitionColumnsForVirtualization, indexToColumnLetter, estimateHeaderMinWidth } from '@alaarab/ogrid-core';
 import type { GridState } from '../state/GridState';
 import type { HeaderFilterState, HeaderFilterConfig } from '../state/HeaderFilterState';
 import type { VirtualScrollState } from '../state/VirtualScrollState';
@@ -805,9 +805,13 @@ export class TableRenderer<T> {
           th.style.textAlign = 'right';
         }
 
-        // Apply column width from resize state
+        // Apply column width from resize state, or enforce header-based minimum
         if (this.interactionState?.columnWidths[col.columnId]) {
           th.style.width = `${this.interactionState.columnWidths[col.columnId]}px`;
+        } else if (col.minWidth == null) {
+          // No explicit minWidth set: ensure column is at least wide enough to show the header
+          // text without truncation (overrides the global CSS min-width: 80px rule).
+          th.style.minWidth = `${estimateHeaderMinWidth(col.name)}px`;
         }
 
         // Column pinning

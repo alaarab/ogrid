@@ -99,9 +99,12 @@ export function useCellSelection(params: UseCellSelectionParams): UseCellSelecti
         // setIsDragging(true) is deferred to the first mousemove to avoid
         // a true to false toggle on simple clicks (which causes 2 extra renders).
         isDraggingRef.current = true;
-        // Apply drag attrs immediately for the initial cell so the anchor styling shows
-        // even before the first mousemove. This ensures instant visual feedback.
-        setTimeout(() => applyDragAttrsRef.current?.(initial), 0);
+        // Apply drag attrs synchronously so the anchor cell styling is in place
+        // before React commits its re-render and before the next browser paint.
+        // Using setTimeout here caused a 1-frame flicker: React would paint the
+        // origin cell with a green outline (data-active-cell + data-in-range) before
+        // the timeout fired and added data-drag-anchor (which suppresses the outline).
+        applyDragAttrsRef.current?.(initial);
       }
     },
     [setActiveCell, colOffsetRef, setSelectionRange]
