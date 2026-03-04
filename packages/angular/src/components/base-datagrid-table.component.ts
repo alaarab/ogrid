@@ -739,24 +739,20 @@ export abstract class BaseDataGridTableComponent<T = unknown> {
 
   commitBooleanEdit(item: T, columnId: string, oldValue: boolean, rowIndex: number, globalColIndex: number): void {
     this.state().editing.commitCellEdit(item, columnId, oldValue, !oldValue, rowIndex, globalColIndex);
-    const colOff = this.colOffset();
-    const localCol = globalColIndex - colOff;
-    setTimeout(() => {
-      this.state().interaction.setActiveCell?.({ rowIndex, columnIndex: globalColIndex });
-      this.state().interaction.setSelectionRange?.({ startRow: rowIndex, startCol: localCol, endRow: rowIndex, endCol: localCol });
-    }, 0);
+    // commitCellEdit advances to the next row; undo that for checkbox toggles.
+    // setTimeout(0) ensures this runs after the framework finishes the commit's state batch.
+    setTimeout(() => { this.selectCell(rowIndex, globalColIndex); }, 0);
   }
 
   onBooleanCheckboxPointerDown(event: PointerEvent, rowIndex: number, globalColIndex: number): void {
     event.stopPropagation();
-    const colOff = this.colOffset();
+    this.selectCell(rowIndex, globalColIndex);
+  }
+
+  private selectCell(rowIndex: number, globalColIndex: number): void {
+    const localCol = globalColIndex - this.colOffset();
     this.state().interaction.setActiveCell?.({ rowIndex, columnIndex: globalColIndex });
-    this.state().interaction.setSelectionRange?.({
-      startRow: rowIndex,
-      startCol: globalColIndex - colOff,
-      endRow: rowIndex,
-      endCol: globalColIndex - colOff,
-    });
+    this.state().interaction.setSelectionRange?.({ startRow: rowIndex, startCol: localCol, endRow: rowIndex, endCol: localCol });
   }
 
   cancelEdit(): void {
