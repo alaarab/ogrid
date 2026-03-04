@@ -61,6 +61,7 @@ export class DataGridEditingHelper<T> {
     newValue: unknown,
     rowIndex: number,
     globalColIndex: number,
+    options?: { skipAdvance?: boolean },
   ): void {
     const col = this.getVisibleCols().find((c) => c.columnId === columnId);
     if (col) {
@@ -81,7 +82,7 @@ export class DataGridEditingHelper<T> {
     this.pendingEditorValueSig.set(undefined);
 
     const items = this.getItems();
-    if (rowIndex < items.length - 1) {
+    if (!options?.skipAdvance && rowIndex < items.length - 1) {
       const newRow = rowIndex + 1;
       const localCol = globalColIndex - this.getColOffset();
       this.setActiveCellFn({ rowIndex: newRow, columnIndex: globalColIndex });

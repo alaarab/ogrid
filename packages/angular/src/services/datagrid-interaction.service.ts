@@ -266,6 +266,11 @@ export class DataGridInteractionHelper<T> {
       this.liveDragRange = initial;
       this.setActiveCell({ rowIndex, columnIndex: globalColIndex });
       this.isDraggingRef = true;
+      // Apply drag attrs synchronously so the anchor cell styling (data-drag-range)
+      // is in place before the next browser paint. Without this, the origin cell
+      // briefly shows a green outline (from the active-cell CSS class) until the
+      // first pointermove fires and the RAF applies the drag attributes.
+      this.applyDragAttrs(initial, colOffset, wrapperEl);
     }
   }
 

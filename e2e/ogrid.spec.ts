@@ -948,6 +948,118 @@ test.describe('Fill handle', () => {
     expect(row2Text).toContain('Fill Source');
     expect(row3Text).toContain('Fill Source');
   });
+
+  // Cross-column fill compatibility (areFillCompatible) tests
+  //
+  // Column layout: 0:name (text, editable), 1:status (richSelect, editable),
+  // 2:owner (not editable), 3:department (not editable), 4:budget (not editable),
+  // 5:startDate (date, editable), 6:active (boolean, editable)
+  //
+  // areFillCompatible blocks fills when column types or custom editors differ.
+
+  test('fill handle from text cell to richSelect (status) column does nothing', async ({ page }) => {
+    // name (col 0) has no custom editor; status (col 1) uses richSelect.
+    // Different editors = incompatible, so fill should be blocked.
+    if (isJS(page)) {
+      test.skip();
+      return;
+    }
+
+    const statusCell = page.locator('tbody tr:nth-child(1) td:nth-child(2)');
+    const originalStatus = await statusCell.textContent();
+
+    const nameCell = getCellContent(page, 0, 0);
+    await nameCell.click();
+    await page.waitForTimeout(300);
+
+    const handleBox = await getFillHandle(page).boundingBox();
+    const statusBox = await statusCell.boundingBox();
+
+    const hx = handleBox!.x + handleBox!.width / 2;
+    const hy = handleBox!.y + handleBox!.height / 2;
+    const sx = statusBox!.x + statusBox!.width / 2;
+    const sy = statusBox!.y + statusBox!.height / 2;
+
+    await page.mouse.move(hx, hy);
+    await page.mouse.down();
+    await page.mouse.move(sx, sy, { steps: 10 });
+    await page.mouse.up();
+    await page.waitForTimeout(400);
+
+    const afterStatus = await statusCell.textContent();
+    expect(afterStatus).toBe(originalStatus);
+  });
+
+  test('fill handle from date cell to boolean (active) column does nothing', async ({ page }) => {
+    // startDate is type:'date', active is type:'boolean'. Different types = blocked.
+    if (isJS(page)) {
+      test.skip();
+      return;
+    }
+
+    // active is col index 6, so td:nth-child(7)
+    const activeCell = page.locator('tbody tr:nth-child(1) td:nth-child(7)');
+    const originalActive = await activeCell.textContent();
+
+    const dateCell = getCellContent(page, 0, 5);
+    await dateCell.click();
+    await page.waitForTimeout(300);
+
+    const handleBox = await getFillHandle(page).boundingBox();
+    const activeBox = await activeCell.boundingBox();
+
+    const hx = handleBox!.x + handleBox!.width / 2;
+    const hy = handleBox!.y + handleBox!.height / 2;
+    const ax = activeBox!.x + activeBox!.width / 2;
+    const ay = activeBox!.y + activeBox!.height / 2;
+
+    await page.mouse.move(hx, hy);
+    await page.mouse.down();
+    await page.mouse.move(ax, ay, { steps: 10 });
+    await page.mouse.up();
+    await page.waitForTimeout(400);
+
+    const afterActive = await activeCell.textContent();
+    expect(afterActive).toBe(originalActive);
+  });
+
+  test('fill handle from text cell across all columns leaves date and boolean unchanged', async ({ page }) => {
+    // Dragging name (text, col 0) all the way to active (boolean, col 6).
+    // Non-editable columns are skipped by isColumnEditable. startDate (date)
+    // and active (boolean) are type-incompatible with name (text). Nothing changes.
+    if (isJS(page)) {
+      test.skip();
+      return;
+    }
+
+    const dateCellTd = page.locator('tbody tr:nth-child(1) td:nth-child(6)');
+    const activeCellTd = page.locator('tbody tr:nth-child(1) td:nth-child(7)');
+    const originalDate = await dateCellTd.textContent();
+    const originalActive = await activeCellTd.textContent();
+
+    const nameCell = getCellContent(page, 0, 0);
+    await nameCell.click();
+    await page.waitForTimeout(300);
+
+    const handleBox = await getFillHandle(page).boundingBox();
+    const activeBox = await activeCellTd.boundingBox();
+
+    const hx = handleBox!.x + handleBox!.width / 2;
+    const hy = handleBox!.y + handleBox!.height / 2;
+    const ax = activeBox!.x + activeBox!.width / 2;
+    const ay = activeBox!.y + activeBox!.height / 2;
+
+    await page.mouse.move(hx, hy);
+    await page.mouse.down();
+    await page.mouse.move(ax, ay, { steps: 15 });
+    await page.mouse.up();
+    await page.waitForTimeout(400);
+
+    const afterDate = await dateCellTd.textContent();
+    const afterActive = await activeCellTd.textContent();
+    expect(afterDate).toBe(originalDate);
+    expect(afterActive).toBe(originalActive);
+  });
 });
 
 test.describe('Date editor', () => {

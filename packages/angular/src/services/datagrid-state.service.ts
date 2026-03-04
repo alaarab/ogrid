@@ -75,6 +75,7 @@ export interface DataGridEditingState<T> {
     newValue: unknown,
     rowIndex: number,
     globalColIndex: number,
+    options?: { skipAdvance?: boolean },
   ) => void;
   cancelPopoverEdit: () => void;
   popoverAnchorEl: HTMLElement | null;
@@ -434,8 +435,9 @@ export class DataGridStateService<T> {
     newValue: unknown,
     rowIndex: number,
     globalColIndex: number,
+    options?: { skipAdvance?: boolean },
   ): void {
-    this.editingHelper.commitCellEdit(item, columnId, oldValue, newValue, rowIndex, globalColIndex);
+    this.editingHelper.commitCellEdit(item, columnId, oldValue, newValue, rowIndex, globalColIndex, options);
   }
 
   cancelPopoverEdit(): void {
@@ -627,8 +629,8 @@ export class DataGridStateService<T> {
   private readonly _handleSelectAll = (checked: boolean) => this.handleSelectAll(checked);
   private readonly _setEditingCell = (cell: { rowId: RowId; columnId: string } | null) => this.setEditingCell(cell);
   private readonly _setPendingEditorValue = (v: unknown) => this.setPendingEditorValue(v);
-  private readonly _commitCellEdit = (item: T, colId: string, oldVal: unknown, newVal: unknown, rowIdx: number, globalColIdx: number) =>
-    this.commitCellEdit(item, colId, oldVal, newVal, rowIdx, globalColIdx);
+  private readonly _commitCellEdit = (item: T, colId: string, oldVal: unknown, newVal: unknown, rowIdx: number, globalColIdx: number, options?: { skipAdvance?: boolean }) =>
+    this.commitCellEdit(item, colId, oldVal, newVal, rowIdx, globalColIdx, options);
   private readonly _cancelPopoverEdit = () => this.cancelPopoverEdit();
   private readonly _setPopoverAnchorEl = (el: HTMLElement | null) => this.editingHelper.popoverAnchorElSig.set(el);
   private readonly _setActiveCell = (cell: IActiveCell | null) => this.setActiveCell(cell);

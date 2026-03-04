@@ -19,7 +19,7 @@ import {
   buildPopoverEditorProps,
   getCellInteractionProps,
 } from '../utils';
-import { buildHeaderRows, CHECKBOX_COLUMN_WIDTH, ROW_NUMBER_COLUMN_WIDTH, ROW_NUMBER_COLUMN_ID, DEFAULT_MIN_COLUMN_WIDTH, indexToColumnLetter, formatCellReference } from '@alaarab/ogrid-core';
+import { buildHeaderRows, CHECKBOX_COLUMN_WIDTH, ROW_NUMBER_COLUMN_WIDTH, ROW_NUMBER_COLUMN_ID, DEFAULT_MIN_COLUMN_WIDTH, estimateHeaderMinWidth, indexToColumnLetter, formatCellReference, handleBooleanCellPointerDown } from '@alaarab/ogrid-core';
 import { StatusBar } from './StatusBar';
 import { MarchingAntsOverlay } from './MarchingAntsOverlay';
 import { FormulaRefOverlay } from './FormulaRefOverlay';
@@ -129,7 +129,7 @@ export function createDataGridTable(ui: IDataGridTableUIBindings) {
 
           const hasResizeOverride = !!columnSizingOverrides[col.columnId];
           const measuredW = measuredColumnWidths[col.columnId];
-          const baseMinWidth = col.minWidth ?? DEFAULT_MIN_COLUMN_WIDTH;
+          const baseMinWidth = col.minWidth ?? estimateHeaderMinWidth(col.name);
           const effectiveMinWidth = hasResizeOverride ? columnWidth : Math.max(baseMinWidth, measuredW ?? 0);
 
           const tdStyle: Record<string, string> = {
@@ -295,23 +295,13 @@ export function createDataGridTable(ui: IDataGridTableUIBindings) {
               onChange: descriptor.canEditAny ? () => {
                 const savedRow = descriptor.rowIndex;
                 const savedCol = descriptor.globalColIndex;
-                const savedLocalCol = descriptor.globalColIndex - _colOffset;
-                editCallbacks.commitCellEdit(item, col.columnId, boolVal, !boolVal, savedRow, savedCol);
-                setTimeout(() => {
-                  setActiveCell({ rowIndex: savedRow, columnIndex: savedCol });
-                  setSelectionRange({ startRow: savedRow, startCol: savedLocalCol, endRow: savedRow, endCol: savedLocalCol });
-                }, 0);
+                editCallbacks.commitCellEdit(item, col.columnId, boolVal, !boolVal, savedRow, savedCol, { skipAdvance: true });
               } : undefined,
-              onPointerdown: (e: PointerEvent) => {
-                e.stopPropagation();
-                setActiveCell({ rowIndex: descriptor.rowIndex, columnIndex: descriptor.globalColIndex });
-                setSelectionRange({
-                  startRow: descriptor.rowIndex,
-                  startCol: descriptor.globalColIndex - _colOffset,
-                  endRow: descriptor.rowIndex,
-                  endCol: descriptor.globalColIndex - _colOffset,
-                });
-              },
+              onPointerdown: (e: PointerEvent) =>
+                handleBooleanCellPointerDown(e, descriptor.rowIndex, descriptor.globalColIndex, _colOffset, {
+                  setActiveCell,
+                  setSelectionRange,
+                }),
               onClick: (e: Event) => e.stopPropagation(),
               style: `margin:0;cursor:${descriptor.canEditAny ? 'pointer' : 'default'};outline:none`,
               'aria-label': boolVal ? 'Checked' : 'Unchecked',
@@ -377,17 +367,21 @@ export function createDataGridTable(ui: IDataGridTableUIBindings) {
           };
         };
 
-        // Dynamic wrapper style
+        // Dynamic wrapper style.
+        // Virtual scroll needs flex: 1 + minHeight: 0 so the container has a measurable height
+        // for VS math. Non-virtual-scroll uses auto height so the grid shrinks to fit its rows.
+        const vsOn = virtualScrollEnabled.value;
         const wrapperStyle: Record<string, string> = {
           position: 'relative',
-          flex: '1',
-          minHeight: isLoading && items.length === 0 ? '200px' : '0',
           width: fitToContent ? 'fit-content' : '100%',
           maxWidth: '100%',
           overflowX: suppressHorizontalScroll ? 'hidden' : allowOverflowX ? 'auto' : 'hidden',
           overflowY: 'auto',
           backgroundColor: '#fff',
           willChange: 'scroll-position',
+          ...(vsOn
+            ? { flex: '1', minHeight: '0' }
+            : { minHeight: isLoading && items.length === 0 ? '200px' : 'auto' }),
         };
         if (p.rowHeight) {
           wrapperStyle['--ogrid-row-height'] = `${p.rowHeight}px`;

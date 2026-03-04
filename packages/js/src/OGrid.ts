@@ -739,8 +739,11 @@ export class OGrid<T> {
     this.cellEditor?.closeEditor();
     e.preventDefault();
     this.selectionState.startDrag(rowIndex, colIndex);
-    // Apply drag attributes immediately for instant visual feedback on the initial cell
-    setTimeout(() => this.renderingHelper.updateDragAttributes(), 0);
+    // Apply drag attributes synchronously so the anchor cell styling is in place
+    // before the next browser paint. startDrag() now sets pendingRange to the
+    // initial single-cell range, so getDragRange() is non-null here and
+    // updateDragAttributes() will correctly highlight the origin cell immediately.
+    this.renderingHelper.updateDragAttributes();
   }
 
   private handleCellContextMenu(rowIndex: number, colIndex: number, e: MouseEvent): void {
