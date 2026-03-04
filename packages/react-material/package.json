@@ -39,7 +39,7 @@
     "node": ">=18"
   },
   "dependencies": {
-    "@alaarab/ogrid-react": "2.5.7"
+    "@alaarab/ogrid-react": "2.5.8"
   },
   "peerDependencies": {
     "@emotion/react": "^11.0.0",

@@ -42,7 +42,7 @@
     "node": ">=18"
   },
   "dependencies": {
-    "@alaarab/ogrid-vue": "2.5.7"
+    "@alaarab/ogrid-vue": "2.5.8"
   },
   "peerDependencies": {
     "@headlessui/vue": "^1.7.23",
