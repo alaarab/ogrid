@@ -1,6 +1,6 @@
 {
   "name": "@alaarab/ogrid-vue-radix",
-  "version": "2.5.10",
+  "version": "2.6.1",
   "description": "OGrid Vue Radix – Lightweight data grid with sorting, filtering, pagination, column chooser, and CSV export. Built with Headless UI Vue.",
   "main": "dist/esm/index.js",
   "module": "dist/esm/index.js",
@@ -53,7 +53,7 @@
     "node": ">=18"
   },
   "dependencies": {
-    "@alaarab/ogrid-vue": "2.5.10"
+    "@alaarab/ogrid-vue": "2.6.1"
   },
   "peerDependencies": {
     "@headlessui/vue": "^1.7.23",
