@@ -12,34 +12,42 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted, onUnmounted } from 'vue';
+import { computed, onMounted, onUnmounted, ref } from 'vue';
 import { OGrid } from '@alaarab/ogrid-vue-primevue';
 import type { IOGridProps } from '@alaarab/ogrid-vue-primevue';
 import { connectGridToBridge } from '@alaarab/ogrid-mcp/bridge-client';
 import type { BridgeConnection } from '@alaarab/ogrid-mcp/bridge-client';
-import { makeDemoProjects, makeDemoColumns, getRowId, handleCellValueChanged } from '../shared/demoData';
+import { makeDemoProjects, makeDemoColumns, getRowId } from '../shared/demoData';
 import type { Project } from '../shared/demoData';
 
-const projects = makeDemoProjects(75);
-const gridProps: IOGridProps<Project> = {
-  data: projects,
-  columns: makeDemoColumns<Project>(),
+const projects = ref(makeDemoProjects(75));
+const columns = makeDemoColumns<Project>();
+
+const updateProjectCell = (rowId: string, columnId: string, newValue: unknown) => {
+  projects.value = projects.value.map((row) =>
+    row.id === rowId ? { ...row, [columnId]: newValue } : row
+  );
+};
+
+const gridProps = computed<IOGridProps<Project>>(() => ({
+  data: projects.value,
+  columns,
   getRowId,
   entityLabelPlural: 'projects',
   defaultPageSize: 25,
   editable: true,
   cellSelection: true,
   statusBar: true,
-  onCellValueChanged: (e) => handleCellValueChanged(projects, e),
-};
+  onCellValueChanged: (e) => updateProjectCell(e.item.id, e.columnId, e.newValue),
+}));
 
 let bridge: BridgeConnection | null = null;
 
 onMounted(() => {
   bridge = connectGridToBridge({
     gridId: 'vue-primevue-demo',
-    getData: () => projects,
-    getColumns: () => gridProps.columns.map((c) => ({
+    getData: () => projects.value,
+    getColumns: () => columns.map((c) => ({
       columnId: c.columnId,
       headerName: c.name ?? c.columnId,
       type: c.type,
@@ -47,9 +55,9 @@ onMounted(() => {
     getSort: () => [],
     getFilters: () => ({}),
     onCellUpdate: (rowIndex, columnId, value) => {
-      if (projects[rowIndex]) {
-        (projects[rowIndex] as Record<string, unknown>)[columnId] = value;
-      }
+      const row = projects.value[rowIndex];
+      if (!row) return;
+      updateProjectCell(row.id, columnId, value);
     },
   });
 });

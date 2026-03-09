@@ -633,35 +633,11 @@
 /* The code "window" - floating terminal with glow */
 .codeWindowFloat {
   position: relative;
-  padding-bottom: 48px; /* space for reflection */
 }
 
 /* Reflection element below the terminal */
 .codeReflection {
-  position: absolute;
-  left: 5%;
-  right: 5%;
-  bottom: 0;
-  height: 44px;
-  background: linear-gradient(
-    180deg,
-    rgba(33, 115, 70, 0.06) 0%,
-    transparent 100%
-  );
-  transform: scaleY(-1);
-  mask-image: linear-gradient(180deg, rgba(0,0,0,0.22) 0%, transparent 100%);
-  pointer-events: none;
-  border-radius: 0 0 14px 14px;
-  filter: blur(5px);
-}
-
-[data-theme='dark'] .codeReflection {
-  background: linear-gradient(
-    180deg,
-    rgba(58, 184, 118, 0.08) 0%,
-    transparent 100%
-  );
-  mask-image: linear-gradient(180deg, rgba(0,0,0,0.28) 0%, transparent 100%);
+  display: none;
 }
 
 .codeWindow {

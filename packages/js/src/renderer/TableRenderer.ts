@@ -146,6 +146,26 @@ export class TableRenderer<T> {
     return { el: cell, rowIndex: coords.rowIndex, colIndex: coords.colIndex };
   }
 
+  private addDelegatedListeners(
+    target: HTMLElement,
+    listeners: ReadonlyArray<readonly [type: string, listener: EventListener | null, options?: AddEventListenerOptions]>
+  ): void {
+    for (const [type, listener, options] of listeners) {
+      if (!listener) continue;
+      target.addEventListener(type, listener, options);
+    }
+  }
+
+  private removeDelegatedListeners(
+    target: HTMLElement,
+    listeners: ReadonlyArray<readonly [type: string, listener: EventListener | null]>
+  ): void {
+    for (const [type, listener] of listeners) {
+      if (!listener) continue;
+      target.removeEventListener(type, listener);
+    }
+  }
+
   private attachBodyDelegation(): void {
     if (!this.tbody) return;
 
@@ -194,18 +214,22 @@ export class TableRenderer<T> {
       this.interactionState?.onCellContextMenu?.({ rowIndex: cell.rowIndex, colIndex: cell.colIndex, event: e });
     };
 
-    this.tbody.addEventListener('click', this._tbodyClickHandler, { passive: true });
-    this.tbody.addEventListener('pointerdown', this._tbodyPointerdownHandler);
-    this.tbody.addEventListener('dblclick', this._tbodyDblclickHandler, { passive: true });
-    this.tbody.addEventListener('contextmenu', this._tbodyContextmenuHandler);
+    this.addDelegatedListeners(this.tbody, [
+      ['click', this._tbodyClickHandler as EventListener, { passive: true }],
+      ['pointerdown', this._tbodyPointerdownHandler as EventListener],
+      ['dblclick', this._tbodyDblclickHandler as EventListener, { passive: true }],
+      ['contextmenu', this._tbodyContextmenuHandler as EventListener],
+    ]);
   }
 
   private detachBodyDelegation(): void {
     if (!this.tbody) return;
-    if (this._tbodyClickHandler) this.tbody.removeEventListener('click', this._tbodyClickHandler);
-    if (this._tbodyPointerdownHandler) this.tbody.removeEventListener('pointerdown', this._tbodyPointerdownHandler);
-    if (this._tbodyDblclickHandler) this.tbody.removeEventListener('dblclick', this._tbodyDblclickHandler);
-    if (this._tbodyContextmenuHandler) this.tbody.removeEventListener('contextmenu', this._tbodyContextmenuHandler);
+    this.removeDelegatedListeners(this.tbody, [
+      ['click', this._tbodyClickHandler as EventListener | null],
+      ['pointerdown', this._tbodyPointerdownHandler as EventListener | null],
+      ['dblclick', this._tbodyDblclickHandler as EventListener | null],
+      ['contextmenu', this._tbodyContextmenuHandler as EventListener | null],
+    ]);
     this._tbodyClickHandler = null;
     this._tbodyPointerdownHandler = null;
     this._tbodyDblclickHandler = null;
@@ -267,16 +291,20 @@ export class TableRenderer<T> {
       }
     };
 
-    if (this._theadClickHandler) this.thead.addEventListener('click', this._theadClickHandler);
-    this.thead.addEventListener('pointerdown', this._theadPointerdownHandler);
-    this.thead.addEventListener('dblclick', this._theadDblclickHandler);
+    this.addDelegatedListeners(this.thead, [
+      ['click', this._theadClickHandler as EventListener | null],
+      ['pointerdown', this._theadPointerdownHandler as EventListener],
+      ['dblclick', this._theadDblclickHandler as EventListener],
+    ]);
   }
 
   private detachHeaderDelegation(): void {
     if (!this.thead) return;
-    if (this._theadClickHandler) this.thead.removeEventListener('click', this._theadClickHandler);
-    if (this._theadPointerdownHandler) this.thead.removeEventListener('pointerdown', this._theadPointerdownHandler);
-    if (this._theadDblclickHandler) this.thead.removeEventListener('dblclick', this._theadDblclickHandler);
+    this.removeDelegatedListeners(this.thead, [
+      ['click', this._theadClickHandler as EventListener | null],
+      ['pointerdown', this._theadPointerdownHandler as EventListener | null],
+      ['dblclick', this._theadDblclickHandler as EventListener | null],
+    ]);
     this._theadClickHandler = null;
     this._theadPointerdownHandler = null;
     this._theadDblclickHandler = null;

@@ -43,6 +43,36 @@ export function createInlineCellEditor(options: CreateInlineCellEditorOptions) {
       const highlightedIndex = ref(0);
       const suppressNextBlurCommit = ref(false);
 
+      const syncInputValue = (e: Event | KeyboardEvent) => {
+        localValue.value = (e.target as HTMLInputElement).value;
+      };
+
+      const getCurrentInputValue = (e?: Event | KeyboardEvent) => {
+        const target = e?.target as HTMLInputElement | null | undefined;
+        return target?.value ?? String(localValue.value ?? '');
+      };
+
+      const syncLocalValueFromProps = (value: unknown) => {
+        if (props.editorType === 'date') {
+          const dateFormat = (props.column.cellEditorParams?.['dateFormat'] as DateFormat | undefined) ?? (props.column.dateFormat as DateFormat | undefined) ?? DEFAULT_DATE_FORMAT;
+          const dateEditorType = (props.column.cellEditorParams?.['editorType'] as string | undefined) ?? 'text';
+          if (dateEditorType === 'native') {
+            if (value == null) {
+              localValue.value = '';
+              return;
+            }
+            const str = String(value);
+            localValue.value = str.match(/^\d{4}-\d{2}-\d{2}/) ? str.substring(0, 10) : str;
+            return;
+          }
+          localValue.value = formatDateForDisplay(value, dateFormat) ?? '';
+          return;
+        }
+        localValue.value = value;
+      };
+
+      syncLocalValueFromProps(props.value);
+
       const commitAndSuppressBlur = (value: unknown) => {
         suppressNextBlurCommit.value = true;
         props.onCommit(value);
@@ -135,7 +165,7 @@ export function createInlineCellEditor(options: CreateInlineCellEditorOptions) {
       });
 
       // Sync local value when prop changes
-      watch(() => props.value, (v) => { localValue.value = v; });
+      watch(() => props.value, syncLocalValueFromProps);
 
       // Initialize highlighted index to current value
       const initHighlightedIndex = () => {
@@ -349,9 +379,10 @@ export function createInlineCellEditor(options: CreateInlineCellEditorOptions) {
           };
 
           const handleDateKeyDown = (e: KeyboardEvent) => {
-            if (e.key === 'Enter') { e.preventDefault(); commitDate(String(localValue.value ?? '')); }
+            e.stopPropagation();
+            if (e.key === 'Enter') { e.preventDefault(); commitDate(getCurrentInputValue(e)); }
             if (e.key === 'Escape') { e.preventDefault(); cancelAndSuppressBlur(); }
-            if (e.key === 'Tab') { e.preventDefault(); commitDate(String(localValue.value ?? '')); }
+            if (e.key === 'Tab') { e.preventDefault(); commitDate(getCurrentInputValue(e)); }
           };
 
           if (dateEditorType === 'native') {
@@ -367,34 +398,34 @@ export function createInlineCellEditor(options: CreateInlineCellEditorOptions) {
                 type: 'date',
                 value: isoStr,
                 style: { width: '100%', height: '100%', border: 'none', outline: 'none', padding: '0 4px', fontSize: 'inherit', boxSizing: 'border-box' },
-                onInput: (e: Event) => { localValue.value = (e.target as HTMLInputElement).value; },
+                onInput: syncInputValue,
+                onChange: syncInputValue,
+                onKeyup: syncInputValue,
                 onKeydown: handleDateKeyDown,
-                onBlur: () => {
+                onBlur: (e: FocusEvent) => {
                   if (shouldSkipBlurCommit()) return;
-                  commitDate(String(localValue.value ?? ''));
+                  commitDate(getCurrentInputValue(e));
                 },
               })
             );
           }
 
           // Default: text input with configurable date format
-          const displayValue = formatDateForDisplay(props.value, dateFormat) ?? '';
-          if (localValue.value == null || localValue.value === '') {
-            localValue.value = displayValue;
-          }
           const placeholder = getDateInputPlaceholder(dateFormat);
           return h('div', { style: editorWrapperStyle },
             h('input', {
               ref: (el: unknown) => { inputRef.value = el as HTMLInputElement; },
               type: 'text',
-              value: localValue.value,
+              value: String(localValue.value ?? ''),
               placeholder,
               style: { width: '100%', height: '100%', border: 'none', outline: 'none', padding: '0 4px', fontSize: 'inherit', boxSizing: 'border-box' },
-              onInput: (e: Event) => { localValue.value = (e.target as HTMLInputElement).value; },
+              onInput: syncInputValue,
+              onChange: syncInputValue,
+              onKeyup: syncInputValue,
               onKeydown: handleDateKeyDown,
-              onBlur: () => {
+              onBlur: (e: FocusEvent) => {
                 if (shouldSkipBlurCommit()) return;
-                commitDate(String(localValue.value ?? ''));
+                commitDate(getCurrentInputValue(e));
               },
             })
           );
@@ -407,15 +438,18 @@ export function createInlineCellEditor(options: CreateInlineCellEditorOptions) {
             type: 'text',
             value: localValue.value != null ? String(localValue.value) : '',
             style: { width: '100%', height: '100%', border: 'none', outline: 'none', padding: '0 4px', fontSize: 'inherit', boxSizing: 'border-box' },
-            onInput: (e: Event) => { localValue.value = (e.target as HTMLInputElement).value; },
+            onInput: syncInputValue,
+            onChange: syncInputValue,
+            onKeyup: syncInputValue,
             onKeydown: (e: KeyboardEvent) => {
-              if (e.key === 'Enter') { e.preventDefault(); commitAndSuppressBlur(localValue.value); }
+              e.stopPropagation();
+              if (e.key === 'Enter') { e.preventDefault(); commitAndSuppressBlur(getCurrentInputValue(e)); }
               if (e.key === 'Escape') { e.preventDefault(); cancelAndSuppressBlur(); }
-              if (e.key === 'Tab') { e.preventDefault(); commitAndSuppressBlur(localValue.value); }
+              if (e.key === 'Tab') { e.preventDefault(); commitAndSuppressBlur(getCurrentInputValue(e)); }
             },
-            onBlur: () => {
+            onBlur: (e: FocusEvent) => {
               if (shouldSkipBlurCommit()) return;
-              commitAndSuppressBlur(localValue.value);
+              commitAndSuppressBlur(getCurrentInputValue(e));
             },
           })
         );

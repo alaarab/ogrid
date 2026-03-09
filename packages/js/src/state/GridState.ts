@@ -129,6 +129,23 @@ export class GridState<T> {
     return nextOrder;
   }
 
+  private emitStateChange(event: StateChangeEvent): void {
+    this.emitter.emit('stateChange', event);
+  }
+
+  private emitDataChange(): void {
+    this.emitStateChange({ type: 'data' });
+  }
+
+  private handleQueryStateChange(event: StateChangeEvent): void {
+    this.emitStateChange(event);
+    if (this.isServerSide) {
+      this.fetchServerData();
+    } else {
+      this.emitDataChange();
+    }
+  }
+
   constructor(options: OGridOptions<T>) {
     this._allColumns = options.columns;
     this._columns = flattenColumns(options.columns as unknown as Parameters<typeof flattenColumns>[0]) as IColumnDef<T>[];
@@ -327,7 +344,7 @@ export class GridState<T> {
     const currentController = this._abortController;
 
     this._isLoading = true;
-    this.emitter.emit('stateChange', { type: 'loading' });
+    this.emitStateChange({ type: 'loading' });
 
     this._dataSource
       .fetchPage({
@@ -350,7 +367,7 @@ export class GridState<T> {
           this._onFirstDataRendered?.();
         }
 
-        this.emitter.emit('stateChange', { type: 'data' });
+        this.emitDataChange();
       })
       .catch((err) => {
         // Ignore if this request was superseded or aborted
@@ -359,7 +376,7 @@ export class GridState<T> {
         this._serverItems = [];
         this._serverTotalCount = 0;
         this._isLoading = false;
-        this.emitter.emit('stateChange', { type: 'data' });
+        this.emitDataChange();
       });
   }
 
@@ -388,40 +405,25 @@ export class GridState<T> {
     if (rowOrderChanged) {
       this._sortDirty = true;
     }
-    this.emitter.emit('stateChange', { type: 'data' });
+    this.emitDataChange();
   }
 
   setPage(page: number): void {
     this._page = page;
-    this.emitter.emit('stateChange', { type: 'page', page: this._page });
-    if (this.isServerSide) {
-      this.fetchServerData();
-    } else {
-      this.emitter.emit('stateChange', { type: 'data' });
-    }
+    this.handleQueryStateChange({ type: 'page', page: this._page });
   }
 
   setPageSize(pageSize: number): void {
     this._pageSize = pageSize;
     this._page = 1;
-    this.emitter.emit('stateChange', { type: 'pageSize', page: this._page, pageSize: this._pageSize });
-    if (this.isServerSide) {
-      this.fetchServerData();
-    } else {
-      this.emitter.emit('stateChange', { type: 'data' });
-    }
+    this.handleQueryStateChange({ type: 'pageSize', page: this._page, pageSize: this._pageSize });
   }
 
   setSort(sort: { field: string; direction: 'asc' | 'desc' } | undefined): void {
     this._sort = sort;
     this._page = 1;
     this._sortDirty = true; // explicit sort change: re-sort on next getProcessedItems call
-    this.emitter.emit('stateChange', { type: 'sort', sort: this._sort });
-    if (this.isServerSide) {
-      this.fetchServerData();
-    } else {
-      this.emitter.emit('stateChange', { type: 'data' });
-    }
+    this.handleQueryStateChange({ type: 'sort', sort: this._sort });
   }
 
   toggleSort(field: string): void {
@@ -434,24 +436,14 @@ export class GridState<T> {
     }
     this._page = 1;
     this._sortDirty = true; // explicit sort change: re-sort on next getProcessedItems call
-    this.emitter.emit('stateChange', { type: 'sort', sort: this._sort });
-    if (this.isServerSide) {
-      this.fetchServerData();
-    } else {
-      this.emitter.emit('stateChange', { type: 'data' });
-    }
+    this.handleQueryStateChange({ type: 'sort', sort: this._sort });
   }
 
   setFilter(key: string, value: FilterValue | undefined): void {
     this._filters = mergeFilter(this._filters, key, value);
     this._page = 1;
     this._sortDirty = true; // filter change requires re-sort to get the right subset
-    this.emitter.emit('stateChange', { type: 'filter', filters: this._filters });
-    if (this.isServerSide) {
-      this.fetchServerData();
-    } else {
-      this.emitter.emit('stateChange', { type: 'data' });
-    }
+    this.handleQueryStateChange({ type: 'filter', filters: this._filters });
   }
 
   clearFilters(): void {
@@ -461,7 +453,7 @@ export class GridState<T> {
   setVisibleColumns(columns: Set<string>): void {
     this._visibleColumns = this.normalizeVisibleColumns(columns);
     this._visibleColsDirty = true;
-    this.emitter.emit('stateChange', {
+    this.emitStateChange({
       type: 'columns',
       reason: 'visibleColumns',
       visibleColumns: new Set(this._visibleColumns),
@@ -471,7 +463,7 @@ export class GridState<T> {
   setColumnOrder(order: string[]): void {
     this._columnOrder = this.normalizeColumnOrder(order);
     this._visibleColsDirty = true;
-    this.emitter.emit('stateChange', {
+    this.emitStateChange({
       type: 'columns',
       reason: 'columnOrder',
       columnOrder: [...this._columnOrder],
@@ -482,12 +474,7 @@ export class GridState<T> {
     this._filters = { ...filters };
     this._page = 1;
     this._sortDirty = true; // filter change requires re-sort to get the right subset
-    this.emitter.emit('stateChange', { type: 'filter', filters: this._filters });
-    if (this.isServerSide) {
-      this.fetchServerData();
-    } else {
-      this.emitter.emit('stateChange', { type: 'data' });
-    }
+    this.handleQueryStateChange({ type: 'filter', filters: this._filters });
   }
 
   /** Update the container width for responsive column hiding. Invalidates the visible-cols cache. */
@@ -496,13 +483,13 @@ export class GridState<T> {
     this._containerWidth = width;
     if (this._responsiveColumns) {
       this._visibleColsDirty = true;
-      this.emitter.emit('stateChange', { type: 'columns', reason: 'responsive' });
+      this.emitStateChange({ type: 'columns', reason: 'responsive' });
     }
   }
 
   setLoading(loading: boolean): void {
     this._isLoading = loading;
-    this.emitter.emit('stateChange', { type: 'loading' });
+    this.emitStateChange({ type: 'loading' });
   }
 
   refreshData(): void {
