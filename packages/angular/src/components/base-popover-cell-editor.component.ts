@@ -1,4 +1,4 @@
-import { Input, ViewChild, ElementRef, Injector, EnvironmentInjector, inject, signal, effect, createComponent } from '@angular/core';
+import { Directive, Input, ViewChild, ElementRef, Injector, EnvironmentInjector, inject, signal, effect, createComponent } from '@angular/core';
 import type { IColumnDef, ICellEditorProps } from '../types';
 
 /**
@@ -45,6 +45,7 @@ export const POPOVER_CELL_EDITOR_OVERLAY_STYLES = `
  * Subclasses only need a @Component decorator with selector, template, and
  * framework-specific .ogrid-popover-anchor CSS styles.
  */
+@Directive()
 export abstract class BasePopoverCellEditorComponent<T = unknown> {
   @Input({ required: true }) item!: T;
   @Input({ required: true }) column!: IColumnDef<T>;

@@ -1,4 +1,4 @@
-import { Input, Output, EventEmitter, signal, computed, ElementRef, ViewChild } from '@angular/core';
+import { Directive, Input, Output, EventEmitter, signal, computed, ElementRef, ViewChild } from '@angular/core';
 import type { IColumnDef } from '@alaarab/ogrid-core';
 import { formatDateForDisplay, parseUserInputDate, getDateInputPlaceholder } from '@alaarab/ogrid-core';
 
@@ -9,6 +9,7 @@ import { formatDateForDisplay, parseUserInputDate, getDateInputPlaceholder } fro
  *
  * Subclasses only need a @Component decorator with selector + template.
  */
+@Directive()
 export abstract class BaseInlineCellEditorComponent<T = unknown> {
   @Input({ required: true }) value!: unknown;
   @Input({ required: true }) item!: T;

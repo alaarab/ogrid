@@ -257,7 +257,7 @@ export class OGridService<T> {
 
   // Filter options state
   private readonly serverFilterOptions = signal<Record<string, string[]>>({});
-  private readonly loadingFilterOptions = signal<Record<string, boolean>>({});
+  readonly loadingFilterOptions = signal<Record<string, boolean>>({});
 
   // --- Derived computed signals ---
 

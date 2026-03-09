@@ -3,10 +3,11 @@
  * Contains all shared TypeScript logic. Subclasses provide a @Component
  * decorator with their own selector, template, and imports.
  */
-import { Input, signal, effect, inject } from '@angular/core';
+import { Directive, Input, signal, effect, inject } from '@angular/core';
 import { OGridService } from '../services/ogrid.service';
 import type { IOGridProps } from '../types';
 
+@Directive()
 export abstract class BaseOGridComponent<T> {
   private readonly propsSignal = signal<IOGridProps<T> | undefined>(undefined);
   readonly ogridService = inject<OGridService<T>>(OGridService);

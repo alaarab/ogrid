@@ -1,4 +1,4 @@
-import { signal, computed, Input } from '@angular/core';
+import { Directive, signal, computed, Input } from '@angular/core';
 import {
   getColumnHeaderMenuItems,
   type IColumnHeaderMenuItem,
@@ -16,6 +16,7 @@ import {
  * 1. Provide a @Component decorator with template and styles
  * 2. Implement their own menu open/close mechanism (mat-menu, p-menu, or native dropdown)
  */
+@Directive()
 export abstract class BaseColumnHeaderMenuComponent {
   @Input({ required: true }) columnId!: string;
 
