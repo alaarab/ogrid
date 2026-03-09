@@ -24,7 +24,7 @@
 
 ---
 
-Pick the framework and UI library you already use and get sorting, filtering, pagination, cell editing, spreadsheet selection, and more out of the box.
+Pick the framework and UI library you already use and get sorting, filtering, pagination, cell editing, spreadsheet selection, and the shared core grid model out of the box.
 
 ## Why OGrid?
 
@@ -110,7 +110,7 @@ Bundle size is what you actually install (core + framework adapter + UI layer). 
 └── @alaarab/ogrid-js             vanilla JS (class-based)
 ```
 
-Core owns types and pure TypeScript utilities with zero dependencies. Framework adapters (React hooks, Angular services, Vue composables) own state logic and headless components. UI packages are thin view layers, around 50 lines of framework-specific rendering per component. All UI packages within a framework pass the same test suite via shared test factories.
+Core owns types and pure TypeScript utilities with zero dependencies. Framework adapters (React hooks, Angular services, Vue composables) own state logic and headless components. UI packages are thin view layers, around 50 lines of framework-specific rendering per component. Shared test factories cover the common contract, while package-specific docs and E2E lanes track the remaining behavior gaps.
 
 ### Installed sizes (gzip)
 
@@ -418,7 +418,7 @@ See the [MCP guide](packages/docs/docs/guides/mcp.mdx) and [live testing bridge 
 | Vue | Vue Test Utils | ~768 |
 | Vanilla JS | Native DOM + jsdom | ~394 |
 
-Cross-package parity is enforced through shared test factories: 8 factories per framework that generate identical test scenarios for every UI package.
+Cross-package parity is driven by shared test factories: 8 factories per framework generate the common scenarios, and package-specific browser coverage documents the remaining gaps where implementations still differ.
 
 ## Development
 
