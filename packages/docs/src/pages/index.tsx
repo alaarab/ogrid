@@ -583,8 +583,7 @@ function FeatureBentoSection() {
           Enterprise features.<br />MIT license.
         </h2>
         <p className={styles.bentoSub}>
-          25+ features shipped. Zero paywalls.
-          Everything you'd pay $999/dev for elsewhere - built in.
+          25+ features shipped. Zero paywalls. All included, all MIT licensed.
         </p>
       </div>
 
@@ -596,7 +595,7 @@ function FeatureBentoSection() {
           <h3 className={styles.bentoCardTitle}>Spreadsheet Selection</h3>
           <p className={styles.bentoCardDesc}>
             Click-and-drag cell ranges, active cell highlight, multi-cell clipboard.
-            AG Grid charges $999/dev for this. Here it ships by default.
+            Included out of the box, no enterprise tier required.
           </p>
           <div className={styles.bentoCardIllustration}>
             <div className={styles.bentoSelectionGrid}>
@@ -717,29 +716,27 @@ function LiveDataSection() {
 }
 
 /* ──────────────────────────────────────────────
-   Comparison - horizontal price cliff
+   Everything Included — standalone feature list
    ────────────────────────────────────────────── */
 
-const comparisonRows = [
-  { name: 'Sorting & Filtering', ogrid: true, aggrid: 'free' as const },
-  { name: 'Cell Editing', ogrid: true, aggrid: 'free' as const },
-  { name: 'CSV Export', ogrid: true, aggrid: 'free' as const },
-  { name: 'Keyboard Navigation', ogrid: true, aggrid: 'free' as const },
-  { name: 'Spreadsheet Selection', ogrid: true, aggrid: 'paid' as const },
-  { name: 'Clipboard Copy/Paste', ogrid: true, aggrid: 'paid' as const },
-  { name: 'Fill Handle', ogrid: true, aggrid: 'paid' as const },
-  { name: 'Undo / Redo', ogrid: true, aggrid: 'paid' as const },
-  { name: 'Context Menu', ogrid: true, aggrid: 'paid' as const },
-  { name: 'Status Bar', ogrid: true, aggrid: 'paid' as const },
-  { name: 'Side Bar', ogrid: true, aggrid: 'paid' as const },
-  { name: 'Server-Side Data', ogrid: true, aggrid: 'paid' as const },
-  { name: 'Formula Engine', ogrid: true, aggrid: 'paid' as const },
-  { name: 'Headless Core', ogrid: true, aggrid: 'no' as const },
-  { name: 'License', ogrid: true, aggrid: 'neutral' as const },
-  { name: 'Price', ogrid: true, aggrid: 'paid' as const },
+const featureList = [
+  { name: 'Sorting & Filtering', tag: 'Core' },
+  { name: 'Cell Editing', tag: 'Core' },
+  { name: 'CSV Export', tag: 'Core' },
+  { name: 'Keyboard Navigation', tag: 'Core' },
+  { name: 'Spreadsheet Selection', tag: 'Pro' },
+  { name: 'Clipboard Copy/Paste', tag: 'Pro' },
+  { name: 'Fill Handle', tag: 'Pro' },
+  { name: 'Undo / Redo', tag: 'Pro' },
+  { name: 'Context Menu', tag: 'Pro' },
+  { name: 'Status Bar', tag: 'Pro' },
+  { name: 'Side Bar', tag: 'Pro' },
+  { name: 'Server-Side Data', tag: 'Pro' },
+  { name: 'Formula Engine', tag: 'Pro' },
+  { name: 'Headless Core', tag: 'Architecture' },
 ];
 
-function ComparisonSection() {
+function EverythingIncludedSection() {
   const { ref, visible } = useScrollReveal<HTMLElement>(0.08);
 
   return (
@@ -747,13 +744,12 @@ function ComparisonSection() {
       <NoiseOverlay opacity={0.02} />
       <div className={styles.compInner}>
         <div className={styles.compHeader}>
-          <div className={styles.compLabel}>Comparison</div>
+          <div className={styles.compLabel}>What's included</div>
           <h2 className={styles.compTitle}>
-            Why pay $999/dev<br />for features that should be free?
+            Everything you need.<br />Nothing to unlock.
           </h2>
           <p className={styles.compSub}>
-            AG Grid charges enterprise rates for spreadsheet-grade UX.
-            OGrid ships all of it - free, forever.
+            Every feature ships free under the MIT license. No enterprise tier, no feature gates, no per-seat pricing.
           </p>
         </div>
 
@@ -762,16 +758,12 @@ function ComparisonSection() {
             <div className={styles.compTableFeatureCol}>Feature</div>
             <div className={`${styles.compTableCol} ${styles.compTableColOGrid}`}>
               <span className={styles.compTableLogo}>OGrid</span>
-              <span className={styles.compTablePrice}>$0 / forever</span>
-            </div>
-            <div className={styles.compTableCol}>
-              <span className={styles.compTableLogo}>AG Grid</span>
-              <span className={styles.compTablePricePaid}>from $999 / dev</span>
+              <span className={styles.compTablePrice}>free forever</span>
             </div>
           </div>
 
           <div className={styles.compTableBody}>
-            {comparisonRows.map((row, i) => (
+            {featureList.map((row, i) => (
               <div
                 key={row.name}
                 className={`${styles.compRow} ${i % 2 === 0 ? styles.compRowEven : ''}`}
@@ -782,20 +774,6 @@ function ComparisonSection() {
                   <span className={styles.compCheck}>✓</span>
                   <span className={styles.compCheckLabel}>Included</span>
                 </div>
-                <div className={styles.compRowCell}>
-                  {row.aggrid === 'free' && (
-                    <><span className={styles.compCheck}>✓</span><span className={styles.compCheckLabel}>Community</span></>
-                  )}
-                  {row.aggrid === 'paid' && (
-                    <><span className={styles.compLock}>$</span><span className={styles.compLockLabel}>Enterprise only</span></>
-                  )}
-                  {row.aggrid === 'no' && (
-                    <><span className={styles.compNo}>–</span><span className={styles.compNoLabel}>Not available</span></>
-                  )}
-                  {row.aggrid === 'neutral' && (
-                    <span className={styles.compNeutral}>MIT / Commercial</span>
-                  )}
-                </div>
               </div>
             ))}
           </div>
@@ -804,11 +782,7 @@ function ComparisonSection() {
             <div className={styles.compTableFeatureCol} />
             <div className={`${styles.compFootCell} ${styles.compFootCellOGrid}`}>
               <span className={styles.compFootPrice}>$0</span>
-              <span className={styles.compFootNote}>free forever</span>
-            </div>
-            <div className={styles.compFootCell}>
-              <span className={styles.compFootPricePaid}>$999+/dev</span>
-              <span className={styles.compFootNote}>per developer per year</span>
+              <span className={styles.compFootNote}>MIT licensed, free forever</span>
             </div>
           </div>
         </div>
@@ -946,13 +920,13 @@ export default function Home() {
   return (
     <Layout
       title="Your spreadsheet. Your framework. Zero compromises."
-      description="Lightweight data grid for React, Angular, Vue, and vanilla JS. Sorting, filtering, editing, spreadsheet selection, clipboard, formulas - all free. No enterprise tier."
+      description="Free open-source data grid for React, Angular, Vue, and vanilla JS. Sorting, filtering, editing, spreadsheet selection, clipboard, fill handle, formulas, and more. MIT licensed AG Grid alternative with no enterprise tier."
     >
       <Hero />
       <CodePreviewSection />
       <FeatureBentoSection />
       <LiveDataSection />
-      <ComparisonSection />
+      <EverythingIncludedSection />
       <CTASection />
     </Layout>
   );
