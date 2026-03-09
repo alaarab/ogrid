@@ -17,7 +17,7 @@ import { BaseColumnChooserComponent } from '@alaarab/ogrid-angular';
         [attr.aria-expanded]="isOpen()"
         aria-haspopup="listbox"
       >
-        ☰ Columns ({{ visibleCount() }}/{{ totalCount() }})
+        ☰ Columns ({{ visibleCount() }} of {{ totalCount() }})
         <span class="ogrid-column-chooser__caret">{{ isOpen() ? '▲' : '▼' }}</span>
       </button>
 
