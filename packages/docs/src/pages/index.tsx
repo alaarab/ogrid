@@ -598,19 +598,34 @@ function FeatureBentoSection() {
             Included out of the box, no enterprise tier required.
           </p>
           <div className={styles.bentoCardIllustration}>
-            <div className={styles.bentoSelectionGrid}>
-              {Array.from({ length: 28 }).map((_, i) => {
-                const col = i % 7;
-                const row = Math.floor(i / 7);
-                const inRange = row >= 1 && row <= 2 && col >= 2 && col <= 5;
-                const isFocused = row === 1 && col === 2;
-                return (
-                  <div
-                    key={i}
-                    className={`${styles.bentoSelCell} ${inRange ? styles.bentoSelCellActive : ''} ${isFocused ? styles.bentoSelCellFocused : ''}`}
-                  />
-                );
-              })}
+            <div className={styles.bentoSpreadsheet}>
+              {/* Column headers */}
+              <div className={styles.bentoSpreadsheetRow}>
+                <div className={`${styles.bentoSpreadsheetCell} ${styles.bentoSpreadsheetCorner}`} />
+                {['A', 'B', 'C', 'D', 'E'].map(col => (
+                  <div key={col} className={`${styles.bentoSpreadsheetCell} ${styles.bentoSpreadsheetColHeader}`}>{col}</div>
+                ))}
+              </div>
+              {/* Data rows */}
+              {[1, 2, 3, 4].map(row => (
+                <div key={row} className={styles.bentoSpreadsheetRow}>
+                  <div className={`${styles.bentoSpreadsheetCell} ${styles.bentoSpreadsheetRowHeader}`}>{row}</div>
+                  {[0, 1, 2, 3, 4].map(col => {
+                    const inRange = row >= 2 && row <= 3 && col >= 1 && col <= 3;
+                    const isActive = row === 2 && col === 1;
+                    return (
+                      <div
+                        key={col}
+                        className={`${styles.bentoSpreadsheetCell} ${styles.bentoSpreadsheetData} ${inRange ? styles.bentoSpreadsheetSelected : ''} ${isActive ? styles.bentoSpreadsheetActive : ''}`}
+                      />
+                    );
+                  })}
+                </div>
+              ))}
+              {/* Selection border overlay */}
+              <div className={styles.bentoSelectionOverlay}>
+                <div className={styles.bentoSelectionHandle} />
+              </div>
             </div>
           </div>
         </div>
@@ -624,9 +639,11 @@ function FeatureBentoSection() {
             Drag the corner to fill values down entire columns.
           </p>
           <div className={styles.bentoFillIllustration}>
-            {['$42,000', '$43,000', '$44,000', '...'].map((v, i) => (
-              <div key={i} className={`${styles.bentoFillRow} ${i === 3 ? styles.bentoFillRowGhost : ''}`}>{v}</div>
+            <div className={styles.bentoFillLabel}>Revenue</div>
+            {['$42,000', '$43,000', '$44,000'].map((v, i) => (
+              <div key={i} className={`${styles.bentoFillRow} ${i >= 1 ? styles.bentoFillRowFilled : ''}`}>{v}</div>
             ))}
+            <div className={`${styles.bentoFillRow} ${styles.bentoFillRowGhost}`}>$45,000</div>
             <div className={styles.bentoFillHandle} />
           </div>
         </div>
@@ -637,6 +654,12 @@ function FeatureBentoSection() {
           <div className={styles.bentoCardTag}>Performance</div>
           <h3 className={styles.bentoCardTitle}>Virtual Scrolling</h3>
           <p className={styles.bentoCardDesc}>10,000+ rows with web worker sort.</p>
+          <div className={styles.bentoVirtualRows}>
+            {[0, 1, 2].map(i => (
+              <div key={i} className={styles.bentoVirtualRow} />
+            ))}
+            <div className={styles.bentoVirtualFade} />
+          </div>
           <div className={styles.bentoStatBig}>10K+</div>
         </div>
 
@@ -647,7 +670,14 @@ function FeatureBentoSection() {
           <h3 className={styles.bentoCardTitle}>10 packages</h3>
           <p className={styles.bentoCardDesc}>React · Angular · Vue · Vanilla JS</p>
           <div className={styles.bentoFrameworkDots}>
-            {['R', 'A', 'V', 'JS'].map(f => <span key={f} className={styles.bentoFrameworkDot}>{f}</span>)}
+            {[
+              { label: 'R', cls: styles.bentoFrameworkDotReact },
+              { label: 'A', cls: styles.bentoFrameworkDotAngular },
+              { label: 'V', cls: styles.bentoFrameworkDotVue },
+              { label: 'JS', cls: styles.bentoFrameworkDotJs },
+            ].map(f => (
+              <span key={f.label} className={`${styles.bentoFrameworkDot} ${f.cls}`}>{f.label}</span>
+            ))}
           </div>
         </div>
 
@@ -677,6 +707,10 @@ function FeatureBentoSection() {
           <div className={styles.bentoFormulaBar}>
             <span className={styles.bentoFx}>fx</span>
             <span className={styles.bentoFormula}>=SUM(B2:B1000)</span>
+          </div>
+          <div className={styles.bentoFormulaResult}>
+            <span className={styles.bentoFormulaResultLabel}>Result</span>
+            <span className={styles.bentoFormulaResultValue}>1,247,500</span>
           </div>
         </div>
       </div>
@@ -715,81 +749,6 @@ function LiveDataSection() {
   );
 }
 
-/* ──────────────────────────────────────────────
-   Everything Included — standalone feature list
-   ────────────────────────────────────────────── */
-
-const featureList = [
-  { name: 'Sorting & Filtering', tag: 'Core' },
-  { name: 'Cell Editing', tag: 'Core' },
-  { name: 'CSV Export', tag: 'Core' },
-  { name: 'Keyboard Navigation', tag: 'Core' },
-  { name: 'Spreadsheet Selection', tag: 'Pro' },
-  { name: 'Clipboard Copy/Paste', tag: 'Pro' },
-  { name: 'Fill Handle', tag: 'Pro' },
-  { name: 'Undo / Redo', tag: 'Pro' },
-  { name: 'Context Menu', tag: 'Pro' },
-  { name: 'Status Bar', tag: 'Pro' },
-  { name: 'Side Bar', tag: 'Pro' },
-  { name: 'Server-Side Data', tag: 'Pro' },
-  { name: 'Formula Engine', tag: 'Pro' },
-  { name: 'Headless Core', tag: 'Architecture' },
-];
-
-function EverythingIncludedSection() {
-  const { ref, visible } = useScrollReveal<HTMLElement>(0.08);
-
-  return (
-    <section ref={ref} className={`${styles.compSection} ${visible ? styles.revealed : ''}`}>
-      <NoiseOverlay opacity={0.02} />
-      <div className={styles.compInner}>
-        <div className={styles.compHeader}>
-          <div className={styles.compLabel}>What's included</div>
-          <h2 className={styles.compTitle}>
-            Everything you need.<br />Nothing to unlock.
-          </h2>
-          <p className={styles.compSub}>
-            Every feature ships free under the MIT license. No enterprise tier, no feature gates, no per-seat pricing.
-          </p>
-        </div>
-
-        <div className={styles.compTable}>
-          <div className={styles.compTableHead}>
-            <div className={styles.compTableFeatureCol}>Feature</div>
-            <div className={`${styles.compTableCol} ${styles.compTableColOGrid}`}>
-              <span className={styles.compTableLogo}>OGrid</span>
-              <span className={styles.compTablePrice}>free forever</span>
-            </div>
-          </div>
-
-          <div className={styles.compTableBody}>
-            {featureList.map((row, i) => (
-              <div
-                key={row.name}
-                className={`${styles.compRow} ${i % 2 === 0 ? styles.compRowEven : ''}`}
-                style={{ transitionDelay: visible ? `${i * 40}ms` : '0ms' }}
-              >
-                <div className={styles.compRowFeature}>{row.name}</div>
-                <div className={`${styles.compRowCell} ${styles.compRowCellOGrid}`}>
-                  <span className={styles.compCheck}>✓</span>
-                  <span className={styles.compCheckLabel}>Included</span>
-                </div>
-              </div>
-            ))}
-          </div>
-
-          <div className={styles.compTableFoot}>
-            <div className={styles.compTableFeatureCol} />
-            <div className={`${styles.compFootCell} ${styles.compFootCellOGrid}`}>
-              <span className={styles.compFootPrice}>$0</span>
-              <span className={styles.compFootNote}>MIT licensed, free forever</span>
-            </div>
-          </div>
-        </div>
-      </div>
-    </section>
-  );
-}
 
 /* ──────────────────────────────────────────────
    CTA
@@ -812,17 +771,17 @@ const frameworkCards: FrameworkCard[] = [
   {
     name: 'Angular',
     uiKits: [
+      { label: 'Radix', pkg: '@alaarab/ogrid-angular-radix' },
       { label: 'Material', pkg: '@alaarab/ogrid-angular-material' },
       { label: 'PrimeNG', pkg: '@alaarab/ogrid-angular-primeng' },
-      { label: 'Radix', pkg: '@alaarab/ogrid-angular-radix' },
     ],
   },
   {
     name: 'Vue',
     uiKits: [
+      { label: 'Radix', pkg: '@alaarab/ogrid-vue-radix' },
       { label: 'Vuetify', pkg: '@alaarab/ogrid-vue-vuetify' },
       { label: 'PrimeVue', pkg: '@alaarab/ogrid-vue-primevue' },
-      { label: 'Radix', pkg: '@alaarab/ogrid-vue-radix' },
     ],
   },
   {
@@ -926,7 +885,6 @@ export default function Home() {
       <CodePreviewSection />
       <FeatureBentoSection />
       <LiveDataSection />
-      <EverythingIncludedSection />
       <CTASection />
     </Layout>
   );
