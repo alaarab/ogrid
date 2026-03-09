@@ -347,8 +347,7 @@ test.describe('Cell editing', () => {
   });
 
   test('Escape discards the edit', async ({ page }) => {
-    // Vue Vuetify inline editor does not cancel on Escape  -  skip for that framework
-    if (!supportsEscapeCancel(page)) {
+    if (getFramework(page) === 'vue-vuetify') {
       test.skip();
       return;
     }
@@ -506,7 +505,7 @@ test.describe('Undo/Redo', () => {
   });
 
   test('Ctrl+Z undoes a cell edit', async ({ page }) => {
-    if (isJS(page) || !supportsUndo(page)) {
+    if (!supportsUndo(page)) {
       test.skip();
       return;
     }
@@ -530,7 +529,7 @@ test.describe('Undo/Redo', () => {
   });
 
   test('Ctrl+Y redoes after undo', async ({ page }) => {
-    if (isJS(page) || !supportsUndo(page)) {
+    if (!supportsUndo(page)) {
       test.skip();
       return;
     }
@@ -570,10 +569,6 @@ test.describe('Advanced keyboard shortcuts', () => {
   });
 
   test('Delete key clears editable cell value', async ({ page }) => {
-    if (isJS(page)) {
-      test.skip();
-      return;
-    }
     const cellContent = getCellContent(page, 0, 0);
     await cellContent.click();
 
@@ -803,12 +798,6 @@ test.describe('Fill handle', () => {
   });
 
   test('dragging fill handle fills value into rows below', async ({ page }) => {
-    // JS renders the fill handle and blocks incompatible cross-column fills, but
-    // drag-to-fill does not complete in the browser example yet.
-    if (isJS(page)) {
-      test.skip();
-      return;
-    }
     // Edit cell [0,0] to a known value
     const cell = getCellContent(page, 0, 0);
     const input = await enterCellEdit(page, 0, 0);
@@ -963,10 +952,7 @@ test.describe('RichSelect editor', () => {
   });
 
   test('double-clicking a Status cell opens a dropdown with search', async ({ page }) => {
-    // Vue Vuetify uses a native VSelect for the Status cell, not the custom
-    // RichSelect with search. JS does not surface the RichSelect search UI in
-    // the browser example yet.
-    if (isJS(page) || !supportsRichSelect(page)) {
+    if (!supportsRichSelect(page)) {
       test.skip();
       return;
     }
@@ -984,10 +970,7 @@ test.describe('RichSelect editor', () => {
   });
 
   test('typing in RichSelect search filters options', async ({ page }) => {
-    // Vue Vuetify uses a native VSelect for the Status cell, not the custom
-    // RichSelect with search. JS does not surface the RichSelect search UI in
-    // the browser example yet.
-    if (isJS(page) || !supportsRichSelect(page)) {
+    if (!supportsRichSelect(page)) {
       test.skip();
       return;
     }

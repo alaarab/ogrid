@@ -651,8 +651,8 @@ export function getContextMenuItem(page: Page, name: string | RegExp): Locator {
  * Returns true if the framework uses a custom RichSelect editor with search input
  * for enum cells (Status column). Vue Vuetify uses a native VSelect instead.
  */
-export function supportsRichSelect(page: Page): boolean {
-  return getFramework(page) !== 'vue-vuetify';
+export function supportsRichSelect(_page: Page): boolean {
+  return true;
 }
 
 /**
@@ -661,9 +661,8 @@ export function supportsRichSelect(page: Page): boolean {
  */
 export function supportsEscapeCancel(page: Page): boolean {
   const fw = getFramework(page);
-  // Vue Vuetify inline editor does not cancel on Escape.
   // JS inline editor closes, but edited values are not discarded on Escape.
-  return fw !== 'vue-vuetify' && fw !== 'js';
+  return fw !== 'js';
 }
 
 /**
