@@ -137,12 +137,14 @@
   position: relative;
   z-index: 3;
   display: grid;
-  grid-template-columns: 480px 1fr;
+  grid-template-columns: 480px minmax(0, 1fr);
   gap: 3rem;
   align-items: center;
   max-width: 1600px;
   margin: 0 auto;
   padding: 4.5rem 3rem 4rem;
+  box-sizing: border-box;
+  width: 100%;
 
   @media (max-width: 1100px) {
     grid-template-columns: 1fr;
@@ -421,6 +423,7 @@
 /* ── Hero Right: live OGrid ── */
 .heroRight {
   position: relative;
+  min-width: 0;
   /* Fade the grid out on the right edge so it reads as extending beyond, not clipping */
   mask-image: linear-gradient(
     to right,
@@ -463,6 +466,7 @@
   height: 70vh;
   min-height: 480px;
   max-height: 750px;
+  background: var(--ifm-background-surface-color);
   border-radius: 12px;
   overflow: hidden;
   border: 1px solid var(--ogrid-border-glass);
@@ -473,15 +477,21 @@
   contain: layout style;
   display: flex;
   flex-direction: column;
+  isolation: isolate;
 
   > div {
     flex: 1;
+    background: inherit;
+    height: 100%;
     min-height: 0;
   }
 
   > div > div {
+    background: inherit;
     border: none !important;
-    border-radius: 0 !important;
+    border-radius: inherit !important;
+    height: 100%;
+    overflow: hidden;
   }
 
   table {

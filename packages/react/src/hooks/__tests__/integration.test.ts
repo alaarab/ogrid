@@ -26,9 +26,9 @@ const testData: Row[] = [
 ];
 
 const testColumns: IColumnDef<Row>[] = [
-  { columnId: 'name', name: 'Name', editable: true },
-  { columnId: 'score', name: 'Score', type: 'numeric', editable: true },
-  { columnId: 'status', name: 'Status', editable: true },
+  { columnId: 'name', name: 'Name', editable: true, cellEditor: 'text' },
+  { columnId: 'score', name: 'Score', type: 'numeric', editable: true, cellEditor: 'text' },
+  { columnId: 'status', name: 'Status', editable: true, cellEditor: 'text' },
 ];
 
 const filterableColumns: IColumnDef<Row>[] = [

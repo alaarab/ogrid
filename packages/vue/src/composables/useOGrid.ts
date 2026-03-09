@@ -7,6 +7,7 @@ import {
   processClientSideData,
   processClientSideDataAsync,
   computeNextSortState,
+  shouldUseWorkerSort,
   validateColumns,
   validateRowIds,
   columnLetterToIndex,
@@ -104,6 +105,7 @@ export function useOGrid<T>(
       columnOrder: p.columnOrder,
       onColumnOrderChange: p.onColumnOrderChange,
       onColumnResized: p.onColumnResized,
+      onAutosizeColumn: p.onAutosizeColumn,
       onColumnPinned: p.onColumnPinned,
       columnChooser: p.columnChooser,
     };
@@ -188,6 +190,7 @@ export function useOGrid<T>(
     direction: defaults.value.defaultSortDirection,
   });
   const internalFilters = ref<IFilters>({});
+  const internalColumnOrder = ref<string[] | undefined>(undefined);
   const internalVisibleColumns = ref<Set<string>>((() => {
     const visible = columns.value
       .filter((c) => c.defaultVisible !== false)
@@ -206,6 +209,7 @@ export function useOGrid<T>(
   const pageSize = computed(() => controlledState.value.pageSize ?? internalPageSize.value);
   const sort = computed(() => controlledState.value.sort ?? internalSort.value);
   const filters = computed(() => controlledState.value.filters ?? internalFilters.value);
+  const effectiveColumnOrder = computed(() => columnProps.value.columnOrder ?? internalColumnOrder.value);
   const visibleColumns = computed(() => controlledState.value.visibleColumns ?? internalVisibleColumns.value);
 
   const setPage = (p: number) => {
@@ -281,7 +285,11 @@ export function useOGrid<T>(
   });
 
   // --- Client-side filtering & sorting ---
-  const workerSortEnabled = computed(() => !!props.value.workerSort);
+  const workerSortEnabled = computed(() => shouldUseWorkerSort(props.value.workerSort, displayData.value.length, {
+    columns: columns.value,
+    filters: filters.value,
+    sortBy: sort.value.field,
+  }));
 
   // Stable sorted order (index-based, same approach as React).
   // sortedIndices stores indices into displayData from the last explicit sort/filter pass.
@@ -428,6 +436,7 @@ export function useOGrid<T>(
   const serverTotalCount = ref(0);
   const loading = ref(false);
   let fetchId = 0;
+  let fetchAbortController: AbortController | null = null;
   let isDestroyed = false;
   const refreshCounter = ref(0);
 
@@ -437,6 +446,9 @@ export function useOGrid<T>(
       return;
     }
     const id = ++fetchId;
+    fetchAbortController?.abort();
+    const controller = new AbortController();
+    fetchAbortController = controller;
     loading.value = true;
     dataProps.value.dataSource
       .fetchPage({
@@ -444,20 +456,21 @@ export function useOGrid<T>(
         pageSize: pageSize.value,
         sort: { field: sort.value.field, direction: sort.value.direction },
         filters: filters.value,
+        signal: controller.signal,
       })
       .then((res) => {
-        if (id !== fetchId || isDestroyed) return;
+        if (id !== fetchId || isDestroyed || controller.signal.aborted) return;
         serverItems.value = res.items;
         serverTotalCount.value = res.totalCount;
       })
       .catch((err) => {
-        if (id !== fetchId || isDestroyed) return;
+        if (id !== fetchId || isDestroyed || controller.signal.aborted) return;
         callbacks.value.onError?.(err);
         serverItems.value = [];
         serverTotalCount.value = 0;
       })
       .finally(() => {
-        if (id === fetchId && !isDestroyed) loading.value = false;
+        if (id === fetchId && !isDestroyed && !controller.signal.aborted) loading.value = false;
       });
   };
 
@@ -479,6 +492,8 @@ export function useOGrid<T>(
 
   onUnmounted(() => {
     isDestroyed = true;
+    fetchAbortController?.abort();
+    fetchAbortController = null;
   });
 
   const displayItems = computed<T[]>(() =>
@@ -552,6 +567,11 @@ export function useOGrid<T>(
   const handleColumnResized = (columnId: string, width: number) => {
     columnWidthOverrides.value = { ...columnWidthOverrides.value, [columnId]: width };
     columnProps.value.onColumnResized?.(columnId, width);
+  };
+
+  const handleAutosizeColumn = (columnId: string, width: number) => {
+    columnWidthOverrides.value = { ...columnWidthOverrides.value, [columnId]: width };
+    (columnProps.value.onAutosizeColumn ?? columnProps.value.onColumnResized)?.(columnId, width);
   };
 
   const handleColumnPinned = (columnId: string, pinned: 'left' | 'right' | null) => {
@@ -664,9 +684,10 @@ export function useOGrid<T>(
       sortDirection: sort.value.direction,
       onColumnSort: handleSort,
       visibleColumns: visibleColumns.value,
-      columnOrder: columnProps.value.columnOrder,
+      columnOrder: effectiveColumnOrder.value,
       onColumnOrderChange: columnProps.value.onColumnOrderChange,
       onColumnResized: handleColumnResized,
+      onAutosizeColumn: handleAutosizeColumn,
       onColumnPinned: handleColumnPinned,
       pinnedColumns: pinnedOverrides.value,
       initialColumnWidths: columnWidthOverrides.value,
@@ -819,7 +840,7 @@ export function useOGrid<T>(
     getColumnState: () => ({
       visibleColumns: Array.from(visibleColumns.value),
       sort: sort.value,
-      columnOrder: columnProps.value.columnOrder ?? undefined,
+      columnOrder: effectiveColumnOrder.value ?? undefined,
       columnWidths: Object.keys(columnWidthOverrides.value).length > 0 ? columnWidthOverrides.value : undefined,
       filters: Object.keys(filters.value).length > 0 ? filters.value : undefined,
       pinnedColumns: Object.keys(pinnedOverrides.value).length > 0 ? pinnedOverrides.value : undefined,
@@ -827,7 +848,10 @@ export function useOGrid<T>(
     applyColumnState: (state: Partial<IGridColumnState>) => {
       if (state.visibleColumns) setVisibleColumns(new Set(state.visibleColumns));
       if (state.sort) setSort(state.sort);
-      if (state.columnOrder && columnProps.value.onColumnOrderChange) columnProps.value.onColumnOrderChange(state.columnOrder);
+      if (state.columnOrder) {
+        if (columnProps.value.columnOrder === undefined) internalColumnOrder.value = state.columnOrder;
+        columnProps.value.onColumnOrderChange?.(state.columnOrder);
+      }
       if (state.columnWidths) columnWidthOverrides.value = state.columnWidths;
       if (state.filters) setFilters(state.filters);
       if (state.pinnedColumns) pinnedOverrides.value = state.pinnedColumns;
@@ -864,8 +888,9 @@ export function useOGrid<T>(
       // No-op at orchestration level  -  DataGridTable components implement
       // this via useVirtualScroll.scrollToRow when virtual scrolling is active.
     },
-    getColumnOrder: () => columnProps.value.columnOrder ?? columns.value.map((c) => c.columnId),
+    getColumnOrder: () => effectiveColumnOrder.value ?? columns.value.map((c) => c.columnId),
     setColumnOrder: (order: string[]) => {
+      if (columnProps.value.columnOrder === undefined) internalColumnOrder.value = order;
       columnProps.value.onColumnOrderChange?.(order);
     },
   }));

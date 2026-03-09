@@ -195,14 +195,33 @@ export class InlineCellEditor<T> {
    */
   private createInputEditor(type: 'text' | 'date', initialValue: string): HTMLInputElement {
     const input = document.createElement('input');
+    let suppressBlurCommit = false;
     input.type = type;
     input.value = initialValue;
     Object.assign(input.style, EDITOR_STYLE);
+
+    const handleBlur = () => {
+      if (suppressBlurCommit) {
+        suppressBlurCommit = false;
+        this.closeEditor();
+        return;
+      }
+      if (this.editingCell) {
+        this.onCommit?.(this.editingCell.rowId, this.editingCell.columnId, input.value);
+      }
+      this.closeEditor();
+    };
+
+    const detachBlurHandler = () => {
+      input.removeEventListener('blur', handleBlur);
+    };
 
     input.addEventListener('keydown', (e) => {
       if (e.key === 'Enter') {
         e.preventDefault();
         e.stopPropagation(); // Prevent grid wrapper from re-opening the editor
+        suppressBlurCommit = true;
+        detachBlurHandler();
         if (this.editingCell) {
           this.onCommit?.(this.editingCell.rowId, this.editingCell.columnId, input.value);
         }
@@ -212,6 +231,8 @@ export class InlineCellEditor<T> {
       } else if (e.key === 'Escape') {
         e.preventDefault();
         e.stopPropagation();
+        suppressBlurCommit = true;
+        detachBlurHandler();
         this.onCancel?.();
         this.closeEditor();
       } else if (['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'].includes(e.key)) {
@@ -223,12 +244,7 @@ export class InlineCellEditor<T> {
       }
     });
 
-    input.addEventListener('blur', () => {
-      if (this.editingCell) {
-        this.onCommit?.(this.editingCell.rowId, this.editingCell.columnId, input.value);
-      }
-      this.closeEditor();
-    });
+    input.addEventListener('blur', handleBlur);
 
     setTimeout(() => input.select(), 0);
     return input;
@@ -303,6 +319,7 @@ export class InlineCellEditor<T> {
    */
   private createDateTextEditor(initialValue: string, placeholder: string, dateFormat: string): HTMLInputElement {
     const input = document.createElement('input');
+    let suppressBlurCommit = false;
     input.type = 'text';
     input.value = initialValue;
     input.placeholder = placeholder;
@@ -334,6 +351,7 @@ export class InlineCellEditor<T> {
       if (e.key === 'Enter') {
         e.preventDefault();
         e.stopPropagation();
+        suppressBlurCommit = true;
         commitValue();
         const afterCommit = this.onAfterCommit;
         this.closeEditor();
@@ -341,6 +359,7 @@ export class InlineCellEditor<T> {
       } else if (e.key === 'Escape') {
         e.preventDefault();
         e.stopPropagation();
+        suppressBlurCommit = true;
         this.onCancel?.();
         this.closeEditor();
       } else if (['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'].includes(e.key)) {
@@ -351,6 +370,11 @@ export class InlineCellEditor<T> {
     });
 
     input.addEventListener('blur', () => {
+      if (suppressBlurCommit) {
+        suppressBlurCommit = false;
+        this.closeEditor();
+        return;
+      }
       commitValue();
       this.closeEditor();
     });
@@ -597,6 +621,8 @@ export class InlineCellEditor<T> {
       for (let i = 0; i < filteredValues.length; i++) {
         const val = filteredValues[i];
         const option = document.createElement('div');
+        option.setAttribute('role', 'option');
+        option.setAttribute('aria-selected', String(i === highlightedIndex));
         option.textContent = String(formatValue(val));
         option.style.padding = '6px 8px';
         option.style.cursor = 'pointer';
@@ -627,9 +653,11 @@ export class InlineCellEditor<T> {
       const next = optionsContainer.children[nextIndex] as HTMLElement | undefined;
       if (prev) {
         prev.style.background = '';
+        prev.setAttribute('aria-selected', 'false');
       }
       if (next) {
         next.style.background = 'var(--ogrid-bg-hover, #e8f0fe)';
+        next.setAttribute('aria-selected', 'true');
         next.scrollIntoView({ block: 'nearest' });
       }
     };

@@ -92,7 +92,7 @@
  * - `destroy()` -- full cleanup.
  */
 import type { OGridOptions, OGridEvents, IJsOGridApi } from './types/gridTypes';
-import type { FilterValue } from '@alaarab/ogrid-core';
+import type { FilterValue, IGridColumnState } from '@alaarab/ogrid-core';
 import { GridState } from './state/GridState';
 import { TableRenderer } from './renderer/TableRenderer';
 import { PaginationControls } from './components/PaginationControls';
@@ -125,6 +125,52 @@ import { OGridRendering } from './OGridRendering';
 import type { OGridRenderingContext } from './OGridRendering';
 import { FormulaEngineState } from './state/FormulaEngineState';
 import { FormulaBar } from './components/FormulaBar';
+import { SheetTabs } from './components/SheetTabs';
+
+function areArraysEqual<TValue>(left: TValue[], right: TValue[]): boolean {
+  if (left.length !== right.length) return false;
+  return left.every((value, index) => value === right[index]);
+}
+
+function areSortsEqual(
+  left: { field: string; direction: 'asc' | 'desc' } | undefined,
+  right: { field: string; direction: 'asc' | 'desc' } | undefined,
+): boolean {
+  return left?.field === right?.field && left?.direction === right?.direction;
+}
+
+function areFiltersEqual(
+  left: Record<string, FilterValue | undefined>,
+  right: Record<string, FilterValue | undefined>,
+): boolean {
+  return JSON.stringify(left) === JSON.stringify(right);
+}
+
+function sanitizeColumnWidths(
+  widths: Record<string, number> | undefined,
+  validColumnIds: Set<string>,
+): Record<string, number> {
+  if (!widths) return {};
+  const nextWidths: Record<string, number> = {};
+  for (const [columnId, width] of Object.entries(widths)) {
+    if (!validColumnIds.has(columnId) || !Number.isFinite(width) || width <= 0) continue;
+    nextWidths[columnId] = width;
+  }
+  return nextWidths;
+}
+
+function sanitizePinnedColumns(
+  pinnedColumns: Record<string, 'left' | 'right'> | undefined,
+  validColumnIds: Set<string>,
+): Record<string, 'left' | 'right'> {
+  if (!pinnedColumns) return {};
+  const nextPinnedColumns: Record<string, 'left' | 'right'> = {};
+  for (const [columnId, side] of Object.entries(pinnedColumns)) {
+    if (!validColumnIds.has(columnId)) continue;
+    nextPinnedColumns[columnId] = side;
+  }
+  return nextPinnedColumns;
+}
 
 /**
  * CSS variable definitions for light and dark themes (injected once per page).
@@ -277,10 +323,13 @@ export class OGrid<T> {
   private formulaEngine: FormulaEngineState | null = null;
   private formulaBar: FormulaBar | null = null;
   private formulaBarContainer: HTMLElement | null = null;
+  private sheetTabs: SheetTabs | null = null;
+  private sheetTabsContainer: HTMLElement | null = null;
   /** Tracks the text currently displayed/edited in the formula bar. */
   private formulaBarText = '';
   /** Whether the formula bar input is currently in editing mode. */
   private formulaBarEditing = false;
+  private activeSheetId: string | null = null;
 
   private events = new EventEmitter<OGridEvents<T>>();
   private unsubscribes: (() => void)[] = [];
@@ -293,6 +342,12 @@ export class OGrid<T> {
   private isFullScreen = false;
   private fullscreenBtn: HTMLButtonElement | null = null;
   private nameBoxEl: HTMLElement | null = null;
+  private lastPage = 1;
+  private lastPageSize = 20;
+  private lastSort: { field: string; direction: 'asc' | 'desc' } | undefined;
+  private lastFilters: Record<string, FilterValue | undefined> = {};
+  private lastColumnOrder: string[] = [];
+  private lastPinnedColumns: Record<string, 'left' | 'right'> = {};
 
   // Decomposed helpers
   private renderingHelper: OGridRendering<T>;
@@ -303,9 +358,15 @@ export class OGrid<T> {
 
   constructor(container: HTMLElement, options: OGridOptions<T>) {
     this.options = options;
+    this.activeSheetId = options.activeSheet ?? options.sheetDefs?.[0]?.id ?? null;
     this.state = new GridState<T>(options);
     this.api = this.state.getApi();
     this.eventWiringHelper = new OGridEventWiring<T>();
+    this.lastPage = this.state.page;
+    this.lastPageSize = this.state.pageSize;
+    this.lastSort = this.state.sort;
+    this.lastFilters = { ...this.state.filters };
+    this.lastColumnOrder = [...this.state.columnOrder];
 
     // Formula engine (opt-in)
     if (options.formulas) {
@@ -400,6 +461,10 @@ export class OGrid<T> {
     this.tableContainer.style.position = 'relative';
     this.bodyArea.appendChild(this.tableContainer);
 
+    this.sheetTabsContainer = document.createElement('div');
+    this.sheetTabsContainer.className = 'ogrid-sheet-tabs-container';
+    this.containerEl.appendChild(this.sheetTabsContainer);
+
     // Status bar container
     this.statusBarContainer = document.createElement('div');
     this.statusBarContainer.className = 'ogrid-status-bar-container';
@@ -429,6 +494,7 @@ export class OGrid<T> {
     this.pagination = new PaginationControls<T>(this.paginationContainer, this.state);
     this.statusBar = new StatusBar(this.statusBarContainer);
     this.columnChooser = new ColumnChooser<T>(this.toolbarEl, this.state);
+    this.sheetTabs = new SheetTabs(this.sheetTabsContainer);
 
     // Initialize header filter state
     this.headerFilterState = new HeaderFilterState((key: string, value: FilterValue | undefined) => {
@@ -472,6 +538,8 @@ export class OGrid<T> {
         options.pinnedColumns,
         flatCols as unknown as import('@alaarab/ogrid-core').IColumnDef[]
       );
+      this.bindColumnStateApi();
+      this.bindSheetTabsApi();
 
       // Initialize row selection (always active if rowSelection is set)
       if (options.rowSelection && options.rowSelection !== 'none') {
@@ -498,7 +566,9 @@ export class OGrid<T> {
         };
 
         this.unsubscribes.push(
-          this.rowSelectionState.onRowSelectionChange(() => {
+          this.rowSelectionState.onRowSelectionChange((event) => {
+            options.onSelectionChange?.(event);
+            this.events.emit('selectionChange', event);
             this.renderingHelper.updateRendererInteractionState();
           })
         );
@@ -513,8 +583,15 @@ export class OGrid<T> {
       // Initialize interaction features if enabled (default: true for cellSelection)
       const shouldEnableInteraction = options.cellSelection !== false || options.editable === true;
       if (shouldEnableInteraction) {
+        const interactionOptions: OGridOptions<T> = {
+          ...options,
+          onCellValueChanged: (event) => {
+            options.onCellValueChanged?.(event);
+            this.events.emit('cellValueChanged', event);
+          },
+        };
         const result = this.eventWiringHelper.initializeInteraction(
-          options,
+          interactionOptions,
           this.state,
           this.renderer,
           this.tableContainer,
@@ -543,6 +620,13 @@ export class OGrid<T> {
         this.contextMenu = result.contextMenu;
         this.unsubscribes.push(...result.unsubscribes);
 
+        this.unsubscribes.push(
+          this.resizeState.onColumnWidthChange(({ columnId, widthPx }) => {
+            options.onColumnResized?.(columnId, widthPx);
+            this.events.emit('columnResized', { columnId, width: widthPx });
+          })
+        );
+
         // Wire name box updates on active cell change
         if (this.nameBoxEl && this.selectionState) {
           const nameBox = this.nameBoxEl;
@@ -570,7 +654,7 @@ export class OGrid<T> {
           const fEngine = this.formulaEngine;
           let colOffset = 0;
           if (this.rowSelectionState) colOffset++;
-          if (options.showRowNumbers || options.cellReferences || options.formulas) colOffset++;
+          if (options.showRowNumbers || options.cellReferences) colOffset++;
           this.unsubscribes.push(
             sel.onSelectionChange(({ activeCell }) => {
               this.formulaBarEditing = false;
@@ -606,12 +690,15 @@ export class OGrid<T> {
       this.unsubscribes.push(
         this.state.onStateChange(() => {
           this.renderingHelper.renderAll();
+          this.emitGridStateEvents();
         })
       );
 
       // Subscribe to pinning changes
+      this.lastPinnedColumns = { ...this.pinningState.pinnedColumns };
       this.unsubscribes.push(
-        this.pinningState.onPinningChange(() => {
+        this.pinningState.onPinningChange(({ pinnedColumns }) => {
+          this.emitPinnedColumnChanges(pinnedColumns);
           this.renderingHelper.updateRendererInteractionState();
         })
       );
@@ -623,16 +710,17 @@ export class OGrid<T> {
         })
       );
 
-      // Subscribe to layout changes for responsive column hiding
-      if (options.responsiveColumns) {
-        this.unsubscribes.push(
-          this.layoutState.onLayoutChange((event) => {
-            if (event.type === 'containerResize') {
-              this.state.setContainerWidth(this.layoutState.containerWidth);
-            }
-          })
-        );
-      }
+      // Subscribe to layout changes for width overrides and responsive column hiding
+      this.unsubscribes.push(
+        this.layoutState.onLayoutChange((event) => {
+          if (event.type === 'columnOverride') {
+            this.renderingHelper.updateRendererInteractionState();
+          }
+          if (event.type === 'containerResize' && options.responsiveColumns) {
+            this.state.setContainerWidth(this.layoutState.containerWidth);
+          }
+        })
+      );
 
       // Initialize virtual scrolling if configured
       if (options.virtualScroll?.enabled) {
@@ -677,6 +765,7 @@ export class OGrid<T> {
 
       // Complete initial render (pagination, status bar, column chooser, sidebar, loading)
       this.renderingHelper.renderAll();
+      this.renderSheetTabs();
     } catch (e) {
       this.destroy();
       throw e;
@@ -802,7 +891,8 @@ export class OGrid<T> {
     if (wrapped) {
       wrapped({ item, columnId, oldValue: currentValue, newValue, rowIndex });
     }
-    this.renderingHelper.updateRendererInteractionState();
+    // Boolean cells mutate the existing row object, so a full render is needed to refresh the cell DOM.
+    this.renderingHelper.renderAll();
   }
 
   private startCellEdit(rowId: RowId, columnId: string): void {
@@ -1012,6 +1102,191 @@ export class OGrid<T> {
     this.formulaBar?.setEditing(true);
   }
 
+  private bindColumnStateApi(): void {
+    const baseGetColumnState = this.api.getColumnState.bind(this.api);
+    const baseApplyColumnState = this.api.applyColumnState.bind(this.api);
+
+    this.api.getColumnState = (): IGridColumnState => {
+      const baseState = baseGetColumnState();
+      const columnWidths = this.layoutState.getAllColumnWidths();
+      const pinnedColumns = this.pinningState?.pinnedColumns ?? {};
+      return {
+        ...baseState,
+        columnOrder: [...this.state.columnOrder],
+        columnWidths: Object.keys(columnWidths).length > 0 ? { ...columnWidths } : undefined,
+        pinnedColumns: Object.keys(pinnedColumns).length > 0 ? { ...pinnedColumns } : undefined,
+      };
+    };
+
+    this.api.applyColumnState = (state: Partial<IGridColumnState>) => {
+      baseApplyColumnState(state);
+      let needsInteractionSync = false;
+
+      const validColumnIds = new Set(this.state.columns.map((column) => column.columnId));
+
+      if (state.columnWidths !== undefined) {
+        this.layoutState.applyInitialWidths(sanitizeColumnWidths(state.columnWidths, validColumnIds));
+        needsInteractionSync = true;
+      }
+
+      if (state.pinnedColumns !== undefined && this.pinningState) {
+        const nextPinnedColumns = sanitizePinnedColumns(state.pinnedColumns, validColumnIds);
+        const currentPinnedColumns = { ...this.pinningState.pinnedColumns };
+
+        for (const columnId of Object.keys(currentPinnedColumns)) {
+          if (nextPinnedColumns[columnId]) continue;
+          this.pinningState.unpinColumn(columnId);
+        }
+
+        for (const [columnId, side] of Object.entries(nextPinnedColumns)) {
+          if (currentPinnedColumns[columnId] === side) continue;
+          this.pinningState.pinColumn(columnId, side);
+        }
+        needsInteractionSync = true;
+      }
+
+      if (needsInteractionSync) {
+        this.renderingHelper.updateRendererInteractionState();
+      }
+    };
+  }
+
+  private bindSheetTabsApi(): void {
+    this.api.getActiveSheet = () => this.activeSheetId;
+
+    this.api.setActiveSheet = (sheetId: string) => {
+      this.setActiveSheet(sheetId);
+    };
+
+    this.api.getSheetDefs = () => {
+      return (this.options.sheetDefs ?? []).map((sheet) => ({ ...sheet }));
+    };
+
+    this.api.setSheetDefs = (sheetDefs, options) => {
+      this.options.sheetDefs = sheetDefs.map((sheet) => ({ ...sheet }));
+      if (options?.activeSheet !== undefined) {
+        this.activeSheetId = options.activeSheet;
+      } else if (!this.options.sheetDefs.some((sheet) => sheet.id === this.activeSheetId)) {
+        this.activeSheetId = this.options.sheetDefs[0]?.id ?? null;
+      }
+      this.options.activeSheet = this.activeSheetId ?? undefined;
+      this.renderSheetTabs();
+    };
+  }
+
+  private setActiveSheet(sheetId: string): void {
+    const sheetDefs = this.options.sheetDefs ?? [];
+    if (!sheetDefs.some((sheet) => sheet.id === sheetId) || this.activeSheetId === sheetId) {
+      return;
+    }
+
+    this.activeSheetId = sheetId;
+    this.options.activeSheet = sheetId;
+    this.renderSheetTabs();
+    this.options.onSheetChange?.(sheetId);
+    this.events.emit('sheetChange', { sheetId });
+  }
+
+  private handleSheetAdd = (): void => {
+    this.options.onSheetAdd?.();
+    this.events.emit('sheetAdd', {});
+
+    if (this.options.sheetDefs?.length && !this.activeSheetId) {
+      this.activeSheetId = this.options.sheetDefs[0]?.id ?? null;
+      this.options.activeSheet = this.activeSheetId ?? undefined;
+    }
+
+    this.renderSheetTabs();
+  };
+
+  private renderSheetTabs(): void {
+    if (!this.sheetTabs) return;
+
+    const sheetDefs = this.options.sheetDefs ?? [];
+    if (sheetDefs.length === 0) {
+      this.sheetTabs.render({
+        sheets: [],
+        activeSheet: '',
+        onSheetChange: () => {},
+      });
+      return;
+    }
+
+    if (!sheetDefs.some((sheet) => sheet.id === this.activeSheetId)) {
+      this.activeSheetId = sheetDefs[0]?.id ?? null;
+      this.options.activeSheet = this.activeSheetId ?? undefined;
+    }
+
+    if (!this.activeSheetId) {
+      this.sheetTabs.render({
+        sheets: [],
+        activeSheet: '',
+        onSheetChange: () => {},
+      });
+      return;
+    }
+
+    this.sheetTabs.render({
+      sheets: sheetDefs,
+      activeSheet: this.activeSheetId,
+      onSheetChange: (sheetId) => this.setActiveSheet(sheetId),
+      onSheetAdd: this.options.onSheetAdd ? this.handleSheetAdd : undefined,
+    });
+  }
+
+  private emitGridStateEvents(): void {
+    const page = this.state.page;
+    const pageSize = this.state.pageSize;
+    const sort = this.state.sort;
+    const filters = { ...this.state.filters };
+    const columnOrder = [...this.state.columnOrder];
+
+    if (page !== this.lastPage) {
+      this.options.onPageChange?.(page);
+      this.events.emit('pageChange', { page });
+      this.lastPage = page;
+    }
+
+    if (pageSize !== this.lastPageSize) {
+      this.options.onPageSizeChange?.(pageSize);
+      this.events.emit('pageSizeChange', { page, pageSize });
+      this.lastPageSize = pageSize;
+    }
+
+    if (!areSortsEqual(sort, this.lastSort)) {
+      this.events.emit('sortChange', { sort });
+      this.lastSort = sort;
+    }
+
+    if (!areFiltersEqual(filters, this.lastFilters)) {
+      this.events.emit('filterChange', { filters });
+      this.lastFilters = filters;
+    }
+
+    if (!areArraysEqual(columnOrder, this.lastColumnOrder)) {
+      this.options.onColumnOrderChange?.([...columnOrder]);
+      this.events.emit('columnOrderChange', { order: [...columnOrder] });
+      this.lastColumnOrder = columnOrder;
+    }
+  }
+
+  private emitPinnedColumnChanges(nextPinnedColumns: Record<string, 'left' | 'right'>): void {
+    const columnIds = new Set([
+      ...Object.keys(this.lastPinnedColumns),
+      ...Object.keys(nextPinnedColumns),
+    ]);
+
+    for (const columnId of columnIds) {
+      const previousPin = this.lastPinnedColumns[columnId] ?? null;
+      const nextPin = nextPinnedColumns[columnId] ?? null;
+      if (previousPin === nextPin) continue;
+      this.options.onColumnPinned?.(columnId, nextPin);
+      this.events.emit('columnPinned', { columnId, pin: nextPin });
+    }
+
+    this.lastPinnedColumns = { ...nextPinnedColumns };
+  }
+
   // Rendering methods delegated to OGridRendering helper:
   // - updateRendererInteractionState() -> this.renderingHelper.updateRendererInteractionState()
   // - updateDragAttributes()           -> this.renderingHelper.updateDragAttributes()
@@ -1074,6 +1349,7 @@ export class OGrid<T> {
     this.cellEditor?.closeEditor();
     this.contextMenu?.close();
     this.formulaBar?.destroy();
+    this.sheetTabs?.destroy();
     this.formulaEngine?.destroy();
     this.events.removeAllListeners();
     this.containerEl.remove();

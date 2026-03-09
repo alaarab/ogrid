@@ -7,6 +7,7 @@ import {
   processClientSideData,
   processClientSideDataAsync,
   computeNextSortState,
+  shouldUseWorkerSort,
   validateColumns,
   validateRowIds,
   columnLetterToIndex,
@@ -121,6 +122,7 @@ export class OGridService<T> {
   readonly onFiltersChange = signal<((filters: IFilters) => void) | undefined>(undefined);
   readonly onVisibleColumnsChange = signal<((cols: Set<string>) => void) | undefined>(undefined);
   readonly columnOrder = signal<string[] | undefined>(undefined);
+  readonly internalColumnOrder = signal<string[] | undefined>(undefined);
   readonly onColumnOrderChange = signal<((order: string[]) => void) | undefined>(undefined);
   readonly onColumnResized = signal<((columnId: string, width: number) => void) | undefined>(undefined);
   readonly onAutosizeColumn = signal<((columnId: string, width: number) => void) | undefined>(undefined);
@@ -160,7 +162,7 @@ export class OGridService<T> {
   readonly virtualScroll = signal<IVirtualScrollConfig | undefined>(undefined);
   readonly ariaLabel = signal<string | undefined>(undefined);
   readonly ariaLabelledBy = signal<string | undefined>(undefined);
-  readonly workerSort = signal<boolean>(false);
+  readonly workerSort = signal<boolean | 'auto'>(false);
   readonly showRowNumbers = signal<boolean>(false);
   readonly cellReferences = signal<boolean>(false);
   readonly formulasEnabled = signal<boolean>(false);
@@ -286,6 +288,7 @@ export class OGridService<T> {
     const visible = cols.filter((c) => c.defaultVisible !== false).map((c) => c.columnId);
     return new Set(visible.length > 0 ? visible : cols.map((c) => c.columnId));
   });
+  readonly effectiveColumnOrder = computed(() => this.columnOrder() ?? this.internalColumnOrder());
   readonly effectiveSelectedRows = computed(() => this.selectedRows() ?? this.internalSelectedRows());
 
   readonly columnChooserPlacement = computed<ColumnChooserPlacement>(() => {
@@ -302,9 +305,15 @@ export class OGridService<T> {
     return deriveFilterOptionsFromData(this.displayData(), this.columns());
   });
 
+  readonly workerSortEnabled = computed(() => shouldUseWorkerSort(this.workerSort(), this.displayData().length, {
+    columns: this.columns(),
+    filters: this.filters(),
+    sortBy: this.sort().field,
+  }));
+
   /** Sync path: used when workerSort is off. */
   readonly clientItemsAndTotal = computed(() => {
-    if (!this.isClientSide() || this.workerSort()) return null;
+    if (!this.isClientSide() || this.workerSortEnabled()) return null;
 
     const data = this.displayData();
     const cols = this.columns();
@@ -503,7 +512,7 @@ export class OGridService<T> {
     sortDirection: this.sort().direction,
     onColumnSort: this.handleSortFn,
     visibleColumns: this.visibleColumns(),
-    columnOrder: this.columnOrder(),
+    columnOrder: this.effectiveColumnOrder(),
     onColumnOrderChange: this.onColumnOrderChange(),
     onColumnResized: this.handleColumnResizedFn,
     onAutosizeColumn: this.onAutosizeColumn(),
@@ -626,7 +635,7 @@ export class OGridService<T> {
     let asyncPrevDataLength = -1;
 
     effect((onCleanup) => {
-      if (!this.isClientSide() || !this.workerSort()) return;
+      if (!this.isClientSide() || !this.workerSortEnabled()) return;
 
       const data = this.displayData();
       const cols = this.columns();
@@ -714,7 +723,13 @@ export class OGridService<T> {
       this.fetchAbortController = controller;
       this.serverLoading.set(true);
 
-      ds.fetchPage({ page, pageSize, sort: { field: sort.field, direction: sort.direction }, filters })
+      ds.fetchPage({
+        page,
+        pageSize,
+        sort: { field: sort.field, direction: sort.direction },
+        filters,
+        signal: controller.signal,
+      })
         .then((res) => {
           if (controller.signal.aborted) return;
           this.serverItems.set(res.items);
@@ -1120,7 +1135,7 @@ export class OGridService<T> {
       getColumnState: (): IGridColumnState => ({
         visibleColumns: Array.from(this.visibleColumns()),
         sort: this.sort(),
-        columnOrder: this.columnOrder() ?? undefined,
+        columnOrder: this.effectiveColumnOrder() ?? undefined,
         columnWidths: Object.keys(this.columnWidthOverrides()).length > 0 ? this.columnWidthOverrides() : undefined,
         filters: Object.keys(this.filters()).length > 0 ? this.filters() : undefined,
         pinnedColumns: Object.keys(this.pinnedOverrides()).length > 0 ? this.pinnedOverrides() : undefined,
@@ -1128,7 +1143,10 @@ export class OGridService<T> {
       applyColumnState: (state: Partial<IGridColumnState>) => {
         if (state.visibleColumns) this.setVisibleColumns(new Set(state.visibleColumns));
         if (state.sort) this.setSort(state.sort);
-        if (state.columnOrder) this.onColumnOrderChange()?.(state.columnOrder);
+        if (state.columnOrder) {
+          if (this.columnOrder() === undefined) this.internalColumnOrder.set(state.columnOrder);
+          this.onColumnOrderChange()?.(state.columnOrder);
+        }
         if (state.columnWidths) this.columnWidthOverrides.set(state.columnWidths);
         if (state.filters) this.setFilters(state.filters);
         if (state.pinnedColumns) this.pinnedOverrides.set(state.pinnedColumns);
@@ -1166,8 +1184,9 @@ export class OGridService<T> {
           this.refreshCounter.update((c) => c + 1);
         }
       },
-      getColumnOrder: () => this.columnOrder() ?? this.columns().map((c) => c.columnId),
+      getColumnOrder: () => this.effectiveColumnOrder() ?? this.columns().map((c) => c.columnId),
       setColumnOrder: (order: string[]) => {
+        if (this.columnOrder() === undefined) this.internalColumnOrder.set(order);
         this.onColumnOrderChange()?.(order);
       },
       scrollToRow: (_index: number, _options?: { align?: 'start' | 'center' | 'end' }) => {

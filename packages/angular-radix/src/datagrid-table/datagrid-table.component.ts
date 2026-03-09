@@ -10,7 +10,6 @@ import {
   EmptyStateComponent,
   FormulaRefOverlayComponent,
   ROW_NUMBER_COLUMN_ID,
-  OGRID_THEME_VARS_CSS,
   indexToColumnLetter,
   formatCellReference,
 } from '@alaarab/ogrid-angular';
@@ -34,7 +33,7 @@ import { PopoverCellEditorComponent } from './popover-cell-editor.component';
   encapsulation: ViewEncapsulation.None,
   imports: [ColumnHeaderFilterComponent, ColumnHeaderMenuComponent, StatusBarComponent, GridContextMenuComponent, MarchingAntsOverlayComponent, EmptyStateComponent, FormulaRefOverlayComponent, InlineCellEditorComponent, PopoverCellEditorComponent],
   providers: [DataGridStateService, ColumnReorderService, VirtualScrollService],
-  styles: [OGRID_THEME_VARS_CSS, `
+  styles: [`
     :host { display: block; }
     .ogrid-datagrid-root {
       position: relative;
@@ -485,7 +484,7 @@ import { PopoverCellEditorComponent } from './popover-cell-editor.component';
                           [style.max-width.px]="getRowNumberWidth()"
                         >
                           #
-                          <div class="ogrid-datagrid-resize-handle" (pointerdown)="onResizeRowNumber($event)" (dblclick)="$event.stopPropagation()"></div>
+                          <div class="ogrid-datagrid-resize-handle" role="separator" aria-label="Resize row numbers" (pointerdown)="onResizeRowNumber($event)" (dblclick)="$event.stopPropagation()"></div>
                         </th>
                       }
                       @if (rowIdx === 0 && rowIdx < headerRows().length - 1 && hasRowNumbersCol()) {
@@ -553,7 +552,7 @@ import { PopoverCellEditorComponent } from './popover-cell-editor.component';
                                 [handlers]="getColumnMenuHandlersMemoized(col.columnId)"
                               />
                             </div>
-                            <div class="ogrid-datagrid-resize-handle" (pointerdown)="onResizeStart($event, col)" (dblclick)="onResizeDoubleClick($event, col)"></div>
+                            <div class="ogrid-datagrid-resize-handle" role="separator" [attr.aria-label]="'Resize ' + col.name" (pointerdown)="onResizeStart($event, col)" (dblclick)="onResizeDoubleClick($event, col)"></div>
                           </th>
                         }
                       }
