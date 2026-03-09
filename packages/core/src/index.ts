@@ -148,6 +148,8 @@ export {
   terminateSortFilterWorker,
   extractValueMatrix,
   processClientSideDataAsync,
+  DEFAULT_WORKER_SORT_AUTO_THRESHOLD,
+  shouldUseWorkerSort,
 } from './utils';
 export type { SortFilterRequest, SortFilterResponse } from './utils';
 

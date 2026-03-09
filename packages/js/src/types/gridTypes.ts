@@ -7,6 +7,7 @@ import type {
   IRowSelectionChangeEvent,
   IOGridApi,
   ISideBarDef,
+  ISheetDef,
   IStatusBarProps,
   IVirtualScrollConfig,
   IFormulaFunction,
@@ -34,6 +35,7 @@ export type {
   ISelectionRange,
   SideBarPanelId,
   ISideBarDef,
+  ISheetDef,
   IVirtualScrollConfig,
   IOGridApi,
   IFormulaFunction,
@@ -68,6 +70,14 @@ export interface IJsOGridApi<T> extends IOGridApi<T> {
   getColumnOrder: () => string[];
   /** Set the column display order. */
   setColumnOrder: (order: string[]) => void;
+  /** Get the currently active sheet tab id. */
+  getActiveSheet: () => string | null;
+  /** Set the active sheet tab id. */
+  setActiveSheet: (sheetId: string) => void;
+  /** Get the current sheet tab definitions. */
+  getSheetDefs: () => ISheetDef[];
+  /** Replace the current sheet tab definitions. */
+  setSheetDefs: (sheetDefs: ISheetDef[], options?: { activeSheet?: string }) => void;
 }
 
 /** Options for the vanilla JS OGrid constructor. */
@@ -137,6 +147,15 @@ export interface OGridOptions<T> {
 
   /** Side bar configuration (columns panel + filters panel). */
   sideBar?: boolean | ISideBarDef;
+
+  /** Sheet definitions for bottom tab bar. When set, renders Excel-style sheet tabs. */
+  sheetDefs?: ISheetDef[];
+  /** Initially active sheet id. Defaults to the first provided sheet. */
+  activeSheet?: string;
+  /** Called when the user switches sheets. */
+  onSheetChange?: (sheetId: string) => void;
+  /** Called when the user clicks the add-sheet button. */
+  onSheetAdd?: () => void;
 
   /** Error callback for server-side data source failures. */
   onError?: (error: unknown) => void;
@@ -239,7 +258,13 @@ export interface OGridOptions<T> {
 export interface OGridEvents<T> extends Record<string, unknown> {
   cellValueChanged: ICellValueChangedEvent<T>;
   selectionChange: IRowSelectionChangeEvent<T>;
-  sortChange: { field: string; direction: 'asc' | 'desc' };
+  sortChange: { sort: { field: string; direction: 'asc' | 'desc' } | undefined };
   filterChange: { filters: IFilters };
   pageChange: { page: number };
+  pageSizeChange: { page: number; pageSize: number };
+  columnOrderChange: { order: string[] };
+  columnResized: { columnId: string; width: number };
+  columnPinned: { columnId: string; pin: 'left' | 'right' | null };
+  sheetChange: { sheetId: string };
+  sheetAdd: Record<string, never>;
 }

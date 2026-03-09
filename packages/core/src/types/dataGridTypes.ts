@@ -47,6 +47,8 @@ export interface IFetchParams {
   pageSize: number;
   sort?: { field: string; direction: 'asc' | 'desc' };
   filters: IFilters;
+  /** Optional abort signal for cancelling stale requests when the grid state changes. */
+  signal?: AbortSignal;
 }
 
 export interface IPageResult<T> {
