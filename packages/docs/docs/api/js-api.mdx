@@ -179,7 +179,7 @@ The JS package extends the core `IColumnDef<T>` with DOM-aware fields:
 | `cellStyle` | `Partial<CSSStyleDeclaration>` | Inline styles applied to each cell. |
 | `cellEditor` | `string \| (container: HTMLElement, params: object) => { getValue: () => unknown; destroy: () => void }` | Built-in editor name (`'text'`, `'select'`, `'richSelect'`, `'checkbox'`, `'date'`) or a factory function for custom editors. |
 
-All other `IColumnDef` fields (`columnId`, `name`, `sortable`, `filterable`, `type`, `editable`, `valueFormatter`, `valueGetter`, `valueParser`, `minWidth`, `defaultWidth`, `idealWidth`, `pinned`, `required`, `defaultVisible`) are identical to the React version  -  see [Column Definitions](./column-def).
+All other `IColumnDef` fields (`columnId`, `name`, `sortable`, `filterable`, `type`, `editable`, `valueFormatter`, `valueGetter`, `valueParser`, `minWidth`, `defaultWidth`, `idealWidth`, `pinned`, `required`, `defaultVisible`) follow the shared column-definition contract used across the framework packages. See [Column Definitions](./column-def).
 
 ---
 

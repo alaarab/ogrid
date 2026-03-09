@@ -1,7 +1,7 @@
 ---
 sidebar_position: 5
 title: Framework Showcase
-description: OGrid in React, Angular, Vue, and Vanilla JS — same API, native components
+description: OGrid in React, Angular, Vue, and Vanilla JS — shared core, native components
 ---
 
 import ShowcaseRadixDemo from '@site/src/components/demos/ShowcaseRadixDemo';
@@ -14,7 +14,7 @@ import BrowserOnly from '@docusaurus/BrowserOnly';
 
 OGrid works with your existing design system — not against it. React, Angular, Vue, and Vanilla JS are all fully supported, and every framework shares the same headless core so most behavior stays aligned across them.
 
-Every grid below is live. Sort, filter, edit, select, copy-paste, undo — it all works.
+Every grid below is live. Core interactions like sorting, filtering, editing, and selection are wired up across the demos, while deeper browser parity still varies by package.
 
 ---
 
@@ -240,7 +240,7 @@ npm install @alaarab/ogrid-js
 | **Vue** 3.3+ | Radix (Headless UI) *(bundled)* · Vuetify 3 · PrimeVue 4 | Composition API |
 | **Vanilla JS/TS** | Built-in CSS theme *(zero deps)* | EventEmitter |
 
-All 10 packages share the same `@alaarab/ogrid-core` and pass the same test suite. Switching design systems is a one-line import change.
+All 10 packages share the same `@alaarab/ogrid-core`. Shared test factories cover the common contract, and package-specific browser coverage handles the remaining interaction differences. Switching design systems within a framework family is usually a one-line import change.
 
 ## Premium inputs (optional)
 
