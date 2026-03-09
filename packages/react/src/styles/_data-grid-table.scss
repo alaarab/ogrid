@@ -352,9 +352,20 @@
   background: var(--ogrid-range-bg, rgba(33, 115, 70, 0.12));
 }
 
+// Extend the range background to the <td> itself so the cell borders between
+// highlighted cells don't appear as white/grey lines cutting through the selection.
+.tableWrapper .dataTable tbody td:has(> .cellInRange) {
+  background: var(--ogrid-range-bg, rgba(33, 115, 70, 0.12));
+}
+
 // Drag-range highlight applied via DOM attributes during drag (bypasses React for performance)
 // The .tableWrapper parent raises specificity to beat row-level hover/selected backgrounds.
 .tableWrapper :global([data-drag-range]) {
+  background: var(--ogrid-range-bg, rgba(33, 115, 70, 0.12));
+}
+
+// Also apply drag-range background to the <td> to eliminate border gaps during drag.
+.tableWrapper .dataTable tbody td:has(> :global([data-drag-range])) {
   background: var(--ogrid-range-bg, rgba(33, 115, 70, 0.12));
 }
 
