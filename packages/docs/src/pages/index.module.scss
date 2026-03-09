@@ -986,7 +986,7 @@
 
 .bentoSelectionGrid {
   display: grid;
-  grid-template-columns: repeat(5, 1fr);
+  grid-template-columns: repeat(7, 1fr);
   gap: 3px;
 }
 
@@ -1326,18 +1326,6 @@
 
 .compTableColOGrid {
   position: relative;
-
-  /* Green left border accent */
-  &::before {
-    content: '';
-    position: absolute;
-    top: -1.25rem;
-    left: -0.5rem;
-    bottom: -0.5rem;
-    width: 2px;
-    background: linear-gradient(180deg, #217346, #3ab876);
-    border-radius: 2px;
-  }
 }
 
 .compTableLogo {
@@ -1660,6 +1648,10 @@
   border-radius: 12px;
   padding: 1.25rem 0.85rem;
   backdrop-filter: blur(12px);
+  cursor: pointer;
+  text-align: center;
+  font: inherit;
+  color: inherit;
   transition: border-color 0.25s, transform 0.25s, box-shadow 0.25s, background 0.25s;
 
   &:hover {
@@ -1672,6 +1664,12 @@
   }
 }
 
+.ctaFrameworkCardActive {
+  border-color: rgba(58, 184, 118, 0.6);
+  background: rgba(58, 184, 118, 0.12);
+  box-shadow: 0 0 24px rgba(58, 184, 118, 0.15);
+}
+
 [data-theme='dark'] .ctaFrameworkCard {
   background: rgba(255, 255, 255, 0.03);
   border-color: rgba(255, 255, 255, 0.06);
@@ -1682,6 +1680,42 @@
       0 0 24px rgba(58, 184, 118, 0.15),
       0 8px 32px rgba(0, 0, 0, 0.3);
   }
+}
+
+[data-theme='dark'] .ctaFrameworkCardActive {
+  border-color: rgba(58, 184, 118, 0.5);
+  background: rgba(58, 184, 118, 0.1);
+}
+
+.ctaUiKitPicker {
+  display: flex;
+  gap: 0.5rem;
+  justify-content: center;
+  margin-bottom: 1.5rem;
+}
+
+.ctaUiKitBtn {
+  padding: 0.4rem 1rem;
+  font-size: 0.78rem;
+  font-weight: 600;
+  font-family: inherit;
+  color: rgba(255, 255, 255, 0.6);
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s;
+
+  &:hover {
+    color: rgba(255, 255, 255, 0.9);
+    border-color: rgba(255, 255, 255, 0.2);
+  }
+}
+
+.ctaUiKitBtnActive {
+  color: #fff;
+  background: rgba(58, 184, 118, 0.15);
+  border-color: rgba(58, 184, 118, 0.5);
 }
 
 .ctaFrameworkName {
@@ -1744,14 +1778,9 @@
   mix-blend-mode: overlay;
 }
 
-/* Matrix rain canvas for CTA */
+/* Matrix rain canvas removed — kept class for backwards compat */
 .matrixCanvas {
-  position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-  pointer-events: none;
-  z-index: 0;
+  display: none;
 }
 
 /* Vignette effect for CTA */
@@ -1785,23 +1814,12 @@
   filter: drop-shadow(0 0 20px rgba(58, 184, 118, 0.3));
 }
 
-/* CTA install command pulse ring */
+/* CTA install command */
 .ctaInstallPulse {
   position: relative;
   display: inline-flex;
   justify-content: center;
   width: 100%;
-
-  &::before {
-    content: '';
-    position: absolute;
-    inset: -3px;
-    border-radius: 11px;
-    background: linear-gradient(135deg, rgba(33, 115, 70, 0.3), rgba(58, 184, 118, 0.15), rgba(33, 115, 70, 0.3));
-    animation: installPulse 3s ease-in-out infinite;
-    pointer-events: none;
-    z-index: -1;
-  }
 
   /* Override install widget colors for dark CTA background */
   .heroInstall {
