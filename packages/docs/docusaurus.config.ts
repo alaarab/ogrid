@@ -78,10 +78,26 @@ const config: Config = {
       tagName: 'meta',
       attributes: { property: 'og:site_name', content: 'OGrid' },
     },
+    {
+      tagName: 'meta',
+      attributes: { property: 'og:image', content: 'https://alaarab.github.io/ogrid/img/og-image.png' },
+    },
+    {
+      tagName: 'meta',
+      attributes: { property: 'og:image:width', content: '1200' },
+    },
+    {
+      tagName: 'meta',
+      attributes: { property: 'og:image:height', content: '630' },
+    },
     // Twitter Card
     {
       tagName: 'meta',
       attributes: { name: 'twitter:card', content: 'summary_large_image' },
+    },
+    {
+      tagName: 'meta',
+      attributes: { name: 'twitter:image', content: 'https://alaarab.github.io/ogrid/img/og-image.png' },
     },
     // Structured data
     {

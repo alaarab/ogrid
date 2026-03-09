@@ -1,0 +1,99 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#0a1a10"/>
+      <stop offset="100%" stop-color="#0d1f14"/>
+    </linearGradient>
+    <linearGradient id="accent" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%" stop-color="#217346"/>
+      <stop offset="100%" stop-color="#3ab876"/>
+    </linearGradient>
+    <radialGradient id="glow" cx="50%" cy="45%" r="50%">
+      <stop offset="0%" stop-color="rgba(33,115,70,0.15)"/>
+      <stop offset="100%" stop-color="transparent"/>
+    </radialGradient>
+  </defs>
+
+  <!-- Background -->
+  <rect width="1200" height="630" fill="url(#bg)"/>
+  <rect width="1200" height="630" fill="url(#glow)"/>
+
+  <!-- Subtle grid lines -->
+  <g opacity="0.06" stroke="#3ab876" stroke-width="0.5">
+    <line x1="0" y1="105" x2="1200" y2="105"/>
+    <line x1="0" y1="210" x2="1200" y2="210"/>
+    <line x1="0" y1="315" x2="1200" y2="315"/>
+    <line x1="0" y1="420" x2="1200" y2="420"/>
+    <line x1="0" y1="525" x2="1200" y2="525"/>
+    <line x1="200" y1="0" x2="200" y2="630"/>
+    <line x1="400" y1="0" x2="400" y2="630"/>
+    <line x1="600" y1="0" x2="600" y2="630"/>
+    <line x1="800" y1="0" x2="800" y2="630"/>
+    <line x1="1000" y1="0" x2="1000" y2="630"/>
+  </g>
+
+  <!-- Logo icon (grid cells) -->
+  <g transform="translate(540, 130)">
+    <rect width="48" height="48" rx="9" fill="#217346"/>
+    <rect x="9" y="9" width="12" height="12" rx="2.5" fill="white" opacity="0.95"/>
+    <rect x="27" y="9" width="12" height="12" rx="2.5" fill="white" opacity="0.6"/>
+    <rect x="9" y="27" width="12" height="12" rx="2.5" fill="white" opacity="0.6"/>
+    <rect x="27" y="27" width="12" height="12" rx="2.5" fill="white" opacity="0.35"/>
+  </g>
+
+  <!-- "OGrid" text -->
+  <text x="600" y="230" text-anchor="middle" font-family="Inter, -apple-system, BlinkMacSystemFont, sans-serif" font-size="64" font-weight="900" letter-spacing="-3" fill="white">OGrid</text>
+
+  <!-- Tagline -->
+  <text x="600" y="290" text-anchor="middle" font-family="Inter, -apple-system, BlinkMacSystemFont, sans-serif" font-size="24" font-weight="400" fill="rgba(255,255,255,0.6)">The open-source data grid</text>
+
+  <!-- Framework pills -->
+  <g transform="translate(310, 330)">
+    <rect width="100" height="36" rx="18" fill="rgba(255,255,255,0.08)" stroke="rgba(255,255,255,0.12)" stroke-width="1"/>
+    <text x="50" y="23" text-anchor="middle" font-family="Inter, sans-serif" font-size="14" font-weight="600" fill="rgba(255,255,255,0.8)">React</text>
+  </g>
+  <g transform="translate(430, 330)">
+    <rect width="100" height="36" rx="18" fill="rgba(255,255,255,0.08)" stroke="rgba(255,255,255,0.12)" stroke-width="1"/>
+    <text x="50" y="23" text-anchor="middle" font-family="Inter, sans-serif" font-size="14" font-weight="600" fill="rgba(255,255,255,0.8)">Angular</text>
+  </g>
+  <g transform="translate(550, 330)">
+    <rect width="100" height="36" rx="18" fill="rgba(255,255,255,0.08)" stroke="rgba(255,255,255,0.12)" stroke-width="1"/>
+    <text x="50" y="23" text-anchor="middle" font-family="Inter, sans-serif" font-size="14" font-weight="600" fill="rgba(255,255,255,0.8)">Vue</text>
+  </g>
+  <g transform="translate(670, 330)">
+    <rect width="120" height="36" rx="18" fill="rgba(255,255,255,0.08)" stroke="rgba(255,255,255,0.12)" stroke-width="1"/>
+    <text x="60" y="23" text-anchor="middle" font-family="Inter, sans-serif" font-size="14" font-weight="600" fill="rgba(255,255,255,0.8)">Vanilla JS</text>
+  </g>
+
+  <!-- Feature chips row -->
+  <g transform="translate(240, 400)">
+    <rect width="110" height="30" rx="6" fill="rgba(33,115,70,0.2)" stroke="rgba(58,184,118,0.3)" stroke-width="1"/>
+    <text x="55" y="20" text-anchor="middle" font-family="Inter, sans-serif" font-size="12" font-weight="600" fill="#3ab876">Sorting</text>
+  </g>
+  <g transform="translate(365, 400)">
+    <rect width="110" height="30" rx="6" fill="rgba(33,115,70,0.2)" stroke="rgba(58,184,118,0.3)" stroke-width="1"/>
+    <text x="55" y="20" text-anchor="middle" font-family="Inter, sans-serif" font-size="12" font-weight="600" fill="#3ab876">Filtering</text>
+  </g>
+  <g transform="translate(490, 400)">
+    <rect width="110" height="30" rx="6" fill="rgba(33,115,70,0.2)" stroke="rgba(58,184,118,0.3)" stroke-width="1"/>
+    <text x="55" y="20" text-anchor="middle" font-family="Inter, sans-serif" font-size="12" font-weight="600" fill="#3ab876">Editing</text>
+  </g>
+  <g transform="translate(615, 400)">
+    <rect width="110" height="30" rx="6" fill="rgba(33,115,70,0.2)" stroke="rgba(58,184,118,0.3)" stroke-width="1"/>
+    <text x="55" y="20" text-anchor="middle" font-family="Inter, sans-serif" font-size="12" font-weight="600" fill="#3ab876">Formulas</text>
+  </g>
+  <g transform="translate(740, 400)">
+    <rect width="110" height="30" rx="6" fill="rgba(33,115,70,0.2)" stroke="rgba(58,184,118,0.3)" stroke-width="1"/>
+    <text x="55" y="20" text-anchor="middle" font-family="Inter, sans-serif" font-size="12" font-weight="600" fill="#3ab876">Clipboard</text>
+  </g>
+
+  <!-- MIT badge -->
+  <g transform="translate(470, 470)">
+    <rect width="260" height="40" rx="20" fill="rgba(255,255,255,0.06)" stroke="rgba(255,255,255,0.1)" stroke-width="1"/>
+    <circle cx="24" cy="20" r="5" fill="#3ab876"/>
+    <text x="142" y="25" text-anchor="middle" font-family="Inter, -apple-system, sans-serif" font-size="15" font-weight="600" fill="rgba(255,255,255,0.7)">MIT License  ·  Free Forever</text>
+  </g>
+
+  <!-- Bottom URL -->
+  <text x="600" y="575" text-anchor="middle" font-family="Inter, sans-serif" font-size="16" font-weight="500" fill="rgba(255,255,255,0.3)">alaarab.github.io/ogrid</text>
+</svg>
