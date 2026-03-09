@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useMemo } from 'react';
 import { processClientSideData } from '../utils';
-import { processClientSideDataAsync } from '@alaarab/ogrid-core';
+import { processClientSideDataAsync, shouldUseWorkerSort } from '@alaarab/ogrid-core';
 import { useLatestRef } from './useLatestRef';
 import type { IFilters, IDataSource } from '../types';
 import type { IColumnDef as ICoreColumnDef } from '@alaarab/ogrid-core';
@@ -50,7 +50,11 @@ export function useOGridDataFetching<T>(params: UseOGridDataFetchingParams<T>): 
   const isClientSide = !isServerSide;
 
   // Determine if worker sort should be used
-  const useWorker = workerSort === true || (workerSort === 'auto' && displayData.length > 5000);
+  const useWorker = shouldUseWorkerSort(workerSort, displayData.length, {
+    columns,
+    filters: stableFilters,
+    sortBy: sort.field,
+  });
 
   // --- Stable sorted order (index-based) ---
   // We store the sorted order as indices into `displayData` (at sort time). When data changes
@@ -205,27 +209,32 @@ export function useOGridDataFetching<T>(params: UseOGridDataFetchingParams<T>): 
     }
     const ds = dataSourceRef.current;
     const id = ++fetchIdRef.current;
+    const controller = new AbortController();
     setServerLoading(true);
     ds
       .fetchPage({
         page, pageSize,
         sort: { field: sort.field, direction: sort.direction },
         filters: stableFilters,
+        signal: controller.signal,
       })
       .then((res) => {
-        if (id !== fetchIdRef.current) return;
+        if (id !== fetchIdRef.current || controller.signal.aborted) return;
         setServerItems(res.items);
         setServerTotalCount(res.totalCount);
       })
       .catch((err) => {
-        if (id !== fetchIdRef.current) return;
+        if (id !== fetchIdRef.current || controller.signal.aborted) return;
         onErrorRef.current?.(err);
         setServerItems([]);
         setServerTotalCount(0);
       })
       .finally(() => {
-        if (id === fetchIdRef.current) setServerLoading(false);
+        if (id === fetchIdRef.current && !controller.signal.aborted) setServerLoading(false);
       });
+    return () => {
+      controller.abort();
+    };
   }, [isServerSide, page, pageSize, sort.field, sort.direction, stableFilters, refreshCounter, dataSourceRef, onErrorRef]);
 
   const clientResult = clientItemsAndTotal ?? asyncItems;
