@@ -490,8 +490,7 @@ export function createDataGridTableTests(DataGridTable: React.ComponentType<IOGr
       },
     ];
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const BoolDataGridTable = DataGridTable as React.ComponentType<any>;
+    const BoolDataGridTable = DataGridTable as unknown as React.ComponentType<Record<string, unknown>>;
 
     function renderBoolTable(overrides: Record<string, unknown> = {}) {
       const onCellValueChanged = jest.fn();
