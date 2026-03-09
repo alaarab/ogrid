@@ -99,6 +99,7 @@ export class TableLayoutState {
   /** Apply initial column widths from options. */
   applyInitialWidths(initialWidths: Record<string, number>): void {
     this._columnSizingOverrides = { ...initialWidths };
+    this.emitter.emit('layoutChange', { type: 'columnOverride' });
   }
 
   onLayoutChange(handler: (event: LayoutChangeEvent) => void): () => void {

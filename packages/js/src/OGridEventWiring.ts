@@ -157,8 +157,8 @@ export class OGridEventWiring<T> {
 
     // Subscribe to column resize changes
     unsubscribes.push(
-      resizeState.onColumnWidthChange(() => {
-        callbacks.updateRendererInteractionState();
+      resizeState.onColumnWidthChange(({ columnId, widthPx }) => {
+        layoutState.setColumnOverride(columnId, widthPx);
       })
     );
 
