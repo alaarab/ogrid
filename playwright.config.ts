@@ -3,10 +3,11 @@ import { defineConfig, devices } from '@playwright/test';
 /**
  * Playwright E2E configuration for OGrid.
  *
- * Tests run against 4 representative example apps (one per framework family):
+ * Tests run against 5 representative example apps:
  *   - React Radix     to  port 3003
  *   - Angular Material  to  port 3011
- *   - Vue Vuetify      to  port 3021
+ *   - Vue Radix         to  port 3020
+ *   - Vue Vuetify       to  port 3021
  *   - Vanilla JS       to  port 3030
  *
  * Each project shares the same test suite in e2e/  -  tests are parameterised
@@ -43,6 +44,10 @@ export default defineConfig({
       use: { baseURL: 'http://localhost:3021' },
     },
     {
+      name: 'vue-radix',
+      use: { baseURL: 'http://localhost:3020' },
+    },
+    {
       name: 'js',
       use: { baseURL: 'http://localhost:3030' },
     },
@@ -64,6 +69,12 @@ export default defineConfig({
     {
       command: 'npm run dev:vue-vuetify',
       port: 3021,
+      reuseExistingServer: true,
+      timeout: 30_000,
+    },
+    {
+      command: 'npm run dev:vue-radix',
+      port: 3020,
       reuseExistingServer: true,
       timeout: 30_000,
     },

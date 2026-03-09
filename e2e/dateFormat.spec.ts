@@ -9,7 +9,10 @@ import { test, expect } from '@playwright/test';
 
 test.describe('Date Format Feature (E2E)', () => {
   test.beforeEach(async ({ page }, testInfo) => {
-    test.skip(testInfo.project.name !== 'react-radix', 'Date format coverage is only maintained against the React Radix example.');
+    const supportedProjects = ['react-radix', 'vue-vuetify', 'vue-radix', 'js'];
+    if (!supportedProjects.includes(testInfo.project.name)) {
+      test.skip(`Date format coverage currently covers ${supportedProjects.join(', ')} only.`);
+    }
 
     await page.goto('/');
 
@@ -17,8 +20,8 @@ test.describe('Date Format Feature (E2E)', () => {
   });
 
   test('Date cell displays in configured format (YYYY-MM-DD by default)', async ({ page }) => {
+    const firstDateCell = page.locator('tbody tr:nth-child(1) td:nth-child(6)').first();
     // The default "Start Date" column should display dates in some readable format
-    const firstDateCell = page.locator('tbody tr:nth-child(1) td:nth-child(6) div').first();
     const dateText = await firstDateCell.textContent();
 
     // Should contain a date pattern
@@ -26,7 +29,7 @@ test.describe('Date Format Feature (E2E)', () => {
   });
 
   test('Editing a date cell accepts input and commits on Enter', async ({ page }) => {
-    const firstDateCell = page.locator('tbody tr:nth-child(1) td:nth-child(6) > div').first();
+    const firstDateCell = page.locator('tbody tr:nth-child(1) td:nth-child(6)').first();
 
     // Double-click to enter edit mode
     await firstDateCell.dblclick();
@@ -45,13 +48,13 @@ test.describe('Date Format Feature (E2E)', () => {
     await page.waitForTimeout(300);
 
     // Verify the cell updated
-    const updatedCell = page.locator('tbody tr:nth-child(1) td:nth-child(6) div').first();
+    const updatedCell = page.locator('tbody tr:nth-child(1) td:nth-child(6)').first();
     const updatedText = await updatedCell.textContent();
     expect(updatedText).toContain('2025-12-25');
   });
 
   test('Escape key cancels date edit without committing', async ({ page }) => {
-    const firstDateCell = page.locator('tbody tr:nth-child(1) td:nth-child(6) > div').first();
+    const firstDateCell = page.locator('tbody tr:nth-child(1) td:nth-child(6)').first();
     const originalText = await firstDateCell.textContent();
 
     // Double-click to enter edit mode
@@ -67,13 +70,13 @@ test.describe('Date Format Feature (E2E)', () => {
     await page.waitForTimeout(300);
 
     // Cell should still show original value
-    const cancelledCell = page.locator('tbody tr:nth-child(1) td:nth-child(6) div').first();
+    const cancelledCell = page.locator('tbody tr:nth-child(1) td:nth-child(6)').first();
     const cancelledText = await cancelledCell.textContent();
     expect(cancelledText).toBe(originalText);
   });
 
   test('Date input with text editor shows proper placeholder', async ({ page }) => {
-    const firstDateCell = page.locator('tbody tr:nth-child(1) td:nth-child(6) > div').first();
+    const firstDateCell = page.locator('tbody tr:nth-child(1) td:nth-child(6)').first();
 
     await firstDateCell.dblclick();
     await page.waitForTimeout(300);
@@ -93,7 +96,7 @@ test.describe('Date Format Feature (E2E)', () => {
   });
 
   test('Invalid date input falls back to raw string', async ({ page }) => {
-    const firstDateCell = page.locator('tbody tr:nth-child(1) td:nth-child(6) > div').first();
+    const firstDateCell = page.locator('tbody tr:nth-child(1) td:nth-child(6)').first();
 
     await firstDateCell.dblclick();
     await page.waitForTimeout(300);
@@ -109,7 +112,7 @@ test.describe('Date Format Feature (E2E)', () => {
     await page.waitForTimeout(300);
 
     // The cell should show the raw input (or handle it gracefully)
-    const resultCell = page.locator('tbody tr:nth-child(1) td:nth-child(6) div').first();
+    const resultCell = page.locator('tbody tr:nth-child(1) td:nth-child(6)').first();
     const resultText = await resultCell.textContent();
 
     // Should either show the invalid text or a fallback - main thing is it doesn't crash
@@ -117,7 +120,7 @@ test.describe('Date Format Feature (E2E)', () => {
   });
 
   test('Blur on date input commits the value', async ({ page }) => {
-    const firstDateCell = page.locator('tbody tr:nth-child(1) td:nth-child(6) > div').first();
+    const firstDateCell = page.locator('tbody tr:nth-child(1) td:nth-child(6)').first();
 
     await firstDateCell.dblclick();
     await page.waitForTimeout(300);
@@ -131,7 +134,7 @@ test.describe('Date Format Feature (E2E)', () => {
     await page.waitForTimeout(300);
 
     // Verify the cell updated
-    const updatedCell = page.locator('tbody tr:nth-child(1) td:nth-child(6) div').first();
+    const updatedCell = page.locator('tbody tr:nth-child(1) td:nth-child(6)').first();
     const updatedText = await updatedCell.textContent();
     expect(updatedText).toContain('2026-03-03');
   });

@@ -585,7 +585,6 @@ export function getResizeHandle(page: Page, columnName: string): Locator {
 
 /**
  * Returns true if the framework supports Ctrl+Z undo after cell edits.
- * Vue Vuetify does not restore the previous value via Ctrl+Z in headless Playwright.
  */
 export function supportsUndo(page: Page): boolean {
   void page;
@@ -595,7 +594,6 @@ export function supportsUndo(page: Page): boolean {
 /**
  * Returns true if the framework supports clipboard paste (Ctrl+V) pasting
  * the internal grid clipboard into another cell.
- * Vue Vuetify's clipboard paste does not work in headless Playwright.
  */
 export function supportsClipboardPaste(page: Page): boolean {
   void page;
@@ -645,17 +643,13 @@ export function getContextMenuItem(page: Page, name: string | RegExp): Locator {
   return page.getByRole('button', { name });
 }
 
-/**
- * Returns true if the framework uses a custom RichSelect editor with search input
- * for enum cells (Status column). Vue Vuetify uses a native VSelect instead.
- */
+/** Returns true if the framework supports rich-select editor interactions. */
 export function supportsRichSelect(_page: Page): boolean {
   return true;
 }
 
 /**
- * Returns true if the framework supports cancelling a cell edit via Escape.
- * Vue Vuetify's inline editor does not close/cancel on Escape key.
+ * Returns true if the framework supports cancelling an active cell edit via Escape.
  */
 export function supportsEscapeCancel(page: Page): boolean {
   void page;
