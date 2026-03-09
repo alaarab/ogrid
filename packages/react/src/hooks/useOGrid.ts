@@ -335,6 +335,8 @@ export function useOGrid<T>(
   );
 
   // --- Column resize & pin ---
+  const [internalColumnOrder, setInternalColumnOrder] = useState<string[] | undefined>(undefined);
+  const effectiveColumnOrder = columnOrder ?? internalColumnOrder;
   const [columnWidthOverrides, setColumnWidthOverrides] = useState<Record<string, number>>({});
   const [pinnedOverrides, setPinnedOverrides] = useState<Record<string, 'left' | 'right'>>(() => {
     const initial: Record<string, 'left' | 'right'> = {};
@@ -369,7 +371,7 @@ export function useOGrid<T>(
   // --- Imperative handle (stabilized via refs to avoid invalidation on every state change) ---
   const visibleColumnsRef = useLatestRef(visibleColumns);
   const sortRef = useLatestRef(sortingState.sort);
-  const columnOrderRef = useLatestRef(columnOrder);
+  const columnOrderRef = useLatestRef(effectiveColumnOrder);
   const columnWidthOverridesRef = useLatestRef(columnWidthOverrides);
   const pinnedOverridesRef = useLatestRef(pinnedOverrides);
   const filtersRef = useLatestRef(filtersState.filters);
@@ -396,7 +398,10 @@ export function useOGrid<T>(
       applyColumnState: (state: Partial<import('../types').IGridColumnState>) => {
         if (state.visibleColumns) setVisibleColumns(new Set(state.visibleColumns));
         if (state.sort) sortingState.setSort(state.sort);
-        if (state.columnOrder && onColumnOrderChange) onColumnOrderChange(state.columnOrder);
+        if (state.columnOrder) {
+          if (columnOrder === undefined) setInternalColumnOrder(state.columnOrder);
+          onColumnOrderChange?.(state.columnOrder);
+        }
         if (state.columnWidths) setColumnWidthOverrides(state.columnWidths);
         if (state.filters) filtersState.setFilters(state.filters);
         if (state.pinnedColumns) setPinnedOverrides(state.pinnedColumns);
@@ -432,6 +437,7 @@ export function useOGrid<T>(
       },
       getColumnOrder: () => columnOrderRef.current ?? columnsRef.current.map((c) => c.columnId),
       setColumnOrder: (order: string[]) => {
+        if (columnOrder === undefined) setInternalColumnOrder(order);
         onColumnOrderChange?.(order);
       },
       scrollToRow: () => {
@@ -441,7 +447,7 @@ export function useOGrid<T>(
     }),
     [
       isServerSide, setVisibleColumns, sortingState, filtersState,
-      onColumnOrderChange, selectedRows, onSelectionChange, dataFetchingState,
+      columnOrder, onColumnOrderChange, selectedRows, onSelectionChange, dataFetchingState,
       columnOrderRef, columnWidthOverridesRef, columnsRef, displayItemsRef,
       effectiveSelectedRowsRef, filtersRef, getRowIdRef, pinnedOverridesRef,
       sortRef, visibleColumnsRef,
@@ -574,7 +580,7 @@ export function useOGrid<T>(
     sortDirection: sortingState.sort.direction,
     onColumnSort: sortingState.handleSort,
     visibleColumns,
-    columnOrder,
+    columnOrder: effectiveColumnOrder,
     onColumnOrderChange,
     onColumnResized: handleColumnResized,
     onColumnPinned: handleColumnPinned,
@@ -635,7 +641,7 @@ export function useOGrid<T>(
   }), [
     dataFetchingState.displayItems, columnsProp, getRowId,
     sortingState.sort.field, sortingState.sort.direction, sortingState.handleSort,
-    visibleColumns, columnOrder, onColumnOrderChange, handleColumnResized,
+    visibleColumns, effectiveColumnOrder, onColumnOrderChange, handleColumnResized,
     handleColumnPinned, pinnedOverrides, columnWidthOverrides,
     editable, cellSelection, onCellValueChanged, onUndo, onRedo, canUndo, canRedo,
     rowSelection, effectiveSelectedRows, handleSelectionChange,

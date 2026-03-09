@@ -24,7 +24,6 @@ import {
   DEFAULT_MIN_COLUMN_WIDTH,
   ROW_NUMBER_COLUMN_ID,
   ROW_NUMBER_COLUMN_MIN_WIDTH,
-  OGRID_THEME_VARS_CSS,
   indexToColumnLetter,
   formatCellReference,
 } from '@alaarab/ogrid-angular';
@@ -124,6 +123,8 @@ import { PopoverCellEditorComponent } from './popover-cell-editor.component';
                           #
                           <div
                             class="ogrid-resize-handle"
+                            role="separator"
+                            aria-label="Resize row numbers"
                             (pointerdown)="onResizeRowNumber($event)"
                             (dblclick)="$event.stopPropagation()"
                           ></div>
@@ -197,6 +198,7 @@ import { PopoverCellEditorComponent } from './popover-cell-editor.component';
                             </div>
                             <div
                               class="ogrid-resize-handle"
+                              role="separator"
                               (pointerdown)="onResizeStartPrimeng($event, col)"
                               (dblclick)="onResizeDoubleClick($event, col)"
                               [attr.aria-label]="'Resize ' + col.name"
@@ -415,7 +417,7 @@ import { PopoverCellEditorComponent } from './popover-cell-editor.component';
       }
     </div>
   `,
-  styles: [OGRID_THEME_VARS_CSS, `
+  styles: [`
     :host { display: block; }
     .ogrid-root {
       position: relative;

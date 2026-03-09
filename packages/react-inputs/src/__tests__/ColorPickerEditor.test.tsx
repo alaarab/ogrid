@@ -104,25 +104,23 @@ describe('ColorPickerEditor', () => {
 
   describe('Swatch Click', () => {
     it('clicking a swatch calls onValueChange with normalized hex', async () => {
+      const user = userEvent.setup();
       const { props } = renderEditor({ value: null });
       const firstColor = DEFAULT_COLOR_PALETTE[0] as string;
       const swatchBtn = screen.getByLabelText(firstColor);
 
-      await act(async () => {
-        swatchBtn.click();
-      });
+      await user.click(swatchBtn);
 
       expect(props.onValueChange).toHaveBeenCalledWith(expect.stringMatching(/^#[0-9A-Fa-f]{6}$/));
     });
 
     it('clicking a swatch auto-commits via setTimeout', async () => {
+      const user = userEvent.setup();
       const { props } = renderEditor({ value: null });
       const firstColor = DEFAULT_COLOR_PALETTE[0] as string;
       const swatchBtn = screen.getByLabelText(firstColor);
 
-      await act(async () => {
-        swatchBtn.click();
-      });
+      await user.click(swatchBtn);
 
       await act(async () => {
         await new Promise((r) => setTimeout(r, 10));
@@ -172,23 +170,24 @@ describe('ColorPickerEditor', () => {
   // ── 5. Clear Button ──
 
   describe('Clear Button', () => {
-    it('clicking Clear calls onValueChange with empty string', () => {
+    it('clicking Clear calls onValueChange with empty string', async () => {
+      const user = userEvent.setup();
       const { props } = renderEditor({ value: '#FF6B6B' });
-      screen.getByText('Clear').click();
+      await user.click(screen.getByText('Clear'));
       expect(props.onValueChange).toHaveBeenCalledWith('');
     });
 
-    it('clicking Clear calls onCommit', () => {
+    it('clicking Clear calls onCommit', async () => {
+      const user = userEvent.setup();
       const { props } = renderEditor({ value: '#FF6B6B' });
-      screen.getByText('Clear').click();
+      await user.click(screen.getByText('Clear'));
       expect(props.onCommit).toHaveBeenCalled();
     });
 
     it('clicking Clear clears the hex input', async () => {
+      const user = userEvent.setup();
       renderEditor({ value: '#FF6B6B' });
-      await act(async () => {
-        screen.getByText('Clear').click();
-      });
+      await user.click(screen.getByText('Clear'));
       const input = screen.getByPlaceholderText('000000') as HTMLInputElement;
       expect(input.value).toBe('');
     });

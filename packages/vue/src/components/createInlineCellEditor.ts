@@ -41,6 +41,23 @@ export function createInlineCellEditor(options: CreateInlineCellEditorOptions) {
       const selectDropdownRef = ref<HTMLDivElement | null>(null);
       const localValue = ref<unknown>(props.value);
       const highlightedIndex = ref(0);
+      const suppressNextBlurCommit = ref(false);
+
+      const commitAndSuppressBlur = (value: unknown) => {
+        suppressNextBlurCommit.value = true;
+        props.onCommit(value);
+      };
+
+      const cancelAndSuppressBlur = () => {
+        suppressNextBlurCommit.value = true;
+        props.onCancel();
+      };
+
+      const shouldSkipBlurCommit = () => {
+        if (!suppressNextBlurCommit.value) return false;
+        suppressNextBlurCommit.value = false;
+        return true;
+      };
 
       const positionDropdown = () => {
         const wrapper = selectWrapperRef.value;
@@ -145,19 +162,19 @@ export function createInlineCellEditor(options: CreateInlineCellEditorOptions) {
             e.preventDefault();
             e.stopPropagation();
             if (values.length > 0 && highlightedIndex.value < values.length) {
-              props.onCommit(values[highlightedIndex.value]);
+              commitAndSuppressBlur(values[highlightedIndex.value]);
             }
             break;
           case 'Tab':
             e.preventDefault();
             if (values.length > 0 && highlightedIndex.value < values.length) {
-              props.onCommit(values[highlightedIndex.value]);
+              commitAndSuppressBlur(values[highlightedIndex.value]);
             }
             break;
           case 'Escape':
             e.preventDefault();
             e.stopPropagation();
-            props.onCancel();
+            cancelAndSuppressBlur();
             break;
         }
       };
@@ -200,13 +217,13 @@ export function createInlineCellEditor(options: CreateInlineCellEditorOptions) {
             e.preventDefault();
             e.stopPropagation();
             if (filtered.length > 0 && highlightedIndex.value < filtered.length) {
-              props.onCommit(filtered[highlightedIndex.value]);
+              commitAndSuppressBlur(filtered[highlightedIndex.value]);
             }
             break;
           case 'Escape':
             e.preventDefault();
             e.stopPropagation();
-            props.onCancel();
+            cancelAndSuppressBlur();
             break;
         }
       };
@@ -217,8 +234,8 @@ export function createInlineCellEditor(options: CreateInlineCellEditorOptions) {
           return h('div', { style: { ...editorWrapperStyle, justifyContent: 'center' } },
             renderCheckbox({
               checked,
-              onChange: (c: boolean) => props.onCommit(c),
-              onCancel: props.onCancel,
+              onChange: (c: boolean) => commitAndSuppressBlur(c),
+              onCancel: cancelAndSuppressBlur,
             })
           );
         }
@@ -245,7 +262,7 @@ export function createInlineCellEditor(options: CreateInlineCellEditorOptions) {
                   key: String(v),
                   role: 'option',
                   'aria-selected': i === highlightedIndex.value,
-                  onClick: () => props.onCommit(v),
+                  onClick: () => commitAndSuppressBlur(v),
                   style: { padding: '6px 8px', cursor: 'pointer', color: 'var(--ogrid-fg, #242424)', fontSize: '13px', ...(i === highlightedIndex.value ? { background: 'var(--ogrid-bg-hover, #e8f0fe)' } : {}) },
                 }, getDisplayText(v))
               ),
@@ -287,7 +304,7 @@ export function createInlineCellEditor(options: CreateInlineCellEditorOptions) {
                   key: String(v),
                   role: 'option',
                   'aria-selected': i === highlightedIndex.value,
-                  onClick: () => props.onCommit(v),
+                  onClick: () => commitAndSuppressBlur(v),
                   style: { padding: '6px 8px', cursor: 'pointer', color: 'var(--ogrid-fg, #242424)', fontSize: '13px', ...(i === highlightedIndex.value ? { background: 'var(--ogrid-bg-hover, #e8f0fe)' } : {}) },
                 }, getDisplayText(v))
               )),
@@ -307,18 +324,18 @@ export function createInlineCellEditor(options: CreateInlineCellEditorOptions) {
                 const yyyy = parsed.getUTCFullYear().toString().padStart(4, '0');
                 const mm = (parsed.getUTCMonth() + 1).toString().padStart(2, '0');
                 const dd = parsed.getUTCDate().toString().padStart(2, '0');
-                props.onCommit(`${yyyy}-${mm}-${dd}`);
+                commitAndSuppressBlur(`${yyyy}-${mm}-${dd}`);
               } else {
-                props.onCommit(raw || null);
+                commitAndSuppressBlur(raw || null);
               }
             } else {
-              props.onCommit(raw);
+              commitAndSuppressBlur(raw);
             }
           };
 
           const handleDateKeyDown = (e: KeyboardEvent) => {
             if (e.key === 'Enter') { e.preventDefault(); commitDate(String(localValue.value ?? '')); }
-            if (e.key === 'Escape') { e.preventDefault(); props.onCancel(); }
+            if (e.key === 'Escape') { e.preventDefault(); cancelAndSuppressBlur(); }
             if (e.key === 'Tab') { e.preventDefault(); commitDate(String(localValue.value ?? '')); }
           };
 
@@ -337,7 +354,10 @@ export function createInlineCellEditor(options: CreateInlineCellEditorOptions) {
                 style: { width: '100%', height: '100%', border: 'none', outline: 'none', padding: '0 4px', fontSize: 'inherit', boxSizing: 'border-box' },
                 onInput: (e: Event) => { localValue.value = (e.target as HTMLInputElement).value; },
                 onKeydown: handleDateKeyDown,
-                onBlur: () => commitDate(String(localValue.value ?? '')),
+                onBlur: () => {
+                  if (shouldSkipBlurCommit()) return;
+                  commitDate(String(localValue.value ?? ''));
+                },
               })
             );
           }
@@ -357,7 +377,10 @@ export function createInlineCellEditor(options: CreateInlineCellEditorOptions) {
               style: { width: '100%', height: '100%', border: 'none', outline: 'none', padding: '0 4px', fontSize: 'inherit', boxSizing: 'border-box' },
               onInput: (e: Event) => { localValue.value = (e.target as HTMLInputElement).value; },
               onKeydown: handleDateKeyDown,
-              onBlur: () => commitDate(String(localValue.value ?? '')),
+              onBlur: () => {
+                if (shouldSkipBlurCommit()) return;
+                commitDate(String(localValue.value ?? ''));
+              },
             })
           );
         }
@@ -371,11 +394,14 @@ export function createInlineCellEditor(options: CreateInlineCellEditorOptions) {
             style: { width: '100%', height: '100%', border: 'none', outline: 'none', padding: '0 4px', fontSize: 'inherit', boxSizing: 'border-box' },
             onInput: (e: Event) => { localValue.value = (e.target as HTMLInputElement).value; },
             onKeydown: (e: KeyboardEvent) => {
-              if (e.key === 'Enter') { e.preventDefault(); props.onCommit(localValue.value); }
-              if (e.key === 'Escape') { e.preventDefault(); props.onCancel(); }
-              if (e.key === 'Tab') { e.preventDefault(); props.onCommit(localValue.value); }
+              if (e.key === 'Enter') { e.preventDefault(); commitAndSuppressBlur(localValue.value); }
+              if (e.key === 'Escape') { e.preventDefault(); cancelAndSuppressBlur(); }
+              if (e.key === 'Tab') { e.preventDefault(); commitAndSuppressBlur(localValue.value); }
             },
-            onBlur: () => props.onCommit(localValue.value),
+            onBlur: () => {
+              if (shouldSkipBlurCommit()) return;
+              commitAndSuppressBlur(localValue.value);
+            },
           })
         );
       };

@@ -18,9 +18,9 @@ interface TestRow {
 }
 
 const testColumns: IColumnDef<TestRow>[] = [
-  { columnId: 'name', name: 'Name', sortable: true, editable: true },
-  { columnId: 'age', name: 'Age', type: 'numeric', sortable: true, editable: true },
-  { columnId: 'department', name: 'Department', editable: true },
+  { columnId: 'name', name: 'Name', sortable: true, editable: true, cellEditor: 'text' },
+  { columnId: 'age', name: 'Age', type: 'numeric', sortable: true, editable: true, cellEditor: 'text' },
+  { columnId: 'department', name: 'Department', editable: true, cellEditor: 'text' },
 ];
 
 const filterableColumns: IColumnDef<TestRow>[] = [

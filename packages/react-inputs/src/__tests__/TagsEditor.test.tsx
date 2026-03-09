@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { render, screen, act } from '@testing-library/react';
+import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { TagsEditor } from '../Tags/TagsEditor';
 import type { ICellEditorProps } from '@alaarab/ogrid-core';
@@ -111,21 +111,21 @@ describe('TagsEditor', () => {
   // ── 3. Tag Removal ──
 
   describe('Tag Removal', () => {
-    it('clicking the remove button on a tag removes it', () => {
+    it('clicking the remove button on a tag removes it', async () => {
+      const user = userEvent.setup();
       const { props } = renderEditor({ value: 'Bug, Feature' });
 
       const removeBugBtn = screen.getByLabelText('Remove Bug');
-      removeBugBtn.click();
+      await user.click(removeBugBtn);
 
       expect(props.onValueChange).toHaveBeenCalledWith('Feature');
     });
 
     it('removing a tag updates the tag count', async () => {
+      const user = userEvent.setup();
       renderEditor({ value: 'Bug, Feature' });
 
-      await act(async () => {
-        screen.getByLabelText('Remove Bug').click();
-      });
+      await user.click(screen.getByLabelText('Remove Bug'));
 
       expect(screen.getByText('1 tag')).toBeInTheDocument();
     });
@@ -208,32 +208,34 @@ describe('TagsEditor', () => {
   // ── 6. Clear All Button ──
 
   describe('Clear All', () => {
-    it('clicking Clear all calls onValueChange with empty string', () => {
+    it('clicking Clear all calls onValueChange with empty string', async () => {
+      const user = userEvent.setup();
       const { props } = renderEditor({ value: 'Bug, Feature' });
-      screen.getByText('Clear all').click();
+      await user.click(screen.getByText('Clear all'));
       expect(props.onValueChange).toHaveBeenCalledWith('');
     });
 
-    it('clicking Clear all does not call onCommit when showApplyButton is true (default)', () => {
+    it('clicking Clear all does not call onCommit when showApplyButton is true (default)', async () => {
+      const user = userEvent.setup();
       const { props } = renderEditor({ value: 'Bug, Feature' });
-      screen.getByText('Clear all').click();
+      await user.click(screen.getByText('Clear all'));
       expect(props.onCommit).not.toHaveBeenCalled();
     });
 
-    it('clicking Clear all calls onCommit when showApplyButton is false', () => {
+    it('clicking Clear all calls onCommit when showApplyButton is false', async () => {
+      const user = userEvent.setup();
       const { props } = renderEditor({
         value: 'Bug, Feature',
         cellEditorParams: { showApplyButton: false },
       });
-      screen.getByText('Clear all').click();
+      await user.click(screen.getByText('Clear all'));
       expect(props.onCommit).toHaveBeenCalled();
     });
 
     it('clicking Clear all removes all tags from display', async () => {
+      const user = userEvent.setup();
       renderEditor({ value: 'Bug, Feature' });
-      await act(async () => {
-        screen.getByText('Clear all').click();
-      });
+      await user.click(screen.getByText('Clear all'));
       expect(screen.getByText('No tags')).toBeInTheDocument();
     });
   });
@@ -267,17 +269,17 @@ describe('TagsEditor', () => {
   // ── 8. Apply Button ──
 
   describe('Apply Button', () => {
-    it('clicking Apply calls onCommit', () => {
+    it('clicking Apply calls onCommit', async () => {
+      const user = userEvent.setup();
       const { props } = renderEditor({ value: 'Bug' });
-      screen.getByRole('button', { name: 'Apply tags' }).click();
+      await user.click(screen.getByRole('button', { name: 'Apply tags' }));
       expect(props.onCommit).toHaveBeenCalled();
     });
 
     it('clicking Apply does not clear tags', async () => {
+      const user = userEvent.setup();
       renderEditor({ value: 'Bug, Feature' });
-      await act(async () => {
-        screen.getByRole('button', { name: 'Apply tags' }).click();
-      });
+      await user.click(screen.getByRole('button', { name: 'Apply tags' }));
       expect(screen.getByText('Bug')).toBeInTheDocument();
       expect(screen.getByText('Feature')).toBeInTheDocument();
     });
@@ -308,10 +310,9 @@ describe('TagsEditor', () => {
     });
 
     it('clicking a suggestion in multi-select mode selects it (adds as tag)', async () => {
+      const user = userEvent.setup();
       const { props } = renderEditor(multiSelectProps);
-      await act(async () => {
-        screen.getByText('Bug').click();
-      });
+      await user.click(screen.getByText('Bug'));
       expect(props.onValueChange).toHaveBeenCalledWith('Bug');
     });
 
@@ -326,9 +327,8 @@ describe('TagsEditor', () => {
       const allBugTexts = screen.getAllByText('Bug');
       // The dropdown item text span has flex:1 style, the chip has text-overflow style
       // Click the last one which is in the suggestions list
-      await act(async () => {
-        allBugTexts[allBugTexts.length - 1].click();
-      });
+      const user = userEvent.setup();
+      await user.click(allBugTexts[allBugTexts.length - 1]);
 
       expect(props.onValueChange).toHaveBeenCalledWith('');
     });
@@ -371,9 +371,7 @@ describe('TagsEditor', () => {
       });
 
       // allowCreate: false but suggestions provided — clicking "Bug" in dropdown works
-      await act(async () => {
-        screen.getByText('Bug').click();
-      });
+      await user.click(screen.getByText('Bug'));
 
       expect(props.onValueChange).toHaveBeenCalledWith('Bug');
     });

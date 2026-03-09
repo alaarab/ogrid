@@ -92,7 +92,6 @@ function HeroGrid() {
   }, []);
 
   const columns = useMemo(() => [
-    { columnId: 'id', name: '#', type: 'numeric' as const, defaultWidth: 50 },
     { columnId: 'name', name: 'Name', sortable: true, editable: true, defaultWidth: 170 },
     { columnId: 'department', name: 'Department', sortable: true, editable: true, filterable: { type: 'multiSelect' as const }, cellEditor: 'richSelect' as const, cellEditorParams: { values: DEPARTMENTS }, defaultWidth: 145 },
     { columnId: 'title', name: 'Title', sortable: true, editable: true, filterable: { type: 'text' as const }, defaultWidth: 180 },
@@ -345,8 +344,8 @@ function Hero() {
           </div>
 
           <h1 className={styles.heroHeadline}>
-            The data grid<br />
-            <em className={styles.heroHeadlineEm}>AG Grid charges for.</em>
+            The open-source<br />
+            <em className={styles.heroHeadlineEm}>data grid.</em>
           </h1>
 
           <p className={styles.heroLead}>
@@ -733,7 +732,7 @@ function FeatureBentoSection() {
           <div className={styles.bentoCardTag}>Built-in</div>
           <h3 className={styles.bentoCardTitle}>Formula Engine</h3>
           <p className={styles.bentoCardDesc}>
-            93 functions. SUM, IF, VLOOKUP, and more. Excel-style cell references.
+            159 functions. SUM, IF, VLOOKUP, and more. Excel-style cell references.
           </p>
           <div className={styles.bentoFormulaBar}>
             <span className={styles.bentoFx}>fx</span>

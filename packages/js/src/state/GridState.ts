@@ -22,6 +22,7 @@ import {
   getCellValue,
   deriveFilterOptionsFromData,
   mergeFilter,
+  shouldUseWorkerSort,
   validateColumns,
   validateRowIds,
   resolveResponsiveConfig,
@@ -30,9 +31,19 @@ import {
 import { EventEmitter } from './EventEmitter';
 import type { FormulaEngineState } from './FormulaEngineState';
 
-interface StateChangeEvent {
-  type: 'data' | 'sort' | 'filter' | 'page' | 'columns' | 'loading';
-}
+type StateChangeEvent =
+  | { type: 'data' }
+  | { type: 'loading' }
+  | { type: 'sort'; sort: { field: string; direction: 'asc' | 'desc' } | undefined }
+  | { type: 'filter'; filters: IFilters }
+  | { type: 'page'; page: number }
+  | { type: 'pageSize'; page: number; pageSize: number }
+  | {
+      type: 'columns';
+      reason: 'visibleColumns' | 'columnOrder' | 'responsive';
+      visibleColumns?: Set<string>;
+      columnOrder?: string[];
+    };
 
 export class GridState<T> {
   private emitter = new EventEmitter<{ stateChange: StateChangeEvent }>();
@@ -59,6 +70,7 @@ export class GridState<T> {
   private _firstDataRendered = false;
   private _rowHeight?: number;
   private _ariaLabel?: string;
+  private _ariaLabelledBy?: string;
   private _stickyHeader: boolean;
   private _fullScreen: boolean;
   private _workerSort: boolean | 'auto';
@@ -87,6 +99,36 @@ export class GridState<T> {
   private _sortedIndices: number[] | null = null;
   private _sortDirty = true; // true = must re-sort on next getProcessedItems call
 
+  private getKnownColumnIds(): string[] {
+    return this._columns.map((column) => column.columnId);
+  }
+
+  private normalizeVisibleColumns(columns: Iterable<string>): Set<string> {
+    const knownColumnIds = new Set(this.getKnownColumnIds());
+    return new Set(Array.from(columns).filter((columnId) => knownColumnIds.has(columnId)));
+  }
+
+  private normalizeColumnOrder(order: string[]): string[] {
+    const knownColumnIds = this.getKnownColumnIds();
+    const validColumnIds = new Set(knownColumnIds);
+    const nextOrder: string[] = [];
+    const seen = new Set<string>();
+
+    for (const columnId of order) {
+      if (!validColumnIds.has(columnId) || seen.has(columnId)) continue;
+      seen.add(columnId);
+      nextOrder.push(columnId);
+    }
+
+    for (const columnId of knownColumnIds) {
+      if (seen.has(columnId)) continue;
+      seen.add(columnId);
+      nextOrder.push(columnId);
+    }
+
+    return nextOrder;
+  }
+
   constructor(options: OGridOptions<T>) {
     this._allColumns = options.columns;
     this._columns = flattenColumns(options.columns as unknown as Parameters<typeof flattenColumns>[0]) as IColumnDef<T>[];
@@ -97,12 +139,15 @@ export class GridState<T> {
     this._pageSize = options.pageSize ?? 20;
     this._sort = options.sort;
     this._filters = options.filters ?? {};
-    this._visibleColumns = options.visibleColumns ?? new Set(this._columns.map(c => c.columnId));
-    this._columnOrder = this._columns.map(c => c.columnId);
+    this._visibleColumns = this.normalizeVisibleColumns(
+      options.visibleColumns ?? this._columns.map(c => c.columnId)
+    );
+    this._columnOrder = this.normalizeColumnOrder(options.columnOrder ?? this._columns.map(c => c.columnId));
     this._onError = options.onError;
     this._onFirstDataRendered = options.onFirstDataRendered;
     this._rowHeight = options.rowHeight;
-    this._ariaLabel = options.ariaLabel;
+    this._ariaLabel = options['aria-label'] ?? options.ariaLabel;
+    this._ariaLabelledBy = options['aria-labelledby'];
     this._stickyHeader = options.stickyHeader ?? true;
     this._fullScreen = options.fullScreen ?? false;
     this._workerSort = options.workerSort ?? false;
@@ -151,6 +196,7 @@ export class GridState<T> {
   get columnOrder(): string[] { return this._columnOrder; }
   get rowHeight(): number | undefined { return this._rowHeight; }
   get ariaLabel(): string | undefined { return this._ariaLabel; }
+  get ariaLabelledBy(): string | undefined { return this._ariaLabelledBy; }
   get responsiveColumns(): IResponsiveColumnsConfig | null { return this._responsiveColumns; }
 
   /** Get the visible columns in display order (respects column reorder and responsive hiding). Memoized via dirty flag. */
@@ -215,7 +261,11 @@ export class GridState<T> {
 
   /** Whether worker sort should be used for the current data set. */
   get useWorkerSort(): boolean {
-    return this._workerSort === true || (this._workerSort === 'auto' && this._data.length > 5000);
+    return shouldUseWorkerSort(this._workerSort, this._data.length, {
+      columns: this._columns,
+      filters: this._filters,
+      sortBy: this._sort?.field,
+    });
   }
 
   /**
@@ -285,6 +335,7 @@ export class GridState<T> {
         pageSize: this._pageSize,
         sort: this._sort ? { field: this._sort.field, direction: this._sort.direction } : undefined,
         filters: this._filters,
+        signal: currentController.signal,
       })
       .then((res) => {
         // Ignore if this request was superseded by a newer one
@@ -315,7 +366,8 @@ export class GridState<T> {
   // --- Setters ---
 
   setData(data: T[]): void {
-    const prevLength = this._data.length;
+    const prevData = this._data;
+    const prevLength = prevData.length;
     this._data = data;
     if (!this.isServerSide) {
       this._filterOptions = deriveFilterOptionsFromData(
@@ -323,9 +375,17 @@ export class GridState<T> {
         this._columns as unknown as Parameters<typeof deriveFilterOptionsFromData>[1]
       );
     }
-    // If row count changed (add/remove), the existing sorted indices are invalid - re-sort.
-    // If only values changed (cell edit), preserve the existing sort order (Excel-like behavior).
-    if (data.length !== prevLength) {
+    // If row count or row-id order changed, the cached sorted indices are no longer valid.
+    // When row ids stay in the same order, treat it as a data-only update so edited rows
+    // do not jump to a new position immediately.
+    const rowOrderChanged =
+      data.length !== prevLength ||
+      data.some((item, index) => {
+        const previousItem = prevData[index];
+        return previousItem == null || this._getRowId(previousItem) !== this._getRowId(item);
+      });
+
+    if (rowOrderChanged) {
       this._sortDirty = true;
     }
     this.emitter.emit('stateChange', { type: 'data' });
@@ -333,20 +393,22 @@ export class GridState<T> {
 
   setPage(page: number): void {
     this._page = page;
+    this.emitter.emit('stateChange', { type: 'page', page: this._page });
     if (this.isServerSide) {
       this.fetchServerData();
     } else {
-      this.emitter.emit('stateChange', { type: 'page' });
+      this.emitter.emit('stateChange', { type: 'data' });
     }
   }
 
   setPageSize(pageSize: number): void {
     this._pageSize = pageSize;
     this._page = 1;
+    this.emitter.emit('stateChange', { type: 'pageSize', page: this._page, pageSize: this._pageSize });
     if (this.isServerSide) {
       this.fetchServerData();
     } else {
-      this.emitter.emit('stateChange', { type: 'page' });
+      this.emitter.emit('stateChange', { type: 'data' });
     }
   }
 
@@ -354,10 +416,11 @@ export class GridState<T> {
     this._sort = sort;
     this._page = 1;
     this._sortDirty = true; // explicit sort change: re-sort on next getProcessedItems call
+    this.emitter.emit('stateChange', { type: 'sort', sort: this._sort });
     if (this.isServerSide) {
       this.fetchServerData();
     } else {
-      this.emitter.emit('stateChange', { type: 'sort' });
+      this.emitter.emit('stateChange', { type: 'data' });
     }
   }
 
@@ -371,10 +434,11 @@ export class GridState<T> {
     }
     this._page = 1;
     this._sortDirty = true; // explicit sort change: re-sort on next getProcessedItems call
+    this.emitter.emit('stateChange', { type: 'sort', sort: this._sort });
     if (this.isServerSide) {
       this.fetchServerData();
     } else {
-      this.emitter.emit('stateChange', { type: 'sort' });
+      this.emitter.emit('stateChange', { type: 'data' });
     }
   }
 
@@ -382,34 +446,48 @@ export class GridState<T> {
     this._filters = mergeFilter(this._filters, key, value);
     this._page = 1;
     this._sortDirty = true; // filter change requires re-sort to get the right subset
+    this.emitter.emit('stateChange', { type: 'filter', filters: this._filters });
     if (this.isServerSide) {
       this.fetchServerData();
     } else {
-      this.emitter.emit('stateChange', { type: 'filter' });
+      this.emitter.emit('stateChange', { type: 'data' });
     }
   }
 
   clearFilters(): void {
-    this._filters = {};
-    this._page = 1;
-    this._sortDirty = true; // filter change requires re-sort to get the right subset
-    if (this.isServerSide) {
-      this.fetchServerData();
-    } else {
-      this.emitter.emit('stateChange', { type: 'filter' });
-    }
+    this.setFilterModel({});
   }
 
   setVisibleColumns(columns: Set<string>): void {
-    this._visibleColumns = columns;
+    this._visibleColumns = this.normalizeVisibleColumns(columns);
     this._visibleColsDirty = true;
-    this.emitter.emit('stateChange', { type: 'columns' });
+    this.emitter.emit('stateChange', {
+      type: 'columns',
+      reason: 'visibleColumns',
+      visibleColumns: new Set(this._visibleColumns),
+    });
   }
 
   setColumnOrder(order: string[]): void {
-    this._columnOrder = order;
+    this._columnOrder = this.normalizeColumnOrder(order);
     this._visibleColsDirty = true;
-    this.emitter.emit('stateChange', { type: 'columns' });
+    this.emitter.emit('stateChange', {
+      type: 'columns',
+      reason: 'columnOrder',
+      columnOrder: [...this._columnOrder],
+    });
+  }
+
+  setFilterModel(filters: IFilters): void {
+    this._filters = { ...filters };
+    this._page = 1;
+    this._sortDirty = true; // filter change requires re-sort to get the right subset
+    this.emitter.emit('stateChange', { type: 'filter', filters: this._filters });
+    if (this.isServerSide) {
+      this.fetchServerData();
+    } else {
+      this.emitter.emit('stateChange', { type: 'data' });
+    }
   }
 
   /** Update the container width for responsive column hiding. Invalidates the visible-cols cache. */
@@ -418,7 +496,7 @@ export class GridState<T> {
     this._containerWidth = width;
     if (this._responsiveColumns) {
       this._visibleColsDirty = true;
-      this.emitter.emit('stateChange', { type: 'columns' });
+      this.emitter.emit('stateChange', { type: 'columns', reason: 'responsive' });
     }
   }
 
@@ -451,31 +529,26 @@ export class GridState<T> {
       getColumnState: (): IGridColumnState => ({
         visibleColumns: Array.from(this._visibleColumns),
         sort: this._sort,
+        columnOrder: [...this._columnOrder],
         filters: Object.keys(this._filters).length > 0 ? this._filters : undefined,
       }),
       applyColumnState: (state: Partial<IGridColumnState>) => {
-        if (state.visibleColumns) this._visibleColumns = new Set(state.visibleColumns);
-        if (state.sort !== undefined) this._sort = state.sort;
-        if (state.filters !== undefined) this._filters = state.filters ?? {};
-        if (this.isServerSide) {
-          this.fetchServerData();
-        } else {
-          this.emitter.emit('stateChange', { type: 'columns' });
-        }
+        if ('visibleColumns' in state && state.visibleColumns) this.setVisibleColumns(new Set(state.visibleColumns));
+        if ('columnOrder' in state && state.columnOrder) this.setColumnOrder(state.columnOrder);
+        if ('sort' in state) this.setSort(state.sort);
+        if ('filters' in state) this.setFilterModel(state.filters ?? {});
       },
       setFilterModel: (filters: IFilters) => {
-        this._filters = filters;
-        this._page = 1;
-        if (this.isServerSide) {
-          this.fetchServerData();
-        } else {
-          this.emitter.emit('stateChange', { type: 'filter' });
-        }
+        this.setFilterModel(filters);
       },
       getSelectedRows: () => [],
       setSelectedRows: () => {},
       selectAll: () => {},
       deselectAll: () => {},
+      getActiveSheet: () => null,
+      setActiveSheet: () => {},
+      getSheetDefs: () => [],
+      setSheetDefs: () => {},
       clearFilters: () => this.clearFilters(),
       clearSort: () => this.setSort(undefined),
       resetGridState: () => {

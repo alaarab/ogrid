@@ -3,25 +3,48 @@
  *
  * These helpers detect the framework from the page URL (port) and use
  * the correct selectors for each framework family:
- *   - React Radix    (port 3003)
- *   - Angular Material (port 3011)
- *   - Vue Vuetify     (port 3021)
- *   - Vanilla JS      (port 3030)
+ *   - React Fluent      (port 3001)
+ *   - React Material    (port 3002)
+ *   - React Radix       (port 3003)
+ *   - Angular Radix     (port 3010)
+ *   - Angular Material  (port 3011)
+ *   - Angular PrimeNG   (port 3012)
+ *   - Vue Radix         (port 3020)
+ *   - Vue Vuetify       (port 3021)
+ *   - Vue PrimeVue      (port 3022)
+ *   - Vanilla JS        (port 3030)
  */
 
 import { expect, type Page, type Locator } from '@playwright/test';
+import { DEMO_PAGE_SIZE } from '../packages/examples/src/shared/demoConfig';
 
 // ---------------------------------------------------------------------------
 // Framework detection
 // ---------------------------------------------------------------------------
 
-export type Framework = 'react-radix' | 'angular-material' | 'vue-vuetify' | 'js';
+export type Framework =
+  | 'react-fluent'
+  | 'react-material'
+  | 'react-radix'
+  | 'angular-radix'
+  | 'angular-material'
+  | 'angular-primeng'
+  | 'vue-radix'
+  | 'vue-vuetify'
+  | 'vue-primevue'
+  | 'js';
 
 export function getFramework(page: Page): Framework {
   const url = page.url();
+  if (url.includes(':3001')) return 'react-fluent';
+  if (url.includes(':3002')) return 'react-material';
   if (url.includes(':3003')) return 'react-radix';
+  if (url.includes(':3010')) return 'angular-radix';
   if (url.includes(':3011')) return 'angular-material';
+  if (url.includes(':3012')) return 'angular-primeng';
+  if (url.includes(':3020')) return 'vue-radix';
   if (url.includes(':3021')) return 'vue-vuetify';
+  if (url.includes(':3022')) return 'vue-primevue';
   if (url.includes(':3030')) return 'js';
   // Fallback: try page title
   return 'react-radix';
@@ -29,6 +52,46 @@ export function getFramework(page: Page): Framework {
 
 export function isJS(page: Page): boolean {
   return getFramework(page) === 'js';
+}
+
+async function isVisible(locator: Locator): Promise<boolean> {
+  return locator.isVisible({ timeout: 1_000 }).catch(() => false);
+}
+
+async function getVisibleRowSignature(page: Page): Promise<string> {
+  return page.locator('tbody tr').evaluateAll((rows) => rows
+    .slice(0, 5)
+    .map((row) => (row.textContent ?? '').replace(/\s+/g, ' ').trim())
+    .join('||'));
+}
+
+async function waitForVisibleRowSignatureChange(page: Page, previous: string): Promise<void> {
+  await expect.poll(async () => getVisibleRowSignature(page), { timeout: 5_000 }).not.toBe(previous);
+}
+
+function getColumnChooserSurfaces(page: Page): Locator[] {
+  return [
+    page.getByRole('button', { name: /clear all/i }).first(),
+    page.getByRole('button', { name: /select all/i }).first(),
+    page.locator('text=/Select Columns/i').first(),
+    page.locator('label:has(input[type="checkbox"])').first(),
+  ];
+}
+
+function getColumnOptionsSurfaces(page: Page): Locator[] {
+  return [
+    page.getByRole('menu').first(),
+    page.getByRole('menuitem').first(),
+    page.getByRole('button', { name: /sort ascending|sort descending|pin left|pin right/i }).first(),
+    page.locator('text=/Sort ascending|Sort descending|Pin left|Pin right/i').first(),
+  ];
+}
+
+async function waitForAnyVisibleState(locators: Locator[], visible: boolean): Promise<void> {
+  await expect.poll(async () => {
+    const states = await Promise.all(locators.map((locator) => isVisible(locator)));
+    return states.some(Boolean);
+  }, { timeout: 5_000 }).toBe(visible);
 }
 
 // ---------------------------------------------------------------------------
@@ -85,7 +148,7 @@ export function getCellContent(page: Page, rowIdx: number, colIdx: number): Loca
 /** Get the grid region/wrapper for keyboard events. */
 export function getGridRegion(page: Page): Locator {
   if (isJS(page)) {
-    return page.locator('[role="grid"]').first();
+    return page.locator('.ogrid-wrapper[role="region"]').first();
   }
   return page.locator('[role="region"]').first();
 }
@@ -134,23 +197,23 @@ export async function sortColumn(
   direction: 'ascending' | 'descending',
 ): Promise<void> {
   const th = page.locator('thead th').filter({ hasText: columnName }).first();
+  const beforeSignature = await getVisibleRowSignature(page);
 
   if (isJS(page)) {
     // JS: click header directly (toggles asc  to  desc  to  none)
     await th.click();
-    await page.waitForTimeout(300);
+    await waitForVisibleRowSignatureChange(page, beforeSignature);
     // If we need descending and current is ascending, click again
     if (direction === 'descending') {
+      const afterAscending = await getVisibleRowSignature(page);
       await th.click();
-      await page.waitForTimeout(300);
+      await waitForVisibleRowSignatureChange(page, afterAscending);
     }
     return;
   }
 
-  // React/Angular/Vue: open ⋮ menu
-  const menuBtn = th.getByLabel('Column options');
-  await menuBtn.click();
-  await page.waitForTimeout(300);
+  // React/Angular/Vue: open the column menu from the real header trigger.
+  await openColumnOptions(page, columnName);
 
   const fw = getFramework(page);
   if (fw === 'vue-vuetify') {
@@ -168,7 +231,8 @@ export async function sortColumn(
     await expect(sortBtn).toBeVisible({ timeout: 2000 });
     await sortBtn.click();
   }
-  await page.waitForTimeout(300);
+  await waitForAnyVisibleState(getColumnOptionsSurfaces(page), false);
+  await waitForVisibleRowSignatureChange(page, beforeSignature);
 }
 
 // ---------------------------------------------------------------------------
@@ -177,23 +241,25 @@ export async function sortColumn(
 
 /** Click the "Next page" button. */
 export async function clickNextPage(page: Page): Promise<void> {
+  const beforeSignature = await getVisibleRowSignature(page);
   if (isJS(page)) {
     // JS: ▶ button (last navigation button)
     await page.locator('button:has-text("▶")').click();
   } else {
     await page.getByRole('button', { name: /next page/i }).click();
   }
-  await page.waitForTimeout(300);
+  await waitForVisibleRowSignatureChange(page, beforeSignature);
 }
 
 /** Click the "Previous page" button. */
 export async function clickPrevPage(page: Page): Promise<void> {
+  const beforeSignature = await getVisibleRowSignature(page);
   if (isJS(page)) {
     await page.locator('button:has-text("◀")').click();
   } else {
     await page.getByRole('button', { name: /previous page/i }).click();
   }
-  await page.waitForTimeout(300);
+  await waitForVisibleRowSignatureChange(page, beforeSignature);
 }
 
 /** Change the page size via the dropdown. */
@@ -204,7 +270,6 @@ export async function changePageSize(page: Page, size: number): Promise<void> {
     // Vuetify uses a custom VSelect  -  click to open, then select the option
     const selectWrapper = page.locator('.v-select').last();
     await selectWrapper.click();
-    await page.waitForTimeout(200);
     const option = page.getByRole('option', { name: String(size) });
     await option.click();
   } else {
@@ -212,11 +277,12 @@ export async function changePageSize(page: Page, size: number): Promise<void> {
     const select = page.locator('select').first();
     await select.selectOption(String(size));
   }
-  await page.waitForTimeout(300);
+  await expect(getRows(page)).toHaveCount(size);
 }
 
 /** Click a specific page number button. */
 export async function clickPageNumber(page: Page, pageNum: number): Promise<void> {
+  const beforeSignature = await getVisibleRowSignature(page);
   if (isJS(page)) {
     // JS: plain button with just the number text
     await page.locator(`button:has-text("${pageNum}")`).first().click();
@@ -224,7 +290,7 @@ export async function clickPageNumber(page: Page, pageNum: number): Promise<void
     const btn = page.getByRole('button', { name: new RegExp(`^${pageNum}$|page ${pageNum}`, 'i') });
     await btn.click();
   }
-  await page.waitForTimeout(300);
+  await waitForVisibleRowSignatureChange(page, beforeSignature);
 }
 
 // ---------------------------------------------------------------------------
@@ -236,7 +302,7 @@ export async function openFilter(page: Page, columnName: string): Promise<void> 
   // All frameworks use aria-label="Filter {columnName}" on the filter button
   const filterBtn = page.getByRole('button', { name: new RegExp(`filter ${columnName}`, 'i') });
   await filterBtn.click();
-  await page.waitForTimeout(300);
+  await expect(getFilterPopover(page)).toBeVisible({ timeout: 3_000 });
 }
 
 /** Get the filter popover/dialog container. */
@@ -244,32 +310,44 @@ export function getFilterPopover(page: Page): Locator {
   if (isJS(page)) {
     return page.locator('.ogrid-header-filter-popover').first();
   }
-  if (getFramework(page) === 'vue-vuetify') {
-    // Vuetify uses .v-overlay__content (VMenu/VCard), not role="dialog"
-    // Return the one that contains filter content (has "Apply" button)
-    return page.locator('.v-overlay__content').filter({ has: page.getByRole('button', { name: /apply/i }) }).first();
+  if (getFramework(page) === 'react-fluent') {
+    return page.locator('[class*="filterPopover"], .fui-PopoverSurface').first();
   }
-  if (getFramework(page) === 'angular-material') {
-    // Angular Material renders filters inline in the header (no dialog).
-    // The filter panel has class ogrid-header-filter__popover.
+  if (getFramework(page) === 'react-material') {
+    return page.locator('.MuiPopover-root, .MuiPopover-paper').first();
+  }
+  if (getFramework(page) === 'vue-vuetify') {
+    return page.locator('.v-overlay__content').filter({ hasText: /apply/i }).first();
+  }
+  if (getFramework(page) === 'vue-primevue') {
+    return page.getByRole('dialog').filter({ hasText: /apply/i }).first();
+  }
+  if (getFramework(page) === 'angular-material' || getFramework(page) === 'angular-radix') {
     return page.locator('.ogrid-header-filter__popover').first();
   }
-  // React Radix uses role="dialog"
+  if (getFramework(page) === 'angular-primeng') {
+    return page.locator('thead').getByText(/filter:/i).first();
+  }
+  if (getFramework(page) === 'vue-radix') {
+    return page.locator('.popover-header').first();
+  }
   return page.getByRole('dialog');
 }
 
 /** Apply the current filter. */
 export async function applyFilter(page: Page): Promise<void> {
+  const popover = getFilterPopover(page);
   if (isJS(page)) {
     await page.locator('.ogrid-filter-apply-btn').click();
   } else {
     await page.getByRole('button', { name: /apply/i }).click();
   }
-  await page.waitForTimeout(300);
+  await expect(popover).not.toBeVisible({ timeout: 3_000 });
 }
 
 /** Clear the current filter (and apply/close). */
 export async function clearFilter(page: Page): Promise<void> {
+  const popover = getFilterPopover(page);
   if (isJS(page)) {
     // Text filter popovers have .ogrid-filter-clear-btn (Apply + Clear row).
     // Multiselect popovers have .ogrid-filter-clear-sel-btn (in-list clear) but no
@@ -297,7 +375,7 @@ export async function clearFilter(page: Page): Promise<void> {
     // The "Clear" button at the bottom of the filter popover (not the "Clear" in the header)
     await page.getByRole('button', { name: /clear/i }).last().click();
   }
-  await page.waitForTimeout(300);
+  await expect(popover).not.toBeVisible({ timeout: 3_000 });
 }
 
 // ---------------------------------------------------------------------------
@@ -306,12 +384,13 @@ export async function clearFilter(page: Page): Promise<void> {
 
 /** Open the column chooser dropdown. */
 export async function openColumnChooser(page: Page): Promise<void> {
-  if (isJS(page)) {
+  const fw = getFramework(page);
+  if (fw === 'js' || fw === 'angular-radix') {
     await page.locator('button:has-text("Columns")').click();
   } else {
     await page.getByRole('button', { name: /column visibility/i }).click();
   }
-  await page.waitForTimeout(200);
+  await waitForAnyVisibleState(getColumnChooserSurfaces(page), true);
 }
 
 /**
@@ -322,7 +401,7 @@ export async function openColumnChooser(page: Page): Promise<void> {
  */
 export async function closeColumnChooser(page: Page): Promise<void> {
   const fw = getFramework(page);
-  if (fw === 'js') {
+  if (fw === 'js' || fw === 'angular-radix') {
     await page.locator('button:has-text("Columns")').click();
   } else if (fw === 'angular-material') {
     // Angular Material column chooser is a toggle dropdown  -  click the button
@@ -331,7 +410,7 @@ export async function closeColumnChooser(page: Page): Promise<void> {
   } else {
     await page.keyboard.press('Escape');
   }
-  await page.waitForTimeout(200);
+  await waitForAnyVisibleState(getColumnChooserSurfaces(page), false);
 }
 
 /**
@@ -347,7 +426,6 @@ export async function toggleColumnInChooser(page: Page, columnName: string): Pro
     const label = page.locator('label').filter({ hasText: new RegExp(columnName) }).first();
     await label.click();
   }
-  await page.waitForTimeout(200);
 }
 
 // ---------------------------------------------------------------------------
@@ -363,7 +441,6 @@ export async function toggleColumnInChooser(page: Page, columnName: string): Pro
 export async function enterCellEdit(page: Page, rowIdx: number, colIdx: number): Promise<Locator> {
   const cell = getCellContent(page, rowIdx, colIdx);
   await cell.click();
-  await page.waitForTimeout(200);
 
   if (isJS(page)) {
     // JS: click activates the cell, Enter opens the inline editor
@@ -371,11 +448,25 @@ export async function enterCellEdit(page: Page, rowIdx: number, colIdx: number):
   } else {
     await cell.dblclick();
   }
-  await page.waitForTimeout(500);
 
   // Wait for the text input to appear
   const input = page.locator('input[type="text"]').first();
   await expect(input).toBeVisible({ timeout: 3000 });
+  return input;
+}
+
+export async function enterDateCellEdit(page: Page, rowIdx: number, colIdx: number): Promise<Locator> {
+  const cell = getCellContent(page, rowIdx, colIdx);
+  await cell.click();
+
+  if (isJS(page)) {
+    await getGridRegion(page).press('Enter');
+  } else {
+    await cell.dblclick();
+  }
+
+  const input = page.locator('input[placeholder*="YYYY"], input[type="date"], input[type="text"]').first();
+  await expect(input).toBeVisible({ timeout: 3_000 });
   return input;
 }
 
@@ -385,13 +476,15 @@ export async function enterCellEdit(page: Page, rowIdx: number, colIdx: number):
 
 /**
  * Open the column options (⋮) menu for a named column.
- * React/Angular/Vue: button with aria-label "Column options" inside the th.
- * JS: not applicable  -  skip tests that call this when isJS(page).
+ * All frameworks expose a button with aria-label containing "Column options" inside the th.
  */
 export async function openColumnOptions(page: Page, columnName: string): Promise<void> {
   const th = page.locator('thead th').filter({ hasText: columnName }).first();
-  await th.getByLabel('Column options').click();
-  await page.waitForTimeout(300);
+  await th.hover();
+  const trigger = th.getByRole('button', { name: /column options/i }).first();
+  await expect(trigger).toBeVisible({ timeout: 3000 });
+  await trigger.click();
+  await waitForAnyVisibleState(getColumnOptionsSurfaces(page), true);
 }
 
 // ---------------------------------------------------------------------------
@@ -405,9 +498,8 @@ export async function openColumnOptions(page: Page, columnName: string): Promise
 export async function rightClickCell(page: Page, rowIdx: number, colIdx: number): Promise<void> {
   const cell = getCellContent(page, rowIdx, colIdx);
   await cell.click();
-  await page.waitForTimeout(200);
   await cell.click({ button: 'right' });
-  await page.waitForTimeout(300);
+  await expect(getContextMenu(page)).toBeVisible({ timeout: 3_000 });
 }
 
 /**
@@ -418,15 +510,20 @@ export async function rightClickCell(page: Page, rowIdx: number, colIdx: number)
  * Other frameworks: click the h1 heading or press Escape.
  */
 export async function dismissContextMenu(page: Page): Promise<void> {
-  if (getFramework(page) === 'angular-material') {
-    // Angular Material context menu dismisses on Escape key.
-    // The overlay (position:fixed;inset:0) blocks pointer clicks from landing
-    // on the context menu host, so force-clicking the overlay does not work.
-    await page.keyboard.press('Escape');
+  if (getFramework(page) === 'angular-material' || getFramework(page) === 'angular-radix') {
+    // Angular wrappers render a full-page overlay; clicking the overlay itself
+    // is the real browser equivalent of clicking "outside" the menu.
+    const overlay = page.locator('.ogrid-datagrid-context-menu-overlay').first();
+    const box = await overlay.boundingBox();
+    if (box) {
+      await page.mouse.click(box.x + box.width - 8, box.y + box.height - 8);
+    } else {
+      await page.keyboard.press('Escape');
+    }
   } else {
     await page.locator('h1').first().click();
   }
-  await page.waitForTimeout(200);
+  await expect(getContextMenu(page)).not.toBeVisible({ timeout: 3_000 });
 }
 
 // ---------------------------------------------------------------------------
@@ -450,6 +547,9 @@ export function getStatusBar(page: Page): Locator {
  * The fill handle appears as [aria-label="Fill handle"] inside the active td.
  */
 export function getFillHandle(page: Page): Locator {
+  if (getFramework(page) === 'angular-radix') {
+    return page.locator('.ogrid-datagrid-fill-handle').first();
+  }
   return page.locator('[aria-label="Fill handle"]').first();
 }
 
@@ -465,9 +565,10 @@ export function getFillHandle(page: Page): Locator {
  */
 export function getResizeHandle(page: Page, columnName: string): Locator {
   const fw = getFramework(page);
-  if (fw === 'js' || fw === 'vue-vuetify') {
+  if (fw === 'js' || fw === 'vue-vuetify' || fw === 'angular-radix') {
     const th = page.locator('thead th').filter({ hasText: columnName }).first();
-    return th.locator('.ogrid-resize-handle').first();
+    const className = fw === 'angular-radix' ? '.ogrid-datagrid-resize-handle' : '.ogrid-resize-handle';
+    return th.locator(className).first();
   }
   if (fw === 'angular-material') {
     // Angular Material: the resize separator uses role="separator" but may not
@@ -516,8 +617,14 @@ export function supportsAriaSort(_page: Page): boolean {
  * Vue Vuetify: role="list" (Vuetify VList).
  */
 export function getContextMenu(page: Page): Locator {
+  if (isJS(page)) {
+    return page.locator('[role="menu"], .ogrid-context-menu, body > div').filter({ hasText: /copy|paste|select all/i }).first();
+  }
   if (getFramework(page) === 'vue-vuetify') {
     return page.locator('[role="list"]').first();
+  }
+  if (getFramework(page) === 'vue-primevue') {
+    return page.getByRole('menu', { name: /grid context menu/i }).first();
   }
   return page.locator('[role="menu"]').first();
 }
@@ -528,8 +635,14 @@ export function getContextMenu(page: Page): Locator {
  * Vue Vuetify: role="listitem".
  */
 export function getContextMenuItem(page: Page, name: string | RegExp): Locator {
+  if (isJS(page)) {
+    return page.locator('button, [role="button"], div').filter({ hasText: name }).first();
+  }
   if (getFramework(page) === 'vue-vuetify') {
     return page.getByRole('listitem').filter({ hasText: name }).first();
+  }
+  if (getFramework(page) === 'vue-primevue') {
+    return page.getByRole('menuitem').filter({ hasText: name }).first();
   }
   return page.getByRole('button', { name });
 }
@@ -549,7 +662,7 @@ export function supportsRichSelect(page: Page): boolean {
 export function supportsEscapeCancel(page: Page): boolean {
   const fw = getFramework(page);
   // Vue Vuetify inline editor does not cancel on Escape.
-  // JS inline editor commits (not cancels) on Escape  -  cancel not supported.
+  // JS inline editor closes, but edited values are not discarded on Escape.
   return fw !== 'vue-vuetify' && fw !== 'js';
 }
 
@@ -574,9 +687,8 @@ export async function scrollGridVertically(page: Page, scrollTop: number): Promi
 
 /** Get the default page size for the current framework. */
 export function getDefaultPageSize(page: Page): number {
-  // JS example uses pageSizeOptions [10, 20, 25, 50, 100] with default 20
-  if (isJS(page)) return 20;
-  return 25;
+  void page;
+  return DEMO_PAGE_SIZE;
 }
 
 /** Get the expected row count on the first page. */

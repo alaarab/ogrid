@@ -10,10 +10,10 @@ interface TestRow {
 }
 
 const testColumns: IColumnDef<TestRow>[] = [
-  { columnId: 'name', name: 'Name', editable: true },
-  { columnId: 'age', name: 'Age', type: 'numeric', editable: true },
-  { columnId: 'email', name: 'Email', editable: true },
-  { columnId: 'active', name: 'Active', type: 'boolean', editable: true },
+  { columnId: 'name', name: 'Name', editable: true, cellEditor: 'text' },
+  { columnId: 'age', name: 'Age', type: 'numeric', editable: true, cellEditor: 'text' },
+  { columnId: 'email', name: 'Email', editable: true, cellEditor: 'text' },
+  { columnId: 'active', name: 'Active', type: 'boolean', editable: true, cellEditor: 'checkbox' },
 ];
 
 const testData: TestRow[] = [

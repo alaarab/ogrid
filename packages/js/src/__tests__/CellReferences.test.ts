@@ -10,9 +10,9 @@ interface TestRow {
 }
 
 const testColumns: IColumnDef<TestRow>[] = [
-  { columnId: 'name', name: 'Name', editable: true },
-  { columnId: 'age', name: 'Age', type: 'numeric', editable: true },
-  { columnId: 'active', name: 'Active', type: 'boolean', editable: true },
+  { columnId: 'name', name: 'Name', editable: true, cellEditor: 'text' },
+  { columnId: 'age', name: 'Age', type: 'numeric', editable: true, cellEditor: 'text' },
+  { columnId: 'active', name: 'Active', type: 'boolean', editable: true, cellEditor: 'checkbox' },
 ];
 
 const testData: TestRow[] = [
@@ -501,10 +501,12 @@ describe('Cell References - Default (disabled)', () => {
     const { container, grid } = createGrid();
 
     const headers = container.querySelectorAll('th.ogrid-header-cell');
+    const getHeaderLabel = (header: Element) =>
+      header.querySelector('[data-header-label] > span')?.textContent;
     expect(headers.length).toBe(3);
-    expect(headers[0].textContent).toBe('Name');
-    expect(headers[1].textContent).toBe('Age');
-    expect(headers[2].textContent).toBe('Active');
+    expect(getHeaderLabel(headers[0])).toBe('Name');
+    expect(getHeaderLabel(headers[1])).toBe('Age');
+    expect(getHeaderLabel(headers[2])).toBe('Active');
 
     grid.destroy();
   });

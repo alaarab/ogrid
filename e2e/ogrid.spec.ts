@@ -2,14 +2,15 @@
  * OGrid E2E test suite.
  *
  * Runs the same tests against every framework example app (React Radix,
- * Angular Material, Vue Vuetify, Vanilla JS).  Each app renders 75 demo
+ * Angular Material, Vue Vuetify, Vanilla JS).  Each app renders a shared demo
  * projects with sorting, filtering, pagination, cell editing, cell selection,
  * and a status bar.
  *
  * Columns: Project Name | Status | Owner | Department | Budget | Start Date
- * Page size: 25 (React/Angular/Vue), 20 (JS)  |  Total rows: 75
+ * Page size: shared example config  |  Total rows: shared example config
  */
 
+import { DEMO_PROJECT_COUNT } from '../packages/examples/src/shared/demoConfig';
 import { test, expect } from '@playwright/test';
 import {
   waitForGrid,
@@ -33,6 +34,7 @@ import {
   getFillHandle,
   getResizeHandle,
   enterCellEdit,
+  enterDateCellEdit,
   getDefaultPageSize,
   expectActiveCellAt,
   getTextFilterInput,
@@ -84,16 +86,16 @@ test.describe('Grid rendering', () => {
     expect(names[0]).toContain('Project A');
   });
 
-  test('pagination info shows total count of 75', async ({ page }) => {
+  test(`pagination info shows total count of ${DEMO_PROJECT_COUNT}`, async ({ page }) => {
     await waitForGrid(page);
     const pageSize = getDefaultPageSize(page);
-    const info = page.locator(`text=/1.*to.*${pageSize}.*of.*75/i`).first();
-    // Fallback: for JS the format may differ (e.g., "1-20 of 75")
+    const info = page.locator(`text=/1.*to.*${pageSize}.*of.*${DEMO_PROJECT_COUNT}/i`).first();
+    // Fallback: pagination copy varies slightly by framework.
     if (await info.isVisible({ timeout: 2000 }).catch(() => false)) {
       await expect(info).toBeVisible();
     } else {
       const text = await page.locator('body').textContent();
-      expect(text).toMatch(/75/);
+      expect(text).toContain(String(DEMO_PROJECT_COUNT));
     }
   });
 });
@@ -130,8 +132,7 @@ test.describe('Sorting', () => {
   });
 
   test('sorted column shows aria-sort attribute', async ({ page }) => {
-    // Skip on JS and Vue Vuetify  -  these frameworks do not set aria-sort on th elements
-    if (isJS(page) || !supportsAriaSort(page)) {
+    if (!supportsAriaSort(page)) {
       test.skip();
       return;
     }
@@ -247,7 +248,6 @@ test.describe('MultiSelect filter', () => {
         : popover.locator('input[type="checkbox"]').first();
       await activeCheckbox.click();
     }
-    await page.waitForTimeout(100);
 
     await applyFilter(page);
 
@@ -302,8 +302,6 @@ test.describe('Cell selection', () => {
   test('clicking a cell activates it with visual indicator', async ({ page }) => {
     const cellContent = getCellContent(page, 0, 0);
     await cellContent.click();
-    await page.waitForTimeout(200);
-
     // Active cell: tabindex=0 (React/Angular/Vue) or data-active-cell="true" (JS)
     await expectActiveCellAt(page, 0, 0);
   });
@@ -311,11 +309,9 @@ test.describe('Cell selection', () => {
   test('arrow keys navigate between cells', async ({ page }) => {
     const cellContent = getCellContent(page, 0, 0);
     await cellContent.click();
-    await page.waitForTimeout(100);
 
     const region = getGridRegion(page);
     await region.press('ArrowRight');
-    await page.waitForTimeout(100);
 
     await expectActiveCellAt(page, 0, 1);
   });
@@ -323,11 +319,9 @@ test.describe('Cell selection', () => {
   test('Tab navigates to next cell', async ({ page }) => {
     const cellContent = getCellContent(page, 0, 0);
     await cellContent.click();
-    await page.waitForTimeout(100);
 
     const region = getGridRegion(page);
     await region.press('Tab');
-    await page.waitForTimeout(100);
 
     await expectActiveCellAt(page, 0, 1);
   });
@@ -348,12 +342,8 @@ test.describe('Cell editing', () => {
     const input = await enterCellEdit(page, 0, 0);
 
     await input.fill('E2E Edited');
-    await page.waitForTimeout(100);
     await input.press('Enter');
-    await page.waitForTimeout(500);
-
-    const updatedText = await getCellContent(page, 0, 0).textContent();
-    expect(updatedText).toContain('E2E Edited');
+    await expect.poll(async () => (await getCellContent(page, 0, 0).textContent()) ?? '').toContain('E2E Edited');
   });
 
   test('Escape discards the edit', async ({ page }) => {
@@ -370,10 +360,7 @@ test.describe('Cell editing', () => {
 
     await input.fill('Should Be Discarded');
     await input.press('Escape');
-    await page.waitForTimeout(500);
-
-    const restoredText = await getCellContent(page, 0, 0).textContent();
-    expect(restoredText?.trim()).toBe(originalText.trim());
+    await expect.poll(async () => ((await getCellContent(page, 0, 0).textContent()) ?? '').trim()).toBe(originalText.trim());
   });
 });
 
@@ -386,11 +373,9 @@ test.describe('Keyboard navigation', () => {
   test('Enter opens cell editor on editable cell', async ({ page }) => {
     const cellContent = getCellContent(page, 0, 0);
     await cellContent.click();
-    await page.waitForTimeout(200);
 
     const region = getGridRegion(page);
     await region.press('Enter');
-    await page.waitForTimeout(500);
 
     const input = page.locator('input[type="text"]').first();
     await expect(input).toBeVisible({ timeout: 3000 });
@@ -405,47 +390,33 @@ test.describe('Keyboard navigation', () => {
 
     const cellContent = getCellContent(page, 0, 0);
     await cellContent.click();
-    await page.waitForTimeout(200);
 
     const region = getGridRegion(page);
     await region.press('Enter');
-    await page.waitForTimeout(300);
-
     await region.press('Escape');
-    await page.waitForTimeout(200);
-
-    const inputCount = await page.locator('input[type="text"]').count();
-    expect(inputCount).toBe(0);
+    await expect(page.locator('input[type="text"]')).toHaveCount(0);
   });
 
   test('Ctrl+A selects all cells', async ({ page }) => {
     const cellContent = getCellContent(page, 0, 0);
     await cellContent.click();
-    await page.waitForTimeout(200);
 
     const region = getGridRegion(page);
     await region.press('Control+a');
-    await page.waitForTimeout(200);
-
-    const inRangeCells = page.locator('[data-in-range="true"]');
-    const count = await inRangeCells.count();
-    expect(count).toBeGreaterThan(1);
+    await expect.poll(async () => page.locator('[data-in-range="true"]').count()).toBeGreaterThan(1);
   });
 
   test('Home/End navigate to first/last column', async ({ page }) => {
     const cellContent = getCellContent(page, 0, 2);
     await cellContent.click();
-    await page.waitForTimeout(200);
 
     const region = getGridRegion(page);
 
     await region.press('Home');
-    await page.waitForTimeout(100);
     await expectActiveCellAt(page, 0, 0);
 
     await region.press('End');
-    await page.waitForTimeout(100);
-    await expectActiveCellAt(page, 0, 5);
+    await expectActiveCellAt(page, 0, 6);
   });
 });
 
@@ -456,11 +427,8 @@ test.describe('Sticky header', () => {
   });
 
   test('header stays visible after scrolling the grid', async ({ page }) => {
-    // JS uses full-page scroll (no overflow container) so thead does not stay
-    // sticky within the viewport when scrolling via window.scrollTo.
-    // The sticky header is implemented correctly in JS (position: sticky; top: 0)
-    // but requires an overflow-scrolling ancestor, which this test can't exercise
-    // in headless Playwright with a full-page layout.
+    // JS uses page-level scrolling in the example app, so the header can move
+    // above the viewport even though sticky header styling exists in the core renderer.
     if (isJS(page)) {
       test.skip();
       return;
@@ -473,8 +441,6 @@ test.describe('Sticky header', () => {
     await expect(thead).toBeVisible();
 
     await scrollGridVertically(page, 500);
-    await page.waitForTimeout(300);
-
     await expect(thead).toBeVisible();
     // Vue Vuetify uses page-level scroll  -  the header scrolls off-screen (box.y < 0)
     // but the thead element is still attached to the DOM. Skip the y-position check.
@@ -495,10 +461,6 @@ test.describe('Context menu', () => {
   });
 
   test('right-click opens context menu with Copy/Cut/Paste', async ({ page }) => {
-    if (isJS(page)) {
-      test.skip();
-      return;
-    }
     await rightClickCell(page, 0, 0);
 
     // Vue Vuetify uses role="list" (VList); React/Angular use role="menu"
@@ -512,10 +474,6 @@ test.describe('Context menu', () => {
   });
 
   test('context menu contains Select all option', async ({ page }) => {
-    if (isJS(page)) {
-      test.skip();
-      return;
-    }
     await rightClickCell(page, 0, 0);
 
     // Vue Vuetify uses role="list" (VList); React/Angular use role="menu"
@@ -528,10 +486,6 @@ test.describe('Context menu', () => {
   });
 
   test('clicking outside dismisses context menu', async ({ page }) => {
-    if (isJS(page)) {
-      test.skip();
-      return;
-    }
     await rightClickCell(page, 0, 0);
 
     // Vue Vuetify uses role="list" (VList); React/Angular use role="menu"
@@ -562,21 +516,17 @@ test.describe('Undo/Redo', () => {
     const input = await enterCellEdit(page, 0, 0);
     await input.fill('Undo Test Value');
     await input.press('Enter');
-    await page.waitForTimeout(500);
 
     // After Enter the active cell moves down, re-locate td[0,0]
-    const editedText = await td.textContent();
-    expect(editedText).not.toBe(originalText);
+    await expect.poll(async () => await td.textContent()).not.toBe(originalText);
+    const currentEditedText = await td.textContent();
+    expect(currentEditedText).not.toBe(originalText);
 
     const region = getGridRegion(page);
     // Click a different cell first to ensure the grid region has focus
     await getCellContent(page, 2, 0).click();
-    await page.waitForTimeout(100);
     await region.press('Control+z');
-    await page.waitForTimeout(300);
-
-    const restoredText = await td.textContent();
-    expect(restoredText?.trim()).toBe(originalText?.trim());
+    await expect.poll(async () => ((await td.textContent()) ?? '').trim()).toBe((originalText ?? '').trim());
   });
 
   test('Ctrl+Y redoes after undo', async ({ page }) => {
@@ -589,19 +539,16 @@ test.describe('Undo/Redo', () => {
     const input = await enterCellEdit(page, 0, 0);
     await input.fill('Redo Test Value');
     await input.press('Enter');
-    await page.waitForTimeout(500);
 
+    await expect.poll(async () => await td.textContent()).not.toBe('');
     const afterEdit = await td.textContent();
 
     const region = getGridRegion(page);
     await region.press('Control+z');
-    await page.waitForTimeout(300);
+    await expect.poll(async () => ((await td.textContent()) ?? '').trim()).not.toBe((afterEdit ?? '').trim());
 
     await region.press('Control+y');
-    await page.waitForTimeout(300);
-
-    const afterRedo = await td.textContent();
-    expect(afterRedo?.trim()).toBe(afterEdit?.trim());
+    await expect.poll(async () => ((await td.textContent()) ?? '').trim()).toBe((afterEdit ?? '').trim());
   });
 });
 
@@ -612,17 +559,11 @@ test.describe('Advanced keyboard shortcuts', () => {
   });
 
   test('F2 enters edit mode on active cell', async ({ page }) => {
-    if (isJS(page)) {
-      test.skip();
-      return;
-    }
     const cellContent = getCellContent(page, 0, 0);
     await cellContent.click();
-    await page.waitForTimeout(200);
 
     const region = getGridRegion(page);
     await region.press('F2');
-    await page.waitForTimeout(500);
 
     const input = page.locator('input[type="text"]').first();
     await expect(input).toBeVisible({ timeout: 3000 });
@@ -635,15 +576,12 @@ test.describe('Advanced keyboard shortcuts', () => {
     }
     const cellContent = getCellContent(page, 0, 0);
     await cellContent.click();
-    await page.waitForTimeout(200);
 
     const region = getGridRegion(page);
     await region.press('Delete');
-    await page.waitForTimeout(300);
 
     const td = page.locator('tbody tr:nth-child(1) td:nth-child(1)');
-    const textAfterDelete = await td.textContent();
-    expect(textAfterDelete?.trim()).toBe('');
+    await expect.poll(async () => ((await td.textContent()) ?? '').trim()).toBe('');
   });
 });
 
@@ -662,15 +600,9 @@ test.describe('Range selection', () => {
     const cell22 = getCellContent(page, 2, 2);
 
     await cell00.click();
-    await page.waitForTimeout(200);
 
     await cell22.click({ modifiers: ['Shift'] });
-    await page.waitForTimeout(200);
-
-    const inRangeCells = page.locator('[data-in-range="true"]');
-    const count = await inRangeCells.count();
-    // 3 rows x 3 cols = 9 cells in range
-    expect(count).toBe(9);
+    await expect.poll(async () => page.locator('[data-in-range="true"]').count()).toBe(9);
   });
 
   test('Shift+Click range has data-in-range="true" on all covered cells', async ({ page }) => {
@@ -682,15 +614,9 @@ test.describe('Range selection', () => {
     const cell10 = getCellContent(page, 1, 0);
 
     await cell00.click();
-    await page.waitForTimeout(200);
 
     await cell10.click({ modifiers: ['Shift'] });
-    await page.waitForTimeout(200);
-
-    const inRangeCells = page.locator('[data-in-range="true"]');
-    const count = await inRangeCells.count();
-    // 2 rows x 1 col = 2 cells
-    expect(count).toBe(2);
+    await expect.poll(async () => page.locator('[data-in-range="true"]').count()).toBe(2);
   });
 });
 
@@ -707,15 +633,10 @@ test.describe('Status bar aggregations', () => {
     }
     const cellContent = getCellContent(page, 0, 0);
     await cellContent.click();
-    await page.waitForTimeout(200);
 
     const region = getGridRegion(page);
     await region.press('Control+a');
-    await page.waitForTimeout(200);
-
-    const statusText = await getStatusBar(page).textContent();
-    // With all cells selected, numeric columns produce Sum/Avg/etc.
-    expect(statusText).toMatch(/sum|avg|count|cells/i);
+    await expect.poll(async () => (await getStatusBar(page).textContent()) ?? '').toMatch(/sum|avg|count|cells/i);
   });
 
   test('status bar shows cell count when cells selected', async ({ page }) => {
@@ -727,14 +648,9 @@ test.describe('Status bar aggregations', () => {
     const cell11 = getCellContent(page, 1, 1);
 
     await cell00.click();
-    await page.waitForTimeout(200);
 
     await cell11.click({ modifiers: ['Shift'] });
-    await page.waitForTimeout(200);
-
-    const statusText = await getStatusBar(page).textContent();
-    // 2x2 = 4 cells selected  -  status bar should show cell count
-    expect(statusText).toMatch(/cells?.*4|4.*cells?/i);
+    await expect.poll(async () => (await getStatusBar(page).textContent()) ?? '').toMatch(/cells?.*4|4.*cells?/i);
   });
 });
 
@@ -745,10 +661,6 @@ test.describe('Column header menu', () => {
   });
 
   test('column options menu has pin left/right and autosize buttons', async ({ page }) => {
-    if (isJS(page)) {
-      test.skip();
-      return;
-    }
     await openColumnOptions(page, 'Project Name');
 
     const fw = getFramework(page);
@@ -758,8 +670,8 @@ test.describe('Column header menu', () => {
       await expect(page.getByRole('listitem').filter({ hasText: 'Pin right' }).first()).toBeVisible();
       await expect(page.getByRole('listitem').filter({ hasText: 'Autosize this column' }).first()).toBeVisible();
       await expect(page.getByRole('listitem').filter({ hasText: 'Autosize all columns' }).first()).toBeVisible();
-    } else if (fw === 'angular-material') {
-      // Angular Material uses role="menuitem" (MatMenu items), not role="button"
+    } else if (fw === 'angular-material' || fw === 'js') {
+      // Angular Material and JS use role="menuitem" for the popup actions.
       await expect(page.getByRole('menuitem', { name: 'Pin left' })).toBeVisible();
       await expect(page.getByRole('menuitem', { name: 'Pin right' })).toBeVisible();
       await expect(page.getByRole('menuitem', { name: 'Autosize this column' })).toBeVisible();
@@ -773,10 +685,6 @@ test.describe('Column header menu', () => {
   });
 
   test('pin left makes column sticky', async ({ page }) => {
-    if (isJS(page)) {
-      test.skip();
-      return;
-    }
     const th = page.locator('thead th').filter({ hasText: 'Project Name' }).first();
     await openColumnOptions(page, 'Project Name');
 
@@ -784,17 +692,14 @@ test.describe('Column header menu', () => {
     if (fw === 'vue-vuetify') {
       // Vuetify column menu uses role="listitem" (VList items), not role="button"
       await page.getByRole('listitem').filter({ hasText: 'Pin left' }).first().click();
-    } else if (fw === 'angular-material') {
-      // Angular Material uses role="menuitem" (MatMenu items), not role="button"
+    } else if (fw === 'angular-material' || fw === 'js') {
+      // Angular Material and JS use role="menuitem" for the popup actions.
       await page.getByRole('menuitem', { name: 'Pin left' }).click();
     } else {
       await page.getByRole('button', { name: 'Pin left' }).click();
     }
-    await page.waitForTimeout(300);
 
-    // Pinned column gets a left offset style applied
-    const style = await th.getAttribute('style');
-    expect(style).toMatch(/left:\s*0px/);
+    await expect.poll(async () => await th.getAttribute('style')).toMatch(/left:\s*0px/);
   });
 });
 
@@ -805,9 +710,9 @@ test.describe('Column resize', () => {
   });
 
   test('dragging resize handle changes column width', async ({ page }) => {
-    // Skip on JS (no resize handles) and Angular Material (resize separator
-    // is not exposed as a visible accessible element in headless Playwright).
-    if (isJS(page) || getFramework(page) === 'angular-material') {
+    // Angular Material's resize separator is not exposed as a stable visible
+    // element in headless Playwright.
+    if (getFramework(page) === 'angular-material') {
       test.skip();
       return;
     }
@@ -817,7 +722,6 @@ test.describe('Column resize', () => {
     // Hover the header first to make the resize handle visible (some frameworks
     // only show it on hover).
     await th.hover();
-    await page.waitForTimeout(200);
 
     const resizeHandle = getResizeHandle(page, 'Project Name');
     await expect(resizeHandle).toBeVisible({ timeout: 3000 });
@@ -827,10 +731,7 @@ test.describe('Column resize', () => {
     await page.mouse.down();
     await page.mouse.move(handleBox.x + handleBox.width / 2 + 80, handleBox.y + handleBox.height / 2, { steps: 10 });
     await page.mouse.up();
-    await page.waitForTimeout(300);
-
-    const afterBox = await th.boundingBox();
-    expect(afterBox?.width).toBeGreaterThan(initialBox?.width ?? 0);
+    await expect.poll(async () => (await th.boundingBox())?.width ?? 0).toBeGreaterThan(initialBox?.width ?? 0);
   });
 });
 
@@ -841,29 +742,29 @@ test.describe('Clipboard', () => {
   });
 
   test('Ctrl+C shows marching ants overlay on selected cells', async ({ page }) => {
-    // Skip on JS and Angular Material  -  Angular's marching ants overlay does
-    // not render a visible SVG in headless Playwright after Ctrl+C.
-    if (isJS(page) || getFramework(page) === 'angular-material') {
+    // Angular's marching ants overlay does not render a visible SVG in headless
+    // Playwright after Ctrl+C.
+    if (getFramework(page) === 'angular-material') {
       test.skip();
       return;
     }
     const cell = getCellContent(page, 0, 0);
     await cell.click();
-    await page.waitForTimeout(200);
 
     const region = getGridRegion(page);
     await region.press('Control+c');
-    await page.waitForTimeout(400);
 
     // Marching ants SVG appears as an absolutely-positioned overlay
     const svg = page.locator('svg').first();
     await expect(svg).toBeVisible();
-    const style = await svg.getAttribute('style');
-    expect(style).toMatch(/position:\s*absolute/);
+    const box = await svg.boundingBox();
+    expect(box).not.toBeNull();
+    expect(box?.width ?? 0).toBeGreaterThan(0);
+    expect(box?.height ?? 0).toBeGreaterThan(0);
   });
 
   test('Ctrl+V pastes copied value into another cell', async ({ page }) => {
-    if (isJS(page) || !supportsClipboardPaste(page)) {
+    if (!supportsClipboardPaste(page)) {
       test.skip();
       return;
     }
@@ -871,27 +772,21 @@ test.describe('Clipboard', () => {
     const input = await enterCellEdit(page, 0, 0);
     await input.fill('Clipboard Value');
     await input.press('Enter');
-    await page.waitForTimeout(400);
+    await expect.poll(async () => (await page.locator('tbody tr:nth-child(1) td:nth-child(1)').textContent()) ?? '').toContain('Clipboard Value');
 
     // Re-click cell [0,0] to select it
     const cell00 = getCellContent(page, 0, 0);
     await cell00.click();
-    await page.waitForTimeout(200);
 
     // Copy it
     const region = getGridRegion(page);
     await region.press('Control+c');
-    await page.waitForTimeout(300);
 
     // Navigate to cell [1,0] and paste
     const cell10 = getCellContent(page, 1, 0);
     await cell10.click();
-    await page.waitForTimeout(200);
     await region.press('Control+v');
-    await page.waitForTimeout(400);
-
-    const pasted = await page.locator('tbody tr:nth-child(2) td:nth-child(1)').textContent();
-    expect(pasted).toContain('Clipboard Value');
+    await expect.poll(async () => (await page.locator('tbody tr:nth-child(2) td:nth-child(1)').textContent()) ?? '').toContain('Clipboard Value');
   });
 });
 
@@ -902,34 +797,28 @@ test.describe('Fill handle', () => {
   });
 
   test('fill handle is visible on active cell', async ({ page }) => {
-    if (isJS(page)) {
-      test.skip();
-      return;
-    }
     const cell = getCellContent(page, 0, 0);
     await cell.click();
-    await page.waitForTimeout(300);
-
     await expect(getFillHandle(page)).toBeVisible();
   });
 
   test('dragging fill handle fills value into rows below', async ({ page }) => {
+    // JS renders the fill handle and blocks incompatible cross-column fills, but
+    // drag-to-fill does not complete in the browser example yet.
     if (isJS(page)) {
       test.skip();
       return;
     }
     // Edit cell [0,0] to a known value
     const cell = getCellContent(page, 0, 0);
-    await cell.dblclick();
-    await page.waitForTimeout(400);
-    const input = page.locator('input[type="text"]').first();
+    const input = await enterCellEdit(page, 0, 0);
     await input.fill('Fill Source');
     await input.press('Enter');
-    await page.waitForTimeout(300);
+    await expect.poll(async () => (await page.locator('tbody tr:nth-child(1) td:nth-child(1)').textContent()) ?? '').toContain('Fill Source');
 
     // Re-activate cell [0,0]
     await cell.click();
-    await page.waitForTimeout(300);
+    await expect(getFillHandle(page)).toBeVisible();
 
     const handleBox = await getFillHandle(page).boundingBox();
     const row3 = page.locator('tbody tr:nth-child(3) td:nth-child(1)');
@@ -941,12 +830,8 @@ test.describe('Fill handle', () => {
     await page.mouse.down();
     await page.mouse.move(hx + hw / 2, r3y + r3h / 2, { steps: 10 });
     await page.mouse.up();
-    await page.waitForTimeout(400);
-
-    const row2Text = await page.locator('tbody tr:nth-child(2) td:nth-child(1)').textContent();
-    const row3Text = await page.locator('tbody tr:nth-child(3) td:nth-child(1)').textContent();
-    expect(row2Text).toContain('Fill Source');
-    expect(row3Text).toContain('Fill Source');
+    await expect.poll(async () => (await page.locator('tbody tr:nth-child(2) td:nth-child(1)').textContent()) ?? '').toContain('Fill Source');
+    await expect.poll(async () => (await page.locator('tbody tr:nth-child(3) td:nth-child(1)').textContent()) ?? '').toContain('Fill Source');
   });
 
   // Cross-column fill compatibility (areFillCompatible) tests
@@ -960,31 +845,30 @@ test.describe('Fill handle', () => {
   test('fill handle from text cell to richSelect (status) column does nothing', async ({ page }) => {
     // name (col 0) has no custom editor; status (col 1) uses richSelect.
     // Different editors = incompatible, so fill should be blocked.
-    if (isJS(page)) {
-      test.skip();
-      return;
-    }
-
     const statusCell = page.locator('tbody tr:nth-child(1) td:nth-child(2)');
     const originalStatus = await statusCell.textContent();
 
     const nameCell = getCellContent(page, 0, 0);
     await nameCell.click();
-    await page.waitForTimeout(300);
+    await expect(getFillHandle(page)).toBeVisible();
 
     const handleBox = await getFillHandle(page).boundingBox();
     const statusBox = await statusCell.boundingBox();
+    expect(handleBox).not.toBeNull();
+    expect(statusBox).not.toBeNull();
+    if (!handleBox || !statusBox) {
+      throw new Error('Expected fill handle and target status cell to have bounding boxes.');
+    }
 
-    const hx = handleBox!.x + handleBox!.width / 2;
-    const hy = handleBox!.y + handleBox!.height / 2;
-    const sx = statusBox!.x + statusBox!.width / 2;
-    const sy = statusBox!.y + statusBox!.height / 2;
+    const hx = handleBox.x + handleBox.width / 2;
+    const hy = handleBox.y + handleBox.height / 2;
+    const sx = statusBox.x + statusBox.width / 2;
+    const sy = statusBox.y + statusBox.height / 2;
 
     await page.mouse.move(hx, hy);
     await page.mouse.down();
     await page.mouse.move(sx, sy, { steps: 10 });
     await page.mouse.up();
-    await page.waitForTimeout(400);
 
     const afterStatus = await statusCell.textContent();
     expect(afterStatus).toBe(originalStatus);
@@ -992,32 +876,31 @@ test.describe('Fill handle', () => {
 
   test('fill handle from date cell to boolean (active) column does nothing', async ({ page }) => {
     // startDate is type:'date', active is type:'boolean'. Different types = blocked.
-    if (isJS(page)) {
-      test.skip();
-      return;
-    }
-
     // active is col index 6, so td:nth-child(7)
     const activeCell = page.locator('tbody tr:nth-child(1) td:nth-child(7)');
     const originalActive = await activeCell.textContent();
 
     const dateCell = getCellContent(page, 0, 5);
     await dateCell.click();
-    await page.waitForTimeout(300);
+    await expect(getFillHandle(page)).toBeVisible();
 
     const handleBox = await getFillHandle(page).boundingBox();
     const activeBox = await activeCell.boundingBox();
+    expect(handleBox).not.toBeNull();
+    expect(activeBox).not.toBeNull();
+    if (!handleBox || !activeBox) {
+      throw new Error('Expected fill handle and target active cell to have bounding boxes.');
+    }
 
-    const hx = handleBox!.x + handleBox!.width / 2;
-    const hy = handleBox!.y + handleBox!.height / 2;
-    const ax = activeBox!.x + activeBox!.width / 2;
-    const ay = activeBox!.y + activeBox!.height / 2;
+    const hx = handleBox.x + handleBox.width / 2;
+    const hy = handleBox.y + handleBox.height / 2;
+    const ax = activeBox.x + activeBox.width / 2;
+    const ay = activeBox.y + activeBox.height / 2;
 
     await page.mouse.move(hx, hy);
     await page.mouse.down();
     await page.mouse.move(ax, ay, { steps: 10 });
     await page.mouse.up();
-    await page.waitForTimeout(400);
 
     const afterActive = await activeCell.textContent();
     expect(afterActive).toBe(originalActive);
@@ -1027,11 +910,6 @@ test.describe('Fill handle', () => {
     // Dragging name (text, col 0) all the way to active (boolean, col 6).
     // Non-editable columns are skipped by isColumnEditable. startDate (date)
     // and active (boolean) are type-incompatible with name (text). Nothing changes.
-    if (isJS(page)) {
-      test.skip();
-      return;
-    }
-
     const dateCellTd = page.locator('tbody tr:nth-child(1) td:nth-child(6)');
     const activeCellTd = page.locator('tbody tr:nth-child(1) td:nth-child(7)');
     const originalDate = await dateCellTd.textContent();
@@ -1039,21 +917,25 @@ test.describe('Fill handle', () => {
 
     const nameCell = getCellContent(page, 0, 0);
     await nameCell.click();
-    await page.waitForTimeout(300);
+    await expect(getFillHandle(page)).toBeVisible();
 
     const handleBox = await getFillHandle(page).boundingBox();
     const activeBox = await activeCellTd.boundingBox();
+    expect(handleBox).not.toBeNull();
+    expect(activeBox).not.toBeNull();
+    if (!handleBox || !activeBox) {
+      throw new Error('Expected fill handle and target active cell to have bounding boxes.');
+    }
 
-    const hx = handleBox!.x + handleBox!.width / 2;
-    const hy = handleBox!.y + handleBox!.height / 2;
-    const ax = activeBox!.x + activeBox!.width / 2;
-    const ay = activeBox!.y + activeBox!.height / 2;
+    const hx = handleBox.x + handleBox.width / 2;
+    const hy = handleBox.y + handleBox.height / 2;
+    const ax = activeBox.x + activeBox.width / 2;
+    const ay = activeBox.y + activeBox.height / 2;
 
     await page.mouse.move(hx, hy);
     await page.mouse.down();
     await page.mouse.move(ax, ay, { steps: 15 });
     await page.mouse.up();
-    await page.waitForTimeout(400);
 
     const afterDate = await dateCellTd.textContent();
     const afterActive = await activeCellTd.textContent();
@@ -1069,18 +951,7 @@ test.describe('Date editor', () => {
   });
 
   test('double-clicking a date cell opens a date input', async ({ page }) => {
-    if (isJS(page)) {
-      test.skip();
-      return;
-    }
-    // Start Date is col index 5 (6th column)
-    const dateCell = page.locator('tbody tr:nth-child(1) td:nth-child(6) > div').first();
-    await dateCell.click();
-    await page.waitForTimeout(200);
-    await dateCell.dblclick();
-    await page.waitForTimeout(500);
-
-    const dateInput = page.locator('input[type="date"]').first();
+    const dateInput = await enterDateCellEdit(page, 0, 5);
     await expect(dateInput).toBeVisible({ timeout: 3000 });
   });
 });
@@ -1092,17 +963,16 @@ test.describe('RichSelect editor', () => {
   });
 
   test('double-clicking a Status cell opens a dropdown with search', async ({ page }) => {
-    // Vue Vuetify uses a native VSelect for the Status cell, not the custom RichSelect with search
+    // Vue Vuetify uses a native VSelect for the Status cell, not the custom
+    // RichSelect with search. JS does not surface the RichSelect search UI in
+    // the browser example yet.
     if (isJS(page) || !supportsRichSelect(page)) {
       test.skip();
       return;
     }
-    // Status is col index 1 (2nd column)
-    const statusCell = page.locator('tbody tr:nth-child(1) td:nth-child(2) > div').first();
+    const statusCell = getCellContent(page, 0, 1);
     await statusCell.click();
-    await page.waitForTimeout(200);
     await statusCell.dblclick();
-    await page.waitForTimeout(500);
 
     // RichSelect shows a listbox with options and a search input
     const searchInput = page.locator('input[placeholder="Search..."]').first();
@@ -1114,16 +984,16 @@ test.describe('RichSelect editor', () => {
   });
 
   test('typing in RichSelect search filters options', async ({ page }) => {
-    // Vue Vuetify uses a native VSelect for the Status cell, not the custom RichSelect with search
+    // Vue Vuetify uses a native VSelect for the Status cell, not the custom
+    // RichSelect with search. JS does not surface the RichSelect search UI in
+    // the browser example yet.
     if (isJS(page) || !supportsRichSelect(page)) {
       test.skip();
       return;
     }
-    const statusCell = page.locator('tbody tr:nth-child(1) td:nth-child(2) > div').first();
+    const statusCell = getCellContent(page, 0, 1);
     await statusCell.click();
-    await page.waitForTimeout(200);
     await statusCell.dblclick();
-    await page.waitForTimeout(500);
 
     const searchInput = page.locator('input[placeholder="Search..."]').first();
     await expect(searchInput).toBeVisible({ timeout: 3000 });
@@ -1131,10 +1001,7 @@ test.describe('RichSelect editor', () => {
     const allOptionsBefore = await page.locator('[role="option"]').count();
 
     await searchInput.fill('Act');
-    await page.waitForTimeout(200);
-
-    const filteredOptions = await page.locator('[role="option"]').count();
-    expect(filteredOptions).toBeLessThan(allOptionsBefore);
+    await expect.poll(async () => page.locator('[role="option"]').count()).toBeLessThan(allOptionsBefore);
   });
 });
 
@@ -1180,9 +1047,8 @@ test.describe('Integration', () => {
   test('edit value persists after pagination round-trip', async ({ page }) => {
     const input = await enterCellEdit(page, 0, 0);
     await input.fill('Persisted Value');
-    await page.waitForTimeout(100);
     await input.press('Enter');
-    await page.waitForTimeout(500);
+    await expect.poll(async () => (await getCellContent(page, 0, 0).textContent()) ?? '').toContain('Persisted Value');
 
     await clickNextPage(page);
     await clickPrevPage(page);

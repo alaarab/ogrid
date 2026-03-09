@@ -111,8 +111,6 @@ export class OGridRendering<T> {
 
   updateRendererInteractionState(): void {
     const { selectionState, clipboardState, resizeState, state, layoutState, pinningState, rowSelectionState, cellEditor, renderer, reorderState, marchingAnts, fillHandleState, options } = this.ctx;
-    if (!selectionState || !clipboardState || !resizeState) return;
-
     const { items } = state.getProcessedItems();
     const visibleCols = state.visibleColumnDefs;
 
@@ -133,24 +131,24 @@ export class OGridRendering<T> {
     ) ?? {};
 
     renderer.setInteractionState({
-      activeCell: selectionState.activeCell,
-      selectionRange: selectionState.selectionRange,
-      copyRange: clipboardState.copyRange,
-      cutRange: clipboardState.cutRange,
+      activeCell: selectionState?.activeCell ?? null,
+      selectionRange: selectionState?.selectionRange ?? null,
+      copyRange: clipboardState?.copyRange ?? null,
+      cutRange: clipboardState?.cutRange ?? null,
       editingCell: cellEditor?.getEditingCell() ?? null,
       columnWidths,
-      onCellClick: (ce) => this.ctx.handleCellClick(ce.rowIndex, ce.colIndex),
-      onCellMouseDown: (ce) => { if (ce.event) this.ctx.handleCellMouseDown(ce.rowIndex, ce.colIndex, ce.event); },
-      onCellDoubleClick: (ce) => { if (ce.rowId != null && ce.columnId) this.ctx.startCellEdit(ce.rowId, ce.columnId); },
-      onCellContextMenu: (ce) => { if (ce.event) this.ctx.handleCellContextMenu(ce.rowIndex, ce.colIndex, ce.event); },
-      onResizeStart: renderer.getOnResizeStart(),
-      onResizeDoubleClick: (columnId: string) => {
+      onCellClick: selectionState ? (ce) => this.ctx.handleCellClick(ce.rowIndex, ce.colIndex) : undefined,
+      onCellMouseDown: selectionState ? (ce) => { if (ce.event) this.ctx.handleCellMouseDown(ce.rowIndex, ce.colIndex, ce.event); } : undefined,
+      onCellDoubleClick: selectionState ? (ce) => { if (ce.rowId != null && ce.columnId) this.ctx.startCellEdit(ce.rowId, ce.columnId); } : undefined,
+      onCellContextMenu: selectionState ? (ce) => { if (ce.event) this.ctx.handleCellContextMenu(ce.rowIndex, ce.colIndex, ce.event); } : undefined,
+      onResizeStart: resizeState ? renderer.getOnResizeStart() : undefined,
+      onResizeDoubleClick: resizeState ? (columnId: string) => {
         const col = visibleCols.find(c => c.columnId === columnId);
         const minW = col?.minWidth ?? DEFAULT_MIN_COLUMN_WIDTH;
         const container = renderer.getTableElement()?.parentElement ?? undefined;
         const idealWidth = measureColumnContentWidth(columnId, minW, container);
         resizeState.setColumnWidth(columnId, idealWidth);
-      },
+      } : undefined,
       // Boolean toggle
       onBooleanToggle: options.editable !== false ? (rowId, columnId, currentValue) => this.ctx.toggleBooleanCell(rowId, columnId, currentValue) : undefined,
       // Fill handle
@@ -189,15 +187,41 @@ export class OGridRendering<T> {
           tableEl
         );
       } : undefined,
+      onPinColumn: pinningState ? (columnId, side) => {
+        if (side) pinningState.pinColumn(columnId, side);
+        else pinningState.unpinColumn(columnId);
+      } : undefined,
+      onSetColumnSort: (columnId, direction) => {
+        if (direction) {
+          state.setSort({ field: columnId, direction });
+        } else {
+          state.setSort(undefined);
+        }
+      },
+      onAutosizeColumn: resizeState ? (columnId) => {
+        const col = visibleCols.find((candidate) => candidate.columnId === columnId);
+        const minW = col?.minWidth ?? DEFAULT_MIN_COLUMN_WIDTH;
+        const container = renderer.getTableElement()?.parentElement ?? undefined;
+        const idealWidth = measureColumnContentWidth(columnId, minW, container);
+        resizeState.setColumnWidth(columnId, idealWidth);
+      } : undefined,
+      onAutosizeAllColumns: resizeState ? () => {
+        const container = renderer.getTableElement()?.parentElement ?? undefined;
+        for (const col of visibleCols) {
+          const minW = col.minWidth ?? DEFAULT_MIN_COLUMN_WIDTH;
+          const idealWidth = measureColumnContentWidth(col.columnId, minW, container);
+          resizeState.setColumnWidth(col.columnId, idealWidth);
+        }
+      } : undefined,
     });
 
     renderer.update();
 
     // Update marching ants overlay
     marchingAnts?.update(
-      selectionState.selectionRange,
-      clipboardState.copyRange,
-      clipboardState.cutRange,
+      selectionState?.selectionRange ?? null,
+      clipboardState?.copyRange ?? null,
+      clipboardState?.cutRange ?? null,
       this.layoutVersion
     );
   }
@@ -299,11 +323,12 @@ export class OGridRendering<T> {
         endBatch: () => undoRedoState?.endBatch(),
       });
 
-      // Update renderer interaction state before rendering
-      this.updateRendererInteractionState();
-    } else {
-      renderer.update();
     }
+
+    // Always update renderer interaction state before rendering. Some UI features
+    // (for example row selection, pinning, row numbers) do not depend on keyboard
+    // or clipboard interaction being enabled.
+    this.updateRendererInteractionState();
 
     // Update virtual scroll with current total row count
     virtualScrollState?.setTotalRows(totalCount);

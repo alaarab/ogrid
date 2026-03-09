@@ -6,6 +6,7 @@ import type { HeaderFilterState, HeaderFilterConfig } from '../state/HeaderFilte
 import type { VirtualScrollState } from '../state/VirtualScrollState';
 import type { FormulaEngineState } from '../state/FormulaEngineState';
 import { getCellCoordinates } from '../utils/getCellCoordinates';
+import { ColumnHeaderMenu } from '../components/ColumnHeaderMenu';
 
 /** Pre-computed range bounds for fast in-range checks (avoids repeated Math.min/max). */
 interface RangeBounds { minR: number; maxR: number; minC: number; maxC: number; }
@@ -59,6 +60,11 @@ export interface TableRendererInteractionState {
   onColumnReorderStart?: (columnId: string, event: PointerEvent) => void;
   // Boolean toggle
   onBooleanToggle?: (rowId: RowId, columnId: string, currentValue: boolean) => void;
+  // Column header menu
+  onPinColumn?: (columnId: string, side: 'left' | 'right' | null) => void;
+  onSetColumnSort?: (columnId: string, direction: 'asc' | 'desc' | null) => void;
+  onAutosizeColumn?: (columnId: string) => void;
+  onAutosizeAllColumns?: () => void;
 }
 
 
@@ -103,6 +109,7 @@ export class TableRenderer<T> {
   private lastAllSelected: boolean | undefined;
   private lastSomeSelected: boolean | undefined;
   private formulaEngine: FormulaEngineState | null = null;
+  private headerMenu = new ColumnHeaderMenu();
 
   constructor(container: HTMLElement, state: GridState<T>) {
     this.container = container;
@@ -224,8 +231,8 @@ export class TableRenderer<T> {
         return;
       }
 
-      // Don't start reorder from filter icon
-      if (target.classList.contains('ogrid-filter-icon')) return;
+      // Don't start reorder from header action buttons.
+      if (target.closest('.ogrid-filter-icon, .ogrid-column-menu-trigger')) return;
 
       // Column reorder pointerdown
       if (this.interactionState?.onColumnReorderStart) {
@@ -285,8 +292,13 @@ export class TableRenderer<T> {
     if (this.state.rowHeight) {
       wrapper.style.setProperty('--ogrid-row-height', `${this.state.rowHeight}px`);
     }
-    const label = this.state.ariaLabel ?? 'Data grid';
-    wrapper.setAttribute('aria-label', label);
+    const label = this.state.ariaLabel;
+    const labelledBy = this.state.ariaLabelledBy;
+    if (labelledBy) wrapper.setAttribute('aria-labelledby', labelledBy);
+    else wrapper.removeAttribute('aria-labelledby');
+    if (label) wrapper.setAttribute('aria-label', label);
+    else if (!labelledBy) wrapper.setAttribute('aria-label', 'Data grid');
+    else wrapper.removeAttribute('aria-label');
     this.wrapperEl = wrapper;
 
     // Create table
@@ -334,6 +346,7 @@ export class TableRenderer<T> {
       parts.push(col.columnId);
       parts.push(col.name);
       parts.push(is?.columnWidths[col.columnId]?.toString() ?? '');
+      parts.push(`pin:${is?.pinnedColumns?.[col.columnId] ?? ''}`);
     }
     // Include sort state
     const sort = this.state.sort;
@@ -518,6 +531,7 @@ export class TableRenderer<T> {
         const fillHandle = document.createElement('div');
         fillHandle.className = 'ogrid-fill-handle';
         fillHandle.setAttribute('data-fill-handle', 'true');
+        fillHandle.setAttribute('aria-label', 'Fill handle');
         fillHandle.style.position = 'absolute';
         fillHandle.style.right = '-3px';
         fillHandle.style.bottom = '-3px';
@@ -619,6 +633,7 @@ export class TableRenderer<T> {
 
   private renderHeader(): void {
     if (!this.thead) return;
+    this.headerMenu.close();
     this.thead.innerHTML = '';
 
     const visibleCols = this.state.visibleColumnDefs;
@@ -710,7 +725,6 @@ export class TableRenderer<T> {
         }
         for (const cell of row) {
           const th = document.createElement('th');
-          th.textContent = cell.label;
           th.className = cell.isGroup ? 'ogrid-group-header' : 'ogrid-header-cell';
           if (cell.colSpan > 1) th.colSpan = cell.colSpan;
 
@@ -732,6 +746,17 @@ export class TableRenderer<T> {
             this.applyPinningStyles(th, cell.columnDef.columnId, true);
             // Resize, reorder, and filter icon clicks are handled
             // via delegated listeners on <thead> (attachHeaderDelegation).
+          }
+
+          if (!cell.isGroup && cell.columnDef) {
+            this.appendHeaderContent(th, {
+              columnId: cell.columnDef.columnId,
+              label: cell.label,
+              sortable: cell.columnDef.sortable,
+              type: cell.columnDef.type,
+            });
+          } else {
+            th.textContent = cell.label;
           }
 
           tr.appendChild(th);
@@ -791,9 +816,12 @@ export class TableRenderer<T> {
         }
 
         // Text container
-        const textSpan = document.createElement('span');
-        textSpan.textContent = col.name;
-        th.appendChild(textSpan);
+        this.appendHeaderContent(th, {
+          columnId: col.columnId,
+          label: col.name,
+          sortable: col.sortable,
+          type: col.type,
+        });
 
         if (col.sortable) {
           th.classList.add('ogrid-sortable');
@@ -832,45 +860,150 @@ export class TableRenderer<T> {
 
         // Resize pointerdown handled via delegated listener on <thead>
 
-        // Filter icon (if column is filterable)
-        const filterConfig = this.filterConfigs.get(col.columnId);
-        if (filterConfig && this.onFilterIconClick) {
-          const filterBtn = document.createElement('button');
-          filterBtn.className = 'ogrid-filter-icon';
-          filterBtn.setAttribute('aria-label', `Filter ${col.name}`);
-          filterBtn.setAttribute('aria-expanded', 'false');
-          filterBtn.setAttribute('aria-haspopup', 'dialog');
-          filterBtn.style.border = 'none';
-          filterBtn.style.background = 'transparent';
-          filterBtn.style.cursor = 'pointer';
-          filterBtn.style.fontSize = '10px';
-          filterBtn.style.padding = '0 2px';
-          filterBtn.style.marginLeft = '4px';
-          filterBtn.style.color = 'var(--ogrid-fg, #242424)';
-          filterBtn.style.opacity = '0.6';
-
-          // Show active filter indicator
-          const hasActive = this.headerFilterState?.hasActiveFilter(filterConfig);
-          filterBtn.textContent = hasActive ? '\u25BC' : '\u25BD';
-          if (hasActive) {
-            filterBtn.style.opacity = '1';
-            filterBtn.style.color = 'var(--ogrid-selection, #217346)';
-          }
-
-          filterBtn.addEventListener('click', (e) => {
-            e.stopPropagation();
-            e.preventDefault();
-            this.onFilterIconClick?.(col.columnId, th);
-          });
-          th.appendChild(filterBtn);
-        }
-
         // Column reorder pointerdown handled via delegated listener on <thead>
 
         tr.appendChild(th);
       }
       this.thead?.appendChild(tr);
     }
+  }
+
+  private appendHeaderContent(
+    th: HTMLElement,
+    column: { columnId: string; label: string; sortable?: boolean; type?: string },
+  ): void {
+    const content = document.createElement('div');
+    content.setAttribute('data-header-label', 'true');
+    content.style.display = 'flex';
+    content.style.alignItems = 'center';
+    content.style.gap = '4px';
+    content.style.minWidth = '0';
+    content.style.width = '100%';
+
+    const labelSpan = document.createElement('span');
+    labelSpan.textContent = column.label;
+    labelSpan.style.flex = '1';
+    labelSpan.style.minWidth = '0';
+    if (column.type === 'numeric') {
+      labelSpan.style.textAlign = 'right';
+    }
+    content.appendChild(labelSpan);
+
+    const actions = document.createElement('span');
+    actions.style.display = 'inline-flex';
+    actions.style.alignItems = 'center';
+    actions.style.gap = '4px';
+    actions.style.marginRight = '8px';
+
+    const filterButton = this.createHeaderFilterButton(column.columnId, column.label, th);
+    if (filterButton) {
+      actions.appendChild(filterButton);
+    }
+
+    const menuButton = this.createHeaderMenuButton(column.columnId, column.label);
+    if (menuButton) {
+      actions.appendChild(menuButton);
+    }
+
+    if (actions.childElementCount > 0) {
+      content.appendChild(actions);
+    }
+
+    th.appendChild(content);
+  }
+
+  private createHeaderFilterButton(columnId: string, columnLabel: string, th: HTMLElement): HTMLButtonElement | null {
+    const filterConfig = this.filterConfigs.get(columnId);
+    if (!filterConfig || !this.onFilterIconClick) return null;
+
+    const filterBtn = document.createElement('button');
+    filterBtn.type = 'button';
+    filterBtn.className = 'ogrid-filter-icon';
+    filterBtn.setAttribute('aria-label', `Filter ${columnLabel}`);
+    filterBtn.setAttribute('aria-expanded', 'false');
+    filterBtn.setAttribute('aria-haspopup', 'dialog');
+    filterBtn.style.border = 'none';
+    filterBtn.style.background = 'transparent';
+    filterBtn.style.cursor = 'pointer';
+    filterBtn.style.fontSize = '10px';
+    filterBtn.style.padding = '0 2px';
+    filterBtn.style.color = 'var(--ogrid-fg, #242424)';
+    filterBtn.style.opacity = '0.6';
+
+    const hasActive = this.headerFilterState?.hasActiveFilter(filterConfig);
+    filterBtn.textContent = hasActive ? '\u25BC' : '\u25BD';
+    if (hasActive) {
+      filterBtn.style.opacity = '1';
+      filterBtn.style.color = 'var(--ogrid-selection, #217346)';
+    }
+
+    filterBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      e.preventDefault();
+      this.onFilterIconClick?.(columnId, th);
+    });
+
+    return filterBtn;
+  }
+
+  private createHeaderMenuButton(columnId: string, columnLabel: string): HTMLButtonElement | null {
+    const is = this.interactionState;
+    if (!is?.onPinColumn && !is?.onSetColumnSort && !is?.onAutosizeColumn && !is?.onAutosizeAllColumns) {
+      return null;
+    }
+
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = 'ogrid-column-menu-trigger';
+    button.setAttribute('aria-label', `Column options for ${columnLabel}`);
+    button.setAttribute('aria-haspopup', 'menu');
+    button.style.border = 'none';
+    button.style.background = 'transparent';
+    button.style.cursor = 'pointer';
+    button.style.fontSize = '14px';
+    button.style.lineHeight = '1';
+    button.style.padding = '0 2px';
+    button.style.color = 'var(--ogrid-fg, #242424)';
+    button.style.opacity = '0.7';
+    button.textContent = '\u22EE';
+
+    button.addEventListener('click', (e) => {
+      e.stopPropagation();
+      e.preventDefault();
+      this.openColumnMenu(columnId, button);
+    });
+
+    return button;
+  }
+
+  private openColumnMenu(columnId: string, anchorElement: HTMLElement): void {
+    const column = this.state.columns.find((candidate) => candidate.columnId === columnId);
+    if (!column) return;
+
+    const currentSort = this.state.sort?.field === columnId ? this.state.sort.direction : null;
+    const currentPin = this.interactionState?.pinnedColumns?.[columnId];
+
+    this.headerMenu.show(
+      anchorElement,
+      {
+        canPinLeft: currentPin !== 'left',
+        canPinRight: currentPin !== 'right',
+        canUnpin: !!currentPin,
+        currentSort,
+        isSortable: column.sortable !== false,
+        isResizable: !!this.interactionState?.onAutosizeColumn || !!this.interactionState?.onAutosizeAllColumns,
+      },
+      {
+        onPinLeft: () => this.interactionState?.onPinColumn?.(columnId, 'left'),
+        onPinRight: () => this.interactionState?.onPinColumn?.(columnId, 'right'),
+        onUnpin: () => this.interactionState?.onPinColumn?.(columnId, null),
+        onSortAsc: () => this.interactionState?.onSetColumnSort?.(columnId, 'asc'),
+        onSortDesc: () => this.interactionState?.onSetColumnSort?.(columnId, 'desc'),
+        onClearSort: () => this.interactionState?.onSetColumnSort?.(columnId, null),
+        onAutosizeThis: () => this.interactionState?.onAutosizeColumn?.(columnId),
+        onAutosizeAll: () => this.interactionState?.onAutosizeAllColumns?.(),
+      },
+    );
   }
 
   private appendSelectAllCheckbox(th: HTMLElement): void {
@@ -1022,7 +1155,8 @@ export class TableRenderer<T> {
 
       for (let colIndex = 0; colIndex < renderCols.length; colIndex++) {
         const col = renderCols[colIndex];
-        const globalColIndex = (colGlobalIndexMap ? colGlobalIndexMap[colIndex] : colIndex) + colOffset;
+        const visibleColIndex = colGlobalIndexMap ? colGlobalIndexMap[colIndex] : colIndex;
+        const globalColIndex = visibleColIndex + colOffset;
         const td = document.createElement('td');
         td.className = 'ogrid-cell';
         td.setAttribute('data-column-id', col.columnId);
@@ -1050,18 +1184,18 @@ export class TableRenderer<T> {
           }
 
           // Selection range
-          if (selectionRange && isInSelectionRange(selectionRange, rowIndex, colIndex)) {
+          if (selectionRange && isInSelectionRange(selectionRange, rowIndex, visibleColIndex)) {
             td.setAttribute('data-in-range', 'true');
             td.style.backgroundColor = 'var(--ogrid-range-bg, rgba(33, 115, 70, 0.12))';
           }
 
           // Copy range
-          if (copyRange && isInSelectionRange(copyRange, rowIndex, colIndex)) {
+          if (copyRange && isInSelectionRange(copyRange, rowIndex, visibleColIndex)) {
             td.style.outline = '1px dashed var(--ogrid-fg-muted, rgba(0, 0, 0, 0.5))';
           }
 
           // Cut range
-          if (cutRange && isInSelectionRange(cutRange, rowIndex, colIndex)) {
+          if (cutRange && isInSelectionRange(cutRange, rowIndex, visibleColIndex)) {
             td.style.outline = '1px dashed var(--ogrid-accent, #0078d4)';
           }
 
@@ -1079,16 +1213,16 @@ export class TableRenderer<T> {
           // Cast col to unknown first to work around structural differences
           const rawValue = getCellValue(item, col as unknown as Parameters<typeof getCellValue>[1]);
           // Use formula result if available
-          const value = this.formulaEngine?.isEnabled() && this.formulaEngine.hasFormula(colIndex, rowIndex)
-            ? (this.formulaEngine.getValue(colIndex, rowIndex) ?? rawValue)
+          const value = this.formulaEngine?.isEnabled() && this.formulaEngine.hasFormula(visibleColIndex, rowIndex)
+            ? (this.formulaEngine.getValue(visibleColIndex, rowIndex) ?? rawValue)
             : rawValue;
           col.renderCell(td, item, value);
         } else {
           // Default: text content via valueFormatter or toString
           const rawValue = getCellValue(item, col as unknown as Parameters<typeof getCellValue>[1]);
           // Use formula result if available
-          const value = this.formulaEngine?.isEnabled() && this.formulaEngine.hasFormula(colIndex, rowIndex)
-            ? (this.formulaEngine.getValue(colIndex, rowIndex) ?? rawValue)
+          const value = this.formulaEngine?.isEnabled() && this.formulaEngine.hasFormula(visibleColIndex, rowIndex)
+            ? (this.formulaEngine.getValue(visibleColIndex, rowIndex) ?? rawValue)
             : rawValue;
           if (col.type === 'boolean') {
             const boolVal = Boolean(value);
@@ -1103,14 +1237,16 @@ export class TableRenderer<T> {
             checkbox.setAttribute('aria-label', boolVal ? 'Checked' : 'Unchecked');
             checkbox.addEventListener('pointerdown', (e) => {
               e.stopPropagation();
-              // Manually trigger cell selection so the parent td's pointerdown (which starts drag) is bypassed
-              this.interactionState?.onCellMouseDown?.({ rowIndex, colIndex, event: e as unknown as MouseEvent });
+              // Keep the checkbox's native toggle sequence intact while preventing drag selection from starting.
+            });
+            checkbox.addEventListener('click', (e) => {
+              e.stopPropagation();
             });
             if (editable) {
-              checkbox.addEventListener('change', () => {
+              checkbox.addEventListener('change', (e) => {
+                e.stopPropagation();
                 this.interactionState?.onBooleanToggle?.(rowId, col.columnId, boolVal);
               });
-              checkbox.addEventListener('click', (e) => e.stopPropagation());
             }
             td.appendChild(checkbox);
           } else if (col.valueFormatter) {
@@ -1136,11 +1272,12 @@ export class TableRenderer<T> {
             selectionRange &&
             this.interactionState.onFillHandleMouseDown &&
             rowIndex === Math.max(selectionRange.startRow, selectionRange.endRow) &&
-            colIndex === Math.max(selectionRange.startCol, selectionRange.endCol)
+            visibleColIndex === Math.max(selectionRange.startCol, selectionRange.endCol)
           ) {
             const fillHandle = document.createElement('div');
             fillHandle.className = 'ogrid-fill-handle';
             fillHandle.setAttribute('data-fill-handle', 'true');
+            fillHandle.setAttribute('aria-label', 'Fill handle');
             fillHandle.style.position = 'absolute';
             fillHandle.style.right = '-3px';
             fillHandle.style.bottom = '-3px';
@@ -1218,6 +1355,7 @@ export class TableRenderer<T> {
   }
 
   destroy(): void {
+    this.headerMenu.destroy();
     this.detachHeaderDelegation();
     this.detachBodyDelegation();
     this.container.innerHTML = '';

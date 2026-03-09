@@ -103,23 +103,21 @@ describe('RatingEditor', () => {
 
   describe('Star Click', () => {
     it('clicking a star calls onValueChange', async () => {
+      const user = userEvent.setup();
       const { props } = renderEditor({ value: 0 });
       const starButtons = getStarButtons();
 
-      await act(async () => {
-        starButtons[0]!.click();
-      });
+      await user.click(starButtons[0]!);
 
       expect(props.onValueChange).toHaveBeenCalled();
     });
 
     it('clicking a star auto-commits via setTimeout', async () => {
+      const user = userEvent.setup();
       const { props } = renderEditor({ value: 0 });
       const starButtons = getStarButtons();
 
-      await act(async () => {
-        starButtons[2]!.click();
-      });
+      await user.click(starButtons[2]!);
 
       await act(async () => {
         await new Promise((r) => setTimeout(r, 10));
@@ -132,23 +130,24 @@ describe('RatingEditor', () => {
   // ── 4. Clear Button ──
 
   describe('Clear Button', () => {
-    it('clicking Clear calls onValueChange with empty string', () => {
+    it('clicking Clear calls onValueChange with empty string', async () => {
+      const user = userEvent.setup();
       const { props } = renderEditor({ value: 3 });
-      screen.getByText('Clear').click();
+      await user.click(screen.getByText('Clear'));
       expect(props.onValueChange).toHaveBeenCalledWith('');
     });
 
-    it('clicking Clear calls onCommit', () => {
+    it('clicking Clear calls onCommit', async () => {
+      const user = userEvent.setup();
       const { props } = renderEditor({ value: 3 });
-      screen.getByText('Clear').click();
+      await user.click(screen.getByText('Clear'));
       expect(props.onCommit).toHaveBeenCalled();
     });
 
     it('clicking Clear resets label to "No rating"', async () => {
+      const user = userEvent.setup();
       renderEditor({ value: 3 });
-      await act(async () => {
-        screen.getByText('Clear').click();
-      });
+      await user.click(screen.getByText('Clear'));
       expect(screen.getByText('No rating')).toBeInTheDocument();
     });
   });

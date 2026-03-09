@@ -29,9 +29,8 @@ export const editorInputStyle: React.CSSProperties = {
   background: 'transparent',
   color: 'inherit',
   font: 'inherit',
-  // Use at least 16px so iOS Safari does not auto-zoom when the input is focused.
-  // On desktop this is overridden to 13px via CSS (see _data-grid-table.scss).
-  fontSize: '16px',
+  fontSize: 'var(--ogrid-cell-font-size, 13px)',
+  lineHeight: 'inherit',
   outline: 'none',
   minWidth: 0,
 };
