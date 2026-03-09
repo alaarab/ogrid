@@ -273,7 +273,7 @@ export class OGridRendering<T> {
     // Increment layout version to trigger marching ants re-measurement
     this.layoutVersion++;
 
-    const { state, options, headerFilterState, rowSelectionState, keyboardNavState, clipboardState, undoRedoState, fillHandleState, virtualScrollState, pagination, statusBar, columnChooser, renderer } = this.ctx;
+    const { state, options, headerFilterState, rowSelectionState, keyboardNavState, clipboardState, undoRedoState, fillHandleState, virtualScrollState, pagination, statusBar, columnChooser } = this.ctx;
     const colOffset = rowSelectionState ? 1 : 0;
 
     // Update header filter state with current filters and options

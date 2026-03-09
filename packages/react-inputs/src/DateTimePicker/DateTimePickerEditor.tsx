@@ -15,10 +15,8 @@
  */
 import * as React from 'react';
 import type { ICellEditorProps } from '@alaarab/ogrid-core';
-import { getCalendarGrid, formatDate, parseDate, DAY_NAMES, MONTH_NAMES } from '../DatePicker/calendar-utils';
+import { getCalendarGrid, formatDate, DAY_NAMES, MONTH_NAMES } from '../DatePicker/calendar-utils';
 import {
-  parseTime,
-  formatTime12,
   toHour12,
   toAmPm,
   fromHour12,
