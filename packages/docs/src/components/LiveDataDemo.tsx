@@ -82,7 +82,7 @@ export default function LiveDataDemo() {
       if (pausedRef.current) return;
       setData(prev => {
         const next = [...prev];
-        const count = 2 + Math.floor(Math.random() * 4);
+        const count = 4 + Math.floor(Math.random() * 6);
         const indices = new Set<number>();
         while (indices.size < Math.min(count, next.length)) {
           indices.add(Math.floor(Math.random() * next.length));
@@ -90,7 +90,7 @@ export default function LiveDataDemo() {
         indices.forEach(i => { next[i] = tickStock(next[i]); });
         return next;
       });
-    }, 1200);
+    }, 250);
     return () => clearInterval(interval);
   }, []);
 
@@ -99,25 +99,25 @@ export default function LiveDataDemo() {
   }, []);
 
   const columns = useMemo(() => [
-    { columnId: 'ticker', name: 'Ticker', sortable: true, defaultWidth: 80, cellStyle: (_item: StockRow) => ({ fontWeight: 700 }) as React.CSSProperties },
-    { columnId: 'company', name: 'Company', sortable: true, defaultWidth: 180 },
+    { columnId: 'ticker', name: 'Ticker', sortable: true, minWidth: 80, cellStyle: (_item: StockRow) => ({ fontWeight: 700 }) as React.CSSProperties },
+    { columnId: 'company', name: 'Company', sortable: true, minWidth: 160 },
     {
-      columnId: 'price', name: 'Price', type: 'numeric' as const, sortable: true, defaultWidth: 100,
+      columnId: 'price', name: 'Price', type: 'numeric' as const, sortable: true, minWidth: 100,
       valueFormatter: (v: unknown) => v != null ? `$${Number(v).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : '',
       cellStyle: greenOrRed,
     },
     {
-      columnId: 'change', name: 'Change', type: 'numeric' as const, sortable: true, defaultWidth: 90,
+      columnId: 'change', name: 'Change', type: 'numeric' as const, sortable: true, minWidth: 90,
       valueFormatter: (v: unknown) => { const n = Number(v); return `${n >= 0 ? '+' : ''}${n.toFixed(2)}`; },
       cellStyle: greenOrRed,
     },
     {
-      columnId: 'changePct', name: 'Chng %', type: 'numeric' as const, sortable: true, defaultWidth: 85,
+      columnId: 'changePct', name: 'Change %', type: 'numeric' as const, sortable: true, minWidth: 95,
       valueFormatter: (v: unknown) => { const n = Number(v); return `${n >= 0 ? '+' : ''}${n.toFixed(2)}%`; },
       cellStyle: greenOrRed,
     },
     {
-      columnId: 'volume', name: 'Volume', type: 'numeric' as const, sortable: true, defaultWidth: 95,
+      columnId: 'volume', name: 'Volume', type: 'numeric' as const, sortable: true, minWidth: 90,
       valueFormatter: (v: unknown) => {
         const n = Number(v);
         if (n >= 1_000_000_000) return `${(n / 1_000_000_000).toFixed(1)}B`;
@@ -127,7 +127,7 @@ export default function LiveDataDemo() {
       },
     },
     {
-      columnId: 'marketCap', name: 'Mkt Cap', type: 'numeric' as const, sortable: true, defaultWidth: 100,
+      columnId: 'marketCap', name: 'Market Cap', type: 'numeric' as const, sortable: true, minWidth: 110,
       valueFormatter: (v: unknown) => {
         const n = Number(v);
         if (n >= 1_000_000_000_000) return `$${(n / 1_000_000_000_000).toFixed(2)}T`;
@@ -136,7 +136,7 @@ export default function LiveDataDemo() {
       },
     },
     {
-      columnId: 'sector', name: 'Sector', sortable: true, defaultWidth: 130,
+      columnId: 'sector', name: 'Sector', sortable: true, minWidth: 140,
       filterable: { type: 'multiSelect' as const },
     },
   ], [greenOrRed]);

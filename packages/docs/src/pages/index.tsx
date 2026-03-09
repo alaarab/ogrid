@@ -421,74 +421,6 @@ function NoiseOverlay({ opacity = 0.03 }: { opacity?: number }) {
 }
 
 /* ──────────────────────────────────────────────
-   Matrix Rain Canvas (CTA background)
-   ────────────────────────────────────────────── */
-
-const MATRIX_CHARS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
-
-function MatrixRain() {
-  const canvasRef = useRef<HTMLCanvasElement>(null);
-
-  useEffect(() => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-    const ctx = canvas.getContext('2d');
-    if (!ctx) return;
-
-    let animId: number;
-    const fontSize = 14;
-    let columns: number;
-    let drops: number[];
-
-    function resize() {
-      const dpr = window.devicePixelRatio || 1;
-      canvas.width = canvas.offsetWidth * dpr;
-      canvas.height = canvas.offsetHeight * dpr;
-      ctx!.setTransform(dpr, 0, 0, dpr, 0, 0);
-      columns = Math.floor(canvas.offsetWidth / fontSize);
-      drops = Array(columns).fill(0).map(() => Math.random() * -50);
-    }
-
-    resize();
-    window.addEventListener('resize', resize);
-
-    function draw() {
-      ctx!.fillStyle = 'rgba(0, 0, 0, 0.05)';
-      ctx!.fillRect(0, 0, canvas.offsetWidth, canvas.offsetHeight);
-      ctx!.font = `${fontSize}px monospace`;
-
-      for (let i = 0; i < columns; i++) {
-        const char = MATRIX_CHARS[Math.floor(Math.random() * MATRIX_CHARS.length)];
-        const x = i * fontSize;
-        const y = drops[i] * fontSize;
-        const alpha = 0.06 + Math.random() * 0.1;
-        ctx!.fillStyle = `rgba(58, 184, 118, ${alpha})`;
-        ctx!.fillText(char, x, y);
-
-        if (Math.random() > 0.975) {
-          ctx!.fillStyle = 'rgba(78, 196, 132, 0.45)';
-          ctx!.fillText(char, x, y);
-        }
-
-        if (y > canvas.offsetHeight && Math.random() > 0.985) {
-          drops[i] = 0;
-        }
-        drops[i] += 0.35 + Math.random() * 0.25;
-      }
-      animId = requestAnimationFrame(draw);
-    }
-
-    draw();
-    return () => {
-      cancelAnimationFrame(animId);
-      window.removeEventListener('resize', resize);
-    };
-  }, []);
-
-  return <canvas ref={canvasRef} className={styles.matrixCanvas} />;
-}
-
-/* ──────────────────────────────────────────────
    Code Preview (Framework Tabs)
    ────────────────────────────────────────────── */
 
@@ -668,9 +600,18 @@ function FeatureBentoSection() {
           </p>
           <div className={styles.bentoCardIllustration}>
             <div className={styles.bentoSelectionGrid}>
-              {Array.from({ length: 20 }).map((_, i) => (
-                <div key={i} className={`${styles.bentoSelCell} ${i >= 6 && i <= 13 && i !== 10 && i !== 11 ? styles.bentoSelCellActive : ''} ${i === 8 ? styles.bentoSelCellFocused : ''}`} />
-              ))}
+              {Array.from({ length: 28 }).map((_, i) => {
+                const col = i % 7;
+                const row = Math.floor(i / 7);
+                const inRange = row >= 1 && row <= 2 && col >= 2 && col <= 5;
+                const isFocused = row === 1 && col === 2;
+                return (
+                  <div
+                    key={i}
+                    className={`${styles.bentoSelCell} ${inRange ? styles.bentoSelCellActive : ''} ${isFocused ? styles.bentoSelCellFocused : ''}`}
+                  />
+                );
+              })}
             </div>
           </div>
         </div>
@@ -863,9 +804,7 @@ function ComparisonSection() {
             <div className={styles.compTableFeatureCol} />
             <div className={`${styles.compFootCell} ${styles.compFootCellOGrid}`}>
               <span className={styles.compFootPrice}>$0</span>
-              <Link className={styles.btnPrimary} to="/docs/getting-started/overview">
-                Start building
-              </Link>
+              <span className={styles.compFootNote}>free forever</span>
             </div>
             <div className={styles.compFootCell}>
               <span className={styles.compFootPricePaid}>$999+/dev</span>
@@ -882,22 +821,60 @@ function ComparisonSection() {
    CTA
    ────────────────────────────────────────────── */
 
-const frameworkCards = [
-  { name: 'React', detail: 'Radix · Fluent · Material', count: '3 UI kits' },
-  { name: 'Angular', detail: 'Material · PrimeNG · Radix', count: '3 UI kits' },
-  { name: 'Vue', detail: 'Vuetify · PrimeVue · Radix', count: '3 UI kits' },
-  { name: 'Vanilla JS', detail: 'Zero dependencies', count: '1 package' },
+interface FrameworkCard {
+  name: string;
+  uiKits: Array<{ label: string; pkg: string }>;
+}
+
+const frameworkCards: FrameworkCard[] = [
+  {
+    name: 'React',
+    uiKits: [
+      { label: 'Radix', pkg: '@alaarab/ogrid-react-radix' },
+      { label: 'Fluent UI', pkg: '@alaarab/ogrid-react-fluent' },
+      { label: 'Material UI', pkg: '@alaarab/ogrid-react-material' },
+    ],
+  },
+  {
+    name: 'Angular',
+    uiKits: [
+      { label: 'Material', pkg: '@alaarab/ogrid-angular-material' },
+      { label: 'PrimeNG', pkg: '@alaarab/ogrid-angular-primeng' },
+      { label: 'Radix', pkg: '@alaarab/ogrid-angular-radix' },
+    ],
+  },
+  {
+    name: 'Vue',
+    uiKits: [
+      { label: 'Vuetify', pkg: '@alaarab/ogrid-vue-vuetify' },
+      { label: 'PrimeVue', pkg: '@alaarab/ogrid-vue-primevue' },
+      { label: 'Radix', pkg: '@alaarab/ogrid-vue-radix' },
+    ],
+  },
+  {
+    name: 'Vanilla JS',
+    uiKits: [
+      { label: 'Zero deps', pkg: '@alaarab/ogrid-js' },
+    ],
+  },
 ];
 
 function CTASection() {
   const { ref, visible } = useScrollReveal<HTMLElement>(0.1);
+  const [selectedFramework, setSelectedFramework] = useState(0);
+  const [selectedUiKit, setSelectedUiKit] = useState(0);
+
+  const activeFramework = frameworkCards[selectedFramework];
+  const activeUiKit = activeFramework.uiKits[Math.min(selectedUiKit, activeFramework.uiKits.length - 1)];
+
+  const handleFrameworkClick = useCallback((i: number) => {
+    setSelectedFramework(i);
+    setSelectedUiKit(0);
+  }, []);
 
   return (
     <section ref={ref} className={`${styles.ctaSection} ${visible ? styles.revealed : ''}`}>
       <div className={styles.ctaBg} />
-      <BrowserOnly fallback={null}>
-        {() => <MatrixRain />}
-      </BrowserOnly>
       <div className={styles.ctaVignette} />
       <div className={styles.ctaInner}>
         <h2 className={styles.ctaTitle}>
@@ -910,20 +887,42 @@ function CTASection() {
 
         <div className={styles.ctaFrameworks}>
           {frameworkCards.map((fw, i) => (
-            <div
+            <button
               key={fw.name}
-              className={styles.ctaFrameworkCard}
+              className={`${styles.ctaFrameworkCard} ${i === selectedFramework ? styles.ctaFrameworkCardActive : ''}`}
               style={{ transitionDelay: visible ? `${200 + i * 80}ms` : '0ms' }}
+              onClick={() => handleFrameworkClick(i)}
+              type="button"
             >
               <div className={styles.ctaFrameworkName}>{fw.name}</div>
-              <div className={styles.ctaFrameworkDetail}>{fw.detail}</div>
-              <div className={styles.ctaFrameworkCount}>{fw.count}</div>
-            </div>
+              <div className={styles.ctaFrameworkDetail}>{fw.uiKits.map(k => k.label).join(' · ')}</div>
+              <div className={styles.ctaFrameworkCount}>{fw.uiKits.length === 1 ? '1 package' : `${fw.uiKits.length} UI kits`}</div>
+            </button>
           ))}
         </div>
 
+        {activeFramework.uiKits.length > 1 && (
+          <div className={styles.ctaUiKitPicker}>
+            {activeFramework.uiKits.map((kit, i) => (
+              <button
+                key={kit.pkg}
+                className={`${styles.ctaUiKitBtn} ${i === selectedUiKit ? styles.ctaUiKitBtnActive : ''}`}
+                onClick={() => setSelectedUiKit(i)}
+                type="button"
+              >
+                {kit.label}
+              </button>
+            ))}
+          </div>
+        )}
+
         <div className={styles.ctaInstallPulse}>
-          <RotatingInstallCommand />
+          <div className={styles.heroInstall}>
+            <span className={styles.heroInstallPrompt}>$</span>
+            <span className={styles.heroInstallText}>
+              npm i {activeUiKit.pkg}
+            </span>
+          </div>
         </div>
 
         <div className={styles.ctaActions}>
