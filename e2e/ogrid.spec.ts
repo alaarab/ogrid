@@ -38,17 +38,12 @@ import {
   getDefaultPageSize,
   expectActiveCellAt,
   getTextFilterInput,
-  supportsEscapeCancel,
   scrollGridVertically,
   dismissContextMenu,
   toggleColumnInChooser,
   closeColumnChooser,
   getContextMenu,
   getContextMenuItem,
-  supportsUndo,
-  supportsClipboardPaste,
-  supportsAriaSort,
-  supportsRichSelect,
   getFramework,
   isJS,
 } from './helpers';
@@ -132,10 +127,6 @@ test.describe('Sorting', () => {
   });
 
   test('sorted column shows aria-sort attribute', async ({ page }) => {
-    if (!supportsAriaSort(page)) {
-      test.skip();
-      return;
-    }
     await sortColumn(page, 'Project Name', 'descending');
     const th = page.locator('thead th').filter({ hasText: 'Project Name' }).first();
     await expect(th).toHaveAttribute('aria-sort', 'descending');
@@ -376,11 +367,6 @@ test.describe('Keyboard navigation', () => {
   });
 
   test('Escape closes editor without changing value', async ({ page }) => {
-    if (!supportsEscapeCancel(page)) {
-      test.skip();
-      return;
-    }
-
     const cellContent = getCellContent(page, 0, 0);
     const originalText = ((await cellContent.textContent()) ?? '').trim();
     await cellContent.click();
@@ -497,10 +483,6 @@ test.describe('Undo/Redo', () => {
   });
 
   test('Ctrl+Z undoes a cell edit', async ({ page }) => {
-    if (!supportsUndo(page)) {
-      test.skip();
-      return;
-    }
     const td = page.locator('tbody tr:nth-child(1) td:nth-child(1)');
     const originalText = await td.textContent();
 
@@ -521,10 +503,6 @@ test.describe('Undo/Redo', () => {
   });
 
   test('Ctrl+Y redoes after undo', async ({ page }) => {
-    if (!supportsUndo(page)) {
-      test.skip();
-      return;
-    }
     const td = page.locator('tbody tr:nth-child(1) td:nth-child(1)');
 
     const input = await enterCellEdit(page, 0, 0);
@@ -723,10 +701,6 @@ test.describe('Clipboard', () => {
   });
 
   test('Ctrl+V pastes copied value into another cell', async ({ page }) => {
-    if (!supportsClipboardPaste(page)) {
-      test.skip();
-      return;
-    }
     // Edit cell [0,0] to a known value
     const input = await enterCellEdit(page, 0, 0);
     await input.fill('Clipboard Value');
@@ -915,10 +889,6 @@ test.describe('RichSelect editor', () => {
   });
 
   test('double-clicking a Status cell opens a dropdown with search', async ({ page }) => {
-    if (!supportsRichSelect(page)) {
-      test.skip();
-      return;
-    }
     const statusCell = getCellContent(page, 0, 1);
     await statusCell.click();
     if (isJS(page)) {
@@ -937,10 +907,6 @@ test.describe('RichSelect editor', () => {
   });
 
   test('typing in RichSelect search filters options', async ({ page }) => {
-    if (!supportsRichSelect(page)) {
-      test.skip();
-      return;
-    }
     const statusCell = getCellContent(page, 0, 1);
     await statusCell.click();
     if (isJS(page)) {

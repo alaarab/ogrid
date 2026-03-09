@@ -584,30 +584,6 @@ export function getResizeHandle(page: Page, columnName: string): Locator {
 }
 
 /**
- * Returns true if the framework supports Ctrl+Z undo after cell edits.
- */
-export function supportsUndo(page: Page): boolean {
-  void page;
-  return true;
-}
-
-/**
- * Returns true if the framework supports clipboard paste (Ctrl+V) pasting
- * the internal grid clipboard into another cell.
- */
-export function supportsClipboardPaste(page: Page): boolean {
-  void page;
-  return true;
-}
-
-/**
- * Returns true if the framework supports aria-sort attribute on sorted column headers.
- */
-export function supportsAriaSort(_page: Page): boolean {
-  return true;
-}
-
-/**
  * Get the context menu locator (right-click menu on grid cells).
  * React/Angular: role="menu".
  * Vue Vuetify: role="list" (Vuetify VList).
@@ -641,19 +617,6 @@ export function getContextMenuItem(page: Page, name: string | RegExp): Locator {
     return page.getByRole('menuitem').filter({ hasText: name }).first();
   }
   return page.getByRole('button', { name });
-}
-
-/** Returns true if the framework supports rich-select editor interactions. */
-export function supportsRichSelect(_page: Page): boolean {
-  return true;
-}
-
-/**
- * Returns true if the framework supports cancelling an active cell edit via Escape.
- */
-export function supportsEscapeCancel(page: Page): boolean {
-  void page;
-  return true;
 }
 
 /**
