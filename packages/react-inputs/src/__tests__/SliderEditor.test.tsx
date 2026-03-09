@@ -1,3 +1,4 @@
+import '@testing-library/jest-dom';
 import * as React from 'react';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
@@ -6,9 +7,19 @@ import type { ICellEditorProps } from '@alaarab/ogrid-core';
 
 // ---------- Helpers ----------
 
+type SliderEditorParams = NonNullable<ICellEditorProps<{ id: number }>['cellEditorParams']> & {
+  min?: number;
+  max?: number;
+  step?: number;
+};
+
+type SliderEditorTestProps = Omit<ICellEditorProps<{ id: number }>, 'cellEditorParams'> & {
+  cellEditorParams?: SliderEditorParams;
+};
+
 function createMockProps(
-  overrides: Partial<ICellEditorProps<{ id: number }>> = {},
-): ICellEditorProps<{ id: number }> {
+  overrides: Partial<SliderEditorTestProps> = {},
+): SliderEditorTestProps {
   return {
     value: 50,
     onValueChange: jest.fn(),
@@ -20,7 +31,7 @@ function createMockProps(
   };
 }
 
-function renderEditor(overrides: Partial<ICellEditorProps<{ id: number }>> = {}) {
+function renderEditor(overrides: Partial<SliderEditorTestProps> = {}) {
   const props = createMockProps(overrides);
   const result = render(<SliderEditor {...props} />);
   return { ...result, props };

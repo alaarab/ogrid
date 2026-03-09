@@ -4,9 +4,21 @@ import type { ICellEditorProps } from '@alaarab/ogrid-core';
 
 // ---------- Helpers ----------
 
+type SliderEditorParams = NonNullable<ICellEditorProps<{ id: number }>['cellEditorParams']> & {
+  min?: number;
+  max?: number;
+  step?: number;
+};
+
+type SliderEditorTestProps = Omit<ICellEditorProps<{ id: number }>, 'cellEditorParams'> & {
+  cellEditorParams?: SliderEditorParams;
+};
+
+type SliderEditorComponentProps = InstanceType<typeof SliderEditor>['$props'];
+
 function createMockProps(
-  overrides: Partial<ICellEditorProps<{ id: number }>> = {},
-): ICellEditorProps<{ id: number }> {
+  overrides: Partial<SliderEditorTestProps> = {},
+): SliderEditorTestProps {
   return {
     value: 50,
     onValueChange: jest.fn(),
@@ -18,10 +30,10 @@ function createMockProps(
   };
 }
 
-function mountEditor(overrides: Partial<ICellEditorProps<{ id: number }>> = {}) {
+function mountEditor(overrides: Partial<SliderEditorTestProps> = {}) {
   const props = createMockProps(overrides);
   const wrapper = mount(SliderEditor, {
-    props: props as Record<string, unknown>,
+    props: props as unknown as SliderEditorComponentProps,
   });
   return { wrapper, props };
 }

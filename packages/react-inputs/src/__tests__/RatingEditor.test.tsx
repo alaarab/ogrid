@@ -1,3 +1,4 @@
+import '@testing-library/jest-dom';
 import * as React from 'react';
 import { render, screen, act } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
@@ -6,9 +7,18 @@ import type { ICellEditorProps } from '@alaarab/ogrid-core';
 
 // ---------- Helpers ----------
 
+type RatingEditorParams = NonNullable<ICellEditorProps<{ id: number }>['cellEditorParams']> & {
+  maxStars?: number;
+  allowHalf?: boolean;
+};
+
+type RatingEditorTestProps = Omit<ICellEditorProps<{ id: number }>, 'cellEditorParams'> & {
+  cellEditorParams?: RatingEditorParams;
+};
+
 function createMockProps(
-  overrides: Partial<ICellEditorProps<{ id: number }>> = {},
-): ICellEditorProps<{ id: number }> {
+  overrides: Partial<RatingEditorTestProps> = {},
+): RatingEditorTestProps {
   return {
     value: 3,
     onValueChange: jest.fn(),
@@ -20,7 +30,7 @@ function createMockProps(
   };
 }
 
-function renderEditor(overrides: Partial<ICellEditorProps<{ id: number }>> = {}) {
+function renderEditor(overrides: Partial<RatingEditorTestProps> = {}) {
   const props = createMockProps(overrides);
   const result = render(<RatingEditor {...props} />);
   return { ...result, props };

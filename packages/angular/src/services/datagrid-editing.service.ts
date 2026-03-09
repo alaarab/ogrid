@@ -75,11 +75,13 @@ export class DataGridEditingHelper<T> {
       newValue = result.value;
     }
 
-    const onCellValueChanged = this.getWrappedOnCellValueChanged();
-    onCellValueChanged?.({ item, columnId, oldValue, newValue, rowIndex });
     this.editingCellSig.set(null);
     this.popoverAnchorElSig.set(null);
     this.pendingEditorValueSig.set(undefined);
+    if (!Object.is(newValue, oldValue)) {
+      const onCellValueChanged = this.getWrappedOnCellValueChanged();
+      onCellValueChanged?.({ item, columnId, oldValue, newValue, rowIndex });
+    }
 
     const items = this.getItems();
     if (!options?.skipAdvance && rowIndex < items.length - 1) {

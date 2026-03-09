@@ -95,7 +95,7 @@ describe('OGrid', () => {
     it('toggles editable boolean cells on click and refreshes the DOM', () => {
       const columns: IColumnDef<TestRow>[] = [
         { columnId: 'name', name: 'Name' },
-        { columnId: 'active', name: 'Active', type: 'boolean', editable: true },
+        { columnId: 'active', name: 'Active', type: 'boolean', editable: true, cellEditor: 'checkbox' },
       ];
       const data: TestRow[] = [
         { id: 1, name: 'Alice', age: 30, active: true },
@@ -578,7 +578,7 @@ describe('OGrid', () => {
       const cellValueChangedEvents: Array<{ columnId: string; newValue: unknown }> = [];
       const columns: IColumnDef<TestRow>[] = [
         { columnId: 'name', name: 'Name' },
-        { columnId: 'active', name: 'Active', type: 'boolean', editable: true },
+        { columnId: 'active', name: 'Active', type: 'boolean', editable: true, cellEditor: 'checkbox' },
       ];
       const data: TestRow[] = [
         { id: 1, name: 'Alice', age: 30, active: true },

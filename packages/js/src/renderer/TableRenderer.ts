@@ -152,6 +152,15 @@ export class TableRenderer<T> {
     this._tbodyClickHandler = (e: MouseEvent) => {
       const cell = this.getCellFromEvent(e);
       if (!cell) return;
+      if (e.detail === 2) {
+        const columnId = cell.el.getAttribute('data-column-id') ?? '';
+        const { items } = this.state.getProcessedItems();
+        const item = items[cell.rowIndex];
+        if (!item) return;
+        const rowId = this.state.getRowId(item);
+        this.interactionState?.onCellDoubleClick?.({ rowIndex: cell.rowIndex, colIndex: cell.colIndex, rowId, columnId });
+        return;
+      }
       this.interactionState?.onCellClick?.({ rowIndex: cell.rowIndex, colIndex: cell.colIndex, event: e });
     };
 

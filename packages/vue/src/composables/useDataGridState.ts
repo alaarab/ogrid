@@ -170,9 +170,11 @@ export function useDataGridState<T>(
   const editableProp = computed(() => props.value.editable);
   const cellSelection = computed(() => props.value.cellSelection !== false);
   const pinnedColumnsProp = computed(() => props.value.pinnedColumns);
+  const mutationTick = ref(0);
+  const bumpMutationTick = () => { mutationTick.value++; };
 
   // Undo/redo wrapping
-  const undoRedo = useUndoRedo<T>({ onCellValueChanged: props.value.onCellValueChanged });
+  const undoRedo = useUndoRedo<T>({ onCellValueChanged: props.value.onCellValueChanged, afterChange: bumpMutationTick });
   const onCellValueChanged = computed(() => undoRedo.onCellValueChanged);
 
   /**
@@ -499,16 +501,18 @@ export function useDataGridState<T>(
       newValue = result.value;
     }
 
-    onCellValueChanged.value?.({
-      item,
-      columnId,
-      oldValue,
-      newValue,
-      rowIndex,
-    });
     setEditingCell(null);
     setPopoverAnchorEl(null);
     setPendingEditorValue(undefined);
+    if (!Object.is(newValue, oldValue)) {
+      onCellValueChanged.value?.({
+        item,
+        columnId,
+        oldValue,
+        newValue,
+        rowIndex,
+      });
+    }
     if (!options?.skipAdvance && rowIndex < items.value.length - 1) {
       const newRow = rowIndex + 1;
       const localCol = globalColIndex - colOffset.value;
@@ -564,7 +568,9 @@ export function useDataGridState<T>(
     setPopoverAnchorEl,
   }));
 
-  const interactionState = computed<DataGridCellInteractionState>(() => ({
+  const interactionState = computed<DataGridCellInteractionState>(() => {
+    void mutationTick.value;
+    return {
     activeCell: cellSelection.value ? activeCell.value : null,
     setActiveCell: cellSelection.value ? setActiveCell : (NOOP as typeof setActiveCell),
     selectionRange: cellSelection.value ? selectionRange.value : null,
@@ -585,7 +591,8 @@ export function useDataGridState<T>(
     onUndo: undoRedo.undo,
     onRedo: undoRedo.redo,
     isDragging: cellSelection.value ? isDragging.value : false,
-  }));
+    };
+  });
 
   const contextMenuState = computed<DataGridContextMenuState>(() => ({
     menuPosition: cellSelection.value ? contextMenuPosition.value : null,

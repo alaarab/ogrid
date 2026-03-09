@@ -84,8 +84,20 @@ export function createInlineCellEditor(options: CreateInlineCellEditorOptions) {
 
       // Close select/richSelect on scroll so the fixed dropdown doesn't drift
       let scrollCleanup: (() => void) | null = null;
+      let escapeCleanup: (() => void) | null = null;
 
       onMounted(() => {
+        const handleDocumentEscape = (e: KeyboardEvent) => {
+          if (e.key !== 'Escape') return;
+          e.preventDefault();
+          e.stopPropagation();
+          cancelAndSuppressBlur();
+        };
+        document.addEventListener('keydown', handleDocumentEscape, true);
+        escapeCleanup = () => {
+          document.removeEventListener('keydown', handleDocumentEscape, true);
+        };
+
         nextTick(() => {
           if (selectWrapperRef.value) {
             // For richSelect, focus the search input inside the dropdown
@@ -117,7 +129,10 @@ export function createInlineCellEditor(options: CreateInlineCellEditorOptions) {
         });
       });
 
-      onUnmounted(() => { scrollCleanup?.(); });
+      onUnmounted(() => {
+        scrollCleanup?.();
+        escapeCleanup?.();
+      });
 
       // Sync local value when prop changes
       watch(() => props.value, (v) => { localValue.value = v; });

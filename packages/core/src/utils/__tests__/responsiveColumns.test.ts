@@ -1,7 +1,14 @@
 import { getResponsiveHiddenColumns, RESPONSIVE_BREAKPOINTS, resolveResponsiveConfig, applyResponsiveHiding } from '../responsiveColumns';
 
 // Helper to create minimal column metas
-function col(id, opts = {}) {
+type TestColumn = {
+  columnId: string;
+  name: string;
+  responsivePriority?: number;
+  required?: boolean;
+};
+
+function col(id: string, opts: Partial<TestColumn> = {}): TestColumn {
   return { columnId: id, name: id, ...opts };
 }
 

@@ -6,7 +6,6 @@ module.exports = {
   transform: {
     '^.+\\.ts$': ['ts-jest', {
       useESM: false,
-      isolatedModules: true,
       tsconfig: {
         esModuleInterop: true,
         allowSyntheticDefaultImports: true,

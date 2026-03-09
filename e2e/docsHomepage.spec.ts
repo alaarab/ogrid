@@ -1,7 +1,10 @@
 import { expect, test } from '@playwright/test';
 
 test('docs homepage hero grid stays clipped and edit height stays stable', async ({ page }) => {
-  await page.goto('http://127.0.0.1:3000/ogrid/', { waitUntil: 'networkidle' });
+  const docsUrl = process.env.OGRID_DOCS_URL;
+  test.skip(!docsUrl, 'Docs homepage coverage requires OGRID_DOCS_URL or a dedicated docs Playwright project.');
+
+  await page.goto(docsUrl!, { waitUntil: 'networkidle' });
 
   const heroMetrics = await page.evaluate(() => {
     const heroInner = document.querySelector('[class*="heroInner"]');

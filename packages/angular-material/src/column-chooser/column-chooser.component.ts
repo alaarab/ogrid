@@ -102,6 +102,7 @@ import { BaseColumnChooserComponent } from '@alaarab/ogrid-angular';
   `],
   host: {
     '(document:click)': 'onDocumentClick($event)',
+    '(document:keydown.escape)': 'onEscape($event)',
   },
 })
 export class ColumnChooserComponent extends BaseColumnChooserComponent {

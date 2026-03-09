@@ -14,7 +14,7 @@
     "./styles/*": "./dist/esm/*"
   },
   "scripts": {
-    "build": "rimraf dist && tsup && tsc -p tsconfig.build.json",
+    "build": "rimraf dist && tsup && node scripts/copy-css.js && tsc -p tsconfig.build.json",
     "test": "jest",
     "storybook": "storybook dev -p 6011 --no-open",
     "build-storybook": "storybook build"

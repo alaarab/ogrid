@@ -5,7 +5,6 @@ module.exports = {
   testMatch: ['<rootDir>/src/**/__tests__/**/*.test.ts'],
   transform: {
     '^.+\\.ts$': ['ts-jest', {
-      isolatedModules: true,
       tsconfig: {
         jsx: 'preserve',
         esModuleInterop: true,

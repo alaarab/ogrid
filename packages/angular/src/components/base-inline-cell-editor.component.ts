@@ -32,6 +32,7 @@ export abstract class BaseInlineCellEditorComponent<T = unknown> {
   readonly selectOptions = signal<unknown[]>([]);
   readonly searchText = signal('');
   private scrollCleanup: (() => void) | null = null;
+  private suppressNextBlur = false;
   readonly filteredOptions = computed(() => {
     const options = this.selectOptions();
     const search = this.searchText().trim().toLowerCase();
@@ -130,36 +131,55 @@ export abstract class BaseInlineCellEditorComponent<T = unknown> {
     this.commit.emit(value);
   }
 
+  private commitAndSuppressBlur(value: unknown): void {
+    this.suppressNextBlur = true;
+    this.commitValue(value);
+  }
+
+  private cancelAndSuppressBlur(): void {
+    this.suppressNextBlur = true;
+    this.cancel.emit();
+  }
+
+  private shouldSkipBlur(): boolean {
+    if (!this.suppressNextBlur) return false;
+    this.suppressNextBlur = false;
+    return true;
+  }
+
   onTextKeyDown(e: KeyboardEvent): void {
     if (e.key === 'Enter') {
       e.preventDefault();
-      this.commitDateOrValue();
+      this.commitDateOrValue(true);
     } else if (e.key === 'Escape') {
       e.preventDefault();
-      this.cancel.emit();
+      this.cancelAndSuppressBlur();
     } else if (e.key === 'Tab') {
       e.preventDefault();
-      this.commitDateOrValue();
+      this.commitDateOrValue(true);
     }
   }
 
-  private commitDateOrValue(): void {
+  private commitDateOrValue(suppressBlur = false): void {
     if (this.editorType === 'date') {
       const cellEditorType = this.getCellEditorType();
       if (cellEditorType !== 'native') {
         const rawStr = String(this.localValue());
         if (!rawStr.trim()) {
-          this.commitValue(null);
+          if (suppressBlur) this.commitAndSuppressBlur(null);
+          else this.commitValue(null);
           return;
         }
         const parsed = parseUserInputDate(rawStr, this.getDateFormat());
         // Convert Date to YYYY-MM-DD format; if parsing fails, pass through raw string
         const toCommit = parsed instanceof Date ? parsed.toISOString().substring(0, 10) : rawStr;
-        this.commitValue(toCommit);
+        if (suppressBlur) this.commitAndSuppressBlur(toCommit);
+        else this.commitValue(toCommit);
         return;
       }
     }
-    this.commitValue(this.localValue());
+    if (suppressBlur) this.commitAndSuppressBlur(this.localValue());
+    else this.commitValue(this.localValue());
   }
 
   getDateFormat(): string {
@@ -255,6 +275,7 @@ export abstract class BaseInlineCellEditorComponent<T = unknown> {
   }
 
   onTextBlur(): void {
+    if (this.shouldSkipBlur()) return;
     if (this.editorType === 'date') {
       const cellEditorType = this.getCellEditorType();
       if (cellEditorType !== 'native') {

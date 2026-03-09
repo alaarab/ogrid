@@ -18,7 +18,7 @@ const grid = new OGrid<Project>(container, {
   columns,
   getRowId,
   entityLabelPlural: 'projects',
-  defaultPageSize: 25,
+  pageSize: 25,
   editable: true,
   cellSelection: true,
   statusBar: true,

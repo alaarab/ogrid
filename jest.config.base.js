@@ -20,7 +20,6 @@ function createBaseConfig(displayName) {
         'ts-jest',
         {
           useESM: false,
-          isolatedModules: true, // Skip type-checking — build handles that. Saves ~40% memory per worker.
           tsconfig: {
             esModuleInterop: true,
             allowSyntheticDefaultImports: true,

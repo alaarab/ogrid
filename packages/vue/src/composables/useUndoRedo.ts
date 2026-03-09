@@ -5,6 +5,7 @@ import type { ICellValueChangedEvent } from '../types';
 export interface UseUndoRedoParams<T> {
   onCellValueChanged: ((event: ICellValueChangedEvent<T>) => void) | undefined;
   maxUndoDepth?: number;
+  afterChange?: () => void;
 }
 
 export interface UseUndoRedoResult<T> {
@@ -25,7 +26,7 @@ export interface UseUndoRedoResult<T> {
 export function useUndoRedo<T>(
   params: UseUndoRedoParams<T>
 ): UseUndoRedoResult<T> {
-  const { onCellValueChanged, maxUndoDepth = 100 } = params;
+  const { onCellValueChanged, maxUndoDepth = 100, afterChange } = params;
   const stack = new UndoRedoStack<ICellValueChangedEvent<T>>(maxUndoDepth);
   const canUndo = ref(false);
   const canRedo = ref(false);
@@ -42,6 +43,9 @@ export function useUndoRedo<T>(
           updateFlags();
         }
         onCellValueChanged(event);
+        if (!stack.isBatching) {
+          afterChange?.();
+        }
       }
     : undefined;
 
@@ -52,6 +56,7 @@ export function useUndoRedo<T>(
   const endBatch = () => {
     stack.endBatch();
     updateFlags();
+    afterChange?.();
   };
 
   const undo = () => {
@@ -63,6 +68,7 @@ export function useUndoRedo<T>(
       const ev = lastBatch[i];
       onCellValueChanged({ ...ev, oldValue: ev.newValue, newValue: ev.oldValue });
     }
+    afterChange?.();
   };
 
   const redo = () => {
@@ -73,6 +79,7 @@ export function useUndoRedo<T>(
     for (const ev of nextBatch) {
       onCellValueChanged(ev);
     }
+    afterChange?.();
   };
 
   return {

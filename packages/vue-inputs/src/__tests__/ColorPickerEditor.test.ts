@@ -5,9 +5,20 @@ import type { ICellEditorProps } from '@alaarab/ogrid-core';
 
 // ---------- Helpers ----------
 
+type ColorPickerEditorParams = NonNullable<ICellEditorProps<{ id: number }>['cellEditorParams']> & {
+  allowCustom?: boolean;
+  colors?: string[];
+};
+
+type ColorPickerEditorTestProps = Omit<ICellEditorProps<{ id: number }>, 'cellEditorParams'> & {
+  cellEditorParams?: ColorPickerEditorParams;
+};
+
+type ColorPickerEditorComponentProps = InstanceType<typeof ColorPickerEditor>['$props'];
+
 function createMockProps(
-  overrides: Partial<ICellEditorProps<{ id: number }>> = {},
-): ICellEditorProps<{ id: number }> {
+  overrides: Partial<ColorPickerEditorTestProps> = {},
+): ColorPickerEditorTestProps {
   return {
     value: '#FF6B6B',
     onValueChange: jest.fn(),
@@ -19,10 +30,10 @@ function createMockProps(
   };
 }
 
-function mountEditor(overrides: Partial<ICellEditorProps<{ id: number }>> = {}) {
+function mountEditor(overrides: Partial<ColorPickerEditorTestProps> = {}) {
   const props = createMockProps(overrides);
   const wrapper = mount(ColorPickerEditor, {
-    props: props as Record<string, unknown>,
+    props: props as unknown as ColorPickerEditorComponentProps,
   });
   return { wrapper, props };
 }

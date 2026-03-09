@@ -1,6 +1,7 @@
 import { createApp } from 'vue';
 import { createVuetify } from 'vuetify';
 import 'vuetify/styles';
+import '@alaarab/ogrid-vue-vuetify/styles/DataGridTable/DataGridTable.css';
 import App from './App.vue';
 import { createThemeToggle, getInitialTheme } from '../shared/themeToggle';
 

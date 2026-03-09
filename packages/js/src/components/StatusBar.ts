@@ -1,5 +1,7 @@
 import { getStatusBarParts } from '@alaarab/ogrid-core';
-import type { IStatusBarProps } from '@alaarab/ogrid-core';
+import type { IStatusBarProps, StatusBarPartsInput } from '@alaarab/ogrid-core';
+
+type JSStatusBarProps = IStatusBarProps & Pick<StatusBarPartsInput, 'selectedCellCount'>;
 
 export class StatusBar {
   private container: HTMLElement;
@@ -9,7 +11,7 @@ export class StatusBar {
     this.container = container;
   }
 
-  render(props: IStatusBarProps): void {
+  render(props: JSStatusBarProps): void {
     if (this.el) this.el.remove();
 
     const parts = getStatusBarParts(props);

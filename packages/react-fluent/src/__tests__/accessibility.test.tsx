@@ -16,6 +16,15 @@ import type { FixtureRow } from '@alaarab/ogrid-react/testing';
 
 expect.extend(toHaveNoViolations);
 
+async function renderAndFlush(element: React.ReactElement) {
+  let container!: HTMLElement;
+  await act(async () => {
+    ({ container } = render(element));
+    await new Promise((resolve) => setTimeout(resolve, 350));
+  });
+  return container;
+}
+
 // --- Shared props helpers ---
 
 function getOGridProps(overrides: Record<string, unknown> = {}) {
@@ -67,30 +76,21 @@ function getDataGridTableProps(overrides: Partial<IOGridDataGridProps<FixtureRow
 
 describe('OGrid accessibility (axe)', () => {
   it('has no axe violations with default props', async () => {
-    let container!: HTMLElement;
-    await act(async () => {
-      ({ container } = render(<OGrid {...getOGridProps()} />));
-    });
+    const container = await renderAndFlush(<OGrid {...getOGridProps()} />);
     const results = await axe(container);
     expect(results).toHaveNoViolations();
   });
 
   it('has no axe violations with row selection enabled', async () => {
-    let container!: HTMLElement;
-    await act(async () => {
-      ({ container } = render(<OGrid {...getOGridProps({ rowSelection: 'multiple' })} />));
-    });
+    const container = await renderAndFlush(<OGrid {...getOGridProps({ rowSelection: 'multiple' })} />);
     const results = await axe(container);
     expect(results).toHaveNoViolations();
   });
 
   it('has no axe violations with sorting applied', async () => {
-    let container!: HTMLElement;
-    await act(async () => {
-      ({ container } = render(
-        <OGrid {...getOGridProps({ defaultSortBy: 'name', defaultSortDirection: 'asc' })} />
-      ));
-    });
+    const container = await renderAndFlush(
+      <OGrid {...getOGridProps({ defaultSortBy: 'name', defaultSortDirection: 'asc' })} />
+    );
     const results = await axe(container);
     expect(results).toHaveNoViolations();
   });
@@ -98,21 +98,15 @@ describe('OGrid accessibility (axe)', () => {
 
 describe('DataGridTable accessibility (axe)', () => {
   it('has no axe violations with default props', async () => {
-    let container!: HTMLElement;
-    await act(async () => {
-      ({ container } = render(<DataGridTable {...getDataGridTableProps()} />));
-    });
+    const container = await renderAndFlush(<DataGridTable {...getDataGridTableProps()} />);
     const results = await axe(container);
     expect(results).toHaveNoViolations();
   });
 
   it('has no axe violations with ascending sort applied', async () => {
-    let container!: HTMLElement;
-    await act(async () => {
-      ({ container } = render(
-        <DataGridTable {...getDataGridTableProps({ sortBy: 'name', sortDirection: 'asc' })} />
-      ));
-    });
+    const container = await renderAndFlush(
+      <DataGridTable {...getDataGridTableProps({ sortBy: 'name', sortDirection: 'asc' })} />
+    );
     const results = await axe(container);
     expect(results).toHaveNoViolations();
   });

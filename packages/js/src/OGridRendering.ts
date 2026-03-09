@@ -34,7 +34,7 @@ import type { VirtualScrollState } from './state/VirtualScrollState';
 import type { MarchingAntsOverlay } from './components/MarchingAntsOverlay';
 import type { InlineCellEditor } from './components/InlineCellEditor';
 import type { TableLayoutState } from './state/TableLayoutState';
-import { normalizeSelectionRange, isInSelectionRange, CHECKBOX_COLUMN_WIDTH, measureColumnContentWidth, DEFAULT_MIN_COLUMN_WIDTH } from '@alaarab/ogrid-core';
+import { computeAggregations, normalizeSelectionRange, isInSelectionRange, CHECKBOX_COLUMN_WIDTH, measureColumnContentWidth, DEFAULT_MIN_COLUMN_WIDTH } from '@alaarab/ogrid-core';
 import { getCellCoordinates } from './utils/getCellCoordinates';
 
 /**
@@ -273,7 +273,7 @@ export class OGridRendering<T> {
     // Increment layout version to trigger marching ants re-measurement
     this.layoutVersion++;
 
-    const { state, options, headerFilterState, rowSelectionState, keyboardNavState, clipboardState, undoRedoState, fillHandleState, virtualScrollState, pagination, statusBar, columnChooser } = this.ctx;
+    const { state, options, headerFilterState, rowSelectionState, selectionState, keyboardNavState, clipboardState, undoRedoState, fillHandleState, virtualScrollState, pagination, statusBar, columnChooser } = this.ctx;
     const colOffset = rowSelectionState ? 1 : 0;
 
     // Update header filter state with current filters and options
@@ -282,8 +282,22 @@ export class OGridRendering<T> {
 
     // Update interaction states with current data
     const { items, totalCount } = state.getProcessedItems();
+    const visibleCols = state.visibleColumnDefs;
+    const selectionRange = selectionState?.selectionRange ?? null;
+    const normalizedSelection = selectionRange ? normalizeSelectionRange(selectionRange) : null;
+    const selectedCellCount = normalizedSelection
+      ? ((normalizedSelection.endRow - normalizedSelection.startRow) + 1) * ((normalizedSelection.endCol - normalizedSelection.startCol) + 1)
+      : undefined;
+    const aggregation = computeAggregations(items, visibleCols, selectionRange);
+
     if (keyboardNavState && clipboardState) {
-      const visibleCols = state.visibleColumnDefs;
+      const wrappedCellValueChanged = undoRedoState?.getWrappedCallback();
+      const onCellValueChangedAndRender = wrappedCellValueChanged
+        ? (event: Parameters<NonNullable<typeof wrappedCellValueChanged>>[0]) => {
+          wrappedCellValueChanged(event);
+          this.renderAll();
+        }
+        : undefined;
 
       keyboardNavState.updateParams({
         items,
@@ -291,12 +305,18 @@ export class OGridRendering<T> {
         colOffset,
         getRowId: state.getRowId,
         editable: options.editable,
-        onCellValueChanged: undoRedoState?.getWrappedCallback(),
+        onCellValueChanged: onCellValueChangedAndRender,
         onCopy: () => clipboardState?.handleCopy(),
         onCut: () => clipboardState?.handleCut(),
         onPaste: async () => { await clipboardState?.handlePaste(); },
-        onUndo: () => undoRedoState?.undo(),
-        onRedo: () => undoRedoState?.redo(),
+        onUndo: () => {
+          undoRedoState?.undo();
+          this.renderAll();
+        },
+        onRedo: () => {
+          undoRedoState?.redo();
+          this.renderAll();
+        },
         onContextMenu: (x, y) => this.ctx.showContextMenu(x, y),
         onStartEdit: (rowId, columnId) => this.ctx.startCellEdit(rowId, columnId),
         onCancelEdit: () => this.ctx.cellEditor?.cancelEdit() ?? false,
@@ -310,7 +330,7 @@ export class OGridRendering<T> {
         visibleCols: visibleCols as unknown as Parameters<typeof clipboardState.updateParams>[0]['visibleCols'],
         colOffset,
         editable: options.editable,
-        onCellValueChanged: undoRedoState?.getWrappedCallback(),
+        onCellValueChanged: onCellValueChangedAndRender,
       });
 
       // Update fill handle params
@@ -318,7 +338,7 @@ export class OGridRendering<T> {
         items,
         visibleCols: visibleCols as unknown as Parameters<typeof import('./state/FillHandleState').FillHandleState<T>['prototype']['updateParams']>[0]['visibleCols'],
         editable: options.editable,
-        onCellValueChanged: undoRedoState?.getWrappedCallback(),
+        onCellValueChanged: onCellValueChangedAndRender,
         colOffset,
         beginBatch: () => undoRedoState?.beginBatch(),
         endBatch: () => undoRedoState?.endBatch(),
@@ -335,7 +355,12 @@ export class OGridRendering<T> {
     virtualScrollState?.setTotalRows(totalCount);
 
     pagination.render(totalCount, options.pageSizeOptions);
-    statusBar.render({ totalCount });
+    statusBar.render({
+      totalCount,
+      selectedCount: rowSelectionState?.selectedRowIds.size,
+      selectedCellCount,
+      aggregation,
+    });
     columnChooser.render();
     this.renderSideBar();
     this.renderLoadingOverlay();

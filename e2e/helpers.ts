@@ -71,10 +71,11 @@ async function waitForVisibleRowSignatureChange(page: Page, previous: string): P
 
 function getColumnChooserSurfaces(page: Page): Locator[] {
   return [
+    page.locator('.ogrid-column-chooser__dropdown').first(),
+    page.locator('.ogrid-column-chooser-dropdown').first(),
     page.getByRole('button', { name: /clear all/i }).first(),
     page.getByRole('button', { name: /select all/i }).first(),
     page.locator('text=/Select Columns/i').first(),
-    page.locator('label:has(input[type="checkbox"])').first(),
   ];
 }
 
@@ -404,9 +405,7 @@ export async function closeColumnChooser(page: Page): Promise<void> {
   if (fw === 'js' || fw === 'angular-radix') {
     await page.locator('button:has-text("Columns")').click();
   } else if (fw === 'angular-material') {
-    // Angular Material column chooser is a toggle dropdown  -  click the button
-    // again to close (Escape does not dismiss it).
-    await page.getByRole('button', { name: /column visibility/i }).click();
+    await page.locator('h1').first().click();
   } else {
     await page.keyboard.press('Escape');
   }
@@ -565,10 +564,14 @@ export function getFillHandle(page: Page): Locator {
  */
 export function getResizeHandle(page: Page, columnName: string): Locator {
   const fw = getFramework(page);
-  if (fw === 'js' || fw === 'vue-vuetify' || fw === 'angular-radix') {
+  if (fw === 'js' || fw === 'angular-radix') {
     const th = page.locator('thead th').filter({ hasText: columnName }).first();
     const className = fw === 'angular-radix' ? '.ogrid-datagrid-resize-handle' : '.ogrid-resize-handle';
     return th.locator(className).first();
+  }
+  if (fw === 'vue-vuetify') {
+    const th = page.locator('thead th').filter({ hasText: columnName }).first();
+    return th.getByRole('separator').first();
   }
   if (fw === 'angular-material') {
     // Angular Material: the resize separator uses role="separator" but may not
@@ -585,11 +588,8 @@ export function getResizeHandle(page: Page, columnName: string): Locator {
  * Vue Vuetify does not restore the previous value via Ctrl+Z in headless Playwright.
  */
 export function supportsUndo(page: Page): boolean {
-  const fw = getFramework(page);
-  // Vue Vuetify and Angular Material: Ctrl+Z does not restore previous cell
-  // values in headless Playwright (keyboard shortcut doesn't reach the grid's
-  // undo handler reliably).
-  return fw !== 'vue-vuetify' && fw !== 'angular-material';
+  void page;
+  return true;
 }
 
 /**
@@ -598,10 +598,8 @@ export function supportsUndo(page: Page): boolean {
  * Vue Vuetify's clipboard paste does not work in headless Playwright.
  */
 export function supportsClipboardPaste(page: Page): boolean {
-  const fw = getFramework(page);
-  // Vue Vuetify and Angular Material: Ctrl+V does not paste the internal grid
-  // clipboard in headless Playwright.
-  return fw !== 'vue-vuetify' && fw !== 'angular-material';
+  void page;
+  return true;
 }
 
 /**
@@ -660,19 +658,18 @@ export function supportsRichSelect(_page: Page): boolean {
  * Vue Vuetify's inline editor does not close/cancel on Escape key.
  */
 export function supportsEscapeCancel(page: Page): boolean {
-  const fw = getFramework(page);
-  // JS inline editor closes, but edited values are not discarded on Escape.
-  return fw !== 'js';
+  void page;
+  return true;
 }
 
 /**
  * Scroll the grid content area vertically by the given amount.
- * Vue Vuetify + JS: the page itself is the scroll container (region is not independently scrollable).
- * React/Angular: scroll the [role="region"] element directly.
+ * Vue Vuetify: the page itself is the scroll container.
+ * React/Angular/JS: scroll the [role="region"] element directly.
  */
 export async function scrollGridVertically(page: Page, scrollTop: number): Promise<void> {
   const fw = getFramework(page);
-  if (fw === 'vue-vuetify' || fw === 'js') {
+  if (fw === 'vue-vuetify') {
     await page.evaluate((top) => { window.scrollTo(0, top); }, scrollTop);
   } else {
     const region = page.locator('[role="region"]').first();

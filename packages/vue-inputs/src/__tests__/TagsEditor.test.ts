@@ -4,9 +4,21 @@ import type { ICellEditorProps } from '@alaarab/ogrid-core';
 
 // ---------- Helpers ----------
 
+type TagsEditorParams = NonNullable<ICellEditorProps<{ id: number }>['cellEditorParams']> & {
+  suggestions?: string[];
+  allowCreate?: boolean;
+  showApplyButton?: boolean;
+};
+
+type TagsEditorTestProps = Omit<ICellEditorProps<{ id: number }>, 'cellEditorParams'> & {
+  cellEditorParams?: TagsEditorParams;
+};
+
+type TagsEditorComponentProps = InstanceType<typeof TagsEditor>['$props'];
+
 function createMockProps(
-  overrides: Partial<ICellEditorProps<{ id: number }>> = {},
-): ICellEditorProps<{ id: number }> {
+  overrides: Partial<TagsEditorTestProps> = {},
+): TagsEditorTestProps {
   return {
     value: 'Bug, Feature',
     onValueChange: jest.fn(),
@@ -18,10 +30,10 @@ function createMockProps(
   };
 }
 
-function mountEditor(overrides: Partial<ICellEditorProps<{ id: number }>> = {}) {
+function mountEditor(overrides: Partial<TagsEditorTestProps> = {}) {
   const props = createMockProps(overrides);
   const wrapper = mount(TagsEditor, {
-    props: props as Record<string, unknown>,
+    props: props as unknown as TagsEditorComponentProps,
   });
   return { wrapper, props };
 }

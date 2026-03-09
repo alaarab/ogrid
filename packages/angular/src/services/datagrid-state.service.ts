@@ -190,6 +190,7 @@ export interface DataGridStateResult<T> {
 export class DataGridStateService<T> {
   private destroyRef = inject(DestroyRef);
   private ngZone = inject(NgZone);
+  private readonly mutationTick = signal(0);
 
   // --- Input signals ---
   readonly props = signal<IOGridDataGridProps<T> | null>(null);
@@ -494,6 +495,7 @@ export class DataGridStateService<T> {
       p.items, this.visibleCols(), this.colOffset(),
       p.editable, this.wrappedOnCellValueChanged(),
     );
+    this.mutationTick.update((v) => v + 1);
   }
 
   clearClipboardRanges(): void {
@@ -513,11 +515,13 @@ export class DataGridStateService<T> {
   undo(): void {
     const p = this.props();
     this.interactionHelper.undo(p?.onCellValueChanged);
+    this.mutationTick.update((v) => v + 1);
   }
 
   redo(): void {
     const p = this.props();
     this.interactionHelper.redo(p?.onCellValueChanged);
+    this.mutationTick.update((v) => v + 1);
   }
 
   // --- Keyboard navigation (delegated to interactionHelper) ---
@@ -665,6 +669,7 @@ export class DataGridStateService<T> {
   // --- Get state result ---
 
   getState(): DataGridStateResult<T> {
+    this.mutationTick();
     const p = this.props();
     const cellSel = this.cellSelection();
 
