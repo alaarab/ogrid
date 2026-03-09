@@ -483,6 +483,12 @@
   flex-direction: column;
   isolation: isolate;
 
+  /* Override OGrid's inline CSS vars so its container
+     matches the wrapper — eliminates the round-vs-square
+     corner artifact caused by mismatched backgrounds. */
+  --ogrid-bg: var(--ifm-background-surface-color);
+  --ogrid-border: transparent;
+
   > div {
     flex: 1;
     background: inherit;
@@ -493,7 +499,7 @@
   }
 
   > div > div {
-    background: inherit;
+    background: inherit !important;
     border: none !important;
     border-radius: inherit !important;
     height: 100%;
