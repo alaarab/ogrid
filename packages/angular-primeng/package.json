@@ -1,6 +1,6 @@
 {
   "name": "@alaarab/ogrid-angular-primeng",
-  "version": "2.5.8",
+  "version": "2.5.9",
   "description": "OGrid PrimeNG – PrimeNG Table-based data grid with sorting, filtering, pagination, column chooser, and CSV export.",
   "main": "dist/esm/index.js",
   "module": "dist/esm/index.js",
@@ -13,7 +13,7 @@
     }
   },
   "scripts": {
-    "build": "rimraf dist && tsup && tsc -p tsconfig.build.json",
+    "build": "rimraf dist && ngc -p tsconfig.build.json",
     "test": "jest --passWithNoTests",
     "storybook": "ng run angular-primeng:storybook",
     "build-storybook": "ng run angular-primeng:build-storybook"
@@ -37,7 +37,7 @@
     "node": ">=18"
   },
   "dependencies": {
-    "@alaarab/ogrid-angular": "2.5.8"
+    "@alaarab/ogrid-angular": "2.5.9"
   },
   "peerDependencies": {
     "@angular/core": "^21.0.0",
