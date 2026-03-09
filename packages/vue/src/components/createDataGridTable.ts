@@ -494,6 +494,8 @@ export function createDataGridTable(ui: IDataGridTableUIBindings) {
                                   handleResizeStart(e, { columnId: ROW_NUMBER_COLUMN_ID, name: '#' } as IColumnDef<unknown>);
                                 },
                                 class: 'ogrid-resize-handle',
+                                role: 'separator',
+                                'aria-label': 'Resize row numbers',
                               }),
                             ]);
                           })()] : []),
@@ -566,6 +568,8 @@ export function createDataGridTable(ui: IDataGridTableUIBindings) {
                                 },
                                 onDblclick: (e: PointerEvent) => handleResizeDoubleClick(e, col),
                                 class: 'ogrid-resize-handle',
+                                role: 'separator',
+                                'aria-label': `Resize ${col.name ?? col.columnId}`,
                               }),
                             ]);
                           }),
