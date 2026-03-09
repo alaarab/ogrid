@@ -102,6 +102,8 @@ export interface IStatusBarProps {
   filteredCount?: number;
   /** Number of selected rows. Omit or 0 to hide. */
   selectedCount?: number;
+  /** Number of selected cells in the current cell range. Omit or 0/1 to hide. */
+  selectedCellCount?: number;
   /** Panels to show (default: all applicable). */
   panels?: StatusBarPanel[];
   /** Aggregation values for selected numeric cells. */

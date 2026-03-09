@@ -347,11 +347,6 @@ test.describe('Cell editing', () => {
   });
 
   test('Escape discards the edit', async ({ page }) => {
-    if (getFramework(page) === 'vue-vuetify') {
-      test.skip();
-      return;
-    }
-
     const cellContent = getCellContent(page, 0, 0);
     const originalText = (await cellContent.textContent()) ?? '';
 
@@ -381,19 +376,23 @@ test.describe('Keyboard navigation', () => {
   });
 
   test('Escape closes editor without changing value', async ({ page }) => {
-    // Vue Vuetify inline editor does not close on Escape  -  skip for that framework
     if (!supportsEscapeCancel(page)) {
       test.skip();
       return;
     }
 
     const cellContent = getCellContent(page, 0, 0);
+    const originalText = ((await cellContent.textContent()) ?? '').trim();
     await cellContent.click();
 
     const region = getGridRegion(page);
     await region.press('Enter');
     await region.press('Escape');
-    await expect(page.locator('input[type="text"]')).toHaveCount(0);
+    await expect.poll(async () => ((await getCellContent(page, 0, 0).textContent()) ?? '').trim()).toBe(originalText);
+    const editorInput = getFramework(page) === 'vue-vuetify'
+      ? page.locator('tbody input[type="text"]')
+      : page.locator('input[type="text"]');
+    await expect(editorInput).toHaveCount(0);
   });
 
   test('Ctrl+A selects all cells', async ({ page }) => {
@@ -426,13 +425,6 @@ test.describe('Sticky header', () => {
   });
 
   test('header stays visible after scrolling the grid', async ({ page }) => {
-    // JS uses page-level scrolling in the example app, so the header can move
-    // above the viewport even though sticky header styling exists in the core renderer.
-    if (isJS(page)) {
-      test.skip();
-      return;
-    }
-
     await changePageSize(page, 50);
 
     const thead = page.locator('thead').first();
@@ -587,10 +579,6 @@ test.describe('Range selection', () => {
   });
 
   test('Shift+Click selects a range of cells', async ({ page }) => {
-    if (isJS(page)) {
-      test.skip();
-      return;
-    }
     const cell00 = getCellContent(page, 0, 0);
     const cell22 = getCellContent(page, 2, 2);
 
@@ -601,10 +589,6 @@ test.describe('Range selection', () => {
   });
 
   test('Shift+Click range has data-in-range="true" on all covered cells', async ({ page }) => {
-    if (isJS(page)) {
-      test.skip();
-      return;
-    }
     const cell00 = getCellContent(page, 0, 0);
     const cell10 = getCellContent(page, 1, 0);
 
@@ -622,10 +606,6 @@ test.describe('Status bar aggregations', () => {
   });
 
   test('selecting cells shows aggregation info in status bar', async ({ page }) => {
-    if (isJS(page)) {
-      test.skip();
-      return;
-    }
     const cellContent = getCellContent(page, 0, 0);
     await cellContent.click();
 
@@ -635,10 +615,6 @@ test.describe('Status bar aggregations', () => {
   });
 
   test('status bar shows cell count when cells selected', async ({ page }) => {
-    if (isJS(page)) {
-      test.skip();
-      return;
-    }
     const cell00 = getCellContent(page, 0, 0);
     const cell11 = getCellContent(page, 1, 1);
 
@@ -705,12 +681,6 @@ test.describe('Column resize', () => {
   });
 
   test('dragging resize handle changes column width', async ({ page }) => {
-    // Angular Material's resize separator is not exposed as a stable visible
-    // element in headless Playwright.
-    if (getFramework(page) === 'angular-material') {
-      test.skip();
-      return;
-    }
     const th = page.locator('thead th:nth-child(1)');
     const initialBox = await th.boundingBox();
 
@@ -737,12 +707,6 @@ test.describe('Clipboard', () => {
   });
 
   test('Ctrl+C shows marching ants overlay on selected cells', async ({ page }) => {
-    // Angular's marching ants overlay does not render a visible SVG in headless
-    // Playwright after Ctrl+C.
-    if (getFramework(page) === 'angular-material') {
-      test.skip();
-      return;
-    }
     const cell = getCellContent(page, 0, 0);
     await cell.click();
 
@@ -751,7 +715,7 @@ test.describe('Clipboard', () => {
 
     // Marching ants SVG appears as an absolutely-positioned overlay
     const svg = page.locator('svg').first();
-    await expect(svg).toBeVisible();
+    await expect.poll(async () => await svg.count()).toBeGreaterThan(0);
     const box = await svg.boundingBox();
     expect(box).not.toBeNull();
     expect(box?.width ?? 0).toBeGreaterThan(0);
@@ -834,7 +798,7 @@ test.describe('Fill handle', () => {
   test('fill handle from text cell to richSelect (status) column does nothing', async ({ page }) => {
     // name (col 0) has no custom editor; status (col 1) uses richSelect.
     // Different editors = incompatible, so fill should be blocked.
-    const statusCell = page.locator('tbody tr:nth-child(1) td:nth-child(2)');
+    const statusCell = page.locator('tbody tr:nth-child(1) td[data-column-id="status"]');
     const originalStatus = await statusCell.textContent();
 
     const nameCell = getCellContent(page, 0, 0);
@@ -865,8 +829,7 @@ test.describe('Fill handle', () => {
 
   test('fill handle from date cell to boolean (active) column does nothing', async ({ page }) => {
     // startDate is type:'date', active is type:'boolean'. Different types = blocked.
-    // active is col index 6, so td:nth-child(7)
-    const activeCell = page.locator('tbody tr:nth-child(1) td:nth-child(7)');
+    const activeCell = page.locator('tbody tr:nth-child(1) td[data-column-id="active"]');
     const originalActive = await activeCell.textContent();
 
     const dateCell = getCellContent(page, 0, 5);
@@ -899,8 +862,8 @@ test.describe('Fill handle', () => {
     // Dragging name (text, col 0) all the way to active (boolean, col 6).
     // Non-editable columns are skipped by isColumnEditable. startDate (date)
     // and active (boolean) are type-incompatible with name (text). Nothing changes.
-    const dateCellTd = page.locator('tbody tr:nth-child(1) td:nth-child(6)');
-    const activeCellTd = page.locator('tbody tr:nth-child(1) td:nth-child(7)');
+    const dateCellTd = page.locator('tbody tr:nth-child(1) td[data-column-id="startDate"]');
+    const activeCellTd = page.locator('tbody tr:nth-child(1) td[data-column-id="active"]');
     const originalDate = await dateCellTd.textContent();
     const originalActive = await activeCellTd.textContent();
 
@@ -958,7 +921,11 @@ test.describe('RichSelect editor', () => {
     }
     const statusCell = getCellContent(page, 0, 1);
     await statusCell.click();
-    await statusCell.dblclick();
+    if (isJS(page)) {
+      await getGridRegion(page).press('Enter');
+    } else {
+      await statusCell.dblclick();
+    }
 
     // RichSelect shows a listbox with options and a search input
     const searchInput = page.locator('input[placeholder="Search..."]').first();
@@ -976,7 +943,11 @@ test.describe('RichSelect editor', () => {
     }
     const statusCell = getCellContent(page, 0, 1);
     await statusCell.click();
-    await statusCell.dblclick();
+    if (isJS(page)) {
+      await getGridRegion(page).press('Enter');
+    } else {
+      await statusCell.dblclick();
+    }
 
     const searchInput = page.locator('input[placeholder="Search..."]').first();
     await expect(searchInput).toBeVisible({ timeout: 3000 });

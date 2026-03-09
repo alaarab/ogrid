@@ -4,9 +4,20 @@ import type { ICellEditorProps } from '@alaarab/ogrid-core';
 
 // ---------- Helpers ----------
 
+type RatingEditorParams = NonNullable<ICellEditorProps<{ id: number }>['cellEditorParams']> & {
+  maxStars?: number;
+  allowHalf?: boolean;
+};
+
+type RatingEditorTestProps = Omit<ICellEditorProps<{ id: number }>, 'cellEditorParams'> & {
+  cellEditorParams?: RatingEditorParams;
+};
+
+type RatingEditorComponentProps = InstanceType<typeof RatingEditor>['$props'];
+
 function createMockProps(
-  overrides: Partial<ICellEditorProps<{ id: number }>> = {},
-): ICellEditorProps<{ id: number }> {
+  overrides: Partial<RatingEditorTestProps> = {},
+): RatingEditorTestProps {
   return {
     value: 3,
     onValueChange: jest.fn(),
@@ -18,10 +29,10 @@ function createMockProps(
   };
 }
 
-function mountEditor(overrides: Partial<ICellEditorProps<{ id: number }>> = {}) {
+function mountEditor(overrides: Partial<RatingEditorTestProps> = {}) {
   const props = createMockProps(overrides);
   const wrapper = mount(RatingEditor, {
-    props: props as Record<string, unknown>,
+    props: props as unknown as RatingEditorComponentProps,
   });
   return { wrapper, props };
 }

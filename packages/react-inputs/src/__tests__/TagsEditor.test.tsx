@@ -1,3 +1,4 @@
+import '@testing-library/jest-dom';
 import * as React from 'react';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
@@ -6,9 +7,19 @@ import type { ICellEditorProps } from '@alaarab/ogrid-core';
 
 // ---------- Helpers ----------
 
+type TagsEditorParams = NonNullable<ICellEditorProps<{ id: number }>['cellEditorParams']> & {
+  suggestions?: string[];
+  allowCreate?: boolean;
+  showApplyButton?: boolean;
+};
+
+type TagsEditorTestProps = Omit<ICellEditorProps<{ id: number }>, 'cellEditorParams'> & {
+  cellEditorParams?: TagsEditorParams;
+};
+
 function createMockProps(
-  overrides: Partial<ICellEditorProps<{ id: number }>> = {},
-): ICellEditorProps<{ id: number }> {
+  overrides: Partial<TagsEditorTestProps> = {},
+): TagsEditorTestProps {
   return {
     value: 'Bug, Feature',
     onValueChange: jest.fn(),
@@ -20,7 +31,7 @@ function createMockProps(
   };
 }
 
-function renderEditor(overrides: Partial<ICellEditorProps<{ id: number }>> = {}) {
+function renderEditor(overrides: Partial<TagsEditorTestProps> = {}) {
   const props = createMockProps(overrides);
   const result = render(<TagsEditor {...props} />);
   return { ...result, props };

@@ -8,11 +8,11 @@
 import { test, expect } from '@playwright/test';
 
 test.describe('Date Format Feature (E2E)', () => {
-  test.beforeEach(async ({ page }) => {
-    // Navigate to React Radix example (has full date column editing support)
-    await page.goto('http://localhost:3001');
+  test.beforeEach(async ({ page }, testInfo) => {
+    test.skip(testInfo.project.name !== 'react-radix', 'Date format coverage is only maintained against the React Radix example.');
 
-    // Wait for grid to load
+    await page.goto('/');
+
     await page.waitForSelector('table tbody', { timeout: 10000 });
   });
 
@@ -73,20 +73,22 @@ test.describe('Date Format Feature (E2E)', () => {
   });
 
   test('Date input with text editor shows proper placeholder', async ({ page }) => {
-    // This test checks that if the column is set up with editorType='text',
-    // the placeholder reflects the configured format
     const firstDateCell = page.locator('tbody tr:nth-child(1) td:nth-child(6) > div').first();
 
     await firstDateCell.dblclick();
     await page.waitForTimeout(300);
 
-    // Get the input (could be type="date" or type="text")
-    const dateInput = page.locator('input').filter({ has: page.locator('[placeholder]') }).first();
+    const dateInput = page.locator('input').first();
+    await expect(dateInput).toBeVisible({ timeout: 3000 });
+
+    const inputType = await dateInput.getAttribute('type');
     const placeholder = await dateInput.getAttribute('placeholder');
 
-    // Should have a placeholder indicating the expected format
-    if (placeholder) {
+    if (inputType === 'text') {
       expect(placeholder).toMatch(/YYYY|MM|DD|Date/i);
+    } else {
+      expect(inputType).toBe('date');
+      expect(placeholder).toBeFalsy();
     }
   });
 

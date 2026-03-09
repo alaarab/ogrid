@@ -1,3 +1,4 @@
+import '@testing-library/jest-dom';
 import * as React from 'react';
 import { render, screen, act } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
@@ -7,9 +8,18 @@ import type { ICellEditorProps } from '@alaarab/ogrid-core';
 
 // ---------- Helpers ----------
 
+type ColorPickerEditorParams = NonNullable<ICellEditorProps<{ id: number }>['cellEditorParams']> & {
+  allowCustom?: boolean;
+  colors?: string[];
+};
+
+type ColorPickerEditorTestProps = Omit<ICellEditorProps<{ id: number }>, 'cellEditorParams'> & {
+  cellEditorParams?: ColorPickerEditorParams;
+};
+
 function createMockProps(
-  overrides: Partial<ICellEditorProps<{ id: number }>> = {},
-): ICellEditorProps<{ id: number }> {
+  overrides: Partial<ColorPickerEditorTestProps> = {},
+): ColorPickerEditorTestProps {
   return {
     value: '#FF6B6B',
     onValueChange: jest.fn(),
@@ -21,7 +31,7 @@ function createMockProps(
   };
 }
 
-function renderEditor(overrides: Partial<ICellEditorProps<{ id: number }>> = {}) {
+function renderEditor(overrides: Partial<ColorPickerEditorTestProps> = {}) {
   const props = createMockProps(overrides);
   const result = render(<ColorPickerEditor {...props} />);
   return { ...result, props };

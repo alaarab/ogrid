@@ -95,8 +95,8 @@ describe('useColumnResize', () => {
       mockedMeasure.mockReturnValue(200);
     });
 
-    function createDoubleClickEvent(): MouseEvent {
-      const event = new MouseEvent('dblclick', { bubbles: true });
+    function createDoubleClickEvent(): PointerEvent {
+      const event = new MouseEvent('dblclick', { bubbles: true }) as unknown as PointerEvent;
       // Override currentTarget since it's read-only on real events  - 
       // define it as a property pointing to our resizeHandle element
       Object.defineProperty(event, 'currentTarget', { value: resizeHandle });

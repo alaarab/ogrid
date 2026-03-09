@@ -15,11 +15,11 @@ interface TestRow {
 }
 
 const testColumns: IColumnDef<TestRow>[] = [
-  { columnId: 'name', name: 'Name', editable: true },
-  { columnId: 'age', name: 'Age', type: 'numeric', editable: true },
-  { columnId: 'dateJoined', name: 'Date Joined', type: 'date', editable: true },
-  { columnId: 'active', name: 'Active', type: 'boolean', editable: true },
-  { columnId: 'notes', name: 'Notes', editable: true },
+  { columnId: 'name', name: 'Name', editable: true, cellEditor: 'text' },
+  { columnId: 'age', name: 'Age', type: 'numeric', editable: true, cellEditor: 'text' },
+  { columnId: 'dateJoined', name: 'Date Joined', type: 'date', editable: true, cellEditor: 'date' },
+  { columnId: 'active', name: 'Active', type: 'boolean', editable: true, cellEditor: 'checkbox' },
+  { columnId: 'notes', name: 'Notes', editable: true, cellEditor: 'text' },
 ];
 
 const testDataWithNulls: TestRow[] = [

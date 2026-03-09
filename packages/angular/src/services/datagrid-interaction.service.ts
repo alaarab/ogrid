@@ -39,6 +39,7 @@ export class DataGridInteractionHelper<T> {
   readonly cutRangeSig = signal<ISelectionRange | null>(null);
   readonly copyRangeSig = signal<ISelectionRange | null>(null);
   private internalClipboard: string | null = null;
+  private preferInternalClipboard = false;
 
   // Undo/redo
   readonly undoRedoStack = new UndoRedoStack<ICellValueChangedEvent<T>>(100);
@@ -101,8 +102,15 @@ export class DataGridInteractionHelper<T> {
     const norm = normalizeSelectionRange(range);
     const tsv = formatSelectionAsTsv(items, visibleCols, norm);
     this.internalClipboard = tsv;
+    this.preferInternalClipboard = true;
     this.copyRangeSig.set(norm);
-    void navigator.clipboard.writeText(tsv).catch(() => {});
+    void navigator.clipboard.writeText(tsv)
+      .then(() => {
+        this.preferInternalClipboard = false;
+      })
+      .catch(() => {
+        this.preferInternalClipboard = true;
+      });
   }
 
   handleCut(
@@ -132,11 +140,15 @@ export class DataGridInteractionHelper<T> {
     if (editable === false) return;
     if (!wrappedOnCellValueChanged) return;
 
-    let text: string;
-    try {
-      text = await navigator.clipboard.readText();
-    } catch {
-      text = '';
+    let text = this.preferInternalClipboard && this.internalClipboard != null
+      ? this.internalClipboard
+      : '';
+    if (!text.trim()) {
+      try {
+        text = await navigator.clipboard.readText();
+      } catch {
+        text = '';
+      }
     }
     if (!text.trim() && this.internalClipboard != null) {
       text = this.internalClipboard;

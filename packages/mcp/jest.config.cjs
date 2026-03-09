@@ -7,10 +7,10 @@ module.exports = {
   transform: {
     '^.+\\.ts$': ['ts-jest', {
       useESM: false,
-      isolatedModules: true,
       tsconfig: {
         esModuleInterop: true,
         allowSyntheticDefaultImports: true,
+        isolatedModules: true,
         module: 'commonjs',
         target: 'es2019',
         types: ['jest', 'node'],

@@ -5,7 +5,10 @@ import type { ICellEditorProps } from '@alaarab/ogrid-core';
 
 // ---------- Helpers ----------
 
-function createMockProps(overrides: Partial<ICellEditorProps<{ id: number }>> = {}): ICellEditorProps<{ id: number }> {
+type DatePickerEditorTestProps = ICellEditorProps<{ id: number }>;
+type DatePickerEditorComponentProps = InstanceType<typeof DatePickerEditor>['$props'];
+
+function createMockProps(overrides: Partial<DatePickerEditorTestProps> = {}): DatePickerEditorTestProps {
   return {
     value: '2024-03-15',
     onValueChange: jest.fn(),
@@ -17,10 +20,10 @@ function createMockProps(overrides: Partial<ICellEditorProps<{ id: number }>> = 
   };
 }
 
-function mountEditor(overrides: Partial<ICellEditorProps<{ id: number }>> = {}) {
+function mountEditor(overrides: Partial<DatePickerEditorTestProps> = {}) {
   const props = createMockProps(overrides);
   const wrapper = mount(DatePickerEditor, {
-    props: props as Record<string, unknown>,
+    props: props as unknown as DatePickerEditorComponentProps,
   });
   return { wrapper, props };
 }
@@ -358,7 +361,7 @@ describe('DatePickerEditor', () => {
       // Must attach to document for focus() to work in jsdom
       const props = createMockProps({ value: '2024-03-15' });
       const wrapper = mount(DatePickerEditor, {
-        props: props as Record<string, unknown>,
+        props: props as unknown as DatePickerEditorComponentProps,
         attachTo: document.body,
       });
 

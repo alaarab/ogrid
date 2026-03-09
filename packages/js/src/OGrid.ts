@@ -600,6 +600,7 @@ export class OGrid<T> {
           this.pinningState,
           {
             updateRendererInteractionState: () => this.renderingHelper.updateRendererInteractionState(),
+            renderAll: () => this.renderingHelper.renderAll(),
             updateDragAttributes: () => this.renderingHelper.updateDragAttributes(),
             clearCachedDragCells: () => this.renderingHelper.clearCachedDragCells(),
             showContextMenu: (x, y) => this.showContextMenu(x, y),
@@ -835,6 +836,9 @@ export class OGrid<T> {
     if (!this.selectionState) return;
     // Close any open editor when clicking a different cell
     this.cellEditor?.closeEditor();
+    if (e.shiftKey && this.selectionState.activeCell) {
+      return;
+    }
     e.preventDefault();
     this.selectionState.startDrag(rowIndex, colIndex);
     // Apply drag attributes synchronously so the anchor cell styling is in place

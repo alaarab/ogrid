@@ -5,12 +5,23 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>OGrid - Vanilla JS Example</title>
   <style>
+    html,
     body {
+      height: 100%;
       font-family: system-ui, -apple-system, sans-serif;
       margin: 0;
       padding: 0;
     }
+    body {
+      display: flex;
+      min-height: 100%;
+    }
     .container {
+      box-sizing: border-box;
+      display: flex;
+      flex: 1;
+      flex-direction: column;
+      min-height: 100vh;
       padding: 24px;
       max-width: 1200px;
       margin: 0 auto;
@@ -27,6 +38,10 @@
       padding: 2px 6px;
       border-radius: 3px;
       font-family: monospace;
+    }
+    #grid-container {
+      flex: 1;
+      min-height: 0;
     }
   </style>
 </head>

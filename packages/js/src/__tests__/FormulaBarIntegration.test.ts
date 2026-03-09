@@ -8,8 +8,8 @@ interface TestRow {
 }
 
 const testColumns: IColumnDef<TestRow>[] = [
-  { columnId: 'name', name: 'Name', editable: true },
-  { columnId: 'age', name: 'Age', type: 'numeric', editable: true },
+  { columnId: 'name', name: 'Name', editable: true, cellEditor: 'text' },
+  { columnId: 'age', name: 'Age', type: 'numeric', editable: true, cellEditor: 'text' },
 ];
 
 const testData: TestRow[] = [

@@ -48,6 +48,7 @@ export interface InteractionResult<T> {
  */
 export interface EventWiringCallbacks<_T> {
   updateRendererInteractionState: () => void;
+  renderAll: () => void;
   updateDragAttributes: () => void;
   clearCachedDragCells: () => void;
   showContextMenu: (x: number, y: number) => void;
@@ -82,6 +83,13 @@ export class OGridEventWiring<T> {
     // Undo/Redo (wraps onCellValueChanged if editable)
     const onCellValueChanged = options.onCellValueChanged;
     const undoRedoState = new UndoRedoState<T>(onCellValueChanged);
+    const wrappedCellValueChanged = undoRedoState.getWrappedCallback();
+    const onCellValueChangedAndRender = wrappedCellValueChanged
+      ? (event: Parameters<NonNullable<typeof wrappedCellValueChanged>>[0]) => {
+        wrappedCellValueChanged(event);
+        callbacks.renderAll();
+      }
+      : undefined;
 
     // Clipboard
     const clipboardState = new ClipboardState<T>(
@@ -90,7 +98,7 @@ export class OGridEventWiring<T> {
         visibleCols: [] as unknown as Parameters<typeof ClipboardState<T>['prototype']['updateParams']>[0]['visibleCols'],
         colOffset,
         editable,
-        onCellValueChanged: undoRedoState.getWrappedCallback(),
+        onCellValueChanged: onCellValueChangedAndRender,
       },
       () => selectionState.activeCell ?? null,
       () => selectionState.selectionRange ?? null
@@ -102,7 +110,7 @@ export class OGridEventWiring<T> {
         items: [],
         visibleCols: [] as unknown as Parameters<typeof FillHandleState<T>['prototype']['updateParams']>[0]['visibleCols'],
         editable,
-        onCellValueChanged: undoRedoState.getWrappedCallback(),
+        onCellValueChanged: onCellValueChangedAndRender,
         colOffset,
         beginBatch: () => undoRedoState.beginBatch(),
         endBatch: () => undoRedoState.endBatch(),
@@ -125,12 +133,18 @@ export class OGridEventWiring<T> {
         colOffset,
         getRowId: state.getRowId,
         editable,
-        onCellValueChanged: undoRedoState.getWrappedCallback(),
+        onCellValueChanged: onCellValueChangedAndRender,
         onCopy: () => clipboardState.handleCopy(),
         onCut: () => clipboardState.handleCut(),
         onPaste: async () => { await clipboardState.handlePaste(); },
-        onUndo: () => undoRedoState.undo(),
-        onRedo: () => undoRedoState.redo(),
+        onUndo: () => {
+          undoRedoState.undo();
+          callbacks.renderAll();
+        },
+        onRedo: () => {
+          undoRedoState.redo();
+          callbacks.renderAll();
+        },
         onContextMenu: (x, y) => callbacks.showContextMenu(x, y),
         onStartEdit: (rowId, columnId) => callbacks.startCellEdit(rowId, columnId),
         clearClipboardRanges: () => clipboardState.clearClipboardRanges(),
@@ -144,7 +158,7 @@ export class OGridEventWiring<T> {
     // Subscribe to selection changes
     unsubscribes.push(
       selectionState.onSelectionChange(() => {
-        callbacks.updateRendererInteractionState();
+        callbacks.renderAll();
       })
     );
 
