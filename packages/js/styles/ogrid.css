@@ -580,6 +580,54 @@
   color: var(--ogrid-fg, #242424);
 }
 
+/* ── Sheet tabs ── */
+
+.ogrid-sheet-tabs-container:empty {
+  display: none;
+}
+
+.ogrid-sheet-tabs {
+  display: flex;
+  align-items: center;
+  border-top: 1px solid var(--ogrid-border, #e0e0e0);
+  background: var(--ogrid-header-bg, #f5f5f5);
+  min-height: 30px;
+  overflow-x: auto;
+  overflow-y: hidden;
+  gap: 0;
+  font-size: 12px;
+}
+
+.ogrid-sheet-tabs__add-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 4px 10px;
+  font-size: 16px;
+  line-height: 22px;
+  color: var(--ogrid-fg-secondary, #666);
+  flex-shrink: 0;
+}
+
+.ogrid-sheet-tabs__tab {
+  background: none;
+  border: none;
+  border-bottom: 2px solid transparent;
+  cursor: pointer;
+  padding: 4px 16px;
+  font-size: 12px;
+  line-height: 22px;
+  color: var(--ogrid-fg, #242424);
+  white-space: nowrap;
+  position: relative;
+}
+
+.ogrid-sheet-tabs__tab--active {
+  font-weight: 600;
+  border-bottom-color: var(--ogrid-primary, #217346);
+  background: var(--ogrid-bg, #fff);
+}
+
 /* ── Pagination ── */
 
 .ogrid-pagination-container {

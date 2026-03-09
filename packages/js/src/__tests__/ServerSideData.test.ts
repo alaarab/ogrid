@@ -87,7 +87,7 @@ describe('GridState (server-side)', () => {
     expect(state.isLoading).toBe(false);
     expect(ds.fetchMock).toHaveBeenCalledTimes(1);
     expect(ds.fetchMock).toHaveBeenCalledWith(
-      expect.objectContaining({ page: 1, pageSize: 10 })
+      expect.objectContaining({ page: 1, pageSize: 10, signal: expect.anything() })
     );
 
     const { items, totalCount } = state.getProcessedItems();
@@ -126,7 +126,7 @@ describe('GridState (server-side)', () => {
 
     expect(ds.fetchMock).toHaveBeenCalledTimes(2);
     expect(ds.fetchMock).toHaveBeenLastCalledWith(
-      expect.objectContaining({ page: 2, pageSize: 10 })
+      expect.objectContaining({ page: 2, pageSize: 10, signal: expect.anything() })
     );
 
     const { items } = state.getProcessedItems();

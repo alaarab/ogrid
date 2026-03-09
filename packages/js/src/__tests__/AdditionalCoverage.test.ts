@@ -121,7 +121,7 @@ describe('Integration Tests', () => {
       gridState.setPage(2);
       selectionState.setActiveCell({ rowIndex: 0, columnIndex: 0 });
 
-      expect(stateChangeCount).toBe(3); // sort, filter, page
+      expect(stateChangeCount).toBe(6); // each mutation emits a state-specific event plus a data refresh event
       expect(selectionState.activeCell).toBeTruthy();
 
       unsub();
@@ -234,14 +234,14 @@ describe('Memory Leak Tests', () => {
       gridState.onStateChange(handler2);
 
       gridState.setPage(2);
-      expect(handler1).toHaveBeenCalledTimes(1);
-      expect(handler2).toHaveBeenCalledTimes(1);
+      expect(handler1).toHaveBeenCalledTimes(2);
+      expect(handler2).toHaveBeenCalledTimes(2);
 
       gridState.destroy();
 
       gridState.setPage(3);
-      expect(handler1).toHaveBeenCalledTimes(1);
-      expect(handler2).toHaveBeenCalledTimes(1);
+      expect(handler1).toHaveBeenCalledTimes(2);
+      expect(handler2).toHaveBeenCalledTimes(2);
     });
 
     it('should remove SelectionState event listeners on destroy', () => {
