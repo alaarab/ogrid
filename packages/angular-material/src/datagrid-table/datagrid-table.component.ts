@@ -384,6 +384,7 @@ import { PopoverCellEditorComponent } from './popover-cell-editor.component';
           [selectedCellCount]="selectionCellCount()"
           [aggregation]="sbConfig.aggregation"
           [suppressRowCount]="sbConfig.suppressRowCount"
+          [classNames]="statusBarClasses"
         />
       }
 
@@ -549,6 +550,39 @@ import { PopoverCellEditorComponent } from './popover-cell-editor.component';
       background: none; border: none; color: var(--mat-sys-primary, #1976d2);
       cursor: pointer; font-size: inherit; text-decoration: underline; padding: 0;
     }
+    .ogrid-status-bar {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      width: 100%;
+      min-height: 33px;
+      padding: 6px 12px;
+      box-sizing: border-box;
+      font-size: 12px;
+      line-height: 20px;
+      color: var(--ogrid-fg-secondary, rgba(0, 0, 0, 0.6));
+      background: var(--ogrid-header-bg, rgba(0, 0, 0, 0.04));
+      border-top: 1px solid var(--ogrid-border, rgba(0, 0, 0, 0.12));
+    }
+    .ogrid-status-bar-item {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+    }
+    .ogrid-status-bar-item:not(:last-child)::after {
+      content: '';
+      width: 1px;
+      height: 14px;
+      margin-left: 12px;
+      background: var(--ogrid-border, rgba(0, 0, 0, 0.12));
+    }
+    .ogrid-status-bar-label {
+      color: var(--ogrid-fg-secondary, rgba(0, 0, 0, 0.6));
+    }
+    .ogrid-status-bar-value {
+      color: var(--ogrid-fg, rgba(0, 0, 0, 0.87));
+      font-weight: 600;
+    }
     .ogrid-datagrid-loading-overlay {
       position: absolute; inset: 0; z-index: 2;
       display: flex; align-items: center; justify-content: center;
@@ -610,6 +644,13 @@ import { PopoverCellEditorComponent } from './popover-cell-editor.component';
 })
 export class DataGridTableComponent<T> extends BaseDataGridTableComponent<T> {
   private readonly propsSignal = signal<IOGridDataGridProps<T> | undefined>(undefined);
+
+  readonly statusBarClasses = {
+    statusBar: 'ogrid-status-bar',
+    statusBarItem: 'ogrid-status-bar-item',
+    statusBarLabel: 'ogrid-status-bar-label',
+    statusBarValue: 'ogrid-status-bar-value',
+  };
 
   @Input({ required: true, alias: 'props' })
   set propsInput(value: IOGridDataGridProps<T>) {

@@ -432,7 +432,9 @@ import { PopoverCellEditorComponent } from './popover-cell-editor.component';
       position: relative;
       background: var(--ogrid-bg, #ffffff);
       color: var(--ogrid-fg, rgba(0, 0, 0, 0.87));
+      outline: none;
     }
+    .ogrid-scroll-wrapper:focus-visible { outline: none; }
     .ogrid-scroll-wrapper[data-virtual-scroll] { flex: 1; min-height: 0; }
     .ogrid-scroll-wrapper--loading-empty { min-height: 200px; }
     .ogrid-table-wrapper {
@@ -573,6 +575,39 @@ import { PopoverCellEditorComponent } from './popover-cell-editor.component';
     .ogrid-empty-title {
       font-weight: 600;
       margin-bottom: 8px;
+    }
+    .ogrid-status-bar {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      width: 100%;
+      min-height: 33px;
+      padding: 6px 12px;
+      box-sizing: border-box;
+      font-size: 12px;
+      line-height: 20px;
+      color: var(--ogrid-fg-secondary, rgba(0, 0, 0, 0.6));
+      background: var(--ogrid-header-bg, #f5f5f5);
+      border-top: 1px solid var(--ogrid-border, rgba(0, 0, 0, 0.12));
+    }
+    .ogrid-status-bar-item {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+    }
+    .ogrid-status-bar-item:not(:last-child)::after {
+      content: '';
+      width: 1px;
+      height: 14px;
+      margin-left: 12px;
+      background: var(--ogrid-border, rgba(0, 0, 0, 0.12));
+    }
+    .ogrid-status-bar-label {
+      color: var(--ogrid-fg-secondary, rgba(0, 0, 0, 0.6));
+    }
+    .ogrid-status-bar-value {
+      color: var(--ogrid-fg, rgba(0, 0, 0, 0.87));
+      font-weight: 600;
     }
     .ogrid-loading-overlay {
       position: absolute;
