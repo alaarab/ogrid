@@ -159,8 +159,9 @@ const grid = new OGrid(document.getElementById('grid'), {
   rowSelection: 'multiple',
 });
 
-grid.on('selectionChange', ({ selectedRows }) => {
-  console.log(`${selectedRows.length} rows selected`);
+grid.on('selectionChange', ({ selectedItems, selectedRowIds }) => {
+  console.log(`${selectedItems.length} rows selected`);
+  console.log('Selected row IDs:', selectedRowIds);
 });
 
 // Programmatic access

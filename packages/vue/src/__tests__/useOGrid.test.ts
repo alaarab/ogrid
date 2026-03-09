@@ -176,6 +176,21 @@ describe('useOGrid', () => {
       expect(state.filters).toEqual({ id: { type: 'text', value: '1' } });
     });
 
+    it('applyColumnState stores columnOrder internally when uncontrolled', () => {
+      const props = ref<IOGridProps<Row>>({
+        columns,
+        getRowId,
+        data,
+        defaultPageSize: 10,
+      });
+
+      const { api } = useOGrid(props);
+      api.value.applyColumnState({ columnOrder: ['name', 'id'] });
+
+      expect(api.value.getColumnState().columnOrder).toEqual(['name', 'id']);
+      expect(api.value.getColumnOrder()).toEqual(['name', 'id']);
+    });
+
     it('applyColumnState restores columnWidths', () => {
       const props = ref<IOGridProps<Row>>({
         columns,
@@ -1183,6 +1198,21 @@ describe('useOGrid', () => {
       api.value.setColumnOrder(['name', 'id']);
 
       expect(onColumnOrderChange).toHaveBeenCalledWith(['name', 'id']);
+    });
+
+    it('setColumnOrder stores order internally when uncontrolled', () => {
+      const props = ref<IOGridProps<Row>>({
+        columns,
+        getRowId,
+        data,
+        defaultPageSize: 10,
+      });
+
+      const { api } = useOGrid(props);
+      api.value.setColumnOrder(['name', 'id']);
+
+      expect(api.value.getColumnOrder()).toEqual(['name', 'id']);
+      expect(api.value.getColumnState().columnOrder).toEqual(['name', 'id']);
     });
   });
 

@@ -137,6 +137,15 @@ describe('OGridService', () => {
       expect(state.columnWidths).toEqual({ id: 200, name: 300 });
     });
 
+    it('applyColumnState stores columnOrder internally when uncontrolled', () => {
+      service.getApi().applyColumnState({
+        columnOrder: ['name', 'id'],
+      });
+
+      expect(service.getApi().getColumnState().columnOrder).toEqual(['name', 'id']);
+      expect(service.getApi().getColumnOrder()).toEqual(['name', 'id']);
+    });
+
     it('applyColumnState with partial state only changes specified fields', () => {
       service.defaultSortBy.set('name');
       service.defaultSortDirection.set('desc');
@@ -198,6 +207,13 @@ describe('OGridService', () => {
 
       expect(service.getApi().getColumnState().filters).toBeUndefined();
       expect(service.getApi().getSelectedRows()).toEqual(['1']);
+    });
+
+    it('setColumnOrder stores columnOrder internally when uncontrolled', () => {
+      service.getApi().setColumnOrder(['name', 'id']);
+
+      expect(service.getApi().getColumnOrder()).toEqual(['name', 'id']);
+      expect(service.getApi().getColumnState().columnOrder).toEqual(['name', 'id']);
     });
   });
 
