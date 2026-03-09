@@ -5,7 +5,7 @@ import path from 'path';
 
 const config: Config = {
   title: 'OGrid',
-  tagline: 'The lightweight, framework-agnostic React data grid.',
+  tagline: 'The open-source data grid for React, Angular, Vue, and vanilla JS.',
   favicon: 'img/favicon.svg',
   url: 'https://alaarab.github.io',
   baseUrl: '/ogrid/',
@@ -69,6 +69,46 @@ const config: Config = {
         href: 'https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap',
       },
     },
+    // OpenGraph
+    {
+      tagName: 'meta',
+      attributes: { property: 'og:type', content: 'website' },
+    },
+    {
+      tagName: 'meta',
+      attributes: { property: 'og:site_name', content: 'OGrid' },
+    },
+    // Twitter Card
+    {
+      tagName: 'meta',
+      attributes: { name: 'twitter:card', content: 'summary_large_image' },
+    },
+    // Structured data
+    {
+      tagName: 'script',
+      attributes: { type: 'application/ld+json' },
+      innerHTML: JSON.stringify({
+        '@context': 'https://schema.org',
+        '@type': 'SoftwareSourceCode',
+        name: 'OGrid',
+        description: 'Free open-source data grid for React, Angular, Vue, and vanilla JS. Sorting, filtering, editing, spreadsheet selection, clipboard, fill handle, formulas, and more.',
+        url: 'https://alaarab.github.io/ogrid/',
+        codeRepository: 'https://github.com/alaarab/ogrid',
+        programmingLanguage: ['TypeScript', 'JavaScript'],
+        runtimePlatform: ['React', 'Angular', 'Vue', 'Vanilla JS'],
+        license: 'https://opensource.org/licenses/MIT',
+        author: {
+          '@type': 'Person',
+          name: 'Ala Arab',
+          url: 'https://github.com/alaarab',
+        },
+        offers: {
+          '@type': 'Offer',
+          price: '0',
+          priceCurrency: 'USD',
+        },
+      }),
+    },
   ],
 
   presets: [
@@ -78,16 +118,26 @@ const config: Config = {
         docs: {
           sidebarPath: './sidebars.ts',
           editUrl: 'https://github.com/alaarab/ogrid/tree/main/packages/docs/',
+          showLastUpdateTime: true,
         },
         blog: false,
         theme: {
           customCss: './src/css/custom.scss',
+        },
+        sitemap: {
+          priority: 0.5,
+          changefreq: 'weekly',
+          filename: 'sitemap.xml',
         },
       } satisfies Preset.Options,
     ],
   ],
 
   themeConfig: {
+    metadata: [
+      { name: 'keywords', content: 'data grid, react data grid, angular data grid, vue data grid, javascript table, spreadsheet, MIT license, open source, AG Grid alternative' },
+      { name: 'author', content: 'Ala Arab' },
+    ],
     colorMode: {
       defaultMode: 'dark',
       disableSwitch: false,

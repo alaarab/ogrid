@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://alaarab.github.io/ogrid/sitemap.xml
