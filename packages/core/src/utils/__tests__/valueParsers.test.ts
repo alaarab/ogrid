@@ -188,7 +188,7 @@ describe('dateParser', () => {
   });
   it('parses date-time', () => {
     const result = p('2024-01-15T10:30:00Z') as string;
-    expect(result).toBe('2024-01-15T10:30:00.000Z');
+    expect(result).toBe('2024-01-15');
   });
   it('returns null for empty', () => expect(p('')).toBeNull());
   it('rejects invalid date', () => expect(p('not-a-date')).toBeUndefined());

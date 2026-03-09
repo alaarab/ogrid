@@ -115,7 +115,7 @@ export function dateParser<T>(params: IValueParserParams<T>): unknown {
   const str = String(newValue).trim();
   const date = new Date(str);
   if (Number.isNaN(date.getTime())) return undefined;
-  return date.toISOString();
+  return date.toISOString().substring(0, 10);
 }
 
 /**
