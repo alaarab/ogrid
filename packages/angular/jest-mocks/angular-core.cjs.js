@@ -7,6 +7,7 @@ const identity = (v) => v;
 // Decorator factories — return the class/method unchanged
 const Injectable = (opts) => (target) => target;
 const Component = (opts) => (target) => target;
+const Directive = (opts) => (target) => target;
 const Input = (opts) => (target, propertyKey) => {};
 const Output = (opts) => (target, propertyKey) => {};
 const ViewChild = (selector, opts) => (target, propertyKey) => {};
@@ -79,6 +80,16 @@ class ElementRef {
   }
 }
 
+class Injector {}
+class EnvironmentInjector {}
+
+const createComponent = () => ({
+  instance: {},
+  changeDetectorRef: { detectChanges: noop },
+  location: { nativeElement: {} },
+  destroy: noop,
+});
+
 // TemplateRef stub (used in type positions only, but exported for completeness)
 class TemplateRef {}
 
@@ -88,6 +99,7 @@ class TemplateRef {}
 module.exports = {
   Injectable,
   Component,
+  Directive,
   Input,
   Output,
   ViewChild,
@@ -101,6 +113,9 @@ module.exports = {
   DestroyRef,
   NgZone,
   ElementRef,
+  Injector,
+  EnvironmentInjector,
+  createComponent,
   EventEmitter,
   TemplateRef,
   ChangeDetectionStrategy: { OnPush: 0, Default: 1 },
