@@ -1,4 +1,4 @@
-import { signal, computed, Input, Output, EventEmitter } from '@angular/core';
+import { Directive, signal, computed, Input, Output, EventEmitter } from '@angular/core';
 import { getPaginationViewModel } from '@alaarab/ogrid-core';
 
 /**
@@ -11,6 +11,7 @@ import { getPaginationViewModel } from '@alaarab/ogrid-core';
  * Uses @Input setter + signal pattern so computed() can track dependencies.
  * (Plain @Input properties are NOT tracked by computed()  -  only signals are.)
  */
+@Directive()
 export abstract class BasePaginationControlsComponent {
   private readonly _currentPage = signal(1);
   private readonly _pageSize = signal(25);

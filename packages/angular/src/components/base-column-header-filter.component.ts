@@ -1,4 +1,4 @@
-import { signal, computed, ElementRef, Input } from '@angular/core';
+import { Directive, signal, computed, ElementRef, Input } from '@angular/core';
 import type { ColumnFilterType, IDateFilterValue, UserLike } from '../types';
 
 export interface IColumnHeaderFilterProps {
@@ -29,6 +29,7 @@ export interface IColumnHeaderFilterProps {
  * 1. Provide a @Component decorator with template and styles
  * 2. Implement abstract accessor for headerEl (ViewChild reference)
  */
+@Directive()
 export abstract class BaseColumnHeaderFilterComponent {
   @Input({ required: true }) columnKey!: string;
   @Input({ required: true }) columnName!: string;

@@ -1,4 +1,4 @@
-import { signal, computed, Input, Output, EventEmitter } from '@angular/core';
+import { Directive, signal, computed, Input, Output, EventEmitter } from '@angular/core';
 import type { IColumnDefinition } from '../types';
 
 export interface IColumnChooserProps {
@@ -15,6 +15,7 @@ export interface IColumnChooserProps {
  * 1. Provide a @Component decorator with template and styles
  * 2. Handle their own click-outside behavior (host binding or effect)
  */
+@Directive()
 export abstract class BaseColumnChooserComponent {
   private readonly _columns = signal<IColumnDefinition[]>([]);
   private readonly _visibleColumns = signal<Set<string>>(new Set());

@@ -1,4 +1,4 @@
-import { signal, computed, effect, ElementRef, inject } from '@angular/core';
+import { Directive, signal, computed, effect, ElementRef, inject } from '@angular/core';
 import { DataGridStateService } from '../services/datagrid-state.service';
 import { ColumnReorderService } from '../services/column-reorder.service';
 import { VirtualScrollService } from '../services/virtual-scroll.service';
@@ -38,6 +38,7 @@ import type { HeaderFilterConfig, CellRenderDescriptor } from '../utils';
  * 2. Call `initBase()` in the constructor (effects require injection context)
  * 3. Implement abstract accessors for propsInput, wrapperRef, and tableContainerRef
  */
+@Directive()
 export abstract class BaseDataGridTableComponent<T = unknown> {
   readonly stateService = inject<DataGridStateService<T>>(DataGridStateService);
   readonly columnReorderService = inject<ColumnReorderService<T>>(ColumnReorderService);
