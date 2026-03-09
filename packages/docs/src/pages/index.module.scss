@@ -1296,14 +1296,14 @@
 
 .compTableHead {
   display: grid;
-  grid-template-columns: 1fr 180px 180px;
+  grid-template-columns: 1fr 180px;
   background: var(--ifm-background-color);
   border-bottom: 2px solid var(--ogrid-border-glass);
   padding: 1.25rem 1.5rem;
   gap: 1rem;
 
   @media (max-width: 600px) {
-    grid-template-columns: 1fr 120px 120px;
+    grid-template-columns: 1fr 120px;
   }
 }
 
@@ -1342,13 +1342,6 @@
   letter-spacing: 0.02em;
 }
 
-.compTablePricePaid {
-  font-size: 0.68rem;
-  font-weight: 600;
-  color: var(--ifm-color-emphasis-500);
-  letter-spacing: 0.02em;
-}
-
 .compTableBody {
   background: var(--ifm-background-color);
 }
@@ -1359,7 +1352,7 @@
 
 .compRow {
   display: grid;
-  grid-template-columns: 1fr 180px 180px;
+  grid-template-columns: 1fr 180px;
   align-items: center;
   padding: 0.75rem 1.5rem;
   gap: 1rem;
@@ -1375,7 +1368,7 @@
   }
 
   @media (max-width: 600px) {
-    grid-template-columns: 1fr 120px 120px;
+    grid-template-columns: 1fr 120px;
   }
 }
 
@@ -1450,63 +1443,17 @@
   white-space: nowrap;
 }
 
-.compLock {
-  width: 18px;
-  height: 18px;
-  border-radius: 50%;
-  background: rgba(245, 158, 11, 0.12);
-  color: #d97706;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 0.62rem;
-  font-weight: 900;
-  flex-shrink: 0;
-}
-
-.compLockLabel {
-  font-size: 0.72rem;
-  color: #d97706;
-  font-weight: 600;
-  white-space: nowrap;
-}
-
-.compNo {
-  width: 18px;
-  height: 18px;
-  border-radius: 50%;
-  background: rgba(100, 116, 139, 0.1);
-  color: #94a3b8;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 0.7rem;
-  font-weight: 600;
-  flex-shrink: 0;
-}
-
-.compNoLabel {
-  font-size: 0.72rem;
-  color: var(--ifm-color-emphasis-500);
-  white-space: nowrap;
-}
-
-.compNeutral {
-  font-size: 0.72rem;
-  color: var(--ifm-color-emphasis-500);
-}
-
 /* Table footer */
 .compTableFoot {
   display: grid;
-  grid-template-columns: 1fr 180px 180px;
+  grid-template-columns: 1fr 180px;
   padding: 1.5rem;
   gap: 1rem;
   background: var(--ifm-background-surface-color);
   border-top: 2px solid var(--ogrid-border-glass);
 
   @media (max-width: 600px) {
-    grid-template-columns: 1fr 120px 120px;
+    grid-template-columns: 1fr 120px;
   }
 }
 
@@ -1546,14 +1493,6 @@
 
 [data-theme='dark'] .compFootPrice {
   color: #3ab876;
-}
-
-.compFootPricePaid {
-  font-size: 1.2rem;
-  font-weight: 700;
-  letter-spacing: -0.03em;
-  color: var(--ifm-color-emphasis-500);
-  line-height: 1;
 }
 
 .compFootNote {
