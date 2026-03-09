@@ -294,7 +294,7 @@ export abstract class BaseInlineCellEditorComponent<T = unknown> {
   }
 
   getInputStyle(): string {
-    const baseStyle = 'width:100%;box-sizing:border-box;padding:6px 10px;border:none;outline:none;font:inherit;background:transparent;color:inherit;';
+    const baseStyle = 'width:100%;min-width:0;padding:0;border:none;outline:none;font:inherit;font-size:var(--ogrid-cell-font-size, 13px);line-height:inherit;background:transparent;color:inherit;box-sizing:border-box;';
     const col = this.column;
     if (col.type === 'numeric') {
       return baseStyle + 'text-align:right;';
