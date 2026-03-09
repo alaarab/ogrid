@@ -1,6 +1,6 @@
 {
   "name": "@alaarab/ogrid-react",
-  "version": "2.5.8",
+  "version": "2.5.9",
   "description": "OGrid React – React hooks, headless components, and utilities for OGrid data grids.",
   "main": "dist/esm/index.js",
   "module": "dist/esm/index.js",
@@ -12,7 +12,9 @@
       "default": "./dist/esm/index.js"
     },
     "./testing": {
-      "types": "./dist/types/testing/index.d.ts"
+      "types": "./src/testing/index.d.ts",
+      "import": "./dist/esm/testing/index.js",
+      "default": "./dist/esm/testing/index.js"
     }
   },
   "scripts": {
@@ -31,6 +33,7 @@
   "license": "MIT",
   "files": [
     "dist",
+    "src/testing/index.d.ts",
     "README.md",
     "LICENSE"
   ],
@@ -39,12 +42,18 @@
     "node": ">=18"
   },
   "dependencies": {
-    "@alaarab/ogrid-core": "2.5.8",
+    "@alaarab/ogrid-core": "2.5.9",
     "@tanstack/react-virtual": "^3.0.0"
   },
   "peerDependencies": {
+    "@testing-library/react": "^16.0.0",
     "react": "^17.0.0 || ^18.0.0 || ^19.0.0",
     "react-dom": "^17.0.0 || ^18.0.0 || ^19.0.0"
+  },
+  "peerDependenciesMeta": {
+    "@testing-library/react": {
+      "optional": true
+    }
   },
   "devDependencies": {
     "@testing-library/jest-dom": "^6.9.1",

@@ -6,11 +6,16 @@
   ],
   "scripts": {
     "build": "turbo build",
+    "build:angular-family": "turbo build --filter=@alaarab/ogrid-angular --filter=@alaarab/ogrid-angular-radix --filter=@alaarab/ogrid-angular-material --filter=@alaarab/ogrid-angular-primeng",
+    "build:examples": "turbo build --filter=@alaarab/ogrid-examples",
+    "build:react-family": "turbo build --filter=@alaarab/ogrid-react --filter=@alaarab/ogrid-react-radix --filter=@alaarab/ogrid-react-fluent --filter=@alaarab/ogrid-react-material",
     "test": "npm --workspaces --if-present run test",
     "test:all": "npm --workspaces --if-present run test",
+    "test:coverage": "npm --workspaces --if-present run test -- --coverage",
     "test:core": "npm test -w @alaarab/ogrid-core",
     "test:js": "npm test -w @alaarab/ogrid-js",
     "test:react": "npm test -w @alaarab/ogrid-react",
+    "test:react-family": "turbo test --filter=@alaarab/ogrid-react --filter=@alaarab/ogrid-react-radix --filter=@alaarab/ogrid-react-fluent --filter=@alaarab/ogrid-react-material",
     "test:fluent": "npm test -w @alaarab/ogrid-react-fluent",
     "test:material": "npm test -w @alaarab/ogrid-react-material",
     "test:radix": "npm test -w @alaarab/ogrid-react-radix",
@@ -28,6 +33,7 @@
     "test:vue-inputs": "npm test -w @alaarab/ogrid-vue-inputs",
     "test:js-inputs": "npm test -w @alaarab/ogrid-js-inputs",
     "test:mcp": "npm test -w @alaarab/ogrid-mcp",
+    "test:examples:types": "npm run typecheck -w @alaarab/ogrid-examples",
     "dev:react-fluent": "npm run dev:react-fluent -w @alaarab/ogrid-examples",
     "dev:react-material": "npm run dev:react-material -w @alaarab/ogrid-examples",
     "dev:react-radix": "npm run dev:react-radix -w @alaarab/ogrid-examples",
@@ -55,6 +61,9 @@
     "size": "size-limit",
     "lint": "eslint .",
     "test:e2e": "npx playwright test",
+    "test:e2e:smoke": "npx playwright test e2e/liveSmoke.spec.ts",
+    "audit:visual": "OGRID_VISUAL_AUDIT=1 npx playwright test e2e/visualAudit.spec.ts",
+    "test:consumer:angular": "npm run build -w @alaarab/ogrid-core && npm run build:angular-family && node scripts/angular-consumer-smoke.mjs",
     "test:e2e:react": "npx playwright test --project=react-radix",
     "test:e2e:angular": "npx playwright test --project=angular-material",
     "test:e2e:vue": "npx playwright test --project=vue-vuetify",
@@ -101,7 +110,7 @@
     "typescript": "^5.9.3",
     "typescript-eslint": "^8.56.0"
   },
-  "version": "2.5.8",
+  "version": "2.5.9",
   "lint-staged": {
     "*.{ts,tsx}": [
       "eslint --fix"
