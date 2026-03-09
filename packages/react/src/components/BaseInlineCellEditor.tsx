@@ -314,7 +314,7 @@ export function BaseInlineCellEditor<T>(props: BaseInlineCellEditorProps<T>): Re
   if (editorType === 'checkbox') {
     const checked = value === true;
     return (
-      <div style={{ ...editorWrapperStyle, justifyContent: 'center' }}>
+      <div style={{ ...editorWrapperStyle, justifyContent: 'flex-start' }}>
         {renderCheckbox(checked, (val) => commit(val), cancel)}
       </div>
     );

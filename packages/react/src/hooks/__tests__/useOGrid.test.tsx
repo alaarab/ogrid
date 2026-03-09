@@ -296,6 +296,30 @@ describe('useOGrid', () => {
     expect(onColumnOrderChange).toHaveBeenCalledWith(['name', 'id']);
   });
 
+  it('applyColumnState stores columnOrder internally when uncontrolled', () => {
+    const ref = React.createRef<IOGridApi<Row>>();
+    const Wrapper = () => {
+      useOGrid<Row>(
+        {
+          columns,
+          getRowId,
+          data,
+          defaultPageSize: 10,
+        },
+        ref
+      );
+      return null;
+    };
+    render(<Wrapper />);
+
+    act(() => {
+      ref.current!.applyColumnState({ columnOrder: ['name', 'id'] });
+    });
+
+    expect(ref.current!.getColumnState().columnOrder).toEqual(['name', 'id']);
+    expect(ref.current!.getColumnOrder()).toEqual(['name', 'id']);
+  });
+
   it('getColumnState includes columnOrder when provided via props', () => {
     const ref = React.createRef<IOGridApi<Row>>();
     const Wrapper = () => {
@@ -314,6 +338,30 @@ describe('useOGrid', () => {
     render(<Wrapper />);
     const state = ref.current!.getColumnState();
     expect(state.columnOrder).toEqual(['name', 'id']);
+  });
+
+  it('setColumnOrder stores columnOrder internally when uncontrolled', () => {
+    const ref = React.createRef<IOGridApi<Row>>();
+    const Wrapper = () => {
+      useOGrid<Row>(
+        {
+          columns,
+          getRowId,
+          data,
+          defaultPageSize: 10,
+        },
+        ref
+      );
+      return null;
+    };
+    render(<Wrapper />);
+
+    act(() => {
+      ref.current!.setColumnOrder(['name', 'id']);
+    });
+
+    expect(ref.current!.getColumnOrder()).toEqual(['name', 'id']);
+    expect(ref.current!.getColumnState().columnOrder).toEqual(['name', 'id']);
   });
 
   it('onColumnResized callback is fired through dataGridProps', () => {

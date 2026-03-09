@@ -135,23 +135,24 @@ grid.on('cellValueChanged', ({ item, columnId, oldValue, newValue }) => {
   // save to backend
 });
 
-grid.on('selectionChange', ({ selectedRows }) => {
-  console.log(`${selectedRows.length} rows selected`);
-  updateActionBar(selectedRows);
+grid.on('selectionChange', ({ selectedItems, selectedRowIds }) => {
+  console.log(`${selectedItems.length} rows selected`);
+  updateActionBar(selectedItems, selectedRowIds);
 });
 
-grid.on('sortChange', ({ field, direction }) => {
-  console.log(`Sorted by ${field} ${direction}`);
+grid.on('sortChange', ({ sort }) => {
+  if (!sort) return;
+  console.log(`Sorted by ${sort.field} ${sort.direction}`);
 });
 ```
 
 | Event | Payload | When it fires |
 |-------|---------|---------------|
 | `cellValueChanged` | `{ item, columnId, oldValue, newValue }` | A cell edit is committed |
-| `sortChange` | `{ field, direction }` | User changes sort |
+| `sortChange` | `{ sort }` | User changes sort |
 | `filterChange` | `{ filters }` | User changes filters |
 | `pageChange` | `{ page }` | User navigates pages |
-| `selectionChange` | `{ selectedRows, selectedRowIds }` | Row selection changes |
+| `selectionChange` | `{ selectedItems, selectedRowIds }` | Row selection changes |
 
 ## Programmatic control
 
@@ -212,5 +213,5 @@ grid.destroy();
 ## What's next?
 
 - [JS API Reference](../api/js-api) — full method and options reference
-- [Features](../features/sorting) — all features work identically in the JS package
+- [Features](../features/sorting) — feature guides, with JS notes where behavior differs from framework packages
 - [Theming Guide](../guides/theming) — deep dive into CSS customization

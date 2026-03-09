@@ -315,7 +315,7 @@ const dataSource: IDataSource<Product> = {
 <OGrid dataSource={dataSource} columns={columns} getRowId={(r) => r.id} />
 ```
 
-All features work identically across React, Angular, Vue, and vanilla JS.
+Core features are shared across React, Angular, Vue, and vanilla JS, but browser-matrix coverage and a few UI surfaces still vary by package.
 
 ## Packages
 

@@ -151,7 +151,7 @@ Subscribe with `grid.on(eventName, handler)`.
 |-------|-------------|------------|
 | `cellValueChanged` | `ICellValueChangedEvent<T>` | A cell edit is committed |
 | `selectionChange` | `IRowSelectionChangeEvent<T>` | Row selection changes |
-| `sortChange` | `{ field: string; direction: 'asc' \| 'desc' }` | Sort state changes |
+| `sortChange` | `{ sort: { field: string; direction: 'asc' \| 'desc' } \| undefined }` | Sort state changes |
 | `filterChange` | `{ filters: IFilters }` | Filter state changes |
 | `pageChange` | `{ page: number }` | Current page changes |
 

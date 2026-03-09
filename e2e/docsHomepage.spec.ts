@@ -8,6 +8,9 @@ test('docs homepage hero grid stays clipped and edit height stays stable', async
   await page.goto(docsUrl, { waitUntil: 'networkidle' });
 
   const heroMetrics = await page.evaluate(() => {
+    const heroGridWrapper = document.querySelector('[class*="heroGridWrapper"]');
+    const heroGridChild = heroGridWrapper?.firstElementChild ?? null;
+    const heroGridGrandchild = heroGridChild?.firstElementChild ?? null;
     const heroInner = document.querySelector('[class*="heroInner"]');
     const heroRight = document.querySelector('[class*="heroRight"]');
     const tableWrapper = document.querySelector('[class*="tableWrapper"]');
@@ -23,12 +26,30 @@ test('docs homepage hero grid stays clipped and edit height stays stable', async
       };
     };
 
+    const radius = (element: Element | null) => {
+      if (!element) return 0;
+      return Number.parseFloat(getComputedStyle(element).borderTopLeftRadius) || 0;
+    };
+
+    const bottomGap = (outer: Element | null, inner: Element | null) => {
+      if (!outer || !inner) return null;
+      return Math.abs(outer.getBoundingClientRect().bottom - inner.getBoundingClientRect().bottom);
+    };
+
     return {
       viewportWidth: window.innerWidth,
       documentWidth: document.documentElement.scrollWidth,
+      heroGridWrapper: rect(heroGridWrapper),
+      heroGridChild: rect(heroGridChild),
+      heroGridGrandchild: rect(heroGridGrandchild),
       heroInner: rect(heroInner),
       heroRight: rect(heroRight),
       tableWrapper: rect(tableWrapper),
+      heroGridOverflow: heroGridWrapper ? getComputedStyle(heroGridWrapper).overflow : null,
+      heroGridRadius: radius(heroGridWrapper),
+      heroGridChildRadius: radius(heroGridChild),
+      heroGridChildBottomGap: bottomGap(heroGridWrapper, heroGridChild),
+      heroGridGrandchildBottomGap: bottomGap(heroGridWrapper, heroGridGrandchild),
     };
   });
 
@@ -36,6 +57,13 @@ test('docs homepage hero grid stays clipped and edit height stays stable', async
   expect(heroMetrics.heroRight?.x ?? 0).toBeGreaterThanOrEqual(0);
   expect((heroMetrics.heroRight?.x ?? 0) + (heroMetrics.heroRight?.width ?? 0)).toBeLessThanOrEqual(heroMetrics.viewportWidth);
   expect((heroMetrics.tableWrapper?.x ?? 0) + (heroMetrics.tableWrapper?.width ?? 0)).toBeLessThanOrEqual(heroMetrics.viewportWidth);
+  expect(heroMetrics.heroGridOverflow).toBe('hidden');
+  expect(heroMetrics.heroGridRadius).toBeGreaterThan(0);
+  expect(heroMetrics.heroGridChildRadius).toBeGreaterThan(0);
+  expect(heroMetrics.heroGridChildBottomGap ?? Number.POSITIVE_INFINITY).toBeLessThanOrEqual(2);
+  expect(heroMetrics.heroGridGrandchildBottomGap ?? Number.POSITIVE_INFINITY).toBeLessThanOrEqual(2);
+
+  await page.locator('button[title="Comfortable density"]').click();
 
   const editableCell = page.getByRole('gridcell', { name: /Product Manager|Backend Developer/i }).first();
   const before = await editableCell.boundingBox();
@@ -46,5 +74,6 @@ test('docs homepage hero grid stays clipped and edit height stays stable', async
 
   const after = await editableCell.boundingBox();
   expect(after).not.toBeNull();
+  expect(after?.width).toBe(before?.width);
   expect(after?.height).toBe(before?.height);
 });

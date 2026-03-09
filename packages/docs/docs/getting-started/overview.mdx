@@ -81,13 +81,13 @@ Each UI package is a thin shell (~1,500 lines) that calls the same core logic an
 | `@alaarab/ogrid-vue-vuetify` | Vuetify 3 | Vue + Material Design |
 | `@alaarab/ogrid-vue-primevue` | PrimeVue 4 | Vue + PrimeVue ecosystem |
 
-All packages within a framework export the same `OGrid` component with the same props. Switching UI libraries is a one-line import change  -  your column definitions, event handlers, data sources, and API calls stay identical.
+All packages within a framework export the same `OGrid` component with the same props. Switching UI libraries is a one-line import change  -  your column definitions, event handlers, data sources, and API calls stay identical within that framework family.
 
 ### Why This Matters
 
 - **Write once, render anywhere.** A bug fix or feature in core lands across all frameworks instantly.
 - **Zero lock-in.** Migrate between React, Angular, and Vue without rewriting business logic.
-- **Guaranteed parity.** Shared core ensures all packages behave identically.
+- **Shared core, aligned behavior.** Most behavior is implemented once in core, with package-specific docs and tests calling out the remaining differences.
 - **Small surface area.** No duplicated state logic to drift out of sync.
 
 ## Packages

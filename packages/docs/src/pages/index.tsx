@@ -188,11 +188,11 @@ function HeroGrid() {
         formulas
         cellReferences
         initialFormulas={[
-          { col: 5, row: 4, formula: '=SUM(F1:F4)' },
-          { col: 5, row: 5, formula: '=AVERAGE(F1:F4)' },
-          { col: 5, row: 6, formula: '=MAX(F1:F4)' },
-          { col: 5, row: 7, formula: '=MIN(F1:F4)' },
-          { col: 9, row: 4, formula: '=AVERAGE(J1:J4)' },
+          { col: 4, row: 4, formula: '=SUM(E1:E4)' },
+          { col: 4, row: 5, formula: '=AVERAGE(E1:E4)' },
+          { col: 4, row: 6, formula: '=MAX(E1:E4)' },
+          { col: 4, row: 7, formula: '=MIN(E1:E4)' },
+          { col: 8, row: 4, formula: '=AVERAGE(I1:I4)' },
         ]}
       />
     </div>
