@@ -136,7 +136,7 @@ export default function LiveDataDemo() {
       },
     },
     {
-      columnId: 'sector', name: 'Sector', sortable: true, minWidth: 140,
+      columnId: 'sector', name: 'Sector', sortable: true, minWidth: 140, width: '100%',
       filterable: { type: 'multiSelect' as const },
     },
   ], [greenOrRed]);
