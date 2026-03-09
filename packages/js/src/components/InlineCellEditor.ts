@@ -104,6 +104,13 @@ export class InlineCellEditor<T> {
     return this.editingCell;
   }
 
+  cancelEdit(): boolean {
+    if (!this.editingCell) return false;
+    this.onCancel?.();
+    this.closeEditor();
+    return true;
+  }
+
   closeEditor(): void {
     this.scrollCleanup?.();
     this.scrollCleanup = null;
