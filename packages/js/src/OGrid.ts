@@ -788,7 +788,7 @@ export class OGrid<T> {
       headerFilterComponent: this.headerFilterComponent,
       filterConfigs: this.filterConfigs,
       setLoadingOverlay: (el: HTMLElement | null) => { this.loadingOverlay = el; },
-      handleCellClick: (rowIndex: number, colIndex: number) => this.handleCellClick(rowIndex, colIndex),
+      handleCellClick: (rowIndex: number, colIndex: number, shiftKey?: boolean) => this.handleCellClick(rowIndex, colIndex, shiftKey),
       handleCellMouseDown: (rowIndex: number, colIndex: number, e: MouseEvent) => this.handleCellMouseDown(rowIndex, colIndex, e),
       handleCellContextMenu: (rowIndex: number, colIndex: number, e: MouseEvent) => this.handleCellContextMenu(rowIndex, colIndex, e),
       startCellEdit: (rowId: RowId, columnId: string) => this.startCellEdit(rowId, columnId),
@@ -815,10 +815,19 @@ export class OGrid<T> {
     return new OGridRendering<T>(ctx);
   }
 
-  private handleCellClick(rowIndex: number, colIndex: number): void {
+  private handleCellClick(rowIndex: number, colIndex: number, shiftKey = false): void {
     if (!this.selectionState) return;
-    // setActiveCell also sets a single-cell selectionRange internally.
-    // The selectionChange subscription handles re-rendering.
+    if (shiftKey && this.selectionState.activeCell) {
+      const anchor = this.selectionState.activeCell;
+      this.selectionState.setActiveCell({ rowIndex, columnIndex: colIndex });
+      this.selectionState.setSelectionRange({
+        startRow: anchor.rowIndex,
+        startCol: anchor.columnIndex,
+        endRow: rowIndex,
+        endCol: colIndex,
+      });
+      return;
+    }
     this.selectionState.setActiveCell({ rowIndex, columnIndex: colIndex });
   }
 

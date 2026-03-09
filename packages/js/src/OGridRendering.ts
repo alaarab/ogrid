@@ -75,7 +75,7 @@ export interface OGridRenderingContext<T> {
   setLoadingOverlay: (el: HTMLElement | null) => void;
 
   // Callbacks back to OGrid
-  handleCellClick: (rowIndex: number, colIndex: number) => void;
+  handleCellClick: (rowIndex: number, colIndex: number, shiftKey?: boolean) => void;
   handleCellMouseDown: (rowIndex: number, colIndex: number, e: MouseEvent) => void;
   handleCellContextMenu: (rowIndex: number, colIndex: number, e: MouseEvent) => void;
   startCellEdit: (rowId: import('@alaarab/ogrid-core').RowId, columnId: string) => void;
@@ -137,7 +137,7 @@ export class OGridRendering<T> {
       cutRange: clipboardState?.cutRange ?? null,
       editingCell: cellEditor?.getEditingCell() ?? null,
       columnWidths,
-      onCellClick: selectionState ? (ce) => this.ctx.handleCellClick(ce.rowIndex, ce.colIndex) : undefined,
+      onCellClick: selectionState ? (ce) => this.ctx.handleCellClick(ce.rowIndex, ce.colIndex, !!ce.event?.shiftKey) : undefined,
       onCellMouseDown: selectionState ? (ce) => { if (ce.event) this.ctx.handleCellMouseDown(ce.rowIndex, ce.colIndex, ce.event); } : undefined,
       onCellDoubleClick: selectionState ? (ce) => { if (ce.rowId != null && ce.columnId) this.ctx.startCellEdit(ce.rowId, ce.columnId); } : undefined,
       onCellContextMenu: selectionState ? (ce) => { if (ce.event) this.ctx.handleCellContextMenu(ce.rowIndex, ce.colIndex, ce.event); } : undefined,
@@ -299,6 +299,7 @@ export class OGridRendering<T> {
         onRedo: () => undoRedoState?.redo(),
         onContextMenu: (x, y) => this.ctx.showContextMenu(x, y),
         onStartEdit: (rowId, columnId) => this.ctx.startCellEdit(rowId, columnId),
+        onCancelEdit: () => this.ctx.cellEditor?.cancelEdit() ?? false,
         clearClipboardRanges: () => clipboardState?.clearClipboardRanges(),
         onKeyDown: options.onKeyDown,
         onFillDown: fillHandleState ? () => fillHandleState.fillDown() : undefined,

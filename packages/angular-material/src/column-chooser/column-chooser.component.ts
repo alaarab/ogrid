@@ -14,6 +14,7 @@ import { BaseColumnChooserComponent } from '@alaarab/ogrid-angular';
       <button
         class="ogrid-column-chooser__trigger"
         (click)="toggle()"
+        (keydown.escape)="onEscape($event)"
         [attr.aria-expanded]="isOpen()"
         aria-haspopup="listbox"
       >
@@ -22,7 +23,7 @@ import { BaseColumnChooserComponent } from '@alaarab/ogrid-angular';
       </button>
 
       @if (isOpen()) {
-        <div class="ogrid-column-chooser__dropdown" (click)="$event.stopPropagation()">
+        <div class="ogrid-column-chooser__dropdown" (click)="$event.stopPropagation()" (keydown.escape)="onEscape($event)" tabindex="-1">
           <div class="ogrid-column-chooser__header">
             Select Columns ({{ visibleCount() }} of {{ totalCount() }})
           </div>
@@ -104,6 +105,13 @@ import { BaseColumnChooserComponent } from '@alaarab/ogrid-angular';
   },
 })
 export class ColumnChooserComponent extends BaseColumnChooserComponent {
+  onEscape(event: KeyboardEvent): void {
+    if (!this.isOpen()) return;
+    event.preventDefault();
+    event.stopPropagation();
+    this.isOpen.set(false);
+  }
+
   onDocumentClick(event: MouseEvent): void {
     const el = event.target as HTMLElement;
     if (!el.closest('ogrid-column-chooser')) {
