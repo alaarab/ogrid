@@ -78,6 +78,8 @@ interface IOGridBaseProps<T> {
   onColumnOrderChange?: (order: string[]) => void;
   /** Called when a column is resized by the user. */
   onColumnResized?: (columnId: string, width: number) => void;
+  /** Called when user requests autosize for a single column (with measured width). */
+  onAutosizeColumn?: (columnId: string, width: number) => void;
   /** Called when a column is pinned or unpinned. */
   onColumnPinned?: (columnId: string, pinned: 'left' | 'right' | null) => void;
   editable?: boolean;
@@ -157,8 +159,14 @@ interface IOGridBaseProps<T> {
   /** Virtual scrolling configuration. Set `enabled: true` with a fixed `rowHeight` to virtualize large datasets. */
   virtualScroll?: IVirtualScrollConfig;
 
-  /** Offload sort/filter to a Web Worker for large datasets. Falls back to sync when sort column has a custom compare. */
-  workerSort?: boolean;
+  /**
+   * Offload sort/filter to a Web Worker for large datasets.
+   * - `true`: always use worker sort
+   * - `'auto'`: use worker sort when data.length > 5000
+   * - `false` (default): use synchronous sort
+   * Falls back to sync when the sort column has a custom compare.
+   */
+  workerSort?: boolean | 'auto';
 
   /** Fixed row height in pixels. Overrides default row height (36px). */
   rowHeight?: number;
