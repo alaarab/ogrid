@@ -89,6 +89,7 @@ jobs:
       - name: Build required packages for browser smoke
         run: |
           npx turbo build \
+            --filter=@alaarab/ogrid-mcp \
             --filter=@alaarab/ogrid-core \
             --filter=@alaarab/ogrid-react \
             --filter=@alaarab/ogrid-react-radix \
