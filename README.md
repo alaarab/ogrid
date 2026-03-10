@@ -315,7 +315,7 @@ const dataSource: IDataSource<Product> = {
 <OGrid dataSource={dataSource} columns={columns} getRowId={(r) => r.id} />
 ```
 
-Core features are shared across React, Angular, Vue, and vanilla JS. Main CI now runs a browser smoke suite on every push, and the broader Playwright matrix tracks the remaining wrapper-specific drift.
+Core features are shared across React, Angular, Vue, and vanilla JS. Main CI now stays fast with lint plus a browser smoke suite on every push, while the heavier verification workflows are run manually when you want a full release-grade pass.
 
 ## Packages
 
@@ -418,7 +418,7 @@ See the [MCP guide](packages/docs/docs/guides/mcp.mdx) and [live testing bridge 
 | Vue | Vue Test Utils | ~768 |
 | Vanilla JS | Native DOM + jsdom | ~394 |
 
-Cross-package parity is driven by shared test factories: 8 factories per framework generate the common scenarios, and Playwright now covers a fast smoke gate on every push plus a full matrix across all 10 example apps.
+Cross-package parity is driven by shared test factories: 8 factories per framework generate the common scenarios, and Playwright now covers a fast smoke gate on every push plus a manual full matrix across all 10 example apps.
 
 ## Development
 
@@ -432,6 +432,11 @@ npm run lint                        # ESLint
 npm run test:e2e:smoke              # Browser merge gate (React Radix, Angular Material, Vue Vuetify, JS)
 npm run test:e2e:docs               # Built docs homepage verification
 npm run test:e2e:matrix             # Full browser matrix across all 10 example apps
+
+# GitHub Actions
+# CI                -> fast push/PR checks (lint + browser smoke)
+# Full Verification -> manual full build/test matrix before release or larger merges
+# Playwright Matrix -> manual browser parity pass across all 10 example apps
 
 # Storybook
 npm run storybook:react-fluent      # React Fluent UI    (port 6006)

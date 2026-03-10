@@ -9,7 +9,7 @@ description: What runs in browser CI today, what the smoke suite covers, and whi
 OGrid ships 10 UI packages, but not every browser check needs to run on every push. The browser contract is split into two layers:
 
 - `npm run test:e2e:smoke` is the fast merge gate that runs on every push and pull request in the main `CI` workflow.
-- The `Playwright Matrix` GitHub workflow runs the broader browser suite across all 10 example apps on a schedule and on demand.
+- The `Playwright Matrix` GitHub workflow runs the broader browser suite across all 10 example apps only when you dispatch it manually.
 
 ## Main CI smoke suite
 
@@ -37,7 +37,7 @@ This suite is the merge gate because it covers the shared spreadsheet contract t
 
 ## Full Playwright matrix
 
-The scheduled/manual browser workflow runs the main browser suite against every example app:
+The manual browser workflow runs the main browser suite against every example app:
 
 ```bash
 npm run test:e2e:matrix

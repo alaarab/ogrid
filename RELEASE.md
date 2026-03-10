@@ -20,6 +20,11 @@ If you need the broader browser pass before a publish, run:
 npm run test:e2e:matrix
 ```
 
+If you want GitHub-side confirmation before publishing, manually run these workflows against `main`:
+
+- `Full Verification` for the full multi-Node build/test pass
+- `Playwright Matrix` for the full browser parity pass
+
 ## 2. Confirm versions are in sync
 
 All 22 packages must share one version:

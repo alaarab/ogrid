@@ -1,9 +1,11 @@
 name: Playwright Matrix
 
 on:
-  schedule:
-    - cron: '0 9 * * *'
   workflow_dispatch:
+
+concurrency:
+  group: playwright-matrix-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   browser-matrix:
