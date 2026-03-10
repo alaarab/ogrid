@@ -10,6 +10,8 @@ import { connectGridToBridge } from '@alaarab/ogrid-mcp/bridge-client';
 
 const initialProjects = makeDemoProjects(75);
 const columns = makeDemoColumns<Project>();
+const enableCellReferences = typeof window !== 'undefined'
+  && new URLSearchParams(window.location.search).has('cellReferences');
 
 const lightTheme = createTheme({ palette: { mode: 'light' } });
 const darkTheme = createTheme({ palette: { mode: 'dark' } });
@@ -81,6 +83,7 @@ function App() {
           defaultPageSize={25}
           editable
           cellSelection
+          cellReferences={enableCellReferences}
           statusBar
           onCellValueChanged={onCellValueChanged}
         />

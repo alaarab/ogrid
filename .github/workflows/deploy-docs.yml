@@ -36,6 +36,12 @@ jobs:
       - name: Build docs
         run: npm run docs:build
 
+      - name: Install Playwright Chromium
+        run: npx playwright install --with-deps chromium
+
+      - name: Verify docs homepage
+        run: npm run test:e2e:docs
+
       - name: Setup Pages
         uses: actions/configure-pages@v5
 

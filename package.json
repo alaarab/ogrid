@@ -61,6 +61,7 @@
     "size": "size-limit",
     "lint": "eslint .",
     "test:e2e": "npx playwright test",
+    "test:e2e:docs": "npx playwright test --config=playwright.docs.config.ts",
     "test:e2e:smoke": "npx playwright test e2e/liveSmoke.spec.ts",
     "audit:visual": "OGRID_VISUAL_AUDIT=1 npx playwright test e2e/visualAudit.spec.ts",
     "test:consumer:angular": "npm run build -w @alaarab/ogrid-core && npm run build:angular-family && node scripts/angular-consumer-smoke.mjs",
