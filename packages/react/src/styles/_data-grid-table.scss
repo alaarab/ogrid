@@ -119,6 +119,10 @@
   tr td:first-child {
     border-left: none;
   }
+
+  tbody td {
+    user-select: none;
+  }
 }
 
 // ---- Column group headers ----
@@ -440,6 +444,7 @@
   justify-content: center;
   width: 100%;
   font-variant-numeric: tabular-nums;
+  user-select: none;
 }
 
 // ---- Column letter row (cell references) ----

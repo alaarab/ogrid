@@ -473,9 +473,9 @@
   background: var(--ifm-background-surface-color);
   border-radius: 12px;
   overflow: hidden;
-  border: 1px solid rgba(0, 0, 0, 0.15);
+  border: 1px solid rgba(0, 0, 0, 0.22);
   box-shadow:
-    0 0 0 1px rgba(58, 184, 118, 0.06),
+    0 0 0 1px rgba(58, 184, 118, 0.08),
     0 24px 80px rgba(0, 0, 0, 0.35),
     0 4px 12px rgba(0, 0, 0, 0.15);
   contain: layout style;
@@ -601,17 +601,17 @@
    ══════════════════════════════════════════════════════════ */
 
 .codeSection {
-  padding: 8rem 3rem;
+  padding: 6rem 3rem 5rem;
   max-width: 1200px;
   margin: 0 auto;
 
   @media (max-width: 768px) {
-    padding: 5rem 1.5rem;
+    padding: 4.5rem 1.5rem 4rem;
   }
 }
 
 .codeSectionInner {
-  margin-bottom: 3.5rem;
+  margin-bottom: 2.5rem;
 }
 
 .codeSectionLabel {
@@ -774,12 +774,18 @@
 }
 
 .codeWindowBody {
+  overflow: hidden;
+
+  :global(.theme-code-block) {
+    margin-bottom: 0 !important;
+  }
+
   :global(.prism-code),
   pre {
     margin: 0 !important;
     border-radius: 0 !important;
     border: none !important;
-    padding-bottom: 0.5rem !important;
+    padding-bottom: 0 !important;
     /* Light mode: warm off-white gradient */
     background: linear-gradient(
       160deg,
@@ -853,15 +859,11 @@
 /* The bento grid - asymmetric layout */
 .bentoGrid {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: 1.35fr 1fr;
   grid-template-rows: auto;
   gap: 1rem;
 
   @media (max-width: 900px) {
-    grid-template-columns: 1fr 1fr;
-  }
-
-  @media (max-width: 560px) {
     grid-template-columns: 1fr;
   }
 }
@@ -1377,7 +1379,7 @@
    ══════════════════════════════════════════════════════════ */
 
 .liveDataSection {
-  padding: 6rem 0;
+  padding: 4.5rem 0 5rem;
   background: var(--ifm-background-surface-color);
   position: relative;
   overflow: hidden;
@@ -1391,7 +1393,7 @@
 
 .liveDataHeader {
   text-align: center;
-  margin-bottom: 3rem;
+  margin-bottom: 2.25rem;
 }
 
 .liveDataLabel {
@@ -1425,14 +1427,14 @@
    ══════════════════════════════════════════════════════════ */
 
 .ctaSection {
-  padding: 10rem 3rem;
+  padding: 8rem 3rem;
   text-align: center;
   position: relative;
   overflow: hidden;
-  background: linear-gradient(180deg, var(--ifm-background-color) 0%, #1a2e24 100%);
+  background: linear-gradient(180deg, #f7faf8 0%, #edf4ef 54%, #e5eee8 100%);
 
   @media (max-width: 768px) {
-    padding: 6rem 1.5rem;
+    padding: 5rem 1.5rem;
   }
 }
 
@@ -1444,9 +1446,9 @@
   position: absolute;
   inset: 0;
   background:
-    radial-gradient(ellipse 50% 60% at 50% 40%, rgba(33, 115, 70, 0.12) 0%, transparent 70%),
-    radial-gradient(ellipse 35% 45% at 5% 90%, rgba(0, 102, 204, 0.06) 0%, transparent 55%),
-    radial-gradient(ellipse 35% 45% at 95% 10%, rgba(139, 92, 246, 0.06) 0%, transparent 55%);
+    radial-gradient(ellipse 46% 54% at 50% 34%, rgba(33, 115, 70, 0.09) 0%, transparent 68%),
+    radial-gradient(ellipse 30% 40% at 8% 88%, rgba(77, 159, 236, 0.08) 0%, transparent 52%),
+    radial-gradient(ellipse 28% 36% at 92% 14%, rgba(241, 179, 84, 0.08) 0%, transparent 50%);
   pointer-events: none;
 }
 
@@ -1470,17 +1472,17 @@
   letter-spacing: -0.06em;
   line-height: 1.0;
   margin: 0 0 1.25rem;
-  color: #fff;
+  color: #162019;
 }
 
 /* Light mode: keep readable */
 :global(:root) .ctaTitle {
-  color: #fff;
+  color: #162019;
 }
 
 .ctaSub {
   font-size: 1.1rem;
-  color: rgba(255, 255, 255, 0.6);
+  color: rgba(22, 32, 25, 0.72);
   line-height: 1.65;
   margin: 0 0 3rem;
 }
@@ -1501,8 +1503,8 @@
 }
 
 .ctaFrameworkCard {
-  background: rgba(255, 255, 255, 0.06);
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.7);
+  border: 1px solid rgba(22, 32, 25, 0.08);
   border-radius: 12px;
   padding: 1.25rem 0.85rem;
   backdrop-filter: blur(12px);
@@ -1513,19 +1515,21 @@
   transition: border-color 0.25s, transform 0.25s, box-shadow 0.25s, background 0.25s;
 
   &:hover {
-    border-color: rgba(58, 184, 118, 0.4);
+    border-color: rgba(33, 115, 70, 0.28);
     transform: translateY(-3px);
-    background: rgba(255, 255, 255, 0.09);
+    background: rgba(255, 255, 255, 0.92);
     box-shadow:
-      0 0 20px rgba(58, 184, 118, 0.12),
-      0 8px 32px rgba(0, 0, 0, 0.15);
+      0 10px 30px rgba(17, 31, 24, 0.08),
+      0 0 0 1px rgba(33, 115, 70, 0.08);
   }
 }
 
 .ctaFrameworkCardActive {
-  border-color: rgba(58, 184, 118, 0.6);
-  background: rgba(58, 184, 118, 0.12);
-  box-shadow: 0 0 24px rgba(58, 184, 118, 0.15);
+  border-color: rgba(33, 115, 70, 0.35);
+  background: rgba(246, 251, 248, 0.96);
+  box-shadow:
+    0 12px 34px rgba(17, 31, 24, 0.08),
+    0 0 0 1px rgba(33, 115, 70, 0.12);
 }
 
 [data-theme='dark'] .ctaFrameworkCard {
@@ -1557,23 +1561,23 @@
   font-size: 0.78rem;
   font-weight: 600;
   font-family: inherit;
-  color: rgba(255, 255, 255, 0.6);
-  background: rgba(255, 255, 255, 0.04);
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: rgba(22, 32, 25, 0.7);
+  background: rgba(255, 255, 255, 0.72);
+  border: 1px solid rgba(22, 32, 25, 0.08);
   border-radius: 8px;
   cursor: pointer;
   transition: all 0.2s;
 
   &:hover {
-    color: rgba(255, 255, 255, 0.9);
-    border-color: rgba(255, 255, 255, 0.2);
+    color: rgba(22, 32, 25, 0.92);
+    border-color: rgba(33, 115, 70, 0.22);
   }
 }
 
 .ctaUiKitBtnActive {
-  color: #fff;
-  background: rgba(58, 184, 118, 0.15);
-  border-color: rgba(58, 184, 118, 0.5);
+  color: #165a38;
+  background: rgba(226, 243, 233, 0.98);
+  border-color: rgba(33, 115, 70, 0.28);
 }
 
 .ctaFrameworkName {
@@ -1581,12 +1585,12 @@
   font-weight: 800;
   letter-spacing: -0.02em;
   margin-bottom: 0.25rem;
-  color: #fff;
+  color: #162019;
 }
 
 .ctaFrameworkDetail {
   font-size: 0.68rem;
-  color: rgba(255, 255, 255, 0.5);
+  color: rgba(22, 32, 25, 0.52);
   margin-bottom: 0.35rem;
   line-height: 1.4;
 }
@@ -1607,13 +1611,13 @@
   margin-top: 2rem;
 
   .btnGhost {
-    color: rgba(255, 255, 255, 0.8);
-    border-color: rgba(255, 255, 255, 0.15);
+    color: rgba(22, 32, 25, 0.82);
+    border-color: rgba(22, 32, 25, 0.12);
 
     &:hover {
-      color: #fff;
-      border-color: rgba(58, 184, 118, 0.5);
-      background: rgba(58, 184, 118, 0.08);
+      color: #162019;
+      border-color: rgba(33, 115, 70, 0.28);
+      background: rgba(33, 115, 70, 0.06);
     }
   }
 }
@@ -1681,12 +1685,12 @@
 
   /* Override install widget colors for dark CTA background */
   .heroInstall {
-    background: rgba(255, 255, 255, 0.06);
-    border-color: rgba(255, 255, 255, 0.12);
+    background: rgba(255, 255, 255, 0.82);
+    border-color: rgba(22, 32, 25, 0.08);
   }
 
   .heroInstallText {
-    color: rgba(255, 255, 255, 0.85);
+    color: rgba(22, 32, 25, 0.88);
   }
 }
 
@@ -1753,6 +1757,155 @@
     transparent 50%,
     rgba(255, 255, 255, 0.015) 100%
   );
+}
+
+.bentoCardProof {
+  min-height: 250px;
+  display: flex;
+  flex-direction: column;
+}
+
+.bentoFeatureList {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.7rem;
+  margin-top: auto;
+}
+
+.bentoFeaturePill {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.55rem 0.8rem;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.74);
+  border: 1px solid rgba(22, 32, 25, 0.08);
+  color: rgba(22, 32, 25, 0.84);
+  font-size: 0.8rem;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+
+[data-theme='dark'] .bentoFeaturePill {
+  background: rgba(255, 255, 255, 0.06);
+  border-color: rgba(255, 255, 255, 0.08);
+  color: rgba(255, 255, 255, 0.82);
+}
+
+.bentoFrameworkBands {
+  display: grid;
+  gap: 0.65rem;
+  margin-top: auto;
+}
+
+.bentoFrameworkBand {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.bentoFrameworkBand span {
+  display: inline-flex;
+  align-items: center;
+  min-height: 30px;
+  padding: 0.35rem 0.7rem;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.74);
+  border: 1px solid rgba(22, 32, 25, 0.08);
+  color: rgba(22, 32, 25, 0.8);
+  font-size: 0.77rem;
+  font-weight: 600;
+}
+
+.bentoFrameworkBand span:first-child {
+  background: rgba(33, 115, 70, 0.1);
+  border-color: rgba(33, 115, 70, 0.16);
+  color: #1b5f39;
+}
+
+[data-theme='dark'] .bentoFrameworkBand span {
+  background: rgba(255, 255, 255, 0.06);
+  border-color: rgba(255, 255, 255, 0.08);
+  color: rgba(255, 255, 255, 0.82);
+}
+
+[data-theme='dark'] .bentoFrameworkBand span:first-child {
+  background: rgba(58, 184, 118, 0.12);
+  border-color: rgba(58, 184, 118, 0.2);
+  color: #85d7aa;
+}
+
+.bentoCommandGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.7rem;
+  margin-top: auto;
+
+  @media (max-width: 640px) {
+    grid-template-columns: 1fr;
+  }
+}
+
+.bentoCommandCard {
+  padding: 0.85rem 0.95rem;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.82);
+  border: 1px solid rgba(22, 32, 25, 0.08);
+  color: rgba(22, 32, 25, 0.82);
+  font-size: 0.84rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  text-align: left;
+}
+
+[data-theme='dark'] .bentoCommandCard {
+  background: rgba(255, 255, 255, 0.05);
+  border-color: rgba(255, 255, 255, 0.08);
+  color: rgba(255, 255, 255, 0.84);
+}
+
+.bentoMetricRow {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.75rem;
+  margin-top: auto;
+}
+
+.bentoMetricRow div {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  padding: 0.9rem 0.75rem;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.76);
+  border: 1px solid rgba(22, 32, 25, 0.08);
+}
+
+.bentoMetricRow strong {
+  font-size: 1.25rem;
+  line-height: 1;
+  color: var(--ifm-font-color-base);
+}
+
+.bentoMetricRow span {
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: rgba(22, 32, 25, 0.55);
+}
+
+[data-theme='dark'] .bentoMetricRow div {
+  background: rgba(255, 255, 255, 0.05);
+  border-color: rgba(255, 255, 255, 0.08);
+}
+
+[data-theme='dark'] .bentoMetricRow strong {
+  color: rgba(255, 255, 255, 0.9);
+}
+
+[data-theme='dark'] .bentoMetricRow span {
+  color: rgba(255, 255, 255, 0.56);
 }
 
 /* ── Scroll-triggered section reveals ── */

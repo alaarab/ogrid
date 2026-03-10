@@ -100,6 +100,7 @@
   border-right: 1px solid var(--colorNeutralStroke1, #c4c4c4);
   position: relative;
   border-bottom: 1px solid var(--ogrid-border, rgba(0, 0, 0, 0.12));
+  user-select: none;
 
   /* Prevent long unbroken content from forcing intrinsic widths / overlap */
   > * {
@@ -179,6 +180,7 @@
   font-weight: 600;
   color: var(--colorNeutralForeground3, #666);
   border-right: 1px solid var(--ogrid-border, rgba(0, 0, 0, 0.12));
+  user-select: none;
 }
 
 // Selected row highlight

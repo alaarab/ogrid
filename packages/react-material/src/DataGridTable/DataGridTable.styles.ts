@@ -11,7 +11,7 @@ const STYLES = `
 .ogrid-mat-row--selected > td { background-color: var(--ogrid-selection-bg, rgba(25, 118, 210, 0.08)); }
 .ogrid-mat-row--selected > td.ogrid-mat-row-number { background-color: var(--ogrid-header-bg, #f5f5f5); }
 
-.ogrid-mat-td { position: relative; padding: 0; height: 1px; border-bottom: 1px solid var(--ogrid-border, rgba(224,224,224,1)); }
+.ogrid-mat-td { position: relative; padding: 0; height: 1px; border-bottom: 1px solid var(--ogrid-border, rgba(224,224,224,1)); user-select: none; }
 .ogrid-mat-td--pinned-left { position: sticky; left: 0; z-index: var(--ogrid-z-pinned, 6); background-color: var(--ogrid-paper-bg, #fff); will-change: transform; border-right: 1px solid var(--ogrid-border, rgba(224,224,224,1)); box-shadow: 2px 0 4px -1px rgba(0,0,0,0.1); }
 .ogrid-mat-td--pinned-right { position: sticky; right: 0; z-index: var(--ogrid-z-pinned, 6); background-color: var(--ogrid-paper-bg, #fff); will-change: transform; border-left: 1px solid var(--ogrid-border, rgba(224,224,224,1)); box-shadow: -2px 0 4px -1px rgba(0,0,0,0.1); }
 
@@ -40,7 +40,7 @@ table:not([data-virtual-scroll]) .ogrid-mat-tbody tr { content-visibility: auto;
 
 .ogrid-mat-checkbox-wrapper { display: flex; align-items: center; justify-content: center; }
 
-.ogrid-mat-row-number { text-align: center; font-weight: 600; font-variant-numeric: tabular-nums; color: var(--ogrid-fg-secondary); background-color: var(--ogrid-hover-bg); position: sticky; z-index: var(--ogrid-z-row-number, 5); }
+.ogrid-mat-row-number { text-align: center; font-weight: 600; font-variant-numeric: tabular-nums; color: var(--ogrid-fg-secondary); background-color: var(--ogrid-hover-bg); position: sticky; z-index: var(--ogrid-z-row-number, 5); user-select: none; }
 
 .ogrid-mat-tbody tr:last-child > td { border-bottom: none; }
 

@@ -303,6 +303,7 @@ export {
   UndoRedoStack,
   indexToColumnLetter,
   formatCellReference,
+  getGridCellSurfaceState,
   handleBooleanCellPointerDown,
 } from './utils';
 export type {
@@ -321,6 +322,8 @@ export type {
   ParseValueResult,
   AggregationResult,
   GridRowComparatorProps,
+  GridCellSurfaceState,
+  GetGridCellSurfaceStateParams,
   IColumnHeaderMenuItem,
   ColumnHeaderMenuInput,
   ColumnHeaderMenuHandlers,
