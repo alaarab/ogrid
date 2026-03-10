@@ -1,8 +1,8 @@
 /**
  * Date Format E2E Tests
  *
- * Tests the configurable date format feature across all frameworks.
- * Verifies that dates display and edit in the configured format.
+ * Tests the configurable date format feature across the framework examples
+ * that currently participate in date-editor browser coverage.
  */
 
 import { test, expect } from '@playwright/test';
@@ -10,7 +10,7 @@ import { enterDateCellEdit, getCellContent, getColumnTexts, waitForGrid } from '
 
 test.describe('Date Format Feature (E2E)', () => {
   test.beforeEach(async ({ page }, testInfo) => {
-    const supportedProjects = ['react-radix', 'vue-vuetify', 'vue-radix', 'js'];
+    const supportedProjects = ['react-radix', 'angular-material', 'vue-vuetify', 'vue-radix', 'js'];
     if (!supportedProjects.includes(testInfo.project.name)) {
       test.skip(`Date format coverage currently covers ${supportedProjects.join(', ')} only.`);
     }

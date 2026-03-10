@@ -1,9 +1,8 @@
 import { Injectable, signal, computed, effect, DestroyRef, inject, NgZone } from '@angular/core';
 import {
   getDataGridStatusBarConfig,
-  parseValue,
+  applyFillValues,
   computeAggregations,
-  getCellValue,
   normalizeSelectionRange,
 } from '@alaarab/ogrid-core';
 import type {
@@ -887,23 +886,20 @@ export class DataGridStateService<T> {
       const onCellValueChanged = this.wrappedOnCellValueChanged();
 
       if (startItem && startColDef && onCellValueChanged) {
-        const startValue = getCellValue(startItem, startColDef as ICoreColumnDef<T>);
-        this.beginBatch();
-        for (let row = norm.startRow; row <= norm.endRow; row++) {
-          for (let col = norm.startCol; col <= norm.endCol; col++) {
-            if (row === fillStart.startRow && col === fillStart.startCol) continue;
-            if (row >= items.length || col >= visibleCols.length) continue;
-            const item = items[row];
-            const colDef = visibleCols[col];
-            const colEditable = colDef.editable === true || (typeof colDef.editable === 'function' && colDef.editable(item));
-            if (!colEditable) continue;
-            const oldValue = getCellValue(item, colDef);
-            const result = parseValue(startValue, oldValue, item, colDef);
-            if (!result.valid) continue;
-            onCellValueChanged({ item, columnId: colDef.columnId, oldValue, newValue: result.value, rowIndex: row });
+        const fillEvents = applyFillValues(
+          norm,
+          fillStart.startRow,
+          fillStart.startCol,
+          items,
+          visibleCols as ICoreColumnDef<T>[],
+        );
+        if (fillEvents.length > 0) {
+          this.beginBatch();
+          for (const event of fillEvents) {
+            onCellValueChanged(event);
           }
+          this.endBatch();
         }
-        this.endBatch();
       }
       this.interactionHelper.fillDragStart = null;
     };

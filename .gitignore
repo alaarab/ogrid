@@ -19,6 +19,10 @@ packages/docs/build
 
 # AI context / internal docs — not for public repo
 .claude/
+.codex-*
+AGENTS.md
 CLAUDE.md
+CLAUDE-*.md
+FINDINGS.md
 KNOWLEDGE.md
 LEARNINGS.md

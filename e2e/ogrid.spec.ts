@@ -1,10 +1,12 @@
 /**
  * OGrid E2E test suite.
  *
- * Runs the same tests against every framework example app (React Radix,
- * Angular Material, Vue Vuetify, Vanilla JS).  Each app renders a shared demo
- * projects with sorting, filtering, pagination, cell editing, cell selection,
- * and a status bar.
+ * Runs the shared grid-journey suite against the representative example apps
+ * in the main Playwright matrix: React Fluent, React Material, React Radix,
+ * Angular Material, Vue Radix, Vue Vuetify, and Vanilla JS.
+ *
+ * Each app renders the same demo data set with sorting, filtering, pagination,
+ * cell editing, cell selection, and a status bar.
  *
  * Columns: Project Name | Status | Owner | Department | Budget | Start Date
  * Page size: shared example config  |  Total rows: shared example config
@@ -574,6 +576,65 @@ test.describe('Range selection', () => {
 
     await cell10.click({ modifiers: ['Shift'] });
     await expect.poll(async () => page.locator('[data-in-range="true"]').count()).toBe(2);
+  });
+});
+
+test.describe('Selection seam regressions', () => {
+  test.beforeEach(async ({ page }, testInfo) => {
+    test.skip(
+      !['react-fluent', 'react-material', 'react-radix'].includes(testInfo.project.name),
+      'Seam regression coverage is currently scoped to React wrappers.',
+    );
+    await page.goto('/?cellReferences=1');
+    await waitForGrid(page);
+  });
+
+  test('dragging from the row-number seam does not select row-number text', async ({ page }) => {
+    const activeCell = page.locator('tbody tr:nth-child(1) td[data-column-id="name"] > div').first();
+    const startCell = page.locator('tbody tr:nth-child(1) td').first();
+    const endCell = page.locator('tbody tr:nth-child(3) td').first();
+
+    await activeCell.click();
+    await page.evaluate(() => window.getSelection()?.removeAllRanges());
+
+    const startBox = await startCell.boundingBox();
+    const endBox = await endCell.boundingBox();
+    if (!startBox || !endBox) {
+      throw new Error('Expected row-number cells to have bounding boxes.');
+    }
+
+    const seamX = startBox.x + startBox.width - 1;
+    await page.mouse.move(seamX, startBox.y + startBox.height / 2);
+    await page.mouse.down();
+    await page.mouse.move(seamX, endBox.y + endBox.height / 2, { steps: 8 });
+    await page.mouse.up();
+
+    await expect.poll(async () => page.evaluate(() => window.getSelection()?.toString() ?? '')).toBe('');
+    await expect(activeCell).toHaveAttribute('tabindex', '0');
+  });
+
+  test('dragging from the column-letter seam does not select header text', async ({ page }) => {
+    const activeCell = page.locator('tbody tr:nth-child(1) td[data-column-id="name"] > div').first();
+    const startHeader = page.locator('thead tr').first().locator('th').nth(1);
+    const endHeader = page.locator('thead tr').first().locator('th').nth(3);
+
+    await activeCell.click();
+    await page.evaluate(() => window.getSelection()?.removeAllRanges());
+
+    const startBox = await startHeader.boundingBox();
+    const endBox = await endHeader.boundingBox();
+    if (!startBox || !endBox) {
+      throw new Error('Expected column-letter header cells to have bounding boxes.');
+    }
+
+    const seamY = startBox.y + startBox.height - 1;
+    await page.mouse.move(startBox.x + startBox.width / 2, seamY);
+    await page.mouse.down();
+    await page.mouse.move(endBox.x + endBox.width / 2, seamY, { steps: 8 });
+    await page.mouse.up();
+
+    await expect.poll(async () => page.evaluate(() => window.getSelection()?.toString() ?? '')).toBe('');
+    await expect(activeCell).toHaveAttribute('tabindex', '0');
   });
 });
 
