@@ -18,10 +18,13 @@ import type { IOGridProps } from '@alaarab/ogrid-vue-primevue';
 import { connectGridToBridge } from '@alaarab/ogrid-mcp/bridge-client';
 import type { BridgeConnection } from '@alaarab/ogrid-mcp/bridge-client';
 import { makeDemoProjects, makeDemoColumns, getRowId } from '../shared/demoData';
+import { shouldEnableCellReferences } from '../shared/queryFlags';
 import type { Project } from '../shared/demoData';
 
 const projects = ref(makeDemoProjects(75));
 const columns = makeDemoColumns<Project>();
+const enableCellReferences = typeof window !== 'undefined'
+  && shouldEnableCellReferences(window.location.search);
 
 const updateProjectCell = (rowId: string, columnId: string, newValue: unknown) => {
   projects.value = projects.value.map((row) =>
@@ -37,6 +40,7 @@ const gridProps = computed<IOGridProps<Project>>(() => ({
   defaultPageSize: 25,
   editable: true,
   cellSelection: true,
+  cellReferences: enableCellReferences,
   statusBar: true,
   onCellValueChanged: (e) => updateProjectCell(e.item.id, e.columnId, e.newValue),
 }));

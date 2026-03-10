@@ -100,6 +100,9 @@ import { PopoverCellEditorComponent } from './popover-cell-editor.component';
                           [style.width.px]="getRowNumberWidth()"
                           [style.min-width.px]="getRowNumberWidth()"
                           [style.max-width.px]="getRowNumberWidth()"
+                          (pointerdown)="onNonDataSurfacePointerDown($event)"
+                          (mousedown)="onNonDataSurfacePointerDown($event)"
+                          (selectstart)="onNonDataSurfaceSelectStart($event)"
                         >
                           <div class="ogrid-row-number-header-content">#</div>
                           <div class="ogrid-datagrid-resize-handle" role="separator" aria-label="Resize row numbers" (pointerdown)="onResizeRowNumber($event)" (dblclick)="$event.stopPropagation()"></div>
@@ -211,9 +214,13 @@ import { PopoverCellEditorComponent } from './popover-cell-editor.component';
                         }
                         @if (hasRowNumbersCol()) {
                           <td class="ogrid-datagrid-td ogrid-row-number-cell"
+                            style="user-select: none; -webkit-user-select: none;"
                             [style.width.px]="getRowNumberWidth()"
                             [style.min-width.px]="getRowNumberWidth()"
                             [style.max-width.px]="getRowNumberWidth()"
+                            (pointerdown)="onNonDataSurfacePointerDown($event)"
+                            (mousedown)="onNonDataSurfacePointerDown($event)"
+                            (selectstart)="onNonDataSurfaceSelectStart($event)"
                           >
                             <div class="ogrid-row-number-cell-content">
                               {{ rowNumberOffset() + rowIndex + 1 }}
@@ -226,6 +233,7 @@ import { PopoverCellEditorComponent } from './popover-cell-editor.component';
                         @for (colLayout of vsColumnLayouts(); track colLayout.col.columnId) {
                           <td
                             class="ogrid-datagrid-td"
+                            style="user-select: none; -webkit-user-select: none;"
                             [attr.data-column-id]="colLayout.col.columnId"
                             [class.ogrid-datagrid-td--pinned-left]="colLayout.pinnedLeft"
                             [class.ogrid-datagrid-td--pinned-right]="colLayout.pinnedRight"
@@ -234,6 +242,9 @@ import { PopoverCellEditorComponent } from './popover-cell-editor.component';
                             [style.maxWidth.px]="colLayout.width"
                             [style.left.px]="colLayout.pinnedLeft ? getPinnedLeftOffset(colLayout.col.columnId) : null"
                             [style.right.px]="colLayout.pinnedRight ? getPinnedRightOffset(colLayout.col.columnId) : null"
+                            (pointerdown)="onNonDataSurfacePointerDown($event)"
+                            (mousedown)="onNonDataSurfacePointerDown($event)"
+                            (selectstart)="onNonDataSurfaceSelectStart($event)"
                           >
                             @let descriptor = getCellDescriptor(item, colLayout.col, rowIndex, getGlobalColIndex(colLayout.col));
                             @if (descriptor.mode === 'editing-inline') {
@@ -458,7 +469,7 @@ import { PopoverCellEditorComponent } from './popover-cell-editor.component';
       text-align: center;
       background: var(--ogrid-header-bg, rgba(0, 0, 0, 0.04)); font-weight: 600;
       font-variant-numeric: tabular-nums; color: var(--ogrid-fg-secondary, rgba(0, 0, 0, 0.6));
-      position: sticky; left: 0; z-index: 3;
+      position: sticky; left: 0; z-index: 3; user-select: none;
     }
     .ogrid-row-number-header { z-index: 4; }
     .ogrid-row-number-header-content, .ogrid-row-number-cell-content {

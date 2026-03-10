@@ -68,3 +68,41 @@ jobs:
 
       - name: Lint
         run: npm run lint
+
+  browser-smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Use Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build required packages for browser smoke
+        run: |
+          npx turbo build \
+            --filter=@alaarab/ogrid-core \
+            --filter=@alaarab/ogrid-react \
+            --filter=@alaarab/ogrid-react-radix \
+            --filter=@alaarab/ogrid-angular \
+            --filter=@alaarab/ogrid-angular-material \
+            --filter=@alaarab/ogrid-vue \
+            --filter=@alaarab/ogrid-vue-vuetify \
+            --filter=@alaarab/ogrid-js
+        env:
+          TURBO_TOKEN: ${{ secrets.TURBO_TOKEN }}
+          TURBO_TEAM: ${{ vars.TURBO_TEAM }}
+
+      - name: Install Playwright Chromium
+        run: npx playwright install --with-deps chromium
+
+      - name: Run browser smoke suite
+        run: npm run test:e2e:smoke

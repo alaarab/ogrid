@@ -101,6 +101,17 @@ export function createDataGridTable(ui: IDataGridTableUIBindings) {
 
       // Stable handlers  -  avoid creating new closures per render
       const onWrapperPointerdown = (e: PointerEvent) => { lastMouseShift.value = e.shiftKey; };
+      const preventSurfacePointerdown = (e: PointerEvent) => {
+        if (e.button !== 0) return;
+        e.preventDefault();
+      };
+      const preventSurfaceMousedown = (e: MouseEvent) => {
+        if (e.button !== 0) return;
+        e.preventDefault();
+      };
+      const preventSurfaceSelectstart = (e: Event) => {
+        e.preventDefault();
+      };
       const onContextmenu = (e: MouseEvent) => e.preventDefault();
       const stopPropagation = (e: MouseEvent) => e.stopPropagation();
 
@@ -482,8 +493,11 @@ export function createDataGridTable(ui: IDataGridTableUIBindings) {
                                 position: 'sticky',
                                 left: hasCheckboxCol ? `${CHECKBOX_COLUMN_WIDTH}px` : '0',
                                 zIndex: 3,
-                              },
-                            }, [
+                                },
+                                onPointerdown: preventSurfacePointerdown,
+                                onMousedown: preventSurfaceMousedown,
+                                onSelectstart: preventSurfaceSelectstart,
+                              }, [
                               '#',
                               h('div', {
                                 onPointerdown: (e: PointerEvent) => {
@@ -640,7 +654,12 @@ export function createDataGridTable(ui: IDataGridTableUIBindings) {
                                   position: 'sticky',
                                   left: hasCheckboxCol ? `${CHECKBOX_COLUMN_WIDTH}px` : '0',
                                   zIndex: 2,
+                                  userSelect: 'none',
+                                  WebkitUserSelect: 'none',
                                 },
+                                onPointerdown: preventSurfacePointerdown,
+                                onMousedown: preventSurfaceMousedown,
+                                onSelectstart: preventSurfaceSelectstart,
                               }, String(rowNumberOffset + rowIndex + 1));
                             })()] : []),
                             // Left spacer for column virtualization
@@ -653,7 +672,14 @@ export function createDataGridTable(ui: IDataGridTableUIBindings) {
                                 key: cl.col.columnId,
                                 'data-column-id': cl.col.columnId,
                                 class: cl.tdClasses,
-                                style: cl.tdDynamicStyle,
+                                style: {
+                                  ...cl.tdDynamicStyle,
+                                  userSelect: 'none',
+                                  WebkitUserSelect: 'none',
+                                },
+                                onPointerdown: preventSurfacePointerdown,
+                                onMousedown: preventSurfaceMousedown,
+                                onSelectstart: preventSurfaceSelectstart,
                               }, [renderCellContent(item, cl.col, rowIndex, colIndexMap.get(cl.col.columnId) ?? 0)])
                             ),
                             // Right spacer for column virtualization

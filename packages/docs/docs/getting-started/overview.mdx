@@ -85,7 +85,7 @@ All packages within a framework export the same `OGrid` component with the same 
 
 ### Why This Matters
 
-- **Shared core, broad portability.** A core fix often benefits every package, while wrapper-specific UI behavior is still verified and documented per package.
+- **Shared core, broad portability.** A core fix often benefits every package, while wrapper-specific UI behavior is verified in the browser matrix and documented per package.
 - **Zero lock-in.** Migrate between React, Angular, and Vue without rewriting business logic.
 - **Shared core, aligned behavior.** Most behavior is implemented once in core, with package-specific docs and tests calling out the remaining differences.
 - **Small surface area.** No duplicated state logic to drift out of sync.
@@ -145,6 +145,15 @@ All packages within a framework export the same `OGrid` component with the same 
 ## Coming from AG Grid?
 
 OGrid is designed as a drop-in replacement for AG Grid with a simpler, more React-idiomatic API. If you are migrating from AG Grid, see the [Migration Guide](../guides/migration-from-ag-grid).
+
+## Browser verification
+
+OGrid's browser checks now have an explicit contract:
+
+- A fast smoke suite runs on every push through the main CI workflow
+- The broader Playwright matrix runs across all 10 example apps on a schedule and on demand
+
+See the [Browser Support Matrix](../guides/browser-support-matrix) for the current coverage map and commands.
 
 ## Next Steps
 

@@ -2,6 +2,20 @@
 
 All notable changes to OGrid will be documented in this file.
 
+## [2.6.1] - 2026-03-10
+
+### Added
+
+- **Playwright browser smoke gate in main CI** - The main `CI` workflow now installs Chromium and runs `npm run test:e2e:smoke` on every push and pull request. The smoke suite covers render, sorting, filtering, and inline editing across React Radix, Angular Material, Vue Vuetify, and vanilla JS.
+- **Full Playwright matrix workflow** - New `Playwright Matrix` GitHub Actions workflow runs the shared browser suite across all 10 example apps on a schedule and via manual dispatch.
+- **Missing framework projects added to Playwright** - Angular Radix, Angular PrimeNG, and Vue PrimeVue now participate in the main Playwright config instead of living outside the browser harness.
+- **Browser support and release docs** - Added a docs page that explains smoke coverage versus full-matrix coverage, plus a root `RELEASE.md` that documents the publish rehearsal and release path.
+
+### Changed
+
+- **Browser verification contract is now explicit** - The repository now has dedicated commands for the main smoke gate (`npm run test:e2e:smoke`), the docs homepage check (`npm run test:e2e:docs`), and the full example-app matrix (`npm run test:e2e:matrix`).
+- **README and docs coverage claims updated** - Public and contributor-facing docs now describe the real browser verification split instead of treating browser coverage as an informal or package-by-package assumption.
+
 ## [2.5.8] - 2026-03-04
 
 ### Added

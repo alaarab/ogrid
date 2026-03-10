@@ -659,6 +659,15 @@ export abstract class BaseDataGridTableComponent<T = unknown> {
     this.state().interaction.handleCellMouseDown(event, rowIndex, globalColIndex);
   }
 
+  onNonDataSurfacePointerDown(event: Event & { button?: number }): void {
+    if (typeof event.button === 'number' && event.button !== 0) return;
+    event.preventDefault();
+  }
+
+  onNonDataSurfaceSelectStart(event: Event): void {
+    event.preventDefault();
+  }
+
   onCellClick(rowIndex: number, globalColIndex: number): void {
     this.state().interaction.setActiveCell?.({ rowIndex, columnIndex: globalColIndex });
   }

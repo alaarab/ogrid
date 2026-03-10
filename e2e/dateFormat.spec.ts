@@ -10,7 +10,16 @@ import { enterDateCellEdit, getCellContent, getColumnTexts, waitForGrid } from '
 
 test.describe('Date Format Feature (E2E)', () => {
   test.beforeEach(async ({ page }, testInfo) => {
-    const supportedProjects = ['react-radix', 'angular-material', 'vue-vuetify', 'vue-radix', 'js'];
+    const supportedProjects = [
+      'react-radix',
+      'angular-radix',
+      'angular-material',
+      'angular-primeng',
+      'vue-radix',
+      'vue-vuetify',
+      'vue-primevue',
+      'js',
+    ];
     if (!supportedProjects.includes(testInfo.project.name)) {
       test.skip(`Date format coverage currently covers ${supportedProjects.join(', ')} only.`);
     }
