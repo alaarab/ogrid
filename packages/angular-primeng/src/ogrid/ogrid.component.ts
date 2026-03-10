@@ -60,6 +60,7 @@ import { PaginationControlsComponent } from '../pagination-controls/pagination-c
         [onColumnOrderChange]="service.onColumnOrderChange()"
         [onColumnResized]="onColumnResizedFn"
         [onColumnPinned]="onColumnPinnedFn"
+        [pinnedColumns]="service.dataGridProps().pinnedColumns"
         [editable]="service.editable()"
         [cellSelection]="service.cellSelection()"
         [onCellValueChanged]="service.onCellValueChanged()"

@@ -181,6 +181,12 @@ export function getTextFilterInput(page: Page): Locator {
   if (isJS(page)) {
     return page.locator('.ogrid-header-filter-popover input[type="text"]').first();
   }
+  if (getFramework(page) === 'angular-primeng') {
+    return page.locator('input[placeholder*="Filter text"], input[aria-label^="Filter "]').first();
+  }
+  if (getFramework(page) === 'vue-primevue') {
+    return page.locator('input[placeholder*="Enter search term"], input[placeholder*="Search"]').first();
+  }
   return page.getByPlaceholder(/search|enter/i).first();
 }
 
@@ -223,14 +229,17 @@ export async function sortColumn(
     await expect(sortItem).toBeVisible({ timeout: 2000 });
     await sortItem.click();
   } else if (fw === 'angular-material') {
-    // Angular Material uses role="menuitem" for column menu items
-    const sortItem = page.getByRole('menuitem', { name: `Sort ${direction}` });
-    await expect(sortItem).toBeVisible({ timeout: 2000 });
-    await sortItem.click();
+    const sortItem = page.getByRole('menuitem', { name: `Sort ${direction}` }).first();
+    const buttonFallback = page.getByRole('button', { name: `Sort ${direction}` }).first();
+    const locator = await isVisible(sortItem) ? sortItem : buttonFallback;
+    await expect(locator).toBeVisible({ timeout: 2_000 });
+    await locator.click();
   } else {
-    const sortBtn = page.getByRole('button', { name: `Sort ${direction}` });
-    await expect(sortBtn).toBeVisible({ timeout: 2000 });
-    await sortBtn.click();
+    const sortBtn = page.getByRole('button', { name: `Sort ${direction}` }).first();
+    const sortMenuItem = page.getByRole('menuitem', { name: `Sort ${direction}` }).first();
+    const locator = await isVisible(sortBtn) ? sortBtn : sortMenuItem;
+    await expect(locator).toBeVisible({ timeout: 2_000 });
+    await locator.click();
   }
   await waitForAnyVisibleState(getColumnOptionsSurfaces(page), false);
   await waitForVisibleRowSignatureChange(page, beforeSignature);
@@ -272,6 +281,16 @@ export async function changePageSize(page: Page, size: number): Promise<void> {
     const selectWrapper = page.locator('.v-select').last();
     await selectWrapper.click();
     const option = page.getByRole('option', { name: String(size) });
+    await option.click();
+  } else if (fw === 'react-material') {
+    const select = page.getByRole('navigation', { name: /pagination/i }).getByRole('combobox').first();
+    await select.click();
+    const option = page.getByRole('option', { name: String(size) }).first();
+    await option.click();
+  } else if (fw === 'vue-primevue') {
+    const select = page.getByLabel(/rows per page/i).first();
+    await select.click();
+    const option = page.getByRole('option', { name: String(size) }).first();
     await option.click();
   } else {
     // React, Angular, JS: native <select> or combobox
@@ -327,7 +346,7 @@ export function getFilterPopover(page: Page): Locator {
     return page.locator('.ogrid-header-filter__popover').first();
   }
   if (getFramework(page) === 'angular-primeng') {
-    return page.locator('thead').getByText(/filter:/i).first();
+    return page.locator('ogrid-primeng-column-header-filter').filter({ hasText: /filter:/i }).first();
   }
   if (getFramework(page) === 'vue-radix') {
     return page.locator('.popover-header').first();
@@ -361,8 +380,8 @@ export async function clearFilter(page: Page): Promise<void> {
       await page.locator('.ogrid-filter-clear-sel-btn').first().click();
       await page.locator('.ogrid-filter-apply-btn').click();
     }
-  } else if (getFramework(page) === 'vue-vuetify') {
-    // Vue Vuetify: the filter popover resets the input to empty when reopened.
+  } else if (getFramework(page) === 'vue-vuetify' || getFramework(page) === 'vue-primevue') {
+    // Vue Vuetify/PrimeVue: the filter popover resets the input to empty when reopened.
     // The Clear button is disabled when input is empty, so Apply with empty input clears the filter.
     const clearBtn = page.getByRole('button', { name: /^clear$/i }).first();
     const isEnabled = await clearBtn.isEnabled({ timeout: 500 }).catch(() => false);
@@ -404,6 +423,8 @@ export async function closeColumnChooser(page: Page): Promise<void> {
   const fw = getFramework(page);
   if (fw === 'js' || fw === 'angular-radix') {
     await page.locator('button:has-text("Columns")').click();
+  } else if (fw === 'angular-primeng') {
+    await page.getByRole('button', { name: /column visibility/i }).click();
   } else if (fw === 'angular-material') {
     await page.locator('h1').first().click();
   } else {
@@ -519,6 +540,8 @@ export async function dismissContextMenu(page: Page): Promise<void> {
     } else {
       await page.keyboard.press('Escape');
     }
+  } else if (getFramework(page) === 'react-material') {
+    await page.keyboard.press('Escape');
   } else {
     await page.locator('h1').first().click();
   }
@@ -580,6 +603,10 @@ export function getResizeHandle(page: Page, columnName: string): Locator {
     const bySep = th.getByRole('separator');
     return bySep.first();
   }
+  if (fw === 'react-material') {
+    const th = page.locator('thead th').filter({ hasText: columnName }).first();
+    return th.locator(':scope > div').last();
+  }
   return page.getByRole('separator', { name: `Resize ${columnName}` });
 }
 
@@ -613,7 +640,7 @@ export function getContextMenuItem(page: Page, name: string | RegExp): Locator {
   if (getFramework(page) === 'vue-vuetify') {
     return page.getByRole('listitem').filter({ hasText: name }).first();
   }
-  if (getFramework(page) === 'vue-primevue') {
+  if (getFramework(page) === 'vue-primevue' || getFramework(page) === 'react-material') {
     return page.getByRole('menuitem').filter({ hasText: name }).first();
   }
   return page.getByRole('button', { name });
@@ -626,7 +653,7 @@ export function getContextMenuItem(page: Page, name: string | RegExp): Locator {
  */
 export async function scrollGridVertically(page: Page, scrollTop: number): Promise<void> {
   const fw = getFramework(page);
-  if (fw === 'vue-vuetify') {
+  if (fw === 'vue-vuetify' || fw === 'vue-primevue') {
     await page.evaluate((top) => { window.scrollTo(0, top); }, scrollTop);
   } else {
     const region = page.locator('[role="region"]').first();

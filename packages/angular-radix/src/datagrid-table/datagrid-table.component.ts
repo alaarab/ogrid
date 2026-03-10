@@ -428,6 +428,7 @@ import { PopoverCellEditorComponent } from './popover-cell-editor.component';
       position: sticky;
       left: 0;
       z-index: 9;
+      user-select: none;
     }
     .ogrid-datagrid-row-number-spacer {
       padding: 0;
@@ -442,6 +443,7 @@ import { PopoverCellEditorComponent } from './popover-cell-editor.component';
       position: sticky;
       left: 0;
       z-index: 6;
+      user-select: none;
     }
     /* Reveal column menu trigger on header hover without layout shift.
        The button always takes up space (visibility: hidden); shown when column is hovered. */
@@ -515,6 +517,9 @@ import { PopoverCellEditorComponent } from './popover-cell-editor.component';
                           [style.width.px]="getRowNumberWidth()"
                           [style.min-width.px]="getRowNumberWidth()"
                           [style.max-width.px]="getRowNumberWidth()"
+                          (pointerdown)="onNonDataSurfacePointerDown($event)"
+                          (mousedown)="onNonDataSurfacePointerDown($event)"
+                          (selectstart)="onNonDataSurfaceSelectStart($event)"
                         >
                           #
                           <div class="ogrid-datagrid-resize-handle" role="separator" aria-label="Resize row numbers" (pointerdown)="onResizeRowNumber($event)" (dblclick)="$event.stopPropagation()"></div>
@@ -627,9 +632,13 @@ import { PopoverCellEditorComponent } from './popover-cell-editor.component';
                         }
                         @if (hasRowNumbersCol()) {
                           <td class="ogrid-datagrid-td ogrid-datagrid-row-number-cell"
+                            style="user-select: none; -webkit-user-select: none;"
                             [style.width.px]="getRowNumberWidth()"
                             [style.min-width.px]="getRowNumberWidth()"
                             [style.max-width.px]="getRowNumberWidth()"
+                            (pointerdown)="onNonDataSurfacePointerDown($event)"
+                            (mousedown)="onNonDataSurfacePointerDown($event)"
+                            (selectstart)="onNonDataSurfaceSelectStart($event)"
                           >
                             {{ rowNumberOffset() + rowIndex + 1 }}
                           </td>
@@ -640,6 +649,7 @@ import { PopoverCellEditorComponent } from './popover-cell-editor.component';
                         @for (colLayout of vsColumnLayouts(); track colLayout.col.columnId) {
                           <td
                             class="ogrid-datagrid-td"
+                            style="user-select: none; -webkit-user-select: none;"
                             [attr.data-column-id]="colLayout.col.columnId"
                             [class.ogrid-datagrid-td--pinned-left]="colLayout.pinnedLeft"
                             [class.ogrid-datagrid-td--pinned-right]="colLayout.pinnedRight"
@@ -648,6 +658,9 @@ import { PopoverCellEditorComponent } from './popover-cell-editor.component';
                             [style.maxWidth.px]="colLayout.width"
                             [style.left.px]="colLayout.pinnedLeft ? getPinnedLeftOffset(colLayout.col.columnId) : null"
                             [style.right.px]="colLayout.pinnedRight ? getPinnedRightOffset(colLayout.col.columnId) : null"
+                            (pointerdown)="onNonDataSurfacePointerDown($event)"
+                            (mousedown)="onNonDataSurfacePointerDown($event)"
+                            (selectstart)="onNonDataSurfaceSelectStart($event)"
                           >
                             @let descriptor = getCellDescriptor(item, colLayout.col, rowIndex, getGlobalColIndex(colLayout.col));
                             @if (descriptor.mode === 'editing-inline') {

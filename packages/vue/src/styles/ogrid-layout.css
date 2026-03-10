@@ -207,6 +207,7 @@
   font-weight: 600;
   background-color: var(--ogrid-header-bg);
   color: var(--ogrid-fg-secondary);
+  user-select: none;
 }
 
 .ogrid-row-number-spacer {
@@ -219,6 +220,7 @@
   font-variant-numeric: tabular-nums;
   background-color: var(--ogrid-header-bg);
   color: var(--ogrid-fg-secondary);
+  user-select: none;
 }
 
 /* === Data cells === */

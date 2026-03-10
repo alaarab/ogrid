@@ -1,0 +1,73 @@
+---
+sidebar_position: 6
+title: Browser Support Matrix
+description: What runs in browser CI today, what the smoke suite covers, and which projects are in the full Playwright matrix
+---
+
+# Browser Support Matrix
+
+OGrid ships 10 UI packages, but not every browser check needs to run on every push. The browser contract is split into two layers:
+
+- `npm run test:e2e:smoke` is the fast merge gate that runs on every push and pull request in the main `CI` workflow.
+- The `Playwright Matrix` GitHub workflow runs the broader browser suite across all 10 example apps on a schedule and on demand.
+
+## Main CI smoke suite
+
+The merge gate is intentionally small. It covers the minimum set of user journeys that should fail the build immediately if they break:
+
+```bash
+npm run test:e2e:smoke
+```
+
+Projects in the smoke gate:
+
+- `react-radix`
+- `angular-material`
+- `vue-vuetify`
+- `js`
+
+Journeys covered by the smoke suite:
+
+- Grid renders with the shared demo columns and first page of rows
+- Sorting changes the visible row order
+- Text filtering narrows results and clearing the filter restores the page
+- Inline editing commits a new value
+
+This suite is the merge gate because it covers the shared spreadsheet contract through four different rendering stacks without turning every push into a full browser matrix run.
+
+## Full Playwright matrix
+
+The scheduled/manual browser workflow runs the main browser suite against every example app:
+
+```bash
+npm run test:e2e:matrix
+```
+
+| Framework package | Playwright project | Example port | Main CI smoke | Full matrix |
+|---|---|---:|---|---|
+| `@alaarab/ogrid-react-fluent` | `react-fluent` | 3001 | No | Yes |
+| `@alaarab/ogrid-react-material` | `react-material` | 3002 | No | Yes |
+| `@alaarab/ogrid-react-radix` | `react-radix` | 3003 | Yes | Yes |
+| `@alaarab/ogrid-angular-radix` | `angular-radix` | 3010 | No | Yes |
+| `@alaarab/ogrid-angular-material` | `angular-material` | 3011 | Yes | Yes |
+| `@alaarab/ogrid-angular-primeng` | `angular-primeng` | 3012 | No | Yes |
+| `@alaarab/ogrid-vue-radix` | `vue-radix` | 3020 | No | Yes |
+| `@alaarab/ogrid-vue-vuetify` | `vue-vuetify` | 3021 | Yes | Yes |
+| `@alaarab/ogrid-vue-primevue` | `vue-primevue` | 3022 | No | Yes |
+| `@alaarab/ogrid-js` | `js` | 3030 | Yes | Yes |
+
+## Docs homepage coverage
+
+The docs homepage is verified separately because it runs against the built Docusaurus site under the `/ogrid/` base path:
+
+```bash
+npm run test:e2e:docs
+```
+
+That check currently runs in the `Deploy Docs` workflow after `npm run docs:build`.
+
+## Interpreting failures
+
+- A smoke suite failure is a release-blocking regression for the shared grid contract.
+- A full-matrix failure means one wrapper or example app diverged from the documented behavior and should be audited before the next release.
+- A docs homepage failure means the public site or deployment assumptions changed.

@@ -6,11 +6,14 @@ import type { IOGridProps } from '@alaarab/ogrid-angular-radix';
 import { makeDemoProjects, makeDemoColumns, getRowId, handleCellValueChanged } from '../shared/demoData';
 import type { Project } from '../shared/demoData';
 import { createThemeToggle } from '../shared/themeToggle';
+import { shouldEnableCellReferences } from '../shared/queryFlags';
 import { connectGridToBridge } from '@alaarab/ogrid-mcp/bridge-client';
 import type { BridgeConnection } from '@alaarab/ogrid-mcp/bridge-client';
 
 const projects = makeDemoProjects(75);
 const columns = makeDemoColumns<Project>();
+const enableCellReferences = typeof window !== 'undefined'
+  && shouldEnableCellReferences(window.location.search);
 
 @Component({
   selector: 'app-root',
@@ -51,6 +54,7 @@ const columns = makeDemoColumns<Project>();
 export class AppComponent implements OnInit, OnDestroy {
   private bridge: BridgeConnection | null = null;
   private data = projects;
+  private pinnedColumns: Record<string, 'left' | 'right'> = {};
 
   gridProps: IOGridProps<Project> = {
     data: projects,
@@ -60,9 +64,22 @@ export class AppComponent implements OnInit, OnDestroy {
     defaultPageSize: 25,
     editable: true,
     cellSelection: true,
+    cellReferences: enableCellReferences,
+    pinnedColumns: this.pinnedColumns,
     statusBar: true,
     onCellValueChanged: (e) => handleCellValueChanged(projects, e),
+    onColumnPinned: (columnId, pinned) => this.handleColumnPinned(columnId, pinned),
   };
+
+  private handleColumnPinned(columnId: string, pinned: 'left' | 'right' | null) {
+    if (pinned) {
+      this.pinnedColumns = { ...this.pinnedColumns, [columnId]: pinned };
+    } else {
+      const { [columnId]: _, ...next } = this.pinnedColumns;
+      this.pinnedColumns = next;
+    }
+    this.gridProps = { ...this.gridProps, pinnedColumns: this.pinnedColumns };
+  }
 
   ngOnInit() {
     this.bridge = connectGridToBridge({

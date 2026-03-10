@@ -234,12 +234,16 @@ test.describe('MultiSelect filter', () => {
       // React/Angular/Vue: dialog or popover with checkboxes
       const popover = getFilterPopover(page);
       await expect(popover).toBeVisible({ timeout: 2000 });
-      // "Active" is first alphabetically  -  click first checkbox.
-      // Vue Vuetify uses input[type="checkbox"] with aria-label (no role="checkbox").
-      const activeCheckbox = (await popover.getByRole('checkbox').count()) > 0
-        ? popover.getByRole('checkbox').first()
-        : popover.locator('input[type="checkbox"]').first();
-      await activeCheckbox.click();
+      const activeLabel = popover.locator('label').filter({ hasText: /^Active$/i }).first();
+      if (await activeLabel.isVisible().catch(() => false)) {
+        await activeLabel.click();
+      } else {
+        // Vue Vuetify uses input[type="checkbox"] with aria-label (no role="checkbox").
+        const activeCheckbox = (await popover.getByRole('checkbox', { name: /active/i }).count()) > 0
+          ? popover.getByRole('checkbox', { name: /active/i }).first()
+          : popover.locator('input[type="checkbox"][aria-label*="Active" i], input[type="checkbox"]').first();
+        await activeCheckbox.click();
+      }
     }
 
     await applyFilter(page);
@@ -421,9 +425,9 @@ test.describe('Sticky header', () => {
 
     await scrollGridVertically(page, 500);
     await expect(thead).toBeVisible();
-    // Vue Vuetify uses page-level scroll  -  the header scrolls off-screen (box.y < 0)
-    // but the thead element is still attached to the DOM. Skip the y-position check.
-    if (getFramework(page) !== 'vue-vuetify') {
+    // Vue Vuetify/PrimeVue and React Material can keep the rendered header visible
+    // while the raw thead box sits above the viewport. Skip the y-position check.
+    if (!['react-material', 'vue-vuetify', 'vue-primevue'].includes(getFramework(page))) {
       const box = await thead.boundingBox();
       expect(box).not.toBeNull();
       if (box) {
@@ -582,8 +586,18 @@ test.describe('Range selection', () => {
 test.describe('Selection seam regressions', () => {
   test.beforeEach(async ({ page }, testInfo) => {
     test.skip(
-      !['react-fluent', 'react-material', 'react-radix'].includes(testInfo.project.name),
-      'Seam regression coverage is currently scoped to React wrappers.',
+      ![
+        'react-fluent',
+        'react-material',
+        'react-radix',
+        'angular-radix',
+        'angular-material',
+        'angular-primeng',
+        'vue-radix',
+        'vue-vuetify',
+        'vue-primevue',
+      ].includes(testInfo.project.name),
+      'Seam regression coverage currently targets framework wrappers with cell references.',
     );
     await page.goto('/?cellReferences=1');
     await waitForGrid(page);
@@ -680,8 +694,8 @@ test.describe('Column header menu', () => {
       await expect(page.getByRole('listitem').filter({ hasText: 'Pin right' }).first()).toBeVisible();
       await expect(page.getByRole('listitem').filter({ hasText: 'Autosize this column' }).first()).toBeVisible();
       await expect(page.getByRole('listitem').filter({ hasText: 'Autosize all columns' }).first()).toBeVisible();
-    } else if (fw === 'angular-material' || fw === 'js') {
-      // Angular Material and JS use role="menuitem" for the popup actions.
+    } else if (fw === 'react-material' || fw === 'angular-material' || fw === 'angular-primeng' || fw === 'vue-radix' || fw === 'vue-primevue' || fw === 'js') {
+      // React Material, Angular Material/PrimeNG, Vue Radix/PrimeVue, and JS use role="menuitem" for the popup actions.
       await expect(page.getByRole('menuitem', { name: 'Pin left' })).toBeVisible();
       await expect(page.getByRole('menuitem', { name: 'Pin right' })).toBeVisible();
       await expect(page.getByRole('menuitem', { name: 'Autosize this column' })).toBeVisible();
@@ -702,14 +716,14 @@ test.describe('Column header menu', () => {
     if (fw === 'vue-vuetify') {
       // Vuetify column menu uses role="listitem" (VList items), not role="button"
       await page.getByRole('listitem').filter({ hasText: 'Pin left' }).first().click();
-    } else if (fw === 'angular-material' || fw === 'js') {
-      // Angular Material and JS use role="menuitem" for the popup actions.
+    } else if (fw === 'react-material' || fw === 'angular-material' || fw === 'angular-primeng' || fw === 'vue-radix' || fw === 'vue-primevue' || fw === 'js') {
+      // React Material, Angular Material/PrimeNG, Vue Radix/PrimeVue, and JS use role="menuitem" for the popup actions.
       await page.getByRole('menuitem', { name: 'Pin left' }).click();
     } else {
       await page.getByRole('button', { name: 'Pin left' }).click();
     }
 
-    await expect.poll(async () => await th.getAttribute('style')).toMatch(/left:\s*0px/);
+    await expect.poll(async () => await th.evaluate((el) => getComputedStyle(el).left)).toBe('0px');
   });
 });
 

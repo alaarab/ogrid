@@ -315,7 +315,7 @@ const dataSource: IDataSource<Product> = {
 <OGrid dataSource={dataSource} columns={columns} getRowId={(r) => r.id} />
 ```
 
-Core features are shared across React, Angular, Vue, and vanilla JS, but browser-matrix coverage and a few UI surfaces still vary by package.
+Core features are shared across React, Angular, Vue, and vanilla JS. Main CI now runs a browser smoke suite on every push, and the broader Playwright matrix tracks the remaining wrapper-specific drift.
 
 ## Packages
 
@@ -418,7 +418,7 @@ See the [MCP guide](packages/docs/docs/guides/mcp.mdx) and [live testing bridge 
 | Vue | Vue Test Utils | ~768 |
 | Vanilla JS | Native DOM + jsdom | ~394 |
 
-Cross-package parity is driven by shared test factories: 8 factories per framework generate the common scenarios, and package-specific browser coverage documents the remaining gaps where implementations still differ.
+Cross-package parity is driven by shared test factories: 8 factories per framework generate the common scenarios, and Playwright now covers a fast smoke gate on every push plus a full matrix across all 10 example apps.
 
 ## Development
 
@@ -429,6 +429,9 @@ npm install
 npm run build                       # Build all packages (Turborepo)
 npm run test:all                    # Run all tests
 npm run lint                        # ESLint
+npm run test:e2e:smoke              # Browser merge gate (React Radix, Angular Material, Vue Vuetify, JS)
+npm run test:e2e:docs               # Built docs homepage verification
+npm run test:e2e:matrix             # Full browser matrix across all 10 example apps
 
 # Storybook
 npm run storybook:react-fluent      # React Fluent UI    (port 6006)
@@ -457,7 +460,7 @@ Contributions are welcome. To get started:
 5. Run the full verification suite before submitting:
 
 ```bash
-npm run build && npm run test:all && npm run lint
+npm run build && npm run test:all && npm run lint && npm run test:e2e:smoke
 ```
 
 6. Open a pull request with a clear description of what changed and why.

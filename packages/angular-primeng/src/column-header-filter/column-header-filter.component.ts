@@ -212,17 +212,8 @@ export class ColumnHeaderFilterComponent extends BaseColumnHeaderFilterComponent
 
   constructor() {
     super();
-    // Sync temp values when filter opens
     effect(() => {
       if (this.isFilterOpen()) {
-        this.tempTextValue.set(this.textValue ?? '');
-        this.searchText.set('');
-        const sv = this.selectedValues;
-        this.tempSelected.set(new Set(sv ?? []));
-        const dv = this.dateValue;
-        this.tempDateFrom.set(dv?.from ?? '');
-        this.tempDateTo.set(dv?.to ?? '');
-
         document.addEventListener('mousedown', this.clickOutsideHandler, true);
       } else {
         document.removeEventListener('mousedown', this.clickOutsideHandler, true);
