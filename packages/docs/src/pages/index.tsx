@@ -524,16 +524,16 @@ function CodePreviewSection() {
   return (
     <section ref={ref} className={`${styles.codeSection} ${visible ? styles.revealed : ''}`}>
       <NoiseOverlay opacity={0.025} />
-      <div className={styles.codeSectionInner}>
-        <div className={styles.codeSectionLabel}>One API. Four frameworks.</div>
-        <h2 className={styles.codeSectionTitle}>
-          Same props.<br />Same behavior.<br />Just swap the import.
-        </h2>
-        <p className={styles.codeSectionSub}>
-          10 packages across React, Angular, Vue, and Vanilla JS.
-          All share an identical column definition and prop API.
-        </p>
-      </div>
+        <div className={styles.codeSectionInner}>
+          <div className={styles.codeSectionLabel}>One API. Four frameworks.</div>
+          <h2 className={styles.codeSectionTitle}>
+          One grid model.<br />Framework-native wrappers.<br />Swap packages, keep moving.
+          </h2>
+          <p className={styles.codeSectionSub}>
+          React, Angular, Vue, and Vanilla JS packages with the same grid concepts,
+          column model, and feature set across the lineup.
+          </p>
+        </div>
 
       <div className={styles.codeWindowFloat}>
         <div className={styles.codeWindow}>
@@ -578,139 +578,108 @@ function FeatureBentoSection() {
       <div className={styles.bentoMesh} />
       <NoiseOverlay opacity={0.035} />
       <div className={styles.bentoHeader}>
-        <div className={styles.bentoLabel}>Features</div>
+        <div className={styles.bentoLabel}>Why OGrid</div>
         <h2 className={styles.bentoTitle}>
-          Enterprise features.<br />MIT license.
+          Spreadsheet-grade interaction.<br />Open-source by default.
         </h2>
         <p className={styles.bentoSub}>
-          25+ features shipped. Zero paywalls. All included, all MIT licensed.
+          The point is not a longer feature checklist. The point is getting the spreadsheet behavior,
+          editing workflow, and framework coverage without a locked enterprise tier.
         </p>
       </div>
 
       <div className={styles.bentoGrid}>
-        {/* Large card: Spreadsheet Selection */}
-        <div className={`${styles.bentoCard} ${styles.bentoCardWide} ${styles.bentoCardGreen}`}>
+        <div className={`${styles.bentoCard} ${styles.bentoCardWide} ${styles.bentoCardGreen} ${styles.bentoCardProof}`}>
           <div className={styles.bentoCardInner} />
-          <div className={styles.bentoCardTag}>Core differentiator</div>
-          <h3 className={styles.bentoCardTitle}>Spreadsheet Selection</h3>
+          <div className={styles.bentoCardTag}>No gated tier</div>
+          <h3 className={styles.bentoCardTitle}>MIT license. Real spreadsheet features.</h3>
           <p className={styles.bentoCardDesc}>
-            Click-and-drag cell ranges, active cell highlight, multi-cell clipboard.
-            Included out of the box, no enterprise tier required.
+            Range selection, fill handle, clipboard, undo/redo, formulas, filters, pinning, and virtualization
+            ship in the public packages. No split between “community” and “actually usable.”
           </p>
-          <div className={styles.bentoCardIllustration}>
-            <div className={styles.bentoSpreadsheet}>
-              {/* Column headers */}
-              <div className={styles.bentoSpreadsheetRow}>
-                <div className={`${styles.bentoSpreadsheetCell} ${styles.bentoSpreadsheetCorner}`} />
-                {['A', 'B', 'C', 'D', 'E'].map(col => (
-                  <div key={col} className={`${styles.bentoSpreadsheetCell} ${styles.bentoSpreadsheetColHeader}`}>{col}</div>
-                ))}
-              </div>
-              {/* Data rows */}
-              {[1, 2, 3, 4].map(row => (
-                <div key={row} className={styles.bentoSpreadsheetRow}>
-                  <div className={`${styles.bentoSpreadsheetCell} ${styles.bentoSpreadsheetRowHeader}`}>{row}</div>
-                  {[0, 1, 2, 3, 4].map(col => {
-                    const inRange = row >= 2 && row <= 3 && col >= 1 && col <= 3;
-                    const isActive = row === 2 && col === 1;
-                    return (
-                      <div
-                        key={col}
-                        className={`${styles.bentoSpreadsheetCell} ${styles.bentoSpreadsheetData} ${inRange ? styles.bentoSpreadsheetSelected : ''} ${isActive ? styles.bentoSpreadsheetActive : ''}`}
-                      />
-                    );
-                  })}
-                </div>
-              ))}
-              {/* Selection border overlay */}
-              <div className={styles.bentoSelectionOverlay}>
-                <div className={styles.bentoSelectionHandle} />
-              </div>
+          <div className={styles.bentoFeatureList}>
+            {[
+              'Cell-range selection',
+              'Fill handle',
+              'Clipboard + multi-cell paste',
+              'Undo / redo',
+              'Formula bar + references',
+              'Virtualized rows and columns',
+            ].map((item) => (
+              <span key={item} className={styles.bentoFeaturePill}>{item}</span>
+            ))}
+          </div>
+        </div>
+
+        <div className={`${styles.bentoCard} ${styles.bentoCardMedium} ${styles.bentoCardBlue} ${styles.bentoCardProof}`}>
+          <div className={styles.bentoCardInner} />
+          <div className={styles.bentoCardTag}>Cross-framework</div>
+          <h3 className={styles.bentoCardTitle}>One mental model, ten packages.</h3>
+          <p className={styles.bentoCardDesc}>
+            React, Angular, Vue, and vanilla JS packages stay aligned on concepts and capabilities,
+            so moving between stacks does not mean learning a different grid every time.
+          </p>
+          <div className={styles.bentoFrameworkBands}>
+            <div className={styles.bentoFrameworkBand}>
+              <span>React</span>
+              <span>Radix</span>
+              <span>Material</span>
+              <span>Fluent UI</span>
+            </div>
+            <div className={styles.bentoFrameworkBand}>
+              <span>Angular</span>
+              <span>Radix</span>
+              <span>Material</span>
+              <span>PrimeNG</span>
+            </div>
+            <div className={styles.bentoFrameworkBand}>
+              <span>Vue</span>
+              <span>Radix</span>
+              <span>Vuetify</span>
+              <span>PrimeVue</span>
+            </div>
+            <div className={styles.bentoFrameworkBand}>
+              <span>Vanilla JS</span>
+              <span>Zero deps</span>
             </div>
           </div>
         </div>
 
-        {/* Tall card: Fill Handle */}
-        <div className={`${styles.bentoCard} ${styles.bentoCardTall} ${styles.bentoCardDark}`}>
+        <div className={`${styles.bentoCard} ${styles.bentoCardMedium} ${styles.bentoCardDark} ${styles.bentoCardProof}`}>
           <div className={styles.bentoCardInner} />
-          <div className={styles.bentoCardTag}>Excel-style</div>
-          <h3 className={styles.bentoCardTitle}>Fill Handle</h3>
+          <div className={styles.bentoCardTag}>Editing workflow</div>
+          <h3 className={styles.bentoCardTitle}>Built for people who live in grids.</h3>
           <p className={styles.bentoCardDesc}>
-            Drag the corner to fill values down entire columns.
+            Keyboard navigation, inline editing, bulk paste, formulas, and status-bar feedback
+            are part of the normal flow, not bolted on demos.
           </p>
-          <div className={styles.bentoFillIllustration}>
-            <div className={styles.bentoFillLabel}>Revenue</div>
-            {['$42,000', '$43,000', '$44,000'].map((v, i) => (
-              <div key={i} className={`${styles.bentoFillRow} ${i >= 1 ? styles.bentoFillRowFilled : ''}`}>{v}</div>
+          <div className={styles.bentoCommandGrid}>
+            {['Enter edit', 'Tab move', 'Shift+Click range', 'Ctrl+C / Ctrl+V'].map((item) => (
+              <div key={item} className={styles.bentoCommandCard}>{item}</div>
             ))}
-            <div className={`${styles.bentoFillRow} ${styles.bentoFillRowGhost}`}>$45,000</div>
-            <div className={styles.bentoFillHandle} />
           </div>
         </div>
 
-        {/* Small card: Virtual Scrolling */}
-        <div className={`${styles.bentoCard} ${styles.bentoCardSmall}`}>
+        <div className={`${styles.bentoCard} ${styles.bentoCardSmall} ${styles.bentoCardPurple} ${styles.bentoCardProof}`}>
           <div className={styles.bentoCardInner} />
           <div className={styles.bentoCardTag}>Performance</div>
-          <h3 className={styles.bentoCardTitle}>Virtual Scrolling</h3>
-          <p className={styles.bentoCardDesc}>10,000+ rows with web worker sort.</p>
-          <div className={styles.bentoVirtualRows}>
-            {[0, 1, 2].map(i => (
-              <div key={i} className={styles.bentoVirtualRow} />
-            ))}
-            <div className={styles.bentoVirtualFade} />
-          </div>
-          <div className={styles.bentoStatBig}>10K+</div>
-        </div>
-
-        {/* Small card: Frameworks */}
-        <div className={`${styles.bentoCard} ${styles.bentoCardSmall} ${styles.bentoCardBlue}`}>
-          <div className={styles.bentoCardInner} />
-          <div className={styles.bentoCardTag}>Cross-framework</div>
-          <h3 className={styles.bentoCardTitle}>10 packages</h3>
-          <p className={styles.bentoCardDesc}>React · Angular · Vue · Vanilla JS</p>
-          <div className={styles.bentoFrameworkDots}>
-            {[
-              { label: 'R', cls: styles.bentoFrameworkDotReact },
-              { label: 'A', cls: styles.bentoFrameworkDotAngular },
-              { label: 'V', cls: styles.bentoFrameworkDotVue },
-              { label: 'JS', cls: styles.bentoFrameworkDotJs },
-            ].map(f => (
-              <span key={f.label} className={`${styles.bentoFrameworkDot} ${f.cls}`}>{f.label}</span>
-            ))}
-          </div>
-        </div>
-
-        {/* Medium card: Undo/Redo + Clipboard */}
-        <div className={`${styles.bentoCard} ${styles.bentoCardMedium}`}>
-          <div className={styles.bentoCardInner} />
-          <div className={styles.bentoCardTag}>Productivity</div>
-          <h3 className={styles.bentoCardTitle}>Full edit history</h3>
+          <h3 className={styles.bentoCardTitle}>10K+ rows in the homepage demo.</h3>
           <p className={styles.bentoCardDesc}>
-            Ctrl+Z / Ctrl+Y undo stack. Ctrl+C/V/X clipboard with multi-cell paste.
+            The examples are not toy screenshots. The docs are running a real grid with real interaction state.
           </p>
-          <div className={styles.bentoKbdRow}>
-            {['Ctrl+Z', 'Ctrl+Y', 'Ctrl+C', 'Ctrl+V'].map(k => (
-              <kbd key={k} className={styles.bentoKbd}>{k}</kbd>
-            ))}
-          </div>
-        </div>
-
-        {/* Medium card: Formula Engine */}
-        <div className={`${styles.bentoCard} ${styles.bentoCardMedium} ${styles.bentoCardPurple}`}>
-          <div className={styles.bentoCardInner} />
-          <div className={styles.bentoCardTag}>Built-in</div>
-          <h3 className={styles.bentoCardTitle}>Formula Engine</h3>
-          <p className={styles.bentoCardDesc}>
-            159 functions. SUM, IF, VLOOKUP, and more. Excel-style cell references.
-          </p>
-          <div className={styles.bentoFormulaBar}>
-            <span className={styles.bentoFx}>fx</span>
-            <span className={styles.bentoFormula}>=SUM(B2:B1000)</span>
-          </div>
-          <div className={styles.bentoFormulaResult}>
-            <span className={styles.bentoFormulaResultLabel}>Result</span>
-            <span className={styles.bentoFormulaResultValue}>1,247,500</span>
+          <div className={styles.bentoMetricRow}>
+            <div>
+              <strong>10,000</strong>
+              <span>rows</span>
+            </div>
+            <div>
+              <strong>100</strong>
+              <span>page size</span>
+            </div>
+            <div>
+              <strong>MIT</strong>
+              <span>license</span>
+            </div>
           </div>
         </div>
       </div>
@@ -731,11 +700,11 @@ function LiveDataSection() {
         <div className={styles.liveDataHeader}>
           <div className={styles.liveDataLabel}>Real-time</div>
           <h2 className={styles.liveDataTitle}>
-            Built for live data.
+            Live updates without the jank.
           </h2>
           <p className={styles.liveDataSub}>
-            Financial dashboards, trading terminals, monitoring systems.
-            OGrid handles high-frequency updates without skipping a frame.
+            Trading terminals, monitoring dashboards, and operational tables need constant updates.
+            OGrid keeps the grid responsive while the data keeps moving.
           </p>
         </div>
         <BrowserOnly fallback={<div style={{ height: 500 }} />}>
@@ -764,8 +733,8 @@ const frameworkCards: FrameworkCard[] = [
     name: 'React',
     uiKits: [
       { label: 'Radix', pkg: '@alaarab/ogrid-react-radix' },
-      { label: 'Fluent UI', pkg: '@alaarab/ogrid-react-fluent' },
       { label: 'Material UI', pkg: '@alaarab/ogrid-react-material' },
+      { label: 'Fluent UI', pkg: '@alaarab/ogrid-react-fluent' },
     ],
   },
   {
@@ -879,11 +848,10 @@ export default function Home() {
   return (
     <Layout
       title="Your spreadsheet. Your framework. Zero compromises."
-      description="Free open-source data grid for React, Angular, Vue, and vanilla JS. Sorting, filtering, editing, spreadsheet selection, clipboard, fill handle, formulas, and more. MIT licensed AG Grid alternative with no enterprise tier."
+      description="Free open-source data grid for React, Angular, Vue, and vanilla JS. Sorting, filtering, editing, spreadsheet selection, clipboard, fill handle, formulas, and more. MIT licensed with no enterprise tier."
     >
       <Hero />
       <CodePreviewSection />
-      <FeatureBentoSection />
       <LiveDataSection />
       <CTASection />
     </Layout>

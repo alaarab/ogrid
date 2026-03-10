@@ -39,6 +39,7 @@ import {
   NOOP,
   STOP_PROPAGATION,
   indexToColumnLetter,
+  getGridCellSurfaceState,
   getColumnHeaderMenuProps,
   ROW_NUMBER_COLUMN_ID,
   ROW_NUMBER_COLUMN_WIDTH,
@@ -68,6 +69,7 @@ function GridRowInner(props: RadixGridRowProps) {
     renderCellContent, handleSingleRowClick, handleRowCheckboxChange,
     lastMouseShiftRef, hasCheckboxCol, hasRowNumbersCol, rowNumberOffset,
     leftSpacerWidth, rightSpacerWidth, globalColIndexMap, rowNumWidth,
+    selectionRange, activeCell, cutRange,
   } = props;
 
   return (
@@ -99,7 +101,11 @@ function GridRowInner(props: RadixGridRowProps) {
         </td>
       )}
       {hasRowNumbersCol && (
-        <td className={styles.rowNumberCell} style={rowNumWidth ? { width: rowNumWidth, minWidth: rowNumWidth, maxWidth: rowNumWidth } : undefined}>
+        <td
+          className={styles.rowNumberCell}
+          style={rowNumWidth ? { width: rowNumWidth, minWidth: rowNumWidth, maxWidth: rowNumWidth } : undefined}
+          onPointerDown={PREVENT_DEFAULT}
+        >
           <div className={styles.rowNumberCellInner}>
             {rowNumberOffset + rowIndex + 1}
           </div>
@@ -110,12 +116,31 @@ function GridRowInner(props: RadixGridRowProps) {
       )}
       {visibleCols.map((col, colIdx) => {
         const globalIdx = globalColIndexMap ? globalColIndexMap[colIdx] : colIdx;
+        const surfaceState = getGridCellSurfaceState({
+          rowIndex,
+          columnIndex: globalIdx,
+          selectionRange,
+          activeCell,
+          cutRange,
+        });
         return (
           <td
             key={col.columnId}
             data-column-id={col.columnId}
             className={columnMeta.cellClasses[col.columnId] || undefined}
-            style={columnMeta.cellStyles[col.columnId]}
+            style={{
+              ...columnMeta.cellStyles[col.columnId],
+              ...(surfaceState.isRangeCell
+                ? { background: 'var(--ogrid-range-bg, rgba(33, 115, 70, 0.12))' }
+                : {}),
+              ...(surfaceState.isActiveRangeCell
+                ? { background: 'var(--ogrid-bg, #fff)' }
+                : {}),
+              ...(surfaceState.isCutCell
+                ? { background: 'var(--ogrid-hover-bg, rgba(0, 0, 0, 0.04))' }
+                : {}),
+            }}
+            onPointerDown={PREVENT_DEFAULT}
           >
             {renderCellContent(item, col, rowIndex, globalIdx)}
           </td>
