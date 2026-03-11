@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { Menu, MenuItems, MenuItem } from '@headlessui/vue';
+import { nextTick, onMounted, onUnmounted, ref } from 'vue';
 import {
   GRID_CONTEXT_MENU_ITEMS,
   getContextMenuHandlers,
@@ -22,6 +23,7 @@ export interface GridContextMenuProps {
 }
 
 const props = defineProps<GridContextMenuProps>();
+const menuRef = ref<HTMLElement | null>(null);
 
 const handlers = getContextMenuHandlers(props);
 
@@ -35,13 +37,40 @@ const isDisabled = (item: (typeof GRID_CONTEXT_MENU_ITEMS)[number]) => {
 const handleItemClick = (item: (typeof GRID_CONTEXT_MENU_ITEMS)[number]) => {
   if (!isDisabled(item)) {
     handlers[item.id]();
+    props.onClose();
   }
 };
+
+const handleDocumentPointerDown = (event: PointerEvent | MouseEvent) => {
+  const target = event.target;
+  if (menuRef.value && target instanceof Node && !menuRef.value.contains(target)) {
+    props.onClose();
+  }
+};
+
+const handleDocumentKeyDown = (event: KeyboardEvent) => {
+  if (event.key === 'Escape') {
+    event.preventDefault();
+    props.onClose();
+  }
+};
+
+onMounted(() => {
+  document.addEventListener('pointerdown', handleDocumentPointerDown, true);
+  document.addEventListener('keydown', handleDocumentKeyDown, true);
+  nextTick(() => menuRef.value?.focus());
+});
+
+onUnmounted(() => {
+  document.removeEventListener('pointerdown', handleDocumentPointerDown, true);
+  document.removeEventListener('keydown', handleDocumentKeyDown, true);
+});
 </script>
 
 <template>
   <Menu as="div" class="context-menu-wrapper">
     <MenuItems
+      ref="menuRef"
       static
       class="context-menu"
       :style="{ left: `${x}px`, top: `${y}px` }"

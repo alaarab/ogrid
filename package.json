@@ -60,7 +60,7 @@
     "test:fast": "npm --workspaces --if-present run test",
     "size": "size-limit",
     "lint": "eslint .",
-    "test:e2e": "npx playwright test",
+    "test:e2e": "node scripts/run-playwright-matrix.mjs",
     "test:e2e:docs": "npx playwright test --config=playwright.docs.config.ts",
     "test:e2e:smoke": "npx playwright test --config=playwright.smoke.config.ts",
     "test:e2e:matrix": "node scripts/run-playwright-matrix.mjs",

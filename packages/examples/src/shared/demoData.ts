@@ -5,6 +5,8 @@ export interface Project {
   name: string;
   status: string;
   owner: string;
+  title: string;
+  email: string;
   budget: number;
   startDate: string;
   department: string;
@@ -18,6 +20,7 @@ export interface DemoColumnOptions {
 const STATUSES = ['Active', 'Planning', 'On Hold', 'Completed', 'Cancelled'];
 const OWNERS = ['Alice Johnson', 'Bob Smith', 'Carol Lee', 'David Kim', 'Eve Torres', 'Frank Wu', 'Grace Park', 'Henry Adams'];
 const DEPARTMENTS = ['Engineering', 'Marketing', 'Sales', 'Finance', 'Operations', 'HR'];
+const TITLES = ['Staff Engineer', 'Product Manager', 'Design Lead', 'Finance Analyst', 'Sales Director', 'Operations Manager', 'QA Engineer', 'Solutions Architect'];
 
 export function makeDemoProjects(count: number): Project[] {
   return Array.from({ length: count }, (_, i) => ({
@@ -25,6 +28,8 @@ export function makeDemoProjects(count: number): Project[] {
     name: `Project ${String.fromCharCode(65 + (i % 26))}${Math.floor(i / 26) || ''}`,
     status: STATUSES[i % STATUSES.length],
     owner: OWNERS[i % OWNERS.length],
+    title: TITLES[i % TITLES.length],
+    email: OWNERS[i % OWNERS.length].toLowerCase().replace(/\s+/g, '.') + '@acme.co',
     budget: Math.round((5000 + Math.random() * 95000) * 100) / 100,
     startDate: new Date(2024, i % 12, 1 + (i % 28)).toISOString().slice(0, 10),
     department: DEPARTMENTS[i % DEPARTMENTS.length],
@@ -57,12 +62,30 @@ export function makeDemoColumns<T extends Project>(options: DemoColumnOptions = 
       name: 'Owner',
       sortable: true,
       filterable: { type: 'text' },
+      defaultWidth: 170,
+    },
+    {
+      columnId: 'title',
+      name: 'Title',
+      sortable: true,
+      editable: true,
+      filterable: { type: 'text' },
+      defaultWidth: 170,
+    },
+    {
+      columnId: 'email',
+      name: 'Email',
+      sortable: true,
+      editable: true,
+      filterable: { type: 'text' },
+      defaultWidth: 220,
     },
     {
       columnId: 'department',
       name: 'Department',
       sortable: true,
       filterable: { type: 'multiSelect', filterField: 'department' },
+      defaultWidth: 150,
     },
     {
       columnId: 'budget',
@@ -71,6 +94,7 @@ export function makeDemoColumns<T extends Project>(options: DemoColumnOptions = 
       editable: formulaMode,
       compare: (a: T, b: T) => a.budget - b.budget,
       valueFormatter: (v: unknown) => v != null ? `$${Number(v).toLocaleString()}` : '',
+      defaultWidth: 120,
     },
     {
       columnId: 'startDate',
@@ -78,6 +102,7 @@ export function makeDemoColumns<T extends Project>(options: DemoColumnOptions = 
       type: 'date' as const,
       sortable: true,
       editable: true,
+      defaultWidth: 130,
     },
     {
       columnId: 'active',
@@ -85,6 +110,7 @@ export function makeDemoColumns<T extends Project>(options: DemoColumnOptions = 
       type: 'boolean' as const,
       sortable: true,
       editable: true,
+      defaultWidth: 90,
     },
   ] as IColumnDef<T>[];
 }

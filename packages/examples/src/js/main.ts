@@ -13,16 +13,20 @@ import { connectGridToBridge } from '@alaarab/ogrid-mcp/bridge-client';
 import { createProjectExampleScenario } from '../shared/demoScenario';
 import { getExampleFeatureFlags } from '../shared/queryFlags';
 import { makePremiumInputColumns, makePremiumInputRows } from '../shared/premiumInputsData';
-
-type ExampleRow = { id: string; [key: string]: unknown };
+import {
+  coerceExampleColumns,
+  coerceExampleDataSource,
+  coerceExampleRows,
+  type ExampleRow,
+} from '../shared/exampleTypes';
 
 const featureFlags = getExampleFeatureFlags(typeof window !== 'undefined' ? window.location.search : '');
 const projectScenario = createProjectExampleScenario(featureFlags);
 const isPremiumExample = featureFlags.premiumInputs;
-const initialRows = isPremiumExample
+const initialRows = coerceExampleRows(isPremiumExample
   ? makePremiumInputRows()
-  : projectScenario.data;
-const columns = isPremiumExample
+  : projectScenario.data);
+const columns = coerceExampleColumns(isPremiumExample
   ? makePremiumInputColumns({
     dateEditor: createDatePickerEditor,
     ratingEditor: createRatingEditor,
@@ -30,43 +34,47 @@ const columns = isPremiumExample
     sliderEditor: createSliderEditor,
     tagsEditor: createTagsEditor,
   })
-  : projectScenario.columns;
+  : projectScenario.columns);
 
 const container = document.getElementById('grid-container');
 if (!container) {
   throw new Error('Grid container not found');
 }
 
-const rows = initialRows as ExampleRow[];
+const rows = initialRows;
 
 const grid = new OGrid<ExampleRow>(container, {
-  ...(!isPremiumExample && projectScenario.serverSide ? { dataSource: projectScenario.dataSource! } : { data: rows }),
-  columns: columns as ConstructorParameters<typeof OGrid<ExampleRow>>[1]['columns'],
+  ...(!isPremiumExample && projectScenario.serverSide ? { dataSource: coerceExampleDataSource(projectScenario.dataSource!) } : { data: rows }),
+  columns: columns as unknown as ConstructorParameters<typeof OGrid<ExampleRow>>[1]['columns'],
   getRowId: (row) => row.id,
   entityLabelPlural: isPremiumExample ? 'products' : 'projects',
-  pageSize: isPremiumExample ? 10 : 25,
+  pageSize: isPremiumExample ? 10 : projectScenario.defaultPageSize,
   editable: isPremiumExample || !projectScenario.serverSide,
   cellSelection: true,
-  cellReferences: isPremiumExample ? undefined : featureFlags.cellReferences,
+  cellReferences: isPremiumExample ? undefined : projectScenario.cellReferences,
   rowSelection: isPremiumExample ? undefined : projectScenario.rowSelection,
   formulas: isPremiumExample ? undefined : projectScenario.formulas,
   initialFormulas: isPremiumExample ? undefined : projectScenario.initialFormulas,
+  sideBar: isPremiumExample ? undefined : projectScenario.sideBar,
+  fullScreen: isPremiumExample ? undefined : projectScenario.fullScreen,
+  responsiveColumns: isPremiumExample ? undefined : projectScenario.responsiveColumns,
+  density: isPremiumExample ? undefined : projectScenario.density,
   statusBar: true,
   onCellValueChanged: (event) => handleCellValueChanged(rows, event),
 });
 
-(window as Record<string, unknown>).gridApi = grid.api;
+(window as unknown as Record<string, unknown>).gridApi = grid.api;
 
 if (location.hostname === 'localhost') {
   const api = grid.api;
   connectGridToBridge({
     gridId: 'js-demo',
     getData: () => api.getDisplayedRows(),
-    getColumns: () => columns.map((column) => ({
-      columnId: column.columnId,
-      headerName: column.name ?? column.columnId,
-      type: column.type,
-    })),
+    getColumns: () => columns.flatMap((column) => (
+      'columnId' in column
+        ? [{ columnId: column.columnId, headerName: column.name ?? column.columnId, type: column.type }]
+        : []
+    )),
     getSort: () => {
       const state = api.getColumnState();
       if (state.sort) {

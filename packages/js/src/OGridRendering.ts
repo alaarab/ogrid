@@ -274,7 +274,8 @@ export class OGridRendering<T> {
     this.layoutVersion++;
 
     const { state, options, headerFilterState, rowSelectionState, selectionState, keyboardNavState, clipboardState, undoRedoState, fillHandleState, virtualScrollState, pagination, statusBar, columnChooser } = this.ctx;
-    const colOffset = rowSelectionState ? 1 : 0;
+    let colOffset = rowSelectionState ? 1 : 0;
+    if (options.showRowNumbers || options.cellReferences) colOffset += 1;
 
     // Update header filter state with current filters and options
     headerFilterState.setFilters(state.filters);

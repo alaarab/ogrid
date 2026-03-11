@@ -71,6 +71,7 @@ export class FormulaBar {
     this.inputEl.addEventListener('input', this.handleInput);
     this.inputEl.addEventListener('click', this.handleClick);
     this.inputEl.addEventListener('dblclick', this.handleClick);
+    this.inputEl.addEventListener('blur', this.handleBlur);
 
     this.el.appendChild(this.inputEl);
     container.appendChild(this.el);
@@ -84,6 +85,12 @@ export class FormulaBar {
     if (this.inputEl) {
       this.inputEl.value = formulaText;
     }
+  }
+
+  /** Update the input placeholder for the active cell's editor semantics. */
+  setPlaceholder(placeholder: string | null): void {
+    if (!this.inputEl) return;
+    this.inputEl.placeholder = placeholder ?? '';
   }
 
   /** Set editing state. When true, the input becomes editable and receives focus. */
@@ -104,6 +111,7 @@ export class FormulaBar {
       this.inputEl.removeEventListener('input', this.handleInput);
       this.inputEl.removeEventListener('click', this.handleClick);
       this.inputEl.removeEventListener('dblclick', this.handleClick);
+      this.inputEl.removeEventListener('blur', this.handleBlur);
     }
     this.el?.remove();
     this.el = null;
@@ -126,6 +134,12 @@ export class FormulaBar {
   private handleClick = (): void => {
     if (!this.isEditing) {
       this.callbacks.onStartEditing();
+    }
+  };
+
+  private handleBlur = (): void => {
+    if (this.isEditing) {
+      this.callbacks.onCommit();
     }
   };
 }

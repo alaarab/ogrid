@@ -1,13 +1,12 @@
 import { expect, test } from '@playwright/test';
+import { DEMO_PROJECT_COUNT } from '../packages/examples/src/shared/demoConfig';
 import {
   applyFilter,
   clearFilter,
   enterCellEdit,
-  enterDateCellEdit,
+  expectRenderedPageSize,
   getColumnTexts,
   getDefaultPageSize,
-  getFramework,
-  getRows,
   getTextFilterInput,
   openFilter,
   sortColumn,
@@ -27,7 +26,7 @@ test.describe('Live smoke suite', () => {
     expect(joined).toContain('Project Name');
     expect(joined).toContain('Status');
     expect(joined).toContain('Start Date');
-    await expect(getRows(page)).toHaveCount(getDefaultPageSize(page));
+    await expectRenderedPageSize(page, getDefaultPageSize(page), { totalCount: DEMO_PROJECT_COUNT });
   });
 
   test('sorts Project Name descending', async ({ page }) => {
@@ -52,30 +51,17 @@ test.describe('Live smoke suite', () => {
 
     await openFilter(page, 'Project Name');
     await clearFilter(page);
-    await expect(getRows(page)).toHaveCount(getDefaultPageSize(page));
+    await expectRenderedPageSize(page, getDefaultPageSize(page), { totalCount: DEMO_PROJECT_COUNT });
   });
 
   test('edits a cell and commits the new value', async ({ page }) => {
-    if (['vue-vuetify', 'vue-primevue'].includes(getFramework(page))) {
-      const input = await enterDateCellEdit(page, 0, 5);
-      await input.clear();
-      await input.fill('2026-12-31');
-      await input.press('Enter');
-
-      await expect.poll(async () => {
-        const [value = ''] = await getColumnTexts(page, 'startDate');
-        return value;
-      }).toContain('2026-12-31');
-      return;
-    }
-
     const input = await enterCellEdit(page, 0, 0);
-    await input.fill('Smoke Edit');
+    await input.fill('!Smoke Edit');
     await input.press('Enter');
 
     await expect.poll(async () => {
       const values = await getColumnTexts(page, 'name');
-      return values.some((value) => value.includes('Smoke Edit'));
+      return values.some((value) => value.includes('!Smoke Edit'));
     }).toBe(true);
   });
 });

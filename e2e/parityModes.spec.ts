@@ -1,7 +1,9 @@
 import { test, expect, type Page } from '@playwright/test';
+import { DEMO_PROJECT_COUNT } from '../packages/examples/src/shared/demoConfig';
 import {
+  activateCell,
+  DEMO_COLUMN_INDEX,
   waitForGrid,
-  getRows,
   getDefaultPageSize,
   getColumnTexts,
   sortColumn,
@@ -9,8 +11,9 @@ import {
   openFilter,
   applyFilter,
   getTextFilterInput,
-  getCellContentByColumnId,
   getDataCell,
+  expectRenderedPageSize,
+  expectSelectedRowCount,
 } from './helpers';
 
 async function startFormulaBarEdit(page: Page) {
@@ -41,15 +44,14 @@ test.describe('Formula mode parity', () => {
     const budgetCell = getDataCell(page, 0, 'budget');
     await expect.poll(async () => ((await budgetCell.textContent()) ?? '').trim()).toContain('40');
 
-    await getCellContentByColumnId(page, 0, 'budget').click();
+    await activateCell(page, 0, DEMO_COLUMN_INDEX.budget);
 
     await expect(page.getByLabel(/active cell reference/i).first()).toHaveText(/[A-Z]+\d+/);
     await expect(page.getByRole('textbox', { name: /formula input/i }).first()).toHaveValue('=20+20');
   });
 
   test('commits formula-bar edits to the active data cell across frameworks', async ({ page }) => {
-    const targetCell = getCellContentByColumnId(page, 1, 'budget');
-    await targetCell.click();
+    await activateCell(page, 1, DEMO_COLUMN_INDEX.budget);
 
     const formulaInput = await startFormulaBarEdit(page);
     await formulaInput.fill('=21+21');
@@ -64,20 +66,20 @@ test.describe('Row selection parity', () => {
   test.beforeEach(async ({ page }) => {
     await page.goto('/?rowSelection=1');
     await waitForGrid(page);
-    await expect(getRows(page)).toHaveCount(getDefaultPageSize(page));
+    await expectRenderedPageSize(page, getDefaultPageSize(page), { totalCount: DEMO_PROJECT_COUNT });
   });
 
   test('row checkboxes select rows and update the selected-row state', async ({ page }) => {
     await page.getByLabel(/select row/i).first().click();
 
-    await expect.poll(async () => page.locator('tbody tr[aria-selected="true"]').count()).toBe(1);
+    await expectSelectedRowCount(page, 1);
   });
 
   test('select-all marks the visible page as selected', async ({ page }) => {
     const visibleRows = getDefaultPageSize(page);
     await page.getByLabel(/select all rows/i).first().click();
 
-    await expect.poll(async () => page.locator('tbody tr[aria-selected="true"]').count()).toBe(visibleRows);
+    await expectSelectedRowCount(page, visibleRows);
   });
 });
 
@@ -85,7 +87,7 @@ test.describe('Server-side data parity', () => {
   test.beforeEach(async ({ page }) => {
     await page.goto('/?serverSide=1');
     await waitForGrid(page);
-    await expect(getRows(page)).toHaveCount(getDefaultPageSize(page));
+    await expectRenderedPageSize(page, getDefaultPageSize(page), { totalCount: DEMO_PROJECT_COUNT });
   });
 
   test('sorting reorders server-fetched rows', async ({ page }) => {

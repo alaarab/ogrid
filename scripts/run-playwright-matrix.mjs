@@ -12,11 +12,12 @@ const projects = [
   'vue-primevue',
   'js',
 ];
+const passthroughArgs = process.argv.slice(2);
 
 for (const project of projects) {
   const result = spawnSync(
     'npx',
-    ['playwright', 'test', `--project=${project}`],
+    ['playwright', 'test', `--project=${project}`, ...passthroughArgs],
     {
       stdio: 'inherit',
       env: {
