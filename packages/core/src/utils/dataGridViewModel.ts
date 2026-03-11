@@ -153,6 +153,10 @@ export interface CellRenderDescriptorInput<T> {
   formulaVersion?: number;
 }
 
+function isCustomCellEditor(cellEditor: unknown): boolean {
+  return cellEditor != null && typeof cellEditor !== 'string';
+}
+
 export interface CellRenderDescriptor {
   mode: CellRenderMode;
   editorType?: 'text' | 'select' | 'checkbox' | 'richSelect' | 'date';
@@ -345,12 +349,12 @@ function computeCellDescriptor<T>(
     input.editable !== false &&
     colEditable &&
     !!input.onCellValueChanged &&
-    typeof col.cellEditor !== 'function';
+    !isCustomCellEditor(col.cellEditor);
   const canEditPopup =
     input.editable !== false &&
     colEditable &&
     !!input.onCellValueChanged &&
-    typeof col.cellEditor === 'function' &&
+    isCustomCellEditor(col.cellEditor) &&
     col.cellEditorPopup !== false;
   const canEditAny = canEditInline || canEditPopup;
 
@@ -415,7 +419,7 @@ function computeCellDescriptor<T>(
     } else {
       editorType = 'text';
     }
-  } else if (isEditing && canEditPopup && typeof col.cellEditor === 'function') {
+  } else if (isEditing && canEditPopup) {
     mode = 'editing-popover';
   }
 

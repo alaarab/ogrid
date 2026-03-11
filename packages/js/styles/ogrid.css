@@ -221,6 +221,8 @@
   border-right: 1px solid var(--ogrid-border, #e0e0e0);
   font-size: 13px;
   vertical-align: middle;
+  user-select: none;
+  -webkit-user-select: none;
 }
 
 .ogrid-table th:last-of-type,
@@ -284,6 +286,12 @@
   border-bottom: 1px solid var(--ogrid-border, rgba(0, 0, 0, 0.12));
   user-select: none;
   font-variant-numeric: tabular-nums;
+}
+
+.ogrid-row-number-header,
+.ogrid-row-number-cell {
+  user-select: none;
+  -webkit-user-select: none;
 }
 
 /* ── Resize Handle ── */

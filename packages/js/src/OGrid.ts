@@ -577,6 +577,11 @@ export class OGrid<T> {
       // Create rendering helper (uses lazy context  -  state objects populated after interaction init)
       this.renderingHelper = this.createRenderingHelper();
 
+      // Load initial formulas before the first paint so formula cells render computed values immediately.
+      if (this.formulaEngine) {
+        this.formulaEngine.initialize(this.buildFormulaAccessor());
+      }
+
       // Initial render (must happen before interaction init so wrapper DOM exists)
       this.renderer.render();
 
@@ -1042,15 +1047,20 @@ export class OGrid<T> {
     };
   }
 
+  /** Count leading non-data columns that appear inside the grid table. */
+  private getGridColumnOffset(): number {
+    let colOffset = 0;
+    if (this.rowSelectionState) colOffset++;
+    if (this.options.showRowNumbers || this.options.cellReferences) colOffset++;
+    return colOffset;
+  }
+
   private handleFormulaBarCommit(): void {
     if (!this.formulaEngine || !this.selectionState) return;
     const ac = this.selectionState.activeCell;
     if (!ac) return;
 
-    let colOffset = 0;
-    if (this.rowSelectionState) colOffset++;
-    if (this.options.showRowNumbers || this.options.cellReferences || this.options.formulas) colOffset++;
-    const dataCol = ac.columnIndex - colOffset;
+    const dataCol = ac.columnIndex - this.getGridColumnOffset();
     const dataRow = (this.state.page - 1) * this.state.pageSize + ac.rowIndex;
     const text = this.formulaBarText;
 
@@ -1084,10 +1094,7 @@ export class OGrid<T> {
     // Revert the formula bar text to the active cell's current value
     if (this.selectionState?.activeCell && this.formulaEngine) {
       const ac = this.selectionState.activeCell;
-      let colOffset = 0;
-      if (this.rowSelectionState) colOffset++;
-      if (this.options.showRowNumbers || this.options.cellReferences || this.options.formulas) colOffset++;
-      const dataCol = ac.columnIndex - colOffset;
+      const dataCol = ac.columnIndex - this.getGridColumnOffset();
       const dataRow = (this.state.page - 1) * this.state.pageSize + ac.rowIndex;
       const formula = this.formulaEngine.getFormula(dataCol, dataRow);
       if (formula) {
