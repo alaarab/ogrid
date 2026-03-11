@@ -1,4 +1,4 @@
-import { Directive, Input, ViewChild, ElementRef, Injector, EnvironmentInjector, inject, signal, effect, createComponent } from '@angular/core';
+import { AfterViewInit, Directive, Input, ViewChild, ElementRef, Injector, EnvironmentInjector, inject, signal, effect, createComponent } from '@angular/core';
 import type { IColumnDef, ICellEditorProps } from '../types';
 
 /**
@@ -46,7 +46,7 @@ export const POPOVER_CELL_EDITOR_OVERLAY_STYLES = `
  * framework-specific .ogrid-popover-anchor CSS styles.
  */
 @Directive()
-export abstract class BasePopoverCellEditorComponent<T = unknown> {
+export abstract class BasePopoverCellEditorComponent<T = unknown> implements AfterViewInit {
   @Input({ required: true }) item!: T;
   @Input({ required: true }) column!: IColumnDef<T>;
   @Input({ required: true }) rowIndex!: number;
@@ -55,26 +55,28 @@ export abstract class BasePopoverCellEditorComponent<T = unknown> {
   @Input({ required: true }) editorProps!: ICellEditorProps<T>;
   @Input({ required: true }) onCancel!: () => void;
 
-  @ViewChild('anchorEl') private anchorRef?: ElementRef<HTMLElement>;
-  @ViewChild('editorContainer') private editorContainerRef?: ElementRef<HTMLElement>;
+  @ViewChild('editorContainer')
+  private set editorContainerRef(ref: ElementRef<HTMLElement> | undefined) {
+    this.editorContainerRefSig.set(ref);
+  }
+
   private readonly injector = inject(Injector);
   private readonly envInjector = inject(EnvironmentInjector);
+  private readonly editorContainerRefSig = signal<ElementRef<HTMLElement> | undefined>(undefined);
 
   protected readonly showEditor = signal(false);
 
-  constructor() {
-    // Show editor after anchor is rendered
-    effect(() => {
-      const anchor = this.anchorRef;
-      if (anchor) {
-        setTimeout(() => this.showEditor.set(true), 0);
-      }
-    });
+  ngAfterViewInit(): void {
+    // Defer until after the anchor has painted; the editor container is gated by
+    // `showEditor()`, so the container ViewChild signal will fire on the next render.
+    setTimeout(() => this.showEditor.set(true), 0);
+  }
 
+  constructor() {
     // Render custom editor component when container is available.
     // Angular's effect() ignores return values  -  use onCleanup() for cleanup.
     effect((onCleanup) => {
-      const container = this.editorContainerRef;
+      const container = this.editorContainerRefSig();
       const props = this.editorProps;
       const col = this.column;
       if (!container || !this.showEditor() || typeof col.cellEditor !== 'function') return;

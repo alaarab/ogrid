@@ -1,43 +1,71 @@
 import { OGrid } from '@alaarab/ogrid-js';
 import '@alaarab/ogrid-js/styles';
-import { makeDemoProjects, makeDemoColumns, getRowId, handleCellValueChanged } from '../shared/demoData';
-import type { Project } from '../shared/demoData';
+import {
+  createDatePickerEditor,
+  createRatingEditor,
+  createColorPickerEditor,
+  createSliderEditor,
+  createTagsEditor,
+} from '@alaarab/ogrid-js-inputs';
+import { handleCellValueChanged } from '../shared/demoData';
 import { createThemeToggle } from '../shared/themeToggle';
 import { connectGridToBridge } from '@alaarab/ogrid-mcp/bridge-client';
+import { createProjectExampleScenario } from '../shared/demoScenario';
+import { getExampleFeatureFlags } from '../shared/queryFlags';
+import { makePremiumInputColumns, makePremiumInputRows } from '../shared/premiumInputsData';
 
-const projects = makeDemoProjects(75);
-const columns = makeDemoColumns<Project>();
+type ExampleRow = { id: string; [key: string]: unknown };
+
+const featureFlags = getExampleFeatureFlags(typeof window !== 'undefined' ? window.location.search : '');
+const projectScenario = createProjectExampleScenario(featureFlags);
+const isPremiumExample = featureFlags.premiumInputs;
+const initialRows = isPremiumExample
+  ? makePremiumInputRows()
+  : projectScenario.data;
+const columns = isPremiumExample
+  ? makePremiumInputColumns({
+    dateEditor: createDatePickerEditor,
+    ratingEditor: createRatingEditor,
+    colorEditor: createColorPickerEditor,
+    sliderEditor: createSliderEditor,
+    tagsEditor: createTagsEditor,
+  })
+  : projectScenario.columns;
 
 const container = document.getElementById('grid-container');
 if (!container) {
   throw new Error('Grid container not found');
 }
 
-const grid = new OGrid<Project>(container, {
-  data: projects,
-  columns,
-  getRowId,
-  entityLabelPlural: 'projects',
-  pageSize: 25,
-  editable: true,
+const rows = initialRows as ExampleRow[];
+
+const grid = new OGrid<ExampleRow>(container, {
+  ...(!isPremiumExample && projectScenario.serverSide ? { dataSource: projectScenario.dataSource! } : { data: rows }),
+  columns: columns as ConstructorParameters<typeof OGrid<ExampleRow>>[1]['columns'],
+  getRowId: (row) => row.id,
+  entityLabelPlural: isPremiumExample ? 'products' : 'projects',
+  pageSize: isPremiumExample ? 10 : 25,
+  editable: isPremiumExample || !projectScenario.serverSide,
   cellSelection: true,
+  cellReferences: isPremiumExample ? undefined : featureFlags.cellReferences,
+  rowSelection: isPremiumExample ? undefined : projectScenario.rowSelection,
+  formulas: isPremiumExample ? undefined : projectScenario.formulas,
+  initialFormulas: isPremiumExample ? undefined : projectScenario.initialFormulas,
   statusBar: true,
-  onCellValueChanged: (e) => handleCellValueChanged(projects, e),
+  onCellValueChanged: (event) => handleCellValueChanged(rows, event),
 });
 
-// Expose grid API to window for debugging
-(window as unknown as Record<string, unknown>).gridApi = grid.api;
+(window as Record<string, unknown>).gridApi = grid.api;
 
-// MCP Live Testing Bridge (dev only)
 if (location.hostname === 'localhost') {
   const api = grid.api;
-  const _bridge = connectGridToBridge({
+  connectGridToBridge({
     gridId: 'js-demo',
     getData: () => api.getDisplayedRows(),
-    getColumns: () => columns.map((c) => ({
-      columnId: c.columnId,
-      headerName: c.name ?? c.columnId,
-      type: c.type,
+    getColumns: () => columns.map((column) => ({
+      columnId: column.columnId,
+      headerName: column.name ?? column.columnId,
+      type: column.type,
     })),
     getSort: () => {
       const state = api.getColumnState();
@@ -64,12 +92,11 @@ if (location.hostname === 'localhost') {
       clearFilters: () => api.clearFilters(),
     },
     onCellUpdate: (rowIndex, columnId, value) => {
-      if (projects[rowIndex]) {
-        (projects[rowIndex] as Record<string, unknown>)[columnId] = value;
+      if (rows[rowIndex]) {
+        (rows[rowIndex] as Record<string, unknown>)[columnId] = value;
       }
     },
   });
 }
 
-// Add dark mode toggle
 createThemeToggle();

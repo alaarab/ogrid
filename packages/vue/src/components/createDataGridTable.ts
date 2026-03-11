@@ -264,7 +264,7 @@ export function createDataGridTable(ui: IDataGridTableUIBindings) {
             );
           }
 
-          if (descriptor.mode === 'editing-popover' && typeof col.cellEditor === 'function') {
+          if (descriptor.mode === 'editing-popover' && col.cellEditor != null && typeof col.cellEditor !== 'string') {
             const editorProps = buildPopoverEditorProps(item, col, descriptor, pendingEditorValue, editCallbacks);
             const CustomEditor = col.cellEditor as unknown as ReturnType<typeof defineComponent>;
             const popoverDisplayContent = resolveCellDisplayContent(col, item, descriptor.displayValue);

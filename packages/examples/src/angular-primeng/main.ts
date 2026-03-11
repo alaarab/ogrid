@@ -5,29 +5,54 @@ import { Component, OnInit, OnDestroy, provideZonelessChangeDetection } from '@a
 import { provideAnimations } from '@angular/platform-browser/animations';
 import { OGridComponent } from '@alaarab/ogrid-angular-primeng';
 import type { IOGridProps } from '@alaarab/ogrid-angular-primeng';
-import { makeDemoProjects, makeDemoColumns, getRowId, handleCellValueChanged } from '../shared/demoData';
-import type { Project } from '../shared/demoData';
+import {
+  DatePickerEditorComponent,
+  RatingEditorComponent,
+  ColorPickerEditorComponent,
+  SliderEditorComponent,
+  TagsEditorComponent,
+} from '@alaarab/ogrid-angular-inputs';
+import { handleCellValueChanged } from '../shared/demoData';
 import { createThemeToggle } from '../shared/themeToggle';
-import { shouldEnableCellReferences } from '../shared/queryFlags';
+import { createProjectExampleScenario } from '../shared/demoScenario';
+import { getExampleFeatureFlags } from '../shared/queryFlags';
+import { makePremiumInputColumns, makePremiumInputRows } from '../shared/premiumInputsData';
 import { connectGridToBridge } from '@alaarab/ogrid-mcp/bridge-client';
 import type { BridgeConnection } from '@alaarab/ogrid-mcp/bridge-client';
 
-const projects = makeDemoProjects(75);
-const columns = makeDemoColumns<Project>();
-const enableCellReferences = typeof window !== 'undefined'
-  && shouldEnableCellReferences(window.location.search);
+type ExampleRow = { id: string; [key: string]: unknown };
+
+const featureFlags = getExampleFeatureFlags(typeof window !== 'undefined' ? window.location.search : '');
+const projectScenario = createProjectExampleScenario(featureFlags);
+const isPremiumExample = featureFlags.premiumInputs;
+const initialRows = isPremiumExample
+  ? makePremiumInputRows()
+  : projectScenario.data;
+const columns = isPremiumExample
+  ? makePremiumInputColumns({
+    dateEditor: DatePickerEditorComponent,
+    ratingEditor: RatingEditorComponent,
+    colorEditor: ColorPickerEditorComponent,
+    sliderEditor: SliderEditorComponent,
+    tagsEditor: TagsEditorComponent,
+  })
+  : projectScenario.columns;
 
 @Component({
   selector: 'app-root',
   standalone: true,
-  imports: [OGridComponent],
+  imports: [
+    OGridComponent,
+    DatePickerEditorComponent,
+    RatingEditorComponent,
+    ColorPickerEditorComponent,
+    SliderEditorComponent,
+    TagsEditorComponent,
+  ],
   template: `
     <div class="app-container">
       <h1>OGrid - Angular PrimeNG Example</h1>
-      <p class="app-subtitle">
-        A fully featured data table powered by <code>@alaarab/ogrid-angular-primeng</code>.
-        Includes sorting, multi-select &amp; text filtering, column chooser, and pagination.
-      </p>
+      <p class="app-subtitle">{{ subtitle }}</p>
       <div style="flex: 1; min-height: 0;">
         <ogrid-primeng [props]="gridProps" />
       </div>
@@ -55,21 +80,28 @@ const enableCellReferences = typeof window !== 'undefined'
 })
 export class AppComponent implements OnInit, OnDestroy {
   private bridge: BridgeConnection | null = null;
-  private data = projects;
+  private data = initialRows as ExampleRow[];
   private pinnedColumns: Record<string, 'left' | 'right'> = {};
 
-  gridProps: IOGridProps<Project> = {
-    data: projects,
-    columns: columns,
-    getRowId: getRowId,
-    entityLabelPlural: 'projects',
-    defaultPageSize: 25,
-    editable: true,
+  readonly subtitle = isPremiumExample
+    ? 'Premium editor parity mode powered by @alaarab/ogrid-angular-inputs.'
+    : 'A fully featured data table powered by @alaarab/ogrid-angular-primeng. Includes sorting, multi-select text filtering, column chooser, and pagination.';
+
+  gridProps: IOGridProps<ExampleRow> = {
+    ...(!isPremiumExample && projectScenario.serverSide ? { dataSource: projectScenario.dataSource! } : { data: this.data }),
+    columns: columns as IOGridProps<ExampleRow>['columns'],
+    getRowId: (row) => row.id,
+    entityLabelPlural: isPremiumExample ? 'products' : 'projects',
+    defaultPageSize: isPremiumExample ? 10 : 25,
+    editable: isPremiumExample || !projectScenario.serverSide,
     cellSelection: true,
-    cellReferences: enableCellReferences,
+    cellReferences: isPremiumExample ? undefined : featureFlags.cellReferences,
+    rowSelection: isPremiumExample ? undefined : projectScenario.rowSelection,
+    formulas: isPremiumExample ? undefined : projectScenario.formulas,
+    initialFormulas: isPremiumExample ? undefined : projectScenario.initialFormulas,
     pinnedColumns: this.pinnedColumns,
     statusBar: true,
-    onCellValueChanged: (e) => handleCellValueChanged(projects, e),
+    onCellValueChanged: (event) => handleCellValueChanged(this.data, event as { item: ExampleRow; columnId: string; newValue: unknown }),
     onColumnPinned: (columnId, pinned) => this.handleColumnPinned(columnId, pinned),
   };
 
@@ -80,24 +112,23 @@ export class AppComponent implements OnInit, OnDestroy {
       const { [columnId]: _, ...next } = this.pinnedColumns;
       this.pinnedColumns = next;
     }
-    this.gridProps = { ...this.gridProps, pinnedColumns: this.pinnedColumns };
+    this.gridProps = { ...this.gridProps, pinnedColumns: this.pinnedColumns } as IOGridProps<ExampleRow>;
   }
 
   ngOnInit() {
     this.bridge = connectGridToBridge({
       gridId: 'angular-primeng-demo',
       getData: () => this.data,
-      getColumns: () => columns.map((c) => ({
-        columnId: c.columnId,
-        headerName: c.name ?? c.columnId,
-        type: c.type,
+      getColumns: () => columns.map((column) => ({
+        columnId: column.columnId,
+        headerName: column.name ?? column.columnId,
+        type: column.type,
       })),
       getSort: () => [],
       getFilters: () => ({}),
       onCellUpdate: (rowIndex, columnId, value) => {
-        if (this.data[rowIndex]) {
-          (this.data[rowIndex] as Record<string, unknown>)[columnId] = value;
-        }
+        if (!this.data[rowIndex]) return;
+        (this.data[rowIndex] as Record<string, unknown>)[columnId] = value;
       },
     });
   }

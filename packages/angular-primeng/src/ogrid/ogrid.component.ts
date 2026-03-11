@@ -90,6 +90,16 @@ import { PaginationControlsComponent } from '../pagination-controls/pagination-c
         [showColumnLetters]="service.dataGridProps().showColumnLetters ?? false"
         [showNameBox]="service.dataGridProps().showNameBox ?? false"
         [onActiveCellChange]="service.dataGridProps().onActiveCellChange"
+        [formulas]="service.dataGridProps().formulas"
+        [getFormulaValue]="service.dataGridProps().getFormulaValue"
+        [hasFormula]="service.dataGridProps().hasFormula"
+        [getFormula]="service.dataGridProps().getFormula"
+        [setFormula]="service.dataGridProps().setFormula"
+        [onFormulaCellChanged]="service.dataGridProps().onFormulaCellChanged"
+        [getPrecedents]="service.dataGridProps().getPrecedents"
+        [getDependents]="service.dataGridProps().getDependents"
+        [getAuditTrail]="service.dataGridProps().getAuditTrail"
+        [formulaVersion]="service.dataGridProps().formulaVersion"
         [formulaReferences]="service.dataGridProps().formulaReferences"
       ></ogrid-primeng-datagrid-table>
 

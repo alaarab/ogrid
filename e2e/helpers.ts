@@ -146,6 +146,20 @@ export function getCellContent(page: Page, rowIdx: number, colIdx: number): Loca
   return page.locator(`tbody tr:nth-child(${rowIdx + 1}) td:nth-child(${colIdx + 1}) > div`).first();
 }
 
+/** Get the table cell element for a data column, ignoring checkbox/row-number gutters. */
+export function getDataCell(page: Page, rowIdx: number, columnId: string): Locator {
+  return page.locator(`tbody tr:nth-child(${rowIdx + 1}) td[data-column-id="${columnId}"]`).first();
+}
+
+/** Get the interactive cell content for a data column, ignoring checkbox/row-number gutters. */
+export function getCellContentByColumnId(page: Page, rowIdx: number, columnId: string): Locator {
+  const cell = getDataCell(page, rowIdx, columnId);
+  if (isJS(page)) {
+    return cell;
+  }
+  return cell.locator(':scope > div').first();
+}
+
 /** Get the grid region/wrapper for keyboard events. */
 export function getGridRegion(page: Page): Locator {
   if (isJS(page)) {

@@ -13,6 +13,8 @@ interface TestRow {
   active?: boolean;
 }
 
+const FakeVueEditor = { name: 'FakeVueEditor' };
+
 const baseInput = (): CellRenderDescriptorInput<TestRow> => ({
   editingCell: null,
   activeCell: null,
@@ -153,6 +155,23 @@ describe('getCellRenderDescriptor  -  mode computation', () => {
 
     const descriptor = getCellRenderDescriptor(item, col, 0, 0, input);
     expect(descriptor.mode).toBe('display');
+  });
+
+  it('returns editing-popover mode for non-string custom editor objects', () => {
+    const col: IColumnDef<TestRow> = {
+      columnId: 'name',
+      name: 'Name',
+      editable: true,
+      cellEditor: FakeVueEditor,
+      cellEditorPopup: true,
+    };
+    const item: TestRow = { id: '1', name: 'Alice' };
+
+    const input = baseInput();
+    input.editingCell = { rowId: '1', columnId: 'name' };
+
+    const descriptor = getCellRenderDescriptor(item, col, 0, 0, input);
+    expect(descriptor.mode).toBe('editing-popover');
   });
 });
 

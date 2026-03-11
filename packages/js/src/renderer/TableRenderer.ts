@@ -85,13 +85,17 @@ export class TableRenderer<T> {
   // Delegated event handlers bound to tbody
   private _tbodyClickHandler: ((e: MouseEvent) => void) | null = null;
   private _tbodyPointerdownHandler: ((e: PointerEvent) => void) | null = null;
+  private _tbodyMousedownHandler: ((e: MouseEvent) => void) | null = null;
   private _tbodyDblclickHandler: ((e: MouseEvent) => void) | null = null;
   private _tbodyContextmenuHandler: ((e: MouseEvent) => void) | null = null;
+  private _tbodySelectstartHandler: ((e: Event) => void) | null = null;
 
   // Delegated event handlers bound to thead (avoids per-<th> inline listeners)
   private _theadClickHandler: ((e: MouseEvent) => void) | null = null;
   private _theadPointerdownHandler: ((e: PointerEvent) => void) | null = null;
+  private _theadMousedownHandler: ((e: MouseEvent) => void) | null = null;
   private _theadDblclickHandler: ((e: MouseEvent) => void) | null = null;
+  private _theadSelectstartHandler: ((e: Event) => void) | null = null;
 
   // State tracking for incremental DOM patching
   private lastActiveCell: IActiveCell | null = null;
@@ -166,6 +170,11 @@ export class TableRenderer<T> {
     }
   }
 
+  private isNonDataSelectionSurface(target: EventTarget | null): boolean {
+    if (!(target instanceof HTMLElement)) return false;
+    return !!target.closest('td.ogrid-row-number-cell, th.ogrid-row-number-header');
+  }
+
   private attachBodyDelegation(): void {
     if (!this.tbody) return;
 
@@ -187,6 +196,10 @@ export class TableRenderer<T> {
     this._tbodyPointerdownHandler = (e: PointerEvent) => {
       // Fill handle pointerdown  -  delegated from per-cell inline listener
       const target = e.target as HTMLElement;
+      if (this.isNonDataSelectionSurface(target)) {
+        if (e.button === 0) e.preventDefault();
+        return;
+      }
       if (target.classList.contains('ogrid-fill-handle') || target.getAttribute('data-fill-handle') === 'true') {
         this.interactionState?.onFillHandleMouseDown?.(e);
         return;
@@ -194,6 +207,11 @@ export class TableRenderer<T> {
       const cell = this.getCellFromEvent(e);
       if (!cell) return;
       this.interactionState?.onCellMouseDown?.({ rowIndex: cell.rowIndex, colIndex: cell.colIndex, event: e });
+    };
+
+    this._tbodyMousedownHandler = (e: MouseEvent) => {
+      if (!this.isNonDataSelectionSurface(e.target)) return;
+      if (e.button === 0) e.preventDefault();
     };
 
     this._tbodyDblclickHandler = (e: MouseEvent) => {
@@ -214,11 +232,18 @@ export class TableRenderer<T> {
       this.interactionState?.onCellContextMenu?.({ rowIndex: cell.rowIndex, colIndex: cell.colIndex, event: e });
     };
 
+    this._tbodySelectstartHandler = (e: Event) => {
+      if (!this.isNonDataSelectionSurface(e.target)) return;
+      e.preventDefault();
+    };
+
     this.addDelegatedListeners(this.tbody, [
       ['click', this._tbodyClickHandler as EventListener, { passive: true }],
       ['pointerdown', this._tbodyPointerdownHandler as EventListener],
+      ['mousedown', this._tbodyMousedownHandler as EventListener],
       ['dblclick', this._tbodyDblclickHandler as EventListener, { passive: true }],
       ['contextmenu', this._tbodyContextmenuHandler as EventListener],
+      ['selectstart', this._tbodySelectstartHandler as EventListener],
     ]);
   }
 
@@ -227,13 +252,17 @@ export class TableRenderer<T> {
     this.removeDelegatedListeners(this.tbody, [
       ['click', this._tbodyClickHandler as EventListener | null],
       ['pointerdown', this._tbodyPointerdownHandler as EventListener | null],
+      ['mousedown', this._tbodyMousedownHandler as EventListener | null],
       ['dblclick', this._tbodyDblclickHandler as EventListener | null],
       ['contextmenu', this._tbodyContextmenuHandler as EventListener | null],
+      ['selectstart', this._tbodySelectstartHandler as EventListener | null],
     ]);
     this._tbodyClickHandler = null;
     this._tbodyPointerdownHandler = null;
+    this._tbodyMousedownHandler = null;
     this._tbodyDblclickHandler = null;
     this._tbodyContextmenuHandler = null;
+    this._tbodySelectstartHandler = null;
   }
 
   /** Attach delegated event listeners to <thead> for sort clicks, resize, reorder, and filter icon clicks. */
@@ -247,6 +276,11 @@ export class TableRenderer<T> {
 
     this._theadPointerdownHandler = (e: PointerEvent) => {
       const target = e.target as HTMLElement;
+
+      if (this.isNonDataSelectionSurface(target)) {
+        if (e.button === 0) e.preventDefault();
+        return;
+      }
 
       // Resize handle pointerdown
       if (target.classList.contains('ogrid-resize-handle')) {
@@ -291,10 +325,22 @@ export class TableRenderer<T> {
       }
     };
 
+    this._theadMousedownHandler = (e: MouseEvent) => {
+      if (!this.isNonDataSelectionSurface(e.target)) return;
+      if (e.button === 0) e.preventDefault();
+    };
+
+    this._theadSelectstartHandler = (e: Event) => {
+      if (!this.isNonDataSelectionSurface(e.target)) return;
+      e.preventDefault();
+    };
+
     this.addDelegatedListeners(this.thead, [
       ['click', this._theadClickHandler as EventListener | null],
       ['pointerdown', this._theadPointerdownHandler as EventListener],
+      ['mousedown', this._theadMousedownHandler as EventListener],
       ['dblclick', this._theadDblclickHandler as EventListener],
+      ['selectstart', this._theadSelectstartHandler as EventListener],
     ]);
   }
 
@@ -303,11 +349,15 @@ export class TableRenderer<T> {
     this.removeDelegatedListeners(this.thead, [
       ['click', this._theadClickHandler as EventListener | null],
       ['pointerdown', this._theadPointerdownHandler as EventListener | null],
+      ['mousedown', this._theadMousedownHandler as EventListener | null],
       ['dblclick', this._theadDblclickHandler as EventListener | null],
+      ['selectstart', this._theadSelectstartHandler as EventListener | null],
     ]);
     this._theadClickHandler = null;
     this._theadPointerdownHandler = null;
+    this._theadMousedownHandler = null;
     this._theadDblclickHandler = null;
+    this._theadSelectstartHandler = null;
   }
 
   getWrapperElement(): HTMLDivElement | null {

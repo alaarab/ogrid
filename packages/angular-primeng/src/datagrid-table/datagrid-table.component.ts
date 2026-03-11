@@ -848,6 +848,16 @@ export class DataGridTableComponent<T = unknown> extends BaseDataGridTableCompon
   @Input({ alias: 'showColumnLetters' }) showColumnLettersInput: boolean = false;
   @Input({ alias: 'showNameBox' }) showNameBoxInput: boolean = false;
   @Input() onActiveCellChange: ((ref: string | null) => void) | undefined = undefined;
+  @Input() formulas: boolean | undefined = undefined;
+  @Input() getFormulaValue: ((col: number, row: number) => unknown) | undefined = undefined;
+  @Input() hasFormula: ((col: number, row: number) => boolean) | undefined = undefined;
+  @Input() getFormula: ((col: number, row: number) => string | undefined) | undefined = undefined;
+  @Input() setFormula: ((col: number, row: number, formula: string | null) => void) | undefined = undefined;
+  @Input() onFormulaCellChanged: ((col: number, row: number) => void) | undefined = undefined;
+  @Input() getPrecedents: ((col: number, row: number) => import('@alaarab/ogrid-core').IAuditEntry[]) | undefined = undefined;
+  @Input() getDependents: ((col: number, row: number) => import('@alaarab/ogrid-core').IAuditEntry[]) | undefined = undefined;
+  @Input() getAuditTrail: ((col: number, row: number) => import('@alaarab/ogrid-core').IAuditTrail | null) | undefined = undefined;
+  @Input() formulaVersion: number | undefined = undefined;
   @Input({ alias: 'formulaReferences' }) formulaReferencesInput: import('@alaarab/ogrid-core').FormulaReference[] | undefined = undefined;
   @Input({ alias: 'currentPage' }) currentPageInput: number = 1;
   @Input({ alias: 'pageSize' }) pageSizeInput: number = 25;
@@ -1081,6 +1091,16 @@ export class DataGridTableComponent<T = unknown> extends BaseDataGridTableCompon
       showColumnLetters: this.showColumnLettersInput,
       showNameBox: this.showNameBoxInput,
       onActiveCellChange: this.onActiveCellChange,
+      formulas: this.formulas,
+      getFormulaValue: this.getFormulaValue,
+      hasFormula: this.hasFormula,
+      getFormula: this.getFormula,
+      setFormula: this.setFormula,
+      onFormulaCellChanged: this.onFormulaCellChanged,
+      getPrecedents: this.getPrecedents,
+      getDependents: this.getDependents,
+      getAuditTrail: this.getAuditTrail,
+      formulaVersion: this.formulaVersion,
       currentPage: this.currentPageInput,
       pageSize: this.pageSizeInput,
       statusBar: this.statusBar as IOGridDataGridProps<T>['statusBar'],

@@ -46,6 +46,7 @@ import {
   closeColumnChooser,
   getContextMenu,
   getContextMenuItem,
+  getCellContentByColumnId,
   getFramework,
   isJS,
 } from './helpers';
@@ -596,15 +597,16 @@ test.describe('Selection seam regressions', () => {
         'vue-radix',
         'vue-vuetify',
         'vue-primevue',
+        'js',
       ].includes(testInfo.project.name),
-      'Seam regression coverage currently targets framework wrappers with cell references.',
+      'Seam regression coverage requires an example with cell references enabled.',
     );
     await page.goto('/?cellReferences=1');
     await waitForGrid(page);
   });
 
   test('dragging from the row-number seam does not select row-number text', async ({ page }) => {
-    const activeCell = page.locator('tbody tr:nth-child(1) td[data-column-id="name"] > div').first();
+    const activeCell = getCellContentByColumnId(page, 0, 'name');
     const startCell = page.locator('tbody tr:nth-child(1) td').first();
     const endCell = page.locator('tbody tr:nth-child(3) td').first();
 
@@ -624,11 +626,15 @@ test.describe('Selection seam regressions', () => {
     await page.mouse.up();
 
     await expect.poll(async () => page.evaluate(() => window.getSelection()?.toString() ?? '')).toBe('');
-    await expect(activeCell).toHaveAttribute('tabindex', '0');
+    if (isJS(page)) {
+      await expect(activeCell).toHaveAttribute('data-active-cell', 'true');
+    } else {
+      await expect(activeCell).toHaveAttribute('tabindex', '0');
+    }
   });
 
   test('dragging from the column-letter seam does not select header text', async ({ page }) => {
-    const activeCell = page.locator('tbody tr:nth-child(1) td[data-column-id="name"] > div').first();
+    const activeCell = getCellContentByColumnId(page, 0, 'name');
     const startHeader = page.locator('thead tr').first().locator('th').nth(1);
     const endHeader = page.locator('thead tr').first().locator('th').nth(3);
 
@@ -648,7 +654,11 @@ test.describe('Selection seam regressions', () => {
     await page.mouse.up();
 
     await expect.poll(async () => page.evaluate(() => window.getSelection()?.toString() ?? '')).toBe('');
-    await expect(activeCell).toHaveAttribute('tabindex', '0');
+    if (isJS(page)) {
+      await expect(activeCell).toHaveAttribute('data-active-cell', 'true');
+    } else {
+      await expect(activeCell).toHaveAttribute('tabindex', '0');
+    }
   });
 });
 
