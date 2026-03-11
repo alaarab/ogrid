@@ -81,6 +81,7 @@ interface IOGridBaseProps<T> {
   /** Called when user requests autosize for a single column (with measured width). */
   onAutosizeColumn?: (columnId: string, width: number) => void;
   onColumnPinned?: (columnId: string, pinned: 'left' | 'right' | null) => void;
+  pinnedColumns?: Record<string, 'left' | 'right'>;
   editable?: boolean;
   cellSelection?: boolean;
   density?: 'compact' | 'normal' | 'comfortable';

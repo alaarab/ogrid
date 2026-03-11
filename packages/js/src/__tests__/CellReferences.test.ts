@@ -26,9 +26,10 @@ const testData: TestRow[] = [
 function createGrid(options?: Partial<OGridOptions<TestRow>>) {
   const container = document.createElement('div');
   document.body.appendChild(container);
+  const data = (options?.data ?? testData).map((item) => ({ ...item }));
   const grid = new OGrid<TestRow>(container, {
     columns: testColumns,
-    data: testData,
+    data,
     getRowId: (item: TestRow) => item.id,
     pageSize: 20,
     ...options,
@@ -356,6 +357,75 @@ describe('Cell References - Name Box', () => {
     expect(formatCellReference(2, 3)).toBe('C3');
     expect(formatCellReference(25, 100)).toBe('Z100');
     expect(formatCellReference(26, 1)).toBe('AA1');
+  });
+});
+
+describe('Cell References - Interaction Offsets', () => {
+  it('keyboard Enter edits the active data column instead of the row-number gutter offset', () => {
+    const { container, grid } = createGrid({
+      cellReferences: true,
+      cellSelection: true,
+      editable: true,
+    });
+
+    const nameCell = container.querySelector('td[data-column-id="name"][data-row-index="0"]') as HTMLElement;
+    expect(nameCell).not.toBeNull();
+    nameCell.click();
+
+    const wrapper = container.querySelector('.ogrid-wrapper') as HTMLElement;
+    expect(wrapper).not.toBeNull();
+    wrapper.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
+
+    const input = container.querySelector('input[type="text"]') as HTMLInputElement;
+    expect(input).not.toBeNull();
+    expect(input.value).toBe('Alice');
+
+    grid.destroy();
+  });
+
+  it('keyboard Home lands on the first data column when cell references are enabled', () => {
+    const { container, grid } = createGrid({
+      cellReferences: true,
+      cellSelection: true,
+      editable: true,
+    });
+
+    const ageCell = container.querySelector('td[data-column-id="age"][data-row-index="0"]') as HTMLElement;
+    expect(ageCell).not.toBeNull();
+    ageCell.click();
+
+    const wrapper = container.querySelector('.ogrid-wrapper') as HTMLElement;
+    expect(wrapper).not.toBeNull();
+    wrapper.dispatchEvent(new KeyboardEvent('keydown', { key: 'Home', bubbles: true }));
+
+    const nameCell = container.querySelector('td[data-column-id="name"][data-row-index="0"]') as HTMLElement;
+    expect(nameCell.getAttribute('data-active-cell')).toBe('true');
+
+    grid.destroy();
+  });
+
+  it('Delete clears the active first data column instead of the row-number offset column', () => {
+    const { container, grid } = createGrid({
+      cellReferences: true,
+      cellSelection: true,
+      editable: true,
+    });
+
+    const nameCell = container.querySelector('td[data-column-id="name"][data-row-index="0"]') as HTMLElement;
+    expect(nameCell).not.toBeNull();
+    expect(nameCell.textContent).toContain('Alice');
+    nameCell.click();
+
+    const wrapper = container.querySelector('.ogrid-wrapper') as HTMLElement;
+    expect(wrapper).not.toBeNull();
+    wrapper.dispatchEvent(new KeyboardEvent('keydown', { key: 'Delete', bubbles: true }));
+
+    const clearedNameCell = container.querySelector('td[data-column-id="name"][data-row-index="0"]') as HTMLElement;
+    expect(clearedNameCell.textContent).toBe('');
+    const ageCell = container.querySelector('td[data-column-id="age"][data-row-index="0"]') as HTMLElement;
+    expect(ageCell.textContent).toContain('30');
+
+    grid.destroy();
   });
 });
 

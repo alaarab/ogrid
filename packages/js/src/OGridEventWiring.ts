@@ -71,7 +71,8 @@ export class OGridEventWiring<T> {
     callbacks: EventWiringCallbacks<T>,
   ): InteractionResult<T> {
     const { editable } = options;
-    const colOffset = rowSelectionState ? 1 : 0;
+    let colOffset = rowSelectionState ? 1 : 0;
+    if (options.showRowNumbers || options.cellReferences) colOffset += 1;
     const unsubscribes: (() => void)[] = [];
 
     // Create interaction states
@@ -121,7 +122,7 @@ export class OGridEventWiring<T> {
         callbacks.updateRendererInteractionState();
       },
       (cell) => {
-        selectionState.setActiveCell(cell);
+        selectionState.setActiveCell(cell, cell ? cell.columnIndex - colOffset : undefined);
       }
     );
 
@@ -151,7 +152,7 @@ export class OGridEventWiring<T> {
       },
       () => selectionState.activeCell ?? null,
       () => selectionState.selectionRange ?? null,
-      (cell) => selectionState.setActiveCell(cell),
+      (cell) => selectionState.setActiveCell(cell, cell ? cell.columnIndex - colOffset : undefined),
       (range) => selectionState.setSelectionRange(range)
     );
 
@@ -249,7 +250,12 @@ export class OGridEventWiring<T> {
         if (target.tagName === 'TD') {
           const coords = getCellCoordinates(target);
           if (coords && coords.rowIndex >= 0 && coords.colIndex >= 0) {
-            selectionState.updateDrag(coords.rowIndex, coords.colIndex, () => callbacks.updateDragAttributes());
+            selectionState.updateDrag(
+              coords.rowIndex,
+              coords.colIndex,
+              () => callbacks.updateDragAttributes(),
+              coords.colIndex - renderer.getColOffset(),
+            );
           }
         }
       }

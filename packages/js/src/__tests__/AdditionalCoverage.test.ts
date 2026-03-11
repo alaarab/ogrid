@@ -297,6 +297,41 @@ describe('Memory Leak Tests', () => {
   });
 
   describe('RAF cancellation', () => {
+    it('should allow active-cell and selection-range columns to diverge when a gutter offset is present', () => {
+      const selectionState = new SelectionState();
+
+      selectionState.setActiveCell({ rowIndex: 0, columnIndex: 1 }, 0);
+
+      expect(selectionState.activeCell).toEqual({ rowIndex: 0, columnIndex: 1 });
+      expect(selectionState.selectionRange).toEqual({
+        startRow: 0,
+        startCol: 0,
+        endRow: 0,
+        endCol: 0,
+      });
+
+      selectionState.destroy();
+    });
+
+    it('should keep drag ranges in data-column coordinates when a gutter offset is present', () => {
+      const selectionState = new SelectionState();
+      const applyFn = jest.fn();
+
+      selectionState.startDrag(0, 1, 0);
+      selectionState.updateDrag(1, 2, applyFn, 1);
+      selectionState.endDrag();
+
+      expect(selectionState.activeCell).toEqual({ rowIndex: 0, columnIndex: 1 });
+      expect(selectionState.selectionRange).toEqual({
+        startRow: 0,
+        startCol: 0,
+        endRow: 1,
+        endCol: 1,
+      });
+
+      selectionState.destroy();
+    });
+
     it('should cancel pending RAF in SelectionState on destroy', () => {
       const selectionState = new SelectionState();
       const applyFn = jest.fn();

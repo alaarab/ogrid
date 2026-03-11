@@ -1,2 +1,2 @@
-export const DEMO_PROJECT_COUNT = 75;
-export const DEMO_PAGE_SIZE = 25;
+export const DEMO_PROJECT_COUNT = 1000;
+export const DEMO_PAGE_SIZE = 100;

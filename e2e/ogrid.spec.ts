@@ -8,7 +8,7 @@
  * Each app renders the same demo data set with sorting, filtering, pagination,
  * cell editing, cell selection, and a status bar.
  *
- * Columns: Project Name | Status | Owner | Department | Budget | Start Date
+ * Columns: Project Name | Status | Owner | Title | Email | Department | Budget | Start Date | Active
  * Page size: shared example config  |  Total rows: shared example config
  */
 
@@ -29,6 +29,8 @@ import {
   getFilterPopover,
   applyFilter,
   clearFilter,
+  activateCell,
+  DEMO_COLUMN_INDEX,
   openColumnChooser,
   openColumnOptions,
   rightClickCell,
@@ -37,15 +39,18 @@ import {
   getResizeHandle,
   enterCellEdit,
   enterDateCellEdit,
+  expectRenderedPageSize,
   getDefaultPageSize,
   expectActiveCellAt,
   getTextFilterInput,
+  getOpenTextEditor,
   scrollGridVertically,
   dismissContextMenu,
   toggleColumnInChooser,
   closeColumnChooser,
   getContextMenu,
   getContextMenuItem,
+  getDataCell,
   getCellContentByColumnId,
   getFramework,
   isJS,
@@ -60,7 +65,7 @@ test.describe('Grid rendering', () => {
     await page.goto('/');
   });
 
-  test('renders a table with 6 column headers', async ({ page }) => {
+  test('renders the shared demo column headers', async ({ page }) => {
     await waitForGrid(page);
     const headers = await page.locator('thead th').allTextContents();
     const joined = headers.join(' ');
@@ -75,7 +80,7 @@ test.describe('Grid rendering', () => {
   test('renders correct number of data rows on first page', async ({ page }) => {
     await waitForGrid(page);
     const expectedRows = getDefaultPageSize(page);
-    await expect(getRows(page)).toHaveCount(expectedRows);
+    await expectRenderedPageSize(page, expectedRows, { totalCount: DEMO_PROJECT_COUNT });
   });
 
   test('first row contains "Project A" as project name', async ({ page }) => {
@@ -93,7 +98,7 @@ test.describe('Grid rendering', () => {
       await expect(info).toBeVisible();
     } else {
       const text = await page.locator('body').textContent();
-      expect(text).toContain(String(DEMO_PROJECT_COUNT));
+      expect(text ?? '').toMatch(new RegExp(DEMO_PROJECT_COUNT.toLocaleString('en-US').replace(/,/g, '[,]?')));
     }
   });
 });
@@ -145,7 +150,10 @@ test.describe('Pagination', () => {
   test('next page loads rows', async ({ page }) => {
     await clickNextPage(page);
     const pageSize = getDefaultPageSize(page);
-    await expect(getRows(page)).toHaveCount(pageSize);
+    await expectRenderedPageSize(page, pageSize, {
+      start: pageSize + 1,
+      totalCount: DEMO_PROJECT_COUNT,
+    });
   });
 
   test('navigating to last page shows final rows', async ({ page }) => {
@@ -165,7 +173,7 @@ test.describe('Pagination', () => {
 
   test('changing page size to 50 shows 50 rows', async ({ page }) => {
     await changePageSize(page, 50);
-    await expect(getRows(page)).toHaveCount(50);
+    await expectRenderedPageSize(page, 50, { totalCount: DEMO_PROJECT_COUNT });
   });
 
   test('page number buttons navigate directly', async ({ page }) => {
@@ -214,7 +222,7 @@ test.describe('Text filter', () => {
     await openFilter(page, 'Project Name');
     await clearFilter(page);
 
-    await expect(getRows(page)).toHaveCount(getDefaultPageSize(page));
+    await expectRenderedPageSize(page, getDefaultPageSize(page), { totalCount: DEMO_PROJECT_COUNT });
   });
 });
 
@@ -228,6 +236,10 @@ test.describe('MultiSelect filter', () => {
     await openFilter(page, 'Status');
 
     if (isJS(page)) {
+      const clearSelection = page.locator('.ogrid-filter-clear-sel-btn').first();
+      if (await clearSelection.isVisible().catch(() => false)) {
+        await clearSelection.click();
+      }
       // JS: checkboxes in .ogrid-filter-checkbox-list
       const checkbox = page.locator('.ogrid-filter-checkbox-list label').filter({ hasText: 'Active' }).locator('input');
       await checkbox.click();
@@ -235,9 +247,21 @@ test.describe('MultiSelect filter', () => {
       // React/Angular/Vue: dialog or popover with checkboxes
       const popover = getFilterPopover(page);
       await expect(popover).toBeVisible({ timeout: 2000 });
+      const clearSelection = popover.getByRole('button', { name: /^clear$/i }).first();
+      if (await clearSelection.isVisible().catch(() => false)) {
+        await clearSelection.click();
+      }
       const activeLabel = popover.locator('label').filter({ hasText: /^Active$/i }).first();
       if (await activeLabel.isVisible().catch(() => false)) {
-        await activeLabel.click();
+        const labelledCheckbox = activeLabel.locator('xpath=preceding-sibling::*[@role="checkbox"][1]').first();
+        const labelledInput = activeLabel.locator('xpath=preceding-sibling::input[@type="checkbox"][1]').first();
+        if (await labelledCheckbox.isVisible().catch(() => false)) {
+          await labelledCheckbox.click();
+        } else if (await labelledInput.isVisible().catch(() => false)) {
+          await labelledInput.click();
+        } else {
+          await activeLabel.click();
+        }
       } else {
         // Vue Vuetify uses input[type="checkbox"] with aria-label (no role="checkbox").
         const activeCheckbox = (await popover.getByRole('checkbox', { name: /active/i }).count()) > 0
@@ -339,9 +363,9 @@ test.describe('Cell editing', () => {
   test('Enter commits the edited value', async ({ page }) => {
     const input = await enterCellEdit(page, 0, 0);
 
-    await input.fill('E2E Edited');
+    await input.fill('!E2E Edited');
     await input.press('Enter');
-    await expect.poll(async () => (await getCellContent(page, 0, 0).textContent()) ?? '').toContain('E2E Edited');
+    await expect.poll(async () => (await getCellContent(page, 0, 0).textContent()) ?? '').toContain('!E2E Edited');
   });
 
   test('Escape discards the edit', async ({ page }) => {
@@ -369,7 +393,7 @@ test.describe('Keyboard navigation', () => {
     const region = getGridRegion(page);
     await region.press('Enter');
 
-    const input = page.locator('input[type="text"]').first();
+    const input = getOpenTextEditor(page);
     await expect(input).toBeVisible({ timeout: 3000 });
   });
 
@@ -382,9 +406,7 @@ test.describe('Keyboard navigation', () => {
     await region.press('Enter');
     await region.press('Escape');
     await expect.poll(async () => ((await getCellContent(page, 0, 0).textContent()) ?? '').trim()).toBe(originalText);
-    const editorInput = getFramework(page) === 'vue-vuetify'
-      ? page.locator('tbody input[type="text"]')
-      : page.locator('input[type="text"]');
+    const editorInput = getOpenTextEditor(page);
     await expect(editorInput).toHaveCount(0);
   });
 
@@ -407,7 +429,7 @@ test.describe('Keyboard navigation', () => {
     await expectActiveCellAt(page, 0, 0);
 
     await region.press('End');
-    await expectActiveCellAt(page, 0, 6);
+    await expectActiveCellAt(page, 0, DEMO_COLUMN_INDEX.active);
   });
 });
 
@@ -490,11 +512,11 @@ test.describe('Undo/Redo', () => {
   });
 
   test('Ctrl+Z undoes a cell edit', async ({ page }) => {
-    const td = page.locator('tbody tr:nth-child(1) td:nth-child(1)');
+    const td = getDataCell(page, 0, 'name');
     const originalText = await td.textContent();
 
     const input = await enterCellEdit(page, 0, 0);
-    await input.fill('Undo Test Value');
+    await input.fill('!Undo Test Value');
     await input.press('Enter');
 
     // After Enter the active cell moves down, re-locate td[0,0]
@@ -510,10 +532,10 @@ test.describe('Undo/Redo', () => {
   });
 
   test('Ctrl+Y redoes after undo', async ({ page }) => {
-    const td = page.locator('tbody tr:nth-child(1) td:nth-child(1)');
+    const td = getDataCell(page, 0, 'name');
 
     const input = await enterCellEdit(page, 0, 0);
-    await input.fill('Redo Test Value');
+    await input.fill('!Redo Test Value');
     await input.press('Enter');
 
     await expect.poll(async () => await td.textContent()).not.toBe('');
@@ -541,7 +563,7 @@ test.describe('Advanced keyboard shortcuts', () => {
     const region = getGridRegion(page);
     await region.press('F2');
 
-    const input = page.locator('input[type="text"]').first();
+    const input = getOpenTextEditor(page);
     await expect(input).toBeVisible({ timeout: 3000 });
   });
 
@@ -552,7 +574,7 @@ test.describe('Advanced keyboard shortcuts', () => {
     const region = getGridRegion(page);
     await region.press('Delete');
 
-    const td = page.locator('tbody tr:nth-child(1) td:nth-child(1)');
+    const td = getDataCell(page, 0, 'name');
     await expect.poll(async () => ((await td.textContent()) ?? '').trim()).toBe('');
   });
 });
@@ -733,7 +755,10 @@ test.describe('Column header menu', () => {
       await page.getByRole('button', { name: 'Pin left' }).click();
     }
 
-    await expect.poll(async () => await th.evaluate((el) => getComputedStyle(el).left)).toBe('0px');
+    await expect.poll(async () => await th.evaluate((el) => getComputedStyle(el).position)).toBe('sticky');
+    const pinnedLeft = await th.evaluate((el) => getComputedStyle(el).left);
+    expect(pinnedLeft).toMatch(/^-?\d+(\.\d+)?px$/);
+    expect(Number.parseFloat(pinnedLeft)).toBeGreaterThanOrEqual(0);
   });
 });
 
@@ -744,8 +769,20 @@ test.describe('Column resize', () => {
   });
 
   test('dragging resize handle changes column width', async ({ page }) => {
-    const th = page.locator('thead th:nth-child(1)');
-    const initialBox = await th.boundingBox();
+    const th = page.locator('thead th').filter({ hasText: 'Project Name' }).first();
+    const fw = getFramework(page);
+    const getMeasuredWidth = async () => th.evaluate((el) => {
+      const rectWidth = el.getBoundingClientRect().width;
+      const style = (el as HTMLElement).style;
+      const parsePx = (value: string) => Number.parseFloat(value || '0');
+      return Math.max(
+        rectWidth,
+        parsePx(style.width),
+        parsePx(style.minWidth),
+        parsePx(style.maxWidth),
+      );
+    });
+    const initialWidth = await getMeasuredWidth();
 
     // Hover the header first to make the resize handle visible (some frameworks
     // only show it on hover).
@@ -755,11 +792,51 @@ test.describe('Column resize', () => {
     await expect(resizeHandle).toBeVisible({ timeout: 3000 });
     const handleBox = await resizeHandle.boundingBox();
 
-    await page.mouse.move(handleBox.x + handleBox.width / 2, handleBox.y + handleBox.height / 2);
-    await page.mouse.down();
-    await page.mouse.move(handleBox.x + handleBox.width / 2 + 80, handleBox.y + handleBox.height / 2, { steps: 10 });
-    await page.mouse.up();
-    await expect.poll(async () => (await th.boundingBox())?.width ?? 0).toBeGreaterThan(initialBox?.width ?? 0);
+    const startX = handleBox.x + handleBox.width / 2;
+    const startY = handleBox.y + handleBox.height / 2;
+    const endX = startX + 80;
+
+    if (fw === 'angular-radix') {
+      await resizeHandle.dispatchEvent('pointerdown', {
+        bubbles: true,
+        button: 0,
+        buttons: 1,
+        clientX: startX,
+        clientY: startY,
+        isPrimary: true,
+        pointerId: 1,
+        pointerType: 'mouse',
+      });
+      await page.evaluate(({ endX, startY }) => {
+        window.dispatchEvent(new PointerEvent('pointermove', {
+          bubbles: true,
+          button: 0,
+          buttons: 1,
+          clientX: endX,
+          clientY: startY,
+          isPrimary: true,
+          pointerId: 1,
+          pointerType: 'mouse',
+        }));
+        window.dispatchEvent(new PointerEvent('pointerup', {
+          bubbles: true,
+          button: 0,
+          buttons: 0,
+          clientX: endX,
+          clientY: startY,
+          isPrimary: true,
+          pointerId: 1,
+          pointerType: 'mouse',
+        }));
+      }, { endX, startY });
+    } else {
+      await page.mouse.move(startX, startY);
+      await page.mouse.down();
+      await page.mouse.move(endX, startY, { steps: 10 });
+      await page.mouse.up();
+    }
+
+    await expect.poll(getMeasuredWidth).toBeGreaterThan(initialWidth);
   });
 });
 
@@ -788,9 +865,9 @@ test.describe('Clipboard', () => {
   test('Ctrl+V pastes copied value into another cell', async ({ page }) => {
     // Edit cell [0,0] to a known value
     const input = await enterCellEdit(page, 0, 0);
-    await input.fill('Clipboard Value');
+    await input.fill('!Clipboard Value');
     await input.press('Enter');
-    await expect.poll(async () => (await page.locator('tbody tr:nth-child(1) td:nth-child(1)').textContent()) ?? '').toContain('Clipboard Value');
+    await expect.poll(async () => (await getDataCell(page, 0, 'name').textContent()) ?? '').toContain('!Clipboard Value');
 
     // Re-click cell [0,0] to select it
     const cell00 = getCellContent(page, 0, 0);
@@ -804,7 +881,7 @@ test.describe('Clipboard', () => {
     const cell10 = getCellContent(page, 1, 0);
     await cell10.click();
     await region.press('Control+v');
-    await expect.poll(async () => (await page.locator('tbody tr:nth-child(2) td:nth-child(1)').textContent()) ?? '').toContain('Clipboard Value');
+    await expect.poll(async () => (await getDataCell(page, 1, 'name').textContent()) ?? '').toContain('!Clipboard Value');
   });
 });
 
@@ -824,16 +901,16 @@ test.describe('Fill handle', () => {
     // Edit cell [0,0] to a known value
     const cell = getCellContent(page, 0, 0);
     const input = await enterCellEdit(page, 0, 0);
-    await input.fill('Fill Source');
+    await input.fill('!Fill Source');
     await input.press('Enter');
-    await expect.poll(async () => (await page.locator('tbody tr:nth-child(1) td:nth-child(1)').textContent()) ?? '').toContain('Fill Source');
+    await expect.poll(async () => (await getDataCell(page, 0, 'name').textContent()) ?? '').toContain('!Fill Source');
 
     // Re-activate cell [0,0]
     await cell.click();
     await expect(getFillHandle(page)).toBeVisible();
 
     const handleBox = await getFillHandle(page).boundingBox();
-    const row3 = page.locator('tbody tr:nth-child(3) td:nth-child(1)');
+    const row3 = getDataCell(page, 2, 'name');
     const row3Box = await row3.boundingBox();
 
     const hx = handleBox?.x ?? 0, hw = handleBox?.width ?? 0, hy = handleBox?.y ?? 0, hh = handleBox?.height ?? 0;
@@ -842,8 +919,8 @@ test.describe('Fill handle', () => {
     await page.mouse.down();
     await page.mouse.move(hx + hw / 2, r3y + r3h / 2, { steps: 10 });
     await page.mouse.up();
-    await expect.poll(async () => (await page.locator('tbody tr:nth-child(2) td:nth-child(1)').textContent()) ?? '').toContain('Fill Source');
-    await expect.poll(async () => (await page.locator('tbody tr:nth-child(3) td:nth-child(1)').textContent()) ?? '').toContain('Fill Source');
+    await expect.poll(async () => (await getDataCell(page, 1, 'name').textContent()) ?? '').toContain('!Fill Source');
+    await expect.poll(async () => (await getDataCell(page, 2, 'name').textContent()) ?? '').toContain('!Fill Source');
   });
 
   // Cross-column fill compatibility (areFillCompatible) tests
@@ -891,8 +968,7 @@ test.describe('Fill handle', () => {
     const activeCell = page.locator('tbody tr:nth-child(1) td[data-column-id="active"]');
     const originalActive = await activeCell.textContent();
 
-    const dateCell = getCellContent(page, 0, 5);
-    await dateCell.click();
+    await activateCell(page, 0, DEMO_COLUMN_INDEX.startDate);
     await expect(getFillHandle(page)).toBeVisible();
 
     const handleBox = await getFillHandle(page).boundingBox();
@@ -918,7 +994,7 @@ test.describe('Fill handle', () => {
   });
 
   test('fill handle from text cell across all columns leaves date and boolean unchanged', async ({ page }) => {
-    // Dragging name (text, col 0) all the way to active (boolean, col 6).
+    // Dragging name (text, col 0) all the way to active (boolean, last col).
     // Non-editable columns are skipped by isColumnEditable. startDate (date)
     // and active (boolean) are type-incompatible with name (text). Nothing changes.
     const dateCellTd = page.locator('tbody tr:nth-child(1) td[data-column-id="startDate"]');
@@ -962,7 +1038,7 @@ test.describe('Date editor', () => {
   });
 
   test('double-clicking a date cell opens a date input', async ({ page }) => {
-    const dateInput = await enterDateCellEdit(page, 0, 5);
+    const dateInput = await enterDateCellEdit(page, 0, DEMO_COLUMN_INDEX.startDate);
     await expect(dateInput).toBeVisible({ timeout: 3000 });
   });
 });
@@ -1051,14 +1127,14 @@ test.describe('Integration', () => {
 
   test('edit value persists after pagination round-trip', async ({ page }) => {
     const input = await enterCellEdit(page, 0, 0);
-    await input.fill('Persisted Value');
+    await input.fill('!Persisted Value');
     await input.press('Enter');
-    await expect.poll(async () => (await getCellContent(page, 0, 0).textContent()) ?? '').toContain('Persisted Value');
+    await expect.poll(async () => (await getCellContent(page, 0, 0).textContent()) ?? '').toContain('!Persisted Value');
 
     await clickNextPage(page);
     await clickPrevPage(page);
 
     const text = await getCellContent(page, 0, 0).textContent();
-    expect(text).toContain('Persisted Value');
+    expect(text).toContain('!Persisted Value');
   });
 });

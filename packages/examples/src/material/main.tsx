@@ -9,16 +9,20 @@ import { connectGridToBridge } from '@alaarab/ogrid-mcp/bridge-client';
 import { createProjectExampleScenario } from '../shared/demoScenario';
 import { getExampleFeatureFlags } from '../shared/queryFlags';
 import { makePremiumInputColumns, makePremiumInputRows } from '../shared/premiumInputsData';
-
-type ExampleRow = { id: string; [key: string]: unknown };
+import {
+  coerceExampleColumns,
+  coerceExampleDataSource,
+  coerceExampleRows,
+  type ExampleRow,
+} from '../shared/exampleTypes';
 
 const featureFlags = getExampleFeatureFlags(typeof window !== 'undefined' ? window.location.search : '');
 const projectScenario = createProjectExampleScenario(featureFlags);
 const isPremiumExample = featureFlags.premiumInputs;
-const initialRows = isPremiumExample
+const initialRows = coerceExampleRows(isPremiumExample
   ? makePremiumInputRows()
-  : projectScenario.data;
-const columns = isPremiumExample
+  : projectScenario.data);
+const columns = coerceExampleColumns(isPremiumExample
   ? makePremiumInputColumns({
     dateEditor: DatePickerEditor,
     ratingEditor: RatingEditor,
@@ -26,7 +30,7 @@ const columns = isPremiumExample
     sliderEditor: SliderEditor,
     tagsEditor: TagsEditor,
   })
-  : projectScenario.columns;
+  : projectScenario.columns);
 
 const lightTheme = createTheme({ palette: { mode: 'light' } });
 const darkTheme = createTheme({ palette: { mode: 'dark' } });
@@ -35,10 +39,10 @@ let setAppTheme: ((theme: 'light' | 'dark') => void) | null = null;
 
 function App() {
   const [theme, setThemeState] = useState(getInitialTheme());
-  const [data, setData] = useState<ExampleRow[]>(initialRows as ExampleRow[]);
-  const apiRef = useRef<IOGridApi<ExampleRow> | null>(null);
+  const [data, setData] = useState<ExampleRow[]>(initialRows);
+  const apiRef = useRef<IOGridApi<unknown> | null>(null);
   const gridDataProps = !isPremiumExample && projectScenario.serverSide
-    ? { dataSource: projectScenario.dataSource! }
+    ? { dataSource: coerceExampleDataSource(projectScenario.dataSource!) }
     : { data };
 
   setAppTheme = (nextTheme) => {
@@ -59,12 +63,12 @@ function App() {
   useEffect(() => {
     const bridge = connectGridToBridge({
       gridId: 'material-demo',
-      getData: () => apiRef.current?.getDisplayedRows() ?? data,
-      getColumns: () => columns.map((column) => ({
-        columnId: column.columnId,
-        headerName: column.name ?? column.columnId,
-        type: column.type,
-      })),
+      getData: () => (apiRef.current?.getDisplayedRows() as ExampleRow[] | undefined) ?? data,
+      getColumns: () => columns.flatMap((column) => (
+        'columnId' in column
+          ? [{ columnId: column.columnId, headerName: column.name ?? column.columnId, type: column.type }]
+          : []
+      )),
       getSort: () => {
         const state = apiRef.current?.getColumnState();
         if (state?.sort) {
@@ -96,20 +100,23 @@ function App() {
         </p>
         <OGrid
           ref={apiRef}
-          columns={columns}
-          getRowId={(row) => row.id}
+          columns={columns as React.ComponentProps<typeof OGrid>['columns']}
+          getRowId={(row) => (row as ExampleRow).id}
           entityLabelPlural={isPremiumExample ? 'products' : 'projects'}
-          title={<h2 style={{ margin: 0 }}>{isPremiumExample ? 'Products' : 'Projects'}</h2>}
-          defaultPageSize={isPremiumExample ? 10 : 25}
+          defaultPageSize={isPremiumExample ? 10 : projectScenario.defaultPageSize}
           {...gridDataProps}
           editable={isPremiumExample || !projectScenario.serverSide}
           cellSelection
-          cellReferences={isPremiumExample ? undefined : featureFlags.cellReferences}
+          cellReferences={isPremiumExample ? undefined : projectScenario.cellReferences}
           rowSelection={isPremiumExample ? undefined : projectScenario.rowSelection}
           formulas={isPremiumExample ? undefined : projectScenario.formulas}
           initialFormulas={isPremiumExample ? undefined : projectScenario.initialFormulas}
+          sideBar={isPremiumExample ? undefined : projectScenario.sideBar}
+          fullScreen={isPremiumExample ? undefined : projectScenario.fullScreen}
+          responsiveColumns={isPremiumExample ? undefined : projectScenario.responsiveColumns}
+          density={isPremiumExample ? undefined : projectScenario.density}
           statusBar
-          onCellValueChanged={onCellValueChanged}
+          onCellValueChanged={onCellValueChanged as React.ComponentProps<typeof OGrid>['onCellValueChanged']}
         />
       </div>
     </ThemeProvider>

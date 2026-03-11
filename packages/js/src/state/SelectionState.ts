@@ -14,6 +14,7 @@ export class SelectionState {
   private _selectedRowIds = new Set<RowId>();
   private _isDragging = false;
   private dragStartCell: IActiveCell | null = null;
+  private dragStartSelectionCol: number | null = null;
   private rafHandle: number | null = null;
   private pendingRange: ISelectionRange | null = null;
 
@@ -42,10 +43,15 @@ export class SelectionState {
     return this.pendingRange;
   }
 
-  setActiveCell(cell: IActiveCell | null): void {
+  setActiveCell(cell: IActiveCell | null, selectionColumnIndex?: number): void {
     this._activeCell = cell;
     this._selectionRange = cell != null
-      ? { startRow: cell.rowIndex, startCol: cell.columnIndex, endRow: cell.rowIndex, endCol: cell.columnIndex }
+      ? {
+        startRow: cell.rowIndex,
+        startCol: selectionColumnIndex ?? cell.columnIndex,
+        endRow: cell.rowIndex,
+        endCol: selectionColumnIndex ?? cell.columnIndex,
+      }
       : null;
     this.emitter.emit('selectionChange', { activeCell: cell, selectionRange: this._selectionRange });
   }
@@ -61,11 +67,12 @@ export class SelectionState {
     this.emitter.emit('selectionChange', { activeCell: null, selectionRange: null });
   }
 
-  startDrag(rowIndex: number, colIndex: number): void {
+  startDrag(rowIndex: number, colIndex: number, selectionColIndex = colIndex): void {
     this._isDragging = true;
     this.dragStartCell = { rowIndex, columnIndex: colIndex };
+    this.dragStartSelectionCol = selectionColIndex;
     this._activeCell = { rowIndex, columnIndex: colIndex };
-    this._selectionRange = { startRow: rowIndex, startCol: colIndex, endRow: rowIndex, endCol: colIndex };
+    this._selectionRange = { startRow: rowIndex, startCol: selectionColIndex, endRow: rowIndex, endCol: selectionColIndex };
     // Set pendingRange to the initial cell so getDragRange() is non-null immediately.
     // This allows updateDragAttributes() called from handleCellMouseDown to apply
     // data-drag-anchor on the origin cell before the first pointermove, eliminating
@@ -73,14 +80,14 @@ export class SelectionState {
     this.pendingRange = this._selectionRange;
   }
 
-  updateDrag(rowIndex: number, colIndex: number, applyFn: (range: ISelectionRange) => void): void {
-    if (!this._isDragging || !this.dragStartCell) return;
+  updateDrag(rowIndex: number, colIndex: number, applyFn: (range: ISelectionRange) => void, selectionColIndex = colIndex): void {
+    if (!this._isDragging || !this.dragStartCell || this.dragStartSelectionCol === null) return;
 
     const newRange: ISelectionRange = {
       startRow: this.dragStartCell.rowIndex,
-      startCol: this.dragStartCell.columnIndex,
+      startCol: this.dragStartSelectionCol,
       endRow: rowIndex,
-      endCol: colIndex,
+      endCol: selectionColIndex,
     };
 
     // Skip RAF if range hasn't changed (deduplication optimization)
@@ -111,6 +118,7 @@ export class SelectionState {
     }
     this._isDragging = false;
     this.dragStartCell = null;
+    this.dragStartSelectionCol = null;
   }
 
   setSelectedRowIds(ids: Set<RowId>): void {
@@ -132,6 +140,7 @@ export class SelectionState {
     if (this.rafHandle !== null) {
       cancelAnimationFrame(this.rafHandle);
     }
+    this.dragStartSelectionCol = null;
     this.emitter.removeAllListeners();
   }
 }

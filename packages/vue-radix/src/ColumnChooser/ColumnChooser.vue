@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed } from 'vue';
-import { Menu, MenuButton, MenuItems, MenuItem } from '@headlessui/vue';
+import { Menu, MenuButton, MenuItems } from '@headlessui/vue';
 import { useColumnChooserState } from '@alaarab/ogrid-vue';
 import type { IColumnChooserProps } from './types';
 
@@ -54,11 +54,13 @@ const handleCheckboxChange = (columnKey: string) => (e: Event) => {
           <div class="header">Select Columns ({{ visibleCount }} of {{ totalCount }})</div>
 
           <div class="options-list">
-            <MenuItem
+            <div
               v-for="column in columns"
               :key="column.columnId"
-              as="div"
               class="option-item"
+              role="menuitemcheckbox"
+              :aria-checked="visibleColumns.has(column.columnId)"
+              :aria-disabled="column.required === true"
             >
               <input
                 :id="`col-${column.columnId}`"
@@ -66,22 +68,24 @@ const handleCheckboxChange = (columnKey: string) => (e: Event) => {
                 :checked="visibleColumns.has(column.columnId)"
                 :disabled="column.required === true"
                 class="checkbox-input"
-                @change="handleCheckboxChange(column.columnId)"
+                @click.stop
+                @change="handleCheckboxChange(column.columnId)($event)"
               />
               <label
                 :for="`col-${column.columnId}`"
                 class="checkbox-label"
+                @click.stop
               >
                 {{ column.name }}
               </label>
-            </MenuItem>
+            </div>
           </div>
 
           <div class="actions">
-            <button type="button" class="clear-button" @click="handleClearAll">
+            <button type="button" class="clear-button" @click.stop="handleClearAll">
               Clear All
             </button>
-            <button type="button" class="select-all-button" @click="handleSelectAll">
+            <button type="button" class="select-all-button" @click.stop="handleSelectAll">
               Select All
             </button>
           </div>

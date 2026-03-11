@@ -19,16 +19,20 @@ import { getExampleFeatureFlags } from '../shared/queryFlags';
 import { makePremiumInputColumns, makePremiumInputRows } from '../shared/premiumInputsData';
 import { connectGridToBridge } from '@alaarab/ogrid-mcp/bridge-client';
 import type { BridgeConnection } from '@alaarab/ogrid-mcp/bridge-client';
-
-type ExampleRow = { id: string; [key: string]: unknown };
+import {
+  coerceExampleColumns,
+  coerceExampleDataSource,
+  coerceExampleRows,
+  type ExampleRow,
+} from '../shared/exampleTypes';
 
 const featureFlags = getExampleFeatureFlags(typeof window !== 'undefined' ? window.location.search : '');
 const projectScenario = createProjectExampleScenario(featureFlags);
 const isPremiumExample = featureFlags.premiumInputs;
-const initialRows = isPremiumExample
+const initialRows = coerceExampleRows(isPremiumExample
   ? makePremiumInputRows()
-  : projectScenario.data;
-const columns = isPremiumExample
+  : projectScenario.data);
+const columns = coerceExampleColumns(isPremiumExample
   ? makePremiumInputColumns({
     dateEditor: DatePickerEditorComponent,
     ratingEditor: RatingEditorComponent,
@@ -36,7 +40,7 @@ const columns = isPremiumExample
     sliderEditor: SliderEditorComponent,
     tagsEditor: TagsEditorComponent,
   })
-  : projectScenario.columns;
+  : projectScenario.columns);
 
 @Component({
   selector: 'app-root',
@@ -80,50 +84,41 @@ const columns = isPremiumExample
 })
 export class AppComponent implements OnInit, OnDestroy {
   private bridge: BridgeConnection | null = null;
-  private data = initialRows as ExampleRow[];
-  private pinnedColumns: Record<string, 'left' | 'right'> = {};
+  private data = initialRows;
 
   readonly subtitle = isPremiumExample
     ? 'Premium editor parity mode powered by @alaarab/ogrid-angular-inputs.'
     : 'A fully featured data table powered by @alaarab/ogrid-angular-material. Includes sorting, multi-select text filtering, column chooser, and pagination.';
 
   gridProps: IOGridProps<ExampleRow> = {
-    ...(!isPremiumExample && projectScenario.serverSide ? { dataSource: projectScenario.dataSource! } : { data: this.data }),
-    columns: columns as IOGridProps<ExampleRow>['columns'],
+    ...(!isPremiumExample && projectScenario.serverSide ? { dataSource: coerceExampleDataSource(projectScenario.dataSource!) } : { data: this.data }),
+    columns: columns as unknown as IOGridProps<ExampleRow>['columns'],
     getRowId: (row) => row.id,
     entityLabelPlural: isPremiumExample ? 'products' : 'projects',
-    defaultPageSize: isPremiumExample ? 10 : 25,
+    defaultPageSize: isPremiumExample ? 10 : projectScenario.defaultPageSize,
     editable: isPremiumExample || !projectScenario.serverSide,
     cellSelection: true,
-    cellReferences: isPremiumExample ? undefined : featureFlags.cellReferences,
+    cellReferences: isPremiumExample ? undefined : projectScenario.cellReferences,
     rowSelection: isPremiumExample ? undefined : projectScenario.rowSelection,
     formulas: isPremiumExample ? undefined : projectScenario.formulas,
     initialFormulas: isPremiumExample ? undefined : projectScenario.initialFormulas,
-    pinnedColumns: this.pinnedColumns,
+    sideBar: isPremiumExample ? undefined : projectScenario.sideBar,
+    fullScreen: isPremiumExample ? undefined : projectScenario.fullScreen,
+    responsiveColumns: isPremiumExample ? undefined : projectScenario.responsiveColumns,
+    density: isPremiumExample ? undefined : projectScenario.density,
     statusBar: true,
     onCellValueChanged: (event) => handleCellValueChanged(this.data, event as { item: ExampleRow; columnId: string; newValue: unknown }),
-    onColumnPinned: (columnId, pinned) => this.handleColumnPinned(columnId, pinned),
   };
-
-  private handleColumnPinned(columnId: string, pinned: 'left' | 'right' | null) {
-    if (pinned) {
-      this.pinnedColumns = { ...this.pinnedColumns, [columnId]: pinned };
-    } else {
-      const { [columnId]: _, ...next } = this.pinnedColumns;
-      this.pinnedColumns = next;
-    }
-    this.gridProps = { ...this.gridProps, pinnedColumns: this.pinnedColumns } as IOGridProps<ExampleRow>;
-  }
 
   ngOnInit() {
     this.bridge = connectGridToBridge({
       gridId: 'angular-material-demo',
       getData: () => this.data,
-      getColumns: () => columns.map((column) => ({
-        columnId: column.columnId,
-        headerName: column.name ?? column.columnId,
-        type: column.type,
-      })),
+      getColumns: () => columns.flatMap((column) => (
+        'columnId' in column
+          ? [{ columnId: column.columnId, headerName: column.name ?? column.columnId, type: column.type }]
+          : []
+      )),
       getSort: () => [],
       getFilters: () => ({}),
       onCellUpdate: (rowIndex, columnId, value) => {

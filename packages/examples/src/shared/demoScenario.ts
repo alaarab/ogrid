@@ -5,6 +5,7 @@ import type {
   IFetchParams,
   IColumnDef,
   RowSelectionMode,
+  ISideBarDef,
 } from '@alaarab/ogrid-core';
 import { DEMO_PROJECT_COUNT } from './demoConfig';
 import { makeDemoColumns, makeDemoProjects } from './demoData';
@@ -12,16 +13,22 @@ import type { Project } from './demoData';
 import type { ExampleFeatureFlags } from './queryFlags';
 
 const SERVER_DELAY_MS = 25;
-const FORMULA_BUDGET_COLUMN_INDEX = 4;
+const FORMULA_BUDGET_COLUMN_INDEX = 6;
 
 export interface ProjectExampleScenario {
   columns: IColumnDef<Project>[];
   data: Project[];
   dataSource?: IDataSource<Project>;
+  defaultPageSize: number;
   formulas: boolean;
+  cellReferences: boolean;
   initialFormulas?: Array<{ col: number; row: number; formula: string }>;
   rowSelection: RowSelectionMode;
   serverSide: boolean;
+  sideBar: boolean | ISideBarDef;
+  fullScreen: boolean;
+  responsiveColumns: boolean;
+  density: 'compact' | 'normal' | 'comfortable';
 }
 
 function createAbortError(): Error {
@@ -95,19 +102,31 @@ function createProjectDataSource(
 export function createProjectExampleScenario(
   flags: ExampleFeatureFlags,
 ): ProjectExampleScenario {
+  const formulas = !flags.serverSide;
+  const cellReferences = !flags.serverSide;
   const data = makeDemoProjects(DEMO_PROJECT_COUNT);
-  const columns = makeDemoColumns<Project>({ formulaMode: flags.formulas });
-  const initialFormulas = flags.formulas
-    ? [{ col: FORMULA_BUDGET_COLUMN_INDEX, row: 0, formula: '=20+20' }]
+  const columns = makeDemoColumns<Project>({ formulaMode: formulas });
+  const initialFormulas = formulas
+    ? [
+      { col: FORMULA_BUDGET_COLUMN_INDEX, row: 0, formula: '=20+20' },
+      { col: FORMULA_BUDGET_COLUMN_INDEX, row: 1, formula: '=21+21' },
+      { col: FORMULA_BUDGET_COLUMN_INDEX, row: 2, formula: '=AVERAGE(G1:G2)' },
+    ]
     : undefined;
 
   return {
     columns,
     data,
     dataSource: flags.serverSide ? createProjectDataSource(data, columns) : undefined,
-    formulas: flags.formulas,
+    defaultPageSize: 100,
+    formulas,
+    cellReferences,
     initialFormulas,
     rowSelection: flags.rowSelection ? 'multiple' : 'none',
     serverSide: flags.serverSide,
+    sideBar: { position: 'right', defaultPanel: 'filters' },
+    fullScreen: true,
+    responsiveColumns: true,
+    density: 'normal',
   };
 }

@@ -26,9 +26,10 @@ const testData: TestRow[] = [
 
 function createGrid(options?: Partial<OGridOptions<TestRow>>) {
   const container = document.createElement('div');
+  const data = (options?.data ?? testData).map((item) => ({ ...item }));
   const grid = new OGrid<TestRow>(container, {
     columns: testColumns,
-    data: testData,
+    data,
     getRowId: (item: TestRow) => item.id,
     pageSize: 20,
     cellSelection: true,

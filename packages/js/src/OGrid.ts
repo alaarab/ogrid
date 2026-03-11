@@ -92,7 +92,7 @@
  * - `destroy()` -- full cleanup.
  */
 import type { OGridOptions, OGridEvents, IJsOGridApi } from './types/gridTypes';
-import type { FilterValue, IGridColumnState } from '@alaarab/ogrid-core';
+import type { FilterValue, ICellValueChangedEvent, IGridColumnState } from '@alaarab/ogrid-core';
 import { GridState } from './state/GridState';
 import { TableRenderer } from './renderer/TableRenderer';
 import { PaginationControls } from './components/PaginationControls';
@@ -119,7 +119,14 @@ import type { InlineCellEditor } from './components/InlineCellEditor';
 import type { ContextMenu } from './components/ContextMenu';
 import { EventEmitter } from './state/EventEmitter';
 import type { RowId } from '@alaarab/ogrid-core';
-import { flattenColumns, injectGlobalStyles, formatCellReference } from '@alaarab/ogrid-core';
+import {
+  DEFAULT_DATE_FORMAT,
+  flattenColumns,
+  formatCellReference,
+  getDateInputPlaceholder,
+  injectGlobalStyles,
+  parseUserInputDate,
+} from '@alaarab/ogrid-core';
 import { OGridEventWiring } from './OGridEventWiring';
 import { OGridRendering } from './OGridRendering';
 import type { OGridRenderingContext } from './OGridRendering';
@@ -590,10 +597,7 @@ export class OGrid<T> {
       if (shouldEnableInteraction) {
         const interactionOptions: OGridOptions<T> = {
           ...options,
-          onCellValueChanged: (event) => {
-            options.onCellValueChanged?.(event);
-            this.events.emit('cellValueChanged', event);
-          },
+          onCellValueChanged: (event) => this.applyCellValueChange(event),
         };
         const result = this.eventWiringHelper.initializeInteraction(
           interactionOptions,
@@ -683,9 +687,12 @@ export class OGrid<T> {
                   this.formulaBarText = value;
                   fBar.update(cellRef, value);
                 }
+                const activeColumn = this.state.visibleColumnDefs[dataCol];
+                fBar.setPlaceholder(this.getFormulaBarPlaceholder(activeColumn));
               } else {
                 this.formulaBarText = '';
                 fBar.update(null, '');
+                fBar.setPlaceholder('');
               }
             })
           );
@@ -823,29 +830,34 @@ export class OGrid<T> {
 
   private handleCellClick(rowIndex: number, colIndex: number, shiftKey = false): void {
     if (!this.selectionState) return;
+    const colOffset = this.getGridColumnOffset();
+    const dataColIndex = colIndex - colOffset;
     if (shiftKey && this.selectionState.activeCell) {
       const anchor = this.selectionState.activeCell;
-      this.selectionState.setActiveCell({ rowIndex, columnIndex: colIndex });
+      this.selectionState.setActiveCell({ rowIndex, columnIndex: colIndex }, dataColIndex);
       this.selectionState.setSelectionRange({
         startRow: anchor.rowIndex,
-        startCol: anchor.columnIndex,
+        startCol: anchor.columnIndex - colOffset,
         endRow: rowIndex,
-        endCol: colIndex,
+        endCol: dataColIndex,
       });
       return;
     }
-    this.selectionState.setActiveCell({ rowIndex, columnIndex: colIndex });
+    this.selectionState.setActiveCell({ rowIndex, columnIndex: colIndex }, dataColIndex);
   }
 
   private handleCellMouseDown(rowIndex: number, colIndex: number, e: MouseEvent): void {
     if (!this.selectionState) return;
     // Close any open editor when clicking a different cell
+    if (this.formulaBarEditing) {
+      this.handleFormulaBarCommit();
+    }
     this.cellEditor?.closeEditor();
     if (e.shiftKey && this.selectionState.activeCell) {
       return;
     }
     e.preventDefault();
-    this.selectionState.startDrag(rowIndex, colIndex);
+    this.selectionState.startDrag(rowIndex, colIndex, colIndex - this.getGridColumnOffset());
     // Apply drag attributes synchronously so the anchor cell styling is in place
     // before the next browser paint. startDrag() now sets pendingRange to the
     // initial single-cell range, so getDragRange() is non-null here and
@@ -859,7 +871,7 @@ export class OGrid<T> {
 
     // Set active cell if not already set
     if (!this.selectionState.activeCell || this.selectionState.activeCell.rowIndex !== rowIndex || this.selectionState.activeCell.columnIndex !== colIndex) {
-      this.selectionState.setActiveCell({ rowIndex, columnIndex: colIndex });
+      this.selectionState.setActiveCell({ rowIndex, columnIndex: colIndex }, colIndex - this.getGridColumnOffset());
       this.renderingHelper.updateRendererInteractionState();
     }
 
@@ -898,16 +910,23 @@ export class OGrid<T> {
     );
   }
 
+  private applyCellValueChange(event: ICellValueChangedEvent<T>): void {
+    (event.item as Record<string, unknown>)[event.columnId] = event.newValue;
+    this.options.onCellValueChanged?.(event);
+    this.events.emit('cellValueChanged', event);
+  }
+
   private toggleBooleanCell(rowId: RowId, columnId: string, currentValue: boolean): void {
     const { items } = this.state.getProcessedItems();
     const rowIndex = items.findIndex((it) => this.state.getRowId(it) === rowId);
     if (rowIndex < 0) return;
     const item = items[rowIndex];
     const newValue = !currentValue;
-    (item as Record<string, unknown>)[columnId] = newValue;
     const wrapped = this.undoRedoState?.getWrappedCallback();
     if (wrapped) {
       wrapped({ item, columnId, oldValue: currentValue, newValue, rowIndex });
+    } else {
+      this.applyCellValueChange({ item, columnId, oldValue: currentValue, newValue, rowIndex });
     }
     // Boolean cells mutate the existing row object, so a full render is needed to refresh the cell DOM.
     this.renderingHelper.renderAll();
@@ -939,14 +958,18 @@ export class OGrid<T> {
       const col = visibleCols.find((c) => c.columnId === cid);
       if (!col) return;
 
-      // NOTE: Direct mutation on the item reference. This updates the in-memory data
-      // so subsequent renders reflect the new value before the consumer calls setRowData.
       const oldValue = (item as Record<string, unknown>)[cid];
-      (item as Record<string, unknown>)[cid] = value;
-
       const wrapped = this.undoRedoState?.getWrappedCallback();
       if (wrapped) {
         wrapped({
+          item,
+          columnId: cid,
+          oldValue,
+          newValue: value,
+          rowIndex,
+        });
+      } else {
+        this.applyCellValueChange({
           item,
           columnId: cid,
           oldValue,
@@ -969,9 +992,9 @@ export class OGrid<T> {
         if (ac) {
           const { items: currentItems } = this.state.getProcessedItems();
           const newRow = Math.min(ac.rowIndex + 1, currentItems.length - 1);
-          this.selectionState.setActiveCell({ rowIndex: newRow, columnIndex: ac.columnIndex });
           const colOffset = this.renderer.getColOffset();
           const dataCol = ac.columnIndex - colOffset;
+          this.selectionState.setActiveCell({ rowIndex: newRow, columnIndex: ac.columnIndex }, dataCol);
           this.selectionState.setSelectionRange({
             startRow: newRow,
             startCol: dataCol,
@@ -1055,6 +1078,44 @@ export class OGrid<T> {
     return colOffset;
   }
 
+  private getColumnDateFormat(column: { type?: unknown; dateFormat?: unknown; cellEditorParams?: unknown } | undefined): string {
+    const cellEditorParams = column?.cellEditorParams as Record<string, unknown> | undefined;
+    const paramFormat = typeof cellEditorParams?.['dateFormat'] === 'string'
+      ? cellEditorParams['dateFormat']
+      : undefined;
+    return paramFormat
+      ?? (typeof column?.dateFormat === 'string' ? column.dateFormat : undefined)
+      ?? DEFAULT_DATE_FORMAT;
+  }
+
+  private getFormulaBarPlaceholder(column: { type?: unknown; dateFormat?: unknown; cellEditorParams?: unknown } | undefined): string {
+    if (column?.type !== 'date') return '';
+    return getDateInputPlaceholder(this.getColumnDateFormat(column));
+  }
+
+  private normalizeFormulaBarValue(
+    text: string,
+    column: { type?: unknown; dateFormat?: unknown; cellEditorParams?: unknown } | undefined,
+  ): unknown {
+    if (column?.type !== 'date') {
+      return text;
+    }
+
+    if (!text.trim()) {
+      return '';
+    }
+
+    const parsed = parseUserInputDate(text, this.getColumnDateFormat(column));
+    if (!(parsed instanceof Date)) {
+      return text;
+    }
+
+    const year = parsed.getUTCFullYear().toString().padStart(4, '0');
+    const month = (parsed.getUTCMonth() + 1).toString().padStart(2, '0');
+    const day = parsed.getUTCDate().toString().padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  }
+
   private handleFormulaBarCommit(): void {
     if (!this.formulaEngine || !this.selectionState) return;
     const ac = this.selectionState.activeCell;
@@ -1079,7 +1140,7 @@ export class OGrid<T> {
       const item = items[ac.rowIndex];
       const col = visibleCols[dataCol];
       if (item && col) {
-        (item as Record<string, unknown>)[col.columnId] = text;
+        (item as Record<string, unknown>)[col.columnId] = this.normalizeFormulaBarValue(text, col);
       }
     }
 
