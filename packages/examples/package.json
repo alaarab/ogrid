@@ -47,7 +47,7 @@
     "@alaarab/ogrid-js": "2.6.1",
     "@alaarab/ogrid-mcp": "2.6.1",
     "@angular/common": "^21.0.0",
-    "@angular/compiler": "^21.0.0",
+    "@angular/compiler": "^21.2.4",
     "@angular/core": "^21.0.0",
     "@angular/cdk": "^21.0.0",
     "@angular/platform-browser": "^21.0.0",
