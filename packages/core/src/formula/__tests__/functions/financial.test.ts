@@ -20,7 +20,7 @@ function evalFormula(formula: string, data: Record<string, unknown> = {}): unkno
 // Helper to round to N decimal places for floating-point comparison
 function round(n: unknown, decimals = 6): number {
   if (typeof n !== 'number') throw new Error(`Expected number, got ${typeof n}: ${n}`);
-  return Math.round(n * Math.pow(10, decimals)) / Math.pow(10, decimals);
+  return Math.round(n * 10 ** decimals) / 10 ** decimals;
 }
 
 describe('Financial functions', () => {

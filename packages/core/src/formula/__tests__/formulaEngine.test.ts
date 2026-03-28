@@ -186,7 +186,7 @@ describe('FormulaEngine', () => {
   describe('onCellChanged', () => {
     it('recalculates dependent formula when a non-formula cell changes', () => {
       // Set up: B1 = A1 * 3, initially A1 = 10
-      let currentData: Record<string, unknown> = { '0,0': 10 };
+      const currentData: Record<string, unknown> = { '0,0': 10 };
       const dynamicAccessor = createAccessor(currentData);
 
       engine.setFormula(1, 0, '=A1*3', dynamicAccessor);

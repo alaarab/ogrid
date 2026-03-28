@@ -447,7 +447,7 @@ export function registerTextFunctions(registry: Map<string, IFormulaFunction>): 
       const absNum = Math.abs(num);
       const rounded = decimals >= 0
         ? absNum.toFixed(decimals)
-        : (Math.round(absNum / Math.pow(10, -decimals)) * Math.pow(10, -decimals)).toFixed(0);
+        : (Math.round(absNum / 10 ** -decimals) * 10 ** -decimals).toFixed(0);
       const [intPart, decPart] = rounded.split('.');
       const withCommas = intPart.replace(/\B(?=(\d{3})+(?!\d))/g, ',');
       const formatted = decPart !== undefined ? `${withCommas}.${decPart}` : withCommas;
@@ -481,7 +481,7 @@ export function registerTextFunctions(registry: Map<string, IFormulaFunction>): 
       const absNum = Math.abs(num);
       const rounded = decimals >= 0
         ? absNum.toFixed(decimals)
-        : (Math.round(absNum / Math.pow(10, -decimals)) * Math.pow(10, -decimals)).toFixed(0);
+        : (Math.round(absNum / 10 ** -decimals) * 10 ** -decimals).toFixed(0);
       if (noCommas) {
         return num < 0 ? `-${rounded}` : rounded;
       }

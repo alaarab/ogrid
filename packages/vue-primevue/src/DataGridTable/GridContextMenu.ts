@@ -79,7 +79,7 @@ export const GridContextMenu = defineComponent({
           padding: '4px 0',
         },
       },
-        GRID_CONTEXT_MENU_ITEMS.map((item) => {
+        GRID_CONTEXT_MENU_ITEMS.flatMap((item) => {
           const disabled = isDisabled(item);
           return [
             ...(item.dividerBefore ? [
@@ -118,7 +118,7 @@ export const GridContextMenu = defineComponent({
               ] : []),
             ]),
           ];
-        }).flat()
+        })
       );
   },
 });
