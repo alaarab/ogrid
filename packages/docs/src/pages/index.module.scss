@@ -424,6 +424,7 @@
 .heroRight {
   position: relative;
   min-width: 0;
+  overflow: hidden;
   /* Fade the grid out on the right edge so it reads as extending beyond, not clipping */
   mask-image: linear-gradient(
     to right,

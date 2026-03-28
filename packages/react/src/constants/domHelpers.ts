@@ -12,18 +12,15 @@ export const GRID_ROOT_STYLE: React.CSSProperties = { position: 'relative', flex
 export const CURSOR_CELL_STYLE: React.CSSProperties = { cursor: 'cell' };
 
 /**
- * Popover anchor element style — must match the `.cellContent` layout so the cell
- * content doesn't shift when the editor opens. Uses flex alignment + cell padding
- * to keep the displayed value in the same position as a non-editing cell.
+ * Popover anchor — positioned absolutely within the `<td>` so it doesn't add
+ * height to the row. Uses the same cell-padding var as `.cellContent` so text
+ * stays aligned when the editor opens.
  */
 export const POPOVER_ANCHOR_STYLE: React.CSSProperties = {
-  width: '100%',
-  height: '100%',
-  minHeight: '100%',
-  minWidth: 40,
+  position: 'absolute',
+  inset: 0,
   display: 'flex',
   alignItems: 'center',
-  boxSizing: 'border-box',
   padding: 'var(--ogrid-cell-padding, 6px 10px)',
   overflow: 'hidden',
 };

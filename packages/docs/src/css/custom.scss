@@ -427,6 +427,12 @@ table:not([class]) th {
   gap: 6px;
 }
 
+/* Override Docusaurus table styles for landing page LiveDataDemo */
+.live-data-demo table {
+  overflow: visible;
+  margin-bottom: 0;
+}
+
 .live-demo__content {
   width: 100%;
   /* Let OGrid's internal tableWrapper handle scrolling — a competing

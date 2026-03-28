@@ -261,6 +261,7 @@
 // Default density vars are set on .tableWrapper in the shared _data-grid-table.scss partial.
 // These classes override them per density setting.
 .density-compact {
+  --ogrid-cell-padding: 4px 8px;
   --ogrid-cell-padding-vertical: 4px;
   --ogrid-cell-padding-horizontal: 8px;
   --ogrid-cell-font-size: 12px;

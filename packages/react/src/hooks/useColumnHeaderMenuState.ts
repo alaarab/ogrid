@@ -10,7 +10,7 @@ export interface UseColumnHeaderMenuStateParams {
   onColumnSort: (columnKey: string, direction?: 'asc' | 'desc' | null) => void;
   onColumnResized?: (columnId: string, width: number) => void;
   onAutosizeColumn?: (columnId: string, width: number) => void;
-  columns: Array<{ columnId: string; width?: number; minWidth?: number; sortable?: boolean; resizable?: boolean }>;
+  columns: Array<{ columnId: string; width?: number | string; minWidth?: number; sortable?: boolean; resizable?: boolean }>;
 }
 
 export interface UseColumnHeaderMenuStateResult {
