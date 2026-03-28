@@ -56,7 +56,7 @@ export const GridContextMenu = defineComponent({
       }, {
         default: () =>
           h(VList as Component, { density: 'compact', 'aria-label': 'Grid context menu' }, () =>
-            GRID_CONTEXT_MENU_ITEMS.map((item) => [
+            GRID_CONTEXT_MENU_ITEMS.flatMap((item) => [
               ...(item.dividerBefore ? [h(VDivider as Component, { key: `${item.id}-div` })] : []),
               h(VListItem as Component, {
                 key: item.id,
@@ -72,7 +72,7 @@ export const GridContextMenu = defineComponent({
                   ] : []),
                 ])
               ),
-            ]).flat()
+            ])
           ),
       });
   },

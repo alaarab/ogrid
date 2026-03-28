@@ -10,7 +10,7 @@ function Inner() {
   const dataSource = useMemo<IDataSource>(() => ({
     async fetchPage({ page, pageSize, sort }: IFetchParams) {
       await new Promise(r => setTimeout(r, 300));
-      let items = [...people];
+      const items = [...people];
       if (sort) {
         items.sort((a, b) => {
           const av = (a as Record<string, unknown>)[sort.field];

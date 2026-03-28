@@ -128,7 +128,7 @@ export function registerMathFunctions(registry: Map<string, IFormulaFunction>): 
       const digits = toNumber(rawDigits);
       if (digits instanceof FormulaError) return digits;
 
-      const factor = Math.pow(10, Math.trunc(digits));
+      const factor = 10 ** Math.trunc(digits);
       return Math.round(num * factor) / factor;
     },
   });
@@ -216,7 +216,7 @@ export function registerMathFunctions(registry: Map<string, IFormulaFunction>): 
       const exponent = toNumber(rawExp);
       if (exponent instanceof FormulaError) return exponent;
 
-      return Math.pow(base, exponent);
+      return base ** exponent;
     },
   });
 
@@ -245,7 +245,7 @@ export function registerMathFunctions(registry: Map<string, IFormulaFunction>): 
       if (rawDigits instanceof FormulaError) return rawDigits;
       const digits = toNumber(rawDigits);
       if (digits instanceof FormulaError) return digits;
-      const factor = Math.pow(10, Math.trunc(digits));
+      const factor = 10 ** Math.trunc(digits);
       return num >= 0
         ? Math.ceil(num * factor) / factor
         : Math.floor(num * factor) / factor;
@@ -264,7 +264,7 @@ export function registerMathFunctions(registry: Map<string, IFormulaFunction>): 
       if (rawDigits instanceof FormulaError) return rawDigits;
       const digits = toNumber(rawDigits);
       if (digits instanceof FormulaError) return digits;
-      const factor = Math.pow(10, Math.trunc(digits));
+      const factor = 10 ** Math.trunc(digits);
       return Math.trunc(num * factor) / factor;
     },
   });
@@ -297,7 +297,7 @@ export function registerMathFunctions(registry: Map<string, IFormulaFunction>): 
         if (d instanceof FormulaError) return d;
         digits = Math.trunc(d);
       }
-      const factor = Math.pow(10, digits);
+      const factor = 10 ** digits;
       return Math.trunc(num * factor) / factor;
     },
   });

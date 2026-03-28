@@ -48,7 +48,7 @@ export function registerFinancialFunctions(registry: Map<string, IFormulaFunctio
         return -(pv + fv) / nper;
       }
 
-      const factor = Math.pow(1 + rate, nper);
+      const factor = (1 + rate) ** nper;
       const typeAdj = type !== 0 ? (1 + rate) : 1;
       return -(pv * factor + fv) / ((factor - 1) / rate * typeAdj);
     },
@@ -97,7 +97,7 @@ export function registerFinancialFunctions(registry: Map<string, IFormulaFunctio
         return -(pv + pmt * nper);
       }
 
-      const factor = Math.pow(1 + rate, nper);
+      const factor = (1 + rate) ** nper;
       const typeAdj = type !== 0 ? (1 + rate) : 1;
       return -(pv * factor + pmt * typeAdj * (factor - 1) / rate);
     },
@@ -146,7 +146,7 @@ export function registerFinancialFunctions(registry: Map<string, IFormulaFunctio
         return -pmt * nper - fv;
       }
 
-      const factor = Math.pow(1 + rate, nper);
+      const factor = (1 + rate) ** nper;
       const typeAdj = type !== 0 ? (1 + rate) : 1;
       return -(fv + pmt * typeAdj * (factor - 1) / rate) / factor;
     },
@@ -267,7 +267,7 @@ export function registerFinancialFunctions(registry: Map<string, IFormulaFunctio
 
       for (let i = 0; i < MAX_ITER; i++) {
         if (r <= -1) return new FormulaError('#NUM!', 'RATE: rate converged to invalid value');
-        const factor = Math.pow(1 + r, nper);
+        const factor = (1 + r) ** nper;
         const typeAdj = type !== 0 ? (1 + r) : 1;
 
         let f: number;
@@ -280,7 +280,7 @@ export function registerFinancialFunctions(registry: Map<string, IFormulaFunctio
         } else {
           f = pv * factor + pmt * typeAdj * (factor - 1) / r + fv;
           // Derivative df/dr
-          const dfactor = nper * Math.pow(1 + r, nper - 1);
+          const dfactor = nper * (1 + r) ** (nper - 1);
           const dTypeAdj = type !== 0 ? 1 : 0;
           df = pv * dfactor
             + pmt * (dTypeAdj * (factor - 1) / r + typeAdj * (dfactor * r - (factor - 1)) / (r * r));
@@ -316,7 +316,7 @@ export function registerFinancialFunctions(registry: Map<string, IFormulaFunctio
         if (val instanceof FormulaError) return val;
         if (typeof val === 'number' || typeof val === 'boolean') {
           const n = typeof val === 'boolean' ? (val ? 1 : 0) : val;
-          npv += n / Math.pow(1 + rate, period);
+          npv += n / (1 + rate) ** period;
           period++;
         }
         // Strings and nulls are ignored in NPV (Excel behavior)
@@ -361,10 +361,10 @@ export function registerFinancialFunctions(registry: Map<string, IFormulaFunctio
         let f = 0;
         let df = 0;
         for (let j = 0; j < nums.length; j++) {
-          const factor = Math.pow(1 + r, j);
+          const factor = (1 + r) ** j;
           f += nums[j] / factor;
           if (j > 0) {
-            df -= j * nums[j] / Math.pow(1 + r, j + 1);
+            df -= j * nums[j] / (1 + r) ** (j + 1);
           }
         }
 

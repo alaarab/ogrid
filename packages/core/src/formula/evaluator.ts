@@ -172,7 +172,7 @@ export class FormulaEvaluator implements IEvaluator {
       case '/':
         if (rNum === 0) return new FormulaError('#DIV/0!');
         return lNum / rNum;
-      case '^': return Math.pow(lNum, rNum);
+      case '^': return lNum ** rNum;
       case '%': return lNum * rNum / 100;
       default:
         return new FormulaError('#ERROR!', `Unknown operator: ${op}`);
