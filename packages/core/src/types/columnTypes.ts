@@ -37,6 +37,8 @@ export interface IColumnMeta {
   minWidth?: number;
   defaultWidth?: number;
   idealWidth?: number;
+  /** CSS width value (e.g. '100%') to make a column fill remaining space. */
+  width?: string;
   /** Pin column to left or right edge (sticky during horizontal scroll). */
   pinned?: 'left' | 'right';
 }

@@ -71,11 +71,18 @@ export function useColumnMeta<T>(params: UseColumnMetaParams<T>): ColumnMetaResu
         : Math.max(baseMinWidth, measuredW ?? 0);
 
       const stickyOverride = addStickyPosition && isPinned ? { position: 'sticky' as const } : undefined;
+      // CSS width string (e.g. '100%') lets a column fill remaining space.
+      const cssWidth = col.width;
+
+      // Auto-sized columns get width:'0' so the browser distributes remaining
+      // table space evenly (each column still respects its min-width).
+      const autoWidth = cssWidth ?? (hasExplicitWidth ? columnWidth : 0);
+      const autoMaxWidth = cssWidth ? undefined : (hasExplicitWidth ? columnWidth : undefined);
 
       cellStyles[col.columnId] = {
         minWidth: effectiveMinWidth,
-        width: hasExplicitWidth ? columnWidth : undefined,
-        maxWidth: hasExplicitWidth ? columnWidth : undefined,
+        width: autoWidth,
+        maxWidth: autoMaxWidth,
         textAlign: col.type === 'numeric' ? 'right' : col.type === 'boolean' ? 'center' : undefined,
         ...stickyOverride,
         ...(isPinnedLeft && leftOffsets[col.columnId] != null ? { left: leftOffsets[col.columnId] } : undefined),
@@ -84,8 +91,8 @@ export function useColumnMeta<T>(params: UseColumnMetaParams<T>): ColumnMetaResu
 
       hdrStyles[col.columnId] = {
         minWidth: effectiveMinWidth,
-        width: hasExplicitWidth ? columnWidth : undefined,
-        maxWidth: hasExplicitWidth ? columnWidth : undefined,
+        width: autoWidth,
+        maxWidth: autoMaxWidth,
         ...stickyOverride,
         ...(isPinnedLeft && leftOffsets[col.columnId] != null ? { left: leftOffsets[col.columnId] } : undefined),
         ...(isPinnedRight && rightOffsets[col.columnId] != null ? { right: rightOffsets[col.columnId] } : undefined),

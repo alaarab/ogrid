@@ -11,27 +11,36 @@ export interface Person {
   startDate: string;
 }
 
-const NAMES = [
-  'Alice Johnson', 'Bob Smith', 'Carol Lee', 'David Kim', 'Eve Torres',
-  'Frank Wu', 'Grace Park', 'Henry Adams', 'Irene Costa', 'Jack Rivera',
-  'Karen Liu', 'Leo Martinez', 'Mona Chen', 'Nate Brown', 'Olivia Scott',
-  'Paul Davis', 'Quinn Foster', 'Rachel Green', 'Sam Wilson', 'Tina Hall',
-  'Uma Patel', 'Vince Moore', 'Wendy Diaz', 'Xander Young', 'Yara King',
+const FIRST_NAMES = [
+  'Alice', 'Bob', 'Carol', 'David', 'Eve', 'Frank', 'Grace', 'Henry', 'Irene', 'Jack',
+  'Karen', 'Leo', 'Mona', 'Nate', 'Olivia', 'Paul', 'Quinn', 'Rachel', 'Sam', 'Tina',
+  'Uma', 'Vince', 'Wendy', 'Xander', 'Yara', 'Zoe', 'Aaron', 'Beth', 'Carlos', 'Dana',
+  'Ethan', 'Fiona', 'George', 'Hannah', 'Ivan', 'Julia', 'Kyle', 'Luna', 'Marco', 'Nina',
+];
+
+const LAST_NAMES = [
+  'Johnson', 'Smith', 'Lee', 'Kim', 'Torres', 'Wu', 'Park', 'Adams', 'Costa', 'Rivera',
+  'Liu', 'Martinez', 'Chen', 'Brown', 'Scott', 'Davis', 'Foster', 'Green', 'Wilson', 'Hall',
+  'Patel', 'Moore', 'Diaz', 'Young', 'King',
 ];
 
 const DEPTS = ['Engineering', 'Marketing', 'Sales', 'Finance', 'Operations'];
 const STATUSES = ['Active', 'Draft', 'Archived'];
 
-export const people: Person[] = NAMES.map((name, i) => ({
-  id: i + 1,
-  name,
-  age: 25 + (i % 30),
-  email: `${name.split(' ')[0].toLowerCase()}@example.com`,
-  department: DEPTS[i % DEPTS.length],
-  salary: 50000 + i * 3500,
-  status: STATUSES[i % STATUSES.length],
-  startDate: `2024-${String((i % 12) + 1).padStart(2, '0')}-15`,
-}));
+export const people: Person[] = Array.from({ length: 1000 }, (_, i) => {
+  const first = FIRST_NAMES[i % FIRST_NAMES.length];
+  const last = LAST_NAMES[(i * 7 + Math.floor(i / FIRST_NAMES.length)) % LAST_NAMES.length];
+  return {
+    id: i + 1,
+    name: `${first} ${last}`,
+    age: 22 + (i % 40),
+    email: `${first.toLowerCase()}${i}@example.com`,
+    department: DEPTS[i % DEPTS.length],
+    salary: 40000 + (i % 80) * 1500,
+    status: STATUSES[i % STATUSES.length],
+    startDate: `202${3 + (i % 3)}-${String((i % 12) + 1).padStart(2, '0')}-${String((i % 28) + 1).padStart(2, '0')}`,
+  };
+});
 
 export const getRowId = (p: Person) => p.id;
 

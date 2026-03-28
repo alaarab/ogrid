@@ -335,7 +335,7 @@ function DataGridTableInner<T>(props: IOGridDataGridProps<T>): React.ReactElemen
         content = (
           <Popover.Root open={!!popoverAnchorElRef.current} onOpenChange={(open: boolean) => { if (!open) cancelPopoverEdit(); }}>
             <Popover.Anchor asChild>
-              <div ref={(el: HTMLDivElement | null) => { if (el) setPopoverAnchorEl(el); }} style={POPOVER_ANCHOR_STYLE}>
+              <div ref={(el: HTMLDivElement | null) => { if (el) setPopoverAnchorEl(el); }} className="ogrid-popover-anchor" style={POPOVER_ANCHOR_STYLE}>
                 {popoverCellStyle ? <span style={popoverCellStyle}>{popoverDisplayContent}</span> : popoverDisplayContent}
               </div>
             </Popover.Anchor>

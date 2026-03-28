@@ -98,10 +98,10 @@ function HeroGrid() {
     { columnId: 'email', name: 'Email', editable: true, defaultWidth: 200 },
     { columnId: 'salary', name: 'Salary', type: 'numeric' as const, editable: true, valueFormatter: (v: unknown) => v != null ? `$${Number(v).toLocaleString()}` : '', defaultWidth: 110 },
     { columnId: 'startDate', name: 'Start Date', type: 'date' as const, sortable: true, editable: true, defaultWidth: 130 },
-    { columnId: 'remote', name: 'Remote', type: 'boolean' as const, editable: true, sortable: true, filterable: { type: 'multiSelect' as const }, defaultWidth: 90 },
-    { columnId: 'status', name: 'Status', editable: true, filterable: { type: 'multiSelect' as const }, cellEditor: 'richSelect' as const, cellEditorParams: { values: STATUSES_UNIQUE }, defaultWidth: 110 },
-    { columnId: 'rating', name: 'Rating', sortable: true, editable: true, filterable: { type: 'multiSelect' as const }, cellEditor: RatingEditor, cellEditorPopup: true, cellEditorParams: { maxStars: 5 }, defaultWidth: 90 },
-    { columnId: 'color', name: 'Color', editable: true, cellEditor: ColorPickerEditor, cellEditorPopup: true, defaultWidth: 80, valueFormatter: (v: unknown) => v ? String(v) : '' },
+    { columnId: 'remote', name: 'Remote', type: 'boolean' as const, editable: true, sortable: true, filterable: { type: 'multiSelect' as const }, defaultWidth: 110 },
+    { columnId: 'status', name: 'Status', editable: true, filterable: { type: 'multiSelect' as const }, cellEditor: 'richSelect' as const, cellEditorParams: { values: STATUSES_UNIQUE }, defaultWidth: 120 },
+    { columnId: 'rating', name: 'Rating', sortable: true, editable: true, filterable: { type: 'multiSelect' as const }, cellEditor: RatingEditor, cellEditorPopup: true, cellEditorParams: { maxStars: 5 }, defaultWidth: 120 },
+    { columnId: 'color', name: 'Color', editable: true, cellEditor: ColorPickerEditor, cellEditorPopup: true, defaultWidth: 110, valueFormatter: (v: unknown) => v ? String(v) : '' },
     { columnId: 'tags', name: 'Skills', editable: true, cellEditor: TagsEditor, cellEditorPopup: true, cellEditorParams: { suggestions: ['React', 'Angular', 'Vue', 'TypeScript', 'Python', 'Java', 'Go', 'Rust', 'Node', 'Docker', 'AWS', 'Azure', 'GraphQL', 'ML'] }, defaultWidth: 160 },
   ], [RatingEditor, ColorPickerEditor, TagsEditor]);
 

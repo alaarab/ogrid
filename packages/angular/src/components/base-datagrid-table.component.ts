@@ -320,6 +320,7 @@ export abstract class BaseDataGridTableComponent<T = unknown> {
         pinnedRight,
         minWidth: effectiveMinWidth,
         width: w,
+        cssWidth: col.width,
       };
     });
   });

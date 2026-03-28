@@ -161,12 +161,7 @@
   height: 20px;
   flex-shrink: 0;
 
-  // Always reserve space so the sort arrow never shifts when menu appears.
-  // On hover-capable devices: invisible until the column is hovered.
-  // Touch devices keep it always visible (no hover support).
-  @media (hover: hover) {
-    visibility: hidden;
-  }
+  // Always visible — no hover-to-reveal.
 
   // Expand touch target on coarse-pointer (touch) devices
   @media (pointer: coarse) {
@@ -190,10 +185,6 @@
   }
 }
 
-// Show column options button on header cell hover
-.dataTable thead th:hover .headerMenuTrigger {
-  visibility: visible;
-}
 
 // ---- Column reorder drop indicator ----
 
@@ -332,6 +323,7 @@
 .dataTable tbody td:has(> .editingCellContent) {
   z-index: var(--ogrid-z-active-cell, 2);
 }
+
 
 .tableWrapper .editingCellContent.editingCellContent {
   width: 100%;

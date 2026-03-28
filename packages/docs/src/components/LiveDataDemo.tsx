@@ -159,7 +159,7 @@ export default function LiveDataDemo() {
   ), [paused]);
 
   return (
-    <div style={{ height: 520, borderRadius: 8, overflow: 'hidden' }}>
+    <div className="live-data-demo" style={{ height: 520, borderRadius: 8, overflow: 'hidden' }}>
       <OGrid
         columns={columns}
         data={data}

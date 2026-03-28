@@ -143,15 +143,17 @@ export function createDataGridTable(ui: IDataGridTableUIBindings) {
           const baseMinWidth = col.minWidth ?? estimateHeaderMinWidth(col.name);
           const effectiveMinWidth = hasResizeOverride ? columnWidth : Math.max(baseMinWidth, measuredW ?? 0);
 
+          // CSS width string (e.g. '100%') lets a column fill remaining space.
+          const cssWidth = col.width;
           const tdStyle: Record<string, string> = {
             minWidth: `${effectiveMinWidth}px`,
-            width: `${columnWidth}px`,
-            maxWidth: `${columnWidth}px`,
+            width: cssWidth ?? `${columnWidth}px`,
+            ...(cssWidth ? {} : { maxWidth: `${columnWidth}px` }),
           };
           const hdrStyle: Record<string, string> = {
             minWidth: `${effectiveMinWidth}px`,
-            width: `${columnWidth}px`,
-            maxWidth: `${columnWidth}px`,
+            width: cssWidth ?? `${columnWidth}px`,
+            ...(cssWidth ? {} : { maxWidth: `${columnWidth}px` }),
           };
 
           const tdClassParts: string[] = ['ogrid-data-cell'];

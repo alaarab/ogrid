@@ -920,9 +920,11 @@ export class TableRenderer<T> {
           th.style.textAlign = 'right';
         }
 
-        // Apply column width from resize state, or enforce header-based minimum
+        // Apply column width from resize state, CSS width string, or enforce header-based minimum
         if (this.interactionState?.columnWidths[col.columnId]) {
           th.style.width = `${this.interactionState.columnWidths[col.columnId]}px`;
+        } else if (col.width) {
+          th.style.width = col.width;
         } else if (col.minWidth == null) {
           // No explicit minWidth set: ensure column is at least wide enough to show the header
           // text without truncation (overrides the global CSS min-width: 80px rule).
