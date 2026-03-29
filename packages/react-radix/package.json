@@ -59,11 +59,11 @@
     "@types/react": "^19.2.14",
     "@types/react-dom": "^19.2.3",
     "eslint-plugin-storybook": "^10.3.3",
-    "react": "^18.3.1",
-    "react-dom": "^18.3.1",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0",
     "sass": "^1.97.3",
     "storybook": "^10.3.3",
-    "vite": "^7.3.1"
+    "vite": "^8.0.0"
   },
   "publishConfig": {
     "access": "public"
