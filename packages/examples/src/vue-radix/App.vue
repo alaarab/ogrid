@@ -13,6 +13,7 @@
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref } from 'vue';
 import { OGrid } from '@alaarab/ogrid-vue-radix';
+import '@alaarab/ogrid-vue-radix/styles/DataGridTable/DataGridTable.css';
 import type { IOGridProps } from '@alaarab/ogrid-vue-radix';
 import { DatePickerEditor, RatingEditor, ColorPickerEditor, SliderEditor, TagsEditor } from '@alaarab/ogrid-vue-inputs';
 import { connectGridToBridge } from '@alaarab/ogrid-mcp/bridge-client';
