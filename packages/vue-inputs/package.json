@@ -1,6 +1,6 @@
 {
   "name": "@alaarab/ogrid-vue-inputs",
-  "version": "2.7.2",
+  "version": "2.7.3",
   "description": "OGrid Vue Inputs – Optional premium cell editors (DatePicker, and more). Zero impact when not installed.",
   "main": "dist/esm/index.js",
   "module": "dist/esm/index.js",
@@ -37,8 +37,8 @@
     "node": ">=18"
   },
   "dependencies": {
-    "@alaarab/ogrid-core": "2.7.2",
-    "@alaarab/ogrid-inputs": "2.7.2"
+    "@alaarab/ogrid-core": "2.7.3",
+    "@alaarab/ogrid-inputs": "2.7.3"
   },
   "peerDependencies": {
     "vue": "^3.3.0"
