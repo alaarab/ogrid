@@ -51,29 +51,25 @@ const setPopoverRefEl = (el: any) => { popoverRef.value = el as HTMLDivElement; 
 
 <template>
   <div class="column-header" :ref="setHeaderRefEl">
-    <div class="header-content">
-      <span class="column-name" :title="columnName" data-header-label>
-        {{ columnName }}
-      </span>
-    </div>
-    <div class="header-actions">
-      <button
-        v-if="filterType !== 'none'"
-        :class="[
-          'filter-icon',
-          { 'filter-active': hasActiveFilter },
-          { 'filter-open': isFilterOpen },
-        ]"
-        @click="handlers.handleFilterIconClick"
-        :aria-label="`Filter ${columnName}`"
-        :aria-expanded="isFilterOpen"
-        aria-haspopup="dialog"
-        :title="`Filter ${columnName}`"
-      >
-        <span aria-hidden>▼</span>
-        <span v-if="hasActiveFilter" class="filter-badge" />
-      </button>
-    </div>
+    <span class="column-name" :title="columnName" data-header-label>
+      {{ columnName }}
+    </span>
+    <button
+      v-if="filterType !== 'none'"
+      :class="[
+        'filter-icon',
+        { 'filter-active': hasActiveFilter },
+        { 'filter-open': isFilterOpen },
+      ]"
+      @click="handlers.handleFilterIconClick"
+      :aria-label="`Filter ${columnName}`"
+      :aria-expanded="isFilterOpen"
+      aria-haspopup="dialog"
+      :title="`Filter ${columnName}`"
+    >
+      <span aria-hidden>▼</span>
+      <span v-if="hasActiveFilter" class="filter-badge" />
+    </button>
 
     <Teleport to="body">
     <div

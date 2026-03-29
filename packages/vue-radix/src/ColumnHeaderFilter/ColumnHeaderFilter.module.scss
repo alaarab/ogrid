@@ -3,40 +3,21 @@
 .column-header {
   display: flex;
   align-items: center;
-  gap: 4px;
-  width: 100%;
-  max-width: 100%;
+  gap: 2px;
+  flex: 1;
   min-width: 0;
-  position: relative;
   box-sizing: border-box;
 }
 
-.header-content {
-  display: flex;
-  align-items: center;
+.column-name {
   flex: 1;
   min-width: 0;
-  overflow: hidden;
-}
-
-.column-name {
-  display: block;
-  min-width: 0;
-  max-width: 100%;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
   font-weight: 600;
   font-size: 14px;
   color: var(--ogrid-fg, rgba(0, 0, 0, 0.87));
-}
-
-.header-actions {
-  display: flex;
-  align-items: center;
-  gap: 2px;
-  margin-left: auto;
-  flex-shrink: 0;
 }
 
 .filter-icon {
