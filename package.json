@@ -107,7 +107,7 @@
     "ts-jest": "^29.4.6",
     "tsup": "^8.5.1",
     "turbo": "^2.8.21",
-    "typescript": "~5.9"
+    "typescript": "^6.0.0"
   },
   "version": "2.7.0",
   "lint-staged": {
@@ -116,11 +116,13 @@
     ]
   },
   "overrides": {
-    "react": "^18.3.1",
-    "react-dom": "^18.3.1",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0",
     "@types/react": "^19.0.0",
     "@types/react-dom": "^19.0.0",
     "picomatch": "^4.0.4",
-    "serialize-javascript": "^7.0.5"
+    "serialize-javascript": "^7.0.5",
+    "typescript": "^6.0.0",
+    "vite": "^8.0.0"
   }
 }
