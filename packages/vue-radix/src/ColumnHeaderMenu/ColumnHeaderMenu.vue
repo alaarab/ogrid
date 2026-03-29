@@ -51,6 +51,7 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
+  <Teleport to="body">
   <div
     v-if="isOpen && anchorElement"
     ref="menuRef"
@@ -58,6 +59,8 @@ onBeforeUnmount(() => {
     aria-label="Column options"
     class="ogrid-column-header-menu"
     :style="{
+      position: 'fixed',
+      zIndex: 9999,
       top: `${anchorElement.getBoundingClientRect().bottom + 4}px`,
       left: `${anchorElement.getBoundingClientRect().left}px`,
     }"
@@ -78,6 +81,7 @@ onBeforeUnmount(() => {
       </div>
     </template>
   </div>
+  </Teleport>
 </template>
 
 <style scoped>

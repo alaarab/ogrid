@@ -141,15 +141,7 @@
      On hover-capable devices: hidden by default, revealed on column hover. */
 }
 
-@media (hover: hover) {
-  .ogrid-column-menu-btn {
-    visibility: hidden;
-  }
-
-  th:hover .ogrid-column-menu-btn {
-    visibility: visible;
-  }
-}
+/* Menu button always visible — matches React-radix parity. */
 
 .ogrid-column-menu-btn:focus-visible {
   visibility: visible;
