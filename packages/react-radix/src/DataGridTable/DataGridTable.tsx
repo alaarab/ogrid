@@ -48,8 +48,6 @@ import {
 import type { GridRowProps } from '@alaarab/ogrid-react';
 import styles from './DataGridTable.module.scss';
 
-const SPACER_TD_STYLE: React.CSSProperties = { padding: 0, border: 'none' };
-
 
 // --- Memoized row component (skips re-render for rows unaffected by selection changes) ---
 
@@ -112,7 +110,7 @@ function GridRowInner(props: RadixGridRowProps) {
         </td>
       )}
       {leftSpacerWidth != null && leftSpacerWidth > 0 && (
-        <td style={{ ...SPACER_TD_STYLE, width: leftSpacerWidth, minWidth: leftSpacerWidth }} aria-hidden />
+        <td style={{ padding: 0, border: 'none', width: leftSpacerWidth, minWidth: leftSpacerWidth }} aria-hidden />
       )}
       {visibleCols.map((col, colIdx) => {
         const globalIdx = globalColIndexMap ? globalColIndexMap[colIdx] : colIdx;
@@ -123,23 +121,23 @@ function GridRowInner(props: RadixGridRowProps) {
           activeCell,
           cutRange,
         });
+        // Compute background override only when the cell has state.
+        // For the ~99% of cells outside any selection/cut range this is
+        // undefined, so we reuse the memoized baseStyle directly (zero allocation).
+        const baseStyle = columnMeta.cellStyles[col.columnId];
+        const bg = surfaceState.isCutCell
+          ? 'var(--ogrid-hover-bg, rgba(0, 0, 0, 0.04))'
+          : surfaceState.isActiveRangeCell
+          ? 'var(--ogrid-bg, #fff)'
+          : surfaceState.isRangeCell
+          ? 'var(--ogrid-range-bg, rgba(33, 115, 70, 0.12))'
+          : undefined;
         return (
           <td
             key={col.columnId}
             data-column-id={col.columnId}
             className={columnMeta.cellClasses[col.columnId] || undefined}
-            style={{
-              ...columnMeta.cellStyles[col.columnId],
-              ...(surfaceState.isRangeCell
-                ? { background: 'var(--ogrid-range-bg, rgba(33, 115, 70, 0.12))' }
-                : {}),
-              ...(surfaceState.isActiveRangeCell
-                ? { background: 'var(--ogrid-bg, #fff)' }
-                : {}),
-              ...(surfaceState.isCutCell
-                ? { background: 'var(--ogrid-hover-bg, rgba(0, 0, 0, 0.04))' }
-                : {}),
-            }}
+            style={bg ? { ...baseStyle, background: bg } : baseStyle}
             onPointerDown={PREVENT_DEFAULT}
           >
             {renderCellContent(item, col, rowIndex, globalIdx)}
@@ -147,7 +145,7 @@ function GridRowInner(props: RadixGridRowProps) {
         );
       })}
       {rightSpacerWidth != null && rightSpacerWidth > 0 && (
-        <td style={{ ...SPACER_TD_STYLE, width: rightSpacerWidth, minWidth: rightSpacerWidth }} aria-hidden />
+        <td style={{ padding: 0, border: 'none', width: rightSpacerWidth, minWidth: rightSpacerWidth }} aria-hidden />
       )}
     </tr>
   );
@@ -281,7 +279,7 @@ function DataGridTableInner<T>(props: IOGridDataGridProps<T>): React.ReactElemen
     isLoading, loadingMessage,
     ariaLabel, ariaLabelledBy, visibleColumns, columnOrder, columnReorder, density, rowHeight,
     rowNumberOffset, headerRows, allowOverflowX, fitToContent, showColumnLetters,
-    editCallbacks, interactionHandlers,
+    editCallbacks, interactionHandlers, delegatedCellHandlers,
     cellDescriptorInputRef, cellDescriptorCacheRef, pendingEditorValueRef, popoverAnchorElRef,
     handleSingleRowClick, handlePasteVoid,
     visibleCols, totalColCount, hasCheckboxCol, hasRowNumbersCol, colOffset,
@@ -380,7 +378,7 @@ function DataGridTableInner<T>(props: IOGridDataGridProps<T>): React.ReactElemen
 
         const cellClassNames = `${styles.cellContent}${descriptor.isActive ? ` ${styles.activeCellContent}` : ''}${descriptor.isActive && descriptor.isInRange ? ` ${styles.inRange}` : ''}${descriptor.isInRange && !descriptor.isActive ? ` ${styles.cellInRange}` : ''}${descriptor.isInCutRange ? ` ${styles.cellCut}` : ''}${descriptor.isInCopyRange ? ` ${styles.cellCopied}` : ''}`;
 
-        const interactionProps = getCellInteractionProps(descriptor, col.columnId, interactionHandlers);
+        const interactionProps = getCellInteractionProps(descriptor, col.columnId, interactionHandlers, delegatedCellHandlers);
 
         content = (
           <div
@@ -406,7 +404,7 @@ function DataGridTableInner<T>(props: IOGridDataGridProps<T>): React.ReactElemen
         </CellErrorBoundary>
       );
     },
-    [editCallbacks, interactionHandlers, handleFillHandleMouseDown, setPopoverAnchorEl, cancelPopoverEdit, getRowId, onCellError, cellDescriptorInputRef, cellDescriptorCacheRef, pendingEditorValueRef, popoverAnchorElRef, colOffset, interaction, setActiveCell]
+    [editCallbacks, interactionHandlers, delegatedCellHandlers, handleFillHandleMouseDown, setPopoverAnchorEl, cancelPopoverEdit, getRowId, onCellError, cellDescriptorInputRef, cellDescriptorCacheRef, pendingEditorValueRef, popoverAnchorElRef, colOffset, interaction, setActiveCell]
   );
 
   return (

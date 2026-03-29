@@ -210,6 +210,13 @@ export class CellDescriptorCache {
    */
   private static readonly MAX_COL_STRIDE = 1024;
 
+  /**
+   * Safety limit: if the cache grows past this many entries (e.g. after heavy
+   * data swaps without a clear()), wipe it to prevent unbounded memory growth.
+   * The cache rebuilds organically during the next render pass.
+   */
+  private static readonly MAX_ENTRIES = 100_000;
+
   private readonly cache = new Map<number, { version: string; descriptor: CellRenderDescriptor }>();
 
   /** Last seen volatile version string. Used to detect when to skip per-cell version checks. */
@@ -272,6 +279,8 @@ export class CellDescriptorCache {
 
     // Cache miss: recompute and store.
     const descriptor = compute();
+    // Safety valve: prevent unbounded growth after heavy data swaps.
+    if (this.cache.size >= CellDescriptorCache.MAX_ENTRIES) this.cache.clear();
     this.cache.set(key, { version, descriptor });
     return descriptor;
   }

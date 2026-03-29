@@ -173,7 +173,7 @@ export type {
 
 // Utils  -  debounce, dom
 export { debounce } from './utils';
-export { measureRange, buildCellIndex, injectGlobalStyles } from './utils';
+export { measureRange, buildCellIndex, cellIndexKey, CELL_INDEX_STRIDE, injectGlobalStyles } from './utils';
 export type { OverlayRect } from './utils';
 
 // Utils  -  sortHelpers

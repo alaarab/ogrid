@@ -1,6 +1,7 @@
 import { useCallback, useRef, useMemo, useEffect } from 'react';
 import type { RefObject } from 'react';
 import { formatCellReference } from '../utils';
+import type { DelegatedCellHandlers } from '../utils';
 import type { IOGridDataGridProps, IColumnDef } from '../types';
 import type {
   DataGridLayoutState,
@@ -22,6 +23,7 @@ import { useColumnResize } from './useColumnResize';
 import { useColumnReorder } from './useColumnReorder';
 import { useVirtualScroll } from './useVirtualScroll';
 import { useLatestRef } from './useLatestRef';
+import { useMiddleClickScroll } from './useMiddleClickScroll';
 import { buildHeaderRows } from '../utils';
 import { CellDescriptorCache } from '@alaarab/ogrid-core';
 
@@ -114,6 +116,9 @@ export interface UseDataGridTableOrchestrationResult<T> {
     handleLongPressStart: DataGridContextMenuState['handleLongPressStart'];
     handleLongPressEnd: DataGridContextMenuState['handleLongPressEnd'];
   };
+
+  /** Stable delegated handlers for cell interaction (zero per-cell closures). */
+  delegatedCellHandlers: DelegatedCellHandlers;
 
   // Stable refs for volatile state (used in renderCellContent)
   cellDescriptorInputRef: React.MutableRefObject<CellRenderDescriptorInput<T>>;
@@ -321,6 +326,9 @@ export function useDataGridTableOrchestration<T>(
     columnOverscan: virtualScroll?.columnOverscan,
   });
 
+  // ── Middle-click auto-scroll ───────────────────────────────────────────
+  useMiddleClickScroll({ wrapperRef });
+
   // ── Memoized callback groups ───────────────────────────────────────────
   const editCallbacks = useMemo(
     () => ({ commitCellEdit, setEditingCell, setPendingEditorValue, cancelPopoverEdit }),
@@ -330,6 +338,54 @@ export function useDataGridTableOrchestration<T>(
     () => ({ handleCellMouseDown, setActiveCell, setEditingCell, handleCellContextMenu, handleLongPressStart, handleLongPressEnd }),
     [handleCellMouseDown, setActiveCell, setEditingCell, handleCellContextMenu, handleLongPressStart, handleLongPressEnd],
   );
+
+  // ── Delegated cell handlers (stable — zero per-cell closures) ──────────
+  // Read row/col from e.currentTarget data attributes at call time.
+  const interactionHandlersRef = useLatestRef(interactionHandlers);
+  const itemsRef = useLatestRef(items);
+  const getRowIdRef = useLatestRef(getRowId);
+  const visibleColsRef = useLatestRef(visibleCols);
+  const colOffsetRef2 = useLatestRef(colOffset);
+
+  const delegatedCellHandlers = useMemo(() => {
+    const parseCell = (e: { currentTarget: EventTarget | null }) => {
+      const el = e.currentTarget as HTMLElement | null;
+      if (!el) return null;
+      const r = parseInt(el.getAttribute('data-row-index') ?? '', 10);
+      const c = parseInt(el.getAttribute('data-col-index') ?? '', 10);
+      return (!Number.isNaN(r) && !Number.isNaN(c)) ? { row: r, col: c } : null;
+    };
+    return {
+      onPointerDown: (e: React.PointerEvent) => {
+        const cell = parseCell(e);
+        if (!cell) return;
+        const h = interactionHandlersRef.current;
+        h.setEditingCell(null);
+        h.handleCellMouseDown(e, cell.row, cell.col);
+        h.handleLongPressStart?.(e);
+      },
+      onClick: (e: React.MouseEvent) => {
+        const cell = parseCell(e);
+        if (!cell) return;
+        interactionHandlersRef.current.setActiveCell({ rowIndex: cell.row, columnIndex: cell.col });
+      },
+      onDoubleClick: (e: React.MouseEvent) => {
+        const el = e.currentTarget as HTMLElement | null;
+        if (!el?.hasAttribute('data-can-edit')) return;
+        const cell = parseCell(e);
+        if (!cell) return;
+        const co = colOffsetRef2.current;
+        const dataCol = cell.col - co;
+        const cols = visibleColsRef.current;
+        if (dataCol < 0 || dataCol >= cols.length) return;
+        const col = cols[dataCol];
+        const itms = itemsRef.current;
+        if (cell.row >= itms.length) return;
+        const rowId = getRowIdRef.current(itms[cell.row]);
+        interactionHandlersRef.current.setEditingCell({ rowId, columnId: col.columnId });
+      },
+    };
+  }, [interactionHandlersRef, itemsRef, getRowIdRef, visibleColsRef, colOffsetRef2]);
 
   // ── Stable refs for volatile state ─────────────────────────────────────
   const cellDescriptorInputRef = useLatestRef(cellDescriptorInput);
@@ -435,6 +491,7 @@ export function useDataGridTableOrchestration<T>(
     // Memoized callback groups
     editCallbacks,
     interactionHandlers,
+    delegatedCellHandlers,
 
     // Stable refs for volatile state
     cellDescriptorInputRef,

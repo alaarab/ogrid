@@ -39,11 +39,12 @@ export function useTableLayout<T>(
     onColumnResized,
   } = params;
 
-  // --- Container width measurement via ResizeObserver ---
+  // --- Container width measurement via ResizeObserver (rAF-throttled) ---
   const [containerWidth, setContainerWidth] = useState<number>(0);
   useEffect(() => {
     const el = wrapperRef.current;
     if (!el) return;
+    let rafId = 0;
     const measure = () => {
       const rect = el.getBoundingClientRect();
       const cs = window.getComputedStyle(el);
@@ -55,10 +56,17 @@ export function useTableLayout<T>(
       // infinite re-render loops during column resize.
       setContainerWidth((prev) => (prev === next ? prev : next));
     };
-    const ro = new ResizeObserver(measure);
+    const throttledMeasure = () => {
+      if (rafId) return;
+      rafId = requestAnimationFrame(() => {
+        rafId = 0;
+        measure();
+      });
+    };
+    const ro = new ResizeObserver(throttledMeasure);
     ro.observe(el);
-    measure();
-    return () => ro.disconnect();
+    measure(); // initial synchronous measurement
+    return () => { ro.disconnect(); if (rafId) cancelAnimationFrame(rafId); };
   }, [wrapperRef]);
 
   // --- Column sizing overrides state ---

@@ -1,5 +1,5 @@
 import { shallowRef, watch, isRef, onUnmounted, type Ref, type ShallowRef } from 'vue';
-import { normalizeSelectionRange, applyFillValues, buildCellIndex } from '@alaarab/ogrid-core';
+import { normalizeSelectionRange, applyFillValues, buildCellIndex, cellIndexKey } from '@alaarab/ogrid-core';
 import type { ISelectionRange, IActiveCell, IColumnDef, ICellValueChangedEvent } from '../types';
 import type { IVisibleRange } from '@alaarab/ogrid-core';
 
@@ -112,7 +112,7 @@ export function useFillHandle<T>(params: UseFillHandleParams<T>): UseFillHandleR
       // Look up only cells in the new range  -  O(range size) via Map lookup
       for (let r = minR; r <= maxR; r++) {
         for (let c = minC; c <= maxC; c++) {
-          const key = `${r},${c + colOff}`;
+          const key = cellIndexKey(r, c + colOff);
           let el = fillCellIndex?.get(key);
           // Handle virtual scroll recycling  -  if element is stale, rebuild index once
           if (el && !el.isConnected) {

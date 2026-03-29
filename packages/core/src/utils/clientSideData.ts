@@ -52,7 +52,13 @@ export function processClientSideData<T>(
         // valueFormatter on the column def to ensure meaningful string representation.
         if (val.value.length > 0) {
           const allowedSet = new Set(val.value);
-          predicates.push((r) => allowedSet.has(String(getCellValue(r, col))));
+          // Schwartzian transform: pre-compute String() coercion to avoid
+          // repeated conversion inside the filter predicate (same pattern as text/people).
+          const msCache = new Map<T, string>();
+          for (let j = 0; j < data.length; j++) {
+            msCache.set(data[j], String(getCellValue(data[j], col)));
+          }
+          predicates.push((r) => allowedSet.has(msCache.get(r) ?? ''));
         }
         break;
       case 'text': {

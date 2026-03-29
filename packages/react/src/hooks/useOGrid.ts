@@ -572,6 +572,40 @@ export function useOGrid<T>(
     setFormula: formulaEngine.enabled ? formulaEngine.setFormula : undefined,
   });
 
+  // Split dataGridProps into focused sub-memos so that changes in one concern
+  // (e.g. sorting) don't invalidate memos for unrelated concerns (e.g. formulas).
+
+  const dgFilterProps = useMemo(() => ({
+    filters: filtersState.filters,
+    onFilterChange: filtersState.handleFilterChange,
+    filterOptions: filtersState.clientFilterOptions,
+    loadingFilterOptions: dataSource?.fetchFilterOptions ? filtersState.loadingFilterOptions : EMPTY_LOADING_OPTIONS,
+    peopleSearch: dataSource?.searchPeople,
+    getUserByEmail: dataSource?.getUserByEmail,
+  }), [filtersState.filters, filtersState.handleFilterChange, filtersState.clientFilterOptions, dataSource, filtersState.loadingFilterOptions]);
+
+  const dgEmptyState = useMemo(() => ({
+    hasActiveFilters: filtersState.hasActiveFilters,
+    onClearAll: clearAllFilters,
+    message: emptyState?.message,
+    render: emptyState?.render,
+  }), [filtersState.hasActiveFilters, clearAllFilters, emptyState]);
+
+  const dgFormulaProps = useMemo(() => ({
+    formulas,
+    getFormulaValue: formulaEngine.enabled ? formulaEngine.getFormulaValue : undefined,
+    hasFormula: formulaEngine.enabled ? formulaEngine.hasFormula : undefined,
+    getFormula: formulaEngine.enabled ? formulaEngine.getFormula : undefined,
+    setFormula: formulaEngine.enabled ? formulaEngine.setFormula : undefined,
+    onFormulaCellChanged: formulaEngine.enabled ? formulaEngine.onCellChanged : undefined,
+    getPrecedents: formulaEngine.enabled ? formulaEngine.getPrecedents : undefined,
+    getDependents: formulaEngine.enabled ? formulaEngine.getDependents : undefined,
+    getAuditTrail: formulaEngine.enabled ? formulaEngine.getAuditTrail : undefined,
+    formulaVersion,
+    formulaReferences: formulaBarState.referencedCells.length > 0 ? formulaBarState.referencedCells : undefined,
+    onFormulaInsertReference: formulaBarState.insertReference,
+  }), [formulas, formulaEngine, formulaVersion, formulaBarState.referencedCells, formulaBarState.insertReference]);
+
   const dataGridProps = useMemo<IOGridDataGridProps<T>>(() => ({
     items: dataFetchingState.displayItems,
     columns: columnsProp,
@@ -604,12 +638,7 @@ export function useOGrid<T>(
     pageSize: paginationState.pageSize,
     statusBar: statusBarConfig,
     isLoading: isLoadingResolved,
-    filters: filtersState.filters,
-    onFilterChange: filtersState.handleFilterChange,
-    filterOptions: filtersState.clientFilterOptions,
-    loadingFilterOptions: dataSource?.fetchFilterOptions ? filtersState.loadingFilterOptions : EMPTY_LOADING_OPTIONS,
-    peopleSearch: dataSource?.searchPeople,
-    getUserByEmail: dataSource?.getUserByEmail,
+    ...dgFilterProps,
     layoutMode,
     suppressHorizontalScroll,
     stickyHeader: stickyHeader ?? true,
@@ -620,24 +649,8 @@ export function useOGrid<T>(
     density,
     'aria-label': ariaLabel,
     'aria-labelledby': ariaLabelledBy,
-    emptyState: {
-      hasActiveFilters: filtersState.hasActiveFilters,
-      onClearAll: clearAllFilters,
-      message: emptyState?.message,
-      render: emptyState?.render,
-    },
-    formulas,
-    getFormulaValue: formulaEngine.enabled ? formulaEngine.getFormulaValue : undefined,
-    hasFormula: formulaEngine.enabled ? formulaEngine.hasFormula : undefined,
-    getFormula: formulaEngine.enabled ? formulaEngine.getFormula : undefined,
-    setFormula: formulaEngine.enabled ? formulaEngine.setFormula : undefined,
-    onFormulaCellChanged: formulaEngine.enabled ? formulaEngine.onCellChanged : undefined,
-    getPrecedents: formulaEngine.enabled ? formulaEngine.getPrecedents : undefined,
-    getDependents: formulaEngine.enabled ? formulaEngine.getDependents : undefined,
-    getAuditTrail: formulaEngine.enabled ? formulaEngine.getAuditTrail : undefined,
-    formulaVersion,
-    formulaReferences: formulaBarState.referencedCells.length > 0 ? formulaBarState.referencedCells : undefined,
-    onFormulaInsertReference: formulaBarState.insertReference,
+    emptyState: dgEmptyState,
+    ...dgFormulaProps,
   }), [
     dataFetchingState.displayItems, columnsProp, getRowId,
     sortingState.sort.field, sortingState.sort.direction, sortingState.handleSort,
@@ -647,12 +660,10 @@ export function useOGrid<T>(
     rowSelection, effectiveSelectedRows, handleSelectionChange,
     showRowNumbersResolved, showColumnLettersResolved, showNameBox, showActiveCellChange, onActiveCellChange,
     paginationState.page, paginationState.pageSize, statusBarConfig,
-    isLoadingResolved, filtersState.filters, filtersState.handleFilterChange,
-    filtersState.clientFilterOptions, dataSource, filtersState.loadingFilterOptions,
+    isLoadingResolved, dgFilterProps,
     layoutMode, suppressHorizontalScroll, stickyHeader, columnReorder, responsiveColumns, virtualScroll,
     rowHeight, density, ariaLabel, ariaLabelledBy,
-    filtersState.hasActiveFilters, clearAllFilters, emptyState,
-    formulas, formulaEngine, formulaVersion, formulaBarState.referencedCells, formulaBarState.insertReference,
+    dgEmptyState, dgFormulaProps,
   ]);
 
   const pagination = useMemo<UseOGridPagination>(() => ({

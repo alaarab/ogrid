@@ -256,8 +256,6 @@ interface ColumnLayout<T = unknown> {
   maxWidth: number;
 }
 
-const SPACER_TD_STYLE: React.CSSProperties = { padding: 0, border: 'none' };
-
 interface GridRowProps {
   item: unknown;
   rowIndex: number;
@@ -339,7 +337,7 @@ function GridRowInner(props: GridRowProps) {
         );
       })()}
       {leftSpacerWidth != null && leftSpacerWidth > 0 && (
-        <td style={{ ...SPACER_TD_STYLE, width: leftSpacerWidth, minWidth: leftSpacerWidth }} aria-hidden />
+        <td style={{ padding: 0, border: 'none', width: leftSpacerWidth, minWidth: leftSpacerWidth }} aria-hidden />
       )}
       {columnLayouts.map((cl, colIdx) => {
         const globalIdx = globalColIndexMap ? globalColIndexMap[colIdx] : colIdx;
@@ -350,26 +348,22 @@ function GridRowInner(props: GridRowProps) {
           activeCell,
           cutRange,
         });
+        const bg = surfaceState.isCutCell
+          ? 'var(--ogrid-hover-bg, rgba(0,0,0,0.04))'
+          : surfaceState.isActiveRangeCell
+          ? 'var(--ogrid-bg, #fff)'
+          : surfaceState.isRangeCell
+          ? 'var(--ogrid-bg-range, rgba(33,115,70,0.12))'
+          : undefined;
         return (
           <td
             key={cl.col.columnId}
             data-column-id={cl.col.columnId}
             className={cl.tdClassName}
-            style={{
-              ...cl.tdStyle,
-              minWidth: cl.minWidth,
-              width: cl.width,
-              maxWidth: cl.maxWidth,
-              ...(surfaceState.isRangeCell
-                ? { background: 'var(--ogrid-bg-range, rgba(33,115,70,0.12))' }
-                : {}),
-              ...(surfaceState.isActiveRangeCell
-                ? { background: 'var(--ogrid-bg, #fff)' }
-                : {}),
-              ...(surfaceState.isCutCell
-                ? { background: 'var(--ogrid-hover-bg, rgba(0,0,0,0.04))' }
-                : {}),
-            }}
+            style={bg
+              ? { ...cl.tdStyle, minWidth: cl.minWidth, width: cl.width, maxWidth: cl.maxWidth, background: bg }
+              : { ...cl.tdStyle, minWidth: cl.minWidth, width: cl.width, maxWidth: cl.maxWidth }
+            }
             onPointerDown={PREVENT_DEFAULT}
           >
             {renderCellContent(item, cl.col, rowIndex, globalIdx)}
@@ -377,7 +371,7 @@ function GridRowInner(props: GridRowProps) {
         );
       })}
       {rightSpacerWidth != null && rightSpacerWidth > 0 && (
-        <td style={{ ...SPACER_TD_STYLE, width: rightSpacerWidth, minWidth: rightSpacerWidth }} aria-hidden />
+        <td style={{ padding: 0, border: 'none', width: rightSpacerWidth, minWidth: rightSpacerWidth }} aria-hidden />
       )}
     </tr>
   );

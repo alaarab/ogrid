@@ -79,7 +79,7 @@ export type {
   CellRenderMode,
 } from './dataGridViewModel';
 export { debounce } from './debounce';
-export { measureRange, buildCellIndex, injectGlobalStyles } from './dom';
+export { measureRange, buildCellIndex, cellIndexKey, CELL_INDEX_STRIDE, injectGlobalStyles } from './dom';
 export type { OverlayRect } from './dom';
 export { computeNextSortState } from './sortHelpers';
 export type { ISortState } from './sortHelpers';

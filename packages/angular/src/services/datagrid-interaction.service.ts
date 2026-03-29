@@ -12,6 +12,8 @@ import {
   applyFillValues,
   applyCellDeletion,
   getScrollTopForRow,
+  buildCellIndex,
+  cellIndexKey,
 } from '@alaarab/ogrid-core';
 import type {
   RowId,
@@ -63,6 +65,8 @@ export class DataGridInteractionHelper<T> {
   rafId = 0;
   lastMousePos: { cx: number; cy: number } | null = null;
   autoScrollInterval: ReturnType<typeof setInterval> | null = null;
+  /** Cell index Map for O(1) lookups during drag (built once on drag start). */
+  cellIndex: Map<number, HTMLElement> | null = null;
 
   setActiveCell(cell: IActiveCell | null): void {
     const prev = this.activeCellSig();
@@ -733,30 +737,47 @@ export class DataGridInteractionHelper<T> {
     });
   }
 
+  /** Set of currently drag-marked elements — avoids O(n) DOM scan on clear. */
+  private markedCells = new Set<Element>();
+
   applyDragAttrs(range: ISelectionRange, colOff: number, wrapper: HTMLElement | null): void {
     if (!wrapper) return;
     const minR = Math.min(range.startRow, range.endRow);
     const maxR = Math.max(range.startRow, range.endRow);
     const minC = Math.min(range.startCol, range.endCol);
     const maxC = Math.max(range.startCol, range.endCol);
-    const cells = wrapper.querySelectorAll('[data-row-index][data-col-index]');
-    for (let i = 0; i < cells.length; i++) {
-      const el = cells[i];
+
+    // Build index on first call per drag gesture
+    if (!this.cellIndex) this.cellIndex = buildCellIndex(wrapper);
+
+    // Un-mark cells no longer in range (iterate the small set, not all DOM)
+    for (const el of this.markedCells) {
       const r = parseInt(el.getAttribute('data-row-index') ?? '', 10);
       const c = parseInt(el.getAttribute('data-col-index') ?? '', 10) - colOff;
-      const inRange = r >= minR && r <= maxR && c >= minC && c <= maxC;
-      if (inRange) {
-        if (!el.hasAttribute('data-drag-range')) el.setAttribute('data-drag-range', '');
-      } else {
-        if (el.hasAttribute('data-drag-range')) el.removeAttribute('data-drag-range');
+      if (!(r >= minR && r <= maxR && c >= minC && c <= maxC)) {
+        el.removeAttribute('data-drag-range');
+        this.markedCells.delete(el);
+      }
+    }
+
+    // Mark cells in the new range — O(range size) via Map lookup
+    for (let r = minR; r <= maxR; r++) {
+      for (let c = minC; c <= maxC; c++) {
+        const el = this.cellIndex.get(cellIndexKey(r, c + colOff));
+        if (el) {
+          if (!el.hasAttribute('data-drag-range')) el.setAttribute('data-drag-range', '');
+          this.markedCells.add(el);
+        }
       }
     }
   }
 
-  clearDragAttrs(wrapper: HTMLElement | null): void {
-    if (!wrapper) return;
-    const marked = wrapper.querySelectorAll('[data-drag-range]');
-    for (let i = 0; i < marked.length; i++) marked[i].removeAttribute('data-drag-range');
+  clearDragAttrs(_wrapper: HTMLElement | null): void {
+    for (const el of this.markedCells) {
+      el.removeAttribute('data-drag-range');
+    }
+    this.markedCells.clear();
+    this.cellIndex = null;
   }
 
   // --- Private helpers ---

@@ -110,34 +110,63 @@ export interface CellInteractionHandlers {
   handleLongPressEnd?: () => void;
 }
 
+/**
+ * Stable delegated handlers that read row/col from `e.currentTarget`'s data attributes
+ * at call time, eliminating per-cell closure allocations. Created once per grid via
+ * useCallback in the orchestration hook and reused for every cell.
+ */
+export interface DelegatedCellHandlers {
+  onPointerDown: (e: React.PointerEvent) => void;
+  onClick: (e: React.MouseEvent) => void;
+  onDoubleClick: (e: React.MouseEvent) => void;
+}
+
 export function getCellInteractionProps(
   descriptor: CellRenderDescriptor,
   columnId: string,
-  handlers: CellInteractionHandlers
+  handlers: CellInteractionHandlers,
+  delegated?: DelegatedCellHandlers
 ) {
-  return {
+  const longPressEnd = handlers.handleLongPressEnd;
+
+  const props: Record<string, unknown> = {
     'data-row-index': descriptor.rowIndex,
     'data-col-index': descriptor.globalColIndex,
-    ...(descriptor.isActive ? { 'data-active-cell': 'true' as const } : {}),
-    ...(descriptor.isInRange ? { 'data-in-range': 'true' as const } : {}),
     tabIndex: descriptor.isActive ? 0 : -1,
-    onPointerDown: (e: React.PointerEvent) => {
+    onPointerUp: longPressEnd,
+    onPointerLeave: longPressEnd,
+    onPointerCancel: longPressEnd,
+    onContextMenu: handlers.handleCellContextMenu,
+  };
+
+  if (delegated) {
+    // Stable shared handlers — zero per-cell closures.
+    // Each handler reads row/col from currentTarget's data attributes at call time.
+    props.onPointerDown = delegated.onPointerDown;
+    props.onClick = delegated.onClick;
+    if (descriptor.canEditAny) {
+      props['data-can-edit'] = '';
+      props.role = 'button';
+      props.onDoubleClick = delegated.onDoubleClick;
+    }
+  } else {
+    // Fallback: per-cell closures (backward compat for external consumers)
+    props.onPointerDown = (e: React.PointerEvent) => {
       handlers.setEditingCell(null);
       handlers.handleCellMouseDown(e, descriptor.rowIndex, descriptor.globalColIndex);
       handlers.handleLongPressStart?.(e);
-    },
-    onPointerUp: () => handlers.handleLongPressEnd?.(),
-    onPointerLeave: () => handlers.handleLongPressEnd?.(),
-    onPointerCancel: () => handlers.handleLongPressEnd?.(),
-    onClick: () =>
-      handlers.setActiveCell({ rowIndex: descriptor.rowIndex, columnIndex: descriptor.globalColIndex }),
-    onContextMenu: handlers.handleCellContextMenu,
-    ...(descriptor.canEditAny
-      ? {
-          role: 'button' as const,
-          onDoubleClick: () =>
-            handlers.setEditingCell({ rowId: descriptor.rowId, columnId }),
-        }
-      : {}),
-  };
+    };
+    props.onClick = () =>
+      handlers.setActiveCell({ rowIndex: descriptor.rowIndex, columnIndex: descriptor.globalColIndex });
+    if (descriptor.canEditAny) {
+      props.role = 'button';
+      props.onDoubleClick = () =>
+        handlers.setEditingCell({ rowId: descriptor.rowId, columnId });
+    }
+  }
+
+  if (descriptor.isActive) props['data-active-cell'] = 'true';
+  if (descriptor.isInRange) props['data-in-range'] = 'true';
+
+  return props;
 }
