@@ -86,11 +86,10 @@
   border: 1px solid var(--ogrid-bg, #fff);
 }
 
-// Popover content
+// Popover content — rendered via <Teleport to="body"> with position: fixed
+// to escape <th> stacking contexts created by sticky headers (z-index on
+// position: sticky th traps absolutely-positioned children).
 .popover-content {
-  position: absolute;
-  top: calc(100% + 4px);
-  right: 0;
   z-index: 1000;
   min-width: 280px;
   max-width: 320px;
@@ -98,8 +97,6 @@
   @media (max-width: 360px) {
     min-width: calc(100vw - 24px);
     max-width: calc(100vw - 24px);
-    right: auto;
-    left: 0;
   }
   background: var(--ogrid-bg, #fff);
   border: 1px solid var(--ogrid-border, rgba(0, 0, 0, 0.12));
