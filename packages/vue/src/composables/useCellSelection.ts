@@ -1,5 +1,5 @@
 import { shallowRef, ref, isRef, onMounted, onUnmounted, type Ref, type ShallowRef } from 'vue';
-import { normalizeSelectionRange, rangesEqual, computeAutoScrollSpeed, buildCellIndex } from '@alaarab/ogrid-core';
+import { normalizeSelectionRange, rangesEqual, computeAutoScrollSpeed, buildCellIndex, cellIndexKey } from '@alaarab/ogrid-core';
 import type { ISelectionRange, IActiveCell } from '../types';
 import { useLatestRef } from './useLatestRef';
 
@@ -25,7 +25,6 @@ const DRAG_ANCHOR_ATTR = 'data-drag-anchor';
 
 /** Auto-scroll config */
 const AUTO_SCROLL_EDGE = 40;
-const AUTO_SCROLL_INTERVAL = 16;
 
 /**
  * Manages cell selection range with drag-to-select and select-all support.
@@ -44,7 +43,7 @@ export function useCellSelection(params: UseCellSelectionParams): UseCellSelecti
   let dragStart: { row: number; col: number } | null = null;
   let rafId = 0;
   let liveDragRange: ISelectionRange | null = null;
-  let autoScrollInterval: ReturnType<typeof setInterval> | null = null;
+  let autoScrollHandle: number | null = null;
   let lastMousePos: { cx: number; cy: number } | null = null;
 
   const setSelectionRange = (next: ISelectionRange | null) => {
@@ -109,7 +108,7 @@ export function useCellSelection(params: UseCellSelectionParams): UseCellSelecti
   const markedCells = new Set<HTMLElement>();
 
   /** Cell lookup index built on drag start  -  O(1) lookups per frame instead of querySelectorAll. */
-  let cellIndex: Map<string, HTMLElement> | null = null;
+  let cellIndex: Map<number, HTMLElement> | null = null;
 
   /** Apply styling to a single in-range cell (attrs + box-shadow). */
   const styleCellInRange = (
@@ -174,7 +173,7 @@ export function useCellSelection(params: UseCellSelectionParams): UseCellSelecti
     let rebuilt = false;
     for (let r = minR; r <= maxR; r++) {
       for (let c = minC; c <= maxC; c++) {
-        const key = `${r},${c + colOff}`;
+        const key = cellIndexKey(r, c + colOff);
         let el = cellIndex?.get(key);
         if (el && !el.isConnected && !rebuilt) {
           rebuilt = true;
@@ -216,10 +215,38 @@ export function useCellSelection(params: UseCellSelectionParams): UseCellSelecti
   };
 
   const stopAutoScroll = () => {
-    if (autoScrollInterval) {
-      clearInterval(autoScrollInterval);
-      autoScrollInterval = null;
+    if (autoScrollHandle) {
+      cancelAnimationFrame(autoScrollHandle);
+      autoScrollHandle = null;
     }
+  };
+
+  /** rAF-synced auto-scroll loop. Reads layout once per frame, then writes. */
+  const autoScrollLoop = () => {
+    const w = wrapperRef.value;
+    const p = lastMousePos;
+    if (!w || !p || !isDraggingInternal.value) { autoScrollHandle = null; return; }
+
+    const r = w.getBoundingClientRect();
+    let sdx = 0;
+    let sdy = 0;
+    if (p.cy < r.top + AUTO_SCROLL_EDGE) sdy = -computeAutoScrollSpeed(r.top + AUTO_SCROLL_EDGE - p.cy);
+    else if (p.cy > r.bottom - AUTO_SCROLL_EDGE) sdy = computeAutoScrollSpeed(p.cy - (r.bottom - AUTO_SCROLL_EDGE));
+    if (p.cx < r.left + AUTO_SCROLL_EDGE) sdx = -computeAutoScrollSpeed(r.left + AUTO_SCROLL_EDGE - p.cx);
+    else if (p.cx > r.right - AUTO_SCROLL_EDGE) sdx = computeAutoScrollSpeed(p.cx - (r.right - AUTO_SCROLL_EDGE));
+
+    if (sdx === 0 && sdy === 0) { autoScrollHandle = null; return; }
+
+    w.scrollTop += sdy;
+    w.scrollLeft += sdx;
+
+    const newRange = resolveRange(p.cx, p.cy);
+    if (newRange) {
+      liveDragRange = newRange;
+      applyDragAttrs(newRange);
+    }
+
+    autoScrollHandle = requestAnimationFrame(autoScrollLoop);
   };
 
   const updateAutoScroll = () => {
@@ -250,31 +277,9 @@ export function useCellSelection(params: UseCellSelectionParams): UseCellSelecti
       return;
     }
 
-    if (!autoScrollInterval) {
-      autoScrollInterval = setInterval(() => {
-        const w = wrapperRef.value;
-        const p = lastMousePos;
-        if (!w || !p || !isDraggingInternal.value) { stopAutoScroll(); return; }
-
-        const r = w.getBoundingClientRect();
-        let sdx = 0;
-        let sdy = 0;
-        if (p.cy < r.top + AUTO_SCROLL_EDGE) sdy = -computeAutoScrollSpeed(r.top + AUTO_SCROLL_EDGE - p.cy);
-        else if (p.cy > r.bottom - AUTO_SCROLL_EDGE) sdy = computeAutoScrollSpeed(p.cy - (r.bottom - AUTO_SCROLL_EDGE));
-        if (p.cx < r.left + AUTO_SCROLL_EDGE) sdx = -computeAutoScrollSpeed(r.left + AUTO_SCROLL_EDGE - p.cx);
-        else if (p.cx > r.right - AUTO_SCROLL_EDGE) sdx = computeAutoScrollSpeed(p.cx - (r.right - AUTO_SCROLL_EDGE));
-
-        if (sdx === 0 && sdy === 0) { stopAutoScroll(); return; }
-
-        w.scrollTop += sdy;
-        w.scrollLeft += sdx;
-
-        const newRange = resolveRange(p.cx, p.cy);
-        if (newRange) {
-          liveDragRange = newRange;
-          applyDragAttrs(newRange);
-        }
-      }, AUTO_SCROLL_INTERVAL);
+    // Start rAF loop if not already running
+    if (!autoScrollHandle) {
+      autoScrollHandle = requestAnimationFrame(autoScrollLoop);
     }
   };
 

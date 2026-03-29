@@ -52,6 +52,7 @@ export {
   computeRowSelectionState,
   UndoRedoStack,
   buildCellIndex,
+  cellIndexKey,
   indexToColumnLetter,
   formatCellReference,
   getScrollTopForRow,
@@ -83,6 +84,7 @@ export {
   buildPopoverEditorProps,
   getCellInteractionProps,
 } from './dataGridViewModel';
+export type { DelegatedCellHandlers } from './dataGridViewModel';
 export { CellDescriptorCache } from '@alaarab/ogrid-core';
 export type {
   HeaderFilterConfigInput,

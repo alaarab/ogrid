@@ -7,6 +7,13 @@ export interface GridCellSurfaceState {
   isCutCell: boolean;
 }
 
+/** Frozen flyweight for the common case where a cell has no surface state. */
+const NO_STATE: GridCellSurfaceState = Object.freeze({
+  isActiveRangeCell: false,
+  isRangeCell: false,
+  isCutCell: false,
+});
+
 export interface GetGridCellSurfaceStateParams {
   rowIndex: number;
   columnIndex: number;
@@ -40,10 +47,12 @@ export function getGridCellSurfaceState(
     activeCell?.rowIndex === rowIndex &&
     activeCell?.columnIndex === columnIndex;
 
-  return {
-    isActiveRangeCell: isInMultiCellSelection && isAnchorCell,
-    isRangeCell: isInMultiCellSelection && !isAnchorCell,
-    isCutCell:
-      cutRange != null && isInSelectionRange(cutRange, rowIndex, columnIndex),
-  };
+  const isActiveRangeCell = isInMultiCellSelection && isAnchorCell;
+  const isRangeCell = isInMultiCellSelection && !isAnchorCell;
+  const isCutCell = cutRange != null && isInSelectionRange(cutRange, rowIndex, columnIndex);
+
+  // Return the frozen flyweight when all flags are false (vast majority of cells).
+  if (!isActiveRangeCell && !isRangeCell && !isCutCell) return NO_STATE;
+
+  return { isActiveRangeCell, isRangeCell, isCutCell };
 }

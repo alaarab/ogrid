@@ -3,7 +3,7 @@ import type { RefObject } from 'react';
 import { normalizeSelectionRange } from '../types';
 import type { ISelectionRange, IActiveCell } from '../types';
 import type { IColumnDef, ICellValueChangedEvent } from '../types/columnTypes';
-import { applyFillValues, buildCellIndex } from '../utils';
+import { applyFillValues, buildCellIndex, cellIndexKey } from '../utils';
 import type { IFillFormulaOptions } from '../utils';
 import { useLatestRef } from './useLatestRef';
 
@@ -98,7 +98,7 @@ export function useFillHandle<T>(params: UseFillHandleParams<T>): UseFillHandleR
       // Look up only cells in the new range  -  O(range size) via Map lookup
       for (let r = minR; r <= maxR; r++) {
         for (let c = minC; c <= maxC; c++) {
-          const key = `${r},${c + colOff}`;
+          const key = cellIndexKey(r, c + colOff);
           let el = cellIndex?.get(key);
           // Handle virtual scroll recycling  -  if element is stale, rebuild index once
           if (el && !el.isConnected) {

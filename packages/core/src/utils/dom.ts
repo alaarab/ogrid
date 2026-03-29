@@ -67,18 +67,32 @@ export function measureRange(
  * ```
  */
 /**
- * Build a Map of `"rowIndex,colIndex"`  to  HTMLElement for O(1) cell lookups during drag operations.
+ * Stride for numeric cell index keys. Must exceed the maximum column count.
+ * Power-of-2 enables fast JS engine optimisation of the multiplication.
+ */
+export const CELL_INDEX_STRIDE = 2048;
+
+/** Compute a numeric key for cell index lookups: `row * CELL_INDEX_STRIDE + col`. */
+export function cellIndexKey(row: number, col: number): number {
+  return row * CELL_INDEX_STRIDE + col;
+}
+
+/**
+ * Build a Map of numeric key → HTMLElement for O(1) cell lookups during drag operations.
+ * Numeric keys avoid per-lookup string allocation that template-literal keys incur.
  * Scans the container once via querySelectorAll instead of per-frame DOM queries.
  */
-export function buildCellIndex(container: HTMLElement | null): Map<string, HTMLElement> {
-  const index = new Map<string, HTMLElement>();
+export function buildCellIndex(container: HTMLElement | null): Map<number, HTMLElement> {
+  const index = new Map<number, HTMLElement>();
   if (!container) return index;
   const cells = container.querySelectorAll('[data-row-index][data-col-index]');
   for (let i = 0; i < cells.length; i++) {
     const el = cells[i] as HTMLElement;
-    const r = el.getAttribute('data-row-index') ?? '';
-    const c = el.getAttribute('data-col-index') ?? '';
-    index.set(`${r},${c}`, el);
+    const r = parseInt(el.getAttribute('data-row-index') ?? '', 10);
+    const c = parseInt(el.getAttribute('data-col-index') ?? '', 10);
+    if (!Number.isNaN(r) && !Number.isNaN(c)) {
+      index.set(r * CELL_INDEX_STRIDE + c, el);
+    }
   }
   return index;
 }

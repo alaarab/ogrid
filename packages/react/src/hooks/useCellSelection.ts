@@ -1,6 +1,6 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
 import { normalizeSelectionRange } from '../types';
-import { rangesEqual, computeAutoScrollSpeed, buildCellIndex } from '../utils';
+import { rangesEqual, computeAutoScrollSpeed, buildCellIndex, cellIndexKey } from '../utils';
 import { useLatestRef } from './useLatestRef';
 import type { ISelectionRange, IActiveCell } from '../types';
 
@@ -27,7 +27,6 @@ const DRAG_ANCHOR_ATTR = 'data-drag-anchor';
 
 /** Auto-scroll config */
 const AUTO_SCROLL_EDGE = 40;   // px from wrapper edge to trigger
-const AUTO_SCROLL_INTERVAL = 16; // ~60fps
 
 /**
  * Manages cell selection range with drag-to-select and select-all support.
@@ -49,8 +48,8 @@ export function useCellSelection(params: UseCellSelectionParams): UseCellSelecti
   const rafRef = useRef(0);
   /** Live drag range kept in a ref  -  only committed to React state on pointerup. */
   const liveDragRangeRef = useRef<ISelectionRange | null>(null);
-  /** Auto-scroll interval during drag. */
-  const autoScrollRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  /** Auto-scroll rAF handle during drag. */
+  const autoScrollRef = useRef<number | null>(null);
 
   // Ref mirror of selectionRange  -  lets handleCellMouseDown read current value
   // without adding selectionRange to its useCallback deps (keeps it stable).
@@ -136,7 +135,7 @@ export function useCellSelection(params: UseCellSelectionParams): UseCellSelecti
     const markedCells = new Set<HTMLElement>();
 
     /** Cell lookup index built on drag start  -  O(1) lookups per frame instead of querySelectorAll. */
-    let cellIndex: Map<string, HTMLElement> | null = null;
+    let cellIndex: Map<number, HTMLElement> | null = null;
 
     /** Single overlay div for the drag-selection border (replaces per-cell box-shadows). */
     let overlayEl: HTMLDivElement | null = null;
@@ -168,8 +167,8 @@ export function useCellSelection(params: UseCellSelectionParams): UseCellSelecti
     const positionOverlay = (
       minR: number, maxR: number, minC: number, maxC: number, colOff: number
     ) => {
-      const topLeftEl = cellIndex?.get(`${minR},${minC + colOff}`);
-      const bottomRightEl = cellIndex?.get(`${maxR},${maxC + colOff}`);
+      const topLeftEl = cellIndex?.get(cellIndexKey(minR, minC + colOff));
+      const bottomRightEl = cellIndex?.get(cellIndexKey(maxR, maxC + colOff));
       if (!topLeftEl || !bottomRightEl) return;
 
       // Measure from <td> parents for full cell coverage (no gaps at borders)
@@ -249,7 +248,7 @@ export function useCellSelection(params: UseCellSelectionParams): UseCellSelecti
       let rebuilt = false;
       for (let r = minR; r <= maxR; r++) {
         for (let c = minC; c <= maxC; c++) {
-          const key = `${r},${c + colOff}`;
+          const key = cellIndexKey(r, c + colOff);
           let el = cellIndex?.get(key);
           if (el && !el.isConnected && !rebuilt) {
             rebuilt = true;
@@ -299,7 +298,39 @@ export function useCellSelection(params: UseCellSelectionParams): UseCellSelecti
       });
     };
 
-    /** Start or update auto-scroll interval based on pointer position relative to wrapper edges. */
+    /** rAF-synced auto-scroll loop.  Reads layout once per frame, then writes. */
+    const autoScrollLoop = () => {
+      const w = wrapperRef.current;
+      const p = lastMousePosRef.current;
+      if (!w || !p || !isDraggingRef.current) { autoScrollRef.current = null; return; }
+
+      // Batch all layout reads first
+      const r = w.getBoundingClientRect();
+      let sdx = 0;
+      let sdy = 0;
+      if (p.cy < r.top + AUTO_SCROLL_EDGE) sdy = -computeAutoScrollSpeed(r.top + AUTO_SCROLL_EDGE - p.cy);
+      else if (p.cy > r.bottom - AUTO_SCROLL_EDGE) sdy = computeAutoScrollSpeed(p.cy - (r.bottom - AUTO_SCROLL_EDGE));
+      if (p.cx < r.left + AUTO_SCROLL_EDGE) sdx = -computeAutoScrollSpeed(r.left + AUTO_SCROLL_EDGE - p.cx);
+      else if (p.cx > r.right - AUTO_SCROLL_EDGE) sdx = computeAutoScrollSpeed(p.cx - (r.right - AUTO_SCROLL_EDGE));
+
+      if (sdx === 0 && sdy === 0) { autoScrollRef.current = null; return; }
+
+      // Layout writes
+      w.scrollTop += sdy;
+      w.scrollLeft += sdx;
+
+      // After scrolling, re-resolve the cell under the pointer and update drag range
+      const newRange = resolveRange(p.cx, p.cy);
+      if (newRange) {
+        liveDragRangeRef.current = newRange;
+        applyDragAttrs(newRange);
+      }
+
+      // Continue the loop, synced to the next paint frame
+      autoScrollRef.current = requestAnimationFrame(autoScrollLoop);
+    };
+
+    /** Start or update rAF auto-scroll based on pointer position relative to wrapper edges. */
     const updateAutoScroll = () => {
       const wrapper = wrapperRef.current;
       const pos = lastMousePosRef.current;
@@ -329,39 +360,15 @@ export function useCellSelection(params: UseCellSelectionParams): UseCellSelecti
         return;
       }
 
-      // Start interval if not already running
+      // Start rAF loop if not already running
       if (!autoScrollRef.current) {
-        autoScrollRef.current = setInterval(() => {
-          const w = wrapperRef.current;
-          const p = lastMousePosRef.current;
-          if (!w || !p || !isDraggingRef.current) { stopAutoScroll(); return; }
-
-          const r = w.getBoundingClientRect();
-          let sdx = 0;
-          let sdy = 0;
-          if (p.cy < r.top + AUTO_SCROLL_EDGE) sdy = -computeAutoScrollSpeed(r.top + AUTO_SCROLL_EDGE - p.cy);
-          else if (p.cy > r.bottom - AUTO_SCROLL_EDGE) sdy = computeAutoScrollSpeed(p.cy - (r.bottom - AUTO_SCROLL_EDGE));
-          if (p.cx < r.left + AUTO_SCROLL_EDGE) sdx = -computeAutoScrollSpeed(r.left + AUTO_SCROLL_EDGE - p.cx);
-          else if (p.cx > r.right - AUTO_SCROLL_EDGE) sdx = computeAutoScrollSpeed(p.cx - (r.right - AUTO_SCROLL_EDGE));
-
-          if (sdx === 0 && sdy === 0) { stopAutoScroll(); return; }
-
-          w.scrollTop += sdy;
-          w.scrollLeft += sdx;
-
-          // After scrolling, re-resolve the cell under the pointer and update drag range
-          const newRange = resolveRange(p.cx, p.cy);
-          if (newRange) {
-            liveDragRangeRef.current = newRange;
-            applyDragAttrs(newRange);
-          }
-        }, AUTO_SCROLL_INTERVAL);
+        autoScrollRef.current = requestAnimationFrame(autoScrollLoop);
       }
     };
 
     const stopAutoScroll = () => {
       if (autoScrollRef.current) {
-        clearInterval(autoScrollRef.current);
+        cancelAnimationFrame(autoScrollRef.current);
         autoScrollRef.current = null;
       }
     };

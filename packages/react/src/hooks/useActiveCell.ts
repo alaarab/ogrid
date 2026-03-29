@@ -1,4 +1,4 @@
-import { useState, useLayoutEffect, useEffect, useCallback, useRef } from 'react';
+import { useState, useLayoutEffect, useCallback, useRef } from 'react';
 import type { IActiveCell, RowId } from '../types';
 
 export interface UseActiveCellResult {
@@ -31,58 +31,51 @@ export function useActiveCell(
   // RAF ref for batching scroll-into-view during rapid keyboard navigation
   const scrollRafRef = useRef(0);
 
-  // Synchronously focus the cell to prevent the browser from resetting
-  // focus to body between arrow presses.
+  // Focus the active cell synchronously (prevents browser resetting focus
+  // to <body> between arrow presses), then queue a scroll-into-view via RAF
+  // so rapid keyboard navigation batches into a single scroll. Both phases
+  // share the same querySelector result to avoid a redundant DOM lookup.
   useLayoutEffect(() => {
     if (activeCell == null || wrapperRef?.current == null || editingCell != null) return;
+    const wrapper = wrapperRef.current;
     const { rowIndex, columnIndex } = activeCell;
     const selector = `[data-row-index="${rowIndex}"][data-col-index="${columnIndex}"]`;
-    const cell = wrapperRef.current.querySelector(selector) as HTMLElement | null;
+    const cell = wrapper.querySelector(selector) as HTMLElement | null;
+
+    // Synchronous focus
     if (cell && document.activeElement !== cell && typeof cell.focus === 'function') {
       cell.focus({ preventScroll: true });
     }
-  }, [activeCell, editingCell, wrapperRef]);
 
-  // Batch scroll-into-view via RAF so rapid keyboard navigation only scrolls once
-  useEffect(() => {
-    if (activeCell == null || wrapperRef?.current == null || editingCell != null) return;
+    // Async scroll-into-view (batched via RAF)
     cancelAnimationFrame(scrollRafRef.current);
     scrollRafRef.current = requestAnimationFrame(() => {
-      const wrapper = wrapperRef?.current;
-      if (!wrapper) return;
-      const { rowIndex, columnIndex } = activeCell;
-      const selector = `[data-row-index="${rowIndex}"][data-col-index="${columnIndex}"]`;
-      const cell = wrapper.querySelector(selector) as HTMLElement | null;
-      if (cell) {
-        const thead = wrapper.querySelector('thead');
-        const headerHeight = thead ? thead.getBoundingClientRect().height : 0;
-        const wrapperRect = wrapper.getBoundingClientRect();
-        const cellRect = cell.getBoundingClientRect();
+      if (!cell || !wrapper.isConnected) return;
+      const thead = wrapper.querySelector('thead');
+      const headerHeight = thead ? thead.getBoundingClientRect().height : 0;
+      const wrapperRect = wrapper.getBoundingClientRect();
+      const cellRect = cell.getBoundingClientRect();
 
-        // Vertical scroll (account for sticky thead)
-        const visibleTop = wrapperRect.top + headerHeight;
-        if (cellRect.top < visibleTop) {
-          wrapper.scrollTop -= visibleTop - cellRect.top;
-        } else if (cellRect.bottom > wrapperRect.bottom) {
-          wrapper.scrollTop += cellRect.bottom - wrapperRect.bottom;
-        }
+      // Vertical scroll (account for sticky thead)
+      const visibleTop = wrapperRect.top + headerHeight;
+      if (cellRect.top < visibleTop) {
+        wrapper.scrollTop -= visibleTop - cellRect.top;
+      } else if (cellRect.bottom > wrapperRect.bottom) {
+        wrapper.scrollTop += cellRect.bottom - wrapperRect.bottom;
+      }
 
-        // Horizontal scroll  -  only when the wrapper actually scrolls horizontally
-        if (wrapper.scrollWidth > wrapper.clientWidth) {
-          if (cellRect.left < wrapperRect.left) {
-            wrapper.scrollLeft -= wrapperRect.left - cellRect.left;
-          } else if (cellRect.right > wrapperRect.right) {
-            wrapper.scrollLeft += cellRect.right - wrapperRect.right;
-          }
+      // Horizontal scroll — only when the wrapper actually scrolls horizontally
+      if (wrapper.scrollWidth > wrapper.clientWidth) {
+        if (cellRect.left < wrapperRect.left) {
+          wrapper.scrollLeft -= wrapperRect.left - cellRect.left;
+        } else if (cellRect.right > wrapperRect.right) {
+          wrapper.scrollLeft += cellRect.right - wrapperRect.right;
         }
       }
     });
-  }, [activeCell, editingCell, wrapperRef]);
 
-  // Clean up pending RAF on unmount
-  useEffect(() => {
     return () => cancelAnimationFrame(scrollRafRef.current);
-  }, []);
+  }, [activeCell, editingCell, wrapperRef]);
 
   return { activeCell, setActiveCell };
 }

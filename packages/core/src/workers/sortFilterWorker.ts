@@ -55,40 +55,48 @@ export function workerBody(): void {
       indices = new Array(rowCount);
       for (let i = 0; i < rowCount; i++) indices[i] = i;
     } else {
+      // Pre-compute expensive filter structures once, outside the row loop.
+      // Text filters: pre-trim/lowercase. MultiSelect filters: pre-build Set.
+      const prepared = filterEntries.map(([key, filter]) => {
+        const colIdx = Number(key);
+        if (filter.type === 'text') {
+          return { colIdx, type: 'text' as const, trimmed: filter.value.trim().toLowerCase() };
+        }
+        if (filter.type === 'multiSelect') {
+          return { colIdx, type: 'multiSelect' as const, set: new Set(filter.value), empty: filter.value.length === 0 };
+        }
+        return { colIdx, type: 'date' as const, from: filter.value.from, to: filter.value.to };
+      });
+
       for (let r = 0; r < rowCount; r++) {
         let pass = true;
-        for (let f = 0; f < filterEntries.length; f++) {
-          const colIdx = Number(filterEntries[f][0]);
-          const filter = filterEntries[f][1];
-          const cellVal = values[r][colIdx];
+        for (let f = 0; f < prepared.length; f++) {
+          const pf = prepared[f];
+          const cellVal = values[r][pf.colIdx];
 
-          switch (filter.type) {
+          switch (pf.type) {
             case 'text': {
-              const trimmed = filter.value.trim().toLowerCase();
-              if (trimmed && !String(cellVal ?? '').toLowerCase().includes(trimmed)) {
+              if (pf.trimmed && !String(cellVal ?? '').toLowerCase().includes(pf.trimmed)) {
                 pass = false;
               }
               break;
             }
             case 'multiSelect': {
-              if (filter.value.length > 0) {
-                const set = new Set(filter.value);
-                if (!set.has(String(cellVal ?? ''))) {
-                  pass = false;
-                }
+              if (!pf.empty && !pf.set.has(String(cellVal ?? ''))) {
+                pass = false;
               }
               break;
             }
             case 'date': {
               if (cellVal == null) { pass = false; break; }
               const ts = new Date(String(cellVal)).getTime();
-              if (isNaN(ts)) { pass = false; break; }
-              if (filter.value.from) {
-                const fromTs = new Date(filter.value.from + 'T00:00:00').getTime();
+              if (Number.isNaN(ts)) { pass = false; break; }
+              if (pf.from) {
+                const fromTs = new Date(pf.from + 'T00:00:00').getTime();
                 if (ts < fromTs) { pass = false; break; }
               }
-              if (filter.value.to) {
-                const toTs = new Date(filter.value.to + 'T23:59:59.999').getTime();
+              if (pf.to) {
+                const toTs = new Date(pf.to + 'T23:59:59.999').getTime();
                 if (ts > toTs) { pass = false; break; }
               }
               break;
