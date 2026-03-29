@@ -39,6 +39,7 @@ const {
   tempDateFrom, tempDateTo,
   setTempTextValue, setSearchText, setPeopleSearchText,
   setTempDateFrom, setTempDateTo,
+  popoverPosition,
   handlers,
 } = state;
 
@@ -74,10 +75,12 @@ const setPopoverRefEl = (el: any) => { popoverRef.value = el as HTMLDivElement; 
       </button>
     </div>
 
+    <Teleport to="body">
     <div
       v-if="isFilterOpen && filterType !== 'none'"
       :ref="setPopoverRefEl"
       class="popover-content"
+      :style="popoverPosition ? { position: 'fixed', top: popoverPosition.top + 'px', left: popoverPosition.left + 'px' } : {}"
       @click.stop
     >
       <div class="popover-header">Filter: {{ columnName }}</div>
@@ -155,6 +158,7 @@ const setPopoverRefEl = (el: any) => { popoverRef.value = el as HTMLDivElement; 
         </div>
       </div>
     </div>
+    </Teleport>
   </div>
 </template>
 
