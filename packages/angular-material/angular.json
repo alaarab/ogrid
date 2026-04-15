@@ -7,7 +7,7 @@
       "sourceRoot": "src",
       "architect": {
         "build": {
-          "builder": "@angular-devkit/build-angular:browser",
+          "builder": "@angular/build:browser",
           "options": {
             "tsConfig": "tsconfig.storybook.json",
             "main": ".storybook/storybook-entry.ts",
