@@ -6,7 +6,7 @@
     "useIgnoreFile": true
   },
   "files": {
-    "includes": ["**/*.ts", "**/*.tsx"],
+    "includes": ["**/*.ts", "**/*.tsx", "**/*.vue"],
     "ignoreUnknown": true
   },
   "linter": {
