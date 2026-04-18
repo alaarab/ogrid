@@ -1,0 +1,74 @@
+{
+  "name": "@alaarab/ogrid-react-shadcn",
+  "version": "2.7.3",
+  "description": "OGrid React shadcn/ui – Data grid with sorting, filtering, pagination, column chooser, and CSV export. Styled to match the shadcn/ui default theme (neutral + blue) and shipped with its own CSS so Tailwind is optional in the consumer's app.",
+  "main": "dist/esm/index.js",
+  "module": "dist/esm/index.js",
+  "types": "dist/types/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/types/index.d.ts",
+      "import": "./dist/esm/index.js",
+      "default": "./dist/esm/index.js"
+    },
+    "./styles/*": "./dist/esm/*",
+    "./styles.css": "./dist/esm/index.css"
+  },
+  "scripts": {
+    "build": "rimraf dist && tsup && tsc -p tsconfig.build.json",
+    "test": "jest"
+  },
+  "keywords": [
+    "ogrid",
+    "shadcn",
+    "shadcn-ui",
+    "tailwind",
+    "datatable",
+    "react",
+    "typescript",
+    "grid",
+    "headless"
+  ],
+  "author": "Ala Arab",
+  "license": "MIT",
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "sideEffects": [
+    "**/*.css"
+  ],
+  "engines": {
+    "node": ">=18"
+  },
+  "dependencies": {
+    "@alaarab/ogrid-react": "2.7.3"
+  },
+  "peerDependencies": {
+    "@radix-ui/react-checkbox": "^1.3.3",
+    "@radix-ui/react-dropdown-menu": "^2.1.16",
+    "@radix-ui/react-popover": "^1.1.15",
+    "react": "^17.0.0 || ^18.0.0 || ^19.0.0",
+    "react-dom": "^17.0.0 || ^18.0.0 || ^19.0.0"
+  },
+  "devDependencies": {
+    "@testing-library/jest-dom": "^6.9.1",
+    "@testing-library/react": "^16.3.2",
+    "@testing-library/user-event": "^14.6.1",
+    "@types/react": "^19.2.14",
+    "@types/react-dom": "^19.2.3",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/alaarab/ogrid.git",
+    "directory": "packages/react-shadcn"
+  },
+  "homepage": "https://ogrid.dev",
+  "bugs": "https://github.com/alaarab/ogrid/issues"
+}

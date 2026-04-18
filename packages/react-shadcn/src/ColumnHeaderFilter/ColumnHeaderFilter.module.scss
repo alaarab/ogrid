@@ -1,0 +1,371 @@
+// OGrid shadcn – column header filter
+
+.columnHeader {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  position: relative;
+  box-sizing: border-box;
+  overflow: hidden;
+}
+
+.headerContent {
+  display: flex;
+  align-items: center;
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.columnName {
+  display: block;
+  min-width: 0;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-weight: 600;
+  font-size: 13px;
+  color: var(--ogrid-fg);
+  letter-spacing: 0.01em;
+}
+
+.headerActions {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  margin-left: auto;
+  flex-shrink: 0;
+}
+
+.filterIcon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 24px;
+  padding: 4px 6px;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--ogrid-muted);
+  cursor: pointer;
+  flex-shrink: 0;
+  position: relative;
+  font-size: 14px;
+  transition: background 0.15s, color 0.15s;
+
+  @media (pointer: coarse) {
+    width: 36px;
+    height: 36px;
+    padding: 6px;
+  }
+
+  &:hover {
+    background: var(--ogrid-hover-bg);
+    color: var(--ogrid-fg);
+  }
+  &.filterActive {
+    background: var(--ogrid-header-bg);
+    color: var(--ogrid-primary);
+  }
+  &.filterOpen {
+    background: var(--ogrid-header-bg);
+  }
+  &:focus-visible {
+    outline: none;
+    box-shadow: 0 0 0 2px var(--ogrid-bg), 0 0 0 4px var(--ogrid-primary);
+  }
+}
+
+.filterBadge {
+  position: absolute;
+  top: 2px;
+  right: 2px;
+  width: 6px;
+  height: 6px;
+  background: var(--ogrid-primary);
+  border-radius: 50%;
+  border: 1px solid var(--ogrid-bg);
+}
+
+// Popover content — shadcn uses rounded-md (6px) and a border + subtle shadow.
+.popoverContent {
+  z-index: var(--ogrid-z-popover, 1000);
+  min-width: 280px;
+  max-width: 320px;
+  @media (max-width: 360px) {
+    min-width: calc(100vw - 24px);
+    max-width: calc(100vw - 24px);
+  }
+  background: var(--ogrid-bg);
+  color: var(--ogrid-fg);
+  border: 1px solid var(--ogrid-border);
+  border-radius: 6px;
+  box-shadow: var(--ogrid-shadow);
+  overflow: hidden;
+}
+
+.popoverHeader {
+  padding: 10px 14px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--ogrid-muted);
+  border-bottom: 1px solid var(--ogrid-border);
+  background: var(--ogrid-bg-subtle);
+}
+
+.popoverSearch {
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--ogrid-border);
+}
+
+.searchInput {
+  width: 100%;
+  padding: 6px 10px;
+  border: 1px solid var(--ogrid-border);
+  border-radius: 6px;
+  background: var(--ogrid-bg);
+  color: var(--ogrid-fg);
+  font-size: 13px;
+  box-sizing: border-box;
+  transition: border-color 0.15s, box-shadow 0.15s;
+  &:focus {
+    outline: none;
+    border-color: var(--ogrid-primary);
+    box-shadow: 0 0 0 2px color-mix(in srgb, var(--ogrid-primary) 20%, transparent);
+  }
+}
+
+.nativeInputWrapper {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  border: 1px solid var(--ogrid-border);
+  border-radius: 6px;
+  background: var(--ogrid-bg);
+  padding: 6px 12px;
+  min-height: 36px;
+  box-sizing: border-box;
+  transition: border-color 0.15s, box-shadow 0.15s;
+  &:focus-within {
+    border-color: var(--ogrid-primary);
+    box-shadow: 0 0 0 2px color-mix(in srgb, var(--ogrid-primary) 20%, transparent);
+  }
+}
+
+.nativeInput {
+  flex: 1;
+  min-width: 0;
+  border: none;
+  outline: none;
+  padding: 0;
+  font-size: 13px;
+  font-family: inherit;
+  background: transparent;
+  color: var(--ogrid-fg);
+  &::placeholder {
+    color: var(--ogrid-muted);
+  }
+}
+
+.resultCount {
+  margin-top: 6px;
+  font-size: 11px;
+  color: var(--ogrid-muted);
+}
+
+.selectAllRow {
+  display: flex;
+  gap: 8px;
+  padding: 6px 12px;
+  border-bottom: 1px solid var(--ogrid-border);
+  background: var(--ogrid-bg-subtle);
+}
+
+.selectAllButton {
+  background: none;
+  border: none;
+  color: var(--ogrid-primary);
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  padding: 4px 8px;
+  border-radius: 6px;
+  transition: background 0.15s;
+  &:hover {
+    background: var(--ogrid-hover-bg);
+  }
+}
+
+.popoverOptions {
+  overflow-y: auto;
+  max-height: 250px;
+  padding: 6px 0;
+}
+
+.popoverOption {
+  padding: 4px 12px;
+  display: flex;
+  align-items: center;
+  font-size: 13px;
+  gap: 8px;
+  color: var(--ogrid-fg);
+  @media (pointer: coarse) {
+    min-height: 44px;
+  }
+  &:hover {
+    background: var(--ogrid-hover-bg);
+  }
+}
+
+.filterCheckbox {
+  width: 16px;
+  height: 16px;
+  border: 1px solid var(--ogrid-border-strong);
+  border-radius: 4px;
+  background: var(--ogrid-bg);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  transition: background 0.15s, border-color 0.15s;
+  &[data-state='checked'] {
+    background: var(--ogrid-primary);
+    border-color: var(--ogrid-primary);
+    color: var(--ogrid-primary-fg);
+  }
+}
+
+.personOption {
+  padding: 8px 12px;
+  cursor: pointer;
+  color: var(--ogrid-fg);
+  &:hover {
+    background: var(--ogrid-hover-bg);
+  }
+}
+
+.loadingContainer,
+.noResults {
+  padding: 20px;
+  text-align: center;
+  font-size: 13px;
+  color: var(--ogrid-muted);
+}
+
+.selectedUserSection {
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--ogrid-border);
+}
+
+.selectedUserLabel {
+  font-size: 11px;
+  color: var(--ogrid-muted);
+  margin-bottom: 4px;
+}
+
+.selectedUser {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.userInfo {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.userText {
+  min-width: 0;
+  font-size: 13px;
+  color: var(--ogrid-fg);
+  .userSecondary {
+    font-size: 12px;
+    color: var(--ogrid-muted);
+  }
+}
+
+.removeUserButton {
+  padding: 4px;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  color: var(--ogrid-muted);
+  flex-shrink: 0;
+  border-radius: 6px;
+  transition: background 0.15s, color 0.15s;
+  &:hover {
+    color: var(--ogrid-fg);
+    background: var(--ogrid-hover-bg);
+  }
+}
+
+.popoverActions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  padding: 8px 12px;
+  border-top: 1px solid var(--ogrid-border);
+  background: var(--ogrid-bg-subtle);
+}
+
+// shadcn-style secondary/outline button
+.clearButton {
+  padding: 6px 12px;
+  border: 1px solid var(--ogrid-border);
+  border-radius: 6px;
+  background: var(--ogrid-bg);
+  color: var(--ogrid-fg);
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s, box-shadow 0.15s;
+  @media (pointer: coarse) {
+    min-height: 44px;
+    padding: 10px 16px;
+  }
+  &:hover {
+    background: var(--ogrid-hover-bg);
+  }
+  &:focus-visible {
+    outline: none;
+    box-shadow: 0 0 0 2px var(--ogrid-bg), 0 0 0 4px var(--ogrid-primary);
+  }
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+}
+
+// shadcn-style primary button
+.applyButton {
+  padding: 6px 16px;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  background: var(--ogrid-primary);
+  color: var(--ogrid-primary-fg);
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.15s, box-shadow 0.15s;
+  @media (pointer: coarse) {
+    min-height: 44px;
+    padding: 10px 20px;
+  }
+  &:hover {
+    background: var(--ogrid-primary-hover);
+  }
+  &:focus-visible {
+    outline: none;
+    box-shadow: 0 0 0 2px var(--ogrid-bg), 0 0 0 4px var(--ogrid-primary);
+  }
+}

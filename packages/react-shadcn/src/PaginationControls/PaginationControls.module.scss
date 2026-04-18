@@ -1,0 +1,137 @@
+// OGrid shadcn – pagination
+
+.pagination {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px 24px;
+  width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+  padding: 0;
+}
+
+.paginationInfo {
+  font-size: 13px;
+  color: var(--ogrid-muted);
+  flex-shrink: 0;
+  font-variant-numeric: tabular-nums;
+}
+
+.paginationControls {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-wrap: wrap;
+  flex: 1 1 auto;
+  justify-content: center;
+  min-width: 0;
+}
+
+// shadcn pagination uses rounded-md squares (not circles) with icon buttons.
+.navBtn {
+  min-width: 32px;
+  min-height: 32px;
+  padding: 4px;
+  border: 1px solid var(--ogrid-border);
+  border-radius: 6px;
+  background: var(--ogrid-bg);
+  color: var(--ogrid-fg);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  transition: background 0.15s, border-color 0.15s, box-shadow 0.15s;
+
+  &:hover:not(:disabled) {
+    background: var(--ogrid-bg-hover);
+  }
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+  &:focus-visible {
+    outline: none;
+    box-shadow: 0 0 0 2px var(--ogrid-bg), 0 0 0 4px var(--ogrid-primary);
+  }
+}
+
+.pageNumbers {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin: 0 8px;
+}
+
+.pageBtn {
+  min-width: 32px;
+  min-height: 32px;
+  padding: 4px 10px;
+  border: 1px solid var(--ogrid-border);
+  border-radius: 6px;
+  background: var(--ogrid-bg);
+  color: var(--ogrid-fg);
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+  transition: background 0.15s, border-color 0.15s, box-shadow 0.15s;
+
+  &:hover {
+    background: var(--ogrid-bg-hover);
+  }
+  &.active {
+    background: var(--ogrid-primary);
+    border-color: var(--ogrid-primary);
+    color: var(--ogrid-primary-fg);
+  }
+  &:focus-visible {
+    outline: none;
+    box-shadow: 0 0 0 2px var(--ogrid-bg), 0 0 0 4px var(--ogrid-primary);
+  }
+}
+
+.ellipsis {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 24px;
+  font-size: 12px;
+  color: var(--ogrid-muted);
+  user-select: none;
+}
+
+.pageSizeSelector {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+
+  .pageSizeLabel {
+    font-size: 13px;
+    color: var(--ogrid-muted);
+    user-select: none;
+    white-space: nowrap;
+  }
+
+  .pageSizeSelect {
+    min-width: 72px;
+    padding: 6px 10px;
+    border: 1px solid var(--ogrid-border);
+    border-radius: 6px;
+    background: var(--ogrid-bg);
+    color: var(--ogrid-fg);
+    font-size: 13px;
+    cursor: pointer;
+    transition: background 0.15s, border-color 0.15s, box-shadow 0.15s;
+    &:hover {
+      background: var(--ogrid-bg-hover);
+    }
+    &:focus-visible {
+      outline: none;
+      box-shadow: 0 0 0 2px var(--ogrid-bg), 0 0 0 4px var(--ogrid-primary);
+    }
+  }
+}

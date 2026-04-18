@@ -1,0 +1,287 @@
+// OGrid shadcn -- DataGridTable (native table, shadcn theme)
+// Imports shared structural styles from @alaarab/ogrid-react, then adds
+// shadcn-specific theme variables and native <table> element styles.
+
+@use '../../../react/src/styles/data-grid-table' as *;
+@use '../../../core/src/styles/ogrid-theme' as *;
+
+// ---- shadcn-specific: native <table> element styles ----
+
+.dataTable th,
+.dataTable td {
+  min-width: 80px;
+  box-sizing: border-box;
+  border-right: 1px solid var(--ogrid-border);
+  font-size: 13px;
+  vertical-align: middle;
+}
+
+.dataTable th {
+  padding: 8px 12px;
+}
+
+.dataTable td {
+  padding: 0;
+}
+
+.dataTable th:last-of-type,
+.dataTable td:last-of-type {
+  border-right: none;
+}
+
+.dataTable th:first-of-type,
+.dataTable td:first-of-type {
+  border-left: none;
+}
+
+.dataTable thead {
+  background: var(--ogrid-header-bg);
+}
+
+// Sticky header
+.dataTable thead.stickyHeader {
+  z-index: var(--ogrid-z-thead, 8);
+  background: var(--ogrid-header-bg);
+}
+
+.dataTable thead.stickyHeader th {
+  position: sticky;
+  top: 0;
+  background: var(--ogrid-header-bg);
+}
+
+.dataTable thead.stickyHeader .pinnedColLeft,
+.dataTable thead.stickyHeader .pinnedColRight {
+  top: 0;
+  z-index: var(--ogrid-z-pinned-header, 10);
+}
+
+.dataTable thead.stickyHeader .selectionHeaderCell {
+  top: 0;
+  z-index: var(--ogrid-z-selection-header-pinned, 12);
+}
+
+// Pinned columns
+.dataTable .pinnedColLeft {
+  position: sticky;
+  z-index: var(--ogrid-z-pinned, 6);
+  background: var(--ogrid-bg);
+  border-right: 1px solid var(--ogrid-border);
+  box-shadow: 2px 0 4px -1px var(--ogrid-pinned-shadow);
+}
+
+.dataTable thead .pinnedColLeft {
+  background: var(--ogrid-header-bg);
+}
+
+.dataTable .pinnedColRight {
+  position: sticky;
+  z-index: var(--ogrid-z-pinned, 6);
+  background: var(--ogrid-bg);
+  border-left: 1px solid var(--ogrid-border);
+  box-shadow: -2px 0 4px -1px var(--ogrid-pinned-shadow);
+}
+
+.dataTable thead .pinnedColRight {
+  background: var(--ogrid-header-bg);
+}
+
+.dataTable thead th {
+  font-weight: 600;
+  font-size: 13px;
+  color: var(--ogrid-muted);
+  letter-spacing: 0.01em;
+  white-space: nowrap;
+  background: var(--ogrid-header-bg);
+  z-index: var(--ogrid-z-thead, 8);
+  border-bottom: 1px solid var(--ogrid-border);
+  text-align: left;
+
+  &:focus-visible {
+    outline: 2px solid var(--ogrid-primary);
+    outline-offset: -2px;
+    z-index: var(--ogrid-z-header-focus, 11);
+  }
+}
+
+.dataTable tbody td {
+  background: var(--ogrid-bg);
+  border-bottom: 1px solid var(--ogrid-border);
+  color: var(--ogrid-fg);
+}
+
+.dataTable tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.dataTable tbody tr:hover td {
+  background: var(--ogrid-hover-bg);
+}
+
+.dataTable tbody tr:hover td.pinnedColLeft,
+.dataTable tbody tr:hover td.pinnedColRight,
+.dataTable tbody tr:hover td.selectionCell {
+  background: var(--ogrid-bg);
+}
+
+.dataTable tbody tr:hover td.rowNumberCell {
+  background: var(--ogrid-header-bg);
+}
+
+.dataTable tbody tr.selectedRow td {
+  background: var(--ogrid-selected-row-bg);
+}
+
+.dataTable tbody tr.selectedRow td.pinnedColLeft,
+.dataTable tbody tr.selectedRow td.pinnedColRight,
+.dataTable tbody tr.selectedRow td.selectionCell {
+  background: var(--ogrid-selected-row-bg);
+}
+
+.dataTable tbody tr.selectedRow td.rowNumberCell {
+  background: var(--ogrid-header-bg);
+}
+
+.dataTable tbody tr.selectedRow:hover td {
+  background: var(--ogrid-bg-selected-hover);
+}
+
+.dataTable tbody tr.selectedRow:hover td.pinnedColLeft,
+.dataTable tbody tr.selectedRow:hover td.pinnedColRight,
+.dataTable tbody tr.selectedRow:hover td.selectionCell {
+  background: var(--ogrid-bg-selected-hover);
+}
+
+.dataTable tbody tr.selectedRow:hover td.rowNumberCell {
+  background: var(--ogrid-header-bg);
+}
+
+.dataTable tbody td {
+  position: relative;
+  height: 1px;
+}
+
+.dataTable tbody td.pinnedColLeft {
+  position: sticky;
+}
+
+.dataTable tbody td.pinnedColRight {
+  position: sticky;
+}
+
+// ---- shadcn-specific: cell content padding ----
+
+.cellContent {
+  padding: var(--ogrid-cell-padding, 8px 12px);
+}
+
+// ---- shadcn-specific: selection & row number cells ----
+
+.dataTable th.selectionHeaderCell,
+.dataTable td.selectionCell {
+  width: 48px;
+  min-width: 48px;
+  max-width: 48px;
+  padding: 4px;
+  text-align: center;
+  position: sticky;
+  left: 0;
+  z-index: var(--ogrid-z-selection-cell, 7);
+  background: var(--ogrid-bg);
+}
+
+.dataTable th.selectionHeaderCell {
+  background: var(--ogrid-header-bg);
+  z-index: var(--ogrid-z-header-focus, 11);
+}
+
+.dataTable th.rowNumberHeaderCell,
+.dataTable td.rowNumberCell {
+  padding: 4px 8px;
+  text-align: center;
+  background: var(--ogrid-header-bg);
+  font-weight: 500;
+  color: var(--ogrid-muted);
+  border-right: 1px solid var(--ogrid-border);
+  position: sticky;
+  left: var(--row-number-sticky-left, 0px);
+  z-index: var(--ogrid-z-row-number, 5);
+}
+
+.dataTable th.rowNumberHeaderCell {
+  background: var(--ogrid-header-bg);
+  z-index: 9;
+}
+
+// ---- shadcn-specific: Radix Checkbox styling for row-selection checkboxes ----
+// shadcn uses rounded-sm (4px) for checkboxes, border 1px, and a focus ring.
+
+.rowCheckbox {
+  width: 16px;
+  height: 16px;
+  border: 1px solid var(--ogrid-border-strong);
+  border-radius: 4px;
+  background: var(--ogrid-bg);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  padding: 0;
+  transition: background 0.15s, border-color 0.15s, box-shadow 0.15s;
+
+  &[data-state='checked'],
+  &[data-state='indeterminate'] {
+    background: var(--ogrid-primary);
+    border-color: var(--ogrid-primary);
+  }
+
+  &:focus-visible {
+    outline: none;
+    box-shadow: 0 0 0 2px var(--ogrid-bg), 0 0 0 4px var(--ogrid-primary);
+  }
+}
+
+.rowCheckboxIndicator {
+  color: var(--ogrid-primary-fg);
+  font-size: 12px;
+  line-height: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* ─── Cell Density ───────────────────────────────────────────────── */
+
+.density-compact {
+  --ogrid-cell-padding: 4px 8px;
+  --ogrid-cell-padding-vertical: 4px;
+  --ogrid-cell-padding-horizontal: 8px;
+  --ogrid-cell-font-size: 12px;
+
+  .dataTable th {
+    padding: 6px 8px;
+  }
+
+  .cellContent {
+    padding: 4px 8px;
+  }
+}
+
+.density-normal {
+  // Default styles already applied above.
+}
+
+.density-comfortable {
+  --ogrid-cell-padding-vertical: 12px;
+  --ogrid-cell-padding-horizontal: 16px;
+  --ogrid-cell-font-size: 14px;
+
+  .dataTable th {
+    padding: 14px 16px;
+  }
+
+  .cellContent {
+    padding: 12px 16px;
+  }
+}

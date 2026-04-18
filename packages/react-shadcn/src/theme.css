@@ -1,0 +1,45 @@
+/* OGrid shadcn — theme variable overrides.
+ *
+ * Mirrors the shadcn/ui "blue" default theme (https://ui.shadcn.com/themes).
+ * These cascade through every --ogrid-* variable referenced by the shared
+ * structural styles, so the grid adopts shadcn colors, radii, and shadows
+ * without changing any component markup.
+ *
+ * The shared theme partial in @alaarab/ogrid-core uses :where(:root) with
+ * specificity 0, so this plain :root block always wins regardless of load
+ * order. Consumers can override any value further by redefining it at a
+ * higher specificity (e.g. .dark, [data-theme="dark"], etc.). */
+
+:root {
+  /* Surfaces */
+  --ogrid-bg: hsl(0 0% 100%);
+  --ogrid-bg-subtle: hsl(210 40% 98%);
+  --ogrid-header-bg: hsl(210 40% 96.1%);
+  --ogrid-bg-hover: hsl(210 40% 96.1%);
+  --ogrid-hover-bg: hsl(210 40% 96.1%);
+  --ogrid-selected-row-bg: hsl(214 95% 95%);
+  --ogrid-bg-selected-hover: hsl(214 95% 91%);
+
+  /* Foreground */
+  --ogrid-fg: hsl(222.2 84% 4.9%);
+  --ogrid-fg-secondary: hsl(215.4 16.3% 46.9%);
+  --ogrid-muted: hsl(215.4 16.3% 46.9%);
+
+  /* Borders */
+  --ogrid-border: hsl(214.3 31.8% 91.4%);
+  --ogrid-border-strong: hsl(215.4 16.3% 46.9%);
+  --ogrid-border-hover: hsl(214.3 31.8% 80%);
+
+  /* Primary (shadcn blue) */
+  --ogrid-primary: hsl(221.2 83.2% 53.3%);
+  --ogrid-primary-fg: hsl(210 40% 98%);
+  --ogrid-primary-hover: hsl(221.2 83.2% 45%);
+  --ogrid-accent: hsl(221.2 83.2% 53.3%);
+
+  /* Shadows (shadcn uses very subtle layered shadows) */
+  --ogrid-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.08), 0 2px 4px -2px rgb(0 0 0 / 0.06);
+  --ogrid-pinned-shadow: rgb(0 0 0 / 0.08);
+
+  /* Range/selection tint (translucent primary) */
+  --ogrid-range-bg: hsl(221.2 83.2% 53.3% / 0.10);
+}
