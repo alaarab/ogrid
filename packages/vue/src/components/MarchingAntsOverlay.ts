@@ -123,7 +123,7 @@ export const MarchingAntsOverlay = defineComponent({
             width: Math.max(0, selRect.value.width - 2),
             height: Math.max(0, selRect.value.height - 2),
             fill: 'none',
-            stroke: 'var(--ogrid-selection, #217346)',
+            stroke: 'var(--ogrid-selection-color, #217346)',
             'stroke-width': 2,
           }),
         ]) : null,
@@ -148,7 +148,7 @@ export const MarchingAntsOverlay = defineComponent({
             width: Math.max(0, clipRect.value.width - 2),
             height: Math.max(0, clipRect.value.height - 2),
             fill: 'none',
-            stroke: 'var(--ogrid-selection, #217346)',
+            stroke: 'var(--ogrid-selection-color, #217346)',
             'stroke-width': 2,
             'stroke-dasharray': '4 4',
             style: {

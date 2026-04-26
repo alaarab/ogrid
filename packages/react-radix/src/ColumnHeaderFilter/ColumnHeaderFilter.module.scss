@@ -48,7 +48,7 @@
   height: 24px;
   padding: 4px 6px;
   border: none;
-  border-radius: 4px;
+  border-radius: var(--ogrid-radius, 4px);
   background: transparent;
   color: var(--ogrid-muted, #616161);
   cursor: pointer;
@@ -83,7 +83,7 @@
   width: 6px;
   height: 6px;
   background: var(--ogrid-primary, #0066cc);
-  border-radius: 50%;
+  border-radius: var(--ogrid-radius-full, 50%);
   border: 1px solid var(--ogrid-bg, #fff);
 }
 
@@ -99,7 +99,7 @@
   }
   background: var(--ogrid-bg, #fff);
   border: 1px solid var(--ogrid-border, #d1d1d1);
-  border-radius: 8px;
+  border-radius: var(--ogrid-radius-xl, 8px);
   box-shadow: var(--ogrid-shadow, 0 4px 16px rgba(0, 0, 0, 0.12));
   overflow: hidden;
 }
@@ -122,7 +122,7 @@
   width: 100%;
   padding: 6px 10px;
   border: 1px solid var(--ogrid-border, #d1d1d1);
-  border-radius: 4px;
+  border-radius: var(--ogrid-radius, 4px);
   font-size: 14px;
   box-sizing: border-box;
   &:focus {
@@ -137,7 +137,7 @@
   gap: 8px;
   width: 100%;
   border: 1px solid var(--ogrid-border, #d1d1d1);
-  border-radius: 4px;
+  border-radius: var(--ogrid-radius, 4px);
   background: var(--ogrid-bg, #fff);
   padding: 6px 12px;
   min-height: 36px;
@@ -185,7 +185,7 @@
   font-weight: 500;
   cursor: pointer;
   padding: 4px 8px;
-  border-radius: 4px;
+  border-radius: var(--ogrid-radius, 4px);
   &:hover {
     background: var(--ogrid-hover-bg, rgba(0, 0, 0, 0.04));
   }
@@ -216,7 +216,7 @@
   width: 16px;
   height: 16px;
   border: 1px solid var(--ogrid-border, #888);
-  border-radius: 3px;
+  border-radius: var(--ogrid-radius-sm, 3px);
   background: var(--ogrid-bg, #fff);
   cursor: pointer;
   display: inline-flex;
@@ -304,7 +304,7 @@
 .clearButton {
   padding: 6px 12px;
   border: 1px solid var(--ogrid-border, #ccc);
-  border-radius: 4px;
+  border-radius: var(--ogrid-radius, 4px);
   background: var(--ogrid-bg, #fff);
   color: var(--ogrid-muted, #666);
   font-size: 12px;
@@ -323,7 +323,7 @@
 .applyButton {
   padding: 6px 16px;
   border: none;
-  border-radius: 4px;
+  border-radius: var(--ogrid-radius, 4px);
   background: var(--ogrid-primary, #0066cc);
   color: var(--ogrid-primary-fg, #fff);
   font-size: 12px;

@@ -214,7 +214,7 @@ import { PopoverCellEditorComponent } from './popover-cell-editor.component';
       background: var(--ogrid-bg, #fff);
     }
     .ogrid-datagrid-cell--in-range {
-      background: var(--ogrid-bg-range, rgba(33, 115, 70, 0.12));
+      background: var(--ogrid-range-bg, rgba(33, 115, 70, 0.12));
     }
     .ogrid-datagrid-cell--in-cut-range {
       background: var(--ogrid-hover-bg, rgba(0, 0, 0, 0.04));

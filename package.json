@@ -73,6 +73,8 @@
     "test:e2e:js": "npx playwright test --project=js",
     "publish:all": "npm publish --workspace=packages/core --access=public && npm publish --workspace=packages/react --access=public && npm publish --workspace=packages/js --access=public && npm publish --workspace=packages/react-fluent --access=public && npm publish --workspace=packages/react-material --access=public && npm publish --workspace=packages/react-radix --access=public && npm publish --workspace=packages/angular --access=public && npm publish --workspace=packages/angular-material --access=public && npm publish --workspace=packages/angular-primeng --access=public && npm publish --workspace=packages/angular-radix --access=public && npm publish --workspace=packages/vue --access=public && npm publish --workspace=packages/vue-vuetify --access=public && npm publish --workspace=packages/vue-primevue --access=public && npm publish --workspace=packages/vue-radix --access=public && npm publish --workspace=packages/inputs --access=public && npm publish --workspace=packages/react-inputs --access=public && npm publish --workspace=packages/angular-inputs --access=public && npm publish --workspace=packages/vue-inputs --access=public && npm publish --workspace=packages/js-inputs --access=public && npm publish --workspace=packages/mcp --access=public",
     "version:bump": "node scripts/version-bump.mjs",
+    "sync:theme": "node scripts/sync-theme.mjs",
+    "sync:theme:check": "node scripts/sync-theme.mjs --check",
     "bench": "npx tsx packages/core/src/__benchmarks__/performance.bench.ts",
     "mcp": "node packages/mcp/dist/esm/index.js",
     "prepare": "husky"
@@ -109,7 +111,7 @@
     "turbo": "^2.8.21",
     "typescript": "^6.0.0"
   },
-  "version": "2.7.3",
+  "version": "2.8.1",
   "lint-staged": {
     "*.{ts,tsx}": [
       "biome check --fix --no-errors-on-unmatched"

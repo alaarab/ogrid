@@ -148,7 +148,7 @@ export default function LiveDataDemo() {
       <button
         style={{
           ...toolbarBtnStyle,
-          background: paused ? 'var(--ogrid-selection, #217346)' : 'transparent',
+          background: paused ? 'var(--ogrid-selection-color, #217346)' : 'transparent',
           color: paused ? 'white' : 'var(--ogrid-fg, #242424)',
         }}
         onClick={() => setPaused(p => !p)}

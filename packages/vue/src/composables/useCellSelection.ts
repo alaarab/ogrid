@@ -124,10 +124,10 @@ export function useCellSelection(params: UseCellSelectionParams): UseCellSelecti
       if (el.hasAttribute(DRAG_ANCHOR_ATTR)) el.removeAttribute(DRAG_ANCHOR_ATTR);
     }
     const shadows: string[] = [];
-    if (r === minR) shadows.push('inset 0 2px 0 0 var(--ogrid-selection, #217346)');
-    if (r === maxR) shadows.push('inset 0 -2px 0 0 var(--ogrid-selection, #217346)');
-    if (c === minC) shadows.push('inset 2px 0 0 0 var(--ogrid-selection, #217346)');
-    if (c === maxC) shadows.push('inset -2px 0 0 0 var(--ogrid-selection, #217346)');
+    if (r === minR) shadows.push('inset 0 2px 0 0 var(--ogrid-selection-color, #217346)');
+    if (r === maxR) shadows.push('inset 0 -2px 0 0 var(--ogrid-selection-color, #217346)');
+    if (c === minC) shadows.push('inset 2px 0 0 0 var(--ogrid-selection-color, #217346)');
+    if (c === maxC) shadows.push('inset -2px 0 0 0 var(--ogrid-selection-color, #217346)');
     el.style.boxShadow = shadows.length > 0 ? shadows.join(', ') : '';
     markedCells.add(el);
   };

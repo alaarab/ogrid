@@ -9,6 +9,12 @@ export type {
   UseOGridFilters,
   ColumnChooserPlacement,
 } from './useOGrid';
+export { useHeadlessGrid } from './useHeadlessGrid';
+export type {
+  UseHeadlessGridParams,
+  UseHeadlessGridResult,
+  RowId as HeadlessGridRowId,
+} from './useHeadlessGrid';
 export { useOGridPagination } from './useOGridPagination';
 export type { UseOGridPaginationParams, UseOGridPaginationState } from './useOGridPagination';
 export { useOGridSorting } from './useOGridSorting';

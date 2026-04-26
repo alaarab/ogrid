@@ -274,6 +274,16 @@ export { VirtualScrollService } from './services/virtual-scroll.service';
 export { FormulaEngineService } from './services/formula-engine.service';
 export type { FormulaEngineConfig } from './services/formula-engine.service';
 
+// Headless API — render with your own table chrome
+export { createHeadlessGrid } from './services/headless-grid';
+export type {
+  CreateHeadlessGridParams,
+  HeadlessGridResult,
+  RowId as HeadlessGridRowId,
+  SortState as HeadlessGridSortState,
+  SignalLike as HeadlessGridSignalLike,
+} from './services/headless-grid';
+
 // Components
 export { OGridLayoutComponent } from './components/ogrid-layout.component';
 export { StatusBarComponent } from './components/status-bar.component';

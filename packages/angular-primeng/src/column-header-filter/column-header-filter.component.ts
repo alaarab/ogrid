@@ -27,7 +27,7 @@ import { BaseColumnHeaderFilterComponent } from '@alaarab/ogrid-angular';
           >
             &#9662;
             @if (hasActiveFilter()) {
-              <span style="position:absolute;top:0;right:0;width:6px;height:6px;border-radius:50%;background:var(--ogrid-selection, #217346)"></span>
+              <span style="position:absolute;top:0;right:0;width:6px;height:6px;border-radius:50%;background:var(--ogrid-selection-color, #217346)"></span>
             }
           </button>
 

@@ -54,6 +54,7 @@ export { toUserLike, isInSelectionRange, normalizeSelectionRange } from './types
 export {
   useFilterOptions,
   useOGrid,
+  useHeadlessGrid,
   useActiveCell,
   useCellEditing,
   useContextMenu,
@@ -96,6 +97,9 @@ export type {
   UseOGridLayout,
   UseOGridFilters,
   ColumnChooserPlacement,
+  UseHeadlessGridParams,
+  UseHeadlessGridResult,
+  HeadlessGridRowId,
   UseActiveCellResult,
   UseCellEditingResult,
   EditingCell,

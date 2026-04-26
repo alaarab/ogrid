@@ -10,7 +10,7 @@
 /* Cell selection highlighting.
    Qualify with .ogrid-outer-container (specificity 0,2,0) to beat row-level hover backgrounds. */
 .ogrid-outer-container .ogrid-cell-in-range {
-  background: var(--ogrid-bg-range, rgba(33, 115, 70, 0.12));
+  background: var(--ogrid-range-bg, rgba(33, 115, 70, 0.12));
 }
 
 /* Cut range highlighting */
@@ -62,6 +62,10 @@
   font-size: 0.875rem;
   background-color: var(--ogrid-bg);
   color: var(--ogrid-fg);
+  font-family: var(--ogrid-font, inherit);
+  /* Tabular numerics + OpenType features so digits align in columns. */
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: "tnum" 1, "ss01" 1, "cv11" 1;
 }
 
 /* No left border on first column — the grid container provides the left edge */
@@ -279,7 +283,7 @@
 }
 
 .ogrid-cell-content--active {
-  outline: 2px solid var(--ogrid-selection, #217346);
+  outline: 2px solid var(--ogrid-selection-color, #217346);
   outline-offset: -1px;
   z-index: var(--ogrid-z-active-cell, 2);
   position: relative;
@@ -327,7 +331,7 @@
   bottom: -3px;
   width: 7px;
   height: 7px;
-  background-color: var(--ogrid-selection, #217346);
+  background-color: var(--ogrid-selection-color, #217346);
   border: 1px solid var(--ogrid-bg);
   border-radius: 1px;
   cursor: crosshair;

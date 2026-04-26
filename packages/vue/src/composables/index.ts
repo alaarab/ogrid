@@ -9,6 +9,15 @@ export type {
   ColumnChooserPlacement,
 } from './useOGrid';
 
+// Headless API — for consumers who want to render with their own table chrome
+export { useHeadlessGrid } from './useHeadlessGrid';
+export type {
+  UseHeadlessGridParams,
+  UseHeadlessGridResult,
+  RowId as HeadlessGridRowId,
+  SortState as HeadlessGridSortState,
+} from './useHeadlessGrid';
+
 export { useDataGridState } from './useDataGridState';
 export type {
   UseDataGridStateParams,

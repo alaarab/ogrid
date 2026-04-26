@@ -44,7 +44,7 @@ const getUserKey = (user: UserLike) => {
             style="
               width: 32px;
               height: 32px;
-              border-radius: 50%;
+              border-radius: var(--ogrid-radius-full, 50%);
               background: var(--ogrid-border, #e0e0e0);
               display: flex;
               align-items: center;
@@ -118,7 +118,7 @@ const getUserKey = (user: UserLike) => {
               style="
                 width: 32px;
                 height: 32px;
-                border-radius: 50%;
+                border-radius: var(--ogrid-radius-full, 50%);
                 background: var(--ogrid-border, #e0e0e0);
                 display: flex;
                 align-items: center;
@@ -201,7 +201,7 @@ const getUserKey = (user: UserLike) => {
   gap: 8px;
   width: 100%;
   border: 1px solid var(--ogrid-border, #d1d1d1);
-  border-radius: 4px;
+  border-radius: var(--ogrid-radius, 4px);
   background: var(--ogrid-bg, #fff);
   padding: 6px 12px;
   min-height: 36px;

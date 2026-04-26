@@ -1,6 +1,6 @@
 {
   "name": "@alaarab/ogrid-vue-vuetify",
-  "version": "2.7.3",
+  "version": "2.8.1",
   "description": "OGrid Vuetify – Vuetify-based data grid with sorting, filtering, pagination, column chooser, and CSV export.",
   "main": "dist/esm/index.js",
   "module": "dist/esm/index.js",
@@ -38,7 +38,7 @@
     "node": ">=18"
   },
   "dependencies": {
-    "@alaarab/ogrid-vue": "2.7.3"
+    "@alaarab/ogrid-vue": "2.8.1"
   },
   "peerDependencies": {
     "vue": "^3.3.0",

@@ -91,7 +91,7 @@ onBeforeUnmount(() => {
   background-color: var(--ogrid-bg, #ffffff);
   color: var(--ogrid-fg, rgba(0, 0, 0, 0.87));
   border: 1px solid var(--ogrid-border, rgba(0, 0, 0, 0.12));
-  border-radius: 4px;
+  border-radius: var(--ogrid-radius, 4px);
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
   min-width: 160px;
   padding: 4px 0;

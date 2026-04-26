@@ -248,6 +248,7 @@ export { FormulaRefOverlay } from './components/FormulaRefOverlay';
 // Composables
 export {
   useOGrid,
+  useHeadlessGrid,
   useDataGridState,
   useActiveCell,
   useCellEditing,
@@ -288,6 +289,10 @@ export type {
   UseOGridLayout,
   UseOGridFilters,
   ColumnChooserPlacement,
+  UseHeadlessGridParams,
+  UseHeadlessGridResult,
+  HeadlessGridRowId,
+  HeadlessGridSortState,
   UseDataGridStateParams,
   UseDataGridStateResult,
   DataGridLayoutState,

@@ -226,7 +226,7 @@
   width: 18px;
   height: 18px;
   border: 1.5px solid var(--ogrid-border-strong, rgba(0, 0, 0, 0.5));
-  border-radius: 3px;
+  border-radius: var(--ogrid-radius-sm, 3px);
   background: var(--ogrid-bg, #fff);
   cursor: pointer;
   display: inline-flex;

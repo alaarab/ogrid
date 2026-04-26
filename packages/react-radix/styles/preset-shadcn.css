@@ -1,0 +1,81 @@
+/* OGrid React Radix — shadcn/Tailwind v4 preset
+ *
+ * Maps every `--ogrid-*` token to its shadcn equivalent so OGrid
+ * inherits the host app's palette, radius, font, and focus ring
+ * automatically — no per-property overrides needed.
+ *
+ * Usage:
+ *   import "@alaarab/ogrid-react-radix/styles/index.css";
+ *   import "@alaarab/ogrid-react-radix/styles/preset-shadcn.css";
+ *
+ * Order matters: index.css must come first so the preset overrides its
+ * defaults. Both light and dark modes follow your shadcn theme — no need
+ * to maintain a parallel `[data-theme="dark"]` block.
+ *
+ * Required shadcn tokens: --background, --foreground, --card,
+ * --card-foreground, --muted, --muted-foreground, --accent,
+ * --accent-foreground, --primary, --primary-foreground, --border,
+ * --ring, --radius, --font-sans (or --font-display).
+ *
+ * Override individual --ogrid-* tokens after this preset import to
+ * customize specific surfaces. Your selector beats the :where() in here.
+ */
+
+:where(:root) {
+  /* ── Surfaces ── */
+  --ogrid-bg: var(--card);
+  --ogrid-fg: var(--card-foreground);
+  --ogrid-fg-secondary: var(--muted-foreground);
+  --ogrid-fg-muted: var(--muted-foreground);
+  --ogrid-muted: var(--muted-foreground);
+
+  --ogrid-bg-subtle: var(--muted);
+  --ogrid-bg-hover: var(--accent);
+  --ogrid-active-bg: var(--accent);
+
+  --ogrid-header-bg: var(--muted);
+  --ogrid-hover-bg: var(--accent);
+
+  /* ── Borders ── */
+  --ogrid-border: var(--border);
+  --ogrid-border-strong: var(--border);
+  --ogrid-border-hover: var(--border);
+
+  /* ── Primary (buttons, badges, active filter chips) ── */
+  --ogrid-primary: var(--primary);
+  --ogrid-primary-fg: var(--primary-foreground);
+  --ogrid-primary-hover: color-mix(in oklch, var(--primary) 85%, var(--foreground));
+
+  /* ── Accent / Selection / Focus ring ── */
+  --ogrid-accent: var(--ring);
+  --ogrid-accent-dark: color-mix(in oklch, var(--ring) 80%, var(--foreground));
+  --ogrid-ring: var(--ring);
+
+  /* Selection states use ring hue at low alpha so they tint, not flood */
+  --ogrid-selection: var(--primary);
+  --ogrid-selection-color: var(--primary);
+  --ogrid-selected-row-bg: color-mix(in oklch, var(--ring) 12%, transparent);
+  --ogrid-bg-selected-hover: color-mix(in oklch, var(--ring) 18%, transparent);
+  --ogrid-bg-selected: color-mix(in oklch, var(--ring) 12%, transparent);
+  --ogrid-active-cell-bg: color-mix(in oklch, var(--ring) 6%, transparent);
+  --ogrid-range-bg: color-mix(in oklch, var(--primary) 10%, transparent);
+  --ogrid-bg-range: color-mix(in oklch, var(--primary) 10%, transparent);
+
+  /* ── Shadows — derived from foreground so they pick up dark mode ── */
+  --ogrid-shadow: 0 4px 16px color-mix(in oklch, var(--foreground) 12%, transparent);
+  --ogrid-shadow-sm: 0 2px 4px color-mix(in oklch, var(--foreground) 8%, transparent);
+  --ogrid-pinned-shadow: color-mix(in oklch, var(--foreground) 10%, transparent);
+
+  /* ── Loading overlay ── */
+  --ogrid-loading-overlay: color-mix(in oklch, var(--background) 70%, transparent);
+  --ogrid-loading-bg: color-mix(in oklch, var(--background) 70%, transparent);
+
+  /* ── Radius — follow shadcn's --radius scale ── */
+  --ogrid-radius: var(--radius);
+  --ogrid-radius-sm: calc(var(--radius) * 0.6);
+  --ogrid-radius-lg: calc(var(--radius) * 1.5);
+  --ogrid-radius-xl: calc(var(--radius) * 2);
+
+  /* ── Typography ── */
+  --ogrid-font: var(--font-sans, inherit);
+}
