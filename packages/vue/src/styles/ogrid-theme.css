@@ -1,119 +1,228 @@
-/* OGrid Shared Theme Variables — consumed by all Vue UI packages.
+/* OGrid Vue theme — generated from packages/core/src/styles/_ogrid-theme.scss
+ * Run `node scripts/sync-theme.mjs` to regenerate. Do not edit by hand.
  *
- * Uses :where() selectors for ZERO specificity — consumer overrides always win.
- * Dark mode: auto via prefers-color-scheme, explicit via [data-theme="dark"].
+ * Dark mode activates via:
+ *   1. System preference (prefers-color-scheme: dark) unless [data-theme="light"]
+ *      or .light is set on root.
+ *   2. Explicit attribute: [data-theme="dark"] on any ancestor.
+ *   3. Tailwind/shadcn convention: .dark class on any ancestor.
+ *
+ * To opt OUT of auto-dark: set .light or [data-theme="light"] on :root.
  */
 
 /* ─── Light Theme (default) ─── */
 :where(:root) {
-  /* Cell padding — override for row density:
-     --ogrid-cell-padding          : shorthand (default 6px 10px)
-     --ogrid-cell-padding-vertical : vertical only (default 6px)
+  /* ── Cell padding — override for row density ──
+     --ogrid-cell-padding           : shorthand (default 6px 10px)
+     --ogrid-cell-padding-vertical  : vertical only (default 6px)
      --ogrid-cell-padding-horizontal: horizontal only (default 10px) */
   --ogrid-cell-padding: 6px 10px;
   --ogrid-cell-padding-vertical: 6px;
   --ogrid-cell-padding-horizontal: 10px;
+
+  /* ── Radius scale — override --ogrid-radius to scale all corners ──
+     --ogrid-radius     : base (default 6px) — buttons, inputs, popovers
+     --ogrid-radius-sm  : tighter (calc 0.6x) — checkboxes, tags
+     --ogrid-radius-lg  : looser  (calc 1.4x) — cards, dialogs
+     --ogrid-radius-xl  : largest (calc 1.8x) — hero surfaces
+     --ogrid-radius-full: 9999px — pills, dots */
+  --ogrid-radius: 6px;
+  --ogrid-radius-sm: calc(var(--ogrid-radius) * 0.6);
+  --ogrid-radius-lg: calc(var(--ogrid-radius) * 1.4);
+  --ogrid-radius-xl: calc(var(--ogrid-radius) * 1.8);
+  --ogrid-radius-full: 9999px;
+
+  /* ── Typography — override --ogrid-font to re-skin the type stack ──
+     --ogrid-font     : font-family for grid chrome (default: inherit from host)
+     --ogrid-font-size: base body font-size (default 13px) */
+  --ogrid-font: inherit;
+  --ogrid-font-size: 13px;
+
+  /* ── Focus ring — color used for focus outlines / rings ──
+     --ogrid-ring: focus ring color (defaults to accent) */
+  --ogrid-ring: var(--ogrid-accent, #0078d4);
+
+  /* ── Z-Index Stacking Order ──
+     --ogrid-z-resize-handle       :  1   column resize drag handle
+     --ogrid-z-active-cell         :  2   active/editing cell outline
+     --ogrid-z-fill-handle         :  3   fill handle dot
+     --ogrid-z-row-number          :  5   row number column
+     --ogrid-z-pinned              :  6   sticky pinned body cells
+     --ogrid-z-selection-cell      :  7   selection checkbox column in body
+     --ogrid-z-thead               :  8   sticky thead row
+     --ogrid-z-pinned-header       : 10   pinned header cells (sticky both axes)
+     --ogrid-z-header-focus        : 11   focused header cell
+     --ogrid-z-selection-header-pinned: 12  checkbox column in sticky header (sticky both axes)
+     --ogrid-z-checkbox            : 12   alias — checkbox column in sticky header
+     --ogrid-z-loading             :  2   loading overlay within table
+     --ogrid-z-drop-indicator      : 100  column reorder drop indicator
+     --ogrid-z-filter-popover      : 1000 filter popovers
+     --ogrid-z-popover             : 1000 alias — filter popovers
+     --ogrid-z-fullscreen          : 9999 fullscreen grid container
+     --ogrid-z-context-menu        : 10000 context menu (fixed, above everything) */
+  --ogrid-z-resize-handle: 1;
+  --ogrid-z-active-cell: 2;
+  --ogrid-z-fill-handle: 3;
+  --ogrid-z-row-number: 5;
+  --ogrid-z-pinned: 6;
+  --ogrid-z-selection-cell: 7;
+  --ogrid-z-thead: 8;
+  --ogrid-z-pinned-header: 10;
+  --ogrid-z-header-focus: 11;
+  --ogrid-z-selection-header-pinned: 12;
+  --ogrid-z-checkbox: 12;
+  --ogrid-z-loading: 2;
+  --ogrid-z-drop-indicator: 100;
+  --ogrid-z-filter-popover: 1000;
+  --ogrid-z-popover: 1000;
+  --ogrid-z-fullscreen: 9999;
+  --ogrid-z-context-menu: 10000;
+
+  /* Core */
   --ogrid-bg: #ffffff;
   --ogrid-fg: rgba(0, 0, 0, 0.87);
   --ogrid-fg-secondary: rgba(0, 0, 0, 0.6);
   --ogrid-fg-muted: rgba(0, 0, 0, 0.5);
+
+  /* Borders */
   --ogrid-border: rgba(0, 0, 0, 0.12);
   --ogrid-border-strong: rgba(0, 0, 0, 0.5);
   --ogrid-border-hover: rgba(0, 0, 0, 0.3);
+
+  /* Table */
   --ogrid-header-bg: #f5f5f5;
   --ogrid-hover-bg: rgba(0, 0, 0, 0.04);
   --ogrid-selected-row-bg: #e6f0fb;
   --ogrid-bg-selected-hover: #dae8f8;
   --ogrid-active-cell-bg: rgba(0, 0, 0, 0.02);
   --ogrid-range-bg: rgba(33, 115, 70, 0.12);
+
+  /* Accent & Selection */
   --ogrid-accent: #0078d4;
   --ogrid-accent-dark: #005a9e;
   --ogrid-selection-color: #217346;
-  --ogrid-primary: #0078d4;
-  --ogrid-primary-fg: #fff;
-  --ogrid-primary-hover: #106ebe;
+
+  /* Primary (buttons, badges) — neutral by default; host theme should override */
+  --ogrid-primary: oklch(0.55 0 0);
+  --ogrid-primary-fg: oklch(1 0 0);
+  --ogrid-primary-hover: oklch(0.45 0 0);
+
+  /* Surfaces */
   --ogrid-bg-subtle: #f5f5f5;
   --ogrid-bg-hover: rgba(0, 0, 0, 0.04);
   --ogrid-active-bg: rgba(0, 0, 0, 0.06);
   --ogrid-muted: rgba(0, 0, 0, 0.5);
+
+  /* Shadows */
   --ogrid-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
   --ogrid-shadow-sm: 0 2px 4px rgba(0, 0, 0, 0.08);
   --ogrid-pinned-shadow: rgba(0, 0, 0, 0.1);
+
+  /* Loading */
   --ogrid-loading-overlay: rgba(255, 255, 255, 0.7);
-  --ogrid-selection: #217346;
-  --ogrid-bg-range: rgba(33, 115, 70, 0.12);
-  --ogrid-bg-selected: #e6f0fb;
-  --ogrid-loading-bg: rgba(255, 255, 255, 0.7);
+
+  /* Formula errors */
+  --ogrid-formula-error-color: #d32f2f;
 }
 
-/* ─── Auto Dark (system preference) ─── */
+/* ─── Auto Dark (system preference, unless explicitly set to light) ─── */
 @media (prefers-color-scheme: dark) {
-  :where(:root:not([data-theme="light"])) {
+  :where(:root:not([data-theme="light"]):not(.light)) {
+    /* Core */
     --ogrid-bg: #1e1e1e;
     --ogrid-fg: rgba(255, 255, 255, 0.87);
     --ogrid-fg-secondary: rgba(255, 255, 255, 0.6);
     --ogrid-fg-muted: rgba(255, 255, 255, 0.5);
+
+    /* Borders */
     --ogrid-border: rgba(255, 255, 255, 0.12);
     --ogrid-border-strong: rgba(255, 255, 255, 0.5);
     --ogrid-border-hover: rgba(255, 255, 255, 0.3);
+
+    /* Table */
     --ogrid-header-bg: #2c2c2c;
     --ogrid-hover-bg: rgba(255, 255, 255, 0.08);
     --ogrid-selected-row-bg: #1a3a5c;
     --ogrid-bg-selected-hover: #1f3650;
     --ogrid-active-cell-bg: rgba(255, 255, 255, 0.06);
     --ogrid-range-bg: rgba(46, 160, 67, 0.15);
+
+    /* Accent & Selection */
     --ogrid-accent: #4da6ff;
     --ogrid-accent-dark: #3390e0;
     --ogrid-selection-color: #2ea043;
-    --ogrid-primary: #4da6ff;
-    --ogrid-primary-fg: #fff;
-    --ogrid-primary-hover: #66b3ff;
+
+    /* Primary — neutral by default; host theme should override */
+    --ogrid-primary: oklch(0.7 0 0);
+    --ogrid-primary-fg: oklch(0.1 0 0);
+    --ogrid-primary-hover: oklch(0.8 0 0);
+
+    /* Surfaces */
     --ogrid-bg-subtle: rgba(255, 255, 255, 0.04);
     --ogrid-bg-hover: rgba(255, 255, 255, 0.08);
     --ogrid-active-bg: rgba(255, 255, 255, 0.08);
     --ogrid-muted: rgba(255, 255, 255, 0.5);
+
+    /* Shadows */
     --ogrid-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
     --ogrid-shadow-sm: 0 2px 4px rgba(0, 0, 0, 0.25);
     --ogrid-pinned-shadow: rgba(0, 0, 0, 0.3);
+
+    /* Loading */
     --ogrid-loading-overlay: rgba(0, 0, 0, 0.7);
-    --ogrid-selection: #2ea043;
-    --ogrid-bg-range: rgba(46, 160, 67, 0.15);
-    --ogrid-bg-selected: #1a3a5c;
-    --ogrid-loading-bg: rgba(0, 0, 0, 0.7);
+
+    /* Formula errors */
+    --ogrid-formula-error-color: #ef5350;
   }
 }
 
-/* ─── Explicit Dark ─── */
-:where([data-theme="dark"]) {
+/* ─── Explicit Dark (data-theme="dark" or .dark — Tailwind/shadcn convention) ─── */
+:where([data-theme="dark"], .dark) {
+  /* Core */
   --ogrid-bg: #1e1e1e;
   --ogrid-fg: rgba(255, 255, 255, 0.87);
   --ogrid-fg-secondary: rgba(255, 255, 255, 0.6);
   --ogrid-fg-muted: rgba(255, 255, 255, 0.5);
+
+  /* Borders */
   --ogrid-border: rgba(255, 255, 255, 0.12);
   --ogrid-border-strong: rgba(255, 255, 255, 0.5);
   --ogrid-border-hover: rgba(255, 255, 255, 0.3);
+
+  /* Table */
   --ogrid-header-bg: #2c2c2c;
   --ogrid-hover-bg: rgba(255, 255, 255, 0.08);
   --ogrid-selected-row-bg: #1a3a5c;
   --ogrid-bg-selected-hover: #1f3650;
   --ogrid-active-cell-bg: rgba(255, 255, 255, 0.06);
   --ogrid-range-bg: rgba(46, 160, 67, 0.15);
+
+  /* Accent & Selection */
   --ogrid-accent: #4da6ff;
   --ogrid-accent-dark: #3390e0;
   --ogrid-selection-color: #2ea043;
+
+  /* Primary */
   --ogrid-primary: #4da6ff;
   --ogrid-primary-fg: #fff;
   --ogrid-primary-hover: #66b3ff;
+
+  /* Surfaces */
   --ogrid-bg-subtle: rgba(255, 255, 255, 0.04);
   --ogrid-bg-hover: rgba(255, 255, 255, 0.08);
   --ogrid-active-bg: rgba(255, 255, 255, 0.08);
   --ogrid-muted: rgba(255, 255, 255, 0.5);
+
+  /* Shadows */
   --ogrid-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
   --ogrid-shadow-sm: 0 2px 4px rgba(0, 0, 0, 0.25);
   --ogrid-pinned-shadow: rgba(0, 0, 0, 0.3);
+
+  /* Loading */
   --ogrid-loading-overlay: rgba(0, 0, 0, 0.7);
-  --ogrid-selection: #2ea043;
-  --ogrid-bg-range: rgba(46, 160, 67, 0.15);
-  --ogrid-bg-selected: #1a3a5c;
-  --ogrid-loading-bg: rgba(0, 0, 0, 0.7);
+
+  /* Formula errors */
+  --ogrid-formula-error-color: #ef5350;
+
 }
+/* @sync-end — do not move; sync-theme.mjs anchors here when splicing. */

@@ -158,6 +158,10 @@ export type {
   UseOGridLayout,
   UseOGridFilters,
   ColumnChooserPlacement,
+  UseHeadlessGridParams,
+  UseHeadlessGridResult,
+  HeadlessGridRowId,
+  HeadlessGridSortState,
   UseDataGridStateParams,
   UseDataGridStateResult,
   DataGridLayoutState,
@@ -226,6 +230,7 @@ export type {
 // Composables
 export {
   useOGrid,
+  useHeadlessGrid,
   useDataGridState,
   useActiveCell,
   useCellEditing,

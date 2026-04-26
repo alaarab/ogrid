@@ -155,7 +155,7 @@ function HeroGrid() {
               border: 'none',
               borderRadius: 0,
               borderRight: idx < densityOptions.length - 1 ? '1px solid var(--ogrid-border, #e0e0e0)' : 'none',
-              background: density === opt.value ? 'var(--ogrid-selection, #217346)' : 'transparent',
+              background: density === opt.value ? 'var(--ogrid-selection-color, #217346)' : 'transparent',
               color: density === opt.value ? 'white' : 'var(--ogrid-fg, #242424)',
               minWidth: 32,
             }}

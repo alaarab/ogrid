@@ -2,6 +2,56 @@
 
 All notable changes to OGrid will be documented in this file.
 
+## [2.8.1] - 2026-04-26
+
+The "make OGrid feel modern + go headless" release. Everything is additive on the API side — existing apps keep working without changes; opt into the new bits as you go. A handful of visual defaults shift (primary color, radius) but consumers using the shadcn preset or their own theme overrides won't notice.
+
+### Added — headless API
+
+- **Headless data hook across React, Vue, and Angular** — same shape, framework-native primitives:
+  - `useHeadlessGrid()` in `@alaarab/ogrid-react` + `@alaarab/ogrid-react-radix` (React hook)
+  - `useHeadlessGrid()` in `@alaarab/ogrid-vue` + `@alaarab/ogrid-vue-radix` (Vue composable, returns refs/computeds)
+  - `createHeadlessGrid()` in `@alaarab/ogrid-angular` + `@alaarab/ogrid-angular-radix` (factory returning Angular signals)
+
+  Pure data layer: returns sort/filter/paginate state + sorted rows + cell-value resolver + minimal Set-based row selection, without imposing any chrome. Render with shadcn `<Table>`, plain HTML, Material `<mat-table>`, your own component — anything. The existing `<OGrid>` component continues to work unchanged on every framework. The headless API is parallel, additive, and unblocks shadcn-native consumers (like Arc) without forcing a migration on existing Fluent/Material consumers (ProjectCenter, EMV).
+
+  39 tests across the three frameworks (13 each) confirm behavior parity: pagination, sort cycling, multi-select filters, page-1 reset on filter/sort change, cell-value resolution honoring `valueGetter`, reactive updates when input data changes. Storybook stories ship in `react-radix`, `vue-radix`, and `angular-radix` showing plain-HTML rendering, shadcn-style chrome, and filter integration.
+
+  ```ts
+  // React / Vue (composable)
+  const grid = useHeadlessGrid({ columns, data, getRowId: (r) => r.id });
+
+  // Angular (factory)
+  grid = createHeadlessGrid({ columns, data, getRowId: (r) => r.id });
+  ```
+
+### Added — theming
+
+- **`preset-shadcn.css` for `@alaarab/ogrid-react-radix`** — one import maps every `--ogrid-*` token to its shadcn equivalent so OGrid inherits the host app's palette, radius, font, and focus ring automatically. Drops the need for hand-authored `[data-theme="dark"]` override blocks. Consumes `--background`, `--foreground`, `--card`, `--card-foreground`, `--muted`, `--accent`, `--primary`, `--border`, `--ring`, `--radius`, `--font-sans`. Uses `color-mix(in oklch, ...)` for derived states (selected/hover/range) so they auto-tint to the host's primary/ring hue.
+  ```ts
+  import "@alaarab/ogrid-react-radix/styles/index.css";
+  import "@alaarab/ogrid-react-radix/styles/preset-shadcn.css";
+  ```
+- **New theming tokens** — `--ogrid-radius`, `--ogrid-radius-sm`, `--ogrid-radius-lg`, `--ogrid-radius-xl`, `--ogrid-radius-full`, `--ogrid-font`, `--ogrid-ring`. Override `--ogrid-radius` once and every corner in OGrid scales (sm/lg/xl are calc'd from the base). Override `--ogrid-font` to re-skin the type stack. `--ogrid-ring` is a dedicated focus-ring color that defaults to `--ogrid-accent`.
+- **`.dark` class now activates dark mode** (Tailwind v3+ / shadcn convention). The explicit-dark rule is `:where([data-theme="dark"], .dark)`. Apps that toggle dark mode via a `.dark` class on `<html>` get OGrid dark mode for free — no `data-theme` bridging required.
+- **`.light` class now opts out of auto-dark.** The `prefers-color-scheme: dark` auto-rule is now `:where(:root:not([data-theme="light"]):not(.light))`. Apps in deliberate light mode on a dark-OS machine can put `.light` on the root (or `[data-theme="light"]`) and OGrid follows.
+- **Tabular numerics + OpenType features** are now on by default. Adds `font-variant-numeric: tabular-nums` and `font-feature-settings: "tnum" 1, "ss01" 1, "cv11" 1` to the `.dataTable` (React) / `.ogrid-table` (Vue, JS) selectors so digits align in columns. Opt out with `font-variant-numeric: normal` on a wrapper if non-tabular reads better.
+
+### Added — tooling
+
+- **`npm run sync:theme`** regenerates Vue and JS plain-CSS theme files from the canonical `packages/core/src/styles/_ogrid-theme.scss`. CI can gate drift with `npm run sync:theme:check` (exits non-zero if files are out of sync). Eliminates the three-way hand-edit dance that caused two drift bugs during the 2.8.x cycle.
+
+### Changed
+
+- **All hardcoded `border-radius` values across `react-radix`, `react-fluent`, and `vue-radix` are now `var(--ogrid-radius{,-sm,-lg,-xl,-full}, <fallback>)`**. Override `--ogrid-radius` to scale every corner.
+- **Default `--ogrid-radius` bumped 4px → 6px.** Modern spec; matches shadcn's typical `--radius: 0.5rem` ballpark. Override via `--ogrid-radius` to restore prior corners.
+- **Default `--ogrid-primary` reset to neutral grey** (`oklch(0.55 0 0)` light / `oklch(0.7 0 0)` dark). Previously was Microsoft-blue `#0078d4`. Hosts setting their own primary via theme override or the shadcn preset are unaffected; hosts relying on the default get a neutral that doesn't fight the host palette.
+- **Theme stylesheet documentation updated** in `_ogrid-theme.scss`, `vue/src/styles/ogrid-theme.css`, and `js/styles/ogrid.css` to describe all four activation paths (auto via `prefers-color-scheme`, explicit `[data-theme="dark"]`, explicit `.dark`, opt-out via `.light`/`[data-theme="light"]`).
+
+### Removed (breaking — but had no internal-consumer impact)
+
+- Legacy alias variables `--ogrid-selection`, `--ogrid-bg-range`, `--ogrid-bg-selected`, `--ogrid-loading-bg`. Use canonical names `--ogrid-selection-color`, `--ogrid-range-bg`, `--ogrid-selected-row-bg`, `--ogrid-loading-overlay`. All internal Angular/Vue/Docs uses have been migrated.
+
 ## [2.6.1] - 2026-03-10
 
 ### Added

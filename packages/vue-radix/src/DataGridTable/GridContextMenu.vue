@@ -109,7 +109,7 @@ onUnmounted(() => {
   min-width: 200px;
   background: white;
   border: 1px solid var(--ogrid-border-color, #e0e0e0);
-  border-radius: 4px;
+  border-radius: var(--ogrid-radius, 4px);
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
   padding: 4px 0;
   outline: none;

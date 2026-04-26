@@ -2,7 +2,7 @@
   min-width: 140px;
   background: var(--ogrid-bg, #ffffff);
   border: 1px solid var(--ogrid-border, rgba(0, 0, 0, 0.12));
-  border-radius: 6px;
+  border-radius: var(--ogrid-radius-lg, 6px);
   padding: 4px;
   box-shadow: 0px 10px 38px -10px rgba(22, 23, 24, 0.35), 0px 10px 20px -15px rgba(22, 23, 24, 0.2);
   z-index: 1000;
@@ -15,7 +15,7 @@
   font-size: 13px;
   line-height: 1;
   color: var(--ogrid-fg, rgba(0, 0, 0, 0.87));
-  border-radius: 4px;
+  border-radius: var(--ogrid-radius, 4px);
   border: none;
   background: transparent;
   display: flex;

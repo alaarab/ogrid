@@ -315,7 +315,7 @@ import { PopoverCellEditorComponent } from './popover-cell-editor.component';
                                 class="ogrid-cell-content"
                                 [style.cursor]="descriptor.canEditAny ? 'cell' : 'default'"
                                 [style.background]="descriptor.isInRange && !descriptor.isActive ? 'var(--ogrid-range-bg, rgba(33, 115, 70, 0.08))' : (descriptor.isActive && descriptor.isInRange ? 'var(--ogrid-bg, #fff)' : null)"
-                                [style.outline]="descriptor.isActive && !descriptor.isInRange ? '2px solid var(--ogrid-selection, #217346)' : null"
+                                [style.outline]="descriptor.isActive && !descriptor.isInRange ? '2px solid var(--ogrid-selection-color, #217346)' : null"
                                 [style.outline-offset]="descriptor.isActive && !descriptor.isInRange ? '-2px' : null"
                               >
                                 @if (col.type === 'boolean') {
@@ -570,7 +570,7 @@ import { PopoverCellEditorComponent } from './popover-cell-editor.component';
       right: -3px;
       width: 7px;
       height: 7px;
-      background: var(--ogrid-selection, #217346);
+      background: var(--ogrid-selection-color, #217346);
       cursor: crosshair;
       touch-action: none;
       z-index: 2;

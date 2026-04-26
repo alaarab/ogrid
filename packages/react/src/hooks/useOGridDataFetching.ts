@@ -70,19 +70,28 @@ export function useOGridDataFetching<T>(params: UseOGridDataFetchingParams<T>): 
   const prevFiltersRef = useRef<IFilters | null>(null);
   const prevColumnsRef = useRef<ICoreColumnDef<T>[] | null>(null);
   const prevDataLengthRef = useRef(-1);
+  const prevSortFieldRef = useRef<string | null>(null);
+  const prevSortDirectionRef = useRef<'asc' | 'desc' | null>(null);
 
   // Detect when a full re-sort is needed.
+  // sort.field/direction are checked alongside sortVersion so controlled-sort
+  // changes (host swaps the `sort` prop without going through `setSort`) still
+  // invalidate the cached sorted indices.
   const needsResort =
     sortVersion !== prevSortVersionRef.current ||
     stableFilters !== prevFiltersRef.current ||
     columns !== prevColumnsRef.current ||
-    displayData.length !== prevDataLengthRef.current; // row count changed (add/remove)
+    displayData.length !== prevDataLengthRef.current ||
+    sort.field !== prevSortFieldRef.current ||
+    sort.direction !== prevSortDirectionRef.current;
 
   if (needsResort) {
     prevSortVersionRef.current = sortVersion;
     prevFiltersRef.current = stableFilters;
     prevColumnsRef.current = columns;
     prevDataLengthRef.current = displayData.length;
+    prevSortFieldRef.current = sort.field;
+    prevSortDirectionRef.current = sort.direction;
     sortedIndicesRef.current = null; // will be built in memo
   }
 
@@ -123,7 +132,7 @@ export function useOGridDataFetching<T>(params: UseOGridDataFetchingParams<T>): 
     return { items: paged, totalCount: total };
     // Note: sortVersion is implicitly tracked via needsResort / sortedIndicesRef.current === null
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isClientSide, useWorker, displayData, columns, stableFilters, sortVersion, page, pageSize]);
+  }, [isClientSide, useWorker, displayData, columns, stableFilters, sortVersion, sort.field, sort.direction, page, pageSize]);
 
   // --- Client-side filtering & sorting (async worker path) ---
   const [asyncItems, setAsyncItems] = useState<{ items: T[]; totalCount: number } | null>(null);
@@ -189,7 +198,7 @@ export function useOGridDataFetching<T>(params: UseOGridDataFetchingParams<T>): 
       setAsyncItems({ items: paged, totalCount: total });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isClientSide, useWorker, displayData, columns, stableFilters, sortVersion, page, pageSize]);
+  }, [isClientSide, useWorker, displayData, columns, stableFilters, sortVersion, sort.field, sort.direction, page, pageSize]);
 
   // --- Server-side data fetching ---
   const [serverItems, setServerItems] = useState<T[]>([]);

@@ -26,7 +26,7 @@ import { measureRange, injectGlobalStyles, type OverlayRect } from '@alaarab/ogr
           [attr.width]="max0(selRect()!.width - 2)"
           [attr.height]="max0(selRect()!.height - 2)"
           fill="none"
-          stroke="var(--ogrid-selection, #217346)"
+          stroke="var(--ogrid-selection-color, #217346)"
           stroke-width="2"
         />
       </svg>
@@ -45,7 +45,7 @@ import { measureRange, injectGlobalStyles, type OverlayRect } from '@alaarab/ogr
           [attr.width]="max0(clipRect()!.width - 2)"
           [attr.height]="max0(clipRect()!.height - 2)"
           fill="none"
-          stroke="var(--ogrid-selection, #217346)"
+          stroke="var(--ogrid-selection-color, #217346)"
           stroke-width="2"
           stroke-dasharray="4 4"
           style="animation: ogrid-marching-ants 0.5s linear infinite"
