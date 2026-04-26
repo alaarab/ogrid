@@ -1,269 +1,173 @@
-import { useState, useCallback, useRef, useEffect } from 'react';
-import type { RefObject } from 'react';
-import { normalizeSelectionRange } from '../types';
-import type { ISelectionRange, IActiveCell } from '../types';
-import type { IColumnDef, ICellValueChangedEvent } from '../types/columnTypes';
-import { applyFillValues, buildCellIndex, cellIndexKey } from '../utils';
-import type { IFillFormulaOptions } from '../utils';
-import { useLatestRef } from './useLatestRef';
+/**
+ * useFillHandle — headless Excel-style drag-to-fill for OGrid.
+ *
+ * Pairs with `useRangeSelection`. The user starts a fill by grabbing the
+ * fill-handle at the bottom-right of the current range, then drags toward
+ * a target cell. On commit, every cell from the source range to the target
+ * gets the source value(s) — Excel/Sheets semantics, including type
+ * compatibility checks (won't fill text into a date column, etc).
+ *
+ * Smart-fill behavior comes from `applyFillValues` in `@alaarab/ogrid-core`,
+ * which produces a list of `ICellValueChangedEvent` objects. The consumer
+ * wires `onFillCells` to apply those events to their data store.
+ *
+ * Example:
+ *
+ *   const range = useRangeSelection({ rowCount: rows.length, colCount: columns.length });
+ *   const fill = useFillHandle({
+ *     rangeSelection: range,
+ *     rows,
+ *     columns,
+ *     onFillCells: (events) => events.forEach(applyOneEdit),
+ *   });
+ *
+ *   // The fill-handle dot, rendered at the bottom-right of the active range:
+ *   <div onMouseDown={fill.startFill} />
+ *
+ *   // While dragging, on each cell:
+ *   <td
+ *     onMouseEnter={() => fill.isFilling && fill.updateFill(rowIdx, colIdx)}
+ *     onMouseUp={fill.commitFill}
+ *     style={{ outline: fill.isInFillRange(rowIdx, colIdx) ? '1px dashed' : undefined }}
+ *   />
+ */
+
+import { useCallback, useMemo, useState } from 'react';
+import {
+  applyFillValues,
+  isInSelectionRange,
+  normalizeSelectionRange,
+} from '@alaarab/ogrid-core';
+import type {
+  IColumnDef as ICoreColumnDef,
+  ISelectionRange,
+  ICellValueChangedEvent,
+} from '@alaarab/ogrid-core';
+import type {
+  CellCoord,
+  UseRangeSelectionResult,
+} from './useRangeSelection';
 
 export interface UseFillHandleParams<T> {
-  items: T[];
-  visibleCols: IColumnDef<T>[];
-  editable?: boolean;
-  onCellValueChanged?: (event: ICellValueChangedEvent<T>) => void;
-  selectionRange: ISelectionRange | null;
-  setSelectionRange: (range: ISelectionRange | null) => void;
-  setActiveCell: (cell: IActiveCell | null) => void;
-  colOffset: number;
-  wrapperRef: RefObject<HTMLDivElement | null>;
-  beginBatch?: () => void;
-  endBatch?: () => void;
-  /** Optional formula-aware fill options. When provided, cells with formulas adjust references during fill. */
-  formulaOptions?: IFillFormulaOptions<T>;
+  /** Current range selection — fill always extends from this range. */
+  rangeSelection: UseRangeSelectionResult;
+  /** Rows currently rendered (post-filter, post-page). */
+  rows: T[];
+  /** Visible columns the user can fill across. */
+  columns: ICoreColumnDef<T>[];
+  /**
+   * Called with cell-change events when the fill commits. Apply each event
+   * to your data store (typically by updating the row at `rowIndex` with
+   * `columnId: newValue`).
+   */
+  onFillCells: (events: ICellValueChangedEvent<T>[]) => void;
 }
 
 export interface UseFillHandleResult {
-  fillDrag: { startRow: number; startCol: number } | null;
-  setFillDrag: (value: { startRow: number; startCol: number } | null) => void;
-  handleFillHandleMouseDown: (e: React.MouseEvent) => void;
-  /** Fill the current selection down from the top row (Ctrl+D). No-op if no selection or editable=false. */
-  fillDown: () => void;
+  /** The cell the user is currently dragging the fill handle toward, or null. */
+  fillTarget: CellCoord | null;
+  /** True while a fill drag is in progress. */
+  isFilling: boolean;
+  /** Begin a fill from the current range's bottom-right cell. No-op if no range. */
+  startFill: () => void;
+  /** Update the current fill target as the user drags. No-op if not filling. */
+  updateFill: (row: number, col: number) => void;
+  /** Commit the fill — calls `onFillCells` with the resulting events. */
+  commitFill: () => void;
+  /** Cancel without committing. */
+  cancelFill: () => void;
+  /** The full fill range (source range + target extension). Use for highlight rendering. */
+  fillRange: ISelectionRange | null;
+  /** True if (row, col) is inside the active fill range. */
+  isInFillRange: (row: number, col: number) => boolean;
 }
 
-/** DOM attribute name for fill-drag range highlighting (same as cell selection drag). */
-const DRAG_ATTR = 'data-drag-range';
-
 /**
- * Manages Excel-style fill handle drag-to-fill for cell ranges.
- * @param params - Items, columns, selection range, editability, and value change callback.
- * @returns Fill drag state, setter, and mousedown handler for the fill handle.
+ * Headless drag-to-fill hook.
+ *
+ * Tracks the fill-target cell and computes the extended range during a
+ * drag. On commit, calls `applyFillValues` from core to produce cell-change
+ * events, then hands those to the consumer's `onFillCells`.
  */
-export function useFillHandle<T>(params: UseFillHandleParams<T>): UseFillHandleResult {
-  const {
-    items,
-    visibleCols,
-    editable,
-    onCellValueChanged: onCellValueChangedProp,
-    selectionRange,
-    setSelectionRange,
-    setActiveCell,
-    colOffset,
-    wrapperRef,
-    beginBatch,
-    endBatch,
-    formulaOptions,
-  } = params;
+export function useFillHandle<T>(
+  params: UseFillHandleParams<T>,
+): UseFillHandleResult {
+  const { rangeSelection, rows, columns, onFillCells } = params;
 
-  const onCellValueChangedRef = useLatestRef(onCellValueChangedProp);
-  const [fillDrag, setFillDrag] = useState<{ startRow: number; startCol: number } | null>(null);
-  const fillDragEndRef = useRef<{ endRow: number; endCol: number }>({ endRow: 0, endCol: 0 });
-  const rafRef = useRef(0);
-  const liveFillRangeRef = useRef<ISelectionRange | null>(null);
-  const colOffsetRef = useLatestRef(colOffset);
-  const itemsRef = useLatestRef(items);
-  const visibleColsRef = useLatestRef(visibleCols);
-  const formulaOptionsRef = useLatestRef(formulaOptions);
+  const [fillTarget, setFillTarget] = useState<CellCoord | null>(null);
 
-  useEffect(() => {
-    if (!fillDrag || editable === false || !onCellValueChangedRef.current || !wrapperRef.current) return;
-    fillDragEndRef.current = { endRow: fillDrag.startRow, endCol: fillDrag.startCol };
-    liveFillRangeRef.current = null;
+  const isFilling = fillTarget !== null;
 
-    /** Set of currently drag-marked HTMLElements  -  avoids O(n) full DOM scan on clear. */
-    const markedCells = new Set<Element>();
+  const sourceRange = rangeSelection.range;
 
-    /** Cell lookup index built on drag start  -  O(1) lookups per frame. */
-    let cellIndex = buildCellIndex(wrapperRef.current);
+  // Extend the source range to include the fill target.
+  const fillRange = useMemo<ISelectionRange | null>(() => {
+    if (!sourceRange) return null;
+    if (!fillTarget) return sourceRange;
+    return normalizeSelectionRange({
+      startRow: Math.min(sourceRange.startRow, fillTarget.row),
+      startCol: Math.min(sourceRange.startCol, fillTarget.col),
+      endRow: Math.max(sourceRange.endRow, fillTarget.row),
+      endCol: Math.max(sourceRange.endCol, fillTarget.col),
+    });
+  }, [sourceRange, fillTarget]);
 
-    const applyDragAttrs = (range: ISelectionRange) => {
-      const wrapper = wrapperRef.current;
-      if (!wrapper) return;
-      const minR = Math.min(range.startRow, range.endRow);
-      const maxR = Math.max(range.startRow, range.endRow);
-      const minC = Math.min(range.startCol, range.endCol);
-      const maxC = Math.max(range.startCol, range.endCol);
-      const colOff = colOffsetRef.current;
-
-      // Un-mark cells no longer in range
-      for (const el of markedCells) {
-        const r = parseInt(el.getAttribute('data-row-index') ?? '', 10);
-        const c = parseInt(el.getAttribute('data-col-index') ?? '', 10) - colOff;
-        if (!(r >= minR && r <= maxR && c >= minC && c <= maxC)) {
-          el.removeAttribute(DRAG_ATTR);
-          markedCells.delete(el);
-        }
-      }
-
-      // Look up only cells in the new range  -  O(range size) via Map lookup
-      for (let r = minR; r <= maxR; r++) {
-        for (let c = minC; c <= maxC; c++) {
-          const key = cellIndexKey(r, c + colOff);
-          let el = cellIndex?.get(key);
-          // Handle virtual scroll recycling  -  if element is stale, rebuild index once
-          if (el && !el.isConnected) {
-            cellIndex = buildCellIndex(wrapperRef.current);
-            el = cellIndex.get(key);
-          }
-          if (el) {
-            if (!el.hasAttribute(DRAG_ATTR)) el.setAttribute(DRAG_ATTR, '');
-            markedCells.add(el);
-          }
-        }
-      }
-    };
-
-    const clearDragAttrs = () => {
-      for (const el of markedCells) {
-        el.removeAttribute(DRAG_ATTR);
-      }
-      markedCells.clear();
-    };
-
-    let lastFillMousePos: { cx: number; cy: number } | null = null;
-
-    const resolveRange = (cx: number, cy: number): ISelectionRange | null => {
-      const target = document.elementFromPoint(cx, cy) as HTMLElement | null;
-      const cell = target?.closest?.('[data-row-index][data-col-index]');
-      if (!cell || !wrapperRef.current?.contains(cell)) return null;
-      const r = parseInt(cell.getAttribute('data-row-index') ?? '', 10);
-      const c = parseInt(cell.getAttribute('data-col-index') ?? '', 10);
-      if (Number.isNaN(r) || Number.isNaN(c) || c < colOffsetRef.current) return null;
-      const dataCol = c - colOffsetRef.current;
-      return normalizeSelectionRange({
-        startRow: fillDrag.startRow,
-        startCol: fillDrag.startCol,
-        endRow: r,
-        endCol: dataCol,
-      });
-    };
-
-    const onMove = (e: PointerEvent) => {
-      lastFillMousePos = { cx: e.clientX, cy: e.clientY };
-      if (rafRef.current) cancelAnimationFrame(rafRef.current);
-
-      rafRef.current = requestAnimationFrame(() => {
-        rafRef.current = 0;
-        if (!lastFillMousePos) return;
-        const newRange = resolveRange(lastFillMousePos.cx, lastFillMousePos.cy);
-        if (!newRange) return;
-
-        // Skip if unchanged
-        const prev = liveFillRangeRef.current;
-        if (
-          prev &&
-          prev.startRow === newRange.startRow &&
-          prev.startCol === newRange.startCol &&
-          prev.endRow === newRange.endRow &&
-          prev.endCol === newRange.endCol
-        ) {
-          return;
-        }
-
-        liveFillRangeRef.current = newRange;
-        fillDragEndRef.current = { endRow: newRange.endRow, endCol: newRange.endCol };
-        applyDragAttrs(newRange);
-      });
-    };
-
-    const onUp = () => {
-      if (rafRef.current) {
-        cancelAnimationFrame(rafRef.current);
-        rafRef.current = 0;
-      }
-
-      // Flush: resolve final position if RAF hasn't executed yet
-      if (lastFillMousePos) {
-        const flushed = resolveRange(lastFillMousePos.cx, lastFillMousePos.cy);
-        if (flushed) {
-          liveFillRangeRef.current = flushed;
-          fillDragEndRef.current = { endRow: flushed.endRow, endCol: flushed.endCol };
-        }
-      }
-
-      clearDragAttrs();
-
-      const end = fillDragEndRef.current;
-      const norm = normalizeSelectionRange({
-        startRow: fillDrag.startRow,
-        startCol: fillDrag.startCol,
-        endRow: end.endRow,
-        endCol: end.endCol,
-      });
-
-      // Commit range to React state
-      setSelectionRange(norm);
-      setActiveCell({ rowIndex: fillDrag.startRow, columnIndex: fillDrag.startCol + colOffsetRef.current });
-
-      // Apply fill values
-      const fillEvents = applyFillValues(norm, fillDrag.startRow, fillDrag.startCol, items, visibleCols, formulaOptionsRef.current);
-      if (fillEvents.length > 0) {
-        beginBatch?.();
-        for (const evt of fillEvents) onCellValueChangedRef.current?.(evt);
-        endBatch?.();
-      }
-      setFillDrag(null);
-      liveFillRangeRef.current = null;
-    };
-
-    window.addEventListener('pointermove', onMove, true);
-    window.addEventListener('pointerup', onUp, true);
-    return () => {
-      window.removeEventListener('pointermove', onMove, true);
-      window.removeEventListener('pointerup', onUp, true);
-      if (rafRef.current) cancelAnimationFrame(rafRef.current);
-    };
-  }, [
-    fillDrag,
-    editable,
-    items,
-    visibleCols,
-    setSelectionRange,
-    setActiveCell,
-    beginBatch,
-    endBatch,
-    colOffsetRef,
-    wrapperRef,
-    onCellValueChangedRef,
-    formulaOptionsRef,
-  ]);
-
-  // Ref mirror  -  keeps handleFillHandleMouseDown stable across selection changes
-  const selectionRangeRef = useRef(selectionRange);
-  selectionRangeRef.current = selectionRange;
-
-  const handleFillHandleMouseDown = useCallback(
-    (e: React.MouseEvent) => {
-      e.preventDefault();
-      e.stopPropagation();
-      const range = selectionRangeRef.current;
-      if (!range) return;
-      setFillDrag({
-        startRow: range.startRow,
-        startCol: range.startCol,
-      });
+  const isInFillRange = useCallback(
+    (row: number, col: number): boolean => {
+      if (!fillRange) return false;
+      return isInSelectionRange(fillRange, row, col);
     },
-    []
+    [fillRange],
   );
 
-  const fillDown = useCallback(() => {
-    const range = selectionRangeRef.current;
-    if (!range || editable === false || !onCellValueChangedRef.current) return;
-    const norm = normalizeSelectionRange(range);
-    const fillEvents = applyFillValues(
-      norm,
-      norm.startRow,
-      norm.startCol,
-      itemsRef.current,
-      visibleColsRef.current,
-      formulaOptionsRef.current
-    );
-    if (fillEvents.length > 0) {
-      beginBatch?.();
-      for (const evt of fillEvents) onCellValueChangedRef.current(evt);
-      endBatch?.();
-    }
-  }, [editable, beginBatch, endBatch, onCellValueChangedRef, itemsRef, visibleColsRef, formulaOptionsRef]);
+  const startFill = useCallback(() => {
+    if (!sourceRange) return;
+    setFillTarget({ row: sourceRange.endRow, col: sourceRange.endCol });
+  }, [sourceRange]);
 
-  return { fillDrag, setFillDrag, handleFillHandleMouseDown, fillDown };
+  const updateFill = useCallback((row: number, col: number) => {
+    setFillTarget((prev) => (prev === null ? prev : { row, col }));
+  }, []);
+
+  const cancelFill = useCallback(() => {
+    setFillTarget(null);
+  }, []);
+
+  const commitFill = useCallback(() => {
+    if (!sourceRange || !fillRange) {
+      setFillTarget(null);
+      return;
+    }
+    // No extension — user released without dragging beyond the source range.
+    if (
+      fillRange.startRow === sourceRange.startRow &&
+      fillRange.startCol === sourceRange.startCol &&
+      fillRange.endRow === sourceRange.endRow &&
+      fillRange.endCol === sourceRange.endCol
+    ) {
+      setFillTarget(null);
+      return;
+    }
+
+    const events = applyFillValues(
+      fillRange,
+      sourceRange.startRow,
+      sourceRange.startCol,
+      rows,
+      columns,
+    );
+    if (events.length > 0) onFillCells(events);
+    setFillTarget(null);
+  }, [sourceRange, fillRange, rows, columns, onFillCells]);
+
+  return {
+    fillTarget,
+    isFilling,
+    startFill,
+    updateFill,
+    commitFill,
+    cancelFill,
+    fillRange,
+    isInFillRange,
+  };
 }

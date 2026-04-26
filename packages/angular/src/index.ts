@@ -283,6 +283,34 @@ export type {
   SortState as HeadlessGridSortState,
   SignalLike as HeadlessGridSignalLike,
 } from './services/headless-grid';
+export { createInlineEdit } from './services/inline-edit';
+export type {
+  CreateInlineEditParams,
+  InlineEditResult,
+  InlineEditEvent,
+  InlineEditorProps,
+} from './services/inline-edit';
+export { createRangeSelection } from './services/range-selection';
+export type {
+  CreateRangeSelectionParams,
+  RangeSelectionResult,
+  CellCoord,
+} from './services/range-selection';
+export { createFillHandle } from './services/fill-handle';
+export type {
+  CreateFillHandleParams,
+  FillHandleResult,
+} from './services/fill-handle';
+export { createCellClipboard } from './services/cell-clipboard';
+export type {
+  CreateCellClipboardParams,
+  CellClipboardResult,
+} from './services/cell-clipboard';
+export { createGridFocus } from './services/grid-focus';
+export type {
+  CreateGridFocusParams,
+  GridFocusResult,
+} from './services/grid-focus';
 
 // Components
 export { OGridLayoutComponent } from './components/ogrid-layout.component';

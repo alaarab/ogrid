@@ -1,179 +1,167 @@
 import { renderHook, act } from '@testing-library/react';
 import { useFillHandle } from '../useFillHandle';
+import { useRangeSelection } from '../useRangeSelection';
+import type { IColumnDef, ICellValueChangedEvent } from '@alaarab/ogrid-core';
+
+type Row = { id: string; a: number; b: number; name: string };
+
+const makeRows = (): Row[] => [
+  { id: '1', a: 10, b: 100, name: 'one' },
+  { id: '2', a: 20, b: 200, name: 'two' },
+  { id: '3', a: 30, b: 300, name: 'three' },
+  { id: '4', a: 40, b: 400, name: 'four' },
+];
+
+const columns: IColumnDef<Row>[] = [
+  { columnId: 'a', name: 'A', type: 'numeric', editable: true },
+  { columnId: 'b', name: 'B', type: 'numeric', editable: true },
+  { columnId: 'name', name: 'Name', type: 'text', editable: true },
+];
+
+function setup() {
+  const events: ICellValueChangedEvent<Row>[] = [];
+  const rows = makeRows();
+  const { result: rangeResult } = renderHook(() =>
+    useRangeSelection({ rowCount: rows.length, colCount: columns.length }),
+  );
+  const { result: fillResult, rerender } = renderHook(
+    ({ range }) =>
+      useFillHandle<Row>({
+        rangeSelection: range,
+        rows,
+        columns,
+        onFillCells: (e) => events.push(...e),
+      }),
+    { initialProps: { range: rangeResult.current } },
+  );
+  return { rangeResult, fillResult, events, rerender, rows };
+}
 
 describe('useFillHandle', () => {
-  const createParams = (overrides = {}) => ({
-    items: [{ id: '1', name: 'A' }, { id: '2', name: 'B' }],
-    visibleCols: [{ columnId: 'name', name: 'Name' }],
-    onCellValueChanged: jest.fn(),
-    selectionRange: { startRow: 0, startCol: 0, endRow: 0, endCol: 0 },
-    setSelectionRange: jest.fn(),
-    setActiveCell: jest.fn(),
-    colOffset: 0,
-    wrapperRef: { current: document.createElement('div') },
-    ...overrides,
+  it('starts inactive', () => {
+    const { fillResult } = setup();
+    expect(fillResult.current.isFilling).toBe(false);
+    expect(fillResult.current.fillTarget).toBeNull();
+    expect(fillResult.current.fillRange).toBeNull();
   });
 
-  it('returns fillDrag, setFillDrag, and handleFillHandleMouseDown', () => {
-    const params = createParams();
-    const { result } = renderHook(() => useFillHandle(params));
-    expect(result.current.fillDrag).toBeNull();
-    expect(typeof result.current.setFillDrag).toBe('function');
-    expect(typeof result.current.handleFillHandleMouseDown).toBe('function');
+  it('startFill is a no-op without a source range', () => {
+    const { fillResult } = setup();
+    act(() => fillResult.current.startFill());
+    expect(fillResult.current.isFilling).toBe(false);
   });
 
-  it('handleFillHandleMouseDown does nothing when selectionRange is null', () => {
-    const params = createParams({ selectionRange: null });
-    const { result } = renderHook(() => useFillHandle(params));
-    const e = { preventDefault: jest.fn(), stopPropagation: jest.fn() } as unknown as React.MouseEvent;
-    act(() => {
-      result.current.handleFillHandleMouseDown(e);
+  it('startFill anchors the fill target at the source range end', () => {
+    const { rangeResult, fillResult, rerender } = setup();
+    act(() => rangeResult.current.startRange(1, 0));
+    rerender({ range: rangeResult.current });
+
+    act(() => fillResult.current.startFill());
+    expect(fillResult.current.isFilling).toBe(true);
+    expect(fillResult.current.fillTarget).toEqual({ row: 1, col: 0 });
+  });
+
+  it('updateFill extends the range as the user drags', () => {
+    const { rangeResult, fillResult, rerender } = setup();
+    act(() => rangeResult.current.startRange(1, 0));
+    rerender({ range: rangeResult.current });
+    act(() => fillResult.current.startFill());
+
+    act(() => fillResult.current.updateFill(3, 0));
+    expect(fillResult.current.fillTarget).toEqual({ row: 3, col: 0 });
+    expect(fillResult.current.fillRange).toEqual({
+      startRow: 1,
+      startCol: 0,
+      endRow: 3,
+      endCol: 0,
     });
-    expect(e.preventDefault).toHaveBeenCalled();
-    expect(e.stopPropagation).toHaveBeenCalled();
-    expect(result.current.fillDrag).toBeNull();
   });
 
-  it('handleFillHandleMouseDown sets fillDrag when selectionRange is set', () => {
-    const params = createParams();
-    const { result } = renderHook(() => useFillHandle(params));
-    const e = { preventDefault: jest.fn(), stopPropagation: jest.fn() } as unknown as React.MouseEvent;
-    act(() => {
-      result.current.handleFillHandleMouseDown(e);
-    });
-    expect(result.current.fillDrag).toEqual({ startRow: 0, startCol: 0 });
-  });
-});
+  it('isInFillRange highlights cells within the extended range', () => {
+    const { rangeResult, fillResult, rerender } = setup();
+    act(() => rangeResult.current.startRange(0, 0));
+    rerender({ range: rangeResult.current });
+    act(() => fillResult.current.startFill());
+    act(() => fillResult.current.updateFill(2, 0));
 
-// ---------------------------------------------------------------------------
-// fillDown (Ctrl+D) tests
-// ---------------------------------------------------------------------------
-
-describe('useFillHandle  -  fillDown (Ctrl+D)', () => {
-  type Item = { id: string; name: string };
-  const items: Item[] = [
-    { id: '1', name: 'Alice' },
-    { id: '2', name: 'Bob' },
-    { id: '3', name: 'Charlie' },
-  ];
-  const visibleCols = [{ columnId: 'name', name: 'Name', editable: true }] as import('../../types').IColumnDef<Item>[];
-
-  const createFillDownParams = (overrides: Record<string, unknown> = {}) => ({
-    items,
-    visibleCols,
-    editable: true,
-    onCellValueChanged: jest.fn(),
-    selectionRange: { startRow: 0, startCol: 0, endRow: 2, endCol: 0 },
-    setSelectionRange: jest.fn(),
-    setActiveCell: jest.fn(),
-    colOffset: 0,
-    wrapperRef: { current: document.createElement('div') },
-    ...overrides,
+    expect(fillResult.current.isInFillRange(0, 0)).toBe(true);
+    expect(fillResult.current.isInFillRange(1, 0)).toBe(true);
+    expect(fillResult.current.isInFillRange(2, 0)).toBe(true);
+    expect(fillResult.current.isInFillRange(3, 0)).toBe(false); // beyond
+    expect(fillResult.current.isInFillRange(0, 1)).toBe(false); // wrong col
   });
 
-  it('returns a fillDown function', () => {
-    const params = createFillDownParams();
-    const { result } = renderHook(() => useFillHandle(params));
-    expect(typeof result.current.fillDown).toBe('function');
+  it('commitFill emits onFillCells events covering filled rows', () => {
+    const { rangeResult, fillResult, rerender, events } = setup();
+    // Source: row 0 col 0 (value 10). Drag down to row 2.
+    act(() => rangeResult.current.startRange(0, 0));
+    rerender({ range: rangeResult.current });
+    act(() => fillResult.current.startFill());
+    act(() => fillResult.current.updateFill(2, 0));
+    act(() => fillResult.current.commitFill());
+
+    // Filled rows 1 and 2 with value 10 (the source).
+    expect(events.length).toBe(2);
+    expect(events[0].rowIndex).toBe(1);
+    expect(events[0].columnId).toBe('a');
+    expect(events[0].newValue).toBe(10);
+    expect(events[1].rowIndex).toBe(2);
+    expect(events[1].newValue).toBe(10);
+    expect(fillResult.current.isFilling).toBe(false);
   });
 
-  it('fillDown calls onCellValueChanged for rows below the top row in selection', () => {
-    const onCellValueChanged = jest.fn();
-    const params = createFillDownParams({ onCellValueChanged });
-    const { result } = renderHook(() => useFillHandle(params));
+  it('commitFill is a no-op when fillRange equals sourceRange', () => {
+    const { rangeResult, fillResult, rerender, events } = setup();
+    act(() => rangeResult.current.startRange(0, 0));
+    rerender({ range: rangeResult.current });
+    act(() => fillResult.current.startFill());
+    // No updateFill — release without dragging.
+    act(() => fillResult.current.commitFill());
 
-    act(() => {
-      result.current.fillDown();
-    });
-
-    // Rows 1 and 2 should be filled with "Alice" (value from row 0)
-    expect(onCellValueChanged).toHaveBeenCalledWith(
-      expect.objectContaining({ columnId: 'name', newValue: 'Alice' })
-    );
-    // Should be called for rows 1 and 2 only (row 0 is the source)
-    expect(onCellValueChanged).toHaveBeenCalledTimes(2);
+    expect(events.length).toBe(0);
+    expect(fillResult.current.isFilling).toBe(false);
   });
 
-  it('fillDown is a no-op when editable is false', () => {
-    const onCellValueChanged = jest.fn();
-    const params = createFillDownParams({ editable: false, onCellValueChanged });
-    const { result } = renderHook(() => useFillHandle(params));
+  it('cancelFill clears state without firing onFillCells', () => {
+    const { rangeResult, fillResult, rerender, events } = setup();
+    act(() => rangeResult.current.startRange(0, 0));
+    rerender({ range: rangeResult.current });
+    act(() => fillResult.current.startFill());
+    act(() => fillResult.current.updateFill(2, 0));
+    act(() => fillResult.current.cancelFill());
 
-    act(() => {
-      result.current.fillDown();
-    });
-
-    expect(onCellValueChanged).not.toHaveBeenCalled();
+    expect(fillResult.current.isFilling).toBe(false);
+    expect(events.length).toBe(0);
   });
 
-  it('fillDown is a no-op when selectionRange is null', () => {
-    const onCellValueChanged = jest.fn();
-    const params = createFillDownParams({ selectionRange: null, onCellValueChanged });
-    const { result } = renderHook(() => useFillHandle(params));
+  it('fills horizontally across compatible columns', () => {
+    const { rangeResult, fillResult, rerender, events } = setup();
+    // Source: row 0 col 0 (a=10). Drag right to col 1.
+    act(() => rangeResult.current.startRange(0, 0));
+    rerender({ range: rangeResult.current });
+    act(() => fillResult.current.startFill());
+    act(() => fillResult.current.updateFill(0, 1));
+    act(() => fillResult.current.commitFill());
 
-    act(() => {
-      result.current.fillDown();
-    });
-
-    expect(onCellValueChanged).not.toHaveBeenCalled();
+    // a (numeric) → b (numeric) = compatible.
+    expect(events.length).toBe(1);
+    expect(events[0].columnId).toBe('b');
+    expect(events[0].newValue).toBe(10);
   });
 
-  it('fillDown is a no-op when onCellValueChanged is not provided', () => {
-    const params = createFillDownParams({ onCellValueChanged: undefined });
-    const { result } = renderHook(() => useFillHandle(params));
+  it('skips incompatible columns (numeric → text)', () => {
+    const { rangeResult, fillResult, rerender, events } = setup();
+    // Source: row 0 col 0 (numeric). Drag right to col 2 (text).
+    act(() => rangeResult.current.startRange(0, 0));
+    rerender({ range: rangeResult.current });
+    act(() => fillResult.current.startFill());
+    act(() => fillResult.current.updateFill(0, 2));
+    act(() => fillResult.current.commitFill());
 
-    // Should not throw
-    expect(() => {
-      act(() => {
-        result.current.fillDown();
-      });
-    }).not.toThrow();
-  });
-
-  it('fillDown is a no-op for single-row selection (nothing to fill)', () => {
-    const onCellValueChanged = jest.fn();
-    const params = createFillDownParams({
-      selectionRange: { startRow: 1, startCol: 0, endRow: 1, endCol: 0 },
-      onCellValueChanged,
-    });
-    const { result } = renderHook(() => useFillHandle(params));
-
-    act(() => {
-      result.current.fillDown();
-    });
-
-    expect(onCellValueChanged).not.toHaveBeenCalled();
-  });
-
-  it('fillDown calls beginBatch and endBatch when batch functions are provided', () => {
-    const onCellValueChanged = jest.fn();
-    const beginBatch = jest.fn();
-    const endBatch = jest.fn();
-    const params = createFillDownParams({ onCellValueChanged, beginBatch, endBatch });
-    const { result } = renderHook(() => useFillHandle(params));
-
-    act(() => {
-      result.current.fillDown();
-    });
-
-    expect(beginBatch).toHaveBeenCalledTimes(1);
-    expect(endBatch).toHaveBeenCalledTimes(1);
-  });
-
-  it('fillDown handles reversed selection (endRow < startRow) by normalizing', () => {
-    const onCellValueChanged = jest.fn();
-    // Selection from row 2 up to row 0 (reversed)  -  should still fill rows 1,2 with row 0's value
-    const params = createFillDownParams({
-      selectionRange: { startRow: 2, startCol: 0, endRow: 0, endCol: 0 },
-      onCellValueChanged,
-    });
-    const { result } = renderHook(() => useFillHandle(params));
-
-    act(() => {
-      result.current.fillDown();
-    });
-
-    // normalizeSelectionRange makes startRow=0, endRow=2  -  same as forward selection
-    expect(onCellValueChanged).toHaveBeenCalledTimes(2);
+    // b (numeric) is compatible, name (text) is not.
+    expect(events.length).toBe(1);
+    expect(events[0].columnId).toBe('b');
+    // No event for name column.
+    expect(events.find((e) => e.columnId === 'name')).toBeUndefined();
   });
 });

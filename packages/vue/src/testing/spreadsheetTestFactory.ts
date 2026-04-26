@@ -13,7 +13,7 @@ import { useContextMenu } from '../composables/useContextMenu';
 import { useKeyboardNavigation } from '../composables/useKeyboardNavigation';
 import { useUndoRedo } from '../composables/useUndoRedo';
 import { useRowSelection } from '../composables/useRowSelection';
-import { useFillHandle } from '../composables/useFillHandle';
+import { useFillHandleInternal as useFillHandle } from '../composables/useFillHandleInternal';
 import type { IColumnDef, ICellValueChangedEvent } from '../types';
 import { fixtureRows, getRowId, type FixtureRow } from './fixtures';
 

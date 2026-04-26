@@ -6,7 +6,7 @@ import { formatCellReference } from '../utils';
 import { useCellSelection } from './useCellSelection';
 import { useClipboard } from './useClipboard';
 import { useKeyboardNavigation } from './useKeyboardNavigation';
-import { useFillHandle } from './useFillHandle';
+import { useFillHandleInternal } from './useFillHandleInternal';
 import { useUndoRedo } from './useUndoRedo';
 import { useLatestRef } from './useLatestRef';
 import type { DataGridCellInteractionState } from './useDataGridState';
@@ -212,7 +212,7 @@ export function useDataGridInteraction<T>(
     return { flatColumns, getFormula, hasFormula, setFormula };
   }, [formulas, flatColumns, getFormula, hasFormula, setFormula]);
 
-  const { handleFillHandleMouseDown, fillDown } = useFillHandle({
+  const { handleFillHandleMouseDown, fillDown } = useFillHandleInternal({
     items,
     visibleCols,
     editable,

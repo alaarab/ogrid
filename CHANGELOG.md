@@ -2,6 +2,80 @@
 
 All notable changes to OGrid will be documented in this file.
 
+## [2.9.0] - 2026-04-26
+
+The "spreadsheet behavior on any table chrome" release. Six headless hooks
+combine to give shadcn / Material / Fluent / your-own-table consumers the
+same inline edit, range select, fill handle, copy/paste, undo, and keyboard
+nav that the built-in `<OGrid>` ships. All additive — `<OGrid>` keeps working
+unchanged.
+
+### Added — headless spreadsheet hooks
+
+Six new hooks in React, with mirrored API surfaces in Vue (composable) and
+Angular (signal-based factory):
+
+- **`useInlineEdit`** / **`createInlineEdit`** — start/commit/cancel cell
+  editing. Honors column `editable` (boolean or per-row predicate) and
+  `valueParser` validation. Returns `getEditorProps` for spreading onto your
+  input element (Enter commits, Escape cancels).
+- **`useRangeSelection`** / **`createRangeSelection`** — Excel-style anchor +
+  focus range. `isInRange`, `extendRange`, `selectAll`, `getRangeRows`,
+  `getRangeCells`. Foundation for fill and clipboard.
+- **`useFillHandle`** / **`createFillHandle`** — drag-to-fill. Type-compatible
+  fill via core's `applyFillValues`. Numeric series, date series, and
+  copy-string semantics out of the box.
+- **`useCellClipboard`** / **`createCellClipboard`** — TSV copy/cut/paste
+  round-trippable through Excel and Google Sheets. Honors `clipboardFormatter`
+  for copy and `valueParser` for paste validation.
+- **`useUndoRedo`** / **`createUndoRedo`** — wraps your `onCellEdit` with an
+  undo/redo history stack. Pair with `useInlineEdit` / `useFillHandle` /
+  `useCellClipboard` for spreadsheet-style undo across all of them.
+- **`useGridFocus`** / **`createGridFocus`** — keyboard navigation. Arrow,
+  Tab, Enter, Home, End, PageUp, PageDown, with Shift+Arrow extending the
+  range when paired with `useRangeSelection`.
+
+```tsx
+// React example — combine all six on a plain shadcn-style table:
+const grid = useHeadlessGrid({ columns, data, getRowId: (r) => r.id });
+const range = useRangeSelection({ rowCount: grid.rows.length, colCount: grid.columns.length });
+const undo = useUndoRedo({ onCellValueChanged: applyEdit });
+const edit = useInlineEdit({ columns, getRowId: (r) => r.id, onCellEdit: undo.onCellValueChanged });
+const fill = useFillHandle({ rangeSelection: range, rows: grid.rows, columns, onFillCells });
+const clipboard = useCellClipboard({ rangeSelection: range, rows: grid.rows, columns, onCellEdit });
+const focus = useGridFocus({ rowCount: grid.rows.length, colCount: grid.columns.length, rangeSelection: range });
+```
+
+See the [`SpreadsheetDemo` Storybook story](packages/react-radix/src/OGrid/SpreadsheetDemo.stories.tsx)
+for ~200 lines of full integration code, copy-pasteable as a starter template.
+
+### Added — tooling + quality
+
+- `sync:theme:check` runs in CI on every push. Theme drift across core
+  SCSS / Vue CSS / JS CSS now fails the build instead of silently shipping.
+- `publish.yml` no longer fails when versions were pre-bumped locally —
+  the "Create git tag" step skips the no-op commit and tolerates re-runs.
+
+### Changed (non-breaking)
+
+- React's existing chrome-coupled `useFillHandle` is renamed to
+  `useFillHandleInternal`. The public `useFillHandle` name now resolves to
+  the new headless hook. Same for Vue. Internal consumers of the chrome
+  primitive update automatically; nobody outside OGrid was using it.
+
+### Server-side parity for headless hooks
+
+- React `useHeadlessGrid` supports `dataSource` (server-side mode), worker
+  sort, and Excel-like sortVersion tracking — feature-parity with `<OGrid>`.
+- Vue and Angular `useHeadlessGrid` are still client-side-only in 2.9.0;
+  server-side parity for those frameworks lands in 2.9.x.
+
+### Deferred (post-2.9.0)
+
+- Vue + Angular Storybook combo demos (React combo is the canonical demo).
+- Dedicated docs-site `/spreadsheet-hooks` section.
+- Arc consumer page migrations as case study (planned as a follow-up PR).
+
 ## [2.8.1] - 2026-04-26
 
 The "make OGrid feel modern + go headless" release. Everything is additive on the API side — existing apps keep working without changes; opt into the new bits as you go. A handful of visual defaults shift (primary color, radius) but consumers using the shadcn preset or their own theme overrides won't notice.
