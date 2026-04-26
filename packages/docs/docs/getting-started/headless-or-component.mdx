@@ -1,0 +1,124 @@
+---
+sidebar_position: 5
+title: Headless or component?
+description: When to use the <OGrid> drop-in component vs the headless useHeadlessGrid hooks
+---
+
+# Headless or component?
+
+OGrid ships **two equally-supported entry points**. Both are first-class.
+Both are MIT. Both expose the same spreadsheet features. Pick the one that
+fits the page you're building — you can mix them in the same app.
+
+| | `<OGrid>` component | `useHeadlessGrid` + spreadsheet hooks |
+|---|---|---|
+| **What you write** | One JSX element | A handful of hook calls + your own `<table>` markup |
+| **Time to first working grid** | ~5 lines | ~50-100 lines |
+| **Customization ceiling** | High (theme tokens, slots) | Unlimited (you draw the chrome) |
+| **Design-system fit** | Inherits via theme presets (shadcn, Fluent, Material) | Native — uses your chrome primitives directly |
+| **Spreadsheet features** | Built-in | Composable from hooks |
+| **Best for** | Standard list pages, admin tables, dashboards | Pages where chrome integration matters more than save-time |
+
+## Use `<OGrid>` when…
+
+- You want a complete grid in one element. Sort, filter, paginate, edit,
+  range select, fill handle, copy/paste, undo, keyboard nav — all wired.
+- The default chrome (via your chosen UI variant — Radix / Fluent / Material)
+  is close enough to your design system that a theme preset (`preset-shadcn.css`)
+  can bridge the rest.
+- You're prototyping or building admin pages where shipping fast matters
+  more than every pixel.
+
+```tsx
+import { OGrid } from "@alaarab/ogrid-react-radix";
+import "@alaarab/ogrid-react-radix/styles/index.css";
+import "@alaarab/ogrid-react-radix/styles/preset-shadcn.css";
+
+const columns = [
+  { columnId: "name", name: "Name", sortable: true, editable: true },
+  { columnId: "salary", name: "Salary", type: "numeric", sortable: true },
+];
+
+<OGrid columns={columns} data={employees} getRowId={(e) => e.id} />;
+```
+
+## Use `useHeadlessGrid` + the spreadsheet hooks when…
+
+- You want OGrid's logic but rendered with your own table chrome
+  (shadcn `<Table>`, Fluent `<DataGrid>`, Material `<TableRow>`, plain HTML —
+  anything).
+- The chrome integration is non-negotiable: a specific design system,
+  custom row layouts, embedded widgets in cells, or shared `<TableRow>`
+  components from the rest of the app.
+- You want to opt into spreadsheet features piece-by-piece. Add only
+  inline edit on this page; add range selection + clipboard on that one.
+
+```tsx
+import {
+  useHeadlessGrid,
+  useInlineEdit,
+  useRangeSelection,
+  useFillHandle,
+  useCellClipboard,
+  useUndoRedo,
+  useGridFocus,
+} from "@alaarab/ogrid-react-radix";
+import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/table"; // your shadcn primitives
+
+const grid = useHeadlessGrid({ columns, data, getRowId: (r) => r.id });
+const range = useRangeSelection({ rowCount: grid.rows.length, colCount: grid.columns.length });
+const undo = useUndoRedo({ onCellValueChanged: applyEdit });
+const edit = useInlineEdit({ columns, getRowId: (r) => r.id, onCellEdit: undo.onCellValueChanged });
+const fill = useFillHandle({ rangeSelection: range, rows: grid.rows, columns, onFillCells });
+const clipboard = useCellClipboard({ rangeSelection: range, rows: grid.rows, columns, onCellEdit });
+const focus = useGridFocus({ rowCount: grid.rows.length, colCount: grid.columns.length, rangeSelection: range });
+
+return (
+  <Table>
+    <TableHeader>{/* render grid.columns + grid.toggleSort + grid.sortIndicator */}</TableHeader>
+    <TableBody>{/* render grid.rows + edit / range / fill / clipboard / focus glue */}</TableBody>
+  </Table>
+);
+```
+
+The full integration code is the
+[`SpreadsheetDemo` Storybook story in `react-radix`](https://github.com/alaarab/ogrid/blob/main/packages/react-radix/src/OGrid/SpreadsheetDemo.stories.tsx)
+— ~200 lines, copy-paste as your starter template.
+
+## Both at once — yes, in the same app
+
+Mix freely. A typical pattern:
+
+- 80% of admin / list pages → `<OGrid>` (fast to build, good enough chrome)
+- 20% of "the data table is the product" pages → headless hooks (custom chrome wins)
+
+Same package import. Same theme tokens. Same TypeScript types. The
+spreadsheet features (inline edit, fill handle, clipboard, undo) work
+identically across both paths because they share the same core utilities
+(`processClientSideData`, `applyFillValues`, `formatSelectionAsTsv`,
+`parseValue`, etc).
+
+## What this means architecturally
+
+`<OGrid>` is OGrid's **reference chrome** — a complete grid built on the
+same headless primitives any consumer would use. The two paths share
+underlying state machines (`useOGridSorting`, `useOGridFilters`,
+`useOGridPagination`, `useOGridDataFetching`); the only difference is who
+draws the table. That's why you can swap between them page-by-page
+without losing behavior parity, and why the bug fixes in one path
+automatically benefit the other.
+
+## Vue and Angular
+
+The same dual-mode story applies to Vue (`useHeadlessGrid` composable +
+`<OGrid>` component) and Angular (`createHeadlessGrid` factory +
+`<ogrid>` component). The Vue/Angular spreadsheet hooks are
+client-side-only in 2.9.0; server-side `dataSource` parity ships in 2.9.x.
+
+## Migrating between modes
+
+There's no migration boundary. `<OGrid>` accepts the same column defs
+your headless code uses. Move a page from `<OGrid>` to headless by
+replacing the JSX element with hook calls + your own table; the column
+defs, the row data, the sort/filter/paginate behavior all stay identical.
+Move back the same way.
