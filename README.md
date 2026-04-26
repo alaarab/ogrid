@@ -5,7 +5,7 @@
 <h1 align="center">OGrid</h1>
 
 <p align="center">
-  A lightweight, multi-framework data grid. One headless core, 10 UI packages across React, Angular, Vue, and vanilla JS.
+  Spreadsheet behavior for any table chrome. Headless hooks for inline edit, range select, fill handle, copy/paste — drop them on shadcn, Material, Fluent, or your own &lt;table&gt;. Or use the built-in &lt;OGrid&gt; component. Multi-framework, MIT.
 </p>
 
 <p align="center">
@@ -25,6 +25,24 @@
 ---
 
 Pick the framework and UI library you already use and get sorting, filtering, pagination, cell editing, spreadsheet selection, and the shared core grid model out of the box.
+
+## NEW in 2.9 — Headless spreadsheet hooks
+
+OGrid is now the only library where you can add **spreadsheet behavior** — inline edit, range select, fill handle, copy/paste, undo/redo, keyboard navigation — to **any table chrome** (shadcn `<Table>`, Material `<mat-table>`, your own `<table>`), MIT-licensed, on React / Vue / Angular.
+
+```tsx
+import {
+  useHeadlessGrid, useInlineEdit, useRangeSelection,
+  useFillHandle, useCellClipboard, useUndoRedo, useGridFocus,
+} from "@alaarab/ogrid-react-radix";
+
+const grid = useHeadlessGrid({ columns, data, getRowId: (r) => r.id });
+const range = useRangeSelection({ rowCount: grid.rows.length, colCount: grid.columns.length });
+const edit = useInlineEdit({ columns, getRowId: (r) => r.id, onCellEdit: applyEdit });
+// ... render with shadcn <Table>, plain HTML, or whatever
+```
+
+See the [Spreadsheet Demo Storybook](https://alaarab.github.io/ogrid/storybook/?path=/story/ogrid-react-radix-spreadsheetdemo--full-spreadsheet) for the full set of hooks combined on one page (~200 lines, copy-paste starter).
 
 ## Why OGrid?
 

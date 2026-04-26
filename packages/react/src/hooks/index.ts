@@ -15,6 +15,29 @@ export type {
   UseHeadlessGridResult,
   RowId as HeadlessGridRowId,
 } from './useHeadlessGrid';
+export { useInlineEdit } from './useInlineEdit';
+export type {
+  UseInlineEditParams,
+  UseInlineEditResult,
+  InlineEditEvent,
+  InlineEditorProps,
+} from './useInlineEdit';
+export { useRangeSelection } from './useRangeSelection';
+export type {
+  UseRangeSelectionParams,
+  UseRangeSelectionResult,
+  CellCoord,
+} from './useRangeSelection';
+export { useCellClipboard } from './useCellClipboard';
+export type {
+  UseCellClipboardParams,
+  UseCellClipboardResult,
+} from './useCellClipboard';
+export { useGridFocus } from './useGridFocus';
+export type {
+  UseGridFocusParams,
+  UseGridFocusResult,
+} from './useGridFocus';
 export { useOGridPagination } from './useOGridPagination';
 export type { UseOGridPaginationParams, UseOGridPaginationState } from './useOGridPagination';
 export { useOGridSorting } from './useOGridSorting';
@@ -43,8 +66,18 @@ export type {
 export { useUndoRedo } from './useUndoRedo';
 export type { UseUndoRedoResult, UseUndoRedoParams } from './useUndoRedo';
 export { useDebounce } from './useDebounce';
+// Internal chrome primitive — DOM-mutation drag-fill used by <OGrid>. Public
+// headless equivalent is `useFillHandle` (exported below).
+export { useFillHandleInternal } from './useFillHandleInternal';
+export type {
+  UseFillHandleInternalResult,
+  UseFillHandleInternalParams,
+} from './useFillHandleInternal';
 export { useFillHandle } from './useFillHandle';
-export type { UseFillHandleResult, UseFillHandleParams } from './useFillHandle';
+export type {
+  UseFillHandleParams,
+  UseFillHandleResult,
+} from './useFillHandle';
 export { useDataGridState } from './useDataGridState';
 export type {
   UseDataGridStateParams,

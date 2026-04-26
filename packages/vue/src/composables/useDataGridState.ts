@@ -9,7 +9,7 @@ import { useCellSelection } from './useCellSelection';
 import { useContextMenu } from './useContextMenu';
 import { useClipboard } from './useClipboard';
 import { useKeyboardNavigation } from './useKeyboardNavigation';
-import { useFillHandle } from './useFillHandle';
+import { useFillHandleInternal } from "./useFillHandleInternal";
 import { useUndoRedo } from './useUndoRedo';
 import { useTableLayout } from './useTableLayout';
 import { useColumnPinning } from './useColumnPinning';
@@ -292,7 +292,7 @@ export function useDataGridState<T>(
     handleCellMouseDownBase(e, rowIndex, globalColIndex);
   };
 
-  const { handleFillHandleMouseDown, fillDown } = useFillHandle({
+  const { handleFillHandleMouseDown, fillDown } = useFillHandleInternal({
     items,
     visibleCols,
     editable: editableProp,

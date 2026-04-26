@@ -92,6 +92,137 @@ Pair with `preset-shadcn.css` for full theme inheritance:
 import "@alaarab/ogrid-react-radix/styles/preset-shadcn.css";
 ```
 
+## Inline cell editing — `useInlineEdit`
+
+Add spreadsheet-style cell editing to your shadcn table. Compose with
+`useHeadlessGrid`; bring your own input component. `valueParser` validation
+fires on commit (same flow `<OGrid>` uses).
+
+```tsx
+import { useHeadlessGrid, useInlineEdit } from '@alaarab/ogrid-react-radix';
+
+const grid = useHeadlessGrid({ columns, data: employees, getRowId: (r) => r.id });
+const edit = useInlineEdit({
+  columns,
+  getRowId: (r) => r.id,
+  onCellEdit: ({ item, columnId, newValue }) =>
+    updateRow(item.id, { [columnId]: newValue }),
+});
+
+return (
+  <Table>
+    <TableBody>
+      {grid.rows.map((row) => (
+        <TableRow key={grid.getRowId(row)}>
+          {grid.columns.map((col) => (
+            <TableCell
+              key={col.columnId}
+              onDoubleClick={() => edit.startEdit(row, col.columnId)}
+            >
+              {edit.isEditing(row, col.columnId) ? (
+                <input autoFocus {...edit.getEditorProps(row, col.columnId)} />
+              ) : (
+                String(grid.getCellValue(row, col.columnId))
+              )}
+            </TableCell>
+          ))}
+        </TableRow>
+      ))}
+    </TableBody>
+  </Table>
+);
+```
+
+The hook returns `editingCell`, `pendingValue`, `setPendingValue`, `startEdit`,
+`commitEdit`, `cancelEdit`, `isEditing(row, columnId)`, `canEdit(row, columnId)`,
+and `getEditorProps(row, columnId)` (which spreads into your input as
+`value`/`onChange`/`onBlur`/`onKeyDown` — Enter commits, Escape cancels).
+
+## Range selection — `useRangeSelection`
+
+Excel/Sheets-style anchor + focus range selection. Pure state — consumer
+wires their own mouse handlers. Foundation for fill handle and clipboard.
+
+```tsx
+const range = useRangeSelection({ rowCount: grid.rows.length, colCount: grid.columns.length });
+
+<TableCell
+  onMouseDown={(e) => e.shiftKey ? range.extendRange(rowIdx, colIdx) : range.startRange(rowIdx, colIdx)}
+  onMouseEnter={(e) => e.buttons === 1 && range.extendRange(rowIdx, colIdx)}
+  data-selected={range.isInRange(rowIdx, colIdx)}
+/>
+```
+
+Returns `range`, `anchor`, `focus`, `startRange`, `extendRange`, `setRange`,
+`clearRange`, `selectAll`, `isInRange`, `getRangeRows`, `getRangeCells`.
+
+## Fill handle — `useFillHandle`
+
+Excel-style drag-to-fill. Builds on `useRangeSelection`. Smart-fill
+(numeric series, copy-text, type-compatibility checks) comes from core's
+`applyFillValues`.
+
+```tsx
+const fill = useFillHandle({
+  rangeSelection: range,
+  rows: grid.rows,
+  columns: grid.columns,
+  onFillCells: (events) => events.forEach(applyEdit),
+});
+
+// At the bottom-right of the active range:
+<div onMouseDown={fill.startFill} />
+
+// On every cell during drag:
+<TableCell
+  onMouseEnter={() => fill.isFilling && fill.updateFill(rowIdx, colIdx)}
+  onMouseUp={fill.commitFill}
+  data-fill={fill.isInFillRange(rowIdx, colIdx)}
+/>
+```
+
+## Copy / cut / paste — `useCellClipboard`
+
+TSV-format clipboard, round-trippable through Excel and Google Sheets.
+Honors `clipboardFormatter` for copy and `valueParser` for paste validation.
+
+```tsx
+const clipboard = useCellClipboard({
+  rangeSelection: range,
+  rows: grid.rows,
+  columns: grid.columns,
+  onCellEdit: (events) => events.forEach(applyEdit),
+});
+
+useEffect(() => {
+  const handler = (e: KeyboardEvent) => {
+    const mod = e.metaKey || e.ctrlKey;
+    if (mod && e.key === 'c') clipboard.copyRange();
+    if (mod && e.key === 'x') clipboard.cutRange();
+    if (mod && e.key === 'v') clipboard.pasteRange();
+  };
+  document.addEventListener('keydown', handler);
+  return () => document.removeEventListener('keydown', handler);
+}, [clipboard]);
+```
+
+## Undo / redo — `useUndoRedo`
+
+Wraps your `onCellEdit` callback with an undo/redo history stack. Pair
+with `useInlineEdit`, `useFillHandle`, and `useCellClipboard` to get
+spreadsheet-style undo for free.
+
+```tsx
+const undo = useUndoRedo({ onCellValueChanged: applyEditToRows });
+
+const edit = useInlineEdit({ columns, getRowId, onCellEdit: undo.onCellValueChanged });
+const fill = useFillHandle({ ..., onFillCells: (events) => events.forEach(undo.onCellValueChanged) });
+const clipboard = useCellClipboard({ ..., onCellEdit: (events) => events.forEach(undo.onCellValueChanged) });
+
+<button onClick={undo.undo} disabled={!undo.canUndo}>Undo</button>
+<button onClick={undo.redo} disabled={!undo.canRedo}>Redo</button>
+```
+
 ## Theming
 
 Override any `--ogrid-*` variable to customize. The shadcn preset above maps

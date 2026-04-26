@@ -50,8 +50,38 @@ export type { UseRowSelectionParams, UseRowSelectionResult } from './useRowSelec
 export { useKeyboardNavigation } from './useKeyboardNavigation';
 export type { UseKeyboardNavigationParams, UseKeyboardNavigationResult } from './useKeyboardNavigation';
 
+// Internal chrome primitive (DOM-mutation drag-fill used by <OGrid>).
+export { useFillHandleInternal } from './useFillHandleInternal';
+export type {
+  UseFillHandleInternalParams,
+  UseFillHandleInternalResult,
+} from './useFillHandleInternal';
+// Public headless drag-fill — pairs with useRangeSelection.
 export { useFillHandle } from './useFillHandle';
 export type { UseFillHandleParams, UseFillHandleResult } from './useFillHandle';
+export { useInlineEdit } from './useInlineEdit';
+export type {
+  UseInlineEditParams,
+  UseInlineEditResult,
+  InlineEditEvent,
+  InlineEditorProps,
+} from './useInlineEdit';
+export { useRangeSelection } from './useRangeSelection';
+export type {
+  UseRangeSelectionParams,
+  UseRangeSelectionResult,
+  CellCoord,
+} from './useRangeSelection';
+export { useCellClipboard } from './useCellClipboard';
+export type {
+  UseCellClipboardParams,
+  UseCellClipboardResult,
+} from './useCellClipboard';
+export { useGridFocus } from './useGridFocus';
+export type {
+  UseGridFocusParams,
+  UseGridFocusResult,
+} from './useGridFocus';
 
 export { useUndoRedo } from './useUndoRedo';
 export type { UseUndoRedoParams, UseUndoRedoResult } from './useUndoRedo';
