@@ -28,7 +28,7 @@ Pick the framework and UI library you already use and get sorting, filtering, pa
 
 ## NEW in 2.9 — Headless spreadsheet hooks
 
-OGrid is now the only library where you can add **spreadsheet behavior** — inline edit, range select, fill handle, copy/paste, undo/redo, keyboard navigation — to **any table chrome** (shadcn `<Table>`, Material `<mat-table>`, your own `<table>`), MIT-licensed, on React / Vue / Angular.
+A set of headless hooks that add **spreadsheet behavior** — inline edit, range select, fill handle, copy/paste, undo/redo, keyboard navigation — to **any table chrome** (shadcn `<Table>`, Material `<mat-table>`, your own `<table>`). React / Vue / Angular, MIT.
 
 ```tsx
 import {
