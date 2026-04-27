@@ -39,14 +39,14 @@
  *   </template>
  */
 
-import { ref, computed, toValue, type ComputedRef, type Ref, type MaybeRefOrGetter } from 'vue';
+import { ref, shallowRef, computed, toValue, watch, type ComputedRef, type Ref, type MaybeRefOrGetter } from 'vue';
 import {
   processClientSideData,
   getCellValue as coreGetCellValue,
   computeNextSortState,
   mergeFilter,
 } from '@alaarab/ogrid-core';
-import type { IColumnDef, IFilters, FilterValue } from '@alaarab/ogrid-core';
+import type { IColumnDef, IFilters, FilterValue, IDataSource } from '@alaarab/ogrid-core';
 
 export type RowId = string | number;
 
@@ -65,6 +65,15 @@ export interface UseHeadlessGridParams<T> {
   initialFilters?: IFilters;
   initialPage?: number;
   initialPageSize?: number;
+
+  /**
+   * Server-side data source. When provided, sort/filter/paginate are sent to
+   * the server and the returned items are displayed as-is. When omitted,
+   * client-side processing runs against `data`.
+   */
+  dataSource?: IDataSource<T>;
+  /** Server-side fetch error callback. */
+  onError?: (err: unknown) => void;
 }
 
 export interface UseHeadlessGridResult<T> {
@@ -110,6 +119,11 @@ export interface UseHeadlessGridResult<T> {
   toggleRowSelection: (row: T) => void;
   selectAllOnPage: () => void;
   clearSelection: () => void;
+
+  /** True while a server-side fetch is in flight. Always false in client-side mode. */
+  serverLoading: Ref<boolean>;
+  /** Force a fresh server-side fetch (no-op in client-side mode). */
+  refreshData: () => void;
 }
 
 const DEFAULT_PAGE_SIZE = 25;
@@ -131,6 +145,8 @@ export function useHeadlessGrid<T>(
     initialFilters = {},
     initialPage = 1,
     initialPageSize = DEFAULT_PAGE_SIZE,
+    dataSource,
+    onError,
   } = params;
 
   const sort = ref<SortState>(initialSort ?? { field: '', direction: 'asc' });
@@ -141,7 +157,65 @@ export function useHeadlessGrid<T>(
   const columns = computed(() => toValue(columnsInput));
   const data = computed(() => toValue(dataInput));
 
+  const isServerSide = dataSource != null;
+
+  // ── Server-side fetch state ────────────────────────────────────────
+  // shallowRef so consumer's row type T isn't reactively unwrapped to
+  // UnwrapRefSimple<T> — same pattern as useInlineEdit's editingContext.
+  const serverItems = shallowRef<T[]>([]);
+  const serverTotalCount = ref(0);
+  const serverLoading = ref(isServerSide);
+  const refreshCounter = ref(0);
+  // Stale-fetch guard: increment per fetch, only the latest write wins.
+  let fetchId = 0;
+
+  if (isServerSide && dataSource) {
+    watch(
+      [
+        page,
+        pageSize,
+        () => sort.value.field,
+        () => sort.value.direction,
+        filters,
+        refreshCounter,
+      ],
+      () => {
+        const id = ++fetchId;
+        const controller = new AbortController();
+        serverLoading.value = true;
+        dataSource
+          .fetchPage({
+            page: page.value,
+            pageSize: pageSize.value,
+            sort: { field: sort.value.field, direction: sort.value.direction },
+            filters: filters.value,
+            signal: controller.signal,
+          })
+          .then((res) => {
+            if (id !== fetchId || controller.signal.aborted) return;
+            serverItems.value = res.items;
+            serverTotalCount.value = res.totalCount;
+          })
+          .catch((err) => {
+            if (id !== fetchId || controller.signal.aborted) return;
+            onError?.(err);
+            serverItems.value = [];
+            serverTotalCount.value = 0;
+          })
+          .finally(() => {
+            if (id === fetchId && !controller.signal.aborted) {
+              serverLoading.value = false;
+            }
+          });
+        return () => controller.abort();
+      },
+      { immediate: true, deep: true },
+    );
+  }
+
+  // ── Client-side derivation (only used when isServerSide === false) ─
   const allFilteredRows = computed(() => {
+    if (isServerSide) return serverItems.value;
     const sortField = sort.value.field;
     return processClientSideData(
       data.value,
@@ -152,15 +226,22 @@ export function useHeadlessGrid<T>(
     );
   });
 
-  const totalCount = computed(() => allFilteredRows.value.length);
+  const totalCount = computed(() =>
+    isServerSide ? serverTotalCount.value : allFilteredRows.value.length,
+  );
   const totalPages = computed(() =>
     Math.max(1, Math.ceil(totalCount.value / pageSize.value)),
   );
 
   const rows = computed(() => {
+    if (isServerSide) return serverItems.value;
     const start = (page.value - 1) * pageSize.value;
     return allFilteredRows.value.slice(start, start + pageSize.value);
   });
+
+  const refreshData = () => {
+    refreshCounter.value += 1;
+  };
 
   // ── Actions ─────────────────────────────────────────────────────────
   const setPage = (p: number) => {
@@ -264,5 +345,8 @@ export function useHeadlessGrid<T>(
     toggleRowSelection,
     selectAllOnPage,
     clearSelection,
+
+    serverLoading,
+    refreshData,
   };
 }

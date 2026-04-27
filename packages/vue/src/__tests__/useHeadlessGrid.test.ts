@@ -154,4 +154,167 @@ describe('useHeadlessGrid (Vue)', () => {
     dataRef.value = data;
     expect(grid.totalCount.value).toBe(6);
   });
+
+  describe('server-side mode', () => {
+    const flush = () => new Promise((resolve) => setTimeout(resolve, 0));
+
+    it('fetches initial page on mount', async () => {
+      const fetchPage = jest.fn().mockResolvedValue({
+        items: data.slice(0, 2),
+        totalCount: 6,
+      });
+      const grid = useHeadlessGrid({
+        columns,
+        data: [],
+        getRowId,
+        dataSource: { fetchPage },
+        initialPageSize: 2,
+      });
+
+      await flush();
+      expect(fetchPage).toHaveBeenCalledTimes(1);
+      expect(grid.rows.value).toHaveLength(2);
+      expect(grid.totalCount.value).toBe(6);
+      expect(grid.serverLoading.value).toBe(false);
+    });
+
+    it('passes page/pageSize/sort/filters to fetchPage', async () => {
+      const fetchPage = jest.fn().mockResolvedValue({ items: [], totalCount: 0 });
+      const grid = useHeadlessGrid({
+        columns,
+        data: [],
+        getRowId,
+        dataSource: { fetchPage },
+        initialSort: { field: 'score', direction: 'desc' },
+        initialPageSize: 25,
+      });
+
+      await flush();
+      expect(fetchPage).toHaveBeenCalledWith(
+        expect.objectContaining({
+          page: 1,
+          pageSize: 25,
+          sort: { field: 'score', direction: 'desc' },
+          filters: {},
+        }),
+      );
+
+      grid.setPage(2);
+      await flush();
+      expect(fetchPage).toHaveBeenLastCalledWith(
+        expect.objectContaining({ page: 2, pageSize: 25 }),
+      );
+    });
+
+    it('refetches on filter change', async () => {
+      const fetchPage = jest.fn().mockResolvedValue({ items: [], totalCount: 0 });
+      const grid = useHeadlessGrid({
+        columns,
+        data: [],
+        getRowId,
+        dataSource: { fetchPage },
+      });
+
+      await flush();
+      const initialCalls = fetchPage.mock.calls.length;
+
+      grid.setFilter('status', { type: 'multiSelect', value: ['Active'] });
+      await flush();
+
+      expect(fetchPage.mock.calls.length).toBeGreaterThan(initialCalls);
+      expect(fetchPage).toHaveBeenLastCalledWith(
+        expect.objectContaining({
+          filters: { status: { type: 'multiSelect', value: ['Active'] } },
+        }),
+      );
+    });
+
+    it('serverLoading toggles around the fetch', async () => {
+      let resolveFetch!: (val: { items: Row[]; totalCount: number }) => void;
+      const fetchPage = jest.fn().mockImplementation(
+        () => new Promise<{ items: Row[]; totalCount: number }>((r) => { resolveFetch = r; }),
+      );
+      const grid = useHeadlessGrid({
+        columns,
+        data: [],
+        getRowId,
+        dataSource: { fetchPage },
+      });
+
+      // While the promise is unresolved, loading is true.
+      await flush();
+      expect(grid.serverLoading.value).toBe(true);
+
+      resolveFetch({ items: data.slice(0, 1), totalCount: 1 });
+      await flush();
+      expect(grid.serverLoading.value).toBe(false);
+    });
+
+    it('refreshData triggers a fresh fetch', async () => {
+      const fetchPage = jest.fn().mockResolvedValue({ items: [], totalCount: 0 });
+      const grid = useHeadlessGrid({
+        columns,
+        data: [],
+        getRowId,
+        dataSource: { fetchPage },
+      });
+
+      await flush();
+      const initialCalls = fetchPage.mock.calls.length;
+
+      grid.refreshData();
+      await flush();
+
+      expect(fetchPage.mock.calls.length).toBe(initialCalls + 1);
+    });
+
+    it('onError fires when fetchPage rejects', async () => {
+      const onError = jest.fn();
+      const error = new Error('boom');
+      const fetchPage = jest.fn().mockRejectedValue(error);
+
+      const grid = useHeadlessGrid({
+        columns,
+        data: [],
+        getRowId,
+        dataSource: { fetchPage },
+        onError,
+      });
+
+      await flush();
+      expect(onError).toHaveBeenCalledWith(error);
+      expect(grid.rows.value).toEqual([]);
+      expect(grid.totalCount.value).toBe(0);
+    });
+
+    it('stale fetches are discarded (race-condition guard)', async () => {
+      // First fetch hangs; second fetch resolves immediately.
+      const responses = [
+        new Promise<{ items: Row[]; totalCount: number }>(() => { /* never */ }),
+        Promise.resolve({ items: data.slice(0, 3), totalCount: 3 }),
+      ];
+      const fetchPage = jest.fn().mockImplementation(() => responses.shift());
+
+      const grid = useHeadlessGrid({
+        columns,
+        data: [],
+        getRowId,
+        dataSource: { fetchPage },
+      });
+
+      await flush();
+      grid.setPage(2); // triggers the second fetch
+      await flush();
+
+      // The second fetch's result wins.
+      expect(grid.rows.value).toHaveLength(3);
+      expect(grid.totalCount.value).toBe(3);
+    });
+
+    it('client-side mode unchanged when no dataSource', () => {
+      const grid = useHeadlessGrid({ columns, data, getRowId });
+      expect(grid.serverLoading.value).toBe(false);
+      expect(grid.rows.value).toHaveLength(6);
+    });
+  });
 });
