@@ -50,13 +50,10 @@ export type { UseRowSelectionParams, UseRowSelectionResult } from './useRowSelec
 export { useKeyboardNavigation } from './useKeyboardNavigation';
 export type { UseKeyboardNavigationParams, UseKeyboardNavigationResult } from './useKeyboardNavigation';
 
-// Internal chrome primitive (DOM-mutation drag-fill used by <OGrid>).
-export { useFillHandleInternal } from './useFillHandleInternal';
-export type {
-  UseFillHandleInternalParams,
-  UseFillHandleInternalResult,
-} from './useFillHandleInternal';
-// Public headless drag-fill — pairs with useRangeSelection.
+// `useFillHandleInternal` (the chrome-coupled DOM-mutation drag-fill used by
+// `<OGrid>`) is intentionally not re-exported from the public barrel. Internal
+// consumers import it via relative path. The public name `useFillHandle`
+// resolves to the headless composable below.
 export { useFillHandle } from './useFillHandle';
 export type { UseFillHandleParams, UseFillHandleResult } from './useFillHandle';
 export { useInlineEdit } from './useInlineEdit';
