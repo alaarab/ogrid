@@ -2,6 +2,8 @@ name: Full Verification
 
 on:
   workflow_dispatch:
+  push:
+    branches: [main]
 
 concurrency:
   group: full-verification-${{ github.ref }}
