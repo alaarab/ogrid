@@ -171,6 +171,11 @@ export type {
   UseListVirtualizerResult,
   VirtualItem,
 } from './useListVirtualizer';
+export { useGridVirtualization } from './useGridVirtualization';
+export type {
+  UseGridVirtualizationParams,
+  UseGridVirtualizationResult,
+} from './useGridVirtualization';
 export { useLatestRef } from './useLatestRef';
 export { useShallowEqualMemo } from './useShallowEqualMemo';
 export { usePaginationControls } from './usePaginationControls';

@@ -339,6 +339,66 @@ const focus = useGridFocus({
 
 ---
 
+## `useGridVirtualization` — windowed rendering
+
+Headless row + column virtualization for large datasets. Tracks scroll
+position on a consumer-owned container and reports which slice of rows/
+columns to render with spacer offsets that preserve scroll geometry. Zero
+external dependencies — uses core's pure compute helpers.
+
+```tsx
+import { useRef } from 'react';
+import { useHeadlessGrid, useGridVirtualization } from '@alaarab/ogrid-react';
+
+const grid = useHeadlessGrid({ columns, data, getRowId, initialPageSize: 10000 });
+const containerRef = useRef<HTMLDivElement>(null);
+const virt = useGridVirtualization({
+  rowCount: grid.totalCount,
+  rowHeight: 36,
+  containerRef,
+});
+
+return (
+  <div ref={containerRef} onScroll={virt.onScroll} style={{ height: 400, overflow: 'auto' }}>
+    <div style={{ height: virt.totalHeight, position: 'relative' }}>
+      <div style={{ transform: `translateY(${virt.rowRange.offsetTop}px)` }}>
+        {grid.rows.slice(virt.rowRange.startIndex, virt.rowRange.endIndex + 1).map((row) => (
+          <div key={grid.getRowId(row)} style={{ height: 36 }}>
+            {/* render row */}
+          </div>
+        ))}
+      </div>
+    </div>
+  </div>
+);
+```
+
+### Parameters
+
+| Param | Type | Notes |
+|-------|------|-------|
+| `rowCount` | `number` | Total rows in the data set. |
+| `rowHeight` | `number` | Uniform row height in pixels. |
+| `containerRef` | `RefObject<HTMLElement \| null>` | The scroll container — must have a fixed height + `overflow: auto`. |
+| `overscan` | `number` | Extra rows above/below the visible window. Default `5`. |
+| `enabled` | `boolean` | Disable virtualization entirely. Default `true`. |
+| `threshold` | `number` | Below this row count, all rows render (avoids small-dataset artifacts). Default `100`. |
+| `columnWidths` | `number[]` | Per-column widths (unpinned only) — enables column virt. Omit for row-only. |
+| `columnOverscan` | `number` | Extra columns left/right of the viewport. Default `2`. |
+
+### Returns
+
+| Field | Type | Notes |
+|-------|------|-------|
+| `totalHeight` | `number` | Total scroll height (`rowCount × rowHeight`). |
+| `rowRange` | `{ startIndex; endIndex; offsetTop; offsetBottom }` | Visible row slice + spacer pixels. |
+| `columnRange` | `{ startIndex; endIndex; leftOffset; rightOffset } \| null` | Visible column slice (null when `columnWidths` omitted). |
+| `scrollToIndex` | `(index, align?) => void` | Programmatically scroll a row into view (`'start' \| 'center' \| 'end'`). |
+| `onScroll` | `() => void` | Attach to the container's `onScroll` prop. |
+| `isActive` | `boolean` | True when virtualization is engaged (above threshold + enabled). |
+
+---
+
 ## All seven combined
 
 The canonical demo combining every hook on a plain HTML table is the
