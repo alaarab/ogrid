@@ -66,13 +66,10 @@ export type {
 export { useUndoRedo } from './useUndoRedo';
 export type { UseUndoRedoResult, UseUndoRedoParams } from './useUndoRedo';
 export { useDebounce } from './useDebounce';
-// Internal chrome primitive — DOM-mutation drag-fill used by <OGrid>. Public
-// headless equivalent is `useFillHandle` (exported below).
-export { useFillHandleInternal } from './useFillHandleInternal';
-export type {
-  UseFillHandleInternalResult,
-  UseFillHandleInternalParams,
-} from './useFillHandleInternal';
+// `useFillHandleInternal` (the chrome-coupled DOM-mutation drag-fill used by
+// `<OGrid>`) is intentionally not re-exported from the public barrel. Internal
+// consumers import it via relative path. The public name `useFillHandle`
+// resolves to the headless hook below.
 export { useFillHandle } from './useFillHandle';
 export type {
   UseFillHandleParams,
