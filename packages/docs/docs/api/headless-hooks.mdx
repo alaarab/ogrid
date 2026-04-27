@@ -1,0 +1,345 @@
+---
+sidebar_position: 11
+title: Headless hooks
+description: API reference for useHeadlessGrid + the spreadsheet hook set (useInlineEdit, useRangeSelection, useFillHandle, useCellClipboard, useUndoRedo, useGridFocus).
+---
+
+# Headless hooks
+
+OGrid 2.9 ships seven framework-native hooks that expose grid logic without
+imposing any chrome. Pair `useHeadlessGrid` with the spreadsheet hooks to
+add inline edit, range selection, fill handle, clipboard, undo/redo, and
+keyboard navigation to your own table markup (shadcn `<Table>`, plain HTML,
+Material `<DataGrid>`, anything).
+
+All seven hooks ship in identical shapes across React, Vue, and Angular —
+same params, same return values, just framework-native reactivity:
+
+- **React** — `import { useX } from '@alaarab/ogrid-react-radix'`
+- **Vue** — `import { useX } from '@alaarab/ogrid-vue-radix'`
+- **Angular** — `import { createX } from '@alaarab/ogrid-angular-radix'` (factory, not hook)
+
+Examples below use the React imports for readability.
+
+---
+
+## `useHeadlessGrid` — data layer
+
+The foundation. Returns sort/filter/paginate state plus the current page
+of rows. React variant supports `dataSource` for server-side mode; Vue +
+Angular are client-side-only in 2.9 (server-side parity ships in 2.9.x).
+
+```tsx
+import { useHeadlessGrid } from '@alaarab/ogrid-react-radix';
+
+const grid = useHeadlessGrid({
+  columns,
+  data: rows,
+  getRowId: (row) => row.id,
+  initialSort: { field: 'name', direction: 'asc' },
+  initialPageSize: 25,
+});
+```
+
+### Parameters
+
+| Param | Type | Notes |
+|---|---|---|
+| `columns` | `IColumnDef<T>[]` | Column definitions |
+| `data` | `T[]` | Full dataset (client-side) or empty array (server-side) |
+| `getRowId` | `(row: T) => RowId` | Stable row-identity extractor |
+| `initialSort?` | `{ field, direction }` | Initial sort, omit for none |
+| `initialFilters?` | `IFilters` | Initial filter values |
+| `initialPage?` | `number` | Default `1` |
+| `initialPageSize?` | `number` | Default `25` |
+| `sort?`, `filters?`, `page?`, `pageSize?` | controlled overrides | Pass to put state under your control |
+| `onSortChange?`, `onFiltersChange?`, `onPageChange?`, `onPageSizeChange?` | callbacks | Fired when state changes |
+| `dataSource?` | `IDataSource<T>` | **React only.** Server-side mode |
+| `workerSort?` | `boolean \| 'auto'` | **React only.** Worker-thread sort for large datasets |
+
+### Returns
+
+| Field | Description |
+|---|---|
+| `rows` | Current page rows after sort + filter |
+| `allFilteredRows` | Full filtered+sorted set (client mode) or current page (server mode) |
+| `columns` | Resolved columns |
+| `totalCount` | Post-filter total |
+| `totalPages` | Total pages at current page size |
+| `sort`, `filters`, `page`, `pageSize` | Current state |
+| `setSort`, `toggleSort(columnId)`, `sortIndicator(columnId)` | Sort actions |
+| `setFilters(filters)`, `setFilter(key, value)`, `hasActiveFilters` | Filter actions |
+| `setPage(n)`, `setPageSize(n)` | Pagination |
+| `getRowId`, `getCellValue(row, columnId)` | Row + cell helpers |
+| `selectedRowIds`, `isRowSelected(row)`, `toggleRowSelection(row)`, `selectAllOnPage()`, `clearSelection()` | Minimal Set-based row selection |
+
+---
+
+## `useInlineEdit` — cell editing lifecycle
+
+Manages start/commit/cancel for one cell at a time. Honors the column's
+`editable` flag (boolean or per-row predicate) and validates new values
+through `valueParser` — same flow `<OGrid>` uses internally.
+
+```tsx
+const edit = useInlineEdit({
+  columns,
+  getRowId: (row) => row.id,
+  onCellEdit: ({ item, columnId, oldValue, newValue }) =>
+    updateRow(item.id, { [columnId]: newValue }),
+});
+
+// In render:
+<TableCell onDoubleClick={() => edit.startEdit(row, col.columnId)}>
+  {edit.isEditing(row, col.columnId) ? (
+    <input autoFocus {...edit.getEditorProps(row, col.columnId)} />
+  ) : (
+    String(grid.getCellValue(row, col.columnId))
+  )}
+</TableCell>
+```
+
+### Parameters
+
+| Param | Type |
+|---|---|
+| `columns` | `IColumnDef<T>[]` |
+| `getRowId` | `(row: T) => RowId` |
+| `onCellEdit` | `(event: { item, columnId, oldValue, newValue }) => void` |
+| `isCellEditable?` | `(row, columnId) => boolean` (override per-row) |
+
+### Returns
+
+| Field | Description |
+|---|---|
+| `editingCell` | `{ rowId, columnId } \| null` |
+| `pendingValue`, `setPendingValue` | Buffered new value |
+| `startEdit(row, columnId)` | Begin editing (no-op if not editable) |
+| `commitEdit()` | Validate via `valueParser`, fire `onCellEdit` |
+| `cancelEdit()` | Close without firing |
+| `isEditing(row, columnId)` | `boolean` |
+| `canEdit(row, columnId)` | `boolean` |
+| `getEditorProps(row, columnId)` | Spread onto your input — `{ value, onChange, onBlur, onKeyDown }` (Enter commits, Escape cancels) |
+
+---
+
+## `useRangeSelection` — Excel-style range
+
+Anchor + focus model. Foundation for `useFillHandle` and `useCellClipboard`.
+
+```tsx
+const range = useRangeSelection({
+  rowCount: grid.rows.length,
+  colCount: grid.columns.length,
+});
+
+// Click + drag:
+<TableCell
+  onMouseDown={(e) => e.shiftKey ? range.extendRange(rowIdx, colIdx) : range.startRange(rowIdx, colIdx)}
+  onMouseEnter={(e) => e.buttons === 1 && range.extendRange(rowIdx, colIdx)}
+  data-selected={range.isInRange(rowIdx, colIdx)}
+/>
+```
+
+### Parameters
+
+| Param | Type |
+|---|---|
+| `rowCount` | `number` (visible row count) |
+| `colCount` | `number` (visible column count) |
+
+### Returns
+
+| Field | Description |
+|---|---|
+| `range` | `ISelectionRange \| null` (normalized rectangular bounds) |
+| `anchor`, `focus` | `CellCoord \| null` |
+| `startRange(row, col)`, `extendRange(row, col)`, `setRange(range)`, `clearRange()` | State actions |
+| `selectAll()` | Select every cell |
+| `isInRange(row, col)` | `boolean` |
+| `getRangeRows()`, `getRangeCells()` | Convenience extractors |
+
+---
+
+## `useFillHandle` — drag-to-fill
+
+Excel-style fill via core's `applyFillValues`. Type-compatibility checks
+prevent dragging incompatible types (text into a number column).
+
+```tsx
+const fill = useFillHandle({
+  rangeSelection: range,
+  rows: grid.rows,
+  columns,
+  onFillCells: (events) => events.forEach(applyEdit),
+});
+
+// Bottom-right of active range:
+<div onMouseDown={fill.startFill} className="fill-handle-dot" />
+
+// On every cell during drag:
+<TableCell
+  onMouseEnter={() => fill.isFilling && fill.updateFill(rowIdx, colIdx)}
+  onMouseUp={fill.commitFill}
+  data-fill={fill.isInFillRange(rowIdx, colIdx)}
+/>
+```
+
+### Parameters
+
+| Param | Type |
+|---|---|
+| `rangeSelection` | `UseRangeSelectionResult` |
+| `rows` | `T[]` (current page rows) |
+| `columns` | `IColumnDef<T>[]` |
+| `onFillCells` | `(events: ICellValueChangedEvent<T>[]) => void` |
+
+### Returns
+
+| Field | Description |
+|---|---|
+| `fillTarget` | `CellCoord \| null` (current drag target) |
+| `isFilling` | `boolean` |
+| `fillRange` | `ISelectionRange \| null` (source range extended to target) |
+| `startFill()`, `updateFill(row, col)`, `commitFill()`, `cancelFill()` | Lifecycle |
+| `isInFillRange(row, col)` | `boolean` for highlighting |
+
+---
+
+## `useCellClipboard` — TSV copy/cut/paste
+
+Round-trippable through Excel and Google Sheets. Honors `clipboardFormatter`
+on copy and `valueParser` on paste validation.
+
+```tsx
+const clipboard = useCellClipboard({
+  rangeSelection: range,
+  rows: grid.rows,
+  columns,
+  onCellEdit: (events) => events.forEach(applyEdit),
+});
+
+useEffect(() => {
+  const handler = (e) => {
+    const mod = e.metaKey || e.ctrlKey;
+    if (mod && e.key === 'c') clipboard.copyRange();
+    if (mod && e.key === 'x') clipboard.cutRange();
+    if (mod && e.key === 'v') clipboard.pasteRange();
+  };
+  document.addEventListener('keydown', handler);
+  return () => document.removeEventListener('keydown', handler);
+}, [clipboard]);
+```
+
+### Parameters
+
+| Param | Type |
+|---|---|
+| `rangeSelection` | `UseRangeSelectionResult` |
+| `rows` | `T[]` |
+| `columns` | `IColumnDef<T>[]` |
+| `onCellEdit` | `(events: ICellValueChangedEvent<T>[]) => void` |
+| `clipboard?` | `{ readText, writeText }` override (defaults to `navigator.clipboard`) |
+
+### Returns
+
+| Field | Description |
+|---|---|
+| `copyRange()`, `cutRange()`, `pasteRange()` | Async actions |
+| `canPaste` | `boolean` (feature detection) |
+| `activeCutRange`, `activeCopyRange` | Marching-ants tracking |
+| `clearClipboard()` | Dismiss markers (bind to Escape) |
+
+---
+
+## `useUndoRedo` — action history stack
+
+Wraps your `onCellEdit` callback with an undo/redo history. Pair with
+`useInlineEdit` / `useFillHandle` / `useCellClipboard` to get spreadsheet-
+style undo across all of them for free.
+
+```tsx
+const undo = useUndoRedo({ onCellValueChanged: applyEditToRows });
+
+const edit = useInlineEdit({ columns, getRowId, onCellEdit: undo.onCellValueChanged });
+const fill = useFillHandle({ ..., onFillCells: (events) => events.forEach(undo.onCellValueChanged) });
+
+<button onClick={undo.undo} disabled={!undo.canUndo}>Undo</button>
+<button onClick={undo.redo} disabled={!undo.canRedo}>Redo</button>
+```
+
+### Parameters
+
+| Param | Type |
+|---|---|
+| `onCellValueChanged` | `(event: ICellValueChangedEvent<T>) => void` |
+| `maxUndoDepth?` | `number` (default `100`) |
+
+### Returns
+
+| Field | Description |
+|---|---|
+| `onCellValueChanged` | Wrapped callback — pass to other hooks instead of your raw handler |
+| `undo()`, `redo()` | Actions |
+| `canUndo`, `canRedo` | `boolean` flags |
+| `beginBatch()`, `endBatch()` | Group multiple edits as one undo step |
+
+---
+
+## `useGridFocus` — keyboard navigation
+
+Arrow / Tab / Enter / Home / End / PageUp / PageDown. Pairs with
+`useRangeSelection` so Shift+Arrow extends the active range.
+
+```tsx
+const focus = useGridFocus({
+  rowCount: grid.rows.length,
+  colCount: grid.columns.length,
+  rangeSelection: range, // optional — enables Shift+Arrow extend
+});
+
+<div tabIndex={0} onKeyDown={focus.getKeyDownHandler()}>
+  {/* Render cells; highlight focus.activeCell */}
+</div>
+```
+
+### Parameters
+
+| Param | Type |
+|---|---|
+| `rowCount` | `number` |
+| `colCount` | `number` |
+| `pageSize?` | `number` (PageUp/Down step, default `10`) |
+| `rangeSelection?` | `UseRangeSelectionResult` (optional, for Shift+Arrow extend) |
+
+### Returns
+
+| Field | Description |
+|---|---|
+| `activeCell`, `setActiveCell(cell)` | Current focus + setter |
+| `moveUp/Down/Left/Right(n?)` | Programmatic movement |
+| `moveToRowStart/RowEnd/Start/End()` | Navigation helpers |
+| `getKeyDownHandler()` | Returns the handler to attach to your grid container's `onKeyDown` |
+
+---
+
+## All seven combined
+
+The canonical demo combining every hook on a plain HTML table is the
+[`SpreadsheetDemo` Storybook story](https://github.com/alaarab/ogrid/blob/main/packages/react-radix/src/OGrid/SpreadsheetDemo.stories.tsx) —
+~200 lines you can copy as a starter template.
+
+```tsx
+const grid = useHeadlessGrid({ columns, data, getRowId: (r) => r.id });
+const range = useRangeSelection({ rowCount: grid.rows.length, colCount: grid.columns.length });
+const undo = useUndoRedo({ onCellValueChanged: applyEditToRows });
+const edit = useInlineEdit({ columns, getRowId, onCellEdit: undo.onCellValueChanged });
+const fill = useFillHandle({ rangeSelection: range, rows: grid.rows, columns, onFillCells });
+const clipboard = useCellClipboard({ rangeSelection: range, rows: grid.rows, columns, onCellEdit });
+const focus = useGridFocus({ rowCount: grid.rows.length, colCount: grid.columns.length, rangeSelection: range });
+```
+
+## See also
+
+- [Headless or component?](/docs/getting-started/headless-or-component) — When to use these hooks vs `<OGrid>`
+- [Theming](/docs/guides/theming) — Including the shadcn preset

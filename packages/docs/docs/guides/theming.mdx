@@ -213,3 +213,56 @@ Users can resize columns by dragging the column border. Listen for resize events
   }}
 />
 ```
+
+## Theme presets (new in 2.9)
+
+Instead of mapping `--ogrid-*` variables to your design system one-by-one,
+import a pre-built preset that bridges every token at once. Currently the
+shadcn/Tailwind v4 preset ships with `@alaarab/ogrid-react-radix`:
+
+```ts
+import "@alaarab/ogrid-react-radix/styles/index.css";
+import "@alaarab/ogrid-react-radix/styles/preset-shadcn.css";
+```
+
+The preset maps `--ogrid-bg → var(--card)`, `--ogrid-fg → var(--card-foreground)`,
+`--ogrid-header-bg → var(--muted)`, `--ogrid-primary → var(--primary)`,
+`--ogrid-accent → var(--ring)`, `--ogrid-border → var(--border)`,
+`--ogrid-radius → var(--radius)`, `--ogrid-font → var(--font-sans)`, and
+derived states (`--ogrid-selected-row-bg`, `--ogrid-range-bg`, etc.) via
+`color-mix(in oklch, var(--ring) 12%, transparent)` so they auto-tint to
+your primary/ring hue.
+
+Both light and dark modes follow your shadcn theme automatically — no
+hand-authored `[data-theme="dark"]` override blocks needed. The `.dark`
+class on `<html>` (Tailwind v3+/shadcn convention) is fully supported.
+
+### New theming tokens (2.9)
+
+In addition to the colors documented above, 2.8.0 added a radius/font/ring
+scale that `preset-shadcn.css` bridges automatically:
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `--ogrid-radius` | `6px` | Base corner radius — buttons, inputs, popovers |
+| `--ogrid-radius-sm` | `calc(--ogrid-radius * 0.6)` | Tighter — checkboxes, tags |
+| `--ogrid-radius-lg` | `calc(--ogrid-radius * 1.4)` | Looser — cards, dialogs |
+| `--ogrid-radius-xl` | `calc(--ogrid-radius * 1.8)` | Largest — hero surfaces |
+| `--ogrid-radius-full` | `9999px` | Pills, dots |
+| `--ogrid-font` | `inherit` | Font family for grid chrome |
+| `--ogrid-font-size` | `13px` | Base body font-size |
+| `--ogrid-ring` | `var(--ogrid-accent)` | Focus ring color |
+
+Override `--ogrid-radius` once and every corner in OGrid scales (sm/lg/xl
+are `calc()`'d from the base).
+
+### Dark mode signals
+
+OGrid honors three dark-mode activation signals:
+
+1. `prefers-color-scheme: dark` — system preference (auto)
+2. `[data-theme="dark"]` on any ancestor (explicit)
+3. `.dark` on any ancestor — Tailwind v3+/shadcn convention (explicit)
+
+Opt out of auto-dark on a deliberate-light-mode app by setting
+`[data-theme="light"]` or `.light` on `<html>`.
