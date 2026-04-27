@@ -21,6 +21,22 @@ same params, same return values, just framework-native reactivity:
 
 Examples below use the React imports for readability.
 
+### Bundle-size tip — headless-only consumers
+
+If your app **only** uses the hooks (no `<OGrid>` chrome), import from
+`@alaarab/ogrid-react` instead of `@alaarab/ogrid-react-radix`. Same hooks,
+no chrome CSS load (~40KB saved), and `sideEffects: false` lets your
+bundler tree-shake aggressively:
+
+```ts
+// Headless-only — skip the radix package entirely
+import { useHeadlessGrid, useInlineEdit, useRangeSelection } from '@alaarab/ogrid-react';
+```
+
+Same goes for Vue (`@alaarab/ogrid-vue`) and Angular (`@alaarab/ogrid-angular`).
+Use the `-radix` packages when you want both the headless hooks AND the
+drop-in `<OGrid>` component.
+
 ---
 
 ## `useHeadlessGrid` — data layer
