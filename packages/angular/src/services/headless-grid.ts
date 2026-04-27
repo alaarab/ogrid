@@ -47,14 +47,14 @@
  *   }
  */
 
-import { signal, computed, type Signal, type WritableSignal } from '@angular/core';
+import { signal, computed, effect, type Signal, type WritableSignal } from '@angular/core';
 import {
   processClientSideData,
   getCellValue as coreGetCellValue,
   computeNextSortState,
   mergeFilter,
 } from '@alaarab/ogrid-core';
-import type { IColumnDef, IFilters, FilterValue } from '@alaarab/ogrid-core';
+import type { IColumnDef, IFilters, FilterValue, IDataSource } from '@alaarab/ogrid-core';
 
 export type RowId = string | number;
 
@@ -76,6 +76,15 @@ export interface CreateHeadlessGridParams<T> {
   initialFilters?: IFilters;
   initialPage?: number;
   initialPageSize?: number;
+
+  /**
+   * Server-side data source. When provided, sort/filter/paginate are sent
+   * to the server and the returned items are displayed as-is. When omitted,
+   * client-side processing runs against `data`.
+   */
+  dataSource?: IDataSource<T>;
+  /** Server-side fetch error callback. */
+  onError?: (err: unknown) => void;
 }
 
 export interface HeadlessGridResult<T> {
@@ -120,6 +129,11 @@ export interface HeadlessGridResult<T> {
   toggleRowSelection: (row: T) => void;
   selectAllOnPage: () => void;
   clearSelection: () => void;
+
+  /** True while a server-side fetch is in flight. Always false in client-side mode. */
+  serverLoading: Signal<boolean>;
+  /** Force a fresh server-side fetch (no-op in client-side mode). */
+  refreshData: () => void;
 }
 
 const DEFAULT_PAGE_SIZE = 25;
@@ -153,6 +167,8 @@ export function createHeadlessGrid<T>(
     initialFilters = {},
     initialPage = 1,
     initialPageSize = DEFAULT_PAGE_SIZE,
+    dataSource,
+    onError,
   } = params;
 
   const sort = signal<SortState>(initialSort ?? { field: '', direction: 'asc' });
@@ -163,7 +179,60 @@ export function createHeadlessGrid<T>(
   const columns = normalize(columnsInput);
   const data = normalize(dataInput);
 
+  const isServerSide = dataSource != null;
+
+  // ── Server-side fetch state ────────────────────────────────────────
+  const serverItems = signal<T[]>([]);
+  const serverTotalCount = signal(0);
+  const serverLoading = signal(isServerSide);
+  const refreshCounter = signal(0);
+  // Stale-fetch guard — only the latest write wins.
+  let fetchId = 0;
+
+  if (isServerSide && dataSource) {
+    effect((onCleanup) => {
+      // Read every signal we want to track for re-fetching.
+      const p = page();
+      const ps = pageSize();
+      const s = sort();
+      const f = filters();
+      void refreshCounter();
+
+      const id = ++fetchId;
+      const controller = new AbortController();
+      serverLoading.set(true);
+      dataSource
+        .fetchPage({
+          page: p,
+          pageSize: ps,
+          sort: { field: s.field, direction: s.direction },
+          filters: f,
+          signal: controller.signal,
+        })
+        .then((res) => {
+          if (id !== fetchId || controller.signal.aborted) return;
+          serverItems.set(res.items);
+          serverTotalCount.set(res.totalCount);
+        })
+        .catch((err) => {
+          if (id !== fetchId || controller.signal.aborted) return;
+          onError?.(err);
+          serverItems.set([]);
+          serverTotalCount.set(0);
+        })
+        .finally(() => {
+          if (id === fetchId && !controller.signal.aborted) {
+            serverLoading.set(false);
+          }
+        });
+
+      onCleanup(() => controller.abort());
+    });
+  }
+
+  // ── Client-side derivation (only used when isServerSide === false) ─
   const allFilteredRows = computed(() => {
+    if (isServerSide) return serverItems();
     const sortField = sort().field;
     return processClientSideData(
       data(),
@@ -174,15 +243,20 @@ export function createHeadlessGrid<T>(
     );
   });
 
-  const totalCount = computed(() => allFilteredRows().length);
+  const totalCount = computed(() =>
+    isServerSide ? serverTotalCount() : allFilteredRows().length,
+  );
   const totalPages = computed(() =>
     Math.max(1, Math.ceil(totalCount() / pageSize())),
   );
 
   const rows = computed(() => {
+    if (isServerSide) return serverItems();
     const start = (page() - 1) * pageSize();
     return allFilteredRows().slice(start, start + pageSize());
   });
+
+  const refreshData = () => refreshCounter.update((n) => n + 1);
 
   // ── Actions ─────────────────────────────────────────────────────────
   const setPage = (p: number) => page.set(p);
@@ -281,5 +355,8 @@ export function createHeadlessGrid<T>(
     toggleRowSelection,
     selectAllOnPage,
     clearSelection,
+
+    serverLoading,
+    refreshData,
   };
 }
