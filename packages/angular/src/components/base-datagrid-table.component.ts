@@ -305,8 +305,8 @@ export abstract class BaseDataGridTableComponent<T = unknown> {
     const sizingOverrides = this.columnSizingOverrides();
     return cols.map((col) => {
       const runtimePinned = pinnedCols[col.columnId];
-      const pinnedLeft = runtimePinned === 'left' || (col as unknown as Record<string, unknown>).pinned === 'left';
-      const pinnedRight = runtimePinned === 'right' || (col as unknown as Record<string, unknown>).pinned === 'right';
+      const pinnedLeft = runtimePinned === 'left' || col.pinned === 'left';
+      const pinnedRight = runtimePinned === 'right' || col.pinned === 'right';
       const w = this.getColumnWidth(col);
       // Use previously-measured DOM width as a minWidth floor to prevent columns
       // from shrinking when new data loads (e.g. server-side pagination).

@@ -194,12 +194,17 @@ function RadixTableBody<T>(props: RadixTableBodyProps<T>) {
   // Partition columns when column virtualization is active
   const partition = React.useMemo(() => {
     if (!columnRange) return null;
-    const p = partitionColumnsForVirtualization(
-      visibleCols as Parameters<typeof partitionColumnsForVirtualization>[0],
+    // Cast bridges core's IColumnDef<T> to react's IColumnDef<T> — react extends
+    // core but TypeScript sees them as different types from different packages.
+    return partitionColumnsForVirtualization<T>(
+      visibleCols as Parameters<typeof partitionColumnsForVirtualization<T>>[0],
       columnRange,
       pinnedColumns,
-    );
-    return p as unknown as { pinnedLeft: IColumnDef<T>[]; virtualizedUnpinned: IColumnDef<T>[]; pinnedRight: IColumnDef<T>[]; leftSpacerWidth: number; rightSpacerWidth: number };
+    ) as ReturnType<typeof partitionColumnsForVirtualization<T>> & {
+      pinnedLeft: IColumnDef<T>[];
+      virtualizedUnpinned: IColumnDef<T>[];
+      pinnedRight: IColumnDef<T>[];
+    };
   }, [visibleCols, columnRange, pinnedColumns]);
 
   // Build global column index map: maps local index in partitioned array to global index in visibleCols
