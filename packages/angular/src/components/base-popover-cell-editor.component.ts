@@ -1,4 +1,4 @@
-import { AfterViewInit, Directive, Input, ViewChild, ElementRef, Injector, EnvironmentInjector, inject, signal, effect, createComponent } from '@angular/core';
+import { AfterViewInit, Directive, Input, ViewChild, ElementRef, Injector, EnvironmentInjector, inject, signal, effect, createComponent, type Type } from '@angular/core';
 import type { IColumnDef, ICellEditorProps } from '../types';
 
 /**
@@ -81,7 +81,7 @@ export abstract class BasePopoverCellEditorComponent<T = unknown> implements Aft
       const col = this.column;
       if (!container || !this.showEditor() || typeof col.cellEditor !== 'function') return;
 
-      const EditorComponent = col.cellEditor as unknown as new (...args: unknown[]) => unknown;
+      const EditorComponent = col.cellEditor as Type<unknown>;
       const componentRef = createComponent(EditorComponent, {
         environmentInjector: this.envInjector,
         elementInjector: this.injector,
