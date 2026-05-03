@@ -118,7 +118,7 @@ Bundle size is what you actually install (core + framework adapter + UI layer). 
 ├── @alaarab/ogrid-react          hooks + headless components
 │   ├── ogrid-react-radix         Radix UI views
 │   ├── ogrid-react-fluent        Fluent UI views
-│   └── ogrid-react-material      Material UI views
+│   └── ogrid-react-material      (frozen — MUI v7)
 ├── @alaarab/ogrid-angular        (frozen — signals + services)
 │   ├── ogrid-angular-material    (frozen)
 │   ├── ogrid-angular-primeng     (frozen)
@@ -176,9 +176,9 @@ function App() {
 }
 ```
 
-> Using Fluent UI? Change the import to `@alaarab/ogrid-react-fluent`. Material UI? `@alaarab/ogrid-react-material`. Same API.
+> Using Fluent UI? Change the import to `@alaarab/ogrid-react-fluent`. Same API.
 
-> Using Angular or Vue? See [Frozen adapters](#frozen-adapters) — these still work at v2.9.0 but are no longer actively developed.
+> Need Material UI, Angular, or Vue? See [Frozen adapters](#frozen-adapters) — those packages still work at their last shipped versions but are no longer actively developed.
 
 ### Vanilla JS
 
@@ -278,7 +278,6 @@ Core features are shared across React, Angular, Vue, and vanilla JS. Main CI now
 | [`@alaarab/ogrid-react`](./packages/react) | [![npm](https://img.shields.io/npm/v/@alaarab/ogrid-react)](https://www.npmjs.com/package/@alaarab/ogrid-react) | `react`, `react-dom` |
 | [`@alaarab/ogrid-react-radix`](./packages/react-radix) | [![npm](https://img.shields.io/npm/v/@alaarab/ogrid-react-radix)](https://www.npmjs.com/package/@alaarab/ogrid-react-radix) | `react`, `react-dom` |
 | [`@alaarab/ogrid-react-fluent`](./packages/react-fluent) | [![npm](https://img.shields.io/npm/v/@alaarab/ogrid-react-fluent)](https://www.npmjs.com/package/@alaarab/ogrid-react-fluent) | + `@fluentui/react-components`, `@fluentui/react-icons` |
-| [`@alaarab/ogrid-react-material`](./packages/react-material) | [![npm](https://img.shields.io/npm/v/@alaarab/ogrid-react-material)](https://www.npmjs.com/package/@alaarab/ogrid-react-material) | + `@mui/material`, `@mui/icons-material`, `@emotion/*` |
 | **Vanilla JS** | | |
 | [`@alaarab/ogrid-js`](./packages/js) | [![npm](https://img.shields.io/npm/v/@alaarab/ogrid-js)](https://www.npmjs.com/package/@alaarab/ogrid-js) | None |
 
@@ -288,10 +287,11 @@ Optional premium inputs (calendar date picker, rating, color picker, slider, tag
 
 ### Frozen adapters
 
-The Angular and Vue families remain published on npm at **v2.9.0** and the source lives in `packages/{angular*,vue*}` for reference, but they are no longer in the active build, test, release, or CI pipelines. They will not get framework-major upgrades or new features. Existing installs continue to work at v2.9.0; for new projects, use the React adapter or vanilla JS.
+The following packages remain published on npm at the version listed and the source lives in `packages/` for reference, but they are no longer in the active build, test, release, or CI pipelines. They will not get framework-major upgrades or new features. Existing installs continue to work; for new projects, use the React Radix or React Fluent adapter or vanilla JS.
 
 | Frozen package | npm |
 |---|---|
+| `@alaarab/ogrid-react-material` | v2.9.1 (MUI v7; v9 dropped Typography props the adapter uses) |
 | `@alaarab/ogrid-angular`, `-angular-material`, `-angular-primeng`, `-angular-radix`, `-angular-inputs` | v2.9.0 |
 | `@alaarab/ogrid-vue`, `-vue-vuetify`, `-vue-primevue`, `-vue-radix`, `-vue-inputs` | v2.9.0 |
 
@@ -389,7 +389,6 @@ npm run test:e2e:matrix             # Full browser matrix across active example 
 
 # Storybook
 npm run storybook:react-fluent      # React Fluent UI    (port 6006)
-npm run storybook:react-material    # React Material UI  (port 6007)
 npm run storybook:react-radix       # React Radix UI     (port 6008)
 
 # Documentation

@@ -233,7 +233,6 @@ function FeatureTicker() {
 const installCommands = [
   { pkg: '@alaarab/ogrid-react-radix', label: 'React + Radix' },
   { pkg: '@alaarab/ogrid-react-fluent', label: 'React + Fluent UI' },
-  { pkg: '@alaarab/ogrid-react-material', label: 'React + Material UI' },
   { pkg: '@alaarab/ogrid-js', label: 'Vanilla JS' },
 ];
 
@@ -427,7 +426,7 @@ function getCodeExample(fw: typeof frameworks[number]) {
   switch (fw.id) {
     case 'react':
       return `import { OGrid } from '@alaarab/ogrid-react-radix';
-// Also: '@alaarab/ogrid-react-fluent' | '@alaarab/ogrid-react-material'
+// Also: '@alaarab/ogrid-react-fluent'
 
 const columns = [
   { columnId: 'name', name: 'Name', sortable: true },
@@ -672,7 +671,6 @@ const frameworkCards: FrameworkCard[] = [
     name: 'React',
     uiKits: [
       { label: 'Radix', pkg: '@alaarab/ogrid-react-radix' },
-      { label: 'Material UI', pkg: '@alaarab/ogrid-react-material' },
       { label: 'Fluent UI', pkg: '@alaarab/ogrid-react-fluent' },
     ],
   },

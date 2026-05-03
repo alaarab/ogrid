@@ -32,16 +32,6 @@ npm install @alaarab/ogrid-react-fluent @fluentui/react-components
 
 **When to choose:** SharePoint Framework (SPFx) apps, Microsoft 365 integrations, or projects already using Fluent UI.
 
-### Material UI
-
-**Google's Material Design.** Requires MUI v7 and Emotion as peer dependencies.
-
-```bash
-npm install @alaarab/ogrid-react-material @mui/material @emotion/react @emotion/styled
-```
-
-**When to choose:** Projects using Material Design, or when you need MUI's extensive component ecosystem.
-
 ---
 
 ## Vanilla JS (No Framework)
@@ -58,7 +48,11 @@ npm install @alaarab/ogrid-js
 
 ## Frozen adapters
 
-The Angular and Vue adapters were available through **v2.9.0** and remain on npm at that version. They no longer receive feature work or framework-major upgrades. Existing installs continue to work unchanged. For new projects, use the React adapter or vanilla JS.
+The following adapters remain on npm at their last shipped version but no longer receive feature work or framework-major upgrades. Existing installs continue to work unchanged.
+
+- **`@alaarab/ogrid-react-material`** — frozen at v2.9.1. MUI v7 (skipped v8, broke in v9). For new React projects, use the Radix or Fluent UI variant.
+- **`@alaarab/ogrid-angular*`** — frozen at v2.9.0.
+- **`@alaarab/ogrid-vue*`** — frozen at v2.9.0.
 
 ---
 

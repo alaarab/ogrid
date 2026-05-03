@@ -14,7 +14,7 @@ High-level overview of the OGrid monorepo. **12 active packages** across React +
 packages/
   core/                     to  @alaarab/ogrid-core (zero deps)
   react/                    to  @alaarab/ogrid-react (hooks + shared logic)
-  react-{radix,fluent,material}/   to  UI implementations (3 packages)
+  react-{radix,fluent}/     to  UI implementations (react-material frozen at v2.9.1)
   js/                       to  @alaarab/ogrid-js (vanilla JS, class-based)
   inputs/                   to  @alaarab/ogrid-inputs (headless utils: calendar, rating, color, slider, tags)
   {react,js}-inputs/        to  Premium editors (5 total per framework)
@@ -94,7 +94,7 @@ npm run build                   # Build all packages (Turborepo)
 npm run test:all                # Run all 4,728 tests
 npm run test:{core,js,react,radix,fluent,material}  # Package-specific
 npm run lint                    # ESLint
-npm run storybook:{react-fluent,react-material,react-radix,:6006,6007,6008}
+npm run storybook:{react-fluent,react-radix}    # ports 6006, 6008
 npm run docs:dev                # Docusaurus dev (http://localhost:3000)
 npm run docs:build              # Build static docs site
 ```

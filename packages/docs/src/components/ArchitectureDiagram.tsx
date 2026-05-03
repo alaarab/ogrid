@@ -320,7 +320,7 @@ export function ArchitectureDiagram() {
           uiPackages={[
             { name: 'ogrid-react-radix',    description: 'Radix Primitives' },
             { name: 'ogrid-react-fluent',   description: 'Fluent UI v9' },
-            { name: 'ogrid-react-material', description: 'Material UI v7' },
+            { name: 'ogrid-react-material', description: 'Frozen at v2.9.1' },
           ]}
           adapterName="ogrid-react"
           adapterDescription="Hooks · Headless Components"

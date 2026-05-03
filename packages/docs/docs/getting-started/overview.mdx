@@ -6,9 +6,9 @@ description: What is OGrid and why use it
 
 # Overview
 
-OGrid is a lightweight, open-source data grid library that delivers spreadsheet-grade features without the enterprise paywall. It ships with a React adapter (Radix, Fluent UI, and Material UI implementations) plus a vanilla JS package, all powered by a shared TypeScript core.
+OGrid is a lightweight, open-source data grid library that delivers spreadsheet-grade features without the enterprise paywall. It ships with a React adapter (Radix and Fluent UI implementations) plus a vanilla JS package, all powered by a shared TypeScript core.
 
-> **Note:** Angular and Vue adapters were available through v2.9.0 and remain on npm at that version. New development is React-first. See the project README's "Frozen adapters" section if you have an existing Angular or Vue install.
+> **Note:** Angular, Vue, and Material UI adapters were available through earlier 2.9.x versions and remain on npm at those versions. New development is React-first (Radix / Fluent). See the project README's "Frozen adapters" section if you have an existing install on one of the frozen variants.
 
 ## Why OGrid?
 
@@ -54,9 +54,8 @@ Each UI package is a thin shell (~1,500 lines) that calls the same core logic an
 |---|---|---|
 | `@alaarab/ogrid-react-radix` | Radix primitives | Lightweight apps, custom design systems |
 | `@alaarab/ogrid-react-fluent` | Fluent UI v9 | Microsoft 365, SharePoint, Teams apps |
-| `@alaarab/ogrid-react-material` | MUI v7 | Material Design apps, dashboards |
 
-All three packages export the same `OGrid` component with the same props. Switching design systems is a one-line import change  -  your column definitions, event handlers, data sources, and API calls stay identical.
+Both packages export the same `OGrid` component with the same props. Switching design systems is a one-line import change  -  your column definitions, event handlers, data sources, and API calls stay identical.
 
 ### Why This Matters
 
@@ -73,7 +72,6 @@ All three packages export the same `OGrid` component with the same props. Switch
 | `@alaarab/ogrid-react` | [![npm](https://img.shields.io/npm/v/@alaarab/ogrid-react)](https://npmjs.com/package/@alaarab/ogrid-react) | React hooks, headless components, utilities |
 | `@alaarab/ogrid-react-radix` | [![npm](https://img.shields.io/npm/v/@alaarab/ogrid-react-radix)](https://npmjs.com/package/@alaarab/ogrid-react-radix) | Radix UI implementation (default, lightweight) |
 | `@alaarab/ogrid-react-fluent` | [![npm](https://img.shields.io/npm/v/@alaarab/ogrid-react-fluent)](https://npmjs.com/package/@alaarab/ogrid-react-fluent) | Fluent UI v9 implementation |
-| `@alaarab/ogrid-react-material` | [![npm](https://img.shields.io/npm/v/@alaarab/ogrid-react-material)](https://npmjs.com/package/@alaarab/ogrid-react-material) | Material UI v7 implementation |
 | **Vanilla JS** | | |
 | `@alaarab/ogrid-js` | [![npm](https://img.shields.io/npm/v/@alaarab/ogrid-js)](https://npmjs.com/package/@alaarab/ogrid-js) | Vanilla JS data grid (no framework) |
 
