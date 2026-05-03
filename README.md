@@ -327,16 +327,18 @@ Playwright covers a fast smoke gate on every push plus a manual full matrix acro
 
 ## Development
 
+OGrid uses **Bun** as the package manager and script runner. Install [Bun 1.3+](https://bun.com/docs/installation) first, then:
+
 ```bash
 git clone https://github.com/alaarab/ogrid.git
 cd ogrid
-npm install
-npm run build                       # Build all packages (Turborepo)
-npm run test:all                    # Run all tests
-npm run lint                        # Biome
-npm run test:e2e:smoke              # Browser merge gate (React Radix)
-npm run test:e2e:docs               # Built docs homepage verification
-npm run test:e2e:matrix             # Full browser matrix across active example apps
+bun install
+bun run build                       # Build all packages (Turborepo)
+bun run test                        # Run all tests
+bun run lint                        # Biome
+bun run test:e2e:smoke              # Browser merge gate (React Radix)
+bun run test:e2e:docs               # Built docs homepage verification
+bun run test:e2e:matrix             # Full browser matrix across active example apps
 
 # GitHub Actions
 # CI                -> fast push/PR checks (lint + browser smoke)
@@ -344,13 +346,15 @@ npm run test:e2e:matrix             # Full browser matrix across active example 
 # Playwright Matrix -> manual browser parity pass across active example apps
 
 # Storybook
-npm run storybook:react-fluent      # React Fluent UI    (port 6006)
-npm run storybook:react-radix       # React Radix UI     (port 6008)
+bun run storybook:react-fluent      # React Fluent UI    (port 6006)
+bun run storybook:react-radix       # React Radix UI     (port 6008)
 
 # Documentation
-npm run docs:dev                    # Docusaurus dev server
-npm run docs:build                  # Build docs site
+bun run docs:dev                    # Docusaurus dev server
+bun run docs:build                  # Build docs site
 ```
+
+> Tests still run on Jest (per-workspace `jest.config.js`); Bun is the install + script runner. Published consumer packages remain plain npm — your users do `npm install @alaarab/ogrid-react-radix` exactly as before.
 
 ### Requirements
 

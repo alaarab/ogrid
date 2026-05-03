@@ -56,4 +56,4 @@ for (const file of files.sort()) {
 }
 
 console.log(`\nBumped ${updated} package(s) to ${version}`);
-console.log('Run `npm install` to update package-lock.json');
+console.log('Run `bun install` to update bun.lock');

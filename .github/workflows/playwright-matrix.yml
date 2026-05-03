@@ -16,23 +16,22 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v6
 
-      - name: Use Node.js 22
-        uses: actions/setup-node@v6
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
         with:
-          node-version: 22
-          cache: npm
+          bun-version: latest
 
       - name: Install dependencies
-        run: npm ci
+        run: bun install --frozen-lockfile
 
       - name: Build all packages
-        run: npm run build
+        run: bun run build
         env:
           TURBO_TOKEN: ${{ secrets.TURBO_TOKEN }}
           TURBO_TEAM: ${{ vars.TURBO_TEAM }}
 
       - name: Install Playwright Chromium
-        run: npx playwright install --with-deps chromium
+        run: bunx playwright install --with-deps chromium
 
       - name: Run full Playwright matrix
-        run: npm run test:e2e:matrix
+        run: bun run test:e2e:matrix
