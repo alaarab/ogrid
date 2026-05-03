@@ -19,17 +19,16 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v6
 
-      - name: Use Node.js 22
-        uses: actions/setup-node@v6
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
         with:
-          node-version: 22
-          cache: npm
+          bun-version: latest
 
       - name: Install dependencies
-        run: npm ci
+        run: bun install --frozen-lockfile
 
       - name: Lint
-        run: npm run lint
+        run: bun run lint
 
   browser-smoke:
     runs-on: ubuntu-latest
@@ -39,18 +38,17 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v6
 
-      - name: Use Node.js 22
-        uses: actions/setup-node@v6
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
         with:
-          node-version: 22
-          cache: npm
+          bun-version: latest
 
       - name: Install dependencies
-        run: npm ci
+        run: bun install --frozen-lockfile
 
       - name: Build required packages for browser smoke
         run: |
-          npx turbo build \
+          bunx turbo build \
             --filter=@alaarab/ogrid-mcp \
             --filter=@alaarab/ogrid-core \
             --filter=@alaarab/ogrid-react \
@@ -62,7 +60,7 @@ jobs:
           TURBO_TEAM: ${{ vars.TURBO_TEAM }}
 
       - name: Install Playwright Chromium
-        run: npx playwright install --with-deps chromium
+        run: bunx playwright install --with-deps chromium
 
       - name: Run browser smoke suite
-        run: npm run test:e2e:smoke
+        run: bun run test:e2e:smoke

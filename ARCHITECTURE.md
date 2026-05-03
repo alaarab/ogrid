@@ -2,9 +2,9 @@
 
 High-level overview of the OGrid monorepo. **9 active packages** on `main`. Frozen variants (Material UI, vanilla JS, Angular, Vue) live on the `legacy/multiframework` branch and at the `v2.9.1-multiframework` tag.
 
-- **Monorepo:** npm workspaces + Turborepo
+- **Monorepo:** Bun workspaces + Turborepo
 - **Build:** TypeScript 6 strict, ESM-only, tree-shakeable
-- **Node:** 22 via nvm
+- **Runtime:** Bun 1.3+ for dev/CI; published packages remain plain npm
 - **License:** MIT
 
 ## Project Structure
@@ -76,14 +76,14 @@ Custom headless engine in `packages/core/src/formula/` with 93 functions:
 ## Key Commands
 
 ```bash
-npm ci                          # Install deps
-npm run build                   # Build all packages (Turborepo)
-npm run test:all                # Run all 4,728 tests
-npm run test:{core,js,react,radix,fluent,material}  # Package-specific
-npm run lint                    # ESLint
-npm run storybook:{react-fluent,react-radix}    # ports 6006, 6008
-npm run docs:dev                # Docusaurus dev (http://localhost:3000)
-npm run docs:build              # Build static docs site
+bun install                     # Install deps
+bun run build                   # Build all packages (Turborepo)
+bun run test                    # Run all 2,768 tests
+bun run test:{core,react,radix,fluent,inputs,react-inputs,mcp}  # Package-specific
+bun run lint                    # Biome
+bun run storybook:{react-fluent,react-radix}    # ports 6006, 6008
+bun run docs:dev                # Docusaurus dev (http://localhost:3000)
+bun run docs:build              # Build static docs site
 ```
 
 ## Conventions
