@@ -16,7 +16,6 @@ Complete API documentation for OGrid components, types, and interfaces.
 - [OGrid Props](./ogrid-props.mdx): top-level OGrid component props (client-side and server-side modes)
 - [Column Definition](./column-def.mdx): complete column definition reference (IColumnDef, IColumnGroupDef, cell editors, filters)
 - [Grid API](./grid-api.mdx): imperative grid API (IOGridApi) for programmatic control
-- [JS API](./js-api.mdx): vanilla JS API reference (OGrid class, state classes, components)
 
 ## Types
 
@@ -47,10 +46,9 @@ Complete API documentation for OGrid components, types, and interfaces.
 
 ## Type Imports
 
-All types can be imported from any OGrid package:
+All types can be imported from any React UI package:
 
 ```typescript
-// React packages
 import type {
   IColumnDef,
   IOGridApi,
@@ -61,17 +59,12 @@ import type {
   FilterValue,
   RowId,
 } from '@alaarab/ogrid-react-radix';
-
-// Vanilla JS
-import type {
-  IColumnDef,
-  IDataSource,
-} from '@alaarab/ogrid-js';
 ```
 
-## Framework-Specific APIs
+## API surface
 
-| Framework | Orchestration | State Hook | Props Pattern |
-|-----------|---------------|------------|---------------|
-| React | `useOGrid()` hook | `useDataGridState()` | Individual props |
-| Vanilla JS | `OGrid` class | `GridState` class | Constructor options |
+| Surface | Entry point |
+|---|---|
+| Component | `<OGrid>` from `@alaarab/ogrid-react-radix` or `-react-fluent` |
+| Orchestration hook | `useOGrid()` |
+| State hook | `useDataGridState()` |

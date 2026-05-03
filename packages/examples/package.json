@@ -2,21 +2,17 @@
   "name": "@alaarab/ogrid-examples",
   "version": "2.9.1",
   "private": true,
-  "description": "OGrid example apps for React and Vanilla JS UI packages.",
+  "description": "OGrid example apps for the React UI packages.",
   "scripts": {
-    "build": "npm run build:react-fluent && npm run build:react-radix && npm run build:js",
+    "build": "npm run build:react-fluent && npm run build:react-radix",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "dev:react-fluent": "vite --config vite.fluent.config.ts",
     "dev:react-radix": "vite --config vite.radix.config.ts",
-    "dev:js": "vite --config vite.js.config.ts",
     "build:react-fluent": "vite build --config vite.fluent.config.ts",
-    "build:react-radix": "vite build --config vite.radix.config.ts",
-    "build:js": "vite build --config vite.js.config.ts"
+    "build:react-radix": "vite build --config vite.radix.config.ts"
   },
   "dependencies": {
     "@alaarab/ogrid-core": "2.9.1",
-    "@alaarab/ogrid-js": "2.9.1",
-    "@alaarab/ogrid-js-inputs": "2.9.1",
     "@alaarab/ogrid-mcp": "2.9.1",
     "@alaarab/ogrid-react": "2.9.1",
     "@alaarab/ogrid-react-fluent": "2.9.1",

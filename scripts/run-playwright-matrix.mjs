@@ -3,7 +3,6 @@ import { spawnSync } from 'node:child_process';
 const projects = [
   'react-fluent',
   'react-radix',
-  'js',
 ];
 const passthroughArgs = process.argv.slice(2);
 

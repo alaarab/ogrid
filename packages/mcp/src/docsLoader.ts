@@ -111,17 +111,10 @@ function detectFramework(
   const ctxLower = surroundingContext.toLowerCase();
   if (ctxLower.includes('value="react"') || ctxLower.includes('label="react"'))
     return 'react';
-  if (
-    ctxLower.includes('value="js"') ||
-    ctxLower.includes('label="vanilla js"') ||
-    ctxLower.includes('vanilla js')
-  )
-    return 'js';
 
   // Content heuristics
   if (code.includes('ogrid-react') || code.includes('from \'react\''))
     return 'react';
-  if (code.includes('ogrid-js') || code.includes('new OGrid(')) return 'js';
 
   return undefined;
 }

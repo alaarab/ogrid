@@ -17,7 +17,7 @@ The `IOGridApi` ref gives you imperative control over the grid: set data, manage
 <GridApiDemo />
 
 :::tip Try it in your framework
-The demo above uses Radix UI for styling. To see this feature with your framework's design system (Fluent UI, Material UI, Vuetify, PrimeNG, etc.), click **"Open in online demo"** below the demo.
+The demo above uses Radix UI for styling. To see this feature with the Fluent UI implementation, click **"Open in online demo"** below the demo.
 :::
 
 ## Quick Example
@@ -66,30 +66,7 @@ The `OGrid` component has the same props across all React UI packages. To switch
 
 - **Radix** (lightweight, default): `from '@alaarab/ogrid-react-radix'`
 - **Fluent UI** (Microsoft 365 / SPFx): `from '@alaarab/ogrid-react-fluent'`  -  wrap in `<FluentProvider>`
-- **Material UI** (MUI v7): `from '@alaarab/ogrid-react-material'`  -  wrap in `<ThemeProvider>`
 :::
-
-  </TabItem>
-  <TabItem value="js" label="Vanilla JS">
-
-```js
-import { OGrid } from '@alaarab/ogrid-js';
-import '@alaarab/ogrid-js/styles';
-
-const grid = new OGrid(document.getElementById('grid'), {
-  columns: columns,
-  data: initialData,
-  getRowId: (r) => r.id,
-});
-
-// Use the grid API directly
-async function handleRefresh() {
-  grid.api.setLoading(true);
-  const data = await fetchEmployees();
-  grid.api.setRowData(data);
-  grid.api.setLoading(false);
-}
-```
 
   </TabItem>
 </Tabs>

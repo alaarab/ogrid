@@ -63,26 +63,8 @@ function App() {
 ```
 
 <Admonition type="tip">
-Also available from `@alaarab/ogrid-react-fluent` and `@alaarab/ogrid-react-material`.
+Also available from `@alaarab/ogrid-react-fluent`.
 </Admonition>
-
-  </TabItem>
-  <TabItem value="js" label="Vanilla JS">
-
-```typescript
-import { OGrid } from '@alaarab/ogrid-js';
-
-const grid = new OGrid(document.getElementById('grid')!, {
-  columns: [
-    { columnId: 'name', name: 'Name', responsivePriority: 0 },
-    { columnId: 'email', name: 'Email', responsivePriority: 1 },
-    { columnId: 'phone', name: 'Phone', responsivePriority: 3 },
-  ],
-  data: items,
-  getRowId: (item) => item.id,
-  responsiveColumns: true,
-});
-```
 
   </TabItem>
 </Tabs>

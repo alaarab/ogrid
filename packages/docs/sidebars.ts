@@ -10,7 +10,6 @@ const sidebars: SidebarsConfig = {
         'getting-started/overview',
         'getting-started/installation',
         'getting-started/quick-start',
-        'getting-started/vanilla-js',
       ],
     },
     {
@@ -66,7 +65,6 @@ const sidebars: SidebarsConfig = {
         'api/ogrid-props',
         'api/column-def',
         'api/grid-api',
-        'api/js-api',
         'api/types',
         {
           type: 'category',

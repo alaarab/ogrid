@@ -106,29 +106,7 @@ Same props across all React packages — just change the import:
 
 - **Radix** (lightweight, default): `from '@alaarab/ogrid-react-radix'`
 - **Fluent UI** (Microsoft 365 / SPFx): `from '@alaarab/ogrid-react-fluent'`  -  wrap in `<FluentProvider>`
-- **Material UI** (MUI v7): `from '@alaarab/ogrid-react-material'`  -  wrap in `<ThemeProvider>`
 :::
-
-  </TabItem>
-  <TabItem value="js" label="Vanilla JS">
-
-```js
-import { OGrid } from '@alaarab/ogrid-js';
-import '@alaarab/ogrid-js/styles';
-
-const grid = new OGrid(document.getElementById('grid'), {
-  columns: [
-    { columnId: 'id', name: 'ID', type: 'numeric' },
-    { columnId: 'name', name: 'Name', sortable: true },
-    { columnId: 'revenue', name: 'Revenue', type: 'numeric', sortable: true },
-    { columnId: 'region', name: 'Region', sortable: true },
-  ],
-  data: largeDataset,   // e.g. 50,000 rows
-  getRowId: (r) => r.id,
-  workerSort: true,
-  statusBar: true,
-});
-```
 
   </TabItem>
 </Tabs>
@@ -211,31 +189,7 @@ Same props across all React packages — just change the import:
 
 - **Radix** (lightweight, default): `from '@alaarab/ogrid-react-radix'`
 - **Fluent UI** (Microsoft 365 / SPFx): `from '@alaarab/ogrid-react-fluent'`  -  wrap in `<FluentProvider>`
-- **Material UI** (MUI v7): `from '@alaarab/ogrid-react-material'`  -  wrap in `<ThemeProvider>`
 :::
-
-  </TabItem>
-  <TabItem value="js" label="Vanilla JS">
-
-```js
-import { OGrid } from '@alaarab/ogrid-js';
-import '@alaarab/ogrid-js/styles';
-
-const grid = new OGrid(document.getElementById('grid'), {
-  columns,           // 100 columns
-  data: largeData,   // 100,000 rows
-  getRowId: (r) => r.id,
-  virtualScroll: {
-    enabled: true,
-    rowHeight: 36,
-    overscan: 5,
-    columns: true,
-    columnOverscan: 2,
-  },
-  workerSort: true,
-  statusBar: true,
-});
-```
 
   </TabItem>
 </Tabs>

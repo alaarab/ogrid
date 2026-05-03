@@ -19,8 +19,8 @@ interface VersionDetectResult {
 
 function detectFramework(packageNames: string[]): string {
   if (packageNames.some((n) => n.includes('-react'))) return 'react';
-  if (packageNames.some((n) => n.endsWith('-js'))) return 'js';
-  // Frozen v2.9.0 adapters: report so detect_version still returns useful info.
+  // Frozen adapters: report so detect_version still returns useful info.
+  if (packageNames.some((n) => n.endsWith('-js'))) return 'js (frozen at v2.9.1)';
   if (packageNames.some((n) => n.includes('-angular'))) return 'angular (frozen at v2.9.0)';
   if (packageNames.some((n) => n.includes('-vue'))) return 'vue (frozen at v2.9.0)';
   return 'unknown';
@@ -85,7 +85,7 @@ export function createOGridMcpServer(index: DocsIndex, bridge?: BridgeStore): Mc
   const server = new McpServer({
     name: 'ogrid-docs',
     version: '2.3.0',
-    instructions: `OGrid documentation server. OGrid is a lightweight multi-framework data grid for React, Angular, Vue, and vanilla JS.
+    instructions: `OGrid documentation server. OGrid is a lightweight, headless data grid for React (Radix and Fluent UI implementations).
 
 Tools: search_docs (keyword search), list_docs (browse by category), get_docs (full page), get_code_example (code snippets), detect_version (detect OGrid version in your project).
 Resources: ogrid://quick-reference (key API overview), ogrid://docs/{path} (any doc page by path).
@@ -108,7 +108,7 @@ Categories: features, getting-started, guides, api.`,
         .optional()
         .describe('Max results to return (default 5)'),
       framework: z
-        .enum(['react', 'js'])
+        .enum(['react'])
         .optional()
         .describe('Filter code examples to this framework'),
     },
@@ -259,9 +259,9 @@ Categories: features, getting-started, guides, api.`,
     {
       query: z.string().describe('Search query for code examples'),
       framework: z
-        .enum(['react', 'js'])
+        .enum(['react'])
         .optional()
-        .describe('Filter by framework: react, js'),
+        .describe('Filter by framework: react'),
     },
     async ({ query, framework }) => {
       const examples = index.getCodeExamples(query, framework);
@@ -332,7 +332,6 @@ Categories: features, getting-started, guides, api.`,
                 'Install OGrid:',
                 '  React (Radix):  npm install @alaarab/ogrid-react-radix',
                 '  React (Fluent): npm install @alaarab/ogrid-react-fluent',
-                '  Vanilla JS:     npm install @alaarab/ogrid-js',
               ].join('\n'),
             },
           ],
@@ -390,9 +389,6 @@ Categories: features, getting-started, guides, api.`,
             '# React (choose one)',
             'npm install @alaarab/ogrid-react-radix',
             'npm install @alaarab/ogrid-react-fluent',
-            '',
-            '# Vanilla JS',
-            'npm install @alaarab/ogrid-js',
             '```',
             '',
             '## Core Props (IOGridProps)',

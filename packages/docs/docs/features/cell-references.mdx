@@ -17,7 +17,7 @@ Enable Excel-style cell references with a single prop. Column letter headers (A,
 <CellReferencesDemo />
 
 :::tip UI styling
-The live demo above shows **Radix UI** styling (lightweight default). The same feature renders through the Fluent UI and Material UI packages with their native components, plus the `@alaarab/ogrid-js` vanilla theme.
+The live demo above shows **Radix UI** styling (lightweight default). The same feature renders through the Fluent UI package with its native components.
 :::
 
 ## Quick Example
@@ -56,36 +56,7 @@ The `OGrid` component has the same props across all React UI packages. To switch
 
 - **Radix** (lightweight, default): `from '@alaarab/ogrid-react-radix'`
 - **Fluent UI** (Microsoft 365 / SPFx): `from '@alaarab/ogrid-react-fluent'` -- wrap in `<FluentProvider>`
-- **Material UI** (MUI v7): `from '@alaarab/ogrid-react-material'` -- wrap in `<ThemeProvider>`
 :::
-
-  </TabItem>
-  <TabItem value="js" label="Vanilla JS">
-
-```js
-import { OGrid } from '@alaarab/ogrid-js';
-import '@alaarab/ogrid-js/styles';
-
-const grid = new OGrid(document.getElementById('grid'), {
-  columns: [
-    { columnId: 'name', name: 'Name' },
-    { columnId: 'age', name: 'Age', type: 'numeric' },
-    { columnId: 'email', name: 'Email' },
-    { columnId: 'department', name: 'Department' },
-    {
-      columnId: 'salary',
-      name: 'Salary',
-      type: 'numeric',
-      valueFormatter: (v) => `$${Number(v).toLocaleString()}`,
-    },
-  ],
-  data: people,
-  getRowId: (item) => item.id,
-  cellReferences: true,
-  pageSize: 25,
-  entityLabelPlural: 'people',
-});
-```
 
   </TabItem>
 </Tabs>

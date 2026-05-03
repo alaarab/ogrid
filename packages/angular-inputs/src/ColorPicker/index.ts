@@ -1,1 +1,0 @@
-export { ColorPickerEditorComponent } from './ColorPickerEditor';

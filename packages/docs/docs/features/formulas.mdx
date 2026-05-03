@@ -72,30 +72,7 @@ Same props across all React packages — just change the import:
 
 - **Radix** (lightweight, default): `from '@alaarab/ogrid-react-radix'`
 - **Fluent UI** (Microsoft 365 / SPFx): `from '@alaarab/ogrid-react-fluent'`  -  wrap in `<FluentProvider>`
-- **Material UI** (MUI v7): `from '@alaarab/ogrid-react-material'`  -  wrap in `<ThemeProvider>`
 :::
-
-  </TabItem>
-  <TabItem value="js" label="Vanilla JS">
-
-```js
-import { OGrid, FormulaEngineState } from '@alaarab/ogrid-js';
-import '@alaarab/ogrid-js/styles';
-
-const grid = new OGrid(document.getElementById('grid'), {
-  columns: [
-    { columnId: 'a', name: 'A', type: 'numeric', editable: true },
-    { columnId: 'b', name: 'B', type: 'numeric', editable: true },
-    { columnId: 'c', name: 'C', type: 'numeric', editable: true },
-  ],
-  data: initialData,
-  getRowId: (r) => r.id,
-  editable: true,
-});
-
-const formulaState = new FormulaEngineState({ formulas: true });
-formulaState.setFormula(2, 0, '=A1+B1', grid.getApi().getDataAccessor());
-```
 
   </TabItem>
 </Tabs>

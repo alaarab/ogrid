@@ -90,57 +90,7 @@ Same props across all React packages — just change the import:
 
 - **Radix** (lightweight, default): `from '@alaarab/ogrid-react-radix'`
 - **Fluent UI** (Microsoft 365 / SPFx): `from '@alaarab/ogrid-react-fluent'`  -  wrap in `<FluentProvider>`
-- **Material UI** (MUI v7): `from '@alaarab/ogrid-react-material'`  -  wrap in `<ThemeProvider>`
 :::
-
-  </TabItem>
-  <TabItem value="js" label="Vanilla JS">
-
-```js
-import { OGrid } from '@alaarab/ogrid-js';
-import '@alaarab/ogrid-js/styles';
-
-const DEPTS = ['Engineering', 'Marketing', 'Sales', 'Finance', 'Operations'];
-const STATUSES = ['Active', 'Draft', 'Archived'];
-
-const grid = new OGrid(document.getElementById('grid'), {
-  columns: [
-    { columnId: 'name', name: 'Name', editable: true },
-    {
-      columnId: 'department',
-      name: 'Department',
-      editable: true,
-      cellEditor: 'richSelect',
-      cellEditorParams: { values: DEPTS },
-    },
-    {
-      columnId: 'status',
-      name: 'Status',
-      editable: true,
-      cellEditor: 'select',
-      cellEditorParams: { values: STATUSES },
-    },
-    {
-      columnId: 'salary',
-      name: 'Salary',
-      editable: true,
-      type: 'numeric',
-      valueParser: ({ newValue }) => {
-        const num = Number(newValue);
-        return isNaN(num) || num < 0 ? undefined : num;
-      },
-      valueFormatter: (v) => `$${Number(v).toLocaleString()}`,
-    },
-  ],
-  data: initialData,
-  getRowId: (item) => item.id,
-  editable: true,
-});
-
-grid.on('cellValueChanged', (event) => {
-  console.log(`${event.columnId} changed to ${event.newValue}`);
-});
-```
 
   </TabItem>
 </Tabs>

@@ -6,9 +6,9 @@ description: What is OGrid and why use it
 
 # Overview
 
-OGrid is a lightweight, open-source data grid library that delivers spreadsheet-grade features without the enterprise paywall. It ships with a React adapter (Radix and Fluent UI implementations) plus a vanilla JS package, all powered by a shared TypeScript core.
+OGrid is a lightweight, open-source React data grid library that delivers spreadsheet-grade features without the enterprise paywall. It ships React UI implementations for Radix and Fluent UI, all powered by a shared TypeScript core.
 
-> **Note:** Angular, Vue, and Material UI adapters were available through earlier 2.9.x versions and remain on npm at those versions. New development is React-first (Radix / Fluent). See the project README's "Frozen adapters" section if you have an existing install on one of the frozen variants.
+> **Note:** Angular, Vue, vanilla JS, and Material UI adapters were available through earlier 2.9.x versions and remain on npm at those versions. New development is React-first (Radix / Fluent). See the project README's "Frozen adapters" section if you have an existing install on one of the frozen variants.
 
 ## Why OGrid?
 
@@ -16,9 +16,9 @@ Most production-grade React data grids fall into one of two camps: free but limi
 
 - **Free and MIT-licensed.** Every feature is included. No enterprise tier, no feature gating.
 - **25+ built-in features.** Sorting, filtering, pagination, cell editing, clipboard, undo/redo, fill handle, row selection, cell range selection, column pinning, column groups, CSV export, context menu, keyboard navigation, cell references, virtual scrolling, status bar, sidebar, and more.
-- **Three React UI flavors.** Pick Radix, Fluent, or Material — switch later with a one-line import change.
+- **Two React UI flavors.** Pick Radix or Fluent — switch later with a one-line import change.
 - **TypeScript-first.** Full strict-mode TypeScript with exported types for every prop, event, and API method.
-- **Lightweight.** The Radix package has no heavy framework dependency. Fluent and Material packages use their respective component libraries as peer dependencies.
+- **Lightweight.** The Radix package has no heavy framework dependency. Fluent uses `@fluentui/react-components` as a peer dependency.
 
 ## Architecture
 
@@ -30,7 +30,7 @@ import { ArchitectureDiagram } from '@site/src/components/ArchitectureDiagram';
 
 ### Core Layer  -  `@alaarab/ogrid-core`
 
-Pure TypeScript with zero dependencies. Provides the type system (`IOGridProps`, `IColumnDef`, `IOGridApi`, `FilterValue`, etc.) and shared algorithms (`getCellValue`, `buildHeaderRows`, `parseValue`, `normalizeSelectionRange`, etc.) used by both the React and JS packages.
+Pure TypeScript with zero dependencies. Provides the type system (`IOGridProps`, `IColumnDef`, `IOGridApi`, `FilterValue`, etc.) and shared algorithms (`getCellValue`, `buildHeaderRows`, `parseValue`, `normalizeSelectionRange`, etc.) consumed by the React adapter.
 
 ### React Adapter  -  `@alaarab/ogrid-react`
 
@@ -72,8 +72,6 @@ Both packages export the same `OGrid` component with the same props. Switching d
 | `@alaarab/ogrid-react` | [![npm](https://img.shields.io/npm/v/@alaarab/ogrid-react)](https://npmjs.com/package/@alaarab/ogrid-react) | React hooks, headless components, utilities |
 | `@alaarab/ogrid-react-radix` | [![npm](https://img.shields.io/npm/v/@alaarab/ogrid-react-radix)](https://npmjs.com/package/@alaarab/ogrid-react-radix) | Radix UI implementation (default, lightweight) |
 | `@alaarab/ogrid-react-fluent` | [![npm](https://img.shields.io/npm/v/@alaarab/ogrid-react-fluent)](https://npmjs.com/package/@alaarab/ogrid-react-fluent) | Fluent UI v9 implementation |
-| **Vanilla JS** | | |
-| `@alaarab/ogrid-js` | [![npm](https://img.shields.io/npm/v/@alaarab/ogrid-js)](https://npmjs.com/package/@alaarab/ogrid-js) | Vanilla JS data grid (no framework) |
 
 ## Feature Highlights
 
@@ -113,7 +111,7 @@ OGrid is designed as a drop-in replacement for AG Grid with a simpler, more Reac
 OGrid's browser checks now have an explicit contract:
 
 - A fast smoke suite runs on every push through the main CI workflow
-- The broader Playwright matrix runs across the active React + JS example apps only when you dispatch it manually
+- The broader Playwright matrix runs across the active React example apps only when you dispatch it manually
 
 See the [Browser Support Matrix](../guides/browser-support-matrix) for the current coverage map and commands.
 

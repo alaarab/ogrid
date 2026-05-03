@@ -23,13 +23,6 @@ npm install @alaarab/ogrid-react-inputs
 Works with any OGrid React UI package (Radix, Fluent, Material).
 
   </TabItem>
-  <TabItem value="js" label="Vanilla JS">
-
-```bash
-npm install @alaarab/ogrid-js-inputs
-```
-
-  </TabItem>
 </Tabs>
 
 All premium input packages depend only on `@alaarab/ogrid-core` and their framework peer dependency. They share calendar utilities via `@alaarab/ogrid-inputs` (headless, zero deps).
@@ -81,32 +74,7 @@ function App() {
 
 - **Radix** (lightweight, default): `from '@alaarab/ogrid-react-radix'`
 - **Fluent UI** (Microsoft 365 / SPFx): `from '@alaarab/ogrid-react-fluent'`
-- **Material UI** (MUI v7): `from '@alaarab/ogrid-react-material'`
 :::
-
-  </TabItem>
-  <TabItem value="js" label="Vanilla JS">
-
-```typescript
-import { OGrid } from '@alaarab/ogrid-js';
-import { createDatePickerEditor } from '@alaarab/ogrid-js-inputs';
-
-const grid = new OGrid(container, {
-  columns: [
-    { columnId: 'name', name: 'Name' },
-    {
-      columnId: 'dueDate',
-      name: 'Due Date',
-      editable: true,
-      cellEditor: createDatePickerEditor,
-      cellEditorPopup: true,
-    },
-  ],
-  data,
-  getRowId: (item) => item.id,
-  editable: true,
-});
-```
 
   </TabItem>
 </Tabs>
@@ -135,24 +103,6 @@ const columns = [
     name: 'Rating',
     editable: true,
     cellEditor: RatingEditor,
-    cellEditorPopup: true,
-    cellEditorParams: { maxStars: 5, allowHalf: false },
-  },
-];
-```
-
-  </TabItem>
-  <TabItem value="js" label="Vanilla JS">
-
-```typescript
-import { createRatingEditor } from '@alaarab/ogrid-js-inputs';
-
-const columns = [
-  {
-    columnId: 'rating',
-    name: 'Rating',
-    editable: true,
-    cellEditor: createRatingEditor,
     cellEditorPopup: true,
     cellEditorParams: { maxStars: 5, allowHalf: false },
   },
@@ -193,24 +143,6 @@ const columns = [
 ```
 
   </TabItem>
-  <TabItem value="js" label="Vanilla JS">
-
-```typescript
-import { createColorPickerEditor } from '@alaarab/ogrid-js-inputs';
-
-const columns = [
-  {
-    columnId: 'color',
-    name: 'Color',
-    editable: true,
-    cellEditor: createColorPickerEditor,
-    cellEditorPopup: true,
-    cellEditorParams: { allowCustom: true },
-  },
-];
-```
-
-  </TabItem>
 </Tabs>
 
 ## SliderEditor
@@ -237,24 +169,6 @@ const columns = [
     name: 'Progress',
     editable: true,
     cellEditor: SliderEditor,
-    cellEditorPopup: true,
-    cellEditorParams: { min: 0, max: 100, step: 1 },
-  },
-];
-```
-
-  </TabItem>
-  <TabItem value="js" label="Vanilla JS">
-
-```typescript
-import { createSliderEditor } from '@alaarab/ogrid-js-inputs';
-
-const columns = [
-  {
-    columnId: 'progress',
-    name: 'Progress',
-    editable: true,
-    cellEditor: createSliderEditor,
     cellEditorPopup: true,
     cellEditorParams: { min: 0, max: 100, step: 1 },
   },
@@ -289,27 +203,6 @@ const columns = [
     name: 'Skills',
     editable: true,
     cellEditor: TagsEditor,
-    cellEditorPopup: true,
-    cellEditorParams: {
-      suggestions: ['React', 'Angular', 'Vue', 'TypeScript', 'Python'],
-      allowCreate: true,
-    },
-  },
-];
-```
-
-  </TabItem>
-  <TabItem value="js" label="Vanilla JS">
-
-```typescript
-import { createTagsEditor } from '@alaarab/ogrid-js-inputs';
-
-const columns = [
-  {
-    columnId: 'skills',
-    name: 'Skills',
-    editable: true,
-    cellEditor: createTagsEditor,
     cellEditorPopup: true,
     cellEditorParams: {
       suggestions: ['React', 'Angular', 'Vue', 'TypeScript', 'Python'],
