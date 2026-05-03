@@ -11,7 +11,14 @@
     "esModuleInterop": true,
     "skipLibCheck": true,
     "types": ["node"],
-    "rootDir": "src"
+    "rootDir": "src",
+    "paths": {
+      "@alaarab/ogrid-core": ["../core/src/index.ts"],
+      "@alaarab/ogrid-core/formula": ["../core/src/formula/index.ts"],
+      "@alaarab/ogrid-react": ["../react/src/index.ts"],
+      "@alaarab/ogrid-react/testing": ["../react/src/testing/index.ts"],
+      "@alaarab/ogrid-react/storybook": ["../react/src/storybook/index.ts"]
+    }
   },
   "include": ["src"],
   "exclude": ["src/**/__tests__/**", "src/**/*.stories.tsx"]

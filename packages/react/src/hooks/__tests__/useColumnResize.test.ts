@@ -1,17 +1,18 @@
+import { describe, it, expect, beforeEach, mock } from 'bun:test';
 import { renderHook, act } from '@testing-library/react';
-import { measureColumnContentWidth } from '@alaarab/ogrid-core';
-import { useColumnResize } from '../useColumnResize';
+import * as actualCore from '@alaarab/ogrid-core';
 import type { IColumnDef } from '../../types';
 
-jest.mock('@alaarab/ogrid-core', () => {
-  const actual = jest.requireActual('@alaarab/ogrid-core');
-  return {
-    ...actual,
-    measureColumnContentWidth: jest.fn(() => 200),
-  };
-});
+const mockedMeasure = mock(() => 200);
+mock.module('@alaarab/ogrid-core', () => ({
+  ...actualCore,
+  measureColumnContentWidth: mockedMeasure,
+}));
 
-const mockedMeasure = measureColumnContentWidth as jest.MockedFunction<typeof measureColumnContentWidth>;
+// Import after mock so the hook picks up the mocked binding.
+const { useColumnResize } = await import('../useColumnResize');
+const { measureColumnContentWidth } = await import('@alaarab/ogrid-core');
+void measureColumnContentWidth;
 
 describe('useColumnResize', () => {
   const mockColumn: IColumnDef<{ id: string; name: string }> = {
