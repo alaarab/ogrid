@@ -2,7 +2,6 @@ import { spawnSync } from 'node:child_process';
 
 const projects = [
   'react-fluent',
-  'react-material',
   'react-radix',
   'js',
 ];

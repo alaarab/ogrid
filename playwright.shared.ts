@@ -29,14 +29,12 @@ export const defaultBrowserUse = {
 
 export const allBrowserProjects: BrowserProject[] = [
   createProject('react-fluent', 'http://localhost:3001'),
-  createProject('react-material', 'http://localhost:3002'),
   createProject('react-radix', 'http://localhost:3003'),
   createProject('js', 'http://localhost:3030'),
 ];
 
 export const allBrowserServers: BrowserServer[] = [
   createServer('npm run dev:react-fluent', 3001),
-  createServer('npm run dev:react-material', 3002),
   createServer('npm run dev:react-radix', 3003),
   createServer('npm run dev:js', 3030),
 ];

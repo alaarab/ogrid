@@ -26,15 +26,6 @@ const frameworkCards = [
     glow: 'rgba(0, 120, 212, 0.22)',
   },
   {
-    name: 'React + Material',
-    detail: 'MUI v7',
-    pkg: '@alaarab/ogrid-react-material',
-    color: '#1976d2',
-    bg: 'rgba(25, 118, 210, 0.08)',
-    border: 'rgba(25, 118, 210, 0.3)',
-    glow: 'rgba(25, 118, 210, 0.22)',
-  },
-  {
     name: 'Vanilla JS',
     detail: 'Zero dependencies',
     pkg: '@alaarab/ogrid-js',

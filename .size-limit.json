@@ -20,11 +20,6 @@
     "limit": "185 kB"
   },
   {
-    "name": "react-material",
-    "path": "packages/react-material/dist/esm/index.js",
-    "limit": "195 kB"
-  },
-  {
     "name": "js",
     "path": "packages/js/dist/esm/index.js",
     "limit": "58 kB"
