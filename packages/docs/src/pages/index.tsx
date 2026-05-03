@@ -486,7 +486,7 @@ function CodePreviewSection() {
             </div>
           </div>
           <div className={styles.codeWindowBody}>
-            <CodeBlock language={frameworks[active].id === 'vue' ? 'html' : frameworks[active].id === 'react' ? 'tsx' : 'typescript'}>
+            <CodeBlock language="tsx">
               {getCodeExample(frameworks[active])}
             </CodeBlock>
           </div>
@@ -515,8 +515,8 @@ function FeatureBentoSection() {
           Spreadsheet-grade interaction.<br />Open-source by default.
         </h2>
         <p className={styles.bentoSub}>
-          The point is not a longer feature checklist. The point is getting the spreadsheet behavior,
-          editing workflow, and framework coverage without a locked enterprise tier.
+          The point is not a longer feature checklist. The point is getting the spreadsheet behavior
+          and editing workflow you actually need, in a React grid, without a locked enterprise tier.
         </p>
       </div>
 
@@ -545,10 +545,10 @@ function FeatureBentoSection() {
 
         <div className={`${styles.bentoCard} ${styles.bentoCardMedium} ${styles.bentoCardBlue} ${styles.bentoCardProof}`}>
           <div className={styles.bentoCardInner} />
-          <div className={styles.bentoCardTag}>One API, three React UI kits</div>
+          <div className={styles.bentoCardTag}>One API, two React UI kits</div>
           <h3 className={styles.bentoCardTitle}>One mental model. Pick your design system.</h3>
           <p className={styles.bentoCardDesc}>
-            All three React packages share the same hooks, props, and grid concepts.
+            Both React packages share the same hooks, props, and grid concepts.
             Switch design systems with a one-line import change.
           </p>
           <div className={styles.bentoFrameworkBands}>
@@ -747,7 +747,7 @@ function CTASection() {
 export default function Home() {
   return (
     <Layout
-      title="Your spreadsheet. Your framework. Zero compromises."
+      title="The open-source React data grid. Spreadsheet-grade. Zero compromises."
       description="Free open-source React data grid (Radix and Fluent UI). Sorting, filtering, editing, spreadsheet selection, clipboard, fill handle, formulas, and more. MIT licensed with no enterprise tier."
     >
       <Hero />

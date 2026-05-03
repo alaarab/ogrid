@@ -26,11 +26,11 @@
 
 > **Status:** Active surface is React (Radix + Fluent UI). Vanilla JS, Material UI, Angular, and Vue variants are frozen on the `legacy/multiframework` branch — still on npm at their last shipped versions but no longer in active development. See [Frozen adapters](#frozen-adapters) below.
 
-Pick the framework and UI library you already use and get sorting, filtering, pagination, cell editing, spreadsheet selection, and the shared core grid model out of the box.
+Pick the React UI library you already use (Radix or Fluent) and get sorting, filtering, pagination, cell editing, spreadsheet selection, and the shared core grid model out of the box.
 
 ## NEW in 2.9 — Headless spreadsheet hooks
 
-A set of headless hooks that add **spreadsheet behavior** — inline edit, range select, fill handle, copy/paste, undo/redo, keyboard navigation — to **any table chrome** (shadcn `<Table>`, Material `<mat-table>`, your own `<table>`). React / Vue / Angular, MIT.
+A set of headless React hooks that add **spreadsheet behavior** — inline edit, range select, fill handle, copy/paste, undo/redo, keyboard navigation — to **any table chrome** (shadcn `<Table>`, your own `<table>`, anything). MIT.
 
 ```tsx
 import {
@@ -227,7 +227,7 @@ const dataSource: IDataSource<Product> = {
 <OGrid dataSource={dataSource} columns={columns} getRowId={(r) => r.id} />
 ```
 
-Core features are shared across React, Angular, Vue, and vanilla JS. Main CI now stays fast with lint plus a browser smoke suite on every push, while the heavier verification workflows are run manually when you want a full release-grade pass.
+Main CI now stays fast with lint plus a browser smoke suite on every push, while the heavier verification workflows are run manually when you want a full release-grade pass.
 
 ## Packages
 
@@ -276,8 +276,8 @@ Once connected, your editor can search and read the full OGrid documentation:
 
 ```
 > Which filtering modes does OGrid support?
-> Show me a server-side data source example in Angular
-> How do I pin columns in Vue?
+> Show me a server-side data source example
+> How do I pin columns?
 ```
 
 Available tools: `search_docs`, `list_docs`, `get_docs`, `get_code_example`, `detect_version`
