@@ -31,9 +31,6 @@ jobs:
       - name: Lint
         run: npm run lint
 
-      - name: Theme drift check
-        run: npm run sync:theme:check
-
   browser-smoke:
     runs-on: ubuntu-latest
     timeout-minutes: 20

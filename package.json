@@ -48,8 +48,6 @@
     "test:e2e:react": "npx playwright test --project=react-radix",
     "publish:all": "npm publish --workspace=packages/core --access=public && npm publish --workspace=packages/react --access=public && npm publish --workspace=packages/react-fluent --access=public && npm publish --workspace=packages/react-radix --access=public && npm publish --workspace=packages/inputs --access=public && npm publish --workspace=packages/react-inputs --access=public && npm publish --workspace=packages/mcp --access=public",
     "version:bump": "node scripts/version-bump.mjs",
-    "sync:theme": "node scripts/sync-theme.mjs",
-    "sync:theme:check": "node scripts/sync-theme.mjs --check",
     "bench": "npx tsx packages/core/src/__benchmarks__/performance.bench.ts",
     "mcp": "node packages/mcp/dist/esm/index.js",
     "prepare": "husky"
