@@ -1,6 +1,6 @@
 {
   "name": "@alaarab/ogrid-inputs",
-  "version": "2.10.0",
+  "version": "2.11.0",
   "description": "OGrid Inputs – Headless utilities for premium cell editors (calendar, date parsing). Framework-agnostic.",
   "main": "dist/esm/index.js",
   "module": "dist/esm/index.js",
@@ -14,7 +14,7 @@
   },
   "scripts": {
     "build": "rimraf dist && tsup && tsc -p tsconfig.build.json",
-    "test": "jest"
+    "test": "bun test --preload ../../bun-test.setup.ts"
   },
   "keywords": [
     "ogrid",

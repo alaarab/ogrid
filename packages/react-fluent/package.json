@@ -1,6 +1,6 @@
 {
   "name": "@alaarab/ogrid-react-fluent",
-  "version": "2.10.0",
+  "version": "2.11.0",
   "description": "OGrid React Fluent implementation – DataGrid-powered data table with sorting, filtering, pagination, column chooser, and CSV export.",
   "main": "dist/esm/index.js",
   "module": "dist/esm/index.js",
@@ -15,7 +15,7 @@
   },
   "scripts": {
     "build": "rimraf dist && tsup && tsc -p tsconfig.build.json",
-    "test": "jest",
+    "test": "bun test --preload ../../bun-test.setup.ts",
     "storybook": "storybook dev -p 6006 --no-open",
     "build-storybook": "storybook build"
   },
@@ -41,8 +41,8 @@
     "node": ">=18"
   },
   "dependencies": {
-    "@alaarab/ogrid-core": "2.10.0",
-    "@alaarab/ogrid-react": "2.10.0"
+    "@alaarab/ogrid-core": "2.11.0",
+    "@alaarab/ogrid-react": "2.11.0"
   },
   "peerDependencies": {
     "@fluentui/react-components": "^9.0.0",

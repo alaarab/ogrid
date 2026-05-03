@@ -354,7 +354,7 @@ bun run docs:dev                    # Docusaurus dev server
 bun run docs:build                  # Build docs site
 ```
 
-> Tests still run on Jest (per-workspace `jest.config.js`); Bun is the install + script runner. Published consumer packages remain plain npm — your users do `npm install @alaarab/ogrid-react-radix` exactly as before.
+> Tests run natively on `bun:test` (no Jest); shared setup at `bun-test.setup.ts` boots happy-dom, registers jest-dom matchers, and exposes the Jest globals so existing test syntax works unchanged. Published consumer packages remain plain npm — your users do `npm install @alaarab/ogrid-react-radix` exactly as before.
 
 ### Requirements
 

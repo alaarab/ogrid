@@ -2,22 +2,20 @@
  * Tests for useOGridDataFetching: client-side sync path, async worker path,
  * server-side fetching, and onFirstDataRendered callback.
  */
+import { describe, it, expect, beforeEach, mock } from 'bun:test';
 import { renderHook, act, waitFor } from '@testing-library/react';
-import { useOGridDataFetching } from '../useOGridDataFetching';
+import * as actualCore from '@alaarab/ogrid-core';
 import type { UseOGridDataFetchingParams } from '../useOGridDataFetching';
 
-// Mock processClientSideDataAsync from core
-jest.mock('@alaarab/ogrid-core', () => {
-  const actual = jest.requireActual('@alaarab/ogrid-core');
-  return {
-    ...actual,
-    processClientSideDataAsync: jest.fn((...args: unknown[]) =>
-      Promise.resolve(actual.processClientSideData(...args))
-    ),
-  };
-});
+mock.module('@alaarab/ogrid-core', () => ({
+  ...actualCore,
+  processClientSideDataAsync: mock((...args: unknown[]) =>
+    Promise.resolve(actualCore.processClientSideData(...(args as Parameters<typeof actualCore.processClientSideData>))),
+  ),
+}));
 
-import { processClientSideDataAsync } from '@alaarab/ogrid-core';
+const { useOGridDataFetching } = await import('../useOGridDataFetching');
+const { processClientSideDataAsync } = await import('@alaarab/ogrid-core');
 
 interface TestRow {
   id: number;
