@@ -1,9 +1,9 @@
 #!/usr/bin/env node
 /**
- * Sync OGrid theme variables from the canonical SCSS to the Vue and JS
- * plain-CSS counterparts. Run when `_ogrid-theme.scss` changes.
+ * Sync OGrid theme variables from the canonical SCSS to the JS plain-CSS
+ * counterpart. Run when `_ogrid-theme.scss` changes.
  *
- *   node scripts/sync-theme.mjs            # write Vue + JS files
+ *   node scripts/sync-theme.mjs            # write JS file
  *   node scripts/sync-theme.mjs --check    # exit 1 if out of sync (CI gate)
  *
  * Strategy: read the SCSS, drop the SCSS-only header comment block, drop
@@ -11,10 +11,11 @@
  * the same variable declarations and dark-mode rules. The JS variant rewrites
  * `[data-theme="dark"]` to `[data-theme='dark']` to match historical convention.
  *
- * Vue and JS files have additional structural CSS below the variable block.
- * We only replace the variable block (everything from start of file through
- * the closing `}` of the explicit-dark rule); structural rules below are
- * preserved.
+ * The JS file has additional structural CSS below the variable block. We only
+ * replace the variable block; structural rules below are preserved.
+ *
+ * The frozen Vue package keeps its v2.9.0-era theme file as-is and is no longer
+ * synced.
  */
 
 import { readFileSync, writeFileSync } from "node:fs";
@@ -25,24 +26,9 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 const repoRoot = join(__dirname, "..");
 
 const SOURCE = join(repoRoot, "packages/core/src/styles/_ogrid-theme.scss");
-const VUE_TARGET = join(repoRoot, "packages/vue/src/styles/ogrid-theme.css");
 const JS_TARGET = join(repoRoot, "packages/js/styles/ogrid.css");
 
 const checkMode = process.argv.includes("--check");
-
-const HEADER_VUE = `/* OGrid Vue theme — generated from packages/core/src/styles/_ogrid-theme.scss
- * Run \`node scripts/sync-theme.mjs\` to regenerate. Do not edit by hand.
- *
- * Dark mode activates via:
- *   1. System preference (prefers-color-scheme: dark) unless [data-theme="light"]
- *      or .light is set on root.
- *   2. Explicit attribute: [data-theme="dark"] on any ancestor.
- *   3. Tailwind/shadcn convention: .dark class on any ancestor.
- *
- * To opt OUT of auto-dark: set .light or [data-theme="light"] on :root.
- */
-
-`;
 
 const HEADER_JS = `/* OGrid JS theme — generated from packages/core/src/styles/_ogrid-theme.scss
  * Run \`node scripts/sync-theme.mjs\` to regenerate. Do not edit by hand.
@@ -174,13 +160,10 @@ function compareOrWrite(target, contents, label) {
 
 const scss = readFileSync(SOURCE, "utf8");
 
-const vueCss = transformToCss(scss, { quoteStyle: "double" });
 const jsCss = transformToCss(scss, { quoteStyle: "single" });
 
-const finalVue = spliceVariablesIntoExisting(VUE_TARGET, vueCss, HEADER_VUE);
 const finalJs = spliceVariablesIntoExisting(JS_TARGET, jsCss, HEADER_JS);
 
-compareOrWrite(VUE_TARGET, finalVue, "vue/styles/ogrid-theme.css");
 compareOrWrite(JS_TARGET, finalJs, "js/styles/ogrid.css");
 
 if (!checkMode) console.log("\nDone. Rebuild affected packages.");

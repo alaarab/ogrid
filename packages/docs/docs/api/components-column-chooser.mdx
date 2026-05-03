@@ -24,28 +24,6 @@ import { ColumnChooser } from '@alaarab/ogrid-react-material';
 ```
 
 </TabItem>
-<TabItem value="angular" label="Angular">
-
-```typescript
-import { ColumnChooserComponent } from '@alaarab/ogrid-angular-material';
-// or
-import { ColumnChooserComponent } from '@alaarab/ogrid-angular-primeng';
-// or
-import { ColumnChooserComponent } from '@alaarab/ogrid-angular-radix';
-```
-
-</TabItem>
-<TabItem value="vue" label="Vue">
-
-```typescript
-import { ColumnChooser } from '@alaarab/ogrid-vue-vuetify';
-// or
-import { ColumnChooser } from '@alaarab/ogrid-vue-primevue';
-// or
-import { ColumnChooser } from '@alaarab/ogrid-vue-radix';
-```
-
-</TabItem>
 <TabItem value="js" label="Vanilla JS">
 
 ```typescript
@@ -148,84 +126,6 @@ function MyApp() {
 ```
 
 The "ID" and "Product Name" columns will have disabled checkboxes and cannot be hidden.
-
-## Angular Usage
-
-In Angular packages, the component uses `@Input()` and `@Output()` decorators:
-
-```typescript
-import { Component } from '@angular/core';
-import { ColumnChooserComponent } from '@alaarab/ogrid-angular-material';
-import type { IColumnDefinition } from '@alaarab/ogrid-angular';
-
-@Component({
-  selector: 'app-my-grid',
-  standalone: true,
-  imports: [ColumnChooserComponent],
-  template: `
-    <ogrid-column-chooser
-      [columns]="columns"
-      [visibleColumns]="visibleColumns"
-      (onVisibilityChange)="handleVisibilityChange($event)"
-    />
-  `
-})
-export class MyGridComponent {
-  columns: IColumnDefinition[] = [
-    { columnId: 'id', name: 'ID', required: true },
-    { columnId: 'name', name: 'Product Name' },
-    { columnId: 'price', name: 'Price' },
-  ];
-
-  visibleColumns = new Set(['id', 'name', 'price']);
-
-  handleVisibilityChange(event: { columnKey: string; visible: boolean }) {
-    if (event.visible) {
-      this.visibleColumns.add(event.columnKey);
-    } else {
-      this.visibleColumns.delete(event.columnKey);
-    }
-    this.visibleColumns = new Set(this.visibleColumns); // Trigger change detection
-  }
-}
-```
-
-## Vue Usage
-
-In Vue packages, the component accepts props via `v-bind` or shorthand `:`:
-
-```vue
-<template>
-  <ColumnChooser
-    :columns="columns"
-    :visible-columns="visibleColumns"
-    @visibility-change="handleVisibilityChange"
-  />
-</template>
-
-<script setup lang="ts">
-import { ref } from 'vue';
-import { ColumnChooser } from '@alaarab/ogrid-vue-vuetify';
-import type { IColumnDefinition } from '@alaarab/ogrid-vue';
-
-const columns: IColumnDefinition[] = [
-  { columnId: 'id', name: 'ID', required: true },
-  { columnId: 'name', name: 'Product Name' },
-  { columnId: 'price', name: 'Price' },
-];
-
-const visibleColumns = ref<Set<string>>(new Set(['id', 'name', 'price']));
-
-const handleVisibilityChange = (columnKey: string, visible: boolean) => {
-  if (visible) {
-    visibleColumns.value.add(columnKey);
-  } else {
-    visibleColumns.value.delete(columnKey);
-  }
-  visibleColumns.value = new Set(visibleColumns.value); // Trigger reactivity
-};
-</script>
-```
 
 ## Behavior
 

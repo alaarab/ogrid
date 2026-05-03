@@ -1,6 +1,7 @@
 {
   "name": "@alaarab/ogrid-vue-vuetify",
   "version": "2.9.0",
+  "private": true,
   "description": "OGrid Vuetify – Vuetify-based data grid with sorting, filtering, pagination, column chooser, and CSV export.",
   "main": "dist/esm/index.js",
   "module": "dist/esm/index.js",

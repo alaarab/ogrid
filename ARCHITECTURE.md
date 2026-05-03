@@ -1,29 +1,36 @@
 # OGrid Architecture
 
-High-level overview of the OGrid monorepo  -  21 packages, headless core, 4 frameworks.
+High-level overview of the OGrid monorepo. **12 active packages** across React + vanilla JS; **10 packages frozen at v2.9.0** for the Angular and Vue families (kept on disk as reference, removed from npm workspaces and active CI).
 
 - **Monorepo:** npm workspaces + Turborepo
-- **Build:** TypeScript 5.7 strict, ESM-only, tree-shakeable
+- **Build:** TypeScript 6 strict, ESM-only, tree-shakeable
 - **Node:** 22 via nvm
 - **License:** MIT
 
 ## Project Structure
 
+**Active:**
 ```
 packages/
   core/                     to  @alaarab/ogrid-core (zero deps)
   react/                    to  @alaarab/ogrid-react (hooks + shared logic)
   react-{radix,fluent,material}/   to  UI implementations (3 packages)
-  angular/                  to  @alaarab/ogrid-angular (services + signals)
-  angular-{material,primeng,radix}/   to  UI implementations (3 packages)
-  vue/                      to  @alaarab/ogrid-vue (composables)
-  vue-{vuetify,primevue,radix}/   to  UI implementations (3 packages)
   js/                       to  @alaarab/ogrid-js (vanilla JS, class-based)
   inputs/                   to  @alaarab/ogrid-inputs (headless utils: calendar, rating, color, slider, tags)
-  {react,angular,vue,js}-inputs/   to  Premium editors (5 total per framework)
+  {react,js}-inputs/        to  Premium editors (5 total per framework)
+  mcp/                      to  @alaarab/ogrid-mcp (docs/runtime bridge)
   docs/                     to  Docusaurus site + demos
   examples/                 to  Vite example apps
 ```
+
+**Frozen at v2.9.0 (source on disk, not in npm workspaces):**
+```
+packages/
+  angular/, angular-{material,primeng,radix,inputs}/   (frozen)
+  vue/,     vue-{vuetify,primevue,radix,inputs}/       (frozen)
+```
+
+To thaw a frozen package: add its path back to the `workspaces` array in root `package.json`, drop the `"private": true` flag added during the freeze, then `rm -rf node_modules package-lock.json && npm install`.
 
 ## Core Concepts
 
@@ -35,16 +42,16 @@ packages/
 - Algorithms (virtual scroll ranges, responsive column hiding, worker sort/filter)
 
 **Framework packages** implement the same interfaces:
-- React: hooks (`useOGrid`, `useDataGridState`, etc.) + thin view layer
-- Angular: services + signals + standalone components
-- Vue: composables + render functions (NO SFCs)
-- JS: class-based state + DOM manipulation
+- React: hooks (`useOGrid`, `useDataGridState`, etc.) + thin view layer (active)
+- JS: class-based state + DOM manipulation (active)
+- Angular: services + signals + standalone components (frozen at v2.9.0)
+- Vue: composables + render functions, NO SFCs (frozen at v2.9.0)
 
 **UI packages** are the thinnest layer  -  just visual mapping from framework state to framework components.
 
 ### Premium Inputs (v2.5.5+)
 
-5 optional cell editors (`cellEditorPopup: true`) available across all 4 frameworks:
+5 optional cell editors (`cellEditorPopup: true`) available for React and vanilla JS (Angular and Vue inputs are frozen at v2.9.0):
 
 1. **DatePickerEditor**  -  Calendar popup with month nav, text input, Today/Clear buttons
 2. **RatingEditor**  -  Star rating (1-5, configurable `maxStars`, `allowHalf` support)

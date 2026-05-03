@@ -6,10 +6,10 @@ description: What runs in browser CI today, what the smoke suite covers, and whi
 
 # Browser Support Matrix
 
-OGrid ships 10 UI packages, but not every browser check needs to run on every push. The browser contract is split into two layers:
+OGrid ships React UI packages plus a vanilla JS package, and not every browser check needs to run on every push. The browser contract is split into two layers:
 
 - `npm run test:e2e:smoke` is the fast merge gate that runs on every push and pull request in the main `CI` workflow.
-- The `Playwright Matrix` GitHub workflow runs the broader browser suite across all 10 example apps only when you dispatch it manually.
+- The `Playwright Matrix` GitHub workflow runs the broader browser suite across the React + JS example apps only when you dispatch it manually.
 
 ## Main CI smoke suite
 
@@ -22,8 +22,6 @@ npm run test:e2e:smoke
 Projects in the smoke gate:
 
 - `react-radix`
-- `angular-material`
-- `vue-vuetify`
 - `js`
 
 Journeys covered by the smoke suite:
@@ -43,17 +41,11 @@ The manual browser workflow runs the main browser suite against every example ap
 npm run test:e2e:matrix
 ```
 
-| Framework package | Playwright project | Example port | Main CI smoke | Full matrix |
+| Package | Playwright project | Example port | Main CI smoke | Full matrix |
 |---|---|---:|---|---|
 | `@alaarab/ogrid-react-fluent` | `react-fluent` | 3001 | No | Yes |
 | `@alaarab/ogrid-react-material` | `react-material` | 3002 | No | Yes |
 | `@alaarab/ogrid-react-radix` | `react-radix` | 3003 | Yes | Yes |
-| `@alaarab/ogrid-angular-radix` | `angular-radix` | 3010 | No | Yes |
-| `@alaarab/ogrid-angular-material` | `angular-material` | 3011 | Yes | Yes |
-| `@alaarab/ogrid-angular-primeng` | `angular-primeng` | 3012 | No | Yes |
-| `@alaarab/ogrid-vue-radix` | `vue-radix` | 3020 | No | Yes |
-| `@alaarab/ogrid-vue-vuetify` | `vue-vuetify` | 3021 | Yes | Yes |
-| `@alaarab/ogrid-vue-primevue` | `vue-primevue` | 3022 | No | Yes |
 | `@alaarab/ogrid-js` | `js` | 3030 | Yes | Yes |
 
 ## Docs homepage coverage

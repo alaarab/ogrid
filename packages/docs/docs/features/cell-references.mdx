@@ -16,14 +16,8 @@ Enable Excel-style cell references with a single prop. Column letter headers (A,
 
 <CellReferencesDemo />
 
-:::tip Framework-Specific Styling
-The live demo above shows **React Radix UI** styling (lightweight default). To see how cell references look in your framework's design system, click the framework buttons above the demo to open online demo:
-- **React** -- Radix UI default theme
-- **Angular** -- Angular Material theme
-- **Vue** -- Vuetify theme
-- **JS** -- Vanilla JS default theme
-
-Each framework renders with its native components, so the styling matches your design system.
+:::tip UI styling
+The live demo above shows **Radix UI** styling (lightweight default). The same feature renders through the Fluent UI and Material UI packages with their native components, plus the `@alaarab/ogrid-js` vanilla theme.
 :::
 
 ## Quick Example
@@ -63,90 +57,6 @@ The `OGrid` component has the same props across all React UI packages. To switch
 - **Radix** (lightweight, default): `from '@alaarab/ogrid-react-radix'`
 - **Fluent UI** (Microsoft 365 / SPFx): `from '@alaarab/ogrid-react-fluent'` -- wrap in `<FluentProvider>`
 - **Material UI** (MUI v7): `from '@alaarab/ogrid-react-material'` -- wrap in `<ThemeProvider>`
-:::
-
-  </TabItem>
-  <TabItem value="angular" label="Angular">
-
-```typescript
-import { Component } from '@angular/core';
-import { OGridComponent, type IColumnDef } from '@alaarab/ogrid-angular-material';
-
-@Component({
-  standalone: true,
-  imports: [OGridComponent],
-  template: `<ogrid [props]="gridProps" />`
-})
-export class GridComponent {
-  gridProps = {
-    columns: [
-      { columnId: 'name', name: 'Name' },
-      { columnId: 'age', name: 'Age', type: 'numeric' },
-      { columnId: 'email', name: 'Email' },
-      { columnId: 'department', name: 'Department' },
-      {
-        columnId: 'salary', name: 'Salary', type: 'numeric',
-        valueFormatter: (v: unknown) => `$${Number(v).toLocaleString()}`,
-      },
-    ] as IColumnDef<Person>[],
-    data: people,
-    getRowId: (item: Person) => item.id,
-    cellReferences: true,
-    defaultPageSize: 25,
-    entityLabelPlural: 'people',
-  };
-}
-```
-
-:::tip Switching UI libraries
-Same component API across Angular packages. To switch, just change the import:
-
-- **Radix (CDK)**: `from '@alaarab/ogrid-angular-radix'` *(default, lightweight)*
-- **Angular Material**: `from '@alaarab/ogrid-angular-material'`
-- **PrimeNG**: `from '@alaarab/ogrid-angular-primeng'`
-
-All components are standalone -- no NgModule required.
-:::
-
-  </TabItem>
-  <TabItem value="vue" label="Vue">
-
-```vue
-<script setup lang="ts">
-import { OGrid, type IColumnDef } from '@alaarab/ogrid-vue-vuetify';
-
-const columns: IColumnDef<Person>[] = [
-  { columnId: 'name', name: 'Name' },
-  { columnId: 'age', name: 'Age', type: 'numeric' },
-  { columnId: 'email', name: 'Email' },
-  { columnId: 'department', name: 'Department' },
-  {
-    columnId: 'salary', name: 'Salary', type: 'numeric',
-    valueFormatter: (v) => `$${Number(v).toLocaleString()}`,
-  },
-];
-
-const gridProps = {
-  columns,
-  data: people,
-  getRowId: (item) => item.id,
-  cellReferences: true,
-  defaultPageSize: 25,
-  entityLabelPlural: 'people',
-};
-</script>
-
-<template>
-  <OGrid :gridProps="gridProps" />
-</template>
-```
-
-:::tip Switching UI libraries
-Same component API across Vue packages. To switch, just change the import:
-
-- **Radix (Headless UI)**: `from '@alaarab/ogrid-vue-radix'` *(default, lightweight)*
-- **Vuetify**: `from '@alaarab/ogrid-vue-vuetify'` -- wrap in `<v-app>` for theming
-- **PrimeVue**: `from '@alaarab/ogrid-vue-primevue'`
 :::
 
   </TabItem>

@@ -1,6 +1,7 @@
 {
   "name": "@alaarab/ogrid-angular-material",
   "version": "2.9.0",
+  "private": true,
   "description": "OGrid Angular Material – MatTable-based data grid with sorting, filtering, pagination, column chooser, and CSV export.",
   "main": "dist/esm/index.js",
   "module": "dist/esm/index.js",

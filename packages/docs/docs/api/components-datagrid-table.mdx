@@ -24,28 +24,6 @@ import { DataGridTable } from '@alaarab/ogrid-react-material';
 ```
 
 </TabItem>
-<TabItem value="angular" label="Angular">
-
-```typescript
-import { DataGridTableComponent } from '@alaarab/ogrid-angular-material';
-// or
-import { DataGridTableComponent } from '@alaarab/ogrid-angular-primeng';
-// or
-import { DataGridTableComponent } from '@alaarab/ogrid-angular-radix';
-```
-
-</TabItem>
-<TabItem value="vue" label="Vue">
-
-```typescript
-import { DataGridTable } from '@alaarab/ogrid-vue-vuetify';
-// or
-import { DataGridTable } from '@alaarab/ogrid-vue-primevue';
-// or
-import { DataGridTable } from '@alaarab/ogrid-vue-radix';
-```
-
-</TabItem>
 <TabItem value="js" label="Vanilla JS">
 
 ```typescript
@@ -157,50 +135,6 @@ function MyGrid() {
   );
 }
 ```
-
-## Angular Usage
-
-In Angular Material/Radix packages, `DataGridTable` accepts a single `propsInput` property:
-
-```typescript
-import { Component } from '@angular/core';
-import { OGridService } from '@alaarab/ogrid-angular';
-import { DataGridTableComponent } from '@alaarab/ogrid-angular-material';
-
-@Component({
-  selector: 'app-my-grid',
-  standalone: true,
-  imports: [DataGridTableComponent],
-  template: `
-    <ogrid-datagrid-table [propsInput]="gridProps" />
-  `
-})
-export class MyGridComponent {
-  ogridService = new OGridService<Product>();
-  gridProps = this.ogridService.getDataGridProps();
-}
-```
-
-In Angular PrimeNG, `DataGridTable` uses individual `@Input()` properties matching the React prop names.
-
-## Vue Usage
-
-In Vue Vuetify/PrimeVue packages, `DataGridTable` accepts a single `:grid-props` prop:
-
-```vue
-<template>
-  <DataGridTable :grid-props="gridProps" />
-</template>
-
-<script setup lang="ts">
-import { DataGridTable } from '@alaarab/ogrid-vue-vuetify';
-import { useOGrid } from '@alaarab/ogrid-vue';
-
-const { dataGridProps: gridProps } = useOGrid({ /* ... */ });
-</script>
-```
-
-In Vue Radix, `DataGridTable` uses individual props via `defineProps<IOGridProps>()` (like React).
 
 ## Accessibility
 

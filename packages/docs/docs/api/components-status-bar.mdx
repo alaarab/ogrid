@@ -24,22 +24,6 @@ import { StatusBar } from '@alaarab/ogrid-react-material';
 ```
 
 </TabItem>
-<TabItem value="angular" label="Angular">
-
-```typescript
-// StatusBar is rendered internally by DataGridTable in Angular packages
-import { DataGridTableComponent } from '@alaarab/ogrid-angular-material';
-```
-
-</TabItem>
-<TabItem value="vue" label="Vue">
-
-```typescript
-// StatusBar is rendered internally by DataGridTable in Vue packages
-import { DataGridTable } from '@alaarab/ogrid-vue-vuetify';
-```
-
-</TabItem>
 <TabItem value="js" label="Vanilla JS">
 
 ```typescript
@@ -178,54 +162,6 @@ The status bar intelligently shows/hides sections based on available data:
 | `aggregation` provided | `Sum: X`, `Avg: X`, `Min: X`, `Max: X` |
 
 Sections are separated by `|` (pipe) characters.
-
-## Angular Usage
-
-In Angular packages, the status bar is rendered internally by `DataGridTable` when `statusBar` is enabled. You don't need to import or use the component directly.
-
-```typescript
-import { Component } from '@angular/core';
-import { OGridService } from '@alaarab/ogrid-angular';
-
-@Component({
-  selector: 'app-my-grid',
-  template: `
-    <ogrid-datagrid-table [propsInput]="gridProps" />
-  `
-})
-export class MyGridComponent {
-  ogridService = new OGridService<Product>();
-
-  constructor() {
-    // Enable status bar via props
-    this.ogridService.setProps({ statusBar: true });
-  }
-
-  gridProps = this.ogridService.getDataGridProps();
-}
-```
-
-## Vue Usage
-
-In Vue packages, the status bar is rendered internally by `DataGridTable` when `statusBar` is enabled.
-
-```vue
-<template>
-  <DataGridTable :grid-props="gridProps" />
-</template>
-
-<script setup lang="ts">
-import { DataGridTable } from '@alaarab/ogrid-vue-vuetify';
-import { useOGrid } from '@alaarab/ogrid-vue';
-
-const { dataGridProps: gridProps } = useOGrid({
-  data: products,
-  columns: columns,
-  getRowId: (item) => item.id,
-  statusBar: true, // Enable status bar
-});
-</script>
-```
 
 ## Enabling in OGrid
 

@@ -26,7 +26,7 @@ function cleanup(dir: string) {
 // McpServer doesn't expose handlers directly, so we call through the index.
 async function callSearchDocs(
   index: ReturnType<typeof loadDocsIndex>,
-  args: { query: string; limit?: number; framework?: 'react' | 'angular' | 'vue' | 'js' }
+  args: { query: string; limit?: number; framework?: 'react' | 'js' }
 ) {
   // We test search_docs behavior via the index directly since server tools
   // are thin wrappers — the real logic lives in docsLoader.
@@ -97,26 +97,24 @@ describe('detect_version behavior (via file system)', () => {
     fs.rmSync(dir, { recursive: true, force: true });
   });
 
-  test('detects framework from package name', () => {
+  test('detects react framework from package name', () => {
     const packageNames = ['@alaarab/ogrid-react-radix'];
     const framework = packageNames.some((n) => n.includes('-react'))
       ? 'react'
-      : packageNames.some((n) => n.includes('-angular'))
-      ? 'angular'
-      : packageNames.some((n) => n.includes('-vue'))
-      ? 'vue'
-      : 'js';
+      : packageNames.some((n) => n.endsWith('-js'))
+      ? 'js'
+      : 'unknown';
     expect(framework).toBe('react');
   });
 
-  test('detects angular framework from package name', () => {
-    const packageNames = ['@alaarab/ogrid-angular-material'];
+  test('detects js framework from package name', () => {
+    const packageNames = ['@alaarab/ogrid-js'];
     const framework = packageNames.some((n) => n.includes('-react'))
       ? 'react'
-      : packageNames.some((n) => n.includes('-angular'))
-      ? 'angular'
-      : 'other';
-    expect(framework).toBe('angular');
+      : packageNames.some((n) => n.endsWith('-js'))
+      ? 'js'
+      : 'unknown';
+    expect(framework).toBe('js');
   });
 
   test('strips version prefix characters', () => {
@@ -151,8 +149,8 @@ describe('search_docs tool behavior', () => {
         '---\ntitle: Filtering\ndescription: Filter rows\n---',
         'Use the filter bar to narrow results.',
         '```ts',
-        "import { Component } from '@angular/core';",
-        "@Component({ template: '<p>hello</p>' }) class Comp {}",
+        "import { OGrid } from '@alaarab/ogrid-react-radix';",
+        '<OGrid data={rows} columns={cols} />',
         '```',
       ].join('\n'),
     });

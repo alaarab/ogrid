@@ -5,7 +5,7 @@
 <h1 align="center">OGrid</h1>
 
 <p align="center">
-  Spreadsheet behavior for any table chrome. Headless hooks for inline edit, range select, fill handle, copy/paste — drop them on shadcn, Material, Fluent, or your own &lt;table&gt;. Or use the built-in &lt;OGrid&gt; component. Multi-framework, MIT.
+  Spreadsheet behavior for any table chrome. Headless hooks for inline edit, range select, fill handle, copy/paste — drop them on shadcn, Material, Fluent, or your own &lt;table&gt;. Or use the built-in &lt;OGrid&gt; component. React-first, MIT.
 </p>
 
 <p align="center">
@@ -23,6 +23,8 @@
 </p>
 
 ---
+
+> **Status:** React and Vanilla JS are the actively maintained adapter families. The Angular and Vue packages are **frozen at v2.9.0** — they remain on npm and in the repository for reference, but no longer receive feature work or version bumps. See [Frozen adapters](#frozen-adapters) below.
 
 Pick the framework and UI library you already use and get sorting, filtering, pagination, cell editing, spreadsheet selection, and the shared core grid model out of the box.
 
@@ -117,18 +119,18 @@ Bundle size is what you actually install (core + framework adapter + UI layer). 
 │   ├── ogrid-react-radix         Radix UI views
 │   ├── ogrid-react-fluent        Fluent UI views
 │   └── ogrid-react-material      Material UI views
-├── @alaarab/ogrid-angular        signals + services
-│   ├── ogrid-angular-material    Angular Material views
-│   ├── ogrid-angular-primeng     PrimeNG views
-│   └── ogrid-angular-radix       Radix UI views
-├── @alaarab/ogrid-vue            composables
-│   ├── ogrid-vue-vuetify         Vuetify views
-│   ├── ogrid-vue-primevue        PrimeVue views
-│   └── ogrid-vue-radix           Radix UI views
+├── @alaarab/ogrid-angular        (frozen — signals + services)
+│   ├── ogrid-angular-material    (frozen)
+│   ├── ogrid-angular-primeng     (frozen)
+│   └── ogrid-angular-radix       (frozen)
+├── @alaarab/ogrid-vue            (frozen — composables)
+│   ├── ogrid-vue-vuetify         (frozen)
+│   ├── ogrid-vue-primevue        (frozen)
+│   └── ogrid-vue-radix           (frozen)
 └── @alaarab/ogrid-js             vanilla JS (class-based)
 ```
 
-Core owns types and pure TypeScript utilities with zero dependencies. Framework adapters (React hooks, Angular services, Vue composables) own state logic and headless components. UI packages are thin view layers, around 50 lines of framework-specific rendering per component. Shared test factories cover the common contract, while package-specific docs and E2E lanes track the remaining behavior gaps.
+Core owns types and pure TypeScript utilities with zero dependencies. The React adapter (hooks + headless components) is the actively maintained surface. The Angular signals/services and Vue composables adapters are kept as a reference for the framework-agnostic separation pattern but receive no new work.
 
 ### Installed sizes (gzip)
 
@@ -139,12 +141,6 @@ These are the actual sizes you ship. Each row is core + adapter + UI layer combi
 | React + Radix | 54 KB |
 | React + Fluent | 55 KB |
 | React + Material | 57 KB |
-| Angular + Material | 59 KB |
-| Angular + PrimeNG | 61 KB |
-| Angular + Radix | 59 KB |
-| Vue + Vuetify | 47 KB |
-| Vue + PrimeVue | 47 KB |
-| Vue + Radix | 44 KB |
 | Vanilla JS | 45 KB |
 | AG Grid Community (comparison) | ~339 KB |
 
@@ -182,69 +178,7 @@ function App() {
 
 > Using Fluent UI? Change the import to `@alaarab/ogrid-react-fluent`. Material UI? `@alaarab/ogrid-react-material`. Same API.
 
-### Angular
-
-```bash
-npm install @alaarab/ogrid-angular-material @angular/material @angular/cdk
-```
-
-```typescript
-import { Component } from '@angular/core';
-import { OGridComponent, type IColumnDef } from '@alaarab/ogrid-angular-material';
-
-@Component({
-  standalone: true,
-  imports: [OGridComponent],
-  template: `<ogrid [gridProps]="gridProps" />`
-})
-export class AppComponent {
-  gridProps = {
-    columns: [
-      { columnId: 'name', name: 'Name', sortable: true, filterable: { type: 'text' } },
-      { columnId: 'department', name: 'Department', filterable: { type: 'multiSelect' } },
-      { columnId: 'salary', name: 'Salary', editable: true, type: 'numeric' },
-    ] as IColumnDef[],
-    data: employees,
-    getRowId: (e: any) => e.id,
-    editable: true,
-    statusBar: true,
-  };
-}
-```
-
-> Using PrimeNG? Change the import to `@alaarab/ogrid-angular-primeng`. Radix UI? `@alaarab/ogrid-angular-radix`. Same API.
-
-### Vue
-
-```bash
-npm install @alaarab/ogrid-vue-vuetify vuetify
-```
-
-```vue
-<script setup lang="ts">
-import { OGrid, type IColumnDef } from '@alaarab/ogrid-vue-vuetify';
-
-const columns: IColumnDef[] = [
-  { columnId: 'name', name: 'Name', sortable: true, filterable: { type: 'text' } },
-  { columnId: 'department', name: 'Department', filterable: { type: 'multiSelect' } },
-  { columnId: 'salary', name: 'Salary', editable: true, type: 'numeric' },
-];
-
-const gridProps = {
-  columns,
-  data: employees,
-  getRowId: (e: any) => e.id,
-  editable: true,
-  statusBar: true,
-};
-</script>
-
-<template>
-  <OGrid :gridProps="gridProps" />
-</template>
-```
-
-> Using PrimeVue? Change the import to `@alaarab/ogrid-vue-primevue`. Radix UI? `@alaarab/ogrid-vue-radix`. Same API.
+> Using Angular or Vue? See [Frozen adapters](#frozen-adapters) — these still work at v2.9.0 but are no longer actively developed.
 
 ### Vanilla JS
 
@@ -345,22 +279,21 @@ Core features are shared across React, Angular, Vue, and vanilla JS. Main CI now
 | [`@alaarab/ogrid-react-radix`](./packages/react-radix) | [![npm](https://img.shields.io/npm/v/@alaarab/ogrid-react-radix)](https://www.npmjs.com/package/@alaarab/ogrid-react-radix) | `react`, `react-dom` |
 | [`@alaarab/ogrid-react-fluent`](./packages/react-fluent) | [![npm](https://img.shields.io/npm/v/@alaarab/ogrid-react-fluent)](https://www.npmjs.com/package/@alaarab/ogrid-react-fluent) | + `@fluentui/react-components`, `@fluentui/react-icons` |
 | [`@alaarab/ogrid-react-material`](./packages/react-material) | [![npm](https://img.shields.io/npm/v/@alaarab/ogrid-react-material)](https://www.npmjs.com/package/@alaarab/ogrid-react-material) | + `@mui/material`, `@mui/icons-material`, `@emotion/*` |
-| **Angular** | | |
-| [`@alaarab/ogrid-angular`](./packages/angular) | [![npm](https://img.shields.io/npm/v/@alaarab/ogrid-angular)](https://www.npmjs.com/package/@alaarab/ogrid-angular) | `@angular/core`, `@angular/common` |
-| [`@alaarab/ogrid-angular-material`](./packages/angular-material) | [![npm](https://img.shields.io/npm/v/@alaarab/ogrid-angular-material)](https://www.npmjs.com/package/@alaarab/ogrid-angular-material) | + `@angular/material`, `@angular/cdk` |
-| [`@alaarab/ogrid-angular-primeng`](./packages/angular-primeng) | [![npm](https://img.shields.io/npm/v/@alaarab/ogrid-angular-primeng)](https://www.npmjs.com/package/@alaarab/ogrid-angular-primeng) | + `primeng` |
-| [`@alaarab/ogrid-angular-radix`](./packages/angular-radix) | [![npm](https://img.shields.io/npm/v/@alaarab/ogrid-angular-radix)](https://www.npmjs.com/package/@alaarab/ogrid-angular-radix) | None extra |
-| **Vue** | | |
-| [`@alaarab/ogrid-vue`](./packages/vue) | [![npm](https://img.shields.io/npm/v/@alaarab/ogrid-vue)](https://www.npmjs.com/package/@alaarab/ogrid-vue) | `vue` |
-| [`@alaarab/ogrid-vue-vuetify`](./packages/vue-vuetify) | [![npm](https://img.shields.io/npm/v/@alaarab/ogrid-vue-vuetify)](https://www.npmjs.com/package/@alaarab/ogrid-vue-vuetify) | + `vuetify` |
-| [`@alaarab/ogrid-vue-primevue`](./packages/vue-primevue) | [![npm](https://img.shields.io/npm/v/@alaarab/ogrid-vue-primevue)](https://www.npmjs.com/package/@alaarab/ogrid-vue-primevue) | + `primevue` |
-| [`@alaarab/ogrid-vue-radix`](./packages/vue-radix) | [![npm](https://img.shields.io/npm/v/@alaarab/ogrid-vue-radix)](https://www.npmjs.com/package/@alaarab/ogrid-vue-radix) | None extra |
 | **Vanilla JS** | | |
 | [`@alaarab/ogrid-js`](./packages/js) | [![npm](https://img.shields.io/npm/v/@alaarab/ogrid-js)](https://www.npmjs.com/package/@alaarab/ogrid-js) | None |
 
 UI packages re-export everything from their adapter (which re-exports from core), so one import is all you need.
 
-Optional premium inputs (calendar date picker, rating, color picker, slider, tags) are available as add-on packages: `@alaarab/ogrid-react-inputs`, `@alaarab/ogrid-angular-inputs`, `@alaarab/ogrid-vue-inputs`, `@alaarab/ogrid-js-inputs`.
+Optional premium inputs (calendar date picker, rating, color picker, slider, tags) are available as add-on packages: `@alaarab/ogrid-react-inputs`, `@alaarab/ogrid-js-inputs`.
+
+### Frozen adapters
+
+The Angular and Vue families remain published on npm at **v2.9.0** and the source lives in `packages/{angular*,vue*}` for reference, but they are no longer in the active build, test, release, or CI pipelines. They will not get framework-major upgrades or new features. Existing installs continue to work at v2.9.0; for new projects, use the React adapter or vanilla JS.
+
+| Frozen package | npm |
+|---|---|
+| `@alaarab/ogrid-angular`, `-angular-material`, `-angular-primeng`, `-angular-radix`, `-angular-inputs` | v2.9.0 |
+| `@alaarab/ogrid-vue`, `-vue-vuetify`, `-vue-primevue`, `-vue-radix`, `-vue-inputs` | v2.9.0 |
 
 ## Editor Integration (MCP)
 
@@ -426,17 +359,15 @@ See the [MCP guide](packages/docs/docs/guides/mcp.mdx) and [live testing bridge 
 
 ## Testing
 
-4,999 tests across all packages. Each framework uses its native testing tools:
+Active suites use each framework's native testing tools:
 
 | Framework | Tool | Tests |
 |-----------|------|------:|
 | Core | Jest + ts-jest | ~1,501 |
 | React | React Testing Library | ~903 |
-| Angular | Angular Testing utilities | ~706 |
-| Vue | Vue Test Utils | ~768 |
 | Vanilla JS | Native DOM + jsdom | ~394 |
 
-Cross-package parity is driven by shared test factories: 8 factories per framework generate the common scenarios, and Playwright now covers a fast smoke gate on every push plus a manual full matrix across all 10 example apps.
+Cross-package parity is driven by shared test factories. Playwright covers a fast smoke gate on every push plus a manual full matrix across the active example apps. Frozen Angular and Vue test suites still live in their packages and pass at v2.9.0 but are not part of the active CI matrix.
 
 ## Development
 
@@ -446,21 +377,20 @@ cd ogrid
 npm install
 npm run build                       # Build all packages (Turborepo)
 npm run test:all                    # Run all tests
-npm run lint                        # ESLint
-npm run test:e2e:smoke              # Browser merge gate (React Radix, Angular Material, Vue Vuetify, JS)
+npm run lint                        # Biome
+npm run test:e2e:smoke              # Browser merge gate (React Radix, JS)
 npm run test:e2e:docs               # Built docs homepage verification
-npm run test:e2e:matrix             # Full browser matrix across all 10 example apps
+npm run test:e2e:matrix             # Full browser matrix across active example apps
 
 # GitHub Actions
 # CI                -> fast push/PR checks (lint + browser smoke)
 # Full Verification -> manual full build/test matrix before release or larger merges
-# Playwright Matrix -> manual browser parity pass across all 10 example apps
+# Playwright Matrix -> manual browser parity pass across active example apps
 
 # Storybook
 npm run storybook:react-fluent      # React Fluent UI    (port 6006)
 npm run storybook:react-material    # React Material UI  (port 6007)
 npm run storybook:react-radix       # React Radix UI     (port 6008)
-npm run storybook:vue-vuetify       # Vue Vuetify        (port 6011)
 
 # Documentation
 npm run docs:dev                    # Docusaurus dev server

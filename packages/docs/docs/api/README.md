@@ -32,7 +32,6 @@ Complete API documentation for OGrid components, types, and interfaces.
 ### Getting Started
 - [Installation](/docs/getting-started/installation)
 - [Quick Start](/docs/getting-started/quick-start)
-- [Framework Showcase](/docs/guides/framework-showcase)
 
 ### Features
 - [Sorting](/docs/features/sorting)
@@ -63,20 +62,6 @@ import type {
   RowId,
 } from '@alaarab/ogrid-react-radix';
 
-// Angular packages
-import type {
-  IColumnDef,
-  IOGridApi,
-  IDataSource,
-} from '@alaarab/ogrid-angular-material';
-
-// Vue packages
-import type {
-  IColumnDef,
-  IOGridApi,
-  IDataSource,
-} from '@alaarab/ogrid-vue-vuetify';
-
 // Vanilla JS
 import type {
   IColumnDef,
@@ -86,13 +71,7 @@ import type {
 
 ## Framework-Specific APIs
 
-Each framework has idiomatic APIs:
-
-| Framework | Orchestration | State Hook/Service | Props Pattern |
-|-----------|---------------|-------------------|---------------|
+| Framework | Orchestration | State Hook | Props Pattern |
+|-----------|---------------|------------|---------------|
 | React | `useOGrid()` hook | `useDataGridState()` | Individual props |
-| Angular | `OGridService` | `DataGridStateService` | Signal-based inputs |
-| Vue | `useOGrid()` composable | `useDataGridState()` | Individual props or `:grid-props` |
 | Vanilla JS | `OGrid` class | `GridState` class | Constructor options |
-
-See the [Framework Showcase](/docs/guides/framework-showcase) for detailed comparisons and examples.

@@ -43,7 +43,7 @@ interface IColumnMeta {
 
 ## IColumnDef&lt;T&gt;
 
-Extends `IColumnMeta` with rendering, editing, and data access properties. The `renderCell` and `cellStyle` properties are React-specific additions; Angular and Vue packages have equivalent rendering mechanisms in their respective component APIs.
+Extends `IColumnMeta` with rendering, editing, and data access properties. The `renderCell` and `cellStyle` properties are React-specific additions; the vanilla JS package uses an equivalent `renderCell` callback that receives a DOM container instead of returning JSX.
 
 ```typescript
 interface IColumnDef<T> extends IColumnMeta {

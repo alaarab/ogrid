@@ -4,12 +4,6 @@ const projects = [
   'react-fluent',
   'react-material',
   'react-radix',
-  'angular-radix',
-  'angular-material',
-  'angular-primeng',
-  'vue-radix',
-  'vue-vuetify',
-  'vue-primevue',
   'js',
 ];
 const passthroughArgs = process.argv.slice(2);

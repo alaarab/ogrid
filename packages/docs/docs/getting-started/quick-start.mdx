@@ -13,74 +13,28 @@ Here's a grid in 60 seconds — sorting, filtering, editing, pagination, and key
 
 ## Install
 
-Pick your framework and UI library:
-
-<Tabs groupId="framework">
-  <TabItem value="react" label="React" default>
+Pick the React UI flavor that matches your design system, or use vanilla JS:
 
 <Tabs groupId="react-ui">
-  <TabItem value="radix" label="Radix (Default)" default>
+  <TabItem value="radix" label="React + Radix (Default)" default>
 
 ```bash
 npm install @alaarab/ogrid-react-radix
 ```
 
   </TabItem>
-  <TabItem value="fluent" label="Fluent UI">
+  <TabItem value="fluent" label="React + Fluent UI">
 
 ```bash
 npm install @alaarab/ogrid-react-fluent @fluentui/react-components
 ```
 
   </TabItem>
-  <TabItem value="material" label="Material UI">
+  <TabItem value="material" label="React + Material UI">
 
 ```bash
 npm install @alaarab/ogrid-react-material @mui/material @emotion/react @emotion/styled
 ```
-
-  </TabItem>
-</Tabs>
-
-  </TabItem>
-  <TabItem value="angular" label="Angular">
-
-<Tabs groupId="angular-ui">
-  <TabItem value="angular-material" label="Angular Material" default>
-
-```bash
-npm install @alaarab/ogrid-angular-material @angular/material @angular/cdk
-```
-
-  </TabItem>
-  <TabItem value="angular-primeng" label="PrimeNG">
-
-```bash
-npm install @alaarab/ogrid-angular-primeng primeng
-```
-
-  </TabItem>
-</Tabs>
-
-  </TabItem>
-  <TabItem value="vue" label="Vue">
-
-<Tabs groupId="vue-ui">
-  <TabItem value="vue-vuetify" label="Vuetify" default>
-
-```bash
-npm install @alaarab/ogrid-vue-vuetify vuetify
-```
-
-  </TabItem>
-  <TabItem value="vue-primevue" label="PrimeVue">
-
-```bash
-npm install @alaarab/ogrid-vue-primevue primevue
-```
-
-  </TabItem>
-</Tabs>
 
   </TabItem>
   <TabItem value="js" label="Vanilla JS">
@@ -157,126 +111,6 @@ The `OGrid` component has identical props across all React UI packages. To switc
 - **Radix** (lightweight, no peer deps): `from '@alaarab/ogrid-react-radix'`
 - **Fluent UI** (Microsoft 365 / SPFx): `from '@alaarab/ogrid-react-fluent'`  -  wrap in `<FluentProvider>`
 - **Material UI** (MUI v7): `from '@alaarab/ogrid-react-material'`  -  wrap in `<ThemeProvider>`
-:::
-
-  </TabItem>
-  <TabItem value="angular" label="Angular">
-
-```typescript
-import { Component } from '@angular/core';
-import { OGridComponent, type IColumnDef } from '@alaarab/ogrid-angular-material';
-
-interface Employee {
-  id: number;
-  name: string;
-  department: string;
-  salary: number;
-}
-
-@Component({
-  standalone: true,
-  imports: [OGridComponent],
-  template: `<ogrid [props]="gridProps" />`
-})
-export class EmployeeGridComponent {
-  private readonly data: Employee[] = [
-    { id: 1, name: 'Alice Johnson', department: 'Engineering', salary: 95000 },
-    { id: 2, name: 'Bob Smith', department: 'Marketing', salary: 72000 },
-    { id: 3, name: 'Carol Williams', department: 'Engineering', salary: 110000 },
-    { id: 4, name: 'David Brown', department: 'Sales', salary: 68000 },
-    { id: 5, name: 'Eva Martinez', department: 'Marketing', salary: 78000 },
-  ];
-
-  private readonly columns: IColumnDef<Employee>[] = [
-    { columnId: 'name', name: 'Name', sortable: true },
-    {
-      columnId: 'department', name: 'Department', sortable: true,
-      filterable: { type: 'multiSelect', options: ['Engineering', 'Marketing', 'Sales'] },
-    },
-    {
-      columnId: 'salary', name: 'Salary', type: 'numeric', sortable: true, editable: true,
-      valueFormatter: (value) =>
-        new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(value as number),
-    },
-  ];
-
-  gridProps = {
-    columns: this.columns,
-    data: this.data,
-    getRowId: (row: Employee) => row.id,
-    defaultPageSize: 10,
-    defaultSortBy: 'name',
-    statusBar: true,
-  };
-}
-```
-
-:::tip Switching UI libraries
-All Angular packages share the same component API. Change one import:
-
-- **Radix (CDK)** (lightweight): `from '@alaarab/ogrid-angular-radix'`
-- **Angular Material**: `from '@alaarab/ogrid-angular-material'`
-- **PrimeNG**: `from '@alaarab/ogrid-angular-primeng'`
-
-All components are standalone — no NgModule required.
-:::
-
-  </TabItem>
-  <TabItem value="vue" label="Vue">
-
-```vue
-<script setup lang="ts">
-import { OGrid, type IColumnDef } from '@alaarab/ogrid-vue-vuetify';
-
-interface Employee {
-  id: number;
-  name: string;
-  department: string;
-  salary: number;
-}
-
-const data: Employee[] = [
-  { id: 1, name: 'Alice Johnson', department: 'Engineering', salary: 95000 },
-  { id: 2, name: 'Bob Smith', department: 'Marketing', salary: 72000 },
-  { id: 3, name: 'Carol Williams', department: 'Engineering', salary: 110000 },
-  { id: 4, name: 'David Brown', department: 'Sales', salary: 68000 },
-  { id: 5, name: 'Eva Martinez', department: 'Marketing', salary: 78000 },
-];
-
-const columns: IColumnDef<Employee>[] = [
-  { columnId: 'name', name: 'Name', sortable: true },
-  {
-    columnId: 'department', name: 'Department', sortable: true,
-    filterable: { type: 'multiSelect', options: ['Engineering', 'Marketing', 'Sales'] },
-  },
-  {
-    columnId: 'salary', name: 'Salary', type: 'numeric', sortable: true, editable: true,
-    valueFormatter: (value) =>
-      new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(value as number),
-  },
-];
-
-const gridProps = {
-  columns,
-  data,
-  getRowId: (row: Employee) => row.id,
-  defaultPageSize: 10,
-  defaultSortBy: 'name',
-  statusBar: true,
-};
-</script>
-
-<template>
-  <OGrid :gridProps="gridProps" />
-</template>
-```
-
-:::tip Switching UI libraries
-All Vue packages share the same API. Change one import:
-
-- **Radix (Headless UI)** (lightweight): `from '@alaarab/ogrid-vue-radix'`
-- **Vuetify**: `from '@alaarab/ogrid-vue-vuetify'`  -  wrap in `<v-app>` for theming
-- **PrimeVue**: `from '@alaarab/ogrid-vue-primevue'`
 :::
 
   </TabItem>
@@ -366,48 +200,6 @@ function App() {
     </>
   );
 }
-```
-
-  </TabItem>
-  <TabItem value="angular" label="Angular">
-
-```typescript
-import { Component } from '@angular/core';
-import { OGridComponent, OGridService } from '@alaarab/ogrid-angular-material';
-
-@Component({
-  standalone: true,
-  imports: [OGridComponent],
-  template: `
-    <button (click)="exportCsv()">Export CSV</button>
-    <ogrid [props]="gridProps" />
-  `
-})
-export class AppComponent {
-  constructor(private gridService: OGridService) {}
-
-  exportCsv() {
-    this.gridService.exportToCsv('employees.csv');
-  }
-
-  gridProps = { columns, data, getRowId: (row: any) => row.id };
-}
-```
-
-  </TabItem>
-  <TabItem value="vue" label="Vue">
-
-```vue
-<script setup lang="ts">
-import { OGrid, useOGrid } from '@alaarab/ogrid-vue-vuetify';
-
-const { exportToCsv } = useOGrid({ columns, data, getRowId: (row) => row.id });
-</script>
-
-<template>
-  <button @click="exportToCsv('employees.csv')">Export CSV</button>
-  <OGrid :gridProps="{ columns, data, getRowId: (row) => row.id }" />
-</template>
 ```
 
   </TabItem>

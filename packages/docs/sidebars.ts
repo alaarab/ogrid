@@ -54,7 +54,6 @@ const sidebars: SidebarsConfig = {
         'guides/custom-cell-editors',
         'guides/theming',
         'guides/accessibility',
-        'guides/framework-showcase',
         'guides/migration-from-ag-grid',
         'guides/mcp',
         'guides/mcp-live-testing',

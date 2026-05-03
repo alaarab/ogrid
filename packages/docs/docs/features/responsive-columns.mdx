@@ -67,66 +67,6 @@ Also available from `@alaarab/ogrid-react-fluent` and `@alaarab/ogrid-react-mate
 </Admonition>
 
   </TabItem>
-  <TabItem value="angular" label="Angular">
-
-```typescript
-import { OGridComponent } from '@alaarab/ogrid-angular-material';
-
-@Component({
-  template: `
-    <ogrid-component
-      [columns]="columns"
-      [data]="items"
-      [getRowId]="getRowId"
-      [responsiveColumns]="true"
-    />
-  `,
-})
-export class AppComponent {
-  columns = [
-    { columnId: 'name', name: 'Name', responsivePriority: 0 },
-    { columnId: 'email', name: 'Email', responsivePriority: 1 },
-    { columnId: 'phone', name: 'Phone', responsivePriority: 3 },
-  ];
-  items = [...];
-  getRowId = (item: any) => item.id;
-}
-```
-
-<Admonition type="tip">
-Also available from `@alaarab/ogrid-angular-primeng` and `@alaarab/ogrid-angular-radix`.
-</Admonition>
-
-  </TabItem>
-  <TabItem value="vue" label="Vue">
-
-```vue
-<template>
-  <OGrid
-    :columns="columns"
-    :data="items"
-    :getRowId="(item) => item.id"
-    :responsiveColumns="true"
-  />
-</template>
-
-<script setup>
-import { OGrid } from '@alaarab/ogrid-vue-vuetify';
-
-const columns = [
-  { columnId: 'name', name: 'Name', responsivePriority: 0 },
-  { columnId: 'email', name: 'Email', responsivePriority: 1 },
-  { columnId: 'phone', name: 'Phone', responsivePriority: 3 },
-];
-const items = [...];
-</script>
-```
-
-<Admonition type="tip">
-Also available from `@alaarab/ogrid-vue-primevue` and `@alaarab/ogrid-vue-radix`.
-</Admonition>
-
-  </TabItem>
   <TabItem value="js" label="Vanilla JS">
 
 ```typescript

@@ -9,8 +9,6 @@
  */
 
 import { readFileSync, writeFileSync } from 'fs';
-import { glob } from 'fs/promises';
-import { join } from 'path';
 
 const version = process.argv[2];
 if (!version || !/^\d+\.\d+\.\d+/.test(version)) {
@@ -22,10 +20,11 @@ if (!version || !/^\d+\.\d+\.\d+/.test(version)) {
 const OGRID_PKG = /^@alaarab\/ogrid-/;
 const DEP_SECTIONS = ['dependencies', 'peerDependencies', 'devDependencies', 'optionalDependencies'];
 
-const files = ['package.json'];
-for await (const f of glob('packages/*/package.json')) {
-  files.push(f);
-}
+// Drive the bump off root workspaces so frozen packages (Angular/Vue, omitted
+// from the workspaces array) stay pinned at their last shipped version.
+const root = JSON.parse(readFileSync('package.json', 'utf8'));
+const workspacePaths = (root.workspaces ?? []).map((p) => `${p}/package.json`);
+const files = ['package.json', ...workspacePaths];
 
 let updated = 0;
 

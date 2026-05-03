@@ -24,28 +24,6 @@ import { PaginationControls } from '@alaarab/ogrid-react-material';
 ```
 
 </TabItem>
-<TabItem value="angular" label="Angular">
-
-```typescript
-import { PaginationControlsComponent } from '@alaarab/ogrid-angular-material';
-// or
-import { PaginationControlsComponent } from '@alaarab/ogrid-angular-primeng';
-// or
-import { PaginationControlsComponent } from '@alaarab/ogrid-angular-radix';
-```
-
-</TabItem>
-<TabItem value="vue" label="Vue">
-
-```typescript
-import { PaginationControls } from '@alaarab/ogrid-vue-vuetify';
-// or
-import { PaginationControls } from '@alaarab/ogrid-vue-primevue';
-// or
-import { PaginationControls } from '@alaarab/ogrid-vue-radix';
-```
-
-</TabItem>
 <TabItem value="js" label="Vanilla JS">
 
 ```typescript
@@ -145,80 +123,6 @@ function MyApp() {
     />
   );
 }
-```
-
-## Angular Usage
-
-In Angular packages, the component uses `@Input()` and `@Output()` decorators:
-
-```typescript
-import { Component } from '@angular/core';
-import { PaginationControlsComponent } from '@alaarab/ogrid-angular-material';
-
-@Component({
-  selector: 'app-my-grid',
-  standalone: true,
-  imports: [PaginationControlsComponent],
-  template: `
-    <ogrid-pagination-controls
-      [currentPage]="currentPage"
-      [pageSize]="pageSize"
-      [totalCount]="totalCount"
-      (onPageChange)="handlePageChange($event)"
-      (onPageSizeChange)="handlePageSizeChange($event)"
-      [entityLabelPlural]="'users'"
-    />
-  `
-})
-export class MyGridComponent {
-  currentPage = 1;
-  pageSize = 20;
-  totalCount = 500;
-
-  handlePageChange(page: number) {
-    this.currentPage = page;
-  }
-
-  handlePageSizeChange(pageSize: number) {
-    this.pageSize = pageSize;
-    this.currentPage = 1; // Reset to first page
-  }
-}
-```
-
-## Vue Usage
-
-In Vue packages, the component accepts props via `v-bind` or shorthand `:`:
-
-```vue
-<template>
-  <PaginationControls
-    :current-page="currentPage"
-    :page-size="pageSize"
-    :total-count="totalCount"
-    @page-change="handlePageChange"
-    @page-size-change="handlePageSizeChange"
-    entity-label-plural="users"
-  />
-</template>
-
-<script setup lang="ts">
-import { ref } from 'vue';
-import { PaginationControls } from '@alaarab/ogrid-vue-vuetify';
-
-const currentPage = ref(1);
-const pageSize = ref(20);
-const totalCount = ref(500);
-
-const handlePageChange = (page: number) => {
-  currentPage.value = page;
-};
-
-const handlePageSizeChange = (size: number) => {
-  pageSize.value = size;
-  currentPage.value = 1; // Reset to first page
-};
-</script>
 ```
 
 ## Behavior
