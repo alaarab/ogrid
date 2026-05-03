@@ -118,37 +118,19 @@ describe('loadDocsIndex', () => {
     }
   });
 
-  test('detects angular framework from code content', () => {
+  test('detects js framework from new OGrid() content', () => {
     const dir = makeTmpDocs({
       'features/sorting.mdx': [
         '---\ntitle: Sorting\ndescription: Sort docs\n---',
-        '```ts',
-        "import { Component } from '@angular/core';",
-        "@Component({ template: '<ogrid-angular-material />' })",
-        'class MyComponent {}',
+        '```js',
+        "import { OGrid } from '@alaarab/ogrid-js';",
+        "const grid = new OGrid(document.body, { columns: [], data: [] });",
         '```',
       ].join('\n'),
     });
     try {
       const index = loadDocsIndex(dir);
-      expect(index.entries[0].codeBlocks[0].framework).toBe('angular');
-    } finally {
-      cleanup(dir);
-    }
-  });
-
-  test('detects vue framework from .vue language', () => {
-    const dir = makeTmpDocs({
-      'features/sorting.mdx': [
-        '---\ntitle: Sorting\ndescription: Sort docs\n---',
-        '```vue',
-        '<template><OGrid :data="rows" /></template>',
-        '```',
-      ].join('\n'),
-    });
-    try {
-      const index = loadDocsIndex(dir);
-      expect(index.entries[0].codeBlocks[0].framework).toBe('vue');
+      expect(index.entries[0].codeBlocks[0].framework).toBe('js');
     } finally {
       cleanup(dir);
     }
@@ -405,9 +387,9 @@ describe('DocsIndex.getCodeExamples', () => {
         '```tsx',
         "import { OGrid } from '@alaarab/ogrid-react-radix';",
         '```',
-        '```ts',
-        "import { Component } from '@angular/core';",
-        "@Component({ template: '' }) class MyComp {}",
+        '```js',
+        "import { OGrid } from '@alaarab/ogrid-js';",
+        "const grid = new OGrid(document.body, { columns: [], data: [] });",
         '```',
       ].join('\n'),
     });
@@ -427,16 +409,16 @@ describe('DocsIndex.getCodeExamples', () => {
         '```tsx',
         "import { OGrid } from '@alaarab/ogrid-react-radix';",
         '```',
-        '```ts',
-        "import { Component } from '@angular/core';",
-        "@Component({ template: '' }) class MyComp {}",
+        '```js',
+        "import { OGrid } from '@alaarab/ogrid-js';",
+        "const grid = new OGrid(document.body, { columns: [], data: [] });",
         '```',
       ].join('\n'),
     });
     try {
       const index = loadDocsIndex(dir);
       const all = index.getCodeExamples('ogrid');
-      // The react block contains 'ogrid' in the import, angular may not
+      // Both blocks contain 'ogrid' in the import — react and js
       expect(all.length).toBeGreaterThan(0);
     } finally {
       fs.rmSync(dir, { recursive: true, force: true });

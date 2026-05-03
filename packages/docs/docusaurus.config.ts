@@ -5,7 +5,7 @@ import path from 'path';
 
 const config: Config = {
   title: 'OGrid',
-  tagline: 'The open-source data grid for React, Angular, Vue, and vanilla JS.',
+  tagline: 'The open-source data grid for React and vanilla JS.',
   favicon: 'img/favicon.svg',
   url: 'https://alaarab.github.io',
   baseUrl: '/ogrid/',
@@ -107,11 +107,11 @@ const config: Config = {
         '@context': 'https://schema.org',
         '@type': 'SoftwareSourceCode',
         name: 'OGrid',
-        description: 'Free open-source data grid for React, Angular, Vue, and vanilla JS. Sorting, filtering, editing, spreadsheet selection, clipboard, fill handle, formulas, and more.',
+        description: 'Free open-source data grid for React and vanilla JS. Sorting, filtering, editing, spreadsheet selection, clipboard, fill handle, formulas, and more.',
         url: 'https://alaarab.github.io/ogrid/',
         codeRepository: 'https://github.com/alaarab/ogrid',
         programmingLanguage: ['TypeScript', 'JavaScript'],
-        runtimePlatform: ['React', 'Angular', 'Vue', 'Vanilla JS'],
+        runtimePlatform: ['React', 'Vanilla JS'],
         license: 'https://opensource.org/licenses/MIT',
         author: {
           '@type': 'Person',
@@ -151,7 +151,7 @@ const config: Config = {
 
   themeConfig: {
     metadata: [
-      { name: 'keywords', content: 'data grid, react data grid, angular data grid, vue data grid, javascript table, spreadsheet, MIT license, open source, AG Grid alternative' },
+      { name: 'keywords', content: 'data grid, react data grid, javascript table, spreadsheet, MIT license, open source, AG Grid alternative' },
       { name: 'author', content: 'Ala Arab' },
     ],
     colorMode: {
@@ -196,12 +196,10 @@ const config: Config = {
           ],
         },
         {
-          title: 'Angular / Vue / JS',
+          title: 'JS',
           items: [
-            { label: 'Angular Material', href: 'https://npmjs.com/package/@alaarab/ogrid-angular-material' },
-            { label: 'Vue Vuetify', href: 'https://npmjs.com/package/@alaarab/ogrid-vue-vuetify' },
             { label: 'Vanilla JS', href: 'https://npmjs.com/package/@alaarab/ogrid-js' },
-            { label: 'All 14 packages', href: 'https://www.npmjs.com/search?q=%40alaarab%2Fogrid' },
+            { label: 'All packages', href: 'https://www.npmjs.com/search?q=%40alaarab%2Fogrid' },
           ],
         },
         {

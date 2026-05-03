@@ -28,8 +28,8 @@ import React from 'react';
 // ─── Color tokens ───────────────────────────────────────────
 const COLORS = {
   react:   { border: '#2d7a4f', bg: '#e8f5e9', text: '#1a4a2e', adapterBg: '#c8e6c9' },
-  angular: { border: '#c2185b', bg: '#fce4ec', text: '#880e4f', adapterBg: '#f8bbd0' },
-  vue:     { border: '#00897b', bg: '#e0f2f1', text: '#004d40', adapterBg: '#b2dfdb' },
+  angular: { border: '#9e9e9e', bg: '#f5f5f5', text: '#616161', adapterBg: '#eeeeee' },
+  vue:     { border: '#9e9e9e', bg: '#f5f5f5', text: '#616161', adapterBg: '#eeeeee' },
   js:      { border: '#e65100', bg: '#fff3e0', text: '#bf360c', adapterBg: '#ffe0b2' },
   core:    { border: '#3ab876', bg: '#1a2e1a', text: '#3ab876', adapterBg: '#1a2e1a' },
 };
@@ -235,8 +235,8 @@ interface LegendEntry {
 
 const LEGEND: LegendEntry[] = [
   { label: 'React', colors: COLORS.react },
-  { label: 'Angular', colors: COLORS.angular },
-  { label: 'Vue', colors: COLORS.vue },
+  { label: 'Angular (frozen)', colors: COLORS.angular },
+  { label: 'Vue (frozen)', colors: COLORS.vue },
   { label: 'Vanilla JS', colors: COLORS.js },
   { label: 'Core', colors: COLORS.core },
 ];
@@ -329,23 +329,23 @@ export function ArchitectureDiagram() {
 
         <FrameworkColumn
           uiPackages={[
-            { name: 'ogrid-angular-material', description: 'Angular Material v21' },
-            { name: 'ogrid-angular-primeng',  description: 'PrimeNG v21' },
-            { name: 'ogrid-angular-radix',    description: 'Radix UI (Angular)' },
+            { name: 'ogrid-angular-material', description: 'Frozen at v2.9.0' },
+            { name: 'ogrid-angular-primeng',  description: 'Frozen at v2.9.0' },
+            { name: 'ogrid-angular-radix',    description: 'Frozen at v2.9.0' },
           ]}
           adapterName="ogrid-angular"
-          adapterDescription="Services · Signals · Components"
+          adapterDescription="Frozen — maintenance only"
           colors={COLORS.angular}
         />
 
         <FrameworkColumn
           uiPackages={[
-            { name: 'ogrid-vue-vuetify',  description: 'Vuetify 3' },
-            { name: 'ogrid-vue-primevue', description: 'PrimeVue 4' },
-            { name: 'ogrid-vue-radix',    description: 'Radix UI (Vue)' },
+            { name: 'ogrid-vue-vuetify',  description: 'Frozen at v2.9.0' },
+            { name: 'ogrid-vue-primevue', description: 'Frozen at v2.9.0' },
+            { name: 'ogrid-vue-radix',    description: 'Frozen at v2.9.0' },
           ]}
           adapterName="ogrid-vue"
-          adapterDescription="Composables · Utilities"
+          adapterDescription="Frozen — maintenance only"
           colors={COLORS.vue}
         />
 

@@ -25,22 +25,6 @@ The `SideBar` component is framework-agnostic and uses inline styles. All React 
 :::
 
 </TabItem>
-<TabItem value="angular" label="Angular">
-
-```typescript
-// SideBar is rendered internally by OGridLayout in Angular packages
-import { OGridLayoutComponent } from '@alaarab/ogrid-angular';
-```
-
-</TabItem>
-<TabItem value="vue" label="Vue">
-
-```typescript
-// SideBar is rendered internally by OGridLayout in Vue packages
-import { OGridLayout } from '@alaarab/ogrid-vue';
-```
-
-</TabItem>
 <TabItem value="js" label="Vanilla JS">
 
 ```typescript
@@ -233,64 +217,6 @@ import { OGrid } from '@alaarab/ogrid-react-radix';
   }}
   {...props}
 />
-```
-
-## Angular Usage
-
-In Angular packages, the sidebar is rendered internally by `OGridLayoutComponent` when `sideBar` is enabled:
-
-```typescript
-import { Component } from '@angular/core';
-import { OGridService } from '@alaarab/ogrid-angular';
-
-@Component({
-  selector: 'app-my-grid',
-  template: `
-    <ogrid [propsInput]="gridProps" />
-  `
-})
-export class MyGridComponent {
-  ogridService = new OGridService<Product>();
-
-  constructor() {
-    // Enable sidebar via props
-    this.ogridService.setProps({
-      sideBar: {
-        panels: ['columns', 'filters'],
-        defaultPanel: 'columns',
-        position: 'right',
-      },
-    });
-  }
-
-  gridProps = this.ogridService.getDataGridProps();
-}
-```
-
-## Vue Usage
-
-In Vue packages, the sidebar is rendered internally by `OGridLayout` when `sideBar` is enabled:
-
-```vue
-<template>
-  <OGrid
-    :data="products"
-    :columns="columns"
-    :get-row-id="(item) => item.id"
-    :side-bar="{
-      panels: ['columns', 'filters'],
-      defaultPanel: 'columns',
-      position: 'right',
-    }"
-  />
-</template>
-
-<script setup lang="ts">
-import { OGrid } from '@alaarab/ogrid-vue-vuetify';
-
-const products = [...];
-const columns = [...];
-</script>
 ```
 
 ## Behavior

@@ -24,28 +24,6 @@ import { ColumnHeaderFilter } from '@alaarab/ogrid-react-material';
 ```
 
 </TabItem>
-<TabItem value="angular" label="Angular">
-
-```typescript
-import { ColumnHeaderFilterComponent } from '@alaarab/ogrid-angular-material';
-// or
-import { ColumnHeaderFilterComponent } from '@alaarab/ogrid-angular-primeng';
-// or
-import { ColumnHeaderFilterComponent } from '@alaarab/ogrid-angular-radix';
-```
-
-</TabItem>
-<TabItem value="vue" label="Vue">
-
-```typescript
-import { ColumnHeaderFilter } from '@alaarab/ogrid-vue-vuetify';
-// or
-import { ColumnHeaderFilter } from '@alaarab/ogrid-vue-primevue';
-// or
-import { ColumnHeaderFilter } from '@alaarab/ogrid-vue-radix';
-```
-
-</TabItem>
 <TabItem value="js" label="Vanilla JS">
 
 ```typescript
@@ -213,68 +191,6 @@ function MyHeader() {
     />
   );
 }
-```
-
-## Angular Usage
-
-In Angular packages, the component has the same prop interface but uses `@Input()` decorators:
-
-```typescript
-import { Component } from '@angular/core';
-import { ColumnHeaderFilterComponent } from '@alaarab/ogrid-angular-material';
-
-@Component({
-  selector: 'app-my-header',
-  standalone: true,
-  imports: [ColumnHeaderFilterComponent],
-  template: `
-    <ogrid-column-header-filter
-      [columnKey]="'status'"
-      [columnName]="'Status'"
-      [filterType]="'multiSelect'"
-      [selectedValues]="selectedValues"
-      (onFilterChange)="handleFilterChange($event)"
-      [options]="options"
-    />
-  `
-})
-export class MyHeaderComponent {
-  selectedValues: string[] = [];
-  options = ['Active', 'Pending', 'Completed'];
-
-  handleFilterChange(values: string[]) {
-    this.selectedValues = values;
-  }
-}
-```
-
-## Vue Usage
-
-In Vue packages, the component accepts props via `v-bind` or shorthand `:`:
-
-```vue
-<template>
-  <ColumnHeaderFilter
-    column-key="status"
-    column-name="Status"
-    filter-type="multiSelect"
-    :selected-values="selectedValues"
-    @filter-change="handleFilterChange"
-    :options="options"
-  />
-</template>
-
-<script setup lang="ts">
-import { ref } from 'vue';
-import { ColumnHeaderFilter } from '@alaarab/ogrid-vue-vuetify';
-
-const selectedValues = ref<string[]>([]);
-const options = ['Active', 'Pending', 'Completed'];
-
-const handleFilterChange = (values: string[]) => {
-  selectedValues.value = values;
-};
-</script>
 ```
 
 ## Accessibility

@@ -23,24 +23,6 @@ npm install @alaarab/ogrid-react-inputs
 Works with any OGrid React UI package (Radix, Fluent, Material).
 
   </TabItem>
-  <TabItem value="angular" label="Angular">
-
-```bash
-npm install @alaarab/ogrid-angular-inputs
-```
-
-Works with any OGrid Angular UI package (Angular Material, PrimeNG, Radix).
-
-  </TabItem>
-  <TabItem value="vue" label="Vue">
-
-```bash
-npm install @alaarab/ogrid-vue-inputs
-```
-
-Works with any OGrid Vue UI package (Vuetify, PrimeVue, Radix).
-
-  </TabItem>
   <TabItem value="js" label="Vanilla JS">
 
 ```bash
@@ -103,59 +85,6 @@ function App() {
 :::
 
   </TabItem>
-  <TabItem value="angular" label="Angular">
-
-```typescript
-import { DatePickerEditorComponent } from '@alaarab/ogrid-angular-inputs';
-
-const columns = [
-  { columnId: 'name', name: 'Name' },
-  {
-    columnId: 'dueDate',
-    name: 'Due Date',
-    editable: true,
-    cellEditor: DatePickerEditorComponent,
-    cellEditorPopup: true,
-  },
-];
-```
-
-:::tip Switching UI libraries
-`DatePickerEditorComponent` works with all Angular UI packages:
-
-- **Angular Material**: `from '@alaarab/ogrid-angular-material'`
-- **PrimeNG**: `from '@alaarab/ogrid-angular-primeng'`
-- **Radix** (lightweight): `from '@alaarab/ogrid-angular-radix'`
-:::
-
-  </TabItem>
-  <TabItem value="vue" label="Vue">
-
-```typescript
-import { OGrid } from '@alaarab/ogrid-vue-vuetify';
-import { DatePickerEditor } from '@alaarab/ogrid-vue-inputs';
-
-const columns = [
-  { columnId: 'name', name: 'Name' },
-  {
-    columnId: 'dueDate',
-    name: 'Due Date',
-    editable: true,
-    cellEditor: DatePickerEditor,
-    cellEditorPopup: true,
-  },
-];
-```
-
-:::tip Switching UI libraries
-`DatePickerEditor` works with all Vue UI packages:
-
-- **Vuetify**: `from '@alaarab/ogrid-vue-vuetify'`
-- **PrimeVue**: `from '@alaarab/ogrid-vue-primevue'`
-- **Radix** (lightweight): `from '@alaarab/ogrid-vue-radix'`
-:::
-
-  </TabItem>
   <TabItem value="js" label="Vanilla JS">
 
 ```typescript
@@ -199,42 +128,6 @@ A star-based rating editor (1-5 stars) that renders as a popover cell editor. Fe
 
 ```tsx
 import { RatingEditor } from '@alaarab/ogrid-react-inputs';
-
-const columns = [
-  {
-    columnId: 'rating',
-    name: 'Rating',
-    editable: true,
-    cellEditor: RatingEditor,
-    cellEditorPopup: true,
-    cellEditorParams: { maxStars: 5, allowHalf: false },
-  },
-];
-```
-
-  </TabItem>
-  <TabItem value="angular" label="Angular">
-
-```typescript
-import { RatingEditorComponent } from '@alaarab/ogrid-angular-inputs';
-
-const columns = [
-  {
-    columnId: 'rating',
-    name: 'Rating',
-    editable: true,
-    cellEditor: RatingEditorComponent,
-    cellEditorPopup: true,
-    cellEditorParams: { maxStars: 5, allowHalf: false },
-  },
-];
-```
-
-  </TabItem>
-  <TabItem value="vue" label="Vue">
-
-```typescript
-import { RatingEditor } from '@alaarab/ogrid-vue-inputs';
 
 const columns = [
   {
@@ -300,42 +193,6 @@ const columns = [
 ```
 
   </TabItem>
-  <TabItem value="angular" label="Angular">
-
-```typescript
-import { ColorPickerEditorComponent } from '@alaarab/ogrid-angular-inputs';
-
-const columns = [
-  {
-    columnId: 'color',
-    name: 'Color',
-    editable: true,
-    cellEditor: ColorPickerEditorComponent,
-    cellEditorPopup: true,
-    cellEditorParams: { allowCustom: true },
-  },
-];
-```
-
-  </TabItem>
-  <TabItem value="vue" label="Vue">
-
-```typescript
-import { ColorPickerEditor } from '@alaarab/ogrid-vue-inputs';
-
-const columns = [
-  {
-    columnId: 'color',
-    name: 'Color',
-    editable: true,
-    cellEditor: ColorPickerEditor,
-    cellEditorPopup: true,
-    cellEditorParams: { allowCustom: true },
-  },
-];
-```
-
-  </TabItem>
   <TabItem value="js" label="Vanilla JS">
 
 ```typescript
@@ -373,42 +230,6 @@ A range slider for numeric values that renders as a popover cell editor. Feature
 
 ```tsx
 import { SliderEditor } from '@alaarab/ogrid-react-inputs';
-
-const columns = [
-  {
-    columnId: 'progress',
-    name: 'Progress',
-    editable: true,
-    cellEditor: SliderEditor,
-    cellEditorPopup: true,
-    cellEditorParams: { min: 0, max: 100, step: 1 },
-  },
-];
-```
-
-  </TabItem>
-  <TabItem value="angular" label="Angular">
-
-```typescript
-import { SliderEditorComponent } from '@alaarab/ogrid-angular-inputs';
-
-const columns = [
-  {
-    columnId: 'progress',
-    name: 'Progress',
-    editable: true,
-    cellEditor: SliderEditorComponent,
-    cellEditorPopup: true,
-    cellEditorParams: { min: 0, max: 100, step: 1 },
-  },
-];
-```
-
-  </TabItem>
-  <TabItem value="vue" label="Vue">
-
-```typescript
-import { SliderEditor } from '@alaarab/ogrid-vue-inputs';
 
 const columns = [
   {
@@ -461,48 +282,6 @@ A multi-value tag/chip editor with suggestions that renders as a popover cell ed
 
 ```tsx
 import { TagsEditor } from '@alaarab/ogrid-react-inputs';
-
-const columns = [
-  {
-    columnId: 'skills',
-    name: 'Skills',
-    editable: true,
-    cellEditor: TagsEditor,
-    cellEditorPopup: true,
-    cellEditorParams: {
-      suggestions: ['React', 'Angular', 'Vue', 'TypeScript', 'Python'],
-      allowCreate: true,
-    },
-  },
-];
-```
-
-  </TabItem>
-  <TabItem value="angular" label="Angular">
-
-```typescript
-import { TagsEditorComponent } from '@alaarab/ogrid-angular-inputs';
-
-const columns = [
-  {
-    columnId: 'skills',
-    name: 'Skills',
-    editable: true,
-    cellEditor: TagsEditorComponent,
-    cellEditorPopup: true,
-    cellEditorParams: {
-      suggestions: ['React', 'Angular', 'Vue', 'TypeScript', 'Python'],
-      allowCreate: true,
-    },
-  },
-];
-```
-
-  </TabItem>
-  <TabItem value="vue" label="Vue">
-
-```typescript
-import { TagsEditor } from '@alaarab/ogrid-vue-inputs';
 
 const columns = [
   {

@@ -58,15 +58,9 @@ jobs:
             --filter=@alaarab/ogrid-core \
             --filter=@alaarab/ogrid-react \
             --filter=@alaarab/ogrid-react-radix \
-            --filter=@alaarab/ogrid-angular \
-            --filter=@alaarab/ogrid-angular-material \
-            --filter=@alaarab/ogrid-vue \
-            --filter=@alaarab/ogrid-vue-vuetify \
             --filter=@alaarab/ogrid-js \
             --filter=@alaarab/ogrid-inputs \
             --filter=@alaarab/ogrid-react-inputs \
-            --filter=@alaarab/ogrid-angular-inputs \
-            --filter=@alaarab/ogrid-vue-inputs \
             --filter=@alaarab/ogrid-js-inputs
         env:
           TURBO_TOKEN: ${{ secrets.TURBO_TOKEN }}

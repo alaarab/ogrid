@@ -106,19 +106,11 @@ function detectFramework(
 ): string | undefined {
   // Explicit language hints
   if (language === 'tsx' || language === 'jsx') return 'react';
-  if (language === 'vue') return 'vue';
 
   // Check surrounding TabItem context (most reliable for MDX docs)
   const ctxLower = surroundingContext.toLowerCase();
   if (ctxLower.includes('value="react"') || ctxLower.includes('label="react"'))
     return 'react';
-  if (
-    ctxLower.includes('value="angular"') ||
-    ctxLower.includes('label="angular"')
-  )
-    return 'angular';
-  if (ctxLower.includes('value="vue"') || ctxLower.includes('label="vue"'))
-    return 'vue';
   if (
     ctxLower.includes('value="js"') ||
     ctxLower.includes('label="vanilla js"') ||
@@ -127,8 +119,6 @@ function detectFramework(
     return 'js';
 
   // Content heuristics
-  if (code.includes('@angular/') || code.includes('@Component')) return 'angular';
-  if (code.includes('ogrid-vue') || code.includes('<template>')) return 'vue';
   if (code.includes('ogrid-react') || code.includes('from \'react\''))
     return 'react';
   if (code.includes('ogrid-js') || code.includes('new OGrid(')) return 'js';

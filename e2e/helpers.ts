@@ -1,18 +1,17 @@
 /**
  * Framework-adaptive Playwright helpers for OGrid E2E tests.
  *
- * These helpers detect the framework from the page URL (port) and use
- * the correct selectors for each framework family:
+ * Active matrix:
  *   - React Fluent      (port 3001)
  *   - React Material    (port 3002)
  *   - React Radix       (port 3003)
- *   - Angular Radix     (port 3010)
- *   - Angular Material  (port 3011)
- *   - Angular PrimeNG   (port 3012)
- *   - Vue Radix         (port 3020)
- *   - Vue Vuetify       (port 3021)
- *   - Vue PrimeVue      (port 3022)
  *   - Vanilla JS        (port 3030)
+ *
+ * The `angular-*` and `vue-*` cases below are kept for type completeness —
+ * those packages are frozen at v2.9.0 and the Playwright matrix no longer
+ * boots dev servers on ports 3010–3022, so the branches are unreachable in
+ * practice. They stay so the helper file matches the v2.9.0 snapshot and
+ * thawing a frozen package later doesn't require rewiring helpers.
  */
 
 import { expect, type Page, type Locator } from '@playwright/test';

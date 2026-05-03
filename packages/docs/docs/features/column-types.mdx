@@ -70,66 +70,6 @@ The `OGrid` component has the same props across all React UI packages. To switch
 :::
 
   </TabItem>
-  <TabItem value="angular" label="Angular">
-
-```typescript
-import { Component } from '@angular/core';
-import { OGridComponent } from '@alaarab/ogrid-angular-material';
-
-@Component({
-  standalone: true,
-  imports: [OGridComponent],
-  template: `<ogrid [props]="gridProps" />`
-})
-export class GridComponent {
-  gridProps = {
-    columns: columns,
-    data: data,
-    getRowId: (r: Row) => r.id,
-    editable: true,
-  };
-}
-```
-
-:::tip Switching UI libraries
-Same component API across Angular packages. To switch, just change the import:
-
-- **Radix (CDK)**: `from '@alaarab/ogrid-angular-radix'` *(default, lightweight)*
-- **Angular Material**: `from '@alaarab/ogrid-angular-material'`
-- **PrimeNG**: `from '@alaarab/ogrid-angular-primeng'`
-
-All components are standalone  -  no NgModule required.
-:::
-
-  </TabItem>
-  <TabItem value="vue" label="Vue">
-
-```vue
-<script setup lang="ts">
-import { OGrid } from '@alaarab/ogrid-vue-vuetify';
-
-const gridProps = {
-  columns,
-  data,
-  getRowId: (r) => r.id,
-  editable: true,
-};
-</script>
-
-<template>
-  <OGrid :gridProps="gridProps" />
-</template>
-```
-
-:::tip Switching UI libraries
-Same component API across Vue packages. To switch, just change the import:
-
-- **Radix (Headless UI)**: `from '@alaarab/ogrid-vue-radix'` *(default, lightweight)*
-- **Vuetify**: `from '@alaarab/ogrid-vue-vuetify'`  -  wrap in `<v-app>` for theming
-- **PrimeVue**: `from '@alaarab/ogrid-vue-primevue'`
-:::
-
-  </TabItem>
   <TabItem value="js" label="Vanilla JS">
 
 ```js

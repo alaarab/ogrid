@@ -12,14 +12,9 @@ add inline edit, range selection, fill handle, clipboard, undo/redo, and
 keyboard navigation to your own table markup (shadcn `<Table>`, plain HTML,
 Material `<DataGrid>`, anything).
 
-All seven hooks ship in identical shapes across React, Vue, and Angular —
-same params, same return values, just framework-native reactivity:
+All seven hooks ship as React hooks:
 
-- **React** — `import { useX } from '@alaarab/ogrid-react-radix'`
-- **Vue** — `import { useX } from '@alaarab/ogrid-vue-radix'`
-- **Angular** — `import { createX } from '@alaarab/ogrid-angular-radix'` (factory, not hook)
-
-Examples below use the React imports for readability.
+- `import { useX } from '@alaarab/ogrid-react-radix'`
 
 ### Bundle-size tip — headless-only consumers
 
@@ -33,17 +28,15 @@ bundler tree-shake aggressively:
 import { useHeadlessGrid, useInlineEdit, useRangeSelection } from '@alaarab/ogrid-react';
 ```
 
-Same goes for Vue (`@alaarab/ogrid-vue`) and Angular (`@alaarab/ogrid-angular`).
-Use the `-radix` packages when you want both the headless hooks AND the
-drop-in `<OGrid>` component.
+Use `@alaarab/ogrid-react-radix` when you want both the headless hooks AND
+the drop-in `<OGrid>` component.
 
 ---
 
 ## `useHeadlessGrid` — data layer
 
 The foundation. Returns sort/filter/paginate state plus the current page
-of rows. React variant supports `dataSource` for server-side mode; Vue +
-Angular are client-side-only in 2.9 (server-side parity ships in 2.9.x).
+of rows. Supports `dataSource` for server-side mode.
 
 ```tsx
 import { useHeadlessGrid } from '@alaarab/ogrid-react-radix';

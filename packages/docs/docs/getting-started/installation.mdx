@@ -6,7 +6,7 @@ description: Install OGrid for your framework
 
 # Installation
 
-OGrid ships as separate packages for each UI framework. Pick the one that matches your project's design system.
+OGrid ships as separate packages for each design system. Pick the one that matches your project.
 
 ## React
 
@@ -44,78 +44,6 @@ npm install @alaarab/ogrid-react-material @mui/material @emotion/react @emotion/
 
 ---
 
-## Angular
-
-Choose one Angular UI package based on your design system:
-
-### Radix (Angular CDK)
-
-**Lightest option.** Uses Angular CDK for overlays -- no heavy UI framework dependencies.
-
-```bash
-npm install @alaarab/ogrid-angular-radix @angular/cdk
-```
-
-**When to choose:** New Angular projects, or when you want minimal bundle size and no design system lock-in.
-
-### Angular Material
-
-**Official Material Design for Angular.** Requires Angular v21, Angular Material, and CDK as peer dependencies.
-
-```bash
-npm install @alaarab/ogrid-angular-material @angular/material @angular/cdk
-```
-
-**When to choose:** Projects already using Angular Material, or when you need Material Design components.
-
-### PrimeNG
-
-**PrimeNG component library.** Requires Angular v21 and PrimeNG as peer dependencies.
-
-```bash
-npm install @alaarab/ogrid-angular-primeng primeng
-```
-
-**When to choose:** Projects already using PrimeNG, or when you prefer PrimeNG's component set.
-
----
-
-## Vue
-
-Choose one Vue UI package based on your design system:
-
-### Radix (Headless UI)
-
-**Lightest option.** Headless UI Vue components are bundled as regular dependencies -- no peer deps beyond Vue.
-
-```bash
-npm install @alaarab/ogrid-vue-radix
-```
-
-**When to choose:** New Vue projects, or when you want minimal bundle size and no design system lock-in.
-
-### Vuetify
-
-**Material Design for Vue.** Requires Vue 3 and Vuetify as peer dependencies.
-
-```bash
-npm install @alaarab/ogrid-vue-vuetify vuetify
-```
-
-**When to choose:** Projects already using Vuetify, or when you need Material Design components.
-
-### PrimeVue
-
-**PrimeVue component library.** Requires Vue 3 and PrimeVue as peer dependencies.
-
-```bash
-npm install @alaarab/ogrid-vue-primevue primevue
-```
-
-**When to choose:** Projects already using PrimeVue, or when you prefer PrimeVue's component set.
-
----
-
 ## Vanilla JS (No Framework)
 
 **Framework-free data grid.** Class-based API with EventEmitter state management. Zero framework dependencies.
@@ -124,23 +52,15 @@ npm install @alaarab/ogrid-vue-primevue primevue
 npm install @alaarab/ogrid-js
 ```
 
-**When to choose:** Projects without React/Angular/Vue, legacy codebases, or when you want full control over rendering.
+**When to choose:** Projects without React, legacy codebases, or when you want full control over rendering.
 
-:::tip Theme CSS
-The JS package ships a default theme with light and dark mode support:
+---
 
-```js
-import '@alaarab/ogrid-js/styles';
-```
+## Frozen adapters
 
-Or link it directly in HTML:
+The Angular and Vue adapters were available through **v2.9.0** and remain on npm at that version. They no longer receive feature work or framework-major upgrades. Existing installs continue to work unchanged. For new projects, use the React adapter or vanilla JS.
 
-```html
-<link rel="stylesheet" href="node_modules/@alaarab/ogrid-js/dist/styles/ogrid.css" />
-```
-
-You can override any `--ogrid-*` CSS variable to customize colors, or skip the default theme entirely and write your own CSS targeting the `ogrid-*` class names.
-:::
+---
 
 ## Core Only
 
@@ -156,11 +76,9 @@ You typically do not need to install `@alaarab/ogrid-core` separately. All React
 
 ## Requirements
 
-| Framework | Version |
+| Dependency | Version |
 |---|---|
 | React | 17, 18, or 19 |
-| Angular | 21 |
-| Vue | 3.3+ |
 | TypeScript | 5.x recommended (not required) |
 | Node.js | >= 18 (for development/build tooling) |
 
@@ -168,7 +86,6 @@ You typically do not need to install `@alaarab/ogrid-core` separately. All React
 
 After installing, confirm everything is working by rendering a minimal grid.
 
-**React:**
 ```tsx
 import { OGrid, type IColumnDef } from '@alaarab/ogrid-react-radix';
 
@@ -180,43 +97,8 @@ function App() {
 }
 ```
 
-**Angular:**
-```typescript
-import { Component } from '@angular/core';
-import { OGridComponent, type IColumnDef } from '@alaarab/ogrid-angular-radix';
-
-@Component({
-  standalone: true,
-  imports: [OGridComponent],
-  template: `<ogrid [props]="gridProps" />`
-})
-export class AppComponent {
-  gridProps = {
-    columns: [{ columnId: 'name', name: 'Name' }] as IColumnDef[],
-    data: [{ id: 1, name: 'Test' }],
-    getRowId: (row: any) => row.id,
-  };
-}
-```
-
-**Vue:**
-```vue
-<script setup lang="ts">
-import { OGrid } from '@alaarab/ogrid-vue-radix';
-import type { IColumnDef } from '@alaarab/ogrid-vue';
-
-const columns: IColumnDef[] = [{ columnId: 'name', name: 'Name' }];
-const data = [{ id: 1, name: 'Test' }];
-const getRowId = (row: any) => row.id;
-</script>
-
-<template>
-  <OGrid :gridProps="{ columns, data, getRowId }" />
-</template>
-```
-
 If the grid renders with a single row showing "Test", your installation is correct.
 
 ## Next Steps
 
-- [Quick Start](./quick-start) -- build a grid with your chosen framework
+- [Quick Start](./quick-start) -- build a working React grid

@@ -108,13 +108,6 @@ draws the table. That's why you can swap between them page-by-page
 without losing behavior parity, and why the bug fixes in one path
 automatically benefit the other.
 
-## Vue and Angular
-
-The same dual-mode story applies to Vue (`useHeadlessGrid` composable +
-`<OGrid>` component) and Angular (`createHeadlessGrid` factory +
-`<ogrid>` component). The Vue/Angular spreadsheet hooks are
-client-side-only in 2.9.0; server-side `dataSource` parity ships in 2.9.x.
-
 ## Migrating between modes
 
 There's no migration boundary. `<OGrid>` accepts the same column defs

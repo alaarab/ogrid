@@ -234,12 +234,6 @@ const installCommands = [
   { pkg: '@alaarab/ogrid-react-radix', label: 'React + Radix' },
   { pkg: '@alaarab/ogrid-react-fluent', label: 'React + Fluent UI' },
   { pkg: '@alaarab/ogrid-react-material', label: 'React + Material UI' },
-  { pkg: '@alaarab/ogrid-angular-material', label: 'Angular + Material' },
-  { pkg: '@alaarab/ogrid-angular-primeng', label: 'Angular + PrimeNG' },
-  { pkg: '@alaarab/ogrid-angular-radix', label: 'Angular + Radix' },
-  { pkg: '@alaarab/ogrid-vue-vuetify', label: 'Vue + Vuetify' },
-  { pkg: '@alaarab/ogrid-vue-primevue', label: 'Vue + PrimeVue' },
-  { pkg: '@alaarab/ogrid-vue-radix', label: 'Vue + Radix' },
   { pkg: '@alaarab/ogrid-js', label: 'Vanilla JS' },
 ];
 
@@ -350,7 +344,7 @@ function Hero() {
 
           <p className={styles.heroLead}>
             Sorting, filtering, editing, formulas, clipboard, virtual scroll.
-            React, Angular, Vue, Vanilla JS. MIT licensed.
+            React + Vanilla JS. MIT licensed.
           </p>
 
           <div className={styles.heroCta}>
@@ -426,8 +420,6 @@ function NoiseOverlay({ opacity = 0.03 }: { opacity?: number }) {
 
 const frameworks = [
   { id: 'react', label: 'React' },
-  { id: 'angular', label: 'Angular' },
-  { id: 'vue', label: 'Vue' },
   { id: 'js', label: 'Vanilla JS' },
 ] as const;
 
@@ -456,47 +448,6 @@ function App() {
     />
   );
 }`;
-    case 'angular':
-      return `import { OGridComponent } from '@alaarab/ogrid-angular-material';
-// Also: '@alaarab/ogrid-angular-primeng' | '@alaarab/ogrid-angular-radix'
-
-@Component({
-  standalone: true,
-  imports: [OGridComponent],
-  template: \`
-    <ogrid
-      [columns]="columns" [data]="employees"
-      [getRowId]="getRowId" [editable]="true"
-      [cellSelection]="true" [statusBar]="true"
-    />
-  \`,
-})
-export class AppComponent {
-  columns = [
-    { columnId: 'name', name: 'Name', sortable: true },
-    { columnId: 'role', name: 'Role', filterable: { type: 'multiSelect' } },
-    { columnId: 'salary', name: 'Salary', editable: true,
-      valueFormatter: (v) => \`$\${v.toLocaleString()}\` },
-  ];
-  getRowId = (e) => e.id;
-}`;
-    case 'vue':
-      return `<script setup lang="ts">
-import { OGrid } from '@alaarab/ogrid-vue-vuetify';
-// Also: '@alaarab/ogrid-vue-primevue' | '@alaarab/ogrid-vue-radix'
-
-const columns = [
-  { columnId: 'name', name: 'Name', sortable: true },
-  { columnId: 'role', name: 'Role', filterable: { type: 'multiSelect' } },
-  { columnId: 'salary', name: 'Salary', editable: true,
-    valueFormatter: (v) => \`$\${v.toLocaleString()}\` },
-];
-</script>
-
-<template>
-  <OGrid :columns="columns" :data="employees"
-    :getRowId="(e) => e.id" editable cellSelection statusBar />
-</template>`;
     case 'js':
       return `import { OGrid } from '@alaarab/ogrid-js';
 import '@alaarab/ogrid-js/styles';
@@ -525,12 +476,12 @@ function CodePreviewSection() {
     <section ref={ref} className={`${styles.codeSection} ${visible ? styles.revealed : ''}`}>
       <NoiseOverlay opacity={0.025} />
         <div className={styles.codeSectionInner}>
-          <div className={styles.codeSectionLabel}>One API. Four frameworks.</div>
+          <div className={styles.codeSectionLabel}>One API. Three React UI flavors + Vanilla JS.</div>
           <h2 className={styles.codeSectionTitle}>
           One grid model.<br />Framework-native wrappers.<br />Swap packages, keep moving.
           </h2>
           <p className={styles.codeSectionSub}>
-          React, Angular, Vue, and Vanilla JS packages with the same grid concepts,
+          React (Radix / Fluent / Material) and Vanilla JS packages with the same grid concepts,
           column model, and feature set across the lineup.
           </p>
         </div>
@@ -613,11 +564,11 @@ function FeatureBentoSection() {
 
         <div className={`${styles.bentoCard} ${styles.bentoCardMedium} ${styles.bentoCardBlue} ${styles.bentoCardProof}`}>
           <div className={styles.bentoCardInner} />
-          <div className={styles.bentoCardTag}>Cross-framework</div>
-          <h3 className={styles.bentoCardTitle}>One mental model, ten packages.</h3>
+          <div className={styles.bentoCardTag}>One API, three React UI kits</div>
+          <h3 className={styles.bentoCardTitle}>One mental model. Pick your design system.</h3>
           <p className={styles.bentoCardDesc}>
-            React, Angular, Vue, and vanilla JS packages stay aligned on concepts and capabilities,
-            so moving between stacks does not mean learning a different grid every time.
+            All three React packages share the same hooks, props, and grid concepts.
+            Switch design systems with a one-line import change.
           </p>
           <div className={styles.bentoFrameworkBands}>
             <div className={styles.bentoFrameworkBand}>
@@ -625,18 +576,6 @@ function FeatureBentoSection() {
               <span>Radix</span>
               <span>Material</span>
               <span>Fluent UI</span>
-            </div>
-            <div className={styles.bentoFrameworkBand}>
-              <span>Angular</span>
-              <span>Radix</span>
-              <span>Material</span>
-              <span>PrimeNG</span>
-            </div>
-            <div className={styles.bentoFrameworkBand}>
-              <span>Vue</span>
-              <span>Radix</span>
-              <span>Vuetify</span>
-              <span>PrimeVue</span>
             </div>
             <div className={styles.bentoFrameworkBand}>
               <span>Vanilla JS</span>
@@ -738,22 +677,6 @@ const frameworkCards: FrameworkCard[] = [
     ],
   },
   {
-    name: 'Angular',
-    uiKits: [
-      { label: 'Radix', pkg: '@alaarab/ogrid-angular-radix' },
-      { label: 'Material', pkg: '@alaarab/ogrid-angular-material' },
-      { label: 'PrimeNG', pkg: '@alaarab/ogrid-angular-primeng' },
-    ],
-  },
-  {
-    name: 'Vue',
-    uiKits: [
-      { label: 'Radix', pkg: '@alaarab/ogrid-vue-radix' },
-      { label: 'Vuetify', pkg: '@alaarab/ogrid-vue-vuetify' },
-      { label: 'PrimeVue', pkg: '@alaarab/ogrid-vue-primevue' },
-    ],
-  },
-  {
     name: 'Vanilla JS',
     uiKits: [
       { label: 'Zero deps', pkg: '@alaarab/ogrid-js' },
@@ -848,7 +771,7 @@ export default function Home() {
   return (
     <Layout
       title="Your spreadsheet. Your framework. Zero compromises."
-      description="Free open-source data grid for React, Angular, Vue, and vanilla JS. Sorting, filtering, editing, spreadsheet selection, clipboard, fill handle, formulas, and more. MIT licensed with no enterprise tier."
+      description="Free open-source data grid for React (Radix / Fluent / Material) and vanilla JS. Sorting, filtering, editing, spreadsheet selection, clipboard, fill handle, formulas, and more. MIT licensed with no enterprise tier."
     >
       <Hero />
       <CodePreviewSection />

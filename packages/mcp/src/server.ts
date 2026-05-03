@@ -19,9 +19,10 @@ interface VersionDetectResult {
 
 function detectFramework(packageNames: string[]): string {
   if (packageNames.some((n) => n.includes('-react'))) return 'react';
-  if (packageNames.some((n) => n.includes('-angular'))) return 'angular';
-  if (packageNames.some((n) => n.includes('-vue'))) return 'vue';
   if (packageNames.some((n) => n.endsWith('-js'))) return 'js';
+  // Frozen v2.9.0 adapters: report so detect_version still returns useful info.
+  if (packageNames.some((n) => n.includes('-angular'))) return 'angular (frozen at v2.9.0)';
+  if (packageNames.some((n) => n.includes('-vue'))) return 'vue (frozen at v2.9.0)';
   return 'unknown';
 }
 
@@ -107,7 +108,7 @@ Categories: features, getting-started, guides, api.`,
         .optional()
         .describe('Max results to return (default 5)'),
       framework: z
-        .enum(['react', 'angular', 'vue', 'js'])
+        .enum(['react', 'js'])
         .optional()
         .describe('Filter code examples to this framework'),
     },
@@ -258,9 +259,9 @@ Categories: features, getting-started, guides, api.`,
     {
       query: z.string().describe('Search query for code examples'),
       framework: z
-        .enum(['react', 'angular', 'vue', 'js'])
+        .enum(['react', 'js'])
         .optional()
-        .describe('Filter by framework: react, angular, vue, js'),
+        .describe('Filter by framework: react, js'),
     },
     async ({ query, framework }) => {
       const examples = index.getCodeExamples(query, framework);
@@ -328,14 +329,10 @@ Categories: features, getting-started, guides, api.`,
               text: [
                 `No OGrid packages found in package.json (searched from: ${searchPath}).`,
                 '',
-                'Install OGrid for your framework:',
+                'Install OGrid:',
                 '  React (Radix):    npm install @alaarab/ogrid-react-radix',
                 '  React (Material): npm install @alaarab/ogrid-react-material',
                 '  React (Fluent):   npm install @alaarab/ogrid-react-fluent',
-                '  Angular Material: npm install @alaarab/ogrid-angular-material',
-                '  Angular PrimeNG:  npm install @alaarab/ogrid-angular-primeng',
-                '  Vue Vuetify:      npm install @alaarab/ogrid-vue-vuetify',
-                '  Vue PrimeVue:     npm install @alaarab/ogrid-vue-primevue',
                 '  Vanilla JS:       npm install @alaarab/ogrid-js',
               ].join('\n'),
             },
@@ -395,16 +392,6 @@ Categories: features, getting-started, guides, api.`,
             'npm install @alaarab/ogrid-react-radix',
             'npm install @alaarab/ogrid-react-material',
             'npm install @alaarab/ogrid-react-fluent',
-            '',
-            '# Angular (choose one)',
-            'npm install @alaarab/ogrid-angular-material',
-            'npm install @alaarab/ogrid-angular-primeng',
-            'npm install @alaarab/ogrid-angular-radix',
-            '',
-            '# Vue (choose one)',
-            'npm install @alaarab/ogrid-vue-vuetify',
-            'npm install @alaarab/ogrid-vue-primevue',
-            'npm install @alaarab/ogrid-vue-radix',
             '',
             '# Vanilla JS',
             'npm install @alaarab/ogrid-js',

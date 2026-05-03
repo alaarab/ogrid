@@ -19,7 +19,7 @@ The engine adds ~12KB gzipped and is completely **tree-shakeable** — grids wit
 <FormulasDemo />
 
 :::tip Try it in your framework
-The demo uses Radix UI styling. The formula engine itself is framework-agnostic — same behavior in React, Angular, Vue, and Vanilla JS.
+The demo uses Radix UI styling. The formula engine itself is UI-agnostic — same behavior across React (Radix / Fluent / Material) and the vanilla JS package.
 :::
 
 ## Why bother with in-grid formulas?
@@ -73,89 +73,6 @@ Same props across all React packages — just change the import:
 - **Radix** (lightweight, default): `from '@alaarab/ogrid-react-radix'`
 - **Fluent UI** (Microsoft 365 / SPFx): `from '@alaarab/ogrid-react-fluent'`  -  wrap in `<FluentProvider>`
 - **Material UI** (MUI v7): `from '@alaarab/ogrid-react-material'`  -  wrap in `<ThemeProvider>`
-:::
-
-  </TabItem>
-  <TabItem value="angular" label="Angular">
-
-```typescript
-import { Component, signal } from '@angular/core';
-import { OGridComponent, FormulaEngineService, type IColumnDef } from '@alaarab/ogrid-angular-material';
-
-@Component({
-  standalone: true,
-  imports: [OGridComponent],
-  providers: [FormulaEngineService],
-  template: `<ogrid [props]="gridProps" />`
-})
-export class FormulaGridComponent {
-  constructor(private formulaEngine: FormulaEngineService<Row>) {
-    this.formulaEngine.configure({ formulas: true });
-  }
-
-  gridProps = {
-    columns: [
-      { columnId: 'a', name: 'A', type: 'numeric', editable: true },
-      { columnId: 'b', name: 'B', type: 'numeric', editable: true },
-      { columnId: 'c', name: 'C', type: 'numeric', editable: true },
-    ] as IColumnDef<Row>[],
-    data: initialData,
-    getRowId: (r: Row) => r.id,
-    editable: true,
-  };
-}
-```
-
-:::tip Switching UI libraries
-Same API across Angular packages. Change the import:
-
-- **Radix (CDK)**: `from '@alaarab/ogrid-angular-radix'` *(default, lightweight)*
-- **Angular Material**: `from '@alaarab/ogrid-angular-material'`
-- **PrimeNG**: `from '@alaarab/ogrid-angular-primeng'`
-
-All components are standalone — no NgModule required.
-:::
-
-  </TabItem>
-  <TabItem value="vue" label="Vue">
-
-```vue
-<script setup lang="ts">
-import { ref } from 'vue';
-import { OGrid, useFormulaEngine, type IColumnDef } from '@alaarab/ogrid-vue-vuetify';
-
-const columns: IColumnDef<Row>[] = [
-  { columnId: 'a', name: 'A', type: 'numeric', editable: true },
-  { columnId: 'b', name: 'B', type: 'numeric', editable: true },
-  { columnId: 'c', name: 'C', type: 'numeric', editable: true },
-];
-
-const data = ref(initialData);
-const formulas = ref(true);
-const items = ref(data.value);
-const flatColumns = ref(columns);
-
-const formulaEngine = useFormulaEngine({
-  formulas,
-  items,
-  flatColumns,
-  initialFormulas: [
-    { col: 2, row: 0, formula: '=A1+B1' },
-  ],
-});
-</script>
-
-<template>
-  <OGrid :columns="columns" :data="data" :getRowId="(r) => r.id" editable />
-</template>
-```
-
-:::tip Switching UI libraries
-Same API across Vue packages. Change the import:
-
-- **Radix (Headless UI)**: `from '@alaarab/ogrid-vue-radix'` *(default, lightweight)*
-- **Vuetify**: `from '@alaarab/ogrid-vue-vuetify'`  -  wrap in `<v-app>` for theming
-- **PrimeVue**: `from '@alaarab/ogrid-vue-primevue'`
 :::
 
   </TabItem>
