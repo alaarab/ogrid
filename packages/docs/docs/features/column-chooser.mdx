@@ -70,35 +70,7 @@ The `OGrid` component has the same props across all React UI packages. To switch
 
 - **Radix** (lightweight, default): `from '@alaarab/ogrid-react-radix'`
 - **Fluent UI** (Microsoft 365 / SPFx): `from '@alaarab/ogrid-react-fluent'`  -  wrap in `<FluentProvider>`
-- **Material UI** (MUI v7): `from '@alaarab/ogrid-react-material'`  -  wrap in `<ThemeProvider>`
 :::
-
-  </TabItem>
-  <TabItem value="js" label="Vanilla JS">
-
-```js
-import { OGrid } from '@alaarab/ogrid-js';
-import '@alaarab/ogrid-js/styles';
-
-const grid = new OGrid(document.getElementById('grid'), {
-  columns: [
-    { columnId: 'name', name: 'Name', required: true },
-    { columnId: 'email', name: 'Email' },
-    { columnId: 'age', name: 'Age', type: 'numeric', defaultVisible: false },
-    { columnId: 'department', name: 'Department' },
-    {
-      columnId: 'salary',
-      name: 'Salary',
-      type: 'numeric',
-      valueFormatter: (v) => `$${Number(v).toLocaleString()}`,
-    },
-    { columnId: 'startDate', name: 'Start Date', defaultVisible: false },
-  ],
-  data: people,
-  getRowId: (p) => p.id,
-  pageSize: 10,
-});
-```
 
   </TabItem>
 </Tabs>

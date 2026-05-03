@@ -30,13 +30,6 @@ npm install @alaarab/ogrid-react-fluent @fluentui/react-components
 ```
 
   </TabItem>
-  <TabItem value="js" label="Vanilla JS">
-
-```bash
-npm install @alaarab/ogrid-js
-```
-
-  </TabItem>
 </Tabs>
 
 ## Your first grid
@@ -106,49 +99,6 @@ The `OGrid` component has identical props across all React UI packages. To switc
 :::
 
   </TabItem>
-  <TabItem value="js" label="Vanilla JS">
-
-```js
-import { OGrid } from '@alaarab/ogrid-js';
-import '@alaarab/ogrid-js/styles';
-
-const grid = new OGrid(document.getElementById('grid'), {
-  columns: [
-    { columnId: 'name', name: 'Name', sortable: true },
-    {
-      columnId: 'department',
-      name: 'Department',
-      sortable: true,
-      filterable: { type: 'multiSelect', options: ['Engineering', 'Marketing', 'Sales'] },
-    },
-    {
-      columnId: 'salary',
-      name: 'Salary',
-      type: 'numeric',
-      sortable: true,
-      editable: true,
-      valueFormatter: (value) =>
-        new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(value),
-    },
-  ],
-  data: [
-    { id: 1, name: 'Alice Johnson', department: 'Engineering', salary: 95000 },
-    { id: 2, name: 'Bob Smith', department: 'Marketing', salary: 72000 },
-    { id: 3, name: 'Carol Williams', department: 'Engineering', salary: 110000 },
-    { id: 4, name: 'David Brown', department: 'Sales', salary: 68000 },
-    { id: 5, name: 'Eva Martinez', department: 'Marketing', salary: 78000 },
-  ],
-  getRowId: (row) => row.id,
-  pageSize: 10,
-  editable: true,
-});
-```
-
-:::tip
-The JS package has a class-based imperative API. See the [Vanilla JS guide](./vanilla-js) for events, grid methods, and theming.
-:::
-
-  </TabItem>
 </Tabs>
 
 ## What you get for free
@@ -195,29 +145,11 @@ function App() {
 ```
 
   </TabItem>
-  <TabItem value="js" label="Vanilla JS">
-
-```js
-import { OGrid } from '@alaarab/ogrid-js';
-
-const grid = new OGrid(document.getElementById('grid'), {
-  columns, data, getRowId: (row) => row.id,
-});
-
-document.getElementById('export-btn').addEventListener('click', () => {
-  grid.api.exportToCsv('employees.csv');
-});
-
-// Cleanup when done
-grid.destroy();
-```
-
-  </TabItem>
 </Tabs>
 
 ## What's next?
 
 - [Sorting](../features/sorting), [Filtering](../features/filtering), [Editing](../features/editing) — dig into individual features
 - [Server-Side Data](../features/server-side-data) — connect to a REST API or GraphQL endpoint
-- [Grid API](../api/js-api) — full reference for programmatic control
+- [Grid API](../api/grid-api) — full reference for programmatic control
 - [Column Definitions](../api/types) — every column option explained

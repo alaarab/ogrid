@@ -26,7 +26,7 @@ function cleanup(dir: string) {
 // McpServer doesn't expose handlers directly, so we call through the index.
 async function callSearchDocs(
   index: ReturnType<typeof loadDocsIndex>,
-  args: { query: string; limit?: number; framework?: 'react' | 'js' }
+  args: { query: string; limit?: number; framework?: 'react' }
 ) {
   // We test search_docs behavior via the index directly since server tools
   // are thin wrappers — the real logic lives in docsLoader.
@@ -101,20 +101,8 @@ describe('detect_version behavior (via file system)', () => {
     const packageNames = ['@alaarab/ogrid-react-radix'];
     const framework = packageNames.some((n) => n.includes('-react'))
       ? 'react'
-      : packageNames.some((n) => n.endsWith('-js'))
-      ? 'js'
       : 'unknown';
     expect(framework).toBe('react');
-  });
-
-  test('detects js framework from package name', () => {
-    const packageNames = ['@alaarab/ogrid-js'];
-    const framework = packageNames.some((n) => n.includes('-react'))
-      ? 'react'
-      : packageNames.some((n) => n.endsWith('-js'))
-      ? 'js'
-      : 'unknown';
-    expect(framework).toBe('js');
   });
 
   test('strips version prefix characters', () => {

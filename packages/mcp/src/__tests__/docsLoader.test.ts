@@ -118,24 +118,6 @@ describe('loadDocsIndex', () => {
     }
   });
 
-  test('detects js framework from new OGrid() content', () => {
-    const dir = makeTmpDocs({
-      'features/sorting.mdx': [
-        '---\ntitle: Sorting\ndescription: Sort docs\n---',
-        '```js',
-        "import { OGrid } from '@alaarab/ogrid-js';",
-        "const grid = new OGrid(document.body, { columns: [], data: [] });",
-        '```',
-      ].join('\n'),
-    });
-    try {
-      const index = loadDocsIndex(dir);
-      expect(index.entries[0].codeBlocks[0].framework).toBe('js');
-    } finally {
-      cleanup(dir);
-    }
-  });
-
   test('detects react from TabItem context in MDX', () => {
     const dir = makeTmpDocs({
       'features/sorting.mdx': [
@@ -383,13 +365,12 @@ describe('DocsIndex.getCodeExamples', () => {
   test('framework filter excludes non-matching code blocks', () => {
     const dir = makeTmpDocs({
       'features/multi.mdx': [
-        '---\ntitle: Multi Framework\ndescription: Framework examples\n---',
+        '---\ntitle: React Framework\ndescription: Framework examples\n---',
         '```tsx',
         "import { OGrid } from '@alaarab/ogrid-react-radix';",
         '```',
-        '```js',
-        "import { OGrid } from '@alaarab/ogrid-js';",
-        "const grid = new OGrid(document.body, { columns: [], data: [] });",
+        '```ts',
+        "// plain ts snippet, no framework hint",
         '```',
       ].join('\n'),
     });
@@ -405,20 +386,18 @@ describe('DocsIndex.getCodeExamples', () => {
   test('no framework filter returns all matching examples', () => {
     const dir = makeTmpDocs({
       'features/multi.mdx': [
-        '---\ntitle: Multi Framework\ndescription: Framework examples\n---',
+        '---\ntitle: React Framework\ndescription: Framework examples\n---',
         '```tsx',
         "import { OGrid } from '@alaarab/ogrid-react-radix';",
         '```',
-        '```js',
-        "import { OGrid } from '@alaarab/ogrid-js';",
-        "const grid = new OGrid(document.body, { columns: [], data: [] });",
+        '```tsx',
+        "import { OGrid } from '@alaarab/ogrid-react-fluent';",
         '```',
       ].join('\n'),
     });
     try {
       const index = loadDocsIndex(dir);
       const all = index.getCodeExamples('ogrid');
-      // Both blocks contain 'ogrid' in the import — react and js
       expect(all.length).toBeGreaterThan(0);
     } finally {
       fs.rmSync(dir, { recursive: true, force: true });

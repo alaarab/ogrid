@@ -24,7 +24,7 @@
 
 ---
 
-> **Status:** React and Vanilla JS are the actively maintained adapter families. The Angular and Vue packages are **frozen at v2.9.0** — they remain on npm and in the repository for reference, but no longer receive feature work or version bumps. See [Frozen adapters](#frozen-adapters) below.
+> **Status:** Active surface is React (Radix + Fluent UI). Vanilla JS, Material UI, Angular, and Vue variants are frozen on the `legacy/multiframework` branch — still on npm at their last shipped versions but no longer in active development. See [Frozen adapters](#frozen-adapters) below.
 
 Pick the framework and UI library you already use and get sorting, filtering, pagination, cell editing, spreadsheet selection, and the shared core grid model out of the box.
 
@@ -81,7 +81,7 @@ Bundle size is what you actually install (core + framework adapter + UI layer). 
 - Clipboard: Ctrl+C / X / V with multi-cell copy/paste, respects `valueFormatter` / `valueParser`
 - Fill handle: drag to fill cells (Excel-style)
 - Undo / redo: full edit history with Ctrl+Z / Ctrl+Y, batch operation support
-- Premium inputs: optional calendar date picker and more via `@alaarab/ogrid-{react,angular,vue,js}-inputs`
+- Premium inputs: optional calendar date picker and more via `@alaarab/ogrid-react-inputs`
 
 **Selection & Navigation**
 - Spreadsheet selection: click-and-drag range selection with active cell highlight
@@ -115,33 +115,19 @@ Bundle size is what you actually install (core + framework adapter + UI layer). 
 
 ```
 @alaarab/ogrid-core          (pure TS, zero deps)
-├── @alaarab/ogrid-react          hooks + headless components
-│   ├── ogrid-react-radix         Radix UI views
-│   ├── ogrid-react-fluent        Fluent UI views
-│   └── ogrid-react-material      (frozen — MUI v7)
-├── @alaarab/ogrid-angular        (frozen — signals + services)
-│   ├── ogrid-angular-material    (frozen)
-│   ├── ogrid-angular-primeng     (frozen)
-│   └── ogrid-angular-radix       (frozen)
-├── @alaarab/ogrid-vue            (frozen — composables)
-│   ├── ogrid-vue-vuetify         (frozen)
-│   ├── ogrid-vue-primevue        (frozen)
-│   └── ogrid-vue-radix           (frozen)
-└── @alaarab/ogrid-js             vanilla JS (class-based)
+└── @alaarab/ogrid-react          hooks + headless components
+    ├── ogrid-react-radix         Radix UI views (default)
+    └── ogrid-react-fluent        Fluent UI views
 ```
 
-Core owns types and pure TypeScript utilities with zero dependencies. The React adapter (hooks + headless components) is the actively maintained surface. The Angular signals/services and Vue composables adapters are kept as a reference for the framework-agnostic separation pattern but receive no new work.
+Core owns types and pure TypeScript utilities with zero dependencies. The React adapter (hooks + headless components) is the actively maintained surface. Frozen variants (Material UI, vanilla JS, Angular, Vue) live on the `legacy/multiframework` branch.
 
 ### Installed sizes (gzip)
-
-These are the actual sizes you ship. Each row is core + adapter + UI layer combined:
 
 | Setup | Gzip |
 |-------|------|
 | React + Radix | 54 KB |
 | React + Fluent | 55 KB |
-| React + Material | 57 KB |
-| Vanilla JS | 45 KB |
 | AG Grid Community (comparison) | ~339 KB |
 
 ## Quick Start
@@ -178,33 +164,7 @@ function App() {
 
 > Using Fluent UI? Change the import to `@alaarab/ogrid-react-fluent`. Same API.
 
-> Need Material UI, Angular, or Vue? See [Frozen adapters](#frozen-adapters) — those packages still work at their last shipped versions but are no longer actively developed.
-
-### Vanilla JS
-
-```bash
-npm install @alaarab/ogrid-js
-```
-
-```ts
-import { OGrid } from '@alaarab/ogrid-js';
-
-const grid = new OGrid(document.getElementById('grid')!, {
-  columns: [
-    { columnId: 'name', name: 'Name', sortable: true, filterable: { type: 'text' } },
-    { columnId: 'department', name: 'Department', filterable: { type: 'multiSelect' } },
-    { columnId: 'salary', name: 'Salary', editable: true, type: 'numeric' },
-  ],
-  data: employees,
-  getRowId: (e) => e.id,
-  editable: true,
-  cellSelection: true,
-});
-
-// Programmatic control
-grid.getApi().setRowData(newData);
-grid.destroy();
-```
+> Need Material UI, vanilla JS, Angular, or Vue? See [Frozen adapters](#frozen-adapters) — those packages still work at their last shipped versions but are no longer actively developed.
 
 ## Cell Editing
 
@@ -278,20 +238,19 @@ Core features are shared across React, Angular, Vue, and vanilla JS. Main CI now
 | [`@alaarab/ogrid-react`](./packages/react) | [![npm](https://img.shields.io/npm/v/@alaarab/ogrid-react)](https://www.npmjs.com/package/@alaarab/ogrid-react) | `react`, `react-dom` |
 | [`@alaarab/ogrid-react-radix`](./packages/react-radix) | [![npm](https://img.shields.io/npm/v/@alaarab/ogrid-react-radix)](https://www.npmjs.com/package/@alaarab/ogrid-react-radix) | `react`, `react-dom` |
 | [`@alaarab/ogrid-react-fluent`](./packages/react-fluent) | [![npm](https://img.shields.io/npm/v/@alaarab/ogrid-react-fluent)](https://www.npmjs.com/package/@alaarab/ogrid-react-fluent) | + `@fluentui/react-components`, `@fluentui/react-icons` |
-| **Vanilla JS** | | |
-| [`@alaarab/ogrid-js`](./packages/js) | [![npm](https://img.shields.io/npm/v/@alaarab/ogrid-js)](https://www.npmjs.com/package/@alaarab/ogrid-js) | None |
 
 UI packages re-export everything from their adapter (which re-exports from core), so one import is all you need.
 
-Optional premium inputs (calendar date picker, rating, color picker, slider, tags) are available as add-on packages: `@alaarab/ogrid-react-inputs`, `@alaarab/ogrid-js-inputs`.
+Optional premium inputs (calendar date picker, rating, color picker, slider, tags) are available as `@alaarab/ogrid-react-inputs`.
 
 ### Frozen adapters
 
-The following packages remain published on npm at the version listed and the source lives in `packages/` for reference, but they are no longer in the active build, test, release, or CI pipelines. They will not get framework-major upgrades or new features. Existing installs continue to work; for new projects, use the React Radix or React Fluent adapter or vanilla JS.
+The following packages remain published on npm at the version listed and the source lives on the `legacy/multiframework` branch, but they are no longer in the active build, test, release, or CI pipelines. They will not get framework-major upgrades or new features. Existing installs continue to work; for new projects, use the React Radix or React Fluent adapter.
 
 | Frozen package | npm |
 |---|---|
 | `@alaarab/ogrid-react-material` | v2.9.1 (MUI v7; v9 dropped Typography props the adapter uses) |
+| `@alaarab/ogrid-js`, `@alaarab/ogrid-js-inputs` | v2.9.1 (vanilla JS variant) |
 | `@alaarab/ogrid-angular`, `-angular-material`, `-angular-primeng`, `-angular-radix`, `-angular-inputs` | v2.9.0 |
 | `@alaarab/ogrid-vue`, `-vue-vuetify`, `-vue-primevue`, `-vue-radix`, `-vue-inputs` | v2.9.0 |
 
@@ -359,15 +318,12 @@ See the [MCP guide](packages/docs/docs/guides/mcp.mdx) and [live testing bridge 
 
 ## Testing
 
-Active suites use each framework's native testing tools:
+| Surface | Tool | Tests |
+|---------|------|------:|
+| Core | Jest + ts-jest | ~1,575 |
+| React | React Testing Library | ~583 |
 
-| Framework | Tool | Tests |
-|-----------|------|------:|
-| Core | Jest + ts-jest | ~1,501 |
-| React | React Testing Library | ~903 |
-| Vanilla JS | Native DOM + jsdom | ~394 |
-
-Cross-package parity is driven by shared test factories. Playwright covers a fast smoke gate on every push plus a manual full matrix across the active example apps. Frozen Angular and Vue test suites still live in their packages and pass at v2.9.0 but are not part of the active CI matrix.
+Playwright covers a fast smoke gate on every push plus a manual full matrix across the active example apps. Frozen variants live on the `legacy/multiframework` branch with their original test suites.
 
 ## Development
 
@@ -378,7 +334,7 @@ npm install
 npm run build                       # Build all packages (Turborepo)
 npm run test:all                    # Run all tests
 npm run lint                        # Biome
-npm run test:e2e:smoke              # Browser merge gate (React Radix, JS)
+npm run test:e2e:smoke              # Browser merge gate (React Radix)
 npm run test:e2e:docs               # Built docs homepage verification
 npm run test:e2e:matrix             # Full browser matrix across active example apps
 

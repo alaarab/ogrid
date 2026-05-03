@@ -1,1 +1,0 @@
-export { RatingEditorComponent } from './RatingEditor';

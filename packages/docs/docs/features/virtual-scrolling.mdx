@@ -22,7 +22,7 @@ OGrid supports two independent virtualization axes that can be combined:
 <VirtualScrollingDemo />
 
 :::tip Try it in your framework
-The demo above uses Radix UI for styling. To see this feature with your framework's design system (Fluent UI, Material UI, Vuetify, PrimeNG, etc.), click **"Open in online demo"** below the demo.
+The demo above uses Radix UI for styling. To see this feature with the Fluent UI implementation, click **"Open in online demo"** below the demo.
 :::
 
 ## Quick Example
@@ -72,35 +72,7 @@ The `OGrid` component has the same props across all React UI packages. To switch
 
 - **Radix** (lightweight, default): `from '@alaarab/ogrid-react-radix'`
 - **Fluent UI** (Microsoft 365 / SPFx): `from '@alaarab/ogrid-react-fluent'`  -  wrap in `<FluentProvider>`
-- **Material UI** (MUI v7): `from '@alaarab/ogrid-react-material'`  -  wrap in `<ThemeProvider>`
 :::
-
-  </TabItem>
-  <TabItem value="js" label="Vanilla JS">
-
-```js
-import { OGrid } from '@alaarab/ogrid-js';
-import '@alaarab/ogrid-js/styles';
-
-const data = Array.from({ length: 10_000 }, (_, i) => ({
-  id: i + 1,
-  name: `Row ${i + 1}`,
-  value: Math.round(Math.random() * 10000),
-}));
-
-const grid = new OGrid(document.getElementById('grid'), {
-  columns: [
-    { columnId: 'id', name: 'ID', type: 'numeric' },
-    { columnId: 'name', name: 'Name' },
-    { columnId: 'value', name: 'Value', type: 'numeric',
-      valueFormatter: (v) => `$${Number(v).toLocaleString()}` },
-  ],
-  data,
-  getRowId: (r) => r.id,
-  virtualScroll: { enabled: true, rowHeight: 36 },
-  statusBar: true,
-});
-```
 
   </TabItem>
 </Tabs>
@@ -190,32 +162,6 @@ function App() {
     </div>
   );
 }
-```
-
-  </TabItem>
-  <TabItem value="js" label="Vanilla JS">
-
-```js
-import { OGrid } from '@alaarab/ogrid-js';
-import '@alaarab/ogrid-js/styles';
-
-const grid = new OGrid(document.getElementById('grid'), {
-  columns,
-  data,
-  getRowId: (r) => r.id,
-  virtualScroll: { enabled: true, rowHeight: 36 },
-});
-
-const api = grid.getApi();
-
-// Scroll to the first row
-api.scrollToRow(0);
-
-// Scroll to row 5000, centered in the viewport
-api.scrollToRow(4999, { align: 'center' });
-
-// Scroll to the last row
-api.scrollToRow(9999, { align: 'end' });
 ```
 
   </TabItem>
@@ -313,32 +259,7 @@ The `OGrid` component has the same props across all React UI packages. To switch
 
 - **Radix** (lightweight, default): `from '@alaarab/ogrid-react-radix'`
 - **Fluent UI** (Microsoft 365 / SPFx): `from '@alaarab/ogrid-react-fluent'`  -  wrap in `<FluentProvider>`
-- **Material UI** (MUI v7): `from '@alaarab/ogrid-react-material'`  -  wrap in `<ThemeProvider>`
 :::
-
-  </TabItem>
-  <TabItem value="js" label="Vanilla JS">
-
-```js
-import { OGrid } from '@alaarab/ogrid-js';
-import '@alaarab/ogrid-js/styles';
-
-const columns = [
-  { columnId: 'id', name: 'ID', type: 'numeric', pinned: 'left', defaultWidth: 80 },
-  ...Array.from({ length: 49 }, (_, i) => ({
-    columnId: `col${i}`,
-    name: `Column ${i + 1}`,
-    type: 'numeric',
-  })),
-];
-
-const grid = new OGrid(document.getElementById('grid'), {
-  columns,
-  data,
-  getRowId: (r) => r.id,
-  virtualScroll: { enabled: true, rowHeight: 36, columns: true, columnOverscan: 2 },
-});
-```
 
   </TabItem>
 </Tabs>

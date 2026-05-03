@@ -1,6 +1,6 @@
 # OGrid Architecture
 
-High-level overview of the OGrid monorepo. **12 active packages** across React + vanilla JS; **10 packages frozen at v2.9.0** for the Angular and Vue families (kept on disk as reference, removed from npm workspaces and active CI).
+High-level overview of the OGrid monorepo. **9 active packages** on `main`. Frozen variants (Material UI, vanilla JS, Angular, Vue) live on the `legacy/multiframework` branch and at the `v2.9.1-multiframework` tag.
 
 - **Monorepo:** npm workspaces + Turborepo
 - **Build:** TypeScript 6 strict, ESM-only, tree-shakeable
@@ -9,28 +9,19 @@ High-level overview of the OGrid monorepo. **12 active packages** across React +
 
 ## Project Structure
 
-**Active:**
 ```
 packages/
   core/                     to  @alaarab/ogrid-core (zero deps)
   react/                    to  @alaarab/ogrid-react (hooks + shared logic)
-  react-{radix,fluent}/     to  UI implementations (react-material frozen at v2.9.1)
-  js/                       to  @alaarab/ogrid-js (vanilla JS, class-based)
+  react-{radix,fluent}/     to  UI implementations
   inputs/                   to  @alaarab/ogrid-inputs (headless utils: calendar, rating, color, slider, tags)
-  {react,js}-inputs/        to  Premium editors (5 total per framework)
+  react-inputs/             to  Premium React cell editors
   mcp/                      to  @alaarab/ogrid-mcp (docs/runtime bridge)
   docs/                     to  Docusaurus site + demos
   examples/                 to  Vite example apps
 ```
 
-**Frozen at v2.9.0 (source on disk, not in npm workspaces):**
-```
-packages/
-  angular/, angular-{material,primeng,radix,inputs}/   (frozen)
-  vue/,     vue-{vuetify,primevue,radix,inputs}/       (frozen)
-```
-
-To thaw a frozen package: add its path back to the `workspaces` array in root `package.json`, drop the `"private": true` flag added during the freeze, then `rm -rf node_modules package-lock.json && npm install`.
+To revive a frozen variant: `git checkout legacy/multiframework`, copy the package source over.
 
 ## Core Concepts
 
@@ -41,17 +32,13 @@ To thaw a frozen package: add its path back to the `workspaces` array in root `p
 - Utilities (sort, filter, pagination, cell references, formulas)
 - Algorithms (virtual scroll ranges, responsive column hiding, worker sort/filter)
 
-**Framework packages** implement the same interfaces:
-- React: hooks (`useOGrid`, `useDataGridState`, etc.) + thin view layer (active)
-- JS: class-based state + DOM manipulation (active)
-- Angular: services + signals + standalone components (frozen at v2.9.0)
-- Vue: composables + render functions, NO SFCs (frozen at v2.9.0)
+**React adapter** (`@alaarab/ogrid-react`): hooks (`useOGrid`, `useDataGridState`, etc.) + thin view layer.
 
-**UI packages** are the thinnest layer  -  just visual mapping from framework state to framework components.
+**UI packages** are the thinnest layer  -  just visual mapping from React state to native components.
 
 ### Premium Inputs (v2.5.5+)
 
-5 optional cell editors (`cellEditorPopup: true`) available for React and vanilla JS (Angular and Vue inputs are frozen at v2.9.0):
+5 optional cell editors (`cellEditorPopup: true`) available for React:
 
 1. **DatePickerEditor**  -  Calendar popup with month nav, text input, Today/Clear buttons
 2. **RatingEditor**  -  Star rating (1-5, configurable `maxStars`, `allowHalf` support)
@@ -108,28 +95,23 @@ npm run docs:build              # Build static docs site
 
 ### Naming
 - Component names: PascalCase
-- Editor names: `{Name}Editor` (React/Vue), `{Name}EditorComponent` (Angular), `create{Name}Editor` (JS)
-- Hooks: `use*` (React), `use*` (Vue), services in Angular, factories in JS
+- Editor names: `{Name}Editor`
+- Hooks: `use*`
 
 ### Styles
-- Inline (`React.CSSProperties`, `Record<string, string>` in Angular)
+- Inline (`React.CSSProperties`)
 - CSS variables for theming (no dark mode hacks)
 - No CSS files in input packages (`sideEffects: false`)
 
 ### Testing
 - **Core:** Jest, pure TS utilities
 - **React:** React Testing Library + RTL queries
-- **Angular:** Angular Testing utilities + TestBed
-- **Vue:** Vue Test Utils + `mount()`
-- **JS:** jsdom + native DOM APIs
 
 ### File Structure per Package
 ```
 src/
   components/         to  Reusable headless components
-  hooks/              to  React hooks (React package only)
-  services/           to  Angular services (Angular package only)
-  composables/        to  Vue composables (Vue package only)
+  hooks/              to  React hooks
   types/              to  TypeScript interfaces
   utils/              to  Utility functions
   workers/            to  Web workers (core only)
@@ -143,34 +125,20 @@ package.json          to  ESM, no CJS, tree-shakeable, peer deps
 
 ## Architecture Decisions
 
-### Why Headless Core + Framework Wrappers?
-- Reuse algorithm logic across all frameworks without reimplementing
-- Type safety via TypeScript interfaces across language boundaries
-- Easy to test algorithms in isolation
-- Frameworks can evolve independently without touching core
+### Why Headless Core + React Adapter?
+- Core algorithm logic stays UI-agnostic and testable in isolation
+- React adapter is a thin wrapper that translates core state into hooks
+- UI packages are visual mapping only (~1,500 lines each)
 
-### Why Three UI Kits per Framework?
-- Users pick their design system (Radix, Material, Fluent, Vuetify, PrimeNG, etc.)
-- Same API, different look  to  easy migration
-- Proves the headless architecture works
-- Encourages community contributions for more UI kits
+### Why Two UI Kits (Radix + Fluent)?
+- Users pick their design system
+- Same API, different chrome  to  easy migration
+- Radix is the lightweight default; Fluent is for Microsoft 365 / SPFx apps
 
 ### Why Optional Premium Inputs?
 - Keeps base packages lightweight
 - Users only pay for what they use (tree-shakeable)
-- Allows future input types without bloating everyone's bundle
 - Inline styles + CSS variables = consistent theming without CSS files
-
-### Why Inline Styles in Input Packages?
-- `sideEffects: false`  -  no CSS files to import
-- Smaller footprint for optional packages
-- CSS variables for theming (light/dark mode aware)
-- Matches DatePicker pattern (battle-tested)
-
-### Why No SFCs in Vue?
-- CommonJS `require()` can't import ES modules
-- Jest needs CommonJS for `jest.requireActual()` in test setup
-- Using `defineComponent()` + `h()` keeps everything ESM
 
 ## Performance Features
 

@@ -81,30 +81,6 @@ export function MyGrid() {
 ```
 
 </TabItem>
-<TabItem value="js" label="Vanilla JS">
-
-```js
-import { OGrid } from '@alaarab/ogrid-js';
-import { connectGridToBridge } from '@alaarab/ogrid-mcp/bridge-client';
-
-const grid = new OGrid(container, { data: myRows, columns });
-
-// Only in development
-if (location.hostname === 'localhost') {
-  const bridge = connectGridToBridge({
-    gridId: 'my-grid',
-    getData: () => grid.getApi().getData(),
-    getColumns: () => columns,
-    onCellUpdate: (rowIndex, columnId, value) => {
-      // Update your data source and refresh
-      myRows[rowIndex][columnId] = value;
-      grid.getApi().refresh();
-    },
-  });
-}
-```
-
-</TabItem>
 </Tabs>
 
 ---

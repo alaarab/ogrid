@@ -233,7 +233,6 @@ function FeatureTicker() {
 const installCommands = [
   { pkg: '@alaarab/ogrid-react-radix', label: 'React + Radix' },
   { pkg: '@alaarab/ogrid-react-fluent', label: 'React + Fluent UI' },
-  { pkg: '@alaarab/ogrid-js', label: 'Vanilla JS' },
 ];
 
 function RotatingInstallCommand() {
@@ -343,7 +342,7 @@ function Hero() {
 
           <p className={styles.heroLead}>
             Sorting, filtering, editing, formulas, clipboard, virtual scroll.
-            React + Vanilla JS. MIT licensed.
+            For React. MIT licensed.
           </p>
 
           <div className={styles.heroCta}>
@@ -418,15 +417,17 @@ function NoiseOverlay({ opacity = 0.03 }: { opacity?: number }) {
    ────────────────────────────────────────────── */
 
 const frameworks = [
-  { id: 'react', label: 'React' },
-  { id: 'js', label: 'Vanilla JS' },
+  { id: 'radix', label: 'Radix' },
+  { id: 'fluent', label: 'Fluent UI' },
 ] as const;
 
 function getCodeExample(fw: typeof frameworks[number]) {
-  switch (fw.id) {
-    case 'react':
-      return `import { OGrid } from '@alaarab/ogrid-react-radix';
-// Also: '@alaarab/ogrid-react-fluent'
+  const importLine =
+    fw.id === 'radix'
+      ? "import { OGrid } from '@alaarab/ogrid-react-radix';"
+      : "import { OGrid } from '@alaarab/ogrid-react-fluent';";
+
+  return `${importLine}
 
 const columns = [
   { columnId: 'name', name: 'Name', sortable: true },
@@ -447,24 +448,6 @@ function App() {
     />
   );
 }`;
-    case 'js':
-      return `import { OGrid } from '@alaarab/ogrid-js';
-import '@alaarab/ogrid-js/styles';
-
-const grid = new OGrid(document.getElementById('grid'), {
-  columns: [
-    { columnId: 'name', name: 'Name', sortable: true },
-    { columnId: 'role', name: 'Role', filterable: { type: 'multiSelect' } },
-    { columnId: 'salary', name: 'Salary', editable: true,
-      valueFormatter: (v) => \`$\${v.toLocaleString()}\` },
-  ],
-  data: employees,
-  getRowId: (e) => e.id,
-  editable: true,
-  cellSelection: true,
-  statusBar: true,
-});`;
-  }
 }
 
 function CodePreviewSection() {
@@ -475,13 +458,12 @@ function CodePreviewSection() {
     <section ref={ref} className={`${styles.codeSection} ${visible ? styles.revealed : ''}`}>
       <NoiseOverlay opacity={0.025} />
         <div className={styles.codeSectionInner}>
-          <div className={styles.codeSectionLabel}>One API. Three React UI flavors + Vanilla JS.</div>
+          <div className={styles.codeSectionLabel}>One API. Two React UI flavors.</div>
           <h2 className={styles.codeSectionTitle}>
-          One grid model.<br />Framework-native wrappers.<br />Swap packages, keep moving.
+          One grid model.<br />Pick your design system.<br />One-line import to switch.
           </h2>
           <p className={styles.codeSectionSub}>
-          React (Radix / Fluent / Material) and Vanilla JS packages with the same grid concepts,
-          column model, and feature set across the lineup.
+          Radix and Fluent UI packages share the same hooks, props, and grid concepts.
           </p>
         </div>
 
@@ -571,14 +553,12 @@ function FeatureBentoSection() {
           </p>
           <div className={styles.bentoFrameworkBands}>
             <div className={styles.bentoFrameworkBand}>
-              <span>React</span>
               <span>Radix</span>
-              <span>Material</span>
-              <span>Fluent UI</span>
+              <span>Lightweight default</span>
             </div>
             <div className={styles.bentoFrameworkBand}>
-              <span>Vanilla JS</span>
-              <span>Zero deps</span>
+              <span>Fluent UI</span>
+              <span>Microsoft 365 / SPFx</span>
             </div>
           </div>
         </div>
@@ -668,16 +648,15 @@ interface FrameworkCard {
 
 const frameworkCards: FrameworkCard[] = [
   {
-    name: 'React',
+    name: 'Radix',
     uiKits: [
-      { label: 'Radix', pkg: '@alaarab/ogrid-react-radix' },
-      { label: 'Fluent UI', pkg: '@alaarab/ogrid-react-fluent' },
+      { label: 'Lightweight default', pkg: '@alaarab/ogrid-react-radix' },
     ],
   },
   {
-    name: 'Vanilla JS',
+    name: 'Fluent UI',
     uiKits: [
-      { label: 'Zero deps', pkg: '@alaarab/ogrid-js' },
+      { label: 'Microsoft 365 / SPFx', pkg: '@alaarab/ogrid-react-fluent' },
     ],
   },
 ];
@@ -769,7 +748,7 @@ export default function Home() {
   return (
     <Layout
       title="Your spreadsheet. Your framework. Zero compromises."
-      description="Free open-source data grid for React (Radix / Fluent / Material) and vanilla JS. Sorting, filtering, editing, spreadsheet selection, clipboard, fill handle, formulas, and more. MIT licensed with no enterprise tier."
+      description="Free open-source React data grid (Radix and Fluent UI). Sorting, filtering, editing, spreadsheet selection, clipboard, fill handle, formulas, and more. MIT licensed with no enterprise tier."
     >
       <Hero />
       <CodePreviewSection />

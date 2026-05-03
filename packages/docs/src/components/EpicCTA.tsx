@@ -25,15 +25,6 @@ const frameworkCards = [
     border: 'rgba(0, 120, 212, 0.3)',
     glow: 'rgba(0, 120, 212, 0.22)',
   },
-  {
-    name: 'Vanilla JS',
-    detail: 'Zero dependencies',
-    pkg: '@alaarab/ogrid-js',
-    color: '#f7df1e',
-    bg: 'rgba(247, 223, 30, 0.07)',
-    border: 'rgba(247, 223, 30, 0.3)',
-    glow: 'rgba(247, 223, 30, 0.2)',
-  },
 ];
 
 /* ──────────────────────────────────────────────

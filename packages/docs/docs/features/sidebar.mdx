@@ -19,7 +19,7 @@ The Side Bar adds a collapsible panel alongside the grid with two built-in panel
 <SideBarDemo />
 
 :::tip Try it in your framework
-The demo above uses Radix UI for styling. To see this feature with your framework's design system (Fluent UI, Material UI, Vuetify, PrimeNG, etc.), click **"Open in online demo"** below the demo.
+The demo above uses Radix UI for styling. To see this feature with the Fluent UI implementation, click **"Open in online demo"** below the demo.
 :::
 
 <Tabs groupId="framework">
@@ -43,25 +43,7 @@ The `OGrid` component has the same props across all React UI packages. To switch
 
 - **Radix** (lightweight, default): `from '@alaarab/ogrid-react-radix'`
 - **Fluent UI** (Microsoft 365 / SPFx): `from '@alaarab/ogrid-react-fluent'`  -  wrap in `<FluentProvider>`
-- **Material UI** (MUI v7): `from '@alaarab/ogrid-react-material'`  -  wrap in `<ThemeProvider>`
 :::
-
-  </TabItem>
-  <TabItem value="js" label="Vanilla JS">
-
-```js
-import { OGrid } from '@alaarab/ogrid-js';
-import '@alaarab/ogrid-js/styles';
-
-const grid = new OGrid(document.getElementById('grid'), {
-  columns: columns,
-  data: items,
-  getRowId: (item) => item.id,
-  sideBar: true,
-  columnChooser: 'sidebar',
-  pagination: true,
-});
-```
 
   </TabItem>
 </Tabs>

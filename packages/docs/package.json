@@ -9,7 +9,6 @@
     "clear": "docusaurus clear"
   },
   "dependencies": {
-    "@alaarab/ogrid-js": "2.9.1",
     "@alaarab/ogrid-react": "2.9.1",
     "@alaarab/ogrid-react-fluent": "2.9.1",
     "@alaarab/ogrid-react-radix": "2.9.1",

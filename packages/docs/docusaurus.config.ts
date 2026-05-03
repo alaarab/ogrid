@@ -5,7 +5,7 @@ import path from 'path';
 
 const config: Config = {
   title: 'OGrid',
-  tagline: 'The open-source data grid for React and vanilla JS.',
+  tagline: 'The open-source React data grid.',
   favicon: 'img/favicon.svg',
   url: 'https://alaarab.github.io',
   baseUrl: '/ogrid/',
@@ -35,8 +35,6 @@ const config: Config = {
                 '@alaarab/ogrid-react': path.resolve(__dirname, '../react/dist/esm'),
                 '@alaarab/ogrid-react-radix': path.resolve(__dirname, '../react-radix/dist/esm'),
                 '@alaarab/ogrid-react-fluent': path.resolve(__dirname, '../react-fluent/dist/esm'),
-                '@alaarab/ogrid-js/styles': path.resolve(__dirname, '../js/styles/ogrid.css'),
-                '@alaarab/ogrid-js': path.resolve(__dirname, '../js/dist/esm'),
               },
             },
           };
@@ -106,11 +104,11 @@ const config: Config = {
         '@context': 'https://schema.org',
         '@type': 'SoftwareSourceCode',
         name: 'OGrid',
-        description: 'Free open-source data grid for React and vanilla JS. Sorting, filtering, editing, spreadsheet selection, clipboard, fill handle, formulas, and more.',
+        description: 'Free open-source React data grid. Sorting, filtering, editing, spreadsheet selection, clipboard, fill handle, formulas, and more.',
         url: 'https://alaarab.github.io/ogrid/',
         codeRepository: 'https://github.com/alaarab/ogrid',
         programmingLanguage: ['TypeScript', 'JavaScript'],
-        runtimePlatform: ['React', 'Vanilla JS'],
+        runtimePlatform: ['React'],
         license: 'https://opensource.org/licenses/MIT',
         author: {
           '@type': 'Person',
@@ -187,16 +185,10 @@ const config: Config = {
           ],
         },
         {
-          title: 'React',
+          title: 'Packages',
           items: [
             { label: 'Radix UI (default)', href: 'https://npmjs.com/package/@alaarab/ogrid-react-radix' },
             { label: 'Fluent UI', href: 'https://npmjs.com/package/@alaarab/ogrid-react-fluent' },
-          ],
-        },
-        {
-          title: 'JS',
-          items: [
-            { label: 'Vanilla JS', href: 'https://npmjs.com/package/@alaarab/ogrid-js' },
             { label: 'All packages', href: 'https://www.npmjs.com/search?q=%40alaarab%2Fogrid' },
           ],
         },

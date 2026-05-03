@@ -17,7 +17,7 @@ Select entire rows with checkboxes (multiple mode) or radio-button-style selecti
 <RowSelectionDemo />
 
 :::tip UI styling
-The live demo above shows **Radix UI** styling (lightweight default). The same feature renders through the Fluent UI and Material UI packages with their native checkbox components, plus the `@alaarab/ogrid-js` vanilla theme.
+The live demo above shows **Radix UI** styling (lightweight default). The same feature renders through the Fluent UI package with its native components.
 :::
 
 ## Quick Example
@@ -60,34 +60,7 @@ The `OGrid` component has the same props across all React UI packages. To switch
 
 - **Radix** (lightweight, default): `from '@alaarab/ogrid-react-radix'`
 - **Fluent UI** (Microsoft 365 / SPFx): `from '@alaarab/ogrid-react-fluent'`  -  wrap in `<FluentProvider>`
-- **Material UI** (MUI v7): `from '@alaarab/ogrid-react-material'`  -  wrap in `<ThemeProvider>`
 :::
-
-  </TabItem>
-  <TabItem value="js" label="Vanilla JS">
-
-```js
-import { OGrid } from '@alaarab/ogrid-js';
-import '@alaarab/ogrid-js/styles';
-
-const grid = new OGrid(document.getElementById('grid'), {
-  columns: columns,
-  data: people,
-  getRowId: (item) => item.id,
-  rowSelection: 'multiple',
-});
-
-grid.on('selectionChange', ({ selectedItems, selectedRowIds }) => {
-  console.log(`${selectedItems.length} rows selected`);
-  console.log('Selected row IDs:', selectedRowIds);
-});
-
-// Programmatic access
-document.getElementById('export-btn').addEventListener('click', () => {
-  const selected = grid.api.getSelectedRows();
-  console.log('Selected:', selected);
-});
-```
 
   </TabItem>
 </Tabs>

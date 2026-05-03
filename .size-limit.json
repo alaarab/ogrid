@@ -18,10 +18,5 @@
     "name": "react-fluent",
     "path": "packages/react-fluent/dist/esm/index.js",
     "limit": "185 kB"
-  },
-  {
-    "name": "js",
-    "path": "packages/js/dist/esm/index.js",
-    "limit": "58 kB"
   }
 ]
