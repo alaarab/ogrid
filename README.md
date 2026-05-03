@@ -318,12 +318,19 @@ See the [MCP guide](packages/docs/docs/guides/mcp.mdx) and [live testing bridge 
 
 ## Testing
 
-| Surface | Tool | Tests |
-|---------|------|------:|
-| Core | Jest + ts-jest | ~1,575 |
-| React | React Testing Library | ~583 |
+All packages run on **`bun:test`** with **2,768 tests** total across the active surface:
 
-Playwright covers a fast smoke gate on every push plus a manual full matrix across the active example apps. Frozen variants live on the `legacy/multiframework` branch with their original test suites.
+| Package | Tests |
+|---------|------:|
+| `@alaarab/ogrid-core` | 1,575 |
+| `@alaarab/ogrid-react` | 583 |
+| `@alaarab/ogrid-react-radix` | 153 |
+| `@alaarab/ogrid-react-fluent` | 153 |
+| `@alaarab/ogrid-inputs` | 133 |
+| `@alaarab/ogrid-react-inputs` | 132 |
+| `@alaarab/ogrid-mcp` | 39 |
+
+React/DOM tests use `@testing-library/react` + `happy-dom`; cross-package source aliasing is handled via tsconfig `paths`. Playwright covers a fast smoke gate on every push plus a manual full matrix across the active example apps. Frozen variants live on the `legacy/multiframework` branch with their original Jest test suites.
 
 ## Development
 
@@ -358,8 +365,9 @@ bun run docs:build                  # Build docs site
 
 ### Requirements
 
-- Node.js >= 18 (developed with Node 22)
-- npm workspaces + Turborepo for monorepo management
+- [Bun](https://bun.com/docs/installation) >= 1.3 (package manager + script runner + test runner)
+- Node.js >= 18 (peer engine for published packages)
+- Bun workspaces + Turborepo for monorepo management
 
 ## Contributing
 
@@ -367,12 +375,12 @@ Contributions are welcome. To get started:
 
 1. Fork the repository and create a feature branch.
 2. Make your changes following the project conventions (TypeScript strict, ESM-first, headless architecture).
-3. If your change affects UI, update **all** UI packages within the relevant framework(s) to maintain parity.
-4. Add or extend tests. Use the shared test factories so all UI packages get coverage.
+3. If your change affects UI, update both UI packages (`react-radix` + `react-fluent`) to maintain parity.
+4. Add or extend tests. Use the shared test factories in `@alaarab/ogrid-react/testing` so both UI packages get coverage.
 5. Run the full verification suite before submitting:
 
 ```bash
-npm run build && npm run test:all && npm run lint && npm run test:e2e:smoke
+bun run build && bun run test && bun run lint && bun run test:e2e:smoke
 ```
 
 6. Open a pull request with a clear description of what changed and why.

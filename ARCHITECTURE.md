@@ -36,7 +36,7 @@ To revive a frozen variant: `git checkout legacy/multiframework`, copy the packa
 
 **UI packages** are the thinnest layer  -  just visual mapping from React state to native components.
 
-### Premium Inputs (v2.5.5+)
+### Premium Inputs
 
 5 optional cell editors (`cellEditorPopup: true`) available for React:
 
@@ -104,8 +104,11 @@ bun run docs:build              # Build static docs site
 - No CSS files in input packages (`sideEffects: false`)
 
 ### Testing
-- **Core:** Jest, pure TS utilities
-- **React:** React Testing Library + RTL queries
+- **Runner:** `bun:test` natively across all packages (2,768 tests total)
+- **DOM:** happy-dom via `@happy-dom/global-registrator`, bootstrapped in `bun-test.setup.ts` at the repo root
+- **React:** `@testing-library/react` + `@testing-library/jest-dom` matchers
+- **Source aliasing:** tsconfig `paths` redirect `@alaarab/ogrid-*` to sibling source TS so tests run against source, not compiled `dist/`
+- **Jest compat:** the global setup exposes `jest`, `mock`, `spyOn` from `bun:test` so existing test syntax works with no per-file imports
 
 ### File Structure per Package
 ```
@@ -116,10 +119,9 @@ src/
   utils/              to  Utility functions
   workers/            to  Web workers (core only)
   __tests__/          to  Tests co-located with code
-tsconfig.json         to  Dev config (includes tests)
-tsconfig.build.json   to  Build config (excludes tests)
+tsconfig.json         to  Dev config (includes tests; declares paths for workspace aliasing)
+tsconfig.build.json   to  Build config (excludes tests; overrides paths:{} so dist resolves through node_modules)
 tsup.config.ts        to  ESM + types bundling
-jest.config.js        to  Jest setup with moduleNameMapper for deps
 package.json          to  ESM, no CJS, tree-shakeable, peer deps
 ```
 

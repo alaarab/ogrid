@@ -6,9 +6,9 @@ description: What runs in browser CI today, what the smoke suite covers, and whi
 
 # Browser Support Matrix
 
-OGrid ships React UI packages plus a vanilla JS package, and not every browser check needs to run on every push. The browser contract is split into two layers:
+OGrid ships two React UI packages (Radix and Fluent), and not every browser check needs to run on every push. The browser contract is split into two layers:
 
-- `npm run test:e2e:smoke` is the fast merge gate that runs on every push and pull request in the main `CI` workflow.
+- `bun run test:e2e:smoke` is the fast merge gate that runs on every push and pull request in the main `CI` workflow.
 - The `Playwright Matrix` GitHub workflow runs the broader browser suite across the React + JS example apps only when you dispatch it manually.
 
 ## Main CI smoke suite
@@ -16,7 +16,7 @@ OGrid ships React UI packages plus a vanilla JS package, and not every browser c
 The merge gate is intentionally small. It covers the minimum set of user journeys that should fail the build immediately if they break:
 
 ```bash
-npm run test:e2e:smoke
+bun run test:e2e:smoke
 ```
 
 Projects in the smoke gate:
@@ -53,7 +53,7 @@ The docs homepage is verified separately because it runs against the built Docus
 npm run test:e2e:docs
 ```
 
-That check currently runs in the `Deploy Docs` workflow after `npm run docs:build`.
+That check currently runs in the `Deploy Docs` workflow after `bun run docs:build`.
 
 ## Interpreting failures
 
