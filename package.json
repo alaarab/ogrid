@@ -8,6 +8,7 @@
     "packages/react-radix",
     "packages/react-fluent",
     "packages/react-inputs",
+    "packages/react-xlsx",
     "packages/mcp",
     "packages/docs",
     "packages/examples"
