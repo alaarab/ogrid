@@ -3,12 +3,12 @@
 // caller (or by XlsxWorkbookGrid) and passed in.
 
 import { useMemo } from 'react';
-import * as XLSX from 'xlsx';
+import type ExcelJS from 'exceljs';
 import { OGrid, type IOGridProps } from '@alaarab/ogrid-react-radix';
 import { sheetToGridData, type SheetRow } from './sheetMapper';
 
 export interface XlsxGridProps {
-  workbook: XLSX.WorkBook;
+  workbook: ExcelJS.Workbook;
   sheetName: string;
   /** CSS height for the grid container. Defaults to '100%'. */
   height?: number | string;
@@ -17,9 +17,9 @@ export interface XlsxGridProps {
 }
 
 export function XlsxGrid({ workbook, sheetName, height = '100%', density = 'compact' }: XlsxGridProps) {
-  const sheet = workbook.Sheets[sheetName];
+  const sheet = workbook.getWorksheet(sheetName);
   const { columns, rows, initialFormulas } = useMemo(
-    () => (sheet ? sheetToGridData(sheet) : { columns: [], rows: [], initialFormulas: [] }),
+    () => sheetToGridData(sheet),
     [sheet],
   );
 

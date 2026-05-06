@@ -3,11 +3,11 @@
 // and the active sheet's grid below.
 
 import { useEffect, useMemo, useState } from 'react';
-import * as XLSX from 'xlsx';
+import type ExcelJS from 'exceljs';
 import { XlsxGrid } from './XlsxGrid';
 import { workbookFromBlob } from './sheetMapper';
 
-type Source = { blob: Blob } | { workbook: XLSX.WorkBook };
+type Source = { blob: Blob } | { workbook: ExcelJS.Workbook };
 
 export type XlsxWorkbookGridProps = Source & {
   /** CSS height of the whole component. Defaults to '100%'. */
@@ -21,7 +21,7 @@ export type XlsxWorkbookGridProps = Source & {
 
 export function XlsxWorkbookGrid(props: XlsxWorkbookGridProps) {
   const { height = '100%', initialSheet, density, onSheetChange } = props;
-  const [workbook, setWorkbook] = useState<XLSX.WorkBook | null>(
+  const [workbook, setWorkbook] = useState<ExcelJS.Workbook | null>(
     'workbook' in props ? props.workbook : null,
   );
   const [error, setError] = useState<string | null>(null);
@@ -41,7 +41,10 @@ export function XlsxWorkbookGrid(props: XlsxWorkbookGridProps) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, ['blob' in props ? props.blob : props.workbook]);
 
-  const sheetNames = useMemo(() => workbook?.SheetNames ?? [], [workbook]);
+  const sheetNames = useMemo(
+    () => workbook?.worksheets.map((w) => w.name) ?? [],
+    [workbook],
+  );
   const [active, setActive] = useState<string | null>(null);
 
   // Pick the initial sheet once the workbook is in.
