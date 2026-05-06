@@ -15,22 +15,28 @@
 // React 19 does not auto-unmount when the host node is removed from the
 // DOM, so imperative consumers MUST call the returned unmount() before
 // detaching the node, or event listeners + state will leak.
+//
+// Format support: .xlsx + CSV/TSV. Built on ExcelJS (active, MIT, on
+// npm). The previous SheetJS-backed builds are gone — `xlsx` on npm is
+// stuck at the vulnerable 0.18.5. See CHANGELOG 2.12.0 for the swap.
 
 import { createElement } from 'react';
 import { createRoot } from 'react-dom/client';
-import * as XLSX from 'xlsx';
+import type ExcelJS from 'exceljs';
 import { XlsxWorkbookGrid, type XlsxWorkbookGridProps } from './XlsxWorkbookGrid';
 export { XlsxGrid, type XlsxGridProps } from './XlsxGrid';
 export { XlsxWorkbookGrid, type XlsxWorkbookGridProps } from './XlsxWorkbookGrid';
-export { workbookFromBlob, sheetToGridData, listSheets, type SheetGridData, type SheetRow } from './sheetMapper';
-
-/** Re-export the bundled SheetJS so consumers can parse workbooks
- *  themselves and pass `{ workbook }` instead of `{ blob }`. */
-export { XLSX };
+export {
+  workbookFromBlob,
+  sheetToGridData,
+  listSheets,
+  type SheetGridData,
+  type SheetRow,
+} from './sheetMapper';
 
 export interface MountOptions {
   /** Pre-parsed workbook (use this OR blob, not both). */
-  workbook?: XLSX.WorkBook;
+  workbook?: ExcelJS.Workbook;
   /** Raw blob — parsed lazily inside the component. */
   blob?: Blob;
   initialSheet?: string;

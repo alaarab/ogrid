@@ -2,21 +2,53 @@
 
 All notable changes to OGrid will be documented in this file.
 
-## [2.11.1] - 2026-05-06
+## [2.12.0] - 2026-05-06
 
-### Security
+### Changed — `@alaarab/ogrid-react-xlsx` swapped from SheetJS to ExcelJS
 
-- **`@alaarab/ogrid-react-xlsx`**: upgraded SheetJS from `xlsx@0.18.5` (npm,
-  unmaintained) to `xlsx@0.20.3` (sourced from
-  `https://cdn.sheetjs.com/xlsx-0.20.3/xlsx-0.20.3.tgz`, the vendor's
-  official distribution channel). Closes
-  [CVE-2023-30533](https://nvd.nist.gov/vuln/detail/CVE-2023-30533)
-  (prototype pollution, CVSS 7.8) and
-  [CVE-2024-22363](https://nvd.nist.gov/vuln/detail/CVE-2024-22363)
-  (ReDoS, CVSS 7.5). The npm `xlsx` package is permanently stuck at the
-  vulnerable 0.18.5 — SheetJS no longer publishes there. Same API,
-  same supported formats (xlsx/xls/xlsm/xlsb/ods/csv), same formula
-  engine surface. No downstream consumer change required.
+The previous SheetJS dep (`xlsx@0.18.5`) was unmaintained on npm and
+permanently exposed two high-severity CVEs:
+[CVE-2023-30533](https://nvd.nist.gov/vuln/detail/CVE-2023-30533)
+(prototype pollution, CVSS 7.8) and
+[CVE-2024-22363](https://nvd.nist.gov/vuln/detail/CVE-2024-22363)
+(ReDoS, CVSS 7.5). The patched SheetJS 0.20.x is only distributed via
+`cdn.sheetjs.com`, not npm.
+
+We replaced it with [ExcelJS](https://github.com/exceljs/exceljs) — MIT,
+actively maintained, npm-published, no known CVEs. The reader path
+also handles CSV/TSV inline (RFC 4180), so single-sheet text files
+keep working.
+
+### Public API
+
+- `workbookFromBlob(blob): Promise<ExcelJS.Workbook>` — returns an
+  `ExcelJS.Workbook` instead of an `XLSX.WorkBook`. The shape now uses
+  ExcelJS's `workbook.worksheets[]` / `workbook.getWorksheet(name)`
+  instead of SheetJS's `workbook.SheetNames` / `workbook.Sheets[name]`.
+- `sheetToGridData(worksheet)` — accepts an `ExcelJS.Worksheet | null |
+  undefined` instead of an `XLSX.WorkSheet`. Output shape is unchanged:
+  `{ columns, rows, initialFormulas }`. Formula cells are unwrapped
+  from ExcelJS's `{ formula, result }` shape; rich-text cells flatten
+  to plain strings.
+- The previously-exported re-export of `XLSX` is gone. Consumers that
+  were parsing workbooks themselves should switch to ExcelJS:
+  `new ExcelJS.Workbook().xlsx.load(buffer)`.
+- `XlsxGrid` / `XlsxWorkbookGrid` props now type `workbook` as
+  `ExcelJS.Workbook`.
+
+### Removed — legacy spreadsheet formats
+
+`.xls` (binary, pre-2007), `.xlsm`, `.xlsb`, and `.ods` are no longer
+supported by the reader. ExcelJS does not parse them, and there is no
+maintained npm-published reader that does. Consumers who attached
+those types should fall back to a "view source" path or convert
+upstream to `.xlsx`.
+
+### Workspace
+
+All 11 packages bumped to 2.12.0 to keep the workspace versions in
+sync (the lib swap only affects `@alaarab/ogrid-react-xlsx`; other
+packages are unchanged in behavior).
 
 ## [2.9.0] - 2026-04-26
 
