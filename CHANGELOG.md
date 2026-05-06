@@ -2,6 +2,22 @@
 
 All notable changes to OGrid will be documented in this file.
 
+## [2.11.1] - 2026-05-06
+
+### Security
+
+- **`@alaarab/ogrid-react-xlsx`**: upgraded SheetJS from `xlsx@0.18.5` (npm,
+  unmaintained) to `xlsx@0.20.3` (sourced from
+  `https://cdn.sheetjs.com/xlsx-0.20.3/xlsx-0.20.3.tgz`, the vendor's
+  official distribution channel). Closes
+  [CVE-2023-30533](https://nvd.nist.gov/vuln/detail/CVE-2023-30533)
+  (prototype pollution, CVSS 7.8) and
+  [CVE-2024-22363](https://nvd.nist.gov/vuln/detail/CVE-2024-22363)
+  (ReDoS, CVSS 7.5). The npm `xlsx` package is permanently stuck at the
+  vulnerable 0.18.5 — SheetJS no longer publishes there. Same API,
+  same supported formats (xlsx/xls/xlsm/xlsb/ods/csv), same formula
+  engine surface. No downstream consumer change required.
+
 ## [2.9.0] - 2026-04-26
 
 The "spreadsheet behavior on any table chrome" release. Six headless hooks
