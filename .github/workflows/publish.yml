@@ -101,4 +101,5 @@ jobs:
             git commit -m "chore: release v${{ inputs.version }}"
           fi
           git tag "v${{ inputs.version }}" 2>/dev/null || echo "Tag v${{ inputs.version }} already exists"
-          git push origin main --tags
+          git push origin main
+          git push origin "v${{ inputs.version }}" --force
