@@ -1,6 +1,6 @@
 {
   "name": "@alaarab/ogrid-react-inputs",
-  "version": "2.12.0",
+  "version": "2.13.0",
   "description": "OGrid React Inputs – Optional premium cell editors (DatePicker, and more). Zero impact when not installed.",
   "main": "dist/esm/index.js",
   "module": "dist/esm/index.js",
@@ -37,8 +37,8 @@
     "node": ">=18"
   },
   "dependencies": {
-    "@alaarab/ogrid-core": "2.12.0",
-    "@alaarab/ogrid-inputs": "2.12.0"
+    "@alaarab/ogrid-core": "2.13.0",
+    "@alaarab/ogrid-inputs": "2.13.0"
   },
   "peerDependencies": {
     "react": "^17.0.0 || ^18.0.0 || ^19.0.0",

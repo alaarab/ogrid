@@ -2,6 +2,42 @@
 
 All notable changes to OGrid will be documented in this file.
 
+## [2.13.0] - 2026-05-10
+
+### Added — `@alaarab/ogrid-react-xlsx` headerRow option
+
+`sheetToGridData()` now accepts a `headerRow` option, exposed all the
+way up through `XlsxGrid`, `XlsxWorkbookGrid`, and the imperative
+`mount()` API:
+
+```ts
+mount(node, { blob, headerRow: 'auto' });   // default — promote when row 1 looks like a header
+mount(node, { blob, headerRow: 'header' }); // always promote row 1 (coerce to strings)
+mount(node, { blob, headerRow: 'none' });   // legacy — A/B/C as column names, row 1 stays as data
+```
+
+### Changed — default sheet rendering promotes the header row
+
+Default behaviour now matches how every spreadsheet tool actually
+displays a sheet: when row 1 is all strings (and the sheet has more
+than one row) it becomes the column header instead of a data row.
+Column ids stay as Excel letters (`A`, `B`, …) so `cellReferences`,
+`INDIRECT("A1")`, and any saved formulas keep resolving the same way.
+`initialFormulas` row indices shift down by one to compensate; any
+formula that lived on the now-stripped header row is dropped.
+
+This fixes a long-standing UX bug where consumers using both
+`cellReferences: true` (cell-letter strip) and the default
+column.name = letter mapping rendered **two rows of A/B/C** above the
+data with no real column titles. Pass `headerRow: 'none'` to restore
+the pre-2.13 behaviour.
+
+### Fixed — `publish:all` script now includes `react-xlsx`
+
+The release helper was silently skipping `@alaarab/ogrid-react-xlsx`,
+so xlsx releases had to be hand-published. It now runs in dependency
+order alongside the other workspaces.
+
 ## [2.12.0] - 2026-05-06
 
 ### Changed — `@alaarab/ogrid-react-xlsx` swapped from SheetJS to ExcelJS
