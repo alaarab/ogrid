@@ -5,7 +5,7 @@
 import { useMemo } from 'react';
 import type ExcelJS from 'exceljs';
 import { OGrid, type IOGridProps } from '@alaarab/ogrid-react-radix';
-import { sheetToGridData, type SheetRow } from './sheetMapper';
+import { sheetToGridData, type SheetRow, type SheetToGridDataOptions } from './sheetMapper';
 
 export interface XlsxGridProps {
   workbook: ExcelJS.Workbook;
@@ -14,13 +14,21 @@ export interface XlsxGridProps {
   height?: number | string;
   /** Override grid density. Defaults to 'compact' (matches Excel-like row size). */
   density?: 'compact' | 'normal' | 'comfortable';
+  /** See {@link SheetToGridDataOptions.headerRow}. Defaults to 'auto'. */
+  headerRow?: SheetToGridDataOptions['headerRow'];
 }
 
-export function XlsxGrid({ workbook, sheetName, height = '100%', density = 'compact' }: XlsxGridProps) {
+export function XlsxGrid({
+  workbook,
+  sheetName,
+  height = '100%',
+  density = 'compact',
+  headerRow,
+}: XlsxGridProps) {
   const sheet = workbook.getWorksheet(sheetName);
   const { columns, rows, initialFormulas } = useMemo(
-    () => sheetToGridData(sheet),
-    [sheet],
+    () => sheetToGridData(sheet, { headerRow }),
+    [sheet, headerRow],
   );
 
   if (!sheet) {

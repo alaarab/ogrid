@@ -1,6 +1,6 @@
 {
   "name": "@alaarab/ogrid-core",
-  "version": "2.12.0",
+  "version": "2.13.0",
   "description": "OGrid core – framework-agnostic types, algorithms, and utilities for OGrid data grids.",
   "main": "dist/esm/index.js",
   "module": "dist/esm/index.js",

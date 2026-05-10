@@ -32,6 +32,7 @@ export {
   listSheets,
   type SheetGridData,
   type SheetRow,
+  type SheetToGridDataOptions,
 } from './sheetMapper';
 
 export interface MountOptions {
@@ -43,6 +44,8 @@ export interface MountOptions {
   density?: 'compact' | 'normal' | 'comfortable';
   height?: number | string;
   onSheetChange?: (sheetName: string) => void;
+  /** See {@link SheetToGridDataOptions.headerRow}. Defaults to 'auto'. */
+  headerRow?: 'auto' | 'header' | 'none';
 }
 
 /** Imperative mount for non-React hosts. Returns an unmount function. */

@@ -31,6 +31,26 @@ export interface SheetGridData {
  *  `__rowIdx` is a synthetic id (0-based) so getRowId can be `(r) => r.__rowIdx`. */
 export type SheetRow = Record<string, unknown> & { __rowIdx: number };
 
+/** Options accepted by {@link sheetToGridData}. */
+export interface SheetToGridDataOptions {
+  /**
+   * Whether to promote row 1 of the worksheet into column names.
+   *
+   * - `'auto'` (default): promote when row 1 looks like a header row —
+   *   every non-empty cell is a non-empty string and the sheet has at
+   *   least 2 rows. Otherwise keep A/B/C as column names.
+   * - `'header'`: always promote row 1, coercing values to strings.
+   *   Falls back to the column letter when a cell is empty.
+   * - `'none'`: legacy behaviour — column names stay as A/B/C and
+   *   row 1 is returned as the first data row.
+   *
+   * `columnId` is always the column letter so the `cellReferences`
+   * strip and any `INDIRECT("A1")`-style formula references keep
+   * resolving the same way.
+   */
+  headerRow?: 'auto' | 'header' | 'none';
+}
+
 const SAMPLE_SIZE = 50; // rows inspected for column-type detection
 
 /**
@@ -130,6 +150,7 @@ function parseDelimited(text: string, delimiter: string): string[][] {
  */
 export function sheetToGridData(
   sheet: ExcelJS.Worksheet | null | undefined,
+  options: SheetToGridDataOptions = {},
 ): SheetGridData {
   if (!sheet) return { columns: [], rows: [], initialFormulas: [] };
   const colCount = sheet.columnCount || 0;
@@ -150,10 +171,25 @@ export function sheetToGridData(
     matrix.push(out);
   }
 
+  // Decide whether row 1 is a header row. Defaults to 'auto' — the right
+  // choice for almost every xlsx in the wild, where row 1 is the column
+  // titles. 'none' restores legacy behaviour for callers that want to
+  // see all rows as data (e.g. when they strip headers themselves).
+  const mode = options.headerRow ?? 'auto';
+  const headerRow = matrix[0];
+  const promote =
+    mode === 'header' ||
+    (mode === 'auto' && matrix.length > 1 && looksLikeHeaderRow(headerRow));
+  const dataMatrix = promote ? matrix.slice(1) : matrix;
+  const headerNames = promote
+    ? headerRow.map((v, i) => coerceHeader(v) ?? indexToColumnLetter(i))
+    : null;
+
   // Column-type detection over a top-of-sheet sample. Empty cells
   // don't disqualify a column from being numeric/date — only conflicting
-  // non-empty cells do.
-  const sample = Math.min(matrix.length, SAMPLE_SIZE);
+  // non-empty cells do. Sample the *data* rows so a string header row
+  // doesn't pin every column to 'text'.
+  const sample = Math.min(dataMatrix.length, SAMPLE_SIZE);
   const types: ('text' | 'numeric' | 'date' | 'boolean')[] = new Array(colCount).fill('text');
   for (let c = 0; c < colCount; c++) {
     let allNum = true;
@@ -161,7 +197,7 @@ export function sheetToGridData(
     let allBool = true;
     let saw = false;
     for (let r = 0; r < sample; r++) {
-      const v = matrix[r][c];
+      const v = dataMatrix[r][c];
       if (v === '' || v === null || v === undefined) continue;
       saw = true;
       if (typeof v !== 'number') allNum = false;
@@ -186,7 +222,7 @@ export function sheetToGridData(
     const letter = indexToColumnLetter(c);
     columns.push({
       columnId: letter,
-      name: letter,
+      name: headerNames ? headerNames[c] : letter,
       type: types[c],
       sortable: true,
       defaultWidth: 120,
@@ -195,7 +231,7 @@ export function sheetToGridData(
     });
   }
 
-  const rows: SheetRow[] = matrix.map((arr, rowIdx) => {
+  const rows: SheetRow[] = dataMatrix.map((arr, rowIdx) => {
     const obj = { __rowIdx: rowIdx } as SheetRow;
     for (let c = 0; c < colCount; c++) {
       obj[indexToColumnLetter(c)] = arr[c];
@@ -203,7 +239,42 @@ export function sheetToGridData(
     return obj;
   });
 
-  return { columns, rows, initialFormulas };
+  // Re-index initialFormulas onto the post-strip data. Anything that was
+  // on the header row itself is dropped (it no longer exists in `rows`);
+  // everything below shifts up by one. The cached `result` already
+  // travelled with the cell value, so the visible grid renders correctly
+  // even before the formula engine recalculates.
+  const adjustedFormulas = promote
+    ? initialFormulas
+        .filter((f) => f.row >= 1)
+        .map((f) => ({ ...f, row: f.row - 1 }))
+    : initialFormulas;
+
+  return { columns, rows, initialFormulas: adjustedFormulas };
+}
+
+/** Heuristic: row 1 is a header row when every non-empty cell is a
+ *  non-empty string and at least one cell is non-empty. Numbers, dates,
+ *  and booleans in row 1 disqualify the heuristic — those are data. */
+function looksLikeHeaderRow(row: unknown[] | undefined): boolean {
+  if (!row || row.length === 0) return false;
+  let hasContent = false;
+  for (const v of row) {
+    if (v === '' || v === null || v === undefined) continue;
+    if (typeof v !== 'string') return false;
+    if (v.trim() === '') continue;
+    hasContent = true;
+  }
+  return hasContent;
+}
+
+/** Coerce a raw row-1 cell to a column-name string. Returns null for
+ *  empty/whitespace-only values so the caller can fall back to A/B/C. */
+function coerceHeader(v: unknown): string | null {
+  if (v === '' || v === null || v === undefined) return null;
+  const s = typeof v === 'string' ? v : String(v);
+  const trimmed = s.trim();
+  return trimmed === '' ? null : trimmed;
 }
 
 /** Normalize an ExcelJS cell value to a primitive (or Date). ExcelJS

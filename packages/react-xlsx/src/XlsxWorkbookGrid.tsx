@@ -5,7 +5,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import type ExcelJS from 'exceljs';
 import { XlsxGrid } from './XlsxGrid';
-import { workbookFromBlob } from './sheetMapper';
+import { workbookFromBlob, type SheetToGridDataOptions } from './sheetMapper';
 
 type Source = { blob: Blob } | { workbook: ExcelJS.Workbook };
 
@@ -17,10 +17,12 @@ export type XlsxWorkbookGridProps = Source & {
   density?: 'compact' | 'normal' | 'comfortable';
   /** Called when the user switches sheets. */
   onSheetChange?: (sheetName: string) => void;
+  /** See {@link SheetToGridDataOptions.headerRow}. Defaults to 'auto'. */
+  headerRow?: SheetToGridDataOptions['headerRow'];
 };
 
 export function XlsxWorkbookGrid(props: XlsxWorkbookGridProps) {
-  const { height = '100%', initialSheet, density, onSheetChange } = props;
+  const { height = '100%', initialSheet, density, onSheetChange, headerRow } = props;
   const [workbook, setWorkbook] = useState<ExcelJS.Workbook | null>(
     'workbook' in props ? props.workbook : null,
   );
@@ -83,7 +85,7 @@ export function XlsxWorkbookGrid(props: XlsxWorkbookGridProps) {
         </div>
       )}
       <div style={gridWrapStyle}>
-        <XlsxGrid workbook={workbook} sheetName={active} density={density} />
+        <XlsxGrid workbook={workbook} sheetName={active} density={density} headerRow={headerRow} />
       </div>
     </div>
   );
