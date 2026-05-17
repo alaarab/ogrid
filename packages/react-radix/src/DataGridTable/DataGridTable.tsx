@@ -16,6 +16,7 @@ import type {
   IColumnDef,
   ICellEditorProps,
   IOGridDataGridProps,
+  WindowedDataState,
 } from '@alaarab/ogrid-react';
 import {
   useDataGridTableOrchestration,
@@ -32,7 +33,9 @@ import {
   areGridRowPropsEqual,
   partitionColumnsForVirtualization,
   CellErrorBoundary,
+  WindowedPlaceholderRow,
   GRID_ROOT_STYLE,
+  GRID_ROOT_VIRTUAL_SCROLL_STYLE,
   CURSOR_CELL_STYLE,
   POPOVER_ANCHOR_STYLE,
   PREVENT_DEFAULT,
@@ -160,6 +163,10 @@ interface RadixTableBodyProps<T> {
   visibleRange: { startIndex: number; endIndex: number; offsetTop: number; offsetBottom: number };
   columnRange: import('@alaarab/ogrid-core').IVisibleColumnRange | null;
   items: T[];
+  /** Windowed (lazy) row access. When set, rows are read by index, not from `items`. */
+  windowed?: WindowedDataState<T> | null;
+  /** Fixed row height (px) — used to size windowed loading/error placeholder rows. */
+  rowHeight: number;
   getRowId: (item: T) => string | number;
   selectedRowIds: Set<string | number>;
   visibleCols: IColumnDef<T>[];
@@ -184,7 +191,7 @@ interface RadixTableBodyProps<T> {
 function RadixTableBody<T>(props: RadixTableBodyProps<T>) {
   const {
     virtualScrollEnabled, visibleRange, columnRange,
-    items, getRowId, selectedRowIds, visibleCols, columnMeta,
+    items, windowed, rowHeight, getRowId, selectedRowIds, visibleCols, columnMeta,
     renderCellContent, handleSingleRowClick, handleRowCheckboxChange,
     lastMouseShiftRef, hasCheckboxCol, hasRowNumbersCol, rowNumberOffset,
     selectionRange, activeCell, cutRange, copyRange, isDragging,
@@ -254,12 +261,48 @@ function RadixTableBody<T>(props: RadixTableBodyProps<T>) {
     );
   };
 
+  // Columns a normal row spans — sizes the windowed loading/error placeholders.
+  const placeholderColSpan =
+    (hasCheckboxCol ? 1 : 0) +
+    (hasRowNumbersCol ? 1 : 0) +
+    rowCols.length +
+    (leftSpacerWidth ? 1 : 0) +
+    (rightSpacerWidth ? 1 : 0);
+
+  // Windowed (lazy) data source: render the visible index range, reading each
+  // row from the cache. Not-yet-loaded rows render a placeholder of identical
+  // height so the scroll geometry holds while data streams in.
+  const renderWindowedRows = (): React.ReactNode[] => {
+    const out: React.ReactNode[] = [];
+    if (!windowed) return out;
+    for (let i = visibleRange.startIndex; i <= visibleRange.endIndex; i++) {
+      const slot = windowed.getRow(i);
+      if (slot.status === 'loaded') {
+        out.push(renderRow(slot.row, i));
+      } else {
+        out.push(
+          <WindowedPlaceholderRow
+            key={`w-${i}`}
+            status={slot.status}
+            rowIndex={i}
+            colSpan={placeholderColSpan}
+            rowHeight={rowHeight}
+            onRetry={slot.status === 'error' ? () => windowed.retryRow(i) : undefined}
+          />
+        );
+      }
+    }
+    return out;
+  };
+
   return (
     <tbody>
       {virtualScrollEnabled && visibleRange.offsetTop > 0 && (
         <tr style={{ height: visibleRange.offsetTop }} aria-hidden />
       )}
-      {virtualScrollEnabled
+      {windowed
+        ? renderWindowedRows()
+        : virtualScrollEnabled
         ? items.slice(visibleRange.startIndex, visibleRange.endIndex + 1).map((item, i) =>
             renderRow(item, visibleRange.startIndex + i)
           )
@@ -279,8 +322,8 @@ function DataGridTableInner<T>(props: IOGridDataGridProps<T>): React.ReactElemen
     wrapperRef, tableContainerRef, lastMouseShiftRef,
     interaction, pinning,
     handleResizeStart, handleResizeDoubleClick, getColumnWidth, isReorderDragging, dropIndicatorX, handleHeaderMouseDown,
-    virtualScrollEnabled, visibleRange, columnRange, onHorizontalScroll,
-    items, getRowId, emptyState, rowSelection,
+    virtualScrollEnabled, virtualRowHeight, visibleRange, columnRange, onHorizontalScroll,
+    items, windowed, getRowId, emptyState, rowSelection,
     isLoading, loadingMessage,
     ariaLabel, ariaLabelledBy, visibleColumns, columnOrder, columnReorder, density, rowHeight,
     rowNumberOffset, headerRows, allowOverflowX, fitToContent, showColumnLetters,
@@ -413,7 +456,7 @@ function DataGridTableInner<T>(props: IOGridDataGridProps<T>): React.ReactElemen
   );
 
   return (
-    <div style={GRID_ROOT_STYLE}>
+    <div style={virtualScrollEnabled ? GRID_ROOT_VIRTUAL_SCROLL_STYLE : GRID_ROOT_STYLE}>
       <div
         ref={wrapperRef}
         tabIndex={0}
@@ -424,6 +467,7 @@ function DataGridTableInner<T>(props: IOGridDataGridProps<T>): React.ReactElemen
         aria-label={ariaLabel ?? (ariaLabelledBy ? undefined : 'Data grid')}
         aria-labelledby={ariaLabelledBy}
         data-ogrid-scroll-container=""
+        data-virtual-scroll={virtualScrollEnabled ? '' : undefined}
         data-empty={showEmptyInGrid ? 'true' : undefined}
         data-loading={isLoading && items.length === 0 ? 'true' : undefined}
         data-column-count={totalColCount}
@@ -594,6 +638,8 @@ function DataGridTableInner<T>(props: IOGridDataGridProps<T>): React.ReactElemen
                     visibleRange={visibleRange}
                     columnRange={columnRange}
                     items={items}
+                    windowed={windowed}
+                    rowHeight={virtualRowHeight}
                     getRowId={getRowId}
                     selectedRowIds={selectedRowIds}
                     visibleCols={visibleCols}

@@ -4,7 +4,12 @@ import {
   getScrollTopForRow,
   computeVisibleColumnRange,
   partitionColumnsForVirtualization,
+  MAX_SPACER_PX,
+  computeScaledGeometry,
+  computeScaledWindow,
+  scrollTopForRowScaled,
 } from '../virtualScroll';
+import type { IScaledSpacerConfig } from '../virtualScroll';
 import type { IColumnDef } from '../../types';
 
 // ─── Row Virtualization (existing) ──────────────────────────────────────────
@@ -200,5 +205,177 @@ describe('partitionColumnsForVirtualization', () => {
     expect(result.pinnedRight.map(c => c.columnId)).toEqual(['p2']);
     expect(result.virtualizedUnpinned.map(c => c.columnId)).toEqual(['a', 'b']);
     expect(result.rightSpacerWidth).toBe(150);
+  });
+});
+
+// --- Scaled spacer (DOM height-cap workaround) ------------------------------
+
+describe('computeScaledGeometry', () => {
+  it('does not scale when content fits under the cap (100k rows)', () => {
+    const geom = computeScaledGeometry({ totalRows: 100_000, rowHeight: 36, viewportHeight: 480 });
+    expect(geom.scaled).toBe(false);
+    expect(geom.scale).toBe(1);
+    expect(geom.realHeight).toBe(3_600_000);
+    expect(geom.spacerHeight).toBe(3_600_000);
+  });
+
+  it('scales when content exceeds the cap (1,048,576 rows)', () => {
+    const geom = computeScaledGeometry({ totalRows: 1_048_576, rowHeight: 36, viewportHeight: 480 });
+    expect(geom.scaled).toBe(true);
+    expect(geom.realHeight).toBe(37_748_736);
+    expect(geom.spacerHeight).toBe(MAX_SPACER_PX);
+    expect(geom.spacerHeight).toBeLessThanOrEqual(MAX_SPACER_PX);
+    expect(geom.scale).toBeCloseTo(37_748_736 / 32_000_000, 5);
+  });
+
+  it('does not scale just under the cap and scales just over it', () => {
+    // 32M / 36 = 888,888.9 rows is the boundary.
+    const under = computeScaledGeometry({ totalRows: 888_000, rowHeight: 36, viewportHeight: 480 });
+    expect(under.scaled).toBe(false);
+    const over = computeScaledGeometry({ totalRows: 931_000, rowHeight: 36, viewportHeight: 480 });
+    expect(over.scaled).toBe(true);
+  });
+
+  it('exactly at the cap is not scaled', () => {
+    // rowHeight 32, 1,000,000 rows = exactly 32,000,000 px.
+    const geom = computeScaledGeometry({ totalRows: 1_000_000, rowHeight: 32, viewportHeight: 480 });
+    expect(geom.realHeight).toBe(MAX_SPACER_PX);
+    expect(geom.scaled).toBe(false);
+    expect(geom.scale).toBe(1);
+  });
+
+  it('respects a custom maxSpacerPx override', () => {
+    const geom = computeScaledGeometry({
+      totalRows: 1000,
+      rowHeight: 36,
+      viewportHeight: 400,
+      maxSpacerPx: 10_000,
+    });
+    expect(geom.realHeight).toBe(36_000);
+    expect(geom.spacerHeight).toBe(10_000);
+    expect(geom.scaled).toBe(true);
+    expect(geom.scale).toBe(3.6);
+  });
+
+  it('handles zero rows', () => {
+    const geom = computeScaledGeometry({ totalRows: 0, rowHeight: 36, viewportHeight: 480 });
+    expect(geom.realHeight).toBe(0);
+    expect(geom.spacerHeight).toBe(0);
+    expect(geom.scaled).toBe(false);
+  });
+});
+
+describe('computeScaledWindow', () => {
+  const bigCfg: IScaledSpacerConfig = {
+    totalRows: 1_048_576,
+    rowHeight: 36,
+    viewportHeight: 480,
+  };
+  const bigGeom = computeScaledGeometry(bigCfg);
+
+  it('returns an empty range for zero rows', () => {
+    const cfg: IScaledSpacerConfig = { totalRows: 0, rowHeight: 36, viewportHeight: 480 };
+    const win = computeScaledWindow(0, computeScaledGeometry(cfg), cfg);
+    expect(win).toEqual({ startIndex: 0, endIndex: -1, offsetPx: 0, realScrollTop: 0 });
+  });
+
+  it('returns an empty range for zero rowHeight', () => {
+    const cfg: IScaledSpacerConfig = { totalRows: 100, rowHeight: 0, viewportHeight: 480 };
+    const win = computeScaledWindow(0, computeScaledGeometry(cfg), cfg);
+    expect(win.endIndex).toBe(-1);
+  });
+
+  it('non-scaled path matches plain fixed-height math', () => {
+    const cfg: IScaledSpacerConfig = { totalRows: 100_000, rowHeight: 36, viewportHeight: 480 };
+    const geom = computeScaledGeometry(cfg);
+    expect(geom.scaled).toBe(false);
+    const win = computeScaledWindow(1000, geom, cfg, 8);
+    // firstVisible = floor(1000 / 36) = 27
+    expect(win.realScrollTop).toBe(1000);
+    expect(win.startIndex).toBe(Math.max(0, 27 - 8));
+    expect(win.endIndex).toBe(27 + Math.ceil(480 / 36) + 8);
+  });
+
+  it('at scrollTop 0 shows the first rows', () => {
+    const win = computeScaledWindow(0, bigGeom, bigCfg, 8);
+    expect(win.startIndex).toBe(0);
+    expect(win.realScrollTop).toBe(0);
+    expect(win.offsetPx).toBe(0);
+  });
+
+  it('at max scrollTop the last row is within the window', () => {
+    const maxCompressed = bigGeom.spacerHeight - bigCfg.viewportHeight;
+    const win = computeScaledWindow(maxCompressed, bigGeom, bigCfg, 8);
+    expect(win.endIndex).toBe(bigCfg.totalRows - 1);
+  });
+
+  it('keeps firstVisible monotonic across a full scroll sweep', () => {
+    const maxCompressed = bigGeom.spacerHeight - bigCfg.viewportHeight;
+    let prev = -1;
+    for (let s = 0; s <= maxCompressed; s += maxCompressed / 500) {
+      const win = computeScaledWindow(s, bigGeom, bigCfg, 8);
+      const firstVisible = win.startIndex === 0 ? 0 : win.startIndex + 8;
+      expect(firstVisible).toBeGreaterThanOrEqual(prev);
+      prev = firstVisible;
+    }
+  });
+
+  it('positions the rendered block at startIndex in compressed space', () => {
+    const win = computeScaledWindow(bigGeom.spacerHeight / 2, bigGeom, bigCfg, 8);
+    expect(win.offsetPx).toBeCloseTo((win.startIndex * bigCfg.rowHeight) / bigGeom.scale, 4);
+  });
+
+  it('scale-induced row skip per compressed pixel stays sub-row', () => {
+    // One compressed pixel spans scale real pixels; rows skipped per px is
+    // scale / rowHeight. Must stay well under 1 so scrolling is not jumpy.
+    const rowsPerCompressedPx = bigGeom.scale / bigCfg.rowHeight;
+    expect(rowsPerCompressedPx).toBeLessThan(0.04);
+  });
+});
+
+describe('scrollTopForRowScaled', () => {
+  const bigCfg: IScaledSpacerConfig = {
+    totalRows: 1_048_576,
+    rowHeight: 36,
+    viewportHeight: 480,
+  };
+  const bigGeom = computeScaledGeometry(bigCfg);
+  const maxCompressed = bigGeom.spacerHeight - bigCfg.viewportHeight;
+
+  it('non-scaled path returns the real row top', () => {
+    const cfg: IScaledSpacerConfig = { totalRows: 1000, rowHeight: 36, viewportHeight: 400 };
+    const geom = computeScaledGeometry(cfg);
+    expect(scrollTopForRowScaled(10, geom, cfg)).toBe(360);
+  });
+
+  it('non-scaled path clamps to the compressed scroll range', () => {
+    const cfg: IScaledSpacerConfig = { totalRows: 1000, rowHeight: 36, viewportHeight: 400 };
+    const geom = computeScaledGeometry(cfg);
+    const maxScroll = geom.spacerHeight - cfg.viewportHeight;
+    expect(scrollTopForRowScaled(999, geom, cfg)).toBe(maxScroll);
+  });
+
+  it('jump-to-last never overshoots the compressed scroll range', () => {
+    const st = scrollTopForRowScaled(bigCfg.totalRows - 1, bigGeom, bigCfg);
+    expect(st).toBeLessThanOrEqual(maxCompressed + 0.001);
+  });
+
+  it('jump-to-last lands on a window containing the last row', () => {
+    const st = scrollTopForRowScaled(bigCfg.totalRows - 1, bigGeom, bigCfg);
+    const win = computeScaledWindow(st, bigGeom, bigCfg, 8);
+    expect(win.endIndex).toBe(bigCfg.totalRows - 1);
+  });
+
+  it('round-trips a range of target rows within the overscan window', () => {
+    for (const target of [0, 1, 250_000, 500_000, 930_000, 1_000_000, 1_048_575]) {
+      const st = scrollTopForRowScaled(target, bigGeom, bigCfg);
+      const win = computeScaledWindow(st, bigGeom, bigCfg, 8);
+      expect(win.startIndex).toBeLessThanOrEqual(target);
+      expect(win.endIndex).toBeGreaterThanOrEqual(target);
+    }
+  });
+
+  it('row 0 maps to scrollTop 0', () => {
+    expect(scrollTopForRowScaled(0, bigGeom, bigCfg)).toBe(0);
   });
 });

@@ -2,6 +2,110 @@
 
 All notable changes to OGrid will be documented in this file.
 
+## [Unreleased]
+
+## [2.14.1] - 2026-05-16
+
+### Fixed — `@alaarab/ogrid-react-xlsx` row order
+
+`XlsxGrid` rendered sheet rows sorted by the first column (OGrid defaults its
+sort to `columns[0]` when no `defaultSortBy` is given) — a spreadsheet preview
+should read top-to-bottom as authored. `XlsxGrid` now passes `defaultSortBy:
+''` so rows keep their sheet order; columns remain click-to-sort.
+
+## [2.14.0] - 2026-05-16
+
+### Added — windowed (lazy) data source
+
+`IDataSource<T>` now supports an optional **windowed** mode for very large
+server-side datasets (millions of DB rows) without holding the dataset in
+memory. Instead of page-based `fetchPage`, a windowed source implements:
+
+```ts
+interface IWindowedDataSource<T> {
+  getRowCount(ctx): Promise<number>;        // scrollbar geometry (cheap COUNT)
+  getRows({ start, end, sort, filters }): Promise<IRowWindowResult<T>>;
+}
+```
+
+Virtualization requests only the visible row window; rows are fetched on
+demand. A data source is treated as windowed when it provides both
+`getRowCount` and `getRows` — use the `isWindowedDataSource()` guard to
+detect it. `fetchPage` is now optional so a pure windowed source can omit it.
+
+New `WindowedRowCache` / `createWindowedRowCache()` helper sits between the
+grid and a windowed source: caches fetched rows by index, coalesces and
+dedupes in-flight block fetches, returns synchronous loading placeholders
+for not-yet-loaded rows, evicts the least-recently-needed blocks, and
+invalidates on sort/filter change. New types: `IRowWindowParams`,
+`IRowWindowResult`, `IRowQueryContext`, `WindowedRow`, `WindowedRowCacheOptions`.
+
+### Added — full-dataset virtualization (decoupled from pagination)
+
+`IVirtualScrollConfig` gains a `paginate?: boolean` option (default `true`).
+With `virtualScroll={{ enabled: true, paginate: false }}` on a client-side
+grid, OGrid virtual-scrolls the **entire** in-memory dataset in one continuous
+viewport instead of virtualizing only the current page. Pagination is bypassed
+and its controls are hidden. Previously virtual scrolling only ever windowed
+the current 25–100 row page, so large datasets still required paging.
+
+### Fixed — standalone DataGridTable virtualization
+
+- A `DataGridTable` mounted directly with `virtualScroll.enabled` rendered zero
+  body rows. The `data-virtual-scroll` marker was only on the inner `<table>`,
+  so the height-contract CSS rule (`flex: 1; min-height: 0`) never reached the
+  scroll container; it collapsed to header height and the virtualizer measured
+  a 0px viewport, producing an empty visible range. The marker is now also on
+  the scroll container, and a standalone virtual-scroll grid gets a `minHeight`
+  fallback (`--ogrid-virtual-scroll-min-height`, default 480px) so it has a
+  measurable viewport even without a height-providing flex parent.
+- `useVirtualScroll` froze the visible range to its first (empty) value: it was
+  memoized on the stable virtualizer instance, so re-renders triggered by async
+  scroll-element measurement never refreshed the range. The range is now
+  recomputed every render.
+
+New export: `GRID_ROOT_VIRTUAL_SCROLL_STYLE` (the virtual-scroll variant of
+`GRID_ROOT_STYLE`).
+
+### Added — scaled spacer for million-row datasets
+
+Browsers cap a single element's rendered height (~33.5M px), which a plain
+virtual list hits at ~931k rows (rowHeight 36) — past that the last rows
+become unreachable. `useVirtualScroll` now switches automatically to a
+**scaled spacer**: the spacer is clamped under the cap and the browser
+scrollTop is remapped through a scale factor (the AG-Grid DOM-virtualisation
+technique), so a grid can virtual-scroll the full Excel row maximum
+(1,048,576 rows) and beyond. No configuration — scaling engages on its own
+when `totalRows * rowHeight` exceeds the cap. Core math: `computeScaledGeometry`,
+`computeScaledWindow`, `scrollTopForRowScaled`, `MAX_SPACER_PX`. The hook now
+also returns a `scaled` flag.
+
+### Added — windowed rows wired into the grid render path
+
+The windowed (lazy) data source is now consumed end to end. `OGrid` /
+`DataGridTable` accept a `windowed` accessor; the virtualized body reads each
+visible row by index from the cache and calls `requestWindow` as the viewport
+moves. Rows that have not arrived yet render a `WindowedPlaceholderRow` — a
+uniform-height loading skeleton, or an error row with a Retry button — so
+scroll geometry stays correct while data streams in. A windowed data source
+forces virtual scrolling on automatically. New export: `WindowedPlaceholderRow`.
+
+### Fixed — infinite render loop in windowed data fetching
+
+`useOGridDataFetching` keyed its windowed row-count effect on the
+`stableFilters` object identity. Callers that did not pass a referentially
+stable filters object re-ran the effect every render — `cache.setContext` →
+`invalidate` → `onChange` → `setState` → re-render → … — an unbounded loop
+that exhausted memory. The effect is now keyed on a content string.
+
+### Changed — `@alaarab/ogrid-react-xlsx` virtual-scrolls large sheets
+
+`XlsxGrid` previously rendered spreadsheet previews paginated (25 rows/page).
+It now runs fully virtualized (`virtualScroll: { enabled: true, paginate:
+false }`) with a fixed per-density row height, so CSV / XLSX previews scroll
+continuously over the whole sheet — tens or hundreds of thousands of rows —
+instead of paging.
+
 ## [2.13.0] - 2026-05-10
 
 ### Added — `@alaarab/ogrid-react-xlsx` headerRow option

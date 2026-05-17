@@ -45,7 +45,7 @@ export type { UseOGridSortingParams, UseOGridSortingState, SortState } from './u
 export { useOGridFilters as useOGridFiltersState } from './useOGridFilters';
 export type { UseOGridFiltersParams, UseOGridFiltersState } from './useOGridFilters';
 export { useOGridDataFetching } from './useOGridDataFetching';
-export type { UseOGridDataFetchingParams, UseOGridDataFetchingState } from './useOGridDataFetching';
+export type { UseOGridDataFetchingParams, UseOGridDataFetchingState, WindowedDataState } from './useOGridDataFetching';
 export { useActiveCell } from './useActiveCell';
 export type { UseActiveCellResult } from './useActiveCell';
 export { useCellEditing } from './useCellEditing';

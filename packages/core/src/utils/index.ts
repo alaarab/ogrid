@@ -52,8 +52,20 @@ export {
   getScrollTopForRow,
   computeVisibleColumnRange,
   partitionColumnsForVirtualization,
+  MAX_SPACER_PX,
+  computeScaledGeometry,
+  computeScaledWindow,
+  scrollTopForRowScaled,
 } from './virtualScroll';
-export type { IVisibleRange, IVisibleColumnRange } from './virtualScroll';
+export type {
+  IVisibleRange,
+  IVisibleColumnRange,
+  IScaledSpacerConfig,
+  IScaledSpacerGeometry,
+  IScaledRowWindow,
+} from './virtualScroll';
+export { WindowedRowCache, createWindowedRowCache } from './windowedRowCache';
+export type { WindowedRow, WindowedRowCacheOptions } from './windowedRowCache';
 export {
   createSortFilterWorker,
   terminateSortFilterWorker,

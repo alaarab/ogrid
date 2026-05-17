@@ -27,11 +27,16 @@ export type {
   IFilters,
   IFetchParams,
   IPageResult,
+  IRowWindowParams,
+  IRowWindowResult,
+  IRowQueryContext,
+  IWindowedDataSource,
   IDataSource,
   IGridColumnState,
   IOGridApi,
   IOGridProps,
   IOGridDataGridProps,
+  WindowedDataState,
   RowSelectionMode,
   RowId,
   IRowSelectionChangeEvent,
@@ -48,7 +53,7 @@ export type {
   IColumnReorderConfig,
   ISheetDef,
 } from './types';
-export { toUserLike, isInSelectionRange, normalizeSelectionRange } from './types';
+export { toUserLike, isInSelectionRange, normalizeSelectionRange, isWindowedDataSource } from './types';
 
 // Hooks
 export {
@@ -188,6 +193,7 @@ export type {
 // Constants
 export {
   GRID_ROOT_STYLE,
+  GRID_ROOT_VIRTUAL_SCROLL_STYLE,
   CURSOR_CELL_STYLE,
   POPOVER_ANCHOR_STYLE,
   PREVENT_DEFAULT,
@@ -252,6 +258,8 @@ export { createOGrid } from './components/createOGrid';
 export type { CreateOGridComponents, GridRowProps, InlineCellEditorProps } from './components/createOGrid';
 export { CellErrorBoundary } from './components/CellErrorBoundary';
 export type { CellErrorBoundaryProps } from './components/CellErrorBoundary';
+export { WindowedPlaceholderRow } from './components/WindowedPlaceholderRow';
+export type { WindowedPlaceholderRowProps } from './components/WindowedPlaceholderRow';
 export { EmptyState } from './components/EmptyState';
 export type { EmptyStateProps } from './components/EmptyState';
 export { BaseEmptyState } from './components/BaseEmptyState';
@@ -327,8 +335,12 @@ export {
   formatCellReference,
   getGridCellSurfaceState,
   handleBooleanCellPointerDown,
+  WindowedRowCache,
+  createWindowedRowCache,
 } from './utils';
 export type {
+  WindowedRow,
+  WindowedRowCacheOptions,
   CsvColumn,
   StatusBarPart,
   StatusBarPartsInput,

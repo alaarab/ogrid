@@ -437,6 +437,32 @@ export function createDataGridTableTests(DataGridTable: React.ComponentType<IOGr
         });
       }).not.toThrow();
     });
+
+    it('marks the scroll container with data-virtual-scroll when virtualizing', () => {
+      // The `data-virtual-scroll` attribute must sit on the scroll container
+      // (`[data-ogrid-scroll-container]`), not only the inner `<table>`. The
+      // height-contract CSS rule that gives the container a measurable height
+      // keys off the scroll container — without the attribute there, the
+      // container collapses and the virtualizer produces an empty range.
+      const { container } = renderTable({
+        items: manyRows,
+        virtualScroll: { enabled: true, rowHeight: 40, threshold: 50 },
+        visibleColumns: new Set(['name', 'status']),
+      });
+      const scrollContainer = container.querySelector('[data-ogrid-scroll-container]');
+      expect(scrollContainer).not.toBeNull();
+      expect(scrollContainer?.hasAttribute('data-virtual-scroll')).toBe(true);
+    });
+
+    it('does not mark the scroll container with data-virtual-scroll when not virtualizing', () => {
+      const { container } = renderTable({
+        items: manyRows.slice(0, 5),
+        visibleColumns: new Set(['name', 'status']),
+      });
+      const scrollContainer = container.querySelector('[data-ogrid-scroll-container]');
+      expect(scrollContainer).not.toBeNull();
+      expect(scrollContainer?.hasAttribute('data-virtual-scroll')).toBe(false);
+    });
   });
 
   // Cell references: column letter row

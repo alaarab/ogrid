@@ -18,6 +18,18 @@ export interface XlsxGridProps {
   headerRow?: SheetToGridDataOptions['headerRow'];
 }
 
+/**
+ * Fixed virtualized row height per density. Virtual scrolling needs a uniform
+ * row height, so the grid is pinned to one of these (via both `virtualScroll.
+ * rowHeight` and the top-level `rowHeight` prop) rather than letting rows size
+ * to content.
+ */
+const ROW_HEIGHT_BY_DENSITY: Record<NonNullable<XlsxGridProps['density']>, number> = {
+  compact: 28,
+  normal: 36,
+  comfortable: 44,
+};
+
 export function XlsxGrid({
   workbook,
   sheetName,
@@ -35,17 +47,23 @@ export function XlsxGrid({
     return <div style={{ padding: 16, opacity: 0.7 }}>Sheet not found: {sheetName}</div>;
   }
 
+  const rowHeight = ROW_HEIGHT_BY_DENSITY[density];
+
   // Cast: sheetMapper emits @alaarab/ogrid-core's IColumnDef where
   // cellEditor is `unknown`, while OGrid wants @alaarab/ogrid-react's
   // narrower variant. We never set cellEditor in the mapper so the
   // narrowing is sound at runtime. createOGrid()'s memo+forwardRef
   // also drops the generic at the call site, so T resolves to unknown.
   //
-  // Config matches the canonical formula+cellRef story in
-  // packages/react-radix/src/OGrid/OGrid.stories.tsx — explicit
-  // virtualScroll:{columns:false}, no layoutMode (default 'content'),
-  // no columnReorder (read-only preview). statusBar gives a familiar
-  // Excel-style row-count footer at the bottom of the modal.
+  // Virtual scrolling: a spreadsheet sheet can be tens or hundreds of
+  // thousands of rows long, so the grid runs fully virtualized.
+  // `enabled: true` turns on row virtualization; `paginate: false` makes
+  // it span the whole sheet instead of a 25-row page, giving continuous
+  // scroll over the entire dataset. `rowHeight` is fixed (the
+  // virtualization model requires a uniform row height) and the matching
+  // top-level `rowHeight` prop pins the rendered rows to it. Past ~931k
+  // rows the core scaled-spacer engages automatically to beat the browser
+  // element-height cap. statusBar gives an Excel-style row-count footer.
   const gridProps = {
     columns,
     data: rows,
@@ -53,7 +71,13 @@ export function XlsxGrid({
     cellReferences: true,
     formulas: true,
     initialFormulas,
-    virtualScroll: { columns: false },
+    // Show the sheet in its real row order. OGrid otherwise defaults its
+    // sort to the first column; an empty `defaultSortBy` opts out so a
+    // spreadsheet preview reads top-to-bottom as authored. Columns stay
+    // click-to-sort.
+    defaultSortBy: '',
+    virtualScroll: { enabled: true, paginate: false, rowHeight, columns: false },
+    rowHeight,
     density,
     statusBar: true,
     columnChooser: false as const,

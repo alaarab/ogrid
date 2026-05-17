@@ -88,7 +88,16 @@
     min-height: 200px;
   }
 
-  // Virtual scroll: fill the flex parent so the container has a measurable height.
+  // Virtual scroll: the scroll container needs a measurable, bounded height so
+  // the virtualizer can compute a visible range — TanStack returns an empty
+  // range when the scroll element measures 0px tall.
+  //
+  // `flex: 1` + `min-height: 0` fills (and can shrink within) a height-providing
+  // flex parent — the `OGrid` layout chain establishes that height. A standalone
+  // `DataGridTable` mounted without that chain has no height source; the grid
+  // root carries a `minHeight` fallback in virtual-scroll mode (see
+  // `GRID_ROOT_VIRTUAL_SCROLL_STYLE` in `constants/domHelpers.ts`) so the
+  // scroll container still measures a real viewport instead of collapsing.
   &[data-virtual-scroll] {
     flex: 1;
     min-height: 0;

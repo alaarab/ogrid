@@ -22,6 +22,10 @@ export type {
   IFilters,
   IFetchParams,
   IPageResult,
+  IRowWindowParams,
+  IRowWindowResult,
+  IRowQueryContext,
+  IWindowedDataSource,
   IDataSource,
   IGridColumnState,
   IOGridApi,
@@ -29,6 +33,7 @@ export type {
   IOGridClientProps,
   IOGridServerProps,
   IOGridDataGridProps,
+  WindowedDataState,
   RowSelectionMode,
   IRowSelectionChangeEvent,
   StatusBarPanel,
@@ -42,4 +47,4 @@ export type {
   ISheetDef,
 } from './dataGridTypes';
 
-export { toUserLike, isInSelectionRange, normalizeSelectionRange } from './dataGridTypes';
+export { toUserLike, isInSelectionRange, normalizeSelectionRange, isWindowedDataSource } from './dataGridTypes';

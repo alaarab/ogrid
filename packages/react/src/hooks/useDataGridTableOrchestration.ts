@@ -73,6 +73,8 @@ export interface UseDataGridTableOrchestrationResult<T> {
 
   // Derived from props
   items: T[];
+  /** Windowed (lazy) row access, or null/undefined for an in-memory dataset. */
+  windowed: IOGridDataGridProps<T>['windowed'];
   columns: IOGridDataGridProps<T>['columns'];
   getRowId: IOGridDataGridProps<T>['getRowId'];
   emptyState: IOGridDataGridProps<T>['emptyState'];
@@ -235,6 +237,7 @@ export function useDataGridTableOrchestration<T>(
   // ── Props destructuring ─────────────────────────────────────────────────
   const {
     items,
+    windowed,
     columns,
     getRowId,
     emptyState,
@@ -297,7 +300,9 @@ export function useDataGridTableOrchestration<T>(
   });
 
   // ── Virtual scroll ─────────────────────────────────────────────────────
-  const virtualScrollEnabled = virtualScroll?.enabled === true;
+  // A windowed (lazy) data source is always virtualized — the grid never holds
+  // its full dataset — so it enables virtual scrolling regardless of the prop.
+  const virtualScrollEnabled = virtualScroll?.enabled === true || !!windowed;
   const virtualRowHeight = virtualScroll?.rowHeight ?? 36;
   const columnVirtualization = virtualScroll?.columns === true;
 
@@ -314,17 +319,32 @@ export function useDataGridTableOrchestration<T>(
     return widths;
   }, [columnVirtualization, visibleCols, pinnedColumns, getColumnWidth]);
 
+  // Windowed (lazy) data source: the grid virtual-scrolls `windowed.rowCount`
+  // rows and reads each visible row via `windowed.getRow`. A windowed source
+  // is inherently virtualized, so it forces `enabled` on regardless of the
+  // `virtualScroll` prop, and falls back to a threshold of 0.
+  const virtualTotalRows = windowed ? windowed.rowCount : items.length;
   const { visibleRange, columnRange, onHorizontalScroll } = useVirtualScroll({
-    totalRows: items.length,
+    totalRows: virtualTotalRows,
     rowHeight: virtualRowHeight,
     enabled: virtualScrollEnabled,
     overscan: virtualScroll?.overscan,
-    threshold: virtualScroll?.threshold,
+    threshold: windowed ? 0 : virtualScroll?.threshold,
     containerRef: wrapperRef,
     columnVirtualization,
     columnWidths: unpinnedColumnWidths,
     columnOverscan: virtualScroll?.columnOverscan,
   });
+
+  // Fetch the visible window from a windowed data source as the viewport moves.
+  // `getRow` only reads cache; `requestWindow` is what drives the background
+  // fetches, so it must be called whenever the visible range changes.
+  const requestWindow = windowed?.requestWindow;
+  useEffect(() => {
+    if (!requestWindow) return;
+    if (visibleRange.endIndex < visibleRange.startIndex) return;
+    requestWindow(visibleRange.startIndex, visibleRange.endIndex + 1);
+  }, [requestWindow, visibleRange.startIndex, visibleRange.endIndex]);
 
   // ── Middle-click auto-scroll ───────────────────────────────────────────
   useMiddleClickScroll({ wrapperRef });
@@ -460,6 +480,7 @@ export function useDataGridTableOrchestration<T>(
 
     // Derived from props
     items,
+    windowed,
     columns,
     getRowId,
     emptyState,
