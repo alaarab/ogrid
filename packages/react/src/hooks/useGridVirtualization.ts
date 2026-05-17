@@ -127,7 +127,9 @@ export function useGridVirtualization(
     setContainerWidth(el.clientWidth);
     if (typeof ResizeObserver === 'undefined') return;
     const ro = new ResizeObserver((entries) => {
-      const entry = entries[0];
+      // `entries` can be nullish under non-spec-compliant ResizeObserver
+      // implementations in some test runtimes — guard before indexing it.
+      const entry = entries?.[0];
       if (!entry) return;
       setContainerHeight(entry.contentRect.height);
       setContainerWidth(entry.contentRect.width);

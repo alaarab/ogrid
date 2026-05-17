@@ -148,7 +148,9 @@ export function useVirtualScroll(params: UseVirtualScrollParams): UseVirtualScro
     setContainerWidth(el.clientWidth);
     if (typeof ResizeObserver === 'undefined') return;
     const ro = new ResizeObserver((entries) => {
-      if (entries.length > 0) {
+      // `entries` can be nullish under non-spec-compliant ResizeObserver
+      // implementations in some test runtimes — guard before reading it.
+      if (entries && entries.length > 0) {
         setContainerHeight(entries[0].contentRect.height);
         setContainerWidth(entries[0].contentRect.width);
       }
