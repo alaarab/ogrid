@@ -585,16 +585,24 @@ Configuration for virtual scrolling (rendering only visible rows for large datas
 ```typescript
 interface IVirtualScrollConfig {
   enabled?: boolean;
+  paginate?: boolean;
   rowHeight?: number;
   overscan?: number;
+  threshold?: number;
+  columns?: boolean;
+  columnOverscan?: number;
 }
 ```
 
 | Field | Type | Default | Description |
 |-------|------|---------|-------------|
 | `enabled` | `boolean` | `false` | Enable virtual scrolling. Must be `true` to activate. |
+| `paginate` | `boolean` | `true` | When `false`, bypass pagination and virtual-scroll the entire dataset in one viewport. Pagination controls are hidden. Client-side grids only. |
 | `rowHeight` | `number` | `36` | Fixed row height in pixels. All rows must have the same height. Required when enabled. |
 | `overscan` | `number` | `5` | Number of extra rows to render above/below the visible area (for smoother scrolling). |
+| `threshold` | `number` | `100` | Minimum row count before virtual scrolling activates. Below this, all rows render. |
+| `columns` | `boolean` | `false` | Enable column virtualization -- render only columns visible in the horizontal viewport. |
+| `columnOverscan` | `number` | `2` | Number of extra columns to render beyond the visible horizontal range on each side. |
 
 ### Usage Example
 

@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react';
 import type { IColumnDef, IColumnGroupDef, ICellValueChangedEvent } from './columnTypes';
-import type { IFormulaFunction, IRecalcResult, IGridDataAccessor, IAuditEntry, IAuditTrail, IResponsiveColumnsConfig } from '@alaarab/ogrid-core';
+import type { IFormulaFunction, IRecalcResult, IGridDataAccessor, IAuditEntry, IAuditTrail, IResponsiveColumnsConfig, WindowedRow } from '@alaarab/ogrid-core';
 
 // Re-export all shared types and functions from core (no React-specific changes)
 export type {
@@ -11,6 +11,10 @@ export type {
   IFilters,
   IFetchParams,
   IPageResult,
+  IRowWindowParams,
+  IRowWindowResult,
+  IRowQueryContext,
+  IWindowedDataSource,
   IDataSource,
   IGridColumnState,
   RowSelectionMode,
@@ -27,7 +31,7 @@ export type {
   IOGridApi,
 } from '@alaarab/ogrid-core';
 
-export { toUserLike, isInSelectionRange, normalizeSelectionRange } from '@alaarab/ogrid-core';
+export { toUserLike, isInSelectionRange, normalizeSelectionRange, isWindowedDataSource } from '@alaarab/ogrid-core';
 
 // Import types needed by React-specific interfaces below
 import type {
@@ -205,8 +209,35 @@ export interface IOGridServerProps<T> extends IOGridBaseProps<T> {
 export type IOGridProps<T> = IOGridClientProps<T> | IOGridServerProps<T>;
 
 /** Props passed from useOGrid to the framework-specific DataGridTable. */
+/**
+ * Sparse, index-addressed row access for a windowed (lazy) data source.
+ *
+ * Produced by `useOGridDataFetching` when the `dataSource` implements the
+ * windowed contract (`getRowCount` + `getRows`). The virtualized render path
+ * reads `getRow(index)` for each visible row and calls `requestWindow` as the
+ * viewport moves; rows arrive asynchronously and the grid re-renders. In
+ * windowed mode `items` is empty — the grid never holds the whole dataset.
+ */
+export interface WindowedDataState<T> {
+  /** Total row count for the current sort/filter state (0 until first known). */
+  rowCount: number;
+  /** Read the row slot at an absolute index: a loaded row, or a loading/error placeholder. */
+  getRow: (index: number) => WindowedRow<T>;
+  /** Ensure rows in `[start, end)` are loaded or loading. Call as the visible window moves. */
+  requestWindow: (start: number, end: number) => void;
+  /** Retry a previously failed block covering `index`. */
+  retryRow: (index: number) => void;
+}
+
 export interface IOGridDataGridProps<T> {
   items: T[];
+  /**
+   * Windowed (lazy) row access. Set when the data source streams rows on
+   * demand instead of holding them all in `items`. When present the grid
+   * virtual-scrolls `windowed.rowCount` rows and reads each visible row via
+   * `windowed.getRow`. Mutually exclusive with a populated `items` array.
+   */
+  windowed?: WindowedDataState<T> | null;
   columns: (IColumnDef<T> | IColumnGroupDef<T>)[];
   getRowId: (item: T) => RowId;
   sortBy?: string;

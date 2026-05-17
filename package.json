@@ -84,7 +84,7 @@
     "turbo": "^2.9.8",
     "typescript": "^6.0.3"
   },
-  "version": "2.13.0",
+  "version": "2.14.1",
   "lint-staged": {
     "*.{ts,tsx}": [
       "biome check --fix --no-errors-on-unmatched"

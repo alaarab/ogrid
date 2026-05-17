@@ -8,6 +8,26 @@ import type * as React from 'react';
 /** Root container style for the DataGridTable (flex column layout). */
 export const GRID_ROOT_STYLE: React.CSSProperties = { position: 'relative', flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column' };
 
+/**
+ * Root container style for the DataGridTable when virtual scrolling is enabled.
+ *
+ * Identical to `GRID_ROOT_STYLE` but with a `minHeight` floor. Virtual scroll
+ * needs the scroll container to measure a non-zero height — TanStack returns an
+ * empty visible range when the scroll element is 0px tall. Inside `OGrid` (or
+ * any height-providing flex parent) `flex: 1` stretches the root to fill and
+ * this floor is inert; mounted standalone with no height source, the floor
+ * keeps the grid from collapsing to its header height.
+ *
+ * Override the floor with the `--ogrid-virtual-scroll-min-height` CSS variable.
+ */
+export const GRID_ROOT_VIRTUAL_SCROLL_STYLE: React.CSSProperties = {
+  position: 'relative',
+  flex: 1,
+  minHeight: 'var(--ogrid-virtual-scroll-min-height, 480px)',
+  display: 'flex',
+  flexDirection: 'column',
+};
+
 /** Applied to cells that support editing  -  shows the cell cursor. */
 export const CURSOR_CELL_STYLE: React.CSSProperties = { cursor: 'cell' };
 

@@ -101,6 +101,32 @@ The grid replaces the standard row rendering with a virtualized strategy:
 
 Virtual scrolling automatically becomes a no-op when the dataset has fewer than **100 rows**. Below that threshold, all rows render normally -- there is no performance benefit from virtualizing a small list, and the passthrough avoids unnecessary spacer elements.
 
+### Full-Dataset Virtualization (No Pagination)
+
+By default, virtual scrolling windows the rows of the **current page** -- the grid still paginates, and each page is a separate scroll region. For a large in-memory dataset where paging would be an arbitrary interruption, set `paginate: false` to virtual-scroll the **entire** dataset in one continuous viewport:
+
+```tsx
+<OGrid
+  columns={columns}
+  data={data}                                       // e.g. 1,000,000 rows
+  getRowId={(r) => r.id}
+  virtualScroll={{ enabled: true, rowHeight: 36, paginate: false }}
+  statusBar
+/>
+```
+
+With `paginate: false`:
+
+- Every row is a candidate for rendering -- the grid scrolls through the whole dataset, not one page at a time.
+- Pagination controls are **hidden** (there are no pages to navigate).
+- Sorting and filtering still apply across the full dataset.
+
+`paginate` only applies to **client-side** grids (`data`). Server-side grids (`dataSource`) always page through the data source -- see [Server-Side Data](./server-side-data) for the windowed/lazy mode that streams very large datasets on demand.
+
+:::tip Standalone DataGridTable
+When mounting the lower-level `DataGridTable` directly (without `OGrid`), give its parent a definite height so the virtual-scroll viewport can be measured. A virtual-scroll `DataGridTable` falls back to a `min-height` of `480px` (override with the `--ogrid-virtual-scroll-min-height` CSS variable) so it never collapses to the header height.
+:::
+
 ### Custom Row Height
 
 The `rowHeight` property sets the fixed pixel height for every row. Choose a value that matches your CSS row height:
@@ -306,8 +332,10 @@ Column virtualization requires that all columns have a defined width (via `defau
 | Field | Type | Default | Description |
 |-------|------|---------|-------------|
 | `enabled` | `boolean` | `false` | Enable row virtual scrolling. Must be set to `true` to activate. |
+| `paginate` | `boolean` | `true` | When `false`, bypass pagination and virtual-scroll the entire dataset in one viewport. Pagination controls are hidden. Client-side grids only. |
 | `rowHeight` | `number` | `36` | Fixed height of each row in pixels. Required when row virtualization is enabled. |
 | `overscan` | `number` | `5` | Extra rows rendered above and below the visible area. |
+| `threshold` | `number` | `100` | Minimum row count before virtualization activates. Below this, all rows render. |
 | `columns` | `boolean` | `false` | Enable column virtualization. Renders only columns visible in the horizontal viewport. |
 | `columnOverscan` | `number` | `2` | Extra columns rendered beyond the visible horizontal range on each side. |
 

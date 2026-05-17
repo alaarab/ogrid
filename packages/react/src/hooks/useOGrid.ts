@@ -62,6 +62,12 @@ export interface UseOGridPagination {
   setPageSize: (size: number) => void;
   pageSizeOptions?: number[];
   entityLabelPlural: string;
+  /**
+   * True when pagination is bypassed (full-dataset virtualization mode —
+   * `virtualScroll.paginate === false`). The UI layer should not render
+   * pagination controls in this mode.
+   */
+  hidden: boolean;
 }
 
 /** Column chooser state and handlers. */
@@ -220,6 +226,15 @@ export function useOGrid<T>(
   const columns = useMemo(() => flattenColumns(columnsProp), [columnsProp]);
   const isServerSide = dataSource != null;
 
+  // Full-dataset virtualization: when `virtualScroll.enabled` and the consumer
+  // opts out of paging (`virtualScroll.paginate === false`) on a client-side
+  // grid, the grid virtual-scrolls the entire dataset in one viewport instead
+  // of one page at a time. Pagination is bypassed and its controls are hidden.
+  // Server-side grids always page through the `dataSource`, so the flag is
+  // ignored there.
+  const fullyVirtualized =
+    !isServerSide && virtualScroll?.enabled === true && virtualScroll?.paginate === false;
+
   // --- Runtime validation (dev-only, runs once on mount) ---
   const rowIdsValidatedRef = useRef(false);
   useEffect(() => {
@@ -257,6 +272,7 @@ export function useOGrid<T>(
     sortVersion: sortingState.sortVersion,
     page: paginationState.page,
     pageSize: paginationState.pageSize,
+    paginate: !fullyVirtualized,
     onError, onFirstDataRendered,
     workerSort,
   });
@@ -608,6 +624,7 @@ export function useOGrid<T>(
 
   const dataGridProps = useMemo<IOGridDataGridProps<T>>(() => ({
     items: dataFetchingState.displayItems,
+    windowed: dataFetchingState.windowed,
     columns: columnsProp,
     getRowId,
     sortBy: sortingState.sort.field,
@@ -652,7 +669,7 @@ export function useOGrid<T>(
     emptyState: dgEmptyState,
     ...dgFormulaProps,
   }), [
-    dataFetchingState.displayItems, columnsProp, getRowId,
+    dataFetchingState.displayItems, dataFetchingState.windowed, columnsProp, getRowId,
     sortingState.sort.field, sortingState.sort.direction, sortingState.handleSort,
     visibleColumns, effectiveColumnOrder, onColumnOrderChange, handleColumnResized,
     handleColumnPinned, pinnedOverrides, columnWidthOverrides,
@@ -674,7 +691,8 @@ export function useOGrid<T>(
     setPageSize: paginationState.setPageSize,
     pageSizeOptions,
     entityLabelPlural,
-  }), [paginationState.page, paginationState.pageSize, dataFetchingState.displayTotalCount, paginationState.setPage, paginationState.setPageSize, pageSizeOptions, entityLabelPlural]);
+    hidden: fullyVirtualized,
+  }), [paginationState.page, paginationState.pageSize, dataFetchingState.displayTotalCount, paginationState.setPage, paginationState.setPageSize, pageSizeOptions, entityLabelPlural, fullyVirtualized]);
 
   const columnChooser = useMemo<UseOGridColumnChooser>(() => ({
     columns: columnChooserColumns,

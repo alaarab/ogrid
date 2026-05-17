@@ -1,7 +1,7 @@
 import * as React from 'react';
 import type { Meta, StoryObj } from '@storybook/react';
 import { OGrid } from './OGrid';
-import type { IColumnDef, ICellValueChangedEvent, ISideBarDef } from '@alaarab/ogrid-react';
+import type { IColumnDef, ICellValueChangedEvent, ISideBarDef, IDataSource } from '@alaarab/ogrid-react';
 
 // ---------------------------------------------------------------------------
 // Demo data
@@ -338,12 +338,88 @@ export const VirtualScrolling10K: Story = {
         getRowId={getRowId}
         entityLabelPlural="projects"
         statusBar
-        pagination={false}
         layoutMode="fill"
-        virtualScroll={{ columns: false }}
+        virtualScroll={{ enabled: true, rowHeight: 36 }}
       />
     </div>
   ),
+};
+
+/**
+ * Full-dataset virtualization: `virtualScroll.paginate: false` bypasses
+ * pagination entirely — the grid virtual-scrolls all 100,000 rows in one
+ * continuous viewport instead of one page at a time. Pagination controls are
+ * hidden. The status bar still reports the full row count.
+ */
+export const FullDatasetVirtualization: Story = {
+  render: function FullDatasetStory() {
+    const [data] = React.useState(() => makeProjects(100_000));
+    return (
+      <div style={{ height: 600 }}>
+        <OGrid<Project>
+          data={data}
+          columns={columns}
+          getRowId={getRowId}
+          entityLabelPlural="projects"
+          statusBar
+          layoutMode="fill"
+          virtualScroll={{ enabled: true, rowHeight: 36, paginate: false }}
+        />
+      </div>
+    );
+  },
+};
+
+/**
+ * Windowed (lazy) data source — the "millions of DB rows" case. The data
+ * source never holds the dataset: `getRowCount` reports the total and
+ * `getRows` synthesizes only the requested window on demand. The total here
+ * is 1,000,000 rows, yet at most a few hundred ever exist in memory. Rows
+ * arrive after a simulated latency, so the loading-placeholder rows are
+ * visible while scrolling. Past ~931k rows the scaled spacer engages
+ * automatically to beat the browser element-height cap.
+ */
+export const WindowedDataSource: Story = {
+  render: function WindowedStory() {
+    const dataSource = React.useMemo<IDataSource<Project>>(() => {
+      const TOTAL = 1_000_000;
+      const makeRow = (i: number): Project => ({
+        id: `proj-${i + 1}`,
+        name: `Project ${String.fromCharCode(65 + (i % 26))}${Math.floor(i / 26) || ''}`,
+        status: STATUSES[i % STATUSES.length],
+        owner: OWNERS[i % OWNERS.length],
+        budget: 10000 + (i % 900) * 100,
+        startDate: new Date(2024, i % 12, 1 + (i % 28)).toISOString().slice(0, 10),
+        active: i % 3 !== 0,
+      });
+      return {
+        getRowCount: () => Promise.resolve(TOTAL),
+        getRows: ({ start, end }) =>
+          new Promise((resolve) => {
+            // Simulated network latency so the loading placeholders show.
+            setTimeout(() => {
+              const clampedEnd = Math.min(end, TOTAL);
+              const items: Project[] = [];
+              for (let i = start; i < clampedEnd; i++) items.push(makeRow(i));
+              resolve({ items, totalCount: TOTAL });
+            }, 250);
+          }),
+      };
+    }, []);
+    return (
+      <div style={{ height: 600 }}>
+        <OGrid<Project>
+          dataSource={dataSource}
+          columns={columns}
+          getRowId={getRowId}
+          entityLabelPlural="projects"
+          statusBar
+          layoutMode="fill"
+          virtualScroll={{ enabled: true, rowHeight: 36 }}
+        />
+      </div>
+    );
+  },
 };
 
 export const WorkerSort50K: Story = {

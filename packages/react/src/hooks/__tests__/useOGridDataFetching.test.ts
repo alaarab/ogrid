@@ -81,6 +81,50 @@ describe('useOGridDataFetching  -  client-side sync path', () => {
   });
 });
 
+describe('useOGridDataFetching  -  full-dataset virtualization (paginate=false)', () => {
+  it('returns the entire dataset, ignoring page/pageSize', () => {
+    const { result } = renderHook(() =>
+      // page 2 + pageSize 2 would normally slice to 2 rows; paginate=false bypasses it.
+      useOGridDataFetching(makeParams({ paginate: false, pageSize: 2, page: 2 }))
+    );
+
+    expect(result.current.displayItems).toHaveLength(5);
+    expect(result.current.displayTotalCount).toBe(5);
+  });
+
+  it('still sorts the full dataset when not paginating', () => {
+    const { result } = renderHook(() =>
+      useOGridDataFetching(makeParams({
+        paginate: false,
+        pageSize: 2,
+        sort: { field: 'age', direction: 'asc' },
+      }))
+    );
+
+    expect(result.current.displayItems).toHaveLength(5);
+    expect(result.current.displayItems[0].name).toBe('Eve'); // age 22
+    expect(result.current.displayItems[4].name).toBe('Charlie'); // age 35
+  });
+
+  it('worker sort path returns the full dataset when paginate=false', async () => {
+    const { result } = renderHook(() =>
+      useOGridDataFetching(makeParams({
+        paginate: false,
+        pageSize: 2,
+        page: 2,
+        workerSort: true,
+      }))
+    );
+
+    await waitFor(() => {
+      expect(result.current.displayItems.length).toBeGreaterThan(0);
+    });
+
+    expect(result.current.displayItems).toHaveLength(5);
+    expect(result.current.displayTotalCount).toBe(5);
+  });
+});
+
 describe('useOGridDataFetching  -  worker sort', () => {
   beforeEach(() => {
     (processClientSideDataAsync as jest.Mock).mockClear();
@@ -215,5 +259,100 @@ describe('useOGridDataFetching  -  sort snapshot (Excel-like behavior)', () => {
     // Now sorted: Eve(22), Bob(25), Diana(28), Alice(30), Charlie(35)
     expect(result.current.displayItems[0].name).toBe('Eve');
     expect(result.current.displayItems[4].name).toBe('Charlie');
+  });
+});
+
+describe('useOGridDataFetching  -  windowed (lazy) data source', () => {
+  /** Build an in-memory windowed data source over `total` synthetic rows. */
+  function makeWindowedSource(total: number) {
+    const windowCalls: Array<{ start: number; end: number }> = [];
+    return {
+      windowCalls,
+      source: {
+        async getRowCount() {
+          return total;
+        },
+        async getRows(params: { start: number; end: number }) {
+          windowCalls.push({ start: params.start, end: params.end });
+          const items: TestRow[] = [];
+          const end = Math.min(params.end, total);
+          for (let i = params.start; i < end; i++) {
+            items.push({ id: i, name: `Row ${i}`, age: i });
+          }
+          return { items, totalCount: total };
+        },
+      },
+    };
+  }
+
+  it('exposes a windowed accessor for a windowed data source', async () => {
+    const { source } = makeWindowedSource(100_000);
+    const { result } = renderHook(() =>
+      useOGridDataFetching(makeParams({ isServerSide: true, dataSource: source, displayData: [] }))
+    );
+    expect(result.current.windowed).not.toBeNull();
+    await waitFor(() => expect(result.current.windowed?.rowCount).toBe(100_000));
+    expect(result.current.displayTotalCount).toBe(100_000);
+    // displayItems stays empty — the render path reads getRow() instead.
+    expect(result.current.displayItems).toHaveLength(0);
+  });
+
+  it('windowed is null for a page-based data source', () => {
+    const pageSource = {
+      async fetchPage() {
+        return { items: [], totalCount: 0 };
+      },
+    };
+    const { result } = renderHook(() =>
+      useOGridDataFetching(makeParams({ isServerSide: true, dataSource: pageSource, displayData: [] }))
+    );
+    expect(result.current.windowed).toBeNull();
+  });
+
+  it('requestWindow fetches rows and getRow returns loaded slots', async () => {
+    const { source } = makeWindowedSource(100_000);
+    const { result } = renderHook(() =>
+      useOGridDataFetching(makeParams({ isServerSide: true, dataSource: source, displayData: [] }))
+    );
+    await waitFor(() => expect(result.current.windowed?.rowCount).toBe(100_000));
+
+    // Before requesting, an arbitrary row is a loading placeholder.
+    expect(result.current.windowed?.getRow(50).status).toBe('loading');
+
+    act(() => {
+      result.current.windowed?.requestWindow(0, 60);
+    });
+    await waitFor(() => {
+      expect(result.current.windowed?.getRow(0).status).toBe('loaded');
+    });
+    const slot = result.current.windowed?.getRow(10);
+    expect(slot).toEqual({ status: 'loaded', row: { id: 10, name: 'Row 10', age: 10 } });
+  });
+
+  it('refetches the row count when filters change', async () => {
+    let total = 100_000;
+    const source = {
+      async getRowCount() {
+        return total;
+      },
+      async getRows(params: { start: number; end: number }) {
+        return { items: [] as TestRow[], totalCount: total, _s: params.start };
+      },
+    };
+    let params = makeParams({ isServerSide: true, dataSource: source, displayData: [], stableFilters: {} });
+    const { result, rerender } = renderHook(() => useOGridDataFetching(params));
+    await waitFor(() => expect(result.current.windowed?.rowCount).toBe(100_000));
+
+    total = 42;
+    act(() => {
+      params = makeParams({
+        isServerSide: true,
+        dataSource: source,
+        displayData: [],
+        stableFilters: { name: { type: 'text', value: 'Row 1' } },
+      });
+      rerender();
+    });
+    await waitFor(() => expect(result.current.windowed?.rowCount).toBe(42));
   });
 });

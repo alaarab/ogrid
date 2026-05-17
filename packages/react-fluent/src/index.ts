@@ -35,6 +35,10 @@ export type {
   IFilters,
   IFetchParams,
   IPageResult,
+  IRowWindowParams,
+  IRowWindowResult,
+  IRowQueryContext,
+  IWindowedDataSource,
   IDataSource,
   IGridColumnState,
   IOGridApi,
@@ -54,7 +58,7 @@ export type {
   IVirtualScrollConfig,
   IColumnReorderConfig,
 } from '@alaarab/ogrid-react';
-export { toUserLike, isInSelectionRange, normalizeSelectionRange } from '@alaarab/ogrid-react';
+export { toUserLike, isInSelectionRange, normalizeSelectionRange, isWindowedDataSource } from '@alaarab/ogrid-react';
 
 // Hooks
 export {

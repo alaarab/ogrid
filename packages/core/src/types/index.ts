@@ -25,6 +25,10 @@ export type {
   IFilters,
   IFetchParams,
   IPageResult,
+  IRowWindowParams,
+  IRowWindowResult,
+  IRowQueryContext,
+  IWindowedDataSource,
   IDataSource,
   IGridColumnState,
   RowSelectionMode,
@@ -46,4 +50,5 @@ export {
   toUserLike,
   isInSelectionRange,
   normalizeSelectionRange,
+  isWindowedDataSource,
 } from './dataGridTypes';

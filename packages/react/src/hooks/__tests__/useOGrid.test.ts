@@ -128,6 +128,54 @@ describe('useOGrid', () => {
 
       expect(result.current.pagination.pageSizeOptions).toEqual([10, 25, 50]);
     });
+
+    it('pagination.hidden is false by default', () => {
+      const { result } = renderUseOGrid();
+
+      expect(result.current.pagination.hidden).toBe(false);
+    });
+  });
+
+  describe('full-dataset virtualization (virtualScroll.paginate=false)', () => {
+    it('renders the entire dataset instead of one page', () => {
+      const { result } = renderUseOGrid({
+        defaultPageSize: 2,
+        virtualScroll: { enabled: true, paginate: false, rowHeight: 36 },
+      });
+
+      // defaultPageSize 2 would normally slice to 2 items; paginate=false
+      // delivers all 5 rows so the grid can virtual-scroll the whole dataset.
+      expect(result.current.dataGridProps.items).toHaveLength(5);
+      expect(result.current.pagination.displayTotalCount).toBe(5);
+    });
+
+    it('hides pagination controls', () => {
+      const { result } = renderUseOGrid({
+        virtualScroll: { enabled: true, paginate: false, rowHeight: 36 },
+      });
+
+      expect(result.current.pagination.hidden).toBe(true);
+    });
+
+    it('still paginates when virtualScroll.paginate is true', () => {
+      const { result } = renderUseOGrid({
+        defaultPageSize: 2,
+        virtualScroll: { enabled: true, paginate: true, rowHeight: 36 },
+      });
+
+      expect(result.current.dataGridProps.items).toHaveLength(2);
+      expect(result.current.pagination.hidden).toBe(false);
+    });
+
+    it('still paginates when virtualScroll is enabled but paginate is omitted', () => {
+      const { result } = renderUseOGrid({
+        defaultPageSize: 2,
+        virtualScroll: { enabled: true, rowHeight: 36 },
+      });
+
+      expect(result.current.dataGridProps.items).toHaveLength(2);
+      expect(result.current.pagination.hidden).toBe(false);
+    });
   });
 
   describe('sorting', () => {

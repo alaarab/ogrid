@@ -56,12 +56,79 @@ export interface IPageResult<T> {
   totalCount: number;
 }
 
-/** Data source API: fetch a page and optionally filter options / people. */
-export interface IDataSource<T> {
-  fetchPage(params: IFetchParams): Promise<IPageResult<T>>;
+/** Parameters describing a contiguous row window requested by the grid. */
+export interface IRowWindowParams {
+  /** First row index to fetch (0-based, inclusive). */
+  start: number;
+  /** One past the last row index to fetch (0-based, exclusive). */
+  end: number;
+  sort?: { field: string; direction: 'asc' | 'desc' };
+  filters: IFilters;
+  /** Optional abort signal for cancelling stale window requests when grid state changes. */
+  signal?: AbortSignal;
+}
+
+/** Result of a windowed row fetch. `items[0]` corresponds to row index `start`. */
+export interface IRowWindowResult<T> {
+  /** Rows for the requested window, in order. May be shorter than the window near the end of the dataset. */
+  items: T[];
+  /**
+   * Total row count for the current sort/filter state. Optional: omit when the
+   * count is unchanged from a prior call so the grid keeps its cached total.
+   */
+  totalCount?: number;
+}
+
+/** Sort/filter context shared by windowed row-count and row-window requests. */
+export interface IRowQueryContext {
+  sort?: { field: string; direction: 'asc' | 'desc' };
+  filters: IFilters;
+  /** Optional abort signal for cancelling a stale request. */
+  signal?: AbortSignal;
+}
+
+/**
+ * Windowed data source: the grid asks only for the rows currently in (or near)
+ * the viewport rather than whole pages. Implementations report `getRowCount`
+ * for scrollbar geometry and serve `getRows` on demand. Pairs with
+ * `createWindowedRowCache` for caching, in-flight dedup, and loading placeholders.
+ *
+ * A data source is treated as windowed when it provides BOTH `getRowCount` and
+ * `getRows`; otherwise the grid falls back to the page-based `fetchPage` path.
+ */
+export interface IWindowedDataSource<T> {
+  /**
+   * Total number of rows for the given sort/filter state. Called when filters
+   * or sort change so the grid can size the virtual scroll spacer. Should be
+   * cheap to produce (e.g. a COUNT query), not a full data scan.
+   */
+  getRowCount(params: IRowQueryContext): Promise<number>;
+  /** Fetch a contiguous window of rows. The grid requests only the visible window plus overscan. */
+  getRows(params: IRowWindowParams): Promise<IRowWindowResult<T>>;
+}
+
+/**
+ * Data source API. Provide EITHER the page-based `fetchPage` (classic
+ * server-side pagination) OR the windowed pair `getRowCount` + `getRows`
+ * (on-demand windowed fetching for very large datasets). `fetchPage` is
+ * optional only so a pure windowed source can omit it; at least one mode
+ * must be implemented.
+ */
+export interface IDataSource<T> extends Partial<IWindowedDataSource<T>> {
+  fetchPage?(params: IFetchParams): Promise<IPageResult<T>>;
   fetchFilterOptions?(field: string): Promise<string[]>;
   searchPeople?(query: string): Promise<UserLike[]>;
   getUserByEmail?(email: string): Promise<UserLike | undefined>;
+}
+
+/**
+ * Narrowing guard: true when a data source implements the windowed contract
+ * (`getRowCount` + `getRows`). Use to pick the windowed fetch path over `fetchPage`.
+ */
+export function isWindowedDataSource<T>(
+  ds: IDataSource<T> | undefined
+): ds is IDataSource<T> & IWindowedDataSource<T> {
+  return !!ds && typeof ds.getRowCount === 'function' && typeof ds.getRows === 'function';
 }
 
 /** Column state returned by getColumnState(). All fields JSON-serializable for persistence (e.g. localStorage). */
@@ -190,6 +257,21 @@ export interface ISheetDef {
 export interface IVirtualScrollConfig {
   /** Enable virtual scrolling (default: false). */
   enabled?: boolean;
+  /**
+   * Whether the grid still paginates while virtualizing (default: true).
+   *
+   * `true` — virtual scrolling renders only the visible slice of the *current
+   * page*. Pagination controls stay active; each page is a separate scroll.
+   *
+   * `false` — full-dataset virtualization. Pagination is bypassed: every row is
+   * a candidate for rendering and the grid virtual-scrolls the entire dataset
+   * in one continuous viewport. Pagination controls are hidden. Use this for
+   * large in-memory datasets where paging would be an arbitrary interruption.
+   *
+   * Only meaningful when `enabled` is `true` and the grid is client-side
+   * (`data`, not `dataSource`).
+   */
+  paginate?: boolean;
   /** Fixed row height in pixels (required when enabled). */
   rowHeight?: number;
   /** Number of extra rows to render above/below the visible area (default: 5). */

@@ -445,7 +445,10 @@ export function useDataGridState<T>(
     [statusBar, items.length, selectedRowIds.size, aggregation]
   );
 
-  const showEmptyInGrid = items.length === 0 && !!emptyState && !props.isLoading;
+  // A windowed (lazy) data source keeps `items` empty by design — rows are read
+  // by index — so an empty `items` array there does not mean "no results".
+  const showEmptyInGrid =
+    items.length === 0 && !props.windowed && !!emptyState && !props.isLoading;
 
   // --- Memoize remaining sub-objects ---
 

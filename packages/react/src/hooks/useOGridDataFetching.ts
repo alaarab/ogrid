@@ -1,9 +1,19 @@
-import { useState, useEffect, useRef, useMemo } from 'react';
+import { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { processClientSideData } from '../utils';
-import { processClientSideDataAsync, shouldUseWorkerSort } from '@alaarab/ogrid-core';
+import {
+  processClientSideDataAsync,
+  shouldUseWorkerSort,
+  isWindowedDataSource,
+  WindowedRowCache,
+} from '@alaarab/ogrid-core';
 import { useLatestRef } from './useLatestRef';
-import type { IFilters, IDataSource } from '../types';
-import type { IColumnDef as ICoreColumnDef } from '@alaarab/ogrid-core';
+import type { IFilters, IDataSource, WindowedDataState } from '../types';
+import type { IColumnDef as ICoreColumnDef, WindowedRow } from '@alaarab/ogrid-core';
+
+// WindowedDataState is defined alongside IOGridDataGridProps in ../types (the
+// grid consumes it as a prop). Re-exported here so existing imports from this
+// module keep resolving.
+export type { WindowedDataState } from '../types';
 
 export interface UseOGridDataFetchingParams<T> {
   isServerSide: boolean;
@@ -20,6 +30,16 @@ export interface UseOGridDataFetchingParams<T> {
   sortVersion: number;
   page: number;
   pageSize: number;
+  /**
+   * Whether client-side results are paginated (default: true).
+   *
+   * When `false`, the client-side path skips the page slice: `displayItems` is
+   * the full sorted/filtered dataset and `displayTotalCount` is its full count.
+   * This is the full-dataset virtualization mode — the grid virtual-scrolls the
+   * entire dataset instead of one page. Ignored in server-side mode, where the
+   * `dataSource` always controls windowing.
+   */
+  paginate?: boolean;
   onError?: (err: unknown) => void;
   onFirstDataRendered?: () => void;
   /** Worker sort mode: true=always, 'auto'=when data > 5000 rows, false=sync. */
@@ -31,6 +51,15 @@ export interface UseOGridDataFetchingState<T> {
   displayTotalCount: number;
   serverLoading: boolean;
   refreshData: () => void;
+  /**
+   * Windowed (lazy) data-source accessors. Populated only when `dataSource`
+   * implements the windowed contract (`getRowCount` + `getRows`); otherwise
+   * `windowed` is `null`. The virtualized render path reads `getRow(index)`
+   * for each visible row and calls `requestWindow(start, end)` as the viewport
+   * moves. In windowed mode `displayItems` stays empty and `displayTotalCount`
+   * mirrors `windowed.rowCount`.
+   */
+  windowed: WindowedDataState<T> | null;
 }
 
 /**
@@ -44,7 +73,7 @@ export interface UseOGridDataFetchingState<T> {
 export function useOGridDataFetching<T>(params: UseOGridDataFetchingParams<T>): UseOGridDataFetchingState<T> {
   const {
     isServerSide, dataSource, displayData, columns, stableFilters,
-    sort, sortVersion, page, pageSize, onError, onFirstDataRendered, workerSort,
+    sort, sortVersion, page, pageSize, paginate = true, onError, onFirstDataRendered, workerSort,
   } = params;
 
   const isClientSide = !isServerSide;
@@ -127,12 +156,17 @@ export function useOGridDataFetching<T>(params: UseOGridDataFetchingParams<T>): 
     }
 
     const total = orderedRows.length;
+    // Full-dataset virtualization (paginate=false): return every row so the
+    // grid virtual-scrolls the whole dataset instead of a single page.
+    if (!paginate) {
+      return { items: orderedRows, totalCount: total };
+    }
     const start = (page - 1) * pageSize;
     const paged = orderedRows.slice(start, start + pageSize);
     return { items: paged, totalCount: total };
     // Note: sortVersion is implicitly tracked via needsResort / sortedIndicesRef.current === null
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isClientSide, useWorker, displayData, columns, stableFilters, sortVersion, sort.field, sort.direction, page, pageSize]);
+  }, [isClientSide, useWorker, displayData, columns, stableFilters, sortVersion, sort.field, sort.direction, page, pageSize, paginate]);
 
   // --- Client-side filtering & sorting (async worker path) ---
   const [asyncItems, setAsyncItems] = useState<{ items: T[]; totalCount: number } | null>(null);
@@ -185,6 +219,10 @@ export function useOGridDataFetching<T>(params: UseOGridDataFetchingParams<T>): 
         }).filter((idx) => idx !== -1);
         asyncSortedIndicesRef.current = indices;
         const total = rows.length;
+        if (!paginate) {
+          setAsyncItems({ items: rows as T[], totalCount: total });
+          return;
+        }
         const start = (page - 1) * pageSize;
         const paged = rows.slice(start, start + pageSize) as T[];
         setAsyncItems({ items: paged, totalCount: total });
@@ -193,12 +231,16 @@ export function useOGridDataFetching<T>(params: UseOGridDataFetchingParams<T>): 
       // Preserve order: look up updated rows by stored indices.
       const orderedRows = asyncSortedIndicesRef.current.map((idx) => displayData[idx]).filter((r) => r !== undefined);
       const total = orderedRows.length;
-      const start = (page - 1) * pageSize;
-      const paged = orderedRows.slice(start, start + pageSize);
-      setAsyncItems({ items: paged, totalCount: total });
+      if (!paginate) {
+        setAsyncItems({ items: orderedRows, totalCount: total });
+      } else {
+        const start = (page - 1) * pageSize;
+        const paged = orderedRows.slice(start, start + pageSize);
+        setAsyncItems({ items: paged, totalCount: total });
+      }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isClientSide, useWorker, displayData, columns, stableFilters, sortVersion, sort.field, sort.direction, page, pageSize]);
+  }, [isClientSide, useWorker, displayData, columns, stableFilters, sortVersion, sort.field, sort.direction, page, pageSize, paginate]);
 
   // --- Server-side data fetching ---
   const [serverItems, setServerItems] = useState<T[]>([]);
@@ -212,16 +254,21 @@ export function useOGridDataFetching<T>(params: UseOGridDataFetchingParams<T>): 
   const onErrorRef = useLatestRef(onError);
 
   useEffect(() => {
-    if (!isServerSide || !dataSourceRef.current) {
-      if (!isServerSide) setServerLoading(false);
+    const ds = dataSourceRef.current;
+    // A windowed data source (getRowCount + getRows) is driven by the
+    // windowed-cache path below, not this page-based fetch effect. A source
+    // with no `fetchPage` at all also skips this effect. In either case the
+    // page-based path stays idle and clears its loading flag.
+    const pageBased = !!ds && typeof ds.fetchPage === 'function' && !isWindowedDataSource(ds);
+    if (!isServerSide || !pageBased) {
+      setServerLoading(false);
       return;
     }
-    const ds = dataSourceRef.current;
     const id = ++fetchIdRef.current;
     const controller = new AbortController();
     setServerLoading(true);
-    ds
-      .fetchPage({
+    ds!
+      .fetchPage!({
         page, pageSize,
         sort: { field: sort.field, direction: sort.direction },
         filters: stableFilters,
@@ -246,9 +293,91 @@ export function useOGridDataFetching<T>(params: UseOGridDataFetchingParams<T>): 
     };
   }, [isServerSide, page, pageSize, sort.field, sort.direction, stableFilters, refreshCounter, dataSourceRef, onErrorRef]);
 
+  // --- Windowed (lazy) data source ---
+  // When the data source implements the windowed contract (getRowCount +
+  // getRows), the grid fetches only the visible row window on demand instead
+  // of whole pages. A WindowedRowCache holds fetched rows, dedupes in-flight
+  // fetches, and serves loading placeholders; `windowedTick` forces a re-render
+  // when the cache changes so the virtualized render path re-reads its rows.
+  const isWindowed = isServerSide && isWindowedDataSource(dataSource);
+  const [windowedTick, setWindowedTick] = useState(0);
+  const [windowedRowCount, setWindowedRowCount] = useState(0);
+  const windowedCacheRef = useRef<WindowedRowCache<T> | null>(null);
+
+  useEffect(() => {
+    const ds = dataSourceRef.current;
+    if (!isServerSide || !isWindowedDataSource(ds)) {
+      windowedCacheRef.current?.dispose();
+      windowedCacheRef.current = null;
+      return;
+    }
+    const cache = new WindowedRowCache<T>({
+      dataSource: ds,
+      onChange: () => {
+        setWindowedRowCount(cache.getRowCount() ?? 0);
+        setWindowedTick((t) => t + 1);
+      },
+    });
+    windowedCacheRef.current = cache;
+    return () => {
+      cache.dispose();
+      if (windowedCacheRef.current === cache) windowedCacheRef.current = null;
+    };
+    // Re-create the cache only when the data source identity or mode changes.
+  }, [isServerSide, isWindowed, dataSourceRef]);
+
+  // Re-fetch the row count whenever sort or filters change.
+  //
+  // Depend on a content key, not `stableFilters` identity. Not every caller
+  // guarantees a referentially stable filters object across renders; keying the
+  // effect on identity would re-run it every render, and each run calls
+  // `cache.setContext` -> `invalidate` -> `onChange` -> `setWindowedTick`,
+  // producing an infinite render loop. A content string only changes when the
+  // filters actually change.
+  const windowedFiltersKey = JSON.stringify(stableFilters);
+  useEffect(() => {
+    const cache = windowedCacheRef.current;
+    if (!cache) return;
+    cache.setContext({
+      sort: { field: sort.field, direction: sort.direction },
+      filters: stableFilters,
+    });
+    // stableFilters is read but intentionally excluded from deps in favour of
+    // windowedFiltersKey (its content-stable string form).
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isWindowed, sort.field, sort.direction, windowedFiltersKey, refreshCounter]);
+
+  const requestWindow = useCallback((start: number, end: number) => {
+    windowedCacheRef.current?.ensureRange(start, end);
+  }, []);
+  const getWindowedRow = useCallback(
+    (index: number): WindowedRow<T> =>
+      windowedCacheRef.current?.getRow(index) ?? { status: 'loading' },
+    []
+  );
+  const retryWindowedRow = useCallback((index: number) => {
+    windowedCacheRef.current?.retry(index);
+  }, []);
+
+  const windowed = useMemo<WindowedDataState<T> | null>(() => {
+    if (!isWindowed) return null;
+    return {
+      rowCount: windowedRowCount,
+      getRow: getWindowedRow,
+      requestWindow,
+      retryRow: retryWindowedRow,
+    };
+    // windowedTick is a dependency so consumers re-read rows after a fetch resolves.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isWindowed, windowedRowCount, windowedTick, getWindowedRow, requestWindow, retryWindowedRow]);
+
   const clientResult = clientItemsAndTotal ?? asyncItems;
   const displayItems = isClientSide && clientResult ? clientResult.items : serverItems;
-  const displayTotalCount = isClientSide && clientResult ? clientResult.totalCount : serverTotalCount;
+  const displayTotalCount = isWindowed
+    ? windowedRowCount
+    : isClientSide && clientResult
+      ? clientResult.totalCount
+      : serverTotalCount;
 
   // Fire onFirstDataRendered once when the grid first has data
   const onFirstDataRenderedRef = useLatestRef(onFirstDataRendered);
@@ -265,5 +394,6 @@ export function useOGridDataFetching<T>(params: UseOGridDataFetchingParams<T>): 
     displayTotalCount,
     serverLoading,
     refreshData: () => setRefreshCounter((prev) => prev + 1),
+    windowed,
   };
 }

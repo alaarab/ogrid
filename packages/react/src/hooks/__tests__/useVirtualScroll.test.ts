@@ -322,6 +322,45 @@ describe('useVirtualScroll  -  scrollToIndex', () => {
   });
 });
 
+describe('useVirtualScroll  -  active visibleRange recomputes per render', () => {
+  it('reflects a populated virtual range produced after the first render', () => {
+    // The virtualizer instance has a stable identity for the hook's lifetime.
+    // The scroll element is measured asynchronously, so getVirtualItems() is
+    // empty on the first render and populates on a later render. visibleRange
+    // must NOT be frozen to that first empty value (the bug that rendered zero
+    // body rows in a virtualized grid).
+    mockGetVirtualItems.mockReturnValue([] as never[]);
+    mockGetTotalSize.mockReturnValue(200 * 36);
+
+    const { result, rerender } = renderHook(() =>
+      useVirtualScroll({
+        totalRows: 200,
+        rowHeight: 36,
+        enabled: true,
+        threshold: 100,
+        containerRef: makeContainerRef(document.createElement('div')),
+      })
+    );
+
+    // First render: no virtual items yet -> empty range.
+    expect(result.current.visibleRange.endIndex).toBe(-1);
+
+    // Scroll element is now measured: the virtualizer reports a real window.
+    mockGetVirtualItems.mockReturnValue([
+      { index: 0, start: 0, end: 36 },
+      { index: 1, start: 36, end: 72 },
+      { index: 2, start: 72, end: 108 },
+    ] as never[]);
+    rerender();
+
+    expect(result.current.visibleRange.startIndex).toBe(0);
+    expect(result.current.visibleRange.endIndex).toBe(2);
+    expect(result.current.visibleRange.offsetTop).toBe(0);
+    // 200*36 total - last.end (108) = 7092
+    expect(result.current.visibleRange.offsetBottom).toBe(200 * 36 - 108);
+  });
+});
+
 // --- Column virtualization ---
 
 describe('useVirtualScroll  -  column virtualization', () => {
@@ -398,5 +437,107 @@ describe('useVirtualScroll  -  column virtualization', () => {
 
     expect(result.current).toHaveProperty('columnRange');
     expect(result.current).toHaveProperty('onHorizontalScroll');
+  });
+});
+
+describe('useVirtualScroll  -  scaled spacer (large datasets)', () => {
+  // Build a container element with a fixed viewport height. `totalRows` is just
+  // a number to the hook — no rows are materialized, so a million-row dataset
+  // costs nothing here.
+  function makeScaledContainer(clientHeight = 600) {
+    const el = document.createElement('div');
+    Object.defineProperty(el, 'clientHeight', { value: clientHeight, configurable: true });
+    el.scrollTo = jest.fn() as unknown as typeof el.scrollTo;
+    return el;
+  }
+
+  it('does not scale a dataset that fits under the height cap', () => {
+    const { result } = renderHook(() =>
+      useVirtualScroll({
+        totalRows: 50_000, // 50k * 36 = 1.8M px, well under the cap
+        rowHeight: 36,
+        enabled: true,
+        containerRef: makeContainerRef(makeScaledContainer()),
+      })
+    );
+    expect(result.current.scaled).toBe(false);
+  });
+
+  it('engages scaling when totalRows * rowHeight exceeds the cap', () => {
+    const { result } = renderHook(() =>
+      useVirtualScroll({
+        totalRows: 1_000_000, // 1M * 36 = 36M px, over the 32M cap
+        rowHeight: 36,
+        enabled: true,
+        containerRef: makeContainerRef(makeScaledContainer()),
+      })
+    );
+    expect(result.current.scaled).toBe(true);
+  });
+
+  it('clamps totalHeight to the spacer cap when scaled', () => {
+    const { result } = renderHook(() =>
+      useVirtualScroll({
+        totalRows: 1_000_000,
+        rowHeight: 36,
+        enabled: true,
+        containerRef: makeContainerRef(makeScaledContainer()),
+      })
+    );
+    expect(result.current.totalHeight).toBe(32_000_000);
+  });
+
+  it('reports the top window at scrollTop 0 with offsets summing to the spacer', () => {
+    const { result } = renderHook(() =>
+      useVirtualScroll({
+        totalRows: 1_000_000,
+        rowHeight: 36,
+        enabled: true,
+        containerRef: makeContainerRef(makeScaledContainer(600)),
+      })
+    );
+    const { startIndex, endIndex, offsetTop, offsetBottom } = result.current.visibleRange;
+    expect(startIndex).toBe(0);
+    expect(endIndex).toBeGreaterThan(0);
+    expect(offsetTop).toBe(0);
+    const blockHeight = (endIndex - startIndex + 1) * 36;
+    // The two spacers plus the rendered block fill exactly the clamped spacer.
+    expect(offsetTop + blockHeight + offsetBottom).toBe(32_000_000);
+  });
+
+  it('scrollToIndex remaps the target row to a compressed scrollTop', () => {
+    const container = makeScaledContainer(600);
+    const { result } = renderHook(() =>
+      useVirtualScroll({
+        totalRows: 1_000_000,
+        rowHeight: 36,
+        enabled: true,
+        containerRef: makeContainerRef(container),
+      })
+    );
+    result.current.scrollToIndex(500_000);
+    expect(container.scrollTo).toHaveBeenCalledTimes(1);
+    const arg = (container.scrollTo as jest.Mock).mock.calls[0][0];
+    expect(arg.behavior).toBe('auto');
+    // The remapped scrollTop must stay inside the clamped (compressed) range.
+    expect(arg.top).toBeGreaterThan(0);
+    expect(arg.top).toBeLessThanOrEqual(32_000_000);
+  });
+
+  it('keeps the last row reachable within the compressed range', () => {
+    const container = makeScaledContainer(600);
+    const { result } = renderHook(() =>
+      useVirtualScroll({
+        totalRows: 1_000_000,
+        rowHeight: 36,
+        enabled: true,
+        containerRef: makeContainerRef(container),
+      })
+    );
+    result.current.scrollToIndex(999_999);
+    const arg = (container.scrollTo as jest.Mock).mock.calls[0][0];
+    // Jump-to-last lands at the bottom of the compressed scroll range, never past it.
+    expect(arg.top).toBeLessThanOrEqual(32_000_000 - 600);
+    expect(arg.top).toBeGreaterThan(31_000_000);
   });
 });

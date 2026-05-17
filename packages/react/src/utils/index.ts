@@ -56,8 +56,12 @@ export {
   indexToColumnLetter,
   formatCellReference,
   getScrollTopForRow,
+  WindowedRowCache,
+  createWindowedRowCache,
 } from '@alaarab/ogrid-core';
 export type {
+  WindowedRow,
+  WindowedRowCacheOptions,
   CsvColumn,
   StatusBarPart,
   StatusBarPartsInput,

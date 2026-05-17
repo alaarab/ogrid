@@ -25,6 +25,10 @@ export type {
   IFilters,
   IFetchParams,
   IPageResult,
+  IRowWindowParams,
+  IRowWindowResult,
+  IRowQueryContext,
+  IWindowedDataSource,
   IDataSource,
   IGridColumnState,
   RowSelectionMode,
@@ -44,6 +48,7 @@ export {
   toUserLike,
   isInSelectionRange,
   normalizeSelectionRange,
+  isWindowedDataSource,
 } from './types';
 
 // Utils  -  exportToCsv
@@ -139,8 +144,22 @@ export {
   getScrollTopForRow,
   computeVisibleColumnRange,
   partitionColumnsForVirtualization,
+  MAX_SPACER_PX,
+  computeScaledGeometry,
+  computeScaledWindow,
+  scrollTopForRowScaled,
 } from './utils';
-export type { IVisibleRange, IVisibleColumnRange } from './utils';
+export type {
+  IVisibleRange,
+  IVisibleColumnRange,
+  IScaledSpacerConfig,
+  IScaledSpacerGeometry,
+  IScaledRowWindow,
+} from './utils';
+
+// Utils  -  windowedRowCache
+export { WindowedRowCache, createWindowedRowCache } from './utils';
+export type { WindowedRow, WindowedRowCacheOptions } from './utils';
 
 // Utils  -  workerSortFilter
 export {

@@ -91,15 +91,20 @@ export function createOGrid(components: CreateOGridComponents) {
           ) : undefined
         }
         pagination={
-          <PaginationControls
-            currentPage={pagination.page}
-            pageSize={pagination.pageSize}
-            totalCount={pagination.displayTotalCount}
-            onPageChange={pagination.setPage}
-            onPageSizeChange={pagination.setPageSize}
-            pageSizeOptions={pagination.pageSizeOptions}
-            entityLabelPlural={pagination.entityLabelPlural}
-          />
+          // Hidden in full-dataset virtualization mode (virtualScroll.paginate
+          // === false) — the grid scrolls the whole dataset, so there are no
+          // pages to navigate.
+          pagination.hidden ? undefined : (
+            <PaginationControls
+              currentPage={pagination.page}
+              pageSize={pagination.pageSize}
+              totalCount={pagination.displayTotalCount}
+              onPageChange={pagination.setPage}
+              onPageSizeChange={pagination.setPageSize}
+              pageSizeOptions={pagination.pageSizeOptions}
+              entityLabelPlural={pagination.entityLabelPlural}
+            />
+          )
         }
       >
         <DataGridTable {...(dataGridProps as IOGridDataGridProps<unknown>)} />
