@@ -16,6 +16,7 @@
   },
   "scripts": {
     "build": "rimraf dist && tsup && tsc -p tsconfig.build.json",
+    "typecheck": "tsc -p tsconfig.build.json --noEmit",
     "test": "bun test --preload ../../bun-test.setup.ts",
     "storybook": "storybook dev -p 6008 --no-open",
     "build-storybook": "storybook build"

@@ -1,5 +1,5 @@
 /**
- * Pure keyboard navigation helpers shared across React, Vue, Angular, and JS.
+ * Pure keyboard navigation helpers shared by the React UI packages.
  * No framework dependencies  -  takes plain values, returns plain values.
  */
 import type { ISelectionRange } from '../types/dataGridTypes';

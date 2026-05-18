@@ -37,7 +37,7 @@ function parseCellRefCoords(ref: string): { col: number; row: number } | null {
  */
 /**
  * Handle Enter/Escape key events in the formula bar input.
- * Shared across React, Angular, Vue, and JS.
+ * Shared by the React UI packages.
  */
 export function handleFormulaBarKeyDown(
   key: string,

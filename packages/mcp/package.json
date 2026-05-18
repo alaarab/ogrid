@@ -25,6 +25,7 @@
     "prebuild": "node scripts/bundle-docs.mjs",
     "build": "tsup",
     "dev": "tsup --watch",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
     "test": "bun test --preload ../../bun-test.setup.ts"
   },
   "dependencies": {

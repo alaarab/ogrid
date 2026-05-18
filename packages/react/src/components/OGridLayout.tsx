@@ -1,7 +1,6 @@
 /**
  * Single layout structure for OGrid: unified bordered container with
  * toolbar strip, grid area (optionally with sidebar), and footer strip.
- * UI packages supply Container (Fluent/Radix: div, Material: Box).
  */
 
 import * as React from 'react';
@@ -11,10 +10,6 @@ import type { SideBarProps } from './SideBar';
 import { GRID_BORDER_RADIUS } from '@alaarab/ogrid-core';
 
 export interface OGridLayoutProps {
-  /** Root container element (default: 'div'). Material can pass Box. */
-  containerComponent?: React.ElementType;
-  /** Extra props for the root container (e.g. sx for MUI Box). */
-  containerProps?: Record<string, unknown>;
   className?: string;
   /** Custom toolbar content (left-aligned in toolbar strip). */
   toolbar?: React.ReactNode;
@@ -177,8 +172,6 @@ const CollapseIcon = () => (
  */
 export function OGridLayout(props: OGridLayoutProps): React.ReactElement {
   const {
-    containerComponent: Container = 'div',
-    containerProps = {},
     className,
     toolbar,
     toolbarEnd,
@@ -224,10 +217,9 @@ export function OGridLayout(props: OGridLayoutProps): React.ReactElement {
   ) : null;
 
   return (
-    <Container
+    <div
       className={className}
       style={isFullScreen ? fullscreenRootStyle : rootStyle}
-      {...containerProps}
     >
       {/* === Bordered container === */}
       <div style={isFullScreen ? fullscreenContainerStyle : borderedContainerStyle}>
@@ -269,6 +261,6 @@ export function OGridLayout(props: OGridLayoutProps): React.ReactElement {
           <div style={footerStripStyle}>{pagination}</div>
         )}
       </div>
-    </Container>
+    </div>
   );
 }
