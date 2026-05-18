@@ -1,5 +1,5 @@
 /**
- * Shared pagination view model for Fluent, Material, and Radix PaginationControls.
+ * Shared pagination view model for the Radix and Fluent PaginationControls.
  * UI packages use this and render only presentation.
  */
 
@@ -23,7 +23,7 @@ export interface PaginationViewModel {
 }
 
 /**
- * Returns a view model for pagination UI. Use in Fluent/Material/Radix PaginationControls
+ * Returns a view model for pagination UI. Use in the Radix and Fluent PaginationControls
  * so page math lives in one place and components only render.
  */
 export function getPaginationViewModel(

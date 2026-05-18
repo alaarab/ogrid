@@ -1,6 +1,6 @@
 /**
  * Formula bar and formula reference highlighting constants.
- * Shared across React, Angular, Vue, and JS packages.
+ * Shared by the React UI packages.
  */
 
 /** Color palette for formula reference highlights (cycles 0–5). Uses CSS vars with fallbacks. */
@@ -13,7 +13,7 @@ export const FORMULA_REF_COLORS = [
   'var(--ogrid-formula-ref-5, #46bdc6)',
 ] as const;
 
-/** CSS text for the formula bar container (used by JS and Angular inline styles). */
+/** CSS text for the formula bar container (for inline-style consumers). */
 export const FORMULA_BAR_CSS = {
   bar: 'display:flex;align-items:center;border-bottom:1px solid var(--ogrid-border, #e0e0e0);background:var(--ogrid-bg, #fff);min-height:28px;font-size:13px;',
   nameBox: 'font-family:monospace;font-size:12px;font-weight:500;padding:2px 8px;border-right:1px solid var(--ogrid-border, #e0e0e0);background:var(--ogrid-bg, #fff);color:var(--ogrid-fg, #242424);min-width:52px;text-align:center;line-height:24px;user-select:none;white-space:nowrap;',
@@ -21,7 +21,7 @@ export const FORMULA_BAR_CSS = {
   input: 'flex:1;border:none;outline:none;padding:2px 8px;font-family:monospace;font-size:12px;line-height:24px;background:transparent;color:var(--ogrid-fg, #242424);min-width:0;',
 } as const;
 
-/** Style objects for the formula bar  -  used by React and Vue (CSSProperties-compatible). */
+/** Style objects for the formula bar (CSSProperties-compatible). */
 export const FORMULA_BAR_STYLES = {
   bar: {
     display: 'flex',

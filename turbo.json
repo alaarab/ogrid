@@ -1,16 +1,21 @@
 {
   "$schema": "https://turbo.build/schema.json",
-  "globalDependencies": ["jest.config.base.js"],
   "tasks": {
     "build": {
       "dependsOn": ["^build"],
-      "inputs": ["src/**/*.ts", "src/**/*.tsx", "src/**/*.vue", "src/**/*.scss", "package.json", "tsconfig*.json"],
+      "inputs": ["src/**/*.ts", "src/**/*.tsx", "src/**/*.scss", "package.json", "tsconfig*.json"],
       "outputs": ["dist/esm/**", "dist/types/**"]
+    },
+    "typecheck": {
+      "dependsOn": ["^build"],
+      "cache": true,
+      "inputs": ["src/**", "tsconfig*.json"],
+      "outputs": []
     },
     "test": {
       "dependsOn": ["build"],
       "cache": true,
-      "inputs": ["src/**", "jest.config.*", "jest-mocks/**", "tsconfig.*"],
+      "inputs": ["src/**", "$TURBO_ROOT$/bun-test.setup.ts", "tsconfig.*"],
       "outputs": []
     },
     "lint": {
@@ -18,7 +23,7 @@
     },
     "storybook": {
       "cache": true,
-      "inputs": ["src/**/*.stories.tsx", "src/**/*.stories.ts", "src/**/*.tsx", "src/**/*.ts", "src/**/*.vue", "src/**/*.scss", ".storybook/**"],
+      "inputs": ["src/**/*.stories.tsx", "src/**/*.stories.ts", "src/**/*.tsx", "src/**/*.ts", "src/**/*.scss", ".storybook/**"],
       "persistent": true
     }
   }

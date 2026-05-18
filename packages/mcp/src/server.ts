@@ -82,15 +82,19 @@ function fromResourcePath(resourcePath: string, index: DocsIndex): ReturnType<Do
 // ---------------------------------------------------------------------------
 
 export function createOGridMcpServer(index: DocsIndex, bridge?: BridgeStore): McpServer {
-  const server = new McpServer({
-    name: 'ogrid-docs',
-    version: '2.3.0',
-    instructions: `OGrid documentation server. OGrid is a lightweight, headless data grid for React (Radix and Fluent UI implementations).
+  const server = new McpServer(
+    {
+      name: 'ogrid-docs',
+      version: '2.3.0',
+    },
+    {
+      instructions: `OGrid documentation server. OGrid is a lightweight, headless data grid for React (Radix and Fluent UI implementations).
 
 Tools: search_docs (keyword search), list_docs (browse by category), get_docs (full page), get_code_example (code snippets), detect_version (detect OGrid version in your project).
 Resources: ogrid://quick-reference (key API overview), ogrid://docs/{path} (any doc page by path).
 Categories: features, getting-started, guides, api.`,
-  });
+    },
+  );
 
   // -------------------------------------------------------------------------
   // Tool: search_docs
@@ -381,12 +385,14 @@ Categories: features, getting-started, guides, api.`,
         {
           uri: uri.href,
           mimeType: 'text/markdown',
+          // Source of truth: docs/api/ogrid-props.mdx + docs/api/column-def.mdx.
+          // Keep this in sync when those API references change.
           text: [
             '# OGrid Quick Reference',
             '',
             '## Install',
             '```bash',
-            '# React (choose one)',
+            '# React (choose one UI variant)',
             'npm install @alaarab/ogrid-react-radix',
             'npm install @alaarab/ogrid-react-fluent',
             '```',
@@ -394,34 +400,38 @@ Categories: features, getting-started, guides, api.`,
             '## Core Props (IOGridProps)',
             '| Prop | Type | Description |',
             '|------|------|-------------|',
-            '| `data` | `T[]` | Client-side row data |',
-            '| `columns` | `IColumnDef<T>[]` | Column definitions |',
-            '| `dataSource` | `IDataSource<T>` | Server-side data source |',
-            '| `pagination` | `boolean \\| number` | Enable pagination (number = page size) |',
-            '| `rowSelection` | `"single" \\| "multiple"` | Row selection mode |',
+            '| `data` | `T[]` | Client-side row data (mutually exclusive with `dataSource`) |',
+            '| `dataSource` | `IDataSource<T>` | Server-side data source (mutually exclusive with `data`) |',
+            '| `columns` | `(IColumnDef<T> \\| IColumnGroupDef<T>)[]` | Column definitions (and optional groups) |',
+            '| `getRowId` | `(item: T) => RowId` | **Required.** Stable unique id for each row |',
+            '| `defaultPageSize` | `number` | Initial page size in uncontrolled mode (default 25) |',
+            '| `pageSizeOptions` | `number[]` | Options shown in the page-size dropdown |',
+            '| `rowSelection` | `"none" \\| "single" \\| "multiple"` | Row selection mode |',
+            '| `editable` | `boolean` | Enable inline cell editing globally |',
             '| `formulas` | `boolean` | Enable formula engine (=SUM, =IF, etc.) |',
             '| `cellReferences` | `boolean` | Excel-style A1 column headers + name box |',
             '| `workerSort` | `boolean \\| "auto"` | Web Worker sort/filter |',
             '| `columnChooser` | `boolean \\| "toolbar" \\| "sidebar"` | Column visibility control |',
             '| `sideBar` | `boolean \\| ISideBarDef` | Sidebar panel |',
             '| `toolbar` | `ReactNode` | Custom toolbar content |',
-            '| `onRowSelectionChanged` | `(rows: T[]) => void` | Row selection callback |',
-            '| `onCellValueChanged` | `(e: ICellValueChangedEvent) => void` | Cell edit callback |',
+            '| `onSelectionChange` | `(e: IRowSelectionChangeEvent<T>) => void` | Row selection callback |',
+            '| `onCellValueChanged` | `(e: ICellValueChangedEvent<T>) => void` | Cell edit callback |',
             '',
             '## IColumnDef Key Fields',
             '| Field | Type | Description |',
             '|-------|------|-------------|',
-            '| `columnId` | `string` | Unique column ID (maps to data key) |',
-            '| `headerName` | `string` | Column header label |',
+            '| `columnId` | `string` | Unique column id (maps to the data key) |',
+            '| `name` | `string` | Column header label |',
             '| `type` | `"text" \\| "numeric" \\| "date" \\| "boolean"` | Data type |',
-            '| `filter` | `"none" \\| "text" \\| "multiSelect" \\| "date"` | Filter type |',
-            '| `editable` | `boolean \\| (row) => boolean` | Enable inline editing |',
-            '| `width` | `number` | Column width in px |',
-            '| `pinned` | `"left" \\| "right"` | Pin column |',
-            '| `sortable` | `boolean` | Enable sorting |',
-            '| `hidden` | `boolean` | Hide column by default |',
-            '| `valueGetter` | `(row: T) => unknown` | Custom value extractor |',
-            '| `renderCell` | `(value, row) => ReactNode` | Custom cell renderer (React) |',
+            '| `filterable` | `IColumnFilterDef` | Filter config; omit to make the column not filterable |',
+            '| `editable` | `boolean \\| ((item: T) => boolean)` | Enable inline editing |',
+            '| `sortable` | `boolean` | Enable sorting (default true) |',
+            '| `defaultWidth` | `number` | Default column width in pixels |',
+            '| `pinned` | `"left" \\| "right"` | Pin column to an edge |',
+            '| `defaultVisible` | `boolean` | Show column by default (false = hidden, toggle via chooser) |',
+            '| `cellEditor` | `"text" \\| "select" \\| "checkbox" \\| "richSelect" \\| "date" \\| ComponentType` | Cell editor |',
+            '| `valueGetter` | `(item: T) => unknown` | Custom value extractor |',
+            '| `renderCell` | `(item: T) => ReactNode` | Custom cell renderer |',
             '',
             '## Common Patterns',
             '',
@@ -429,27 +439,27 @@ Categories: features, getting-started, guides, api.`,
             '```tsx',
             'import { OGrid } from "@alaarab/ogrid-react-radix";',
             'const columns = [',
-            '  { columnId: "name", headerName: "Name", type: "text", filter: "text" },',
-            '  { columnId: "age",  headerName: "Age",  type: "numeric", sortable: true },',
+            '  { columnId: "name", name: "Name", type: "text", filterable: { type: "text" } },',
+            '  { columnId: "age",  name: "Age",  type: "numeric", sortable: true },',
             '];',
-            '<OGrid data={rows} columns={columns} pagination={50} />',
+            '<OGrid data={rows} columns={columns} getRowId={(r) => r.id} defaultPageSize={50} />',
             '```',
             '',
             '### Server-side data',
             '```tsx',
             'const dataSource = {',
-            '  fetchPage: async ({ page, pageSize, sortModel, filterModel }) => {',
-            '    const res = await fetch(`/api/data?page=${page}&size=${pageSize}`);',
+            '  fetchPage: async ({ page, pageSize, sort, filters, signal }) => {',
+            '    const res = await fetch(`/api/data?page=${page}&size=${pageSize}`, { signal });',
             '    const json = await res.json();',
-            '    return { rows: json.data, totalCount: json.total };',
-            '  }',
+            '    return { items: json.data, totalCount: json.total };',
+            '  },',
             '};',
-            '<OGrid dataSource={dataSource} columns={columns} pagination={50} />',
+            '<OGrid dataSource={dataSource} columns={columns} getRowId={(r) => r.id} defaultPageSize={50} />',
             '```',
             '',
             '### Formula support',
             '```tsx',
-            '<OGrid data={rows} columns={columns} formulas cellReferences />',
+            '<OGrid data={rows} columns={columns} getRowId={(r) => r.id} formulas cellReferences />',
             '// Users can type =SUM(A1:C3), =IF(A1>0,"yes","no"), etc.',
             '```',
           ].join('\n'),
@@ -750,7 +760,7 @@ Categories: features, getting-started, guides, api.`,
           .enum(['update_cell', 'set_filter', 'clear_filters', 'set_sort', 'go_to_page'])
           .describe('Command type'),
         payload: z
-          .record(z.unknown())
+          .record(z.string(), z.unknown())
           .describe('Command-specific payload (see tool description for fields per type)'),
         timeoutMs: z
           .number()

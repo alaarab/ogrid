@@ -1,6 +1,6 @@
 /**
  * View model helpers for DataGridTable.
- * Pure TypeScript  -  no framework dependencies (React, Angular, Vue).
+ * Pure TypeScript  -  no framework dependencies.
  * Framework packages re-export these and may add thin framework-specific wrappers.
  */
 
