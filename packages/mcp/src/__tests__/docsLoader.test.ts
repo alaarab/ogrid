@@ -215,6 +215,15 @@ describe('DocsIndex.search', () => {
     expect(results[0].title).toBe('Sorting');
   });
 
+  test('multi-word query matches via tokens when the exact phrase is absent', () => {
+    const index = loadDocsIndex(dir);
+    // The exact phrase "column sorting" appears in no doc, but both tokens
+    // occur in the Sorting doc — token scoring should still surface it.
+    const results = index.search('column sorting');
+    expect(results.length).toBeGreaterThan(0);
+    expect(results[0].title).toBe('Sorting');
+  });
+
   test('returns empty array when no docs match and no category bonus applies', () => {
     // Build a fresh index with no features/getting-started categories
     // so the category bonus does not inflate scores for unrelated queries.

@@ -41,27 +41,18 @@ export interface GridRowProps {
 }
 
 export interface CreateOGridComponents {
-  DataGridTable: React.ComponentType<IOGridDataGridProps<unknown>>;
+  /** Generic data-grid component. Matches the `DataGridTable` exported by each UI variant. */
+  DataGridTable: <T>(props: IOGridDataGridProps<T>) => React.ReactElement;
   ColumnChooser: React.ComponentType<IColumnChooserProps>;
   PaginationControls: React.ComponentType<IPaginationControlsProps>;
-  /** Optional wrapper component + props (e.g. MUI Box with sx). */
-  containerComponent?: React.ElementType;
-  containerProps?: Record<string, unknown>;
 }
 
 /**
  * Factory that creates a memoized, forwardRef OGrid component.
  * Used by Radix and Fluent to avoid duplicating the same wiring code.
- * Material uses its own OGrid because it adds MUI theme bridging (containerSx).
  */
 export function createOGrid(components: CreateOGridComponents) {
-  const {
-    DataGridTable,
-    ColumnChooser,
-    PaginationControls,
-    containerComponent,
-    containerProps,
-  } = components;
+  const { DataGridTable, ColumnChooser, PaginationControls } = components;
 
   const OGridInner = forwardRef(function OGridInner<T>(
     props: IOGridProps<T>,
@@ -71,8 +62,6 @@ export function createOGrid(components: CreateOGridComponents) {
 
     return (
       <OGridLayout
-        containerComponent={containerComponent}
-        containerProps={containerProps}
         className={layout.className}
         sideBar={layout.sideBarProps}
         toolbar={layout.toolbar}

@@ -20,6 +20,7 @@ describe('useClipboard', () => {
     Object.defineProperty(navigator, 'clipboard', {
       value: { writeText: writeTextMock, readText: readTextMock },
       writable: true,
+      configurable: true,
     });
   });
 

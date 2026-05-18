@@ -1,5 +1,5 @@
 /**
- * Shared definition for grid context menu items. Used by Fluent, Material, and Radix GridContextMenu components.
+ * Shared definition for grid context menu items. Used by the Radix and Fluent GridContextMenu components.
  */
 export interface GridContextMenuItem {
   id: string;
@@ -40,7 +40,7 @@ export interface GridContextMenuHandlerProps {
 
 /**
  * Returns a map of menu item id -> click handler. Each handler invokes the corresponding
- * action and then onClose. Used by Fluent, Material, and Radix GridContextMenu components.
+ * action and then onClose. Used by the Radix and Fluent GridContextMenu components.
  */
 export function getContextMenuHandlers(
   props: GridContextMenuHandlerProps

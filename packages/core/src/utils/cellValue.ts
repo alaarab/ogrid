@@ -25,7 +25,7 @@ export function isColumnEditable<T>(col: IColumnDef<T>, item: T): boolean {
 
 /**
  * Create an IGridDataAccessor from items and flat columns.
- * Shared factory used by React, Angular, Vue, and JS formula engine integrations.
+ * Shared factory used by the formula engine integration.
  */
 export function createGridDataAccessor<T>(
   items: T[],

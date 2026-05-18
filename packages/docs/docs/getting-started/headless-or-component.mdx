@@ -15,7 +15,7 @@ fits the page you're building — you can mix them in the same app.
 | **What you write** | One JSX element | A handful of hook calls + your own `<table>` markup |
 | **Time to first working grid** | ~5 lines | ~50-100 lines |
 | **Customization ceiling** | High (theme tokens, slots) | Unlimited (you draw the chrome) |
-| **Design-system fit** | Inherits via theme presets (shadcn, Fluent, Material) | Native — uses your chrome primitives directly |
+| **Design-system fit** | Inherits via theme presets (shadcn, Fluent) | Native — uses your chrome primitives directly |
 | **Spreadsheet features** | Built-in | Composable from hooks |
 | **Best for** | Standard list pages, admin tables, dashboards | Pages where chrome integration matters more than save-time |
 
@@ -23,7 +23,7 @@ fits the page you're building — you can mix them in the same app.
 
 - You want a complete grid in one element. Sort, filter, paginate, edit,
   range select, fill handle, copy/paste, undo, keyboard nav — all wired.
-- The default chrome (via your chosen UI variant — Radix / Fluent / Material)
+- The default chrome (via your chosen UI variant — Radix / Fluent)
   is close enough to your design system that a theme preset (`preset-shadcn.css`)
   can bridge the rest.
 - You're prototyping or building admin pages where shipping fast matters
@@ -45,8 +45,7 @@ const columns = [
 ## Use `useHeadlessGrid` + the spreadsheet hooks when…
 
 - You want OGrid's logic but rendered with your own table chrome
-  (shadcn `<Table>`, Fluent `<DataGrid>`, Material `<TableRow>`, plain HTML —
-  anything).
+  (shadcn `<Table>`, Fluent `<DataGrid>`, plain HTML — anything).
 - The chrome integration is non-negotiable: a specific design system,
   custom row layouts, embedded widgets in cells, or shared `<TableRow>`
   components from the rest of the app.
