@@ -1,6 +1,6 @@
 /**
  * DOM utility functions for OGrid components.
- * These utilities are framework-agnostic and can be used across React, Angular, Vue, and vanilla JS implementations.
+ * These utilities are framework-agnostic.
  */
 
 import type { ISelectionRange } from '../types';

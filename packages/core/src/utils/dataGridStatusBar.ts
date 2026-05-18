@@ -2,7 +2,7 @@ import type { IStatusBarProps } from '../types';
 
 /**
  * Derives status bar config for DataGridTable from props + current items/selection.
- * Use in Fluent, Material, and Radix DataGridTable so the same logic lives in one place.
+ * Use in the Radix and Fluent DataGridTable so the same logic lives in one place.
  */
 export function getDataGridStatusBarConfig(
   statusBar: boolean | IStatusBarProps | undefined,

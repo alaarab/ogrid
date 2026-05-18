@@ -206,39 +206,59 @@ function parseDocFile(filePath: string, docsDir: string): DocEntry {
 // Search scoring
 // ---------------------------------------------------------------------------
 
+/** Count occurrences of `needle` in `haystack`, capped at `cap`. */
+function countOccurrences(haystack: string, needle: string, cap: number): number {
+  if (!needle) return 0;
+  let idx = 0;
+  let count = 0;
+  while (count < cap) {
+    idx = haystack.indexOf(needle, idx);
+    if (idx === -1) break;
+    count++;
+    idx += needle.length;
+  }
+  return count;
+}
+
+/** Split a query into individual search tokens (drops 1-char noise). */
+function tokenize(queryLower: string): string[] {
+  return queryLower.split(/\s+/).filter((t) => t.length > 1);
+}
+
 function scoreEntry(entry: DocEntry, queryLower: string): number {
   let score = 0;
   const titleLower = entry.title.toLowerCase();
   const descLower = entry.description.toLowerCase();
   const contentLower = entry.content.toLowerCase();
 
-  // Title match  -  highest weight
+  // --- Full-phrase match: the strongest relevance signal ---
   if (titleLower.includes(queryLower)) {
     score += 100;
-    // Bonus for exact title match
     if (titleLower === queryLower) score += 50;
-    // Bonus for title starting with query
     if (titleLower.startsWith(queryLower)) score += 25;
   }
-
-  // Description match  -  medium weight
   if (descLower.includes(queryLower)) {
     score += 50;
   }
-
-  // Content match  -  base weight, plus density bonus
   if (contentLower.includes(queryLower)) {
     score += 10;
-    // Count occurrences (up to 10) for density bonus
-    let idx = 0;
-    let count = 0;
-    while (count < 10) {
-      idx = contentLower.indexOf(queryLower, idx);
-      if (idx === -1) break;
-      count++;
-      idx += queryLower.length;
+    score += countOccurrences(contentLower, queryLower, 10) * 2;
+  }
+
+  // --- Per-token match: gives partial credit on multi-word queries so
+  // "filter rows" still surfaces the filtering doc even though the exact
+  // phrase never appears. Single-word queries are unaffected (one token
+  // equals the phrase already scored above). ---
+  const tokens = tokenize(queryLower);
+  if (tokens.length > 1) {
+    for (const token of tokens) {
+      if (titleLower.includes(token)) score += 25;
+      if (descLower.includes(token)) score += 12;
+      if (contentLower.includes(token)) {
+        score += 3;
+        score += countOccurrences(contentLower, token, 5);
+      }
     }
-    score += count * 2;
   }
 
   // Category bonus: features and getting-started are often more relevant
@@ -260,12 +280,24 @@ function scoreCodeBlock(
   // Framework filter: must match if specified
   if (framework && block.framework !== framework) return -1;
 
-  // Entry-level relevance
-  if (entry.title.toLowerCase().includes(queryLower)) score += 50;
-  if (entry.description.toLowerCase().includes(queryLower)) score += 25;
+  const titleLower = entry.title.toLowerCase();
+  const descLower = entry.description.toLowerCase();
+  const codeLower = block.code.toLowerCase();
 
-  // Code content relevance
-  if (block.code.toLowerCase().includes(queryLower)) score += 30;
+  // Full-phrase relevance
+  if (titleLower.includes(queryLower)) score += 50;
+  if (descLower.includes(queryLower)) score += 25;
+  if (codeLower.includes(queryLower)) score += 30;
+
+  // Per-token relevance for multi-word queries
+  const tokens = tokenize(queryLower);
+  if (tokens.length > 1) {
+    for (const token of tokens) {
+      if (titleLower.includes(token)) score += 12;
+      if (descLower.includes(token)) score += 6;
+      if (codeLower.includes(token)) score += 8;
+    }
+  }
 
   return score;
 }

@@ -1,5 +1,5 @@
 /**
- * Pure selection helpers shared across React, Vue, Angular, and JS.
+ * Pure selection helpers shared by the React UI packages.
  * No framework dependencies  -  operates only on plain ISelectionRange values.
  */
 import type { ISelectionRange } from '../types/dataGridTypes';
@@ -51,7 +51,7 @@ export function clampSelectionToBounds(
 
 /**
  * Auto-scroll speed: proportional to how far past the scroll edge the pointer is.
- * Used by drag-selection auto-scroll in both React and Vue.
+ * Used by drag-selection auto-scroll.
  *
  * @param distance  Distance past the edge threshold (pixels).
  * @param edgePx    Scroll edge threshold in pixels (default: 40).
@@ -71,7 +71,7 @@ export function computeAutoScrollSpeed(
 
 /**
  * Apply a shift-click range selection to a set of row IDs.
- * Used by React `useRowSelection`, Vue `useRowSelection`, and JS `RowSelectionState`.
+ * Used by the React `useRowSelection` hook.
  *
  * @param start       Start index of the range (inclusive).
  * @param end         End index of the range (inclusive).
@@ -104,7 +104,7 @@ export function applyRangeRowSelection<T>(
 
 /**
  * Compute the allSelected / someSelected state from a set of selected row IDs.
- * Used by React `useRowSelection`, Vue `useRowSelection`, and JS `RowSelectionState`.
+ * Used by the React `useRowSelection` hook.
  *
  * @param selectedIds  Current set of selected row IDs.
  * @param items        Array of all row data objects.

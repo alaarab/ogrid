@@ -17,6 +17,7 @@
     "build": "turbo build",
     "build:examples": "turbo build --filter=@alaarab/ogrid-examples",
     "build:react-family": "turbo build --filter=@alaarab/ogrid-react --filter=@alaarab/ogrid-react-radix --filter=@alaarab/ogrid-react-fluent",
+    "typecheck": "turbo typecheck",
     "test": "bun run --filter '*' test",
     "test:all": "bun run --filter '*' test",
     "test:coverage": "bun run --filter '*' test -- --coverage",

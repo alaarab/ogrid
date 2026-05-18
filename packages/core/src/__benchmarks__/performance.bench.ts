@@ -70,16 +70,16 @@ function generateRows(count: number): Row[] {
 
 function makeColumns(): IColumnDef<Row>[] {
   return [
-    { columnId: 'id', name: 'ID', field: 'id', type: 'numeric' },
-    { columnId: 'name', name: 'Name', field: 'name' },
-    { columnId: 'email', name: 'Email', field: 'email' },
-    { columnId: 'date', name: 'Date', field: 'date', type: 'date' },
-    { columnId: 'amount', name: 'Amount', field: 'amount', type: 'numeric' },
-    { columnId: 'category', name: 'Category', field: 'category' },
-    { columnId: 'status', name: 'Status', field: 'status' },
-    { columnId: 'region', name: 'Region', field: 'region' },
-    { columnId: 'score', name: 'Score', field: 'score', type: 'numeric' },
-    { columnId: 'tag', name: 'Tag', field: 'tag' },
+    { columnId: 'id', name: 'ID', type: 'numeric' },
+    { columnId: 'name', name: 'Name' },
+    { columnId: 'email', name: 'Email' },
+    { columnId: 'date', name: 'Date', type: 'date' },
+    { columnId: 'amount', name: 'Amount', type: 'numeric' },
+    { columnId: 'category', name: 'Category' },
+    { columnId: 'status', name: 'Status' },
+    { columnId: 'region', name: 'Region' },
+    { columnId: 'score', name: 'Score', type: 'numeric' },
+    { columnId: 'tag', name: 'Tag' },
   ];
 }
 
@@ -94,7 +94,7 @@ function makeNestedColumnTree(): (IColumnGroupDef<Row> | IColumnDef<Row>)[] {
       const leaves: IColumnDef<Row>[] = [];
       for (let l = 0; l < 5; l++) {
         const id = `col_${colIdx++}`;
-        leaves.push({ columnId: id, name: `Col ${colIdx}`, field: 'name' });
+        leaves.push({ columnId: id, name: `Col ${colIdx}` });
       }
       subGroups.push({ headerName: `SubGroup ${g}_${sg}`, children: leaves });
     }
