@@ -9,6 +9,7 @@
     "packages/react-fluent",
     "packages/react-inputs",
     "packages/react-xlsx",
+    "packages/react-xlsx-browser",
     "packages/mcp",
     "packages/docs",
     "packages/examples"
