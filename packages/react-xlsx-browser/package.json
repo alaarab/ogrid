@@ -1,0 +1,58 @@
+{
+  "name": "@alaarab/ogrid-react-xlsx-browser",
+  "version": "2.14.1",
+  "description": "Self-contained browser ESM bundle of @alaarab/ogrid-react-xlsx. React + ReactDOM + ExcelJS + every @alaarab/ogrid-* dep inlined into one file. Drop into a static vendor/ directory and `import()` from a no-bundler app.",
+  "main": "dist/ogrid-xlsx.js",
+  "module": "dist/ogrid-xlsx.js",
+  "exports": {
+    ".": {
+      "import": "./dist/ogrid-xlsx.js",
+      "default": "./dist/ogrid-xlsx.js"
+    },
+    "./ogrid-xlsx.css": "./dist/ogrid-xlsx.css"
+  },
+  "scripts": {
+    "build": "rimraf dist && tsup",
+    "test": "echo 'no tests — this package only re-bundles @alaarab/ogrid-react-xlsx; tests live there'"
+  },
+  "keywords": [
+    "ogrid",
+    "xlsx",
+    "excel",
+    "spreadsheet",
+    "browser",
+    "no-bundler",
+    "esm",
+    "vendor"
+  ],
+  "author": "Ala Arab",
+  "license": "MIT",
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "sideEffects": false,
+  "engines": {
+    "node": ">=18"
+  },
+  "devDependencies": {
+    "@alaarab/ogrid-react-xlsx": "2.14.1",
+    "@types/react": "^19.2.14",
+    "@types/react-dom": "^19.2.3",
+    "react": "^19.2.5",
+    "react-dom": "^19.2.5",
+    "rimraf": "^6.0.0",
+    "tsup": "^8.0.0"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/alaarab/ogrid.git",
+    "directory": "packages/react-xlsx-browser"
+  },
+  "homepage": "https://ogrid.dev",
+  "bugs": "https://github.com/alaarab/ogrid/issues"
+}

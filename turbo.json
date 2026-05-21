@@ -4,7 +4,7 @@
     "build": {
       "dependsOn": ["^build"],
       "inputs": ["src/**/*.ts", "src/**/*.tsx", "src/**/*.scss", "package.json", "tsconfig*.json"],
-      "outputs": ["dist/esm/**", "dist/types/**"]
+      "outputs": ["dist/**"]
     },
     "typecheck": {
       "dependsOn": ["^build"],
