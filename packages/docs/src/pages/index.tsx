@@ -578,7 +578,7 @@ function FeatureBentoSection() {
           </div>
         </div>
 
-        <div className={`${styles.bentoCard} ${styles.bentoCardSmall} ${styles.bentoCardPurple} ${styles.bentoCardProof}`}>
+        <div className={`${styles.bentoCard} ${styles.bentoCardWide} ${styles.bentoCardPurple} ${styles.bentoCardProof}`}>
           <div className={styles.bentoCardInner} />
           <div className={styles.bentoCardTag}>Performance</div>
           <h3 className={styles.bentoCardTitle}>10K+ rows in the homepage demo.</h3>
