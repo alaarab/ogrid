@@ -212,9 +212,9 @@
       "name": "@alaarab/ogrid-react-xlsx",
       "version": "2.14.1",
       "dependencies": {
-        "@alaarab/ogrid-core": "2.11.1",
-        "@alaarab/ogrid-react": "2.11.1",
-        "@alaarab/ogrid-react-radix": "2.11.1",
+        "@alaarab/ogrid-core": "2.14.1",
+        "@alaarab/ogrid-react": "2.14.1",
+        "@alaarab/ogrid-react-radix": "2.14.1",
         "exceljs": "^4.4.0",
       },
       "devDependencies": {
@@ -229,6 +229,19 @@
       "peerDependencies": {
         "react": "^17.0.0 || ^18.0.0 || ^19.0.0",
         "react-dom": "^17.0.0 || ^18.0.0 || ^19.0.0",
+      },
+    },
+    "packages/react-xlsx-browser": {
+      "name": "@alaarab/ogrid-react-xlsx-browser",
+      "version": "2.14.1",
+      "devDependencies": {
+        "@alaarab/ogrid-react-xlsx": "2.14.1",
+        "@types/react": "^19.2.14",
+        "@types/react-dom": "^19.2.3",
+        "react": "^19.2.5",
+        "react-dom": "^19.2.5",
+        "rimraf": "^6.0.0",
+        "tsup": "^8.0.0",
       },
     },
   },
@@ -263,6 +276,8 @@
     "@alaarab/ogrid-react-radix": ["@alaarab/ogrid-react-radix@workspace:packages/react-radix"],
 
     "@alaarab/ogrid-react-xlsx": ["@alaarab/ogrid-react-xlsx@workspace:packages/react-xlsx"],
+
+    "@alaarab/ogrid-react-xlsx-browser": ["@alaarab/ogrid-react-xlsx-browser@workspace:packages/react-xlsx-browser"],
 
     "@algolia/abtesting": ["@algolia/abtesting@1.18.0", "", { "dependencies": { "@algolia/client-common": "5.52.0", "@algolia/requester-browser-xhr": "5.52.0", "@algolia/requester-fetch": "5.52.0", "@algolia/requester-node-http": "5.52.0" } }, "sha512-8siuLG+FIns1AjZ/g2SDVwHz9S+ObacDQISEJvS8XsNei1zl3FXqfqQrBpmrG7ACWCyesXHbicMJtvRbg00FEw=="],
 
