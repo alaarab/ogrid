@@ -1,0 +1,130 @@
+---
+sidebar_position: 16
+title: XLSX Import
+description: Drop an .xlsx file into a fully featured OGrid — with multi-sheet tabs, formulas, and cell references on by default
+---
+
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+
+# XLSX Import
+
+Render any `.xlsx`, CSV, or TSV blob as a fully featured OGrid. Multi-sheet workbooks get tabbed navigation, formulas evaluate live, and Excel-style cell references (A1, B2…) are on by default.
+
+Two packages ship this:
+
+| Package | When to use |
+|---|---|
+| [`@alaarab/ogrid-react-xlsx`](https://www.npmjs.com/package/@alaarab/ogrid-react-xlsx) | React apps with a bundler (Vite, Next.js, Webpack, etc.). |
+| [`@alaarab/ogrid-react-xlsx-browser`](https://www.npmjs.com/package/@alaarab/ogrid-react-xlsx-browser) | Static HTML pages, SharePoint Framework drops, or any no-bundler context. One self-contained ESM file. |
+
+Both expose the same component surface — `XlsxWorkbookGrid`, `XlsxGrid`, and an imperative `mount()` helper.
+
+## React (with a bundler)
+
+```bash
+npm i @alaarab/ogrid-react-xlsx
+```
+
+<Tabs groupId="entry">
+  <TabItem value="workbook" label="Full workbook" default>
+
+```tsx
+import { XlsxWorkbookGrid } from '@alaarab/ogrid-react-xlsx';
+
+function Preview({ file }: { file: Blob }) {
+  return <XlsxWorkbookGrid blob={file} height={520} />;
+}
+```
+
+  </TabItem>
+  <TabItem value="single" label="Single sheet">
+
+```tsx
+import { XlsxGrid, workbookFromBlob } from '@alaarab/ogrid-react-xlsx';
+import { useEffect, useState } from 'react';
+import type ExcelJS from 'exceljs';
+
+function SingleSheet({ file }: { file: Blob }) {
+  const [wb, setWb] = useState<ExcelJS.Workbook | null>(null);
+  useEffect(() => { workbookFromBlob(file).then(setWb); }, [file]);
+  if (!wb) return null;
+  return <XlsxGrid workbook={wb} sheetName="Summary" density="compact" />;
+}
+```
+
+  </TabItem>
+</Tabs>
+
+### `XlsxWorkbookGrid` props
+
+| Prop | Type | Default | Description |
+|---|---|---|---|
+| `blob` | `Blob` | — | The raw `.xlsx`/CSV/TSV file. Parsed inside the component. Use this OR `workbook`. |
+| `workbook` | `ExcelJS.Workbook` | — | A pre-parsed workbook. Use this OR `blob`. |
+| `height` | `number \| string` | `'100%'` | Container height. |
+| `initialSheet` | `string` | first sheet | Which sheet to show on mount. |
+| `density` | `'compact' \| 'normal' \| 'comfortable'` | `'compact'` | Row height. |
+| `onSheetChange` | `(name: string) => void` | — | Fired when the user clicks a sheet tab. |
+| `headerRow` | `'auto' \| 'header' \| 'none'` | `'auto'` | Whether to promote row 1 to the header. `'auto'` detects strings-only top rows; `'header'` forces it; `'none'` uses A/B/C letters. |
+
+### Format support
+
+ExcelJS-backed: `.xlsx`, `.csv`, `.tsv`. The `xlsx` package on npm (SheetJS) is currently stuck at the vulnerable 0.18.5, so support for `.xls`, `.xlsm`, `.xlsb`, and `.ods` was dropped in 2.12.0. See CHANGELOG for the swap rationale.
+
+## Browser bundle (no bundler)
+
+For SharePoint Framework, static HTML, or any page that can't (or won't) run a JS bundler, install `@alaarab/ogrid-react-xlsx-browser`. It's a single ESM file — `dist/ogrid-xlsx.js` — with React, ReactDOM, ExcelJS, and every `@alaarab/ogrid-*` dep inlined. ~1.5MB minified, gzipped well by any HTTP server.
+
+```bash
+npm i @alaarab/ogrid-react-xlsx-browser
+```
+
+Copy the two output files into a `vendor/` directory you serve statically:
+
+```
+vendor/
+  ogrid-xlsx.js
+  ogrid-xlsx.css
+```
+
+Then drop this into any HTML page:
+
+```html
+<link rel="stylesheet" href="/vendor/ogrid-xlsx.css" />
+<div id="grid" style="height: 520px"></div>
+
+<script type="module">
+  const { mount } = await import('/vendor/ogrid-xlsx.js');
+
+  const file = await fetch('/data/report.xlsx').then(r => r.blob());
+  const unmount = mount(document.getElementById('grid'), { blob: file });
+
+  // When you're done — React 19 does not auto-unmount on DOM removal:
+  // unmount();
+</script>
+```
+
+### Imperative `mount()`
+
+```ts
+mount(node: Element, opts: MountOptions): () => void
+```
+
+Returns an unmount function. Always call it before removing the host node — React 19 won't clean up event listeners or state if you just `node.remove()`.
+
+`MountOptions` accepts the same fields as `XlsxWorkbookGrid` props (`blob` / `workbook`, `initialSheet`, `density`, `height`, `onSheetChange`, `headerRow`).
+
+### When to pick this over the React package
+
+| Use the React package when | Use the browser bundle when |
+|---|---|
+| You already have a Vite / Webpack / Next.js build. | You're shipping into a static page, SPFx web part, or CDN drop. |
+| You want tree-shaking and a single dependency graph. | You don't have (and don't want) a JS bundler. |
+| You're integrating into an existing React tree. | You want one `<script type="module">` import. |
+
+## Related
+
+- [Formulas](./formulas) — the engine that evaluates `=SUM(A1:A5)` cells lifted out of the workbook
+- [Cell References](./cell-references) — A/B/C column headers and the name box, on by default for xlsx grids
+- [CSV Export](./csv-export) — round-trip data back out of the grid
