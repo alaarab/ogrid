@@ -35,6 +35,7 @@ const sidebars: SidebarsConfig = {
         'features/context-menu',
         'features/status-bar',
         'features/csv-export',
+        'features/xlsx-import',
         'features/server-side-data',
         'features/keyboard-navigation',
         'features/mobile-touch',
