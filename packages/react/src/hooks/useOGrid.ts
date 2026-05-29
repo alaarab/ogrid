@@ -9,7 +9,7 @@ import {
 } from 'react';
 
 import { flattenColumns, getCellValue } from '../utils';
-import { validateColumns, validateRowIds, columnLetterToIndex } from '@alaarab/ogrid-core';
+import { validateColumns, validateRowIds } from '@alaarab/ogrid-core';
 import { useFormulaEngine } from './useFormulaEngine';
 import { useFormulaBar } from './useFormulaBar';
 import { FormulaBar } from '../components/FormulaBar';
@@ -18,6 +18,10 @@ import { useOGridPagination } from './useOGridPagination';
 import { useOGridSorting } from './useOGridSorting';
 import { useOGridFilters } from './useOGridFilters';
 import { useOGridDataFetching } from './useOGridDataFetching';
+import { useOGridColumnVisibility } from './useOGridColumnVisibility';
+import { useOGridColumnLayout } from './useOGridColumnLayout';
+import { useOGridRowSelection } from './useOGridRowSelection';
+import { useOGridActiveCell } from './useOGridActiveCell';
 import { useLatestRef } from './useLatestRef';
 import { useSideBarState } from './useSideBarState';
 import type { SideBarProps } from '../components/SideBar';
@@ -287,102 +291,42 @@ export function useOGrid<T>(
   }, [dataFetchingState.displayItems, getRowId]);
 
   // --- Column visibility ---
-  const [internalVisibleColumns, setInternalVisibleColumns] = useState<Set<string>>(
-    () => {
-      const visible = columns
-        .filter((c) => c.defaultVisible !== false)
-        .map((c) => c.columnId);
-      return new Set(
-        visible.length > 0 ? visible : columns.map((c) => c.columnId)
-      );
-    }
-  );
-
-  // Re-initialize when columns arrive after starting empty (common pattern: columns
-  // depend on async data, so the initial render passes columns=[] then re-renders
-  // with actual columns once data loads).
-  const prevColumnsLengthRef = useRef(columns.length);
-  useEffect(() => {
-    const prev = prevColumnsLengthRef.current;
-    prevColumnsLengthRef.current = columns.length;
-    if (controlledVisibleColumns !== undefined) return; // controlled  -  skip
-    if (prev === 0 && columns.length > 0 && internalVisibleColumns.size === 0) {
-      const visible = columns
-        .filter((c) => c.defaultVisible !== false)
-        .map((c) => c.columnId);
-      setInternalVisibleColumns(new Set(
-        visible.length > 0 ? visible : columns.map((c) => c.columnId)
-      ));
-    }
-  }, [columns, controlledVisibleColumns, internalVisibleColumns.size]);
-
-  const visibleColumns = controlledVisibleColumns ?? internalVisibleColumns;
-
-  const setVisibleColumns = useCallback(
-    (cols: Set<string>) => {
-      if (controlledVisibleColumns === undefined) setInternalVisibleColumns(cols);
-      onVisibleColumnsChange?.(cols);
-    },
-    [controlledVisibleColumns, onVisibleColumnsChange]
-  );
-
-  const handleVisibilityChange = useCallback(
-    (columnKey: string, isVisible: boolean) => {
-      const next = new Set(visibleColumns);
-      if (isVisible) next.add(columnKey);
-      else next.delete(columnKey);
-      setVisibleColumns(next);
-    },
-    [visibleColumns, setVisibleColumns]
-  );
-
-  // --- Row selection ---
-  const [internalSelectedRows, setInternalSelectedRows] = useState<Set<RowId>>(new Set());
-  const effectiveSelectedRows = selectedRows ?? internalSelectedRows;
-
-  const handleSelectionChange = useCallback(
-    (event: IRowSelectionChangeEvent<T>) => {
-      if (selectedRows === undefined) {
-        setInternalSelectedRows(new Set(event.selectedRowIds));
-      }
-      onSelectionChange?.(event);
-    },
-    [selectedRows, onSelectionChange]
-  );
-
-  // --- Column resize & pin ---
-  const [internalColumnOrder, setInternalColumnOrder] = useState<string[] | undefined>(undefined);
-  const effectiveColumnOrder = columnOrder ?? internalColumnOrder;
-  const [columnWidthOverrides, setColumnWidthOverrides] = useState<Record<string, number>>({});
-  const [pinnedOverrides, setPinnedOverrides] = useState<Record<string, 'left' | 'right'>>(() => {
-    const initial: Record<string, 'left' | 'right'> = {};
-    for (const col of flattenColumns(columnsProp)) {
-      if (col.pinned) initial[col.columnId] = col.pinned;
-    }
-    return initial;
+  const {
+    visibleColumns,
+    setVisibleColumns,
+    handleVisibilityChange,
+  } = useOGridColumnVisibility({
+    columns,
+    controlledVisibleColumns,
+    onVisibleColumnsChange,
   });
 
-  const handleColumnResized = useCallback(
-    (columnId: string, width: number) => {
-      setColumnWidthOverrides((prev) => ({ ...prev, [columnId]: width }));
-      onColumnResized?.(columnId, width);
-    },
-    [onColumnResized]
-  );
+  // --- Row selection ---
+  const {
+    effectiveSelectedRows,
+    handleSelectionChange,
+    setInternalSelectedRows,
+  } = useOGridRowSelection({
+    controlledSelectedRows: selectedRows,
+    onSelectionChange,
+  });
 
-  const handleColumnPinned = useCallback(
-    (columnId: string, pinned: 'left' | 'right' | null) => {
-      setPinnedOverrides((prev) => {
-        if (pinned === null) {
-          const { [columnId]: _, ...rest } = prev;
-          return rest;
-        }
-        return { ...prev, [columnId]: pinned };
-      });
-      onColumnPinned?.(columnId, pinned);
-    },
-    [onColumnPinned]
-  );
+  // --- Column layout (order / resize / pin) ---
+  const {
+    effectiveColumnOrder,
+    columnWidthOverrides,
+    pinnedOverrides,
+    handleColumnResized,
+    handleColumnPinned,
+    setInternalColumnOrder,
+    setColumnWidthOverrides,
+    setPinnedOverrides,
+  } = useOGridColumnLayout({
+    columnsProp,
+    controlledColumnOrder: columnOrder,
+    onColumnResized,
+    onColumnPinned,
+  });
 
   // --- Imperative handle (stabilized via refs to avoid invalidation on every state change) ---
   const visibleColumnsRef = useLatestRef(visibleColumns);
@@ -554,22 +498,7 @@ export function useOGrid<T>(
   const showActiveCellChange = !!(cellReferences || formulas);
 
   // --- Name box / formula bar (active cell reference + coordinates) ---
-  const [activeCellRef, setActiveCellRef] = useState<string | null>(null);
-  const [activeCellCoords, setActiveCellCoords] = useState<{ col: number; row: number } | null>(null);
-  const onActiveCellChange = useCallback((ref: string | null) => {
-    setActiveCellRef(ref);
-    if (ref) {
-      // Parse "A1"  to  { col: 0, row: 0 }
-      const m = ref.match(/^([A-Z]+)(\d+)$/);
-      if (m) {
-        setActiveCellCoords({ col: columnLetterToIndex(m[1]), row: parseInt(m[2], 10) - 1 });
-      } else {
-        setActiveCellCoords(null);
-      }
-    } else {
-      setActiveCellCoords(null);
-    }
-  }, []);
+  const { activeCellRef, activeCellCoords, onActiveCellChange } = useOGridActiveCell();
 
   // --- Formula bar hook (only when formulas are enabled) ---
   const getRawValue = useCallback((col: number, row: number): unknown => {
