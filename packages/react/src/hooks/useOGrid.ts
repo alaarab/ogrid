@@ -3,7 +3,6 @@ import {
   useMemo,
   useCallback,
   useState,
-  useImperativeHandle,
   useEffect,
   useRef,
 } from 'react';
@@ -22,6 +21,7 @@ import { useOGridColumnVisibility } from './useOGridColumnVisibility';
 import { useOGridColumnLayout } from './useOGridColumnLayout';
 import { useOGridRowSelection } from './useOGridRowSelection';
 import { useOGridActiveCell } from './useOGridActiveCell';
+import { useOGridImperativeHandle } from './useOGridImperativeHandle';
 import { useLatestRef } from './useLatestRef';
 import { useSideBarState } from './useSideBarState';
 import type { SideBarProps } from '../components/SideBar';
@@ -329,90 +329,31 @@ export function useOGrid<T>(
   });
 
   // --- Imperative handle (stabilized via refs to avoid invalidation on every state change) ---
-  const visibleColumnsRef = useLatestRef(visibleColumns);
-  const sortRef = useLatestRef(sortingState.sort);
-  const columnOrderRef = useLatestRef(effectiveColumnOrder);
-  const columnWidthOverridesRef = useLatestRef(columnWidthOverrides);
-  const pinnedOverridesRef = useLatestRef(pinnedOverrides);
-  const filtersRef = useLatestRef(filtersState.filters);
-  const effectiveSelectedRowsRef = useLatestRef(effectiveSelectedRows);
-  const displayItemsRef = useLatestRef(dataFetchingState.displayItems);
-  const getRowIdRef = useLatestRef(getRowId);
-  const columnsRef = useLatestRef(columns);
-
-  useImperativeHandle(
+  useOGridImperativeHandle({
     ref,
-    () => ({
-      setRowData: (d: T[]) => {
-        if (!isServerSide) setInternalData(d);
-      },
-      setLoading: setInternalLoading,
-      getColumnState: () => ({
-        visibleColumns: Array.from(visibleColumnsRef.current),
-        sort: sortRef.current,
-        columnOrder: columnOrderRef.current ?? undefined,
-        columnWidths: Object.keys(columnWidthOverridesRef.current).length > 0 ? columnWidthOverridesRef.current : undefined,
-        filters: Object.keys(filtersRef.current).length > 0 ? filtersRef.current : undefined,
-        pinnedColumns: Object.keys(pinnedOverridesRef.current).length > 0 ? pinnedOverridesRef.current : undefined,
-      }),
-      applyColumnState: (state: Partial<import('../types').IGridColumnState>) => {
-        if (state.visibleColumns) setVisibleColumns(new Set(state.visibleColumns));
-        if (state.sort) sortingState.setSort(state.sort);
-        if (state.columnOrder) {
-          if (columnOrder === undefined) setInternalColumnOrder(state.columnOrder);
-          onColumnOrderChange?.(state.columnOrder);
-        }
-        if (state.columnWidths) setColumnWidthOverrides(state.columnWidths);
-        if (state.filters) filtersState.setFilters(state.filters);
-        if (state.pinnedColumns) setPinnedOverrides(state.pinnedColumns);
-      },
-      setFilterModel: filtersState.setFilters,
-      getSelectedRows: () => Array.from(effectiveSelectedRowsRef.current),
-      setSelectedRows: (rowIds: RowId[]) => {
-        if (selectedRows === undefined) setInternalSelectedRows(new Set(rowIds));
-      },
-      selectAll: () => {
-        const items = displayItemsRef.current;
-        const allIds = new Set(items.map((item) => getRowIdRef.current(item)));
-        if (selectedRows === undefined) setInternalSelectedRows(allIds);
-        onSelectionChange?.({ selectedRowIds: Array.from(allIds), selectedItems: items });
-      },
-      deselectAll: () => {
-        if (selectedRows === undefined) setInternalSelectedRows(new Set());
-        onSelectionChange?.({ selectedRowIds: [], selectedItems: [] });
-      },
-      clearFilters: () => filtersState.setFilters({}),
-      clearSort: () => sortingState.setSort({ field: sortingState.defaultSortField, direction: sortingState.defaultSortDirection }),
-      resetGridState: (options?: { keepSelection?: boolean }) => {
-        filtersState.setFilters({});
-        sortingState.setSort({ field: sortingState.defaultSortField, direction: sortingState.defaultSortDirection });
-        if (!options?.keepSelection) {
-          if (selectedRows === undefined) setInternalSelectedRows(new Set());
-          onSelectionChange?.({ selectedRowIds: [], selectedItems: [] });
-        }
-      },
-      getDisplayedRows: () => displayItemsRef.current,
-      refreshData: () => {
-        if (isServerSide) dataFetchingState.refreshData();
-      },
-      getColumnOrder: () => columnOrderRef.current ?? columnsRef.current.map((c) => c.columnId),
-      setColumnOrder: (order: string[]) => {
-        if (columnOrder === undefined) setInternalColumnOrder(order);
-        onColumnOrderChange?.(order);
-      },
-      scrollToRow: () => {
-        // No-op at orchestration level  -  DataGridTable components implement
-        // this via useVirtualScroll.scrollToIndex when virtual scrolling is active.
-      },
-    }),
-    [
-      isServerSide, setVisibleColumns, sortingState, filtersState,
-      columnOrder, onColumnOrderChange, selectedRows, onSelectionChange, dataFetchingState,
-      columnOrderRef, columnWidthOverridesRef, columnsRef, displayItemsRef,
-      effectiveSelectedRowsRef, filtersRef, getRowIdRef, pinnedOverridesRef,
-      sortRef, visibleColumnsRef,
-    ]
-  );
+    isServerSide,
+    columnOrder,
+    selectedRows,
+    onColumnOrderChange,
+    onSelectionChange,
+    sortingState,
+    filtersState,
+    dataFetchingState,
+    setVisibleColumns,
+    setInternalColumnOrder,
+    setColumnWidthOverrides,
+    setPinnedOverrides,
+    setInternalSelectedRows,
+    setInternalData,
+    setInternalLoading,
+    visibleColumns,
+    effectiveColumnOrder,
+    columnWidthOverrides,
+    pinnedOverrides,
+    effectiveSelectedRows,
+    columns,
+    getRowId,
+  });
 
   // --- Status bar ---
   const statusBarConfig = useMemo((): IStatusBarProps | undefined => {
@@ -501,6 +442,10 @@ export function useOGrid<T>(
   const { activeCellRef, activeCellCoords, onActiveCellChange } = useOGridActiveCell();
 
   // --- Formula bar hook (only when formulas are enabled) ---
+  // Latest-value snapshots for the formula bar's raw-value lookup. The imperative
+  // handle keeps its own internal snapshots, so these are scoped to getRawValue.
+  const displayItemsRef = useLatestRef(dataFetchingState.displayItems);
+  const columnsRef = useLatestRef(columns);
   const getRawValue = useCallback((col: number, row: number): unknown => {
     const items = displayItemsRef.current;
     const cols = columnsRef.current;
