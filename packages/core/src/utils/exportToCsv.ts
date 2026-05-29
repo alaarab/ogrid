@@ -87,7 +87,15 @@ export function triggerCsvDownload(csvContent: string, filename: string): void {
     document.body.appendChild(link);
     link.click();
   } finally {
-    try { document.body.removeChild(link); } catch { /* noop */ }
+    try {
+      document.body.removeChild(link);
+    } catch (err) {
+      // The link is normally still attached here; a failure means it was already
+      // detached elsewhere, which is harmless. Surface it in dev, stay silent in prod.
+      if (process.env.NODE_ENV !== 'production') {
+        console.warn('[OGrid] CSV download link cleanup failed (already detached?)', err);
+      }
+    }
     URL.revokeObjectURL(url);
   }
 }

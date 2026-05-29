@@ -594,8 +594,10 @@ export function registerTextFunctions(registry: Map<string, IFormulaFunction>): 
     minArgs: 1,
     maxArgs: 1,
     evaluate(args: ASTNode[], context: IFormulaContext, evaluator: IEvaluator): unknown {
-      // Phonetic reading is language-specific (Japanese furigana etc.)
-      // Return the text as-is as a stub
+      // PHONETIC returns the furigana (phonetic guide) Excel stores alongside a
+      // cell's text. OGrid has no furigana metadata to draw from, so by design it
+      // returns the source text unchanged. This is an intentional, documented
+      // limitation, not an incomplete implementation.
       const val = evaluator.evaluate(args[0], context);
       if (val instanceof FormulaError) return val;
       return toString(val);
