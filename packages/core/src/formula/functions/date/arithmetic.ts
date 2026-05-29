@@ -1,102 +1,13 @@
-import type { IFormulaFunction, IFormulaContext, IEvaluator, ASTNode } from '../types';
-import { FormulaError } from '../types';
-import { toNumber } from '../evaluator';
+import type { IFormulaFunction, IFormulaContext, IEvaluator, ASTNode } from '../../types';
+import { FormulaError } from '../../types';
+import { toNumber } from '../../evaluator';
+import { toDate, isLeapYear, parseWeekendNumber } from './shared';
 
-function toDate(val: unknown): Date | FormulaError {
-  if (val instanceof FormulaError) return val;
-  if (val instanceof Date) {
-    if (isNaN(val.getTime())) return new FormulaError('#VALUE!', 'Invalid date');
-    return val;
-  }
-  if (typeof val === 'string') {
-    const d = new Date(val);
-    if (isNaN(d.getTime())) return new FormulaError('#VALUE!', `Cannot parse "${val}" as date`);
-    return d;
-  }
-  if (typeof val === 'number') {
-    // Treat number as a timestamp
-    const d = new Date(val);
-    if (isNaN(d.getTime())) return new FormulaError('#VALUE!', 'Invalid numeric date');
-    return d;
-  }
-  return new FormulaError('#VALUE!', 'Cannot convert value to date');
-}
-
-export function registerDateFunctions(registry: Map<string, IFormulaFunction>): void {
-  registry.set('TODAY', {
-    minArgs: 0,
-    maxArgs: 0,
-    evaluate(_args: ASTNode[], context: IFormulaContext): unknown {
-      const now = context.now();
-      // Return date with no time component
-      return new Date(now.getFullYear(), now.getMonth(), now.getDate());
-    },
-  });
-
-  registry.set('NOW', {
-    minArgs: 0,
-    maxArgs: 0,
-    evaluate(_args: ASTNode[], context: IFormulaContext): unknown {
-      return context.now();
-    },
-  });
-
-  registry.set('YEAR', {
-    minArgs: 1,
-    maxArgs: 1,
-    evaluate(args: ASTNode[], context: IFormulaContext, evaluator: IEvaluator): unknown {
-      const val = evaluator.evaluate(args[0], context);
-      if (val instanceof FormulaError) return val;
-      const date = toDate(val);
-      if (date instanceof FormulaError) return date;
-      return date.getFullYear();
-    },
-  });
-
-  registry.set('MONTH', {
-    minArgs: 1,
-    maxArgs: 1,
-    evaluate(args: ASTNode[], context: IFormulaContext, evaluator: IEvaluator): unknown {
-      const val = evaluator.evaluate(args[0], context);
-      if (val instanceof FormulaError) return val;
-      const date = toDate(val);
-      if (date instanceof FormulaError) return date;
-      return date.getMonth() + 1; // 1-12
-    },
-  });
-
-  registry.set('DAY', {
-    minArgs: 1,
-    maxArgs: 1,
-    evaluate(args: ASTNode[], context: IFormulaContext, evaluator: IEvaluator): unknown {
-      const val = evaluator.evaluate(args[0], context);
-      if (val instanceof FormulaError) return val;
-      const date = toDate(val);
-      if (date instanceof FormulaError) return date;
-      return date.getDate(); // 1-31
-    },
-  });
-
-  registry.set('DATE', {
-    minArgs: 3,
-    maxArgs: 3,
-    evaluate(args: ASTNode[], context: IFormulaContext, evaluator: IEvaluator): unknown {
-      const rawY = evaluator.evaluate(args[0], context);
-      if (rawY instanceof FormulaError) return rawY;
-      const y = toNumber(rawY);
-      if (y instanceof FormulaError) return y;
-      const rawM = evaluator.evaluate(args[1], context);
-      if (rawM instanceof FormulaError) return rawM;
-      const m = toNumber(rawM);
-      if (m instanceof FormulaError) return m;
-      const rawD = evaluator.evaluate(args[2], context);
-      if (rawD instanceof FormulaError) return rawD;
-      const d = toNumber(rawD);
-      if (d instanceof FormulaError) return d;
-      return new Date(Math.trunc(y), Math.trunc(m) - 1, Math.trunc(d));
-    },
-  });
-
+/**
+ * Date arithmetic, differences, and business-day calculations: DATEDIF, EDATE,
+ * EOMONTH, NETWORKDAYS, DAYS, DAYS360, ISOWEEKNUM, YEARFRAC, WORKDAY, WORKDAY.INTL.
+ */
+export function registerDateArithmeticFunctions(registry: Map<string, IFormulaFunction>): void {
   registry.set('DATEDIF', {
     minArgs: 3,
     maxArgs: 3,
@@ -168,68 +79,6 @@ export function registerDateFunctions(registry: Map<string, IFormulaFunction>): 
       // Last day of the target month
       const result = new Date(date.getFullYear(), date.getMonth() + Math.trunc(months) + 1, 0);
       return result;
-    },
-  });
-
-  registry.set('WEEKDAY', {
-    minArgs: 1,
-    maxArgs: 2,
-    evaluate(args: ASTNode[], context: IFormulaContext, evaluator: IEvaluator): unknown {
-      const rawDate = evaluator.evaluate(args[0], context);
-      if (rawDate instanceof FormulaError) return rawDate;
-      const date = toDate(rawDate);
-      if (date instanceof FormulaError) return date;
-      let returnType = 1;
-      if (args.length >= 2) {
-        const rawRT = evaluator.evaluate(args[1], context);
-        if (rawRT instanceof FormulaError) return rawRT;
-        const rt = toNumber(rawRT);
-        if (rt instanceof FormulaError) return rt;
-        returnType = Math.trunc(rt);
-      }
-      const day = date.getDay(); // 0=Sun, 6=Sat
-      switch (returnType) {
-        case 1: return day + 1; // 1=Sun, 7=Sat
-        case 2: return day === 0 ? 7 : day; // 1=Mon, 7=Sun
-        case 3: return day === 0 ? 6 : day - 1; // 0=Mon, 6=Sun
-        default: return new FormulaError('#VALUE!', 'WEEKDAY return_type must be 1, 2, or 3');
-      }
-    },
-  });
-
-  registry.set('HOUR', {
-    minArgs: 1,
-    maxArgs: 1,
-    evaluate(args: ASTNode[], context: IFormulaContext, evaluator: IEvaluator): unknown {
-      const val = evaluator.evaluate(args[0], context);
-      if (val instanceof FormulaError) return val;
-      const date = toDate(val);
-      if (date instanceof FormulaError) return date;
-      return date.getHours();
-    },
-  });
-
-  registry.set('MINUTE', {
-    minArgs: 1,
-    maxArgs: 1,
-    evaluate(args: ASTNode[], context: IFormulaContext, evaluator: IEvaluator): unknown {
-      const val = evaluator.evaluate(args[0], context);
-      if (val instanceof FormulaError) return val;
-      const date = toDate(val);
-      if (date instanceof FormulaError) return date;
-      return date.getMinutes();
-    },
-  });
-
-  registry.set('SECOND', {
-    minArgs: 1,
-    maxArgs: 1,
-    evaluate(args: ASTNode[], context: IFormulaContext, evaluator: IEvaluator): unknown {
-      const val = evaluator.evaluate(args[0], context);
-      if (val instanceof FormulaError) return val;
-      const date = toDate(val);
-      if (date instanceof FormulaError) return date;
-      return date.getSeconds();
     },
   });
 
@@ -399,67 +248,6 @@ export function registerDateFunctions(registry: Map<string, IFormulaFunction>): 
     },
   });
 
-  // --- DATEVALUE ---
-  registry.set('DATEVALUE', {
-    minArgs: 1,
-    maxArgs: 1,
-    evaluate(args: ASTNode[], context: IFormulaContext, evaluator: IEvaluator): unknown {
-      const rawVal = evaluator.evaluate(args[0], context);
-      if (rawVal instanceof FormulaError) return rawVal;
-      const str = typeof rawVal === 'string' ? rawVal : String(rawVal);
-      const d = new Date(str);
-      if (isNaN(d.getTime())) return new FormulaError('#VALUE!', `DATEVALUE cannot parse "${str}"`);
-      // Return Excel-like serial (days since 1900-01-01, with Excel's 1900 leap year bug offset)
-      // We return the Date object directly  -  consistent with how the engine handles dates
-      return new Date(d.getFullYear(), d.getMonth(), d.getDate());
-    },
-  });
-
-  // --- TIMEVALUE ---
-  registry.set('TIMEVALUE', {
-    minArgs: 1,
-    maxArgs: 1,
-    evaluate(args: ASTNode[], context: IFormulaContext, evaluator: IEvaluator): unknown {
-      const rawVal = evaluator.evaluate(args[0], context);
-      if (rawVal instanceof FormulaError) return rawVal;
-      const str = typeof rawVal === 'string' ? rawVal : String(rawVal);
-      const match = str.match(/^(\d{1,2}):(\d{2})(?::(\d{2}))?(?:\s*(AM|PM))?$/i);
-      if (!match) return new FormulaError('#VALUE!', `TIMEVALUE cannot parse "${str}"`);
-      let hours = parseInt(match[1], 10);
-      const minutes = parseInt(match[2], 10);
-      const seconds = match[3] ? parseInt(match[3], 10) : 0;
-      const ampm = match[4] ? match[4].toUpperCase() : null;
-      if (ampm === 'PM' && hours < 12) hours += 12;
-      if (ampm === 'AM' && hours === 12) hours = 0;
-      if (hours > 23 || minutes > 59 || seconds > 59) {
-        return new FormulaError('#VALUE!', 'TIMEVALUE: invalid time component');
-      }
-      return (hours * 3600 + minutes * 60 + seconds) / 86400;
-    },
-  });
-
-  // --- TIME ---
-  registry.set('TIME', {
-    minArgs: 3,
-    maxArgs: 3,
-    evaluate(args: ASTNode[], context: IFormulaContext, evaluator: IEvaluator): unknown {
-      const rawH = evaluator.evaluate(args[0], context);
-      if (rawH instanceof FormulaError) return rawH;
-      const h = toNumber(rawH);
-      if (h instanceof FormulaError) return h;
-      const rawM = evaluator.evaluate(args[1], context);
-      if (rawM instanceof FormulaError) return rawM;
-      const m = toNumber(rawM);
-      if (m instanceof FormulaError) return m;
-      const rawS = evaluator.evaluate(args[2], context);
-      if (rawS instanceof FormulaError) return rawS;
-      const s = toNumber(rawS);
-      if (s instanceof FormulaError) return s;
-      const totalSeconds = Math.trunc(h) * 3600 + Math.trunc(m) * 60 + Math.trunc(s);
-      return (totalSeconds % 86400) / 86400;
-    },
-  });
-
   // --- WORKDAY ---
   registry.set('WORKDAY', {
     minArgs: 2,
@@ -575,44 +363,4 @@ export function registerDateFunctions(registry: Map<string, IFormulaFunction>): 
       return current;
     },
   });
-}
-
-/** Determine if a year is a leap year. */
-function isLeapYear(year: number): boolean {
-  return (year % 4 === 0 && year % 100 !== 0) || year % 400 === 0;
-}
-
-/**
- * Parse Excel weekend number (1-17) into a Mon-Sun boolean mask.
- * true = weekend (non-working).
- */
-function parseWeekendNumber(n: number): boolean[] | null {
-  // Mon=idx 0, Tue=1, Wed=2, Thu=3, Fri=4, Sat=5, Sun=6
-  // Excel weekend numbers per spec:
-  // 1=Sat+Sun, 2=Sun+Mon, 3=Mon+Tue, 4=Tue+Wed, 5=Wed+Thu, 6=Thu+Fri, 7=Fri+Sat
-  // 11=Sun only, 12=Mon only, 13=Tue only, 14=Wed only, 15=Thu only, 16=Fri only, 17=Sat only
-  const twoDay: [number, number][] = [
-    [5, 6], // 1: Sat+Sun
-    [6, 0], // 2: Sun+Mon  (Sun=index6, Mon=index0)
-    [0, 1], // 3: Mon+Tue
-    [1, 2], // 4: Tue+Wed
-    [2, 3], // 5: Wed+Thu
-    [3, 4], // 6: Thu+Fri
-    [4, 5], // 7: Fri+Sat
-  ];
-  if (n >= 1 && n <= 7) {
-    const mask = [false, false, false, false, false, false, false];
-    const [a, b] = twoDay[n - 1];
-    mask[a] = true;
-    mask[b] = true;
-    return mask;
-  }
-  if (n >= 11 && n <= 17) {
-    const mask = [false, false, false, false, false, false, false];
-    // 11=Sun(6), 12=Mon(0), 13=Tue(1), 14=Wed(2), 15=Thu(3), 16=Fri(4), 17=Sat(5)
-    const singleDay = [6, 0, 1, 2, 3, 4, 5];
-    mask[singleDay[n - 11]] = true;
-    return mask;
-  }
-  return null;
 }
