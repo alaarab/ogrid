@@ -8,9 +8,18 @@
  *   import "@alaarab/ogrid-react-radix/styles/index.css";
  *   import "@alaarab/ogrid-react-radix/styles/preset-shadcn.css";
  *
- * Order matters: index.css must come first so the preset overrides its
- * defaults. Both light and dark modes follow your shadcn theme — no need
- * to maintain a parallel `[data-theme="dark"]` block.
+ * This preset binds at `:root` (specificity 0,1,0) — NOT `:where(:root)` —
+ * on purpose. The base `index.css` is auto-injected by the component at
+ * mount (`index.js` does `import './index.css'`), so it can land in the
+ * cascade AFTER the host app's CSS where this preset was imported. The
+ * base defines its defaults at `:where(:root)` (0,0,0), so a `:where(:root)`
+ * preset would TIE on specificity and lose to that later injection — the
+ * grid would fall back to its neutral/blue built-in palette. `:root` beats
+ * `:where()` regardless of source order, so the mapping always wins.
+ *
+ * One block covers light AND dark: the right-hand `var(--primary)` etc.
+ * already resolve per-mode in the host (shadcn flips them under `.dark`),
+ * so there's no need for a parallel `[data-theme="dark"]` block.
  *
  * Required shadcn tokens: --background, --foreground, --card,
  * --card-foreground, --muted, --muted-foreground, --accent,
@@ -18,10 +27,11 @@
  * --ring, --radius, --font-sans (or --font-display).
  *
  * Override individual --ogrid-* tokens after this preset import to
- * customize specific surfaces. Your selector beats the :where() in here.
+ * customize specific surfaces. Use a `:root` (or stronger) selector so
+ * your override beats this preset.
  */
 
-:where(:root) {
+:root {
   /* ── Surfaces ── */
   --ogrid-bg: var(--card);
   --ogrid-fg: var(--card-foreground);
