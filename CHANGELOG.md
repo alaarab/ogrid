@@ -22,6 +22,15 @@ table (shadcn/Tailwind) rather than a spreadsheet:
   and Material wrappers — integration-test ProjectCenter / EMV before
   publishing.)
 
+### Fixed — empty-state message rendered off-screen on wide grids
+
+The in-grid empty state ("No results found") centered itself across the
+full grid content width. When the columns were wider than the viewport
+(common with many columns), the centred message landed past the right
+edge and the empty table read as a blank void. It now sticks to the
+scroll viewport's left edge and left-aligns, so it's always visible.
+(Shared `_data-grid-table.scss` — affects all React wrappers.)
+
 ### Fixed — `preset-shadcn.css` defeated by the component's own injected CSS
 
 `@alaarab/ogrid-react-radix`'s shadcn preset bound its token mappings at
