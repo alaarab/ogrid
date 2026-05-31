@@ -332,7 +332,7 @@ The "make OGrid feel modern + go headless" release. Everything is additive on th
   - `useHeadlessGrid()` in `@alaarab/ogrid-vue` + `@alaarab/ogrid-vue-radix` (Vue composable, returns refs/computeds)
   - `createHeadlessGrid()` in `@alaarab/ogrid-angular` + `@alaarab/ogrid-angular-radix` (factory returning Angular signals)
 
-  Pure data layer: returns sort/filter/paginate state + sorted rows + cell-value resolver + minimal Set-based row selection, without imposing any chrome. Render with shadcn `<Table>`, plain HTML, Material `<mat-table>`, your own component — anything. The existing `<OGrid>` component continues to work unchanged on every framework. The headless API is parallel, additive, and unblocks shadcn-native consumers (like Arc) without forcing a migration on existing Fluent/Material consumers (ProjectCenter, EMV).
+  Pure data layer: returns sort/filter/paginate state + sorted rows + cell-value resolver + minimal Set-based row selection, without imposing any chrome. Render with shadcn `<Table>`, plain HTML, Material `<mat-table>`, your own component — anything. The existing `<OGrid>` component continues to work unchanged on every framework. The headless API is parallel, additive, and unblocks shadcn-native consumers (like Arc) without forcing a migration on existing Fluent/Material consumers.
 
   39 tests across the three frameworks (13 each) confirm behavior parity: pagination, sort cycling, multi-select filters, page-1 reset on filter/sort change, cell-value resolution honoring `valueGetter`, reactive updates when input data changes. Storybook stories ship in `react-radix`, `vue-radix`, and `angular-radix` showing plain-HTML rendering, shadcn-style chrome, and filter integration.
 
