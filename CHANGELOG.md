@@ -4,6 +4,25 @@ All notable changes to OGrid will be documented in this file.
 
 ## [Unreleased]
 
+### Fixed — `preset-shadcn.css` defeated by the component's own injected CSS
+
+`@alaarab/ogrid-react-radix`'s shadcn preset bound its token mappings at
+`:where(:root)` (specificity 0,0,0), the same specificity the base
+`index.css` uses for its built-in defaults. Because the component bundle
+auto-injects `index.css` at mount (`index.js` → `import './index.css'`),
+that base CSS can land in the cascade *after* the host app's stylesheet
+(where the preset was imported). On a tie, the later rule wins — so the
+preset lost and the grid fell back to its neutral/blue palette instead of
+the host's shadcn theme. Most visibly the active pagination button, focus
+ring, row selection, and loading spinner rendered grey (light) / blue
+(`#4da6ff`, dark) rather than the app's `--primary` / `--ring`.
+
+The preset now binds at `:root` (specificity 0,1,0), which beats the base
+`:where()` defaults regardless of injection order. No API change; existing
+imports pick up the fix automatically. Consumers who worked around this
+with their own `:root { --ogrid-* }` overrides can keep them (they still
+win) or remove them.
+
 ## [2.14.1] - 2026-05-16
 
 ### Fixed — `@alaarab/ogrid-react-xlsx` row order
