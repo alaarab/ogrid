@@ -69,6 +69,20 @@ const toolbarStripStyle: React.CSSProperties = {
 /** Toolbar strip without border-bottom (when toolbarBelow follows  -  it owns the border). */
 const toolbarStripNoBorderStyle: React.CSSProperties = toolbarStripBase;
 
+/**
+ * Toolbar strip when it carries ONLY built-in end items (the column
+ * chooser / fullscreen button) and no custom `toolbar` or `toolbarBelow`
+ * content. Rendering the full header-coloured, bordered strip for a lone
+ * right-aligned control wastes a whole row and reads as an empty bar.
+ * Instead: transparent, borderless, tight — the control floats just above
+ * the grid header rather than sitting in its own band.
+ */
+const toolbarStripEndOnlyStyle: React.CSSProperties = {
+  ...toolbarStripBase,
+  background: 'transparent',
+  padding: '4px 6px 2px',
+};
+
 const toolbarSectionStyle: React.CSSProperties = {
   display: 'flex',
   alignItems: 'center',
@@ -203,6 +217,11 @@ export function OGridLayout(props: OGridLayoutProps): React.ReactElement {
   const hasSideBar = sideBar != null;
   const sideBarPosition = sideBar?.position ?? 'right';
   const hasToolbar = toolbar != null || toolbarEnd != null || fullScreen;
+  // Only built-in end items (column chooser / fullscreen) present — no
+  // custom toolbar or secondary row. Render a light, borderless strip
+  // instead of a full empty bar (see toolbarStripEndOnlyStyle).
+  const endItemsOnly =
+    hasToolbar && toolbar == null && toolbarBelow == null;
 
   const fullscreenButton = fullScreen ? (
     <button
@@ -225,7 +244,15 @@ export function OGridLayout(props: OGridLayoutProps): React.ReactElement {
       <div style={isFullScreen ? fullscreenContainerStyle : borderedContainerStyle}>
         {/* Toolbar strip */}
         {hasToolbar && (
-          <div style={toolbarBelow ? toolbarStripNoBorderStyle : toolbarStripStyle}>
+          <div
+            style={
+              endItemsOnly
+                ? toolbarStripEndOnlyStyle
+                : toolbarBelow
+                  ? toolbarStripNoBorderStyle
+                  : toolbarStripStyle
+            }
+          >
             <div style={toolbarSectionStyle}>{toolbar}</div>
             <div style={toolbarSectionStyle}>
               {toolbarEnd}
