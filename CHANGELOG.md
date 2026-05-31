@@ -4,6 +4,24 @@ All notable changes to OGrid will be documented in this file.
 
 ## [Unreleased]
 
+### Changed — cleaner default table chrome (react-radix)
+
+Two opt-out-able defaults to make the radix grid read like a modern data
+table (shadcn/Tailwind) rather than a spreadsheet:
+
+- **No vertical cell gridlines by default.** `.dataTable th/td` no longer
+  hard-codes `border-right`; it now reads `var(--ogrid-cell-divider, none)`,
+  so only the horizontal row separators remain. Restore the gridlines per
+  grid with `--ogrid-cell-divider: 1px solid var(--ogrid-border)`.
+  Pinned-column dividers are unaffected.
+- **Lighter toolbar strip when it holds only built-in controls.** When the
+  toolbar carries just the column chooser / fullscreen button (no custom
+  `toolbar` or secondary row), it now renders transparent and borderless
+  instead of a full header-coloured bar — no more near-empty toolbar row
+  above the header. (Shared `OGridLayout`, so this also affects the Fluent
+  and Material wrappers — integration-test the downstream host apps before
+  publishing.)
+
 ### Fixed — `preset-shadcn.css` defeated by the component's own injected CSS
 
 `@alaarab/ogrid-react-radix`'s shadcn preset bound its token mappings at
