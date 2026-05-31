@@ -22,6 +22,17 @@ table (shadcn/Tailwind) rather than a spreadsheet:
   and Material wrappers — integration-test the downstream host apps before
   publishing.)
 
+### Fixed — empty status bar rendered as a stray row below the grid
+
+With `suppressRowCount` (and nothing selected), `getStatusBarParts`
+returns no parts, but the status bar still rendered as a 33px
+header-coloured band with a top border — reads as an extra empty row
+under the table. `.statusBar:empty` now collapses to zero footprint
+(no min-height / padding / border / background) while keeping the
+`role="status"` aria-live node in the DOM, so the bar reappears intact
+the moment a selection populates it. (Shared `_data-grid-table.scss` —
+affects all React wrappers.)
+
 ### Fixed — empty-state message rendered off-screen on wide grids
 
 The in-grid empty state ("No results found") centered itself across the
