@@ -489,6 +489,18 @@
   background: var(--ogrid-header-bg, #f5f5f5);
   border-top: 1px solid var(--ogrid-border, rgba(0, 0, 0, 0.12));
   min-height: 33px;
+
+  // When the status bar has no parts (e.g. `suppressRowCount` and nothing
+  // selected), it would otherwise render as a 33px header-coloured band below
+  // the grid — reads as a stray empty row. Collapse it to zero footprint while
+  // keeping the `role="status"` aria-live node in the DOM, so the full styling
+  // (and live-region announcement) returns the instant a selection populates it.
+  &:empty {
+    min-height: 0;
+    padding: 0;
+    border-top: none;
+    background: transparent;
+  }
 }
 
 .statusBarItem {
