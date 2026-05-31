@@ -4,6 +4,8 @@ All notable changes to OGrid will be documented in this file.
 
 ## [Unreleased]
 
+## [2.15.0] - 2026-05-31
+
 ### Changed — cleaner default table chrome (react-radix)
 
 Two opt-out-able defaults to make the radix grid read like a modern data
