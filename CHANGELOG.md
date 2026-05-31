@@ -19,7 +19,7 @@ table (shadcn/Tailwind) rather than a spreadsheet:
   `toolbar` or secondary row), it now renders transparent and borderless
   instead of a full header-coloured bar — no more near-empty toolbar row
   above the header. (Shared `OGridLayout`, so this also affects the Fluent
-  and Material wrappers — integration-test ProjectCenter / EMV before
+  and Material wrappers — integration-test the downstream host apps before
   publishing.)
 
 ### Fixed — empty status bar rendered as a stray row below the grid
