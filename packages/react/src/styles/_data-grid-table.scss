@@ -610,10 +610,16 @@
 .emptyStateInGrid {
   display: flex;
   flex-direction: column;
-  align-items: center;
+  // The empty-state lives inside the (potentially wider-than-viewport)
+  // grid content, so centering horizontally pushed the message off-screen
+  // to the right whenever the columns overflowed. Stick to the scroll
+  // viewport's left edge and left-align so it's always visible.
+  position: sticky;
+  left: 0;
+  align-items: flex-start;
   justify-content: center;
-  text-align: center;
-  padding: 20px 16px;
+  text-align: left;
+  padding: 20px 24px;
   min-height: 88px;
   width: 100%;
   box-sizing: border-box;
