@@ -11,7 +11,11 @@
 .dataTable td {
   min-width: 80px;
   box-sizing: border-box;
-  border-right: 1px solid var(--ogrid-border, rgba(0, 0, 0, 0.12));
+  // Vertical cell divider. Defaults to OFF for a clean, modern table
+  // (horizontal row separators only — matches shadcn/Tailwind data tables).
+  // Opt back into spreadsheet-style gridlines per grid with:
+  //   --ogrid-cell-divider: 1px solid var(--ogrid-border);
+  border-right: var(--ogrid-cell-divider, none);
   font-size: 13px;
   vertical-align: middle;
 }
