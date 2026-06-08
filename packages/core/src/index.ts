@@ -163,8 +163,6 @@ export type { WindowedRow, WindowedRowCacheOptions } from './utils';
 
 // Utils  -  workerSortFilter
 export {
-  createSortFilterWorker,
-  terminateSortFilterWorker,
   extractValueMatrix,
   processClientSideDataAsync,
   DEFAULT_WORKER_SORT_AUTO_THRESHOLD,

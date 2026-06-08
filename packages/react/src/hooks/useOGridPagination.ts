@@ -4,6 +4,8 @@ export interface UseOGridPaginationParams {
   controlledPage?: number;
   controlledPageSize?: number;
   defaultPageSize: number;
+  /** Initial page for the uncontrolled case (lazy-initialized; default 1). */
+  initialPage?: number;
   onPageChange?: (p: number) => void;
   onPageSizeChange?: (size: number) => void;
 }
@@ -20,9 +22,9 @@ export interface UseOGridPaginationState {
  * Resets to page 1 when page size changes.
  */
 export function useOGridPagination(params: UseOGridPaginationParams): UseOGridPaginationState {
-  const { controlledPage, controlledPageSize, defaultPageSize, onPageChange, onPageSizeChange } = params;
+  const { controlledPage, controlledPageSize, defaultPageSize, initialPage, onPageChange, onPageSizeChange } = params;
 
-  const [internalPage, setInternalPage] = useState(1);
+  const [internalPage, setInternalPage] = useState(() => initialPage ?? 1);
   const [internalPageSize, setInternalPageSize] = useState(defaultPageSize);
 
   const page = controlledPage ?? internalPage;

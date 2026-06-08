@@ -25,6 +25,8 @@ const EMPTY_DATA_SOURCE = { fetchFilterOptions: undefined } as const;
 
 export interface UseOGridFiltersParams<T> {
   controlledFilters?: IFilters;
+  /** Initial filters for the uncontrolled case (lazy-initialized). */
+  initialFilters?: IFilters;
   onFiltersChange?: (f: IFilters) => void;
   setPage: (p: number) => void;
   columns: ICoreColumnDef<T>[];
@@ -47,9 +49,9 @@ export interface UseOGridFiltersState {
  * Resets to page 1 on filter change.
  */
 export function useOGridFilters<T>(params: UseOGridFiltersParams<T>): UseOGridFiltersState {
-  const { controlledFilters, onFiltersChange, setPage, columns, displayData, dataSource } = params;
+  const { controlledFilters, initialFilters, onFiltersChange, setPage, columns, displayData, dataSource } = params;
 
-  const [internalFilters, setInternalFilters] = useState<IFilters>({});
+  const [internalFilters, setInternalFilters] = useState<IFilters>(() => initialFilters ?? {});
   const filters = controlledFilters ?? internalFilters;
 
   const setFilters = useCallback(
