@@ -5,7 +5,7 @@
 <h1 align="center">OGrid</h1>
 
 <p align="center">
-  Spreadsheet behavior for any table chrome. Headless hooks for inline edit, range select, fill handle, copy/paste — drop them on shadcn, Material, Fluent, or your own &lt;table&gt;. Or use the built-in &lt;OGrid&gt; component. React-first, MIT.
+  A React data grid with built-in spreadsheet features: sorting, filtering, pagination, cell editing, range selection, copy/paste, and fill handle. Drop in the &lt;OGrid&gt; component, or compose the hooks onto your own table. MIT.
 </p>
 
 <p align="center">
@@ -28,9 +28,9 @@
 
 Pick the React UI library you already use (Radix or Fluent) and get sorting, filtering, pagination, cell editing, spreadsheet selection, and the shared core grid model out of the box.
 
-## NEW in 2.9 — Headless spreadsheet hooks
+## Spreadsheet hooks
 
-A set of headless React hooks that add **spreadsheet behavior** — inline edit, range select, fill handle, copy/paste, undo/redo, keyboard navigation — to **any table chrome** (shadcn `<Table>`, your own `<table>`, anything). MIT.
+Hooks that add spreadsheet behavior — inline edit, range select, fill handle, copy/paste, undo/redo, keyboard navigation — to any table you render (shadcn `<Table>`, a plain `<table>`, anything).
 
 ```tsx
 import {
