@@ -256,6 +256,15 @@ export type {
 } from './components/ColumnChooserContent';
 export { createOGrid } from './components/createOGrid';
 export type { CreateOGridComponents, GridRowProps, InlineCellEditorProps } from './components/createOGrid';
+export { BaseDataGridTableInner, createDataGridTable } from './components/BaseDataGridTable';
+export type {
+  DataGridStyles,
+  DataGridPrimitives,
+  RowCheckboxRenderProps,
+  HeaderSelectAllRenderProps,
+  BooleanCellRenderProps,
+  PopoverEditorRenderProps,
+} from './components/BaseDataGridTable';
 export { CellErrorBoundary } from './components/CellErrorBoundary';
 export type { CellErrorBoundaryProps } from './components/CellErrorBoundary';
 export { WindowedPlaceholderRow } from './components/WindowedPlaceholderRow';
