@@ -10,6 +10,7 @@ const sidebars: SidebarsConfig = {
         'getting-started/overview',
         'getting-started/installation',
         'getting-started/quick-start',
+        'getting-started/headless-or-component',
       ],
     },
     {
@@ -22,6 +23,7 @@ const sidebars: SidebarsConfig = {
         'features/pagination',
         'features/editing',
         'features/formulas',
+        'features/multi-sheet',
         'features/spreadsheet-selection',
         'features/row-selection',
         'features/column-groups',
@@ -66,6 +68,7 @@ const sidebars: SidebarsConfig = {
         'api/ogrid-props',
         'api/column-def',
         'api/grid-api',
+        'api/headless-hooks',
         'api/types',
         {
           type: 'category',

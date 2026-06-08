@@ -124,7 +124,7 @@ interface IOGridBaseProps<T> {
   /** Side bar configuration. `true` shows default panels (columns + filters). Pass ISideBarDef for options. */
   sideBar?: boolean | ISideBarDef;
 
-  /** Page size options shown in the pagination dropdown. Default: [10, 20, 50, 100]. */
+  /** Page size options shown in the pagination dropdown. Default: [10, 25, 50, 100]. */
   pageSizeOptions?: number[];
 
   /** Enable column reordering via drag-and-drop on header cells. Default: false. */
