@@ -67,8 +67,6 @@ export type {
 export { WindowedRowCache, createWindowedRowCache } from './windowedRowCache';
 export type { WindowedRow, WindowedRowCacheOptions } from './windowedRowCache';
 export {
-  createSortFilterWorker,
-  terminateSortFilterWorker,
   extractValueMatrix,
   processClientSideDataAsync,
 } from './workerSortFilter';

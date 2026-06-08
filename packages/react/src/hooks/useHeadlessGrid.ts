@@ -188,22 +188,16 @@ export function useHeadlessGrid<T>(
   const isServerSide = dataSource != null;
 
   // Pagination first — sort and filter both reset to page 1, so they need setPage.
+  // initialPage/initialFilters are lazy-initialized inside the child hooks (no
+  // setState-during-render), so the initial values apply from the first render.
   const pagination = useOGridPagination({
     controlledPage,
     controlledPageSize,
     defaultPageSize: initialPageSize,
+    initialPage,
     onPageChange,
     onPageSizeChange,
   });
-
-  // Initialize page once if initialPage was provided and we're uncontrolled.
-  // (useOGridPagination starts at 1; we reset only if a different initialPage was asked for.)
-  // We do this lazily on first render via useState — but pagination.setPage is the API.
-  // Since the hook resets to 1 on sort/filter changes anyway, initialPage is best-effort.
-  useMemo(() => {
-    if (controlledPage === undefined && initialPage !== 1) pagination.setPage(initialPage);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
 
   const sorting = useOGridSorting({
     controlledSort,
@@ -213,26 +207,15 @@ export function useHeadlessGrid<T>(
     setPage: pagination.setPage,
   });
 
-  // Initialize filters lazily on first render if initialFilters was provided.
-  const [didInitFilters, setDidInitFilters] = useState(false);
-
   const filtersHook = useOGridFilters<T>({
     controlledFilters,
+    initialFilters,
     onFiltersChange,
     setPage: pagination.setPage,
     columns,
     displayData: data,
     dataSource,
   });
-
-  if (
-    !didInitFilters &&
-    controlledFilters === undefined &&
-    initialFilters !== undefined
-  ) {
-    filtersHook.setFilters(initialFilters);
-    setDidInitFilters(true);
-  }
 
   // Data-layer fetching — handles client-side AND server-side modes,
   // worker-sort optimization, and Excel-like sortVersion tracking.
