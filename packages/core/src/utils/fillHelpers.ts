@@ -79,6 +79,11 @@ export function applyFillValues<T>(
   const srcFlatColIndex = formulaOptions
     ? formulaOptions.flatColumns.findIndex(c => c.columnId === startColDef.columnId)
     : -1;
+  // Precompute columnId -> flat index once instead of findIndex per filled cell
+  // (a large fill over a wide grid was O(cells x flatColumns)).
+  const flatColIndexById = formulaOptions
+    ? new Map(formulaOptions.flatColumns.map((c, i) => [c.columnId, i] as const))
+    : null;
 
   const compatibleCols = new Set<number>();
   for (let col = range.startCol; col <= range.endCol; col++) {
@@ -109,7 +114,7 @@ export function applyFillValues<T>(
           const rowDelta = row - sourceRow;
           const colDelta = col - sourceCol;
           const adjusted = adjustFormulaReferences(srcFormula, colDelta, rowDelta);
-          const targetFlatColIdx = formulaOptions.flatColumns.findIndex(c => c.columnId === colDef.columnId);
+          const targetFlatColIdx = flatColIndexById?.get(colDef.columnId) ?? -1;
           if (targetFlatColIdx >= 0) {
             formulaOptions.setFormula(targetFlatColIdx, row, adjusted);
             // Skip normal value fill  -  formula evaluation will provide the value

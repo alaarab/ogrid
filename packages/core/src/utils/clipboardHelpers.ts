@@ -53,6 +53,10 @@ export function formatSelectionAsTsv<T>(
   }
 ): string {
   const norm = normalizeSelectionRange(range);
+  // Precompute columnId -> flat index once instead of findIndex per copied cell.
+  const flatColIndexById = formulaOptions
+    ? new Map(formulaOptions.flatColumns.map((fc, i) => [fc.columnId, i] as const))
+    : null;
   const rows: string[] = [];
   for (let r = norm.startRow; r <= norm.endRow; r++) {
     const cells: string[] = [];
@@ -62,7 +66,7 @@ export function formatSelectionAsTsv<T>(
       const col = visibleCols[c];
       // Check formula first  -  copy formula text instead of computed value
       if (formulaOptions?.hasFormula && formulaOptions?.getFormula) {
-        const flatColIndex = formulaOptions.flatColumns.findIndex(fc => fc.columnId === col.columnId);
+        const flatColIndex = flatColIndexById?.get(col.columnId) ?? -1;
         if (flatColIndex >= 0 && formulaOptions.hasFormula(flatColIndex, r)) {
           const formulaStr = formulaOptions.getFormula(flatColIndex, r);
           if (formulaStr) {
@@ -123,6 +127,10 @@ export function applyPastedValues<T>(
   }
 ): ICellValueChangedEvent<T>[] {
   const events: ICellValueChangedEvent<T>[] = [];
+  // Precompute columnId -> flat index once instead of findIndex per pasted cell.
+  const flatColIndexById = formulaOptions
+    ? new Map(formulaOptions.flatColumns.map((fc, i) => [fc.columnId, i] as const))
+    : null;
   for (let r = 0; r < parsedRows.length; r++) {
     const cells = parsedRows[r];
     for (let c = 0; c < cells.length; c++) {
@@ -135,7 +143,7 @@ export function applyPastedValues<T>(
       const cellText = cells[c] ?? '';
       // Detect formula paste  -  route through setFormula instead of normal value path
       if (cellText.startsWith('=') && formulaOptions?.setFormula) {
-        const flatColIndex = formulaOptions.flatColumns.findIndex(fc => fc.columnId === col.columnId);
+        const flatColIndex = flatColIndexById?.get(col.columnId) ?? -1;
         if (flatColIndex >= 0) {
           formulaOptions.setFormula(flatColIndex, targetRow, cellText);
           continue;

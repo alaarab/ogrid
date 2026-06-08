@@ -196,15 +196,28 @@ function readBody(req: IncomingMessage): Promise<unknown> {
   });
 }
 
-function send(res: ServerResponse, status: number, body: unknown): void {
+// The bridge binds to 127.0.0.1 and only talks to a local dev app. Reflect the
+// request Origin only when it's a localhost origin instead of using a wildcard,
+// so an arbitrary website a developer visits can't read/write grid state on the
+// loopback bridge.
+const LOCALHOST_ORIGIN = /^https?:\/\/(localhost|127\.0\.0\.1|\[::1\])(:\d+)?$/;
+function corsOrigin(req: IncomingMessage): string {
+  const origin = req.headers.origin;
+  return origin && LOCALHOST_ORIGIN.test(origin) ? origin : '';
+}
+
+function send(req: IncomingMessage, res: ServerResponse, status: number, body: unknown): void {
   const json = JSON.stringify(body);
-  res.writeHead(status, {
+  const headers: Record<string, string | number> = {
     'Content-Type': 'application/json',
     'Content-Length': Buffer.byteLength(json),
-    'Access-Control-Allow-Origin': '*',
+    Vary: 'Origin',
     'Access-Control-Allow-Methods': 'GET, POST, PUT, OPTIONS',
     'Access-Control-Allow-Headers': 'Content-Type',
-  });
+  };
+  const allow = corsOrigin(req);
+  if (allow) headers['Access-Control-Allow-Origin'] = allow;
+  res.writeHead(status, headers);
   res.end(json);
 }
 
@@ -214,13 +227,16 @@ export function startBridgeServer(
 ): Promise<() => Promise<void>> {
   return new Promise((resolve, reject) => {
     const httpServer = createServer(async (req: IncomingMessage, res: ServerResponse) => {
-      // CORS pre-flight
+      // CORS pre-flight — reflect localhost origins only (see send()).
       if (req.method === 'OPTIONS') {
-        res.writeHead(204, {
-          'Access-Control-Allow-Origin': '*',
+        const headers: Record<string, string> = {
           'Access-Control-Allow-Methods': 'GET, POST, PUT, OPTIONS',
           'Access-Control-Allow-Headers': 'Content-Type',
-        });
+          Vary: 'Origin',
+        };
+        const allow = corsOrigin(req);
+        if (allow) headers['Access-Control-Allow-Origin'] = allow;
+        res.writeHead(204, headers);
         res.end();
         return;
       }
@@ -231,7 +247,7 @@ export function startBridgeServer(
       try {
         // GET /health
         if (req.method === 'GET' && parts[0] === 'health') {
-          send(res, 200, { ok: true, grids: store.listGrids().length });
+          send(req, res,200, { ok: true, grids: store.listGrids().length });
           return;
         }
 
@@ -239,9 +255,9 @@ export function startBridgeServer(
         if (req.method === 'POST' && parts[0] === 'grids' && parts[1] === 'connect') {
           const body = (await readBody(req)) as Record<string, unknown>;
           const gridId = String(body?.['gridId'] ?? '');
-          if (!gridId) { send(res, 400, { error: 'gridId required' }); return; }
+          if (!gridId) { send(req, res,400, { error: 'gridId required' }); return; }
           store.upsertGrid(gridId, body as Partial<GridStateSnapshot>);
-          send(res, 200, { ok: true });
+          send(req, res,200, { ok: true });
           return;
         }
 
@@ -250,7 +266,7 @@ export function startBridgeServer(
           const gridId = parts[1];
           const body = (await readBody(req)) as Record<string, unknown>;
           store.upsertGrid(gridId, body as Partial<GridStateSnapshot>);
-          send(res, 200, { ok: true });
+          send(req, res,200, { ok: true });
           return;
         }
 
@@ -261,7 +277,7 @@ export function startBridgeServer(
           const state = store.getState(gridId);
           if (state) store.upsertGrid(gridId, {});
           const cmds = store.popPendingCommands(gridId);
-          send(res, 200, cmds);
+          send(req, res,200, cmds);
           return;
         }
 
@@ -275,13 +291,13 @@ export function startBridgeServer(
           const cmdId = parts[3];
           const body = (await readBody(req)) as Record<string, unknown>;
           store.resolveCommand(cmdId, body?.['result'], body?.['error'] as string | undefined);
-          send(res, 200, { ok: true });
+          send(req, res,200, { ok: true });
           return;
         }
 
-        send(res, 404, { error: 'Not found' });
+        send(req, res,404, { error: 'Not found' });
       } catch (err) {
-        send(res, 500, { error: String(err) });
+        send(req, res,500, { error: String(err) });
       }
     });
 
