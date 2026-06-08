@@ -72,14 +72,15 @@ const toolbarStripNoBorderStyle: React.CSSProperties = toolbarStripBase;
 /**
  * Toolbar strip when it carries ONLY built-in end items (the column
  * chooser / fullscreen button) and no custom `toolbar` or `toolbarBelow`
- * content. Rendering the full header-coloured, bordered strip for a lone
- * right-aligned control wastes a whole row and reads as an empty bar.
- * Instead: transparent, borderless, tight — the control floats just above
- * the grid header rather than sitting in its own band.
+ * content. Keep it borderless and tight (a lone right-aligned control
+ * doesn't warrant a full padded, bordered row), but KEEP the header
+ * background so it reads as the top of the grid's header band — flush with
+ * the column-header row below and consistent with the (also header-coloured)
+ * footer strip. A transparent background here showed the white grid body
+ * through the strip, producing a jarring white band above the beige header.
  */
 const toolbarStripEndOnlyStyle: React.CSSProperties = {
   ...toolbarStripBase,
-  background: 'transparent',
   padding: '4px 6px 2px',
 };
 
