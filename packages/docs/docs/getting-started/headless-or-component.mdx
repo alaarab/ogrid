@@ -86,10 +86,10 @@ The full integration code is the
 
 ## Both at once — yes, in the same app
 
-Mix freely. A typical pattern:
+Mix freely. A common pattern:
 
-- 80% of admin / list pages → `<OGrid>` (fast to build, good enough chrome)
-- 20% of "the data table is the product" pages → headless hooks (custom chrome wins)
+- Standard admin / list pages → `<OGrid>` (fast to build, sensible default UI)
+- Pages where the table is the product → the hooks (full control over the markup)
 
 Same package import. Same theme tokens. Same TypeScript types. The
 spreadsheet features (inline edit, fill handle, clipboard, undo) work

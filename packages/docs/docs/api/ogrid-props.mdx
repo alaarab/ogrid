@@ -35,6 +35,7 @@ import { OGrid } from '@alaarab/ogrid-react-fluent';
 | `onSortChange` | `(sort: { field: string; direction: 'asc' \| 'desc' }) => void` | `undefined` | Callback fired when the user changes the sort. Required for controlled sort mode. |
 | `defaultSortBy` | `string` | `undefined` | Column ID to sort by initially in uncontrolled mode. |
 | `defaultSortDirection` | `'asc' \| 'desc'` | `undefined` | Initial sort direction in uncontrolled mode. Used together with `defaultSortBy`. |
+| `workerSort` | `boolean \| 'auto'` | `false` | Offload sorting to a Web Worker to keep the main thread responsive. `true` always uses the worker; `'auto'` uses it past ~5000 rows. Columns with a custom `compare` fall back to synchronous sort. |
 
 ## Filtering
 
@@ -63,6 +64,7 @@ import { OGrid } from '@alaarab/ogrid-react-fluent';
 | `columnOrder` | `string[]` | `undefined` | Controlled column order as an array of column IDs. |
 | `onColumnOrderChange` | `(order: string[]) => void` | `undefined` | Callback fired when the user reorders columns. |
 | `onColumnResized` | `(columnId: string, width: number) => void` | `undefined` | Callback fired when the user finishes resizing a column. |
+| `responsiveColumns` | `boolean \| IResponsiveColumnsConfig` | `false` | Auto-hide columns by their `responsivePriority` as the container narrows. `true` uses default breakpoints (576/768/992/1200px); pass a config object for custom thresholds. |
 
 ## Editing
 
@@ -130,11 +132,38 @@ import { OGrid } from '@alaarab/ogrid-react-fluent';
 | `rowHeight` | `number` | `36` | Fixed row height in pixels. Affects layout and virtual scrolling row height calculation. |
 | `density` | `'compact' \| 'normal' \| 'comfortable'` | `'normal'` | Cell spacing preset. Controls cell padding throughout the grid. |
 | `showRowNumbers` | `boolean` | `false` | Show Excel-style row number column (1, 2, 3...) at the start of the grid. |
+| `cellReferences` | `boolean` | `false` | Excel-style cell references: column-letter headers (A, B, C…), a row-number gutter, and a name box showing the active cell (e.g. "A1"). Implies `showRowNumbers`. |
 | `className` | `string` | `undefined` | Additional CSS class name applied to the root grid element. |
 | `toolbar` | `ReactNode` | `undefined` | Custom toolbar content rendered in the left side of the primary toolbar strip. |
 | `toolbarBelow` | `ReactNode` | `undefined` | Secondary toolbar row rendered below the primary toolbar. Use for active filter chips, breadcrumbs, or other contextual controls. |
 | `entityLabelPlural` | `string` | `undefined` | Plural label for the entity type (e.g., `"projects"`, `"users"`). Used in status bar text and empty state messages. |
 | `emptyState` | `{ message?: ReactNode; render?: () => ReactNode }` | `undefined` | Custom empty state configuration. Provide `message` for a simple text override, or `render` for a fully custom empty state component. |
+
+## Formulas
+
+| Name | Type | Default | Description |
+|------|------|---------|-------------|
+| `formulas` | `boolean` | `false` | Enable Excel-like formulas. When on, cells starting with `=` are evaluated by the built-in formula engine. |
+| `initialFormulas` | `Array<{ col: number; row: number; formula: string }>` | `undefined` | Formulas to load when the engine initializes. |
+| `onFormulaRecalc` | `(result: IRecalcResult) => void` | `undefined` | Called when a recalculation updates cell values (e.g. a cascade from an edited cell). |
+| `formulaFunctions` | `Record<string, IFormulaFunction>` | `undefined` | Custom functions to register with the formula engine. |
+| `namedRanges` | `Record<string, string>` | `undefined` | Named ranges for formulas, mapping a name to a cell/range ref (e.g. `{ Revenue: 'A1:A10' }`). |
+| `sheets` | `Record<string, IGridDataAccessor>` | `undefined` | Accessors for cross-sheet formula references (e.g. `{ Sheet2: accessor }`). |
+
+See [Formulas](../features/formulas) for the full guide.
+
+## Multi-Sheet
+
+Excel-style sheet tabs along the bottom of the grid.
+
+| Name | Type | Default | Description |
+|------|------|---------|-------------|
+| `sheetDefs` | `ISheetDef[]` | `undefined` | Sheet definitions. When set, renders a bottom tab bar (the `SheetTabs` component). |
+| `activeSheet` | `string` | `undefined` | The currently active sheet id. |
+| `onSheetChange` | `(sheetId: string) => void` | `undefined` | Called when the user switches sheets. |
+| `onSheetAdd` | `() => void` | `undefined` | Called when the user clicks the add-sheet button. |
+
+See [Multi-Sheet](../features/multi-sheet).
 
 ## Callbacks
 

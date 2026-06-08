@@ -1,0 +1,91 @@
+---
+sidebar_position: 6
+title: Multi-Sheet
+description: Excel-style sheet tabs — render a bottom tab bar and switch between multiple grids.
+---
+
+# Multi-Sheet
+
+OGrid can render an Excel-style **sheet tab bar** along the bottom of the grid so users can switch between multiple sheets. Provide `sheetDefs`, track the `activeSheet`, and swap the grid's `data` (and `columns`, if they differ) when the active sheet changes.
+
+## Props
+
+| Name | Type | Description |
+|------|------|-------------|
+| `sheetDefs` | `ISheetDef[]` | Sheet definitions. When set, the grid renders the bottom tab bar. |
+| `activeSheet` | `string` | The id of the currently active sheet. |
+| `onSheetChange` | `(sheetId: string) => void` | Called when the user clicks a different tab. |
+| `onSheetAdd` | `() => void` | Called when the user clicks the **+** button. Omit to hide it. |
+
+`ISheetDef` is a small shape from `@alaarab/ogrid-core`:
+
+```ts
+interface ISheetDef {
+  id: string;
+  name: string;
+  color?: string; // optional tab color (any CSS color)
+}
+```
+
+## Example
+
+The grid is controlled: you own `activeSheet` and pick which data to show.
+
+```tsx
+import { useState } from "react";
+import { OGrid } from "@alaarab/ogrid-react-radix";
+
+const sheets = [
+  { id: "q1", name: "Q1" },
+  { id: "q2", name: "Q2" },
+  { id: "fy", name: "Full Year", color: "#217346" },
+];
+
+const dataBySheet = {
+  q1: q1Rows,
+  q2: q2Rows,
+  fy: fyRows,
+};
+
+function Workbook() {
+  const [activeSheet, setActiveSheet] = useState("q1");
+  return (
+    <OGrid
+      columns={columns}
+      data={dataBySheet[activeSheet]}
+      getRowId={(r) => r.id}
+      sheetDefs={sheets}
+      activeSheet={activeSheet}
+      onSheetChange={setActiveSheet}
+      onSheetAdd={() => {/* add a sheet to your own state */}}
+    />
+  );
+}
+```
+
+## Cross-sheet formulas
+
+When [formulas](./formulas) are enabled, the `sheets` prop registers other sheets' data as accessors so a formula can reference another sheet (e.g. `=Q2!A1`):
+
+```tsx
+<OGrid
+  /* ...sheet props as above... */
+  formulas
+  sheets={{ Q2: q2Accessor, FY: fyAccessor }}
+/>
+```
+
+## Standalone tab bar
+
+The tab bar is also exported on its own as `SheetTabs` from `@alaarab/ogrid-react`, if you want to render it outside the grid:
+
+```tsx
+import { SheetTabs } from "@alaarab/ogrid-react";
+
+<SheetTabs
+  sheets={sheets}
+  activeSheet={activeSheet}
+  onSheetChange={setActiveSheet}
+  onSheetAdd={addSheet}
+/>;
+```
