@@ -22,7 +22,12 @@ export const TextFilterPopover: React.FC<TextFilterPopoverProps> = ({
         placeholder="Enter search term..."
         value={value}
         onChange={(e) => onValueChange(e.target.value)}
-        onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), onApply())}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter') {
+            e.preventDefault();
+            onApply();
+          }
+        }}
         autoComplete="off"
       />
     </div>

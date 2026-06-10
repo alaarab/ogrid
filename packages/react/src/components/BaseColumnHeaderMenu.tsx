@@ -78,7 +78,7 @@ export function BaseColumnHeaderMenu(props: BaseColumnHeaderMenuProps) {
     const handleClickOutside = (e: MouseEvent) => {
       const target = e.target as Node;
       // Don't close if clicking inside the menu itself (portal)  -  let onClick fire first
-      if (menuRef.current && menuRef.current.contains(target)) return;
+      if (menuRef.current?.contains(target)) return;
       if (anchorElement && !anchorElement.contains(target)) {
         onClose();
       }

@@ -254,7 +254,7 @@ export function startBridgeServer(
         // POST /grids/connect  { gridId, ...initialState }
         if (req.method === 'POST' && parts[0] === 'grids' && parts[1] === 'connect') {
           const body = (await readBody(req)) as Record<string, unknown>;
-          const gridId = String(body?.['gridId'] ?? '');
+          const gridId = String(body?.gridId ?? '');
           if (!gridId) { send(req, res,400, { error: 'gridId required' }); return; }
           store.upsertGrid(gridId, body as Partial<GridStateSnapshot>);
           send(req, res,200, { ok: true });
@@ -290,7 +290,7 @@ export function startBridgeServer(
         ) {
           const cmdId = parts[3];
           const body = (await readBody(req)) as Record<string, unknown>;
-          store.resolveCommand(cmdId, body?.['result'], body?.['error'] as string | undefined);
+          store.resolveCommand(cmdId, body?.result, body?.error as string | undefined);
           send(req, res,200, { ok: true });
           return;
         }

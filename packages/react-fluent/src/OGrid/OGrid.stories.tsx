@@ -716,7 +716,7 @@ export const Playground: StoryObj<PlaygroundArgs> = {
     const pageSizeOpts = args.pageSizeOptions
       .split(',')
       .map((s) => parseInt(s.trim(), 10))
-      .filter((n) => !isNaN(n));
+      .filter((n) => !Number.isNaN(n));
 
     return (
       <OGrid<Project>

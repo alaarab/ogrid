@@ -114,7 +114,7 @@ export function toCellKey(col: number, row: number, sheet?: string): CellKey {
  */
 export function fromCellKey(key: CellKey): { col: number; row: number; sheet?: string } {
   const colonIdx = key.indexOf(':');
-  if (colonIdx >= 0 && isNaN(parseInt(key.substring(0, colonIdx), 10))) {
+  if (colonIdx >= 0 && Number.isNaN(parseInt(key.substring(0, colonIdx), 10))) {
     // Has sheet prefix: "sheetName:col,row"
     const sheet = key.substring(0, colonIdx);
     const rest = key.substring(colonIdx + 1);

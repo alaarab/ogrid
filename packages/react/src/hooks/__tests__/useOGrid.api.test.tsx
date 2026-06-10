@@ -1,7 +1,7 @@
 import * as React from 'react';
 import { renderHook, act, render } from '@testing-library/react';
 import { useOGrid } from '../useOGrid';
-import type { IOGridProps, IOGridApi } from '../../types';
+import type { IOGridApi } from '../../types';
 
 type Row = { id: string; name: string };
 const columns = [

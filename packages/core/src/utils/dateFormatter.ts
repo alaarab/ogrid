@@ -78,7 +78,7 @@ export function formatDateForDisplay(
  * @returns A UTC Date at midnight (00:00:00.000Z), or null for invalid/unparseable input.
  */
 export function parseUserInputDate(input: string, format: string): Date | null {
-  if (!input || !input.trim()) return null;
+  if (!input?.trim()) return null;
 
   const trimmed = input.trim();
   const parts = trimmed.split(/[/\-.\s]+/).filter(Boolean);

@@ -8,18 +8,18 @@ import { FormulaError } from '../../types';
 export function toDate(val: unknown): Date | FormulaError {
   if (val instanceof FormulaError) return val;
   if (val instanceof Date) {
-    if (isNaN(val.getTime())) return new FormulaError('#VALUE!', 'Invalid date');
+    if (Number.isNaN(val.getTime())) return new FormulaError('#VALUE!', 'Invalid date');
     return val;
   }
   if (typeof val === 'string') {
     const d = new Date(val);
-    if (isNaN(d.getTime())) return new FormulaError('#VALUE!', `Cannot parse "${val}" as date`);
+    if (Number.isNaN(d.getTime())) return new FormulaError('#VALUE!', `Cannot parse "${val}" as date`);
     return d;
   }
   if (typeof val === 'number') {
     // Treat number as a timestamp
     const d = new Date(val);
-    if (isNaN(d.getTime())) return new FormulaError('#VALUE!', 'Invalid numeric date');
+    if (Number.isNaN(d.getTime())) return new FormulaError('#VALUE!', 'Invalid numeric date');
     return d;
   }
   return new FormulaError('#VALUE!', 'Cannot convert value to date');

@@ -1,4 +1,4 @@
-import * as React from 'react';
+
 import type { IColumnDef } from '../types';
 
 export interface FixtureRow {

@@ -5,7 +5,6 @@ import {
   getValueFromOffset,
   DEFAULT_MIN,
   DEFAULT_MAX,
-  DEFAULT_STEP,
 } from '../slider/slider-utils';
 
 describe('slider-utils', () => {

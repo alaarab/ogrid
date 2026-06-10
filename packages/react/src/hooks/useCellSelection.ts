@@ -255,7 +255,7 @@ export function useCellSelection(params: UseCellSelectionParams): UseCellSelecti
             cellIndex = buildCellIndex(wrapperRef.current);
             el = cellIndex?.get(key);
           }
-          if (el && el.isConnected) {
+          if (el?.isConnected) {
             styleCellInRange(el, r, c, minR, maxR, minC, maxC, anchor);
           }
         }

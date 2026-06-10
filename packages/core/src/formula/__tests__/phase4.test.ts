@@ -5,7 +5,7 @@ import { tokenize } from '../tokenizer';
 import { parse } from '../parser';
 import { FormulaEngine } from '../formulaEngine';
 import { FormulaError } from '../types';
-import type { IGridDataAccessor, CellKey } from '../types';
+import type { IGridDataAccessor, } from '../types';
 import { toCellKey, fromCellKey, formatAddress, adjustFormulaReferences } from '../cellAddressUtils';
 
 // Helper: create a simple accessor from a 2D array
@@ -455,7 +455,7 @@ describe('Cross-Sheet References', () => {
 
       engine.unregisterSheet('Sheet2');
       // Recalculate
-      const result = engine.setFormula(0, 0, '=Sheet2!A1', mainAccessor);
+      engine.setFormula(0, 0, '=Sheet2!A1', mainAccessor);
       const val = engine.getValue(0, 0);
       expect(val).toBeInstanceOf(FormulaError);
     });

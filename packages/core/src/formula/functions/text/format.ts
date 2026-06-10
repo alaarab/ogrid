@@ -73,7 +73,7 @@ export function registerTextFormatFunctions(registry: Map<string, IFormulaFuncti
       const isPercent = raw.endsWith('%');
       const text = raw.replace(/[,$%\s]/g, '');
       const n = Number(text);
-      if (isNaN(n)) return new FormulaError('#VALUE!', 'VALUE cannot convert text to number');
+      if (Number.isNaN(n)) return new FormulaError('#VALUE!', 'VALUE cannot convert text to number');
       return isPercent ? n / 100 : n;
     },
   });
@@ -262,7 +262,7 @@ export function registerTextFormatFunctions(registry: Map<string, IFormulaFuncti
       }
 
       const n = Number(text);
-      if (isNaN(n)) return new FormulaError('#VALUE!', `NUMBERVALUE cannot parse "${toString(rawText)}"`);
+      if (Number.isNaN(n)) return new FormulaError('#VALUE!', `NUMBERVALUE cannot parse "${toString(rawText)}"`);
       return isPercent ? n / 100 : n;
     },
   });

@@ -17,7 +17,7 @@ export function registerInfoFunctions(registry: Map<string, IFormulaFunction>): 
     maxArgs: 1,
     evaluate(args: ASTNode[], context: IFormulaContext, evaluator: IEvaluator): unknown {
       const val = evaluator.evaluate(args[0], context);
-      return typeof val === 'number' && !isNaN(val);
+      return typeof val === 'number' && !Number.isNaN(val);
     },
   });
 

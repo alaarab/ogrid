@@ -84,7 +84,7 @@ export const editingColumns: IColumnDef<Person>[] = [
     valueFormatter: (v) => `$${Number(v).toLocaleString()}`,
     valueParser: ({ newValue }) => {
       const n = Number(newValue);
-      return isNaN(n) || n < 0 ? undefined : n;
+      return Number.isNaN(n) || n < 0 ? undefined : n;
     } },
 ];
 

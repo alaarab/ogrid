@@ -1,6 +1,6 @@
 import { tokenize } from '../tokenizer';
 import { FormulaError } from '../types';
-import type { Token, TokenType } from '../types';
+import type { TokenType } from '../types';
 
 /** Helper: extract just (type, value) pairs, excluding EOF */
 function tokenPairs(input: string): Array<[TokenType, string]> {

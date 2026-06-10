@@ -41,7 +41,7 @@ export function computeAggregations<T>(
       // Use Number() instead of parseFloat() so date strings like "2020-08-22"
       // return NaN instead of partially parsing to 2020
       const num = typeof raw === 'number' ? raw : Number(raw);
-      if (!isNaN(num) && isFinite(num)) {
+      if (!Number.isNaN(num) && Number.isFinite(num)) {
         sum += num;
         if (num < min) min = num;
         if (num > max) max = num;

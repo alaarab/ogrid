@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import { useMemo } from 'react';
 import { LiveDemo } from '../LiveDemo';
 import { people, getRowId, sortingColumns, type Person } from './demoData';
 

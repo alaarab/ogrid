@@ -1,4 +1,4 @@
-import React, { useRef } from 'react';
+import { useRef } from 'react';
 import { LiveDemo } from '../LiveDemo';
 import { people, getRowId, toolbarColumns, btnStyle, type Person } from './demoData';
 

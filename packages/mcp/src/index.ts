@@ -20,7 +20,7 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 const monorepoDocs = join(__dirname, '../../../docs/docs');
 const bundledDocs = join(__dirname, '../../bundled-docs');
 const docsDir =
-  process.env['OGRID_DOCS_PATH'] ??
+  process.env.OGRID_DOCS_PATH ??
   (existsSync(monorepoDocs) ? monorepoDocs : bundledDocs);
 
 const index = loadDocsIndex(docsDir);
@@ -30,8 +30,8 @@ const index = loadDocsIndex(docsDir);
 // ---------------------------------------------------------------------------
 
 const bridgeStore = new BridgeStore();
-const bridgePort = process.env['OGRID_BRIDGE_PORT']
-  ? parseInt(process.env['OGRID_BRIDGE_PORT'], 10)
+const bridgePort = process.env.OGRID_BRIDGE_PORT
+  ? parseInt(process.env.OGRID_BRIDGE_PORT, 10)
   : process.argv.includes('--bridge')
     ? 7890
     : null;

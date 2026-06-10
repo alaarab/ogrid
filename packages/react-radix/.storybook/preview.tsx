@@ -1,5 +1,5 @@
 import type { Preview } from '@storybook/react-vite';
-import React, { useEffect } from 'react';
+import { useEffect } from 'react';
 
 const preview: Preview = {
   parameters: {

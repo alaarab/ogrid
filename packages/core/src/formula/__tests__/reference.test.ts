@@ -426,10 +426,9 @@ describe('MDETERM', () => {
   });
 
   it('returns #VALUE! for non-square matrix', () => {
+    // 1 row × 2 cols — not square
     const cells = { '0,0': 1, '1,0': 2, '0,1': 3 };
-    const result = evalFn('MDETERM', [range(0, 0, 1, 0)], cells); // 1x2, not square for 2-row range
-    // Actually a 1x2 range is non-square: 1 row, 2 cols  to  expect #VALUE!
-    expect(evalFn('MDETERM', [range(0, 0, 1, 1)], { '0,0': 1, '1,0': 2, '0,1': 3, '1,1': 4 })).toBe(-2);
+    expect(evalFn('MDETERM', [range(0, 0, 1, 0)], cells)).toBeInstanceOf(FormulaError);
   });
 
   it('returns #VALUE! for non-range argument', () => {

@@ -1,4 +1,4 @@
-import React, { useRef } from 'react';
+import { useRef } from 'react';
 import { LiveDemo } from '../LiveDemo';
 import { people, getRowId, gridApiColumns, btnStyle, type Person } from './demoData';
 

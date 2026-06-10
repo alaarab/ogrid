@@ -131,7 +131,7 @@ export function insertReferenceAtCursor(
 }
 
 export function extractFormulaReferences(formula: string): FormulaReference[] {
-  if (!formula || formula[0] !== '=') return [];
+  if (formula?.[0] !== '=') return [];
   const refs: FormulaReference[] = [];
   let colorIdx = 0;
   try {

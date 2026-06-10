@@ -90,7 +90,7 @@ export function RatingEditor<T>(props: ICellEditorProps<T>): React.ReactElement 
   const initialRating = React.useMemo(() => {
     if (value == null || value === '') return 0;
     const num = Number(value);
-    return isNaN(num) ? 0 : clampRating(num, maxStars);
+    return Number.isNaN(num) ? 0 : clampRating(num, maxStars);
   }, [value, maxStars]);
 
   const [rating, setRating] = React.useState(initialRating);

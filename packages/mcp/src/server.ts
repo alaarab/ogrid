@@ -35,9 +35,9 @@ function detectOGridVersion(searchPath: string): VersionDetectResult {
         const raw = readFileSync(pkgPath, 'utf-8');
         const pkg = JSON.parse(raw) as Record<string, unknown>;
         const allDeps: Record<string, string> = {
-          ...((pkg['dependencies'] as Record<string, string>) ?? {}),
-          ...((pkg['devDependencies'] as Record<string, string>) ?? {}),
-          ...((pkg['peerDependencies'] as Record<string, string>) ?? {}),
+          ...((pkg.dependencies as Record<string, string>) ?? {}),
+          ...((pkg.devDependencies as Record<string, string>) ?? {}),
+          ...((pkg.peerDependencies as Record<string, string>) ?? {}),
         };
         const ogridPkgs = Object.entries(allDeps)
           .filter(([name]) => name.startsWith('@alaarab/ogrid-'))
