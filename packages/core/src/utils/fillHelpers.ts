@@ -102,8 +102,7 @@ export function applyFillValues<T>(
 
       // Formula-aware path: if source cell has a formula, adjust and propagate it
       if (
-        formulaOptions &&
-        formulaOptions.hasFormula &&
+        formulaOptions?.hasFormula &&
         formulaOptions.getFormula &&
         formulaOptions.setFormula &&
         srcFlatColIndex >= 0 &&

@@ -153,7 +153,7 @@ export function registerDateComponentFunctions(registry: Map<string, IFormulaFun
       if (rawVal instanceof FormulaError) return rawVal;
       const str = typeof rawVal === 'string' ? rawVal : String(rawVal);
       const d = new Date(str);
-      if (isNaN(d.getTime())) return new FormulaError('#VALUE!', `DATEVALUE cannot parse "${str}"`);
+      if (Number.isNaN(d.getTime())) return new FormulaError('#VALUE!', `DATEVALUE cannot parse "${str}"`);
       // Return Excel-like serial (days since 1900-01-01, with Excel's 1900 leap year bug offset)
       // We return the Date object directly  -  consistent with how the engine handles dates
       return new Date(d.getFullYear(), d.getMonth(), d.getDate());

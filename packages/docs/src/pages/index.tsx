@@ -76,7 +76,7 @@ const toolbarBtnStyle: React.CSSProperties = {
 
 function HeroGrid() {
   const { OGrid, exportToCsv } = require('@alaarab/ogrid-react-radix') as typeof import('@alaarab/ogrid-react-radix');
-  const { RatingEditor, ColorPickerEditor, SliderEditor, TagsEditor } = require('@alaarab/ogrid-react-inputs') as typeof import('@alaarab/ogrid-react-inputs');
+  const { RatingEditor, ColorPickerEditor, TagsEditor } = require('@alaarab/ogrid-react-inputs') as typeof import('@alaarab/ogrid-react-inputs');
   type ApiType = import('@alaarab/ogrid-react-radix').IOGridApi<EmployeeRow>;
   type IFilters = import('@alaarab/ogrid-react-radix').IFilters;
 
@@ -493,113 +493,6 @@ function CodePreviewSection() {
         </div>
         {/* Reflection */}
         <div className={styles.codeReflection} aria-hidden="true" />
-      </div>
-    </section>
-  );
-}
-
-/* ──────────────────────────────────────────────
-   Feature Bento
-   ────────────────────────────────────────────── */
-
-function FeatureBentoSection() {
-  const { ref, visible } = useScrollReveal<HTMLElement>(0.08);
-
-  return (
-    <section ref={ref} className={`${styles.bentoSection} ${visible ? styles.revealed : ''}`}>
-      <div className={styles.bentoMesh} />
-      <NoiseOverlay opacity={0.035} />
-      <div className={styles.bentoHeader}>
-        <div className={styles.bentoLabel}>Why OGrid</div>
-        <h2 className={styles.bentoTitle}>
-          Spreadsheet-grade interaction.<br />Open-source by default.
-        </h2>
-        <p className={styles.bentoSub}>
-          The point is not a longer feature checklist. The point is getting the spreadsheet behavior
-          and editing workflow you actually need, in a React grid, without a locked enterprise tier.
-        </p>
-      </div>
-
-      <div className={styles.bentoGrid}>
-        <div className={`${styles.bentoCard} ${styles.bentoCardWide} ${styles.bentoCardGreen} ${styles.bentoCardProof}`}>
-          <div className={styles.bentoCardInner} />
-          <div className={styles.bentoCardTag}>No gated tier</div>
-          <h3 className={styles.bentoCardTitle}>MIT license. Real spreadsheet features.</h3>
-          <p className={styles.bentoCardDesc}>
-            Range selection, fill handle, clipboard, undo/redo, formulas, filters, pinning, and virtualization
-            ship in the public packages. No split between “community” and “actually usable.”
-          </p>
-          <div className={styles.bentoFeatureList}>
-            {[
-              'Cell-range selection',
-              'Fill handle',
-              'Clipboard + multi-cell paste',
-              'Undo / redo',
-              'Formula bar + references',
-              'Virtualized rows and columns',
-            ].map((item) => (
-              <span key={item} className={styles.bentoFeaturePill}>{item}</span>
-            ))}
-          </div>
-        </div>
-
-        <div className={`${styles.bentoCard} ${styles.bentoCardMedium} ${styles.bentoCardBlue} ${styles.bentoCardProof}`}>
-          <div className={styles.bentoCardInner} />
-          <div className={styles.bentoCardTag}>One API, two React UI kits</div>
-          <h3 className={styles.bentoCardTitle}>One mental model. Pick your design system.</h3>
-          <p className={styles.bentoCardDesc}>
-            Both React packages share the same hooks, props, and grid concepts.
-            Switch design systems with a one-line import change.
-          </p>
-          <div className={styles.bentoFrameworkBands}>
-            <div className={styles.bentoFrameworkBand}>
-              <span>Radix</span>
-              <span>Lightweight default</span>
-            </div>
-            <div className={styles.bentoFrameworkBand}>
-              <span>Fluent UI</span>
-              <span>Microsoft 365 / SPFx</span>
-            </div>
-          </div>
-        </div>
-
-        <div className={`${styles.bentoCard} ${styles.bentoCardMedium} ${styles.bentoCardDark} ${styles.bentoCardProof}`}>
-          <div className={styles.bentoCardInner} />
-          <div className={styles.bentoCardTag}>Editing workflow</div>
-          <h3 className={styles.bentoCardTitle}>Built for people who live in grids.</h3>
-          <p className={styles.bentoCardDesc}>
-            Keyboard navigation, inline editing, bulk paste, formulas, and status-bar feedback
-            are part of the normal flow, not bolted on demos.
-          </p>
-          <div className={styles.bentoCommandGrid}>
-            {['Enter edit', 'Tab move', 'Shift+Click range', 'Ctrl+C / Ctrl+V'].map((item) => (
-              <div key={item} className={styles.bentoCommandCard}>{item}</div>
-            ))}
-          </div>
-        </div>
-
-        <div className={`${styles.bentoCard} ${styles.bentoCardWide} ${styles.bentoCardPurple} ${styles.bentoCardProof}`}>
-          <div className={styles.bentoCardInner} />
-          <div className={styles.bentoCardTag}>Performance</div>
-          <h3 className={styles.bentoCardTitle}>10K+ rows in the homepage demo.</h3>
-          <p className={styles.bentoCardDesc}>
-            The examples are not toy screenshots. The docs are running a real grid with real interaction state.
-          </p>
-          <div className={styles.bentoMetricRow}>
-            <div>
-              <strong>10,000</strong>
-              <span>rows</span>
-            </div>
-            <div>
-              <strong>100</strong>
-              <span>page size</span>
-            </div>
-            <div>
-              <strong>MIT</strong>
-              <span>license</span>
-            </div>
-          </div>
-        </div>
       </div>
     </section>
   );

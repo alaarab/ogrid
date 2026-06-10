@@ -1,6 +1,5 @@
 import {
   measureColumnContentWidth,
-  AUTOSIZE_EXTRA_PX,
   AUTOSIZE_MAX_PX,
 } from '../columnAutosize';
 import { DEFAULT_MIN_COLUMN_WIDTH } from '../../constants/layout';

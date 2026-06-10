@@ -33,7 +33,6 @@ const INITIAL_STOCKS: StockRow[] = [
   { id: 18, ticker: 'AVGO',  company: 'Broadcom Inc.',        price: 1298.50, change: 24.30, changePct:  1.91, volume:  5_900_000, marketCap:  605_000_000_000, sector: 'Technology'    },
 ];
 
-const SECTORS = ['All', 'Technology', 'Financials', 'Healthcare', 'Consumer Disc.', 'Consumer Stap.', 'Energy', 'Automotive'];
 
 function tickStock(stock: StockRow): StockRow {
   if (Math.random() > 0.4) {

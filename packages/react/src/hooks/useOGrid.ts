@@ -26,11 +26,9 @@ import { useLatestRef } from './useLatestRef';
 import { useSideBarState } from './useSideBarState';
 import type { SideBarProps } from '../components/SideBar';
 import type {
-  RowId,
   IOGridProps,
   IOGridDataGridProps,
   IOGridApi,
-  IRowSelectionChangeEvent,
   IStatusBarProps,
   IColumnDefinition,
 } from '../types';
@@ -380,7 +378,7 @@ export function useOGrid<T>(
   const filterableColumns = useMemo(
     () =>
       columns
-        .filter((c) => c.filterable && c.filterable.type)
+        .filter((c) => c.filterable?.type)
         .map((c) => ({
           columnId: c.columnId,
           name: c.name,

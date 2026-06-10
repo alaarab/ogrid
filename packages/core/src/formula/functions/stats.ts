@@ -50,7 +50,7 @@ function parseCriteria(criteria: unknown): ParsedCriteria {
 
 function parseNumericOrString(s: string): number | string {
   const n = Number(s);
-  if (!isNaN(n) && s !== '') return n;
+  if (!Number.isNaN(n) && s !== '') return n;
   return s;
 }
 

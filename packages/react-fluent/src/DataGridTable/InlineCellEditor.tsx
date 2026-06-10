@@ -13,7 +13,12 @@ export function InlineCellEditor<T>(props: InlineCellEditorProps<T>): React.Reac
         <Checkbox
           checked={checked}
           onChange={(_, data) => onCommit(!!data.checked)}
-          onKeyDown={(e: React.KeyboardEvent) => e.key === 'Escape' && (e.preventDefault(), onCancel())}
+          onKeyDown={(e: React.KeyboardEvent) => {
+            if (e.key === 'Escape') {
+              e.preventDefault();
+              onCancel();
+            }
+          }}
         />
       )}
     />

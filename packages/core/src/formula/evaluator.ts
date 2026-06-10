@@ -19,7 +19,7 @@ export function toNumber(val: unknown): number | FormulaError {
   if (typeof val === 'number') return val;
   if (val instanceof Date) return val.getTime();
   const n = Number(val);
-  if (isNaN(n)) return new FormulaError('#VALUE!', `Cannot convert "${val}" to number`);
+  if (Number.isNaN(n)) return new FormulaError('#VALUE!', `Cannot convert "${val}" to number`);
   return n;
 }
 

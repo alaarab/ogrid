@@ -271,7 +271,7 @@ function FilteredTable() {
   const departments = ['Engineering', 'Sales', 'Marketing'] as const;
 
   const activeDepts = (() => {
-    const f = grid.filters['department'];
+    const f = grid.filters.department;
     if (f?.type === 'multiSelect') return new Set(f.value);
     return new Set<string>();
   })();

@@ -15,7 +15,12 @@ export function InlineCellEditor<T>(props: InlineCellEditorProps<T>): React.Reac
           className={styles.rowCheckbox}
           checked={checked}
           onCheckedChange={(c: boolean | 'indeterminate') => onCommit(c === true)}
-          onKeyDown={(e: React.KeyboardEvent) => e.key === 'Escape' && (e.preventDefault(), onCancel())}
+          onKeyDown={(e: React.KeyboardEvent) => {
+            if (e.key === 'Escape') {
+              e.preventDefault();
+              onCancel();
+            }
+          }}
         >
           <Checkbox.Indicator className={styles.rowCheckboxIndicator}>✓</Checkbox.Indicator>
         </Checkbox.Root>

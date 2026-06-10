@@ -1,4 +1,4 @@
-import React from 'react';
+
 import { LiveDemo } from '../LiveDemo';
 import { people, getRowId, cellReferencesColumns } from './demoData';
 

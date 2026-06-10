@@ -1,4 +1,4 @@
-import React, { useCallback } from 'react';
+import { useCallback } from 'react';
 import { LiveDemo } from '../LiveDemo';
 import { people, getRowId, paginationColumns, btnStyle, type Person } from './demoData';
 

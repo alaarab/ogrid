@@ -161,9 +161,9 @@ export function connectGridToBridge(options: ConnectGridOptions): BridgeConnecti
     try {
       switch (cmd.type) {
         case 'update_cell': {
-          const rowIndex = cmd.payload['rowIndex'] as number;
-          const columnId = cmd.payload['columnId'] as string;
-          const value = cmd.payload['value'];
+          const rowIndex = cmd.payload.rowIndex as number;
+          const columnId = cmd.payload.columnId as string;
+          const value = cmd.payload.value;
           if (onCellUpdate) {
             onCellUpdate(rowIndex, columnId, value);
             result = { ok: true, rowIndex, columnId, value };
@@ -173,8 +173,8 @@ export function connectGridToBridge(options: ConnectGridOptions): BridgeConnecti
           break;
         }
         case 'set_filter': {
-          const columnId = cmd.payload['columnId'] as string;
-          const value = cmd.payload['value'];
+          const columnId = cmd.payload.columnId as string;
+          const value = cmd.payload.value;
           if (api?.updateFilter) {
             api.updateFilter(columnId, value);
             result = { ok: true };
@@ -193,7 +193,7 @@ export function connectGridToBridge(options: ConnectGridOptions): BridgeConnecti
           break;
         }
         case 'set_sort': {
-          const sortModel = cmd.payload['sortModel'] as Array<{
+          const sortModel = cmd.payload.sortModel as Array<{
             columnId: string;
             direction: 'asc' | 'desc';
           }>;
@@ -206,7 +206,7 @@ export function connectGridToBridge(options: ConnectGridOptions): BridgeConnecti
           break;
         }
         case 'go_to_page': {
-          const page = cmd.payload['page'] as number;
+          const page = cmd.payload.page as number;
           if (api?.goToPage) {
             api.goToPage(page);
             result = { ok: true };

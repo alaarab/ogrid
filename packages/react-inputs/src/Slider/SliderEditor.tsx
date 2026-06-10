@@ -144,7 +144,7 @@ export function SliderEditor<T>(props: ICellEditorProps<T>): React.ReactElement 
   const initialValue = React.useMemo(() => {
     if (value == null || value === '') return min;
     const num = Number(value);
-    return isNaN(num) ? min : clampValue(snapToStep(num, min, step), min, max);
+    return Number.isNaN(num) ? min : clampValue(snapToStep(num, min, step), min, max);
   }, [value, min, max, step]);
 
   const [currentValue, setCurrentValue] = React.useState(initialValue);
@@ -209,7 +209,7 @@ export function SliderEditor<T>(props: ICellEditorProps<T>): React.ReactElement 
     const text = e.target.value;
     setInputText(text);
     const num = Number(text);
-    if (!isNaN(num)) {
+    if (!Number.isNaN(num)) {
       const clamped = clampValue(snapToStep(num, min, step), min, max);
       setCurrentValue(clamped);
       onValueChange(clamped);
@@ -221,7 +221,7 @@ export function SliderEditor<T>(props: ICellEditorProps<T>): React.ReactElement 
       e.preventDefault();
       e.stopPropagation();
       const num = Number(inputText);
-      if (!isNaN(num)) {
+      if (!Number.isNaN(num)) {
         const clamped = clampValue(snapToStep(num, min, step), min, max);
         onValueChange(clamped);
       }
