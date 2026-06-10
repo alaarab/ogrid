@@ -144,8 +144,9 @@ export function processClientSideData<T>(
         if (val == null) {
           timestampCache.set(row, NaN);
         } else {
-          const t = new Date(String(val)).getTime();
-          timestampCache.set(row, Number.isNaN(t) ? 0 : t);
+          // Invalid dates stay NaN so they group with nulls (first in asc order),
+          // matching the date-filter cache above instead of sorting as 1970.
+          timestampCache.set(row, new Date(String(val)).getTime());
         }
       }
       sortable.sort((a, b) => {
