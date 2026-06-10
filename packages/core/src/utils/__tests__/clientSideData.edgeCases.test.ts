@@ -191,6 +191,19 @@ describe('processClientSideData - Edge Cases', () => {
       expect(result[4].date).toBe('2024-03-10');
     });
 
+    it('should group invalid dates with nulls even when pre-1970 dates exist', () => {
+      const data: TestItem[] = [
+        { id: '1', name: 'A', age: 1, email: null, status: null, date: '1960-06-01', active: true },
+        { id: '2', name: 'B', age: 2, email: null, status: null, date: 'not-a-date', active: true },
+        { id: '3', name: 'C', age: 3, email: null, status: null, date: '2024-01-15', active: true },
+        { id: '4', name: 'D', age: 4, email: null, status: null, date: null, active: true },
+      ];
+      const result = processClientSideData(data, columns, {}, 'date', 'asc');
+      // null/invalid first (in original relative order), then chronological —
+      // the invalid date must not sort as epoch 0 between 1960 and 2024.
+      expect(result.map(r => r.id)).toEqual(['2', '4', '1', '3']);
+    });
+
     it('should handle empty string in text sort', () => {
       const result = processClientSideData(mixedData, columns, {}, 'status', 'asc');
       // null, '', 'active', 'inactive', 'pending'

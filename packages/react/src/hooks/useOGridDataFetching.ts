@@ -168,6 +168,10 @@ export function useOGridDataFetching<T>(params: UseOGridDataFetchingParams<T>): 
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isClientSide, useWorker, displayData, columns, stableFilters, sortVersion, sort.field, sort.direction, page, pageSize, paginate]);
 
+  // Stabilize callback refs so inline dataSource/onError don't cause infinite re-fetches.
+  const dataSourceRef = useLatestRef(dataSource);
+  const onErrorRef = useLatestRef(onError);
+
   // --- Client-side filtering & sorting (async worker path) ---
   const [asyncItems, setAsyncItems] = useState<{ items: T[]; totalCount: number } | null>(null);
   const asyncIdRef = useRef(0);
@@ -200,6 +204,25 @@ export function useOGridDataFetching<T>(params: UseOGridDataFetchingParams<T>): 
     const id = ++asyncIdRef.current;
 
     if (asyncSortedIndicesRef.current === null) {
+      const commitRows = (rows: T[]) => {
+        const indexMap = new Map<T, number>();
+        for (let i = 0; i < displayData.length; i++) {
+          indexMap.set(displayData[i], i);
+        }
+        const indices = rows.map((row) => {
+          const idx = indexMap.get(row);
+          return idx !== undefined ? idx : -1;
+        }).filter((idx) => idx !== -1);
+        asyncSortedIndicesRef.current = indices;
+        const total = rows.length;
+        if (!paginate) {
+          setAsyncItems({ items: rows, totalCount: total });
+          return;
+        }
+        const start = (page - 1) * pageSize;
+        setAsyncItems({ items: rows.slice(start, start + pageSize), totalCount: total });
+      };
+
       // Full re-sort via worker.
       processClientSideDataAsync(
         displayData,
@@ -209,23 +232,13 @@ export function useOGridDataFetching<T>(params: UseOGridDataFetchingParams<T>): 
         sort.direction,
       ).then((rows) => {
         if (id !== asyncIdRef.current) return; // stale
-        const indexMap = new Map<T, number>();
-        for (let i = 0; i < displayData.length; i++) {
-          indexMap.set(displayData[i], i);
-        }
-        const indices = (rows as T[]).map((row) => {
-          const idx = indexMap.get(row);
-          return idx !== undefined ? idx : -1;
-        }).filter((idx) => idx !== -1);
-        asyncSortedIndicesRef.current = indices;
-        const total = rows.length;
-        if (!paginate) {
-          setAsyncItems({ items: rows as T[], totalCount: total });
-          return;
-        }
-        const start = (page - 1) * pageSize;
-        const paged = rows.slice(start, start + pageSize) as T[];
-        setAsyncItems({ items: paged, totalCount: total });
+        commitRows(rows as T[]);
+      }).catch((err) => {
+        if (id !== asyncIdRef.current) return; // stale
+        // Worker failed at runtime: report and fall back to synchronous
+        // processing so the grid still updates instead of keeping stale rows.
+        onErrorRef.current?.(err);
+        commitRows(processClientSideData(displayData, columns, stableFilters, sort.field, sort.direction));
       });
     } else {
       // Preserve order: look up updated rows by stored indices.
@@ -240,7 +253,7 @@ export function useOGridDataFetching<T>(params: UseOGridDataFetchingParams<T>): 
       }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isClientSide, useWorker, displayData, columns, stableFilters, sortVersion, sort.field, sort.direction, page, pageSize, paginate]);
+  }, [isClientSide, useWorker, displayData, columns, stableFilters, sortVersion, sort.field, sort.direction, page, pageSize, paginate, onErrorRef]);
 
   // --- Server-side data fetching ---
   const [serverItems, setServerItems] = useState<T[]>([]);
@@ -248,10 +261,6 @@ export function useOGridDataFetching<T>(params: UseOGridDataFetchingParams<T>): 
   const [serverLoading, setServerLoading] = useState(true);
   const fetchIdRef = useRef(0);
   const [refreshCounter, setRefreshCounter] = useState(0);
-
-  // Stabilize callback refs so inline dataSource/onError don't cause infinite re-fetches.
-  const dataSourceRef = useLatestRef(dataSource);
-  const onErrorRef = useLatestRef(onError);
 
   useEffect(() => {
     const ds = dataSourceRef.current;

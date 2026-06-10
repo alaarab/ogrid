@@ -65,7 +65,13 @@ export function workerBody(): void {
         if (filter.type === 'multiSelect') {
           return { colIdx, type: 'multiSelect' as const, set: new Set(filter.value), empty: filter.value.length === 0 };
         }
-        return { colIdx, type: 'date' as const, from: filter.value.from, to: filter.value.to };
+        // Parse boundary timestamps once here; NaN means "no bound".
+        return {
+          colIdx,
+          type: 'date' as const,
+          fromTs: filter.value.from ? new Date(filter.value.from + 'T00:00:00').getTime() : NaN,
+          toTs: filter.value.to ? new Date(filter.value.to + 'T23:59:59.999').getTime() : NaN,
+        };
       });
 
       for (let r = 0; r < rowCount; r++) {
@@ -91,14 +97,8 @@ export function workerBody(): void {
               if (cellVal == null) { pass = false; break; }
               const ts = new Date(String(cellVal)).getTime();
               if (Number.isNaN(ts)) { pass = false; break; }
-              if (pf.from) {
-                const fromTs = new Date(pf.from + 'T00:00:00').getTime();
-                if (ts < fromTs) { pass = false; break; }
-              }
-              if (pf.to) {
-                const toTs = new Date(pf.to + 'T23:59:59.999').getTime();
-                if (ts > toTs) { pass = false; break; }
-              }
+              if (!Number.isNaN(pf.fromTs) && ts < pf.fromTs) { pass = false; break; }
+              if (!Number.isNaN(pf.toTs) && ts > pf.toTs) { pass = false; break; }
               break;
             }
           }
