@@ -45,6 +45,7 @@ export function workerBody(): void {
 
     const { requestId, values, filters, sort } = msg;
     const rowCount = values.length;
+    const columnMeta = msg.columnMeta;
 
     // --- Filtering ---
     let indices: number[] = [];
@@ -113,19 +114,47 @@ export function workerBody(): void {
       const { columnIndex, direction } = sort;
       const dir = direction === 'asc' ? 1 : -1;
 
-      indices.sort((a, b) => {
-        const av = values[a][columnIndex];
-        const bv = values[b][columnIndex];
-        if (av == null && bv == null) return 0;
-        if (av == null) return -1 * dir;
-        if (bv == null) return 1 * dir;
-        if (typeof av === 'number' && typeof bv === 'number') {
-          return av === bv ? 0 : av > bv ? dir : -dir;
+      let isDateSort = false;
+      for (let i = 0; i < columnMeta.length; i++) {
+        if (columnMeta[i].index === columnIndex) {
+          isDateSort = columnMeta[i].type === 'date';
+          break;
         }
-        const sa = String(av).toLowerCase();
-        const sb = String(bv).toLowerCase();
-        return sa === sb ? 0 : sa > sb ? dir : -dir;
-      });
+      }
+
+      if (isDateSort) {
+        // Date columns sort by timestamp like the sync path — lexical order
+        // is wrong for non-ISO date strings. Timestamps are parsed once per
+        // row; null/invalid stay NaN so they group first in ascending order.
+        const timestamps = new Map<number, number>();
+        for (let i = 0; i < indices.length; i++) {
+          const r = indices[i];
+          const v = values[r][columnIndex];
+          timestamps.set(r, v == null ? NaN : new Date(String(v)).getTime());
+        }
+        indices.sort((a, b) => {
+          const at = timestamps.get(a) as number;
+          const bt = timestamps.get(b) as number;
+          if (Number.isNaN(at) && Number.isNaN(bt)) return 0;
+          if (Number.isNaN(at)) return -1 * dir;
+          if (Number.isNaN(bt)) return 1 * dir;
+          return at === bt ? 0 : at > bt ? dir : -dir;
+        });
+      } else {
+        indices.sort((a, b) => {
+          const av = values[a][columnIndex];
+          const bv = values[b][columnIndex];
+          if (av == null && bv == null) return 0;
+          if (av == null) return -1 * dir;
+          if (bv == null) return 1 * dir;
+          if (typeof av === 'number' && typeof bv === 'number') {
+            return av === bv ? 0 : av > bv ? dir : -dir;
+          }
+          const sa = String(av).toLowerCase();
+          const sb = String(bv).toLowerCase();
+          return sa === sb ? 0 : sa > sb ? dir : -dir;
+        });
+      }
     }
 
     const response: SortFilterResponse = {
