@@ -92,7 +92,12 @@ export const PeopleFilterPopover: React.FC<PeopleFilterPopoverProps> = ({
             key={user.id ?? user.email ?? user.displayName ?? ''}
             className={styles.personOption}
             onClick={() => onUserSelect(user)}
-            onKeyDown={(e) => e.key === 'Enter' && onUserSelect(user)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                onUserSelect(user);
+              }
+            }}
             role="button"
             tabIndex={0}
           >

@@ -90,6 +90,15 @@ export const PeopleFilterPopover: React.FC<PeopleFilterPopoverProps> = ({
               e.stopPropagation();
               onUserSelect(user);
             }}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                e.stopPropagation();
+                onUserSelect(user);
+              }
+            }}
+            role="button"
+            tabIndex={0}
           >
             <div className={styles.userInfo}>
               <div className={styles.avatar}>

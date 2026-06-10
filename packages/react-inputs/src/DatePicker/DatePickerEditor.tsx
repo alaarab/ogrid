@@ -292,6 +292,9 @@ export function DatePickerEditor<T>(props: ICellEditorProps<T>): React.ReactElem
               onMouseEnter={() => setHoveredCell(key)}
               onMouseLeave={() => setHoveredCell(null)}
               tabIndex={-1}
+              aria-label={`${MONTH_NAMES[day.month]} ${day.date}, ${day.year}`}
+              aria-pressed={isSelected}
+              aria-current={day.isToday ? 'date' : undefined}
             >
               {day.date}
             </button>
