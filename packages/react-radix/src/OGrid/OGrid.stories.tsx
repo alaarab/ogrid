@@ -1,6 +1,7 @@
 import * as React from 'react';
 import type { Meta, StoryObj } from '@storybook/react-vite';
 import { OGrid } from './OGrid';
+import { ColumnChooser } from '../ColumnChooser/ColumnChooser';
 import type { IColumnDef, ICellValueChangedEvent, ISideBarDef, IDataSource } from '@alaarab/ogrid-react';
 
 interface Project {
@@ -490,6 +491,68 @@ export const ToolbarWithSecondaryRow: Story = {
   ),
 };
 
+/**
+ * External column chooser — the canonical "consumer owns the control" layout.
+ *
+ * `columnChooser="external"` tells the grid to render no chooser of its own.
+ * The consumer lifts column visibility into their own state
+ * (`visibleColumns` + `onVisibleColumnsChange`) and renders the standalone
+ * `<ColumnChooser>` wherever they like — here in a page header row, with an
+ * "{N} total" label on the left and the chooser on the right, on the same line,
+ * above the grid. This is the reference pattern for placing the visibility
+ * control next to a total count (e.g. arc's project-detail Activities grid).
+ */
+export const ExternalColumnChooser: Story = {
+  render: function ExternalColumnChooserStory() {
+    const [data] = React.useState(() => makeProjects(50));
+    const [visibleColumns, setVisibleColumns] = React.useState<Set<string>>(
+      () => new Set(columns.map((c) => c.columnId)),
+    );
+    const handleVisibilityChange = React.useCallback((key: string, visible: boolean) => {
+      setVisibleColumns((prev) => {
+        const next = new Set(prev);
+        if (visible) next.add(key);
+        else next.delete(key);
+        return next;
+      });
+    }, []);
+    return (
+      <div>
+        {/* Page header row: total on the left, chooser on the right — the
+            consumer owns this layout, not the grid toolbar. */}
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            marginBottom: 8,
+          }}
+        >
+          <span style={{ fontSize: 13, color: 'var(--ogrid-muted, #666)' }}>
+            {data.length} total
+          </span>
+          <ColumnChooser
+            columns={columns}
+            visibleColumns={visibleColumns}
+            onVisibilityChange={handleVisibilityChange}
+            onSetVisibleColumns={setVisibleColumns}
+          />
+        </div>
+        <OGrid<Project>
+          data={data}
+          columns={columns}
+          getRowId={getRowId}
+          entityLabelPlural="projects"
+          columnChooser="external"
+          visibleColumns={visibleColumns}
+          onVisibleColumnsChange={setVisibleColumns}
+          defaultPageSize={10}
+        />
+      </div>
+    );
+  },
+};
+
 // ---------------------------------------------------------------------------
 // Playground  -  fully interactive with Storybook controls
 // ---------------------------------------------------------------------------
@@ -552,7 +615,7 @@ const playgroundColumns: IColumnDef<Project>[] = [
 interface PlaygroundArgs {
   rowCount: number;
   statusBar: boolean;
-  columnChooser: boolean | 'toolbar' | 'sidebar';
+  columnChooser: boolean | 'toolbar' | 'sidebar' | 'external';
   sideBar: boolean;
   sideBarPosition: 'left' | 'right';
   sideBarDefaultPanel: string;
@@ -578,7 +641,7 @@ export const Playground: StoryObj<PlaygroundArgs> = {
     statusBar: { control: 'boolean' },
     columnChooser: {
       control: 'select',
-      options: [true, false, 'toolbar', 'sidebar'],
+      options: [true, false, 'toolbar', 'sidebar', 'external'],
     },
     sideBar: { control: 'boolean' },
     sideBarPosition: {

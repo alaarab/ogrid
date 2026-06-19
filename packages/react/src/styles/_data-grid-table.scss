@@ -622,10 +622,10 @@
 .emptyStateInGrid {
   display: flex;
   flex-direction: column;
-  // The empty-state lives inside the (potentially wider-than-viewport)
-  // grid content, so centering horizontally pushed the message off-screen
-  // to the right whenever the columns overflowed. Stick to the scroll
-  // viewport's left edge and left-align so it's always visible.
+  // Base (fallback) placement for renderers that still mount the empty state
+  // INSIDE the max-content `.tableWidthAnchor` (e.g. react-fluent): centering
+  // there pushes the message off-screen to the right when columns overflow, so
+  // pin to the scroll viewport's left edge and left-align — always visible.
   position: sticky;
   left: 0;
   align-items: flex-start;
@@ -637,6 +637,18 @@
   box-sizing: border-box;
   border-top: 1px solid var(--ogrid-border, rgba(0, 0, 0, 0.12));
   background: var(--ogrid-header-bg, #f5f5f5);
+}
+
+// When the empty state is rendered as a direct child of the viewport-width
+// `.tableScrollContent` (a sibling of the max-content `.tableWidthAnchor`, as
+// in react-radix), its box already spans the visible scroll viewport — so it
+// can be horizontally CENTERED and stays fully on-screen even when columns
+// overflow. No left-pin hack needed: `width: 100%` here is the viewport, not
+// the wider grid content.
+.tableScrollContent > .emptyStateInGrid {
+  position: static;
+  align-items: center;
+  text-align: center;
 }
 
 .emptyStateInGridTitle {

@@ -4,6 +4,26 @@ All notable changes to OGrid will be documented in this file.
 
 ## [Unreleased]
 
+### Added — external column-chooser placement (core + react-radix)
+
+- **`columnChooser="external"`.** A new placement that renders no built-in
+  chooser, so a consumer can render the standalone `<ColumnChooser>` wherever
+  they want — e.g. on the same line as an "{N} total" count — while lifting
+  selection through the existing controlled `visibleColumns` /
+  `onVisibleColumnsChange` props. Existing `'toolbar'` / `'sidebar'` / `false`
+  behavior is unchanged. See the `ExternalColumnChooser` Storybook story.
+
+### Fixed — in-grid empty state centered within the viewport (react-radix)
+
+- The in-grid empty state ("No results found") rendered inside the
+  `max-content` grid content, so it was left-pinned (a prior fix that kept it
+  from being pushed off-screen-right when columns overflow). It now renders as
+  a child of the viewport-width scroll container, so it is horizontally
+  centered when columns fit **and** stays fully visible (never off-screen-right)
+  when columns overflow. react-fluent is unchanged — its empty state still
+  nests in the content and the centering override is scoped to the react-radix
+  structure.
+
 ## [2.15.0] - 2026-05-31
 
 ### Changed — cleaner default table chrome (react-radix)

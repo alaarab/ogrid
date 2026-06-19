@@ -70,6 +70,10 @@ export function createOGrid(components: CreateOGridComponents) {
         formulaBar={layout.formulaBar}
         sheetTabs={layout.sheetTabs}
         toolbarEnd={
+          // Only the 'toolbar' placement renders a chooser inside the grid.
+          // 'external' means the consumer renders the standalone <ColumnChooser>
+          // themselves (lifting visibleColumns/onVisibleColumnsChange), so the
+          // grid intentionally renders nothing here.
           columnChooser.placement === 'toolbar' ? (
             <ColumnChooser
               columns={columnChooser.columns as IColumnDefinition[]}
