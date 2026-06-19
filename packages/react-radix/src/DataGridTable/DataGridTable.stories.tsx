@@ -117,6 +117,70 @@ export const EmptyWithActiveFilters: Story = {
   ),
 };
 
+// Many columns: each cell carries `min-width: 80px`, so 25 columns force the
+// grid content far wider than any normal viewport. Used to prove the in-grid
+// empty state stays centered in the VISIBLE viewport and is never pushed
+// off-screen to the right when columns overflow.
+const manyColumns: IColumnDef<Row>[] = Array.from({ length: 25 }, (_, i) => ({
+  columnId: `col${i}`,
+  name: `Column ${i + 1}`,
+  sortable: true,
+  renderCell: () => <span>-</span>,
+}));
+
+// Empty data, FEW columns that fit the viewport: the icon + message should sit
+// horizontally CENTERED in the grid (regression guard for the left-aligned bug).
+export const EmptyFitsCentered: Story = {
+  render: () => (
+    <div style={{ width: 900 }}>
+      <DataGridTable<Row>
+        items={[]}
+        columns={columns}
+        getRowId={getRowId}
+        sortBy={undefined}
+        sortDirection="asc"
+        onColumnSort={noop}
+        visibleColumns={new Set(['name', 'status', 'owner'])}
+        filters={{}}
+        onFilterChange={noop}
+        filterOptions={{}}
+        loadingFilterOptions={{}}
+        emptyState={{
+          hasActiveFilters: false,
+          onClearAll: noop,
+        }}
+      />
+    </div>
+  ),
+};
+
+// Empty data, MANY columns that overflow a narrow viewport: the message must
+// remain fully visible within the scroll viewport — NOT pushed off-screen to
+// the right by the wider-than-viewport grid content.
+export const EmptyOverflowStaysVisible: Story = {
+  render: () => (
+    <div style={{ width: 600 }}>
+      <DataGridTable<Row>
+        items={[]}
+        columns={manyColumns}
+        getRowId={getRowId}
+        sortBy={undefined}
+        sortDirection="asc"
+        onColumnSort={noop}
+        visibleColumns={new Set(manyColumns.map((c) => c.columnId))}
+        filters={{}}
+        onFilterChange={noop}
+        filterOptions={{}}
+        loadingFilterOptions={{}}
+        emptyState={{
+          hasActiveFilters: false,
+          onClearAll: noop,
+        }}
+      />
+    </div>
+  ),
+};
+
 export const WithPeopleFilter: Story = {
   render: () => (
     <DataGridTable<Row>

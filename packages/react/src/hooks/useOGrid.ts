@@ -53,7 +53,7 @@ const NAME_BOX_STYLE: React.CSSProperties = {
 };
 
 /** Resolved column chooser placement. */
-export type ColumnChooserPlacement = 'toolbar' | 'sidebar' | 'none';
+export type ColumnChooserPlacement = 'toolbar' | 'sidebar' | 'external' | 'none';
 
 /** Pagination state and handlers. */
 export interface UseOGridPagination {
@@ -223,6 +223,7 @@ export function useOGrid<T>(
   const columnChooserPlacement: ColumnChooserPlacement =
     columnChooserProp === false ? 'none'
     : columnChooserProp === 'sidebar' ? 'sidebar'
+    : columnChooserProp === 'external' ? 'external'
     : 'toolbar';
 
   const columns = useMemo(() => flattenColumns(columnsProp), [columnsProp]);

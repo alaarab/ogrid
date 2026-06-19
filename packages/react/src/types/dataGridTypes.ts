@@ -107,8 +107,11 @@ interface IOGridBaseProps<T> {
   /** Where the column chooser renders.
    *  - `true` or `'toolbar'` (default): column chooser button in the toolbar strip.
    *  - `'sidebar'`: column chooser only available via the sidebar columns panel.
+   *  - `'external'`: the grid renders no chooser; the consumer renders the
+   *    standalone `<ColumnChooser>` themselves (e.g. next to an "N total" line)
+   *    and lifts visibility via `visibleColumns` / `onVisibleColumnsChange`.
    *  - `false`: column chooser hidden entirely. */
-  columnChooser?: boolean | 'toolbar' | 'sidebar';
+  columnChooser?: boolean | 'toolbar' | 'sidebar' | 'external';
 
   layoutMode?: 'content' | 'fill';
 

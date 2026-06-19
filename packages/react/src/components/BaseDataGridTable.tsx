@@ -820,11 +820,17 @@ export function BaseDataGridTableInner<T>(
                   colOffset={colOffset}
                 />
               )}
-              {showEmptyInGrid && emptyState && (
-                <EmptyState emptyState={emptyState} />
-              )}
             </div>
           </div>
+          {/* Empty state lives directly under `.tableScrollContent` (a sibling
+              of the max-content `.tableWidthAnchor`), so its box spans the
+              scroll viewport width — never the wider-than-viewport grid
+              content. This lets it stay centered when columns fit and fully
+              visible (no off-screen-right push) when columns overflow. Shared
+              body, so this applies to every adapter (radix, fluent). */}
+          {showEmptyInGrid && emptyState && (
+            <EmptyState emptyState={emptyState} />
+          )}
       </div>
 
         {menuPosition &&
