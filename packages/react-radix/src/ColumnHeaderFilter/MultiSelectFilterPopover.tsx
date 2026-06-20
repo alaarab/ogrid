@@ -31,6 +31,7 @@ export const MultiSelectFilterPopover: React.FC<MultiSelectFilterPopoverProps> =
   isLoading,
 }) => {
   const virt = useListVirtualizer({ count: filteredOptions.length, itemHeight: ITEM_HEIGHT });
+  const optionIdPrefix = React.useId();
 
   return (
     <>
@@ -64,9 +65,11 @@ export const MultiSelectFilterPopover: React.FC<MultiSelectFilterPopoverProps> =
           <div style={{ height: virt.totalHeight, position: 'relative' }}>
             {virt.visibleItems.map(({ index, offsetTop }) => {
               const option = filteredOptions[index];
+              const optionId = `${optionIdPrefix}-${index}`;
               return (
                 <div key={option} className={styles.popoverOption} style={{ position: 'absolute', top: offsetTop, width: '100%', height: ITEM_HEIGHT, boxSizing: 'border-box', display: 'flex', alignItems: 'center' }}>
                   <Checkbox.Root
+                    id={optionId}
                     checked={selected.has(option)}
                     onCheckedChange={(c: boolean | 'indeterminate') =>
                       onOptionToggle(option, c === true)
@@ -75,7 +78,7 @@ export const MultiSelectFilterPopover: React.FC<MultiSelectFilterPopoverProps> =
                   >
                     <Checkbox.Indicator>✓</Checkbox.Indicator>
                   </Checkbox.Root>
-                  <label style={{ marginLeft: 8, cursor: 'pointer' }}>{option}</label>
+                  <label htmlFor={optionId} style={{ marginLeft: 8, cursor: 'pointer' }}>{option}</label>
                 </div>
               );
             })}

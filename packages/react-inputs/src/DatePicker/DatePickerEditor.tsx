@@ -232,6 +232,7 @@ export function DatePickerEditor<T>(props: ICellEditorProps<T>): React.ReactElem
       <div style={inputRowStyle}>
         <input
           type="text"
+          aria-label="Date (YYYY-MM-DD)"
           value={inputText}
           onChange={handleInputChange}
           onKeyDown={handleInputKeyDown}

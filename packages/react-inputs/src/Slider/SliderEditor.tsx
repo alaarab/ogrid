@@ -297,6 +297,7 @@ export function SliderEditor<T>(props: ICellEditorProps<T>): React.ReactElement 
         <span style={inputLabelStyle}>Value:</span>
         <input
           type="text"
+          aria-label="Value"
           value={inputText}
           onChange={handleInputChange}
           onKeyDown={handleInputKeyDown}

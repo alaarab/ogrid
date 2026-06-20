@@ -259,6 +259,7 @@ export function ColorPickerEditor<T>(props: ICellEditorProps<T>): React.ReactEle
           <span style={hashPrefixStyle}>#</span>
           <input
             type="text"
+            aria-label="Hex color"
             value={inputText}
             onChange={handleInputChange}
             onKeyDown={handleInputKeyDown}

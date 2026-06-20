@@ -254,6 +254,7 @@ export function TimePickerEditor<T>(props: ICellEditorProps<T>): React.ReactElem
       <div style={inputRowStyle}>
         <input
           type="text"
+          aria-label="Time"
           value={inputText}
           onChange={handleInputChange}
           onKeyDown={handleInputKeyDown}
