@@ -24,6 +24,33 @@ All notable changes to OGrid will be documented in this file.
   nests in the content and the centering override is scoped to the react-radix
   structure.
 
+### Fixed — formula, date, and filter correctness (core)
+
+- **Excel-faithful math/text/date functions.** `ROUND` now rounds halves away
+  from zero (`ROUND(-2.5, 0)` → `-3`, not `-2`); `MOD` takes the sign of the
+  divisor (`MOD(-3, 2)` → `1`); `TRIM` collapses runs of internal spaces to a
+  single space; and `EDATE` clamps the day to the end of the target month
+  (`EDATE(2021-01-31, 1)` → `2021-02-28`, not `2021-03-03`).
+- **Timezone-safe date cell parsing.** The built-in `dateParser` no longer
+  round-trips locale-formatted input (e.g. `3/15/2020`) through UTC, which
+  shifted the saved day by one in positive-UTC-offset timezones. Bare ISO
+  dates are preserved verbatim and ISO timestamps still resolve to their UTC
+  date.
+- **Worker/sync filter parity.** The Web Worker filter path coerced empty
+  `multiSelect` cells to `''`, diverging from the synchronous path which keeps
+  the empty string distinct from empty (null) cells. Both paths now agree.
+- **Pagination range clamping.** `getPaginationViewModel` clamps a stale,
+  out-of-range page before computing the item window, so a shrunk dataset no
+  longer renders a nonsensical range like "41–3 of 3".
+
+### Fixed — accessibility (react-radix + react-inputs)
+
+- The Radix multi-select filter options now associate each `<label>` with its
+  checkbox (`id` / `htmlFor`), so clicking the option text toggles it and
+  screen readers announce the control.
+- The custom date, time, slider, and color cell editors now give their text
+  inputs an `aria-label`, so screen readers announce what each field edits.
+
 ## [2.15.0] - 2026-05-31
 
 ### Changed — cleaner default table chrome (react-radix)
