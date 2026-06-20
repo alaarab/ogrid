@@ -22,7 +22,10 @@ export function registerMathRoundingFunctions(registry: Map<string, IFormulaFunc
       if (digits instanceof FormulaError) return digits;
 
       const factor = 10 ** Math.trunc(digits);
-      return Math.round(num * factor) / factor;
+      // Excel ROUND rounds halves away from zero, unlike Math.round which rounds
+      // halves toward +Infinity (so ROUND(-2.5, 0) is -3, not -2).
+      const scaled = Math.round(Math.abs(num) * factor) / factor;
+      return num < 0 ? -scaled : scaled;
     },
   });
 

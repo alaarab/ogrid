@@ -81,6 +81,11 @@ describe('Text functions', () => {
     it('should return unchanged text when no extra spaces', () => {
       expect(evalFormula('=TRIM("hello")')).toBe('hello');
     });
+
+    it('should collapse runs of internal spaces to a single space', () => {
+      expect(evalFormula('=TRIM("a   b")')).toBe('a b');
+      expect(evalFormula('=TRIM("  hello   world  ")')).toBe('hello world');
+    });
   });
 
   // --- LEFT ---
