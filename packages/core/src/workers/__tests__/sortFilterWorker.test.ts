@@ -51,6 +51,27 @@ describe('workerBody', () => {
     expect(indices).toEqual([1, 3, 0]);
   });
 
+  it('multiSelect keeps empty-string distinct from null cells (matches sync path)', () => {
+    // Filtering for the empty string must match only genuine '' cells, not
+    // null/empty cells. Sync coerces null via String(null) -> "null", so the
+    // worker must too (String(cellVal)), rather than collapsing null to ''.
+    const indices = runWorker({
+      values: [[''], [null], ['active']],
+      columnMeta: textMeta,
+      filters: { 0: { type: 'multiSelect', value: [''] } },
+    });
+    expect(indices).toEqual([0]);
+  });
+
+  it('multiSelect matches selected values across cells', () => {
+    const indices = runWorker({
+      values: [['active'], ['inactive'], ['active'], [null]],
+      columnMeta: textMeta,
+      filters: { 0: { type: 'multiSelect', value: ['active'] } },
+    });
+    expect(indices).toEqual([0, 2]);
+  });
+
   it('applies date range filter using parsed boundaries', () => {
     const indices = runWorker({
       values: [['2024-01-15'], ['2024-02-20'], ['2023-12-31'], [null], ['not-a-date']],
