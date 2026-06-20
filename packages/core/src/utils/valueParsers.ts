@@ -113,9 +113,29 @@ export function dateParser<T>(params: IValueParserParams<T>): unknown {
   const { newValue } = params;
   if (newValue === '' || newValue == null) return null;
   const str = String(newValue).trim();
+  // A bare YYYY-MM-DD is already in the target format; return it verbatim (after
+  // validation) so we never round-trip it through a Date, which would shift the
+  // day in negative-UTC-offset timezones.
+  const isoMatch = /^(\d{4})-(\d{2})-(\d{2})$/.exec(str);
+  if (isoMatch) {
+    const [, y, m, d] = isoMatch;
+    const probe = new Date(Number(y), Number(m) - 1, Number(d));
+    if (probe.getMonth() !== Number(m) - 1 || probe.getDate() !== Number(d)) return undefined;
+    return str;
+  }
   const date = new Date(str);
   if (Number.isNaN(date.getTime())) return undefined;
-  return date.toISOString().substring(0, 10);
+  // ISO 8601 timestamps (with a `T` time component) represent a UTC-anchored
+  // instant, so take their UTC date part. Non-ISO locale strings (e.g.
+  // "3/15/2020") are parsed as *local* midnight; reading the UTC date there would
+  // shift the day in positive-UTC-offset timezones, so use the local fields.
+  if (str.includes('T')) {
+    return date.toISOString().substring(0, 10);
+  }
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, '0');
+  const d = String(date.getDate()).padStart(2, '0');
+  return `${y}-${m}-${d}`;
 }
 
 /**

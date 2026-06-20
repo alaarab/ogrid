@@ -190,6 +190,18 @@ describe('dateParser', () => {
     const result = p('2024-01-15T10:30:00Z') as string;
     expect(result).toBe('2024-01-15');
   });
+  it('parses a US-style locale date without a timezone day-shift', () => {
+    // "3/15/2020" is parsed as local midnight; the result must keep the typed
+    // calendar day regardless of the runner's timezone (a UTC round-trip used to
+    // shift this to 3/14 in positive-UTC-offset zones).
+    expect(p('3/15/2020')).toBe('2020-03-15');
+  });
+  it('preserves a bare ISO date verbatim', () => {
+    expect(p('2024-01-15')).toBe('2024-01-15');
+  });
+  it('rejects an out-of-range ISO date', () => {
+    expect(p('2024-02-31')).toBeUndefined();
+  });
   it('returns null for empty', () => expect(p('')).toBeNull());
   it('rejects invalid date', () => expect(p('not-a-date')).toBeUndefined());
 });
