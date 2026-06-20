@@ -59,8 +59,12 @@ export function getPaginationViewModel(
     showEndEllipsis = end < totalPages;
   }
 
-  const startItem = Math.max(1, (currentPage - 1) * pageSize + 1);
-  const endItem = Math.min(currentPage * pageSize, totalCount);
+  // Clamp the page into range before computing the item window. Otherwise a
+  // stale page (e.g. page 5 after a filter shrinks the data to 3 items) yields a
+  // nonsensical range like "41–3 of 3".
+  const clampedPage = Math.min(Math.max(1, currentPage), totalPages);
+  const startItem = (clampedPage - 1) * pageSize + 1;
+  const endItem = Math.min(clampedPage * pageSize, totalCount);
 
   return {
     totalPages,

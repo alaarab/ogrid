@@ -86,6 +86,20 @@ describe('getPaginationViewModel', () => {
     expect(result?.endItem).toBe(95);
   });
 
+  it('clamps a stale out-of-range page into the item window', () => {
+    // page 5 but only 3 items (e.g. a filter shrank the data) must not report
+    // "41–3 of 3"; it clamps to the last page.
+    const result = getPaginationViewModel(5, 10, 3);
+    expect(result?.startItem).toBe(1);
+    expect(result?.endItem).toBe(3);
+  });
+
+  it('clamps a zero/negative page up to the first page', () => {
+    const result = getPaginationViewModel(0, 10, 100);
+    expect(result?.startItem).toBe(1);
+    expect(result?.endItem).toBe(10);
+  });
+
   it('returns default pageSizeOptions', () => {
     const result = getPaginationViewModel(1, 10, 100);
     expect(result?.pageSizeOptions).toEqual(PAGE_SIZE_OPTIONS);

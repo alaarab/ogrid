@@ -89,7 +89,10 @@ export function workerBody(): void {
               break;
             }
             case 'multiSelect': {
-              if (!pf.empty && !pf.set.has(String(cellVal ?? ''))) {
+              // Mirror the sync path's exact-membership coercion: null/undefined
+              // stringify to "null"/"undefined" (NOT ''), so filtering for the
+              // empty string stays distinct from filtering for empty cells.
+              if (!pf.empty && !pf.set.has(String(cellVal))) {
                 pass = false;
               }
               break;
