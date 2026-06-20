@@ -58,8 +58,16 @@ export function registerDateArithmeticFunctions(registry: Map<string, IFormulaFu
       if (rawMonths instanceof FormulaError) return rawMonths;
       const months = toNumber(rawMonths);
       if (months instanceof FormulaError) return months;
+      // Excel EDATE clamps the day to the last day of the target month rather
+      // than overflowing (EDATE(2021-01-31, 1) is 2021-02-28, not 2021-03-03).
+      // Set the day to 1 before shifting the month so setMonth can't roll over,
+      // then clamp the original day-of-month to the target month's length.
       const result = new Date(date);
+      const day = result.getDate();
+      result.setDate(1);
       result.setMonth(result.getMonth() + Math.trunc(months));
+      const lastDay = new Date(result.getFullYear(), result.getMonth() + 1, 0).getDate();
+      result.setDate(Math.min(day, lastDay));
       return result;
     },
   });

@@ -122,6 +122,35 @@ describe('Math functions (new)', () => {
     });
   });
 
+  describe('ROUND', () => {
+    it('rounds halves away from zero (positive)', () => {
+      expect(evalFn('ROUND', [num(2.5), num(0)])).toBe(3);
+    });
+    it('rounds halves away from zero (negative)', () => {
+      expect(evalFn('ROUND', [num(-2.5), num(0)])).toBe(-3);
+      expect(evalFn('ROUND', [num(-0.5), num(0)])).toBe(-1);
+    });
+    it('rounds to decimal places', () => {
+      expect(evalFn('ROUND', [num(5.678), num(2)])).toBe(5.68);
+      expect(evalFn('ROUND', [num(2.345), num(2)])).toBe(2.35);
+    });
+  });
+
+  describe('MOD', () => {
+    it('takes the sign of the divisor (negative dividend)', () => {
+      expect(evalFn('MOD', [num(-3), num(2)])).toBe(1);
+    });
+    it('takes the sign of the divisor (negative divisor)', () => {
+      expect(evalFn('MOD', [num(3), num(-2)])).toBe(-1);
+    });
+    it('matches plain remainder when signs agree', () => {
+      expect(evalFn('MOD', [num(10), num(3)])).toBe(1);
+    });
+    it('returns #DIV/0! when divisor is zero', () => {
+      expect(evalFn('MOD', [num(5), num(0)])).toBeInstanceOf(FormulaError);
+    });
+  });
+
   describe('PRODUCT', () => {
     it('multiplies a range of numbers', () => {
       expect(evalFn('PRODUCT', [range(0, 0, 0, 2)], {
@@ -581,12 +610,13 @@ describe('Date functions (new)', () => {
   });
 
   describe('EDATE', () => {
-    it('adds months to a date', () => {
-      const ctx = createMockContext({ '0,0': new Date('2025-01-31') });
+    it('adds months and clamps the day to the end of the target month', () => {
+      const ctx = createMockContext({ '0,0': new Date(2025, 0, 31) });
       const result = evaluator.evaluate(fn('EDATE', cell(0, 0), num(1)), ctx) as Date;
       expect(result).toBeInstanceOf(Date);
-      // Jan 31 + 1 month = Feb 28 or Mar 3 depending on implementation
-      expect(result.getMonth()).toBeGreaterThanOrEqual(1); // At least February
+      // Jan 31 + 1 month clamps to Feb 28 (2025 is not a leap year), not Mar 3.
+      expect(result.getMonth()).toBe(1); // February
+      expect(result.getDate()).toBe(28);
     });
     it('subtracts months with negative value', () => {
       const ctx = createMockContext({ '0,0': new Date('2025-06-15') });

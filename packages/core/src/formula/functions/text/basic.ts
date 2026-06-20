@@ -61,7 +61,9 @@ export function registerBasicTextFunctions(registry: Map<string, IFormulaFunctio
     evaluate(args: ASTNode[], context: IFormulaContext, evaluator: IEvaluator): unknown {
       const val = evaluator.evaluate(args[0], context);
       if (val instanceof FormulaError) return val;
-      return toString(val).trim();
+      // Excel TRIM removes leading/trailing spaces AND collapses runs of internal
+      // spaces to a single space (only the space character, not tabs/newlines).
+      return toString(val).replace(/ +/g, ' ').replace(/^ | $/g, '');
     },
   });
 

@@ -34,7 +34,9 @@ export function registerMathArithmeticFunctions(registry: Map<string, IFormulaFu
       if (divisor instanceof FormulaError) return divisor;
 
       if (divisor === 0) return new FormulaError('#DIV/0!', 'Division by zero in MOD');
-      return num % divisor;
+      // Excel MOD result takes the sign of the divisor, unlike JS `%` which takes
+      // the sign of the dividend (so MOD(-3, 2) is 1, not -1).
+      return num - divisor * Math.floor(num / divisor);
     },
   });
 
