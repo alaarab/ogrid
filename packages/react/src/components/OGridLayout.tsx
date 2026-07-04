@@ -157,7 +157,7 @@ const fullscreenBtnStyle: React.CSSProperties = {
 
 // SVG expand icon (enter fullscreen)
 const ExpandIcon = () => (
-  <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+  <svg aria-hidden="true" width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
     <polyline points="10 2 14 2 14 6" />
     <polyline points="6 14 2 14 2 10" />
     <line x1="14" y1="2" x2="10" y2="6" />
@@ -167,7 +167,7 @@ const ExpandIcon = () => (
 
 // SVG collapse icon (exit fullscreen)
 const CollapseIcon = () => (
-  <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+  <svg aria-hidden="true" width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
     <polyline points="4 10 0 10 0 14" />
     <polyline points="12 6 16 6 16 2" />
     <line x1="0" y1="10" x2="4" y2="6" />
