@@ -55,7 +55,7 @@ describe('useRichSelectState', () => {
     const { result } = setup();
     expect(result.current.highlightedIndex).toBe(0);
     act(() => {
-      result.current.handleKeyDown({ key: 'ArrowDown', preventDefault: jest.fn(), stopPropagation: jest.fn() } as any);
+      result.current.handleKeyDown({ key: 'ArrowDown', preventDefault: jest.fn(), stopPropagation: jest.fn() } as unknown as React.KeyboardEvent);
     });
     expect(result.current.highlightedIndex).toBe(1);
   });
@@ -63,7 +63,7 @@ describe('useRichSelectState', () => {
   it('keyboard ArrowUp decrements highlighted index (min 0)', () => {
     const { result } = setup();
     act(() => {
-      result.current.handleKeyDown({ key: 'ArrowUp', preventDefault: jest.fn(), stopPropagation: jest.fn() } as any);
+      result.current.handleKeyDown({ key: 'ArrowUp', preventDefault: jest.fn(), stopPropagation: jest.fn() } as unknown as React.KeyboardEvent);
     });
     expect(result.current.highlightedIndex).toBe(0);
   });
@@ -71,10 +71,10 @@ describe('useRichSelectState', () => {
   it('keyboard Enter commits highlighted value', () => {
     const { result } = setup();
     act(() => {
-      result.current.handleKeyDown({ key: 'ArrowDown', preventDefault: jest.fn(), stopPropagation: jest.fn() } as any);
+      result.current.handleKeyDown({ key: 'ArrowDown', preventDefault: jest.fn(), stopPropagation: jest.fn() } as unknown as React.KeyboardEvent);
     });
     act(() => {
-      result.current.handleKeyDown({ key: 'Enter', preventDefault: jest.fn(), stopPropagation: jest.fn() } as any);
+      result.current.handleKeyDown({ key: 'Enter', preventDefault: jest.fn(), stopPropagation: jest.fn() } as unknown as React.KeyboardEvent);
     });
     expect(onCommit).toHaveBeenCalledWith('Banana');
   });
@@ -82,7 +82,7 @@ describe('useRichSelectState', () => {
   it('keyboard Escape calls onCancel', () => {
     const { result } = setup();
     act(() => {
-      result.current.handleKeyDown({ key: 'Escape', preventDefault: jest.fn(), stopPropagation: jest.fn() } as any);
+      result.current.handleKeyDown({ key: 'Escape', preventDefault: jest.fn(), stopPropagation: jest.fn() } as unknown as React.KeyboardEvent);
     });
     expect(onCancel).toHaveBeenCalled();
   });

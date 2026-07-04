@@ -31,8 +31,7 @@ const makeContainer = (overrides: Partial<Box> = {}) => {
 
 beforeAll(() => {
   // jsdom doesn't ship ResizeObserver — stub it for the dimension tracker.
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  (globalThis as any).ResizeObserver = class {
+  (globalThis as unknown as { ResizeObserver: unknown }).ResizeObserver = class {
     observe() {}
     disconnect() {}
     unobserve() {}

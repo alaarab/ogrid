@@ -16,12 +16,12 @@
       "correctness": {
         "useExhaustiveDependencies": "warn",
         "useHookAtTopLevel": "warn",
-        "noUnusedVariables": "warn",
-        "noUnusedImports": "warn",
-        "noUnusedPrivateClassMembers": "warn"
+        "noUnusedVariables": "error",
+        "noUnusedImports": "error",
+        "noUnusedPrivateClassMembers": "error"
       },
       "suspicious": {
-        "noExplicitAny": "warn",
+        "noExplicitAny": "error",
         "noRedeclare": "off",
         "noAssignInExpressions": "off",
         "useIterableCallbackReturn": "warn",
@@ -48,7 +48,16 @@
         "useOptionalChain": "warn"
       },
       "a11y": {
-        "recommended": false
+        "recommended": true,
+        "noStaticElementInteractions": "warn",
+        "useButtonType": "warn",
+        "useKeyWithClickEvents": "warn",
+        "useSemanticElements": "warn",
+        "noAutofocus": "warn",
+        "useFocusableInteractive": "warn",
+        "useAriaPropsSupportedByRole": "warn",
+        "useAriaPropsForRole": "warn",
+        "noNoninteractiveTabindex": "warn"
       },
       "performance": {
         "noDelete": "warn"

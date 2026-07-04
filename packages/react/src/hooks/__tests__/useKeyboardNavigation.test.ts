@@ -1,5 +1,7 @@
 import { renderHook, act } from '@testing-library/react';
 import { useKeyboardNavigation } from '../useKeyboardNavigation';
+import type { IActiveCell, ISelectionRange, ICellValueChangedEvent, RowSelectionMode } from '../../types';
+import type { EditingCell } from '../useCellEditing';
 
 describe('useKeyboardNavigation', () => {
   const items = [{ id: '1', name: 'A' }, { id: '2', name: 'B' }];
@@ -9,19 +11,19 @@ describe('useKeyboardNavigation', () => {
   const wrapperRef = { current: document.createElement('div') };
 
   // Helper to create params in the new grouped structure
-  const makeParams = (overrides: Record<string, any> = {}) => ({
+  const makeParams = (overrides: Record<string, unknown> = {}) => ({
     data: {
       items: (overrides.items !== undefined ? overrides.items : items) as typeof items,
       visibleCols: (overrides.visibleCols !== undefined ? overrides.visibleCols : visibleCols) as typeof visibleCols,
       colOffset: (overrides.colOffset !== undefined ? overrides.colOffset : 0) as number,
       hasCheckboxCol: (overrides.hasCheckboxCol !== undefined ? overrides.hasCheckboxCol : false) as boolean,
       visibleColumnCount: (overrides.visibleColumnCount !== undefined ? overrides.visibleColumnCount : 1) as number,
-      getRowId: (overrides.getRowId !== undefined ? overrides.getRowId : ((item: { id: string }) => item.id)) as (item: any) => string,
+      getRowId: (overrides.getRowId !== undefined ? overrides.getRowId : ((item: { id: string }) => item.id)) as (item: { id: string }) => string,
     },
     state: {
-      activeCell: (overrides.activeCell !== undefined ? overrides.activeCell : null) as any,
-      selectionRange: (overrides.selectionRange !== undefined ? overrides.selectionRange : null) as any,
-      editingCell: (overrides.editingCell !== undefined ? overrides.editingCell : null) as any,
+      activeCell: (overrides.activeCell !== undefined ? overrides.activeCell : null) as IActiveCell | null,
+      selectionRange: (overrides.selectionRange !== undefined ? overrides.selectionRange : null) as ISelectionRange | null,
+      editingCell: (overrides.editingCell !== undefined ? overrides.editingCell : null) as EditingCell | null,
       selectedRowIds: (overrides.selectedRowIds !== undefined ? overrides.selectedRowIds : new Set<string>()) as Set<string>,
     },
     handlers: {
@@ -39,8 +41,8 @@ describe('useKeyboardNavigation', () => {
     },
     features: {
       editable: (overrides.editable !== undefined ? overrides.editable : false) as boolean,
-      onCellValueChanged: overrides.onCellValueChanged as any,
-      rowSelection: (overrides.rowSelection !== undefined ? overrides.rowSelection : 'none' as const) as any,
+      onCellValueChanged: overrides.onCellValueChanged as ((event: ICellValueChangedEvent<{ id: string; name: string }>) => void) | undefined,
+      rowSelection: (overrides.rowSelection !== undefined ? overrides.rowSelection : 'none' as const) as RowSelectionMode,
       wrapperRef: (overrides.wrapperRef !== undefined ? overrides.wrapperRef : wrapperRef) as typeof wrapperRef,
     },
   });
@@ -149,7 +151,7 @@ describe('useKeyboardNavigation', () => {
       { columnId: 'name', name: 'Name' },
     ] as import('../../types').IColumnDef<PgItem>[];
 
-    function makePgParams(activeRow: number, sel?: any) {
+    function makePgParams(activeRow: number, sel?: ISelectionRange) {
       return makeParams({
         items: pgItems,
         visibleCols: pgCols,
