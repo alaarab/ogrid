@@ -2,6 +2,9 @@ name: Playwright Matrix
 
 on:
   workflow_dispatch:
+  schedule:
+    # Weekly cross-browser run, Mondays 06:00 UTC (off-peak)
+    - cron: "0 6 * * 1"
 
 concurrency:
   group: playwright-matrix-${{ github.ref }}
@@ -19,7 +22,7 @@ jobs:
       - name: Setup Bun
         uses: oven-sh/setup-bun@v2
         with:
-          bun-version: latest
+          bun-version-file: package.json
 
       - name: Install dependencies
         run: bun install --frozen-lockfile
