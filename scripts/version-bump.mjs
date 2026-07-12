@@ -20,8 +20,8 @@ if (!version || !/^\d+\.\d+\.\d+/.test(version)) {
 const OGRID_PKG = /^@alaarab\/ogrid-/;
 const DEP_SECTIONS = ['dependencies', 'peerDependencies', 'devDependencies', 'optionalDependencies'];
 
-// Drive the bump off root workspaces so frozen packages (Angular/Vue, omitted
-// from the workspaces array) stay pinned at their last shipped version.
+// Drive the bump off the root workspaces array so every workspace package
+// (and only workspace packages) gets the new version.
 const root = JSON.parse(readFileSync('package.json', 'utf8'));
 const workspacePaths = (root.workspaces ?? []).map((p) => `${p}/package.json`);
 const files = ['package.json', ...workspacePaths];
