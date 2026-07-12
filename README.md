@@ -388,7 +388,7 @@ bun run build && bun run test && bun run lint && bun run test:e2e:smoke
 
 6. Open a pull request with a clear description of what changed and why.
 
-See [ARCHITECTURE.md](./ARCHITECTURE.md) for detailed architecture documentation and conventions.
+See [CONTRIBUTING.md](./CONTRIBUTING.md) for the full guide and [ARCHITECTURE.md](./ARCHITECTURE.md) for architecture documentation.
 
 ## License
 

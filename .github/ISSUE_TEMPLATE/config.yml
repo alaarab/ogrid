@@ -1,0 +1,8 @@
+blank_issues_enabled: true
+contact_links:
+  - name: Documentation
+    url: https://alaarab.github.io/ogrid/
+    about: Guides, feature docs, live demos, and the full API reference.
+  - name: Security vulnerability
+    url: https://github.com/alaarab/ogrid/security/advisories/new
+    about: Please report security issues privately via a security advisory, not a public issue.

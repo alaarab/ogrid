@@ -1,0 +1,40 @@
+name: Bug report
+description: Something in OGrid doesn't work as documented
+labels: [bug]
+body:
+  - type: input
+    id: package
+    attributes:
+      label: Package
+      description: Which @alaarab/ogrid-* package(s) are affected?
+      placeholder: "@alaarab/ogrid-react-radix"
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Version
+      placeholder: "2.15.1"
+    validations:
+      required: true
+  - type: textarea
+    id: description
+    attributes:
+      label: What happened?
+      description: A clear description of the bug — what you did, what you expected, what actually happened.
+    validations:
+      required: true
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Reproduction
+      description: Minimal code or steps that reproduce the issue. A StackBlitz/CodeSandbox link or a snippet with columns + props is ideal.
+      render: tsx
+    validations:
+      required: true
+  - type: input
+    id: environment
+    attributes:
+      label: Environment
+      description: Browser, OS, React version
+      placeholder: "Chrome 138 / macOS / React 19"
