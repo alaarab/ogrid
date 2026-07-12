@@ -49,7 +49,7 @@
     "test:e2e:matrix": "bun scripts/run-playwright-matrix.mjs",
     "audit:visual": "OGRID_VISUAL_AUDIT=1 bunx playwright test e2e/visualAudit.spec.ts",
     "test:e2e:react": "bunx playwright test --project=react-radix",
-    "publish:all": "(cd packages/core && npm publish --access=public) && (cd packages/inputs && npm publish --access=public) && (cd packages/react && npm publish --access=public) && (cd packages/react-radix && npm publish --access=public) && (cd packages/react-fluent && npm publish --access=public) && (cd packages/react-inputs && npm publish --access=public) && (cd packages/react-xlsx && npm publish --access=public) && (cd packages/react-xlsx-browser && npm publish --access=public) && (cd packages/mcp && npm publish --access=public)",
+    "publish:all": "node scripts/publish-all.mjs",
     "version:bump": "bun scripts/version-bump.mjs",
     "bench": "bunx tsx packages/core/src/__benchmarks__/performance.bench.ts",
     "mcp": "bun packages/mcp/dist/esm/index.js",

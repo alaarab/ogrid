@@ -55,5 +55,24 @@ for (const file of files.sort()) {
   }
 }
 
+// Cut the CHANGELOG: [Unreleased] becomes this version's heading, and a
+// fresh empty [Unreleased] section is inserted above it. Skipped when the
+// section is missing (already cut) or empty (nothing to release under it).
+const CHANGELOG = 'CHANGELOG.md';
+const changelog = readFileSync(CHANGELOG, 'utf8');
+const unreleased = '## [Unreleased]';
+if (changelog.includes(`## [${version}]`)) {
+  console.log(`CHANGELOG.md already has a [${version}] heading, leaving it as is`);
+} else if (changelog.includes(unreleased)) {
+  const today = new Date().toISOString().slice(0, 10);
+  writeFileSync(
+    CHANGELOG,
+    changelog.replace(unreleased, `${unreleased}\n\n## [${version}] - ${today}`),
+  );
+  console.log(`  CHANGELOG.md ([Unreleased] cut to [${version}] - ${today})`);
+} else {
+  console.log('CHANGELOG.md has no [Unreleased] section, leaving it as is');
+}
+
 console.log(`\nBumped ${updated} package(s) to ${version}`);
 console.log('Run `bun install` to update bun.lock');

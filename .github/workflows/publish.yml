@@ -92,6 +92,7 @@ jobs:
         run: |
           echo "🏃 Dry run — skipping publish"
           echo "Would publish version: ${{ inputs.version }}"
+          bun run publish:all --dry-run
 
       - name: Create git tag
         if: ${{ !inputs.dry-run }}
@@ -104,4 +105,16 @@ jobs:
           fi
           git tag "v${{ inputs.version }}" 2>/dev/null || echo "Tag v${{ inputs.version }} already exists"
           git push origin main
-          git push origin "v${{ inputs.version }}" --force
+          # Push the tag without --force: if the tag already exists remotely
+          # at a different commit, this fails loudly instead of moving a
+          # published release marker.
+          remote_sha=$(git ls-remote --tags origin "refs/tags/v${{ inputs.version }}" | cut -f1)
+          local_sha=$(git rev-parse "v${{ inputs.version }}")
+          if [ -z "$remote_sha" ]; then
+            git push origin "v${{ inputs.version }}"
+          elif [ "$remote_sha" = "$local_sha" ]; then
+            echo "Tag v${{ inputs.version }} already pushed at the same commit"
+          else
+            echo "::error::Tag v${{ inputs.version }} exists remotely at $remote_sha (local: $local_sha). Refusing to move a published tag."
+            exit 1
+          fi
