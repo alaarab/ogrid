@@ -63,7 +63,7 @@ export function formatDate(year: number, month: number, date: number): string {
 /** Parse a YYYY-MM-DD string into { year, month, date }. Returns null if invalid. */
 export function parseDate(str: string): { year: number; month: number; date: number } | null {
   const match = str.match(/^(\d{4})-(\d{2})-(\d{2})/);
-  if (!match) return null;
+  if (match?.[1] == null || match[2] == null || match[3] == null) return null;
   const year = parseInt(match[1], 10);
   const month = parseInt(match[2], 10) - 1;
   const date = parseInt(match[3], 10);

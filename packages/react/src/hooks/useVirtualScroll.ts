@@ -150,9 +150,10 @@ export function useVirtualScroll(params: UseVirtualScrollParams): UseVirtualScro
     const ro = new ResizeObserver((entries) => {
       // `entries` can be nullish under non-spec-compliant ResizeObserver
       // implementations in some test runtimes — guard before reading it.
-      if (entries && entries.length > 0) {
-        setContainerHeight(entries[0].contentRect.height);
-        setContainerWidth(entries[0].contentRect.width);
+      const entry = entries?.[0];
+      if (entry) {
+        setContainerHeight(entry.contentRect.height);
+        setContainerWidth(entry.contentRect.width);
       }
     });
     ro.observe(el);
@@ -238,12 +239,16 @@ export function useVirtualScroll(params: UseVirtualScrollParams): UseVirtualScro
       const first = virtualItems[0];
       const last = virtualItems[virtualItems.length - 1];
       const totalSize = virtualizer.getTotalSize();
-      activeRange = {
-        startIndex: first.index,
-        endIndex: last.index,
-        offsetTop: first.start,
-        offsetBottom: Math.max(0, totalSize - last.end),
-      };
+      if (first !== undefined && last !== undefined) {
+        activeRange = {
+          startIndex: first.index,
+          endIndex: last.index,
+          offsetTop: first.start,
+          offsetBottom: Math.max(0, totalSize - last.end),
+        };
+      } else {
+        activeRange = { startIndex: 0, endIndex: -1, offsetTop: 0, offsetBottom: 0 };
+      }
     }
   }
 

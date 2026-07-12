@@ -114,7 +114,7 @@ export function useColumnPinning<T = unknown>(params: UseColumnPinningParams<T>)
 
       for (let i = visibleCols.length - 1; i >= 0; i--) {
         const col = visibleCols[i];
-        if (pinnedColumns[col.columnId] === 'right') {
+        if (col !== undefined && pinnedColumns[col.columnId] === 'right') {
           offsets[col.columnId] = right;
           right += columnWidths[col.columnId] ?? defaultWidth;
         }

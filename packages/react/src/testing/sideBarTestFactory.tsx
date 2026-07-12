@@ -99,7 +99,7 @@ export function createSideBarTests(OGrid: React.ComponentType<IOGridProps<Fixtur
       // The checkboxes are for Name and Status columns  -  find the Status one
       const checkboxes = panel.querySelectorAll('input[type="checkbox"]');
       // Second checkbox is Status (Name is first)
-      fireEvent.click(checkboxes[1]);
+      fireEvent.click(checkboxes[1]!);
       expect(screen.queryByTestId('cell-status')).not.toBeInTheDocument();
     });
 

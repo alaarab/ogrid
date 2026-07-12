@@ -78,6 +78,7 @@ export function useUndoRedo<T>(
     setRedoLength(stack.redoLength);
     for (let i = lastBatch.length - 1; i >= 0; i--) {
       const ev = lastBatch[i];
+      if (ev === undefined) continue;
       onCellValueChangedRef.current({
         ...ev,
         oldValue: ev.newValue,

@@ -65,6 +65,7 @@ export const MultiSelectFilterPopover: React.FC<MultiSelectFilterPopoverProps> =
           <div style={{ height: virt.totalHeight, position: 'relative' }}>
             {virt.visibleItems.map(({ index, offsetTop }) => {
               const option = filteredOptions[index];
+              if (option === undefined) return null;
               const optionId = `${optionIdPrefix}-${index}`;
               return (
                 <div key={option} className={styles.popoverOption} style={{ position: 'absolute', top: offsetTop, width: '100%', height: ITEM_HEIGHT, boxSizing: 'border-box', display: 'flex', alignItems: 'center' }}>

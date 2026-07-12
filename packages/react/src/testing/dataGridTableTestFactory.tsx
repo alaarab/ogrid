@@ -238,9 +238,9 @@ export function createDataGridTableTests(DataGridTable: React.ComponentType<IOGr
     // Verify numeric column cells render
     const amountCells = container.querySelectorAll('[data-testid="cell-amount"]');
     expect(amountCells.length).toBe(2);
-    expect(amountCells[0].textContent).toBe('Active');
+    expect(amountCells[0]!.textContent).toBe('Active');
     // Verify it's within a cell wrapper that has row/col index attributes
-    const cellWrapper = amountCells[0].closest('[data-col-index]');
+    const cellWrapper = amountCells[0]!.closest('[data-col-index]');
     expect(cellWrapper).toBeTruthy();
   });
 

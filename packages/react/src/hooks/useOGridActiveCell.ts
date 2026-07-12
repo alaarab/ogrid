@@ -21,7 +21,7 @@ export function useOGridActiveCell(): UseOGridActiveCellState {
     if (ref) {
       // Parse "A1"  to  { col: 0, row: 0 }
       const m = ref.match(/^([A-Z]+)(\d+)$/);
-      if (m) {
+      if (m?.[1] != null && m[2] != null) {
         setActiveCellCoords({ col: columnLetterToIndex(m[1]), row: parseInt(m[2], 10) - 1 });
       } else {
         setActiveCellCoords(null);

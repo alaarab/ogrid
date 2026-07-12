@@ -57,6 +57,7 @@ export function useColumnMeta<T>(params: UseColumnMetaParams<T>): ColumnMetaResu
 
     for (let i = 0; i < visibleCols.length; i++) {
       const col = visibleCols[i];
+      if (col === undefined) continue;
       const columnWidth = getColumnWidth(col);
       const hasExplicitWidth = !!(columnSizingOverrides[col.columnId] || col.idealWidth != null || col.defaultWidth != null);
       const isPinnedLeft = pinnedColumns[col.columnId] === 'left';

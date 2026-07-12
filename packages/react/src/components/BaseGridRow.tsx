@@ -67,7 +67,7 @@ function GridRowInner(props: BaseGridRowProps) {
         <td style={{ padding: 0, border: 'none', width: leftSpacerWidth, minWidth: leftSpacerWidth }} aria-hidden />
       )}
       {visibleCols.map((col, colIdx) => {
-        const globalIdx = globalColIndexMap ? globalColIndexMap[colIdx] : colIdx;
+        const globalIdx = globalColIndexMap ? (globalColIndexMap[colIdx] ?? colIdx) : colIdx;
         const surfaceState = getGridCellSurfaceState({
           rowIndex,
           columnIndex: globalIdx,

@@ -400,8 +400,9 @@ export function useDataGridTableOrchestration<T>(
         if (dataCol < 0 || dataCol >= cols.length) return;
         const col = cols[dataCol];
         const itms = itemsRef.current;
-        if (cell.row >= itms.length) return;
-        const rowId = getRowIdRef.current(itms[cell.row]);
+        const item = itms[cell.row];
+        if (col === undefined || item === undefined) return;
+        const rowId = getRowIdRef.current(item);
         interactionHandlersRef.current.setEditingCell({ rowId, columnId: col.columnId });
       },
     };

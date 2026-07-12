@@ -103,7 +103,8 @@ export function useDataGridLayout<T>(
     if (!columnOrder?.length) return filtered;
     const orderMap = new Map<string, number>();
     for (let i = 0; i < columnOrder.length; i++) {
-      orderMap.set(columnOrder[i], i);
+      const id = columnOrder[i];
+      if (id !== undefined) orderMap.set(id, i);
     }
     return [...filtered].sort((a, b) => {
       const ia = orderMap.get(a.columnId) ?? -1;

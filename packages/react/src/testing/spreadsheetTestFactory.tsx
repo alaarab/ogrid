@@ -505,7 +505,7 @@ export function createSpreadsheetTests(DataGridTable: React.ComponentType<IOGrid
         await waitFor(() => {
           const active = container.querySelectorAll('[data-active-cell="true"]');
           expect(active.length).toBe(1);
-          expect(active[0].getAttribute('data-col-index')).toBe('1');
+          expect(active[0]!.getAttribute('data-col-index')).toBe('1');
         });
       });
 
@@ -535,16 +535,16 @@ export function createSpreadsheetTests(DataGridTable: React.ComponentType<IOGrid
         await waitFor(() => {
           const active = container.querySelectorAll('[data-active-cell="true"]');
           expect(active.length).toBe(1);
-          expect(active[0].getAttribute('data-row-index')).toBe('0');
-          expect(active[0].getAttribute('data-col-index')).toBe('1');
+          expect(active[0]!.getAttribute('data-row-index')).toBe('0');
+          expect(active[0]!.getAttribute('data-col-index')).toBe('1');
         });
 
         fireEvent.keyDown(grid, { key: 'Tab' });
         await waitFor(() => {
           const active = container.querySelectorAll('[data-active-cell="true"]');
           expect(active.length).toBe(1);
-          expect(active[0].getAttribute('data-row-index')).toBe('1');
-          expect(active[0].getAttribute('data-col-index')).toBe('0');
+          expect(active[0]!.getAttribute('data-row-index')).toBe('1');
+          expect(active[0]!.getAttribute('data-col-index')).toBe('0');
         });
       });
 
@@ -559,8 +559,8 @@ export function createSpreadsheetTests(DataGridTable: React.ComponentType<IOGrid
         await waitFor(() => {
           const active = container.querySelectorAll('[data-active-cell="true"]');
           expect(active.length).toBe(1);
-          expect(active[0].getAttribute('data-row-index')).toBe('0');
-          expect(active[0].getAttribute('data-col-index')).toBe('1');
+          expect(active[0]!.getAttribute('data-row-index')).toBe('0');
+          expect(active[0]!.getAttribute('data-col-index')).toBe('1');
         });
       });
 
@@ -575,16 +575,16 @@ export function createSpreadsheetTests(DataGridTable: React.ComponentType<IOGrid
         await waitFor(() => {
           const active = container.querySelectorAll('[data-active-cell="true"]');
           expect(active.length).toBe(1);
-          expect(active[0].getAttribute('data-row-index')).toBe('1');
-          expect(active[0].getAttribute('data-col-index')).toBe('0');
+          expect(active[0]!.getAttribute('data-row-index')).toBe('1');
+          expect(active[0]!.getAttribute('data-col-index')).toBe('0');
         });
 
         fireEvent.keyDown(grid, { key: 'Home', ctrlKey: true });
         await waitFor(() => {
           const active = container.querySelectorAll('[data-active-cell="true"]');
           expect(active.length).toBe(1);
-          expect(active[0].getAttribute('data-row-index')).toBe('0');
-          expect(active[0].getAttribute('data-col-index')).toBe('0');
+          expect(active[0]!.getAttribute('data-row-index')).toBe('0');
+          expect(active[0]!.getAttribute('data-col-index')).toBe('0');
         });
       });
 
@@ -599,16 +599,16 @@ export function createSpreadsheetTests(DataGridTable: React.ComponentType<IOGrid
         await waitFor(() => {
           const active = container.querySelectorAll('[data-active-cell="true"]');
           expect(active.length).toBe(1);
-          expect(active[0].getAttribute('data-row-index')).toBe('0');
-          expect(active[0].getAttribute('data-col-index')).toBe('1');
+          expect(active[0]!.getAttribute('data-row-index')).toBe('0');
+          expect(active[0]!.getAttribute('data-col-index')).toBe('1');
         });
 
         fireEvent.keyDown(grid, { key: 'End', ctrlKey: true });
         await waitFor(() => {
           const active = container.querySelectorAll('[data-active-cell="true"]');
           expect(active.length).toBe(1);
-          expect(active[0].getAttribute('data-row-index')).toBe('2');
-          expect(active[0].getAttribute('data-col-index')).toBe('1');
+          expect(active[0]!.getAttribute('data-row-index')).toBe('2');
+          expect(active[0]!.getAttribute('data-col-index')).toBe('1');
         });
       });
     });

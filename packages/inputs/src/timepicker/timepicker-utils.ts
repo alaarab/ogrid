@@ -20,7 +20,7 @@ export function parseTime(str: string): TimeValue | null {
 
   // Try 12-hour format: "h:mm AM" or "h:mm PM"
   const match12 = trimmed.match(/^(\d{1,2}):(\d{2})\s*(AM|PM)$/i);
-  if (match12) {
+  if (match12?.[1] != null && match12[2] != null && match12[3] != null) {
     let hours = parseInt(match12[1], 10);
     const minutes = parseInt(match12[2], 10);
     const ampm = match12[3].toUpperCase() as AmPm;
@@ -35,7 +35,7 @@ export function parseTime(str: string): TimeValue | null {
 
   // Try 24-hour format: "HH:MM"
   const match24 = trimmed.match(/^(\d{1,2}):(\d{2})$/);
-  if (match24) {
+  if (match24?.[1] != null && match24[2] != null) {
     const hours = parseInt(match24[1], 10);
     const minutes = parseInt(match24[2], 10);
     if (hours < 0 || hours > 23 || minutes < 0 || minutes > 59) return null;

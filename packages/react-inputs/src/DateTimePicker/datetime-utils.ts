@@ -20,7 +20,7 @@ export function parseDateTime(str: string): DateTimeValue | null {
 
   // Try "YYYY-MM-DD h:mm AM" format
   const match12 = trimmed.match(/^(\d{4})-(\d{2})-(\d{2})\s+(\d{1,2}):(\d{2})\s*(AM|PM)$/i);
-  if (match12) {
+  if (match12?.[1] != null && match12[2] != null && match12[3] != null && match12[4] != null && match12[5] != null && match12[6] != null) {
     const year = parseInt(match12[1], 10);
     const month = parseInt(match12[2], 10) - 1;
     const date = parseInt(match12[3], 10);
@@ -37,7 +37,7 @@ export function parseDateTime(str: string): DateTimeValue | null {
 
   // Try ISO "YYYY-MM-DDThh:mm" or "YYYY-MM-DD hh:mm"
   const match24 = trimmed.match(/^(\d{4})-(\d{2})-(\d{2})[T ](\d{2}):(\d{2})$/);
-  if (match24) {
+  if (match24?.[1] != null && match24[2] != null && match24[3] != null && match24[4] != null && match24[5] != null) {
     const year = parseInt(match24[1], 10);
     const month = parseInt(match24[2], 10) - 1;
     const date = parseInt(match24[3], 10);
