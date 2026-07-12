@@ -603,7 +603,14 @@
 
 .codeSection {
   padding: 6rem 3rem 5rem;
+  /* Fill the flex parent (Docusaurus .main-wrapper) rather than shrink-wrap
+     to the code block's intrinsic width. Without this, the <pre>'s longest
+     line (white-space: pre) forces the section — and the whole page — wider
+     than the mobile viewport, causing horizontal overflow. */
+  width: 100%;
   max-width: 1200px;
+  min-width: 0;
+  box-sizing: border-box;
   margin: 0 auto;
 
   @media (max-width: 768px) {
