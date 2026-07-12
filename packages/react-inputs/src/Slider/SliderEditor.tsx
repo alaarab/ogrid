@@ -281,6 +281,11 @@ export function SliderEditor<T>(props: ICellEditorProps<T>): React.ReactElement 
               cursor: isDragging ? 'grabbing' : 'grab',
             }}
             onMouseDown={handleThumbMouseDown}
+            role="slider"
+            aria-label="Slider"
+            aria-valuemin={min}
+            aria-valuemax={max}
+            aria-valuenow={currentValue}
           />
         </div>
         <span style={valueLabelStyle}>{currentValue}</span>
@@ -297,7 +302,7 @@ export function SliderEditor<T>(props: ICellEditorProps<T>): React.ReactElement 
         <span style={inputLabelStyle}>Value:</span>
         <input
           type="text"
-          aria-label="Value"
+          aria-label={`Value (${min} to ${max})`}
           value={inputText}
           onChange={handleInputChange}
           onKeyDown={handleInputKeyDown}

@@ -304,41 +304,6 @@ table:not([class]) th {
   z-index: 9999 !important;
 }
 
-/* ── Prop Table Component ── */
-.prop-table {
-  width: 100%;
-
-  th {
-    text-align: left;
-    padding: 10px 16px;
-  }
-
-  td {
-    padding: 10px 16px;
-    vertical-align: top;
-  }
-
-  .prop-name {
-    font-weight: 600;
-    white-space: nowrap;
-  }
-
-  .prop-required {
-    color: #ef4444;
-    margin-left: 2px;
-  }
-
-  .prop-type {
-    color: var(--ogrid-accent);
-    font-size: 0.85em;
-  }
-
-  .prop-default {
-    color: var(--ifm-color-emphasis-600);
-    font-size: 0.85em;
-  }
-}
-
 /* ── Live Demo Container ── */
 .live-demo {
   position: relative;

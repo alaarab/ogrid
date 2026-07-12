@@ -37,7 +37,8 @@ function renderEditor(overrides: Partial<TagsEditorTestProps> = {}) {
 }
 
 function getTagInput(): HTMLInputElement {
-  return screen.getByRole('textbox') as HTMLInputElement;
+  // The tag input is a combobox (it owns the suggestion listbox).
+  return screen.getByRole('combobox') as HTMLInputElement;
 }
 
 // ---------- Tests ----------

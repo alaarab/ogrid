@@ -150,6 +150,8 @@ function HeroGrid() {
             key={opt.value}
             onClick={() => setDensity(opt.value)}
             title={`${opt.label} density`}
+            aria-label={`${opt.label} density`}
+            aria-pressed={density === opt.value}
             style={{
               ...toolbarBtnStyle,
               border: 'none',

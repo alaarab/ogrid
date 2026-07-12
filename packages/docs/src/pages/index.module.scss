@@ -471,6 +471,12 @@
   height: 70vh;
   min-height: 480px;
   max-height: 750px;
+
+  @media (max-width: 768px) {
+    height: 55vh;
+    min-height: 360px;
+    max-height: 480px;
+  }
   background: var(--ifm-background-surface-color);
   border-radius: 12px;
   overflow: hidden;
@@ -525,6 +531,13 @@
   height: 70vh;
   min-height: 480px;
   max-height: 750px;
+
+  /* Keep in sync with .heroGridWrapper above */
+  @media (max-width: 768px) {
+    height: 55vh;
+    min-height: 360px;
+    max-height: 480px;
+  }
   border-radius: 12px;
   border: 1px solid var(--ogrid-border-glass);
   background: linear-gradient(

@@ -357,9 +357,12 @@ bun run storybook:react-fluent      # React Fluent UI    (port 6006)
 bun run storybook:react-radix       # React Radix UI     (port 6008)
 
 # Documentation
-bun run docs:dev                    # Docusaurus dev server
+bun run docs:dev:full               # Build workspace packages, then start the Docusaurus dev server
+bun run docs:dev                    # Docusaurus dev server only (requires packages already built)
 bun run docs:build                  # Build docs site
 ```
+
+> The docs site resolves `@alaarab/ogrid-*` imports to each package's `dist/esm` build, so a fresh clone must build those packages first — use `docs:dev:full` (or run `bun run build` once), otherwise the dev server fails with "Module not found" errors.
 
 > Tests run natively on `bun:test` (no Jest); shared setup at `bun-test.setup.ts` boots happy-dom, registers jest-dom matchers, and exposes the Jest globals so existing test syntax works unchanged. Published consumer packages remain plain npm — your users do `npm install @alaarab/ogrid-react-radix` exactly as before.
 

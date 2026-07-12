@@ -235,6 +235,7 @@ export function ColorPickerEditor<T>(props: ICellEditorProps<T>): React.ReactEle
         onMouseLeave={() => setHoveredSwatch(null)}
         tabIndex={-1}
         aria-label={color}
+        aria-pressed={isSelected}
       >
         {isSelected ? '\u2713' : ''}
       </button>

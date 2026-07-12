@@ -48,7 +48,19 @@
         "useOptionalChain": "warn"
       },
       "a11y": {
-        "recommended": false
+        "recommended": true,
+        "noStaticElementInteractions": "warn",
+        "useKeyWithClickEvents": "warn",
+        "useKeyWithMouseEvents": "warn",
+        "useSemanticElements": "warn",
+        "noNoninteractiveTabindex": "warn",
+        "noNoninteractiveElementInteractions": "warn",
+        "useFocusableInteractive": "warn",
+        "useButtonType": "warn",
+        "noAutofocus": "warn",
+        "useAriaPropsSupportedByRole": "warn",
+        "useAriaPropsForRole": "warn",
+        "noSvgWithoutTitle": "warn"
       },
       "performance": {
         "noDelete": "warn"
