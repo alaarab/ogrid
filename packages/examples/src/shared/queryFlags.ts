@@ -4,6 +4,7 @@ export interface ExampleFeatureFlags {
   premiumInputs: boolean;
   rowSelection: boolean;
   serverSide: boolean;
+  xlsx: boolean;
 }
 
 export function getExampleFeatureFlags(search: string): ExampleFeatureFlags {
@@ -14,6 +15,7 @@ export function getExampleFeatureFlags(search: string): ExampleFeatureFlags {
     premiumInputs: params.has('premiumInputs'),
     rowSelection: params.has('rowSelection'),
     serverSide: params.has('serverSide'),
+    xlsx: params.has('xlsx'),
   };
 }
 

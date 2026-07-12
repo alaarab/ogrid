@@ -8,6 +8,7 @@ import { createThemeToggle, getInitialTheme, setTheme } from '../shared/themeTog
 import { connectGridToBridge } from '@alaarab/ogrid-mcp/bridge-client';
 import { createProjectExampleScenario } from '../shared/demoScenario';
 import { getExampleFeatureFlags } from '../shared/queryFlags';
+import { XlsxExample } from '../shared/xlsxExample';
 import { makePremiumInputColumns, makePremiumInputRows } from '../shared/premiumInputsData';
 import {
   coerceExampleColumns,
@@ -121,7 +122,13 @@ function App() {
 }
 
 const rootEl = document.getElementById('root');
-if (rootEl) createRoot(rootEl).render(<App />);
+if (rootEl) {
+  if (featureFlags.xlsx) {
+    createRoot(rootEl).render(<XlsxExample />);
+  } else {
+    createRoot(rootEl).render(<App />);
+  }
+}
 
 // Add dark mode toggle  -  also switch Fluent theme
 createThemeToggle((theme) => {
