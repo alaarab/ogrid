@@ -4,6 +4,19 @@ All notable changes to OGrid will be documented in this file.
 
 ## [Unreleased]
 
+### Added — xlsx export (react-xlsx + core)
+
+- **`exportToXlsx(items, columns, getValue, filename?, options?)`.** The
+  inverse of the importer: exports grid data as a downloaded `.xlsx` workbook,
+  mirroring `exportToCsv`'s call shape. Values export as native Excel types
+  (numbers, dates, booleans), and an optional `formulas` array (the same
+  `{col, row, formula}` shape `sheetToGridData` produces) emits live formula
+  cells with cached results. Lower-level `workbookFromGridData` and
+  `xlsxBlobFromWorkbook` are exported for multi-sheet assembly.
+- **`triggerBlobDownload(blob, filename)`** (core): shared browser download
+  helper extracted from `triggerCsvDownload`; exported from core, react, and
+  both UI kits.
+
 ### Added — external column-chooser placement (core + react-radix)
 
 - **`columnChooser="external"`.** A new placement that renders no built-in

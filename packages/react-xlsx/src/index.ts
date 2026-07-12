@@ -34,6 +34,13 @@ export {
   type SheetRow,
   type SheetToGridDataOptions,
 } from './sheetMapper';
+export {
+  exportToXlsx,
+  workbookFromGridData,
+  xlsxBlobFromWorkbook,
+  XLSX_MIME_TYPE,
+  type XlsxExportOptions,
+} from './exportToXlsx';
 
 export interface MountOptions {
   /** Pre-parsed workbook (use this OR blob, not both). */

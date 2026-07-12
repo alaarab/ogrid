@@ -5,6 +5,7 @@ export {
   buildCsvRows,
   exportToCsv,
   triggerCsvDownload,
+  triggerBlobDownload,
   getCellValue,
   flattenColumns,
   buildHeaderRows,
