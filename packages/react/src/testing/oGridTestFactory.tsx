@@ -5,7 +5,7 @@
 import * as React from 'react';
 import { render, screen, fireEvent } from '@testing-library/react';
 import { fixtureRows, fixtureColumns, getRowId } from './fixtures';
-import type { IOGridProps } from '@alaarab/ogrid-core';
+import type { IOGridProps } from '../types';
 import type { FixtureRow } from './fixtures';
 
 export function createOGridTests(OGrid: React.ComponentType<IOGridProps<FixtureRow>>): void {
@@ -17,7 +17,10 @@ export function createOGridTests(OGrid: React.ComponentType<IOGridProps<FixtureR
       entityLabelPlural: 'items',
       defaultPageSize: 10,
     };
-    return render(<OGrid {...defaultProps} {...overrides} />);
+    // Merge before the JSX spread: IOGridProps is a client/server
+    // discriminated union and spreading two partials defeats the narrowing.
+    const props = { ...defaultProps, ...overrides } as IOGridProps<FixtureRow>;
+    return render(<OGrid {...props} />);
   }
 
   it('renders rows from items', () => {

@@ -1,7 +1,7 @@
 {
   "name": "@alaarab/ogrid-react",
   "version": "2.15.1",
-  "description": "OGrid React – React hooks, headless components, and utilities for OGrid data grids.",
+  "description": "OGrid React \u2013 React hooks, headless components, and utilities for OGrid data grids.",
   "main": "dist/esm/index.js",
   "module": "dist/esm/index.js",
   "types": "dist/types/index.d.ts",
@@ -10,10 +10,15 @@
       "types": "./dist/types/index.d.ts",
       "import": "./dist/esm/index.js",
       "default": "./dist/esm/index.js"
+    },
+    "./testing": {
+      "types": "./dist/types/testing/index.d.ts",
+      "import": "./dist/esm/testing/index.js",
+      "default": "./dist/esm/testing/index.js"
     }
   },
   "scripts": {
-    "build": "rimraf dist && tsup && tsc -p tsconfig.build.json",
+    "build": "rimraf dist && tsup && tsc -p tsconfig.build.json && tsc -p tsconfig.testing.build.json",
     "typecheck": "tsc -p tsconfig.build.json --noEmit",
     "test": "bun test --preload ../../bun-test.setup.ts"
   },
@@ -54,6 +59,7 @@
     "@testing-library/jest-dom": "^6.9.1",
     "@testing-library/react": "^16.3.2",
     "@testing-library/user-event": "^14.6.1",
+    "@types/jest": "^30.0.0",
     "@types/react": "^19.2.17",
     "@types/react-dom": "^19.2.3",
     "react": "^19.2.7",
