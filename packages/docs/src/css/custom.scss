@@ -228,6 +228,14 @@ table:not([class]) {
   display: table;
   width: 100%;
   font-size: 0.9rem;
+
+  /* Narrow screens: fall back to Infima's scrollable-block table so wide
+     tables scroll inside the page instead of forcing horizontal overflow. */
+  @media (max-width: 768px) {
+    display: block;
+    overflow-x: auto;
+    width: 100%;
+  }
 }
 
 .markdown table th,
