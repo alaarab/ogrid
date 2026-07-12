@@ -18,5 +18,15 @@
     "name": "react-fluent",
     "path": "packages/react-fluent/dist/esm/index.js",
     "limit": "185 kB"
+  },
+  {
+    "name": "react-xlsx",
+    "path": "packages/react-xlsx/dist/esm/index.js",
+    "limit": "400 kB"
+  },
+  {
+    "name": "react-xlsx-browser",
+    "path": "packages/react-xlsx-browser/dist/ogrid-xlsx.js",
+    "limit": "400 kB"
   }
 ]

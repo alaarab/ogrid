@@ -185,6 +185,8 @@ const tagCountStyle: React.CSSProperties = {
 
 // ── Component ──
 
+let tagsEditorInstanceCounter = 0;
+
 export function TagsEditor<T>(props: ICellEditorProps<T>): React.ReactElement {
   const { value, onValueChange, onCommit, onCancel, cellEditorParams } = props;
 
@@ -201,6 +203,9 @@ export function TagsEditor<T>(props: ICellEditorProps<T>): React.ReactElement {
   const [highlightedIndex, setHighlightedIndex] = React.useState(-1);
   const rootRef = React.useRef<HTMLDivElement>(null);
   const inputRef = React.useRef<HTMLInputElement>(null);
+  // Stable per-instance id linking the combobox input to its listbox
+  // (React.useId needs React 18; this package supports React 17 peers).
+  const listboxId = React.useRef(`ogrid-tags-listbox-${++tagsEditorInstanceCounter}`).current;
 
   // In multi-select mode: show all available suggestions (not yet selected) when input is empty,
   // or filter them when user types. In regular mode: only show suggestions when typing.
@@ -391,6 +396,9 @@ export function TagsEditor<T>(props: ICellEditorProps<T>): React.ReactElement {
       return (
         <div
           key={suggestion}
+          id={`${listboxId}-opt-${i}`}
+          role="option"
+          aria-selected={isSelected}
           style={{
             ...suggestionItemStyle,
             ...(isHighlighted ? suggestionItemHoveredStyle : {}),
@@ -414,6 +422,9 @@ export function TagsEditor<T>(props: ICellEditorProps<T>): React.ReactElement {
     return (
       <div
         key={suggestion}
+        id={`${listboxId}-opt-${i}`}
+        role="option"
+        aria-selected={isSelected}
         style={{
           ...suggestionItemStyle,
           ...(isHighlighted ? suggestionItemHoveredStyle : {}),
@@ -449,11 +460,18 @@ export function TagsEditor<T>(props: ICellEditorProps<T>): React.ReactElement {
         placeholder={isMultiSelectMode ? 'Search...' : allowCreate ? 'Type to add tag...' : 'Search tags...'}
         style={inputStyle}
         aria-label="Tag search input"
+        role="combobox"
+        aria-expanded={showSuggestions}
+        aria-controls={showSuggestions ? listboxId : undefined}
+        aria-autocomplete="list"
+        aria-activedescendant={
+          showSuggestions && highlightedIndex >= 0 ? `${listboxId}-opt-${highlightedIndex}` : undefined
+        }
       />
 
       {/* Suggestions dropdown */}
       {showSuggestions && (
-        <div style={suggestionsStyle}>
+        <div id={listboxId} role="listbox" aria-label="Tag suggestions" style={suggestionsStyle}>
           {filteredSuggestions.map((suggestion, i) => renderSuggestionItem(suggestion, i))}
         </div>
       )}

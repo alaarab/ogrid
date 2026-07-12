@@ -16,7 +16,7 @@
       "dependsOn": ["build"],
       "cache": true,
       "inputs": ["src/**", "$TURBO_ROOT$/bun-test.setup.ts", "tsconfig.*"],
-      "outputs": []
+      "outputs": ["coverage/**"]
     },
     "lint": {
       "cache": true

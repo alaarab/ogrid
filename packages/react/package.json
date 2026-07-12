@@ -10,11 +10,6 @@
       "types": "./dist/types/index.d.ts",
       "import": "./dist/esm/index.js",
       "default": "./dist/esm/index.js"
-    },
-    "./testing": {
-      "types": "./src/testing/index.d.ts",
-      "import": "./dist/esm/testing/index.js",
-      "default": "./dist/esm/testing/index.js"
     }
   },
   "scripts": {
@@ -34,7 +29,6 @@
   "license": "MIT",
   "files": [
     "dist",
-    "src/testing/index.d.ts",
     "README.md",
     "LICENSE"
   ],

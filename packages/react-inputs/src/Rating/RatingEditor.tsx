@@ -199,6 +199,7 @@ export function RatingEditor<T>(props: ICellEditorProps<T>): React.ReactElement 
           onClick={(e) => handleStarClick(starIndex, e)}
           onMouseMove={(e) => handleStarHover(starIndex, e)}
           tabIndex={-1}
+          aria-label={`${starIndex + 1} of ${maxStars} stars`}
         >
           <span
             style={{
@@ -222,6 +223,7 @@ export function RatingEditor<T>(props: ICellEditorProps<T>): React.ReactElement 
         onClick={(e) => handleStarClick(starIndex, e)}
         onMouseMove={(e) => handleStarHover(starIndex, e)}
         tabIndex={-1}
+        aria-label={`${starIndex + 1} of ${maxStars} stars`}
       >
         {starChar}
       </button>
@@ -234,6 +236,12 @@ export function RatingEditor<T>(props: ICellEditorProps<T>): React.ReactElement 
       style={rootStyle}
       onMouseDown={(e) => e.stopPropagation()}
       tabIndex={0}
+      role="slider"
+      aria-label="Rating"
+      aria-valuemin={0}
+      aria-valuemax={maxStars}
+      aria-valuenow={rating}
+      aria-valuetext={rating > 0 ? `${rating} of ${maxStars} stars` : 'No rating'}
     >
       {/* Stars row */}
       <div style={starsRowStyle} onMouseLeave={handleMouseLeave}>

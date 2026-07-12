@@ -36,7 +36,7 @@
     "storybook:react-fluent": "bun --filter '@alaarab/ogrid-react-fluent' storybook",
     "storybook:react-radix": "bun --filter '@alaarab/ogrid-react-radix' storybook",
     "docs:dev": "bun --filter '@alaarab/ogrid-docs' start",
-    "docs:dev:full": "bun --filter '@alaarab/ogrid-core' build && bun --filter '@alaarab/ogrid-react' build && bun --filter '@alaarab/ogrid-react-radix' build && bun --filter '@alaarab/ogrid-docs' start",
+    "docs:dev:full": "turbo build --filter=@alaarab/ogrid-react-radix --filter=@alaarab/ogrid-react-fluent --filter=@alaarab/ogrid-react-inputs && bun --filter '@alaarab/ogrid-docs' start",
     "docs:build": "bun --filter '@alaarab/ogrid-docs' build",
     "docs:serve": "bun --filter '@alaarab/ogrid-docs' serve",
     "test:fast": "bun run --filter '*' test",
