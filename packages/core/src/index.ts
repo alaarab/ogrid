@@ -58,6 +58,7 @@ export {
   buildCsvRows,
   exportToCsv,
   triggerCsvDownload,
+  triggerBlobDownload,
 } from './utils';
 export type { CsvColumn, FormulaExportOptions } from './utils';
 

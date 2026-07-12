@@ -77,7 +77,11 @@ export function exportToCsv<T>(
  * only from browser-side code (e.g. event handlers), not during server rendering.
  */
 export function triggerCsvDownload(csvContent: string, filename: string): void {
-  const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+  triggerBlobDownload(new Blob([csvContent], { type: 'text/csv;charset=utf-8;' }), filename);
+}
+
+/** Trigger a browser download for any Blob (xlsx, csv, …) via a temporary anchor. */
+export function triggerBlobDownload(blob: Blob, filename: string): void {
   const url = URL.createObjectURL(blob);
   const link = document.createElement('a');
   try {
@@ -93,7 +97,7 @@ export function triggerCsvDownload(csvContent: string, filename: string): void {
       // The link is normally still attached here; a failure means it was already
       // detached elsewhere, which is harmless. Surface it in dev, stay silent in prod.
       if (process.env.NODE_ENV !== 'production') {
-        console.warn('[OGrid] CSV download link cleanup failed (already detached?)', err);
+        console.warn('[OGrid] download link cleanup failed (already detached?)', err);
       }
     }
     URL.revokeObjectURL(url);

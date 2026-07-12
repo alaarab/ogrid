@@ -4,6 +4,7 @@ export {
   buildCsvRows,
   exportToCsv,
   triggerCsvDownload,
+  triggerBlobDownload,
 } from './exportToCsv';
 export { getCellValue, isColumnEditable, createGridDataAccessor } from './cellValue';
 export { flattenColumns, buildHeaderRows } from './columnUtils';
