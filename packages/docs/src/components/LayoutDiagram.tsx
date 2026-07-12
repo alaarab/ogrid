@@ -126,6 +126,8 @@ export function LayoutDiagram() {
   return (
     <div style={container} role="img" aria-label="OGrid layout anatomy diagram">
       {/* Toolbar Strip */}
+      {/* biome-ignore lint/a11y/noNoninteractiveElementInteractions: decorative anatomy diagram (container has role="img"); hover handlers only drive a visual highlight */}
+      {/* biome-ignore lint/a11y/noStaticElementInteractions: decorative anatomy diagram; hover-only highlight, no click functionality */}
       <div
         style={{
           ...toolbarStrip,
@@ -138,6 +140,8 @@ export function LayoutDiagram() {
         <div>
           <div style={sectionLabel}>Toolbar Strip</div>
           <div style={sectionHint}>
+            {/* biome-ignore lint/a11y/noNoninteractiveElementInteractions: decorative anatomy diagram (container has role="img"); hover handlers only drive a visual highlight */}
+            {/* biome-ignore lint/a11y/noStaticElementInteractions: decorative anatomy diagram; hover-only highlight, no click functionality */}
             <span
               style={getPillStyle(hoveredSection === 'toolbar', colors.toolbar)}
               onMouseEnter={() => setHoveredSection('toolbar')}
@@ -150,6 +154,8 @@ export function LayoutDiagram() {
         </div>
         <div style={{ textAlign: 'right' }}>
           <div style={{ ...sectionHint, marginTop: 0 }}>
+            {/* biome-ignore lint/a11y/noNoninteractiveElementInteractions: decorative anatomy diagram (container has role="img"); hover handlers only drive a visual highlight */}
+            {/* biome-ignore lint/a11y/noStaticElementInteractions: decorative anatomy diagram; hover-only highlight, no click functionality */}
             <span
               style={getPillStyle(hoveredSection === 'columnChooser', colors.columnChooser)}
               onMouseEnter={() => setHoveredSection('columnChooser')}
@@ -162,6 +168,8 @@ export function LayoutDiagram() {
       </div>
 
       {/* Secondary Toolbar Row */}
+      {/* biome-ignore lint/a11y/noNoninteractiveElementInteractions: decorative anatomy diagram (container has role="img"); hover handlers only drive a visual highlight */}
+      {/* biome-ignore lint/a11y/noStaticElementInteractions: decorative anatomy diagram; hover-only highlight, no click functionality */}
       <div
         style={{
           ...secondaryToolbarStrip,
@@ -182,6 +190,8 @@ export function LayoutDiagram() {
 
       {/* Middle: Sidebar + Grid */}
       <div style={middleRow}>
+        {/* biome-ignore lint/a11y/noNoninteractiveElementInteractions: decorative anatomy diagram (container has role="img"); hover handlers only drive a visual highlight */}
+        {/* biome-ignore lint/a11y/noStaticElementInteractions: decorative anatomy diagram; hover-only highlight, no click functionality */}
         <div
           style={{
             ...sidebarCell,
@@ -202,6 +212,8 @@ export function LayoutDiagram() {
             Filters panel
           </div>
         </div>
+        {/* biome-ignore lint/a11y/noNoninteractiveElementInteractions: decorative anatomy diagram (container has role="img"); hover handlers only drive a visual highlight */}
+        {/* biome-ignore lint/a11y/noStaticElementInteractions: decorative anatomy diagram; hover-only highlight, no click functionality */}
         <div
           style={{
             ...gridCell,
@@ -215,6 +227,8 @@ export function LayoutDiagram() {
           <div style={sectionHint}>
             Column headers, rows, inline editing
           </div>
+          {/* biome-ignore lint/a11y/noNoninteractiveElementInteractions: decorative anatomy diagram (container has role="img"); hover handlers only drive a visual highlight */}
+          {/* biome-ignore lint/a11y/noStaticElementInteractions: decorative anatomy diagram; hover-only highlight, no click functionality */}
           <div
             style={{
               ...statusBarArea,
@@ -236,6 +250,8 @@ export function LayoutDiagram() {
       </div>
 
       {/* Footer Strip */}
+      {/* biome-ignore lint/a11y/noNoninteractiveElementInteractions: decorative anatomy diagram (container has role="img"); hover handlers only drive a visual highlight */}
+      {/* biome-ignore lint/a11y/noStaticElementInteractions: decorative anatomy diagram; hover-only highlight, no click functionality */}
       <div
         style={{
           ...footerStrip,

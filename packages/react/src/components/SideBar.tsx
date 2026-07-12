@@ -145,6 +145,7 @@ export function SideBar(props: SideBarProps): React.ReactElement {
       {panels.map((panel) => (
         <button
           key={panel}
+          type="button"
           role="tab"
           aria-selected={activePanel === panel}
           aria-label={PANEL_LABELS[panel]}
@@ -162,7 +163,7 @@ export function SideBar(props: SideBarProps): React.ReactElement {
     <div role="tabpanel" aria-label={PANEL_LABELS[activePanel]} style={panelContainerStyle}>
       <div style={panelHeaderStyle}>
         <span>{PANEL_LABELS[activePanel]}</span>
-        <button onClick={() => onPanelChange(null)} style={closeButtonStyle} aria-label="Close panel">
+        <button type="button" onClick={() => onPanelChange(null)} style={closeButtonStyle} aria-label="Close panel">
           &times;
         </button>
       </div>
@@ -188,12 +189,12 @@ export function SideBar(props: SideBarProps): React.ReactElement {
   ) : null;
 
   return (
-    <div style={sideBarRootStyle} role="complementary" aria-label="Side bar">
+    <aside style={sideBarRootStyle} aria-label="Side bar">
       {position === 'left' && tabStrip}
       {position === 'left' && panelContent}
       {position === 'right' && panelContent}
       {position === 'right' && tabStrip}
-    </div>
+    </aside>
   );
 }
 
@@ -210,7 +211,9 @@ function ColumnsPanel(props: {
 
   const handleSelectAll = () => {
     const next = new Set(visibleColumns);
-    columns.forEach((c) => next.add(c.columnId));
+    columns.forEach((c) => {
+      next.add(c.columnId);
+    });
     onSetVisibleColumns(next);
   };
   const handleClearAll = () => {
@@ -224,10 +227,10 @@ function ColumnsPanel(props: {
   return (
     <>
       <div style={buttonRowStyle}>
-        <button onClick={handleSelectAll} disabled={allVisible} style={actionButtonStyle}>
+        <button type="button" onClick={handleSelectAll} disabled={allVisible} style={actionButtonStyle}>
           Select All
         </button>
-        <button onClick={handleClearAll} style={actionButtonStyle}>
+        <button type="button" onClick={handleClearAll} style={actionButtonStyle}>
           Clear All
         </button>
       </div>
@@ -311,6 +314,7 @@ function FiltersPanel(props: {
               </div>
             )}
             {col.filterType === 'multiSelect' && (
+              // biome-ignore lint/a11y/useSemanticElements: a fieldset would introduce default border/padding and change the panel layout; role="group" on a styled div is intentional
               <div style={multiSelectContainerStyle} role="group" aria-label={`${col.name} options`}>
                 {(filterOptions[filterKey] ?? []).map((opt) => {
                   const selected = fv?.type === 'multiSelect' ? fv.value.includes(opt) : false;

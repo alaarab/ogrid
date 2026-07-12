@@ -259,6 +259,8 @@ export function SliderEditor<T>(props: ICellEditorProps<T>): React.ReactElement 
   }, [onCancel]);
 
   return (
+    // biome-ignore lint/a11y/noNoninteractiveElementInteractions: popup editor root; onMouseDown only stops propagation so the grid does not treat clicks as outside-clicks. Keyboard is handled by the value input and a root-level Escape listener.
+    // biome-ignore lint/a11y/noStaticElementInteractions: see above — propagation guard, not an interactive control
     <div
       ref={rootRef}
       style={rootStyle}
@@ -266,6 +268,9 @@ export function SliderEditor<T>(props: ICellEditorProps<T>): React.ReactElement 
     >
       {/* Slider track + value label */}
       <div style={sliderRowStyle}>
+        {/* biome-ignore lint/a11y/useKeyWithClickEvents: track click is a pointer-only convenience; keyboard users set the value via the text input below */}
+        {/* biome-ignore lint/a11y/noNoninteractiveElementInteractions: pointer-only jump-to-position affordance duplicating the keyboard-accessible value input */}
+        {/* biome-ignore lint/a11y/noStaticElementInteractions: pointer-only jump-to-position affordance duplicating the keyboard-accessible value input */}
         <div
           ref={trackRef}
           style={trackContainerStyle}
@@ -274,6 +279,7 @@ export function SliderEditor<T>(props: ICellEditorProps<T>): React.ReactElement 
           <div style={trackStyle}>
             <div style={{ ...trackFillStyle, width: `${percentage}%` }} />
           </div>
+          {/* biome-ignore lint/a11y/useFocusableInteractive: thumb is a pointer-drag affordance; focus and keyboard editing stay on the value input per this editor's keyboard model */}
           <div
             style={{
               ...thumbStyle,

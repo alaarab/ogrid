@@ -68,8 +68,10 @@ export { parse } from './parser';
 export {
   FormulaEvaluator,
   toNumber,
-  toString,
-  toString as formulaToString,
+  toText,
+  // Back-compat aliases for the pre-rename export names.
+  toText as toString,
+  toText as formulaToString,
   toBoolean,
   flattenArgs,
 } from './evaluator';

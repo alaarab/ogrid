@@ -280,10 +280,13 @@ export function BaseInlineCellEditor<T>(props: BaseInlineCellEditorProps<T>): Re
           onChange={(e) => richSelect.setSearchText(e.target.value)}
           onKeyDown={richSelect.handleKeyDown}
           placeholder="Search..."
+          // biome-ignore lint/a11y/noAutofocus: popup editor must receive focus on open (the dropdown may be portaled outside the wrapper the focus effect targets)
           autoFocus
           style={richSelectSearchInputStyle}
         />
         {richSelect.filteredValues.map((v, i) => (
+          // biome-ignore lint/a11y/useFocusableInteractive: options use an active-descendant highlight pattern; keyboard selection is handled by the search input's onKeyDown
+          // biome-ignore lint/a11y/useKeyWithClickEvents: keyboard selection is handled by the search input's onKeyDown (Enter/arrow keys)
           <div
             key={String(v)}
             role="option"
@@ -325,6 +328,8 @@ export function BaseInlineCellEditor<T>(props: BaseInlineCellEditorProps<T>): Re
     const dropdownContent = (
       <div style={computedDropdownStyle} ref={selectState.dropdownRef} role="listbox">
         {editorValues.map((v, i) => (
+          // biome-ignore lint/a11y/useFocusableInteractive: options use an active-descendant highlight pattern; keyboard selection is handled by the editor wrapper's onKeyDown
+          // biome-ignore lint/a11y/useKeyWithClickEvents: keyboard selection is handled by the editor wrapper's onKeyDown (Enter/arrow keys)
           <div
             key={String(v)}
             role="option"
@@ -338,6 +343,9 @@ export function BaseInlineCellEditor<T>(props: BaseInlineCellEditorProps<T>): Re
       </div>
     );
     return (
+      // biome-ignore lint/a11y/noStaticElementInteractions: the select editor wrapper is the focus target that receives keyboard events for the dropdown (focused on mount)
+      // biome-ignore lint/a11y/noNoninteractiveElementInteractions: the select editor wrapper is the focus target that receives keyboard events for the dropdown (focused on mount)
+      // biome-ignore lint/a11y/noNoninteractiveTabindex: the select editor has no native input, so the wrapper must be focusable to receive keyboard events
       <div ref={wrapperRef} style={richSelectWrapperStyle} onKeyDown={selectState.handleKeyDown} tabIndex={0}>
         <div style={selectDisplayStyle}>
           <span>{selectState.getDisplayText(value)}</span>
@@ -361,6 +369,7 @@ export function BaseInlineCellEditor<T>(props: BaseInlineCellEditorProps<T>): Re
             onBlur={handleBlur}
             onKeyDown={handleKeyDown}
             style={editorInputStyle}
+            // biome-ignore lint/a11y/noAutofocus: popup editor must receive focus on open
             autoFocus
           />
         </div>
@@ -376,6 +385,7 @@ export function BaseInlineCellEditor<T>(props: BaseInlineCellEditorProps<T>): Re
           onKeyDown={handleKeyDown}
           placeholder={placeholder}
           style={editorInputStyle}
+          // biome-ignore lint/a11y/noAutofocus: popup editor must receive focus on open
           autoFocus
         />
       </div>
@@ -392,6 +402,7 @@ export function BaseInlineCellEditor<T>(props: BaseInlineCellEditorProps<T>): Re
         onBlur={handleBlur}
         onKeyDown={handleKeyDown}
         style={editorInputStyle}
+        // biome-ignore lint/a11y/noAutofocus: popup editor must receive focus on open
         autoFocus
       />
     </div>

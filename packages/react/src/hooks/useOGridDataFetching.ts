@@ -125,6 +125,7 @@ export function useOGridDataFetching<T>(params: UseOGridDataFetchingParams<T>): 
   }
 
   // --- Client-side filtering & sorting (sync path) ---
+  // biome-ignore lint/correctness/useExhaustiveDependencies: sortVersion is a deliberate invalidation trigger — it is consumed via needsResort/sortedIndicesRef above, so the memo must recompute when it bumps even though it is not read inside
   const clientItemsAndTotal = useMemo(() => {
     if (!isClientSide || useWorker) return null;
 
@@ -264,6 +265,7 @@ export function useOGridDataFetching<T>(params: UseOGridDataFetchingParams<T>): 
   const fetchIdRef = useRef(0);
   const [refreshCounter, setRefreshCounter] = useState(0);
 
+  // biome-ignore lint/correctness/useExhaustiveDependencies: refreshCounter is a deliberate re-fetch trigger (bumped by the imperative refresh API); it is not read inside the effect
   useEffect(() => {
     const ds = dataSourceRef.current;
     // A windowed data source (getRowCount + getRows) is driven by the
@@ -316,6 +318,7 @@ export function useOGridDataFetching<T>(params: UseOGridDataFetchingParams<T>): 
   const [windowedRowCount, setWindowedRowCount] = useState(0);
   const windowedCacheRef = useRef<WindowedRowCache<T> | null>(null);
 
+  // biome-ignore lint/correctness/useExhaustiveDependencies: isWindowed is a deliberate trigger so the cache is re-created when the data-source mode changes (see note below); the effect reads the mode via isWindowedDataSource(ds) instead
   useEffect(() => {
     const ds = dataSourceRef.current;
     if (!isServerSide || !isWindowedDataSource(ds)) {
@@ -347,6 +350,7 @@ export function useOGridDataFetching<T>(params: UseOGridDataFetchingParams<T>): 
   // producing an infinite render loop. A content string only changes when the
   // filters actually change.
   const windowedFiltersKey = JSON.stringify(stableFilters);
+  // biome-ignore lint/correctness/useExhaustiveDependencies: stableFilters is intentionally tracked via its content key windowedFiltersKey (see note above) to avoid an identity-driven render loop; isWindowed and refreshCounter are deliberate re-run triggers
   useEffect(() => {
     const cache = windowedCacheRef.current;
     if (!cache) return;
@@ -371,6 +375,7 @@ export function useOGridDataFetching<T>(params: UseOGridDataFetchingParams<T>): 
     windowedCacheRef.current?.retry(index);
   }, []);
 
+  // biome-ignore lint/correctness/useExhaustiveDependencies: windowedTick is a deliberate invalidation trigger so consumers re-read cached rows after a fetch resolves; it is not read inside the memo
   const windowed = useMemo<WindowedDataState<T> | null>(() => {
     if (!isWindowed) return null;
     return {

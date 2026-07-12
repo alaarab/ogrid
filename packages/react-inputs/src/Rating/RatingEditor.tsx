@@ -244,6 +244,8 @@ export function RatingEditor<T>(props: ICellEditorProps<T>): React.ReactElement 
       aria-valuetext={rating > 0 ? `${rating} of ${maxStars} stars` : 'No rating'}
     >
       {/* Stars row */}
+      {/* biome-ignore lint/a11y/noNoninteractiveElementInteractions: onMouseLeave only clears the hover preview; rating keyboard interaction lives on the role="slider" editor root */}
+      {/* biome-ignore lint/a11y/noStaticElementInteractions: hover-preview reset only, not an interactive control */}
       <div style={starsRowStyle} onMouseLeave={handleMouseLeave}>
         {Array.from({ length: maxStars }, (_, i) => renderStar(i))}
       </div>

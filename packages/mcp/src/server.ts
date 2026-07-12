@@ -450,6 +450,7 @@ Categories: features, getting-started, guides, api.`,
             '```tsx',
             'const dataSource = {',
             '  fetchPage: async ({ page, pageSize, sort, filters, signal }) => {',
+            // biome-ignore lint/suspicious/noTemplateCurlyInString: intentional — this is documentation example code emitted as text; the ${} placeholders belong to the sample snippet
             '    const res = await fetch(`/api/data?page=${page}&size=${pageSize}`, { signal });',
             '    const json = await res.json();',
             '    return { items: json.data, totalCount: json.total };',

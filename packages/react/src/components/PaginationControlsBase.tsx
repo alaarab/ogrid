@@ -183,11 +183,11 @@ export const PaginationControlsBase: React.FC<PaginationControlsBaseProps> = Rea
   }
 
   return (
-    <div className={outerClass} role={outerRole} aria-label={outerLabel}>
+    <nav className={outerClass} aria-label="Pagination">
       {infoNode}
       {navNode}
       {pageSizeNode}
-    </div>
+    </nav>
   );
 });
 

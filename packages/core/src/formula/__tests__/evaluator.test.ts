@@ -1,4 +1,4 @@
-import { FormulaEvaluator, toNumber, toString, toBoolean, flattenArgs } from '../evaluator';
+import { FormulaEvaluator, toNumber, toText, toBoolean, flattenArgs } from '../evaluator';
 import { FormulaError } from '../types';
 import type { ASTNode, IFormulaContext } from '../types';
 
@@ -93,40 +93,40 @@ describe('toNumber', () => {
 });
 
 // ---------------------------------------------------------------------------
-// toString
+// toText
 // ---------------------------------------------------------------------------
 
-describe('toString', () => {
+describe('toText', () => {
   it('converts a number to its string representation', () => {
-    expect(toString(99)).toBe('99');
+    expect(toText(99)).toBe('99');
   });
 
   it('converts null to empty string', () => {
-    expect(toString(null)).toBe('');
+    expect(toText(null)).toBe('');
   });
 
   it('converts undefined to empty string', () => {
-    expect(toString(undefined)).toBe('');
+    expect(toText(undefined)).toBe('');
   });
 
   it('returns the error type string for a FormulaError', () => {
     const err = new FormulaError('#REF!');
-    expect(toString(err)).toBe('#REF!');
+    expect(toText(err)).toBe('#REF!');
   });
 
   it('converts a boolean to string', () => {
-    expect(toString(true)).toBe('true');
-    expect(toString(false)).toBe('false');
+    expect(toText(true)).toBe('true');
+    expect(toText(false)).toBe('false');
   });
 
   it('passes a string through unchanged', () => {
-    expect(toString('hello')).toBe('hello');
+    expect(toText('hello')).toBe('hello');
   });
 
   it('converts a Date to a locale date string', () => {
     const d = new Date('2025-01-15T00:00:00Z');
     // Date.toLocaleDateString output varies by locale; just verify it is a string
-    const result = toString(d);
+    const result = toText(d);
     expect(typeof result).toBe('string');
     expect(result.length).toBeGreaterThan(0);
   });

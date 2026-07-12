@@ -1,6 +1,6 @@
 import type { IFormulaFunction, IFormulaContext, IEvaluator, ASTNode } from '../../types';
 import { FormulaError } from '../../types';
-import { toNumber, toString, evalArg } from '../../evaluator';
+import { toNumber, toText, evalArg } from '../../evaluator';
 
 /**
  * Character/number conversion and number-to-text formatting: CHAR, CODE, TEXT,
@@ -27,7 +27,7 @@ export function registerTextFormatFunctions(registry: Map<string, IFormulaFuncti
     evaluate(args: ASTNode[], context: IFormulaContext, evaluator: IEvaluator): unknown {
       const val = evalArg(evaluator, args[0], context);
       if (val instanceof FormulaError) return val;
-      const text = toString(val);
+      const text = toText(val);
       if (text.length === 0) return new FormulaError('#VALUE!', 'CODE requires non-empty text');
       return text.charCodeAt(0);
     },
@@ -41,9 +41,9 @@ export function registerTextFormatFunctions(registry: Map<string, IFormulaFuncti
       if (rawVal instanceof FormulaError) return rawVal;
       const rawFmt = evalArg(evaluator, args[1], context);
       if (rawFmt instanceof FormulaError) return rawFmt;
-      const fmt = toString(rawFmt);
+      const fmt = toText(rawFmt);
       const num = toNumber(rawVal);
-      if (num instanceof FormulaError) return toString(rawVal);
+      if (num instanceof FormulaError) return toText(rawVal);
       // Basic format support: 0, 0.00, #,##0, #,##0.00, 0%, 0.00%
       if (fmt.includes('%')) {
         const decimals = (fmt.match(/0/g) || []).length - 1;
@@ -69,7 +69,7 @@ export function registerTextFormatFunctions(registry: Map<string, IFormulaFuncti
       const val = evalArg(evaluator, args[0], context);
       if (val instanceof FormulaError) return val;
       if (typeof val === 'number') return val;
-      const raw = toString(val).trim();
+      const raw = toText(val).trim();
       const isPercent = raw.endsWith('%');
       const text = raw.replace(/[,$%\s]/g, '');
       const n = Number(text);
@@ -84,7 +84,7 @@ export function registerTextFormatFunctions(registry: Map<string, IFormulaFuncti
     evaluate(args: ASTNode[], context: IFormulaContext, evaluator: IEvaluator): unknown {
       const rawDelim = evalArg(evaluator, args[0], context);
       if (rawDelim instanceof FormulaError) return rawDelim;
-      const delimiter = toString(rawDelim);
+      const delimiter = toText(rawDelim);
       const rawIgnore = evalArg(evaluator, args[1], context);
       if (rawIgnore instanceof FormulaError) return rawIgnore;
       const ignoreEmpty = !!rawIgnore;
@@ -97,14 +97,14 @@ export function registerTextFormatFunctions(registry: Map<string, IFormulaFuncti
           for (const row of rangeData) {
             for (const cell of row) {
               if (cell instanceof FormulaError) return cell;
-              const s = toString(cell);
+              const s = toText(cell);
               if (!ignoreEmpty || s !== '') parts.push(s);
             }
           }
         } else {
           const val = evalArg(evaluator, args[i], context);
           if (val instanceof FormulaError) return val;
-          const s = toString(val);
+          const s = toText(val);
           if (!ignoreEmpty || s !== '') parts.push(s);
         }
       }
@@ -225,7 +225,7 @@ export function registerTextFormatFunctions(registry: Map<string, IFormulaFuncti
       const rawText = evalArg(evaluator, args[0], context);
       if (rawText instanceof FormulaError) return rawText;
       if (typeof rawText === 'number') return rawText;
-      let text = toString(rawText).trim();
+      let text = toText(rawText).trim();
 
       let decimalSep = '.';
       let groupSep = ','; // default
@@ -235,7 +235,7 @@ export function registerTextFormatFunctions(registry: Map<string, IFormulaFuncti
       if (hasDecimalArg) {
         const rawDec = evalArg(evaluator, args[1], context);
         if (rawDec instanceof FormulaError) return rawDec;
-        decimalSep = toString(rawDec);
+        decimalSep = toText(rawDec);
         if (decimalSep.length !== 1) return new FormulaError('#VALUE!', 'NUMBERVALUE decimal separator must be 1 character');
         // When only decimal sep is specified, default group sep adjusts to avoid clash
         if (!hasGroupArg) {
@@ -245,7 +245,7 @@ export function registerTextFormatFunctions(registry: Map<string, IFormulaFuncti
       if (hasGroupArg) {
         const rawGrp = evalArg(evaluator, args[2], context);
         if (rawGrp instanceof FormulaError) return rawGrp;
-        groupSep = toString(rawGrp);
+        groupSep = toText(rawGrp);
         if (groupSep.length !== 1) return new FormulaError('#VALUE!', 'NUMBERVALUE group separator must be 1 character');
       }
       if (decimalSep === groupSep) return new FormulaError('#VALUE!', 'NUMBERVALUE separators must be different');
@@ -263,7 +263,7 @@ export function registerTextFormatFunctions(registry: Map<string, IFormulaFuncti
       }
 
       const n = Number(text);
-      if (Number.isNaN(n)) return new FormulaError('#VALUE!', `NUMBERVALUE cannot parse "${toString(rawText)}"`);
+      if (Number.isNaN(n)) return new FormulaError('#VALUE!', `NUMBERVALUE cannot parse "${toText(rawText)}"`);
       return isPercent ? n / 100 : n;
     },
   });
@@ -278,7 +278,7 @@ export function registerTextFormatFunctions(registry: Map<string, IFormulaFuncti
       // limitation, not an incomplete implementation.
       const val = evalArg(evaluator, args[0], context);
       if (val instanceof FormulaError) return val;
-      return toString(val);
+      return toText(val);
     },
   });
 }

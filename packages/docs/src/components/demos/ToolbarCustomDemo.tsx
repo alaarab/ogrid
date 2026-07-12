@@ -1,4 +1,4 @@
-import { useCallback, useRef, useState } from 'react';
+import { useCallback, useMemo, useRef, useState } from 'react';
 import { LiveDemo } from '../LiveDemo';
 import { people, getRowId, toolbarColumns, btnStyle, type Person } from './demoData';
 
@@ -7,9 +7,13 @@ function Inner() {
   type IOGridApi = import('@alaarab/ogrid-react-radix').IOGridApi<Person>;
   type CsvColumn = import('@alaarab/ogrid-react-radix').CsvColumn;
 
-  const csvColumns: CsvColumn[] = toolbarColumns
-    .filter(c => c.defaultVisible !== false)
-    .map(c => ({ columnId: c.columnId, name: c.name }));
+  const csvColumns: CsvColumn[] = useMemo(
+    () =>
+      toolbarColumns
+        .filter(c => c.defaultVisible !== false)
+        .map(c => ({ columnId: c.columnId, name: c.name })),
+    []
+  );
 
   const gridRef = useRef<IOGridApi>(null);
   const [count, setCount] = useState(people.length);
@@ -21,7 +25,7 @@ function Inner() {
       (item, columnId) => String((item as Record<string, unknown>)[columnId] ?? ''),
       'people.csv'
     );
-  }, []);
+  }, [exportToCsv, csvColumns]);
 
   return (
     <OGrid
@@ -35,8 +39,8 @@ function Inner() {
       onPageChange={() => setCount(people.length)}
       toolbar={
         <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
-          <button style={btnStyle} onClick={handleExport}>Export CSV</button>
-          <button style={btnStyle} onClick={() => gridRef.current?.selectAll()}>Select All</button>
+          <button type="button" style={btnStyle} onClick={handleExport}>Export CSV</button>
+          <button type="button" style={btnStyle} onClick={() => gridRef.current?.selectAll()}>Select All</button>
           <span style={{ fontSize: '0.8rem', color: 'var(--ogrid-muted)' }}>
             {count} rows
           </span>

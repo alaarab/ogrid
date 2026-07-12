@@ -51,6 +51,7 @@ export function FormulaBar({
 
   return (
     <div style={FORMULA_BAR_STYLES.bar as React.CSSProperties} role="toolbar" aria-label="Formula bar">
+      {/* biome-ignore lint/a11y/useAriaPropsSupportedByRole: the name box is a read-only cell-reference indicator; the label is intentional and relied on as a stable hook */}
       <div style={FORMULA_BAR_STYLES.nameBox as React.CSSProperties} aria-label="Active cell reference">
         {cellRef ?? '\u2014'}
       </div>

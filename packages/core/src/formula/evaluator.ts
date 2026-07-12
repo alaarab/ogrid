@@ -24,7 +24,7 @@ export function toNumber(val: unknown): number | FormulaError {
 }
 
 /** Coerce a value to string. */
-export function toString(val: unknown): string {
+export function toText(val: unknown): string {
   if (val === null || val === undefined) return '';
   if (val instanceof FormulaError) return val.toString();
   if (val instanceof Date) return val.toLocaleDateString();
@@ -157,7 +157,7 @@ export class FormulaEvaluator implements IEvaluator {
       if (l instanceof FormulaError) return l;
       const r = this.evaluate(right, context);
       if (r instanceof FormulaError) return r;
-      return toString(l) + toString(r);
+      return toText(l) + toText(r);
     }
 
     // Comparison operators
@@ -228,7 +228,7 @@ export class FormulaEvaluator implements IEvaluator {
     }
 
     // Fall back to string comparison
-    return this.strCompare(op, toString(left), toString(right));
+    return this.strCompare(op, toText(left), toText(right));
   }
 
   private numCompare(op: BinaryOp, a: number, b: number): boolean {

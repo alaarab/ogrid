@@ -34,6 +34,9 @@ export const PeopleFilterPopover: React.FC<PeopleFilterPopoverProps> = ({
 }) => (
   <>
     {selectedUser && (
+      // biome-ignore lint/a11y/useKeyWithClickEvents: onClick only stops propagation so clicks inside the popover do not reach the column header; inner controls are natively interactive
+      // biome-ignore lint/a11y/noStaticElementInteractions: onClick only stops propagation; inner controls are natively interactive
+      // biome-ignore lint/a11y/noNoninteractiveElementInteractions: onClick only stops propagation; inner controls are natively interactive
       <div className={styles.selectedUserSection} onClick={onPopoverClick}>
         <div className={styles.selectedUserLabel}>Currently filtered by:</div>
         <div className={styles.selectedUser}>
@@ -55,6 +58,9 @@ export const PeopleFilterPopover: React.FC<PeopleFilterPopoverProps> = ({
         </div>
       </div>
     )}
+    {/* biome-ignore lint/a11y/useKeyWithClickEvents: onClick only stops propagation so clicks inside the popover do not reach the column header; inner controls are natively interactive */}
+    {/* biome-ignore lint/a11y/noStaticElementInteractions: onClick only stops propagation; inner controls are natively interactive */}
+    {/* biome-ignore lint/a11y/noNoninteractiveElementInteractions: onClick only stops propagation; inner controls are natively interactive */}
     <div className={styles.popoverSearch} onClick={onPopoverClick}>
       <div className={styles.nativeInputWrapper}>
         <SearchRegular className={styles.nativeInputIcon} />
@@ -73,6 +79,9 @@ export const PeopleFilterPopover: React.FC<PeopleFilterPopoverProps> = ({
         />
       </div>
     </div>
+    {/* biome-ignore lint/a11y/useKeyWithClickEvents: onClick only stops propagation so clicks inside the popover do not reach the column header; inner controls are natively interactive */}
+    {/* biome-ignore lint/a11y/noStaticElementInteractions: onClick only stops propagation; inner controls are natively interactive */}
+    {/* biome-ignore lint/a11y/noNoninteractiveElementInteractions: onClick only stops propagation; inner controls are natively interactive */}
     <div className={styles.popoverOptions} onClick={onPopoverClick}>
       {isLoading && searchText.trim() ? (
         <div className={styles.loadingContainer}>
@@ -83,6 +92,7 @@ export const PeopleFilterPopover: React.FC<PeopleFilterPopoverProps> = ({
         <div className={styles.noResults}>No results found</div>
       ) : searchText.trim() ? (
         suggestions.map((user) => (
+          // biome-ignore lint/a11y/useSemanticElements: converting this styled list option to a native button would change layout/typography; it already has role, tabIndex, and Enter/Space key handling
           <div
             key={user.id ?? user.email ?? user.displayName}
             className={styles.personOption}
@@ -119,6 +129,9 @@ export const PeopleFilterPopover: React.FC<PeopleFilterPopoverProps> = ({
       )}
     </div>
     {selectedUser && (
+      // biome-ignore lint/a11y/useKeyWithClickEvents: onClick only stops propagation so clicks inside the popover do not reach the column header; inner controls are natively interactive
+      // biome-ignore lint/a11y/noStaticElementInteractions: onClick only stops propagation; inner controls are natively interactive
+      // biome-ignore lint/a11y/noNoninteractiveElementInteractions: onClick only stops propagation; inner controls are natively interactive
       <div className={styles.popoverActions} onClick={onPopoverClick}>
         <button type="button" className={styles.clearButton} onClick={onClearUser}>
           Clear Filter

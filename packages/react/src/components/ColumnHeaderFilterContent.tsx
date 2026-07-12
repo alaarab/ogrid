@@ -75,8 +75,8 @@ export const DateFilterContent: React.FC<DateFilterContentProps> = ({
       </label>
     </div>
     <div className={classNames?.popoverActions}>
-      <button className={classNames?.clearButton} onClick={onClear} disabled={!tempDateFrom && !tempDateTo}>Clear</button>
-      <button className={classNames?.applyButton} onClick={onApply}>Apply</button>
+      <button type="button" className={classNames?.clearButton} onClick={onClear} disabled={!tempDateFrom && !tempDateTo}>Clear</button>
+      <button type="button" className={classNames?.applyButton} onClick={onApply}>Apply</button>
     </div>
   </>
 );

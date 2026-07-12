@@ -37,6 +37,9 @@ function GridRowInner(props: BaseGridRowProps) {
     >
       {hasCheckboxCol && (
         <Td className={styles.selectionCell}>
+          {/* biome-ignore lint/a11y/useKeyWithClickEvents: onClick only stops propagation so the checkbox click does not trigger row selection; keyboard interaction is handled by the grid's roving focus/keyboard-navigation layer */}
+          {/* biome-ignore lint/a11y/noStaticElementInteractions: onClick only stops propagation; the inner checkbox is the interactive control */}
+          {/* biome-ignore lint/a11y/noNoninteractiveElementInteractions: onClick only stops propagation; the inner checkbox is the interactive control */}
           <div
             className={styles.selectionCellInner}
             data-row-index={rowIndex}

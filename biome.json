@@ -6,7 +6,11 @@
     "useIgnoreFile": true
   },
   "files": {
-    "includes": ["**/*.ts", "**/*.tsx", "**/*.vue"],
+    "includes": [
+      "**/*.ts",
+      "**/*.tsx",
+      "**/*.vue"
+    ],
     "ignoreUnknown": true
   },
   "linter": {
@@ -14,28 +18,28 @@
     "rules": {
       "recommended": true,
       "correctness": {
-        "useExhaustiveDependencies": "warn",
-        "useHookAtTopLevel": "warn",
-        "noUnusedVariables": "warn",
-        "noUnusedImports": "warn",
-        "noUnusedPrivateClassMembers": "warn"
+        "useExhaustiveDependencies": "error",
+        "useHookAtTopLevel": "error",
+        "noUnusedVariables": "error",
+        "noUnusedImports": "error",
+        "noUnusedPrivateClassMembers": "error"
       },
       "suspicious": {
-        "noExplicitAny": "warn",
+        "noExplicitAny": "error",
         "noRedeclare": "off",
         "noAssignInExpressions": "off",
-        "useIterableCallbackReturn": "warn",
-        "noShadowRestrictedNames": "warn",
-        "noArrayIndexKey": "warn",
+        "useIterableCallbackReturn": "error",
+        "noShadowRestrictedNames": "error",
+        "noArrayIndexKey": "error",
         "noControlCharactersInRegex": "off",
         "noPrototypeBuiltins": "off",
         "noFallthroughSwitchClause": "off",
-        "noDoubleEquals": "warn",
-        "noGlobalAssign": "warn",
-        "noImplicitAnyLet": "warn"
+        "noDoubleEquals": "error",
+        "noGlobalAssign": "error",
+        "noImplicitAnyLet": "error"
       },
       "style": {
-        "noNonNullAssertion": "warn",
+        "noNonNullAssertion": "error",
         "useImportType": "off",
         "noParameterAssign": "off",
         "useDefaultParameterLast": "off",
@@ -45,25 +49,25 @@
       "complexity": {
         "noForEach": "off",
         "noUselessSwitchCase": "off",
-        "useOptionalChain": "warn"
+        "useOptionalChain": "error"
       },
       "a11y": {
         "recommended": true,
-        "noStaticElementInteractions": "warn",
-        "useKeyWithClickEvents": "warn",
-        "useKeyWithMouseEvents": "warn",
-        "useSemanticElements": "warn",
-        "noNoninteractiveTabindex": "warn",
-        "noNoninteractiveElementInteractions": "warn",
-        "useFocusableInteractive": "warn",
-        "useButtonType": "warn",
-        "noAutofocus": "warn",
-        "useAriaPropsSupportedByRole": "warn",
-        "useAriaPropsForRole": "warn",
-        "noSvgWithoutTitle": "warn"
+        "noStaticElementInteractions": "error",
+        "useKeyWithClickEvents": "error",
+        "useKeyWithMouseEvents": "error",
+        "useSemanticElements": "error",
+        "noNoninteractiveTabindex": "error",
+        "noNoninteractiveElementInteractions": "error",
+        "useFocusableInteractive": "error",
+        "useButtonType": "error",
+        "noAutofocus": "error",
+        "useAriaPropsSupportedByRole": "error",
+        "useAriaPropsForRole": "error",
+        "noSvgWithoutTitle": "error"
       },
       "performance": {
-        "noDelete": "warn"
+        "noDelete": "error"
       }
     }
   },
@@ -78,15 +82,36 @@
         "**/*.test.tsx",
         "**/src/testing/**",
         "**/*.stories.tsx",
-        "**/__benchmarks__/**"
+        "**/__benchmarks__/**",
+        "bun-test.setup.ts"
       ],
       "linter": {
         "rules": {
           "style": {
             "noNonNullAssertion": "off"
           },
+          "suspicious": {
+            "noExplicitAny": "off",
+            "noApproximativeNumericConstant": "off",
+            "useIterableCallbackReturn": "off"
+          },
+          "performance": {
+            "noDelete": "off"
+          },
           "a11y": {
-            "recommended": false
+            "recommended": false,
+            "noStaticElementInteractions": "off",
+            "useKeyWithClickEvents": "off",
+            "useKeyWithMouseEvents": "off",
+            "useSemanticElements": "off",
+            "noNoninteractiveTabindex": "off",
+            "noNoninteractiveElementInteractions": "off",
+            "useFocusableInteractive": "off",
+            "useButtonType": "off",
+            "noAutofocus": "off",
+            "useAriaPropsSupportedByRole": "off",
+            "useAriaPropsForRole": "off",
+            "noSvgWithoutTitle": "off"
           }
         }
       }

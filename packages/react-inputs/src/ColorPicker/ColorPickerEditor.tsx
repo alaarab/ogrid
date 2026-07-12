@@ -243,6 +243,8 @@ export function ColorPickerEditor<T>(props: ICellEditorProps<T>): React.ReactEle
   };
 
   return (
+    // biome-ignore lint/a11y/noNoninteractiveElementInteractions: popup editor root; onMouseDown only stops propagation so the grid does not treat clicks as outside-clicks. Keyboard is handled by the inner controls and a root-level Escape listener.
+    // biome-ignore lint/a11y/noStaticElementInteractions: see above — propagation guard, not an interactive control
     <div
       ref={rootRef}
       style={rootStyle}

@@ -90,8 +90,11 @@ export function BaseDataGridTableInner<T>(
 
   return (
     <div style={virtualScrollEnabled ? GRID_ROOT_VIRTUAL_SCROLL_STYLE : GRID_ROOT_STYLE}>
+      {/* biome-ignore lint/a11y/noNoninteractiveElementInteractions: the grid wrapper hosts the centralized keyboard-navigation layer (useKeyboardNavigation); all cell keyboard interaction is handled here via roving focus */}
+      {/* biome-ignore lint/a11y/useSemanticElements: the wrapper must stay a div scroll container; role="region" is the intended landmark semantics */}
       <div
         ref={wrapperRef}
+        // biome-ignore lint/a11y/noNoninteractiveTabindex: the grid wrapper is the intentional focus target for the grid's roving-focus/keyboard-navigation system
         tabIndex={0}
         onMouseDown={(e) => { lastMouseShiftRef.current = e.shiftKey; }}
         onScroll={onHorizontalScroll ? (e) => onHorizontalScroll((e.target as HTMLElement).scrollLeft) : undefined}

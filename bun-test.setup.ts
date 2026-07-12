@@ -28,7 +28,6 @@ delete (globalThis as { Worker?: unknown }).Worker;
 
 // jest-dom matchers (toBeInTheDocument, toHaveAttribute, etc.)
 const jestDomMatchers = await import('@testing-library/jest-dom/matchers');
-// biome-ignore lint/suspicious/noExplicitAny: jest-dom matchers' types vary
 expect.extend(jestDomMatchers as any);
 
 // React Testing Library auto-cleanup between tests (mirrors Jest's default).
@@ -69,7 +68,6 @@ if (typeof globalThis.PointerEvent === 'undefined') {
       this.isPrimary = params.isPrimary ?? false;
     }
   }
-  // biome-ignore lint/suspicious/noExplicitAny: polyfill assignment
   (globalThis as any).PointerEvent = PointerEventPolyfill;
 }
 
@@ -80,7 +78,6 @@ if (typeof globalThis.ResizeObserver === 'undefined') {
     unobserve(): void {}
     disconnect(): void {}
   }
-  // biome-ignore lint/suspicious/noExplicitAny: polyfill assignment
   (globalThis as any).ResizeObserver = ResizeObserverStub;
 }
 

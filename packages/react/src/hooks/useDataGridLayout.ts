@@ -121,7 +121,9 @@ export function useDataGridLayout<T>(
 
   const rowIndexByRowId = useMemo(() => {
     const m = new Map<RowId, number>();
-    items.forEach((item, idx) => m.set(getRowId(item), idx));
+    items.forEach((item, idx) => {
+      m.set(getRowId(item), idx);
+    });
     return m;
   }, [items, getRowId]);
 
@@ -167,6 +169,7 @@ export function useDataGridLayout<T>(
   }, [columnSizingOverrides]);
 
   const [measuredColumnWidths, setMeasuredColumnWidths] = useState<Record<string, number>>({});
+  // biome-ignore lint/correctness/useExhaustiveDependencies: visibleCols and overridesKey are deliberate re-measure triggers (see note below) — the effect reads the DOM, not these values
   useLayoutEffect(() => {
     const wrapper = wrapperRef.current;
     if (!wrapper) return;

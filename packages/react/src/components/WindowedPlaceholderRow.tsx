@@ -77,7 +77,7 @@ export function WindowedPlaceholderRow({
             )}
           </>
         ) : (
-          <span style={skeletonStyle} aria-label={`Loading row ${rowIndex + 1}`} />
+          <span style={skeletonStyle} role="status" aria-label={`Loading row ${rowIndex + 1}`} />
         )}
       </td>
     </tr>

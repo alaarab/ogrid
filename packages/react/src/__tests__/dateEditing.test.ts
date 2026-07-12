@@ -34,7 +34,6 @@ function keyEvent(key: string): React.KeyboardEvent {
 
 describe('useInlineCellEditorState — date display initialization', () => {
   it('initializes empty string for null value', () => {
-    const { result } = renderHook(() => makeParams({ value: null }), {});
     const { result: hookResult } = renderHook(() =>
       useInlineCellEditorState(makeParams({ value: null }))
     );

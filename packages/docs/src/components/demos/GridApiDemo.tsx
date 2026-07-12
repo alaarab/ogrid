@@ -18,9 +18,9 @@ function Inner() {
       defaultPageSize={10}
       toolbar={
         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-          <button style={btnStyle} onClick={() => gridRef.current?.selectAll()}>Select All</button>
-          <button style={btnStyle} onClick={() => gridRef.current?.deselectAll()}>Deselect All</button>
-          <button style={btnStyle} onClick={() => gridRef.current?.applyColumnState({
+          <button type="button" style={btnStyle} onClick={() => gridRef.current?.selectAll()}>Select All</button>
+          <button type="button" style={btnStyle} onClick={() => gridRef.current?.deselectAll()}>Deselect All</button>
+          <button type="button" style={btnStyle} onClick={() => gridRef.current?.applyColumnState({
             sort: { field: 'salary', direction: 'desc' }
           })}>Sort by Salary (desc)</button>
         </div>

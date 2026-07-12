@@ -202,7 +202,7 @@ export function useInlineEdit<T>(
   }, [editingCell, editingContext, pendingValue, findColumn, onCellEdit, cancelEdit]);
 
   const getEditorProps = useCallback(
-    (row: T, columnId: string): InlineEditorProps => ({
+    (_row: T, _columnId: string): InlineEditorProps => ({
       value: pendingValue,
       onChange: setPendingValue,
       onCommit: commitEdit,
