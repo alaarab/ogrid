@@ -10,7 +10,7 @@ export default function XlsxImportDemo() {
   return (
     <LiveDemo height={460} title="A two-sheet workbook built in-browser, rendered with XlsxWorkbookGrid">
       {() => {
-        const { XlsxWorkbookGrid } = require('@alaarab/ogrid-react-xlsx') as typeof import('@alaarab/ogrid-react-xlsx');
+        const { XlsxWorkbookGrid, exportToXlsx } = require('@alaarab/ogrid-react-xlsx') as typeof import('@alaarab/ogrid-react-xlsx');
         const ExcelJS = require('exceljs') as typeof import('exceljs');
 
         function WorkbookDemo() {
@@ -36,7 +36,48 @@ export default function XlsxImportDemo() {
           }, []);
 
           if (!workbook) return <div style={{ padding: 16 }}>Building workbook…</div>;
-          return <XlsxWorkbookGrid workbook={workbook} height={420} />;
+
+          const handleExport = () => {
+            const orders = workbook.getWorksheet('Orders');
+            if (!orders) return;
+            const rows: Array<Record<string, unknown>> = [];
+            orders.eachRow((row, rowNumber) => {
+              if (rowNumber === 1) return; // header
+              rows.push({
+                order: row.getCell(1).value,
+                customer: row.getCell(2).value,
+                amount: row.getCell(3).value,
+                status: row.getCell(4).value,
+              });
+            });
+            void exportToXlsx(
+              rows,
+              [
+                { columnId: 'order', name: 'Order' },
+                { columnId: 'customer', name: 'Customer' },
+                { columnId: 'amount', name: 'Amount' },
+                { columnId: 'status', name: 'Status' },
+              ],
+              (item, columnId) => item[columnId],
+              'orders.xlsx',
+              { sheetName: 'Orders' },
+            );
+          };
+
+          return (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8, height: '100%' }}>
+              <div>
+                <button
+                  type="button"
+                  onClick={handleExport}
+                  style={{ padding: '4px 12px', fontSize: 13, cursor: 'pointer' }}
+                >
+                  Export .xlsx
+                </button>
+              </div>
+              <XlsxWorkbookGrid workbook={workbook} height={380} />
+            </div>
+          );
         }
 
         return <WorkbookDemo />;

@@ -1,7 +1,7 @@
 ---
 sidebar_position: 16
-title: XLSX Import
-description: Drop an .xlsx file into a fully featured OGrid — with multi-sheet tabs, formulas, and cell references on by default
+title: XLSX Import & Export
+description: Drop an .xlsx file into a fully featured OGrid — and export grid data back out as a real workbook
 ---
 
 import Tabs from '@theme/Tabs';
@@ -9,9 +9,9 @@ import TabItem from '@theme/TabItem';
 
 import XlsxImportDemo from '@site/src/components/demos/XlsxImportDemo';
 
-# XLSX Import
+# XLSX Import & Export
 
-Render any `.xlsx`, CSV, or TSV blob as a fully featured OGrid. Multi-sheet workbooks get tabbed navigation, formulas evaluate live, and Excel-style cell references (A1, B2…) are on by default.
+Render any `.xlsx`, CSV, or TSV blob as a fully featured OGrid — and export grid data back out as a real `.xlsx` workbook. Multi-sheet workbooks get tabbed navigation, formulas evaluate live, and Excel-style cell references (A1, B2…) are on by default.
 
 <XlsxImportDemo />
 
@@ -126,6 +126,35 @@ Returns an unmount function. Always call it before removing the host node — Re
 | You already have a Vite / Webpack / Next.js build. | You're shipping into a static page, SPFx web part, or CDN drop. |
 | You want tree-shaking and a single dependency graph. | You don't have (and don't want) a JS bundler. |
 | You're integrating into an existing React tree. | You want one `<script type="module">` import. |
+
+## Exporting
+
+`exportToXlsx` mirrors [`exportToCsv`](./csv-export)'s call shape — pass rows, lightweight column defs, a value accessor, and a filename:
+
+```tsx
+import { exportToXlsx } from '@alaarab/ogrid-react-xlsx';
+
+await exportToXlsx(
+  rows,
+  [
+    { columnId: 'name', name: 'Name' },
+    { columnId: 'salary', name: 'Salary' },
+  ],
+  (item, columnId) => item[columnId],
+  'people.xlsx',
+);
+```
+
+Values export as native Excel types: numbers, dates, and booleans round-trip without stringification. To emit **live formulas** (Excel recalculates them on open), pass the same `{col, row, formula}` array `sheetToGridData` produced on import:
+
+```tsx
+await exportToXlsx(rows, columns, getValue, 'sheet.xlsx', {
+  sheetName: 'Data',
+  formulas: initialFormulas, // e.g. from the imported workbook
+});
+```
+
+For full control (multi-sheet assembly, styling), build the workbook yourself with `workbookFromGridData(rows, columns, getValue, options)` — it returns an `ExcelJS.Workbook` you can add sheets to before serializing with `xlsxBlobFromWorkbook(wb)`.
 
 ## Related
 

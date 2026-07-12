@@ -7,9 +7,15 @@ description: Touch-friendly interactions using the Pointer Events API for cell s
 import Tabs from '@theme/Tabs';
 import TabItem from '@theme/TabItem';
 
+import MobileTouchDemo from '@site/src/components/demos/MobileTouchDemo';
+
 # Mobile Touch Support
 
 OGrid uses the [Pointer Events API](https://developer.mozilla.org/en-US/docs/Web/API/Pointer_events) for all drag interactions, providing unified input handling across mouse, touch, and pen devices. All interactions  -  cell drag-selection, fill handle drag-to-fill, column resize, and column reorder  -  work on touch devices out of the box with no additional configuration.
+
+<MobileTouchDemo />
+
+The demo above uses the exact same pointer gestures on every device — try it with a mouse here, or open this page on a phone or tablet: the fill and resize handles automatically enlarge under `@media (pointer: coarse)` for finger-sized targets.
 
 ## How It Works
 
