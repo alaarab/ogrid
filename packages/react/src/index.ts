@@ -256,6 +256,19 @@ export type {
 } from './components/ColumnChooserContent';
 export { createOGrid } from './components/createOGrid';
 export type { CreateOGridComponents, GridRowProps, InlineCellEditorProps } from './components/createOGrid';
+export {
+  createGridContextMenu,
+  createStatusBar,
+  createDropIndicator,
+  createLoadingOverlay,
+} from './components/createStyledKitComponents';
+export type {
+  KitStylesModule,
+  StyledGridContextMenuProps,
+  StyledStatusBarProps,
+  StyledDropIndicatorProps,
+  StyledLoadingOverlayProps,
+} from './components/createStyledKitComponents';
 export { BaseDataGridTableInner, createDataGridTable } from './components/BaseDataGridTable';
 export type {
   DataGridStyles,

@@ -18,13 +18,21 @@ const leafColumns: IColumnDef<FixtureRow>[] = [
   { columnId: 'status', name: 'Status', renderCell: (item) => <span>{item.status}</span> },
 ];
 
+const nameColumn: IColumnDef<FixtureRow> = {
+  columnId: 'name',
+  name: 'Name',
+  renderCell: (item) => <span>{item.name}</span>,
+};
+const statusColumn: IColumnDef<FixtureRow> = {
+  columnId: 'status',
+  name: 'Status',
+  renderCell: (item) => <span>{item.status}</span>,
+};
+
 const groupedColumns: (IColumnGroupDef<FixtureRow> | IColumnDef<FixtureRow>)[] = [
   {
     headerName: 'Info',
-    children: [
-      { columnId: 'name', name: 'Name', renderCell: (item) => <span>{item.name}</span> },
-      { columnId: 'status', name: 'Status', renderCell: (item) => <span>{item.status}</span> },
-    ],
+    children: [nameColumn, statusColumn],
   },
 ];
 
@@ -34,10 +42,7 @@ const nestedGroupedColumns: (IColumnGroupDef<FixtureRow> | IColumnDef<FixtureRow
     children: [
       {
         headerName: 'Info',
-        children: [
-          { columnId: 'name', name: 'Name', renderCell: (item) => <span>{item.name}</span> },
-          { columnId: 'status', name: 'Status', renderCell: (item) => <span>{item.status}</span> },
-        ],
+        children: [nameColumn, statusColumn],
       },
     ],
   },
@@ -77,7 +82,7 @@ export function createColumnGroupTests(DataGridTable: React.ComponentType<IOGrid
       const thead = container.querySelector('thead');
       expect(thead).toBeTruthy();
       const headerRows = thead?.querySelectorAll('tr');
-      expect(headerRows.length).toBe(2);
+      expect(headerRows?.length).toBe(2);
     });
 
     it('group header cell has correct colSpan', () => {
