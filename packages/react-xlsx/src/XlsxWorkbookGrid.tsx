@@ -23,25 +23,24 @@ export type XlsxWorkbookGridProps = Source & {
 
 export function XlsxWorkbookGrid(props: XlsxWorkbookGridProps) {
   const { height = '100%', initialSheet, density, onSheetChange, headerRow } = props;
-  const [workbook, setWorkbook] = useState<ExcelJS.Workbook | null>(
-    'workbook' in props ? props.workbook : null,
-  );
+  const sourceBlob = 'blob' in props ? props.blob : null;
+  const sourceWorkbook = 'workbook' in props ? props.workbook : null;
+  const [workbook, setWorkbook] = useState<ExcelJS.Workbook | null>(sourceWorkbook);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    if ('workbook' in props) {
-      setWorkbook(props.workbook);
+    if (sourceWorkbook) {
+      setWorkbook(sourceWorkbook);
       return;
     }
+    if (!sourceBlob) return;
     let cancelled = false;
     setError(null);
-    workbookFromBlob(props.blob)
+    workbookFromBlob(sourceBlob)
       .then((wb) => { if (!cancelled) setWorkbook(wb); })
       .catch((e) => { if (!cancelled) setError(String(e?.message ?? e)); });
     return () => { cancelled = true; };
-    // 'blob' is a stable reference per mount; props.workbook doesn't apply here.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, ['blob' in props ? props.blob : props.workbook]);
+  }, [sourceBlob, sourceWorkbook]);
 
   const sheetNames = useMemo(
     () => workbook?.worksheets.map((w) => w.name) ?? [],
@@ -132,7 +131,8 @@ const tabActiveStyle: React.CSSProperties = {
   ...tabBase,
   background: 'var(--bg, #0b1014)',
   color: 'var(--accent, #3cb87a)',
-  borderColor: 'var(--accent, #3cb87a)',
+  border: '1px solid var(--accent, #3cb87a)',
+  borderBottom: 'none',
 };
 const gridWrapStyle: React.CSSProperties = {
   flex: '1 1 auto',
