@@ -38,7 +38,7 @@ export function computeVisibleColumnRange(
 
   for (let i = 0; i < columnWidths.length; i++) {
     const colStart = cumWidth;
-    cumWidth += columnWidths[i];
+    cumWidth += columnWidths[i] ?? 0;
 
     // Column is visible if its right edge is past scrollLeft
     if (cumWidth > scrollLeft && rawStart === columnWidths.length) {
@@ -61,12 +61,12 @@ export function computeVisibleColumnRange(
   // Calculate spacer offsets
   let leftOffset = 0;
   for (let i = 0; i < startIndex; i++) {
-    leftOffset += columnWidths[i];
+    leftOffset += columnWidths[i] ?? 0;
   }
 
   let rightOffset = 0;
   for (let i = endIndex + 1; i < columnWidths.length; i++) {
-    rightOffset += columnWidths[i];
+    rightOffset += columnWidths[i] ?? 0;
   }
 
   return { startIndex, endIndex, leftOffset, rightOffset };

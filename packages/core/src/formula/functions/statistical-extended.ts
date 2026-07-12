@@ -95,9 +95,14 @@ export function registerStatisticalExtendedFunctions(registry: Map<string, IForm
     minArgs: 2,
     maxArgs: 2,
     evaluate(args: ASTNode[], context: IFormulaContext, evaluator: IEvaluator): unknown {
-      const nums1 = extractNums([args[0]], context, evaluator);
+      const arg0 = args[0];
+      const arg1 = args[1];
+      if (arg0 === undefined || arg1 === undefined) {
+        return new FormulaError('#N/A', 'CORREL: arrays must have same number of values');
+      }
+      const nums1 = extractNums([arg0], context, evaluator);
       if (nums1 instanceof FormulaError) return nums1;
-      const nums2 = extractNums([args[1]], context, evaluator);
+      const nums2 = extractNums([arg1], context, evaluator);
       if (nums2 instanceof FormulaError) return nums2;
 
       if (nums1.length !== nums2.length) {
@@ -114,8 +119,11 @@ export function registerStatisticalExtendedFunctions(registry: Map<string, IForm
       let var1 = 0;
       let var2 = 0;
       for (let i = 0; i < nums1.length; i++) {
-        const d1 = nums1[i] - m1;
-        const d2 = nums2[i] - m2;
+        const v1 = nums1[i];
+        const v2 = nums2[i];
+        if (v1 === undefined || v2 === undefined) continue;
+        const d1 = v1 - m1;
+        const d2 = v2 - m2;
         cov += d1 * d2;
         var1 += d1 * d1;
         var2 += d2 * d2;
@@ -135,19 +143,29 @@ export function registerStatisticalExtendedFunctions(registry: Map<string, IForm
     const idx = k * (sorted.length - 1);
     const low = Math.floor(idx);
     const high = Math.ceil(idx);
-    if (low === high) return sorted[low];
+    const lowVal = sorted[low];
+    const highVal = sorted[high];
+    if (lowVal === undefined || highVal === undefined) {
+      return new FormulaError('#NUM!', 'PERCENTILE: empty array');
+    }
+    if (low === high) return lowVal;
     const frac = idx - low;
-    return sorted[low] + frac * (sorted[high] - sorted[low]);
+    return lowVal + frac * (highVal - lowVal);
   }
 
   const percentileImpl: IFormulaFunction = {
     minArgs: 2,
     maxArgs: 2,
     evaluate(args: ASTNode[], context: IFormulaContext, evaluator: IEvaluator): unknown {
-      const nums = extractNums([args[0]], context, evaluator);
+      const arrayArg = args[0];
+      const kArg = args[1];
+      if (arrayArg === undefined || kArg === undefined) {
+        return new FormulaError('#NUM!', 'PERCENTILE: empty array');
+      }
+      const nums = extractNums([arrayArg], context, evaluator);
       if (nums instanceof FormulaError) return nums;
 
-      const rawK = evaluator.evaluate(args[1], context);
+      const rawK = evaluator.evaluate(kArg, context);
       if (rawK instanceof FormulaError) return rawK;
       const k = toNumber(rawK);
       if (k instanceof FormulaError) return k;
@@ -163,10 +181,15 @@ export function registerStatisticalExtendedFunctions(registry: Map<string, IForm
     minArgs: 2,
     maxArgs: 2,
     evaluate(args: ASTNode[], context: IFormulaContext, evaluator: IEvaluator): unknown {
-      const nums = extractNums([args[0]], context, evaluator);
+      const arrayArg = args[0];
+      const quartArg = args[1];
+      if (arrayArg === undefined || quartArg === undefined) {
+        return new FormulaError('#NUM!', 'QUARTILE: quart must be 0, 1, 2, 3, or 4');
+      }
+      const nums = extractNums([arrayArg], context, evaluator);
       if (nums instanceof FormulaError) return nums;
 
-      const rawQuart = evaluator.evaluate(args[1], context);
+      const rawQuart = evaluator.evaluate(quartArg, context);
       if (rawQuart instanceof FormulaError) return rawQuart;
       const quart = toNumber(rawQuart);
       if (quart instanceof FormulaError) return quart;

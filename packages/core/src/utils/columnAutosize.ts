@@ -169,6 +169,12 @@ export function measureColumnContentWidth(
     // Write pass: take all content elements out of flow to measure natural width
     for (let i = 0; i < contentEls.length; i++) {
       const el = contentEls[i];
+      if (el === undefined) {
+        // Keep origPositions/origWidths index-aligned with contentEls
+        origPositions.push('');
+        origWidths.push('');
+        continue;
+      }
       origPositions.push(el.style.position);
       origWidths.push(el.style.width);
       el.style.position = 'absolute';
@@ -177,13 +183,17 @@ export function measureColumnContentWidth(
 
     // Read pass: measure all content elements (single reflow)
     for (let i = 0; i < contentEls.length; i++) {
-      maxWidth = Math.max(maxWidth, contentEls[i].offsetWidth + AUTOSIZE_EXTRA_PX);
+      const el = contentEls[i];
+      if (el === undefined) continue;
+      maxWidth = Math.max(maxWidth, el.offsetWidth + AUTOSIZE_EXTRA_PX);
     }
 
     // Restore pass: put everything back
     for (let i = 0; i < contentEls.length; i++) {
-      contentEls[i].style.position = origPositions[i];
-      contentEls[i].style.width = origWidths[i];
+      const el = contentEls[i];
+      if (el === undefined) continue;
+      el.style.position = origPositions[i] ?? '';
+      el.style.width = origWidths[i] ?? '';
     }
   }
 

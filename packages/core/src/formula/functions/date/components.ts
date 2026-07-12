@@ -1,6 +1,6 @@
 import type { IFormulaFunction, IFormulaContext, IEvaluator, ASTNode } from '../../types';
 import { FormulaError } from '../../types';
-import { toNumber } from '../../evaluator';
+import { toNumber, evalArg } from '../../evaluator';
 import { toDate } from './shared';
 
 /**
@@ -30,7 +30,7 @@ export function registerDateComponentFunctions(registry: Map<string, IFormulaFun
     minArgs: 1,
     maxArgs: 1,
     evaluate(args: ASTNode[], context: IFormulaContext, evaluator: IEvaluator): unknown {
-      const val = evaluator.evaluate(args[0], context);
+      const val = evalArg(evaluator, args[0], context);
       if (val instanceof FormulaError) return val;
       const date = toDate(val);
       if (date instanceof FormulaError) return date;
@@ -42,7 +42,7 @@ export function registerDateComponentFunctions(registry: Map<string, IFormulaFun
     minArgs: 1,
     maxArgs: 1,
     evaluate(args: ASTNode[], context: IFormulaContext, evaluator: IEvaluator): unknown {
-      const val = evaluator.evaluate(args[0], context);
+      const val = evalArg(evaluator, args[0], context);
       if (val instanceof FormulaError) return val;
       const date = toDate(val);
       if (date instanceof FormulaError) return date;
@@ -54,7 +54,7 @@ export function registerDateComponentFunctions(registry: Map<string, IFormulaFun
     minArgs: 1,
     maxArgs: 1,
     evaluate(args: ASTNode[], context: IFormulaContext, evaluator: IEvaluator): unknown {
-      const val = evaluator.evaluate(args[0], context);
+      const val = evalArg(evaluator, args[0], context);
       if (val instanceof FormulaError) return val;
       const date = toDate(val);
       if (date instanceof FormulaError) return date;
@@ -66,15 +66,15 @@ export function registerDateComponentFunctions(registry: Map<string, IFormulaFun
     minArgs: 3,
     maxArgs: 3,
     evaluate(args: ASTNode[], context: IFormulaContext, evaluator: IEvaluator): unknown {
-      const rawY = evaluator.evaluate(args[0], context);
+      const rawY = evalArg(evaluator, args[0], context);
       if (rawY instanceof FormulaError) return rawY;
       const y = toNumber(rawY);
       if (y instanceof FormulaError) return y;
-      const rawM = evaluator.evaluate(args[1], context);
+      const rawM = evalArg(evaluator, args[1], context);
       if (rawM instanceof FormulaError) return rawM;
       const m = toNumber(rawM);
       if (m instanceof FormulaError) return m;
-      const rawD = evaluator.evaluate(args[2], context);
+      const rawD = evalArg(evaluator, args[2], context);
       if (rawD instanceof FormulaError) return rawD;
       const d = toNumber(rawD);
       if (d instanceof FormulaError) return d;
@@ -86,13 +86,13 @@ export function registerDateComponentFunctions(registry: Map<string, IFormulaFun
     minArgs: 1,
     maxArgs: 2,
     evaluate(args: ASTNode[], context: IFormulaContext, evaluator: IEvaluator): unknown {
-      const rawDate = evaluator.evaluate(args[0], context);
+      const rawDate = evalArg(evaluator, args[0], context);
       if (rawDate instanceof FormulaError) return rawDate;
       const date = toDate(rawDate);
       if (date instanceof FormulaError) return date;
       let returnType = 1;
       if (args.length >= 2) {
-        const rawRT = evaluator.evaluate(args[1], context);
+        const rawRT = evalArg(evaluator, args[1], context);
         if (rawRT instanceof FormulaError) return rawRT;
         const rt = toNumber(rawRT);
         if (rt instanceof FormulaError) return rt;
@@ -112,7 +112,7 @@ export function registerDateComponentFunctions(registry: Map<string, IFormulaFun
     minArgs: 1,
     maxArgs: 1,
     evaluate(args: ASTNode[], context: IFormulaContext, evaluator: IEvaluator): unknown {
-      const val = evaluator.evaluate(args[0], context);
+      const val = evalArg(evaluator, args[0], context);
       if (val instanceof FormulaError) return val;
       const date = toDate(val);
       if (date instanceof FormulaError) return date;
@@ -124,7 +124,7 @@ export function registerDateComponentFunctions(registry: Map<string, IFormulaFun
     minArgs: 1,
     maxArgs: 1,
     evaluate(args: ASTNode[], context: IFormulaContext, evaluator: IEvaluator): unknown {
-      const val = evaluator.evaluate(args[0], context);
+      const val = evalArg(evaluator, args[0], context);
       if (val instanceof FormulaError) return val;
       const date = toDate(val);
       if (date instanceof FormulaError) return date;
@@ -136,7 +136,7 @@ export function registerDateComponentFunctions(registry: Map<string, IFormulaFun
     minArgs: 1,
     maxArgs: 1,
     evaluate(args: ASTNode[], context: IFormulaContext, evaluator: IEvaluator): unknown {
-      const val = evaluator.evaluate(args[0], context);
+      const val = evalArg(evaluator, args[0], context);
       if (val instanceof FormulaError) return val;
       const date = toDate(val);
       if (date instanceof FormulaError) return date;
@@ -149,7 +149,7 @@ export function registerDateComponentFunctions(registry: Map<string, IFormulaFun
     minArgs: 1,
     maxArgs: 1,
     evaluate(args: ASTNode[], context: IFormulaContext, evaluator: IEvaluator): unknown {
-      const rawVal = evaluator.evaluate(args[0], context);
+      const rawVal = evalArg(evaluator, args[0], context);
       if (rawVal instanceof FormulaError) return rawVal;
       const str = typeof rawVal === 'string' ? rawVal : String(rawVal);
       const d = new Date(str);
@@ -165,13 +165,17 @@ export function registerDateComponentFunctions(registry: Map<string, IFormulaFun
     minArgs: 1,
     maxArgs: 1,
     evaluate(args: ASTNode[], context: IFormulaContext, evaluator: IEvaluator): unknown {
-      const rawVal = evaluator.evaluate(args[0], context);
+      const rawVal = evalArg(evaluator, args[0], context);
       if (rawVal instanceof FormulaError) return rawVal;
       const str = typeof rawVal === 'string' ? rawVal : String(rawVal);
       const match = str.match(/^(\d{1,2}):(\d{2})(?::(\d{2}))?(?:\s*(AM|PM))?$/i);
-      if (!match) return new FormulaError('#VALUE!', `TIMEVALUE cannot parse "${str}"`);
-      let hours = parseInt(match[1], 10);
-      const minutes = parseInt(match[2], 10);
+      const hourStr = match?.[1];
+      const minuteStr = match?.[2];
+      if (!match || hourStr === undefined || minuteStr === undefined) {
+        return new FormulaError('#VALUE!', `TIMEVALUE cannot parse "${str}"`);
+      }
+      let hours = parseInt(hourStr, 10);
+      const minutes = parseInt(minuteStr, 10);
       const seconds = match[3] ? parseInt(match[3], 10) : 0;
       const ampm = match[4] ? match[4].toUpperCase() : null;
       if (ampm === 'PM' && hours < 12) hours += 12;
@@ -188,15 +192,15 @@ export function registerDateComponentFunctions(registry: Map<string, IFormulaFun
     minArgs: 3,
     maxArgs: 3,
     evaluate(args: ASTNode[], context: IFormulaContext, evaluator: IEvaluator): unknown {
-      const rawH = evaluator.evaluate(args[0], context);
+      const rawH = evalArg(evaluator, args[0], context);
       if (rawH instanceof FormulaError) return rawH;
       const h = toNumber(rawH);
       if (h instanceof FormulaError) return h;
-      const rawM = evaluator.evaluate(args[1], context);
+      const rawM = evalArg(evaluator, args[1], context);
       if (rawM instanceof FormulaError) return rawM;
       const m = toNumber(rawM);
       if (m instanceof FormulaError) return m;
-      const rawS = evaluator.evaluate(args[2], context);
+      const rawS = evalArg(evaluator, args[2], context);
       if (rawS instanceof FormulaError) return rawS;
       const s = toNumber(rawS);
       if (s instanceof FormulaError) return s;

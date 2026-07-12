@@ -89,8 +89,19 @@ export function extractValueMatrix<T>(
   const matrix: (string | number | boolean | null)[][] = new Array(data.length);
   for (let r = 0; r < data.length; r++) {
     const row = new Array(columns.length);
+    const item = data[r];
+    if (item === undefined) {
+      row.fill(null);
+      matrix[r] = row;
+      continue;
+    }
     for (let c = 0; c < columns.length; c++) {
-      const val = getCellValue(data[r], columns[c]);
+      const col = columns[c];
+      if (col === undefined) {
+        row[c] = null;
+        continue;
+      }
+      const val = getCellValue(item, col);
       if (val == null) {
         row[c] = null;
       } else if (typeof val === 'string' || typeof val === 'number' || typeof val === 'boolean') {
@@ -134,7 +145,9 @@ export function processClientSideDataAsync<T>(
   // Build column index map and value matrix
   const columnIndexMap = new Map<string, number>();
   for (let i = 0; i < columns.length; i++) {
-    columnIndexMap.set(columns[i].columnId, i);
+    const col = columns[i];
+    if (col === undefined) continue;
+    columnIndexMap.set(col.columnId, i);
   }
 
   const values = extractValueMatrix(data, columns);
@@ -186,7 +199,11 @@ export function processClientSideDataAsync<T>(
       resolve: (indices) => {
         const result = new Array<T>(indices.length);
         for (let i = 0; i < indices.length; i++) {
-          result[i] = data[indices[i]];
+          const idx = indices[i];
+          if (idx === undefined) continue;
+          const item = data[idx];
+          if (item === undefined) continue;
+          result[i] = item;
         }
         resolve(result);
       },

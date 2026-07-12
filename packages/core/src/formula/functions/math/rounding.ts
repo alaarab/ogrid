@@ -1,6 +1,6 @@
 import type { IFormulaFunction, IFormulaContext, IEvaluator, ASTNode } from '../../types';
 import { FormulaError } from '../../types';
-import { toNumber } from '../../evaluator';
+import { toNumber, evalArg } from '../../evaluator';
 
 /**
  * Rounding and truncation: ROUND, CEILING, FLOOR, ROUNDUP, ROUNDDOWN, INT,
@@ -11,12 +11,12 @@ export function registerMathRoundingFunctions(registry: Map<string, IFormulaFunc
     minArgs: 2,
     maxArgs: 2,
     evaluate(args: ASTNode[], context: IFormulaContext, evaluator: IEvaluator): unknown {
-      const rawNum = evaluator.evaluate(args[0], context);
+      const rawNum = evalArg(evaluator, args[0], context);
       if (rawNum instanceof FormulaError) return rawNum;
       const num = toNumber(rawNum);
       if (num instanceof FormulaError) return num;
 
-      const rawDigits = evaluator.evaluate(args[1], context);
+      const rawDigits = evalArg(evaluator, args[1], context);
       if (rawDigits instanceof FormulaError) return rawDigits;
       const digits = toNumber(rawDigits);
       if (digits instanceof FormulaError) return digits;
@@ -33,12 +33,12 @@ export function registerMathRoundingFunctions(registry: Map<string, IFormulaFunc
     minArgs: 2,
     maxArgs: 2,
     evaluate(args: ASTNode[], context: IFormulaContext, evaluator: IEvaluator): unknown {
-      const rawNum = evaluator.evaluate(args[0], context);
+      const rawNum = evalArg(evaluator, args[0], context);
       if (rawNum instanceof FormulaError) return rawNum;
       const num = toNumber(rawNum);
       if (num instanceof FormulaError) return num;
 
-      const rawSig = evaluator.evaluate(args[1], context);
+      const rawSig = evalArg(evaluator, args[1], context);
       if (rawSig instanceof FormulaError) return rawSig;
       const significance = toNumber(rawSig);
       if (significance instanceof FormulaError) return significance;
@@ -52,12 +52,12 @@ export function registerMathRoundingFunctions(registry: Map<string, IFormulaFunc
     minArgs: 2,
     maxArgs: 2,
     evaluate(args: ASTNode[], context: IFormulaContext, evaluator: IEvaluator): unknown {
-      const rawNum = evaluator.evaluate(args[0], context);
+      const rawNum = evalArg(evaluator, args[0], context);
       if (rawNum instanceof FormulaError) return rawNum;
       const num = toNumber(rawNum);
       if (num instanceof FormulaError) return num;
 
-      const rawSig = evaluator.evaluate(args[1], context);
+      const rawSig = evalArg(evaluator, args[1], context);
       if (rawSig instanceof FormulaError) return rawSig;
       const significance = toNumber(rawSig);
       if (significance instanceof FormulaError) return significance;
@@ -71,11 +71,11 @@ export function registerMathRoundingFunctions(registry: Map<string, IFormulaFunc
     minArgs: 2,
     maxArgs: 2,
     evaluate(args: ASTNode[], context: IFormulaContext, evaluator: IEvaluator): unknown {
-      const rawNum = evaluator.evaluate(args[0], context);
+      const rawNum = evalArg(evaluator, args[0], context);
       if (rawNum instanceof FormulaError) return rawNum;
       const num = toNumber(rawNum);
       if (num instanceof FormulaError) return num;
-      const rawDigits = evaluator.evaluate(args[1], context);
+      const rawDigits = evalArg(evaluator, args[1], context);
       if (rawDigits instanceof FormulaError) return rawDigits;
       const digits = toNumber(rawDigits);
       if (digits instanceof FormulaError) return digits;
@@ -90,11 +90,11 @@ export function registerMathRoundingFunctions(registry: Map<string, IFormulaFunc
     minArgs: 2,
     maxArgs: 2,
     evaluate(args: ASTNode[], context: IFormulaContext, evaluator: IEvaluator): unknown {
-      const rawNum = evaluator.evaluate(args[0], context);
+      const rawNum = evalArg(evaluator, args[0], context);
       if (rawNum instanceof FormulaError) return rawNum;
       const num = toNumber(rawNum);
       if (num instanceof FormulaError) return num;
-      const rawDigits = evaluator.evaluate(args[1], context);
+      const rawDigits = evalArg(evaluator, args[1], context);
       if (rawDigits instanceof FormulaError) return rawDigits;
       const digits = toNumber(rawDigits);
       if (digits instanceof FormulaError) return digits;
@@ -107,7 +107,7 @@ export function registerMathRoundingFunctions(registry: Map<string, IFormulaFunc
     minArgs: 1,
     maxArgs: 1,
     evaluate(args: ASTNode[], context: IFormulaContext, evaluator: IEvaluator): unknown {
-      const rawVal = evaluator.evaluate(args[0], context);
+      const rawVal = evalArg(evaluator, args[0], context);
       if (rawVal instanceof FormulaError) return rawVal;
       const num = toNumber(rawVal);
       if (num instanceof FormulaError) return num;
@@ -119,13 +119,13 @@ export function registerMathRoundingFunctions(registry: Map<string, IFormulaFunc
     minArgs: 1,
     maxArgs: 2,
     evaluate(args: ASTNode[], context: IFormulaContext, evaluator: IEvaluator): unknown {
-      const rawVal = evaluator.evaluate(args[0], context);
+      const rawVal = evalArg(evaluator, args[0], context);
       if (rawVal instanceof FormulaError) return rawVal;
       const num = toNumber(rawVal);
       if (num instanceof FormulaError) return num;
       let digits = 0;
       if (args.length >= 2) {
-        const rawD = evaluator.evaluate(args[1], context);
+        const rawD = evalArg(evaluator, args[1], context);
         if (rawD instanceof FormulaError) return rawD;
         const d = toNumber(rawD);
         if (d instanceof FormulaError) return d;
@@ -143,12 +143,12 @@ export function registerMathRoundingFunctions(registry: Map<string, IFormulaFunc
     minArgs: 2,
     maxArgs: 2,
     evaluate(args: ASTNode[], context: IFormulaContext, evaluator: IEvaluator): unknown {
-      const rawNum = evaluator.evaluate(args[0], context);
+      const rawNum = evalArg(evaluator, args[0], context);
       if (rawNum instanceof FormulaError) return rawNum;
       const num = toNumber(rawNum);
       if (num instanceof FormulaError) return num;
 
-      const rawMul = evaluator.evaluate(args[1], context);
+      const rawMul = evalArg(evaluator, args[1], context);
       if (rawMul instanceof FormulaError) return rawMul;
       const multiple = toNumber(rawMul);
       if (multiple instanceof FormulaError) return multiple;

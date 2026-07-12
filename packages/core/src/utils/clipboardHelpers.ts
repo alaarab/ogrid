@@ -64,6 +64,7 @@ export function formatSelectionAsTsv<T>(
       if (r >= items.length || c >= visibleCols.length) break;
       const item = items[r];
       const col = visibleCols[c];
+      if (item === undefined || col === undefined) break;
       // Check formula first  -  copy formula text instead of computed value
       if (formulaOptions?.hasFormula && formulaOptions?.getFormula) {
         const flatColIndex = flatColIndexById?.get(col.columnId) ?? -1;
@@ -133,12 +134,14 @@ export function applyPastedValues<T>(
     : null;
   for (let r = 0; r < parsedRows.length; r++) {
     const cells = parsedRows[r];
+    if (cells === undefined) continue;
     for (let c = 0; c < cells.length; c++) {
       const targetRow = anchorRow + r;
       const targetCol = anchorCol + c;
       if (targetRow >= items.length || targetCol >= visibleCols.length) continue;
       const item = items[targetRow];
       const col = visibleCols[targetCol];
+      if (item === undefined || col === undefined) continue;
       if (!isColumnEditable(col, item)) continue;
       const cellText = cells[c] ?? '';
       // Detect formula paste  -  route through setFormula instead of normal value path
@@ -184,6 +187,7 @@ export function applyCutClear<T>(
       if (r >= items.length || c >= visibleCols.length) continue;
       const item = items[r];
       const col = visibleCols[c];
+      if (item === undefined || col === undefined) continue;
       if (!isColumnEditable(col, item)) continue;
       const oldValue = getCellValue(item, col);
       const result = parseValue('', oldValue, item, col);

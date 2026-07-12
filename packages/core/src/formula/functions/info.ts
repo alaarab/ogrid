@@ -1,13 +1,13 @@
 import type { IFormulaFunction, IFormulaContext, IEvaluator, ASTNode } from '../types';
 import { FormulaError } from '../types';
-import { toNumber } from '../evaluator';
+import { toNumber, evalArg } from '../evaluator';
 
 export function registerInfoFunctions(registry: Map<string, IFormulaFunction>): void {
   registry.set('ISBLANK', {
     minArgs: 1,
     maxArgs: 1,
     evaluate(args: ASTNode[], context: IFormulaContext, evaluator: IEvaluator): unknown {
-      const val = evaluator.evaluate(args[0], context);
+      const val = evalArg(evaluator, args[0], context);
       return val === null || val === undefined || val === '';
     },
   });
@@ -16,7 +16,7 @@ export function registerInfoFunctions(registry: Map<string, IFormulaFunction>): 
     minArgs: 1,
     maxArgs: 1,
     evaluate(args: ASTNode[], context: IFormulaContext, evaluator: IEvaluator): unknown {
-      const val = evaluator.evaluate(args[0], context);
+      const val = evalArg(evaluator, args[0], context);
       return typeof val === 'number' && !Number.isNaN(val);
     },
   });
@@ -25,7 +25,7 @@ export function registerInfoFunctions(registry: Map<string, IFormulaFunction>): 
     minArgs: 1,
     maxArgs: 1,
     evaluate(args: ASTNode[], context: IFormulaContext, evaluator: IEvaluator): unknown {
-      const val = evaluator.evaluate(args[0], context);
+      const val = evalArg(evaluator, args[0], context);
       return typeof val === 'string';
     },
   });
@@ -34,7 +34,7 @@ export function registerInfoFunctions(registry: Map<string, IFormulaFunction>): 
     minArgs: 1,
     maxArgs: 1,
     evaluate(args: ASTNode[], context: IFormulaContext, evaluator: IEvaluator): unknown {
-      const val = evaluator.evaluate(args[0], context);
+      const val = evalArg(evaluator, args[0], context);
       return val instanceof FormulaError;
     },
   });
@@ -43,7 +43,7 @@ export function registerInfoFunctions(registry: Map<string, IFormulaFunction>): 
     minArgs: 1,
     maxArgs: 1,
     evaluate(args: ASTNode[], context: IFormulaContext, evaluator: IEvaluator): unknown {
-      const val = evaluator.evaluate(args[0], context);
+      const val = evalArg(evaluator, args[0], context);
       return val instanceof FormulaError && val.type === '#N/A';
     },
   });
@@ -52,7 +52,7 @@ export function registerInfoFunctions(registry: Map<string, IFormulaFunction>): 
     minArgs: 1,
     maxArgs: 1,
     evaluate(args: ASTNode[], context: IFormulaContext, evaluator: IEvaluator): unknown {
-      const val = evaluator.evaluate(args[0], context);
+      const val = evalArg(evaluator, args[0], context);
       if (val instanceof FormulaError) return 16; // Error
       if (typeof val === 'number') return 1;
       if (typeof val === 'string') return 2;
@@ -67,7 +67,7 @@ export function registerInfoFunctions(registry: Map<string, IFormulaFunction>): 
     minArgs: 1,
     maxArgs: 1,
     evaluate(args: ASTNode[], context: IFormulaContext, evaluator: IEvaluator): unknown {
-      const val = evaluator.evaluate(args[0], context);
+      const val = evalArg(evaluator, args[0], context);
       if (val instanceof FormulaError) return val;
       if (typeof val === 'boolean') return new FormulaError('#VALUE!', 'ISODD requires a number');
       const n = toNumber(val);
@@ -81,7 +81,7 @@ export function registerInfoFunctions(registry: Map<string, IFormulaFunction>): 
     minArgs: 1,
     maxArgs: 1,
     evaluate(args: ASTNode[], context: IFormulaContext, evaluator: IEvaluator): unknown {
-      const val = evaluator.evaluate(args[0], context);
+      const val = evalArg(evaluator, args[0], context);
       if (val instanceof FormulaError) return val;
       if (typeof val === 'boolean') return new FormulaError('#VALUE!', 'ISEVEN requires a number');
       const n = toNumber(val);
@@ -96,7 +96,7 @@ export function registerInfoFunctions(registry: Map<string, IFormulaFunction>): 
     maxArgs: 1,
     evaluate(args: ASTNode[], context: IFormulaContext, _evaluator: IEvaluator): unknown {
       const arg = args[0];
-      if (arg.kind !== 'cellRef') return false;
+      if (arg === undefined || arg.kind !== 'cellRef') return false;
       if (!context.getCellFormula) return false;
       const formula = context.getCellFormula(arg.address);
       return formula !== undefined;
@@ -108,7 +108,7 @@ export function registerInfoFunctions(registry: Map<string, IFormulaFunction>): 
     minArgs: 1,
     maxArgs: 1,
     evaluate(args: ASTNode[], context: IFormulaContext, evaluator: IEvaluator): unknown {
-      const val = evaluator.evaluate(args[0], context);
+      const val = evalArg(evaluator, args[0], context);
       if (val instanceof FormulaError) return false;
       return typeof val === 'boolean';
     },
@@ -119,7 +119,7 @@ export function registerInfoFunctions(registry: Map<string, IFormulaFunction>): 
     minArgs: 1,
     maxArgs: 1,
     evaluate(args: ASTNode[], context: IFormulaContext, evaluator: IEvaluator): unknown {
-      const val = evaluator.evaluate(args[0], context);
+      const val = evalArg(evaluator, args[0], context);
       if (val instanceof FormulaError) return true; // errors are non-text
       return typeof val !== 'string';
     },
@@ -132,7 +132,7 @@ export function registerInfoFunctions(registry: Map<string, IFormulaFunction>): 
     evaluate(args: ASTNode[], _context: IFormulaContext, _evaluator: IEvaluator): unknown {
       // In formula engine context: TRUE if the argument is a cell or range reference node
       const arg = args[0];
-      return arg.kind === 'cellRef' || arg.kind === 'range';
+      return arg !== undefined && (arg.kind === 'cellRef' || arg.kind === 'range');
     },
   });
 }

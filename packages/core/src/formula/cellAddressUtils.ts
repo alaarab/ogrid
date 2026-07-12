@@ -25,7 +25,9 @@ export function parseCellRef(ref: string): ICellAddress | null {
   const absCol = m[1] === '$';
   const colLetters = m[2];
   const absRow = m[3] === '$';
-  const rowNum = parseInt(m[4], 10);
+  const rowDigits = m[4];
+  if (colLetters === undefined || rowDigits === undefined) return null;
+  const rowNum = parseInt(rowDigits, 10);
   if (rowNum < 1) return null;
   return {
     col: columnLetterToIndex(colLetters),
@@ -41,9 +43,11 @@ export function parseCellRef(ref: string): ICellAddress | null {
  */
 export function parseRange(rangeStr: string): ICellRange | null {
   const parts = rangeStr.split(':');
-  if (parts.length !== 2) return null;
-  const start = parseCellRef(parts[0]);
-  const end = parseCellRef(parts[1]);
+  const startStr = parts[0];
+  const endStr = parts[1];
+  if (parts.length !== 2 || startStr === undefined || endStr === undefined) return null;
+  const start = parseCellRef(startStr);
+  const end = parseCellRef(endStr);
   if (!start || !end) return null;
   return { start, end };
 }

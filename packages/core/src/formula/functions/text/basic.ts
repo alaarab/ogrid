@@ -1,6 +1,6 @@
 import type { IFormulaFunction, IFormulaContext, IEvaluator, ASTNode } from '../../types';
 import { FormulaError } from '../../types';
-import { toNumber, toString, flattenArgs } from '../../evaluator';
+import { toNumber, toString, flattenArgs, evalArg } from '../../evaluator';
 
 /**
  * Core string manipulation: concatenation, casing, trimming, slicing, length,
@@ -39,7 +39,7 @@ export function registerBasicTextFunctions(registry: Map<string, IFormulaFunctio
     minArgs: 1,
     maxArgs: 1,
     evaluate(args: ASTNode[], context: IFormulaContext, evaluator: IEvaluator): unknown {
-      const val = evaluator.evaluate(args[0], context);
+      const val = evalArg(evaluator, args[0], context);
       if (val instanceof FormulaError) return val;
       return toString(val).toUpperCase();
     },
@@ -49,7 +49,7 @@ export function registerBasicTextFunctions(registry: Map<string, IFormulaFunctio
     minArgs: 1,
     maxArgs: 1,
     evaluate(args: ASTNode[], context: IFormulaContext, evaluator: IEvaluator): unknown {
-      const val = evaluator.evaluate(args[0], context);
+      const val = evalArg(evaluator, args[0], context);
       if (val instanceof FormulaError) return val;
       return toString(val).toLowerCase();
     },
@@ -59,7 +59,7 @@ export function registerBasicTextFunctions(registry: Map<string, IFormulaFunctio
     minArgs: 1,
     maxArgs: 1,
     evaluate(args: ASTNode[], context: IFormulaContext, evaluator: IEvaluator): unknown {
-      const val = evaluator.evaluate(args[0], context);
+      const val = evalArg(evaluator, args[0], context);
       if (val instanceof FormulaError) return val;
       // Excel TRIM removes leading/trailing spaces AND collapses runs of internal
       // spaces to a single space (only the space character, not tabs/newlines).
@@ -71,13 +71,13 @@ export function registerBasicTextFunctions(registry: Map<string, IFormulaFunctio
     minArgs: 1,
     maxArgs: 2,
     evaluate(args: ASTNode[], context: IFormulaContext, evaluator: IEvaluator): unknown {
-      const val = evaluator.evaluate(args[0], context);
+      const val = evalArg(evaluator, args[0], context);
       if (val instanceof FormulaError) return val;
       const text = toString(val);
 
       let numChars = 1;
       if (args.length >= 2) {
-        const rawNum = evaluator.evaluate(args[1], context);
+        const rawNum = evalArg(evaluator, args[1], context);
         if (rawNum instanceof FormulaError) return rawNum;
         const n = toNumber(rawNum);
         if (n instanceof FormulaError) return n;
@@ -93,13 +93,13 @@ export function registerBasicTextFunctions(registry: Map<string, IFormulaFunctio
     minArgs: 1,
     maxArgs: 2,
     evaluate(args: ASTNode[], context: IFormulaContext, evaluator: IEvaluator): unknown {
-      const val = evaluator.evaluate(args[0], context);
+      const val = evalArg(evaluator, args[0], context);
       if (val instanceof FormulaError) return val;
       const text = toString(val);
 
       let numChars = 1;
       if (args.length >= 2) {
-        const rawNum = evaluator.evaluate(args[1], context);
+        const rawNum = evalArg(evaluator, args[1], context);
         if (rawNum instanceof FormulaError) return rawNum;
         const n = toNumber(rawNum);
         if (n instanceof FormulaError) return n;
@@ -115,16 +115,16 @@ export function registerBasicTextFunctions(registry: Map<string, IFormulaFunctio
     minArgs: 3,
     maxArgs: 3,
     evaluate(args: ASTNode[], context: IFormulaContext, evaluator: IEvaluator): unknown {
-      const val = evaluator.evaluate(args[0], context);
+      const val = evalArg(evaluator, args[0], context);
       if (val instanceof FormulaError) return val;
       const text = toString(val);
 
-      const rawStart = evaluator.evaluate(args[1], context);
+      const rawStart = evalArg(evaluator, args[1], context);
       if (rawStart instanceof FormulaError) return rawStart;
       const startPos = toNumber(rawStart);
       if (startPos instanceof FormulaError) return startPos;
 
-      const rawNum = evaluator.evaluate(args[2], context);
+      const rawNum = evalArg(evaluator, args[2], context);
       if (rawNum instanceof FormulaError) return rawNum;
       const numChars = toNumber(rawNum);
       if (numChars instanceof FormulaError) return numChars;
@@ -144,7 +144,7 @@ export function registerBasicTextFunctions(registry: Map<string, IFormulaFunctio
     minArgs: 1,
     maxArgs: 1,
     evaluate(args: ASTNode[], context: IFormulaContext, evaluator: IEvaluator): unknown {
-      const val = evaluator.evaluate(args[0], context);
+      const val = evalArg(evaluator, args[0], context);
       if (val instanceof FormulaError) return val;
       return toString(val).length;
     },
@@ -154,10 +154,10 @@ export function registerBasicTextFunctions(registry: Map<string, IFormulaFunctio
     minArgs: 2,
     maxArgs: 2,
     evaluate(args: ASTNode[], context: IFormulaContext, evaluator: IEvaluator): unknown {
-      const rawText = evaluator.evaluate(args[0], context);
+      const rawText = evalArg(evaluator, args[0], context);
       if (rawText instanceof FormulaError) return rawText;
       const text = toString(rawText);
-      const rawTimes = evaluator.evaluate(args[1], context);
+      const rawTimes = evalArg(evaluator, args[1], context);
       if (rawTimes instanceof FormulaError) return rawTimes;
       const times = toNumber(rawTimes);
       if (times instanceof FormulaError) return times;
@@ -171,9 +171,9 @@ export function registerBasicTextFunctions(registry: Map<string, IFormulaFunctio
     minArgs: 2,
     maxArgs: 2,
     evaluate(args: ASTNode[], context: IFormulaContext, evaluator: IEvaluator): unknown {
-      const rawA = evaluator.evaluate(args[0], context);
+      const rawA = evalArg(evaluator, args[0], context);
       if (rawA instanceof FormulaError) return rawA;
-      const rawB = evaluator.evaluate(args[1], context);
+      const rawB = evalArg(evaluator, args[1], context);
       if (rawB instanceof FormulaError) return rawB;
       return toString(rawA) === toString(rawB);
     },
@@ -183,7 +183,7 @@ export function registerBasicTextFunctions(registry: Map<string, IFormulaFunctio
     minArgs: 1,
     maxArgs: 1,
     evaluate(args: ASTNode[], context: IFormulaContext, evaluator: IEvaluator): unknown {
-      const val = evaluator.evaluate(args[0], context);
+      const val = evalArg(evaluator, args[0], context);
       if (val instanceof FormulaError) return val;
       return toString(val).toLowerCase().replace(/\b\w/g, (c) => c.toUpperCase());
     },
@@ -193,7 +193,7 @@ export function registerBasicTextFunctions(registry: Map<string, IFormulaFunctio
     minArgs: 1,
     maxArgs: 1,
     evaluate(args: ASTNode[], context: IFormulaContext, evaluator: IEvaluator): unknown {
-      const val = evaluator.evaluate(args[0], context);
+      const val = evalArg(evaluator, args[0], context);
       if (val instanceof FormulaError) return val;
       // Remove non-printable characters (ASCII 0-31)
       // eslint-disable-next-line no-control-regex

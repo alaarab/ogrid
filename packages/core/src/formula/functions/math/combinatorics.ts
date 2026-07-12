@@ -1,6 +1,6 @@
 import type { IFormulaFunction, IFormulaContext, IEvaluator, ASTNode } from '../../types';
 import { FormulaError } from '../../types';
-import { toNumber } from '../../evaluator';
+import { toNumber, evalArg } from '../../evaluator';
 
 /**
  * Combinatorics and integer functions: COMBIN, PERMUT, FACT, GCD, LCM.
@@ -13,12 +13,12 @@ export function registerMathCombinatoricsFunctions(registry: Map<string, IFormul
     minArgs: 2,
     maxArgs: 2,
     evaluate(args: ASTNode[], context: IFormulaContext, evaluator: IEvaluator): unknown {
-      const rawN = evaluator.evaluate(args[0], context);
+      const rawN = evalArg(evaluator, args[0], context);
       if (rawN instanceof FormulaError) return rawN;
       const n = toNumber(rawN);
       if (n instanceof FormulaError) return n;
 
-      const rawK = evaluator.evaluate(args[1], context);
+      const rawK = evalArg(evaluator, args[1], context);
       if (rawK instanceof FormulaError) return rawK;
       const k = toNumber(rawK);
       if (k instanceof FormulaError) return k;
@@ -47,12 +47,12 @@ export function registerMathCombinatoricsFunctions(registry: Map<string, IFormul
     minArgs: 2,
     maxArgs: 2,
     evaluate(args: ASTNode[], context: IFormulaContext, evaluator: IEvaluator): unknown {
-      const rawN = evaluator.evaluate(args[0], context);
+      const rawN = evalArg(evaluator, args[0], context);
       if (rawN instanceof FormulaError) return rawN;
       const n = toNumber(rawN);
       if (n instanceof FormulaError) return n;
 
-      const rawK = evaluator.evaluate(args[1], context);
+      const rawK = evalArg(evaluator, args[1], context);
       if (rawK instanceof FormulaError) return rawK;
       const k = toNumber(rawK);
       if (k instanceof FormulaError) return k;
@@ -78,7 +78,7 @@ export function registerMathCombinatoricsFunctions(registry: Map<string, IFormul
     minArgs: 1,
     maxArgs: 1,
     evaluate(args: ASTNode[], context: IFormulaContext, evaluator: IEvaluator): unknown {
-      const rawVal = evaluator.evaluate(args[0], context);
+      const rawVal = evalArg(evaluator, args[0], context);
       if (rawVal instanceof FormulaError) return rawVal;
       const num = toNumber(rawVal);
       if (num instanceof FormulaError) return num;
@@ -112,11 +112,14 @@ export function registerMathCombinatoricsFunctions(registry: Map<string, IFormul
         nums.push(n);
       }
 
-      if (nums.length === 0) return new FormulaError('#NUM!', 'GCD: no arguments');
+      const first = nums[0];
+      if (first === undefined) return new FormulaError('#NUM!', 'GCD: no arguments');
 
-      let result = nums[0];
+      let result = first;
       for (let i = 1; i < nums.length; i++) {
-        result = gcdTwo(result, nums[i]);
+        const n = nums[i];
+        if (n === undefined) continue;
+        result = gcdTwo(result, n);
       }
       return result;
     },
@@ -139,13 +142,16 @@ export function registerMathCombinatoricsFunctions(registry: Map<string, IFormul
         nums.push(n);
       }
 
-      if (nums.length === 0) return new FormulaError('#NUM!', 'LCM: no arguments');
+      const first = nums[0];
+      if (first === undefined) return new FormulaError('#NUM!', 'LCM: no arguments');
 
-      let result = nums[0];
+      let result = first;
       for (let i = 1; i < nums.length; i++) {
-        const g = gcdTwo(result, nums[i]);
+        const n = nums[i];
+        if (n === undefined) continue;
+        const g = gcdTwo(result, n);
         if (g === 0) { result = 0; break; }
-        result = (result / g) * nums[i];
+        result = (result / g) * n;
       }
       return result;
     },

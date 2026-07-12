@@ -104,27 +104,33 @@ export function calculateDropTarget(
   let targetIndex: number;
   let indicatorX: number;
 
-  if (mouseX <= targets[0].midX) {
+  const first = targets[0];
+  const last = targets[targets.length - 1];
+  if (first === undefined || last === undefined) return null;
+
+  if (mouseX <= first.midX) {
     // Before the first target
-    targetIndex = targets[0].orderIndex;
-    indicatorX = targets[0].left;
-  } else if (mouseX >= targets[targets.length - 1].midX) {
+    targetIndex = first.orderIndex;
+    indicatorX = first.left;
+  } else if (mouseX >= last.midX) {
     // After the last target
-    const last = targets[targets.length - 1];
     targetIndex = last.orderIndex + 1;
     indicatorX = last.right;
   } else {
     // Between two targets  -  find the boundary
-    let matchIndex = -1;
+    let match: (typeof targets)[number] | undefined;
     for (let i = 0; i < targets.length - 1; i++) {
-      if (mouseX >= targets[i].midX && mouseX < targets[i + 1].midX) {
-        matchIndex = i;
+      const cur = targets[i];
+      const next = targets[i + 1];
+      if (cur === undefined || next === undefined) continue;
+      if (mouseX >= cur.midX && mouseX < next.midX) {
+        match = cur;
         break;
       }
     }
-    if (matchIndex === -1) return null;
-    targetIndex = targets[matchIndex].orderIndex + 1;
-    indicatorX = targets[matchIndex].right;
+    if (match === undefined) return null;
+    targetIndex = match.orderIndex + 1;
+    indicatorX = match.right;
   }
 
   // Check if this is a no-op (dropping at same position)

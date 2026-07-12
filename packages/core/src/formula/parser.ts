@@ -32,11 +32,11 @@ export function parse(tokens: Token[], namedRanges?: Map<string, string>): ASTNo
 
   // --- Token helpers ---
 
-  function peek(): Token {
+  function peek(): Token | undefined {
     return tokens[pos];
   }
 
-  function advance(): Token {
+  function advance(): Token | undefined {
     const token = tokens[pos];
     pos++;
     return token;
@@ -45,7 +45,8 @@ export function parse(tokens: Token[], namedRanges?: Map<string, string>): ASTNo
   function expect(type: Token['type']): Token | null {
     const token = peek();
     if (token && token.type === type) {
-      return advance();
+      advance();
+      return token;
     }
     return null;
   }
@@ -63,8 +64,9 @@ export function parse(tokens: Token[], namedRanges?: Map<string, string>): ASTNo
   function comparison(): ASTNode {
     let left = concat();
 
-    while (peek()) {
+    for (;;) {
       const t = peek();
+      if (!t) break;
       let op: BinaryOp | null = null;
       if (t.type === 'GT') op = '>';
       else if (t.type === 'LT') op = '<';
@@ -85,7 +87,7 @@ export function parse(tokens: Token[], namedRanges?: Map<string, string>): ASTNo
   function concat(): ASTNode {
     let left = addition();
 
-    while (peek() && peek().type === 'AMPERSAND') {
+    while (peek()?.type === 'AMPERSAND') {
       advance();
       const right = addition();
       left = { kind: 'binaryOp', op: '&', left, right };
@@ -97,8 +99,9 @@ export function parse(tokens: Token[], namedRanges?: Map<string, string>): ASTNo
   function addition(): ASTNode {
     let left = multiplication();
 
-    while (peek()) {
+    for (;;) {
       const t = peek();
+      if (!t) break;
       let op: BinaryOp | null = null;
       if (t.type === 'PLUS') op = '+';
       else if (t.type === 'MINUS') op = '-';
@@ -115,8 +118,9 @@ export function parse(tokens: Token[], namedRanges?: Map<string, string>): ASTNo
   function multiplication(): ASTNode {
     let left = power();
 
-    while (peek()) {
+    for (;;) {
       const t = peek();
+      if (!t) break;
       let op: BinaryOp | null = null;
       if (t.type === 'MULTIPLY') op = '*';
       else if (t.type === 'DIVIDE') op = '/';
@@ -133,7 +137,7 @@ export function parse(tokens: Token[], namedRanges?: Map<string, string>): ASTNo
   function power(): ASTNode {
     let left = unary();
 
-    while (peek() && peek().type === 'POWER') {
+    while (peek()?.type === 'POWER') {
       advance();
       const right = unary();
       left = { kind: 'binaryOp', op: '^', left, right };
@@ -158,7 +162,7 @@ export function parse(tokens: Token[], namedRanges?: Map<string, string>): ASTNo
   function postfix(): ASTNode {
     let node = primary();
 
-    if (peek() && peek().type === 'PERCENT') {
+    if (peek()?.type === 'PERCENT') {
       advance();
       node = { kind: 'binaryOp', op: '%', left: node, right: { kind: 'number', value: 100 } };
     }
@@ -193,22 +197,22 @@ export function parse(tokens: Token[], namedRanges?: Map<string, string>): ASTNo
 
     // Cell reference or range
     if (t.type === 'CELL_REF') {
-      return cellRefOrRange();
+      return cellRefOrRange(t);
     }
 
     // Function call
     if (t.type === 'FUNCTION') {
-      return functionCall();
+      return functionCall(t);
     }
 
     // Named range identifier
     if (t.type === 'IDENTIFIER') {
-      return namedRangeRef();
+      return namedRangeRef(t);
     }
 
     // Sheet-qualified cell reference
     if (t.type === 'SHEET_REF') {
-      return sheetRef();
+      return sheetRef(t);
     }
 
     // Parenthesized expression
@@ -226,8 +230,8 @@ export function parse(tokens: Token[], namedRanges?: Map<string, string>): ASTNo
     return errorNode(`Unexpected token: ${t.value}`);
   }
 
-  function cellRefOrRange(): ASTNode {
-    const refToken = advance(); // consume the CELL_REF token
+  function cellRefOrRange(refToken: Token): ASTNode {
+    advance(); // consume the CELL_REF token
     const address = parseCellRef(refToken.value);
 
     if (!address) {
@@ -235,7 +239,7 @@ export function parse(tokens: Token[], namedRanges?: Map<string, string>): ASTNo
     }
 
     // Check if followed by COLON for a range
-    if (peek() && peek().type === 'COLON') {
+    if (peek()?.type === 'COLON') {
       advance(); // consume ':'
       const endToken = expect('CELL_REF');
 
@@ -263,8 +267,8 @@ export function parse(tokens: Token[], namedRanges?: Map<string, string>): ASTNo
     };
   }
 
-  function functionCall(): ASTNode {
-    const nameToken = advance(); // consume FUNCTION token
+  function functionCall(nameToken: Token): ASTNode {
+    advance(); // consume FUNCTION token
     const name = nameToken.value.toUpperCase(); // normalize at parse time (avoids per-eval allocation)
 
     if (!expect('LPAREN')) {
@@ -274,10 +278,11 @@ export function parse(tokens: Token[], namedRanges?: Map<string, string>): ASTNo
     const args: ASTNode[] = [];
 
     // Parse comma-separated arguments (if any)
-    if (peek() && peek().type !== 'RPAREN' && peek().type !== 'EOF') {
+    const first = peek();
+    if (first && first.type !== 'RPAREN' && first.type !== 'EOF') {
       args.push(expression());
 
-      while (peek() && peek().type === 'COMMA') {
+      while (peek()?.type === 'COMMA') {
         advance(); // consume ','
         args.push(expression());
       }
@@ -290,8 +295,8 @@ export function parse(tokens: Token[], namedRanges?: Map<string, string>): ASTNo
     return { kind: 'functionCall', name, args };
   }
 
-  function namedRangeRef(): ASTNode {
-    const nameToken = advance(); // consume IDENTIFIER
+  function namedRangeRef(nameToken: Token): ASTNode {
+    advance(); // consume IDENTIFIER
     const name = nameToken.value.toUpperCase();
     const ref = namedRanges?.get(name);
     if (!ref) {
@@ -313,8 +318,8 @@ export function parse(tokens: Token[], namedRanges?: Map<string, string>): ASTNo
     return { kind: 'error', error: new FormulaError('#REF!', `Invalid named range reference: ${ref}`) };
   }
 
-  function sheetRef(): ASTNode {
-    const sheetToken = advance(); // consume SHEET_REF
+  function sheetRef(sheetToken: Token): ASTNode {
+    advance(); // consume SHEET_REF
     const sheetName = sheetToken.value;
 
     // Expect a CELL_REF next
@@ -332,7 +337,7 @@ export function parse(tokens: Token[], namedRanges?: Map<string, string>): ASTNo
     address.sheet = sheetName;
 
     // Check if followed by COLON for a range
-    if (peek() && peek().type === 'COLON') {
+    if (peek()?.type === 'COLON') {
       advance(); // consume ':'
       const endToken = expect('CELL_REF');
       if (!endToken) {
@@ -363,8 +368,9 @@ export function parse(tokens: Token[], namedRanges?: Map<string, string>): ASTNo
   const result = expression();
 
   // Ensure all tokens were consumed (except EOF)
-  if (peek() && peek().type !== 'EOF') {
-    return errorNode(`Unexpected token after expression: ${peek().value}`);
+  const trailing = peek();
+  if (trailing && trailing.type !== 'EOF') {
+    return errorNode(`Unexpected token after expression: ${trailing.value}`);
   }
 
   return result;

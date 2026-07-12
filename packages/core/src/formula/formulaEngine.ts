@@ -383,6 +383,7 @@ export class FormulaEngine {
     let head = 0;
     while (head < queue.length) {
       const current = queue[head++];
+      if (current === undefined) continue;
       const parsed = fromCellKey(current);
       result.push({
         cellKey: current,
@@ -426,6 +427,7 @@ export class FormulaEngine {
     let head = 0;
     while (head < queue.length) {
       const current = queue[head++];
+      if (current === undefined) continue;
       const parsed = fromCellKey(current);
       result.push({
         cellKey: current,

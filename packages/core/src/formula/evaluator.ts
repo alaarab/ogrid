@@ -65,6 +65,21 @@ export function flattenArgs(
   return result;
 }
 
+/**
+ * Evaluate an argument AST node that may be absent under noUncheckedIndexedAccess.
+ * The evaluator enforces minArgs before invoking a function, so a missing required
+ * argument is unreachable at runtime; this returns a FormulaError for type safety
+ * (callers already propagate FormulaError results).
+ */
+export function evalArg(
+  evaluator: IEvaluator,
+  node: ASTNode | undefined,
+  context: IFormulaContext
+): unknown {
+  if (node === undefined) return new FormulaError('#ERROR!', 'Missing argument');
+  return evaluator.evaluate(node, context);
+}
+
 export class FormulaEvaluator implements IEvaluator {
   private functions: Map<string, IFormulaFunction>;
 

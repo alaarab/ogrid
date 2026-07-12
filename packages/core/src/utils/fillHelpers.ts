@@ -87,7 +87,9 @@ export function applyFillValues<T>(
 
   const compatibleCols = new Set<number>();
   for (let col = range.startCol; col <= range.endCol; col++) {
-    if (col < visibleCols.length && areFillCompatible(startColDef, visibleCols[col])) {
+    if (col >= visibleCols.length) continue;
+    const candidate = visibleCols[col];
+    if (candidate !== undefined && areFillCompatible(startColDef, candidate)) {
       compatibleCols.add(col);
     }
   }
@@ -98,6 +100,7 @@ export function applyFillValues<T>(
       if (row >= items.length || !compatibleCols.has(col)) continue;
       const item = items[row];
       const colDef = visibleCols[col];
+      if (item === undefined || colDef === undefined) continue;
       if (!isColumnEditable(colDef, item)) continue;
 
       // Formula-aware path: if source cell has a formula, adjust and propagate it

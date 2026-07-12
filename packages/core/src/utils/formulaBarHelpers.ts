@@ -25,7 +25,10 @@ const CELL_REF_RE = /^\$?([A-Za-z]+)\$?(\d+)$/;
 function parseCellRefCoords(ref: string): { col: number; row: number } | null {
   const m = ref.match(CELL_REF_RE);
   if (!m) return null;
-  return { col: columnLetterToIndex(m[1]), row: parseInt(m[2], 10) - 1 };
+  const letters = m[1];
+  const digits = m[2];
+  if (letters === undefined || digits === undefined) return null;
+  return { col: columnLetterToIndex(letters), row: parseInt(digits, 10) - 1 };
 }
 
 /**
@@ -101,6 +104,7 @@ export function canInsertReference(text: string, cursorPos: number): boolean {
   if (!text.startsWith('=')) return false;
   if (cursorPos <= 1) return true; // Right after '='
   const before = text[cursorPos - 1];
+  if (before === undefined) return false;
   return /[+\-*/^%&=<>(,:\s]/.test(before);
 }
 
@@ -123,7 +127,9 @@ export function insertReferenceAtCursor(
   }
   // Replace the preceding token (e.g., a partial cell ref the user started typing)
   let replaceStart = cursorPos;
-  while (replaceStart > 1 && /[A-Za-z0-9$]/.test(text[replaceStart - 1])) {
+  while (replaceStart > 1) {
+    const ch = text[replaceStart - 1];
+    if (ch !== undefined && !/[A-Za-z0-9$]/.test(ch)) break;
     replaceStart--;
   }
   const newText = text.substring(0, replaceStart) + reference + text.substring(cursorPos);
@@ -138,11 +144,20 @@ export function extractFormulaReferences(formula: string): FormulaReference[] {
     const tokens = tokenize(formula.substring(1));
     for (let i = 0; i < tokens.length; i++) {
       const tok = tokens[i];
+      if (tok === undefined) continue;
       if (tok.type === 'CELL_REF') {
         // Check if next tokens form a range: CELL_REF COLON CELL_REF
-        if (i + 2 < tokens.length && tokens[i + 1].type === 'COLON' && tokens[i + 2].type === 'CELL_REF') {
+        const colonTok = tokens[i + 1];
+        const endTok = tokens[i + 2];
+        if (
+          i + 2 < tokens.length &&
+          colonTok !== undefined &&
+          endTok !== undefined &&
+          colonTok.type === 'COLON' &&
+          endTok.type === 'CELL_REF'
+        ) {
           const start = parseCellRefCoords(tok.value);
-          const end = parseCellRefCoords(tokens[i + 2].value);
+          const end = parseCellRefCoords(endTok.value);
           if (start && end) {
             refs.push({
               type: 'range',

@@ -1,6 +1,6 @@
 import type { IFormulaFunction, IFormulaContext, IEvaluator, ASTNode } from '../../types';
 import { FormulaError } from '../../types';
-import { toNumber, toString } from '../../evaluator';
+import { toNumber, toString, evalArg } from '../../evaluator';
 
 /**
  * Substring search and replacement: SUBSTITUTE, FIND, SEARCH, REPLACE.
@@ -10,20 +10,20 @@ export function registerTextSearchFunctions(registry: Map<string, IFormulaFuncti
     minArgs: 3,
     maxArgs: 4,
     evaluate(args: ASTNode[], context: IFormulaContext, evaluator: IEvaluator): unknown {
-      const val = evaluator.evaluate(args[0], context);
+      const val = evalArg(evaluator, args[0], context);
       if (val instanceof FormulaError) return val;
       const text = toString(val);
 
-      const rawOld = evaluator.evaluate(args[1], context);
+      const rawOld = evalArg(evaluator, args[1], context);
       if (rawOld instanceof FormulaError) return rawOld;
       const oldText = toString(rawOld);
 
-      const rawNew = evaluator.evaluate(args[2], context);
+      const rawNew = evalArg(evaluator, args[2], context);
       if (rawNew instanceof FormulaError) return rawNew;
       const newText = toString(rawNew);
 
       if (args.length >= 4) {
-        const rawInstance = evaluator.evaluate(args[3], context);
+        const rawInstance = evalArg(evaluator, args[3], context);
         if (rawInstance instanceof FormulaError) return rawInstance;
         const instanceNum = toNumber(rawInstance);
         if (instanceNum instanceof FormulaError) return instanceNum;
@@ -64,15 +64,15 @@ export function registerTextSearchFunctions(registry: Map<string, IFormulaFuncti
     minArgs: 2,
     maxArgs: 3,
     evaluate(args: ASTNode[], context: IFormulaContext, evaluator: IEvaluator): unknown {
-      const rawFind = evaluator.evaluate(args[0], context);
+      const rawFind = evalArg(evaluator, args[0], context);
       if (rawFind instanceof FormulaError) return rawFind;
       const findText = toString(rawFind);
-      const rawWithin = evaluator.evaluate(args[1], context);
+      const rawWithin = evalArg(evaluator, args[1], context);
       if (rawWithin instanceof FormulaError) return rawWithin;
       const withinText = toString(rawWithin);
       let startNum = 1;
       if (args.length >= 3) {
-        const rawStart = evaluator.evaluate(args[2], context);
+        const rawStart = evalArg(evaluator, args[2], context);
         if (rawStart instanceof FormulaError) return rawStart;
         const s = toNumber(rawStart);
         if (s instanceof FormulaError) return s;
@@ -89,15 +89,15 @@ export function registerTextSearchFunctions(registry: Map<string, IFormulaFuncti
     minArgs: 2,
     maxArgs: 3,
     evaluate(args: ASTNode[], context: IFormulaContext, evaluator: IEvaluator): unknown {
-      const rawFind = evaluator.evaluate(args[0], context);
+      const rawFind = evalArg(evaluator, args[0], context);
       if (rawFind instanceof FormulaError) return rawFind;
       const findText = toString(rawFind).toLowerCase();
-      const rawWithin = evaluator.evaluate(args[1], context);
+      const rawWithin = evalArg(evaluator, args[1], context);
       if (rawWithin instanceof FormulaError) return rawWithin;
       const withinText = toString(rawWithin).toLowerCase();
       let startNum = 1;
       if (args.length >= 3) {
-        const rawStart = evaluator.evaluate(args[2], context);
+        const rawStart = evalArg(evaluator, args[2], context);
         if (rawStart instanceof FormulaError) return rawStart;
         const s = toNumber(rawStart);
         if (s instanceof FormulaError) return s;
@@ -114,18 +114,18 @@ export function registerTextSearchFunctions(registry: Map<string, IFormulaFuncti
     minArgs: 4,
     maxArgs: 4,
     evaluate(args: ASTNode[], context: IFormulaContext, evaluator: IEvaluator): unknown {
-      const rawText = evaluator.evaluate(args[0], context);
+      const rawText = evalArg(evaluator, args[0], context);
       if (rawText instanceof FormulaError) return rawText;
       const text = toString(rawText);
-      const rawStart = evaluator.evaluate(args[1], context);
+      const rawStart = evalArg(evaluator, args[1], context);
       if (rawStart instanceof FormulaError) return rawStart;
       const startPos = toNumber(rawStart);
       if (startPos instanceof FormulaError) return startPos;
-      const rawNum = evaluator.evaluate(args[2], context);
+      const rawNum = evalArg(evaluator, args[2], context);
       if (rawNum instanceof FormulaError) return rawNum;
       const numChars = toNumber(rawNum);
       if (numChars instanceof FormulaError) return numChars;
-      const rawNew = evaluator.evaluate(args[3], context);
+      const rawNew = evalArg(evaluator, args[3], context);
       if (rawNew instanceof FormulaError) return rawNew;
       const newText = toString(rawNew);
       const start = Math.trunc(startPos) - 1; // 1-based to 0-based
