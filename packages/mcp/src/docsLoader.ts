@@ -72,7 +72,7 @@ const FRONTMATTER_RE = /^---\r?\n([\s\S]*?)\r?\n---/;
 function parseFrontmatter(raw: string): Frontmatter {
   const match = FRONTMATTER_RE.exec(raw);
   if (!match) return { title: '', description: '' };
-  const block = match[1];
+  const block = match[1] ?? '';
   let title = '';
   let description = '';
   for (const line of block.split('\n')) {
@@ -131,7 +131,7 @@ function extractCodeBlocks(raw: string): CodeBlock[] {
   CODE_BLOCK_RE.lastIndex = 0;
   while ((match = CODE_BLOCK_RE.exec(raw)) !== null) {
     const language = match[1] || 'text';
-    const code = match[2].trim();
+    const code = (match[2] ?? '').trim();
 
     // Grab ~300 chars before the code block for TabItem / heading context
     const precedingStart = Math.max(0, match.index - 300);

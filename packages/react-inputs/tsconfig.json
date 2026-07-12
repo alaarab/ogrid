@@ -1,18 +1,16 @@
 {
+  "extends": "../../tsconfig.base.json",
   "compilerOptions": {
-    "target": "ES2020",
-    "module": "ESNext",
-    "moduleResolution": "Bundler",
-    "jsx": "react-jsx",
-    "declaration": true,
     "declarationDir": "dist/types",
     "outDir": "dist/esm",
-    "strict": true,
-    "esModuleInterop": true,
-    "skipLibCheck": true,
-    "types": ["node"],
-    "rootDir": "src"
+    "rootDir": "src",
+    "jsx": "react-jsx",
+    "noUncheckedIndexedAccess": true
   },
-  "include": ["src"],
-  "exclude": ["src/**/__tests__/**"]
+  "include": [
+    "src"
+  ],
+  "exclude": [
+    "**/__tests__/**"
+  ]
 }

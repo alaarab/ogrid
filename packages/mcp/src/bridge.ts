@@ -262,7 +262,7 @@ export function startBridgeServer(
         }
 
         // PUT /grids/:id/state  { ...stateUpdate }
-        if (req.method === 'PUT' && parts[0] === 'grids' && parts[2] === 'state') {
+        if (req.method === 'PUT' && parts[0] === 'grids' && parts[1] != null && parts[2] === 'state') {
           const gridId = parts[1];
           const body = (await readBody(req)) as Record<string, unknown>;
           store.upsertGrid(gridId, body as Partial<GridStateSnapshot>);
@@ -271,7 +271,7 @@ export function startBridgeServer(
         }
 
         // GET /grids/:id/commands
-        if (req.method === 'GET' && parts[0] === 'grids' && parts[2] === 'commands') {
+        if (req.method === 'GET' && parts[0] === 'grids' && parts[1] != null && parts[2] === 'commands') {
           const gridId = parts[1];
           // Heartbeat  -  update lastSeen
           const state = store.getState(gridId);
@@ -286,6 +286,7 @@ export function startBridgeServer(
           req.method === 'POST' &&
           parts[0] === 'grids' &&
           parts[2] === 'commands' &&
+          parts[3] != null &&
           parts[4] === 'result'
         ) {
           const cmdId = parts[3];

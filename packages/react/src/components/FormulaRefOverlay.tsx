@@ -56,7 +56,7 @@ function measureRef(
     left: Math.round(tlRect.left - cRect.left),
     width: Math.round(brRect.right - tlRect.left),
     height: Math.round(brRect.bottom - tlRect.top),
-    color: FORMULA_REF_COLORS[ref.colorIndex % FORMULA_REF_COLORS.length],
+    color: FORMULA_REF_COLORS[ref.colorIndex % FORMULA_REF_COLORS.length] ?? FORMULA_REF_COLORS[0] ?? '#217346',
   };
 }
 

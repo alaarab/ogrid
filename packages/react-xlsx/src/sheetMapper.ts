@@ -176,7 +176,7 @@ export function sheetToGridData(
   // titles. 'none' restores legacy behaviour for callers that want to
   // see all rows as data (e.g. when they strip headers themselves).
   const mode = options.headerRow ?? 'auto';
-  const headerRow = matrix[0];
+  const headerRow = matrix[0] ?? [];
   const promote =
     mode === 'header' ||
     (mode === 'auto' && matrix.length > 1 && looksLikeHeaderRow(headerRow));
@@ -197,7 +197,7 @@ export function sheetToGridData(
     let allBool = true;
     let saw = false;
     for (let r = 0; r < sample; r++) {
-      const v = dataMatrix[r][c];
+      const v = dataMatrix[r]?.[c];
       if (v === '' || v === null || v === undefined) continue;
       saw = true;
       if (typeof v !== 'number') allNum = false;
@@ -222,7 +222,7 @@ export function sheetToGridData(
     const letter = indexToColumnLetter(c);
     columns.push({
       columnId: letter,
-      name: headerNames ? headerNames[c] : letter,
+      name: headerNames ? (headerNames[c] ?? letter) : letter,
       type: types[c],
       sortable: true,
       defaultWidth: 120,

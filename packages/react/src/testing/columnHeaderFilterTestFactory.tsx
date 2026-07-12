@@ -41,7 +41,7 @@ export function createColumnHeaderFilterTests(ColumnHeaderFilter: React.Componen
     render(<ColumnHeaderFilter columnKey="status" columnName="Status" filterType="multiSelect" selectedValues={['Active']} onFilterChange={onFilterChange} options={['Active', 'Closed']} />);
     fireEvent.click(screen.getByRole('button', { name: /filter status/i }));
     const clearButtons = screen.getAllByRole('button', { name: /^clear$/i });
-    fireEvent.click(clearButtons[clearButtons.length - 1]);
+    fireEvent.click(clearButtons[clearButtons.length - 1]!);
     fireEvent.click(screen.getByRole('button', { name: /apply/i }));
     expect(onFilterChange).toHaveBeenCalledWith([]);
   });
@@ -77,7 +77,7 @@ export function createColumnHeaderFilterTests(ColumnHeaderFilter: React.Componen
     await act(async () => { await new Promise((r) => setTimeout(r, 350)); });
     await waitFor(() => { expect(peopleSearch).toHaveBeenCalledWith('ali'); });
     const [suggestion] = await screen.findAllByText('Alice Johnson');
-    fireEvent.click(suggestion);
+    fireEvent.click(suggestion!);
     expect(onUserChange).toHaveBeenCalledWith(expect.objectContaining({ displayName: 'Alice Johnson', email: 'alice@example.com' }));
   });
 

@@ -43,9 +43,10 @@ function detectOGridVersion(searchPath: string): VersionDetectResult {
           .filter(([name]) => name.startsWith('@alaarab/ogrid-'))
           .map(([name, version]) => ({ name, version: String(version) }));
 
-        if (ogridPkgs.length > 0) {
+        const firstPkg = ogridPkgs[0];
+        if (firstPkg) {
           const framework = detectFramework(ogridPkgs.map((p) => p.name));
-          const version = ogridPkgs[0].version.replace(/^[\^~>=<]+/, '');
+          const version = firstPkg.version.replace(/^[\^~>=<]+/, '');
           return { found: true, version, framework, packages: ogridPkgs, packageJsonPath: pkgPath };
         }
       } catch {
@@ -140,10 +141,10 @@ Categories: features, getting-started, guides, api.`,
             ? entry.codeBlocks.filter((b) => !b.framework || b.framework === framework).slice(0, 1)
             : [];
 
-          const codeSnippet =
-            relevantCode.length > 0
-              ? `\n\`\`\`${relevantCode[0].language}\n${relevantCode[0].code.slice(0, 300)}\n\`\`\``
-              : '';
+          const firstCode = relevantCode[0];
+          const codeSnippet = firstCode
+            ? `\n\`\`\`${firstCode.language}\n${firstCode.code.slice(0, 300)}\n\`\`\``
+            : '';
 
           return [
             `## ${i + 1}. ${entry.title}`,

@@ -51,7 +51,7 @@ export function XlsxWorkbookGrid(props: XlsxWorkbookGridProps) {
   // Pick the initial sheet once the workbook is in.
   useEffect(() => {
     if (!sheetNames.length) { setActive(null); return; }
-    const wanted = initialSheet && sheetNames.includes(initialSheet) ? initialSheet : sheetNames[0];
+    const wanted = initialSheet && sheetNames.includes(initialSheet) ? initialSheet : (sheetNames[0] ?? null);
     setActive(wanted);
   }, [sheetNames, initialSheet]);
 

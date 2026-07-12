@@ -36,7 +36,7 @@ export function getTagColor(tag: string, colors: readonly string[] = DEFAULT_TAG
   for (let i = 0; i < tag.length; i++) {
     hash = ((hash << 5) - hash + tag.charCodeAt(i)) | 0;
   }
-  return colors[Math.abs(hash) % colors.length];
+  return colors[Math.abs(hash) % colors.length] ?? DEFAULT_TAG_COLORS[0] ?? '#e2e8f0';
 }
 
 /**

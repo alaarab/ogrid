@@ -448,8 +448,10 @@ export function useOGrid<T>(
   const getRawValue = useCallback((col: number, row: number): unknown => {
     const items = displayItemsRef.current;
     const cols = columnsRef.current;
-    if (row < 0 || row >= items.length || col < 0 || col >= cols.length) return undefined;
-    return getCellValue(items[row], cols[col]);
+    const item = items[row];
+    const colDef = cols[col];
+    if (item === undefined || colDef === undefined) return undefined;
+    return getCellValue(item, colDef);
   }, [displayItemsRef, columnsRef]);
 
   const formulaBarState = useFormulaBar({

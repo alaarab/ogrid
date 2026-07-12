@@ -1,26 +1,32 @@
 {
+  "extends": "../../tsconfig.base.json",
   "compilerOptions": {
-    "target": "ES2020",
-    "module": "ESNext",
-    "moduleResolution": "Bundler",
-    "jsx": "react-jsx",
-    "declaration": true,
     "declarationDir": "dist/types",
     "outDir": "dist/esm",
-    "strict": true,
-    "esModuleInterop": true,
-    "skipLibCheck": true,
-    "types": ["node"],
     "rootDir": "src",
+    "jsx": "react-jsx",
     "paths": {
-      "@alaarab/ogrid-core": ["../core/src/index.ts"],
-      "@alaarab/ogrid-core/formula": ["../core/src/formula/index.ts"],
-      "@alaarab/ogrid-react": ["../react/src/index.ts"],
-      "@alaarab/ogrid-react/testing": ["../react/src/testing/index.ts"],
-      "@alaarab/ogrid-react/storybook": ["../react/src/storybook/index.ts"]
-    }
+      "@alaarab/ogrid-core": [
+        "../core/src/index.ts"
+      ],
+      "@alaarab/ogrid-core/formula": [
+        "../core/src/formula/index.ts"
+      ],
+      "@alaarab/ogrid-react": [
+        "../react/src/index.ts"
+      ],
+      "@alaarab/ogrid-react/testing": [
+        "../react/src/testing/index.ts"
+      ],
+      "@alaarab/ogrid-react/storybook": [
+        "../react/src/storybook/index.ts"
+      ]
+    },
+    "noUncheckedIndexedAccess": true
   },
-  "include": ["src"],
+  "include": [
+    "src"
+  ],
   "exclude": [
     "src/**/__tests__/**",
     "src/**/*.stories.tsx",

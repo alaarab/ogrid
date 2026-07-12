@@ -141,7 +141,8 @@ export function useOGridDataFetching<T>(params: UseOGridDataFetchingParams<T>): 
       // This handles filtering correctly: filtered-in rows are a subset of displayData.
       const indexMap = new Map<T, number>();
       for (let i = 0; i < displayData.length; i++) {
-        indexMap.set(displayData[i], i);
+        const row = displayData[i];
+        if (row !== undefined) indexMap.set(row, i);
       }
       const indices = sorted.map((row) => {
         const idx = indexMap.get(row);
@@ -207,7 +208,8 @@ export function useOGridDataFetching<T>(params: UseOGridDataFetchingParams<T>): 
       const commitRows = (rows: T[]) => {
         const indexMap = new Map<T, number>();
         for (let i = 0; i < displayData.length; i++) {
-          indexMap.set(displayData[i], i);
+          const row = displayData[i];
+          if (row !== undefined) indexMap.set(row, i);
         }
         const indices = rows.map((row) => {
           const idx = indexMap.get(row);

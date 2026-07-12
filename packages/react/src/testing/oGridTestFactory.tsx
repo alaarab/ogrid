@@ -43,7 +43,7 @@ export function createOGridTests(OGrid: React.ComponentType<IOGridProps<FixtureR
     // Deselect "Active" by clicking its checkbox
     const checkboxes = screen.getAllByRole('checkbox');
     // First non-"select all" checkbox is "Active"
-    fireEvent.click(checkboxes[0]);
+    fireEvent.click(checkboxes[0]!);
     fireEvent.click(screen.getByRole('button', { name: /apply/i }));
     expect(screen.getAllByTestId('cell-name').map((el) => el.textContent)).toEqual(['Beta']);
   });
@@ -93,7 +93,7 @@ export function createOGridTests(OGrid: React.ComponentType<IOGridProps<FixtureR
     fireEvent.click(screen.getByRole('button', { name: /select all/i }));
     const filterCheckboxes = screen.getAllByRole('checkbox');
     // Second checkbox is "Closed"
-    fireEvent.click(filterCheckboxes[1]);
+    fireEvent.click(filterCheckboxes[1]!);
     fireEvent.click(screen.getByRole('button', { name: /apply/i }));
     expect(screen.getAllByTestId('cell-name').map((el) => el.textContent)).toEqual(['Alpha', 'Gamma']);
     const rowsSelect = screen.getByLabelText('Rows per page');

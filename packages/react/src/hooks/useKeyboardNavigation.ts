@@ -119,8 +119,10 @@ export function useKeyboardNavigation<T>(
       const dataColIndex = columnIndex - colOffset;
       const shift = e.shiftKey;
       const isEmptyAt = (r: number, c: number): boolean => {
-        if (r < 0 || r >= items.length || c < 0 || c >= visibleCols.length) return true;
-        const v = getCellValue(items[r], visibleCols[c]);
+        const row = items[r];
+        const col = visibleCols[c];
+        if (row === undefined || col === undefined) return true;
+        const v = getCellValue<T>(row, col);
         return v == null || v === '';
       };
 

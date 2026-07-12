@@ -150,7 +150,7 @@ export function BaseColumnHeaderMenu(props: BaseColumnHeaderMenuProps) {
             className={classNames?.item}
             disabled={item.disabled}
             onClick={() => {
-              handlers[item.id]();
+              handlers[item.id]?.();
               onClose();
             }}
           >

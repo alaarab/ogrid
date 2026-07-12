@@ -89,6 +89,7 @@ export const MultiSelectFilterPopover: React.FC<MultiSelectFilterPopoverProps> =
           <div style={{ height: virt.totalHeight, position: 'relative' }}>
             {virt.visibleItems.map(({ index, offsetTop }) => {
               const option = filteredOptions[index];
+              if (option === undefined) return null;
               const isChecked = selected.has(option);
               return (
                 <label

@@ -14,8 +14,8 @@ function filtersEqual(a: Record<string, unknown>, b: Record<string, unknown>): b
   const aKeys = Object.keys(a);
   const bKeys = Object.keys(b);
   if (aKeys.length !== bKeys.length) return false;
-  for (let i = 0; i < bKeys.length; i++) {
-    if (a[bKeys[i]] !== b[bKeys[i]]) return false;
+  for (const key of bKeys) {
+    if (a[key] !== b[key]) return false;
   }
   return true;
 }

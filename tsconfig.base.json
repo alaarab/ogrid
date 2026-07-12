@@ -2,7 +2,7 @@
   "compilerOptions": {
     "target": "ES2020",
     "module": "ESNext",
-    "moduleResolution": "Node",
+    "moduleResolution": "Bundler",
     "ignoreDeprecations": "6.0",
     "declaration": true,
     "strict": true,
@@ -10,6 +10,9 @@
     "skipLibCheck": true,
     "forceConsistentCasingInFileNames": true,
     "resolveJsonModule": true,
-    "isolatedModules": true
+    "isolatedModules": true,
+    "types": [
+      "node"
+    ]
   }
 }

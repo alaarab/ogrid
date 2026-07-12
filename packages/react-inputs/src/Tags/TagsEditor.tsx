@@ -290,14 +290,15 @@ export function TagsEditor<T>(props: ICellEditorProps<T>): React.ReactElement {
       e.stopPropagation();
       if (isMultiSelectMode) {
         // In multi-select mode, Enter toggles the highlighted suggestion or applies
-        if (showSuggestions && highlightedIndex >= 0) {
-          toggleTag(filteredSuggestions[highlightedIndex]);
+        const highlighted = filteredSuggestions[highlightedIndex];
+        if (showSuggestions && highlightedIndex >= 0 && highlighted !== undefined) {
+          toggleTag(highlighted);
         } else if (!showApplyButton) {
           onCommit();
         } else {
           onCommit();
         }
-      } else if (showSuggestions && highlightedIndex >= 0) {
+      } else if (showSuggestions && highlightedIndex >= 0 && filteredSuggestions[highlightedIndex] !== undefined) {
         addTag(filteredSuggestions[highlightedIndex]);
       } else if (inputText.trim()) {
         addTag(inputText);
