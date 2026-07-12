@@ -270,16 +270,17 @@ export function useOGridDataFetching<T>(params: UseOGridDataFetchingParams<T>): 
     // windowed-cache path below, not this page-based fetch effect. A source
     // with no `fetchPage` at all also skips this effect. In either case the
     // page-based path stays idle and clears its loading flag.
-    const pageBased = !!ds && typeof ds.fetchPage === 'function' && !isWindowedDataSource(ds);
-    if (!isServerSide || !pageBased) {
+    const fetchPage = ds && !isWindowedDataSource(ds) && typeof ds.fetchPage === 'function'
+      ? ds.fetchPage.bind(ds)
+      : null;
+    if (!isServerSide || !fetchPage) {
       setServerLoading(false);
       return;
     }
     const id = ++fetchIdRef.current;
     const controller = new AbortController();
     setServerLoading(true);
-    ds!
-      .fetchPage!({
+    fetchPage({
         page, pageSize,
         sort: { field: sort.field, direction: sort.direction },
         filters: stableFilters,

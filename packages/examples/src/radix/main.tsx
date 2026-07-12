@@ -35,8 +35,8 @@ const columns = coerceExampleColumns(isPremiumExample
 function App() {
   const [data, setData] = useState<ExampleRow[]>(initialRows);
   const apiRef = useRef<IOGridApi<unknown> | null>(null);
-  const gridDataProps = !isPremiumExample && projectScenario.serverSide
-    ? { dataSource: coerceExampleDataSource(projectScenario.dataSource!) }
+  const gridDataProps = !isPremiumExample && projectScenario.serverSide && projectScenario.dataSource
+    ? { dataSource: coerceExampleDataSource(projectScenario.dataSource) }
     : { data };
 
   const onCellValueChanged = useCallback((event: { item: ExampleRow; columnId?: string; field?: string; newValue: unknown }) => {
