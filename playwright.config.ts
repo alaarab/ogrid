@@ -4,20 +4,12 @@ import { allBrowserProjects, allBrowserServers, defaultBrowserUse } from './play
 /**
  * Playwright E2E configuration for OGrid.
  *
- * Tests run against all example apps:
- *   - React Fluent      on port 3001
- *   - React Material    on port 3002
- *   - React Radix       on port 3003
- *   - Angular Radix     on port 3010
- *   - Angular Material  on port 3011
- *   - Angular PrimeNG   on port 3012
- *   - Vue Radix         on port 3020
- *   - Vue Vuetify       on port 3021
- *   - Vue PrimeVue      on port 3022
- *   - Vanilla JS        on port 3030
+ * Tests run against the example apps defined in playwright.shared.ts:
+ *   - React Fluent  on port 3001
+ *   - React Radix   on port 3003
  *
- * Each project shares the same test suite in e2e/  -  tests are parameterised
- * via baseURL so identical user-journeys are verified across every framework.
+ * Both projects share the same test suite in e2e/  -  tests are parameterised
+ * via baseURL so identical user-journeys are verified across both UI kits.
  */
 const filteredProjectNames = process.env.OGRID_PLAYWRIGHT_PROJECTS
   ?.split(',')
