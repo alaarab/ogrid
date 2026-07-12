@@ -7,31 +7,40 @@ export function registerLookupFunctions(registry: Map<string, IFormulaFunction>)
     minArgs: 3,
     maxArgs: 4,
     evaluate(args: ASTNode[], context: IFormulaContext, evaluator: IEvaluator): unknown {
+      const lookupArg = args[0];
+      const tableArg = args[1];
+      const colArg = args[2];
+      if (lookupArg === undefined || colArg === undefined) {
+        return new FormulaError('#VALUE!', 'VLOOKUP requires lookup_value, table_array, and col_index');
+      }
+
       // Arg 0: lookup value
-      const lookupValue = evaluator.evaluate(args[0], context);
+      const lookupValue = evaluator.evaluate(lookupArg, context);
       if (lookupValue instanceof FormulaError) return lookupValue;
 
       // Arg 1: table range (must be a RangeNode)
-      if (args[1].kind !== 'range') {
+      if (tableArg === undefined || tableArg.kind !== 'range') {
         return new FormulaError('#VALUE!', 'VLOOKUP table_array must be a range');
       }
-      const tableData = context.getRangeValues({ start: args[1].start, end: args[1].end });
+      const tableData = context.getRangeValues({ start: tableArg.start, end: tableArg.end });
 
       // Arg 2: column index (1-based)
-      const rawColIndex = evaluator.evaluate(args[2], context);
+      const rawColIndex = evaluator.evaluate(colArg, context);
       if (rawColIndex instanceof FormulaError) return rawColIndex;
       const colIndex = toNumber(rawColIndex);
       if (colIndex instanceof FormulaError) return colIndex;
 
       if (colIndex < 1) return new FormulaError('#VALUE!', 'VLOOKUP col_index must be >= 1');
-      if (tableData.length > 0 && colIndex > tableData[0].length) {
+      const firstTableRow = tableData[0];
+      if (firstTableRow !== undefined && colIndex > firstTableRow.length) {
         return new FormulaError('#REF!', 'VLOOKUP col_index exceeds table columns');
       }
 
       // Arg 3: range_lookup (default true = approximate match)
       let rangeLookup = true;
-      if (args.length >= 4) {
-        const rawRL = evaluator.evaluate(args[3], context);
+      const rlArg = args[3];
+      if (rlArg !== undefined) {
+        const rawRL = evaluator.evaluate(rlArg, context);
         if (rawRL instanceof FormulaError) return rawRL;
         rangeLookup = !!rawRL;
       }
@@ -46,7 +55,7 @@ export function registerLookupFunctions(registry: Map<string, IFormulaFunction>)
         // Find largest value <= lookupValue
         let bestRow = -1;
         for (let r = 0; r < tableData.length; r++) {
-          const cellVal = tableData[r][0];
+          const cellVal = tableData[r]?.[0];
           if (cellVal === null || cellVal === undefined) continue;
           if (typeof lookupValue === 'number' && typeof cellVal === 'number') {
             if (cellVal <= lookupValue) bestRow = r;
@@ -57,17 +66,17 @@ export function registerLookupFunctions(registry: Map<string, IFormulaFunction>)
           }
         }
         if (bestRow === -1) return new FormulaError('#N/A', 'VLOOKUP no match found');
-        return tableData[bestRow][col] ?? null;
+        return tableData[bestRow]?.[col] ?? null;
       } else {
         // Exact match
         for (let r = 0; r < tableData.length; r++) {
-          const cellVal = tableData[r][0];
+          const cellVal = tableData[r]?.[0];
           if (lookupLower !== null && typeof cellVal === 'string') {
             if (cellVal.toLowerCase() === lookupLower) {
-              return tableData[r][col] ?? null;
+              return tableData[r]?.[col] ?? null;
             }
           } else if (cellVal === lookupValue) {
-            return tableData[r][col] ?? null;
+            return tableData[r]?.[col] ?? null;
           }
         }
         return new FormulaError('#N/A', 'VLOOKUP no exact match found');
@@ -80,21 +89,27 @@ export function registerLookupFunctions(registry: Map<string, IFormulaFunction>)
     maxArgs: 3,
     evaluate(args: ASTNode[], context: IFormulaContext, evaluator: IEvaluator): unknown {
       // Arg 0: range
-      if (args[0].kind !== 'range') {
+      const rangeArg = args[0];
+      if (rangeArg === undefined || rangeArg.kind !== 'range') {
         return new FormulaError('#VALUE!', 'INDEX first argument must be a range');
       }
-      const rangeData = context.getRangeValues({ start: args[0].start, end: args[0].end });
+      const rangeData = context.getRangeValues({ start: rangeArg.start, end: rangeArg.end });
 
       // Arg 1: row number (1-based)
-      const rawRow = evaluator.evaluate(args[1], context);
+      const rowArg = args[1];
+      if (rowArg === undefined) {
+        return new FormulaError('#VALUE!', 'INDEX requires a row number');
+      }
+      const rawRow = evaluator.evaluate(rowArg, context);
       if (rawRow instanceof FormulaError) return rawRow;
       const rowNum = toNumber(rawRow);
       if (rowNum instanceof FormulaError) return rowNum;
 
       // Arg 2: column number (1-based, optional, default 1)
       let colNum = 1;
-      if (args.length >= 3) {
-        const rawCol = evaluator.evaluate(args[2], context);
+      const colArg = args[2];
+      if (colArg !== undefined) {
+        const rawCol = evaluator.evaluate(colArg, context);
         if (rawCol instanceof FormulaError) return rawCol;
         const c = toNumber(rawCol);
         if (c instanceof FormulaError) return c;
@@ -107,11 +122,12 @@ export function registerLookupFunctions(registry: Map<string, IFormulaFunction>)
       if (r < 0 || r >= rangeData.length) {
         return new FormulaError('#REF!', 'INDEX row out of bounds');
       }
-      if (c < 0 || (rangeData.length > 0 && c >= rangeData[0].length)) {
+      const firstRangeRow = rangeData[0];
+      if (c < 0 || (firstRangeRow !== undefined && c >= firstRangeRow.length)) {
         return new FormulaError('#REF!', 'INDEX column out of bounds');
       }
 
-      return rangeData[r][c] ?? null;
+      return rangeData[r]?.[c] ?? null;
     },
   });
 
@@ -119,13 +135,19 @@ export function registerLookupFunctions(registry: Map<string, IFormulaFunction>)
     minArgs: 3,
     maxArgs: 4,
     evaluate(args: ASTNode[], context: IFormulaContext, evaluator: IEvaluator): unknown {
-      const lookupValue = evaluator.evaluate(args[0], context);
+      const lookupArg = args[0];
+      const tableArg = args[1];
+      const rowIdxArg = args[2];
+      if (lookupArg === undefined || rowIdxArg === undefined) {
+        return new FormulaError('#VALUE!', 'HLOOKUP requires lookup_value, table_array, and row_index');
+      }
+      const lookupValue = evaluator.evaluate(lookupArg, context);
       if (lookupValue instanceof FormulaError) return lookupValue;
-      if (args[1].kind !== 'range') {
+      if (tableArg === undefined || tableArg.kind !== 'range') {
         return new FormulaError('#VALUE!', 'HLOOKUP table_array must be a range');
       }
-      const tableData = context.getRangeValues({ start: args[1].start, end: args[1].end });
-      const rawRowIndex = evaluator.evaluate(args[2], context);
+      const tableData = context.getRangeValues({ start: tableArg.start, end: tableArg.end });
+      const rawRowIndex = evaluator.evaluate(rowIdxArg, context);
       if (rawRowIndex instanceof FormulaError) return rawRowIndex;
       const rowIndex = toNumber(rawRowIndex);
       if (rowIndex instanceof FormulaError) return rowIndex;
@@ -134,8 +156,9 @@ export function registerLookupFunctions(registry: Map<string, IFormulaFunction>)
         return new FormulaError('#REF!', 'HLOOKUP row_index exceeds table rows');
       }
       let rangeLookup = true;
-      if (args.length >= 4) {
-        const rawRL = evaluator.evaluate(args[3], context);
+      const rlArg = args[3];
+      if (rlArg !== undefined) {
+        const rawRL = evaluator.evaluate(rlArg, context);
         if (rawRL instanceof FormulaError) return rawRL;
         rangeLookup = !!rawRL;
       }
@@ -157,14 +180,14 @@ export function registerLookupFunctions(registry: Map<string, IFormulaFunction>)
           }
         }
         if (bestCol === -1) return new FormulaError('#N/A', 'HLOOKUP no match found');
-        return tableData[row][bestCol] ?? null;
+        return tableData[row]?.[bestCol] ?? null;
       } else {
         for (let c = 0; c < firstRow.length; c++) {
           const cellVal = firstRow[c];
           if (lookupLower !== null && typeof cellVal === 'string') {
-            if (cellVal.toLowerCase() === lookupLower) return tableData[row][c] ?? null;
+            if (cellVal.toLowerCase() === lookupLower) return tableData[row]?.[c] ?? null;
           } else if (cellVal === lookupValue) {
-            return tableData[row][c] ?? null;
+            return tableData[row]?.[c] ?? null;
           }
         }
         return new FormulaError('#N/A', 'HLOOKUP no exact match found');
@@ -176,27 +199,35 @@ export function registerLookupFunctions(registry: Map<string, IFormulaFunction>)
     minArgs: 3,
     maxArgs: 6,
     evaluate(args: ASTNode[], context: IFormulaContext, evaluator: IEvaluator): unknown {
-      const lookupValue = evaluator.evaluate(args[0], context);
+      const lookupArg = args[0];
+      if (lookupArg === undefined) {
+        return new FormulaError('#VALUE!', 'XLOOKUP requires lookup_value, lookup_array, and return_array');
+      }
+      const lookupValue = evaluator.evaluate(lookupArg, context);
       if (lookupValue instanceof FormulaError) return lookupValue;
       // lookup_array
-      if (args[1].kind !== 'range') {
+      const lookupArrayArg = args[1];
+      if (lookupArrayArg === undefined || lookupArrayArg.kind !== 'range') {
         return new FormulaError('#VALUE!', 'XLOOKUP lookup_array must be a range');
       }
-      const lookupArray = context.getRangeValues({ start: args[1].start, end: args[1].end });
+      const lookupArray = context.getRangeValues({ start: lookupArrayArg.start, end: lookupArrayArg.end });
       // return_array
-      if (args[2].kind !== 'range') {
+      const returnArrayArg = args[2];
+      if (returnArrayArg === undefined || returnArrayArg.kind !== 'range') {
         return new FormulaError('#VALUE!', 'XLOOKUP return_array must be a range');
       }
-      const returnArray = context.getRangeValues({ start: args[2].start, end: args[2].end });
+      const returnArray = context.getRangeValues({ start: returnArrayArg.start, end: returnArrayArg.end });
       // if_not_found (optional)
       let ifNotFound: unknown = new FormulaError('#N/A', 'XLOOKUP no match found');
-      if (args.length >= 4) {
-        ifNotFound = evaluator.evaluate(args[3], context);
+      const infArg = args[3];
+      if (infArg !== undefined) {
+        ifNotFound = evaluator.evaluate(infArg, context);
       }
       // match_mode: 0=exact, -1=exact or next smaller, 1=exact or next larger
       let matchMode = 0;
-      if (args.length >= 5) {
-        const rawMM = evaluator.evaluate(args[4], context);
+      const mmArg = args[4];
+      if (mmArg !== undefined) {
+        const rawMM = evaluator.evaluate(mmArg, context);
         if (rawMM instanceof FormulaError) return rawMM;
         const mm = toNumber(rawMM);
         if (mm instanceof FormulaError) return mm;
@@ -204,8 +235,9 @@ export function registerLookupFunctions(registry: Map<string, IFormulaFunction>)
       }
       // search_mode: 1=first-to-last, -1=last-to-first
       let searchMode = 1;
-      if (args.length >= 6) {
-        const rawSM = evaluator.evaluate(args[5], context);
+      const smArg = args[5];
+      if (smArg !== undefined) {
+        const rawSM = evaluator.evaluate(smArg, context);
         if (rawSM instanceof FormulaError) return rawSM;
         const sm = toNumber(rawSM);
         if (sm instanceof FormulaError) return sm;
@@ -213,8 +245,8 @@ export function registerLookupFunctions(registry: Map<string, IFormulaFunction>)
       }
       // Flatten lookup array to 1D
       const isRow = lookupArray.length === 1;
-      const len = isRow ? lookupArray[0].length : lookupArray.length;
-      const getVal = isRow ? (i: number) => lookupArray[0][i] : (i: number) => lookupArray[i][0];
+      const len = isRow ? (lookupArray[0]?.length ?? 0) : lookupArray.length;
+      const getVal = isRow ? (i: number) => lookupArray[0]?.[i] : (i: number) => lookupArray[i]?.[0];
       const lookupLower = typeof lookupValue === 'string' ? lookupValue.toLowerCase() : null;
 
       const eq = (a: unknown, b: unknown): boolean => {
@@ -258,7 +290,7 @@ export function registerLookupFunctions(registry: Map<string, IFormulaFunction>)
       if (foundIdx === -1) return ifNotFound;
       // Return from return_array at same position
       const isReturnRow = returnArray.length === 1;
-      if (isReturnRow) return returnArray[0][foundIdx] ?? null;
+      if (isReturnRow) return returnArray[0]?.[foundIdx] ?? null;
       return returnArray[foundIdx]?.[0] ?? null;
     },
   });
@@ -268,28 +300,34 @@ export function registerLookupFunctions(registry: Map<string, IFormulaFunction>)
     maxArgs: 3,
     evaluate(args: ASTNode[], context: IFormulaContext, evaluator: IEvaluator): unknown {
       // Arg 0: lookup value
-      const lookupValue = evaluator.evaluate(args[0], context);
+      const lookupArg = args[0];
+      if (lookupArg === undefined) {
+        return new FormulaError('#VALUE!', 'MATCH requires lookup_value and lookup_array');
+      }
+      const lookupValue = evaluator.evaluate(lookupArg, context);
       if (lookupValue instanceof FormulaError) return lookupValue;
 
       // Arg 1: lookup range (must be a RangeNode, should be 1D)
-      if (args[1].kind !== 'range') {
+      const rangeArg = args[1];
+      if (rangeArg === undefined || rangeArg.kind !== 'range') {
         return new FormulaError('#VALUE!', 'MATCH lookup_array must be a range');
       }
-      const rangeData = context.getRangeValues({ start: args[1].start, end: args[1].end });
+      const rangeData = context.getRangeValues({ start: rangeArg.start, end: rangeArg.end });
 
       // Flatten to a 1D array (take first column if multi-column, or first row if single-row)
       // For column ranges, access rangeData[i][0] directly to avoid intermediate array allocation
       const isSingleRow = rangeData.length === 1;
-      const values = isSingleRow ? rangeData[0] : rangeData;
+      const values = isSingleRow ? (rangeData[0] ?? []) : rangeData;
       const getValue = isSingleRow
         ? (i: number) => (values as unknown[])[i]
-        : (i: number) => (values as unknown[][])[i][0];
+        : (i: number) => (values as unknown[][])[i]?.[0];
       const valuesLength = isSingleRow ? (values as unknown[]).length : (values as unknown[][]).length;
 
       // Arg 2: match_type (default 1)
       let matchType = 1;
-      if (args.length >= 3) {
-        const rawMT = evaluator.evaluate(args[2], context);
+      const mtArg = args[2];
+      if (mtArg !== undefined) {
+        const rawMT = evaluator.evaluate(mtArg, context);
         if (rawMT instanceof FormulaError) return rawMT;
         const mt = toNumber(rawMT);
         if (mt instanceof FormulaError) return mt;

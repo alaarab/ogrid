@@ -106,7 +106,9 @@ export function buildHeaderRows<T>(
       if (isColumnGroupDef(c)) {
         const leafCount = countVisibleLeaves(c.children);
         if (leafCount === 0) continue; // Skip empty groups
-        rows[depth].push({
+        const groupRow = rows[depth];
+        if (groupRow === undefined) continue;
+        groupRow.push({
           label: c.headerName,
           colSpan: leafCount,
           isGroup: true,
@@ -118,7 +120,9 @@ export function buildHeaderRows<T>(
         // Leaf column: place it at the current depth.
         // If depth < maxDepth, the rendering layer should use rowSpan to stretch
         // this cell down to the bottom row.
-        rows[depth].push({
+        const leafRow = rows[depth];
+        if (leafRow === undefined) continue;
+        leafRow.push({
           label: c.name,
           colSpan: 1,
           isGroup: false,

@@ -57,7 +57,9 @@ export function validateRowIds<T>(items: T[], getRowId: ((item: T) => RowId) | n
   const ids = new Set<RowId>();
   const limit = Math.min(items.length, 100);
   for (let i = 0; i < limit; i++) {
-    const id = getRowId(items[i]);
+    const item = items[i];
+    if (item === undefined) continue;
+    const id = getRowId(item);
     if (id == null) {
       console.warn(`[OGrid] getRowId returned null/undefined for row ${i}`);
       return;

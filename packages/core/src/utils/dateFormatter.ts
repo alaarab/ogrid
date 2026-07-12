@@ -116,6 +116,7 @@ export function parseUserInputDate(input: string, format: string): Date | null {
     year = currentYear;
   } else if (parts.length === 1) {
     const raw = parts[0];
+    if (raw === undefined) return null;
     if (/^\d+$/.test(raw)) {
       if (raw.length === 8) {
         // YYYYMMDD

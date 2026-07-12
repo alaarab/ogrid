@@ -1,6 +1,6 @@
 import type { IFormulaFunction, IFormulaContext, IEvaluator, ASTNode } from '../../types';
 import { FormulaError } from '../../types';
-import { toNumber } from '../../evaluator';
+import { toNumber, evalArg } from '../../evaluator';
 import { toDate, isLeapYear, parseWeekendNumber } from './shared';
 
 /**
@@ -12,15 +12,15 @@ export function registerDateArithmeticFunctions(registry: Map<string, IFormulaFu
     minArgs: 3,
     maxArgs: 3,
     evaluate(args: ASTNode[], context: IFormulaContext, evaluator: IEvaluator): unknown {
-      const rawStart = evaluator.evaluate(args[0], context);
+      const rawStart = evalArg(evaluator, args[0], context);
       if (rawStart instanceof FormulaError) return rawStart;
       const startDate = toDate(rawStart);
       if (startDate instanceof FormulaError) return startDate;
-      const rawEnd = evaluator.evaluate(args[1], context);
+      const rawEnd = evalArg(evaluator, args[1], context);
       if (rawEnd instanceof FormulaError) return rawEnd;
       const endDate = toDate(rawEnd);
       if (endDate instanceof FormulaError) return endDate;
-      const rawUnit = evaluator.evaluate(args[2], context);
+      const rawUnit = evalArg(evaluator, args[2], context);
       if (rawUnit instanceof FormulaError) return rawUnit;
       const unit = String(rawUnit).toUpperCase();
       if (startDate > endDate) return new FormulaError('#NUM!', 'DATEDIF start date must be <= end date');
@@ -50,11 +50,11 @@ export function registerDateArithmeticFunctions(registry: Map<string, IFormulaFu
     minArgs: 2,
     maxArgs: 2,
     evaluate(args: ASTNode[], context: IFormulaContext, evaluator: IEvaluator): unknown {
-      const rawDate = evaluator.evaluate(args[0], context);
+      const rawDate = evalArg(evaluator, args[0], context);
       if (rawDate instanceof FormulaError) return rawDate;
       const date = toDate(rawDate);
       if (date instanceof FormulaError) return date;
-      const rawMonths = evaluator.evaluate(args[1], context);
+      const rawMonths = evalArg(evaluator, args[1], context);
       if (rawMonths instanceof FormulaError) return rawMonths;
       const months = toNumber(rawMonths);
       if (months instanceof FormulaError) return months;
@@ -76,11 +76,11 @@ export function registerDateArithmeticFunctions(registry: Map<string, IFormulaFu
     minArgs: 2,
     maxArgs: 2,
     evaluate(args: ASTNode[], context: IFormulaContext, evaluator: IEvaluator): unknown {
-      const rawDate = evaluator.evaluate(args[0], context);
+      const rawDate = evalArg(evaluator, args[0], context);
       if (rawDate instanceof FormulaError) return rawDate;
       const date = toDate(rawDate);
       if (date instanceof FormulaError) return date;
-      const rawMonths = evaluator.evaluate(args[1], context);
+      const rawMonths = evalArg(evaluator, args[1], context);
       if (rawMonths instanceof FormulaError) return rawMonths;
       const months = toNumber(rawMonths);
       if (months instanceof FormulaError) return months;
@@ -94,11 +94,11 @@ export function registerDateArithmeticFunctions(registry: Map<string, IFormulaFu
     minArgs: 2,
     maxArgs: 2,
     evaluate(args: ASTNode[], context: IFormulaContext, evaluator: IEvaluator): unknown {
-      const rawStart = evaluator.evaluate(args[0], context);
+      const rawStart = evalArg(evaluator, args[0], context);
       if (rawStart instanceof FormulaError) return rawStart;
       const startDate = toDate(rawStart);
       if (startDate instanceof FormulaError) return startDate;
-      const rawEnd = evaluator.evaluate(args[1], context);
+      const rawEnd = evalArg(evaluator, args[1], context);
       if (rawEnd instanceof FormulaError) return rawEnd;
       const endDate = toDate(rawEnd);
       if (endDate instanceof FormulaError) return endDate;
@@ -122,11 +122,11 @@ export function registerDateArithmeticFunctions(registry: Map<string, IFormulaFu
     minArgs: 2,
     maxArgs: 2,
     evaluate(args: ASTNode[], context: IFormulaContext, evaluator: IEvaluator): unknown {
-      const rawEnd = evaluator.evaluate(args[0], context);
+      const rawEnd = evalArg(evaluator, args[0], context);
       if (rawEnd instanceof FormulaError) return rawEnd;
       const endDate = toDate(rawEnd);
       if (endDate instanceof FormulaError) return endDate;
-      const rawStart = evaluator.evaluate(args[1], context);
+      const rawStart = evalArg(evaluator, args[1], context);
       if (rawStart instanceof FormulaError) return rawStart;
       const startDate = toDate(rawStart);
       if (startDate instanceof FormulaError) return startDate;
@@ -141,18 +141,18 @@ export function registerDateArithmeticFunctions(registry: Map<string, IFormulaFu
     minArgs: 2,
     maxArgs: 3,
     evaluate(args: ASTNode[], context: IFormulaContext, evaluator: IEvaluator): unknown {
-      const rawStart = evaluator.evaluate(args[0], context);
+      const rawStart = evalArg(evaluator, args[0], context);
       if (rawStart instanceof FormulaError) return rawStart;
       const startDate = toDate(rawStart);
       if (startDate instanceof FormulaError) return startDate;
-      const rawEnd = evaluator.evaluate(args[1], context);
+      const rawEnd = evalArg(evaluator, args[1], context);
       if (rawEnd instanceof FormulaError) return rawEnd;
       const endDate = toDate(rawEnd);
       if (endDate instanceof FormulaError) return endDate;
 
       let method = false;
       if (args.length >= 3) {
-        const rawMethod = evaluator.evaluate(args[2], context);
+        const rawMethod = evalArg(evaluator, args[2], context);
         if (rawMethod instanceof FormulaError) return rawMethod;
         method = !!rawMethod;
       }
@@ -183,7 +183,7 @@ export function registerDateArithmeticFunctions(registry: Map<string, IFormulaFu
     minArgs: 1,
     maxArgs: 1,
     evaluate(args: ASTNode[], context: IFormulaContext, evaluator: IEvaluator): unknown {
-      const rawDate = evaluator.evaluate(args[0], context);
+      const rawDate = evalArg(evaluator, args[0], context);
       if (rawDate instanceof FormulaError) return rawDate;
       const date = toDate(rawDate);
       if (date instanceof FormulaError) return date;
@@ -202,18 +202,18 @@ export function registerDateArithmeticFunctions(registry: Map<string, IFormulaFu
     minArgs: 2,
     maxArgs: 3,
     evaluate(args: ASTNode[], context: IFormulaContext, evaluator: IEvaluator): unknown {
-      const rawStart = evaluator.evaluate(args[0], context);
+      const rawStart = evalArg(evaluator, args[0], context);
       if (rawStart instanceof FormulaError) return rawStart;
       const startDate = toDate(rawStart);
       if (startDate instanceof FormulaError) return startDate;
-      const rawEnd = evaluator.evaluate(args[1], context);
+      const rawEnd = evalArg(evaluator, args[1], context);
       if (rawEnd instanceof FormulaError) return rawEnd;
       const endDate = toDate(rawEnd);
       if (endDate instanceof FormulaError) return endDate;
 
       let basis = 0;
       if (args.length >= 3) {
-        const rawBasis = evaluator.evaluate(args[2], context);
+        const rawBasis = evalArg(evaluator, args[2], context);
         if (rawBasis instanceof FormulaError) return rawBasis;
         const b = toNumber(rawBasis);
         if (b instanceof FormulaError) return b;
@@ -261,11 +261,11 @@ export function registerDateArithmeticFunctions(registry: Map<string, IFormulaFu
     minArgs: 2,
     maxArgs: 3,
     evaluate(args: ASTNode[], context: IFormulaContext, evaluator: IEvaluator): unknown {
-      const rawStart = evaluator.evaluate(args[0], context);
+      const rawStart = evalArg(evaluator, args[0], context);
       if (rawStart instanceof FormulaError) return rawStart;
       const startDate = toDate(rawStart);
       if (startDate instanceof FormulaError) return startDate;
-      const rawDays = evaluator.evaluate(args[1], context);
+      const rawDays = evalArg(evaluator, args[1], context);
       if (rawDays instanceof FormulaError) return rawDays;
       const daysNum = toNumber(rawDays);
       if (daysNum instanceof FormulaError) return daysNum;
@@ -273,8 +273,8 @@ export function registerDateArithmeticFunctions(registry: Map<string, IFormulaFu
 
       // Build holiday set (as UTC date strings for comparison)
       const holidaySet = new Set<string>();
-      if (args.length >= 3) {
-        const rawHol = args[2];
+      const rawHol = args[2];
+      if (rawHol !== undefined) {
         let holVals: unknown[];
         if (rawHol.kind === 'range') {
           holVals = context.getRangeValues({ start: rawHol.start, end: rawHol.end }).flat();
@@ -310,11 +310,11 @@ export function registerDateArithmeticFunctions(registry: Map<string, IFormulaFu
     minArgs: 2,
     maxArgs: 4,
     evaluate(args: ASTNode[], context: IFormulaContext, evaluator: IEvaluator): unknown {
-      const rawStart = evaluator.evaluate(args[0], context);
+      const rawStart = evalArg(evaluator, args[0], context);
       if (rawStart instanceof FormulaError) return rawStart;
       const startDate = toDate(rawStart);
       if (startDate instanceof FormulaError) return startDate;
-      const rawDays = evaluator.evaluate(args[1], context);
+      const rawDays = evalArg(evaluator, args[1], context);
       if (rawDays instanceof FormulaError) return rawDays;
       const daysNum = toNumber(rawDays);
       if (daysNum instanceof FormulaError) return daysNum;
@@ -323,7 +323,7 @@ export function registerDateArithmeticFunctions(registry: Map<string, IFormulaFu
       // Parse weekend mask: "0000011" string or Excel weekend number 1-17
       let weekendMask = [false, false, false, false, false, true, true]; // Mon-Sun, default Sat+Sun
       if (args.length >= 3) {
-        const rawWeekend = evaluator.evaluate(args[2], context);
+        const rawWeekend = evalArg(evaluator, args[2], context);
         if (rawWeekend instanceof FormulaError) return rawWeekend;
         if (typeof rawWeekend === 'string' && /^[01]{7}$/.test(rawWeekend)) {
           weekendMask = rawWeekend.split('').map(c => c === '1');
@@ -338,8 +338,8 @@ export function registerDateArithmeticFunctions(registry: Map<string, IFormulaFu
 
       // Build holiday set
       const holidaySet = new Set<string>();
-      if (args.length >= 4) {
-        const rawHol = args[3];
+      const rawHol = args[3];
+      if (rawHol !== undefined) {
         let holVals: unknown[];
         if (rawHol.kind === 'range') {
           holVals = context.getRangeValues({ start: rawHol.start, end: rawHol.end }).flat();

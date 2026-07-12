@@ -3,6 +3,26 @@ import { FormulaError } from './types';
 
 const CELL_REF_PATTERN = /^\$?[A-Za-z]+\$?\d+$/;
 
+/** True when c is a digit '0'-'9'. Undefined (out-of-range index) is false. */
+function isDigit(c: string | undefined): c is string {
+  return c !== undefined && c >= '0' && c <= '9';
+}
+
+/** True when c is an ASCII letter. Undefined (out-of-range index) is false. */
+function isLetter(c: string | undefined): c is string {
+  return c !== undefined && ((c >= 'A' && c <= 'Z') || (c >= 'a' && c <= 'z'));
+}
+
+/** True when c is a letter, digit, '$' or '_'. Undefined (out-of-range index) is false. */
+function isIdentChar(c: string | undefined): c is string {
+  return isLetter(c) || isDigit(c) || c === '$' || c === '_';
+}
+
+/** True when c is a letter, digit or '_'. Undefined (out-of-range index) is false. */
+function isWordChar(c: string | undefined): c is string {
+  return isLetter(c) || isDigit(c) || c === '_';
+}
+
 const SINGLE_CHAR_OPERATORS: Record<string, TokenType> = {
   '+': 'PLUS',
   '-': 'MINUS',
@@ -32,6 +52,7 @@ export function tokenize(input: string): Token[] {
 
   while (pos < input.length) {
     const ch = input[pos];
+    if (ch === undefined) break; // unreachable: pos < input.length guarantees a character
 
     // 1. Whitespace  -  skip
     if (ch === ' ' || ch === '\t' || ch === '\r' || ch === '\n') {
@@ -40,14 +61,14 @@ export function tokenize(input: string): Token[] {
     }
 
     // 2. Numbers  -  \d+(\.\d+)? including leading '.' (like .5)
-    if (ch >= '0' && ch <= '9' || (ch === '.' && pos + 1 < input.length && input[pos + 1] >= '0' && input[pos + 1] <= '9')) {
+    if (isDigit(ch) || (ch === '.' && isDigit(input[pos + 1]))) {
       const start = pos;
-      while (pos < input.length && input[pos] >= '0' && input[pos] <= '9') {
+      while (isDigit(input[pos])) {
         pos++;
       }
       if (pos < input.length && input[pos] === '.') {
         pos++;
-        while (pos < input.length && input[pos] >= '0' && input[pos] <= '9') {
+        while (isDigit(input[pos])) {
           pos++;
         }
       }
@@ -133,49 +154,33 @@ export function tokenize(input: string): Token[] {
       continue;
     }
 
-    if (SINGLE_CHAR_OPERATORS[ch]) {
-      tokens.push({ type: SINGLE_CHAR_OPERATORS[ch], value: ch, position: pos });
+    const operatorType = SINGLE_CHAR_OPERATORS[ch];
+    if (operatorType) {
+      tokens.push({ type: operatorType, value: ch, position: pos });
       pos++;
       continue;
     }
 
     // 6. Delimiters  -  (, ), ,, :
-    if (DELIMITERS[ch]) {
-      tokens.push({ type: DELIMITERS[ch], value: ch, position: pos });
+    const delimiterType = DELIMITERS[ch];
+    if (delimiterType) {
+      tokens.push({ type: delimiterType, value: ch, position: pos });
       pos++;
       continue;
     }
 
     // 7. Cell references / identifiers  -  start with $ or letter
-    if (ch === '$' || (ch >= 'A' && ch <= 'Z') || (ch >= 'a' && ch <= 'z')) {
+    if (ch === '$' || isLetter(ch)) {
       const start = pos;
       // Consume identifier: letters, digits, $, _
-      while (
-        pos < input.length &&
-        ((input[pos] >= 'A' && input[pos] <= 'Z') ||
-          (input[pos] >= 'a' && input[pos] <= 'z') ||
-          (input[pos] >= '0' && input[pos] <= '9') ||
-          input[pos] === '$' ||
-          input[pos] === '_')
-      ) {
+      while (isIdentChar(input[pos])) {
         pos++;
       }
       // Allow a single dot in function names (e.g. STDEV.S, PERCENTILE.INC)
       // Only consume the dot if it is followed by more letters (not a decimal number)
-      if (
-        pos < input.length &&
-        input[pos] === '.' &&
-        pos + 1 < input.length &&
-        ((input[pos + 1] >= 'A' && input[pos + 1] <= 'Z') || (input[pos + 1] >= 'a' && input[pos + 1] <= 'z'))
-      ) {
+      if (pos < input.length && input[pos] === '.' && isLetter(input[pos + 1])) {
         pos++; // consume '.'
-        while (
-          pos < input.length &&
-          ((input[pos] >= 'A' && input[pos] <= 'Z') ||
-            (input[pos] >= 'a' && input[pos] <= 'z') ||
-            (input[pos] >= '0' && input[pos] <= '9') ||
-            input[pos] === '_')
-        ) {
+        while (isWordChar(input[pos])) {
           pos++;
         }
       }

@@ -76,10 +76,13 @@ export function workerBody(): void {
       });
 
       for (let r = 0; r < rowCount; r++) {
+        const rowVals = values[r];
+        if (rowVals === undefined) continue;
         let pass = true;
         for (let f = 0; f < prepared.length; f++) {
           const pf = prepared[f];
-          const cellVal = values[r][pf.colIdx];
+          if (pf === undefined) continue;
+          const cellVal = rowVals[pf.colIdx];
 
           switch (pf.type) {
             case 'text': {
@@ -119,8 +122,10 @@ export function workerBody(): void {
 
       let isDateSort = false;
       for (let i = 0; i < columnMeta.length; i++) {
-        if (columnMeta[i].index === columnIndex) {
-          isDateSort = columnMeta[i].type === 'date';
+        const meta = columnMeta[i];
+        if (meta === undefined) continue;
+        if (meta.index === columnIndex) {
+          isDateSort = meta.type === 'date';
           break;
         }
       }
@@ -132,7 +137,9 @@ export function workerBody(): void {
         const timestamps = new Map<number, number>();
         for (let i = 0; i < indices.length; i++) {
           const r = indices[i];
-          const v = values[r][columnIndex];
+          if (r === undefined) continue;
+          const rowVals = values[r];
+          const v = rowVals === undefined ? null : rowVals[columnIndex];
           timestamps.set(r, v == null ? NaN : new Date(String(v)).getTime());
         }
         indices.sort((a, b) => {
@@ -145,8 +152,10 @@ export function workerBody(): void {
         });
       } else {
         indices.sort((a, b) => {
-          const av = values[a][columnIndex];
-          const bv = values[b][columnIndex];
+          const rowA = values[a];
+          const rowB = values[b];
+          const av = rowA === undefined ? null : rowA[columnIndex];
+          const bv = rowB === undefined ? null : rowB[columnIndex];
           if (av == null && bv == null) return 0;
           if (av == null) return -1 * dir;
           if (bv == null) return 1 * dir;

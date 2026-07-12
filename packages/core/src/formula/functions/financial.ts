@@ -1,6 +1,6 @@
 import type { IFormulaFunction, IFormulaContext, IEvaluator, ASTNode } from '../types';
 import { FormulaError } from '../types';
-import { toNumber, flattenArgs } from '../evaluator';
+import { toNumber, flattenArgs, evalArg } from '../evaluator';
 
 export function registerFinancialFunctions(registry: Map<string, IFormulaFunction>): void {
   // PMT(rate, nper, pv, [fv=0], [type=0])
@@ -9,24 +9,24 @@ export function registerFinancialFunctions(registry: Map<string, IFormulaFunctio
     minArgs: 3,
     maxArgs: 5,
     evaluate(args: ASTNode[], context: IFormulaContext, evaluator: IEvaluator): unknown {
-      const rawRate = evaluator.evaluate(args[0], context);
+      const rawRate = evalArg(evaluator, args[0], context);
       if (rawRate instanceof FormulaError) return rawRate;
       const rate = toNumber(rawRate);
       if (rate instanceof FormulaError) return rate;
 
-      const rawNper = evaluator.evaluate(args[1], context);
+      const rawNper = evalArg(evaluator, args[1], context);
       if (rawNper instanceof FormulaError) return rawNper;
       const nper = toNumber(rawNper);
       if (nper instanceof FormulaError) return nper;
 
-      const rawPv = evaluator.evaluate(args[2], context);
+      const rawPv = evalArg(evaluator, args[2], context);
       if (rawPv instanceof FormulaError) return rawPv;
       const pv = toNumber(rawPv);
       if (pv instanceof FormulaError) return pv;
 
       let fv = 0;
       if (args.length >= 4) {
-        const rawFv = evaluator.evaluate(args[3], context);
+        const rawFv = evalArg(evaluator, args[3], context);
         if (rawFv instanceof FormulaError) return rawFv;
         const fvNum = toNumber(rawFv);
         if (fvNum instanceof FormulaError) return fvNum;
@@ -35,7 +35,7 @@ export function registerFinancialFunctions(registry: Map<string, IFormulaFunctio
 
       let type = 0;
       if (args.length >= 5) {
-        const rawType = evaluator.evaluate(args[4], context);
+        const rawType = evalArg(evaluator, args[4], context);
         if (rawType instanceof FormulaError) return rawType;
         const typeNum = toNumber(rawType);
         if (typeNum instanceof FormulaError) return typeNum;
@@ -60,24 +60,24 @@ export function registerFinancialFunctions(registry: Map<string, IFormulaFunctio
     minArgs: 3,
     maxArgs: 5,
     evaluate(args: ASTNode[], context: IFormulaContext, evaluator: IEvaluator): unknown {
-      const rawRate = evaluator.evaluate(args[0], context);
+      const rawRate = evalArg(evaluator, args[0], context);
       if (rawRate instanceof FormulaError) return rawRate;
       const rate = toNumber(rawRate);
       if (rate instanceof FormulaError) return rate;
 
-      const rawNper = evaluator.evaluate(args[1], context);
+      const rawNper = evalArg(evaluator, args[1], context);
       if (rawNper instanceof FormulaError) return rawNper;
       const nper = toNumber(rawNper);
       if (nper instanceof FormulaError) return nper;
 
-      const rawPmt = evaluator.evaluate(args[2], context);
+      const rawPmt = evalArg(evaluator, args[2], context);
       if (rawPmt instanceof FormulaError) return rawPmt;
       const pmt = toNumber(rawPmt);
       if (pmt instanceof FormulaError) return pmt;
 
       let pv = 0;
       if (args.length >= 4) {
-        const rawPv = evaluator.evaluate(args[3], context);
+        const rawPv = evalArg(evaluator, args[3], context);
         if (rawPv instanceof FormulaError) return rawPv;
         const pvNum = toNumber(rawPv);
         if (pvNum instanceof FormulaError) return pvNum;
@@ -86,7 +86,7 @@ export function registerFinancialFunctions(registry: Map<string, IFormulaFunctio
 
       let type = 0;
       if (args.length >= 5) {
-        const rawType = evaluator.evaluate(args[4], context);
+        const rawType = evalArg(evaluator, args[4], context);
         if (rawType instanceof FormulaError) return rawType;
         const typeNum = toNumber(rawType);
         if (typeNum instanceof FormulaError) return typeNum;
@@ -109,24 +109,24 @@ export function registerFinancialFunctions(registry: Map<string, IFormulaFunctio
     minArgs: 3,
     maxArgs: 5,
     evaluate(args: ASTNode[], context: IFormulaContext, evaluator: IEvaluator): unknown {
-      const rawRate = evaluator.evaluate(args[0], context);
+      const rawRate = evalArg(evaluator, args[0], context);
       if (rawRate instanceof FormulaError) return rawRate;
       const rate = toNumber(rawRate);
       if (rate instanceof FormulaError) return rate;
 
-      const rawNper = evaluator.evaluate(args[1], context);
+      const rawNper = evalArg(evaluator, args[1], context);
       if (rawNper instanceof FormulaError) return rawNper;
       const nper = toNumber(rawNper);
       if (nper instanceof FormulaError) return nper;
 
-      const rawPmt = evaluator.evaluate(args[2], context);
+      const rawPmt = evalArg(evaluator, args[2], context);
       if (rawPmt instanceof FormulaError) return rawPmt;
       const pmt = toNumber(rawPmt);
       if (pmt instanceof FormulaError) return pmt;
 
       let fv = 0;
       if (args.length >= 4) {
-        const rawFv = evaluator.evaluate(args[3], context);
+        const rawFv = evalArg(evaluator, args[3], context);
         if (rawFv instanceof FormulaError) return rawFv;
         const fvNum = toNumber(rawFv);
         if (fvNum instanceof FormulaError) return fvNum;
@@ -135,7 +135,7 @@ export function registerFinancialFunctions(registry: Map<string, IFormulaFunctio
 
       let type = 0;
       if (args.length >= 5) {
-        const rawType = evaluator.evaluate(args[4], context);
+        const rawType = evalArg(evaluator, args[4], context);
         if (rawType instanceof FormulaError) return rawType;
         const typeNum = toNumber(rawType);
         if (typeNum instanceof FormulaError) return typeNum;
@@ -158,24 +158,24 @@ export function registerFinancialFunctions(registry: Map<string, IFormulaFunctio
     minArgs: 3,
     maxArgs: 5,
     evaluate(args: ASTNode[], context: IFormulaContext, evaluator: IEvaluator): unknown {
-      const rawRate = evaluator.evaluate(args[0], context);
+      const rawRate = evalArg(evaluator, args[0], context);
       if (rawRate instanceof FormulaError) return rawRate;
       const rate = toNumber(rawRate);
       if (rate instanceof FormulaError) return rate;
 
-      const rawPmt = evaluator.evaluate(args[1], context);
+      const rawPmt = evalArg(evaluator, args[1], context);
       if (rawPmt instanceof FormulaError) return rawPmt;
       const pmt = toNumber(rawPmt);
       if (pmt instanceof FormulaError) return pmt;
 
-      const rawPv = evaluator.evaluate(args[2], context);
+      const rawPv = evalArg(evaluator, args[2], context);
       if (rawPv instanceof FormulaError) return rawPv;
       const pv = toNumber(rawPv);
       if (pv instanceof FormulaError) return pv;
 
       let fv = 0;
       if (args.length >= 4) {
-        const rawFv = evaluator.evaluate(args[3], context);
+        const rawFv = evalArg(evaluator, args[3], context);
         if (rawFv instanceof FormulaError) return rawFv;
         const fvNum = toNumber(rawFv);
         if (fvNum instanceof FormulaError) return fvNum;
@@ -184,7 +184,7 @@ export function registerFinancialFunctions(registry: Map<string, IFormulaFunctio
 
       let type = 0;
       if (args.length >= 5) {
-        const rawType = evaluator.evaluate(args[4], context);
+        const rawType = evalArg(evaluator, args[4], context);
         if (rawType instanceof FormulaError) return rawType;
         const typeNum = toNumber(rawType);
         if (typeNum instanceof FormulaError) return typeNum;
@@ -217,24 +217,24 @@ export function registerFinancialFunctions(registry: Map<string, IFormulaFunctio
     minArgs: 3,
     maxArgs: 6,
     evaluate(args: ASTNode[], context: IFormulaContext, evaluator: IEvaluator): unknown {
-      const rawNper = evaluator.evaluate(args[0], context);
+      const rawNper = evalArg(evaluator, args[0], context);
       if (rawNper instanceof FormulaError) return rawNper;
       const nper = toNumber(rawNper);
       if (nper instanceof FormulaError) return nper;
 
-      const rawPmt = evaluator.evaluate(args[1], context);
+      const rawPmt = evalArg(evaluator, args[1], context);
       if (rawPmt instanceof FormulaError) return rawPmt;
       const pmt = toNumber(rawPmt);
       if (pmt instanceof FormulaError) return pmt;
 
-      const rawPv = evaluator.evaluate(args[2], context);
+      const rawPv = evalArg(evaluator, args[2], context);
       if (rawPv instanceof FormulaError) return rawPv;
       const pv = toNumber(rawPv);
       if (pv instanceof FormulaError) return pv;
 
       let fv = 0;
       if (args.length >= 4) {
-        const rawFv = evaluator.evaluate(args[3], context);
+        const rawFv = evalArg(evaluator, args[3], context);
         if (rawFv instanceof FormulaError) return rawFv;
         const fvNum = toNumber(rawFv);
         if (fvNum instanceof FormulaError) return fvNum;
@@ -243,7 +243,7 @@ export function registerFinancialFunctions(registry: Map<string, IFormulaFunctio
 
       let type = 0;
       if (args.length >= 5) {
-        const rawType = evaluator.evaluate(args[4], context);
+        const rawType = evalArg(evaluator, args[4], context);
         if (rawType instanceof FormulaError) return rawType;
         const typeNum = toNumber(rawType);
         if (typeNum instanceof FormulaError) return typeNum;
@@ -252,7 +252,7 @@ export function registerFinancialFunctions(registry: Map<string, IFormulaFunctio
 
       let guess = 0.1;
       if (args.length >= 6) {
-        const rawGuess = evaluator.evaluate(args[5], context);
+        const rawGuess = evalArg(evaluator, args[5], context);
         if (rawGuess instanceof FormulaError) return rawGuess;
         const guessNum = toNumber(rawGuess);
         if (guessNum instanceof FormulaError) return guessNum;
@@ -304,7 +304,7 @@ export function registerFinancialFunctions(registry: Map<string, IFormulaFunctio
     minArgs: 2,
     maxArgs: -1,
     evaluate(args: ASTNode[], context: IFormulaContext, evaluator: IEvaluator): unknown {
-      const rawRate = evaluator.evaluate(args[0], context);
+      const rawRate = evalArg(evaluator, args[0], context);
       if (rawRate instanceof FormulaError) return rawRate;
       const rate = toNumber(rawRate);
       if (rate instanceof FormulaError) return rate;
@@ -331,7 +331,9 @@ export function registerFinancialFunctions(registry: Map<string, IFormulaFunctio
     minArgs: 1,
     maxArgs: 2,
     evaluate(args: ASTNode[], context: IFormulaContext, evaluator: IEvaluator): unknown {
-      const cashFlows = flattenArgs([args[0]], context, evaluator);
+      const valuesArg = args[0];
+      if (valuesArg === undefined) return new FormulaError('#NUM!', 'IRR: no values');
+      const cashFlows = flattenArgs([valuesArg], context, evaluator);
       const nums: number[] = [];
       for (const val of cashFlows) {
         if (val instanceof FormulaError) return val;
@@ -343,7 +345,7 @@ export function registerFinancialFunctions(registry: Map<string, IFormulaFunctio
 
       let guess = 0.1;
       if (args.length >= 2) {
-        const rawGuess = evaluator.evaluate(args[1], context);
+        const rawGuess = evalArg(evaluator, args[1], context);
         if (rawGuess instanceof FormulaError) return rawGuess;
         const guessNum = toNumber(rawGuess);
         if (guessNum instanceof FormulaError) return guessNum;
@@ -361,10 +363,12 @@ export function registerFinancialFunctions(registry: Map<string, IFormulaFunctio
         let f = 0;
         let df = 0;
         for (let j = 0; j < nums.length; j++) {
+          const flow = nums[j];
+          if (flow === undefined) continue;
           const factor = (1 + r) ** j;
-          f += nums[j] / factor;
+          f += flow / factor;
           if (j > 0) {
-            df -= j * nums[j] / (1 + r) ** (j + 1);
+            df -= j * flow / (1 + r) ** (j + 1);
           }
         }
 
@@ -386,17 +390,17 @@ export function registerFinancialFunctions(registry: Map<string, IFormulaFunctio
     minArgs: 3,
     maxArgs: 3,
     evaluate(args: ASTNode[], context: IFormulaContext, evaluator: IEvaluator): unknown {
-      const rawCost = evaluator.evaluate(args[0], context);
+      const rawCost = evalArg(evaluator, args[0], context);
       if (rawCost instanceof FormulaError) return rawCost;
       const cost = toNumber(rawCost);
       if (cost instanceof FormulaError) return cost;
 
-      const rawSalvage = evaluator.evaluate(args[1], context);
+      const rawSalvage = evalArg(evaluator, args[1], context);
       if (rawSalvage instanceof FormulaError) return rawSalvage;
       const salvage = toNumber(rawSalvage);
       if (salvage instanceof FormulaError) return salvage;
 
-      const rawLife = evaluator.evaluate(args[2], context);
+      const rawLife = evalArg(evaluator, args[2], context);
       if (rawLife instanceof FormulaError) return rawLife;
       const life = toNumber(rawLife);
       if (life instanceof FormulaError) return life;

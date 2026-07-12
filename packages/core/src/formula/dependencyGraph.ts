@@ -209,6 +209,7 @@ export class DependencyGraph {
     let head = 0;
     while (head < bfsQueue.length) {
       const current = bfsQueue[head++];
+      if (current === undefined) continue;
       const currentDependents = this.dependents.get(current);
       if (currentDependents) {
         for (const dep of currentDependents) {
@@ -256,6 +257,7 @@ export class DependencyGraph {
 
     while (queueHead < queue.length) {
       const cell = queue[queueHead++];
+      if (cell === undefined) continue;
       result.push(cell);
 
       const cellDependents = this.dependents.get(cell);

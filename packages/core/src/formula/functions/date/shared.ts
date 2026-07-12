@@ -49,8 +49,10 @@ export function parseWeekendNumber(n: number): boolean[] | null {
     [4, 5], // 7: Fri+Sat
   ];
   if (n >= 1 && n <= 7) {
+    const pair = twoDay[n - 1];
+    if (pair === undefined) return null;
     const mask = [false, false, false, false, false, false, false];
-    const [a, b] = twoDay[n - 1];
+    const [a, b] = pair;
     mask[a] = true;
     mask[b] = true;
     return mask;
@@ -59,7 +61,9 @@ export function parseWeekendNumber(n: number): boolean[] | null {
     const mask = [false, false, false, false, false, false, false];
     // 11=Sun(6), 12=Mon(0), 13=Tue(1), 14=Wed(2), 15=Thu(3), 16=Fri(4), 17=Sat(5)
     const singleDay = [6, 0, 1, 2, 3, 4, 5];
-    mask[singleDay[n - 11]] = true;
+    const dayIdx = singleDay[n - 11];
+    if (dayIdx === undefined) return null;
+    mask[dayIdx] = true;
     return mask;
   }
   return null;

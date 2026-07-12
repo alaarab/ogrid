@@ -1,5 +1,6 @@
 import type { IFormulaFunction, IFormulaContext, IEvaluator, ASTNode } from '../types';
 import { FormulaError } from '../types';
+import { evalArg } from '../evaluator';
 
 function flattenArgs(args: ASTNode[], context: IFormulaContext, evaluator: IEvaluator): unknown[] {
   const result: unknown[] = [];
@@ -23,15 +24,15 @@ export function registerLogicalFunctions(registry: Map<string, IFormulaFunction>
     minArgs: 2,
     maxArgs: 3,
     evaluate(args: ASTNode[], context: IFormulaContext, evaluator: IEvaluator): unknown {
-      const condition = evaluator.evaluate(args[0], context);
+      const condition = evalArg(evaluator, args[0], context);
       if (condition instanceof FormulaError) return condition;
 
       // Short-circuit: only evaluate the needed branch
       if (condition) {
-        return evaluator.evaluate(args[1], context);
+        return evalArg(evaluator, args[1], context);
       } else {
         if (args.length >= 3) {
-          return evaluator.evaluate(args[2], context);
+          return evalArg(evaluator, args[2], context);
         }
         return false;
       }
@@ -68,7 +69,7 @@ export function registerLogicalFunctions(registry: Map<string, IFormulaFunction>
     minArgs: 1,
     maxArgs: 1,
     evaluate(args: ASTNode[], context: IFormulaContext, evaluator: IEvaluator): unknown {
-      const val = evaluator.evaluate(args[0], context);
+      const val = evalArg(evaluator, args[0], context);
       if (val instanceof FormulaError) return val;
       return !val;
     },
@@ -78,9 +79,9 @@ export function registerLogicalFunctions(registry: Map<string, IFormulaFunction>
     minArgs: 2,
     maxArgs: 2,
     evaluate(args: ASTNode[], context: IFormulaContext, evaluator: IEvaluator): unknown {
-      const val = evaluator.evaluate(args[0], context);
+      const val = evalArg(evaluator, args[0], context);
       if (val instanceof FormulaError) {
-        return evaluator.evaluate(args[1], context);
+        return evalArg(evaluator, args[1], context);
       }
       return val;
     },
@@ -90,9 +91,9 @@ export function registerLogicalFunctions(registry: Map<string, IFormulaFunction>
     minArgs: 2,
     maxArgs: 2,
     evaluate(args: ASTNode[], context: IFormulaContext, evaluator: IEvaluator): unknown {
-      const val = evaluator.evaluate(args[0], context);
+      const val = evalArg(evaluator, args[0], context);
       if (val instanceof FormulaError && val.type === '#N/A') {
-        return evaluator.evaluate(args[1], context);
+        return evalArg(evaluator, args[1], context);
       }
       return val;
     },
@@ -107,10 +108,10 @@ export function registerLogicalFunctions(registry: Map<string, IFormulaFunction>
         return new FormulaError('#VALUE!', 'IFS requires pairs of condition, value');
       }
       for (let i = 0; i < args.length; i += 2) {
-        const condition = evaluator.evaluate(args[i], context);
+        const condition = evalArg(evaluator, args[i], context);
         if (condition instanceof FormulaError) return condition;
         if (condition) {
-          return evaluator.evaluate(args[i + 1], context);
+          return evalArg(evaluator, args[i + 1], context);
         }
       }
       return new FormulaError('#N/A', 'IFS no condition was TRUE');
@@ -122,19 +123,19 @@ export function registerLogicalFunctions(registry: Map<string, IFormulaFunction>
     maxArgs: -1,
     evaluate(args: ASTNode[], context: IFormulaContext, evaluator: IEvaluator): unknown {
       // SWITCH(expr, val1, result1, val2, result2, ..., [default])
-      const expr = evaluator.evaluate(args[0], context);
+      const expr = evalArg(evaluator, args[0], context);
       if (expr instanceof FormulaError) return expr;
       const hasDefault = (args.length - 1) % 2 !== 0;
       const pairCount = hasDefault ? (args.length - 2) / 2 : (args.length - 1) / 2;
       for (let i = 0; i < pairCount; i++) {
-        const caseVal = evaluator.evaluate(args[1 + i * 2], context);
+        const caseVal = evalArg(evaluator, args[1 + i * 2], context);
         if (caseVal instanceof FormulaError) return caseVal;
         if (expr === caseVal) {
-          return evaluator.evaluate(args[2 + i * 2], context);
+          return evalArg(evaluator, args[2 + i * 2], context);
         }
       }
       if (hasDefault) {
-        return evaluator.evaluate(args[args.length - 1], context);
+        return evalArg(evaluator, args[args.length - 1], context);
       }
       return new FormulaError('#N/A', 'SWITCH no match found');
     },
@@ -144,14 +145,14 @@ export function registerLogicalFunctions(registry: Map<string, IFormulaFunction>
     minArgs: 2,
     maxArgs: -1,
     evaluate(args: ASTNode[], context: IFormulaContext, evaluator: IEvaluator): unknown {
-      const rawIdx = evaluator.evaluate(args[0], context);
+      const rawIdx = evalArg(evaluator, args[0], context);
       if (rawIdx instanceof FormulaError) return rawIdx;
       if (typeof rawIdx !== 'number') return new FormulaError('#VALUE!', 'CHOOSE index must be a number');
       const idx = Math.trunc(rawIdx);
       if (idx < 1 || idx >= args.length) {
         return new FormulaError('#VALUE!', 'CHOOSE index out of range');
       }
-      return evaluator.evaluate(args[idx], context);
+      return evalArg(evaluator, args[idx], context);
     },
   });
 

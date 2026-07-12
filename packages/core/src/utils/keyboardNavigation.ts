@@ -205,6 +205,7 @@ export function applyCellDeletion<T>(
       if (r >= items.length || c >= visibleCols.length) continue;
       const item = items[r];
       const col = visibleCols[c];
+      if (item === undefined || col === undefined) continue;
       if (!isColumnEditable(col, item)) continue;
       const oldValue = getCellValue(item, col);
       const result = parseValue('', oldValue, item, col);

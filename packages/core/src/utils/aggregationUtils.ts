@@ -37,6 +37,7 @@ export function computeAggregations<T>(
       totalCells++;
       const item = items[r];
       const col = visibleCols[c];
+      if (item === undefined || col === undefined) continue;
       const raw = getCellValue(item, col);
       // Use Number() instead of parseFloat() so date strings like "2020-08-22"
       // return NaN instead of partially parsing to 2020

@@ -35,7 +35,10 @@ export function createGridDataAccessor<T>(
     getCellValue: (col: number, row: number): unknown => {
       if (row < 0 || row >= items.length) return null;
       if (col < 0 || col >= flatColumns.length) return null;
-      return getCellValue(items[row], flatColumns[col]);
+      const item = items[row];
+      const colDef = flatColumns[col];
+      if (item === undefined || colDef === undefined) return null;
+      return getCellValue(item, colDef);
     },
     getRowCount: () => items.length,
     getColumnCount: () => flatColumns.length,

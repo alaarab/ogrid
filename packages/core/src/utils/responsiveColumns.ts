@@ -49,8 +49,10 @@ export function getResponsiveHiddenColumns<T extends IColumnMeta>(
   // Walk breakpoints from highest to lowest; first match wins.
   let maxPriority = Infinity;
   for (let i = breakpoints.length - 1; i >= 0; i--) {
-    if (containerWidth >= breakpoints[i].minWidth) {
-      maxPriority = breakpoints[i].maxPriority;
+    const bp = breakpoints[i];
+    if (bp === undefined) continue;
+    if (containerWidth >= bp.minWidth) {
+      maxPriority = bp.maxPriority;
       break;
     }
   }

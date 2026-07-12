@@ -104,32 +104,42 @@ export function registerStatsFunctions(registry: Map<string, IFormulaFunction>):
     maxArgs: 3,
     evaluate(args: ASTNode[], context: IFormulaContext, evaluator: IEvaluator): unknown {
       // Arg 0: criteria range (must be a RangeNode)
-      if (args[0].kind !== 'range') {
+      const rangeArg = args[0];
+      if (rangeArg === undefined || rangeArg.kind !== 'range') {
         return new FormulaError('#VALUE!', 'SUMIF range must be a cell range');
       }
-      const criteriaRange = context.getRangeValues({ start: args[0].start, end: args[0].end });
+      const criteriaRange = context.getRangeValues({ start: rangeArg.start, end: rangeArg.end });
 
       // Arg 1: criteria
-      const rawCriteria = evaluator.evaluate(args[1], context);
+      const criteriaArg = args[1];
+      if (criteriaArg === undefined) {
+        return new FormulaError('#VALUE!', 'SUMIF requires a criteria argument');
+      }
+      const rawCriteria = evaluator.evaluate(criteriaArg, context);
       if (rawCriteria instanceof FormulaError) return rawCriteria;
       const criteria = parseCriteria(rawCriteria);
 
       // Arg 2: sum range (optional, defaults to criteria range)
       let sumRange: unknown[][];
-      if (args.length >= 3) {
-        if (args[2].kind !== 'range') {
+      const sumRangeArg = args[2];
+      if (sumRangeArg !== undefined) {
+        if (sumRangeArg.kind !== 'range') {
           return new FormulaError('#VALUE!', 'SUMIF sum_range must be a cell range');
         }
-        sumRange = context.getRangeValues({ start: args[2].start, end: args[2].end });
+        sumRange = context.getRangeValues({ start: sumRangeArg.start, end: sumRangeArg.end });
       } else {
         sumRange = criteriaRange;
       }
 
       let sum = 0;
       for (let r = 0; r < criteriaRange.length; r++) {
-        for (let c = 0; c < criteriaRange[r].length; c++) {
-          if (matchesCriteria(criteriaRange[r][c], criteria)) {
-            const sumVal = (sumRange[r] && sumRange[r][c] !== undefined) ? sumRange[r][c] : null;
+        const critRow = criteriaRange[r];
+        if (critRow === undefined) continue;
+        const sumRow = sumRange[r];
+        for (let c = 0; c < critRow.length; c++) {
+          if (matchesCriteria(critRow[c], criteria)) {
+            const rawSumVal = sumRow === undefined ? undefined : sumRow[c];
+            const sumVal = rawSumVal !== undefined ? rawSumVal : null;
             const n = toNumber(sumVal);
             if (typeof n === 'number') {
               sum += n;
@@ -147,20 +157,27 @@ export function registerStatsFunctions(registry: Map<string, IFormulaFunction>):
     maxArgs: 2,
     evaluate(args: ASTNode[], context: IFormulaContext, evaluator: IEvaluator): unknown {
       // Arg 0: range (must be a RangeNode)
-      if (args[0].kind !== 'range') {
+      const rangeArg = args[0];
+      if (rangeArg === undefined || rangeArg.kind !== 'range') {
         return new FormulaError('#VALUE!', 'COUNTIF range must be a cell range');
       }
-      const rangeData = context.getRangeValues({ start: args[0].start, end: args[0].end });
+      const rangeData = context.getRangeValues({ start: rangeArg.start, end: rangeArg.end });
 
       // Arg 1: criteria
-      const rawCriteria = evaluator.evaluate(args[1], context);
+      const criteriaArg = args[1];
+      if (criteriaArg === undefined) {
+        return new FormulaError('#VALUE!', 'COUNTIF requires a criteria argument');
+      }
+      const rawCriteria = evaluator.evaluate(criteriaArg, context);
       if (rawCriteria instanceof FormulaError) return rawCriteria;
       const criteria = parseCriteria(rawCriteria);
 
       let count = 0;
       for (let r = 0; r < rangeData.length; r++) {
-        for (let c = 0; c < rangeData[r].length; c++) {
-          if (matchesCriteria(rangeData[r][c], criteria)) {
+        const row = rangeData[r];
+        if (row === undefined) continue;
+        for (let c = 0; c < row.length; c++) {
+          if (matchesCriteria(row[c], criteria)) {
             count++;
           }
         }
@@ -174,23 +191,29 @@ export function registerStatsFunctions(registry: Map<string, IFormulaFunction>):
     maxArgs: 3,
     evaluate(args: ASTNode[], context: IFormulaContext, evaluator: IEvaluator): unknown {
       // Arg 0: criteria range (must be a RangeNode)
-      if (args[0].kind !== 'range') {
+      const rangeArg = args[0];
+      if (rangeArg === undefined || rangeArg.kind !== 'range') {
         return new FormulaError('#VALUE!', 'AVERAGEIF range must be a cell range');
       }
-      const criteriaRange = context.getRangeValues({ start: args[0].start, end: args[0].end });
+      const criteriaRange = context.getRangeValues({ start: rangeArg.start, end: rangeArg.end });
 
       // Arg 1: criteria
-      const rawCriteria = evaluator.evaluate(args[1], context);
+      const criteriaArg = args[1];
+      if (criteriaArg === undefined) {
+        return new FormulaError('#VALUE!', 'AVERAGEIF requires a criteria argument');
+      }
+      const rawCriteria = evaluator.evaluate(criteriaArg, context);
       if (rawCriteria instanceof FormulaError) return rawCriteria;
       const criteria = parseCriteria(rawCriteria);
 
       // Arg 2: average range (optional, defaults to criteria range)
       let avgRange: unknown[][];
-      if (args.length >= 3) {
-        if (args[2].kind !== 'range') {
+      const avgRangeArg = args[2];
+      if (avgRangeArg !== undefined) {
+        if (avgRangeArg.kind !== 'range') {
           return new FormulaError('#VALUE!', 'AVERAGEIF avg_range must be a cell range');
         }
-        avgRange = context.getRangeValues({ start: args[2].start, end: args[2].end });
+        avgRange = context.getRangeValues({ start: avgRangeArg.start, end: avgRangeArg.end });
       } else {
         avgRange = criteriaRange;
       }
@@ -198,9 +221,13 @@ export function registerStatsFunctions(registry: Map<string, IFormulaFunction>):
       let sum = 0;
       let count = 0;
       for (let r = 0; r < criteriaRange.length; r++) {
-        for (let c = 0; c < criteriaRange[r].length; c++) {
-          if (matchesCriteria(criteriaRange[r][c], criteria)) {
-            const avgVal = (avgRange[r] && avgRange[r][c] !== undefined) ? avgRange[r][c] : null;
+        const critRow = criteriaRange[r];
+        if (critRow === undefined) continue;
+        const avgRow = avgRange[r];
+        for (let c = 0; c < critRow.length; c++) {
+          if (matchesCriteria(critRow[c], criteria)) {
+            const rawAvgVal = avgRow === undefined ? undefined : avgRow[c];
+            const avgVal = rawAvgVal !== undefined ? rawAvgVal : null;
             const n = toNumber(avgVal);
             if (typeof n === 'number') {
               sum += n;
@@ -223,26 +250,33 @@ export function registerStatsFunctions(registry: Map<string, IFormulaFunction>):
       if ((args.length - 1) % 2 !== 0) {
         return new FormulaError('#VALUE!', 'SUMIFS requires sum_range + pairs of criteria_range, criteria');
       }
-      if (args[0].kind !== 'range') {
+      const sumRangeArg = args[0];
+      if (sumRangeArg === undefined || sumRangeArg.kind !== 'range') {
         return new FormulaError('#VALUE!', 'SUMIFS sum_range must be a cell range');
       }
-      const sumRange = context.getRangeValues({ start: args[0].start, end: args[0].end });
+      const sumRange = context.getRangeValues({ start: sumRangeArg.start, end: sumRangeArg.end });
 
       const pairs: { range: unknown[][]; criteria: ParsedCriteria }[] = [];
       for (let i = 1; i < args.length; i += 2) {
         const rangeArg = args[i];
-        if (rangeArg.kind !== 'range') {
+        if (rangeArg === undefined || rangeArg.kind !== 'range') {
           return new FormulaError('#VALUE!', 'SUMIFS criteria_range must be a cell range');
         }
+        const criteriaArg = args[i + 1];
+        if (criteriaArg === undefined) {
+          return new FormulaError('#VALUE!', 'SUMIFS requires sum_range + pairs of criteria_range, criteria');
+        }
         const range = context.getRangeValues({ start: rangeArg.start, end: rangeArg.end });
-        const rawCriteria = evaluator.evaluate(args[i + 1], context);
+        const rawCriteria = evaluator.evaluate(criteriaArg, context);
         if (rawCriteria instanceof FormulaError) return rawCriteria;
         pairs.push({ range, criteria: parseCriteria(rawCriteria) });
       }
 
       let sum = 0;
       for (let r = 0; r < sumRange.length; r++) {
-        for (let c = 0; c < sumRange[r].length; c++) {
+        const sumRow = sumRange[r];
+        if (sumRow === undefined) continue;
+        for (let c = 0; c < sumRow.length; c++) {
           let allMatch = true;
           for (const pair of pairs) {
             const cellVal = pair.range[r]?.[c];
@@ -252,7 +286,7 @@ export function registerStatsFunctions(registry: Map<string, IFormulaFunction>):
             }
           }
           if (allMatch) {
-            const n = toNumber(sumRange[r][c]);
+            const n = toNumber(sumRow[c]);
             if (typeof n === 'number') sum += n;
           }
         }
@@ -273,20 +307,30 @@ export function registerStatsFunctions(registry: Map<string, IFormulaFunction>):
       const pairs: { range: unknown[][]; criteria: ParsedCriteria }[] = [];
       for (let i = 0; i < args.length; i += 2) {
         const rangeArg = args[i];
-        if (rangeArg.kind !== 'range') {
+        if (rangeArg === undefined || rangeArg.kind !== 'range') {
           return new FormulaError('#VALUE!', 'COUNTIFS criteria_range must be a cell range');
         }
+        const criteriaArg = args[i + 1];
+        if (criteriaArg === undefined) {
+          return new FormulaError('#VALUE!', 'COUNTIFS requires pairs of criteria_range, criteria');
+        }
         const range = context.getRangeValues({ start: rangeArg.start, end: rangeArg.end });
-        const rawCriteria = evaluator.evaluate(args[i + 1], context);
+        const rawCriteria = evaluator.evaluate(criteriaArg, context);
         if (rawCriteria instanceof FormulaError) return rawCriteria;
         pairs.push({ range, criteria: parseCriteria(rawCriteria) });
       }
 
       // Use first range dimensions
-      const firstRange = pairs[0].range;
+      const firstPair = pairs[0];
+      if (firstPair === undefined) {
+        return new FormulaError('#VALUE!', 'COUNTIFS requires pairs of criteria_range, criteria');
+      }
+      const firstRange = firstPair.range;
       let count = 0;
       for (let r = 0; r < firstRange.length; r++) {
-        for (let c = 0; c < firstRange[r].length; c++) {
+        const firstRow = firstRange[r];
+        if (firstRow === undefined) continue;
+        for (let c = 0; c < firstRow.length; c++) {
           let allMatch = true;
           for (const pair of pairs) {
             const cellVal = pair.range[r]?.[c];
@@ -310,19 +354,24 @@ export function registerStatsFunctions(registry: Map<string, IFormulaFunction>):
       if ((args.length - 1) % 2 !== 0) {
         return new FormulaError('#VALUE!', 'AVERAGEIFS requires avg_range + pairs of criteria_range, criteria');
       }
-      if (args[0].kind !== 'range') {
+      const avgRangeArg = args[0];
+      if (avgRangeArg === undefined || avgRangeArg.kind !== 'range') {
         return new FormulaError('#VALUE!', 'AVERAGEIFS avg_range must be a cell range');
       }
-      const avgRange = context.getRangeValues({ start: args[0].start, end: args[0].end });
+      const avgRange = context.getRangeValues({ start: avgRangeArg.start, end: avgRangeArg.end });
 
       const pairs: { range: unknown[][]; criteria: ParsedCriteria }[] = [];
       for (let i = 1; i < args.length; i += 2) {
         const rangeArg = args[i];
-        if (rangeArg.kind !== 'range') {
+        if (rangeArg === undefined || rangeArg.kind !== 'range') {
           return new FormulaError('#VALUE!', 'AVERAGEIFS criteria_range must be a cell range');
         }
+        const criteriaArg = args[i + 1];
+        if (criteriaArg === undefined) {
+          return new FormulaError('#VALUE!', 'AVERAGEIFS requires avg_range + pairs of criteria_range, criteria');
+        }
         const range = context.getRangeValues({ start: rangeArg.start, end: rangeArg.end });
-        const rawCriteria = evaluator.evaluate(args[i + 1], context);
+        const rawCriteria = evaluator.evaluate(criteriaArg, context);
         if (rawCriteria instanceof FormulaError) return rawCriteria;
         pairs.push({ range, criteria: parseCriteria(rawCriteria) });
       }
@@ -330,7 +379,9 @@ export function registerStatsFunctions(registry: Map<string, IFormulaFunction>):
       let sum = 0;
       let count = 0;
       for (let r = 0; r < avgRange.length; r++) {
-        for (let c = 0; c < avgRange[r].length; c++) {
+        const avgRow = avgRange[r];
+        if (avgRow === undefined) continue;
+        for (let c = 0; c < avgRow.length; c++) {
           let allMatch = true;
           for (const pair of pairs) {
             const cellVal = pair.range[r]?.[c];
@@ -340,7 +391,7 @@ export function registerStatsFunctions(registry: Map<string, IFormulaFunction>):
             }
           }
           if (allMatch) {
-            const n = toNumber(avgRange[r][c]);
+            const n = toNumber(avgRow[c]);
             if (typeof n === 'number') {
               sum += n;
               count++;

@@ -31,7 +31,9 @@ export function processClientSideData<T>(
   if (!columnMap) {
     columnMap = new Map<string, IColumnDef<T>>();
     for (let i = 0; i < columns.length; i++) {
-      columnMap.set(columns[i].columnId, columns[i]);
+      const c = columns[i];
+      if (c === undefined) continue;
+      columnMap.set(c.columnId, c);
     }
     columnMapCache.set(columns as IColumnDef<unknown>[], columnMap as Map<string, IColumnDef<unknown>>);
   }
@@ -41,6 +43,7 @@ export function processClientSideData<T>(
 
   for (let i = 0; i < columns.length; i++) {
     const col = columns[i];
+    if (col === undefined) continue;
     const filterKey = getFilterField(col);
     const val = filters[filterKey];
     if (!val) continue;
@@ -56,7 +59,9 @@ export function processClientSideData<T>(
           // repeated conversion inside the filter predicate (same pattern as text/people).
           const msCache = new Map<T, string>();
           for (let j = 0; j < data.length; j++) {
-            msCache.set(data[j], String(getCellValue(data[j], col)));
+            const row = data[j];
+            if (row === undefined) continue;
+            msCache.set(row, String(getCellValue(row, col)));
           }
           predicates.push((r) => allowedSet.has(msCache.get(r) ?? ''));
         }
@@ -69,7 +74,9 @@ export function processClientSideData<T>(
           // O(n) String() + toLowerCase() inside every filter predicate call.
           const textCache = new Map<T, string>();
           for (let j = 0; j < data.length; j++) {
-            textCache.set(data[j], String(getCellValue(data[j], col) ?? '').toLowerCase());
+            const row = data[j];
+            if (row === undefined) continue;
+            textCache.set(row, String(getCellValue(row, col) ?? '').toLowerCase());
           }
           predicates.push((r) => (textCache.get(r) ?? '').includes(lower));
         }
@@ -80,7 +87,9 @@ export function processClientSideData<T>(
         // Pre-compute lowercase strings for people filter
         const peopleCache = new Map<T, string>();
         for (let j = 0; j < data.length; j++) {
-          peopleCache.set(data[j], String(getCellValue(data[j], col) ?? '').toLowerCase());
+          const row = data[j];
+          if (row === undefined) continue;
+          peopleCache.set(row, String(getCellValue(row, col) ?? '').toLowerCase());
         }
         predicates.push((r) => (peopleCache.get(r) ?? '') === email);
         break;
@@ -93,12 +102,14 @@ export function processClientSideData<T>(
         // Pre-compute cell timestamps (same pattern as sort) to avoid N Date allocations
         const dateCache = new Map<T, number>();
         for (let j = 0; j < data.length; j++) {
-          const cellVal = getCellValue(data[j], col);
+          const row = data[j];
+          if (row === undefined) continue;
+          const cellVal = getCellValue(row, col);
           if (cellVal == null) {
-            dateCache.set(data[j], NaN);
+            dateCache.set(row, NaN);
           } else {
             const t = new Date(String(cellVal)).getTime();
-            dateCache.set(data[j], Number.isNaN(t) ? NaN : t);
+            dateCache.set(row, Number.isNaN(t) ? NaN : t);
           }
         }
         predicates.push((r) => {
@@ -117,7 +128,8 @@ export function processClientSideData<T>(
   const rows = filtered
     ? data.filter((row) => {
         for (let i = 0; i < predicates.length; i++) {
-          if (!predicates[i](row)) return false;
+          const predicate = predicates[i];
+          if (predicate !== undefined && !predicate(row)) return false;
         }
         return true;
       })
@@ -140,6 +152,7 @@ export function processClientSideData<T>(
       const timestampCache = new Map<T, number>();
       for (let i = 0; i < sortable.length; i++) {
         const row = sortable[i];
+        if (row === undefined) continue;
         const val = sortCol ? getCellValue(row, sortCol) : (row as Record<string, unknown>)[sortBy];
         if (val == null) {
           timestampCache.set(row, NaN);
@@ -166,6 +179,7 @@ export function processClientSideData<T>(
       const keyCache = new Map<T, string | number | undefined>();
       for (let i = 0; i < sortable.length; i++) {
         const row = sortable[i];
+        if (row === undefined) continue;
         const v = sortCol
           ? getCellValue(row, sortCol)
           : (row as Record<string, unknown>)[sortBy];

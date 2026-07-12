@@ -1,6 +1,6 @@
 import type { IFormulaFunction, IFormulaContext, IEvaluator, ASTNode } from '../../types';
 import { FormulaError } from '../../types';
-import { toNumber } from '../../evaluator';
+import { toNumber, evalArg } from '../../evaluator';
 
 /**
  * Elementary arithmetic, powers, logs, and constants/random: ABS, MOD, POWER,
@@ -11,7 +11,7 @@ export function registerMathArithmeticFunctions(registry: Map<string, IFormulaFu
     minArgs: 1,
     maxArgs: 1,
     evaluate(args: ASTNode[], context: IFormulaContext, evaluator: IEvaluator): unknown {
-      const rawVal = evaluator.evaluate(args[0], context);
+      const rawVal = evalArg(evaluator, args[0], context);
       if (rawVal instanceof FormulaError) return rawVal;
       const num = toNumber(rawVal);
       if (num instanceof FormulaError) return num;
@@ -23,12 +23,12 @@ export function registerMathArithmeticFunctions(registry: Map<string, IFormulaFu
     minArgs: 2,
     maxArgs: 2,
     evaluate(args: ASTNode[], context: IFormulaContext, evaluator: IEvaluator): unknown {
-      const rawNum = evaluator.evaluate(args[0], context);
+      const rawNum = evalArg(evaluator, args[0], context);
       if (rawNum instanceof FormulaError) return rawNum;
       const num = toNumber(rawNum);
       if (num instanceof FormulaError) return num;
 
-      const rawDiv = evaluator.evaluate(args[1], context);
+      const rawDiv = evalArg(evaluator, args[1], context);
       if (rawDiv instanceof FormulaError) return rawDiv;
       const divisor = toNumber(rawDiv);
       if (divisor instanceof FormulaError) return divisor;
@@ -44,12 +44,12 @@ export function registerMathArithmeticFunctions(registry: Map<string, IFormulaFu
     minArgs: 2,
     maxArgs: 2,
     evaluate(args: ASTNode[], context: IFormulaContext, evaluator: IEvaluator): unknown {
-      const rawBase = evaluator.evaluate(args[0], context);
+      const rawBase = evalArg(evaluator, args[0], context);
       if (rawBase instanceof FormulaError) return rawBase;
       const base = toNumber(rawBase);
       if (base instanceof FormulaError) return base;
 
-      const rawExp = evaluator.evaluate(args[1], context);
+      const rawExp = evalArg(evaluator, args[1], context);
       if (rawExp instanceof FormulaError) return rawExp;
       const exponent = toNumber(rawExp);
       if (exponent instanceof FormulaError) return exponent;
@@ -62,7 +62,7 @@ export function registerMathArithmeticFunctions(registry: Map<string, IFormulaFu
     minArgs: 1,
     maxArgs: 1,
     evaluate(args: ASTNode[], context: IFormulaContext, evaluator: IEvaluator): unknown {
-      const rawVal = evaluator.evaluate(args[0], context);
+      const rawVal = evalArg(evaluator, args[0], context);
       if (rawVal instanceof FormulaError) return rawVal;
       const num = toNumber(rawVal);
       if (num instanceof FormulaError) return num;
@@ -75,7 +75,7 @@ export function registerMathArithmeticFunctions(registry: Map<string, IFormulaFu
     minArgs: 1,
     maxArgs: 1,
     evaluate(args: ASTNode[], context: IFormulaContext, evaluator: IEvaluator): unknown {
-      const rawVal = evaluator.evaluate(args[0], context);
+      const rawVal = evalArg(evaluator, args[0], context);
       if (rawVal instanceof FormulaError) return rawVal;
       const num = toNumber(rawVal);
       if (num instanceof FormulaError) return num;
@@ -90,12 +90,12 @@ export function registerMathArithmeticFunctions(registry: Map<string, IFormulaFu
     minArgs: 2,
     maxArgs: 2,
     evaluate(args: ASTNode[], context: IFormulaContext, evaluator: IEvaluator): unknown {
-      const rawNum = evaluator.evaluate(args[0], context);
+      const rawNum = evalArg(evaluator, args[0], context);
       if (rawNum instanceof FormulaError) return rawNum;
       const num = toNumber(rawNum);
       if (num instanceof FormulaError) return num;
 
-      const rawDen = evaluator.evaluate(args[1], context);
+      const rawDen = evalArg(evaluator, args[1], context);
       if (rawDen instanceof FormulaError) return rawDen;
       const den = toNumber(rawDen);
       if (den instanceof FormulaError) return den;
@@ -109,14 +109,14 @@ export function registerMathArithmeticFunctions(registry: Map<string, IFormulaFu
     minArgs: 1,
     maxArgs: 2,
     evaluate(args: ASTNode[], context: IFormulaContext, evaluator: IEvaluator): unknown {
-      const rawVal = evaluator.evaluate(args[0], context);
+      const rawVal = evalArg(evaluator, args[0], context);
       if (rawVal instanceof FormulaError) return rawVal;
       const num = toNumber(rawVal);
       if (num instanceof FormulaError) return num;
       if (num <= 0) return new FormulaError('#NUM!', 'LOG requires a positive number');
       let base = 10;
       if (args.length >= 2) {
-        const rawB = evaluator.evaluate(args[1], context);
+        const rawB = evalArg(evaluator, args[1], context);
         if (rawB instanceof FormulaError) return rawB;
         const b = toNumber(rawB);
         if (b instanceof FormulaError) return b;
@@ -131,7 +131,7 @@ export function registerMathArithmeticFunctions(registry: Map<string, IFormulaFu
     minArgs: 1,
     maxArgs: 1,
     evaluate(args: ASTNode[], context: IFormulaContext, evaluator: IEvaluator): unknown {
-      const rawVal = evaluator.evaluate(args[0], context);
+      const rawVal = evalArg(evaluator, args[0], context);
       if (rawVal instanceof FormulaError) return rawVal;
       const num = toNumber(rawVal);
       if (num instanceof FormulaError) return num;
@@ -144,7 +144,7 @@ export function registerMathArithmeticFunctions(registry: Map<string, IFormulaFu
     minArgs: 1,
     maxArgs: 1,
     evaluate(args: ASTNode[], context: IFormulaContext, evaluator: IEvaluator): unknown {
-      const rawVal = evaluator.evaluate(args[0], context);
+      const rawVal = evalArg(evaluator, args[0], context);
       if (rawVal instanceof FormulaError) return rawVal;
       const num = toNumber(rawVal);
       if (num instanceof FormulaError) return num;
@@ -172,11 +172,11 @@ export function registerMathArithmeticFunctions(registry: Map<string, IFormulaFu
     minArgs: 2,
     maxArgs: 2,
     evaluate(args: ASTNode[], context: IFormulaContext, evaluator: IEvaluator): unknown {
-      const rawLow = evaluator.evaluate(args[0], context);
+      const rawLow = evalArg(evaluator, args[0], context);
       if (rawLow instanceof FormulaError) return rawLow;
       const low = toNumber(rawLow);
       if (low instanceof FormulaError) return low;
-      const rawHigh = evaluator.evaluate(args[1], context);
+      const rawHigh = evalArg(evaluator, args[1], context);
       if (rawHigh instanceof FormulaError) return rawHigh;
       const high = toNumber(rawHigh);
       if (high instanceof FormulaError) return high;

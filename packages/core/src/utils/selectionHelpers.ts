@@ -94,7 +94,9 @@ export function applyRangeRowSelection<T>(
   const hi = Math.max(start, end);
   for (let i = lo; i <= hi; i++) {
     if (i < items.length) {
-      const id = getRowId(items[i]);
+      const item = items[i];
+      if (item === undefined) continue;
+      const id = getRowId(item);
       if (checked) next.add(id);
       else next.delete(id);
     }
