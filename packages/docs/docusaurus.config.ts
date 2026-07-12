@@ -35,6 +35,7 @@ const config: Config = {
                 '@alaarab/ogrid-react': path.resolve(__dirname, '../react/dist/esm'),
                 '@alaarab/ogrid-react-radix': path.resolve(__dirname, '../react-radix/dist/esm'),
                 '@alaarab/ogrid-react-fluent': path.resolve(__dirname, '../react-fluent/dist/esm'),
+                '@alaarab/ogrid-react-xlsx': path.resolve(__dirname, '../react-xlsx/dist/esm'),
               },
             },
           };
