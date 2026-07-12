@@ -88,6 +88,7 @@ export const PeopleFilterPopover: React.FC<PeopleFilterPopoverProps> = ({
         <div className={styles.noResults}>No results found</div>
       ) : searchText.trim() ? (
         suggestions.map((user) => (
+          // biome-ignore lint/a11y/useSemanticElements: converting this styled list option to a native button would change layout/typography; it already has role, tabIndex, and Enter/Space key handling
           <div
             key={user.id ?? user.email ?? user.displayName ?? ''}
             className={styles.personOption}

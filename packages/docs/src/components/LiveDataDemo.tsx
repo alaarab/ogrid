@@ -145,6 +145,7 @@ export default function LiveDataDemo() {
       <span style={{ fontWeight: 700, fontSize: 13, marginRight: 8 }}>Market Watch</span>
       <span style={{ fontSize: 11, opacity: 0.6, marginRight: 16 }}>Real-time quotes</span>
       <button
+        type="button"
         style={{
           ...toolbarBtnStyle,
           background: paused ? 'var(--ogrid-selection-color, #217346)' : 'transparent',

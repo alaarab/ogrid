@@ -155,7 +155,7 @@ export function useDataGridEditing<T>(
   const editingState = useMemo<DataGridEditingState<T>>(() => ({
     editingCell, setEditingCell, pendingEditorValue, setPendingEditorValue,
     commitCellEdit, cancelPopoverEdit, popoverAnchorEl, setPopoverAnchorEl,
-  }), [editingCell, setEditingCell, pendingEditorValue, setPendingEditorValue, commitCellEdit, cancelPopoverEdit, popoverAnchorEl, setPopoverAnchorEl]);
+  }), [editingCell, setEditingCell, pendingEditorValue, setPendingEditorValue, commitCellEdit, cancelPopoverEdit, popoverAnchorEl]);
 
   return { editing: editingState };
 }

@@ -104,6 +104,7 @@ export function useRenderCellContent<T>(
           >
             {displayNode}
             {descriptor.canEditAny && descriptor.isSelectionEndCell && (
+              // biome-ignore lint/a11y/useAriaPropsSupportedByRole: the fill handle is a pointer-only drag affordance; the label is intentional and relied on as a stable hook
               <div
                 className={styles.fillHandle}
                 onPointerDown={handleFillHandleMouseDown}

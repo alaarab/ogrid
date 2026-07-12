@@ -227,6 +227,8 @@ export function DatePickerEditor<T>(props: ICellEditorProps<T>): React.ReactElem
   }, [onCancel]);
 
   return (
+    // biome-ignore lint/a11y/noNoninteractiveElementInteractions: popup editor root; onMouseDown only stops propagation so the grid does not treat clicks as outside-clicks. Keyboard is handled by the inner input and a root-level Escape listener.
+    // biome-ignore lint/a11y/noStaticElementInteractions: see above — propagation guard, not an interactive control
     <div ref={rootRef} style={rootStyle} onMouseDown={(e) => e.stopPropagation()}>
       {/* Text input for typing dates */}
       <div style={inputRowStyle}>

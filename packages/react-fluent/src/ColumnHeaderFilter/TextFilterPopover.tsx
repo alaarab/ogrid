@@ -26,6 +26,9 @@ export const TextFilterPopover: React.FC<TextFilterPopoverProps> = ({
   onInputKeyDown,
 }) => (
   <>
+    {/* biome-ignore lint/a11y/useKeyWithClickEvents: onClick only stops propagation so clicks inside the popover do not reach the column header; inner controls are natively interactive */}
+    {/* biome-ignore lint/a11y/noStaticElementInteractions: onClick only stops propagation; inner controls are natively interactive */}
+    {/* biome-ignore lint/a11y/noNoninteractiveElementInteractions: onClick only stops propagation; inner controls are natively interactive */}
     <div className={styles.popoverSearch} onClick={onPopoverClick}>
       <div className={styles.nativeInputWrapper}>
         <SearchRegular className={styles.nativeInputIcon} />
@@ -49,6 +52,9 @@ export const TextFilterPopover: React.FC<TextFilterPopoverProps> = ({
         />
       </div>
     </div>
+    {/* biome-ignore lint/a11y/useKeyWithClickEvents: onClick only stops propagation so clicks inside the popover do not reach the column header; inner controls are natively interactive */}
+    {/* biome-ignore lint/a11y/noStaticElementInteractions: onClick only stops propagation; inner controls are natively interactive */}
+    {/* biome-ignore lint/a11y/noNoninteractiveElementInteractions: onClick only stops propagation; inner controls are natively interactive */}
     <div className={styles.popoverActions} onClick={onPopoverClick}>
       <button type="button" className={styles.clearButton} onClick={onClear} disabled={!value}>
         Clear

@@ -74,6 +74,12 @@ const toolbarBtnStyle: React.CSSProperties = {
   whiteSpace: 'nowrap' as const,
 };
 
+const densityOptions: Array<{ value: 'compact' | 'normal' | 'comfortable'; label: string; icon: string }> = [
+  { value: 'compact', label: 'Compact', icon: '☰' },
+  { value: 'normal', label: 'Normal', icon: '≡' },
+  { value: 'comfortable', label: 'Comfortable', icon: '☷' },
+];
+
 function HeroGrid() {
   const { OGrid, exportToCsv } = require('@alaarab/ogrid-react-radix') as typeof import('@alaarab/ogrid-react-radix');
   const { RatingEditor, ColorPickerEditor, TagsEditor } = require('@alaarab/ogrid-react-inputs') as typeof import('@alaarab/ogrid-react-inputs');
@@ -121,18 +127,13 @@ function HeroGrid() {
 
   const hasActiveFilters = Object.keys(filters).length > 0;
 
-  const densityOptions: Array<{ value: 'compact' | 'normal' | 'comfortable'; label: string; icon: string }> = [
-    { value: 'compact', label: 'Compact', icon: '☰' },
-    { value: 'normal', label: 'Normal', icon: '≡' },
-    { value: 'comfortable', label: 'Comfortable', icon: '☷' },
-  ];
-
   const toolbar = useMemo(() => (
     <>
-      <button style={toolbarBtnStyle} onClick={handleExportCsv} title="Export to CSV">
+      <button type="button" style={toolbarBtnStyle} onClick={handleExportCsv} title="Export to CSV">
         Export CSV
       </button>
       <button
+        type="button"
         style={{
           ...toolbarBtnStyle,
           opacity: hasActiveFilters ? 1 : 0.5,
@@ -147,6 +148,7 @@ function HeroGrid() {
       <div style={{ display: 'flex', gap: 0, border: '1px solid var(--ogrid-border, #e0e0e0)', borderRadius: 4, overflow: 'hidden' }}>
         {densityOptions.map((opt, idx) => (
           <button
+            type="button"
             key={opt.value}
             onClick={() => setDensity(opt.value)}
             title={`${opt.label} density`}
@@ -167,7 +169,7 @@ function HeroGrid() {
         ))}
       </div>
     </>
-  ), [handleExportCsv, handleClearFilters, hasActiveFilters, density, densityOptions]);
+  ), [handleExportCsv, handleClearFilters, hasActiveFilters, density]);
 
   return (
     <div className={styles.heroGridWrapper}>
@@ -218,6 +220,7 @@ function FeatureTicker() {
     <div className={styles.ticker} aria-hidden="true">
       <div className={styles.tickerTrack}>
         {items.map((f, i) => (
+          // biome-ignore lint/suspicious/noArrayIndexKey: static decorative marquee (aria-hidden) that duplicates the feature list; items never reorder
           <span key={i} className={styles.tickerItem}>
             <span className={styles.tickerDot} />
             {f}
@@ -290,15 +293,17 @@ function SpreadsheetBackground() {
     <div className={styles.spreadsheetBg} aria-hidden="true">
       <div className={styles.gridLines}>
         {Array.from({ length: 22 }).map((_, i) => (
+          // biome-ignore lint/suspicious/noArrayIndexKey: fixed-length decorative grid lines; the index is the line's identity (position is derived from it)
           <div key={`v${i}`} className={styles.gridLineV} style={{ left: `${(i + 1) * 4.76}%` }} />
         ))}
         {Array.from({ length: 16 }).map((_, i) => (
+          // biome-ignore lint/suspicious/noArrayIndexKey: fixed-length decorative grid lines; the index is the line's identity (position is derived from it)
           <div key={`h${i}`} className={styles.gridLineH} style={{ top: `${(i + 1) * 6.25}%` }} />
         ))}
       </div>
-      {shimmerCells.map((cell, i) => (
+      {shimmerCells.map((cell) => (
         <div
-          key={i}
+          key={`${cell.type}-${cell.col}-${cell.row}`}
           className={`${styles.gridCell} ${styles[`gridCell--${cell.type}`]}`}
           style={{ left: `${cell.col * 4.76}%`, top: `${cell.row * 6.25}%`, animationDelay: `${cell.delay}s`, animationDuration: `${cell.duration}s` }}
         />
@@ -324,6 +329,8 @@ function Hero() {
   }, []);
 
   return (
+    // biome-ignore lint/a11y/noNoninteractiveElementInteractions: mouse-move handlers only drive a decorative cursor-glow effect; no functionality is gated on them
+    // biome-ignore lint/a11y/noStaticElementInteractions: decorative cursor-glow hover effect only, no interactive behavior
     <section className={styles.hero} ref={heroRef} onMouseMove={handleMouseMove} onMouseLeave={handleMouseLeave}>
       <SpreadsheetBackground />
       <div className={styles.heroBg} />
@@ -478,6 +485,7 @@ function CodePreviewSection() {
             <div className={styles.codeWindowTabs}>
               {frameworks.map((fw, i) => (
                 <button
+                  type="button"
                   key={fw.id}
                   className={`${styles.codeWindowTab} ${i === active ? styles.codeWindowTabActive : ''}`}
                   onClick={() => setActive(i)}

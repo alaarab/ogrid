@@ -395,6 +395,8 @@ export function TagsEditor<T>(props: ICellEditorProps<T>): React.ReactElement {
 
     if (isMultiSelectMode) {
       return (
+        // biome-ignore lint/a11y/useKeyWithClickEvents: ARIA combobox pattern — keyboard selection (arrows/Enter) is handled by the combobox input's onKeyDown; onClick is the pointer path
+        // biome-ignore lint/a11y/useFocusableInteractive: options are intentionally not focusable; focus stays on the combobox input and aria-activedescendant tracks the active option
         <div
           key={suggestion}
           id={`${listboxId}-opt-${i}`}
@@ -421,6 +423,8 @@ export function TagsEditor<T>(props: ICellEditorProps<T>): React.ReactElement {
     }
 
     return (
+      // biome-ignore lint/a11y/useKeyWithClickEvents: ARIA combobox pattern — keyboard selection (arrows/Enter) is handled by the combobox input's onKeyDown; onClick is the pointer path
+      // biome-ignore lint/a11y/useFocusableInteractive: options are intentionally not focusable; focus stays on the combobox input and aria-activedescendant tracks the active option
       <div
         key={suggestion}
         id={`${listboxId}-opt-${i}`}
@@ -439,6 +443,8 @@ export function TagsEditor<T>(props: ICellEditorProps<T>): React.ReactElement {
   };
 
   return (
+    // biome-ignore lint/a11y/noNoninteractiveElementInteractions: popup editor root; onMouseDown only stops propagation so the grid does not treat clicks as outside-clicks. Keyboard is handled by the combobox input and a root-level Escape listener.
+    // biome-ignore lint/a11y/noStaticElementInteractions: see above — propagation guard, not an interactive control
     <div
       ref={rootRef}
       style={rootStyle}

@@ -94,6 +94,9 @@ export const ColumnHeaderFilter: React.FC<IColumnHeaderFilterProps> = React.memo
       />
     ),
     renderDate: (p) => (
+      // biome-ignore lint/a11y/useKeyWithClickEvents: onClick only stops propagation so clicks inside the popover do not reach the column header; inner controls are natively interactive
+      // biome-ignore lint/a11y/noStaticElementInteractions: onClick only stops propagation; inner controls are natively interactive
+      // biome-ignore lint/a11y/noNoninteractiveElementInteractions: onClick only stops propagation; inner controls are natively interactive
       <div onClick={handlePopoverClick}>
         <DateFilterContent
           tempDateFrom={p.tempDateFrom}

@@ -1,6 +1,6 @@
 import type { IFormulaFunction, IFormulaContext, IEvaluator, ASTNode } from '../../types';
 import { FormulaError } from '../../types';
-import { toNumber, toString, flattenArgs, evalArg } from '../../evaluator';
+import { toNumber, toText, flattenArgs, evalArg } from '../../evaluator';
 
 /**
  * Core string manipulation: concatenation, casing, trimming, slicing, length,
@@ -15,7 +15,7 @@ export function registerBasicTextFunctions(registry: Map<string, IFormulaFunctio
       const parts: string[] = [];
       for (const val of values) {
         if (val instanceof FormulaError) return val;
-        parts.push(toString(val));
+        parts.push(toText(val));
       }
       return parts.join('');
     },
@@ -29,7 +29,7 @@ export function registerBasicTextFunctions(registry: Map<string, IFormulaFunctio
       const parts: string[] = [];
       for (const val of values) {
         if (val instanceof FormulaError) return val;
-        parts.push(toString(val));
+        parts.push(toText(val));
       }
       return parts.join('');
     },
@@ -41,7 +41,7 @@ export function registerBasicTextFunctions(registry: Map<string, IFormulaFunctio
     evaluate(args: ASTNode[], context: IFormulaContext, evaluator: IEvaluator): unknown {
       const val = evalArg(evaluator, args[0], context);
       if (val instanceof FormulaError) return val;
-      return toString(val).toUpperCase();
+      return toText(val).toUpperCase();
     },
   });
 
@@ -51,7 +51,7 @@ export function registerBasicTextFunctions(registry: Map<string, IFormulaFunctio
     evaluate(args: ASTNode[], context: IFormulaContext, evaluator: IEvaluator): unknown {
       const val = evalArg(evaluator, args[0], context);
       if (val instanceof FormulaError) return val;
-      return toString(val).toLowerCase();
+      return toText(val).toLowerCase();
     },
   });
 
@@ -63,7 +63,7 @@ export function registerBasicTextFunctions(registry: Map<string, IFormulaFunctio
       if (val instanceof FormulaError) return val;
       // Excel TRIM removes leading/trailing spaces AND collapses runs of internal
       // spaces to a single space (only the space character, not tabs/newlines).
-      return toString(val).replace(/ +/g, ' ').replace(/^ | $/g, '');
+      return toText(val).replace(/ +/g, ' ').replace(/^ | $/g, '');
     },
   });
 
@@ -73,7 +73,7 @@ export function registerBasicTextFunctions(registry: Map<string, IFormulaFunctio
     evaluate(args: ASTNode[], context: IFormulaContext, evaluator: IEvaluator): unknown {
       const val = evalArg(evaluator, args[0], context);
       if (val instanceof FormulaError) return val;
-      const text = toString(val);
+      const text = toText(val);
 
       let numChars = 1;
       if (args.length >= 2) {
@@ -95,7 +95,7 @@ export function registerBasicTextFunctions(registry: Map<string, IFormulaFunctio
     evaluate(args: ASTNode[], context: IFormulaContext, evaluator: IEvaluator): unknown {
       const val = evalArg(evaluator, args[0], context);
       if (val instanceof FormulaError) return val;
-      const text = toString(val);
+      const text = toText(val);
 
       let numChars = 1;
       if (args.length >= 2) {
@@ -117,7 +117,7 @@ export function registerBasicTextFunctions(registry: Map<string, IFormulaFunctio
     evaluate(args: ASTNode[], context: IFormulaContext, evaluator: IEvaluator): unknown {
       const val = evalArg(evaluator, args[0], context);
       if (val instanceof FormulaError) return val;
-      const text = toString(val);
+      const text = toText(val);
 
       const rawStart = evalArg(evaluator, args[1], context);
       if (rawStart instanceof FormulaError) return rawStart;
@@ -146,7 +146,7 @@ export function registerBasicTextFunctions(registry: Map<string, IFormulaFunctio
     evaluate(args: ASTNode[], context: IFormulaContext, evaluator: IEvaluator): unknown {
       const val = evalArg(evaluator, args[0], context);
       if (val instanceof FormulaError) return val;
-      return toString(val).length;
+      return toText(val).length;
     },
   });
 
@@ -156,7 +156,7 @@ export function registerBasicTextFunctions(registry: Map<string, IFormulaFunctio
     evaluate(args: ASTNode[], context: IFormulaContext, evaluator: IEvaluator): unknown {
       const rawText = evalArg(evaluator, args[0], context);
       if (rawText instanceof FormulaError) return rawText;
-      const text = toString(rawText);
+      const text = toText(rawText);
       const rawTimes = evalArg(evaluator, args[1], context);
       if (rawTimes instanceof FormulaError) return rawTimes;
       const times = toNumber(rawTimes);
@@ -175,7 +175,7 @@ export function registerBasicTextFunctions(registry: Map<string, IFormulaFunctio
       if (rawA instanceof FormulaError) return rawA;
       const rawB = evalArg(evaluator, args[1], context);
       if (rawB instanceof FormulaError) return rawB;
-      return toString(rawA) === toString(rawB);
+      return toText(rawA) === toText(rawB);
     },
   });
 
@@ -185,7 +185,7 @@ export function registerBasicTextFunctions(registry: Map<string, IFormulaFunctio
     evaluate(args: ASTNode[], context: IFormulaContext, evaluator: IEvaluator): unknown {
       const val = evalArg(evaluator, args[0], context);
       if (val instanceof FormulaError) return val;
-      return toString(val).toLowerCase().replace(/\b\w/g, (c) => c.toUpperCase());
+      return toText(val).toLowerCase().replace(/\b\w/g, (c) => c.toUpperCase());
     },
   });
 
@@ -197,7 +197,7 @@ export function registerBasicTextFunctions(registry: Map<string, IFormulaFunctio
       if (val instanceof FormulaError) return val;
       // Remove non-printable characters (ASCII 0-31)
       // eslint-disable-next-line no-control-regex
-      return toString(val).replace(/[\x00-\x1F]/g, '');
+      return toText(val).replace(/[\x00-\x1F]/g, '');
     },
   });
 }

@@ -1,4 +1,4 @@
-import { useCallback } from 'react';
+import { useCallback, useMemo } from 'react';
 import { LiveDemo } from '../LiveDemo';
 import { people, getRowId, paginationColumns, btnStyle, type Person } from './demoData';
 
@@ -6,7 +6,10 @@ function Inner() {
   const { OGrid, exportToCsv } = require('@alaarab/ogrid-react-radix') as typeof import('@alaarab/ogrid-react-radix');
   type CsvColumn = import('@alaarab/ogrid-react-radix').CsvColumn;
 
-  const csvColumns: CsvColumn[] = paginationColumns.map(c => ({ columnId: c.columnId, name: c.name }));
+  const csvColumns: CsvColumn[] = useMemo(
+    () => paginationColumns.map(c => ({ columnId: c.columnId, name: c.name })),
+    []
+  );
 
   const handleExport = useCallback(() => {
     exportToCsv<Person>(
@@ -15,14 +18,14 @@ function Inner() {
       (item, columnId) => String((item as Record<string, unknown>)[columnId] ?? ''),
       'people.csv'
     );
-  }, []);
+  }, [exportToCsv, csvColumns]);
 
   return (
     <OGrid
       columns={paginationColumns}
       data={people}
       getRowId={getRowId}
-      toolbar={<button onClick={handleExport} style={btnStyle}>Export to CSV</button>}
+      toolbar={<button type="button" onClick={handleExport} style={btnStyle}>Export to CSV</button>}
       defaultPageSize={10}
     />
   );

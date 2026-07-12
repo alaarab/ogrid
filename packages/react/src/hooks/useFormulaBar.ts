@@ -68,6 +68,7 @@ export function useFormulaBar(params: UseFormulaBarParams): UseFormulaBarResult 
   );
 
   // Reset editing when active cell changes
+  // biome-ignore lint/correctness/useExhaustiveDependencies: activeCol/activeRow are deliberate triggers — the effect must re-run whenever the active cell changes even though it does not read them
   useEffect(() => {
     setIsEditing(false);
     isFormulaBarEditing.current = false;

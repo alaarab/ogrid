@@ -8,8 +8,11 @@ const chipStyle: React.CSSProperties = {
   gap: 4,
   padding: '2px 10px',
   background: 'var(--ogrid-border, #e0e0e0)',
+  border: 'none',
   borderRadius: 12,
   fontSize: '0.75rem',
+  fontFamily: 'inherit',
+  color: 'inherit',
   cursor: 'pointer',
 };
 
@@ -29,7 +32,7 @@ function Inner() {
       defaultPageSize={10}
       toolbar={
         <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-          <button style={btnStyle} onClick={() => setChips(['Engineering', 'Active'])}>
+          <button type="button" style={btnStyle} onClick={() => setChips(['Engineering', 'Active'])}>
             Reset Filters
           </button>
           <span style={{ fontSize: '0.8rem', color: 'var(--ogrid-muted)' }}>
@@ -44,9 +47,9 @@ function Inner() {
               Filters:
             </span>
             {chips.map((chip) => (
-              <span key={chip} style={chipStyle} onClick={() => removeChip(chip)}>
+              <button key={chip} type="button" style={chipStyle} onClick={() => removeChip(chip)}>
                 {chip} &times;
-              </span>
+              </button>
             ))}
           </div>
         ) : undefined

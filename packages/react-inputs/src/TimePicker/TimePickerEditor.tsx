@@ -219,6 +219,7 @@ export function TimePickerEditor<T>(props: ICellEditorProps<T>): React.ReactElem
   };
 
   // Scroll selected items into view on mount
+  // biome-ignore lint/correctness/useExhaustiveDependencies: mount-only effect; deliberately reads initial hour12/time/options once to avoid re-scrolling while the user interacts
   React.useEffect(() => {
     const scrollSelected = (colEl: HTMLDivElement | null, selectedIndex: number, total: number) => {
       if (!colEl) return;
@@ -249,6 +250,8 @@ export function TimePickerEditor<T>(props: ICellEditorProps<T>): React.ReactElem
   }, [onCancel]);
 
   return (
+    // biome-ignore lint/a11y/noNoninteractiveElementInteractions: popup editor root; onMouseDown only stops propagation so the grid does not treat clicks as outside-clicks. Keyboard is handled by the inner input and a root-level Escape listener.
+    // biome-ignore lint/a11y/noStaticElementInteractions: see above — propagation guard, not an interactive control
     <div ref={rootRef} style={rootStyle} onMouseDown={(e) => e.stopPropagation()}>
       {/* Text input */}
       <div style={inputRowStyle}>

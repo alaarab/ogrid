@@ -48,6 +48,7 @@ export function BaseTableHeader<T>(props: BaseTableHeaderProps<T>): React.ReactE
         </primitives.Tr>
       )}
       {headerRows.map((row, rowIdx) => (
+        // biome-ignore lint/suspicious/noArrayIndexKey: header rows are structural depth levels of the column-group tree; the index IS the row's identity and rows are rebuilt wholesale (never reordered in place)
         <primitives.Tr key={rowIdx}>
           {/* Checkbox header: show in last row (leaf row) */}
           {rowIdx === headerRows.length - 1 && hasCheckboxCol && (
@@ -69,8 +70,11 @@ export function BaseTableHeader<T>(props: BaseTableHeaderProps<T>): React.ReactE
                 <div className={styles.rowNumberHeaderCellInner}>
                   #
                 </div>
+                {/* biome-ignore lint/a11y/useFocusableInteractive: resize handle is a pointer-only drag affordance; it is deliberately kept out of the tab order (grid keyboard interaction is centralized in the grid's keyboard-navigation layer) */}
+                {/* biome-ignore lint/a11y/useSemanticElements: an <hr> inside a th would break the table header layout; role="separator" on a styled div is intentional */}
                 <div
                   className={styles.resizeHandle}
+                  // biome-ignore lint/a11y/useAriaPropsForRole: the drag-driven resize handle has no meaningful discrete value to expose via aria-valuenow
                   role="separator"
                   aria-orientation="vertical"
                   aria-label="Resize row number column"
@@ -91,6 +95,7 @@ export function BaseTableHeader<T>(props: BaseTableHeaderProps<T>): React.ReactE
           {row.map((cell, cellIdx) => {
             if (cell.isGroup) {
               return (
+                // biome-ignore lint/suspicious/noArrayIndexKey: group header cells have no stable id (labels may repeat) and the header layout is rebuilt wholesale when columns change — cells are never reordered in place
                 <th key={cellIdx} colSpan={cell.colSpan} className={styles.groupHeaderCell} scope="colgroup">
                   {cell.label}
                 </th>
@@ -128,6 +133,7 @@ export function BaseTableHeader<T>(props: BaseTableHeaderProps<T>): React.ReactE
                 <div className={styles.headerCellContent}>
                   <ColumnHeaderFilter {...getHeaderFilterConfig(col, headerFilterInput)} />
                   <button
+                    type="button"
                     className={styles.headerMenuTrigger}
                     onClick={(e) => {
                       e.stopPropagation();
@@ -143,8 +149,11 @@ export function BaseTableHeader<T>(props: BaseTableHeaderProps<T>): React.ReactE
                     {'⋮'}
                   </button>
                 </div>
+                {/* biome-ignore lint/a11y/useFocusableInteractive: resize handle is a pointer-only drag affordance; it is deliberately kept out of the tab order (grid keyboard interaction is centralized in the grid's keyboard-navigation layer) */}
+                {/* biome-ignore lint/a11y/useSemanticElements: an <hr> inside a th would break the table header layout; role="separator" on a styled div is intentional */}
                 <div
                   className={styles.resizeHandle}
+                  // biome-ignore lint/a11y/useAriaPropsForRole: the drag-driven resize handle has no meaningful discrete value to expose via aria-valuenow
                   role="separator"
                   aria-orientation="vertical"
                   aria-label={`Resize ${col.name}`}

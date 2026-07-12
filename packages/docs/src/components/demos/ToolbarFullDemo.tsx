@@ -22,7 +22,7 @@ function Inner() {
       defaultPageSize={10}
       toolbar={
         <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-          <button style={btnStyle} onClick={() => gridRef.current?.deselectAll()}>Clear Selection</button>
+          <button type="button" style={btnStyle} onClick={() => gridRef.current?.deselectAll()}>Clear Selection</button>
           <span style={{ fontSize: '0.8rem', color: 'var(--ogrid-muted)' }}>
             Full-featured layout
           </span>

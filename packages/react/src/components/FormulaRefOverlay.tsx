@@ -97,6 +97,7 @@ function FormulaRefOverlayInner({
     <>
       {rects.map((r, i) => (
         <svg
+          // biome-ignore lint/suspicious/noArrayIndexKey: rects are decorative overlays rebuilt wholesale on every measure pass; they carry no stable identity and are never reordered in place
           key={i}
           style={{
             position: 'absolute',

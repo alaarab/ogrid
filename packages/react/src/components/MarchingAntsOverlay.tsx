@@ -74,6 +74,7 @@ export function MarchingAntsOverlay({
   }, []);
 
   // Measure when any range changes; re-measure on resize
+  // biome-ignore lint/correctness/useExhaustiveDependencies: items/visibleColumns/columnSizingOverrides/columnOrder are deliberate re-measure triggers — cell positions shift when data or column layout changes, which the ResizeObserver alone cannot detect
   useEffect(() => {
     if (!selectionRange && !clipRange) {
       setSelRect(null);

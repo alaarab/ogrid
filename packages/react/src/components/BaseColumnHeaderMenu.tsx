@@ -147,6 +147,7 @@ export function BaseColumnHeaderMenu(props: BaseColumnHeaderMenuProps) {
       {items.map((item, idx) => (
         <React.Fragment key={item.id}>
           <button
+            type="button"
             className={classNames?.item}
             disabled={item.disabled}
             onClick={() => {

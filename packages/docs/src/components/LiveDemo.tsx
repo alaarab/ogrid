@@ -29,15 +29,16 @@ function GridSkeleton({ height }: { height: number }) {
     <div className="live-demo__skeleton" style={{ height }}>
       {/* Header row */}
       <div className="live-demo__skeleton-header">
-        {[30, 18, 22, 16, 14].map((w, i) => (
-          <div key={i} className="live-demo__skeleton-cell live-demo__skeleton-cell--header" style={{ width: `${w}%` }} />
+        {[30, 18, 22, 16, 14].map((w) => (
+          <div key={w} className="live-demo__skeleton-cell live-demo__skeleton-cell--header" style={{ width: `${w}%` }} />
         ))}
       </div>
       {/* Data rows */}
       {Array.from({ length: 8 }).map((_, row) => (
+        // biome-ignore lint/suspicious/noArrayIndexKey: fixed-length static loading skeleton; rows have no data identity and never reorder
         <div key={row} className="live-demo__skeleton-row">
-          {[30, 18, 22, 16, 14].map((w, col) => (
-            <div key={col} className="live-demo__skeleton-cell" style={{ width: `${w}%`, opacity: 1 - row * 0.08 }} />
+          {[30, 18, 22, 16, 14].map((w) => (
+            <div key={w} className="live-demo__skeleton-cell" style={{ width: `${w}%`, opacity: 1 - row * 0.08 }} />
           ))}
         </div>
       ))}
