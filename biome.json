@@ -70,6 +70,28 @@
   "formatter": {
     "enabled": false
   },
+  "overrides": [
+    {
+      "includes": [
+        "**/__tests__/**",
+        "**/*.test.ts",
+        "**/*.test.tsx",
+        "**/src/testing/**",
+        "**/*.stories.tsx",
+        "**/__benchmarks__/**"
+      ],
+      "linter": {
+        "rules": {
+          "style": {
+            "noNonNullAssertion": "off"
+          },
+          "a11y": {
+            "recommended": false
+          }
+        }
+      }
+    }
+  ],
   "assist": {
     "enabled": true,
     "actions": {

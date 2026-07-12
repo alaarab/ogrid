@@ -40,8 +40,8 @@ function App() {
   const [theme, setThemeState] = useState(getInitialTheme());
   const [data, setData] = useState<ExampleRow[]>(initialRows);
   const apiRef = useRef<IOGridApi<unknown> | null>(null);
-  const gridDataProps = !isPremiumExample && projectScenario.serverSide
-    ? { dataSource: coerceExampleDataSource(projectScenario.dataSource!) }
+  const gridDataProps = !isPremiumExample && projectScenario.serverSide && projectScenario.dataSource
+    ? { dataSource: coerceExampleDataSource(projectScenario.dataSource) }
     : { data };
   setAppTheme = (t) => { setThemeState(t); setTheme(t); };
 
