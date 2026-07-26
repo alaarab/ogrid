@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, type Dispatch, type SetStateAction } from 'react';
 
 export interface UseOGridPaginationParams {
   controlledPage?: number;
@@ -15,6 +15,12 @@ export interface UseOGridPaginationState {
   pageSize: number;
   setPage: (p: number) => void;
   setPageSize: (size: number) => void;
+  /**
+   * Raw setter for the uncontrolled page. Writes state without notifying
+   * `onPageChange`, so callers restoring a previously captured page
+   * (sheet-scoped state) don't report it back as a user page change.
+   */
+  setInternalPage: Dispatch<SetStateAction<number>>;
 }
 
 /**
@@ -47,5 +53,5 @@ export function useOGridPagination(params: UseOGridPaginationParams): UseOGridPa
     [controlledPageSize, onPageSizeChange, setPage]
   );
 
-  return { page, pageSize, setPage, setPageSize };
+  return { page, pageSize, setPage, setPageSize, setInternalPage };
 }

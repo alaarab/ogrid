@@ -34,6 +34,79 @@ describe('useOGridColumnVisibility', () => {
     expect(result.current.visibleColumns).toEqual(new Set(['a']));
   });
 
+  it('reseeds when the column set is swapped wholesale (sheet switch)', () => {
+    const { result, rerender } = renderHook(
+      ({ columns }) => useOGridColumnVisibility({ columns }),
+      { initialProps: { columns: [{ columnId: 'a1' }, { columnId: 'a2' }, { columnId: 'a3' }] as Col[] } }
+    );
+    expect(result.current.visibleColumns).toEqual(new Set(['a1', 'a2', 'a3']));
+
+    rerender({ columns: [{ columnId: 'b1' }, { columnId: 'b2' }] });
+    // No ids from the old sheet survive, and the new columns are visible.
+    expect(result.current.visibleColumns).toEqual(new Set(['b1', 'b2']));
+  });
+
+  it('keeps deliberate hides for columns that survive a column-set change', () => {
+    const { result, rerender } = renderHook(
+      ({ columns }) => useOGridColumnVisibility({ columns }),
+      { initialProps: { columns: [{ columnId: 'shared' }, { columnId: 'a1' }] as Col[] } }
+    );
+    act(() => result.current.handleVisibilityChange('shared', false));
+    expect(result.current.visibleColumns).toEqual(new Set(['a1']));
+
+    rerender({ columns: [{ columnId: 'shared' }, { columnId: 'b1' }] });
+    // 'shared' stays hidden (user's choice), 'b1' is new so it defaults to visible.
+    expect(result.current.visibleColumns).toEqual(new Set(['b1']));
+  });
+
+  it('honours defaultVisible=false on the incoming column set', () => {
+    const { result, rerender } = renderHook(
+      ({ columns }) => useOGridColumnVisibility({ columns }),
+      { initialProps: { columns: [{ columnId: 'a1' }] as Col[] } }
+    );
+    rerender({ columns: [{ columnId: 'b1' }, { columnId: 'b2', defaultVisible: false }] });
+    expect(result.current.visibleColumns).toEqual(new Set(['b1']));
+  });
+
+  it('falls back to the new defaults when the remap would hide everything', () => {
+    const { result, rerender } = renderHook(
+      ({ columns }) => useOGridColumnVisibility({ columns }),
+      { initialProps: { columns: [{ columnId: 'a1' }, { columnId: 'a2' }] as Col[] } }
+    );
+    act(() => result.current.setVisibleColumns(new Set(['a1'])));
+
+    // Every incoming column is already known and hidden  -  don't render a
+    // column-less (and therefore row-less) grid.
+    rerender({ columns: [{ columnId: 'a2' }] });
+    expect(result.current.visibleColumns).toEqual(new Set(['a2']));
+  });
+
+  it('does not churn state when columns are re-created with the same ids', () => {
+    const seen: Array<Set<string>> = [];
+    const { rerender } = renderHook(
+      ({ columns }) => {
+        const state = useOGridColumnVisibility({ columns });
+        seen.push(state.visibleColumns);
+        return state;
+      },
+      { initialProps: { columns: [{ columnId: 'a' }, { columnId: 'b' }] as Col[] } }
+    );
+    const first = seen[seen.length - 1];
+    rerender({ columns: [{ columnId: 'a' }, { columnId: 'b' }] });
+    expect(seen[seen.length - 1]).toBe(first);
+  });
+
+  it('does NOT remap internal state when controlled', () => {
+    const controlled = new Set(['a']);
+    const { result, rerender } = renderHook(
+      ({ columns }) =>
+        useOGridColumnVisibility({ columns, controlledVisibleColumns: controlled }),
+      { initialProps: { columns: [{ columnId: 'a' }] as Col[] } }
+    );
+    rerender({ columns: [{ columnId: 'b1' }, { columnId: 'b2' }] });
+    expect(result.current.visibleColumns).toBe(controlled);
+  });
+
   it('does NOT re-initialize from late columns when controlled', () => {
     const controlled = new Set(['x']);
     const { result, rerender } = renderHook(

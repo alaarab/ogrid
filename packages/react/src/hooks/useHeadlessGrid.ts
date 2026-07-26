@@ -203,6 +203,7 @@ export function useHeadlessGrid<T>(
     controlledSort,
     defaultSortField: initialSort?.field ?? '',
     defaultSortDirection: initialSort?.direction ?? 'asc',
+    columns,
     onSortChange,
     setPage: pagination.setPage,
   });
