@@ -150,12 +150,18 @@ jobs:
         run: bun install --frozen-lockfile
 
       - name: Build required packages for browser smoke
+        # This list must cover every workspace package the examples app
+        # imports, because their package entries point at dist/. A missing
+        # one does not fail the build - the demo app just dies in the
+        # browser and every smoke test times out on a grid that never
+        # renders (that is exactly how the react-xlsx omission presented).
         run: |
           bunx turbo build \
             --filter=@alaarab/ogrid-mcp \
             --filter=@alaarab/ogrid-core \
             --filter=@alaarab/ogrid-react \
             --filter=@alaarab/ogrid-react-radix \
+            --filter=@alaarab/ogrid-react-xlsx \
             --filter=@alaarab/ogrid-inputs \
             --filter=@alaarab/ogrid-react-inputs
         env:
