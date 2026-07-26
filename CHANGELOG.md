@@ -4,6 +4,8 @@ All notable changes to OGrid will be documented in this file.
 
 ## [Unreleased]
 
+## [2.15.2] - 2026-07-26
+
 ### Added — xlsx export (react-xlsx + core)
 
 - **`exportToXlsx(items, columns, getValue, filename?, options?)`.** The

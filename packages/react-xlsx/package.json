@@ -1,7 +1,7 @@
 {
   "name": "@alaarab/ogrid-react-xlsx",
-  "version": "2.15.1",
-  "description": "Drop an xlsx Blob, get a fully featured OGrid \u2014 and export grid data back to .xlsx. Wraps ExcelJS + @alaarab/ogrid-react-radix with formula engine + Excel cell references on by default.",
+  "version": "2.15.2",
+  "description": "Drop an xlsx Blob, get a fully featured OGrid — and export grid data back to .xlsx. Wraps ExcelJS + @alaarab/ogrid-react-radix with formula engine + Excel cell references on by default.",
   "main": "dist/esm/index.js",
   "module": "dist/esm/index.js",
   "types": "dist/types/index.d.ts",
@@ -39,9 +39,9 @@
     "node": ">=18"
   },
   "dependencies": {
-    "@alaarab/ogrid-core": "2.15.1",
-    "@alaarab/ogrid-react": "2.15.1",
-    "@alaarab/ogrid-react-radix": "2.15.1",
+    "@alaarab/ogrid-core": "2.15.2",
+    "@alaarab/ogrid-react": "2.15.2",
+    "@alaarab/ogrid-react-radix": "2.15.2",
     "exceljs": "^4.4.0"
   },
   "peerDependencies": {
