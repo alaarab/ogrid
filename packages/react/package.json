@@ -1,7 +1,7 @@
 {
   "name": "@alaarab/ogrid-react",
-  "version": "2.15.1",
-  "description": "OGrid React \u2013 React hooks, headless components, and utilities for OGrid data grids.",
+  "version": "2.15.2",
+  "description": "OGrid React – React hooks, headless components, and utilities for OGrid data grids.",
   "main": "dist/esm/index.js",
   "module": "dist/esm/index.js",
   "types": "dist/types/index.d.ts",
@@ -42,7 +42,7 @@
     "node": ">=18"
   },
   "dependencies": {
-    "@alaarab/ogrid-core": "2.15.1",
+    "@alaarab/ogrid-core": "2.15.2",
     "@tanstack/react-virtual": "^3.14.2"
   },
   "peerDependencies": {
