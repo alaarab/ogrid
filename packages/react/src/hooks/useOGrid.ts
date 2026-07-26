@@ -23,7 +23,9 @@ import { useOGridRowSelection } from './useOGridRowSelection';
 import { useOGridActiveCell } from './useOGridActiveCell';
 import { useOGridImperativeHandle } from './useOGridImperativeHandle';
 import { useLatestRef } from './useLatestRef';
+import { useSheetScopedState } from './useSheetScopedState';
 import { useSideBarState } from './useSideBarState';
+import type { SortState } from './useOGridSorting';
 import type { SideBarProps } from '../components/SideBar';
 import type {
   IOGridProps,
@@ -31,6 +33,8 @@ import type {
   IOGridApi,
   IStatusBarProps,
   IColumnDefinition,
+  IFilters,
+  RowId,
 } from '../types';
 
 const DEFAULT_PAGE_SIZE = 25;
@@ -99,6 +103,22 @@ export interface UseOGridLayout {
 export interface UseOGridFilters {
   hasActiveFilters: boolean;
   setFilters: (f: import('../types').IFilters) => void;
+}
+
+/**
+ * Grid state that belongs to one sheet, captured and restored across switches.
+ * A slot typed as optional uses `undefined` to mean "leave it to the hook that
+ * reconciles this against the incoming column defs".
+ */
+interface SheetScopedGridState {
+  visibleColumns: Set<string> | undefined;
+  sort: SortState;
+  filters: IFilters;
+  page: number;
+  selectedRows: Set<RowId>;
+  columnOrder: string[] | undefined;
+  columnWidths: Record<string, number>;
+  pinned: Record<string, 'left' | 'right'> | undefined;
 }
 
 export interface UseOGridResult<T> {
@@ -258,7 +278,7 @@ export function useOGrid<T>(
   });
 
   const sortingState = useOGridSorting({
-    controlledSort, defaultSortField, defaultSortDirection,
+    controlledSort, defaultSortField, defaultSortDirection, columns,
     onSortChange, setPage: paginationState.setPage,
   });
 
@@ -294,6 +314,7 @@ export function useOGrid<T>(
     visibleColumns,
     setVisibleColumns,
     handleVisibilityChange,
+    setInternalVisibleColumns,
   } = useOGridColumnVisibility({
     columns,
     controlledVisibleColumns,
@@ -326,6 +347,79 @@ export function useOGrid<T>(
     onColumnResized,
     onColumnPinned,
   });
+
+  // --- Per-sheet UI state ---
+  // Everything below is keyed on ids that belong to one sheet: column ids
+  // (visibility, sort field, filter keys, order, widths, pins) and row ids
+  // (selection), plus a page index that only makes sense against that sheet's
+  // row count. It is captured when the user leaves a sheet and restored when
+  // they come back, so their choices survive a round trip, and a sheet seen for
+  // the first time starts from its own defaults instead of inheriting the
+  // previous sheet's. Controlled slots are left alone  -  the host owns those.
+  //
+  // `visibleColumns` and `pinned` are restored as `undefined` for a first-time
+  // sheet: their own hooks already reconcile against the incoming column defs,
+  // and that reconcile is what preserves a deliberate hide for a column both
+  // sheets share.
+  //
+  // `pageSize` is deliberately NOT sheet-scoped: it is a viewport preference,
+  // not something the sheet's columns or rows give meaning to.
+  useSheetScopedState<SheetScopedGridState>({
+    activeSheet,
+    current: {
+      visibleColumns,
+      sort: sortingState.sort,
+      filters: filtersState.filters,
+      page: paginationState.page,
+      selectedRows: effectiveSelectedRows,
+      columnOrder: effectiveColumnOrder,
+      columnWidths: columnWidthOverrides,
+      pinned: pinnedOverrides,
+    },
+    defaults: () => ({
+      visibleColumns: undefined,
+      sort: { field: defaultSortField, direction: defaultSortDirection },
+      filters: {},
+      page: 1,
+      selectedRows: new Set<RowId>(),
+      columnOrder: undefined,
+      columnWidths: {},
+      pinned: undefined,
+    }),
+    apply: (state) => {
+      if (controlledVisibleColumns === undefined && state.visibleColumns !== undefined) {
+        setInternalVisibleColumns(state.visibleColumns);
+      }
+      if (controlledSort === undefined) sortingState.setInternalSort(state.sort);
+      if (controlledFilters === undefined) filtersState.setInternalFilters(state.filters);
+      if (controlledPage === undefined) paginationState.setInternalPage(state.page);
+      if (selectedRows === undefined) setInternalSelectedRows(state.selectedRows);
+      if (columnOrder === undefined) setInternalColumnOrder(state.columnOrder);
+      setColumnWidthOverrides(state.columnWidths);
+      if (state.pinned !== undefined) setPinnedOverrides(state.pinned);
+    },
+  });
+
+  // A page index outlives its data whenever the row count shrinks without the
+  // page following  -  a sheet switch onto a shorter sheet, a host-applied
+  // filter, a refresh that returns fewer rows. The page slice then lands past
+  // the end and the grid renders no rows at all, with pagination still claiming
+  // there is data. Snap back to the last page that has rows. Controlled
+  // pagination is the host's to correct, and full-dataset virtualization has no
+  // pages to be past the end of.
+  const lastPage = Math.max(
+    1,
+    Math.ceil(dataFetchingState.displayTotalCount / paginationState.pageSize)
+  );
+  const isPagePastEnd =
+    controlledPage === undefined &&
+    !fullyVirtualized &&
+    dataFetchingState.displayTotalCount > 0 &&
+    paginationState.page > lastPage;
+  const setPageRef = useLatestRef(paginationState.setPage);
+  useEffect(() => {
+    if (isPagePastEnd) setPageRef.current(lastPage);
+  }, [isPagePastEnd, lastPage, setPageRef]);
 
   // --- Imperative handle (stabilized via refs to avoid invalidation on every state change) ---
   useOGridImperativeHandle({

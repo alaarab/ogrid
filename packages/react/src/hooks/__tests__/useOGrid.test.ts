@@ -134,6 +134,49 @@ describe('useOGrid', () => {
 
       expect(result.current.pagination.hidden).toBe(false);
     });
+
+    it('snaps back to the last real page when the data shrinks underneath it', () => {
+      const apiRef = React.createRef<IOGridApi<Row>>();
+      const onPageChange = jest.fn();
+      const { result, rerender } = renderHook(
+        ({ rows }: { rows: Row[] }) =>
+          useOGrid(
+            makeClientProps({ data: rows, defaultPageSize: 2, onPageChange }),
+            apiRef
+          ),
+        { wrapper, initialProps: { rows: testData } }
+      );
+      act(() => {
+        result.current.pagination.setPage(3);
+      });
+      expect(result.current.dataGridProps.items).toHaveLength(1);
+      onPageChange.mockClear();
+
+      // Two rows left: page 3 no longer exists, and slicing it renders nothing.
+      rerender({ rows: testData.slice(0, 2) });
+
+      expect(result.current.pagination.page).toBe(1);
+      expect(result.current.dataGridProps.items).toHaveLength(2);
+      expect(onPageChange).toHaveBeenCalledWith(1);
+    });
+
+    it('leaves a page past the end alone when pagination is controlled', () => {
+      const apiRef = React.createRef<IOGridApi<Row>>();
+      const onPageChange = jest.fn();
+      const { result, rerender } = renderHook(
+        ({ rows }: { rows: Row[] }) =>
+          useOGrid(
+            makeClientProps({ data: rows, defaultPageSize: 2, page: 3, onPageChange }),
+            apiRef
+          ),
+        { wrapper, initialProps: { rows: testData } }
+      );
+
+      rerender({ rows: testData.slice(0, 2) });
+
+      expect(result.current.pagination.page).toBe(3);
+      expect(onPageChange).not.toHaveBeenCalled();
+    });
   });
 
   describe('full-dataset virtualization (virtualScroll.paginate=false)', () => {

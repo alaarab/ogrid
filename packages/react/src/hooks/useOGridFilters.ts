@@ -1,4 +1,4 @@
-import { useState, useCallback, useMemo } from 'react';
+import { useState, useCallback, useMemo, type Dispatch, type SetStateAction } from 'react';
 import {
   mergeFilter,
   deriveFilterOptionsFromData,
@@ -42,6 +42,12 @@ export interface UseOGridFiltersState {
   hasActiveFilters: boolean;
   clientFilterOptions: Record<string, string[]>;
   loadingFilterOptions: Record<string, boolean>;
+  /**
+   * Raw setter for the uncontrolled filters. Writes state without notifying
+   * `onFiltersChange` or resetting the page, so callers restoring previously
+   * captured filters (sheet-scoped state) don't report them back as a user edit.
+   */
+  setInternalFilters: Dispatch<SetStateAction<IFilters>>;
 }
 
 /**
@@ -106,5 +112,6 @@ export function useOGridFilters<T>(params: UseOGridFiltersParams<T>): UseOGridFi
     hasActiveFilters,
     clientFilterOptions,
     loadingFilterOptions: dataSource?.fetchFilterOptions ? loadingFilterOptions : EMPTY_LOADING_OPTIONS,
+    setInternalFilters,
   };
 }
