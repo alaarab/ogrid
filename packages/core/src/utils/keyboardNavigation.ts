@@ -25,12 +25,20 @@ export function findCtrlArrowTarget(
   step: number,
   isEmpty: (i: number) => boolean
 ): number {
-  if (pos === edge) return pos;
+  // Bail out when we are already at (or past) the edge in the direction of
+  // travel. A strict `pos === edge` check is not enough: a stale position on
+  // the far side of the edge  -  e.g. an activeCell left over after a filter
+  // shrank the row count  -  would step away from `edge` forever.
+  const atOrPastEdge = step > 0 ? pos >= edge : pos <= edge;
+  if (atOrPastEdge) return pos;
+
+  const inBounds = (p: number): boolean => (step > 0 ? p < edge : p > edge);
+
   const next = pos + step;
   if (!isEmpty(pos) && !isEmpty(next)) {
     // Scan forward through non-empties; stop at the last before an empty or edge
     let p = next;
-    while (p !== edge) {
+    while (inBounds(p)) {
       if (isEmpty(p + step)) return p;
       p += step;
     }
@@ -38,7 +46,7 @@ export function findCtrlArrowTarget(
   }
   // Skip empties; land on first non-empty or edge
   let p = next;
-  while (p !== edge) {
+  while (inBounds(p)) {
     if (!isEmpty(p)) return p;
     p += step;
   }

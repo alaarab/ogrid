@@ -4,6 +4,52 @@ All notable changes to OGrid will be documented in this file.
 
 ## [Unreleased]
 
+### Fixed — formula engine (core)
+
+- **Postfix `%` returned a value 100× too large.** The parser encodes `X%` as
+  `binaryOp('%', X, 100)`, but the evaluator computed `l * r / 100`, so the
+  injected divisor cancelled itself out: `=50%` evaluated to `50` instead of
+  `0.5`, and `=50%*2` to `100` instead of `1`. The evaluator now divides.
+- **Clearing a formula left its dependents stale.** `setFormula(col, row, null)`
+  dropped the cell's dependency edges and returned before cascading, so every
+  cell referencing it kept the value it held while the formula still existed.
+  The cascade is now captured before the graph is mutated, then recalculated.
+- **Wide grids were wrongly marked `#CIRC!`.** The recalc guard counted cells in
+  the recalculation order (fan-out) rather than dependency depth, so any grid
+  with more than `maxChainLength` (default 1000) formulas referencing a shared
+  input marked the overflow as circular. Cycle participants are now reported
+  exactly by the dependency graph's topological sort. `IFormulaEngineConfig.maxChainLength`
+  is deprecated and ignored.
+- **Copy/fill corrupted formulas.** `adjustFormulaReferences` regex-replaced the
+  raw formula string, so anything shaped like `<letters><digits>` was rewritten:
+  `=LOG10(A1)` became `=LOG11(A2)`, and text inside string literals (`="Total A1"`)
+  was rewritten too. Lowercase references were silently skipped. The rewrite is
+  now driven by the tokenizer, so only real `CELL_REF` tokens are adjusted
+  (references normalize to uppercase, as in Excel).
+
+### Fixed — grid utilities (core)
+
+- **Ctrl+Arrow navigation could hang the browser.** Both scan loops in
+  `findCtrlArrowTarget` terminated on `p !== edge`, so a position on the far
+  side of the edge — a stale `activeCell` left over after a filter shrank the
+  row count — stepped away from the edge forever. The loops now use a
+  directional bound. This module previously had no test coverage.
+- **Client-side sort defaulted to the opposite direction of the worker path.**
+  `processClientSideData` treated an unspecified `sortDirection` as descending
+  while `workerSortFilter` treated it as ascending, so the same grid sorted
+  differently depending on whether the async path was taken. Both now default
+  to ascending.
+
+### Fixed — packaging
+
+- **ESM was published without `"type": "module"`.** All eight ESM-only packages
+  emit `.js` files, which Node classifies as CommonJS when the field is absent,
+  so `import '@alaarab/ogrid-core'` threw on Node 18 (the version `engines`
+  declares) and worked on newer Node only via ESM syntax detection. The field is
+  now set on core, inputs, react, react-radix, react-fluent, react-inputs,
+  react-xlsx and react-xlsx-browser. The two `compile-styles` build scripts are
+  renamed to `.cjs` to stay valid CommonJS.
+
 ## [2.15.2] - 2026-07-26
 
 ### Added — xlsx export (react-xlsx + core)

@@ -142,7 +142,10 @@ export function processClientSideData<T>(
     const sortable = filtered ? rows : rows.slice();
     const sortCol = columnMap.get(sortBy);
     const compare = sortCol?.compare;
-    const dir = sortDirection === 'asc' ? 1 : -1;
+    // Default to ascending when unspecified, matching the worker path in
+    // workerSortFilter.ts  -  otherwise the same grid sorts in opposite
+    // directions depending on whether the async path was taken.
+    const dir = sortDirection === 'desc' ? -1 : 1;
     const isDateSort = sortCol?.type === 'date';
 
     // For date columns, pre-compute timestamps to avoid repeated new Date() in O(n log n) comparisons.

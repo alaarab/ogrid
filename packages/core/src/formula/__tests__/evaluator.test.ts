@@ -313,8 +313,10 @@ describe('evaluate  -  arithmetic binary operators', () => {
   });
 
   it('computes percentage operator', () => {
-    // '%' operator: lNum * rNum / 100
-    expect(evaluator.evaluate(binOp('%', 200, 50), ctx)).toBe(100);
+    // The parser encodes postfix `X%` as binaryOp('%', X, 100), so the
+    // evaluator divides: 50% -> 50 / 100 -> 0.5, matching Excel.
+    expect(evaluator.evaluate(binOp('%', 50, 100), ctx)).toBe(0.5);
+    expect(evaluator.evaluate(binOp('%', 200, 100), ctx)).toBe(2);
   });
 });
 
