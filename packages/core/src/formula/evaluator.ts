@@ -188,7 +188,9 @@ export class FormulaEvaluator implements IEvaluator {
         if (rNum === 0) return new FormulaError('#DIV/0!');
         return lNum / rNum;
       case '^': return lNum ** rNum;
-      case '%': return lNum * rNum / 100;
+      // Postfix percent. The parser encodes `X%` as binaryOp('%', X, 100),
+      // so this is a division: 50% -> 50 / 100 -> 0.5 (matching Excel).
+      case '%': return lNum / rNum;
       default:
         return new FormulaError('#ERROR!', `Unknown operator: ${op}`);
     }

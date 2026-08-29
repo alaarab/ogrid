@@ -691,4 +691,85 @@ describe('FormulaEngine', () => {
       expect(result.updatedCells).toEqual([]);
     });
   });
+  // ---------------------------------------------------------------------------
+  // Regressions
+  // ---------------------------------------------------------------------------
+  describe('regressions', () => {
+    describe('postfix percent', () => {
+      // The parser encodes `X%` as binaryOp('%', X, 100); the evaluator used to
+      // compute `l * r / 100`, so the injected 100 cancelled itself out and
+      // every percentage came back 100x too large.
+      it('evaluates =50% as 0.5', () => {
+        engine.setFormula(0, 0, '=50%', accessor);
+        expect(engine.getValue(0, 0)).toBe(0.5);
+      });
+
+      it('evaluates =50%*2 as 1', () => {
+        engine.setFormula(0, 0, '=50%*2', accessor);
+        expect(engine.getValue(0, 0)).toBe(1);
+      });
+
+      it('evaluates =200% as 2', () => {
+        engine.setFormula(0, 0, '=200%', accessor);
+        expect(engine.getValue(0, 0)).toBe(2);
+      });
+    });
+
+    describe('clearing a formula cascades to dependents', () => {
+      // setFormula(..., null) used to return early after dropping the cell's
+      // dependencies, leaving every dependent holding a stale value.
+      it('recalculates dependents when a formula is cleared', () => {
+        engine.setFormula(0, 0, '=5', accessor);
+        engine.setFormula(1, 0, '=A1+1', accessor);
+        expect(engine.getValue(1, 0)).toBe(6);
+
+        const result = engine.setFormula(0, 0, null, accessor);
+
+        expect(engine.getValue(1, 0)).toBe(1);
+        expect(result.updatedCells.length).toBeGreaterThan(1);
+      });
+
+      it('cascades through a multi-level chain', () => {
+        engine.setFormula(0, 0, '=10', accessor);
+        engine.setFormula(1, 0, '=A1*2', accessor);
+        engine.setFormula(2, 0, '=B1+1', accessor);
+        expect(engine.getValue(2, 0)).toBe(21);
+
+        engine.setFormula(0, 0, null, accessor);
+
+        expect(engine.getValue(1, 0)).toBe(0);
+        expect(engine.getValue(2, 0)).toBe(1);
+      });
+    });
+
+    describe('wide fan-out is not mistaken for a long chain', () => {
+      // The recalc guard counted cells in the recalc order (breadth) rather
+      // than dependency depth, so any grid with >1000 formulas referencing one
+      // shared input marked the overflow #CIRC!.
+      it('does not mark 1500 cells depending on one input as circular', () => {
+        engine.setFormula(0, 0, '=1', accessor);
+        for (let row = 1; row <= 1500; row++) {
+          engine.setFormula(1, row, '=$A$1*2', accessor);
+        }
+
+        engine.setFormula(0, 0, '=2', accessor);
+
+        const circular = [];
+        for (let row = 1; row <= 1500; row++) {
+          const value = engine.getValue(1, row);
+          if (value instanceof FormulaError) circular.push(row);
+        }
+        expect(circular).toEqual([]);
+        expect(engine.getValue(1, 1500)).toBe(4);
+      });
+
+      it('still reports a genuine circular reference', () => {
+        engine.setFormula(0, 0, '=B1+1', accessor);
+        engine.setFormula(1, 0, '=A1+1', accessor);
+        const value = engine.getValue(1, 0);
+        expect(value).toBeInstanceOf(FormulaError);
+        expect((value as FormulaError).type).toBe('#CIRC!');
+      });
+    });
+  });
 });

@@ -186,8 +186,22 @@ export interface IRecalcResult {
   }>;
 }
 
+/**
+ * A recalculation plan: the topologically ordered cells to recompute, plus the
+ * subset that participates in a dependency cycle and must be marked #CIRC!.
+ */
+export interface IRecalcPlan {
+  order: CellKey[];
+  cyclic: ReadonlySet<CellKey>;
+}
+
 /** Configuration for the FormulaEngine. */
 export interface IFormulaEngineConfig {
+  /**
+   * @deprecated No longer used. Circular references are now detected exactly by
+   * the dependency graph's topological sort, so no chain-length heuristic is
+   * needed. Accepted for backwards compatibility and ignored.
+   */
   maxChainLength?: number;
   customFunctions?: Record<string, IFormulaFunction>;
   /** Named ranges: name  to  cell/range reference string (e.g. "A1:B10"). */
