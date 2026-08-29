@@ -4,7 +4,8 @@
  */
 
 import { indexToColumnLetter, columnLetterToIndex } from '../utils/cellReference';
-import type { ICellAddress, ICellRange, CellKey } from './types';
+import { tokenize } from './tokenizer';
+import type { ICellAddress, ICellRange, CellKey, Token } from './types';
 
 // Re-export columnLetterToIndex so existing formula/index.ts barrel keeps working
 export { columnLetterToIndex };
@@ -12,8 +13,8 @@ export { columnLetterToIndex };
 /** Regex for a cell reference: optional $ before letters, optional $ before digits. */
 const CELL_REF_RE = /^(\$?)([A-Za-z]+)(\$?)(\d+)$/;
 
-/** Pre-compiled regex for adjustFormulaReferences (hoisted to avoid recompilation per call). */
-const ADJUST_REF_RE = /(?:'[^']*'!|[A-Za-z_]\w*!)?(\$?)([A-Z]+)(\$?)(\d+)/g;
+/** Splits a cell ref token ("A1", "$B$2") into its absolute markers and parts. */
+const REF_PARTS_RE = /^(\$?)([A-Za-z]+)(\$?)(\d+)$/;
 
 /**
  * Parse a cell reference string like "A1", "$B$2", "$A1", "A$1".
@@ -71,37 +72,55 @@ export function formatAddress(addr: ICellAddress): string {
  * Adjusts relative cell references in a formula string by a row/column delta.
  * Absolute references ($A$1) are not adjusted. Mixed refs ($A1, A$1) adjust only the relative part.
  *
+ * Driven by the tokenizer rather than a raw regex, so function names that end in
+ * digits (LOG10), text inside string literals ("Total A1") and named ranges
+ * (Revenue2) are never mistaken for cell references.
+ *
  * @param formula   The formula string (e.g. "=A1+B1")
  * @param colDelta  Column offset to apply to relative column references
  * @param rowDelta  Row offset to apply to relative row references
  * @returns The adjusted formula string. Out-of-bounds references become "#REF!".
  */
 export function adjustFormulaReferences(formula: string, colDelta: number, rowDelta: number): string {
-  // Reset lastIndex for the shared regex (it's global/stateful)
-  ADJUST_REF_RE.lastIndex = 0;
-  return formula.replace(ADJUST_REF_RE, (match, colAbs, colLetters, rowAbs, rowDigits) => {
-    // Extract sheet prefix if present
-    const cellRefStart = match.indexOf(colAbs + colLetters);
-    const sheetPrefix = cellRefStart > 0 ? match.substring(0, cellRefStart) : '';
-    let newCol = colLetters;
-    let newRow = rowDigits;
+  if (colDelta === 0 && rowDelta === 0) return formula;
 
-    // Adjust column if not absolute
-    if (colAbs !== '$') {
-      const colIdx = columnLetterToIndex(colLetters) + colDelta;
-      if (colIdx < 0) return '#REF!';
-      newCol = indexToColumnLetter(colIdx);
+  let tokens: Token[];
+  try {
+    tokens = tokenize(formula.startsWith('=') ? formula.slice(1) : formula);
+  } catch {
+    // Malformed formula  -  leave it untouched rather than corrupt it.
+    return formula;
+  }
+
+  // The tokenizer runs on the '='-stripped expression, so token positions are
+  // shifted by that many characters relative to the original string.
+  const offset = formula.startsWith('=') ? 1 : 0;
+
+  // Splice back-to-front so earlier positions stay valid as we rewrite.
+  let result = formula;
+  for (let i = tokens.length - 1; i >= 0; i--) {
+    const token = tokens[i];
+    if (token === undefined || token.type !== 'CELL_REF') continue;
+
+    const parts = REF_PARTS_RE.exec(token.value);
+    if (parts === null) continue;
+    const [, colAbs = '', colLetters = '', rowAbs = '', rowDigits = ''] = parts;
+
+    let replacement: string;
+    const colIdx = columnLetterToIndex(colLetters) + (colAbs === '$' ? 0 : colDelta);
+    const rowNum = parseInt(rowDigits, 10) + (rowAbs === '$' ? 0 : rowDelta);
+    if (colIdx < 0 || rowNum < 1) {
+      // Rows are 1-based in formulas; either axis going out of bounds is #REF!.
+      replacement = '#REF!';
+    } else {
+      replacement = `${colAbs}${indexToColumnLetter(colIdx)}${rowAbs}${rowNum}`;
     }
 
-    // Adjust row if not absolute
-    if (rowAbs !== '$') {
-      const rowNum = parseInt(rowDigits, 10) + rowDelta;
-      if (rowNum < 1) return '#REF!'; // rows are 1-based in formulas
-      newRow = String(rowNum);
-    }
+    const start = token.position + offset;
+    result = result.slice(0, start) + replacement + result.slice(start + token.value.length);
+  }
 
-    return `${sheetPrefix}${colAbs}${newCol}${rowAbs}${newRow}`;
-  });
+  return result;
 }
 
 /**

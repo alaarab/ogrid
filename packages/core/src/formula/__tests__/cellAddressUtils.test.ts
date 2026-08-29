@@ -234,6 +234,42 @@ describe('cellAddressUtils', () => {
       expect(adjustFormulaReferences('=SUM(A1:A5)', 0, 1)).toBe('=SUM(A2:A6)');
     });
 
+    // The previous implementation regex-replaced the raw string, so anything
+    // shaped like <letters><digits> was rewritten  -  including function names,
+    // text inside string literals, and named ranges.
+    describe('only rewrites real cell references', () => {
+      it('leaves a function name ending in digits alone', () => {
+        expect(adjustFormulaReferences('=LOG10(A1)', 0, 1)).toBe('=LOG10(A2)');
+      });
+
+      it('leaves text inside a string literal alone', () => {
+        expect(adjustFormulaReferences('="Total A1"&A1', 0, 1)).toBe('="Total A1"&A2');
+      });
+
+      it('leaves a named range alone', () => {
+        expect(adjustFormulaReferences('=TaxRate+A1', 0, 1)).toBe('=TaxRate+A2');
+      });
+
+      // A name shaped like a cell reference ("Revenue2") is tokenized as one,
+      // which is why Excel forbids defining such names in the first place.
+      it('treats a cell-ref-shaped name as a reference, as Excel does', () => {
+        expect(adjustFormulaReferences('=Revenue2', 0, 1)).toBe('=REVENUE3');
+      });
+
+      it('adjusts lowercase references, which the old regex skipped entirely', () => {
+        // Normalized to uppercase on rewrite, matching Excel.
+        expect(adjustFormulaReferences('=a1+b1', 0, 1)).toBe('=A2+B2');
+      });
+
+      it('returns a malformed formula untouched rather than corrupting it', () => {
+        expect(adjustFormulaReferences('="unterminated', 0, 1)).toBe('="unterminated');
+      });
+
+      it('is a no-op when both deltas are zero', () => {
+        expect(adjustFormulaReferences('=LOG10(A1)&"A1"', 0, 0)).toBe('=LOG10(A1)&"A1"');
+      });
+    });
+
     it('does not adjust when both deltas are zero', () => {
       expect(adjustFormulaReferences('=A1+B2', 0, 0)).toBe('=A1+B2');
     });

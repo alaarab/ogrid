@@ -1,4 +1,4 @@
-import type { CellKey } from './types';
+import type { CellKey, IRecalcPlan } from './types';
 
 const EMPTY_SET: ReadonlySet<CellKey> = Object.freeze(new Set<CellKey>());
 
@@ -58,6 +58,14 @@ export class DependencyGraph {
    * appended at the end (the engine will assign #CIRC! to them).
    */
   getRecalcOrder(changedCell: CellKey): CellKey[] {
+    return this.topologicalSort(new Set([changedCell])).order;
+  }
+
+  /**
+   * Like `getRecalcOrder`, but also reports which cells are genuine cycle
+   * participants so the caller can mark exactly those #CIRC!.
+   */
+  getRecalcPlan(changedCell: CellKey): IRecalcPlan {
     return this.topologicalSort(new Set([changedCell]));
   }
 
@@ -66,6 +74,11 @@ export class DependencyGraph {
    * Union of all transitive dependents, topologically sorted.
    */
   getRecalcOrderBatch(changedCells: CellKey[]): CellKey[] {
+    return this.topologicalSort(new Set(changedCells)).order;
+  }
+
+  /** Like `getRecalcOrderBatch`, but also reports cycle participants. */
+  getRecalcPlanBatch(changedCells: CellKey[]): IRecalcPlan {
     return this.topologicalSort(new Set(changedCells));
   }
 
@@ -189,7 +202,7 @@ export class DependencyGraph {
    * 5. If any cells remain unprocessed, they're in a cycle  -  append them
    *    at the end (engine marks as #CIRC!).
    */
-  private topologicalSort(changedCells: Set<CellKey>): CellKey[] {
+  private topologicalSort(changedCells: Set<CellKey>): IRecalcPlan {
     // Step 1: Collect all transitively affected cells via BFS on dependents
     const affected = new Set<CellKey>();
     const bfsQueue: CellKey[] = [];
@@ -222,7 +235,7 @@ export class DependencyGraph {
     }
 
     if (affected.size === 0) {
-      return [];
+      return { order: [], cyclic: new Set<CellKey>() };
     }
 
     // Step 2: Build in-degree map for affected cells
@@ -275,15 +288,17 @@ export class DependencyGraph {
     }
 
     // Step 5: Any remaining cells are in a cycle  -  append at the end
+    const cyclic = new Set<CellKey>();
     if (result.length < affected.size) {
       const resultSet = new Set(result);
       for (const cell of affected) {
         if (!resultSet.has(cell)) {
           result.push(cell);
+          cyclic.add(cell);
         }
       }
     }
 
-    return result;
+    return { order: result, cyclic };
   }
 }

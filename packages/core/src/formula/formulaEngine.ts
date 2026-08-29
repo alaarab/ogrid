@@ -23,6 +23,9 @@ import { DependencyGraph } from './dependencyGraph';
 import { createBuiltInFunctions } from './functions';
 import { toCellKey, fromCellKey } from './cellAddressUtils';
 
+/** Shared empty cycle set, so recalcCells can default without allocating. */
+const EMPTY_CYCLIC: ReadonlySet<CellKey> = Object.freeze(new Set<CellKey>());
+
 /**
  * Extract all cell references from an AST node (for dependency tracking).
  */
@@ -71,7 +74,6 @@ export class FormulaEngine {
   private readonly values = new Map<CellKey, unknown>();
   private readonly depGraph = new DependencyGraph();
   private readonly evaluator: FormulaEvaluator;
-  private readonly maxChainLength: number;
   private readonly namedRanges = new Map<string, string>();
   private readonly sheetAccessors = new Map<string, IGridDataAccessor>();
 
@@ -88,7 +90,6 @@ export class FormulaEngine {
       }
     }
     this.evaluator = new FormulaEvaluator(builtIns);
-    this.maxChainLength = config?.maxChainLength ?? 1000;
   }
 
   /**
@@ -105,15 +106,19 @@ export class FormulaEngine {
     if (formula === null || formula === '') {
       // Clear formula
       const oldValue = this.values.get(key);
+      // Capture the cascade before mutating the graph, then recalculate the
+      // dependents  -  otherwise every cell referencing this one keeps the
+      // value it had while the formula still existed.
+      const plan = this.depGraph.getRecalcPlan(key);
       this.formulas.delete(key);
       this.parsedFormulas.delete(key);
       this.values.delete(key);
       this.depGraph.removeDependencies(key);
-      return {
-        updatedCells: oldValue !== undefined
-          ? [{ cellKey: key, col, row, oldValue, newValue: undefined }]
-          : [],
-      };
+      const updatedCells: IRecalcResult['updatedCells'] = oldValue !== undefined
+        ? [{ cellKey: key, col, row, oldValue, newValue: undefined }]
+        : [];
+      this.recalcCells(plan.order, accessor, updatedCells, plan.cyclic);
+      return { updatedCells };
     }
 
     // Parse formula (strip leading '=' if present)
@@ -163,8 +168,8 @@ export class FormulaEngine {
     ];
 
     // Cascade: recalculate all dependents
-    const recalcOrder = this.depGraph.getRecalcOrder(key);
-    this.recalcCells(recalcOrder, accessor, updatedCells);
+    const plan = this.depGraph.getRecalcPlan(key);
+    this.recalcCells(plan.order, accessor, updatedCells, plan.cyclic);
 
     return { updatedCells };
   }
@@ -178,11 +183,11 @@ export class FormulaEngine {
     accessor: IGridDataAccessor
   ): IRecalcResult {
     const key = toCellKey(col, row);
-    const recalcOrder = this.depGraph.getRecalcOrder(key);
-    if (recalcOrder.length === 0) return { updatedCells: [] };
+    const plan = this.depGraph.getRecalcPlan(key);
+    if (plan.order.length === 0) return { updatedCells: [] };
 
     const updatedCells: IRecalcResult['updatedCells'] = [];
-    this.recalcCells(recalcOrder, accessor, updatedCells);
+    this.recalcCells(plan.order, accessor, updatedCells, plan.cyclic);
     return { updatedCells };
   }
 
@@ -194,11 +199,11 @@ export class FormulaEngine {
     accessor: IGridDataAccessor
   ): IRecalcResult {
     const keys = cells.map(c => toCellKey(c.col, c.row));
-    const recalcOrder = this.depGraph.getRecalcOrderBatch(keys);
-    if (recalcOrder.length === 0) return { updatedCells: [] };
+    const plan = this.depGraph.getRecalcPlanBatch(keys);
+    if (plan.order.length === 0) return { updatedCells: [] };
 
     const updatedCells: IRecalcResult['updatedCells'] = [];
-    this.recalcCells(recalcOrder, accessor, updatedCells);
+    this.recalcCells(plan.order, accessor, updatedCells, plan.cyclic);
     return { updatedCells };
   }
 
@@ -242,7 +247,8 @@ export class FormulaEngine {
     const allFormulaKeys: CellKey[] = [];
     for (const key of this.formulas.keys()) allFormulaKeys.push(key);
 
-    const recalcOrder = this.depGraph.getRecalcOrderBatch(allFormulaKeys);
+    const plan = this.depGraph.getRecalcPlanBatch(allFormulaKeys);
+    const recalcOrder = plan.order;
     // Also recalc any formula cells that have no dependents (root formulas)
     const ordered = new Set(recalcOrder);
     for (const key of allFormulaKeys) {
@@ -258,7 +264,7 @@ export class FormulaEngine {
     }
 
     // Now recalc the ordered dependents
-    this.recalcCells(recalcOrder, accessor, updatedCells);
+    this.recalcCells(recalcOrder, accessor, updatedCells, plan.cyclic);
 
     return { updatedCells };
   }
@@ -525,17 +531,17 @@ export class FormulaEngine {
   private recalcCells(
     order: CellKey[],
     accessor: IGridDataAccessor,
-    updatedCells: IRecalcResult['updatedCells']
+    updatedCells: IRecalcResult['updatedCells'],
+    cyclic: ReadonlySet<CellKey> = EMPTY_CYCLIC
   ): void {
     const context = this.createContext(accessor);
-    let count = 0;
 
     for (const key of order) {
-      if (count++ > this.maxChainLength) {
-        // Safety limit  -  mark remaining as circular
+      if (cyclic.has(key)) {
+        // Genuine cycle participant, as reported by the topological sort.
         const { col, row } = fromCellKey(key);
         const oldValue = this.values.get(key);
-        const circError = new FormulaError('#CIRC!', 'Dependency chain too long');
+        const circError = new FormulaError('#CIRC!', 'Circular reference detected');
         this.values.set(key, circError);
         updatedCells.push({ cellKey: key, col, row, oldValue, newValue: circError });
         continue;
