@@ -1,6 +1,6 @@
 {
   "name": "@alaarab/ogrid-examples",
-  "version": "2.15.2",
+  "version": "2.15.3",
   "private": true,
   "description": "OGrid example apps for the React UI packages.",
   "scripts": {
@@ -12,13 +12,13 @@
     "build:react-radix": "vite build --config vite.radix.config.ts"
   },
   "dependencies": {
-    "@alaarab/ogrid-core": "2.15.2",
-    "@alaarab/ogrid-mcp": "2.15.2",
-    "@alaarab/ogrid-react": "2.15.2",
-    "@alaarab/ogrid-react-fluent": "2.15.2",
-    "@alaarab/ogrid-react-inputs": "2.15.2",
-    "@alaarab/ogrid-react-radix": "2.15.2",
-    "@alaarab/ogrid-react-xlsx": "2.15.2",
+    "@alaarab/ogrid-core": "2.15.3",
+    "@alaarab/ogrid-mcp": "2.15.3",
+    "@alaarab/ogrid-react": "2.15.3",
+    "@alaarab/ogrid-react-fluent": "2.15.3",
+    "@alaarab/ogrid-react-inputs": "2.15.3",
+    "@alaarab/ogrid-react-radix": "2.15.3",
+    "@alaarab/ogrid-react-xlsx": "2.15.3",
     "@fluentui/react-components": "^9.74.1",
     "@fluentui/react-icons": "^2.0.328",
     "@radix-ui/react-checkbox": "^1.3.4",

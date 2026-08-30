@@ -4,6 +4,8 @@ All notable changes to OGrid will be documented in this file.
 
 ## [Unreleased]
 
+## [2.15.3] - 2026-08-30
+
 ### Fixed — formula engine (core)
 
 - **Postfix `%` returned a value 100× too large.** The parser encodes `X%` as
