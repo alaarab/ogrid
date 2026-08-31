@@ -32,8 +32,8 @@ import { PaginationControls } from '@alaarab/ogrid-react-fluent';
 | `pageSize` | `number` | **Required** | Number of items per page. |
 | `totalCount` | `number` | **Required** | Total number of items across all pages. |
 | `onPageChange` | `(page: number) => void` | **Required** | Callback when user navigates to a different page. |
-| `onPageSizeChange` | `(pageSize: number) => void` | **Required** | Callback when user changes the page size. |
-| `pageSizeOptions` | `number[]` | `[10, 20, 50, 100]` | Available page size options in the dropdown. |
+| `onPageSizeChange` | `(pageSize: number \| 'all') => void` | **Required** | Callback when user changes the page size. |
+| `pageSizeOptions` | `(number \| 'all')[]` | `[10, 20, 50, 100]` | Available page size options in the dropdown. `'all'` renders as "All" and shows every row on one page. |
 | `entityLabelPlural` | `string` | `'rows'` | Plural label for items (e.g., `'products'`, `'users'`). |
 | `className` | `string` | `undefined` | Additional CSS class for the root element. |
 

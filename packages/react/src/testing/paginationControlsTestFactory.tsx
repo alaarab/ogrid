@@ -7,10 +7,10 @@ import { render, screen, fireEvent } from '@testing-library/react';
 
 interface PaginationControlsProps {
   currentPage: number;
-  pageSize: number;
+  pageSize: number | 'all';
   totalCount: number;
   onPageChange: (page: number) => void;
-  onPageSizeChange: (pageSize: number) => void;
+  onPageSizeChange: (pageSize: number | 'all') => void;
 }
 
 export function createPaginationControlsTests(PaginationControls: React.ComponentType<PaginationControlsProps>): void {
@@ -64,5 +64,21 @@ export function createPaginationControlsTests(PaginationControls: React.Componen
     const select = screen.getByLabelText('Rows per page');
     fireEvent.change(select, { target: { value: '25' } });
     expect(onPageSizeChange).toHaveBeenCalledWith(25);
+  });
+
+  it("renders an All option and reports 'all' when selected", () => {
+    const onPageSizeChange = jest.fn();
+    renderControls({ onPageSizeChange, pageSizeOptions: [50, 250, 500, 'all'], pageSize: 50, currentPage: 1 });
+    const select = screen.getByLabelText('Rows per page');
+    expect(screen.getByRole('option', { name: 'All' })).toBeInTheDocument();
+    fireEvent.change(select, { target: { value: 'all' } });
+    expect(onPageSizeChange).toHaveBeenCalledWith('all');
+  });
+
+  it("pageSize 'all' shows the full range on one page", () => {
+    renderControls({ pageSize: 'all', currentPage: 1, totalCount: 50, pageSizeOptions: [10, 'all'] });
+    expect(screen.getByText(/Showing 1 to 50 of 50 items/i)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Next page' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Previous page' })).toBeDisabled();
   });
 }

@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react';
 import type { IColumnDef, IColumnGroupDef, ICellValueChangedEvent } from './columnTypes';
-import type { IFormulaFunction, IRecalcResult, IGridDataAccessor, IAuditEntry, IAuditTrail, IResponsiveColumnsConfig, WindowedRow } from '@alaarab/ogrid-core';
+import type { IFormulaFunction, IRecalcResult, IGridDataAccessor, IAuditEntry, IAuditTrail, IResponsiveColumnsConfig, WindowedRow, PageSize } from '@alaarab/ogrid-core';
 
 // Re-export all shared types and functions from core (no React-specific changes)
 export type {
@@ -56,14 +56,14 @@ interface IOGridBaseProps<T> {
   getRowId: (item: T) => RowId;
 
   page?: number;
-  pageSize?: number;
+  pageSize?: PageSize;
   sort?: { field: string; direction: 'asc' | 'desc' };
   filters?: IFilters;
   visibleColumns?: Set<string>;
   isLoading?: boolean;
 
   onPageChange?: (page: number) => void;
-  onPageSizeChange?: (size: number) => void;
+  onPageSizeChange?: (size: PageSize) => void;
   onSortChange?: (sort: { field: string; direction: 'asc' | 'desc' }) => void;
   onFiltersChange?: (filters: IFilters) => void;
   onVisibleColumnsChange?: (cols: Set<string>) => void;
@@ -94,7 +94,7 @@ interface IOGridBaseProps<T> {
 
   statusBar?: boolean | IStatusBarProps;
 
-  defaultPageSize?: number;
+  defaultPageSize?: PageSize;
   defaultSortBy?: string;
   defaultSortDirection?: 'asc' | 'desc';
 
@@ -127,8 +127,8 @@ interface IOGridBaseProps<T> {
   /** Side bar configuration. `true` shows default panels (columns + filters). Pass ISideBarDef for options. */
   sideBar?: boolean | ISideBarDef;
 
-  /** Page size options shown in the pagination dropdown. Default: [10, 25, 50, 100]. */
-  pageSizeOptions?: number[];
+  /** Page size options shown in the pagination dropdown. Include the literal `'all'` to offer an "All" entry that shows every filtered row on one page. Default: [10, 25, 50, 100]. */
+  pageSizeOptions?: PageSize[];
 
   /** Enable column reordering via drag-and-drop on header cells. Default: false. */
   columnReorder?: boolean;
@@ -289,7 +289,7 @@ export interface IOGridDataGridProps<T> {
   /** Current page number (1-based) for row number calculation. */
   currentPage?: number;
   /** Page size for row number calculation. */
-  pageSize?: number;
+  pageSize?: PageSize;
   statusBar?: IStatusBarProps;
   /** Unified filter model (discriminated union values). */
   filters: IFilters;

@@ -86,7 +86,7 @@ export {
   PAGE_SIZE_OPTIONS,
   MAX_PAGE_BUTTONS,
 } from './utils';
-export type { PaginationViewModel } from './utils';
+export type { PaginationViewModel, PageSize } from './utils';
 
 // Utils  -  gridContextMenuHelpers
 export {

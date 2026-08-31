@@ -46,7 +46,7 @@
 
 import { useCallback, useMemo, useState } from 'react';
 import { getCellValue as coreGetCellValue } from '@alaarab/ogrid-core';
-import type { IColumnDef as ICoreColumnDef, IFilters, FilterValue } from '@alaarab/ogrid-core';
+import type { IColumnDef as ICoreColumnDef, IFilters, FilterValue, PageSize } from '@alaarab/ogrid-core';
 import type { IDataSource } from '../types';
 
 import { useOGridSorting, type SortState } from './useOGridSorting';
@@ -69,7 +69,7 @@ export interface UseHeadlessGridParams<T> {
   /** Initial page (1-indexed). */
   initialPage?: number;
   /** Initial page size. */
-  initialPageSize?: number;
+  initialPageSize?: PageSize;
 
   /** Optional controlled sort. */
   sort?: SortState;
@@ -84,8 +84,8 @@ export interface UseHeadlessGridParams<T> {
   onPageChange?: (page: number) => void;
 
   /** Optional controlled page size. */
-  pageSize?: number;
-  onPageSizeChange?: (size: number) => void;
+  pageSize?: PageSize;
+  onPageSizeChange?: (size: PageSize) => void;
 
   /**
    * Server-side data source. When provided, sort/filter/paginate are sent to
@@ -133,9 +133,9 @@ export interface UseHeadlessGridResult<T> {
 
   /** Pagination. */
   page: number;
-  pageSize: number;
+  pageSize: PageSize;
   setPage: (page: number) => void;
-  setPageSize: (size: number) => void;
+  setPageSize: (size: PageSize) => void;
 
   /** Stable row identity. */
   getRowId: (row: T) => RowId;
@@ -237,7 +237,9 @@ export function useHeadlessGrid<T>(
 
   const rows = dataFetching.displayItems;
   const totalCount = dataFetching.displayTotalCount;
-  const totalPages = Math.max(1, Math.ceil(totalCount / pagination.pageSize));
+  const totalPages = pagination.pageSize === 'all'
+    ? 1
+    : Math.max(1, Math.ceil(totalCount / pagination.pageSize));
 
   // `allFilteredRows` is the full filtered+sorted set across all pages.
   // Client-side: derived from the current page's slice context. Server-side:

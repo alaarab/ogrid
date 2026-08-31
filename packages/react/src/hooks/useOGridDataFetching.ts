@@ -8,7 +8,14 @@ import {
 } from '@alaarab/ogrid-core';
 import { useLatestRef } from './useLatestRef';
 import type { IFilters, IDataSource, WindowedDataState } from '../types';
-import type { IColumnDef as ICoreColumnDef, WindowedRow } from '@alaarab/ogrid-core';
+import type { IColumnDef as ICoreColumnDef, WindowedRow, PageSize } from '@alaarab/ogrid-core';
+
+/** One page of rows; `'all'` yields the entire (filtered, sorted) dataset. */
+function pageWindow<T>(rows: T[], page: number, pageSize: PageSize): T[] {
+  if (pageSize === 'all') return rows;
+  const start = (page - 1) * pageSize;
+  return rows.slice(start, start + pageSize);
+}
 
 // WindowedDataState is defined alongside IOGridDataGridProps in ../types (the
 // grid consumes it as a prop). Re-exported here so existing imports from this
@@ -29,7 +36,7 @@ export interface UseOGridDataFetchingParams<T> {
    */
   sortVersion: number;
   page: number;
-  pageSize: number;
+  pageSize: PageSize;
   /**
    * Whether client-side results are paginated (default: true).
    *
@@ -163,9 +170,7 @@ export function useOGridDataFetching<T>(params: UseOGridDataFetchingParams<T>): 
     if (!paginate) {
       return { items: orderedRows, totalCount: total };
     }
-    const start = (page - 1) * pageSize;
-    const paged = orderedRows.slice(start, start + pageSize);
-    return { items: paged, totalCount: total };
+    return { items: pageWindow(orderedRows, page, pageSize), totalCount: total };
     // Note: sortVersion is implicitly tracked via needsResort / sortedIndicesRef.current === null
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isClientSide, useWorker, displayData, columns, stableFilters, sortVersion, sort.field, sort.direction, page, pageSize, paginate]);
@@ -222,8 +227,7 @@ export function useOGridDataFetching<T>(params: UseOGridDataFetchingParams<T>): 
           setAsyncItems({ items: rows, totalCount: total });
           return;
         }
-        const start = (page - 1) * pageSize;
-        setAsyncItems({ items: rows.slice(start, start + pageSize), totalCount: total });
+        setAsyncItems({ items: pageWindow(rows, page, pageSize), totalCount: total });
       };
 
       // Full re-sort via worker.
@@ -250,9 +254,7 @@ export function useOGridDataFetching<T>(params: UseOGridDataFetchingParams<T>): 
       if (!paginate) {
         setAsyncItems({ items: orderedRows, totalCount: total });
       } else {
-        const start = (page - 1) * pageSize;
-        const paged = orderedRows.slice(start, start + pageSize);
-        setAsyncItems({ items: paged, totalCount: total });
+        setAsyncItems({ items: pageWindow(orderedRows, page, pageSize), totalCount: total });
       }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -283,7 +285,8 @@ export function useOGridDataFetching<T>(params: UseOGridDataFetchingParams<T>): 
     const controller = new AbortController();
     setServerLoading(true);
     fetchPage({
-        page, pageSize,
+        // IFetchParams is numeric; 'all' asks the source for everything.
+        page, pageSize: pageSize === 'all' ? Number.MAX_SAFE_INTEGER : pageSize,
         sort: { field: sort.field, direction: sort.direction },
         filters: stableFilters,
         signal: controller.signal,

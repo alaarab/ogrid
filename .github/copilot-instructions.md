@@ -1,0 +1,1 @@
+/home/example/.phren/ogrid/CLAUDE.md

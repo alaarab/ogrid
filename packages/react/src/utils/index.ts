@@ -69,6 +69,7 @@ export type {
   GridContextMenuItem,
   GridContextMenuHandlerProps,
   PaginationViewModel,
+  PageSize,
   ParseValueResult,
   AggregationResult,
   IColumnHeaderMenuItem,

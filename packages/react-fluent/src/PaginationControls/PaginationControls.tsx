@@ -55,10 +55,11 @@ const PageButton: React.FC<IPageButtonSlotProps> = ({ onClick, active, 'aria-lab
 );
 
 const PageSizeSelect: React.FC<IPageSizeSelectSlotProps> = ({ value, options, onChange, 'aria-label': ariaLabel, className }) => {
-  const handleChange = (_e: React.ChangeEvent<HTMLSelectElement>, data: SelectOnChangeData) => onChange(Number(data.value));
+  const handleChange = (_e: React.ChangeEvent<HTMLSelectElement>, data: SelectOnChangeData) =>
+    onChange(data.value === 'all' ? 'all' : Number(data.value));
   return (
     <Select value={String(value)} onChange={handleChange} size="small" appearance="outline" aria-label={ariaLabel} className={className}>
-      {options.map((n) => <option key={n} value={n}>{n}</option>)}
+      {options.map((n) => <option key={n} value={n}>{n === 'all' ? 'All' : n}</option>)}
     </Select>
   );
 };
