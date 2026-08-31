@@ -1,0 +1,1 @@
+/home/alaarab/.phren/ogrid/CLAUDE.md

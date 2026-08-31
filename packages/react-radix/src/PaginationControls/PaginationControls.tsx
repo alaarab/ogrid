@@ -33,8 +33,13 @@ const PageButton: React.FC<IPageButtonSlotProps> = ({ onClick, active, 'aria-lab
 );
 
 const PageSizeSelect: React.FC<IPageSizeSelectSlotProps> = ({ value, options, onChange, 'aria-label': ariaLabel, className }) => (
-  <select className={className} value={String(value)} onChange={(e) => onChange(Number(e.target.value))} aria-label={ariaLabel}>
-    {options.map((n) => <option key={n} value={n}>{n}</option>)}
+  <select
+    className={className}
+    value={String(value)}
+    onChange={(e) => onChange(e.target.value === 'all' ? 'all' : Number(e.target.value))}
+    aria-label={ariaLabel}
+  >
+    {options.map((n) => <option key={n} value={n}>{n === 'all' ? 'All' : n}</option>)}
   </select>
 );
 

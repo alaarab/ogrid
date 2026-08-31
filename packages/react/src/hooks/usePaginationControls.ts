@@ -1,20 +1,21 @@
 import { useMemo } from 'react';
 import { getPaginationViewModel } from '../utils';
+import type { PageSize } from '../utils';
 
 export interface UsePaginationControlsProps {
   currentPage: number;
-  pageSize: number;
+  pageSize: PageSize;
   totalCount: number;
   onPageChange: (page: number) => void;
-  onPageSizeChange: (pageSize: number) => void;
-  pageSizeOptions?: number[];
+  onPageSizeChange: (pageSize: PageSize) => void;
+  pageSizeOptions?: PageSize[];
   entityLabelPlural?: string;
 }
 
 export interface UsePaginationControlsResult {
   labelPlural: string;
   vm: ReturnType<typeof getPaginationViewModel>;
-  handlePageSizeChange: (pageSize: number) => void;
+  handlePageSizeChange: (pageSize: PageSize) => void;
 }
 
 /**

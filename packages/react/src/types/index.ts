@@ -48,3 +48,4 @@ export type {
 } from './dataGridTypes';
 
 export { toUserLike, isInSelectionRange, normalizeSelectionRange, isWindowedDataSource } from './dataGridTypes';
+export type { PageSize } from '@alaarab/ogrid-core';

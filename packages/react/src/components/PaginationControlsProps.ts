@@ -4,13 +4,15 @@
  * but shares this common prop shape.
  */
 
+import type { PageSize } from '@alaarab/ogrid-core';
+
 export interface IPaginationControlsProps {
   currentPage: number;
-  pageSize: number;
+  pageSize: PageSize;
   totalCount: number;
   onPageChange: (page: number) => void;
-  onPageSizeChange: (pageSize: number) => void;
-  pageSizeOptions?: number[];
+  onPageSizeChange: (pageSize: PageSize) => void;
+  pageSizeOptions?: PageSize[];
   entityLabelPlural?: string;
   className?: string;
 }

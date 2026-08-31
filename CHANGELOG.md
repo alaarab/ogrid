@@ -4,6 +4,24 @@ All notable changes to OGrid will be documented in this file.
 
 ## [Unreleased]
 
+## [2.16.0] - 2026-08-31
+
+### Added — "All" page size (core + react + both UI kits)
+
+- **`pageSizeOptions` accepts the literal `'all'`** (e.g. `[50, 250, 500, 'all']`),
+  rendered as "All" in the page-size dropdown. Selecting it shows every filtered
+  row on a single page, with the info text reading "Showing 1 to N of N". The
+  value is sticky: it resolves against the current filtered total, so the grid
+  keeps showing everything when the dataset shrinks, grows, or refilters.
+  `defaultPageSize`, the controlled `pageSize` prop, and the headless
+  `useHeadlessGrid` pagination accept `'all'` too. A `PageSize` type
+  (`number | 'all'`) is exported from core and react. With a server-side
+  `dataSource`, `'all'` requests `Number.MAX_SAFE_INTEGER` rows via `fetchPage`.
+- **Type note:** props that carry a page size widened from `number` to
+  `PageSize`. Consumers with explicitly-annotated `(size: number) => void`
+  handlers for `onPageSizeChange` need to widen the parameter to `PageSize`;
+  inline handlers and grids that don't opt into `'all'` are unaffected.
+
 ## [2.15.3] - 2026-08-30
 
 ### Fixed — formula engine (core)

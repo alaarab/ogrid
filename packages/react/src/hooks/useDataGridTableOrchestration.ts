@@ -93,7 +93,7 @@ export interface UseDataGridTableOrchestrationResult<T> {
   rowHeight: number | undefined;
   pinnedColumns: IOGridDataGridProps<T>['pinnedColumns'];
   currentPage: number;
-  propPageSize: number;
+  propPageSize: IOGridDataGridProps<T>['pageSize'];
 
   // Computed values
   rowNumberOffset: number;
@@ -265,7 +265,7 @@ export function useDataGridTableOrchestration<T>(
   } = props;
 
   // ── Derived values ──────────────────────────────────────────────────────
-  const rowNumberOffset = hasRowNumbersCol ? (currentPage - 1) * propPageSize : 0;
+  const rowNumberOffset = hasRowNumbersCol && propPageSize !== 'all' ? (currentPage - 1) * propPageSize : 0;
   const headerRows = useMemo(() => buildHeaderRows(columns, visibleColumns), [columns, visibleColumns]);
   const allowOverflowX = !suppressHorizontalScroll && containerWidth > 0 && (minTableWidth > containerWidth || desiredTableWidth > containerWidth);
   const fitToContent = layoutMode === 'content';

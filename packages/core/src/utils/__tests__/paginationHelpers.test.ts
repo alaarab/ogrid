@@ -210,6 +210,40 @@ describe('getPaginationViewModel', () => {
     expect(result?.pageNumbers).toContain(5);
   });
 
+  it("pageSize 'all' collapses to a single page spanning every row", () => {
+    const result = getPaginationViewModel(1, 'all', 1400);
+    expect(result?.totalPages).toBe(1);
+    expect(result?.pageNumbers).toEqual([1]);
+    expect(result?.startItem).toBe(1);
+    expect(result?.endItem).toBe(1400);
+  });
+
+  it("pageSize 'all' with a stale page still shows the full range", () => {
+    const result = getPaginationViewModel(7, 'all', 42);
+    expect(result?.totalPages).toBe(1);
+    expect(result?.startItem).toBe(1);
+    expect(result?.endItem).toBe(42);
+  });
+
+  it("pageSize 'all' returns null for an empty dataset", () => {
+    expect(getPaginationViewModel(1, 'all', 0)).toBeNull();
+  });
+
+  it("keeps 'all' where the caller placed it when already in options", () => {
+    const result = getPaginationViewModel(1, 50, 1400, { pageSizeOptions: [50, 250, 500, 'all'] });
+    expect(result?.pageSizeOptions).toEqual([50, 250, 500, 'all']);
+  });
+
+  it("appends 'all' after the numeric options when it is the active size but missing from options", () => {
+    const result = getPaginationViewModel(1, 'all', 100, { pageSizeOptions: [10, 25] });
+    expect(result?.pageSizeOptions).toEqual([10, 25, 'all']);
+  });
+
+  it("inserts a numeric active size in sorted order while keeping 'all' last", () => {
+    const result = getPaginationViewModel(1, 30, 100, { pageSizeOptions: [10, 50, 'all'] });
+    expect(result?.pageSizeOptions).toEqual([10, 30, 50, 'all']);
+  });
+
   it('exports PAGE_SIZE_OPTIONS constant', () => {
     expect(PAGE_SIZE_OPTIONS).toEqual([10, 25, 50, 100]);
   });

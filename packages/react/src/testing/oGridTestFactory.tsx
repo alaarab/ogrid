@@ -58,6 +58,32 @@ export function createOGridTests(OGrid: React.ComponentType<IOGridProps<FixtureR
     expect(screen.getByText(/Showing 3 to 3 of 3 items/i)).toBeInTheDocument();
   });
 
+  it("selecting All in the page-size dropdown shows every row", () => {
+    renderOGrid({ defaultPageSize: 2, pageSizeOptions: [2, 'all'] });
+    expect(screen.getAllByTestId('cell-name')).toHaveLength(2);
+    fireEvent.change(screen.getByLabelText('Rows per page'), { target: { value: 'all' } });
+    expect(screen.getAllByTestId('cell-name')).toHaveLength(3);
+    expect(screen.getByText(/Showing 1 to 3 of 3 items/i)).toBeInTheDocument();
+    expect(screen.getByRole('option', { name: 'All' })).toBeInTheDocument();
+  });
+
+  it("defaultPageSize 'all' renders every row from the first paint", () => {
+    renderOGrid({ defaultPageSize: 'all', pageSizeOptions: [10, 'all'] });
+    expect(screen.getAllByTestId('cell-name')).toHaveLength(3);
+    expect(screen.getByText(/Showing 1 to 3 of 3 items/i)).toBeInTheDocument();
+  });
+
+  it("pageSize 'all' tracks a shrinking filtered dataset", () => {
+    renderOGrid({ defaultPageSize: 'all', pageSizeOptions: [10, 'all'] });
+    fireEvent.click(screen.getByRole('button', { name: /filter status/i }));
+    fireEvent.click(screen.getByRole('button', { name: /select all/i }));
+    const checkboxes = screen.getAllByRole('checkbox');
+    fireEvent.click(checkboxes[0]!); // deselect "Active", leaving only "Closed"
+    fireEvent.click(screen.getByRole('button', { name: /apply/i }));
+    expect(screen.getAllByTestId('cell-name').map((el) => el.textContent)).toEqual(['Beta']);
+    expect(screen.getByText(/Showing 1 to 1 of 1 items/i)).toBeInTheDocument();
+  });
+
   it('column visibility toggles columns', () => {
     renderOGrid();
     expect(screen.getAllByTestId('cell-status')).toHaveLength(3);

@@ -370,6 +370,7 @@ export type {
   GridContextMenuItem,
   GridContextMenuHandlerProps,
   PaginationViewModel,
+  PageSize,
   HeaderFilterConfigInput,
   HeaderFilterConfig,
   CellRenderDescriptorInput,

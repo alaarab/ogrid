@@ -6,6 +6,7 @@
 
 import * as React from 'react';
 import type { IPaginationControlsProps } from './PaginationControlsProps';
+import type { PageSize } from '../utils';
 import { usePaginationControls } from '../hooks/usePaginationControls';
 
 // ---- Slot prop types ----
@@ -28,9 +29,9 @@ export interface IPageButtonSlotProps {
 }
 
 export interface IPageSizeSelectSlotProps {
-  value: number;
-  options: readonly number[];
-  onChange: (value: number) => void;
+  value: PageSize;
+  options: readonly PageSize[];
+  onChange: (value: PageSize) => void;
   'aria-label': string;
   className?: string;
 }

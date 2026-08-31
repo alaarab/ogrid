@@ -1,20 +1,21 @@
 import { useState, useCallback, type Dispatch, type SetStateAction } from 'react';
+import type { PageSize } from '@alaarab/ogrid-core';
 
 export interface UseOGridPaginationParams {
   controlledPage?: number;
-  controlledPageSize?: number;
-  defaultPageSize: number;
+  controlledPageSize?: PageSize;
+  defaultPageSize: PageSize;
   /** Initial page for the uncontrolled case (lazy-initialized; default 1). */
   initialPage?: number;
   onPageChange?: (p: number) => void;
-  onPageSizeChange?: (size: number) => void;
+  onPageSizeChange?: (size: PageSize) => void;
 }
 
 export interface UseOGridPaginationState {
   page: number;
-  pageSize: number;
+  pageSize: PageSize;
   setPage: (p: number) => void;
-  setPageSize: (size: number) => void;
+  setPageSize: (size: PageSize) => void;
   /**
    * Raw setter for the uncontrolled page. Writes state without notifying
    * `onPageChange`, so callers restoring a previously captured page
@@ -31,7 +32,7 @@ export function useOGridPagination(params: UseOGridPaginationParams): UseOGridPa
   const { controlledPage, controlledPageSize, defaultPageSize, initialPage, onPageChange, onPageSizeChange } = params;
 
   const [internalPage, setInternalPage] = useState(() => initialPage ?? 1);
-  const [internalPageSize, setInternalPageSize] = useState(defaultPageSize);
+  const [internalPageSize, setInternalPageSize] = useState<PageSize>(defaultPageSize);
 
   const page = controlledPage ?? internalPage;
   const pageSize = controlledPageSize ?? internalPageSize;
@@ -45,7 +46,7 @@ export function useOGridPagination(params: UseOGridPaginationParams): UseOGridPa
   );
 
   const setPageSize = useCallback(
-    (size: number) => {
+    (size: PageSize) => {
       if (controlledPageSize === undefined) setInternalPageSize(size);
       onPageSizeChange?.(size);
       setPage(1);

@@ -5,10 +5,21 @@
 
 export const PAGE_SIZE_OPTIONS = [10, 25, 50, 100] as const;
 
-/** Ensures the active pageSize is included in the options list, inserting it in sorted order if missing. */
-function ensurePageSizeInOptions(pageSize: number, options: readonly number[]): readonly number[] {
+/**
+ * A page size: a row count, or `'all'` to show every row on a single page.
+ * `'all'` is sticky — it resolves against the current filtered total, so the
+ * page keeps showing everything when the dataset grows, shrinks, or refilters.
+ */
+export type PageSize = number | 'all';
+
+/** Ensures the active pageSize is included in the options list, inserting it in sorted order if missing ('all' always sorts last). */
+function ensurePageSizeInOptions(pageSize: PageSize, options: readonly PageSize[]): readonly PageSize[] {
   if (options.includes(pageSize)) return options;
-  return [...options, pageSize].sort((a, b) => a - b);
+  const numbers = options.filter((o): o is number => o !== 'all');
+  if (typeof pageSize === 'number') numbers.push(pageSize);
+  numbers.sort((a, b) => a - b);
+  const hasAll = pageSize === 'all' || options.includes('all');
+  return hasAll ? [...numbers, 'all'] : numbers;
 }
 export const MAX_PAGE_BUTTONS = 5;
 
@@ -19,7 +30,7 @@ export interface PaginationViewModel {
   showEndEllipsis: boolean;
   startItem: number;
   endItem: number;
-  pageSizeOptions: readonly number[];
+  pageSizeOptions: readonly PageSize[];
 }
 
 /**
@@ -28,14 +39,17 @@ export interface PaginationViewModel {
  */
 export function getPaginationViewModel(
   currentPage: number,
-  pageSize: number,
+  pageSize: PageSize,
   totalCount: number,
-  options?: { maxPageButtons?: number; pageSizeOptions?: readonly number[] }
+  options?: { maxPageButtons?: number; pageSizeOptions?: readonly PageSize[] }
 ): PaginationViewModel | null {
   if (totalCount <= 0) return null;
 
+  // 'all' means one page holding the entire filtered dataset.
+  const effectivePageSize = pageSize === 'all' ? totalCount : pageSize;
+
   const maxPageButtons = options?.maxPageButtons ?? MAX_PAGE_BUTTONS;
-  const totalPages = Math.ceil(totalCount / pageSize);
+  const totalPages = Math.ceil(totalCount / effectivePageSize);
 
   let pageNumbers: number[];
   let showStartEllipsis: boolean;
@@ -63,8 +77,8 @@ export function getPaginationViewModel(
   // stale page (e.g. page 5 after a filter shrinks the data to 3 items) yields a
   // nonsensical range like "41–3 of 3".
   const clampedPage = Math.min(Math.max(1, currentPage), totalPages);
-  const startItem = (clampedPage - 1) * pageSize + 1;
-  const endItem = Math.min(clampedPage * pageSize, totalCount);
+  const startItem = (clampedPage - 1) * effectivePageSize + 1;
+  const endItem = Math.min(clampedPage * effectivePageSize, totalCount);
 
   return {
     totalPages,

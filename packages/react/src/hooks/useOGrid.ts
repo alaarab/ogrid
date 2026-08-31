@@ -35,6 +35,7 @@ import type {
   IColumnDefinition,
   IFilters,
   RowId,
+  PageSize,
 } from '../types';
 
 const DEFAULT_PAGE_SIZE = 25;
@@ -62,11 +63,11 @@ export type ColumnChooserPlacement = 'toolbar' | 'sidebar' | 'external' | 'none'
 /** Pagination state and handlers. */
 export interface UseOGridPagination {
   page: number;
-  pageSize: number;
+  pageSize: PageSize;
   displayTotalCount: number;
   setPage: (p: number) => void;
-  setPageSize: (size: number) => void;
-  pageSizeOptions?: number[];
+  setPageSize: (size: PageSize) => void;
+  pageSizeOptions?: PageSize[];
   entityLabelPlural: string;
   /**
    * True when pagination is bypassed (full-dataset virtualization mode —
@@ -407,10 +408,9 @@ export function useOGrid<T>(
   // there is data. Snap back to the last page that has rows. Controlled
   // pagination is the host's to correct, and full-dataset virtualization has no
   // pages to be past the end of.
-  const lastPage = Math.max(
-    1,
-    Math.ceil(dataFetchingState.displayTotalCount / paginationState.pageSize)
-  );
+  const lastPage = paginationState.pageSize === 'all'
+    ? 1
+    : Math.max(1, Math.ceil(dataFetchingState.displayTotalCount / paginationState.pageSize));
   const isPagePastEnd =
     controlledPage === undefined &&
     !fullyVirtualized &&
