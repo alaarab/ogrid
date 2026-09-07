@@ -4,6 +4,25 @@ All notable changes to OGrid will be documented in this file.
 
 ## [Unreleased]
 
+## [2.17.0] - 2026-09-07
+
+### Added — labeled filters
+
+- Multi-select choices accept strings or `{ value: string, label: string }` in
+  `filterable.options`, `filterOptions`, and `IDataSource.fetchFilterOptions`.
+  Menus search and display labels; filter state and requests retain raw string
+  values. Radix, Fluent, and sidebar filters support both forms.
+- Static column options now take precedence over fetched/data-derived options,
+  including an explicitly empty array, and avoid unnecessary options requests.
+
+### Fixed — Radix mobile controls and popup themes
+
+- Filter triggers and pagination controls use 44px touch targets on coarse
+  pointers. Virtual filter rows use matching 44px spacing, and pagination wraps
+  within narrow screens. Filter and chooser popovers fit the available viewport.
+- Portaled filter and chooser menus preserve wrapper-scoped OGrid tokens and
+  track host theme changes while open. Inputs and menu text use theme colors.
+
 ## [2.16.0] - 2026-08-31
 
 ### Added — "All" page size (core + react + both UI kits)
@@ -23,6 +42,7 @@ All notable changes to OGrid will be documented in this file.
   inline handlers and grids that don't opt into `'all'` are unaffected.
 
 ## [2.15.3] - 2026-08-30
+
 
 ### Fixed — formula engine (core)
 

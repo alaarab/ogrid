@@ -1,3 +1,4 @@
+import type { FilterOption } from '@alaarab/ogrid-core';
 import { useState, useCallback, useMemo, type Dispatch, type SetStateAction } from 'react';
 import {
   mergeFilter,
@@ -40,7 +41,7 @@ export interface UseOGridFiltersState {
   handleFilterChange: (key: string, value: FilterValue | undefined) => void;
   stableFilters: IFilters;
   hasActiveFilters: boolean;
-  clientFilterOptions: Record<string, string[]>;
+  clientFilterOptions: Record<string, FilterOption[]>;
   loadingFilterOptions: Record<string, boolean>;
   /**
    * Raw setter for the uncontrolled filters. Writes state without notifying
@@ -100,8 +101,15 @@ export function useOGridFilters<T>(params: UseOGridFiltersParams<T>): UseOGridFi
 
   const hasServerFilterOptions = dataSource?.fetchFilterOptions != null;
   const clientFilterOptions = useMemo(() => {
-    if (hasServerFilterOptions) return serverFilterOptions;
-    return deriveFilterOptionsFromData(displayData, columns);
+    const options: Record<string, FilterOption[]> = {
+      ...(hasServerFilterOptions ? serverFilterOptions : deriveFilterOptionsFromData(displayData, columns)),
+    };
+    for (const column of columns) {
+      if (column.filterable?.type === 'multiSelect' && column.filterable.options !== undefined) {
+        options[column.filterable.filterField ?? column.columnId] = column.filterable.options;
+      }
+    }
+    return options;
   }, [hasServerFilterOptions, displayData, columns, serverFilterOptions]);
 
   return {

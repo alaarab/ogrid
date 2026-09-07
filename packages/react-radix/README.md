@@ -92,6 +92,50 @@ Pair with `preset-shadcn.css` for full theme inheritance:
 import "@alaarab/ogrid-react-radix/styles/preset-shadcn.css";
 ```
 
+## Filter labels and values
+
+Multi-select choices can be strings or objects with separate string values and
+display labels. Existing string arrays work unchanged:
+
+```tsx
+const columns = [{
+  columnId: 'active',
+  name: 'Status',
+  filterable: {
+    type: 'multiSelect' as const,
+    options: [
+      { value: 'true', label: 'Active' },
+      { value: 'false', label: 'Inactive' },
+    ],
+  },
+}];
+```
+
+Selecting “Inactive” produces `{ type: 'multiSelect', value: ['false'] }`.
+Search matches display labels. `IDataSource.fetchFilterOptions(field)` and
+`DataGridTable.filterOptions` accept the same `FilterOption[]` shape. Static
+`filterable.options` take precedence, including `[]`, and skip option fetching.
+Use string values for boolean or numeric data, matching OGrid's filter state.
+
+For custom palettes, map `--ogrid-*` variables on `:root` or a grid wrapper.
+Filter and column chooser portals preserve the wrapper's tokens and follow
+class, `data-theme`, and inline style changes while open. The shadcn preset
+expects shadcn tokens such as `--card` and `--primary`; apps with other token
+names should map OGrid variables directly. See the Radix example at
+`/filter-options.html` for a scoped palette and labeled boolean filter.
+
+For deployment, install matching published core/react/radix versions and commit
+the regenerated lockfile. A `--no-save` local tarball install can retain nested
+registry copies, even when their version labels match the tarballs. From the
+OGrid checkout, verify a consumer with:
+
+```sh
+node scripts/check-package-resolution.mjs /path/to/consumer 2.17.0
+```
+
+The check verifies exact internal dependency versions and confirms that every
+package resolves the same core/react installations as the consumer root.
+
 ## Inline cell editing — `useInlineEdit`
 
 Add spreadsheet-style cell editing to your shadcn table. Compose with

@@ -1,3 +1,4 @@
+import type { FilterOption } from './columnTypes';
 import type { IDateFilterValue } from './columnTypes';
 
 /** Row identifier type  -  grids accept string or number IDs. */
@@ -116,7 +117,7 @@ export interface IWindowedDataSource<T> {
  */
 export interface IDataSource<T> extends Partial<IWindowedDataSource<T>> {
   fetchPage?(params: IFetchParams): Promise<IPageResult<T>>;
-  fetchFilterOptions?(field: string): Promise<string[]>;
+  fetchFilterOptions?(field: string): Promise<FilterOption[]>;
   searchPeople?(query: string): Promise<UserLike[]>;
   getUserByEmail?(email: string): Promise<UserLike | undefined>;
 }
