@@ -124,6 +124,18 @@ expects shadcn tokens such as `--card` and `--primary`; apps with other token
 names should map OGrid variables directly. See the Radix example at
 `/filter-options.html` for a scoped palette and labeled boolean filter.
 
+For deployment, install matching published core/react/radix versions and commit
+the regenerated lockfile. A `--no-save` local tarball install can retain nested
+registry copies, even when their version labels match the tarballs. From the
+OGrid checkout, verify a consumer with:
+
+```sh
+node scripts/check-package-resolution.mjs /path/to/consumer 2.17.0
+```
+
+The check verifies exact internal dependency versions and confirms that every
+package resolves the same core/react installations as the consumer root.
+
 ## Inline cell editing — `useInlineEdit`
 
 Add spreadsheet-style cell editing to your shadcn table. Compose with
