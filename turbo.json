@@ -1,5 +1,6 @@
 {
   "$schema": "https://turbo.build/schema.json",
+  "globalPassThroughEnv": ["OGRID_PLAYWRIGHT_PROJECTS"],
   "tasks": {
     "build": {
       "dependsOn": ["^build"],
