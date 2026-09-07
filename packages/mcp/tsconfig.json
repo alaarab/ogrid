@@ -5,7 +5,6 @@
     "rootDir": "src",
     "isolatedModules": true,
     "moduleResolution": "Bundler",
-    "ignoreDeprecations": "6.0",
     "types": [
       "node"
     ],

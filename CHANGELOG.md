@@ -6,6 +6,19 @@ All notable changes to OGrid will be documented in this file.
 
 ## [2.17.0] - 2026-09-07
 
+### Changed — dependency and toolchain upgrades
+
+- Update all direct development and runtime dependencies to current stable
+  releases, including TypeScript 7, Jest DOM 7, Jest Axe 11, PostCSS Modules 9,
+  and Size Limit 13; refresh transitive dependencies within supported ranges.
+- Update React to 19.2.8, Radix primitives, Fluent UI, TanStack Virtual, Vite,
+  Storybook, Docusaurus, the MCP SDK, and Zod. React 17–19 peer compatibility
+  remains available to consumers.
+- Use Bun 1.4.2 and current GitHub Actions, with Node 26.8.1 in CI. Repository
+  development requires Node 22.18 or newer; published package runtime engines
+  are unchanged. Generate MCP declarations with the TypeScript 7 CLI.
+
+
 ### Added — labeled filters
 
 - Multi-select choices accept strings or `{ value: string, label: string }` in

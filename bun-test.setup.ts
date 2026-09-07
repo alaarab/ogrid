@@ -26,6 +26,12 @@ if (typeof document === 'undefined') {
 // sync path; remove the stub so the fallback engages.
 delete (globalThis as { Worker?: unknown }).Worker;
 
+// Happy-dom 20.14 eagerly creates Animation.finished promises and rejects them
+// on cancellation, even when callers only use finish/cancel events. Fluent's
+// cleanup then produces unhandled AbortErrors. Use its no-Web-Animations
+// fallback in DOM unit tests; Chromium coverage exercises real animations.
+delete (Element.prototype as { animate?: unknown }).animate;
+
 // jest-dom matchers (toBeInTheDocument, toHaveAttribute, etc.)
 const jestDomMatchers = await import('@testing-library/jest-dom/matchers');
 expect.extend(jestDomMatchers as any);

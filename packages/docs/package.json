@@ -14,23 +14,26 @@
     "@alaarab/ogrid-react-inputs": "2.17.0",
     "@alaarab/ogrid-react-radix": "2.17.0",
     "@alaarab/ogrid-react-xlsx": "2.17.0",
-    "@docusaurus/core": "^3.10.1",
-    "@docusaurus/preset-classic": "^3.10.1",
-    "@docusaurus/theme-mermaid": "^3.10.1",
-    "@fluentui/react-components": "^9.74.1",
+    "@docusaurus/core": "^3.10.2",
+    "@docusaurus/preset-classic": "^3.10.2",
+    "@docusaurus/theme-mermaid": "^3.10.2",
+    "@fluentui/react-components": "^9.74.7",
     "@mdx-js/react": "^3.1.1",
     "clsx": "^2.1.1",
     "prism-react-renderer": "^2.4.1",
-    "react": "^19.2.7",
-    "react-dom": "^19.2.7"
+    "react": "^19.2.8",
+    "react-dom": "^19.2.8"
   },
   "devDependencies": {
-    "@docusaurus/module-type-aliases": "^3.10.1",
+    "@docusaurus/module-type-aliases": "^3.10.2",
     "exceljs": "^4.4.0",
-    "@docusaurus/tsconfig": "^3.10.1",
-    "docusaurus-plugin-sass": "^0.2.6",
-    "sass": "^1.100.0",
-    "typescript": "^6.0.3"
+    "@docusaurus/tsconfig": "^3.10.2",
+    "docusaurus-plugin-sass": "^0.2.7",
+    "sass": "^1.104.0",
+    "typescript": "^7.0.2",
+    "@docusaurus/types": "^3.10.2",
+    "@types/react": "^19.2.18",
+    "@types/react-dom": "^19.2.7"
   },
   "browserslist": {
     "production": [

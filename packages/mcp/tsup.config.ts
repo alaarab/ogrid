@@ -21,7 +21,7 @@ export default defineConfig([
     outDir: 'dist/esm',
     splitting: false,
     treeshake: true,
-    dts: true,
+    dts: false, // TypeScript 7 CLI emits declarations after bundling.
     target: 'es2020',
     platform: 'browser',
   },

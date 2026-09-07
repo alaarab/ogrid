@@ -28,18 +28,18 @@
   ],
   "scripts": {
     "prebuild": "node scripts/bundle-docs.mjs",
-    "build": "tsup",
+    "build": "tsup && tsc -p tsconfig.json --emitDeclarationOnly --outDir dist/esm",
     "dev": "tsup --watch",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "test": "bun test --preload ../../bun-test.setup.ts"
   },
   "dependencies": {
-    "@modelcontextprotocol/sdk": "^1.29.0",
-    "zod": "^4.4.3"
+    "@modelcontextprotocol/sdk": "^1.30.0",
+    "zod": "^4.5.4"
   },
   "devDependencies": {
     "tsup": "^8.5.1",
-    "typescript": "^6.0.3"
+    "typescript": "^7.0.2"
   },
   "engines": {
     "node": ">=18"
