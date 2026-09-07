@@ -1,3 +1,4 @@
+import type { FilterOption } from '../types/columnTypes';
 /**
  * View model helpers for DataGridTable.
  * Pure TypeScript  -  no framework dependencies.
@@ -23,7 +24,7 @@ export interface HeaderFilterConfigInput {
   onColumnSort: (columnKey: string, direction?: 'asc' | 'desc' | null) => void;
   filters: IFilters;
   onFilterChange: (key: string, value: FilterValue | undefined) => void;
-  filterOptions: Record<string, string[]>;
+  filterOptions: Record<string, FilterOption[]>;
   loadingFilterOptions: Record<string, boolean>;
   peopleSearch?: (query: string) => Promise<UserLike[]>;
 }
@@ -38,7 +39,7 @@ export interface HeaderFilterConfig {
   onSort?: () => void;
   selectedValues?: string[];
   onFilterChange?: (values: string[]) => void;
-  options?: string[];
+  options?: FilterOption[];
   isLoadingOptions?: boolean;
   textValue?: string;
   onTextChange?: (value: string) => void;
@@ -91,8 +92,8 @@ export function getHeaderFilterConfig<T>(
   if (filterType === 'multiSelect') {
     return {
       ...base,
-      options: input.filterOptions[filterField] ?? [],
-      isLoadingOptions: input.loadingFilterOptions[filterField] ?? false,
+      options: filterable?.options ?? input.filterOptions[filterField] ?? [],
+      isLoadingOptions: filterable?.options ? false : input.loadingFilterOptions[filterField] ?? false,
       selectedValues: filterValue?.type === 'multiSelect' ? filterValue.value : [],
       onFilterChange: (values: string[]) =>
         input.onFilterChange(filterField, values.length ? { type: 'multiSelect', value: values } : undefined),

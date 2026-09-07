@@ -1,5 +1,13 @@
-import type { IColumnDef, IColumnFilterDef, IFilters, FilterValue } from '../types';
+import type { IColumnDef, IColumnFilterDef, IFilters, FilterValue, FilterOption } from '../types';
 import { getCellValue } from './cellValue';
+
+export function getFilterOptionValue(option: FilterOption): string {
+  return typeof option === 'string' ? option : option.value;
+}
+
+export function getFilterOptionLabel(option: FilterOption): string {
+  return typeof option === 'string' ? option : option.label;
+}
 
 /** Type guard: returns true if val is an IColumnFilterDef (an object with a filter type). */
 export function isFilterConfig(val: unknown): val is IColumnFilterDef {
@@ -82,7 +90,7 @@ export function getMultiSelectFilterFields<T>(columns: IColumnDef<T>[]): string[
   const fields: string[] = [];
   for (const col of columns) {
     const f = isFilterConfig(col.filterable) ? col.filterable : null;
-    if (f?.type === 'multiSelect') fields.push(getFilterField(col));
+    if (f?.type === 'multiSelect' && f.options === undefined) fields.push(getFilterField(col));
   }
   return fields;
 }

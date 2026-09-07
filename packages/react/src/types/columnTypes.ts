@@ -9,6 +9,8 @@ export type {
   ColumnFilterType,
   IDateFilterValue,
   IColumnFilterDef,
+  IFilterOption,
+  FilterOption,
   IColumnMeta,
   IValueParserParams,
   ICellValueChangedEvent,

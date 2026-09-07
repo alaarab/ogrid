@@ -1,3 +1,5 @@
+import type { FilterOption } from '@alaarab/ogrid-core';
+import { getFilterOptionLabel, getFilterOptionValue } from '@alaarab/ogrid-core';
 /**
  * Multi-select filter state sub-hook for column header filters.
  * Manages temporary selection set, search text, debounced search, filtered options, and select/clear handlers.
@@ -12,7 +14,7 @@ const EMPTY_OPTIONS: string[] = [];
 export interface UseMultiSelectFilterStateParams {
   selectedValues?: string[];
   onFilterChange?: (values: string[]) => void;
-  options?: string[];
+  options?: FilterOption[];
   isFilterOpen: boolean;
 }
 
@@ -22,7 +24,7 @@ export interface UseMultiSelectFilterStateResult {
   searchText: string;
   setSearchText: (v: string) => void;
   debouncedSearchText: string;
-  filteredOptions: string[];
+  filteredOptions: FilterOption[];
   handleCheckboxChange: (option: string, checked: boolean) => void;
   handleSelectAll: () => void;
   handleClearSelection: () => void;
@@ -54,7 +56,7 @@ export function useMultiSelectFilterState(
     const trimmed = debouncedSearchText.trim();
     if (!trimmed) return safeOptions;
     const searchLower = trimmed.toLowerCase();
-    return safeOptions.filter((opt) => opt.toLowerCase().includes(searchLower));
+    return safeOptions.filter((opt) => getFilterOptionLabel(opt).toLowerCase().includes(searchLower));
   }, [safeOptions, debouncedSearchText]);
 
   const handleCheckboxChange = useCallback((option: string, checked: boolean) => {
@@ -69,7 +71,7 @@ export function useMultiSelectFilterState(
   const handleSelectAll = useCallback(() => {
     setTempSelected((prev) => {
       const next = new Set(prev);
-      for (const opt of filteredOptions) next.add(opt);
+      for (const opt of filteredOptions) next.add(getFilterOptionValue(opt));
       return next;
     });
   }, [filteredOptions]);

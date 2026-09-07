@@ -9,6 +9,7 @@ import {
   type ColumnChooserContentClassNames,
 } from '@alaarab/ogrid-react';
 import styles from './ColumnChooser.module.scss';
+import { usePortalTheme } from '../utils/usePortalTheme';
 
 export type { IColumnChooserProps };
 
@@ -48,6 +49,7 @@ const CLASS_NAMES: ColumnChooserContentClassNames = {
 
 export const ColumnChooser: React.FC<IColumnChooserProps> = (props) => {
   const { columns, visibleColumns, onVisibilityChange, onSetVisibleColumns, className } = props;
+  const containerRef = React.useRef<HTMLDivElement>(null);
 
   const {
     open, setOpen,
@@ -55,11 +57,12 @@ export const ColumnChooser: React.FC<IColumnChooserProps> = (props) => {
     handleSelectAll, handleClearAll,
     visibleCount, totalCount,
   } = useColumnChooserState({ columns, visibleColumns, onVisibilityChange, onSetVisibleColumns });
+  const portalTheme = usePortalTheme(containerRef, open);
 
   const handleCheckboxChange = (columnKey: string) => (checked: boolean) => setColumnVisible(columnKey)(checked);
 
   return (
-    <div className={`${styles.container} ${className || ''}`}>
+    <div ref={containerRef} className={`${styles.container} ${className || ''}`}>
       <Popover.Root open={open} onOpenChange={setOpen}>
         <Popover.Trigger asChild>
           <button type="button" className={styles.triggerButton} aria-expanded={open} aria-haspopup="listbox">
@@ -71,7 +74,9 @@ export const ColumnChooser: React.FC<IColumnChooserProps> = (props) => {
         <Popover.Portal>
           <Popover.Content
             className={styles.dropdown}
+            style={portalTheme}
             sideOffset={4}
+            collisionPadding={12}
             align="end"
             onOpenAutoFocus={(e: Event) => e.preventDefault()}
           >

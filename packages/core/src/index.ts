@@ -3,6 +3,8 @@ export type {
   ColumnFilterType,
   IDateFilterValue,
   IColumnFilterDef,
+  IFilterOption,
+  FilterOption,
   DateFormat,
   IColumnMeta,
   IValueParserParams,
@@ -71,6 +73,8 @@ export {
   isFilterConfig,
   getFilterField,
   mergeFilter,
+  getFilterOptionLabel,
+  getFilterOptionValue,
   deriveFilterOptionsFromData,
   getMultiSelectFilterFields,
 } from './utils';

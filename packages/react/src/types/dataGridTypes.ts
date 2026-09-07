@@ -1,3 +1,4 @@
+import type { FilterOption } from '@alaarab/ogrid-core';
 import type { ReactNode } from 'react';
 import type { IColumnDef, IColumnGroupDef, ICellValueChangedEvent } from './columnTypes';
 import type { IFormulaFunction, IRecalcResult, IGridDataAccessor, IAuditEntry, IAuditTrail, IResponsiveColumnsConfig, WindowedRow, PageSize } from '@alaarab/ogrid-core';
@@ -295,7 +296,7 @@ export interface IOGridDataGridProps<T> {
   filters: IFilters;
   /** Single callback for all filter changes. Pass undefined to clear. */
   onFilterChange: (key: string, value: FilterValue | undefined) => void;
-  filterOptions: Record<string, string[]>;
+  filterOptions: Record<string, FilterOption[]>;
   loadingFilterOptions: Record<string, boolean>;
   peopleSearch?: (query: string) => Promise<UserLike[]>;
   getUserByEmail?: (email: string) => Promise<UserLike | undefined>;

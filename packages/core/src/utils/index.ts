@@ -12,6 +12,8 @@ export {
   isFilterConfig,
   getFilterField,
   mergeFilter,
+  getFilterOptionLabel,
+  getFilterOptionValue,
   deriveFilterOptionsFromData,
   getMultiSelectFilterFields,
 } from './ogridHelpers';
