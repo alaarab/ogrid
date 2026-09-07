@@ -21,6 +21,8 @@ export {
 export type {
   ColumnFilterType,
   IColumnFilterDef,
+  IFilterOption,
+  FilterOption,
   IColumnMeta,
   IColumnDef,
   IColumnGroupDef,

@@ -1,15 +1,18 @@
+import { getFilterOptionLabel, getFilterOptionValue } from '@alaarab/ogrid-core';
+import type { FilterOption } from '@alaarab/ogrid-core';
 import * as React from 'react';
 import * as Checkbox from '@radix-ui/react-checkbox';
 import { useListVirtualizer } from '@alaarab/ogrid-react';
 import styles from './ColumnHeaderFilter.module.scss';
+import { useCoarsePointer } from '../utils/useCoarsePointer';
 
 const ITEM_HEIGHT = 34;
 
 export interface MultiSelectFilterPopoverProps {
   searchText: string;
   onSearchChange: (value: string) => void;
-  options: string[];
-  filteredOptions: string[];
+  options: FilterOption[];
+  filteredOptions: FilterOption[];
   selected: Set<string>;
   onOptionToggle: (option: string, checked: boolean) => void;
   onSelectAll: () => void;
@@ -30,7 +33,8 @@ export const MultiSelectFilterPopover: React.FC<MultiSelectFilterPopoverProps> =
   onApply,
   isLoading,
 }) => {
-  const virt = useListVirtualizer({ count: filteredOptions.length, itemHeight: ITEM_HEIGHT });
+  const itemHeight = useCoarsePointer() ? 44 : ITEM_HEIGHT;
+  const virt = useListVirtualizer({ count: filteredOptions.length, itemHeight });
   const optionIdPrefix = React.useId();
 
   return (
@@ -66,21 +70,23 @@ export const MultiSelectFilterPopover: React.FC<MultiSelectFilterPopoverProps> =
             {virt.visibleItems.map(({ index, offsetTop }) => {
               const option = filteredOptions[index];
               if (option === undefined) return null;
+              const value = getFilterOptionValue(option);
+              const label = getFilterOptionLabel(option);
               const optionId = `${optionIdPrefix}-${index}`;
               return (
-                <div key={option} className={styles.popoverOption} style={{ position: 'absolute', top: offsetTop, width: '100%', height: ITEM_HEIGHT, boxSizing: 'border-box', display: 'flex', alignItems: 'center' }}>
+                <label htmlFor={optionId} key={value} className={styles.popoverOption} style={{ position: 'absolute', top: offsetTop, width: '100%', height: itemHeight, boxSizing: 'border-box', display: 'flex', alignItems: 'center' }}>
                   <Checkbox.Root
                     id={optionId}
-                    checked={selected.has(option)}
+                    checked={selected.has(value)}
                     onCheckedChange={(c: boolean | 'indeterminate') =>
-                      onOptionToggle(option, c === true)
+                      onOptionToggle(value, c === true)
                     }
                     className={styles.filterCheckbox}
                   >
                     <Checkbox.Indicator>✓</Checkbox.Indicator>
                   </Checkbox.Root>
-                  <label htmlFor={optionId} style={{ marginLeft: 8, cursor: 'pointer' }}>{option}</label>
-                </div>
+                  <span className={styles.optionLabel} title={label}>{label}</span>
+                </label>
               );
             })}
           </div>

@@ -1,3 +1,5 @@
+import { getFilterOptionLabel, getFilterOptionValue } from '@alaarab/ogrid-core';
+import type { FilterOption } from '@alaarab/ogrid-core';
 import * as React from 'react';
 import { SearchRegular } from '@fluentui/react-icons';
 import { useListVirtualizer } from '@alaarab/ogrid-react';
@@ -8,8 +10,8 @@ const ITEM_HEIGHT = 40;
 export interface MultiSelectFilterPopoverProps {
   searchText: string;
   onSearchChange: (value: string) => void;
-  options: string[];
-  filteredOptions: string[];
+  options: FilterOption[];
+  filteredOptions: FilterOption[];
   selected: Set<string>;
   onOptionToggle: (option: string, checked: boolean) => void;
   onSelectAll: () => void;
@@ -99,10 +101,12 @@ export const MultiSelectFilterPopover: React.FC<MultiSelectFilterPopoverProps> =
             {virt.visibleItems.map(({ index, offsetTop }) => {
               const option = filteredOptions[index];
               if (option === undefined) return null;
-              const isChecked = selected.has(option);
+              const value = getFilterOptionValue(option);
+              const label = getFilterOptionLabel(option);
+              const isChecked = selected.has(value);
               return (
                 <label
-                  key={option}
+                  key={value}
                   className={styles.popoverOption}
                   style={{ position: 'absolute', top: offsetTop, width: '100%', height: ITEM_HEIGHT, boxSizing: 'border-box', display: 'flex', alignItems: 'center' }}
                 >
@@ -111,11 +115,11 @@ export const MultiSelectFilterPopover: React.FC<MultiSelectFilterPopoverProps> =
                     checked={isChecked}
                     onChange={(ev) => {
                       ev.stopPropagation();
-                      onOptionToggle(option, ev.target.checked);
+                      onOptionToggle(value, ev.target.checked);
                     }}
                     className={styles.nativeCheckbox}
                   />
-                  <span className={styles.checkboxLabel}>{option}</span>
+                  <span className={styles.checkboxLabel}>{label}</span>
                 </label>
               );
             })}

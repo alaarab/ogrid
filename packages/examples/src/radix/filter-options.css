@@ -1,0 +1,28 @@
+body { margin: 0; font-family: sans-serif; }
+.theme-scope {
+  padding: 12px;
+  max-width: 900px;
+  margin: auto;
+  --ogrid-bg: #fff8ef;
+  --ogrid-bg-subtle: #f4e8dc;
+  --ogrid-fg: #36261d;
+  --ogrid-muted: #705744;
+  --ogrid-primary: #a64d33;
+  --ogrid-primary-fg: #ffffff;
+  --ogrid-border: #8c7969;
+  --ogrid-font: sans-serif;
+  color: var(--ogrid-fg);
+  background: var(--ogrid-bg);
+  color-scheme: light;
+}
+.theme-scope[data-theme='dark'] {
+  --ogrid-bg: #241c18;
+  --ogrid-bg-subtle: #322720;
+  --ogrid-fg: #fff1e5;
+  --ogrid-muted: #d5b8a4;
+  --ogrid-primary: #dc977e;
+  --ogrid-primary-fg: #241c18;
+  color-scheme: dark;
+}
+section { margin-top: 24px; }
+output { display: block; overflow-wrap: anywhere; }
