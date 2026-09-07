@@ -4,6 +4,8 @@ All notable changes to OGrid will be documented in this file.
 
 ## [Unreleased]
 
+## [2.17.0] - 2026-09-07
+
 ### Added — labeled filters
 
 - Multi-select choices accept strings or `{ value: string, label: string }` in

@@ -3,7 +3,7 @@ import { defaultBrowserUse, smokeBrowserProjects, smokeBrowserServers } from './
 
 export default defineConfig({
   testDir: './e2e',
-  testMatch: ['liveSmoke.spec.ts'],
+  testMatch: ['liveSmoke.spec.ts', 'radixFilters.spec.ts'],
   timeout: 30_000,
   expect: { timeout: 5_000 },
   fullyParallel: true,

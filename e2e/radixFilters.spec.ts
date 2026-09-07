@@ -20,6 +20,20 @@ test('labels filter boolean rows and emit raw string values', async ({ page }) =
   await expect(page.getByRole('gridcell', { name: 'Current project', exact: true })).toHaveCount(0);
 });
 
+test('All page size stays selected when a labeled boolean filter changes the total', async ({ page }) => {
+  const pageSize = page.getByRole('combobox', { name: 'Rows per page' }).first();
+  await pageSize.selectOption('all');
+  await expect(page.getByRole('gridcell', { name: 'Current project', exact: true })).toBeVisible();
+  await expect(page.getByRole('gridcell', { name: 'Past project', exact: true })).toBeVisible();
+  await page.getByRole('button', { name: 'Filter Status' }).click();
+  await page.getByRole('checkbox', { name: 'Inactive', exact: true }).click();
+  await page.getByRole('button', { name: 'Apply', exact: true }).click();
+  await expect(pageSize).toHaveValue('all');
+  await expect(page.getByRole('gridcell', { name: 'Current project', exact: true })).toHaveCount(0);
+  await expect(page.getByRole('gridcell', { name: 'Past project', exact: true })).toBeVisible();
+  await expect(page.getByTestId('filters')).toHaveText('{"active":{"type":"multiSelect","value":["false"]}}');
+});
+
 test('portaled filter and chooser retain scoped dark colors and follow theme changes while open', async ({ page }) => {
   for (const trigger of [page.getByRole('button', { name: 'Filter Status' }), page.getByRole('button', { name: /Column Visibility/ })]) {
     await page.locator('main').evaluate((el) => el.setAttribute('data-theme', 'dark'));

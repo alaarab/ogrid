@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import type { PageSize } from '@alaarab/ogrid-core';
 import { createRoot } from 'react-dom/client';
 import { OGrid, ColumnHeaderFilter, ColumnChooser, PaginationControls, type IColumnDef } from '@alaarab/ogrid-react-radix';
 import './filter-options.css';
@@ -16,10 +17,10 @@ function App() {
   const [selected, setSelected] = useState<string[]>([]);
   const [visible, setVisible] = useState(new Set(['name', 'active']));
   const [page, setPage] = useState(10);
-  const [pageSize, setPageSize] = useState(25);
+  const [pageSize, setPageSize] = useState<PageSize>(25);
   return <main className="theme-scope" data-theme="dark">
     <h1>Filter labels and scoped themes</h1>
-    <OGrid columns={columns} data={rows} getRowId={(row) => (row as (typeof rows)[number]).id} filters={filters} onFiltersChange={setFilters} columnChooser={false} />
+    <OGrid columns={columns} data={rows} getRowId={(row) => (row as (typeof rows)[number]).id} filters={filters} onFiltersChange={setFilters} columnChooser={false} defaultPageSize={1} pageSizeOptions={[1, 'all']} />
     <output data-testid="filters">{JSON.stringify(filters)}</output>
     <section aria-label="Many options">
       <ColumnHeaderFilter columnKey="choice" columnName="Choice" filterType="multiSelect" options={manyOptions} selectedValues={selected} onFilterChange={setSelected} />
@@ -33,7 +34,7 @@ function App() {
       })} onSetVisibleColumns={setVisible} />
     </section>
     <section aria-label="Many pages">
-      <PaginationControls currentPage={page} pageSize={pageSize} totalCount={1000} onPageChange={setPage} onPageSizeChange={setPageSize} />
+      <PaginationControls currentPage={page} pageSize={pageSize} totalCount={1000} onPageChange={setPage} onPageSizeChange={(size) => { setPageSize(size); setPage(1); }} pageSizeOptions={[25, 50, 'all']} />
     </section>
   </main>;
 }
