@@ -1,16 +1,17 @@
+import type { FilterOption } from '@alaarab/ogrid-core';
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useLatestRef } from './useLatestRef';
 import type { IDataSource } from '../types/dataGridTypes';
 
 export interface UseFilterOptionsResult {
-  filterOptions: Record<string, string[]>;
+  filterOptions: Record<string, FilterOption[]>;
   loadingOptions: Record<string, boolean>;
 }
 
 /** Accepted data source shapes for useFilterOptions. */
 type FilterOptionsSource =
   | IDataSource<unknown>
-  | { fetchFilterOptions?: (field: string) => Promise<string[]> };
+  | { fetchFilterOptions?: (field: string) => Promise<FilterOption[]> };
 
 /** Shallow-compare two string arrays by value. */
 function fieldsEqual(a: string[], b: string[]): boolean {
@@ -21,7 +22,7 @@ function fieldsEqual(a: string[], b: string[]): boolean {
   return true;
 }
 
-const EMPTY_FILTER_OPTIONS: Record<string, string[]> = {};
+const EMPTY_FILTER_OPTIONS: Record<string, FilterOption[]> = {};
 const EMPTY_LOADING: Record<string, boolean> = {};
 
 /**
@@ -44,7 +45,7 @@ export function useFilterOptions(
   // Stabilize dataSource ref so inline objects don't cause infinite re-fetches.
   const dataSourceRef = useLatestRef(dataSource);
 
-  const [filterOptions, setFilterOptions] = useState<Record<string, string[]>>(EMPTY_FILTER_OPTIONS);
+  const [filterOptions, setFilterOptions] = useState<Record<string, FilterOption[]>>(EMPTY_FILTER_OPTIONS);
   const [loadingOptions, setLoadingOptions] = useState<Record<string, boolean>>(EMPTY_LOADING);
 
   const load = useCallback(async (): Promise<void> => {
@@ -64,7 +65,7 @@ export function useFilterOptions(
     stableFields.forEach((f) => { loading[f] = true; });
     setLoadingOptions(loading);
 
-    const results: Record<string, string[]> = {};
+    const results: Record<string, FilterOption[]> = {};
     await Promise.all(
       stableFields.map(async (field) => {
         try {

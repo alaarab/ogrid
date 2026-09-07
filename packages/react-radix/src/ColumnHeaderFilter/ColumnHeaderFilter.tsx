@@ -12,6 +12,7 @@ import { TextFilterPopover } from './TextFilterPopover';
 import { MultiSelectFilterPopover } from './MultiSelectFilterPopover';
 import { PeopleFilterPopover } from './PeopleFilterPopover';
 import styles from './ColumnHeaderFilter.module.scss';
+import { usePortalTheme } from '../utils/usePortalTheme';
 
 export type { IColumnHeaderFilterProps };
 
@@ -43,6 +44,7 @@ export const ColumnHeaderFilter: React.FC<IColumnHeaderFilterProps> = React.memo
     hasActiveFilter,
     handlers,
   } = state;
+  const portalTheme = usePortalTheme(headerRef, isFilterOpen);
 
   return (
     <div className={styles.columnHeader} ref={headerRef as React.RefObject<HTMLDivElement>}>
@@ -70,7 +72,9 @@ export const ColumnHeaderFilter: React.FC<IColumnHeaderFilterProps> = React.memo
               <Popover.Content
                 ref={popoverRef as React.RefObject<HTMLDivElement>}
                 className={styles.popoverContent}
+                style={portalTheme}
                 sideOffset={4}
+                collisionPadding={12}
                 align="start"
                 onOpenAutoFocus={(e: Event) => e.preventDefault()}
               >

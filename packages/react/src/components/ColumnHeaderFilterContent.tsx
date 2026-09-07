@@ -1,3 +1,4 @@
+import type { FilterOption } from '@alaarab/ogrid-core';
 /**
  * Shared filter content rendering for ColumnHeaderFilter across all React UI packages.
  * Each UI package provides its own popover wrapper + trigger; this component renders
@@ -21,7 +22,7 @@ export interface IColumnHeaderFilterProps {
   onSort?: () => void;
   selectedValues?: string[];
   onFilterChange?: (values: string[]) => void;
-  options?: string[];
+  options?: FilterOption[];
   isLoadingOptions?: boolean;
   textValue?: string;
   onTextChange?: (value: string) => void;

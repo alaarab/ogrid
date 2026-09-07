@@ -1,3 +1,4 @@
+import type { FilterOption } from '@alaarab/ogrid-core';
 /**
  * Shared ColumnHeaderFilter tests.
  * Each UI package calls createColumnHeaderFilterTests(ColumnHeaderFilter) to run these.
@@ -14,7 +15,7 @@ interface ColumnHeaderFilterProps {
   onSort?: () => void;
   selectedValues?: string[];
   onFilterChange?: (values: string[]) => void;
-  options?: string[];
+  options?: FilterOption[];
   textValue?: string;
   onTextChange?: (value: string) => void;
   selectedUser?: UserLike;
@@ -23,6 +24,33 @@ interface ColumnHeaderFilterProps {
 }
 
 export function createColumnHeaderFilterTests(ColumnHeaderFilter: React.ComponentType<ColumnHeaderFilterProps>): void {
+  it('displays labels while preserving raw values for selection and apply', () => {
+    const onFilterChange = jest.fn();
+    render(<ColumnHeaderFilter columnKey="active" columnName="Active" filterType="multiSelect"
+      selectedValues={['false']} onFilterChange={onFilterChange}
+      options={[{ value: 'true', label: 'Active' }, { value: 'false', label: 'Inactive' }, 'Unknown']} />);
+    fireEvent.click(screen.getByRole('button', { name: 'Filter Active' }));
+    expect(screen.getByRole('checkbox', { name: 'Inactive' })).toBeChecked();
+    fireEvent.click(screen.getByRole('checkbox', { name: 'Inactive' }));
+    fireEvent.click(screen.getByRole('checkbox', { name: 'Active' }));
+    fireEvent.click(screen.getByRole('checkbox', { name: 'Unknown' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Apply' }));
+    expect(onFilterChange).toHaveBeenCalledWith(['true', 'Unknown']);
+  });
+
+  it('searches labels and selects only the matching values', async () => {
+    const onFilterChange = jest.fn();
+    render(<ColumnHeaderFilter columnKey="active" columnName="Active" filterType="multiSelect"
+      selectedValues={['Unknown']} onFilterChange={onFilterChange}
+      options={[{ value: 'true', label: 'Active' }, { value: 'false', label: 'Inactive' }, 'Unknown']} />);
+    fireEvent.click(screen.getByRole('button', { name: 'Filter Active' }));
+    fireEvent.change(screen.getByPlaceholderText('Search...'), { target: { value: 'INACTIVE' } });
+    await waitFor(() => expect(screen.queryByRole('checkbox', { name: 'Active' }) === null).toBe(true));
+    fireEvent.click(screen.getByRole('button', { name: /select all/i }));
+    fireEvent.click(screen.getByRole('button', { name: 'Apply' }));
+    expect(onFilterChange).toHaveBeenCalledWith(['Unknown', 'false']);
+  });
+
   it('renders no filter button when filterType is none', () => {
     render(<ColumnHeaderFilter columnKey="id" columnName="ID" filterType="none" onSort={() => undefined} />);
     expect(screen.queryByRole('button', { name: /filter id/i })).not.toBeInTheDocument();

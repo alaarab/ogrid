@@ -1,3 +1,4 @@
+import type { FilterOption } from '@alaarab/ogrid-core';
 /**
  * Headless column header filter state and handlers for Fluent, Material, and Radix.
  * UI packages use this hook and render only presentation (popover, inputs, buttons).
@@ -28,7 +29,7 @@ export interface UseColumnHeaderFilterStateParams {
   onSort?: () => void;
   selectedValues?: string[];
   onFilterChange?: (values: string[]) => void;
-  options?: string[];
+  options?: FilterOption[];
   isLoadingOptions?: boolean;
   textValue?: string;
   onTextChange?: (value: string) => void;
@@ -52,7 +53,7 @@ export interface UseColumnHeaderFilterStateResult {
   searchText: string;
   setSearchText: (v: string) => void;
   debouncedSearchText: string;
-  filteredOptions: string[];
+  filteredOptions: FilterOption[];
   peopleSuggestions: UserLike[];
   isPeopleLoading: boolean;
   peopleSearchText: string;

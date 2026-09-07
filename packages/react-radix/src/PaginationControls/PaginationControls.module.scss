@@ -15,7 +15,8 @@
 .paginationInfo {
   font-size: 13px;
   color: var(--ogrid-muted, #606060);
-  flex-shrink: 0;
+  flex-shrink: 1;
+  overflow-wrap: anywhere;
   font-variant-numeric: tabular-nums;
 }
 
@@ -55,6 +56,9 @@
 
 .pageNumbers {
   display: inline-flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  max-width: 100%;
   align-items: center;
   gap: 4px;
   margin: 0 8px;
@@ -111,6 +115,31 @@
     border: 1px solid var(--ogrid-border, #ccc);
     border-radius: var(--ogrid-radius, 4px);
     background: var(--ogrid-bg, #fff);
+    color: var(--ogrid-fg, #333);
     font-size: 13px;
+  }
+}
+
+@media (pointer: coarse) {
+  .navBtn, .pageBtn, .pageSizeSelector .pageSizeSelect {
+    min-width: 44px;
+    min-height: 44px;
+    box-sizing: border-box;
+  }
+
+  .pageSizeSelector .pageSizeSelect {
+    font-size: 16px;
+  }
+}
+
+@media (max-width: 600px) {
+  .paginationControls {
+    flex-basis: 100%;
+  }
+
+  .pageNumbers {
+    order: 1;
+    flex-basis: 100%;
+    margin: 0;
   }
 }

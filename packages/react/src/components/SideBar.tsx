@@ -1,3 +1,5 @@
+import { getFilterOptionLabel, getFilterOptionValue } from '@alaarab/ogrid-core';
+import type { FilterOption } from '@alaarab/ogrid-core';
 /**
  * Headless SideBar component rendered by OGridLayout.
  * Contains a tab strip (toggle buttons) and a panel area (columns or filters).
@@ -29,7 +31,7 @@ export interface SideBarProps {
   filterableColumns: SideBarFilterColumn[];
   filters: IFilters;
   onFilterChange: (key: string, value: FilterValue | undefined) => void;
-  filterOptions: Record<string, string[]>;
+  filterOptions: Record<string, FilterOption[]>;
 }
 
 const PANEL_WIDTH = 240;
@@ -253,7 +255,7 @@ function FiltersPanel(props: {
   filterableColumns: SideBarFilterColumn[];
   filters: IFilters;
   onFilterChange: (key: string, value: FilterValue | undefined) => void;
-  filterOptions: Record<string, string[]>;
+  filterOptions: Record<string, FilterOption[]>;
 }): React.ReactElement {
   const { filterableColumns, filters, onFilterChange, filterOptions } = props;
 
@@ -317,21 +319,22 @@ function FiltersPanel(props: {
               // biome-ignore lint/a11y/useSemanticElements: a fieldset would introduce default border/padding and change the panel layout; role="group" on a styled div is intentional
               <div style={multiSelectContainerStyle} role="group" aria-label={`${col.name} options`}>
                 {(filterOptions[filterKey] ?? []).map((opt) => {
-                  const selected = fv?.type === 'multiSelect' ? fv.value.includes(opt) : false;
+                  const value = getFilterOptionValue(opt);
+                  const selected = fv?.type === 'multiSelect' ? fv.value.includes(value) : false;
                   return (
-                    <label key={opt} style={multiSelectLabelStyle}>
+                    <label key={value} style={multiSelectLabelStyle}>
                       <input
                         type="checkbox"
                         checked={selected}
                         onChange={(e) => {
                           const current = fv?.type === 'multiSelect' ? fv.value : [];
                           const next = e.target.checked
-                            ? [...current, opt]
-                            : current.filter((v) => v !== opt);
+                            ? [...current, value]
+                            : current.filter((v) => v !== value);
                           onFilterChange(filterKey, next.length > 0 ? { type: 'multiSelect', value: next } : undefined);
                         }}
                       />
-                      <span>{opt}</span>
+                      <span>{getFilterOptionLabel(opt)}</span>
                     </label>
                   );
                 })}

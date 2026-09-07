@@ -1,5 +1,14 @@
 export type ColumnFilterType = 'none' | 'text' | 'multiSelect' | 'people' | 'date';
 
+/** A filter choice with a display label and a string value used in filter state/requests. */
+export interface IFilterOption {
+  value: string;
+  label: string;
+}
+
+/** Plain strings remain shorthand for a choice whose label equals its value. */
+export type FilterOption = string | IFilterOption;
+
 /** Date range filter value (ISO YYYY-MM-DD strings). Both fields optional for open-ended ranges. */
 export interface IDateFilterValue {
   from?: string;
@@ -10,7 +19,8 @@ export interface IColumnFilterDef {
   type: Exclude<ColumnFilterType, 'none'>;
   filterField?: string;
   optionsSource?: 'api' | 'static' | 'years';
-  options?: string[];
+  /** Static multi-select choices. Take precedence over fetched or data-derived options. */
+  options?: FilterOption[];
   yearsCount?: number;
 }
 

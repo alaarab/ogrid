@@ -58,8 +58,8 @@
 
   // Enlarge touch target on touch devices to meet 44px minimum
   @media (pointer: coarse) {
-    width: 36px;
-    height: 36px;
+    width: 44px;
+    height: 44px;
     padding: 6px;
   }
 
@@ -89,19 +89,19 @@
 
 // Popover content (Radix Popover.Content)
 .popoverContent {
-  z-index: 1000;
-  min-width: 280px;
-  max-width: 320px;
-  // On small screens, constrain width to viewport with safe margin
-  @media (max-width: 360px) {
-    min-width: calc(100vw - 24px);
-    max-width: calc(100vw - 24px);
-  }
+  z-index: var(--ogrid-z-popover, 1000);
+  box-sizing: border-box;
+  width: 320px;
+  max-width: min(calc(100vw - 24px), var(--radix-popover-content-available-width));
+  max-height: min(calc(100dvh - 24px), var(--radix-popover-content-available-height));
+  color: var(--ogrid-fg, #242424);
+  font-family: var(--ogrid-font, inherit);
   background: var(--ogrid-bg, #fff);
   border: 1px solid var(--ogrid-border, #d1d1d1);
   border-radius: var(--ogrid-radius-xl, 8px);
   box-shadow: var(--ogrid-shadow, 0 4px 16px rgba(0, 0, 0, 0.12));
-  overflow: hidden;
+  overflow: auto;
+  overscroll-behavior: contain;
 }
 
 .popoverHeader {
@@ -120,6 +120,9 @@
 
 .searchInput {
   width: 100%;
+  background: var(--ogrid-bg, #fff);
+  color: var(--ogrid-fg, #242424);
+  font-family: inherit;
   padding: 6px 10px;
   border: 1px solid var(--ogrid-border, #d1d1d1);
   border-radius: var(--ogrid-radius, 4px);
@@ -336,5 +339,34 @@
   }
   &:hover {
     background: var(--ogrid-primary-hover, #0052a3);
+  }
+}
+
+.optionLabel {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.popoverContent input[type='date'] {
+  min-width: 0;
+  background: var(--ogrid-bg, #fff);
+  color: var(--ogrid-fg, #242424);
+  border: 1px solid var(--ogrid-border, #d1d1d1);
+  border-radius: var(--ogrid-radius, 4px);
+}
+
+@media (pointer: coarse) {
+  .selectAllButton, .removeUserButton, .personOption {
+    min-width: 44px;
+    min-height: 44px;
+    box-sizing: border-box;
+  }
+
+  .popoverContent input {
+    min-height: 44px;
+    box-sizing: border-box;
+    font-size: 16px;
   }
 }

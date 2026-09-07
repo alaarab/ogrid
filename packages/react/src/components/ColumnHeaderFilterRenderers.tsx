@@ -1,3 +1,4 @@
+import type { FilterOption } from '@alaarab/ogrid-core';
 /**
  * Shared filter content dispatching for ColumnHeaderFilter across all React UI packages.
  *
@@ -27,8 +28,8 @@ export interface FilterContentRenderers {
 export interface MultiSelectRendererProps {
   searchText: string;
   onSearchChange: (value: string) => void;
-  options: string[];
-  filteredOptions: string[];
+  options: FilterOption[];
+  filteredOptions: FilterOption[];
   selected: Set<string>;
   onOptionToggle: (option: string, checked: boolean) => void;
   onSelectAll: () => void;
@@ -79,7 +80,7 @@ export interface DateRendererProps {
 export function renderFilterContent(
   filterType: ColumnFilterType,
   state: UseColumnHeaderFilterStateResult,
-  options: string[],
+  options: FilterOption[],
   isLoadingOptions: boolean,
   selectedUser: UserLike | undefined,
   renderers: FilterContentRenderers
