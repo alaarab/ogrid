@@ -7,7 +7,7 @@ Thanks for your interest in contributing! This guide covers everything you need 
 OGrid uses **Bun** as the package manager, script runner, and test runner, with **Turborepo** for the monorepo pipeline.
 
 ```bash
-# Prerequisites: Bun 1.4.2 (https://bun.com/docs/installation), Node >= 22.18 (CI uses 26.7.0)
+# Prerequisites: Bun 1.4.2 (https://bun.com/docs/installation), Node >= 22.18 (CI uses 26.8.1)
 git clone https://github.com/alaarab/ogrid.git
 cd ogrid
 bun install

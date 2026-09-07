@@ -14,7 +14,7 @@ All notable changes to OGrid will be documented in this file.
 - Update React to 19.2.8, Radix primitives, Fluent UI, TanStack Virtual, Vite,
   Storybook, Docusaurus, the MCP SDK, and Zod. React 17–19 peer compatibility
   remains available to consumers.
-- Use Bun 1.4.2 and current GitHub Actions, with Node 26.7.0 in CI. Repository
+- Use Bun 1.4.2 and current GitHub Actions, with Node 26.8.1 in CI. Repository
   development requires Node 22.18 or newer; published package runtime engines
   are unchanged. Generate MCP declarations with the TypeScript 7 CLI.
 
