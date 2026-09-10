@@ -63,6 +63,10 @@ test.describe('phone controls', () => {
   }
 
   test('has 44px controls, non-overlapping virtual options, and menus within the viewport', async ({ page }) => {
+    const columnMenus = page.getByRole('button', { name: 'Column options', exact: true });
+    await expect(columnMenus.first()).toBeVisible();
+    for (const menu of await columnMenus.all()) await expectTouchTarget(menu);
+    await expectTouchTarget(page.getByRole('button', { name: /Column Visibility/ }));
     const filter = page.getByRole('button', { name: 'Filter Choice' });
     await expectTouchTarget(filter);
     await filter.click();
