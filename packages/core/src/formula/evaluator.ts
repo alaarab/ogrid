@@ -18,10 +18,16 @@ export function toNumber(val: unknown): number | FormulaError {
   if (typeof val === 'boolean') return val ? 1 : 0;
   if (typeof val === 'number') return val;
   if (val instanceof Date) return val.getTime();
-  const n = Number(val);
-  if (Number.isNaN(n)) return new FormulaError('#VALUE!', `Cannot convert "${val}" to number`);
-  return n;
+  // Only plain decimal text converts. Number() alone would also accept
+  // whitespace (" " -> 0), hex ("0x10") and "Infinity", which Excel rejects.
+  const text = String(val).trim();
+  if (!NUMERIC_TEXT_RE.test(text)) {
+    return new FormulaError('#VALUE!', `Cannot convert "${val}" to number`);
+  }
+  return Number(text);
 }
+
+const NUMERIC_TEXT_RE = /^[+-]?(\d+\.?\d*|\.\d+)(e[+-]?\d+)?$/i;
 
 /** Coerce a value to string. */
 export function toText(val: unknown): string {
@@ -180,20 +186,29 @@ export class FormulaEvaluator implements IEvaluator {
     const rNum = toNumber(rVal);
     if (rNum instanceof FormulaError) return rNum;
 
+    let result: number;
     switch (op) {
-      case '+': return lNum + rNum;
-      case '-': return lNum - rNum;
-      case '*': return lNum * rNum;
+      case '+': result = lNum + rNum; break;
+      case '-': result = lNum - rNum; break;
+      case '*': result = lNum * rNum; break;
       case '/':
         if (rNum === 0) return new FormulaError('#DIV/0!');
-        return lNum / rNum;
-      case '^': return lNum ** rNum;
+        result = lNum / rNum;
+        break;
+      case '^':
+        // Excel: 0 raised to a negative power is #DIV/0!
+        if (lNum === 0 && rNum < 0) return new FormulaError('#DIV/0!');
+        result = lNum ** rNum;
+        break;
       // Postfix percent. The parser encodes `X%` as binaryOp('%', X, 100),
       // so this is a division: 50% -> 50 / 100 -> 0.5 (matching Excel).
-      case '%': return lNum / rNum;
+      case '%': result = lNum / rNum; break;
       default:
         return new FormulaError('#ERROR!', `Unknown operator: ${op}`);
     }
+    // Overflow and NaN (e.g. (-8)^(1/3)) surface as #NUM!, as in Excel.
+    if (!Number.isFinite(result)) return new FormulaError('#NUM!', 'Result is not a finite number');
+    return result;
   }
 
   private evaluateUnaryOp(

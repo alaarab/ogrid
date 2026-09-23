@@ -203,3 +203,29 @@ describe('useCellClipboard', () => {
     expect(events[0].newValue).toBe('one');
   });
 });
+
+describe('useCellClipboard clipboard failures', () => {
+  it('resolves and reports instead of rejecting when the clipboard is denied', async () => {
+    const denied = new Error('denied');
+    const errors: unknown[] = [];
+    const { result: rangeResult } = renderHook(() => useRangeSelection({ rowCount: 3, colCount: 3 }));
+    act(() => { rangeResult.current.startRange(0, 0); });
+    const { result } = renderHook(() =>
+      useCellClipboard<Row>({
+        rangeSelection: rangeResult.current,
+        rows: makeRows(),
+        columns,
+        onCellEdit: () => {},
+        clipboard: { readText: () => Promise.reject(denied), writeText: () => Promise.reject(denied) },
+        onClipboardError: (e) => errors.push(e),
+      }),
+    );
+    await act(async () => {
+      await result.current.copyRange();
+      await result.current.cutRange();
+      await result.current.pasteRange();
+    });
+    expect(errors).toEqual([denied, denied, denied]);
+    expect(result.current.activeCutRange).toBeNull();
+  });
+});

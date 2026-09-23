@@ -136,8 +136,10 @@ export function toCellKey(col: number, row: number, sheet?: string): CellKey {
  * Parse a CellKey back to (col, row) and optional sheet.
  */
 export function fromCellKey(key: CellKey): { col: number; row: number; sheet?: string } {
-  const colonIdx = key.indexOf(':');
-  if (colonIdx >= 0 && Number.isNaN(parseInt(key.substring(0, colonIdx), 10))) {
+  // The "col,row" tail never contains ':', so the LAST colon splits off the
+  // sheet  -  sheet names may themselves contain digits, ':' or ','.
+  const colonIdx = key.lastIndexOf(':');
+  if (colonIdx >= 0) {
     // Has sheet prefix: "sheetName:col,row"
     const sheet = key.substring(0, colonIdx);
     const rest = key.substring(colonIdx + 1);

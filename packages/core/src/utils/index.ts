@@ -26,7 +26,7 @@ export {
 } from './paginationHelpers';
 export type { PaginationViewModel, PageSize } from './paginationHelpers';
 export { GRID_CONTEXT_MENU_ITEMS, COLUMN_HEADER_MENU_ITEMS, getContextMenuHandlers, getColumnHeaderMenuItems, formatShortcut } from './gridContextMenuHelpers';
-export type { CsvColumn, FormulaExportOptions } from './exportToCsv';
+export type { CsvColumn, CsvEscapeOptions, FormulaExportOptions } from './exportToCsv';
 export type { StatusBarPart, StatusBarPartsInput } from './statusBarHelpers';
 export type { GridContextMenuItem, IColumnHeaderMenuItem, GridContextMenuHandlerProps, ColumnHeaderMenuInput, ColumnHeaderMenuHandlers } from './gridContextMenuHelpers';
 export {

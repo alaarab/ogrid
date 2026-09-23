@@ -67,8 +67,9 @@ export function parseDate(str: string): { year: number; month: number; date: num
   const year = parseInt(match[1], 10);
   const month = parseInt(match[2], 10) - 1;
   const date = parseInt(match[3], 10);
-  // Validate
-  const d = new Date(year, month, date);
+  // Validate (setFullYear avoids the Date constructor mapping years 0-99 to 1900-1999)
+  const d = new Date(2000, 0, 1);
+  d.setFullYear(year, month, date);
   if (d.getFullYear() !== year || d.getMonth() !== month || d.getDate() !== date) return null;
   return { year, month, date };
 }

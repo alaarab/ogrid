@@ -33,7 +33,7 @@ export function BaseTableHeader<T>(props: BaseTableHeaderProps<T>): React.ReactE
   return (
     <Thead className={o.stickyHeader ? styles.stickyHeader : undefined}>
       {showColumnLetters && (
-        <primitives.Tr className={styles.columnLetterRow}>
+        <primitives.Tr className={styles.columnLetterRow} aria-rowindex={1}>
           {hasCheckboxCol && <th className={styles.columnLetterCell} />}
           {hasRowNumbersCol && <th className={styles.columnLetterCell} />}
           {visibleCols.map((col, colIdx) => (
@@ -49,7 +49,7 @@ export function BaseTableHeader<T>(props: BaseTableHeaderProps<T>): React.ReactE
       )}
       {headerRows.map((row, rowIdx) => (
         // biome-ignore lint/suspicious/noArrayIndexKey: header rows are structural depth levels of the column-group tree; the index IS the row's identity and rows are rebuilt wholesale (never reordered in place)
-        <primitives.Tr key={rowIdx}>
+        <primitives.Tr key={rowIdx} aria-rowindex={rowIdx + 1 + (showColumnLetters ? 1 : 0)}>
           {/* Checkbox header: show in last row (leaf row) */}
           {rowIdx === headerRows.length - 1 && hasCheckboxCol && (
             <primitives.Th className={styles.selectionHeaderCell} scope="col" rowSpan={1} key="__selection__">

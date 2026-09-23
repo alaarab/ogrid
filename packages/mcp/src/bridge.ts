@@ -67,11 +67,33 @@ export interface GridCommand {
 // BridgeStore  -  in-process state, shared between HTTP handler and MCP tools
 // ---------------------------------------------------------------------------
 
+/** Grids not heard from for this long are forgotten (with their queues). */
+const GRID_TTL_MS = 10 * 60_000;
+/** Commands and results older than this are dropped. */
+const COMMAND_TTL_MS = 5 * 60_000;
+
 export class BridgeStore {
   private readonly grids = new Map<string, GridStateSnapshot>();
   private readonly commandQueues = new Map<string, GridCommand[]>();
   private readonly commandResults = new Map<string, GridCommand>();
   private cmdSeq = 0;
+
+  /** Drop stale grids, commands and results so a long-running bridge doesn't grow without bound. */
+  prune(now = Date.now()): void {
+    for (const [id, grid] of this.grids) {
+      if (now - grid.lastSeen > GRID_TTL_MS) {
+        this.grids.delete(id);
+        this.commandQueues.delete(id);
+      }
+    }
+    for (const [id, queue] of this.commandQueues) {
+      const live = queue.filter((c) => now - c.createdAt <= COMMAND_TTL_MS);
+      if (live.length !== queue.length) this.commandQueues.set(id, live);
+    }
+    for (const [id, cmd] of this.commandResults) {
+      if (now - cmd.createdAt > COMMAND_TTL_MS) this.commandResults.delete(id);
+    }
+  }
 
   // ---- Called by HTTP handler ----
 
@@ -121,6 +143,8 @@ export class BridgeStore {
         cmd.result = result;
         cmd.error = error;
         this.commandResults.set(cmdId, { ...cmd });
+        // The queue only needs pending commands; the result lives in commandResults.
+        queue.splice(queue.indexOf(cmd), 1);
         return;
       }
     }
@@ -163,6 +187,7 @@ export class BridgeStore {
       const poll = () => {
         const cmd = this.commandResults.get(cmdId);
         if (cmd) {
+          this.commandResults.delete(cmdId);
           resolve(cmd);
           return;
         }
@@ -181,10 +206,24 @@ export class BridgeStore {
 // HTTP server
 // ---------------------------------------------------------------------------
 
+/** Grid snapshots include row data, so allow a generous but finite body. */
+export const MAX_BODY_BYTES = 10 * 1024 * 1024;
+
+class PayloadTooLargeError extends Error {}
+
 function readBody(req: IncomingMessage): Promise<unknown> {
   return new Promise((resolve, reject) => {
     const chunks: Buffer[] = [];
-    req.on('data', (c: Buffer) => chunks.push(c));
+    let size = 0;
+    req.on('data', (c: Buffer) => {
+      size += c.length;
+      if (size > MAX_BODY_BYTES) {
+        req.destroy();
+        reject(new PayloadTooLargeError(`Body exceeds ${MAX_BODY_BYTES} bytes`));
+        return;
+      }
+      chunks.push(c);
+    });
     req.on('end', () => {
       try {
         resolve(JSON.parse(Buffer.concat(chunks).toString('utf-8') || 'null'));
@@ -201,9 +240,33 @@ function readBody(req: IncomingMessage): Promise<unknown> {
 // so an arbitrary website a developer visits can't read/write grid state on the
 // loopback bridge.
 const LOCALHOST_ORIGIN = /^https?:\/\/(localhost|127\.0\.0\.1|\[::1\])(:\d+)?$/;
+const LOCALHOST_HOST = /^(localhost|127\.0\.0\.1|\[::1\])(:\d+)?$/;
 function corsOrigin(req: IncomingMessage): string {
   const origin = req.headers.origin;
   return origin && LOCALHOST_ORIGIN.test(origin) ? origin : '';
+}
+
+/**
+ * Why a request must be refused, or null if it may proceed.
+ *
+ * CORS alone doesn't protect the bridge: "simple" requests (GET, or POST with
+ * a text/plain body) reach the server without a preflight, and their side
+ * effects happen even though the page can't read the response. So:
+ *  - any Origin that isn't localhost is refused outright;
+ *  - the Host must be loopback (blocks DNS rebinding, where a public name
+ *    resolves to 127.0.0.1);
+ *  - writes must be application/json, which forces a browser preflight.
+ */
+export function rejectReason(req: IncomingMessage): string | null {
+  const host = req.headers.host ?? '';
+  if (!LOCALHOST_HOST.test(host)) return 'Host must be localhost';
+  const origin = req.headers.origin;
+  if (origin && !LOCALHOST_ORIGIN.test(origin)) return 'Origin not allowed';
+  if (req.method === 'POST' || req.method === 'PUT') {
+    const type = (req.headers['content-type'] ?? '').split(';')[0]?.trim().toLowerCase();
+    if (type !== 'application/json') return 'Content-Type must be application/json';
+  }
+  return null;
 }
 
 function send(req: IncomingMessage, res: ServerResponse, status: number, body: unknown): void {
@@ -240,6 +303,13 @@ export function startBridgeServer(
         res.end();
         return;
       }
+
+      const refused = rejectReason(req);
+      if (refused) {
+        send(req, res, 403, { error: refused });
+        return;
+      }
+      store.prune();
 
       const url = new URL(req.url ?? '/', `http://localhost:${port}`);
       const parts = url.pathname.replace(/^\//, '').split('/');
@@ -298,6 +368,10 @@ export function startBridgeServer(
 
         send(req, res,404, { error: 'Not found' });
       } catch (err) {
+        if (err instanceof PayloadTooLargeError) {
+          send(req, res, 413, { error: err.message });
+          return;
+        }
         send(req, res,500, { error: String(err) });
       }
     });

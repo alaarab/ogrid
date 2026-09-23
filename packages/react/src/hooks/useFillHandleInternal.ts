@@ -122,7 +122,10 @@ export function useFillHandleInternal<T>(params: UseFillHandleInternalParams<T>)
 
     let lastFillMousePos: { cx: number; cy: number } | null = null;
 
-    const resolveRange = (cx: number, cy: number): ISelectionRange | null => {
+    // Returns the normalized fill range plus the raw cell under the pointer:
+    // the drag end must be the raw cell, or dragging up/left (where the
+    // normalized end is the source itself) collapses the fill to nothing.
+    const resolveRange = (cx: number, cy: number): { range: ISelectionRange; endRow: number; endCol: number } | null => {
       const target = document.elementFromPoint(cx, cy) as HTMLElement | null;
       const cell = target?.closest?.('[data-row-index][data-col-index]');
       if (!cell || !wrapperRef.current?.contains(cell)) return null;
@@ -130,12 +133,16 @@ export function useFillHandleInternal<T>(params: UseFillHandleInternalParams<T>)
       const c = parseInt(cell.getAttribute('data-col-index') ?? '', 10);
       if (Number.isNaN(r) || Number.isNaN(c) || c < colOffsetRef.current) return null;
       const dataCol = c - colOffsetRef.current;
-      return normalizeSelectionRange({
-        startRow: fillDrag.startRow,
-        startCol: fillDrag.startCol,
+      return {
+        range: normalizeSelectionRange({
+          startRow: fillDrag.startRow,
+          startCol: fillDrag.startCol,
+          endRow: r,
+          endCol: dataCol,
+        }),
         endRow: r,
         endCol: dataCol,
-      });
+      };
     };
 
     const onMove = (e: PointerEvent) => {
@@ -145,8 +152,9 @@ export function useFillHandleInternal<T>(params: UseFillHandleInternalParams<T>)
       rafRef.current = requestAnimationFrame(() => {
         rafRef.current = 0;
         if (!lastFillMousePos) return;
-        const newRange = resolveRange(lastFillMousePos.cx, lastFillMousePos.cy);
-        if (!newRange) return;
+        const resolved = resolveRange(lastFillMousePos.cx, lastFillMousePos.cy);
+        if (!resolved) return;
+        const newRange = resolved.range;
 
         // Skip if unchanged
         const prev = liveFillRangeRef.current;
@@ -161,7 +169,7 @@ export function useFillHandleInternal<T>(params: UseFillHandleInternalParams<T>)
         }
 
         liveFillRangeRef.current = newRange;
-        fillDragEndRef.current = { endRow: newRange.endRow, endCol: newRange.endCol };
+        fillDragEndRef.current = { endRow: resolved.endRow, endCol: resolved.endCol };
         applyDragAttrs(newRange);
       });
     };
@@ -176,7 +184,7 @@ export function useFillHandleInternal<T>(params: UseFillHandleInternalParams<T>)
       if (lastFillMousePos) {
         const flushed = resolveRange(lastFillMousePos.cx, lastFillMousePos.cy);
         if (flushed) {
-          liveFillRangeRef.current = flushed;
+          liveFillRangeRef.current = flushed.range;
           fillDragEndRef.current = { endRow: flushed.endRow, endCol: flushed.endCol };
         }
       }
@@ -199,18 +207,38 @@ export function useFillHandleInternal<T>(params: UseFillHandleInternalParams<T>)
       const fillEvents = applyFillValues(norm, fillDrag.startRow, fillDrag.startCol, items, visibleCols, formulaOptionsRef.current);
       if (fillEvents.length > 0) {
         beginBatch?.();
-        for (const evt of fillEvents) onCellValueChangedRef.current?.(evt);
-        endBatch?.();
+        try {
+          for (const evt of fillEvents) onCellValueChangedRef.current?.(evt);
+        } finally {
+          // Always close the batch, or a throwing handler leaves undo stuck.
+          endBatch?.();
+        }
       }
+      setFillDrag(null);
+      liveFillRangeRef.current = null;
+    };
+
+    // Pointer cancelled (touch pan takeover) or window lost: abandon the fill
+    // without writing anything.
+    const onCancel = () => {
+      if (rafRef.current) {
+        cancelAnimationFrame(rafRef.current);
+        rafRef.current = 0;
+      }
+      clearDragAttrs();
       setFillDrag(null);
       liveFillRangeRef.current = null;
     };
 
     window.addEventListener('pointermove', onMove, true);
     window.addEventListener('pointerup', onUp, true);
+    window.addEventListener('pointercancel', onCancel, true);
+    window.addEventListener('blur', onCancel);
     return () => {
       window.removeEventListener('pointermove', onMove, true);
       window.removeEventListener('pointerup', onUp, true);
+      window.removeEventListener('pointercancel', onCancel, true);
+      window.removeEventListener('blur', onCancel);
       if (rafRef.current) cancelAnimationFrame(rafRef.current);
     };
   }, [
@@ -260,8 +288,11 @@ export function useFillHandleInternal<T>(params: UseFillHandleInternalParams<T>)
     );
     if (fillEvents.length > 0) {
       beginBatch?.();
-      for (const evt of fillEvents) onCellValueChangedRef.current(evt);
-      endBatch?.();
+      try {
+        for (const evt of fillEvents) onCellValueChangedRef.current(evt);
+      } finally {
+        endBatch?.();
+      }
     }
   }, [editable, beginBatch, endBatch, onCellValueChangedRef, itemsRef, visibleColsRef, formulaOptionsRef]);
 

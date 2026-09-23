@@ -60,7 +60,7 @@ export function tokenize(input: string): Token[] {
       continue;
     }
 
-    // 2. Numbers  -  \d+(\.\d+)? including leading '.' (like .5)
+    // 2. Numbers  -  \d+(\.\d+)?([eE][+-]?\d+)? including leading '.' (like .5)
     if (isDigit(ch) || (ch === '.' && isDigit(input[pos + 1]))) {
       const start = pos;
       while (isDigit(input[pos])) {
@@ -70,6 +70,16 @@ export function tokenize(input: string): Token[] {
         pos++;
         while (isDigit(input[pos])) {
           pos++;
+        }
+      }
+      // Scientific notation: 1e5, 2.5E-3
+      if (input[pos] === 'e' || input[pos] === 'E') {
+        const sign = input[pos + 1] === '+' || input[pos + 1] === '-' ? 1 : 0;
+        if (isDigit(input[pos + 1 + sign])) {
+          pos += 1 + sign;
+          while (isDigit(input[pos])) {
+            pos++;
+          }
         }
       }
       tokens.push({ type: 'NUMBER', value: input.slice(start, pos), position: start });
@@ -124,7 +134,10 @@ export function tokenize(input: string): Token[] {
         // Has escaped quotes  -  replace "" with "
         value = input.slice(scanStart, pos).replace(/""/g, '"');
       }
-      if (pos < input.length) pos++; // skip closing quote
+      if (pos >= input.length) {
+        throw new FormulaError('#ERROR!', `Unterminated string at position ${start}`);
+      }
+      pos++; // skip closing quote
       tokens.push({ type: 'STRING', value, position: start });
       continue;
     }

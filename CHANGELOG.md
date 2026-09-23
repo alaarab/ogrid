@@ -4,6 +4,98 @@ All notable changes to OGrid will be documented in this file.
 
 ## [Unreleased]
 
+### Security
+
+- CSV export prefixes values that start with `=`, `+`, `-`, `@`, tab or CR with
+  `'`, so opening the file in a spreadsheet can't run them as formulas. Plain
+  numbers like `-5` are unchanged. Opt out with `preventFormulaInjection: false`
+  (`escapeCsvValue` options, or `FormulaExportOptions`). Values containing a
+  bare `\r` are now quoted.
+- `@alaarab/ogrid-react-xlsx`: a tiny `.xlsx` with one far-away cell no longer
+  freezes the tab. Only populated cells are read, and loading is capped by
+  `maxRows` / `maxCols` / `maxCells` (new `limits` prop on `XlsxGrid`,
+  `XlsxWorkbookGrid` and `mount`). Truncated sheets show a notice, and
+  `sheetToGridData` returns `truncated`.
+- Formula engine resource limits: ranges are tracked as ranges (no per-cell
+  dependency expansion), huge ranges are clamped to the grid, and `REPT`,
+  `SEQUENCE` and `SUBSTITUTE` can no longer exhaust memory or hang.
+- MCP bridge: refuses non-localhost `Origin`s and `Host` headers (DNS
+  rebinding), requires `application/json` for writes, caps request bodies at
+  10 MB, and evicts stale grids, commands and results.
+
+### Fixed
+
+- Replacing the grid's data with a different array of the same length now
+  re-sorts and re-filters it (it used to reuse the old row order and ignore the
+  filter). Cell edits still keep the Excel-style snapshot order.
+- Swapping a (memoized) `dataSource` now refetches and rebuilds the windowed
+  cache. Inline `dataSource` objects still don't cause refetch loops.
+- Date filters match bare `YYYY-MM-DD` values on the selected day in every
+  timezone. Numeric timestamps work in date columns.
+- Mixed number/text columns sort in one consistent order (numbers first) on
+  both the main-thread and Web Worker paths.
+- Pasting keeps blank rows and Excel/Sheets quoted multi-line cells. Copying
+  quotes cells containing tabs or line breaks instead of flattening them.
+- Cut then paste onto an overlapping range no longer wipes the pasted cells;
+  clicking a cell no longer cancels a pending cut or copy (Escape does).
+- Escape followed by blur cancels an edit instead of saving it; Enter followed
+  by blur saves once.
+- Ctrl+Shift+Z (and Ctrl+Z with Caps Lock) now redo/undo. Deleting a range is a
+  single undo step, and a throwing change handler can't leave undo stuck.
+- Drags (selection, fill, column resize and reorder) end cleanly on
+  `pointercancel` or when the window loses focus, instead of staying stuck.
+- Dragging the fill handle up or left fills from the source cell.
+- `useHeadlessGrid().allFilteredRows` returns every filtered row, not just the
+  current page.
+- `useCellClipboard` resolves instead of rejecting when clipboard access is
+  denied (new `onClipboardError`), and `canPaste` no longer causes a hydration
+  mismatch. Copy works on plain-http pages.
+- `useGridFocus`: the first arrow key focuses the first cell, and range updates
+  no longer run inside a React state updater.
+- Changing `rowHeight`/density re-measures virtual rows.
+- Web Worker sort/filter falls back to the main thread on worker errors or a
+  30s timeout instead of waiting forever.
+- Formula engine: a throwing custom function yields `#VALUE!` instead of
+  throwing; closing a cycle marks its dependents `#CIRC!`; `INDIRECT`/`OFFSET`
+  recalculate when their targets change; scientific notation (`1e5`) parses;
+  non-finite results are `#NUM!`/`#DIV/0!`; whitespace, hex and `Infinity`
+  text no longer coerce to numbers; unterminated strings are errors; sheet
+  names with digits, `:` or `,` work in references.
+- `@alaarab/ogrid-inputs`: `getMinuteOptions` with a zero/negative step no
+  longer loops forever; `parseDate` accepts years below 100.
+- react-radix works on React 17 again (it used `useId` and
+  `useSyncExternalStore`).
+- Fluent: filter options no longer overlap on touch devices, and the popover
+  cell editor is positioned correctly on first open.
+- Column chooser checkboxes no longer collide on ids when two grids share a
+  page.
+
+### Changed
+
+- Accessibility: filter popovers take focus when opened and return it to the
+  filter button on close (both kits). The grid exposes
+  `aria-rowcount`/`aria-colcount`, `aria-rowindex`/`aria-colindex` and
+  `aria-multiselectable`, and announces the active cell through a polite live
+  region. Sheet tabs (`SheetTabs`, xlsx workbook tabs) support arrow/Home/End
+  keys with a roving tabindex.
+- Radix: the context menu, column header menu and popover cell editor keep the
+  grid's scoped theme tokens (`usePortalTheme` is now exported from
+  `@alaarab/ogrid-react`, along with `useCoarsePointer`).
+- Fluent: the `--ogrid-*` bridge on `FluentProvider` has zero specificity
+  (`:where()`), the loading overlay follows dark themes, `--dt-*` variables are
+  scoped to the header, and cells use the shared delegated event handlers
+  (fewer per-cell closures).
+- `@alaarab/ogrid-react-xlsx` requires React 18 or 19 (`mount()` needs
+  `react-dom/client`), and declares its Radix dependencies.
+- `@alaarab/ogrid-react-radix` no longer lists the unused
+  `@radix-ui/react-dropdown-menu` peer.
+- Published type declarations use explicit `.js` paths, so they resolve under
+  `moduleResolution: node16`/`nodenext`; subpath exports gained
+  `typesVersions`. `@alaarab/ogrid-react-xlsx-browser` now ships types and
+  keeps its CSS import under tree-shaking. Every package ships a LICENSE.
+- Releases: prereleases publish under the `next` dist-tag, dependents of a
+  failed package are held back, and a dry run validates the packed packages.
+
 ## [2.17.0] - 2026-09-07
 
 ### Changed — dependency and toolchain upgrades

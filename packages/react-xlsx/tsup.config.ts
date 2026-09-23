@@ -1,8 +1,11 @@
 import { defineConfig } from 'tsup';
 
-// SheetJS is bundled into this package — the whole point is "drop a Blob,
-// get a grid" with no extra install. Everything else (react, ogrid)
-// stays external so consumers control versions and the bundle stays small.
+// Everything stays external: react, the ogrid packages, and ExcelJS (a
+// regular dependency, so it installs automatically). ExcelJS is imported
+// statically because every entry point needs it and workbookFromGridData is
+// synchronous; apps that want it off the initial bundle should lazy-load the
+// route or component that uses this package (React.lazy / dynamic import).
+// @alaarab/ogrid-react-xlsx-browser is the self-contained bundle.
 export default defineConfig({
   entry: ['src/index.ts'],
   format: ['esm'],

@@ -16,8 +16,10 @@ import styles from './ColumnChooser.module.scss';
 export type { IColumnChooserProps };
 
 const CheckboxItem: React.FC<IColumnChooserCheckboxItemProps> = ({ columnId, columnName, checked, disabled, onChange }) => (
+  // No explicit id: Fluent's Checkbox generates a unique one and wires its
+  // label, so two grids on a page don't collide on `col-${columnId}`.
   <Checkbox
-    id={`col-${columnId}`}
+    data-column-id={columnId}
     label={columnName}
     checked={checked}
     onChange={(_ev: React.ChangeEvent<HTMLInputElement>, data: CheckboxOnChangeData) => onChange(data.checked === true)}
@@ -75,14 +77,14 @@ export const ColumnChooser: React.FC<IColumnChooserProps> = (props) => {
         icon={<TableSettingsRegular />}
         onClick={handleToggle}
         aria-expanded={open}
-        aria-haspopup="listbox"
+        aria-haspopup="dialog"
       >
         Column Visibility ({visibleCount} of {totalCount})
         {open ? <ChevronUpRegular /> : <ChevronDownRegular />}
       </Button>
 
       {open && (
-        <div ref={dropdownRef} className={styles.dropdown}>
+        <div ref={dropdownRef} className={styles.dropdown} role="dialog" aria-label="Column visibility">
           <ColumnChooserContent
             columns={columns}
             visibleColumns={visibleColumns}

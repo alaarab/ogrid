@@ -139,8 +139,8 @@ function SpreadsheetDemo() {
       if (e.key === 'c') { e.preventDefault(); clipboard.copyRange(); }
       else if (e.key === 'x') { e.preventDefault(); clipboard.cutRange(); }
       else if (e.key === 'v') { e.preventDefault(); clipboard.pasteRange(); }
-      else if (e.key === 'z' && !e.shiftKey) { e.preventDefault(); undo.undo(); }
-      else if (e.key === 'z' && e.shiftKey) { e.preventDefault(); undo.redo(); }
+      else if (e.key.toLowerCase() === 'z' && !e.shiftKey) { e.preventDefault(); undo.undo(); }
+      else if (e.key.toLowerCase() === 'z' && e.shiftKey) { e.preventDefault(); undo.redo(); }
       else if (e.key === 'a') {
         e.preventDefault();
         range.selectAll();

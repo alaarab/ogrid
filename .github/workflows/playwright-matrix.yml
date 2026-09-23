@@ -3,6 +3,9 @@ name: Playwright Matrix
 on:
   workflow_dispatch:
 
+permissions:
+  contents: read
+
 concurrency:
   group: playwright-matrix-${{ github.ref }}
   cancel-in-progress: true

@@ -360,3 +360,31 @@ describe('useInlineCellEditorState', () => {
     expect(mockEvent.preventDefault).not.toHaveBeenCalled();
   });
 });
+
+describe('useInlineCellEditorState blur after Escape/Enter', () => {
+  const key = (k: string) => ({ key: k, preventDefault: () => {}, stopPropagation: () => {} }) as unknown as React.KeyboardEvent;
+
+  it('does not commit on a blur that follows Escape', () => {
+    const onCommit = jest.fn();
+    const onCancel = jest.fn();
+    const { result } = renderHook(() => useInlineCellEditorState({ value: 'a', editorType: 'text', onCommit, onCancel }));
+    act(() => { result.current.setLocalValue('typed'); });
+    act(() => {
+      result.current.handleKeyDown(key('Escape'));
+      result.current.handleBlur();
+    });
+    expect(onCancel).toHaveBeenCalledTimes(1);
+    expect(onCommit).not.toHaveBeenCalled();
+  });
+
+  it('commits once for Enter followed by blur', () => {
+    const onCommit = jest.fn();
+    const { result } = renderHook(() => useInlineCellEditorState({ value: 'a', editorType: 'text', onCommit, onCancel: jest.fn() }));
+    act(() => { result.current.setLocalValue('b'); });
+    act(() => {
+      result.current.handleKeyDown(key('Enter'));
+      result.current.handleBlur();
+    });
+    expect(onCommit).toHaveBeenCalledTimes(1);
+  });
+});

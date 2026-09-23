@@ -71,3 +71,9 @@ describe('calendar-utils', () => {
     });
   });
 });
+
+describe('parseDate early years', () => {
+  it('accepts years below 100 instead of mapping them to 19xx', () => {
+    expect(parseDate('0050-03-04')).toEqual({ year: 50, month: 2, date: 4 });
+  });
+});

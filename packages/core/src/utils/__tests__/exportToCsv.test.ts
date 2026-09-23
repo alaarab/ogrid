@@ -235,3 +235,43 @@ describe('exportToCsv', () => {
     });
   });
 });
+
+describe('escapeCsvValue formula-injection guard', () => {
+  it('prefixes strings that a spreadsheet would evaluate', () => {
+    expect(escapeCsvValue('=HYPERLINK("http://x","y")')).toBe(`"'=HYPERLINK(""http://x"",""y"")"`);
+    expect(escapeCsvValue('@SUM(1)')).toBe("'@SUM(1)");
+    expect(escapeCsvValue('+1+cmd')).toBe("'+1+cmd");
+    expect(escapeCsvValue('-2+3')).toBe("'-2+3");
+    expect(escapeCsvValue('\tx')).toBe("'\tx");
+  });
+
+  it('leaves plain numbers and numeric strings alone', () => {
+    expect(escapeCsvValue(-5)).toBe('-5');
+    expect(escapeCsvValue('-5')).toBe('-5');
+    expect(escapeCsvValue('+1.5e3')).toBe('+1.5e3');
+    expect(escapeCsvValue('hello')).toBe('hello');
+  });
+
+  it('can be disabled', () => {
+    expect(escapeCsvValue('=1+1', { preventFormulaInjection: false })).toBe('=1+1');
+  });
+
+  it('quotes values containing a bare carriage return', () => {
+    expect(escapeCsvValue('a\rb')).toBe('"a\rb"');
+  });
+
+  it('never prefixes formulas written in formulas export mode', () => {
+    const rows = buildCsvRows(
+      [{ a: 2 }],
+      [{ columnId: 'a', name: 'A' }],
+      (item, id) => (item as Record<string, unknown>)[id],
+      {
+        exportMode: 'formulas',
+        hasFormula: () => true,
+        getFormula: () => '=1+1',
+        columnIdToIndex: new Map([['a', 0]]),
+      },
+    );
+    expect(rows).toEqual(['=1+1']);
+  });
+});

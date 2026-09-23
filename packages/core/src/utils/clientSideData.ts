@@ -1,6 +1,10 @@
 import type { IColumnDef, IFilters } from '../types';
 import { getCellValue } from './cellValue';
 import { getFilterField } from './ogridHelpers';
+import { compareSortKeys, compareTimestamps, toDateTimestamp, toSortKey } from '../workers/sortFilterPrimitives';
+
+// Shared with the Web Worker path so both sort and filter identically.
+export { toDateTimestamp };
 
 /**
  * Cached column map to avoid rebuilding on every call.
@@ -104,13 +108,7 @@ export function processClientSideData<T>(
         for (let j = 0; j < data.length; j++) {
           const row = data[j];
           if (row === undefined) continue;
-          const cellVal = getCellValue(row, col);
-          if (cellVal == null) {
-            dateCache.set(row, NaN);
-          } else {
-            const t = new Date(String(cellVal)).getTime();
-            dateCache.set(row, Number.isNaN(t) ? NaN : t);
-          }
+          dateCache.set(row, toDateTimestamp(getCellValue(row, col)));
         }
         predicates.push((r) => {
           const cellTs = dateCache.get(r) ?? NaN;
@@ -157,22 +155,11 @@ export function processClientSideData<T>(
         const row = sortable[i];
         if (row === undefined) continue;
         const val = sortCol ? getCellValue(row, sortCol) : (row as Record<string, unknown>)[sortBy];
-        if (val == null) {
-          timestampCache.set(row, NaN);
-        } else {
-          // Invalid dates stay NaN so they group with nulls (first in asc order),
-          // matching the date-filter cache above instead of sorting as 1970.
-          timestampCache.set(row, new Date(String(val)).getTime());
-        }
+        // Invalid dates stay NaN so they group with nulls (first in asc order),
+        // matching the date-filter cache above instead of sorting as 1970.
+        timestampCache.set(row, toDateTimestamp(val));
       }
-      sortable.sort((a, b) => {
-        const at = timestampCache.get(a) ?? NaN;
-        const bt = timestampCache.get(b) ?? NaN;
-        if (Number.isNaN(at) && Number.isNaN(bt)) return 0;
-        if (Number.isNaN(at)) return -1 * dir;
-        if (Number.isNaN(bt)) return 1 * dir;
-        return at === bt ? 0 : at > bt ? dir : -dir;
-      });
+      sortable.sort((a, b) => compareTimestamps(timestampCache.get(a) ?? NaN, timestampCache.get(b) ?? NaN) * dir);
     } else if (!compare) {
       // Pre-compute sort keys before sort to avoid repeated String().toLowerCase()
       // in O(n log n) comparisons. Numeric values use their raw form (no string conversion needed).
@@ -186,24 +173,9 @@ export function processClientSideData<T>(
         const v = sortCol
           ? getCellValue(row, sortCol)
           : (row as Record<string, unknown>)[sortBy];
-        if (v == null) {
-          keyCache.set(row, undefined);
-        } else if (typeof v === 'number') {
-          keyCache.set(row, v);
-        } else {
-          keyCache.set(row, String(v).toLowerCase());
-        }
+        keyCache.set(row, toSortKey(v));
       }
-      sortable.sort((a, b) => {
-        const av = keyCache.get(a);
-        const bv = keyCache.get(b);
-        if (av === undefined && bv === undefined) return 0;
-        if (av === undefined) return -1 * dir;
-        if (bv === undefined) return 1 * dir;
-        if (typeof av === 'number' && typeof bv === 'number')
-          return av === bv ? 0 : av > bv ? dir : -dir;
-        return av === bv ? 0 : (av as string) > (bv as string) ? dir : -dir;
-      });
+      sortable.sort((a, b) => compareSortKeys(keyCache.get(a), keyCache.get(b)) * dir);
     } else {
       sortable.sort((a, b) => compare(a, b) * dir);
     }

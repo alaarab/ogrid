@@ -21,6 +21,8 @@ export interface MultiSelectFilterPopoverProps {
   isLoading: boolean;
 }
 
+let multiSelectInstanceCounter = 0;
+
 export const MultiSelectFilterPopover: React.FC<MultiSelectFilterPopoverProps> = ({
   searchText,
   onSearchChange,
@@ -35,7 +37,9 @@ export const MultiSelectFilterPopover: React.FC<MultiSelectFilterPopoverProps> =
 }) => {
   const itemHeight = useCoarsePointer() ? 44 : ITEM_HEIGHT;
   const virt = useListVirtualizer({ count: filteredOptions.length, itemHeight });
-  const optionIdPrefix = React.useId();
+  // Per-instance id prefix for option ids. React.useId needs React 18; this
+  // kit supports React 17 peers.
+  const [optionIdPrefix] = React.useState(() => `ogrid-ms-option-${++multiSelectInstanceCounter}`);
 
   return (
     <>

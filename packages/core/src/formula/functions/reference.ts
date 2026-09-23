@@ -338,14 +338,13 @@ export function registerReferenceFunctions(registry: Map<string, IFormulaFunctio
         start = s;
       }
 
-      let step = 1;
+      // step is validated for error propagation; it can't affect the first element.
       const stepArg = args[3];
       if (stepArg !== undefined) {
         const rawStep = evaluator.evaluate(stepArg, context);
         if (rawStep instanceof FormulaError) return rawStep;
         const st = toNumber(rawStep);
         if (st instanceof FormulaError) return st;
-        step = st;
       }
 
       const rowCount = Math.trunc(rows);
@@ -355,26 +354,13 @@ export function registerReferenceFunctions(registry: Map<string, IFormulaFunctio
         return new FormulaError('#VALUE!', 'SEQUENCE: rows must be >= 1');
       }
 
-      // Build the nested array
-      const result: number[][] = [];
-      let current = start;
-      for (let r = 0; r < rowCount; r++) {
-        const row: number[] = [];
-        for (let c = 0; c < colCount; c++) {
-          row.push(current);
-          current += step;
-        }
-        result.push(row);
+      // A formula cell holds a single value (no spill engine), so the result
+      // is the sequence's first element. Don't materialise the whole array:
+      // =SEQUENCE(1e9) would otherwise exhaust memory.
+      if (!Number.isFinite(rowCount) || !Number.isFinite(colCount)) {
+        return new FormulaError('#NUM!', 'SEQUENCE: size must be finite');
       }
-
-      // Single value: return first element
-      if (rowCount === 1 && colCount === 1) {
-        return result[0]?.[0];
-      }
-
-      // Return the array structure  -  callers can inspect it
-      // For a single-cell context, return the first element
-      return result[0]?.[0];
+      return start;
     },
   });
 

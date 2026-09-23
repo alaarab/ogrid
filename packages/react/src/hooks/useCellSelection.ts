@@ -475,9 +475,15 @@ export function useCellSelection(params: UseCellSelectionParams): UseCellSelecti
 
     window.addEventListener('pointermove', onMove, true);
     window.addEventListener('pointerup', onUp, true);
+    // A cancelled pointer (touch pan takeover) or a lost window never sends
+    // pointerup; end the drag at the last range instead of staying stuck.
+    window.addEventListener('pointercancel', onUp, true);
+    window.addEventListener('blur', onUp);
     return () => {
       window.removeEventListener('pointermove', onMove, true);
       window.removeEventListener('pointerup', onUp, true);
+      window.removeEventListener('pointercancel', onUp, true);
+      window.removeEventListener('blur', onUp);
       if (rafRef.current) cancelAnimationFrame(rafRef.current);
       stopAutoScroll();
       removeOverlay();

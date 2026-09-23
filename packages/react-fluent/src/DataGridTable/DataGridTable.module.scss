@@ -6,8 +6,12 @@
 @use '../../../core/src/styles/ogrid-theme' as *;
 
 /* Inside FluentProvider: derive --ogrid-* from Fluent tokens so light/dark follows automatically.
-   Regular specificity (0,1,0) beats the :where() defaults from core theme. */
-:global(.fui-FluentProvider) {
+   :where() keeps this at zero specificity, so any consumer rule that targets the
+   provider or an element inside it (a class, [data-theme], .dark wrapper, ...)
+   wins without !important. A bare :root override does NOT reach inside the
+   provider, because the provider re-declares the variables on itself: set
+   custom --ogrid-* values on the provider or on a wrapper around the grid. */
+:global(:where(.fui-FluentProvider)) {
   --ogrid-bg: var(--colorNeutralBackground1, #ffffff);
   --ogrid-fg: var(--colorNeutralForeground1, rgba(0, 0, 0, 0.87));
   --ogrid-fg-secondary: var(--colorNeutralForeground2, rgba(0, 0, 0, 0.6));
@@ -16,11 +20,12 @@
   --ogrid-header-bg: var(--colorSubtleBackgroundSelected, #f3f2f1);
   --ogrid-hover-bg: var(--colorSubtleBackgroundHover, rgba(0, 0, 0, 0.04));
   --ogrid-selected-row-bg: var(--colorNeutralBackground1Selected, #e6f0fb);
-  --ogrid-active-cell-bg: rgba(0, 0, 0, 0.02);
+  --ogrid-active-cell-bg: color-mix(in srgb, var(--colorNeutralForeground1, #000) 2%, transparent);
   --ogrid-range-bg: rgba(33, 115, 70, 0.12);
   --ogrid-accent: var(--colorBrandForeground1, #0078d4);
   --ogrid-selection-color: #217346;
-  --ogrid-loading-overlay: rgba(255, 255, 255, 0.7);
+  /* Tinted from the theme background so dark Fluent themes get a dark overlay. */
+  --ogrid-loading-overlay: color-mix(in srgb, var(--colorNeutralBackground1, #ffffff) 70%, transparent);
 }
 
 // ---- Fluent-specific overrides ----

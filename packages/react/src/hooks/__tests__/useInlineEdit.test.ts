@@ -188,3 +188,42 @@ describe('useInlineEdit', () => {
     );
   });
 });
+
+describe('useInlineEdit stale editor callbacks', () => {
+  type R = { id: string; name: string };
+  const cols = [{ columnId: 'name', name: 'Name', editable: true }];
+
+  it('Escape followed by blur in the same tick cancels instead of committing', () => {
+    const onCellEdit = jest.fn();
+    const row: R = { id: '1', name: 'old' };
+    const { result } = renderHook(() =>
+      useInlineEdit<R>({ columns: cols, getRowId: (r) => r.id, onCellEdit }),
+    );
+    act(() => { result.current.startEdit(row, 'name'); });
+    act(() => { result.current.setPendingValue('typed'); });
+    const props = result.current.getEditorProps(row, 'name');
+    act(() => {
+      props.onKeyDown({ key: 'Escape', preventDefault: () => {} } as never);
+      props.onBlur();
+    });
+    expect(onCellEdit).not.toHaveBeenCalled();
+    expect(result.current.editingCell).toBeNull();
+  });
+
+  it('Enter followed by blur commits exactly once', () => {
+    const onCellEdit = jest.fn();
+    const row: R = { id: '1', name: 'old' };
+    const { result } = renderHook(() =>
+      useInlineEdit<R>({ columns: cols, getRowId: (r) => r.id, onCellEdit }),
+    );
+    act(() => { result.current.startEdit(row, 'name'); });
+    act(() => { result.current.setPendingValue('new'); });
+    const props = result.current.getEditorProps(row, 'name');
+    act(() => {
+      props.onKeyDown({ key: 'Enter', preventDefault: () => {} } as never);
+      props.onBlur();
+    });
+    expect(onCellEdit).toHaveBeenCalledTimes(1);
+    expect(onCellEdit.mock.calls[0][0].newValue).toBe('new');
+  });
+});

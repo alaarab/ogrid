@@ -4,6 +4,7 @@ import { ROW_NUMBER_COLUMN_ID, ROW_NUMBER_COLUMN_WIDTH } from '@alaarab/ogrid-co
 import { useDataGridTableOrchestration } from '../hooks/useDataGridTableOrchestration';
 import { useColumnMeta } from '../hooks/useColumnMeta';
 import { useRenderCellContent } from '../hooks/useRenderCellContent';
+import { usePortalTheme } from '../hooks/usePortalTheme';
 import { getColumnHeaderMenuProps } from '../hooks/useColumnHeaderMenuState';
 import {
   GRID_ROOT_STYLE,
@@ -29,12 +30,39 @@ export type {
   PopoverEditorRenderProps,
 } from './BaseDataGridTable.types';
 
+const VISUALLY_HIDDEN_STYLE: React.CSSProperties = {
+  position: 'absolute',
+  width: 1,
+  height: 1,
+  padding: 0,
+  margin: -1,
+  overflow: 'hidden',
+  clip: 'rect(0 0 0 0)',
+  whiteSpace: 'nowrap',
+  border: 0,
+};
+
+/** "Name, row 3" for the active cell, or '' when nothing is active. */
+function useActiveCellAnnouncement(
+  activeCell: { rowIndex: number; columnIndex: number } | null,
+  visibleCols: ReadonlyArray<{ name?: string; columnId: string }>,
+  colOffset: number,
+  pageOffset: number,
+): string {
+  return React.useMemo(() => {
+    if (!activeCell) return '';
+    const col = visibleCols[activeCell.columnIndex - colOffset];
+    if (!col) return '';
+    return `${col.name || col.columnId}, row ${pageOffset + activeCell.rowIndex + 1}`;
+  }, [activeCell, visibleCols, colOffset, pageOffset]);
+}
+
 /**
  * Shared DataGridTable body. Adapters (`react-radix`, `react-fluent`) bind their
  * own UI primitives + scoped CSS module and re-export the memoized result.
  *
- * `delegatedCellHandlers` is optional: Radix passes a delegated-handlers object,
- * Fluent omits it (its `getCellInteractionProps` is called with 3 args).
+ * Both built-in kits set `primitives.useDelegatedCellHandlers`, so cells share
+ * one set of stable interaction handlers instead of per-cell closures.
  */
 export function BaseDataGridTableInner<T>(
   props: IOGridDataGridProps<T> & {
@@ -88,6 +116,23 @@ export function BaseDataGridTableInner<T>(
 
   const renderCellContent = useRenderCellContent(o, styles, primitives);
 
+  // ARIA grid geometry. aria-rowindex counts header rows and earlier pages;
+  // aria-rowcount is -1 ("unknown") when the grid can't see the full total.
+  const headerRowCount = o.headerRows.length + (o.showColumnLetters ? 1 : 0);
+  const pageOffset = o.propPageSize === 'all' || o.propPageSize == null ? 0 : (o.currentPage - 1) * o.propPageSize;
+  const ariaRowIndexBase = headerRowCount + pageOffset;
+  const knownTotalRows = windowed
+    ? windowed.rowCount
+    : o.statusBarConfig
+      ? o.statusBarConfig.totalCount
+      : pageOffset === 0 && (o.propPageSize === 'all' || o.propPageSize == null || items.length < o.propPageSize)
+        ? items.length
+        : -1;
+  const ariaRowCount = knownTotalRows >= 0 ? headerRowCount + knownTotalRows : -1;
+  // Theme tokens for the portaled context menu (it renders outside the grid).
+  const contextMenuTheme = usePortalTheme(wrapperRef, menuPosition != null);
+  const activeCellAnnouncement = useActiveCellAnnouncement(interaction.activeCell, visibleCols, colOffset, pageOffset);
+
   return (
     <div style={virtualScrollEnabled ? GRID_ROOT_VIRTUAL_SCROLL_STYLE : GRID_ROOT_STYLE}>
       {/* biome-ignore lint/a11y/noNoninteractiveElementInteractions: the grid wrapper hosts the centralized keyboard-navigation layer (useKeyboardNavigation); all cell keyboard interaction is handled here via roving focus */}
@@ -121,10 +166,22 @@ export function BaseDataGridTableInner<T>(
           ...(rowHeight ? { ['--ogrid-row-height' as string]: `${rowHeight}px` } : {}),
         } as React.CSSProperties}
       >
+        {/* Screen readers don't follow the visual active cell (focus stays on
+            the wrapper), so announce it politely as it moves. */}
+        <div aria-live="polite" aria-atomic="true" style={VISUALLY_HIDDEN_STYLE}>
+          {activeCellAnnouncement}
+        </div>
         <div className={styles.tableScrollContent}>
         <div className={isLoading && items.length > 0 ? styles.loadingDimmed : undefined}>
           <div className={styles.tableWidthAnchor} ref={tableContainerRef}>
-              <TableEl className={styles.dataTable} role="grid" data-virtual-scroll={virtualScrollEnabled ? '' : undefined}>
+              <TableEl
+                className={styles.dataTable}
+                role="grid"
+                aria-rowcount={ariaRowCount}
+                aria-colcount={totalColCount}
+                aria-multiselectable={hasCellSelection || rowSelection === 'multiple' ? true : undefined}
+                data-virtual-scroll={virtualScrollEnabled ? '' : undefined}
+              >
                 <BaseTableHeader
                   o={o}
                   columnMeta={columnMeta}
@@ -152,6 +209,7 @@ export function BaseDataGridTableInner<T>(
                     hasCheckboxCol={hasCheckboxCol}
                     hasRowNumbersCol={hasRowNumbersCol}
                     rowNumberOffset={rowNumberOffset}
+                    ariaRowIndexBase={ariaRowIndexBase}
                     selectionRange={selectionRange}
                     activeCell={interaction.activeCell}
                     cutRange={cutRange}
@@ -202,6 +260,7 @@ export function BaseDataGridTableInner<T>(
 
         {menuPosition &&
           createPortal(
+            <div style={{ ...contextMenuTheme, display: 'contents' }}>
             <GridContextMenu
               x={menuPosition.x}
               y={menuPosition.y}
@@ -215,7 +274,8 @@ export function BaseDataGridTableInner<T>(
               onPaste={handlePasteVoid}
               onSelectAll={o.interaction.handleSelectAllCells}
               onClose={closeContextMenu}
-            />,
+            />
+            </div>,
             getContextMenuPortalTarget ? getContextMenuPortalTarget(wrapperRef.current) : document.body
           )}
 

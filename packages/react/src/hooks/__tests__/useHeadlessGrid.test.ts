@@ -239,3 +239,15 @@ describe('useHeadlessGrid', () => {
     expect(result.current.rows[0].name).toBe('Eve'); // score 95
   });
 });
+
+describe('useHeadlessGrid allFilteredRows', () => {
+  it('returns every filtered row across pages, not just the current page', () => {
+    const { result } = renderHook(() =>
+      useHeadlessGrid({ columns, data, getRowId, initialPageSize: 2 }),
+    );
+    expect(result.current.rows).toHaveLength(2);
+    expect(result.current.allFilteredRows).toHaveLength(6);
+    act(() => { result.current.setFilter('status', { type: 'multiSelect', value: ['Active'] }); });
+    expect(result.current.allFilteredRows.map((r) => r.id)).toEqual(['1', '3', '5']);
+  });
+});

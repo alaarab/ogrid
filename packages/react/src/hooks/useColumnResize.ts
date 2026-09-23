@@ -127,6 +127,8 @@ export function useColumnResize<T>({
     const cleanup = () => {
       document.removeEventListener('pointermove', onMove);
       document.removeEventListener('pointerup', onUp);
+      document.removeEventListener('pointercancel', onUp);
+      window.removeEventListener('blur', onUp);
       cleanupRef.current = null;
 
       // Restore cursor and user-select
@@ -160,6 +162,10 @@ export function useColumnResize<T>({
 
     document.addEventListener('pointermove', onMove);
     document.addEventListener('pointerup', onUp);
+    // A cancelled pointer (touch pan takeover) or a lost window never sends
+    // pointerup; finish the resize at the last width instead of staying stuck.
+    document.addEventListener('pointercancel', onUp);
+    window.addEventListener('blur', onUp);
     cleanupRef.current = cleanup;
   }, [defaultWidth, minWidth, setColumnSizingOverrides, columnSizingOverridesRef]);
 

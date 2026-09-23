@@ -16,6 +16,11 @@ export interface XlsxGridProps {
   density?: 'compact' | 'normal' | 'comfortable';
   /** See {@link SheetToGridDataOptions.headerRow}. Defaults to 'auto'. */
   headerRow?: SheetToGridDataOptions['headerRow'];
+  /**
+   * Load limits for untrusted files; see {@link SheetToGridDataOptions}.
+   * When a sheet exceeds them a notice above the grid says what was cut.
+   */
+  limits?: Pick<SheetToGridDataOptions, 'maxRows' | 'maxCols' | 'maxCells'>;
 }
 
 /**
@@ -36,11 +41,15 @@ export function XlsxGrid({
   height = '100%',
   density = 'compact',
   headerRow,
+  limits,
 }: XlsxGridProps) {
   const sheet = workbook.getWorksheet(sheetName);
-  const { columns, rows, initialFormulas } = useMemo(
-    () => sheetToGridData(sheet, { headerRow }),
-    [sheet, headerRow],
+  const maxRows = limits?.maxRows;
+  const maxCols = limits?.maxCols;
+  const maxCells = limits?.maxCells;
+  const { columns, rows, initialFormulas, truncated } = useMemo(
+    () => sheetToGridData(sheet, { headerRow, maxRows, maxCols, maxCells }),
+    [sheet, headerRow, maxRows, maxCols, maxCells],
   );
 
   if (!sheet) {
@@ -85,6 +94,12 @@ export function XlsxGrid({
 
   return (
     <div style={{ width: '100%', height, display: 'flex', flexDirection: 'column' }}>
+      {truncated && (
+        <div role="status" style={{ padding: '4px 8px', fontSize: 12, opacity: 0.8 }}>
+          Showing {rows.length.toLocaleString()} of {truncated.rowCount.toLocaleString()} rows and{' '}
+          {columns.length.toLocaleString()} of {truncated.columnCount.toLocaleString()} columns (sheet too large to load in full).
+        </div>
+      )}
       <OGrid {...gridProps} />
     </div>
   );

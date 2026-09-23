@@ -9,7 +9,7 @@
     "includes": [
       "**/*.ts",
       "**/*.tsx",
-      "**/*.vue"
+      "**/*.mjs"
     ],
     "ignoreUnknown": true
   },

@@ -62,7 +62,7 @@ export {
   triggerCsvDownload,
   triggerBlobDownload,
 } from './utils';
-export type { CsvColumn, FormulaExportOptions } from './utils';
+export type { CsvColumn, CsvEscapeOptions, FormulaExportOptions } from './utils';
 
 // Utils  -  cellValue, columnUtils
 export { getCellValue, isColumnEditable, createGridDataAccessor } from './utils';

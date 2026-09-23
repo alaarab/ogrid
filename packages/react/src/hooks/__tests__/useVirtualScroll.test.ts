@@ -541,3 +541,28 @@ describe('useVirtualScroll  -  scaled spacer (large datasets)', () => {
     expect(arg.top).toBeGreaterThan(31_000_000);
   });
 });
+
+describe('useVirtualScroll  -  rowHeight changes', () => {
+  it('re-measures the virtualizer when rowHeight changes', () => {
+    const measure = jest.fn();
+    (useVirtualizer as jest.Mock).mockReturnValue({
+      getVirtualItems: mockGetVirtualItems,
+      getTotalSize: mockGetTotalSize,
+      scrollToIndex: mockScrollToIndex,
+      measure,
+    });
+    const { rerender } = renderHook(
+      ({ rowHeight }) =>
+        useVirtualScroll({
+          totalRows: 500,
+          rowHeight,
+          enabled: true,
+          containerRef: makeContainerRef(document.createElement('div')),
+        }),
+      { initialProps: { rowHeight: 36 } },
+    );
+    expect(measure).not.toHaveBeenCalled();
+    rerender({ rowHeight: 48 });
+    expect(measure).toHaveBeenCalledTimes(1);
+  });
+});

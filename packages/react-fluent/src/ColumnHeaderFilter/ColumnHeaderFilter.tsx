@@ -128,6 +128,7 @@ export const ColumnHeaderFilter: React.FC<IColumnHeaderFilterProps> = React.memo
           <>
             <button
               ref={filterBtnRef}
+              data-ogrid-filter-trigger
               type="button"
               className={`${styles.filterIcon} ${hasActiveFilter ? styles.filterActive : ''} ${isFilterOpen ? styles.filterOpen : ''}`}
               onClick={handlers.handleFilterIconClick}

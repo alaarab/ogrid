@@ -2,7 +2,7 @@
  * Edge case tests for processClientSideData utility.
  * Covers P0 gaps: null/undefined handling, mixed type sorting, pagination edge cases.
  */
-import { processClientSideData } from '../clientSideData';
+import { processClientSideData, toDateTimestamp } from '../clientSideData';
 import type { IColumnDef, IFilters } from '../../types';
 
 describe('processClientSideData - Edge Cases', () => {
@@ -349,5 +349,33 @@ describe('processClientSideData - Edge Cases', () => {
       expect(result).toHaveLength(1);
       expect(result[0].id).toBe('1');
     });
+  });
+});
+
+describe('audit regressions: dates and mixed sort', () => {
+  type Row = { d: unknown };
+  const dateCols: IColumnDef<Row>[] = [{ columnId: 'd', name: 'D', type: 'date' }];
+
+  it('matches a bare YYYY-MM-DD cell with a same-day filter in any timezone', () => {
+    const data: Row[] = [{ d: '2024-01-14' }, { d: '2024-01-15' }, { d: '2024-01-16' }];
+    const out = processClientSideData(data, dateCols, {
+      d: { type: 'date', value: { from: '2024-01-15', to: '2024-01-15' } },
+    });
+    expect(out).toEqual([{ d: '2024-01-15' }]);
+  });
+
+  it('reads bare YYYY-MM-DD as local midnight', () => {
+    expect(toDateTimestamp('2024-01-15')).toBe(new Date(2024, 0, 15).getTime());
+    expect(toDateTimestamp(new Date(2024, 0, 15))).toBe(new Date(2024, 0, 15).getTime());
+    expect(Number.isNaN(toDateTimestamp('nope'))).toBe(true);
+    expect(Number.isNaN(toDateTimestamp(null))).toBe(true);
+  });
+
+  it('sorts mixed number/string values into one stable total order', () => {
+    const cols: IColumnDef<Row>[] = [{ columnId: 'd', name: 'D' }];
+    const sortVals = (vals: unknown[]) =>
+      processClientSideData(vals.map((d) => ({ d })), cols, {}, 'd', 'asc').map((r) => r.d);
+    expect(sortVals([5, '10', '3'])).toEqual([5, '10', '3']);
+    expect(sortVals(['3', 5, '10'])).toEqual([5, '10', '3']);
   });
 });

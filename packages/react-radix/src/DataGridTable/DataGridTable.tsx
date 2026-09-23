@@ -1,4 +1,5 @@
 
+import * as React from 'react';
 import * as Popover from '@radix-ui/react-popover';
 import * as Checkbox from '@radix-ui/react-checkbox';
 import { ColumnHeaderFilter } from '../ColumnHeaderFilter';
@@ -12,8 +13,9 @@ import { DropIndicator } from './DropIndicator';
 import {
   createDataGridTable,
   POPOVER_ANCHOR_STYLE,
+  usePortalTheme,
 } from '@alaarab/ogrid-react';
-import type { DataGridStyles, DataGridPrimitives } from '@alaarab/ogrid-react';
+import type { DataGridStyles, DataGridPrimitives, PopoverEditorRenderProps } from '@alaarab/ogrid-react';
 import styles from './DataGridTable.module.scss';
 
 // Radix binds native table elements + Radix Checkbox/Popover to the shared
@@ -72,20 +74,34 @@ const primitives: DataGridPrimitives = {
       <Checkbox.Indicator className={styles.rowCheckboxIndicator}>✓</Checkbox.Indicator>
     </Checkbox.Root>
   ),
-  renderPopoverEditor: ({ open, onClose, setAnchorEl, anchorContent, editor }) => (
+  renderPopoverEditor: (p) => <RadixPopoverEditor {...p} />,
+};
+
+/** Popover cell editor; copies the grid's scoped theme tokens into the portal. */
+function RadixPopoverEditor({ open, onClose, setAnchorEl, anchorContent, editor }: PopoverEditorRenderProps) {
+  const anchorRef = React.useRef<HTMLDivElement | null>(null);
+  const portalTheme = usePortalTheme(anchorRef, open);
+  return (
     <Popover.Root open={open} onOpenChange={(o: boolean) => { if (!o) onClose(); }}>
       <Popover.Anchor asChild>
-        <div ref={(el: HTMLDivElement | null) => { if (el) setAnchorEl(el); }} className="ogrid-popover-anchor" style={POPOVER_ANCHOR_STYLE}>
+        <div
+          ref={(el: HTMLDivElement | null) => {
+            anchorRef.current = el;
+            if (el) setAnchorEl(el);
+          }}
+          className="ogrid-popover-anchor"
+          style={POPOVER_ANCHOR_STYLE}
+        >
           {anchorContent}
         </div>
       </Popover.Anchor>
       <Popover.Portal>
-        <Popover.Content sideOffset={4} onOpenAutoFocus={(e: Event) => e.preventDefault()}>
+        <Popover.Content sideOffset={4} style={portalTheme} onOpenAutoFocus={(e: Event) => e.preventDefault()}>
           {editor}
         </Popover.Content>
       </Popover.Portal>
     </Popover.Root>
-  ),
-};
+  );
+}
 
 export const DataGridTable = createDataGridTable(styles as DataGridStyles, primitives);

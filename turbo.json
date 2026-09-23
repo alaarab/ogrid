@@ -1,31 +1,105 @@
 {
   "$schema": "https://turbo.build/schema.json",
-  "globalPassThroughEnv": ["OGRID_PLAYWRIGHT_PROJECTS"],
+  "globalPassThroughEnv": [
+    "OGRID_PLAYWRIGHT_PROJECTS"
+  ],
+  "globalDependencies": [
+    "tsconfig.base.json"
+  ],
   "tasks": {
     "build": {
-      "dependsOn": ["^build"],
-      "inputs": ["src/**/*.ts", "src/**/*.tsx", "src/**/*.scss", "package.json", "tsconfig*.json"],
-      "outputs": ["dist/**"]
+      "dependsOn": [
+        "^build"
+      ],
+      "inputs": [
+        "src/**/*.ts",
+        "src/**/*.tsx",
+        "src/**/*.scss",
+        "package.json",
+        "tsconfig*.json",
+        "tsup.config.ts",
+        "scripts/**",
+        "$TURBO_ROOT$/scripts/fix-dts-extensions.mjs"
+      ],
+      "outputs": [
+        "dist/**"
+      ]
+    },
+    "@alaarab/ogrid-mcp#build": {
+      "dependsOn": [
+        "^build"
+      ],
+      "inputs": [
+        "src/**/*.ts",
+        "package.json",
+        "tsconfig*.json",
+        "tsup.config.ts",
+        "scripts/**",
+        "$TURBO_ROOT$/scripts/fix-dts-extensions.mjs",
+        "$TURBO_ROOT$/packages/docs/docs/**"
+      ],
+      "outputs": [
+        "dist/**",
+        "bundled-docs/**"
+      ]
     },
     "typecheck": {
-      "dependsOn": ["^build"],
+      "dependsOn": [
+        "^build"
+      ],
       "cache": true,
-      "inputs": ["src/**", "tsconfig*.json"],
+      "inputs": [
+        "src/**",
+        "tsconfig*.json"
+      ],
       "outputs": []
     },
     "test": {
-      "dependsOn": ["build"],
+      "dependsOn": [
+        "build"
+      ],
       "cache": true,
-      "inputs": ["src/**", "$TURBO_ROOT$/bun-test.setup.ts", "tsconfig.*"],
-      "outputs": ["coverage/**"]
+      "inputs": [
+        "src/**",
+        "$TURBO_ROOT$/bun-test.setup.ts",
+        "tsconfig.*"
+      ],
+      "outputs": [
+        "coverage/**"
+      ]
     },
     "lint": {
       "cache": true
     },
     "storybook": {
       "cache": true,
-      "inputs": ["src/**/*.stories.tsx", "src/**/*.stories.ts", "src/**/*.tsx", "src/**/*.ts", "src/**/*.scss", ".storybook/**"],
+      "inputs": [
+        "src/**/*.stories.tsx",
+        "src/**/*.stories.ts",
+        "src/**/*.tsx",
+        "src/**/*.ts",
+        "src/**/*.scss",
+        ".storybook/**"
+      ],
       "persistent": true
+    },
+    "@alaarab/ogrid-docs#build": {
+      "dependsOn": [
+        "^build"
+      ],
+      "inputs": [
+        "docs/**",
+        "src/**",
+        "static/**",
+        "docusaurus.config.*",
+        "sidebars.*",
+        "package.json",
+        "tsconfig*.json"
+      ],
+      "outputs": [
+        "build/**",
+        ".docusaurus/**"
+      ]
     }
   }
 }

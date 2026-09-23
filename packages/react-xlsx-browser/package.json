@@ -5,15 +5,17 @@
   "description": "Self-contained browser ESM bundle of @alaarab/ogrid-react-xlsx. React + ReactDOM + ExcelJS + every @alaarab/ogrid-* dep inlined into one file. Drop into a static vendor/ directory and `import()` from a no-bundler app.",
   "main": "dist/ogrid-xlsx.js",
   "module": "dist/ogrid-xlsx.js",
+  "types": "dist/ogrid-xlsx.d.ts",
   "exports": {
     ".": {
+      "types": "./dist/ogrid-xlsx.d.ts",
       "import": "./dist/ogrid-xlsx.js",
       "default": "./dist/ogrid-xlsx.js"
     },
     "./ogrid-xlsx.css": "./dist/ogrid-xlsx.css"
   },
   "scripts": {
-    "build": "rimraf dist && tsup",
+    "build": "rimraf dist && tsup && node scripts/copy-types.mjs",
     "test": "echo 'no tests — this package only re-bundles @alaarab/ogrid-react-xlsx; tests live there'"
   },
   "keywords": [
@@ -33,7 +35,9 @@
     "README.md",
     "LICENSE"
   ],
-  "sideEffects": false,
+  "sideEffects": [
+    "**/*.css"
+  ],
   "engines": {
     "node": ">=18"
   },

@@ -30,6 +30,8 @@ export interface BaseTableBodyProps<T> {
   hasCheckboxCol: boolean;
   hasRowNumbersCol: boolean;
   rowNumberOffset: number;
+  /** aria-rowindex of the first data row minus 1 (header rows + page offset). */
+  ariaRowIndexBase?: number;
   selectionRange: GridRowProps['selectionRange'];
   activeCell: GridRowProps['activeCell'];
   cutRange: GridRowProps['cutRange'];
@@ -47,7 +49,7 @@ export function BaseTableBody<T>(props: BaseTableBodyProps<T>) {
     virtualScrollEnabled, visibleRange, columnRange,
     items, windowed, rowHeight, getRowId, selectedRowIds, visibleCols, columnMeta,
     renderCellContent, handleSingleRowClick, handleRowCheckboxChange,
-    lastMouseShiftRef, hasCheckboxCol, hasRowNumbersCol, rowNumberOffset,
+    lastMouseShiftRef, hasCheckboxCol, hasRowNumbersCol, rowNumberOffset, ariaRowIndexBase,
     selectionRange, activeCell, cutRange, copyRange, isDragging,
     editingCell, pinnedColumns, rowNumWidth, styles, primitives,
   } = props;
@@ -102,6 +104,7 @@ export function BaseTableBody<T>(props: BaseTableBodyProps<T>) {
         hasCheckboxCol={hasCheckboxCol}
         hasRowNumbersCol={hasRowNumbersCol}
         rowNumberOffset={rowNumberOffset}
+        ariaRowIndexBase={ariaRowIndexBase}
         selectionRange={selectionRange}
         activeCell={activeCell}
         cutRange={cutRange}

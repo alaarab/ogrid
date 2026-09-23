@@ -93,3 +93,13 @@ test.describe('phone controls', () => {
     expect(chooserBounds.x + chooserBounds.width).toBeLessThanOrEqual(309);
   });
 });
+
+test('portaled context menu keeps the scoped dark theme', async ({ page }) => {
+  await page.locator('main').evaluate((el) => el.setAttribute('data-theme', 'dark'));
+  const cell = page.locator('[data-row-index="0"][data-col-index]').first();
+  await cell.click({ button: 'right' });
+  const menu = page.getByRole('menu');
+  await expect(menu).toBeVisible();
+  expect(await menu.evaluate((el) => !el.closest('main'))).toBe(true);
+  await expect(menu).toHaveCSS('background-color', 'rgb(36, 28, 24)');
+});

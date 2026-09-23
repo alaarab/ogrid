@@ -187,6 +187,8 @@ export type {
   UseGridVirtualizationResult,
 } from './useGridVirtualization';
 export { useLatestRef } from './useLatestRef';
+export { usePortalTheme } from './usePortalTheme';
+export { useCoarsePointer } from './useCoarsePointer';
 export { useShallowEqualMemo } from './useShallowEqualMemo';
 export { usePaginationControls } from './usePaginationControls';
 export type {

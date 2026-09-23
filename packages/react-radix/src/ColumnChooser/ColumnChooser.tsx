@@ -23,10 +23,13 @@ function ChevronUp(): React.ReactElement {
   return <span className={styles.chevron} aria-hidden>▲</span>;
 }
 
+// The label wraps the checkbox instead of pointing at an id, so two grids on
+// one page can't collide on a shared `col-${columnId}` id.
 const CheckboxItem: React.FC<IColumnChooserCheckboxItemProps> = ({ columnId, columnName, checked, disabled, onChange }) => (
-  <>
+  // biome-ignore lint/a11y/noLabelWithoutControl: the control is the nested Radix Checkbox (a button, which is labelable)
+  <label style={{ display: 'inline-flex', alignItems: 'center', cursor: disabled ? 'default' : 'pointer' }}>
     <Checkbox.Root
-      id={`col-${columnId}`}
+      data-column-id={columnId}
       checked={checked}
       onCheckedChange={(c) => onChange(c === true)}
       disabled={disabled}
@@ -34,8 +37,8 @@ const CheckboxItem: React.FC<IColumnChooserCheckboxItemProps> = ({ columnId, col
     >
       <Checkbox.Indicator className={styles.checkboxIndicator}>✓</Checkbox.Indicator>
     </Checkbox.Root>
-    <label htmlFor={`col-${columnId}`} style={{ marginLeft: 8, cursor: 'pointer' }}>{columnName}</label>
-  </>
+    <span style={{ marginLeft: 8 }}>{columnName}</span>
+  </label>
 );
 
 const CLASS_NAMES: ColumnChooserContentClassNames = {
@@ -65,7 +68,7 @@ export const ColumnChooser: React.FC<IColumnChooserProps> = (props) => {
     <div ref={containerRef} className={`${styles.container} ${className || ''}`}>
       <Popover.Root open={open} onOpenChange={setOpen}>
         <Popover.Trigger asChild>
-          <button type="button" className={styles.triggerButton} aria-expanded={open} aria-haspopup="listbox">
+          <button type="button" className={styles.triggerButton} aria-expanded={open} aria-haspopup="dialog">
             <TableSettingsIcon />
             <span>Column Visibility ({visibleCount} of {totalCount})</span>
             {open ? <ChevronUp /> : <ChevronDown />}

@@ -33,7 +33,7 @@
  *   </div>
  */
 
-import { useCallback, useState } from 'react';
+import { useCallback, useRef, useState } from 'react';
 import type { CellCoord, UseRangeSelectionResult } from './useRangeSelection';
 
 export interface UseGridFocusParams {
@@ -99,28 +99,39 @@ export function useGridFocus(params: UseGridFocusParams): UseGridFocusResult {
   const { rowCount, colCount, pageSize = 10, rangeSelection } = params;
 
   const [activeCell, setActiveCellState] = useState<CellCoord | null>(null);
+  // Mirror of activeCell, updated synchronously, so movement can compute the
+  // next cell and call rangeSelection outside a state updater (updaters must be
+  // pure: React may run them twice, and calling another hook's setter from one
+  // warns about updating during render).
+  const activeCellRef = useRef<CellCoord | null>(null);
+
+  const commit = useCallback((next: CellCoord | null) => {
+    activeCellRef.current = next;
+    setActiveCellState(next);
+  }, []);
 
   const setActiveCell = useCallback((cell: CellCoord | null) => {
-    setActiveCellState(cell);
-  }, []);
+    commit(cell);
+  }, [commit]);
 
   const moveBy = useCallback(
     (drow: number, dcol: number, extendRange = false) => {
-      setActiveCellState((prev) => {
-        if (rowCount <= 0 || colCount <= 0) return prev;
-        const start = prev ?? { row: 0, col: 0 };
-        const next: CellCoord = {
-          row: clamp(start.row + drow, 0, rowCount - 1),
-          col: clamp(start.col + dcol, 0, colCount - 1),
-        };
-        if (rangeSelection) {
-          if (extendRange) rangeSelection.extendRange(next.row, next.col);
-          else rangeSelection.startRange(next.row, next.col);
-        }
-        return next;
-      });
+      if (rowCount <= 0 || colCount <= 0) return;
+      const prev = activeCellRef.current;
+      // With no active cell yet, the first move focuses the first cell.
+      const next: CellCoord = prev
+        ? {
+            row: clamp(prev.row + drow, 0, rowCount - 1),
+            col: clamp(prev.col + dcol, 0, colCount - 1),
+          }
+        : { row: 0, col: 0 };
+      commit(next);
+      if (rangeSelection) {
+        if (extendRange) rangeSelection.extendRange(next.row, next.col);
+        else rangeSelection.startRange(next.row, next.col);
+      }
     },
-    [rowCount, colCount, rangeSelection],
+    [rowCount, colCount, rangeSelection, commit],
   );
 
   const moveUp = useCallback((n = 1) => moveBy(-n, 0), [moveBy]);
@@ -129,33 +140,29 @@ export function useGridFocus(params: UseGridFocusParams): UseGridFocusResult {
   const moveRight = useCallback((n = 1) => moveBy(0, n), [moveBy]);
 
   const moveToRowStart = useCallback(() => {
-    setActiveCellState((prev) => {
-      if (!prev) return { row: 0, col: 0 };
-      const next = { row: prev.row, col: 0 };
-      rangeSelection?.startRange(next.row, next.col);
-      return next;
-    });
-  }, [rangeSelection]);
+    const prev = activeCellRef.current;
+    const next = { row: prev?.row ?? 0, col: 0 };
+    commit(next);
+    if (prev) rangeSelection?.startRange(next.row, next.col);
+  }, [rangeSelection, commit]);
 
   const moveToRowEnd = useCallback(() => {
-    setActiveCellState((prev) => {
-      if (!prev) return { row: 0, col: Math.max(0, colCount - 1) };
-      const next = { row: prev.row, col: Math.max(0, colCount - 1) };
-      rangeSelection?.startRange(next.row, next.col);
-      return next;
-    });
-  }, [colCount, rangeSelection]);
+    const prev = activeCellRef.current;
+    const next = { row: prev?.row ?? 0, col: Math.max(0, colCount - 1) };
+    commit(next);
+    if (prev) rangeSelection?.startRange(next.row, next.col);
+  }, [colCount, rangeSelection, commit]);
 
   const moveToStart = useCallback(() => {
-    setActiveCellState({ row: 0, col: 0 });
+    commit({ row: 0, col: 0 });
     rangeSelection?.startRange(0, 0);
-  }, [rangeSelection]);
+  }, [rangeSelection, commit]);
 
   const moveToEnd = useCallback(() => {
     const last = { row: Math.max(0, rowCount - 1), col: Math.max(0, colCount - 1) };
-    setActiveCellState(last);
+    commit(last);
     rangeSelection?.startRange(last.row, last.col);
-  }, [rowCount, colCount, rangeSelection]);
+  }, [rowCount, colCount, rangeSelection, commit]);
 
   const getKeyDownHandler = useCallback(() => {
     return (e: {

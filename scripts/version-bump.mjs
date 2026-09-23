@@ -8,10 +8,11 @@
  * Usage: node scripts/version-bump.mjs 2.6.0
  */
 
-import { readFileSync, writeFileSync } from 'fs';
+import { readFileSync, writeFileSync } from 'node:fs';
 
 const version = process.argv[2];
-if (!version || !/^\d+\.\d+\.\d+/.test(version)) {
+// Full semver (optional prerelease/build); anchored so trailing junk is rejected.
+if (!version || !/^\d+\.\d+\.\d+(-[0-9A-Za-z.-]+)?(\+[0-9A-Za-z.-]+)?$/.test(version)) {
   console.error('Usage: node scripts/version-bump.mjs <version>');
   console.error('Example: node scripts/version-bump.mjs 2.6.0');
   process.exit(1);

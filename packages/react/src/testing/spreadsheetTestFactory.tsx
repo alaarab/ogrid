@@ -45,6 +45,10 @@ function getCellAt(container: HTMLElement, rowIndex: number, colIndex: number): 
 
 export function createSpreadsheetTests(DataGridTable: React.ComponentType<IOGridDataGridProps<FixtureRow>>): void {
   function renderSpreadsheetGrid(overrides: Partial<IOGridDataGridProps<FixtureRow>> = {}) {
+    return render(renderSpreadsheetGridElement(overrides));
+  }
+
+  function renderSpreadsheetGridElement(overrides: Partial<IOGridDataGridProps<FixtureRow>> = {}) {
     const defaultProps = {
       items: fixtureRows,
       columns: twoColumnColumns,
@@ -60,7 +64,7 @@ export function createSpreadsheetTests(DataGridTable: React.ComponentType<IOGrid
       editable: true,
       onCellValueChanged: jest.fn(),
     };
-    return render(<DataGridTable {...defaultProps} {...overrides} />);
+    return <DataGridTable {...defaultProps} {...overrides} />;
   }
 
   describe('DataGridTable spreadsheet features', () => {
@@ -244,6 +248,9 @@ export function createSpreadsheetTests(DataGridTable: React.ComponentType<IOGrid
           expect(writeText).toHaveBeenCalled();
         });
 
+        // Paste somewhere else: pasting onto the cut cell itself keeps the
+        // pasted value (the paste wins), so nothing would be cleared.
+        fireEvent.pointerDown(getCellAt(container, 1, 0));
         await act(async () => {
           fireEvent.keyDown(grid as Element, { key: 'v', ctrlKey: true });
         });
@@ -253,6 +260,30 @@ export function createSpreadsheetTests(DataGridTable: React.ComponentType<IOGrid
           const clearCalls = onCellValueChanged.mock.calls.filter((c: unknown[]) => (c[0] as { newValue: unknown }).newValue === '');
           expect(clearCalls.length).toBeGreaterThanOrEqual(1);
         });
+      });
+
+      it('cut then paste onto the same cell keeps the pasted value', async () => {
+        const onCellValueChanged = jest.fn();
+        const writeText = jest.fn().mockResolvedValue(undefined);
+        const readText = jest.fn().mockResolvedValue('PastedValue');
+        Object.defineProperty(navigator, 'clipboard', {
+          value: { writeText, readText },
+          configurable: true,
+        });
+
+        const { container } = renderSpreadsheetGrid({ onCellValueChanged });
+        fireEvent.pointerDown(getCellAt(container, 0, 0));
+        const grid = container.querySelector('[role="region"]');
+        await act(async () => {
+          fireEvent.keyDown(grid as Element, { key: 'x', ctrlKey: true });
+        });
+        await waitFor(() => expect(writeText).toHaveBeenCalled());
+        await act(async () => {
+          fireEvent.keyDown(grid as Element, { key: 'v', ctrlKey: true });
+        });
+        await waitFor(() => expect(onCellValueChanged).toHaveBeenCalled());
+        const values = onCellValueChanged.mock.calls.map((c: unknown[]) => (c[0] as { newValue: unknown }).newValue);
+        expect(values).not.toContain('');
       });
     });
 
@@ -456,6 +487,7 @@ export function createSpreadsheetTests(DataGridTable: React.ComponentType<IOGrid
           expect(writeText).toHaveBeenCalled();
         });
 
+        fireEvent.pointerDown(getCellAt(container, 1, 0));
         fireEvent.keyDown(grid as Element, { key: 'v', ctrlKey: true });
         await waitFor(() => {
           const clearCalls = onCellValueChanged.mock.calls.filter((c: unknown[]) => (c[0] as { newValue: unknown }).newValue === '');

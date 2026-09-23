@@ -59,6 +59,7 @@ export const ColumnHeaderFilter: React.FC<IColumnHeaderFilterProps> = React.memo
             <Popover.Trigger asChild>
               <button
                 type="button"
+                data-ogrid-filter-trigger
                 className={`${styles.filterIcon} ${hasActiveFilter ? styles.filterActive : ''} ${isFilterOpen ? styles.filterOpen : ''}`}
                 onClick={handlers.handleFilterIconClick}
                 aria-label={`Filter ${columnName}`}

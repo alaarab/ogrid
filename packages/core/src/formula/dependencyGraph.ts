@@ -1,19 +1,57 @@
 import type { CellKey, IRecalcPlan } from './types';
+import { fromCellKey } from './cellAddressUtils';
 
 const EMPTY_SET: ReadonlySet<CellKey> = Object.freeze(new Set<CellKey>());
 
+/**
+ * A rectangular range a formula depends on, kept as a range rather than
+ * expanded into one dependency per cell: `=SUM(A1:A100000)` is one entry.
+ */
+export interface IRangeDependency {
+  sheet?: string;
+  minRow: number;
+  maxRow: number;
+  minCol: number;
+  maxCol: number;
+}
+
+interface RangeEntry {
+  owner: CellKey;
+  range: IRangeDependency;
+}
+
+/** Ranges spanning more columns than this skip the per-column index. */
+const MAX_INDEXED_COL_SPAN = 64;
+
+function rangeContains(range: IRangeDependency, col: number, row: number, sheet: string | undefined): boolean {
+  return (
+    (range.sheet ?? undefined) === sheet &&
+    col >= range.minCol && col <= range.maxCol &&
+    row >= range.minRow && row <= range.maxRow
+  );
+}
+
 export class DependencyGraph {
-  /** cell -> set of cells it depends on (references in its formula) */
+  /** cell -> set of cells it depends on (single-cell references in its formula) */
   private dependencies: Map<CellKey, Set<CellKey>> = new Map();
 
-  /** cell -> set of cells that depend on it (reverse index) */
+  /** cell -> set of cells that depend on it (reverse index of `dependencies`) */
   private dependents: Map<CellKey, Set<CellKey>> = new Map();
+
+  /** cell -> ranges it depends on */
+  private rangeDependencies: Map<CellKey, RangeEntry[]> = new Map();
+
+  /** sheet ('' = main) -> column -> range entries covering that column */
+  private rangesByColumn: Map<string, Map<number, Set<RangeEntry>>> = new Map();
+
+  /** sheet ('' = main) -> range entries too wide to index per column */
+  private wideRanges: Map<string, Set<RangeEntry>> = new Map();
 
   /**
    * Set the dependencies for a cell, replacing any previous ones.
-   * Updates both the forward (dependencies) and reverse (dependents) maps.
+   * `deps` are single-cell references; `ranges` are range references.
    */
-  setDependencies(cell: CellKey, deps: Set<CellKey>): void {
+  setDependencies(cell: CellKey, deps: Set<CellKey>, ranges: readonly IRangeDependency[] = []): void {
     // Remove old dependencies first (clean up reverse index)
     this.removeDependenciesInternal(cell);
 
@@ -29,25 +67,20 @@ export class DependencyGraph {
       }
       depSet.add(cell);
     }
+
+    if (ranges.length > 0) {
+      const entries = ranges.map((range) => ({ owner: cell, range }));
+      this.rangeDependencies.set(cell, entries);
+      for (const entry of entries) this.indexRange(entry);
+    }
   }
 
   /**
-   * Remove all dependency information for a cell from both maps.
+   * Remove all dependency information for a cell. Cells that reference
+   * `cell` keep their edges: their formulas still point at it.
    */
   removeDependencies(cell: CellKey): void {
     this.removeDependenciesInternal(cell);
-
-    // Also remove from dependents map as a key (cells that depend on this cell
-    // still exist, but if the cell itself is removed, its dependents entry
-    // for other cells referencing it is cleaned up by removeDependenciesInternal).
-    // Here we also need to clean up any cell that listed `cell` as a dependent  - 
-    // but that's about other cells' formulas referencing this cell, which is the
-    // reverse direction. We remove the dependents entry for `cell` itself only
-    // if no other cells reference it. Since removeDependenciesInternal handles
-    // the forward to reverse cleanup, we just need to remove the dependents key.
-    // But other cells might still depend on `cell`, so we keep that entry.
-    // We do remove the forward dependencies entry.
-    this.dependencies.delete(cell);
   }
 
   /**
@@ -77,144 +110,235 @@ export class DependencyGraph {
     return this.topologicalSort(new Set(changedCells)).order;
   }
 
-  /** Like `getRecalcOrderBatch`, but also reports cycle participants. */
-  getRecalcPlanBatch(changedCells: CellKey[]): IRecalcPlan {
-    return this.topologicalSort(new Set(changedCells));
+  /**
+   * Like `getRecalcOrderBatch`, but also reports cycle participants.
+   * `alsoRecalc` cells (e.g. volatile formulas) are included in the plan even
+   * when nothing they reference changed, together with their dependents.
+   */
+  getRecalcPlanBatch(changedCells: CellKey[], alsoRecalc?: Iterable<CellKey>): IRecalcPlan {
+    return this.topologicalSort(new Set(changedCells), alsoRecalc);
   }
 
   /**
-   * Check if adding dependencies from `cell` to `deps` would create a cycle.
-   * DFS from each dep: if we can reach `cell`, it would create a cycle.
+   * Check if giving `cell` these dependencies would create a cycle, i.e. if
+   * any proposed dependency is `cell` itself or already depends on `cell`.
    */
-  wouldCreateCycle(cell: CellKey, deps: Set<CellKey>): boolean {
-    // If cell depends on itself, that's a cycle
-    if (deps.has(cell)) {
-      return true;
-    }
+  wouldCreateCycle(cell: CellKey, deps: Set<CellKey>, ranges: readonly IRangeDependency[] = []): boolean {
+    const hits = (key: CellKey): boolean => {
+      if (deps.has(key)) return true;
+      if (ranges.length === 0) return false;
+      const { col, row, sheet } = fromCellKey(key);
+      for (const range of ranges) {
+        if (rangeContains(range, col, row, sheet)) return true;
+      }
+      return false;
+    };
 
-    // For each proposed dependency, check if `cell` is reachable from it
-    // by following the dependents chain (i.e., if dep transitively depends on cell)
-    // Share a single visited Set across all deps to avoid redundant traversals
-    const visited = new Set<CellKey>();
-    for (const dep of deps) {
-      if (this.canReach(dep, cell, visited)) {
-        return true;
+    if (hits(cell)) return true;
+
+    // Walk everything that transitively depends on `cell`.
+    const visited = new Set<CellKey>([cell]);
+    const stack: CellKey[] = [cell];
+    while (stack.length > 0) {
+      const current = stack.pop() as CellKey;
+      for (const dependent of this.collectDependents(current)) {
+        if (visited.has(dependent)) continue;
+        if (hits(dependent)) return true;
+        visited.add(dependent);
+        stack.push(dependent);
       }
     }
-
     return false;
   }
 
   /**
-   * Return direct dependents of a cell (cells whose formulas reference this cell).
-   * Returns an empty set if none.
+   * Return direct dependents of a cell: cells whose formulas reference it,
+   * either directly or through a range. Returns an empty set if none.
    */
   getDependents(cell: CellKey): ReadonlySet<CellKey> {
-    return this.dependents.get(cell) ?? EMPTY_SET;
+    const direct = this.dependents.get(cell);
+    const viaRanges = this.rangeDependentsOf(cell);
+    if (viaRanges.length === 0) return direct ?? EMPTY_SET;
+    const all = new Set<CellKey>(direct);
+    for (const owner of viaRanges) all.add(owner);
+    return all;
   }
 
   /**
-   * Return direct dependencies of a cell (cells referenced in this cell's formula).
-   * Returns an empty set if none.
+   * Return direct single-cell dependencies of a cell (cells referenced in
+   * this cell's formula). Range references are in `getRangeDependencies`.
    */
   getDependencies(cell: CellKey): ReadonlySet<CellKey> {
     return this.dependencies.get(cell) ?? EMPTY_SET;
   }
 
+  /** Return the range references of a cell's formula. */
+  getRangeDependencies(cell: CellKey): readonly IRangeDependency[] {
+    const entries = this.rangeDependencies.get(cell);
+    return entries ? entries.map((e) => e.range) : [];
+  }
+
   /**
-   * Clear both maps entirely.
+   * Clear all maps entirely.
    */
   clear(): void {
     this.dependencies.clear();
     this.dependents.clear();
+    this.rangeDependencies.clear();
+    this.rangesByColumn.clear();
+    this.wideRanges.clear();
   }
 
   // ---------------------------------------------------------------------------
   // Private helpers
   // ---------------------------------------------------------------------------
 
-  /**
-   * Remove `cell` from the forward dependencies map and clean up reverse
-   * references in the dependents map.
-   */
-  private removeDependenciesInternal(cell: CellKey): void {
-    const oldDeps = this.dependencies.get(cell);
-    if (!oldDeps) {
+  private indexRange(entry: RangeEntry): void {
+    const sheetKey = entry.range.sheet ?? '';
+    const { minCol, maxCol } = entry.range;
+    if (maxCol - minCol + 1 > MAX_INDEXED_COL_SPAN) {
+      let wide = this.wideRanges.get(sheetKey);
+      if (!wide) {
+        wide = new Set();
+        this.wideRanges.set(sheetKey, wide);
+      }
+      wide.add(entry);
       return;
     }
+    let byCol = this.rangesByColumn.get(sheetKey);
+    if (!byCol) {
+      byCol = new Map();
+      this.rangesByColumn.set(sheetKey, byCol);
+    }
+    for (let c = minCol; c <= maxCol; c++) {
+      let set = byCol.get(c);
+      if (!set) {
+        set = new Set();
+        byCol.set(c, set);
+      }
+      set.add(entry);
+    }
+  }
 
-    // For each old dependency, remove `cell` from its dependents set
-    for (const oldDep of oldDeps) {
-      const depSet = this.dependents.get(oldDep);
-      if (depSet) {
-        depSet.delete(cell);
-        if (depSet.size === 0) {
-          this.dependents.delete(oldDep);
-        }
+  private unindexRange(entry: RangeEntry): void {
+    const sheetKey = entry.range.sheet ?? '';
+    const { minCol, maxCol } = entry.range;
+    if (maxCol - minCol + 1 > MAX_INDEXED_COL_SPAN) {
+      const wide = this.wideRanges.get(sheetKey);
+      wide?.delete(entry);
+      if (wide && wide.size === 0) this.wideRanges.delete(sheetKey);
+      return;
+    }
+    const byCol = this.rangesByColumn.get(sheetKey);
+    if (!byCol) return;
+    for (let c = minCol; c <= maxCol; c++) {
+      const set = byCol.get(c);
+      if (!set) continue;
+      set.delete(entry);
+      if (set.size === 0) byCol.delete(c);
+    }
+    if (byCol.size === 0) this.rangesByColumn.delete(sheetKey);
+  }
+
+  /** Owners of ranges that contain `cell`. */
+  private rangeDependentsOf(cell: CellKey): CellKey[] {
+    if (this.rangeDependencies.size === 0) return [];
+    const { col, row, sheet } = fromCellKey(cell);
+    const sheetKey = sheet ?? '';
+    const owners: CellKey[] = [];
+    const candidates = this.rangesByColumn.get(sheetKey)?.get(col);
+    if (candidates) {
+      for (const entry of candidates) {
+        if (row >= entry.range.minRow && row <= entry.range.maxRow) owners.push(entry.owner);
       }
     }
+    const wide = this.wideRanges.get(sheetKey);
+    if (wide) {
+      for (const entry of wide) {
+        if (rangeContains(entry.range, col, row, sheet)) owners.push(entry.owner);
+      }
+    }
+    return owners;
+  }
 
-    this.dependencies.delete(cell);
+  /** Direct dependents (cell refs + ranges), deduplicated, as an array. */
+  private collectDependents(cell: CellKey): CellKey[] {
+    const direct = this.dependents.get(cell);
+    const viaRanges = this.rangeDependentsOf(cell);
+    if (viaRanges.length === 0) return direct ? Array.from(direct) : [];
+    const all = new Set<CellKey>(direct);
+    for (const owner of viaRanges) all.add(owner);
+    return Array.from(all);
   }
 
   /**
-   * Iterative DFS: check if `target` is reachable from `start` by following
-   * the dependency chain. Iterative to avoid stack overflow for deep chains.
+   * Remove `cell`'s forward dependencies (cells and ranges) and clean up the
+   * reverse indexes.
    */
-  private canReach(
-    start: CellKey,
-    target: CellKey,
-    visited: Set<CellKey>
-  ): boolean {
-    if (start === target) return true;
-    if (visited.has(start)) return false;
-
-    const stack: CellKey[] = [start];
-    visited.add(start);
-
-    while (stack.length > 0) {
-      const current = stack.pop() as string;
-      const deps = this.dependencies.get(current);
-      if (!deps) continue;
-
-      for (const dep of deps) {
-        if (dep === target) return true;
-        if (!visited.has(dep)) {
-          visited.add(dep);
-          stack.push(dep);
+  private removeDependenciesInternal(cell: CellKey): void {
+    const oldDeps = this.dependencies.get(cell);
+    if (oldDeps) {
+      // For each old dependency, remove `cell` from its dependents set
+      for (const oldDep of oldDeps) {
+        const depSet = this.dependents.get(oldDep);
+        if (depSet) {
+          depSet.delete(cell);
+          if (depSet.size === 0) {
+            this.dependents.delete(oldDep);
+          }
         }
       }
+      this.dependencies.delete(cell);
     }
 
-    return false;
+    const oldRanges = this.rangeDependencies.get(cell);
+    if (oldRanges) {
+      for (const entry of oldRanges) this.unindexRange(entry);
+      this.rangeDependencies.delete(cell);
+    }
   }
 
   /**
    * Topological sort using Kahn's algorithm.
    *
-   * 1. Collect all cells transitively dependent on the changed cell(s).
-   * 2. Build in-degree map for these cells (count how many of their
-   *    dependencies are in the affected set).
-   * 3. Start with cells whose in-degree is 0 (only depend on unaffected
+   * 1. Collect all cells transitively dependent on the changed cell(s)
+   *    (plus any `alsoRecalc` cells and their dependents).
+   * 2. Count, for each affected cell, how many affected cells it depends on.
+   * 3. Start with cells whose count is 0 (only depend on unaffected
    *    cells or the changed cells themselves).
-   * 4. Process queue: for each cell, reduce in-degree of its dependents,
-   *    add to queue when in-degree reaches 0.
+   * 4. Process queue: for each cell, reduce the count of its dependents,
+   *    add to queue when it reaches 0.
    * 5. If any cells remain unprocessed, they're in a cycle  -  append them
    *    at the end (engine marks as #CIRC!).
    */
-  private topologicalSort(changedCells: Set<CellKey>): IRecalcPlan {
+  private topologicalSort(changedCells: Set<CellKey>, alsoRecalc?: Iterable<CellKey>): IRecalcPlan {
+    // Direct dependents are computed once per visited cell and reused below.
+    const dependentsOf = new Map<CellKey, CellKey[]>();
+    const getDeps = (cell: CellKey): CellKey[] => {
+      let list = dependentsOf.get(cell);
+      if (!list) {
+        list = this.collectDependents(cell);
+        dependentsOf.set(cell, list);
+      }
+      return list;
+    };
+
     // Step 1: Collect all transitively affected cells via BFS on dependents
     const affected = new Set<CellKey>();
     const bfsQueue: CellKey[] = [];
-
+    if (alsoRecalc) {
+      for (const cell of alsoRecalc) {
+        if (!affected.has(cell)) {
+          affected.add(cell);
+          bfsQueue.push(cell);
+        }
+      }
+    }
     for (const changed of changedCells) {
-      const directDependents = this.dependents.get(changed);
-      if (directDependents) {
-        for (const dep of directDependents) {
-          if (!affected.has(dep)) {
-            affected.add(dep);
-            bfsQueue.push(dep);
-          }
+      for (const dep of getDeps(changed)) {
+        if (!affected.has(dep)) {
+          affected.add(dep);
+          bfsQueue.push(dep);
         }
       }
     }
@@ -223,13 +347,10 @@ export class DependencyGraph {
     while (head < bfsQueue.length) {
       const current = bfsQueue[head++];
       if (current === undefined) continue;
-      const currentDependents = this.dependents.get(current);
-      if (currentDependents) {
-        for (const dep of currentDependents) {
-          if (!affected.has(dep)) {
-            affected.add(dep);
-            bfsQueue.push(dep);
-          }
+      for (const dep of getDeps(current)) {
+        if (!affected.has(dep)) {
+          affected.add(dep);
+          bfsQueue.push(dep);
         }
       }
     }
@@ -238,22 +359,15 @@ export class DependencyGraph {
       return { order: [], cyclic: new Set<CellKey>() };
     }
 
-    // Step 2: Build in-degree map for affected cells
-    // In-degree = number of dependencies that are ALSO in the affected set
-    // (dependencies on changed cells or unaffected cells count as 0)
+    // Step 2: in-degree = number of affected cells each affected cell depends on
     const inDegree = new Map<CellKey, number>();
-
+    for (const cell of affected) inDegree.set(cell, 0);
     for (const cell of affected) {
-      let degree = 0;
-      const deps = this.dependencies.get(cell);
-      if (deps) {
-        for (const dep of deps) {
-          if (affected.has(dep)) {
-            degree++;
-          }
+      for (const dependent of getDeps(cell)) {
+        if (affected.has(dependent)) {
+          inDegree.set(dependent, (inDegree.get(dependent) ?? 0) + 1);
         }
       }
-      inDegree.set(cell, degree);
     }
 
     // Step 3: Start with cells whose in-degree is 0
@@ -273,15 +387,12 @@ export class DependencyGraph {
       if (cell === undefined) continue;
       result.push(cell);
 
-      const cellDependents = this.dependents.get(cell);
-      if (cellDependents) {
-        for (const dependent of cellDependents) {
-          if (affected.has(dependent)) {
-            const newDegree = (inDegree.get(dependent) ?? 0) - 1;
-            inDegree.set(dependent, newDegree);
-            if (newDegree === 0) {
-              queue.push(dependent);
-            }
+      for (const dependent of getDeps(cell)) {
+        if (affected.has(dependent)) {
+          const newDegree = (inDegree.get(dependent) ?? 0) - 1;
+          inDegree.set(dependent, newDegree);
+          if (newDegree === 0) {
+            queue.push(dependent);
           }
         }
       }

@@ -5,6 +5,9 @@ on:
   push:
     branches: [main]
 
+permissions:
+  contents: read
+
 concurrency:
   group: full-verification-${{ github.ref }}
   cancel-in-progress: true

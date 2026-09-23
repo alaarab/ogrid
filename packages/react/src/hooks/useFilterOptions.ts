@@ -1,6 +1,7 @@
 import type { FilterOption } from '@alaarab/ogrid-core';
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useLatestRef } from './useLatestRef';
+import { useIdentityVersion } from './useIdentityVersion';
 import type { IDataSource } from '../types/dataGridTypes';
 
 export interface UseFilterOptionsResult {
@@ -44,10 +45,13 @@ export function useFilterOptions(
 
   // Stabilize dataSource ref so inline objects don't cause infinite re-fetches.
   const dataSourceRef = useLatestRef(dataSource);
+  // ...but reload when a memoized dataSource is swapped for another one.
+  const dataSourceVersion = useIdentityVersion(dataSource);
 
   const [filterOptions, setFilterOptions] = useState<Record<string, FilterOption[]>>(EMPTY_FILTER_OPTIONS);
   const [loadingOptions, setLoadingOptions] = useState<Record<string, boolean>>(EMPTY_LOADING);
 
+  // biome-ignore lint/correctness/useExhaustiveDependencies: dataSourceVersion is a deliberate reload trigger; the source is read via dataSourceRef
   const load = useCallback(async (): Promise<void> => {
     const ds = dataSourceRef.current;
     const fetcher =
@@ -78,7 +82,7 @@ export function useFilterOptions(
 
     setFilterOptions(results);
     setLoadingOptions(EMPTY_LOADING);
-  }, [stableFields, dataSourceRef]);
+  }, [stableFields, dataSourceRef, dataSourceVersion]);
 
   useEffect(() => {
     load().catch((err) => {

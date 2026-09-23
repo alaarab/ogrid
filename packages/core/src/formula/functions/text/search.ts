@@ -30,6 +30,8 @@ export function registerTextSearchFunctions(registry: Map<string, IFormulaFuncti
 
         const n = Math.trunc(instanceNum);
         if (n < 1) return new FormulaError('#VALUE!', 'SUBSTITUTE instance_num must be >= 1');
+        // Excel: an empty old_text never matches.
+        if (oldText === '') return text;
 
         // Replace only the nth occurrence
         let count = 0;

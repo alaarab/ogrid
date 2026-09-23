@@ -2,9 +2,9 @@
 // or a pre-parsed WorkBook. Renders a sheet-tab strip across the top
 // and the active sheet's grid below.
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import type ExcelJS from 'exceljs';
-import { XlsxGrid } from './XlsxGrid';
+import { XlsxGrid, type XlsxGridProps } from './XlsxGrid';
 import { workbookFromBlob, type SheetToGridDataOptions } from './sheetMapper';
 
 type Source = { blob: Blob } | { workbook: ExcelJS.Workbook };
@@ -19,10 +19,14 @@ export type XlsxWorkbookGridProps = Source & {
   onSheetChange?: (sheetName: string) => void;
   /** See {@link SheetToGridDataOptions.headerRow}. Defaults to 'auto'. */
   headerRow?: SheetToGridDataOptions['headerRow'];
+  /** Per-sheet load limits; see {@link XlsxGridProps.limits}. */
+  limits?: XlsxGridProps['limits'];
 };
 
+let workbookGridInstanceCounter = 0;
+
 export function XlsxWorkbookGrid(props: XlsxWorkbookGridProps) {
-  const { height = '100%', initialSheet, density, onSheetChange, headerRow } = props;
+  const { height = '100%', initialSheet, density, onSheetChange, headerRow, limits } = props;
   const sourceBlob = 'blob' in props ? props.blob : null;
   const sourceWorkbook = 'workbook' in props ? props.workbook : null;
   const [workbook, setWorkbook] = useState<ExcelJS.Workbook | null>(sourceWorkbook);
@@ -36,6 +40,9 @@ export function XlsxWorkbookGrid(props: XlsxWorkbookGridProps) {
     if (!sourceBlob) return;
     let cancelled = false;
     setError(null);
+    // Drop the previous file's workbook so it isn't shown (and editable)
+    // while the new one parses.
+    setWorkbook(null);
     workbookFromBlob(sourceBlob)
       .then((wb) => { if (!cancelled) setWorkbook(wb); })
       .catch((e) => { if (!cancelled) setError(String(e?.message ?? e)); });
@@ -47,6 +54,29 @@ export function XlsxWorkbookGrid(props: XlsxWorkbookGridProps) {
     [workbook],
   );
   const [active, setActive] = useState<string | null>(null);
+  const [idBase] = useState(() => `ogrid-xlsx-${++workbookGridInstanceCounter}`);
+  const tabRefs = useRef(new Map<string, HTMLButtonElement>());
+
+  const selectSheet = (name: string, focus = false) => {
+    setActive(name);
+    onSheetChange?.(name);
+    if (focus) tabRefs.current.get(name)?.focus();
+  };
+
+  // WAI-ARIA tabs keyboard model: arrows move and activate, Home/End jump.
+  const onTabKeyDown = (e: React.KeyboardEvent<HTMLButtonElement>, index: number) => {
+    const last = sheetNames.length - 1;
+    const next =
+      e.key === 'ArrowRight' ? (index === last ? 0 : index + 1)
+      : e.key === 'ArrowLeft' ? (index === 0 ? last : index - 1)
+      : e.key === 'Home' ? 0
+      : e.key === 'End' ? last
+      : -1;
+    if (next < 0) return;
+    e.preventDefault();
+    const name = sheetNames[next];
+    if (name) selectSheet(name, true);
+  };
 
   // Pick the initial sheet once the workbook is in.
   useEffect(() => {
@@ -66,15 +96,20 @@ export function XlsxWorkbookGrid(props: XlsxWorkbookGridProps) {
     <div style={{ ...rootStyle, height }}>
       {sheetNames.length > 1 && (
         <div role="tablist" aria-label="Workbook sheets" style={tabsStyle}>
-          {sheetNames.map((name) => {
+          {sheetNames.map((name, index) => {
             const isActive = name === active;
             return (
               <button
                 key={name}
+                ref={(el) => { if (el) tabRefs.current.set(name, el); else tabRefs.current.delete(name); }}
+                id={`${idBase}-tab-${index}`}
                 type="button"
                 role="tab"
                 aria-selected={isActive}
-                onClick={() => { setActive(name); onSheetChange?.(name); }}
+                aria-controls={`${idBase}-panel`}
+                tabIndex={isActive ? 0 : -1}
+                onClick={() => selectSheet(name)}
+                onKeyDown={(e) => onTabKeyDown(e, index)}
                 style={isActive ? tabActiveStyle : tabStyle}
               >
                 {name}
@@ -83,8 +118,14 @@ export function XlsxWorkbookGrid(props: XlsxWorkbookGridProps) {
           })}
         </div>
       )}
-      <div style={gridWrapStyle}>
-        <XlsxGrid workbook={workbook} sheetName={active} density={density} headerRow={headerRow} />
+      <div
+        style={gridWrapStyle}
+        id={`${idBase}-panel`}
+        {...(sheetNames.length > 1
+          ? { role: 'tabpanel', 'aria-labelledby': `${idBase}-tab-${sheetNames.indexOf(active)}` }
+          : {})}
+      >
+        <XlsxGrid workbook={workbook} sheetName={active} density={density} headerRow={headerRow} limits={limits} />
       </div>
     </div>
   );

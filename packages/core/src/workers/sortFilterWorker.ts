@@ -6,6 +6,8 @@
  * and column metadata; the worker applies filters + sort and returns row indices.
  */
 
+import { compareSortKeys, compareTimestamps, toDateTimestamp, toSortKey } from './sortFilterPrimitives';
+
 // --- Worker message types ---
 
 export interface SortFilterRequest {
@@ -38,6 +40,10 @@ export interface SortFilterResponse {
  */
 export function workerBody(): void {
   const ctx = self as unknown as Worker;
+
+  // toDateTimestamp, toSortKey, compareSortKeys and compareTimestamps come
+  // from ./sortFilterPrimitives: imported here for tests, and serialized into
+  // the Blob ahead of this body by createSortFilterWorker.
 
   ctx.onmessage = (e: MessageEvent<SortFilterRequest>) => {
     const msg = e.data;
@@ -101,8 +107,7 @@ export function workerBody(): void {
               break;
             }
             case 'date': {
-              if (cellVal == null) { pass = false; break; }
-              const ts = new Date(String(cellVal)).getTime();
+              const ts = toDateTimestamp(cellVal);
               if (Number.isNaN(ts)) { pass = false; break; }
               if (!Number.isNaN(pf.fromTs) && ts < pf.fromTs) { pass = false; break; }
               if (!Number.isNaN(pf.toTs) && ts > pf.toTs) { pass = false; break; }
@@ -140,32 +145,18 @@ export function workerBody(): void {
           if (r === undefined) continue;
           const rowVals = values[r];
           const v = rowVals === undefined ? null : rowVals[columnIndex];
-          timestamps.set(r, v == null ? NaN : new Date(String(v)).getTime());
+          timestamps.set(r, toDateTimestamp(v));
         }
-        indices.sort((a, b) => {
-          const at = timestamps.get(a) as number;
-          const bt = timestamps.get(b) as number;
-          if (Number.isNaN(at) && Number.isNaN(bt)) return 0;
-          if (Number.isNaN(at)) return -1 * dir;
-          if (Number.isNaN(bt)) return 1 * dir;
-          return at === bt ? 0 : at > bt ? dir : -dir;
-        });
+        indices.sort((a, b) => compareTimestamps(timestamps.get(a) as number, timestamps.get(b) as number) * dir);
       } else {
-        indices.sort((a, b) => {
-          const rowA = values[a];
-          const rowB = values[b];
-          const av = rowA === undefined ? null : rowA[columnIndex];
-          const bv = rowB === undefined ? null : rowB[columnIndex];
-          if (av == null && bv == null) return 0;
-          if (av == null) return -1 * dir;
-          if (bv == null) return 1 * dir;
-          if (typeof av === 'number' && typeof bv === 'number') {
-            return av === bv ? 0 : av > bv ? dir : -dir;
-          }
-          const sa = String(av).toLowerCase();
-          const sb = String(bv).toLowerCase();
-          return sa === sb ? 0 : sa > sb ? dir : -dir;
-        });
+        // Sort keys once per row instead of once per comparison.
+        const keys: (string | number | undefined)[] = new Array(rowCount);
+        for (let i = 0; i < indices.length; i++) {
+          const r = indices[i];
+          if (r === undefined) continue;
+          keys[r] = toSortKey(values[r]?.[columnIndex]);
+        }
+        indices.sort((a, b) => compareSortKeys(keys[a], keys[b]) * dir);
       }
     }
 
