@@ -33,11 +33,11 @@
     },
     "packages/core": {
       "name": "@alaarab/ogrid-core",
-      "version": "2.17.0",
+      "version": "2.17.1",
     },
     "packages/docs": {
       "name": "@alaarab/ogrid-docs",
-      "version": "2.17.0",
+      "version": "2.17.1",
       "dependencies": {
         "@alaarab/ogrid-react": "2.17.0",
         "@alaarab/ogrid-react-fluent": "2.17.0",
@@ -68,7 +68,7 @@
     },
     "packages/examples": {
       "name": "@alaarab/ogrid-examples",
-      "version": "2.17.0",
+      "version": "2.17.1",
       "dependencies": {
         "@alaarab/ogrid-core": "2.17.0",
         "@alaarab/ogrid-mcp": "2.17.0",
@@ -94,11 +94,11 @@
     },
     "packages/inputs": {
       "name": "@alaarab/ogrid-inputs",
-      "version": "2.17.0",
+      "version": "2.17.1",
     },
     "packages/mcp": {
       "name": "@alaarab/ogrid-mcp",
-      "version": "2.17.0",
+      "version": "2.17.1",
       "bin": {
         "ogrid-mcp": "./dist/esm/index.js",
       },
@@ -113,7 +113,7 @@
     },
     "packages/react": {
       "name": "@alaarab/ogrid-react",
-      "version": "2.17.0",
+      "version": "2.17.1",
       "dependencies": {
         "@alaarab/ogrid-core": "2.17.0",
         "@tanstack/react-virtual": "^3.14.10",
@@ -139,7 +139,7 @@
     },
     "packages/react-fluent": {
       "name": "@alaarab/ogrid-react-fluent",
-      "version": "2.17.0",
+      "version": "2.17.1",
       "dependencies": {
         "@alaarab/ogrid-core": "2.17.0",
         "@alaarab/ogrid-react": "2.17.0",
@@ -169,7 +169,7 @@
     },
     "packages/react-inputs": {
       "name": "@alaarab/ogrid-react-inputs",
-      "version": "2.17.0",
+      "version": "2.17.1",
       "dependencies": {
         "@alaarab/ogrid-core": "2.17.0",
         "@alaarab/ogrid-inputs": "2.17.0",
@@ -190,7 +190,7 @@
     },
     "packages/react-radix": {
       "name": "@alaarab/ogrid-react-radix",
-      "version": "2.17.0",
+      "version": "2.17.1",
       "dependencies": {
         "@alaarab/ogrid-core": "2.17.0",
         "@alaarab/ogrid-react": "2.17.0",
@@ -217,7 +217,7 @@
     },
     "packages/react-xlsx": {
       "name": "@alaarab/ogrid-react-xlsx",
-      "version": "2.17.0",
+      "version": "2.17.1",
       "dependencies": {
         "@alaarab/ogrid-core": "2.17.0",
         "@alaarab/ogrid-react": "2.17.0",
@@ -242,7 +242,7 @@
     },
     "packages/react-xlsx-browser": {
       "name": "@alaarab/ogrid-react-xlsx-browser",
-      "version": "2.17.0",
+      "version": "2.17.1",
       "devDependencies": {
         "@alaarab/ogrid-react-xlsx": "2.17.0",
         "@types/react": "^19.2.18",

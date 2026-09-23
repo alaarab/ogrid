@@ -4,6 +4,8 @@ All notable changes to OGrid will be documented in this file.
 
 ## [Unreleased]
 
+## [2.17.1] - 2026-09-23
+
 ### Security
 
 - CSV export prefixes values that start with `=`, `+`, `-`, `@`, tab or CR with
