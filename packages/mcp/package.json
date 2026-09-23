@@ -1,6 +1,6 @@
 {
   "name": "@alaarab/ogrid-mcp",
-  "version": "2.17.0",
+  "version": "2.17.1",
   "description": "MCP server for OGrid documentation",
   "type": "module",
   "repository": {
@@ -15,7 +15,9 @@
   "types": "dist/esm/index.d.ts",
   "typesVersions": {
     "*": {
-      "bridge-client": ["dist/esm/bridge-client.d.ts"]
+      "bridge-client": [
+        "dist/esm/bridge-client.d.ts"
+      ]
     }
   },
   "exports": {
