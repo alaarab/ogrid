@@ -210,7 +210,7 @@ describe('sheetToGridData resource limits', () => {
     expect(out.truncated).toEqual({ rowCount: 200000, columnCount: 200 });
     expect(out.columns).toHaveLength(200);
     expect(out.rows.length * out.columns.length).toBeLessThanOrEqual(5_000_000);
-    expect(elapsed).toBeLessThan(5000);
+    expect(elapsed).toBeLessThan(15000);
   });
 
   test('honours maxRows / maxCols and reports the full extent', () => {

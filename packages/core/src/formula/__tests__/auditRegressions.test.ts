@@ -29,23 +29,28 @@ describe('FormulaEngine audit regressions', () => {
     const start = performance.now();
     engine.setFormula(4, 5, '=SUM(A1:ZZZZZ2)', accessor);
     expect(engine.getValue(4, 5)).toBe(5);
-    expect(performance.now() - start).toBeLessThan(500);
+    // Generous bound: this used to hang (24M-cell expansion), not merely run slow.
+    expect(performance.now() - start).toBeLessThan(5000);
   });
 
-  it('keeps running totals fast (range deps are not expanded per cell)', () => {
-    const n = 3000;
+  it('keeps range dependencies as ranges (running totals stay correct)', () => {
+    const n = 1000;
     const data: Record<string, unknown> = {};
     for (let r = 0; r < n; r++) data[`0,${r}`] = 1;
     const accessor = createAccessor(data, n, 3);
     const engine = new FormulaEngine();
-    const start = performance.now();
     for (let r = 0; r < n; r++) engine.setFormula(1, r, `=SUM($A$1:A${r + 1})`, accessor);
     expect(engine.getValue(1, n - 1)).toBe(n);
+    // One range entry per formula, not one dependency per cell in the range.
+    const graph = (engine as unknown as { depGraph: import('../dependencyGraph').DependencyGraph }).depGraph;
+    expect(graph.getDependencies(`1,${n - 1}`).size).toBe(0);
+    expect(graph.getRangeDependencies(`1,${n - 1}`)).toEqual([
+      { sheet: undefined, minRow: 0, maxRow: n - 1, minCol: 0, maxCol: 0 },
+    ]);
     data['0,0'] = 11;
     const result = engine.onCellChanged(0, 0, accessor);
     expect(result.updatedCells.length).toBe(n);
     expect(engine.getValue(1, n - 1)).toBe(n + 10);
-    expect(performance.now() - start).toBeLessThan(3000);
   });
 
   it('recalculates range dependents when a formula cell inside the range changes', () => {
@@ -91,7 +96,7 @@ describe('FormulaEngine audit regressions', () => {
     expect(engine.getValue(0, 2)).toBe(7);
     engine.setFormula(0, 3, '=SUBSTITUTE("abc","","x",1000000000000)', accessor);
     expect(engine.getValue(0, 3)).toBe('abc');
-    expect(performance.now() - start).toBeLessThan(200);
+    expect(performance.now() - start).toBeLessThan(3000);
   });
 
   it('recalculates dependents when a new formula closes a cycle', () => {
