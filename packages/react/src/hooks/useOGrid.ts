@@ -290,7 +290,7 @@ export function useOGrid<T>(
   });
 
   const dataFetchingState = useOGridDataFetching({
-    isServerSide, dataSource, displayData, columns,
+    isServerSide, dataSource, displayData, getRowId, columns,
     stableFilters: filtersState.stableFilters,
     sort: sortingState.sort,
     sortVersion: sortingState.sortVersion,

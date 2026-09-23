@@ -7,6 +7,9 @@ on:
     branches: [ main ]
   workflow_dispatch:
 
+permissions:
+  contents: read
+
 concurrency:
   group: ci-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
@@ -112,6 +115,12 @@ jobs:
           TURBO_TOKEN: ${{ secrets.TURBO_TOKEN }}
           TURBO_TEAM: ${{ vars.TURBO_TEAM }}
 
+      - name: Run core tests west and east of UTC
+        # Date parsing/filtering bugs only show up away from UTC.
+        run: |
+          (cd packages/core && TZ=America/Los_Angeles bun run test)
+          (cd packages/core && TZ=Pacific/Auckland bun run test)
+
   build-and-size:
     runs-on: ubuntu-latest
     timeout-minutes: 20
@@ -149,6 +158,9 @@ jobs:
 
       - name: Check bundle size
         run: bun run size
+
+      - name: Check published type resolution (node16 + bundler)
+        run: bun run check:types
 
   browser-smoke:
     runs-on: ubuntu-latest
@@ -191,6 +203,7 @@ jobs:
             --filter=@alaarab/ogrid-core \
             --filter=@alaarab/ogrid-react \
             --filter=@alaarab/ogrid-react-radix \
+            --filter=@alaarab/ogrid-react-fluent \
             --filter=@alaarab/ogrid-react-xlsx \
             --filter=@alaarab/ogrid-inputs \
             --filter=@alaarab/ogrid-react-inputs
@@ -201,5 +214,13 @@ jobs:
       - name: Install Playwright Chromium
         run: bunx playwright install --with-deps chromium
 
-      - name: Run browser smoke suite
+      - name: Run browser smoke suite (Radix + Fluent)
         run: bun run test:e2e:smoke
+
+      - name: Upload Playwright report
+        if: failure()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: playwright-report
+          path: playwright-report/
+          retention-days: 7

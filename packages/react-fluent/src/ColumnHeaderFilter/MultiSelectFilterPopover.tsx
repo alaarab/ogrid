@@ -2,7 +2,7 @@ import { getFilterOptionLabel, getFilterOptionValue } from '@alaarab/ogrid-core'
 import type { FilterOption } from '@alaarab/ogrid-core';
 import * as React from 'react';
 import { SearchRegular } from '@fluentui/react-icons';
-import { useListVirtualizer } from '@alaarab/ogrid-react';
+import { useListVirtualizer, useCoarsePointer } from '@alaarab/ogrid-react';
 import styles from './ColumnHeaderFilter.module.scss';
 
 const ITEM_HEIGHT = 40;
@@ -42,7 +42,9 @@ export const MultiSelectFilterPopover: React.FC<MultiSelectFilterPopoverProps> =
   onInputClick,
   onInputKeyDown,
 }) => {
-  const virt = useListVirtualizer({ count: filteredOptions.length, itemHeight: ITEM_HEIGHT });
+  // Match the 44px coarse-pointer min-height in the stylesheet, or virtual rows overlap.
+  const itemHeight = useCoarsePointer() ? 44 : ITEM_HEIGHT;
+  const virt = useListVirtualizer({ count: filteredOptions.length, itemHeight });
 
   return (
     <>
@@ -108,7 +110,7 @@ export const MultiSelectFilterPopover: React.FC<MultiSelectFilterPopoverProps> =
                 <label
                   key={value}
                   className={styles.popoverOption}
-                  style={{ position: 'absolute', top: offsetTop, width: '100%', height: ITEM_HEIGHT, boxSizing: 'border-box', display: 'flex', alignItems: 'center' }}
+                  style={{ position: 'absolute', top: offsetTop, width: '100%', height: itemHeight, boxSizing: 'border-box', display: 'flex', alignItems: 'center' }}
                 >
                   <input
                     type="checkbox"

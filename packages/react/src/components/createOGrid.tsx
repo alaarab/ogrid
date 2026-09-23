@@ -31,6 +31,8 @@ export interface GridRowProps {
   hasCheckboxCol: boolean;
   hasRowNumbersCol: boolean;
   rowNumberOffset: number;
+  /** aria-rowindex of the first data row minus 1 (header rows + page offset). */
+  ariaRowIndexBase?: number;
   // Comparator-only props (drive re-render decisions, not used in render body)
   selectionRange: { startRow: number; endRow: number; startCol: number; endCol: number } | null;
   activeCell: { rowIndex: number; columnIndex: number } | null;

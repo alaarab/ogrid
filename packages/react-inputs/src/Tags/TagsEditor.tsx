@@ -205,7 +205,7 @@ export function TagsEditor<T>(props: ICellEditorProps<T>): React.ReactElement {
   const inputRef = React.useRef<HTMLInputElement>(null);
   // Stable per-instance id linking the combobox input to its listbox
   // (React.useId needs React 18; this package supports React 17 peers).
-  const listboxId = React.useRef(`ogrid-tags-listbox-${++tagsEditorInstanceCounter}`).current;
+  const [listboxId] = React.useState(() => `ogrid-tags-listbox-${++tagsEditorInstanceCounter}`);
 
   // In multi-select mode: show all available suggestions (not yet selected) when input is empty,
   // or filter them when user types. In regular mode: only show suggestions when typing.

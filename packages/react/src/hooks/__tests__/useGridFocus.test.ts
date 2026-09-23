@@ -1,3 +1,4 @@
+import React from 'react';
 import { renderHook, act } from '@testing-library/react';
 import { useGridFocus } from '../useGridFocus';
 import { useRangeSelection } from '../useRangeSelection';
@@ -188,5 +189,36 @@ describe('useGridFocus', () => {
     const handler = result.current.getKeyDownHandler();
     act(() => handler({ key: 'a' }));
     expect(result.current.activeCell).toEqual({ row: 0, col: 0 });
+  });
+});
+
+describe('useGridFocus audit regressions', () => {
+  it('first ArrowDown with no active cell focuses (0,0)', () => {
+    const { result } = renderHook(() => useGridFocus({ rowCount: 5, colCount: 3 }));
+    act(() => { result.current.moveDown(); });
+    expect(result.current.activeCell).toEqual({ row: 0, col: 0 });
+  });
+
+  it('chains several moves in one tick', () => {
+    const { result } = renderHook(() => useGridFocus({ rowCount: 5, colCount: 3 }));
+    act(() => {
+      result.current.setActiveCell({ row: 0, col: 0 });
+      result.current.moveDown();
+      result.current.moveDown();
+      result.current.moveRight();
+    });
+    expect(result.current.activeCell).toEqual({ row: 2, col: 1 });
+  });
+
+  it('calls rangeSelection outside the state updater (once per move under StrictMode)', () => {
+    const startRange = jest.fn();
+    const rangeSelection = { startRange, extendRange: jest.fn() } as unknown as Parameters<typeof useGridFocus>[0]['rangeSelection'];
+    const { result } = renderHook(() => useGridFocus({ rowCount: 5, colCount: 3, rangeSelection }), {
+      wrapper: React.StrictMode,
+    });
+    act(() => { result.current.setActiveCell({ row: 1, col: 1 }); });
+    act(() => { result.current.moveDown(); });
+    expect(startRange).toHaveBeenCalledTimes(1);
+    expect(startRange).toHaveBeenCalledWith(2, 1);
   });
 });

@@ -94,6 +94,8 @@ export {
   useListVirtualizer,
   useGridVirtualization,
   useLatestRef,
+  usePortalTheme,
+  useCoarsePointer,
   usePaginationControls,
   useDataGridTableOrchestration,
   useColumnMeta,

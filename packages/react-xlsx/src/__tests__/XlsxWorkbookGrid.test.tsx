@@ -57,3 +57,25 @@ describe('XlsxWorkbookGrid', () => {
     await waitFor(() => expect(screen.getByText(/Could not parse workbook/)).toBeInTheDocument());
   });
 });
+
+describe('XlsxWorkbookGrid sheet tabs keyboard', () => {
+  test('arrow keys move and activate tabs; tabs control the panel', async () => {
+    const changes: string[] = [];
+    render(<XlsxWorkbookGrid workbook={buildWorkbook()} height={400} onSheetChange={(n) => changes.push(n)} />);
+    await waitFor(() => expect(screen.getByText('99')).toBeInTheDocument());
+    const orders = screen.getByRole('tab', { name: 'Orders' });
+    const summary = screen.getByRole('tab', { name: 'Summary' });
+    expect(orders.getAttribute('tabindex')).toBe('0');
+    expect(summary.getAttribute('tabindex')).toBe('-1');
+    const panel = screen.getByRole('tabpanel');
+    expect(orders.getAttribute('aria-controls')).toBe(panel.id);
+    expect(panel.getAttribute('aria-labelledby')).toBe(orders.id);
+
+    orders.focus();
+    fireEvent.keyDown(orders, { key: 'ArrowRight' });
+    expect(changes).toEqual(['Summary']);
+    await waitFor(() => expect(document.activeElement).toBe(screen.getByRole('tab', { name: 'Summary' })));
+    fireEvent.keyDown(document.activeElement as Element, { key: 'ArrowRight' });
+    expect(changes).toEqual(['Summary', 'Orders']);
+  });
+});

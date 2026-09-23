@@ -3,19 +3,40 @@ export interface CsvColumn {
   name: string;
 }
 
-export function escapeCsvValue(value: unknown): string {
+export interface CsvEscapeOptions {
+  /**
+   * Prefix text that a spreadsheet would run as a formula (leading `=`, `+`,
+   * `-`, `@`, tab or CR) with `'` so opening the CSV can't execute it
+   * (CSV/formula injection). Plain numbers like `-5` are left alone.
+   * Default: true.
+   */
+  preventFormulaInjection?: boolean;
+}
+
+const FORMULA_TRIGGER_RE = /^[=+\-@\t\r]/;
+const NUMERIC_RE = /^[+-]?(\d+\.?\d*|\.\d+)(e[+-]?\d+)?$/i;
+
+export function escapeCsvValue(value: unknown, options?: CsvEscapeOptions): string {
   if (value === null || value === undefined) {
     return '';
   }
-  const s = String(value);
-  if (s.includes(',') || s.includes('"') || s.includes('\n')) {
+  let s = String(value);
+  if (
+    options?.preventFormulaInjection !== false &&
+    typeof value === 'string' &&
+    FORMULA_TRIGGER_RE.test(s) &&
+    !NUMERIC_RE.test(s)
+  ) {
+    s = `'${s}`;
+  }
+  if (s.includes(',') || s.includes('"') || s.includes('\n') || s.includes('\r')) {
     return `"${s.replace(/"/g, '""')}"`;
   }
   return s;
 }
 
-export function buildCsvHeader(columns: CsvColumn[]): string {
-  return columns.map((c) => escapeCsvValue(c.name)).join(',');
+export function buildCsvHeader(columns: CsvColumn[], options?: CsvEscapeOptions): string {
+  return columns.map((c) => escapeCsvValue(c.name, options)).join(',');
 }
 
 export interface FormulaExportOptions {
@@ -25,6 +46,11 @@ export interface FormulaExportOptions {
   columnIdToIndex?: Map<string, number>;
   /** Export mode: 'values' (default) exports computed results, 'formulas' exports formula strings */
   exportMode?: 'values' | 'formulas';
+  /**
+   * See {@link CsvEscapeOptions.preventFormulaInjection}. Default: true.
+   * Formula strings written in `exportMode: 'formulas'` are never prefixed.
+   */
+  preventFormulaInjection?: boolean;
 }
 
 export function buildCsvRows<T>(
@@ -33,6 +59,9 @@ export function buildCsvRows<T>(
   getValue: (item: T, columnId: string) => unknown,
   formulaOptions?: FormulaExportOptions
 ): string[] {
+  const escapeOptions: CsvEscapeOptions = {
+    preventFormulaInjection: formulaOptions?.preventFormulaInjection,
+  };
   return items.map((item, rowIdx) =>
     columns.map((col) => {
       // If exporting formulas and cell has a formula, use formula string
@@ -45,11 +74,11 @@ export function buildCsvRows<T>(
         const colIdx = formulaOptions.columnIdToIndex.get(col.columnId);
         if (colIdx !== undefined && formulaOptions.hasFormula(colIdx, rowIdx)) {
           const formula = formulaOptions.getFormula(colIdx, rowIdx);
-          if (formula) return escapeCsvValue(formula);
+          if (formula) return escapeCsvValue(formula, { preventFormulaInjection: false });
         }
       }
       // Default: export computed value
-      return escapeCsvValue(getValue(item, col.columnId));
+      return escapeCsvValue(getValue(item, col.columnId), escapeOptions);
     }).join(',')
   );
 }
@@ -61,7 +90,9 @@ export function exportToCsv<T>(
   filename?: string,
   formulaOptions?: FormulaExportOptions
 ): void {
-  const header = buildCsvHeader(columns);
+  const header = buildCsvHeader(columns, {
+    preventFormulaInjection: formulaOptions?.preventFormulaInjection,
+  });
   const rows = buildCsvRows(items, columns, getValue, formulaOptions);
   const csv = [header, ...rows].join('\n');
   triggerCsvDownload(csv, filename ?? `export_${new Date().toISOString().slice(0, 10)}.csv`);

@@ -12,12 +12,20 @@
     "ogrid-mcp": "./dist/esm/index.js"
   },
   "main": "./dist/esm/index.js",
+  "types": "dist/esm/index.d.ts",
+  "typesVersions": {
+    "*": {
+      "bridge-client": ["dist/esm/bridge-client.d.ts"]
+    }
+  },
   "exports": {
     ".": {
+      "types": "./dist/esm/index.d.ts",
       "import": "./dist/esm/index.js",
       "default": "./dist/esm/index.js"
     },
     "./bridge-client": {
+      "types": "./dist/esm/bridge-client.d.ts",
       "import": "./dist/esm/bridge-client.js",
       "default": "./dist/esm/bridge-client.js"
     }
@@ -28,7 +36,7 @@
   ],
   "scripts": {
     "prebuild": "node scripts/bundle-docs.mjs",
-    "build": "tsup && tsc -p tsconfig.json --emitDeclarationOnly --outDir dist/esm",
+    "build": "tsup && tsc -p tsconfig.json --emitDeclarationOnly --outDir dist/esm && node ../../scripts/fix-dts-extensions.mjs dist/esm",
     "dev": "tsup --watch",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "test": "bun test --preload ../../bun-test.setup.ts"

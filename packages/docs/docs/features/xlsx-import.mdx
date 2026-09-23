@@ -71,6 +71,13 @@ function SingleSheet({ file }: { file: Blob }) {
 | `density` | `'compact' \| 'normal' \| 'comfortable'` | `'compact'` | Row height. |
 | `onSheetChange` | `(name: string) => void` | — | Fired when the user clicks a sheet tab. |
 | `headerRow` | `'auto' \| 'header' \| 'none'` | `'auto'` | Whether to promote row 1 to the header. `'auto'` detects strings-only top rows; `'header'` forces it; `'none'` uses A/B/C letters. |
+| `limits` | `{ maxRows?, maxCols?, maxCells? }` | 1,048,576 rows / 1,000 cols / 5,000,000 cells | Load caps per sheet. A small file can declare a huge used range; anything past the caps is dropped and a notice is shown above the grid. |
+
+### Untrusted files
+
+Only populated cells are read, and each sheet is capped by `limits`. `sheetToGridData(sheet, { maxRows, maxCols, maxCells })` applies the same caps and returns `truncated: { rowCount, columnCount }` (the full size) when it cut the sheet.
+
+`@alaarab/ogrid-react-xlsx` requires React 18 or 19.
 
 ### Format support
 

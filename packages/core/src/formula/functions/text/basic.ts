@@ -163,6 +163,8 @@ export function registerBasicTextFunctions(registry: Map<string, IFormulaFunctio
       if (times instanceof FormulaError) return times;
       const n = Math.trunc(times);
       if (n < 0) return new FormulaError('#VALUE!', 'REPT number must be >= 0');
+      // Excel's cell text limit; also stops =REPT("x",1e10) exhausting memory.
+      if (text.length * n > 32767) return new FormulaError('#VALUE!', 'REPT result exceeds 32767 characters');
       return text.repeat(n);
     },
   });

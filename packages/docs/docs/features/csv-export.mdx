@@ -65,8 +65,9 @@ The `OGrid` component has the same props across all React UI packages. To switch
 exportToCsv<T>(
   items: T[],
   columns: CsvColumn[],
-  getValue: (item: T, columnId: string) => string,
-  filename?: string
+  getValue: (item: T, columnId: string) => unknown,
+  filename?: string,
+  formulaOptions?: FormulaExportOptions
 ): void
 ```
 
@@ -75,13 +76,15 @@ exportToCsv<T>(
 | `items` | `T[]` | The row data to export |
 | `columns` | `CsvColumn[]` | Array of `{ columnId, name }` defining which columns to include and their header names |
 | `getValue` | `(item, columnId) => string` | Function to extract the display value for each cell |
-| `filename` | `string` (optional) | Download filename (default: `'export.csv'`) |
+| `filename` | `string` (optional) | Download filename (default: `export_YYYY-MM-DD.csv`) |
+| `formulaOptions` | `FormulaExportOptions` (optional) | Formula export settings, plus `preventFormulaInjection` (default `true`) |
 
 The function:
 1. Builds a CSV header row from `columns[].name`.
 2. Iterates over each item and calls `getValue` for each column.
-3. Escapes values containing commas, quotes, or newlines.
-4. Triggers a browser download with the specified filename.
+3. Escapes values containing commas, quotes, or line breaks.
+4. Guards against CSV (formula) injection: text starting with `=`, `+`, `-`, `@`, a tab or a carriage return is prefixed with `'`, so a spreadsheet opening the file shows it as text instead of running it. Plain numbers such as `-5` are left alone. Pass `{ preventFormulaInjection: false }` to turn this off, for example when a trusted consumer needs the raw text. Formulas written with `exportMode: 'formulas'` are never prefixed.
+5. Triggers a browser download with the specified filename.
 
 ### Context Menu Integration
 

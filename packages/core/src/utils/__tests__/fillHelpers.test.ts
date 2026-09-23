@@ -393,3 +393,15 @@ describe('areFillCompatible', () => {
     expect(areFillCompatible(a, b)).toBe(false);
   });
 });
+
+describe('applyFillValues with a source that is not the top-left cell', () => {
+  it('copies the source value upward instead of the range start value', () => {
+    const items = [{ v: 'a' }, { v: 'b' }, { v: 'src' }];
+    const cols: IColumnDef<{ v: string }>[] = [{ columnId: 'v', name: 'V', editable: true }];
+    const events = applyFillValues({ startRow: 0, startCol: 0, endRow: 2, endCol: 0 }, 2, 0, items, cols);
+    expect(events.map((e) => [e.rowIndex, e.newValue])).toEqual([
+      [0, 'src'],
+      [1, 'src'],
+    ]);
+  });
+});

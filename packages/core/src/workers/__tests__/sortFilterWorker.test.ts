@@ -121,4 +121,35 @@ describe('workerBody', () => {
     });
     expect(indices).toEqual([1, 2, 0]);
   });
+
+  it('treats bare YYYY-MM-DD cells as local dates so same-day filters match', () => {
+    const indices = runWorker({
+      values: [['2024-01-14'], ['2024-01-15'], ['2024-01-16']],
+      columnMeta: dateMeta,
+      filters: { 0: { type: 'date', value: { from: '2024-01-15', to: '2024-01-15' } } },
+    });
+    expect(indices).toEqual([1]);
+  });
+
+  it('accepts numeric timestamps in date columns', () => {
+    const ts = new Date(2024, 0, 15, 12).getTime();
+    const indices = runWorker({
+      values: [[ts]],
+      columnMeta: dateMeta,
+      filters: { 0: { type: 'date', value: { from: '2024-01-15', to: '2024-01-15' } } },
+    });
+    expect(indices).toEqual([0]);
+  });
+
+  it('orders mixed number/string values the same regardless of input order', () => {
+    const run = (values: (string | number)[]) =>
+      runWorker({
+        values: values.map((v) => [v]),
+        columnMeta: textMeta,
+        filters: {},
+        sort: { columnIndex: 0, direction: 'asc' },
+      }).map((i) => values[i]);
+    expect(run([5, '10', '3'])).toEqual([5, '10', '3']);
+    expect(run(['3', 5, '10'])).toEqual([5, '10', '3']);
+  });
 });

@@ -201,10 +201,11 @@ export function useDataGridInteraction<T>(
       }
 
       (wrapperRef as RefObject<HTMLDivElement | null>).current?.focus({ preventScroll: true });
-      clearClipboardRanges();
+      // Clicking another cell keeps a pending cut/copy (Excel behavior), so
+      // "cut, click the destination, paste" moves the cells. Escape clears it.
       handleCellMouseDownBase(e, rowIndex, globalColIndex);
     },
-    [handleCellMouseDownBase, clearClipboardRanges, wrapperRef, onFormulaInsertReferenceRef, colOffset]
+    [handleCellMouseDownBase, wrapperRef, onFormulaInsertReferenceRef, colOffset]
   );
 
   const fillFormulaOptions = useMemo<IFillFormulaOptions<T> | undefined>(() => {
@@ -230,7 +231,7 @@ export function useDataGridInteraction<T>(
   const { handleGridKeyDown } = useKeyboardNavigation({
     data: { items, visibleCols, colOffset, hasCheckboxCol, visibleColumnCount, getRowId },
     state: { activeCell, selectionRange, editingCell, selectedRowIds },
-    handlers: { setActiveCell, setSelectionRange, setEditingCell, handleRowCheckboxChange, handleCopy, handleCut, handlePaste, setContextMenu: setContextMenuPosition, onUndo: undoRedo.undo, onRedo: undoRedo.redo, clearClipboardRanges },
+    handlers: { setActiveCell, setSelectionRange, setEditingCell, handleRowCheckboxChange, handleCopy, handleCut, handlePaste, setContextMenu: setContextMenuPosition, onUndo: undoRedo.undo, onRedo: undoRedo.redo, clearClipboardRanges, beginBatch: undoRedo.beginBatch, endBatch: undoRedo.endBatch },
     features: { editable, onCellValueChanged, rowSelection: rowSelection ?? 'none', wrapperRef, onKeyDown, fillDown },
   });
 

@@ -23,7 +23,10 @@ export function formatCellValueForTsv(
   const val = formatted != null && formatted !== '' ? formatted : raw;
   if (val == null || val === '') return '';
   try {
-    return String(val).replace(/[\t\n]/g, ' ');
+    const s = String(val);
+    // Excel/Sheets convention: cells containing tabs or line breaks are
+    // quoted (inner quotes doubled) so they survive a paste intact.
+    return /[\t\r\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
   } catch {
     return '[Object]';
   }
@@ -88,15 +91,70 @@ export function formatSelectionAsTsv<T>(
 
 /**
  * Parse a TSV clipboard string into a 2D array of cell strings.
- * Handles both \\r\\n and \\n line endings. Ignores trailing empty lines.
+ * Handles \r\n and \n line endings and Excel-style quoted cells (a cell that
+ * starts with `"` may contain tabs, line breaks and `""` escaped quotes).
+ * Interior blank lines are kept as empty rows; only the single trailing line
+ * break that spreadsheets append is dropped.
  *
  * @param text  Raw clipboard text (TSV format).
  * @returns 2D array: rows of cells. Empty if text is blank.
  */
 export function parseTsvClipboard(text: string): string[][] {
   if (!text.trim()) return [];
-  const lines = text.split(/\r?\n/).filter((l) => l.length > 0);
-  return lines.map((line) => line.split('\t'));
+  const rows: string[][] = [];
+  let row: string[] = [];
+  const len = text.length;
+  let i = 0;
+  while (i <= len) {
+    let cell = '';
+    let quotedEnd = -1;
+    if (text[i] === '"') {
+      // Find the closing quote that is followed by a delimiter or end of text.
+      let j = i + 1;
+      let buf = '';
+      while (j < len) {
+        const ch = text[j];
+        if (ch === '"') {
+          if (text[j + 1] === '"') {
+            buf += '"';
+            j += 2;
+            continue;
+          }
+          const next = text[j + 1];
+          if (next === undefined || next === '\t' || next === '\n' || next === '\r') {
+            quotedEnd = j + 1;
+            cell = buf;
+          }
+          break;
+        }
+        buf += ch;
+        j++;
+      }
+    }
+    if (quotedEnd !== -1) {
+      i = quotedEnd;
+    } else {
+      // Unquoted (or unterminated quote): read up to the next delimiter literally.
+      let j = i;
+      while (j < len && text[j] !== '\t' && text[j] !== '\n' && text[j] !== '\r') j++;
+      cell = text.slice(i, j);
+      i = j;
+    }
+    row.push(cell);
+    const ch = text[i];
+    if (ch === '\t') {
+      i++;
+    } else if (ch === '\r' || ch === '\n') {
+      i += ch === '\r' && text[i + 1] === '\n' ? 2 : 1;
+      rows.push(row);
+      row = [];
+      if (i >= len) break; // trailing line break: no extra empty row
+    } else {
+      rows.push(row);
+      break;
+    }
+  }
+  return rows;
 }
 
 /**

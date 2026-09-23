@@ -193,3 +193,44 @@ describe('sheetToGridData', () => {
     expect(out.rows[0].A).toBe('Hello world');
   });
 });
+
+describe('sheetToGridData resource limits', () => {
+  test('a single far-away cell does not allocate the declared rectangle', async () => {
+    // Round-trip through xlsx bytes so the declared dimension comes from the file.
+    const src = new ExcelJS.Workbook();
+    const ws = src.addWorksheet('s');
+    ws.getCell(1, 1).value = 'x';
+    ws.getCell(200000, 200).value = 1;
+    const buf = await src.xlsx.writeBuffer();
+    const wb = new ExcelJS.Workbook();
+    await wb.xlsx.load(buf as ArrayBuffer);
+    const start = performance.now();
+    const out = sheetToGridData(wb.getWorksheet('s'), { headerRow: 'none' });
+    const elapsed = performance.now() - start;
+    expect(out.truncated).toEqual({ rowCount: 200000, columnCount: 200 });
+    expect(out.columns).toHaveLength(200);
+    expect(out.rows.length * out.columns.length).toBeLessThanOrEqual(5_000_000);
+    expect(elapsed).toBeLessThan(5000);
+  });
+
+  test('honours maxRows / maxCols and reports the full extent', () => {
+    const sheet = buildSheet([
+      [1, 2, 3],
+      [4, 5, 6],
+      [7, 8, 9],
+    ]);
+    const out = sheetToGridData(sheet, { headerRow: 'none', maxRows: 2, maxCols: 2 });
+    expect(out.rows.map((r) => [r.A, r.B])).toEqual([[1, 2], [4, 5]]);
+    expect(out.columns.map((c) => c.columnId)).toEqual(['A', 'B']);
+    expect(out.truncated).toEqual({ rowCount: 3, columnCount: 3 });
+  });
+
+  test('leaves truncated unset for sheets within limits and keeps interior blanks', () => {
+    const sheet = buildSheet([[1, null, 3], [], [7, 8, 9]]);
+    const out = sheetToGridData(sheet, { headerRow: 'none' });
+    expect(out.truncated).toBeUndefined();
+    expect(out.rows).toHaveLength(3);
+    expect(out.rows[1]?.A).toBe('');
+    expect(out.rows[0]?.B).toBe('');
+  });
+});

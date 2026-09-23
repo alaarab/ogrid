@@ -103,8 +103,8 @@ export interface DataGridPrimitives {
   omitLeafRowSpan?: boolean;
   /**
    * Pass `true` to use the delegated (stable, zero-per-cell-closure) cell
-   * interaction handlers. Radix opts in; Fluent uses the per-cell-closure
-   * fallback path (it never passed delegated handlers historically).
+   * interaction handlers. Both built-in kits opt in; omit it to fall back to
+   * per-cell closures.
    */
   useDelegatedCellHandlers?: boolean;
   /** Resolve the portal target for the context menu. Defaults to document.body. */

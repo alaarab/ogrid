@@ -160,6 +160,8 @@ export function useColumnReorder<T>(params: UseColumnReorderParams<T>): UseColum
       const cleanup = () => {
         window.removeEventListener('pointermove', onMove, true);
         window.removeEventListener('pointerup', onUp, true);
+        window.removeEventListener('pointercancel', onCancel, true);
+        window.removeEventListener('blur', onCancel);
         cleanupRef.current = null;
 
         // Restore user-select and cursor
@@ -187,8 +189,18 @@ export function useColumnReorder<T>(params: UseColumnReorderParams<T>): UseColum
         setDropIndicatorX(null);
       };
 
+      // Pointer cancelled (touch pan takeover) or window lost: abort the drag
+      // without reordering.
+      const onCancel = () => {
+        cleanup();
+        setIsDragging(false);
+        setDropIndicatorX(null);
+      };
+
       window.addEventListener('pointermove', onMove, true);
       window.addEventListener('pointerup', onUp, true);
+      window.addEventListener('pointercancel', onCancel, true);
+      window.addEventListener('blur', onCancel);
       cleanupRef.current = cleanup;
     },
     [enabled, wrapperRef]

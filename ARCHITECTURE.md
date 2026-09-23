@@ -163,65 +163,38 @@ package.json          to  ESM, no CJS, tree-shakeable, peer deps
 
 All components use CSS variables for light/dark mode support:
 
-| Variable | Purpose | Default |
+| Variable | Purpose | Light / dark default |
 |----------|---------|---------|
-| `--ogrid-bg` | Background | `#fff` / `#1e1e1e` |
-| `--ogrid-fg` | Text | `#242424` / `#e0e0e0` |
+| `--ogrid-bg` | Background | `#ffffff` / `#1e1e1e` |
+| `--ogrid-fg` | Text | `rgba(0,0,0,0.87)` / `rgba(255,255,255,0.87)` |
 | `--ogrid-border` | Borders | `rgba(0,0,0,0.12)` |
-| `--ogrid-accent` | Selected/active | `#0078d4` |
-| `--ogrid-shadow` | Shadows | `0 4px 16px rgba(0,0,0,0.15)` |
-| `--ogrid-muted` | Disabled/secondary | `#888` |
-| `--ogrid-bg-hover` | Hover backgrounds | `#f0f0f0` / `#2a2a2a` |
-| `--ogrid-selection` | Cell selection color | `#217346` |
-| `--ogrid-formula-error-color` | Formula errors | `#dc3545` |
+| `--ogrid-accent` | Selected/active | `#0078d4` / `#4da6ff` |
+| `--ogrid-shadow` | Popover and menu shadows | `0 4px 16px rgba(0,0,0,0.12)` |
+| `--ogrid-muted` | Disabled/secondary | `rgba(0,0,0,0.5)` / `rgba(255,255,255,0.5)` |
+| `--ogrid-hover-bg` | Hover backgrounds | `rgba(0,0,0,0.04)` / `rgba(255,255,255,0.08)` |
+| `--ogrid-selection-color` | Cell selection border | `#217346` / `#2ea043` |
+| `--ogrid-range-bg` | Selected range fill | `rgba(33,115,70,0.12)` |
+| `--ogrid-formula-error-color` | Formula errors | `#d32f2f` / `#ef5350` |
+
+The full list lives in `packages/core/src/styles/_ogrid-theme.scss`. Defaults use `:where()` (zero specificity), so a consumer override on `:root`, a wrapper, `[data-theme]` or `.dark` wins. Inside Fluent, the kit derives these from Fluent tokens on the `FluentProvider`, so custom values must be set on the provider or on a wrapper inside it. Menus and popovers portaled to `<body>` copy the grid's tokens via `usePortalTheme`.
 
 ## Known Patterns
 
-### Cell Editor Patterns (All Frameworks)
+### Cell Editor Pattern
 ```typescript
-// React
 function MyEditor<T>(props: ICellEditorProps<T>): ReactElement {
   const { value, onValueChange, onCommit, onCancel } = props;
   return <div onMouseDown={(e) => e.stopPropagation()}>...</div>;
-}
-
-// Angular
-@Component({
-  standalone: true,
-  template: `<div (mousedown)="$event.stopPropagation()">...</div>`,
-})
-export class MyEditorComponent {
-  @Input() value: unknown;
-  @Input() onValueChange!: (v: unknown) => void;
-  @Input() onCommit!: () => void;
-  @Input() onCancel!: () => void;
-}
-
-// Vue
-export const MyEditor = defineComponent({
-  props: { value, onValueChange, onCommit, onCancel, ... },
-  setup(props) {
-    return () => h('div', { onMousedown: (e) => e.stopPropagation() }, ...);
-  },
-});
-
-// JS
-export function createMyEditor(context: MyEditorContext): HTMLElement {
-  const root = document.createElement('div');
-  root.addEventListener('mousedown', (e) => e.stopPropagation());
-  return root;
 }
 ```
 
 All editors support: Escape = cancel, Enter = commit (usually), focus on mount, popover root style.
 
 ### State Orchestration Pattern
-- React: `useOGrid` + `useDataGridState` (composed from 6 sub-hooks)
-- Angular: `OGridService` + `DataGridStateService` (signals-based)
-- Vue: `useOGrid` + `useDataGridState` (composables)
-- JS: `GridState` + `SelectionState` (class-based + EventEmitter)
+- `<OGrid>`: `useOGrid` + `useDataGridState` (composed from sub-hooks), rendered through the shared `BaseDataGridTable` with kit-specific primitives (Radix or Fluent).
+- Headless: `useHeadlessGrid` plus the spreadsheet hooks (`useInlineEdit`, `useRangeSelection`, `useFillHandle`, `useCellClipboard`, `useUndoRedo`, `useGridFocus`) on your own table.
 
-All expose: columns, sorting, filtering, pagination, selection, editing, sidebar, undo/redo, etc.
+Both expose columns, sorting, filtering, pagination, selection, editing, undo/redo, etc.
 
 ## Community & Resources
 

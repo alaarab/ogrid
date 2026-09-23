@@ -3,7 +3,7 @@
  * UI packages use this hook and render only the framework input (Input, TextField, select, Checkbox).
  */
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useRef } from 'react';
 import { formatDateForDisplay, parseUserInputDate, DEFAULT_DATE_FORMAT } from '@alaarab/ogrid-core';
 
 export type InlineCellEditorType = 'text' | 'select' | 'checkbox' | 'richSelect' | 'date';
@@ -69,16 +69,23 @@ export function useInlineCellEditorState(
     return String(value);
   });
 
+  // Set once Escape/Enter has cancelled or committed, so a blur that follows
+  // (focus moving as the editor closes) doesn't commit a second time or
+  // commit a cancelled edit.
+  const settledRef = useRef(false);
+
   const handleKeyDown = useCallback(
     (e: React.KeyboardEvent) => {
       if (e.key === 'Escape') {
         e.preventDefault();
         e.stopPropagation(); // Don't let the grid handler clear selection on Escape
+        settledRef.current = true;
         onCancel();
       }
       if (e.key === 'Enter' && (editorType === 'text' || editorType === 'date')) {
         e.preventDefault();
         e.stopPropagation(); // Don't let the grid handler re-open an editor
+        settledRef.current = true;
         if (editorType === 'date' && dateEditorType !== 'native') {
           onCommit(commitDateValue(localValue, effectiveDateFormat));
         } else {
@@ -90,6 +97,7 @@ export function useInlineCellEditorState(
   );
 
   const handleBlur = useCallback(() => {
+    if (settledRef.current) return;
     if (editorType === 'text') {
       onCommit(localValue);
     } else if (editorType === 'date') {
@@ -101,9 +109,15 @@ export function useInlineCellEditorState(
     }
   }, [editorType, localValue, onCommit, effectiveDateFormat, dateEditorType]);
 
+  // Typing again means a new edit, in case the editor instance is reused.
+  const setLocalValueAndReopen = useCallback((next: string) => {
+    settledRef.current = false;
+    setLocalValue(next);
+  }, []);
+
   return {
     localValue,
-    setLocalValue,
+    setLocalValue: setLocalValueAndReopen,
     handleKeyDown,
     handleBlur,
     commit: onCommit,

@@ -72,6 +72,28 @@ export function SheetTabs({
     [onSheetChange]
   );
 
+  // WAI-ARIA tabs keyboard model: arrows move and activate, Home/End jump.
+  const handleTabKeyDown = useCallback(
+    (e: React.KeyboardEvent<HTMLButtonElement>) => {
+      const index = sheets.findIndex((s) => s.id === e.currentTarget.dataset.sheetId);
+      if (index < 0) return;
+      const last = sheets.length - 1;
+      const next =
+        e.key === 'ArrowRight' ? (index === last ? 0 : index + 1)
+        : e.key === 'ArrowLeft' ? (index === 0 ? last : index - 1)
+        : e.key === 'Home' ? 0
+        : e.key === 'End' ? last
+        : -1;
+      const target = next >= 0 ? sheets[next] : undefined;
+      if (!target) return;
+      e.preventDefault();
+      onSheetChange(target.id);
+      const tablist = e.currentTarget.parentElement;
+      tablist?.querySelector<HTMLElement>(`[data-sheet-id="${CSS.escape(String(target.id))}"]`)?.focus();
+    },
+    [sheets, onSheetChange]
+  );
+
   return (
     <div style={barStyle} role="tablist" aria-label="Sheet tabs">
       {onSheetAdd && (
@@ -95,9 +117,11 @@ export function SheetTabs({
             type="button"
             role="tab"
             aria-selected={isActive}
+            tabIndex={isActive ? 0 : -1}
             style={style}
             data-sheet-id={sheet.id}
             onClick={handleTabClick}
+            onKeyDown={handleTabKeyDown}
           >
             {sheet.name}
           </button>

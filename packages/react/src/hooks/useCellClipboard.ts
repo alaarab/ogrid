@@ -29,8 +29,9 @@
  *   });
  */
 
-import { useCallback, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import {
+  normalizeSelectionRange,
   formatSelectionAsTsv,
   parseTsvClipboard,
   applyPastedValues,
@@ -42,6 +43,7 @@ import type {
   ICellValueChangedEvent,
 } from '@alaarab/ogrid-core';
 import type { UseRangeSelectionResult } from './useRangeSelection';
+import { useLatestRef } from './useLatestRef';
 
 export interface UseCellClipboardParams<T> {
   /** Current range selection. Copy/cut/paste targets resolve from here. */
@@ -63,6 +65,11 @@ export interface UseCellClipboardParams<T> {
     readText: () => Promise<string>;
     writeText: (text: string) => Promise<void>;
   };
+  /**
+   * Called when the clipboard read/write fails (e.g. permission denied).
+   * Copy/cut/paste resolve instead of rejecting either way.
+   */
+  onClipboardError?: (error: unknown) => void;
 }
 
 export interface UseCellClipboardResult {
@@ -79,7 +86,11 @@ export interface UseCellClipboardResult {
    * paste lands elsewhere, the cut range is cleared.
    */
   pasteRange: () => Promise<void>;
-  /** True if the OS clipboard supports paste (basic feature detection). */
+  /**
+   * True if the OS clipboard supports paste (basic feature detection).
+   * Always false on the server and during the first client render, so
+   * server-rendered markup hydrates without a mismatch.
+   */
   canPaste: boolean;
   /** Currently-marked cut range, or null. Render with marching ants for UI feedback. */
   activeCutRange: ISelectionRange | null;
@@ -110,44 +121,67 @@ const DEFAULT_CLIPBOARD = {
 export function useCellClipboard<T>(
   params: UseCellClipboardParams<T>,
 ): UseCellClipboardResult {
-  const { rangeSelection, rows, columns, onCellEdit, clipboard = DEFAULT_CLIPBOARD } = params;
+  const { rangeSelection, rows, columns, onCellEdit, clipboard = DEFAULT_CLIPBOARD, onClipboardError } = params;
+  const onClipboardErrorRef = useLatestRef(onClipboardError);
 
   const [activeCutRange, setActiveCutRange] = useState<ISelectionRange | null>(null);
   const [activeCopyRange, setActiveCopyRange] = useState<ISelectionRange | null>(null);
 
-  const canPaste =
-    typeof navigator !== 'undefined' && Boolean(navigator.clipboard?.readText);
+  // Detected after mount: computing it during render would differ between
+  // server (false) and client (true) and break hydration.
+  const [canPaste, setCanPaste] = useState(false);
+  useEffect(() => {
+    setCanPaste(typeof navigator !== 'undefined' && Boolean(navigator.clipboard?.readText));
+  }, []);
 
   const copyRange = useCallback(async () => {
     const range = rangeSelection.range;
     if (!range) return;
     const text = formatSelectionAsTsv(rows, columns, range);
-    await clipboard.writeText(text);
+    try {
+      await clipboard.writeText(text);
+    } catch (err) {
+      onClipboardErrorRef.current?.(err);
+      return;
+    }
     setActiveCopyRange(range);
     setActiveCutRange(null);
-  }, [rangeSelection.range, rows, columns, clipboard]);
+  }, [rangeSelection.range, rows, columns, clipboard, onClipboardErrorRef]);
 
   const cutRange = useCallback(async () => {
     const range = rangeSelection.range;
     if (!range) return;
     const text = formatSelectionAsTsv(rows, columns, range);
-    await clipboard.writeText(text);
+    try {
+      await clipboard.writeText(text);
+    } catch (err) {
+      onClipboardErrorRef.current?.(err);
+      return;
+    }
     setActiveCutRange(range);
     setActiveCopyRange(null);
-  }, [rangeSelection.range, rows, columns, clipboard]);
+  }, [rangeSelection.range, rows, columns, clipboard, onClipboardErrorRef]);
 
   const pasteRange = useCallback(async () => {
     const range = rangeSelection.range;
     if (!range) return;
 
-    const text = await clipboard.readText();
+    let text: string;
+    try {
+      text = await clipboard.readText();
+    } catch (err) {
+      onClipboardErrorRef.current?.(err);
+      return;
+    }
     const parsed = parseTsvClipboard(text);
     if (parsed.length === 0) return;
 
+    // Anchor at the top-left even for ranges selected upward/leftward.
+    const anchor = normalizeSelectionRange(range);
     const events = applyPastedValues(
       parsed,
-      range.startRow,
-      range.startCol,
+      anchor.startRow,
+      anchor.startCol,
       rows,
       columns,
     );
@@ -167,7 +201,7 @@ export function useCellClipboard<T>(
     if (combined.length > 0) onCellEdit(combined);
     setActiveCutRange(null);
     setActiveCopyRange(null);
-  }, [rangeSelection.range, rows, columns, onCellEdit, clipboard, activeCutRange]);
+  }, [rangeSelection.range, rows, columns, onCellEdit, clipboard, activeCutRange, onClipboardErrorRef]);
 
   const clearClipboard = useCallback(() => {
     setActiveCutRange(null);

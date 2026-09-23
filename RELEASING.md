@@ -59,14 +59,25 @@ That's it. The workflow will:
 ### Tips
 
 - **Test first without publishing:** run it once with **Dry run** checked. It
-  builds and validates but skips the actual `npm publish` and the version bump.
+  bumps the version inside the runner (nothing is committed or pushed), builds,
+  and runs `npm pack --dry-run` on every package, so it validates exactly what
+  would ship.
+- **Dispatch from `main`.** The workflow refuses other branches and rejects any
+  version that isn't plain semver (`2.18.0`, `3.0.0-beta.1`).
+- **Prereleases** (`3.0.0-beta.1`) are published under the `next` dist-tag, so
+  they never become `latest`.
 - **Versioning:** follow semver — patch (`2.15.1`) for fixes, minor (`2.16.0`)
   for new features, major (`3.0.0`) for breaking changes.
 - **Don't bump versions by hand** — the workflow does it for you and keeps all
   packages + their cross-dependencies in sync.
 - **If a publish fails partway through:** re-run with the *same* version. The
   publisher checks the registry first and skips packages already published at
-  that version, so only the remainder is published.
+  that version, so only the remainder is published. Packages that depend on a
+  failed one are held back in that run, so nothing goes live pinned to a
+  missing version.
+- The release commit is pushed with the workflow token, which doesn't trigger
+  push workflows, so the publish job dispatches **CI** and **Deploy Docs** for
+  it explicitly.
 
 ## Verify it worked
 
