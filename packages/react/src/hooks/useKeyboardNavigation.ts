@@ -43,6 +43,9 @@ export interface UseKeyboardNavigationParams<T> {
     onUndo?: () => void;
     onRedo?: () => void;
     clearClipboardRanges?: () => void;
+    /** Group multi-cell edits (range delete) into one undo step. */
+    beginBatch?: () => void;
+    endBatch?: () => void;
   };
   features: {
     editable?: boolean;
@@ -80,7 +83,7 @@ export function useKeyboardNavigation<T>(
       const { data, state, handlers, features } = paramsRef.current;
       const { items, visibleCols, colOffset, hasCheckboxCol, visibleColumnCount, getRowId } = data;
       const { activeCell, selectionRange, editingCell, selectedRowIds } = state;
-      const { setActiveCell, setSelectionRange, setEditingCell, handleRowCheckboxChange, handleCopy, handleCut, handlePaste, setContextMenu, onUndo, onRedo, clearClipboardRanges } = handlers;
+      const { setActiveCell, setSelectionRange, setEditingCell, handleRowCheckboxChange, handleCopy, handleCut, handlePaste, setContextMenu, onUndo, onRedo, clearClipboardRanges, beginBatch, endBatch } = handlers;
       const { editable, onCellValueChanged, rowSelection, wrapperRef, onKeyDown, fillDown } = features;
 
       // Consumer intercept: call consumer's handler first; skip grid default if preventDefault() was called
@@ -126,7 +129,10 @@ export function useKeyboardNavigation<T>(
         return v == null || v === '';
       };
 
-      switch (e.key) {
+      // Letter shortcuts compare lowercase: with Shift or Caps Lock held the
+      // browser reports 'Z' not 'z', which broke Ctrl+Shift+Z (redo).
+      const key = (e.ctrlKey || e.metaKey) && e.key.length === 1 ? e.key.toLowerCase() : e.key;
+      switch (key) {
         case 'c':
           if (e.ctrlKey || e.metaKey) {
             if (editingCell != null) break; // let the input handle copy
@@ -361,7 +367,12 @@ export function useKeyboardNavigation<T>(
           if (range == null) break;
           e.preventDefault();
           const deleteEvents = applyCellDeletion(range, items, visibleCols);
-          for (const evt of deleteEvents) onCellValueChanged(evt);
+          beginBatch?.();
+          try {
+            for (const evt of deleteEvents) onCellValueChanged(evt);
+          } finally {
+            endBatch?.();
+          }
           break;
         }
         case 'F10':

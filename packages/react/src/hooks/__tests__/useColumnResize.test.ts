@@ -147,6 +147,37 @@ describe('useColumnResize', () => {
     expect(onColumnResized).toHaveBeenCalledWith('name', 180);
   });
 
+  it('pointercancel ends the resize and restores the body cursor', () => {
+    const onColumnResized = jest.fn();
+    const { result } = renderHook(() =>
+      useColumnResize<{ id: string; name: string }>({
+        columnSizingOverrides: {},
+        setColumnSizingOverrides: jest.fn(),
+        onColumnResized,
+      })
+    );
+    const mockTh = {
+      getBoundingClientRect: () => ({ width: 150 }),
+      closest: (sel: string) => (sel === 'th' ? mockTh : null),
+      dataset: { columnId: 'name' },
+    };
+    const mockEvent = {
+      preventDefault: jest.fn(),
+      stopPropagation: jest.fn(),
+      clientX: 100,
+      currentTarget: { closest: (sel: string) => (sel === 'th' ? mockTh : null) },
+    } as unknown as React.MouseEvent;
+    document.body.style.cursor = '';
+    act(() => { result.current.handleResizeStart(mockEvent, mockColumn); });
+    expect(document.body.style.cursor).toBe('col-resize');
+    act(() => { document.dispatchEvent(new PointerEvent('pointercancel', { bubbles: true })); });
+    expect(document.body.style.cursor).toBe('');
+    expect(onColumnResized).toHaveBeenCalledTimes(1);
+    // Later moves no longer resize.
+    act(() => { document.dispatchEvent(new PointerEvent('pointermove', { clientX: 400, bubbles: true })); });
+    expect(onColumnResized).toHaveBeenCalledTimes(1);
+  });
+
   it('uses override cascade: override > idealWidth > defaultWidth > defaultWidth param', () => {
     const setColumnSizingOverrides = jest.fn();
     const col: IColumnDef<{ id: string; name: string }> = {

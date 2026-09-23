@@ -37,10 +37,8 @@ export const allBrowserServers: BrowserServer[] = [
   createServer('npm run dev:react-radix', 3003),
 ];
 
-export const smokeBrowserProjects: BrowserProject[] = [
-  createProject('react-radix', 'http://localhost:3003'),
-];
+// Both kits run the smoke suite on every PR so Fluent regressions surface
+// before merge, not only in the manual full matrix.
+export const smokeBrowserProjects: BrowserProject[] = allBrowserProjects;
 
-export const smokeBrowserServers: BrowserServer[] = [
-  createServer('npm run dev:react-radix', 3003),
-];
+export const smokeBrowserServers: BrowserServer[] = allBrowserServers;

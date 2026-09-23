@@ -113,7 +113,11 @@ export interface UseHeadlessGridResult<T> {
   totalCount: number;
   /** Total number of pages at current page size. */
   totalPages: number;
-  /** Filtered + sorted rows across all pages (no pagination applied). */
+  /**
+   * Filtered + sorted rows across all pages (no pagination applied).
+   * Client-side only; server-side it equals `rows` (the current page), since
+   * the full set is never loaded.
+   */
   allFilteredRows: T[];
 
   /** Current sort state. */
@@ -224,6 +228,7 @@ export function useHeadlessGrid<T>(
     isServerSide,
     dataSource,
     displayData: data,
+    getRowId,
     columns,
     stableFilters: filtersHook.stableFilters,
     sort: sorting.sort,
@@ -242,9 +247,8 @@ export function useHeadlessGrid<T>(
     : Math.max(1, Math.ceil(totalCount / pagination.pageSize));
 
   // `allFilteredRows` is the full filtered+sorted set across all pages.
-  // Client-side: derived from the current page's slice context. Server-side:
-  // unknown without a separate request, so it equals `rows` (current page).
-  const allFilteredRows = rows;
+  // Server-side: unknown without a separate request, so it equals `rows`.
+  const allFilteredRows = isServerSide ? rows : dataFetching.allFilteredItems;
 
   // ── Cell helpers ───────────────────────────────────────────────────────
   const columnMap = useMemo(() => {

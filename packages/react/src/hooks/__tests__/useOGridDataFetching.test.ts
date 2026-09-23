@@ -356,3 +356,78 @@ describe('useOGridDataFetching  -  windowed (lazy) data source', () => {
     await waitFor(() => expect(result.current.windowed?.rowCount).toBe(42));
   });
 });
+
+describe('useOGridDataFetching  -  replacing data of the same length', () => {
+  const filters = { name: { type: 'text' as const, value: 'a' } };
+  const other: TestRow[] = [
+    { id: 11, name: 'Xan', age: 1 },
+    { id: 12, name: 'Pete', age: 2 },
+    { id: 13, name: 'Quinn', age: 3 },
+    { id: 14, name: 'Rory', age: 4 },
+    { id: 15, name: 'Sam', age: 5 },
+  ];
+
+  it('re-filters when a new dataset of the same length arrives (with getRowId)', () => {
+    const { result, rerender } = renderHook(
+      ({ data }) => useOGridDataFetching(makeParams({ displayData: data, stableFilters: filters, getRowId: (r) => r.id })),
+      { initialProps: { data: testData } },
+    );
+    expect(result.current.displayItems.map((r) => r.name)).toEqual(['Alice', 'Charlie', 'Diana']);
+    rerender({ data: other });
+    expect(result.current.displayItems.map((r) => r.name)).toEqual(['Xan', 'Sam']);
+  });
+
+  it('re-filters a same-length replacement without getRowId', () => {
+    const { result, rerender } = renderHook(
+      ({ data }) => useOGridDataFetching(makeParams({ displayData: data, stableFilters: filters })),
+      { initialProps: { data: testData } },
+    );
+    rerender({ data: other });
+    expect(result.current.displayItems.map((r) => r.name)).toEqual(['Xan', 'Sam']);
+  });
+
+  it('keeps snapshot order and filter membership after a cell edit', () => {
+    const sort = { field: 'age', direction: 'asc' as const };
+    const noFilters = {};
+    const { result, rerender } = renderHook(
+      ({ data }) => useOGridDataFetching(makeParams({ displayData: data, sort, sortVersion: 1, stableFilters: noFilters, getRowId: (r) => r.id })),
+      { initialProps: { data: testData } },
+    );
+    expect(result.current.displayItems.map((r) => r.id)).toEqual([5, 2, 4, 1, 3]);
+    const edited = testData.map((r) => (r.id === 5 ? { ...r, age: 99 } : r));
+    rerender({ data: edited });
+    // Edited row stays in place (Excel-like) instead of jumping to the end.
+    expect(result.current.displayItems.map((r) => r.id)).toEqual([5, 2, 4, 1, 3]);
+    expect(result.current.displayItems[0]?.age).toBe(99);
+  });
+});
+
+const noFilters = {};
+
+describe('useOGridDataFetching  -  swapping dataSource', () => {
+  it('refetches when a memoized dataSource is replaced', async () => {
+    const makeSource = (label: string) => ({
+      fetchPage: mock(() => Promise.resolve({ items: [{ id: 1, name: label, age: 1 }], totalCount: 1 })),
+    });
+    const a = makeSource('from-a');
+    const b = makeSource('from-b');
+    const { result, rerender } = renderHook(
+      ({ ds }) => useOGridDataFetching(makeParams({ isServerSide: true, dataSource: ds, stableFilters: noFilters })),
+      { initialProps: { ds: a } },
+    );
+    await waitFor(() => expect(result.current.displayItems[0]?.name).toBe('from-a'));
+    rerender({ ds: b });
+    await waitFor(() => expect(result.current.displayItems[0]?.name).toBe('from-b'));
+    expect(b.fetchPage).toHaveBeenCalled();
+  });
+
+  it('does not refetch in a loop for an inline dataSource', async () => {
+    const fetchPage = mock(() => Promise.resolve({ items: [{ id: 1, name: 'x', age: 1 }], totalCount: 1 }));
+    const { result } = renderHook(() =>
+      useOGridDataFetching(makeParams({ isServerSide: true, dataSource: { fetchPage }, stableFilters: noFilters })),
+    );
+    await waitFor(() => expect(result.current.displayItems).toHaveLength(1));
+    await new Promise((r) => setTimeout(r, 50));
+    expect(fetchPage.mock.calls.length).toBeLessThanOrEqual(2);
+  });
+});

@@ -16,6 +16,8 @@
 // DOM, so imperative consumers MUST call the returned unmount() before
 // detaching the node, or event listeners + state will leak.
 //
+// React: 18 or 19 (mount() uses react-dom/client, which React 17 lacks).
+//
 // Format support: .xlsx + CSV/TSV. Built on ExcelJS (active, MIT, on
 // npm). The previous SheetJS-backed builds are gone — `xlsx` on npm is
 // stuck at the vulnerable 0.18.5. See CHANGELOG 2.12.0 for the swap.
@@ -33,6 +35,9 @@ export {
   type SheetGridData,
   type SheetRow,
   type SheetToGridDataOptions,
+  DEFAULT_MAX_ROWS,
+  DEFAULT_MAX_COLS,
+  DEFAULT_MAX_CELLS,
 } from './sheetMapper';
 export {
   exportToXlsx,
@@ -53,6 +58,8 @@ export interface MountOptions {
   onSheetChange?: (sheetName: string) => void;
   /** See {@link SheetToGridDataOptions.headerRow}. Defaults to 'auto'. */
   headerRow?: 'auto' | 'header' | 'none';
+  /** Load limits for untrusted files; see {@link XlsxWorkbookGridProps.limits}. */
+  limits?: XlsxWorkbookGridProps['limits'];
 }
 
 /** Imperative mount for non-React hosts. Returns an unmount function. */

@@ -25,6 +25,12 @@ export interface SheetGridData {
   columns: IColumnDef<SheetRow>[];
   rows: SheetRow[];
   initialFormulas: Array<{ col: number; row: number; formula: string }>;
+  /**
+   * Set when the sheet's populated area exceeded `maxRows`/`maxCols`/
+   * `maxCells` and was cut down. Holds the untruncated extent so callers can
+   * tell the user what was left out.
+   */
+  truncated?: { rowCount: number; columnCount: number };
 }
 
 /** Row shape — keyed by column letter (A, B, C, ..., AA, AB, ...).
@@ -49,7 +55,22 @@ export interface SheetToGridDataOptions {
    * resolving the same way.
    */
   headerRow?: 'auto' | 'header' | 'none';
+  /** Maximum worksheet rows to load (default 1,048,576, Excel's own limit). */
+  maxRows?: number;
+  /** Maximum worksheet columns to load (default 1,000). */
+  maxCols?: number;
+  /**
+   * Maximum rows × columns to load (default 5,000,000). A few-KB xlsx with
+   * one far-away cell has a used range of billions of cells; this keeps an
+   * untrusted file from freezing the page. Rows are dropped from the bottom
+   * to fit.
+   */
+  maxCells?: number;
 }
+
+export const DEFAULT_MAX_ROWS = 1_048_576;
+export const DEFAULT_MAX_COLS = 1_000;
+export const DEFAULT_MAX_CELLS = 5_000_000;
 
 const SAMPLE_SIZE = 50; // rows inspected for column-type detection
 
@@ -153,23 +174,47 @@ export function sheetToGridData(
   options: SheetToGridDataOptions = {},
 ): SheetGridData {
   if (!sheet) return { columns: [], rows: [], initialFormulas: [] };
-  const colCount = sheet.columnCount || 0;
-  const rowCount = sheet.rowCount || 0;
-  if (!colCount || !rowCount) return { columns: [], rows: [], initialFormulas: [] };
+
+  // Find the populated extent by visiting only cells that exist. The
+  // declared dimensions (rowCount/columnCount) come from the file and can be
+  // huge for a single far-away cell, and sheet.getCell() creates cells as a
+  // side effect, so never walk the declared rectangle.
+  let usedRows = 0;
+  let usedCols = 0;
+  sheet.eachRow({ includeEmpty: false }, (row, rowNumber) => {
+    let rowHasValue = false;
+    row.eachCell({ includeEmpty: false }, (cell, colNumber) => {
+      if (cell.value == null) return;
+      rowHasValue = true;
+      if (colNumber > usedCols) usedCols = colNumber;
+    });
+    if (rowHasValue && rowNumber > usedRows) usedRows = rowNumber;
+  });
+  if (!usedCols || !usedRows) return { columns: [], rows: [], initialFormulas: [] };
+
+  const maxCols = Math.max(1, options.maxCols ?? DEFAULT_MAX_COLS);
+  const maxRows = Math.max(1, options.maxRows ?? DEFAULT_MAX_ROWS);
+  const maxCells = Math.max(1, options.maxCells ?? DEFAULT_MAX_CELLS);
+  const colCount = Math.min(usedCols, maxCols);
+  const rowCount = Math.min(usedRows, maxRows, Math.max(1, Math.floor(maxCells / colCount)));
+  const truncated = colCount < usedCols || rowCount < usedRows
+    ? { rowCount: usedRows, columnCount: usedCols }
+    : undefined;
 
   // Build raw cell matrix (rowCount × colCount) plus formulas.
   // ExcelJS uses 1-based row/column indexing; our matrix and the
   // initialFormulas it emits stay 0-based to match the rest of OGrid.
-  const matrix: unknown[][] = [];
+  const matrix: unknown[][] = new Array(rowCount);
+  for (let r = 0; r < rowCount; r++) matrix[r] = new Array(colCount).fill('');
   const initialFormulas: SheetGridData['initialFormulas'] = [];
-  for (let r = 0; r < rowCount; r++) {
-    const out: unknown[] = new Array(colCount);
-    for (let c = 0; c < colCount; c++) {
-      const cell = sheet.getCell(r + 1, c + 1);
-      out[c] = readCellValue(cell, c, r, initialFormulas);
-    }
-    matrix.push(out);
-  }
+  sheet.eachRow({ includeEmpty: false }, (row, rowNumber) => {
+    if (rowNumber > rowCount) return;
+    const out = matrix[rowNumber - 1] as unknown[];
+    row.eachCell({ includeEmpty: false }, (cell, colNumber) => {
+      if (colNumber > colCount) return;
+      out[colNumber - 1] = readCellValue(cell, colNumber - 1, rowNumber - 1, initialFormulas);
+    });
+  });
 
   // Decide whether row 1 is a header row. Defaults to 'auto' — the right
   // choice for almost every xlsx in the wild, where row 1 is the column
@@ -250,7 +295,9 @@ export function sheetToGridData(
         .map((f) => ({ ...f, row: f.row - 1 }))
     : initialFormulas;
 
-  return { columns, rows, initialFormulas: adjustedFormulas };
+  return truncated
+    ? { columns, rows, initialFormulas: adjustedFormulas, truncated }
+    : { columns, rows, initialFormulas: adjustedFormulas };
 }
 
 /** Heuristic: row 1 is a header row when every non-empty cell is a

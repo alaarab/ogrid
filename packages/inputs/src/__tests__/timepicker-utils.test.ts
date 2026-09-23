@@ -173,3 +173,12 @@ describe('getHour12Options', () => {
     expect(opts[11]).toBe(11);
   });
 });
+
+describe('getMinuteOptions invalid steps', () => {
+  it('does not loop forever on zero, negative or NaN steps', () => {
+    expect(getMinuteOptions(0)).toHaveLength(60);
+    expect(getMinuteOptions(-5)).toHaveLength(60);
+    expect(getMinuteOptions(Number.NaN)).toHaveLength(60);
+    expect(getMinuteOptions(15)).toEqual([0, 15, 30, 45]);
+  });
+});

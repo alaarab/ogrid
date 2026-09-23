@@ -78,6 +78,7 @@ export {
 
 // Dependency graph
 export { DependencyGraph } from './dependencyGraph';
+export type { IRangeDependency } from './dependencyGraph';
 
 // Formula engine
 export { FormulaEngine } from './formulaEngine';

@@ -15,7 +15,7 @@
     "./styles/*": "./dist/esm/*"
   },
   "scripts": {
-    "build": "rimraf dist && tsup && tsc -p tsconfig.build.json",
+    "build": "rimraf dist && tsup && tsc -p tsconfig.build.json && node ../../scripts/fix-dts-extensions.mjs dist/types",
     "typecheck": "tsc -p tsconfig.build.json --noEmit",
     "test": "bun test --preload ../../bun-test.setup.ts",
     "storybook": "storybook dev -p 6006 --no-open",

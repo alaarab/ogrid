@@ -36,6 +36,8 @@ describe('useKeyboardNavigation', () => {
       onUndo: overrides.onUndo as (() => void) | undefined,
       onRedo: overrides.onRedo as (() => void) | undefined,
       clearClipboardRanges: overrides.clearClipboardRanges as (() => void) | undefined,
+      beginBatch: overrides.beginBatch as (() => void) | undefined,
+      endBatch: overrides.endBatch as (() => void) | undefined,
     },
     features: {
       editable: (overrides.editable !== undefined ? overrides.editable : false) as boolean,
@@ -442,6 +444,53 @@ describe('useKeyboardNavigation', () => {
       expect(p.handlers.setActiveCell).toHaveBeenCalledWith({ rowIndex: 4, columnIndex: 2 });
     });
   });
+  describe('audit regressions', () => {
+    const keyEvent = (key: string, mods: { ctrlKey?: boolean; shiftKey?: boolean } = {}) => ({
+      key,
+      preventDefault: jest.fn(),
+      shiftKey: !!mods.shiftKey,
+      ctrlKey: !!mods.ctrlKey,
+      metaKey: false,
+      altKey: false,
+    }) as unknown as React.KeyboardEvent;
+
+    it('Ctrl+Shift+Z (key reported as "Z") redoes', () => {
+      const onRedo = jest.fn();
+      const onUndo = jest.fn();
+      const { result } = renderHook(() =>
+        useKeyboardNavigation(makeParams({ onRedo, onUndo, activeCell: { rowIndex: 0, columnIndex: 0 } }))
+      );
+      act(() => { result.current.handleGridKeyDown(keyEvent('Z', { ctrlKey: true, shiftKey: true })); });
+      expect(onRedo).toHaveBeenCalledTimes(1);
+      expect(onUndo).not.toHaveBeenCalled();
+    });
+
+    it('Ctrl+Z with Caps Lock (key "Z", no shift) undoes', () => {
+      const onUndo = jest.fn();
+      const { result } = renderHook(() =>
+        useKeyboardNavigation(makeParams({ onUndo, activeCell: { rowIndex: 0, columnIndex: 0 } }))
+      );
+      act(() => { result.current.handleGridKeyDown(keyEvent('Z', { ctrlKey: true })); });
+      expect(onUndo).toHaveBeenCalledTimes(1);
+    });
+
+    it('Delete over a range is one undo batch', () => {
+      const calls: string[] = [];
+      const { result } = renderHook(() =>
+        useKeyboardNavigation(makeParams({
+          editable: true,
+          visibleCols: [{ columnId: 'name', name: 'Name', editable: true }],
+          activeCell: { rowIndex: 0, columnIndex: 0 },
+          selectionRange: { startRow: 0, startCol: 0, endRow: 1, endCol: 0 },
+          onCellValueChanged: () => calls.push('change'),
+          beginBatch: () => calls.push('begin'),
+          endBatch: () => calls.push('end'),
+        }))
+      );
+      act(() => { result.current.handleGridKeyDown(keyEvent('Delete')); });
+      expect(calls).toEqual(['begin', 'change', 'change', 'end']);
+    });
+  });
 });
 
 // ---------------------------------------------------------------------------
@@ -664,4 +713,5 @@ describe('useKeyboardNavigation  -  onKeyDown intercept prop', () => {
       act(() => { result.current.handleGridKeyDown(makeEvent('d', { ctrlKey: true })); });
     }).not.toThrow();
   });
+
 });

@@ -70,7 +70,7 @@ const grid = useHeadlessGrid({
 | Field | Description |
 |---|---|
 | `rows` | Current page rows after sort + filter |
-| `allFilteredRows` | Full filtered+sorted set (client mode) or current page (server mode) |
+| `allFilteredRows` | Every filtered+sorted row across pages (client mode), or the current page (server mode) |
 | `columns` | Resolved columns |
 | `totalCount` | Post-filter total |
 | `totalPages` | Total pages at current page size |
@@ -248,13 +248,14 @@ useEffect(() => {
 | `columns` | `IColumnDef<T>[]` |
 | `onCellEdit` | `(events: ICellValueChangedEvent<T>[]) => void` |
 | `clipboard?` | `{ readText, writeText }` override (defaults to `navigator.clipboard`) |
+| `onClipboardError?` | `(error: unknown) => void`, called when a clipboard read/write fails (e.g. permission denied) |
 
 ### Returns
 
 | Field | Description |
 |---|---|
-| `copyRange()`, `cutRange()`, `pasteRange()` | Async actions |
-| `canPaste` | `boolean` (feature detection) |
+| `copyRange()`, `cutRange()`, `pasteRange()` | Async actions. They resolve (never reject) when the clipboard is unavailable or denied; see `onClipboardError`. |
+| `canPaste` | `boolean` (feature detection). `false` until mounted, so server-rendered markup hydrates cleanly. |
 | `activeCutRange`, `activeCopyRange` | Marching-ants tracking |
 | `clearClipboard()` | Dismiss markers (bind to Escape) |
 

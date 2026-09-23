@@ -76,9 +76,12 @@ export function useClipboard<T>(params: UseClipboardParams<T>): UseClipboardResu
   const getEffectiveRange = useCallback((): ISelectionRange | null => {
     const sel = selectionRangeRef.current;
     const ac = activeCellRef.current;
-    return sel ?? (ac != null
+    // Normalized so paste anchors at the top-left even when the selection was
+    // made upward/leftward (start below/right of end).
+    if (sel) return normalizeSelectionRange(sel);
+    return ac != null
       ? { startRow: ac.rowIndex, startCol: ac.columnIndex - colOffset, endRow: ac.rowIndex, endCol: ac.columnIndex - colOffset }
-      : null);
+      : null;
   }, [colOffset, selectionRangeRef, activeCellRef]);
 
   const handleCopy = useCallback(() => {
@@ -96,7 +99,9 @@ export function useClipboard<T>(params: UseClipboardParams<T>): UseClipboardResu
     const tsv = formatSelectionAsTsv(itemsRef.current, visibleColsRef.current, norm, formulaOptions);
     internalClipboardRef.current = tsv;
     setCopyRange(norm);
-    void navigator.clipboard.writeText(tsv).catch(() => {});
+    // navigator.clipboard is undefined outside secure contexts (plain http);
+    // the internal clipboard above still makes copy/paste work in-page.
+    void navigator.clipboard?.writeText(tsv).catch(() => {});
   }, [getEffectiveRange, itemsRef, visibleColsRef, formulasRef, flatColumnsRef, getFormulaRef, hasFormulaRef, colOffset]);
 
   const handleCut = useCallback(() => {
@@ -118,7 +123,7 @@ export function useClipboard<T>(params: UseClipboardParams<T>): UseClipboardResu
     if (onCellValueChanged == null) return;
     let text: string;
     try {
-      text = await navigator.clipboard.readText();
+      text = (await navigator.clipboard?.readText()) ?? '';
     } catch {
       text = '';
     }
@@ -142,15 +147,22 @@ export function useClipboard<T>(params: UseClipboardParams<T>): UseClipboardResu
         }
       : undefined;
     beginBatch?.();
-    const pasteEvents = applyPastedValues(parsedRows, anchorRow, anchorCol, items, visibleCols, formulaOptions);
-    for (const evt of pasteEvents) onCellValueChanged(evt);
-    if (cutRangeRef.current) {
-      const cutEvents = applyCutClear(cutRangeRef.current, items, visibleCols);
-      for (const evt of cutEvents) onCellValueChanged(evt);
-      cutRangeRef.current = null;
-      setCutRange(null);
+    try {
+      const pasteEvents = applyPastedValues(parsedRows, anchorRow, anchorCol, items, visibleCols, formulaOptions);
+      for (const evt of pasteEvents) onCellValueChanged(evt);
+      if (cutRangeRef.current) {
+        // Skip cells the paste just wrote: when the paste overlaps the cut
+        // source, clearing them afterwards would wipe the pasted values.
+        const pastedKeys = new Set(pasteEvents.map((e) => `${e.rowIndex}|${e.columnId}`));
+        const cutEvents = applyCutClear(cutRangeRef.current, items, visibleCols)
+          .filter((e) => !pastedKeys.has(`${e.rowIndex}|${e.columnId}`));
+        for (const evt of cutEvents) onCellValueChanged(evt);
+        cutRangeRef.current = null;
+        setCutRange(null);
+      }
+    } finally {
+      endBatch?.();
     }
-    endBatch?.();
     setCopyRange(null);
   }, [getEffectiveRange, itemsRef, visibleColsRef, editableRef, onCellValueChangedRef, beginBatch, endBatch, formulasRef, flatColumnsRef, setFormulaRef, colOffset]);
 

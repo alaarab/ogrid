@@ -27,7 +27,7 @@
  *   </TableCell>
  */
 
-import { useCallback, useState } from 'react';
+import { useCallback, useRef, useState } from 'react';
 import {
   parseValue,
   isColumnEditable,
@@ -117,13 +117,24 @@ export function useInlineEdit<T>(
     rowId: RowId;
     columnId: string;
   } | null>(null);
-  const [pendingValue, setPendingValue] = useState<unknown>(undefined);
-  // Snapshot of the row + old value at edit-start, so commit doesn't depend on
-  // the consumer keeping the same row reference around.
-  const [editingContext, setEditingContext] = useState<{
+  const [pendingValue, setPendingValueState] = useState<unknown>(undefined);
+  // The live edit session (with a snapshot of the row + old value at
+  // edit-start, so commit doesn't depend on the consumer keeping the same row
+  // reference around), updated synchronously. Editor callbacks created in
+  // an earlier render (e.g. an onBlur firing right after Escape, before React
+  // re-renders) read this instead of their stale closure, so a cancelled or
+  // committed edit can't be committed again.
+  const sessionRef = useRef<{
+    cell: { rowId: RowId; columnId: string };
     item: T;
     oldValue: unknown;
+    pending: unknown;
   } | null>(null);
+
+  const setPendingValue = useCallback((value: unknown) => {
+    if (sessionRef.current) sessionRef.current.pending = value;
+    setPendingValueState(value);
+  }, []);
 
   const findColumn = useCallback(
     (columnId: string) => columns.find((c) => c.columnId === columnId),
@@ -156,37 +167,38 @@ export function useInlineEdit<T>(
       const col = findColumn(columnId);
       if (!col) return;
       const oldValue = coreGetCellValue(row, col);
-      setEditingCell({ rowId: getRowId(row), columnId });
-      setEditingContext({ item: row, oldValue });
-      setPendingValue(oldValue);
+      const cell = { rowId: getRowId(row), columnId };
+      sessionRef.current = { cell, item: row, oldValue, pending: oldValue };
+      setEditingCell(cell);
+      setPendingValueState(oldValue);
     },
     [canEdit, findColumn, getRowId],
   );
 
   const cancelEdit = useCallback(() => {
+    sessionRef.current = null;
     setEditingCell(null);
-    setEditingContext(null);
-    setPendingValue(undefined);
+    setPendingValueState(undefined);
   }, []);
 
   const commitEdit = useCallback(() => {
-    if (!editingCell || !editingContext) return;
-    const col = findColumn(editingCell.columnId);
+    const session = sessionRef.current;
+    if (!session) return;
+    const col = findColumn(session.cell.columnId);
     if (!col) {
       cancelEdit();
       return;
     }
 
-    const { item, oldValue } = editingContext;
-    let newValue = pendingValue;
+    const { item, oldValue } = session;
 
     // Validate via valueParser — same flow <OGrid> uses.
-    const result = parseValue(newValue, oldValue, item, col);
+    const result = parseValue(session.pending, oldValue, item, col);
     if (!result.valid) {
       cancelEdit();
       return;
     }
-    newValue = result.value;
+    const newValue = result.value;
 
     // No-op if value unchanged.
     if (newValue === oldValue) {
@@ -194,12 +206,10 @@ export function useInlineEdit<T>(
       return;
     }
 
-    onCellEdit({ item, columnId: editingCell.columnId, oldValue, newValue });
-
-    setEditingCell(null);
-    setEditingContext(null);
-    setPendingValue(undefined);
-  }, [editingCell, editingContext, pendingValue, findColumn, onCellEdit, cancelEdit]);
+    // End the session before notifying so a re-entrant blur can't commit twice.
+    cancelEdit();
+    onCellEdit({ item, columnId: session.cell.columnId, oldValue, newValue });
+  }, [findColumn, onCellEdit, cancelEdit]);
 
   const getEditorProps = useCallback(
     (_row: T, _columnId: string): InlineEditorProps => ({
@@ -221,7 +231,7 @@ export function useInlineEdit<T>(
     // row/columnId are accepted for API symmetry with future per-cell
     // overrides but not used in the default implementation.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [pendingValue, commitEdit, cancelEdit],
+    [pendingValue, setPendingValue, commitEdit, cancelEdit],
   );
 
   return {

@@ -1,3 +1,4 @@
+import * as React from 'react';
 
 import {
   Table,
@@ -24,7 +25,7 @@ import {
   createDataGridTable,
   POPOVER_ANCHOR_STYLE,
 } from '@alaarab/ogrid-react';
-import type { DataGridStyles, DataGridPrimitives } from '@alaarab/ogrid-react';
+import type { DataGridStyles, DataGridPrimitives, PopoverEditorRenderProps } from '@alaarab/ogrid-react';
 import styles from './DataGridTable.module.scss';
 
 // Fluent binds @fluentui/react-components table elements + Checkbox/Popover to
@@ -55,6 +56,8 @@ const primitives: DataGridPrimitives = {
   addStickyPosition: true,
   // Fluent's TableHeaderCell doesn't support rowSpan.
   omitLeafRowSpan: true,
+  // Same zero-per-cell-closure interaction handlers as Radix.
+  useDelegatedCellHandlers: true,
   getContextMenuPortalTarget: (wrapper) =>
     (wrapper?.closest('.fui-FluentProvider') as HTMLElement) ?? document.body,
   InlineCellEditor: InlineCellEditor as DataGridPrimitives['InlineCellEditor'],
@@ -91,25 +94,37 @@ const primitives: DataGridPrimitives = {
       aria-label={ariaLabel}
     />
   ),
-  renderPopoverEditor: ({ open, onClose, setAnchorEl, anchorEl, anchorContent, editor }) => (
+  renderPopoverEditor: (p) => <FluentPopoverEditor {...p} />,
+};
+
+/**
+ * Popover cell editor. The anchor element is kept in state (not read from the
+ * render-time prop) so Fluent gets a positioning target on the first open,
+ * after the anchor's ref callback has run.
+ */
+function FluentPopoverEditor({ open, onClose, setAnchorEl, anchorContent, editor }: PopoverEditorRenderProps) {
+  const [target, setTarget] = React.useState<HTMLElement | null>(null);
+  const anchorRef = React.useCallback((el: HTMLDivElement | null) => {
+    if (!el) return;
+    setAnchorEl(el);
+    setTarget(el);
+  }, [setAnchorEl]);
+  return (
     <>
-      <div
-        ref={(el) => { if (el) setAnchorEl(el); }}
-        style={POPOVER_ANCHOR_STYLE}
-      >
+      <div ref={anchorRef} style={POPOVER_ANCHOR_STYLE}>
         {anchorContent}
       </div>
       <Popover
-        open={open}
+        open={open && target != null}
         onOpenChange={(_: OpenPopoverEvents, data: OnOpenChangeData) => { if (!data.open) onClose(); }}
-        positioning={{ target: anchorEl ?? undefined }}
+        positioning={{ target: target ?? undefined }}
       >
         <PopoverSurface>
           {editor}
         </PopoverSurface>
       </Popover>
     </>
-  ),
-};
+  );
+}
 
 export const DataGridTable = createDataGridTable(dataGridStyles, primitives);

@@ -23,7 +23,8 @@
    NOTE: Fluent's column resize hit-target lives at the far right edge of the header cell.
    We leave a 16px safety zone for it.
 */
-:root {
+// Scoped to the header (not :root) so the kit doesn't leak globals into the app.
+.columnHeader {
   --dt-header-resize-zone: 16px;
   --dt-header-action-button: 24px;
   --dt-header-action-gap: 2px;

@@ -1,4 +1,7 @@
 import type { FilterOption } from '@alaarab/ogrid-core';
+const POPOVER_FOCUSABLE =
+  'input:not([disabled]), select:not([disabled]), textarea:not([disabled]), button:not([disabled]), [tabindex]:not([tabindex="-1"])';
+
 /**
  * Headless column header filter state and handlers for Fluent, Material, and Radix.
  * UI packages use this hook and render only presentation (popover, inputs, buttons).
@@ -143,6 +146,31 @@ export function useColumnHeaderFilterState(
   useEffect(() => {
     if (!isFilterOpen) {
       setPopoverPosition(null);
+    }
+  }, [isFilterOpen]);
+
+  // Keyboard access: on open, move focus into the popover (it is portaled to
+  // the end of <body>, so Tab from the trigger would otherwise skip it); on
+  // close, return focus to the trigger unless the user moved it elsewhere.
+  const wasOpenRef = useRef(false);
+  useEffect(() => {
+    if (isFilterOpen) {
+      wasOpenRef.current = true;
+      // After the popover mounts (and after the people filter's own focus).
+      const id = window.setTimeout(() => {
+        const pop = popoverRef.current;
+        if (!pop || pop.contains(document.activeElement)) return;
+        pop.querySelector<HTMLElement>(POPOVER_FOCUSABLE)?.focus({ preventScroll: true });
+      }, 60);
+      return () => window.clearTimeout(id);
+    }
+    if (!wasOpenRef.current) return;
+    wasOpenRef.current = false;
+    const active = document.activeElement;
+    if (!active || active === document.body || popoverRef.current?.contains(active)) {
+      headerRef.current
+        ?.querySelector<HTMLElement>('[data-ogrid-filter-trigger]')
+        ?.focus({ preventScroll: true });
     }
   }, [isFilterOpen]);
 

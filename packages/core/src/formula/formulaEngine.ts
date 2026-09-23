@@ -20,6 +20,7 @@ import { tokenize } from './tokenizer';
 import { parse } from './parser';
 import { FormulaEvaluator } from './evaluator';
 import { DependencyGraph } from './dependencyGraph';
+import type { IRangeDependency } from './dependencyGraph';
 import { createBuiltInFunctions } from './functions';
 import { toCellKey, fromCellKey } from './cellAddressUtils';
 
@@ -27,30 +28,55 @@ import { toCellKey, fromCellKey } from './cellAddressUtils';
 const EMPTY_CYCLIC: ReadonlySet<CellKey> = Object.freeze(new Set<CellKey>());
 
 /**
- * Extract all cell references from an AST node (for dependency tracking).
+ * Functions whose references are computed at evaluation time, so the
+ * dependency graph can't see them. Formulas using them recalc on every change.
  */
-function extractDependencies(node: ASTNode): Set<CellKey> {
-  const deps = new Set<CellKey>();
+const VOLATILE_FUNCTIONS: ReadonlySet<string> = new Set(['INDIRECT', 'OFFSET']);
+
+/** Ranges larger than this are clamped to the grid's data bounds. */
+const MAX_UNCLAMPED_RANGE_CELLS = 1_000_000;
+
+/** Upper bound on cells read for one range after clamping to the grid. */
+export const MAX_RANGE_CELLS = 5_000_000;
+
+/** Upper bound on range cells expanded when listing audit precedents. */
+const MAX_AUDIT_RANGE_CELLS = 10_000;
+
+interface FormulaDependencies {
+  cells: Set<CellKey>;
+  ranges: IRangeDependency[];
+  volatile: boolean;
+}
+
+/**
+ * Extract all cell and range references from an AST node (for dependency
+ * tracking). Ranges stay ranges: expanding `A1:A100000` into 100k keys made a
+ * single formula freeze the page.
+ */
+function extractDependencies(node: ASTNode): FormulaDependencies {
+  const cells = new Set<CellKey>();
+  const ranges: IRangeDependency[] = [];
+  let volatile = false;
 
   function walk(n: ASTNode): void {
     switch (n.kind) {
       case 'cellRef':
-        deps.add(toCellKey(n.address.col, n.address.row, n.address.sheet));
+        cells.add(toCellKey(n.address.col, n.address.row, n.address.sheet));
         break;
       case 'range': {
-        const sheet = n.start.sheet;
         const minRow = Math.min(n.start.row, n.end.row);
         const maxRow = Math.max(n.start.row, n.end.row);
         const minCol = Math.min(n.start.col, n.end.col);
         const maxCol = Math.max(n.start.col, n.end.col);
-        for (let r = minRow; r <= maxRow; r++) {
-          for (let c = minCol; c <= maxCol; c++) {
-            deps.add(toCellKey(c, r, sheet));
-          }
+        if (minRow === maxRow && minCol === maxCol) {
+          cells.add(toCellKey(minCol, minRow, n.start.sheet));
+        } else {
+          ranges.push({ sheet: n.start.sheet, minRow, maxRow, minCol, maxCol });
         }
         break;
       }
       case 'functionCall':
+        if (VOLATILE_FUNCTIONS.has(n.name.toUpperCase())) volatile = true;
         for (const arg of n.args) walk(arg);
         break;
       case 'binaryOp':
@@ -65,7 +91,7 @@ function extractDependencies(node: ASTNode): Set<CellKey> {
   }
 
   walk(node);
-  return deps;
+  return { cells, ranges, volatile };
 }
 
 export class FormulaEngine {
@@ -76,6 +102,10 @@ export class FormulaEngine {
   private readonly evaluator: FormulaEvaluator;
   private readonly namedRanges = new Map<string, string>();
   private readonly sheetAccessors = new Map<string, IGridDataAccessor>();
+  /** Formula cells using INDIRECT/OFFSET; recalculated on every change. */
+  private readonly volatileCells = new Set<CellKey>();
+  /** column -> rows holding formula cells (main sheet), for range overlays. */
+  private readonly formulaRowsByCol = new Map<number, Set<number>>();
 
   constructor(config?: IFormulaEngineConfig) {
     const builtIns = createBuiltInFunctions();
@@ -109,10 +139,8 @@ export class FormulaEngine {
       // Capture the cascade before mutating the graph, then recalculate the
       // dependents  -  otherwise every cell referencing this one keeps the
       // value it had while the formula still existed.
-      const plan = this.depGraph.getRecalcPlan(key);
-      this.formulas.delete(key);
-      this.parsedFormulas.delete(key);
-      this.values.delete(key);
+      const plan = this.depGraph.getRecalcPlanBatch([key], this.volatileCells);
+      this.forgetFormula(key, col, row);
       this.depGraph.removeDependencies(key);
       const updatedCells: IRecalcResult['updatedCells'] = oldValue !== undefined
         ? [{ cellKey: key, col, row, oldValue, newValue: undefined }]
@@ -121,54 +149,39 @@ export class FormulaEngine {
       return { updatedCells };
     }
 
-    // Parse formula (strip leading '=' if present)
-    const expression = formula.startsWith('=') ? formula.slice(1) : formula;
-    let ast: ASTNode;
-    try {
-      const tokens = tokenize(expression);
-      ast = parse(tokens, this.namedRanges);
-    } catch (err) {
-      const error = err instanceof FormulaError
-        ? err
-        : new FormulaError('#ERROR!', String(err));
-      ast = { kind: 'error', error };
-    }
-
-    // Extract dependencies from AST
+    const ast = this.parseFormula(formula);
     const deps = extractDependencies(ast);
+    const oldValue = this.values.get(key);
 
-    // Check for circular references
-    if (deps.has(key) || this.depGraph.wouldCreateCycle(key, deps)) {
-      const oldValue = this.values.get(key);
+    // Circular reference: store the formula as #CIRC!, then recalc its
+    // dependents so cells downstream don't keep values from before the cycle.
+    if (this.depGraph.wouldCreateCycle(key, deps.cells, deps.ranges)) {
       const circError = new FormulaError('#CIRC!', 'Circular reference detected');
-      this.formulas.set(key, formula);
-      this.parsedFormulas.set(key, ast);
+      this.rememberFormula(key, col, row, formula, ast, deps.volatile);
       this.values.set(key, circError);
-      this.depGraph.setDependencies(key, deps);
-      return {
-        updatedCells: [{ cellKey: key, col, row, oldValue, newValue: circError }],
-      };
+      this.depGraph.setDependencies(key, deps.cells, deps.ranges);
+      const updatedCells: IRecalcResult['updatedCells'] = [
+        { cellKey: key, col, row, oldValue, newValue: circError },
+      ];
+      const plan = this.depGraph.getRecalcPlan(key);
+      this.recalcCells(plan.order.filter((k) => k !== key), accessor, updatedCells, plan.cyclic);
+      return { updatedCells };
     }
 
-    // Update dependency graph
-    this.depGraph.setDependencies(key, deps);
-
-    // Store formula and AST
-    this.formulas.set(key, formula);
-    this.parsedFormulas.set(key, ast);
+    this.depGraph.setDependencies(key, deps.cells, deps.ranges);
+    this.rememberFormula(key, col, row, formula, ast, deps.volatile);
 
     // Evaluate the formula
-    const oldValue = this.values.get(key);
     const context = this.createContext(accessor);
-    const newValue = this.evaluator.evaluate(ast, context);
+    const newValue = this.safeEvaluate(ast, context);
     this.values.set(key, newValue);
 
     const updatedCells: IRecalcResult['updatedCells'] = [
       { cellKey: key, col, row, oldValue, newValue },
     ];
 
-    // Cascade: recalculate all dependents
-    const plan = this.depGraph.getRecalcPlan(key);
+    // Cascade: recalculate all dependents (and volatile formulas)
+    const plan = this.depGraph.getRecalcPlanBatch([key], this.otherVolatiles(key));
     this.recalcCells(plan.order, accessor, updatedCells, plan.cyclic);
 
     return { updatedCells };
@@ -183,7 +196,7 @@ export class FormulaEngine {
     accessor: IGridDataAccessor
   ): IRecalcResult {
     const key = toCellKey(col, row);
-    const plan = this.depGraph.getRecalcPlan(key);
+    const plan = this.depGraph.getRecalcPlanBatch([key], this.volatileCells);
     if (plan.order.length === 0) return { updatedCells: [] };
 
     const updatedCells: IRecalcResult['updatedCells'] = [];
@@ -199,7 +212,7 @@ export class FormulaEngine {
     accessor: IGridDataAccessor
   ): IRecalcResult {
     const keys = cells.map(c => toCellKey(c.col, c.row));
-    const plan = this.depGraph.getRecalcPlanBatch(keys);
+    const plan = this.depGraph.getRecalcPlanBatch(keys, this.volatileCells);
     if (plan.order.length === 0) return { updatedCells: [] };
 
     const updatedCells: IRecalcResult['updatedCells'] = [];
@@ -257,7 +270,7 @@ export class FormulaEngine {
         const ast = this.parsedFormulas.get(key);
         if (!ast) continue;
         const oldValue = this.values.get(key);
-        const newValue = this.evaluator.evaluate(ast, context);
+        const newValue = this.safeEvaluate(ast, context);
         this.values.set(key, newValue);
         updatedCells.push({ cellKey: key, col, row, oldValue, newValue });
       }
@@ -277,6 +290,8 @@ export class FormulaEngine {
     this.parsedFormulas.clear();
     this.values.clear();
     this.depGraph.clear();
+    this.volatileCells.clear();
+    this.formulaRowsByCol.clear();
   }
 
   /**
@@ -303,23 +318,10 @@ export class FormulaEngine {
     // Parse and register all formulas first
     for (const { col, row, formula } of formulas) {
       const key = toCellKey(col, row);
-      const expression = formula.startsWith('=') ? formula.slice(1) : formula;
-      let ast: ASTNode;
-      try {
-        const tokens = tokenize(expression);
-        ast = parse(tokens, this.namedRanges);
-      } catch (err) {
-        const error = err instanceof FormulaError
-          ? err
-          : new FormulaError('#ERROR!', String(err));
-        ast = { kind: 'error', error };
-      }
-
-      this.formulas.set(key, formula);
-      this.parsedFormulas.set(key, ast);
-
+      const ast = this.parseFormula(formula);
       const deps = extractDependencies(ast);
-      this.depGraph.setDependencies(key, deps);
+      this.rememberFormula(key, col, row, formula, ast, deps.volatile);
+      this.depGraph.setDependencies(key, deps.cells, deps.ranges);
     }
 
     // Evaluate all in dependency order
@@ -376,16 +378,32 @@ export class FormulaEngine {
     const visited = new Set<CellKey>();
     const queue: CellKey[] = [];
 
-    // Seed with direct dependencies
-    const directDeps = this.depGraph.getDependencies(key);
-    for (const dep of directDeps) {
-      if (!visited.has(dep)) {
-        visited.add(dep);
-        queue.push(dep);
+    const enqueuePrecedents = (cell: CellKey): void => {
+      for (const dep of this.depGraph.getDependencies(cell)) {
+        if (!visited.has(dep)) {
+          visited.add(dep);
+          queue.push(dep);
+        }
       }
-    }
+      // Range references are expanded cell by cell, up to a bound, so audits
+      // of huge ranges stay responsive.
+      for (const range of this.depGraph.getRangeDependencies(cell)) {
+        const cellCount = (range.maxRow - range.minRow + 1) * (range.maxCol - range.minCol + 1);
+        if (cellCount > MAX_AUDIT_RANGE_CELLS) continue;
+        for (let r = range.minRow; r <= range.maxRow; r++) {
+          for (let c = range.minCol; c <= range.maxCol; c++) {
+            const dep = toCellKey(c, r, range.sheet);
+            if (!visited.has(dep)) {
+              visited.add(dep);
+              queue.push(dep);
+            }
+          }
+        }
+      }
+    };
 
-    // BFS
+    // Seed with direct dependencies, then BFS
+    enqueuePrecedents(key);
     let head = 0;
     while (head < queue.length) {
       const current = queue[head++];
@@ -398,14 +416,7 @@ export class FormulaEngine {
         formula: this.formulas.get(current),
         value: this.values.has(current) ? this.values.get(current) : undefined,
       });
-
-      const deps = this.depGraph.getDependencies(current);
-      for (const dep of deps) {
-        if (!visited.has(dep)) {
-          visited.add(dep);
-          queue.push(dep);
-        }
-      }
+      enqueuePrecedents(current);
     }
 
     return result;
@@ -503,20 +514,40 @@ export class FormulaEngine {
           return [[new FormulaError('#REF!', `Unknown sheet: ${sheet}`)]];
         }
         const minRow = Math.min(range.start.row, range.end.row);
-        const maxRow = Math.max(range.start.row, range.end.row);
         const minCol = Math.min(range.start.col, range.end.col);
-        const maxCol = Math.max(range.start.col, range.end.col);
+        let maxRow = Math.max(range.start.row, range.end.row);
+        let maxCol = Math.max(range.start.col, range.end.col);
+        // Huge ranges (=SUM(A1:XFD1048576)) are clamped to the grid, since
+        // cells past the data are empty and reading them one by one would
+        // hang the page. Ordinary ranges keep their full shape so functions
+        // like COUNTBLANK and INDEX see the cells past the last data row.
+        if ((maxRow - minRow + 1) * (maxCol - minCol + 1) > MAX_UNCLAMPED_RANGE_CELLS) {
+          maxRow = Math.min(maxRow, (rangeAccessor?.getRowCount() ?? 0) - 1);
+          maxCol = Math.min(maxCol, (rangeAccessor?.getColumnCount() ?? 0) - 1);
+          if (maxRow < minRow || maxCol < minCol) return [[]];
+          if ((maxRow - minRow + 1) * (maxCol - minCol + 1) > MAX_RANGE_CELLS) {
+            return [[new FormulaError('#VALUE!', 'Range too large')]];
+          }
+        }
         for (let r = minRow; r <= maxRow; r++) {
-          const row: unknown[] = [];
+          const row: unknown[] = new Array(maxCol - minCol + 1);
           for (let c = minCol; c <= maxCol; c++) {
-            const key = toCellKey(c, r, sheet);
-            if (this.values.has(key)) {
-              row.push(this.values.get(key));
-            } else {
-              row.push(rangeAccessor?.getCellValue(c, r));
-            }
+            row[c - minCol] = rangeAccessor?.getCellValue(c, r);
           }
           result.push(row);
+        }
+        // Overlay computed formula values (main sheet only: formulas live there).
+        if (!sheet) {
+          for (let c = minCol; c <= maxCol; c++) {
+            const rows = this.formulaRowsByCol.get(c);
+            if (!rows) continue;
+            for (const r of rows) {
+              if (r < minRow || r > maxRow) continue;
+              const key = toCellKey(c, r);
+              const target = result[r - minRow];
+              if (target && this.values.has(key)) target[c - minCol] = this.values.get(key);
+            }
+          }
         }
         return result;
       },
@@ -552,9 +583,75 @@ export class FormulaEngine {
 
       const { col, row } = fromCellKey(key);
       const oldValue = this.values.get(key);
-      const newValue = this.evaluator.evaluate(ast, context);
+      const newValue = this.safeEvaluate(ast, context);
       this.values.set(key, newValue);
       updatedCells.push({ cellKey: key, col, row, oldValue, newValue });
     }
+  }
+
+  private parseFormula(formula: string): ASTNode {
+    // Strip leading '=' if present
+    const expression = formula.startsWith('=') ? formula.slice(1) : formula;
+    try {
+      return parse(tokenize(expression), this.namedRanges);
+    } catch (err) {
+      const error = err instanceof FormulaError
+        ? err
+        : new FormulaError('#ERROR!', String(err));
+      return { kind: 'error', error };
+    }
+  }
+
+  /**
+   * Evaluate without letting a throwing custom function or a runtime error
+   * (e.g. out-of-memory RangeError) escape and leave the engine half-updated.
+   */
+  private safeEvaluate(ast: ASTNode, context: IFormulaContext): unknown {
+    try {
+      return this.evaluator.evaluate(ast, context);
+    } catch (err) {
+      if (err instanceof FormulaError) return err;
+      return new FormulaError('#VALUE!', err instanceof Error ? err.message : String(err));
+    }
+  }
+
+  private rememberFormula(
+    key: CellKey,
+    col: number,
+    row: number,
+    formula: string,
+    ast: ASTNode,
+    volatile: boolean,
+  ): void {
+    this.formulas.set(key, formula);
+    this.parsedFormulas.set(key, ast);
+    if (volatile) this.volatileCells.add(key);
+    else this.volatileCells.delete(key);
+    let rows = this.formulaRowsByCol.get(col);
+    if (!rows) {
+      rows = new Set();
+      this.formulaRowsByCol.set(col, rows);
+    }
+    rows.add(row);
+  }
+
+  private forgetFormula(key: CellKey, col: number, row: number): void {
+    this.formulas.delete(key);
+    this.parsedFormulas.delete(key);
+    this.values.delete(key);
+    this.volatileCells.delete(key);
+    const rows = this.formulaRowsByCol.get(col);
+    if (rows) {
+      rows.delete(row);
+      if (rows.size === 0) this.formulaRowsByCol.delete(col);
+    }
+  }
+
+  /** Volatile cells other than `key` (which was just evaluated). */
+  private otherVolatiles(key: CellKey): CellKey[] {
+    if (this.volatileCells.size === 0) return [];
+    const out: CellKey[] = [];
+    for (const k of this.volatileCells) if (k !== key) out.push(k);
+    return out;
   }
 }

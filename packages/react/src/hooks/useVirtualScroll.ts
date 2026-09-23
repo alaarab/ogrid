@@ -138,6 +138,16 @@ export function useVirtualScroll(params: UseVirtualScrollParams): UseVirtualScro
     enabled: tanStackActive,
   });
 
+  // TanStack memoizes row measurements and does not watch estimateSize, so a
+  // rowHeight/density change would keep the old heights (wrong total size and
+  // offsets) until something else invalidated them. Re-measure explicitly.
+  const measuredRowHeightRef = useRef(rowHeight);
+  useEffect(() => {
+    if (measuredRowHeightRef.current === rowHeight) return;
+    measuredRowHeightRef.current = rowHeight;
+    virtualizer.measure?.();
+  }, [rowHeight, virtualizer]);
+
   // Track container size whenever row or column virtualization is live. The
   // observer fires only on real resizes, so this is cheap to keep mounted.
   useEffect(() => {

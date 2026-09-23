@@ -51,6 +51,19 @@ export function createColumnHeaderFilterTests(ColumnHeaderFilter: React.Componen
     expect(onFilterChange).toHaveBeenCalledWith(['Unknown', 'false']);
   });
 
+  it('moves focus into the popover on open and back to the trigger on Escape', async () => {
+    render(<ColumnHeaderFilter columnKey="name" columnName="Name" filterType="text" textValue="" onTextChange={() => undefined} />);
+    const trigger = screen.getByRole('button', { name: 'Filter Name' });
+    trigger.focus();
+    fireEvent.click(trigger);
+    await waitFor(() => {
+      const active = document.activeElement as HTMLElement | null;
+      expect(active?.tagName).toBe('INPUT');
+    });
+    fireEvent.keyDown(document.activeElement as Element, { key: 'Escape' });
+    await waitFor(() => expect(document.activeElement).toBe(screen.getByRole('button', { name: 'Filter Name' })));
+  });
+
   it('renders no filter button when filterType is none', () => {
     render(<ColumnHeaderFilter columnKey="id" columnName="ID" filterType="none" onSort={() => undefined} />);
     expect(screen.queryByRole('button', { name: /filter id/i })).not.toBeInTheDocument();

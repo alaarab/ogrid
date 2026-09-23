@@ -22,11 +22,13 @@ function GridRowInner(props: BaseGridRowProps) {
   const {
     item, rowIndex, rowId, isSelected, visibleCols, columnMeta,
     renderCellContent, handleSingleRowClick, handleRowCheckboxChange,
-    lastMouseShiftRef, hasCheckboxCol, hasRowNumbersCol, rowNumberOffset,
+    lastMouseShiftRef, hasCheckboxCol, hasRowNumbersCol, rowNumberOffset, ariaRowIndexBase,
     leftSpacerWidth, rightSpacerWidth, globalColIndexMap, rowNumWidth,
     selectionRange, activeCell, cutRange, styles, primitives,
   } = props;
   const { Tr, Td, renderRowCheckbox } = primitives;
+  // Checkbox / row-number columns precede the data columns in aria-colindex.
+  const leadingColCount = (hasCheckboxCol ? 1 : 0) + (hasRowNumbersCol ? 1 : 0);
 
   return (
     <Tr
@@ -34,6 +36,7 @@ function GridRowInner(props: BaseGridRowProps) {
       data-row-id={rowId}
       onClick={handleSingleRowClick}
       aria-selected={isSelected || undefined}
+      aria-rowindex={ariaRowIndexBase != null ? ariaRowIndexBase + rowIndex + 1 : undefined}
     >
       {hasCheckboxCol && (
         <Td className={styles.selectionCell}>
@@ -93,6 +96,7 @@ function GridRowInner(props: BaseGridRowProps) {
           <Td
             key={col.columnId}
             data-column-id={col.columnId}
+            aria-colindex={leadingColCount + globalIdx + 1}
             className={columnMeta.cellClasses[col.columnId] || undefined}
             style={bg ? { ...baseStyle, background: bg } : baseStyle}
             onPointerDown={PREVENT_DEFAULT}

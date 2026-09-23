@@ -48,11 +48,13 @@ export interface IFillFormulaOptions<T> {
 
 /**
  * Apply fill values from a source cell across a normalized selection range.
- * Copies the value from the start cell of the range to every other editable cell.
+ * Copies the value of the source cell (`sourceRow`/`sourceCol`, which may be
+ * any cell of the range, e.g. the bottom cell of an upward fill) to every
+ * other editable cell.
  * If formulaOptions is provided and the source cell has a formula, relative references
  * in the formula are adjusted for each target cell instead of copying the raw value.
  *
- * @param range           The normalized fill range (startRow/startCol is the source).
+ * @param range           The normalized fill range (contains the source cell).
  * @param sourceRow       The original source row index (skipped during fill).
  * @param sourceCol       The original source col index (skipped during fill).
  * @param items           Array of all row data objects.
@@ -69,8 +71,8 @@ export function applyFillValues<T>(
   formulaOptions?: IFillFormulaOptions<T>
 ): ICellValueChangedEvent<T>[] {
   const events: ICellValueChangedEvent<T>[] = [];
-  const startItem = items[range.startRow];
-  const startColDef = visibleCols[range.startCol];
+  const startItem = items[sourceRow];
+  const startColDef = visibleCols[sourceCol];
   if (!startItem || !startColDef) return events;
 
   const startValue = getCellValue(startItem, startColDef);

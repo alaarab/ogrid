@@ -7,6 +7,7 @@ import {
   WindowedRowCache,
 } from '@alaarab/ogrid-core';
 import { useLatestRef } from './useLatestRef';
+import { useIdentityVersion } from './useIdentityVersion';
 import type { IFilters, IDataSource, WindowedDataState } from '../types';
 import type { IColumnDef as ICoreColumnDef, WindowedRow, PageSize } from '@alaarab/ogrid-core';
 
@@ -26,6 +27,13 @@ export interface UseOGridDataFetchingParams<T> {
   isServerSide: boolean;
   dataSource?: IDataSource<T>;
   displayData: T[];
+  /**
+   * Row identity. When `displayData` changes, rows are re-sorted/re-filtered
+   * unless every position still holds the same row (by id): that's a cell
+   * edit, whose order is preserved. Without it, a new array whose rows are
+   * all new objects counts as a replacement.
+   */
+  getRowId?: (row: T) => unknown;
   columns: ICoreColumnDef<T>[];
   stableFilters: IFilters;
   sort: { field: string; direction: 'asc' | 'desc' };
@@ -54,6 +62,11 @@ export interface UseOGridDataFetchingParams<T> {
 }
 
 export interface UseOGridDataFetchingState<T> {
+  /**
+   * Client-side only: every filtered + sorted row, before the page slice.
+   * Empty in server-side mode (the full set isn't loaded).
+   */
+  allFilteredItems: T[];
   displayItems: T[];
   displayTotalCount: number;
   serverLoading: boolean;
@@ -77,13 +90,41 @@ export interface UseOGridDataFetchingState<T> {
  * (sortVersion increments). Subsequent data edits preserve row order rather than
  * re-sorting - matching Excel behavior where edited rows stay in place.
  */
+const EMPTY_ROWS: readonly unknown[] = Object.freeze([]);
+
+/**
+ * True when `next` looks like `prev` after in-place cell edits (same rows at
+ * the same positions) rather than a different dataset. Edits keep the snapshot
+ * sort order; a different dataset of the same length must be re-sorted and
+ * re-filtered.
+ */
+function isSameRowSet<T>(prev: readonly T[], next: readonly T[], getRowId?: (row: T) => unknown): boolean {
+  if (prev === next) return true;
+  if (prev.length !== next.length) return false;
+  let shared = 0;
+  for (let i = 0; i < next.length; i++) {
+    const a = prev[i];
+    const b = next[i];
+    if (a === b) {
+      shared++;
+      continue;
+    }
+    if (getRowId && a !== undefined && b !== undefined && getRowId(a) !== getRowId(b)) return false;
+  }
+  // Without ids: an edit replaces some row objects; a new dataset replaces all.
+  return getRowId !== undefined || next.length === 0 || shared > 0;
+}
+
 export function useOGridDataFetching<T>(params: UseOGridDataFetchingParams<T>): UseOGridDataFetchingState<T> {
   const {
-    isServerSide, dataSource, displayData, columns, stableFilters,
+    isServerSide, dataSource, displayData, getRowId, columns, stableFilters,
     sort, sortVersion, page, pageSize, paginate = true, onError, onFirstDataRendered, workerSort,
   } = params;
 
   const isClientSide = !isServerSide;
+  // Held in a ref: callers may pass an inline getRowId, which must not
+  // retrigger the worker effect on every render.
+  const getRowIdRef = useLatestRef(getRowId);
 
   // Determine if worker sort should be used
   const useWorker = shouldUseWorkerSort(workerSort, displayData.length, {
@@ -105,7 +146,7 @@ export function useOGridDataFetching<T>(params: UseOGridDataFetchingParams<T>): 
   const prevSortVersionRef = useRef(-1); // -1 forces initial build
   const prevFiltersRef = useRef<IFilters | null>(null);
   const prevColumnsRef = useRef<ICoreColumnDef<T>[] | null>(null);
-  const prevDataLengthRef = useRef(-1);
+  const prevDataRef = useRef<T[] | null>(null);
   const prevSortFieldRef = useRef<string | null>(null);
   const prevSortDirectionRef = useRef<'asc' | 'desc' | null>(null);
 
@@ -117,7 +158,8 @@ export function useOGridDataFetching<T>(params: UseOGridDataFetchingParams<T>): 
     sortVersion !== prevSortVersionRef.current ||
     stableFilters !== prevFiltersRef.current ||
     columns !== prevColumnsRef.current ||
-    displayData.length !== prevDataLengthRef.current ||
+    prevDataRef.current === null ||
+    !isSameRowSet(prevDataRef.current, displayData, getRowIdRef.current) ||
     sort.field !== prevSortFieldRef.current ||
     sort.direction !== prevSortDirectionRef.current;
 
@@ -125,11 +167,11 @@ export function useOGridDataFetching<T>(params: UseOGridDataFetchingParams<T>): 
     prevSortVersionRef.current = sortVersion;
     prevFiltersRef.current = stableFilters;
     prevColumnsRef.current = columns;
-    prevDataLengthRef.current = displayData.length;
     prevSortFieldRef.current = sort.field;
     prevSortDirectionRef.current = sort.direction;
     sortedIndicesRef.current = null; // will be built in memo
   }
+  prevDataRef.current = displayData;
 
   // --- Client-side filtering & sorting (sync path) ---
   // biome-ignore lint/correctness/useExhaustiveDependencies: sortVersion is a deliberate invalidation trigger — it is consumed via needsResort/sortedIndicesRef above, so the memo must recompute when it bumps even though it is not read inside
@@ -168,26 +210,30 @@ export function useOGridDataFetching<T>(params: UseOGridDataFetchingParams<T>): 
     // Full-dataset virtualization (paginate=false): return every row so the
     // grid virtual-scrolls the whole dataset instead of a single page.
     if (!paginate) {
-      return { items: orderedRows, totalCount: total };
+      return { items: orderedRows, totalCount: total, all: orderedRows };
     }
-    return { items: pageWindow(orderedRows, page, pageSize), totalCount: total };
+    return { items: pageWindow(orderedRows, page, pageSize), totalCount: total, all: orderedRows };
     // Note: sortVersion is implicitly tracked via needsResort / sortedIndicesRef.current === null
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isClientSide, useWorker, displayData, columns, stableFilters, sortVersion, sort.field, sort.direction, page, pageSize, paginate]);
 
   // Stabilize callback refs so inline dataSource/onError don't cause infinite re-fetches.
   const dataSourceRef = useLatestRef(dataSource);
+  // Bumps when a (memoized) dataSource is replaced, so swapping backends
+  // refetches and rebuilds the windowed cache. Inline objects bump it at most once.
+  const dataSourceVersion = useIdentityVersion(dataSource);
   const onErrorRef = useLatestRef(onError);
 
   // --- Client-side filtering & sorting (async worker path) ---
-  const [asyncItems, setAsyncItems] = useState<{ items: T[]; totalCount: number } | null>(null);
+  const [asyncItems, setAsyncItems] = useState<{ items: T[]; totalCount: number; all: T[] } | null>(null);
   const asyncIdRef = useRef(0);
   const asyncSortedIndicesRef = useRef<number[] | null>(null);
   const asyncPrevSortVersionRef = useRef(-1);
   const asyncPrevFiltersRef = useRef<IFilters | null>(null);
   const asyncPrevColumnsRef = useRef<ICoreColumnDef<T>[] | null>(null);
-  const asyncPrevDataLengthRef = useRef(-1);
+  const asyncPrevDataRef = useRef<T[] | null>(null);
 
+  // biome-ignore lint/correctness/useExhaustiveDependencies: getRowIdRef.current is a latest-value ref read on purpose; depending on it would re-run the worker effect for inline getRowId functions
   useEffect(() => {
     if (!isClientSide || !useWorker) {
       setAsyncItems(null);
@@ -198,13 +244,14 @@ export function useOGridDataFetching<T>(params: UseOGridDataFetchingParams<T>): 
       sortVersion !== asyncPrevSortVersionRef.current ||
       stableFilters !== asyncPrevFiltersRef.current ||
       columns !== asyncPrevColumnsRef.current ||
-      displayData.length !== asyncPrevDataLengthRef.current;
+      asyncPrevDataRef.current === null ||
+      !isSameRowSet(asyncPrevDataRef.current, displayData, getRowIdRef.current);
+    asyncPrevDataRef.current = displayData;
 
     if (needsResortAsync) {
       asyncPrevSortVersionRef.current = sortVersion;
       asyncPrevFiltersRef.current = stableFilters;
       asyncPrevColumnsRef.current = columns;
-      asyncPrevDataLengthRef.current = displayData.length;
       asyncSortedIndicesRef.current = null;
     }
 
@@ -224,10 +271,10 @@ export function useOGridDataFetching<T>(params: UseOGridDataFetchingParams<T>): 
         asyncSortedIndicesRef.current = indices;
         const total = rows.length;
         if (!paginate) {
-          setAsyncItems({ items: rows, totalCount: total });
+          setAsyncItems({ items: rows, totalCount: total, all: rows });
           return;
         }
-        setAsyncItems({ items: pageWindow(rows, page, pageSize), totalCount: total });
+        setAsyncItems({ items: pageWindow(rows, page, pageSize), totalCount: total, all: rows });
       };
 
       // Full re-sort via worker.
@@ -252,9 +299,9 @@ export function useOGridDataFetching<T>(params: UseOGridDataFetchingParams<T>): 
       const orderedRows = asyncSortedIndicesRef.current.map((idx) => displayData[idx]).filter((r) => r !== undefined);
       const total = orderedRows.length;
       if (!paginate) {
-        setAsyncItems({ items: orderedRows, totalCount: total });
+        setAsyncItems({ items: orderedRows, totalCount: total, all: orderedRows });
       } else {
-        setAsyncItems({ items: pageWindow(orderedRows, page, pageSize), totalCount: total });
+        setAsyncItems({ items: pageWindow(orderedRows, page, pageSize), totalCount: total, all: orderedRows });
       }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -267,7 +314,7 @@ export function useOGridDataFetching<T>(params: UseOGridDataFetchingParams<T>): 
   const fetchIdRef = useRef(0);
   const [refreshCounter, setRefreshCounter] = useState(0);
 
-  // biome-ignore lint/correctness/useExhaustiveDependencies: refreshCounter is a deliberate re-fetch trigger (bumped by the imperative refresh API); it is not read inside the effect
+  // biome-ignore lint/correctness/useExhaustiveDependencies: refreshCounter and dataSourceVersion are deliberate re-fetch triggers (bumped by the imperative refresh API); it is not read inside the effect
   useEffect(() => {
     const ds = dataSourceRef.current;
     // A windowed data source (getRowCount + getRows) is driven by the
@@ -308,7 +355,7 @@ export function useOGridDataFetching<T>(params: UseOGridDataFetchingParams<T>): 
     return () => {
       controller.abort();
     };
-  }, [isServerSide, page, pageSize, sort.field, sort.direction, stableFilters, refreshCounter, dataSourceRef, onErrorRef]);
+  }, [isServerSide, page, pageSize, sort.field, sort.direction, stableFilters, refreshCounter, dataSourceVersion, dataSourceRef, onErrorRef]);
 
   // --- Windowed (lazy) data source ---
   // When the data source implements the windowed contract (getRowCount +
@@ -321,7 +368,7 @@ export function useOGridDataFetching<T>(params: UseOGridDataFetchingParams<T>): 
   const [windowedRowCount, setWindowedRowCount] = useState(0);
   const windowedCacheRef = useRef<WindowedRowCache<T> | null>(null);
 
-  // biome-ignore lint/correctness/useExhaustiveDependencies: isWindowed is a deliberate trigger so the cache is re-created when the data-source mode changes (see note below); the effect reads the mode via isWindowedDataSource(ds) instead
+  // biome-ignore lint/correctness/useExhaustiveDependencies: isWindowed and dataSourceVersion are deliberate triggers so the cache is re-created when the data-source mode or identity changes (see note below); the effect reads the source via dataSourceRef instead
   useEffect(() => {
     const ds = dataSourceRef.current;
     if (!isServerSide || !isWindowedDataSource(ds)) {
@@ -342,7 +389,7 @@ export function useOGridDataFetching<T>(params: UseOGridDataFetchingParams<T>): 
       if (windowedCacheRef.current === cache) windowedCacheRef.current = null;
     };
     // Re-create the cache only when the data source identity or mode changes.
-  }, [isServerSide, isWindowed, dataSourceRef]);
+  }, [isServerSide, isWindowed, dataSourceVersion, dataSourceRef]);
 
   // Re-fetch the row count whenever sort or filters change.
   //
@@ -393,6 +440,7 @@ export function useOGridDataFetching<T>(params: UseOGridDataFetchingParams<T>): 
 
   const clientResult = clientItemsAndTotal ?? asyncItems;
   const displayItems = isClientSide && clientResult ? clientResult.items : serverItems;
+  const allFilteredItems = isClientSide && clientResult ? clientResult.all : EMPTY_ROWS as T[];
   const displayTotalCount = isWindowed
     ? windowedRowCount
     : isClientSide && clientResult
@@ -411,6 +459,7 @@ export function useOGridDataFetching<T>(params: UseOGridDataFetchingParams<T>): 
 
   return {
     displayItems,
+    allFilteredItems,
     displayTotalCount,
     serverLoading,
     refreshData: () => setRefreshCounter((prev) => prev + 1),

@@ -48,6 +48,19 @@ export function createDataGridTableTests(DataGridTable: React.ComponentType<IOGr
     expect(screen.getAllByTestId('cell-status').map((el) => el.textContent)).toEqual(['Active', 'Closed']);
   });
 
+  it('exposes ARIA grid geometry (row/col counts and indexes)', () => {
+    const { container } = renderTable();
+    const grid = container.querySelector('[role="grid"]') as HTMLElement;
+    expect(grid.getAttribute('aria-colcount')).toBe('2');
+    const headerRows = container.querySelectorAll('thead tr').length;
+    expect(grid.getAttribute('aria-rowcount')).toBe(String(headerRows + 2));
+    const bodyRows = container.querySelectorAll('tbody tr');
+    expect(bodyRows[0]?.getAttribute('aria-rowindex')).toBe(String(headerRows + 1));
+    expect(bodyRows[1]?.getAttribute('aria-rowindex')).toBe(String(headerRows + 2));
+    const cells = bodyRows[0]?.querySelectorAll('[aria-colindex]') ?? [];
+    expect(Array.from(cells).map((c) => c.getAttribute('aria-colindex'))).toEqual(['1', '2']);
+  });
+
   it('hides columns not in visibleColumns', () => {
     renderTable({ visibleColumns: new Set(['name']) });
     expect(screen.getAllByTestId('cell-name')).toHaveLength(2);

@@ -1,5 +1,6 @@
 import * as React from 'react';
 import { createPortal } from 'react-dom';
+import { usePortalTheme } from '../hooks/usePortalTheme';
 import { getColumnHeaderMenuItems } from '../utils';
 import type { ColumnHeaderMenuInput } from '../utils';
 
@@ -62,6 +63,9 @@ export function BaseColumnHeaderMenu(props: BaseColumnHeaderMenuProps) {
 
   const [position, setPosition] = React.useState<{ top: number; left: number } | null>(null);
   const menuRef = React.useRef<HTMLDivElement>(null);
+  // Carry the grid's scoped theme tokens into the portaled menu.
+  const anchorRef = React.useMemo(() => ({ current: anchorElement ?? null }), [anchorElement]);
+  const portalTheme = usePortalTheme(anchorRef, isOpen);
 
   React.useEffect(() => {
     if (!isOpen || !anchorElement) {
@@ -138,6 +142,7 @@ export function BaseColumnHeaderMenu(props: BaseColumnHeaderMenuProps) {
       ref={menuRef}
       className={classNames?.content}
       style={{
+        ...portalTheme,
         position: 'fixed',
         top: position.top,
         left: position.left,

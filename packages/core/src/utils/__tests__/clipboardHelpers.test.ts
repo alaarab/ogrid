@@ -43,9 +43,11 @@ describe('formatCellValueForTsv', () => {
     expect(formatCellValueForTsv(42, 'forty-two')).toBe('forty-two');
   });
 
-  it('strips tabs and newlines', () => {
-    expect(formatCellValueForTsv('a\tb', null)).toBe('a b');
-    expect(formatCellValueForTsv('a\nb', null)).toBe('a b');
+  it('quotes cells containing tabs or newlines (Excel convention)', () => {
+    expect(formatCellValueForTsv('a\tb', null)).toBe('"a\tb"');
+    expect(formatCellValueForTsv('a\nb', null)).toBe('"a\nb"');
+    expect(formatCellValueForTsv('say "hi"\n', null)).toBe('"say ""hi""\n"');
+    expect(formatCellValueForTsv('say "hi"', null)).toBe('say "hi"');
   });
 });
 
@@ -248,5 +250,37 @@ describe('applyPastedValues type safety', () => {
     // Only name (text) accepts "hello"  -  age, active, joined all reject
     expect(events).toHaveLength(1);
     expect(events[0].columnId).toBe('name');
+  });
+});
+
+describe('parseTsvClipboard (Excel compatibility)', () => {
+  it('keeps interior blank rows so later rows stay aligned', () => {
+    expect(parseTsvClipboard('a\r\n\r\nc')).toEqual([['a'], [''], ['c']]);
+    expect(parseTsvClipboard('a\n\nc\n')).toEqual([['a'], [''], ['c']]);
+  });
+
+  it('drops only the single trailing line break', () => {
+    expect(parseTsvClipboard('a\tb\r\n')).toEqual([['a', 'b']]);
+    expect(parseTsvClipboard('a\r\n\r\n')).toEqual([['a'], ['']]);
+  });
+
+  it('keeps empty trailing cells', () => {
+    expect(parseTsvClipboard('a\t\tc\r\n\t\t')).toEqual([['a', '', 'c'], ['', '', '']]);
+  });
+
+  it('parses quoted cells with line breaks, tabs and escaped quotes', () => {
+    expect(parseTsvClipboard('"line1\nline2"\tb')).toEqual([['line1\nline2', 'b']]);
+    expect(parseTsvClipboard('"a\tb"\t"say ""hi"""\r\nz')).toEqual([['a\tb', 'say "hi"'], ['z']]);
+  });
+
+  it('treats quotes that do not wrap the whole cell literally', () => {
+    expect(parseTsvClipboard('5" pipe\tx')).toEqual([['5" pipe', 'x']]);
+    expect(parseTsvClipboard('"abc" def\tx')).toEqual([['"abc" def', 'x']]);
+    expect(parseTsvClipboard('"unterminated\tx')).toEqual([['"unterminated', 'x']]);
+  });
+
+  it('round-trips multiline values written by formatCellValueForTsv', () => {
+    const cell = formatCellValueForTsv('a "q"\nb', undefined);
+    expect(parseTsvClipboard(`${cell}\tnext`)).toEqual([['a "q"\nb', 'next']]);
   });
 });

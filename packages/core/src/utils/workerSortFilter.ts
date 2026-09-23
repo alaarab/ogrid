@@ -11,13 +11,40 @@ import { getFilterField } from './ogridHelpers';
 import { processClientSideData } from './clientSideData';
 import type { SortFilterRequest, SortFilterResponse } from '../workers/sortFilterWorker';
 import { workerBody } from '../workers/sortFilterWorker';
+import { SORT_FILTER_PRIMITIVES } from '../workers/sortFilterPrimitives';
+
+/**
+ * Worker script: the shared primitives (as function declarations) followed by
+ * the self-invoking worker body, which calls them by name.
+ */
+export function buildWorkerSource(): string {
+  const prelude = SORT_FILTER_PRIMITIVES.map((fn) => fn.toString()).join('\n');
+  return `${prelude}\n(${workerBody.toString()})()`;
+}
 
 let workerInstance: Worker | null = null;
+/** Set once the worker errors before ever replying (e.g. CSP blocks blob: workers). */
+let workerUnavailable = false;
 let requestCounter = 0;
 const pendingRequests = new Map<number, {
   resolve: (indices: number[]) => void;
   reject: (err: Error) => void;
+  timer: ReturnType<typeof setTimeout>;
 }>();
+
+/**
+ * A request that gets no reply within this window is rejected so callers can
+ * fall back to the synchronous path instead of waiting forever.
+ */
+export const WORKER_REQUEST_TIMEOUT_MS = 30_000;
+
+function rejectAllPending(err: Error): void {
+  for (const [id, pending] of pendingRequests) {
+    clearTimeout(pending.timer);
+    pending.reject(err);
+    pendingRequests.delete(id);
+  }
+}
 
 /**
  * Create (or reuse) the sort/filter Web Worker from an inline Blob URL.
@@ -25,36 +52,52 @@ const pendingRequests = new Map<number, {
  */
 export function createSortFilterWorker(): Worker | null {
   if (workerInstance) return workerInstance;
+  if (workerUnavailable) return null;
 
   if (typeof Worker === 'undefined' || typeof Blob === 'undefined' || typeof URL === 'undefined') {
     return null;
   }
 
   try {
-    const fnStr = workerBody.toString();
-    const blob = new Blob(
-      [`(${fnStr})()`],
-      { type: 'application/javascript' }
-    );
-    const url = URL.createObjectURL(blob);
-    workerInstance = new Worker(url);
-    URL.revokeObjectURL(url);
+    const blob = new Blob([buildWorkerSource()], { type: 'application/javascript' });
+    let url: string | null = URL.createObjectURL(blob);
+    const worker = new Worker(url);
+    workerInstance = worker;
+    let hasReplied = false;
+    // Revoke only once the worker has loaded (first reply or error): revoking
+    // before the script fetch completes can fail worker startup in some browsers.
+    const releaseUrl = () => {
+      if (url) {
+        URL.revokeObjectURL(url);
+        url = null;
+      }
+    };
 
-    workerInstance.onmessage = (e: MessageEvent<SortFilterResponse>) => {
+    worker.onmessage = (e: MessageEvent<SortFilterResponse>) => {
+      hasReplied = true;
+      releaseUrl();
       const { requestId, indices } = e.data;
       const pending = pendingRequests.get(requestId);
       if (pending) {
+        clearTimeout(pending.timer);
         pendingRequests.delete(requestId);
         pending.resolve(indices);
       }
     };
 
-    workerInstance.onerror = (err) => {
-      // Reject all pending requests
-      for (const [id, pending] of pendingRequests) {
-        pending.reject(new Error(err.message || 'Worker error'));
-        pendingRequests.delete(id);
+    worker.onmessageerror = () => {
+      rejectAllPending(new Error('Worker message could not be deserialized'));
+    };
+
+    worker.onerror = (err) => {
+      releaseUrl();
+      if (!hasReplied) {
+        // Never worked: stop retrying and use the sync path from now on.
+        workerUnavailable = true;
+        worker.terminate();
+        if (workerInstance === worker) workerInstance = null;
       }
+      rejectAllPending(new Error(err.message || 'Worker error'));
     };
 
     return workerInstance;
@@ -71,11 +114,7 @@ export function terminateSortFilterWorker(): void {
     workerInstance.terminate();
     workerInstance = null;
   }
-  // Reject any pending requests
-  for (const [id, pending] of pendingRequests) {
-    pending.reject(new Error('Worker terminated'));
-    pendingRequests.delete(id);
-  }
+  rejectAllPending(new Error('Worker terminated'));
 }
 
 /**
@@ -84,8 +123,11 @@ export function terminateSortFilterWorker(): void {
  */
 export function extractValueMatrix<T>(
   data: T[],
-  columns: IColumnDef<T>[]
+  columns: IColumnDef<T>[],
+  /** Column indices to extract; others are left null. Defaults to all. */
+  neededColumns?: ReadonlySet<number>,
 ): (string | number | boolean | null)[][] {
+  const needed = columns.map((_, i) => !neededColumns || neededColumns.has(i));
   const matrix: (string | number | boolean | null)[][] = new Array(data.length);
   for (let r = 0; r < data.length; r++) {
     const row = new Array(columns.length);
@@ -101,11 +143,17 @@ export function extractValueMatrix<T>(
         row[c] = null;
         continue;
       }
+      if (!needed[c]) {
+        row[c] = null;
+        continue;
+      }
       const val = getCellValue(item, col);
       if (val == null) {
         row[c] = null;
       } else if (typeof val === 'string' || typeof val === 'number' || typeof val === 'boolean') {
         row[c] = val;
+      } else if (val instanceof Date && col.type === 'date') {
+        row[c] = val.getTime();
       } else {
         row[c] = String(val);
       }
@@ -150,8 +198,6 @@ export function processClientSideDataAsync<T>(
     columnIndexMap.set(col.columnId, i);
   }
 
-  const values = extractValueMatrix(data, columns);
-
   // Build column metadata
   const columnMeta = columns.map((col, idx) => ({
     type: col.type ?? 'text' as const,
@@ -192,6 +238,11 @@ export function processClientSideDataAsync<T>(
     }
   }
 
+  // Only filtered/sorted columns are read by the worker; skip the rest.
+  const neededColumns = new Set<number>(Object.keys(workerFilters).map(Number));
+  if (sort) neededColumns.add(sort.columnIndex);
+  const values = extractValueMatrix(data, columns, neededColumns);
+
   const requestId = ++requestCounter;
 
   return new Promise<T[]>((resolve, reject) => {
@@ -208,6 +259,11 @@ export function processClientSideDataAsync<T>(
         resolve(result);
       },
       reject,
+      timer: setTimeout(() => {
+        if (pendingRequests.delete(requestId)) {
+          reject(new Error('Worker sort/filter timed out'));
+        }
+      }, WORKER_REQUEST_TIMEOUT_MS),
     });
 
     const request: SortFilterRequest = {

@@ -12,6 +12,7 @@ export default defineConfig({
   splitting: false,
   treeshake: true,
   clean: false,
+  // Types are copied from @alaarab/ogrid-react-xlsx by scripts/copy-types.mjs.
   dts: false,
   target: 'es2020',
   platform: 'browser',

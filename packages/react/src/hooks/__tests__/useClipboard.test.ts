@@ -328,4 +328,66 @@ describe('useClipboard', () => {
       );
     });
   });
+
+  it('cut then paste onto an overlapping range keeps the pasted values', async () => {
+    const rows = [{ id: '1', name: 'a', score: 1 }, { id: '2', name: 'b', score: 2 }, { id: '3', name: 'c', score: 3 }, { id: '4', name: 'd', score: 4 }];
+    const cols = [{ columnId: 'name', name: 'Name', editable: true }] as import('../../types').IColumnDef<typeof rows[number]>[];
+    const events: { rowIndex: number; newValue: unknown }[] = [];
+    let selection = { startRow: 0, startCol: 0, endRow: 2, endCol: 0 };
+    const { result, rerender } = renderHook(() =>
+      useClipboard({
+        items: rows,
+        visibleCols: cols,
+        colOffset: 0,
+        selectionRange: selection,
+        activeCell: null,
+        editable: true,
+        onCellValueChanged: (e) => events.push({ rowIndex: e.rowIndex, newValue: e.newValue }),
+      })
+    );
+    act(() => { result.current.handleCut(); });
+    readTextMock.mockResolvedValue('a\r\nb\r\nc\r\n');
+    selection = { startRow: 1, startCol: 0, endRow: 1, endCol: 0 };
+    rerender();
+    await act(async () => { await result.current.handlePaste(); });
+    // Paste writes rows 1-3; the cut clears only row 0 (rows 1-2 were pasted over).
+    const last = new Map(events.map((e) => [e.rowIndex, e.newValue]));
+    expect(last.get(0)).toBe('');
+    expect(last.get(1)).toBe('a');
+    expect(last.get(2)).toBe('b');
+    expect(last.get(3)).toBe('c');
+  });
+
+  it('pastes at the top-left of a selection made upward', async () => {
+    const events: { rowIndex: number }[] = [];
+    const { result } = renderHook(() =>
+      useClipboard({
+        items,
+        visibleCols: [{ columnId: 'name', name: 'Name', editable: true }] as typeof visibleCols,
+        colOffset: 0,
+        selectionRange: { startRow: 1, startCol: 0, endRow: 0, endCol: 0 },
+        activeCell: null,
+        editable: true,
+        onCellValueChanged: (e) => events.push({ rowIndex: e.rowIndex }),
+      })
+    );
+    readTextMock.mockResolvedValue('x');
+    await act(async () => { await result.current.handlePaste(); });
+    expect(events.map((e) => e.rowIndex)).toEqual([0]);
+  });
+
+  it('copy does not throw when navigator.clipboard is unavailable (non-secure context)', () => {
+    Object.defineProperty(navigator, 'clipboard', { value: undefined, writable: true, configurable: true });
+    const { result } = renderHook(() =>
+      useClipboard({
+        items,
+        visibleCols,
+        colOffset: 0,
+        selectionRange: null,
+        activeCell: { rowIndex: 0, columnIndex: 0 },
+        onCellValueChanged: undefined,
+      })
+    );
+    expect(() => act(() => { result.current.handleCopy(); })).not.toThrow();
+  });
 });

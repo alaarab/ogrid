@@ -6,6 +6,11 @@
   "main": "dist/esm/index.js",
   "module": "dist/esm/index.js",
   "types": "dist/types/index.d.ts",
+  "typesVersions": {
+    "*": {
+      "formula": ["dist/types/formula/index.d.ts"]
+    }
+  },
   "exports": {
     ".": {
       "types": "./dist/types/index.d.ts",
@@ -19,7 +24,7 @@
     }
   },
   "scripts": {
-    "build": "rimraf dist && tsup && tsc -p tsconfig.build.json",
+    "build": "rimraf dist && tsup && tsc -p tsconfig.build.json && node ../../scripts/fix-dts-extensions.mjs dist/types",
     "typecheck": "tsc -p tsconfig.build.json --noEmit",
     "test": "bun test --preload ../../bun-test.setup.ts"
   },

@@ -99,7 +99,9 @@ export function clampTime(value: number, min: number, max: number): number {
  */
 export function getMinuteOptions(step = 5): number[] {
   const options: number[] = [];
-  for (let m = 0; m < 60; m += step) {
+  // A zero, negative or non-numeric step would never advance; fall back to 1.
+  const inc = Number.isFinite(step) && step >= 1 ? Math.floor(step) : 1;
+  for (let m = 0; m < 60; m += inc) {
     options.push(m);
   }
   return options;
