@@ -53,8 +53,7 @@ function Workbook(): React.ReactElement {
 
 function chooserLabel(): string {
   const btn = screen.getByRole('button', { name: /column visibility/i });
-  const spans = Array.from(btn.querySelectorAll('span'));
-  return spans.map((s) => s.textContent ?? '').find((t) => t.includes('Column Visibility')) ?? '';
+  return btn.getAttribute('aria-label') ?? '';
 }
 
 describe('OGrid sheet switching + column visibility', () => {
@@ -62,6 +61,7 @@ describe('OGrid sheet switching + column visibility', () => {
     render(<Workbook />);
 
     expect(chooserLabel()).toBe('Column Visibility (3 of 3)');
+    expect(screen.getByRole('button', { name: /column visibility/i })).toHaveTextContent('Columns(3/3)');
     expect(screen.getAllByTestId('cell-a1')).toHaveLength(2);
 
     fireEvent.click(screen.getByRole('tab', { name: 'Sheet B' }));

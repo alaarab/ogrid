@@ -13,8 +13,13 @@ import { usePortalTheme } from '../utils/usePortalTheme';
 
 export type { IColumnChooserProps };
 
-function TableSettingsIcon(): React.ReactElement {
-  return <span className={styles.buttonIcon} aria-hidden>⚙</span>;
+function ColumnsIcon(): React.ReactElement {
+  return (
+    <svg className={styles.buttonIcon} aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+      <rect x="3" y="3" width="18" height="18" rx="2" />
+      <path d="M9 3v18M15 3v18" />
+    </svg>
+  );
 }
 function ChevronDown(): React.ReactElement {
   return <span className={styles.chevron} aria-hidden>▼</span>;
@@ -68,9 +73,10 @@ export const ColumnChooser: React.FC<IColumnChooserProps> = (props) => {
     <div ref={containerRef} className={`${styles.container} ${className || ''}`}>
       <Popover.Root open={open} onOpenChange={setOpen}>
         <Popover.Trigger asChild>
-          <button type="button" className={styles.triggerButton} aria-expanded={open} aria-haspopup="dialog">
-            <TableSettingsIcon />
-            <span>Column Visibility ({visibleCount} of {totalCount})</span>
+          <button type="button" className={styles.triggerButton} aria-label={`Column Visibility (${visibleCount} of ${totalCount})`} aria-expanded={open} aria-haspopup="dialog">
+            <ColumnsIcon />
+            <span>Columns</span>
+            <span aria-hidden="true">({visibleCount}/{totalCount})</span>
             {open ? <ChevronUp /> : <ChevronDown />}
           </button>
         </Popover.Trigger>

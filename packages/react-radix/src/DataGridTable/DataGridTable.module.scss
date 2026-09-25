@@ -296,3 +296,9 @@
     padding: 12px 16px;
   }
 }
+
+@media (pointer: coarse) {
+  .density-comfortable .dataTable th {
+    padding: 6px 8px;
+  }
+}
