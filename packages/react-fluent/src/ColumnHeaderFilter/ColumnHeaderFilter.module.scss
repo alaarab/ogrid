@@ -58,6 +58,14 @@
   color: var(--colorNeutralForeground1, #242424);
 }
 
+// Sorted-column arrow (aria-sort on the <th> carries the semantics; this is the visual cue)
+.sortIndicator {
+  flex-shrink: 0;
+  font-size: 9px;
+  line-height: 1;
+  color: var(--colorNeutralForeground2, #424242);
+}
+
 // Container for sort and filter buttons
 .headerActions {
   display: flex;

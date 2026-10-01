@@ -96,7 +96,7 @@ function RadixPopoverEditor({ open, onClose, setAnchorEl, anchorContent, editor 
         </div>
       </Popover.Anchor>
       <Popover.Portal>
-        <Popover.Content sideOffset={4} style={portalTheme} onOpenAutoFocus={(e: Event) => e.preventDefault()}>
+        <Popover.Content sideOffset={4} style={{ ...portalTheme, zIndex: 'var(--ogrid-z-popover, 10001)' }} onOpenAutoFocus={(e: Event) => e.preventDefault()}>
           {editor}
         </Popover.Content>
       </Popover.Portal>

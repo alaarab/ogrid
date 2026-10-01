@@ -186,7 +186,7 @@ export function useCellSelection(params: UseCellSelectionParams): UseCellSelecti
       if (!overlayEl) {
         overlayEl = document.createElement('div');
         overlayEl.style.position = 'absolute';
-        overlayEl.style.border = '2px solid var(--ogrid-selection, #217346)';
+        overlayEl.style.border = '2px solid var(--ogrid-selection, var(--ogrid-selection-color, #217346))';
         overlayEl.style.pointerEvents = 'none';
         overlayEl.style.zIndex = '4';
         overlayEl.style.boxSizing = 'border-box';

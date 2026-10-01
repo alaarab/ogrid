@@ -1,10 +1,14 @@
 // Memoized row component (skips re-render for rows unaffected by selection changes)
 
 import * as React from 'react';
+import { CHECKBOX_COLUMN_WIDTH } from '@alaarab/ogrid-core';
 import { areGridRowPropsEqual, getGridCellSurfaceState } from '../utils';
 import { PREVENT_DEFAULT, STOP_PROPAGATION } from '../constants/domHelpers';
 import type { GridRowProps } from './createOGrid';
 import type { DataGridStyles, DataGridPrimitives } from './BaseDataGridTable.types';
+
+/** Layer a (possibly translucent) tint over an opaque base so sticky pinned cells never turn transparent. */
+const opaqueOver = (tint: string) => `linear-gradient(${tint}, ${tint}), var(--ogrid-bg, #fff)`;
 
 /** Extended props for column virtualization spacers. */
 export interface BaseGridRowProps extends GridRowProps {
@@ -27,6 +31,9 @@ function GridRowInner(props: BaseGridRowProps) {
     selectionRange, activeCell, cutRange, styles, primitives,
   } = props;
   const { Tr, Td, renderRowCheckbox } = primitives;
+  // Leading columns stay put on horizontal scroll. Radix gets `position: sticky` from CSS;
+  // Fluent's atomic `position: relative` needs the inline override (addStickyPosition).
+  const stickyPos = primitives.addStickyPosition ? ({ position: 'sticky' } as const) : undefined;
   // Checkbox / row-number columns precede the data columns in aria-colindex.
   const leadingColCount = (hasCheckboxCol ? 1 : 0) + (hasRowNumbersCol ? 1 : 0);
 
@@ -39,7 +46,7 @@ function GridRowInner(props: BaseGridRowProps) {
       aria-rowindex={ariaRowIndexBase != null ? ariaRowIndexBase + rowIndex + 1 : undefined}
     >
       {hasCheckboxCol && (
-        <Td className={styles.selectionCell}>
+        <Td className={styles.selectionCell} style={stickyPos ? { ...stickyPos, left: 0 } : undefined}>
           {/* biome-ignore lint/a11y/useKeyWithClickEvents: onClick only stops propagation so the checkbox click does not trigger row selection; keyboard interaction is handled by the grid's roving focus/keyboard-navigation layer */}
           {/* biome-ignore lint/a11y/noStaticElementInteractions: onClick only stops propagation; the inner checkbox is the interactive control */}
           {/* biome-ignore lint/a11y/noNoninteractiveElementInteractions: onClick only stops propagation; the inner checkbox is the interactive control */}
@@ -61,7 +68,11 @@ function GridRowInner(props: BaseGridRowProps) {
       {hasRowNumbersCol && (
         <Td
           className={styles.rowNumberCell}
-          style={rowNumWidth ? { width: rowNumWidth, minWidth: rowNumWidth, maxWidth: rowNumWidth } : undefined}
+          style={{
+            ...stickyPos,
+            left: hasCheckboxCol ? CHECKBOX_COLUMN_WIDTH : 0,
+            ...(rowNumWidth ? { width: rowNumWidth, minWidth: rowNumWidth, maxWidth: rowNumWidth } : undefined),
+          }}
           onPointerDown={PREVENT_DEFAULT}
         >
           <div className={styles.rowNumberCellInner}>
@@ -98,7 +109,7 @@ function GridRowInner(props: BaseGridRowProps) {
             data-column-id={col.columnId}
             aria-colindex={leadingColCount + globalIdx + 1}
             className={columnMeta.cellClasses[col.columnId] || undefined}
-            style={bg ? { ...baseStyle, background: bg } : baseStyle}
+            style={bg ? { ...baseStyle, background: baseStyle && (baseStyle.left != null || baseStyle.right != null) ? opaqueOver(bg) : bg } : baseStyle}
             onPointerDown={PREVENT_DEFAULT}
           >
             {renderCellContent(item, col, rowIndex, globalIdx)}

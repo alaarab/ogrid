@@ -29,6 +29,8 @@ export const ColumnHeaderFilter: React.FC<IColumnHeaderFilterProps> = React.memo
   const {
     columnName,
     filterType,
+    isSorted,
+    isSortedDescending,
     options = [],
     isLoadingOptions = false,
     selectedUser,
@@ -54,6 +56,11 @@ export const ColumnHeaderFilter: React.FC<IColumnHeaderFilterProps> = React.memo
         </span>
       </div>
       <div className={styles.headerActions}>
+        {isSorted && (
+          <span className={styles.sortIndicator} data-sort-indicator={isSortedDescending ? 'desc' : 'asc'} aria-hidden="true">
+            {isSortedDescending ? '\u25BC' : '\u25B2'}
+          </span>
+        )}
         {filterType !== 'none' && (
           <Popover.Root open={isFilterOpen} onOpenChange={setFilterOpen}>
             <Popover.Trigger asChild>

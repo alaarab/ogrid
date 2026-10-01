@@ -137,11 +137,15 @@
   background: var(--ogrid-selected-row-bg, #e6f0fb);
 }
 
-/* Pinned & checkbox cells on selected rows keep the selected-row background */
+/* Pinned & checkbox cells on selected rows keep the selected-row background.
+   Layered over an opaque base: the token may be translucent (shadcn preset), and
+   sticky cells must not let scrolled content show through. */
 .dataTable tbody tr.selectedRow td.pinnedColLeft,
 .dataTable tbody tr.selectedRow td.pinnedColRight,
 .dataTable tbody tr.selectedRow td.selectionCell {
-  background: var(--ogrid-selected-row-bg, #e6f0fb);
+  background:
+    linear-gradient(var(--ogrid-selected-row-bg, #e6f0fb), var(--ogrid-selected-row-bg, #e6f0fb)),
+    var(--ogrid-bg, #ffffff);
 }
 
 .dataTable tbody tr.selectedRow td.rowNumberCell {
@@ -156,7 +160,9 @@
 .dataTable tbody tr.selectedRow:hover td.pinnedColLeft,
 .dataTable tbody tr.selectedRow:hover td.pinnedColRight,
 .dataTable tbody tr.selectedRow:hover td.selectionCell {
-  background: var(--ogrid-bg-selected-hover, #dae8f8);
+  background:
+    linear-gradient(var(--ogrid-bg-selected-hover, #dae8f8), var(--ogrid-bg-selected-hover, #dae8f8)),
+    var(--ogrid-bg, #ffffff);
 }
 
 .dataTable tbody tr.selectedRow:hover td.rowNumberCell {
