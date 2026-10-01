@@ -165,3 +165,18 @@ describe('useFillHandle', () => {
     expect(events.find((e) => e.columnId === 'name')).toBeUndefined();
   });
 });
+
+describe('useFillHandle  -  multi-cell source (S01)', () => {
+  it('commitFill tiles the source block instead of copying the top-left cell', () => {
+    const { rangeResult, fillResult, events, rerender } = setup();
+    act(() => rangeResult.current.startRange(0, 0));
+    act(() => rangeResult.current.extendRange(1, 1));
+    rerender({ range: rangeResult.current });
+    act(() => fillResult.current.startFill());
+    act(() => fillResult.current.updateFill(3, 1));
+    act(() => fillResult.current.commitFill());
+    const got = events.map((e) => `${e.rowIndex}:${e.columnId}=${e.newValue}`);
+    // Source cells (rows 0-1) untouched; rows 2-3 repeat the 2-row pattern per column.
+    expect(got).toEqual(['2:a=10', '2:b=100', '3:a=20', '3:b=200']);
+  });
+});

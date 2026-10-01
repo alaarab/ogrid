@@ -167,6 +167,9 @@ interface IOGridBaseProps<T> {
   /** Called when server-side fetchPage fails. */
   onError?: (error: unknown) => void;
 
+  /** Called when reading the system clipboard fails on paste (e.g. permission denied). The paste is abandoned. */
+  onClipboardError?: (error: unknown) => void;
+
   /** Called when a cell renderer or custom editor throws an error. */
   onCellError?: (error: Error, errorInfo: React.ErrorInfo) => void;
 
@@ -318,6 +321,8 @@ export interface IOGridDataGridProps<T> {
   density?: 'compact' | 'normal' | 'comfortable';
   /** Called when a cell renderer or custom editor throws an error. */
   onCellError?: (error: Error, errorInfo: React.ErrorInfo) => void;
+  /** Called when reading the system clipboard fails on paste. The paste is abandoned. */
+  onClipboardError?: (error: unknown) => void;
   'aria-label'?: string;
   'aria-labelledby'?: string;
   /** Custom keydown handler. Called before grid's built-in handling. Call event.preventDefault() to suppress grid default. */

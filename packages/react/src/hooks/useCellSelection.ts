@@ -281,9 +281,21 @@ export function useCellSelection(params: UseCellSelectionParams): UseCellSelecti
     /** Resolve pointer coordinates to a cell range (shared by RAF callback and pointerUp flush). */
     const resolveRange = (cx: number, cy: number): ISelectionRange | null => {
       if (!dragStartRef.current) return null;
-      const target = document.elementFromPoint(cx, cy);
+      // Probe inside the visible body: while auto-scrolling, the pointer sits over
+      // the sticky header (or outside the grid), where no cell would resolve.
+      let px = cx;
+      let py = cy;
+      const wrapper = wrapperRef.current;
+      const wr = wrapper?.getBoundingClientRect();
+      if (wrapper && wr && wr.width > 0 && wr.height > 0) {
+        const headerBottom = wrapper.querySelector('thead')?.getBoundingClientRect().bottom ?? wr.top;
+        px = Math.min(Math.max(cx, wr.left + 1), wr.right - 1);
+        py = Math.min(Math.max(cy, Math.max(wr.top, headerBottom) + 1), wr.bottom - 1);
+      }
+      const target = document.elementFromPoint(px, py);
       const cell = (target as HTMLElement)?.closest?.('[data-row-index][data-col-index]');
-      if (!cell) return null;
+      // Ignore cells of another grid on the page.
+      if (!cell || (wrapper && !wrapper.contains(cell))) return null;
       const r = parseInt(cell.getAttribute('data-row-index') ?? '', 10);
       const c = parseInt(cell.getAttribute('data-col-index') ?? '', 10);
       const colOff = colOffsetRef.current;

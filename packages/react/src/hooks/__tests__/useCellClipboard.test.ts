@@ -229,3 +229,44 @@ describe('useCellClipboard clipboard failures', () => {
     expect(result.current.activeCutRange).toBeNull();
   });
 });
+
+describe('useCellClipboard  -  cut identity (S03/S02)', () => {
+  it('clears the cut row by identity after rows are re-sorted; ignores a foreign clipboard', async () => {
+    const rows = makeRows();
+    const events: ICellValueChangedEvent<Row>[] = [];
+    const clip = { text: '' };
+    const clipboard = {
+      readText: () => Promise.resolve(clip.text),
+      writeText: (t: string) => { clip.text = t; return Promise.resolve(); },
+    };
+    const state = { rows, range: { range: { startRow: 0, startCol: 0, endRow: 0, endCol: 0 } } };
+    const { result, rerender } = renderHook(() =>
+      useCellClipboard<Row>({
+        rangeSelection: state.range as never,
+        rows: state.rows,
+        columns,
+        onCellEdit: (e) => events.push(...e),
+        clipboard,
+      }),
+    );
+    await act(async () => { await result.current.cutRange(); }); // cut rows[0] ('one')
+    const [r0, r1, r2] = rows as [Row, Row, Row];
+    state.rows = [r2, r1, r0]; // sorted: 'one' now at index 2
+    state.range = { range: { startRow: 1, startCol: 0, endRow: 1, endCol: 0 } };
+    rerender();
+    await act(async () => { await result.current.pasteRange(); });
+    const cleared = events.filter((e) => e.newValue === '' && e.columnId === 'a');
+    expect(cleared.map((e) => e.rowIndex)).toEqual([2]);
+
+    // Cut again, then paste text that did not come from the cut: nothing is cleared.
+    events.length = 0;
+    state.range = { range: { startRow: 2, startCol: 0, endRow: 2, endCol: 0 } };
+    rerender();
+    await act(async () => { await result.current.cutRange(); });
+    clip.text = 'from elsewhere';
+    state.range = { range: { startRow: 0, startCol: 0, endRow: 0, endCol: 0 } };
+    rerender();
+    await act(async () => { await result.current.pasteRange(); });
+    expect(events.map((e) => e.newValue)).toEqual(['from elsewhere']);
+  });
+});

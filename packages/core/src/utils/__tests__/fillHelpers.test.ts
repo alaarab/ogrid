@@ -405,3 +405,72 @@ describe('applyFillValues with a source that is not the top-left cell', () => {
     ]);
   });
 });
+
+describe('applyFillValues  -  multi-cell source tiling (S01)', () => {
+  const colX: IColumnDef<Row> = { columnId: 'id', name: 'X', editable: true };
+  const colY: IColumnDef<Row> = { columnId: 'value', name: 'Y', editable: true };
+  const cols = [colX, colY];
+  const mk = () => [
+    { id: 'a1', value: 'b1' },
+    { id: 'a2', value: 'b2' },
+    { id: '', value: '' },
+    { id: '', value: '' },
+    { id: '', value: '' },
+  ] as Row[];
+
+  it('tiles a 2x2 source and never overwrites the source cells', () => {
+    const items = mk();
+    const events = applyFillValues(makeRange(0, 0, 4, 1), 0, 0, items, cols, undefined, makeRange(0, 0, 1, 1));
+    expect(events.map((e) => `${e.rowIndex}:${e.columnId}=${e.newValue}`)).toEqual([
+      '2:id=a1', '2:value=b1', '3:id=a2', '3:value=b2', '4:id=a1', '4:value=b1',
+    ]);
+  });
+
+  it('a no-op range (source only) produces no events', () => {
+    const events = applyFillValues(makeRange(0, 0, 1, 1), 0, 0, mk(), cols, undefined, makeRange(0, 0, 1, 1));
+    expect(events).toHaveLength(0);
+  });
+
+  it('fills upward aligning the pattern to the end of the source', () => {
+    const items = [
+      { id: '', value: '' },
+      { id: '', value: '' },
+      { id: 'a1', value: 'b1' },
+      { id: 'a2', value: 'b2' },
+    ] as Row[];
+    const events = applyFillValues(makeRange(0, 0, 3, 0), 2, 0, items, cols, undefined, makeRange(2, 0, 3, 0));
+    // rows 0..1 take the pattern ending at the source end
+    expect(events.map((e) => `${e.rowIndex}=${e.newValue}`)).toEqual(['0=a1', '1=a2']);
+  });
+
+  it('a partial upward fill takes the source cells nearest the source first (Excel)', () => {
+    const items = [
+      { id: '', value: '' },
+      { id: 'a1', value: 'b1' },
+      { id: 'a2', value: 'b2' },
+    ] as Row[];
+    const events = applyFillValues(makeRange(0, 0, 2, 0), 1, 0, items, cols, undefined, makeRange(1, 0, 2, 0));
+    expect(events.map((e) => `${e.rowIndex}=${e.newValue}`)).toEqual(['0=a2']);
+  });
+
+  it('fills leftward by tiling the source columns', () => {
+    const wide: IColumnDef<Row>[] = [
+      { columnId: 'c0', name: 'C0', editable: true },
+      { columnId: 'c1', name: 'C1', editable: true },
+      { columnId: 'c2', name: 'C2', editable: true },
+      { columnId: 'c3', name: 'C3', editable: true },
+      { columnId: 'c4', name: 'C4', editable: true },
+    ];
+    const items = [{ c0: '', c1: '', c2: '', c3: 'x', c4: 'y' }] as unknown as Row[];
+    const events = applyFillValues(makeRange(0, 0, 0, 4), 0, 3, items, wide, undefined, makeRange(0, 3, 0, 4));
+    expect(events.map((e) => `${e.columnId}=${e.newValue}`)).toEqual(['c0=y', 'c1=x', 'c2=y']);
+  });
+
+  it('Ctrl+D style single-row source copies each column top cell down its own column', () => {
+    const items = mk();
+    const events = applyFillValues(makeRange(0, 0, 3, 1), 0, 0, items, cols, undefined, makeRange(0, 0, 0, 1));
+    const byCol = (id: string) => events.filter((e) => e.columnId === id).map((e) => e.newValue);
+    expect(byCol('id')).toEqual(['a1', 'a1', 'a1']);
+    expect(byCol('value')).toEqual(['b1', 'b1', 'b1']);
+  });
+});

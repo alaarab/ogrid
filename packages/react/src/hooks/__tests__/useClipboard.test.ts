@@ -1,3 +1,4 @@
+import React from 'react';
 import { renderHook, act } from '@testing-library/react';
 import { useClipboard } from '../useClipboard';
 
@@ -389,5 +390,123 @@ describe('useClipboard', () => {
       })
     );
     expect(() => act(() => { result.current.handleCopy(); })).not.toThrow();
+  });
+
+  describe('cut/paste identity and clipboard source (S02, S03, S04, S06)', () => {
+    type Row = { id: string; name: string };
+    const mkRows = (): Row[] => [
+      { id: '1', name: 'a' },
+      { id: '2', name: 'b' },
+      { id: '3', name: 'c' },
+    ];
+    const cols = [{ columnId: 'name', name: 'Name', editable: true }] as import('../../types').IColumnDef<Row>[];
+
+    function setup(initialRows: Row[], onClipboardError?: (error: unknown) => void) {
+      const events: { rowIndex: number; newValue: unknown; item: Row }[] = [];
+      const state = { rows: initialRows, selection: { startRow: 0, startCol: 0, endRow: 0, endCol: 0 } };
+      const hook = renderHook(() =>
+        useClipboard<Row>({
+          items: state.rows,
+          visibleCols: cols,
+          colOffset: 0,
+          selectionRange: state.selection,
+          activeCell: null,
+          editable: true,
+          getRowId: (r) => r.id,
+          onClipboardError,
+          onCellValueChanged: (e) => events.push({ rowIndex: e.rowIndex, newValue: e.newValue, item: e.item }),
+        }),
+      );
+      return { events, state, ...hook };
+    }
+
+    it('clears the cut row by id after the rows are re-sorted before paste (S03)', async () => {
+      const { events, state, result, rerender } = setup(mkRows());
+      act(() => { result.current.handleCut(); }); // cuts row id 1 at index 0
+      const text = writeTextMock.mock.calls[0]![0] as string;
+      readTextMock.mockResolvedValue(text);
+      const [r1, r2, r3] = state.rows as [Row, Row, Row];
+      state.rows = [r3, r2, r1]; // sort/page change: id 1 now at index 2
+      state.selection = { startRow: 1, startCol: 0, endRow: 1, endCol: 0 };
+      rerender();
+      await act(async () => { await result.current.handlePaste(); });
+      const cleared = events.filter((e) => e.newValue === '');
+      expect(cleared).toHaveLength(1);
+      expect(cleared[0]!.item.id).toBe('1');
+      expect(cleared[0]!.rowIndex).toBe(2);
+    });
+
+    it('a later copy cancels the pending cut (S02)', async () => {
+      const { events, state, result, rerender } = setup(mkRows());
+      act(() => { result.current.handleCut(); });
+      expect(result.current.cutRange).not.toBeNull();
+      state.selection = { startRow: 2, startCol: 0, endRow: 2, endCol: 0 };
+      rerender();
+      act(() => { result.current.handleCopy(); });
+      expect(result.current.cutRange).toBeNull();
+      readTextMock.mockResolvedValue('c');
+      state.selection = { startRow: 1, startCol: 0, endRow: 1, endCol: 0 };
+      rerender();
+      await act(async () => { await result.current.handlePaste(); });
+      expect(events.some((e) => e.newValue === '' && e.rowIndex === 0)).toBe(false);
+    });
+
+    it('does not clear the cut cells when the pasted text came from elsewhere (S02)', async () => {
+      const { events, state, result, rerender } = setup(mkRows());
+      act(() => { result.current.handleCut(); });
+      readTextMock.mockResolvedValue('copied in another app');
+      state.selection = { startRow: 1, startCol: 0, endRow: 1, endCol: 0 };
+      rerender();
+      await act(async () => { await result.current.handlePaste(); });
+      expect(events.map((e) => e.newValue)).toEqual(['copied in another app']);
+      expect(result.current.cutRange).toBeNull();
+    });
+
+    it('still clears the cut when the clipboard returns it with other line endings and a trailing newline (S02)', async () => {
+      const { events, state, result, rerender } = setup(mkRows());
+      state.selection = { startRow: 0, startCol: 0, endRow: 1, endCol: 0 };
+      rerender();
+      act(() => { result.current.handleCut(); });
+      const text = writeTextMock.mock.calls[0]![0] as string;
+      expect(text).toBe('a\r\nb');
+      readTextMock.mockResolvedValue('a\nb\n'); // line endings rewritten by the OS clipboard
+      state.selection = { startRow: 2, startCol: 0, endRow: 2, endCol: 0 };
+      rerender();
+      await act(async () => { await result.current.handlePaste(); });
+      expect(events.filter((e) => e.newValue === '').map((e) => e.item.id)).toEqual(['1', '2']);
+    });
+
+    it('does not paste the stale internal copy when the clipboard read is rejected (S06)', async () => {
+      const onClipboardError = jest.fn();
+      const { events, state, result, rerender } = setup(mkRows(), onClipboardError);
+      act(() => { result.current.handleCopy(); }); // internal clipboard = 'a'
+      readTextMock.mockRejectedValue(new Error('NotAllowedError'));
+      state.selection = { startRow: 1, startCol: 0, endRow: 1, endCol: 0 };
+      rerender();
+      await act(async () => { await result.current.handlePaste(); });
+      expect(events).toHaveLength(0);
+      expect(onClipboardError).toHaveBeenCalledTimes(1);
+    });
+
+    it('pastes under React.StrictMode (S04)', async () => {
+      const events: unknown[] = [];
+      const rows = mkRows();
+      readTextMock.mockResolvedValue('zzz');
+      const { result } = renderHook(
+        () =>
+          useClipboard<Row>({
+            items: rows,
+            visibleCols: cols,
+            colOffset: 0,
+            selectionRange: null,
+            activeCell: { rowIndex: 0, columnIndex: 0 },
+            editable: true,
+            onCellValueChanged: (e) => events.push(e),
+          }),
+        { wrapper: React.StrictMode },
+      );
+      await act(async () => { await result.current.handlePaste(); });
+      expect(events).toHaveLength(1);
+    });
   });
 });
