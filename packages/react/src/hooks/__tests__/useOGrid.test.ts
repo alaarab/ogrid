@@ -1024,4 +1024,76 @@ describe('useOGrid', () => {
       expect(typeof result.current.dataGridProps.emptyState!.onClearAll).toBe('function');
     });
   });
+
+  describe('render stability', () => {
+    // D07: an unchanged OGrid re-render must not rebuild the table props,
+    // which would re-render the whole DataGridTable.
+    it('keeps dataGridProps identity across a re-render with unchanged props', () => {
+      const { result, rerender } = renderUseOGrid();
+      const first = result.current.dataGridProps;
+      rerender();
+      expect(result.current.dataGridProps).toBe(first);
+    });
+
+    it('keeps dataGridProps identity across a re-render with formulas on', () => {
+      const { result, rerender } = renderUseOGrid({ formulas: true });
+      const first = result.current.dataGridProps;
+      rerender();
+      expect(result.current.dataGridProps).toBe(first);
+    });
+
+    it('keeps the imperative handle across a re-render with unchanged props', () => {
+      const { apiRef, rerender } = renderUseOGrid();
+      const first = apiRef.current;
+      rerender();
+      expect(apiRef.current).toBe(first);
+    });
+  });
+
+  describe('inline columns prop', () => {
+    // D05: a new `columns` array every render (inline prop with inline
+    // renderCell) must not re-filter/re-sort or move an edited row.
+    const inlineColumns = () => [
+      { columnId: 'name', name: 'Name', renderCell: (r: Row) => r.name },
+      { columnId: 'age', name: 'Age', type: 'numeric' as const, filterable: { type: 'text' as const } },
+    ];
+
+    function renderWithInlineColumns() {
+      return renderHook(
+        ({ data }: { data: Row[] }) =>
+          useOGrid(makeClientProps({ data, columns: inlineColumns(), defaultSortBy: 'name' })),
+        { wrapper, initialProps: { data: testData } },
+      );
+    }
+
+    it('keeps the displayed items when re-rendered with an equivalent inline columns array', () => {
+      const { result, rerender } = renderWithInlineColumns();
+      const first = result.current.dataGridProps.items;
+      rerender({ data: testData });
+      expect(result.current.dataGridProps.items).toBe(first);
+    });
+
+    it('keeps an edited row in place until the user sorts again', () => {
+      const { result, rerender } = renderWithInlineColumns();
+      expect(result.current.dataGridProps.items.map((r) => r.name)).toEqual(['Alice', 'Bob', 'Charlie', 'Diana', 'Eve']);
+      // Rename Alice so she would sort last.
+      const edited = testData.map((r) => (r.id === '1' ? { ...r, name: 'Zed' } : r));
+      rerender({ data: edited });
+      expect(result.current.dataGridProps.items.map((r) => r.name)).toEqual(['Zed', 'Bob', 'Charlie', 'Diana', 'Eve']);
+    });
+
+    it('still re-sorts when a sort-relevant column field changes', () => {
+      const { result, rerender } = renderHook(
+        ({ compare }: { compare?: (a: Row, b: Row) => number }) =>
+          useOGrid(makeClientProps({
+            columns: [{ columnId: 'name', name: 'Name', compare }, { columnId: 'age', name: 'Age' }],
+            defaultSortBy: 'name',
+          })),
+        { wrapper, initialProps: { compare: undefined as ((a: Row, b: Row) => number) | undefined } },
+      );
+      expect(result.current.dataGridProps.items[0]?.name).toBe('Alice');
+      rerender({ compare: (a: Row, b: Row) => b.name.localeCompare(a.name) });
+      expect(result.current.dataGridProps.items[0]?.name).toBe('Eve');
+    });
+  });
 });

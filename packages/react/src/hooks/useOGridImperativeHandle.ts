@@ -77,6 +77,10 @@ export function useOGridImperativeHandle<T>(params: UseOGridImperativeHandlePara
   const displayItemsRef = useLatestRef(dataFetchingState.displayItems);
   const getRowIdRef = useLatestRef(getRowId);
   const columnsRef = useLatestRef(columns);
+  // Depend on the member functions, not the state objects (new literals every render).
+  const { setSort, defaultSortField, defaultSortDirection } = sortingState;
+  const { setFilters } = filtersState;
+  const { refreshData } = dataFetchingState;
 
   useImperativeHandle(
     ref,
@@ -95,16 +99,16 @@ export function useOGridImperativeHandle<T>(params: UseOGridImperativeHandlePara
       }),
       applyColumnState: (state: Partial<import('../types').IGridColumnState>) => {
         if (state.visibleColumns) setVisibleColumns(new Set(state.visibleColumns));
-        if (state.sort) sortingState.setSort(state.sort);
+        if (state.sort) setSort(state.sort);
         if (state.columnOrder) {
           if (columnOrder === undefined) setInternalColumnOrder(state.columnOrder);
           onColumnOrderChange?.(state.columnOrder);
         }
         if (state.columnWidths) setColumnWidthOverrides(state.columnWidths);
-        if (state.filters) filtersState.setFilters(state.filters);
+        if (state.filters) setFilters(state.filters);
         if (state.pinnedColumns) setPinnedOverrides(state.pinnedColumns);
       },
-      setFilterModel: filtersState.setFilters,
+      setFilterModel: setFilters,
       getSelectedRows: () => Array.from(effectiveSelectedRowsRef.current),
       setSelectedRows: (rowIds: RowId[]) => {
         if (selectedRows === undefined) setInternalSelectedRows(new Set(rowIds));
@@ -119,11 +123,11 @@ export function useOGridImperativeHandle<T>(params: UseOGridImperativeHandlePara
         if (selectedRows === undefined) setInternalSelectedRows(new Set());
         onSelectionChange?.({ selectedRowIds: [], selectedItems: [] });
       },
-      clearFilters: () => filtersState.setFilters({}),
-      clearSort: () => sortingState.setSort({ field: sortingState.defaultSortField, direction: sortingState.defaultSortDirection }),
+      clearFilters: () => setFilters({}),
+      clearSort: () => setSort({ field: defaultSortField, direction: defaultSortDirection }),
       resetGridState: (options?: { keepSelection?: boolean }) => {
-        filtersState.setFilters({});
-        sortingState.setSort({ field: sortingState.defaultSortField, direction: sortingState.defaultSortDirection });
+        setFilters({});
+        setSort({ field: defaultSortField, direction: defaultSortDirection });
         if (!options?.keepSelection) {
           if (selectedRows === undefined) setInternalSelectedRows(new Set());
           onSelectionChange?.({ selectedRowIds: [], selectedItems: [] });
@@ -131,7 +135,7 @@ export function useOGridImperativeHandle<T>(params: UseOGridImperativeHandlePara
       },
       getDisplayedRows: () => displayItemsRef.current,
       refreshData: () => {
-        if (isServerSide) dataFetchingState.refreshData();
+        if (isServerSide) refreshData();
       },
       getColumnOrder: () => columnOrderRef.current ?? columnsRef.current.map((c) => c.columnId),
       setColumnOrder: (order: string[]) => {
@@ -144,8 +148,8 @@ export function useOGridImperativeHandle<T>(params: UseOGridImperativeHandlePara
       },
     }),
     [
-      isServerSide, setVisibleColumns, sortingState, filtersState,
-      columnOrder, onColumnOrderChange, selectedRows, onSelectionChange, dataFetchingState,
+      isServerSide, setVisibleColumns, setSort, defaultSortField, defaultSortDirection, setFilters,
+      columnOrder, onColumnOrderChange, selectedRows, onSelectionChange, refreshData,
       columnOrderRef, columnWidthOverridesRef, columnsRef, displayItemsRef,
       effectiveSelectedRowsRef, filtersRef, getRowIdRef, pinnedOverridesRef,
       sortRef, visibleColumnsRef,

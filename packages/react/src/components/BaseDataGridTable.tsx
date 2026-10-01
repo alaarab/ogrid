@@ -216,6 +216,9 @@ export function BaseDataGridTableInner<T>(
                     copyRange={copyRange}
                     isDragging={isDragging}
                     editingCell={editingCell}
+                    popoverAnchorEl={o.editing.popoverAnchorEl}
+                    pendingEditorValue={o.editing.pendingEditorValue}
+                    formulaVersion={gridProps.formulaVersion}
                     pinnedColumns={pinning.pinnedColumns}
                     rowNumWidth={hasRowNumbersCol ? (columnSizingOverrides?.[ROW_NUMBER_COLUMN_ID]?.widthPx ?? ROW_NUMBER_COLUMN_WIDTH) : undefined}
                     styles={styles}
