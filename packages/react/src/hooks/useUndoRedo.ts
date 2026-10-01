@@ -66,7 +66,7 @@ export function useUndoRedo<T>(
   // Rebuild the stack when the configured depth changes after mount.
   useEffect(() => {
     if (stackRef.current && stackRef.current.maxDepth !== maxUndoDepth) {
-      stackRef.current = new UndoRedoStack<ICellValueChangedEvent<T>>(maxUndoDepth);
+      stackRef.current = new UndoRedoStack<UndoEntry<T>>(maxUndoDepth);
       setHistoryLength(0);
       setRedoLength(0);
     }
