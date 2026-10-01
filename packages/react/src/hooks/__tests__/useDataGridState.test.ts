@@ -548,6 +548,58 @@ describe('useDataGridState', () => {
     expect(result.current.layout.flatColumns).toHaveLength(3);
     expect(result.current.layout.flatColumns.map((c) => c.columnId)).toEqual(['name', 'id', 'score']);
   });
+
+  describe('windowed data source', () => {
+    // Rows 10 and 11 of 1000 are loaded; `items` stays empty in windowed mode.
+    function windowedProps(overrides: Partial<IOGridDataGridProps<Row>> = {}): IOGridDataGridProps<Row> {
+      const loadedRows: Row[] = [];
+      loadedRows.length = 1000;
+      loadedRows[10] = { id: '10', name: 'Ten', score: 10 };
+      loadedRows[11] = { id: '11', name: 'Eleven', score: 11 };
+      return {
+        ...defaultProps,
+        items: [],
+        windowed: {
+          rowCount: 1000,
+          getRow: (i) => (loadedRows[i] ? { status: 'loaded', row: loadedRows[i] as Row } : { status: 'loading' }),
+          requestWindow: jest.fn(),
+          retryRow: jest.fn(),
+          loadedRows,
+        },
+        ...overrides,
+      };
+    }
+
+    it('header select-all selects the loaded rows and reads as all selected', () => {
+      const wrapperRef = { current: document.createElement('div') };
+      const { result } = renderHook(() =>
+        useDataGridState<Row>({ props: windowedProps({ rowSelection: 'multiple' }), wrapperRef })
+      );
+      act(() => result.current.rowSelection.handleSelectAll(true));
+      expect([...result.current.rowSelection.selectedRowIds].sort()).toEqual(['10', '11']);
+      expect(result.current.rowSelection.allSelected).toBe(true);
+      expect(result.current.rowSelection.someSelected).toBe(false);
+    });
+
+    it('Enter on a loaded row starts editing it', () => {
+      const wrapperRef = { current: document.createElement('div') };
+      const props = windowedProps({
+        columns: [{ columnId: 'name', name: 'Name', editable: true }],
+        visibleColumns: new Set(['name']),
+        onCellValueChanged: jest.fn(),
+      });
+      const { result } = renderHook(() => useDataGridState<Row>({ props, wrapperRef }));
+      act(() => result.current.interaction.setActiveCell({ rowIndex: 11, columnIndex: 0 }));
+      act(() => {
+        result.current.interaction.handleGridKeyDown({
+          key: 'Enter',
+          preventDefault: jest.fn(),
+          defaultPrevented: false,
+        } as unknown as React.KeyboardEvent);
+      });
+      expect(result.current.editing.editingCell).toEqual({ rowId: '11', columnId: 'name' });
+    });
+  });
 });
 
 describe('useDataGridState host-managed undo/redo (D03)', () => {
