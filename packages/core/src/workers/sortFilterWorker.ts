@@ -6,7 +6,7 @@
  * and column metadata; the worker applies filters + sort and returns row indices.
  */
 
-import { compareSortKeys, compareTimestamps, toDateTimestamp, toSortKey } from './sortFilterPrimitives';
+import { compareSortKeys, compareTimestamps, toDateTimestamp, toSortKey, createSortCollator } from './sortFilterPrimitives';
 
 // --- Worker message types ---
 
@@ -15,6 +15,8 @@ export interface SortFilterRequest {
   requestId: number;
   /** Flat value matrix: values[row][col] */
   values: (string | number | boolean | null)[][];
+  /** Displayed text for active text filters, matched in addition to the raw value. */
+  textValues?: Record<number, string[]>;
   /** Column metadata (only columns that participate in filter/sort). */
   columnMeta: { type: 'text' | 'numeric' | 'date' | 'boolean'; index: number }[];
   /** Active filters keyed by column index in the values matrix. */
@@ -40,6 +42,7 @@ export interface SortFilterResponse {
  */
 export function workerBody(): void {
   const ctx = self as unknown as Worker;
+  const sortCollator = createSortCollator();
 
   // toDateTimestamp, toSortKey, compareSortKeys and compareTimestamps come
   // from ./sortFilterPrimitives: imported here for tests, and serialized into
@@ -76,8 +79,8 @@ export function workerBody(): void {
         return {
           colIdx,
           type: 'date' as const,
-          fromTs: filter.value.from ? new Date(filter.value.from + 'T00:00:00').getTime() : NaN,
-          toTs: filter.value.to ? new Date(filter.value.to + 'T23:59:59.999').getTime() : NaN,
+          fromTs: filter.value.from ? new Date(filter.value.from + 'T00:00:00Z').getTime() : NaN,
+          toTs: filter.value.to ? new Date(filter.value.to + 'T23:59:59.999Z').getTime() : NaN,
         };
       });
 
@@ -92,16 +95,19 @@ export function workerBody(): void {
 
           switch (pf.type) {
             case 'text': {
-              if (pf.trimmed && !String(cellVal ?? '').toLowerCase().includes(pf.trimmed)) {
+              // Match the raw value or the displayed text, like the sync path.
+              if (
+                pf.trimmed &&
+                !String(cellVal ?? '').toLowerCase().includes(pf.trimmed) &&
+                !(msg.textValues?.[pf.colIdx]?.[r] ?? '').toLowerCase().includes(pf.trimmed)
+              ) {
                 pass = false;
               }
               break;
             }
             case 'multiSelect': {
-              // Mirror the sync path's exact-membership coercion: null/undefined
-              // stringify to "null"/"undefined" (NOT ''), so filtering for the
-              // empty string stays distinct from filtering for empty cells.
-              if (!pf.empty && !pf.set.has(String(cellVal))) {
+              // The empty-string option represents all blank cells in both paths.
+              if (!pf.empty && !pf.set.has(String(cellVal ?? ''))) {
                 pass = false;
               }
               break;
@@ -156,7 +162,7 @@ export function workerBody(): void {
           if (r === undefined) continue;
           keys[r] = toSortKey(values[r]?.[columnIndex]);
         }
-        indices.sort((a, b) => compareSortKeys(keys[a], keys[b]) * dir);
+        indices.sort((a, b) => compareSortKeys(keys[a], keys[b], sortCollator) * dir);
       }
     }
 

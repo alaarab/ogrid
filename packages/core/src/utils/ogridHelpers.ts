@@ -6,7 +6,7 @@ export function getFilterOptionValue(option: FilterOption): string {
 }
 
 export function getFilterOptionLabel(option: FilterOption): string {
-  return typeof option === 'string' ? option : option.label;
+  return typeof option === 'string' ? (option === '' ? '(Blanks)' : option) : option.label;
 }
 
 /** Type guard: returns true if val is an IColumnFilterDef (an object with a filter type). */
@@ -71,7 +71,7 @@ export function deriveFilterOptionsFromData<T>(
       if (fc === undefined) continue;
       const v = getCellValue(item, fc.col);
       const set = valueSets.get(fc.field);
-      if (v != null && v !== '' && set) set.add(String(v));
+      if (set) set.add(String(v ?? ''));
     }
   }
 
@@ -80,7 +80,7 @@ export function deriveFilterOptionsFromData<T>(
     const fc = filterCols[i];
     if (fc === undefined) continue;
     const set = valueSets.get(fc.field);
-    out[fc.field] = set ? Array.from(set).sort() : [];
+    out[fc.field] = set ? Array.from(set).sort((a, b) => a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' })) : [];
   }
   return out;
 }

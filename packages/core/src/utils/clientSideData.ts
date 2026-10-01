@@ -1,7 +1,10 @@
 import type { IColumnDef, IFilters } from '../types';
 import { getCellValue } from './cellValue';
+import { formatCellValue } from './cellFormatting';
 import { getFilterField } from './ogridHelpers';
-import { compareSortKeys, compareTimestamps, toDateTimestamp, toSortKey } from '../workers/sortFilterPrimitives';
+import { compareSortKeys, compareTimestamps, toDateTimestamp, toSortKey, createSortCollator } from '../workers/sortFilterPrimitives';
+
+const sortCollator = createSortCollator();
 
 // Shared with the Web Worker path so both sort and filter identically.
 export { toDateTimestamp };
@@ -54,7 +57,7 @@ export function processClientSideData<T>(
 
     switch (val.type) {
       case 'multiSelect':
-        // NOTE: Cell values are coerced to string via String() for set membership checks.
+        // Cell values are coerced to string; null/undefined share the empty-string blank option.
         // Object-typed column values will produce "[object Object]"  -  use valueGetter or
         // valueFormatter on the column def to ensure meaningful string representation.
         if (val.value.length > 0) {
@@ -65,7 +68,7 @@ export function processClientSideData<T>(
           for (let j = 0; j < data.length; j++) {
             const row = data[j];
             if (row === undefined) continue;
-            msCache.set(row, String(getCellValue(row, col)));
+            msCache.set(row, String(getCellValue(row, col) ?? ''));
           }
           predicates.push((r) => allowedSet.has(msCache.get(r) ?? ''));
         }
@@ -74,15 +77,20 @@ export function processClientSideData<T>(
         const trimmed = val.value.trim();
         if (trimmed) {
           const lower = trimmed.toLowerCase();
-          // Schwartzian transform: pre-compute lowercase strings to avoid
-          // O(n) String() + toLowerCase() inside every filter predicate call.
-          const textCache = new Map<T, string>();
+          // Pre-compute matches once: a row passes when its raw value or its displayed text contains the query.
+          const textMatches = new Set<T>();
           for (let j = 0; j < data.length; j++) {
             const row = data[j];
             if (row === undefined) continue;
-            textCache.set(row, String(getCellValue(row, col) ?? '').toLowerCase());
+            const v = getCellValue(row, col);
+            if (
+              String(v ?? '').toLowerCase().includes(lower) ||
+              (formatCellValue(v, row, col) ?? '').toLowerCase().includes(lower)
+            ) {
+              textMatches.add(row);
+            }
           }
-          predicates.push((r) => (textCache.get(r) ?? '').includes(lower));
+          predicates.push((r) => textMatches.has(r));
         }
         break;
       }
@@ -101,8 +109,8 @@ export function processClientSideData<T>(
       case 'date': {
         const dv = val.value;
         // Pre-compute filter boundary timestamps to avoid repeated Date parsing in the filter loop
-        const fromTs = dv.from ? new Date(dv.from + 'T00:00:00').getTime() : NaN;
-        const toTs = dv.to ? new Date(dv.to + 'T23:59:59.999').getTime() : NaN;
+        const fromTs = dv.from ? new Date(dv.from + 'T00:00:00Z').getTime() : NaN;
+        const toTs = dv.to ? new Date(dv.to + 'T23:59:59.999Z').getTime() : NaN;
         // Pre-compute cell timestamps (same pattern as sort) to avoid N Date allocations
         const dateCache = new Map<T, number>();
         for (let j = 0; j < data.length; j++) {
@@ -175,7 +183,7 @@ export function processClientSideData<T>(
           : (row as Record<string, unknown>)[sortBy];
         keyCache.set(row, toSortKey(v));
       }
-      sortable.sort((a, b) => compareSortKeys(keyCache.get(a), keyCache.get(b)) * dir);
+      sortable.sort((a, b) => compareSortKeys(keyCache.get(a), keyCache.get(b), sortCollator) * dir);
     } else {
       sortable.sort((a, b) => compare(a, b) * dir);
     }

@@ -234,6 +234,7 @@ export function useDataGridLayout<T>(
   );
 
   const headerMenuResult = useColumnHeaderMenuState({
+    wrapperRef,
     pinnedColumns: pinningResult.pinnedColumns,
     onPinColumn: pinningResult.pinColumn,
     onUnpinColumn: pinningResult.unpinColumn,

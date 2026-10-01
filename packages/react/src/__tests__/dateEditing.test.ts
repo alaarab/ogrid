@@ -403,3 +403,18 @@ describe('useInlineCellEditorState — text editor unaffected by dateFormat', ()
     expect(onCommit).toHaveBeenCalledWith('world');
   });
 });
+
+for (const dateEditorType of ['text', 'native'] as const) {
+  it(`initializes ${dateEditorType} date editors from numeric timestamps using UTC fields`, () => {
+    const { result } = renderHook(() => useInlineCellEditorState(makeParams({
+      value: Date.UTC(2024, 0, 15), dateEditorType,
+    })));
+    expect(result.current.localValue).toBe('2024-01-15');
+  });
+  it(`initializes ${dateEditorType} date editors from an offset timestamp using the displayed UTC day`, () => {
+    const { result } = renderHook(() => useInlineCellEditorState(makeParams({
+      value: '2024-01-15T23:00:00-08:00', dateEditorType,
+    })));
+    expect(result.current.localValue).toBe('2024-01-16');
+  });
+}

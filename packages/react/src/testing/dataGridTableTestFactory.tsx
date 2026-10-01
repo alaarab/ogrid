@@ -595,6 +595,20 @@ export function createDataGridTableTests(DataGridTable: React.ComponentType<IOGr
       expect(cells.length).toBe(2);
     });
 
+    it('renders false strings as unchecked and commits their original value when toggled', () => {
+      const { container, onCellValueChanged } = renderBoolTable({
+        items: [{ id: '1', name: 'Alpha', active: 'false' }, { id: '2', name: 'Beta', active: '0' }],
+      });
+      const checkboxes = Array.from(container.querySelectorAll('[role="checkbox"], input[type="checkbox"]')) as HTMLElement[];
+      expect(checkboxes).toHaveLength(2);
+      checkboxes.forEach(cb => {
+        const state = cb.getAttribute('data-state') ?? (cb as HTMLInputElement).checked?.toString() ?? cb.getAttribute('aria-checked');
+        expect(state === 'unchecked' || state === 'false').toBe(true);
+      });
+      fireEvent.click(checkboxes[0]!);
+      expect(onCellValueChanged).toHaveBeenCalledWith(expect.objectContaining({ oldValue: 'false', newValue: true }));
+    });
+
     it('renders checked and unchecked boolean cells correctly', () => {
       const { container } = renderBoolTable();
       const checkboxes = Array.from(
