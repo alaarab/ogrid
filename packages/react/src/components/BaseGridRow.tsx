@@ -97,6 +97,7 @@ function GridRowInner(props: BaseGridRowProps) {
             key={col.columnId}
             data-column-id={col.columnId}
             aria-colindex={leadingColCount + globalIdx + 1}
+            aria-selected={surfaceState.isActiveRangeCell || surfaceState.isRangeCell ? true : undefined}
             className={columnMeta.cellClasses[col.columnId] || undefined}
             style={bg ? { ...baseStyle, background: bg } : baseStyle}
             onPointerDown={PREVENT_DEFAULT}

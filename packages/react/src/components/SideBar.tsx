@@ -117,6 +117,9 @@ const multiSelectContainerStyle: React.CSSProperties = { maxHeight: 120, overflo
 
 const multiSelectLabelStyle: React.CSSProperties = { display: 'flex', alignItems: 'center', gap: 4, padding: '1px 0', cursor: 'pointer', fontSize: 13 };
 
+// React 17 compatible stable id (no useId).
+let sideBarIdCounter = 0;
+
 export function SideBar(props: SideBarProps): React.ReactElement {
   const {
     activePanel,
@@ -139,17 +142,43 @@ export function SideBar(props: SideBarProps): React.ReactElement {
     onPanelChange(activePanel === panel ? null : panel);
   };
 
+  const [baseId] = React.useState(() => `ogrid-sidebar-${++sideBarIdCounter}`);
+  const tabId = (panel: SideBarPanelId) => `${baseId}-tab-${panel}`;
+  const panelId = (panel: SideBarPanelId) => `${baseId}-panel-${panel}`;
+
+  // WAI-ARIA tabs (vertical strip): arrows/Home/End move focus; Enter/Space toggle the panel via click.
+  const handleTabKeyDown = (e: React.KeyboardEvent<HTMLButtonElement>) => {
+    const index = panels.findIndex((p) => tabId(p) === e.currentTarget.id);
+    if (index < 0) return;
+    const last = panels.length - 1;
+    const next =
+      e.key === 'ArrowDown' || e.key === 'ArrowRight' ? (index === last ? 0 : index + 1)
+      : e.key === 'ArrowUp' || e.key === 'ArrowLeft' ? (index === 0 ? last : index - 1)
+      : e.key === 'Home' ? 0
+      : e.key === 'End' ? last
+      : -1;
+    const target = next >= 0 ? panels[next] : undefined;
+    if (!target) return;
+    e.preventDefault();
+    e.stopPropagation();
+    e.currentTarget.parentElement?.querySelector<HTMLElement>(`[id="${tabId(target)}"]`)?.focus();
+  };
+
   const tabStripStyle = position === 'right' ? tabStripBorderLeft : tabStripBorderRight;
   const panelContainerStyle = position === 'right' ? panelContainerBorderLeft : panelContainerBorderRight;
 
   const tabStrip = (
-    <div style={tabStripStyle} role="tablist" aria-label="Side bar tabs">
-      {panels.map((panel) => (
+    <div style={tabStripStyle} role="tablist" aria-orientation="vertical" aria-label="Side bar tabs">
+      {panels.map((panel, i) => (
         <button
           key={panel}
           type="button"
           role="tab"
+          id={tabId(panel)}
           aria-selected={activePanel === panel}
+          aria-controls={activePanel === panel ? panelId(panel) : undefined}
+          tabIndex={activePanel === panel || (activePanel === null && i === 0) ? 0 : -1}
+          onKeyDown={handleTabKeyDown}
           aria-label={PANEL_LABELS[panel]}
           onClick={() => handleTabClick(panel)}
           title={PANEL_LABELS[panel]}
@@ -162,7 +191,7 @@ export function SideBar(props: SideBarProps): React.ReactElement {
   );
 
   const panelContent = isOpen && activePanel ? (
-    <div role="tabpanel" aria-label={PANEL_LABELS[activePanel]} style={panelContainerStyle}>
+    <div role="tabpanel" id={panelId(activePanel)} aria-labelledby={tabId(activePanel)} style={panelContainerStyle}>
       <div style={panelHeaderStyle}>
         <span>{PANEL_LABELS[activePanel]}</span>
         <button type="button" onClick={() => onPanelChange(null)} style={closeButtonStyle} aria-label="Close panel">

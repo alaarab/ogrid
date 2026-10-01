@@ -143,8 +143,20 @@ export function BaseTableHeader<T>(props: BaseTableHeaderProps<T>): React.ReactE
                         headerMenu.open(col.columnId, e.currentTarget);
                       }
                     }}
-                    aria-label="Column options"
-                    title="Column options"
+                    onKeyDown={(e) => {
+                      // The trigger owns Enter/Space/Arrow keys so the grid handler can't preventDefault them
+                      if (e.key === 'Enter' || e.key === ' ') {
+                        e.stopPropagation();
+                      } else if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+                        e.stopPropagation();
+                        e.preventDefault();
+                        headerMenu.open(col.columnId, e.currentTarget);
+                      }
+                    }}
+                    aria-haspopup="menu"
+                    aria-expanded={headerMenu.isOpen && headerMenu.openForColumn === col.columnId}
+                    aria-label={`${col.name} column options`}
+                    title={`${col.name} column options`}
                   >
                     {'⋮'}
                   </button>

@@ -733,10 +733,10 @@ test.describe('Column header menu', () => {
       await expect(page.getByRole('menuitem', { name: 'Autosize this column' })).toBeVisible();
       await expect(page.getByRole('menuitem', { name: 'Autosize all columns' })).toBeVisible();
     } else {
-      await expect(page.getByRole('button', { name: 'Pin left' })).toBeVisible();
-      await expect(page.getByRole('button', { name: 'Pin right' })).toBeVisible();
-      await expect(page.getByRole('button', { name: 'Autosize this column' })).toBeVisible();
-      await expect(page.getByRole('button', { name: 'Autosize all columns' })).toBeVisible();
+      await expect(page.getByRole('menuitem', { name: 'Pin left' })).toBeVisible();
+      await expect(page.getByRole('menuitem', { name: 'Pin right' })).toBeVisible();
+      await expect(page.getByRole('menuitem', { name: 'Autosize this column' })).toBeVisible();
+      await expect(page.getByRole('menuitem', { name: 'Autosize all columns' })).toBeVisible();
     }
   });
 
@@ -752,7 +752,7 @@ test.describe('Column header menu', () => {
       // React Material, Angular Material/PrimeNG, Vue Radix/PrimeVue, and JS use role="menuitem" for the popup actions.
       await page.getByRole('menuitem', { name: 'Pin left' }).click();
     } else {
-      await page.getByRole('button', { name: 'Pin left' }).click();
+      await page.getByRole('menuitem', { name: 'Pin left' }).click();
     }
 
     await expect.poll(async () => await th.evaluate((el) => getComputedStyle(el).position)).toBe('sticky');
