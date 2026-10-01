@@ -1,8 +1,10 @@
-import { useMemo, useCallback } from 'react';
+import { useMemo, useCallback, useEffect } from 'react';
 import type { RefObject } from 'react';
-import { getDataGridStatusBarConfig, computeAggregations } from '../utils';
+import { getDataGridStatusBarConfig, computeAggregations, getCellValue } from '../utils';
+import { isColumnEditable } from '@alaarab/ogrid-core';
 import type { HeaderFilterConfigInput, CellRenderDescriptorInput } from '../utils';
-import type { RowId, IOGridDataGridProps, IStatusBarProps, IColumnDef } from '../types';
+import type { RowId, IOGridDataGridProps, IStatusBarProps, IColumnDef, IFormulaCellWriter } from '../types';
+import type { UseUndoRedoFormulaCells } from './useUndoRedo';
 import { useRowSelection } from './useRowSelection';
 import { useCellEditing } from './useCellEditing';
 import { useActiveCell } from './useActiveCell';
@@ -263,6 +265,38 @@ export function useDataGridState<T>(
     colOffset,
     hasCheckboxCol,
   } = layoutResult;
+  const flatColumns = layoutResult.layout.flatColumns;
+
+  // --- Formula coordinates ---
+  // The formula engine is keyed by flat column index + sheet row (see
+  // IFormulaRowMap); the grid works in visible columns and displayed rows.
+  // These two functions are the one place that translates between them.
+  const { formulaRowMap } = props;
+  const flatColIndexById = useMemo(
+    () => new Map(flatColumns.map((c, i) => [c.columnId, i] as const)),
+    [flatColumns]
+  );
+  const formulaCol = useCallback((columnId: string) => flatColIndexById.get(columnId) ?? -1, [flatColIndexById]);
+  const formulaRow = useCallback(
+    (rowIndex: number) => (formulaRowMap ? formulaRowMap.toSheetRow(rowIndex) : rowIndex),
+    [formulaRowMap]
+  );
+  // Every value change goes through the undo wrapper, which uses these to clear
+  // a formula the value overwrites, record formula changes, and notify the engine.
+  const { formulas: formulasOn, getFormula, setFormula, onFormulaCellChanged } = props;
+  const formulaCells = useMemo<UseUndoRedoFormulaCells<T> | undefined>(() => {
+    if (!formulasOn || !getFormula || !setFormula) return undefined;
+    return {
+      cellOf: (event) => {
+        const col = formulaCol(event.columnId);
+        const row = formulaRow(event.rowIndex);
+        return col >= 0 && row >= 0 ? { col, row } : null;
+      },
+      getFormula,
+      setFormula,
+      onCellChanged: onFormulaCellChanged,
+    };
+  }, [formulasOn, getFormula, setFormula, onFormulaCellChanged, formulaCol, formulaRow]);
 
   // --- 2. Row selection ---
   const rowSelectionResult = useRowSelection({
@@ -308,11 +342,14 @@ export function useDataGridState<T>(
     wrapperRef,
     onKeyDown,
     formulas: props.formulas,
-    flatColumns: layoutResult.layout.flatColumns,
+    flatColumns,
     getFormula: props.getFormula,
     hasFormula: props.hasFormula,
     setFormula: props.setFormula,
     onFormulaInsertReference: props.onFormulaInsertReference,
+    formulaCol,
+    formulaRow,
+    formulaCells,
   });
 
   const {
@@ -336,11 +373,49 @@ export function useDataGridState<T>(
     setActiveCell,
     setSelectionRange,
     colOffset,
-    setFormula: props.setFormula,
-    onFormulaCellChanged: props.onFormulaCellChanged,
+    // Mapped to sheet rows and recorded for undo; plain values notify the
+    // engine through the undo wrapper, so only the legacy path passes this.
+    setFormula: interactionResult.setFormula,
+    onFormulaCellChanged: formulaCells ? undefined : props.onFormulaCellChanged,
     formulas: props.formulas,
-    flatColumns: layoutResult.layout.flatColumns,
+    flatColumns,
   });
+
+  // --- Formula bar writer: sheet cell -> the grid's normal edit path ---
+  const { formulaCellWriterRef, editable: editableProp } = props;
+  const writerStateRef = useLatestRef({
+    items, visibleCols, flatColumns, formulaRowMap, colOffset, editable: editableProp,
+    onCellValueChanged, commitCellEdit: editingResult.editing.commitCellEdit,
+  });
+  const formulaCellWriter = useMemo<IFormulaCellWriter>(() => {
+    const resolve = (col: number, row: number) => {
+      const st = writerStateRef.current;
+      const colDef = st.flatColumns[col];
+      const displayRow = st.formulaRowMap ? st.formulaRowMap.toDisplayRow(row) : row;
+      if (!colDef || displayRow < 0 || displayRow >= st.items.length) return null;
+      const item = st.items[displayRow] as T;
+      const editableCell = st.editable !== false && !!st.onCellValueChanged && isColumnEditable(colDef, item);
+      return editableCell ? { st, colDef, item, displayRow } : null;
+    };
+    return {
+      canEdit: (col, row) => resolve(col, row) !== null,
+      write: (col, row, text) => {
+        const cell = resolve(col, row);
+        if (!cell) return false;
+        const { st, colDef, item, displayRow } = cell;
+        const visibleIdx = st.visibleCols.findIndex((c) => c.columnId === colDef.columnId);
+        st.commitCellEdit(item, colDef.columnId, getCellValue(item, colDef), text, displayRow, visibleIdx + st.colOffset, { skipAdvance: true });
+        return true;
+      },
+    };
+  }, [writerStateRef]);
+  useEffect(() => {
+    if (!formulaCellWriterRef) return;
+    formulaCellWriterRef.current = formulaCellWriter;
+    return () => {
+      if (formulaCellWriterRef.current === formulaCellWriter) formulaCellWriterRef.current = null;
+    };
+  }, [formulaCellWriterRef, formulaCellWriter]);
 
   // --- 6. View models ---
   const {
@@ -402,6 +477,8 @@ export function useDataGridState<T>(
       editable,
       onCellValueChanged,
       isDragging: cellSelection ? isDragging : false,
+      formulaCol,
+      formulaRow,
       getFormulaValue: props.getFormulaValue,
       hasFormula: props.hasFormula,
       getFormula: props.getFormula,
@@ -420,6 +497,8 @@ export function useDataGridState<T>(
       onCellValueChanged,
       cellSelection,
       isDragging,
+      formulaCol,
+      formulaRow,
       props.getFormulaValue,
       props.hasFormula,
       props.getFormula,

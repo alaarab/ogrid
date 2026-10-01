@@ -470,6 +470,55 @@ describe('Cross-Sheet References', () => {
       expect(engine.getValue(1, 0)).toBe(15);
     });
 
+    it('onCellChanged with a sheet recalculates formulas reading that sheet', () => {
+      const engine = new FormulaEngine();
+      const mainAccessor = createAccessor([[0]]);
+      const sheet2Data = [[5], [7]];
+      engine.registerSheet('Sheet2', createAccessor(sheet2Data));
+      engine.setFormula(1, 0, '=Sheet2!A1*2', mainAccessor);
+      engine.setFormula(2, 0, '=SUM(Sheet2!A1:A2)', mainAccessor);
+      expect(engine.getValue(1, 0)).toBe(10);
+
+      sheet2Data[0][0] = 50;
+      const result = engine.onCellChanged(0, 0, mainAccessor, 'Sheet2');
+      expect(engine.getValue(1, 0)).toBe(100);
+      expect(engine.getValue(2, 0)).toBe(57);
+      expect(result.updatedCells).toHaveLength(2);
+
+      sheet2Data[1][0] = 8;
+      engine.onCellsChanged([{ col: 0, row: 1, sheet: 'Sheet2' }], mainAccessor);
+      expect(engine.getValue(2, 0)).toBe(58);
+    });
+
+    it('a main-sheet change with the same coordinates does not touch cross-sheet formulas', () => {
+      const engine = new FormulaEngine();
+      const mainAccessor = createAccessor([[1]]);
+      engine.registerSheet('Sheet2', createAccessor([[5]]));
+      engine.setFormula(1, 0, '=Sheet2!A1*2', mainAccessor);
+      expect(engine.onCellChanged(0, 0, mainAccessor).updatedCells).toHaveLength(0);
+    });
+
+    it('onSheetChanged recalculates readers of a replaced or removed sheet and their dependents', () => {
+      const engine = new FormulaEngine();
+      const mainAccessor = createAccessor([[0]]);
+      engine.registerSheet('Sheet2', createAccessor([[5]]));
+      engine.setFormula(1, 0, '=Sheet2!A1*2', mainAccessor);
+      engine.setFormula(2, 0, '=B1+1', mainAccessor);
+      engine.setFormula(3, 0, '=1+1', mainAccessor);
+      expect(engine.getValue(2, 0)).toBe(11);
+
+      engine.registerSheet('Sheet2', createAccessor([[50]]));
+      const result = engine.onSheetChanged('Sheet2', mainAccessor);
+      expect(engine.getValue(1, 0)).toBe(100);
+      expect(engine.getValue(2, 0)).toBe(101);
+      // Formulas that don't read the sheet are left alone.
+      expect(result.updatedCells.map((c) => c.col).sort()).toEqual([1, 2]);
+
+      engine.unregisterSheet('Sheet2');
+      engine.onSheetChanged('Sheet2', mainAccessor);
+      expect((engine.getValue(1, 0) as FormulaError).type).toBe('#REF!');
+    });
+
     it('quoted sheet name works in engine', () => {
       const engine = new FormulaEngine();
       const mainAccessor = createAccessor([[0]]);

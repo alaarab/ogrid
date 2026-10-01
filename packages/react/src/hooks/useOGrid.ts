@@ -8,7 +8,7 @@ import {
 } from 'react';
 
 import { flattenColumns, getCellValue } from '../utils';
-import { validateColumns, validateRowIds } from '@alaarab/ogrid-core';
+import { validateColumns, validateRowIds, createFormulaRowMap, createOffsetFormulaRowMap } from '@alaarab/ogrid-core';
 import { useFormulaEngine } from './useFormulaEngine';
 import { useFormulaBar } from './useFormulaBar';
 import { FormulaBar } from '../components/FormulaBar';
@@ -34,6 +34,7 @@ import type {
   IStatusBarProps,
   IColumnDefinition,
   IFilters,
+  IFormulaCellWriter,
   RowId,
   PageSize,
 } from '../types';
@@ -55,6 +56,7 @@ const NAME_BOX_STYLE: React.CSSProperties = {
   textAlign: 'center',
   lineHeight: '20px',
   userSelect: 'none',
+  display: 'block',
 };
 
 /** Resolved column chooser placement. */
@@ -506,6 +508,36 @@ export function useOGrid<T>(
     filterableColumns, filtersState.filters, filtersState.handleFilterChange, filtersState.clientFilterOptions,
   ]);
 
+  // --- Sheet coordinates (formulas, A1 references, row numbers, name box) ---
+  // A formula row is the record's index in the full client-side data, not its
+  // position on screen, so formulas stay with their record through sort,
+  // filter and paging. Server-side grids only hold the current page, so there
+  // the sheet row is the absolute row in the server's order.
+  const spreadsheetMode = !!(cellReferences || formulas);
+  const displayItems = dataFetchingState.displayItems;
+  const pageOffset = isServerSide && paginationState.pageSize !== 'all'
+    ? (paginationState.page - 1) * paginationState.pageSize
+    : 0;
+  const sheetItems = useMemo(
+    // Leading holes stand in for the server rows before the current page.
+    () => (!isServerSide ? displayData : pageOffset > 0 ? new Array<T>(pageOffset).concat(displayItems) : displayItems),
+    [isServerSide, displayData, displayItems, pageOffset]
+  );
+  const sheetRowById = useMemo(() => {
+    if (!spreadsheetMode || isServerSide) return null;
+    const m = new Map<RowId, number>();
+    for (let i = 0; i < displayData.length; i++) {
+      const item = displayData[i];
+      if (item !== undefined) m.set(getRowId(item), i);
+    }
+    return m;
+  }, [spreadsheetMode, isServerSide, displayData, getRowId]);
+  const formulaRowMap = useMemo(() => {
+    if (!spreadsheetMode) return undefined;
+    if (!sheetRowById) return createOffsetFormulaRowMap(pageOffset, displayItems.length);
+    return createFormulaRowMap(sheetRowById, displayItems, getRowId);
+  }, [spreadsheetMode, sheetRowById, pageOffset, displayItems, getRowId]);
+
   // --- Formula engine (opt-in, tree-shakeable) ---
   const [formulaVersion, setFormulaVersion] = useState(0);
   const wrappedOnFormulaRecalc = useCallback((result: import('@alaarab/ogrid-core').IRecalcResult) => {
@@ -514,7 +546,7 @@ export function useOGrid<T>(
   }, [onFormulaRecalc]);
   const formulaEngine = useFormulaEngine({
     formulas,
-    items: dataFetchingState.displayItems,
+    items: sheetItems,
     flatColumns: columns,
     initialFormulas,
     onFormulaRecalc: wrappedOnFormulaRecalc,
@@ -527,35 +559,57 @@ export function useOGrid<T>(
   const clearAllFilters = useCallback(() => filtersState.setFilters({}), [filtersState]);
   const isLoadingResolved = (isServerSide && dataFetchingState.serverLoading) || displayLoading;
   const showRowNumbersResolved = showRowNumbers || cellReferences || formulas;
-  const showColumnLettersResolved = !!(cellReferences || formulas);
+  const showColumnLettersResolved = spreadsheetMode;
   const showNameBox = !!cellReferences && !formulas; // formula bar has its own name box
-  const showActiveCellChange = !!(cellReferences || formulas);
+  const showActiveCellChange = spreadsheetMode;
 
   // --- Name box / formula bar (active cell reference + coordinates) ---
   const { activeCellRef, activeCellCoords, onActiveCellChange } = useOGridActiveCell();
 
   // --- Formula bar hook (only when formulas are enabled) ---
-  // Latest-value snapshots for the formula bar's raw-value lookup. The imperative
-  // handle keeps its own internal snapshots, so these are scoped to getRawValue.
-  const displayItemsRef = useLatestRef(dataFetchingState.displayItems);
-  const columnsRef = useLatestRef(columns);
+  // The active cell's coordinates are sheet coordinates (they come from the
+  // name box reference). The lookups depend on the data and formulaVersion so
+  // the bar's text refreshes when the cell's value or formula changes.
   const getRawValue = useCallback((col: number, row: number): unknown => {
-    const items = displayItemsRef.current;
-    const cols = columnsRef.current;
-    const item = items[row];
-    const colDef = cols[col];
+    const item = sheetItems[row];
+    const colDef = columns[col];
     if (item === undefined || colDef === undefined) return undefined;
     return getCellValue(item, colDef);
-  }, [displayItemsRef, columnsRef]);
+  }, [sheetItems, columns]);
+  const engineGetFormula = formulaEngine.getFormula;
+  // biome-ignore lint/correctness/useExhaustiveDependencies: formulaVersion is the deliberate trigger — a recalc or formula edit must refresh the bar's text
+  const getFormulaForBar = useCallback(
+    (col: number, row: number) => engineGetFormula(col, row),
+    [engineGetFormula, formulaVersion]
+  );
+  // Commits go through the grid's own edit path (value parsing, undo, engine
+  // notification), which the grid hands back through this ref.
+  const formulaCellWriterRef = useRef<IFormulaCellWriter | null>(null);
+  const writeFromBar = useCallback((col: number, row: number, formula: string | null) => {
+    // A null formula comes paired with a plain-value commit, and writing that
+    // value clears the formula, so there is nothing to do for it here.
+    if (formula !== null) formulaCellWriterRef.current?.write(col, row, formula);
+  }, []);
+  const writeValueFromBar = useCallback((col: number, row: number, value: unknown) => {
+    formulaCellWriterRef.current?.write(col, row, value == null ? '' : String(value));
+  }, []);
 
   const formulaBarState = useFormulaBar({
     activeCol: activeCellCoords?.col ?? null,
     activeRow: activeCellCoords?.row ?? null,
     activeCellRef,
-    getFormula: formulaEngine.enabled ? formulaEngine.getFormula : undefined,
+    getFormula: formulaEngine.enabled ? getFormulaForBar : undefined,
     getRawValue,
-    setFormula: formulaEngine.enabled ? formulaEngine.setFormula : undefined,
+    setFormula: formulaEngine.enabled ? writeFromBar : undefined,
+    onCellValueChanged: writeValueFromBar,
   });
+  // The bar only enters edit mode on a cell the grid lets the user edit.
+  const activeCellCoordsRef = useLatestRef(activeCellCoords);
+  const barStartEditing = formulaBarState.startEditing;
+  const startFormulaBarEditing = useCallback(() => {
+    const coords = activeCellCoordsRef.current;
+    if (coords && formulaCellWriterRef.current?.canEdit(coords.col, coords.row)) barStartEditing();
+  }, [activeCellCoordsRef, barStartEditing]);
 
   // Split dataGridProps into focused sub-memos so that changes in one concern
   // (e.g. sorting) don't invalidate memos for unrelated concerns (e.g. formulas).
@@ -589,7 +643,9 @@ export function useOGrid<T>(
     formulaVersion,
     formulaReferences: formulaBarState.referencedCells.length > 0 ? formulaBarState.referencedCells : undefined,
     onFormulaInsertReference: formulaBarState.insertReference,
-  }), [formulas, formulaEngine, formulaVersion, formulaBarState.referencedCells, formulaBarState.insertReference]);
+    formulaRowMap,
+    formulaCellWriterRef: formulas ? formulaCellWriterRef : undefined,
+  }), [formulas, formulaEngine, formulaVersion, formulaBarState.referencedCells, formulaBarState.insertReference, formulaRowMap]);
 
   const dataGridProps = useMemo<IOGridDataGridProps<T>>(() => ({
     items: dataFetchingState.displayItems,
@@ -671,7 +727,7 @@ export function useOGrid<T>(
     placement: columnChooserPlacement,
   }), [columnChooserColumns, visibleColumns, handleVisibilityChange, setVisibleColumns, columnChooserPlacement]);
 
-  const nameBoxEl = useMemo(() => showNameBox ? React.createElement('div', {
+  const nameBoxEl = useMemo(() => showNameBox ? React.createElement('output', {
     style: NAME_BOX_STYLE,
     'aria-label': 'Active cell reference',
   }, activeCellRef ?? '\u2014') : null, [showNameBox, activeCellRef]);
@@ -690,10 +746,10 @@ export function useOGrid<T>(
       onInputChange: formulaBarState.onInputChange,
       onCommit: formulaBarState.onCommit,
       onCancel: formulaBarState.onCancel,
-      startEditing: formulaBarState.startEditing,
+      startEditing: startFormulaBarEditing,
       inputRef: formulaBarState.inputRef,
     });
-  }, [formulas, formulaBarState.cellRef, formulaBarState.formulaText, formulaBarState.isEditing, formulaBarState.onInputChange, formulaBarState.onCommit, formulaBarState.onCancel, formulaBarState.startEditing, formulaBarState.inputRef]);
+  }, [formulas, formulaBarState.cellRef, formulaBarState.formulaText, formulaBarState.isEditing, formulaBarState.onInputChange, formulaBarState.onCommit, formulaBarState.onCancel, startFormulaBarEditing, formulaBarState.inputRef]);
 
   // Sheet tabs element (only when sheetDefs are provided)
   const sheetTabsEl = useMemo(() => {
