@@ -5,15 +5,16 @@
  * (packages/docs/docs/) into packages/mcp/bundled-docs/, mirroring
  * the directory structure.
  *
- * MDX import statements (lines starting with `import `) are stripped
- * because the referenced React components are not available outside
- * the Docusaurus build. Everything else (frontmatter, prose, code
- * blocks) is preserved.
+ * MDX import statements (lines starting with `import ` outside code
+ * fences) are stripped because the referenced React components are not
+ * available outside the Docusaurus build. Everything else (frontmatter,
+ * prose, code blocks, including their imports) is preserved.
  */
 
 import { readdirSync, readFileSync, writeFileSync, mkdirSync, rmSync, statSync } from 'node:fs';
 import { join, dirname, extname } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { stripImports } from './strip-imports.mjs';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const SOURCE_DIR = join(__dirname, '../../docs/docs');
@@ -31,14 +32,6 @@ function collectFiles(dir) {
     }
   }
   return results;
-}
-
-/** Strip MDX import lines (e.g. `import Foo from '@site/...'`). */
-function stripImports(content) {
-  return content
-    .split('\n')
-    .filter((line) => !line.match(/^import\s+/))
-    .join('\n');
 }
 
 // ---- Main ----
