@@ -2,7 +2,7 @@ import { useMemo, useState, useLayoutEffect, useCallback } from 'react';
 import type { RefObject } from 'react';
 import { flattenColumns } from '../utils';
 import type { RowId, IColumnDef } from '../types';
-import { CHECKBOX_COLUMN_WIDTH, DEFAULT_MIN_COLUMN_WIDTH, resolveResponsiveConfig, applyResponsiveHiding } from '@alaarab/ogrid-core';
+import { CHECKBOX_COLUMN_WIDTH, ROW_NUMBER_COLUMN_ID, ROW_NUMBER_COLUMN_WIDTH, DEFAULT_MIN_COLUMN_WIDTH, resolveResponsiveConfig, applyResponsiveHiding } from '@alaarab/ogrid-core';
 import type { IResponsiveColumnsConfig } from '@alaarab/ogrid-core';
 import { useTableLayout } from './useTableLayout';
 import { useColumnPinning } from './useColumnPinning';
@@ -207,9 +207,14 @@ export function useDataGridLayout<T>(
     return map;
   }, [visibleCols, columnSizingOverrides, measuredColumnWidths]);
 
+  // The row-number column sits between the checkbox and the first data column, so
+  // left-pinned offsets must start after it.
+  const rowNumberWidth = hasRowNumbersCol
+    ? (columnSizingOverrides[ROW_NUMBER_COLUMN_ID]?.widthPx ?? ROW_NUMBER_COLUMN_WIDTH)
+    : 0;
   const leftOffsets = useMemo(
-    () => pinningResult.computeLeftOffsets(visibleCols, columnWidthMap, DEFAULT_MIN_COLUMN_WIDTH, hasCheckboxCol, CHECKBOX_COLUMN_WIDTH),
-    [pinningResult, visibleCols, columnWidthMap, hasCheckboxCol]
+    () => pinningResult.computeLeftOffsets(visibleCols, columnWidthMap, DEFAULT_MIN_COLUMN_WIDTH, hasCheckboxCol, CHECKBOX_COLUMN_WIDTH, rowNumberWidth),
+    [pinningResult, visibleCols, columnWidthMap, hasCheckboxCol, rowNumberWidth]
   );
 
   const rightOffsets = useMemo(

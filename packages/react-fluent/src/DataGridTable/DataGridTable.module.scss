@@ -152,12 +152,17 @@
 // Qualify with .dataTable to beat the `.dataTable :global(.fui-TableHeaderCell)` padding
 // rule (specificity 0,2,0 for a global class). Adding .dataTable raises these to 0,2,0 or
 // more, which is sufficient since both share the same specificity level on the element.
+// `position: sticky` + `left` are applied inline (see BaseGridRow/BaseTableHeader) because
+// Fluent's TableCell injects atomic `position: relative`; the z-index and opaque
+// background here keep scrolled content from showing through the sticky columns.
 .dataTable .selectionHeaderCellWrapper {
   width: 48px;
   min-width: 48px;
   max-width: 48px;
   padding: 4px;
   text-align: center;
+  background-color: var(--colorSubtleBackgroundSelected, var(--ogrid-header-bg, #f3f2f1));
+  z-index: var(--ogrid-z-selection-header-pinned, 12);
 }
 
 .dataTable .selectionCellWrapper {
@@ -166,6 +171,8 @@
   max-width: 48px;
   padding: 4px;
   text-align: center;
+  background-color: var(--colorNeutralBackground1, var(--ogrid-bg, #ffffff));
+  z-index: var(--ogrid-z-selection-cell, 7);
 }
 
 .dataTable .rowNumberHeaderCellWrapper {
@@ -175,7 +182,8 @@
   font-weight: 600;
   color: var(--colorNeutralForeground3, #666);
   border-right: 1px solid var(--ogrid-border, rgba(0, 0, 0, 0.12));
-  position: relative;
+  position: sticky; // left offset is applied inline (after the checkbox column)
+  z-index: var(--ogrid-z-header-focus, 11);
 }
 
 .dataTable .rowNumberCellWrapper {
@@ -186,6 +194,7 @@
   color: var(--colorNeutralForeground3, #666);
   border-right: 1px solid var(--ogrid-border, rgba(0, 0, 0, 0.12));
   user-select: none;
+  z-index: var(--ogrid-z-selection-cell, 7);
 }
 
 // Selected row highlight

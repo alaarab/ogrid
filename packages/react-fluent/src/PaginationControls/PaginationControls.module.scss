@@ -79,3 +79,24 @@
     min-width: 72px;
   }
 }
+
+// Touch targets and narrow-width reflow (mirrors the Radix kit)
+@media (pointer: coarse) {
+  .navBtn, .pageBtn {
+    min-width: 44px;
+    min-height: 44px;
+    box-sizing: border-box;
+  }
+}
+
+@media (max-width: 600px) {
+  .paginationControls {
+    flex-basis: 100%;
+  }
+
+  .pageNumbers {
+    order: 1;
+    flex-basis: 100%;
+    margin: 0;
+  }
+}
