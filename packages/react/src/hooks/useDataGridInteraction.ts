@@ -61,6 +61,8 @@ export interface UseDataGridInteractionParams<T> {
   wrapperRef: RefObject<HTMLDivElement | null>;
   /** Custom keydown handler  -  called before grid default. preventDefault() suppresses grid handling. */
   onKeyDown?: (event: React.KeyboardEvent) => void;
+  /** Called when reading the system clipboard fails on paste. */
+  onClipboardError?: (error: unknown) => void;
   /** When true, enables formula-aware clipboard and fill handle. */
   formulas?: boolean;
   /** Flat column list for formula coordinate mapping. */
@@ -149,6 +151,7 @@ export function useDataGridInteraction<T>(
     setContextMenuPosition,
     wrapperRef,
     onKeyDown,
+    onClipboardError,
     formulas,
     flatColumns,
     getFormula,
@@ -197,6 +200,8 @@ export function useDataGridInteraction<T>(
 
   const { handleCopy, handleCut, handlePaste, cutRange, copyRange, clearClipboardRanges } = useClipboard({
     items,
+    getRowId,
+    onClipboardError,
     visibleCols,
     colOffset,
     selectionRange,

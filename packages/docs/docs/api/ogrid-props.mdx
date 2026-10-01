@@ -178,6 +178,7 @@ See [Multi-Sheet](../features/multi-sheet).
 |------|------|---------|-------------|
 | `onError` | `(error: unknown) => void` | `undefined` | Callback fired when the grid encounters an error (e.g., a failed server-side fetch). |
 | `onCellError` | `(error: Error, errorInfo: React.ErrorInfo) => void` | `undefined` | Callback fired when a cell renderer or custom editor throws an error. |
+| `onClipboardError` | `(error: unknown) => void` | `undefined` | Callback fired when reading the system clipboard fails on paste (e.g., permission denied). The paste is abandoned instead of pasting stale in-grid content. |
 
 ## Accessibility
 

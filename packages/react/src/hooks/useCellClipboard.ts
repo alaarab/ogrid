@@ -29,7 +29,7 @@
  *   });
  */
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   normalizeSelectionRange,
   formatSelectionAsTsv,
@@ -126,6 +126,10 @@ export function useCellClipboard<T>(
 
   const [activeCutRange, setActiveCutRange] = useState<ISelectionRange | null>(null);
   const [activeCopyRange, setActiveCopyRange] = useState<ISelectionRange | null>(null);
+  // The cut source by identity (row objects, column ids) plus the text it put on
+  // the clipboard, so a re-sort/page change or a later external copy can't make
+  // paste clear the wrong cells.
+  const cutSourceRef = useRef<{ rowItems: T[]; columnIds: string[]; text: string } | null>(null);
 
   // Detected after mount: computing it during render would differ between
   // server (false) and client (true) and break hydration.
@@ -146,6 +150,7 @@ export function useCellClipboard<T>(
     }
     setActiveCopyRange(range);
     setActiveCutRange(null);
+    cutSourceRef.current = null;
   }, [rangeSelection.range, rows, columns, clipboard, onClipboardErrorRef]);
 
   const cutRange = useCallback(async () => {
@@ -158,6 +163,12 @@ export function useCellClipboard<T>(
       onClipboardErrorRef.current?.(err);
       return;
     }
+    const norm = normalizeSelectionRange(range);
+    cutSourceRef.current = {
+      rowItems: rows.slice(norm.startRow, norm.endRow + 1),
+      columnIds: columns.slice(norm.startCol, norm.endCol + 1).map((c) => c.columnId),
+      text,
+    };
     setActiveCutRange(range);
     setActiveCopyRange(null);
   }, [rangeSelection.range, rows, columns, clipboard, onClipboardErrorRef]);
@@ -188,8 +199,22 @@ export function useCellClipboard<T>(
 
     // If a cut was active and paste lands in a different range, also clear the cut source.
     let combined = events;
-    if (activeCutRange) {
-      const cutClearEvents = applyCutClear(activeCutRange, rows, columns);
+    const cutSource = cutSourceRef.current;
+    cutSourceRef.current = null;
+    const norm = (s: string) => s.replace(/\r\n?/g, '\n').replace(/\n+$/, '');
+    if (cutSource && norm(text) === norm(cutSource.text)) {
+      const cutClearEvents: ICellValueChangedEvent<T>[] = [];
+      const rowIndexByItem = new Map<T, number>();
+      rows.forEach((item, i) => { rowIndexByItem.set(item, i); });
+      for (const item of cutSource.rowItems) {
+        const r = rowIndexByItem.get(item);
+        if (r === undefined) continue;
+        for (const columnId of cutSource.columnIds) {
+          const c = columns.findIndex((col) => col.columnId === columnId);
+          if (c < 0) continue;
+          cutClearEvents.push(...applyCutClear({ startRow: r, endRow: r, startCol: c, endCol: c }, rows, columns));
+        }
+      }
       // Skip cells that paste already overwrote (cut + paste over the same cell = paste wins).
       const pastedKeys = new Set(events.map((e) => `${e.rowIndex}|${e.columnId}`));
       const filtered = cutClearEvents.filter(
@@ -201,9 +226,10 @@ export function useCellClipboard<T>(
     if (combined.length > 0) onCellEdit(combined);
     setActiveCutRange(null);
     setActiveCopyRange(null);
-  }, [rangeSelection.range, rows, columns, onCellEdit, clipboard, activeCutRange, onClipboardErrorRef]);
+  }, [rangeSelection.range, rows, columns, onCellEdit, clipboard, onClipboardErrorRef]);
 
   const clearClipboard = useCallback(() => {
+    cutSourceRef.current = null;
     setActiveCutRange(null);
     setActiveCopyRange(null);
   }, []);
