@@ -415,7 +415,11 @@ export function useOGridDataFetching<T>(params: UseOGridDataFetchingParams<T>): 
     const cache = new WindowedRowCache<T>({
       dataSource: ds,
       onChange: () => {
-        setWindowedRowCount(cache.getRowCount() ?? 0);
+        // The count is unknown between an invalidate and the new total: keep
+        // the previous one so the grid doesn't collapse (and lose its scroll
+        // position) while the recount is in flight.
+        const count = cache.getRowCount();
+        if (count !== undefined) setWindowedRowCount(count);
         setWindowedTick((t) => t + 1);
       },
     });
@@ -427,7 +431,10 @@ export function useOGridDataFetching<T>(params: UseOGridDataFetchingParams<T>): 
     // Re-create the cache only when the data source identity or mode changes.
   }, [isServerSide, isWindowed, dataSourceVersion, dataSourceRef]);
 
-  // Re-fetch the row count whenever sort or filters change.
+  // Re-fetch the row count whenever sort or filters change, on refresh, and
+  // for a freshly created cache (dataSource swap), then re-request the window
+  // the grid last asked for: setContext drops every cached row, and the
+  // grid's own requestWindow effect only re-runs when the visible range moves.
   //
   // Depend on a content key, not `stableFilters` identity. Not every caller
   // guarantees a referentially stable filters object across renders; keying the
@@ -436,7 +443,8 @@ export function useOGridDataFetching<T>(params: UseOGridDataFetchingParams<T>): 
   // producing an infinite render loop. A content string only changes when the
   // filters actually change.
   const windowedFiltersKey = JSON.stringify(stableFilters);
-  // biome-ignore lint/correctness/useExhaustiveDependencies: stableFilters is intentionally tracked via its content key windowedFiltersKey (see note above) to avoid an identity-driven render loop; isWindowed and refreshCounter are deliberate re-run triggers
+  const lastWindowRef = useRef<{ start: number; end: number } | null>(null);
+  // biome-ignore lint/correctness/useExhaustiveDependencies: stableFilters is intentionally tracked via its content key windowedFiltersKey (see note above) to avoid an identity-driven render loop; isWindowed, refreshCounter and dataSourceVersion are deliberate re-run triggers (this effect runs after the cache-creation effect above, so a swapped source gets the current context)
   useEffect(() => {
     const cache = windowedCacheRef.current;
     if (!cache) return;
@@ -444,12 +452,15 @@ export function useOGridDataFetching<T>(params: UseOGridDataFetchingParams<T>): 
       sort: { field: sort.field, direction: sort.direction },
       filters: stableFilters,
     });
+    const last = lastWindowRef.current;
+    if (last) cache.ensureRange(last.start, last.end);
     // stableFilters is read but intentionally excluded from deps in favour of
     // windowedFiltersKey (its content-stable string form).
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isWindowed, sort.field, sort.direction, windowedFiltersKey, refreshCounter]);
+  }, [isWindowed, sort.field, sort.direction, windowedFiltersKey, refreshCounter, dataSourceVersion]);
 
   const requestWindow = useCallback((start: number, end: number) => {
+    lastWindowRef.current = { start, end };
     windowedCacheRef.current?.ensureRange(start, end);
   }, []);
   const getWindowedRow = useCallback(
@@ -464,11 +475,20 @@ export function useOGridDataFetching<T>(params: UseOGridDataFetchingParams<T>): 
   // biome-ignore lint/correctness/useExhaustiveDependencies: windowedTick is a deliberate invalidation trigger so consumers re-read cached rows after a fetch resolves; it is not read inside the memo
   const windowed = useMemo<WindowedDataState<T> | null>(() => {
     if (!isWindowed) return null;
+    // Sparse, index-addressed snapshot of the loaded rows (holes where rows
+    // are still loading). Keyboard navigation, clipboard, editing and row
+    // selection read rows by absolute index, so they work over this window.
+    const loadedRows: T[] = [];
+    loadedRows.length = windowedRowCount;
+    windowedCacheRef.current?.forEachLoadedRow((row, index) => {
+      if (index < windowedRowCount) loadedRows[index] = row;
+    });
     return {
       rowCount: windowedRowCount,
       getRow: getWindowedRow,
       requestWindow,
       retryRow: retryWindowedRow,
+      loadedRows,
     };
     // windowedTick is a dependency so consumers re-read rows after a fetch resolves.
     // eslint-disable-next-line react-hooks/exhaustive-deps
