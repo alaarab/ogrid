@@ -119,10 +119,12 @@ export function BaseDataGridTableInner<T>(
   // ARIA grid geometry. aria-rowindex counts header rows and earlier pages;
   // aria-rowcount is -1 ("unknown") when the grid can't see the full total.
   const headerRowCount = o.headerRows.length + (o.showColumnLetters ? 1 : 0);
-  const pageOffset = o.propPageSize === 'all' || o.propPageSize == null ? 0 : (o.currentPage - 1) * o.propPageSize;
+  const pageOffset = windowed || o.propPageSize === 'all' || o.propPageSize == null ? 0 : (o.currentPage - 1) * o.propPageSize;
   const ariaRowIndexBase = headerRowCount + pageOffset;
   const knownTotalRows = windowed
     ? windowed.rowCount
+    : gridProps.totalCount != null
+      ? gridProps.totalCount
     : o.statusBarConfig
       ? o.statusBarConfig.totalCount
       : pageOffset === 0 && (o.propPageSize === 'all' || o.propPageSize == null || items.length < o.propPageSize)
@@ -132,6 +134,16 @@ export function BaseDataGridTableInner<T>(
   // Theme tokens for the portaled context menu (it renders outside the grid).
   const contextMenuTheme = usePortalTheme(wrapperRef, menuPosition != null);
   const activeCellAnnouncement = useActiveCellAnnouncement(interaction.activeCell, visibleCols, colOffset, pageOffset);
+  // Windowed placeholders are aria-hidden; announce loading once for the grid instead.
+  let windowedLoading = false;
+  if (windowed) {
+    for (let i = visibleRange.startIndex; i <= visibleRange.endIndex && i < windowed.rowCount; i++) {
+      if (windowed.getRow(i).status === 'loading') {
+        windowedLoading = true;
+        break;
+      }
+    }
+  }
 
   return (
     <div style={virtualScrollEnabled ? GRID_ROOT_VIRTUAL_SCROLL_STYLE : GRID_ROOT_STYLE}>
@@ -171,6 +183,11 @@ export function BaseDataGridTableInner<T>(
         <div aria-live="polite" aria-atomic="true" style={VISUALLY_HIDDEN_STYLE}>
           {activeCellAnnouncement}
         </div>
+        {windowed && (
+          <div role="status" aria-live="polite" style={VISUALLY_HIDDEN_STYLE}>
+            {windowedLoading ? 'Loading rows\u2026' : ''}
+          </div>
+        )}
         <div className={styles.tableScrollContent}>
         <div className={isLoading && items.length > 0 ? styles.loadingDimmed : undefined}>
           <div className={styles.tableWidthAnchor} ref={tableContainerRef}>

@@ -71,7 +71,7 @@ export interface UseOGridPagination {
   entityLabelPlural: string;
   /**
    * True when pagination is bypassed (full-dataset virtualization mode —
-   * `virtualScroll.paginate === false`). The UI layer should not render
+   * `virtualScroll.paginate === false` — or a windowed data source). The UI layer should not render
    * pagination controls in this mode.
    */
   hidden: boolean;
@@ -301,6 +301,9 @@ export function useOGrid<T>(
     workerSort,
   });
 
+  // A windowed (lazy) source virtual-scrolls all rows: no pages, no pager.
+  const isWindowed = dataFetchingState.windowed != null;
+
   // Validate row IDs once on first data render
   useEffect(() => {
     const items = dataFetchingState.displayItems;
@@ -414,6 +417,7 @@ export function useOGrid<T>(
   const isPagePastEnd =
     controlledPage === undefined &&
     !fullyVirtualized &&
+    !isWindowed &&
     dataFetchingState.displayTotalCount > 0 &&
     paginationState.page > lastPage;
   const setPageRef = useLatestRef(paginationState.setPage);
@@ -620,8 +624,10 @@ export function useOGrid<T>(
     showColumnLetters: showColumnLettersResolved,
     showNameBox,
     onActiveCellChange: showActiveCellChange ? onActiveCellChange : undefined,
-    currentPage: paginationState.page,
+    // A windowed source scrolls every row in one viewport: no page offset.
+    currentPage: isWindowed ? 1 : paginationState.page,
     pageSize: paginationState.pageSize,
+    totalCount: dataFetchingState.displayTotalCount,
     statusBar: statusBarConfig,
     isLoading: isLoadingResolved,
     ...dgFilterProps,
@@ -645,7 +651,7 @@ export function useOGrid<T>(
     editable, cellSelection, onCellValueChanged, onUndo, onRedo, canUndo, canRedo,
     rowSelection, effectiveSelectedRows, handleSelectionChange,
     showRowNumbersResolved, showColumnLettersResolved, showNameBox, showActiveCellChange, onActiveCellChange,
-    paginationState.page, paginationState.pageSize, statusBarConfig,
+    isWindowed, paginationState.page, paginationState.pageSize, dataFetchingState.displayTotalCount, statusBarConfig,
     isLoadingResolved, dgFilterProps,
     layoutMode, suppressHorizontalScroll, stickyHeader, columnReorder, responsiveColumns, virtualScroll,
     rowHeight, density, ariaLabel, ariaLabelledBy,
@@ -660,8 +666,8 @@ export function useOGrid<T>(
     setPageSize: paginationState.setPageSize,
     pageSizeOptions,
     entityLabelPlural,
-    hidden: fullyVirtualized,
-  }), [paginationState.page, paginationState.pageSize, dataFetchingState.displayTotalCount, paginationState.setPage, paginationState.setPageSize, pageSizeOptions, entityLabelPlural, fullyVirtualized]);
+    hidden: fullyVirtualized || isWindowed,
+  }), [paginationState.page, paginationState.pageSize, dataFetchingState.displayTotalCount, paginationState.setPage, paginationState.setPageSize, pageSizeOptions, entityLabelPlural, fullyVirtualized, isWindowed]);
 
   const columnChooser = useMemo<UseOGridColumnChooser>(() => ({
     columns: columnChooserColumns,

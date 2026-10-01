@@ -265,7 +265,8 @@ export function useDataGridTableOrchestration<T>(
   } = props;
 
   // ── Derived values ──────────────────────────────────────────────────────
-  const rowNumberOffset = hasRowNumbersCol && propPageSize !== 'all' ? (currentPage - 1) * propPageSize : 0;
+  // A windowed source scrolls every row in one viewport, so it never has a page offset.
+  const rowNumberOffset = hasRowNumbersCol && !windowed && propPageSize !== 'all' ? (currentPage - 1) * propPageSize : 0;
   const headerRows = useMemo(() => buildHeaderRows(columns, visibleColumns), [columns, visibleColumns]);
   const allowOverflowX = !suppressHorizontalScroll && containerWidth > 0 && (minTableWidth > containerWidth || desiredTableWidth > containerWidth);
   const fitToContent = layoutMode === 'content';
@@ -362,7 +363,8 @@ export function useDataGridTableOrchestration<T>(
   // ── Delegated cell handlers (stable — zero per-cell closures) ──────────
   // Read row/col from e.currentTarget data attributes at call time.
   const interactionHandlersRef = useLatestRef(interactionHandlers);
-  const itemsRef = useLatestRef(items);
+  // Windowed sources read the loaded rows by absolute index (see useDataGridState).
+  const itemsRef = useLatestRef(windowed?.loadedRows ?? items);
   const getRowIdRef = useLatestRef(getRowId);
   const visibleColsRef = useLatestRef(visibleCols);
   const colOffsetRef2 = useLatestRef(colOffset);
