@@ -1,6 +1,9 @@
 import * as fs from 'node:fs';
 import * as path from 'node:path';
 import * as os from 'node:os';
+import { Client } from '@modelcontextprotocol/sdk/client/index.js';
+import { InMemoryTransport } from '@modelcontextprotocol/sdk/inMemory.js';
+import { BridgeStore } from '../bridge';
 import { loadDocsIndex } from '../docsLoader';
 import { createOGridMcpServer } from '../server';
 
@@ -64,6 +67,124 @@ describe('createOGridMcpServer', () => {
     } finally {
       cleanup(dir);
     }
+  });
+});
+
+// ---------------------------------------------------------------------------
+// End-to-end through the real MCP SDK (client <-> server over an in-memory
+// transport), so resource-template matching and tool routing are the SDK's own.
+// ---------------------------------------------------------------------------
+
+async function connect(server: ReturnType<typeof createOGridMcpServer>): Promise<Client> {
+  const [clientTransport, serverTransport] = InMemoryTransport.createLinkedPair();
+  const client = new Client({ name: 'test', version: '0.0.0' });
+  await Promise.all([server.connect(serverTransport), client.connect(clientTransport)]);
+  return client;
+}
+
+function text(result: { content?: unknown }): string {
+  return (result.content as Array<{ text: string }>).map((c) => c.text).join('\n');
+}
+
+describe('doc-page resource template', () => {
+  let dir: string;
+
+  beforeAll(() => {
+    dir = makeTmpDocs({
+      'features/filtering.mdx': '---\ntitle: Filtering\ndescription: Filter rows\n---\nNested content.',
+      'api/types/column-def.md': '---\ntitle: Column def\n---\nDeeply nested.',
+    });
+  });
+
+  afterAll(() => cleanup(dir));
+
+  test('every advertised doc URI, including nested paths, resolves', async () => {
+    const client = await connect(createOGridMcpServer(loadDocsIndex(dir)));
+    const { resources } = await client.listResources();
+    const docUris = resources.map((r) => r.uri).filter((u) => u.startsWith('ogrid://docs/'));
+    expect(docUris.sort()).toEqual(['ogrid://docs/api/types/column-def', 'ogrid://docs/features/filtering']);
+
+    const filtering = await client.readResource({ uri: 'ogrid://docs/features/filtering' });
+    expect((filtering.contents[0] as { text: string }).text).toContain('Nested content.');
+    const columnDef = await client.readResource({ uri: 'ogrid://docs/api/types/column-def' });
+    expect((columnDef.contents[0] as { text: string }).text).toContain('Deeply nested.');
+    await client.close();
+  });
+});
+
+describe('server metadata and detect_version', () => {
+  let dir: string;
+
+  beforeAll(() => {
+    dir = makeTmpDocs({ 'features/sorting.mdx': '---\ntitle: Sorting\n---\nContent.' });
+  });
+
+  afterAll(() => cleanup(dir));
+
+  test('reports the version it was created with', async () => {
+    const client = await connect(createOGridMcpServer(loadDocsIndex(dir), undefined, '9.8.7'));
+    expect(client.getServerVersion()?.version).toBe('9.8.7');
+    await client.close();
+  });
+
+  test('does not suggest a framework filter for frozen adapters', async () => {
+    const app = fs.mkdtempSync(path.join(os.tmpdir(), 'ogrid-version-test-'));
+    try {
+      fs.writeFileSync(path.join(app, 'package.json'), JSON.stringify({ dependencies: { '@alaarab/ogrid-angular': '2.9.0' } }));
+      const client = await connect(createOGridMcpServer(loadDocsIndex(dir)));
+      const out = text(await client.callTool({ name: 'detect_version', arguments: { path: app } }));
+      expect(out).toContain('angular (frozen at v2.9.0)');
+      expect(out).not.toContain('framework="angular');
+      await client.close();
+    } finally {
+      cleanup(app);
+    }
+  });
+
+  test('suggests the react framework filter for react packages', async () => {
+    const app = fs.mkdtempSync(path.join(os.tmpdir(), 'ogrid-version-test-'));
+    try {
+      fs.writeFileSync(path.join(app, 'package.json'), JSON.stringify({ dependencies: { '@alaarab/ogrid-react-radix': '^2.17.0' } }));
+      const client = await connect(createOGridMcpServer(loadDocsIndex(dir)));
+      const out = text(await client.callTool({ name: 'detect_version', arguments: { path: app } }));
+      expect(out).toContain('framework="react"');
+      await client.close();
+    } finally {
+      cleanup(app);
+    }
+  });
+});
+
+describe('bridge tools', () => {
+  let dir: string;
+
+  beforeAll(() => {
+    dir = makeTmpDocs({ 'features/sorting.mdx': '---\ntitle: Sorting\n---\nContent.' });
+  });
+
+  afterAll(() => cleanup(dir));
+
+  test('send_grid_command rejects a payload that does not fit the command type', async () => {
+    const bridge = new BridgeStore();
+    bridge.upsertGrid('g', {});
+    const client = await connect(createOGridMcpServer(loadDocsIndex(dir), bridge));
+    const result = await client.callTool({
+      name: 'send_grid_command',
+      arguments: { gridId: 'g', type: 'go_to_page', payload: { page: '2' }, timeoutMs: 100 },
+    });
+    expect(result.isError).toBe(true);
+    expect(text(result)).toContain('Invalid payload for go_to_page');
+    expect(bridge.popPendingCommands('g')).toEqual([]);
+    await client.close();
+  });
+
+  test('get_grid_state reports selected row ids', async () => {
+    const bridge = new BridgeStore();
+    bridge.upsertGrid('g', { selectedRowIds: ['a', 7] });
+    const client = await connect(createOGridMcpServer(loadDocsIndex(dir), bridge));
+    const out = text(await client.callTool({ name: 'get_grid_state', arguments: { gridId: 'g' } }));
+    expect(out).toContain('2 row(s) selected: ids [a, 7]');
+    await client.close();
   });
 });
 

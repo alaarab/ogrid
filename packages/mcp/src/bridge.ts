@@ -44,6 +44,8 @@ export interface GridStateSnapshot {
   sortModel: Array<{ columnId: string; direction: 'asc' | 'desc' }>;
   filterModel: Record<string, unknown>;
   selectedRowIndices: number[];
+  /** Selected row ids, as returned by IOGridApi.getSelectedRows(). */
+  selectedRowIds: Array<string | number>;
 }
 
 export type GridCommandType =
@@ -101,8 +103,6 @@ export class BridgeStore {
     const existing = this.grids.get(gridId);
     const now = Date.now();
     this.grids.set(gridId, {
-      connectedAt: existing?.connectedAt ?? now,
-      lastSeen: now,
       rowCount: 0,
       totalCount: 0,
       page: 1,
@@ -113,9 +113,13 @@ export class BridgeStore {
       sortModel: [],
       filterModel: {},
       selectedRowIndices: [],
+      selectedRowIds: [],
       ...existing,
       ...partial,
-      // gridId must always be the canonical value  -  set last so partial can't override it
+      // gridId, connectedAt and lastSeen must always reflect this call  -  set
+      // last so a heartbeat (empty partial) or a partial can't override them.
+      connectedAt: existing?.connectedAt ?? now,
+      lastSeen: now,
       gridId,
     });
     if (!this.commandQueues.has(gridId)) {
@@ -135,16 +139,25 @@ export class BridgeStore {
     return unsent;
   }
 
-  resolveCommand(cmdId: string, result: unknown, error?: string): void {
+  /** Record a command's result. Only the grid the command was sent to can resolve it. */
+  resolveCommand(gridId: string, cmdId: string, result: unknown, error?: string): void {
+    const queue = this.commandQueues.get(gridId);
+    const cmd = queue?.find((c) => c.id === cmdId);
+    if (!queue || !cmd) return;
+    cmd.status = error ? 'error' : 'completed';
+    cmd.result = result;
+    cmd.error = error;
+    this.commandResults.set(cmdId, { ...cmd });
+    // The queue only needs pending commands; the result lives in commandResults.
+    queue.splice(queue.indexOf(cmd), 1);
+  }
+
+  /** Drop a command that timed out, so it isn't delivered (or resolved) after the caller gave up. */
+  private cancelCommand(cmdId: string): void {
     for (const queue of this.commandQueues.values()) {
-      const cmd = queue.find((c) => c.id === cmdId);
-      if (cmd) {
-        cmd.status = error ? 'error' : 'completed';
-        cmd.result = result;
-        cmd.error = error;
-        this.commandResults.set(cmdId, { ...cmd });
-        // The queue only needs pending commands; the result lives in commandResults.
-        queue.splice(queue.indexOf(cmd), 1);
+      const i = queue.findIndex((c) => c.id === cmdId);
+      if (i !== -1) {
+        queue.splice(i, 1);
         return;
       }
     }
@@ -192,6 +205,7 @@ export class BridgeStore {
           return;
         }
         if (Date.now() > deadline) {
+          this.cancelCommand(cmdId);
           reject(new Error(`Command ${cmdId} timed out after ${timeoutMs}ms`));
           return;
         }
@@ -215,15 +229,20 @@ function readBody(req: IncomingMessage): Promise<unknown> {
   return new Promise((resolve, reject) => {
     const chunks: Buffer[] = [];
     let size = 0;
-    req.on('data', (c: Buffer) => {
+    const onData = (c: Buffer) => {
       size += c.length;
       if (size > MAX_BODY_BYTES) {
-        req.destroy();
+        // Don't destroy the socket here: the response shares it, and the 413
+        // must still go out. Stop buffering, discard the rest, and let the
+        // handler reply with Connection: close.
+        req.off('data', onData);
+        req.resume();
         reject(new PayloadTooLargeError(`Body exceeds ${MAX_BODY_BYTES} bytes`));
         return;
       }
       chunks.push(c);
-    });
+    };
+    req.on('data', onData);
     req.on('end', () => {
       try {
         resolve(JSON.parse(Buffer.concat(chunks).toString('utf-8') || 'null'));
@@ -269,6 +288,45 @@ export function rejectReason(req: IncomingMessage): string | null {
   return null;
 }
 
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return value !== null && typeof value === 'object' && !Array.isArray(value);
+}
+
+/**
+ * Keep only the well-typed snapshot fields from an untrusted request body, so
+ * a malformed push can't break list_grids / get_grid_state. gridId,
+ * connectedAt and lastSeen are owned by the store and never taken from it.
+ */
+export function sanitizeSnapshot(body: Record<string, unknown>): Partial<GridStateSnapshot> {
+  const out: Partial<GridStateSnapshot> = {};
+  for (const key of ['rowCount', 'totalCount', 'page', 'pageSize', 'pageCount'] as const) {
+    const value = body[key];
+    if (typeof value === 'number' && Number.isFinite(value)) out[key] = value;
+  }
+  if (Array.isArray(body.data)) out.data = body.data;
+  if (Array.isArray(body.columns)) {
+    out.columns = body.columns.filter(
+      (c): c is GridColumnInfo => isRecord(c) && typeof c.columnId === 'string',
+    );
+  }
+  if (Array.isArray(body.sortModel)) {
+    out.sortModel = body.sortModel.filter(
+      (s): s is GridStateSnapshot['sortModel'][number] =>
+        isRecord(s) && typeof s.columnId === 'string' && (s.direction === 'asc' || s.direction === 'desc'),
+    );
+  }
+  if (isRecord(body.filterModel)) out.filterModel = body.filterModel;
+  if (Array.isArray(body.selectedRowIndices)) {
+    out.selectedRowIndices = body.selectedRowIndices.filter((i): i is number => typeof i === 'number');
+  }
+  if (Array.isArray(body.selectedRowIds)) {
+    out.selectedRowIds = body.selectedRowIds.filter(
+      (id): id is string | number => typeof id === 'string' || typeof id === 'number',
+    );
+  }
+  return out;
+}
+
 function send(req: IncomingMessage, res: ServerResponse, status: number, body: unknown): void {
   const json = JSON.stringify(body);
   const headers: Record<string, string | number> = {
@@ -289,7 +347,7 @@ export function startBridgeServer(
   port = 7890,
 ): Promise<() => Promise<void>> {
   return new Promise((resolve, reject) => {
-    const httpServer = createServer(async (req: IncomingMessage, res: ServerResponse) => {
+    const handle = async (req: IncomingMessage, res: ServerResponse): Promise<void> => {
       // CORS pre-flight — reflect localhost origins only (see send()).
       if (req.method === 'OPTIONS') {
         const headers: Record<string, string> = {
@@ -309,12 +367,20 @@ export function startBridgeServer(
         send(req, res, 403, { error: refused });
         return;
       }
-      store.prune();
-
-      const url = new URL(req.url ?? '/', `http://localhost:${port}`);
-      const parts = url.pathname.replace(/^\//, '').split('/');
+      let parts: string[];
+      try {
+        // Path segments arrive percent-encoded (the client encodes gridId), so
+        // decode them to match the raw gridId sent to /grids/connect.
+        const url = new URL(req.url ?? '/', `http://localhost:${port}`);
+        parts = url.pathname.replace(/^\//, '').split('/').map(decodeURIComponent);
+      } catch {
+        send(req, res, 400, { error: 'Malformed request URL' });
+        return;
+      }
 
       try {
+        store.prune();
+
         // GET /health
         if (req.method === 'GET' && parts[0] === 'health') {
           send(req, res,200, { ok: true, grids: store.listGrids().length });
@@ -323,10 +389,10 @@ export function startBridgeServer(
 
         // POST /grids/connect  { gridId, ...initialState }
         if (req.method === 'POST' && parts[0] === 'grids' && parts[1] === 'connect') {
-          const body = (await readBody(req)) as Record<string, unknown>;
-          const gridId = String(body?.gridId ?? '');
-          if (!gridId) { send(req, res,400, { error: 'gridId required' }); return; }
-          store.upsertGrid(gridId, body as Partial<GridStateSnapshot>);
+          const body = await readBody(req);
+          const gridId = isRecord(body) ? String(body.gridId ?? '') : '';
+          if (!isRecord(body) || !gridId) { send(req, res,400, { error: 'gridId required' }); return; }
+          store.upsertGrid(gridId, sanitizeSnapshot(body));
           send(req, res,200, { ok: true });
           return;
         }
@@ -334,8 +400,9 @@ export function startBridgeServer(
         // PUT /grids/:id/state  { ...stateUpdate }
         if (req.method === 'PUT' && parts[0] === 'grids' && parts[1] != null && parts[2] === 'state') {
           const gridId = parts[1];
-          const body = (await readBody(req)) as Record<string, unknown>;
-          store.upsertGrid(gridId, body as Partial<GridStateSnapshot>);
+          const body = await readBody(req);
+          if (!isRecord(body)) { send(req, res,400, { error: 'JSON object body required' }); return; }
+          store.upsertGrid(gridId, sanitizeSnapshot(body));
           send(req, res,200, { ok: true });
           return;
         }
@@ -355,13 +422,15 @@ export function startBridgeServer(
         if (
           req.method === 'POST' &&
           parts[0] === 'grids' &&
+          parts[1] != null &&
           parts[2] === 'commands' &&
           parts[3] != null &&
           parts[4] === 'result'
         ) {
-          const cmdId = parts[3];
-          const body = (await readBody(req)) as Record<string, unknown>;
-          store.resolveCommand(cmdId, body?.result, body?.error as string | undefined);
+          const body = await readBody(req);
+          const result = isRecord(body) ? body.result : undefined;
+          const error = isRecord(body) && body.error != null ? String(body.error) : undefined;
+          store.resolveCommand(parts[1], parts[3], result, error);
           send(req, res,200, { ok: true });
           return;
         }
@@ -369,11 +438,21 @@ export function startBridgeServer(
         send(req, res,404, { error: 'Not found' });
       } catch (err) {
         if (err instanceof PayloadTooLargeError) {
+          res.setHeader('Connection', 'close');
           send(req, res, 413, { error: err.message });
           return;
         }
         send(req, res,500, { error: String(err) });
       }
+    };
+
+    // Never let a rejected handler escape as an unhandled rejection: that
+    // would take down the whole MCP process, stdio session included.
+    const httpServer = createServer((req, res) => {
+      handle(req, res).catch((err: unknown) => {
+        if (res.headersSent) res.destroy();
+        else send(req, res, 500, { error: String(err) });
+      });
     });
 
     httpServer.on('error', reject);
