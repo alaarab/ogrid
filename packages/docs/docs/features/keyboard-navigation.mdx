@@ -58,8 +58,8 @@ Click any cell to make it the active cell, then use the keyboard to navigate and
 |---|---|
 | Arrow Up / Down / Left / Right | Move active cell in that direction |
 | Ctrl+Arrow | Jump to the edge of the current data region (Excel-style) |
-| Tab | Move to the next cell (left to right, then next row) |
-| Shift+Tab | Move to the previous cell |
+| Tab | Move to the next cell (left to right, then next row). From the last cell, Tab moves focus out of the grid |
+| Shift+Tab | Move to the previous cell. From the first cell, Shift+Tab moves focus out of the grid |
 | Home | Move to the first column in the current row |
 | End | Move to the last column in the current row |
 | Ctrl+Home | Move to the first cell in the grid (top-left) |
@@ -72,9 +72,10 @@ Click any cell to make it the active cell, then use the keyboard to navigate and
 | Key | Action |
 |---|---|
 | Click | Set active cell |
-| Shift+Arrow | Extend selection range from the active cell |
+| Shift+Arrow | Extend selection range from the active cell (the active cell stays put as the anchor) |
 | Ctrl+Shift+Arrow | Extend selection to the edge of the current data region |
 | Shift+Click | Select range from active cell to clicked cell |
+| Shift+Space | Toggle selection of the active cell's row (when row selection is enabled) |
 | Ctrl+A | Select all **cells** in the grid (for copy/paste/fill operations, not row selection) |
 
 The selection range is highlighted with a green border. The active cell remains visually distinct within the range.

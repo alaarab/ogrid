@@ -9,12 +9,15 @@ import {
   getCellInteractionProps,
   handleBooleanCellPointerDown,
 } from '../utils';
-import { CURSOR_CELL_STYLE } from '../constants/domHelpers';
+import { CURSOR_CELL_STYLE, CELL_EDITOR_ATTR } from '../constants/domHelpers';
 import { CellErrorBoundary } from '../components/CellErrorBoundary';
 import type { UseDataGridTableOrchestrationResult } from './useDataGridTableOrchestration';
 import type { InlineCellEditorProps } from '../components/createOGrid';
 import type { DataGridStyles, DataGridPrimitives } from '../components/BaseDataGridTable.types';
 import type { IColumnDef, ICellEditorProps } from '../types';
+
+/** Marks the inline editor so the grid keydown handler leaves its keys alone. */
+const EDITOR_MARKER_PROPS = { [CELL_EDITOR_ATTR]: '' };
 
 /**
  * The per-cell renderer for the shared table body. Reads volatile state from
@@ -53,7 +56,7 @@ export function useRenderCellContent<T>(
       if (descriptor.mode === 'editing-inline') {
         const editorProps = buildInlineEditorProps(item, col, descriptor, editCallbacks) as InlineCellEditorProps<T>;
         content = (
-          <div className={styles.editingCellContent}>
+          <div className={styles.editingCellContent} {...EDITOR_MARKER_PROPS}>
             <InlineCellEditor<T> {...editorProps} />
           </div>
         );

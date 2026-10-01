@@ -376,7 +376,7 @@ describe('useInlineCellEditorState — date edge cases', () => {
     const { result } = renderHook(() =>
       useInlineCellEditorState(makeParams({ value: '2024-03-15', onCommit, onCancel }))
     );
-    act(() => { result.current.handleKeyDown(keyEvent('Tab')); });
+    act(() => { result.current.handleKeyDown(keyEvent('ArrowLeft')); });
     expect(onCommit).not.toHaveBeenCalled();
     expect(onCancel).not.toHaveBeenCalled();
   });

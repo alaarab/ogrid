@@ -222,3 +222,49 @@ describe('useGridFocus audit regressions', () => {
     expect(startRange).toHaveBeenCalledWith(2, 1);
   });
 });
+
+describe('useGridFocus Shift and Tab handling', () => {
+  function setup(rowCount = 5, colCount = 4) {
+    const { result: range } = renderHook(() => useRangeSelection({ rowCount, colCount }));
+    const { result } = renderHook(() => useGridFocus({ rowCount, colCount, rangeSelection: range.current }));
+    return { range, result };
+  }
+
+  it('Shift+ArrowRight extends the range like the other arrows', () => {
+    const { range, result } = setup();
+    act(() => result.current.setActiveCell({ row: 1, col: 1 }));
+    act(() => range.current.startRange(1, 1));
+    act(() => result.current.getKeyDownHandler()({ key: 'ArrowRight', shiftKey: true }));
+    expect(range.current.range).toEqual({ startRow: 1, startCol: 1, endRow: 1, endCol: 2 });
+  });
+
+  it('Shift+Home/End extend to the row edges; Ctrl+Shift to the grid corners', () => {
+    const { range, result } = setup();
+    act(() => result.current.setActiveCell({ row: 2, col: 2 }));
+    act(() => range.current.startRange(2, 2));
+    act(() => result.current.getKeyDownHandler()({ key: 'End', shiftKey: true }));
+    expect(range.current.range).toEqual({ startRow: 2, startCol: 2, endRow: 2, endCol: 3 });
+    act(() => result.current.getKeyDownHandler()({ key: 'Home', shiftKey: true, ctrlKey: true }));
+    expect(range.current.range).toEqual({ startRow: 0, startCol: 0, endRow: 2, endCol: 2 });
+  });
+
+  it('lets Tab leave at the last column (and Shift+Tab at the first) instead of trapping focus', () => {
+    const { result } = setup();
+    act(() => result.current.setActiveCell({ row: 1, col: 3 }));
+    const tab = { key: 'Tab', preventDefault: jest.fn() };
+    act(() => result.current.getKeyDownHandler()(tab));
+    expect(tab.preventDefault).not.toHaveBeenCalled();
+    expect(result.current.activeCell).toEqual({ row: 1, col: 3 });
+
+    act(() => result.current.setActiveCell({ row: 1, col: 0 }));
+    const back = { key: 'Tab', shiftKey: true, preventDefault: jest.fn() };
+    act(() => result.current.getKeyDownHandler()(back));
+    expect(back.preventDefault).not.toHaveBeenCalled();
+
+    const none = renderHook(() => useGridFocus({ rowCount: 5, colCount: 4 }));
+    const first = { key: 'Tab', preventDefault: jest.fn() };
+    act(() => none.result.current.getKeyDownHandler()(first));
+    expect(first.preventDefault).not.toHaveBeenCalled();
+    expect(none.result.current.activeCell).toBeNull();
+  });
+});

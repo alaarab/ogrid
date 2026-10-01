@@ -92,6 +92,27 @@ export function computeTabNavigation(
   return { rowIndex: newRow, columnIndex: newCol };
 }
 
+/**
+ * The corner of `range` diagonally opposite the cell (row, col): the selection
+ * anchor when (row, col) is the moving end, or the moving end when it is the anchor.
+ * Returns (row, col) itself when there is no range or the cell is outside it.
+ */
+export function getOppositeCorner(
+  range: ISelectionRange | null,
+  row: number,
+  col: number
+): { row: number; col: number } {
+  if (range == null) return { row, col };
+  const norm = normalizeSelectionRange(range);
+  if (row < norm.startRow || row > norm.endRow || col < norm.startCol || col > norm.endCol) {
+    return { row, col };
+  }
+  return {
+    row: row === norm.startRow ? norm.endRow : norm.startRow,
+    col: col === norm.startCol ? norm.endCol : norm.startCol,
+  };
+}
+
 /** Input parameters for arrow navigation computation. */
 export interface ArrowNavigationContext {
   direction: 'ArrowDown' | 'ArrowUp' | 'ArrowLeft' | 'ArrowRight';
@@ -106,6 +127,11 @@ export interface ArrowNavigationContext {
   isShift: boolean;
   selectionRange: ISelectionRange | null;
   isEmptyAt: (r: number, c: number) => boolean;
+  /**
+   * Fixed corner of a Shift+Arrow extension (data column index). When omitted,
+   * the anchor is the corner of `selectionRange` opposite the current position.
+   */
+  anchor?: { rowIndex: number; dataColIndex: number } | null;
 }
 
 /** Result of arrow navigation computation. */
@@ -158,25 +184,21 @@ export function computeArrowNavigation(ctx: ArrowNavigationContext): ArrowNaviga
   }
 
   const newDataColIndex = newColumnIndex - colOffset;
-  const isVertical = direction === 'ArrowDown' || direction === 'ArrowUp';
 
   let newRange: ISelectionRange;
   if (isShift) {
-    if (isVertical) {
-      newRange = normalizeSelectionRange({
-        startRow: selectionRange?.startRow ?? rowIndex,
-        startCol: selectionRange?.startCol ?? dataColIndex,
-        endRow: newRowIndex,
-        endCol: selectionRange?.endCol ?? dataColIndex,
-      });
-    } else {
-      newRange = normalizeSelectionRange({
-        startRow: selectionRange?.startRow ?? rowIndex,
-        startCol: selectionRange?.startCol ?? dataColIndex,
-        endRow: selectionRange?.endRow ?? rowIndex,
-        endCol: newDataColIndex,
-      });
-    }
+    // Extend from a fixed anchor so the range grows/shrinks at the moving edge.
+    // Building it from the normalized range's start would treat the moved edge
+    // as the anchor after any upward/leftward step, sliding the range instead.
+    const anchor = ctx.anchor != null
+      ? { row: ctx.anchor.rowIndex, col: ctx.anchor.dataColIndex }
+      : getOppositeCorner(selectionRange, rowIndex, dataColIndex);
+    newRange = normalizeSelectionRange({
+      startRow: anchor.row,
+      startCol: anchor.col,
+      endRow: newRowIndex,
+      endCol: newDataColIndex,
+    });
   } else {
     newRange = {
       startRow: newRowIndex,

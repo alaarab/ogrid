@@ -134,6 +134,28 @@ export function createSpreadsheetTests(DataGridTable: React.ComponentType<IOGrid
         });
       });
 
+      it('Shift+click extends from the active cell (anchor) and keeps it active', async () => {
+        const { container } = renderSpreadsheetGrid();
+        const click = (row: number, col: number, shiftKey = false) => {
+          const cell = getCellAt(container, row, col);
+          fireEvent.pointerDown(cell, { shiftKey });
+          fireEvent.click(cell, { shiftKey });
+        };
+        click(2, 1);
+        click(0, 0, true);
+        // Range now 0..2 x 0..1 with its top-left at (0,0); the anchor is still (2,1).
+        click(1, 1, true);
+        await waitFor(() => {
+          const active = container.querySelector('[data-active-cell="true"]');
+          expect(active?.getAttribute('data-row-index')).toBe('2');
+          expect(active?.getAttribute('data-col-index')).toBe('1');
+        });
+        const inRange = Array.from(container.querySelectorAll('[data-in-range="true"]')).map(
+          (el) => `${el.getAttribute('data-row-index')},${el.getAttribute('data-col-index')}`
+        );
+        expect(inRange.sort()).toEqual(['1,1', '2,1']);
+      });
+
       it('single click selects cell but does not open editor', async () => {
         const { container } = renderSpreadsheetGrid();
         const cell = getCellAt(container, 0, 0);

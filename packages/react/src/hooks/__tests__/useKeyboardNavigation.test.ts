@@ -218,8 +218,10 @@ describe('useKeyboardNavigation', () => {
       const { result } = renderHook(() => useKeyboardNavigation(p));
       firePgKey(result.current.handleGridKeyDown, 'PageUp', { shift: true });
       expect(p.handlers.setSelectionRange).toHaveBeenCalledWith(
-        expect.objectContaining({ startRow: 14, endRow: 4 })
+        expect.objectContaining({ startRow: 4, endRow: 14 })
       );
+      // The active cell is the anchor and stays put while the range extends.
+      expect(p.handlers.setActiveCell).not.toHaveBeenCalled();
     });
 
     it('PageDown prevents default', () => {
@@ -418,7 +420,7 @@ describe('useKeyboardNavigation', () => {
       const p = makeCtrlParams(0, 0);
       const { result } = renderHook(() => useKeyboardNavigation(p));
       fireKey(result.current.handleGridKeyDown, 'ArrowDown', { ctrl: true, shift: true });
-      expect(p.handlers.setActiveCell).toHaveBeenCalledWith({ rowIndex: 2, columnIndex: 0 });
+      expect(p.handlers.setActiveCell).not.toHaveBeenCalled();
       expect(p.handlers.setSelectionRange).toHaveBeenCalledWith(
         expect.objectContaining({ startRow: 0, endRow: 2 })
       );
@@ -429,7 +431,7 @@ describe('useKeyboardNavigation', () => {
       const p = makeCtrlParams(0, 0);
       const { result } = renderHook(() => useKeyboardNavigation(p));
       fireKey(result.current.handleGridKeyDown, 'ArrowRight', { ctrl: true, shift: true });
-      expect(p.handlers.setActiveCell).toHaveBeenCalledWith({ rowIndex: 0, columnIndex: 2 });
+      expect(p.handlers.setActiveCell).not.toHaveBeenCalled();
       expect(p.handlers.setSelectionRange).toHaveBeenCalledWith(
         expect.objectContaining({ startCol: 0, endCol: 2 })
       );
@@ -714,4 +716,234 @@ describe('useKeyboardNavigation  -  onKeyDown intercept prop', () => {
     }).not.toThrow();
   });
 
+});
+
+describe('useKeyboardNavigation event targets, Tab and anchors', () => {
+  type Row = { id: string; name: string };
+  const rows: Row[] = Array.from({ length: 8 }, (_, i) => ({ id: String(i), name: `N${i}` }));
+  const cols = [
+    { columnId: 'name', name: 'Name', editable: true },
+    { columnId: 'other', name: 'Other', editable: true },
+    { columnId: 'third', name: 'Third', editable: true },
+  ] as import('../../types').IColumnDef<Row>[];
+
+  /** Live state: setters write back into `state`, which the hook reads via its params ref. */
+  function setup(opts: {
+    activeCell?: { rowIndex: number; columnIndex: number } | null;
+    selectionRange?: import('../../types').ISelectionRange | null;
+    editingCell?: { rowId: string; columnId: string } | null;
+    rowSelection?: 'none' | 'single' | 'multiple';
+  } = {}) {
+    const wrapper = document.createElement('div');
+    wrapper.tabIndex = 0;
+    wrapper.innerHTML = `
+      <table>
+        <thead><tr><th><button type="button" data-testid="hdr-btn">Filter</button><input data-testid="hdr-input" /></th></tr></thead>
+        <tbody><tr><td><div data-row-index="0" data-col-index="0" tabindex="0"><button type="button" data-testid="cell-btn">x</button></div></td>
+        <td><div data-ogrid-cell-editor=""><input data-testid="editor-input" /></div></td></tr></tbody>
+      </table>`;
+    const portal = document.createElement('div');
+    portal.innerHTML = '<input data-testid="portal-input" />';
+    document.body.append(wrapper, portal);
+
+    const state = {
+      activeCell: opts.activeCell === undefined ? { rowIndex: 3, columnIndex: 1 } : opts.activeCell,
+      selectionRange: opts.selectionRange ?? null,
+      editingCell: opts.editingCell ?? null,
+      selectedRowIds: new Set<string>(),
+    };
+    const handlers = {
+      setActiveCell: jest.fn((c) => { state.activeCell = c; }),
+      setSelectionRange: jest.fn((r) => { state.selectionRange = r; }),
+      setEditingCell: jest.fn((c) => { state.editingCell = c; }),
+      handleRowCheckboxChange: jest.fn(),
+      handleCopy: jest.fn(),
+      handleCut: jest.fn(),
+      handlePaste: jest.fn().mockResolvedValue(undefined),
+      setContextMenu: jest.fn(),
+    };
+    const onCellValueChanged = jest.fn();
+    const params = {
+      data: { items: rows, visibleCols: cols, colOffset: 0, hasCheckboxCol: false, visibleColumnCount: cols.length, getRowId: (r: Row) => r.id },
+      state,
+      handlers,
+      features: { editable: true, onCellValueChanged, rowSelection: opts.rowSelection ?? 'none', wrapperRef: { current: wrapper } },
+    };
+    const { result } = renderHook(() => useKeyboardNavigation<Row>(params as never));
+    const find = (id: string) => document.querySelector(`[data-testid="${id}"]`) as HTMLElement;
+    const press = (key: string, target: Element = wrapper, mods: { shiftKey?: boolean; ctrlKey?: boolean } = {}) => {
+      const e = {
+        key, target, currentTarget: wrapper,
+        shiftKey: !!mods.shiftKey, ctrlKey: !!mods.ctrlKey, metaKey: false,
+        defaultPrevented: false,
+        preventDefault: jest.fn(),
+      };
+      act(() => { result.current.handleGridKeyDown(e as unknown as React.KeyboardEvent); });
+      return e;
+    };
+    return { state, handlers, onCellValueChanged, press, find, wrapper };
+  }
+
+  describe('ignores keystrokes from outside the cell area', () => {
+    it('Backspace typed in a portaled filter input does not clear the selected cells', () => {
+      const t = setup({ selectionRange: { startRow: 0, startCol: 0, endRow: 2, endCol: 1 } });
+      const e = t.press('Backspace', t.find('portal-input'));
+      expect(t.onCellValueChanged).not.toHaveBeenCalled();
+      expect(e.preventDefault).not.toHaveBeenCalled();
+    });
+
+    it('Delete/Ctrl+X/Ctrl+V/Ctrl+A in a header input stay with the input', () => {
+      const t = setup();
+      const input = t.find('hdr-input');
+      for (const [key, mods] of [['Delete', {}], ['x', { ctrlKey: true }], ['v', { ctrlKey: true }], ['a', { ctrlKey: true }]] as const) {
+        const e = t.press(key, input, mods);
+        expect(e.preventDefault).not.toHaveBeenCalled();
+      }
+      expect(t.onCellValueChanged).not.toHaveBeenCalled();
+      expect(t.handlers.handleCut).not.toHaveBeenCalled();
+      expect(t.handlers.handlePaste).not.toHaveBeenCalled();
+      expect(t.handlers.setSelectionRange).not.toHaveBeenCalled();
+    });
+
+    it('Enter on a header button is not swallowed by the grid', () => {
+      const t = setup();
+      const e = t.press('Enter', t.find('hdr-btn'));
+      expect(e.preventDefault).not.toHaveBeenCalled();
+      expect(t.handlers.setEditingCell).not.toHaveBeenCalled();
+    });
+
+    it('still handles keys from the wrapper and from a focused cell', () => {
+      const t = setup();
+      t.press('Backspace');
+      expect(t.onCellValueChanged).toHaveBeenCalledTimes(1);
+      const cell = t.wrapper.querySelector('[data-row-index]') as HTMLElement;
+      const e = t.press('ArrowDown', cell);
+      expect(e.preventDefault).toHaveBeenCalled();
+      expect(t.state.activeCell).toEqual({ rowIndex: 4, columnIndex: 1 });
+    });
+
+    it('leaves Space/Enter to an in-cell control but still navigates with arrows from it', () => {
+      const t = setup({ rowSelection: 'multiple' });
+      const btn = t.find('cell-btn');
+      expect(t.press('Enter', btn).preventDefault).not.toHaveBeenCalled();
+      expect(t.press(' ', btn, { shiftKey: true }).preventDefault).not.toHaveBeenCalled();
+      expect(t.handlers.handleRowCheckboxChange).not.toHaveBeenCalled();
+      t.press('ArrowRight', btn);
+      expect(t.state.activeCell).toEqual({ rowIndex: 3, columnIndex: 2 });
+    });
+  });
+
+  describe('Tab is not a keyboard trap', () => {
+    it('does not capture Tab before a cell is active', () => {
+      const t = setup({ activeCell: null });
+      const e = t.press('Tab');
+      expect(e.preventDefault).not.toHaveBeenCalled();
+      expect(t.handlers.setActiveCell).not.toHaveBeenCalled();
+    });
+
+    it('lets Tab leave from the last cell and Shift+Tab from the first', () => {
+      const last = setup({ activeCell: { rowIndex: 7, columnIndex: 2 } });
+      expect(last.press('Tab').preventDefault).not.toHaveBeenCalled();
+      expect(last.handlers.setActiveCell).not.toHaveBeenCalled();
+
+      const first = setup({ activeCell: { rowIndex: 0, columnIndex: 0 } });
+      expect(first.press('Tab', undefined, { shiftKey: true }).preventDefault).not.toHaveBeenCalled();
+      expect(first.handlers.setActiveCell).not.toHaveBeenCalled();
+    });
+
+    it('still moves cell to cell inside the grid', () => {
+      const t = setup({ activeCell: { rowIndex: 3, columnIndex: 2 } });
+      expect(t.press('Tab').preventDefault).toHaveBeenCalled();
+      expect(t.state.activeCell).toEqual({ rowIndex: 4, columnIndex: 0 });
+    });
+  });
+
+  describe('editor key isolation', () => {
+    const editing = { rowId: '3', columnId: 'other' };
+
+    it('Home/End/PageUp/PageDown/arrows/Delete from the editor are left to the editor', () => {
+      const t = setup({ editingCell: editing });
+      const input = t.find('editor-input');
+      for (const key of ['Home', 'End', 'PageUp', 'PageDown', 'ArrowLeft', 'Delete', 'Escape']) {
+        expect(t.press(key, input).preventDefault).not.toHaveBeenCalled();
+      }
+      expect(t.handlers.setActiveCell).not.toHaveBeenCalled();
+      expect(t.handlers.setSelectionRange).not.toHaveBeenCalled();
+      expect(t.handlers.setEditingCell).not.toHaveBeenCalled();
+      expect(t.onCellValueChanged).not.toHaveBeenCalled();
+    });
+
+    it('Home/End/PageDown from the wrapper do not navigate while a cell is being edited', () => {
+      const t = setup({ editingCell: editing });
+      for (const key of ['Home', 'End', 'PageDown']) {
+        expect(t.press(key).preventDefault).not.toHaveBeenCalled();
+      }
+      expect(t.handlers.setActiveCell).not.toHaveBeenCalled();
+    });
+
+    it('Tab from the editor closes it and moves to the next cell; Shift+Tab moves back', () => {
+      const t = setup({ editingCell: editing });
+      const e = t.press('Tab', t.find('editor-input'));
+      expect(e.preventDefault).toHaveBeenCalled();
+      expect(t.handlers.setEditingCell).toHaveBeenCalledWith(null);
+      expect(t.state.activeCell).toEqual({ rowIndex: 3, columnIndex: 2 });
+
+      const back = setup({ editingCell: editing });
+      back.press('Tab', back.find('editor-input'), { shiftKey: true });
+      expect(back.state.activeCell).toEqual({ rowIndex: 3, columnIndex: 0 });
+    });
+  });
+
+  describe('Shift+Arrow keeps an explicit anchor', () => {
+    const single = (r: number, c: number) => ({ startRow: r, startCol: c, endRow: r, endCol: c });
+
+    it('repeated Shift+ArrowUp grows the range upward from the anchor', () => {
+      const t = setup({ activeCell: { rowIndex: 5, columnIndex: 1 }, selectionRange: single(5, 1) });
+      t.press('ArrowUp', undefined, { shiftKey: true });
+      t.press('ArrowUp', undefined, { shiftKey: true });
+      t.press('ArrowUp', undefined, { shiftKey: true });
+      expect(t.state.selectionRange).toEqual({ startRow: 2, startCol: 1, endRow: 5, endCol: 1 });
+      expect(t.state.activeCell).toEqual({ rowIndex: 5, columnIndex: 1 });
+    });
+
+    it('repeated Shift+ArrowLeft grows the range leftward from the anchor', () => {
+      const t = setup({ activeCell: { rowIndex: 2, columnIndex: 2 }, selectionRange: single(2, 2) });
+      t.press('ArrowLeft', undefined, { shiftKey: true });
+      t.press('ArrowLeft', undefined, { shiftKey: true });
+      expect(t.state.selectionRange).toEqual({ startRow: 2, startCol: 0, endRow: 2, endCol: 2 });
+      expect(t.state.activeCell).toEqual({ rowIndex: 2, columnIndex: 2 });
+    });
+
+    it('reversing direction shrinks back through the anchor', () => {
+      const t = setup({ activeCell: { rowIndex: 5, columnIndex: 1 }, selectionRange: single(5, 1) });
+      t.press('ArrowDown', undefined, { shiftKey: true });
+      expect(t.state.selectionRange).toEqual({ startRow: 5, startCol: 1, endRow: 6, endCol: 1 });
+      t.press('ArrowUp', undefined, { shiftKey: true });
+      t.press('ArrowUp', undefined, { shiftKey: true });
+      expect(t.state.selectionRange).toEqual({ startRow: 4, startCol: 1, endRow: 5, endCol: 1 });
+    });
+
+    it('Shift+PageUp after Shift+ArrowDown extends from the far edge, not the anchor', () => {
+      const t = setup({ activeCell: { rowIndex: 6, columnIndex: 0 }, selectionRange: { startRow: 6, startCol: 0, endRow: 7, endCol: 1 } });
+      t.press('PageUp', undefined, { shiftKey: true });
+      // Fallback page size is 10 → far edge row 7 - 10 clamps to 0; anchor row 6 stays.
+      expect(t.state.selectionRange).toEqual({ startRow: 0, startCol: 0, endRow: 6, endCol: 1 });
+      expect(t.state.activeCell).toEqual({ rowIndex: 6, columnIndex: 0 });
+    });
+  });
+
+  describe('row selection by keyboard', () => {
+    it('Shift+Space toggles the active row from a data column', () => {
+      const t = setup({ rowSelection: 'multiple', activeCell: { rowIndex: 4, columnIndex: 2 } });
+      const e = t.press(' ', undefined, { shiftKey: true });
+      expect(e.preventDefault).toHaveBeenCalled();
+      expect(t.handlers.handleRowCheckboxChange).toHaveBeenCalledWith('4', true, 4, false);
+    });
+
+    it('Shift+Space does nothing without row selection', () => {
+      const t = setup({ rowSelection: 'none' });
+      expect(t.press(' ', undefined, { shiftKey: true }).preventDefault).not.toHaveBeenCalled();
+      expect(t.handlers.handleRowCheckboxChange).not.toHaveBeenCalled();
+    });
+  });
 });
