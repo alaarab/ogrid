@@ -221,22 +221,34 @@ export function useOGrid<T>(
     () => hasColumnOrderChange ? (order: string[]) => onColumnOrderChangeRef.current?.(order) : undefined,
     [hasColumnOrderChange, onColumnOrderChangeRef]
   );
+  // Bumped on every edit the grid emits, so the data pipeline can tell the host
+  // applying that edit (keep row order) from a fresh dataset (re-sort/re-filter).
+  const editVersionRef = useRef(0);
   const onCellValueChangedRef = useLatestRef(onCellValueChangedProp);
   const hasCellValueChanged = onCellValueChangedProp != null;
   const onCellValueChanged = useMemo(
-    () => hasCellValueChanged ? (event: import('../types').ICellValueChangedEvent<T>) => onCellValueChangedRef.current?.(event) : undefined,
+    () => hasCellValueChanged ? (event: import('../types').ICellValueChangedEvent<T>) => {
+      editVersionRef.current++;
+      onCellValueChangedRef.current?.(event);
+    } : undefined,
     [hasCellValueChanged, onCellValueChangedRef]
   );
   const onUndoRef = useLatestRef(onUndoProp);
   const hasUndo = onUndoProp != null;
   const onUndo = useMemo(
-    () => hasUndo ? () => onUndoRef.current?.() : undefined,
+    () => hasUndo ? () => {
+      editVersionRef.current++;
+      onUndoRef.current?.();
+    } : undefined,
     [hasUndo, onUndoRef]
   );
   const onRedoRef = useLatestRef(onRedoProp);
   const hasRedo = onRedoProp != null;
   const onRedo = useMemo(
-    () => hasRedo ? () => onRedoRef.current?.() : undefined,
+    () => hasRedo ? () => {
+      editVersionRef.current++;
+      onRedoRef.current?.();
+    } : undefined,
     [hasRedo, onRedoRef]
   );
 
@@ -264,7 +276,9 @@ export function useOGrid<T>(
   useEffect(() => {
     validateColumns(columns as Parameters<typeof validateColumns>[0]);
   }, [columns]);
-  const defaultSortField = defaultSortBy ?? columns[0]?.columnId ?? '';
+  // Without defaultSortBy the grid starts sorted by its first sortable column
+  // (a sortable:false first column is skipped, never used as the default).
+  const defaultSortField = defaultSortBy ?? columns.find((c) => c.sortable !== false)?.columnId ?? '';
 
   // --- Internal data state (for imperative setRowData/setLoading API) ---
   const [internalData, setInternalData] = useState<T[]>([]);
@@ -290,7 +304,7 @@ export function useOGrid<T>(
   });
 
   const dataFetchingState = useOGridDataFetching({
-    isServerSide, dataSource, displayData, getRowId, columns,
+    isServerSide, dataSource, displayData, getRowId, editVersionRef, columns,
     stableFilters: filtersState.stableFilters,
     sort: sortingState.sort,
     sortVersion: sortingState.sortVersion,
@@ -452,7 +466,7 @@ export function useOGrid<T>(
   const statusBarConfig = useMemo((): IStatusBarProps | undefined => {
     if (!statusBar) return undefined;
     if (typeof statusBar === 'object') return statusBar;
-    const totalData = !isServerSide ? (data?.length ?? 0) : dataFetchingState.displayTotalCount;
+    const totalData = !isServerSide ? displayData.length : dataFetchingState.displayTotalCount;
     const filteredData = dataFetchingState.displayTotalCount;
     return {
       totalCount: totalData,
@@ -460,7 +474,7 @@ export function useOGrid<T>(
       selectedCount: effectiveSelectedRows.size,
       suppressRowCount: true,
     };
-  }, [statusBar, isServerSide, data, dataFetchingState.displayTotalCount, filtersState.hasActiveFilters, effectiveSelectedRows.size]);
+  }, [statusBar, isServerSide, displayData.length, dataFetchingState.displayTotalCount, filtersState.hasActiveFilters, effectiveSelectedRows.size]);
 
   // --- Side bar ---
   const sideBarState = useSideBarState({ config: sideBar });
@@ -525,7 +539,7 @@ export function useOGrid<T>(
 
   // --- Assembly ---
   const clearAllFilters = useCallback(() => filtersState.setFilters({}), [filtersState]);
-  const isLoadingResolved = (isServerSide && dataFetchingState.serverLoading) || displayLoading;
+  const isLoadingResolved = (isServerSide && dataFetchingState.serverLoading) || dataFetchingState.workerPending || displayLoading;
   const showRowNumbersResolved = showRowNumbers || cellReferences || formulas;
   const showColumnLettersResolved = !!(cellReferences || formulas);
   const showNameBox = !!cellReferences && !formulas; // formula bar has its own name box

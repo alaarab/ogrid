@@ -1,4 +1,4 @@
-import { useCallback, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { UndoRedoStack } from '../utils';
 import { useLatestRef } from './useLatestRef';
 import type { ICellValueChangedEvent } from '../types';
@@ -18,6 +18,8 @@ export interface UseUndoRedoResult<T> {
   beginBatch: () => void;
   /** End a batch  -  commits the accumulated changes as a single undo entry. */
   endBatch: () => void;
+  /** Drop all undo/redo history (e.g. when the host replaces the dataset). */
+  clear: () => void;
   /** The configured maximum undo stack depth. */
   maxUndoDepth: number;
 }
@@ -37,6 +39,15 @@ export function useUndoRedo<T>(
   }
   const [historyLength, setHistoryLength] = useState(0);
   const [redoLength, setRedoLength] = useState(0);
+
+  // Rebuild the stack when the configured depth changes after mount.
+  useEffect(() => {
+    if (stackRef.current && stackRef.current.maxDepth !== maxUndoDepth) {
+      stackRef.current = new UndoRedoStack<ICellValueChangedEvent<T>>(maxUndoDepth);
+      setHistoryLength(0);
+      setRedoLength(0);
+    }
+  }, [maxUndoDepth]);
 
   const getStack = useCallback(() => {
     const s = stackRef.current;
@@ -99,6 +110,13 @@ export function useUndoRedo<T>(
     }
   }, [getStack, onCellValueChangedRef]);
 
+  const clear = useCallback(() => {
+    const stack = getStack();
+    stack.clear();
+    setHistoryLength(0);
+    setRedoLength(0);
+  }, [getStack]);
+
   return {
     onCellValueChanged: onCellValueChanged ? wrapped : undefined,
     undo,
@@ -107,6 +125,7 @@ export function useUndoRedo<T>(
     canRedo: redoLength > 0,
     beginBatch,
     endBatch,
+    clear,
     maxUndoDepth,
   };
 }

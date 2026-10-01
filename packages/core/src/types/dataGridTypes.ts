@@ -153,7 +153,13 @@ export type RowSelectionMode = 'none' | 'single' | 'multiple';
 
 /** Event payload when row selection changes. */
 export interface IRowSelectionChangeEvent<T> {
+  /** Every selected row id, including rows on other pages. */
   selectedRowIds: RowId[];
+  /**
+   * The selected rows the grid could resolve to objects. Checkbox and header clicks
+   * resolve against the current page only, so with pagination this can be shorter
+   * than `selectedRowIds`; treat the ids as the source of truth.
+   */
   selectedItems: T[];
 }
 
@@ -314,13 +320,13 @@ export interface IOGridApi<T> {
   getSelectedRows: () => RowId[];
   /** Set selected row IDs programmatically. */
   setSelectedRows: (rowIds: RowId[]) => void;
-  /** Select all rows. */
+  /** Select every row that passes the current filters, across pages (server-side: the loaded page). */
   selectAll: () => void;
   /** Deselect all rows. */
   deselectAll: () => void;
   /** Clear all filters (shorthand for setFilterModel({})). */
   clearFilters: () => void;
-  /** Reset sort to the default (first column, ascending). */
+  /** Reset sort to the default (`defaultSortBy`, or the first sortable column, ascending). */
   clearSort: () => void;
   /** Reset all grid state (filters, sort, selection). */
   resetGridState: (options?: { keepSelection?: boolean }) => void;
