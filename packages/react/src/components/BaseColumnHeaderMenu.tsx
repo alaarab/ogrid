@@ -1,6 +1,7 @@
 import * as React from 'react';
 import { createPortal } from 'react-dom';
 import { usePortalTheme } from '../hooks/usePortalTheme';
+import { useMenuKeyboardNav } from '../hooks/useMenuKeyboardNav';
 import { getColumnHeaderMenuItems } from '../utils';
 import type { ColumnHeaderMenuInput } from '../utils';
 
@@ -29,6 +30,8 @@ export interface BaseColumnHeaderMenuProps {
   isSortable: boolean;
   isResizable: boolean;
   classNames?: ColumnHeaderMenuClassNames;
+  /** Column name, used for the menu's accessible name. */
+  columnName?: string;
   /** Resolve the portal target element. Defaults to document.body. */
   getPortalTarget?: (anchorElement: HTMLElement) => HTMLElement;
 }
@@ -58,6 +61,7 @@ export function BaseColumnHeaderMenu(props: BaseColumnHeaderMenuProps) {
     isSortable,
     isResizable,
     classNames,
+    columnName,
     getPortalTarget,
   } = props;
 
@@ -131,6 +135,13 @@ export function BaseColumnHeaderMenu(props: BaseColumnHeaderMenuProps) {
     [onPinLeft, onPinRight, onUnpin, onSortAsc, onSortDesc, onClearSort, onAutosizeThis, onAutosizeAll]
   );
 
+  const getRestoreTarget = React.useCallback(() => anchorElement, [anchorElement]);
+  const { onKeyDown } = useMenuKeyboardNav(menuRef, {
+    active: isOpen && position != null,
+    onClose,
+    getRestoreTarget,
+  });
+
   if (!isOpen || !position) return null;
 
   const portalTarget = anchorElement && getPortalTarget
@@ -140,6 +151,9 @@ export function BaseColumnHeaderMenu(props: BaseColumnHeaderMenuProps) {
   return createPortal(
     <div
       ref={menuRef}
+      role="menu"
+      aria-label={columnName ? `${columnName} column options` : 'Column options'}
+      onKeyDown={onKeyDown}
       className={classNames?.content}
       style={{
         ...portalTheme,
@@ -153,6 +167,8 @@ export function BaseColumnHeaderMenu(props: BaseColumnHeaderMenuProps) {
         <React.Fragment key={item.id}>
           <button
             type="button"
+            role="menuitem"
+            tabIndex={-1}
             className={classNames?.item}
             disabled={item.disabled}
             onClick={() => {

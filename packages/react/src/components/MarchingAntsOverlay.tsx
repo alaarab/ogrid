@@ -70,7 +70,7 @@ export function MarchingAntsOverlay({
 
   // Inject keyframes on mount
   useEffect(() => {
-    injectGlobalStyles('ogrid-marching-ants-keyframes', '@keyframes ogrid-marching-ants{to{stroke-dashoffset:-8}}');
+    injectGlobalStyles('ogrid-marching-ants-keyframes', '@keyframes ogrid-marching-ants{to{stroke-dashoffset:-8}}@media (prefers-reduced-motion:reduce){.ogrid-marching-ants{animation:none!important}}');
   }, []);
 
   // Measure when any range changes; re-measure on resize
@@ -180,6 +180,7 @@ export function MarchingAntsOverlay({
             stroke="var(--ogrid-selection, #217346)"
             strokeWidth="2"
             strokeDasharray="4 4"
+            className="ogrid-marching-ants"
             style={MARCHING_ANTS_RECT_STYLE}
           />
         </svg>

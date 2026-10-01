@@ -87,7 +87,7 @@ export const ColumnChooser: React.FC<IColumnChooserProps> = (props) => {
             sideOffset={4}
             collisionPadding={12}
             align="end"
-            onOpenAutoFocus={(e: Event) => e.preventDefault()}
+            aria-label="Column visibility"
           >
             <ColumnChooserContent
               columns={columns}

@@ -1,6 +1,7 @@
 import * as React from 'react';
 import { GRID_CONTEXT_MENU_ITEMS, getContextMenuHandlers, formatShortcut } from '../utils';
 import type { GridContextMenuHandlerProps } from '../utils';
+import { useMenuKeyboardNav } from '../hooks/useMenuKeyboardNav';
 
 export interface GridContextMenuClassNames {
   contextMenu?: string;
@@ -37,6 +38,8 @@ export function GridContextMenu(props: GridContextMenuProps): React.ReactElement
     [hasSelection, canUndo, canRedo]
   );
 
+  const { onKeyDown } = useMenuKeyboardNav(ref, { active: true, onClose });
+
   React.useEffect(() => {
     // Handle both mouse and touch click-outside to close the menu
     const handlePointerOutside = (e: PointerEvent) => {
@@ -69,6 +72,7 @@ export function GridContextMenu(props: GridContextMenuProps): React.ReactElement
       ref={ref}
       className={classNames?.contextMenu}
       role="menu"
+      onKeyDown={onKeyDown}
       style={menuStyle}
       aria-label="Grid context menu"
     >
@@ -77,6 +81,8 @@ export function GridContextMenu(props: GridContextMenuProps): React.ReactElement
           {item.dividerBefore && <div className={classNames?.contextMenuDivider} />}
           <button
             type="button"
+            role="menuitem"
+            tabIndex={-1}
             className={classNames?.contextMenuItem}
             onClick={handlers[item.id]}
             disabled={isDisabled(item)}

@@ -146,7 +146,6 @@ export function getCellInteractionProps(
     props.onClick = delegated.onClick;
     if (descriptor.canEditAny) {
       props['data-can-edit'] = '';
-      props.role = 'button';
       props.onDoubleClick = delegated.onDoubleClick;
     }
   } else {
@@ -159,7 +158,6 @@ export function getCellInteractionProps(
     props.onClick = () =>
       handlers.setActiveCell({ rowIndex: descriptor.rowIndex, columnIndex: descriptor.globalColIndex });
     if (descriptor.canEditAny) {
-      props.role = 'button';
       props.onDoubleClick = () =>
         handlers.setEditingCell({ rowId: descriptor.rowId, columnId });
     }
