@@ -83,10 +83,11 @@ export function useRowSelection<T>(params: UseRowSelectionParams<T>): UseRowSele
       let next: Set<RowId>;
 
       // Resolve the anchor's current index; if the row is gone (filtered out,
-      // other page) fall back to a plain toggle.
+      // other page) fall back to a plain toggle. Windowed sources pass a sparse
+      // array, and findIndex visits its holes, so skip them.
       const anchorId = lastClickedRowIdRef.current;
       const anchorIndex = shiftKey && anchorId != null
-        ? currentItems.findIndex((item) => getRowId(item) === anchorId)
+        ? currentItems.findIndex((item) => item !== undefined && getRowId(item) === anchorId)
         : -1;
       if (anchorIndex >= 0 && anchorIndex !== rowIndex) {
         next = applyRangeRowSelection(anchorIndex, rowIndex, checked, currentItems, getRowId, selectedRowIdsRef.current);
@@ -105,13 +106,14 @@ export function useRowSelection<T>(params: UseRowSelectionParams<T>): UseRowSele
   const handleSelectAll = useCallback(
     (checked: boolean) => {
       // `items` is the visible page: add/remove only its ids so selections made
-      // on other pages survive the header checkbox.
+      // on other pages survive the header checkbox. forEach (not for...of) skips
+      // the holes in a windowed source's sparse loaded-rows array.
       const next = new Set(selectedRowIdsRef.current);
-      for (const item of items) {
+      items.forEach((item) => {
         const id = getRowId(item);
         if (checked) next.add(id);
         else next.delete(id);
-      }
+      });
       updateSelection(next);
     },
     [items, getRowId, updateSelection, selectedRowIdsRef]
