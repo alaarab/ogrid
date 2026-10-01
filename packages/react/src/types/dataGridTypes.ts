@@ -231,6 +231,13 @@ export interface WindowedDataState<T> {
   requestWindow: (start: number, end: number) => void;
   /** Retry a previously failed block covering `index`. */
   retryRow: (index: number) => void;
+  /**
+   * Sparse array of length `rowCount` holding each loaded row at its absolute
+   * index (holes where rows are not loaded). When present, keyboard
+   * navigation, copy/paste, fill, editing and row selection work over the
+   * loaded rows; without it they have no rows to act on.
+   */
+  loadedRows?: T[];
 }
 
 export interface IOGridDataGridProps<T> {
@@ -291,6 +298,8 @@ export interface IOGridDataGridProps<T> {
   currentPage?: number;
   /** Page size for row number calculation. */
   pageSize?: PageSize;
+  /** Total rows across all pages (after filtering). Drives `aria-rowcount`; unknown when omitted. */
+  totalCount?: number;
   statusBar?: IStatusBarProps;
   /** Unified filter model (discriminated union values). */
   filters: IFilters;

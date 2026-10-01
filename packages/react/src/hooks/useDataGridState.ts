@@ -226,6 +226,12 @@ export function useDataGridState<T>(
 
   const cellSelection = cellSelectionProp !== false;
 
+  // A windowed (lazy) source keeps `items` empty; index-based interaction
+  // (navigation, clipboard, fill, editing, row selection) reads its loaded
+  // rows, a sparse array of length rowCount, instead.
+  const windowedRows = props.windowed?.loadedRows;
+  const rowItems = windowedRows ?? items;
+
   // --- Shared state hooks (called at orchestrator level to break circular deps) ---
   const {
     editingCell,
@@ -266,7 +272,7 @@ export function useDataGridState<T>(
 
   // --- 2. Row selection ---
   const rowSelectionResult = useRowSelection({
-    items,
+    items: rowItems,
     getRowId,
     rowSelection,
     controlledSelectedRows,
@@ -278,9 +284,18 @@ export function useDataGridState<T>(
     updateSelection,
     handleRowCheckboxChange,
     handleSelectAll,
-    allSelected,
-    someSelected,
   } = rowSelectionResult;
+  // The header checkbox selects the loaded rows of a windowed source, so it
+  // reads as "all selected" once every loaded row is (the count-based check
+  // in useRowSelection compares against the full rowCount).
+  const windowedAllSelected = useMemo(() => {
+    if (!windowedRows || selectedRowIds.size === 0) return null;
+    // Object.values skips the holes without walking the whole (sparse) length.
+    const loaded = Object.values(windowedRows);
+    return loaded.length > 0 && loaded.every((row) => selectedRowIds.has(getRowId(row)));
+  }, [windowedRows, selectedRowIds, getRowId]);
+  const allSelected = windowedAllSelected ?? rowSelectionResult.allSelected;
+  const someSelected = windowedAllSelected != null ? !windowedAllSelected : rowSelectionResult.someSelected;
 
   // --- 3. Context menu ---
   const contextMenuResult = useDataGridContextMenu({ cellSelection });
@@ -288,7 +303,7 @@ export function useDataGridState<T>(
 
   // --- 4. Interaction (selection, keyboard, clipboard, fill handle, undo/redo) ---
   const interactionResult = useDataGridInteraction<T>({
-    items,
+    items: rowItems,
     visibleCols,
     colOffset,
     hasCheckboxCol,
@@ -331,7 +346,7 @@ export function useDataGridState<T>(
     pendingEditorValue,
     setPendingEditorValue,
     visibleCols,
-    itemsLength: items.length,
+    itemsLength: rowItems.length,
     onCellValueChanged,
     setActiveCell,
     setSelectionRange,
@@ -397,7 +412,7 @@ export function useDataGridState<T>(
       cutRange: cellSelection ? cutRange : null,
       copyRange: cellSelection ? copyRange : null,
       colOffset,
-      itemsLength: items.length,
+      itemsLength: rowItems.length,
       getRowId,
       editable,
       onCellValueChanged,
@@ -414,7 +429,7 @@ export function useDataGridState<T>(
       cutRange,
       copyRange,
       colOffset,
-      items.length,
+      rowItems.length,
       getRowId,
       editable,
       onCellValueChanged,
@@ -427,22 +442,24 @@ export function useDataGridState<T>(
     ]
   );
 
+  // Only the status bar shows aggregations. Skipping them otherwise matters for
+  // windowed sources, whose rows array is re-created as every block loads.
   const aggregation = useMemo(
-    () => computeAggregations(items, visibleCols, cellSelection ? selectionRange : null),
-    [items, visibleCols, selectionRange, cellSelection]
+    () => (statusBar ? computeAggregations(rowItems, visibleCols, cellSelection ? selectionRange : null) : null),
+    [statusBar, rowItems, visibleCols, selectionRange, cellSelection]
   );
 
   const statusBarConfig = useMemo(
     () => {
       const base = getDataGridStatusBarConfig(
         statusBar as boolean | IStatusBarProps | undefined,
-        items.length,
+        rowItems.length,
         selectedRowIds.size
       );
       if (!base) return null;
       return { ...base, aggregation: aggregation ?? undefined };
     },
-    [statusBar, items.length, selectedRowIds.size, aggregation]
+    [statusBar, rowItems.length, selectedRowIds.size, aggregation]
   );
 
   // A windowed (lazy) data source keeps `items` empty by design — rows are read

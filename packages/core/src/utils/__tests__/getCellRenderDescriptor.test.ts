@@ -293,6 +293,32 @@ describe('getCellRenderDescriptor  -  with cache', () => {
     expect(second.isActive).toBe(true);
   });
 
+  it('does not serve the previous row when another row lands at the same index', () => {
+    // Windowed source after a sort: index 0 now holds a different row object.
+    const col: IColumnDef<TestRow> = { columnId: 'name', name: 'Name' };
+    const input = baseInput();
+    const cache = new CellDescriptorCache();
+    cache.updateVersion(CellDescriptorCache.computeVersion(input));
+
+    getCellRenderDescriptor({ id: '1', name: 'Alice' }, col, 0, 0, input, cache);
+    const after = getCellRenderDescriptor({ id: '9', name: 'Zed' }, col, 0, 0, input, cache);
+
+    expect(after.rowId).toBe('9');
+    expect(after.displayValue).toBe('Zed');
+  });
+
+  it('recomputes when a row is mutated in place', () => {
+    const col: IColumnDef<TestRow> = { columnId: 'name', name: 'Name' };
+    const item: TestRow = { id: '1', name: 'Alice' };
+    const input = baseInput();
+    const cache = new CellDescriptorCache();
+    cache.updateVersion(CellDescriptorCache.computeVersion(input));
+
+    getCellRenderDescriptor(item, col, 0, 0, input, cache);
+    item.name = 'Alicia';
+    expect(getCellRenderDescriptor(item, col, 0, 0, input, cache).displayValue).toBe('Alicia');
+  });
+
   it('works without a cache (no error)', () => {
     const col: IColumnDef<TestRow> = { columnId: 'name', name: 'Name' };
     const item: TestRow = { id: '1', name: 'Alice' };

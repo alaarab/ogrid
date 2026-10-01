@@ -195,6 +195,9 @@ export interface CellRenderDescriptor {
  * - Tracks a "volatile version" string derived from all inputs that affect per-cell output.
  * - On version match (cache hit), returns the cached descriptor without recomputing.
  * - On version mismatch (cache miss or first render), recomputes and stores the result.
+ * - Entries also remember the row object and raw cell value they were computed from, so
+ *   a different row at the same index (sort/filter/refresh of a windowed source) or a
+ *   changed value (row mutated in place) is a miss rather than a stale display value.
  *
  * Usage: Create one instance per grid (e.g. useRef in React) and pass to getCellRenderDescriptor.
  *
@@ -218,7 +221,7 @@ export class CellDescriptorCache {
    */
   private static readonly MAX_ENTRIES = 100_000;
 
-  private readonly cache = new Map<number, { version: string; descriptor: CellRenderDescriptor }>();
+  private readonly cache = new Map<number, { version: string; item: unknown; value: unknown; descriptor: CellRenderDescriptor }>();
 
   /** Last seen volatile version string. Used to detect when to skip per-cell version checks. */
   private lastVersion = '';
@@ -262,18 +265,22 @@ export class CellDescriptorCache {
    * @param colIdx - Column index within the visible columns.
    * @param version - Volatile version string (from CellDescriptorCache.computeVersion).
    * @param compute - Factory function called on cache miss.
+   * @param item - Row object the descriptor is for; a different object at this index is a miss.
+   * @param value - Raw cell value; a changed value (e.g. in-place mutation) is a miss.
    * @returns The descriptor (cached or freshly computed).
    */
   get(
     rowIndex: number,
     colIdx: number,
     version: string,
-    compute: () => CellRenderDescriptor
+    compute: () => CellRenderDescriptor,
+    item?: unknown,
+    value?: unknown
   ): CellRenderDescriptor {
     const key = rowIndex * CellDescriptorCache.MAX_COL_STRIDE + colIdx;
     const entry = this.cache.get(key);
 
-    if (entry !== undefined && entry.version === version) {
+    if (entry !== undefined && entry.version === version && entry.item === item && Object.is(entry.value, value)) {
       // Cache hit: volatile state is unchanged for this cell  -  return cached descriptor.
       return entry.descriptor;
     }
@@ -282,7 +289,7 @@ export class CellDescriptorCache {
     const descriptor = compute();
     // Safety valve: prevent unbounded growth after heavy data swaps.
     if (this.cache.size >= CellDescriptorCache.MAX_ENTRIES) this.cache.clear();
-    this.cache.set(key, { version, descriptor });
+    this.cache.set(key, { version, item, value, descriptor });
     return descriptor;
   }
 
@@ -330,11 +337,19 @@ export function getCellRenderDescriptor<T>(
   rowIndex: number,
   colIdx: number,
   input: CellRenderDescriptorInput<T>,
-  cache?: { get(rowIndex: number, colIdx: number, version: string, compute: () => CellRenderDescriptor): CellRenderDescriptor; currentVersion: string }
+  cache?: {
+    get(rowIndex: number, colIdx: number, version: string, compute: () => CellRenderDescriptor, item?: unknown, value?: unknown): CellRenderDescriptor;
+    currentVersion: string;
+  }
 ): CellRenderDescriptor {
   if (cache !== undefined) {
-    return cache.get(rowIndex, colIdx, cache.currentVersion, () =>
-      computeCellDescriptor(item, col, rowIndex, colIdx, input)
+    return cache.get(
+      rowIndex,
+      colIdx,
+      cache.currentVersion,
+      () => computeCellDescriptor(item, col, rowIndex, colIdx, input),
+      item,
+      getCellValue(item, col)
     );
   }
   return computeCellDescriptor(item, col, rowIndex, colIdx, input);

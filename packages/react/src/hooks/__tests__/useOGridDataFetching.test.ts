@@ -357,6 +357,104 @@ describe('useOGridDataFetching  -  windowed (lazy) data source', () => {
   });
 });
 
+describe('useOGridDataFetching  -  windowed source through sort, filter, refresh and swap', () => {
+  type Ctx = { sort?: { field: string; direction: 'asc' | 'desc' }; filters: Record<string, unknown> };
+  /** Fake windowed source: 100 rows, sorted by age desc and filtered by min age on request. */
+  function makeSource(label: string, { omitTotal = false } = {}) {
+    const calls: Array<Ctx & { start: number; end: number }> = [];
+    const query = (ctx: Ctx) => {
+      let rows = Array.from({ length: 100 }, (_, i) => ({ id: i, name: `${label} ${i}`, age: i }));
+      const min = (ctx.filters.age as { value?: { min?: number } } | undefined)?.value?.min;
+      if (min !== undefined) rows = rows.filter((r) => r.age >= min);
+      if (ctx.sort?.direction === 'desc') rows.reverse();
+      return rows;
+    };
+    return {
+      calls,
+      source: {
+        async getRowCount(ctx: Ctx) {
+          return query(ctx).length;
+        },
+        async getRows(params: Ctx & { start: number; end: number }) {
+          calls.push(params);
+          const rows = query(params);
+          const items = rows.slice(params.start, params.end);
+          return omitTotal ? { items } : { items, totalCount: rows.length };
+        },
+      },
+    };
+  }
+  const asc = { field: 'age', direction: 'asc' as const };
+  const desc = { field: 'age', direction: 'desc' as const };
+  const ageFilter = { age: { type: 'numberRange', value: { min: 90 } } } as unknown as UseOGridDataFetchingParams<TestRow>['stableFilters'];
+  const row0 = (w: ReturnType<typeof useOGridDataFetching<TestRow>>['windowed']) => {
+    const slot = w?.getRow(0);
+    return slot?.status === 'loaded' ? slot.row.name : slot?.status;
+  };
+
+  async function setup(initial: { ds: unknown; sort?: typeof asc; filters?: UseOGridDataFetchingParams<TestRow>['stableFilters'] }) {
+    const hook = renderHook(
+      ({ ds, sort, filters }) =>
+        useOGridDataFetching(
+          makeParams({ isServerSide: true, dataSource: ds as UseOGridDataFetchingParams<TestRow>['dataSource'], displayData: [], sort, stableFilters: filters }),
+        ),
+      { initialProps: { ds: initial.ds, sort: initial.sort ?? asc, filters: initial.filters ?? noFilters } },
+    );
+    await waitFor(() => expect(hook.result.current.windowed?.rowCount).toBe(100));
+    // The grid asks for its visible window exactly once; nothing below asks again.
+    act(() => hook.result.current.windowed?.requestWindow(0, 20));
+    await waitFor(() => expect(row0(hook.result.current.windowed)).toBe('A 0'));
+    return hook;
+  }
+
+  it('re-requests the last window with the new sort', async () => {
+    const a = makeSource('A');
+    const { result, rerender } = await setup({ ds: a.source });
+    rerender({ ds: a.source, sort: desc, filters: noFilters });
+    await waitFor(() => expect(row0(result.current.windowed)).toBe('A 99'));
+    expect(a.calls.at(-1)).toMatchObject({ start: 0, sort: desc });
+  });
+
+  it('re-requests the last window with the new filter and refreshes the count', async () => {
+    const a = makeSource('A');
+    const { result, rerender } = await setup({ ds: a.source });
+    rerender({ ds: a.source, sort: asc, filters: ageFilter });
+    await waitFor(() => expect(row0(result.current.windowed)).toBe('A 90'));
+    expect(result.current.windowed?.rowCount).toBe(10);
+  });
+
+  it('re-requests the last window on refreshData', async () => {
+    const a = makeSource('A');
+    const { result } = await setup({ ds: a.source });
+    const before = a.calls.length;
+    act(() => result.current.refreshData());
+    await waitFor(() => expect(a.calls.length).toBeGreaterThan(before));
+    await waitFor(() => expect(row0(result.current.windowed)).toBe('A 0'));
+  });
+
+  it('applies the current sort/filter to a swapped source and keeps its row count', async () => {
+    const a = makeSource('A');
+    // B's windows omit totalCount: the count must come from getRowCount, not reset to 0.
+    const b = makeSource('B', { omitTotal: true });
+    const { result, rerender } = await setup({ ds: a.source });
+    rerender({ ds: a.source, sort: desc, filters: ageFilter });
+    await waitFor(() => expect(row0(result.current.windowed)).toBe('A 99'));
+    rerender({ ds: b.source, sort: desc, filters: ageFilter });
+    await waitFor(() => expect(row0(result.current.windowed)).toBe('B 99'));
+    expect(b.calls.every((c) => c.sort?.direction === 'desc' && c.filters === ageFilter)).toBe(true);
+    expect(result.current.windowed?.rowCount).toBe(10);
+  });
+
+  it('exposes loaded rows by absolute index, re-read after a sort', async () => {
+    const a = makeSource('A');
+    const { result, rerender } = await setup({ ds: a.source });
+    expect(result.current.windowed?.loadedRows).toHaveLength(100);
+    expect(result.current.windowed?.loadedRows?.[5]?.name).toBe('A 5');
+    rerender({ ds: a.source, sort: desc, filters: noFilters });
+    await waitFor(() => expect(result.current.windowed?.loadedRows?.[5]?.name).toBe('A 94'));
+  });
+});
+
 describe('useOGridDataFetching  -  replacing data of the same length', () => {
   const filters = { name: { type: 'text' as const, value: 'a' } };
   const other: TestRow[] = [

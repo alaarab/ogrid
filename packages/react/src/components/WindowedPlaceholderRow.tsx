@@ -77,7 +77,9 @@ export function WindowedPlaceholderRow({
             )}
           </>
         ) : (
-          <span style={skeletonStyle} role="status" aria-label={`Loading row ${rowIndex + 1}`} />
+          // Decorative: the row is aria-hidden and the grid announces loading
+          // once through its own live region instead of once per row.
+          <span style={skeletonStyle} />
         )}
       </td>
     </tr>
