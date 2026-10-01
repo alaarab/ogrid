@@ -7,7 +7,7 @@ import type { FilterOption } from '../types/columnTypes';
 
 import type { ColumnFilterType, IDateFilterValue, ICellEditorProps } from '../types/columnTypes';
 import type { IColumnDef } from '../types/columnTypes';
-import { formatDateForDisplay, DEFAULT_DATE_FORMAT } from './dateFormatter';
+import { formatCellValue } from './cellFormatting';
 import type { RowId, UserLike, IFilters, FilterValue } from '../types/dataGridTypes';
 import { getCellValue, isColumnEditable } from './cellValue';
 import { isInSelectionRange } from '../types/dataGridTypes';
@@ -493,17 +493,7 @@ export function resolveCellDisplayContent<T>(
   if (c.renderCell && typeof c.renderCell === 'function') {
     return c.renderCell(item);
   }
-  if (col.valueFormatter) return col.valueFormatter(displayValue, item);
-  if (displayValue == null) return null;
-  if (col.type === 'date') {
-    const format = col.dateFormat ?? DEFAULT_DATE_FORMAT;
-    const formatted = formatDateForDisplay(displayValue, format);
-    if (formatted !== null) return formatted;
-  }
-  if (col.type === 'boolean') {
-    return displayValue ? 'True' : 'False';
-  }
-  return String(displayValue);
+  return formatCellValue(displayValue, item, col);
 }
 
 /**

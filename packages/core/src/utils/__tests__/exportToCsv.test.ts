@@ -120,7 +120,8 @@ describe('exportToCsv', () => {
       jest.spyOn(document.body, 'removeChild').mockImplementation(() => mockLink as unknown as Node);
     });
 
-    afterEach(() => {
+    afterEach(async () => {
+      await new Promise(resolve => setTimeout(resolve, 5));
       jest.restoreAllMocks();
       delete (URL as unknown as { revokeObjectURL?: (u: string) => void }).revokeObjectURL;
     });
@@ -213,12 +214,13 @@ describe('exportToCsv', () => {
       removeChild = jest.spyOn(document.body, 'removeChild').mockImplementation(() => mockLink as unknown as Node);
     });
 
-    afterEach(() => {
+    afterEach(async () => {
+      await new Promise(resolve => setTimeout(resolve, 5));
       jest.restoreAllMocks();
       delete (URL as unknown as { revokeObjectURL?: (u: string) => void }).revokeObjectURL;
     });
 
-    it('creates blob, link, sets href and download, appends, clicks, removes, revokes', () => {
+    it('creates a CSV blob with a UTF-8 BOM and defers revocation until after the click', async () => {
       triggerCsvDownload('a,b\n1,2', 'test.csv');
 
       expect(createElement).toHaveBeenCalledWith('a');
@@ -231,6 +233,9 @@ describe('exportToCsv', () => {
       expect(appendChild).toHaveBeenCalledWith(mockLink);
       expect(mockLink.click).toHaveBeenCalled();
       expect(removeChild).toHaveBeenCalledWith(mockLink);
+      expect(revokeObjectURL).not.toHaveBeenCalled();
+      expect(Array.from(new Uint8Array(await blob.arrayBuffer())).slice(0, 3)).toEqual([0xEF, 0xBB, 0xBF]);
+      await new Promise(resolve => setTimeout(resolve, 5));
       expect(revokeObjectURL).toHaveBeenCalledWith('blob:mock');
     });
   });

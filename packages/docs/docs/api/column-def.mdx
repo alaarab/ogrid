@@ -84,7 +84,7 @@ interface IColumnDef<T> extends IColumnMeta {
 |------|------|---------|-------------|
 | `editable` | `boolean \| ((item: T) => boolean)` | `false` | Whether cells in this column are editable. A function allows per-row control. The grid-level `editable` prop must also be `true` for editing to work. |
 | `cellEditor` | `'text' \| 'select' \| 'checkbox' \| 'richSelect' \| 'date' \| ComponentType<ICellEditorProps<T>>` | `'text'` | The editor to use when a cell enters edit mode. Built-in editors: `'text'` (text input), `'select'` (dropdown), `'checkbox'` (toggle), `'richSelect'` (searchable dropdown), `'date'` (date picker). You can also pass a custom React component. |
-| `cellEditorPopup` | `boolean` | `false` | When `true`, the cell editor renders in a popup overlay instead of inline within the cell. |
+| `cellEditorPopup` | `boolean` | `true` (custom editors) | Custom component editors render in a popup overlay by default; `false` disables editing for that custom editor. Built-in editors render inline and ignore this flag. |
 | `cellEditorParams` | `CellEditorParams` | `undefined` | Additional parameters passed to the cell editor. The shape depends on the editor type. See [CellEditorParams](#celleditorparams) below. |
 
 ## IColumnFilterDef
