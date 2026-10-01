@@ -11,12 +11,23 @@ export function clampValue(value: number, min: number = DEFAULT_MIN, max: number
   return Math.max(min, Math.min(max, value));
 }
 
+/** Number of decimal places in a number's string form (0 for integers). */
+function decimalPlaces(value: number): number {
+  const str = String(value);
+  const dot = str.indexOf('.');
+  return dot === -1 ? 0 : str.length - dot - 1;
+}
+
 /**
  * Snap a value to the nearest step increment from min.
  */
 export function snapToStep(value: number, min: number = DEFAULT_MIN, step: number = DEFAULT_STEP): number {
   if (step <= 0) return value;
-  return min + Math.round((value - min) / step) * step;
+  const snapped = min + Math.round((value - min) / step) * step;
+  // Fractional steps (0.1, 0.3, …) leak float noise such as
+  // 0.30000000000000004 into the value; round to the step/min precision.
+  const precision = Math.max(decimalPlaces(step), decimalPlaces(min));
+  return precision === 0 ? snapped : Number(snapped.toFixed(precision));
 }
 
 /**
@@ -37,6 +48,8 @@ export function getValueFromOffset(
   max: number = DEFAULT_MAX,
   step: number = DEFAULT_STEP,
 ): number {
+  // A zero-width track (hidden element) would divide by zero and yield NaN.
+  if (!(trackWidth > 0)) return min;
   const ratio = Math.max(0, Math.min(1, offsetX / trackWidth));
   const raw = min + ratio * (max - min);
   return clampValue(snapToStep(raw, min, step), min, max);

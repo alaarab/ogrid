@@ -152,6 +152,7 @@ export function SliderEditor<T>(props: ICellEditorProps<T>): React.ReactElement 
   const [isDragging, setIsDragging] = React.useState(false);
   const rootRef = React.useRef<HTMLDivElement>(null);
   const trackRef = React.useRef<HTMLDivElement>(null);
+  const commitTimerRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const percentage = getPercentage(currentValue, min, max);
 
@@ -165,18 +166,46 @@ export function SliderEditor<T>(props: ICellEditorProps<T>): React.ReactElement 
     [min, max, step, onValueChange],
   );
 
+  // One pending auto-commit at a time: a thumb drag that ends over the track
+  // fires mouseup and then click, which must not commit twice.
+  const scheduleCommit = React.useCallback(() => {
+    if (commitTimerRef.current) clearTimeout(commitTimerRef.current);
+    commitTimerRef.current = setTimeout(() => onCommit(), 0);
+  }, [onCommit]);
+
   const handleTrackClick = (e: React.MouseEvent<HTMLDivElement>) => {
     if (!trackRef.current) return;
     const rect = trackRef.current.getBoundingClientRect();
     const offsetX = e.clientX - rect.left;
     const newVal = getValueFromOffset(offsetX, rect.width, min, max, step);
     updateValue(newVal);
+    // A single click (not a drag) is a complete choice, so commit it.
+    scheduleCommit();
   };
 
   const handleThumbMouseDown = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
     setIsDragging(true);
+  };
+
+  const handleThumbKeyDown = (e: React.KeyboardEvent) => {
+    const bigStep = step * 10;
+    let next: number | null = null;
+    if (e.key === 'ArrowRight' || e.key === 'ArrowUp') next = currentValue + step;
+    else if (e.key === 'ArrowLeft' || e.key === 'ArrowDown') next = currentValue - step;
+    else if (e.key === 'PageUp') next = currentValue + bigStep;
+    else if (e.key === 'PageDown') next = currentValue - bigStep;
+    else if (e.key === 'Home') next = min;
+    else if (e.key === 'End') next = max;
+    else if (e.key === 'Enter') { e.preventDefault(); e.stopPropagation(); onCommit(); return; }
+
+    if (next != null) {
+      // Keep handled keys away from the grid's own keyboard navigation.
+      e.preventDefault();
+      e.stopPropagation();
+      updateValue(next);
+    }
   };
 
   // Drag handlers on document
@@ -194,7 +223,7 @@ export function SliderEditor<T>(props: ICellEditorProps<T>): React.ReactElement 
     const handleMouseUp = () => {
       setIsDragging(false);
       // Auto-commit on mouse up after drag
-      setTimeout(() => onCommit(), 0);
+      scheduleCommit();
     };
 
     document.addEventListener('mousemove', handleMouseMove);
@@ -203,11 +232,13 @@ export function SliderEditor<T>(props: ICellEditorProps<T>): React.ReactElement 
       document.removeEventListener('mousemove', handleMouseMove);
       document.removeEventListener('mouseup', handleMouseUp);
     };
-  }, [isDragging, min, max, step, updateValue, onCommit]);
+  }, [isDragging, min, max, step, updateValue, scheduleCommit]);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const text = e.target.value;
     setInputText(text);
+    // Number('') is 0, so a blank box must not be read as "min".
+    if (text.trim() === '') return;
     const num = Number(text);
     if (!Number.isNaN(num)) {
       const clamped = clampValue(snapToStep(num, min, step), min, max);
@@ -220,17 +251,15 @@ export function SliderEditor<T>(props: ICellEditorProps<T>): React.ReactElement 
     if (e.key === 'Enter') {
       e.preventDefault();
       e.stopPropagation();
-      const num = Number(inputText);
-      if (!Number.isNaN(num)) {
-        const clamped = clampValue(snapToStep(num, min, step), min, max);
-        onValueChange(clamped);
+      // A blank box means "no change"; keep the current value.
+      if (inputText.trim() !== '') {
+        const num = Number(inputText);
+        if (!Number.isNaN(num)) {
+          const clamped = clampValue(snapToStep(num, min, step), min, max);
+          onValueChange(clamped);
+        }
       }
       onCommit();
-    }
-    if (e.key === 'Escape') {
-      e.preventDefault();
-      e.stopPropagation();
-      onCancel();
     }
   };
 
@@ -241,6 +270,11 @@ export function SliderEditor<T>(props: ICellEditorProps<T>): React.ReactElement 
       input.focus();
       input.select();
     }
+  }, []);
+
+  // Cancel any pending auto-commit on unmount.
+  React.useEffect(() => () => {
+    if (commitTimerRef.current) clearTimeout(commitTimerRef.current);
   }, []);
 
   // Global escape key
@@ -279,7 +313,6 @@ export function SliderEditor<T>(props: ICellEditorProps<T>): React.ReactElement 
           <div style={trackStyle}>
             <div style={{ ...trackFillStyle, width: `${percentage}%` }} />
           </div>
-          {/* biome-ignore lint/a11y/useFocusableInteractive: thumb is a pointer-drag affordance; focus and keyboard editing stay on the value input per this editor's keyboard model */}
           <div
             style={{
               ...thumbStyle,
@@ -287,6 +320,8 @@ export function SliderEditor<T>(props: ICellEditorProps<T>): React.ReactElement 
               cursor: isDragging ? 'grabbing' : 'grab',
             }}
             onMouseDown={handleThumbMouseDown}
+            onKeyDown={handleThumbKeyDown}
+            tabIndex={0}
             role="slider"
             aria-label="Slider"
             aria-valuemin={min}

@@ -1,5 +1,5 @@
 import '@testing-library/jest-dom';
-import { render, screen } from '@testing-library/react';
+import { render, screen, act, fireEvent } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { SliderEditor } from '../Slider/SliderEditor';
 import type { ICellEditorProps } from '@alaarab/ogrid-core';
@@ -197,6 +197,60 @@ describe('SliderEditor', () => {
       renderEditor({ value: 'not-a-number' });
       const input = getValueInput();
       expect(input.value).toBe('0');
+    });
+
+    it('I08 - clicking the track commits the picked value', async () => {
+      const { props } = renderEditor({ value: 50 });
+      const thumb = screen.getByRole('slider', { name: 'Slider' });
+      const track = thumb.parentElement as HTMLElement;
+
+      fireEvent.click(track);
+
+      await act(async () => {
+        await new Promise((r) => setTimeout(r, 10));
+      });
+
+      expect(props.onValueChange).toHaveBeenCalled();
+      expect(props.onCommit).toHaveBeenCalled();
+    });
+
+    it('I08 - a thumb drag that ends with a click on the track commits once', async () => {
+      const { props } = renderEditor({ value: 50 });
+      const thumb = screen.getByRole('slider', { name: 'Slider' });
+      const track = thumb.parentElement as HTMLElement;
+
+      fireEvent.mouseDown(thumb);
+      fireEvent.mouseUp(document);
+      fireEvent.click(track);
+
+      await act(async () => {
+        await new Promise((r) => setTimeout(r, 10));
+      });
+
+      expect(props.onCommit).toHaveBeenCalledTimes(1);
+    });
+
+    it('I13 - clearing the value box does not commit 0', async () => {
+      const user = userEvent.setup();
+      const { props } = renderEditor({ value: 50 });
+
+      const input = getValueInput();
+      await user.clear(input);
+      await user.keyboard('{Enter}');
+
+      expect(props.onValueChange).not.toHaveBeenCalledWith(0);
+      expect(props.onCommit).toHaveBeenCalled();
+    });
+
+    it('I04 - the slider thumb is focusable and adjusts with arrow keys', async () => {
+      const user = userEvent.setup();
+      const { props } = renderEditor({ value: 50 });
+
+      const thumb = screen.getByRole('slider', { name: 'Slider' });
+      thumb.focus();
+      await user.keyboard('{ArrowUp}');
+
+      expect(props.onValueChange).toHaveBeenCalledWith(51);
     });
   });
 });

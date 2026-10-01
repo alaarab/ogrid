@@ -74,6 +74,13 @@ describe('slider-utils', () => {
       expect(snapToStep(5.5, 0, 1)).toBe(6);
       expect(snapToStep(5.4, 0, 1)).toBe(5);
     });
+
+    it('does not leak floating-point noise for fractional steps', () => {
+      expect(snapToStep(0.3, 0, 0.1)).toBe(0.3);
+      expect(snapToStep(0.7, 0, 0.1)).toBe(0.7);
+      expect(snapToStep(1.2, 0.1, 0.1)).toBe(1.2);
+      expect(snapToStep(0.1 + 0.2, 0, 0.1)).toBe(0.3);
+    });
   });
 
   describe('getPercentage', () => {
@@ -146,6 +153,12 @@ describe('slider-utils', () => {
       // DEFAULT_MIN=0, DEFAULT_MAX=100, DEFAULT_STEP=1
       expect(getValueFromOffset(0, 300)).toBe(0);
       expect(getValueFromOffset(300, 300)).toBe(100);
+    });
+
+    it('returns min (not NaN) for a zero-width track', () => {
+      expect(getValueFromOffset(0, 0, 0, 100, 1)).toBe(0);
+      expect(getValueFromOffset(0, 0, 10, 50, 1)).toBe(10);
+      expect(Number.isNaN(getValueFromOffset(0, 0, 0, 100, 1))).toBe(false);
     });
   });
 });
