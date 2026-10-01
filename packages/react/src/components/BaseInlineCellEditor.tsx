@@ -4,6 +4,7 @@ import { getDateInputPlaceholder, DEFAULT_DATE_FORMAT } from '@alaarab/ogrid-cor
 import type { IColumnDef } from '../types';
 import { useInlineCellEditorState, useRichSelectState, useSelectState } from '../hooks';
 import { CELL_EDITOR_ATTR } from '../constants/domHelpers';
+import { usePortalTheme } from '../hooks/usePortalTheme';
 
 /** Marks dropdowns portaled out of the cell as editor DOM for the grid keydown handler. */
 const EDITOR_MARKER_PROPS = { [CELL_EDITOR_ATTR]: '' };
@@ -231,7 +232,7 @@ export function BaseInlineCellEditor<T>(props: BaseInlineCellEditorProps<T>): Re
       overflowY: 'auto',
       background: 'var(--ogrid-bg, #fff)',
       border: '1px solid var(--ogrid-border, rgba(0, 0, 0, 0.12))',
-      zIndex: 9999,
+      zIndex: 'var(--ogrid-z-popover, 10001)',
       boxShadow: 'var(--ogrid-shadow, 0 4px 16px rgba(0,0,0,0.2))',
       textAlign: 'left',
       fontSize: cellFontSize,
@@ -256,7 +257,9 @@ export function BaseInlineCellEditor<T>(props: BaseInlineCellEditorProps<T>): Re
     };
   }, [editorType]);
 
-  const computedDropdownStyle = fixedDropdownStyle ?? richSelectDropdownStyle;
+  // The dropdown is portaled to <body>; carry the grid's scoped theme tokens along.
+  const portalTheme = usePortalTheme(wrapperRef, editorType === 'select' || editorType === 'richSelect');
+  const computedDropdownStyle = { ...portalTheme, ...(fixedDropdownStyle ?? richSelectDropdownStyle) };
 
   React.useEffect(() => {
     // richSelect search input lives inside the (possibly portaled) dropdown,

@@ -21,7 +21,7 @@
 //   --ogrid-z-drop-indicator: 100 -- column reorder drop indicator
 //   --ogrid-z-loading      : 2   -- loading overlay (within table)
 //   --ogrid-z-context-menu : 10000 -- context menu (fixed, above everything)
-//   --ogrid-z-popover      : 1000  -- filter popovers
+//   --ogrid-z-popover      : 10001 -- portaled popovers/menus (above fullscreen 9999)
 
 // ============================================================
 // Cell Padding Custom Properties (consumer-overrideable)
@@ -316,11 +316,6 @@
   contain: none;
 }
 
-// content-visibility: auto on rows for non-virtualized grids (virtual grids handle row visibility)
-.dataTable:not([data-virtual-scroll]) tbody tr {
-  content-visibility: auto;
-}
-
 // Qualify with .tableWrapper to raise specificity above host-page focus resets
 // (e.g. Docusaurus `body:not(.navigation-with-keyboard) :not(input):focus { outline: none }`
 // has specificity (0,2,2). We need (0,3,0) or higher to beat it).
@@ -369,6 +364,17 @@
 // highlighted cells don't appear as white/grey lines cutting through the selection.
 .tableWrapper .dataTable tbody td:has(> .cellInRange) {
   background: var(--ogrid-range-bg, rgba(33, 115, 70, 0.12));
+}
+
+// Sticky pinned cells must stay opaque: layer the (translucent) range tint over --ogrid-bg
+// so horizontally scrolled cells don't show through a selected pinned cell.
+.tableWrapper .dataTable tbody td.pinnedColLeft:has(> .cellInRange),
+.tableWrapper .dataTable tbody td.pinnedColRight:has(> .cellInRange),
+.tableWrapper .dataTable tbody td.pinnedColLeft:has(> :global([data-drag-range])),
+.tableWrapper .dataTable tbody td.pinnedColRight:has(> :global([data-drag-range])) {
+  background:
+    linear-gradient(var(--ogrid-range-bg, rgba(33, 115, 70, 0.12)), var(--ogrid-range-bg, rgba(33, 115, 70, 0.12))),
+    var(--ogrid-bg, #fff);
 }
 
 // Drag-range highlight applied via DOM attributes during drag (bypasses React for performance)
@@ -692,28 +698,5 @@
 @keyframes ogrid-spin {
   to {
     transform: rotate(360deg);
-  }
-}
-
-// ============================================================
-// Responsive Layout
-// ============================================================
-
-// Compact pagination on small screens: stack vertically, reduce font
-@media (max-width: 576px) {
-  .paginationNav {
-    order: -1;
-    width: 100%;
-    justify-content: center;
-  }
-
-  .paginationInfo {
-    font-size: 11px;
-    text-align: center;
-    width: 100%;
-  }
-
-  .paginationSize {
-    font-size: 11px;
   }
 }

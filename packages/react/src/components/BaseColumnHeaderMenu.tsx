@@ -94,14 +94,44 @@ export function BaseColumnHeaderMenu(props: BaseColumnHeaderMenuProps) {
       }
     };
 
+    // The menu is position: fixed from a one-time measurement, so close it once the header
+    // actually moves (grid or page scroll) rather than leave it detached. Scrolls that leave
+    // the header in place (inside the menu, unrelated scrollers, focus on open) keep it open.
+    const handleScroll = () => {
+      const now = anchorElement.getBoundingClientRect();
+      if (Math.abs(now.top - rect.top) >= 1 || Math.abs(now.left - rect.left) >= 1) onClose();
+    };
+
     document.addEventListener('mousedown', handleClickOutside);
     document.addEventListener('keydown', handleEscape);
+    window.addEventListener('scroll', handleScroll, true);
+    window.addEventListener('resize', onClose);
 
     return () => {
       document.removeEventListener('mousedown', handleClickOutside);
       document.removeEventListener('keydown', handleEscape);
+      window.removeEventListener('scroll', handleScroll, true);
+      window.removeEventListener('resize', onClose);
     };
   }, [isOpen, anchorElement, onClose]);
+
+  // Keep the menu inside the viewport: shift left near the right edge, flip above the
+  // anchor near the bottom edge.
+  React.useLayoutEffect(() => {
+    const menu = menuRef.current;
+    if (!menu || !position || !anchorElement) return;
+    const margin = 8;
+    const menuRect = menu.getBoundingClientRect();
+    let { top, left } = position;
+    if (left + menuRect.width > window.innerWidth - margin) {
+      left = Math.max(margin, window.innerWidth - menuRect.width - margin);
+    }
+    if (top + menuRect.height > window.innerHeight - margin) {
+      const above = anchorElement.getBoundingClientRect().top - 4 - menuRect.height;
+      top = Math.max(margin, above);
+    }
+    if (top !== position.top || left !== position.left) setPosition({ top, left });
+  }, [position, anchorElement]);
 
   const menuInput: ColumnHeaderMenuInput = React.useMemo(
     () => ({
@@ -146,7 +176,7 @@ export function BaseColumnHeaderMenu(props: BaseColumnHeaderMenuProps) {
         position: 'fixed',
         top: position.top,
         left: position.left,
-        zIndex: 1000,
+        zIndex: 'var(--ogrid-z-popover, 10001)',
       }}
     >
       {items.map((item, idx) => (

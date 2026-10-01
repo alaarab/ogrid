@@ -26,7 +26,9 @@ export interface UseColumnPinningResult {
     columnWidths: Record<string, number>,
     defaultWidth: number,
     hasCheckboxColumn: boolean,
-    checkboxColumnWidth: number
+    checkboxColumnWidth: number,
+    /** Width of the row-number column (0 when absent); it sits between the checkbox and the data columns. */
+    rowNumberColumnWidth?: number
   ) => Record<string, number>;
   /** Compute sticky right offsets for pinned columns. */
   computeRightOffsets: (
@@ -101,10 +103,11 @@ export function useColumnPinning<T = unknown>(params: UseColumnPinningParams<T>)
       columnWidths: Record<string, number>,
       defaultWidth: number,
       hasCheckboxColumn: boolean,
-      checkboxColumnWidth: number
+      checkboxColumnWidth: number,
+      rowNumberColumnWidth = 0
     ) => {
       const offsets: Record<string, number> = {};
-      let left = hasCheckboxColumn ? checkboxColumnWidth : 0;
+      let left = (hasCheckboxColumn ? checkboxColumnWidth : 0) + rowNumberColumnWidth;
 
       for (const col of visibleCols) {
         if (pinnedColumns[col.columnId] === 'left') {

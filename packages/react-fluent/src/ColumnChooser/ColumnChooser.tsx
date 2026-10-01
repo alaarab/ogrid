@@ -1,11 +1,13 @@
 import * as React from 'react';
-import { useRef, useEffect } from 'react';
+import { useRef, useEffect, useLayoutEffect, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { Button, Checkbox } from '@fluentui/react-components';
 import type { CheckboxOnChangeData } from '@fluentui/react-components';
 import { TableSettingsRegular, ChevronDownRegular, ChevronUpRegular } from '@fluentui/react-icons';
 import type { IColumnChooserProps } from '@alaarab/ogrid-react';
 import {
   useColumnChooserState,
+  usePortalTheme,
   ColumnChooserContent,
   type IColumnChooserCheckboxItemProps,
   type IColumnChooserActionsProps,
@@ -51,6 +53,31 @@ export const ColumnChooser: React.FC<IColumnChooserProps> = (props) => {
     handleSelectAll, handleClearAll,
     visibleCount, totalCount,
   } = useColumnChooserState({ columns, visibleColumns, onVisibilityChange, onSetVisibleColumns });
+  const portalTheme = usePortalTheme(buttonRef, open);
+
+  // The dropdown is portaled (into the FluentProvider for Fluent tokens; portalTheme carries the
+  // grid's --ogrid-* tokens) and fixed-positioned under the button: the grid container's
+  // overflow:hidden would otherwise clip it.
+  const [position, setPosition] = useState<{ top: number; right: number } | null>(null);
+  useLayoutEffect(() => {
+    const button = buttonRef.current;
+    if (!open || !button) { setPosition(null); return; }
+    const place = () => {
+      const rect = button.getBoundingClientRect();
+      setPosition({ top: rect.bottom + 4, right: Math.max(0, window.innerWidth - rect.right) });
+    };
+    place();
+    const handleScroll = (e: Event) => {
+      if (e.target instanceof Node && dropdownRef.current?.contains(e.target)) return;
+      place();
+    };
+    window.addEventListener('resize', place);
+    window.addEventListener('scroll', handleScroll, true);
+    return () => {
+      window.removeEventListener('resize', place);
+      window.removeEventListener('scroll', handleScroll, true);
+    };
+  }, [open]);
 
   useEffect(() => {
     if (!open) return;
@@ -83,8 +110,14 @@ export const ColumnChooser: React.FC<IColumnChooserProps> = (props) => {
         {open ? <ChevronUpRegular /> : <ChevronDownRegular />}
       </Button>
 
-      {open && (
-        <div ref={dropdownRef} className={styles.dropdown} role="dialog" aria-label="Column visibility">
+      {open && position && createPortal(
+        <div
+          ref={dropdownRef}
+          className={styles.dropdown}
+          style={{ ...portalTheme, top: position.top, right: position.right }}
+          role="dialog"
+          aria-label="Column visibility"
+        >
           <ColumnChooserContent
             columns={columns}
             visibleColumns={visibleColumns}
@@ -97,7 +130,8 @@ export const ColumnChooser: React.FC<IColumnChooserProps> = (props) => {
             classNames={CLASS_NAMES}
             Actions={Actions}
           />
-        </div>
+        </div>,
+        (buttonRef.current?.closest('.fui-FluentProvider') as HTMLElement | null) ?? document.body
       )}
     </div>
   );
