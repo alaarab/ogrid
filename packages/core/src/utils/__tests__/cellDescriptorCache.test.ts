@@ -288,5 +288,26 @@ describe('CellDescriptorCache', () => {
       expect(rA).toBe(dA);
       expect(rB).toBe(dB);
     });
+
+    it('does not collide (r, 1024) with (r+1, 0) on grids wider than 1024 columns', () => {
+      const cache = new CellDescriptorCache();
+      const version = 'v1';
+      const wide = makeDescriptor({ rowIndex: 0, globalColIndex: 1024 });
+      const nextRow = makeDescriptor({ rowIndex: 1, globalColIndex: 0 });
+
+      cache.get(0, 1024, version, () => wide);
+      cache.get(1, 0, version, () => nextRow);
+
+      expect(cache.get(0, 1024, version, () => makeDescriptor())).toBe(wide);
+      expect(cache.get(1, 0, version, () => makeDescriptor())).toBe(nextRow);
+    });
+  });
+
+  describe('version covers colOffset', () => {
+    it('produces different strings when colOffset changes (row-number / checkbox column toggled)', () => {
+      const v1 = CellDescriptorCache.computeVersion(makeInput({ colOffset: 0 }));
+      const v2 = CellDescriptorCache.computeVersion(makeInput({ colOffset: 1 }));
+      expect(v1).not.toBe(v2);
+    });
   });
 });

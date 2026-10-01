@@ -256,4 +256,27 @@ describe('processClientSideData', () => {
     const result = processClientSideData(mockData, mockColumns, {}, 'id', 'asc');
     expect(result.map((r) => r.id)).toEqual(['1', '2', '3', '4']);
   });
+  it('reads a later filter column only for rows that passed earlier filters', () => {
+    // One Map per filter over the whole dataset used to read every row's value
+    // for every active filter, even rows an earlier filter had already rejected.
+    let statusReads = 0;
+    const rows = Array.from({ length: 200 }, (_, i) => ({ id: String(i), name: i === 7 ? 'Keep' : 'Drop', status: 'active' }));
+    const cols: IColumnDef<(typeof rows)[number]>[] = [
+      { columnId: 'name', name: 'Name' },
+      {
+        columnId: 'status',
+        name: 'Status',
+        valueGetter: (r) => {
+          statusReads++;
+          return r.status;
+        },
+      },
+    ];
+    const result = processClientSideData(rows, cols, {
+      name: { type: 'multiSelect', value: ['Keep'] },
+      status: { type: 'text', value: 'act' },
+    });
+    expect(result.map((r) => r.id)).toEqual(['7']);
+    expect(statusReads).toBe(1);
+  });
 });

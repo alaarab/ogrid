@@ -23,6 +23,7 @@ import { useOGridRowSelection } from './useOGridRowSelection';
 import { useOGridActiveCell } from './useOGridActiveCell';
 import { useOGridImperativeHandle } from './useOGridImperativeHandle';
 import { useLatestRef } from './useLatestRef';
+import { useSortFilterColumns } from './useSortFilterColumns';
 import { useSheetScopedState } from './useSheetScopedState';
 import { useSideBarState } from './useSideBarState';
 import type { SortState } from './useOGridSorting';
@@ -248,6 +249,8 @@ export function useOGrid<T>(
     : 'toolbar';
 
   const columns = useMemo(() => flattenColumns(columnsProp), [columnsProp]);
+  // Same rows-affecting fields as `columns`, but stable across inline `columns` props.
+  const sortFilterColumns = useSortFilterColumns(columns);
   const isServerSide = dataSource != null;
 
   // Full-dataset virtualization: when `virtualScroll.enabled` and the consumer
@@ -286,11 +289,11 @@ export function useOGrid<T>(
   const filtersState = useOGridFilters({
     controlledFilters, onFiltersChange,
     setPage: paginationState.setPage,
-    columns, displayData, dataSource,
+    columns: sortFilterColumns, displayData, dataSource,
   });
 
   const dataFetchingState = useOGridDataFetching({
-    isServerSide, dataSource, displayData, getRowId, columns,
+    isServerSide, dataSource, displayData, getRowId, columns: sortFilterColumns,
     stableFilters: filtersState.stableFilters,
     sort: sortingState.sort,
     sortVersion: sortingState.sortVersion,
@@ -506,7 +509,7 @@ export function useOGrid<T>(
     filterableColumns, filtersState.filters, filtersState.handleFilterChange, filtersState.clientFilterOptions,
   ]);
 
-  // --- Formula engine (opt-in, tree-shakeable) ---
+  // --- Formula engine (opt-in; always bundled, only instantiated when `formulas` is on) ---
   const [formulaVersion, setFormulaVersion] = useState(0);
   const wrappedOnFormulaRecalc = useCallback((result: import('@alaarab/ogrid-core').IRecalcResult) => {
     setFormulaVersion(v => v + 1);
@@ -524,7 +527,8 @@ export function useOGrid<T>(
   });
 
   // --- Assembly ---
-  const clearAllFilters = useCallback(() => filtersState.setFilters({}), [filtersState]);
+  const { setFilters } = filtersState;
+  const clearAllFilters = useCallback(() => setFilters({}), [setFilters]);
   const isLoadingResolved = (isServerSide && dataFetchingState.serverLoading) || displayLoading;
   const showRowNumbersResolved = showRowNumbers || cellReferences || formulas;
   const showColumnLettersResolved = !!(cellReferences || formulas);

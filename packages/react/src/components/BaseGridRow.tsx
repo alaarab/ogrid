@@ -14,6 +14,14 @@ export interface BaseGridRowProps extends GridRowProps {
   globalColIndexMap?: number[];
   /** Dynamic width for the row number column (from resize overrides). */
   rowNumWidth?: number;
+  // Comparator-only: cell content reads these through refs, so they are props
+  // here only to repaint the row when they change.
+  /** Popover editor anchor (editing row only); opens the popover once set. */
+  popoverAnchorEl?: HTMLElement | null;
+  /** Popover editor's pending value (editing row only). */
+  pendingEditorValue?: unknown;
+  /** Formula recalculation counter; a recalc can change any cell. */
+  formulaVersion?: number;
   styles: DataGridStyles;
   primitives: DataGridPrimitives;
 }
