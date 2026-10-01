@@ -38,6 +38,46 @@ async function roundTrip(wb: ReturnType<typeof workbookFromGridData>) {
 }
 
 describe('exportToXlsx round-trip', () => {
+  test('formula export strips equals and restores the worksheet header offset', async () => {
+    for (const headerRow of ['auto', 'none'] as const) {
+      const imported = sheetToGridData(workbookFromGridData(
+        [{ x: 2, sum: 4 }],
+        [{ columnId: 'x', name: 'X' }, { columnId: 'sum', name: 'Sum' }],
+        (item, id) => item[id as 'x' | 'sum'],
+        { formulas: [{ col: 1, row: 0, formula: '=A1+$A$1' }] },
+      ).worksheets[0], { headerRow });
+      const wb = workbookFromGridData(imported.rows, imported.columns, (item, id) => item[id], {
+        formulas: imported.initialFormulas,
+      });
+      const parsed = await workbookFromBlob(await xlsxBlobFromWorkbook(wb));
+      const cell = parsed.worksheets[0].getCell(headerRow === 'none' ? 'B3' : 'B2');
+      expect(cell.formula).toBe(headerRow === 'none' ? 'A3+$A$3' : 'A2+$A$2');
+      expect(cell.result).toBe(4);
+    }
+  });
+
+  test('non-finite values and formula caches serialize as empty cells', async () => {
+    const wb = workbookFromGridData([{ a: NaN, b: Infinity, c: -Infinity }], [
+      { columnId: 'a', name: 'A' }, { columnId: 'b', name: 'B' }, { columnId: 'c', name: 'C' },
+    ], (item, id) => item[id as 'a' | 'b' | 'c'], {
+      formulas: [{ col: 2, row: 0, formula: '=1/0' }],
+    });
+    const parsed = await workbookFromBlob(await xlsxBlobFromWorkbook(wb));
+    expect(parsed.worksheets[0].getCell('A2').value).toBeNull();
+    expect(parsed.worksheets[0].getCell('B2').value).toBeNull();
+    expect(parsed.worksheets[0].getCell('C2').result).toBeUndefined();
+  });
+
+  test('sheet names are sanitized before serialization', async () => {
+    for (const sheetName of ['', 'a/b:c*?[]\\', "'name'", 'History', 'x'.repeat(40)]) {
+      const wb = workbookFromGridData([{ x: 1 }], [{ columnId: 'x', name: 'X' }], (item) => item.x, { sheetName });
+      const parsed = await workbookFromBlob(await xlsxBlobFromWorkbook(wb));
+      expect(parsed.worksheets[0].name.length).toBeGreaterThan(0);
+      expect(parsed.worksheets[0].name.length).toBeLessThanOrEqual(31);
+      expect(parsed.worksheets[0].name).not.toMatch(/[\\/*?:[\]]|^'|'$/);
+    }
+  });
+
   test('values, headers, and types survive export → serialize → reimport', async () => {
     const wb = workbookFromGridData(people, personColumns, getPersonValue);
     const out = await roundTrip(wb);
@@ -85,15 +125,15 @@ describe('exportToXlsx round-trip', () => {
     ];
     const wb = workbookFromGridData(rows, cols, (item, id) => item[id as keyof (typeof rows)[0]], {
       formulas: [
-        { col: 2, row: 0, formula: 'A2+B2' },
-        { col: 2, row: 1, formula: 'A3+B3' },
+        { col: 2, row: 0, formula: '=A1+B1' },
+        { col: 2, row: 1, formula: '=A2+B2' },
       ],
     });
     const out = await roundTrip(wb);
 
     expect(out.initialFormulas).toEqual([
-      { col: 2, row: 0, formula: 'A2+B2' },
-      { col: 2, row: 1, formula: 'A3+B3' },
+      { col: 2, row: 0, formula: '=A1+B1' },
+      { col: 2, row: 1, formula: '=A2+B2' },
     ]);
     // Cached results render on reimport before any recalculation.
     expect(out.rows[0].C).toBe(30);

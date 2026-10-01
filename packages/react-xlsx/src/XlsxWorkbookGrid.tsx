@@ -31,23 +31,29 @@ export function XlsxWorkbookGrid(props: XlsxWorkbookGridProps) {
   const sourceWorkbook = 'workbook' in props ? props.workbook : null;
   const [workbook, setWorkbook] = useState<ExcelJS.Workbook | null>(sourceWorkbook);
   const [error, setError] = useState<string | null>(null);
+  const { maxRows, maxCols, maxCells, maxFileBytes, maxUncompressedBytes } = limits ?? {};
 
   useEffect(() => {
     if (sourceWorkbook) {
+      setError(null);
       setWorkbook(sourceWorkbook);
       return;
     }
-    if (!sourceBlob) return;
+    if (!sourceBlob) {
+      setWorkbook(null);
+      setError('A workbook or blob is required');
+      return;
+    }
     let cancelled = false;
     setError(null);
     // Drop the previous file's workbook so it isn't shown (and editable)
     // while the new one parses.
     setWorkbook(null);
-    workbookFromBlob(sourceBlob)
+    workbookFromBlob(sourceBlob, { maxRows, maxCols, maxCells, maxFileBytes, maxUncompressedBytes })
       .then((wb) => { if (!cancelled) setWorkbook(wb); })
       .catch((e) => { if (!cancelled) setError(String(e?.message ?? e)); });
     return () => { cancelled = true; };
-  }, [sourceBlob, sourceWorkbook]);
+  }, [sourceBlob, sourceWorkbook, maxRows, maxCols, maxCells, maxFileBytes, maxUncompressedBytes]);
 
   const sheetNames = useMemo(
     () => workbook?.worksheets.map((w) => w.name) ?? [],
@@ -88,6 +94,9 @@ export function XlsxWorkbookGrid(props: XlsxWorkbookGridProps) {
   if (error) {
     return <div style={errorStyle}>Could not parse workbook: {error}</div>;
   }
+  if (workbook && sheetNames.length === 0) {
+    return <div style={loadingStyle}>Workbook has no sheets.</div>;
+  }
   if (!workbook || !active) {
     return <div style={loadingStyle}>Loading workbook…</div>;
   }
@@ -125,7 +134,7 @@ export function XlsxWorkbookGrid(props: XlsxWorkbookGridProps) {
           ? { role: 'tabpanel', 'aria-labelledby': `${idBase}-tab-${sheetNames.indexOf(active)}` }
           : {})}
       >
-        <XlsxGrid workbook={workbook} sheetName={active} density={density} headerRow={headerRow} limits={limits} />
+        <XlsxGrid key={active} workbook={workbook} sheetName={active} density={density} headerRow={headerRow} limits={limits} />
       </div>
     </div>
   );

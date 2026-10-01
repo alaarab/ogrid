@@ -4,6 +4,7 @@
 
 import ExcelJS from 'exceljs';
 import { triggerBlobDownload, type CsvColumn } from '@alaarab/ogrid-core';
+import { rebaseFormulaRows } from './formulaReferences';
 
 export const XLSX_MIME_TYPE =
   'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
@@ -18,6 +19,8 @@ export interface XlsxExportOptions {
    * cached result immediately and recalculates on open. The public grid API
    * does not expose formulas, so pass this through from the `initialFormulas`
    * you already hold (e.g. from an imported workbook).
+   * References use grid data coordinates; export adds one row for headers.
+   * Items and columns must retain the order used to key these formulas.
    */
   formulas?: Array<{ col: number; row: number; formula: string }>;
 }
@@ -35,7 +38,7 @@ export function workbookFromGridData<T>(
   options?: XlsxExportOptions,
 ): ExcelJS.Workbook {
   const wb = new ExcelJS.Workbook();
-  const ws = wb.addWorksheet(options?.sheetName ?? 'Sheet1');
+  const ws = wb.addWorksheet(sanitizeSheetName(options?.sheetName));
 
   ws.addRow(columns.map((c) => c.name));
   for (const item of items) {
@@ -50,7 +53,7 @@ export function workbookFromGridData<T>(
       const result = toCellValue(getValue(item, column.columnId));
       // +1 for 1-based ExcelJS coordinates, +1 more on the row for the header.
       ws.getCell(f.row + 2, f.col + 1).value = {
-        formula: f.formula,
+        formula: rebaseFormulaRows(f.formula.replace(/^=/, ''), 1),
         result,
       } as ExcelJS.CellFormulaValue;
     }
@@ -88,7 +91,13 @@ export async function exportToXlsx<T>(
  */
 function toCellValue(v: unknown): ExcelJS.CellValue {
   if (v === null || v === undefined) return null;
-  if (typeof v === 'number' || typeof v === 'boolean' || typeof v === 'string') return v;
+  if (typeof v === 'number') return Number.isFinite(v) ? v : null;
+  if (typeof v === 'boolean' || typeof v === 'string') return v;
   if (v instanceof Date) return v;
   return String(v);
+}
+
+function sanitizeSheetName(name: string | undefined): string {
+  const sanitized = (name ?? 'Sheet1').replace(/[\\/*?:[\]]/g, '_').trim().slice(0, 31).replace(/^'+|'+$/g, '');
+  return !sanitized || sanitized.toLowerCase() === 'history' ? 'Sheet1' : sanitized;
 }
