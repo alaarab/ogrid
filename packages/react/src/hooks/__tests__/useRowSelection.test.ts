@@ -73,3 +73,41 @@ describe('useRowSelection', () => {
     expect(result.current.allSelected).toBe(false);
   });
 });
+
+describe('useRowSelection select-all across pages (S09)', () => {
+  type R = { id: number };
+  const getRowId = (r: R) => r.id;
+  const page2: R[] = [{ id: 3 }, { id: 4 }];
+
+  it('header select-all keeps selections from other pages, and deselect-all only drops this page', () => {
+    const { result } = renderHook(() =>
+      useRowSelection<R>({
+        items: page2,
+        getRowId,
+        rowSelection: 'multiple',
+        controlledSelectedRows: undefined,
+        onSelectionChange: undefined,
+      })
+    );
+    act(() => result.current.handleRowCheckboxChange(1, true, 0, false));
+    act(() => result.current.handleSelectAll(true));
+    expect(Array.from(result.current.selectedRowIds).sort()).toEqual([1, 3, 4]);
+    expect(result.current.allSelected).toBe(true);
+    act(() => result.current.handleSelectAll(false));
+    expect(Array.from(result.current.selectedRowIds)).toEqual([1]);
+  });
+
+  it('someSelected is false when the only selections are on other pages', () => {
+    const { result } = renderHook(() =>
+      useRowSelection<R>({
+        items: page2,
+        getRowId,
+        rowSelection: 'multiple',
+        controlledSelectedRows: new Set([1, 2]),
+        onSelectionChange: undefined,
+      })
+    );
+    expect(result.current.someSelected).toBe(false);
+    expect(result.current.allSelected).toBe(false);
+  });
+});

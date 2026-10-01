@@ -93,19 +93,26 @@ export function useRowSelection<T>(params: UseRowSelectionParams<T>): UseRowSele
 
   const handleSelectAll = useCallback(
     (checked: boolean) => {
-      if (checked) {
-        updateSelection(new Set(items.map((item) => getRowId(item))));
-      } else {
-        updateSelection(new Set());
+      // `items` is the visible page: add/remove only its ids so selections made
+      // on other pages survive the header checkbox.
+      const next = new Set(selectedRowIdsRef.current);
+      for (const item of items) {
+        const id = getRowId(item);
+        if (checked) next.add(id);
+        else next.delete(id);
       }
+      updateSelection(next);
     },
-    [items, getRowId, updateSelection]
+    [items, getRowId, updateSelection, selectedRowIdsRef]
   );
 
-  const { allSelected, someSelected } = useMemo(
-    () => computeRowSelectionState(selectedRowIds, items, getRowId),
-    [items, selectedRowIds, getRowId]
-  );
+  // Scoped to the visible page: selections that live only on other pages don't
+  // make this page's header checkbox indeterminate.
+  const { allSelected, someSelected } = useMemo(() => {
+    const state = computeRowSelectionState(selectedRowIds, items, getRowId);
+    const someSelected = !state.allSelected && items.some((item) => selectedRowIds.has(getRowId(item)));
+    return { allSelected: state.allSelected, someSelected };
+  }, [items, selectedRowIds, getRowId]);
 
   return {
     selectedRowIds,
