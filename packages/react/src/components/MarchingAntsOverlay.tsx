@@ -14,6 +14,8 @@ import { measureRange, injectGlobalStyles, type OverlayRect } from '@alaarab/ogr
 const MARCHING_ANTS_ANIMATION: React.CSSProperties = { animation: 'ogrid-marching-ants 0.5s linear infinite' };
 const CRISP_EDGES: React.CSSProperties = { shapeRendering: 'crispEdges' };
 const MARCHING_ANTS_RECT_STYLE: React.CSSProperties = { ...MARCHING_ANTS_ANIMATION, shapeRendering: 'crispEdges' };
+/** Theme selection color; the legacy `--ogrid-selection` token still wins when a host sets it. */
+const SELECTION_STROKE = 'var(--ogrid-selection, var(--ogrid-selection-color, #217346))';
 
 export interface MarchingAntsOverlayProps {
   /** Ref to the positioned container that wraps the table (must have position: relative) */
@@ -149,7 +151,7 @@ export function MarchingAntsOverlay({
             width={Math.max(0, selR.width - 2)}
             height={Math.max(0, selR.height - 2)}
             fill="none"
-            stroke="var(--ogrid-selection, #217346)"
+            stroke={SELECTION_STROKE}
             strokeWidth="2"
             style={CRISP_EDGES}
           />
@@ -177,7 +179,7 @@ export function MarchingAntsOverlay({
             width={Math.max(0, clipR.width - 2)}
             height={Math.max(0, clipR.height - 2)}
             fill="none"
-            stroke="var(--ogrid-selection, #217346)"
+            stroke={SELECTION_STROKE}
             strokeWidth="2"
             strokeDasharray="4 4"
             style={MARCHING_ANTS_RECT_STYLE}

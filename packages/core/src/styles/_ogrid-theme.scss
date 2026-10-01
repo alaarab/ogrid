@@ -62,8 +62,8 @@
      --ogrid-z-checkbox            : 12   alias — checkbox column in sticky header
      --ogrid-z-loading             :  2   loading overlay within table
      --ogrid-z-drop-indicator      : 100  column reorder drop indicator
-     --ogrid-z-filter-popover      : 1000 filter popovers
-     --ogrid-z-popover             : 1000 alias — filter popovers
+     --ogrid-z-filter-popover      : 10001 filter popovers (portaled; above fullscreen 9999)
+     --ogrid-z-popover             : 10001 portaled popovers/menus/editors (above fullscreen)
      --ogrid-z-fullscreen          : 9999 fullscreen grid container
      --ogrid-z-context-menu        : 10000 context menu (fixed, above everything) */
   --ogrid-z-resize-handle: 1;
@@ -79,8 +79,8 @@
   --ogrid-z-checkbox: 12;
   --ogrid-z-loading: 2;
   --ogrid-z-drop-indicator: 100;
-  --ogrid-z-filter-popover: 1000;
-  --ogrid-z-popover: 1000;
+  --ogrid-z-filter-popover: 10001;
+  --ogrid-z-popover: 10001;
   --ogrid-z-fullscreen: 9999;
   --ogrid-z-context-menu: 10000;
 
