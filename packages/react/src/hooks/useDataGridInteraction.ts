@@ -8,6 +8,7 @@ import { useClipboard } from './useClipboard';
 import { useKeyboardNavigation } from './useKeyboardNavigation';
 import { useFillHandleInternal } from './useFillHandleInternal';
 import { useUndoRedo } from './useUndoRedo';
+import type { UseUndoRedoFormulaCells } from './useUndoRedo';
 import { useLatestRef } from './useLatestRef';
 import type { DataGridCellInteractionState } from './useDataGridState';
 
@@ -65,6 +66,12 @@ export interface UseDataGridInteractionParams<T> {
   setFormula?: (col: number, row: number, formula: string | null) => void;
   /** Called when a cell is clicked during formula editing to insert a cell reference. */
   onFormulaInsertReference?: (reference: string) => boolean;
+  /** Formula engine column of a column id (flat index), or -1. Defaults to the flat column lookup. */
+  formulaCol?: (columnId: string) => number;
+  /** Formula engine (sheet) row of a displayed row, or -1. Defaults to the display row. */
+  formulaRow?: (rowIndex: number) => number;
+  /** Formula hooks for the undo history (engine coordinates). */
+  formulaCells?: UseUndoRedoFormulaCells<T>;
 }
 
 export interface UseDataGridInteractionResult<T> {
@@ -105,6 +112,11 @@ export interface UseDataGridInteractionResult<T> {
   }) => void) | undefined;
   canUndo: boolean;
   canRedo: boolean;
+  /**
+   * Set or clear a formula by (flat column, display row): mapped to the sheet
+   * row and recorded for undo. Undefined when formulas are off.
+   */
+  setFormula?: (col: number, row: number, formula: string | null) => void;
 }
 
 /**
@@ -143,13 +155,42 @@ export function useDataGridInteraction<T>(
     hasFormula,
     setFormula,
     onFormulaInsertReference,
+    formulaCells,
   } = params;
 
   const onFormulaInsertReferenceRef = useLatestRef(onFormulaInsertReference);
+  const visibleColsRef = useLatestRef(visibleCols);
+  const formulaColRef = useLatestRef(params.formulaCol);
+  const formulaRowRef = useLatestRef(params.formulaRow);
 
   // Wrap onCellValueChanged with undo/redo tracking
-  const undoRedo = useUndoRedo<T>({ onCellValueChanged: onCellValueChangedProp });
+  const undoRedo = useUndoRedo<T>({ onCellValueChanged: onCellValueChangedProp, formulaCells });
   const onCellValueChanged = undoRedo.onCellValueChanged;
+
+  // Formula access for the clipboard, fill handle and editor, which address
+  // cells by (flat column, display row): the row is mapped to the sheet row,
+  // and writes are recorded for undo.
+  const hasFormulaCells = formulaCells != null;
+  const undoSetFormula = undoRedo.setFormula;
+  const viewFormulas = useMemo(() => {
+    if (!formulas) return undefined;
+    const toRow = (row: number) => formulaRowRef.current?.(row) ?? row;
+    const write = hasFormulaCells ? undoSetFormula : setFormula;
+    return {
+      getFormula: getFormula && ((col: number, row: number) => {
+        const r = toRow(row);
+        return r >= 0 ? getFormula(col, r) : undefined;
+      }),
+      hasFormula: hasFormula && ((col: number, row: number) => {
+        const r = toRow(row);
+        return r >= 0 && hasFormula(col, r);
+      }),
+      setFormula: write && ((col: number, row: number, formula: string | null) => {
+        const r = toRow(row);
+        if (r >= 0) write(col, r, formula);
+      }),
+    };
+  }, [formulas, getFormula, hasFormula, setFormula, hasFormulaCells, undoSetFormula, formulaRowRef]);
 
   const {
     selectionRange,
@@ -177,9 +218,9 @@ export function useDataGridInteraction<T>(
     endBatch: undoRedo.endBatch,
     formulas,
     flatColumns,
-    getFormula,
-    hasFormula,
-    setFormula,
+    getFormula: viewFormulas?.getFormula,
+    hasFormula: viewFormulas?.hasFormula,
+    setFormula: viewFormulas?.setFormula,
   });
 
   const handleCellMouseDown = useCallback(
@@ -191,8 +232,12 @@ export function useDataGridInteraction<T>(
       const insertRef = onFormulaInsertReferenceRef.current;
       if (insertRef) {
         const dataColIndex = globalColIndex - colOffset;
-        if (dataColIndex >= 0) {
-          const ref = formatCellReference(dataColIndex, rowIndex + 1);
+        const col = visibleColsRef.current[dataColIndex];
+        // The reference names the cell's sheet coordinates, not its place on screen.
+        const sheetCol = col ? (formulaColRef.current?.(col.columnId) ?? dataColIndex) : -1;
+        const sheetRow = formulaRowRef.current?.(rowIndex) ?? rowIndex;
+        if (sheetCol >= 0 && sheetRow >= 0) {
+          const ref = formatCellReference(sheetCol, sheetRow + 1);
           if (insertRef(ref)) {
             e.preventDefault();
             return; // Reference inserted  -  skip normal cell selection
@@ -205,13 +250,14 @@ export function useDataGridInteraction<T>(
       // "cut, click the destination, paste" moves the cells. Escape clears it.
       handleCellMouseDownBase(e, rowIndex, globalColIndex);
     },
-    [handleCellMouseDownBase, wrapperRef, onFormulaInsertReferenceRef, colOffset]
+    [handleCellMouseDownBase, wrapperRef, onFormulaInsertReferenceRef, colOffset, visibleColsRef, formulaColRef, formulaRowRef]
   );
 
   const fillFormulaOptions = useMemo<IFillFormulaOptions<T> | undefined>(() => {
-    if (!formulas || !flatColumns) return undefined;
-    return { flatColumns, getFormula, hasFormula, setFormula };
-  }, [formulas, flatColumns, getFormula, hasFormula, setFormula]);
+    if (!viewFormulas || !flatColumns) return undefined;
+    const formulaRow = (row: number) => formulaRowRef.current?.(row) ?? row;
+    return { flatColumns, ...viewFormulas, formulaRow };
+  }, [viewFormulas, flatColumns, formulaRowRef]);
 
   const { handleFillHandleMouseDown, fillDown } = useFillHandleInternal({
     items,
@@ -277,5 +323,6 @@ export function useDataGridInteraction<T>(
     onCellValueChanged,
     canUndo: undoRedo.canUndo,
     canRedo: undoRedo.canRedo,
+    setFormula: viewFormulas?.setFormula,
   };
 }

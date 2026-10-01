@@ -203,16 +203,15 @@ export function useFillHandleInternal<T>(params: UseFillHandleInternalParams<T>)
       setSelectionRange(norm);
       setActiveCell({ rowIndex: fillDrag.startRow, columnIndex: fillDrag.startCol + colOffsetRef.current });
 
-      // Apply fill values
-      const fillEvents = applyFillValues(norm, fillDrag.startRow, fillDrag.startCol, items, visibleCols, formulaOptionsRef.current);
-      if (fillEvents.length > 0) {
-        beginBatch?.();
-        try {
-          for (const evt of fillEvents) onCellValueChangedRef.current?.(evt);
-        } finally {
-          // Always close the batch, or a throwing handler leaves undo stuck.
-          endBatch?.();
-        }
+      // Apply fill values. The batch also covers formulas the fill writes, so
+      // one undo reverts the whole fill.
+      beginBatch?.();
+      try {
+        const fillEvents = applyFillValues(norm, fillDrag.startRow, fillDrag.startCol, items, visibleCols, formulaOptionsRef.current);
+        for (const evt of fillEvents) onCellValueChangedRef.current?.(evt);
+      } finally {
+        // Always close the batch, or a throwing handler leaves undo stuck.
+        endBatch?.();
       }
       setFillDrag(null);
       liveFillRangeRef.current = null;
@@ -278,21 +277,19 @@ export function useFillHandleInternal<T>(params: UseFillHandleInternalParams<T>)
     const range = selectionRangeRef.current;
     if (!range || editable === false || !onCellValueChangedRef.current) return;
     const norm = normalizeSelectionRange(range);
-    const fillEvents = applyFillValues(
-      norm,
-      norm.startRow,
-      norm.startCol,
-      itemsRef.current,
-      visibleColsRef.current,
-      formulaOptionsRef.current
-    );
-    if (fillEvents.length > 0) {
-      beginBatch?.();
-      try {
-        for (const evt of fillEvents) onCellValueChangedRef.current(evt);
-      } finally {
-        endBatch?.();
-      }
+    beginBatch?.();
+    try {
+      const fillEvents = applyFillValues(
+        norm,
+        norm.startRow,
+        norm.startCol,
+        itemsRef.current,
+        visibleColsRef.current,
+        formulaOptionsRef.current
+      );
+      for (const evt of fillEvents) onCellValueChangedRef.current(evt);
+    } finally {
+      endBatch?.();
     }
   }, [editable, beginBatch, endBatch, onCellValueChangedRef, itemsRef, visibleColsRef, formulaOptionsRef]);
 

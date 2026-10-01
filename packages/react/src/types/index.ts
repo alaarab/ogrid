@@ -47,6 +47,7 @@ export type {
   IVirtualScrollConfig,
   IColumnReorderConfig,
   ISheetDef,
+  IFormulaCellWriter,
 } from './dataGridTypes';
 
 export { toUserLike, isInSelectionRange, normalizeSelectionRange, isWindowedDataSource } from './dataGridTypes';

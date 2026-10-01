@@ -139,11 +139,18 @@ export function useClipboard<T>(params: UseClipboardParams<T>): UseClipboardResu
     const items = itemsRef.current;
     const visibleCols = visibleColsRef.current;
     const parsedRows = parseTsvClipboard(text);
-    const formulaOptions = formulasRef.current && flatColumnsRef.current
+    // Cells that received a pasted formula (they produce no value event).
+    const pastedFormulaKeys: string[] = [];
+    const flatColumns = flatColumnsRef.current;
+    const setFormula = setFormulaRef.current;
+    const formulaOptions = formulasRef.current && flatColumns
       ? {
           colOffset,
-          flatColumns: flatColumnsRef.current,
-          setFormula: setFormulaRef.current,
+          flatColumns,
+          setFormula: setFormula && ((col: number, row: number, formula: string | null) => {
+            pastedFormulaKeys.push(`${row}|${flatColumns[col]?.columnId}`);
+            setFormula(col, row, formula);
+          }),
         }
       : undefined;
     beginBatch?.();
@@ -154,6 +161,7 @@ export function useClipboard<T>(params: UseClipboardParams<T>): UseClipboardResu
         // Skip cells the paste just wrote: when the paste overlaps the cut
         // source, clearing them afterwards would wipe the pasted values.
         const pastedKeys = new Set(pasteEvents.map((e) => `${e.rowIndex}|${e.columnId}`));
+        for (const key of pastedFormulaKeys) pastedKeys.add(key);
         const cutEvents = applyCutClear(cutRangeRef.current, items, visibleCols)
           .filter((e) => !pastedKeys.has(`${e.rowIndex}|${e.columnId}`));
         for (const evt of cutEvents) onCellValueChanged(evt);

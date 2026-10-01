@@ -1,6 +1,6 @@
 import { useCallback, useRef, useMemo, useEffect } from 'react';
 import type { RefObject } from 'react';
-import { formatCellReference } from '../utils';
+import { formatCellReference, indexToColumnLetter } from '../utils';
 import type { DelegatedCellHandlers } from '../utils';
 import type { IOGridDataGridProps, IColumnDef } from '../types';
 import type {
@@ -15,7 +15,7 @@ import type {
 import type { UseColumnResizeResult } from './useColumnResize';
 import type { UseColumnReorderResult } from './useColumnReorder';
 import type { UseVirtualScrollResult } from './useVirtualScroll';
-import type { IVisibleColumnRange } from '@alaarab/ogrid-core';
+import type { IVisibleColumnRange, FormulaReference, IFormulaRowMap } from '@alaarab/ogrid-core';
 import type { HeaderFilterConfigInput, CellRenderDescriptorInput } from '../utils';
 import type { IStatusBarProps, RowId, HeaderRow } from '../types';
 import { useDataGridState } from './useDataGridState';
@@ -102,6 +102,12 @@ export interface UseDataGridTableOrchestrationResult<T> {
   fitToContent: boolean;
   showColumnLetters: boolean;
   showNameBox: boolean;
+  /** Header letter per visible column: the letter of its formula (flat) column. */
+  columnLetters: string[];
+  /** Row-number label per displayed row (its sheet row), when the grid maps rows to sheet rows. */
+  rowNumberOf?: (rowIndex: number) => number;
+  /** `formulaReferences` translated to visible columns and displayed rows, for the overlay. */
+  formulaReferences?: FormulaReference[];
 
   // Memoized callback groups (for renderCellContent)
   editCallbacks: {
@@ -192,6 +198,57 @@ export interface UseDataGridTableOrchestrationResult<T> {
   headerMenu: DataGridPinningState['headerMenu'];
 }
 
+/**
+ * Translate formula references (flat columns, sheet rows) to the visible
+ * columns and displayed rows the overlay measures. A range whose cells are
+ * scattered by sorting or column order is outlined by its bounding box.
+ */
+function mapFormulaReferencesToView<T>(
+  refs: FormulaReference[] | undefined,
+  visibleCols: IColumnDef<T>[],
+  formulaCol: ((columnId: string) => number) | undefined,
+  rowMap: IFormulaRowMap | undefined,
+  rowCount: number,
+): FormulaReference[] | undefined {
+  if (!refs || refs.length === 0) return refs;
+  const out: FormulaReference[] = [];
+  for (const ref of refs) {
+    const c0 = Math.min(ref.col, ref.endCol ?? ref.col);
+    const c1 = Math.max(ref.col, ref.endCol ?? ref.col);
+    const r0 = Math.min(ref.row, ref.endRow ?? ref.row);
+    const r1 = Math.max(ref.row, ref.endRow ?? ref.row);
+    let minCol = -1;
+    let maxCol = -1;
+    for (let i = 0; i < visibleCols.length; i++) {
+      const col = visibleCols[i];
+      const flat = col && formulaCol ? formulaCol(col.columnId) : i;
+      if (flat < c0 || flat > c1) continue;
+      if (minCol < 0) minCol = i;
+      maxCol = i;
+    }
+    let minRow = -1;
+    let maxRow = -1;
+    if (!rowMap) {
+      minRow = r0;
+      maxRow = r1;
+    } else if (r0 === r1) {
+      minRow = maxRow = rowMap.toDisplayRow(r0);
+    } else {
+      for (let i = 0; i < rowCount; i++) {
+        const sheetRow = rowMap.toSheetRow(i);
+        if (sheetRow < r0 || sheetRow > r1) continue;
+        if (minRow < 0) minRow = i;
+        maxRow = i;
+      }
+    }
+    if (minCol < 0 || minRow < 0) continue;
+    out.push(minCol === maxCol && minRow === maxRow
+      ? { type: 'cell', col: minCol, row: minRow, colorIndex: ref.colorIndex }
+      : { type: 'range', col: minCol, row: minRow, endCol: maxCol, endRow: maxRow, colorIndex: ref.colorIndex });
+  }
+  return out;
+}
+
 // ---------------------------------------------------------------------------
 // Hook
 // ---------------------------------------------------------------------------
@@ -270,18 +327,43 @@ export function useDataGridTableOrchestration<T>(
   const allowOverflowX = !suppressHorizontalScroll && containerWidth > 0 && (minTableWidth > containerWidth || desiredTableWidth > containerWidth);
   const fitToContent = layoutMode === 'content';
 
+  // ── Sheet coordinates (column letters, row numbers, name box) ─────────
+  // Letters, row numbers and the name box name a cell the way formulas do:
+  // flat column index and sheet row (see IFormulaRowMap), so "B3" in the name
+  // box is the cell a formula's B3 reads.
+  const { formulaRowMap } = props;
+  const formulaCol = cellDescriptorInput.formulaCol;
+  const columnLetters = useMemo(
+    () => visibleCols.map((c, i) => indexToColumnLetter(formulaCol ? Math.max(0, formulaCol(c.columnId)) : i)),
+    [visibleCols, formulaCol]
+  );
+  const rowNumberOf = useMemo(() => {
+    if (!formulaRowMap) return undefined;
+    return (rowIndex: number) => {
+      const sheetRow = formulaRowMap.toSheetRow(rowIndex);
+      return sheetRow >= 0 ? sheetRow + 1 : rowNumberOffset + rowIndex + 1;
+    };
+  }, [formulaRowMap, rowNumberOffset]);
+  const formulaReferences = useMemo(
+    () => mapFormulaReferencesToView(props.formulaReferences, visibleCols, formulaCol, formulaRowMap, items.length),
+    [props.formulaReferences, visibleCols, formulaCol, formulaRowMap, items.length]
+  );
+
   // ── Name box: notify parent when active cell changes ──────────────────
   const onActiveCellChangeRef = useRef(onActiveCellChange);
   onActiveCellChangeRef.current = onActiveCellChange;
   useEffect(() => {
     if (!onActiveCellChangeRef.current) return;
     const ac = interaction.activeCell;
-    if (ac) {
-      onActiveCellChangeRef.current(formatCellReference(ac.columnIndex - colOffset, rowNumberOffset + ac.rowIndex + 1));
+    const col = ac ? visibleCols[ac.columnIndex - colOffset] : undefined;
+    if (ac && col) {
+      const sheetCol = formulaCol ? formulaCol(col.columnId) : ac.columnIndex - colOffset;
+      const sheetRow = formulaRowMap ? formulaRowMap.toSheetRow(ac.rowIndex) : rowNumberOffset + ac.rowIndex;
+      onActiveCellChangeRef.current(sheetCol >= 0 && sheetRow >= 0 ? formatCellReference(sheetCol, sheetRow + 1) : null);
     } else {
       onActiveCellChangeRef.current(null);
     }
-  }, [interaction.activeCell, rowNumberOffset, colOffset]);
+  }, [interaction.activeCell, rowNumberOffset, colOffset, visibleCols, formulaCol, formulaRowMap]);
 
   // ── Column resize ──────────────────────────────────────────────────────
   const { handleResizeStart, handleResizeDoubleClick, getColumnWidth } = useColumnResize<T>({
@@ -509,6 +591,9 @@ export function useDataGridTableOrchestration<T>(
     fitToContent,
     showColumnLetters,
     showNameBox,
+    columnLetters,
+    rowNumberOf,
+    formulaReferences,
 
     // Memoized callback groups
     editCallbacks,

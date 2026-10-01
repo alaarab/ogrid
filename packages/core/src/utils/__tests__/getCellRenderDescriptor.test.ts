@@ -421,3 +421,35 @@ describe('getCellRenderDescriptor  -  rowId and rowIndex', () => {
     expect(descriptor.globalColIndex).toBe(1);
   });
 });
+
+describe('getCellRenderDescriptor  -  formula coordinates', () => {
+  // Formula engine keyed by "flatCol,sheetRow".
+  const formulas = new Map<string, { formula: string; value: unknown }>([['2,5', { formula: '=A6*2', value: 42 }]]);
+  const formulaInput = (): CellRenderDescriptorInput<TestRow> => ({
+    ...baseInput(),
+    hasFormula: (col, row) => formulas.has(`${col},${row}`),
+    getFormulaValue: (col, row) => formulas.get(`${col},${row}`)?.value,
+    getFormula: (col, row) => formulas.get(`${col},${row}`)?.formula,
+    // Column "age" is flat column 2; display row 0 shows sheet row 5.
+    formulaCol: (columnId) => ['id', 'name', 'age'].indexOf(columnId),
+    formulaRow: (rowIndex) => (rowIndex === 0 ? 5 : -1),
+  });
+  const ageCol: IColumnDef<TestRow> = { columnId: 'age', name: 'Age' };
+
+  it('looks formulas up by flat column and sheet row, not screen position', () => {
+    // Shown as the first visible column on the first displayed row.
+    const d = getCellRenderDescriptor({ id: 'x', name: 'n', age: 1 }, ageCol, 0, 0, formulaInput());
+    expect(d.displayValue).toBe(42);
+  });
+
+  it('shows the raw value when the row has no sheet row', () => {
+    const d = getCellRenderDescriptor({ id: 'x', name: 'n', age: 1 }, ageCol, 1, 0, formulaInput());
+    expect(d.displayValue).toBe(1);
+  });
+
+  it('puts the formula text in the editor for a mapped formula cell', () => {
+    const input = { ...formulaInput(), editingCell: { rowId: 'x', columnId: 'age' } };
+    const d = getCellRenderDescriptor({ id: 'x', name: 'n', age: 1 }, ageCol, 0, 0, input);
+    expect(d.value).toBe('=A6*2');
+  });
+});

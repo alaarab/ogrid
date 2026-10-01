@@ -21,6 +21,8 @@ export interface GridRowComparatorProps {
   hasCheckboxCol: boolean;
   /** aria-rowindex base (header rows + page offset); optional. */
   ariaRowIndexBase?: number;
+  /** Row-number label; optional. */
+  rowNumber?: number;
   // Comparator-only props (may not be used in render, but drive re-render decisions)
   selectionRange: { startRow: number; endRow: number; startCol: number; endCol: number } | null;
   activeCell: { rowIndex: number; columnIndex: number } | null;
@@ -51,6 +53,7 @@ export function areGridRowPropsEqual(prev: GridRowComparatorProps, next: GridRow
   // data-row-index / aria-rowindex values.
   if (prev.rowIndex !== next.rowIndex) return false;
   if (prev.ariaRowIndexBase !== next.ariaRowIndexBase) return false;
+  if (prev.rowNumber !== next.rowNumber) return false;
   if (prev.isSelected !== next.isSelected) return false;
   if (prev.hasCheckboxCol !== next.hasCheckboxCol) return false;
 

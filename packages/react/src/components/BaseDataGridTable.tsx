@@ -209,6 +209,7 @@ export function BaseDataGridTableInner<T>(
                     hasCheckboxCol={hasCheckboxCol}
                     hasRowNumbersCol={hasRowNumbersCol}
                     rowNumberOffset={rowNumberOffset}
+                    rowNumberOf={o.rowNumberOf}
                     ariaRowIndexBase={ariaRowIndexBase}
                     selectionRange={selectionRange}
                     activeCell={interaction.activeCell}
@@ -238,10 +239,10 @@ export function BaseDataGridTableInner<T>(
                 columnOrder={columnOrder}
                 isDragging={isDragging}
               />
-              {gridProps.formulaReferences && gridProps.formulaReferences.length > 0 && (
+              {o.formulaReferences && o.formulaReferences.length > 0 && (
                 <FormulaRefOverlay
                   containerRef={tableContainerRef}
-                  references={gridProps.formulaReferences}
+                  references={o.formulaReferences}
                   colOffset={colOffset}
                 />
               )}

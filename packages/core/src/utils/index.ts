@@ -6,7 +6,8 @@ export {
   triggerCsvDownload,
   triggerBlobDownload,
 } from './exportToCsv';
-export { getCellValue, isColumnEditable, createGridDataAccessor } from './cellValue';
+export { getCellValue, isColumnEditable, createGridDataAccessor, createFormulaRowMap, createOffsetFormulaRowMap } from './cellValue';
+export type { IFormulaRowMap } from './cellValue';
 export { flattenColumns, buildHeaderRows } from './columnUtils';
 export {
   isFilterConfig,

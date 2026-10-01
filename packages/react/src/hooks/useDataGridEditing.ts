@@ -21,7 +21,7 @@ export interface UseDataGridEditingParams<T> {
   setActiveCell: (cell: { rowIndex: number; columnIndex: number } | null) => void;
   setSelectionRange: (range: { startRow: number; startCol: number; endRow: number; endCol: number } | null) => void;
   colOffset: number;
-  /** Formula integration: set a formula for a cell coordinate. */
+  /** Formula integration: set a formula for a cell (flat column index, display row). */
   setFormula?: (col: number, row: number, formula: string | null) => void;
   /** Formula integration: notify a non-formula cell changed. */
   onFormulaCellChanged?: (col: number, row: number) => void;
@@ -91,7 +91,7 @@ export function useDataGridEditing<T>(
           setPopoverAnchorEl(null);
           setPendingEditorValue(undefined);
           // Advance to next row
-          if (rowIndex < itemsLengthRef.current - 1) {
+          if (!options?.skipAdvance && rowIndex < itemsLengthRef.current - 1) {
             const newRow = rowIndex + 1;
             const localCol = globalColIndex - colOffset;
             setActiveCell({ rowIndex: newRow, columnIndex: globalColIndex });

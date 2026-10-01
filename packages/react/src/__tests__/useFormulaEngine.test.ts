@@ -533,3 +533,129 @@ describe('useDataGridEditing  -  formula integration', () => {
     expect(params.setFormula).not.toHaveBeenCalled();
   });
 });
+
+// ==========================================================================
+// 9. Recalculation against applied data (K04)
+// ==========================================================================
+
+describe('useFormulaEngine  -  recalculation after the data owner applies a change', () => {
+  it('onCellChanged called before the new items arrive recalculates against the new items', () => {
+    // A consumer's onCellValueChanged calls setState, so the grid notifies the
+    // engine while the hook still holds the old items.
+    const { result, rerender } = renderHook(
+      (props: UseFormulaEngineParams<TestRow>) => useFormulaEngine(props),
+      { initialProps: makeParams() }
+    );
+    act(() => {
+      result.current.setFormula(1, 0, '=A1*10'); // items[0].a = 10
+    });
+    expect(result.current.getFormulaValue(1, 0)).toBe(100);
+
+    const nextItems = items.map((r, i) => (i === 0 ? { ...r, a: 5 } : r));
+    act(() => {
+      result.current.onCellChanged(0, 0);
+      rerender(makeParams({ items: nextItems }));
+    });
+    expect(result.current.getFormulaValue(1, 0)).toBe(50);
+  });
+
+  it('recalculates when items change without a notification (external update, undo)', () => {
+    const onRecalc = jest.fn();
+    const { result, rerender } = renderHook(
+      (props: UseFormulaEngineParams<TestRow>) => useFormulaEngine(props),
+      { initialProps: makeParams({ onFormulaRecalc: onRecalc }) }
+    );
+    act(() => {
+      result.current.setFormula(1, 0, '=A1*10');
+      result.current.setFormula(2, 0, '=B2+1'); // reads a value nobody changes
+    });
+    onRecalc.mockClear();
+
+    rerender(makeParams({ onFormulaRecalc: onRecalc, items: items.map((r, i) => (i === 0 ? { ...r, a: 7 } : r)) }));
+    expect(result.current.getFormulaValue(1, 0)).toBe(70);
+    // Only the cell whose value changed is reported.
+    expect(onRecalc).toHaveBeenCalledTimes(1);
+    expect(onRecalc.mock.calls[0][0].updatedCells).toEqual([
+      expect.objectContaining({ col: 1, row: 0, oldValue: 100, newValue: 70 }),
+    ]);
+  });
+});
+
+// ==========================================================================
+// 10. Cross-sheet references (F18)
+// ==========================================================================
+
+describe('useFormulaEngine  -  sheets', () => {
+  const sheetAccessor = (value: number) => ({
+    getCellValue: (col: number, row: number) => (col === 0 && row === 0 ? value : null),
+    getRowCount: () => 1,
+    getColumnCount: () => 1,
+  });
+
+  it('recalculates cross-sheet formulas when a sheet accessor is replaced', () => {
+    const { result, rerender } = renderHook(
+      (props: UseFormulaEngineParams<TestRow>) => useFormulaEngine(props),
+      { initialProps: makeParams({ sheets: { Sheet2: sheetAccessor(5) } }) }
+    );
+    act(() => {
+      result.current.setFormula(0, 0, '=Sheet2!A1*2');
+    });
+    expect(result.current.getFormulaValue(0, 0)).toBe(10);
+
+    rerender(makeParams({ sheets: { Sheet2: sheetAccessor(50) } }));
+    expect(result.current.getFormulaValue(0, 0)).toBe(100);
+  });
+});
+
+// ==========================================================================
+// 11. Settings and lifecycle (K09)
+// ==========================================================================
+
+describe('useFormulaEngine  -  settings changes', () => {
+  it('re-enabling formulas reloads initial formulas and re-registers sheets', () => {
+    const sheets = {
+      Sheet2: { getCellValue: () => 7, getRowCount: () => 1, getColumnCount: () => 1 },
+    };
+    const initialFormulas = [{ col: 0, row: 0, formula: '=Sheet2!A1*3' }];
+    const { result, rerender } = renderHook(
+      (props: UseFormulaEngineParams<TestRow>) => useFormulaEngine(props),
+      { initialProps: makeParams({ sheets, initialFormulas }) }
+    );
+    expect(result.current.getFormulaValue(0, 0)).toBe(21);
+
+    rerender(makeParams({ formulas: false, sheets, initialFormulas }));
+    rerender(makeParams({ formulas: true, sheets, initialFormulas }));
+    expect(result.current.getFormula(0, 0)).toBe('=Sheet2!A1*3');
+    expect(result.current.getFormulaValue(0, 0)).toBe(21);
+  });
+
+  it('applies changed named ranges and custom functions to existing formulas', () => {
+    const { result, rerender } = renderHook(
+      (props: UseFormulaEngineParams<TestRow>) => useFormulaEngine(props),
+      { initialProps: makeParams({ namedRanges: { Rate: 'A1' } }) }
+    );
+    act(() => {
+      result.current.setFormula(2, 0, '=Rate*2'); // A1 = 10
+    });
+    expect(result.current.getFormulaValue(2, 0)).toBe(20);
+
+    rerender(makeParams({ namedRanges: { Rate: 'A2' } })); // A2 = 30
+    expect(result.current.getFormula(2, 0)).toBe('=Rate*2');
+    expect(result.current.getFormulaValue(2, 0)).toBe(60);
+
+    const formulaFunctions = {
+      TRIPLE: {
+        minArgs: 1,
+        maxArgs: 1,
+        evaluate(args: unknown[], ctx: unknown, evaluator: { evaluate: (node: unknown, ctx: unknown) => unknown }) {
+          return Number(evaluator.evaluate(args[0], ctx)) * 3;
+        },
+      },
+    };
+    act(() => {
+      result.current.setFormula(1, 1, '=TRIPLE(2)');
+    });
+    rerender(makeParams({ namedRanges: { Rate: 'A2' }, formulaFunctions }));
+    expect(result.current.getFormulaValue(1, 1)).toBe(6);
+  });
+});
