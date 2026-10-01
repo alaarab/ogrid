@@ -73,11 +73,6 @@ export function useKeyboardNavigation<T>(
   const paramsRef = useRef(params);
   paramsRef.current = params;
 
-  // Cached page size for PageUp/PageDown — avoids DOM query on every keystroke.
-  // Invalidated when the wrapper element changes (rare).
-  const cachedPageRef = useRef<{ rowHeight: number; pageSize: number } | null>(null);
-  const cachedWrapperRef = useRef<HTMLElement | null>(null);
-
   const handleGridKeyDown = useCallback(
     (e: React.KeyboardEvent) => {
       const { data, state, handlers, features } = paramsRef.current;
@@ -220,18 +215,13 @@ export function useKeyboardNavigation<T>(
           let pageSize = 10;
           let rowHeight = 36;
           if (wrapper) {
-            // Use cached measurement if the wrapper element hasn't changed.
-            if (cachedPageRef.current && cachedWrapperRef.current === wrapper) {
-              rowHeight = cachedPageRef.current.rowHeight;
-              pageSize = cachedPageRef.current.pageSize;
-            } else {
-              const firstRow = wrapper.querySelector('tbody tr') as HTMLElement | null;
-              if (firstRow && firstRow.offsetHeight > 0) {
-                rowHeight = firstRow.offsetHeight;
-                pageSize = Math.max(1, Math.floor(wrapper.clientHeight / rowHeight));
-              }
-              cachedPageRef.current = { rowHeight, pageSize };
-              cachedWrapperRef.current = wrapper;
+            const firstRow = wrapper.querySelector<HTMLElement>('tbody tr[data-row-id]');
+            const configuredHeight = Number.parseFloat(wrapper.style.getPropertyValue('--ogrid-row-height'));
+            if (configuredHeight > 0) rowHeight = configuredHeight;
+            else if (firstRow && firstRow.offsetHeight > 0) rowHeight = firstRow.offsetHeight;
+            const headerHeight = wrapper.querySelector('thead')?.getBoundingClientRect().height ?? 0;
+            if (wrapper.clientHeight > 0) {
+              pageSize = Math.max(1, Math.floor((wrapper.clientHeight - headerHeight) / rowHeight));
             }
           }
           const pgDirection = e.key === 'PageDown' ? 1 : -1;
@@ -253,7 +243,7 @@ export function useKeyboardNavigation<T>(
           }
           setActiveCell({ rowIndex: newRowPage, columnIndex });
           // Scroll the new row into view
-          if (wrapper) {
+          if (wrapper && !wrapper.hasAttribute('data-virtual-scroll')) {
             wrapper.scrollTop = getScrollTopForRow(newRowPage, rowHeight, wrapper.clientHeight, 'center');
           }
           break;

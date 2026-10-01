@@ -152,7 +152,8 @@ export function computeVisibleRange(
     return { startIndex: 0, endIndex: 0, offsetTop: 0, offsetBottom: 0 };
   }
 
-  const startIndex = Math.max(0, Math.floor(scrollTop / rowHeight) - overscan);
+  scrollTop = Math.max(0, Math.min(scrollTop, totalRows * rowHeight - containerHeight));
+  const startIndex = Math.min(totalRows - 1, Math.max(0, Math.floor(scrollTop / rowHeight) - overscan));
   const endIndex = Math.min(
     totalRows - 1,
     Math.ceil((scrollTop + containerHeight) / rowHeight) + overscan
@@ -287,10 +288,9 @@ export interface IScaledRowWindow {
  * When scaling is active the bottom of the scrollable range must still land on
  * the last row, so the fraction scrolled (0..1) is mapped onto the real range
  * rather than scrollTop being scaled directly. This keeps the last row
- * reachable. The rendered block is positioned in compressed space at
- * (startIndex * rowHeight) / scale; because a compressed pixel spans `scale`
- * real pixels, the scale-induced distortion across the small overscan window
- * is sub-pixel and not visible.
+ * reachable. Rows keep their real height, so the rendered block is positioned
+ * relative to the viewport, preserving the distance from its first row to the
+ * real content offset.
  *
  * @param scrollTop - Current scrollTop of the container (compressed space).
  * @param geometry - Output of {@link computeScaledGeometry}.
@@ -314,38 +314,50 @@ export function computeScaledWindow(
   const maxCompressedScroll = Math.max(1, geometry.spacerHeight - viewportHeight);
   const fraction = Math.min(1, Math.max(0, scrollTop / maxCompressedScroll));
   const maxRealScroll = Math.max(0, geometry.realHeight - viewportHeight);
-  const realScrollTop = geometry.scaled ? fraction * maxRealScroll : scrollTop;
+  const compressedScrollTop = Math.min(maxCompressedScroll, Math.max(0, scrollTop));
+  const realScrollTop = geometry.scaled ? fraction * maxRealScroll : Math.min(compressedScrollTop, maxRealScroll);
 
-  const firstVisible = Math.floor(realScrollTop / rowHeight);
+  const firstVisible = Math.min(totalRows - 1, Math.floor(realScrollTop / rowHeight));
+  const lastVisible = Math.max(firstVisible, Math.min(totalRows - 1, Math.ceil((realScrollTop + viewportHeight) / rowHeight) - 1));
   const visibleCount = Math.ceil(viewportHeight / rowHeight);
-  const startIndex = Math.max(0, firstVisible - overscan);
-  const endIndex = Math.min(totalRows - 1, firstVisible + visibleCount + overscan);
+  // Row i belongs at compressed offset blockShift + i * rowHeight. Near either
+  // end of a scaled spacer some overscan rows would fall outside it; drop them
+  // instead of clamping the block, which would shift the visible rows.
+  const blockShift = compressedScrollTop - realScrollTop;
+  const startIndex = Math.min(firstVisible, Math.max(0, firstVisible - overscan, Math.ceil(-blockShift / rowHeight)));
+  const endIndex = Math.max(lastVisible, Math.min(
+    totalRows - 1,
+    firstVisible + visibleCount + overscan,
+    Math.floor((geometry.spacerHeight - blockShift) / rowHeight) - 1
+  ));
 
-  // Position the rendered block in compressed space. The browser's scrollTop
-  // already moved the viewport; the block is offset so row startIndex sits at
-  // the right place. In compressed space the block's natural top is
-  // (startIndex * rowHeight) / scale.
-  const offsetPx = (startIndex * rowHeight) / geometry.scale;
+  const blockHeight = (endIndex - startIndex + 1) * rowHeight;
+  const offsetPx = Math.max(0, Math.min(
+    blockShift + startIndex * rowHeight,
+    Math.max(0, geometry.spacerHeight - blockHeight)
+  ));
 
   return { startIndex, endIndex, offsetPx, realScrollTop };
 }
 
 /**
  * Inverse of {@link computeScaledWindow}: given a target row, return the
- * compressed scrollTop to set so that row is brought to the top of the
- * viewport. Used by scrollToIndex and keyboard paging. O(1).
+ * compressed scrollTop to set so that row is brought into the viewport.
+ * Used by scrollToIndex and keyboard paging. O(1).
  *
  * @param rowIndex - The row to scroll to.
  * @param geometry - Output of {@link computeScaledGeometry}.
  * @param config - The same dataset config passed to computeScaledGeometry.
+ * @param align - Where to position the row within the viewport. Default: 'start'.
  * @returns The scrollTop value to set on the container (compressed space).
  */
 export function scrollTopForRowScaled(
   rowIndex: number,
   geometry: IScaledSpacerGeometry,
-  config: IScaledSpacerConfig
+  config: IScaledSpacerConfig,
+  align: 'start' | 'center' | 'end' = 'start'
 ): number {
-  const realTop = Math.max(0, rowIndex) * config.rowHeight;
+  const realTop = getScrollTopForRow(Math.max(0, rowIndex), config.rowHeight, config.viewportHeight, align);
   const maxCompressedScroll = Math.max(0, geometry.spacerHeight - config.viewportHeight);
   if (!geometry.scaled) return Math.min(realTop, maxCompressedScroll);
   const maxRealScroll = Math.max(1, geometry.realHeight - config.viewportHeight);

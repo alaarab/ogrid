@@ -13,10 +13,9 @@ export const GRID_ROOT_STYLE: React.CSSProperties = { position: 'relative', flex
  *
  * Identical to `GRID_ROOT_STYLE` but with a `minHeight` floor. Virtual scroll
  * needs the scroll container to measure a non-zero height — TanStack returns an
- * empty visible range when the scroll element is 0px tall. Inside `OGrid` (or
- * any height-providing flex parent) `flex: 1` stretches the root to fill and
- * this floor is inert; mounted standalone with no height source, the floor
- * keeps the grid from collapsing to its header height.
+ * empty visible range when the scroll element is 0px tall. OGridLayout
+ * overrides the floor to zero so short flex containers can shrink. Mounted
+ * standalone with no height source, the floor prevents header-only collapse.
  *
  * Override the floor with the `--ogrid-virtual-scroll-min-height` CSS variable.
  */

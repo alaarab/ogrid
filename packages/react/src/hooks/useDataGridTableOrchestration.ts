@@ -1,4 +1,4 @@
-import { useCallback, useRef, useMemo, useEffect } from 'react';
+import { useCallback, useRef, useMemo, useEffect, useLayoutEffect } from 'react';
 import type { RefObject } from 'react';
 import { formatCellReference } from '../utils';
 import type { DelegatedCellHandlers } from '../utils';
@@ -213,9 +213,14 @@ export function useDataGridTableOrchestration<T>(
   const wrapperRef = useRef<HTMLDivElement>(null);
   const tableContainerRef = useRef<HTMLDivElement>(null);
   const lastMouseShiftRef = useRef(false);
+  const scrollToIndexRef = useRef<UseVirtualScrollResult['scrollToIndex'] | null>(null);
 
   // ── Core state ──────────────────────────────────────────────────────────
-  const state = useDataGridState({ props, wrapperRef });
+  const state = useDataGridState({
+    props,
+    wrapperRef,
+    scrollToIndexRef: props.virtualScroll?.enabled || props.windowed ? scrollToIndexRef : undefined,
+  });
 
   const { layout, rowSelection: rowSel, editing, interaction, contextMenu: ctxMenu, viewModels, pinning } = state;
   const {
@@ -303,7 +308,7 @@ export function useDataGridTableOrchestration<T>(
   // A windowed (lazy) data source is always virtualized — the grid never holds
   // its full dataset — so it enables virtual scrolling regardless of the prop.
   const virtualScrollEnabled = virtualScroll?.enabled === true || !!windowed;
-  const virtualRowHeight = virtualScroll?.rowHeight ?? 36;
+  const virtualRowHeight = rowHeight ?? virtualScroll?.rowHeight ?? 36;
   const columnVirtualization = virtualScroll?.columns === true;
 
   // Compute unpinned column widths for horizontal virtualization
@@ -324,17 +329,26 @@ export function useDataGridTableOrchestration<T>(
   // is inherently virtualized, so it forces `enabled` on regardless of the
   // `virtualScroll` prop, and falls back to a threshold of 0.
   const virtualTotalRows = windowed ? windowed.rowCount : items.length;
-  const { visibleRange, columnRange, onHorizontalScroll } = useVirtualScroll({
+  const { visibleRange, columnRange, onHorizontalScroll, scrollToIndex } = useVirtualScroll({
     totalRows: virtualTotalRows,
     rowHeight: virtualRowHeight,
     enabled: virtualScrollEnabled,
     overscan: virtualScroll?.overscan,
     threshold: windowed ? 0 : virtualScroll?.threshold,
     containerRef: wrapperRef,
+    stickyHeader,
     columnVirtualization,
     columnWidths: unpinnedColumnWidths,
     columnOverscan: virtualScroll?.columnOverscan,
   });
+  scrollToIndexRef.current = scrollToIndex;
+
+  const scrollToRowRef = props.scrollToRowRef;
+  useLayoutEffect(() => {
+    if (!scrollToRowRef) return;
+    scrollToRowRef.current = (index, options) => scrollToIndex(index, options?.align ?? 'start');
+    return () => { scrollToRowRef.current = null; };
+  }, [scrollToRowRef, scrollToIndex]);
 
   // Fetch the visible window from a windowed data source as the viewport moves.
   // `getRow` only reads cache; `requestWindow` is what drives the background

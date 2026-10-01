@@ -16,6 +16,18 @@ const data: Row[] = [
 ];
 
 describe('useOGrid', () => {
+  it('setSelectedRows notifies the controlled selection owner', () => {
+    const ref = React.createRef<IOGridApi<Row>>();
+    const onSelectionChange = jest.fn();
+    renderHook(() => useOGrid<Row>({
+      columns, getRowId, data, selectedRows: new Set(['1']), onSelectionChange,
+    }, ref));
+    act(() => ref.current!.setSelectedRows(['2', '2', '3']));
+    expect(ref.current!.getSelectedRows()).toEqual(['1']);
+    expect(onSelectionChange).toHaveBeenCalledWith({
+      selectedRowIds: ['2', '3'], selectedItems: [data[1], data[2]],
+    });
+  });
   it('returns dataGridProps with items and displayTotalCount (client-side)', () => {
     const ref = React.createRef<IOGridApi<Row>>();
     const { result } = renderHook(
