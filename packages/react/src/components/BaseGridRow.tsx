@@ -88,6 +88,7 @@ function GridRowInner(props: BaseGridRowProps) {
           selectionRange,
           activeCell,
           cutRange,
+          colOffset: leadingColCount,
         });
         // Compute background override only when the cell has state.
         // For the ~99% of cells outside any selection/cut range this is

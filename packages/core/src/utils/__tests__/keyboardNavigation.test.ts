@@ -1,4 +1,5 @@
-import { findCtrlArrowTarget, computeTabNavigation } from '../keyboardNavigation';
+import { findCtrlArrowTarget, computeTabNavigation, computeArrowNavigation, getOppositeCorner } from '../keyboardNavigation';
+import type { ArrowNavigationContext } from '../keyboardNavigation';
 
 /** Build an isEmpty predicate from a set of non-empty indices. */
 function nonEmptyAt(...indices: number[]): (i: number) => boolean {
@@ -89,5 +90,63 @@ describe('computeTabNavigation', () => {
 
   it('stays put at the very first cell with shift', () => {
     expect(computeTabNavigation(0, 1, 9, 5, 1, true)).toEqual({ rowIndex: 0, columnIndex: 1 });
+  });
+});
+
+describe('getOppositeCorner', () => {
+  const range = { startRow: 2, startCol: 1, endRow: 5, endCol: 3 };
+
+  it('returns the diagonally opposite corner for each corner', () => {
+    expect(getOppositeCorner(range, 2, 1)).toEqual({ row: 5, col: 3 });
+    expect(getOppositeCorner(range, 5, 3)).toEqual({ row: 2, col: 1 });
+    expect(getOppositeCorner(range, 5, 1)).toEqual({ row: 2, col: 3 });
+  });
+
+  it('treats a reversed (un-normalized) range the same', () => {
+    expect(getOppositeCorner({ startRow: 5, startCol: 3, endRow: 2, endCol: 1 }, 2, 1)).toEqual({ row: 5, col: 3 });
+  });
+
+  it('collapses to the cell itself with no range or a cell outside it', () => {
+    expect(getOppositeCorner(null, 4, 4)).toEqual({ row: 4, col: 4 });
+    expect(getOppositeCorner(range, 9, 0)).toEqual({ row: 9, col: 0 });
+  });
+});
+
+describe('computeArrowNavigation Shift-extend anchor', () => {
+  const base: ArrowNavigationContext = {
+    direction: 'ArrowUp',
+    rowIndex: 5, columnIndex: 2, dataColIndex: 2, colOffset: 0,
+    maxRowIndex: 9, maxColIndex: 5, visibleColCount: 6,
+    isCtrl: false, isShift: true,
+    selectionRange: null,
+    isEmptyAt: () => false,
+  };
+
+  it('repeated Shift+Up grows the range instead of sliding it (moving end passed as position)', () => {
+    let ctx = { ...base };
+    for (let i = 0; i < 3; i++) {
+      const res = computeArrowNavigation(ctx);
+      ctx = { ...ctx, rowIndex: res.newRowIndex, selectionRange: res.newRange };
+    }
+    expect(ctx.selectionRange).toEqual({ startRow: 2, startCol: 2, endRow: 5, endCol: 2 });
+  });
+
+  it('repeated Shift+Left grows the range leftward', () => {
+    let ctx: ArrowNavigationContext = { ...base, direction: 'ArrowLeft' };
+    for (let i = 0; i < 2; i++) {
+      const res = computeArrowNavigation(ctx);
+      ctx = { ...ctx, columnIndex: res.newColumnIndex, dataColIndex: res.newDataColIndex, selectionRange: res.newRange };
+    }
+    expect(ctx.selectionRange).toEqual({ startRow: 5, startCol: 0, endRow: 5, endCol: 2 });
+  });
+
+  it('uses an explicit anchor when given', () => {
+    const res = computeArrowNavigation({
+      ...base,
+      rowIndex: 3,
+      selectionRange: { startRow: 3, startCol: 2, endRow: 5, endCol: 2 },
+      anchor: { rowIndex: 5, dataColIndex: 2 },
+    });
+    expect(res.newRange).toEqual({ startRow: 2, startCol: 2, endRow: 5, endCol: 2 });
   });
 });

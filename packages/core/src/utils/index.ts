@@ -97,7 +97,7 @@ export type { OverlayRect } from './dom';
 export { computeNextSortState } from './sortHelpers';
 export type { ISortState } from './sortHelpers';
 export { measureColumnContentWidth, estimateHeaderMinWidth, AUTOSIZE_EXTRA_PX, AUTOSIZE_MAX_PX } from './columnAutosize';
-export { findCtrlArrowTarget, computeTabNavigation, computeArrowNavigation, applyCellDeletion } from './keyboardNavigation';
+export { findCtrlArrowTarget, computeTabNavigation, computeArrowNavigation, applyCellDeletion, getOppositeCorner } from './keyboardNavigation';
 export type { ArrowNavigationContext, ArrowNavigationResult } from './keyboardNavigation';
 export { rangesEqual, clampSelectionToBounds, computeAutoScrollSpeed, applyRangeRowSelection, computeRowSelectionState } from './selectionHelpers';
 export {

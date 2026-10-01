@@ -65,3 +65,18 @@ describe('getGridCellSurfaceState', () => {
     });
   });
 });
+
+describe('getGridCellSurfaceState with leading columns', () => {
+  const range = { startRow: 0, startCol: 0, endRow: 2, endCol: 2 };
+  // activeCell.columnIndex includes the checkbox column (colOffset 1); data column 0 is global column 1.
+  const activeCell = { rowIndex: 0, columnIndex: 1 };
+
+  it('marks the anchor cell, not the cell to its right, when colOffset > 0', () => {
+    const at = (columnIndex: number) =>
+      getGridCellSurfaceState({ rowIndex: 0, columnIndex, selectionRange: range, activeCell, cutRange: null, colOffset: 1 });
+    expect(at(0).isActiveRangeCell).toBe(true);
+    expect(at(0).isRangeCell).toBe(false);
+    expect(at(1).isActiveRangeCell).toBe(false);
+    expect(at(1).isRangeCell).toBe(true);
+  });
+});

@@ -10,6 +10,11 @@ export interface UseCellSelectionParams {
   visibleColCount: number;
   setActiveCell: (cell: IActiveCell | null) => void;
   wrapperRef: React.RefObject<HTMLElement | null>;
+  /**
+   * Current active cell. Shift+click extends from it (the selection anchor) and
+   * leaves it in place. Without it, Shift+click extends from the range's start.
+   */
+  activeCell?: IActiveCell | null;
 }
 
 export interface UseCellSelectionResult {
@@ -34,10 +39,11 @@ const AUTO_SCROLL_EDGE = 40;   // px from wrapper edge to trigger
  * @returns Selection range, setters, mouse/keyboard handlers, and drag state.
  */
 export function useCellSelection(params: UseCellSelectionParams): UseCellSelectionResult {
-  const { colOffset, rowCount, visibleColCount, setActiveCell, wrapperRef } = params;
+  const { colOffset, rowCount, visibleColCount, setActiveCell, wrapperRef, activeCell } = params;
 
   // Use ref for colOffset to prevent drag restart mid-drag when colOffset changes
   const colOffsetRef = useLatestRef(colOffset);
+  const activeCellRef = useLatestRef(activeCell);
 
   const [selectionRange, _setSelectionRange] = useState<ISelectionRange | null>(null);
   const isDraggingRef = useRef(false);
@@ -73,15 +79,19 @@ export function useCellSelection(params: UseCellSelectionParams): UseCellSelecti
       const dataColIndex = globalColIndex - colOff;
       const currentRange = selectionRangeRef.current;
       if (e.shiftKey && currentRange != null) {
+        // Extend from the anchor (the active cell), not the normalized range's
+        // top-left corner, and keep the anchor active (Excel behavior).
+        const anchor = activeCellRef.current;
+        const hasAnchor = anchor != null && anchor.columnIndex >= colOff;
         setSelectionRange(
           normalizeSelectionRange({
-            startRow: currentRange.startRow,
-            startCol: currentRange.startCol,
+            startRow: hasAnchor ? anchor.rowIndex : currentRange.startRow,
+            startCol: hasAnchor ? anchor.columnIndex - colOff : currentRange.startCol,
             endRow: rowIndex,
             endCol: dataColIndex,
           })
         );
-        setActiveCell({ rowIndex, columnIndex: globalColIndex });
+        if (!hasAnchor) setActiveCell({ rowIndex, columnIndex: globalColIndex });
       } else {
         dragStartRef.current = { row: rowIndex, col: dataColIndex };
         dragMovedRef.current = false;
@@ -107,7 +117,7 @@ export function useCellSelection(params: UseCellSelectionParams): UseCellSelecti
         applyDragAttrsRef.current?.(initial);
       }
     },
-    [setActiveCell, colOffsetRef, setSelectionRange]
+    [setActiveCell, colOffsetRef, activeCellRef, setSelectionRange]
   );
 
   const handleSelectAllCells = useCallback(() => {

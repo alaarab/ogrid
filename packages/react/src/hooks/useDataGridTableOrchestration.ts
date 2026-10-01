@@ -400,6 +400,8 @@ export function useDataGridTableOrchestration<T>(
         h.handleLongPressStart?.(e);
       },
       onClick: (e: React.MouseEvent) => {
+        // Shift+click extended the range on pointerdown; the anchor stays active.
+        if (e.shiftKey) return;
         const cell = parseCell(e);
         if (!cell) return;
         interactionHandlersRef.current.setActiveCell({ rowIndex: cell.row, columnIndex: cell.col });
