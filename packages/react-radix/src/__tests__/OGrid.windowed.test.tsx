@@ -90,6 +90,8 @@ describe('OGrid with a windowed data source', () => {
     filters?: IFilters;
     gridRef?: React.Ref<IOGridApi<Row>>;
     statusBar?: boolean;
+    rowSelection?: 'single' | 'multiple';
+    onSelectionChange?: (e: { selectedRowIds: (string | number)[] }) => void;
   }) {
     return (
       <OGrid<Row>
@@ -102,6 +104,8 @@ describe('OGrid with a windowed data source', () => {
         filters={props.filters ?? NO_FILTERS}
         onFiltersChange={() => {}}
         statusBar={props.statusBar}
+        rowSelection={props.rowSelection}
+        onSelectionChange={props.onSelectionChange}
       />
     );
   }
@@ -180,6 +184,28 @@ describe('OGrid with a windowed data source', () => {
       fireEvent.keyDown(grid, { key: 'c', ctrlKey: true });
     });
     await waitFor(() => expect(writeText).toHaveBeenCalledWith('Name 002'));
+  });
+
+  it('single row selection works on a row loaded after unloaded ones', async () => {
+    const { source, windowCalls } = makeSource(makeRows('Name', 1000));
+    const onSelectionChange = jest.fn();
+    const { container } = render(<Grid source={source} rowSelection="single" onSelectionChange={onSelectionChange} />);
+    await waitFor(() => expect(firstColumnTexts(container)[0]).toBe('Name 000'));
+
+    // Scroll to the end: the last block loads while the rows in between stay
+    // unloaded, so the loaded-rows array has holes before the clicked row.
+    const scroller = container.querySelector('[role="region"]') as HTMLElement;
+    act(() => {
+      scroller.scrollTop = 999 * 36;
+      fireEvent.scroll(scroller);
+    });
+    await waitFor(() => expect(windowCalls.some((c) => c.end >= 1000)).toBe(true));
+    await waitFor(() => expect(firstColumnTexts(container)).toContain('Name 999'));
+    const target = container.querySelector('tbody tr[data-row-id="999"]') as HTMLElement;
+    expect(container.querySelector('tbody tr[data-row-id="500"]')).toBeNull();
+
+    fireEvent.click(target);
+    expect(onSelectionChange).toHaveBeenLastCalledWith(expect.objectContaining({ selectedRowIds: [999] }));
   });
 
   it('hides pagination and does not offset row indices by page', async () => {

@@ -143,3 +143,38 @@ describe('useRowSelection shift-click anchor', () => {
     expect(Array.from(result.current.selectedRowIds).sort()).toEqual(['a', 'd']);
   });
 });
+
+describe('useRowSelection over a sparse (windowed) rows array', () => {
+  type R = { id: number };
+  const getRowId = (r: R) => r.id;
+  // Windowed sources pass loaded rows at their absolute index, with holes for
+  // rows that haven't loaded yet.
+  const sparse = (): R[] => {
+    const rows: R[] = [];
+    rows.length = 10;
+    rows[2] = { id: 2 };
+    rows[3] = { id: 3 };
+    rows[7] = { id: 7 };
+    return rows;
+  };
+
+  it('header select-all selects only the loaded rows', () => {
+    const { result } = renderHook(() =>
+      useRowSelection<R>({ items: sparse(), getRowId, rowSelection: 'multiple', controlledSelectedRows: undefined, onSelectionChange: undefined })
+    );
+    act(() => result.current.handleSelectAll(true));
+    expect(Array.from(result.current.selectedRowIds).sort()).toEqual([2, 3, 7]);
+    act(() => result.current.handleSelectAll(false));
+    expect(result.current.selectedRowIds.size).toBe(0);
+  });
+
+  it('shift-click resolves its anchor past unloaded rows', () => {
+    const rows = sparse();
+    const { result } = renderHook(() =>
+      useRowSelection<R>({ items: rows, getRowId, rowSelection: 'multiple', controlledSelectedRows: undefined, onSelectionChange: undefined })
+    );
+    act(() => { result.current.handleRowCheckboxChange(7, true, 7, false); });
+    act(() => { result.current.handleRowCheckboxChange(2, true, 2, true); });
+    expect(Array.from(result.current.selectedRowIds).sort()).toEqual([2, 3, 7]);
+  });
+});
