@@ -9,3 +9,4 @@ export { createOGridTests } from './oGridTestFactory';
 export { createColumnGroupTests } from './columnGroupTestFactory';
 export { createSideBarTests } from './sideBarTestFactory';
 export { createRowMemoTests, createRowMemoOGridTests } from './rowMemoTestFactory';
+export { createColumnModelTests } from './columnModelTestFactory';

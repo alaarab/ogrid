@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import type { RefObject } from 'react';
 import type { IColumnDef } from '../types';
-import { CHECKBOX_COLUMN_WIDTH, CELL_PADDING, estimateHeaderMinWidth } from '@alaarab/ogrid-core';
+import { CHECKBOX_COLUMN_WIDTH, CELL_PADDING, ROW_NUMBER_COLUMN_ID, estimateHeaderMinWidth } from '@alaarab/ogrid-core';
 
 export interface UseTableLayoutParams<T> {
   wrapperRef: RefObject<HTMLDivElement | null>;
@@ -21,6 +21,21 @@ export interface UseTableLayoutResult {
     React.SetStateAction<Record<string, { widthPx: number }>>
   >;
   onColumnResized?: (columnId: string, width: number) => void;
+}
+
+function toSizingOverrides(widths: Record<string, number> | undefined): Record<string, { widthPx: number }> {
+  const result: Record<string, { widthPx: number }> = {};
+  if (!widths) return result;
+  for (const [id, width] of Object.entries(widths)) {
+    result[id] = { widthPx: width };
+  }
+  return result;
+}
+
+function sameWidths(a: Record<string, number> | undefined, b: Record<string, number> | undefined): boolean {
+  const aKeys = Object.keys(a ?? {});
+  if (aKeys.length !== Object.keys(b ?? {}).length) return false;
+  return aKeys.every((id) => a?.[id] === b?.[id]);
 }
 
 /**
@@ -72,14 +87,29 @@ export function useTableLayout<T>(
   // --- Column sizing overrides state ---
   const [columnSizingOverrides, setColumnSizingOverrides] = useState<
     Record<string, { widthPx: number }>
-  >(() => {
-    if (!initialColumnWidths) return {};
-    const result: Record<string, { widthPx: number }> = {};
-    for (const [id, width] of Object.entries(initialColumnWidths)) {
-      result[id] = { widthPx: width };
+  >(() => toSizingOverrides(initialColumnWidths));
+
+  // Later changes to initialColumnWidths (applyColumnState, a per-sheet width
+  // restore) replace the rendered widths. A change that only echoes back widths
+  // this grid already holds (a resize it just reported through onColumnResized)
+  // is ignored, so the widths locked at the start of a drag survive. Adjusted
+  // during render so the grid never commits a frame with the previous widths.
+  const [prevInitialColumnWidths, setPrevInitialColumnWidths] = useState(initialColumnWidths);
+  if (initialColumnWidths !== prevInitialColumnWidths && !sameWidths(initialColumnWidths, prevInitialColumnWidths)) {
+    setPrevInitialColumnWidths(initialColumnWidths);
+    const next = initialColumnWidths ?? {};
+    const prev = prevInitialColumnWidths ?? {};
+    const isEcho = Object.keys({ ...prev, ...next }).every(
+      (id) => next[id] === prev[id] || (next[id] !== undefined && next[id] === columnSizingOverrides[id]?.widthPx)
+    );
+    if (!isEcho) {
+      const rowNumberOverride = columnSizingOverrides[ROW_NUMBER_COLUMN_ID];
+      setColumnSizingOverrides({
+        ...toSizingOverrides(next),
+        ...(rowNumberOverride ? { [ROW_NUMBER_COLUMN_ID]: rowNumberOverride } : undefined),
+      });
     }
-    return result;
-  });
+  }
 
   // --- Minimum table width calculation ---
   const minTableWidth = useMemo(() => {

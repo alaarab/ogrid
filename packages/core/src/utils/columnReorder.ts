@@ -3,7 +3,10 @@ export type ColumnPinState = 'left' | 'right' | 'unpinned';
 
 /** Result of computing a drop target during column drag. */
 export interface IDropTarget {
-  /** The index in the column order array where the dragged column should be inserted. */
+  /**
+   * The index the dragged column should end up at, i.e. its position after it is
+   * removed from the column order and re-inserted. Pass it to `reorderColumnArray`.
+   */
   targetIndex: number;
   /** X position (px) for the visual drop indicator, or null if dropping at the same position (no-op). */
   indicatorX: number | null;
@@ -57,7 +60,7 @@ export interface ICalculateDropTargetParams {
 /**
  * Calculate the drop target for a dragged column based on mouse position.
  *
- * Iterates visible column header elements (queried via `[data-column-id]`),
+ * Iterates visible column header elements (queried via `th[data-column-id]`),
  * finds the midpoint of each header cell, and determines insertion side.
  * Respects pinning zones: a left-pinned column can only drop among left-pinned, etc.
  *
@@ -69,8 +72,15 @@ export function calculateDropTarget(
   params: ICalculateDropTargetParams
 ): IDropTarget | null {
   const { mouseX, columnOrder, draggedColumnId, draggedPinState, tableElement, pinnedColumns } = params;
-  const headerCells = tableElement.querySelectorAll<HTMLElement>('[data-column-id]');
+  // Header cells only: body cells carry data-column-id too, and measuring every
+  // one of them on each drag frame is O(rows x cols).
+  const headerCells = tableElement.querySelectorAll<HTMLElement>('th[data-column-id]');
   if (headerCells.length === 0) return null;
+
+  const orderIndexById = new Map<string, number>();
+  columnOrder.forEach((id, i) => {
+    orderIndexById.set(id, i);
+  });
 
   // Build ordered list of header rects for columns in the same pin zone
   const targets: { columnId: string; left: number; right: number; midX: number; orderIndex: number }[] = [];
@@ -83,8 +93,8 @@ export function calculateDropTarget(
     if (pinState !== draggedPinState) return;
 
     const rect = cell.getBoundingClientRect();
-    const orderIndex = columnOrder.indexOf(colId);
-    if (orderIndex === -1) return;
+    const orderIndex = orderIndexById.get(colId);
+    if (orderIndex === undefined) return;
 
     targets.push({
       columnId: colId,
@@ -133,11 +143,15 @@ export function calculateDropTarget(
     indicatorX = match.right;
   }
 
-  // Check if this is a no-op (dropping at same position)
-  const currentIndex = columnOrder.indexOf(draggedColumnId);
+  // targetIndex is a gap in the current order. Check if this is a no-op (the gap
+  // on either side of the dragged column), then convert it to the dragged
+  // column's final index: removing the column first shifts every gap to its
+  // right one slot left.
+  const currentIndex = orderIndexById.get(draggedColumnId) ?? -1;
   if (currentIndex === targetIndex || currentIndex + 1 === targetIndex) {
-    return { targetIndex, indicatorX: null };
+    return { targetIndex: currentIndex, indicatorX: null };
   }
+  if (currentIndex !== -1 && currentIndex < targetIndex) targetIndex--;
 
   return { targetIndex, indicatorX };
 }

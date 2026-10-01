@@ -25,7 +25,7 @@ import { useVirtualScroll } from './useVirtualScroll';
 import { useLatestRef } from './useLatestRef';
 import { useMiddleClickScroll } from './useMiddleClickScroll';
 import { buildHeaderRows } from '../utils';
-import { CellDescriptorCache } from '@alaarab/ogrid-core';
+import { CellDescriptorCache, ROW_NUMBER_COLUMN_ID } from '@alaarab/ogrid-core';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -266,7 +266,12 @@ export function useDataGridTableOrchestration<T>(
 
   // ── Derived values ──────────────────────────────────────────────────────
   const rowNumberOffset = hasRowNumbersCol && propPageSize !== 'all' ? (currentPage - 1) * propPageSize : 0;
-  const headerRows = useMemo(() => buildHeaderRows(columns, visibleColumns), [columns, visibleColumns]);
+  // Build the header from the same ordered, responsive-filtered column list the
+  // body renders, so header cells always sit over their own body columns.
+  const headerRows = useMemo(() => {
+    const ids = visibleCols.map((c) => c.columnId);
+    return buildHeaderRows(columns, new Set(ids), ids);
+  }, [columns, visibleCols]);
   const allowOverflowX = !suppressHorizontalScroll && containerWidth > 0 && (minTableWidth > containerWidth || desiredTableWidth > containerWidth);
   const fitToContent = layoutMode === 'content';
 
@@ -284,14 +289,24 @@ export function useDataGridTableOrchestration<T>(
   }, [interaction.activeCell, rowNumberOffset, colOffset]);
 
   // ── Column resize ──────────────────────────────────────────────────────
+  // Report drag resizes and double-click autosizes so the host (and OGrid's
+  // column state) sees them. The row-number column is grid chrome, not a column.
+  const onColumnResizedRef = useLatestRef(props.onColumnResized);
+  const reportColumnResized = useCallback(
+    (columnId: string, width: number) => {
+      if (columnId !== ROW_NUMBER_COLUMN_ID) onColumnResizedRef.current?.(columnId, width);
+    },
+    [onColumnResizedRef],
+  );
   const { handleResizeStart, handleResizeDoubleClick, getColumnWidth } = useColumnResize<T>({
     columnSizingOverrides,
     setColumnSizingOverrides,
+    onColumnResized: reportColumnResized,
   });
 
   // ── Column reorder ─────────────────────────────────────────────────────
   const { isDragging: isReorderDragging, dropIndicatorX, handleHeaderMouseDown } = useColumnReorder<T>({
-    columns: visibleCols,
+    columns: layout.flatColumns as IColumnDef<T>[],
     columnOrder,
     onColumnOrderChange,
     enabled: columnReorder === true,
