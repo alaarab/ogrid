@@ -61,7 +61,7 @@ describe('DataGridTable leading sticky columns (radix)', () => {
 describe('DataGridTable header menu layering and sort indicator', () => {
   it('layers the portaled header options menu above the fullscreen grid (z-index 9999)', () => {
     renderTable();
-    fireEvent.click(screen.getAllByLabelText('Column options')[0] as HTMLElement);
+    fireEvent.click(screen.getByLabelText('Name column options') as HTMLElement);
     const item = screen.getByText('Sort ascending');
     const menu = item.closest('[style*="position: fixed"]') as HTMLElement;
     expect(menu).not.toBeNull();
@@ -70,7 +70,7 @@ describe('DataGridTable header menu layering and sort indicator', () => {
 
   it('closes the header menu on scroll only when its header has moved', () => {
     renderTable();
-    const trigger = screen.getAllByLabelText('Column options')[0] as HTMLElement;
+    const trigger = screen.getByLabelText('Name column options') as HTMLElement;
     fireEvent.click(trigger);
     expect(screen.queryByText('Sort ascending')).not.toBeNull();
     // A scroll that leaves the header in place (focus on open, unrelated scroller) keeps it open.
