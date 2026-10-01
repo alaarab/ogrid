@@ -427,9 +427,11 @@ export function useDataGridState<T>(
     ]
   );
 
+  // Only the status bar shows aggregations; skip scanning the selection without one.
+  const hasStatusBar = !!statusBar;
   const aggregation = useMemo(
-    () => computeAggregations(items, visibleCols, cellSelection ? selectionRange : null),
-    [items, visibleCols, selectionRange, cellSelection]
+    () => (hasStatusBar ? computeAggregations(items, visibleCols, cellSelection ? selectionRange : null) : null),
+    [hasStatusBar, items, visibleCols, selectionRange, cellSelection]
   );
 
   const statusBarConfig = useMemo(

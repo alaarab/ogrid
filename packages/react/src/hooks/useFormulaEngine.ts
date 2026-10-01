@@ -3,10 +3,11 @@
  *
  * Lazily creates a FormulaEngine instance when `formulas` prop is true.
  * Provides accessor bridge between grid data and formula coordinates.
- * Tree-shakeable: if `formulas` is false, no formula code is loaded.
+ * The engine is instantiated only when `formulas` is true, but its code is
+ * imported statically, so it is bundled with every grid that uses this hook.
  */
 
-import { useRef, useCallback, useEffect } from 'react';
+import { useRef, useCallback, useEffect, useMemo } from 'react';
 import {
   createGridDataAccessor,
   type IGridDataAccessor,
@@ -178,8 +179,8 @@ export function useFormulaEngine<T>(
     return engineRef.current?.getAuditTrail(col, row) ?? null;
   }, []);
 
-  if (!formulas) return NOOP_RESULT;
-  return {
+  // Memoized so consumers' memos keyed on the result don't rebuild every render.
+  const result = useMemo<UseFormulaEngineResult>(() => ({
     getFormulaValue,
     hasFormula,
     getFormula,
@@ -189,5 +190,7 @@ export function useFormulaEngine<T>(
     getDependents,
     getAuditTrail,
     enabled: true,
-  };
+  }), [getFormulaValue, hasFormula, getFormula, setFormula, onCellChanged, getPrecedents, getDependents, getAuditTrail]);
+
+  return formulas ? result : NOOP_RESULT;
 }

@@ -457,12 +457,14 @@ export function useOGridDataFetching<T>(params: UseOGridDataFetchingParams<T>): 
     }
   }, [displayItems.length, onFirstDataRenderedRef]);
 
+  const refreshData = useCallback(() => setRefreshCounter((prev) => prev + 1), []);
+
   return {
     displayItems,
     allFilteredItems,
     displayTotalCount,
     serverLoading,
-    refreshData: () => setRefreshCounter((prev) => prev + 1),
+    refreshData,
     windowed,
   };
 }

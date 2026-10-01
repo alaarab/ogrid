@@ -529,4 +529,48 @@ describe('useCellSelection', () => {
       expect(result.current.isDragging).toBe(false);
     });
   });
+
+  describe('window drag listeners', () => {
+    const DRAG_EVENTS = ['pointermove', 'pointerup', 'pointercancel', 'blur'];
+    const countActive = (add: jest.Mock, remove: jest.Mock) =>
+      DRAG_EVENTS.reduce(
+        (n, type) =>
+          n +
+          add.mock.calls.filter((c) => c[0] === type).length -
+          remove.mock.calls.filter((c) => c[0] === type).length,
+        0,
+      );
+
+    it('attaches window listeners only while a drag is in progress', () => {
+      const add = jest.spyOn(window, 'addEventListener');
+      const remove = jest.spyOn(window, 'removeEventListener');
+      try {
+        const { result, unmount } = renderHook(() =>
+          useCellSelection({ colOffset: 0, rowCount: 5, visibleColCount: 3, setActiveCell, wrapperRef })
+        );
+        // Idle grid (e.g. cellSelection off): no global pointer listeners.
+        expect(countActive(add as jest.Mock, remove as jest.Mock)).toBe(0);
+
+        act(() => {
+          result.current.handleCellMouseDown(
+            { button: 0, shiftKey: false, preventDefault: jest.fn() } as unknown as React.MouseEvent,
+            1,
+            1
+          );
+        });
+        expect(countActive(add as jest.Mock, remove as jest.Mock)).toBe(4);
+
+        act(() => {
+          window.dispatchEvent(new PointerEvent('pointerup', { bubbles: true }));
+        });
+        expect(countActive(add as jest.Mock, remove as jest.Mock)).toBe(0);
+
+        unmount();
+        expect(countActive(add as jest.Mock, remove as jest.Mock)).toBe(0);
+      } finally {
+        add.mockRestore();
+        remove.mockRestore();
+      }
+    });
+  });
 });

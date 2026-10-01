@@ -140,6 +140,38 @@ describe('useDataGridState', () => {
     expect(result.current.viewModels.statusBarConfig).toBeNull();
   });
 
+  // U04: aggregations only feed the status bar, so they must not scan the
+  // selection (one value read per cell) when no status bar is shown.
+  it('does not read selected cell values for aggregation when statusBar is off', () => {
+    const valueGetter = jest.fn((r: Row) => r.score);
+    const props: IOGridDataGridProps<Row> = {
+      ...defaultProps,
+      columns: [
+        { columnId: 'id', name: 'ID' },
+        { columnId: 'name', name: 'Name' },
+        { columnId: 'score', name: 'Score', type: 'numeric', valueGetter },
+      ],
+    };
+    const wrapperRef = { current: document.createElement('div') };
+    const { result } = renderHook(() => useDataGridState<Row>({ props, wrapperRef }));
+    valueGetter.mockClear();
+    act(() => {
+      result.current.interaction.setSelectionRange({ startRow: 0, startCol: 0, endRow: 1, endCol: 2 });
+    });
+    expect(result.current.interaction.selectionRange).not.toBeNull();
+    expect(valueGetter).not.toHaveBeenCalled();
+  });
+
+  it('aggregates the selection when statusBar is on', () => {
+    const props: IOGridDataGridProps<Row> = { ...defaultProps, statusBar: true };
+    const wrapperRef = { current: document.createElement('div') };
+    const { result } = renderHook(() => useDataGridState<Row>({ props, wrapperRef }));
+    act(() => {
+      result.current.interaction.setSelectionRange({ startRow: 0, startCol: 2, endRow: 1, endCol: 2 });
+    });
+    expect(result.current.viewModels.statusBarConfig?.aggregation?.sum).toBe(30);
+  });
+
   it('returns statusBarConfig when statusBar is object', () => {
     const propsWithStatusBar: IOGridDataGridProps<Row> = {
       ...defaultProps,

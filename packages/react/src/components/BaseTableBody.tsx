@@ -38,6 +38,11 @@ export interface BaseTableBodyProps<T> {
   copyRange: GridRowProps['copyRange'];
   isDragging: boolean;
   editingCell: { rowId: string | number; columnId: string } | null;
+  /** Popover editor anchor and pending value; only the editing row receives them. */
+  popoverAnchorEl?: HTMLElement | null;
+  pendingEditorValue?: unknown;
+  /** Formula recalculation counter; a change repaints every row. */
+  formulaVersion?: number;
   pinnedColumns: Record<string, 'left' | 'right'>;
   rowNumWidth?: number;
   styles: DataGridStyles;
@@ -51,7 +56,8 @@ export function BaseTableBody<T>(props: BaseTableBodyProps<T>) {
     renderCellContent, handleSingleRowClick, handleRowCheckboxChange,
     lastMouseShiftRef, hasCheckboxCol, hasRowNumbersCol, rowNumberOffset, ariaRowIndexBase,
     selectionRange, activeCell, cutRange, copyRange, isDragging,
-    editingCell, pinnedColumns, rowNumWidth, styles, primitives,
+    editingCell, popoverAnchorEl, pendingEditorValue, formulaVersion,
+    pinnedColumns, rowNumWidth, styles, primitives,
   } = props;
   const { Tbody } = primitives;
 
@@ -88,6 +94,7 @@ export function BaseTableBody<T>(props: BaseTableBodyProps<T>) {
 
   const renderRow = (item: T, rowIndex: number) => {
     const rowIdStr = getRowId(item);
+    const isEditingRow = editingCell != null && editingCell.rowId === rowIdStr;
     return (
       <GridRow
         key={rowIdStr}
@@ -111,6 +118,9 @@ export function BaseTableBody<T>(props: BaseTableBodyProps<T>) {
         copyRange={copyRange}
         isDragging={isDragging}
         editingRowId={editingCell?.rowId ?? null}
+        popoverAnchorEl={isEditingRow ? popoverAnchorEl : undefined}
+        pendingEditorValue={isEditingRow ? pendingEditorValue : undefined}
+        formulaVersion={formulaVersion}
         leftSpacerWidth={leftSpacerWidth}
         rightSpacerWidth={rightSpacerWidth}
         globalColIndexMap={globalColIndexMap}
