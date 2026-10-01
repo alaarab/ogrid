@@ -549,3 +549,49 @@ describe('useDataGridState', () => {
     expect(result.current.layout.flatColumns.map((c) => c.columnId)).toEqual(['name', 'id', 'score']);
   });
 });
+
+describe('useDataGridState host-managed undo/redo (D03)', () => {
+  const wrapper = ({ children }: { children: React.ReactNode }) => React.createElement(React.Fragment, null, children);
+
+  it('routes onUndo/onRedo to the host callbacks and honours host canUndo/canRedo', () => {
+    const wrapperRef = { current: document.createElement('div') };
+    const onUndo = jest.fn();
+    const onRedo = jest.fn();
+    const { result } = renderHook(
+      () => useDataGridState<Row>({ props: { ...defaultProps, onUndo, onRedo, canUndo: true, canRedo: false }, wrapperRef }),
+      { wrapper }
+    );
+    expect(result.current.interaction.canUndo).toBe(true);
+    expect(result.current.interaction.canRedo).toBe(false);
+    act(() => result.current.interaction.onUndo?.());
+    act(() => result.current.interaction.onRedo?.());
+    expect(onUndo).toHaveBeenCalledTimes(1);
+    expect(onRedo).toHaveBeenCalledTimes(1);
+  });
+
+  it('does not also replay the internal undo stack when the host handles undo', () => {
+    const wrapperRef = { current: document.createElement('div') };
+    const onUndo = jest.fn();
+    const onCellValueChanged = jest.fn();
+    const { result } = renderHook(
+      () => useDataGridState<Row>({ props: { ...defaultProps, editable: true, onCellValueChanged, onUndo }, wrapperRef }),
+      { wrapper }
+    );
+    const item = defaultProps.items[0]!;
+    act(() => result.current.viewModels.cellDescriptorInput.onCellValueChanged?.({ item, columnId: 'name', oldValue: 'Alice', newValue: 'Al', rowIndex: 0 }));
+    expect(onCellValueChanged).toHaveBeenCalledTimes(1);
+    act(() => result.current.interaction.onUndo?.());
+    expect(onUndo).toHaveBeenCalledTimes(1);
+    // The internal stack recorded the edit but must not revert it as well.
+    expect(onCellValueChanged).toHaveBeenCalledTimes(1);
+  });
+
+  it('treats host undo as available when onUndo is given without canUndo', () => {
+    const wrapperRef = { current: document.createElement('div') };
+    const { result } = renderHook(
+      () => useDataGridState<Row>({ props: { ...defaultProps, onUndo: jest.fn() }, wrapperRef }),
+      { wrapper }
+    );
+    expect(result.current.interaction.canUndo).toBe(true);
+  });
+});

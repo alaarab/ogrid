@@ -386,6 +386,18 @@ describe('useOGridDataFetching  -  replacing data of the same length', () => {
     expect(result.current.displayItems.map((r) => r.name)).toEqual(['Xan', 'Sam']);
   });
 
+  it('re-filters when every row object is replaced but ids still match by position', () => {
+    // Polling refresh: same ids, brand-new objects, one row now matches the filter differently.
+    const refreshed = testData.map((r) => (r.id === 2 ? { ...r, name: 'Barbara' } : { ...r }));
+    const { result, rerender } = renderHook(
+      ({ data }) => useOGridDataFetching(makeParams({ displayData: data, stableFilters: filters, getRowId: (r) => r.id })),
+      { initialProps: { data: testData } },
+    );
+    expect(result.current.displayItems.map((r) => r.name)).toEqual(['Alice', 'Charlie', 'Diana']);
+    rerender({ data: refreshed });
+    expect(result.current.displayItems.map((r) => r.name)).toEqual(['Alice', 'Barbara', 'Charlie', 'Diana']);
+  });
+
   it('keeps snapshot order and filter membership after a cell edit', () => {
     const sort = { field: 'age', direction: 'asc' as const };
     const noFilters = {};
@@ -429,5 +441,53 @@ describe('useOGridDataFetching  -  swapping dataSource', () => {
     await waitFor(() => expect(result.current.displayItems).toHaveLength(1));
     await new Promise((r) => setTimeout(r, 50));
     expect(fetchPage.mock.calls.length).toBeLessThanOrEqual(2);
+  });
+});
+
+describe('useOGridDataFetching  -  controlled sort with worker sort (D01)', () => {
+  it('re-sorts when only sort.field/direction change', async () => {
+    const { result, rerender } = renderHook(
+      ({ sort }) => useOGridDataFetching(makeParams({ workerSort: true, sort, stableFilters: noFilters })),
+      { initialProps: { sort: { field: 'age', direction: 'asc' as 'asc' | 'desc' } } },
+    );
+    await waitFor(() => {
+      expect(result.current.displayItems[0]?.name).toBe('Eve');
+    });
+    rerender({ sort: { field: 'age', direction: 'desc' } });
+    await waitFor(() => {
+      expect(result.current.displayItems[0]?.name).toBe('Charlie');
+    });
+  });
+});
+
+describe('useOGridDataFetching  -  worker pending state (D02)', () => {
+  it('reports workerPending until the first worker result lands', async () => {
+    const { result } = renderHook(() => useOGridDataFetching(makeParams({ workerSort: true, stableFilters: noFilters })));
+    expect(result.current.workerPending).toBe(true);
+    await waitFor(() => {
+      expect(result.current.workerPending).toBe(false);
+    });
+    expect(result.current.displayItems).toHaveLength(5);
+  });
+
+  it('is never pending on the sync path', () => {
+    const { result } = renderHook(() => useOGridDataFetching(makeParams()));
+    expect(result.current.workerPending).toBe(false);
+  });
+});
+
+describe('useOGridDataFetching  -  repeated row references (S13)', () => {
+  it('keeps both occurrences and picks up an edit of the first after a sort', () => {
+    const dup = { id: 1, name: 'Dup', age: 10 };
+    const other = { id: 2, name: 'Other', age: 5 };
+    const sort = { field: 'age', direction: 'asc' as const };
+    const { result, rerender } = renderHook(
+      ({ data }) => useOGridDataFetching(makeParams({ displayData: data, sort, sortVersion: 1, stableFilters: noFilters })),
+      { initialProps: { data: [dup, other, dup] as TestRow[] } },
+    );
+    expect(result.current.displayItems.map((r) => r.name)).toEqual(['Other', 'Dup', 'Dup']);
+    const edited = { ...dup, name: 'Edited' };
+    rerender({ data: [edited, other, dup] });
+    expect(result.current.displayItems.map((r) => r.name)).toEqual(['Other', 'Edited', 'Dup']);
   });
 });

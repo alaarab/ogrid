@@ -32,6 +32,14 @@ export interface UseDataGridInteractionParams<T> {
     newValue: unknown;
     rowIndex: number;
   }) => void;
+  /** Host-managed undo. When supplied, Ctrl+Z / the context menu call this instead of the internal stack. */
+  onUndo?: () => void;
+  /** Host-managed redo. When supplied, Ctrl+Y / the context menu call this instead of the internal stack. */
+  onRedo?: () => void;
+  /** Host-managed undo availability; defaults to true when `onUndo` is supplied, else the internal stack. */
+  canUndo?: boolean;
+  /** Host-managed redo availability; defaults to true when `onRedo` is supplied, else the internal stack. */
+  canRedo?: boolean;
   cellSelection: boolean;
   rowSelection?: 'none' | 'single' | 'multiple';
   selectedRowIds: Set<RowId>;
@@ -126,6 +134,10 @@ export function useDataGridInteraction<T>(
     getRowId,
     editable,
     onCellValueChangedProp,
+    onUndo: onUndoProp,
+    onRedo: onRedoProp,
+    canUndo: canUndoProp,
+    canRedo: canRedoProp,
     cellSelection,
     rowSelection,
     selectedRowIds,
@@ -150,6 +162,24 @@ export function useDataGridInteraction<T>(
   // Wrap onCellValueChanged with undo/redo tracking
   const undoRedo = useUndoRedo<T>({ onCellValueChanged: onCellValueChangedProp });
   const onCellValueChanged = undoRedo.onCellValueChanged;
+
+  // Host-supplied undo/redo takes over from the internal stack.
+  const onUndoPropRef = useLatestRef(onUndoProp);
+  const onRedoPropRef = useLatestRef(onRedoProp);
+  const hasHostUndo = onUndoProp != null;
+  const hasHostRedo = onRedoProp != null;
+  const internalUndo = undoRedo.undo;
+  const internalRedo = undoRedo.redo;
+  const undo = useCallback(
+    () => (onUndoPropRef.current ?? internalUndo)(),
+    [onUndoPropRef, internalUndo]
+  );
+  const redo = useCallback(
+    () => (onRedoPropRef.current ?? internalRedo)(),
+    [onRedoPropRef, internalRedo]
+  );
+  const canUndo = canUndoProp ?? (hasHostUndo ? true : undoRedo.canUndo);
+  const canRedo = canRedoProp ?? (hasHostRedo ? true : undoRedo.canRedo);
 
   const {
     selectionRange,
@@ -231,7 +261,7 @@ export function useDataGridInteraction<T>(
   const { handleGridKeyDown } = useKeyboardNavigation({
     data: { items, visibleCols, colOffset, hasCheckboxCol, visibleColumnCount, getRowId },
     state: { activeCell, selectionRange, editingCell, selectedRowIds },
-    handlers: { setActiveCell, setSelectionRange, setEditingCell, handleRowCheckboxChange, handleCopy, handleCut, handlePaste, setContextMenu: setContextMenuPosition, onUndo: undoRedo.undo, onRedo: undoRedo.redo, clearClipboardRanges, beginBatch: undoRedo.beginBatch, endBatch: undoRedo.endBatch },
+    handlers: { setActiveCell, setSelectionRange, setEditingCell, handleRowCheckboxChange, handleCopy, handleCut, handlePaste, setContextMenu: setContextMenuPosition, onUndo: undo, onRedo: redo, clearClipboardRanges, beginBatch: undoRedo.beginBatch, endBatch: undoRedo.endBatch },
     features: { editable, onCellValueChanged, rowSelection: rowSelection ?? 'none', wrapperRef, onKeyDown, fillDown },
   });
 
@@ -253,16 +283,16 @@ export function useDataGridInteraction<T>(
     cutRange: cellSelection ? cutRange : null,
     copyRange: cellSelection ? copyRange : null,
     clearClipboardRanges: cellSelection ? clearClipboardRanges : NOOP,
-    canUndo: undoRedo.canUndo,
-    canRedo: undoRedo.canRedo,
-    onUndo: undoRedo.undo,
-    onRedo: undoRedo.redo,
+    canUndo,
+    canRedo,
+    onUndo: undo,
+    onRedo: redo,
     isDragging: cellSelection ? isDragging : false,
   }), [
     cellSelection, activeCell, setActiveCell, selectionRange, setSelectionRange,
     handleCellMouseDown, handleSelectAllCells, hasCellSelection, handleGridKeyDown,
     handleFillHandleMouseDown, handleCopy, handleCut, handlePaste, cutRange, copyRange,
-    clearClipboardRanges, undoRedo.canUndo, undoRedo.canRedo, undoRedo.undo, undoRedo.redo,
+    clearClipboardRanges, canUndo, canRedo, undo, redo,
     isDragging,
   ]);
 
@@ -275,7 +305,7 @@ export function useDataGridInteraction<T>(
     clearClipboardRanges,
     isDragging,
     onCellValueChanged,
-    canUndo: undoRedo.canUndo,
-    canRedo: undoRedo.canRedo,
+    canUndo,
+    canRedo,
   };
 }

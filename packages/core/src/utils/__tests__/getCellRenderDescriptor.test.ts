@@ -173,6 +173,24 @@ describe('getCellRenderDescriptor  -  mode computation', () => {
     const descriptor = getCellRenderDescriptor(item, col, 0, 0, input);
     expect(descriptor.mode).toBe('editing-popover');
   });
+
+  it('cellEditorPopup: false does not make a custom-editor column non-editable', () => {
+    const col: IColumnDef<TestRow> = {
+      columnId: 'name',
+      name: 'Name',
+      editable: true,
+      cellEditor: FakeVueEditor,
+      cellEditorPopup: false,
+    };
+    const item: TestRow = { id: '1', name: 'Alice' };
+
+    const input = baseInput();
+    input.editingCell = { rowId: '1', columnId: 'name' };
+
+    const descriptor = getCellRenderDescriptor(item, col, 0, 0, input);
+    expect(descriptor.canEditAny).toBe(true);
+    expect(descriptor.mode).toBe('editing-popover');
+  });
 });
 
 describe('getCellRenderDescriptor  -  isActive / isInRange', () => {

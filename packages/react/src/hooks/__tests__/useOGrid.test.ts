@@ -638,9 +638,22 @@ describe('useOGrid', () => {
         apiRef.current!.selectAll();
       });
 
-      // selectAll selects from displayItems (current page only)
-      const selected = apiRef.current!.getSelectedRows();
-      expect(selected.length).toBeGreaterThan(0);
+      // selectAll covers every filtered row, not just the current page
+      expect(apiRef.current!.getSelectedRows()).toHaveLength(testData.length);
+    });
+
+    it('setSelectedRows fires onSelectionChange with the matching items', () => {
+      const onSelectionChange = jest.fn();
+      const { apiRef } = renderUseOGrid({ onSelectionChange });
+
+      act(() => {
+        apiRef.current!.setSelectedRows(['1', '3']);
+      });
+
+      expect(onSelectionChange).toHaveBeenCalledWith({
+        selectedRowIds: ['1', '3'],
+        selectedItems: [testData[0], testData[2]],
+      });
     });
 
     it('exposes deselectAll', () => {
@@ -1095,5 +1108,75 @@ describe('useOGrid', () => {
       rerender({ compare: (a: Row, b: Row) => b.name.localeCompare(a.name) });
       expect(result.current.dataGridProps.items[0]?.name).toBe('Eve');
     });
+  });
+});
+
+describe('useOGrid defaults and status bar', () => {
+  it('does not default-sort by a non-sortable first column (D04)', () => {
+    const unordered: Row[] = [
+      { id: '1', name: 'Zed', age: 1 },
+      { id: '2', name: 'Amy', age: 2 },
+    ];
+    const { result } = renderUseOGrid({
+      data: unordered,
+      columns: [{ columnId: 'name', name: 'Name', sortable: false }],
+    });
+    expect(result.current.dataGridProps.items.map((r) => r.name)).toEqual(['Zed', 'Amy']);
+    expect(result.current.dataGridProps.sortBy).toBe('');
+  });
+
+  it('status bar total counts rows supplied through setRowData (D15)', () => {
+    const apiRef = React.createRef<IOGridApi<Row>>();
+    const props = {
+      columns: testColumns,
+      getRowId,
+      statusBar: true,
+    } as unknown as Parameters<typeof useOGrid<Row>>[0];
+    const { result } = renderHook(() => useOGrid(props, apiRef), { wrapper });
+    act(() => {
+      apiRef.current!.setRowData(testData);
+    });
+    expect(result.current.dataGridProps.statusBar?.totalCount).toBe(testData.length);
+  });
+});
+
+describe('useOGrid data replacement vs edits (D06)', () => {
+  const ageSort = { defaultSortBy: 'age', defaultSortDirection: 'asc' };
+  const rebuildAll = (rows: Row[], age: number) => rows.map((r) => ({ ...r, age }));
+
+  function renderWithData(onCellValueChanged?: jest.Mock) {
+    const apiRef = React.createRef<IOGridApi<Row>>();
+    return renderHook(
+      ({ data }: { data: Row[] }) => useOGrid(makeClientProps({ ...ageSort, data, onCellValueChanged }), apiRef),
+      { wrapper, initialProps: { data: testData } },
+    );
+  }
+
+  it('keeps row order when the host applies grid edits by rebuilding every row', () => {
+    const onCellValueChanged = jest.fn();
+    const { result, rerender } = renderWithData(onCellValueChanged);
+    const before = result.current.dataGridProps.items.map((r) => r.id);
+    expect(before).toEqual(['5', '2', '4', '1', '3']);
+
+    // e.g. select-all + Delete: one event per row, applied as a fresh array of new objects
+    act(() => {
+      for (const [i, item] of result.current.dataGridProps.items.entries()) {
+        result.current.dataGridProps.onCellValueChanged?.({ item, columnId: 'age', oldValue: item.age, newValue: 0, rowIndex: i });
+      }
+    });
+    rerender({ data: rebuildAll(testData, 0) });
+
+    expect(result.current.dataGridProps.items.map((r) => r.id)).toEqual(before);
+    expect(result.current.dataGridProps.items.every((r) => r.age === 0)).toBe(true);
+  });
+
+  it('re-sorts when the host replaces every row without a grid edit', () => {
+    const { result, rerender } = renderWithData();
+    expect(result.current.dataGridProps.items.map((r) => r.id)).toEqual(['5', '2', '4', '1', '3']);
+
+    rerender({ data: rebuildAll(testData, 0) });
+
+    // Equal ages: the stable sort falls back to source order.
+    expect(result.current.dataGridProps.items.map((r) => r.id)).toEqual(['1', '2', '3', '4', '5']);
   });
 });

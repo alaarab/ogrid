@@ -97,3 +97,35 @@ describe('useUndoRedo', () => {
     expect(result.current.canUndo).toBe(true);
   });
 });
+
+describe('useUndoRedo history reset (D23)', () => {
+  const event = { item: { id: '1' }, columnId: 'name', field: 'name', oldValue: 'A', newValue: 'B', rowIndex: 0 };
+
+  it('clear() drops undo and redo history', () => {
+    const onCellValueChanged = jest.fn();
+    const { result } = renderHook(() => useUndoRedo({ onCellValueChanged }));
+    act(() => result.current.onCellValueChanged!(event));
+    expect(result.current.canUndo).toBe(true);
+    act(() => result.current.clear());
+    expect(result.current.canUndo).toBe(false);
+    onCellValueChanged.mockClear();
+    act(() => result.current.undo());
+    expect(onCellValueChanged).not.toHaveBeenCalled();
+  });
+
+  it('applies a changed maxUndoDepth after mount', () => {
+    const onCellValueChanged = jest.fn();
+    const { result, rerender } = renderHook(
+      ({ depth }) => useUndoRedo({ onCellValueChanged, maxUndoDepth: depth }),
+      { initialProps: { depth: 100 } },
+    );
+    act(() => result.current.onCellValueChanged!(event));
+    rerender({ depth: 1 });
+    for (let i = 0; i < 3; i++) act(() => result.current.onCellValueChanged!(event));
+    onCellValueChanged.mockClear();
+    act(() => result.current.undo());
+    act(() => result.current.undo());
+    // Depth 1: only a single undo step is available.
+    expect(onCellValueChanged).toHaveBeenCalledTimes(1);
+  });
+});

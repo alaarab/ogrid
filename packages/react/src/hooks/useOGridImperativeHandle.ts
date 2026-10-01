@@ -75,6 +75,7 @@ export function useOGridImperativeHandle<T>(params: UseOGridImperativeHandlePara
   const filtersRef = useLatestRef(filtersState.filters);
   const effectiveSelectedRowsRef = useLatestRef(effectiveSelectedRows);
   const displayItemsRef = useLatestRef(dataFetchingState.displayItems);
+  const allFilteredItemsRef = useLatestRef(dataFetchingState.allFilteredItems);
   const getRowIdRef = useLatestRef(getRowId);
   const columnsRef = useLatestRef(columns);
   // Depend on the member functions, not the state objects (new literals every render).
@@ -111,10 +112,17 @@ export function useOGridImperativeHandle<T>(params: UseOGridImperativeHandlePara
       setFilterModel: setFilters,
       getSelectedRows: () => Array.from(effectiveSelectedRowsRef.current),
       setSelectedRows: (rowIds: RowId[]) => {
-        if (selectedRows === undefined) setInternalSelectedRows(new Set(rowIds));
+        const ids = new Set(rowIds);
+        if (selectedRows === undefined) setInternalSelectedRows(ids);
+        const pool = allFilteredItemsRef.current.length > 0 ? allFilteredItemsRef.current : displayItemsRef.current;
+        onSelectionChange?.({
+          selectedRowIds: rowIds,
+          selectedItems: pool.filter((item) => ids.has(getRowIdRef.current(item))),
+        });
       },
       selectAll: () => {
-        const items = displayItemsRef.current;
+        // Client-side: every filtered row across pages. Server-side only has the loaded page.
+        const items = allFilteredItemsRef.current.length > 0 ? allFilteredItemsRef.current : displayItemsRef.current;
         const allIds = new Set(items.map((item) => getRowIdRef.current(item)));
         if (selectedRows === undefined) setInternalSelectedRows(allIds);
         onSelectionChange?.({ selectedRowIds: Array.from(allIds), selectedItems: items });
@@ -150,7 +158,7 @@ export function useOGridImperativeHandle<T>(params: UseOGridImperativeHandlePara
     [
       isServerSide, setVisibleColumns, setSort, defaultSortField, defaultSortDirection, setFilters,
       columnOrder, onColumnOrderChange, selectedRows, onSelectionChange, refreshData,
-      columnOrderRef, columnWidthOverridesRef, columnsRef, displayItemsRef,
+      columnOrderRef, columnWidthOverridesRef, columnsRef, displayItemsRef, allFilteredItemsRef,
       effectiveSelectedRowsRef, filtersRef, getRowIdRef, pinnedOverridesRef,
       sortRef, visibleColumnsRef,
       // Stable useState setters (passed as params, so listed explicitly to satisfy

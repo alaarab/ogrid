@@ -383,8 +383,7 @@ function computeCellDescriptor<T>(
     input.editable !== false &&
     colEditable &&
     !!input.onCellValueChanged &&
-    isCustomCellEditor(col.cellEditor) &&
-    col.cellEditorPopup !== false;
+    isCustomCellEditor(col.cellEditor);
   const canEditAny = canEditInline || canEditPopup;
 
   const isEditing =

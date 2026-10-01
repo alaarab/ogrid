@@ -455,11 +455,16 @@ export function useDataGridTableOrchestration<T>(
   // ── Stable row-click handler ───────────────────────────────────────────
   const handleSingleRowClick = useCallback((e: React.MouseEvent<HTMLTableRowElement>) => {
     if (rowSelection !== 'single') return;
-    const rowId = e.currentTarget.dataset.rowId;
-    if (!rowId) return;
+    // dataset values are always strings; resolve the real RowId (may be a number) from the items.
+    const rowIdStr = e.currentTarget.dataset.rowId;
+    if (rowIdStr == null) return;
+    const getId = getRowIdRef.current;
+    const match = itemsRef.current.find((item) => String(getId(item)) === rowIdStr);
+    if (match === undefined) return;
+    const rowId = getId(match);
     const ids = selectedRowIdsRef.current;
     updateSelection(ids.has(rowId) ? new Set() : new Set([rowId]));
-  }, [rowSelection, updateSelection, selectedRowIdsRef]);
+  }, [rowSelection, updateSelection, selectedRowIdsRef, itemsRef, getRowIdRef]);
 
   // ── Return ─────────────────────────────────────────────────────────────
   return {

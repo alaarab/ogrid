@@ -76,7 +76,7 @@ Set `rowSelection` on the `OGrid` component to enable row selection:
 | `'multiple'` | Checkbox column appears. Click checkboxes to toggle. Shift+click for range select. Header checkbox toggles all. |
 
 :::info Row Selection vs Cell Selection
-**Row selection** (this page) selects entire rows using checkboxes. The header checkbox selects or deselects **all rows** at once.
+**Row selection** (this page) selects entire rows using checkboxes. The header checkbox selects or deselects **every row on the current page** at once; selections on other pages are kept.
 
 This is separate from **cell selection** ([Spreadsheet Selection](./spreadsheet-selection)), which selects individual cells using click/drag. Cell selection's **Ctrl+A** shortcut selects all **cells** in the grid, not rows.
 
@@ -88,7 +88,7 @@ You can use both features together -- row selection and cell selection are indep
 In `'multiple'` mode, a checkbox column is prepended to the grid:
 
 - Click a checkbox to toggle that row.
-- Click the header checkbox to select or deselect all visible rows.
+- Click the header checkbox to select or deselect all rows on the current page. Selections on other pages are kept.
 - Hold **Shift** and click a checkbox to select a range of rows from the last clicked row.
 
 ### Controlled Mode
@@ -148,7 +148,7 @@ gridRef.current?.deselectAll();
 |--------|-----------|-------------|
 | `getSelectedRows` | `() => RowId[]` | Returns currently selected row IDs. |
 | `setSelectedRows` | `(rowIds: RowId[]) => void` | Sets selected rows programmatically. |
-| `selectAll` | `() => void` | Selects all rows. |
+| `selectAll` | `() => void` | Selects every row that passes the current filters, across all pages (server-side: the loaded page). |
 | `deselectAll` | `() => void` | Deselects all rows. |
 
 ## Related
