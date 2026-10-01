@@ -26,11 +26,14 @@ export function getCalendarGrid(year: number, month: number): CalendarDay[][] {
   const todayM = today.getMonth();
   const todayD = today.getDate();
 
-  const firstDay = new Date(year, month, 1);
+  // setFullYear avoids the Date constructor mapping years 0-99 to 1900-1999.
+  const firstDay = new Date(2000, 0, 1);
+  firstDay.setFullYear(year, month, 1);
   const startDow = firstDay.getDay(); // 0=Sun
 
   // Start from the Sunday of the first week
-  const startDate = new Date(year, month, 1 - startDow);
+  const startDate = new Date(2000, 0, 1);
+  startDate.setFullYear(year, month, 1 - startDow);
 
   const weeks: CalendarDay[][] = [];
   const cursor = new Date(startDate);
@@ -55,14 +58,19 @@ export function getCalendarGrid(year: number, month: number): CalendarDay[][] {
 
 /** Format a date as YYYY-MM-DD. */
 export function formatDate(year: number, month: number, date: number): string {
+  const y = String(year).padStart(4, '0');
   const m = String(month + 1).padStart(2, '0');
   const d = String(date).padStart(2, '0');
-  return `${year}-${m}-${d}`;
+  return `${y}-${m}-${d}`;
 }
 
-/** Parse a YYYY-MM-DD string into { year, month, date }. Returns null if invalid. */
+/**
+ * Parse a YYYY-MM-DD string into { year, month, date }. Returns null if invalid.
+ * A trailing ISO time (e.g. "2024-06-15T10:30:00Z") is ignored, but other
+ * trailing text is rejected so "2024-01-15garbage" does not parse.
+ */
 export function parseDate(str: string): { year: number; month: number; date: number } | null {
-  const match = str.match(/^(\d{4})-(\d{2})-(\d{2})/);
+  const match = str.match(/^(\d{4})-(\d{2})-(\d{2})(?:[T ].*)?$/);
   if (match?.[1] == null || match[2] == null || match[3] == null) return null;
   const year = parseInt(match[1], 10);
   const month = parseInt(match[2], 10) - 1;

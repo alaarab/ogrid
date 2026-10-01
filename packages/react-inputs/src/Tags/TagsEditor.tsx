@@ -191,12 +191,28 @@ export function TagsEditor<T>(props: ICellEditorProps<T>): React.ReactElement {
   const { value, onValueChange, onCommit, onCancel, cellEditorParams } = props;
 
   const params = cellEditorParams as Record<string, unknown> | undefined;
-  const suggestions = params?.suggestions as string[] | undefined;
+  const rawSuggestions = params?.suggestions as unknown;
   const allowCreate = (params?.allowCreate as boolean | undefined) ?? true;
   const showApplyButton = (params?.showApplyButton as boolean | undefined) ?? true;
 
+  // Accept arrays (and other iterables) but never assume the shape: a Set or a
+  // string here would throw on .filter/.includes during render.
+  const suggestions = React.useMemo<string[] | undefined>(() => {
+    if (rawSuggestions == null) return undefined;
+    if (Array.isArray(rawSuggestions)) return rawSuggestions.map(String);
+    if (typeof rawSuggestions === 'string') return [rawSuggestions];
+    if (typeof (rawSuggestions as { [Symbol.iterator]?: unknown })[Symbol.iterator] === 'function') {
+      return Array.from(rawSuggestions as Iterable<unknown>).map(String);
+    }
+    return undefined;
+  }, [rawSuggestions]);
+
   // Multi-select mode: suggestions provided and allowCreate is false
   const isMultiSelectMode = !!suggestions && !allowCreate;
+
+  // Preserve the stored shape: an array value must not become a joined string
+  // after an edit (which would also corrupt tags containing commas).
+  const emitAsArray = React.useRef(Array.isArray(value));
 
   const [tags, setTags] = React.useState<string[]>(() => parseTags(value));
   const [inputText, setInputText] = React.useState('');
@@ -226,7 +242,7 @@ export function TagsEditor<T>(props: ICellEditorProps<T>): React.ReactElement {
   const updateTags = React.useCallback(
     (newTags: string[]) => {
       setTags(newTags);
-      onValueChange(formatTags(newTags));
+      onValueChange(emitAsArray.current ? newTags : formatTags(newTags));
     },
     [onValueChange],
   );
@@ -267,13 +283,16 @@ export function TagsEditor<T>(props: ICellEditorProps<T>): React.ReactElement {
   );
 
   const handleApply = () => {
+    // Commit text still sitting in the input before applying.
+    if (!isMultiSelectMode && inputText.trim()) {
+      addTag(inputText);
+    }
     onCommit();
   };
 
   const handleClearAll = () => {
     updateTags([]);
     setInputText('');
-    onValueChange('');
     if (!showApplyButton) {
       onCommit();
     }
@@ -293,8 +312,6 @@ export function TagsEditor<T>(props: ICellEditorProps<T>): React.ReactElement {
         const highlighted = filteredSuggestions[highlightedIndex];
         if (showSuggestions && highlightedIndex >= 0 && highlighted !== undefined) {
           toggleTag(highlighted);
-        } else if (!showApplyButton) {
-          onCommit();
         } else {
           onCommit();
         }
@@ -303,17 +320,8 @@ export function TagsEditor<T>(props: ICellEditorProps<T>): React.ReactElement {
       } else if (inputText.trim()) {
         addTag(inputText);
       } else {
-        // Enter with empty input: commit if no apply button, otherwise do nothing
-        if (!showApplyButton) {
-          onCommit();
-        } else {
-          onCommit();
-        }
+        onCommit();
       }
-    } else if (e.key === 'Escape') {
-      e.preventDefault();
-      e.stopPropagation();
-      onCancel();
     } else if (!isMultiSelectMode && (e.key === ',' || e.key === 'Tab')) {
       if (inputText.trim()) {
         e.preventDefault();

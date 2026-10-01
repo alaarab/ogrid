@@ -123,7 +123,10 @@ export function DatePickerEditor<T>(props: ICellEditorProps<T>): React.ReactElem
 
   // Parse initial value
   const initial = React.useMemo(() => {
-    if (value == null) return null;
+    if (value == null || value === '') return null;
+    if (value instanceof Date && !Number.isNaN(value.getTime())) {
+      return { year: value.getFullYear(), month: value.getMonth(), date: value.getDate() };
+    }
     return parseDate(String(value));
   }, [value]);
 
@@ -134,6 +137,7 @@ export function DatePickerEditor<T>(props: ICellEditorProps<T>): React.ReactElem
   const [inputText, setInputText] = React.useState(selectedDate);
   const [hoveredCell, setHoveredCell] = React.useState<string | null>(null);
   const rootRef = React.useRef<HTMLDivElement>(null);
+  const commitTimerRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const grid = React.useMemo(() => getCalendarGrid(viewYear, viewMonth), [viewYear, viewMonth]);
 
@@ -161,7 +165,7 @@ export function DatePickerEditor<T>(props: ICellEditorProps<T>): React.ReactElem
     setInputText(formatted);
     onValueChange(formatted);
     // Auto-commit on date selection
-    setTimeout(() => onCommit(), 0);
+    commitTimerRef.current = setTimeout(() => onCommit(), 0);
   };
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -169,10 +173,12 @@ export function DatePickerEditor<T>(props: ICellEditorProps<T>): React.ReactElem
     setInputText(text);
     const parsed = parseDate(text);
     if (parsed) {
-      setSelectedDate(formatDate(parsed.year, parsed.month, parsed.date));
+      const formatted = formatDate(parsed.year, parsed.month, parsed.date);
+      setSelectedDate(formatted);
       setViewYear(parsed.year);
       setViewMonth(parsed.month);
-      onValueChange(text);
+      // Emit the canonical date, not the raw text (which may carry a time suffix).
+      onValueChange(formatted);
     }
   };
 
@@ -180,13 +186,12 @@ export function DatePickerEditor<T>(props: ICellEditorProps<T>): React.ReactElem
     if (e.key === 'Enter') {
       e.preventDefault();
       e.stopPropagation();
-      onValueChange(inputText);
+      // Only commit parseable text; refuse raw garbage such as "2024-02-30".
+      const parsed = parseDate(inputText);
+      if (!parsed) return;
+      const formatted = formatDate(parsed.year, parsed.month, parsed.date);
+      onValueChange(formatted);
       onCommit();
-    }
-    if (e.key === 'Escape') {
-      e.preventDefault();
-      e.stopPropagation();
-      onCancel();
     }
   };
 
@@ -209,6 +214,11 @@ export function DatePickerEditor<T>(props: ICellEditorProps<T>): React.ReactElem
       input.focus();
       input.select();
     }
+  }, []);
+
+  // Cancel any pending auto-commit on unmount.
+  React.useEffect(() => () => {
+    if (commitTimerRef.current) clearTimeout(commitTimerRef.current);
   }, []);
 
   // Keyboard navigation for the calendar

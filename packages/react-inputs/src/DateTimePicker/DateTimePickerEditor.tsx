@@ -10,7 +10,8 @@
  *     cellEditorPopup: true,
  *   }];
  *
- * Value format: "YYYY-MM-DD h:mm AM/PM" (e.g. "2024-06-01 2:30 PM")
+ * Value format: "YYYY-MM-DD h:mm AM/PM" (e.g. "2024-06-01 2:30 PM"), or
+ * "YYYY-MM-DD HH:mm" when the stored value is 24-hour.
  * Implements ICellEditorProps<T>  -  works with cellEditorPopup: true.
  */
 import * as React from 'react';
@@ -39,6 +40,23 @@ const rootStyle: React.CSSProperties = {
   padding: '12px',
   width: '300px',
   userSelect: 'none',
+};
+
+const inputRowStyle: React.CSSProperties = {
+  display: 'flex',
+  gap: '6px',
+  marginBottom: '8px',
+};
+
+const inputStyle: React.CSSProperties = {
+  flex: 1,
+  padding: '4px 8px',
+  border: '1px solid var(--ogrid-border, rgba(0,0,0,0.2))',
+  borderRadius: '4px',
+  fontSize: '13px',
+  outline: 'none',
+  background: 'var(--ogrid-bg, #fff)',
+  color: 'inherit',
 };
 
 const headerStyle: React.CSSProperties = {
@@ -172,51 +190,71 @@ export interface DateTimePickerEditorParams {
 export function DateTimePickerEditor<T>(props: ICellEditorProps<T>): React.ReactElement {
   const { value, onValueChange, onCommit, onCancel } = props;
   const params = (props.cellEditorParams ?? {}) as DateTimePickerEditorParams;
-  const minuteStep = params.minuteStep ?? 5;
+  const rawStep = params.minuteStep ?? 5;
+  // A zero/negative/NaN step would loop forever or produce NaN minutes.
+  const minuteStep = Number.isFinite(rawStep) && rawStep >= 1 ? Math.floor(rawStep) : 1;
 
   const today = new Date();
 
-  const parseInitial = () => {
-    const parsed = parseDateTime(String(value ?? ''));
-    if (parsed) return parsed;
-    return {
-      year: today.getFullYear(),
-      month: today.getMonth(),
-      date: today.getDate(),
-      hours: today.getHours(),
-      minutes: Math.floor(today.getMinutes() / minuteStep) * minuteStep,
-    };
-  };
+  // Preserve the stored format: a 24-hour value should not be rewritten as 12-hour.
+  const use24Hour = React.useMemo(() => {
+    const raw = String(value ?? '').trim();
+    return raw !== '' && parseDateTime(value as string | number | Date | null | undefined) !== null && !/am|pm/i.test(raw);
+  }, [value]);
+
+  const parseInitial = () => parseDateTime(value as string | number | Date | null | undefined);
 
   const initial = parseInitial();
+  const base = initial ?? {
+    year: today.getFullYear(),
+    month: today.getMonth(),
+    date: today.getDate(),
+    hours: today.getHours(),
+    minutes: Math.floor(today.getMinutes() / minuteStep) * minuteStep,
+  };
 
-  const [viewYear, setViewYear] = React.useState(initial.year);
-  const [viewMonth, setViewMonth] = React.useState(initial.month);
-  const [selectedDate, setSelectedDate] = React.useState(
-    formatDate(initial.year, initial.month, initial.date)
+  const formatValue = React.useCallback(
+    (dt: { year: number; month: number; date: number; hours: number; minutes: number }) =>
+      formatDateTime(dt, use24Hour),
+    [use24Hour],
   );
-  const [selectedYear, setSelectedYear] = React.useState(initial.year);
-  const [selectedMonth, setSelectedMonth] = React.useState(initial.month);
-  const [selectedDay, setSelectedDay] = React.useState(initial.date);
-  const [time, setTime] = React.useState<TimeValue>({ hours: initial.hours, minutes: initial.minutes });
-  const [ampm, setAmpm] = React.useState<AmPm>(toAmPm(initial.hours));
-  const [hour12, setHour12] = React.useState(toHour12(initial.hours));
+
+  const [viewYear, setViewYear] = React.useState(initial?.year ?? base.year);
+  const [viewMonth, setViewMonth] = React.useState(initial?.month ?? base.month);
+  const [selectedDate, setSelectedDate] = React.useState(
+    initial ? formatDate(initial.year, initial.month, initial.date) : ''
+  );
+  const [selectedYear, setSelectedYear] = React.useState<number | null>(initial?.year ?? null);
+  const [selectedMonth, setSelectedMonth] = React.useState<number | null>(initial?.month ?? null);
+  const [selectedDay, setSelectedDay] = React.useState<number | null>(initial?.date ?? null);
+  const [time, setTime] = React.useState<TimeValue>({ hours: base.hours, minutes: base.minutes });
+  const [ampm, setAmpm] = React.useState<AmPm>(toAmPm(base.hours));
+  const [hour12, setHour12] = React.useState(toHour12(base.hours));
+  const [inputText, setInputText] = React.useState(() => {
+    if (initial) return formatDateTime(initial, use24Hour);
+    return value == null || String(value).trim() === '' ? '' : String(value);
+  });
   const [hoveredCell, setHoveredCell] = React.useState<string | null>(null);
 
   const rootRef = React.useRef<HTMLDivElement>(null);
   const hourColRef = React.useRef<HTMLDivElement>(null);
   const minuteColRef = React.useRef<HTMLDivElement>(null);
+  const commitTimerRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const grid = React.useMemo(() => getCalendarGrid(viewYear, viewMonth), [viewYear, viewMonth]);
   const hourOptions = getHour12Options();
   const minuteOptions = getMinuteOptions(minuteStep);
 
   const buildAndEmit = React.useCallback(
-    (year: number, month: number, date: number, hours: number, minutes: number) => {
-      const formatted = formatDateTime({ year, month, date, hours, minutes });
+    (year: number | null, month: number | null, date: number | null, hours: number, minutes: number) => {
+      // Without a chosen date we must not fabricate one (that would overwrite
+      // an unparseable stored value with today).
+      if (year == null || month == null || date == null) return;
+      const formatted = formatValue({ year, month, date, hours, minutes });
+      setInputText(formatted);
       onValueChange(formatted);
     },
-    [onValueChange]
+    [formatValue, onValueChange]
   );
 
   const prevMonth = () => {
@@ -257,6 +295,36 @@ export function DateTimePickerEditor<T>(props: ICellEditorProps<T>): React.React
     buildAndEmit(selectedYear, selectedMonth, selectedDay, h24, time.minutes);
   };
 
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const text = e.target.value;
+    setInputText(text);
+    const parsed = parseDateTime(text);
+    if (!parsed) return;
+    setViewYear(parsed.year);
+    setViewMonth(parsed.month);
+    setSelectedDate(formatDate(parsed.year, parsed.month, parsed.date));
+    setSelectedYear(parsed.year);
+    setSelectedMonth(parsed.month);
+    setSelectedDay(parsed.date);
+    setTime({ hours: parsed.hours, minutes: parsed.minutes });
+    setHour12(toHour12(parsed.hours));
+    setAmpm(toAmPm(parsed.hours));
+    // Emit so Apply (or a later commit) picks up a valid typed value.
+    onValueChange(formatValue(parsed));
+  };
+
+  const handleInputKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      e.stopPropagation();
+      // Only commit parseable text; refuse raw garbage.
+      const parsed = parseDateTime(inputText);
+      if (!parsed) return;
+      onValueChange(formatValue(parsed));
+      onCommit();
+    }
+  };
+
   const handleNow = () => {
     const now = new Date();
     const year = now.getFullYear();
@@ -275,10 +343,15 @@ export function DateTimePickerEditor<T>(props: ICellEditorProps<T>): React.React
     setHour12(toHour12(hours));
     setAmpm(toAmPm(hours));
     buildAndEmit(year, month, date, hours, minutes);
-    setTimeout(() => onCommit(), 0);
+    commitTimerRef.current = setTimeout(() => onCommit(), 0);
   };
 
   const handleClear = () => {
+    setSelectedDate('');
+    setSelectedYear(null);
+    setSelectedMonth(null);
+    setSelectedDay(null);
+    setInputText('');
     onValueChange('');
     onCommit();
   };
@@ -297,6 +370,17 @@ export function DateTimePickerEditor<T>(props: ICellEditorProps<T>): React.React
     scrollSelected(minuteColRef.current, mIdx >= 0 ? mIdx : 0, minuteOptions.length);
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
+  // Focus the input on mount so the editor is keyboard-operable.
+  React.useEffect(() => {
+    const input = rootRef.current?.querySelector('input');
+    if (input) { input.focus(); input.select(); }
+  }, []);
+
+  // Cancel any pending auto-commit on unmount.
+  React.useEffect(() => () => {
+    if (commitTimerRef.current) clearTimeout(commitTimerRef.current);
+  }, []);
+
   // Escape key
   React.useEffect(() => {
     const el = rootRef.current;
@@ -310,6 +394,19 @@ export function DateTimePickerEditor<T>(props: ICellEditorProps<T>): React.React
     // biome-ignore lint/a11y/noNoninteractiveElementInteractions: popup editor root; onMouseDown only stops propagation so the grid does not treat clicks as outside-clicks. Keyboard is handled by the inner input and a root-level Escape listener.
     // biome-ignore lint/a11y/noStaticElementInteractions: see above — propagation guard, not an interactive control
     <div ref={rootRef} style={rootStyle} onMouseDown={(e) => e.stopPropagation()}>
+      {/* Text input for typing dates/times */}
+      <div style={inputRowStyle}>
+        <input
+          type="text"
+          aria-label="Date and time"
+          value={inputText}
+          onChange={handleInputChange}
+          onKeyDown={handleInputKeyDown}
+          placeholder="YYYY-MM-DD h:mm AM"
+          style={inputStyle}
+        />
+      </div>
+
       {/* Month/year header */}
       <div style={headerStyle}>
         <button type="button" style={headerBtnStyle} onClick={prevMonth} aria-label="Previous month">
@@ -354,6 +451,8 @@ export function DateTimePickerEditor<T>(props: ICellEditorProps<T>): React.React
               onMouseEnter={() => setHoveredCell(key)}
               onMouseLeave={() => setHoveredCell(null)}
               tabIndex={-1}
+              aria-label={`${MONTH_NAMES[day.month]} ${day.date}, ${day.year}`}
+              aria-pressed={isSelected}
             >
               {day.date}
             </button>
