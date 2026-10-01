@@ -73,3 +73,35 @@ describe('useRowSelection', () => {
     expect(result.current.allSelected).toBe(false);
   });
 });
+
+describe('useRowSelection shift-click anchor', () => {
+  const getRowId = (item: { id: string }) => item.id;
+  const a = { id: 'a' };
+  const b = { id: 'b' };
+  const c = { id: 'c' };
+  const d = { id: 'd' };
+
+  it('follows the anchor row by id after the rows are re-sorted', () => {
+    const { result, rerender } = renderHook(
+      ({ items }) => useRowSelection({ items, getRowId, rowSelection: 'multiple', controlledSelectedRows: undefined, onSelectionChange: undefined }),
+      { initialProps: { items: [a, b, c, d] } }
+    );
+    // Click row "b" (index 1), then sort so "b" moves to index 3.
+    act(() => { result.current.handleRowCheckboxChange('b', true, 1, false); });
+    rerender({ items: [d, c, a, b] });
+    // Shift-click "c" (now index 1): range is c..b (indices 1..3), not d..c from the stale index 1.
+    act(() => { result.current.handleRowCheckboxChange('c', true, 1, true); });
+    expect(Array.from(result.current.selectedRowIds).sort()).toEqual(['a', 'b', 'c']);
+  });
+
+  it('falls back to a plain toggle when the anchor row is no longer present', () => {
+    const { result, rerender } = renderHook(
+      ({ items }) => useRowSelection({ items, getRowId, rowSelection: 'multiple', controlledSelectedRows: undefined, onSelectionChange: undefined }),
+      { initialProps: { items: [a, b, c, d] } }
+    );
+    act(() => { result.current.handleRowCheckboxChange('a', true, 0, false); });
+    rerender({ items: [b, c, d] }); // "a" filtered out
+    act(() => { result.current.handleRowCheckboxChange('d', true, 2, true); });
+    expect(Array.from(result.current.selectedRowIds).sort()).toEqual(['a', 'd']);
+  });
+});

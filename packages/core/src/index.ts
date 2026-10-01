@@ -206,7 +206,7 @@ export type { ISortState } from './utils';
 export { measureColumnContentWidth, estimateHeaderMinWidth, AUTOSIZE_EXTRA_PX, AUTOSIZE_MAX_PX } from './utils';
 
 // Utils  -  keyboardNavigation
-export { findCtrlArrowTarget, computeTabNavigation, computeArrowNavigation, applyCellDeletion } from './utils';
+export { findCtrlArrowTarget, computeTabNavigation, computeArrowNavigation, applyCellDeletion, getOppositeCorner } from './utils';
 export type { ArrowNavigationContext, ArrowNavigationResult } from './utils';
 
 // Utils  -  selectionHelpers

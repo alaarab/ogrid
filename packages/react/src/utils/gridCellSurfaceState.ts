@@ -16,10 +16,16 @@ const NO_STATE: GridCellSurfaceState = Object.freeze({
 
 export interface GetGridCellSurfaceStateParams {
   rowIndex: number;
+  /** Data column index (ranges use data indices). */
   columnIndex: number;
   selectionRange: ISelectionRange | null;
   activeCell: IActiveCell | null;
   cutRange: ISelectionRange | null;
+  /**
+   * Leading checkbox/row-number column count. `activeCell.columnIndex` includes
+   * it while `columnIndex` doesn't, so it's added back for the anchor check.
+   */
+  colOffset?: number;
 }
 
 export function getGridCellSurfaceState(
@@ -31,6 +37,7 @@ export function getGridCellSurfaceState(
     selectionRange,
     activeCell,
     cutRange,
+    colOffset = 0,
   } = params;
 
   const isSingleCellSelection =
@@ -45,7 +52,7 @@ export function getGridCellSurfaceState(
 
   const isAnchorCell =
     activeCell?.rowIndex === rowIndex &&
-    activeCell?.columnIndex === columnIndex;
+    activeCell?.columnIndex === columnIndex + colOffset;
 
   const isActiveRangeCell = isInMultiCellSelection && isAnchorCell;
   const isRangeCell = isInMultiCellSelection && !isAnchorCell;

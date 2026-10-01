@@ -163,6 +163,7 @@ export function useDataGridInteraction<T>(
     visibleColCount: visibleCols.length,
     setActiveCell,
     wrapperRef,
+    activeCell,
   });
 
   const { handleCopy, handleCut, handlePaste, cutRange, copyRange, clearClipboardRanges } = useClipboard({

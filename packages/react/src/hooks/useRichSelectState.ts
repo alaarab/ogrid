@@ -25,7 +25,7 @@ export interface UseRichSelectStateResult {
 }
 
 /**
- * Manages searchable rich select editor state with keyboard navigation (arrow keys, enter, escape).
+ * Manages searchable rich select editor state with keyboard navigation (arrow keys, enter, tab, escape).
  * @param params - Values, format function, initial value, and commit/cancel callbacks.
  * @returns Search text, filtered values, highlighted index, keyboard handler, and select function.
  */
@@ -73,6 +73,13 @@ export function useRichSelectState(params: UseRichSelectStateParams): UseRichSel
         case 'Enter':
           e.preventDefault();
           e.stopPropagation();
+          if (filteredValues.length > 0 && highlightedIndex < filteredValues.length) {
+            selectValue(filteredValues[highlightedIndex]);
+          }
+          break;
+        case 'Tab':
+          // Commit like Enter but let Tab bubble so the grid moves to the next cell.
+          e.preventDefault();
           if (filteredValues.length > 0 && highlightedIndex < filteredValues.length) {
             selectValue(filteredValues[highlightedIndex]);
           }
