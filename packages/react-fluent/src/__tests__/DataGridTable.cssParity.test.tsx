@@ -87,7 +87,7 @@ describe('DataGridTable grouped headers with an ungrouped leading column (Fluent
 describe('DataGridTable header menu layering and sort indicator', () => {
   it('layers the portaled header options menu above the fullscreen grid (z-index 9999)', () => {
     renderTable();
-    fireEvent.click(screen.getAllByLabelText('Column options')[0] as HTMLElement);
+    fireEvent.click(screen.getByLabelText('Name column options') as HTMLElement);
     const item = screen.getByText('Sort ascending');
     const menu = item.closest('[style*="position: fixed"]') as HTMLElement;
     expect(menu).not.toBeNull();

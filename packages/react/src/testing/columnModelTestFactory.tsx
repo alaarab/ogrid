@@ -133,7 +133,7 @@ export function createColumnModelTests(OGrid: OGridComponent): void {
       layout = mockLayout();
       const onColumnOrderChange = jest.fn();
       const { container } = renderOGrid({ columnReorder: true, onColumnOrderChange });
-      const menuButton = container.querySelector('th[data-column-id="name"] button[aria-label="Column options"]');
+      const menuButton = container.querySelector('th[data-column-id="name"] button[aria-label="Name column options"]');
       if (!menuButton) throw new Error('missing column options button');
       await dragHeader(menuButton, 90, 260);
       expect(onColumnOrderChange).not.toHaveBeenCalled();
