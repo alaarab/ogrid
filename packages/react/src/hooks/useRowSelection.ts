@@ -49,22 +49,26 @@ export function useRowSelection<T>(params: UseRowSelectionParams<T>): UseRowSele
     [controlledSelectedRows, internalSelectedRows]
   );
 
+  // Read items/callback via refs so a data edit (new items array) or an inline
+  // onSelectionChange doesn't recreate these handlers, which every row receives.
+  const itemsRef = useLatestRef(items);
+  const onSelectionChangeRef = useLatestRef(onSelectionChange);
+
   const updateSelection = useCallback(
     (newSelectedIds: Set<RowId>) => {
       if (controlledSelectedRows === undefined) {
         setInternalSelectedRows(newSelectedIds);
       }
-      onSelectionChange?.({
+      onSelectionChangeRef.current?.({
         selectedRowIds: Array.from(newSelectedIds),
-        selectedItems: items.filter((item) => newSelectedIds.has(getRowId(item))),
+        selectedItems: itemsRef.current.filter((item) => newSelectedIds.has(getRowId(item))),
       });
     },
-    [controlledSelectedRows, onSelectionChange, items, getRowId]
+    [controlledSelectedRows, onSelectionChangeRef, itemsRef, getRowId]
   );
 
   // Read selectedRowIds via ref to avoid recreating this callback on every selection change
   const selectedRowIdsRef = useLatestRef(selectedRowIds);
-  const itemsRef = useLatestRef(items);
 
   const handleRowCheckboxChange = useCallback(
     (rowId: RowId, checked: boolean, rowIndex: number, shiftKey: boolean) => {

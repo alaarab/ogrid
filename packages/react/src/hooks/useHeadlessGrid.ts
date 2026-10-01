@@ -53,6 +53,7 @@ import { useOGridSorting, type SortState } from './useOGridSorting';
 import { useOGridFilters } from './useOGridFilters';
 import { useOGridPagination } from './useOGridPagination';
 import { useOGridDataFetching } from './useOGridDataFetching';
+import { useLatestRef } from './useLatestRef';
 
 export type RowId = string | number;
 
@@ -267,9 +268,10 @@ export function useHeadlessGrid<T>(
   );
 
   // ── Sort helpers ───────────────────────────────────────────────────────
+  const { handleSort } = sorting;
   const toggleSort = useCallback(
-    (columnId: string) => sorting.handleSort(columnId),
-    [sorting],
+    (columnId: string) => handleSort(columnId),
+    [handleSort],
   );
 
   const sortIndicator = useCallback(
@@ -281,10 +283,11 @@ export function useHeadlessGrid<T>(
   );
 
   // ── Filter helpers ─────────────────────────────────────────────────────
+  const { handleFilterChange } = filtersHook;
   const setFilter = useCallback(
     (key: string, value: FilterValue | undefined) =>
-      filtersHook.handleFilterChange(key, value),
-    [filtersHook],
+      handleFilterChange(key, value),
+    [handleFilterChange],
   );
 
   // ── Selection (minimal Set-based) ──────────────────────────────────────
@@ -310,13 +313,16 @@ export function useHeadlessGrid<T>(
     [getRowId],
   );
 
+  // Reads the current page through a ref so the callback survives page/data changes.
+  const rowsRef = useLatestRef(rows);
   const selectAllOnPage = useCallback(() => {
+    const pageRows = rowsRef.current;
     setSelectedRowIds((prev) => {
       const next = new Set(prev);
-      for (const row of rows) next.add(getRowId(row));
+      for (const row of pageRows) next.add(getRowId(row));
       return next;
     });
-  }, [rows, getRowId]);
+  }, [rowsRef, getRowId]);
 
   const clearSelection = useCallback(() => setSelectedRowIds(new Set()), []);
 

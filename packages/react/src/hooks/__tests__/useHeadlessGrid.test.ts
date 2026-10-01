@@ -238,6 +238,22 @@ describe('useHeadlessGrid', () => {
     rerender({ sort: { field: 'score', direction: 'desc' } });
     expect(result.current.rows[0].name).toBe('Eve'); // score 95
   });
+
+  it('keeps toggleSort, setFilter and selectAllOnPage stable across unrelated re-renders', () => {
+    const { result, rerender } = renderHook(() => useHeadlessGrid({ columns, data, getRowId }));
+    const first = result.current;
+    rerender();
+    expect(result.current.toggleSort).toBe(first.toggleSort);
+    expect(result.current.setFilter).toBe(first.setFilter);
+    expect(result.current.selectAllOnPage).toBe(first.selectAllOnPage);
+
+    // selectAllOnPage stays stable across page changes and still selects the current page.
+    act(() => result.current.setPageSize(2));
+    act(() => result.current.setPage(2));
+    expect(result.current.selectAllOnPage).toBe(first.selectAllOnPage);
+    act(() => result.current.selectAllOnPage());
+    expect([...result.current.selectedRowIds]).toEqual(['3', '4']);
+  });
 });
 
 describe('useHeadlessGrid allFilteredRows', () => {

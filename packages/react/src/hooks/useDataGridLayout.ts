@@ -207,14 +207,17 @@ export function useDataGridLayout<T>(
     return map;
   }, [visibleCols, columnSizingOverrides, measuredColumnWidths]);
 
+  // Depend on the memoized compute functions, not the pinning result object
+  // (a new literal every render), so offsets and columnMeta stay stable.
+  const { computeLeftOffsets, computeRightOffsets } = pinningResult;
   const leftOffsets = useMemo(
-    () => pinningResult.computeLeftOffsets(visibleCols, columnWidthMap, DEFAULT_MIN_COLUMN_WIDTH, hasCheckboxCol, CHECKBOX_COLUMN_WIDTH),
-    [pinningResult, visibleCols, columnWidthMap, hasCheckboxCol]
+    () => computeLeftOffsets(visibleCols, columnWidthMap, DEFAULT_MIN_COLUMN_WIDTH, hasCheckboxCol, CHECKBOX_COLUMN_WIDTH),
+    [computeLeftOffsets, visibleCols, columnWidthMap, hasCheckboxCol]
   );
 
   const rightOffsets = useMemo(
-    () => pinningResult.computeRightOffsets(visibleCols, columnWidthMap, DEFAULT_MIN_COLUMN_WIDTH),
-    [pinningResult, visibleCols, columnWidthMap]
+    () => computeRightOffsets(visibleCols, columnWidthMap, DEFAULT_MIN_COLUMN_WIDTH),
+    [computeRightOffsets, visibleCols, columnWidthMap]
   );
 
   // Stabilize onColumnSort via ref

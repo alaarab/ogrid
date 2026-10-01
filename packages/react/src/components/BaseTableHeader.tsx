@@ -4,6 +4,7 @@
 import * as React from 'react';
 import { ROW_NUMBER_COLUMN_ID, ROW_NUMBER_COLUMN_WIDTH } from '@alaarab/ogrid-core';
 import { getHeaderFilterConfig, indexToColumnLetter } from '../utils';
+import { useHeaderFilterConfigs } from '../hooks/useHeaderFilterConfigs';
 import type { useColumnMeta } from '../hooks/useColumnMeta';
 import type { UseDataGridTableOrchestrationResult } from '../hooks/useDataGridTableOrchestration';
 import type { IColumnDef, IOGridDataGridProps } from '../types';
@@ -29,6 +30,7 @@ export function BaseTableHeader<T>(props: BaseTableHeaderProps<T>): React.ReactE
     headerFilterInput, headerMenu,
   } = o;
   const { Thead, ColumnHeaderFilter, renderHeaderSelectAll } = primitives;
+  const headerFilterConfigs = useHeaderFilterConfigs(visibleCols, headerFilterInput);
 
   return (
     <Thead className={o.stickyHeader ? styles.stickyHeader : undefined}>
@@ -131,7 +133,7 @@ export function BaseTableHeader<T>(props: BaseTableHeaderProps<T>): React.ReactE
                 onPointerDown={columnReorder ? (e: React.PointerEvent) => handleHeaderMouseDown(col.columnId, e) : undefined}
               >
                 <div className={styles.headerCellContent}>
-                  <ColumnHeaderFilter {...getHeaderFilterConfig(col, headerFilterInput)} />
+                  <ColumnHeaderFilter {...(headerFilterConfigs.get(col.columnId) ?? getHeaderFilterConfig(col, headerFilterInput))} />
                   <button
                     type="button"
                     className={styles.headerMenuTrigger}

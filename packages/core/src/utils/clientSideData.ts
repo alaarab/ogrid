@@ -43,6 +43,8 @@ export function processClientSideData<T>(
   }
 
   // --- Filtering (single-pass: build predicates, then one .filter()) ---
+  // Each predicate reads its cell value inline, so a row rejected by an earlier
+  // filter is never read by later ones (no per-filter whole-dataset caches).
   const predicates: ((row: T) => boolean)[] = [];
 
   for (let i = 0; i < columns.length; i++) {
@@ -59,43 +61,20 @@ export function processClientSideData<T>(
         // valueFormatter on the column def to ensure meaningful string representation.
         if (val.value.length > 0) {
           const allowedSet = new Set(val.value);
-          // Schwartzian transform: pre-compute String() coercion to avoid
-          // repeated conversion inside the filter predicate (same pattern as text/people).
-          const msCache = new Map<T, string>();
-          for (let j = 0; j < data.length; j++) {
-            const row = data[j];
-            if (row === undefined) continue;
-            msCache.set(row, String(getCellValue(row, col)));
-          }
-          predicates.push((r) => allowedSet.has(msCache.get(r) ?? ''));
+          predicates.push((r) => allowedSet.has(String(getCellValue(r, col))));
         }
         break;
       case 'text': {
         const trimmed = val.value.trim();
         if (trimmed) {
           const lower = trimmed.toLowerCase();
-          // Schwartzian transform: pre-compute lowercase strings to avoid
-          // O(n) String() + toLowerCase() inside every filter predicate call.
-          const textCache = new Map<T, string>();
-          for (let j = 0; j < data.length; j++) {
-            const row = data[j];
-            if (row === undefined) continue;
-            textCache.set(row, String(getCellValue(row, col) ?? '').toLowerCase());
-          }
-          predicates.push((r) => (textCache.get(r) ?? '').includes(lower));
+          predicates.push((r) => String(getCellValue(r, col) ?? '').toLowerCase().includes(lower));
         }
         break;
       }
       case 'people': {
         const email = val.value.email.toLowerCase();
-        // Pre-compute lowercase strings for people filter
-        const peopleCache = new Map<T, string>();
-        for (let j = 0; j < data.length; j++) {
-          const row = data[j];
-          if (row === undefined) continue;
-          peopleCache.set(row, String(getCellValue(row, col) ?? '').toLowerCase());
-        }
-        predicates.push((r) => (peopleCache.get(r) ?? '') === email);
+        predicates.push((r) => String(getCellValue(r, col) ?? '').toLowerCase() === email);
         break;
       }
       case 'date': {
@@ -103,15 +82,8 @@ export function processClientSideData<T>(
         // Pre-compute filter boundary timestamps to avoid repeated Date parsing in the filter loop
         const fromTs = dv.from ? new Date(dv.from + 'T00:00:00').getTime() : NaN;
         const toTs = dv.to ? new Date(dv.to + 'T23:59:59.999').getTime() : NaN;
-        // Pre-compute cell timestamps (same pattern as sort) to avoid N Date allocations
-        const dateCache = new Map<T, number>();
-        for (let j = 0; j < data.length; j++) {
-          const row = data[j];
-          if (row === undefined) continue;
-          dateCache.set(row, toDateTimestamp(getCellValue(row, col)));
-        }
         predicates.push((r) => {
-          const cellTs = dateCache.get(r) ?? NaN;
+          const cellTs = toDateTimestamp(getCellValue(r, col));
           if (Number.isNaN(cellTs)) return false;
           if (!Number.isNaN(fromTs) && cellTs < fromTs) return false;
           if (!Number.isNaN(toTs) && cellTs > toTs) return false;
