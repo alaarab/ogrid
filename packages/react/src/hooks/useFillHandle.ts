@@ -155,6 +155,8 @@ export function useFillHandle<T>(
       sourceRange.startCol,
       rows,
       columns,
+      undefined,
+      normalizeSelectionRange(sourceRange),
     );
     if (events.length > 0) onFillCells(events);
     setFillTarget(null);

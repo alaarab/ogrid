@@ -177,3 +177,55 @@ describe('useFillHandleInternal  -  fillDown (Ctrl+D)', () => {
     expect(onCellValueChanged).toHaveBeenCalledTimes(2);
   });
 });
+
+describe('useFillHandleInternal  -  multi-cell source (S01/S11)', () => {
+  type Item = { id: string; a: string; b: string };
+  const items: Item[] = [
+    { id: '1', a: 'a1', b: 'b1' },
+    { id: '2', a: 'a2', b: 'b2' },
+    { id: '3', a: '', b: '' },
+  ];
+  const cols = [
+    { columnId: 'a', name: 'A', editable: true },
+    { columnId: 'b', name: 'B', editable: true },
+  ] as import('../../types').IColumnDef<Item>[];
+
+  it('Ctrl+D copies each column top cell down its own column (not the top-left cell)', () => {
+    const onCellValueChanged = jest.fn();
+    const { result } = renderHook(() =>
+      useFillHandleInternal<Item>({
+        items,
+        visibleCols: cols,
+        onCellValueChanged,
+        selectionRange: { startRow: 0, startCol: 0, endRow: 2, endCol: 1 },
+        setSelectionRange: jest.fn(),
+        setActiveCell: jest.fn(),
+        colOffset: 0,
+        wrapperRef: { current: document.createElement('div') },
+      }),
+    );
+    act(() => result.current.fillDown());
+    const got = onCellValueChanged.mock.calls.map(([e]) => `${e.rowIndex}:${e.columnId}=${e.newValue}`);
+    expect(got).toEqual(['1:a=a1', '1:b=b1', '2:a=a1', '2:b=b1']);
+  });
+
+  it('records the whole source selection and ignores a right-click start', () => {
+    const { result } = renderHook(() =>
+      useFillHandleInternal<Item>({
+        items,
+        visibleCols: cols,
+        onCellValueChanged: jest.fn(),
+        selectionRange: { startRow: 0, startCol: 0, endRow: 1, endCol: 1 },
+        setSelectionRange: jest.fn(),
+        setActiveCell: jest.fn(),
+        colOffset: 0,
+        wrapperRef: { current: document.createElement('div') },
+      }),
+    );
+    const evt = (button: number) => ({ preventDefault: jest.fn(), stopPropagation: jest.fn(), button }) as unknown as React.MouseEvent;
+    act(() => result.current.handleFillHandleMouseDown(evt(2)));
+    expect(result.current.fillDrag).toBeNull();
+    act(() => result.current.handleFillHandleMouseDown(evt(0)));
+    expect(result.current.fillDrag).toEqual({ startRow: 0, startCol: 0, endRow: 1, endCol: 1 });
+  });
+});

@@ -284,3 +284,23 @@ describe('parseTsvClipboard (Excel compatibility)', () => {
     expect(parseTsvClipboard(`${cell}\tnext`)).toEqual([['a "q"\nb', 'next']]);
   });
 });
+
+describe('clipboard formatting edge cases', () => {
+  type R = { secret: string; q: string };
+  const items: R[] = [{ secret: 'hunter2', q: '"quoted"' }];
+
+  it('treats a clipboardFormatter returning "" as final (U15)', () => {
+    const cols = [{ columnId: 'secret', name: 'S', clipboardFormatter: () => '' }] as import('../../types/columnTypes').IColumnDef<R>[];
+    expect(formatSelectionAsTsv(items, cols, { startRow: 0, startCol: 0, endRow: 0, endCol: 0 })).toBe('');
+  });
+
+  it('round-trips values that start and end with quotes (U14)', () => {
+    const cols = [{ columnId: 'q', name: 'Q' }] as import('../../types/columnTypes').IColumnDef<R>[];
+    const tsv = formatSelectionAsTsv(
+      [{ secret: '', q: '"quoted"' }, { secret: '', q: '"x""y"' }],
+      cols,
+      { startRow: 0, startCol: 0, endRow: 1, endCol: 0 },
+    );
+    expect(parseTsvClipboard(tsv)).toEqual([['"quoted"'], ['"x""y"']]);
+  });
+});
