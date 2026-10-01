@@ -144,7 +144,17 @@ export interface CellRenderDescriptorInput<T> {
   onCellValueChanged?: unknown;
   /** True while user is drag-selecting cells  -  hides fill handle during drag. */
   isDragging?: boolean;
-  /** Get the formula engine's computed value for a cell (colIdx, rowIndex). */
+  /**
+   * Formula engine column for a column id (its index in the flat column defs).
+   * When omitted, the formula lookups below use the visible column index.
+   */
+  formulaCol?: (columnId: string) => number;
+  /**
+   * Formula engine (sheet) row for a displayed row. When omitted, the formula
+   * lookups below use the display row index.
+   */
+  formulaRow?: (rowIndex: number) => number;
+  /** Get the formula engine's computed value for a cell (formula col, formula row). */
   getFormulaValue?: (col: number, row: number) => unknown;
   /** Check if a cell has a formula at the given coordinate. */
   hasFormula?: (col: number, row: number) => boolean;
@@ -442,10 +452,13 @@ function computeCellDescriptor<T>(
   // Compute cell value once  -  used in editing and display branches
   const cellValue = getCellValue(item, col);
 
-  // Resolve formula display value: if this cell has a formula, show the computed result
-  const cellHasFormula = input.hasFormula?.(colIdx, rowIndex) ?? false;
+  // Resolve formula display value: if this cell has a formula, show the computed result.
+  // The engine is keyed by flat column + sheet row, not by the cell's place on screen.
+  const formulaCol = input.formulaCol ? input.formulaCol(col.columnId) : colIdx;
+  const formulaRow = input.formulaRow ? input.formulaRow(rowIndex) : rowIndex;
+  const cellHasFormula = formulaCol >= 0 && formulaRow >= 0 && (input.hasFormula?.(formulaCol, formulaRow) ?? false);
   const formulaDisplay = cellHasFormula
-    ? input.getFormulaValue?.(colIdx, rowIndex)
+    ? input.getFormulaValue?.(formulaCol, formulaRow)
     : undefined;
 
   let mode: CellRenderMode = 'display';
@@ -475,7 +488,7 @@ function computeCellDescriptor<T>(
   // When editing a formula cell, show the formula string (e.g. '=SUM(A1:A5)')
   // instead of the raw cell value so users can edit the formula directly.
   const editValue = isEditing && cellHasFormula
-    ? (input.getFormula?.(colIdx, rowIndex) ?? cellValue)
+    ? (input.getFormula?.(formulaCol, formulaRow) ?? cellValue)
     : cellValue;
 
   return {

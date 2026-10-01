@@ -108,6 +108,38 @@ describe('applyFillValues', () => {
       expect(formulaStore.get('0,1')).toBe('=$A$1+B2');
     });
 
+    it('shifts references by the flat column distance when a column between source and target is hidden', () => {
+      // Flat columns A, B (hidden), C: filling right from A onto C is a 2-column shift.
+      const COL_HIDDEN: IColumnDef<Row> = { columnId: 'hidden', name: 'Hidden', editable: true };
+      const COL_C: IColumnDef<Row> = { columnId: 'c', name: 'C', editable: true };
+      const items: Row[] = [{ id: 'src', value: null }];
+      const formulaStore = new Map<string, string>([['0,0', '=A2']]);
+      const formulaOptions: IFillFormulaOptions<Row> = {
+        flatColumns: [COL_A, COL_HIDDEN, COL_C],
+        hasFormula: (col, row) => formulaStore.has(`${col},${row}`),
+        getFormula: (col, row) => formulaStore.get(`${col},${row}`),
+        setFormula: (col, row, formula) => { if (formula) formulaStore.set(`${col},${row}`, formula); },
+      };
+      applyFillValues(makeRange(0, 0, 0, 1), 0, 0, items, [COL_A, COL_C], formulaOptions);
+      expect(formulaStore.get('2,0')).toBe('=C2');
+    });
+
+    it('shifts references by the sheet row distance when rows are sorted', () => {
+      // Display rows 0, 1 show sheet rows 4, 1 (sorted view).
+      const items: Row[] = [{ id: 'src', value: null }, { id: '', value: null }];
+      const formulaStore = new Map<string, string>([['0,0', '=B5*2']]);
+      const formulaOptions: IFillFormulaOptions<Row> = {
+        flatColumns: VISIBLE_COLS,
+        hasFormula: (col, row) => formulaStore.has(`${col},${row}`),
+        getFormula: (col, row) => formulaStore.get(`${col},${row}`),
+        setFormula: (col, row, formula) => { if (formula) formulaStore.set(`${col},${row}`, formula); },
+        formulaRow: (row) => (row === 0 ? 4 : 1),
+      };
+      applyFillValues(makeRange(0, 0, 1, 0), 0, 0, items, VISIBLE_COLS, formulaOptions);
+      // The filled record is sheet row 2, so its formula reads its own row: B2.
+      expect(formulaStore.get('0,1')).toBe('=B2*2');
+    });
+
     it('falls back to normal value fill when formulaOptions provided but source has no formula', () => {
       const items: Row[] = [
         { id: 'hello', value: null },

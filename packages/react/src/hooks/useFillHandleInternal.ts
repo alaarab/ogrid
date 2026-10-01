@@ -214,16 +214,15 @@ export function useFillHandleInternal<T>(params: UseFillHandleInternalParams<T>)
       setSelectionRange(norm);
       setActiveCell({ rowIndex: fillDrag.startRow, columnIndex: fillDrag.startCol + colOffsetRef.current });
 
-      // Apply fill values: tile the original selection over the extension
-      const fillEvents = applyFillValues(norm, fillDrag.startRow, fillDrag.startCol, itemsRef.current, visibleColsRef.current, formulaOptionsRef.current, source);
-      if (fillEvents.length > 0) {
-        beginBatch?.();
-        try {
-          for (const evt of fillEvents) onCellValueChangedRef.current?.(evt);
-        } finally {
-          // Always close the batch, or a throwing handler leaves undo stuck.
-          endBatch?.();
-        }
+      // Apply fill values: tile the original selection over the extension. The
+      // batch also covers formulas the fill writes, so one undo reverts the whole fill.
+      beginBatch?.();
+      try {
+        const fillEvents = applyFillValues(norm, fillDrag.startRow, fillDrag.startCol, itemsRef.current, visibleColsRef.current, formulaOptionsRef.current, source);
+        for (const evt of fillEvents) onCellValueChangedRef.current?.(evt);
+      } finally {
+        // Always close the batch, or a throwing handler leaves undo stuck.
+        endBatch?.();
       }
       setFillDrag(null);
       liveFillRangeRef.current = null;
@@ -293,23 +292,22 @@ export function useFillHandleInternal<T>(params: UseFillHandleInternalParams<T>)
     const range = selectionRangeRef.current;
     if (!range || editable === false || !onCellValueChangedRef.current) return;
     const norm = normalizeSelectionRange(range);
-    // Ctrl+D copies each column's top cell down that column.
-    const fillEvents = applyFillValues(
-      norm,
-      norm.startRow,
-      norm.startCol,
-      itemsRef.current,
-      visibleColsRef.current,
-      formulaOptionsRef.current,
-      { ...norm, endRow: norm.startRow }
-    );
-    if (fillEvents.length > 0) {
-      beginBatch?.();
-      try {
-        for (const evt of fillEvents) onCellValueChangedRef.current(evt);
-      } finally {
-        endBatch?.();
-      }
+    // Ctrl+D copies each column's top cell down that column. The batch also
+    // covers formulas the fill writes, so one undo reverts the whole fill.
+    beginBatch?.();
+    try {
+      const fillEvents = applyFillValues(
+        norm,
+        norm.startRow,
+        norm.startCol,
+        itemsRef.current,
+        visibleColsRef.current,
+        formulaOptionsRef.current,
+        { ...norm, endRow: norm.startRow }
+      );
+      for (const evt of fillEvents) onCellValueChangedRef.current(evt);
+    } finally {
+      endBatch?.();
     }
   }, [editable, beginBatch, endBatch, onCellValueChangedRef, itemsRef, visibleColsRef, formulaOptionsRef]);
 

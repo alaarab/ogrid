@@ -54,6 +54,7 @@ export type {
   IVirtualScrollConfig,
   IColumnReorderConfig,
   ISheetDef,
+  IFormulaCellWriter,
 } from './types';
 export { toUserLike, isInSelectionRange, normalizeSelectionRange, isWindowedDataSource } from './types';
 
@@ -140,6 +141,7 @@ export type {
   UseKeyboardNavigationParams,
   UseUndoRedoResult,
   UseUndoRedoParams,
+  UseUndoRedoFormulaCells,
   UseFillHandleResult,
   UseFillHandleParams,
   UseDataGridStateParams,

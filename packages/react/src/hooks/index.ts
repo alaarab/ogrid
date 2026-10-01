@@ -74,7 +74,7 @@ export type {
   UseKeyboardNavigationParams,
 } from './useKeyboardNavigation';
 export { useUndoRedo } from './useUndoRedo';
-export type { UseUndoRedoResult, UseUndoRedoParams } from './useUndoRedo';
+export type { UseUndoRedoResult, UseUndoRedoParams, UseUndoRedoFormulaCells } from './useUndoRedo';
 export { useDebounce } from './useDebounce';
 // `useFillHandleInternal` (the chrome-coupled DOM-mutation drag-fill used by
 // `<OGrid>`) is intentionally not re-exported from the public barrel. Internal

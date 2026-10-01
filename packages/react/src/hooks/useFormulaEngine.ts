@@ -5,9 +5,12 @@
  * Provides accessor bridge between grid data and formula coordinates.
  * The engine is instantiated only when `formulas` is true, but its code is
  * imported statically, so it is bundled with every grid that uses this hook.
+ *
+ * Coordinates are sheet coordinates: `col` indexes `flatColumns` and `row`
+ * indexes `items` (OGrid passes the full data, not the sorted/filtered page).
  */
 
-import { useRef, useCallback, useEffect, useMemo } from 'react';
+import { useRef, useCallback, useLayoutEffect, useMemo, useState } from 'react';
 import {
   createGridDataAccessor,
   type IGridDataAccessor,
@@ -17,13 +20,13 @@ import {
   type IAuditTrail,
 } from '@alaarab/ogrid-core';
 import type { IColumnDef } from '@alaarab/ogrid-core';
-import { FormulaEngine } from '@alaarab/ogrid-core/formula';
+import { FormulaEngine, FormulaError } from '@alaarab/ogrid-core/formula';
 import { useLatestRef } from './useLatestRef';
 
 export interface UseFormulaEngineParams<T> {
   /** Enable formula support. */
   formulas?: boolean;
-  /** Grid data items. */
+  /** Grid data items. Row N of a formula reference is `items[N]`. */
   items: T[];
   /** Flat leaf columns (for mapping column index ↔ columnId). */
   flatColumns: IColumnDef<T>[];
@@ -31,11 +34,11 @@ export interface UseFormulaEngineParams<T> {
   initialFormulas?: Array<{ col: number; row: number; formula: string }>;
   /** Called when recalculation produces cascading updates. */
   onFormulaRecalc?: (result: IRecalcResult) => void;
-  /** Custom formula functions. */
+  /** Custom formula functions. Memoize the object: a new one rebuilds the engine. */
   formulaFunctions?: Record<string, IFormulaFunction>;
   /** Named ranges: name  to  cell/range reference string. */
   namedRanges?: Record<string, string>;
-  /** Sheet accessors for cross-sheet references. */
+  /** Sheet accessors for cross-sheet references. Pass a new accessor when a sheet's data changes. */
   sheets?: Record<string, IGridDataAccessor>;
 }
 
@@ -48,8 +51,14 @@ export interface UseFormulaEngineResult {
   getFormula: (col: number, row: number) => string | undefined;
   /** Set or clear a formula for a cell. Triggers recalculation. */
   setFormula: (col: number, row: number, formula: string | null) => void;
-  /** Notify the engine that a non-formula cell value changed. Triggers dependent recalc. */
+  /**
+   * Notify the engine that a non-formula cell value changed. Dependents
+   * recalculate after the next render, against the data that render receives,
+   * so they see the new value even when the data owner applies it with setState.
+   */
   onCellChanged: (col: number, row: number) => void;
+  /** Batch form of `onCellChanged`. */
+  onCellsChanged: (cells: ReadonlyArray<{ col: number; row: number }>) => void;
   /** Get all cells that a cell depends on (deep, transitive). */
   getPrecedents: (col: number, row: number) => IAuditEntry[];
   /** Get all cells that depend on a cell (deep, transitive). */
@@ -66,11 +75,31 @@ const NOOP_RESULT: UseFormulaEngineResult = {
   getFormula: () => undefined,
   setFormula: () => {},
   onCellChanged: () => {},
+  onCellsChanged: () => {},
   getPrecedents: () => [],
   getDependents: () => [],
   getAuditTrail: () => null,
   enabled: false,
 };
+
+const NO_SHEETS: Record<string, IGridDataAccessor> = {};
+
+function shallowEqual(a: Record<string, unknown> | undefined, b: Record<string, unknown> | undefined): boolean {
+  if (a === b) return true;
+  const aKeys = Object.keys(a ?? {});
+  if (aKeys.length !== Object.keys(b ?? {}).length) return false;
+  for (const key of aKeys) {
+    if (a?.[key] !== b?.[key]) return false;
+  }
+  return true;
+}
+
+function sameValue(a: unknown, b: unknown): boolean {
+  if (Object.is(a, b)) return true;
+  if (a instanceof FormulaError && b instanceof FormulaError) return a.type === b.type;
+  if (a instanceof Date && b instanceof Date) return a.getTime() === b.getTime();
+  return false;
+}
 
 export function useFormulaEngine<T>(
   params: UseFormulaEngineParams<T>
@@ -93,6 +122,11 @@ export function useFormulaEngine<T>(
 
   // Lazy engine instance  -  persists across renders, created once when formulas is enabled
   const engineRef = useRef<FormulaEngine | null>(null);
+  // Settings the engine was built with: functions and named ranges are read at parse time.
+  const engineSettingsRef = useRef<{
+    formulaFunctions?: Record<string, IFormulaFunction>;
+    namedRanges?: Record<string, string>;
+  }>({});
 
   // Create or destroy engine based on `formulas` prop
   if (formulas && !engineRef.current) {
@@ -100,23 +134,11 @@ export function useFormulaEngine<T>(
       customFunctions: formulaFunctions,
       namedRanges,
     });
+    engineSettingsRef.current = { formulaFunctions, namedRanges };
   } else if (!formulas && engineRef.current) {
     engineRef.current = null;
   }
-
-  // Register sheet accessors
-  useEffect(() => {
-    if (!engineRef.current || !sheets) return;
-    for (const [name, accessor] of Object.entries(sheets)) {
-      engineRef.current.registerSheet(name, accessor);
-    }
-    return () => {
-      if (!engineRef.current || !sheets) return;
-      for (const name of Object.keys(sheets)) {
-        engineRef.current.unregisterSheet(name);
-      }
-    };
-  }, [sheets]);
+  const engine = engineRef.current;
 
   // Create a data accessor that bridges grid data  to  formula coordinates
   const createAccessor = useCallback(
@@ -124,18 +146,96 @@ export function useFormulaEngine<T>(
     [itemsRef, flatColumnsRef],
   );
 
-  // Load initial formulas on first enable
-  const initialLoadedRef = useRef(false);
-  useEffect(() => {
-    if (formulas && engineRef.current && initialFormulas && !initialLoadedRef.current) {
-      initialLoadedRef.current = true;
-      const accessor = createAccessor();
-      const result = engineRef.current.loadFormulas(initialFormulas, accessor);
-      if (result.updatedCells.length > 0) {
-        onFormulaRecalcRef.current?.(result);
+  const report = useCallback((result: IRecalcResult): void => {
+    if (result.updatedCells.length > 0) onFormulaRecalcRef.current?.(result);
+  }, [onFormulaRecalcRef]);
+
+  // Register sheet accessors. Tracks which engine they were registered on, so a
+  // new engine (formulas toggled off and on, or rebuilt below) gets them too.
+  const registeredSheetsRef = useRef<Record<string, IGridDataAccessor>>(NO_SHEETS);
+  const sheetsEngineRef = useRef<FormulaEngine | null>(null);
+  useLayoutEffect(() => {
+    if (!engine) return;
+    const prev = sheetsEngineRef.current === engine ? registeredSheetsRef.current : NO_SHEETS;
+    const next = sheets ?? NO_SHEETS;
+    sheetsEngineRef.current = engine;
+    registeredSheetsRef.current = next;
+    const changed: string[] = [];
+    for (const name of Object.keys(prev)) {
+      if (!(name in next)) {
+        engine.unregisterSheet(name);
+        changed.push(name);
       }
     }
-  }, [formulas, initialFormulas, createAccessor, onFormulaRecalcRef]);
+    for (const [name, accessor] of Object.entries(next)) {
+      if (prev[name] !== accessor) {
+        engine.registerSheet(name, accessor);
+        changed.push(name);
+      }
+    }
+    // Formulas reading an added, replaced or removed sheet must recalculate.
+    if (changed.length === 0) return;
+    const accessor = createAccessor();
+    const updatedCells: IRecalcResult['updatedCells'] = [];
+    for (const name of changed) updatedCells.push(...engine.onSheetChanged(name, accessor).updatedCells);
+    report({ updatedCells });
+  }, [engine, sheets, createAccessor, report]);
+
+  // Load initial formulas once per engine (so again after formulas are toggled off and on)
+  const initialLoadedEngineRef = useRef<FormulaEngine | null>(null);
+  useLayoutEffect(() => {
+    if (!engine || !initialFormulas || initialLoadedEngineRef.current === engine) return;
+    initialLoadedEngineRef.current = engine;
+    report(engine.loadFormulas(initialFormulas, createAccessor()));
+  }, [engine, initialFormulas, createAccessor, report]);
+
+  // New custom functions or named ranges: rebuild the engine and re-parse every
+  // formula against them, keeping the formulas and registered sheets.
+  useLayoutEffect(() => {
+    const current = engineRef.current;
+    if (!current) return;
+    const applied = engineSettingsRef.current;
+    if (shallowEqual(applied.formulaFunctions, formulaFunctions) && shallowEqual(applied.namedRanges, namedRanges)) return;
+    const next = new FormulaEngine({ customFunctions: formulaFunctions, namedRanges });
+    engineSettingsRef.current = { formulaFunctions, namedRanges };
+    for (const [name, accessor] of Object.entries(registeredSheetsRef.current)) next.registerSheet(name, accessor);
+    if (sheetsEngineRef.current === current) sheetsEngineRef.current = next;
+    if (initialLoadedEngineRef.current === current) initialLoadedEngineRef.current = next;
+    engineRef.current = next;
+    const result = next.loadFormulas(current.getAllFormulas(), createAccessor());
+    // Report only the cells whose value differs from the old engine's.
+    report({
+      updatedCells: result.updatedCells
+        .map((c) => ({ ...c, oldValue: current.getValue(c.col, c.row) }))
+        .filter((c) => !sameValue(c.oldValue, c.newValue)),
+    });
+  }, [formulaFunctions, namedRanges, createAccessor, report]);
+
+  // --- Dependent recalculation ---
+  // A consumer's onCellValueChanged usually applies the value with setState, so
+  // recalculating inside the event handler reads the pre-edit data. Notifications
+  // are queued and flushed after the next render instead, and a new `items` array
+  // (an edit, undo, or external update) recalculates every formula against it.
+  const pendingCellsRef = useRef<Array<{ col: number; row: number }>>([]);
+  const [pendingTick, setPendingTick] = useState(0);
+  const syncedItemsRef = useRef(items);
+  const syncedColumnsRef = useRef(flatColumns);
+  // biome-ignore lint/correctness/useExhaustiveDependencies: pendingTick is the deliberate trigger that flushes queued notifications
+  useLayoutEffect(() => {
+    const dataChanged = syncedItemsRef.current !== items || syncedColumnsRef.current !== flatColumns;
+    syncedItemsRef.current = items;
+    syncedColumnsRef.current = flatColumns;
+    const pending = pendingCellsRef.current;
+    pendingCellsRef.current = [];
+    const current = engineRef.current;
+    if (!current) return;
+    if (dataChanged) {
+      const result = current.recalcAll(createAccessor());
+      report({ updatedCells: result.updatedCells.filter((c) => !sameValue(c.oldValue, c.newValue)) });
+    } else if (pending.length > 0) {
+      report(current.onCellsChanged(pending, createAccessor()));
+    }
+  }, [items, flatColumns, pendingTick, createAccessor, report]);
 
   const getFormulaValue = useCallback((col: number, row: number): unknown => {
     return engineRef.current?.getValue(col, row);
@@ -151,21 +251,18 @@ export function useFormulaEngine<T>(
 
   const setFormula = useCallback((col: number, row: number, formula: string | null): void => {
     if (!engineRef.current) return;
-    const accessor = createAccessor();
-    const result = engineRef.current.setFormula(col, row, formula, accessor);
-    if (result.updatedCells.length > 0) {
-      onFormulaRecalcRef.current?.(result);
-    }
-  }, [createAccessor, onFormulaRecalcRef]);
+    report(engineRef.current.setFormula(col, row, formula, createAccessor()));
+  }, [createAccessor, report]);
+
+  const onCellsChanged = useCallback((cells: ReadonlyArray<{ col: number; row: number }>): void => {
+    if (!engineRef.current || cells.length === 0) return;
+    for (const cell of cells) pendingCellsRef.current.push({ col: cell.col, row: cell.row });
+    setPendingTick((t) => t + 1);
+  }, []);
 
   const onCellChanged = useCallback((col: number, row: number): void => {
-    if (!engineRef.current) return;
-    const accessor = createAccessor();
-    const result = engineRef.current.onCellChanged(col, row, accessor);
-    if (result.updatedCells.length > 0) {
-      onFormulaRecalcRef.current?.(result);
-    }
-  }, [createAccessor, onFormulaRecalcRef]);
+    onCellsChanged([{ col, row }]);
+  }, [onCellsChanged]);
 
   const getPrecedents = useCallback((col: number, row: number): IAuditEntry[] => {
     return engineRef.current?.getPrecedents(col, row) ?? [];
@@ -186,11 +283,12 @@ export function useFormulaEngine<T>(
     getFormula,
     setFormula,
     onCellChanged,
+    onCellsChanged,
     getPrecedents,
     getDependents,
     getAuditTrail,
     enabled: true,
-  }), [getFormulaValue, hasFormula, getFormula, setFormula, onCellChanged, getPrecedents, getDependents, getAuditTrail]);
+  }), [getFormulaValue, hasFormula, getFormula, setFormula, onCellChanged, onCellsChanged, getPrecedents, getDependents, getAuditTrail]);
 
   return formulas ? result : NOOP_RESULT;
 }

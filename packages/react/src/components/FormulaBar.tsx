@@ -62,7 +62,20 @@ export function FormulaBar({
         value={formulaText}
         readOnly={!isEditing}
         onChange={(e) => onInputChange(e.target.value)}
-        onKeyDown={(e) => handleFormulaBarKeyDown(e.key, () => e.preventDefault(), onCommit, onCancel)}
+        onKeyDown={(e) => {
+          if (isEditing) {
+            handleFormulaBarKeyDown(e.key, () => e.preventDefault(), onCommit, onCancel);
+          } else if (e.key === 'F2' || e.key === 'Enter') {
+            // Keyboard users enter edit mode the way a click does.
+            e.preventDefault();
+            startEditing();
+          } else if (e.key.length === 1 && !e.ctrlKey && !e.metaKey && !e.altKey) {
+            // Typing a character starts editing with that character appended.
+            e.preventDefault();
+            startEditing();
+            onInputChange(formulaText + e.key);
+          }
+        }}
         onClick={() => { if (!isEditing) startEditing(); }}
         onDoubleClick={() => { if (!isEditing) startEditing(); }}
         aria-label="Formula input"

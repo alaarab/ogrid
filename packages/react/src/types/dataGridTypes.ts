@@ -1,7 +1,7 @@
 import type { FilterOption } from '@alaarab/ogrid-core';
 import type { ReactNode } from 'react';
 import type { IColumnDef, IColumnGroupDef, ICellValueChangedEvent } from './columnTypes';
-import type { IFormulaFunction, IRecalcResult, IGridDataAccessor, IAuditEntry, IAuditTrail, IResponsiveColumnsConfig, WindowedRow, PageSize } from '@alaarab/ogrid-core';
+import type { IFormulaFunction, IRecalcResult, IGridDataAccessor, IAuditEntry, IAuditTrail, IResponsiveColumnsConfig, WindowedRow, PageSize, IFormulaRowMap } from '@alaarab/ogrid-core';
 
 // Re-export all shared types and functions from core (no React-specific changes)
 export type {
@@ -364,4 +364,26 @@ export interface IOGridDataGridProps<T> {
    * Accepts a cell reference string (e.g. "A1") and returns true if the reference was inserted.
    */
   onFormulaInsertReference?: (reference: string) => boolean;
+  /**
+   * Maps displayed rows to formula (sheet) rows and back. The formula callbacks
+   * above, A1 references, row numbers and the name box use sheet rows; columns
+   * are always indexes into the flat column defs. OGrid passes a map so formulas
+   * follow their record through sort, filter and paging. Without one, sheet rows
+   * are positions in `items`.
+   */
+  formulaRowMap?: IFormulaRowMap;
+  /**
+   * Filled by the grid with a writer for sheet cells that goes through the
+   * grid's own edit path (value parsing, undo history, formula engine). OGrid's
+   * formula bar commits through it.
+   */
+  formulaCellWriterRef?: React.MutableRefObject<IFormulaCellWriter | null>;
+}
+
+/** Writes text into a sheet cell (flat column index, sheet row) as if typed into the cell. */
+export interface IFormulaCellWriter {
+  /** Whether the cell exists in the current view and can be edited. */
+  canEdit: (col: number, row: number) => boolean;
+  /** Commit `text` (a formula when it starts with '='). Returns false when the cell can't be edited. */
+  write: (col: number, row: number, text: string) => boolean;
 }

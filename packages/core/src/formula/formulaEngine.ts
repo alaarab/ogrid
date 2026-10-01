@@ -189,13 +189,15 @@ export class FormulaEngine {
 
   /**
    * Notify the engine that a non-formula cell's value changed.
+   * Pass `sheet` when the cell belongs to a registered sheet rather than the main grid.
    */
   onCellChanged(
     col: number,
     row: number,
-    accessor: IGridDataAccessor
+    accessor: IGridDataAccessor,
+    sheet?: string
   ): IRecalcResult {
-    const key = toCellKey(col, row);
+    const key = toCellKey(col, row, sheet);
     const plan = this.depGraph.getRecalcPlanBatch([key], this.volatileCells);
     if (plan.order.length === 0) return { updatedCells: [] };
 
@@ -205,13 +207,14 @@ export class FormulaEngine {
   }
 
   /**
-   * Batch notify: multiple cells changed.
+   * Batch notify: multiple cells changed. A cell with `sheet` belongs to that
+   * registered sheet rather than the main grid.
    */
   onCellsChanged(
-    cells: Array<{ col: number; row: number }>,
+    cells: Array<{ col: number; row: number; sheet?: string }>,
     accessor: IGridDataAccessor
   ): IRecalcResult {
-    const keys = cells.map(c => toCellKey(c.col, c.row));
+    const keys = cells.map(c => toCellKey(c.col, c.row, c.sheet));
     const plan = this.depGraph.getRecalcPlanBatch(keys, this.volatileCells);
     if (plan.order.length === 0) return { updatedCells: [] };
 
@@ -365,6 +368,24 @@ export class FormulaEngine {
    */
   unregisterSheet(name: string): void {
     this.sheetAccessors.delete(name);
+  }
+
+  /**
+   * Recalculate every formula that reads from sheet `name`, plus their
+   * dependents. Call after registering, replacing or unregistering a sheet,
+   * or when its data changed and the changed cells aren't known.
+   * `accessor` is the main grid's accessor.
+   */
+  onSheetChanged(name: string, accessor: IGridDataAccessor): IRecalcResult {
+    const readers: CellKey[] = [];
+    for (const key of this.parsedFormulas.keys()) {
+      if (this.volatileCells.has(key) || this.readsSheet(key, name)) readers.push(key);
+    }
+    if (readers.length === 0) return { updatedCells: [] };
+    const plan = this.depGraph.getRecalcPlanBatch([], readers);
+    const updatedCells: IRecalcResult['updatedCells'] = [];
+    this.recalcCells(plan.order, accessor, updatedCells, plan.cyclic);
+    return { updatedCells };
   }
 
   // --- Formula Auditing ---
@@ -645,6 +666,17 @@ export class FormulaEngine {
       rows.delete(row);
       if (rows.size === 0) this.formulaRowsByCol.delete(col);
     }
+  }
+
+  /** Whether the formula at `key` references a cell or range on sheet `name`. */
+  private readsSheet(key: CellKey, name: string): boolean {
+    for (const dep of this.depGraph.getDependencies(key)) {
+      if (fromCellKey(dep).sheet === name) return true;
+    }
+    for (const range of this.depGraph.getRangeDependencies(key)) {
+      if (range.sheet === name) return true;
+    }
+    return false;
   }
 
   /** Volatile cells other than `key` (which was just evaluated). */

@@ -34,7 +34,7 @@ function GridRowInner(props: BaseGridRowProps) {
   const {
     item, rowIndex, rowId, isSelected, visibleCols, columnMeta,
     renderCellContent, handleSingleRowClick, handleRowCheckboxChange,
-    lastMouseShiftRef, hasCheckboxCol, hasRowNumbersCol, rowNumberOffset, ariaRowIndexBase,
+    lastMouseShiftRef, hasCheckboxCol, hasRowNumbersCol, rowNumberOffset, rowNumber, ariaRowIndexBase,
     leftSpacerWidth, rightSpacerWidth, globalColIndexMap, rowNumWidth,
     selectionRange, activeCell, cutRange, styles, primitives,
   } = props;
@@ -84,7 +84,7 @@ function GridRowInner(props: BaseGridRowProps) {
           onPointerDown={PREVENT_DEFAULT}
         >
           <div className={styles.rowNumberCellInner}>
-            {rowNumberOffset + rowIndex + 1}
+            {rowNumber ?? rowNumberOffset + rowIndex + 1}
           </div>
         </Td>
       )}

@@ -68,7 +68,7 @@ export function BaseTableHeader<T>(props: BaseTableHeaderProps<T>): React.ReactE
     wrapperRef, interaction,
     handleResizeStart, handleResizeDoubleClick, isReorderDragging, handleHeaderMouseDown,
     visibleCols, hasCheckboxCol, hasRowNumbersCol, columnSizingOverrides,
-    showColumnLetters, columnReorder,
+    showColumnLetters, columnLetters, columnReorder,
     allSelected, someSelected, handleSelectAll, setActiveCell,
     headerFilterInput, headerMenu,
   } = o;
@@ -98,7 +98,7 @@ export function BaseTableHeader<T>(props: BaseTableHeaderProps<T>): React.ReactE
               className={`${styles.columnLetterCell}${columnMeta.hdrClasses[col.columnId] ? ` ${columnMeta.hdrClasses[col.columnId]}` : ''}`}
               style={columnMeta.hdrStyles[col.columnId]}
             >
-              {indexToColumnLetter(colIdx)}
+              {columnLetters[colIdx] ?? indexToColumnLetter(colIdx)}
             </th>
           ))}
         </primitives.Tr>
