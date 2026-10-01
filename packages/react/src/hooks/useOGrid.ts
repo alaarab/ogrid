@@ -191,6 +191,7 @@ export function useOGrid<T>(
     fullScreen,
     onFirstDataRendered,
     onError,
+    onClipboardError: onClipboardErrorProp,
     columnChooser: columnChooserProp,
     columnReorder,
     responsiveColumns,
@@ -242,6 +243,12 @@ export function useOGrid<T>(
       onUndoRef.current?.();
     } : undefined,
     [hasUndo, onUndoRef]
+  );
+  const onClipboardErrorRef = useLatestRef(onClipboardErrorProp);
+  const hasClipboardError = onClipboardErrorProp != null;
+  const onClipboardError = useMemo(
+    () => hasClipboardError ? (error: unknown) => onClipboardErrorRef.current?.(error) : undefined,
+    [hasClipboardError, onClipboardErrorRef]
   );
   const onRedoRef = useLatestRef(onRedoProp);
   const hasRedo = onRedoProp != null;
@@ -633,6 +640,7 @@ export function useOGrid<T>(
     onRedo,
     canUndo,
     canRedo,
+    onClipboardError,
     rowSelection,
     selectedRows: effectiveSelectedRows,
     onSelectionChange: handleSelectionChange,
@@ -662,7 +670,7 @@ export function useOGrid<T>(
     sortingState.sort.field, sortingState.sort.direction, sortingState.handleSort,
     visibleColumns, effectiveColumnOrder, handleColumnOrderChange, handleColumnResized,
     handleColumnPinned, pinnedOverrides, columnWidthOverrides,
-    editable, cellSelection, onCellValueChanged, onUndo, onRedo, canUndo, canRedo,
+    editable, cellSelection, onCellValueChanged, onUndo, onRedo, canUndo, canRedo, onClipboardError,
     rowSelection, effectiveSelectedRows, handleSelectionChange,
     showRowNumbersResolved, showColumnLettersResolved, showNameBox, showActiveCellChange, onActiveCellChange,
     paginationState.page, paginationState.pageSize, statusBarConfig,

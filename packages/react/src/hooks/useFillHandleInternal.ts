@@ -24,8 +24,9 @@ export interface UseFillHandleInternalParams<T> {
 }
 
 export interface UseFillHandleInternalResult {
-  fillDrag: { startRow: number; startCol: number } | null;
-  setFillDrag: (value: { startRow: number; startCol: number } | null) => void;
+  /** Top-left of the source selection; `endRow`/`endCol` (bottom-right) are set when the source is a multi-cell range. */
+  fillDrag: { startRow: number; startCol: number; endRow?: number; endCol?: number } | null;
+  setFillDrag: (value: { startRow: number; startCol: number; endRow?: number; endCol?: number } | null) => void;
   handleFillHandleMouseDown: (e: React.MouseEvent) => void;
   /** Fill the current selection down from the top row (Ctrl+D). No-op if no selection or editable=false. */
   fillDown: () => void;
@@ -56,7 +57,7 @@ export function useFillHandleInternal<T>(params: UseFillHandleInternalParams<T>)
   } = params;
 
   const onCellValueChangedRef = useLatestRef(onCellValueChangedProp);
-  const [fillDrag, setFillDrag] = useState<{ startRow: number; startCol: number } | null>(null);
+  const [fillDrag, setFillDrag] = useState<{ startRow: number; startCol: number; endRow?: number; endCol?: number } | null>(null);
   const fillDragEndRef = useRef<{ endRow: number; endCol: number }>({ endRow: 0, endCol: 0 });
   const rafRef = useRef(0);
   const liveFillRangeRef = useRef<ISelectionRange | null>(null);
@@ -122,6 +123,21 @@ export function useFillHandleInternal<T>(params: UseFillHandleInternalParams<T>)
 
     let lastFillMousePos: { cx: number; cy: number } | null = null;
 
+    // The original selection is the source block; the fill extends it.
+    const source: ISelectionRange = {
+      startRow: fillDrag.startRow,
+      startCol: fillDrag.startCol,
+      endRow: fillDrag.endRow ?? fillDrag.startRow,
+      endCol: fillDrag.endCol ?? fillDrag.startCol,
+    };
+    const unionWith = (r: number, c: number): ISelectionRange => ({
+      startRow: Math.min(source.startRow, r),
+      startCol: Math.min(source.startCol, c),
+      endRow: Math.max(source.endRow, r),
+      endCol: Math.max(source.endCol, c),
+    });
+    let moved = false;
+
     // Returns the normalized fill range plus the raw cell under the pointer:
     // the drag end must be the raw cell, or dragging up/left (where the
     // normalized end is the source itself) collapses the fill to nothing.
@@ -133,16 +149,7 @@ export function useFillHandleInternal<T>(params: UseFillHandleInternalParams<T>)
       const c = parseInt(cell.getAttribute('data-col-index') ?? '', 10);
       if (Number.isNaN(r) || Number.isNaN(c) || c < colOffsetRef.current) return null;
       const dataCol = c - colOffsetRef.current;
-      return {
-        range: normalizeSelectionRange({
-          startRow: fillDrag.startRow,
-          startCol: fillDrag.startCol,
-          endRow: r,
-          endCol: dataCol,
-        }),
-        endRow: r,
-        endCol: dataCol,
-      };
+      return { range: unionWith(r, dataCol), endRow: r, endCol: dataCol };
     };
 
     const onMove = (e: PointerEvent) => {
@@ -168,6 +175,7 @@ export function useFillHandleInternal<T>(params: UseFillHandleInternalParams<T>)
           return;
         }
 
+        moved = true;
         liveFillRangeRef.current = newRange;
         fillDragEndRef.current = { endRow: resolved.endRow, endCol: resolved.endCol };
         applyDragAttrs(newRange);
@@ -184,6 +192,7 @@ export function useFillHandleInternal<T>(params: UseFillHandleInternalParams<T>)
       if (lastFillMousePos) {
         const flushed = resolveRange(lastFillMousePos.cx, lastFillMousePos.cy);
         if (flushed) {
+          moved = true;
           liveFillRangeRef.current = flushed.range;
           fillDragEndRef.current = { endRow: flushed.endRow, endCol: flushed.endCol };
         }
@@ -191,20 +200,22 @@ export function useFillHandleInternal<T>(params: UseFillHandleInternalParams<T>)
 
       clearDragAttrs();
 
+      // A click without movement leaves the selection untouched (no collapse to the top-left cell).
+      if (!moved) {
+        setFillDrag(null);
+        liveFillRangeRef.current = null;
+        return;
+      }
+
       const end = fillDragEndRef.current;
-      const norm = normalizeSelectionRange({
-        startRow: fillDrag.startRow,
-        startCol: fillDrag.startCol,
-        endRow: end.endRow,
-        endCol: end.endCol,
-      });
+      const norm = unionWith(end.endRow, end.endCol);
 
       // Commit range to React state
       setSelectionRange(norm);
       setActiveCell({ rowIndex: fillDrag.startRow, columnIndex: fillDrag.startCol + colOffsetRef.current });
 
-      // Apply fill values
-      const fillEvents = applyFillValues(norm, fillDrag.startRow, fillDrag.startCol, items, visibleCols, formulaOptionsRef.current);
+      // Apply fill values: tile the original selection over the extension
+      const fillEvents = applyFillValues(norm, fillDrag.startRow, fillDrag.startCol, itemsRef.current, visibleColsRef.current, formulaOptionsRef.current, source);
       if (fillEvents.length > 0) {
         beginBatch?.();
         try {
@@ -244,8 +255,8 @@ export function useFillHandleInternal<T>(params: UseFillHandleInternalParams<T>)
   }, [
     fillDrag,
     editable,
-    items,
-    visibleCols,
+    itemsRef,
+    visibleColsRef,
     setSelectionRange,
     setActiveCell,
     beginBatch,
@@ -264,12 +275,16 @@ export function useFillHandleInternal<T>(params: UseFillHandleInternalParams<T>)
     (e: React.MouseEvent) => {
       e.preventDefault();
       e.stopPropagation();
+      if (e.button > 0) return; // only the primary button starts a fill
       const range = selectionRangeRef.current;
       if (!range) return;
-      setFillDrag({
-        startRow: range.startRow,
-        startCol: range.startCol,
-      });
+      const norm = normalizeSelectionRange(range);
+      const multi = norm.endRow !== norm.startRow || norm.endCol !== norm.startCol;
+      setFillDrag(
+        multi
+          ? { startRow: norm.startRow, startCol: norm.startCol, endRow: norm.endRow, endCol: norm.endCol }
+          : { startRow: norm.startRow, startCol: norm.startCol }
+      );
     },
     []
   );
@@ -278,13 +293,15 @@ export function useFillHandleInternal<T>(params: UseFillHandleInternalParams<T>)
     const range = selectionRangeRef.current;
     if (!range || editable === false || !onCellValueChangedRef.current) return;
     const norm = normalizeSelectionRange(range);
+    // Ctrl+D copies each column's top cell down that column.
     const fillEvents = applyFillValues(
       norm,
       norm.startRow,
       norm.startCol,
       itemsRef.current,
       visibleColsRef.current,
-      formulaOptionsRef.current
+      formulaOptionsRef.current,
+      { ...norm, endRow: norm.startRow }
     );
     if (fillEvents.length > 0) {
       beginBatch?.();

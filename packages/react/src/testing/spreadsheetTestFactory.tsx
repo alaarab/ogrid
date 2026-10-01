@@ -227,8 +227,11 @@ export function createSpreadsheetTests(DataGridTable: React.ComponentType<IOGrid
     describe('cut', () => {
       it('cut then paste clears source cells and calls onCellValueChanged with empty string', async () => {
         const onCellValueChanged = jest.fn();
-        const writeText = jest.fn().mockResolvedValue(undefined);
-        const readText = jest.fn().mockResolvedValue('PastedValue');
+        // The clipboard returns what the cut wrote (cut cells are only cleared when the
+        // pasted text is the cut's own text).
+        let clipboardText = '';
+        const writeText = jest.fn().mockImplementation((t: string) => { clipboardText = t; return Promise.resolve(); });
+        const readText = jest.fn().mockImplementation(() => Promise.resolve(clipboardText));
         Object.defineProperty(navigator, 'clipboard', {
           value: { writeText, readText },
           configurable: true,
@@ -264,8 +267,9 @@ export function createSpreadsheetTests(DataGridTable: React.ComponentType<IOGrid
 
       it('cut then paste onto the same cell keeps the pasted value', async () => {
         const onCellValueChanged = jest.fn();
-        const writeText = jest.fn().mockResolvedValue(undefined);
-        const readText = jest.fn().mockResolvedValue('PastedValue');
+        let clipboardText = '';
+        const writeText = jest.fn().mockImplementation((t: string) => { clipboardText = t; return Promise.resolve(); });
+        const readText = jest.fn().mockImplementation(() => Promise.resolve(clipboardText));
         Object.defineProperty(navigator, 'clipboard', {
           value: { writeText, readText },
           configurable: true,
@@ -317,6 +321,31 @@ export function createSpreadsheetTests(DataGridTable: React.ComponentType<IOGrid
     });
 
     describe('paste', () => {
+      it('a rejected clipboard read calls onClipboardError and pastes nothing', async () => {
+        const onCellValueChanged = jest.fn();
+        const onClipboardError = jest.fn();
+        const readText = jest.fn().mockRejectedValue(new Error('NotAllowedError'));
+        Object.defineProperty(navigator, 'clipboard', {
+          value: { readText, writeText: jest.fn().mockResolvedValue(undefined) },
+          configurable: true,
+        });
+
+        const { container } = renderSpreadsheetGrid({ onCellValueChanged, onClipboardError });
+        fireEvent.pointerDown(getCellAt(container, 0, 0));
+        const grid = container.querySelector('[role="region"]');
+        // An earlier in-grid copy must not be pasted when the read fails.
+        await act(async () => {
+          fireEvent.keyDown(grid as Element, { key: 'c', ctrlKey: true });
+        });
+        fireEvent.pointerDown(getCellAt(container, 1, 0));
+        await act(async () => {
+          fireEvent.keyDown(grid as Element, { key: 'v', ctrlKey: true });
+        });
+
+        await waitFor(() => expect(onClipboardError).toHaveBeenCalledTimes(1));
+        expect(onCellValueChanged).not.toHaveBeenCalled();
+      });
+
       it('pastes from clipboard and calls onCellValueChanged for each cell', async () => {
         const onCellValueChanged = jest.fn();
         const readText = jest.fn().mockResolvedValue('Pasted1\tPasted2\nPasted3\tPasted4');
@@ -463,8 +492,9 @@ export function createSpreadsheetTests(DataGridTable: React.ComponentType<IOGrid
       });
 
       it('Cut from context menu copies to clipboard and sets cut buffer', async () => {
-        const writeText = jest.fn().mockResolvedValue(undefined);
-        const readText = jest.fn().mockResolvedValue('X');
+        let clipboardText = '';
+        const writeText = jest.fn().mockImplementation((t: string) => { clipboardText = t; return Promise.resolve(); });
+        const readText = jest.fn().mockImplementation(() => Promise.resolve(clipboardText));
         Object.defineProperty(navigator, 'clipboard', {
           value: { writeText, readText },
           configurable: true,

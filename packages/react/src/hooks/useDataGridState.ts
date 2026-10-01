@@ -221,6 +221,7 @@ export function useDataGridState<T>(
     onColumnPinned,
     responsiveColumns,
     onCellError,
+    onClipboardError,
     onKeyDown,
   } = props;
 
@@ -311,6 +312,7 @@ export function useDataGridState<T>(
     setContextMenuPosition,
     wrapperRef,
     onKeyDown,
+    onClipboardError,
     formulas: props.formulas,
     flatColumns: layoutResult.layout.flatColumns,
     getFormula: props.getFormula,
