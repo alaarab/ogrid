@@ -33,7 +33,7 @@ import { OGrid } from '@alaarab/ogrid-react-fluent';
 |------|------|---------|-------------|
 | `sort` | `{ field: string; direction: 'asc' \| 'desc' }` | `undefined` | Controlled sort state. When provided, the grid uses this value and calls `onSortChange` when the user clicks a sortable column header. |
 | `onSortChange` | `(sort: { field: string; direction: 'asc' \| 'desc' }) => void` | `undefined` | Callback fired when the user changes the sort. Required for controlled sort mode. |
-| `defaultSortBy` | `string` | `undefined` | Column ID to sort by initially in uncontrolled mode. |
+| `defaultSortBy` | `string` | first sortable column | Column ID to sort by initially in uncontrolled mode. Columns with `sortable: false` are never used as the default. |
 | `defaultSortDirection` | `'asc' \| 'desc'` | `undefined` | Initial sort direction in uncontrolled mode. Used together with `defaultSortBy`. |
 | `workerSort` | `boolean \| 'auto'` | `false` | Offload sorting to a Web Worker to keep the main thread responsive. `true` always uses the worker; `'auto'` uses it past ~5000 rows. Columns with a custom `compare` fall back to synchronous sort. |
 

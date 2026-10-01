@@ -84,7 +84,7 @@ export interface IColumnDef<T = unknown> extends IColumnMeta {
   /** Built-in editor type or framework-specific custom editor (e.g. React component).
    *  Core utilities never inspect this value  -  framework packages narrow the type. */
   cellEditor?: unknown;
-  /** When true, custom cell editor is rendered in a popover/popper instead of inline. */
+  /** Custom (component) cell editors always render in a popover/popper and built-in editors inline; this flag currently has no effect. */
   cellEditorPopup?: boolean;
   /** Params passed to the cell editor (e.g. { values: string[] } for select). */
   cellEditorParams?: CellEditorParams;

@@ -44,7 +44,7 @@
  *   );
  */
 
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { getCellValue as coreGetCellValue } from '@alaarab/ogrid-core';
 import type { IColumnDef as ICoreColumnDef, IFilters, FilterValue, PageSize } from '@alaarab/ogrid-core';
 import type { IDataSource } from '../types';
@@ -124,7 +124,7 @@ export interface UseHeadlessGridResult<T> {
   /** Current sort state. */
   sort: SortState;
   setSort: (sort: SortState) => void;
-  /** Cycle a column's sort: asc → desc → reset to default. */
+  /** Toggle a column's sort between ascending and descending (a new column starts ascending). Use `setSort` to clear. */
   toggleSort: (columnId: string) => void;
   /** "▲" / "▼" / "" — convenient indicator for header rendering. */
   sortIndicator: (columnId: string) => '▲' | '▼' | '';
@@ -246,6 +246,18 @@ export function useHeadlessGrid<T>(
   const totalPages = pagination.pageSize === 'all'
     ? 1
     : Math.max(1, Math.ceil(totalCount / pagination.pageSize));
+
+  // Snap an uncontrolled page back when the data shrinks under it (refresh,
+  // host-side filtering, deletes) so it never sits past the last page.
+  const isPagePastEnd =
+    controlledPage === undefined &&
+    totalCount > 0 &&
+    pagination.pageSize !== 'all' &&
+    pagination.page > totalPages;
+  const { setPage } = pagination;
+  useEffect(() => {
+    if (isPagePastEnd) setPage(totalPages);
+  }, [isPagePastEnd, totalPages, setPage]);
 
   // `allFilteredRows` is the full filtered+sorted set across all pages.
   // Server-side: unknown without a separate request, so it equals `rows`.

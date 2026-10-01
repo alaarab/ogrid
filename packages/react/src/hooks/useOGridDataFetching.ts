@@ -29,11 +29,17 @@ export interface UseOGridDataFetchingParams<T> {
   displayData: T[];
   /**
    * Row identity. When `displayData` changes, rows are re-sorted/re-filtered
-   * unless every position still holds the same row (by id): that's a cell
-   * edit, whose order is preserved. Without it, a new array whose rows are
-   * all new objects counts as a replacement.
+   * unless it looks like a cell edit, whose order is preserved: every position
+   * still holds the same row (by id) and either some row objects are unchanged
+   * or `editVersionRef` moved since the last data change.
    */
   getRowId?: (row: T) => unknown;
+  /**
+   * Bumped by the caller whenever the grid emits an edit. When the host then
+   * replaces every row object (immutable bulk edit, single-row data) with ids
+   * unchanged, it's still treated as an edit and keeps its order.
+   */
+  editVersionRef?: { readonly current: number };
   columns: ICoreColumnDef<T>[];
   stableFilters: IFilters;
   sort: { field: string; direction: 'asc' | 'desc' };
@@ -70,6 +76,8 @@ export interface UseOGridDataFetchingState<T> {
   displayItems: T[];
   displayTotalCount: number;
   serverLoading: boolean;
+  /** True while worker-sort mode is waiting for its first result (no rows to show yet). */
+  workerPending: boolean;
   refreshData: () => void;
   /**
    * Windowed (lazy) data-source accessors. Populated only when `dataSource`
@@ -98,7 +106,12 @@ const EMPTY_ROWS: readonly unknown[] = Object.freeze([]);
  * sort order; a different dataset of the same length must be re-sorted and
  * re-filtered.
  */
-function isSameRowSet<T>(prev: readonly T[], next: readonly T[], getRowId?: (row: T) => unknown): boolean {
+function isSameRowSet<T>(
+  prev: readonly T[],
+  next: readonly T[],
+  getRowId: ((row: T) => unknown) | undefined,
+  editPending: boolean,
+): boolean {
   if (prev === next) return true;
   if (prev.length !== next.length) return false;
   let shared = 0;
@@ -111,15 +124,46 @@ function isSameRowSet<T>(prev: readonly T[], next: readonly T[], getRowId?: (row
     }
     if (getRowId && a !== undefined && b !== undefined && getRowId(a) !== getRowId(b)) return false;
   }
-  // Without ids: an edit replaces some row objects; a new dataset replaces all.
-  return getRowId !== undefined || next.length === 0 || shared > 0;
+  // An edit replaces some row objects while others stay reference-equal; a new
+  // dataset (even one with matching ids) replaces all of them, unless the grid
+  // just emitted edits that the host applied by rebuilding every row.
+  return next.length === 0 || shared > 0 || (getRowId !== undefined && editPending);
+}
+
+/**
+ * Maps processed (filtered + sorted) rows back to their positions in `source`.
+ * A row reference that appears more than once keeps one position per occurrence
+ * (the processing sort is stable, so occurrences come back in source order).
+ */
+function rowsToIndices<T>(source: readonly T[], rows: readonly T[]): number[] {
+  const positions = new Map<T, number[]>();
+  for (let i = 0; i < source.length; i++) {
+    const row = source[i];
+    if (row === undefined) continue;
+    const list = positions.get(row);
+    if (list) list.push(i);
+    else positions.set(row, [i]);
+  }
+  const cursor = new Map<T, number>();
+  const indices: number[] = [];
+  for (const row of rows) {
+    const list = positions.get(row);
+    if (!list) continue;
+    const n = cursor.get(row) ?? 0;
+    const idx = list[Math.min(n, list.length - 1)];
+    cursor.set(row, n + 1);
+    if (idx !== undefined) indices.push(idx);
+  }
+  return indices;
 }
 
 export function useOGridDataFetching<T>(params: UseOGridDataFetchingParams<T>): UseOGridDataFetchingState<T> {
   const {
     isServerSide, dataSource, displayData, getRowId, columns, stableFilters,
     sort, sortVersion, page, pageSize, paginate = true, onError, onFirstDataRendered, workerSort,
+    editVersionRef,
   } = params;
+  const editVersion = editVersionRef?.current ?? 0;
 
   const isClientSide = !isServerSide;
   // Held in a ref: callers may pass an inline getRowId, which must not
@@ -147,6 +191,7 @@ export function useOGridDataFetching<T>(params: UseOGridDataFetchingParams<T>): 
   const prevFiltersRef = useRef<IFilters | null>(null);
   const prevColumnsRef = useRef<ICoreColumnDef<T>[] | null>(null);
   const prevDataRef = useRef<T[] | null>(null);
+  const prevEditVersionRef = useRef(0);
   const prevSortFieldRef = useRef<string | null>(null);
   const prevSortDirectionRef = useRef<'asc' | 'desc' | null>(null);
 
@@ -159,7 +204,7 @@ export function useOGridDataFetching<T>(params: UseOGridDataFetchingParams<T>): 
     stableFilters !== prevFiltersRef.current ||
     columns !== prevColumnsRef.current ||
     prevDataRef.current === null ||
-    !isSameRowSet(prevDataRef.current, displayData, getRowIdRef.current) ||
+    !isSameRowSet(prevDataRef.current, displayData, getRowIdRef.current, editVersion !== prevEditVersionRef.current) ||
     sort.field !== prevSortFieldRef.current ||
     sort.direction !== prevSortDirectionRef.current;
 
@@ -171,6 +216,7 @@ export function useOGridDataFetching<T>(params: UseOGridDataFetchingParams<T>): 
     prevSortDirectionRef.current = sort.direction;
     sortedIndicesRef.current = null; // will be built in memo
   }
+  if (prevDataRef.current !== displayData) prevEditVersionRef.current = editVersion;
   prevDataRef.current = displayData;
 
   // --- Client-side filtering & sorting (sync path) ---
@@ -187,18 +233,8 @@ export function useOGridDataFetching<T>(params: UseOGridDataFetchingParams<T>): 
       const sorted = processClientSideData(
         displayData, columns, stableFilters, sort.field, sort.direction
       );
-      // Build a lookup: row object → index in displayData.
-      // This handles filtering correctly: filtered-in rows are a subset of displayData.
-      const indexMap = new Map<T, number>();
-      for (let i = 0; i < displayData.length; i++) {
-        const row = displayData[i];
-        if (row !== undefined) indexMap.set(row, i);
-      }
-      const indices = sorted.map((row) => {
-        const idx = indexMap.get(row);
-        return idx !== undefined ? idx : -1;
-      }).filter((idx) => idx !== -1);
-      sortedIndicesRef.current = indices;
+      // Map the sorted rows back to positions in displayData (filtered-in rows are a subset).
+      sortedIndicesRef.current = rowsToIndices(displayData, sorted);
       orderedRows = sorted;
     } else {
       // Data values changed (cell edit) but sort order is preserved.
@@ -232,26 +268,35 @@ export function useOGridDataFetching<T>(params: UseOGridDataFetchingParams<T>): 
   const asyncPrevFiltersRef = useRef<IFilters | null>(null);
   const asyncPrevColumnsRef = useRef<ICoreColumnDef<T>[] | null>(null);
   const asyncPrevDataRef = useRef<T[] | null>(null);
+  const asyncPrevEditVersionRef = useRef(0);
+  const asyncPrevSortFieldRef = useRef<string | null>(null);
+  const asyncPrevSortDirectionRef = useRef<'asc' | 'desc' | null>(null);
 
-  // biome-ignore lint/correctness/useExhaustiveDependencies: getRowIdRef.current is a latest-value ref read on purpose; depending on it would re-run the worker effect for inline getRowId functions
+  // biome-ignore lint/correctness/useExhaustiveDependencies: getRowIdRef.current and editVersionRef.current are latest-value refs read on purpose; depending on them would re-run the worker effect for inline getRowId functions and on every edit
   useEffect(() => {
     if (!isClientSide || !useWorker) {
       setAsyncItems(null);
       return;
     }
 
+    const asyncEditVersion = editVersionRef?.current ?? 0;
     const needsResortAsync =
       sortVersion !== asyncPrevSortVersionRef.current ||
       stableFilters !== asyncPrevFiltersRef.current ||
       columns !== asyncPrevColumnsRef.current ||
       asyncPrevDataRef.current === null ||
-      !isSameRowSet(asyncPrevDataRef.current, displayData, getRowIdRef.current);
+      !isSameRowSet(asyncPrevDataRef.current, displayData, getRowIdRef.current, asyncEditVersion !== asyncPrevEditVersionRef.current) ||
+      sort.field !== asyncPrevSortFieldRef.current ||
+      sort.direction !== asyncPrevSortDirectionRef.current;
+    if (asyncPrevDataRef.current !== displayData) asyncPrevEditVersionRef.current = asyncEditVersion;
     asyncPrevDataRef.current = displayData;
 
     if (needsResortAsync) {
       asyncPrevSortVersionRef.current = sortVersion;
       asyncPrevFiltersRef.current = stableFilters;
       asyncPrevColumnsRef.current = columns;
+      asyncPrevSortFieldRef.current = sort.field;
+      asyncPrevSortDirectionRef.current = sort.direction;
       asyncSortedIndicesRef.current = null;
     }
 
@@ -259,16 +304,7 @@ export function useOGridDataFetching<T>(params: UseOGridDataFetchingParams<T>): 
 
     if (asyncSortedIndicesRef.current === null) {
       const commitRows = (rows: T[]) => {
-        const indexMap = new Map<T, number>();
-        for (let i = 0; i < displayData.length; i++) {
-          const row = displayData[i];
-          if (row !== undefined) indexMap.set(row, i);
-        }
-        const indices = rows.map((row) => {
-          const idx = indexMap.get(row);
-          return idx !== undefined ? idx : -1;
-        }).filter((idx) => idx !== -1);
-        asyncSortedIndicesRef.current = indices;
+        asyncSortedIndicesRef.current = rowsToIndices(displayData, rows);
         const total = rows.length;
         if (!paginate) {
           setAsyncItems({ items: rows, totalCount: total, all: rows });
@@ -464,6 +500,7 @@ export function useOGridDataFetching<T>(params: UseOGridDataFetchingParams<T>): 
     allFilteredItems,
     displayTotalCount,
     serverLoading,
+    workerPending: isClientSide && useWorker && clientResult === null,
     refreshData,
     windowed,
   };

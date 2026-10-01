@@ -227,3 +227,19 @@ describe('useInlineEdit stale editor callbacks', () => {
     expect(onCellEdit.mock.calls[0][0].newValue).toBe('new');
   });
 });
+
+describe('useInlineEdit getEditorProps for non-editing cells (D29)', () => {
+  it('returns inert props with the cells own value for a cell that is not being edited', () => {
+    const onCellEdit = jest.fn();
+    const { result } = renderHook(() => useInlineEdit({ columns, getRowId, onCellEdit }));
+    act(() => result.current.startEdit(data[0], 'name'));
+    act(() => result.current.setPendingValue('Typed'));
+    const other = result.current.getEditorProps(data[1], 'name');
+    expect(other.value).toBe(data[1].name);
+    act(() => other.onBlur());
+    act(() => other.onCommit());
+    expect(onCellEdit).not.toHaveBeenCalled();
+    expect(result.current.editingCell).not.toBeNull();
+    expect(result.current.getEditorProps(data[0], 'name').value).toBe('Typed');
+  });
+});
