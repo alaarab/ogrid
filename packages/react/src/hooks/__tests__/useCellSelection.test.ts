@@ -530,3 +530,27 @@ describe('useCellSelection', () => {
     });
   });
 });
+
+describe('useCellSelection Shift+click anchor', () => {
+  const mouse = (shiftKey: boolean) =>
+    ({ button: 0, shiftKey, preventDefault: jest.fn() }) as unknown as React.MouseEvent;
+
+  it('extends from the active cell, not the normalized range corner, and keeps it active', () => {
+    const setActiveCell = jest.fn();
+    const { result } = renderHook(() =>
+      useCellSelection({
+        colOffset: 1,
+        rowCount: 10,
+        visibleColCount: 10,
+        setActiveCell,
+        wrapperRef: createRef<HTMLElement>(),
+        // Drag from (5,5) up-left to (2,2): range 2..5, anchor (5,5) stays active.
+        activeCell: { rowIndex: 5, columnIndex: 6 },
+      })
+    );
+    act(() => { result.current.setSelectionRange({ startRow: 2, startCol: 2, endRow: 5, endCol: 5 }); });
+    act(() => { result.current.handleCellMouseDown(mouse(true), 7, 8); });
+    expect(result.current.selectionRange).toEqual({ startRow: 5, startCol: 5, endRow: 7, endCol: 7 });
+    expect(setActiveCell).not.toHaveBeenCalled();
+  });
+});

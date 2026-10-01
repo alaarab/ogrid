@@ -36,7 +36,8 @@ export function useRowSelection<T>(params: UseRowSelectionParams<T>): UseRowSele
   } = params;
 
   const [internalSelectedRows, setInternalSelectedRows] = useState<Set<RowId>>(new Set());
-  const lastClickedRowRef = useRef<number>(-1);
+  // Shift-click anchor, stored by row id so it survives sort/filter/paging.
+  const lastClickedRowIdRef = useRef<RowId | null>(null);
 
   // Defensive: convert to Set if caller passes an array (e.g. from JSON state)
   const selectedRowIds: Set<RowId> = useMemo(
@@ -70,22 +71,28 @@ export function useRowSelection<T>(params: UseRowSelectionParams<T>): UseRowSele
     (rowId: RowId, checked: boolean, rowIndex: number, shiftKey: boolean) => {
       if (rowSelection === 'single') {
         updateSelection(checked ? new Set([rowId]) : new Set());
-        lastClickedRowRef.current = rowIndex;
+        lastClickedRowIdRef.current = rowId;
         return;
       }
 
       const currentItems = itemsRef.current;
       let next: Set<RowId>;
 
-      if (shiftKey && lastClickedRowRef.current >= 0 && lastClickedRowRef.current !== rowIndex) {
-        next = applyRangeRowSelection(lastClickedRowRef.current, rowIndex, checked, currentItems, getRowId, selectedRowIdsRef.current);
+      // Resolve the anchor's current index; if the row is gone (filtered out,
+      // other page) fall back to a plain toggle.
+      const anchorId = lastClickedRowIdRef.current;
+      const anchorIndex = shiftKey && anchorId != null
+        ? currentItems.findIndex((item) => getRowId(item) === anchorId)
+        : -1;
+      if (anchorIndex >= 0 && anchorIndex !== rowIndex) {
+        next = applyRangeRowSelection(anchorIndex, rowIndex, checked, currentItems, getRowId, selectedRowIdsRef.current);
       } else {
         next = new Set(selectedRowIdsRef.current);
         if (checked) next.add(rowId);
         else next.delete(rowId);
       }
 
-      lastClickedRowRef.current = rowIndex;
+      lastClickedRowIdRef.current = rowId;
       updateSelection(next);
     },
     [rowSelection, getRowId, updateSelection, itemsRef, selectedRowIdsRef]

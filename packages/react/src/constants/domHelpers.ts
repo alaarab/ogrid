@@ -53,3 +53,9 @@ export const NOOP = (): void => {};
 
 /** Stops event propagation (e.g. click on checkbox inside a row). */
 export const STOP_PROPAGATION = (e: React.MouseEvent): void => { e.stopPropagation(); };
+
+/**
+ * Marks inline cell editor DOM (including dropdowns portaled out of the cell)
+ * so the grid keydown handler can tell editor keystrokes from cell navigation.
+ */
+export const CELL_EDITOR_ATTR = 'data-ogrid-cell-editor';

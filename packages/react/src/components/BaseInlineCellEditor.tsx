@@ -3,6 +3,15 @@ import { createPortal } from 'react-dom';
 import { getDateInputPlaceholder, DEFAULT_DATE_FORMAT } from '@alaarab/ogrid-core';
 import type { IColumnDef } from '../types';
 import { useInlineCellEditorState, useRichSelectState, useSelectState } from '../hooks';
+import { CELL_EDITOR_ATTR } from '../constants/domHelpers';
+
+/** Marks dropdowns portaled out of the cell as editor DOM for the grid keydown handler. */
+const EDITOR_MARKER_PROPS = { [CELL_EDITOR_ATTR]: '' };
+
+/** Keeps focus in the rich-select search input when the dropdown list is clicked. */
+const PREVENT_DEFAULT_UNLESS_INPUT = (e: React.MouseEvent): void => {
+  if ((e.target as HTMLElement).tagName !== 'INPUT') e.preventDefault();
+};
 
 // ── Shared editor style constants (used across all 3 UI packages) ──
 
@@ -255,6 +264,12 @@ export function BaseInlineCellEditor<T>(props: BaseInlineCellEditorProps<T>): Re
     if (editorType === 'richSelect') return;
     const wrapper = wrapperRef.current;
     if (!wrapper) return;
+    if (editorType === 'checkbox') {
+      // Focus the checkbox so Space toggles it: Radix renders a button[role=checkbox],
+      // Fluent a native input (skip Radix's hidden aria-hidden form input).
+      wrapper.querySelector<HTMLElement>('button, input:not([aria-hidden="true"])')?.focus({ preventScroll: true });
+      return;
+    }
     const input = wrapper.querySelector('input');
     if (input) {
       input.focus({ preventScroll: true });
@@ -272,13 +287,30 @@ export function BaseInlineCellEditor<T>(props: BaseInlineCellEditorProps<T>): Re
 
   // Rich select (shared across all frameworks)
   if (editorType === 'richSelect') {
+    // Closing on blur: check where focus settled on the next frame, since the
+    // search input remounts when the dropdown moves into its portal.
+    const handleRichSelectBlur = () => {
+      requestAnimationFrame(() => {
+        const wrapper = wrapperRef.current;
+        if (!wrapper) return; // already closed (committed or cancelled)
+        const active = document.activeElement;
+        if (active && (wrapper.contains(active) || active.closest(`[${CELL_EDITOR_ATTR}]`))) return;
+        onCancelRef.current();
+      });
+    };
     const dropdownContent = (
-      <div style={computedDropdownStyle} role="listbox">
+      <div
+        style={computedDropdownStyle}
+        role="listbox"
+        {...EDITOR_MARKER_PROPS}
+        onMouseDown={PREVENT_DEFAULT_UNLESS_INPUT}
+      >
         <input
           type="text"
           value={richSelect.searchText}
           onChange={(e) => richSelect.setSearchText(e.target.value)}
           onKeyDown={richSelect.handleKeyDown}
+          onBlur={handleRichSelectBlur}
           placeholder="Search..."
           // biome-ignore lint/a11y/noAutofocus: popup editor must receive focus on open (the dropdown may be portaled outside the wrapper the focus effect targets)
           autoFocus
@@ -317,7 +349,7 @@ export function BaseInlineCellEditor<T>(props: BaseInlineCellEditorProps<T>): Re
   if (editorType === 'checkbox') {
     const checked = value === true;
     return (
-      <div style={{ ...editorWrapperStyle, justifyContent: 'flex-start' }}>
+      <div ref={wrapperRef} style={{ ...editorWrapperStyle, justifyContent: 'flex-start' }}>
         {renderCheckbox(checked, (val) => commit(val), cancel)}
       </div>
     );
@@ -326,7 +358,7 @@ export function BaseInlineCellEditor<T>(props: BaseInlineCellEditorProps<T>): Re
   // Select (custom dropdown, shared across all frameworks)
   if (editorType === 'select') {
     const dropdownContent = (
-      <div style={computedDropdownStyle} ref={selectState.dropdownRef} role="listbox">
+      <div style={computedDropdownStyle} ref={selectState.dropdownRef} role="listbox" {...EDITOR_MARKER_PROPS}>
         {editorValues.map((v, i) => (
           // biome-ignore lint/a11y/useFocusableInteractive: options use an active-descendant highlight pattern; keyboard selection is handled by the editor wrapper's onKeyDown
           // biome-ignore lint/a11y/useKeyWithClickEvents: keyboard selection is handled by the editor wrapper's onKeyDown (Enter/arrow keys)

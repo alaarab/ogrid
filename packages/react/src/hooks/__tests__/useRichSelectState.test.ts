@@ -94,3 +94,22 @@ describe('useRichSelectState', () => {
     expect(result.current.filteredValues).toEqual(['Cherry']);
   });
 });
+
+describe('useRichSelectState Tab', () => {
+  const tabValues = ['A', 'B', 'C'];
+
+  it('commits the highlighted value and lets Tab bubble to the grid', () => {
+    const onCommit = jest.fn();
+    const { result } = renderHook(() =>
+      useRichSelectState({ values: tabValues, initialValue: 'A', onCommit, onCancel: jest.fn() })
+    );
+    act(() => {
+      result.current.handleKeyDown({ key: 'ArrowDown', preventDefault: jest.fn(), stopPropagation: jest.fn() } as any);
+    });
+    const e = { key: 'Tab', preventDefault: jest.fn(), stopPropagation: jest.fn() };
+    act(() => { result.current.handleKeyDown(e as any); });
+    expect(onCommit).toHaveBeenCalledWith('B');
+    expect(e.preventDefault).toHaveBeenCalled();
+    expect(e.stopPropagation).not.toHaveBeenCalled();
+  });
+});

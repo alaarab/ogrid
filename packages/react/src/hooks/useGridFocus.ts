@@ -4,7 +4,8 @@
  * Manages the active cell coordinate and translates Arrow / Tab / Enter /
  * Home / End / PageUp / PageDown into cell movement scoped to the
  * currently rendered rows × columns. Pairs with `useRangeSelection` so
- * Shift+Arrow extends the range.
+ * Shift+Arrow / Shift+Home / Shift+End extend the range. Tab at the first or
+ * last column is left to the browser so focus can leave the grid.
  *
  * Consumer attaches `getKeyDownHandler()` to their grid container's
  * `onKeyDown`, makes the container focusable (`tabIndex={0}`), and renders
@@ -134,6 +135,17 @@ export function useGridFocus(params: UseGridFocusParams): UseGridFocusResult {
     [rowCount, colCount, rangeSelection, commit],
   );
 
+  // Shift+Home/End: extend the range to a row or grid edge, keeping its anchor.
+  const extendTo = useCallback(
+    (row: number, col: number) => {
+      if (rowCount <= 0 || colCount <= 0) return;
+      const next = { row: clamp(row, 0, rowCount - 1), col: clamp(col, 0, colCount - 1) };
+      commit(next);
+      rangeSelection?.extendRange(next.row, next.col);
+    },
+    [rowCount, colCount, rangeSelection, commit],
+  );
+
   const moveUp = useCallback((n = 1) => moveBy(-n, 0), [moveBy]);
   const moveDown = useCallback((n = 1) => moveBy(n, 0), [moveBy]);
   const moveLeft = useCallback((n = 1) => moveBy(0, -n), [moveBy]);
@@ -189,22 +201,32 @@ export function useGridFocus(params: UseGridFocusParams): UseGridFocusResult {
           moveBy(0, -1, shift);
           break;
         case 'ArrowRight':
-        case 'Tab':
           e.preventDefault?.();
-          moveBy(0, shift && e.key === 'Tab' ? -1 : 1, false);
+          moveBy(0, 1, shift);
           break;
+        case 'Tab': {
+          // At the row's first/last cell (or before any cell is active) let Tab
+          // move focus out of the grid instead of trapping it.
+          const prev = activeCellRef.current;
+          if (!prev || (shift ? prev.col <= 0 : prev.col >= colCount - 1)) break;
+          e.preventDefault?.();
+          moveBy(0, shift ? -1 : 1, false);
+          break;
+        }
         case 'Enter':
           e.preventDefault?.();
           moveBy(shift ? -1 : 1, 0, false);
           break;
         case 'Home':
           e.preventDefault?.();
-          if (mod) moveToStart();
+          if (shift) extendTo(mod ? 0 : (activeCellRef.current?.row ?? 0), 0);
+          else if (mod) moveToStart();
           else moveToRowStart();
           break;
         case 'End':
           e.preventDefault?.();
-          if (mod) moveToEnd();
+          if (shift) extendTo(mod ? rowCount - 1 : (activeCellRef.current?.row ?? 0), colCount - 1);
+          else if (mod) moveToEnd();
           else moveToRowEnd();
           break;
         case 'PageUp':
@@ -219,7 +241,7 @@ export function useGridFocus(params: UseGridFocusParams): UseGridFocusResult {
           break;
       }
     };
-  }, [moveBy, moveToRowStart, moveToRowEnd, moveToStart, moveToEnd, pageSize]);
+  }, [moveBy, extendTo, moveToRowStart, moveToRowEnd, moveToStart, moveToEnd, pageSize, rowCount, colCount]);
 
   return {
     activeCell,
