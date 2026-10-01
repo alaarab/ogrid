@@ -113,3 +113,17 @@ describe('useRichSelectState Tab', () => {
     expect(e.stopPropagation).not.toHaveBeenCalled();
   });
 });
+
+describe('useRichSelectState search highlight (R14)', () => {
+  it('Enter selects the first match after typing a search when the current value was lower in the list', () => {
+    const onCommit = jest.fn();
+    const fruit = ['Apple', 'Banana', 'Cherry'];
+    const { result } = renderHook(() =>
+      useRichSelectState({ values: fruit, initialValue: 'Cherry', onCommit, onCancel: jest.fn() })
+    );
+    act(() => { result.current.setSearchText('an'); });
+    expect(result.current.highlightedIndex).toBe(0);
+    act(() => { result.current.handleKeyDown({ key: 'Enter', preventDefault() {}, stopPropagation() {} } as unknown as React.KeyboardEvent); });
+    expect(onCommit).toHaveBeenCalledWith('Banana');
+  });
+});
