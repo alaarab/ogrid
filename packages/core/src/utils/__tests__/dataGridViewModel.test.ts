@@ -1,4 +1,5 @@
-import { resolveCellStyle, resolveCellDisplayContent } from '../dataGridViewModel';
+import { resolveCellStyle, resolveCellDisplayContent, getHeaderFilterConfig } from '../dataGridViewModel';
+import type { HeaderFilterConfigInput } from '../dataGridViewModel';
 import { FormulaError } from '../../formula/types';
 import type { IColumnDef } from '../../types/columnTypes';
 
@@ -122,5 +123,30 @@ describe('resolveCellDisplayContent', () => {
       const result = resolveCellDisplayContent(dateCol, item, null);
       expect(result).toBeNull();
     });
+  });
+});
+
+describe('getHeaderFilterConfig multiSelect selectedValues stability', () => {
+  const input: HeaderFilterConfigInput = {
+    sortDirection: 'asc',
+    onColumnSort: jest.fn(),
+    filters: {},
+    onFilterChange: jest.fn(),
+    filterOptions: {},
+    loadingFilterOptions: {},
+  };
+
+  it('returns the same empty selectedValues array across calls when no filter is applied', () => {
+    const column: IColumnDef<Row> = {
+      columnId: 'status',
+      name: 'Status',
+      filterable: { type: 'multiSelect' },
+    };
+
+    const first = getHeaderFilterConfig(column, input);
+    const second = getHeaderFilterConfig(column, input);
+
+    expect(first.selectedValues).toEqual([]);
+    expect(first.selectedValues).toBe(second.selectedValues);
   });
 });

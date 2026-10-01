@@ -335,6 +335,100 @@ describe('usePeopleFilterState', () => {
     expect(mockPeopleSearch).toHaveBeenCalledWith('Jane');
   });
 
+  it('ignores an older search response that resolves after a newer one', async () => {
+    const resolvers: Array<(users: UserLike[]) => void> = [];
+    const mockPeopleSearch = jest.fn(
+      (_query: string) => new Promise<UserLike[]>((resolve) => { resolvers.push(resolve); })
+    );
+    const onUserChange = jest.fn();
+    const { result } = renderHook(() =>
+      usePeopleFilterState({
+        isFilterOpen: true,
+        filterType: 'people',
+        peopleSearch: mockPeopleSearch,
+        onUserChange,
+      })
+    );
+
+    act(() => {
+      result.current.setPeopleSearchText('a');
+    });
+    await act(async () => {
+      await new Promise((r) => setTimeout(r, 320));
+    });
+    expect(mockPeopleSearch).toHaveBeenCalledWith('a');
+
+    act(() => {
+      result.current.setPeopleSearchText('ab');
+    });
+    await act(async () => {
+      await new Promise((r) => setTimeout(r, 320));
+    });
+    expect(mockPeopleSearch).toHaveBeenCalledWith('ab');
+
+    // Resolve the newer query first, then the stale older query.
+    await act(async () => {
+      resolvers[1]!([mockUser2]);
+      resolvers[0]!([mockUser1]);
+      await new Promise((r) => setTimeout(r, 0));
+    });
+
+    expect(result.current.peopleSuggestions).toEqual([mockUser2]);
+    expect(result.current.isPeopleLoading).toBe(false);
+  });
+
+  it('resets loading when the query is cleared within the debounce window', async () => {
+    const mockPeopleSearch = jest.fn().mockResolvedValue([mockUser1]);
+    const onUserChange = jest.fn();
+    const { result } = renderHook(() =>
+      usePeopleFilterState({
+        isFilterOpen: true,
+        filterType: 'people',
+        peopleSearch: mockPeopleSearch,
+        onUserChange,
+      })
+    );
+
+    act(() => {
+      result.current.setPeopleSearchText('a');
+    });
+    expect(result.current.isPeopleLoading).toBe(true);
+
+    act(() => {
+      result.current.setPeopleSearchText('');
+    });
+    expect(result.current.isPeopleLoading).toBe(false);
+
+    await act(async () => {
+      await new Promise((r) => setTimeout(r, 350));
+    });
+    expect(mockPeopleSearch).not.toHaveBeenCalled();
+    expect(result.current.isPeopleLoading).toBe(false);
+  });
+
+  it('resets loading when the popover closes with a search pending', () => {
+    const mockPeopleSearch = jest.fn().mockResolvedValue([]);
+    const onUserChange = jest.fn();
+    const { result, rerender } = renderHook(
+      ({ isFilterOpen }) =>
+        usePeopleFilterState({
+          isFilterOpen,
+          filterType: 'people',
+          peopleSearch: mockPeopleSearch,
+          onUserChange,
+        }),
+      { initialProps: { isFilterOpen: true } }
+    );
+
+    act(() => {
+      result.current.setPeopleSearchText('a');
+    });
+    expect(result.current.isPeopleLoading).toBe(true);
+
+    rerender({ isFilterOpen: false });
+    expect(result.current.isPeopleLoading).toBe(false);
+  });
+
   it('cleans up timeout on unmount', () => {
     const mockPeopleSearch = jest.fn().mockResolvedValue([]);
     const onUserChange = jest.fn();
