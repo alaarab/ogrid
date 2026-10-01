@@ -163,7 +163,9 @@ export function BaseDataGridTableInner<T>(
           ['--data-table-width' as string]: showEmptyInGrid ? '100%' : allowOverflowX ? 'fit-content' : fitToContent ? 'fit-content' : '100%',
           ['--data-table-min-width' as string]: showEmptyInGrid ? '100%' : allowOverflowX ? 'max-content' : fitToContent ? 'max-content' : '100%',
           ['--data-table-total-min-width' as string]: `${minTableWidth}px`,
-          ...(rowHeight ? { ['--ogrid-row-height' as string]: `${rowHeight}px` } : {}),
+          // Virtual math assumes fixed rows, so virtual grids always pin the height it uses.
+          ...((virtualScrollEnabled ? virtualRowHeight : rowHeight)
+            ? { ['--ogrid-row-height' as string]: `${virtualScrollEnabled ? virtualRowHeight : rowHeight}px` } : {}),
         } as React.CSSProperties}
       >
         {/* Screen readers don't follow the visual active cell (focus stays on

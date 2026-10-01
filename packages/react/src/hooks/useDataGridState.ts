@@ -11,10 +11,12 @@ import { useDataGridLayout } from './useDataGridLayout';
 import { useDataGridEditing } from './useDataGridEditing';
 import { useDataGridInteraction } from './useDataGridInteraction';
 import { useDataGridContextMenu } from './useDataGridContextMenu';
+import type { UseVirtualScrollResult } from './useVirtualScroll';
 
 export interface UseDataGridStateParams<T> {
   props: IOGridDataGridProps<T>;
   wrapperRef: RefObject<HTMLDivElement | null>;
+  scrollToIndexRef?: RefObject<UseVirtualScrollResult['scrollToIndex'] | null>;
 }
 
 // --- Grouped sub-interfaces ---
@@ -198,7 +200,7 @@ export interface UseDataGridStateResult<T> {
 export function useDataGridState<T>(
   params: UseDataGridStateParams<T>
 ): UseDataGridStateResult<T> {
-  const { props, wrapperRef } = params;
+  const { props, wrapperRef, scrollToIndexRef } = params;
   const {
     items,
     columns,
@@ -234,7 +236,7 @@ export function useDataGridState<T>(
     setPendingEditorValue,
   } = useCellEditing();
 
-  const { activeCell, setActiveCell } = useActiveCell(wrapperRef, editingCell);
+  const { activeCell, setActiveCell } = useActiveCell(wrapperRef, editingCell, scrollToIndexRef);
 
   // --- 1. Layout, pinning, header menu ---
   const layoutResult = useDataGridLayout<T>({
