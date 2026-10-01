@@ -147,4 +147,79 @@ describe('buildHeaderRows', () => {
     expect(rows[0]).toHaveLength(1);
     expect(rows[0][0]).toMatchObject({ label: 'B' });
   });
+
+  it('orders flat leaf cells by columnOrder', () => {
+    const cols: IColumnDef<unknown>[] = [
+      { columnId: 'a', name: 'A' },
+      { columnId: 'b', name: 'B' },
+      { columnId: 'c', name: 'C' },
+    ];
+    const rows = buildHeaderRows(cols, undefined, ['c', 'a', 'b']);
+    expect(rows).toHaveLength(1);
+    expect(rows[0].map((c) => c.columnDef?.columnId)).toEqual(['c', 'a', 'b']);
+  });
+
+  it('puts ids missing from columnOrder last, in definition order', () => {
+    const cols: IColumnDef<unknown>[] = [
+      { columnId: 'a', name: 'A' },
+      { columnId: 'b', name: 'B' },
+      { columnId: 'c', name: 'C' },
+      { columnId: 'd', name: 'D' },
+    ];
+    const rows = buildHeaderRows(cols, new Set(['a', 'b', 'c', 'd']), ['d', 'b']);
+    expect(rows[0].map((c) => c.columnDef?.columnId)).toEqual(['d', 'b', 'a', 'c']);
+  });
+
+  it('applies the visible set and order together (responsive hiding + reorder)', () => {
+    const cols: IColumnDef<unknown>[] = [
+      { columnId: 'a', name: 'A' },
+      { columnId: 'b', name: 'B' },
+      { columnId: 'c', name: 'C' },
+    ];
+    const rows = buildHeaderRows(cols, new Set(['a', 'c']), ['c', 'a']);
+    expect(rows[0].map((c) => c.columnDef?.columnId)).toEqual(['c', 'a']);
+  });
+
+  it('reorders leaves inside a group and keeps the group spanning them', () => {
+    const cols: (IColumnGroupDef<unknown> | IColumnDef<unknown>)[] = [
+      {
+        headerName: 'Group',
+        children: [
+          { columnId: 'a', name: 'A' },
+          { columnId: 'b', name: 'B' },
+        ],
+      },
+      { columnId: 'c', name: 'C' },
+    ];
+    const rows = buildHeaderRows(cols, undefined, ['b', 'a', 'c']);
+    expect(rows).toHaveLength(2);
+    expect(rows[0]).toHaveLength(2);
+    expect(rows[0][0]).toMatchObject({ label: 'Group', colSpan: 2, isGroup: true });
+    expect(rows[0][1]).toMatchObject({ label: 'C', isGroup: false });
+    expect(rows[1].map((c) => c.columnDef?.columnId)).toEqual(['b', 'a']);
+  });
+
+  it('splits a group whose leaves are no longer adjacent', () => {
+    const cols: (IColumnGroupDef<unknown> | IColumnDef<unknown>)[] = [
+      {
+        headerName: 'Group',
+        children: [
+          { columnId: 'a', name: 'A' },
+          { columnId: 'b', name: 'B' },
+        ],
+      },
+      { columnId: 'c', name: 'C' },
+    ];
+    const rows = buildHeaderRows(cols, undefined, ['a', 'c', 'b']);
+    expect(rows).toHaveLength(2);
+    // Top row: Group(a) | C (leaf, spans both rows) | Group(b)
+    expect(rows[0].map((c) => [c.label, c.colSpan, c.isGroup])).toEqual([
+      ['Group', 1, true],
+      ['C', 1, false],
+      ['Group', 1, true],
+    ]);
+    expect(rows[1].map((c) => c.columnDef?.columnId)).toEqual(['a', 'b']);
+    // Total leaf span across the top row matches the leaf count
+    expect(rows[0].reduce((n, c) => n + c.colSpan, 0)).toBe(3);
+  });
 });

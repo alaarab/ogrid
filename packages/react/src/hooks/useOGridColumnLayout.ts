@@ -8,6 +8,8 @@ export interface UseOGridColumnLayoutParams<T> {
   columnsProp: (IColumnDef<T> | IColumnGroupDef<T>)[];
   /** Controlled column order (the `columnOrder` prop), if provided. */
   controlledColumnOrder?: string[];
+  /** Host `onColumnOrderChange` callback, if provided. */
+  onColumnOrderChange?: (order: string[]) => void;
   onColumnResized?: (columnId: string, width: number) => void;
   onColumnPinned?: (columnId: string, pinned: 'left' | 'right' | null) => void;
 }
@@ -16,6 +18,8 @@ export interface UseOGridColumnLayoutState {
   effectiveColumnOrder: string[] | undefined;
   columnWidthOverrides: Record<string, number>;
   pinnedOverrides: Record<string, 'left' | 'right'>;
+  /** Applies a user reorder: updates the internal order when uncontrolled, then notifies the host. */
+  handleColumnOrderChange: (order: string[]) => void;
   handleColumnResized: (columnId: string, width: number) => void;
   handleColumnPinned: (columnId: string, pinned: 'left' | 'right' | null) => void;
   // Raw setters consumed by the imperative handle (applyColumnState / setColumnOrder).
@@ -27,7 +31,7 @@ export interface UseOGridColumnLayoutState {
 type PinnedMap = Record<string, 'left' | 'right'>;
 
 /** Pin positions declared by the column defs themselves. */
-function seedPinned(columns: ReadonlyArray<{ columnId: string; pinned?: 'left' | 'right' }>): PinnedMap {
+export function seedPinned(columns: ReadonlyArray<{ columnId: string; pinned?: 'left' | 'right' }>): PinnedMap {
   const initial: PinnedMap = {};
   for (const col of columns) {
     if (col.pinned) initial[col.columnId] = col.pinned;
@@ -43,7 +47,7 @@ function seedPinned(columns: ReadonlyArray<{ columnId: string; pinned?: 'left' |
  * gone are dropped, so a pin never leaks onto an unrelated column that happens
  * to reuse the id, and the map cannot grow without bound.
  */
-function reconcilePinned(
+export function reconcilePinned(
   prevPinned: PinnedMap,
   prevColumnIds: readonly string[],
   columns: ReadonlyArray<{ columnId: string; pinned?: 'left' | 'right' }>
@@ -65,7 +69,7 @@ function reconcilePinned(
 export function useOGridColumnLayout<T>(
   params: UseOGridColumnLayoutParams<T>
 ): UseOGridColumnLayoutState {
-  const { columnsProp, controlledColumnOrder, onColumnResized, onColumnPinned } = params;
+  const { columnsProp, controlledColumnOrder, onColumnOrderChange, onColumnResized, onColumnPinned } = params;
 
   const flatColumns = useMemo(() => flattenColumns(columnsProp), [columnsProp]);
 
@@ -85,6 +89,15 @@ export function useOGridColumnLayout<T>(
     setPrevColumnIds(columnIdsOf(flatColumns));
     setPinnedOverrides((prev) => reconcilePinned(prev, prevColumnIds, flatColumns));
   }
+
+  const isOrderControlled = controlledColumnOrder !== undefined;
+  const handleColumnOrderChange = useCallback(
+    (order: string[]) => {
+      if (!isOrderControlled) setInternalColumnOrder(order);
+      onColumnOrderChange?.(order);
+    },
+    [isOrderControlled, onColumnOrderChange]
+  );
 
   const handleColumnResized = useCallback(
     (columnId: string, width: number) => {
@@ -112,6 +125,7 @@ export function useOGridColumnLayout<T>(
     effectiveColumnOrder,
     columnWidthOverrides,
     pinnedOverrides,
+    handleColumnOrderChange,
     handleColumnResized,
     handleColumnPinned,
     setInternalColumnOrder,

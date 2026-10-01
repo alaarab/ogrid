@@ -169,7 +169,24 @@ export function useDataGridLayout<T>(
   }, [columnSizingOverrides]);
 
   const [measuredColumnWidths, setMeasuredColumnWidths] = useState<Record<string, number>>({});
-  // biome-ignore lint/correctness/useExhaustiveDependencies: visibleCols and overridesKey are deliberate re-measure triggers (see note below) — the effect reads the DOM, not these values
+
+  // Auto-width columns use their measured width as min-width, and that width
+  // includes the fill-layout share of the old container. When the container
+  // narrows, drop the measurements so columns fall back to their base
+  // min-width, then re-measure at the new size. Only a shrink resets: growing
+  // never leaves a column too wide, and keeping the ratchet otherwise avoids
+  // width jitter as rows scroll in and out.
+  const [measuredAtWidth, setMeasuredAtWidth] = useState(containerWidth);
+  const [measureEpoch, setMeasureEpoch] = useState(0);
+  if (containerWidth !== measuredAtWidth) {
+    setMeasuredAtWidth(containerWidth);
+    if (containerWidth < measuredAtWidth) {
+      setMeasuredColumnWidths({});
+      setMeasureEpoch((n) => n + 1);
+    }
+  }
+
+  // biome-ignore lint/correctness/useExhaustiveDependencies: visibleCols, overridesKey and measureEpoch are deliberate re-measure triggers (see note below) — the effect reads the DOM, not these values
   useLayoutEffect(() => {
     const wrapper = wrapperRef.current;
     if (!wrapper) return;
@@ -192,8 +209,9 @@ export function useDataGridLayout<T>(
   // setContainerWidth  to  useLayoutEffect  to  setMeasuredColumnWidths  to  re-render
   //  to  ResizeObserver  to  ...
   // overridesKey is a serialized string so the effect only re-runs when values actually change,
-  // not on every new object reference during rapid resize.
-  }, [visibleCols, overridesKey, wrapperRef]);
+  // not on every new object reference during rapid resize. measureEpoch bumps only when the
+  // container shrinks (see above).
+  }, [visibleCols, overridesKey, measureEpoch, wrapperRef]);
 
   // Build column width map for pinning offset computation
   const columnWidthMap = useMemo(() => {
