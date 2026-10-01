@@ -157,4 +157,28 @@ describe('useOGridColumnVisibility', () => {
     act(() => result.current.handleVisibilityChange('b', true));
     expect(result.current.visibleColumns).toEqual(new Set(['a', 'b']));
   });
+
+  it('handleVisibilityChange keeps every toggle made in one tick', () => {
+    const columns: Col[] = [{ columnId: 'a' }, { columnId: 'b' }, { columnId: 'c' }];
+    const { result } = renderHook(() => useOGridColumnVisibility({ columns }));
+    act(() => {
+      result.current.handleVisibilityChange('b', false);
+      result.current.handleVisibilityChange('c', false);
+    });
+    expect(result.current.visibleColumns).toEqual(new Set(['a']));
+  });
+
+  it('handleVisibilityChange reports cumulative sets to a controlled host in one tick', () => {
+    const columns: Col[] = [{ columnId: 'a' }, { columnId: 'b' }, { columnId: 'c' }];
+    const onVisibleColumnsChange = jest.fn();
+    const controlled = new Set(['a', 'b', 'c']);
+    const { result } = renderHook(() =>
+      useOGridColumnVisibility({ columns, controlledVisibleColumns: controlled, onVisibleColumnsChange })
+    );
+    act(() => {
+      result.current.handleVisibilityChange('b', false);
+      result.current.handleVisibilityChange('c', false);
+    });
+    expect(onVisibleColumnsChange).toHaveBeenLastCalledWith(new Set(['a']));
+  });
 });

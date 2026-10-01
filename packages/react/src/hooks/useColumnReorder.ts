@@ -9,6 +9,7 @@ import {
 import type { ColumnPinState } from '@alaarab/ogrid-core';
 
 export interface UseColumnReorderParams<T> {
+  /** All leaf columns, including hidden ones, so a reorder keeps their place. */
   columns: IColumnDef<T>[];
   columnOrder?: string[];
   onColumnOrderChange?: (order: string[]) => void;
@@ -45,6 +46,20 @@ function toPinnedColumnsShape(
     ...(left.length > 0 ? { left } : {}),
     ...(right.length > 0 ? { right } : {}),
   };
+}
+
+/** Elements inside a header cell whose own pointer interactions must not start a drag. */
+const INTERACTIVE_SELECTOR = 'button, input, select, textarea, a[href], [role="button"], [data-ogrid-filter-trigger]';
+
+/**
+ * Full display order: the explicit order, then any column it doesn't list in
+ * definition order (the same rule the grid uses to sort what it renders).
+ */
+function resolveColumnOrder(columnOrder: string[] | undefined, columns: { columnId: string }[]): string[] {
+  const ids = columns.map((c) => c.columnId);
+  if (!columnOrder?.length) return ids;
+  const listed = new Set(columnOrder);
+  return [...columnOrder, ...ids.filter((id) => !listed.has(id))];
 }
 
 /**
@@ -96,6 +111,14 @@ export function useColumnReorder<T>(params: UseColumnReorderParams<T>): UseColum
       // Gate on left-click only
       if (event.button !== 0) return;
 
+      // Ignore presses on the header's own controls (filter, column menu) and on
+      // portaled content (filter popover) whose events bubble through the th.
+      const header = event.currentTarget as HTMLElement;
+      const pressed = event.target;
+      if (!(pressed instanceof Node) || !header.contains(pressed)) return;
+      const control = pressed instanceof Element ? pressed.closest(INTERACTIVE_SELECTOR) : null;
+      if (control && control !== header && header.contains(control)) return;
+
       // Skip if in resize handle zone (right 8px of the header cell)
       const target = event.currentTarget as HTMLElement;
       const rect = target.getBoundingClientRect();
@@ -138,8 +161,7 @@ export function useColumnReorder<T>(params: UseColumnReorderParams<T>): UseColum
           const wrapper = wrapperRef.current;
           if (!wrapper) return;
 
-          const currentOrder =
-            columnOrderRef.current ?? columnsRef.current.map((c) => c.columnId);
+          const currentOrder = resolveColumnOrder(columnOrderRef.current, columnsRef.current);
 
           const result = calculateDropTarget({
             mouseX: moveEvent.clientX,
@@ -179,10 +201,11 @@ export function useColumnReorder<T>(params: UseColumnReorderParams<T>): UseColum
         cleanup();
 
         if (hasMoved && latestDropTargetIndex != null) {
-          const currentOrder =
-            columnOrderRef.current ?? columnsRef.current.map((c) => c.columnId);
+          const currentOrder = resolveColumnOrder(columnOrderRef.current, columnsRef.current);
           const newOrder = reorderColumnArray(currentOrder, columnId, latestDropTargetIndex);
-          onColumnOrderChangeRef.current?.(newOrder);
+          if (newOrder.some((id, i) => id !== currentOrder[i])) {
+            onColumnOrderChangeRef.current?.(newOrder);
+          }
         }
 
         setIsDragging(false);

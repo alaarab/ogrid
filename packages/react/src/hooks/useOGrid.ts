@@ -340,6 +340,7 @@ export function useOGrid<T>(
     effectiveColumnOrder,
     columnWidthOverrides,
     pinnedOverrides,
+    handleColumnOrderChange,
     handleColumnResized,
     handleColumnPinned,
     setInternalColumnOrder,
@@ -348,6 +349,7 @@ export function useOGrid<T>(
   } = useOGridColumnLayout({
     columnsProp,
     controlledColumnOrder: columnOrder,
+    onColumnOrderChange,
     onColumnResized,
     onColumnPinned,
   });
@@ -605,7 +607,7 @@ export function useOGrid<T>(
     onColumnSort: sortingState.handleSort,
     visibleColumns,
     columnOrder: effectiveColumnOrder,
-    onColumnOrderChange,
+    onColumnOrderChange: handleColumnOrderChange,
     onColumnResized: handleColumnResized,
     onColumnPinned: handleColumnPinned,
     pinnedColumns: pinnedOverrides,
@@ -644,7 +646,7 @@ export function useOGrid<T>(
   }), [
     dataFetchingState.displayItems, dataFetchingState.windowed, columnsProp, getRowId,
     sortingState.sort.field, sortingState.sort.direction, sortingState.handleSort,
-    visibleColumns, effectiveColumnOrder, onColumnOrderChange, handleColumnResized,
+    visibleColumns, effectiveColumnOrder, handleColumnOrderChange, handleColumnResized,
     handleColumnPinned, pinnedOverrides, columnWidthOverrides,
     editable, cellSelection, onCellValueChanged, onUndo, onRedo, canUndo, canRedo,
     rowSelection, effectiveSelectedRows, handleSelectionChange,
