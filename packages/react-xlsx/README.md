@@ -27,7 +27,17 @@ Other entry points:
 
 ### Untrusted files
 
-A few-KB file can declare a used range of billions of cells. Loading is capped by `maxRows`, `maxCols` and `maxCells` (defaults: 1,048,576 rows, 1,000 columns, 5,000,000 cells). Pass `limits` to `XlsxGrid`/`XlsxWorkbookGrid`, or the same options to `sheetToGridData`. When a sheet is cut, the grid shows a notice and `sheetToGridData` returns `truncated` with the full size.
+A few-KB file can declare a used range of billions of cells. Grid mapping is capped by `maxRows`, `maxCols` and `maxCells` (defaults: 1,048,576 worksheet rows, 1,000 columns, 5,000,000 cells). Pass `limits` to `XlsxGrid`/`XlsxWorkbookGrid`, or the same options to `sheetToGridData`. When a sheet is cut, the grid shows a notice and `sheetToGridData` returns `truncated` with the full size. A `NaN` limit uses the default, `Infinity` removes the limit, and other values are rounded down to at least one.
+
+`workbookFromBlob(blob, options)` and blob-backed `XlsxWorkbookGrid` also enforce `maxFileBytes` (default 50 MiB) before reading, and `maxUncompressedBytes` (default 200 MiB) against the ZIP directory before ExcelJS parsing. Multi-volume archives are rejected. CSV parsing stops at the row/cell limits and drops columns beyond the column limit; `parseTruncated` indicates that the original extent is unknown. These byte limits can be configured in `limits`. Pre-parsed workbooks bypass byte checks.
+
+XLSX row/cell limits bound grid mapping, **not ExcelJS parsing**. ExcelJS still inflates and parses the complete workbook, and ZIP sizes are declared metadata rather than a bound enforced during decompression. Use a trusted or independently bounded parser when a strict parse-time memory limit is required.
+
+### Formulas
+
+Imported formulas start with `=`. Shared formulas expand to each cell's references. Promoting a header row rebases local references, including absolute rows, into grid data coordinates the way deleting that row would in Excel: a range that starts on it shrinks, and a single reference to it becomes `#REF!`. The grid shows the file's cached result for those formulas instead of recalculating them. Sheet-qualified references keep worksheet coordinates and read other sheets' cached values. The grid preserves cached results for unsupported syntax, functions, named ranges or missing sheets; those formulas remain in `sheetToGridData().initialFormulas` for export but are not loaded into the live engine.
+
+Export accepts formulas in grid data coordinates, removes the leading `=`, and adds the worksheet header offset to local references. Keep `items` and `columns` in the order used to key the formulas. Export creates one sheet; callers exporting cross-sheet formulas must provide the referenced sheets themselves. Non-finite numeric values become empty cells, and invalid sheet names are sanitized.
 
 ### Bundle size
 
