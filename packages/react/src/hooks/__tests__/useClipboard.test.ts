@@ -509,4 +509,58 @@ describe('useClipboard', () => {
       expect(events).toHaveLength(1);
     });
   });
+
+  describe('cut and paste of formula cells (S02/S03 + K07)', () => {
+    type Row = { id: string; name: string };
+    const cols = [{ columnId: 'name', name: 'Name', editable: true }] as import('../../types').IColumnDef<Row>[];
+
+    function setup() {
+      const formulas = new Map<string, string>([['0,0', '=B1']]);
+      const events: { rowIndex: number; newValue: unknown }[] = [];
+      const state = { selection: { startRow: 0, startCol: 0, endRow: 0, endCol: 0 } };
+      const hook = renderHook(() =>
+        useClipboard<Row>({
+          items: [{ id: '1', name: '' }, { id: '2', name: '' }],
+          visibleCols: cols,
+          colOffset: 0,
+          selectionRange: state.selection,
+          activeCell: null,
+          editable: true,
+          getRowId: (r) => r.id,
+          onCellValueChanged: (e) => events.push({ rowIndex: e.rowIndex, newValue: e.newValue }),
+          formulas: true,
+          flatColumns: cols,
+          getFormula: (col, row) => formulas.get(`${col},${row}`),
+          hasFormula: (col, row) => formulas.has(`${col},${row}`),
+          setFormula: (col, row, formula) => {
+            if (formula) formulas.set(`${col},${row}`, formula);
+            else formulas.delete(`${col},${row}`);
+          },
+        }),
+      );
+      return { formulas, events, state, ...hook };
+    }
+
+    it('pasting a cut formula back onto its own cell keeps it (no cut-clear over the pasted formula)', async () => {
+      const { formulas, events, result } = setup();
+      act(() => { result.current.handleCut(); });
+      const text = writeTextMock.mock.calls[0]![0] as string;
+      expect(text).toBe('=B1');
+      readTextMock.mockResolvedValue(text);
+      await act(async () => { await result.current.handlePaste(); });
+      expect(formulas.get('0,0')).toBe('=B1');
+      expect(events.filter((e) => e.rowIndex === 0)).toEqual([]);
+    });
+
+    it('pasting a cut formula elsewhere clears the cut source', async () => {
+      const { formulas, events, state, result, rerender } = setup();
+      act(() => { result.current.handleCut(); });
+      readTextMock.mockResolvedValue(writeTextMock.mock.calls[0]![0] as string);
+      state.selection = { startRow: 1, startCol: 0, endRow: 1, endCol: 0 };
+      rerender();
+      await act(async () => { await result.current.handlePaste(); });
+      expect(formulas.has('0,1')).toBe(true);
+      expect(events.filter((e) => e.rowIndex === 0)).toEqual([{ rowIndex: 0, newValue: '' }]);
+    });
+  });
 });

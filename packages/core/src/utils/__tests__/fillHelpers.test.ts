@@ -506,3 +506,37 @@ describe('applyFillValues  -  multi-cell source tiling (S01)', () => {
     expect(byCol('value')).toEqual(['b1', 'b1', 'b1']);
   });
 });
+
+describe('applyFillValues  -  tiled formula fill (S01 + sheet coordinates)', () => {
+  const colX: IColumnDef<Row> = { columnId: 'id', name: 'X', editable: true };
+  const colY: IColumnDef<Row> = { columnId: 'value', name: 'Y', editable: true };
+
+  it('shifts each destination by the sheet distance from its own tile source cell', () => {
+    // Sorted view: display rows 0..4 show sheet rows 10, 11, 3, 7, 20. Column X
+    // is hidden, so visible column 0 is flat column 1 (B).
+    const sheetRows = [10, 11, 3, 7, 20];
+    const items = sheetRows.map(() => ({ id: '', value: null })) as Row[];
+    const store = new Map<string, string>([
+      ['1,0', '=A11*2'],
+      ['1,1', '=A12+1'],
+    ]);
+    const formulaOptions: IFillFormulaOptions<Row> = {
+      flatColumns: [colX, colY],
+      hasFormula: (col, row) => store.has(`${col},${row}`),
+      getFormula: (col, row) => store.get(`${col},${row}`),
+      setFormula: (col, row, formula) => {
+        if (formula) store.set(`${col},${row}`, formula);
+      },
+      formulaRow: (row) => sheetRows[row] ?? row,
+    };
+    const events = applyFillValues(makeRange(0, 0, 4, 0), 0, 0, items, [colY], formulaOptions, makeRange(0, 0, 1, 0));
+    expect(events).toHaveLength(0);
+    // Each filled formula reads its own record's row in column A.
+    expect(store.get('1,2')).toBe('=A4*2');
+    expect(store.get('1,3')).toBe('=A8+1');
+    expect(store.get('1,4')).toBe('=A21*2');
+    // Source cells are untouched.
+    expect(store.get('1,0')).toBe('=A11*2');
+    expect(store.get('1,1')).toBe('=A12+1');
+  });
+});
