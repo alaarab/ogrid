@@ -398,14 +398,64 @@ export class DependencyGraph {
       }
     }
 
-    // Step 5: Any remaining cells are in a cycle  -  append at the end
     const cyclic = new Set<CellKey>();
     if (result.length < affected.size) {
-      const resultSet = new Set(result);
-      for (const cell of affected) {
-        if (!resultSet.has(cell)) {
-          result.push(cell);
-          cyclic.add(cell);
+      const processed = new Set(result);
+      const remaining = new Set([...affected].filter(cell => !processed.has(cell)));
+      const visited = new Set<CellKey>();
+      const finish: CellKey[] = [];
+      const reverse = new Map<CellKey, CellKey[]>();
+      for (const cell of remaining) {
+        for (const dependent of getDeps(cell)) {
+          if (!remaining.has(dependent)) continue;
+          const list = reverse.get(dependent) ?? [];
+          list.push(cell);
+          reverse.set(dependent, list);
+        }
+      }
+      for (const cell of remaining) {
+        if (visited.has(cell)) continue;
+        const stack: Array<{ cell: CellKey; exit: boolean }> = [{ cell, exit: false }];
+        while (stack.length) {
+          const entry = stack.pop();
+          if (!entry) break;
+          if (entry.exit) { finish.push(entry.cell); continue; }
+          if (visited.has(entry.cell)) continue;
+          visited.add(entry.cell);
+          stack.push({ cell: entry.cell, exit: true });
+          for (const dependent of getDeps(entry.cell)) if (remaining.has(dependent) && !visited.has(dependent)) stack.push({ cell: dependent, exit: false });
+        }
+      }
+      visited.clear();
+      for (const cell of finish.reverse()) {
+        if (visited.has(cell)) continue;
+        const component: CellKey[] = [];
+        const stack = [cell];
+        visited.add(cell);
+        while (stack.length) {
+          const current = stack.pop();
+          if (!current) break;
+          component.push(current);
+          for (const precedent of reverse.get(current) ?? []) if (!visited.has(precedent)) { visited.add(precedent); stack.push(precedent); }
+        }
+        if (component.length > 1 || getDeps(cell).includes(cell)) for (const member of component) cyclic.add(member);
+      }
+      for (const cell of cyclic) result.push(cell);
+      for (const cell of cyclic) for (const dependent of getDeps(cell)) {
+        if (!remaining.has(dependent) || cyclic.has(dependent)) continue;
+        const degree = (inDegree.get(dependent) ?? 0) - 1;
+        inDegree.set(dependent, degree);
+        if (degree === 0) queue.push(dependent);
+      }
+      while (queueHead < queue.length) {
+        const cell = queue[queueHead++];
+        if (!cell) continue;
+        result.push(cell);
+        for (const dependent of getDeps(cell)) {
+          if (!remaining.has(dependent) || cyclic.has(dependent)) continue;
+          const degree = (inDegree.get(dependent) ?? 0) - 1;
+          inDegree.set(dependent, degree);
+          if (degree === 0) queue.push(dependent);
         }
       }
     }

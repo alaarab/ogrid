@@ -66,7 +66,7 @@ export function registerMathArithmeticFunctions(registry: Map<string, IFormulaFu
       if (rawVal instanceof FormulaError) return rawVal;
       const num = toNumber(rawVal);
       if (num instanceof FormulaError) return num;
-      if (num < 0) return new FormulaError('#VALUE!', 'Cannot take square root of negative number');
+      if (num < 0) return new FormulaError('#NUM!', 'Cannot take square root of negative number');
       return Math.sqrt(num);
     },
   });

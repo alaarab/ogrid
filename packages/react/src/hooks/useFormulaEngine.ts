@@ -11,6 +11,7 @@ import {
   createGridDataAccessor,
   type IGridDataAccessor,
   type IFormulaFunction,
+  type IFormulaLimits,
   type IRecalcResult,
   type IAuditEntry,
   type IAuditTrail,
@@ -34,6 +35,8 @@ export interface UseFormulaEngineParams<T> {
   formulaFunctions?: Record<string, IFormulaFunction>;
   /** Named ranges: name  to  cell/range reference string. */
   namedRanges?: Record<string, string>;
+  /** Per-formula resource limits, read when the engine is created. */
+  formulaLimits?: IFormulaLimits;
   /** Sheet accessors for cross-sheet references. */
   sheets?: Record<string, IGridDataAccessor>;
 }
@@ -82,6 +85,7 @@ export function useFormulaEngine<T>(
     onFormulaRecalc,
     formulaFunctions,
     namedRanges,
+    formulaLimits,
     sheets,
   } = params;
 
@@ -98,6 +102,7 @@ export function useFormulaEngine<T>(
     engineRef.current = new FormulaEngine({
       customFunctions: formulaFunctions,
       namedRanges,
+      limits: formulaLimits,
     });
   } else if (!formulas && engineRef.current) {
     engineRef.current = null;
