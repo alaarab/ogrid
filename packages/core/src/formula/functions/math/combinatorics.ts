@@ -1,6 +1,6 @@
 import type { IFormulaFunction, IFormulaContext, IEvaluator, ASTNode } from '../../types';
 import { FormulaError } from '../../types';
-import { toNumber, evalArg } from '../../evaluator';
+import { toNumber, evalArg, flattenArgs } from '../../evaluator';
 
 /**
  * Combinatorics and integer functions: COMBIN, PERMUT, FACT, GCD, LCM.
@@ -32,9 +32,11 @@ export function registerMathCombinatoricsFunctions(registry: Map<string, IFormul
       // Compute using multiplicative formula to avoid factorial overflow
       if (ki === 0 || ki === ni) return 1;
       const kk = Math.min(ki, ni - ki);
+      if (!Number.isSafeInteger(ni) || kk > 1024) return new FormulaError('#NUM!', 'COMBIN overflow');
       let result = 1;
       for (let i = 0; i < kk; i++) {
-        result = result * (ni - i) / (i + 1);
+        result = result * ((ni - i) / (i + 1));
+        if (!Number.isFinite(result)) return new FormulaError('#NUM!', 'COMBIN overflow');
       }
       return Math.round(result);
     },
@@ -63,6 +65,7 @@ export function registerMathCombinatoricsFunctions(registry: Map<string, IFormul
       if (ni < 0 || ki < 0) return new FormulaError('#NUM!', 'PERMUT: n and k must be non-negative');
       if (ki > ni) return new FormulaError('#NUM!', 'PERMUT: k must be <= n');
 
+      if (!Number.isSafeInteger(ni) || ki > 170) return new FormulaError('#NUM!', 'PERMUT overflow');
       let result = 1;
       for (let i = 0; i < ki; i++) {
         result *= (ni - i);
@@ -103,12 +106,12 @@ export function registerMathCombinatoricsFunctions(registry: Map<string, IFormul
     maxArgs: -1,
     evaluate(args: ASTNode[], context: IFormulaContext, evaluator: IEvaluator): unknown {
       const nums: number[] = [];
-      for (const arg of args) {
-        const rawVal = evaluator.evaluate(arg, context);
+      for (const rawVal of flattenArgs(args, context, evaluator)) {
         if (rawVal instanceof FormulaError) return rawVal;
         const v = toNumber(rawVal);
         if (v instanceof FormulaError) return v;
-        const n = Math.trunc(Math.abs(v));
+        if (!Number.isSafeInteger(Math.trunc(v)) || v < 0) return new FormulaError('#NUM!', 'Invalid integer');
+        const n = Math.trunc(v);
         nums.push(n);
       }
 
@@ -133,12 +136,12 @@ export function registerMathCombinatoricsFunctions(registry: Map<string, IFormul
     maxArgs: -1,
     evaluate(args: ASTNode[], context: IFormulaContext, evaluator: IEvaluator): unknown {
       const nums: number[] = [];
-      for (const arg of args) {
-        const rawVal = evaluator.evaluate(arg, context);
+      for (const rawVal of flattenArgs(args, context, evaluator)) {
         if (rawVal instanceof FormulaError) return rawVal;
         const v = toNumber(rawVal);
         if (v instanceof FormulaError) return v;
-        const n = Math.trunc(Math.abs(v));
+        if (!Number.isSafeInteger(Math.trunc(v)) || v < 0) return new FormulaError('#NUM!', 'Invalid integer');
+        const n = Math.trunc(v);
         nums.push(n);
       }
 
@@ -152,6 +155,7 @@ export function registerMathCombinatoricsFunctions(registry: Map<string, IFormul
         const g = gcdTwo(result, n);
         if (g === 0) { result = 0; break; }
         result = (result / g) * n;
+        if (!Number.isSafeInteger(result)) return new FormulaError('#NUM!', 'LCM overflow');
       }
       return result;
     },

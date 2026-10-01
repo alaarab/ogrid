@@ -77,9 +77,9 @@ describe('toNumber', () => {
     expect((result as FormulaError).type).toBe('#VALUE!');
   });
 
-  it('converts a Date to its timestamp', () => {
+  it('converts a Date to its Excel serial', () => {
     const d = new Date('2025-06-15T00:00:00Z');
-    expect(toNumber(d)).toBe(d.getTime());
+    expect(toNumber(d)).toBe(45823);
   });
 
   it('passes a FormulaError through unchanged', () => {
@@ -115,8 +115,8 @@ describe('toText', () => {
   });
 
   it('converts a boolean to string', () => {
-    expect(toText(true)).toBe('true');
-    expect(toText(false)).toBe('false');
+    expect(toText(true)).toBe('TRUE');
+    expect(toText(false)).toBe('FALSE');
   });
 
   it('passes a string through unchanged', () => {
@@ -453,14 +453,14 @@ describe('evaluate  -  mixed-type comparisons', () => {
   const num = (v: number): ASTNode => ({ kind: 'number', value: v });
   const str = (v: string): ASTNode => ({ kind: 'string', value: v });
 
-  it('compares a number and a numeric string via numeric coercion', () => {
+  it('compares a number and a numeric string without numeric coercion', () => {
     const node: ASTNode = {
       kind: 'binaryOp',
       op: '=',
       left: num(42),
       right: str('42'),
     };
-    expect(evaluator.evaluate(node, ctx)).toBe(true);
+    expect(evaluator.evaluate(node, ctx)).toBe(false);
   });
 
   it('falls back to string comparison when number coercion fails', () => {

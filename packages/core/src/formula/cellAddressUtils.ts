@@ -11,10 +11,10 @@ import type { ICellAddress, ICellRange, CellKey, Token } from './types';
 export { columnLetterToIndex };
 
 /** Regex for a cell reference: optional $ before letters, optional $ before digits. */
-const CELL_REF_RE = /^(\$?)([A-Za-z]+)(\$?)(\d+)$/;
+const CELL_REF_RE = /^(\$?)([A-Za-z]{1,3})(\$?)(\d+)$/;
 
 /** Splits a cell ref token ("A1", "$B$2") into its absolute markers and parts. */
-const REF_PARTS_RE = /^(\$?)([A-Za-z]+)(\$?)(\d+)$/;
+const REF_PARTS_RE = /^(\$?)([A-Za-z]{1,3})(\$?)(\d+)$/;
 
 /**
  * Parse a cell reference string like "A1", "$B$2", "$A1", "A$1".
@@ -29,7 +29,7 @@ export function parseCellRef(ref: string): ICellAddress | null {
   const rowDigits = m[4];
   if (colLetters === undefined || rowDigits === undefined) return null;
   const rowNum = parseInt(rowDigits, 10);
-  if (rowNum < 1) return null;
+  if (rowNum < 1 || rowNum > 1048576 || columnLetterToIndex(colLetters) >= 16384) return null;
   return {
     col: columnLetterToIndex(colLetters),
     row: rowNum - 1, // 0-based internally
@@ -62,7 +62,7 @@ export function formatAddress(addr: ICellAddress): string {
   const cellStr = colStr + rowStr;
   if (addr.sheet) {
     // Quote sheet name if it contains spaces
-    const sheetStr = addr.sheet.includes(' ') ? `'${addr.sheet}'` : addr.sheet;
+    const sheetStr = /^[A-Za-z_][A-Za-z0-9_]*$/.test(addr.sheet) ? addr.sheet : `'${addr.sheet.replace(/'/g, "''")}'`;
     return `${sheetStr}!${cellStr}`;
   }
   return cellStr;
@@ -109,7 +109,7 @@ export function adjustFormulaReferences(formula: string, colDelta: number, rowDe
     let replacement: string;
     const colIdx = columnLetterToIndex(colLetters) + (colAbs === '$' ? 0 : colDelta);
     const rowNum = parseInt(rowDigits, 10) + (rowAbs === '$' ? 0 : rowDelta);
-    if (colIdx < 0 || rowNum < 1) {
+    if (colIdx < 0 || colIdx >= 16384 || rowNum < 1 || rowNum > 1048576) {
       // Rows are 1-based in formulas; either axis going out of bounds is #REF!.
       replacement = '#REF!';
     } else {

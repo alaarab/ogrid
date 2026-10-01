@@ -11,7 +11,7 @@ export function registerMathAggregationFunctions(registry: Map<string, IFormulaF
     minArgs: 1,
     maxArgs: -1,
     evaluate(args: ASTNode[], context: IFormulaContext, evaluator: IEvaluator): unknown {
-      const values = flattenArgs(args, context, evaluator);
+      const values = flattenArgs(args, context, evaluator, true);
       let sum = 0;
       for (const val of values) {
         if (val instanceof FormulaError) return val;
@@ -30,7 +30,7 @@ export function registerMathAggregationFunctions(registry: Map<string, IFormulaF
     minArgs: 1,
     maxArgs: -1,
     evaluate(args: ASTNode[], context: IFormulaContext, evaluator: IEvaluator): unknown {
-      const values = flattenArgs(args, context, evaluator);
+      const values = flattenArgs(args, context, evaluator, true);
       let sum = 0;
       let count = 0;
       for (const val of values) {
@@ -52,7 +52,7 @@ export function registerMathAggregationFunctions(registry: Map<string, IFormulaF
     minArgs: 1,
     maxArgs: -1,
     evaluate(args: ASTNode[], context: IFormulaContext, evaluator: IEvaluator): unknown {
-      const values = flattenArgs(args, context, evaluator);
+      const values = flattenArgs(args, context, evaluator, true);
       let min = Infinity;
       for (const val of values) {
         if (val instanceof FormulaError) return val;
@@ -71,7 +71,7 @@ export function registerMathAggregationFunctions(registry: Map<string, IFormulaF
     minArgs: 1,
     maxArgs: -1,
     evaluate(args: ASTNode[], context: IFormulaContext, evaluator: IEvaluator): unknown {
-      const values = flattenArgs(args, context, evaluator);
+      const values = flattenArgs(args, context, evaluator, true);
       let max = -Infinity;
       for (const val of values) {
         if (val instanceof FormulaError) return val;
@@ -90,7 +90,7 @@ export function registerMathAggregationFunctions(registry: Map<string, IFormulaF
     minArgs: 1,
     maxArgs: -1,
     evaluate(args: ASTNode[], context: IFormulaContext, evaluator: IEvaluator): unknown {
-      const values = flattenArgs(args, context, evaluator);
+      const values = flattenArgs(args, context, evaluator, true);
       let count = 0;
       for (const val of values) {
         if (val instanceof FormulaError) return val;
@@ -106,7 +106,7 @@ export function registerMathAggregationFunctions(registry: Map<string, IFormulaF
     minArgs: 1,
     maxArgs: -1,
     evaluate(args: ASTNode[], context: IFormulaContext, evaluator: IEvaluator): unknown {
-      const values = flattenArgs(args, context, evaluator);
+      const values = flattenArgs(args, context, evaluator, true);
       let count = 0;
       for (const val of values) {
         if (val instanceof FormulaError) return val;
@@ -122,7 +122,7 @@ export function registerMathAggregationFunctions(registry: Map<string, IFormulaF
     minArgs: 1,
     maxArgs: -1,
     evaluate(args: ASTNode[], context: IFormulaContext, evaluator: IEvaluator): unknown {
-      const values = flattenArgs(args, context, evaluator);
+      const values = flattenArgs(args, context, evaluator, true);
       let product = 1;
       let hasNumber = false;
       for (const val of values) {
@@ -166,9 +166,9 @@ export function registerMathAggregationFunctions(registry: Map<string, IFormulaF
         for (let c = 0; c < cols; c++) {
           let product = 1;
           for (let a = 0; a < arrays.length; a++) {
-            const v = toNumber(arrays[a]?.[r]?.[c]);
-            if (v instanceof FormulaError) { product = 0; break; }
-            product *= v;
+            const v = arrays[a]?.[r]?.[c];
+            if (v instanceof FormulaError) return v;
+            product *= typeof v === 'number' ? v : 0;
           }
           sum += product;
         }
@@ -181,7 +181,7 @@ export function registerMathAggregationFunctions(registry: Map<string, IFormulaF
     minArgs: 1,
     maxArgs: -1,
     evaluate(args: ASTNode[], context: IFormulaContext, evaluator: IEvaluator): unknown {
-      const values = flattenArgs(args, context, evaluator);
+      const values = flattenArgs(args, context, evaluator, true);
       const nums: number[] = [];
       for (const val of values) {
         if (val instanceof FormulaError) return val;
@@ -205,10 +205,10 @@ export function registerMathAggregationFunctions(registry: Map<string, IFormulaF
     maxArgs: 2,
     evaluate(args: ASTNode[], context: IFormulaContext, evaluator: IEvaluator): unknown {
       const rangeArg = args[0];
-      if (rangeArg === undefined || rangeArg.kind !== 'range') {
+      if (rangeArg === undefined || (rangeArg.kind !== 'range' && rangeArg.kind !== 'cellRef')) {
         return new FormulaError('#VALUE!', 'LARGE first argument must be a range');
       }
-      const rangeData = context.getRangeValues({ start: rangeArg.start, end: rangeArg.end });
+      const rangeData = rangeArg.kind === 'range' ? context.getRangeValues({ start: rangeArg.start, end: rangeArg.end }) : [[context.getCellValue(rangeArg.address)]];
       const rawK = evalArg(evaluator, args[1], context);
       if (rawK instanceof FormulaError) return rawK;
       const k = toNumber(rawK);
@@ -231,10 +231,10 @@ export function registerMathAggregationFunctions(registry: Map<string, IFormulaF
     maxArgs: 2,
     evaluate(args: ASTNode[], context: IFormulaContext, evaluator: IEvaluator): unknown {
       const rangeArg = args[0];
-      if (rangeArg === undefined || rangeArg.kind !== 'range') {
+      if (rangeArg === undefined || (rangeArg.kind !== 'range' && rangeArg.kind !== 'cellRef')) {
         return new FormulaError('#VALUE!', 'SMALL first argument must be a range');
       }
-      const rangeData = context.getRangeValues({ start: rangeArg.start, end: rangeArg.end });
+      const rangeData = rangeArg.kind === 'range' ? context.getRangeValues({ start: rangeArg.start, end: rangeArg.end }) : [[context.getCellValue(rangeArg.address)]];
       const rawK = evalArg(evaluator, args[1], context);
       if (rawK instanceof FormulaError) return rawK;
       const k = toNumber(rawK);
@@ -261,10 +261,10 @@ export function registerMathAggregationFunctions(registry: Map<string, IFormulaF
       const num = toNumber(rawNum);
       if (num instanceof FormulaError) return num;
       const rangeArg = args[1];
-      if (rangeArg === undefined || rangeArg.kind !== 'range') {
+      if (rangeArg === undefined || (rangeArg.kind !== 'range' && rangeArg.kind !== 'cellRef')) {
         return new FormulaError('#VALUE!', 'RANK second argument must be a range');
       }
-      const rangeData = context.getRangeValues({ start: rangeArg.start, end: rangeArg.end });
+      const rangeData = rangeArg.kind === 'range' ? context.getRangeValues({ start: rangeArg.start, end: rangeArg.end }) : [[context.getCellValue(rangeArg.address)]];
       let order = 0; // 0 = descending, 1 = ascending
       if (args.length >= 3) {
         const rawO = evalArg(evaluator, args[2], context);

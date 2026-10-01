@@ -259,41 +259,45 @@ export function registerFinancialFunctions(registry: Map<string, IFormulaFunctio
         guess = guessNum;
       }
 
-      // Newton-Raphson: find rate such that PV formula = 0
-      // f(r) = pv*(1+r)^n + pmt*typeAdj*((1+r)^n - 1)/r + fv = 0
-      const MAX_ITER = 20;
-      const TOLERANCE = 1e-7;
-      let r = guess;
-
-      for (let i = 0; i < MAX_ITER; i++) {
-        if (r <= -1) return new FormulaError('#NUM!', 'RATE: rate converged to invalid value');
-        const factor = (1 + r) ** nper;
-        const typeAdj = type !== 0 ? (1 + r) : 1;
-
-        let f: number;
-        let df: number;
-
-        if (Math.abs(r) < 1e-10) {
-          // Linear approximation when rate is near zero
-          f = pv + pmt * nper + fv;
-          df = pv * nper + pmt * nper * (nper - 1) / 2;
-        } else {
-          f = pv * factor + pmt * typeAdj * (factor - 1) / r + fv;
-          // Derivative df/dr
-          const dfactor = nper * (1 + r) ** (nper - 1);
-          const dTypeAdj = type !== 0 ? 1 : 0;
-          df = pv * dfactor
-            + pmt * (dTypeAdj * (factor - 1) / r + typeAdj * (dfactor * r - (factor - 1)) / (r * r));
-        }
-
-        if (Math.abs(df) < 1e-15) return new FormulaError('#NUM!', 'RATE: derivative too small, no convergence');
-
-        const delta = f / df;
-        r = r - delta;
-
-        if (Math.abs(delta) < TOLERANCE) return r;
+      if (nper <= 0 || !Number.isFinite(nper) || guess <= -1 || (type !== 0 && type !== 1)) return new FormulaError('#NUM!', 'Invalid RATE arguments');
+      // Normalise by the discount factor so long loans don't overflow (1+r)^n.
+      const equation = (rate: number): number => {
+        if (Math.abs(rate) < 1e-10) return pv + pmt * nper + fv;
+        const exponent = -nper * Math.log1p(rate);
+        const discount = Math.exp(exponent);
+        return pv + pmt * (1 + rate * type) * (-Math.expm1(exponent)) / rate + (fv === 0 ? 0 : fv * discount);
+      };
+      const tolerance = Math.max(1, Math.abs(pv), Math.abs(pmt), Math.abs(fv)) * 1e-10;
+      if (Math.abs(equation(0)) <= tolerance) return 0;
+      // First try the caller's guess, with a hard cap and a safeguarded step.
+      let rate = guess;
+      for (let i = 0; i < 30; i++) {
+        const value = equation(rate);
+        if (Number.isFinite(value) && Math.abs(value) <= tolerance) return rate;
+        const h = Math.max(1e-7, Math.abs(rate) * 1e-5);
+        const derivative = (equation(rate + h) - equation(rate - h)) / (2 * h);
+        const next = rate - value / derivative;
+        if (!Number.isFinite(next) || next <= -0.999999 || Math.abs(next - rate) > 1) break;
+        rate = next;
       }
-
+      // Search a finite bracket, then bisect for at most 100 iterations.
+      let low = -0.999;
+      let high = Math.max(1, guess);
+      let lowValue = equation(low);
+      let highValue = equation(high);
+      for (let i = 0; i < 32 && Math.sign(lowValue) === Math.sign(highValue); i++) {
+        high *= 2;
+        highValue = equation(high);
+      }
+      if (Number.isNaN(lowValue) || Number.isNaN(highValue) || Math.sign(lowValue) === Math.sign(highValue)) return new FormulaError('#NUM!', 'RATE: no root found');
+      for (let i = 0; i < 100; i++) {
+        const mid = (low + high) / 2;
+        const value = equation(mid);
+        if (Number.isFinite(value) && Math.abs(value) <= tolerance) return mid;
+        if (Number.isNaN(value)) break;
+        if (Math.sign(value) === Math.sign(lowValue)) { low = mid; lowValue = value; }
+        else high = mid;
+      }
       return new FormulaError('#NUM!', 'RATE: did not converge');
     },
   });
@@ -363,6 +367,7 @@ export function registerFinancialFunctions(registry: Map<string, IFormulaFunctio
         let f = 0;
         let df = 0;
         for (let j = 0; j < nums.length; j++) {
+          context.consumeWork?.(1);
           const flow = nums[j];
           if (flow === undefined) continue;
           const factor = (1 + r) ** j;

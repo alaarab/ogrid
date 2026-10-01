@@ -1,6 +1,7 @@
 import type { IFormulaFunction, IFormulaContext, IEvaluator, ASTNode } from '../types';
 import { FormulaError } from '../types';
 import { toNumber } from '../evaluator';
+import { MAX_MATRIX_SIZE, MAX_RANGE_CELLS } from '../limits';
 import { parseCellRef, parseRange } from '../cellAddressUtils';
 import { indexToColumnLetter } from '../../utils/cellReference';
 
@@ -32,8 +33,7 @@ export function registerReferenceFunctions(registry: Map<string, IFormulaFunctio
         if (start.row === end.row && start.col === end.col) {
           return context.getCellValue(start);
         }
-        // Multi-cell: return top-left cell value (INDIRECT of a range returns single value)
-        return context.getCellValue(start);
+        return context.getRangeValues(range);
       }
 
       // Try as a cell reference
@@ -110,17 +110,23 @@ export function registerReferenceFunctions(registry: Map<string, IFormulaFunctio
         width = Math.trunc(w);
       }
 
-      if (height <= 0 || width <= 0) {
+      if (!Number.isFinite(height) || !Number.isFinite(width) || height <= 0 || width <= 0) {
         return new FormulaError('#VALUE!', 'OFFSET: height and width must be >= 1');
       }
 
+      const sheetName = refArg?.kind === 'cellRef' ? refArg.address.sheet : refArg?.kind === 'range' ? refArg.start.sheet : undefined;
+      if (!Number.isSafeInteger(targetRow) || !Number.isSafeInteger(targetCol) || targetRow + height > 1048576 || targetCol + width > 16384) return new FormulaError('#REF!', 'OFFSET out of bounds');
       // Single-cell result
       if (height === 1 && width === 1) {
-        return context.getCellValue({ col: targetCol, row: targetRow, absCol: false, absRow: false });
+        return context.getCellValue({ col: targetCol, row: targetRow, absCol: false, absRow: false, sheet: sheetName });
       }
 
-      // Multi-cell: return top-left cell value (simplified; full array return requires engine support)
-      return context.getCellValue({ col: targetCol, row: targetRow, absCol: false, absRow: false });
+      const sheet = refArg?.kind === 'cellRef' ? refArg.address.sheet : refArg?.kind === 'range' ? refArg.start.sheet : undefined;
+      if (!Number.isSafeInteger(targetRow) || !Number.isSafeInteger(targetCol) || targetRow + height > 1048576 || targetCol + width > 16384) return new FormulaError('#REF!', 'OFFSET out of bounds');
+      return context.getRangeValues({
+        start: { col: targetCol, row: targetRow, absCol: false, absRow: false, sheet },
+        end: { col: targetCol + width - 1, row: targetRow + height - 1, absCol: false, absRow: false, sheet },
+      });
     },
   });
 
@@ -151,7 +157,7 @@ export function registerReferenceFunctions(registry: Map<string, IFormulaFunctio
       const row = Math.trunc(rowNum);
       const col = Math.trunc(colNum);
 
-      if (row < 1 || col < 1) {
+      if (!Number.isSafeInteger(row) || !Number.isSafeInteger(col) || row < 1 || col < 1 || row > 1048576 || col > 16384) {
         return new FormulaError('#VALUE!', 'ADDRESS: row and column must be >= 1');
       }
 
@@ -188,7 +194,7 @@ export function registerReferenceFunctions(registry: Map<string, IFormulaFunctio
       }
 
       if (sheetText) {
-        const quoted = sheetText.includes(' ') ? `'${sheetText}'` : sheetText;
+        const quoted = /^[A-Za-z_][A-Za-z0-9_]*$/.test(sheetText) ? sheetText : `'${sheetText.replace(/'/g, "''")}'`;
         return `${quoted}!${address}`;
       }
       return address;
@@ -204,9 +210,7 @@ export function registerReferenceFunctions(registry: Map<string, IFormulaFunctio
     evaluate(args: ASTNode[], context: IFormulaContext, evaluator: IEvaluator): unknown {
       const arg = args[0];
       if (arg === undefined) {
-        // Without reference: not easily supported without current-cell info in context.
-        // Return 1 as a safe default (matches behavior when called without context).
-        return 1;
+        return (context.currentCell?.row ?? 0) + 1;
       }
 
       if (arg.kind === 'cellRef') {
@@ -239,7 +243,7 @@ export function registerReferenceFunctions(registry: Map<string, IFormulaFunctio
     evaluate(args: ASTNode[], context: IFormulaContext, evaluator: IEvaluator): unknown {
       const arg = args[0];
       if (arg === undefined) {
-        return 1;
+        return (context.currentCell?.col ?? 0) + 1;
       }
 
       if (arg.kind === 'cellRef') {
@@ -375,25 +379,7 @@ export function registerReferenceFunctions(registry: Map<string, IFormulaFunctio
       if (arrayArg === undefined || arrayArg.kind !== 'range') {
         return new FormulaError('#VALUE!', 'TRANSPOSE: argument must be a range');
       }
-      const data = context.getRangeValues({ start: arrayArg.start, end: arrayArg.end });
-      const firstDataRow = data[0];
-      if (firstDataRow === undefined) return null;
-
-      const rows = data.length;
-      const cols = firstDataRow.length;
-
-      // Build transposed array
-      const transposed: unknown[][] = [];
-      for (let c = 0; c < cols; c++) {
-        const newRow: unknown[] = [];
-        for (let r = 0; r < rows; r++) {
-          newRow.push(data[r]?.[c]);
-        }
-        transposed.push(newRow);
-      }
-
-      // Return top-left element (single-cell context)
-      return transposed[0]?.[0] ?? null;
+      return context.getCellValue({ ...arrayArg.start, col: Math.min(arrayArg.start.col, arrayArg.end.col), row: Math.min(arrayArg.start.row, arrayArg.end.row) });
     },
   });
 
@@ -413,44 +399,23 @@ export function registerReferenceFunctions(registry: Map<string, IFormulaFunctio
         return new FormulaError('#VALUE!', 'MMULT: array2 must be a range');
       }
 
-      const a = context.getRangeValues({ start: array1Arg.start, end: array1Arg.end });
-      const b = context.getRangeValues({ start: array2Arg.start, end: array2Arg.end });
-
-      const aFirstRow = a[0];
-      const bFirstRow = b[0];
-      if (aFirstRow === undefined || bFirstRow === undefined) {
-        return new FormulaError('#VALUE!', 'MMULT: empty array');
+      const aCols = Math.abs(array1Arg.end.col - array1Arg.start.col) + 1;
+      const bRows = Math.abs(array2Arg.end.row - array2Arg.start.row) + 1;
+      if (aCols !== bRows) return new FormulaError('#VALUE!', 'MMULT dimensions do not match');
+      if (aCols > MAX_RANGE_CELLS) return new FormulaError('#VALUE!', 'MMULT too large');
+      let sum = 0;
+      const aCol = Math.min(array1Arg.start.col, array1Arg.end.col);
+      const aRow = Math.min(array1Arg.start.row, array1Arg.end.row);
+      const bCol = Math.min(array2Arg.start.col, array2Arg.end.col);
+      const bRow = Math.min(array2Arg.start.row, array2Arg.end.row);
+      for (let k = 0; k < aCols; k++) {
+        const av = toNumber(context.getCellValue({ ...array1Arg.start, col: aCol + k, row: aRow }));
+        const bv = toNumber(context.getCellValue({ ...array2Arg.start, col: bCol, row: bRow + k }));
+        if (av instanceof FormulaError) return av;
+        if (bv instanceof FormulaError) return bv;
+        sum += av * bv;
       }
-
-      const aRows = a.length;
-      const aCols = aFirstRow.length;
-      const bRows = b.length;
-      const bCols = bFirstRow.length;
-
-      if (aCols !== bRows) {
-        return new FormulaError('#VALUE!', `MMULT: columns of array1 (${aCols}) must equal rows of array2 (${bRows})`);
-      }
-
-      // Compute result matrix
-      const result: number[][] = [];
-      for (let r = 0; r < aRows; r++) {
-        const row: number[] = [];
-        for (let c = 0; c < bCols; c++) {
-          let sum = 0;
-          for (let k = 0; k < aCols; k++) {
-            const av = toNumber(a[r]?.[k]);
-            const bv = toNumber(b[k]?.[c]);
-            if (av instanceof FormulaError) return av;
-            if (bv instanceof FormulaError) return bv;
-            sum += av * bv;
-          }
-          row.push(sum);
-        }
-        result.push(row);
-      }
-
-      // Return top-left element for single-cell context
-      return result[0]?.[0];
+      return sum;
     },
   });
 
@@ -466,11 +431,12 @@ export function registerReferenceFunctions(registry: Map<string, IFormulaFunctio
         return new FormulaError('#VALUE!', 'MDETERM: argument must be a range');
       }
 
+      const size = Math.abs(arrayArg.end.row - arrayArg.start.row) + 1;
+      if (size > MAX_MATRIX_SIZE || Math.abs(arrayArg.end.col - arrayArg.start.col) + 1 > MAX_MATRIX_SIZE) return new FormulaError('#VALUE!', 'Matrix too large');
       const data = context.getRangeValues({ start: arrayArg.start, end: arrayArg.end });
-      if (data.length === 0) return new FormulaError('#VALUE!', 'MDETERM: empty array');
 
-      const n = data.length;
-      if (data.some(row => row.length !== n)) {
+      const n = size;
+      if (Math.abs(arrayArg.end.col - arrayArg.start.col) + 1 !== n) {
         return new FormulaError('#VALUE!', 'MDETERM: array must be square');
       }
 
@@ -502,11 +468,12 @@ export function registerReferenceFunctions(registry: Map<string, IFormulaFunctio
         return new FormulaError('#VALUE!', 'MINVERSE: argument must be a range');
       }
 
+      const size = Math.abs(arrayArg.end.row - arrayArg.start.row) + 1;
+      if (size > MAX_MATRIX_SIZE || Math.abs(arrayArg.end.col - arrayArg.start.col) + 1 > MAX_MATRIX_SIZE) return new FormulaError('#VALUE!', 'Matrix too large');
       const data = context.getRangeValues({ start: arrayArg.start, end: arrayArg.end });
-      if (data.length === 0) return new FormulaError('#VALUE!', 'MINVERSE: empty array');
 
-      const n = data.length;
-      if (data.some(row => row.length !== n)) {
+      const n = size;
+      if (Math.abs(arrayArg.end.col - arrayArg.start.col) + 1 !== n) {
         return new FormulaError('#VALUE!', 'MINVERSE: array must be square');
       }
 
@@ -522,63 +489,51 @@ export function registerReferenceFunctions(registry: Map<string, IFormulaFunctio
         matrix.push(row);
       }
 
-      const inv = matrixInverse(matrix, n);
-      if (inv instanceof FormulaError) return inv;
-
-      // Return top-left element for single-cell context
-      return inv[0]?.[0];
+      return matrixInverse(matrix, n);
     },
   });
 }
 
 // ---------------------------------------------------------------------------
-// Helper: recursive cofactor expansion for determinant (small matrices)
+// Helper: elimination with partial pivoting, O(n^3).
 // ---------------------------------------------------------------------------
 function determinant(m: number[][]): number {
-  const n = m.length;
-  const row0 = m[0];
-  if (row0 === undefined) return 0; // unreachable: callers guarantee n >= 1
-  if (n === 1) return row0[0] ?? 0;
-  if (n === 2) {
-    const row1 = m[1];
-    if (row1 === undefined) return 0; // unreachable: matrix is square
-    return (row0[0] ?? 0) * (row1[1] ?? 0) - (row0[1] ?? 0) * (row1[0] ?? 0);
-  }
-
-  let det = 0;
-  for (let c = 0; c < n; c++) {
-    // Cofactor: minor matrix excluding row 0, col c
-    const minor: number[][] = [];
-    for (let r = 1; r < n; r++) {
-      const srcRow = m[r];
-      if (srcRow === undefined) continue; // unreachable: r < n
-      const row: number[] = [];
-      for (let cc = 0; cc < n; cc++) {
-        if (cc !== c) {
-          const v = srcRow[cc];
-          if (v !== undefined) row.push(v);
-        }
-      }
-      minor.push(row);
+  let result = 1;
+  for (let col = 0; col < m.length; col++) {
+    let pivot = col;
+    for (let row = col + 1; row < m.length; row++) if (Math.abs(m[row]?.[col] ?? 0) > Math.abs(m[pivot]?.[col] ?? 0)) pivot = row;
+    if ((m[pivot]?.[col] ?? 0) === 0) return 0;
+    if (pivot !== col) {
+      const a = m[col];
+      const b = m[pivot];
+      if (!a || !b) return 0;
+      m[col] = b; m[pivot] = a; result = -result;
     }
-    det += (c % 2 === 0 ? 1 : -1) * (row0[c] ?? 0) * determinant(minor);
+    const pivotRow = m[col];
+    if (!pivotRow) return 0;
+    const value = pivotRow[col] ?? 0;
+    result *= value;
+    for (let row = col + 1; row < m.length; row++) {
+      const target = m[row];
+      if (!target) continue;
+      const factor = (target[col] ?? 0) / value;
+      for (let c = col + 1; c < m.length; c++) target[c] = (target[c] ?? 0) - factor * (pivotRow[c] ?? 0);
+    }
   }
-  return det;
+  return result;
 }
 
 // ---------------------------------------------------------------------------
 // Helper: Gauss-Jordan matrix inverse
 // ---------------------------------------------------------------------------
-function matrixInverse(m: number[][], n: number): number[][] | FormulaError {
+function matrixInverse(m: number[][], n: number): number | FormulaError {
   // Augment with identity matrix
   const aug: number[][] = [];
   for (let r = 0; r < n; r++) {
     const srcRow = m[r];
     if (srcRow === undefined) continue; // unreachable: r < n and m is n x n
     const row: number[] = [...srcRow];
-    for (let c = 0; c < n; c++) {
-      row.push(c === r ? 1 : 0);
-    }
+    row.push(r === 0 ? 1 : 0);
     aug.push(row);
   }
 
@@ -618,7 +573,7 @@ function matrixInverse(m: number[][], n: number): number[][] | FormulaError {
     if (scale === undefined) {
       return new FormulaError('#NUM!', 'MINVERSE: matrix is singular'); // unreachable
     }
-    for (let c = 0; c < 2 * n; c++) {
+    for (let c = 0; c < n + 1; c++) {
       const v = pivotArr[c];
       if (v !== undefined) pivotArr[c] = v / scale;
     }
@@ -630,7 +585,7 @@ function matrixInverse(m: number[][], n: number): number[][] | FormulaError {
         if (rowArr === undefined) continue; // unreachable: r < n
         const factor = rowArr[col];
         if (factor === undefined) continue; // unreachable: col < 2n
-        for (let c = 0; c < 2 * n; c++) {
+        for (let c = 0; c < n + 1; c++) {
           const rv = rowArr[c];
           const pv = pivotArr[c];
           if (rv !== undefined && pv !== undefined) {
@@ -641,12 +596,5 @@ function matrixInverse(m: number[][], n: number): number[][] | FormulaError {
     }
   }
 
-  // Extract inverse from augmented matrix
-  const result: number[][] = [];
-  for (let r = 0; r < n; r++) {
-    const rowArr = aug[r];
-    if (rowArr === undefined) continue; // unreachable: r < n
-    result.push(rowArr.slice(n));
-  }
-  return result;
+  return aug[0]?.[n] ?? new FormulaError('#NUM!', 'Singular matrix');
 }
