@@ -73,8 +73,9 @@
   --ogrid-cell-padding-horizontal: 10px;
   --ogrid-cell-font-size: 13px;
 
-  // Suppress browser focus outline - the active cell outline handles focus indication.
-  &:focus {
+  // Suppress the outline for mouse/programmatic focus (the active cell outline handles that),
+  // but keep it for keyboard focus so Tabbing into the grid before any cell is active is visible.
+  &:focus:not(:focus-visible) {
     outline: none;
   }
 
@@ -698,5 +699,11 @@
 @keyframes ogrid-spin {
   to {
     transform: rotate(360deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .spinner {
+    animation: none;
   }
 }

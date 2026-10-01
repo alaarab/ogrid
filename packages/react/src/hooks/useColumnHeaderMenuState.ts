@@ -10,13 +10,15 @@ export interface UseColumnHeaderMenuStateParams {
   onColumnSort: (columnKey: string, direction?: 'asc' | 'desc' | null) => void;
   onColumnResized?: (columnId: string, width: number) => void;
   onAutosizeColumn?: (columnId: string, width: number) => void;
-  columns: Array<{ columnId: string; width?: number | string; minWidth?: number; sortable?: boolean; resizable?: boolean }>;
+  columns: Array<{ columnId: string; name?: string; width?: number | string; minWidth?: number; sortable?: boolean; resizable?: boolean }>;
 }
 
 export interface UseColumnHeaderMenuStateResult {
   isOpen: boolean;
   openForColumn: string | null;
   anchorElement: HTMLElement | null;
+  /** Display name of the column the menu is open for. */
+  columnName?: string;
   open: (columnId: string, anchorEl: HTMLElement) => void;
   close: () => void;
   handlePinLeft: () => void;
@@ -147,6 +149,7 @@ export function useColumnHeaderMenuState(
     isOpen,
     openForColumn,
     anchorElement,
+    columnName: columns.find((c) => c.columnId === openForColumn)?.name,
     open,
     close,
     handlePinLeft,
@@ -174,6 +177,7 @@ export function getColumnHeaderMenuProps(headerMenu: UseColumnHeaderMenuStateRes
   return {
     isOpen: headerMenu.isOpen,
     anchorElement: headerMenu.anchorElement,
+    columnName: headerMenu.columnName,
     onClose: headerMenu.close,
     onPinLeft: headerMenu.handlePinLeft,
     onPinRight: headerMenu.handlePinRight,

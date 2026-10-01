@@ -178,6 +178,9 @@ export interface BaseInlineCellEditorProps<T> {
  * Text, date, select, and richSelect editors are fully shared.
  * Checkbox is delegated via renderCheckbox render prop.
  */
+// React 17 compatible stable ids (no useId).
+let editorIdCounter = 0;
+
 export function BaseInlineCellEditor<T>(props: BaseInlineCellEditorProps<T>): React.ReactElement {
   const { value, column, editorType, onCommit, onCancel, renderCheckbox } = props;
   const wrapperRef = React.useRef<HTMLDivElement>(null);
@@ -284,6 +287,12 @@ export function BaseInlineCellEditor<T>(props: BaseInlineCellEditorProps<T>): Re
     }
   }, [editorType]); // Run when editorType changes to focus appropriate element
 
+  // Stable per-editor id prefix for listbox/option ids (React 17 compatible, no useId)
+  const idRef = React.useRef<string>('');
+  if (!idRef.current) idRef.current = `ogrid-editor-${++editorIdCounter}`;
+  const listboxId = `${idRef.current}-listbox`;
+  const optionId = (i: number) => `${idRef.current}-option-${i}`;
+
   // Helper: portal dropdown to document.body when using fixed positioning
   // to escape ancestor `contain: content` which clips even fixed elements
   const usePortal = fixedDropdownStyle != null;
@@ -305,11 +314,18 @@ export function BaseInlineCellEditor<T>(props: BaseInlineCellEditorProps<T>): Re
       <div
         style={computedDropdownStyle}
         role="listbox"
+        id={listboxId}
         {...EDITOR_MARKER_PROPS}
         onMouseDown={PREVENT_DEFAULT_UNLESS_INPUT}
       >
         <input
           type="text"
+          role="combobox"
+          aria-expanded={true}
+          aria-controls={listboxId}
+          aria-autocomplete="list"
+          aria-label="Search options"
+          aria-activedescendant={richSelect.filteredValues.length > 0 ? optionId(richSelect.highlightedIndex) : undefined}
           value={richSelect.searchText}
           onChange={(e) => richSelect.setSearchText(e.target.value)}
           onKeyDown={richSelect.handleKeyDown}
@@ -324,6 +340,7 @@ export function BaseInlineCellEditor<T>(props: BaseInlineCellEditorProps<T>): Re
           // biome-ignore lint/a11y/useKeyWithClickEvents: keyboard selection is handled by the search input's onKeyDown (Enter/arrow keys)
           <div
             key={String(v)}
+            id={optionId(i)}
             role="option"
             aria-selected={i === richSelect.highlightedIndex}
             onClick={() => richSelect.selectValue(v)}
@@ -361,12 +378,13 @@ export function BaseInlineCellEditor<T>(props: BaseInlineCellEditorProps<T>): Re
   // Select (custom dropdown, shared across all frameworks)
   if (editorType === 'select') {
     const dropdownContent = (
-      <div style={computedDropdownStyle} ref={selectState.dropdownRef} role="listbox" {...EDITOR_MARKER_PROPS}>
+      <div style={computedDropdownStyle} ref={selectState.dropdownRef} role="listbox" id={listboxId} {...EDITOR_MARKER_PROPS}>
         {editorValues.map((v, i) => (
           // biome-ignore lint/a11y/useFocusableInteractive: options use an active-descendant highlight pattern; keyboard selection is handled by the editor wrapper's onKeyDown
           // biome-ignore lint/a11y/useKeyWithClickEvents: keyboard selection is handled by the editor wrapper's onKeyDown (Enter/arrow keys)
           <div
             key={String(v)}
+            id={optionId(i)}
             role="option"
             aria-selected={i === selectState.highlightedIndex}
             onClick={() => selectState.selectValue(v)}
@@ -378,10 +396,17 @@ export function BaseInlineCellEditor<T>(props: BaseInlineCellEditorProps<T>): Re
       </div>
     );
     return (
-      // biome-ignore lint/a11y/noStaticElementInteractions: the select editor wrapper is the focus target that receives keyboard events for the dropdown (focused on mount)
-      // biome-ignore lint/a11y/noNoninteractiveElementInteractions: the select editor wrapper is the focus target that receives keyboard events for the dropdown (focused on mount)
-      // biome-ignore lint/a11y/noNoninteractiveTabindex: the select editor has no native input, so the wrapper must be focusable to receive keyboard events
-      <div ref={wrapperRef} style={richSelectWrapperStyle} onKeyDown={selectState.handleKeyDown} tabIndex={0}>
+      <div
+        ref={wrapperRef}
+        style={richSelectWrapperStyle}
+        onKeyDown={selectState.handleKeyDown}
+        tabIndex={0}
+        role="combobox"
+        aria-expanded={true}
+        aria-haspopup="listbox"
+        aria-controls={listboxId}
+        aria-activedescendant={editorValues.length > 0 ? optionId(selectState.highlightedIndex) : undefined}
+      >
         <div style={selectDisplayStyle}>
           <span>{selectState.getDisplayText(value)}</span>
           <span style={selectChevronStyle}>&#9662;</span>

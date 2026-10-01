@@ -31,7 +31,7 @@ export interface UseRichSelectStateResult {
  */
 export function useRichSelectState(params: UseRichSelectStateParams): UseRichSelectStateResult {
   const { values, formatValue, initialValue, onCommit, onCancel } = params;
-  const [searchText, setSearchText] = useState('');
+  const [searchText, setSearchTextState] = useState('');
   const initialIndex = values.findIndex((v) => String(v) === String(initialValue));
   const [highlightedIndex, setHighlightedIndex] = useState(Math.max(initialIndex, 0));
 
@@ -40,6 +40,12 @@ export function useRichSelectState(params: UseRichSelectStateParams): UseRichSel
     const idx = values.findIndex((v) => String(v) === String(initialValue));
     setHighlightedIndex(Math.max(idx, 0));
   }, [initialValue, values]);
+
+  // The highlight indexes the filtered list, so any search change restarts it at the top.
+  const setSearchText = useCallback((text: string) => {
+    setSearchTextState(text);
+    setHighlightedIndex(0);
+  }, []);
 
   const getDisplayText = useCallback(
     (value: unknown): string => getSelectDisplayText(value, formatValue),
