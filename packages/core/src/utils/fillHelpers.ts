@@ -45,6 +45,12 @@ export interface IFillFormulaOptions<T> {
   hasFormula?: (col: number, row: number) => boolean;
   /** Sets or clears the formula at (flatColIndex, rowIndex). Pass null to clear. */
   setFormula?: (col: number, row: number, formula: string | null) => void;
+  /**
+   * Sheet row of a displayed row. Relative references shift by the sheet
+   * distance between source and target, which differs from the on-screen
+   * distance once rows are sorted or filtered. Defaults to the display row.
+   */
+  formulaRow?: (rowIndex: number) => number;
 }
 
 /**
@@ -121,8 +127,14 @@ export function applyFillValues<T>(
         if (srcFlatColIndex >= 0 && formulaOptions.hasFormula(srcFlatColIndex, srcRow)) {
           const srcFormula = formulaOptions.getFormula(srcFlatColIndex, srcRow);
           if (srcFormula) {
-            const adjusted = adjustFormulaReferences(srcFormula, col - srcCol, row - srcRow);
             const targetFlatColIdx = flatColIndexById?.get(colDef.columnId) ?? -1;
+            // Shift references by the sheet distance from this cell's own (tiled)
+            // source cell: flat columns and sheet rows, not the on-screen
+            // distance, which hidden columns and sorting distort.
+            const toSheetRow = formulaOptions.formulaRow;
+            const rowDelta = toSheetRow ? toSheetRow(row) - toSheetRow(srcRow) : row - srcRow;
+            const colDelta = targetFlatColIdx - srcFlatColIndex;
+            const adjusted = adjustFormulaReferences(srcFormula, colDelta, rowDelta);
             if (targetFlatColIdx >= 0) {
               formulaOptions.setFormula(targetFlatColIdx, row, adjusted);
               // Skip normal value fill  -  formula evaluation will provide the value

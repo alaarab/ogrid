@@ -85,11 +85,13 @@ export function useFormulaBar(params: UseFormulaBarParams): UseFormulaBarResult 
   }, []);
 
   const onCommit = useCallback(() => {
-    if (activeCol == null || activeRow == null || !setFormula) return;
+    // Enter in the read-only bar (focused but not editing) must not commit:
+    // `editText` is stale or empty there, and committing it would erase the cell.
+    if (!isEditing || activeCol == null || activeRow == null || !setFormula) return;
     processFormulaBarCommit(editText, activeCol, activeRow, setFormula, onCellValueChanged);
     setIsEditing(false);
     isFormulaBarEditing.current = false;
-  }, [activeCol, activeRow, editText, setFormula, onCellValueChanged]);
+  }, [isEditing, activeCol, activeRow, editText, setFormula, onCellValueChanged]);
 
   const onCancel = useCallback(() => {
     setIsEditing(false);

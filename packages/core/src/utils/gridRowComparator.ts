@@ -32,6 +32,12 @@ export interface GridRowComparatorProps {
   ariaRowIndexBase?: number;
   /** Formula recalculation counter: any change repaints every row, since a recalc can change any cell. */
   formulaVersion?: number;
+  /**
+   * Row-number label (the record's sheet row in cellReferences/formulas mode).
+   * It can change while item and rowIndex stay the same, e.g. when a record is
+   * inserted earlier in the data.
+   */
+  rowNumber?: number;
   // Comparator-only props (may not be used in render, but drive re-render decisions)
   selectionRange: { startRow: number; endRow: number; startCol: number; endCol: number } | null;
   activeCell: { rowIndex: number; columnIndex: number } | null;
@@ -66,7 +72,7 @@ function isSingleCell(range: { startRow: number; endRow: number; startCol: numbe
  */
 export function areGridRowPropsEqual(prev: GridRowComparatorProps, next: GridRowComparatorProps): boolean {
   // Data, structure and render inputs (item, rowIndex, column meta, row-number
-  // column, formulaVersion, render callbacks, ...): any identity change re-renders.
+  // column and label, formulaVersion, render callbacks, ...): any identity change re-renders.
   const p = prev as unknown as Record<string, unknown>;
   const n = next as unknown as Record<string, unknown>;
   for (const key in p) {
