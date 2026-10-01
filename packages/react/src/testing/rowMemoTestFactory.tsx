@@ -215,6 +215,12 @@ export function createRowMemoOGridTests(OGrid: React.ComponentType<IOGridProps<F
         element({ formulas: true, initialFormulas: [{ col: 1, row: 4, formula: '=A1+1' }] }),
       );
       // formulas turn on the row-number column, so data column N has data-col-index N + 1.
+      // Formula rows are records' indexes in `data` (sheet rows), not screen rows:
+      // under the default Name sort, A1 (Alpha, data row 0) is on screen row 0 and
+      // B5 (Epsilon, data row 4) is on screen row 3.
+      const dependentRow = (): number =>
+        Number(container.querySelector('tbody tr[data-row-id="5"] [data-row-index]')?.getAttribute('data-row-index'));
+      expect(dependentRow()).toBe(3);
       fireEvent.pointerDown(getCell(container, 0, 1));
       await waitFor(() => expect(getCell(container, 0, 1).getAttribute('data-active-cell')).toBe('true'));
       fireEvent.doubleClick(getCell(container, 0, 1));
@@ -228,7 +234,7 @@ export function createRowMemoOGridTests(OGrid: React.ComponentType<IOGridProps<F
       fireEvent.change(input, { target: { value: '=100' } });
       fireEvent.keyDown(input, { key: 'Enter' });
 
-      await waitFor(() => expect(getCell(container, 4, 2).textContent).toBe('101'));
+      await waitFor(() => expect(getCell(container, dependentRow(), 2).textContent).toBe('101'));
       expect(getCell(container, 0, 1).textContent).toBe('100');
     });
   });
