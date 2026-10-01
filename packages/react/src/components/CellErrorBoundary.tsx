@@ -7,6 +7,12 @@ export interface CellErrorBoundaryProps {
   children: React.ReactNode;
   onError?: (error: Error, errorInfo: React.ErrorInfo) => void;
   fallback?: React.ReactNode;
+  /**
+   * Resets the boundary when any entry changes (compared with `Object.is`).
+   * Pass values the cell depends on, such as the row item and cell value. When
+   * omitted, the boundary resets whenever `children` identity changes.
+   */
+  resetKeys?: readonly unknown[];
 }
 
 interface CellErrorBoundaryState {
@@ -42,9 +48,18 @@ export class CellErrorBoundary extends React.Component<
     }
   }
 
-  componentDidUpdate(prevProps: CellErrorBoundaryProps): void {
-    // Reset error state when children change (e.g., navigating to a different cell)
-    if (prevProps.children !== this.props.children && this.state.hasError) {
+  componentDidUpdate(prevProps: CellErrorBoundaryProps, prevState: CellErrorBoundaryState): void {
+    // The child threw during this very update. Resetting here would re-render
+    // (and re-report) in the same commit, so wait for the next update.
+    if (!prevState.hasError && this.state.hasError) return;
+    if (!this.state.hasError) return;
+    const prevKeys = prevProps.resetKeys;
+    const keys = this.props.resetKeys;
+    const shouldReset =
+      prevKeys && keys
+        ? prevKeys.length !== keys.length || keys.some((key, i) => !Object.is(key, prevKeys[i]))
+        : prevProps.children !== this.props.children;
+    if (shouldReset) {
       this.setState({ hasError: false });
     }
   }

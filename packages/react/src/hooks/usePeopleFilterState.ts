@@ -35,6 +35,8 @@ export function usePeopleFilterState(
   const peopleInputRef = useRef<HTMLInputElement | null>(null);
   const focusTimeoutRef = useRef<number | undefined>(undefined);
   const peopleSearchTimeoutRef = useRef<number | undefined>(undefined);
+  // Monotonic request id so out-of-order responses can't overwrite newer ones.
+  const peopleSearchRequestRef = useRef(0);
 
   const [peopleSuggestions, setPeopleSuggestions] = useState<UserLike[]>([]);
   const [isPeopleLoading, setIsPeopleLoading] = useState(false);
@@ -56,25 +58,34 @@ export function usePeopleFilterState(
 
   // People search with debounce
   useEffect(() => {
-    if (!peopleSearch || !isFilterOpen || filterType !== 'people') return;
+    if (!peopleSearch || !isFilterOpen || filterType !== 'people') {
+      setIsPeopleLoading(false);
+      return;
+    }
     if (peopleSearchTimeoutRef.current) window.clearTimeout(peopleSearchTimeoutRef.current);
     if (!peopleSearchText.trim()) {
       setPeopleSuggestions([]);
+      setIsPeopleLoading(false);
       return;
     }
+    const requestId = ++peopleSearchRequestRef.current;
     setIsPeopleLoading(true);
     peopleSearchTimeoutRef.current = window.setTimeout(async () => {
       try {
         const results = await peopleSearch(peopleSearchText);
+        if (requestId !== peopleSearchRequestRef.current) return;
         setPeopleSuggestions(results.slice(0, 10));
       } catch {
+        if (requestId !== peopleSearchRequestRef.current) return;
         setPeopleSuggestions([]);
       } finally {
-        setIsPeopleLoading(false);
+        if (requestId === peopleSearchRequestRef.current) setIsPeopleLoading(false);
       }
     }, PEOPLE_SEARCH_DEBOUNCE_MS);
     return () => {
       if (peopleSearchTimeoutRef.current) window.clearTimeout(peopleSearchTimeoutRef.current);
+      // Invalidate any in-flight request when the query, source, or open state changes.
+      peopleSearchRequestRef.current++;
     };
   }, [peopleSearchText, peopleSearch, isFilterOpen, filterType]);
 

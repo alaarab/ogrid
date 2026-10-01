@@ -125,6 +125,97 @@ describe('CellErrorBoundary', () => {
     expect(screen.queryByText('⚠ Error')).not.toBeInTheDocument();
   });
 
+  it('does not reset or re-report when only children identity changes and resetKeys are stable', () => {
+    const onError = jest.fn();
+    const row = { id: 1 };
+    const ThrowError = () => {
+      throw new Error('always');
+    };
+
+    const { rerender } = render(
+      <CellErrorBoundary resetKeys={[row]} onError={onError}>
+        <ThrowError />
+      </CellErrorBoundary>
+    );
+    expect(onError).toHaveBeenCalledTimes(1);
+
+    // New children element identity, same resetKeys (an unrelated grid re-render).
+    rerender(
+      <CellErrorBoundary resetKeys={[row]} onError={onError}>
+        <ThrowError />
+      </CellErrorBoundary>
+    );
+
+    expect(onError).toHaveBeenCalledTimes(1);
+  });
+
+  it('resets when a resetKeys entry changes', () => {
+    const error = jest.fn();
+    const ThrowError = ({ shouldThrow }: { shouldThrow: boolean }) => {
+      if (shouldThrow) throw new Error('boom');
+      return <div data-testid="recovered">Recovered</div>;
+    };
+
+    const { rerender } = render(
+      <CellErrorBoundary resetKeys={[1]} onError={error}>
+        <ThrowError shouldThrow={true} />
+      </CellErrorBoundary>
+    );
+    expect(screen.getByText('⚠ Error')).toBeInTheDocument();
+
+    rerender(
+      <CellErrorBoundary resetKeys={[2]} onError={error}>
+        <ThrowError shouldThrow={false} />
+      </CellErrorBoundary>
+    );
+
+    expect(screen.getByTestId('recovered')).toBeInTheDocument();
+  });
+
+  it('re-reports once when resetKeys change and the cell still throws', () => {
+    const onError = jest.fn();
+    const ThrowError = () => {
+      throw new Error('always');
+    };
+
+    const { rerender } = render(
+      <CellErrorBoundary resetKeys={['a']} onError={onError}>
+        <ThrowError />
+      </CellErrorBoundary>
+    );
+    expect(onError).toHaveBeenCalledTimes(1);
+
+    rerender(
+      <CellErrorBoundary resetKeys={['b']} onError={onError}>
+        <ThrowError />
+      </CellErrorBoundary>
+    );
+
+    expect(onError).toHaveBeenCalledTimes(2);
+  });
+
+  it('reports once when a cell first throws on an update', () => {
+    const onError = jest.fn();
+    const MaybeThrow = ({ shouldThrow }: { shouldThrow: boolean }) => {
+      if (shouldThrow) throw new Error('boom');
+      return <span>ok</span>;
+    };
+
+    const { rerender } = render(
+      <CellErrorBoundary onError={onError}>
+        <MaybeThrow shouldThrow={false} />
+      </CellErrorBoundary>
+    );
+    rerender(
+      <CellErrorBoundary onError={onError}>
+        <MaybeThrow shouldThrow={true} />
+      </CellErrorBoundary>
+    );
+
+    expect(onError).toHaveBeenCalledTimes(1);
+    expect(screen.getByText('⚠ Error')).toBeInTheDocument();
+  });
+
   it('handles error in a nested component (deeply nested throw)', () => {
     const DeepNested = () => {
       throw new Error('Deep error');

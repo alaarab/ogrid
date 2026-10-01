@@ -79,6 +79,33 @@ describe('useMultiSelectFilterState', () => {
     expect(result.current.searchText).toBe('Option A');
   });
 
+  it('keeps pending checks and search text when selectedValues identity changes while open', () => {
+    const onFilterChange = jest.fn();
+    const { result, rerender } = renderHook(
+      ({ isFilterOpen, selectedValues }) =>
+        useMultiSelectFilterState({
+          selectedValues,
+          options: mockOptions,
+          isFilterOpen,
+          onFilterChange,
+        }),
+      { initialProps: { isFilterOpen: true, selectedValues: [] as string[] } }
+    );
+
+    act(() => {
+      result.current.setSearchText('Opt');
+      result.current.handleCheckboxChange('Option B', true);
+    });
+    expect(result.current.tempSelected.has('Option B')).toBe(true);
+
+    // A parent re-render passes a fresh, content-equal array (the common
+    // "nothing selected yet" case) while the popover stays open.
+    rerender({ isFilterOpen: true, selectedValues: [] });
+
+    expect(result.current.tempSelected.has('Option B')).toBe(true);
+    expect(result.current.searchText).toBe('Opt');
+  });
+
   it('filters options based on debounced search text', async () => {
     const onFilterChange = jest.fn();
     const { result } = renderHook(() =>
