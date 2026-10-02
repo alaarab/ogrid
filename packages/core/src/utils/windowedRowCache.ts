@@ -78,8 +78,13 @@ export class WindowedRowCache<T> {
 
   /** Total row count for the current context, or `undefined` until first known. */
   private rowCount: number | undefined;
+  /** Aborts the in-flight `getRowCount` request, if any. */
+  private countController: AbortController | null = null;
   /** Center of the most recently requested window — drives LRU-ish eviction. */
   private lastRequestCenter = 0;
+  /** Most recently requested window `[start, end)`; its blocks are never evicted. */
+  private lastRequestStart = 0;
+  private lastRequestEnd = 0;
 
   constructor(opts: WindowedRowCacheOptions<T>) {
     this.dataSource = opts.dataSource;
@@ -91,6 +96,11 @@ export class WindowedRowCache<T> {
   /** Total rows for the current context, or `undefined` if not yet fetched. */
   getRowCount(): number | undefined {
     return this.rowCount;
+  }
+
+  /** Visit every loaded row with its absolute index (unordered). */
+  forEachLoadedRow(callback: (row: T, index: number) => void): void {
+    for (const [index, row] of this.rows) callback(row, index);
   }
 
   /**
@@ -121,20 +131,21 @@ export class WindowedRowCache<T> {
   setContext(context: IRowQueryContext): void {
     this.context = { sort: context.sort, filters: context.filters };
     this.invalidate();
-    void this.refreshRowCount();
   }
 
   /**
-   * Drop all cached rows and cancel in-flight fetches without changing the
-   * context. Use after a mutation when the underlying data changed but the
-   * sort/filter state did not.
+   * Drop all cached rows, cancel in-flight fetches, and re-fetch the row
+   * count without changing the context. Use after a mutation when the
+   * underlying data changed but the sort/filter state did not. The row count
+   * reads `undefined` until the new total arrives, so `ensureRange` is not
+   * clamped to a stale total in the meantime.
    */
   invalidate(): void {
-    this.generation++;
-    for (const controller of this.inFlight.values()) controller.abort();
-    this.inFlight.clear();
+    this.cancelAll();
     this.rows.clear();
     this.failedBlocks.clear();
+    this.rowCount = undefined;
+    void this.refreshRowCount();
     this.notify();
   }
 
@@ -146,6 +157,8 @@ export class WindowedRowCache<T> {
   ensureRange(start: number, end: number): void {
     if (end <= start) return;
     this.lastRequestCenter = Math.floor((start + end) / 2);
+    this.lastRequestStart = start;
+    this.lastRequestEnd = end;
 
     const total = this.rowCount;
     const clampedEnd = total !== undefined ? Math.min(end, total) : end;
@@ -171,14 +184,21 @@ export class WindowedRowCache<T> {
 
   /** Cancel all in-flight fetches and clear the cache. Call on grid unmount. */
   dispose(): void {
-    this.generation++;
-    for (const controller of this.inFlight.values()) controller.abort();
-    this.inFlight.clear();
+    this.cancelAll();
     this.rows.clear();
     this.failedBlocks.clear();
   }
 
   // --- internals ---
+
+  /** Bump the generation and abort every in-flight row and count request. */
+  private cancelAll(): void {
+    this.generation++;
+    for (const controller of this.inFlight.values()) controller.abort();
+    this.inFlight.clear();
+    this.countController?.abort();
+    this.countController = null;
+  }
 
   /** Fetch the block starting at `blockStart` unless already cached or in flight. */
   private ensureBlock(blockStart: number): void {
@@ -224,7 +244,7 @@ export class WindowedRowCache<T> {
         if (generation !== this.generation || controller.signal.aborted) return;
         this.inFlight.delete(blockStart);
         this.failedBlocks.add(blockStart);
-        if (process.env.NODE_ENV !== 'production') {
+        if (typeof process !== 'undefined' && process.env?.NODE_ENV !== 'production') {
           // Surface fetch failures in dev; production stays silent (placeholder shows error).
           console.error('[ogrid] windowed row block fetch failed', error);
         }
@@ -236,6 +256,7 @@ export class WindowedRowCache<T> {
   private async refreshRowCount(): Promise<void> {
     const generation = this.generation;
     const controller = new AbortController();
+    this.countController = controller;
     try {
       const count = await this.dataSource.getRowCount({
         sort: this.context.sort,
@@ -243,11 +264,13 @@ export class WindowedRowCache<T> {
         signal: controller.signal,
       });
       if (generation !== this.generation) return;
+      this.countController = null;
       this.rowCount = count;
       this.notify();
     } catch (error) {
       if (generation !== this.generation) return;
-      if (process.env.NODE_ENV !== 'production') {
+      this.countController = null;
+      if (typeof process !== 'undefined' && process.env?.NODE_ENV !== 'production') {
         console.error('[ogrid] windowed row count fetch failed', error);
       }
     }
@@ -255,7 +278,9 @@ export class WindowedRowCache<T> {
 
   /**
    * Evict cached blocks furthest from the last requested window once the cache
-   * exceeds `maxCachedRows`. In-flight blocks are never evicted.
+   * exceeds `maxCachedRows`. In-flight blocks and blocks overlapping the last
+   * requested window are never evicted, so a cap smaller than the window (or
+   * than one block) can't evict rows the grid is about to read.
    */
   private evictIfNeeded(): void {
     if (this.maxCachedRows === 0 || this.rows.size <= this.maxCachedRows) return;
@@ -272,6 +297,7 @@ export class WindowedRowCache<T> {
     for (const blockStart of ordered) {
       if (this.rows.size <= this.maxCachedRows) break;
       if (this.inFlight.has(blockStart)) continue;
+      if (blockStart < this.lastRequestEnd && blockStart + this.blockSize > this.lastRequestStart) continue;
       for (let i = blockStart; i < blockStart + this.blockSize; i++) {
         this.rows.delete(i);
       }

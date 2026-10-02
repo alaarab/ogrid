@@ -5,7 +5,7 @@ import { getFilterOptionLabel, getFilterOptionValue } from '@alaarab/ogrid-core'
  * Manages temporary selection set, search text, debounced search, filtered options, and select/clear handlers.
  */
 
-import { useState, useCallback, useEffect, useMemo, type Dispatch, type SetStateAction } from 'react';
+import { useState, useCallback, useEffect, useMemo, useRef, type Dispatch, type SetStateAction } from 'react';
 import { useDebounce } from './useDebounce';
 
 const SEARCH_DEBOUNCE_MS = 150;
@@ -43,12 +43,17 @@ export function useMultiSelectFilterState(
   const [searchText, setSearchText] = useState('');
   const debouncedSearchText = useDebounce(searchText, SEARCH_DEBOUNCE_MS);
 
-  // Sync temp state when popover opens
+  // Sync temp state only on the closed -> open transition. The parent may pass
+  // a fresh `selectedValues` array on any header re-render (e.g. when no filter
+  // is applied), and syncing on identity would discard pending checks and the
+  // search text while the popover is open.
+  const wasOpenRef = useRef(false);
   useEffect(() => {
-    if (isFilterOpen) {
+    if (isFilterOpen && !wasOpenRef.current) {
       setTempSelected(new Set(safeSelectedValues));
       setSearchText('');
     }
+    wasOpenRef.current = isFilterOpen;
   }, [isFilterOpen, safeSelectedValues]);
 
   // Filtered options for multiSelect (search within options)

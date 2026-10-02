@@ -119,10 +119,12 @@ export function BaseDataGridTableInner<T>(
   // ARIA grid geometry. aria-rowindex counts header rows and earlier pages;
   // aria-rowcount is -1 ("unknown") when the grid can't see the full total.
   const headerRowCount = o.headerRows.length + (o.showColumnLetters ? 1 : 0);
-  const pageOffset = o.propPageSize === 'all' || o.propPageSize == null ? 0 : (o.currentPage - 1) * o.propPageSize;
+  const pageOffset = windowed || o.propPageSize === 'all' || o.propPageSize == null ? 0 : (o.currentPage - 1) * o.propPageSize;
   const ariaRowIndexBase = headerRowCount + pageOffset;
   const knownTotalRows = windowed
     ? windowed.rowCount
+    : gridProps.totalCount != null
+      ? gridProps.totalCount
     : o.statusBarConfig
       ? o.statusBarConfig.totalCount
       : pageOffset === 0 && (o.propPageSize === 'all' || o.propPageSize == null || items.length < o.propPageSize)
@@ -132,6 +134,16 @@ export function BaseDataGridTableInner<T>(
   // Theme tokens for the portaled context menu (it renders outside the grid).
   const contextMenuTheme = usePortalTheme(wrapperRef, menuPosition != null);
   const activeCellAnnouncement = useActiveCellAnnouncement(interaction.activeCell, visibleCols, colOffset, pageOffset);
+  // Windowed placeholders are aria-hidden; announce loading once for the grid instead.
+  let windowedLoading = false;
+  if (windowed) {
+    for (let i = visibleRange.startIndex; i <= visibleRange.endIndex && i < windowed.rowCount; i++) {
+      if (windowed.getRow(i).status === 'loading') {
+        windowedLoading = true;
+        break;
+      }
+    }
+  }
 
   return (
     <div style={virtualScrollEnabled ? GRID_ROOT_VIRTUAL_SCROLL_STYLE : GRID_ROOT_STYLE}>
@@ -163,7 +175,9 @@ export function BaseDataGridTableInner<T>(
           ['--data-table-width' as string]: showEmptyInGrid ? '100%' : allowOverflowX ? 'fit-content' : fitToContent ? 'fit-content' : '100%',
           ['--data-table-min-width' as string]: showEmptyInGrid ? '100%' : allowOverflowX ? 'max-content' : fitToContent ? 'max-content' : '100%',
           ['--data-table-total-min-width' as string]: `${minTableWidth}px`,
-          ...(rowHeight ? { ['--ogrid-row-height' as string]: `${rowHeight}px` } : {}),
+          // Virtual math assumes fixed rows, so virtual grids always pin the height it uses.
+          ...((virtualScrollEnabled ? virtualRowHeight : rowHeight)
+            ? { ['--ogrid-row-height' as string]: `${virtualScrollEnabled ? virtualRowHeight : rowHeight}px` } : {}),
         } as React.CSSProperties}
       >
         {/* Screen readers don't follow the visual active cell (focus stays on
@@ -171,6 +185,11 @@ export function BaseDataGridTableInner<T>(
         <div aria-live="polite" aria-atomic="true" style={VISUALLY_HIDDEN_STYLE}>
           {activeCellAnnouncement}
         </div>
+        {windowed && (
+          <div role="status" aria-live="polite" style={VISUALLY_HIDDEN_STYLE}>
+            {windowedLoading ? 'Loading rows\u2026' : ''}
+          </div>
+        )}
         <div className={styles.tableScrollContent}>
         <div className={isLoading && items.length > 0 ? styles.loadingDimmed : undefined}>
           <div className={styles.tableWidthAnchor} ref={tableContainerRef}>
@@ -209,6 +228,7 @@ export function BaseDataGridTableInner<T>(
                     hasCheckboxCol={hasCheckboxCol}
                     hasRowNumbersCol={hasRowNumbersCol}
                     rowNumberOffset={rowNumberOffset}
+                    rowNumberOf={o.rowNumberOf}
                     ariaRowIndexBase={ariaRowIndexBase}
                     selectionRange={selectionRange}
                     activeCell={interaction.activeCell}
@@ -216,6 +236,9 @@ export function BaseDataGridTableInner<T>(
                     copyRange={copyRange}
                     isDragging={isDragging}
                     editingCell={editingCell}
+                    popoverAnchorEl={o.editing.popoverAnchorEl}
+                    pendingEditorValue={o.editing.pendingEditorValue}
+                    formulaVersion={gridProps.formulaVersion}
                     pinnedColumns={pinning.pinnedColumns}
                     rowNumWidth={hasRowNumbersCol ? (columnSizingOverrides?.[ROW_NUMBER_COLUMN_ID]?.widthPx ?? ROW_NUMBER_COLUMN_WIDTH) : undefined}
                     styles={styles}
@@ -238,10 +261,10 @@ export function BaseDataGridTableInner<T>(
                 columnOrder={columnOrder}
                 isDragging={isDragging}
               />
-              {gridProps.formulaReferences && gridProps.formulaReferences.length > 0 && (
+              {o.formulaReferences && o.formulaReferences.length > 0 && (
                 <FormulaRefOverlay
                   containerRef={tableContainerRef}
-                  references={gridProps.formulaReferences}
+                  references={o.formulaReferences}
                   colOffset={colOffset}
                 />
               )}
@@ -289,6 +312,7 @@ export function BaseDataGridTableInner<T>(
           selectedCellCount={selectionRange ? (Math.abs(selectionRange.endRow - selectionRange.startRow) + 1) * (Math.abs(selectionRange.endCol - selectionRange.startCol) + 1) : undefined}
           aggregation={statusBarConfig.aggregation}
           suppressRowCount={statusBarConfig.suppressRowCount}
+          panels={statusBarConfig.panels}
         />
       )}
       {isLoading && (

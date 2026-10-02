@@ -1,7 +1,9 @@
 import type { Token, TokenType } from './types';
 import { FormulaError } from './types';
+import { MAX_FORMULA_LENGTH } from './limits';
+import { columnLetterToIndex } from '../utils/cellReference';
 
-const CELL_REF_PATTERN = /^\$?[A-Za-z]+\$?\d+$/;
+const CELL_REF_PATTERN = /^\$?[A-Za-z]{1,3}\$?\d+$/;
 
 /** True when c is a digit '0'-'9'. Undefined (out-of-range index) is false. */
 function isDigit(c: string | undefined): c is string {
@@ -47,6 +49,7 @@ const DELIMITERS: Record<string, TokenType> = {
  * This is a single-pass character-at-a-time lexer for spreadsheet formulas.
  */
 export function tokenize(input: string): Token[] {
+  if (input.length > MAX_FORMULA_LENGTH) throw new FormulaError('#VALUE!', 'Formula too long');
   const tokens: Token[] = [];
   let pos = 0;
 
@@ -57,6 +60,14 @@ export function tokenize(input: string): Token[] {
     // 1. Whitespace  -  skip
     if (ch === ' ' || ch === '\t' || ch === '\r' || ch === '\n') {
       pos++;
+      continue;
+    }
+
+    if (ch === '#') {
+      const error = /^(#REF!|#DIV\/0!|#VALUE!|#NAME\?|#CIRC!|#ERROR!|#N\/A|#NUM!)/i.exec(input.slice(pos));
+      if (!error) throw new FormulaError('#ERROR!', 'Invalid error literal');
+      tokens.push({ type: 'ERROR_LITERAL', value: error[0].toUpperCase(), position: pos });
+      pos += error[0].length;
       continue;
     }
 
@@ -91,10 +102,14 @@ export function tokenize(input: string): Token[] {
       const start = pos;
       pos++; // skip opening quote
       const nameStart = pos;
-      while (pos < input.length && input[pos] !== "'") {
+      while (pos < input.length) {
+        if (input[pos] === "'") {
+          if (input[pos + 1] === "'") { pos += 2; continue; }
+          break;
+        }
         pos++;
       }
-      const sheetName = input.slice(nameStart, pos);
+      const sheetName = input.slice(nameStart, pos).replace(/''/g, "'");
       if (pos < input.length && input[pos] === "'") {
         pos++; // skip closing quote
         if (pos < input.length && input[pos] === '!') {
@@ -220,7 +235,7 @@ export function tokenize(input: string): Token[] {
       }
 
       // If matches cell ref pattern  to  CELL_REF token
-      if (CELL_REF_PATTERN.test(word)) {
+      if (CELL_REF_PATTERN.test(word) && columnLetterToIndex(word.replace(/[$0-9]/g, '')) < 16384 && Number(word.replace(/[^0-9]/g, '')) >= 1 && Number(word.replace(/[^0-9]/g, '')) <= 1048576) {
         tokens.push({ type: 'CELL_REF', value: word, position: start });
         continue;
       }

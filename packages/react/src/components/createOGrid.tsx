@@ -31,6 +31,8 @@ export interface GridRowProps {
   hasCheckboxCol: boolean;
   hasRowNumbersCol: boolean;
   rowNumberOffset: number;
+  /** Row-number label (the record's sheet row + 1); defaults to rowNumberOffset + rowIndex + 1. */
+  rowNumber?: number;
   /** aria-rowindex of the first data row minus 1 (header rows + page offset). */
   ariaRowIndexBase?: number;
   // Comparator-only props (drive re-render decisions, not used in render body)

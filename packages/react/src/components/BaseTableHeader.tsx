@@ -2,12 +2,56 @@
 // filter + options menu + resize handles.
 
 import * as React from 'react';
-import { ROW_NUMBER_COLUMN_ID, ROW_NUMBER_COLUMN_WIDTH } from '@alaarab/ogrid-core';
+import { CHECKBOX_COLUMN_WIDTH, ROW_NUMBER_COLUMN_ID, ROW_NUMBER_COLUMN_WIDTH } from '@alaarab/ogrid-core';
 import { getHeaderFilterConfig, indexToColumnLetter } from '../utils';
+import { useHeaderFilterConfigs } from '../hooks/useHeaderFilterConfigs';
 import type { useColumnMeta } from '../hooks/useColumnMeta';
 import type { UseDataGridTableOrchestrationResult } from '../hooks/useDataGridTableOrchestration';
-import type { IColumnDef, IOGridDataGridProps } from '../types';
+import type { HeaderRow, IColumnDef, IOGridDataGridProps } from '../types';
 import type { DataGridStyles, DataGridPrimitives } from './BaseDataGridTable.types';
+
+/**
+ * For kits that can't use `rowSpan` on leaf header cells (Fluent): move every leaf that
+ * sits above the bottom header row down to it, and leave an empty placeholder cell in the
+ * rows it vacated, so each row still covers every column and groups line up over their leaves.
+ * Child cells partition their parent group's columns, which gives each cell's start column.
+ */
+function padLeafHeaderRows<T>(rows: HeaderRow<T>[]): HeaderRow<T>[] {
+  const last = rows.length - 1;
+  if (last < 1) return rows;
+  type Placed = { start: number; cell: HeaderRow<T>[number] };
+  const out: Placed[][] = rows.map(() => []);
+  // Parents of the next row: group cells of this row with their start column.
+  let parents: { start: number; span: number }[] = [{ start: 0, span: Number.POSITIVE_INFINITY }];
+  for (let r = 0; r < rows.length; r++) {
+    const row = rows[r] ?? [];
+    const nextParents: { start: number; span: number }[] = [];
+    let pi = 0;
+    let consumed = 0;
+    let parentStart = parents[0]?.start ?? 0;
+    for (const cell of row) {
+      while (consumed >= (parents[pi]?.span ?? Number.POSITIVE_INFINITY)) {
+        pi++;
+        consumed = 0;
+        parentStart = parents[pi]?.start ?? parentStart;
+      }
+      const start = parentStart + consumed;
+      consumed += cell.colSpan;
+      if (cell.isGroup) {
+        nextParents.push({ start, span: cell.colSpan });
+        out[r]?.push({ start, cell });
+      } else if (r < last) {
+        const placeholder = { label: '', colSpan: 1, isGroup: false, depth: r } as HeaderRow<T>[number];
+        for (let k = r; k < last; k++) out[k]?.push({ start, cell: { ...placeholder, depth: k } });
+        out[last]?.push({ start, cell });
+      } else {
+        out[r]?.push({ start, cell });
+      }
+    }
+    parents = nextParents;
+  }
+  return out.map((row) => row.sort((a, b) => a.start - b.start).map((p) => p.cell));
+}
 
 export interface BaseTableHeaderProps<T> {
   o: UseDataGridTableOrchestrationResult<T>;
@@ -24,25 +68,37 @@ export function BaseTableHeader<T>(props: BaseTableHeaderProps<T>): React.ReactE
     wrapperRef, interaction,
     handleResizeStart, handleResizeDoubleClick, isReorderDragging, handleHeaderMouseDown,
     visibleCols, hasCheckboxCol, hasRowNumbersCol, columnSizingOverrides,
-    headerRows, showColumnLetters, columnReorder,
+    showColumnLetters, columnLetters, columnReorder,
     allSelected, someSelected, handleSelectAll, setActiveCell,
     headerFilterInput, headerMenu,
   } = o;
   const { Thead, ColumnHeaderFilter, renderHeaderSelectAll } = primitives;
+  const headerFilterConfigs = useHeaderFilterConfigs(visibleCols, headerFilterInput);
+  const headerRows = React.useMemo(
+    () => (primitives.omitLeafRowSpan ? padLeafHeaderRows(o.headerRows) : o.headerRows),
+    [o.headerRows, primitives.omitLeafRowSpan],
+  );
+  // See BaseGridRow: Fluent needs inline sticky for the leading columns.
+  const stickyPos = primitives.addStickyPosition ? ({ position: 'sticky' } as const) : undefined;
+  // Spacer cells above the checkbox/row-number headers (column-letter row, group rows) are held to
+  // the column width: a wider spacer widens the column and breaks the sticky offsets built on it.
+  const leadingRowNumWidth = columnSizingOverrides?.[ROW_NUMBER_COLUMN_ID]?.widthPx ?? ROW_NUMBER_COLUMN_WIDTH;
+  const checkboxSpacerStyle: React.CSSProperties = { boxSizing: 'border-box', width: CHECKBOX_COLUMN_WIDTH, minWidth: CHECKBOX_COLUMN_WIDTH, maxWidth: CHECKBOX_COLUMN_WIDTH };
+  const rowNumberSpacerStyle: React.CSSProperties = { boxSizing: 'border-box', width: leadingRowNumWidth, minWidth: leadingRowNumWidth, maxWidth: leadingRowNumWidth };
 
   return (
     <Thead className={o.stickyHeader ? styles.stickyHeader : undefined}>
       {showColumnLetters && (
         <primitives.Tr className={styles.columnLetterRow} aria-rowindex={1}>
-          {hasCheckboxCol && <th className={styles.columnLetterCell} />}
-          {hasRowNumbersCol && <th className={styles.columnLetterCell} />}
+          {hasCheckboxCol && <th className={styles.columnLetterCell} style={checkboxSpacerStyle} />}
+          {hasRowNumbersCol && <th className={styles.columnLetterCell} style={rowNumberSpacerStyle} />}
           {visibleCols.map((col, colIdx) => (
             <th
               key={col.columnId}
               className={`${styles.columnLetterCell}${columnMeta.hdrClasses[col.columnId] ? ` ${columnMeta.hdrClasses[col.columnId]}` : ''}`}
               style={columnMeta.hdrStyles[col.columnId]}
             >
-              {indexToColumnLetter(colIdx)}
+              {columnLetters[colIdx] ?? indexToColumnLetter(colIdx)}
             </th>
           ))}
         </primitives.Tr>
@@ -52,7 +108,7 @@ export function BaseTableHeader<T>(props: BaseTableHeaderProps<T>): React.ReactE
         <primitives.Tr key={rowIdx} aria-rowindex={rowIdx + 1 + (showColumnLetters ? 1 : 0)}>
           {/* Checkbox header: show in last row (leaf row) */}
           {rowIdx === headerRows.length - 1 && hasCheckboxCol && (
-            <primitives.Th className={styles.selectionHeaderCell} scope="col" rowSpan={1} key="__selection__">
+            <primitives.Th className={styles.selectionHeaderCell} scope="col" rowSpan={1} key="__selection__" style={stickyPos ? { ...stickyPos, left: 0 } : undefined}>
               <div className={styles.selectionHeaderCellInner}>
                 {renderHeaderSelectAll({ allSelected, someSelected, onChange: handleSelectAll })}
               </div>
@@ -60,13 +116,13 @@ export function BaseTableHeader<T>(props: BaseTableHeaderProps<T>): React.ReactE
           )}
           {/* Empty placeholder for checkbox alignment in non-leaf rows */}
           {rowIdx === 0 && rowIdx < headerRows.length - 1 && hasCheckboxCol && (
-            <th rowSpan={headerRows.length - 1} key="__selection_placeholder__" />
+            <th rowSpan={headerRows.length - 1} key="__selection_placeholder__" style={checkboxSpacerStyle} />
           )}
           {/* Row numbers header: show in last row (leaf row) */}
           {rowIdx === headerRows.length - 1 && hasRowNumbersCol && (() => {
             const rowNumWidth = columnSizingOverrides?.[ROW_NUMBER_COLUMN_ID]?.widthPx ?? ROW_NUMBER_COLUMN_WIDTH;
             return (
-              <primitives.Th className={styles.rowNumberHeaderCell} scope="col" rowSpan={1} key="__row_number__" style={{ width: rowNumWidth, minWidth: rowNumWidth, maxWidth: rowNumWidth }}>
+              <primitives.Th className={styles.rowNumberHeaderCell} scope="col" rowSpan={1} key="__row_number__" style={{ ...stickyPos, left: hasCheckboxCol ? CHECKBOX_COLUMN_WIDTH : 0, width: rowNumWidth, minWidth: rowNumWidth, maxWidth: rowNumWidth }}>
                 <div className={styles.rowNumberHeaderCellInner}>
                   #
                 </div>
@@ -90,7 +146,7 @@ export function BaseTableHeader<T>(props: BaseTableHeaderProps<T>): React.ReactE
           })()}
           {/* Empty placeholder for row numbers alignment in non-leaf rows */}
           {rowIdx === 0 && rowIdx < headerRows.length - 1 && hasRowNumbersCol && (
-            <th rowSpan={headerRows.length - 1} key="__row_number_placeholder__" />
+            <th rowSpan={headerRows.length - 1} key="__row_number_placeholder__" style={rowNumberSpacerStyle} />
           )}
           {row.map((cell, cellIdx) => {
             if (cell.isGroup) {
@@ -102,7 +158,11 @@ export function BaseTableHeader<T>(props: BaseTableHeaderProps<T>): React.ReactE
               );
             }
             // Leaf cell
-            if (!cell.columnDef) return null;
+            if (!cell.columnDef) {
+              // Empty placeholder above a leaf that was moved to the bottom row (see padLeafHeaderRows).
+              // biome-ignore lint/suspicious/noArrayIndexKey: placeholders have no id and are rebuilt wholesale with the header rows
+              return <th key={`__pad_${cellIdx}`} />;
+            }
             const col = cell.columnDef as IColumnDef<T>;
             const leafRowSpan = primitives.omitLeafRowSpan
               ? undefined
@@ -131,7 +191,7 @@ export function BaseTableHeader<T>(props: BaseTableHeaderProps<T>): React.ReactE
                 onPointerDown={columnReorder ? (e: React.PointerEvent) => handleHeaderMouseDown(col.columnId, e) : undefined}
               >
                 <div className={styles.headerCellContent}>
-                  <ColumnHeaderFilter {...getHeaderFilterConfig(col, headerFilterInput)} />
+                  <ColumnHeaderFilter {...(headerFilterConfigs.get(col.columnId) ?? getHeaderFilterConfig(col, headerFilterInput))} />
                   <button
                     type="button"
                     className={styles.headerMenuTrigger}
@@ -143,8 +203,20 @@ export function BaseTableHeader<T>(props: BaseTableHeaderProps<T>): React.ReactE
                         headerMenu.open(col.columnId, e.currentTarget);
                       }
                     }}
-                    aria-label="Column options"
-                    title="Column options"
+                    onKeyDown={(e) => {
+                      // The trigger owns Enter/Space/Arrow keys so the grid handler can't preventDefault them
+                      if (e.key === 'Enter' || e.key === ' ') {
+                        e.stopPropagation();
+                      } else if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+                        e.stopPropagation();
+                        e.preventDefault();
+                        headerMenu.open(col.columnId, e.currentTarget);
+                      }
+                    }}
+                    aria-haspopup="menu"
+                    aria-expanded={headerMenu.isOpen && headerMenu.openForColumn === col.columnId}
+                    aria-label={`${col.name} column options`}
+                    title={`${col.name} column options`}
                   >
                     {'⋮'}
                   </button>

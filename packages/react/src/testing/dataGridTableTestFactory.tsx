@@ -48,6 +48,19 @@ export function createDataGridTableTests(DataGridTable: React.ComponentType<IOGr
     expect(screen.getAllByTestId('cell-status').map((el) => el.textContent)).toEqual(['Active', 'Closed']);
   });
 
+  it('applies virtualScroll.rowHeight to the rendered rows', () => {
+    const { container } = renderTable({ virtualScroll: { enabled: true, rowHeight: 48 } });
+    const wrapper = container.querySelector<HTMLElement>('[data-ogrid-scroll-container]')!;
+    expect(wrapper.style.getPropertyValue('--ogrid-row-height')).toBe('48px');
+    expect(container.querySelectorAll('tbody tr[data-row-id]')).toHaveLength(2);
+  });
+
+  it('uses the top-level rowHeight for both rendering and virtualization', () => {
+    const { container } = renderTable({ rowHeight: 60, virtualScroll: { enabled: true, rowHeight: 48 } });
+    const wrapper = container.querySelector<HTMLElement>('[data-ogrid-scroll-container]')!;
+    expect(wrapper.style.getPropertyValue('--ogrid-row-height')).toBe('60px');
+  });
+
   it('exposes ARIA grid geometry (row/col counts and indexes)', () => {
     const { container } = renderTable();
     const grid = container.querySelector('[role="grid"]') as HTMLElement;
@@ -270,6 +283,13 @@ export function createDataGridTableTests(DataGridTable: React.ComponentType<IOGr
     const statusBar = screen.getByRole('status');
     expect(statusBar).toBeInTheDocument();
     expect(statusBar.textContent).toContain('Rows:');
+  });
+
+  it('status bar shows only the panels listed in statusBar.panels', () => {
+    renderTable({ statusBar: { totalCount: 10, selectedCount: 2, panels: ['selectedRowCount'] } });
+    const statusBar = screen.getByRole('status');
+    expect(statusBar.textContent).toContain('Selected:');
+    expect(statusBar.textContent).not.toContain('Rows:');
   });
 
   it('left-pinned column renders with pinnedColumns prop', () => {
@@ -593,6 +613,20 @@ export function createDataGridTableTests(DataGridTable: React.ComponentType<IOGr
       // The grid should still be rendered (drag didn't break things)
       const cells = container.querySelectorAll('td[data-column-id="active"]');
       expect(cells.length).toBe(2);
+    });
+
+    it('renders false strings as unchecked and commits their original value when toggled', () => {
+      const { container, onCellValueChanged } = renderBoolTable({
+        items: [{ id: '1', name: 'Alpha', active: 'false' }, { id: '2', name: 'Beta', active: '0' }],
+      });
+      const checkboxes = Array.from(container.querySelectorAll('[role="checkbox"], input[type="checkbox"]')) as HTMLElement[];
+      expect(checkboxes).toHaveLength(2);
+      checkboxes.forEach(cb => {
+        const state = cb.getAttribute('data-state') ?? (cb as HTMLInputElement).checked?.toString() ?? cb.getAttribute('aria-checked');
+        expect(state === 'unchecked' || state === 'false').toBe(true);
+      });
+      fireEvent.click(checkboxes[0]!);
+      expect(onCellValueChanged).toHaveBeenCalledWith(expect.objectContaining({ oldValue: 'false', newValue: true }));
     });
 
     it('renders checked and unchecked boolean cells correctly', () => {

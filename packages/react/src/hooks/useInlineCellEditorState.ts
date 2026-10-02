@@ -45,7 +45,7 @@ function commitDateValue(localValue: string, dateFormat: string): string {
 }
 
 /**
- * Returns localValue/setLocalValue (for text), handleKeyDown (Escape cancel, Enter commit for text),
+ * Returns localValue/setLocalValue (for text), handleKeyDown (Escape cancel, Enter/Tab commit for text),
  * handleBlur (commit on blur for text), commit(value), cancel(). UI renders only the input.
  */
 export function useInlineCellEditorState(
@@ -58,12 +58,8 @@ export function useInlineCellEditorState(
     if (value === null || value === undefined) return '';
     if (editorType === 'date') {
       const str = String(value);
-      if (dateEditorType === 'native') {
-        // Native <input type="date"> requires YYYY-MM-DD
-        return str.match(/^\d{4}-\d{2}-\d{2}/) ? str.substring(0, 10) : str;
-      }
-      // Text editor: format the stored value for display using configured format
-      const formatted = formatDateForDisplay(str, effectiveDateFormat);
+      // Native <input type="date"> requires YYYY-MM-DD; both editors use UTC calendar fields.
+      const formatted = formatDateForDisplay(value, dateEditorType === 'native' ? DEFAULT_DATE_FORMAT : effectiveDateFormat);
       return formatted ?? str;
     }
     return String(value);
@@ -82,9 +78,11 @@ export function useInlineCellEditorState(
         settledRef.current = true;
         onCancel();
       }
-      if (e.key === 'Enter' && (editorType === 'text' || editorType === 'date')) {
+      if ((e.key === 'Enter' || e.key === 'Tab') && (editorType === 'text' || editorType === 'date')) {
         e.preventDefault();
-        e.stopPropagation(); // Don't let the grid handler re-open an editor
+        // Enter stops here so the grid doesn't re-open an editor; Tab bubbles on
+        // so the grid can move to the next cell after this commit.
+        if (e.key === 'Enter') e.stopPropagation();
         settledRef.current = true;
         if (editorType === 'date' && dateEditorType !== 'native') {
           onCommit(commitDateValue(localValue, effectiveDateFormat));

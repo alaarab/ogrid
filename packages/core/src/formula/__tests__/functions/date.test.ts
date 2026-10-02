@@ -1,3 +1,4 @@
+import { toDate } from '../../functions/date/shared';
 import { FormulaEngine } from '../../formulaEngine';
 import type { IGridDataAccessor } from '../../types';
 import { FormulaError } from '../../types';
@@ -28,19 +29,19 @@ describe('Date functions', () => {
     });
 
     it('should return a date with no time component', () => {
-      const result = evalFormula('=TODAY()') as Date;
-      expect(result.getHours()).toBe(0);
-      expect(result.getMinutes()).toBe(0);
-      expect(result.getSeconds()).toBe(0);
-      expect(result.getMilliseconds()).toBe(0);
+      const result = toDate(evalFormula('=TODAY()')) as Date;
+      expect(result.getUTCHours()).toBe(0);
+      expect(result.getUTCMinutes()).toBe(0);
+      expect(result.getUTCSeconds()).toBe(0);
+      expect(result.getUTCMilliseconds()).toBe(0);
     });
 
     it('should return today\'s date', () => {
-      const result = evalFormula('=TODAY()') as Date;
+      const result = toDate(evalFormula('=TODAY()')) as Date;
       const now = new Date();
-      expect(result.getFullYear()).toBe(now.getFullYear());
-      expect(result.getMonth()).toBe(now.getMonth());
-      expect(result.getDate()).toBe(now.getDate());
+      expect(result.getUTCFullYear()).toBe(now.getFullYear());
+      expect(result.getUTCMonth()).toBe(now.getMonth());
+      expect(result.getUTCDate()).toBe(now.getDate());
     });
   });
 
@@ -51,10 +52,14 @@ describe('Date functions', () => {
       expect(result).toBeInstanceOf(Date);
     });
 
-    it('should return a date close to the current time', () => {
-      const before = Date.now();
+    it('should return the local wall-clock time in UTC fields', () => {
+      const localWallClock = () => {
+        const now = new Date();
+        return Date.UTC(now.getFullYear(), now.getMonth(), now.getDate(), now.getHours(), now.getMinutes(), now.getSeconds(), now.getMilliseconds());
+      };
+      const before = localWallClock();
       const result = evalFormula('=NOW()') as Date;
-      const after = Date.now();
+      const after = localWallClock();
       expect(result.getTime()).toBeGreaterThanOrEqual(before);
       expect(result.getTime()).toBeLessThanOrEqual(after);
     });

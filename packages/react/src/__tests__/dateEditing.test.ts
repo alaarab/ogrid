@@ -376,7 +376,7 @@ describe('useInlineCellEditorState — date edge cases', () => {
     const { result } = renderHook(() =>
       useInlineCellEditorState(makeParams({ value: '2024-03-15', onCommit, onCancel }))
     );
-    act(() => { result.current.handleKeyDown(keyEvent('Tab')); });
+    act(() => { result.current.handleKeyDown(keyEvent('ArrowLeft')); });
     expect(onCommit).not.toHaveBeenCalled();
     expect(onCancel).not.toHaveBeenCalled();
   });
@@ -403,3 +403,18 @@ describe('useInlineCellEditorState — text editor unaffected by dateFormat', ()
     expect(onCommit).toHaveBeenCalledWith('world');
   });
 });
+
+for (const dateEditorType of ['text', 'native'] as const) {
+  it(`initializes ${dateEditorType} date editors from numeric timestamps using UTC fields`, () => {
+    const { result } = renderHook(() => useInlineCellEditorState(makeParams({
+      value: Date.UTC(2024, 0, 15), dateEditorType,
+    })));
+    expect(result.current.localValue).toBe('2024-01-15');
+  });
+  it(`initializes ${dateEditorType} date editors from an offset timestamp using the displayed UTC day`, () => {
+    const { result } = renderHook(() => useInlineCellEditorState(makeParams({
+      value: '2024-01-15T23:00:00-08:00', dateEditorType,
+    })));
+    expect(result.current.localValue).toBe('2024-01-16');
+  });
+}

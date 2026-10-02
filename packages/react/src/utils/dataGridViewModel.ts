@@ -146,7 +146,6 @@ export function getCellInteractionProps(
     props.onClick = delegated.onClick;
     if (descriptor.canEditAny) {
       props['data-can-edit'] = '';
-      props.role = 'button';
       props.onDoubleClick = delegated.onDoubleClick;
     }
   } else {
@@ -156,10 +155,12 @@ export function getCellInteractionProps(
       handlers.handleCellMouseDown(e, descriptor.rowIndex, descriptor.globalColIndex);
       handlers.handleLongPressStart?.(e);
     };
-    props.onClick = () =>
+    props.onClick = (e: React.MouseEvent) => {
+      // Shift+click extended the range on pointerdown; the anchor stays active.
+      if (e.shiftKey) return;
       handlers.setActiveCell({ rowIndex: descriptor.rowIndex, columnIndex: descriptor.globalColIndex });
+    };
     if (descriptor.canEditAny) {
-      props.role = 'button';
       props.onDoubleClick = () =>
         handlers.setEditingCell({ rowId: descriptor.rowId, columnId });
     }

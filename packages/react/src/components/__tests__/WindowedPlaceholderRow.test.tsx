@@ -13,11 +13,12 @@ function renderRow(ui: React.ReactElement) {
 }
 
 describe('WindowedPlaceholderRow', () => {
-  it('renders a loading placeholder with an accessible label', () => {
-    renderRow(
+  it('loading placeholders carry no per-row live region (the grid announces loading once)', () => {
+    const { container } = renderRow(
       <WindowedPlaceholderRow status="loading" rowIndex={41} colSpan={5} rowHeight={36} />,
     );
-    expect(screen.getByLabelText('Loading row 42')).toBeInTheDocument();
+    expect(container.querySelector('[role="status"]')).toBeNull();
+    expect(container.querySelector('[aria-label]')).toBeNull();
   });
 
   it('sizes the row to rowHeight and spans every column', () => {

@@ -1,8 +1,10 @@
-import { useMemo, useCallback } from 'react';
+import { useMemo, useCallback, useEffect } from 'react';
 import type { RefObject } from 'react';
-import { getDataGridStatusBarConfig, computeAggregations } from '../utils';
+import { getDataGridStatusBarConfig, computeAggregations, getCellValue } from '../utils';
+import { isColumnEditable } from '@alaarab/ogrid-core';
 import type { HeaderFilterConfigInput, CellRenderDescriptorInput } from '../utils';
-import type { RowId, IOGridDataGridProps, IStatusBarProps, IColumnDef } from '../types';
+import type { RowId, IOGridDataGridProps, IStatusBarProps, IColumnDef, IFormulaCellWriter } from '../types';
+import type { UseUndoRedoFormulaCells } from './useUndoRedo';
 import { useRowSelection } from './useRowSelection';
 import { useCellEditing } from './useCellEditing';
 import { useActiveCell } from './useActiveCell';
@@ -11,10 +13,12 @@ import { useDataGridLayout } from './useDataGridLayout';
 import { useDataGridEditing } from './useDataGridEditing';
 import { useDataGridInteraction } from './useDataGridInteraction';
 import { useDataGridContextMenu } from './useDataGridContextMenu';
+import type { UseVirtualScrollResult } from './useVirtualScroll';
 
 export interface UseDataGridStateParams<T> {
   props: IOGridDataGridProps<T>;
   wrapperRef: RefObject<HTMLDivElement | null>;
+  scrollToIndexRef?: RefObject<UseVirtualScrollResult['scrollToIndex'] | null>;
 }
 
 // --- Grouped sub-interfaces ---
@@ -198,7 +202,7 @@ export interface UseDataGridStateResult<T> {
 export function useDataGridState<T>(
   params: UseDataGridStateParams<T>
 ): UseDataGridStateResult<T> {
-  const { props, wrapperRef } = params;
+  const { props, wrapperRef, scrollToIndexRef } = params;
   const {
     items,
     columns,
@@ -221,10 +225,17 @@ export function useDataGridState<T>(
     onColumnPinned,
     responsiveColumns,
     onCellError,
+    onClipboardError,
     onKeyDown,
   } = props;
 
   const cellSelection = cellSelectionProp !== false;
+
+  // A windowed (lazy) source keeps `items` empty; index-based interaction
+  // (navigation, clipboard, fill, editing, row selection) reads its loaded
+  // rows, a sparse array of length rowCount, instead.
+  const windowedRows = props.windowed?.loadedRows;
+  const rowItems = windowedRows ?? items;
 
   // --- Shared state hooks (called at orchestrator level to break circular deps) ---
   const {
@@ -234,7 +245,7 @@ export function useDataGridState<T>(
     setPendingEditorValue,
   } = useCellEditing();
 
-  const { activeCell, setActiveCell } = useActiveCell(wrapperRef, editingCell);
+  const { activeCell, setActiveCell } = useActiveCell(wrapperRef, editingCell, scrollToIndexRef);
 
   // --- 1. Layout, pinning, header menu ---
   const layoutResult = useDataGridLayout<T>({
@@ -263,10 +274,42 @@ export function useDataGridState<T>(
     colOffset,
     hasCheckboxCol,
   } = layoutResult;
+  const flatColumns = layoutResult.layout.flatColumns;
+
+  // --- Formula coordinates ---
+  // The formula engine is keyed by flat column index + sheet row (see
+  // IFormulaRowMap); the grid works in visible columns and displayed rows.
+  // These two functions are the one place that translates between them.
+  const { formulaRowMap } = props;
+  const flatColIndexById = useMemo(
+    () => new Map(flatColumns.map((c, i) => [c.columnId, i] as const)),
+    [flatColumns]
+  );
+  const formulaCol = useCallback((columnId: string) => flatColIndexById.get(columnId) ?? -1, [flatColIndexById]);
+  const formulaRow = useCallback(
+    (rowIndex: number) => (formulaRowMap ? formulaRowMap.toSheetRow(rowIndex) : rowIndex),
+    [formulaRowMap]
+  );
+  // Every value change goes through the undo wrapper, which uses these to clear
+  // a formula the value overwrites, record formula changes, and notify the engine.
+  const { formulas: formulasOn, getFormula, setFormula, onFormulaCellChanged } = props;
+  const formulaCells = useMemo<UseUndoRedoFormulaCells<T> | undefined>(() => {
+    if (!formulasOn || !getFormula || !setFormula) return undefined;
+    return {
+      cellOf: (event) => {
+        const col = formulaCol(event.columnId);
+        const row = formulaRow(event.rowIndex);
+        return col >= 0 && row >= 0 ? { col, row } : null;
+      },
+      getFormula,
+      setFormula,
+      onCellChanged: onFormulaCellChanged,
+    };
+  }, [formulasOn, getFormula, setFormula, onFormulaCellChanged, formulaCol, formulaRow]);
 
   // --- 2. Row selection ---
   const rowSelectionResult = useRowSelection({
-    items,
+    items: rowItems,
     getRowId,
     rowSelection,
     controlledSelectedRows,
@@ -278,9 +321,18 @@ export function useDataGridState<T>(
     updateSelection,
     handleRowCheckboxChange,
     handleSelectAll,
-    allSelected,
-    someSelected,
   } = rowSelectionResult;
+  // The header checkbox selects the loaded rows of a windowed source, so it
+  // reads as "all selected" once every loaded row is (the count-based check
+  // in useRowSelection compares against the full rowCount).
+  const windowedAllSelected = useMemo(() => {
+    if (!windowedRows || selectedRowIds.size === 0) return null;
+    // Object.values skips the holes without walking the whole (sparse) length.
+    const loaded = Object.values(windowedRows);
+    return loaded.length > 0 && loaded.every((row) => selectedRowIds.has(getRowId(row)));
+  }, [windowedRows, selectedRowIds, getRowId]);
+  const allSelected = windowedAllSelected ?? rowSelectionResult.allSelected;
+  const someSelected = windowedAllSelected != null ? !windowedAllSelected : rowSelectionResult.someSelected;
 
   // --- 3. Context menu ---
   const contextMenuResult = useDataGridContextMenu({ cellSelection });
@@ -288,7 +340,7 @@ export function useDataGridState<T>(
 
   // --- 4. Interaction (selection, keyboard, clipboard, fill handle, undo/redo) ---
   const interactionResult = useDataGridInteraction<T>({
-    items,
+    items: rowItems,
     visibleCols,
     colOffset,
     hasCheckboxCol,
@@ -296,6 +348,10 @@ export function useDataGridState<T>(
     getRowId,
     editable,
     onCellValueChangedProp,
+    onUndo: props.onUndo,
+    onRedo: props.onRedo,
+    canUndo: props.canUndo,
+    canRedo: props.canRedo,
     cellSelection,
     rowSelection,
     selectedRowIds,
@@ -306,13 +362,18 @@ export function useDataGridState<T>(
     handleRowCheckboxChange,
     setContextMenuPosition,
     wrapperRef,
+    scrollToIndexRef,
     onKeyDown,
+    onClipboardError,
     formulas: props.formulas,
-    flatColumns: layoutResult.layout.flatColumns,
+    flatColumns,
     getFormula: props.getFormula,
     hasFormula: props.hasFormula,
     setFormula: props.setFormula,
     onFormulaInsertReference: props.onFormulaInsertReference,
+    formulaCol,
+    formulaRow,
+    formulaCells,
   });
 
   const {
@@ -331,16 +392,54 @@ export function useDataGridState<T>(
     pendingEditorValue,
     setPendingEditorValue,
     visibleCols,
-    itemsLength: items.length,
+    itemsLength: rowItems.length,
     onCellValueChanged,
     setActiveCell,
     setSelectionRange,
     colOffset,
-    setFormula: props.setFormula,
-    onFormulaCellChanged: props.onFormulaCellChanged,
+    // Mapped to sheet rows and recorded for undo; plain values notify the
+    // engine through the undo wrapper, so only the legacy path passes this.
+    setFormula: interactionResult.setFormula,
+    onFormulaCellChanged: formulaCells ? undefined : props.onFormulaCellChanged,
     formulas: props.formulas,
-    flatColumns: layoutResult.layout.flatColumns,
+    flatColumns,
   });
+
+  // --- Formula bar writer: sheet cell -> the grid's normal edit path ---
+  const { formulaCellWriterRef, editable: editableProp } = props;
+  const writerStateRef = useLatestRef({
+    items, visibleCols, flatColumns, formulaRowMap, colOffset, editable: editableProp,
+    onCellValueChanged, commitCellEdit: editingResult.editing.commitCellEdit,
+  });
+  const formulaCellWriter = useMemo<IFormulaCellWriter>(() => {
+    const resolve = (col: number, row: number) => {
+      const st = writerStateRef.current;
+      const colDef = st.flatColumns[col];
+      const displayRow = st.formulaRowMap ? st.formulaRowMap.toDisplayRow(row) : row;
+      if (!colDef || displayRow < 0 || displayRow >= st.items.length) return null;
+      const item = st.items[displayRow] as T;
+      const editableCell = st.editable !== false && !!st.onCellValueChanged && isColumnEditable(colDef, item);
+      return editableCell ? { st, colDef, item, displayRow } : null;
+    };
+    return {
+      canEdit: (col, row) => resolve(col, row) !== null,
+      write: (col, row, text) => {
+        const cell = resolve(col, row);
+        if (!cell) return false;
+        const { st, colDef, item, displayRow } = cell;
+        const visibleIdx = st.visibleCols.findIndex((c) => c.columnId === colDef.columnId);
+        st.commitCellEdit(item, colDef.columnId, getCellValue(item, colDef), text, displayRow, visibleIdx + st.colOffset, { skipAdvance: true });
+        return true;
+      },
+    };
+  }, [writerStateRef]);
+  useEffect(() => {
+    if (!formulaCellWriterRef) return;
+    formulaCellWriterRef.current = formulaCellWriter;
+    return () => {
+      if (formulaCellWriterRef.current === formulaCellWriter) formulaCellWriterRef.current = null;
+    };
+  }, [formulaCellWriterRef, formulaCellWriter]);
 
   // --- 6. View models ---
   const {
@@ -397,11 +496,13 @@ export function useDataGridState<T>(
       cutRange: cellSelection ? cutRange : null,
       copyRange: cellSelection ? copyRange : null,
       colOffset,
-      itemsLength: items.length,
+      itemsLength: rowItems.length,
       getRowId,
       editable,
       onCellValueChanged,
       isDragging: cellSelection ? isDragging : false,
+      formulaCol,
+      formulaRow,
       getFormulaValue: props.getFormulaValue,
       hasFormula: props.hasFormula,
       getFormula: props.getFormula,
@@ -414,12 +515,14 @@ export function useDataGridState<T>(
       cutRange,
       copyRange,
       colOffset,
-      items.length,
+      rowItems.length,
       getRowId,
       editable,
       onCellValueChanged,
       cellSelection,
       isDragging,
+      formulaCol,
+      formulaRow,
       props.getFormulaValue,
       props.hasFormula,
       props.getFormula,
@@ -427,22 +530,25 @@ export function useDataGridState<T>(
     ]
   );
 
+  // Only the status bar shows aggregations; skip scanning the selection without one.
+  // This also matters for windowed sources, whose rows array is re-created as every block loads.
+  const hasStatusBar = !!statusBar;
   const aggregation = useMemo(
-    () => computeAggregations(items, visibleCols, cellSelection ? selectionRange : null),
-    [items, visibleCols, selectionRange, cellSelection]
+    () => (hasStatusBar ? computeAggregations(rowItems, visibleCols, cellSelection ? selectionRange : null) : null),
+    [hasStatusBar, rowItems, visibleCols, selectionRange, cellSelection]
   );
 
   const statusBarConfig = useMemo(
     () => {
       const base = getDataGridStatusBarConfig(
         statusBar as boolean | IStatusBarProps | undefined,
-        items.length,
+        rowItems.length,
         selectedRowIds.size
       );
       if (!base) return null;
       return { ...base, aggregation: aggregation ?? undefined };
     },
-    [statusBar, items.length, selectedRowIds.size, aggregation]
+    [statusBar, rowItems.length, selectedRowIds.size, aggregation]
   );
 
   // A windowed (lazy) data source keeps `items` empty by design — rows are read

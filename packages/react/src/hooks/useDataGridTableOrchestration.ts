@@ -1,6 +1,6 @@
-import { useCallback, useRef, useMemo, useEffect } from 'react';
+import { useCallback, useRef, useMemo, useEffect, useLayoutEffect } from 'react';
 import type { RefObject } from 'react';
-import { formatCellReference } from '../utils';
+import { formatCellReference, indexToColumnLetter } from '../utils';
 import type { DelegatedCellHandlers } from '../utils';
 import type { IOGridDataGridProps, IColumnDef } from '../types';
 import type {
@@ -15,7 +15,7 @@ import type {
 import type { UseColumnResizeResult } from './useColumnResize';
 import type { UseColumnReorderResult } from './useColumnReorder';
 import type { UseVirtualScrollResult } from './useVirtualScroll';
-import type { IVisibleColumnRange } from '@alaarab/ogrid-core';
+import type { IVisibleColumnRange, FormulaReference, IFormulaRowMap } from '@alaarab/ogrid-core';
 import type { HeaderFilterConfigInput, CellRenderDescriptorInput } from '../utils';
 import type { IStatusBarProps, RowId, HeaderRow } from '../types';
 import { useDataGridState } from './useDataGridState';
@@ -25,7 +25,7 @@ import { useVirtualScroll } from './useVirtualScroll';
 import { useLatestRef } from './useLatestRef';
 import { useMiddleClickScroll } from './useMiddleClickScroll';
 import { buildHeaderRows } from '../utils';
-import { CellDescriptorCache } from '@alaarab/ogrid-core';
+import { CellDescriptorCache, ROW_NUMBER_COLUMN_ID } from '@alaarab/ogrid-core';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -102,6 +102,12 @@ export interface UseDataGridTableOrchestrationResult<T> {
   fitToContent: boolean;
   showColumnLetters: boolean;
   showNameBox: boolean;
+  /** Header letter per visible column: the letter of its formula (flat) column. */
+  columnLetters: string[];
+  /** Row-number label per displayed row (its sheet row), when the grid maps rows to sheet rows. */
+  rowNumberOf?: (rowIndex: number) => number;
+  /** `formulaReferences` translated to visible columns and displayed rows, for the overlay. */
+  formulaReferences?: FormulaReference[];
 
   // Memoized callback groups (for renderCellContent)
   editCallbacks: {
@@ -192,6 +198,57 @@ export interface UseDataGridTableOrchestrationResult<T> {
   headerMenu: DataGridPinningState['headerMenu'];
 }
 
+/**
+ * Translate formula references (flat columns, sheet rows) to the visible
+ * columns and displayed rows the overlay measures. A range whose cells are
+ * scattered by sorting or column order is outlined by its bounding box.
+ */
+function mapFormulaReferencesToView<T>(
+  refs: FormulaReference[] | undefined,
+  visibleCols: IColumnDef<T>[],
+  formulaCol: ((columnId: string) => number) | undefined,
+  rowMap: IFormulaRowMap | undefined,
+  rowCount: number,
+): FormulaReference[] | undefined {
+  if (!refs || refs.length === 0) return refs;
+  const out: FormulaReference[] = [];
+  for (const ref of refs) {
+    const c0 = Math.min(ref.col, ref.endCol ?? ref.col);
+    const c1 = Math.max(ref.col, ref.endCol ?? ref.col);
+    const r0 = Math.min(ref.row, ref.endRow ?? ref.row);
+    const r1 = Math.max(ref.row, ref.endRow ?? ref.row);
+    let minCol = -1;
+    let maxCol = -1;
+    for (let i = 0; i < visibleCols.length; i++) {
+      const col = visibleCols[i];
+      const flat = col && formulaCol ? formulaCol(col.columnId) : i;
+      if (flat < c0 || flat > c1) continue;
+      if (minCol < 0) minCol = i;
+      maxCol = i;
+    }
+    let minRow = -1;
+    let maxRow = -1;
+    if (!rowMap) {
+      minRow = r0;
+      maxRow = r1;
+    } else if (r0 === r1) {
+      minRow = maxRow = rowMap.toDisplayRow(r0);
+    } else {
+      for (let i = 0; i < rowCount; i++) {
+        const sheetRow = rowMap.toSheetRow(i);
+        if (sheetRow < r0 || sheetRow > r1) continue;
+        if (minRow < 0) minRow = i;
+        maxRow = i;
+      }
+    }
+    if (minCol < 0 || minRow < 0) continue;
+    out.push(minCol === maxCol && minRow === maxRow
+      ? { type: 'cell', col: minCol, row: minRow, colorIndex: ref.colorIndex }
+      : { type: 'range', col: minCol, row: minRow, endCol: maxCol, endRow: maxRow, colorIndex: ref.colorIndex });
+  }
+  return out;
+}
+
 // ---------------------------------------------------------------------------
 // Hook
 // ---------------------------------------------------------------------------
@@ -213,9 +270,14 @@ export function useDataGridTableOrchestration<T>(
   const wrapperRef = useRef<HTMLDivElement>(null);
   const tableContainerRef = useRef<HTMLDivElement>(null);
   const lastMouseShiftRef = useRef(false);
+  const scrollToIndexRef = useRef<UseVirtualScrollResult['scrollToIndex'] | null>(null);
 
   // ── Core state ──────────────────────────────────────────────────────────
-  const state = useDataGridState({ props, wrapperRef });
+  const state = useDataGridState({
+    props,
+    wrapperRef,
+    scrollToIndexRef: props.virtualScroll?.enabled || props.windowed ? scrollToIndexRef : undefined,
+  });
 
   const { layout, rowSelection: rowSel, editing, interaction, contextMenu: ctxMenu, viewModels, pinning } = state;
   const {
@@ -265,10 +327,38 @@ export function useDataGridTableOrchestration<T>(
   } = props;
 
   // ── Derived values ──────────────────────────────────────────────────────
-  const rowNumberOffset = hasRowNumbersCol && propPageSize !== 'all' ? (currentPage - 1) * propPageSize : 0;
-  const headerRows = useMemo(() => buildHeaderRows(columns, visibleColumns), [columns, visibleColumns]);
+  // A windowed source scrolls every row in one viewport, so it never has a page offset.
+  const rowNumberOffset = hasRowNumbersCol && !windowed && propPageSize !== 'all' ? (currentPage - 1) * propPageSize : 0;
+  // Build the header from the same ordered, responsive-filtered column list the
+  // body renders, so header cells always sit over their own body columns.
+  const headerRows = useMemo(() => {
+    const ids = visibleCols.map((c) => c.columnId);
+    return buildHeaderRows(columns, new Set(ids), ids);
+  }, [columns, visibleCols]);
   const allowOverflowX = !suppressHorizontalScroll && containerWidth > 0 && (minTableWidth > containerWidth || desiredTableWidth > containerWidth);
   const fitToContent = layoutMode === 'content';
+
+  // ── Sheet coordinates (column letters, row numbers, name box) ─────────
+  // Letters, row numbers and the name box name a cell the way formulas do:
+  // flat column index and sheet row (see IFormulaRowMap), so "B3" in the name
+  // box is the cell a formula's B3 reads.
+  const { formulaRowMap } = props;
+  const formulaCol = cellDescriptorInput.formulaCol;
+  const columnLetters = useMemo(
+    () => visibleCols.map((c, i) => indexToColumnLetter(formulaCol ? Math.max(0, formulaCol(c.columnId)) : i)),
+    [visibleCols, formulaCol]
+  );
+  const rowNumberOf = useMemo(() => {
+    if (!formulaRowMap) return undefined;
+    return (rowIndex: number) => {
+      const sheetRow = formulaRowMap.toSheetRow(rowIndex);
+      return sheetRow >= 0 ? sheetRow + 1 : rowNumberOffset + rowIndex + 1;
+    };
+  }, [formulaRowMap, rowNumberOffset]);
+  const formulaReferences = useMemo(
+    () => mapFormulaReferencesToView(props.formulaReferences, visibleCols, formulaCol, formulaRowMap, items.length),
+    [props.formulaReferences, visibleCols, formulaCol, formulaRowMap, items.length]
+  );
 
   // ── Name box: notify parent when active cell changes ──────────────────
   const onActiveCellChangeRef = useRef(onActiveCellChange);
@@ -276,22 +366,35 @@ export function useDataGridTableOrchestration<T>(
   useEffect(() => {
     if (!onActiveCellChangeRef.current) return;
     const ac = interaction.activeCell;
-    if (ac) {
-      onActiveCellChangeRef.current(formatCellReference(ac.columnIndex - colOffset, rowNumberOffset + ac.rowIndex + 1));
+    const col = ac ? visibleCols[ac.columnIndex - colOffset] : undefined;
+    if (ac && col) {
+      const sheetCol = formulaCol ? formulaCol(col.columnId) : ac.columnIndex - colOffset;
+      const sheetRow = formulaRowMap ? formulaRowMap.toSheetRow(ac.rowIndex) : rowNumberOffset + ac.rowIndex;
+      onActiveCellChangeRef.current(sheetCol >= 0 && sheetRow >= 0 ? formatCellReference(sheetCol, sheetRow + 1) : null);
     } else {
       onActiveCellChangeRef.current(null);
     }
-  }, [interaction.activeCell, rowNumberOffset, colOffset]);
+  }, [interaction.activeCell, rowNumberOffset, colOffset, visibleCols, formulaCol, formulaRowMap]);
 
   // ── Column resize ──────────────────────────────────────────────────────
+  // Report drag resizes and double-click autosizes so the host (and OGrid's
+  // column state) sees them. The row-number column is grid chrome, not a column.
+  const onColumnResizedRef = useLatestRef(props.onColumnResized);
+  const reportColumnResized = useCallback(
+    (columnId: string, width: number) => {
+      if (columnId !== ROW_NUMBER_COLUMN_ID) onColumnResizedRef.current?.(columnId, width);
+    },
+    [onColumnResizedRef],
+  );
   const { handleResizeStart, handleResizeDoubleClick, getColumnWidth } = useColumnResize<T>({
     columnSizingOverrides,
     setColumnSizingOverrides,
+    onColumnResized: reportColumnResized,
   });
 
   // ── Column reorder ─────────────────────────────────────────────────────
   const { isDragging: isReorderDragging, dropIndicatorX, handleHeaderMouseDown } = useColumnReorder<T>({
-    columns: visibleCols,
+    columns: layout.flatColumns as IColumnDef<T>[],
     columnOrder,
     onColumnOrderChange,
     enabled: columnReorder === true,
@@ -303,7 +406,7 @@ export function useDataGridTableOrchestration<T>(
   // A windowed (lazy) data source is always virtualized — the grid never holds
   // its full dataset — so it enables virtual scrolling regardless of the prop.
   const virtualScrollEnabled = virtualScroll?.enabled === true || !!windowed;
-  const virtualRowHeight = virtualScroll?.rowHeight ?? 36;
+  const virtualRowHeight = rowHeight ?? virtualScroll?.rowHeight ?? 36;
   const columnVirtualization = virtualScroll?.columns === true;
 
   // Compute unpinned column widths for horizontal virtualization
@@ -324,17 +427,26 @@ export function useDataGridTableOrchestration<T>(
   // is inherently virtualized, so it forces `enabled` on regardless of the
   // `virtualScroll` prop, and falls back to a threshold of 0.
   const virtualTotalRows = windowed ? windowed.rowCount : items.length;
-  const { visibleRange, columnRange, onHorizontalScroll } = useVirtualScroll({
+  const { visibleRange, columnRange, onHorizontalScroll, scrollToIndex } = useVirtualScroll({
     totalRows: virtualTotalRows,
     rowHeight: virtualRowHeight,
     enabled: virtualScrollEnabled,
     overscan: virtualScroll?.overscan,
     threshold: windowed ? 0 : virtualScroll?.threshold,
     containerRef: wrapperRef,
+    stickyHeader,
     columnVirtualization,
     columnWidths: unpinnedColumnWidths,
     columnOverscan: virtualScroll?.columnOverscan,
   });
+  scrollToIndexRef.current = scrollToIndex;
+
+  const scrollToRowRef = props.scrollToRowRef;
+  useLayoutEffect(() => {
+    if (!scrollToRowRef) return;
+    scrollToRowRef.current = (index, options) => scrollToIndex(index, options?.align ?? 'start');
+    return () => { scrollToRowRef.current = null; };
+  }, [scrollToRowRef, scrollToIndex]);
 
   // Fetch the visible window from a windowed data source as the viewport moves.
   // `getRow` only reads cache; `requestWindow` is what drives the background
@@ -362,7 +474,8 @@ export function useDataGridTableOrchestration<T>(
   // ── Delegated cell handlers (stable — zero per-cell closures) ──────────
   // Read row/col from e.currentTarget data attributes at call time.
   const interactionHandlersRef = useLatestRef(interactionHandlers);
-  const itemsRef = useLatestRef(items);
+  // Windowed sources read the loaded rows by absolute index (see useDataGridState).
+  const itemsRef = useLatestRef(windowed?.loadedRows ?? items);
   const getRowIdRef = useLatestRef(getRowId);
   const visibleColsRef = useLatestRef(visibleCols);
   const colOffsetRef2 = useLatestRef(colOffset);
@@ -385,6 +498,8 @@ export function useDataGridTableOrchestration<T>(
         h.handleLongPressStart?.(e);
       },
       onClick: (e: React.MouseEvent) => {
+        // Shift+click extended the range on pointerdown; the anchor stays active.
+        if (e.shiftKey) return;
         const cell = parseCell(e);
         if (!cell) return;
         interactionHandlersRef.current.setActiveCell({ rowIndex: cell.row, columnIndex: cell.col });
@@ -440,11 +555,17 @@ export function useDataGridTableOrchestration<T>(
   // ── Stable row-click handler ───────────────────────────────────────────
   const handleSingleRowClick = useCallback((e: React.MouseEvent<HTMLTableRowElement>) => {
     if (rowSelection !== 'single') return;
-    const rowId = e.currentTarget.dataset.rowId;
-    if (!rowId) return;
+    // dataset values are always strings; resolve the real RowId (may be a number) from the items.
+    // A windowed source's loaded rows are sparse, and find visits the holes, so skip them.
+    const rowIdStr = e.currentTarget.dataset.rowId;
+    if (rowIdStr == null) return;
+    const getId = getRowIdRef.current;
+    const match = itemsRef.current.find((item) => item !== undefined && String(getId(item)) === rowIdStr);
+    if (match === undefined) return;
+    const rowId = getId(match);
     const ids = selectedRowIdsRef.current;
     updateSelection(ids.has(rowId) ? new Set() : new Set([rowId]));
-  }, [rowSelection, updateSelection, selectedRowIdsRef]);
+  }, [rowSelection, updateSelection, selectedRowIdsRef, itemsRef, getRowIdRef]);
 
   // ── Return ─────────────────────────────────────────────────────────────
   return {
@@ -509,6 +630,9 @@ export function useDataGridTableOrchestration<T>(
     fitToContent,
     showColumnLetters,
     showNameBox,
+    columnLetters,
+    rowNumberOf,
+    formulaReferences,
 
     // Memoized callback groups
     editCallbacks,

@@ -1,5 +1,9 @@
 import { useState, useLayoutEffect, useCallback, useRef } from 'react';
 import type { IActiveCell, RowId } from '../types';
+import type { UseVirtualScrollResult } from './useVirtualScroll';
+import { scrollCellIntoView } from '../utils/scrollCellIntoView';
+
+const NOOP_SCROLL_TO_INDEX = (): void => {};
 
 export interface UseActiveCellResult {
   activeCell: IActiveCell | null;
@@ -9,10 +13,12 @@ export interface UseActiveCellResult {
 /**
  * Tracks the active cell for keyboard navigation.
  * When wrapperRef and editingCell are provided, scrolls the active cell into view when it changes (and not editing).
+ * An optional index scroller handles virtual rows; focus retries once the target renders.
  */
 export function useActiveCell(
   wrapperRef?: React.RefObject<HTMLElement | null>,
-  editingCell?: { rowId: RowId; columnId: string } | null
+  editingCell?: { rowId: RowId; columnId: string } | null,
+  scrollToIndexRef?: React.RefObject<UseVirtualScrollResult['scrollToIndex'] | null>
 ): UseActiveCellResult {
   const [activeCell, _setActiveCell] = useState<IActiveCell | null>(null);
   const activeCellRef = useRef(activeCell);
@@ -30,17 +36,21 @@ export function useActiveCell(
 
   // RAF ref for batching scroll-into-view during rapid keyboard navigation
   const scrollRafRef = useRef(0);
+  const pendingFocusRef = useRef(false);
 
   // Focus the active cell synchronously (prevents browser resetting focus
   // to <body> between arrow presses), then queue a scroll-into-view via RAF
-  // so rapid keyboard navigation batches into a single scroll. Both phases
-  // share the same querySelector result to avoid a redundant DOM lookup.
+  // so rapid keyboard navigation batches into a single scroll. Virtual rows
+  // scroll by index and may appear between the focus and scroll phases.
   useLayoutEffect(() => {
+    pendingFocusRef.current = false;
     if (activeCell == null || wrapperRef?.current == null || editingCell != null) return;
     const wrapper = wrapperRef.current;
     const { rowIndex, columnIndex } = activeCell;
     const selector = `[data-row-index="${rowIndex}"][data-col-index="${columnIndex}"]`;
     const cell = wrapper.querySelector(selector) as HTMLElement | null;
+    scrollToIndexRef?.current?.(rowIndex, 'auto');
+    pendingFocusRef.current = cell == null;
 
     // Synchronous focus
     if (cell && document.activeElement !== cell && typeof cell.focus === 'function') {
@@ -50,32 +60,25 @@ export function useActiveCell(
     // Async scroll-into-view (batched via RAF)
     cancelAnimationFrame(scrollRafRef.current);
     scrollRafRef.current = requestAnimationFrame(() => {
-      if (!cell || !wrapper.isConnected) return;
-      const thead = wrapper.querySelector('thead');
-      const headerHeight = thead ? thead.getBoundingClientRect().height : 0;
-      const wrapperRect = wrapper.getBoundingClientRect();
-      const cellRect = cell.getBoundingClientRect();
-
-      // Vertical scroll (account for sticky thead)
-      const visibleTop = wrapperRect.top + headerHeight;
-      if (cellRect.top < visibleTop) {
-        wrapper.scrollTop -= visibleTop - cellRect.top;
-      } else if (cellRect.bottom > wrapperRect.bottom) {
-        wrapper.scrollTop += cellRect.bottom - wrapperRect.bottom;
-      }
-
-      // Horizontal scroll — only when the wrapper actually scrolls horizontally
-      if (wrapper.scrollWidth > wrapper.clientWidth) {
-        if (cellRect.left < wrapperRect.left) {
-          wrapper.scrollLeft -= wrapperRect.left - cellRect.left;
-        } else if (cellRect.right > wrapperRect.right) {
-          wrapper.scrollLeft += cellRect.right - wrapperRect.right;
-        }
-      }
+      // Rows of a virtual grid were already scrolled by index above (a no-op
+      // scroller here keeps the helper off the DOM for the vertical axis).
+      scrollCellIntoView(wrapper, rowIndex, columnIndex, scrollToIndexRef?.current ? NOOP_SCROLL_TO_INDEX : undefined);
     });
 
     return () => cancelAnimationFrame(scrollRafRef.current);
-  }, [activeCell, editingCell, wrapperRef]);
+  }, [activeCell, editingCell, wrapperRef, scrollToIndexRef]);
+
+  // A virtualizer renders the target after the index scroll above. Retry focus
+  // on that render, without scrolling back when the user later moves the thumb.
+  useLayoutEffect(() => {
+    if (!pendingFocusRef.current || !activeCell || editingCell != null) return;
+    const cell = wrapperRef?.current?.querySelector<HTMLElement>(
+      `[data-row-index="${activeCell.rowIndex}"][data-col-index="${activeCell.columnIndex}"]`
+    );
+    if (!cell) return;
+    cell.focus({ preventScroll: true });
+    pendingFocusRef.current = false;
+  });
 
   return { activeCell, setActiveCell };
 }

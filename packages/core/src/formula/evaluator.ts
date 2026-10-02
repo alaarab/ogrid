@@ -7,33 +7,41 @@ import type {
   IFormulaContext,
   IEvaluator,
   IFormulaFunction,
+  IFormulaLimits,
   BinaryOp,
 } from './types';
 import { FormulaError } from './types';
+import { dateToSerial } from './functions/date/shared';
+import { MAX_FORMULA_DEPTH, MAX_FORMULA_STEPS, MAX_RANGE_CELLS, MAX_TEXT_LENGTH } from './limits';
 
 /** Coerce a value to number following Excel semantics. */
 export function toNumber(val: unknown): number | FormulaError {
+  if (Array.isArray(val)) val = val[0]?.[0];
   if (val instanceof FormulaError) return val;
   if (val === null || val === undefined || val === '') return 0;
   if (typeof val === 'boolean') return val ? 1 : 0;
-  if (typeof val === 'number') return val;
-  if (val instanceof Date) return val.getTime();
+  if (typeof val === 'number') return Number.isFinite(val) ? val : new FormulaError('#NUM!', 'Non-finite number');
+  if (val instanceof Date) return dateToSerial(val);
   // Only plain decimal text converts. Number() alone would also accept
   // whitespace (" " -> 0), hex ("0x10") and "Infinity", which Excel rejects.
   const text = String(val).trim();
-  if (!NUMERIC_TEXT_RE.test(text)) {
-    return new FormulaError('#VALUE!', `Cannot convert "${val}" to number`);
+  if (text.length > MAX_TEXT_LENGTH || !NUMERIC_TEXT_RE.test(text)) {
+    return new FormulaError('#VALUE!', 'Cannot convert text to number');
   }
-  return Number(text);
+  const number = Number(text);
+  return Number.isFinite(number) ? number : new FormulaError('#NUM!', 'Non-finite number');
 }
 
-const NUMERIC_TEXT_RE = /^[+-]?(\d+\.?\d*|\.\d+)(e[+-]?\d+)?$/i;
+const NUMERIC_TEXT_RE = /^[+-]?(\d+(\.\d*)?|\.\d+)(e[+-]?\d+)?$/i;
 
 /** Coerce a value to string. */
 export function toText(val: unknown): string {
+  if (Array.isArray(val)) val = val[0]?.[0];
   if (val === null || val === undefined) return '';
   if (val instanceof FormulaError) return val.toString();
-  if (val instanceof Date) return val.toLocaleDateString();
+  if (val instanceof Date) return toText(dateToSerial(val));
+  if (typeof val === 'boolean') return val ? 'TRUE' : 'FALSE';
+  if (typeof val === 'number' && Number.isFinite(val)) return String(Number(val.toPrecision(15)));
   return String(val);
 }
 
@@ -49,11 +57,37 @@ export function toBoolean(val: unknown): boolean {
   return val !== null && val !== undefined;
 }
 
+/** Strict coercion for logical formula functions; keep the public toBoolean helper compatible. */
+export function logicalValue(val: unknown): boolean | FormulaError {
+  if (val instanceof FormulaError) return val;
+  if (val === null || val === undefined) return false;
+  if (typeof val === 'boolean') return val;
+  if (typeof val === 'number') return val !== 0;
+  if (typeof val === 'string' && /^(TRUE|FALSE)$/i.test(val)) return val.toUpperCase() === 'TRUE';
+  return new FormulaError('#VALUE!', 'Invalid logical value');
+}
+
+export function compareValues(left: unknown, right: unknown): number {
+  if (Array.isArray(left)) left = left[0]?.[0];
+  if (Array.isArray(right)) right = right[0]?.[0];
+  if (left instanceof Date) left = dateToSerial(left);
+  if (right instanceof Date) right = dateToSerial(right);
+  const blank = (value: unknown) => value === null || value === undefined;
+  const empty = (value: unknown) => typeof value === 'string' ? '' : typeof value === 'boolean' ? false : 0;
+  if (blank(left)) left = empty(right);
+  if (blank(right)) right = empty(left);
+  const rank = (value: unknown) => typeof value === 'number' ? 0 : typeof value === 'string' ? 1 : 2;
+  if (typeof left !== typeof right) return rank(left) - rank(right);
+  if (typeof left === 'string' && typeof right === 'string') { left = left.toLowerCase(); right = right.toLowerCase(); }
+  return left === right ? 0 : (left as number) < (right as number) ? -1 : 1;
+}
+
 /** Evaluate each arg, expanding ranges into flat arrays. */
 export function flattenArgs(
   args: ASTNode[],
   context: IFormulaContext,
-  evaluator: IEvaluator
+  evaluator: IEvaluator,
+  skipReferenceBooleans = false
 ): unknown[] {
   const result: unknown[] = [];
   for (const arg of args) {
@@ -61,11 +95,16 @@ export function flattenArgs(
       const values = context.getRangeValues({ start: arg.start, end: arg.end });
       for (const row of values) {
         for (const val of row) {
-          result.push(val);
+          if (!skipReferenceBooleans || typeof val !== 'boolean') result.push(skipReferenceBooleans && val instanceof Date ? toNumber(val) : val);
         }
       }
     } else {
-      result.push(evaluator.evaluate(arg, context));
+      const value = evaluator.evaluate(arg, context);
+      if (Array.isArray(value)) {
+        for (const row of value as unknown[][]) for (const cell of row) {
+          if (!skipReferenceBooleans || typeof cell !== 'boolean') result.push(skipReferenceBooleans && cell instanceof Date ? toNumber(cell) : cell);
+        }
+      } else if (!skipReferenceBooleans || arg.kind !== 'cellRef' || typeof value !== 'boolean') result.push(skipReferenceBooleans && value instanceof Date ? toNumber(value) : value);
     }
   }
   return result;
@@ -87,10 +126,17 @@ export function evalArg(
 }
 
 export class FormulaEvaluator implements IEvaluator {
+  private depth = 0;
+  private steps = 0;
   private functions: Map<string, IFormulaFunction>;
 
-  constructor(builtInFunctions: Map<string, IFormulaFunction>) {
+  private readonly maxRangeCells: number;
+  private readonly maxWork: number;
+
+  constructor(builtInFunctions: Map<string, IFormulaFunction>, limits?: IFormulaLimits) {
     this.functions = new Map(builtInFunctions);
+    this.maxRangeCells = limits?.maxRangeCells ?? MAX_RANGE_CELLS;
+    this.maxWork = limits?.maxWork ?? MAX_FORMULA_STEPS;
   }
 
   registerFunction(name: string, fn: IFormulaFunction): void {
@@ -98,6 +144,52 @@ export class FormulaEvaluator implements IEvaluator {
   }
 
   evaluate(node: ASTNode, context: IFormulaContext): unknown {
+    if (this.depth === 0) {
+      this.steps = 0;
+      let rangeCells = 0;
+      let work = 0;
+      const { maxRangeCells, maxWork } = this;
+      const consumeWork = (steps: number) => {
+        work += steps;
+        if (work > maxWork) throw new FormulaError('#VALUE!', 'Formula work limit exceeded');
+      };
+      const original = context;
+      context = {
+        ...original,
+        consumeWork,
+        getCellValue: address => {
+          const value = original.getCellValue(address);
+          consumeWork(typeof value === 'string' ? value.length + 1 : 1);
+          return value;
+        },
+        getRangeValues: range => {
+          const data = original.getRangeValues(range);
+          let cells = 0;
+          for (const row of data) {
+            cells += row.length;
+            for (const value of row) {
+              if (typeof value === 'string' && value.length > MAX_TEXT_LENGTH) throw new FormulaError('#VALUE!', 'Cell text too long');
+            }
+          }
+          rangeCells += cells;
+          if (rangeCells > maxRangeCells) throw new FormulaError('#VALUE!', 'Range too large');
+          // Reading a cell is constant work; functions charge for the text they scan.
+          consumeWork(cells);
+          return data;
+        },
+      };
+    }
+    if (this.depth >= MAX_FORMULA_DEPTH || ++this.steps > this.maxWork) return new FormulaError('#VALUE!', 'Formula evaluation limit exceeded');
+    this.depth++;
+    try {
+      const result = this.evaluateNode(node, context);
+      if (typeof result === 'number' && !Number.isFinite(result)) return new FormulaError('#NUM!', 'Non-finite result');
+      if (typeof result === 'string' && result.length > MAX_TEXT_LENGTH) return new FormulaError('#VALUE!', 'Text result too long');
+      return result;
+    } finally { this.depth--; }
+  }
+
+  private evaluateNode(node: ASTNode, context: IFormulaContext): unknown {
     switch (node.kind) {
       case 'number':
         return node.value;
@@ -224,28 +316,7 @@ export class FormulaEvaluator implements IEvaluator {
   }
 
   private compare(op: BinaryOp, left: unknown, right: unknown): boolean {
-    // Excel comparison: same-type comparisons are straightforward.
-    // Mixed types: numbers < strings < booleans in Excel, but we simplify
-    // by coercing both to numbers if possible, otherwise string comparison.
-    if (typeof left === 'number' && typeof right === 'number') {
-      return this.numCompare(op, left, right);
-    }
-    if (typeof left === 'string' && typeof right === 'string') {
-      return this.strCompare(op, left, right);
-    }
-    if (typeof left === 'boolean' && typeof right === 'boolean') {
-      return this.numCompare(op, left ? 1 : 0, right ? 1 : 0);
-    }
-
-    // Try numeric comparison for mixed types
-    const lNum = toNumber(left);
-    const rNum = toNumber(right);
-    if (typeof lNum === 'number' && typeof rNum === 'number') {
-      return this.numCompare(op, lNum, rNum);
-    }
-
-    // Fall back to string comparison
-    return this.strCompare(op, toText(left), toText(right));
+    return this.numCompare(op, compareValues(left, right), 0);
   }
 
   private numCompare(op: BinaryOp, a: number, b: number): boolean {
@@ -260,17 +331,4 @@ export class FormulaEvaluator implements IEvaluator {
     }
   }
 
-  private strCompare(op: BinaryOp, a: string, b: string): boolean {
-    const al = a.toLowerCase();
-    const bl = b.toLowerCase();
-    switch (op) {
-      case '>': return al > bl;
-      case '<': return al < bl;
-      case '>=': return al >= bl;
-      case '<=': return al <= bl;
-      case '=': return al === bl;
-      case '<>': return al !== bl;
-      default: return false;
-    }
-  }
 }

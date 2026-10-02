@@ -238,6 +238,22 @@ describe('useHeadlessGrid', () => {
     rerender({ sort: { field: 'score', direction: 'desc' } });
     expect(result.current.rows[0].name).toBe('Eve'); // score 95
   });
+
+  it('keeps toggleSort, setFilter and selectAllOnPage stable across unrelated re-renders', () => {
+    const { result, rerender } = renderHook(() => useHeadlessGrid({ columns, data, getRowId }));
+    const first = result.current;
+    rerender();
+    expect(result.current.toggleSort).toBe(first.toggleSort);
+    expect(result.current.setFilter).toBe(first.setFilter);
+    expect(result.current.selectAllOnPage).toBe(first.selectAllOnPage);
+
+    // selectAllOnPage stays stable across page changes and still selects the current page.
+    act(() => result.current.setPageSize(2));
+    act(() => result.current.setPage(2));
+    expect(result.current.selectAllOnPage).toBe(first.selectAllOnPage);
+    act(() => result.current.selectAllOnPage());
+    expect([...result.current.selectedRowIds]).toEqual(['3', '4']);
+  });
 });
 
 describe('useHeadlessGrid allFilteredRows', () => {
@@ -249,5 +265,19 @@ describe('useHeadlessGrid allFilteredRows', () => {
     expect(result.current.allFilteredRows).toHaveLength(6);
     act(() => { result.current.setFilter('status', { type: 'multiSelect', value: ['Active'] }); });
     expect(result.current.allFilteredRows.map((r) => r.id)).toEqual(['1', '3', '5']);
+  });
+});
+
+describe('useHeadlessGrid page clamp (D21)', () => {
+  it('snaps back to the last page when data shrinks under it', () => {
+    const { result, rerender } = renderHook(
+      ({ rows }) => useHeadlessGrid({ columns, data: rows, getRowId, initialPageSize: 2 }),
+      { initialProps: { rows: data } },
+    );
+    act(() => result.current.setPage(3));
+    expect(result.current.rows.map((r) => r.id)).toEqual(['5', '6']);
+    rerender({ rows: data.slice(0, 3) });
+    expect(result.current.page).toBe(2);
+    expect(result.current.rows.map((r) => r.id)).toEqual(['3']);
   });
 });

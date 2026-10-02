@@ -36,7 +36,8 @@ export function useRowSelection<T>(params: UseRowSelectionParams<T>): UseRowSele
   } = params;
 
   const [internalSelectedRows, setInternalSelectedRows] = useState<Set<RowId>>(new Set());
-  const lastClickedRowRef = useRef<number>(-1);
+  // Shift-click anchor, stored by row id so it survives sort/filter/paging.
+  const lastClickedRowIdRef = useRef<RowId | null>(null);
 
   // Defensive: convert to Set if caller passes an array (e.g. from JSON state)
   const selectedRowIds: Set<RowId> = useMemo(
@@ -49,43 +50,54 @@ export function useRowSelection<T>(params: UseRowSelectionParams<T>): UseRowSele
     [controlledSelectedRows, internalSelectedRows]
   );
 
+  // Read items/callback via refs so a data edit (new items array) or an inline
+  // onSelectionChange doesn't recreate these handlers, which every row receives.
+  const itemsRef = useLatestRef(items);
+  const onSelectionChangeRef = useLatestRef(onSelectionChange);
+
   const updateSelection = useCallback(
     (newSelectedIds: Set<RowId>) => {
       if (controlledSelectedRows === undefined) {
         setInternalSelectedRows(newSelectedIds);
       }
-      onSelectionChange?.({
+      onSelectionChangeRef.current?.({
         selectedRowIds: Array.from(newSelectedIds),
-        selectedItems: items.filter((item) => newSelectedIds.has(getRowId(item))),
+        selectedItems: itemsRef.current.filter((item) => newSelectedIds.has(getRowId(item))),
       });
     },
-    [controlledSelectedRows, onSelectionChange, items, getRowId]
+    [controlledSelectedRows, onSelectionChangeRef, itemsRef, getRowId]
   );
 
   // Read selectedRowIds via ref to avoid recreating this callback on every selection change
   const selectedRowIdsRef = useLatestRef(selectedRowIds);
-  const itemsRef = useLatestRef(items);
 
   const handleRowCheckboxChange = useCallback(
     (rowId: RowId, checked: boolean, rowIndex: number, shiftKey: boolean) => {
       if (rowSelection === 'single') {
         updateSelection(checked ? new Set([rowId]) : new Set());
-        lastClickedRowRef.current = rowIndex;
+        lastClickedRowIdRef.current = rowId;
         return;
       }
 
       const currentItems = itemsRef.current;
       let next: Set<RowId>;
 
-      if (shiftKey && lastClickedRowRef.current >= 0 && lastClickedRowRef.current !== rowIndex) {
-        next = applyRangeRowSelection(lastClickedRowRef.current, rowIndex, checked, currentItems, getRowId, selectedRowIdsRef.current);
+      // Resolve the anchor's current index; if the row is gone (filtered out,
+      // other page) fall back to a plain toggle. Windowed sources pass a sparse
+      // array, and findIndex visits its holes, so skip them.
+      const anchorId = lastClickedRowIdRef.current;
+      const anchorIndex = shiftKey && anchorId != null
+        ? currentItems.findIndex((item) => item !== undefined && getRowId(item) === anchorId)
+        : -1;
+      if (anchorIndex >= 0 && anchorIndex !== rowIndex) {
+        next = applyRangeRowSelection(anchorIndex, rowIndex, checked, currentItems, getRowId, selectedRowIdsRef.current);
       } else {
         next = new Set(selectedRowIdsRef.current);
         if (checked) next.add(rowId);
         else next.delete(rowId);
       }
 
-      lastClickedRowRef.current = rowIndex;
+      lastClickedRowIdRef.current = rowId;
       updateSelection(next);
     },
     [rowSelection, getRowId, updateSelection, itemsRef, selectedRowIdsRef]
@@ -93,19 +105,27 @@ export function useRowSelection<T>(params: UseRowSelectionParams<T>): UseRowSele
 
   const handleSelectAll = useCallback(
     (checked: boolean) => {
-      if (checked) {
-        updateSelection(new Set(items.map((item) => getRowId(item))));
-      } else {
-        updateSelection(new Set());
-      }
+      // `items` is the visible page: add/remove only its ids so selections made
+      // on other pages survive the header checkbox. forEach (not for...of) skips
+      // the holes in a windowed source's sparse loaded-rows array.
+      const next = new Set(selectedRowIdsRef.current);
+      items.forEach((item) => {
+        const id = getRowId(item);
+        if (checked) next.add(id);
+        else next.delete(id);
+      });
+      updateSelection(next);
     },
-    [items, getRowId, updateSelection]
+    [items, getRowId, updateSelection, selectedRowIdsRef]
   );
 
-  const { allSelected, someSelected } = useMemo(
-    () => computeRowSelectionState(selectedRowIds, items, getRowId),
-    [items, selectedRowIds, getRowId]
-  );
+  // Scoped to the visible page: selections that live only on other pages don't
+  // make this page's header checkbox indeterminate.
+  const { allSelected, someSelected } = useMemo(() => {
+    const state = computeRowSelectionState(selectedRowIds, items, getRowId);
+    const someSelected = !state.allSelected && items.some((item) => selectedRowIds.has(getRowId(item)));
+    return { allSelected: state.allSelected, someSelected };
+  }, [items, selectedRowIds, getRowId]);
 
   return {
     selectedRowIds,

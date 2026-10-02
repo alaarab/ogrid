@@ -65,7 +65,8 @@ export {
 export type { CsvColumn, CsvEscapeOptions, FormulaExportOptions } from './utils';
 
 // Utils  -  cellValue, columnUtils
-export { getCellValue, isColumnEditable, createGridDataAccessor } from './utils';
+export { getCellValue, isColumnEditable, createGridDataAccessor, createFormulaRowMap, createOffsetFormulaRowMap } from './utils';
+export type { IFormulaRowMap } from './utils';
 export { flattenColumns, buildHeaderRows } from './utils';
 
 // Utils  -  ogridHelpers
@@ -206,7 +207,7 @@ export type { ISortState } from './utils';
 export { measureColumnContentWidth, estimateHeaderMinWidth, AUTOSIZE_EXTRA_PX, AUTOSIZE_MAX_PX } from './utils';
 
 // Utils  -  keyboardNavigation
-export { findCtrlArrowTarget, computeTabNavigation, computeArrowNavigation, applyCellDeletion } from './utils';
+export { findCtrlArrowTarget, computeTabNavigation, computeArrowNavigation, applyCellDeletion, getOppositeCorner } from './utils';
 export type { ArrowNavigationContext, ArrowNavigationResult } from './utils';
 
 // Utils  -  selectionHelpers
@@ -281,6 +282,7 @@ export type {
   IEvaluator,
   IRecalcResult,
   IFormulaEngineConfig,
+  IFormulaLimits,
   IGridDataAccessor,
   INamedRange,
   IAuditEntry,

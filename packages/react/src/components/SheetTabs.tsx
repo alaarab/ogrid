@@ -27,6 +27,8 @@ const barStyle: React.CSSProperties = {
   fontSize: 12,
 };
 
+const tabListStyle: React.CSSProperties = { display: 'flex', alignItems: 'center' };
+
 const addBtnStyle: React.CSSProperties = {
   background: 'none',
   border: 'none',
@@ -95,7 +97,7 @@ export function SheetTabs({
   );
 
   return (
-    <div style={barStyle} role="tablist" aria-label="Sheet tabs">
+    <div style={barStyle}>
       {onSheetAdd && (
         <button
           type="button"
@@ -107,26 +109,28 @@ export function SheetTabs({
           +
         </button>
       )}
-      {sheets.map((sheet) => {
-        const isActive = sheet.id === activeSheet;
-        const base = isActive ? activeTabStyle : tabBaseStyle;
-        const style = sheet.color ? { ...base, borderBottomColor: sheet.color } : base;
-        return (
-          <button
-            key={sheet.id}
-            type="button"
-            role="tab"
-            aria-selected={isActive}
-            tabIndex={isActive ? 0 : -1}
-            style={style}
-            data-sheet-id={sheet.id}
-            onClick={handleTabClick}
-            onKeyDown={handleTabKeyDown}
-          >
-            {sheet.name}
-          </button>
-        );
-      })}
+      <div style={tabListStyle} role="tablist" aria-label="Sheet tabs">
+        {sheets.map((sheet) => {
+          const isActive = sheet.id === activeSheet;
+          const base = isActive ? activeTabStyle : tabBaseStyle;
+          const style = sheet.color ? { ...base, borderBottomColor: sheet.color } : base;
+          return (
+            <button
+              key={sheet.id}
+              type="button"
+              role="tab"
+              aria-selected={isActive}
+              tabIndex={isActive ? 0 : -1}
+              style={style}
+              data-sheet-id={sheet.id}
+              onClick={handleTabClick}
+              onKeyDown={handleTabKeyDown}
+            >
+              {sheet.name}
+            </button>
+          );
+        })}
+      </div>
     </div>
   );
 }

@@ -1,5 +1,6 @@
 import type { IFormulaFunction, IFormulaContext, IEvaluator, ASTNode } from '../../types';
 import { FormulaError } from '../../types';
+import { formatNumber } from './numberFormat';
 import { toNumber, toText, evalArg } from '../../evaluator';
 
 /**
@@ -44,21 +45,7 @@ export function registerTextFormatFunctions(registry: Map<string, IFormulaFuncti
       const fmt = toText(rawFmt);
       const num = toNumber(rawVal);
       if (num instanceof FormulaError) return toText(rawVal);
-      // Basic format support: 0, 0.00, #,##0, #,##0.00, 0%, 0.00%
-      if (fmt.includes('%')) {
-        const decimals = (fmt.match(/0/g) || []).length - 1;
-        return (num * 100).toFixed(Math.max(0, decimals)) + '%';
-      }
-      const decimalMatch = fmt.match(/\.(0+)/);
-      const decimals = decimalMatch?.[1]?.length ?? 0;
-      const useCommas = fmt.includes(',');
-      const result = num.toFixed(decimals);
-      if (useCommas) {
-        const [intPart = '', decPart] = result.split('.');
-        const withCommas = intPart.replace(/\B(?=(\d{3})+(?!\d))/g, ',');
-        return decPart ? withCommas + '.' + decPart : withCommas;
-      }
-      return result;
+      return formatNumber(num, fmt);
     },
   });
 
@@ -94,13 +81,26 @@ export function registerTextFormatFunctions(registry: Map<string, IFormulaFuncti
         if (arg === undefined) continue;
         if (arg.kind === 'range') {
           const rangeData = context.getRangeValues({ start: arg.start, end: arg.end });
+          const logicalCols = Math.abs(arg.end.col - arg.start.col) + 1;
+          const logicalRows = Math.abs(arg.end.row - arg.start.row) + 1;
+          const materialised = rangeData.reduce((size, row) => size + row.length, 0);
+          const missing = logicalRows * logicalCols - materialised;
+          if (!ignoreEmpty && delimiter.length > 0 && missing * delimiter.length > 32767) return new FormulaError('#VALUE!', 'TEXTJOIN result too long');
+          const appendEmpty = (count: number) => {
+            if (!ignoreEmpty && delimiter.length > 0) {
+              context.consumeWork?.(count);
+              for (let i = 0; i < count; i++) parts.push('');
+            }
+          };
           for (const row of rangeData) {
             for (const cell of row) {
               if (cell instanceof FormulaError) return cell;
               const s = toText(cell);
               if (!ignoreEmpty || s !== '') parts.push(s);
             }
+            appendEmpty(logicalCols - row.length);
           }
+          appendEmpty((logicalRows - rangeData.length) * logicalCols);
         } else {
           const val = evalArg(evaluator, args[i], context);
           if (val instanceof FormulaError) return val;
@@ -108,6 +108,7 @@ export function registerTextFormatFunctions(registry: Map<string, IFormulaFuncti
           if (!ignoreEmpty || s !== '') parts.push(s);
         }
       }
+      if (parts.reduce((length, part) => length + part.length, 0) + Math.max(0, parts.length - 1) * delimiter.length > 32767) return new FormulaError('#VALUE!', 'TEXTJOIN result too long');
       return parts.join(delimiter);
     },
   });
@@ -193,7 +194,7 @@ export function registerTextFormatFunctions(registry: Map<string, IFormulaFuncti
       if (val instanceof FormulaError) return val;
       if (typeof val === 'number') return val;
       if (typeof val === 'boolean') return val ? 1 : 0;
-      if (val instanceof Date) return val.getTime();
+      if (val instanceof Date) return toNumber(val);
       // string, null, undefined  to  0
       return 0;
     },

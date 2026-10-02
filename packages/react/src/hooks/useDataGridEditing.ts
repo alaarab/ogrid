@@ -21,7 +21,7 @@ export interface UseDataGridEditingParams<T> {
   setActiveCell: (cell: { rowIndex: number; columnIndex: number } | null) => void;
   setSelectionRange: (range: { startRow: number; startCol: number; endRow: number; endCol: number } | null) => void;
   colOffset: number;
-  /** Formula integration: set a formula for a cell coordinate. */
+  /** Formula integration: set a formula for a cell (flat column index, display row). */
   setFormula?: (col: number, row: number, formula: string | null) => void;
   /** Formula integration: notify a non-formula cell changed. */
   onFormulaCellChanged?: (col: number, row: number) => void;
@@ -33,6 +33,20 @@ export interface UseDataGridEditingParams<T> {
 
 export interface UseDataGridEditingResult<T> {
   editing: DataGridEditingState<T>;
+}
+
+/**
+ * True when committing `newValue` would not change the cell: identical values,
+ * an empty cell left empty (undefined/null -> '' or null), or, for untyped
+ * columns only, the text editor's string form of an unchanged primitive
+ * (5 -> '5'). Typed columns or columns with a valueParser still commit
+ * '5' over 5, since that may be a deliberate coercion.
+ */
+function isUnchangedEdit(newValue: unknown, oldValue: unknown, untyped: boolean): boolean {
+  if (Object.is(newValue, oldValue)) return true;
+  if (oldValue == null) return newValue == null || newValue === '';
+  if (!untyped || typeof newValue !== 'string') return false;
+  return (typeof oldValue === 'number' || typeof oldValue === 'boolean') && String(oldValue) === newValue;
 }
 
 /**
@@ -91,7 +105,7 @@ export function useDataGridEditing<T>(
           setPopoverAnchorEl(null);
           setPendingEditorValue(undefined);
           // Advance to next row
-          if (rowIndex < itemsLengthRef.current - 1) {
+          if (!options?.skipAdvance && rowIndex < itemsLengthRef.current - 1) {
             const newRow = rowIndex + 1;
             const localCol = globalColIndex - colOffset;
             setActiveCell({ rowIndex: newRow, columnIndex: globalColIndex });
@@ -114,6 +128,20 @@ export function useDataGridEditing<T>(
           return;
         }
         newValue = result.value;
+      }
+
+      // Unchanged value: close the editor without an edit event or undo entry.
+      if (isUnchangedEdit(newValue, oldValue, !col || (col.type == null && col.valueParser == null))) {
+        setEditingCell(null);
+        setPopoverAnchorEl(null);
+        setPendingEditorValue(undefined);
+        if (!options?.skipAdvance && rowIndex < itemsLengthRef.current - 1) {
+          const newRow = rowIndex + 1;
+          const localCol = globalColIndex - colOffset;
+          setActiveCell({ rowIndex: newRow, columnIndex: globalColIndex });
+          setSelectionRange({ startRow: newRow, startCol: localCol, endRow: newRow, endCol: localCol });
+        }
+        return;
       }
 
       onCellValueChangedRef.current?.({

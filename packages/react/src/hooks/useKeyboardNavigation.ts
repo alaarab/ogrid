@@ -1,5 +1,8 @@
 import { useCallback, useRef } from 'react';
-import { getCellValue, computeTabNavigation, computeArrowNavigation, applyCellDeletion, getScrollTopForRow } from '../utils';
+import { getCellValue, computeTabNavigation, computeArrowNavigation, applyCellDeletion, getScrollTopForRow, getOppositeCorner } from '../utils';
+import { CELL_EDITOR_ATTR } from '../constants/domHelpers';
+import { scrollCellIntoView, type ScrollToRowIndex } from '../utils/scrollCellIntoView';
+import { normalizeSelectionRange } from '../types';
 import type {
   RowId,
   IActiveCell,
@@ -52,6 +55,8 @@ export interface UseKeyboardNavigationParams<T> {
     onCellValueChanged: ((event: ICellValueChangedEvent<T>) => void) | undefined;
     rowSelection: RowSelectionMode;
     wrapperRef: React.RefObject<HTMLElement | null>;
+    /** Virtual grids: scrolls a row into view by index (rows off screen aren't rendered). */
+    scrollToIndexRef?: React.RefObject<ScrollToRowIndex | null>;
     onKeyDown?: (event: React.KeyboardEvent) => void;
     fillDown?: () => void;
   };
@@ -59,6 +64,37 @@ export interface UseKeyboardNavigationParams<T> {
 
 export interface UseKeyboardNavigationResult {
   handleGridKeyDown: (e: React.KeyboardEvent) => void;
+}
+
+/** Text-entry controls: keystrokes typed into these never belong to the grid. */
+const TEXT_ENTRY_SELECTOR =
+  'input:not([type="checkbox"]):not([type="radio"]):not([type="button"]):not([type="submit"]):not([type="reset"]), textarea, select, [contenteditable=""], [contenteditable="true"]';
+/** Header, menus and popups that live in the wrapper's DOM rather than a portal. */
+const NON_CELL_REGION_SELECTOR = 'thead, [role="columnheader"], [role="menu"], [role="dialog"], [role="listbox"]';
+/** In-cell controls that use Space/Enter for their own activation. */
+const CELL_CONTROL_SELECTOR = 'button, a[href], input, [role="button"], [role="checkbox"], [role="switch"], [role="link"]';
+
+/**
+ * Where a keydown came from:
+ * - `grid`: the wrapper or a body cell (or a programmatic call with no DOM target)
+ * - `control`: a button/checkbox/link rendered inside a body cell
+ * - `editor`: an inline cell editor, including its portaled dropdown
+ * - `outside`: anything else (header controls, filter popovers, menus)
+ *
+ * React synthetic events bubble through portals, so keystrokes typed into a
+ * portaled filter popover still reach the wrapper's onKeyDown.
+ */
+type KeyTargetKind = 'grid' | 'control' | 'editor' | 'outside';
+
+function getKeyTargetKind(e: React.KeyboardEvent): KeyTargetKind {
+  const target = e.target as Element | null | undefined;
+  const root = e.currentTarget as Element | null | undefined;
+  if (target == null || typeof target.closest !== 'function' || target === root) return 'grid';
+  if (target.closest(`[${CELL_EDITOR_ATTR}]`)) return 'editor';
+  if (root != null && typeof root.contains === 'function' && !root.contains(target)) return 'outside';
+  if (target.matches('[data-row-index][data-col-index]')) return 'grid';
+  if (target.closest(NON_CELL_REGION_SELECTOR) || target.matches(TEXT_ENTRY_SELECTOR)) return 'outside';
+  return target.matches(CELL_CONTROL_SELECTOR) ? 'control' : 'grid';
 }
 
 /**
@@ -73,18 +109,13 @@ export function useKeyboardNavigation<T>(
   const paramsRef = useRef(params);
   paramsRef.current = params;
 
-  // Cached page size for PageUp/PageDown — avoids DOM query on every keystroke.
-  // Invalidated when the wrapper element changes (rare).
-  const cachedPageRef = useRef<{ rowHeight: number; pageSize: number } | null>(null);
-  const cachedWrapperRef = useRef<HTMLElement | null>(null);
-
   const handleGridKeyDown = useCallback(
     (e: React.KeyboardEvent) => {
       const { data, state, handlers, features } = paramsRef.current;
       const { items, visibleCols, colOffset, hasCheckboxCol, visibleColumnCount, getRowId } = data;
       const { activeCell, selectionRange, editingCell, selectedRowIds } = state;
       const { setActiveCell, setSelectionRange, setEditingCell, handleRowCheckboxChange, handleCopy, handleCut, handlePaste, setContextMenu, onUndo, onRedo, clearClipboardRanges, beginBatch, endBatch } = handlers;
-      const { editable, onCellValueChanged, rowSelection, wrapperRef, onKeyDown, fillDown } = features;
+      const { editable, onCellValueChanged, rowSelection, wrapperRef, scrollToIndexRef, onKeyDown, fillDown } = features;
 
       // Consumer intercept: call consumer's handler first; skip grid default if preventDefault() was called
       if (onKeyDown) {
@@ -92,10 +123,37 @@ export function useKeyboardNavigation<T>(
         if (e.defaultPrevented) return;
       }
 
+      const targetKind = getKeyTargetKind(e);
+      if (targetKind === 'outside') return;
+      // Space/Enter activate the focused in-cell control (row or boolean checkbox).
+      if (targetKind === 'control' && (e.key === ' ' || e.key === 'Enter')) return;
+
       const maxRowIndex = items.length - 1;
       const maxColIndex = visibleColumnCount - 1 + colOffset;
 
       if (items.length === 0) return;
+
+      // Moves the active cell one step in Tab order. Returns false at the grid's
+      // first/last cell so Tab can carry focus out of the grid (no keyboard trap).
+      const moveByTab = (from: IActiveCell, backward: boolean): boolean => {
+        const next = computeTabNavigation(from.rowIndex, from.columnIndex, maxRowIndex, maxColIndex, colOffset, backward);
+        if (next.rowIndex === from.rowIndex && next.columnIndex === from.columnIndex) return false;
+        const nextDataCol = next.columnIndex - colOffset;
+        setSelectionRange({ startRow: next.rowIndex, startCol: nextDataCol, endRow: next.rowIndex, endCol: nextDataCol });
+        setActiveCell(next);
+        return true;
+      };
+
+      if (targetKind === 'editor') {
+        // Editors own their keys. On Tab the editor commits first (its handler
+        // runs before this one), then the grid closes it and moves on, Excel-style.
+        if (e.key === 'Tab' && editingCell != null && activeCell != null) {
+          e.preventDefault();
+          setEditingCell(null);
+          moveByTab(activeCell, e.shiftKey);
+        }
+        return;
+      }
 
       if (activeCell === null) {
         if (
@@ -104,7 +162,6 @@ export function useKeyboardNavigation<T>(
             'ArrowUp',
             'ArrowLeft',
             'ArrowRight',
-            'Tab',
             'Enter',
             'Home',
             'End',
@@ -160,36 +217,39 @@ export function useKeyboardNavigation<T>(
         case 'ArrowLeft': {
           if (editingCell != null) break;
           e.preventDefault();
+          // Shift+Arrow: the active cell is the anchor and stays put (Excel);
+          // the far corner of the range is the end that moves.
+          const extent = shift ? getOppositeCorner(selectionRange, rowIndex, dataColIndex) : null;
           const { newRowIndex, newColumnIndex, newRange } = computeArrowNavigation({
             direction: e.key as 'ArrowDown' | 'ArrowUp' | 'ArrowLeft' | 'ArrowRight',
-            rowIndex, columnIndex, dataColIndex, colOffset,
+            rowIndex: extent ? extent.row : rowIndex,
+            columnIndex: extent ? extent.col + colOffset : columnIndex,
+            dataColIndex: extent ? extent.col : dataColIndex,
+            colOffset,
             maxRowIndex, maxColIndex,
             visibleColCount: visibleCols.length,
             isCtrl: e.ctrlKey || e.metaKey,
             isShift: shift,
             selectionRange,
             isEmptyAt,
+            anchor: { rowIndex, dataColIndex },
           });
           setSelectionRange(newRange);
-          setActiveCell({ rowIndex: newRowIndex, columnIndex: newColumnIndex });
+          if (shift) {
+            if (wrapperRef.current) scrollCellIntoView(wrapperRef.current, newRowIndex, newColumnIndex, scrollToIndexRef?.current);
+          } else {
+            setActiveCell({ rowIndex: newRowIndex, columnIndex: newColumnIndex });
+          }
           break;
         }
         case 'Tab': {
-          e.preventDefault();
-          const { rowIndex: newRowTab, columnIndex: newColTab } = computeTabNavigation(
-            rowIndex, columnIndex, maxRowIndex, maxColIndex, colOffset, e.shiftKey
-          );
-          const newDataColTab = newColTab - colOffset;
-          setSelectionRange({
-            startRow: newRowTab,
-            startCol: newDataColTab,
-            endRow: newRowTab,
-            endCol: newDataColTab,
-          });
-          setActiveCell({ rowIndex: newRowTab, columnIndex: newColTab });
+          // A popover editor can't be committed from here; leave Tab to the browser.
+          if (editingCell != null) break;
+          if (moveByTab(activeCell, e.shiftKey)) e.preventDefault();
           break;
         }
         case 'Home': {
+          if (editingCell != null) break;
           e.preventDefault();
           const newRowHome = e.ctrlKey ? 0 : rowIndex;
           setSelectionRange({
@@ -202,6 +262,7 @@ export function useKeyboardNavigation<T>(
           break;
         }
         case 'End': {
+          if (editingCell != null) break;
           e.preventDefault();
           const newRowEnd = e.ctrlKey ? maxRowIndex : rowIndex;
           setSelectionRange({
@@ -215,34 +276,33 @@ export function useKeyboardNavigation<T>(
         }
         case 'PageDown':
         case 'PageUp': {
+          if (editingCell != null) break;
           e.preventDefault();
           const wrapper = wrapperRef.current;
           let pageSize = 10;
           let rowHeight = 36;
           if (wrapper) {
-            // Use cached measurement if the wrapper element hasn't changed.
-            if (cachedPageRef.current && cachedWrapperRef.current === wrapper) {
-              rowHeight = cachedPageRef.current.rowHeight;
-              pageSize = cachedPageRef.current.pageSize;
-            } else {
-              const firstRow = wrapper.querySelector('tbody tr') as HTMLElement | null;
-              if (firstRow && firstRow.offsetHeight > 0) {
-                rowHeight = firstRow.offsetHeight;
-                pageSize = Math.max(1, Math.floor(wrapper.clientHeight / rowHeight));
-              }
-              cachedPageRef.current = { rowHeight, pageSize };
-              cachedWrapperRef.current = wrapper;
+            const firstRow = wrapper.querySelector<HTMLElement>('tbody tr[data-row-id]');
+            const configuredHeight = Number.parseFloat(wrapper.style.getPropertyValue('--ogrid-row-height'));
+            if (configuredHeight > 0) rowHeight = configuredHeight;
+            else if (firstRow && firstRow.offsetHeight > 0) rowHeight = firstRow.offsetHeight;
+            const headerHeight = wrapper.querySelector('thead')?.getBoundingClientRect().height ?? 0;
+            if (wrapper.clientHeight > 0) {
+              pageSize = Math.max(1, Math.floor((wrapper.clientHeight - headerHeight) / rowHeight));
             }
           }
           const pgDirection = e.key === 'PageDown' ? 1 : -1;
-          const newRowPage = Math.max(0, Math.min(rowIndex + pgDirection * pageSize, maxRowIndex));
-          if (shift) {
-            setSelectionRange({
-              startRow: selectionRange?.startRow ?? rowIndex,
-              startCol: selectionRange?.startCol ?? dataColIndex,
+          // Shift extends from the active cell (anchor) by moving the range's far row.
+          const extent = shift ? getOppositeCorner(selectionRange, rowIndex, dataColIndex) : null;
+          const fromRow = extent ? extent.row : rowIndex;
+          const newRowPage = Math.max(0, Math.min(fromRow + pgDirection * pageSize, maxRowIndex));
+          if (extent) {
+            setSelectionRange(normalizeSelectionRange({
+              startRow: rowIndex,
+              startCol: dataColIndex,
               endRow: newRowPage,
-              endCol: selectionRange?.endCol ?? dataColIndex,
-            });
+              endCol: extent.col,
+            }));
           } else {
             setSelectionRange({
               startRow: newRowPage,
@@ -250,10 +310,15 @@ export function useKeyboardNavigation<T>(
               endRow: newRowPage,
               endCol: dataColIndex,
             });
+            setActiveCell({ rowIndex: newRowPage, columnIndex });
           }
-          setActiveCell({ rowIndex: newRowPage, columnIndex });
-          // Scroll the new row into view
-          if (wrapper) {
+          // Scroll the new row into view. A virtual grid scrolls by index: a plain
+          // PageUp/PageDown through the active cell change, a Shift-extend here,
+          // since the active cell (the anchor) doesn't move.
+          const scrollToIndex = scrollToIndexRef?.current;
+          if (wrapper && scrollToIndex) {
+            if (extent) scrollCellIntoView(wrapper, newRowPage, extent.col + colOffset, scrollToIndex);
+          } else if (wrapper && !wrapper.hasAttribute('data-virtual-scroll')) {
             wrapper.scrollTop = getScrollTopForRow(newRowPage, rowHeight, wrapper.clientHeight, 'center');
           }
           break;
@@ -280,6 +345,8 @@ export function useKeyboardNavigation<T>(
           break;
         }
         case 'Escape':
+          // Always consumed here (cancel edit or clear the selection); the full
+          // screen Escape listener checks defaultPrevented so it doesn't also exit.
           e.preventDefault();
           if (editingCell != null) {
             setEditingCell(null);
@@ -290,17 +357,19 @@ export function useKeyboardNavigation<T>(
           }
           break;
         case ' ':
+          // Shift+Space toggles the active row's selection from any column (WAI-ARIA
+          // grid); the checkbox column itself isn't a navigation stop.
           if (
             rowSelection !== 'none' &&
-            columnIndex === 0 &&
-            hasCheckboxCol
+            editingCell == null &&
+            (e.shiftKey || (columnIndex === 0 && hasCheckboxCol))
           ) {
             e.preventDefault();
             const item = items[rowIndex];
             if (item) {
               const id = getRowId(item);
               const isSelected = selectedRowIds.has(id);
-              handleRowCheckboxChange(id, !isSelected, rowIndex, e.shiftKey);
+              handleRowCheckboxChange(id, !isSelected, rowIndex, false);
             }
           }
           break;

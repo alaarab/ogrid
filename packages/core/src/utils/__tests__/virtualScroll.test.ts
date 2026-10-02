@@ -15,6 +15,19 @@ import type { IColumnDef } from '../../types';
 // ─── Row Virtualization (existing) ──────────────────────────────────────────
 
 describe('computeVisibleRange', () => {
+  it('clamps a stale scroll offset after the dataset shrinks', () => {
+    const range = computeVisibleRange(300_000, 36, 600, 20, 5);
+    expect(range.startIndex).toBe(0);
+    expect(range.endIndex).toBe(19);
+    expect(range.offsetTop).toBe(0);
+    expect(range.offsetBottom).toBe(0);
+  });
+
+  it('clamps negative scroll offsets', () => {
+    expect(computeVisibleRange(-1000, 36, 600, 100, 5)).toEqual(
+      computeVisibleRange(0, 36, 600, 100, 5)
+    );
+  });
   it('returns full range for small datasets', () => {
     const result = computeVisibleRange(0, 36, 400, 5, 5);
     expect(result.startIndex).toBe(0);
@@ -320,9 +333,50 @@ describe('computeScaledWindow', () => {
     }
   });
 
-  it('positions the rendered block at startIndex in compressed space', () => {
+  it('positions the rendered block relative to the viewport', () => {
     const win = computeScaledWindow(bigGeom.spacerHeight / 2, bigGeom, bigCfg, 8);
-    expect(win.offsetPx).toBeCloseTo((win.startIndex * bigCfg.rowHeight) / bigGeom.scale, 4);
+    expect(win.offsetPx + win.realScrollTop - win.startIndex * bigCfg.rowHeight)
+      .toBeCloseTo(bigGeom.spacerHeight / 2, 4);
+  });
+
+  for (const totalRows of [1_000_000, 10_000_000]) {
+    for (const fraction of [0, 0.1, 0.5, 0.999, 1]) {
+      it(`has no blank band at ${totalRows} rows, ${fraction * 100}% scroll, including a sticky header`, () => {
+        const headerHeight = 48;
+        const cfg = { totalRows, rowHeight: 36, viewportHeight: 720 - headerHeight };
+        const geometry = computeScaledGeometry(cfg);
+        const scrollTop = fraction * (geometry.spacerHeight - cfg.viewportHeight);
+        const win = computeScaledWindow(scrollTop, geometry, cfg, 5);
+        const firstVisible = Math.floor(win.realScrollTop / cfg.rowHeight);
+        const rowTop = headerHeight + win.offsetPx + (firstVisible - win.startIndex) * cfg.rowHeight;
+        const visibleTop = scrollTop + headerHeight;
+        expect(rowTop).toBeLessThanOrEqual(visibleTop + 0.000001);
+        expect(rowTop + cfg.rowHeight).toBeGreaterThan(visibleTop - 0.000001);
+        const blockHeight = (win.endIndex - win.startIndex + 1) * cfg.rowHeight;
+        expect(win.offsetPx).toBeGreaterThanOrEqual(0);
+        expect(win.offsetPx + blockHeight).toBeLessThanOrEqual(geometry.spacerHeight);
+        if (fraction === 1) {
+          expect(win.endIndex).toBe(totalRows - 1);
+          expect(headerHeight + win.offsetPx + blockHeight - scrollTop).toBeCloseTo(720, 5);
+        }
+      });
+    }
+  }
+
+  it('keeps rows aligned with realScrollTop near both ends of a scaled spacer', () => {
+    const cfg = { totalRows: 10_000_000, rowHeight: 36, viewportHeight: 672 };
+    const geometry = computeScaledGeometry(cfg);
+    const maxScroll = geometry.spacerHeight - cfg.viewportHeight;
+    for (let i = 0; i <= 300; i++) {
+      for (const scrollTop of [i, maxScroll - i]) {
+        const win = computeScaledWindow(scrollTop, geometry, cfg, 5);
+        const blockHeight = (win.endIndex - win.startIndex + 1) * cfg.rowHeight;
+        expect(win.offsetPx + blockHeight).toBeLessThanOrEqual(geometry.spacerHeight);
+        // Real content offset actually shown at the top of the viewport.
+        const shown = win.startIndex * cfg.rowHeight + scrollTop - win.offsetPx;
+        expect(Math.abs(shown - win.realScrollTop)).toBeLessThan(cfg.rowHeight);
+      }
+    }
   });
 
   it('scale-induced row skip per compressed pixel stays sub-row', () => {

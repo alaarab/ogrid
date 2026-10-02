@@ -18,9 +18,16 @@ export interface IDateFilterValue {
 export interface IColumnFilterDef {
   type: Exclude<ColumnFilterType, 'none'>;
   filterField?: string;
+  /**
+   * Has no effect. Multi-select options come from `options` when set, otherwise
+   * from `dataSource.fetchFilterOptions()` when the data source has it, otherwise
+   * from the grid's data.
+   * @deprecated Not implemented. Set `options`, or implement `fetchFilterOptions` on the data source.
+   */
   optionsSource?: 'api' | 'static' | 'years';
   /** Static multi-select choices. Take precedence over fetched or data-derived options. */
   options?: FilterOption[];
+  /** @deprecated Has no effect: `optionsSource: 'years'` is not implemented. */
   yearsCount?: number;
 }
 
@@ -31,7 +38,7 @@ export interface IColumnMeta {
   name: string;
   /** Column type shorthand. Affects alignment, default editor, filter type, sorting, and display formatting. */
   type?: 'text' | 'numeric' | 'date' | 'boolean';
-  /** Display format for date columns. Overrides the grid-level defaultDateFormat. Supported: 'MM/DD/YYYY', 'DD/MM/YYYY', 'YYYY-MM-DD', or a custom pattern. */
+  /** Display format for date columns. Supported: 'MM/DD/YYYY', 'DD/MM/YYYY', 'YYYY-MM-DD', or a custom pattern. Defaults to 'YYYY-MM-DD'. */
   dateFormat?: DateFormat;
   sortable?: boolean;
   /** Omit for not filterable; set to IColumnFilterDef for filterable. */
@@ -84,7 +91,7 @@ export interface IColumnDef<T = unknown> extends IColumnMeta {
   /** Built-in editor type or framework-specific custom editor (e.g. React component).
    *  Core utilities never inspect this value  -  framework packages narrow the type. */
   cellEditor?: unknown;
-  /** When true, custom cell editor is rendered in a popover/popper instead of inline. */
+  /** Custom (component) cell editors always render in a popover/popper and built-in editors inline; this flag currently has no effect. */
   cellEditorPopup?: boolean;
   /** Params passed to the cell editor (e.g. { values: string[] } for select). */
   cellEditorParams?: CellEditorParams;
@@ -112,7 +119,12 @@ export interface ICellEditorProps<T> {
   cellEditorParams?: CellEditorParams;
 }
 
-/** Params for built-in cell editors (e.g. select: { values: string[] }). */
+/**
+ * Params for built-in cell editors (e.g. select: { values: string[] }).
+ * Premium editors from @alaarab/ogrid-react-inputs add their own options
+ * (e.g. { maxStars: 5 }, { min, max, step }, { suggestions }), so arbitrary
+ * keys are allowed alongside the typed built-ins below.
+ */
 export interface CellEditorParams {
   /** Array of allowed values for select/richSelect editors. */
   values?: unknown[];
@@ -129,6 +141,8 @@ export interface CellEditorParams {
    * - 'native': browser native <input type="date"> (always YYYY-MM-DD input)
    */
   editorType?: 'text' | 'native';
+  /** Editor-specific options; see the editor's docs (e.g. RatingEditor's maxStars). */
+  [key: string]: unknown;
 }
 
 /** Column group for multi-row header (has children, no columnId for data). */

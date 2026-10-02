@@ -47,11 +47,11 @@ export const Z_INDEX = {
   /** Column reorder drop indicator */
   DROP_INDICATOR: 100,
 
-  /** Dropdown menus (column chooser, pagination size select) */
-  DROPDOWN: 1000,
+  /** Portaled dropdowns/popovers; must stay above FULLSCREEN so they show in fullscreen mode */
+  DROPDOWN: 10001,
 
   /** Filter popovers */
-  FILTER_POPOVER: 1000,
+  FILTER_POPOVER: 10001,
 
   /** Modal dialogs */
   MODAL: 2000,

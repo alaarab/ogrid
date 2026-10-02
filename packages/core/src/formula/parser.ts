@@ -16,8 +16,9 @@
  *   functionCall    to  FUNCTION '(' (expression (',' expression)*)? ')'
  */
 
-import type { Token, ASTNode, BinaryOp } from './types';
+import type { Token, ASTNode, BinaryOp, FormulaErrorType } from './types';
 import { FormulaError } from './types';
+import { MAX_FORMULA_DEPTH } from './limits';
 import { parseCellRef, parseRange } from './cellAddressUtils';
 
 /**
@@ -29,7 +30,7 @@ import { parseCellRef, parseRange } from './cellAddressUtils';
  */
 export function parse(tokens: Token[], namedRanges?: Map<string, string>): ASTNode {
   let pos = 0;
-
+  let depth = 0;
   // --- Token helpers ---
 
   function peek(): Token | undefined {
@@ -58,7 +59,8 @@ export function parse(tokens: Token[], namedRanges?: Map<string, string>): ASTNo
   // --- Grammar rules ---
 
   function expression(): ASTNode {
-    return comparison();
+    if (++depth > MAX_FORMULA_DEPTH) throw new FormulaError('#VALUE!', 'Formula too deep');
+    try { return comparison(); } finally { depth--; }
   }
 
   function comparison(): ASTNode {
@@ -152,7 +154,9 @@ export function parse(tokens: Token[], namedRanges?: Map<string, string>): ASTNo
     if (t && (t.type === 'MINUS' || t.type === 'PLUS')) {
       const op = t.type === 'MINUS' ? '-' : '+';
       advance();
-      const operand = unary();
+      if (++depth > MAX_FORMULA_DEPTH) throw new FormulaError('#VALUE!', 'Formula too deep');
+      let operand: ASTNode;
+      try { operand = unary(); } finally { depth--; }
       return { kind: 'unaryOp', op, operand };
     }
 
@@ -177,6 +181,11 @@ export function parse(tokens: Token[], namedRanges?: Map<string, string>): ASTNo
       return errorNode('Unexpected end of expression');
     }
 
+    if (t.type === 'ERROR_LITERAL') {
+      advance();
+      return { kind: 'error', error: new FormulaError(t.value as FormulaErrorType) };
+    }
+
     // Number literal
     if (t.type === 'NUMBER') {
       advance();
@@ -197,6 +206,7 @@ export function parse(tokens: Token[], namedRanges?: Map<string, string>): ASTNo
 
     // Cell reference or range
     if (t.type === 'CELL_REF') {
+      if (namedRanges?.has(t.value.toUpperCase())) return namedRangeRef(t);
       return cellRefOrRange(t);
     }
 
@@ -303,6 +313,8 @@ export function parse(tokens: Token[], namedRanges?: Map<string, string>): ASTNo
       return { kind: 'error', error: new FormulaError('#NAME?', `Unknown name: ${nameToken.value}`) };
     }
 
+    if (ref.length > 32767) return { kind: 'error', error: new FormulaError('#VALUE!', 'Named range reference too long') };
+
     // Try to parse as range (A1:B10) first, then as single cell ref
     if (ref.includes(':')) {
       const rangeRef = parseRange(ref);
@@ -365,7 +377,10 @@ export function parse(tokens: Token[], namedRanges?: Map<string, string>): ASTNo
 
   // --- Entry point ---
 
-  const result = expression();
+  let result: ASTNode;
+  try { result = expression(); } catch (error) {
+    return { kind: 'error', error: error instanceof FormulaError ? error : new FormulaError('#ERROR!', 'Invalid formula') };
+  }
 
   // Ensure all tokens were consumed (except EOF)
   const trailing = peek();
@@ -373,5 +388,15 @@ export function parse(tokens: Token[], namedRanges?: Map<string, string>): ASTNo
     return errorNode(`Unexpected token after expression: ${trailing.value}`);
   }
 
+  const stack: Array<{ node: ASTNode; depth: number }> = [{ node: result, depth: 1 }];
+  while (stack.length) {
+    const entry = stack.pop();
+    if (!entry) break;
+    if (entry.depth > MAX_FORMULA_DEPTH) return errorNode('Formula too deep');
+    const { node, depth } = entry;
+    if (node.kind === 'binaryOp') stack.push({ node: node.left, depth: depth + 1 }, { node: node.right, depth: depth + 1 });
+    else if (node.kind === 'unaryOp') stack.push({ node: node.operand, depth: depth + 1 });
+    else if (node.kind === 'functionCall') for (const arg of node.args) stack.push({ node: arg, depth: depth + 1 });
+  }
   return result;
 }

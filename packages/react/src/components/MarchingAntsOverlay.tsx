@@ -14,6 +14,8 @@ import { measureRange, injectGlobalStyles, type OverlayRect } from '@alaarab/ogr
 const MARCHING_ANTS_ANIMATION: React.CSSProperties = { animation: 'ogrid-marching-ants 0.5s linear infinite' };
 const CRISP_EDGES: React.CSSProperties = { shapeRendering: 'crispEdges' };
 const MARCHING_ANTS_RECT_STYLE: React.CSSProperties = { ...MARCHING_ANTS_ANIMATION, shapeRendering: 'crispEdges' };
+/** Theme selection color; the legacy `--ogrid-selection` token still wins when a host sets it. */
+const SELECTION_STROKE = 'var(--ogrid-selection, var(--ogrid-selection-color, #217346))';
 
 export interface MarchingAntsOverlayProps {
   /** Ref to the positioned container that wraps the table (must have position: relative) */
@@ -70,7 +72,7 @@ export function MarchingAntsOverlay({
 
   // Inject keyframes on mount
   useEffect(() => {
-    injectGlobalStyles('ogrid-marching-ants-keyframes', '@keyframes ogrid-marching-ants{to{stroke-dashoffset:-8}}');
+    injectGlobalStyles('ogrid-marching-ants-keyframes', '@keyframes ogrid-marching-ants{to{stroke-dashoffset:-8}}@media (prefers-reduced-motion:reduce){.ogrid-marching-ants{animation:none!important}}');
   }, []);
 
   // Measure when any range changes; re-measure on resize
@@ -149,7 +151,7 @@ export function MarchingAntsOverlay({
             width={Math.max(0, selR.width - 2)}
             height={Math.max(0, selR.height - 2)}
             fill="none"
-            stroke="var(--ogrid-selection, #217346)"
+            stroke={SELECTION_STROKE}
             strokeWidth="2"
             style={CRISP_EDGES}
           />
@@ -177,9 +179,10 @@ export function MarchingAntsOverlay({
             width={Math.max(0, clipR.width - 2)}
             height={Math.max(0, clipR.height - 2)}
             fill="none"
-            stroke="var(--ogrid-selection, #217346)"
+            stroke={SELECTION_STROKE}
             strokeWidth="2"
             strokeDasharray="4 4"
+            className="ogrid-marching-ants"
             style={MARCHING_ANTS_RECT_STYLE}
           />
         </svg>

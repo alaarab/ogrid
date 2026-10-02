@@ -1,3 +1,4 @@
+import type { StatusBarPanel } from '@alaarab/ogrid-core';
 import * as React from 'react';
 import { getStatusBarParts } from '../utils';
 
@@ -22,13 +23,16 @@ export interface StatusBarProps {
     count: number;
   } | null;
   suppressRowCount?: boolean;
+  /** Which row panels to show (default: all applicable). */
+  panels?: StatusBarPanel[];
   classNames?: StatusBarClassNames;
 }
 
+/** `aria-live="off"` keeps role="status" from re-announcing every selection/aggregate change (the active-cell live region covers navigation). */
 export function StatusBar({ classNames, ...rest }: StatusBarProps): React.ReactElement {
   const parts = getStatusBarParts(rest);
   return (
-    <div className={classNames?.statusBar} role="status" aria-live="polite">
+    <div className={classNames?.statusBar} role="status" aria-live="off">
       {parts.map((p) => (
         <span key={p.key} className={classNames?.statusBarItem}>
           <span className={classNames?.statusBarLabel}>{p.label}</span>

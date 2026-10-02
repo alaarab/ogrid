@@ -164,7 +164,7 @@ export function registerBasicTextFunctions(registry: Map<string, IFormulaFunctio
       const n = Math.trunc(times);
       if (n < 0) return new FormulaError('#VALUE!', 'REPT number must be >= 0');
       // Excel's cell text limit; also stops =REPT("x",1e10) exhausting memory.
-      if (text.length * n > 32767) return new FormulaError('#VALUE!', 'REPT result exceeds 32767 characters');
+      if (!Number.isSafeInteger(n) || text.length * n > 32767) return new FormulaError('#VALUE!', 'REPT result exceeds 32767 characters');
       return text.repeat(n);
     },
   });
@@ -187,7 +187,7 @@ export function registerBasicTextFunctions(registry: Map<string, IFormulaFunctio
     evaluate(args: ASTNode[], context: IFormulaContext, evaluator: IEvaluator): unknown {
       const val = evalArg(evaluator, args[0], context);
       if (val instanceof FormulaError) return val;
-      return toText(val).toLowerCase().replace(/\b\w/g, (c) => c.toUpperCase());
+      return toText(val).toLowerCase().replace(/(^|[^\p{L}])(\p{L})/gu, (_match, prefix: string, letter: string) => prefix + letter.toUpperCase());
     },
   });
 

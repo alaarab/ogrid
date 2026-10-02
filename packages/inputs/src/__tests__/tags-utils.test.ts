@@ -44,6 +44,14 @@ describe('tags-utils', () => {
     it('converts non-string array elements to strings', () => {
       expect(parseTags([1, 2, 3] as unknown as string[])).toEqual(['1', '2', '3']);
     });
+
+    it('trims and de-duplicates array elements', () => {
+      expect(parseTags([' a ', 'a', 'b ', '', 0] as unknown as string[])).toEqual(['a', 'b', '0']);
+    });
+
+    it('de-duplicates the string branch', () => {
+      expect(parseTags('Bug, Bug, Feature')).toEqual(['Bug', 'Feature']);
+    });
   });
 
   describe('formatTags', () => {

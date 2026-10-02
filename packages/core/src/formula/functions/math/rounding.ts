@@ -2,6 +2,10 @@ import type { IFormulaFunction, IFormulaContext, IEvaluator, ASTNode } from '../
 import { FormulaError } from '../../types';
 import { toNumber, evalArg } from '../../evaluator';
 
+function decimal(value: number): number {
+  return Number(value.toPrecision(15));
+}
+
 /**
  * Rounding and truncation: ROUND, CEILING, FLOOR, ROUNDUP, ROUNDDOWN, INT,
  * TRUNC, MROUND.
@@ -24,7 +28,7 @@ export function registerMathRoundingFunctions(registry: Map<string, IFormulaFunc
       const factor = 10 ** Math.trunc(digits);
       // Excel ROUND rounds halves away from zero, unlike Math.round which rounds
       // halves toward +Infinity (so ROUND(-2.5, 0) is -3, not -2).
-      const scaled = Math.round(Math.abs(num) * factor) / factor;
+      const scaled = Math.round(decimal(Math.abs(num) * factor)) / factor;
       return num < 0 ? -scaled : scaled;
     },
   });
@@ -44,7 +48,7 @@ export function registerMathRoundingFunctions(registry: Map<string, IFormulaFunc
       if (significance instanceof FormulaError) return significance;
 
       if (significance === 0) return 0;
-      return Math.ceil(num / significance) * significance;
+      return decimal(Math.ceil(decimal(num / significance)) * significance);
     },
   });
 
@@ -63,7 +67,7 @@ export function registerMathRoundingFunctions(registry: Map<string, IFormulaFunc
       if (significance instanceof FormulaError) return significance;
 
       if (significance === 0) return 0;
-      return Math.floor(num / significance) * significance;
+      return decimal(Math.floor(decimal(num / significance)) * significance);
     },
   });
 
@@ -81,8 +85,8 @@ export function registerMathRoundingFunctions(registry: Map<string, IFormulaFunc
       if (digits instanceof FormulaError) return digits;
       const factor = 10 ** Math.trunc(digits);
       return num >= 0
-        ? Math.ceil(num * factor) / factor
-        : Math.floor(num * factor) / factor;
+        ? Math.ceil(decimal(num * factor)) / factor
+        : Math.floor(decimal(num * factor)) / factor;
     },
   });
 
@@ -99,7 +103,7 @@ export function registerMathRoundingFunctions(registry: Map<string, IFormulaFunc
       const digits = toNumber(rawDigits);
       if (digits instanceof FormulaError) return digits;
       const factor = 10 ** Math.trunc(digits);
-      return Math.trunc(num * factor) / factor;
+      return Math.trunc(decimal(num * factor)) / factor;
     },
   });
 
@@ -132,7 +136,7 @@ export function registerMathRoundingFunctions(registry: Map<string, IFormulaFunc
         digits = Math.trunc(d);
       }
       const factor = 10 ** digits;
-      return Math.trunc(num * factor) / factor;
+      return Math.trunc(decimal(num * factor)) / factor;
     },
   });
 
@@ -157,7 +161,7 @@ export function registerMathRoundingFunctions(registry: Map<string, IFormulaFunc
       if ((num > 0 && multiple < 0) || (num < 0 && multiple > 0)) {
         return new FormulaError('#NUM!', 'MROUND: number and multiple must have the same sign');
       }
-      return Math.round(num / multiple) * multiple;
+      return decimal(Math.round(decimal(num / multiple)) * multiple);
     },
   });
 }

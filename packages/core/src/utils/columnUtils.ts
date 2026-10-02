@@ -29,112 +29,78 @@ export function flattenColumns<T>(
  *
  * - Flat columns (no groups) produce a single row of leaf cells.
  * - Grouped columns produce N rows where N = max nesting depth + 1.
- * - Group cells get colSpan = number of visible leaf descendants.
+ * - Group cells get colSpan = number of adjacent visible leaf descendants.
  * - Leaf cells at a depth shallower than maxDepth are placed at their own depth
  *   (the rendering layer can use rowSpan to stretch them down to the bottom row).
  * - If visibleColumns is provided, only visible leaf columns and their ancestors are included.
+ * - If columnOrder is provided, leaves follow that order (ids missing from it keep
+ *   their definition order after the ordered ones, matching the body). A group whose
+ *   leaves are no longer adjacent is split into one header cell per adjacent run.
  *
  * @param columns - The column tree (mix of IColumnDef and IColumnGroupDef)
  * @param visibleColumns - Optional set of visible column ids (filters out hidden leaves + empty groups)
+ * @param columnOrder - Optional display order of leaf column ids
  * @returns Array of HeaderRow, from top (group headers) to bottom (leaf columns)
  */
 export function buildHeaderRows<T>(
   columns: (IColumnGroupDef<T> | IColumnDef<T>)[],
-  visibleColumns?: Set<string>
+  visibleColumns?: Set<string>,
+  columnOrder?: readonly string[]
 ): HeaderRow<T>[] {
-  // Step 1: Compute max depth of the column tree
-  function getMaxDepth(cols: (IColumnGroupDef<T> | IColumnDef<T>)[], depth: number): number {
-    let max = depth;
+  // Step 1: Collect visible leaves with their ancestor groups (definition order)
+  const leaves: { col: IColumnDef<T>; ancestors: IColumnGroupDef<T>[] }[] = [];
+  function collect(cols: (IColumnGroupDef<T> | IColumnDef<T>)[], ancestors: IColumnGroupDef<T>[]): void {
     for (const c of cols) {
       if (isColumnGroupDef(c)) {
-        max = Math.max(max, getMaxDepth(c.children, depth + 1));
+        collect(c.children, [...ancestors, c]);
+      } else if (!visibleColumns || visibleColumns.has(c.columnId)) {
+        leaves.push({ col: c, ancestors });
       }
     }
-    return max;
+  }
+  collect(columns, []);
+
+  // Step 2: Put leaves in display order (stable sort; unordered ids go last)
+  if (columnOrder?.length) {
+    const orderMap = new Map<string, number>();
+    columnOrder.forEach((id, i) => {
+      orderMap.set(id, i);
+    });
+    leaves.sort((a, b) => {
+      const ia = orderMap.get(a.col.columnId) ?? -1;
+      const ib = orderMap.get(b.col.columnId) ?? -1;
+      if (ia === -1 && ib === -1) return 0;
+      if (ia === -1) return 1;
+      if (ib === -1) return -1;
+      return ia - ib;
+    });
   }
 
-  const maxDepth = getMaxDepth(columns, 0);
+  // Step 3: Build rows for depth 0..maxDepth (groups above, each leaf at its own depth)
+  let maxDepth = 0;
+  for (const leaf of leaves) maxDepth = Math.max(maxDepth, leaf.ancestors.length);
+  const rows: HeaderRow<T>[] = Array.from({ length: maxDepth + 1 }, () => []);
 
-  // If no groups at all, return a single row of leaf cells
-  if (maxDepth === 0) {
-    const row: HeaderRow<T> = [];
-    for (const c of columns) {
-      if (!isColumnGroupDef(c)) {
-        if (visibleColumns && !visibleColumns.has(c.columnId)) continue;
-        row.push({
-          label: c.name,
-          colSpan: 1,
-          isGroup: false,
-          columnDef: c,
-          depth: 0,
-        });
-      }
-    }
-    return [row];
-  }
-
-  // Step 2: Build rows for depth 0..maxDepth
-  // Total rows = maxDepth + 1 (groups use rows 0..maxDepth-1, leaves use row maxDepth)
-  const totalRows = maxDepth + 1;
-  const rows: HeaderRow<T>[] = Array.from({ length: totalRows }, () => []);
-
-  // Step 3: Walk the tree and place cells
-  // Cache leaf counts by children array ref to avoid O(n²) repeated traversals
-  const leafCountCache = new Map<(IColumnGroupDef<T> | IColumnDef<T>)[], number>();
-  function countVisibleLeaves(cols: (IColumnGroupDef<T> | IColumnDef<T>)[]): number {
-    const cached = leafCountCache.get(cols);
-    if (cached !== undefined) return cached;
-    let count = 0;
-    for (const c of cols) {
-      if (isColumnGroupDef(c)) {
-        count += countVisibleLeaves(c.children);
-      } else {
-        if (!visibleColumns || visibleColumns.has(c.columnId)) {
-          count++;
+  for (let depth = 0; depth <= maxDepth; depth++) {
+    const row = rows[depth];
+    if (row === undefined) continue;
+    for (let i = 0; i < leaves.length; i++) {
+      const leaf = leaves[i];
+      if (leaf === undefined) continue;
+      const group = leaf.ancestors[depth];
+      if (group !== undefined) {
+        // Extend the previous cell when the leaf to the left shares this group.
+        const last = row[row.length - 1];
+        if (last !== undefined && leaves[i - 1]?.ancestors[depth] === group) {
+          last.colSpan++;
+        } else {
+          row.push({ label: group.headerName, colSpan: 1, isGroup: true, depth });
         }
-      }
-    }
-    leafCountCache.set(cols, count);
-    return count;
-  }
-
-  function walk(
-    cols: (IColumnGroupDef<T> | IColumnDef<T>)[],
-    depth: number
-  ): void {
-    for (const c of cols) {
-      if (isColumnGroupDef(c)) {
-        const leafCount = countVisibleLeaves(c.children);
-        if (leafCount === 0) continue; // Skip empty groups
-        const groupRow = rows[depth];
-        if (groupRow === undefined) continue;
-        groupRow.push({
-          label: c.headerName,
-          colSpan: leafCount,
-          isGroup: true,
-          depth,
-        });
-        walk(c.children, depth + 1);
-      } else {
-        if (visibleColumns && !visibleColumns.has(c.columnId)) continue;
-        // Leaf column: place it at the current depth.
-        // If depth < maxDepth, the rendering layer should use rowSpan to stretch
-        // this cell down to the bottom row.
-        const leafRow = rows[depth];
-        if (leafRow === undefined) continue;
-        leafRow.push({
-          label: c.name,
-          colSpan: 1,
-          isGroup: false,
-          columnDef: c,
-          depth,
-        });
+      } else if (leaf.ancestors.length === depth) {
+        row.push({ label: leaf.col.name, colSpan: 1, isGroup: false, columnDef: leaf.col, depth });
       }
     }
   }
 
-  walk(columns, 0);
-
-  // Remove any completely empty rows (can happen with certain structures)
-  return rows.filter(row => row.length > 0);
+  return rows;
 }

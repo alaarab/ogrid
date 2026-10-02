@@ -1,101 +1,59 @@
 import type { IFormulaFunction, IFormulaContext, IEvaluator, ASTNode } from '../types';
 import { FormulaError } from '../types';
-import { toNumber } from '../evaluator';
+import { wildcard } from '../wildcard';
+import { toNumber, compareValues } from '../evaluator';
 
 interface ParsedCriteria {
   op: '=' | '<>' | '>' | '<' | '>=' | '<=';
   value: unknown;
-  /** Pre-lowercased value for string comparisons (avoids per-cell allocation). */
-  valueLower: string | null;
-}
-
-function makeCriteria(op: ParsedCriteria['op'], value: unknown): ParsedCriteria {
-  return { op, value, valueLower: typeof value === 'string' ? value.toLowerCase() : null };
+  match?: ReturnType<typeof wildcard>;
 }
 
 function parseCriteria(criteria: unknown): ParsedCriteria {
-  if (typeof criteria === 'number') {
-    return makeCriteria('=', criteria);
+  let op: ParsedCriteria['op'] = '=';
+  let value = criteria;
+  if (typeof criteria === 'string') {
+    const match = /^(>=|<=|<>|>|<|=)?(.*)$/s.exec(criteria);
+    op = (match?.[1] ?? '=') as ParsedCriteria['op'];
+    const text = match?.[2] ?? '';
+    if (/^(TRUE|FALSE)$/i.test(text)) value = text.toUpperCase() === 'TRUE';
+    else {
+      const number = text === '' ? new FormulaError('#VALUE!') : toNumber(text);
+      value = typeof number === 'number' ? number : text;
+    }
   }
-
-  if (typeof criteria !== 'string') {
-    return makeCriteria('=', criteria);
-  }
-
-  const str = criteria.trim();
-
-  // Check for comparison operators (order matters: >= and <= before > and <)
-  if (str.startsWith('>=')) {
-    return makeCriteria('>=', parseNumericOrString(str.substring(2).trim()));
-  }
-  if (str.startsWith('<=')) {
-    return makeCriteria('<=', parseNumericOrString(str.substring(2).trim()));
-  }
-  if (str.startsWith('<>')) {
-    return makeCriteria('<>', parseNumericOrString(str.substring(2).trim()));
-  }
-  if (str.startsWith('>')) {
-    return makeCriteria('>', parseNumericOrString(str.substring(1).trim()));
-  }
-  if (str.startsWith('<')) {
-    return makeCriteria('<', parseNumericOrString(str.substring(1).trim()));
-  }
-  if (str.startsWith('=')) {
-    return makeCriteria('=', parseNumericOrString(str.substring(1).trim()));
-  }
-
-  // No operator: exact match
-  return makeCriteria('=', parseNumericOrString(str));
+  return { op, value, match: typeof value === 'string' && value !== '' && (op === '=' || op === '<>') ? wildcard(value) : undefined };
 }
 
-function parseNumericOrString(s: string): number | string {
-  const n = Number(s);
-  if (!Number.isNaN(n) && s !== '') return n;
-  return s;
-}
-
-function matchesCriteria(cellValue: unknown, criteria: ParsedCriteria): boolean {
+function matchesCriteria(cellValue: unknown, criteria: ParsedCriteria, context: IFormulaContext): boolean {
+  context.consumeWork?.(1);
   const { op, value } = criteria;
-
-  // Convert cell value to number if the criteria value is numeric
-  let comparableCell: unknown = cellValue;
-  if (typeof value === 'number' && typeof cellValue !== 'number') {
-    const n = toNumber(cellValue);
-    if (n instanceof FormulaError) return false;
-    comparableCell = n;
+  if (cellValue instanceof FormulaError) return false;
+  if (cellValue instanceof Date) cellValue = toNumber(cellValue);
+  const blank = cellValue === null || cellValue === undefined || cellValue === '';
+  if (value === '') return op === '=' ? blank : op === '<>' ? !blank : false;
+  if (blank) return false;
+  if (typeof value === 'number' && typeof cellValue !== 'number') return false;
+  if (typeof value === 'boolean' && typeof cellValue !== 'boolean') return false;
+  if (criteria.match) {
+    const match = typeof cellValue === 'string' && criteria.match(cellValue, false, context.consumeWork) >= 0;
+    return op === '=' ? match : !match;
   }
-
-  // For string comparisons, case-insensitive (use pre-lowercased criteria value)
-  if (typeof comparableCell === 'string' && criteria.valueLower !== null) {
-    const a = comparableCell.toLowerCase();
-    const b = criteria.valueLower;
-    switch (op) {
-      case '=': return a === b;
-      case '<>': return a !== b;
-      case '>': return a > b;
-      case '<': return a < b;
-      case '>=': return a >= b;
-      case '<=': return a <= b;
-    }
+  if (typeof cellValue !== typeof value) return op === '<>';
+  const cmp = compareValues(cellValue, value);
+  switch (op) {
+    case '=': return cmp === 0;
+    case '<>': return cmp !== 0;
+    case '>': return cmp > 0;
+    case '<': return cmp < 0;
+    case '>=': return cmp >= 0;
+    case '<=': return cmp <= 0;
   }
+}
 
-  // Numeric or mixed comparisons
-  if (typeof comparableCell === 'number' && typeof value === 'number') {
-    switch (op) {
-      case '=': return comparableCell === value;
-      case '<>': return comparableCell !== value;
-      case '>': return comparableCell > value;
-      case '<': return comparableCell < value;
-      case '>=': return comparableCell >= value;
-      case '<=': return comparableCell <= value;
-    }
-  }
-
-  // Fallback: equality check
-  if (op === '=') return comparableCell === value;
-  if (op === '<>') return comparableCell !== value;
-
-  return false;
+function sameShape(a: ASTNode, b: ASTNode): boolean {
+  if (a.kind !== 'range' || b.kind !== 'range') return false;
+  return Math.abs(a.end.row - a.start.row) === Math.abs(b.end.row - b.start.row) && Math.abs(a.end.col - a.start.col) === Math.abs(b.end.col - b.start.col);
 }
 
 export function registerStatsFunctions(registry: Map<string, IFormulaFunction>): void {
@@ -137,7 +95,7 @@ export function registerStatsFunctions(registry: Map<string, IFormulaFunction>):
         if (critRow === undefined) continue;
         const sumRow = sumRange[r];
         for (let c = 0; c < critRow.length; c++) {
-          if (matchesCriteria(critRow[c], criteria)) {
+          if (matchesCriteria(critRow[c], criteria, context)) {
             const rawSumVal = sumRow === undefined ? undefined : sumRow[c];
             const sumVal = rawSumVal !== undefined ? rawSumVal : null;
             const n = toNumber(sumVal);
@@ -177,10 +135,14 @@ export function registerStatsFunctions(registry: Map<string, IFormulaFunction>):
         const row = rangeData[r];
         if (row === undefined) continue;
         for (let c = 0; c < row.length; c++) {
-          if (matchesCriteria(row[c], criteria)) {
+          if (matchesCriteria(row[c], criteria, context)) {
             count++;
           }
         }
+      }
+      if (matchesCriteria(undefined, criteria, context)) {
+        const total = (Math.abs(rangeArg.end.row - rangeArg.start.row) + 1) * (Math.abs(rangeArg.end.col - rangeArg.start.col) + 1);
+        count += total - rangeData.reduce((size, row) => size + row.length, 0);
       }
       return count;
     },
@@ -225,10 +187,10 @@ export function registerStatsFunctions(registry: Map<string, IFormulaFunction>):
         if (critRow === undefined) continue;
         const avgRow = avgRange[r];
         for (let c = 0; c < critRow.length; c++) {
-          if (matchesCriteria(critRow[c], criteria)) {
+          if (matchesCriteria(critRow[c], criteria, context)) {
             const rawAvgVal = avgRow === undefined ? undefined : avgRow[c];
             const avgVal = rawAvgVal !== undefined ? rawAvgVal : null;
-            const n = toNumber(avgVal);
+            const n = avgVal;
             if (typeof n === 'number') {
               sum += n;
               count++;
@@ -262,6 +224,7 @@ export function registerStatsFunctions(registry: Map<string, IFormulaFunction>):
         if (rangeArg === undefined || rangeArg.kind !== 'range') {
           return new FormulaError('#VALUE!', 'SUMIFS criteria_range must be a cell range');
         }
+        if (!sumRangeArg || !sameShape(sumRangeArg, rangeArg)) return new FormulaError('#VALUE!', 'SUMIFS range dimensions must match');
         const criteriaArg = args[i + 1];
         if (criteriaArg === undefined) {
           return new FormulaError('#VALUE!', 'SUMIFS requires sum_range + pairs of criteria_range, criteria');
@@ -280,7 +243,7 @@ export function registerStatsFunctions(registry: Map<string, IFormulaFunction>):
           let allMatch = true;
           for (const pair of pairs) {
             const cellVal = pair.range[r]?.[c];
-            if (!matchesCriteria(cellVal, pair.criteria)) {
+            if (!matchesCriteria(cellVal, pair.criteria, context)) {
               allMatch = false;
               break;
             }
@@ -310,6 +273,7 @@ export function registerStatsFunctions(registry: Map<string, IFormulaFunction>):
         if (rangeArg === undefined || rangeArg.kind !== 'range') {
           return new FormulaError('#VALUE!', 'COUNTIFS criteria_range must be a cell range');
         }
+        if (!args[0] || !sameShape(args[0], rangeArg)) return new FormulaError('#VALUE!', 'COUNTIFS range dimensions must match');
         const criteriaArg = args[i + 1];
         if (criteriaArg === undefined) {
           return new FormulaError('#VALUE!', 'COUNTIFS requires pairs of criteria_range, criteria');
@@ -325,22 +289,26 @@ export function registerStatsFunctions(registry: Map<string, IFormulaFunction>):
       if (firstPair === undefined) {
         return new FormulaError('#VALUE!', 'COUNTIFS requires pairs of criteria_range, criteria');
       }
-      const firstRange = firstPair.range;
+      const rows = Math.max(...pairs.map(pair => pair.range.length));
+      const cols = Math.max(...pairs.map(pair => pair.range[0]?.length ?? 0));
       let count = 0;
-      for (let r = 0; r < firstRange.length; r++) {
-        const firstRow = firstRange[r];
-        if (firstRow === undefined) continue;
-        for (let c = 0; c < firstRow.length; c++) {
+      for (let r = 0; r < rows; r++) {
+        for (let c = 0; c < cols; c++) {
           let allMatch = true;
           for (const pair of pairs) {
             const cellVal = pair.range[r]?.[c];
-            if (!matchesCriteria(cellVal, pair.criteria)) {
+            if (!matchesCriteria(cellVal, pair.criteria, context)) {
               allMatch = false;
               break;
             }
           }
           if (allMatch) count++;
         }
+      }
+      const firstArg = args[0];
+      if (firstArg?.kind === 'range' && pairs.every(pair => matchesCriteria(undefined, pair.criteria, context))) {
+        const total = (Math.abs(firstArg.end.row - firstArg.start.row) + 1) * (Math.abs(firstArg.end.col - firstArg.start.col) + 1);
+        count += total - rows * cols;
       }
       return count;
     },
@@ -366,6 +334,7 @@ export function registerStatsFunctions(registry: Map<string, IFormulaFunction>):
         if (rangeArg === undefined || rangeArg.kind !== 'range') {
           return new FormulaError('#VALUE!', 'AVERAGEIFS criteria_range must be a cell range');
         }
+        if (!avgRangeArg || !sameShape(avgRangeArg, rangeArg)) return new FormulaError('#VALUE!', 'AVERAGEIFS range dimensions must match');
         const criteriaArg = args[i + 1];
         if (criteriaArg === undefined) {
           return new FormulaError('#VALUE!', 'AVERAGEIFS requires avg_range + pairs of criteria_range, criteria');
@@ -385,13 +354,13 @@ export function registerStatsFunctions(registry: Map<string, IFormulaFunction>):
           let allMatch = true;
           for (const pair of pairs) {
             const cellVal = pair.range[r]?.[c];
-            if (!matchesCriteria(cellVal, pair.criteria)) {
+            if (!matchesCriteria(cellVal, pair.criteria, context)) {
               allMatch = false;
               break;
             }
           }
           if (allMatch) {
-            const n = toNumber(avgRow[c]);
+            const n = avgRow[c];
             if (typeof n === 'number') {
               sum += n;
               count++;

@@ -64,13 +64,12 @@ describe('processClientSideData - Edge Cases', () => {
       expect(result.map(r => r.id)).toEqual(['1', '2', '5']);
     });
 
-    it('should handle empty string as distinct from null in multiSelect', () => {
+    it('should match empty strings and null with the blank multiSelect option', () => {
       const filters: IFilters = {
-        status: { type: 'multiSelect', value: [''] }, // Explicitly filter for empty string
+        status: { type: 'multiSelect', value: [''] }, // The empty-string option represents blanks
       };
       const result = processClientSideData(dataWithNulls, columns, filters);
-      expect(result).toHaveLength(1);
-      expect(result[0].id).toBe('4');
+      expect(result.map(r => r.id)).toEqual(['3', '4']);
     });
 
     it('should filter date column excluding null and invalid dates', () => {
@@ -364,8 +363,8 @@ describe('audit regressions: dates and mixed sort', () => {
     expect(out).toEqual([{ d: '2024-01-15' }]);
   });
 
-  it('reads bare YYYY-MM-DD as local midnight', () => {
-    expect(toDateTimestamp('2024-01-15')).toBe(new Date(2024, 0, 15).getTime());
+  it('reads bare YYYY-MM-DD as UTC midnight', () => {
+    expect(toDateTimestamp('2024-01-15')).toBe(Date.UTC(2024, 0, 15));
     expect(toDateTimestamp(new Date(2024, 0, 15))).toBe(new Date(2024, 0, 15).getTime());
     expect(Number.isNaN(toDateTimestamp('nope'))).toBe(true);
     expect(Number.isNaN(toDateTimestamp(null))).toBe(true);
@@ -375,7 +374,7 @@ describe('audit regressions: dates and mixed sort', () => {
     const cols: IColumnDef<Row>[] = [{ columnId: 'd', name: 'D' }];
     const sortVals = (vals: unknown[]) =>
       processClientSideData(vals.map((d) => ({ d })), cols, {}, 'd', 'asc').map((r) => r.d);
-    expect(sortVals([5, '10', '3'])).toEqual([5, '10', '3']);
-    expect(sortVals(['3', 5, '10'])).toEqual([5, '10', '3']);
+    expect(sortVals([5, '10', '3'])).toEqual([5, '3', '10']);
+    expect(sortVals(['3', 5, '10'])).toEqual([5, '3', '10']);
   });
 });

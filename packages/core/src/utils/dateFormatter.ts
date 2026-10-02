@@ -28,7 +28,7 @@ export function formatDateForDisplay(
 ): string | null {
   if (value == null) return null;
 
-  const d = value instanceof Date ? value : new Date(String(value));
+  const d = value instanceof Date ? value : typeof value === 'number' ? new Date(value) : new Date(String(value));
   if (Number.isNaN(d.getTime())) return null;
 
   let year: number;
@@ -58,9 +58,9 @@ export function formatDateForDisplay(
   const dd = String(day).padStart(2, '0');
 
   return format
-    .replace('YYYY', yyyy)
-    .replace('MM', mm)
-    .replace('DD', dd);
+    .replace(/YYYY/g, yyyy)
+    .replace(/MM/g, mm)
+    .replace(/DD/g, dd);
 }
 
 /**

@@ -14,10 +14,12 @@ export const DEFAULT_TAG_COLORS: readonly string[] = [
  */
 export function parseTags(value: unknown): string[] {
   if (value == null) return [];
-  if (Array.isArray(value)) return value.map(String).filter(Boolean);
+  if (Array.isArray(value)) {
+    return [...new Set(value.map((v) => String(v).trim()).filter(Boolean))];
+  }
   const str = String(value).trim();
   if (!str) return [];
-  return str.split(',').map((s) => s.trim()).filter(Boolean);
+  return [...new Set(str.split(',').map((s) => s.trim()).filter(Boolean))];
 }
 
 /**

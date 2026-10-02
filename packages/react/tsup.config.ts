@@ -13,6 +13,10 @@ export default defineConfig({
   external: ['@alaarab/ogrid-core', '@alaarab/ogrid-core/formula', '@tanstack/react-virtual', 'react', 'react-dom', '@testing-library/react'],
   esbuildOptions(options) {
     options.jsx = 'automatic';
+    // Resolve the JSX runtime to scripts/react-jsx so React 17 works under
+    // strict ESM (see scripts/react-jsx/jsx-runtime.js).
+    options.jsxImportSource = 'ogrid-react-jsx';
+    options.alias = { ...options.alias, 'ogrid-react-jsx': '../../scripts/react-jsx' };
   },
   outExtension: () => ({ js: '.js' }),
 });

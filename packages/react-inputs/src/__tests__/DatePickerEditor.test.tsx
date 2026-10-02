@@ -1,5 +1,5 @@
 
-import { render, screen, act } from '@testing-library/react';
+import { render, screen, act, fireEvent } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { DatePickerEditor } from '../DatePicker/DatePickerEditor';
 import { MONTH_NAMES, DAY_NAMES, formatDate } from '../DatePicker/calendar-utils';
@@ -179,7 +179,8 @@ describe('DatePickerEditor', () => {
       await user.type(input, '2024-05-01');
       await user.keyboard('{Escape}');
 
-      expect(props.onCancel).toHaveBeenCalled();
+      // I17: one Escape path, not the input handler plus the root listener.
+      expect(props.onCancel).toHaveBeenCalledTimes(1);
     });
 
     it('typing an invalid date does not update the calendar view', async () => {
@@ -393,6 +394,56 @@ describe('DatePickerEditor', () => {
       const input = screen.getByPlaceholderText('YYYY-MM-DD') as HTMLInputElement;
       expect(input.selectionStart).toBe(0);
       expect(input.selectionEnd).toBe('2024-03-15'.length);
+    });
+  });
+
+  // ── 9. Validation & value shapes ──
+
+  describe('I07 - Enter validates input', () => {
+    it('refuses to commit an invalid date', async () => {
+      const user = userEvent.setup();
+      const { props } = renderEditor({ value: '2024-03-15' });
+
+      const input = screen.getByPlaceholderText('YYYY-MM-DD');
+      await user.clear(input);
+      await user.type(input, '2024-02-30');
+      await user.keyboard('{Enter}');
+
+      expect(props.onCommit).not.toHaveBeenCalled();
+    });
+
+    it('commits the canonical date for valid ISO-like text', async () => {
+      const user = userEvent.setup();
+      const { props } = renderEditor({ value: '2024-03-15' });
+
+      const input = screen.getByPlaceholderText('YYYY-MM-DD');
+      await user.clear(input);
+      await user.type(input, '2024-06-15T10:30:00Z');
+      await user.keyboard('{Enter}');
+
+      expect(props.onValueChange).toHaveBeenLastCalledWith('2024-06-15');
+      expect(props.onCommit).toHaveBeenCalled();
+    });
+
+    it('emits the canonical date, not the raw text, while typing', () => {
+      const { props } = renderEditor({ value: '2024-03-15' });
+
+      fireEvent.change(screen.getByPlaceholderText('YYYY-MM-DD'), { target: { value: '2024-06-15 junk' } });
+
+      expect(props.onValueChange).toHaveBeenLastCalledWith('2024-06-15');
+    });
+  });
+
+  describe('I20 - accepts Date instances', () => {
+    it('renders the month of a Date value instead of falling back to today', () => {
+      renderEditor({ value: new Date(2023, 8, 25) });
+      expect(screen.getByText('September 2023')).toBeInTheDocument();
+    });
+
+    it('shows the Date value in the input', () => {
+      renderEditor({ value: new Date(2024, 0, 5) });
+      const input = screen.getByPlaceholderText('YYYY-MM-DD') as HTMLInputElement;
+      expect(input.value).toBe('2024-01-05');
     });
   });
 });

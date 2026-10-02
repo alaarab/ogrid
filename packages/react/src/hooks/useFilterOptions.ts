@@ -51,8 +51,19 @@ export function useFilterOptions(
   const [filterOptions, setFilterOptions] = useState<Record<string, FilterOption[]>>(EMPTY_FILTER_OPTIONS);
   const [loadingOptions, setLoadingOptions] = useState<Record<string, boolean>>(EMPTY_LOADING);
 
+  // Monotonic id so a slower load for an older dataSource/fields can't overwrite
+  // a newer one, and so completions after unmount are ignored.
+  const loadRequestIdRef = useRef(0);
+  useEffect(
+    () => () => {
+      loadRequestIdRef.current++;
+    },
+    []
+  );
+
   // biome-ignore lint/correctness/useExhaustiveDependencies: dataSourceVersion is a deliberate reload trigger; the source is read via dataSourceRef
   const load = useCallback(async (): Promise<void> => {
+    const requestId = ++loadRequestIdRef.current;
     const ds = dataSourceRef.current;
     const fetcher =
       'fetchFilterOptions' in ds && typeof ds.fetchFilterOptions === 'function'
@@ -80,6 +91,7 @@ export function useFilterOptions(
       })
     );
 
+    if (requestId !== loadRequestIdRef.current) return;
     setFilterOptions(results);
     setLoadingOptions(EMPTY_LOADING);
   }, [stableFields, dataSourceRef, dataSourceVersion]);
@@ -88,7 +100,7 @@ export function useFilterOptions(
     load().catch((err) => {
       // load() handles per-field fetch errors internally; this guards against an
       // unexpected throw in load itself. Surface it in dev, stay silent in prod.
-      if (process.env.NODE_ENV !== 'production') {
+      if (typeof process !== 'undefined' && process.env?.NODE_ENV !== 'production') {
         console.error('[OGrid] filter options load failed', err);
       }
     });

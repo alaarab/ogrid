@@ -1,4 +1,5 @@
 import {
+  DEFAULT_COLOR_PALETTE,
   isValidHex,
   normalizeHex,
   parseHexColor,
@@ -45,16 +46,15 @@ describe('color-utils', () => {
   });
 
   describe('normalizeHex', () => {
-    it('expands 3-digit hex to 6-digit', () => {
+    it('expands 3-digit hex to 6-digit uppercase', () => {
       expect(normalizeHex('#FFF')).toBe('#FFFFFF');
       expect(normalizeHex('#000')).toBe('#000000');
-      // 3-digit expansion preserves original case (not uppercased)
-      expect(normalizeHex('#abc')).toBe('#aabbcc');
+      expect(normalizeHex('#abc')).toBe('#AABBCC');
     });
 
     it('also expands 3-digit hex without # prefix', () => {
       expect(normalizeHex('FFF')).toBe('#FFFFFF');
-      expect(normalizeHex('abc')).toBe('#aabbcc');
+      expect(normalizeHex('abc')).toBe('#AABBCC');
     });
 
     it('returns uppercase 6-digit hex for valid 6-digit input', () => {
@@ -62,9 +62,14 @@ describe('color-utils', () => {
       expect(normalizeHex('#00FF00')).toBe('#00FF00');
     });
 
-    it('extracts first 6 digits from 8-digit hex (strips alpha)', () => {
-      expect(normalizeHex('#FF000080')).toBe('#FF0000');
-      expect(normalizeHex('#FFFFFFFF')).toBe('#FFFFFF');
+    it('preserves alpha in 8-digit and expands 4-digit shorthand', () => {
+      expect(normalizeHex('#FF000080')).toBe('#FF000080');
+      expect(normalizeHex('#FFFFFFFF')).toBe('#FFFFFFFF');
+      expect(normalizeHex('#abcd')).toBe('#AABBCCDD');
+    });
+
+    it('strips every leading # so ##abc is not mangled', () => {
+      expect(normalizeHex('##abc')).toBe('#AABBCC');
     });
 
     it('returns null for invalid hex strings', () => {
@@ -73,10 +78,9 @@ describe('color-utils', () => {
       expect(normalizeHex('#GGGGGG')).toBeNull();
     });
 
-    it('handles whitespace trimming', () => {
-      // 3-digit expansion preserves case; uppercase input produces uppercase output
+    it('handles whitespace trimming and normalizes to uppercase', () => {
       expect(normalizeHex('  #FFF  ')).toBe('#FFFFFF');
-      expect(normalizeHex('  #fff  ')).toBe('#ffffff');
+      expect(normalizeHex('  #fff  ')).toBe('#FFFFFF');
     });
   });
 
@@ -138,6 +142,12 @@ describe('color-utils', () => {
     it('returns true for light blue/gray tones', () => {
       expect(isLightColor('#E3F2FD')).toBe(true); // very light blue
       expect(isLightColor('#F5F5F5')).toBe(true); // near-white gray
+    });
+  });
+
+  describe('DEFAULT_COLOR_PALETTE', () => {
+    it('has no duplicate colors', () => {
+      expect(new Set(DEFAULT_COLOR_PALETTE).size).toBe(DEFAULT_COLOR_PALETTE.length);
     });
   });
 });

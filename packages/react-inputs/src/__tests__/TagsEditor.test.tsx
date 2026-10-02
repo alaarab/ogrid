@@ -387,4 +387,43 @@ describe('TagsEditor', () => {
       expect(props.onValueChange).toHaveBeenCalledWith('Bug');
     });
   });
+
+  // ── 11. Value shape (I05) and suggestions shape (I18) ──
+
+  describe('Value shape', () => {
+    it('emits an array when the stored value was an array', async () => {
+      const user = userEvent.setup();
+      const { props } = renderEditor({ value: ['Alpha', 'Beta'] as unknown as string });
+
+      await user.click(screen.getByLabelText('Remove Alpha'));
+
+      expect(props.onValueChange).toHaveBeenCalledWith(['Beta']);
+    });
+
+    it('adds text still in the input when Apply is clicked', async () => {
+      const user = userEvent.setup();
+      const { props } = renderEditor({ value: 'Bug' });
+
+      await user.type(getTagInput(), 'New');
+      await user.click(screen.getByRole('button', { name: 'Apply tags' }));
+
+      expect(props.onValueChange).toHaveBeenCalledWith('Bug, New');
+      expect(props.onCommit).toHaveBeenCalled();
+    });
+  });
+
+  describe('Suggestions shape', () => {
+    it('accepts a non-array iterable (Set) without throwing', () => {
+      expect(() =>
+        renderEditor({
+          value: null,
+          cellEditorParams: {
+            suggestions: new Set(['Bug', 'Feature']) as unknown as string[],
+            allowCreate: false,
+          },
+        }),
+      ).not.toThrow();
+      expect(screen.getByText('Bug')).toBeInTheDocument();
+    });
+  });
 });
