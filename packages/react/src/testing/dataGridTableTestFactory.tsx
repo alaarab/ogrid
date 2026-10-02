@@ -272,6 +272,13 @@ export function createDataGridTableTests(DataGridTable: React.ComponentType<IOGr
     expect(statusBar.textContent).toContain('Rows:');
   });
 
+  it('status bar shows only the panels listed in statusBar.panels', () => {
+    renderTable({ statusBar: { totalCount: 10, selectedCount: 2, panels: ['selectedRowCount'] } });
+    const statusBar = screen.getByRole('status');
+    expect(statusBar.textContent).toContain('Selected:');
+    expect(statusBar.textContent).not.toContain('Rows:');
+  });
+
   it('left-pinned column renders with pinnedColumns prop', () => {
     const { container } = renderTable({ pinnedColumns: { name: 'left' } });
     // Pinned column still renders its cells

@@ -14,6 +14,10 @@ export default defineConfig({
   external: ['@alaarab/ogrid-react', '@alaarab/ogrid-core', '@alaarab/ogrid-core/formula', '@tanstack/react-virtual', '@radix-ui/react-checkbox', '@radix-ui/react-popover', 'react', 'react-dom'],
   esbuildOptions(options) {
     options.jsx = 'automatic';
+    // Resolve the JSX runtime to scripts/react-jsx so React 17 works under
+    // strict ESM (see scripts/react-jsx/jsx-runtime.js).
+    options.jsxImportSource = 'ogrid-react-jsx';
+    options.alias = { ...options.alias, 'ogrid-react-jsx': '../../scripts/react-jsx' };
     options.banner = { js: "import './index.css';" };
   },
   esbuildPlugins: [sassPlugin({ transform: postcssModules({ generateScopedName: 'ogrid-radix__[name]__[local]' }) })],

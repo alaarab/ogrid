@@ -224,7 +224,7 @@ export class WindowedRowCache<T> {
         if (generation !== this.generation || controller.signal.aborted) return;
         this.inFlight.delete(blockStart);
         this.failedBlocks.add(blockStart);
-        if (process.env.NODE_ENV !== 'production') {
+        if (typeof process !== 'undefined' && process.env?.NODE_ENV !== 'production') {
           // Surface fetch failures in dev; production stays silent (placeholder shows error).
           console.error('[ogrid] windowed row block fetch failed', error);
         }
@@ -247,7 +247,7 @@ export class WindowedRowCache<T> {
       this.notify();
     } catch (error) {
       if (generation !== this.generation) return;
-      if (process.env.NODE_ENV !== 'production') {
+      if (typeof process !== 'undefined' && process.env?.NODE_ENV !== 'production') {
         console.error('[ogrid] windowed row count fetch failed', error);
       }
     }
