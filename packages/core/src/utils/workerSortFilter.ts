@@ -7,6 +7,7 @@
 
 import type { IColumnDef, IFilters } from '../types';
 import { getCellValue } from './cellValue';
+import { formatCellValue } from './cellFormatting';
 import { getFilterField } from './ogridHelpers';
 import { processClientSideData } from './clientSideData';
 import type { SortFilterRequest, SortFilterResponse } from '../workers/sortFilterWorker';
@@ -131,6 +132,8 @@ export function extractValueMatrix<T>(
    * sent as String(date), like the sync path, instead of as timestamps.
    */
   stringColumns?: ReadonlySet<number>,
+  /** Optional text-filter columns to populate with formatted values during extraction. */
+  textValues?: Record<number, string[]>,
 ): (string | number | boolean | null)[][] {
   const needed = columns.map((_, i) => !neededColumns || neededColumns.has(i));
   const matrix: (string | number | boolean | null)[][] = new Array(data.length);
@@ -153,6 +156,8 @@ export function extractValueMatrix<T>(
         continue;
       }
       const val = getCellValue(item, col);
+      const textColumn = textValues?.[c];
+      if (textColumn) textColumn[r] = formatCellValue(val, item, col) ?? '';
       if (val == null) {
         row[c] = null;
       } else if (typeof val === 'string' || typeof val === 'number' || typeof val === 'boolean') {
@@ -253,7 +258,12 @@ export function processClientSideDataAsync<T>(
     type: col.type ?? 'text' as const,
     index: idx,
   }));
-  const values = extractValueMatrix(data, workerColumns, undefined, stringColumns);
+  // Active text filters also match the displayed text (keyed by worker column).
+  const textValues: Record<number, string[]> = {};
+  for (const [key, filter] of Object.entries(workerFilters)) {
+    if (filter.type === 'text' && filter.value.trim()) textValues[Number(key)] = new Array(data.length);
+  }
+  const values = extractValueMatrix(data, workerColumns, undefined, stringColumns, textValues);
 
   const requestId = ++requestCounter;
 
@@ -282,6 +292,7 @@ export function processClientSideDataAsync<T>(
       type: 'sort-filter',
       requestId,
       values,
+      textValues,
       columnMeta,
       filters: workerFilters,
       sort,

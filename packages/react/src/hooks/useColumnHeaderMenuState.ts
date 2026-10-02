@@ -1,7 +1,8 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, type RefObject } from 'react';
 import { measureColumnContentWidth } from '../utils';
 
 export interface UseColumnHeaderMenuStateParams {
+  wrapperRef?: RefObject<HTMLElement | null>;
   pinnedColumns: Record<string, 'left' | 'right'>;
   onPinColumn: (columnId: string, side: 'left' | 'right') => void;
   onUnpinColumn: (columnId: string) => void;
@@ -45,6 +46,7 @@ export function useColumnHeaderMenuState(
   params: UseColumnHeaderMenuStateParams
 ): UseColumnHeaderMenuStateResult {
   const {
+    wrapperRef,
     pinnedColumns,
     onPinColumn,
     onUnpinColumn,
@@ -129,9 +131,9 @@ export function useColumnHeaderMenuState(
     if (!openForColumn || !resizer || !isResizable) return;
 
     const col = columns.find((c) => c.columnId === openForColumn);
-    resizer(openForColumn, measureColumnContentWidth(openForColumn, col?.minWidth));
+    resizer(openForColumn, measureColumnContentWidth(openForColumn, col?.minWidth, wrapperRef?.current ?? undefined));
     close();
-  }, [openForColumn, onAutosizeColumn, onColumnResized, isResizable, columns, close]);
+  }, [openForColumn, onAutosizeColumn, onColumnResized, isResizable, columns, close, wrapperRef]);
 
   const handleAutosizeAll = useCallback(() => {
     const resizer = onAutosizeColumn ?? onColumnResized;
@@ -139,11 +141,11 @@ export function useColumnHeaderMenuState(
 
     columns.forEach((col) => {
       if (col.resizable === false) return;
-      resizer(col.columnId, measureColumnContentWidth(col.columnId, col.minWidth));
+      resizer(col.columnId, measureColumnContentWidth(col.columnId, col.minWidth, wrapperRef?.current ?? undefined));
     });
 
     close();
-  }, [columns, onAutosizeColumn, onColumnResized, close]);
+  }, [columns, onAutosizeColumn, onColumnResized, close, wrapperRef]);
 
   return {
     isOpen,

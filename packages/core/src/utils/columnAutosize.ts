@@ -141,7 +141,7 @@ export function measureColumnContentWidth(
 ): number {
   const minW = minWidth ?? DEFAULT_MIN_COLUMN_WIDTH;
   const root = container ?? document;
-  const cells = root.querySelectorAll(`[data-column-id="${columnId}"]`);
+  const cells = root.querySelectorAll(`[data-column-id="${CSS.escape(columnId)}"]`);
 
   if (cells.length === 0) return minW;
 

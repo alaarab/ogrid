@@ -58,12 +58,8 @@ export function useInlineCellEditorState(
     if (value === null || value === undefined) return '';
     if (editorType === 'date') {
       const str = String(value);
-      if (dateEditorType === 'native') {
-        // Native <input type="date"> requires YYYY-MM-DD
-        return str.match(/^\d{4}-\d{2}-\d{2}/) ? str.substring(0, 10) : str;
-      }
-      // Text editor: format the stored value for display using configured format
-      const formatted = formatDateForDisplay(str, effectiveDateFormat);
+      // Native <input type="date"> requires YYYY-MM-DD; both editors use UTC calendar fields.
+      const formatted = formatDateForDisplay(value, dateEditorType === 'native' ? DEFAULT_DATE_FORMAT : effectiveDateFormat);
       return formatted ?? str;
     }
     return String(value);
