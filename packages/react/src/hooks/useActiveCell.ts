@@ -1,6 +1,9 @@
 import { useState, useLayoutEffect, useCallback, useRef } from 'react';
 import type { IActiveCell, RowId } from '../types';
 import type { UseVirtualScrollResult } from './useVirtualScroll';
+import { scrollCellIntoView } from '../utils/scrollCellIntoView';
+
+const NOOP_SCROLL_TO_INDEX = (): void => {};
 
 export interface UseActiveCellResult {
   activeCell: IActiveCell | null;
@@ -57,29 +60,9 @@ export function useActiveCell(
     // Async scroll-into-view (batched via RAF)
     cancelAnimationFrame(scrollRafRef.current);
     scrollRafRef.current = requestAnimationFrame(() => {
-      const cell = wrapper.querySelector(selector) as HTMLElement | null;
-      if (!cell || !wrapper.isConnected) return;
-      const thead = wrapper.querySelector('thead');
-      const headerHeight = thead ? thead.getBoundingClientRect().height : 0;
-      const wrapperRect = wrapper.getBoundingClientRect();
-      const cellRect = cell.getBoundingClientRect();
-
-      // Vertical scroll (account for sticky thead)
-      const visibleTop = wrapperRect.top + headerHeight;
-      if (!scrollToIndexRef?.current && cellRect.top < visibleTop) {
-        wrapper.scrollTop -= visibleTop - cellRect.top;
-      } else if (!scrollToIndexRef?.current && cellRect.bottom > wrapperRect.bottom) {
-        wrapper.scrollTop += cellRect.bottom - wrapperRect.bottom;
-      }
-
-      // Horizontal scroll — only when the wrapper actually scrolls horizontally
-      if (wrapper.scrollWidth > wrapper.clientWidth) {
-        if (cellRect.left < wrapperRect.left) {
-          wrapper.scrollLeft -= wrapperRect.left - cellRect.left;
-        } else if (cellRect.right > wrapperRect.right) {
-          wrapper.scrollLeft += cellRect.right - wrapperRect.right;
-        }
-      }
+      // Rows of a virtual grid were already scrolled by index above (a no-op
+      // scroller here keeps the helper off the DOM for the vertical axis).
+      scrollCellIntoView(wrapper, rowIndex, columnIndex, scrollToIndexRef?.current ? NOOP_SCROLL_TO_INDEX : undefined);
     });
 
     return () => cancelAnimationFrame(scrollRafRef.current);

@@ -2,6 +2,7 @@ import { useMemo, useCallback } from 'react';
 import type { RefObject } from 'react';
 import type { RowId, IColumnDef } from '../types';
 import type { IFillFormulaOptions } from '../utils';
+import type { ScrollToRowIndex } from '../utils/scrollCellIntoView';
 import { formatCellReference } from '../utils';
 import { useCellSelection } from './useCellSelection';
 import { useClipboard } from './useClipboard';
@@ -60,6 +61,8 @@ export interface UseDataGridInteractionParams<T> {
   ) => void;
   setContextMenuPosition: (pos: { x: number; y: number } | null) => void;
   wrapperRef: RefObject<HTMLDivElement | null>;
+  /** Virtual grids: scrolls a row into view by index (used by keyboard Shift-extend). */
+  scrollToIndexRef?: RefObject<ScrollToRowIndex | null>;
   /** Custom keydown handler  -  called before grid default. preventDefault() suppresses grid handling. */
   onKeyDown?: (event: React.KeyboardEvent) => void;
   /** Called when reading the system clipboard fails on paste. */
@@ -162,6 +165,7 @@ export function useDataGridInteraction<T>(
     handleRowCheckboxChange,
     setContextMenuPosition,
     wrapperRef,
+    scrollToIndexRef,
     onKeyDown,
     onClipboardError,
     formulas,
@@ -314,7 +318,7 @@ export function useDataGridInteraction<T>(
     data: { items, visibleCols, colOffset, hasCheckboxCol, visibleColumnCount, getRowId },
     state: { activeCell, selectionRange, editingCell, selectedRowIds },
     handlers: { setActiveCell, setSelectionRange, setEditingCell, handleRowCheckboxChange, handleCopy, handleCut, handlePaste, setContextMenu: setContextMenuPosition, onUndo: undo, onRedo: redo, clearClipboardRanges, beginBatch: undoRedo.beginBatch, endBatch: undoRedo.endBatch },
-    features: { editable, onCellValueChanged, rowSelection: rowSelection ?? 'none', wrapperRef, onKeyDown, fillDown },
+    features: { editable, onCellValueChanged, rowSelection: rowSelection ?? 'none', wrapperRef, scrollToIndexRef, onKeyDown, fillDown },
   });
 
   const hasCellSelection = selectionRange != null || activeCell != null;

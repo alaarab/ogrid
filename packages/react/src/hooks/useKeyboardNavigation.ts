@@ -1,6 +1,7 @@
 import { useCallback, useRef } from 'react';
 import { getCellValue, computeTabNavigation, computeArrowNavigation, applyCellDeletion, getScrollTopForRow, getOppositeCorner } from '../utils';
 import { CELL_EDITOR_ATTR } from '../constants/domHelpers';
+import { scrollCellIntoView, type ScrollToRowIndex } from '../utils/scrollCellIntoView';
 import { normalizeSelectionRange } from '../types';
 import type {
   RowId,
@@ -54,6 +55,8 @@ export interface UseKeyboardNavigationParams<T> {
     onCellValueChanged: ((event: ICellValueChangedEvent<T>) => void) | undefined;
     rowSelection: RowSelectionMode;
     wrapperRef: React.RefObject<HTMLElement | null>;
+    /** Virtual grids: scrolls a row into view by index (rows off screen aren't rendered). */
+    scrollToIndexRef?: React.RefObject<ScrollToRowIndex | null>;
     onKeyDown?: (event: React.KeyboardEvent) => void;
     fillDown?: () => void;
   };
@@ -94,23 +97,6 @@ function getKeyTargetKind(e: React.KeyboardEvent): KeyTargetKind {
   return target.matches(CELL_CONTROL_SELECTOR) ? 'control' : 'grid';
 }
 
-/** Scrolls a body cell into view below the sticky header (used for the moving end of Shift+extend). */
-function scrollCellIntoView(wrapper: HTMLElement, rowIndex: number, columnIndex: number): void {
-  const cell = wrapper.querySelector(`[data-row-index="${rowIndex}"][data-col-index="${columnIndex}"]`);
-  if (!cell) return;
-  const thead = wrapper.querySelector('thead');
-  const headerHeight = thead ? thead.getBoundingClientRect().height : 0;
-  const wrapperRect = wrapper.getBoundingClientRect();
-  const cellRect = cell.getBoundingClientRect();
-  const visibleTop = wrapperRect.top + headerHeight;
-  if (cellRect.top < visibleTop) wrapper.scrollTop -= visibleTop - cellRect.top;
-  else if (cellRect.bottom > wrapperRect.bottom) wrapper.scrollTop += cellRect.bottom - wrapperRect.bottom;
-  if (wrapper.scrollWidth > wrapper.clientWidth) {
-    if (cellRect.left < wrapperRect.left) wrapper.scrollLeft -= wrapperRect.left - cellRect.left;
-    else if (cellRect.right > wrapperRect.right) wrapper.scrollLeft += cellRect.right - wrapperRect.right;
-  }
-}
-
 /**
  * Handles all keyboard navigation, shortcuts, and cell editing triggers for the grid.
  * @param params - Grouped data, state, handlers, and feature flags for keyboard interactions.
@@ -129,7 +115,7 @@ export function useKeyboardNavigation<T>(
       const { items, visibleCols, colOffset, hasCheckboxCol, visibleColumnCount, getRowId } = data;
       const { activeCell, selectionRange, editingCell, selectedRowIds } = state;
       const { setActiveCell, setSelectionRange, setEditingCell, handleRowCheckboxChange, handleCopy, handleCut, handlePaste, setContextMenu, onUndo, onRedo, clearClipboardRanges, beginBatch, endBatch } = handlers;
-      const { editable, onCellValueChanged, rowSelection, wrapperRef, onKeyDown, fillDown } = features;
+      const { editable, onCellValueChanged, rowSelection, wrapperRef, scrollToIndexRef, onKeyDown, fillDown } = features;
 
       // Consumer intercept: call consumer's handler first; skip grid default if preventDefault() was called
       if (onKeyDown) {
@@ -250,7 +236,7 @@ export function useKeyboardNavigation<T>(
           });
           setSelectionRange(newRange);
           if (shift) {
-            if (wrapperRef.current) scrollCellIntoView(wrapperRef.current, newRowIndex, newColumnIndex);
+            if (wrapperRef.current) scrollCellIntoView(wrapperRef.current, newRowIndex, newColumnIndex, scrollToIndexRef?.current);
           } else {
             setActiveCell({ rowIndex: newRowIndex, columnIndex: newColumnIndex });
           }
@@ -326,8 +312,13 @@ export function useKeyboardNavigation<T>(
             });
             setActiveCell({ rowIndex: newRowPage, columnIndex });
           }
-          // Scroll the new row into view
-          if (wrapper && !wrapper.hasAttribute('data-virtual-scroll')) {
+          // Scroll the new row into view. A virtual grid scrolls by index: a plain
+          // PageUp/PageDown through the active cell change, a Shift-extend here,
+          // since the active cell (the anchor) doesn't move.
+          const scrollToIndex = scrollToIndexRef?.current;
+          if (wrapper && scrollToIndex) {
+            if (extent) scrollCellIntoView(wrapper, newRowPage, extent.col + colOffset, scrollToIndex);
+          } else if (wrapper && !wrapper.hasAttribute('data-virtual-scroll')) {
             wrapper.scrollTop = getScrollTopForRow(newRowPage, rowHeight, wrapper.clientHeight, 'center');
           }
           break;
