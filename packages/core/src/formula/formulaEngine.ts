@@ -206,6 +206,7 @@ export class FormulaEngine {
     accessor: IGridDataAccessor,
     sheet?: string
   ): IRecalcResult {
+    this.lastAccessor = accessor;
     const key = toCellKey(col, row, sheet);
     const plan = this.depGraph.getRecalcPlanBatch([key], this.volatileCells);
     if (plan.order.length === 0) return { updatedCells: [] };
@@ -223,6 +224,7 @@ export class FormulaEngine {
     cells: Array<{ col: number; row: number; sheet?: string }>,
     accessor: IGridDataAccessor
   ): IRecalcResult {
+    this.lastAccessor = accessor;
     const keys = cells.map(c => toCellKey(c.col, c.row, c.sheet));
     const plan = this.depGraph.getRecalcPlanBatch(keys, this.volatileCells);
     if (plan.order.length === 0) return { updatedCells: [] };
@@ -404,6 +406,7 @@ export class FormulaEngine {
    * `accessor` is the main grid's accessor.
    */
   onSheetChanged(name: string, accessor: IGridDataAccessor): IRecalcResult {
+    this.lastAccessor = accessor;
     const readers: CellKey[] = [];
     for (const key of this.parsedFormulas.keys()) {
       if (this.volatileCells.has(key) || this.readsSheet(key, name)) readers.push(key);

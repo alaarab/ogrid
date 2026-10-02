@@ -530,3 +530,30 @@ describe('Cross-Sheet References', () => {
     });
   });
 });
+
+describe('Named range changes after change notifications', () => {
+  // The grid notifies the engine through onCellChanged/onCellsChanged/
+  // onSheetChanged with an accessor over the latest data. defineNamedRange
+  // recalculates with the last accessor the engine saw, so those must count.
+  it('defineNamedRange recalculates against the data from the latest onCellChanged', () => {
+    const engine = new FormulaEngine();
+    engine.setFormula(1, 0, '=A1*2', createAccessor([[1]]));
+    expect(engine.getValue(1, 0)).toBe(2);
+    engine.onCellChanged(0, 0, createAccessor([[5]]));
+    expect(engine.getValue(1, 0)).toBe(10);
+    engine.defineNamedRange('Rate', 'A1');
+    expect(engine.getValue(1, 0)).toBe(10);
+  });
+
+  it('defineNamedRange recalculates against the data from the latest onCellsChanged and onSheetChanged', () => {
+    const engine = new FormulaEngine();
+    engine.setFormula(1, 0, '=A1*2', createAccessor([[1]]));
+    engine.onCellsChanged([{ col: 0, row: 0 }], createAccessor([[3]]));
+    engine.defineNamedRange('Rate', 'A1');
+    expect(engine.getValue(1, 0)).toBe(6);
+    engine.registerSheet('Other', createAccessor([[0]]));
+    engine.onSheetChanged('Other', createAccessor([[4]]));
+    engine.defineNamedRange('Rate2', 'A1');
+    expect(engine.getValue(1, 0)).toBe(8);
+  });
+});
