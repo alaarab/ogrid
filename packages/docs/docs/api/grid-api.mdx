@@ -70,7 +70,7 @@ interface IOGridApi<T> {
 |--------|-----------|-------------|
 | `setRowData` | `(data: T[]) => void` | Replaces the grid's data with a new array. Useful for client-side mode when you want to update data imperatively rather than through the `data` prop. |
 | `setLoading` | `(loading: boolean) => void` | Sets the loading state of the grid. When `true`, the grid displays a loading indicator. |
-| `getDisplayedRows` | `() => T[]` | Returns the currently displayed (filtered, sorted, paginated) rows. |
+| `getDisplayedRows` | `() => T[]` | Returns the currently displayed (filtered, sorted, paginated) rows. Windowed data sources return all loaded records in absolute row order, excluding unloaded placeholders. |
 | `refreshData` | `() => void` | Re-triggers a data fetch. Server-side only; no-op for client-side grids. |
 
 ### Column State Methods
@@ -97,7 +97,7 @@ interface IOGridApi<T> {
 |--------|-----------|-------------|
 | `getSelectedRows` | `() => RowId[]` | Returns an array of selected row IDs. |
 | `setSelectedRows` | `(rowIds: RowId[]) => void` | Sets the selected rows to the given IDs. Any previously selected rows not in the array are deselected. |
-| `selectAll` | `() => void` | Selects all rows in the current data set. |
+| `selectAll` | `() => void` | Selects all filtered client-side rows across pages, or loaded server-side records. Windowed data sources select loaded records only. |
 | `deselectAll` | `() => void` | Deselects all rows. |
 
 ### Virtual Scrolling Methods

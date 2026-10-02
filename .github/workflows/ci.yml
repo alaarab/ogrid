@@ -43,6 +43,9 @@ jobs:
       - name: Install dependencies
         run: bun install --frozen-lockfile
 
+      - name: Check workspace and lockfile versions
+        run: bun run check:versions
+
       - name: Lint
         run: bun run lint
 
@@ -161,6 +164,15 @@ jobs:
 
       - name: Check published type resolution (node16 + bundler)
         run: bun run check:types
+
+      - name: Test packed packages with React 17 and 18
+        run: bun run test:react-compat
+
+      - name: Install Playwright Chromium
+        run: bunx playwright install --with-deps chromium
+
+      - name: Test self-contained browser bundle
+        run: bun run test:browser-bundle
 
   browser-smoke:
     runs-on: ubuntu-latest

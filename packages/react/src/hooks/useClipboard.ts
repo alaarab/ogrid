@@ -44,20 +44,25 @@ export interface UseClipboardResult {
 
 const normalizeNewlines = (s: string): string => s.replace(/\r\n?/g, '\n').replace(/\n+$/, '');
 
-/** Re-resolve a cut source against the current rows/columns by identity and build its clear events. */
+/** Resolve transferred cut cells by identity and leave rejected or clipped source cells intact. */
 function resolveCutCells<T>(
   source: { rowKeys: unknown[]; columnIds: string[] },
   items: T[],
   visibleCols: IColumnDef<T>[],
-  rowKeyOf: (item: T) => unknown
+  rowKeyOf: (item: T) => unknown,
+  transferred: Set<string>,
+  anchorRow: number,
+  anchorCol: number
 ): ICellValueChangedEvent<T>[] {
   const rowIndexByKey = new Map<unknown, number>();
   items.forEach((item, i) => { rowIndexByKey.set(rowKeyOf(item), i); });
   const events: ICellValueChangedEvent<T>[] = [];
-  for (const key of source.rowKeys) {
+  for (const [sourceRow, key] of source.rowKeys.entries()) {
     const r = rowIndexByKey.get(key);
     if (r === undefined) continue;
-    for (const columnId of source.columnIds) {
+    for (const [sourceCol, columnId] of source.columnIds.entries()) {
+      const targetColumn = visibleCols[anchorCol + sourceCol];
+      if (!targetColumn || !transferred.has(`${anchorRow + sourceRow}|${targetColumn.columnId}`)) continue;
       const c = visibleCols.findIndex((col) => col.columnId === columnId);
       if (c < 0) continue;
       events.push(...applyCutClear({ startRow: r, endRow: r, startCol: c, endCol: c }, items, visibleCols));
@@ -234,7 +239,7 @@ export function useClipboard<T>(params: UseClipboardParams<T>): UseClipboardResu
           // overlaps the cut source, clearing them afterwards would wipe them.
           const pastedKeys = new Set(pasteEvents.map((e) => `${e.rowIndex}|${e.columnId}`));
           for (const key of pastedFormulaKeys) pastedKeys.add(key);
-          const cutEvents = resolveCutCells(cutSource, items, visibleCols, rowKeyOf)
+          const cutEvents = resolveCutCells(cutSource, items, visibleCols, rowKeyOf, pastedKeys, anchorRow, anchorCol)
             .filter((e) => !pastedKeys.has(`${e.rowIndex}|${e.columnId}`));
           for (const evt of cutEvents) onCellValueChanged(evt);
         }

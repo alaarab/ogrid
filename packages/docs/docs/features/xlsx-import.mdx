@@ -161,6 +161,16 @@ await exportToXlsx(rows, columns, getValue, 'sheet.xlsx', {
 });
 ```
 
+Promoting a header row is a lossy transformation for formulas that reference
+that row. For example, importing `LEN(A1)` with row 1 promoted produces
+`LEN(#REF!)`; importing `COUNTA(A1:A3)` and exporting it again produces
+`COUNTA(A2:A3)`. The grid can show the original cached result, but Excel
+recalculates the changed formula after export. Export cannot reconstruct the
+removed references. Use `headerRow: 'none'` when mapping the source workbook
+to preserve those references in the grid data, or retain the original workbook
+when you need a lossless worksheet round trip. Exporting grid data always adds
+a column-header row and shifts its local formula references accordingly.
+
 For full control (multi-sheet assembly, styling), build the workbook yourself with `workbookFromGridData(rows, columns, getValue, options)` — it returns an `ExcelJS.Workbook` you can add sheets to before serializing with `xlsxBlobFromWorkbook(wb)`.
 
 ## Related

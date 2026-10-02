@@ -556,10 +556,11 @@ export function useOGrid<T>(
   const pageOffset = isServerSide && paginationState.pageSize !== 'all'
     ? (paginationState.page - 1) * paginationState.pageSize
     : 0;
+  const windowed = dataFetchingState.windowed;
   const sheetItems = useMemo(
     // Leading holes stand in for the server rows before the current page.
-    () => (!isServerSide ? displayData : pageOffset > 0 ? new Array<T>(pageOffset).concat(displayItems) : displayItems),
-    [isServerSide, displayData, displayItems, pageOffset]
+    () => (windowed ? (windowed.loadedRows ?? displayItems) : !isServerSide ? displayData : pageOffset > 0 ? new Array<T>(pageOffset).concat(displayItems) : displayItems),
+    [windowed, isServerSide, displayData, displayItems, pageOffset]
   );
   const sheetRowById = useMemo(() => {
     if (!spreadsheetMode || isServerSide) return null;
@@ -572,9 +573,10 @@ export function useOGrid<T>(
   }, [spreadsheetMode, isServerSide, displayData, getRowId]);
   const formulaRowMap = useMemo(() => {
     if (!spreadsheetMode) return undefined;
+    if (windowed) return createOffsetFormulaRowMap(0, windowed.rowCount);
     if (!sheetRowById) return createOffsetFormulaRowMap(pageOffset, displayItems.length);
     return createFormulaRowMap(sheetRowById, displayItems, getRowId);
-  }, [spreadsheetMode, sheetRowById, pageOffset, displayItems, getRowId]);
+  }, [spreadsheetMode, windowed, sheetRowById, pageOffset, displayItems, getRowId]);
 
   // --- Formula engine (opt-in; always bundled, only instantiated when `formulas` is on) ---
   const [formulaVersion, setFormulaVersion] = useState(0);

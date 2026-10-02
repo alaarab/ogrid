@@ -4,6 +4,36 @@ All notable changes to OGrid will be documented in this file.
 
 ## [Unreleased]
 
+### Fixed
+
+- Cut/paste preserves source values when destination cells are read-only,
+  reject validation, or fall outside the grid. Both component and headless
+  clipboard hooks clear only successfully transferred cells; headless
+  `useCellClipboard` accepts an optional `getRowId` for stable pending cuts.
+- A formula can be replaced with a literal equal to the row's underlying
+  value, including from the formula bar, with undo/redo preserved.
+- Windowed data sources use loaded rows at their absolute positions for
+  formulas and formula-bar edits. `getDisplayedRows`, selection callbacks,
+  and `selectAll` expose loaded records without including placeholders or
+  allocating a dense copy of the full data set.
+- Document the lossy effect of promoting XLSX headers referenced by formulas
+  and the options for preserving original worksheet references.
+
+### Security
+
+- Update brace-expansion, DOMPurify, fast-uri, ip-address, and
+  serialize-javascript to patched versions in the workspace dependency graph.
+
+### Changed
+
+- Run date-format browser coverage for Fluent as well as Radix. Add runtime
+  checks for the standalone XLSX browser bundle and packed packages on React
+  17 and 18, alongside existing React 19 coverage.
+- Gate publishing on the full browser matrix, docs browser test, standalone
+  bundle checks, supported React compatibility, and published type checks.
+  Validate internal versions in both manifests and the Bun lockfile, and
+  refresh stale development and peer dependency snapshots before releasing.
+
 ## [2.17.2] - 2026-10-02
 
 A broad correctness pass from a full multi-reviewer audit of the codebase:

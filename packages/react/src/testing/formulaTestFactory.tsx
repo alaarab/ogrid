@@ -228,6 +228,27 @@ export function createFormulaTests(OGrid: React.ComponentType<IOGridProps<Row>>)
   });
 
   describe('formula bar', () => {
+    it('replaces a formula with its underlying raw value and supports undo and redo', async () => {
+      const onChange = jest.fn();
+      const { container } = renderGrid({ initialFormulas: [{ col: 1, row: 1, formula: '=10' }] }, onChange);
+      activate(container, 2, 'qty');
+      expect(text(container, 2, 'qty')).toBe('10');
+      const input = formulaInput(container);
+      fireEvent.click(input);
+      fireEvent.change(input, { target: { value: '1' } });
+      fireEvent.keyDown(input, { key: 'Enter' });
+      await waitFor(() => expect(text(container, 2, 'qty')).toBe('1'));
+      expect(onChange).toHaveBeenCalledWith(expect.objectContaining({ columnId: 'qty', oldValue: 1, newValue: 1 }));
+      gridKey(container, { key: 'z', ctrlKey: true });
+      await waitFor(() => expect(text(container, 2, 'qty')).toBe('10'));
+      activate(container, 2, 'qty');
+      expect(formulaInput(container).value).toBe('=10');
+      gridKey(container, { key: 'y', ctrlKey: true });
+      await waitFor(() => expect(text(container, 2, 'qty')).toBe('1'));
+      activate(container, 2, 'qty');
+      expect(formulaInput(container).value).toBe('1');
+    });
+
     it('Enter in the read-only bar does not erase the formula', () => {
       const { container } = renderGrid();
       activate(container, 2, 'total');

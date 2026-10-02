@@ -400,6 +400,7 @@ export function useDataGridState<T>(
     // Mapped to sheet rows and recorded for undo; plain values notify the
     // engine through the undo wrapper, so only the legacy path passes this.
     setFormula: interactionResult.setFormula,
+    hasFormula: interactionResult.hasFormula,
     onFormulaCellChanged: formulaCells ? undefined : props.onFormulaCellChanged,
     formulas: props.formulas,
     flatColumns,
@@ -408,7 +409,7 @@ export function useDataGridState<T>(
   // --- Formula bar writer: sheet cell -> the grid's normal edit path ---
   const { formulaCellWriterRef, editable: editableProp } = props;
   const writerStateRef = useLatestRef({
-    items, visibleCols, flatColumns, formulaRowMap, colOffset, editable: editableProp,
+    items: rowItems, visibleCols, flatColumns, formulaRowMap, colOffset, editable: editableProp,
     onCellValueChanged, commitCellEdit: editingResult.editing.commitCellEdit,
   });
   const formulaCellWriter = useMemo<IFormulaCellWriter>(() => {
@@ -417,8 +418,9 @@ export function useDataGridState<T>(
       const colDef = st.flatColumns[col];
       const displayRow = st.formulaRowMap ? st.formulaRowMap.toDisplayRow(row) : row;
       if (!colDef || displayRow < 0 || displayRow >= st.items.length) return null;
-      const item = st.items[displayRow] as T;
-      const editableCell = st.editable !== false && !!st.onCellValueChanged && isColumnEditable(colDef, item);
+      const item = st.items[displayRow];
+      if (item === undefined) return null;
+      const editableCell = st.editable !== false && !!st.onCellValueChanged && isColumnEditable<T>(colDef, item);
       return editableCell ? { st, colDef, item, displayRow } : null;
     };
     return {
@@ -428,7 +430,7 @@ export function useDataGridState<T>(
         if (!cell) return false;
         const { st, colDef, item, displayRow } = cell;
         const visibleIdx = st.visibleCols.findIndex((c) => c.columnId === colDef.columnId);
-        st.commitCellEdit(item, colDef.columnId, getCellValue(item, colDef), text, displayRow, visibleIdx + st.colOffset, { skipAdvance: true });
+        st.commitCellEdit(item, colDef.columnId, getCellValue<T>(item, colDef), text, displayRow, visibleIdx + st.colOffset, { skipAdvance: true });
         return true;
       },
     };
