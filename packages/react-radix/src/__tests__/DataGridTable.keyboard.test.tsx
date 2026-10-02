@@ -1,5 +1,5 @@
 import { render, screen, fireEvent, act, waitFor } from '@testing-library/react';
-import type { IColumnDef, IOGridDataGridProps } from '@alaarab/ogrid-react';
+import type { ICellEditorProps, IColumnDef, IOGridDataGridProps } from '@alaarab/ogrid-react';
 import { DataGridTable } from '../DataGridTable/DataGridTable';
 import { InlineCellEditor } from '../DataGridTable/InlineCellEditor';
 
@@ -100,5 +100,52 @@ describe('Radix DataGridTable keyboard event targets', () => {
     act(() => { outside.focus(); });
     fireEvent.blur(search);
     await waitFor(() => expect(onCancel).toHaveBeenCalled());
+  });
+});
+
+describe('Radix DataGridTable popover cell editors (react-inputs style)', () => {
+  // Premium editors (@alaarab/ogrid-react-inputs) are ICellEditorProps components
+  // rendered in the kit's popover, often with a text input (DatePicker,
+  // DateTimePicker, Tags). Navigation keys typed there belong to the input.
+  function TextPopoverEditor(props: ICellEditorProps<Row>) {
+    return (
+      <input
+        aria-label="Popover editor input"
+        defaultValue={String(props.value ?? '')}
+        onChange={(e) => props.onValueChange(e.target.value)}
+      />
+    );
+  }
+  const popoverColumns: IColumnDef<Row>[] = [
+    { columnId: 'name', name: 'Name', editable: true, cellEditor: TextPopoverEditor },
+    { columnId: 'status', name: 'Status', editable: true },
+  ];
+
+  it('Home/End/PageUp/PageDown typed in a popover editor input stay with the editor', async () => {
+    const { cell, onCellValueChanged } = renderGrid({ columns: popoverColumns });
+    fireEvent.pointerDown(cell(1, 0));
+    await waitFor(() => expect(cell(1, 0).getAttribute('data-active-cell')).toBe('true'));
+    act(() => {
+      fireEvent.doubleClick(cell(1, 0));
+    });
+    const input = await screen.findByLabelText('Popover editor input');
+
+    for (const key of ['Home', 'End', 'PageUp', 'PageDown']) {
+      const event = new KeyboardEvent('keydown', { key, bubbles: true, cancelable: true });
+      input.dispatchEvent(event);
+      expect(event.defaultPrevented).toBe(false);
+    }
+    fireEvent.keyDown(input, { key: 'Home', ctrlKey: true });
+
+    // The editor is still open; nothing was committed.
+    expect(screen.getByLabelText('Popover editor input')).toBeTruthy();
+    expect(onCellValueChanged).not.toHaveBeenCalled();
+
+    // After closing it, the active cell is still row 1 (PageUp or Ctrl+Home
+    // reaching the grid would have moved it to row 0).
+    fireEvent.keyDown(screen.getByLabelText('Popover editor input'), { key: 'Escape' });
+    await waitFor(() => expect(screen.queryByLabelText('Popover editor input')).toBeNull());
+    expect(cell(1, 0).getAttribute('data-active-cell')).toBe('true');
+    expect(cell(0, 0).getAttribute('data-active-cell')).not.toBe('true');
   });
 });
