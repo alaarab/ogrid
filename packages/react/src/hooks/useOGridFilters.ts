@@ -10,15 +10,26 @@ import { useShallowEqualMemo } from './useShallowEqualMemo';
 import type { IFilters, FilterValue, IDataSource } from '../types';
 import type { IColumnDef as ICoreColumnDef } from '@alaarab/ogrid-core';
 
-/** Deep-equal check for filter objects (shallow key+value comparison). */
-function filtersEqual(a: Record<string, unknown>, b: Record<string, unknown>): boolean {
+/** Structural equality for filter values (`{ type, value }` objects, arrays, dates, user objects). */
+function valuesEqual(a: unknown, b: unknown): boolean {
+  if (a === b) return true;
+  if (typeof a !== 'object' || typeof b !== 'object' || a === null || b === null) return false;
+  if (a instanceof Date || b instanceof Date) {
+    return a instanceof Date && b instanceof Date && a.getTime() === b.getTime();
+  }
+  if (Array.isArray(a) !== Array.isArray(b)) return false;
   const aKeys = Object.keys(a);
   const bKeys = Object.keys(b);
   if (aKeys.length !== bKeys.length) return false;
-  for (const key of bKeys) {
-    if (a[key] !== b[key]) return false;
+  for (const key of aKeys) {
+    if (!valuesEqual((a as Record<string, unknown>)[key], (b as Record<string, unknown>)[key])) return false;
   }
   return true;
+}
+
+/** Deep-equal check for filter objects, so inline controlled filters don't churn identity. */
+function filtersEqual(a: Record<string, unknown>, b: Record<string, unknown>): boolean {
+  return valuesEqual(a, b);
 }
 
 const EMPTY_LOADING_OPTIONS: Record<string, boolean> = {};

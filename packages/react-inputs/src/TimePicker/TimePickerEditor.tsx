@@ -18,6 +18,7 @@ import type { ICellEditorProps } from '@alaarab/ogrid-core';
 import {
   parseTime,
   formatTime12,
+  formatTime24,
   toHour12,
   toAmPm,
   fromHour12,
@@ -128,7 +129,16 @@ export interface TimePickerEditorParams {
 export function TimePickerEditor<T>(props: ICellEditorProps<T>): React.ReactElement {
   const { value, onValueChange, onCommit, onCancel } = props;
   const params = (props.cellEditorParams ?? {}) as TimePickerEditorParams;
-  const minuteStep = params.minuteStep ?? 5;
+  const rawStep = params.minuteStep ?? 5;
+  // A zero/negative/NaN step would loop forever or produce NaN minutes.
+  const minuteStep = Number.isFinite(rawStep) && rawStep >= 1 ? Math.floor(rawStep) : 1;
+
+  // Preserve the stored format: a 24-hour value (e.g. "14:30") should not be
+  // rewritten as 12-hour ("2:30 PM") just by opening and committing.
+  const use24Hour = React.useMemo(() => {
+    const raw = String(value ?? '').trim();
+    return raw !== '' && parseTime(raw) !== null && !/am|pm/i.test(raw);
+  }, [value]);
 
   const parseInitial = (): TimeValue => {
     const parsed = parseTime(String(value ?? ''));
@@ -137,13 +147,19 @@ export function TimePickerEditor<T>(props: ICellEditorProps<T>): React.ReactElem
     return { hours: now.getHours(), minutes: Math.floor(now.getMinutes() / minuteStep) * minuteStep };
   };
 
+  const formatValue = React.useCallback(
+    (tv: TimeValue) => (use24Hour ? formatTime24(tv) : formatTime12(tv)),
+    [use24Hour],
+  );
+
   const [time, setTime] = React.useState<TimeValue>(parseInitial);
   const [ampm, setAmpm] = React.useState<AmPm>(toAmPm(time.hours));
   const [hour12, setHour12] = React.useState(toHour12(time.hours));
-  const [inputText, setInputText] = React.useState(formatTime12(time));
+  const [inputText, setInputText] = React.useState(() => formatValue(time));
   const rootRef = React.useRef<HTMLDivElement>(null);
   const hourColRef = React.useRef<HTMLDivElement>(null);
   const minuteColRef = React.useRef<HTMLDivElement>(null);
+  const commitTimerRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const hourOptions = getHour12Options();
   const minuteOptions = getMinuteOptions(minuteStep);
@@ -151,10 +167,10 @@ export function TimePickerEditor<T>(props: ICellEditorProps<T>): React.ReactElem
   const applyTime = React.useCallback((h12: number, min: number, ap: AmPm) => {
     const h24 = fromHour12(h12, ap);
     const tv: TimeValue = { hours: h24, minutes: min };
-    const formatted = formatTime12(tv);
+    const formatted = formatValue(tv);
     setInputText(formatted);
     onValueChange(formatted);
-  }, [onValueChange]);
+  }, [onValueChange, formatValue]);
 
   const handleHourSelect = (h: number) => {
     setHour12(h);
@@ -181,7 +197,7 @@ export function TimePickerEditor<T>(props: ICellEditorProps<T>): React.ReactElem
       setTime(parsed);
       setHour12(toHour12(parsed.hours));
       setAmpm(toAmPm(parsed.hours));
-      onValueChange(formatTime12(parsed));
+      onValueChange(formatValue(parsed));
     }
   };
 
@@ -189,13 +205,15 @@ export function TimePickerEditor<T>(props: ICellEditorProps<T>): React.ReactElem
     if (e.key === 'Enter') {
       e.preventDefault();
       e.stopPropagation();
-      onValueChange(inputText);
+      // Only commit parseable text (in the detected format); otherwise refuse
+      // so raw garbage like "25:99" is never stored.
+      const parsed = parseTime(inputText);
+      if (!parsed) return;
+      setTime(parsed);
+      setHour12(toHour12(parsed.hours));
+      setAmpm(toAmPm(parsed.hours));
+      onValueChange(formatValue(parsed));
       onCommit();
-    }
-    if (e.key === 'Escape') {
-      e.preventDefault();
-      e.stopPropagation();
-      onCancel();
     }
   };
 
@@ -207,11 +225,16 @@ export function TimePickerEditor<T>(props: ICellEditorProps<T>): React.ReactElem
     setTime(tv);
     setHour12(toHour12(h));
     setAmpm(toAmPm(h));
-    const formatted = formatTime12(tv);
+    const formatted = formatValue(tv);
     setInputText(formatted);
     onValueChange(formatted);
-    setTimeout(() => onCommit(), 0);
+    commitTimerRef.current = setTimeout(() => onCommit(), 0);
   };
+
+  // Cancel pending auto-commit if the editor unmounts first.
+  React.useEffect(() => () => {
+    if (commitTimerRef.current) clearTimeout(commitTimerRef.current);
+  }, []);
 
   const handleClear = () => {
     onValueChange('');
@@ -330,6 +353,9 @@ export function TimePickerEditor<T>(props: ICellEditorProps<T>): React.ReactElem
       <div style={footerStyle}>
         <button type="button" style={footerBtnStyle} onClick={handleNow}>
           Now
+        </button>
+        <button type="button" style={footerBtnStyle} onClick={() => onCommit()}>
+          Apply
         </button>
         <button type="button" style={footerBtnStyle} onClick={handleClear}>
           Clear

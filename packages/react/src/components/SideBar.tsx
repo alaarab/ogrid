@@ -37,6 +37,9 @@ export interface SideBarProps {
 const PANEL_WIDTH = 240;
 const TAB_WIDTH = 36;
 
+/** Debounce before a sidebar text filter commits. */
+const TEXT_FILTER_DEBOUNCE_MS = 250;
+
 const PANEL_LABELS: Record<SideBarPanelId, string> = {
   columns: 'Columns',
   filters: 'Filters',
@@ -117,6 +120,9 @@ const multiSelectContainerStyle: React.CSSProperties = { maxHeight: 120, overflo
 
 const multiSelectLabelStyle: React.CSSProperties = { display: 'flex', alignItems: 'center', gap: 4, padding: '1px 0', cursor: 'pointer', fontSize: 13 };
 
+// React 17 compatible stable id (no useId).
+let sideBarIdCounter = 0;
+
 export function SideBar(props: SideBarProps): React.ReactElement {
   const {
     activePanel,
@@ -139,17 +145,43 @@ export function SideBar(props: SideBarProps): React.ReactElement {
     onPanelChange(activePanel === panel ? null : panel);
   };
 
+  const [baseId] = React.useState(() => `ogrid-sidebar-${++sideBarIdCounter}`);
+  const tabId = (panel: SideBarPanelId) => `${baseId}-tab-${panel}`;
+  const panelId = (panel: SideBarPanelId) => `${baseId}-panel-${panel}`;
+
+  // WAI-ARIA tabs (vertical strip): arrows/Home/End move focus; Enter/Space toggle the panel via click.
+  const handleTabKeyDown = (e: React.KeyboardEvent<HTMLButtonElement>) => {
+    const index = panels.findIndex((p) => tabId(p) === e.currentTarget.id);
+    if (index < 0) return;
+    const last = panels.length - 1;
+    const next =
+      e.key === 'ArrowDown' || e.key === 'ArrowRight' ? (index === last ? 0 : index + 1)
+      : e.key === 'ArrowUp' || e.key === 'ArrowLeft' ? (index === 0 ? last : index - 1)
+      : e.key === 'Home' ? 0
+      : e.key === 'End' ? last
+      : -1;
+    const target = next >= 0 ? panels[next] : undefined;
+    if (!target) return;
+    e.preventDefault();
+    e.stopPropagation();
+    e.currentTarget.parentElement?.querySelector<HTMLElement>(`[id="${tabId(target)}"]`)?.focus();
+  };
+
   const tabStripStyle = position === 'right' ? tabStripBorderLeft : tabStripBorderRight;
   const panelContainerStyle = position === 'right' ? panelContainerBorderLeft : panelContainerBorderRight;
 
   const tabStrip = (
-    <div style={tabStripStyle} role="tablist" aria-label="Side bar tabs">
-      {panels.map((panel) => (
+    <div style={tabStripStyle} role="tablist" aria-orientation="vertical" aria-label="Side bar tabs">
+      {panels.map((panel, i) => (
         <button
           key={panel}
           type="button"
           role="tab"
+          id={tabId(panel)}
           aria-selected={activePanel === panel}
+          aria-controls={activePanel === panel ? panelId(panel) : undefined}
+          tabIndex={activePanel === panel || (activePanel === null && i === 0) ? 0 : -1}
+          onKeyDown={handleTabKeyDown}
           aria-label={PANEL_LABELS[panel]}
           onClick={() => handleTabClick(panel)}
           title={PANEL_LABELS[panel]}
@@ -162,7 +194,7 @@ export function SideBar(props: SideBarProps): React.ReactElement {
   );
 
   const panelContent = isOpen && activePanel ? (
-    <div role="tabpanel" aria-label={PANEL_LABELS[activePanel]} style={panelContainerStyle}>
+    <div role="tabpanel" id={panelId(activePanel)} aria-labelledby={tabId(activePanel)} style={panelContainerStyle}>
       <div style={panelHeaderStyle}>
         <span>{PANEL_LABELS[activePanel]}</span>
         <button type="button" onClick={() => onPanelChange(null)} style={closeButtonStyle} aria-label="Close panel">
@@ -259,26 +291,28 @@ function FiltersPanel(props: {
 }): React.ReactElement {
   const { filterableColumns, filters, onFilterChange, filterOptions } = props;
 
-  if (filterableColumns.length === 0) {
+  // People filters need an async user search control; the panel has no such
+  // control, so don't render a label with nothing under it.
+  const supportedColumns = filterableColumns.filter((col) => col.filterType !== 'people');
+
+  if (supportedColumns.length === 0) {
     return <div style={noFilterStyle}>No filterable columns</div>;
   }
 
   return (
     <>
-      {filterableColumns.map((col) => {
+      {supportedColumns.map((col) => {
         const filterKey = col.filterField;
         const fv = filters[filterKey];
         return (
           <div key={col.columnId} style={filterGroupStyle}>
             <div style={filterLabelStyle}>{col.name}</div>
             {col.filterType === 'text' && (
-              <input
-                type="text"
+              <SideBarTextFilter
+                filterKey={filterKey}
+                name={col.name}
                 value={fv?.type === 'text' ? fv.value : ''}
-                onChange={(e) => onFilterChange(filterKey, e.target.value ? { type: 'text', value: e.target.value } : undefined)}
-                placeholder={`Filter ${col.name}...`}
-                aria-label={`Filter ${col.name}`}
-                style={textInputStyle}
+                onFilterChange={onFilterChange}
               />
             )}
             {col.filterType === 'date' && (
@@ -344,5 +378,53 @@ function FiltersPanel(props: {
         );
       })}
     </>
+  );
+}
+
+/**
+ * Sidebar text filter input. Keeps a local draft so typing stays responsive and
+ * only commits a trimmed value after the debounce, instead of re-filtering (and
+ * resetting the page) on every keystroke.
+ */
+function SideBarTextFilter(props: {
+  filterKey: string;
+  name: string;
+  value: string;
+  onFilterChange: (key: string, value: FilterValue | undefined) => void;
+}): React.ReactElement {
+  const { filterKey, name, value, onFilterChange } = props;
+  const [draft, setDraft] = React.useState(value);
+  const timerRef = React.useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+  const latestRef = React.useRef({ value, onFilterChange });
+  latestRef.current = { value, onFilterChange };
+
+  // Reflect external changes (e.g. Clear all filters) back into the input. Keep
+  // the draft when it only differs by whitespace from the committed value.
+  React.useEffect(() => {
+    setDraft((prev) => (prev.trim() === value ? prev : value));
+  }, [value]);
+
+  React.useEffect(() => () => clearTimeout(timerRef.current), []);
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const next = e.target.value;
+    setDraft(next);
+    clearTimeout(timerRef.current);
+    timerRef.current = setTimeout(() => {
+      const trimmed = next.trim();
+      if (trimmed === latestRef.current.value) return;
+      latestRef.current.onFilterChange(filterKey, trimmed ? { type: 'text', value: trimmed } : undefined);
+    }, TEXT_FILTER_DEBOUNCE_MS);
+  };
+
+  return (
+    <input
+      type="text"
+      value={draft}
+      onChange={handleChange}
+      placeholder={`Filter ${name}...`}
+      aria-label={`Filter ${name}`}
+      style={textInputStyle}
+    />
   );
 }

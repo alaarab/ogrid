@@ -1,4 +1,4 @@
-import { useState, useCallback, type Dispatch, type SetStateAction } from 'react';
+import { useState, useCallback, useRef, type Dispatch, type SetStateAction } from 'react';
 import { columnIdsOf, sameColumnIds } from './columnSetIdentity';
 
 export interface UseOGridColumnVisibilityParams {
@@ -87,8 +87,14 @@ export function useOGridColumnVisibility(
 
   const visibleColumns = controlledVisibleColumns ?? internalVisibleColumns;
 
+  // Latest visible set, advanced synchronously on every change so several
+  // toggles in one tick build on each other instead of on the same render's set.
+  const visibleColumnsRef = useRef(visibleColumns);
+  visibleColumnsRef.current = visibleColumns;
+
   const setVisibleColumns = useCallback(
     (cols: Set<string>) => {
+      visibleColumnsRef.current = cols;
       if (controlledVisibleColumns === undefined) setInternalVisibleColumns(cols);
       onVisibleColumnsChange?.(cols);
     },
@@ -97,12 +103,12 @@ export function useOGridColumnVisibility(
 
   const handleVisibilityChange = useCallback(
     (columnKey: string, isVisible: boolean) => {
-      const next = new Set(visibleColumns);
+      const next = new Set(visibleColumnsRef.current);
       if (isVisible) next.add(columnKey);
       else next.delete(columnKey);
       setVisibleColumns(next);
     },
-    [visibleColumns, setVisibleColumns]
+    [setVisibleColumns]
   );
 
   return { visibleColumns, setVisibleColumns, handleVisibilityChange, setInternalVisibleColumns };

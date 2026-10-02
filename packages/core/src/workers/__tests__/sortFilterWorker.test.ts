@@ -51,16 +51,13 @@ describe('workerBody', () => {
     expect(indices).toEqual([1, 3, 0]);
   });
 
-  it('multiSelect keeps empty-string distinct from null cells (matches sync path)', () => {
-    // Filtering for the empty string must match only genuine '' cells, not
-    // null/empty cells. Sync coerces null via String(null) -> "null", so the
-    // worker must too (String(cellVal)), rather than collapsing null to ''.
+  it('multiSelect matches all blanks with the empty-string option (matches sync path)', () => {
     const indices = runWorker({
       values: [[''], [null], ['active']],
       columnMeta: textMeta,
       filters: { 0: { type: 'multiSelect', value: [''] } },
     });
-    expect(indices).toEqual([0]);
+    expect(indices).toEqual([0, 1]);
   });
 
   it('multiSelect matches selected values across cells', () => {
@@ -122,7 +119,7 @@ describe('workerBody', () => {
     expect(indices).toEqual([1, 2, 0]);
   });
 
-  it('treats bare YYYY-MM-DD cells as local dates so same-day filters match', () => {
+  it('treats bare YYYY-MM-DD cells as UTC dates so same-day filters match', () => {
     const indices = runWorker({
       values: [['2024-01-14'], ['2024-01-15'], ['2024-01-16']],
       columnMeta: dateMeta,
@@ -132,7 +129,7 @@ describe('workerBody', () => {
   });
 
   it('accepts numeric timestamps in date columns', () => {
-    const ts = new Date(2024, 0, 15, 12).getTime();
+    const ts = Date.UTC(2024, 0, 15, 12);
     const indices = runWorker({
       values: [[ts]],
       columnMeta: dateMeta,
@@ -149,7 +146,7 @@ describe('workerBody', () => {
         filters: {},
         sort: { columnIndex: 0, direction: 'asc' },
       }).map((i) => values[i]);
-    expect(run([5, '10', '3'])).toEqual([5, '10', '3']);
-    expect(run(['3', 5, '10'])).toEqual([5, '10', '3']);
+    expect(run([5, '10', '3'])).toEqual([5, '3', '10']);
+    expect(run(['3', 5, '10'])).toEqual([5, '3', '10']);
   });
 });

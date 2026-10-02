@@ -1,6 +1,7 @@
 import * as React from 'react';
 import { createPortal } from 'react-dom';
 import { usePortalTheme } from '../hooks/usePortalTheme';
+import { useMenuKeyboardNav } from '../hooks/useMenuKeyboardNav';
 import { getColumnHeaderMenuItems } from '../utils';
 import type { ColumnHeaderMenuInput } from '../utils';
 
@@ -29,6 +30,8 @@ export interface BaseColumnHeaderMenuProps {
   isSortable: boolean;
   isResizable: boolean;
   classNames?: ColumnHeaderMenuClassNames;
+  /** Column name, used for the menu's accessible name. */
+  columnName?: string;
   /** Resolve the portal target element. Defaults to document.body. */
   getPortalTarget?: (anchorElement: HTMLElement) => HTMLElement;
 }
@@ -58,6 +61,7 @@ export function BaseColumnHeaderMenu(props: BaseColumnHeaderMenuProps) {
     isSortable,
     isResizable,
     classNames,
+    columnName,
     getPortalTarget,
   } = props;
 
@@ -94,14 +98,44 @@ export function BaseColumnHeaderMenu(props: BaseColumnHeaderMenuProps) {
       }
     };
 
+    // The menu is position: fixed from a one-time measurement, so close it once the header
+    // actually moves (grid or page scroll) rather than leave it detached. Scrolls that leave
+    // the header in place (inside the menu, unrelated scrollers, focus on open) keep it open.
+    const handleScroll = () => {
+      const now = anchorElement.getBoundingClientRect();
+      if (Math.abs(now.top - rect.top) >= 1 || Math.abs(now.left - rect.left) >= 1) onClose();
+    };
+
     document.addEventListener('mousedown', handleClickOutside);
     document.addEventListener('keydown', handleEscape);
+    window.addEventListener('scroll', handleScroll, true);
+    window.addEventListener('resize', onClose);
 
     return () => {
       document.removeEventListener('mousedown', handleClickOutside);
       document.removeEventListener('keydown', handleEscape);
+      window.removeEventListener('scroll', handleScroll, true);
+      window.removeEventListener('resize', onClose);
     };
   }, [isOpen, anchorElement, onClose]);
+
+  // Keep the menu inside the viewport: shift left near the right edge, flip above the
+  // anchor near the bottom edge.
+  React.useLayoutEffect(() => {
+    const menu = menuRef.current;
+    if (!menu || !position || !anchorElement) return;
+    const margin = 8;
+    const menuRect = menu.getBoundingClientRect();
+    let { top, left } = position;
+    if (left + menuRect.width > window.innerWidth - margin) {
+      left = Math.max(margin, window.innerWidth - menuRect.width - margin);
+    }
+    if (top + menuRect.height > window.innerHeight - margin) {
+      const above = anchorElement.getBoundingClientRect().top - 4 - menuRect.height;
+      top = Math.max(margin, above);
+    }
+    if (top !== position.top || left !== position.left) setPosition({ top, left });
+  }, [position, anchorElement]);
 
   const menuInput: ColumnHeaderMenuInput = React.useMemo(
     () => ({
@@ -131,6 +165,13 @@ export function BaseColumnHeaderMenu(props: BaseColumnHeaderMenuProps) {
     [onPinLeft, onPinRight, onUnpin, onSortAsc, onSortDesc, onClearSort, onAutosizeThis, onAutosizeAll]
   );
 
+  const getRestoreTarget = React.useCallback(() => anchorElement, [anchorElement]);
+  const { onKeyDown } = useMenuKeyboardNav(menuRef, {
+    active: isOpen && position != null,
+    onClose,
+    getRestoreTarget,
+  });
+
   if (!isOpen || !position) return null;
 
   const portalTarget = anchorElement && getPortalTarget
@@ -140,19 +181,24 @@ export function BaseColumnHeaderMenu(props: BaseColumnHeaderMenuProps) {
   return createPortal(
     <div
       ref={menuRef}
+      role="menu"
+      aria-label={columnName ? `${columnName} column options` : 'Column options'}
+      onKeyDown={onKeyDown}
       className={classNames?.content}
       style={{
         ...portalTheme,
         position: 'fixed',
         top: position.top,
         left: position.left,
-        zIndex: 1000,
+        zIndex: 'var(--ogrid-z-popover, 10001)',
       }}
     >
       {items.map((item, idx) => (
         <React.Fragment key={item.id}>
           <button
             type="button"
+            role="menuitem"
+            tabIndex={-1}
             className={classNames?.item}
             disabled={item.disabled}
             onClick={() => {

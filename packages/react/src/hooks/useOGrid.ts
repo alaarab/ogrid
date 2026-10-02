@@ -8,7 +8,7 @@ import {
 } from 'react';
 
 import { flattenColumns, getCellValue } from '../utils';
-import { validateColumns, validateRowIds } from '@alaarab/ogrid-core';
+import { validateColumns, validateRowIds, createFormulaRowMap, createOffsetFormulaRowMap } from '@alaarab/ogrid-core';
 import { useFormulaEngine } from './useFormulaEngine';
 import { useFormulaBar } from './useFormulaBar';
 import { FormulaBar } from '../components/FormulaBar';
@@ -23,6 +23,7 @@ import { useOGridRowSelection } from './useOGridRowSelection';
 import { useOGridActiveCell } from './useOGridActiveCell';
 import { useOGridImperativeHandle } from './useOGridImperativeHandle';
 import { useLatestRef } from './useLatestRef';
+import { useSortFilterColumns } from './useSortFilterColumns';
 import { useSheetScopedState } from './useSheetScopedState';
 import { useSideBarState } from './useSideBarState';
 import type { SortState } from './useOGridSorting';
@@ -34,6 +35,7 @@ import type {
   IStatusBarProps,
   IColumnDefinition,
   IFilters,
+  IFormulaCellWriter,
   RowId,
   PageSize,
 } from '../types';
@@ -55,6 +57,7 @@ const NAME_BOX_STYLE: React.CSSProperties = {
   textAlign: 'center',
   lineHeight: '20px',
   userSelect: 'none',
+  display: 'block',
 };
 
 /** Resolved column chooser placement. */
@@ -71,7 +74,7 @@ export interface UseOGridPagination {
   entityLabelPlural: string;
   /**
    * True when pagination is bypassed (full-dataset virtualization mode —
-   * `virtualScroll.paginate === false`). The UI layer should not render
+   * `virtualScroll.paginate === false` — or a windowed data source). The UI layer should not render
    * pagination controls in this mode.
    */
   hidden: boolean;
@@ -190,6 +193,7 @@ export function useOGrid<T>(
     fullScreen,
     onFirstDataRendered,
     onError,
+    onClipboardError: onClipboardErrorProp,
     columnChooser: columnChooserProp,
     columnReorder,
     responsiveColumns,
@@ -202,6 +206,7 @@ export function useOGrid<T>(
     onFormulaRecalc,
     formulaFunctions,
     namedRanges,
+    formulaLimits,
     sheets,
     sheetDefs,
     activeSheet,
@@ -221,22 +226,40 @@ export function useOGrid<T>(
     () => hasColumnOrderChange ? (order: string[]) => onColumnOrderChangeRef.current?.(order) : undefined,
     [hasColumnOrderChange, onColumnOrderChangeRef]
   );
+  // Bumped on every edit the grid emits, so the data pipeline can tell the host
+  // applying that edit (keep row order) from a fresh dataset (re-sort/re-filter).
+  const editVersionRef = useRef(0);
   const onCellValueChangedRef = useLatestRef(onCellValueChangedProp);
   const hasCellValueChanged = onCellValueChangedProp != null;
   const onCellValueChanged = useMemo(
-    () => hasCellValueChanged ? (event: import('../types').ICellValueChangedEvent<T>) => onCellValueChangedRef.current?.(event) : undefined,
+    () => hasCellValueChanged ? (event: import('../types').ICellValueChangedEvent<T>) => {
+      editVersionRef.current++;
+      onCellValueChangedRef.current?.(event);
+    } : undefined,
     [hasCellValueChanged, onCellValueChangedRef]
   );
   const onUndoRef = useLatestRef(onUndoProp);
   const hasUndo = onUndoProp != null;
   const onUndo = useMemo(
-    () => hasUndo ? () => onUndoRef.current?.() : undefined,
+    () => hasUndo ? () => {
+      editVersionRef.current++;
+      onUndoRef.current?.();
+    } : undefined,
     [hasUndo, onUndoRef]
+  );
+  const onClipboardErrorRef = useLatestRef(onClipboardErrorProp);
+  const hasClipboardError = onClipboardErrorProp != null;
+  const onClipboardError = useMemo(
+    () => hasClipboardError ? (error: unknown) => onClipboardErrorRef.current?.(error) : undefined,
+    [hasClipboardError, onClipboardErrorRef]
   );
   const onRedoRef = useLatestRef(onRedoProp);
   const hasRedo = onRedoProp != null;
   const onRedo = useMemo(
-    () => hasRedo ? () => onRedoRef.current?.() : undefined,
+    () => hasRedo ? () => {
+      editVersionRef.current++;
+      onRedoRef.current?.();
+    } : undefined,
     [hasRedo, onRedoRef]
   );
 
@@ -248,6 +271,8 @@ export function useOGrid<T>(
     : 'toolbar';
 
   const columns = useMemo(() => flattenColumns(columnsProp), [columnsProp]);
+  // Same rows-affecting fields as `columns`, but stable across inline `columns` props.
+  const sortFilterColumns = useSortFilterColumns(columns);
   const isServerSide = dataSource != null;
 
   // Full-dataset virtualization: when `virtualScroll.enabled` and the consumer
@@ -259,12 +284,19 @@ export function useOGrid<T>(
   const fullyVirtualized =
     !isServerSide && virtualScroll?.enabled === true && virtualScroll?.paginate === false;
 
-  // --- Runtime validation (dev-only, runs once on mount) ---
+  // --- Runtime validation (dev-only, runs once per distinct set of columnIds) ---
   const rowIdsValidatedRef = useRef(false);
+  const columnIdsKey = useMemo(
+    () => columns.map((c) => c.columnId).join('\u0000'),
+    [columns]
+  );
+  // biome-ignore lint/correctness/useExhaustiveDependencies: validate once per distinct columnId set, not on every new columns array identity
   useEffect(() => {
     validateColumns(columns as Parameters<typeof validateColumns>[0]);
-  }, [columns]);
-  const defaultSortField = defaultSortBy ?? columns[0]?.columnId ?? '';
+  }, [columnIdsKey]);
+  // Without defaultSortBy the grid starts sorted by its first sortable column
+  // (a sortable:false first column is skipped, never used as the default).
+  const defaultSortField = defaultSortBy ?? columns.find((c) => c.sortable !== false)?.columnId ?? '';
 
   // --- Internal data state (for imperative setRowData/setLoading API) ---
   const [internalData, setInternalData] = useState<T[]>([]);
@@ -286,11 +318,11 @@ export function useOGrid<T>(
   const filtersState = useOGridFilters({
     controlledFilters, onFiltersChange,
     setPage: paginationState.setPage,
-    columns, displayData, dataSource,
+    columns: sortFilterColumns, displayData, dataSource,
   });
 
   const dataFetchingState = useOGridDataFetching({
-    isServerSide, dataSource, displayData, getRowId, columns,
+    isServerSide, dataSource, displayData, getRowId, editVersionRef, columns: sortFilterColumns,
     stableFilters: filtersState.stableFilters,
     sort: sortingState.sort,
     sortVersion: sortingState.sortVersion,
@@ -300,6 +332,9 @@ export function useOGrid<T>(
     onError, onFirstDataRendered,
     workerSort,
   });
+
+  // A windowed (lazy) source virtual-scrolls all rows: no pages, no pager.
+  const isWindowed = dataFetchingState.windowed != null;
 
   // Validate row IDs once on first data render
   useEffect(() => {
@@ -337,6 +372,7 @@ export function useOGrid<T>(
     effectiveColumnOrder,
     columnWidthOverrides,
     pinnedOverrides,
+    handleColumnOrderChange,
     handleColumnResized,
     handleColumnPinned,
     setInternalColumnOrder,
@@ -345,6 +381,7 @@ export function useOGrid<T>(
   } = useOGridColumnLayout({
     columnsProp,
     controlledColumnOrder: columnOrder,
+    onColumnOrderChange,
     onColumnResized,
     onColumnPinned,
   });
@@ -414,6 +451,7 @@ export function useOGrid<T>(
   const isPagePastEnd =
     controlledPage === undefined &&
     !fullyVirtualized &&
+    !isWindowed &&
     dataFetchingState.displayTotalCount > 0 &&
     paginationState.page > lastPage;
   const setPageRef = useLatestRef(paginationState.setPage);
@@ -422,6 +460,7 @@ export function useOGrid<T>(
   }, [isPagePastEnd, lastPage, setPageRef]);
 
   // --- Imperative handle (stabilized via refs to avoid invalidation on every state change) ---
+  const scrollToRowRef = useRef<IOGridApi<T>['scrollToRow'] | null>(null);
   useOGridImperativeHandle({
     ref,
     isServerSide,
@@ -446,13 +485,14 @@ export function useOGrid<T>(
     effectiveSelectedRows,
     columns,
     getRowId,
+    scrollToRowRef,
   });
 
   // --- Status bar ---
   const statusBarConfig = useMemo((): IStatusBarProps | undefined => {
     if (!statusBar) return undefined;
     if (typeof statusBar === 'object') return statusBar;
-    const totalData = !isServerSide ? (data?.length ?? 0) : dataFetchingState.displayTotalCount;
+    const totalData = !isServerSide ? displayData.length : dataFetchingState.displayTotalCount;
     const filteredData = dataFetchingState.displayTotalCount;
     return {
       totalCount: totalData,
@@ -460,7 +500,7 @@ export function useOGrid<T>(
       selectedCount: effectiveSelectedRows.size,
       suppressRowCount: true,
     };
-  }, [statusBar, isServerSide, data, dataFetchingState.displayTotalCount, filtersState.hasActiveFilters, effectiveSelectedRows.size]);
+  }, [statusBar, isServerSide, displayData.length, dataFetchingState.displayTotalCount, filtersState.hasActiveFilters, effectiveSelectedRows.size]);
 
   // --- Side bar ---
   const sideBarState = useSideBarState({ config: sideBar });
@@ -506,7 +546,37 @@ export function useOGrid<T>(
     filterableColumns, filtersState.filters, filtersState.handleFilterChange, filtersState.clientFilterOptions,
   ]);
 
-  // --- Formula engine (opt-in, tree-shakeable) ---
+  // --- Sheet coordinates (formulas, A1 references, row numbers, name box) ---
+  // A formula row is the record's index in the full client-side data, not its
+  // position on screen, so formulas stay with their record through sort,
+  // filter and paging. Server-side grids only hold the current page, so there
+  // the sheet row is the absolute row in the server's order.
+  const spreadsheetMode = !!(cellReferences || formulas);
+  const displayItems = dataFetchingState.displayItems;
+  const pageOffset = isServerSide && paginationState.pageSize !== 'all'
+    ? (paginationState.page - 1) * paginationState.pageSize
+    : 0;
+  const sheetItems = useMemo(
+    // Leading holes stand in for the server rows before the current page.
+    () => (!isServerSide ? displayData : pageOffset > 0 ? new Array<T>(pageOffset).concat(displayItems) : displayItems),
+    [isServerSide, displayData, displayItems, pageOffset]
+  );
+  const sheetRowById = useMemo(() => {
+    if (!spreadsheetMode || isServerSide) return null;
+    const m = new Map<RowId, number>();
+    for (let i = 0; i < displayData.length; i++) {
+      const item = displayData[i];
+      if (item !== undefined) m.set(getRowId(item), i);
+    }
+    return m;
+  }, [spreadsheetMode, isServerSide, displayData, getRowId]);
+  const formulaRowMap = useMemo(() => {
+    if (!spreadsheetMode) return undefined;
+    if (!sheetRowById) return createOffsetFormulaRowMap(pageOffset, displayItems.length);
+    return createFormulaRowMap(sheetRowById, displayItems, getRowId);
+  }, [spreadsheetMode, sheetRowById, pageOffset, displayItems, getRowId]);
+
+  // --- Formula engine (opt-in; always bundled, only instantiated when `formulas` is on) ---
   const [formulaVersion, setFormulaVersion] = useState(0);
   const wrappedOnFormulaRecalc = useCallback((result: import('@alaarab/ogrid-core').IRecalcResult) => {
     setFormulaVersion(v => v + 1);
@@ -514,48 +584,72 @@ export function useOGrid<T>(
   }, [onFormulaRecalc]);
   const formulaEngine = useFormulaEngine({
     formulas,
-    items: dataFetchingState.displayItems,
+    items: sheetItems,
     flatColumns: columns,
     initialFormulas,
     onFormulaRecalc: wrappedOnFormulaRecalc,
     formulaFunctions,
     namedRanges,
+    formulaLimits,
     sheets,
   });
 
   // --- Assembly ---
-  const clearAllFilters = useCallback(() => filtersState.setFilters({}), [filtersState]);
-  const isLoadingResolved = (isServerSide && dataFetchingState.serverLoading) || displayLoading;
+  const { setFilters } = filtersState;
+  const clearAllFilters = useCallback(() => setFilters({}), [setFilters]);
+  const isLoadingResolved = (isServerSide && dataFetchingState.serverLoading) || dataFetchingState.workerPending || displayLoading;
   const showRowNumbersResolved = showRowNumbers || cellReferences || formulas;
-  const showColumnLettersResolved = !!(cellReferences || formulas);
+  const showColumnLettersResolved = spreadsheetMode;
   const showNameBox = !!cellReferences && !formulas; // formula bar has its own name box
-  const showActiveCellChange = !!(cellReferences || formulas);
+  const showActiveCellChange = spreadsheetMode;
 
   // --- Name box / formula bar (active cell reference + coordinates) ---
   const { activeCellRef, activeCellCoords, onActiveCellChange } = useOGridActiveCell();
 
   // --- Formula bar hook (only when formulas are enabled) ---
-  // Latest-value snapshots for the formula bar's raw-value lookup. The imperative
-  // handle keeps its own internal snapshots, so these are scoped to getRawValue.
-  const displayItemsRef = useLatestRef(dataFetchingState.displayItems);
-  const columnsRef = useLatestRef(columns);
+  // The active cell's coordinates are sheet coordinates (they come from the
+  // name box reference). The lookups depend on the data and formulaVersion so
+  // the bar's text refreshes when the cell's value or formula changes.
   const getRawValue = useCallback((col: number, row: number): unknown => {
-    const items = displayItemsRef.current;
-    const cols = columnsRef.current;
-    const item = items[row];
-    const colDef = cols[col];
+    const item = sheetItems[row];
+    const colDef = columns[col];
     if (item === undefined || colDef === undefined) return undefined;
     return getCellValue(item, colDef);
-  }, [displayItemsRef, columnsRef]);
+  }, [sheetItems, columns]);
+  const engineGetFormula = formulaEngine.getFormula;
+  // biome-ignore lint/correctness/useExhaustiveDependencies: formulaVersion is the deliberate trigger — a recalc or formula edit must refresh the bar's text
+  const getFormulaForBar = useCallback(
+    (col: number, row: number) => engineGetFormula(col, row),
+    [engineGetFormula, formulaVersion]
+  );
+  // Commits go through the grid's own edit path (value parsing, undo, engine
+  // notification), which the grid hands back through this ref.
+  const formulaCellWriterRef = useRef<IFormulaCellWriter | null>(null);
+  const writeFromBar = useCallback((col: number, row: number, formula: string | null) => {
+    // A null formula comes paired with a plain-value commit, and writing that
+    // value clears the formula, so there is nothing to do for it here.
+    if (formula !== null) formulaCellWriterRef.current?.write(col, row, formula);
+  }, []);
+  const writeValueFromBar = useCallback((col: number, row: number, value: unknown) => {
+    formulaCellWriterRef.current?.write(col, row, value == null ? '' : String(value));
+  }, []);
 
   const formulaBarState = useFormulaBar({
     activeCol: activeCellCoords?.col ?? null,
     activeRow: activeCellCoords?.row ?? null,
     activeCellRef,
-    getFormula: formulaEngine.enabled ? formulaEngine.getFormula : undefined,
+    getFormula: formulaEngine.enabled ? getFormulaForBar : undefined,
     getRawValue,
-    setFormula: formulaEngine.enabled ? formulaEngine.setFormula : undefined,
+    setFormula: formulaEngine.enabled ? writeFromBar : undefined,
+    onCellValueChanged: writeValueFromBar,
   });
+  // The bar only enters edit mode on a cell the grid lets the user edit.
+  const activeCellCoordsRef = useLatestRef(activeCellCoords);
+  const barStartEditing = formulaBarState.startEditing;
+  const startFormulaBarEditing = useCallback(() => {
+    const coords = activeCellCoordsRef.current;
+    if (coords && formulaCellWriterRef.current?.canEdit(coords.col, coords.row)) barStartEditing();
+  }, [activeCellCoordsRef, barStartEditing]);
 
   // Split dataGridProps into focused sub-memos so that changes in one concern
   // (e.g. sorting) don't invalidate memos for unrelated concerns (e.g. formulas).
@@ -589,9 +683,12 @@ export function useOGrid<T>(
     formulaVersion,
     formulaReferences: formulaBarState.referencedCells.length > 0 ? formulaBarState.referencedCells : undefined,
     onFormulaInsertReference: formulaBarState.insertReference,
-  }), [formulas, formulaEngine, formulaVersion, formulaBarState.referencedCells, formulaBarState.insertReference]);
+    formulaRowMap,
+    formulaCellWriterRef: formulas ? formulaCellWriterRef : undefined,
+  }), [formulas, formulaEngine, formulaVersion, formulaBarState.referencedCells, formulaBarState.insertReference, formulaRowMap]);
 
   const dataGridProps = useMemo<IOGridDataGridProps<T>>(() => ({
+    scrollToRowRef,
     items: dataFetchingState.displayItems,
     windowed: dataFetchingState.windowed,
     columns: columnsProp,
@@ -601,7 +698,7 @@ export function useOGrid<T>(
     onColumnSort: sortingState.handleSort,
     visibleColumns,
     columnOrder: effectiveColumnOrder,
-    onColumnOrderChange,
+    onColumnOrderChange: handleColumnOrderChange,
     onColumnResized: handleColumnResized,
     onColumnPinned: handleColumnPinned,
     pinnedColumns: pinnedOverrides,
@@ -613,6 +710,7 @@ export function useOGrid<T>(
     onRedo,
     canUndo,
     canRedo,
+    onClipboardError,
     rowSelection,
     selectedRows: effectiveSelectedRows,
     onSelectionChange: handleSelectionChange,
@@ -620,8 +718,10 @@ export function useOGrid<T>(
     showColumnLetters: showColumnLettersResolved,
     showNameBox,
     onActiveCellChange: showActiveCellChange ? onActiveCellChange : undefined,
-    currentPage: paginationState.page,
+    // A windowed source scrolls every row in one viewport: no page offset.
+    currentPage: isWindowed ? 1 : paginationState.page,
     pageSize: paginationState.pageSize,
+    totalCount: dataFetchingState.displayTotalCount,
     statusBar: statusBarConfig,
     isLoading: isLoadingResolved,
     ...dgFilterProps,
@@ -640,12 +740,12 @@ export function useOGrid<T>(
   }), [
     dataFetchingState.displayItems, dataFetchingState.windowed, columnsProp, getRowId,
     sortingState.sort.field, sortingState.sort.direction, sortingState.handleSort,
-    visibleColumns, effectiveColumnOrder, onColumnOrderChange, handleColumnResized,
+    visibleColumns, effectiveColumnOrder, handleColumnOrderChange, handleColumnResized,
     handleColumnPinned, pinnedOverrides, columnWidthOverrides,
-    editable, cellSelection, onCellValueChanged, onUndo, onRedo, canUndo, canRedo,
+    editable, cellSelection, onCellValueChanged, onUndo, onRedo, canUndo, canRedo, onClipboardError,
     rowSelection, effectiveSelectedRows, handleSelectionChange,
     showRowNumbersResolved, showColumnLettersResolved, showNameBox, showActiveCellChange, onActiveCellChange,
-    paginationState.page, paginationState.pageSize, statusBarConfig,
+    isWindowed, paginationState.page, paginationState.pageSize, dataFetchingState.displayTotalCount, statusBarConfig,
     isLoadingResolved, dgFilterProps,
     layoutMode, suppressHorizontalScroll, stickyHeader, columnReorder, responsiveColumns, virtualScroll,
     rowHeight, density, ariaLabel, ariaLabelledBy,
@@ -660,8 +760,8 @@ export function useOGrid<T>(
     setPageSize: paginationState.setPageSize,
     pageSizeOptions,
     entityLabelPlural,
-    hidden: fullyVirtualized,
-  }), [paginationState.page, paginationState.pageSize, dataFetchingState.displayTotalCount, paginationState.setPage, paginationState.setPageSize, pageSizeOptions, entityLabelPlural, fullyVirtualized]);
+    hidden: fullyVirtualized || isWindowed,
+  }), [paginationState.page, paginationState.pageSize, dataFetchingState.displayTotalCount, paginationState.setPage, paginationState.setPageSize, pageSizeOptions, entityLabelPlural, fullyVirtualized, isWindowed]);
 
   const columnChooser = useMemo<UseOGridColumnChooser>(() => ({
     columns: columnChooserColumns,
@@ -671,7 +771,7 @@ export function useOGrid<T>(
     placement: columnChooserPlacement,
   }), [columnChooserColumns, visibleColumns, handleVisibilityChange, setVisibleColumns, columnChooserPlacement]);
 
-  const nameBoxEl = useMemo(() => showNameBox ? React.createElement('div', {
+  const nameBoxEl = useMemo(() => showNameBox ? React.createElement('output', {
     style: NAME_BOX_STYLE,
     'aria-label': 'Active cell reference',
   }, activeCellRef ?? '\u2014') : null, [showNameBox, activeCellRef]);
@@ -690,10 +790,10 @@ export function useOGrid<T>(
       onInputChange: formulaBarState.onInputChange,
       onCommit: formulaBarState.onCommit,
       onCancel: formulaBarState.onCancel,
-      startEditing: formulaBarState.startEditing,
+      startEditing: startFormulaBarEditing,
       inputRef: formulaBarState.inputRef,
     });
-  }, [formulas, formulaBarState.cellRef, formulaBarState.formulaText, formulaBarState.isEditing, formulaBarState.onInputChange, formulaBarState.onCommit, formulaBarState.onCancel, formulaBarState.startEditing, formulaBarState.inputRef]);
+  }, [formulas, formulaBarState.cellRef, formulaBarState.formulaText, formulaBarState.isEditing, formulaBarState.onInputChange, formulaBarState.onCommit, formulaBarState.onCancel, startFormulaBarEditing, formulaBarState.inputRef]);
 
   // Sheet tabs element (only when sheetDefs are provided)
   const sheetTabsEl = useMemo(() => {

@@ -1,4 +1,5 @@
 import * as React from 'react';
+import { booleanParser } from '@alaarab/ogrid-core';
 import { useCallback } from 'react';
 import {
   getCellRenderDescriptor,
@@ -9,17 +10,25 @@ import {
   getCellInteractionProps,
   handleBooleanCellPointerDown,
 } from '../utils';
-import { CURSOR_CELL_STYLE } from '../constants/domHelpers';
+import { CURSOR_CELL_STYLE, CELL_EDITOR_ATTR } from '../constants/domHelpers';
 import { CellErrorBoundary } from '../components/CellErrorBoundary';
 import type { UseDataGridTableOrchestrationResult } from './useDataGridTableOrchestration';
 import type { InlineCellEditorProps } from '../components/createOGrid';
 import type { DataGridStyles, DataGridPrimitives } from '../components/BaseDataGridTable.types';
 import type { IColumnDef, ICellEditorProps } from '../types';
 
+/** Marks the inline editor so the grid keydown handler leaves its keys alone. */
+const EDITOR_MARKER_PROPS = { [CELL_EDITOR_ATTR]: '' };
+
 /**
  * The per-cell renderer for the shared table body. Reads volatile state from
  * refs so the returned function identity stays stable — GridRow's React.memo
  * comparator relies on this to skip rows whose selection state hasn't changed.
+ *
+ * Row-scoped state (selection, active cell, editing, cut/copy) reaches GridRow
+ * as props. Grid-wide inputs read through `cellDescriptorInputRef` that no row
+ * prop carries (editability, formula accessors) are listed as deps instead, so
+ * a change to them gives a new function and repaints every row.
  */
 export function useRenderCellContent<T>(
   o: UseDataGridTableOrchestrationResult<T>,
@@ -30,10 +39,14 @@ export function useRenderCellContent<T>(
     getRowId, editCallbacks, interactionHandlers, delegatedCellHandlers,
     cellDescriptorInputRef, cellDescriptorCacheRef, pendingEditorValueRef, popoverAnchorElRef,
     setPopoverAnchorEl, cancelPopoverEdit, setActiveCell, interaction, colOffset,
-    handleFillHandleMouseDown, onCellError,
+    handleFillHandleMouseDown, onCellError, cellDescriptorInput,
   } = o;
+  const { setSelectionRange } = interaction;
+  const { editable, getFormulaValue, hasFormula, getFormula } = cellDescriptorInput;
+  const hasValueChangeHandler = !!cellDescriptorInput.onCellValueChanged;
   const { InlineCellEditor, renderPopoverEditor, renderBooleanCell } = primitives;
 
+  // biome-ignore lint/correctness/useExhaustiveDependencies: editable, hasValueChangeHandler and the formula accessors are read through cellDescriptorInputRef; they are deps so the function identity (and so every row) changes with them
   return useCallback(
     (item: T, col: IColumnDef<T>, rowIndex: number, colIdx: number): React.ReactNode => {
       const descriptor = getCellRenderDescriptor(item, col, rowIndex, colIdx, cellDescriptorInputRef.current, cellDescriptorCacheRef.current);
@@ -44,7 +57,7 @@ export function useRenderCellContent<T>(
       if (descriptor.mode === 'editing-inline') {
         const editorProps = buildInlineEditorProps(item, col, descriptor, editCallbacks) as InlineCellEditorProps<T>;
         content = (
-          <div className={styles.editingCellContent}>
+          <div className={styles.editingCellContent} {...EDITOR_MARKER_PROPS}>
             <InlineCellEditor<T> {...editorProps} />
           </div>
         );
@@ -64,19 +77,19 @@ export function useRenderCellContent<T>(
       } else {
         let displayNode: React.ReactNode;
         if (descriptor.columnType === 'boolean') {
-          const boolVal = !!descriptor.displayValue;
+          const boolVal = !!(booleanParser({ newValue: descriptor.displayValue, oldValue: descriptor.displayValue, data: item, column: col }) ?? descriptor.displayValue);
           displayNode = renderBooleanCell({
             checked: boolVal,
             disabled: !descriptor.canEditAny,
             onChange: descriptor.canEditAny ? () => {
               const savedRow = descriptor.rowIndex;
               const savedCol = descriptor.globalColIndex;
-              editCallbacks.commitCellEdit(item, col.columnId, boolVal, !boolVal, savedRow, savedCol, { skipAdvance: true });
+              editCallbacks.commitCellEdit(item, col.columnId, descriptor.displayValue, !boolVal, savedRow, savedCol, { skipAdvance: true });
             } : undefined,
             onPointerDown: (e: React.PointerEvent) =>
               handleBooleanCellPointerDown(e, descriptor.rowIndex, descriptor.globalColIndex, colOffset, {
                 setActiveCell,
-                setSelectionRange: (r) => interaction.setSelectionRange(r),
+                setSelectionRange,
               }),
             onClick: (e: React.MouseEvent) => e.stopPropagation(),
             ariaLabel: boolVal ? 'Checked' : 'Unchecked',
@@ -116,11 +129,15 @@ export function useRenderCellContent<T>(
       }
 
       return (
-        <CellErrorBoundary key={`${rowId}-${col.columnId}`} onError={onCellError}>
+        <CellErrorBoundary
+          key={`${rowId}-${col.columnId}`}
+          resetKeys={[item, descriptor.displayValue, descriptor.mode]}
+          onError={onCellError}
+        >
           {content}
         </CellErrorBoundary>
       );
     },
-    [editCallbacks, interactionHandlers, delegatedCellHandlers, handleFillHandleMouseDown, setPopoverAnchorEl, cancelPopoverEdit, getRowId, onCellError, cellDescriptorInputRef, cellDescriptorCacheRef, pendingEditorValueRef, popoverAnchorElRef, colOffset, interaction, setActiveCell, styles, primitives, InlineCellEditor, renderPopoverEditor, renderBooleanCell]
+    [editCallbacks, interactionHandlers, delegatedCellHandlers, handleFillHandleMouseDown, setPopoverAnchorEl, cancelPopoverEdit, getRowId, onCellError, cellDescriptorInputRef, cellDescriptorCacheRef, pendingEditorValueRef, popoverAnchorElRef, colOffset, setSelectionRange, setActiveCell, styles, primitives, InlineCellEditor, renderPopoverEditor, renderBooleanCell, editable, hasValueChangeHandler, getFormulaValue, hasFormula, getFormula]
   );
 }

@@ -250,10 +250,8 @@ describe('cellAddressUtils', () => {
         expect(adjustFormulaReferences('=TaxRate+A1', 0, 1)).toBe('=TaxRate+A2');
       });
 
-      // A name shaped like a cell reference ("Revenue2") is tokenized as one,
-      // which is why Excel forbids defining such names in the first place.
-      it('treats a cell-ref-shaped name as a reference, as Excel does', () => {
-        expect(adjustFormulaReferences('=Revenue2', 0, 1)).toBe('=REVENUE3');
+      it('keeps digit-ending names outside the Excel address domain unchanged', () => {
+        expect(adjustFormulaReferences('=Revenue2', 0, 1)).toBe('=Revenue2');
       });
 
       it('adjusts lowercase references, which the old regex skipped entirely', () => {

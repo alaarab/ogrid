@@ -11,6 +11,12 @@ const DEAD_ZONE = 12;
 const SPEED_SCALE = 0.06;
 /** Maximum scroll speed in px/frame. */
 const MAX_SPEED = 25;
+/**
+ * Interactive targets keep their native middle-click behaviour (e.g. opening a
+ * link in a new tab) instead of starting a pan.
+ */
+const INTERACTIVE_TARGET_SELECTOR =
+  'a,[href],button,input,textarea,select,[contenteditable]:not([contenteditable="false"])';
 
 /**
  * Enables middle-click (button 1) auto-scroll on a scrollable container.
@@ -131,6 +137,15 @@ export function useMiddleClickScroll({ wrapperRef }: UseMiddleClickScrollParams)
       }
     }
 
+    // A pan must not keep scrolling while the window is unfocused/hidden.
+    function onWindowBlur() {
+      stopPan();
+    }
+
+    function onVisibilityChange() {
+      if (document.visibilityState === 'hidden') stopPan();
+    }
+
     // ── Start / stop ───────────────────────────────────────────────────────
 
     function startPan(x: number, y: number) {
@@ -150,6 +165,8 @@ export function useMiddleClickScroll({ wrapperRef }: UseMiddleClickScrollParams)
         window.addEventListener('mousemove', onMouseMove);
         window.addEventListener('mousedown', onGlobalMouseDown, true);
         window.addEventListener('keydown', onKeyDown, true);
+        window.addEventListener('blur', onWindowBlur);
+        document.addEventListener('visibilitychange', onVisibilityChange);
       }, 0);
     }
 
@@ -168,6 +185,8 @@ export function useMiddleClickScroll({ wrapperRef }: UseMiddleClickScrollParams)
       window.removeEventListener('mousemove', onMouseMove);
       window.removeEventListener('mousedown', onGlobalMouseDown, true);
       window.removeEventListener('keydown', onKeyDown, true);
+      window.removeEventListener('blur', onWindowBlur);
+      document.removeEventListener('visibilitychange', onVisibilityChange);
 
       // Reset cooldown after the current event cycle completes so the
       // stopping click doesn't immediately re-trigger a new pan.
@@ -178,15 +197,21 @@ export function useMiddleClickScroll({ wrapperRef }: UseMiddleClickScrollParams)
 
     function onWrapperMouseDown(e: MouseEvent) {
       if (e.button !== 1) return;
+      const target = e.target as Element | null;
+      if (target?.closest?.(INTERACTIVE_TARGET_SELECTOR)) return;
       e.preventDefault();
       if (cooldown) return;
       if (active) { stopPan(); return; }
       startPan(e.clientX, e.clientY);
     }
 
-    // Prevent native autoscroll and middle-click paste on the wrapper.
+    // Prevent native autoscroll and middle-click paste on the wrapper, except
+    // over interactive targets (where middle-click should reach the element).
     function onWrapperAuxClick(e: MouseEvent) {
-      if (e.button === 1) e.preventDefault();
+      if (e.button !== 1) return;
+      const target = e.target as Element | null;
+      if (target?.closest?.(INTERACTIVE_TARGET_SELECTOR)) return;
+      e.preventDefault();
     }
 
     wrapper.addEventListener('mousedown', onWrapperMouseDown);

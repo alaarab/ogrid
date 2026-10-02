@@ -30,6 +30,8 @@ export interface BaseTableBodyProps<T> {
   hasCheckboxCol: boolean;
   hasRowNumbersCol: boolean;
   rowNumberOffset: number;
+  /** Row-number label for a displayed row; defaults to rowNumberOffset + rowIndex + 1. */
+  rowNumberOf?: (rowIndex: number) => number;
   /** aria-rowindex of the first data row minus 1 (header rows + page offset). */
   ariaRowIndexBase?: number;
   selectionRange: GridRowProps['selectionRange'];
@@ -38,6 +40,11 @@ export interface BaseTableBodyProps<T> {
   copyRange: GridRowProps['copyRange'];
   isDragging: boolean;
   editingCell: { rowId: string | number; columnId: string } | null;
+  /** Popover editor anchor and pending value; only the editing row receives them. */
+  popoverAnchorEl?: HTMLElement | null;
+  pendingEditorValue?: unknown;
+  /** Formula recalculation counter; a change repaints every row. */
+  formulaVersion?: number;
   pinnedColumns: Record<string, 'left' | 'right'>;
   rowNumWidth?: number;
   styles: DataGridStyles;
@@ -49,9 +56,10 @@ export function BaseTableBody<T>(props: BaseTableBodyProps<T>) {
     virtualScrollEnabled, visibleRange, columnRange,
     items, windowed, rowHeight, getRowId, selectedRowIds, visibleCols, columnMeta,
     renderCellContent, handleSingleRowClick, handleRowCheckboxChange,
-    lastMouseShiftRef, hasCheckboxCol, hasRowNumbersCol, rowNumberOffset, ariaRowIndexBase,
+    lastMouseShiftRef, hasCheckboxCol, hasRowNumbersCol, rowNumberOffset, rowNumberOf, ariaRowIndexBase,
     selectionRange, activeCell, cutRange, copyRange, isDragging,
-    editingCell, pinnedColumns, rowNumWidth, styles, primitives,
+    editingCell, popoverAnchorEl, pendingEditorValue, formulaVersion,
+    pinnedColumns, rowNumWidth, styles, primitives,
   } = props;
   const { Tbody } = primitives;
 
@@ -88,6 +96,7 @@ export function BaseTableBody<T>(props: BaseTableBodyProps<T>) {
 
   const renderRow = (item: T, rowIndex: number) => {
     const rowIdStr = getRowId(item);
+    const isEditingRow = editingCell != null && editingCell.rowId === rowIdStr;
     return (
       <GridRow
         key={rowIdStr}
@@ -104,6 +113,7 @@ export function BaseTableBody<T>(props: BaseTableBodyProps<T>) {
         hasCheckboxCol={hasCheckboxCol}
         hasRowNumbersCol={hasRowNumbersCol}
         rowNumberOffset={rowNumberOffset}
+        rowNumber={hasRowNumbersCol && rowNumberOf ? rowNumberOf(rowIndex) : undefined}
         ariaRowIndexBase={ariaRowIndexBase}
         selectionRange={selectionRange}
         activeCell={activeCell}
@@ -111,6 +121,9 @@ export function BaseTableBody<T>(props: BaseTableBodyProps<T>) {
         copyRange={copyRange}
         isDragging={isDragging}
         editingRowId={editingCell?.rowId ?? null}
+        popoverAnchorEl={isEditingRow ? popoverAnchorEl : undefined}
+        pendingEditorValue={isEditingRow ? pendingEditorValue : undefined}
+        formulaVersion={formulaVersion}
         leftSpacerWidth={leftSpacerWidth}
         rightSpacerWidth={rightSpacerWidth}
         globalColIndexMap={globalColIndexMap}

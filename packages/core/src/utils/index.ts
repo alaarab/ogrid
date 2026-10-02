@@ -6,7 +6,8 @@ export {
   triggerCsvDownload,
   triggerBlobDownload,
 } from './exportToCsv';
-export { getCellValue, isColumnEditable, createGridDataAccessor } from './cellValue';
+export { getCellValue, isColumnEditable, createGridDataAccessor, createFormulaRowMap, createOffsetFormulaRowMap } from './cellValue';
+export type { IFormulaRowMap } from './cellValue';
 export { flattenColumns, buildHeaderRows } from './columnUtils';
 export {
   isFilterConfig,
@@ -97,7 +98,7 @@ export type { OverlayRect } from './dom';
 export { computeNextSortState } from './sortHelpers';
 export type { ISortState } from './sortHelpers';
 export { measureColumnContentWidth, estimateHeaderMinWidth, AUTOSIZE_EXTRA_PX, AUTOSIZE_MAX_PX } from './columnAutosize';
-export { findCtrlArrowTarget, computeTabNavigation, computeArrowNavigation, applyCellDeletion } from './keyboardNavigation';
+export { findCtrlArrowTarget, computeTabNavigation, computeArrowNavigation, applyCellDeletion, getOppositeCorner } from './keyboardNavigation';
 export type { ArrowNavigationContext, ArrowNavigationResult } from './keyboardNavigation';
 export { rangesEqual, clampSelectionToBounds, computeAutoScrollSpeed, applyRangeRowSelection, computeRowSelectionState } from './selectionHelpers';
 export {

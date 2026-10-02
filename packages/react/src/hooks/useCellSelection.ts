@@ -10,6 +10,11 @@ export interface UseCellSelectionParams {
   visibleColCount: number;
   setActiveCell: (cell: IActiveCell | null) => void;
   wrapperRef: React.RefObject<HTMLElement | null>;
+  /**
+   * Current active cell. Shift+click extends from it (the selection anchor) and
+   * leaves it in place. Without it, Shift+click extends from the range's start.
+   */
+  activeCell?: IActiveCell | null;
 }
 
 export interface UseCellSelectionResult {
@@ -34,10 +39,11 @@ const AUTO_SCROLL_EDGE = 40;   // px from wrapper edge to trigger
  * @returns Selection range, setters, mouse/keyboard handlers, and drag state.
  */
 export function useCellSelection(params: UseCellSelectionParams): UseCellSelectionResult {
-  const { colOffset, rowCount, visibleColCount, setActiveCell, wrapperRef } = params;
+  const { colOffset, rowCount, visibleColCount, setActiveCell, wrapperRef, activeCell } = params;
 
   // Use ref for colOffset to prevent drag restart mid-drag when colOffset changes
   const colOffsetRef = useLatestRef(colOffset);
+  const activeCellRef = useLatestRef(activeCell);
 
   const [selectionRange, _setSelectionRange] = useState<ISelectionRange | null>(null);
   const isDraggingRef = useRef(false);
@@ -73,15 +79,19 @@ export function useCellSelection(params: UseCellSelectionParams): UseCellSelecti
       const dataColIndex = globalColIndex - colOff;
       const currentRange = selectionRangeRef.current;
       if (e.shiftKey && currentRange != null) {
+        // Extend from the anchor (the active cell), not the normalized range's
+        // top-left corner, and keep the anchor active (Excel behavior).
+        const anchor = activeCellRef.current;
+        const hasAnchor = anchor != null && anchor.columnIndex >= colOff;
         setSelectionRange(
           normalizeSelectionRange({
-            startRow: currentRange.startRow,
-            startCol: currentRange.startCol,
+            startRow: hasAnchor ? anchor.rowIndex : currentRange.startRow,
+            startCol: hasAnchor ? anchor.columnIndex - colOff : currentRange.startCol,
             endRow: rowIndex,
             endCol: dataColIndex,
           })
         );
-        setActiveCell({ rowIndex, columnIndex: globalColIndex });
+        if (!hasAnchor) setActiveCell({ rowIndex, columnIndex: globalColIndex });
       } else {
         dragStartRef.current = { row: rowIndex, col: dataColIndex };
         dragMovedRef.current = false;
@@ -98,6 +108,7 @@ export function useCellSelection(params: UseCellSelectionParams): UseCellSelecti
         // setIsDragging(true) is deferred to the first mousemove to avoid
         // a true to false toggle on simple clicks (which causes 2 extra renders).
         isDraggingRef.current = true;
+        attachDragListenersRef.current?.();
         // Apply drag attrs synchronously so the anchor cell styling is in place
         // before React commits its re-render and before the next browser paint.
         // Using setTimeout here caused a 1-frame flicker: React would paint the
@@ -106,7 +117,7 @@ export function useCellSelection(params: UseCellSelectionParams): UseCellSelecti
         applyDragAttrsRef.current?.(initial);
       }
     },
-    [setActiveCell, colOffsetRef, setSelectionRange]
+    [setActiveCell, colOffsetRef, activeCellRef, setSelectionRange]
   );
 
   const handleSelectAllCells = useCallback(() => {
@@ -125,6 +136,8 @@ export function useCellSelection(params: UseCellSelectionParams): UseCellSelecti
 
   // Ref to expose applyDragAttrs outside useEffect so it can be called from pointerDown
   const applyDragAttrsRef = useRef<((range: ISelectionRange) => void) | null>(null);
+  // Attaches the window drag listeners; called from pointerDown when a drag starts.
+  const attachDragListenersRef = useRef<(() => void) | null>(null);
 
   // Window pointer move/up for drag selection (supports mouse + touch via Pointer Events API).
   // Performance: during drag, we update a ref + toggle DOM attributes via rAF.
@@ -186,7 +199,7 @@ export function useCellSelection(params: UseCellSelectionParams): UseCellSelecti
       if (!overlayEl) {
         overlayEl = document.createElement('div');
         overlayEl.style.position = 'absolute';
-        overlayEl.style.border = '2px solid var(--ogrid-selection, #217346)';
+        overlayEl.style.border = '2px solid var(--ogrid-selection, var(--ogrid-selection-color, #217346))';
         overlayEl.style.pointerEvents = 'none';
         overlayEl.style.zIndex = '4';
         overlayEl.style.boxSizing = 'border-box';
@@ -281,9 +294,21 @@ export function useCellSelection(params: UseCellSelectionParams): UseCellSelecti
     /** Resolve pointer coordinates to a cell range (shared by RAF callback and pointerUp flush). */
     const resolveRange = (cx: number, cy: number): ISelectionRange | null => {
       if (!dragStartRef.current) return null;
-      const target = document.elementFromPoint(cx, cy);
+      // Probe inside the visible body: while auto-scrolling, the pointer sits over
+      // the sticky header (or outside the grid), where no cell would resolve.
+      let px = cx;
+      let py = cy;
+      const wrapper = wrapperRef.current;
+      const wr = wrapper?.getBoundingClientRect();
+      if (wrapper && wr && wr.width > 0 && wr.height > 0) {
+        const headerBottom = wrapper.querySelector('thead')?.getBoundingClientRect().bottom ?? wr.top;
+        px = Math.min(Math.max(cx, wr.left + 1), wr.right - 1);
+        py = Math.min(Math.max(cy, Math.max(wr.top, headerBottom) + 1), wr.bottom - 1);
+      }
+      const target = document.elementFromPoint(px, py);
       const cell = (target as HTMLElement)?.closest?.('[data-row-index][data-col-index]');
-      if (!cell) return null;
+      // Ignore cells of another grid on the page.
+      if (!cell || (wrapper && !wrapper.contains(cell))) return null;
       const r = parseInt(cell.getAttribute('data-row-index') ?? '', 10);
       const c = parseInt(cell.getAttribute('data-col-index') ?? '', 10);
       const colOff = colOffsetRef.current;
@@ -420,6 +445,7 @@ export function useCellSelection(params: UseCellSelectionParams): UseCellSelecti
     };
 
     const onUp = () => {
+      detachListeners();
       if (!isDraggingRef.current) return;
 
       stopAutoScroll();
@@ -473,17 +499,33 @@ export function useCellSelection(params: UseCellSelectionParams): UseCellSelecti
       });
     };
 
-    window.addEventListener('pointermove', onMove, true);
-    window.addEventListener('pointerup', onUp, true);
-    // A cancelled pointer (touch pan takeover) or a lost window never sends
-    // pointerup; end the drag at the last range instead of staying stuck.
-    window.addEventListener('pointercancel', onUp, true);
-    window.addEventListener('blur', onUp);
-    return () => {
+    // Window listeners exist only for the duration of a drag (pointerDown to
+    // pointerUp), so idle grids add no global per-pointermove work.
+    let listening = false;
+    function attachListeners() {
+      if (listening) return;
+      listening = true;
+      window.addEventListener('pointermove', onMove, true);
+      window.addEventListener('pointerup', onUp, true);
+      // A cancelled pointer (touch pan takeover) or a lost window never sends
+      // pointerup; end the drag at the last range instead of staying stuck.
+      window.addEventListener('pointercancel', onUp, true);
+      window.addEventListener('blur', onUp);
+    }
+    function detachListeners() {
+      if (!listening) return;
+      listening = false;
       window.removeEventListener('pointermove', onMove, true);
       window.removeEventListener('pointerup', onUp, true);
       window.removeEventListener('pointercancel', onUp, true);
       window.removeEventListener('blur', onUp);
+    }
+    attachDragListenersRef.current = attachListeners;
+    // Effect re-ran mid-drag: keep listening so the drag can still end.
+    if (isDraggingRef.current) attachListeners();
+    return () => {
+      detachListeners();
+      attachDragListenersRef.current = null;
       if (rafRef.current) cancelAnimationFrame(rafRef.current);
       stopAutoScroll();
       removeOverlay();

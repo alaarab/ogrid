@@ -10,6 +10,7 @@ import {
   scrollTopForRowScaled,
 } from '@alaarab/ogrid-core';
 import type { IVisibleRange, IVisibleColumnRange } from '@alaarab/ogrid-core';
+import { useRefElement } from './useRefElement';
 
 // Re-export core's IVirtualScrollConfig for convenience
 export type { IVirtualScrollConfig } from '@alaarab/ogrid-core';
@@ -30,6 +31,8 @@ export interface UseVirtualScrollParams {
   threshold?: number;
   /** Ref to the scrollable container element. */
   containerRef: RefObject<HTMLElement | null>;
+  /** Space occupied by a sticky table header. Default: false. */
+  stickyHeader?: boolean;
   /** Enable column virtualization (only render visible columns). */
   columnVirtualization?: boolean;
   /** Column widths for horizontal virtualization (unpinned columns only). */
@@ -53,7 +56,7 @@ export interface UseVirtualScrollResult {
    */
   scaled: boolean;
   /** Scroll to a specific row index. */
-  scrollToIndex: (index: number) => void;
+  scrollToIndex: (index: number, align?: 'auto' | 'start' | 'center' | 'end') => void;
   /** Visible column range for horizontal virtualization (null when column virtualization disabled). */
   columnRange: IVisibleColumnRange | null;
   /** Callback to attach to scroll container's onScroll for horizontal tracking. */
@@ -91,6 +94,7 @@ export function useVirtualScroll(params: UseVirtualScrollParams): UseVirtualScro
     overscan = 5,
     threshold = DEFAULT_PASSTHROUGH_THRESHOLD,
     containerRef,
+    stickyHeader = false,
     columnVirtualization = false,
     columnWidths,
     columnOverscan = 2,
@@ -102,12 +106,15 @@ export function useVirtualScroll(params: UseVirtualScrollParams): UseVirtualScro
   }, [enabled, rowHeight]);
 
   const isActive = enabled && totalRows >= threshold;
+  const containerElement = useRefElement(containerRef);
 
   // --- Container measurement ---
   // Height feeds the scaled-spacer window; width feeds column virtualization.
   // Both are tracked by one ResizeObserver while either feature is live.
   const [containerHeight, setContainerHeight] = useState(0);
   const [containerWidth, setContainerWidth] = useState(0);
+  const [headerHeight, setHeaderHeight] = useState(0);
+  const viewportHeight = Math.max(0, containerHeight - headerHeight);
   // Browser scrollTop (compressed space). Only tracked while scaled.
   const [scrollTop, setScrollTop] = useState(0);
 
@@ -116,8 +123,8 @@ export function useVirtualScroll(params: UseVirtualScrollParams): UseVirtualScro
   // container is ever measured (computeScaledGeometry ignores viewportHeight
   // for that decision).
   const geometry = useMemo(
-    () => computeScaledGeometry({ totalRows, rowHeight, viewportHeight: containerHeight }),
-    [totalRows, rowHeight, containerHeight],
+    () => computeScaledGeometry({ totalRows, rowHeight, viewportHeight }),
+    [totalRows, rowHeight, viewportHeight],
   );
   const isScaled = isActive && geometry.scaled;
 
@@ -136,6 +143,8 @@ export function useVirtualScroll(params: UseVirtualScrollParams): UseVirtualScro
     estimateSize: () => rowHeight,
     overscan,
     enabled: tanStackActive,
+    scrollMargin: headerHeight,
+    scrollPaddingStart: headerHeight,
   });
 
   // TanStack memoizes row measurements and does not watch estimateSize, so a
@@ -152,30 +161,35 @@ export function useVirtualScroll(params: UseVirtualScrollParams): UseVirtualScro
   // observer fires only on real resizes, so this is cheap to keep mounted.
   useEffect(() => {
     if (!isActive && !columnVirtualization) return;
-    const el = containerRef.current;
+    const el = containerElement;
     if (!el) return;
-    setContainerHeight(el.clientHeight);
-    setContainerWidth(el.clientWidth);
+    const header = stickyHeader ? el.querySelector('thead') : null;
+    const measure = () => {
+      setContainerHeight(el.clientHeight);
+      setContainerWidth(el.clientWidth);
+      setHeaderHeight(header?.getBoundingClientRect().height ?? 0);
+    };
+    measure();
     if (typeof ResizeObserver === 'undefined') return;
     const ro = new ResizeObserver((entries) => {
       // `entries` can be nullish under non-spec-compliant ResizeObserver
       // implementations in some test runtimes — guard before reading it.
       const entry = entries?.[0];
       if (entry) {
-        setContainerHeight(entry.contentRect.height);
-        setContainerWidth(entry.contentRect.width);
+        measure();
       }
     });
     ro.observe(el);
+    if (header) ro.observe(header);
     return () => ro.disconnect();
-  }, [isActive, columnVirtualization, containerRef]);
+  }, [isActive, columnVirtualization, containerElement, stickyHeader]);
 
   // Track scrollTop while scaled — it is the input to the scaled window. rAF
   // throttling keeps a fast scroll to one window recompute per frame.
   const scrollRaf = useRef(0);
   useEffect(() => {
     if (!isScaled) return;
-    const el = containerRef.current;
+    const el = containerElement;
     if (!el) return;
     setScrollTop(el.scrollTop);
     const onScroll = () => {
@@ -193,7 +207,7 @@ export function useVirtualScroll(params: UseVirtualScrollParams): UseVirtualScro
         scrollRaf.current = 0;
       }
     };
-  }, [isScaled, containerRef]);
+  }, [isScaled, containerElement]);
 
   const passthroughRange = useMemo<IVisibleRange>(
     () => ({
@@ -227,7 +241,7 @@ export function useVirtualScroll(params: UseVirtualScrollParams): UseVirtualScro
     const win = computeScaledWindow(
       scrollTop,
       geometry,
-      { totalRows, rowHeight, viewportHeight: containerHeight },
+      { totalRows, rowHeight, viewportHeight },
       overscan,
     );
     const blockCount = win.endIndex >= win.startIndex ? win.endIndex - win.startIndex + 1 : 0;
@@ -253,8 +267,8 @@ export function useVirtualScroll(params: UseVirtualScrollParams): UseVirtualScro
         activeRange = {
           startIndex: first.index,
           endIndex: last.index,
-          offsetTop: first.start,
-          offsetBottom: Math.max(0, totalSize - last.end),
+          offsetTop: Math.max(0, first.start - headerHeight),
+          offsetBottom: Math.max(0, totalSize - (last.end - headerHeight)),
         };
       } else {
         activeRange = { startIndex: 0, endIndex: -1, offsetTop: 0, offsetBottom: 0 };
@@ -272,28 +286,42 @@ export function useVirtualScroll(params: UseVirtualScrollParams): UseVirtualScro
   scrollToIndexRef.current = virtualizer;
 
   const scrollToIndex = useCallback(
-    (index: number) => {
+    (index: number, align: 'auto' | 'start' | 'center' | 'end' = tanStackActive ? 'auto' : 'start') => {
       const container = containerRef.current;
+      if (!container || totalRows <= 0 || !Number.isFinite(index)) return;
+      index = Math.max(0, Math.min(Math.floor(index), totalRows - 1));
+      const stickyHeight = stickyHeader ? container.querySelector('thead')?.getBoundingClientRect().height ?? 0 : 0;
+      const height = Math.max(0, container.clientHeight - stickyHeight);
       if (isScaled) {
-        // Remap the target row to a compressed scrollTop.
-        if (container) {
-          container.scrollTo({
-            top: scrollTopForRowScaled(index, geometry, {
-              totalRows,
-              rowHeight,
-              viewportHeight: container.clientHeight,
-            }),
-            behavior: 'auto',
-          });
+        const config = { totalRows, rowHeight, viewportHeight: height };
+        if (align === 'auto') {
+          const current = computeScaledWindow(container.scrollTop, geometry, config).realScrollTop;
+          if (index * rowHeight >= current && (index + 1) * rowHeight <= current + height) return;
+          align = index * rowHeight < current ? 'start' : 'end';
         }
+        const top = scrollTopForRowScaled(index, geometry, config, align);
+        container.scrollTo({ top, behavior: 'auto' });
+        setScrollTop(top);
       } else if (tanStackActive) {
-        scrollToIndexRef.current?.scrollToIndex(index, { align: 'auto' });
-      } else if (container) {
-        // When not virtualized, scroll the container directly.
-        container.scrollTo({ top: index * rowHeight, behavior: 'auto' });
+        if (align === 'center' && stickyHeight > 0) {
+          scrollToIndexRef.current?.scrollToOffset(Math.max(0, index * rowHeight - (height - rowHeight) / 2));
+        } else {
+          scrollToIndexRef.current?.scrollToIndex(index, { align });
+        }
+      } else {
+        const row = container.querySelector(`[data-row-index="${index}"]`)?.closest('tr');
+        const rect = row?.getBoundingClientRect();
+        const rowTop = rect ? container.scrollTop + rect.top - container.getBoundingClientRect().top - stickyHeight : index * rowHeight;
+        const actualHeight = rect?.height || rowHeight;
+        if (align === 'auto') {
+          if (rowTop >= container.scrollTop && rowTop + actualHeight <= container.scrollTop + height) return;
+          align = height <= 0 || rowTop < container.scrollTop ? 'start' : 'end';
+        }
+        const adjustment = align === 'center' ? (height - actualHeight) / 2 : align === 'end' ? height - actualHeight : 0;
+        container.scrollTo({ top: Math.max(0, rowTop - adjustment), behavior: 'auto' });
       }
     },
-    [isScaled, tanStackActive, containerRef, rowHeight, totalRows, geometry]
+    [isScaled, tanStackActive, containerRef, rowHeight, totalRows, geometry, stickyHeader]
   );
 
   // --- Column virtualization ---

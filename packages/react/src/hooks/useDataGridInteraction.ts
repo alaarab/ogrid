@@ -2,12 +2,14 @@ import { useMemo, useCallback } from 'react';
 import type { RefObject } from 'react';
 import type { RowId, IColumnDef } from '../types';
 import type { IFillFormulaOptions } from '../utils';
+import type { ScrollToRowIndex } from '../utils/scrollCellIntoView';
 import { formatCellReference } from '../utils';
 import { useCellSelection } from './useCellSelection';
 import { useClipboard } from './useClipboard';
 import { useKeyboardNavigation } from './useKeyboardNavigation';
 import { useFillHandleInternal } from './useFillHandleInternal';
 import { useUndoRedo } from './useUndoRedo';
+import type { UseUndoRedoFormulaCells } from './useUndoRedo';
 import { useLatestRef } from './useLatestRef';
 import type { DataGridCellInteractionState } from './useDataGridState';
 
@@ -32,6 +34,14 @@ export interface UseDataGridInteractionParams<T> {
     newValue: unknown;
     rowIndex: number;
   }) => void;
+  /** Host-managed undo. When supplied, Ctrl+Z / the context menu call this instead of the internal stack. */
+  onUndo?: () => void;
+  /** Host-managed redo. When supplied, Ctrl+Y / the context menu call this instead of the internal stack. */
+  onRedo?: () => void;
+  /** Host-managed undo availability; defaults to true when `onUndo` is supplied, else the internal stack. */
+  canUndo?: boolean;
+  /** Host-managed redo availability; defaults to true when `onRedo` is supplied, else the internal stack. */
+  canRedo?: boolean;
   cellSelection: boolean;
   rowSelection?: 'none' | 'single' | 'multiple';
   selectedRowIds: Set<RowId>;
@@ -51,8 +61,12 @@ export interface UseDataGridInteractionParams<T> {
   ) => void;
   setContextMenuPosition: (pos: { x: number; y: number } | null) => void;
   wrapperRef: RefObject<HTMLDivElement | null>;
+  /** Virtual grids: scrolls a row into view by index (used by keyboard Shift-extend). */
+  scrollToIndexRef?: RefObject<ScrollToRowIndex | null>;
   /** Custom keydown handler  -  called before grid default. preventDefault() suppresses grid handling. */
   onKeyDown?: (event: React.KeyboardEvent) => void;
+  /** Called when reading the system clipboard fails on paste. */
+  onClipboardError?: (error: unknown) => void;
   /** When true, enables formula-aware clipboard and fill handle. */
   formulas?: boolean;
   /** Flat column list for formula coordinate mapping. */
@@ -65,6 +79,12 @@ export interface UseDataGridInteractionParams<T> {
   setFormula?: (col: number, row: number, formula: string | null) => void;
   /** Called when a cell is clicked during formula editing to insert a cell reference. */
   onFormulaInsertReference?: (reference: string) => boolean;
+  /** Formula engine column of a column id (flat index), or -1. Defaults to the flat column lookup. */
+  formulaCol?: (columnId: string) => number;
+  /** Formula engine (sheet) row of a displayed row, or -1. Defaults to the display row. */
+  formulaRow?: (rowIndex: number) => number;
+  /** Formula hooks for the undo history (engine coordinates). */
+  formulaCells?: UseUndoRedoFormulaCells<T>;
 }
 
 export interface UseDataGridInteractionResult<T> {
@@ -105,6 +125,11 @@ export interface UseDataGridInteractionResult<T> {
   }) => void) | undefined;
   canUndo: boolean;
   canRedo: boolean;
+  /**
+   * Set or clear a formula by (flat column, display row): mapped to the sheet
+   * row and recorded for undo. Undefined when formulas are off.
+   */
+  setFormula?: (col: number, row: number, formula: string | null) => void;
 }
 
 /**
@@ -126,6 +151,10 @@ export function useDataGridInteraction<T>(
     getRowId,
     editable,
     onCellValueChangedProp,
+    onUndo: onUndoProp,
+    onRedo: onRedoProp,
+    canUndo: canUndoProp,
+    canRedo: canRedoProp,
     cellSelection,
     rowSelection,
     selectedRowIds,
@@ -136,20 +165,69 @@ export function useDataGridInteraction<T>(
     handleRowCheckboxChange,
     setContextMenuPosition,
     wrapperRef,
+    scrollToIndexRef,
     onKeyDown,
+    onClipboardError,
     formulas,
     flatColumns,
     getFormula,
     hasFormula,
     setFormula,
     onFormulaInsertReference,
+    formulaCells,
   } = params;
 
   const onFormulaInsertReferenceRef = useLatestRef(onFormulaInsertReference);
+  const visibleColsRef = useLatestRef(visibleCols);
+  const formulaColRef = useLatestRef(params.formulaCol);
+  const formulaRowRef = useLatestRef(params.formulaRow);
 
   // Wrap onCellValueChanged with undo/redo tracking
-  const undoRedo = useUndoRedo<T>({ onCellValueChanged: onCellValueChangedProp });
+  const undoRedo = useUndoRedo<T>({ onCellValueChanged: onCellValueChangedProp, formulaCells });
   const onCellValueChanged = undoRedo.onCellValueChanged;
+
+  // Host-supplied undo/redo takes over from the internal stack.
+  const onUndoPropRef = useLatestRef(onUndoProp);
+  const onRedoPropRef = useLatestRef(onRedoProp);
+  const hasHostUndo = onUndoProp != null;
+  const hasHostRedo = onRedoProp != null;
+  const internalUndo = undoRedo.undo;
+  const internalRedo = undoRedo.redo;
+  const undo = useCallback(
+    () => (onUndoPropRef.current ?? internalUndo)(),
+    [onUndoPropRef, internalUndo]
+  );
+  const redo = useCallback(
+    () => (onRedoPropRef.current ?? internalRedo)(),
+    [onRedoPropRef, internalRedo]
+  );
+  const canUndo = canUndoProp ?? (hasHostUndo ? true : undoRedo.canUndo);
+  const canRedo = canRedoProp ?? (hasHostRedo ? true : undoRedo.canRedo);
+
+  // Formula access for the clipboard, fill handle and editor, which address
+  // cells by (flat column, display row): the row is mapped to the sheet row,
+  // and writes are recorded for undo.
+  const hasFormulaCells = formulaCells != null;
+  const undoSetFormula = undoRedo.setFormula;
+  const viewFormulas = useMemo(() => {
+    if (!formulas) return undefined;
+    const toRow = (row: number) => formulaRowRef.current?.(row) ?? row;
+    const write = hasFormulaCells ? undoSetFormula : setFormula;
+    return {
+      getFormula: getFormula && ((col: number, row: number) => {
+        const r = toRow(row);
+        return r >= 0 ? getFormula(col, r) : undefined;
+      }),
+      hasFormula: hasFormula && ((col: number, row: number) => {
+        const r = toRow(row);
+        return r >= 0 && hasFormula(col, r);
+      }),
+      setFormula: write && ((col: number, row: number, formula: string | null) => {
+        const r = toRow(row);
+        if (r >= 0) write(col, r, formula);
+      }),
+    };
+  }, [formulas, getFormula, hasFormula, setFormula, hasFormulaCells, undoSetFormula, formulaRowRef]);
 
   const {
     selectionRange,
@@ -163,10 +241,13 @@ export function useDataGridInteraction<T>(
     visibleColCount: visibleCols.length,
     setActiveCell,
     wrapperRef,
+    activeCell,
   });
 
   const { handleCopy, handleCut, handlePaste, cutRange, copyRange, clearClipboardRanges } = useClipboard({
     items,
+    getRowId,
+    onClipboardError,
     visibleCols,
     colOffset,
     selectionRange,
@@ -177,9 +258,9 @@ export function useDataGridInteraction<T>(
     endBatch: undoRedo.endBatch,
     formulas,
     flatColumns,
-    getFormula,
-    hasFormula,
-    setFormula,
+    getFormula: viewFormulas?.getFormula,
+    hasFormula: viewFormulas?.hasFormula,
+    setFormula: viewFormulas?.setFormula,
   });
 
   const handleCellMouseDown = useCallback(
@@ -191,8 +272,12 @@ export function useDataGridInteraction<T>(
       const insertRef = onFormulaInsertReferenceRef.current;
       if (insertRef) {
         const dataColIndex = globalColIndex - colOffset;
-        if (dataColIndex >= 0) {
-          const ref = formatCellReference(dataColIndex, rowIndex + 1);
+        const col = visibleColsRef.current[dataColIndex];
+        // The reference names the cell's sheet coordinates, not its place on screen.
+        const sheetCol = col ? (formulaColRef.current?.(col.columnId) ?? dataColIndex) : -1;
+        const sheetRow = formulaRowRef.current?.(rowIndex) ?? rowIndex;
+        if (sheetCol >= 0 && sheetRow >= 0) {
+          const ref = formatCellReference(sheetCol, sheetRow + 1);
           if (insertRef(ref)) {
             e.preventDefault();
             return; // Reference inserted  -  skip normal cell selection
@@ -205,13 +290,14 @@ export function useDataGridInteraction<T>(
       // "cut, click the destination, paste" moves the cells. Escape clears it.
       handleCellMouseDownBase(e, rowIndex, globalColIndex);
     },
-    [handleCellMouseDownBase, wrapperRef, onFormulaInsertReferenceRef, colOffset]
+    [handleCellMouseDownBase, wrapperRef, onFormulaInsertReferenceRef, colOffset, visibleColsRef, formulaColRef, formulaRowRef]
   );
 
   const fillFormulaOptions = useMemo<IFillFormulaOptions<T> | undefined>(() => {
-    if (!formulas || !flatColumns) return undefined;
-    return { flatColumns, getFormula, hasFormula, setFormula };
-  }, [formulas, flatColumns, getFormula, hasFormula, setFormula]);
+    if (!viewFormulas || !flatColumns) return undefined;
+    const formulaRow = (row: number) => formulaRowRef.current?.(row) ?? row;
+    return { flatColumns, ...viewFormulas, formulaRow };
+  }, [viewFormulas, flatColumns, formulaRowRef]);
 
   const { handleFillHandleMouseDown, fillDown } = useFillHandleInternal({
     items,
@@ -231,8 +317,8 @@ export function useDataGridInteraction<T>(
   const { handleGridKeyDown } = useKeyboardNavigation({
     data: { items, visibleCols, colOffset, hasCheckboxCol, visibleColumnCount, getRowId },
     state: { activeCell, selectionRange, editingCell, selectedRowIds },
-    handlers: { setActiveCell, setSelectionRange, setEditingCell, handleRowCheckboxChange, handleCopy, handleCut, handlePaste, setContextMenu: setContextMenuPosition, onUndo: undoRedo.undo, onRedo: undoRedo.redo, clearClipboardRanges, beginBatch: undoRedo.beginBatch, endBatch: undoRedo.endBatch },
-    features: { editable, onCellValueChanged, rowSelection: rowSelection ?? 'none', wrapperRef, onKeyDown, fillDown },
+    handlers: { setActiveCell, setSelectionRange, setEditingCell, handleRowCheckboxChange, handleCopy, handleCut, handlePaste, setContextMenu: setContextMenuPosition, onUndo: undo, onRedo: redo, clearClipboardRanges, beginBatch: undoRedo.beginBatch, endBatch: undoRedo.endBatch },
+    features: { editable, onCellValueChanged, rowSelection: rowSelection ?? 'none', wrapperRef, scrollToIndexRef, onKeyDown, fillDown },
   });
 
   const hasCellSelection = selectionRange != null || activeCell != null;
@@ -253,16 +339,16 @@ export function useDataGridInteraction<T>(
     cutRange: cellSelection ? cutRange : null,
     copyRange: cellSelection ? copyRange : null,
     clearClipboardRanges: cellSelection ? clearClipboardRanges : NOOP,
-    canUndo: undoRedo.canUndo,
-    canRedo: undoRedo.canRedo,
-    onUndo: undoRedo.undo,
-    onRedo: undoRedo.redo,
+    canUndo,
+    canRedo,
+    onUndo: undo,
+    onRedo: redo,
     isDragging: cellSelection ? isDragging : false,
   }), [
     cellSelection, activeCell, setActiveCell, selectionRange, setSelectionRange,
     handleCellMouseDown, handleSelectAllCells, hasCellSelection, handleGridKeyDown,
     handleFillHandleMouseDown, handleCopy, handleCut, handlePaste, cutRange, copyRange,
-    clearClipboardRanges, undoRedo.canUndo, undoRedo.canRedo, undoRedo.undo, undoRedo.redo,
+    clearClipboardRanges, canUndo, canRedo, undo, redo,
     isDragging,
   ]);
 
@@ -275,7 +361,8 @@ export function useDataGridInteraction<T>(
     clearClipboardRanges,
     isDragging,
     onCellValueChanged,
-    canUndo: undoRedo.canUndo,
-    canRedo: undoRedo.canRedo,
+    canUndo,
+    canRedo,
+    setFormula: viewFormulas?.setFormula,
   };
 }

@@ -1,7 +1,8 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, type RefObject } from 'react';
 import { measureColumnContentWidth } from '../utils';
 
 export interface UseColumnHeaderMenuStateParams {
+  wrapperRef?: RefObject<HTMLElement | null>;
   pinnedColumns: Record<string, 'left' | 'right'>;
   onPinColumn: (columnId: string, side: 'left' | 'right') => void;
   onUnpinColumn: (columnId: string) => void;
@@ -10,13 +11,15 @@ export interface UseColumnHeaderMenuStateParams {
   onColumnSort: (columnKey: string, direction?: 'asc' | 'desc' | null) => void;
   onColumnResized?: (columnId: string, width: number) => void;
   onAutosizeColumn?: (columnId: string, width: number) => void;
-  columns: Array<{ columnId: string; width?: number | string; minWidth?: number; sortable?: boolean; resizable?: boolean }>;
+  columns: Array<{ columnId: string; name?: string; width?: number | string; minWidth?: number; sortable?: boolean; resizable?: boolean }>;
 }
 
 export interface UseColumnHeaderMenuStateResult {
   isOpen: boolean;
   openForColumn: string | null;
   anchorElement: HTMLElement | null;
+  /** Display name of the column the menu is open for. */
+  columnName?: string;
   open: (columnId: string, anchorEl: HTMLElement) => void;
   close: () => void;
   handlePinLeft: () => void;
@@ -43,6 +46,7 @@ export function useColumnHeaderMenuState(
   params: UseColumnHeaderMenuStateParams
 ): UseColumnHeaderMenuStateResult {
   const {
+    wrapperRef,
     pinnedColumns,
     onPinColumn,
     onUnpinColumn,
@@ -127,9 +131,9 @@ export function useColumnHeaderMenuState(
     if (!openForColumn || !resizer || !isResizable) return;
 
     const col = columns.find((c) => c.columnId === openForColumn);
-    resizer(openForColumn, measureColumnContentWidth(openForColumn, col?.minWidth));
+    resizer(openForColumn, measureColumnContentWidth(openForColumn, col?.minWidth, wrapperRef?.current ?? undefined));
     close();
-  }, [openForColumn, onAutosizeColumn, onColumnResized, isResizable, columns, close]);
+  }, [openForColumn, onAutosizeColumn, onColumnResized, isResizable, columns, close, wrapperRef]);
 
   const handleAutosizeAll = useCallback(() => {
     const resizer = onAutosizeColumn ?? onColumnResized;
@@ -137,16 +141,17 @@ export function useColumnHeaderMenuState(
 
     columns.forEach((col) => {
       if (col.resizable === false) return;
-      resizer(col.columnId, measureColumnContentWidth(col.columnId, col.minWidth));
+      resizer(col.columnId, measureColumnContentWidth(col.columnId, col.minWidth, wrapperRef?.current ?? undefined));
     });
 
     close();
-  }, [columns, onAutosizeColumn, onColumnResized, close]);
+  }, [columns, onAutosizeColumn, onColumnResized, close, wrapperRef]);
 
   return {
     isOpen,
     openForColumn,
     anchorElement,
+    columnName: columns.find((c) => c.columnId === openForColumn)?.name,
     open,
     close,
     handlePinLeft,
@@ -174,6 +179,7 @@ export function getColumnHeaderMenuProps(headerMenu: UseColumnHeaderMenuStateRes
   return {
     isOpen: headerMenu.isOpen,
     anchorElement: headerMenu.anchorElement,
+    columnName: headerMenu.columnName,
     onClose: headerMenu.close,
     onPinLeft: headerMenu.handlePinLeft,
     onPinRight: headerMenu.handlePinRight,

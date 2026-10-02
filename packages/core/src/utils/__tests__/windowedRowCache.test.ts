@@ -276,4 +276,63 @@ describe('WindowedRowCache', () => {
     await flush();
     expect(cache.getRowCount()).toBe(500);
   });
+
+  it('invalidate re-fetches the row count instead of clamping to the stale one', async () => {
+    let total = 1000;
+    const calls: number[] = [];
+    const source: IWindowedDataSource<Row> = {
+      async getRowCount() {
+        return total;
+      },
+      async getRows(params: IRowWindowParams) {
+        calls.push(params.start);
+        return { items: [{ id: params.start, name: 'x' }] };
+      },
+    };
+    const cache = new WindowedRowCache({ dataSource: source, blockSize: 100 });
+    cache.setContext({ filters: {} });
+    await flush();
+    expect(cache.getRowCount()).toBe(1000);
+
+    total = 1500; // a mutation added rows
+    cache.invalidate();
+    // Until the new count lands the total is unknown, so rows past the old
+    // total are fetchable rather than clamped away.
+    expect(cache.getRowCount()).toBeUndefined();
+    cache.ensureRange(1200, 1300);
+    await flush();
+    expect(calls).toContain(1200);
+    expect(cache.getRowCount()).toBe(1500);
+  });
+
+  it('aborts an in-flight row count request on invalidate and dispose', async () => {
+    const signals: AbortSignal[] = [];
+    const source: IWindowedDataSource<Row> = {
+      getRowCount(params) {
+        if (params.signal) signals.push(params.signal);
+        return new Promise<number>(() => {});
+      },
+      async getRows() {
+        return { items: [] };
+      },
+    };
+    const cache = new WindowedRowCache({ dataSource: source });
+    cache.setContext({ filters: {} });
+    cache.invalidate();
+    expect(signals[0]?.aborted).toBe(true);
+    cache.dispose();
+    expect(signals[1]?.aborted).toBe(true);
+  });
+
+  it('keeps the requested window cached when maxCachedRows is smaller than a block', async () => {
+    const { source, calls } = makeSource(1000);
+    const cache = new WindowedRowCache({ dataSource: source, blockSize: 200, maxCachedRows: 100 });
+    cache.ensureRange(0, 20);
+    await flush();
+    expect(cache.hasRow(0)).toBe(true);
+    cache.ensureRange(0, 20);
+    cache.ensureRange(0, 20);
+    await flush();
+    expect(calls).toHaveLength(1);
+  });
 });

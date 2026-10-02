@@ -108,6 +108,38 @@ describe('applyFillValues', () => {
       expect(formulaStore.get('0,1')).toBe('=$A$1+B2');
     });
 
+    it('shifts references by the flat column distance when a column between source and target is hidden', () => {
+      // Flat columns A, B (hidden), C: filling right from A onto C is a 2-column shift.
+      const COL_HIDDEN: IColumnDef<Row> = { columnId: 'hidden', name: 'Hidden', editable: true };
+      const COL_C: IColumnDef<Row> = { columnId: 'c', name: 'C', editable: true };
+      const items: Row[] = [{ id: 'src', value: null }];
+      const formulaStore = new Map<string, string>([['0,0', '=A2']]);
+      const formulaOptions: IFillFormulaOptions<Row> = {
+        flatColumns: [COL_A, COL_HIDDEN, COL_C],
+        hasFormula: (col, row) => formulaStore.has(`${col},${row}`),
+        getFormula: (col, row) => formulaStore.get(`${col},${row}`),
+        setFormula: (col, row, formula) => { if (formula) formulaStore.set(`${col},${row}`, formula); },
+      };
+      applyFillValues(makeRange(0, 0, 0, 1), 0, 0, items, [COL_A, COL_C], formulaOptions);
+      expect(formulaStore.get('2,0')).toBe('=C2');
+    });
+
+    it('shifts references by the sheet row distance when rows are sorted', () => {
+      // Display rows 0, 1 show sheet rows 4, 1 (sorted view).
+      const items: Row[] = [{ id: 'src', value: null }, { id: '', value: null }];
+      const formulaStore = new Map<string, string>([['0,0', '=B5*2']]);
+      const formulaOptions: IFillFormulaOptions<Row> = {
+        flatColumns: VISIBLE_COLS,
+        hasFormula: (col, row) => formulaStore.has(`${col},${row}`),
+        getFormula: (col, row) => formulaStore.get(`${col},${row}`),
+        setFormula: (col, row, formula) => { if (formula) formulaStore.set(`${col},${row}`, formula); },
+        formulaRow: (row) => (row === 0 ? 4 : 1),
+      };
+      applyFillValues(makeRange(0, 0, 1, 0), 0, 0, items, VISIBLE_COLS, formulaOptions);
+      // The filled record is sheet row 2, so its formula reads its own row: B2.
+      expect(formulaStore.get('0,1')).toBe('=B2*2');
+    });
+
     it('falls back to normal value fill when formulaOptions provided but source has no formula', () => {
       const items: Row[] = [
         { id: 'hello', value: null },
@@ -403,5 +435,108 @@ describe('applyFillValues with a source that is not the top-left cell', () => {
       [0, 'src'],
       [1, 'src'],
     ]);
+  });
+});
+
+describe('applyFillValues  -  multi-cell source tiling (S01)', () => {
+  const colX: IColumnDef<Row> = { columnId: 'id', name: 'X', editable: true };
+  const colY: IColumnDef<Row> = { columnId: 'value', name: 'Y', editable: true };
+  const cols = [colX, colY];
+  const mk = () => [
+    { id: 'a1', value: 'b1' },
+    { id: 'a2', value: 'b2' },
+    { id: '', value: '' },
+    { id: '', value: '' },
+    { id: '', value: '' },
+  ] as Row[];
+
+  it('tiles a 2x2 source and never overwrites the source cells', () => {
+    const items = mk();
+    const events = applyFillValues(makeRange(0, 0, 4, 1), 0, 0, items, cols, undefined, makeRange(0, 0, 1, 1));
+    expect(events.map((e) => `${e.rowIndex}:${e.columnId}=${e.newValue}`)).toEqual([
+      '2:id=a1', '2:value=b1', '3:id=a2', '3:value=b2', '4:id=a1', '4:value=b1',
+    ]);
+  });
+
+  it('a no-op range (source only) produces no events', () => {
+    const events = applyFillValues(makeRange(0, 0, 1, 1), 0, 0, mk(), cols, undefined, makeRange(0, 0, 1, 1));
+    expect(events).toHaveLength(0);
+  });
+
+  it('fills upward aligning the pattern to the end of the source', () => {
+    const items = [
+      { id: '', value: '' },
+      { id: '', value: '' },
+      { id: 'a1', value: 'b1' },
+      { id: 'a2', value: 'b2' },
+    ] as Row[];
+    const events = applyFillValues(makeRange(0, 0, 3, 0), 2, 0, items, cols, undefined, makeRange(2, 0, 3, 0));
+    // rows 0..1 take the pattern ending at the source end
+    expect(events.map((e) => `${e.rowIndex}=${e.newValue}`)).toEqual(['0=a1', '1=a2']);
+  });
+
+  it('a partial upward fill takes the source cells nearest the source first (Excel)', () => {
+    const items = [
+      { id: '', value: '' },
+      { id: 'a1', value: 'b1' },
+      { id: 'a2', value: 'b2' },
+    ] as Row[];
+    const events = applyFillValues(makeRange(0, 0, 2, 0), 1, 0, items, cols, undefined, makeRange(1, 0, 2, 0));
+    expect(events.map((e) => `${e.rowIndex}=${e.newValue}`)).toEqual(['0=a2']);
+  });
+
+  it('fills leftward by tiling the source columns', () => {
+    const wide: IColumnDef<Row>[] = [
+      { columnId: 'c0', name: 'C0', editable: true },
+      { columnId: 'c1', name: 'C1', editable: true },
+      { columnId: 'c2', name: 'C2', editable: true },
+      { columnId: 'c3', name: 'C3', editable: true },
+      { columnId: 'c4', name: 'C4', editable: true },
+    ];
+    const items = [{ c0: '', c1: '', c2: '', c3: 'x', c4: 'y' }] as unknown as Row[];
+    const events = applyFillValues(makeRange(0, 0, 0, 4), 0, 3, items, wide, undefined, makeRange(0, 3, 0, 4));
+    expect(events.map((e) => `${e.columnId}=${e.newValue}`)).toEqual(['c0=y', 'c1=x', 'c2=y']);
+  });
+
+  it('Ctrl+D style single-row source copies each column top cell down its own column', () => {
+    const items = mk();
+    const events = applyFillValues(makeRange(0, 0, 3, 1), 0, 0, items, cols, undefined, makeRange(0, 0, 0, 1));
+    const byCol = (id: string) => events.filter((e) => e.columnId === id).map((e) => e.newValue);
+    expect(byCol('id')).toEqual(['a1', 'a1', 'a1']);
+    expect(byCol('value')).toEqual(['b1', 'b1', 'b1']);
+  });
+});
+
+describe('applyFillValues  -  tiled formula fill (S01 + sheet coordinates)', () => {
+  const colX: IColumnDef<Row> = { columnId: 'id', name: 'X', editable: true };
+  const colY: IColumnDef<Row> = { columnId: 'value', name: 'Y', editable: true };
+
+  it('shifts each destination by the sheet distance from its own tile source cell', () => {
+    // Sorted view: display rows 0..4 show sheet rows 10, 11, 3, 7, 20. Column X
+    // is hidden, so visible column 0 is flat column 1 (B).
+    const sheetRows = [10, 11, 3, 7, 20];
+    const items = sheetRows.map(() => ({ id: '', value: null })) as Row[];
+    const store = new Map<string, string>([
+      ['1,0', '=A11*2'],
+      ['1,1', '=A12+1'],
+    ]);
+    const formulaOptions: IFillFormulaOptions<Row> = {
+      flatColumns: [colX, colY],
+      hasFormula: (col, row) => store.has(`${col},${row}`),
+      getFormula: (col, row) => store.get(`${col},${row}`),
+      setFormula: (col, row, formula) => {
+        if (formula) store.set(`${col},${row}`, formula);
+      },
+      formulaRow: (row) => sheetRows[row] ?? row,
+    };
+    const events = applyFillValues(makeRange(0, 0, 4, 0), 0, 0, items, [colY], formulaOptions, makeRange(0, 0, 1, 0));
+    expect(events).toHaveLength(0);
+    // Each filled formula reads its own record's row in column A.
+    expect(store.get('1,2')).toBe('=A4*2');
+    expect(store.get('1,3')).toBe('=A8+1');
+    expect(store.get('1,4')).toBe('=A21*2');
+    // Source cells are untouched.
+    expect(store.get('1,0')).toBe('=A11*2');
+    expect(store.get('1,1')).toBe('=A12+1');
   });
 });

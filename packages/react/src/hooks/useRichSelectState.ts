@@ -25,13 +25,13 @@ export interface UseRichSelectStateResult {
 }
 
 /**
- * Manages searchable rich select editor state with keyboard navigation (arrow keys, enter, escape).
+ * Manages searchable rich select editor state with keyboard navigation (arrow keys, enter, tab, escape).
  * @param params - Values, format function, initial value, and commit/cancel callbacks.
  * @returns Search text, filtered values, highlighted index, keyboard handler, and select function.
  */
 export function useRichSelectState(params: UseRichSelectStateParams): UseRichSelectStateResult {
   const { values, formatValue, initialValue, onCommit, onCancel } = params;
-  const [searchText, setSearchText] = useState('');
+  const [searchText, setSearchTextState] = useState('');
   const initialIndex = values.findIndex((v) => String(v) === String(initialValue));
   const [highlightedIndex, setHighlightedIndex] = useState(Math.max(initialIndex, 0));
 
@@ -40,6 +40,12 @@ export function useRichSelectState(params: UseRichSelectStateParams): UseRichSel
     const idx = values.findIndex((v) => String(v) === String(initialValue));
     setHighlightedIndex(Math.max(idx, 0));
   }, [initialValue, values]);
+
+  // The highlight indexes the filtered list, so any search change restarts it at the top.
+  const setSearchText = useCallback((text: string) => {
+    setSearchTextState(text);
+    setHighlightedIndex(0);
+  }, []);
 
   const getDisplayText = useCallback(
     (value: unknown): string => getSelectDisplayText(value, formatValue),
@@ -73,6 +79,13 @@ export function useRichSelectState(params: UseRichSelectStateParams): UseRichSel
         case 'Enter':
           e.preventDefault();
           e.stopPropagation();
+          if (filteredValues.length > 0 && highlightedIndex < filteredValues.length) {
+            selectValue(filteredValues[highlightedIndex]);
+          }
+          break;
+        case 'Tab':
+          // Commit like Enter but let Tab bubble so the grid moves to the next cell.
+          e.preventDefault();
           if (filteredValues.length > 0 && highlightedIndex < filteredValues.length) {
             selectValue(filteredValues[highlightedIndex]);
           }

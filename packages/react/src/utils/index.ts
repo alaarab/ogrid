@@ -48,6 +48,7 @@ export {
   applyCutClear,
   applyFillValues,
   computeArrowNavigation,
+  getOppositeCorner,
   applyCellDeletion,
   applyRangeRowSelection,
   computeRowSelectionState,

@@ -173,6 +173,24 @@ describe('getCellRenderDescriptor  -  mode computation', () => {
     const descriptor = getCellRenderDescriptor(item, col, 0, 0, input);
     expect(descriptor.mode).toBe('editing-popover');
   });
+
+  it('cellEditorPopup: false does not make a custom-editor column non-editable', () => {
+    const col: IColumnDef<TestRow> = {
+      columnId: 'name',
+      name: 'Name',
+      editable: true,
+      cellEditor: FakeVueEditor,
+      cellEditorPopup: false,
+    };
+    const item: TestRow = { id: '1', name: 'Alice' };
+
+    const input = baseInput();
+    input.editingCell = { rowId: '1', columnId: 'name' };
+
+    const descriptor = getCellRenderDescriptor(item, col, 0, 0, input);
+    expect(descriptor.canEditAny).toBe(true);
+    expect(descriptor.mode).toBe('editing-popover');
+  });
 });
 
 describe('getCellRenderDescriptor  -  isActive / isInRange', () => {
@@ -291,6 +309,32 @@ describe('getCellRenderDescriptor  -  with cache', () => {
 
     expect(first).not.toBe(second);
     expect(second.isActive).toBe(true);
+  });
+
+  it('does not serve the previous row when another row lands at the same index', () => {
+    // Windowed source after a sort: index 0 now holds a different row object.
+    const col: IColumnDef<TestRow> = { columnId: 'name', name: 'Name' };
+    const input = baseInput();
+    const cache = new CellDescriptorCache();
+    cache.updateVersion(CellDescriptorCache.computeVersion(input));
+
+    getCellRenderDescriptor({ id: '1', name: 'Alice' }, col, 0, 0, input, cache);
+    const after = getCellRenderDescriptor({ id: '9', name: 'Zed' }, col, 0, 0, input, cache);
+
+    expect(after.rowId).toBe('9');
+    expect(after.displayValue).toBe('Zed');
+  });
+
+  it('recomputes when a row is mutated in place', () => {
+    const col: IColumnDef<TestRow> = { columnId: 'name', name: 'Name' };
+    const item: TestRow = { id: '1', name: 'Alice' };
+    const input = baseInput();
+    const cache = new CellDescriptorCache();
+    cache.updateVersion(CellDescriptorCache.computeVersion(input));
+
+    getCellRenderDescriptor(item, col, 0, 0, input, cache);
+    item.name = 'Alicia';
+    expect(getCellRenderDescriptor(item, col, 0, 0, input, cache).displayValue).toBe('Alicia');
   });
 
   it('works without a cache (no error)', () => {
@@ -419,5 +463,37 @@ describe('getCellRenderDescriptor  -  rowId and rowIndex', () => {
 
     const descriptor = getCellRenderDescriptor(item, col, 0, 0, input);
     expect(descriptor.globalColIndex).toBe(1);
+  });
+});
+
+describe('getCellRenderDescriptor  -  formula coordinates', () => {
+  // Formula engine keyed by "flatCol,sheetRow".
+  const formulas = new Map<string, { formula: string; value: unknown }>([['2,5', { formula: '=A6*2', value: 42 }]]);
+  const formulaInput = (): CellRenderDescriptorInput<TestRow> => ({
+    ...baseInput(),
+    hasFormula: (col, row) => formulas.has(`${col},${row}`),
+    getFormulaValue: (col, row) => formulas.get(`${col},${row}`)?.value,
+    getFormula: (col, row) => formulas.get(`${col},${row}`)?.formula,
+    // Column "age" is flat column 2; display row 0 shows sheet row 5.
+    formulaCol: (columnId) => ['id', 'name', 'age'].indexOf(columnId),
+    formulaRow: (rowIndex) => (rowIndex === 0 ? 5 : -1),
+  });
+  const ageCol: IColumnDef<TestRow> = { columnId: 'age', name: 'Age' };
+
+  it('looks formulas up by flat column and sheet row, not screen position', () => {
+    // Shown as the first visible column on the first displayed row.
+    const d = getCellRenderDescriptor({ id: 'x', name: 'n', age: 1 }, ageCol, 0, 0, formulaInput());
+    expect(d.displayValue).toBe(42);
+  });
+
+  it('shows the raw value when the row has no sheet row', () => {
+    const d = getCellRenderDescriptor({ id: 'x', name: 'n', age: 1 }, ageCol, 1, 0, formulaInput());
+    expect(d.displayValue).toBe(1);
+  });
+
+  it('puts the formula text in the editor for a mapped formula cell', () => {
+    const input = { ...formulaInput(), editingCell: { rowId: 'x', columnId: 'age' } };
+    const d = getCellRenderDescriptor({ id: 'x', name: 'n', age: 1 }, ageCol, 0, 0, input);
+    expect(d.value).toBe('=A6*2');
   });
 });

@@ -4,6 +4,150 @@ All notable changes to OGrid will be documented in this file.
 
 ## [Unreleased]
 
+A broad correctness pass from a full multi-reviewer audit of the codebase:
+formulas, XLSX import, keyboard and accessibility, windowed data sources,
+virtual scroll, column state, clipboard/fill, editors, packaging and the MCP
+server.
+
+### Security
+
+- Formula functions, huge ranges, hostile text (ReDoS) and deeply nested
+  expressions can no longer freeze the page. Formulas that read more than
+  5,000,000 cells or exceed a 20,000,000-unit work budget return `#VALUE!`;
+  tighten both with the new `formulaLimits` prop for untrusted workbooks.
+  WORKDAY.INTL with an all-weekend mask, MDETERM (now LU-based), COMBIN/PERMUT
+  and matrix functions are bounded.
+- XLSX/CSV loading checks file size and ZIP-declared sizes (including ZIP64)
+  before parsing. Files over 50 MiB are rejected by default; raise
+  `limits.maxFileBytes` for larger trusted files.
+- CSV export guards every non-number value against formula injection and
+  quotes after prefixing.
+- MCP bridge: a malformed request URL gets a 400 instead of crashing the MCP
+  process, oversized bodies get a 413, state pushes and command payloads are
+  validated, and only the targeted grid can post a command result. The
+  localhost Origin/Host protections are unchanged.
+
+### Added
+
+- `formulaLimits` prop (and `limits` option on `FormulaEngine`):
+  `maxRangeCells` and `maxWork` per formula.
+- `onClipboardError` prop: called when reading the system clipboard fails on
+  paste (the paste is abandoned instead of pasting stale content).
+- `IOGridApi.scrollToRow` now works (it was a no-op), with `start`/`center`/
+  `end` alignment on plain, virtualized and very large (scaled) grids.
+- `FormulaEngine.onSheetChanged`, and an optional sheet name on
+  `onCellChanged`/`onCellsChanged`, so cross-sheet formulas recalculate.
+- `CellErrorBoundary` `resetKeys`, `useUndoRedo().clear()`,
+  `WindowedDataState.loadedRows` and a `totalCount` prop on `DataGridTable`.
+- Shift+Space toggles the active row's selection.
+
+### Changed
+
+- **Formulas follow their records.** Formulas, A1 references, column letters,
+  row numbers, the name box and the formula bar share one coordinate model, so
+  sorting, filtering, paging and hiding/reordering columns keep formulas on the
+  right cells. In `cellReferences`/`formulas` mode, row numbers show each
+  record's A1 row (not 1..n after a sort) and a hidden column leaves a gap in
+  the letters, as in Excel. `initialFormulas` rows index into `data`.
+- Formula date functions return `Date`s at UTC midnight, date arithmetic gives
+  Excel serial days (`=DATE(2024,3,1)+30` is 45382), and numbers passed to date
+  functions are read as Excel serials. Mixed-type comparisons follow Excel
+  (`"10"=10` and `""=0` are FALSE).
+- Dates use one convention everywhere (UTC calendar days) across display,
+  filters, sorting and editors. Text filters match a cell's displayed text as
+  well as its raw value. Status bar Count/Min/Avg ignore blank and non-numeric
+  cells. Text sorts are locale-aware.
+- Keyboard: Shift+Arrow, Shift+PageUp/PageDown and Shift+click extend the
+  selection from the active cell, which stays put as the anchor. Tab moves
+  between cells Excel-style but leaves the grid at the first/last cell.
+- Popover layers (`--ogrid-z-popover`, `--ogrid-z-filter-popover`,
+  `Z_INDEX.DROPDOWN`, `Z_INDEX.FILTER_POPOVER`) default to 10001 so menus and
+  filters work in fullscreen. Override the variables if a host modal must sit
+  above them.
+- Grid rows are now memoized. If you mutate a row object in place, replace it
+  (immutable update) so the row repaints.
+- `calculateDropTarget().targetIndex` is the dragged column's final index.
+- Virtual-scroll grids without a configured row height render fixed 36px rows
+  to match the virtual math.
+- Header menu triggers are labelled "<column> column options"; menu items use
+  `menuitem` roles; editable cells are no longer `role="button"`.
+- `@alaarab/ogrid-inputs`: `normalizeHex` uppercases and keeps alpha,
+  `parseTags` de-duplicates, `parseDate` rejects trailing text, `snapToStep`
+  rounds away float noise. TimePicker has an Apply button and DateTimePicker a
+  text input.
+- XLSX `mount()` without a workbook or file throws instead of showing
+  "Loading..." forever.
+- `optionsSource` and `yearsCount` on column filters are deprecated (they never
+  had an effect).
+
+### Fixed
+
+- **XLSX import:** filled-down (shared) formulas expand per cell instead of all
+  showing the first cell's value; formula references are rebased when the
+  header row is promoted; switching sheets or workbooks no longer keeps the
+  previous sheet's formulas, sort or undo; cached results, error values,
+  cross-sheet and `_xlfn.` formulas, duplicate headers and empty workbooks are
+  handled; the CSV parser handles quotes, CRLF, BOM and `;`/`|`/tab
+  delimiters; export writes valid formulas and no NaN/Infinity.
+- **Formulas:** editing, paste, fill, delete, cut and undo/redo recalculate
+  dependents with the new values and are undoable; a plain value replaces a
+  formula; Enter in the formula bar no longer deletes the formula; clearing a
+  cycle recovers; plus many Excel-compatibility fixes (criteria and wildcards,
+  logical coercion, rounding, CORREL, MODE, NETWORKDAYS holidays, ROW()/
+  COLUMN(), TEXT formats, RATE, XLOOKUP, INDIRECT/OFFSET).
+  `FormulaError` is a single class across entry points, so errors keep their
+  styling.
+- **Keyboard:** Backspace/Delete/Ctrl+X/Ctrl+V typed in filters, popovers,
+  menus and editors no longer edit grid cells; editors keep Home/End/PageUp/
+  PageDown and commit on Tab; boolean editors take focus; Escape only exits
+  fullscreen when nothing else handled it.
+- **Accessibility:** the column header menu (the only way to sort) and the
+  context menu are keyboard operable with menu semantics and focus return; the
+  Radix column chooser is reachable; ranges expose `aria-selected`; SideBar and
+  SheetTabs follow the tabs pattern; reduced motion is respected.
+- **Selection and clipboard:** single-row selection works with numeric row
+  ids; the fill handle and Ctrl+D tile multi-cell sources; a cut tracks rows by
+  id so sort/page changes can't clear the wrong cells; paste works under
+  StrictMode; unchanged edits don't fire `onCellValueChanged`.
+- **Windowed data sources:** rows reload after sort/filter/refresh/swap instead
+  of sticking on placeholders or showing another row's values; keyboard, copy,
+  fill, editing and select-all work over loaded rows; pagination is hidden.
+- **Virtual scroll:** no blank band on very large datasets; keyboard navigation
+  scrolls unrendered rows into view; PageUp/PageDown sizing; short containers.
+- **Columns:** uncontrolled reorder works; header cells follow column order and
+  responsive hiding; drag-resize fires `onColumnResized` and reaches
+  `getColumnState`; `applyColumnState` widths apply after mount; `minWidth` is
+  respected.
+- **Controlled props:** `onUndo`/`onRedo`/`canUndo`/`canRedo` drive Ctrl+Z/Y and
+  the context menu; worker sort follows controlled sort; header select-all keeps
+  other pages' selections; `cellEditorPopup: false` no longer disables custom
+  editors.
+- **Styles:** fullscreen no longer hides popovers and editors; row-number and
+  checkbox columns stay fixed beside pinned columns; pinned selected cells stay
+  opaque; Fluent grouped headers and column chooser; sort arrows in both kits;
+  `--ogrid-selection` is still honored.
+- **Filters:** multi-select choices survive re-renders; people-search and
+  option-loading races; SideBar text filters can be cleared; a throwing cell
+  renderer is reported once.
+- **Editors:** TimePicker and Slider commit mouse input; `minuteStep <= 0` no
+  longer hangs; DateTimePicker keeps unparseable values and is keyboard
+  operable; date editors refuse half-typed text.
+- **Packaging:** React entries start with `"use client"` (Next.js App Router);
+  `@alaarab/ogrid-react` and `@alaarab/ogrid-react-inputs` load on React 17
+  under strict ESM; `process.env` reads are guarded; the status bar `panels`
+  option works. Note: the Radix and Fluent kits still need a bundler on React
+  17, because Radix/Fluent themselves import `react/jsx-runtime`.
+- **MCP:** `ogrid://docs/{path}` resources resolve; bridge heartbeats keep grids
+  listed; URL-encoded grid ids work; the bridge exits with its client.
+
+### Performance
+
+- Selecting, navigating or editing re-renders only the affected rows instead of
+  every visible row; `<OGrid>` props and handle are stable across renders.
+- Faster filtering, worker sort, range reads and fill on large grids; column
+  drag hit-testing measures header cells only; aggregations run only when the
+  status bar is shown.
+
 ## [2.17.1] - 2026-09-23
 
 ### Security

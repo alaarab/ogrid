@@ -212,26 +212,38 @@ export function useInlineEdit<T>(
   }, [findColumn, onCellEdit, cancelEdit]);
 
   const getEditorProps = useCallback(
-    (_row: T, _columnId: string): InlineEditorProps => ({
-      value: pendingValue,
-      onChange: setPendingValue,
-      onCommit: commitEdit,
-      onCancel: cancelEdit,
-      onKeyDown: (e) => {
-        if (e.key === 'Enter') {
-          e.preventDefault?.();
-          commitEdit();
-        } else if (e.key === 'Escape') {
-          e.preventDefault?.();
-          cancelEdit();
-        }
-      },
-      onBlur: commitEdit,
-    }),
-    // row/columnId are accepted for API symmetry with future per-cell
-    // overrides but not used in the default implementation.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [pendingValue, setPendingValue, commitEdit, cancelEdit],
+    (row: T, columnId: string): InlineEditorProps => {
+      // Only the cell being edited gets live props. Any other cell gets inert
+      // props showing its own value, so blurring it can't commit someone else's edit.
+      if (!isEditing(row, columnId)) {
+        const col = findColumn(columnId);
+        return {
+          value: col ? coreGetCellValue(row, col) : undefined,
+          onChange: () => {},
+          onCommit: () => {},
+          onCancel: () => {},
+          onKeyDown: () => {},
+          onBlur: () => {},
+        };
+      }
+      return {
+        value: pendingValue,
+        onChange: setPendingValue,
+        onCommit: commitEdit,
+        onCancel: cancelEdit,
+        onKeyDown: (e) => {
+          if (e.key === 'Enter') {
+            e.preventDefault?.();
+            commitEdit();
+          } else if (e.key === 'Escape') {
+            e.preventDefault?.();
+            cancelEdit();
+          }
+        },
+        onBlur: commitEdit,
+      };
+    },
+    [isEditing, findColumn, pendingValue, setPendingValue, commitEdit, cancelEdit],
   );
 
   return {

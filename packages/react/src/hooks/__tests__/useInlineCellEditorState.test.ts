@@ -388,3 +388,20 @@ describe('useInlineCellEditorState blur after Escape/Enter', () => {
     expect(onCommit).toHaveBeenCalledTimes(1);
   });
 });
+
+describe('useInlineCellEditorState Tab', () => {
+  it.each(['text', 'date'] as const)('Tab in a %s editor commits and bubbles so the grid can move on', (editorType) => {
+    const onCommit = jest.fn();
+    const { result } = renderHook(() =>
+      useInlineCellEditorState({ value: '', editorType, onCommit, onCancel: jest.fn(), dateEditorType: 'native' })
+    );
+    act(() => { result.current.setLocalValue('2024-01-02'); });
+    const e = { key: 'Tab', preventDefault: jest.fn(), stopPropagation: jest.fn() } as unknown as React.KeyboardEvent;
+    act(() => { result.current.handleKeyDown(e); });
+    expect(onCommit).toHaveBeenCalledWith('2024-01-02');
+    expect(e.stopPropagation).not.toHaveBeenCalled();
+    // The blur that follows as the editor closes must not commit again.
+    act(() => { result.current.handleBlur(); });
+    expect(onCommit).toHaveBeenCalledTimes(1);
+  });
+});

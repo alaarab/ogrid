@@ -252,8 +252,8 @@ interface IRowSelectionChangeEvent<T> {
 
 | Name | Type | Description |
 |------|------|-------------|
-| `selectedRowIds` | `RowId[]` | Array of IDs for all currently selected rows. |
-| `selectedItems` | `T[]` | Array of full row data objects for all currently selected rows. |
+| `selectedRowIds` | `RowId[]` | Array of IDs for all currently selected rows, including rows on other pages. |
+| `selectedItems` | `T[]` | Row objects for the selected rows the grid could resolve. Checkbox and header clicks resolve against the current page only, so with pagination this can be shorter than `selectedRowIds`. Treat the ids as the source of truth. |
 
 ### Usage
 

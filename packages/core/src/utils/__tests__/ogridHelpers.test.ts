@@ -175,7 +175,7 @@ describe('ogridHelpers', () => {
       expect(result.status.filter((v) => v === 'active')).toHaveLength(1);
     });
 
-    it('excludes null and empty values', () => {
+    it('includes one blank option for null and empty values', () => {
       const dataWithNulls = [
         ...mockData,
         { id: '5', status: null as unknown as string, category: '', name: 'Eve' },
@@ -185,8 +185,8 @@ describe('ogridHelpers', () => {
         { columnId: 'category', name: 'Category', filterable: { type: 'multiSelect' } } as IColumnDef<TestItem>,
       ];
       const result = deriveFilterOptionsFromData(dataWithNulls, columns);
-      expect(result.status).toEqual(['active', 'inactive', 'pending']);
-      expect(result.category).toEqual(['A', 'B', 'C']);
+      expect(result.status).toEqual(['', 'active', 'inactive', 'pending']);
+      expect(result.category).toEqual(['', 'A', 'B', 'C']);
     });
 
     it('derives options for multiple columns', () => {

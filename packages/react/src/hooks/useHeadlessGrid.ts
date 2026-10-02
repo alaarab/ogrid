@@ -44,7 +44,7 @@
  *   );
  */
 
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { getCellValue as coreGetCellValue } from '@alaarab/ogrid-core';
 import type { IColumnDef as ICoreColumnDef, IFilters, FilterValue, PageSize } from '@alaarab/ogrid-core';
 import type { IDataSource } from '../types';
@@ -53,6 +53,7 @@ import { useOGridSorting, type SortState } from './useOGridSorting';
 import { useOGridFilters } from './useOGridFilters';
 import { useOGridPagination } from './useOGridPagination';
 import { useOGridDataFetching } from './useOGridDataFetching';
+import { useLatestRef } from './useLatestRef';
 
 export type RowId = string | number;
 
@@ -123,7 +124,7 @@ export interface UseHeadlessGridResult<T> {
   /** Current sort state. */
   sort: SortState;
   setSort: (sort: SortState) => void;
-  /** Cycle a column's sort: asc → desc → reset to default. */
+  /** Toggle a column's sort between ascending and descending (a new column starts ascending). Use `setSort` to clear. */
   toggleSort: (columnId: string) => void;
   /** "▲" / "▼" / "" — convenient indicator for header rendering. */
   sortIndicator: (columnId: string) => '▲' | '▼' | '';
@@ -246,6 +247,18 @@ export function useHeadlessGrid<T>(
     ? 1
     : Math.max(1, Math.ceil(totalCount / pagination.pageSize));
 
+  // Snap an uncontrolled page back when the data shrinks under it (refresh,
+  // host-side filtering, deletes) so it never sits past the last page.
+  const isPagePastEnd =
+    controlledPage === undefined &&
+    totalCount > 0 &&
+    pagination.pageSize !== 'all' &&
+    pagination.page > totalPages;
+  const { setPage } = pagination;
+  useEffect(() => {
+    if (isPagePastEnd) setPage(totalPages);
+  }, [isPagePastEnd, totalPages, setPage]);
+
   // `allFilteredRows` is the full filtered+sorted set across all pages.
   // Server-side: unknown without a separate request, so it equals `rows`.
   const allFilteredRows = isServerSide ? rows : dataFetching.allFilteredItems;
@@ -267,9 +280,10 @@ export function useHeadlessGrid<T>(
   );
 
   // ── Sort helpers ───────────────────────────────────────────────────────
+  const { handleSort } = sorting;
   const toggleSort = useCallback(
-    (columnId: string) => sorting.handleSort(columnId),
-    [sorting],
+    (columnId: string) => handleSort(columnId),
+    [handleSort],
   );
 
   const sortIndicator = useCallback(
@@ -281,10 +295,11 @@ export function useHeadlessGrid<T>(
   );
 
   // ── Filter helpers ─────────────────────────────────────────────────────
+  const { handleFilterChange } = filtersHook;
   const setFilter = useCallback(
     (key: string, value: FilterValue | undefined) =>
-      filtersHook.handleFilterChange(key, value),
-    [filtersHook],
+      handleFilterChange(key, value),
+    [handleFilterChange],
   );
 
   // ── Selection (minimal Set-based) ──────────────────────────────────────
@@ -310,13 +325,16 @@ export function useHeadlessGrid<T>(
     [getRowId],
   );
 
+  // Reads the current page through a ref so the callback survives page/data changes.
+  const rowsRef = useLatestRef(rows);
   const selectAllOnPage = useCallback(() => {
+    const pageRows = rowsRef.current;
     setSelectedRowIds((prev) => {
       const next = new Set(prev);
-      for (const row of rows) next.add(getRowId(row));
+      for (const row of pageRows) next.add(getRowId(row));
       return next;
     });
-  }, [rows, getRowId]);
+  }, [rowsRef, getRowId]);
 
   const clearSelection = useCallback(() => setSelectedRowIds(new Set()), []);
 

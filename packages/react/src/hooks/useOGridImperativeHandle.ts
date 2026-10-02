@@ -33,6 +33,7 @@ export interface UseOGridImperativeHandleParams<T> {
   effectiveSelectedRows: Set<RowId>;
   columns: ReadonlyArray<{ columnId: string }>;
   getRowId: (item: T) => RowId;
+  scrollToRowRef: React.RefObject<IOGridApi<T>['scrollToRow'] | null>;
 }
 
 /**
@@ -65,6 +66,7 @@ export function useOGridImperativeHandle<T>(params: UseOGridImperativeHandlePara
     effectiveSelectedRows,
     columns,
     getRowId,
+    scrollToRowRef,
   } = params;
 
   const visibleColumnsRef = useLatestRef(visibleColumns);
@@ -75,8 +77,13 @@ export function useOGridImperativeHandle<T>(params: UseOGridImperativeHandlePara
   const filtersRef = useLatestRef(filtersState.filters);
   const effectiveSelectedRowsRef = useLatestRef(effectiveSelectedRows);
   const displayItemsRef = useLatestRef(dataFetchingState.displayItems);
+  const allFilteredItemsRef = useLatestRef(dataFetchingState.allFilteredItems);
   const getRowIdRef = useLatestRef(getRowId);
   const columnsRef = useLatestRef(columns);
+  // Depend on the member functions, not the state objects (new literals every render).
+  const { setSort, defaultSortField, defaultSortDirection } = sortingState;
+  const { setFilters } = filtersState;
+  const { refreshData } = dataFetchingState;
 
   useImperativeHandle(
     ref,
@@ -95,22 +102,29 @@ export function useOGridImperativeHandle<T>(params: UseOGridImperativeHandlePara
       }),
       applyColumnState: (state: Partial<import('../types').IGridColumnState>) => {
         if (state.visibleColumns) setVisibleColumns(new Set(state.visibleColumns));
-        if (state.sort) sortingState.setSort(state.sort);
+        if (state.sort) setSort(state.sort);
         if (state.columnOrder) {
           if (columnOrder === undefined) setInternalColumnOrder(state.columnOrder);
           onColumnOrderChange?.(state.columnOrder);
         }
         if (state.columnWidths) setColumnWidthOverrides(state.columnWidths);
-        if (state.filters) filtersState.setFilters(state.filters);
+        if (state.filters) setFilters(state.filters);
         if (state.pinnedColumns) setPinnedOverrides(state.pinnedColumns);
       },
-      setFilterModel: filtersState.setFilters,
+      setFilterModel: setFilters,
       getSelectedRows: () => Array.from(effectiveSelectedRowsRef.current),
       setSelectedRows: (rowIds: RowId[]) => {
-        if (selectedRows === undefined) setInternalSelectedRows(new Set(rowIds));
+        const ids = new Set(rowIds);
+        if (selectedRows === undefined) setInternalSelectedRows(ids);
+        const pool = allFilteredItemsRef.current.length > 0 ? allFilteredItemsRef.current : displayItemsRef.current;
+        onSelectionChange?.({
+          selectedRowIds: Array.from(ids),
+          selectedItems: pool.filter((item) => ids.has(getRowIdRef.current(item))),
+        });
       },
       selectAll: () => {
-        const items = displayItemsRef.current;
+        // Client-side: every filtered row across pages. Server-side only has the loaded page.
+        const items = allFilteredItemsRef.current.length > 0 ? allFilteredItemsRef.current : displayItemsRef.current;
         const allIds = new Set(items.map((item) => getRowIdRef.current(item)));
         if (selectedRows === undefined) setInternalSelectedRows(allIds);
         onSelectionChange?.({ selectedRowIds: Array.from(allIds), selectedItems: items });
@@ -119,11 +133,11 @@ export function useOGridImperativeHandle<T>(params: UseOGridImperativeHandlePara
         if (selectedRows === undefined) setInternalSelectedRows(new Set());
         onSelectionChange?.({ selectedRowIds: [], selectedItems: [] });
       },
-      clearFilters: () => filtersState.setFilters({}),
-      clearSort: () => sortingState.setSort({ field: sortingState.defaultSortField, direction: sortingState.defaultSortDirection }),
+      clearFilters: () => setFilters({}),
+      clearSort: () => setSort({ field: defaultSortField, direction: defaultSortDirection }),
       resetGridState: (options?: { keepSelection?: boolean }) => {
-        filtersState.setFilters({});
-        sortingState.setSort({ field: sortingState.defaultSortField, direction: sortingState.defaultSortDirection });
+        setFilters({});
+        setSort({ field: defaultSortField, direction: defaultSortDirection });
         if (!options?.keepSelection) {
           if (selectedRows === undefined) setInternalSelectedRows(new Set());
           onSelectionChange?.({ selectedRowIds: [], selectedItems: [] });
@@ -131,22 +145,19 @@ export function useOGridImperativeHandle<T>(params: UseOGridImperativeHandlePara
       },
       getDisplayedRows: () => displayItemsRef.current,
       refreshData: () => {
-        if (isServerSide) dataFetchingState.refreshData();
+        if (isServerSide) refreshData();
       },
       getColumnOrder: () => columnOrderRef.current ?? columnsRef.current.map((c) => c.columnId),
       setColumnOrder: (order: string[]) => {
         if (columnOrder === undefined) setInternalColumnOrder(order);
         onColumnOrderChange?.(order);
       },
-      scrollToRow: () => {
-        // No-op at orchestration level  -  DataGridTable components implement
-        // this via useVirtualScroll.scrollToIndex when virtual scrolling is active.
-      },
+      scrollToRow: (index, options) => scrollToRowRef.current?.(index, options),
     }),
     [
-      isServerSide, setVisibleColumns, sortingState, filtersState,
-      columnOrder, onColumnOrderChange, selectedRows, onSelectionChange, dataFetchingState,
-      columnOrderRef, columnWidthOverridesRef, columnsRef, displayItemsRef,
+      isServerSide, setVisibleColumns, setSort, defaultSortField, defaultSortDirection, setFilters,
+      columnOrder, onColumnOrderChange, selectedRows, onSelectionChange, refreshData,
+      columnOrderRef, columnWidthOverridesRef, columnsRef, displayItemsRef, allFilteredItemsRef,
       effectiveSelectedRowsRef, filtersRef, getRowIdRef, pinnedOverridesRef,
       sortRef, visibleColumnsRef,
       // Stable useState setters (passed as params, so listed explicitly to satisfy
@@ -154,6 +165,7 @@ export function useOGridImperativeHandle<T>(params: UseOGridImperativeHandlePara
       // unchanged from the original inline handle.
       setInternalData, setInternalLoading, setInternalColumnOrder,
       setColumnWidthOverrides, setPinnedOverrides, setInternalSelectedRows,
+      scrollToRowRef,
     ]
   );
 }

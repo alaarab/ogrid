@@ -110,7 +110,7 @@ export function useColumnResize<T>({
       }));
     };
 
-    const effectiveMinWidth = columnId === ROW_NUMBER_COLUMN_ID ? ROW_NUMBER_COLUMN_MIN_WIDTH : minWidth;
+    const effectiveMinWidth = columnId === ROW_NUMBER_COLUMN_ID ? ROW_NUMBER_COLUMN_MIN_WIDTH : (col.minWidth ?? minWidth);
 
     const onMove = (moveEvent: PointerEvent) => {
       const deltaX = moveEvent.clientX - startX;
@@ -175,7 +175,7 @@ export function useColumnResize<T>({
     const columnId = col.columnId;
     const thEl = (e.currentTarget as HTMLElement).closest('th');
     const container = thEl?.closest('table')?.parentElement ?? undefined;
-    const idealWidth = measureColumnContentWidth(columnId, minWidth, container);
+    const idealWidth = measureColumnContentWidth(columnId, col.minWidth ?? minWidth, container);
     setColumnSizingOverrides((prev) => ({
       ...prev,
       [columnId]: { widthPx: idealWidth },

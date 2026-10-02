@@ -100,13 +100,26 @@ export function registerStatisticalExtendedFunctions(registry: Map<string, IForm
       if (arg0 === undefined || arg1 === undefined) {
         return new FormulaError('#N/A', 'CORREL: arrays must have same number of values');
       }
-      const nums1 = extractNums([arg0], context, evaluator);
-      if (nums1 instanceof FormulaError) return nums1;
-      const nums2 = extractNums([arg1], context, evaluator);
-      if (nums2 instanceof FormulaError) return nums2;
-
-      if (nums1.length !== nums2.length) {
-        return new FormulaError('#N/A', 'CORREL: arrays must have same number of values');
+      if (arg0.kind === 'range' && arg1.kind === 'range' && (Math.abs(arg0.end.row - arg0.start.row) !== Math.abs(arg1.end.row - arg1.start.row) || Math.abs(arg0.end.col - arg0.start.col) !== Math.abs(arg1.end.col - arg1.start.col))) return new FormulaError('#N/A', 'CORREL shape mismatch');
+      const rangeData = (arg: ASTNode): unknown[][] => {
+        if (arg.kind === 'range') return context.getRangeValues({ start: arg.start, end: arg.end });
+        const value = evaluator.evaluate(arg, context);
+        return Array.isArray(value) ? value as unknown[][] : [[value]];
+      };
+      const values1 = rangeData(arg0);
+      const values2 = rangeData(arg1);
+      const nums1: number[] = [];
+      const nums2: number[] = [];
+      for (let r = 0; r < Math.min(values1.length, values2.length); r++) {
+        const row1 = values1[r] ?? [];
+        const row2 = values2[r] ?? [];
+        for (let c = 0; c < Math.min(row1.length, row2.length); c++) {
+          const a = row1[c];
+          const b = row2[c];
+          if (a instanceof FormulaError) return a;
+          if (b instanceof FormulaError) return b;
+          if (typeof a === 'number' && typeof b === 'number') { nums1.push(a); nums2.push(b); }
+        }
       }
       if (nums1.length < 2) {
         return new FormulaError('#DIV/0!', 'CORREL requires at least 2 paired values');
@@ -230,7 +243,7 @@ export function registerStatisticalExtendedFunctions(registry: Map<string, IForm
         }
       }
 
-      if (maxFreq < 1 || modeVal === null) return new FormulaError('#N/A', 'MODE: no values');
+      if (maxFreq < 2 || modeVal === null) return new FormulaError('#N/A', 'MODE: no values');
       return modeVal;
     },
   };

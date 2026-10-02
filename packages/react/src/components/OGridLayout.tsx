@@ -112,6 +112,7 @@ const gridAreaFlexStyle: React.CSSProperties = {
 };
 
 const gridAreaSoloStyle: React.CSSProperties = {
+  ['--ogrid-virtual-scroll-min-height' as string]: '0px',
   width: '100%',
   minWidth: 0,
   minHeight: 0,
@@ -121,6 +122,7 @@ const gridAreaSoloStyle: React.CSSProperties = {
 };
 
 const gridChildStyle: React.CSSProperties = {
+  ['--ogrid-virtual-scroll-min-height' as string]: '0px',
   flex: 1,
   minWidth: 0,
   minHeight: 0,
@@ -175,6 +177,10 @@ const CollapseIcon = () => (
   </svg>
 );
 
+/** Focus inside these means Escape belongs to them (text entry, popovers, menus), not full screen. */
+const ESCAPE_OWNER_SELECTOR =
+  'input:not([type="checkbox"]):not([type="radio"]), textarea, select, [contenteditable=""], [contenteditable="true"], [role="dialog"], [role="menu"], [role="listbox"]';
+
 /**
  * Renders OGrid layout as a unified bordered container:
  *   ┌────────────────────────────────────┐
@@ -209,7 +215,13 @@ export function OGridLayout(props: OGridLayoutProps): React.ReactElement {
   useEffect(() => {
     if (!isFullScreen) return;
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') setIsFullScreen(false);
+      if (e.key !== 'Escape') return;
+      // Leave Escape to whatever already handled it (grid clearing its selection,
+      // a popover or menu closing, an editor cancelling).
+      if (e.defaultPrevented) return;
+      const target = e.target as Element | null;
+      if (target?.closest?.(ESCAPE_OWNER_SELECTOR)) return;
+      setIsFullScreen(false);
     };
     document.addEventListener('keydown', handleKeyDown);
     return () => document.removeEventListener('keydown', handleKeyDown);

@@ -204,6 +204,22 @@ Then write:
 
 Referencing an unregistered sheet produces a `#REF!` error.
 
+## Limits for large or untrusted data
+
+Each formula has a budget, so one bad formula can't freeze the page. By default a formula can read up to 5,000,000 cells from ranges (counted after clipping to your data, so `=SUM(A:A)` on a 1,000-row grid reads 1,000 cells) and do about 20,000,000 units of work (cells read, nodes evaluated, wildcard matching). A formula that goes over returns `#VALUE!`.
+
+The defaults suit large grids. If you load workbooks from people you don't trust, lower them with `formulaLimits`:
+
+```tsx
+<OGrid
+  formulas
+  formulaLimits={{ maxRangeCells: 100_000, maxWork: 1_000_000 }}
+  // ...
+/>
+```
+
+Some bounds aren't configurable because they protect against inputs that are slow at any grid size: 32,767-character formulas and text, 128 levels of nesting, 64×64 matrices for `MDETERM`/`MINVERSE`, and early `#NUM!`/`#VALUE!` for impossible `WORKDAY`, `COMBIN` and `PERMUT` arguments. `formulaLimits` is read when the formula engine is created. Using `FormulaEngine` directly? Pass the same object as `new FormulaEngine({ limits })`.
+
 ## Debugging with audit trails
 
 When a formula gives unexpected results, trace exactly what it depends on:
@@ -268,6 +284,7 @@ Formula errors display in red (controlled by `--ogrid-formula-error-color`):
 | `onFormulaRecalc` | `(result: IRecalcResult) => void` | — | Called after each recalculation with the updated cell list. |
 | `formulaFunctions` | `Record<string, IFormulaFunction>` | — | Custom functions to register alongside built-ins. |
 | `namedRanges` | `Record<string, string>` | — | Named ranges: name → cell or range reference string. |
+| `formulaLimits` | `IFormulaLimits` | `{ maxRangeCells: 5_000_000, maxWork: 20_000_000 }` | Per-formula limits. Lower them for untrusted workbooks. See [Limits](#limits-for-large-or-untrusted-data). |
 | `sheets` | `Record<string, IGridDataAccessor>` | — | Sheet accessors for cross-sheet references. |
 
 ## Next steps

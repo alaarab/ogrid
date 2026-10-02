@@ -138,8 +138,8 @@ describe('sheetToGridData', () => {
     ws.getCell('C2').value = { formula: 'A2+B2', result: 7 };
     const out = sheetToGridData(ws);
     expect(out.initialFormulas).toEqual([
-      { col: 2, row: 0, formula: 'A1+B1' },
-      { col: 2, row: 1, formula: 'A2+B2' },
+      { col: 2, row: 0, formula: '=A1+B1' },
+      { col: 2, row: 1, formula: '=A2+B2' },
     ]);
     expect(out.rows[0].C).toBe(30);
     expect(out.rows[1].C).toBe(7);
@@ -157,8 +157,8 @@ describe('sheetToGridData', () => {
     const out = sheetToGridData(ws);
     expect(out.columns.map((c) => c.name)).toEqual(['name', 'a', 'b', 'sum']);
     expect(out.initialFormulas).toEqual([
-      { col: 3, row: 0, formula: 'B2+C2' },
-      { col: 3, row: 1, formula: 'B3+C3' },
+      { col: 3, row: 0, formula: '=B1+C1' },
+      { col: 3, row: 1, formula: '=B2+C2' },
     ]);
     expect(out.rows[0].D).toBe(30);
     expect(out.rows[1].D).toBe(7);
@@ -195,6 +195,22 @@ describe('sheetToGridData', () => {
 });
 
 describe('sheetToGridData resource limits', () => {
+  test('invalid and fractional limits are sanitized and maxCells caps columns', () => {
+    const sheet = buildSheet([[1, 2, 3, 4], [5, 6, 7, 8]]);
+    for (const limit of [NaN, Infinity]) {
+      const out = sheetToGridData(sheet, { maxRows: limit, maxCols: limit, maxCells: limit });
+      expect(out.rows).toHaveLength(2);
+      expect(out.columns).toHaveLength(4);
+    }
+    // NaN falls back to the defaults; Infinity lifts the limit as it always has.
+    const wide = buildSheet([Array.from({ length: 1001 }, (_, i) => i)]);
+    expect(sheetToGridData(wide, { maxCols: NaN }).columns).toHaveLength(1000);
+    expect(sheetToGridData(wide, { maxCols: Infinity }).columns).toHaveLength(1001);
+    const out = sheetToGridData(sheet, { maxCells: 3.9, maxCols: 8.5, maxRows: 2.5 });
+    expect(out.rows.length * out.columns.length).toBe(3);
+    expect(out.truncated).toEqual({ rowCount: 2, columnCount: 4 });
+  });
+
   test('a single far-away cell does not allocate the declared rectangle', async () => {
     // Round-trip through xlsx bytes so the declared dimension comes from the file.
     const src = new ExcelJS.Workbook();

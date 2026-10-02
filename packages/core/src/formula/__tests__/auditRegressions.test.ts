@@ -27,7 +27,7 @@ describe('FormulaEngine audit regressions', () => {
     const engine = new FormulaEngine();
     const accessor = createAccessor({ '0,0': 2, '1,1': 3 }, 10, 5);
     const start = performance.now();
-    engine.setFormula(4, 5, '=SUM(A1:ZZZZZ2)', accessor);
+    engine.setFormula(4, 5, '=SUM(A1:XFD2)', accessor);
     expect(engine.getValue(4, 5)).toBe(5);
     // Generous bound: this used to hang (24M-cell expansion), not merely run slow.
     expect(performance.now() - start).toBeLessThan(5000);

@@ -26,7 +26,8 @@ export function formatCellValueForTsv(
     const s = String(val);
     // Excel/Sheets convention: cells containing tabs or line breaks are
     // quoted (inner quotes doubled) so they survive a paste intact.
-    return /[\t\r\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
+    // A leading quote is quoted too, or the parser would read it as a quoted cell.
+    return /[\t\r\n]/.test(s) || s.startsWith('"') ? `"${s.replace(/"/g, '""')}"` : s;
   } catch {
     return '[Object]';
   }
@@ -81,7 +82,12 @@ export function formatSelectionAsTsv<T>(
       }
       const raw = getCellValue(item, col);
       const clipboard = col.clipboardFormatter ? col.clipboardFormatter(raw, item) : null;
-      const formatted = clipboard ?? (col.valueFormatter ? col.valueFormatter(raw, item) : raw);
+      if (clipboard != null) {
+        // clipboardFormatter output is final, even '' (keeps a column's data off the clipboard).
+        cells.push(formatCellValueForTsv('', clipboard));
+        continue;
+      }
+      const formatted = col.valueFormatter ? col.valueFormatter(raw, item) : raw;
       cells.push(formatCellValueForTsv(raw, formatted));
     }
     rows.push(cells.join('\t'));

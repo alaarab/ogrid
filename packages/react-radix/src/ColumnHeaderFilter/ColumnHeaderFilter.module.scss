@@ -32,6 +32,14 @@
   color: var(--ogrid-fg, #242424);
 }
 
+// Sorted-column arrow (aria-sort on the <th> carries the semantics; this is the visual cue)
+.sortIndicator {
+  flex-shrink: 0;
+  font-size: 9px;
+  line-height: 1;
+  color: var(--ogrid-fg-secondary, rgba(0, 0, 0, 0.6));
+}
+
 .headerActions {
   display: flex;
   align-items: center;
@@ -89,7 +97,7 @@
 
 // Popover content (Radix Popover.Content)
 .popoverContent {
-  z-index: var(--ogrid-z-popover, 1000);
+  z-index: var(--ogrid-z-popover, 10001);
   box-sizing: border-box;
   width: 320px;
   max-width: min(calc(100vw - 24px), var(--radix-popover-content-available-width));

@@ -7,6 +7,7 @@
 
 import type { IColumnDef, IFilters } from '../types';
 import { getCellValue } from './cellValue';
+import { formatCellValue } from './cellFormatting';
 import { getFilterField } from './ogridHelpers';
 import { processClientSideData } from './clientSideData';
 import type { SortFilterRequest, SortFilterResponse } from '../workers/sortFilterWorker';
@@ -126,6 +127,13 @@ export function extractValueMatrix<T>(
   columns: IColumnDef<T>[],
   /** Column indices to extract; others are left null. Defaults to all. */
   neededColumns?: ReadonlySet<number>,
+  /**
+   * Column indices read as text (text/multiSelect filters): Date values are
+   * sent as String(date), like the sync path, instead of as timestamps.
+   */
+  stringColumns?: ReadonlySet<number>,
+  /** Optional text-filter columns to populate with formatted values during extraction. */
+  textValues?: Record<number, string[]>,
 ): (string | number | boolean | null)[][] {
   const needed = columns.map((_, i) => !neededColumns || neededColumns.has(i));
   const matrix: (string | number | boolean | null)[][] = new Array(data.length);
@@ -148,11 +156,13 @@ export function extractValueMatrix<T>(
         continue;
       }
       const val = getCellValue(item, col);
+      const textColumn = textValues?.[c];
+      if (textColumn) textColumn[r] = formatCellValue(val, item, col) ?? '';
       if (val == null) {
         row[c] = null;
       } else if (typeof val === 'string' || typeof val === 'number' || typeof val === 'boolean') {
         row[c] = val;
-      } else if (val instanceof Date && col.type === 'date') {
+      } else if (val instanceof Date && col.type === 'date' && !stringColumns?.has(c)) {
         row[c] = val.getTime();
       } else {
         row[c] = String(val);
@@ -169,6 +179,7 @@ export function extractValueMatrix<T>(
  * Falls back to synchronous processing when:
  *   - Worker API is unavailable
  *   - Sort column has a custom `compare` function (not serializable)
+ *   - A people filter is active, or there is nothing to filter or sort
  */
 export function processClientSideDataAsync<T>(
   data: T[],
@@ -185,63 +196,74 @@ export function processClientSideDataAsync<T>(
     }
   }
 
-  const worker = createSortFilterWorker();
-  if (!worker) {
-    return Promise.resolve(processClientSideData(data, columns, filters, sortBy, sortDirection));
-  }
+  const sync = () => Promise.resolve(processClientSideData(data, columns, filters, sortBy, sortDirection));
 
-  // Build column index map and value matrix
-  const columnIndexMap = new Map<string, number>();
-  for (let i = 0; i < columns.length; i++) {
-    const col = columns[i];
-    if (col === undefined) continue;
-    columnIndexMap.set(col.columnId, i);
-  }
+  // Only the filtered/sorted columns are sent, packed into a compact matrix
+  // (worker column index = position in workerColumns).
+  const workerColumns: IColumnDef<T>[] = [];
+  const workerColumnOf = (col: IColumnDef<T>): number => {
+    const existing = workerColumns.indexOf(col);
+    return existing >= 0 ? existing : workerColumns.push(col) - 1;
+  };
+  // Worker columns read as text: Dates must be String()-ed like the sync path.
+  const stringColumns = new Set<number>();
 
-  // Build column metadata
-  const columnMeta = columns.map((col, idx) => ({
-    type: col.type ?? 'text' as const,
-    index: idx,
-  }));
-
-  // Build filter map keyed by column index
+  // Build filter map keyed by worker column index. Empty text/multiSelect
+  // filters are no-ops in both paths, so they are not sent.
   const workerFilters: SortFilterRequest['filters'] = {};
   for (const col of columns) {
-    const filterKey = getFilterField(col);
-    const val = filters[filterKey];
+    const val = filters[getFilterField(col)];
     if (!val) continue;
-    const colIdx = columnIndexMap.get(col.columnId);
-    if (colIdx === undefined) continue;
 
     switch (val.type) {
       case 'text':
-        workerFilters[colIdx] = { type: 'text', value: val.value };
+        if (!val.value.trim()) break;
+        stringColumns.add(workerColumnOf(col));
+        workerFilters[workerColumnOf(col)] = { type: 'text', value: val.value };
         break;
       case 'multiSelect':
-        workerFilters[colIdx] = { type: 'multiSelect', value: val.value };
+        if (val.value.length === 0) break;
+        stringColumns.add(workerColumnOf(col));
+        workerFilters[workerColumnOf(col)] = { type: 'multiSelect', value: val.value };
         break;
       case 'date':
-        workerFilters[colIdx] = { type: 'date', value: { from: val.value.from, to: val.value.to } };
+        workerFilters[workerColumnOf(col)] = { type: 'date', value: { from: val.value.from, to: val.value.to } };
         break;
       // 'people' filter has a UserLike object  -  fall back to sync
       case 'people':
-        return Promise.resolve(processClientSideData(data, columns, filters, sortBy, sortDirection));
+        return sync();
     }
   }
 
-  // Build sort spec
+  // Build sort spec. A sort column that isn't a column def (sync sorts by the
+  // raw field) or that is also read as text (it needs both a string and a
+  // timestamp) stays on the sync path.
   let sort: SortFilterRequest['sort'];
   if (sortBy) {
-    const sortColIdx = columnIndexMap.get(sortBy);
-    if (sortColIdx !== undefined) {
-      sort = { columnIndex: sortColIdx, direction: sortDirection ?? 'asc' };
-    }
+    let sortCol: IColumnDef<T> | undefined;
+    for (const col of columns) if (col.columnId === sortBy) sortCol = col;
+    if (!sortCol) return sync();
+    const sortColIdx = workerColumnOf(sortCol);
+    if (stringColumns.has(sortColIdx) && sortCol.type === 'date') return sync();
+    sort = { columnIndex: sortColIdx, direction: sortDirection ?? 'asc' };
   }
 
-  // Only filtered/sorted columns are read by the worker; skip the rest.
-  const neededColumns = new Set<number>(Object.keys(workerFilters).map(Number));
-  if (sort) neededColumns.add(sort.columnIndex);
-  const values = extractValueMatrix(data, columns, neededColumns);
+  // Nothing to filter or sort: the sync path returns the data as-is.
+  if (workerColumns.length === 0) return sync();
+
+  const worker = createSortFilterWorker();
+  if (!worker) return sync();
+
+  const columnMeta = workerColumns.map((col, idx) => ({
+    type: col.type ?? 'text' as const,
+    index: idx,
+  }));
+  // Active text filters also match the displayed text (keyed by worker column).
+  const textValues: Record<number, string[]> = {};
+  for (const [key, filter] of Object.entries(workerFilters)) {
+    if (filter.type === 'text' && filter.value.trim()) textValues[Number(key)] = new Array(data.length);
+  }
+  const values = extractValueMatrix(data, workerColumns, undefined, stringColumns, textValues);
 
   const requestId = ++requestCounter;
 
@@ -270,6 +292,7 @@ export function processClientSideDataAsync<T>(
       type: 'sort-filter',
       requestId,
       values,
+      textValues,
       columnMeta,
       filters: workerFilters,
       sort,

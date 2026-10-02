@@ -2,7 +2,7 @@ import { useMemo, useState, useLayoutEffect, useCallback } from 'react';
 import type { RefObject } from 'react';
 import { flattenColumns } from '../utils';
 import type { RowId, IColumnDef } from '../types';
-import { CHECKBOX_COLUMN_WIDTH, DEFAULT_MIN_COLUMN_WIDTH, resolveResponsiveConfig, applyResponsiveHiding } from '@alaarab/ogrid-core';
+import { CHECKBOX_COLUMN_WIDTH, ROW_NUMBER_COLUMN_ID, ROW_NUMBER_COLUMN_WIDTH, DEFAULT_MIN_COLUMN_WIDTH, resolveResponsiveConfig, applyResponsiveHiding } from '@alaarab/ogrid-core';
 import type { IResponsiveColumnsConfig } from '@alaarab/ogrid-core';
 import { useTableLayout } from './useTableLayout';
 import { useColumnPinning } from './useColumnPinning';
@@ -169,7 +169,24 @@ export function useDataGridLayout<T>(
   }, [columnSizingOverrides]);
 
   const [measuredColumnWidths, setMeasuredColumnWidths] = useState<Record<string, number>>({});
-  // biome-ignore lint/correctness/useExhaustiveDependencies: visibleCols and overridesKey are deliberate re-measure triggers (see note below) — the effect reads the DOM, not these values
+
+  // Auto-width columns use their measured width as min-width, and that width
+  // includes the fill-layout share of the old container. When the container
+  // narrows, drop the measurements so columns fall back to their base
+  // min-width, then re-measure at the new size. Only a shrink resets: growing
+  // never leaves a column too wide, and keeping the ratchet otherwise avoids
+  // width jitter as rows scroll in and out.
+  const [measuredAtWidth, setMeasuredAtWidth] = useState(containerWidth);
+  const [measureEpoch, setMeasureEpoch] = useState(0);
+  if (containerWidth !== measuredAtWidth) {
+    setMeasuredAtWidth(containerWidth);
+    if (containerWidth < measuredAtWidth) {
+      setMeasuredColumnWidths({});
+      setMeasureEpoch((n) => n + 1);
+    }
+  }
+
+  // biome-ignore lint/correctness/useExhaustiveDependencies: visibleCols, overridesKey and measureEpoch are deliberate re-measure triggers (see note below) — the effect reads the DOM, not these values
   useLayoutEffect(() => {
     const wrapper = wrapperRef.current;
     if (!wrapper) return;
@@ -192,8 +209,9 @@ export function useDataGridLayout<T>(
   // setContainerWidth  to  useLayoutEffect  to  setMeasuredColumnWidths  to  re-render
   //  to  ResizeObserver  to  ...
   // overridesKey is a serialized string so the effect only re-runs when values actually change,
-  // not on every new object reference during rapid resize.
-  }, [visibleCols, overridesKey, wrapperRef]);
+  // not on every new object reference during rapid resize. measureEpoch bumps only when the
+  // container shrinks (see above).
+  }, [visibleCols, overridesKey, measureEpoch, wrapperRef]);
 
   // Build column width map for pinning offset computation
   const columnWidthMap = useMemo(() => {
@@ -207,14 +225,22 @@ export function useDataGridLayout<T>(
     return map;
   }, [visibleCols, columnSizingOverrides, measuredColumnWidths]);
 
+  // The row-number column sits between the checkbox and the first data column, so
+  // left-pinned offsets must start after it.
+  const rowNumberWidth = hasRowNumbersCol
+    ? (columnSizingOverrides[ROW_NUMBER_COLUMN_ID]?.widthPx ?? ROW_NUMBER_COLUMN_WIDTH)
+    : 0;
+  // Depend on the memoized compute functions, not the pinning result object
+  // (a new literal every render), so offsets and columnMeta stay stable.
+  const { computeLeftOffsets, computeRightOffsets } = pinningResult;
   const leftOffsets = useMemo(
-    () => pinningResult.computeLeftOffsets(visibleCols, columnWidthMap, DEFAULT_MIN_COLUMN_WIDTH, hasCheckboxCol, CHECKBOX_COLUMN_WIDTH),
-    [pinningResult, visibleCols, columnWidthMap, hasCheckboxCol]
+    () => computeLeftOffsets(visibleCols, columnWidthMap, DEFAULT_MIN_COLUMN_WIDTH, hasCheckboxCol, CHECKBOX_COLUMN_WIDTH, rowNumberWidth),
+    [computeLeftOffsets, visibleCols, columnWidthMap, hasCheckboxCol, rowNumberWidth]
   );
 
   const rightOffsets = useMemo(
-    () => pinningResult.computeRightOffsets(visibleCols, columnWidthMap, DEFAULT_MIN_COLUMN_WIDTH),
-    [pinningResult, visibleCols, columnWidthMap]
+    () => computeRightOffsets(visibleCols, columnWidthMap, DEFAULT_MIN_COLUMN_WIDTH),
+    [computeRightOffsets, visibleCols, columnWidthMap]
   );
 
   // Stabilize onColumnSort via ref
@@ -234,6 +260,7 @@ export function useDataGridLayout<T>(
   );
 
   const headerMenuResult = useColumnHeaderMenuState({
+    wrapperRef,
     pinnedColumns: pinningResult.pinnedColumns,
     onPinColumn: pinningResult.pinColumn,
     onUnpinColumn: pinningResult.unpinColumn,
