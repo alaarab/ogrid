@@ -642,14 +642,14 @@ describe('Date functions (new)', () => {
 
   describe('WEEKDAY', () => {
     it('returns day of week (type 1: Sun=1..Sat=7)', () => {
-      // Use local date constructor to avoid timezone issues
-      // new Date(2025, 0, 15) = Jan 15 2025, which is Wednesday (getDay()=3)
-      const ctx = createMockContext({ '0,0': new Date(2025, 0, 15) });
+      // Formula dates are UTC calendar days
+      // new Date(Date.UTC(2025, 0, 15)) = Jan 15 2025, which is Wednesday (getDay()=3)
+      const ctx = createMockContext({ '0,0': new Date(Date.UTC(2025, 0, 15)) });
       const result = evaluator.evaluate(fn('WEEKDAY', cell(0, 0)), ctx);
       expect(result).toBe(4); // Wednesday: getDay()=3, type 1 = 3+1 = 4
     });
     it('returns day of week (type 2: Mon=1..Sun=7)', () => {
-      const ctx = createMockContext({ '0,0': new Date(2025, 0, 15) });
+      const ctx = createMockContext({ '0,0': new Date(Date.UTC(2025, 0, 15)) });
       const result = evaluator.evaluate(fn('WEEKDAY', cell(0, 0), num(2)), ctx);
       expect(result).toBe(3); // Wednesday: getDay()=3, type 2 = 3
     });
@@ -681,10 +681,10 @@ describe('Date functions (new)', () => {
 
   describe('NETWORKDAYS', () => {
     it('counts weekdays between dates', () => {
-      // Mon Jan 6 to Fri Jan 10 = 5 weekdays (use local dates)
+      // Mon Jan 6 to Fri Jan 10 = 5 weekdays (UTC dates)
       const ctx = createMockContext({
-        '0,0': new Date(2025, 0, 6),
-        '1,0': new Date(2025, 0, 10),
+        '0,0': new Date(Date.UTC(2025, 0, 6)),
+        '1,0': new Date(Date.UTC(2025, 0, 10)),
       });
       const result = evaluator.evaluate(fn('NETWORKDAYS', cell(0, 0), cell(1, 0)), ctx);
       expect(result).toBe(5);
@@ -692,16 +692,16 @@ describe('Date functions (new)', () => {
     it('excludes weekends', () => {
       // Mon Jan 6 to Mon Jan 13 = 6 weekdays (Mon-Fri + Mon)
       const ctx = createMockContext({
-        '0,0': new Date(2025, 0, 6),
-        '1,0': new Date(2025, 0, 13),
+        '0,0': new Date(Date.UTC(2025, 0, 6)),
+        '1,0': new Date(Date.UTC(2025, 0, 13)),
       });
       const result = evaluator.evaluate(fn('NETWORKDAYS', cell(0, 0), cell(1, 0)), ctx);
       expect(result).toBe(6);
     });
     it('returns negative for reversed dates', () => {
       const ctx = createMockContext({
-        '0,0': new Date(2025, 0, 10),
-        '1,0': new Date(2025, 0, 6),
+        '0,0': new Date(Date.UTC(2025, 0, 10)),
+        '1,0': new Date(Date.UTC(2025, 0, 6)),
       });
       const result = evaluator.evaluate(fn('NETWORKDAYS', cell(0, 0), cell(1, 0)), ctx);
       expect(result).toBe(-5);
