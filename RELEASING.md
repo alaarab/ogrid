@@ -20,11 +20,18 @@ Run the full verification set from the repository root:
 bun run build
 bun run test
 bun run lint
+bun run check:versions
+bun run test:react-compat
+bun run test:browser-bundle
 bun run test:e2e:smoke
 bun run test:e2e:docs
 ```
 
 For the broader browser pass before a publish: `bun run test:e2e:matrix`.
+The publish workflow also gates publication on this full matrix, the standalone
+browser bundle, React 17/18 compatibility, published types, and the docs browser
+test. `check:versions` checks internal dependencies in both manifests and the
+Bun lockfile, including development and peer dependencies.
 For GitHub-side confirmation, manually run the `Full Verification` and
 `Playwright Matrix` workflows against `main`.
 

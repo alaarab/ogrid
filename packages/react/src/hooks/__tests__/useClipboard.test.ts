@@ -462,7 +462,7 @@ describe('useClipboard', () => {
       expect(result.current.cutRange).toBeNull();
     });
 
-    it('still clears the cut when the clipboard returns it with other line endings and a trailing newline (S02)', async () => {
+    it('clears only transferred rows when clipboard line endings change and the paste clips at the grid edge (S02)', async () => {
       const { events, state, result, rerender } = setup(mkRows());
       state.selection = { startRow: 0, startCol: 0, endRow: 1, endCol: 0 };
       rerender();
@@ -473,7 +473,7 @@ describe('useClipboard', () => {
       state.selection = { startRow: 2, startCol: 0, endRow: 2, endCol: 0 };
       rerender();
       await act(async () => { await result.current.handlePaste(); });
-      expect(events.filter((e) => e.newValue === '').map((e) => e.item.id)).toEqual(['1', '2']);
+      expect(events.filter((e) => e.newValue === '').map((e) => e.item.id)).toEqual(['1']);
     });
 
     it('does not paste the stale internal copy when the clipboard read is rejected (S06)', async () => {
@@ -514,14 +514,14 @@ describe('useClipboard', () => {
     type Row = { id: string; name: string };
     const cols = [{ columnId: 'name', name: 'Name', editable: true }] as import('../../types').IColumnDef<Row>[];
 
-    function setup() {
+    function setup(visibleCols = cols) {
       const formulas = new Map<string, string>([['0,0', '=B1']]);
       const events: { rowIndex: number; newValue: unknown }[] = [];
       const state = { selection: { startRow: 0, startCol: 0, endRow: 0, endCol: 0 } };
       const hook = renderHook(() =>
         useClipboard<Row>({
           items: [{ id: '1', name: '' }, { id: '2', name: '' }],
-          visibleCols: cols,
+          visibleCols,
           colOffset: 0,
           selectionRange: state.selection,
           activeCell: null,
@@ -550,6 +550,19 @@ describe('useClipboard', () => {
       await act(async () => { await result.current.handlePaste(); });
       expect(formulas.get('0,0')).toBe('=B1');
       expect(events.filter((e) => e.rowIndex === 0)).toEqual([]);
+    });
+
+    it('preserves a cut formula when the destination is read-only', async () => {
+      const restricted = [{ ...cols[0]!, editable: (item: Row) => item.id === '1' }];
+      const { formulas, events, state, result, rerender } = setup(restricted);
+      act(() => { result.current.handleCut(); });
+      readTextMock.mockResolvedValue(writeTextMock.mock.calls[0]![0] as string);
+      state.selection = { startRow: 1, startCol: 0, endRow: 1, endCol: 0 };
+      rerender();
+      await act(async () => { await result.current.handlePaste(); });
+      expect(formulas.get('0,0')).toBe('=B1');
+      expect(formulas.has('0,1')).toBe(false);
+      expect(events).toEqual([]);
     });
 
     it('pasting a cut formula elsewhere clears the cut source', async () => {

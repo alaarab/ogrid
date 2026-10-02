@@ -81,7 +81,7 @@ Pass a `ref` to the `OGrid` component. The ref exposes the `IOGridApi<T>` interf
 |---|---|---|
 | `setRowData` | `(data: T[]) => void` | Replace all row data (client-side only; no-op with `dataSource`) |
 | `setLoading` | `(loading: boolean) => void` | Show or hide the loading overlay |
-| `getDisplayedRows` | `() => T[]` | Get the currently displayed (filtered, sorted, paginated) rows |
+| `getDisplayedRows` | `() => T[]` | Get the currently displayed (filtered, sorted, paginated) rows; windowed data sources return all loaded records in absolute row order |
 | `refreshData` | `() => void` | Re-trigger a data fetch (server-side only; no-op for client-side) |
 | `getColumnState` | `() => IGridColumnState` | Get current column visibility, sort, order, widths, and filters |
 | `applyColumnState` | `(state: Partial<IGridColumnState>) => void` | Bulk-restore any combination of column state fields |
@@ -93,7 +93,7 @@ Pass a `ref` to the `OGrid` component. The ref exposes the `IOGridApi<T>` interf
 | `resetGridState` | `(options?: { keepSelection?: boolean }) => void` | Reset all grid state (filters, sort, and optionally selection) |
 | `getSelectedRows` | `() => RowId[]` | Get the IDs of currently selected rows |
 | `setSelectedRows` | `(rowIds: RowId[]) => void` | Set which rows are selected |
-| `selectAll` | `() => void` | Select all rows |
+| `selectAll` | `() => void` | Select all filtered client-side rows across pages, or loaded server-side records |
 | `deselectAll` | `() => void` | Deselect all rows |
 | `scrollToRow` | `(index: number, options?: { align?: 'start' \| 'center' \| 'end' }) => void` | Scroll to a row by index (virtual scrolling only) |
 

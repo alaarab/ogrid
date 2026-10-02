@@ -76,7 +76,11 @@ export function useOGridImperativeHandle<T>(params: UseOGridImperativeHandlePara
   const pinnedOverridesRef = useLatestRef(pinnedOverrides);
   const filtersRef = useLatestRef(filtersState.filters);
   const effectiveSelectedRowsRef = useLatestRef(effectiveSelectedRows);
-  const displayItemsRef = useLatestRef(dataFetchingState.displayItems);
+  // Sparse windowed rows use absolute indices; API row lists contain loaded records only.
+  const loadedItems = dataFetchingState.windowed
+    ? Object.values(dataFetchingState.windowed.loadedRows ?? dataFetchingState.displayItems)
+    : dataFetchingState.displayItems;
+  const displayItemsRef = useLatestRef(loadedItems);
   const allFilteredItemsRef = useLatestRef(dataFetchingState.allFilteredItems);
   const getRowIdRef = useLatestRef(getRowId);
   const columnsRef = useLatestRef(columns);
