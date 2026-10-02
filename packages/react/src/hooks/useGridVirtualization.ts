@@ -36,6 +36,7 @@ import {
   getScrollTopForRow,
 } from '@alaarab/ogrid-core';
 import type { IVisibleRange, IVisibleColumnRange } from '@alaarab/ogrid-core';
+import { useRefElement } from './useRefElement';
 
 export interface UseGridVirtualizationParams {
   /** Total number of rows in the data set. */
@@ -93,6 +94,7 @@ export function useGridVirtualization(
   } = params;
 
   const isActive = enabled && rowCount >= threshold && rowHeight > 0;
+  const containerElement = useRefElement(containerRef);
 
   const [scrollTop, setScrollTop] = useState(0);
   const [scrollLeft, setScrollLeft] = useState(0);
@@ -121,10 +123,12 @@ export function useGridVirtualization(
 
   // Track container dimensions via ResizeObserver. Falls back to clientHeight/Width on mount.
   useEffect(() => {
-    const el = containerRef.current;
+    const el = containerElement;
     if (!el) return;
     setContainerHeight(el.clientHeight);
     setContainerWidth(el.clientWidth);
+    setScrollTop(el.scrollTop);
+    setScrollLeft(el.scrollLeft);
     if (typeof ResizeObserver === 'undefined') return;
     const ro = new ResizeObserver((entries) => {
       // `entries` can be nullish under non-spec-compliant ResizeObserver
@@ -136,7 +140,7 @@ export function useGridVirtualization(
     });
     ro.observe(el);
     return () => ro.disconnect();
-  }, [containerRef]);
+  }, [containerElement]);
 
   const totalHeight = computeTotalHeight(rowCount, rowHeight);
 

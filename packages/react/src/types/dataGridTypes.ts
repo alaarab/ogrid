@@ -244,6 +244,8 @@ export interface WindowedDataState<T> {
 }
 
 export interface IOGridDataGridProps<T> {
+  /** @internal Connects the table's scroll implementation to the grid API. */
+  scrollToRowRef?: React.RefObject<((index: number, options?: { align?: 'start' | 'center' | 'end' }) => void) | null>;
   items: T[];
   /**
    * Windowed (lazy) row access. Set when the data source streams rows on

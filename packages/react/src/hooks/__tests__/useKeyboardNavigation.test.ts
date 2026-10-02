@@ -144,6 +144,31 @@ describe('useKeyboardNavigation', () => {
   });
 
   describe('PageDown / PageUp', () => {
+    it('ignores spacer rows and recomputes page size after resize and row-height changes', () => {
+      const wrapper = document.createElement('div');
+      wrapper.setAttribute('data-virtual-scroll', '');
+      wrapper.innerHTML = '<table><thead></thead><tbody><tr></tr><tr data-row-id="0"></tr></tbody></table>';
+      const spacer = wrapper.querySelector('tbody tr')!;
+      const row = wrapper.querySelector('tr[data-row-id]')!;
+      Object.defineProperty(spacer, 'offsetHeight', { value: 10_000 });
+      Object.defineProperty(row, 'offsetHeight', { value: 36, configurable: true });
+      Object.defineProperty(wrapper, 'clientHeight', { value: 264, configurable: true });
+      wrapper.querySelector('thead')!.getBoundingClientRect = () => ({ height: 48 }) as DOMRect;
+      wrapper.scrollTop = 10_000;
+      const params = makeParams({
+        items: Array.from({ length: 100 }, (_, i) => ({ id: String(i), name: `Row ${i}` })),
+        activeCell: { rowIndex: 0, columnIndex: 0 },
+        wrapperRef: { current: wrapper },
+      });
+      const { result } = renderHook(() => useKeyboardNavigation(params));
+      firePgKey(result.current.handleGridKeyDown, 'PageDown');
+      expect(params.handlers.setActiveCell).toHaveBeenLastCalledWith({ rowIndex: 6, columnIndex: 0 });
+      Object.defineProperty(wrapper, 'clientHeight', { value: 408 });
+      Object.defineProperty(row, 'offsetHeight', { value: 48 });
+      firePgKey(result.current.handleGridKeyDown, 'PageDown');
+      expect(params.handlers.setActiveCell).toHaveBeenLastCalledWith({ rowIndex: 7, columnIndex: 0 });
+      expect(wrapper.scrollTop).toBe(10_000);
+    });
     // 15 rows so PageDown (fallback pageSize=10) can move meaningfully
     type PgItem = { id: string; name: string };
     const pgItems: PgItem[] = Array.from({ length: 15 }, (_, i) => ({ id: String(i), name: `Row${i}` }));

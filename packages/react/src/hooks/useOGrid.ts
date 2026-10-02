@@ -454,6 +454,7 @@ export function useOGrid<T>(
   }, [isPagePastEnd, lastPage, setPageRef]);
 
   // --- Imperative handle (stabilized via refs to avoid invalidation on every state change) ---
+  const scrollToRowRef = useRef<IOGridApi<T>['scrollToRow'] | null>(null);
   useOGridImperativeHandle({
     ref,
     isServerSide,
@@ -478,6 +479,7 @@ export function useOGrid<T>(
     effectiveSelectedRows,
     columns,
     getRowId,
+    scrollToRowRef,
   });
 
   // --- Status bar ---
@@ -679,6 +681,7 @@ export function useOGrid<T>(
   }), [formulas, formulaEngine, formulaVersion, formulaBarState.referencedCells, formulaBarState.insertReference, formulaRowMap]);
 
   const dataGridProps = useMemo<IOGridDataGridProps<T>>(() => ({
+    scrollToRowRef,
     items: dataFetchingState.displayItems,
     windowed: dataFetchingState.windowed,
     columns: columnsProp,
