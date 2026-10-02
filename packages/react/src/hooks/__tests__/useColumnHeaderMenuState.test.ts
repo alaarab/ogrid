@@ -9,7 +9,7 @@ describe('header menu autosize scoping', () => {
     function addCell(container: HTMLElement, width: number) {
       const cell = document.createElement('div');
       cell.setAttribute('data-column-id', id);
-      Object.defineProperty(cell, 'scrollWidth', { value: width });
+      Object.defineProperty(cell, 'offsetWidth', { configurable: true, value: width });
       container.appendChild(cell);
     }
     addCell(wrapper, 100);
