@@ -10,6 +10,20 @@ const getRowId = (row: Row) => row.id;
 const data = [{ id: '0' }, { id: '1' }, { id: '2' }];
 
 describe('scrollToRow API integration', () => {
+  // Other test files replace the global ResizeObserver with jest mocks that can
+  // be reset; install a stable stub so this suite doesn't depend on file order.
+  const OriginalResizeObserver = globalThis.ResizeObserver;
+  beforeEach(() => {
+    (globalThis as { ResizeObserver: unknown }).ResizeObserver = class {
+      observe() {}
+      unobserve() {}
+      disconnect() {}
+    };
+  });
+  afterEach(() => {
+    (globalThis as { ResizeObserver: unknown }).ResizeObserver = OriginalResizeObserver;
+  });
+
   it('connects API and active-cell scrolling to a scaled windowed table', () => {
     const apiRef = React.createRef<IOGridApi<Row>>();
     const windowed = {
