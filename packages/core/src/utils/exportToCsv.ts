@@ -127,7 +127,7 @@ export function triggerBlobDownload(blob: Blob, filename: string): void {
     } catch (err) {
       // The link is normally still attached here; a failure means it was already
       // detached elsewhere, which is harmless. Surface it in dev, stay silent in prod.
-      if (process.env.NODE_ENV !== 'production') {
+      if (typeof process !== 'undefined' && process.env?.NODE_ENV !== 'production') {
         console.warn('[OGrid] download link cleanup failed (already detached?)', err);
       }
     }

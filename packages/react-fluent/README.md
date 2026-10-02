@@ -22,3 +22,11 @@ const columns: IColumnDef<Employee>[] = [
 ```
 
 See the [OGrid docs](https://alaarab.github.io/ogrid/) for full documentation.
+
+## Tests and SSR
+
+The package entry imports its own stylesheet (`import './index.css'`), so bundlers pick up the styles with no extra import. Tools that load `node_modules` with plain Node instead of a bundler can't parse that import. Let them process the package instead:
+
+- **Vitest:** `test: { server: { deps: { inline: [/@alaarab\/ogrid-/] } } }`
+- **Vite SSR:** `ssr: { noExternal: [/@alaarab\/ogrid-/] }`
+- **Jest:** transform the ESM packages and stub CSS: `transformIgnorePatterns: ['node_modules/(?!@alaarab/)']` plus `moduleNameMapper: { '\\.css$': '<rootDir>/styleStub.js' }` (a file containing `module.exports = {};`)

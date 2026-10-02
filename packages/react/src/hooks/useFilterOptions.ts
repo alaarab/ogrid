@@ -100,7 +100,7 @@ export function useFilterOptions(
     load().catch((err) => {
       // load() handles per-field fetch errors internally; this guards against an
       // unexpected throw in load itself. Surface it in dev, stay silent in prod.
-      if (process.env.NODE_ENV !== 'production') {
+      if (typeof process !== 'undefined' && process.env?.NODE_ENV !== 'production') {
         console.error('[OGrid] filter options load failed', err);
       }
     });
