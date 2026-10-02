@@ -4,6 +4,8 @@ All notable changes to OGrid will be documented in this file.
 
 ## [Unreleased]
 
+## [2.17.3] - 2026-10-02
+
 ### Fixed
 
 - Cut/paste preserves source values when destination cells are read-only,
