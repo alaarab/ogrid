@@ -3,7 +3,18 @@ import { z } from 'zod';
 import { existsSync, readFileSync } from 'node:fs';
 import { join, dirname } from 'node:path';
 import type { DocsIndex } from './docsLoader.js';
-import type { BridgeStore } from './bridge.js';
+import type { BridgeStore, GridCommandType } from './bridge.js';
+
+/** Per-command payload schemas for send_grid_command, so malformed payloads never reach the app. */
+const COMMAND_PAYLOADS: Record<GridCommandType, z.ZodType<Record<string, unknown>>> = {
+  update_cell: z.object({ rowIndex: z.number().int().min(0), columnId: z.string(), value: z.unknown() }),
+  set_filter: z.object({ columnId: z.string(), value: z.union([z.string(), z.array(z.string())]) }),
+  clear_filters: z.object({}),
+  set_sort: z.object({
+    sortModel: z.array(z.object({ columnId: z.string(), direction: z.enum(['asc', 'desc']) })),
+  }),
+  go_to_page: z.object({ page: z.number().int().min(1) }),
+};
 
 // ---------------------------------------------------------------------------
 // detect_version helpers
@@ -82,11 +93,11 @@ function fromResourcePath(resourcePath: string, index: DocsIndex): ReturnType<Do
 // Server factory
 // ---------------------------------------------------------------------------
 
-export function createOGridMcpServer(index: DocsIndex, bridge?: BridgeStore): McpServer {
+export function createOGridMcpServer(index: DocsIndex, bridge?: BridgeStore, version = '0.0.0-dev'): McpServer {
   const server = new McpServer(
     {
       name: 'ogrid-docs',
-      version: '2.3.0',
+      version,
     },
     {
       instructions: `OGrid documentation server. OGrid is a lightweight, headless data grid for React (Radix and Fluent UI implementations).
@@ -347,8 +358,9 @@ Categories: features, getting-started, guides, api.`,
         .map((p) => `  - ${p.name}: ${p.version}`)
         .join('\n');
 
+      // Only 'react' is a valid framework filter; frozen adapters have no docs here.
       const frameworkTip =
-        result.framework !== 'unknown'
+        result.framework === 'react'
           ? `\n\nTip: use \`get_code_example\` with framework="${result.framework}" or \`search_docs\` with framework="${result.framework}" to get framework-specific results.`
           : '';
 
@@ -544,7 +556,7 @@ Categories: features, getting-started, guides, api.`,
   // -------------------------------------------------------------------------
   server.resource(
     'doc-page',
-    new ResourceTemplate('ogrid://docs/{path}', {
+    new ResourceTemplate('ogrid://docs/{+path}', {
       list: async () => ({
         resources: index.entries.map((entry) => ({
           uri: `ogrid://docs/${toResourcePath(entry.path)}`,
@@ -718,9 +730,11 @@ Categories: features, getting-started, guides, api.`,
           filterDesc,
           '',
           `## Selection`,
-          state.selectedRowIndices.length > 0
-            ? `${state.selectedRowIndices.length} row(s) selected: indices [${state.selectedRowIndices.slice(0, 10).join(', ')}${state.selectedRowIndices.length > 10 ? ', ...' : ''}]`
-            : 'None',
+          state.selectedRowIds.length > 0
+            ? `${state.selectedRowIds.length} row(s) selected: ids [${state.selectedRowIds.slice(0, 10).join(', ')}${state.selectedRowIds.length > 10 ? ', ...' : ''}]`
+            : state.selectedRowIndices.length > 0
+              ? `${state.selectedRowIndices.length} row(s) selected: indices [${state.selectedRowIndices.slice(0, 10).join(', ')}${state.selectedRowIndices.length > 10 ? ', ...' : ''}]`
+              : 'None',
         ];
 
         if (includeData) {
@@ -789,7 +803,20 @@ Categories: features, getting-started, guides, api.`,
           };
         }
 
-        const cmd = bridge.enqueueCommand(gridId, type, payload as Record<string, unknown>);
+        const parsed = COMMAND_PAYLOADS[type].safeParse(payload);
+        if (!parsed.success) {
+          return {
+            content: [
+              {
+                type: 'text' as const,
+                text: `Invalid payload for ${type}: ${parsed.error.issues.map((i) => `${i.path.join('.') || 'payload'}: ${i.message}`).join('; ')}`,
+              },
+            ],
+            isError: true,
+          };
+        }
+
+        const cmd = bridge.enqueueCommand(gridId, type, parsed.data);
         if (!cmd) {
           return {
             content: [{ type: 'text' as const, text: `Failed to enqueue command for grid "${gridId}".` }],
