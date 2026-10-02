@@ -3,6 +3,8 @@ import type { IColumnDef } from '../types/columnTypes';
 import type { ISelectionRange } from '../types/dataGridTypes';
 import { normalizeSelectionRange } from '../types/dataGridTypes';
 
+const NUMERIC_STRING_RE = /^[+-]?(?:\d+\.?\d*|\.\d+)(?:e[+-]?\d+)?$/i;
+
 export interface AggregationResult {
   sum: number;
   avg: number;
@@ -39,9 +41,9 @@ export function computeAggregations<T>(
       const col = visibleCols[c];
       if (item === undefined || col === undefined) continue;
       const raw = getCellValue(item, col);
-      // Use Number() instead of parseFloat() so date strings like "2020-08-22"
-      // return NaN instead of partially parsing to 2020
-      const num = typeof raw === 'number' ? raw : Number(raw);
+      // Blanks, booleans, Dates and non-numeric text are skipped (Excel COUNT semantics).
+      if (typeof raw !== 'number' && (typeof raw !== 'string' || !NUMERIC_STRING_RE.test(raw.trim()))) continue;
+      const num = Number(raw);
       if (!Number.isNaN(num) && Number.isFinite(num)) {
         sum += num;
         if (num < min) min = num;

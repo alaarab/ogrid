@@ -23,7 +23,7 @@ export function escapeCsvValue(value: unknown, options?: CsvEscapeOptions): stri
   let s = String(value);
   if (
     options?.preventFormulaInjection !== false &&
-    typeof value === 'string' &&
+    typeof value !== 'number' &&
     FORMULA_TRIGGER_RE.test(s) &&
     !NUMERIC_RE.test(s)
   ) {
@@ -108,7 +108,7 @@ export function exportToCsv<T>(
  * only from browser-side code (e.g. event handlers), not during server rendering.
  */
 export function triggerCsvDownload(csvContent: string, filename: string): void {
-  triggerBlobDownload(new Blob([csvContent], { type: 'text/csv;charset=utf-8;' }), filename);
+  triggerBlobDownload(new Blob(['\uFEFF', csvContent], { type: 'text/csv;charset=utf-8;' }), filename);
 }
 
 /** Trigger a browser download for any Blob (xlsx, csv, …) via a temporary anchor. */
@@ -131,6 +131,6 @@ export function triggerBlobDownload(blob: Blob, filename: string): void {
         console.warn('[OGrid] download link cleanup failed (already detached?)', err);
       }
     }
-    URL.revokeObjectURL(url);
+    setTimeout(() => URL.revokeObjectURL(url), 0);
   }
 }

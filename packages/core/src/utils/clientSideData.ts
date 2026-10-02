@@ -1,7 +1,10 @@
 import type { IColumnDef, IFilters } from '../types';
 import { getCellValue } from './cellValue';
+import { formatCellValue } from './cellFormatting';
 import { getFilterField } from './ogridHelpers';
-import { compareSortKeys, compareTimestamps, toDateTimestamp, toSortKey } from '../workers/sortFilterPrimitives';
+import { compareSortKeys, compareTimestamps, toDateTimestamp, toSortKey, createSortCollator } from '../workers/sortFilterPrimitives';
+
+const sortCollator = createSortCollator();
 
 // Shared with the Web Worker path so both sort and filter identically.
 export { toDateTimestamp };
@@ -56,19 +59,27 @@ export function processClientSideData<T>(
 
     switch (val.type) {
       case 'multiSelect':
-        // NOTE: Cell values are coerced to string via String() for set membership checks.
+        // Cell values are coerced to string; null/undefined share the empty-string blank option.
         // Object-typed column values will produce "[object Object]"  -  use valueGetter or
         // valueFormatter on the column def to ensure meaningful string representation.
         if (val.value.length > 0) {
           const allowedSet = new Set(val.value);
-          predicates.push((r) => allowedSet.has(String(getCellValue(r, col))));
+          predicates.push((r) => allowedSet.has(String(getCellValue(r, col) ?? '')));
         }
         break;
       case 'text': {
         const trimmed = val.value.trim();
         if (trimmed) {
           const lower = trimmed.toLowerCase();
-          predicates.push((r) => String(getCellValue(r, col) ?? '').toLowerCase().includes(lower));
+          // A row passes when its raw value or its displayed text contains the query.
+          // The formatter only runs when the raw value doesn't match.
+          predicates.push((r) => {
+            const v = getCellValue(r, col);
+            return (
+              String(v ?? '').toLowerCase().includes(lower) ||
+              (formatCellValue(v, r, col) ?? '').toLowerCase().includes(lower)
+            );
+          });
         }
         break;
       }
@@ -80,8 +91,8 @@ export function processClientSideData<T>(
       case 'date': {
         const dv = val.value;
         // Pre-compute filter boundary timestamps to avoid repeated Date parsing in the filter loop
-        const fromTs = dv.from ? new Date(dv.from + 'T00:00:00').getTime() : NaN;
-        const toTs = dv.to ? new Date(dv.to + 'T23:59:59.999').getTime() : NaN;
+        const fromTs = dv.from ? new Date(dv.from + 'T00:00:00Z').getTime() : NaN;
+        const toTs = dv.to ? new Date(dv.to + 'T23:59:59.999Z').getTime() : NaN;
         predicates.push((r) => {
           const cellTs = toDateTimestamp(getCellValue(r, col));
           if (Number.isNaN(cellTs)) return false;
@@ -147,7 +158,7 @@ export function processClientSideData<T>(
           : (row as Record<string, unknown>)[sortBy];
         keyCache.set(row, toSortKey(v));
       }
-      sortable.sort((a, b) => compareSortKeys(keyCache.get(a), keyCache.get(b)) * dir);
+      sortable.sort((a, b) => compareSortKeys(keyCache.get(a), keyCache.get(b), sortCollator) * dir);
     } else {
       sortable.sort((a, b) => compare(a, b) * dir);
     }

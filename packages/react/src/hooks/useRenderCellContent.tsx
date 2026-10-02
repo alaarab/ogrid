@@ -1,4 +1,5 @@
 import * as React from 'react';
+import { booleanParser } from '@alaarab/ogrid-core';
 import { useCallback } from 'react';
 import {
   getCellRenderDescriptor,
@@ -76,14 +77,14 @@ export function useRenderCellContent<T>(
       } else {
         let displayNode: React.ReactNode;
         if (descriptor.columnType === 'boolean') {
-          const boolVal = !!descriptor.displayValue;
+          const boolVal = !!(booleanParser({ newValue: descriptor.displayValue, oldValue: descriptor.displayValue, data: item, column: col }) ?? descriptor.displayValue);
           displayNode = renderBooleanCell({
             checked: boolVal,
             disabled: !descriptor.canEditAny,
             onChange: descriptor.canEditAny ? () => {
               const savedRow = descriptor.rowIndex;
               const savedCol = descriptor.globalColIndex;
-              editCallbacks.commitCellEdit(item, col.columnId, boolVal, !boolVal, savedRow, savedCol, { skipAdvance: true });
+              editCallbacks.commitCellEdit(item, col.columnId, descriptor.displayValue, !boolVal, savedRow, savedCol, { skipAdvance: true });
             } : undefined,
             onPointerDown: (e: React.PointerEvent) =>
               handleBooleanCellPointerDown(e, descriptor.rowIndex, descriptor.globalColIndex, colOffset, {

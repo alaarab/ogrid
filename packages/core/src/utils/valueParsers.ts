@@ -81,15 +81,17 @@ export function parseValue<T>(
 // Return `undefined` to reject; `null` to clear the cell.
 
 /**
- * Parses a value as a number. Strips whitespace and commas.
- * Returns `undefined` (reject) if result is NaN.
+ * Parses decimal numbers with optional grouped thousands, exponent, and surrounding whitespace.
+ * Returns `undefined` (reject) for malformed or non-finite input.
  */
 export function numberParser<T>(params: IValueParserParams<T>): unknown {
   const { newValue } = params;
   if (newValue === '' || newValue == null) return null;
-  const str = String(newValue).replace(/[\s,]/g, '');
-  const num = Number(str);
-  return Number.isNaN(num) ? undefined : num;
+  const str = String(newValue).trim();
+  if (!str) return null;
+  if (!/^[+-]?(?:(?:\d+|\d{1,3}(?:,\d{3})+)(?:\.\d*)?|\.\d+)(?:e[+-]?\d+)?$/i.test(str)) return undefined;
+  const num = Number(str.replace(/,/g, ''));
+  return Number.isFinite(num) ? num : undefined;
 }
 
 /**
@@ -112,6 +114,10 @@ export function currencyParser<T>(params: IValueParserParams<T>): unknown {
 export function dateParser<T>(params: IValueParserParams<T>): unknown {
   const { newValue } = params;
   if (newValue === '' || newValue == null) return null;
+  if (newValue instanceof Date || typeof newValue === 'number') {
+    const date = newValue instanceof Date ? newValue : new Date(newValue);
+    return Number.isNaN(date.getTime()) ? undefined : date.toISOString().substring(0, 10);
+  }
   const str = String(newValue).trim();
   // A bare YYYY-MM-DD is already in the target format; return it verbatim (after
   // validation) so we never round-trip it through a Date, which would shift the

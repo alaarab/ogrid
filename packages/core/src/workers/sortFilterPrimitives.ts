@@ -12,18 +12,14 @@
 
 /**
  * Timestamp for a date-column cell value (NaN when missing or invalid).
- * Bare `YYYY-MM-DD` strings are read as LOCAL midnight so they line up with
- * the local-time filter bounds; `new Date('2024-01-15')` would read them as
- * UTC and shift them a day west of Greenwich.
+ * Bare `YYYY-MM-DD` strings are read as UTC midnight to match date display
+ * and UTC filter bounds. Dates and numeric timestamps represent instants.
  */
 export function toDateTimestamp(value: unknown): number {
   if (value == null) return NaN;
   if (value instanceof Date) return value.getTime();
   if (typeof value === 'number') return value;
-  const s = String(value);
-  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(s);
-  if (m) return new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3])).getTime();
-  return new Date(s).getTime();
+  return new Date(String(value)).getTime();
 }
 
 /**
@@ -36,15 +32,21 @@ export function toSortKey(value: unknown): string | number | undefined {
   return String(value).toLowerCase();
 }
 
+/** Create once per execution context so comparisons reuse the locale collator. */
+export function createSortCollator(): Intl.Collator {
+  return new Intl.Collator(undefined, { numeric: true, sensitivity: 'base' });
+}
+
 /**
  * Ascending total order over sort keys: missing values first, then numbers
- * (numerically), then text (by code unit).
+ * (numerically), then text (locale-aware, with numeric strings in natural order).
  */
-export function compareSortKeys(a: string | number | undefined, b: string | number | undefined): number {
+export function compareSortKeys(a: string | number | undefined, b: string | number | undefined, collator: Intl.Collator): number {
   if (a === undefined || b === undefined) return a === b ? 0 : a === undefined ? -1 : 1;
   const an = typeof a === 'number';
   const bn = typeof b === 'number';
   if (an !== bn) return an ? -1 : 1;
+  if (typeof a === 'string' && typeof b === 'string') return collator.compare(a, b);
   return a === b ? 0 : a > b ? 1 : -1;
 }
 
@@ -57,4 +59,4 @@ export function compareTimestamps(a: number, b: number): number {
 }
 
 /** Serialized ahead of the worker body; see the file comment. */
-export const SORT_FILTER_PRIMITIVES = [toDateTimestamp, toSortKey, compareSortKeys, compareTimestamps];
+export const SORT_FILTER_PRIMITIVES = [toDateTimestamp, toSortKey, createSortCollator, compareSortKeys, compareTimestamps];
