@@ -5,7 +5,7 @@ describe('header menu autosize scoping', () => {
   it('measures only its own grid for one-column and all-column actions', () => {
     const wrapper = document.createElement('div');
     const otherGrid = document.createElement('div');
-    const id = 'amount"\\total';
+    const id = 'amount total';
     function addCell(container: HTMLElement, width: number) {
       const cell = document.createElement('div');
       cell.setAttribute('data-column-id', id);

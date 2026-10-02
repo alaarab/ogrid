@@ -141,11 +141,7 @@ export function measureColumnContentWidth(
 ): number {
   const minW = minWidth ?? DEFAULT_MIN_COLUMN_WIDTH;
   const root = container ?? document;
-  // Match by attribute value rather than an escaped selector: ids may contain
-  // quotes/backslashes, and CSS.escape is missing in some DOM environments.
-  const cells = Array.from(root.querySelectorAll('[data-column-id]')).filter(
-    (cell) => cell.getAttribute('data-column-id') === columnId
-  );
+  const cells = root.querySelectorAll(`[data-column-id="${CSS.escape(columnId)}"]`);
 
   if (cells.length === 0) return minW;
 
