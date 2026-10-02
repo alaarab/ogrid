@@ -1,5 +1,6 @@
 import type { IFormulaFunction, IFormulaContext, IEvaluator, ASTNode } from '../../types';
 import { FormulaError } from '../../types';
+import { wildcard } from '../../wildcard';
 import { toNumber, toText, evalArg } from '../../evaluator';
 
 /**
@@ -57,7 +58,9 @@ export function registerTextSearchFunctions(registry: Map<string, IFormulaFuncti
       } else {
         // Replace all occurrences
         if (oldText === '') return text;
-        return text.split(oldText).join(newText);
+        const parts = text.split(oldText);
+        if (text.length + (parts.length - 1) * (newText.length - oldText.length) > 32767) return new FormulaError('#VALUE!', 'SUBSTITUTE result too long');
+        return parts.join(newText);
       }
     },
   });
@@ -106,9 +109,9 @@ export function registerTextSearchFunctions(registry: Map<string, IFormulaFuncti
         startNum = Math.trunc(s);
       }
       if (startNum < 1) return new FormulaError('#VALUE!', 'SEARCH start_num must be >= 1');
-      const idx = withinText.indexOf(findText, startNum - 1);
+      const idx = wildcard(findText)(withinText.slice(startNum - 1), true, context.consumeWork);
       if (idx === -1) return new FormulaError('#VALUE!', 'SEARCH text not found');
-      return idx + 1;
+      return idx + startNum;
     },
   });
 
@@ -132,6 +135,7 @@ export function registerTextSearchFunctions(registry: Map<string, IFormulaFuncti
       const newText = toText(rawNew);
       const start = Math.trunc(startPos) - 1; // 1-based to 0-based
       const count = Math.trunc(numChars);
+      if (start < 0 || count < 0) return new FormulaError('#VALUE!', 'Invalid REPLACE position');
       return text.substring(0, start) + newText + text.substring(start + count);
     },
   });

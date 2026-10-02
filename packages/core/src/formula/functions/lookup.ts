@@ -1,6 +1,7 @@
 import type { IFormulaFunction, IFormulaContext, IEvaluator, ASTNode } from '../types';
 import { FormulaError } from '../types';
-import { toNumber } from '../evaluator';
+import { wildcard } from '../wildcard';
+import { toNumber, compareValues } from '../evaluator';
 
 export function registerLookupFunctions(registry: Map<string, IFormulaFunction>): void {
   registry.set('VLOOKUP', {
@@ -49,6 +50,7 @@ export function registerLookupFunctions(registry: Map<string, IFormulaFunction>)
 
       // Pre-lowercase the lookup value once (avoid per-row allocation)
       const lookupLower = typeof lookupValue === 'string' ? lookupValue.toLowerCase() : null;
+      const match = lookupLower === null ? undefined : wildcard(lookupLower);
 
       if (rangeLookup) {
         // Approximate match: data assumed sorted ascending in first column
@@ -72,7 +74,7 @@ export function registerLookupFunctions(registry: Map<string, IFormulaFunction>)
         for (let r = 0; r < tableData.length; r++) {
           const cellVal = tableData[r]?.[0];
           if (lookupLower !== null && typeof cellVal === 'string') {
-            if (cellVal.toLowerCase() === lookupLower) {
+            if ((match?.(cellVal, false, context.consumeWork) ?? -1) >= 0) {
               return tableData[r]?.[col] ?? null;
             }
           } else if (cellVal === lookupValue) {
@@ -93,7 +95,7 @@ export function registerLookupFunctions(registry: Map<string, IFormulaFunction>)
       if (rangeArg === undefined || rangeArg.kind !== 'range') {
         return new FormulaError('#VALUE!', 'INDEX first argument must be a range');
       }
-      const rangeData = context.getRangeValues({ start: rangeArg.start, end: rangeArg.end });
+
 
       // Arg 1: row number (1-based)
       const rowArg = args[1];
@@ -116,18 +118,13 @@ export function registerLookupFunctions(registry: Map<string, IFormulaFunction>)
         colNum = c;
       }
 
-      const r = Math.trunc(rowNum) - 1;
-      const c = Math.trunc(colNum) - 1;
-
-      if (r < 0 || r >= rangeData.length) {
-        return new FormulaError('#REF!', 'INDEX row out of bounds');
-      }
-      const firstRangeRow = rangeData[0];
-      if (c < 0 || (firstRangeRow !== undefined && c >= firstRangeRow.length)) {
-        return new FormulaError('#REF!', 'INDEX column out of bounds');
-      }
-
-      return rangeData[r]?.[c] ?? null;
+      const rows = Math.abs(rangeArg.end.row - rangeArg.start.row) + 1;
+      const cols = Math.abs(rangeArg.end.col - rangeArg.start.col) + 1;
+      const horizontal = rows === 1 && colArg === undefined;
+      const r = horizontal ? 0 : Math.trunc(rowNum) - 1;
+      const c = Math.trunc(horizontal ? rowNum : colNum) - 1;
+      if (r < 0 || r >= rows || c < 0 || c >= cols) return new FormulaError('#REF!', 'INDEX out of bounds');
+      return context.getCellValue({ ...rangeArg.start, row: Math.min(rangeArg.start.row, rangeArg.end.row) + r, col: Math.min(rangeArg.start.col, rangeArg.end.col) + c }) ?? null;
     },
   });
 
@@ -165,6 +162,7 @@ export function registerLookupFunctions(registry: Map<string, IFormulaFunction>)
       const row = Math.trunc(rowIndex) - 1;
       const firstRow = tableData[0] || [];
       const lookupLower = typeof lookupValue === 'string' ? lookupValue.toLowerCase() : null;
+      const match = lookupLower === null ? undefined : wildcard(lookupLower);
 
       if (rangeLookup) {
         let bestCol = -1;
@@ -185,7 +183,7 @@ export function registerLookupFunctions(registry: Map<string, IFormulaFunction>)
         for (let c = 0; c < firstRow.length; c++) {
           const cellVal = firstRow[c];
           if (lookupLower !== null && typeof cellVal === 'string') {
-            if (cellVal.toLowerCase() === lookupLower) return tableData[row]?.[c] ?? null;
+            if ((match?.(cellVal, false, context.consumeWork) ?? -1) >= 0) return tableData[row]?.[c] ?? null;
           } else if (cellVal === lookupValue) {
             return tableData[row]?.[c] ?? null;
           }
@@ -248,14 +246,15 @@ export function registerLookupFunctions(registry: Map<string, IFormulaFunction>)
       const len = isRow ? (lookupArray[0]?.length ?? 0) : lookupArray.length;
       const getVal = isRow ? (i: number) => lookupArray[0]?.[i] : (i: number) => lookupArray[i]?.[0];
       const lookupLower = typeof lookupValue === 'string' ? lookupValue.toLowerCase() : null;
+      const match = lookupLower === null ? undefined : wildcard(lookupLower);
 
       const eq = (a: unknown, b: unknown): boolean => {
-        if (lookupLower !== null && typeof a === 'string') return a.toLowerCase() === lookupLower;
+        if (lookupLower !== null && typeof a === 'string') return matchMode === 2 ? (match?.(a, false, context.consumeWork) ?? -1) >= 0 : a.toLowerCase() === lookupLower;
         return a === b;
       };
 
       let foundIdx = -1;
-      if (matchMode === 0) {
+      if (matchMode === 0 || matchMode === 2) {
         // Exact match
         const start = searchMode >= 0 ? 0 : len - 1;
         const end = searchMode >= 0 ? len : -1;
@@ -269,8 +268,8 @@ export function registerLookupFunctions(registry: Map<string, IFormulaFunction>)
         for (let i = 0; i < len; i++) {
           const v = getVal(i);
           if (eq(v, lookupValue)) { foundIdx = i; break; }
-          if (typeof lookupValue === 'number' && typeof v === 'number' && v < lookupValue) {
-            if (best === -1 || v > (getVal(best) as number)) best = i;
+          if (typeof lookupValue === typeof v && compareValues(v, lookupValue) < 0) {
+            if (best === -1 || compareValues(v, getVal(best)) > 0) best = i;
           }
         }
         if (foundIdx === -1) foundIdx = best;
@@ -280,8 +279,8 @@ export function registerLookupFunctions(registry: Map<string, IFormulaFunction>)
         for (let i = 0; i < len; i++) {
           const v = getVal(i);
           if (eq(v, lookupValue)) { foundIdx = i; break; }
-          if (typeof lookupValue === 'number' && typeof v === 'number' && v > lookupValue) {
-            if (best === -1 || v < (getVal(best) as number)) best = i;
+          if (typeof lookupValue === typeof v && compareValues(v, lookupValue) > 0) {
+            if (best === -1 || compareValues(v, getVal(best)) < 0) best = i;
           }
         }
         if (foundIdx === -1) foundIdx = best;
@@ -336,13 +335,14 @@ export function registerLookupFunctions(registry: Map<string, IFormulaFunction>)
 
       // Pre-lowercase the lookup value once (avoid per-iteration allocation)
       const lookupLower = typeof lookupValue === 'string' ? lookupValue.toLowerCase() : null;
+      const match = lookupLower === null ? undefined : wildcard(lookupLower);
 
       if (matchType === 0) {
         // Exact match
         for (let i = 0; i < valuesLength; i++) {
           const cellVal = getValue(i);
           if (lookupLower !== null && typeof cellVal === 'string') {
-            if (cellVal.toLowerCase() === lookupLower) return i + 1;
+            if ((match?.(cellVal, false, context.consumeWork) ?? -1) >= 0) return i + 1;
           } else if (cellVal === lookupValue) {
             return i + 1;
           }

@@ -22,6 +22,8 @@ import { FormulaEvaluator } from './evaluator';
 import { DependencyGraph } from './dependencyGraph';
 import type { IRangeDependency } from './dependencyGraph';
 import { createBuiltInFunctions } from './functions';
+import { MAX_RANGE_CELLS } from './limits';
+export { MAX_RANGE_CELLS } from './limits';
 import { toCellKey, fromCellKey } from './cellAddressUtils';
 
 /** Shared empty cycle set, so recalcCells can default without allocating. */
@@ -33,14 +35,13 @@ const EMPTY_CYCLIC: ReadonlySet<CellKey> = Object.freeze(new Set<CellKey>());
  */
 const VOLATILE_FUNCTIONS: ReadonlySet<string> = new Set(['INDIRECT', 'OFFSET']);
 
-/** Ranges larger than this are clamped to the grid's data bounds. */
-const MAX_UNCLAMPED_RANGE_CELLS = 1_000_000;
-
-/** Upper bound on cells read for one range after clamping to the grid. */
-export const MAX_RANGE_CELLS = 5_000_000;
-
 /** Upper bound on range cells expanded when listing audit precedents. */
 const MAX_AUDIT_RANGE_CELLS = 10_000;
+
+interface EngineContext extends IFormulaContext {
+  getFreshCellValue(address: ICellAddress): unknown;
+  getFreshRangeValues(range: ICellRange): unknown[][];
+}
 
 interface FormulaDependencies {
   cells: Set<CellKey>;
@@ -58,7 +59,10 @@ function extractDependencies(node: ASTNode): FormulaDependencies {
   const ranges: IRangeDependency[] = [];
   let volatile = false;
 
-  function walk(n: ASTNode): void {
+  const stack = [node];
+  while (stack.length) {
+    const n = stack.pop();
+    if (!n) break;
     switch (n.kind) {
       case 'cellRef':
         cells.add(toCellKey(n.address.col, n.address.row, n.address.sheet));
@@ -77,20 +81,18 @@ function extractDependencies(node: ASTNode): FormulaDependencies {
       }
       case 'functionCall':
         if (VOLATILE_FUNCTIONS.has(n.name.toUpperCase())) volatile = true;
-        for (const arg of n.args) walk(arg);
+        for (const arg of n.args) stack.push(arg);
         break;
       case 'binaryOp':
-        walk(n.left);
-        walk(n.right);
+        stack.push(n.left, n.right);
         break;
       case 'unaryOp':
-        walk(n.operand);
+        stack.push(n.operand);
         break;
       // number, string, boolean, error  -  no dependencies
     }
   }
 
-  walk(node);
   return { cells, ranges, volatile };
 }
 
@@ -100,10 +102,15 @@ export class FormulaEngine {
   private readonly values = new Map<CellKey, unknown>();
   private readonly depGraph = new DependencyGraph();
   private readonly evaluator: FormulaEvaluator;
+  private readonly maxRangeCells: number;
   private readonly namedRanges = new Map<string, string>();
   private readonly sheetAccessors = new Map<string, IGridDataAccessor>();
   /** Formula cells using INDIRECT/OFFSET; recalculated on every change. */
   private readonly volatileCells = new Set<CellKey>();
+  private lastAccessor?: IGridDataAccessor;
+  /** High-water mark of formula cells past the data, so range reads include them (reset by clear()). */
+  private maxFormulaRow = -1;
+  private maxFormulaCol = -1;
   /** column -> rows holding formula cells (main sheet), for range overlays. */
   private readonly formulaRowsByCol = new Map<number, Set<number>>();
 
@@ -119,7 +126,8 @@ export class FormulaEngine {
         this.namedRanges.set(name.toUpperCase(), ref);
       }
     }
-    this.evaluator = new FormulaEvaluator(builtIns);
+    this.maxRangeCells = config?.limits?.maxRangeCells ?? MAX_RANGE_CELLS;
+    this.evaluator = new FormulaEvaluator(builtIns, config?.limits);
   }
 
   /**
@@ -131,6 +139,7 @@ export class FormulaEngine {
     formula: string | null,
     accessor: IGridDataAccessor
   ): IRecalcResult {
+    this.lastAccessor = accessor;
     const key = toCellKey(col, row);
 
     if (formula === null || formula === '') {
@@ -139,9 +148,9 @@ export class FormulaEngine {
       // Capture the cascade before mutating the graph, then recalculate the
       // dependents  -  otherwise every cell referencing this one keeps the
       // value it had while the formula still existed.
-      const plan = this.depGraph.getRecalcPlanBatch([key], this.volatileCells);
       this.forgetFormula(key, col, row);
       this.depGraph.removeDependencies(key);
+      const plan = this.depGraph.getRecalcPlanBatch([key], this.volatileCells);
       const updatedCells: IRecalcResult['updatedCells'] = oldValue !== undefined
         ? [{ cellKey: key, col, row, oldValue, newValue: undefined }]
         : [];
@@ -173,7 +182,7 @@ export class FormulaEngine {
 
     // Evaluate the formula
     const context = this.createContext(accessor);
-    const newValue = this.safeEvaluate(ast, context);
+    const newValue = this.safeEvaluate(ast, context, key);
     this.values.set(key, newValue);
 
     const updatedCells: IRecalcResult['updatedCells'] = [
@@ -255,6 +264,7 @@ export class FormulaEngine {
    * Full recalculation of all formulas.
    */
   recalcAll(accessor: IGridDataAccessor): IRecalcResult {
+    this.lastAccessor = accessor;
     const updatedCells: IRecalcResult['updatedCells'] = [];
     const context = this.createContext(accessor);
 
@@ -273,7 +283,7 @@ export class FormulaEngine {
         const ast = this.parsedFormulas.get(key);
         if (!ast) continue;
         const oldValue = this.values.get(key);
-        const newValue = this.safeEvaluate(ast, context);
+        const newValue = this.safeEvaluate(ast, context, key);
         this.values.set(key, newValue);
         updatedCells.push({ cellKey: key, col, row, oldValue, newValue });
       }
@@ -295,6 +305,8 @@ export class FormulaEngine {
     this.depGraph.clear();
     this.volatileCells.clear();
     this.formulaRowsByCol.clear();
+    this.maxFormulaRow = -1;
+    this.maxFormulaCol = -1;
   }
 
   /**
@@ -316,6 +328,7 @@ export class FormulaEngine {
     formulas: Array<{ col: number; row: number; formula: string }>,
     accessor: IGridDataAccessor
   ): IRecalcResult {
+    this.lastAccessor = accessor;
     this.clear();
 
     // Parse and register all formulas first
@@ -338,6 +351,7 @@ export class FormulaEngine {
    */
   defineNamedRange(name: string, ref: string): void {
     this.namedRanges.set(name.toUpperCase(), ref);
+    this.refreshNamedRanges();
   }
 
   /**
@@ -345,6 +359,7 @@ export class FormulaEngine {
    */
   removeNamedRange(name: string): void {
     this.namedRanges.delete(name.toUpperCase());
+    this.refreshNamedRanges();
   }
 
   /**
@@ -352,6 +367,18 @@ export class FormulaEngine {
    */
   getNamedRanges(): ReadonlyMap<string, string> {
     return this.namedRanges;
+  }
+
+  private refreshNamedRanges(): void {
+    for (const [key, formula] of this.formulas) {
+      const ast = this.parseFormula(formula);
+      const deps = extractDependencies(ast);
+      this.parsedFormulas.set(key, ast);
+      this.depGraph.setDependencies(key, deps.cells, deps.ranges);
+      if (deps.volatile) this.volatileCells.add(key);
+      else this.volatileCells.delete(key);
+    }
+    if (this.lastAccessor) this.recalcAll(this.lastAccessor);
   }
 
   // --- Sheet Accessors ---
@@ -509,12 +536,22 @@ export class FormulaEngine {
 
   // --- Private methods ---
 
-  private createContext(accessor: IGridDataAccessor): IFormulaContext {
+  private createContext(accessor: IGridDataAccessor, cyclic: ReadonlySet<CellKey> = EMPTY_CYCLIC): IFormulaContext {
     // Capture a single Date for all NOW()/TODAY() calls in this recalc cycle
     const contextNow = new Date();
-    return {
-      getCellValue: (addr: ICellAddress): unknown => {
+    const evaluated = new Set<CellKey>();
+    const active = new Set<CellKey>();
+    const readCell = (addr: ICellAddress, fresh = false): unknown => {
         const key = toCellKey(addr.col, addr.row, addr.sheet);
+        const ast = this.parsedFormulas.get(key);
+        if (ast && (fresh || this.volatileCells.has(key)) && !cyclic.has(key) && !evaluated.has(key)) {
+          if (active.has(key)) return new FormulaError('#CIRC!', 'Dynamic circular reference');
+          active.add(key);
+          const value = this.safeEvaluate(ast, { ...context, getCellValue: context.getFreshCellValue, getRangeValues: context.getFreshRangeValues }, key);
+          active.delete(key);
+          evaluated.add(key);
+          this.values.set(key, value);
+        }
         if (this.values.has(key)) return this.values.get(key);
         // Use sheet accessor if sheet is specified
         if (addr.sheet) {
@@ -523,8 +560,8 @@ export class FormulaEngine {
           return sheetAccessor.getCellValue(addr.col, addr.row);
         }
         return accessor.getCellValue(addr.col, addr.row);
-      },
-      getRangeValues: (range: ICellRange): unknown[][] => {
+    };
+    const readRange = (range: ICellRange, fresh = false): unknown[][] => {
         const result: unknown[][] = [];
         const sheet = range.start.sheet;
         const rangeAccessor = sheet
@@ -538,46 +575,36 @@ export class FormulaEngine {
         const minCol = Math.min(range.start.col, range.end.col);
         let maxRow = Math.max(range.start.row, range.end.row);
         let maxCol = Math.max(range.start.col, range.end.col);
-        // Huge ranges (=SUM(A1:XFD1048576)) are clamped to the grid, since
-        // cells past the data are empty and reading them one by one would
-        // hang the page. Ordinary ranges keep their full shape so functions
-        // like COUNTBLANK and INDEX see the cells past the last data row.
-        if ((maxRow - minRow + 1) * (maxCol - minCol + 1) > MAX_UNCLAMPED_RANGE_CELLS) {
-          maxRow = Math.min(maxRow, (rangeAccessor?.getRowCount() ?? 0) - 1);
-          maxCol = Math.min(maxCol, (rangeAccessor?.getColumnCount() ?? 0) - 1);
-          if (maxRow < minRow || maxCol < minCol) return [[]];
-          if ((maxRow - minRow + 1) * (maxCol - minCol + 1) > MAX_RANGE_CELLS) {
-            return [[new FormulaError('#VALUE!', 'Range too large')]];
-          }
-        }
+        // Only materialise data/formula cells; logical dimensions stay in the AST.
+        maxRow = Math.min(maxRow, Math.max(rangeAccessor?.getRowCount() ?? 0, sheet ? 0 : this.maxFormulaRow + 1) - 1);
+        maxCol = Math.min(maxCol, Math.max(rangeAccessor?.getColumnCount() ?? 0, sheet ? 0 : this.maxFormulaCol + 1) - 1);
+        if (maxRow < minRow || maxCol < minCol) return [];
+        const size = (maxRow - minRow + 1) * (maxCol - minCol + 1);
+        if (size > this.maxRangeCells) throw new FormulaError('#VALUE!', 'Range too large');
+        const formulaRows = Array.from({ length: maxCol - minCol + 1 }, (_, offset) => sheet ? undefined : this.formulaRowsByCol.get(minCol + offset));
         for (let r = minRow; r <= maxRow; r++) {
           const row: unknown[] = new Array(maxCol - minCol + 1);
           for (let c = minCol; c <= maxCol; c++) {
-            row[c - minCol] = rangeAccessor?.getCellValue(c, r);
+            row[c - minCol] = formulaRows[c - minCol]?.has(r)
+              ? readCell({ col: c, row: r, absCol: false, absRow: false, sheet }, fresh)
+              : rangeAccessor?.getCellValue(c, r);
           }
           result.push(row);
         }
-        // Overlay computed formula values (main sheet only: formulas live there).
-        if (!sheet) {
-          for (let c = minCol; c <= maxCol; c++) {
-            const rows = this.formulaRowsByCol.get(c);
-            if (!rows) continue;
-            for (const r of rows) {
-              if (r < minRow || r > maxRow) continue;
-              const key = toCellKey(c, r);
-              const target = result[r - minRow];
-              if (target && this.values.has(key)) target[c - minCol] = this.values.get(key);
-            }
-          }
-        }
         return result;
-      },
+    };
+    const context: EngineContext = {
+      getCellValue: addr => readCell(addr),
+      getRangeValues: range => readRange(range),
+      getFreshCellValue: addr => readCell(addr, true),
+      getFreshRangeValues: range => readRange(range, true),
       now: () => contextNow,
       getCellFormula: (addr: ICellAddress): string | undefined => {
         const key = toCellKey(addr.col, addr.row, addr.sheet);
         return this.formulas.get(key);
       },
     };
+    return context;
   }
 
   private recalcCells(
@@ -586,13 +613,17 @@ export class FormulaEngine {
     updatedCells: IRecalcResult['updatedCells'],
     cyclic: ReadonlySet<CellKey> = EMPTY_CYCLIC
   ): void {
-    const context = this.createContext(accessor);
+    const oldValues = new Map(order.map(key => [key, this.values.get(key)]));
+    const context = this.createContext(accessor, cyclic);
+    // Set all cycle values before evaluating downstream error-handling formulas.
+    for (const key of cyclic) if (this.parsedFormulas.has(key)) this.values.set(key, new FormulaError('#CIRC!', 'Circular reference detected'));
 
     for (const key of order) {
+      if (!this.parsedFormulas.has(key)) { this.values.delete(key); continue; }
       if (cyclic.has(key)) {
         // Genuine cycle participant, as reported by the topological sort.
         const { col, row } = fromCellKey(key);
-        const oldValue = this.values.get(key);
+        const oldValue = oldValues.get(key);
         const circError = new FormulaError('#CIRC!', 'Circular reference detected');
         this.values.set(key, circError);
         updatedCells.push({ cellKey: key, col, row, oldValue, newValue: circError });
@@ -603,8 +634,8 @@ export class FormulaEngine {
       if (!ast) continue; // Not a formula cell  -  skip
 
       const { col, row } = fromCellKey(key);
-      const oldValue = this.values.get(key);
-      const newValue = this.safeEvaluate(ast, context);
+      const oldValue = oldValues.get(key);
+      const newValue = this.safeEvaluate(ast, context, key);
       this.values.set(key, newValue);
       updatedCells.push({ cellKey: key, col, row, oldValue, newValue });
     }
@@ -627,9 +658,15 @@ export class FormulaEngine {
    * Evaluate without letting a throwing custom function or a runtime error
    * (e.g. out-of-memory RangeError) escape and leave the engine half-updated.
    */
-  private safeEvaluate(ast: ASTNode, context: IFormulaContext): unknown {
+  private safeEvaluate(ast: ASTNode, context: IFormulaContext, key?: CellKey): unknown {
     try {
-      return this.evaluator.evaluate(ast, context);
+      const address = key === undefined ? undefined : fromCellKey(key);
+      if (key && this.volatileCells.has(key) && 'getFreshCellValue' in context) {
+        const freshContext = context as EngineContext;
+        context = { ...context, getCellValue: freshContext.getFreshCellValue, getRangeValues: freshContext.getFreshRangeValues };
+      }
+      const result = this.evaluator.evaluate(ast, address ? { ...context, currentCell: { ...address, absCol: false, absRow: false } } : context);
+      return Array.isArray(result) ? result[0]?.[0] ?? null : result;
     } catch (err) {
       if (err instanceof FormulaError) return err;
       return new FormulaError('#VALUE!', err instanceof Error ? err.message : String(err));
@@ -644,6 +681,8 @@ export class FormulaEngine {
     ast: ASTNode,
     volatile: boolean,
   ): void {
+    this.maxFormulaRow = Math.max(this.maxFormulaRow, row);
+    this.maxFormulaCol = Math.max(this.maxFormulaCol, col);
     this.formulas.set(key, formula);
     this.parsedFormulas.set(key, ast);
     if (volatile) this.volatileCells.add(key);

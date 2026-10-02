@@ -1,7 +1,7 @@
 import type { IFormulaFunction, IFormulaContext, IEvaluator, ASTNode } from '../../types';
 import { FormulaError } from '../../types';
-import { toNumber, evalArg } from '../../evaluator';
-import { toDate, isLeapYear, parseWeekendNumber } from './shared';
+import { toNumber, evalArg, flattenArgs } from '../../evaluator';
+import { toDate, isLeapYear, parseWeekendNumber, dateToSerial, utcDate, serialDay, serialToDate, weekday, MAX_DATE_SERIAL } from './shared';
 
 /**
  * Date arithmetic, differences, and business-day calculations: DATEDIF, EDATE,
@@ -23,25 +23,46 @@ export function registerDateArithmeticFunctions(registry: Map<string, IFormulaFu
       const rawUnit = evalArg(evaluator, args[2], context);
       if (rawUnit instanceof FormulaError) return rawUnit;
       const unit = String(rawUnit).toUpperCase();
-      if (startDate > endDate) return new FormulaError('#NUM!', 'DATEDIF start date must be <= end date');
+      const startSerial = serialDay(rawStart);
+      const endSerial = serialDay(rawEnd);
+      if (startSerial instanceof FormulaError) return startSerial;
+      if (endSerial instanceof FormulaError) return endSerial;
+      if (startSerial > endSerial) return new FormulaError('#NUM!', 'DATEDIF start date must be <= end date');
       switch (unit) {
         case 'Y': {
-          let years = endDate.getFullYear() - startDate.getFullYear();
-          if (endDate.getMonth() < startDate.getMonth() ||
-              (endDate.getMonth() === startDate.getMonth() && endDate.getDate() < startDate.getDate())) {
+          let years = endDate.getUTCFullYear() - startDate.getUTCFullYear();
+          if (endDate.getUTCMonth() < startDate.getUTCMonth() ||
+              (endDate.getUTCMonth() === startDate.getUTCMonth() && endDate.getUTCDate() < startDate.getUTCDate())) {
             years--;
           }
           return years;
         }
         case 'M': {
-          let months = (endDate.getFullYear() - startDate.getFullYear()) * 12 + endDate.getMonth() - startDate.getMonth();
-          if (endDate.getDate() < startDate.getDate()) months--;
+          let months = (endDate.getUTCFullYear() - startDate.getUTCFullYear()) * 12 + endDate.getUTCMonth() - startDate.getUTCMonth();
+          if (endDate.getUTCDate() < startDate.getUTCDate()) months--;
           return months;
         }
-        case 'D':
-          return Math.floor((endDate.getTime() - startDate.getTime()) / 86400000);
+        case 'D': {
+          const start = serialDay(rawStart);
+          const end = serialDay(rawEnd);
+          if (start instanceof FormulaError) return start;
+          if (end instanceof FormulaError) return end;
+          return end - start;
+        }
+        case 'YM': {
+          const months = (endDate.getUTCFullYear() - startDate.getUTCFullYear()) * 12 + endDate.getUTCMonth() - startDate.getUTCMonth() - (endDate.getUTCDate() < startDate.getUTCDate() ? 1 : 0);
+          return months % 12;
+        }
+        case 'MD': {
+          const day = endDate.getUTCDate() - startDate.getUTCDate();
+          return day >= 0 ? day : day + utcDate(endDate.getUTCFullYear(), endDate.getUTCMonth(), 0).getUTCDate();
+        }
+        case 'YD': {
+          const year = endDate.getUTCFullYear() - (endDate.getUTCMonth() < startDate.getUTCMonth() || (endDate.getUTCMonth() === startDate.getUTCMonth() && endDate.getUTCDate() < startDate.getUTCDate()) ? 1 : 0);
+          return Math.floor((endDate.getTime() - utcDate(year, startDate.getUTCMonth(), startDate.getUTCDate()).getTime()) / 86400000);
+        }
         default:
-          return new FormulaError('#VALUE!', 'DATEDIF unit must be Y, M, or D');
+          return new FormulaError('#VALUE!', 'Invalid DATEDIF unit');
       }
     },
   });
@@ -63,12 +84,14 @@ export function registerDateArithmeticFunctions(registry: Map<string, IFormulaFu
       // Set the day to 1 before shifting the month so setMonth can't roll over,
       // then clamp the original day-of-month to the target month's length.
       const result = new Date(date);
-      const day = result.getDate();
-      result.setDate(1);
-      result.setMonth(result.getMonth() + Math.trunc(months));
-      const lastDay = new Date(result.getFullYear(), result.getMonth() + 1, 0).getDate();
-      result.setDate(Math.min(day, lastDay));
-      return result;
+      const day = serialDay(rawDate) === 60 ? 29 : result.getUTCDate();
+      result.setUTCDate(1);
+      result.setUTCMonth(result.getUTCMonth() + Math.trunc(months));
+      const leapMonth = result.getUTCFullYear() === 1900 && result.getUTCMonth() === 1;
+      const lastDay = leapMonth ? 29 : utcDate(result.getUTCFullYear(), result.getUTCMonth() + 1, 0).getUTCDate();
+      if (leapMonth && Math.min(day, lastDay) === 29) return toDate(60);
+      result.setUTCDate(Math.min(day, lastDay));
+      return serialToDate(dateToSerial(result));
     },
   });
 
@@ -85,34 +108,28 @@ export function registerDateArithmeticFunctions(registry: Map<string, IFormulaFu
       const months = toNumber(rawMonths);
       if (months instanceof FormulaError) return months;
       // Last day of the target month
-      const result = new Date(date.getFullYear(), date.getMonth() + Math.trunc(months) + 1, 0);
-      return result;
+      const result = utcDate(date.getUTCFullYear(), date.getUTCMonth() + Math.trunc(months) + 1, 0);
+      if (result.getUTCFullYear() === 1900 && result.getUTCMonth() === 1) return toDate(60);
+      return serialToDate(dateToSerial(result));
     },
   });
 
   registry.set('NETWORKDAYS', {
     minArgs: 2,
-    maxArgs: 2,
+    maxArgs: 3,
     evaluate(args: ASTNode[], context: IFormulaContext, evaluator: IEvaluator): unknown {
-      const rawStart = evalArg(evaluator, args[0], context);
-      if (rawStart instanceof FormulaError) return rawStart;
-      const startDate = toDate(rawStart);
-      if (startDate instanceof FormulaError) return startDate;
-      const rawEnd = evalArg(evaluator, args[1], context);
-      if (rawEnd instanceof FormulaError) return rawEnd;
-      const endDate = toDate(rawEnd);
-      if (endDate instanceof FormulaError) return endDate;
-      const start = new Date(startDate.getFullYear(), startDate.getMonth(), startDate.getDate());
-      const end = new Date(endDate.getFullYear(), endDate.getMonth(), endDate.getDate());
+      const start = serialDay(evalArg(evaluator, args[0], context));
+      if (start instanceof FormulaError) return start;
+      const end = serialDay(evalArg(evaluator, args[1], context));
+      if (end instanceof FormulaError) return end;
+      const holidays = holidayDays(args[2], context, evaluator);
+      if (holidays instanceof FormulaError) return holidays;
       const sign = end >= start ? 1 : -1;
-      const [from, to] = sign === 1 ? [start, end] : [end, start];
-      let count = 0;
-      const current = new Date(from);
-      while (current <= to) {
-        const day = current.getDay();
-        if (day !== 0 && day !== 6) count++;
-        current.setDate(current.getDate() + 1);
-      }
+      const from = Math.min(start, end);
+      const to = Math.max(start, end);
+      const mask = [false, false, false, false, false, true, true];
+      let count = workingDays(from, to, mask);
+      for (const holiday of holidays) if (holiday >= from && holiday <= to && !mask[weekday(holiday)]) count--;
       return count * sign;
     },
   });
@@ -130,9 +147,11 @@ export function registerDateArithmeticFunctions(registry: Map<string, IFormulaFu
       if (rawStart instanceof FormulaError) return rawStart;
       const startDate = toDate(rawStart);
       if (startDate instanceof FormulaError) return startDate;
-      const endMs = Date.UTC(endDate.getFullYear(), endDate.getMonth(), endDate.getDate());
-      const startMs = Date.UTC(startDate.getFullYear(), startDate.getMonth(), startDate.getDate());
-      return Math.round((endMs - startMs) / 86400000);
+      const start = serialDay(rawStart);
+      const end = serialDay(rawEnd);
+      if (start instanceof FormulaError) return start;
+      if (end instanceof FormulaError) return end;
+      return end - start;
     },
   });
 
@@ -157,12 +176,12 @@ export function registerDateArithmeticFunctions(registry: Map<string, IFormulaFu
         method = !!rawMethod;
       }
 
-      const sm = startDate.getMonth() + 1;
-      const em = endDate.getMonth() + 1;
-      let sd = startDate.getDate();
-      let ed = endDate.getDate();
-      const sy = startDate.getFullYear();
-      const ey = endDate.getFullYear();
+      const sm = startDate.getUTCMonth() + 1;
+      const em = endDate.getUTCMonth() + 1;
+      let sd = startDate.getUTCDate();
+      let ed = endDate.getUTCDate();
+      const sy = startDate.getUTCFullYear();
+      const ey = endDate.getUTCFullYear();
 
       if (!method) {
         // US method (NASD): cap start day and end day at 30
@@ -188,7 +207,7 @@ export function registerDateArithmeticFunctions(registry: Map<string, IFormulaFu
       const date = toDate(rawDate);
       if (date instanceof FormulaError) return date;
       // ISO 8601: week containing the first Thursday
-      const d = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
+      const d = new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate()));
       // Set to nearest Thursday: current date + 4 - current day number (Mon=1)
       const day = d.getUTCDay() || 7; // ISO: Mon=1, Sun=7
       d.setUTCDate(d.getUTCDate() + 4 - day);
@@ -220,18 +239,19 @@ export function registerDateArithmeticFunctions(registry: Map<string, IFormulaFu
         basis = Math.trunc(b);
       }
 
-      const sy = startDate.getFullYear();
-      const sm = startDate.getMonth() + 1;
-      const sd = startDate.getDate();
-      const ey = endDate.getFullYear();
-      const em = endDate.getMonth() + 1;
-      const ed = endDate.getDate();
+      const sy = startDate.getUTCFullYear();
+      const sm = startDate.getUTCMonth() + 1;
+      const sd = startDate.getUTCDate();
+      const ey = endDate.getUTCFullYear();
+      const em = endDate.getUTCMonth() + 1;
+      const ed = endDate.getUTCDate();
 
       switch (basis) {
+        case 4:
         case 0: {
-          // US 30/360
+          // US or European 30/360
           const startDay = sd === 31 ? 30 : sd;
-          const endDay = ed === 31 && startDay === 30 ? 30 : ed;
+          const endDay = ed === 31 && (basis === 4 || startDay === 30) ? 30 : ed;
           const days360 = (ey - sy) * 360 + (em - sm) * 30 + (endDay - startDay);
           return days360 / 360;
         }
@@ -245,13 +265,14 @@ export function registerDateArithmeticFunctions(registry: Map<string, IFormulaFu
             : ((Date.UTC(ey + 1, 0, 1) - Date.UTC(sy, 0, 1)) / 86400000) / (ey - sy + 1);
           return diffDays / avgYear;
         }
+        case 2:
         case 3: {
           // Actual/365
           const diffMs = Date.UTC(ey, em - 1, ed) - Date.UTC(sy, sm - 1, sd);
-          return (diffMs / 86400000) / 365;
+          return (diffMs / 86400000) / (basis === 2 ? 360 : 365);
         }
         default:
-          return new FormulaError('#VALUE!', 'YEARFRAC basis must be 0, 1, or 3');
+          return new FormulaError('#VALUE!', 'YEARFRAC basis must be 0 through 4');
       }
     },
   });
@@ -271,37 +292,7 @@ export function registerDateArithmeticFunctions(registry: Map<string, IFormulaFu
       if (daysNum instanceof FormulaError) return daysNum;
       const days = Math.trunc(daysNum);
 
-      // Build holiday set (as UTC date strings for comparison)
-      const holidaySet = new Set<string>();
-      const rawHol = args[2];
-      if (rawHol !== undefined) {
-        let holVals: unknown[];
-        if (rawHol.kind === 'range') {
-          holVals = context.getRangeValues({ start: rawHol.start, end: rawHol.end }).flat();
-        } else {
-          holVals = [evaluator.evaluate(rawHol, context)];
-        }
-        for (const hv of holVals) {
-          if (hv === null || hv === undefined) continue;
-          const hd = toDate(hv);
-          if (!(hd instanceof FormulaError)) {
-            holidaySet.add(`${hd.getFullYear()}-${hd.getMonth()}-${hd.getDate()}`);
-          }
-        }
-      }
-
-      const current = new Date(startDate.getFullYear(), startDate.getMonth(), startDate.getDate());
-      const step = days >= 0 ? 1 : -1;
-      let remaining = Math.abs(days);
-      while (remaining > 0) {
-        current.setDate(current.getDate() + step);
-        const dow = current.getDay();
-        if (dow === 0 || dow === 6) continue; // weekend
-        const key = `${current.getFullYear()}-${current.getMonth()}-${current.getDate()}`;
-        if (holidaySet.has(key)) continue; // holiday
-        remaining--;
-      }
-      return current;
+      return serialToDate(workday(rawStart, days, [false, false, false, false, false, true, true], args[2], context, evaluator));
     },
   });
 
@@ -336,39 +327,57 @@ export function registerDateArithmeticFunctions(registry: Map<string, IFormulaFu
         }
       }
 
-      // Build holiday set
-      const holidaySet = new Set<string>();
-      const rawHol = args[3];
-      if (rawHol !== undefined) {
-        let holVals: unknown[];
-        if (rawHol.kind === 'range') {
-          holVals = context.getRangeValues({ start: rawHol.start, end: rawHol.end }).flat();
-        } else {
-          holVals = [evaluator.evaluate(rawHol, context)];
-        }
-        for (const hv of holVals) {
-          if (hv === null || hv === undefined) continue;
-          const hd = toDate(hv);
-          if (!(hd instanceof FormulaError)) {
-            holidaySet.add(`${hd.getFullYear()}-${hd.getMonth()}-${hd.getDate()}`);
-          }
-        }
-      }
-
-      const current = new Date(startDate.getFullYear(), startDate.getMonth(), startDate.getDate());
-      const step = days >= 0 ? 1 : -1;
-      let remaining = Math.abs(days);
-      while (remaining > 0) {
-        current.setDate(current.getDate() + step);
-        // getDay() returns 0=Sun..6=Sat; mask is Mon(0)..Sun(6)
-        const dow = current.getDay();
-        const maskIndex = dow === 0 ? 6 : dow - 1; // convert Sun=0 to index 6, Mon=1 to index 0
-        if (weekendMask[maskIndex]) continue;
-        const key = `${current.getFullYear()}-${current.getMonth()}-${current.getDate()}`;
-        if (holidaySet.has(key)) continue;
-        remaining--;
-      }
-      return current;
+      return serialToDate(workday(rawStart, days, weekendMask, args[3], context, evaluator));
     },
   });
+}
+
+function holidayDays(arg: ASTNode | undefined, context: IFormulaContext, evaluator: IEvaluator): Set<number> | FormulaError {
+  const days = new Set<number>();
+  if (!arg) return days;
+  for (const value of flattenArgs([arg], context, evaluator)) {
+    if (value === null || value === undefined || value === '') continue;
+    const day = serialDay(value);
+    if (day instanceof FormulaError) return day;
+    days.add(day);
+  }
+  return days;
+}
+
+function workingDays(from: number, to: number, mask: boolean[]): number {
+  const length = to - from + 1;
+  const perWeek = mask.filter(day => !day).length;
+  let count = Math.floor(length / 7) * perWeek;
+  for (let i = 0; i < length % 7; i++) if (!mask[weekday(from + i)]) count++;
+  return count;
+}
+
+function workday(startValue: unknown, days: number, mask: boolean[], holidaysArg: ASTNode | undefined, context: IFormulaContext, evaluator: IEvaluator): number | FormulaError {
+  if (mask.every(Boolean)) return new FormulaError('#VALUE!', 'Weekend mask has no working days');
+  if (!Number.isFinite(days) || Math.abs(days) >= MAX_DATE_SERIAL) return new FormulaError('#NUM!', 'Too many working days');
+  const start = serialDay(startValue);
+  if (start instanceof FormulaError) return start;
+  if (days === 0) return start;
+  const holidays = holidayDays(holidaysArg, context, evaluator);
+  if (holidays instanceof FormulaError) return holidays;
+  const step = days > 0 ? 1 : -1;
+  const target = Math.abs(days);
+  const count = (distance: number): number => {
+    const from = step > 0 ? start + 1 : start - distance;
+    const to = step > 0 ? start + distance : start - 1;
+    let result = workingDays(from, to, mask);
+    context.consumeWork?.(holidays.size);
+    for (const holiday of holidays) if (holiday >= from && holiday <= to && !mask[weekday(holiday)]) result--;
+    return result;
+  };
+  // Monotone search over the Excel date domain: at most 22 iterations.
+  let low = 1;
+  let high = step > 0 ? MAX_DATE_SERIAL - 1 - start : start;
+  if (count(high) < target) return new FormulaError('#NUM!', 'Workday outside Excel date range');
+  for (let i = 0; i < 22 && low < high; i++) {
+    const mid = Math.floor((low + high) / 2);
+    if (count(mid) >= target) high = mid;
+    else low = mid + 1;
+  }
+  return start + step * low;
 }

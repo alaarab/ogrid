@@ -1,7 +1,7 @@
 import type { FilterOption } from '@alaarab/ogrid-core';
 import type { ReactNode } from 'react';
 import type { IColumnDef, IColumnGroupDef, ICellValueChangedEvent } from './columnTypes';
-import type { IFormulaFunction, IRecalcResult, IGridDataAccessor, IAuditEntry, IAuditTrail, IResponsiveColumnsConfig, WindowedRow, PageSize, IFormulaRowMap } from '@alaarab/ogrid-core';
+import type { IFormulaFunction, IFormulaLimits, IRecalcResult, IGridDataAccessor, IAuditEntry, IAuditTrail, IResponsiveColumnsConfig, WindowedRow, PageSize, IFormulaRowMap } from '@alaarab/ogrid-core';
 
 // Re-export all shared types and functions from core (no React-specific changes)
 export type {
@@ -183,6 +183,8 @@ interface IOGridBaseProps<T> {
   formulaFunctions?: Record<string, IFormulaFunction>;
   /** Named ranges for the formula engine: name  to  cell/range ref string (e.g. { Revenue: 'A1:A10' }). */
   namedRanges?: Record<string, string>;
+  /** Per-formula limits (cells read per formula, work budget). Defaults suit large grids; lower them for untrusted imported workbooks. Read when the formula engine is created. */
+  formulaLimits?: IFormulaLimits;
   /** Sheet accessors for cross-sheet formula references (e.g. { Sheet2: accessor }). */
   sheets?: Record<string, IGridDataAccessor>;
 

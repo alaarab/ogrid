@@ -148,6 +148,7 @@ import { OGrid } from '@alaarab/ogrid-react-fluent';
 | `onFormulaRecalc` | `(result: IRecalcResult) => void` | `undefined` | Called when a recalculation updates cell values (e.g. a cascade from an edited cell). |
 | `formulaFunctions` | `Record<string, IFormulaFunction>` | `undefined` | Custom functions to register with the formula engine. |
 | `namedRanges` | `Record<string, string>` | `undefined` | Named ranges for formulas, mapping a name to a cell/range ref (e.g. `{ Revenue: 'A1:A10' }`). |
+| `formulaLimits` | `IFormulaLimits` | `undefined` | Per-formula limits: `maxRangeCells` (default 5,000,000) and `maxWork` (default 20,000,000). A formula over a limit returns `#VALUE!`. Lower them for untrusted workbooks. |
 | `sheets` | `Record<string, IGridDataAccessor>` | `undefined` | Accessors for cross-sheet formula references (e.g. `{ Sheet2: accessor }`). |
 
 See [Formulas](../features/formulas) for the full guide.

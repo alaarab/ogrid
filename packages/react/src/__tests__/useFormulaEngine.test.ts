@@ -383,6 +383,22 @@ describe('useFormulaEngine  -  custom formulaFunctions', () => {
   });
 });
 
+describe('useFormulaEngine  -  formulaLimits', () => {
+  it('passes formulaLimits to the engine so hosts can tighten them', () => {
+    const { result } = renderHook(() =>
+      useFormulaEngine(makeParams({ formulaLimits: { maxRangeCells: 2 } }))
+    );
+
+    act(() => {
+      result.current.setFormula(2, 0, '=SUM(A1:A2)');
+      result.current.setFormula(2, 1, '=SUM(A1:A3)');
+    });
+
+    expect(result.current.getFormulaValue(2, 0)).toBe(40);
+    expect(String(result.current.getFormulaValue(2, 1))).toBe('#VALUE!');
+  });
+});
+
 // ==========================================================================
 // 7. Lifecycle
 // ==========================================================================

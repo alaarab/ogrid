@@ -15,6 +15,7 @@ import {
   createGridDataAccessor,
   type IGridDataAccessor,
   type IFormulaFunction,
+  type IFormulaLimits,
   type IRecalcResult,
   type IAuditEntry,
   type IAuditTrail,
@@ -38,6 +39,8 @@ export interface UseFormulaEngineParams<T> {
   formulaFunctions?: Record<string, IFormulaFunction>;
   /** Named ranges: name  to  cell/range reference string. */
   namedRanges?: Record<string, string>;
+  /** Per-formula resource limits. Memoize the object: a changed one rebuilds the engine. */
+  formulaLimits?: IFormulaLimits;
   /** Sheet accessors for cross-sheet references. Pass a new accessor when a sheet's data changes. */
   sheets?: Record<string, IGridDataAccessor>;
 }
@@ -84,12 +87,14 @@ const NOOP_RESULT: UseFormulaEngineResult = {
 
 const NO_SHEETS: Record<string, IGridDataAccessor> = {};
 
-function shallowEqual(a: Record<string, unknown> | undefined, b: Record<string, unknown> | undefined): boolean {
+function shallowEqual(a: object | undefined, b: object | undefined): boolean {
   if (a === b) return true;
-  const aKeys = Object.keys(a ?? {});
-  if (aKeys.length !== Object.keys(b ?? {}).length) return false;
+  const ra = a as Record<string, unknown> | undefined;
+  const rb = b as Record<string, unknown> | undefined;
+  const aKeys = Object.keys(ra ?? {});
+  if (aKeys.length !== Object.keys(rb ?? {}).length) return false;
   for (const key of aKeys) {
-    if (a?.[key] !== b?.[key]) return false;
+    if (ra?.[key] !== rb?.[key]) return false;
   }
   return true;
 }
@@ -112,6 +117,7 @@ export function useFormulaEngine<T>(
     onFormulaRecalc,
     formulaFunctions,
     namedRanges,
+    formulaLimits,
     sheets,
   } = params;
 
@@ -126,6 +132,7 @@ export function useFormulaEngine<T>(
   const engineSettingsRef = useRef<{
     formulaFunctions?: Record<string, IFormulaFunction>;
     namedRanges?: Record<string, string>;
+    formulaLimits?: IFormulaLimits;
   }>({});
 
   // Create or destroy engine based on `formulas` prop
@@ -133,8 +140,9 @@ export function useFormulaEngine<T>(
     engineRef.current = new FormulaEngine({
       customFunctions: formulaFunctions,
       namedRanges,
+      limits: formulaLimits,
     });
-    engineSettingsRef.current = { formulaFunctions, namedRanges };
+    engineSettingsRef.current = { formulaFunctions, namedRanges, formulaLimits };
   } else if (!formulas && engineRef.current) {
     engineRef.current = null;
   }
@@ -189,15 +197,19 @@ export function useFormulaEngine<T>(
     report(engine.loadFormulas(initialFormulas, createAccessor()));
   }, [engine, initialFormulas, createAccessor, report]);
 
-  // New custom functions or named ranges: rebuild the engine and re-parse every
-  // formula against them, keeping the formulas and registered sheets.
+  // New custom functions, named ranges or limits: rebuild the engine and re-parse
+  // every formula against them, keeping the formulas and registered sheets.
   useLayoutEffect(() => {
     const current = engineRef.current;
     if (!current) return;
     const applied = engineSettingsRef.current;
-    if (shallowEqual(applied.formulaFunctions, formulaFunctions) && shallowEqual(applied.namedRanges, namedRanges)) return;
-    const next = new FormulaEngine({ customFunctions: formulaFunctions, namedRanges });
-    engineSettingsRef.current = { formulaFunctions, namedRanges };
+    if (
+      shallowEqual(applied.formulaFunctions, formulaFunctions) &&
+      shallowEqual(applied.namedRanges, namedRanges) &&
+      shallowEqual(applied.formulaLimits, formulaLimits)
+    ) return;
+    const next = new FormulaEngine({ customFunctions: formulaFunctions, namedRanges, limits: formulaLimits });
+    engineSettingsRef.current = { formulaFunctions, namedRanges, formulaLimits };
     for (const [name, accessor] of Object.entries(registeredSheetsRef.current)) next.registerSheet(name, accessor);
     if (sheetsEngineRef.current === current) sheetsEngineRef.current = next;
     if (initialLoadedEngineRef.current === current) initialLoadedEngineRef.current = next;
@@ -209,7 +221,7 @@ export function useFormulaEngine<T>(
         .map((c) => ({ ...c, oldValue: current.getValue(c.col, c.row) }))
         .filter((c) => !sameValue(c.oldValue, c.newValue)),
     });
-  }, [formulaFunctions, namedRanges, createAccessor, report]);
+  }, [formulaFunctions, namedRanges, formulaLimits, createAccessor, report]);
 
   // --- Dependent recalculation ---
   // A consumer's onCellValueChanged usually applies the value with setState, so

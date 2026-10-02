@@ -206,6 +206,7 @@ export function useOGrid<T>(
     onFormulaRecalc,
     formulaFunctions,
     namedRanges,
+    formulaLimits,
     sheets,
     sheetDefs,
     activeSheet,
@@ -584,6 +585,7 @@ export function useOGrid<T>(
     onFormulaRecalc: wrappedOnFormulaRecalc,
     formulaFunctions,
     namedRanges,
+    formulaLimits,
     sheets,
   });
 

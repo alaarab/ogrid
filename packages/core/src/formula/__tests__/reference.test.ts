@@ -97,8 +97,8 @@ describe('INDIRECT', () => {
     expect(evalFn('INDIRECT', [str('$A$1')], { '0,0': 99 })).toBe(99);
   });
 
-  it('handles range references by returning top-left cell', () => {
-    expect(evalFn('INDIRECT', [str('A1:B2')], { '0,0': 5, '1,1': 10 })).toBe(5);
+  it('handles range references as a range value', () => {
+    expect(evalFn('INDIRECT', [str('A1:B2')], { '0,0': 5, '1,1': 10 })).toEqual([[5, null], [null, 10]]);
   });
 
   it('propagates FormulaError from first argument', () => {
@@ -640,8 +640,8 @@ describe('GCD', () => {
     expect(evalFn('GCD', [num(12.7), num(8.3)])).toBe(4);
   });
 
-  it('handles absolute values (negative inputs)', () => {
-    expect(evalFn('GCD', [num(-12), num(8)])).toBe(4);
+  it('rejects negative inputs', () => {
+    expect(String(evalFn('GCD', [num(-12), num(8)]))).toBe('#NUM!');
   });
 });
 

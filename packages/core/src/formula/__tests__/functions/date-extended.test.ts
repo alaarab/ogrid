@@ -1,3 +1,4 @@
+import { toDate } from '../../functions/date/shared';
 import { FormulaEngine } from '../../formulaEngine';
 import type { IGridDataAccessor } from '../../types';
 import { FormulaError } from '../../types';
@@ -132,7 +133,7 @@ describe('Date extended functions', () => {
     });
 
     it('should return #VALUE! for invalid basis', () => {
-      const result = evalFormula('=YEARFRAC("2024-01-01T00:00:00", "2024-07-01T00:00:00", 2)');
+      const result = evalFormula('=YEARFRAC("2024-01-01T00:00:00", "2024-07-01T00:00:00", 5)');
       expect(result).toBeInstanceOf(FormulaError);
       expect((result as FormulaError).type).toBe('#VALUE!');
     });
@@ -146,9 +147,9 @@ describe('Date extended functions', () => {
     });
 
     it('should strip time component', () => {
-      const result = evalFormula('=DATEVALUE("2024-06-15T12:30:00")') as Date;
-      expect(result.getHours()).toBe(0);
-      expect(result.getMinutes()).toBe(0);
+      const result = toDate(evalFormula('=DATEVALUE("2024-06-15T12:30:00")')) as Date;
+      expect(result.getUTCHours()).toBe(0);
+      expect(result.getUTCMinutes()).toBe(0);
     });
 
     it('should return #VALUE! for invalid date string', () => {
@@ -216,32 +217,32 @@ describe('Date extended functions', () => {
   describe('WORKDAY', () => {
     it('should add 1 working day from Friday (skip Saturday)', () => {
       // 2024-01-05 is Friday, +1 workday = Monday 2024-01-08
-      const result = evalFormula('=WORKDAY("2024-01-05T00:00:00", 1)') as Date;
+      const result = toDate(evalFormula('=WORKDAY("2024-01-05T00:00:00", 1)')) as Date;
       expect(result).toBeInstanceOf(Date);
-      expect(result.getDate()).toBe(8);
-      expect(result.getMonth()).toBe(0); // January
-      expect(result.getFullYear()).toBe(2024);
+      expect(result.getUTCDate()).toBe(8);
+      expect(result.getUTCMonth()).toBe(0); // January
+      expect(result.getUTCFullYear()).toBe(2024);
     });
 
     it('should add 5 working days from Monday', () => {
       // 2024-01-01 is Monday, +5 workdays = 2024-01-08 (next Monday)
-      const result = evalFormula('=WORKDAY("2024-01-01T00:00:00", 5)') as Date;
+      const result = toDate(evalFormula('=WORKDAY("2024-01-01T00:00:00", 5)')) as Date;
       expect(result).toBeInstanceOf(Date);
-      expect(result.getDay()).toBe(1); // Monday
+      expect(result.getUTCDay()).toBe(1); // Monday
     });
 
     it('should subtract working days (negative days)', () => {
       // 2024-01-08 is Monday, -1 workday = Friday 2024-01-05
-      const result = evalFormula('=WORKDAY("2024-01-08T00:00:00", -1)') as Date;
+      const result = toDate(evalFormula('=WORKDAY("2024-01-08T00:00:00", -1)')) as Date;
       expect(result).toBeInstanceOf(Date);
-      expect(result.getDate()).toBe(5);
-      expect(result.getDay()).toBe(5); // Friday
+      expect(result.getUTCDate()).toBe(5);
+      expect(result.getUTCDay()).toBe(5); // Friday
     });
 
     it('should return 0 days = same date', () => {
-      const result = evalFormula('=WORKDAY("2024-01-05T00:00:00", 0)') as Date;
+      const result = toDate(evalFormula('=WORKDAY("2024-01-05T00:00:00", 0)')) as Date;
       expect(result).toBeInstanceOf(Date);
-      expect(result.getDate()).toBe(5);
+      expect(result.getUTCDate()).toBe(5);
     });
 
     it('should return #VALUE! for invalid date', () => {
@@ -254,15 +255,15 @@ describe('Date extended functions', () => {
   // --- WORKDAY.INTL ---
   describe('WORKDAY.INTL', () => {
     it('should use default weekend (Sat+Sun) with no weekend arg', () => {
-      const result = evalFormula('=WORKDAY.INTL("2024-01-05T00:00:00", 1)') as Date;
+      const result = toDate(evalFormula('=WORKDAY.INTL("2024-01-05T00:00:00", 1)')) as Date;
       expect(result).toBeInstanceOf(Date);
-      expect(result.getDate()).toBe(8); // Monday
+      expect(result.getUTCDate()).toBe(8); // Monday
     });
 
     it('should respect custom weekend string "0000011" (Sat+Sun)', () => {
-      const result = evalFormula('=WORKDAY.INTL("2024-01-05T00:00:00", 1, "0000011")') as Date;
+      const result = toDate(evalFormula('=WORKDAY.INTL("2024-01-05T00:00:00", 1, "0000011")')) as Date;
       expect(result).toBeInstanceOf(Date);
-      expect(result.getDate()).toBe(8);
+      expect(result.getUTCDate()).toBe(8);
     });
 
     it('should treat Friday as weekend with "0000100" mask', () => {
@@ -271,22 +272,22 @@ describe('Date extended functions', () => {
       // Starting 2024-01-05 (Fri), +1 workday  to  skip Sat(already in mask?), next non-weekend from Fri+1=Sat  to  Sat not in mask  to  Sat is a workday
       // Actually mask[4]=1 means Fri is weekend, mask[5]=0 means Sat is workday
       // So +1 from Fri = Sat
-      const result = evalFormula('=WORKDAY.INTL("2024-01-05T00:00:00", 1, "0000100")') as Date;
+      const result = toDate(evalFormula('=WORKDAY.INTL("2024-01-05T00:00:00", 1, "0000100")')) as Date;
       expect(result).toBeInstanceOf(Date);
-      expect(result.getDate()).toBe(6); // Saturday
+      expect(result.getUTCDate()).toBe(6); // Saturday
     });
 
     it('should work with numeric weekend code 1 (Sat+Sun)', () => {
-      const result = evalFormula('=WORKDAY.INTL("2024-01-05T00:00:00", 1, 1)') as Date;
+      const result = toDate(evalFormula('=WORKDAY.INTL("2024-01-05T00:00:00", 1, 1)')) as Date;
       expect(result).toBeInstanceOf(Date);
-      expect(result.getDate()).toBe(8); // Monday
+      expect(result.getUTCDate()).toBe(8); // Monday
     });
 
     it('should work with weekend code 11 (Sun only)', () => {
       // code 11 = Sun only; +1 from Fri = Sat (Sat is workday)
-      const result = evalFormula('=WORKDAY.INTL("2024-01-05T00:00:00", 1, 11)') as Date;
+      const result = toDate(evalFormula('=WORKDAY.INTL("2024-01-05T00:00:00", 1, 11)')) as Date;
       expect(result).toBeInstanceOf(Date);
-      expect(result.getDate()).toBe(6); // Saturday
+      expect(result.getUTCDate()).toBe(6); // Saturday
     });
 
     it('should return #VALUE! for invalid weekend number', () => {

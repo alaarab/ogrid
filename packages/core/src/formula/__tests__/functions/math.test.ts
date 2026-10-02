@@ -236,10 +236,10 @@ describe('Math functions', () => {
       expect(evalFormula('=SQRT(16)')).toBe(4);
     });
 
-    it('should return #VALUE! for negative numbers', () => {
+    it('should return #NUM! for negative numbers', () => {
       const result = evalFormula('=SQRT(-4)');
       expect(result).toBeInstanceOf(FormulaError);
-      expect((result as FormulaError).type).toBe('#VALUE!');
+      expect((result as FormulaError).type).toBe('#NUM!');
     });
   });
 });

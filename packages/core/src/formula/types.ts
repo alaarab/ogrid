@@ -48,6 +48,7 @@ export class FormulaError {
 // --- Tokens ---
 
 export type TokenType =
+  | 'ERROR_LITERAL'
   | 'NUMBER'
   | 'STRING'
   | 'BOOLEAN'
@@ -156,6 +157,10 @@ export interface IFormulaContext {
   getCellValue(address: ICellAddress): unknown;
   getRangeValues(range: ICellRange): unknown[][];
   now(): Date;
+  /** Address of the formula being evaluated, when supplied by the engine. */
+  currentCell?: ICellAddress;
+  /** Optional shared work budget for built-in functions. */
+  consumeWork?(steps: number): void;
   /** Optional: return the formula string for a cell, or undefined if not a formula cell. */
   getCellFormula?(address: ICellAddress): string | undefined;
 }
@@ -196,6 +201,17 @@ export interface IRecalcPlan {
 }
 
 /** Configuration for the FormulaEngine. */
+/**
+ * Per-formula resource limits. A formula that exceeds one evaluates to #VALUE!.
+ * The defaults suit large grids; lower them for untrusted imported workbooks.
+ */
+export interface IFormulaLimits {
+  /** Cells a single formula may read from ranges, after clipping to the data. Default 5,000,000. */
+  maxRangeCells?: number;
+  /** Work budget for a single formula: cells read, nodes evaluated and text scanned. Default 20,000,000. */
+  maxWork?: number;
+}
+
 export interface IFormulaEngineConfig {
   /**
    * @deprecated No longer used. Circular references are now detected exactly by
@@ -206,6 +222,8 @@ export interface IFormulaEngineConfig {
   customFunctions?: Record<string, IFormulaFunction>;
   /** Named ranges: name  to  cell/range reference string (e.g. "A1:B10"). */
   namedRanges?: Record<string, string>;
+  /** Per-formula resource limits (range size, work budget). */
+  limits?: IFormulaLimits;
 }
 
 /** Grid data accessor  -  bridge between FormulaEngine and the grid's data model. */
