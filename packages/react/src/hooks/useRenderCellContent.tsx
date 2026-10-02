@@ -129,7 +129,11 @@ export function useRenderCellContent<T>(
       }
 
       return (
-        <CellErrorBoundary key={`${rowId}-${col.columnId}`} onError={onCellError}>
+        <CellErrorBoundary
+          key={`${rowId}-${col.columnId}`}
+          resetKeys={[item, descriptor.displayValue, descriptor.mode]}
+          onError={onCellError}
+        >
           {content}
         </CellErrorBoundary>
       );

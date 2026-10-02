@@ -37,6 +37,9 @@ export interface SideBarProps {
 const PANEL_WIDTH = 240;
 const TAB_WIDTH = 36;
 
+/** Debounce before a sidebar text filter commits. */
+const TEXT_FILTER_DEBOUNCE_MS = 250;
+
 const PANEL_LABELS: Record<SideBarPanelId, string> = {
   columns: 'Columns',
   filters: 'Filters',
@@ -288,26 +291,28 @@ function FiltersPanel(props: {
 }): React.ReactElement {
   const { filterableColumns, filters, onFilterChange, filterOptions } = props;
 
-  if (filterableColumns.length === 0) {
+  // People filters need an async user search control; the panel has no such
+  // control, so don't render a label with nothing under it.
+  const supportedColumns = filterableColumns.filter((col) => col.filterType !== 'people');
+
+  if (supportedColumns.length === 0) {
     return <div style={noFilterStyle}>No filterable columns</div>;
   }
 
   return (
     <>
-      {filterableColumns.map((col) => {
+      {supportedColumns.map((col) => {
         const filterKey = col.filterField;
         const fv = filters[filterKey];
         return (
           <div key={col.columnId} style={filterGroupStyle}>
             <div style={filterLabelStyle}>{col.name}</div>
             {col.filterType === 'text' && (
-              <input
-                type="text"
+              <SideBarTextFilter
+                filterKey={filterKey}
+                name={col.name}
                 value={fv?.type === 'text' ? fv.value : ''}
-                onChange={(e) => onFilterChange(filterKey, e.target.value ? { type: 'text', value: e.target.value } : undefined)}
-                placeholder={`Filter ${col.name}...`}
-                aria-label={`Filter ${col.name}`}
-                style={textInputStyle}
+                onFilterChange={onFilterChange}
               />
             )}
             {col.filterType === 'date' && (
@@ -373,5 +378,53 @@ function FiltersPanel(props: {
         );
       })}
     </>
+  );
+}
+
+/**
+ * Sidebar text filter input. Keeps a local draft so typing stays responsive and
+ * only commits a trimmed value after the debounce, instead of re-filtering (and
+ * resetting the page) on every keystroke.
+ */
+function SideBarTextFilter(props: {
+  filterKey: string;
+  name: string;
+  value: string;
+  onFilterChange: (key: string, value: FilterValue | undefined) => void;
+}): React.ReactElement {
+  const { filterKey, name, value, onFilterChange } = props;
+  const [draft, setDraft] = React.useState(value);
+  const timerRef = React.useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+  const latestRef = React.useRef({ value, onFilterChange });
+  latestRef.current = { value, onFilterChange };
+
+  // Reflect external changes (e.g. Clear all filters) back into the input. Keep
+  // the draft when it only differs by whitespace from the committed value.
+  React.useEffect(() => {
+    setDraft((prev) => (prev.trim() === value ? prev : value));
+  }, [value]);
+
+  React.useEffect(() => () => clearTimeout(timerRef.current), []);
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const next = e.target.value;
+    setDraft(next);
+    clearTimeout(timerRef.current);
+    timerRef.current = setTimeout(() => {
+      const trimmed = next.trim();
+      if (trimmed === latestRef.current.value) return;
+      latestRef.current.onFilterChange(filterKey, trimmed ? { type: 'text', value: trimmed } : undefined);
+    }, TEXT_FILTER_DEBOUNCE_MS);
+  };
+
+  return (
+    <input
+      type="text"
+      value={draft}
+      onChange={handleChange}
+      placeholder={`Filter ${name}...`}
+      aria-label={`Filter ${name}`}
+      style={textInputStyle}
+    />
   );
 }

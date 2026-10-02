@@ -96,6 +96,25 @@ export function createColumnHeaderFilterTests(ColumnHeaderFilter: React.Componen
     expect(onFilterChange).toHaveBeenCalledWith(['Active', 'Closed']);
   });
 
+  it('keeps pending multi-select checks across a parent re-render while open', () => {
+    const onFilterChange = jest.fn();
+    const { rerender } = render(
+      <ColumnHeaderFilter columnKey="status" columnName="Status" filterType="multiSelect"
+        selectedValues={[]} onFilterChange={onFilterChange} options={['Active', 'Closed']} />
+    );
+    fireEvent.click(screen.getByRole('button', { name: /filter status/i }));
+    fireEvent.click(screen.getByRole('checkbox', { name: 'Active' }));
+    expect(screen.getByRole('checkbox', { name: 'Active' })).toBeChecked();
+
+    // A parent re-render passes a fresh, content-equal selectedValues array.
+    rerender(
+      <ColumnHeaderFilter columnKey="status" columnName="Status" filterType="multiSelect"
+        selectedValues={[]} onFilterChange={onFilterChange} options={['Active', 'Closed']} />
+    );
+
+    expect(screen.getByRole('checkbox', { name: 'Active' })).toBeChecked();
+  });
+
   it('applies text filter and calls onTextChange', () => {
     const onTextChange = jest.fn();
     render(<ColumnHeaderFilter columnKey="name" columnName="Name" filterType="text" textValue="" onTextChange={onTextChange} />);
