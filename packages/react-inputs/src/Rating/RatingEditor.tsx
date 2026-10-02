@@ -96,6 +96,8 @@ export function RatingEditor<T>(props: ICellEditorProps<T>): React.ReactElement 
   const [rating, setRating] = React.useState(initialRating);
   const [hoverRating, setHoverRating] = React.useState<number | null>(null);
   const rootRef = React.useRef<HTMLDivElement>(null);
+  const starsRef = React.useRef<HTMLDivElement>(null);
+  const commitTimerRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const displayRating = hoverRating ?? rating;
 
@@ -108,7 +110,7 @@ export function RatingEditor<T>(props: ICellEditorProps<T>): React.ReactElement 
     setRating(clamped);
     onValueChange(clamped);
     // Auto-commit on click
-    setTimeout(() => onCommit(), 0);
+    commitTimerRef.current = setTimeout(() => onCommit(), 0);
   };
 
   const handleStarHover = (starIndex: number, e: React.MouseEvent<HTMLButtonElement>) => {
@@ -129,9 +131,14 @@ export function RatingEditor<T>(props: ICellEditorProps<T>): React.ReactElement 
     onCommit();
   };
 
-  // Focus root on mount
+  // Focus the stars (the role="slider" element) on mount
   React.useEffect(() => {
-    rootRef.current?.focus();
+    starsRef.current?.focus();
+  }, []);
+
+  // Cancel any pending auto-commit on unmount.
+  React.useEffect(() => () => {
+    if (commitTimerRef.current) clearTimeout(commitTimerRef.current);
   }, []);
 
   // Keyboard handling
@@ -146,19 +153,15 @@ export function RatingEditor<T>(props: ICellEditorProps<T>): React.ReactElement 
       } else if (e.key === 'ArrowRight' || e.key === 'ArrowUp') {
         e.preventDefault();
         const step = allowHalf ? 0.5 : 1;
-        setRating((prev) => {
-          const next = clampRating(prev + step, maxStars);
-          onValueChange(next);
-          return next;
-        });
+        const next = clampRating(rating + step, maxStars);
+        setRating(next);
+        onValueChange(next);
       } else if (e.key === 'ArrowLeft' || e.key === 'ArrowDown') {
         e.preventDefault();
         const step = allowHalf ? 0.5 : 1;
-        setRating((prev) => {
-          const next = clampRating(Math.max(0, prev - step), maxStars);
-          onValueChange(next || '');
-          return next;
-        });
+        const next = clampRating(Math.max(0, rating - step), maxStars);
+        setRating(next);
+        onValueChange(next || '');
       }
     };
     const el = rootRef.current;
@@ -166,7 +169,7 @@ export function RatingEditor<T>(props: ICellEditorProps<T>): React.ReactElement 
       el.addEventListener('keydown', handleKeyDown);
       return () => el.removeEventListener('keydown', handleKeyDown);
     }
-  }, [onCancel, onCommit, onValueChange, maxStars, allowHalf]);
+  }, [onCancel, onCommit, onValueChange, maxStars, allowHalf, rating]);
 
   const renderStar = (starIndex: number) => {
     const fill = getStarFill(starIndex, displayRating, allowHalf);
@@ -231,22 +234,23 @@ export function RatingEditor<T>(props: ICellEditorProps<T>): React.ReactElement 
   };
 
   return (
-    <div
-      ref={rootRef}
-      style={rootStyle}
-      onMouseDown={(e) => e.stopPropagation()}
-      tabIndex={0}
-      role="slider"
-      aria-label="Rating"
-      aria-valuemin={0}
-      aria-valuemax={maxStars}
-      aria-valuenow={rating}
-      aria-valuetext={rating > 0 ? `${rating} of ${maxStars} stars` : 'No rating'}
-    >
-      {/* Stars row */}
-      {/* biome-ignore lint/a11y/noNoninteractiveElementInteractions: onMouseLeave only clears the hover preview; rating keyboard interaction lives on the role="slider" editor root */}
-      {/* biome-ignore lint/a11y/noStaticElementInteractions: hover-preview reset only, not an interactive control */}
-      <div style={starsRowStyle} onMouseLeave={handleMouseLeave}>
+    // biome-ignore lint/a11y/noNoninteractiveElementInteractions: popup editor root; onMouseDown only stops propagation so the grid does not treat clicks as outside-clicks. Keyboard is handled by the role="slider" stars row below.
+    // biome-ignore lint/a11y/noStaticElementInteractions: see above — propagation guard, not an interactive control
+    <div ref={rootRef} style={rootStyle} onMouseDown={(e) => e.stopPropagation()}>
+      {/* Stars row: the role="slider" element, kept separate from Clear so the
+          button is not flattened as a presentational slider child. */}
+      <div
+        ref={starsRef}
+        style={starsRowStyle}
+        onMouseLeave={handleMouseLeave}
+        tabIndex={0}
+        role="slider"
+        aria-label="Rating"
+        aria-valuemin={0}
+        aria-valuemax={maxStars}
+        aria-valuenow={rating}
+        aria-valuetext={rating > 0 ? `${rating} of ${maxStars} stars` : 'No rating'}
+      >
         {Array.from({ length: maxStars }, (_, i) => renderStar(i))}
       </div>
 
