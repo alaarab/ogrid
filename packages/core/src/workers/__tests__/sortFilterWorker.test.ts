@@ -129,7 +129,7 @@ describe('workerBody', () => {
   });
 
   it('accepts numeric timestamps in date columns', () => {
-    const ts = new Date(2024, 0, 15, 12).getTime();
+    const ts = Date.UTC(2024, 0, 15, 12);
     const indices = runWorker({
       values: [[ts]],
       columnMeta: dateMeta,
