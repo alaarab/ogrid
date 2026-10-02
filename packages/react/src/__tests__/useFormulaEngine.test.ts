@@ -397,6 +397,29 @@ describe('useFormulaEngine  -  formulaLimits', () => {
     expect(result.current.getFormulaValue(2, 0)).toBe(40);
     expect(String(result.current.getFormulaValue(2, 1))).toBe('#VALUE!');
   });
+
+  it('applies changed limits to existing formulas, and ignores an equal inline object', () => {
+    const onFormulaRecalc = jest.fn();
+    const { result, rerender } = renderHook(
+      (props: UseFormulaEngineParams<TestRow>) => useFormulaEngine(props),
+      { initialProps: makeParams({ formulaLimits: { maxRangeCells: 2 }, onFormulaRecalc }) }
+    );
+    act(() => {
+      result.current.setFormula(2, 1, '=SUM(A1:A3)');
+    });
+    expect(String(result.current.getFormulaValue(2, 1))).toBe('#VALUE!');
+
+    // A new but equal object (inline prop) keeps the engine.
+    onFormulaRecalc.mockClear();
+    rerender(makeParams({ formulaLimits: { maxRangeCells: 2 }, onFormulaRecalc }));
+    expect(String(result.current.getFormulaValue(2, 1))).toBe('#VALUE!');
+    expect(onFormulaRecalc).not.toHaveBeenCalled();
+
+    // Raised limits rebuild the engine and re-evaluate the formula.
+    rerender(makeParams({ formulaLimits: { maxRangeCells: 100 }, onFormulaRecalc }));
+    expect(result.current.getFormula(2, 1)).toBe('=SUM(A1:A3)');
+    expect(typeof result.current.getFormulaValue(2, 1)).toBe('number');
+  });
 });
 
 // ==========================================================================
