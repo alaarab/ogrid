@@ -18,6 +18,13 @@ import { FormulaError } from '../formula/types';
 // Header filter config
 // ---------------------------------------------------------------------------
 
+/**
+ * Shared empty selection array. Returning a new `[]` on every call would change
+ * the identity of `selectedValues` on each header render, which resets pending
+ * multi-select popover state while it is open.
+ */
+const EMPTY_SELECTED_VALUES: string[] = [];
+
 export interface HeaderFilterConfigInput {
   sortBy?: string;
   sortDirection: 'asc' | 'desc';
@@ -94,7 +101,7 @@ export function getHeaderFilterConfig<T>(
       ...base,
       options: filterable?.options ?? input.filterOptions[filterField] ?? [],
       isLoadingOptions: filterable?.options ? false : input.loadingFilterOptions[filterField] ?? false,
-      selectedValues: filterValue?.type === 'multiSelect' ? filterValue.value : [],
+      selectedValues: filterValue?.type === 'multiSelect' ? filterValue.value : EMPTY_SELECTED_VALUES,
       onFilterChange: (values: string[]) =>
         input.onFilterChange(filterField, values.length ? { type: 'multiSelect', value: values } : undefined),
     };

@@ -126,4 +126,41 @@ describe('useFilterOptions', () => {
     expect(after.loadingOptions).toEqual({});
     consoleSpy.mockRestore();
   });
+
+  it('ignores stale results when the data source is replaced mid-load', async () => {
+    let resolveOld: (v: string[]) => void;
+    const dataSourceA: IDataSource<unknown> = {
+      ...minimalDataSource(),
+      fetchFilterOptions: jest.fn(
+        (_field: string) => new Promise<string[]>((resolve) => { resolveOld = resolve; })
+      ),
+    };
+    const dataSourceB: IDataSource<unknown> = {
+      ...minimalDataSource(),
+      fetchFilterOptions: jest.fn().mockResolvedValue(['New']),
+    };
+
+    renderAndGetResult(dataSourceA, ['field']);
+
+    // Swap the source while the old load is still in flight.
+    act(() => {
+      root.render(React.createElement(Harness, { dataSource: dataSourceB, fields: ['field'] }));
+    });
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 0));
+    });
+
+    const afterSwap = JSON.parse(container.querySelector('[data-testid="result"]')?.textContent || '{}');
+    expect(afterSwap.filterOptions).toEqual({ field: ['New'] });
+
+    // The stale source resolves last with old options; it must be discarded.
+    await act(async () => {
+      resolveOld!(['Stale']);
+      await new Promise((resolve) => setTimeout(resolve, 0));
+    });
+
+    const after = JSON.parse(container.querySelector('[data-testid="result"]')?.textContent || '{}');
+    expect(after.filterOptions).toEqual({ field: ['New'] });
+    expect(after.loadingOptions).toEqual({});
+  });
 });
