@@ -362,6 +362,7 @@ export function useDataGridState<T>(
     handleRowCheckboxChange,
     setContextMenuPosition,
     wrapperRef,
+    scrollToIndexRef,
     onKeyDown,
     onClipboardError,
     formulas: props.formulas,

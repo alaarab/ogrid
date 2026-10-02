@@ -118,7 +118,7 @@ export function useOGridImperativeHandle<T>(params: UseOGridImperativeHandlePara
         if (selectedRows === undefined) setInternalSelectedRows(ids);
         const pool = allFilteredItemsRef.current.length > 0 ? allFilteredItemsRef.current : displayItemsRef.current;
         onSelectionChange?.({
-          selectedRowIds: rowIds,
+          selectedRowIds: Array.from(ids),
           selectedItems: pool.filter((item) => ids.has(getRowIdRef.current(item))),
         });
       },

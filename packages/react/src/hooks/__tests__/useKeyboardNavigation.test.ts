@@ -44,6 +44,7 @@ describe('useKeyboardNavigation', () => {
       onCellValueChanged: overrides.onCellValueChanged as any,
       rowSelection: (overrides.rowSelection !== undefined ? overrides.rowSelection : 'none' as const) as any,
       wrapperRef: (overrides.wrapperRef !== undefined ? overrides.wrapperRef : wrapperRef) as typeof wrapperRef,
+      scrollToIndexRef: overrides.scrollToIndexRef as { current: ((index: number, align?: 'auto' | 'start' | 'center' | 'end') => void) | null } | undefined,
     },
   });
 
@@ -236,6 +237,48 @@ describe('useKeyboardNavigation', () => {
       expect(p.handlers.setSelectionRange).toHaveBeenCalledWith(
         expect.objectContaining({ startRow: 2, endRow: 12 })
       );
+    });
+
+    it('Shift+PageDown in a virtual grid scrolls the moving end into view by index', () => {
+      // The anchor (active cell) doesn't move, so useActiveCell won't scroll;
+      // the far row of a virtual grid isn't rendered, so it must scroll by index.
+      const wrapper = document.createElement('div');
+      wrapper.setAttribute('data-virtual-scroll', '');
+      wrapper.scrollTop = 0;
+      const scrollToIndex = jest.fn();
+      const p = makeParams({
+        items: pgItems,
+        visibleCols: pgCols,
+        visibleColumnCount: 1,
+        activeCell: { rowIndex: 2, columnIndex: 0 },
+        getRowId: (item: PgItem) => item.id,
+        wrapperRef: { current: wrapper },
+        scrollToIndexRef: { current: scrollToIndex },
+      });
+      const { result } = renderHook(() => useKeyboardNavigation(p));
+      firePgKey(result.current.handleGridKeyDown, 'PageDown', { shift: true });
+      expect(p.handlers.setActiveCell).not.toHaveBeenCalled();
+      expect(scrollToIndex).toHaveBeenCalledWith(12, 'auto');
+      // No pixel scroll on the (possibly scaled) virtual container.
+      expect(wrapper.scrollTop).toBe(0);
+    });
+
+    it('Shift+ArrowDown in a virtual grid scrolls the moving end into view by index', () => {
+      const scrollToIndex = jest.fn();
+      const p = makeParams({
+        items: pgItems,
+        visibleCols: pgCols,
+        visibleColumnCount: 1,
+        activeCell: { rowIndex: 2, columnIndex: 0 },
+        selectionRange: { startRow: 2, startCol: 0, endRow: 2, endCol: 0 },
+        getRowId: (item: PgItem) => item.id,
+        wrapperRef: { current: document.createElement('div') },
+        scrollToIndexRef: { current: scrollToIndex },
+      });
+      const { result } = renderHook(() => useKeyboardNavigation(p));
+      firePgKey(result.current.handleGridKeyDown, 'ArrowDown', { shift: true });
+      expect(p.handlers.setActiveCell).not.toHaveBeenCalled();
+      expect(scrollToIndex).toHaveBeenCalledWith(3, 'auto');
     });
 
     it('Shift+PageUp extends selection upward', () => {
