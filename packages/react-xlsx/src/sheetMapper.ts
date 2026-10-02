@@ -16,6 +16,8 @@
 
 import ExcelJS from 'exceljs';
 import type { IColumnDef } from '@alaarab/ogrid-core';
+import { adjustFormulaReferences, parseCellRef, tokenize } from '@alaarab/ogrid-core/formula';
+import { normalizeFormula, rebaseFormulaRows } from './formulaReferences';
 
 /**
  * Output of sheetToGridData. Feeds straight into <OGrid> as
@@ -31,6 +33,8 @@ export interface SheetGridData {
    * tell the user what was left out.
    */
   truncated?: { rowCount: number; columnCount: number };
+  /** CSV parsing stopped at a load limit; the original extent is unknown. */
+  parseTruncated?: boolean;
 }
 
 /** Row shape — keyed by column letter (A, B, C, ..., AA, AB, ...).
@@ -51,8 +55,8 @@ export interface SheetToGridDataOptions {
    *   row 1 is returned as the first data row.
    *
    * `columnId` is always the column letter so the `cellReferences`
-   * strip and any `INDIRECT("A1")`-style formula references keep
-   * resolving the same way.
+   * strip retains the worksheet's column coordinates. Promoted headers
+   * shift local formula row references into grid data coordinates.
    */
   headerRow?: 'auto' | 'header' | 'none';
   /** Maximum worksheet rows to load (default 1,048,576, Excel's own limit). */
@@ -60,10 +64,10 @@ export interface SheetToGridDataOptions {
   /** Maximum worksheet columns to load (default 1,000). */
   maxCols?: number;
   /**
-   * Maximum rows × columns to load (default 5,000,000). A few-KB xlsx with
-   * one far-away cell has a used range of billions of cells; this keeps an
-   * untrusted file from freezing the page. Rows are dropped from the bottom
-   * to fit.
+   * Maximum rows × columns to map (default 5,000,000). A few-KB xlsx with
+   * one far-away cell has a used range of billions of cells; this keeps the
+   * grid from allocating that rectangle. Rows are dropped from the bottom
+   * to fit. XLSX parsing itself is bounded only by WorkbookLoadOptions byte checks.
    */
   maxCells?: number;
 }
@@ -71,6 +75,21 @@ export interface SheetToGridDataOptions {
 export const DEFAULT_MAX_ROWS = 1_048_576;
 export const DEFAULT_MAX_COLS = 1_000;
 export const DEFAULT_MAX_CELLS = 5_000_000;
+export const DEFAULT_MAX_FILE_BYTES = 50 * 1024 * 1024;
+export const DEFAULT_MAX_UNCOMPRESSED_BYTES = 200 * 1024 * 1024;
+
+export interface WorkbookLoadOptions extends SheetToGridDataOptions {
+  /** Maximum input bytes before reading the blob (default 50 MiB). */
+  maxFileBytes?: number;
+  /** Maximum ZIP-declared total uncompressed bytes (default 200 MiB). */
+  maxUncompressedBytes?: number;
+}
+
+const truncatedCsvSheets = new WeakSet<ExcelJS.Worksheet>();
+/** Promoted-sheet formulas that referenced the header row. Their grid result
+ * can differ from Excel's (e.g. COUNTA over a shrunk range), so XlsxGrid
+ * keeps the cached result instead of evaluating them. */
+export const headerReferencingFormulas = new WeakSet<object>();
 
 const SAMPLE_SIZE = 50; // rows inspected for column-type detection
 
@@ -80,22 +99,84 @@ const SAMPLE_SIZE = 50; // rows inspected for column-type detection
  * start with `PK\x03\x04`). The fallback synthesizes a single-sheet
  * workbook so downstream code paths stay identical.
  */
-export async function workbookFromBlob(blob: Blob): Promise<ExcelJS.Workbook> {
+export async function workbookFromBlob(blob: Blob, options: WorkbookLoadOptions = {}): Promise<ExcelJS.Workbook> {
+  const maxFileBytes = sanitizeLimit(options.maxFileBytes, DEFAULT_MAX_FILE_BYTES);
+  if (blob.size > maxFileBytes) throw new Error(`File exceeds maxFileBytes (${maxFileBytes})`);
   const buf = await blob.arrayBuffer();
+  if (buf.byteLength > maxFileBytes) throw new Error(`File exceeds maxFileBytes (${maxFileBytes})`);
   if (looksLikeXlsx(buf)) {
+    checkZipSizes(buf, sanitizeLimit(options.maxUncompressedBytes, DEFAULT_MAX_UNCOMPRESSED_BYTES));
     const wb = new ExcelJS.Workbook();
     await wb.xlsx.load(buf);
     return wb;
   }
-  // Fallback: assume CSV-ish text. Sniff the delimiter from the first
-  // non-empty line; tab beats comma if a tab is present.
+  // Fallback: assume CSV-ish text and count separators outside quotes.
   const text = new TextDecoder('utf-8').decode(buf);
   const delimiter = sniffDelimiter(text);
-  const rows = parseDelimited(text, delimiter);
   const wb = new ExcelJS.Workbook();
   const ws = wb.addWorksheet('Sheet1');
-  for (const row of rows) ws.addRow(row);
+  const truncated = parseDelimited(text, delimiter, options, (row) => { ws.addRow(row); });
+  if (truncated) truncatedCsvSheets.add(ws);
   return wb;
+}
+
+/** Inspect ZIP metadata before ExcelJS inflates any entries. This rejects
+ * oversized declared payloads; it is not a streaming decompression bound. */
+function checkZipSizes(buf: ArrayBuffer, maxBytes: number): void {
+  const view = new DataView(buf);
+  const u64 = (pos: number) => view.getUint32(pos, true) + view.getUint32(pos + 4, true) * 2 ** 32;
+  let end = -1;
+  for (let pos = buf.byteLength - 22; pos >= Math.max(0, buf.byteLength - 65557); pos--) {
+    if (view.getUint32(pos, true) === 0x06054b50 && pos + 22 + view.getUint16(pos + 20, true) <= buf.byteLength) {
+      end = pos;
+      break;
+    }
+  }
+  if (end < 0) throw new Error('Invalid XLSX ZIP directory');
+  let entries = view.getUint16(end + 10, true);
+  let size = view.getUint32(end + 12, true);
+  let offset = view.getUint32(end + 16, true);
+  if (view.getUint32(end + 4, true) !== 0 || view.getUint16(end + 8, true) !== entries) {
+    throw new Error('Multi-volume XLSX files are not supported');
+  }
+  let directoryLimit = end;
+  if (entries === 0xffff || size === 0xffffffff || offset === 0xffffffff) {
+    // ZIP64: the real counts live in the ZIP64 end record named by its locator.
+    const locator = end - 20;
+    const record = locator >= 0 && view.getUint32(locator, true) === 0x07064b50 ? u64(locator + 8) : -1;
+    if (record < 0 || record + 56 > locator || view.getUint32(record, true) !== 0x06064b50) {
+      throw new Error('Invalid XLSX ZIP directory');
+    }
+    entries = u64(record + 32);
+    size = u64(record + 40);
+    offset = u64(record + 48);
+    directoryLimit = record;
+  }
+  const directoryEnd = offset + size;
+  if (directoryEnd > directoryLimit) throw new Error('Invalid XLSX ZIP directory');
+  let pos = offset;
+  let total = 0;
+  for (let i = 0; i < entries; i++) {
+    if (pos + 46 > directoryEnd || view.getUint32(pos, true) !== 0x02014b50) {
+      throw new Error('Invalid XLSX ZIP entry');
+    }
+    const nameLength = view.getUint16(pos + 28, true);
+    const extraLength = view.getUint16(pos + 30, true);
+    let bytes = view.getUint32(pos + 24, true);
+    if (bytes === 0xffffffff) {
+      // ZIP64 extra field (id 1); the uncompressed size is its first value.
+      bytes = -1;
+      for (let x = pos + 46 + nameLength; x + 4 <= pos + 46 + nameLength + extraLength; x += 4 + view.getUint16(x + 2, true)) {
+        if (view.getUint16(x, true) === 1 && x + 12 <= directoryEnd) { bytes = u64(x + 4); break; }
+      }
+      if (bytes < 0) throw new Error('Invalid XLSX ZIP entry');
+    }
+    total += bytes;
+    if (total > maxBytes) throw new Error(`XLSX exceeds maxUncompressedBytes (${maxBytes})`);
+    pos += 46 + nameLength + extraLength + view.getUint16(pos + 32, true);
+    if (pos > directoryEnd) throw new Error('Invalid XLSX ZIP entry');
+  }
+  if (pos !== directoryEnd) throw new Error('Invalid XLSX ZIP directory');
 }
 
 function looksLikeXlsx(buf: ArrayBuffer): boolean {
@@ -106,49 +187,92 @@ function looksLikeXlsx(buf: ArrayBuffer): boolean {
 }
 
 function sniffDelimiter(text: string): string {
-  for (const line of text.split(/\r\n|\n|\r/)) {
-    if (!line) continue;
-    if (line.includes('\t')) return '\t';
-    return ',';
-  }
-  return ',';
-}
-
-/** RFC 4180-shaped CSV/TSV reader. Handles quoted fields with embedded
- *  delimiters, escaped quotes (""), CRLF/LF/CR line endings, and a
- *  trailing newline. Numbers and dates stay as strings — sheetToGridData
- *  will classify them as `text` columns. Consumers wanting coercion
- *  should preprocess. */
-function parseDelimited(text: string, delimiter: string): string[][] {
-  const rows: string[][] = [];
-  let cur: string[] = [];
-  let field = '';
+  const candidates = [',', '\t', ';', '|'];
+  const counts = new Map(candidates.map((delimiter) => [delimiter, 0]));
   let inQuotes = false;
+  let fieldStart = true;
   for (let i = 0; i < text.length; i++) {
     const ch = text[i];
     if (inQuotes) {
       if (ch === '"') {
-        if (text[i + 1] === '"') { field += '"'; i++; continue; }
+        if (text[i + 1] === '"') i++;
+        else inQuotes = false;
+      }
+      continue;
+    }
+    if (ch === '"' && fieldStart) { inQuotes = true; continue; }
+    if (ch === '\r' || ch === '\n') {
+      if ([...counts.values()].some((n) => n > 0)) break;
+      fieldStart = true;
+      continue;
+    }
+    if (ch && counts.has(ch)) {
+      counts.set(ch, (counts.get(ch) ?? 0) + 1);
+      fieldStart = true;
+    } else fieldStart = false;
+  }
+  return candidates.reduce((best, delimiter) =>
+    (counts.get(delimiter) ?? 0) > (counts.get(best) ?? 0) ? delimiter : best, ',');
+}
+
+/** RFC 4180-shaped reader. Quotes only open at the start of a field;
+ * delimiters and newlines inside quoted fields are preserved. */
+function parseDelimited(
+  text: string,
+  delimiter: string,
+  options: WorkbookLoadOptions,
+  addRow: (row: string[]) => void,
+): boolean {
+  const maxRows = sanitizeLimit(options.maxRows, DEFAULT_MAX_ROWS);
+  const maxCells = sanitizeLimit(options.maxCells, DEFAULT_MAX_CELLS);
+  const maxCols = Math.min(sanitizeLimit(options.maxCols, DEFAULT_MAX_COLS), maxCells);
+  let rowCount = 0;
+  let cells = 0;
+  let truncated = false;
+  let cur: string[] = [];
+  let field = '';
+  let inQuotes = false;
+  let fieldStart = true;
+  const pushField = () => {
+    if (cur.length < maxCols && cells + cur.length < maxCells) cur.push(field);
+    else truncated = true;
+    field = '';
+    fieldStart = true;
+  };
+  const pushRow = () => {
+    pushField();
+    addRow(cur);
+    rowCount++;
+    cells += cur.length;
+    cur = [];
+  };
+  for (let i = 0; i < text.length; i++) {
+    const ch = text[i];
+    if (inQuotes) {
+      if (ch === '"') {
+        if (text[i + 1] === '"') {
+          if (cur.length < maxCols && cells + cur.length < maxCells) field += '"';
+          i++; continue;
+        }
         inQuotes = false;
         continue;
       }
-      field += ch;
+      if (cur.length < maxCols && cells + cur.length < maxCells) field += ch;
       continue;
     }
-    if (ch === '"') { inQuotes = true; continue; }
-    if (ch === delimiter) { cur.push(field); field = ''; continue; }
-    if (ch === '\r' && text[i + 1] === '\n') {
-      cur.push(field); rows.push(cur); cur = []; field = ''; i++;
-      continue;
-    }
+    if (ch === '"' && fieldStart) { inQuotes = true; fieldStart = false; continue; }
+    if (ch === delimiter) { pushField(); continue; }
     if (ch === '\n' || ch === '\r') {
-      cur.push(field); rows.push(cur); cur = []; field = '';
+      pushRow();
+      if (ch === '\r' && text[i + 1] === '\n') i++;
+      if (rowCount >= maxRows || cells >= maxCells) return truncated || i + 1 < text.length;
       continue;
     }
-    field += ch;
+    if (cur.length < maxCols && cells + cur.length < maxCells) field += ch;
+    fieldStart = false;
   }
-  if (field !== '' || cur.length > 0) { cur.push(field); rows.push(cur); }
-  return rows;
+  if (field !== '' || cur.length > 0 || !fieldStart) pushRow();
+  return truncated;
 }
 
 /**
@@ -156,7 +280,7 @@ function parseDelimited(text: string, delimiter: string): string[][] {
  *
  * Column ids are Excel letters (A, B, …, AA) so the grid's
  * `cellReferences` mode shows A1/B1 notation that matches the
- * source workbook exactly.
+ * source workbook's column coordinates. Header promotion shifts data rows.
  *
  * Row keys are the same letters; ogrid's default valueGetter reads
  * `row[columnId]` so no per-column getter is needed.
@@ -192,10 +316,10 @@ export function sheetToGridData(
   });
   if (!usedCols || !usedRows) return { columns: [], rows: [], initialFormulas: [] };
 
-  const maxCols = Math.max(1, options.maxCols ?? DEFAULT_MAX_COLS);
-  const maxRows = Math.max(1, options.maxRows ?? DEFAULT_MAX_ROWS);
-  const maxCells = Math.max(1, options.maxCells ?? DEFAULT_MAX_CELLS);
-  const colCount = Math.min(usedCols, maxCols);
+  const maxCols = sanitizeLimit(options.maxCols, DEFAULT_MAX_COLS);
+  const maxRows = sanitizeLimit(options.maxRows, DEFAULT_MAX_ROWS);
+  const maxCells = sanitizeLimit(options.maxCells, DEFAULT_MAX_CELLS);
+  const colCount = Math.min(usedCols, maxCols, maxCells);
   const rowCount = Math.min(usedRows, maxRows, Math.max(1, Math.floor(maxCells / colCount)));
   const truncated = colCount < usedCols || rowCount < usedRows
     ? { rowCount: usedRows, columnCount: usedCols }
@@ -227,7 +351,7 @@ export function sheetToGridData(
     (mode === 'auto' && matrix.length > 1 && looksLikeHeaderRow(headerRow));
   const dataMatrix = promote ? matrix.slice(1) : matrix;
   const headerNames = promote
-    ? headerRow.map((v, i) => coerceHeader(v) ?? indexToColumnLetter(i))
+    ? uniqueHeaderNames(headerRow)
     : null;
 
   // Column-type detection over a top-of-sheet sample. Empty cells
@@ -286,18 +410,49 @@ export function sheetToGridData(
 
   // Re-index initialFormulas onto the post-strip data. Anything that was
   // on the header row itself is dropped (it no longer exists in `rows`);
-  // everything below shifts up by one. The cached `result` already
+  // everything below and its local references shift up by one. The cached `result` already
   // travelled with the cell value, so the visible grid renders correctly
   // even before the formula engine recalculates.
   const adjustedFormulas = promote
     ? initialFormulas
         .filter((f) => f.row >= 1)
-        .map((f) => ({ ...f, row: f.row - 1 }))
+        .map((f) => {
+          let removedRow = false;
+          const formula = rebaseFormulaRows(f.formula, -1, () => { removedRow = true; });
+          const entry = { ...f, row: f.row - 1, formula };
+          if (removedRow) headerReferencingFormulas.add(entry);
+          return entry;
+        })
     : initialFormulas;
 
-  return truncated
-    ? { columns, rows, initialFormulas: adjustedFormulas, truncated }
-    : { columns, rows, initialFormulas: adjustedFormulas };
+  return {
+    columns, rows, initialFormulas: adjustedFormulas,
+    ...(truncated ? { truncated } : {}),
+    ...(truncatedCsvSheets.has(sheet) ? { parseTruncated: true } : {}),
+  };
+}
+
+function sanitizeLimit(value: number | undefined, fallback: number): number {
+  // NaN falls back to the default; Infinity lifts the limit.
+  return value === undefined || Number.isNaN(value) ? fallback : Math.max(1, Math.floor(value));
+}
+
+function uniqueHeaderNames(row: unknown[]): string[] {
+  const names = row.map((v, i) => coerceHeader(v) ?? indexToColumnLetter(i));
+  const reserved = new Set(names);
+  const used = new Set<string>();
+  return names.map((name, i) => {
+    let candidate = name;
+    let suffix = 1;
+    if (used.has(candidate)) {
+      do {
+        candidate = `${name} (${indexToColumnLetter(i)}${suffix === 1 ? '' : ` ${suffix}`})`;
+        suffix++;
+      } while (used.has(candidate) || reserved.has(candidate));
+    }
+    used.add(candidate);
+    return candidate;
+  });
 }
 
 /** Heuristic: row 1 is a header row when every non-empty cell is a
@@ -334,22 +489,41 @@ function readCellValue(
   r: number,
   initialFormulas: SheetGridData['initialFormulas'],
 ): unknown {
-  const v = cell?.value;
+  const v = cell.value;
+  // Formula cell (regular or shared): record the formula, return the cached result.
+  if (v && typeof v === 'object' && ('formula' in v || 'sharedFormula' in v)) {
+    const formula = readFormula(cell);
+    if (formula) initialFormulas.push({ col: c, row: r, formula });
+    return v.result == null ? undefined : normalizeCellValue(v.result);
+  }
+  return normalizeCellValue(v);
+}
+
+/** Shared-formula dependents get the master's formula moved by their own
+ *  offset. ExcelJS's `cell.formula` does this with a regex that also rewrites
+ *  string literals and quoted sheet names, so it is only the fallback. */
+function readFormula(cell: ExcelJS.Cell): string | undefined {
+  const v = cell.value as ExcelJS.CellSharedFormulaValue;
+  const at = typeof v.sharedFormula === 'string' ? parseCellRef(v.sharedFormula) : null;
+  const master = at ? cell.worksheet.findCell(at.row + 1, at.col + 1) : undefined;
+  if (at && master?.formula) {
+    const formula = normalizeFormula(master.formula);
+    try {
+      tokenize(formula.slice(1));
+      return adjustFormulaReferences(formula, Number(cell.col) - 1 - at.col, Number(cell.row) - 1 - at.row);
+    } catch {
+      // Syntax the tokenizer doesn't know: fall back to ExcelJS's translation.
+    }
+  }
+  return cell.formula ? normalizeFormula(cell.formula) : undefined;
+}
+
+export function normalizeCellValue(v: ExcelJS.CellValue | undefined): unknown {
   if (v == null) return '';
   if (v instanceof Date) return v;
   if (typeof v !== 'object') return v;
-  // Formula cell (regular or shared): record the formula, return the cached result.
-  if ('formula' in v && typeof (v as ExcelJS.CellFormulaValue).formula === 'string') {
-    const fv = v as ExcelJS.CellFormulaValue;
-    initialFormulas.push({ col: c, row: r, formula: fv.formula });
-    return fv.result == null ? '' : (fv.result as unknown);
-  }
-  if ('sharedFormula' in v) {
-    const sf = v as ExcelJS.CellSharedFormulaValue;
-    if (sf.sharedFormula) {
-      initialFormulas.push({ col: c, row: r, formula: sf.sharedFormula });
-    }
-    return sf.result == null ? '' : (sf.result as unknown);
+  if ('formula' in v || 'sharedFormula' in v) {
+    return v.result == null ? undefined : normalizeCellValue(v.result);
   }
   if ('richText' in v) {
     return (v as ExcelJS.CellRichTextValue).richText.map((p) => p.text).join('');

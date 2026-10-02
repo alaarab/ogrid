@@ -5,7 +5,8 @@
 import { useMemo } from 'react';
 import type ExcelJS from 'exceljs';
 import { OGrid, type IOGridProps } from '@alaarab/ogrid-react-radix';
-import { sheetToGridData, type SheetRow, type SheetToGridDataOptions } from './sheetMapper';
+import { createBuiltInFunctions, tokenize, type IGridDataAccessor } from '@alaarab/ogrid-core/formula';
+import { headerReferencingFormulas, normalizeCellValue, sheetToGridData, type SheetRow, type SheetToGridDataOptions, type WorkbookLoadOptions } from './sheetMapper';
 
 export interface XlsxGridProps {
   workbook: ExcelJS.Workbook;
@@ -20,7 +21,21 @@ export interface XlsxGridProps {
    * Load limits for untrusted files; see {@link SheetToGridDataOptions}.
    * When a sheet exceeds them a notice above the grid says what was cut.
    */
-  limits?: Pick<SheetToGridDataOptions, 'maxRows' | 'maxCols' | 'maxCells'>;
+  limits?: Omit<WorkbookLoadOptions, 'headerRow'>;
+}
+
+// The formula engine loads initialFormulas once per OGrid instance, so each
+// mapped sheet (new sheet, workbook or header mode) gets a fresh grid. That
+// also resets sort and undo.
+const gridKeys = new WeakMap<object, number>();
+let gridKeyCounter = 0;
+function gridKeyFor(data: object): number {
+  let key = gridKeys.get(data);
+  if (key === undefined) {
+    key = ++gridKeyCounter;
+    gridKeys.set(data, key);
+  }
+  return key;
 }
 
 /**
@@ -47,10 +62,39 @@ export function XlsxGrid({
   const maxRows = limits?.maxRows;
   const maxCols = limits?.maxCols;
   const maxCells = limits?.maxCells;
-  const { columns, rows, initialFormulas, truncated } = useMemo(
+  const { columns, rows, initialFormulas, truncated, parseTruncated } = useMemo(
     () => sheetToGridData(sheet, { headerRow, maxRows, maxCols, maxCells }),
     [sheet, headerRow, maxRows, maxCols, maxCells],
   );
+  const sheets = useMemo(() => {
+    const accessors: Record<string, IGridDataAccessor> = Object.create(null);
+    for (const worksheet of workbook.worksheets) {
+      accessors[worksheet.name] = {
+        getCellValue: (col, row) => normalizeCellValue(worksheet.findRow(row + 1)?.findCell(col + 1)?.value),
+        getRowCount: () => worksheet.rowCount,
+        getColumnCount: () => worksheet.columnCount,
+      };
+    }
+    return accessors;
+  }, [workbook]);
+  const supportedFormulas = useMemo(() => {
+    const functions = createBuiltInFunctions();
+    return initialFormulas.filter((f) => {
+      // Keep the file's cached result when the engine cannot interpret it.
+      // All formulas remain available in sheetToGridData for export.
+      if (rows[f.row]?.[columns[f.col]?.columnId ?? ''] === undefined) return true;
+      if (headerReferencingFormulas.has(f)) return false;
+      try {
+        return tokenize(f.formula.slice(1)).every((token) =>
+          (token.type !== 'FUNCTION' || functions.has(token.value.toUpperCase())) &&
+          (token.type !== 'SHEET_REF' || Object.prototype.hasOwnProperty.call(sheets, token.value)) &&
+          token.type !== 'IDENTIFIER',
+        );
+      } catch {
+        return false;
+      }
+    });
+  }, [initialFormulas, columns, rows, sheets]);
 
   if (!sheet) {
     return <div style={{ padding: 16, opacity: 0.7 }}>Sheet not found: {sheetName}</div>;
@@ -79,13 +123,14 @@ export function XlsxGrid({
     getRowId: (row: SheetRow) => row.__rowIdx,
     cellReferences: true,
     formulas: true,
-    initialFormulas,
+    initialFormulas: supportedFormulas,
+    sheets,
     // Show the sheet in its real row order. OGrid otherwise defaults its
     // sort to the first column; an empty `defaultSortBy` opts out so a
     // spreadsheet preview reads top-to-bottom as authored. Columns stay
     // click-to-sort.
     defaultSortBy: '',
-    virtualScroll: { enabled: true, paginate: false, rowHeight, columns: false },
+    virtualScroll: { enabled: true, paginate: false, rowHeight, columns: columns.length > 100 },
     rowHeight,
     density,
     statusBar: true,
@@ -100,7 +145,12 @@ export function XlsxGrid({
           {columns.length.toLocaleString()} of {truncated.columnCount.toLocaleString()} columns (sheet too large to load in full).
         </div>
       )}
-      <OGrid {...gridProps} />
+      {parseTruncated && (
+        <div role="status" style={{ padding: '4px 8px', fontSize: 12, opacity: 0.8 }}>
+          CSV parsing stopped at the configured load limits.
+        </div>
+      )}
+      <OGrid key={gridKeyFor(initialFormulas)} {...gridProps} />
     </div>
   );
 }
