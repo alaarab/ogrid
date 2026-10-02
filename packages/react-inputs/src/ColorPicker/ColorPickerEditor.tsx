@@ -133,6 +133,7 @@ export function ColorPickerEditor<T>(props: ICellEditorProps<T>): React.ReactEle
   );
   const [hoveredSwatch, setHoveredSwatch] = React.useState<string | null>(null);
   const rootRef = React.useRef<HTMLDivElement>(null);
+  const commitTimerRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const handleSwatchClick = (color: string) => {
     const normalized = normalizeHex(color) ?? color;
@@ -140,12 +141,15 @@ export function ColorPickerEditor<T>(props: ICellEditorProps<T>): React.ReactEle
     setInputText(normalized.replace(/^#/, ''));
     onValueChange(normalized);
     // Auto-commit on swatch click
-    setTimeout(() => onCommit(), 0);
+    commitTimerRef.current = setTimeout(() => onCommit(), 0);
   };
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const raw = e.target.value.replace(/[^0-9A-Fa-f]/g, '').slice(0, 6);
+    const raw = e.target.value.replace(/[^0-9A-Fa-f]/g, '').slice(0, 8);
     setInputText(raw);
+    // Only emit a value once the hex is complete (6 = RRGGBB, 8 = RRGGBBAA).
+    // Emitting partial prefixes is what committed stale intermediate values.
+    if (raw.length !== 6 && raw.length !== 8) return;
     const hex = '#' + raw;
     if (isValidHex(hex)) {
       const normalized = normalizeHex(hex);
@@ -160,19 +164,16 @@ export function ColorPickerEditor<T>(props: ICellEditorProps<T>): React.ReactEle
     if (e.key === 'Enter') {
       e.preventDefault();
       e.stopPropagation();
+      // Commit only a complete 3-, 6- or 8-digit hex; refuse anything else.
+      const complete = inputText.length === 3 || inputText.length === 6 || inputText.length === 8;
       const hex = '#' + inputText;
-      if (isValidHex(hex)) {
-        const normalized = normalizeHex(hex);
-        if (normalized) {
-          onValueChange(normalized);
-        }
-      }
+      if (!complete || !isValidHex(hex)) return;
+      const normalized = normalizeHex(hex);
+      if (!normalized) return;
+      setSelectedColor(normalized);
+      setInputText(normalized.replace(/^#/, ''));
+      onValueChange(normalized);
       onCommit();
-    }
-    if (e.key === 'Escape') {
-      e.preventDefault();
-      e.stopPropagation();
-      onCancel();
     }
   };
 
@@ -190,6 +191,11 @@ export function ColorPickerEditor<T>(props: ICellEditorProps<T>): React.ReactEle
       input.focus();
       input.select();
     }
+  }, []);
+
+  // Cancel any pending auto-commit on unmount.
+  React.useEffect(() => () => {
+    if (commitTimerRef.current) clearTimeout(commitTimerRef.current);
   }, []);
 
   // Global escape key
@@ -233,7 +239,9 @@ export function ColorPickerEditor<T>(props: ICellEditorProps<T>): React.ReactEle
         onClick={() => handleSwatchClick(color)}
         onMouseEnter={() => setHoveredSwatch(color)}
         onMouseLeave={() => setHoveredSwatch(null)}
-        tabIndex={-1}
+        // When there is no hex input (allowCustom false) the swatches are the
+        // only keyboard path, so make them reachable via Tab.
+        tabIndex={allowCustom ? -1 : 0}
         aria-label={color}
         aria-pressed={isSelected}
       >
@@ -267,7 +275,7 @@ export function ColorPickerEditor<T>(props: ICellEditorProps<T>): React.ReactEle
             onChange={handleInputChange}
             onKeyDown={handleInputKeyDown}
             placeholder="000000"
-            maxLength={6}
+            maxLength={8}
             style={inputStyle}
           />
         </div>

@@ -1,4 +1,5 @@
 import '@testing-library/jest-dom';
+import { StrictMode } from 'react';
 import { render, screen, act } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { RatingEditor } from '../Rating/RatingEditor';
@@ -186,6 +187,36 @@ describe('RatingEditor', () => {
       await user.keyboard('{Enter}');
 
       expect(props.onCommit).toHaveBeenCalled();
+    });
+  });
+
+  // ── 6. AT exposure and StrictMode side effects ──
+
+  describe('I11 - Clear stays outside the slider role', () => {
+    it('does not nest the Clear button inside the role="slider" element', () => {
+      renderEditor({ value: 3 });
+      const slider = screen.getByRole('slider', { name: 'Rating' });
+      const clear = screen.getByText('Clear');
+      expect(slider.contains(clear)).toBe(false);
+    });
+  });
+
+  describe('I20 - keyboard updates fire once under StrictMode', () => {
+    it('calls onValueChange once per arrow keypress', async () => {
+      const user = userEvent.setup();
+      const props = createMockProps({ value: 3 });
+      render(
+        <StrictMode>
+          <RatingEditor {...props} />
+        </StrictMode>,
+      );
+
+      const slider = screen.getByRole('slider', { name: 'Rating' });
+      slider.focus();
+      await user.keyboard('{ArrowUp}');
+
+      expect(props.onValueChange).toHaveBeenCalledTimes(1);
+      expect(props.onValueChange).toHaveBeenCalledWith(4);
     });
   });
 });

@@ -6,6 +6,10 @@ describe('calendar-utils', () => {
       expect(formatDate(2024, 0, 5)).toBe('2024-01-05');
       expect(formatDate(2024, 11, 25)).toBe('2024-12-25');
     });
+
+    it('pads the year to four digits for years below 1000', () => {
+      expect(formatDate(50, 0, 15)).toBe('0050-01-15');
+    });
   });
 
   describe('parseDate', () => {
@@ -23,9 +27,13 @@ describe('calendar-utils', () => {
       expect(parseDate('2024-13-01')).toBeNull(); // Month 13
     });
 
-    it('handles dates with extra text after YYYY-MM-DD', () => {
+    it('handles dates with extra ISO time after YYYY-MM-DD', () => {
       const result = parseDate('2024-06-15T10:30:00Z');
       expect(result).toEqual({ year: 2024, month: 5, date: 15 });
+    });
+
+    it('rejects trailing non-ISO text so "2024-01-15garbage" does not parse', () => {
+      expect(parseDate('2024-01-15garbage')).toBeNull();
     });
   });
 
@@ -58,6 +66,15 @@ describe('calendar-utils', () => {
       const todayCell = allDays.find((d) => d.isToday);
       expect(todayCell).toBeDefined();
       expect(todayCell!.date).toBe(now.getDate());
+    });
+
+    it('does not map years 0-99 to 1900-1999', () => {
+      const grid = getCalendarGrid(50, 0); // January year 50
+      const allDays = grid.flat();
+      const currentMonthDays = allDays.filter((d) => d.isCurrentMonth);
+      expect(currentMonthDays.length).toBe(31);
+      expect(currentMonthDays.every((d) => d.year === 50)).toBe(true);
+      expect(currentMonthDays.every((d) => d.year !== 1950)).toBe(true);
     });
   });
 

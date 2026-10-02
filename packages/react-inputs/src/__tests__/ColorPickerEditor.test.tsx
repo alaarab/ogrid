@@ -213,4 +213,47 @@ describe('ColorPickerEditor', () => {
       }
     });
   });
+
+  // ── 7. Validation & alpha ──
+
+  describe('I09 - no stale intermediate commit', () => {
+    it('refuses to commit an incomplete 5-digit hex', async () => {
+      const user = userEvent.setup();
+      const { props } = renderEditor({ value: '#FF0000' });
+
+      const input = screen.getByPlaceholderText('000000');
+      await user.clear(input);
+      await user.type(input, 'abcde');
+      await user.keyboard('{Enter}');
+
+      expect(props.onCommit).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('I21 - alpha is preserved', () => {
+    it('shows an 8-digit alpha value and re-commits it unchanged', async () => {
+      const user = userEvent.setup();
+      const { props } = renderEditor({ value: '#FF000080' });
+
+      const input = screen.getByPlaceholderText('000000') as HTMLInputElement;
+      expect(input.value).toBe('FF000080');
+
+      await user.click(input);
+      await user.keyboard('{Enter}');
+
+      expect(props.onValueChange).toHaveBeenLastCalledWith('#FF000080');
+      expect(props.onCommit).toHaveBeenCalled();
+    });
+  });
+
+  describe('I04 - swatches are keyboard reachable without a hex input', () => {
+    it('makes swatches focusable when allowCustom is false', () => {
+      renderEditor({ cellEditorParams: { allowCustom: false } });
+      const swatches = screen.getAllByRole('button').filter(
+        (btn) => btn.getAttribute('aria-label') !== null && btn.textContent !== 'Clear',
+      );
+      expect(swatches.length).toBeGreaterThan(0);
+      expect(swatches[0]).toHaveAttribute('tabindex', '0');
+    });
+  });
 });
