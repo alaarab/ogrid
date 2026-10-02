@@ -27,6 +27,8 @@ export interface UseDataGridEditingParams<T> {
   onFormulaCellChanged?: (col: number, row: number) => void;
   /** Whether formula support is enabled. */
   formulas?: boolean;
+  /** Formula presence at a flat column and display row. */
+  hasFormula?: (col: number, row: number) => boolean;
   /** All flat columns (for mapping columnId  to  column index). */
   flatColumns?: IColumnDef<T>[];
 }
@@ -80,6 +82,7 @@ export function useDataGridEditing<T>(
   const visibleColsRef = useLatestRef(params.visibleCols);
   const itemsLengthRef = useLatestRef(params.itemsLength);
   const onCellValueChangedRef = useLatestRef(onCellValueChanged);
+  const hasFormulaRef = useLatestRef(params.hasFormula);
   const setFormulaRef = useLatestRef(setFormula);
   const onFormulaCellChangedRef = useLatestRef(onFormulaCellChanged);
   const flatColumnsRef = useLatestRef(flatColumns);
@@ -131,7 +134,9 @@ export function useDataGridEditing<T>(
       }
 
       // Unchanged value: close the editor without an edit event or undo entry.
-      if (isUnchangedEdit(newValue, oldValue, !col || (col.type == null && col.valueParser == null))) {
+      const formulaCol = flatColumnsRef.current?.findIndex((c) => c.columnId === columnId) ?? -1;
+      const replacesFormula = formulas && formulaCol >= 0 && hasFormulaRef.current?.(formulaCol, rowIndex);
+      if (!replacesFormula && isUnchangedEdit(newValue, oldValue, !col || (col.type == null && col.valueParser == null))) {
         setEditingCell(null);
         setPopoverAnchorEl(null);
         setPendingEditorValue(undefined);
@@ -171,7 +176,7 @@ export function useDataGridEditing<T>(
         setSelectionRange({ startRow: newRow, startCol: localCol, endRow: newRow, endCol: localCol });
       }
     },
-    [formulas, setEditingCell, setPendingEditorValue, setActiveCell, setSelectionRange, colOffset, visibleColsRef, itemsLengthRef, onCellValueChangedRef, setFormulaRef, onFormulaCellChangedRef, flatColumnsRef]
+    [formulas, setEditingCell, setPendingEditorValue, setActiveCell, setSelectionRange, colOffset, visibleColsRef, itemsLengthRef, onCellValueChangedRef, setFormulaRef, onFormulaCellChangedRef, flatColumnsRef, hasFormulaRef]
   );
 
   const cancelPopoverEdit = useCallback(() => {

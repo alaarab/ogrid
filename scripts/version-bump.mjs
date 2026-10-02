@@ -8,7 +8,7 @@
  * Usage: node scripts/version-bump.mjs 2.6.0
  */
 
-import { readFileSync, writeFileSync } from 'node:fs';
+import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 
 const version = process.argv[2];
 // Full semver (optional prerelease/build); anchored so trailing junk is rejected.
@@ -28,10 +28,12 @@ const workspacePaths = (root.workspaces ?? []).map((p) => `${p}/package.json`);
 const files = ['package.json', ...workspacePaths];
 
 let updated = 0;
+const workspaceNames = new Set();
 
 for (const file of files.sort()) {
   const raw = readFileSync(file, 'utf8');
   const pkg = JSON.parse(raw);
+  if (OGRID_PKG.test(pkg.name)) workspaceNames.add(pkg.name);
   let changed = false;
 
   if (pkg.version && pkg.version !== version) {
@@ -53,6 +55,19 @@ for (const file of files.sort()) {
     writeFileSync(file, JSON.stringify(pkg, null, 2) + '\n');
     console.log(`  ${file}`);
     updated++;
+  }
+}
+
+// Bun 1.4 can refresh workspace versions while retaining old internal
+// dependency snapshots. Update those exact workspace references before the
+// install refreshes workspace versions; leave external resolutions untouched.
+if (existsSync('bun.lock')) {
+  const lock = readFileSync('bun.lock', 'utf8');
+  const nextLock = lock.replace(/("(@alaarab\/ogrid-[^"]+)"\s*:\s*")[^"]*(")/g,
+    (match, prefix, name, suffix) => workspaceNames.has(name) ? `${prefix}${version}${suffix}` : match);
+  if (nextLock !== lock) {
+    writeFileSync('bun.lock', nextLock);
+    console.log('  bun.lock (internal dependency snapshots)');
   }
 }
 

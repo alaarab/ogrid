@@ -223,6 +223,7 @@ on copy and `valueParser` on paste validation.
 const clipboard = useCellClipboard({
   rangeSelection: range,
   rows: grid.rows,
+  getRowId: (row) => row.id,
   columns,
   onCellEdit: (events) => events.forEach(applyEdit),
 });
@@ -245,10 +246,16 @@ useEffect(() => {
 |---|---|
 | `rangeSelection` | `UseRangeSelectionResult` |
 | `rows` | `T[]` |
+| `getRowId?` | `(item: T) => RowId`, keeps a pending cut attached to its source records when row objects are replaced or sorted; defaults to object identity |
 | `columns` | `IColumnDef<T>[]` |
 | `onCellEdit` | `(events: ICellValueChangedEvent<T>[]) => void` |
 | `clipboard?` | `{ readText, writeText }` override (defaults to `navigator.clipboard`) |
 | `onClipboardError?` | `(error: unknown) => void`, called when a clipboard read/write fails (e.g. permission denied) |
+
+A cut clears only source cells whose corresponding destination accepted the
+paste. Read-only cells, rejected values, and cells beyond the grid boundary
+leave their source values intact. Cells overwritten by an overlapping paste
+keep their pasted values.
 
 ### Returns
 

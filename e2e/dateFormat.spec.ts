@@ -10,16 +10,7 @@ import { DEMO_COLUMN_INDEX, enterDateCellEdit, getCellContent, getColumnTexts, w
 
 test.describe('Date Format Feature (E2E)', () => {
   test.beforeEach(async ({ page }, testInfo) => {
-    const supportedProjects = [
-      'react-radix',
-      'angular-radix',
-      'angular-material',
-      'angular-primeng',
-      'vue-radix',
-      'vue-vuetify',
-      'vue-primevue',
-      'js',
-    ];
+    const supportedProjects = ['react-radix', 'react-fluent'];
     if (!supportedProjects.includes(testInfo.project.name)) {
       test.skip(`Date format coverage currently covers ${supportedProjects.join(', ')} only.`);
     }

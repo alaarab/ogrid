@@ -148,7 +148,7 @@ gridRef.current?.deselectAll();
 |--------|-----------|-------------|
 | `getSelectedRows` | `() => RowId[]` | Returns currently selected row IDs. |
 | `setSelectedRows` | `(rowIds: RowId[]) => void` | Sets selected rows programmatically. |
-| `selectAll` | `() => void` | Selects every row that passes the current filters, across all pages (server-side: the loaded page). |
+| `selectAll` | `() => void` | Selects every row that passes the current filters, across all pages (server-side: loaded records, including all loaded windows). |
 | `deselectAll` | `() => void` | Deselects all rows. |
 
 ## Related

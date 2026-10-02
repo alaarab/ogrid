@@ -570,6 +570,31 @@ describe('useDataGridState', () => {
       };
     }
 
+    it('formula bar writes loaded absolute rows and refuses unloaded rows', () => {
+      const wrapperRef = { current: document.createElement('div') };
+      const formulaCellWriterRef: React.RefObject<import('../../types').IFormulaCellWriter | null> = { current: null };
+      const onCellValueChanged = jest.fn();
+      const setFormula = jest.fn();
+      const props = windowedProps({
+        columns: [{ columnId: 'score', name: 'Score', type: 'numeric', editable: (item) => item.id === '10' }],
+        visibleColumns: new Set(['score']),
+        formulas: true,
+        formulaRowMap: { toSheetRow: (row) => row, toDisplayRow: (row) => row },
+        getFormula: (_col, row) => row === 10 ? '=20' : undefined,
+        hasFormula: (_col, row) => row === 10,
+        setFormula,
+        onCellValueChanged,
+        formulaCellWriterRef,
+      });
+      renderHook(() => useDataGridState<Row>({ props, wrapperRef }));
+      expect(formulaCellWriterRef.current?.canEdit(0, 10)).toBe(true);
+      expect(formulaCellWriterRef.current?.canEdit(0, 9)).toBe(false);
+      expect(formulaCellWriterRef.current?.write(0, 9, '5')).toBe(false);
+      act(() => { expect(formulaCellWriterRef.current?.write(0, 10, '10')).toBe(true); });
+      expect(onCellValueChanged).toHaveBeenCalledWith(expect.objectContaining({ rowIndex: 10, newValue: 10, oldValue: 10 }));
+      expect(setFormula).toHaveBeenCalledWith(0, 10, null);
+    });
+
     it('header select-all selects the loaded rows and reads as all selected', () => {
       const wrapperRef = { current: document.createElement('div') };
       const { result } = renderHook(() =>

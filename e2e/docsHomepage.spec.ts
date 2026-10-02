@@ -2,6 +2,8 @@ import { expect, test } from '@playwright/test';
 
 test('docs homepage hero grid stays clipped and edit height stays stable', async ({ page }) => {
   await page.goto('.', { waitUntil: 'networkidle' });
+  // The hero grid renders on the client after the static page has loaded.
+  await expect(page.locator('[class*="heroGridWrapper"] table')).toBeVisible({ timeout: 15_000 });
 
   const heroMetrics = await page.evaluate(() => {
     const heroGridWrapper = document.querySelector('[class*="heroGridWrapper"]');

@@ -130,6 +130,7 @@ export interface UseDataGridInteractionResult<T> {
    * row and recorded for undo. Undefined when formulas are off.
    */
   setFormula?: (col: number, row: number, formula: string | null) => void;
+  hasFormula?: (col: number, row: number) => boolean;
 }
 
 /**
@@ -364,5 +365,6 @@ export function useDataGridInteraction<T>(
     canUndo,
     canRedo,
     setFormula: viewFormulas?.setFormula,
+    hasFormula: viewFormulas?.hasFormula,
   };
 }
