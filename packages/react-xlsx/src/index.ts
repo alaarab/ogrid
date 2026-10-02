@@ -23,7 +23,7 @@
 // stuck at the vulnerable 0.18.5. See CHANGELOG 2.12.0 for the swap.
 
 import { createElement } from 'react';
-import { createRoot } from 'react-dom/client';
+import { createRoot, type Root } from 'react-dom/client';
 import type ExcelJS from 'exceljs';
 import { XlsxWorkbookGrid, type XlsxWorkbookGridProps } from './XlsxWorkbookGrid';
 export { XlsxGrid, type XlsxGridProps } from './XlsxGrid';
@@ -35,9 +35,12 @@ export {
   type SheetGridData,
   type SheetRow,
   type SheetToGridDataOptions,
+  type WorkbookLoadOptions,
   DEFAULT_MAX_ROWS,
   DEFAULT_MAX_COLS,
   DEFAULT_MAX_CELLS,
+  DEFAULT_MAX_FILE_BYTES,
+  DEFAULT_MAX_UNCOMPRESSED_BYTES,
 } from './sheetMapper';
 export {
   exportToXlsx,
@@ -62,20 +65,36 @@ export interface MountOptions {
   limits?: XlsxWorkbookGridProps['limits'];
 }
 
+const mountedRoots = new WeakMap<Element, { root: Root; pendingUnmount: boolean; generation: number }>();
+
 /** Imperative mount for non-React hosts. Returns an unmount function. */
 export function mount(node: Element, opts: MountOptions): () => void {
-  const root = createRoot(node);
+  if (!opts.workbook && !opts.blob) throw new Error('A workbook or blob is required');
+  let entry = mountedRoots.get(node);
+  if (!entry) {
+    entry = { root: createRoot(node), pendingUnmount: false, generation: 0 };
+    mountedRoots.set(node, entry);
+  }
+  const mounted = entry;
+  const generation = ++mounted.generation;
+  mounted.pendingUnmount = false;
   const props = (
     opts.workbook
       ? { workbook: opts.workbook, ...rest(opts) }
       : { blob: opts.blob as Blob, ...rest(opts) }
   ) as XlsxWorkbookGridProps;
-  root.render(createElement(XlsxWorkbookGrid, props));
+  mounted.root.render(createElement(XlsxWorkbookGrid, { ...props, key: generation }));
   return () => {
     // Defer unmount one microtask — React warns if you unmount inside an
     // active render tree (which can happen if a host event triggers
     // close synchronously during a child's commit).
-    queueMicrotask(() => root.unmount());
+    if (mounted.generation !== generation || mounted.pendingUnmount) return;
+    mounted.pendingUnmount = true;
+    queueMicrotask(() => {
+      if (mounted.generation !== generation || !mounted.pendingUnmount) return;
+      mounted.root.unmount();
+      mountedRoots.delete(node);
+    });
   };
 }
 
