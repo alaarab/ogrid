@@ -3,15 +3,17 @@ import type { RowId, IVirtualScrollConfig } from '../types/dataGridTypes';
 
 /**
  * Validate column definitions at grid initialization.
- * Called once (not per render). Warns on empty/missing/duplicate columnIds.
- * In development mode, also warns when editable=true but no cellEditor is defined.
+ * Called once per distinct columnId set (not per render).
+ * Warns on empty columns, and in development mode on missing/duplicate columnIds.
+ * Editable columns without a cellEditor are valid: they fall back to the default
+ * editor for the column type, so they are not warned about.
  */
 export function validateColumns<T>(columns: IColumnDef<T>[]): void {
   if (!Array.isArray(columns) || columns.length === 0) {
     console.warn('[OGrid] columns prop is empty or not an array');
     return;
   }
-  const isDev = typeof process !== 'undefined' && process.env?.NODE_ENV !== 'production';
+  if (typeof process !== 'undefined' && process.env?.NODE_ENV === 'production') return;
   const ids = new Set<string>();
   for (const col of columns) {
     if (!col.columnId) {
@@ -21,12 +23,6 @@ export function validateColumns<T>(columns: IColumnDef<T>[]): void {
       console.warn(`[OGrid] Duplicate columnId: "${col.columnId}"`);
     }
     ids.add(col.columnId);
-    if (isDev && col.editable === true && col.cellEditor == null) {
-      console.warn(
-        `[OGrid] Column "${col.columnId}" has editable=true but no cellEditor defined. ` +
-        `Cells will not open an editor on double-click. Set cellEditor to 'text', 'select', 'checkbox', 'date', or a custom component.`
-      );
-    }
   }
 }
 

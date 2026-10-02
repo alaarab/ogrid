@@ -139,5 +139,6 @@ export interface DataGridPrimitives {
     selectedCellCount?: number;
     aggregation?: import('./StatusBar').StatusBarProps['aggregation'];
     suppressRowCount?: boolean;
+    panels?: import('./StatusBar').StatusBarProps['panels'];
   }>;
 }

@@ -259,11 +259,16 @@ export function useOGrid<T>(
   const fullyVirtualized =
     !isServerSide && virtualScroll?.enabled === true && virtualScroll?.paginate === false;
 
-  // --- Runtime validation (dev-only, runs once on mount) ---
+  // --- Runtime validation (dev-only, runs once per distinct set of columnIds) ---
   const rowIdsValidatedRef = useRef(false);
+  const columnIdsKey = useMemo(
+    () => columns.map((c) => c.columnId).join('\u0000'),
+    [columns]
+  );
+  // biome-ignore lint/correctness/useExhaustiveDependencies: validate once per distinct columnId set, not on every new columns array identity
   useEffect(() => {
     validateColumns(columns as Parameters<typeof validateColumns>[0]);
-  }, [columns]);
+  }, [columnIdsKey]);
   const defaultSortField = defaultSortBy ?? columns[0]?.columnId ?? '';
 
   // --- Internal data state (for imperative setRowData/setLoading API) ---

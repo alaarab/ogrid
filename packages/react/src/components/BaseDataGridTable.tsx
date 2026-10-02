@@ -289,6 +289,7 @@ export function BaseDataGridTableInner<T>(
           selectedCellCount={selectionRange ? (Math.abs(selectionRange.endRow - selectionRange.startRow) + 1) * (Math.abs(selectionRange.endCol - selectionRange.startCol) + 1) : undefined}
           aggregation={statusBarConfig.aggregation}
           suppressRowCount={statusBarConfig.suppressRowCount}
+          panels={statusBarConfig.panels}
         />
       )}
       {isLoading && (
