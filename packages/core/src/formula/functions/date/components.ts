@@ -1,7 +1,7 @@
 import type { IFormulaFunction, IFormulaContext, IEvaluator, ASTNode } from '../../types';
 import { FormulaError } from '../../types';
 import { toNumber, evalArg } from '../../evaluator';
-import { toDate } from './shared';
+import { toDate, dateToSerial, utcDate, serialDay, serialToDate, weekday } from './shared';
 
 /**
  * Date/time component access, construction, and parsing: TODAY, NOW, YEAR,
@@ -14,7 +14,7 @@ export function registerDateComponentFunctions(registry: Map<string, IFormulaFun
     evaluate(_args: ASTNode[], context: IFormulaContext): unknown {
       const now = context.now();
       // Return date with no time component
-      return new Date(now.getFullYear(), now.getMonth(), now.getDate());
+      return utcDate(now.getFullYear(), now.getMonth(), now.getDate());
     },
   });
 
@@ -22,7 +22,11 @@ export function registerDateComponentFunctions(registry: Map<string, IFormulaFun
     minArgs: 0,
     maxArgs: 0,
     evaluate(_args: ASTNode[], context: IFormulaContext): unknown {
-      return context.now();
+      const now = context.now();
+      const date = utcDate(now.getFullYear(), now.getMonth(), now.getDate());
+      // Local wall-clock time in UTC fields, matching TODAY and the date columns.
+      date.setUTCHours(now.getHours(), now.getMinutes(), now.getSeconds(), now.getMilliseconds());
+      return date;
     },
   });
 
@@ -34,7 +38,7 @@ export function registerDateComponentFunctions(registry: Map<string, IFormulaFun
       if (val instanceof FormulaError) return val;
       const date = toDate(val);
       if (date instanceof FormulaError) return date;
-      return date.getFullYear();
+      return date.getUTCFullYear();
     },
   });
 
@@ -46,7 +50,7 @@ export function registerDateComponentFunctions(registry: Map<string, IFormulaFun
       if (val instanceof FormulaError) return val;
       const date = toDate(val);
       if (date instanceof FormulaError) return date;
-      return date.getMonth() + 1; // 1-12
+      return date.getUTCMonth() + 1; // 1-12
     },
   });
 
@@ -58,7 +62,7 @@ export function registerDateComponentFunctions(registry: Map<string, IFormulaFun
       if (val instanceof FormulaError) return val;
       const date = toDate(val);
       if (date instanceof FormulaError) return date;
-      return date.getDate(); // 1-31
+      return serialDay(val) === 60 ? 29 : date.getUTCDate(); // 1-31
     },
   });
 
@@ -78,7 +82,14 @@ export function registerDateComponentFunctions(registry: Map<string, IFormulaFun
       if (rawD instanceof FormulaError) return rawD;
       const d = toNumber(rawD);
       if (d instanceof FormulaError) return d;
-      return new Date(Math.trunc(y), Math.trunc(m) - 1, Math.trunc(d));
+      const year = Math.trunc(y) < 1900 ? Math.trunc(y) + 1900 : Math.trunc(y);
+      if (y < 0 || year > 9999) return new FormulaError('#NUM!', 'Invalid year');
+      // Include Excel's fictitious leap day when normalising day overflow.
+      const first = dateToSerial(utcDate(year, Math.trunc(m) - 1, 1));
+      if (first instanceof FormulaError) return first;
+      const result = first + Math.trunc(d) - 1;
+      const date = toDate(result);
+      return date instanceof FormulaError ? new FormulaError('#NUM!', 'Invalid date') : date;
     },
   });
 
@@ -98,12 +109,16 @@ export function registerDateComponentFunctions(registry: Map<string, IFormulaFun
         if (rt instanceof FormulaError) return rt;
         returnType = Math.trunc(rt);
       }
-      const day = date.getDay(); // 0=Sun, 6=Sat
+      const serial = serialDay(rawDate);
+      if (serial instanceof FormulaError) return serial;
+      const day = (weekday(serial) + 1) % 7; // 0=Sun, 6=Sat
       switch (returnType) {
         case 1: return day + 1; // 1=Sun, 7=Sat
         case 2: return day === 0 ? 7 : day; // 1=Mon, 7=Sun
         case 3: return day === 0 ? 6 : day - 1; // 0=Mon, 6=Sun
-        default: return new FormulaError('#VALUE!', 'WEEKDAY return_type must be 1, 2, or 3');
+        default:
+          if (returnType >= 11 && returnType <= 17) return (day - (returnType - 10) + 7) % 7 + 1;
+          return new FormulaError('#NUM!', 'Invalid WEEKDAY return_type');
       }
     },
   });
@@ -116,7 +131,7 @@ export function registerDateComponentFunctions(registry: Map<string, IFormulaFun
       if (val instanceof FormulaError) return val;
       const date = toDate(val);
       if (date instanceof FormulaError) return date;
-      return date.getHours();
+      return date.getUTCHours();
     },
   });
 
@@ -128,7 +143,7 @@ export function registerDateComponentFunctions(registry: Map<string, IFormulaFun
       if (val instanceof FormulaError) return val;
       const date = toDate(val);
       if (date instanceof FormulaError) return date;
-      return date.getMinutes();
+      return date.getUTCMinutes();
     },
   });
 
@@ -140,7 +155,7 @@ export function registerDateComponentFunctions(registry: Map<string, IFormulaFun
       if (val instanceof FormulaError) return val;
       const date = toDate(val);
       if (date instanceof FormulaError) return date;
-      return date.getSeconds();
+      return date.getUTCSeconds();
     },
   });
 
@@ -151,12 +166,7 @@ export function registerDateComponentFunctions(registry: Map<string, IFormulaFun
     evaluate(args: ASTNode[], context: IFormulaContext, evaluator: IEvaluator): unknown {
       const rawVal = evalArg(evaluator, args[0], context);
       if (rawVal instanceof FormulaError) return rawVal;
-      const str = typeof rawVal === 'string' ? rawVal : String(rawVal);
-      const d = new Date(str);
-      if (Number.isNaN(d.getTime())) return new FormulaError('#VALUE!', `DATEVALUE cannot parse "${str}"`);
-      // Return Excel-like serial (days since 1900-01-01, with Excel's 1900 leap year bug offset)
-      // We return the Date object directly  -  consistent with how the engine handles dates
-      return new Date(d.getFullYear(), d.getMonth(), d.getDate());
+      return serialToDate(serialDay(rawVal));
     },
   });
 
@@ -205,6 +215,7 @@ export function registerDateComponentFunctions(registry: Map<string, IFormulaFun
       const s = toNumber(rawS);
       if (s instanceof FormulaError) return s;
       const totalSeconds = Math.trunc(h) * 3600 + Math.trunc(m) * 60 + Math.trunc(s);
+      if (totalSeconds < 0 || h < 0 || m < 0 || s < 0) return new FormulaError('#NUM!', 'Negative time');
       return (totalSeconds % 86400) / 86400;
     },
   });

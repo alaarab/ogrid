@@ -8,7 +8,23 @@ export function registerInfoFunctions(registry: Map<string, IFormulaFunction>): 
     maxArgs: 1,
     evaluate(args: ASTNode[], context: IFormulaContext, evaluator: IEvaluator): unknown {
       const val = evalArg(evaluator, args[0], context);
-      return val === null || val === undefined || val === '';
+      // A grid cell cleared to '' is empty; the literal ISBLANK("") is not.
+      return val === null || val === undefined || (val === '' && args[0]?.kind === 'cellRef');
+    },
+  });
+
+  registry.set('COUNTBLANK', {
+    minArgs: 1,
+    maxArgs: 1,
+    evaluate(args: ASTNode[], context: IFormulaContext): unknown {
+      const arg = args[0];
+      if (!arg || (arg.kind !== 'range' && arg.kind !== 'cellRef')) return new FormulaError('#VALUE!', 'COUNTBLANK requires a reference');
+      if (arg.kind === 'cellRef') { const value = context.getCellValue(arg.address); return value === null || value === undefined || value === '' ? 1 : 0; }
+      const data = context.getRangeValues({ start: arg.start, end: arg.end });
+      const total = (Math.abs(arg.end.row - arg.start.row) + 1) * (Math.abs(arg.end.col - arg.start.col) + 1);
+      let nonblank = 0;
+      for (const row of data) for (const value of row) if (value !== null && value !== undefined && value !== '') nonblank++;
+      return total - nonblank;
     },
   });
 

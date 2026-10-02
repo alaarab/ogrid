@@ -1,3 +1,4 @@
+import { toDate } from '../functions/date/shared';
 /**
  * Tests for all new formula functions added in the expansion pass.
  * Covers: Math (17), Text (12), Logical (5), Lookup (2), Date (9), Info (6), Stats (3) = 54 new functions.
@@ -578,11 +579,11 @@ describe('Lookup functions (new)', () => {
 describe('Date functions (new)', () => {
   describe('DATE', () => {
     it('creates a date', () => {
-      const result = evalFn('DATE', [num(2025), num(3), num(15)]) as Date;
+      const result = toDate(evalFn('DATE', [num(2025), num(3), num(15)])) as Date;
       expect(result).toBeInstanceOf(Date);
-      expect(result.getFullYear()).toBe(2025);
-      expect(result.getMonth()).toBe(2); // 0-indexed
-      expect(result.getDate()).toBe(15);
+      expect(result.getUTCFullYear()).toBe(2025);
+      expect(result.getUTCMonth()).toBe(2); // 0-indexed
+      expect(result.getUTCDate()).toBe(15);
     });
   });
 
@@ -612,30 +613,30 @@ describe('Date functions (new)', () => {
   describe('EDATE', () => {
     it('adds months and clamps the day to the end of the target month', () => {
       const ctx = createMockContext({ '0,0': new Date(2025, 0, 31) });
-      const result = evaluator.evaluate(fn('EDATE', cell(0, 0), num(1)), ctx) as Date;
+      const result = toDate(evaluator.evaluate(fn('EDATE', cell(0, 0), num(1)), ctx)) as Date;
       expect(result).toBeInstanceOf(Date);
       // Jan 31 + 1 month clamps to Feb 28 (2025 is not a leap year), not Mar 3.
-      expect(result.getMonth()).toBe(1); // February
-      expect(result.getDate()).toBe(28);
+      expect(result.getUTCMonth()).toBe(1); // February
+      expect(result.getUTCDate()).toBe(28);
     });
     it('subtracts months with negative value', () => {
       const ctx = createMockContext({ '0,0': new Date('2025-06-15') });
-      const result = evaluator.evaluate(fn('EDATE', cell(0, 0), num(-3)), ctx) as Date;
-      expect(result.getMonth()).toBe(2); // March (0-indexed)
+      const result = toDate(evaluator.evaluate(fn('EDATE', cell(0, 0), num(-3)), ctx)) as Date;
+      expect(result.getUTCMonth()).toBe(2); // March (0-indexed)
     });
   });
 
   describe('EOMONTH', () => {
     it('returns end of same month', () => {
       const ctx = createMockContext({ '0,0': new Date('2025-01-15') });
-      const result = evaluator.evaluate(fn('EOMONTH', cell(0, 0), num(0)), ctx) as Date;
-      expect(result.getDate()).toBe(31);
+      const result = toDate(evaluator.evaluate(fn('EOMONTH', cell(0, 0), num(0)), ctx)) as Date;
+      expect(result.getUTCDate()).toBe(31);
     });
     it('returns end of next month', () => {
       const ctx = createMockContext({ '0,0': new Date('2025-01-15') });
-      const result = evaluator.evaluate(fn('EOMONTH', cell(0, 0), num(1)), ctx) as Date;
-      expect(result.getMonth()).toBe(1); // February
-      expect(result.getDate()).toBe(28); // 2025 is not leap year
+      const result = toDate(evaluator.evaluate(fn('EOMONTH', cell(0, 0), num(1)), ctx)) as Date;
+      expect(result.getUTCMonth()).toBe(1); // February
+      expect(result.getUTCDate()).toBe(28); // 2025 is not leap year
     });
   });
 
@@ -656,7 +657,7 @@ describe('Date functions (new)', () => {
 
   describe('HOUR', () => {
     it('extracts hour from date', () => {
-      const ctx = createMockContext({ '0,0': new Date('2025-01-15T14:30:45') });
+      const ctx = createMockContext({ '0,0': new Date('2025-01-15T14:30:45Z') });
       const result = evaluator.evaluate(fn('HOUR', cell(0, 0)), ctx);
       expect(result).toBe(14);
     });
@@ -664,7 +665,7 @@ describe('Date functions (new)', () => {
 
   describe('MINUTE', () => {
     it('extracts minute from date', () => {
-      const ctx = createMockContext({ '0,0': new Date('2025-01-15T14:30:45') });
+      const ctx = createMockContext({ '0,0': new Date('2025-01-15T14:30:45Z') });
       const result = evaluator.evaluate(fn('MINUTE', cell(0, 0)), ctx);
       expect(result).toBe(30);
     });
@@ -672,7 +673,7 @@ describe('Date functions (new)', () => {
 
   describe('SECOND', () => {
     it('extracts second from date', () => {
-      const ctx = createMockContext({ '0,0': new Date('2025-01-15T14:30:45') });
+      const ctx = createMockContext({ '0,0': new Date('2025-01-15T14:30:45Z') });
       const result = evaluator.evaluate(fn('SECOND', cell(0, 0)), ctx);
       expect(result).toBe(45);
     });
@@ -717,7 +718,7 @@ describe('Info functions', () => {
     it('returns true for null', () => {
       expect(evalFn('ISBLANK', [cell(0, 0)], {})).toBe(true);
     });
-    it('returns true for empty string', () => {
+    it('returns true for a cell holding an empty string (cleared cell)', () => {
       expect(evalFn('ISBLANK', [cell(0, 0)], { '0,0': '' })).toBe(true);
     });
     it('returns false for a number', () => {
@@ -898,9 +899,9 @@ describe('Original functions still work', () => {
     expect(evalFn('CONCATENATE', [str('Hello'), str(' '), str('World')])).toBe('Hello World');
   });
   it('TODAY', () => {
-    const result = evalFn('TODAY', []) as Date;
+    const result = toDate(evalFn('TODAY', [])) as Date;
     expect(result).toBeInstanceOf(Date);
-    expect(result.getFullYear()).toBe(2025);
+    expect(result.getUTCFullYear()).toBe(2025);
   });
   it('ROUND', () => {
     expect(evalFn('ROUND', [num(3.14159), num(2)])).toBe(3.14);

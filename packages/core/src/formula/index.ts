@@ -26,6 +26,7 @@ export type {
   IEvaluator,
   IRecalcResult,
   IFormulaEngineConfig,
+  IFormulaLimits,
   IGridDataAccessor,
   INamedRange,
   IAuditEntry,
