@@ -53,6 +53,28 @@ afterEach(() => {
 });
 
 describe('useGridVirtualization — return shape', () => {
+  it('measures a late container and reattaches the observer after replacement', () => {
+    const observe = jest.fn();
+    const disconnect = jest.fn();
+    jest.spyOn(globalThis, 'ResizeObserver').mockImplementation(() => ({
+      observe, disconnect, unobserve: jest.fn(),
+    }));
+    const ref: { current: HTMLElement | null } = { current: null };
+    const { result, rerender } = renderHook(() => useGridVirtualization({
+      rowCount: 1000, rowHeight: 30, containerRef: ref, overscan: 0,
+    }));
+    ref.current = makeContainer({ clientHeight: 300, scrollTop: 600 }).current;
+    rerender();
+    expect(observe).toHaveBeenCalledWith(ref.current);
+    expect(result.current.rowRange.startIndex).toBe(20);
+    expect(result.current.rowRange.endIndex).toBe(30);
+    ref.current = makeContainer({ clientHeight: 600 }).current;
+    rerender();
+    expect(disconnect).toHaveBeenCalled();
+    expect(observe).toHaveBeenCalledWith(ref.current);
+    expect(result.current.rowRange.startIndex).toBe(0);
+    expect(result.current.rowRange.endIndex).toBe(20);
+  });
   it('returns all expected fields', () => {
     const ref = makeContainer();
     const { result } = renderHook(() =>

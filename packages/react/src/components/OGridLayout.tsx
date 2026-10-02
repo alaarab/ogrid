@@ -112,6 +112,7 @@ const gridAreaFlexStyle: React.CSSProperties = {
 };
 
 const gridAreaSoloStyle: React.CSSProperties = {
+  ['--ogrid-virtual-scroll-min-height' as string]: '0px',
   width: '100%',
   minWidth: 0,
   minHeight: 0,
@@ -121,6 +122,7 @@ const gridAreaSoloStyle: React.CSSProperties = {
 };
 
 const gridChildStyle: React.CSSProperties = {
+  ['--ogrid-virtual-scroll-min-height' as string]: '0px',
   flex: 1,
   minWidth: 0,
   minHeight: 0,

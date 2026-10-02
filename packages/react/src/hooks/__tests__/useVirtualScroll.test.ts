@@ -2,7 +2,7 @@
  * Tests for useVirtualScroll: configurable threshold, enabling/disabling based on
  * row count vs threshold, and pass-through (non-virtual) mode.
  */
-import { renderHook } from '@testing-library/react';
+import { act, renderHook } from '@testing-library/react';
 import { useVirtualScroll } from '../useVirtualScroll';
 
 // Mock @tanstack/react-virtual  -  useVirtualizer is DOM-dependent; we test the logic layer
@@ -19,16 +19,19 @@ import { useVirtualizer } from '@tanstack/react-virtual';
 const mockGetVirtualItems = jest.fn(() => []);
 const mockGetTotalSize = jest.fn(() => 0);
 const mockScrollToIndex = jest.fn();
+const mockScrollToOffset = jest.fn();
 
 beforeEach(() => {
   (useVirtualizer as jest.Mock).mockReturnValue({
     getVirtualItems: mockGetVirtualItems,
     getTotalSize: mockGetTotalSize,
     scrollToIndex: mockScrollToIndex,
+    scrollToOffset: mockScrollToOffset,
   });
   mockGetVirtualItems.mockReturnValue([]);
   mockGetTotalSize.mockReturnValue(0);
   mockScrollToIndex.mockReset();
+  mockScrollToOffset.mockReset();
 });
 
 function makeContainerRef(el: HTMLElement | null = null) {
@@ -324,6 +327,7 @@ describe('useVirtualScroll  -  scrollToIndex', () => {
 
 describe('useVirtualScroll  -  active visibleRange recomputes per render', () => {
   it('reflects a populated virtual range produced after the first render', () => {
+    const containerRef = makeContainerRef(document.createElement('div'));
     // The virtualizer instance has a stable identity for the hook's lifetime.
     // The scroll element is measured asynchronously, so getVirtualItems() is
     // empty on the first render and populates on a later render. visibleRange
@@ -338,7 +342,7 @@ describe('useVirtualScroll  -  active visibleRange recomputes per render', () =>
         rowHeight: 36,
         enabled: true,
         threshold: 100,
-        containerRef: makeContainerRef(document.createElement('div')),
+        containerRef,
       })
     );
 
@@ -452,48 +456,52 @@ describe('useVirtualScroll  -  scaled spacer (large datasets)', () => {
   }
 
   it('does not scale a dataset that fits under the height cap', () => {
+    const containerRef = makeContainerRef(makeScaledContainer());
     const { result } = renderHook(() =>
       useVirtualScroll({
         totalRows: 50_000, // 50k * 36 = 1.8M px, well under the cap
         rowHeight: 36,
         enabled: true,
-        containerRef: makeContainerRef(makeScaledContainer()),
+        containerRef,
       })
     );
     expect(result.current.scaled).toBe(false);
   });
 
   it('engages scaling when totalRows * rowHeight exceeds the cap', () => {
+    const containerRef = makeContainerRef(makeScaledContainer());
     const { result } = renderHook(() =>
       useVirtualScroll({
         totalRows: 1_000_000, // 1M * 36 = 36M px, over the 32M cap
         rowHeight: 36,
         enabled: true,
-        containerRef: makeContainerRef(makeScaledContainer()),
+        containerRef,
       })
     );
     expect(result.current.scaled).toBe(true);
   });
 
   it('clamps totalHeight to the spacer cap when scaled', () => {
+    const containerRef = makeContainerRef(makeScaledContainer());
     const { result } = renderHook(() =>
       useVirtualScroll({
         totalRows: 1_000_000,
         rowHeight: 36,
         enabled: true,
-        containerRef: makeContainerRef(makeScaledContainer()),
+        containerRef,
       })
     );
     expect(result.current.totalHeight).toBe(32_000_000);
   });
 
   it('reports the top window at scrollTop 0 with offsets summing to the spacer', () => {
+    const containerRef = makeContainerRef(makeScaledContainer());
     const { result } = renderHook(() =>
       useVirtualScroll({
         totalRows: 1_000_000,
         rowHeight: 36,
         enabled: true,
-        containerRef: makeContainerRef(makeScaledContainer(600)),
+        containerRef,
       })
     );
     const { startIndex, endIndex, offsetTop, offsetBottom } = result.current.visibleRange;
@@ -515,7 +523,7 @@ describe('useVirtualScroll  -  scaled spacer (large datasets)', () => {
         containerRef: makeContainerRef(container),
       })
     );
-    result.current.scrollToIndex(500_000);
+    act(() => result.current.scrollToIndex(500_000));
     expect(container.scrollTo).toHaveBeenCalledTimes(1);
     const arg = (container.scrollTo as jest.Mock).mock.calls[0][0];
     expect(arg.behavior).toBe('auto');
@@ -534,7 +542,7 @@ describe('useVirtualScroll  -  scaled spacer (large datasets)', () => {
         containerRef: makeContainerRef(container),
       })
     );
-    result.current.scrollToIndex(999_999);
+    act(() => result.current.scrollToIndex(999_999));
     const arg = (container.scrollTo as jest.Mock).mock.calls[0][0];
     // Jump-to-last lands at the bottom of the compressed scroll range, never past it.
     expect(arg.top).toBeLessThanOrEqual(32_000_000 - 600);
@@ -544,6 +552,7 @@ describe('useVirtualScroll  -  scaled spacer (large datasets)', () => {
 
 describe('useVirtualScroll  -  rowHeight changes', () => {
   it('re-measures the virtualizer when rowHeight changes', () => {
+    const containerRef = makeContainerRef(document.createElement('div'));
     const measure = jest.fn();
     (useVirtualizer as jest.Mock).mockReturnValue({
       getVirtualItems: mockGetVirtualItems,
@@ -557,12 +566,99 @@ describe('useVirtualScroll  -  rowHeight changes', () => {
           totalRows: 500,
           rowHeight,
           enabled: true,
-          containerRef: makeContainerRef(document.createElement('div')),
+          containerRef,
         }),
       { initialProps: { rowHeight: 36 } },
     );
     expect(measure).not.toHaveBeenCalled();
     rerender({ rowHeight: 48 });
     expect(measure).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe('useVirtualScroll regressions', () => {
+  it('centers standard virtual rows within the viewport below a sticky header', () => {
+    const container = document.createElement('div');
+    container.innerHTML = '<table><thead></thead></table>';
+    Object.defineProperty(container, 'clientHeight', { value: 720 });
+    container.querySelector('thead')!.getBoundingClientRect = () => ({ height: 48 }) as DOMRect;
+    const containerRef = makeContainerRef(container);
+    const { result } = renderHook(() => useVirtualScroll({
+      totalRows: 1000, rowHeight: 36, enabled: true, stickyHeader: true, containerRef,
+    }));
+    act(() => result.current.scrollToIndex(500, 'center'));
+    expect(mockScrollToOffset).toHaveBeenCalledWith(18_000 - (672 - 36) / 2);
+  });
+
+  it('subtracts the sticky header from standard row spacer offsets', () => {
+    const container = document.createElement('div');
+    container.innerHTML = '<table><thead></thead></table>';
+    Object.defineProperty(container, 'clientHeight', { value: 720 });
+    container.querySelector('thead')!.getBoundingClientRect = () => ({ height: 48 }) as DOMRect;
+    const containerRef = makeContainerRef(container);
+    mockGetTotalSize.mockReturnValue(36_000);
+    mockGetVirtualItems.mockReturnValue([
+      { index: 10, start: 408, end: 444 },
+      { index: 30, start: 1128, end: 1164 },
+    ] as never[]);
+    const { result } = renderHook(() => useVirtualScroll({
+      totalRows: 1000, rowHeight: 36, enabled: true, stickyHeader: true, containerRef,
+    }));
+    expect(result.current.visibleRange.offsetTop).toBe(360);
+    expect(result.current.visibleRange.offsetBottom).toBe(36_000 - 31 * 36);
+  });
+  for (const align of ['start', 'center', 'end'] as const) {
+    it(`supports ${align} alignment in scaled mode below the sticky header`, () => {
+      const container = document.createElement('div');
+      container.innerHTML = '<table><thead></thead></table>';
+      Object.defineProperty(container, 'clientHeight', { value: 720 });
+      container.querySelector('thead')!.getBoundingClientRect = () => ({ height: 48 }) as DOMRect;
+      container.scrollTo = jest.fn();
+      const containerRef = makeContainerRef(container);
+      const { result } = renderHook(() => useVirtualScroll({
+        totalRows: 10_000_000, rowHeight: 36, enabled: true, stickyHeader: true, containerRef,
+      }));
+      act(() => result.current.scrollToIndex(5_000_000, align));
+      const top = (container.scrollTo as jest.Mock).mock.calls[0][0].top;
+      const adjustment = align === 'center' ? (672 - 36) / 2 : align === 'end' ? 672 - 36 : 0;
+      expect(top / (32_000_000 - 672) * (360_000_000 - 672)).toBeCloseTo(180_000_000 - adjustment, 5);
+    });
+
+    it(`passes ${align} alignment to the standard virtualizer`, () => {
+      const containerRef = makeContainerRef(document.createElement('div'));
+      const { result } = renderHook(() => useVirtualScroll({
+        totalRows: 1000, rowHeight: 36, enabled: true, containerRef,
+      }));
+      act(() => result.current.scrollToIndex(500, align));
+      expect(mockScrollToIndex).toHaveBeenCalledWith(500, { align });
+    });
+  }
+
+  it('measures a container mounted later and observes its replacement', () => {
+    const observe = jest.fn();
+    const disconnect = jest.fn();
+    const observer = jest.spyOn(globalThis, 'ResizeObserver').mockImplementation(() => ({
+      observe, disconnect, unobserve: jest.fn(),
+    }));
+    const containerRef = makeContainerRef();
+    const { result, rerender, unmount } = renderHook(() => useVirtualScroll({
+      totalRows: 10_000_000, rowHeight: 36, enabled: true, containerRef,
+    }));
+    const first = document.createElement('div');
+    Object.defineProperty(first, 'clientHeight', { value: 720 });
+    first.scrollTop = (32_000_000 - 720) / 2;
+    containerRef.current = first;
+    rerender();
+    expect(observe).toHaveBeenCalledWith(first);
+    expect(result.current.visibleRange.startIndex).toBeGreaterThan(4_999_000);
+    const second = document.createElement('div');
+    Object.defineProperty(second, 'clientHeight', { value: 360 });
+    containerRef.current = second;
+    rerender();
+    expect(disconnect).toHaveBeenCalled();
+    expect(observe).toHaveBeenCalledWith(second);
+    expect(result.current.visibleRange.startIndex).toBe(0);
+    unmount();
+    observer.mockRestore();
   });
 });

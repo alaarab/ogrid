@@ -33,6 +33,7 @@ export interface UseOGridImperativeHandleParams<T> {
   effectiveSelectedRows: Set<RowId>;
   columns: ReadonlyArray<{ columnId: string }>;
   getRowId: (item: T) => RowId;
+  scrollToRowRef: React.RefObject<IOGridApi<T>['scrollToRow'] | null>;
 }
 
 /**
@@ -65,6 +66,7 @@ export function useOGridImperativeHandle<T>(params: UseOGridImperativeHandlePara
     effectiveSelectedRows,
     columns,
     getRowId,
+    scrollToRowRef,
   } = params;
 
   const visibleColumnsRef = useLatestRef(visibleColumns);
@@ -150,10 +152,7 @@ export function useOGridImperativeHandle<T>(params: UseOGridImperativeHandlePara
         if (columnOrder === undefined) setInternalColumnOrder(order);
         onColumnOrderChange?.(order);
       },
-      scrollToRow: () => {
-        // No-op at orchestration level  -  DataGridTable components implement
-        // this via useVirtualScroll.scrollToIndex when virtual scrolling is active.
-      },
+      scrollToRow: (index, options) => scrollToRowRef.current?.(index, options),
     }),
     [
       isServerSide, setVisibleColumns, setSort, defaultSortField, defaultSortDirection, setFilters,
@@ -166,6 +165,7 @@ export function useOGridImperativeHandle<T>(params: UseOGridImperativeHandlePara
       // unchanged from the original inline handle.
       setInternalData, setInternalLoading, setInternalColumnOrder,
       setColumnWidthOverrides, setPinnedOverrides, setInternalSelectedRows,
+      scrollToRowRef,
     ]
   );
 }
