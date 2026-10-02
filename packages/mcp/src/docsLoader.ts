@@ -1,5 +1,5 @@
 import { readdirSync, readFileSync, statSync } from 'node:fs';
-import { join, relative, extname } from 'node:path';
+import { join, relative, extname, sep } from 'node:path';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -50,6 +50,15 @@ function collectFiles(dir: string): string[] {
     }
   }
   return results;
+}
+
+/**
+ * Normalize an OS path to forward slashes. Doc paths double as lookup keys,
+ * categories and resource URIs, so on Windows `features\filtering.mdx` must
+ * become `features/filtering.mdx`.
+ */
+export function toPosixPath(osPath: string, separator: string = sep): string {
+  return osPath.split(separator).join('/');
 }
 
 /** Derive the doc category from the first path segment (e.g. "features"). */
@@ -186,7 +195,7 @@ function stripMdxContent(raw: string): string {
 
 function parseDocFile(filePath: string, docsDir: string): DocEntry {
   const raw = readFileSync(filePath, 'utf-8');
-  const relPath = relative(docsDir, filePath);
+  const relPath = toPosixPath(relative(docsDir, filePath));
   const { title, description } = parseFrontmatter(raw);
   const category = deriveCategory(relPath);
   const content = stripMdxContent(raw);

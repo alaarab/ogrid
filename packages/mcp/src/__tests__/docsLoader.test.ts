@@ -1,7 +1,8 @@
 import * as fs from 'node:fs';
 import * as path from 'node:path';
 import * as os from 'node:os';
-import { loadDocsIndex } from '../docsLoader';
+import { loadDocsIndex, toPosixPath } from '../docsLoader';
+import { stripImports } from '../../scripts/strip-imports.mjs';
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -411,5 +412,26 @@ describe('DocsIndex.getCodeExamples', () => {
     } finally {
       fs.rmSync(dir, { recursive: true, force: true });
     }
+  });
+});
+
+describe('toPosixPath', () => {
+  test('turns Windows separators into forward slashes', () => {
+    expect(toPosixPath('features\\filtering.mdx', '\\')).toBe('features/filtering.mdx');
+    expect(toPosixPath('api\\types\\column-def.md', '\\')).toBe('api/types/column-def.md');
+  });
+});
+
+describe('bundle-docs stripImports', () => {
+  test('drops MDX imports but keeps imports inside code examples', () => {
+    const mdx = [
+      "import Tabs from '@theme/Tabs';",
+      '',
+      '```tsx',
+      "import { OGrid } from '@alaarab/ogrid-react-radix';",
+      '```',
+      "import Demo from '@site/src/Demo';",
+    ].join('\n');
+    expect(stripImports(mdx)).toBe(['', '```tsx', "import { OGrid } from '@alaarab/ogrid-react-radix';", '```'].join('\n'));
   });
 });

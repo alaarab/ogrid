@@ -42,13 +42,24 @@ export interface BridgeCommand {
   payload: Record<string, unknown>;
 }
 
-/** Minimal subset of IOGridApi used by the bridge. */
+/**
+ * Grid API used by the bridge. An `IOGridApi` (the `<OGrid>` ref) fits as-is:
+ * filters go through `setFilterModel`, sort through `applyColumnState`, and
+ * selection is read from `getSelectedRows`. `IOGridApi` has no page setter, so
+ * pass `goToPage` yourself for go_to_page. `updateSort` / `updateFilter`, when
+ * given, take precedence over the `IOGridApi` methods.
+ */
 export interface BridgeGridApi {
   updateSort?: (model: Array<{ columnId: string; direction: 'asc' | 'desc' }>) => void;
   updateFilter?: (columnId: string, value: unknown) => void;
   clearFilters?: () => void;
   goToPage?: (page: number) => void;
   getSelectedRows?: () => unknown[];
+  // IOGridApi members (method syntax, so IOGridApi<T> stays assignable).
+  setFilterModel?(filters: Record<string, unknown>): void;
+  getColumnState?(): { filters?: Record<string, unknown> };
+  applyColumnState?(state: { sort?: { field: string; direction: 'asc' | 'desc' } }): void;
+  clearSort?(): void;
 }
 
 export interface ConnectGridOptions {
@@ -100,7 +111,10 @@ export function connectGridToBridge(options: ConnectGridOptions): BridgeConnecti
   } = options;
 
   let stopped = false;
-  let intervalId: ReturnType<typeof setInterval> | null = null;
+  let timer: ReturnType<typeof setTimeout> | null = null;
+  // Aborts in-flight requests on disconnect, so nothing lands after unmount.
+  const controller = new AbortController();
+  const { signal } = controller;
 
   /** Serialize current grid state for the bridge. */
   function buildState(): Record<string, unknown> {
@@ -114,6 +128,7 @@ export function connectGridToBridge(options: ConnectGridOptions): BridgeConnecti
     };
     const sortModel = getSort?.() ?? [];
     const filterModel = getFilters?.() ?? {};
+    const selectedRowIds = api?.getSelectedRows?.() ?? [];
 
     return {
       gridId,
@@ -122,6 +137,7 @@ export function connectGridToBridge(options: ConnectGridOptions): BridgeConnecti
       columns,
       sortModel,
       filterModel,
+      selectedRowIds,
       ...pagination,
     };
   }
@@ -133,6 +149,7 @@ export function connectGridToBridge(options: ConnectGridOptions): BridgeConnecti
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(buildState()),
+        signal,
       });
     } catch {
       // Bridge not running  -  silently ignore
@@ -147,6 +164,7 @@ export function connectGridToBridge(options: ConnectGridOptions): BridgeConnecti
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(buildState()),
+        signal,
       });
     } catch {
       // ignore
@@ -155,16 +173,20 @@ export function connectGridToBridge(options: ConnectGridOptions): BridgeConnecti
 
   /** Handle a single command received from the bridge. */
   async function handleCommand(cmd: BridgeCommand): Promise<void> {
+    if (stopped) return;
     let result: unknown = null;
     let error: string | undefined;
+    const payload = cmd.payload ?? {};
 
     try {
       switch (cmd.type) {
         case 'update_cell': {
-          const rowIndex = cmd.payload.rowIndex as number;
-          const columnId = cmd.payload.columnId as string;
-          const value = cmd.payload.value;
-          if (onCellUpdate) {
+          const rowIndex = payload.rowIndex;
+          const columnId = payload.columnId;
+          const value = payload.value;
+          if (typeof rowIndex !== 'number' || !Number.isInteger(rowIndex) || rowIndex < 0 || typeof columnId !== 'string') {
+            error = 'update_cell needs { rowIndex: integer >= 0, columnId: string, value }';
+          } else if (onCellUpdate) {
             onCellUpdate(rowIndex, columnId, value);
             result = { ok: true, rowIndex, columnId, value };
           } else {
@@ -173,13 +195,22 @@ export function connectGridToBridge(options: ConnectGridOptions): BridgeConnecti
           break;
         }
         case 'set_filter': {
-          const columnId = cmd.payload.columnId as string;
-          const value = cmd.payload.value;
-          if (api?.updateFilter) {
+          const columnId = payload.columnId;
+          const value = payload.value;
+          const isList = Array.isArray(value) && value.every((v) => typeof v === 'string');
+          if (typeof columnId !== 'string' || (typeof value !== 'string' && !isList)) {
+            error = 'set_filter needs { columnId: string, value: string | string[] }';
+          } else if (api?.updateFilter) {
             api.updateFilter(columnId, value);
             result = { ok: true };
+          } else if (api?.setFilterModel) {
+            const filters = { ...(api.getColumnState?.().filters ?? {}) };
+            if (value.length === 0) delete filters[columnId];
+            else filters[columnId] = isList ? { type: 'multiSelect', value } : { type: 'text', value };
+            api.setFilterModel(filters);
+            result = { ok: true };
           } else {
-            error = 'No api.updateFilter available';
+            error = 'No api.updateFilter or api.setFilterModel available';
           }
           break;
         }
@@ -193,25 +224,47 @@ export function connectGridToBridge(options: ConnectGridOptions): BridgeConnecti
           break;
         }
         case 'set_sort': {
-          const sortModel = cmd.payload.sortModel as Array<{
-            columnId: string;
-            direction: 'asc' | 'desc';
-          }>;
+          const sortModel = payload.sortModel;
+          const valid =
+            Array.isArray(sortModel) &&
+            sortModel.every(
+              (s) =>
+                s !== null &&
+                typeof s === 'object' &&
+                typeof (s as { columnId?: unknown }).columnId === 'string' &&
+                ((s as { direction?: unknown }).direction === 'asc' ||
+                  (s as { direction?: unknown }).direction === 'desc'),
+            );
+          if (!valid) {
+            error = 'set_sort needs { sortModel: [{ columnId: string, direction: "asc" | "desc" }] }';
+            break;
+          }
+          const model = sortModel as Array<{ columnId: string; direction: 'asc' | 'desc' }>;
+          const first = model[0];
           if (api?.updateSort) {
-            api.updateSort(sortModel);
+            api.updateSort(model);
+            result = { ok: true };
+          } else if (first && api?.applyColumnState) {
+            // IOGridApi sorts by a single column.
+            api.applyColumnState({ sort: { field: first.columnId, direction: first.direction } });
+            result = { ok: true };
+          } else if (!first && api?.clearSort) {
+            api.clearSort();
             result = { ok: true };
           } else {
-            error = 'No api.updateSort available';
+            error = 'No api.updateSort or api.applyColumnState available';
           }
           break;
         }
         case 'go_to_page': {
-          const page = cmd.payload.page as number;
-          if (api?.goToPage) {
+          const page = payload.page;
+          if (typeof page !== 'number' || !Number.isInteger(page) || page < 1) {
+            error = 'go_to_page needs { page: integer >= 1 }';
+          } else if (api?.goToPage) {
             api.goToPage(page);
             result = { ok: true };
           } else {
-            error = 'No api.goToPage available';
+            error = 'No api.goToPage available (IOGridApi has no page setter; pass goToPage)';
           }
           break;
         }
@@ -230,6 +283,7 @@ export function connectGridToBridge(options: ConnectGridOptions): BridgeConnecti
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ result, error }),
+          signal,
         },
       );
     } catch {
@@ -244,11 +298,12 @@ export function connectGridToBridge(options: ConnectGridOptions): BridgeConnecti
     try {
       const res = await fetch(
         `${bridgeUrl}/grids/${encodeURIComponent(gridId)}/commands`,
+        { signal },
       );
       if (res.ok) {
         const cmds = (await res.json()) as BridgeCommand[];
         for (const cmd of cmds) {
-          void handleCommand(cmd);
+          await handleCommand(cmd);
         }
       }
     } catch {
@@ -258,14 +313,23 @@ export function connectGridToBridge(options: ConnectGridOptions): BridgeConnecti
     await push();
   }
 
+  /** Schedule the next tick only after the previous one finished, so ticks never overlap. */
+  function schedule(): void {
+    if (stopped) return;
+    timer = setTimeout(() => {
+      void tick().then(schedule);
+    }, pollIntervalMs);
+  }
+
   // Start
   void connect();
-  intervalId = setInterval(() => void tick(), pollIntervalMs);
+  schedule();
 
   return {
     disconnect() {
       stopped = true;
-      if (intervalId !== null) clearInterval(intervalId);
+      if (timer !== null) clearTimeout(timer);
+      controller.abort();
     },
     push,
   };
