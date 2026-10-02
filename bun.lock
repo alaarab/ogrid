@@ -115,7 +115,7 @@
       "name": "@alaarab/ogrid-react",
       "version": "2.17.1",
       "dependencies": {
-        "@alaarab/ogrid-core": "2.17.0",
+        "@alaarab/ogrid-core": "2.17.1",
         "@tanstack/react-virtual": "^3.14.10",
       },
       "devDependencies": {
@@ -192,8 +192,8 @@
       "name": "@alaarab/ogrid-react-radix",
       "version": "2.17.1",
       "dependencies": {
-        "@alaarab/ogrid-core": "2.17.0",
-        "@alaarab/ogrid-react": "2.17.0",
+        "@alaarab/ogrid-core": "2.17.1",
+        "@alaarab/ogrid-react": "2.17.1",
       },
       "devDependencies": {
         "@storybook/react-vite": "^10.6.0",
@@ -219,9 +219,9 @@
       "name": "@alaarab/ogrid-react-xlsx",
       "version": "2.17.1",
       "dependencies": {
-        "@alaarab/ogrid-core": "2.17.0",
-        "@alaarab/ogrid-react": "2.17.0",
-        "@alaarab/ogrid-react-radix": "2.17.0",
+        "@alaarab/ogrid-core": "2.17.1",
+        "@alaarab/ogrid-react": "2.17.1",
+        "@alaarab/ogrid-react-radix": "2.17.1",
         "@radix-ui/react-checkbox": "^1.3.11",
         "@radix-ui/react-popover": "^1.1.23",
         "exceljs": "^4.4.0",
@@ -244,7 +244,7 @@
       "name": "@alaarab/ogrid-react-xlsx-browser",
       "version": "2.17.1",
       "devDependencies": {
-        "@alaarab/ogrid-react-xlsx": "2.17.0",
+        "@alaarab/ogrid-react-xlsx": "2.17.1",
         "@types/react": "^19.2.18",
         "@types/react-dom": "^19.2.7",
         "react": "^19.2.8",
@@ -252,6 +252,16 @@
         "rimraf": "^6.1.3",
         "tsup": "^8.5.1",
       },
+      "peerDependencies": {
+        "@alaarab/ogrid-core": "2.17.1",
+        "exceljs": "^4.4.0",
+        "react": "^17.0.0 || ^18.0.0 || ^19.0.0",
+      },
+      "optionalPeers": [
+        "@alaarab/ogrid-core",
+        "exceljs",
+        "react",
+      ],
     },
   },
   "overrides": {

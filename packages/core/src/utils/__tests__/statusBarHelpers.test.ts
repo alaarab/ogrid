@@ -71,4 +71,24 @@ describe('getStatusBarParts', () => {
     });
     expect(parts).toHaveLength(1);
   });
+
+  it('shows only the panels listed in panels', () => {
+    const parts = getStatusBarParts({
+      totalCount: 100,
+      filteredCount: 50,
+      selectedCount: 5,
+      panels: ['filteredRowCount'],
+    });
+    expect(parts).toEqual([{ key: 'filtered', label: 'Filtered:', value: 50 }]);
+  });
+
+  it('hides rowCount when panels excludes it', () => {
+    const parts = getStatusBarParts({ totalCount: 100, panels: ['selectedRowCount'] });
+    expect(parts).toHaveLength(0);
+  });
+
+  it('shows all applicable panels when panels is omitted', () => {
+    const parts = getStatusBarParts({ totalCount: 100, filteredCount: 50, selectedCount: 5 });
+    expect(parts.map((p) => p.key)).toEqual(['total', 'filtered', 'selected']);
+  });
 });

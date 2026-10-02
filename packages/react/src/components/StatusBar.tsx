@@ -1,3 +1,4 @@
+import type { StatusBarPanel } from '@alaarab/ogrid-core';
 import * as React from 'react';
 import { getStatusBarParts } from '../utils';
 
@@ -22,6 +23,8 @@ export interface StatusBarProps {
     count: number;
   } | null;
   suppressRowCount?: boolean;
+  /** Which row panels to show (default: all applicable). */
+  panels?: StatusBarPanel[];
   classNames?: StatusBarClassNames;
 }
 
