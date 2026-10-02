@@ -4,6 +4,8 @@ All notable changes to OGrid will be documented in this file.
 
 ## [Unreleased]
 
+## [2.17.2] - 2026-10-02
+
 A broad correctness pass from a full multi-reviewer audit of the codebase:
 formulas, XLSX import, keyboard and accessibility, windowed data sources,
 virtual scroll, column state, clipboard/fill, editors, packaging and the MCP
