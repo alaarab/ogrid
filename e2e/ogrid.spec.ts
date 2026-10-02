@@ -841,6 +841,10 @@ test.describe('Column resize', () => {
 });
 
 test.describe('Clipboard', () => {
+  // Paste reads the system clipboard. A rejected read (no permission) aborts the
+  // paste rather than falling back to a possibly stale in-page copy, so grant it.
+  test.use({ permissions: ['clipboard-read', 'clipboard-write'] });
+
   test.beforeEach(async ({ page }) => {
     await page.goto('/');
     await waitForGrid(page);

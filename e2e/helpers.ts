@@ -863,7 +863,8 @@ export function getContextMenuItem(page: Page, name: string | RegExp): Locator {
   ) {
     return page.getByRole('menuitem').filter({ hasText: name }).first();
   }
-  return page.getByRole('button', { name });
+  // React kits: the context menu items are WAI-ARIA menu items.
+  return page.getByRole('menuitem', { name });
 }
 
 /**
