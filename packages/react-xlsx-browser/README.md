@@ -23,7 +23,9 @@ Copy `dist/ogrid-xlsx.js` and `dist/ogrid-xlsx.css` from the package into your s
 </script>
 ```
 
-The bundle is about 1.5 MB raw (about 500 KB gzipped). If you have a bundler, use `@alaarab/ogrid-react-xlsx` instead so React and ExcelJS aren't duplicated. See its README for the API and the load limits for untrusted files.
+The bundle is about 1.62 MB raw (about 472 KB gzipped); the Size Limit check
+measures about 389 KB after minification and Brotli compression, within its
+400 KB budget. If you have a bundler, use `@alaarab/ogrid-react-xlsx` instead so React and ExcelJS aren't duplicated. See its README for the API and the load limits for untrusted files.
 
 ## Rendering the exported components
 
