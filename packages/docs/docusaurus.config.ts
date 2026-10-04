@@ -148,6 +148,9 @@ const config: Config = {
   ],
 
   themeConfig: {
+    mermaid: {
+      options: { layout: 'dagre', look: 'classic' },
+    },
     metadata: [
       { name: 'keywords', content: 'data grid, react data grid, javascript table, spreadsheet, MIT license, open source, AG Grid alternative' },
       { name: 'author', content: 'Ala Arab' },

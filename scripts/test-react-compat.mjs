@@ -22,7 +22,7 @@ try {
     const fixture = join(packed, version);
     await mkdir(fixture);
     await writeFile(join(fixture, 'package.json'), JSON.stringify({ private: true, type: 'module' }));
-    execFileSync('npm', ['install', offline ? '--offline' : '--prefer-offline', '--ignore-scripts', '--no-audit', '--no-fund', '--package-lock=false', `react@${version}`, `react-dom@${version}`, 'happy-dom@20.14.0', '@radix-ui/react-checkbox@1.3.11', '@radix-ui/react-popover@1.1.23', '@fluentui/react-components@9.74.7', '@fluentui/react-icons@2.0.339', ...tarballs], { cwd: fixture, stdio: 'inherit', timeout: 180_000, killSignal: 'SIGKILL' });
+    execFileSync('npm', ['install', offline ? '--offline' : '--prefer-offline', '--ignore-scripts', '--no-audit', '--no-fund', '--package-lock=false', `react@${version}`, `react-dom@${version}`, 'happy-dom@20.14.5', '@radix-ui/react-checkbox@1.3.11', '@radix-ui/react-popover@1.1.23', '@fluentui/react-components@9.74.9', '@fluentui/react-icons@2.0.343', ...tarballs], { cwd: fixture, stdio: 'inherit', timeout: 180_000, killSignal: 'SIGKILL' });
     await writeFile(join(fixture, 'smoke.mjs'), await readFile(new URL('./fixtures/react-compat-smoke.mjs', import.meta.url)));
     execFileSync('node', ['smoke.mjs'], { cwd: fixture, stdio: 'inherit', timeout: 180_000, killSignal: 'SIGKILL', env: { ...process.env, NODE_ENV: 'production' } });
   }
