@@ -4,6 +4,17 @@ All notable changes to OGrid will be documented in this file.
 
 ## [Unreleased]
 
+### Changed
+
+- Refresh workspace dependencies and the Bun lockfile, including React 19.3,
+  Fluent UI, the MCP SDK, Zod, build/test tooling, and Size Limit 14 with the
+  esbuild plugin to preserve CSS-inclusive bundle checks. Update CI
+  to Node 26.10.0 and Codecov 7.1.1; retain the Mermaid 11 browser support floor.
+
+### Security
+
+- Resolve esbuild to the patched 0.28.2 release throughout the workspace.
+
 ## [2.17.3] - 2026-10-02
 
 ### Fixed

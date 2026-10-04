@@ -126,11 +126,9 @@ export function BaseTableHeader<T>(props: BaseTableHeaderProps<T>): React.ReactE
                 <div className={styles.rowNumberHeaderCellInner}>
                   #
                 </div>
-                {/* biome-ignore lint/a11y/useFocusableInteractive: resize handle is a pointer-only drag affordance; it is deliberately kept out of the tab order (grid keyboard interaction is centralized in the grid's keyboard-navigation layer) */}
                 {/* biome-ignore lint/a11y/useSemanticElements: an <hr> inside a th would break the table header layout; role="separator" on a styled div is intentional */}
                 <div
                   className={styles.resizeHandle}
-                  // biome-ignore lint/a11y/useAriaPropsForRole: the drag-driven resize handle has no meaningful discrete value to expose via aria-valuenow
                   role="separator"
                   aria-orientation="vertical"
                   aria-label="Resize row number column"
@@ -221,11 +219,9 @@ export function BaseTableHeader<T>(props: BaseTableHeaderProps<T>): React.ReactE
                     {'⋮'}
                   </button>
                 </div>
-                {/* biome-ignore lint/a11y/useFocusableInteractive: resize handle is a pointer-only drag affordance; it is deliberately kept out of the tab order (grid keyboard interaction is centralized in the grid's keyboard-navigation layer) */}
                 {/* biome-ignore lint/a11y/useSemanticElements: an <hr> inside a th would break the table header layout; role="separator" on a styled div is intentional */}
                 <div
                   className={styles.resizeHandle}
-                  // biome-ignore lint/a11y/useAriaPropsForRole: the drag-driven resize handle has no meaningful discrete value to expose via aria-valuenow
                   role="separator"
                   aria-orientation="vertical"
                   aria-label={`Resize ${col.name}`}
