@@ -39,7 +39,9 @@
     "production": [
       ">0.5%",
       "not dead",
-      "not op_mini all"
+      "not op_mini all",
+      "not safari < 17.4",
+      "not ios_saf < 17.4"
     ],
     "development": [
       "last 3 chrome version",
