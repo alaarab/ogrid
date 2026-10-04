@@ -115,7 +115,7 @@
     "uuid": "^14.0.2",
     "webpack-dev-server": "^6.0.0",
     "hono": "^4.13.13",
-    "mermaid": "^11.17.2",
+    "mermaid": "^12.1.0",
     "esbuild": "^0.28.2"
   }
 }
