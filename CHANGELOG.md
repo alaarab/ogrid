@@ -23,6 +23,12 @@ All notable changes to OGrid will be documented in this file.
 
 ### Fixed
 
+- Inserting or deleting rows no longer re-sorts a sorted grid when
+  `getRowId` is set. Existing rows keep their current order (Excel-style, as
+  for edits), new rows that pass the active filters are appended at the end,
+  and deleted rows drop out. Changing the sort, filters or columns still does a
+  full re-sort. Grids without `getRowId`, or with duplicate ids, keep the
+  previous behavior. Applies to the worker sort path too.
 - Ctrl+V and Shift+Insert paste from the native `paste` event instead of
   `navigator.clipboard.readText()`, so pasting works on plain http and in
   browsers that deny clipboard reads (Firefox, Safari). The context-menu Paste
