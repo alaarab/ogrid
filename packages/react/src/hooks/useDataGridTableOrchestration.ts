@@ -1,260 +1,23 @@
-import { useCallback, useRef, useMemo, useEffect, useLayoutEffect } from 'react';
-import type { RefObject } from 'react';
-import { formatCellReference, indexToColumnLetter } from '../utils';
-import type { DelegatedCellHandlers } from '../utils';
-import type { IOGridDataGridProps, IColumnDef } from '../types';
-import type {
-  DataGridLayoutState,
-  DataGridRowSelectionState,
-  DataGridEditingState,
-  DataGridCellInteractionState,
-  DataGridContextMenuState,
-  DataGridViewModelState,
-  DataGridPinningState,
-} from './useDataGridState';
-import type { UseColumnResizeResult } from './useColumnResize';
-import type { UseColumnReorderResult } from './useColumnReorder';
+import { useMemo, useRef } from 'react';
+import type { IColumnDef } from '../types';
 import type { UseVirtualScrollResult } from './useVirtualScroll';
-import type { IVisibleColumnRange, FormulaReference, IFormulaRowMap } from '@alaarab/ogrid-core';
-import type { HeaderFilterConfigInput, CellRenderDescriptorInput } from '../utils';
-import type { IStatusBarProps, RowId, HeaderRow } from '../types';
 import { useDataGridState } from './useDataGridState';
-import { useColumnResize } from './useColumnResize';
-import { useColumnReorder } from './useColumnReorder';
-import { useVirtualScroll } from './useVirtualScroll';
-import { useLatestRef } from './useLatestRef';
 import { useMiddleClickScroll } from './useMiddleClickScroll';
+import { useDataGridSheetCoordinates } from './useDataGridSheetCoordinates';
+import { useDataGridColumnControls } from './useDataGridColumnControls';
+import { useDataGridVirtualization } from './useDataGridVirtualization';
+import { useCellDescriptorCache, useDataGridCellHandlers } from './useDataGridCellHandlers';
+import { resolveAllowOverflowX, resolveRowNumberOffset } from './dataGridDerivations';
 import { buildHeaderRows } from '../utils';
-import { CellDescriptorCache, ROW_NUMBER_COLUMN_ID } from '@alaarab/ogrid-core';
+import type {
+  UseDataGridTableOrchestrationParams,
+  UseDataGridTableOrchestrationResult,
+} from './useDataGridTableOrchestration.types';
 
-// ---------------------------------------------------------------------------
-// Types
-// ---------------------------------------------------------------------------
-
-/** Parameters for the orchestration hook. */
-export interface UseDataGridTableOrchestrationParams<T> {
-  props: IOGridDataGridProps<T>;
-}
-
-/** Everything the framework-specific view layer needs to render. */
-export interface UseDataGridTableOrchestrationResult<T> {
-  // Refs
-  wrapperRef: RefObject<HTMLDivElement | null>;
-  tableContainerRef: RefObject<HTMLDivElement | null>;
-  lastMouseShiftRef: React.MutableRefObject<boolean>;
-
-  // State sub-objects (for framework-specific access)
-  layout: DataGridLayoutState<T>;
-  rowSel: DataGridRowSelectionState;
-  editing: DataGridEditingState<T>;
-  interaction: DataGridCellInteractionState;
-  ctxMenu: DataGridContextMenuState;
-  viewModels: DataGridViewModelState<T>;
-  pinning: DataGridPinningState;
-
-  // Column resize
-  handleResizeStart: UseColumnResizeResult<T>['handleResizeStart'];
-  handleResizeDoubleClick: UseColumnResizeResult<T>['handleResizeDoubleClick'];
-  handleResizeFocus: UseColumnResizeResult<T>['handleResizeFocus'];
-  handleResizeKeyDown: UseColumnResizeResult<T>['handleResizeKeyDown'];
-  getColumnWidth: UseColumnResizeResult<T>['getColumnWidth'];
-  getColumnMinWidth: UseColumnResizeResult<T>['getColumnMinWidth'];
-
-  // Column reorder
-  isReorderDragging: UseColumnReorderResult['isDragging'];
-  dropIndicatorX: UseColumnReorderResult['dropIndicatorX'];
-  handleHeaderMouseDown: UseColumnReorderResult['handleHeaderMouseDown'];
-
-  // Virtual scroll
-  virtualScrollEnabled: boolean;
-  virtualRowHeight: number;
-  visibleRange: UseVirtualScrollResult['visibleRange'];
-  /** Visible column range for horizontal virtualization (null when disabled). */
-  columnRange: IVisibleColumnRange | null;
-  /** Callback for horizontal scroll events (column virtualization). */
-  onHorizontalScroll?: (scrollLeft: number) => void;
-
-  // Derived from props
-  items: T[];
-  /** Windowed (lazy) row access, or null/undefined for an in-memory dataset. */
-  windowed: IOGridDataGridProps<T>['windowed'];
-  columns: IOGridDataGridProps<T>['columns'];
-  getRowId: IOGridDataGridProps<T>['getRowId'];
-  emptyState: IOGridDataGridProps<T>['emptyState'];
-  layoutMode: 'fill' | 'content';
-  rowSelection: IOGridDataGridProps<T>['rowSelection'];
-  suppressHorizontalScroll: IOGridDataGridProps<T>['suppressHorizontalScroll'];
-  stickyHeader: boolean;
-  isLoading: boolean;
-  loadingMessage: string;
-  ariaLabel: string | undefined;
-  ariaLabelledBy: string | undefined;
-  visibleColumns: IOGridDataGridProps<T>['visibleColumns'];
-  columnOrder: IOGridDataGridProps<T>['columnOrder'];
-  columnReorder: IOGridDataGridProps<T>['columnReorder'];
-  density: 'compact' | 'normal' | 'comfortable';
-  rowHeight: number | undefined;
-  pinnedColumns: IOGridDataGridProps<T>['pinnedColumns'];
-  currentPage: number;
-  propPageSize: IOGridDataGridProps<T>['pageSize'];
-
-  // Computed values
-  rowNumberOffset: number;
-  headerRows: HeaderRow<T>[];
-  allowOverflowX: boolean;
-  fitToContent: boolean;
-  showColumnLetters: boolean;
-  showNameBox: boolean;
-  /** Header letter per visible column: the letter of its formula (flat) column. */
-  columnLetters: string[];
-  /** Row-number label per displayed row (its sheet row), when the grid maps rows to sheet rows. */
-  rowNumberOf?: (rowIndex: number) => number;
-  /** `formulaReferences` translated to visible columns and displayed rows, for the overlay. */
-  formulaReferences?: FormulaReference[];
-
-  // Memoized callback groups (for renderCellContent)
-  editCallbacks: {
-    commitCellEdit: DataGridEditingState<T>['commitCellEdit'];
-    setEditingCell: DataGridEditingState<T>['setEditingCell'];
-    setPendingEditorValue: DataGridEditingState<T>['setPendingEditorValue'];
-    cancelPopoverEdit: DataGridEditingState<T>['cancelPopoverEdit'];
-  };
-  interactionHandlers: {
-    handleCellMouseDown: DataGridCellInteractionState['handleCellMouseDown'];
-    setActiveCell: DataGridCellInteractionState['setActiveCell'];
-    setEditingCell: DataGridEditingState<T>['setEditingCell'];
-    handleCellContextMenu: DataGridContextMenuState['handleCellContextMenu'];
-    handleLongPressStart: DataGridContextMenuState['handleLongPressStart'];
-    handleLongPressEnd: DataGridContextMenuState['handleLongPressEnd'];
-  };
-
-  /** Stable delegated handlers for cell interaction (zero per-cell closures). */
-  delegatedCellHandlers: DelegatedCellHandlers;
-
-  // Stable refs for volatile state (used in renderCellContent)
-  cellDescriptorInputRef: React.MutableRefObject<CellRenderDescriptorInput<T>>;
-  /** Per-grid descriptor cache. Eliminates redundant getCellRenderDescriptor allocations for unchanged cells. */
-  cellDescriptorCacheRef: React.MutableRefObject<CellDescriptorCache>;
-  pendingEditorValueRef: React.MutableRefObject<unknown>;
-  popoverAnchorElRef: React.MutableRefObject<HTMLElement | null>;
-  selectedRowIdsRef: React.MutableRefObject<Set<RowId>>;
-
-  // Convenience handlers
-  handleSingleRowClick: (e: React.MouseEvent<HTMLTableRowElement>) => void;
-  handlePasteVoid: () => void;
-
-  // Layout-derived references
-  visibleCols: IColumnDef<T>[];
-  totalColCount: number;
-  hasCheckboxCol: boolean;
-  hasRowNumbersCol: boolean;
-  colOffset: number;
-  containerWidth: number;
-  minTableWidth: number;
-  desiredTableWidth: number;
-  columnSizingOverrides: Record<string, { widthPx: number }>;
-  setColumnSizingOverrides: React.Dispatch<React.SetStateAction<Record<string, { widthPx: number }>>>;
-  measuredColumnWidths: Record<string, number>;
-
-  // Row selection shortcuts
-  selectedRowIds: Set<RowId>;
-  updateSelection: DataGridRowSelectionState['updateSelection'];
-  handleRowCheckboxChange: DataGridRowSelectionState['handleRowCheckboxChange'];
-  handleSelectAll: DataGridRowSelectionState['handleSelectAll'];
-  allSelected: boolean;
-  someSelected: boolean;
-
-  // Editing shortcuts
-  editingCell: DataGridEditingState<T>['editingCell'];
-  setPopoverAnchorEl: DataGridEditingState<T>['setPopoverAnchorEl'];
-  cancelPopoverEdit: DataGridEditingState<T>['cancelPopoverEdit'];
-
-  // Interaction shortcuts
-  setActiveCell: DataGridCellInteractionState['setActiveCell'];
-  selectionRange: DataGridCellInteractionState['selectionRange'];
-  hasCellSelection: boolean;
-  handleGridKeyDown: DataGridCellInteractionState['handleGridKeyDown'];
-  handleFillHandleMouseDown: DataGridCellInteractionState['handleFillHandleMouseDown'];
-  handleCopy: DataGridCellInteractionState['handleCopy'];
-  handleCut: DataGridCellInteractionState['handleCut'];
-  cutRange: DataGridCellInteractionState['cutRange'];
-  copyRange: DataGridCellInteractionState['copyRange'];
-  canUndo: boolean;
-  canRedo: boolean;
-  onUndo: DataGridCellInteractionState['onUndo'];
-  onRedo: DataGridCellInteractionState['onRedo'];
-  isDragging: boolean;
-
-  // Context menu shortcuts
-  menuPosition: DataGridContextMenuState['menuPosition'];
-  handleCellContextMenu: DataGridContextMenuState['handleCellContextMenu'];
-  closeContextMenu: DataGridContextMenuState['closeContextMenu'];
-
-  // ViewModel shortcuts
-  headerFilterInput: HeaderFilterConfigInput;
-  cellDescriptorInput: CellRenderDescriptorInput<T>;
-  statusBarConfig: IStatusBarProps | null;
-  showEmptyInGrid: boolean;
-  onCellError: DataGridViewModelState<T>['onCellError'];
-
-  // Pinning shortcuts
-  headerMenu: DataGridPinningState['headerMenu'];
-}
-
-/**
- * Translate formula references (flat columns, sheet rows) to the visible
- * columns and displayed rows the overlay measures. A range whose cells are
- * scattered by sorting or column order is outlined by its bounding box.
- */
-function mapFormulaReferencesToView<T>(
-  refs: FormulaReference[] | undefined,
-  visibleCols: IColumnDef<T>[],
-  formulaCol: ((columnId: string) => number) | undefined,
-  rowMap: IFormulaRowMap | undefined,
-  rowCount: number,
-): FormulaReference[] | undefined {
-  if (!refs || refs.length === 0) return refs;
-  const out: FormulaReference[] = [];
-  for (const ref of refs) {
-    const c0 = Math.min(ref.col, ref.endCol ?? ref.col);
-    const c1 = Math.max(ref.col, ref.endCol ?? ref.col);
-    const r0 = Math.min(ref.row, ref.endRow ?? ref.row);
-    const r1 = Math.max(ref.row, ref.endRow ?? ref.row);
-    let minCol = -1;
-    let maxCol = -1;
-    for (let i = 0; i < visibleCols.length; i++) {
-      const col = visibleCols[i];
-      const flat = col && formulaCol ? formulaCol(col.columnId) : i;
-      if (flat < c0 || flat > c1) continue;
-      if (minCol < 0) minCol = i;
-      maxCol = i;
-    }
-    let minRow = -1;
-    let maxRow = -1;
-    if (!rowMap) {
-      minRow = r0;
-      maxRow = r1;
-    } else if (r0 === r1) {
-      minRow = maxRow = rowMap.toDisplayRow(r0);
-    } else {
-      for (let i = 0; i < rowCount; i++) {
-        const sheetRow = rowMap.toSheetRow(i);
-        if (sheetRow < r0 || sheetRow > r1) continue;
-        if (minRow < 0) minRow = i;
-        maxRow = i;
-      }
-    }
-    if (minCol < 0 || minRow < 0) continue;
-    out.push(minCol === maxCol && minRow === maxRow
-      ? { type: 'cell', col: minCol, row: minRow, colorIndex: ref.colorIndex }
-      : { type: 'range', col: minCol, row: minRow, endCol: maxCol, endRow: maxRow, colorIndex: ref.colorIndex });
-  }
-  return out;
-}
-
-// ---------------------------------------------------------------------------
-// Hook
-// ---------------------------------------------------------------------------
+export type {
+  UseDataGridTableOrchestrationParams,
+  UseDataGridTableOrchestrationResult,
+} from './useDataGridTableOrchestration.types';
 
 /**
  * Shared orchestration hook for DataGridTable.
@@ -289,428 +52,77 @@ export function useDataGridTableOrchestration<T>(
     columnSizingOverrides, setColumnSizingOverrides, measuredColumnWidths,
   } = layout;
   const visibleCols = visibleColsTyped as IColumnDef<T>[];
-
   const { selectedRowIds, updateSelection, handleRowCheckboxChange, handleSelectAll, allSelected, someSelected } = rowSel;
-  const { editingCell, setEditingCell, pendingEditorValue, setPendingEditorValue, commitCellEdit, cancelPopoverEdit, popoverAnchorEl, setPopoverAnchorEl } = editing;
-  const { setActiveCell, handleCellMouseDown, selectionRange, hasCellSelection, handleGridKeyDown, handleFillHandleMouseDown, handleCopy, handleCut, handlePaste, cutRange, copyRange, canUndo, canRedo, onUndo, onRedo, isDragging } = interaction;
-  const { menuPosition, handleCellContextMenu, closeContextMenu, handleLongPressStart, handleLongPressEnd } = ctxMenu;
-  const { headerFilterInput, cellDescriptorInput, statusBarConfig, showEmptyInGrid, onCellError } = viewModels;
-  const { headerMenu } = pinning;
-
-  const handlePasteVoid = useCallback(() => { void handlePaste(); }, [handlePaste]);
+  const { cellDescriptorInput } = viewModels;
 
   // ── Props destructuring ─────────────────────────────────────────────────
   const {
-    items,
-    windowed,
-    columns,
-    getRowId,
-    emptyState,
-    layoutMode = 'fill',
-    rowSelection = 'none',
-    suppressHorizontalScroll,
-    stickyHeader = true,
-    isLoading = false,
-    loadingMessage = 'Loading\u2026',
-    'aria-label': ariaLabel,
-    'aria-labelledby': ariaLabelledBy,
-    visibleColumns,
-    columnOrder,
-    onColumnOrderChange,
-    columnReorder,
-    virtualScroll,
-    rowHeight,
-    density = 'normal',
-    pinnedColumns,
-    currentPage = 1,
-    pageSize: propPageSize = 25,
-    showColumnLetters = false,
-    showNameBox = false,
-    onActiveCellChange,
+    items, windowed, columns, getRowId, emptyState,
+    layoutMode = 'fill', rowSelection = 'none', suppressHorizontalScroll,
+    stickyHeader = true, isLoading = false, loadingMessage = 'Loading…',
+    'aria-label': ariaLabel, 'aria-labelledby': ariaLabelledBy,
+    visibleColumns, columnOrder, columnReorder, rowHeight, density = 'normal', pinnedColumns,
+    currentPage = 1, pageSize: propPageSize = 25, showColumnLetters = false, showNameBox = false,
   } = props;
 
-  // ── Derived values ──────────────────────────────────────────────────────
-  // A windowed source scrolls every row in one viewport, so it never has a page offset.
-  const rowNumberOffset = hasRowNumbersCol && !windowed && propPageSize !== 'all' ? (currentPage - 1) * propPageSize : 0;
+  // ── Layout derivations ──────────────────────────────────────────────────
+  const rowNumberOffset = resolveRowNumberOffset(hasRowNumbersCol, !!windowed, currentPage, propPageSize);
   // Build the header from the same ordered, responsive-filtered column list the
   // body renders, so header cells always sit over their own body columns.
   const headerRows = useMemo(() => {
     const ids = visibleCols.map((c) => c.columnId);
     return buildHeaderRows(columns, new Set(ids), ids);
   }, [columns, visibleCols]);
-  const allowOverflowX = !suppressHorizontalScroll && containerWidth > 0 && (minTableWidth > containerWidth || desiredTableWidth > containerWidth);
-  const fitToContent = layoutMode === 'content';
+  const allowOverflowX = resolveAllowOverflowX(suppressHorizontalScroll, containerWidth, minTableWidth, desiredTableWidth);
 
-  // ── Sheet coordinates (column letters, row numbers, name box) ─────────
-  // Letters, row numbers and the name box name a cell the way formulas do:
-  // flat column index and sheet row (see IFormulaRowMap), so "B3" in the name
-  // box is the cell a formula's B3 reads.
-  const { formulaRowMap } = props;
-  const formulaCol = cellDescriptorInput.formulaCol;
-  const columnLetters = useMemo(
-    () => visibleCols.map((c, i) => indexToColumnLetter(formulaCol ? Math.max(0, formulaCol(c.columnId)) : i)),
-    [visibleCols, formulaCol]
+  // ── Feature slices (effect order matters: keep this sequence) ──────────
+  const { columnLetters, rowNumberOf, formulaReferences } = useDataGridSheetCoordinates(
+    props, visibleCols, cellDescriptorInput.formulaCol, rowNumberOffset, interaction.activeCell, colOffset,
   );
-  const rowNumberOf = useMemo(() => {
-    if (!formulaRowMap) return undefined;
-    return (rowIndex: number) => {
-      const sheetRow = formulaRowMap.toSheetRow(rowIndex);
-      return sheetRow >= 0 ? sheetRow + 1 : rowNumberOffset + rowIndex + 1;
-    };
-  }, [formulaRowMap, rowNumberOffset]);
-  const formulaReferences = useMemo(
-    () => mapFormulaReferencesToView(props.formulaReferences, visibleCols, formulaCol, formulaRowMap, items.length),
-    [props.formulaReferences, visibleCols, formulaCol, formulaRowMap, items.length]
+  const { resize, reorder } = useDataGridColumnControls(props, layout, wrapperRef);
+  const { virtualScrollEnabled, virtualRowHeight, visibleRange, columnRange, onHorizontalScroll } = useDataGridVirtualization(
+    props, stickyHeader, visibleCols, resize.getColumnWidth, wrapperRef, scrollToIndexRef,
   );
-
-  // ── Name box: notify parent when active cell changes ──────────────────
-  const onActiveCellChangeRef = useRef(onActiveCellChange);
-  onActiveCellChangeRef.current = onActiveCellChange;
-  useEffect(() => {
-    if (!onActiveCellChangeRef.current) return;
-    const ac = interaction.activeCell;
-    const col = ac ? visibleCols[ac.columnIndex - colOffset] : undefined;
-    if (ac && col) {
-      const sheetCol = formulaCol ? formulaCol(col.columnId) : ac.columnIndex - colOffset;
-      const sheetRow = formulaRowMap ? formulaRowMap.toSheetRow(ac.rowIndex) : rowNumberOffset + ac.rowIndex;
-      onActiveCellChangeRef.current(sheetCol >= 0 && sheetRow >= 0 ? formatCellReference(sheetCol, sheetRow + 1) : null);
-    } else {
-      onActiveCellChangeRef.current(null);
-    }
-  }, [interaction.activeCell, rowNumberOffset, colOffset, visibleCols, formulaCol, formulaRowMap]);
-
-  // ── Column resize ──────────────────────────────────────────────────────
-  // Report drag resizes and double-click autosizes so the host (and OGrid's
-  // column state) sees them. The row-number column is grid chrome, not a column.
-  const onColumnResizedRef = useLatestRef(props.onColumnResized);
-  const reportColumnResized = useCallback(
-    (columnId: string, width: number) => {
-      if (columnId !== ROW_NUMBER_COLUMN_ID) onColumnResizedRef.current?.(columnId, width);
-    },
-    [onColumnResizedRef],
-  );
-  const { handleResizeStart, handleResizeDoubleClick, handleResizeFocus, handleResizeKeyDown, getColumnWidth, getColumnMinWidth } = useColumnResize<T>({
-    columnSizingOverrides,
-    setColumnSizingOverrides,
-    onColumnResized: reportColumnResized,
-  });
-
-  // ── Column reorder ─────────────────────────────────────────────────────
-  const { isDragging: isReorderDragging, dropIndicatorX, handleHeaderMouseDown } = useColumnReorder<T>({
-    columns: layout.flatColumns as IColumnDef<T>[],
-    columnOrder,
-    onColumnOrderChange,
-    enabled: columnReorder === true,
-    pinnedColumns,
-    wrapperRef,
-  });
-
-  // ── Virtual scroll ─────────────────────────────────────────────────────
-  // A windowed (lazy) data source is always virtualized — the grid never holds
-  // its full dataset — so it enables virtual scrolling regardless of the prop.
-  const virtualScrollEnabled = virtualScroll?.enabled === true || !!windowed;
-  const virtualRowHeight = rowHeight ?? virtualScroll?.rowHeight ?? 36;
-  const columnVirtualization = virtualScroll?.columns === true;
-
-  // Compute unpinned column widths for horizontal virtualization
-  const unpinnedColumnWidths = useMemo(() => {
-    if (!columnVirtualization) return undefined;
-    const widths: number[] = [];
-    for (const col of visibleCols) {
-      const pin = pinnedColumns?.[col.columnId];
-      if (!pin) {
-        widths.push(getColumnWidth(col));
-      }
-    }
-    return widths;
-  }, [columnVirtualization, visibleCols, pinnedColumns, getColumnWidth]);
-
-  // Windowed (lazy) data source: the grid virtual-scrolls `windowed.rowCount`
-  // rows and reads each visible row via `windowed.getRow`. A windowed source
-  // is inherently virtualized, so it forces `enabled` on regardless of the
-  // `virtualScroll` prop, and falls back to a threshold of 0.
-  const virtualTotalRows = windowed ? windowed.rowCount : items.length;
-  const { visibleRange, columnRange, onHorizontalScroll, scrollToIndex } = useVirtualScroll({
-    totalRows: virtualTotalRows,
-    rowHeight: virtualRowHeight,
-    enabled: virtualScrollEnabled,
-    overscan: virtualScroll?.overscan,
-    threshold: windowed ? 0 : virtualScroll?.threshold,
-    containerRef: wrapperRef,
-    stickyHeader,
-    columnVirtualization,
-    columnWidths: unpinnedColumnWidths,
-    columnOverscan: virtualScroll?.columnOverscan,
-  });
-  scrollToIndexRef.current = scrollToIndex;
-
-  const scrollToRowRef = props.scrollToRowRef;
-  useLayoutEffect(() => {
-    if (!scrollToRowRef) return;
-    scrollToRowRef.current = (index, options) => scrollToIndex(index, options?.align ?? 'start');
-    return () => { scrollToRowRef.current = null; };
-  }, [scrollToRowRef, scrollToIndex]);
-
-  // Fetch the visible window from a windowed data source as the viewport moves.
-  // `getRow` only reads cache; `requestWindow` is what drives the background
-  // fetches, so it must be called whenever the visible range changes.
-  const requestWindow = windowed?.requestWindow;
-  useEffect(() => {
-    if (!requestWindow) return;
-    if (visibleRange.endIndex < visibleRange.startIndex) return;
-    requestWindow(visibleRange.startIndex, visibleRange.endIndex + 1);
-  }, [requestWindow, visibleRange.startIndex, visibleRange.endIndex]);
-
-  // ── Middle-click auto-scroll ───────────────────────────────────────────
   useMiddleClickScroll({ wrapperRef });
+  const handlers = useDataGridCellHandlers(props, state, visibleCols, colOffset);
+  const { cellDescriptorInputRef, cellDescriptorCacheRef } = useCellDescriptorCache(cellDescriptorInput, items, visibleCols);
 
-  // ── Memoized callback groups ───────────────────────────────────────────
-  const editCallbacks = useMemo(
-    () => ({ commitCellEdit, setEditingCell, setPendingEditorValue, cancelPopoverEdit }),
-    [commitCellEdit, setEditingCell, setPendingEditorValue, cancelPopoverEdit],
-  );
-  const interactionHandlers = useMemo(
-    () => ({ handleCellMouseDown, setActiveCell, setEditingCell, handleCellContextMenu, handleLongPressStart, handleLongPressEnd }),
-    [handleCellMouseDown, setActiveCell, setEditingCell, handleCellContextMenu, handleLongPressStart, handleLongPressEnd],
-  );
+  const { handleResizeStart, handleResizeDoubleClick, handleResizeFocus, handleResizeKeyDown, getColumnWidth, getColumnMinWidth } = resize;
+  const { isDragging: isReorderDragging, dropIndicatorX, handleHeaderMouseDown } = reorder;
+  const {
+    editCallbacks, interactionHandlers, delegatedCellHandlers, handleSingleRowClick, handlePasteVoid,
+    pendingEditorValueRef, popoverAnchorElRef, selectedRowIdsRef,
+  } = handlers;
+  const { editingCell, setPopoverAnchorEl, cancelPopoverEdit } = editing;
+  const {
+    setActiveCell, selectionRange, hasCellSelection, handleGridKeyDown, handleFillHandleMouseDown,
+    handleCopy, handleCut, cutRange, copyRange, canUndo, canRedo, onUndo, onRedo, isDragging,
+  } = interaction;
+  const { menuPosition, handleCellContextMenu, closeContextMenu } = ctxMenu;
+  const { headerFilterInput, statusBarConfig, showEmptyInGrid, onCellError } = viewModels;
 
-  // ── Delegated cell handlers (stable — zero per-cell closures) ──────────
-  // Read row/col from e.currentTarget data attributes at call time.
-  const interactionHandlersRef = useLatestRef(interactionHandlers);
-  // Windowed sources read the loaded rows by absolute index (see useDataGridState).
-  const itemsRef = useLatestRef(windowed?.loadedRows ?? items);
-  const getRowIdRef = useLatestRef(getRowId);
-  const visibleColsRef = useLatestRef(visibleCols);
-  const colOffsetRef2 = useLatestRef(colOffset);
-
-  const delegatedCellHandlers = useMemo(() => {
-    const parseCell = (e: { currentTarget: EventTarget | null }) => {
-      const el = e.currentTarget as HTMLElement | null;
-      if (!el) return null;
-      const r = parseInt(el.getAttribute('data-row-index') ?? '', 10);
-      const c = parseInt(el.getAttribute('data-col-index') ?? '', 10);
-      return (!Number.isNaN(r) && !Number.isNaN(c)) ? { row: r, col: c } : null;
-    };
-    return {
-      onPointerDown: (e: React.PointerEvent) => {
-        const cell = parseCell(e);
-        if (!cell) return;
-        const h = interactionHandlersRef.current;
-        h.setEditingCell(null);
-        h.handleCellMouseDown(e, cell.row, cell.col);
-        h.handleLongPressStart?.(e);
-      },
-      onClick: (e: React.MouseEvent) => {
-        // Shift+click extended the range on pointerdown; the anchor stays active.
-        if (e.shiftKey) return;
-        const cell = parseCell(e);
-        if (!cell) return;
-        interactionHandlersRef.current.setActiveCell({ rowIndex: cell.row, columnIndex: cell.col });
-      },
-      onDoubleClick: (e: React.MouseEvent) => {
-        const el = e.currentTarget as HTMLElement | null;
-        if (!el?.hasAttribute('data-can-edit')) return;
-        const cell = parseCell(e);
-        if (!cell) return;
-        const co = colOffsetRef2.current;
-        const dataCol = cell.col - co;
-        const cols = visibleColsRef.current;
-        if (dataCol < 0 || dataCol >= cols.length) return;
-        const col = cols[dataCol];
-        const itms = itemsRef.current;
-        const item = itms[cell.row];
-        if (col === undefined || item === undefined) return;
-        const rowId = getRowIdRef.current(item);
-        interactionHandlersRef.current.setEditingCell({ rowId, columnId: col.columnId });
-      },
-    };
-  }, [interactionHandlersRef, itemsRef, getRowIdRef, visibleColsRef, colOffsetRef2]);
-
-  // ── Stable refs for volatile state ─────────────────────────────────────
-  const cellDescriptorInputRef = useLatestRef(cellDescriptorInput);
-  const pendingEditorValueRef = useLatestRef(pendingEditorValue);
-  const popoverAnchorElRef = useLatestRef(popoverAnchorEl);
-  const selectedRowIdsRef = useLatestRef(selectedRowIds);
-
-  // ── Descriptor cache ─────────────────────────────────────────────────────
-  // One cache instance per grid lifetime. Keyed by (rowIndex * stride + colIdx),
-  // storing descriptor + volatile version string. Skips recomputation for cells
-  // whose selection/editing state hasn't changed since last render.
-  //
-  // The version is recomputed each render from the cellDescriptorInput volatile fields.
-  // We update it synchronously here (during render) so that renderCellContent  -  which
-  // reads the cache during the same render  -  sees the up-to-date version.
-  const cellDescriptorCacheRef = useRef<CellDescriptorCache>(new CellDescriptorCache());
-  const currentVersion = CellDescriptorCache.computeVersion(cellDescriptorInput);
-  cellDescriptorCacheRef.current.updateVersion(currentVersion);
-
-  // Clear the cache when items or visible columns change. Items change means data may have
-  // changed; visibleCols change means column indices shifted (reorder/visibility toggle),
-  // so cached descriptors with stale colIdx would be incorrect.
-  const prevItemsRef = useRef(items);
-  const prevVisibleColsRef = useRef(visibleCols);
-  if (prevItemsRef.current !== items || prevVisibleColsRef.current !== visibleCols) {
-    prevItemsRef.current = items;
-    prevVisibleColsRef.current = visibleCols;
-    cellDescriptorCacheRef.current.clear();
-  }
-
-  // ── Stable row-click handler ───────────────────────────────────────────
-  const handleSingleRowClick = useCallback((e: React.MouseEvent<HTMLTableRowElement>) => {
-    if (rowSelection !== 'single') return;
-    // dataset values are always strings; resolve the real RowId (may be a number) from the items.
-    // A windowed source's loaded rows are sparse, and find visits the holes, so skip them.
-    const rowIdStr = e.currentTarget.dataset.rowId;
-    if (rowIdStr == null) return;
-    const getId = getRowIdRef.current;
-    const match = itemsRef.current.find((item) => item !== undefined && String(getId(item)) === rowIdStr);
-    if (match === undefined) return;
-    const rowId = getId(match);
-    const ids = selectedRowIdsRef.current;
-    updateSelection(ids.has(rowId) ? new Set() : new Set([rowId]));
-  }, [rowSelection, updateSelection, selectedRowIdsRef, itemsRef, getRowIdRef]);
-
-  // ── Return ─────────────────────────────────────────────────────────────
   return {
-    // Refs
-    wrapperRef,
-    tableContainerRef,
-    lastMouseShiftRef,
-
-    // State sub-objects
-    layout,
-    rowSel,
-    editing,
-    interaction,
-    ctxMenu,
-    viewModels,
-    pinning,
-
-    // Column resize
-    handleResizeStart,
-    handleResizeDoubleClick,
-    handleResizeFocus,
-    handleResizeKeyDown,
-    getColumnWidth,
-    getColumnMinWidth,
-
-    // Column reorder
-    isReorderDragging,
-    dropIndicatorX,
-    handleHeaderMouseDown,
-
-    // Virtual scroll
-    virtualScrollEnabled,
-    virtualRowHeight,
-    visibleRange,
-    columnRange,
-    onHorizontalScroll,
-
-    // Derived from props
-    items,
-    windowed,
-    columns,
-    getRowId,
-    emptyState,
-    layoutMode,
-    rowSelection,
-    suppressHorizontalScroll,
-    stickyHeader,
-    isLoading,
-    loadingMessage,
-    ariaLabel,
-    ariaLabelledBy,
-    visibleColumns,
-    columnOrder,
-    columnReorder,
-    density,
-    rowHeight,
-    pinnedColumns,
-    currentPage,
-    propPageSize,
-
-    // Computed values
-    rowNumberOffset,
-    headerRows,
-    allowOverflowX,
-    fitToContent,
-    showColumnLetters,
-    showNameBox,
-    columnLetters,
-    rowNumberOf,
-    formulaReferences,
-
-    // Memoized callback groups
-    editCallbacks,
-    interactionHandlers,
-    delegatedCellHandlers,
-
-    // Stable refs for volatile state
-    cellDescriptorInputRef,
-    cellDescriptorCacheRef,
-    pendingEditorValueRef,
-    popoverAnchorElRef,
-    selectedRowIdsRef,
-
-    // Convenience handlers
-    handleSingleRowClick,
-    handlePasteVoid,
-
-    // Layout-derived references
-    visibleCols,
-    totalColCount,
-    hasCheckboxCol,
-    hasRowNumbersCol,
-    colOffset,
-    containerWidth,
-    minTableWidth,
-    desiredTableWidth,
-    columnSizingOverrides,
-    setColumnSizingOverrides,
-    measuredColumnWidths,
-
-    // Row selection shortcuts
-    selectedRowIds,
-    updateSelection,
-    handleRowCheckboxChange,
-    handleSelectAll,
-    allSelected,
-    someSelected,
-
-    // Editing shortcuts
-    editingCell,
-    setPopoverAnchorEl,
-    cancelPopoverEdit,
-
-    // Interaction shortcuts
-    setActiveCell,
-    selectionRange,
-    hasCellSelection,
-    handleGridKeyDown,
-    handleFillHandleMouseDown,
-    handleCopy,
-    handleCut,
-    cutRange,
-    copyRange,
-    canUndo,
-    canRedo,
-    onUndo,
-    onRedo,
-    isDragging,
-
-    // Context menu shortcuts
-    menuPosition,
-    handleCellContextMenu,
-    closeContextMenu,
-
-    // ViewModel shortcuts
-    headerFilterInput,
-    cellDescriptorInput,
-    statusBarConfig,
-    showEmptyInGrid,
-    onCellError,
-
-    // Pinning shortcuts
-    headerMenu,
+    wrapperRef, tableContainerRef, lastMouseShiftRef,
+    layout, rowSel, editing, interaction, ctxMenu, viewModels, pinning,
+    handleResizeStart, handleResizeDoubleClick, handleResizeFocus, handleResizeKeyDown, getColumnWidth, getColumnMinWidth,
+    isReorderDragging, dropIndicatorX, handleHeaderMouseDown,
+    virtualScrollEnabled, virtualRowHeight, visibleRange, columnRange, onHorizontalScroll,
+    items, windowed, columns, getRowId, emptyState, layoutMode, rowSelection, suppressHorizontalScroll,
+    stickyHeader, isLoading, loadingMessage, ariaLabel, ariaLabelledBy, visibleColumns, columnOrder,
+    columnReorder, density, rowHeight, pinnedColumns, currentPage, propPageSize,
+    rowNumberOffset, headerRows, allowOverflowX, fitToContent: layoutMode === 'content',
+    showColumnLetters, showNameBox, columnLetters, rowNumberOf, formulaReferences,
+    editCallbacks, interactionHandlers, delegatedCellHandlers,
+    cellDescriptorInputRef, cellDescriptorCacheRef, pendingEditorValueRef, popoverAnchorElRef, selectedRowIdsRef,
+    handleSingleRowClick, handlePasteVoid,
+    visibleCols, totalColCount, hasCheckboxCol, hasRowNumbersCol, colOffset, containerWidth, minTableWidth,
+    desiredTableWidth, columnSizingOverrides, setColumnSizingOverrides, measuredColumnWidths,
+    selectedRowIds, updateSelection, handleRowCheckboxChange, handleSelectAll, allSelected, someSelected,
+    editingCell, setPopoverAnchorEl, cancelPopoverEdit,
+    setActiveCell, selectionRange, hasCellSelection, handleGridKeyDown, handleFillHandleMouseDown,
+    handleCopy, handleCut, cutRange, copyRange, canUndo, canRedo, onUndo, onRedo, isDragging,
+    menuPosition, handleCellContextMenu, closeContextMenu,
+    headerFilterInput, cellDescriptorInput, statusBarConfig, showEmptyInGrid, onCellError,
+    headerMenu: pinning.headerMenu,
   };
 }

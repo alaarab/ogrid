@@ -229,3 +229,66 @@ export function applySnapshot<T>(
 
   return { rows, snapshot: { kind: 'ids', data, ids, knownIds: new Set(byId.keys()), rows } };
 }
+
+/**
+ * Inputs whose change always means a full re-sort, compared by identity.
+ * `sortField`/`sortDirection` sit beside `sortVersion` so a controlled `sort`
+ * prop swapped by the host (without going through `setSort`) still
+ * invalidates the snapshot.
+ */
+export type ResortInputs = readonly [
+  sortVersion: number,
+  filters: unknown,
+  columns: unknown,
+  sortField: string,
+  sortDirection: 'asc' | 'desc',
+];
+
+/** What the last run saw, so the next run can tell an edit from a new dataset. */
+export interface ResortTracker<T> {
+  /** Inputs of the last full re-sort; `null` before the first run. */
+  inputs: ResortInputs | null;
+  /** `displayData` of the last run; `null` before the first run. */
+  data: readonly T[] | null;
+  /** Edit counter value when `data` last changed. */
+  editVersion: number;
+}
+
+export function createResortTracker<T>(): ResortTracker<T> {
+  return { inputs: null, data: null, editVersion: 0 };
+}
+
+/** True when any of the inputs that force a full re-sort differs (by identity). */
+export function resortInputsChanged(prev: ResortInputs | null, next: ResortInputs): boolean {
+  return prev === null || next.some((value, i) => value !== prev[i]);
+}
+
+/**
+ * Decides whether this run needs a full re-sort, and records what it saw.
+ *
+ * A re-sort is due on the first run, when a re-sort input changed, or when the
+ * data change can't keep the current snapshot (see `keepsSnapshot`). The edit
+ * counter (`editVersion`, bumped by every edit the grid emits) only counts as
+ * "an edit is pending" when it moved since the data last changed, so a host
+ * that applies the grid's own edit keeps the order and a fresh dataset does not.
+ *
+ * Mutates `tracker`; callers hold it in a ref.
+ */
+export function trackResort<T>(
+  tracker: ResortTracker<T>,
+  inputs: ResortInputs,
+  data: readonly T[],
+  editVersion: number,
+  snapshot: RowOrderSnapshot<T> | null,
+  getRowId: ((row: T) => unknown) | undefined,
+): boolean {
+  const prevData = tracker.data;
+  const needsResort =
+    prevData === null ||
+    resortInputsChanged(tracker.inputs, inputs) ||
+    !keepsSnapshot(snapshot, prevData, data, getRowId, editVersion !== tracker.editVersion);
+  if (needsResort) tracker.inputs = inputs;
+  if (prevData !== data) tracker.editVersion = editVersion;
+  tracker.data = data;
+  return needsResort;
+}
