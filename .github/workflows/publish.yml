@@ -109,9 +109,24 @@ jobs:
           bun-version: 1.4.2
 
       - name: Setup npm registry auth for publishing
+        # npm >= 11.5.1 authenticates with npm Trusted Publishing (GitHub OIDC,
+        # `id-token: write` above) when the package has this workflow registered
+        # as its trusted publisher, and only falls back to a token otherwise.
+        # NPM_TOKEN is therefore optional: once every package has a trusted
+        # publisher on npmjs.com, delete the secret. See RELEASING.md.
         run: |
-          echo "//registry.npmjs.org/:_authToken=${NPM_TOKEN}" > ~/.npmrc
-          echo "provenance=true" >> ~/.npmrc
+          npm_version="$(npm --version)"
+          if [ "$(printf '%s\n' 11.5.1 "$npm_version" | sort -V | head -1)" != "11.5.1" ]; then
+            echo "::error::npm $npm_version is older than 11.5.1 and cannot use Trusted Publishing"
+            exit 1
+          fi
+          echo "provenance=true" > ~/.npmrc
+          if [ -n "$NPM_TOKEN" ]; then
+            echo "//registry.npmjs.org/:_authToken=${NPM_TOKEN}" >> ~/.npmrc
+            echo "Using NPM_TOKEN as a fallback to Trusted Publishing"
+          else
+            echo "No NPM_TOKEN: publishing with Trusted Publishing (OIDC) only"
+          fi
         env:
           NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
 
