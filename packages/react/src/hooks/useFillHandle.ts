@@ -3,9 +3,11 @@
  *
  * Pairs with `useRangeSelection`. The user starts a fill by grabbing the
  * fill-handle at the bottom-right of the current range, then drags toward
- * a target cell. On commit, every cell from the source range to the target
- * gets the source value(s) — Excel/Sheets semantics, including type
- * compatibility checks (won't fill text into a date column, etc).
+ * a target cell. Like Excel, the fill extends the source range along one
+ * axis only: whichever one the target is farther outside the range on (rows
+ * vs columns; ties fill rows). A target inside the range fills nothing. On
+ * commit, every cell in that extension gets the source value(s) tiled over
+ * it, with type compatibility checks (won't fill text into a date column).
  *
  * Smart-fill behavior comes from `applyFillValues` in `@alaarab/ogrid-core`,
  * which produces a list of `ICellValueChangedEvent` objects. The consumer
@@ -35,14 +37,15 @@
 import { useCallback, useMemo, useState } from 'react';
 import {
   applyFillValues,
+  computeFillRange,
   isInSelectionRange,
   normalizeSelectionRange,
 } from '@alaarab/ogrid-core';
 import type {
-  IColumnDef as ICoreColumnDef,
   ISelectionRange,
   ICellValueChangedEvent,
 } from '@alaarab/ogrid-core';
+import type { IColumnDef } from '../types';
 import type {
   CellCoord,
   UseRangeSelectionResult,
@@ -54,7 +57,7 @@ export interface UseFillHandleParams<T> {
   /** Rows currently rendered (post-filter, post-page). */
   rows: T[];
   /** Visible columns the user can fill across. */
-  columns: ICoreColumnDef<T>[];
+  columns: IColumnDef<T>[];
   /**
    * Called with cell-change events when the fill commits. Apply each event
    * to your data store (typically by updating the row at `rowIndex` with
@@ -76,7 +79,11 @@ export interface UseFillHandleResult {
   commitFill: () => void;
   /** Cancel without committing. */
   cancelFill: () => void;
-  /** The full fill range (source range + target extension). Use for highlight rendering. */
+  /**
+   * The full fill range: the source range extended toward `fillTarget` along
+   * one axis (see `computeFillRange`). Equals the source range when idle or
+   * when the target is inside it. Use for highlight rendering.
+   */
   fillRange: ISelectionRange | null;
   /** True if (row, col) is inside the active fill range. */
   isInFillRange: (row: number, col: number) => boolean;
@@ -100,16 +107,11 @@ export function useFillHandle<T>(
 
   const sourceRange = rangeSelection.range;
 
-  // Extend the source range to include the fill target.
+  // Extend the source range toward the fill target along one axis (Excel).
   const fillRange = useMemo<ISelectionRange | null>(() => {
     if (!sourceRange) return null;
     if (!fillTarget) return sourceRange;
-    return normalizeSelectionRange({
-      startRow: Math.min(sourceRange.startRow, fillTarget.row),
-      startCol: Math.min(sourceRange.startCol, fillTarget.col),
-      endRow: Math.max(sourceRange.endRow, fillTarget.row),
-      endCol: Math.max(sourceRange.endCol, fillTarget.col),
-    });
+    return computeFillRange(sourceRange, fillTarget.row, fillTarget.col);
   }, [sourceRange, fillTarget]);
 
   const isInFillRange = useCallback(

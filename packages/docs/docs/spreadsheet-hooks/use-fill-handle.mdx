@@ -9,7 +9,8 @@ import UseFillHandleDemo from '@site/src/components/demos/headless/UseFillHandle
 # `useFillHandle`
 
 Drag the small square at the bottom-right of a selection and the source block
-is tiled over the cells you drag across. The hook tracks the drag target,
+is tiled over the cells you drag across, down or sideways (one axis at a time,
+like Excel). The hook tracks the drag target,
 exposes the extended `fillRange` for highlighting, and on commit calls core's
 `applyFillValues` to turn the fill into `ICellValueChangedEvent` objects. You
 apply them to your data. Column `editable`, `type`, and `valueParser` are
@@ -72,7 +73,7 @@ const r = range.range;
 |---|---|---|
 | `fillTarget` | `CellCoord \| null` | Cell the handle is being dragged toward. |
 | `isFilling` | `boolean` | `fillTarget !== null`. |
-| `fillRange` | `ISelectionRange \| null` | Source range extended to include the target; equals the source range when idle. |
+| `fillRange` | `ISelectionRange \| null` | Source range extended toward the target along one axis (see behavior notes); equals the source range when idle or when the target is inside it. |
 | `startFill` | `() => void` | Begin a drag from the range's bottom-right cell. No-op without a range. |
 | `updateFill` | `(row, col) => void` | Move the target. No-op when not filling. |
 | `commitFill` | `() => void` | Compute events, call `onFillCells`, end the drag. |
@@ -84,8 +85,14 @@ const r = range.range;
 - **Tiling, not series.** The source block repeats across the fill range at
   the same offset modulo the block size (Excel's behavior for a plain drag).
   Source cells are never overwritten. There is no 1, 2, 3 series detection.
-- **The fill range is a bounding box** of the source range and the target, so
-  a drag up or to the left fills in that direction too.
+- **One axis at a time, like Excel.** The fill range is the source range
+  extended toward the target along a single axis: whichever one the target
+  is farther outside the source on, counted in cells (rows vs columns; an
+  exact tie fills rows). Dragging diagonally therefore fills down or across,
+  never both, and the highlight switches axis as the pointer moves. Dragging
+  up or to the left fills in that direction too. A target inside the source
+  range (including dragging back into it) leaves `fillRange` equal to the
+  source, so `commitFill` is a no-op.
 - **Releasing without moving is a no-op**: when `fillRange` equals the source
   range, `commitFill` ends the drag and `onFillCells` is not called.
 - **Validation per cell.** Read-only cells are skipped, and each value runs

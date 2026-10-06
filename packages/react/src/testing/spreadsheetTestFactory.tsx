@@ -942,6 +942,125 @@ export function createSpreadsheetTests(DataGridTable: React.ComponentType<IOGrid
       });
     });
 
+    describe('fill handle drag (axis lock)', () => {
+      const threeColumns: IColumnDef<FixtureRow>[] = [
+        ...twoColumnColumns,
+        { columnId: 'id', name: 'Id', editable: true, cellEditor: 'text' },
+      ];
+
+      /** Select (row, col), optionally Shift+click to extend, and wait for the fill handle. */
+      async function selectForFill(container: HTMLElement, from: [number, number], to?: [number, number]) {
+        fireEvent.pointerDown(getCellAt(container, from[0], from[1]));
+        act(() => {
+          window.dispatchEvent(new PointerEvent('pointerup', { bubbles: true }));
+        });
+        if (to) fireEvent.pointerDown(getCellAt(container, to[0], to[1]), { shiftKey: true });
+        await waitFor(() => {
+          expect(container.querySelector('[aria-label="Fill handle"]')).toBeInTheDocument();
+        });
+        return container.querySelector('[aria-label="Fill handle"]') as HTMLElement;
+      }
+
+      /**
+       * Drag the fill handle over each (row, col) in `path`, then release.
+       * `document.elementFromPoint` is stubbed so pointer position N resolves to path[N].
+       */
+      function dragFillHandle(container: HTMLElement, handle: HTMLElement, path: [number, number][]) {
+        const originalElementFromPoint = document.elementFromPoint;
+        document.elementFromPoint = (x: number, _y: number) => {
+          const step = path[x];
+          if (!step) throw new Error(`No drag step for pointer position ${x}`);
+          return getCellAt(container, step[0], step[1]);
+        };
+        try {
+          fireEvent.pointerDown(handle, { button: 0 });
+          path.forEach((_, i) => {
+            act(() => {
+              window.dispatchEvent(new PointerEvent('pointermove', { clientX: i, clientY: 0, bubbles: true }));
+            });
+          });
+          act(() => {
+            window.dispatchEvent(new PointerEvent('pointerup', { bubbles: true }));
+          });
+        } finally {
+          document.elementFromPoint = originalElementFromPoint;
+        }
+      }
+
+      const filled = (fn: jest.Mock) =>
+        fn.mock.calls.map(([e]) => `${e.rowIndex}:${e.columnId}=${e.newValue}`).sort();
+
+      it('a row-dominant diagonal drag fills down only, keeping the source column', async () => {
+        const onCellValueChanged = jest.fn();
+        const { container } = renderSpreadsheetGrid({ onCellValueChanged });
+        const handle = await selectForFill(container, [0, 0]);
+
+        // 2 rows down, 1 column right: rows win.
+        dragFillHandle(container, handle, [[2, 1]]);
+
+        await waitFor(() => expect(onCellValueChanged).toHaveBeenCalledTimes(2));
+        expect(filled(onCellValueChanged)).toEqual(['1:name=Alpha', '2:name=Alpha']);
+        // The committed selection is the fill range: rows 0-2 of the source column.
+        await waitFor(() => {
+          expect(container.querySelectorAll('[data-in-range="true"]').length).toBe(3);
+        });
+      });
+
+      it('a column-dominant diagonal drag fills across only, keeping the source row', async () => {
+        const onCellValueChanged = jest.fn();
+        const { container } = renderSpreadsheetGrid({
+          onCellValueChanged,
+          columns: threeColumns,
+          visibleColumns: new Set(['name', 'status', 'id']),
+        });
+        const handle = await selectForFill(container, [0, 0]);
+
+        // 1 row down, 2 columns right: columns win.
+        dragFillHandle(container, handle, [[1, 2]]);
+
+        await waitFor(() => expect(onCellValueChanged).toHaveBeenCalledTimes(2));
+        expect(filled(onCellValueChanged)).toEqual(['0:id=Alpha', '0:status=Alpha']);
+      });
+
+      it('a straight drag down a column fills that column', async () => {
+        const onCellValueChanged = jest.fn();
+        const { container } = renderSpreadsheetGrid({ onCellValueChanged });
+        const handle = await selectForFill(container, [1, 1]);
+
+        dragFillHandle(container, handle, [[2, 1]]);
+
+        await waitFor(() => expect(onCellValueChanged).toHaveBeenCalledTimes(1));
+        expect(filled(onCellValueChanged)).toEqual(['2:status=Closed']);
+      });
+
+      it('a straight drag across a row fills that row', async () => {
+        const onCellValueChanged = jest.fn();
+        const { container } = renderSpreadsheetGrid({ onCellValueChanged });
+        const handle = await selectForFill(container, [1, 0]);
+
+        dragFillHandle(container, handle, [[1, 1]]);
+
+        await waitFor(() => expect(onCellValueChanged).toHaveBeenCalledTimes(1));
+        expect(filled(onCellValueChanged)).toEqual(['1:status=Beta']);
+      });
+
+      it('dragging back inside the source block fills nothing and keeps the source selection', async () => {
+        const onCellValueChanged = jest.fn();
+        const { container } = renderSpreadsheetGrid({ onCellValueChanged });
+        // Two-cell source: rows 0-1 of the name column.
+        const handle = await selectForFill(container, [0, 0], [1, 0]);
+
+        // Out to row 2, then back onto the source's last cell.
+        dragFillHandle(container, handle, [[2, 0], [1, 0]]);
+
+        await act(async () => {
+          await new Promise((r) => setTimeout(r, 50));
+        });
+        expect(onCellValueChanged).not.toHaveBeenCalled();
+        expect(container.querySelectorAll('[data-in-range="true"]').length).toBe(2);
+      });
+    });
+
     describe('cellSelection=false disables all selection', () => {
       it('does not show active cell highlight or range on mousedown', async () => {
         const { container } = renderSpreadsheetGrid({ cellSelection: false });

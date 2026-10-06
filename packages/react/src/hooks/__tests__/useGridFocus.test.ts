@@ -268,3 +268,96 @@ describe('useGridFocus Shift and Tab handling', () => {
     expect(none.result.current.activeCell).toBeNull();
   });
 });
+
+describe('useGridFocus Ctrl+Arrow (data-region jumps)', () => {
+  // Column 0 down the rows: X X X . X X   Row 1 across the columns: X . . X X
+  const filled: Record<string, boolean> = {
+    '0,0': true, '1,0': true, '2,0': true, '4,0': true, '5,0': true,
+    '1,3': true, '1,4': true,
+  };
+  const isCellEmpty = (row: number, col: number) => !filled[`${row},${col}`];
+
+  function setup(params: Partial<Parameters<typeof useGridFocus>[0]> = {}, rowCount = 6, colCount = 5) {
+    const { result: range } = renderHook(() => useRangeSelection({ rowCount, colCount }));
+    const { result } = renderHook(() => useGridFocus({ rowCount, colCount, rangeSelection: range.current, ...params }));
+    const press = (key: string, extra: { shiftKey?: boolean; ctrlKey?: boolean; metaKey?: boolean } = {}) => {
+      const e = { key, preventDefault: jest.fn(), ...extra };
+      act(() => result.current.getKeyDownHandler()(e));
+      return e;
+    };
+    return { range, result, press };
+  }
+
+  it('jumps to the grid edges when no isCellEmpty predicate is given', () => {
+    const { result, press } = setup();
+    act(() => result.current.setActiveCell({ row: 2, col: 2 }));
+    press('ArrowDown', { ctrlKey: true });
+    expect(result.current.activeCell).toEqual({ row: 5, col: 2 });
+    press('ArrowRight', { ctrlKey: true });
+    expect(result.current.activeCell).toEqual({ row: 5, col: 4 });
+    press('ArrowUp', { metaKey: true });
+    expect(result.current.activeCell).toEqual({ row: 0, col: 4 });
+    const e = press('ArrowLeft', { metaKey: true });
+    expect(result.current.activeCell).toEqual({ row: 0, col: 0 });
+    expect(e.preventDefault).toHaveBeenCalled();
+  });
+
+  it('follows the data region down a column like Excel', () => {
+    const { result, press } = setup({ isCellEmpty });
+    act(() => result.current.setActiveCell({ row: 0, col: 0 }));
+    // Filled run: stop at the last filled cell before the gap.
+    press('ArrowDown', { ctrlKey: true });
+    expect(result.current.activeCell).toEqual({ row: 2, col: 0 });
+    // Next cell is empty: skip the gap to the next filled cell.
+    press('ArrowDown', { ctrlKey: true });
+    expect(result.current.activeCell).toEqual({ row: 4, col: 0 });
+    // Filled to the edge: land on the edge, and stay there.
+    press('ArrowDown', { ctrlKey: true });
+    expect(result.current.activeCell).toEqual({ row: 5, col: 0 });
+    press('ArrowDown', { ctrlKey: true });
+    expect(result.current.activeCell).toEqual({ row: 5, col: 0 });
+    // From an empty cell, up: land on the next filled cell.
+    act(() => result.current.setActiveCell({ row: 3, col: 0 }));
+    press('ArrowUp', { ctrlKey: true });
+    expect(result.current.activeCell).toEqual({ row: 2, col: 0 });
+  });
+
+  it('follows the data region across a row, and jumps to the edge when the rest is empty', () => {
+    const { result, press } = setup({ isCellEmpty });
+    act(() => result.current.setActiveCell({ row: 1, col: 0 }));
+    press('ArrowRight', { ctrlKey: true });
+    expect(result.current.activeCell).toEqual({ row: 1, col: 3 });
+    press('ArrowRight', { ctrlKey: true });
+    expect(result.current.activeCell).toEqual({ row: 1, col: 4 });
+    // Row 0 is empty past column 0: Ctrl+Right goes straight to the last column.
+    act(() => result.current.setActiveCell({ row: 0, col: 0 }));
+    press('ArrowRight', { ctrlKey: true });
+    expect(result.current.activeCell).toEqual({ row: 0, col: 4 });
+  });
+
+  it('Ctrl+Shift+Arrow extends the range to the jump target, keeping the anchor', () => {
+    const { range, result, press } = setup({ isCellEmpty });
+    act(() => result.current.setActiveCell({ row: 0, col: 0 }));
+    act(() => range.current.startRange(0, 0));
+    press('ArrowDown', { ctrlKey: true, shiftKey: true });
+    expect(result.current.activeCell).toEqual({ row: 2, col: 0 });
+    expect(range.current.range).toEqual({ startRow: 0, startCol: 0, endRow: 2, endCol: 0 });
+    press('ArrowRight', { ctrlKey: true, shiftKey: true });
+    expect(range.current.range).toEqual({ startRow: 0, startCol: 0, endRow: 2, endCol: 4 });
+    // Plain Ctrl+Arrow collapses the range to the new cell: (2,4) is empty, so
+    // up lands on the filled (1,4), not the edge.
+    press('ArrowUp', { ctrlKey: true });
+    expect(result.current.activeCell).toEqual({ row: 1, col: 4 });
+    expect(range.current.range).toEqual({ startRow: 1, startCol: 4, endRow: 1, endCol: 4 });
+  });
+
+  it('focuses (0, 0) when there is no active cell, and clamps a stale cell into the grid', () => {
+    const { result, press } = setup({ isCellEmpty });
+    press('ArrowDown', { ctrlKey: true });
+    expect(result.current.activeCell).toEqual({ row: 0, col: 0 });
+    // Left over after the row count shrank: Ctrl+Down from past the edge clamps.
+    act(() => result.current.setActiveCell({ row: 9, col: 1 }));
+    press('ArrowDown', { ctrlKey: true });
+    expect(result.current.activeCell).toEqual({ row: 5, col: 1 });
+  });
+});

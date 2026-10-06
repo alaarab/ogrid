@@ -1,4 +1,4 @@
-import { applyFillValues, areFillCompatible } from '../fillHelpers';
+import { applyFillValues, areFillCompatible, computeFillRange } from '../fillHelpers';
 import type { IFillFormulaOptions } from '../fillHelpers';
 import type { IColumnDef } from '../../types/columnTypes';
 import type { ISelectionRange } from '../../types/dataGridTypes';
@@ -538,5 +538,42 @@ describe('applyFillValues  -  tiled formula fill (S01 + sheet coordinates)', () 
     // Source cells are untouched.
     expect(store.get('1,0')).toBe('=A11*2');
     expect(store.get('1,1')).toBe('=A12+1');
+  });
+});
+
+describe('computeFillRange (axis lock)', () => {
+  // Source block: rows 2-3, cols 1-2.
+  const source = makeRange(2, 1, 3, 2);
+
+  it('returns the normalized source when the pointer is inside the block', () => {
+    expect(computeFillRange(source, 2, 1)).toEqual(makeRange(2, 1, 3, 2));
+    expect(computeFillRange(source, 3, 2)).toEqual(makeRange(2, 1, 3, 2));
+    expect(computeFillRange(makeRange(3, 2, 2, 1), 2, 2)).toEqual(makeRange(2, 1, 3, 2));
+  });
+
+  it.each([
+    ['down, row-dominant diagonal', 7, 3, makeRange(2, 1, 7, 2)],
+    ['up, row-dominant diagonal', 0, 0, makeRange(0, 1, 3, 2)],
+    ['straight down', 5, 1, makeRange(2, 1, 5, 2)],
+  ])('%s extends rows and keeps the source columns', (_name, row, col, expected) => {
+    expect(computeFillRange(source, row, col)).toEqual(expected);
+  });
+
+  it.each([
+    ['right, column-dominant diagonal', 4, 6, makeRange(2, 1, 3, 6)],
+    ['left, column-dominant diagonal', 1, -3, makeRange(2, -3, 3, 2)],
+    ['straight right', 3, 4, makeRange(2, 1, 3, 4)],
+  ])('%s extends columns and keeps the source rows', (_name, row, col, expected) => {
+    expect(computeFillRange(source, row, col)).toEqual(expected);
+  });
+
+  it('fills rows on an exact diagonal tie', () => {
+    expect(computeFillRange(source, 5, 4)).toEqual(makeRange(2, 1, 5, 2));
+  });
+
+  it('measures distance from the block edge, not its corner', () => {
+    // 1 row below the block but 3 columns right of it: columns win even though
+    // the pointer is diagonally below the bottom-right cell.
+    expect(computeFillRange(source, 4, 5)).toEqual(makeRange(2, 1, 3, 5));
   });
 });
