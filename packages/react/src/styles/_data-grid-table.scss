@@ -354,7 +354,9 @@
 .tableWrapper .dataTable tbody td:focus {
   outline: none;
 }
-.tableWrapper .dataTable tbody td:focus-visible > .cellContent {
+// The row checkbox cell has no active-cell outline; keyboard focus on it gets the same one.
+.tableWrapper .dataTable tbody td:focus-visible > .cellContent,
+.tableWrapper .dataTable tbody td:focus-visible > .selectionCellInner {
   outline: 2px solid var(--ogrid-selection-color, #217346);
   outline-offset: -1px;
 }

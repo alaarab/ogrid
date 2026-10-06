@@ -4,8 +4,8 @@
  * navigation. Runs in both kits.
  */
 
-import { test, expect, type Page } from '@playwright/test';
-import { waitForGrid, getDataCell, getGridRegion } from './helpers';
+import { test, expect, type Locator, type Page } from '@playwright/test';
+import { waitForGrid, getDataCell, getGridRegion, expectSelectedRowCount } from './helpers';
 
 /** Where focus is: the focused cell's coordinates, the grid wrapper, or another element's tag. */
 async function focusedCell(page: Page): Promise<string> {
@@ -27,6 +27,22 @@ async function colIndexOf(page: Page, columnId: string): Promise<number> {
 
 async function tabStopCount(page: Page): Promise<number> {
   return page.locator('tbody td[tabindex="0"]').count();
+}
+
+/**
+ * Scroll a virtual grid's focused row out of the DOM and wait for focus to
+ * reach the wrapper. The click's scroll-to-index can land a few frames late
+ * and pull the row back, so the scroll is re-applied until it sticks.
+ */
+async function scrollFocusedRowAway(page: Page, region: Locator): Promise<void> {
+  await expect.poll(async () => {
+    await region.evaluate((el) => {
+      if (el.scrollTop < el.scrollHeight / 4) el.scrollTop = el.scrollHeight / 2;
+    });
+    await page.waitForTimeout(150);
+    const stillAway = await region.evaluate((el) => el.scrollTop >= el.scrollHeight / 4);
+    return stillAway ? focusedCell(page) : 'scrolled back';
+  }).toBe('wrapper');
 }
 
 test.describe('Roving focus', () => {
@@ -90,6 +106,37 @@ test.describe('Roving focus', () => {
     expect(await focusedCell(page)).toBe(`r3c${nameCol}`);
   });
 
+  test('a click focuses the cell without a keyboard focus ring; arrow keys show it', async ({ page }) => {
+    const focusVisible = () => page.evaluate(() => document.activeElement?.tagName === 'TD' && document.activeElement.matches(':focus-visible'));
+    await getDataCell(page, 1, 'name').click();
+    expect(await focusVisible()).toBe(false);
+    await page.keyboard.press('ArrowDown');
+    expect(await focusVisible()).toBe(true);
+    // A click after keyboard use goes back to no ring.
+    await getDataCell(page, 0, 'name').click();
+    expect(await focusVisible()).toBe(false);
+  });
+
+  test('native copy and paste fire on the focused cell and go through the grid', async ({ page }) => {
+    // The shortcuts ride the browser's native copy/paste events, dispatched at the focused <td>.
+    await page.evaluate(() => {
+      const w = window as unknown as { events: string[] };
+      w.events = [];
+      for (const type of ['copy', 'paste']) {
+        document.addEventListener(type, (e) => {
+          w.events.push(`${type}:${(document.activeElement as HTMLElement).tagName}:${e.defaultPrevented}`);
+        });
+      }
+    });
+    await getDataCell(page, 0, 'name').click();
+    const source = ((await getDataCell(page, 0, 'name').textContent()) ?? '').trim();
+    await page.keyboard.press('ControlOrMeta+c');
+    await getDataCell(page, 1, 'name').click();
+    await page.keyboard.press('ControlOrMeta+v');
+    await expect.poll(async () => ((await getDataCell(page, 1, 'name').textContent()) ?? '').trim()).toBe(source);
+    expect(await page.evaluate(() => (window as unknown as { events: string[] }).events)).toEqual(['copy:TD:true', 'paste:TD:true']);
+  });
+
   test('Escape clears the active cell but keeps focus on the cell', async ({ page }) => {
     const nameCol = await colIndexOf(page, 'name');
     await getDataCell(page, 1, 'name').click();
@@ -97,6 +144,47 @@ test.describe('Roving focus', () => {
     await expect(page.locator('[data-active-cell="true"]')).toHaveCount(0);
     expect(await focusedCell(page)).toBe(`r1c${nameCol}`);
     expect(await tabStopCount(page)).toBe(1);
+  });
+});
+
+test.describe('Roving focus with a row checkbox column', () => {
+  test.beforeEach(async ({ page }) => {
+    await page.goto('/?rowSelection=1');
+    await waitForGrid(page);
+  });
+
+  test('row checkboxes are not tab stops; Shift+Tab from the first cell leaves the grid body', async ({ page }) => {
+    const firstCol = await colIndexOf(page, 'name');
+    let where = '';
+    for (let i = 0; i < 150 && !where.startsWith('r'); i += 1) {
+      await page.keyboard.press('Tab');
+      where = await focusedCell(page);
+    }
+    // Tab skips the row checkboxes and lands on the first data cell.
+    expect(where).toBe(`r0c${firstCol}`);
+    await page.keyboard.press('Shift+Tab');
+    const outsideBody = await page.evaluate(() => !document.activeElement?.closest('tbody'));
+    expect(outsideBody).toBe(true);
+  });
+
+  test('arrow keys reach the checkbox cell; Space toggles its row and Shift+Space selects a range', async ({ page }) => {
+    const firstCol = await colIndexOf(page, 'name');
+    await getDataCell(page, 1, 'name').click();
+    await page.keyboard.press('ArrowLeft');
+    expect(await focusedCell(page)).toBe('r1c0');
+    expect(await tabStopCount(page)).toBe(1);
+
+    await page.keyboard.press('Space');
+    await expectSelectedRowCount(page, 1);
+    await page.keyboard.press('ArrowDown');
+    await page.keyboard.press('ArrowDown');
+    expect(await focusedCell(page)).toBe('r3c0');
+    await page.keyboard.press('Shift+Space');
+    await expectSelectedRowCount(page, 3);
+    expect(await focusedCell(page)).toBe('r3c0');
+
+    await page.keyboard.press('ArrowRight');
+    expect(await focusedCell(page)).toBe(`r3c${firstCol}`);
   });
 });
 
@@ -111,11 +199,8 @@ test.describe('Roving focus with virtual scrolling', () => {
     const region = getGridRegion(page);
     await getDataCell(page, 3, 'name').click();
     expect(await focusedCell(page)).toBe(`r3c${nameCol}`);
-    // Let the click's scroll-into-view frame run before scrolling away.
-    await page.waitForTimeout(100);
 
-    await region.evaluate((el) => { el.scrollTop = el.scrollHeight / 2; });
-    await expect.poll(() => focusedCell(page)).toBe('wrapper');
+    await scrollFocusedRowAway(page, region);
     await expect(region).toHaveAttribute('tabindex', '0');
     expect(await tabStopCount(page)).toBe(0);
 
@@ -128,9 +213,7 @@ test.describe('Roving focus with virtual scrolling', () => {
     const nameCol = await colIndexOf(page, 'name');
     const region = getGridRegion(page);
     await getDataCell(page, 3, 'name').click();
-    await page.waitForTimeout(100);
-    await region.evaluate((el) => { el.scrollTop = el.scrollHeight / 2; });
-    await expect.poll(() => focusedCell(page)).toBe('wrapper');
+    await scrollFocusedRowAway(page, region);
 
     await page.keyboard.press('ArrowDown');
     await expect.poll(() => focusedCell(page)).toBe(`r4c${nameCol}`);

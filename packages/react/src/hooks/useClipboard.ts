@@ -152,7 +152,8 @@ export function useClipboard<T>(params: UseClipboardParams<T>): UseClipboardResu
     // Normalized so paste anchors at the top-left even when the selection was
     // made upward/leftward (start below/right of end).
     if (sel) return normalizeSelectionRange(sel);
-    return ac != null
+    // The checkbox column (active with no range) holds no cell data.
+    return ac != null && ac.columnIndex >= colOffset
       ? { startRow: ac.rowIndex, startCol: ac.columnIndex - colOffset, endRow: ac.rowIndex, endCol: ac.columnIndex - colOffset }
       : null;
   }, [colOffset, selectionRangeRef, activeCellRef]);
@@ -210,6 +211,8 @@ export function useClipboard<T>(params: UseClipboardParams<T>): UseClipboardResu
     if (onCellValueChanged == null) return;
     if (!text.trim()) return;
     const norm = getEffectiveRange();
+    // An active cell with no range is the checkbox column: nothing to paste into.
+    if (norm == null && activeCellRef.current != null) return;
     const anchorRow = norm ? norm.startRow : 0;
     const anchorCol = norm ? norm.startCol : 0;
     const items = itemsRef.current;
@@ -241,7 +244,7 @@ export function useClipboard<T>(params: UseClipboardParams<T>): UseClipboardResu
     } finally {
       endBatch?.();
     }
-  }, [getEffectiveRange, itemsRef, visibleColsRef, onCellValueChangedRef, beginBatch, endBatch, formulasRef, flatColumnsRef, setFormulaRef, colOffset, rowKeyOf, takePendingCut]);
+  }, [getEffectiveRange, activeCellRef, itemsRef, visibleColsRef, onCellValueChangedRef, beginBatch, endBatch, formulasRef, flatColumnsRef, setFormulaRef, colOffset, rowKeyOf, takePendingCut]);
 
   const handlePaste = useCallback(async () => {
     if (editableRef.current === false) return;

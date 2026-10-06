@@ -27,6 +27,12 @@ export interface FormulaBarProps {
   startEditing: () => void;
   /** External ref for the input element (for cursor position tracking). */
   inputRef?: React.RefObject<HTMLInputElement | null>;
+  /**
+   * Called after Enter commits or Escape cancels an edit, so the host can move
+   * focus back to the grid's active cell. Not called when focus leaves the bar
+   * any other way (a click elsewhere keeps its focus).
+   */
+  onReturnFocus?: () => void;
 }
 
 export function FormulaBar({
@@ -38,6 +44,7 @@ export function FormulaBar({
   onCancel,
   startEditing,
   inputRef: externalInputRef,
+  onReturnFocus,
 }: FormulaBarProps): React.ReactElement {
   const internalInputRef = useRef<HTMLInputElement>(null);
   const inputRef = externalInputRef ?? internalInputRef;
@@ -65,6 +72,7 @@ export function FormulaBar({
         onKeyDown={(e) => {
           if (isEditing) {
             handleFormulaBarKeyDown(e.key, () => e.preventDefault(), onCommit, onCancel);
+            if (e.key === 'Enter' || e.key === 'Escape') onReturnFocus?.();
           } else if (e.key === 'F2' || e.key === 'Enter') {
             // Keyboard users enter edit mode the way a click does.
             e.preventDefault();

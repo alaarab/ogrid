@@ -11,6 +11,8 @@ export interface UseGridCellFocusParams {
   editingCell: unknown;
   /** Leading checkbox / row-number columns; the first data column's index. */
   colOffset: number;
+  /** The row-selection checkbox column (index 0) is a navigable cell. */
+  checkboxColumn?: boolean;
   rowCount: number;
   /** Data column count (excluding colOffset columns). */
   colCount: number;
@@ -38,7 +40,7 @@ export function cellFocusOptions(fromPointer: boolean): FocusOptions {
   return fromPointer ? ({ preventScroll: true, focusVisible: false } as FocusOptions) : { preventScroll: true };
 }
 
-/** A body cell of this grid that takes part in roving focus (data cells render a tabindex). */
+/** A body cell of this grid that takes part in roving focus (data and checkbox cells render a tabindex). */
 function isBodyCell(el: Element, wrapper: HTMLElement): boolean {
   return el.tagName === 'TD' && el.hasAttribute('tabindex') && el.closest('tbody') != null && wrapper.contains(el);
 }
@@ -71,12 +73,13 @@ function isFocusLost(el: Element | null): boolean {
  *   the cell once its row renders again.
  */
 export function useGridCellFocus(params: UseGridCellFocusParams): UseGridCellFocusResult {
-  const { wrapperRef, activeCell, setActiveCell, editingCell, colOffset, rowCount, colCount } = params;
+  const { wrapperRef, activeCell, setActiveCell, editingCell, colOffset, checkboxColumn = false, rowCount, colCount } = params;
 
   // Remembered stop after the active cell clears (Escape), so Tab returns to it.
   const lastStopRef = useRef<IActiveCell | null>(null);
   const inBounds = (c: IActiveCell | null): c is IActiveCell =>
-    c != null && c.rowIndex >= 0 && c.rowIndex < rowCount && c.columnIndex >= colOffset && c.columnIndex < colOffset + colCount;
+    c != null && c.rowIndex >= 0 && c.rowIndex < rowCount && colCount > 0 &&
+    ((c.columnIndex >= colOffset && c.columnIndex < colOffset + colCount) || (checkboxColumn && c.columnIndex === 0));
   const tabStopCell: IActiveCell | null = inBounds(activeCell)
     ? activeCell
     : inBounds(lastStopRef.current)

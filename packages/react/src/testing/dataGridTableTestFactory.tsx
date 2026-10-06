@@ -605,6 +605,29 @@ export function createDataGridTableTests(DataGridTable: React.ComponentType<IOGr
       expect(onCellValueChanged).toHaveBeenCalled();
     });
 
+    it('boolean checkboxes are not tab stops; Space on the focused cell toggles the value', () => {
+      const { container, onCellValueChanged } = renderBoolTable();
+      const checkboxes = Array.from(container.querySelectorAll<HTMLElement>('tbody [role="checkbox"], tbody input[type="checkbox"]'));
+      expect(checkboxes).toHaveLength(2);
+      for (const box of checkboxes) expect(box.tabIndex).toBe(-1);
+      const td = container.querySelector('tr[data-row-id="1"] td[data-column-id="active"]') as HTMLElement;
+      act(() => td.focus());
+      act(() => { fireEvent.keyDown(td, { key: ' ' }); });
+      expect(onCellValueChanged).toHaveBeenCalledTimes(1);
+      expect(onCellValueChanged).toHaveBeenCalledWith(expect.objectContaining({ columnId: 'active', oldValue: true, newValue: false, rowIndex: 0 }));
+      // Shift+Space is row selection, not a value toggle.
+      act(() => { fireEvent.keyDown(td, { key: ' ', shiftKey: true }); });
+      expect(onCellValueChanged).toHaveBeenCalledTimes(1);
+    });
+
+    it('Space does not toggle a read-only boolean cell', () => {
+      const { container, onCellValueChanged } = renderBoolTable({ editable: false });
+      const td = container.querySelector('tr[data-row-id="2"] td[data-column-id="active"]') as HTMLElement;
+      act(() => td.focus());
+      act(() => { fireEvent.keyDown(td, { key: ' ' }); });
+      expect(onCellValueChanged).not.toHaveBeenCalled();
+    });
+
     it('pointerDown on checkbox cell selects the cell without starting a drag', () => {
       const { container } = renderBoolTable({ cellSelection: true });
       const checkboxes = container.querySelectorAll('[role="checkbox"], input[type="checkbox"]');
