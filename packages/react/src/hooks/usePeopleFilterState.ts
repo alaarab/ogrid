@@ -5,6 +5,7 @@
  */
 
 import { useState, useCallback, useEffect, useRef, type RefObject } from 'react';
+import { useLatestRef } from './useLatestRef';
 import { PEOPLE_SEARCH_DEBOUNCE_MS } from '@alaarab/ogrid-core';
 import type { UserLike } from '../types/dataGridTypes';
 import type { ColumnFilterType } from '../types/columnTypes';
@@ -56,9 +57,16 @@ export function usePeopleFilterState(
     };
   }, [isFilterOpen, filterType]);
 
+  // Read through a ref: a host passing an inline function would otherwise
+  // restart the search on every render (and the loading-state update below
+  // re-renders, so an inline function looped forever, never finishing a search).
+  const peopleSearchRef = useLatestRef(peopleSearch);
+  const hasPeopleSearch = peopleSearch != null;
+
   // People search with debounce
   useEffect(() => {
-    if (!peopleSearch || !isFilterOpen || filterType !== 'people') {
+    const search = peopleSearchRef.current;
+    if (!hasPeopleSearch || !search || !isFilterOpen || filterType !== 'people') {
       setIsPeopleLoading(false);
       return;
     }
@@ -72,7 +80,7 @@ export function usePeopleFilterState(
     setIsPeopleLoading(true);
     peopleSearchTimeoutRef.current = window.setTimeout(async () => {
       try {
-        const results = await peopleSearch(peopleSearchText);
+        const results = await search(peopleSearchText);
         if (requestId !== peopleSearchRequestRef.current) return;
         setPeopleSuggestions(results.slice(0, 10));
       } catch {
@@ -87,7 +95,7 @@ export function usePeopleFilterState(
       // Invalidate any in-flight request when the query, source, or open state changes.
       peopleSearchRequestRef.current++;
     };
-  }, [peopleSearchText, peopleSearch, isFilterOpen, filterType]);
+  }, [peopleSearchText, hasPeopleSearch, peopleSearchRef, isFilterOpen, filterType]);
 
   const handleUserSelect = useCallback(
     (user: UserLike) => {
