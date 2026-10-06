@@ -15,7 +15,7 @@ function Inner() {
     exportToCsv<Person>(
       people,
       csvColumns,
-      (item, columnId) => String((item as Record<string, unknown>)[columnId] ?? ''),
+      (item, columnId) => String(item[columnId as keyof Person] ?? ''),
       'people.csv'
     );
   }, [exportToCsv, csvColumns]);

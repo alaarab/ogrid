@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useCallback } from 'react';
 import BrowserOnly from '@docusaurus/BrowserOnly';
 import { LiveDemo } from '../LiveDemo';
 
@@ -41,6 +41,8 @@ function RadixGrid() {
     useUndoRedo,
   } = require('@alaarab/ogrid-react-radix') as typeof import('@alaarab/ogrid-react-radix');
 
+  type CellChange = import('@alaarab/ogrid-react-radix').ICellValueChangedEvent<Person>;
+
   const [data, setData] = useState(people);
 
   const columns = useMemo(() => [
@@ -66,22 +68,26 @@ function RadixGrid() {
     { columnId: 'email', name: 'Email' },
   ], []);
 
-  const { handleCellValueChanged, undo, redo, canUndo, canRedo } = useUndoRedo({
-    data,
-    setData,
-    getRowId: (p: Person) => p.id,
+  const applyChange = useCallback((event: CellChange) => {
+    setData((prev) =>
+      prev.map((row) => (row.id === event.item.id ? { ...row, [event.columnId]: event.newValue } : row))
+    );
+  }, []);
+
+  const { onCellValueChanged, undo, redo, canUndo, canRedo } = useUndoRedo<Person>({
+    onCellValueChanged: applyChange,
   });
 
   return (
-    <OGrid<Person>
+    <OGrid
       columns={columns}
       data={data}
-      getRowId={(p) => p.id}
+      getRowId={(p: Person) => p.id}
       editable
       cellSelection
       statusBar
       defaultPageSize={10}
-      onCellValueChanged={handleCellValueChanged}
+      onCellValueChanged={onCellValueChanged}
       onUndo={undo}
       onRedo={redo}
       canUndo={canUndo}

@@ -169,7 +169,7 @@ export default function LiveDataDemo() {
         toolbar={toolbar}
         filters={filters}
         onFiltersChange={setFilters}
-        defaultSortField="ticker"
+        defaultSortBy="ticker"
         defaultSortDirection="asc"
         defaultPageSize={100}
         entityLabelPlural="stocks"
