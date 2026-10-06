@@ -41,6 +41,9 @@ All notable changes to OGrid will be documented in this file.
 
 ### Fixed
 
+- Fluent: the border beside a right-pinned column is 1px again (it doubled at
+  the far-right scroll position after the border-model change), and the line
+  under the column-group row runs across the checkbox and row-number columns.
 - Date-time and time pickers write values back in the stored shape: ISO
   separator, seconds and fraction, the original time zone, and `Date` or epoch
   number types are kept. TimePicker reads values like `"14:30:00"`.
@@ -92,7 +95,7 @@ All notable changes to OGrid will be documented in this file.
 ### Changed
 
 - The Fluent kit uses the separate border model, like Radix, to fix the sticky
-  column seam. Borders next to right-pinned columns may look slightly heavier.
+  column seam.
 - Browser tests serve the example apps as production builds and run the
   labeled-filter cases on Fluent too. Fluent e2e time dropped from about 13 to
   about 2 minutes.
