@@ -7,12 +7,12 @@ function Inner() {
   const { useHeadlessGrid, useRangeSelection, useCellClipboard, isInSelectionRange } = require('@alaarab/ogrid-react') as typeof import('@alaarab/ogrid-react');
 
   const [data, setData] = useState<Person[]>(initialRows);
-  const [status, setStatus] = useState('Select cells, then Ctrl/Cmd+C, X, V (paste reads the native paste event)');
+  const [status, setStatus] = useState('Select cells, then Ctrl/Cmd+C, X, V (the shortcuts use the native clipboard events)');
 
-  // The hook defaults to navigator.clipboard. Ctrl/Cmd+V goes through the
-  // native paste event (cb.onPaste below) and needs no permission; the Paste
-  // button has no such event and reads programmatically, which the browser may
-  // refuse. This override mirrors writes into memory and falls back to that
+  // The hook defaults to navigator.clipboard. Ctrl/Cmd+C, X and V go through
+  // the native copy/cut/paste events (cb.onCopy, cb.onCut, cb.onPaste below)
+  // and need no permission; the buttons have no such event and use the
+  // clipboard programmatically, which the browser may refuse. This override mirrors writes into memory and falls back to that
   // buffer when the read is denied, so the button still works in-demo.
   const clipboard = useMemo(() => {
     let buffer = '';
@@ -87,20 +87,19 @@ function Inner() {
         className={styles.scroll}
         // biome-ignore lint/a11y/noNoninteractiveTabindex: the container is the focus target for the grid's keyboard handling
         tabIndex={0}
-        // Ctrl/Cmd+V is not handled in onKeyDown: the browser follows it with a
-        // native paste event, and onPaste reads the text from that event.
+        // Ctrl/Cmd+C, X and V are not handled in onKeyDown: the browser follows
+        // them with native copy/cut/paste events, which carry the clipboard data.
+        onCopy={(e) => {
+          cb.onCopy(e);
+          if (e.defaultPrevented) setStatus('Copied as TSV');
+        }}
+        onCut={(e) => {
+          cb.onCut(e);
+          if (e.defaultPrevented) setStatus('Cut: source clears when you paste');
+        }}
         onPaste={cb.onPaste}
         onKeyDown={(e) => {
-          const mod = e.metaKey || e.ctrlKey;
-          if (mod && e.key === 'c') {
-            e.preventDefault();
-            void copy();
-          } else if (mod && e.key === 'x') {
-            e.preventDefault();
-            void cut();
-          } else if (e.key === 'Escape') {
-            cb.clearClipboard();
-          }
+          if (e.key === 'Escape') cb.clearClipboard();
         }}
       >
         <table className={styles.table}>

@@ -280,6 +280,79 @@ describe('useCellClipboard onPaste (native paste event)', () => {
   });
 });
 
+describe('useCellClipboard onCopy / onCut (native copy and cut events)', () => {
+  const makeEvent = (target?: EventTarget | null, currentTarget?: EventTarget | null) => {
+    const data: Record<string, string> = {};
+    return {
+      data,
+      clipboardData: { setData: jest.fn((format: string, value: string) => { data[format] = value; }) },
+      preventDefault: jest.fn(),
+      target,
+      currentTarget,
+    };
+  };
+  const selectA0toB0 = (t: ReturnType<typeof setup>) => {
+    act(() => t.rangeResult.current.startRange(0, 0));
+    act(() => t.rangeResult.current.extendRange(0, 1));
+    t.rerender({ range: t.rangeResult.current });
+  };
+
+  it('onCopy puts the TSV on clipboardData, prevents default, marks the copy range and never calls writeText', () => {
+    const t = setup('untouched');
+    selectA0toB0(t);
+    const event = makeEvent();
+    act(() => { t.clipResult.current.onCopy(event); });
+
+    expect(event.data['text/plain']).toBe('one\t100');
+    expect(event.preventDefault).toHaveBeenCalledTimes(1);
+    expect(t.clipboardState.text).toBe('untouched');
+    expect(t.clipResult.current.activeCopyRange).toEqual({ startRow: 0, startCol: 0, endRow: 0, endCol: 1 });
+    expect(t.clipResult.current.activeCutRange).toBeNull();
+  });
+
+  it('onCut marks the cut range, and a paste event of that text moves the values and clears the source', () => {
+    const t = setup();
+    act(() => t.rangeResult.current.startRange(0, 0));
+    t.rerender({ range: t.rangeResult.current });
+    const cut = makeEvent();
+    act(() => { t.clipResult.current.onCut(cut); });
+    expect(cut.data['text/plain']).toBe('one');
+    expect(cut.preventDefault).toHaveBeenCalledTimes(1);
+    expect(t.clipResult.current.activeCutRange).toEqual({ startRow: 0, startCol: 0, endRow: 0, endCol: 0 });
+    expect(t.clipResult.current.activeCopyRange).toBeNull();
+    expect(t.events).toEqual([]);
+
+    act(() => t.rangeResult.current.startRange(2, 0));
+    t.rerender({ range: t.rangeResult.current });
+    act(() => {
+      t.clipResult.current.onPaste({ clipboardData: { getData: () => cut.data['text/plain'] }, preventDefault: jest.fn() });
+    });
+    expect(t.events.map((e) => [e.rowIndex, e.columnId, e.newValue])).toEqual([[2, 'a', 'one'], [0, 'a', '']]);
+    expect(t.clipResult.current.activeCutRange).toBeNull();
+  });
+
+  it('leaves copy/cut aimed at a text input inside the container, or with no range, to the browser', () => {
+    const t = setup();
+    const noRange = makeEvent();
+    act(() => { t.clipResult.current.onCopy(noRange); });
+    selectA0toB0(t);
+    const container = document.createElement('div');
+    const input = document.createElement('input');
+    container.append(input);
+    const copyInInput = makeEvent(input, container);
+    const cutInInput = makeEvent(input, container);
+    act(() => { t.clipResult.current.onCopy(copyInInput); });
+    act(() => { t.clipResult.current.onCut(cutInInput); });
+
+    for (const e of [noRange, copyInInput, cutInInput]) {
+      expect(e.clipboardData.setData).not.toHaveBeenCalled();
+      expect(e.preventDefault).not.toHaveBeenCalled();
+    }
+    expect(t.clipResult.current.activeCopyRange).toBeNull();
+    expect(t.clipResult.current.activeCutRange).toBeNull();
+  });
+});
+
 describe('useCellClipboard clipboard failures', () => {
   it('resolves and reports instead of rejecting when the clipboard is denied', async () => {
     const denied = new Error('denied');

@@ -12,7 +12,7 @@ import type {
   RowSelectionMode,
 } from '../types';
 import type { EditingCell } from './useCellEditing';
-import type { ClipboardPasteEventLike } from './useClipboard';
+import type { ClipboardCopyEventLike, ClipboardPasteEventLike } from './useClipboard';
 import type { ContextMenuPosition } from './useContextMenu';
 
 export interface UseKeyboardNavigationParams<T> {
@@ -40,8 +40,14 @@ export interface UseKeyboardNavigationParams<T> {
       rowIndex: number,
       shiftKey: boolean
     ) => void;
-    handleCopy: () => void;
-    handleCut: () => void;
+    /** @deprecated Unused: Ctrl/Cmd+C now goes through the native `copy` event (`handleCopyEvent`). */
+    handleCopy?: () => void;
+    /** @deprecated Unused: Ctrl/Cmd+X now goes through the native `cut` event (`handleCutEvent`). */
+    handleCut?: () => void;
+    /** Copy from a native `copy` event; see `handleGridCopy`. */
+    handleCopyEvent: (event: ClipboardCopyEventLike) => void;
+    /** Cut from a native `cut` event; see `handleGridCut`. */
+    handleCutEvent: (event: ClipboardCopyEventLike) => void;
     /** Paste from a native `paste` event; see `handleGridPaste`. */
     handlePasteEvent: (event: ClipboardPasteEventLike) => void;
     setContextMenu: (pos: ContextMenuPosition | null) => void;
@@ -73,6 +79,15 @@ export interface UseKeyboardNavigationResult {
    * Pastes aimed at an open cell editor or any other text input stay with it.
    */
   handleGridPaste: (e: React.ClipboardEvent) => void;
+  /**
+   * `copy` handler for the grid wrapper. Ctrl/Cmd+C is left to the browser in
+   * `handleGridKeyDown`; the native event that follows lets the grid put the
+   * TSV on `clipboardData`, which works without `navigator.clipboard` (plain
+   * http). Same target filtering as `handleGridPaste`.
+   */
+  handleGridCopy: (e: React.ClipboardEvent) => void;
+  /** `cut` handler for the grid wrapper (Ctrl/Cmd+X); see `handleGridCopy`. */
+  handleGridCut: (e: React.ClipboardEvent) => void;
 }
 
 /** Text-entry controls: keystrokes typed into these never belong to the grid. */
@@ -106,6 +121,14 @@ function getKeyTargetKind(e: Pick<React.SyntheticEvent, 'target' | 'currentTarge
   return target.matches(CELL_CONTROL_SELECTOR) ? 'control' : 'grid';
 }
 
+/** True when a native clipboard event belongs to the grid rather than a cell editor or other input. */
+function isGridClipboardEvent(e: React.ClipboardEvent, editingCell: EditingCell | null): boolean {
+  const targetKind = getKeyTargetKind(e);
+  // Editors and other text inputs (header filters, popovers) own their clipboard.
+  if (targetKind === 'editor' || targetKind === 'outside') return false;
+  return editingCell == null;
+}
+
 /**
  * Handles all keyboard navigation, shortcuts, and cell editing triggers for the grid.
  * @param params - Grouped data, state, handlers, and feature flags for keyboard interactions.
@@ -123,7 +146,7 @@ export function useKeyboardNavigation<T>(
       const { data, state, handlers, features } = paramsRef.current;
       const { items, visibleCols, colOffset, hasCheckboxCol, visibleColumnCount, getRowId } = data;
       const { activeCell, selectionRange, editingCell, selectedRowIds } = state;
-      const { setActiveCell, setSelectionRange, setEditingCell, handleRowCheckboxChange, handleCopy, handleCut, setContextMenu, onUndo, onRedo, clearClipboardRanges, beginBatch, endBatch } = handlers;
+      const { setActiveCell, setSelectionRange, setEditingCell, handleRowCheckboxChange, setContextMenu, onUndo, onRedo, clearClipboardRanges, beginBatch, endBatch } = handlers;
       const { editable, onCellValueChanged, rowSelection, wrapperRef, scrollToIndexRef, onKeyDown, fillDown } = features;
 
       // Consumer intercept: call consumer's handler first; skip grid default if preventDefault() was called
@@ -200,18 +223,13 @@ export function useKeyboardNavigation<T>(
       const key = (e.ctrlKey || e.metaKey) && e.key.length === 1 ? e.key.toLowerCase() : e.key;
       switch (key) {
         case 'c':
-          if (e.ctrlKey || e.metaKey) {
-            if (editingCell != null) break; // let the input handle copy
-            e.preventDefault();
-            handleCopy();
-          }
-          break;
         case 'x':
-          if (e.ctrlKey || e.metaKey) {
-            if (editingCell != null) break; // let the input handle cut
-            e.preventDefault();
-            handleCut();
-          }
+          // Ctrl/Cmd+C and Ctrl/Cmd+X are deliberately not handled (and not
+          // prevented) here: the browser follows them with a native `copy` /
+          // `cut` event, and handleGridCopy / handleGridCut put the TSV on its
+          // clipboardData. Copying here as well would copy twice, and
+          // preventing the keydown would suppress the event, leaving only
+          // navigator.clipboard.writeText, which is missing on plain http.
           break;
         case 'v':
           // Ctrl/Cmd+V is deliberately not handled (and not prevented) here:
@@ -483,15 +501,24 @@ export function useKeyboardNavigation<T>(
 
   const handleGridPaste = useCallback(
     (e: React.ClipboardEvent) => {
-      const { state, handlers } = paramsRef.current;
-      const targetKind = getKeyTargetKind(e);
-      // Editors and other text inputs (header filters, popovers) own their paste.
-      if (targetKind === 'editor' || targetKind === 'outside') return;
-      if (state.editingCell != null) return;
-      handlers.handlePasteEvent(e);
+      if (isGridClipboardEvent(e, paramsRef.current.state.editingCell)) paramsRef.current.handlers.handlePasteEvent(e);
     },
     [] // stable  -  reads latest values from paramsRef
   );
 
-  return { handleGridKeyDown, handleGridPaste };
+  const handleGridCopy = useCallback(
+    (e: React.ClipboardEvent) => {
+      if (isGridClipboardEvent(e, paramsRef.current.state.editingCell)) paramsRef.current.handlers.handleCopyEvent(e);
+    },
+    [] // stable  -  reads latest values from paramsRef
+  );
+
+  const handleGridCut = useCallback(
+    (e: React.ClipboardEvent) => {
+      if (isGridClipboardEvent(e, paramsRef.current.state.editingCell)) paramsRef.current.handlers.handleCutEvent(e);
+    },
+    [] // stable  -  reads latest values from paramsRef
+  );
+
+  return { handleGridKeyDown, handleGridPaste, handleGridCopy, handleGridCut };
 }

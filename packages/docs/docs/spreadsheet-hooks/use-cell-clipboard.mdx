@@ -34,15 +34,15 @@ const clipboard = useCellClipboard({
   onClipboardError: () => toast('Clipboard access was blocked'),
 });
 
-// On the focusable grid container. Ctrl/Cmd+V is left to the browser: the
-// native paste event that follows carries the text, and onPaste reads it.
+// On the focusable grid container. Ctrl/Cmd+C, X and V are left to the
+// browser: the native copy, cut and paste events that follow carry the
+// clipboard data, and onCopy / onCut / onPaste handle them.
 <div
   tabIndex={0}
+  onCopy={clipboard.onCopy}
+  onCut={clipboard.onCut}
   onPaste={clipboard.onPaste}
   onKeyDown={(e) => {
-    const mod = e.metaKey || e.ctrlKey;
-    if (mod && e.key === 'c') clipboard.copyRange();
-    if (mod && e.key === 'x') clipboard.cutRange();
     if (e.key === 'Escape') clipboard.clearClipboard();
   }}
 >
@@ -68,9 +68,11 @@ const clipboard = useCellClipboard({
 
 | Field | Type | Description |
 |---|---|---|
-| `copyRange` | `() => Promise<void>` | Write the range as TSV, mark it as the copy range. No-op without a range. |
-| `cutRange` | `() => Promise<void>` | Write as TSV and mark the range as cut. Nothing is cleared yet. |
+| `copyRange` | `() => Promise<void>` | Programmatic copy for buttons and menus: write the range as TSV with `clipboard.writeText`, mark it as the copy range. No-op without a range. |
+| `cutRange` | `() => Promise<void>` | Programmatic cut: write as TSV with `clipboard.writeText` and mark the range as cut. Nothing is cleared yet. |
 | `pasteRange` | `() => Promise<void>` | Programmatic paste for buttons and menus: read TSV with `clipboard.readText`, apply at the range's top-left, fire `onCellEdit`, clear markers. |
+| `onCopy` | `(event: CellClipboardCopyEvent) => void` | Native `copy` handler for the container (`onCopy={clipboard.onCopy}`). Puts the range's TSV on `event.clipboardData`, calls `preventDefault()`, then marks the copy range like `copyRange`. Ignores copies aimed at an input, textarea or contenteditable inside the container, and the no-range case. |
+| `onCut` | `(event: CellClipboardCopyEvent) => void` | Native `cut` handler (`onCut={clipboard.onCut}`). Like `onCopy`, but marks the range as cut like `cutRange`. Nothing is cleared until the paste. |
 | `onPaste` | `(event: CellClipboardPasteEvent) => void` | Native `paste` handler for the container (`onPaste={clipboard.onPaste}`). Takes the text from `event.clipboardData`, calls `preventDefault()`, then pastes like `pasteRange`. Ignores pastes aimed at an input, textarea or contenteditable inside the container, events without text, and the no-range case. |
 | `canPaste` | `boolean` | `navigator.clipboard.readText` is available, so `pasteRange()` can read the clipboard. `false` on the server and during the first client render. `onPaste` works regardless. |
 | `activeCopyRange` | `ISelectionRange \| null` | For marching-ants rendering. |
@@ -79,7 +81,7 @@ const clipboard = useCellClipboard({
 
 ## Behavior notes
 
-- **The three actions never reject.** Failures go to `onClipboardError` and the
+- **The three programmatic actions never reject.** Failures go to `onClipboardError` and the
   promise resolves, so `await clipboard.pasteRange()` is safe without a
   `try`/`catch`.
 - **Copy text follows the column.** `clipboardFormatter` wins when set (its
@@ -108,11 +110,18 @@ const clipboard = useCellClipboard({
   `preventDefault()`) Ctrl/Cmd+V in `onKeyDown`: a prevented keydown
   suppresses the paste event, and calling `pasteRange()` as well pastes twice.
   Shift+Insert works the same way.
-- **`pasteRange` and `canPaste` are for buttons and menus.** A toolbar or
-  context-menu Paste has no native event to read from, so it goes through
-  `clipboard.readText`; gate it on `canPaste`. Pass a `clipboard` override if
+- **Copy and cut the keyboard shortcut through `onCopy` / `onCut`.** A
+  Ctrl+C handler that calls `copyRange()` needs `navigator.clipboard.writeText`,
+  which is undefined on plain http, so the copy never reaches the OS
+  clipboard there. Handling the native `copy` / `cut` event puts the TSV on
+  `event.clipboardData` instead, with no permission or secure context needed.
+  As with paste, do not handle or `preventDefault()` Ctrl/Cmd+C or X in
+  `onKeyDown`: a prevented keydown suppresses the event.
+- **`copyRange`, `cutRange`, `pasteRange` and `canPaste` are for buttons and menus.**
+  A toolbar or context-menu Copy, Cut or Paste has no native event to use, so
+  it goes through `clipboard.writeText` / `readText`; gate Paste on `canPaste`. Pass a `clipboard` override if
   you want an in-app fallback for that path, as the demo above does.
-- **Keyboard wiring is yours.** Attach the shortcuts and `onPaste` to a
+- **Keyboard wiring is yours.** Attach `onCopy`, `onCut`, `onPaste` and any shortcuts to a
   focusable container (not `document`) so multiple grids on one page do not
   fight.
 

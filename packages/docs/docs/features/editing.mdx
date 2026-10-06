@@ -200,7 +200,7 @@ Standard shortcuts work on any selection — no configuration needed:
 
 Copy respects `valueFormatter` — what you see is what you get in the clipboard. Paste calls `valueParser` on each value, so bad data is rejected before it lands in your rows.
 
-Ctrl+V and Shift+Insert paste from the browser's native `paste` event, so they work on plain http and in Firefox and Safari, where `navigator.clipboard.readText` is denied by default. Only the context menu's Paste reads the clipboard programmatically (`readText`); a rejected read there calls `onClipboardError` and pastes nothing.
+The keyboard shortcuts go through the browser's native clipboard events: Ctrl+C and Ctrl+X put the TSV on the `copy` / `cut` event's `clipboardData`, and Ctrl+V and Shift+Insert paste from the `paste` event. That works on plain http, where `navigator.clipboard` does not exist, and in Firefox and Safari, where `navigator.clipboard.readText` is denied by default. Only the context menu's Copy, Cut and Paste use the clipboard programmatically (`writeText` / `readText`); a rejected read there calls `onClipboardError` and pastes nothing.
 
 ## Fill handle
 

@@ -77,10 +77,8 @@ function Inner() {
     if (edit.editingCell) return; // the editor owns the keyboard while open
     const mod = e.metaKey || e.ctrlKey;
     const active = focus.activeCell;
-    if (mod && e.key === 'c') return void cb.copyRange();
-    if (mod && e.key === 'x') return void cb.cutRange();
-    // Ctrl/Cmd+V is left to the browser: the native paste event that follows
-    // carries the text and is handled by onPaste={cb.onPaste} on the container.
+    // Ctrl/Cmd+C, X and V are left to the browser: the native copy/cut/paste
+    // events that follow are handled by cb.onCopy / onCut / onPaste on the container.
     if (mod && e.key === 'z') return e.shiftKey ? undo.redo() : undo.undo();
     if (mod && e.key === 'y') return undo.redo();
     if (mod && e.key === 'a') {
@@ -128,6 +126,8 @@ function Inner() {
         // biome-ignore lint/a11y/noNoninteractiveTabindex: the container is the focus target for the grid's keyboard handling
         tabIndex={0}
         onKeyDown={onKeyDown}
+        onCopy={cb.onCopy}
+        onCut={cb.onCut}
         onPaste={cb.onPaste}
       >
         <table className={styles.table}>
