@@ -6,6 +6,10 @@ All notable changes to OGrid will be documented in this file.
 
 ### Added
 
+- `@alaarab/ogrid-core` exports the shared spreadsheet helpers that both the
+  component and headless hooks now use: `computeFillDragEdits`,
+  `captureCutSource`, `resolveCutClear`, `getSelectAllRange`,
+  `computeAutoScrollDelta` and `computeArrowNavigation`.
 - `@alaarab/ogrid-react-radix` and `-react-fluent` publish a CSS-free entry
   under the `"node"` export condition, so Vite SSR (dev and `vite build --ssr`)
   and Vitest can load the kits. Bundlers still resolve the styled entry.
@@ -94,6 +98,11 @@ All notable changes to OGrid will be documented in this file.
 
 ### Changed
 
+- Headless `useFillHandle` selects the filled range after a fill that extends
+  the source, as `<OGrid>` and Excel do.
+- Internal: the component clipboard, fill, selection and keyboard hooks share
+  their spreadsheet logic with the headless hooks instead of duplicating it,
+  so the two cannot drift. No component behavior change.
 - The Fluent kit uses the separate border model, like Radix, to fix the sticky
   column seam.
 - Browser tests serve the example apps as production builds and run the
