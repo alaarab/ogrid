@@ -7,7 +7,7 @@ import {
   WindowedRowCache,
 } from '@alaarab/ogrid-core';
 import { useLatestRef } from './useLatestRef';
-import { useIdentityVersion } from './useIdentityVersion';
+import { useDataSourceVersion } from './useDataSourceVersion';
 import { applySnapshot, createSnapshot, keepsSnapshot } from './rowOrderSnapshot';
 import type { RowOrderSnapshot } from './rowOrderSnapshot';
 import type { IFilters, IDataSource, WindowedDataState } from '../types';
@@ -28,6 +28,13 @@ export type { WindowedDataState } from '../types';
 export interface UseOGridDataFetchingParams<T> {
   isServerSide: boolean;
   dataSource?: IDataSource<T>;
+  /**
+   * When set, the data source counts as replaced (refetch, new windowed cache)
+   * only when this key changes, so an inline `dataSource` object never
+   * refetches on re-render. When omitted, a source whose own properties are
+   * all identical to the previous render's is the same source.
+   */
+  dataSourceKey?: string | number;
   displayData: T[];
   /**
    * Row identity. When `displayData` changes, rows are re-sorted/re-filtered
@@ -108,7 +115,7 @@ const EMPTY_ROWS: readonly unknown[] = Object.freeze([]);
 
 export function useOGridDataFetching<T>(params: UseOGridDataFetchingParams<T>): UseOGridDataFetchingState<T> {
   const {
-    isServerSide, dataSource, displayData, getRowId, columns, stableFilters,
+    isServerSide, dataSource, dataSourceKey, displayData, getRowId, columns, stableFilters,
     sort, sortVersion, page, pageSize, paginate = true, onError, onFirstDataRendered, workerSort,
     editVersionRef,
   } = params;
@@ -209,9 +216,10 @@ export function useOGridDataFetching<T>(params: UseOGridDataFetchingParams<T>): 
 
   // Stabilize callback refs so inline dataSource/onError don't cause infinite re-fetches.
   const dataSourceRef = useLatestRef(dataSource);
-  // Bumps when a (memoized) dataSource is replaced, so swapping backends
-  // refetches and rebuilds the windowed cache. Inline objects bump it at most once.
-  const dataSourceVersion = useIdentityVersion(dataSource);
+  // Changes when the dataSource is replaced (or dataSourceKey changes), so
+  // swapping backends refetches and rebuilds the windowed cache. An inline
+  // object with the same methods is not a swap (see useDataSourceVersion).
+  const dataSourceVersion = useDataSourceVersion(dataSource, dataSourceKey);
   const onErrorRef = useLatestRef(onError);
 
   // --- Client-side filtering & sorting (async worker path) ---

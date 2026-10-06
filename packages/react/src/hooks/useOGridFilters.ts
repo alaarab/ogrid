@@ -44,6 +44,8 @@ export interface UseOGridFiltersParams<T> {
   columns: ICoreColumnDef<T>[];
   displayData: T[];
   dataSource?: IDataSource<T>;
+  /** See IOGridServerProps.dataSourceKey: filter options reload only when it changes. */
+  dataSourceKey?: string | number;
 }
 
 export interface UseOGridFiltersState {
@@ -67,7 +69,7 @@ export interface UseOGridFiltersState {
  * Resets to page 1 on filter change.
  */
 export function useOGridFilters<T>(params: UseOGridFiltersParams<T>): UseOGridFiltersState {
-  const { controlledFilters, initialFilters, onFiltersChange, setPage, columns, displayData, dataSource } = params;
+  const { controlledFilters, initialFilters, onFiltersChange, setPage, columns, displayData, dataSource, dataSourceKey } = params;
 
   const [internalFilters, setInternalFilters] = useState<IFilters>(() => initialFilters ?? {});
   const filters = controlledFilters ?? internalFilters;
@@ -108,7 +110,7 @@ export function useOGridFilters<T>(params: UseOGridFiltersParams<T>): UseOGridFi
 
   const filterOptionsSource = dataSource ?? EMPTY_DATA_SOURCE;
   const { filterOptions: serverFilterOptions, loadingOptions: loadingFilterOptions } =
-    useFilterOptions(filterOptionsSource, multiSelectFilterFields);
+    useFilterOptions(filterOptionsSource, multiSelectFilterFields, { dataSourceKey });
 
   const hasServerFilterOptions = dataSource?.fetchFilterOptions != null;
   const clientFilterOptions = useMemo(() => {

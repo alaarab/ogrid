@@ -149,6 +149,7 @@ export function useOGrid<T>(
     getRowId: getRowIdProp,
     data,
     dataSource,
+    dataSourceKey,
     page: controlledPage,
     pageSize: controlledPageSize,
     sort: controlledSort,
@@ -318,11 +319,11 @@ export function useOGrid<T>(
   const filtersState = useOGridFilters({
     controlledFilters, onFiltersChange,
     setPage: paginationState.setPage,
-    columns: sortFilterColumns, displayData, dataSource,
+    columns: sortFilterColumns, displayData, dataSource, dataSourceKey,
   });
 
   const dataFetchingState = useOGridDataFetching({
-    isServerSide, dataSource, displayData, getRowId, editVersionRef, columns: sortFilterColumns,
+    isServerSide, dataSource, dataSourceKey, displayData, getRowId, editVersionRef, columns: sortFilterColumns,
     stableFilters: filtersState.stableFilters,
     sort: sortingState.sort,
     sortVersion: sortingState.sortVersion,
