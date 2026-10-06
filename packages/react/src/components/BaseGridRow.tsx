@@ -62,7 +62,14 @@ function GridRowInner(props: BaseGridRowProps) {
       aria-rowindex={ariaRowIndexBase != null ? ariaRowIndexBase + rowIndex + 1 : undefined}
     >
       {hasCheckboxCol && (
-        <Td className={styles.selectionCell} style={stickyPos ? { ...stickyPos, left: 0 } : undefined}>
+        <Td
+          className={styles.selectionCell}
+          style={stickyPos ? { ...stickyPos, left: 0 } : undefined}
+          // A navigable gridcell (roving tabindex); its checkbox is not a tab stop of its own.
+          ref={tabStopColumn === 0 ? registerTabStop : undefined}
+          tabIndex={tabStopColumn === 0 ? 0 : -1}
+          aria-colindex={1}
+        >
           {/* biome-ignore lint/a11y/useKeyWithClickEvents: onClick only stops propagation so the checkbox click does not trigger row selection; keyboard interaction is handled by the grid's roving focus/keyboard-navigation layer */}
           {/* biome-ignore lint/a11y/noStaticElementInteractions: onClick only stops propagation; the inner checkbox is the interactive control */}
           {/* biome-ignore lint/a11y/noNoninteractiveElementInteractions: onClick only stops propagation; the inner checkbox is the interactive control */}

@@ -78,6 +78,10 @@ The active cell holds real keyboard focus (a roving tabindex): it is the grid's 
 | Ctrl+Shift+Arrow | Extend selection to the edge of the current data region |
 | Shift+Click | Select range from active cell to clicked cell |
 | Shift+Space | Toggle selection of the active cell's row (when row selection is enabled) |
+| ← from the first column | Move to the row's checkbox cell (`rowSelection="multiple"`) |
+| Space on the checkbox cell | Toggle that row |
+| Shift+Space on the checkbox cell | Select the rows from the last toggled row to this one |
+| Space on an editable boolean cell | Toggle the checkbox |
 | Ctrl+A | Select all **cells** in the grid (for copy/paste/fill operations, not row selection) |
 
 The selection range is highlighted with a green border. The active cell remains visually distinct within the range.

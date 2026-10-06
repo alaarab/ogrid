@@ -73,6 +73,8 @@ const primitives: DataGridPrimitives = {
       checked={checked}
       onChange={(_e, data) => onCheckedChange(!!data.checked)}
       aria-label={ariaLabel}
+      // The grid cell is the tab stop (roving focus); Space on it toggles the row.
+      tabIndex={-1}
     />
   ),
   renderHeaderSelectAll: ({ allSelected, someSelected, onChange }) => (
@@ -92,6 +94,8 @@ const primitives: DataGridPrimitives = {
       onClick={onClick}
       className={styles.booleanCheckbox}
       aria-label={ariaLabel}
+      // The grid cell is the tab stop (roving focus); Space on it toggles the value.
+      tabIndex={-1}
     />
   ),
   renderPopoverEditor: (p) => <FluentPopoverEditor {...p} />,
