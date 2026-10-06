@@ -50,10 +50,16 @@
 
 // ---- Fluent Table primitives (pure visual, no behavior) ----
 
-// Fluent UI's Table component applies `table-layout: fixed` via an atomic CSS class
-// (specificity 0,1,0). Qualifying with .tableWrapper raises to 0,2,0 - wins without !important.
+// Fluent UI's Table component applies `table-layout: fixed` and `border-collapse: collapse`
+// via atomic CSS classes (specificity 0,1,0). Qualifying with .tableWrapper raises to 0,2,0 -
+// wins without !important. Collapsed borders are painted by the table at their scrolled
+// position, so sticky (checkbox, row-number, pinned) cells left a 1px seam that scrolled
+// content showed through; the separate model (as in the shared partial and Radix) keeps
+// each border with its cell. Row lines come from the cells' own border-bottom.
 .tableWrapper .dataTable {
   table-layout: auto;
+  border-collapse: separate;
+  border-spacing: 0;
 }
 
 .dataTable {
