@@ -38,11 +38,11 @@ import {
   applyCutClear,
 } from '@alaarab/ogrid-core';
 import type {
-  IColumnDef as ICoreColumnDef,
   ISelectionRange,
   ICellValueChangedEvent,
   RowId,
 } from '@alaarab/ogrid-core';
+import type { IColumnDef } from '../types';
 import type { UseRangeSelectionResult } from './useRangeSelection';
 import { useLatestRef } from './useLatestRef';
 
@@ -54,7 +54,7 @@ export interface UseCellClipboardParams<T> {
   /** Stable row identity for a pending cut across row replacements or sorting. */
   getRowId?: (item: T) => RowId;
   /** Visible columns. */
-  columns: ICoreColumnDef<T>[];
+  columns: IColumnDef<T>[];
   /**
    * Called with cell-change events when a paste or cut commits. Apply each
    * event to your data store.

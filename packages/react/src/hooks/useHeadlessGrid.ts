@@ -46,8 +46,8 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { getCellValue as coreGetCellValue } from '@alaarab/ogrid-core';
-import type { IColumnDef as ICoreColumnDef, IFilters, FilterValue, PageSize } from '@alaarab/ogrid-core';
-import type { IDataSource } from '../types';
+import type { IFilters, FilterValue, PageSize } from '@alaarab/ogrid-core';
+import type { IColumnDef, IDataSource } from '../types';
 
 import { useOGridSorting, type SortState } from './useOGridSorting';
 import { useOGridFilters } from './useOGridFilters';
@@ -58,7 +58,7 @@ import { useLatestRef } from './useLatestRef';
 export type RowId = string | number;
 
 export interface UseHeadlessGridParams<T> {
-  columns: ICoreColumnDef<T>[];
+  columns: IColumnDef<T>[];
   data: T[];
   /** Stable row ID extractor — must return the same ID for the same row across renders. */
   getRowId: (row: T) => RowId;
@@ -107,7 +107,7 @@ export interface UseHeadlessGridParams<T> {
 
 export interface UseHeadlessGridResult<T> {
   /** Resolved column definitions (matches what was passed in). */
-  columns: ICoreColumnDef<T>[];
+  columns: IColumnDef<T>[];
   /** Rows on the current page after sort + filter. */
   rows: T[];
   /** Post-filter total row count (across all pages). */
@@ -265,7 +265,7 @@ export function useHeadlessGrid<T>(
 
   // ── Cell helpers ───────────────────────────────────────────────────────
   const columnMap = useMemo(() => {
-    const m = new Map<string, ICoreColumnDef<T>>();
+    const m = new Map<string, IColumnDef<T>>();
     for (const col of columns) m.set(col.columnId, col);
     return m;
   }, [columns]);
