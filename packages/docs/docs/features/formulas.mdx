@@ -79,7 +79,7 @@ Same props across all React packages — just change the import:
 
 ## Entering formulas
 
-Type any value starting with `=` into an editable cell. The engine parses and evaluates it, then shows the result. The formula string is stored separately from your data — your `data[]` array is never modified by formulas.
+Type any value starting with `=` into an editable cell. The engine parses and evaluates it, then shows the result. The formula string is stored separately from your data — your `data[]` array is never modified by formulas (unless you own the undo history, see [below](#undo-with-host-controlled-history)).
 
 ```
 =A1+B1                        → adds two cells
@@ -116,6 +116,34 @@ When `formulas` is enabled:
 - **Copy** — copies the formula string (`=SUM(A1:A5)`), not the computed value
 - **Paste** — if the pasted value starts with `=`, it becomes a formula in the target cell
 - **Fill handle** — dragging a formula cell down adjusts relative references. `=A1+B1` dragged down becomes `=A2+B2`. Lock references with `$`: `=$A$1` never adjusts.
+
+## Undo with host-controlled history
+
+With the grid's built-in history (no `onUndo` prop), Ctrl+Z / Ctrl+Y undo formula edits along with value edits; there is nothing to wire up.
+
+When you pass `onUndo` / `onRedo` (for example from your own [`useUndoRedo`](/docs/spreadsheet-hooks/use-undo-redo)), your history is the only one, so formula edits come to you as ordinary cell value changes:
+
+- Typing, pasting or filling a formula fires `onCellValueChanged` with `newValue` set to the formula text (`'=B2*C2'`) and `oldValue` set to the cell's previous formula text or plain value.
+- Typing a plain value over a formula fires it with `oldValue` set to the formula text.
+
+Store `newValue` in your data like any other value. In this mode the grid treats a data value that is a string starting with `=` as that cell's formula: it loads those on mount, and when a cell's value changes to formula text (your undo writes `'=B2*C2'` back) the formula comes back; when it changes from formula text to anything else, the formula is removed. Your undo stays a plain data write.
+
+```tsx
+const applyEdit = useCallback((e: ICellValueChangedEvent<Row>) => {
+  setData((prev) => prev.map((r) => (r.id === e.item.id ? { ...r, [e.columnId]: e.newValue } : r)));
+}, []);
+const history = useUndoRedo<Row>({ onCellValueChanged: applyEdit });
+
+<OGrid
+  formulas
+  data={data}
+  onCellValueChanged={history.onCellValueChanged}
+  onUndo={history.undo}
+  onRedo={history.redo}
+  canUndo={history.canUndo}
+  canRedo={history.canRedo}
+/>
+```
 
 ## Cell reference syntax
 

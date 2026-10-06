@@ -78,6 +78,7 @@ const grid = useHeadlessGrid({
 | `page` / `onPageChange` | `number` / `(page) => void` | uncontrolled | Controlled page. |
 | `pageSize` / `onPageSizeChange` | `number \| 'all'` / `(size) => void` | uncontrolled | Controlled page size. |
 | `dataSource` | `IDataSource<T>` | none | Server-side mode. Sort, filter, and page are sent to the server and the returned items are shown as-is. |
+| `dataSourceKey` | `string \| number` | none | Identity of `dataSource`: refetch and reload filter options only when it changes, so `dataSource` can be an inline object. See [Replacing the data source](/docs/features/server-side-data#replacing-the-data-source). |
 | `workerSort` | `boolean \| 'auto'` | off | `true` always sorts in a Web Worker; `'auto'` does so above roughly 5,000 rows. |
 | `onError` | `(err: unknown) => void` | none | Server-side fetch error callback. |
 | `onFirstDataRendered` | `() => void` | none | Fired once when the first batch of rows lands. |

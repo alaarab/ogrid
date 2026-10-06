@@ -449,3 +449,31 @@ describe('usePeopleFilterState', () => {
     // Should not throw and should clean up timeout
   });
 });
+
+describe('usePeopleFilterState with an inline peopleSearch (D17)', () => {
+  it('a re-render with a new search function does not cancel the search in flight', async () => {
+    let resolve: (users: UserLike[]) => void = () => {};
+    const search = jest.fn(() => new Promise<UserLike[]>((r) => { resolve = r; }));
+    const { result, rerender } = renderHook(
+      ({ tick }: { tick: number }) =>
+        usePeopleFilterState({
+          isFilterOpen: true,
+          filterType: 'people',
+          // A new function each render, as a parent passing an inline arrow does.
+          peopleSearch: (q: string) => { void tick; return search(q); },
+        }),
+      { initialProps: { tick: 0 } },
+    );
+    act(() => { result.current.setPeopleSearchText('jo'); });
+    await act(async () => { await new Promise((r) => setTimeout(r, 400)); });
+    expect(search).toHaveBeenCalledTimes(1);
+    rerender({ tick: 1 });
+    await act(async () => {
+      resolve([{ displayName: 'Jo', email: 'jo@example.com' }]);
+      await new Promise((r) => setTimeout(r, 0));
+    });
+    expect(result.current.peopleSuggestions).toEqual([{ displayName: 'Jo', email: 'jo@example.com' }]);
+    expect(result.current.isPeopleLoading).toBe(false);
+    expect(search).toHaveBeenCalledTimes(1);
+  });
+});

@@ -1,5 +1,5 @@
 export { useFilterOptions } from './useFilterOptions';
-export type { UseFilterOptionsResult } from './useFilterOptions';
+export type { UseFilterOptionsResult, UseFilterOptionsOptions } from './useFilterOptions';
 export { useOGrid } from './useOGrid';
 export type {
   UseOGridResult,

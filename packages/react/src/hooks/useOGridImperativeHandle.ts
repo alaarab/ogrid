@@ -1,6 +1,6 @@
 import { useImperativeHandle, type Ref, type Dispatch, type SetStateAction } from 'react';
 import { useLatestRef } from './useLatestRef';
-import type { RowId, IOGridApi, IRowSelectionChangeEvent } from '../types';
+import type { RowId, IOGridApi } from '../types';
 import type { UseOGridSortingState } from './useOGridSorting';
 import type { UseOGridFiltersState } from './useOGridFilters';
 import type { UseOGridDataFetchingState } from './useOGridDataFetching';
@@ -8,11 +8,14 @@ import type { UseOGridDataFetchingState } from './useOGridDataFetching';
 export interface UseOGridImperativeHandleParams<T> {
   ref: Ref<IOGridApi<T>>;
   isServerSide: boolean;
-  /** Controlled `columnOrder` / `selectedRows` props referenced by the handle. */
+  /** Controlled `columnOrder` prop referenced by the handle. */
   columnOrder: string[] | undefined;
-  selectedRows: Set<RowId> | undefined;
   onColumnOrderChange?: (order: string[]) => void;
-  onSelectionChange?: (event: IRowSelectionChangeEvent<T>) => void;
+  /**
+   * Sets the row selection the same way the grid does (uncontrolled state,
+   * then onSelectionChange with selectedItems resolved for every id).
+   */
+  commitSelection: (rowIds: Iterable<RowId>, extraItems?: readonly T[]) => void;
   /** Sub-hook states whose methods the handle invokes. */
   sortingState: UseOGridSortingState;
   filtersState: UseOGridFiltersState;
@@ -22,7 +25,6 @@ export interface UseOGridImperativeHandleParams<T> {
   setInternalColumnOrder: Dispatch<SetStateAction<string[] | undefined>>;
   setColumnWidthOverrides: Dispatch<SetStateAction<Record<string, number>>>;
   setPinnedOverrides: Dispatch<SetStateAction<Record<string, 'left' | 'right'>>>;
-  setInternalSelectedRows: Dispatch<SetStateAction<Set<RowId>>>;
   setInternalData: Dispatch<SetStateAction<T[]>>;
   setInternalLoading: Dispatch<SetStateAction<boolean>>;
   /** Current values snapshotted into refs so the handle reads them lazily. */
@@ -46,9 +48,8 @@ export function useOGridImperativeHandle<T>(params: UseOGridImperativeHandlePara
     ref,
     isServerSide,
     columnOrder,
-    selectedRows,
     onColumnOrderChange,
-    onSelectionChange,
+    commitSelection,
     sortingState,
     filtersState,
     dataFetchingState,
@@ -56,7 +57,6 @@ export function useOGridImperativeHandle<T>(params: UseOGridImperativeHandlePara
     setInternalColumnOrder,
     setColumnWidthOverrides,
     setPinnedOverrides,
-    setInternalSelectedRows,
     setInternalData,
     setInternalLoading,
     visibleColumns,
@@ -117,35 +117,19 @@ export function useOGridImperativeHandle<T>(params: UseOGridImperativeHandlePara
       },
       setFilterModel: setFilters,
       getSelectedRows: () => Array.from(effectiveSelectedRowsRef.current),
-      setSelectedRows: (rowIds: RowId[]) => {
-        const ids = new Set(rowIds);
-        if (selectedRows === undefined) setInternalSelectedRows(ids);
-        const pool = allFilteredItemsRef.current.length > 0 ? allFilteredItemsRef.current : displayItemsRef.current;
-        onSelectionChange?.({
-          selectedRowIds: Array.from(ids),
-          selectedItems: pool.filter((item) => ids.has(getRowIdRef.current(item))),
-        });
-      },
+      setSelectedRows: (rowIds: RowId[]) => commitSelection(rowIds),
       selectAll: () => {
         // Client-side: every filtered row across pages. Server-side only has the loaded page.
         const items = allFilteredItemsRef.current.length > 0 ? allFilteredItemsRef.current : displayItemsRef.current;
-        const allIds = new Set(items.map((item) => getRowIdRef.current(item)));
-        if (selectedRows === undefined) setInternalSelectedRows(allIds);
-        onSelectionChange?.({ selectedRowIds: Array.from(allIds), selectedItems: items });
+        commitSelection(items.map((item) => getRowIdRef.current(item)), items);
       },
-      deselectAll: () => {
-        if (selectedRows === undefined) setInternalSelectedRows(new Set());
-        onSelectionChange?.({ selectedRowIds: [], selectedItems: [] });
-      },
+      deselectAll: () => commitSelection([]),
       clearFilters: () => setFilters({}),
       clearSort: () => setSort({ field: defaultSortField, direction: defaultSortDirection }),
       resetGridState: (options?: { keepSelection?: boolean }) => {
         setFilters({});
         setSort({ field: defaultSortField, direction: defaultSortDirection });
-        if (!options?.keepSelection) {
-          if (selectedRows === undefined) setInternalSelectedRows(new Set());
-          onSelectionChange?.({ selectedRowIds: [], selectedItems: [] });
-        }
+        if (!options?.keepSelection) commitSelection([]);
       },
       getDisplayedRows: () => displayItemsRef.current,
       refreshData: () => {
@@ -160,7 +144,7 @@ export function useOGridImperativeHandle<T>(params: UseOGridImperativeHandlePara
     }),
     [
       isServerSide, setVisibleColumns, setSort, defaultSortField, defaultSortDirection, setFilters,
-      columnOrder, onColumnOrderChange, selectedRows, onSelectionChange, refreshData,
+      columnOrder, onColumnOrderChange, commitSelection, refreshData,
       columnOrderRef, columnWidthOverridesRef, columnsRef, displayItemsRef, allFilteredItemsRef,
       effectiveSelectedRowsRef, filtersRef, getRowIdRef, pinnedOverridesRef,
       sortRef, visibleColumnsRef,
@@ -168,7 +152,7 @@ export function useOGridImperativeHandle<T>(params: UseOGridImperativeHandlePara
       // exhaustive-deps); their identity never changes, so recreation frequency is
       // unchanged from the original inline handle.
       setInternalData, setInternalLoading, setInternalColumnOrder,
-      setColumnWidthOverrides, setPinnedOverrides, setInternalSelectedRows,
+      setColumnWidthOverrides, setPinnedOverrides,
       scrollToRowRef,
     ]
   );

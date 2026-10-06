@@ -105,6 +105,7 @@ export {
 } from '@alaarab/ogrid-react';
 export type {
   UseFilterOptionsResult,
+  UseFilterOptionsOptions,
   UseOGridResult,
   UseOGridPagination,
   UseOGridColumnChooser,
