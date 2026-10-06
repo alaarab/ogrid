@@ -6,6 +6,9 @@ All notable changes to OGrid will be documented in this file.
 
 ### Added
 
+- Headless `useCellClipboard` returns an `onPaste(event)` handler for the
+  native `paste` event (new `CellClipboardPasteEvent` type). Wire it on the
+  table container so Ctrl+V works without clipboard read permission.
 - Keyboard column resizing. Resize handles are focusable separators
   (`role="separator"`, `aria-valuenow`, `aria-valuemin`) labelled
   "Resize column <name>". Arrow keys resize by 10 px (Shift by 1 px), Home sets
@@ -20,6 +23,11 @@ All notable changes to OGrid will be documented in this file.
 
 ### Fixed
 
+- Ctrl+V and Shift+Insert paste from the native `paste` event instead of
+  `navigator.clipboard.readText()`, so pasting works on plain http and in
+  browsers that deny clipboard reads (Firefox, Safari). The context-menu Paste
+  still uses `readText()`. On plain http, Ctrl+V now pastes the OS clipboard
+  and falls back to the in-page copy only when the event carries no text.
 - Export `SortState` (the type of `useHeadlessGrid`'s `initialSort`/`sort`) from
   `@alaarab/ogrid-react` and both kits.
 - Docs: headless examples no longer spread `getEditorProps()` onto an `<input>`
