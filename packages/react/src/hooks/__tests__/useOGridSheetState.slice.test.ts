@@ -1,13 +1,11 @@
 import { describe, it, expect, mock } from 'bun:test';
 import { applySheetState, sheetStateDefaults } from '../useOGridSheetState';
-import type { SheetStateControlled, SheetStateSetters } from '../useOGridSheetState';
+import type { SheetStateControlProps, SheetStateSlices } from '../useOGridSheetState';
 
-const uncontrolled: SheetStateControlled = {
-  visibleColumns: false, sort: false, filters: false, page: false, selectedRows: false, columnOrder: false,
-};
+const uncontrolled: SheetStateControlProps = {};
 
 function setters() {
-  return {
+  const set = {
     setVisibleColumns: mock(() => {}),
     setSort: mock(() => {}),
     setFilters: mock(() => {}),
@@ -16,7 +14,20 @@ function setters() {
     setColumnOrder: mock(() => {}),
     setColumnWidths: mock(() => {}),
     setPinned: mock(() => {}),
-  } satisfies SheetStateSetters;
+  };
+  const slices: SheetStateSlices = {
+    visibility: { setInternalVisibleColumns: set.setVisibleColumns },
+    sorting: { setInternalSort: set.setSort },
+    filters: { setInternalFilters: set.setFilters },
+    pagination: { setInternalPage: set.setPage },
+    selection: { setInternalSelectedRows: set.setSelectedRows },
+    columnLayout: {
+      setInternalColumnOrder: set.setColumnOrder,
+      setColumnWidthOverrides: set.setColumnWidths,
+      setPinnedOverrides: set.setPinned,
+    },
+  };
+  return { set, slices };
 }
 
 describe('sheetStateDefaults', () => {
@@ -47,8 +58,8 @@ describe('applySheetState', () => {
   };
 
   it('restores every slot of an uncontrolled grid', () => {
-    const set = setters();
-    applySheetState(captured, uncontrolled, set);
+    const { set, slices } = setters();
+    applySheetState(captured, uncontrolled, slices);
     expect(set.setVisibleColumns).toHaveBeenCalledWith(captured.visibleColumns);
     expect(set.setSort).toHaveBeenCalledWith(captured.sort);
     expect(set.setFilters).toHaveBeenCalledWith(captured.filters);
@@ -60,10 +71,11 @@ describe('applySheetState', () => {
   });
 
   it('never writes a slot the host controls', () => {
-    const set = setters();
+    const { set, slices } = setters();
     applySheetState(captured, {
-      visibleColumns: true, sort: true, filters: true, page: true, selectedRows: true, columnOrder: true,
-    }, set);
+      visibleColumns: new Set(['a']), sort: { field: 'a', direction: 'asc' }, filters: {}, page: 1,
+      selectedRows: new Set(), columnOrder: ['a'],
+    }, slices);
     expect(set.setVisibleColumns).not.toHaveBeenCalled();
     expect(set.setSort).not.toHaveBeenCalled();
     expect(set.setFilters).not.toHaveBeenCalled();
@@ -76,8 +88,8 @@ describe('applySheetState', () => {
   });
 
   it('leaves visibility and pins to their own reconcile on a first-time sheet', () => {
-    const set = setters();
-    applySheetState(sheetStateDefaults({ field: '', direction: 'asc' }), uncontrolled, set);
+    const { set, slices } = setters();
+    applySheetState(sheetStateDefaults({ field: '', direction: 'asc' }), uncontrolled, slices);
     expect(set.setVisibleColumns).not.toHaveBeenCalled();
     expect(set.setPinned).not.toHaveBeenCalled();
     // A first-time sheet's column order resets to the column defs.

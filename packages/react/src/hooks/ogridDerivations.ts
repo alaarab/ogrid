@@ -42,27 +42,23 @@ export function resolveDefaultSortField(
   return defaultSortBy ?? columns.find((c) => c.sortable !== false)?.columnId ?? '';
 }
 
-export interface PageClampInput {
-  page: number;
-  pageSize: PageSize;
-  totalCount: number;
-  /** The host controls `page`; correcting it is the host's job. */
-  controlled: boolean;
-  /** Full-dataset virtualization or a windowed source: there are no pages. */
-  unpaged: boolean;
-}
-
 /**
  * A page index outlives its data whenever the row count shrinks without the
  * page following (a sheet switch onto a shorter sheet, a host-applied filter,
  * a refresh that returns fewer rows). The page slice then lands past the end.
- * `isPagePastEnd` says to snap back to `lastPage`.
+ * Returns the last page to snap back to, or `null` when the page is fine.
+ * Controlled pages are the host's to correct; unpaged grids (full-dataset
+ * virtualization, windowed sources) and empty results never clamp.
  */
-export function resolvePageClamp(input: PageClampInput): { lastPage: number; isPagePastEnd: boolean } {
-  const { page, pageSize, totalCount, controlled, unpaged } = input;
+export function resolvePageClampTarget(
+  page: number,
+  pageSize: PageSize,
+  totalCount: number,
+  controlled: boolean,
+  unpaged: boolean,
+): number | null {
   const lastPage = pageSize === 'all' ? 1 : Math.max(1, Math.ceil(totalCount / pageSize));
-  const isPagePastEnd = !controlled && !unpaged && totalCount > 0 && page > lastPage;
-  return { lastPage, isPagePastEnd };
+  return !controlled && !unpaged && totalCount > 0 && page > lastPage ? lastPage : null;
 }
 
 /**
@@ -79,27 +75,25 @@ export function resolveSelectionKnownItems<T>(
   return isServerSide ? (loadedRows ?? displayItems) : displayData;
 }
 
-export interface StatusBarCounts {
-  isServerSide: boolean;
-  /** Length of the client-side dataset (unused server-side). */
-  dataLength: number;
-  /** Rows after filtering (client) or the server's total. */
-  totalCount: number;
-  hasActiveFilters: boolean;
-  selectedCount: number;
-}
-
-/** `statusBar: true` gets counts from the grid; an object is the host's own config. */
+/**
+ * `statusBar: true` gets counts from the grid (the client dataset's length, or
+ * the server total; filtered rows only while filtered); an object is the
+ * host's own config, passed through.
+ */
 export function buildStatusBarConfig(
   statusBar: boolean | IStatusBarProps | undefined,
-  counts: StatusBarCounts,
+  isServerSide: boolean,
+  dataLength: number,
+  totalCount: number,
+  hasActiveFilters: boolean,
+  selectedCount: number,
 ): IStatusBarProps | undefined {
   if (!statusBar) return undefined;
   if (typeof statusBar === 'object') return statusBar;
   return {
-    totalCount: counts.isServerSide ? counts.totalCount : counts.dataLength,
-    filteredCount: counts.hasActiveFilters ? counts.totalCount : undefined,
-    selectedCount: counts.selectedCount,
+    totalCount: isServerSide ? totalCount : dataLength,
+    filteredCount: hasActiveFilters ? totalCount : undefined,
+    selectedCount,
     suppressRowCount: true,
   };
 }
@@ -160,15 +154,14 @@ export function buildSheetRowIndex<T>(data: readonly T[], getRowId: (item: T) =>
  * page offset server-side, from row 0 for a windowed source. `undefined` when
  * the grid is not in spreadsheet mode.
  */
-export function selectFormulaRowMap<T>(input: {
-  spreadsheetMode: boolean;
-  windowedRowCount: number | null;
-  sheetRowById: Map<RowId, number> | null;
-  pageOffset: number;
-  displayItems: T[];
-  getRowId: (item: T) => RowId;
-}): IFormulaRowMap | undefined {
-  const { spreadsheetMode, windowedRowCount, sheetRowById, pageOffset, displayItems, getRowId } = input;
+export function selectFormulaRowMap<T>(
+  spreadsheetMode: boolean,
+  windowedRowCount: number | null,
+  sheetRowById: Map<RowId, number> | null,
+  pageOffset: number,
+  displayItems: T[],
+  getRowId: (item: T) => RowId,
+): IFormulaRowMap | undefined {
   if (!spreadsheetMode) return undefined;
   if (windowedRowCount !== null) return createOffsetFormulaRowMap(0, windowedRowCount);
   if (!sheetRowById) return createOffsetFormulaRowMap(pageOffset, displayItems.length);

@@ -1,28 +1,15 @@
-import { useCallback, useMemo } from 'react';
+import { useCallback, useMemo, useRef } from 'react';
+import { CellDescriptorCache } from '@alaarab/ogrid-core';
 import { useLatestRef } from './useLatestRef';
 import { parseCellCoords, toggleSingleRowSelection } from './dataGridDerivations';
-import type { DelegatedCellHandlers } from '../utils';
-import type { IColumnDef, IOGridDataGridProps, RowId } from '../types';
+import type { CellRenderDescriptorInput, DelegatedCellHandlers } from '../utils';
+import type { IColumnDef, IOGridDataGridProps } from '../types';
 import type {
   DataGridCellInteractionState,
   DataGridContextMenuState,
   DataGridEditingState,
   DataGridRowSelectionState,
 } from './useDataGridState';
-
-export interface UseDataGridCellHandlersParams<T> {
-  editing: DataGridEditingState<T>;
-  interaction: DataGridCellInteractionState;
-  ctxMenu: DataGridContextMenuState;
-  /** In-memory rows, or a windowed source's loaded rows (sparse, by absolute index). */
-  rows: T[];
-  getRowId: IOGridDataGridProps<T>['getRowId'];
-  visibleCols: IColumnDef<T>[];
-  colOffset: number;
-  rowSelection: IOGridDataGridProps<T>['rowSelection'];
-  updateSelection: DataGridRowSelectionState['updateSelection'];
-  selectedRowIds: Set<RowId>;
-}
 
 /**
  * The handlers GridRow and renderCellContent receive.
@@ -34,8 +21,22 @@ export interface UseDataGridCellHandlersParams<T> {
  *   through refs at event time (zero per-cell closures).
  * - `handleSingleRowClick` changes only with `rowSelection` or `updateSelection`.
  */
-export function useDataGridCellHandlers<T>(params: UseDataGridCellHandlersParams<T>) {
-  const { editing, interaction, ctxMenu, rows, getRowId, visibleCols, colOffset, rowSelection, updateSelection, selectedRowIds } = params;
+export function useDataGridCellHandlers<T>(
+  props: Pick<IOGridDataGridProps<T>, 'items' | 'windowed' | 'getRowId' | 'rowSelection'>,
+  state: {
+    editing: DataGridEditingState<T>;
+    interaction: DataGridCellInteractionState;
+    contextMenu: DataGridContextMenuState;
+    rowSelection: Pick<DataGridRowSelectionState, 'updateSelection' | 'selectedRowIds'>;
+  },
+  visibleCols: IColumnDef<T>[],
+  colOffset: number,
+) {
+  const { editing, interaction, contextMenu: ctxMenu } = state;
+  const { getRowId, rowSelection } = props;
+  const { updateSelection, selectedRowIds } = state.rowSelection;
+  // Windowed sources read the loaded rows by absolute index (see useDataGridState).
+  const rows = props.windowed?.loadedRows ?? props.items;
   const { commitCellEdit, setEditingCell, setPendingEditorValue, cancelPopoverEdit } = editing;
   const { handleCellMouseDown, setActiveCell, handlePaste } = interaction;
   const { handleCellContextMenu, handleLongPressStart, handleLongPressEnd } = ctxMenu;
@@ -111,4 +112,36 @@ export function useDataGridCellHandlers<T>(params: UseDataGridCellHandlersParams
     handlePasteVoid, editCallbacks, interactionHandlers, delegatedCellHandlers, handleSingleRowClick,
     pendingEditorValueRef, popoverAnchorElRef, selectedRowIdsRef,
   };
+}
+
+/**
+ * One descriptor cache per grid lifetime, keyed by (rowIndex * stride + colIdx),
+ * storing descriptor + volatile version string. It skips recomputation for
+ * cells whose selection/editing state hasn't changed since the last render.
+ *
+ * Invalidation rules, applied synchronously during render so renderCellContent
+ * (which reads the cache in the same render) sees them:
+ * - the version is recomputed from the descriptor input's volatile fields
+ *   every render;
+ * - the cache is cleared when `items` or `visibleCols` change identity: new
+ *   items may carry new data, and new visible columns shift column indices,
+ *   so cached descriptors with a stale colIdx would be wrong.
+ */
+export function useCellDescriptorCache<T>(
+  cellDescriptorInput: CellRenderDescriptorInput<T>,
+  items: readonly T[],
+  visibleCols: readonly unknown[],
+) {
+  const cellDescriptorInputRef = useLatestRef(cellDescriptorInput);
+  const cellDescriptorCacheRef = useRef<CellDescriptorCache>(new CellDescriptorCache());
+  cellDescriptorCacheRef.current.updateVersion(CellDescriptorCache.computeVersion(cellDescriptorInput));
+
+  const prevItemsRef = useRef(items);
+  const prevVisibleColsRef = useRef(visibleCols);
+  if (prevItemsRef.current !== items || prevVisibleColsRef.current !== visibleCols) {
+    prevItemsRef.current = items;
+    prevVisibleColsRef.current = visibleCols;
+    cellDescriptorCacheRef.current.clear();
+  }
+  return { cellDescriptorInputRef, cellDescriptorCacheRef };
 }

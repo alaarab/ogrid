@@ -231,17 +231,18 @@ export function applySnapshot<T>(
 }
 
 /**
- * Inputs whose change always means a full re-sort. `sortField`/`sortDirection`
- * sit beside `sortVersion` so a controlled `sort` prop swapped by the host
- * (without going through `setSort`) still invalidates the snapshot.
+ * Inputs whose change always means a full re-sort, compared by identity.
+ * `sortField`/`sortDirection` sit beside `sortVersion` so a controlled `sort`
+ * prop swapped by the host (without going through `setSort`) still
+ * invalidates the snapshot.
  */
-export interface ResortInputs {
-  readonly sortVersion: number;
-  readonly filters: unknown;
-  readonly columns: unknown;
-  readonly sortField: string;
-  readonly sortDirection: 'asc' | 'desc';
-}
+export type ResortInputs = readonly [
+  sortVersion: number,
+  filters: unknown,
+  columns: unknown,
+  sortField: string,
+  sortDirection: 'asc' | 'desc',
+];
 
 /** What the last run saw, so the next run can tell an edit from a new dataset. */
 export interface ResortTracker<T> {
@@ -259,14 +260,7 @@ export function createResortTracker<T>(): ResortTracker<T> {
 
 /** True when any of the inputs that force a full re-sort differs (by identity). */
 export function resortInputsChanged(prev: ResortInputs | null, next: ResortInputs): boolean {
-  return (
-    prev === null ||
-    prev.sortVersion !== next.sortVersion ||
-    prev.filters !== next.filters ||
-    prev.columns !== next.columns ||
-    prev.sortField !== next.sortField ||
-    prev.sortDirection !== next.sortDirection
-  );
+  return prev === null || next.some((value, i) => value !== prev[i]);
 }
 
 /**

@@ -143,9 +143,7 @@ export function useOGridDataFetching<T>(params: UseOGridDataFetchingParams<T>): 
   // rebuilt from a full re-sort. Rows only move when the user explicitly sorts.
   const snapshotRef = useRef<RowOrderSnapshot<T> | null>(null);
   const resortTrackerRef = useRef<ResortTracker<T>>(createResortTracker<T>());
-  const resortInputs: ResortInputs = {
-    sortVersion, filters: stableFilters, columns, sortField: sort.field, sortDirection: sort.direction,
-  };
+  const resortInputs: ResortInputs = [sortVersion, stableFilters, columns, sort.field, sort.direction];
   // Full re-sort due (see trackResort): the snapshot is dropped and rebuilt in the memo below.
   if (trackResort(resortTrackerRef.current, resortInputs, displayData, editVersion, snapshotRef.current, getRowIdRef.current)) {
     snapshotRef.current = null;
@@ -212,9 +210,7 @@ export function useOGridDataFetching<T>(params: UseOGridDataFetchingParams<T>): 
       return;
     }
 
-    const asyncInputs: ResortInputs = {
-      sortVersion, filters: stableFilters, columns, sortField: sort.field, sortDirection: sort.direction,
-    };
+    const asyncInputs: ResortInputs = [sortVersion, stableFilters, columns, sort.field, sort.direction];
     if (trackResort(asyncResortTrackerRef.current, asyncInputs, displayData, editVersionRef?.current ?? 0, asyncSnapshotRef.current, getRowIdRef.current)) {
       asyncSnapshotRef.current = null;
     }

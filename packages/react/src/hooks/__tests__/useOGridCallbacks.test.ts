@@ -1,7 +1,6 @@
 import { describe, it, expect, mock } from 'bun:test';
 import { renderHook } from '@testing-library/react';
-import { useStableOptionalCallback } from '../useStableOptionalCallback';
-import { useOGridCallbacks } from '../useOGridCallbacks';
+import { useOGridCallbacks, useStableOptionalCallback } from '../useOGridCallbacks';
 import type { UseOGridCallbacksParams } from '../useOGridCallbacks';
 
 type Row = { id: string };
@@ -85,11 +84,10 @@ describe('useOGridCallbacks', () => {
     expect(stable({ id: '1' })).toBe('x-1');
   });
 
-  it('reports host-owned undo only when onUndo is supplied', () => {
-    const { result, rerender } = render({ getRowId: (r) => r.id });
-    expect(result.current.hasHostUndo).toBe(false);
+  it('drops a callback the host stops passing', () => {
+    const { result, rerender } = render({ getRowId: (r) => r.id, onUndo: () => {} });
+    expect(result.current.onUndo).toBeDefined();
+    rerender({ getRowId: (r) => r.id });
     expect(result.current.onUndo).toBeUndefined();
-    rerender({ getRowId: (r) => r.id, onUndo: () => {} });
-    expect(result.current.hasHostUndo).toBe(true);
   });
 });

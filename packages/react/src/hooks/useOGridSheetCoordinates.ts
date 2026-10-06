@@ -6,21 +6,8 @@ import {
   selectFormulaRowMap,
 } from './ogridDerivations';
 import type { IFormulaRowMap } from '@alaarab/ogrid-core';
-import type { PageSize, RowId, WindowedDataState } from '../types';
-
-export interface UseOGridSheetCoordinatesParams<T> {
-  /** `cellReferences` or `formulas` is on. */
-  spreadsheetMode: boolean;
-  isServerSide: boolean;
-  /** Full client-side dataset. */
-  displayData: T[];
-  /** Rows on screen (current page, sorted and filtered). */
-  displayItems: T[];
-  windowed: WindowedDataState<T> | null;
-  page: number;
-  pageSize: PageSize;
-  getRowId: (item: T) => RowId;
-}
+import type { PageSize, RowId } from '../types';
+import type { UseOGridDataFetchingState } from './useOGridDataFetching';
 
 export interface UseOGridSheetCoordinatesState<T> {
   /** Rows formulas address, indexed by sheet row. */
@@ -36,9 +23,16 @@ export interface UseOGridSheetCoordinatesState<T> {
  * and paging. Server-side grids only hold the current page, so there the sheet
  * row is the absolute row in the server's order.
  */
-export function useOGridSheetCoordinates<T>(params: UseOGridSheetCoordinatesParams<T>): UseOGridSheetCoordinatesState<T> {
-  const { spreadsheetMode, isServerSide, displayData, displayItems, windowed, page, pageSize, getRowId } = params;
-  const pageOffset = resolveSheetPageOffset(isServerSide, page, pageSize);
+export function useOGridSheetCoordinates<T>(
+  spreadsheetMode: boolean,
+  isServerSide: boolean,
+  displayData: T[],
+  dataFetching: Pick<UseOGridDataFetchingState<T>, 'displayItems' | 'windowed'>,
+  pagination: { page: number; pageSize: PageSize },
+  getRowId: (item: T) => RowId,
+): UseOGridSheetCoordinatesState<T> {
+  const { displayItems, windowed } = dataFetching;
+  const pageOffset = resolveSheetPageOffset(isServerSide, pagination.page, pagination.pageSize);
   const sheetItems = useMemo(
     () => resolveSheetItems(windowed, isServerSide, displayData, displayItems, pageOffset),
     [windowed, isServerSide, displayData, displayItems, pageOffset]
@@ -48,14 +42,7 @@ export function useOGridSheetCoordinates<T>(params: UseOGridSheetCoordinatesPara
     [spreadsheetMode, isServerSide, displayData, getRowId]
   );
   const formulaRowMap = useMemo(
-    () => selectFormulaRowMap({
-      spreadsheetMode,
-      windowedRowCount: windowed ? windowed.rowCount : null,
-      sheetRowById,
-      pageOffset,
-      displayItems,
-      getRowId,
-    }),
+    () => selectFormulaRowMap(spreadsheetMode, windowed ? windowed.rowCount : null, sheetRowById, pageOffset, displayItems, getRowId),
     [spreadsheetMode, windowed, sheetRowById, pageOffset, displayItems, getRowId]
   );
   return { sheetItems, formulaRowMap };
