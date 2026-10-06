@@ -1,7 +1,7 @@
 import type { FilterOption } from '@alaarab/ogrid-core';
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useLatestRef } from './useLatestRef';
-import { useIdentityVersion } from './useIdentityVersion';
+import { useDataSourceVersion } from './useDataSourceVersion';
 import type { IDataSource } from '../types/dataGridTypes';
 
 export interface UseFilterOptionsResult {
@@ -31,9 +31,19 @@ const EMPTY_LOADING: Record<string, boolean> = {};
  *
  * Accepts `IDataSource<T>` or a plain `{ fetchFilterOptions }` object.
  */
+export interface UseFilterOptionsOptions {
+  /**
+   * Identity of the data source: options reload only when it changes, so the
+   * source may be an inline object. When omitted, a new object whose own
+   * properties are all identical to the previous one's does not reload.
+   */
+  dataSourceKey?: string | number;
+}
+
 export function useFilterOptions(
   dataSource: FilterOptionsSource,
-  fields: string[]
+  fields: string[],
+  options?: UseFilterOptionsOptions
 ): UseFilterOptionsResult {
   // Stabilize the fields array so inline literals (e.g. ['a','b']) don't
   // cause infinite re-render loops via useCallback/useEffect deps.
@@ -46,7 +56,7 @@ export function useFilterOptions(
   // Stabilize dataSource ref so inline objects don't cause infinite re-fetches.
   const dataSourceRef = useLatestRef(dataSource);
   // ...but reload when a memoized dataSource is swapped for another one.
-  const dataSourceVersion = useIdentityVersion(dataSource);
+  const dataSourceVersion = useDataSourceVersion(dataSource, options?.dataSourceKey);
 
   const [filterOptions, setFilterOptions] = useState<Record<string, FilterOption[]>>(EMPTY_FILTER_OPTIONS);
   const [loadingOptions, setLoadingOptions] = useState<Record<string, boolean>>(EMPTY_LOADING);
@@ -61,7 +71,10 @@ export function useFilterOptions(
     []
   );
 
-  // biome-ignore lint/correctness/useExhaustiveDependencies: dataSourceVersion is a deliberate reload trigger; the source is read via dataSourceRef
+  // The source version the current options came from: a swapped source must
+  // not keep offering the previous source's values while its own load runs.
+  const optionsVersionRef = useRef(dataSourceVersion);
+
   const load = useCallback(async (): Promise<void> => {
     const requestId = ++loadRequestIdRef.current;
     const ds = dataSourceRef.current;
@@ -76,24 +89,41 @@ export function useFilterOptions(
       setLoadingOptions(EMPTY_LOADING);
       return;
     }
+    const sourceChanged = optionsVersionRef.current !== dataSourceVersion;
+    optionsVersionRef.current = dataSourceVersion;
+    // Keep loaded options only for fields that remain, and only from the same source.
+    setFilterOptions((prev) => {
+      if (sourceChanged) return EMPTY_FILTER_OPTIONS;
+      const kept: Record<string, FilterOption[]> = {};
+      for (const f of stableFields) {
+        const options = prev[f];
+        if (options) kept[f] = options;
+      }
+      return kept;
+    });
     const loading: Record<string, boolean> = {};
     stableFields.forEach((f) => { loading[f] = true; });
     setLoadingOptions(loading);
 
-    const results: Record<string, FilterOption[]> = {};
+    // Each field shows its options as soon as they arrive; a newer load (or
+    // unmount) bumps the request id and discards everything still in flight.
     await Promise.all(
       stableFields.map(async (field) => {
+        let options: FilterOption[];
         try {
-          results[field] = await fetcher(field);
+          options = await fetcher(field);
         } catch {
-          results[field] = [];
+          options = [];
         }
+        if (requestId !== loadRequestIdRef.current) return;
+        setFilterOptions((prev) => ({ ...prev, [field]: options }));
+        setLoadingOptions((prev) => {
+          if (!prev[field]) return prev;
+          const { [field]: _done, ...rest } = prev;
+          return Object.keys(rest).length > 0 ? rest : EMPTY_LOADING;
+        });
       })
     );
-
-    if (requestId !== loadRequestIdRef.current) return;
-    setFilterOptions(results);
-    setLoadingOptions(EMPTY_LOADING);
   }, [stableFields, dataSourceRef, dataSourceVersion]);
 
   useEffect(() => {

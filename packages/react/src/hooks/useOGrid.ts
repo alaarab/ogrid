@@ -149,6 +149,7 @@ export function useOGrid<T>(
     getRowId: getRowIdProp,
     data,
     dataSource,
+    dataSourceKey,
     page: controlledPage,
     pageSize: controlledPageSize,
     sort: controlledSort,
@@ -318,11 +319,11 @@ export function useOGrid<T>(
   const filtersState = useOGridFilters({
     controlledFilters, onFiltersChange,
     setPage: paginationState.setPage,
-    columns: sortFilterColumns, displayData, dataSource,
+    columns: sortFilterColumns, displayData, dataSource, dataSourceKey,
   });
 
   const dataFetchingState = useOGridDataFetching({
-    isServerSide, dataSource, displayData, getRowId, editVersionRef, columns: sortFilterColumns,
+    isServerSide, dataSource, dataSourceKey, displayData, getRowId, editVersionRef, columns: sortFilterColumns,
     stableFilters: filtersState.stableFilters,
     sort: sortingState.sort,
     sortVersion: sortingState.sortVersion,
@@ -358,13 +359,20 @@ export function useOGrid<T>(
   });
 
   // --- Row selection ---
+  // selectedItems resolve against every row the grid holds, not just the page.
+  const selectionKnownItems = isServerSide
+    ? (dataFetchingState.windowed?.loadedRows ?? dataFetchingState.displayItems)
+    : displayData;
   const {
     effectiveSelectedRows,
     handleSelectionChange,
+    commitSelection,
     setInternalSelectedRows,
   } = useOGridRowSelection({
     controlledSelectedRows: selectedRows,
     onSelectionChange,
+    getRowId,
+    knownItems: selectionKnownItems,
   });
 
   // --- Column layout (order / resize / pin) ---
@@ -465,9 +473,8 @@ export function useOGrid<T>(
     ref,
     isServerSide,
     columnOrder,
-    selectedRows,
     onColumnOrderChange,
-    onSelectionChange,
+    commitSelection,
     sortingState,
     filtersState,
     dataFetchingState,
@@ -475,7 +482,6 @@ export function useOGrid<T>(
     setInternalColumnOrder,
     setColumnWidthOverrides,
     setPinnedOverrides,
-    setInternalSelectedRows,
     setInternalData,
     setInternalLoading,
     visibleColumns,
@@ -594,6 +600,10 @@ export function useOGrid<T>(
     namedRanges,
     formulaLimits,
     sheets,
+    // A host that owns undo restores formulas by writing their text back into
+    // its data (the grid emits formula edits as value changes), so the engine
+    // follows formula text in the data.
+    formulasFromData: hasUndo,
   });
 
   // --- Assembly ---

@@ -11,6 +11,7 @@
 import * as React from 'react';
 import { render, fireEvent, waitFor, act } from '@testing-library/react';
 import type { IOGridProps, IColumnDef, ICellValueChangedEvent } from '../types';
+import { useUndoRedo } from '../hooks/useUndoRedo';
 
 interface Row {
   id: number;
@@ -101,6 +102,32 @@ export function createFormulaTests(OGrid: React.ComponentType<IOGridProps<Row>>)
     const grid = container.querySelector('[role="region"]') as HTMLElement;
     grid.focus();
     fireEvent.keyDown(grid, init);
+  }
+
+  // The host owns the history: its own useUndoRedo records every change the
+  // grid emits and drives Ctrl+Z/Y through onUndo/onRedo.
+  function HostUndoHarness({ onChange }: { onChange?: (e: ICellValueChangedEvent<Row>) => void }) {
+    const [data, setData] = React.useState(rows);
+    const apply = React.useCallback((e: ICellValueChangedEvent<Row>) => {
+      onChange?.(e);
+      setData((prev) => prev.map((r) => (r.id === e.item.id ? { ...r, [e.columnId]: e.newValue } : r)));
+    }, [onChange]);
+    const history = useUndoRedo<Row>({ onCellValueChanged: apply });
+    const props = {
+      columns,
+      data,
+      getRowId: (r: Row) => r.id,
+      formulas: true,
+      initialFormulas,
+      editable: true,
+      onCellValueChanged: history.onCellValueChanged,
+      onUndo: history.undo,
+      onRedo: history.redo,
+      canUndo: history.canUndo,
+      canRedo: history.canRedo,
+      defaultPageSize: 10,
+    } as IOGridProps<Row>;
+    return <OGrid {...props} />;
   }
 
   const totals = (container: HTMLElement) => [1, 2, 3].map((id) => text(container, id, 'total'));
@@ -298,6 +325,62 @@ export function createFormulaTests(OGrid: React.ComponentType<IOGridProps<Row>>)
       expect(input.readOnly).toBe(true);
       fireEvent.keyDown(input, { key: 'Enter' });
       expect(text(container, 2, 'total')).toBe('20');
+    });
+  });
+
+  describe('host-controlled undo', () => {
+    const renderHost = (onChange?: (e: ICellValueChangedEvent<Row>) => void) => render(<HostUndoHarness onChange={onChange} />);
+
+    it('records a typed formula in the host history, and host undo/redo restore it', async () => {
+      const onChange = jest.fn();
+      const { container } = renderHost(onChange);
+      await editCell(container, 2, 'total', '=1');
+      expect(text(container, 2, 'total')).toBe('1');
+      expect(onChange).toHaveBeenCalledWith(expect.objectContaining({ columnId: 'total', oldValue: '=B2*C2', newValue: '=1' }));
+      gridKey(container, { key: 'z', ctrlKey: true });
+      await waitFor(() => expect(text(container, 2, 'total')).toBe('20'));
+      activate(container, 2, 'total');
+      expect(formulaInput(container).value).toBe('=B2*C2');
+      gridKey(container, { key: 'y', ctrlKey: true });
+      await waitFor(() => expect(text(container, 2, 'total')).toBe('1'));
+    });
+
+    it('host undo of a value typed over a formula restores the formula', async () => {
+      const { container } = renderHost();
+      await editCell(container, 2, 'total', '99');
+      expect(text(container, 2, 'total')).toBe('99');
+      gridKey(container, { key: 'z', ctrlKey: true });
+      await waitFor(() => expect(text(container, 2, 'total')).toBe('20'));
+      activate(container, 2, 'total');
+      expect(formulaInput(container).value).toBe('=B2*C2');
+      gridKey(container, { key: 'y', ctrlKey: true });
+      await waitFor(() => expect(text(container, 2, 'total')).toBe('99'));
+    });
+
+    it('undoes value and formula edits in the order they were made', async () => {
+      const { container } = renderHost();
+      await editCell(container, 2, 'qty', '5');
+      await waitFor(() => expect(text(container, 2, 'total')).toBe('100'));
+      await editCell(container, 3, 'total', '=B2+1');
+      await waitFor(() => expect(text(container, 3, 'total')).toBe('6'));
+      gridKey(container, { key: 'z', ctrlKey: true });
+      await waitFor(() => expect(text(container, 3, 'total')).toBe('60'));
+      expect(text(container, 2, 'total')).toBe('100');
+      gridKey(container, { key: 'z', ctrlKey: true });
+      await waitFor(() => expect(text(container, 2, 'total')).toBe('20'));
+      expect(text(container, 2, 'qty')).toBe('1');
+    });
+
+    it('a formula typed over a plain cell is undone back to the plain value', async () => {
+      const { container } = renderHost();
+      await editCell(container, 2, 'price', '=B2*7');
+      expect(text(container, 2, 'price')).toBe('7');
+      await waitFor(() => expect(text(container, 2, 'total')).toBe('7'));
+      gridKey(container, { key: 'z', ctrlKey: true });
+      await waitFor(() => expect(text(container, 2, 'price')).toBe('20'));
+      expect(text(container, 2, 'total')).toBe('20');
+      activate(container, 2, 'price');
+      expect(formulaInput(container).value).toBe('20');
     });
   });
 }

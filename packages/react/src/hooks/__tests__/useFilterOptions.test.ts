@@ -164,3 +164,76 @@ describe('useFilterOptions', () => {
     expect(after.loadingOptions).toEqual({});
   });
 });
+
+describe('useFilterOptions: stale results and inline sources (D17, V06)', () => {
+  const { renderHook, waitFor } = require('@testing-library/react') as typeof import('@testing-library/react');
+  const flush = () => act(async () => { await new Promise((r) => setTimeout(r, 0)); });
+
+  function deferred() {
+    const map: Record<string, (v: string[]) => void> = {};
+    const fetchFilterOptions = jest.fn((field: string) => new Promise<string[]>((resolve) => { map[field] = resolve; }));
+    return { map, fetchFilterOptions };
+  }
+
+  it('shows each field as soon as its options load', async () => {
+    const { map, fetchFilterOptions } = deferred();
+    const source = { fetchFilterOptions };
+    const { result } = renderHook(() => useFilterOptions(source, ['a', 'b']));
+    await act(async () => { map.a?.(['A1']); await new Promise((r) => setTimeout(r, 0)); });
+    expect(result.current.filterOptions).toEqual({ a: ['A1'] });
+    expect(result.current.loadingOptions).toEqual({ b: true });
+    await act(async () => { map.b?.(['B1']); await new Promise((r) => setTimeout(r, 0)); });
+    expect(result.current.filterOptions).toEqual({ a: ['A1'], b: ['B1'] });
+    expect(result.current.loadingOptions).toEqual({});
+  });
+
+  it("drops the previous source's options as soon as the source is swapped", async () => {
+    const a = { fetchFilterOptions: jest.fn().mockResolvedValue(['Old']) };
+    const b = deferred();
+    const { result, rerender } = renderHook(({ ds }) => useFilterOptions(ds, ['f']), { initialProps: { ds: a as { fetchFilterOptions: (f: string) => Promise<string[]> } } });
+    await waitFor(() => expect(result.current.filterOptions).toEqual({ f: ['Old'] }));
+    rerender({ ds: { fetchFilterOptions: b.fetchFilterOptions } });
+    await flush();
+    expect(result.current.filterOptions).toEqual({});
+    expect(result.current.loadingOptions).toEqual({ f: true });
+    await act(async () => { b.map.f?.(['New']); await new Promise((r) => setTimeout(r, 0)); });
+    expect(result.current.filterOptions).toEqual({ f: ['New'] });
+  });
+
+  it('keeps options for fields that stay when another field is added', async () => {
+    const calls: string[] = [];
+    const fetchFilterOptions = jest.fn((field: string) => { calls.push(field); return Promise.resolve([field.toUpperCase()]); });
+    const source = { fetchFilterOptions };
+    const { result, rerender } = renderHook(({ fields }) => useFilterOptions(source, fields), { initialProps: { fields: ['a'] } });
+    await waitFor(() => expect(result.current.filterOptions).toEqual({ a: ['A'] }));
+    rerender({ fields: ['a', 'b'] });
+    expect(result.current.filterOptions.a).toEqual(['A']);
+    await waitFor(() => expect(result.current.filterOptions).toEqual({ a: ['A'], b: ['B'] }));
+  });
+
+  it('an inline source around the same fetcher does not reload on re-render', async () => {
+    const fetchFilterOptions = jest.fn().mockResolvedValue(['x']);
+    const { rerender } = renderHook(() => useFilterOptions({ fetchFilterOptions }, ['f']));
+    for (let i = 0; i < 3; i++) {
+      rerender();
+      await flush();
+    }
+    expect(fetchFilterOptions).toHaveBeenCalledTimes(1);
+  });
+
+  it('with dataSourceKey, reloads only when the key changes', async () => {
+    const calls: string[] = [];
+    const { rerender } = renderHook(
+      ({ key }) => useFilterOptions({ fetchFilterOptions: () => { calls.push(key); return Promise.resolve(['x']); } }, ['f'], { dataSourceKey: key }),
+      { initialProps: { key: 'a' } },
+    );
+    for (let i = 0; i < 3; i++) {
+      rerender({ key: 'a' });
+      await flush();
+    }
+    expect(calls).toEqual(['a']);
+    rerender({ key: 'b' });
+    await flush();
+    expect(calls).toEqual(['a', 'b']);
+  });
+});

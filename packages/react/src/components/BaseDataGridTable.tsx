@@ -154,6 +154,8 @@ export function BaseDataGridTableInner<T>(
         // biome-ignore lint/a11y/noNoninteractiveTabindex: the grid wrapper is the intentional focus target for the grid's roving-focus/keyboard-navigation system
         tabIndex={0}
         onMouseDown={(e) => { lastMouseShiftRef.current = e.shiftKey; }}
+        // A checkbox toggled from the keyboard (Space) reads Shift from its key press, not a stale mouse press.
+        onKeyDownCapture={(e) => { lastMouseShiftRef.current = e.shiftKey; }}
         onScroll={onHorizontalScroll ? (e) => onHorizontalScroll((e.target as HTMLElement).scrollLeft) : undefined}
         className={`${styles.tableWrapper} ${rowSelection !== 'none' ? styles.selectableGrid : ''} ${styles[`density-${density}`] || ''}`}
         role="region"
