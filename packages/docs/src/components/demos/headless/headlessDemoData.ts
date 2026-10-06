@@ -34,16 +34,10 @@ export const columns: IColumnDef<Person>[] = [
   { columnId: 'email', name: 'Email' },
 ];
 
-/**
- * The hooks return core's IColumnDef, which the React package's IColumnDef
- * extends; these helpers only need the shared fields, so they accept either.
- */
-type ColumnLike = Pick<IColumnDef<Person>, 'type' | 'valueFormatter'>;
-
-export const isNumeric = (col: ColumnLike) => col.type === 'numeric';
+export const isNumeric = (col: IColumnDef<Person>) => col.type === 'numeric';
 
 /** Display text for a cell, honoring the column's `valueFormatter`. */
-export function formatCell(col: ColumnLike, value: unknown, item: Person): string {
+export function formatCell(col: IColumnDef<Person>, value: unknown, item: Person): string {
   if (value == null || value === '') return '';
   return col.valueFormatter ? col.valueFormatter(value, item) : String(value);
 }

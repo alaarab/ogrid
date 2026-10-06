@@ -1,6 +1,6 @@
 import { renderHook, act } from '@testing-library/react';
 import { useInlineEdit } from '../useInlineEdit';
-import type { IColumnDef } from '@alaarab/ogrid-core';
+import type { IColumnDef } from '../../types';
 
 type Row = { id: string; name: string; score: number; locked: boolean };
 

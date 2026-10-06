@@ -33,7 +33,7 @@ import {
   isColumnEditable,
   getCellValue as coreGetCellValue,
 } from '@alaarab/ogrid-core';
-import type { IColumnDef as ICoreColumnDef } from '@alaarab/ogrid-core';
+import type { IColumnDef } from '../types';
 
 export type RowId = string | number;
 
@@ -45,7 +45,7 @@ export interface InlineEditEvent<T> {
 }
 
 export interface UseInlineEditParams<T> {
-  columns: ICoreColumnDef<T>[];
+  columns: IColumnDef<T>[];
   /** Stable row ID extractor — must match the one passed to useHeadlessGrid. */
   getRowId: (row: T) => RowId;
   /**

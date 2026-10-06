@@ -1,7 +1,7 @@
 import { renderHook, act } from '@testing-library/react';
 import { useCellClipboard } from '../useCellClipboard';
 import { useRangeSelection } from '../useRangeSelection';
-import type { IColumnDef, ICellValueChangedEvent } from '@alaarab/ogrid-core';
+import type { IColumnDef, ICellValueChangedEvent } from '../../types';
 
 type Row = { id: string; a: string; b: number; readonly: string };
 

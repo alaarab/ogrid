@@ -42,10 +42,10 @@ import {
   normalizeSelectionRange,
 } from '@alaarab/ogrid-core';
 import type {
-  IColumnDef as ICoreColumnDef,
   ISelectionRange,
   ICellValueChangedEvent,
 } from '@alaarab/ogrid-core';
+import type { IColumnDef } from '../types';
 import type {
   CellCoord,
   UseRangeSelectionResult,
@@ -57,7 +57,7 @@ export interface UseFillHandleParams<T> {
   /** Rows currently rendered (post-filter, post-page). */
   rows: T[];
   /** Visible columns the user can fill across. */
-  columns: ICoreColumnDef<T>[];
+  columns: IColumnDef<T>[];
   /**
    * Called with cell-change events when the fill commits. Apply each event
    * to your data store (typically by updating the row at `rowIndex` with
