@@ -5,7 +5,7 @@ import {
   isFullyVirtualized,
   resolveColumnChooserPlacement,
   resolveDefaultSortField,
-  resolvePageClamp,
+  resolvePageClampTarget,
   resolveSelectionKnownItems,
   resolveSheetItems,
   resolveSheetPageOffset,
@@ -49,25 +49,24 @@ describe('resolveDefaultSortField', () => {
   });
 });
 
-describe('resolvePageClamp', () => {
-  const base = { page: 5, pageSize: 10 as const, totalCount: 25, controlled: false, unpaged: false };
+describe('resolvePageClampTarget', () => {
   it('snaps a page past the end back to the last page', () => {
-    expect(resolvePageClamp(base)).toEqual({ lastPage: 3, isPagePastEnd: true });
+    expect(resolvePageClampTarget(5, 10, 25, false, false)).toBe(3);
   });
   it('leaves a page in range alone', () => {
-    expect(resolvePageClamp({ ...base, page: 3 }).isPagePastEnd).toBe(false);
+    expect(resolvePageClampTarget(3, 10, 25, false, false)).toBeNull();
   });
   it('leaves controlled pages to the host', () => {
-    expect(resolvePageClamp({ ...base, controlled: true }).isPagePastEnd).toBe(false);
+    expect(resolvePageClampTarget(5, 10, 25, true, false)).toBeNull();
   });
   it('never clamps unpaged grids', () => {
-    expect(resolvePageClamp({ ...base, unpaged: true }).isPagePastEnd).toBe(false);
+    expect(resolvePageClampTarget(5, 10, 25, false, true)).toBeNull();
   });
   it('never clamps while there are no rows (loading or empty)', () => {
-    expect(resolvePageClamp({ ...base, totalCount: 0 }).isPagePastEnd).toBe(false);
+    expect(resolvePageClampTarget(5, 10, 0, false, false)).toBeNull();
   });
   it("treats pageSize 'all' as one page", () => {
-    expect(resolvePageClamp({ ...base, pageSize: 'all' })).toEqual({ lastPage: 1, isPagePastEnd: true });
+    expect(resolvePageClampTarget(5, 'all', 25, false, false)).toBe(1);
   });
 });
 
@@ -85,21 +84,20 @@ describe('resolveSelectionKnownItems', () => {
 });
 
 describe('buildStatusBarConfig', () => {
-  const counts = { isServerSide: false, dataLength: 10, totalCount: 4, hasActiveFilters: true, selectedCount: 2 };
   it('is off without statusBar', () => {
-    expect(buildStatusBarConfig(undefined, counts)).toBeUndefined();
-    expect(buildStatusBarConfig(false, counts)).toBeUndefined();
+    expect(buildStatusBarConfig(undefined, false, 10, 4, true, 2)).toBeUndefined();
+    expect(buildStatusBarConfig(false, false, 10, 4, true, 2)).toBeUndefined();
   });
   it('passes a host config through untouched', () => {
     const cfg = { totalCount: 99 };
-    expect(buildStatusBarConfig(cfg, counts)).toBe(cfg);
+    expect(buildStatusBarConfig(cfg, false, 10, 4, true, 2)).toBe(cfg);
   });
   it('counts the client dataset and reports filtered rows only while filtered', () => {
-    expect(buildStatusBarConfig(true, counts)).toEqual({ totalCount: 10, filteredCount: 4, selectedCount: 2, suppressRowCount: true });
-    expect(buildStatusBarConfig(true, { ...counts, hasActiveFilters: false })?.filteredCount).toBeUndefined();
+    expect(buildStatusBarConfig(true, false, 10, 4, true, 2)).toEqual({ totalCount: 10, filteredCount: 4, selectedCount: 2, suppressRowCount: true });
+    expect(buildStatusBarConfig(true, false, 10, 4, false, 2)?.filteredCount).toBeUndefined();
   });
   it('uses the server total server-side', () => {
-    expect(buildStatusBarConfig(true, { ...counts, isServerSide: true })?.totalCount).toBe(4);
+    expect(buildStatusBarConfig(true, true, 10, 4, true, 2)?.totalCount).toBe(4);
   });
 });
 
@@ -162,11 +160,10 @@ describe('sheet coordinates', () => {
   });
 
   it('selects the row map for each mode', () => {
-    const base = { spreadsheetMode: true, windowedRowCount: null, sheetRowById: null, pageOffset: 0, displayItems: rows, getRowId };
-    expect(selectFormulaRowMap({ ...base, spreadsheetMode: false })).toBeUndefined();
-    expect(selectFormulaRowMap({ ...base, windowedRowCount: 100 })?.toSheetRow(7)).toBe(7);
-    expect(selectFormulaRowMap({ ...base, pageOffset: 20 })?.toSheetRow(1)).toBe(21);
-    const byId = selectFormulaRowMap({ ...base, sheetRowById: new Map([['a', 5], ['b', 6], ['c', 7]]) });
+    expect(selectFormulaRowMap(false, null, null, 0, rows, getRowId)).toBeUndefined();
+    expect(selectFormulaRowMap(true, 100, null, 0, rows, getRowId)?.toSheetRow(7)).toBe(7);
+    expect(selectFormulaRowMap(true, null, null, 20, rows, getRowId)?.toSheetRow(1)).toBe(21);
+    const byId = selectFormulaRowMap(true, null, new Map([['a', 5], ['b', 6], ['c', 7]]), 0, rows, getRowId);
     expect(byId?.toSheetRow(2)).toBe(7);
   });
 });

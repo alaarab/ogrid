@@ -1,22 +1,8 @@
 import { useEffect, useMemo, useRef } from 'react';
 import { indexToColumnLetter } from '../utils';
 import { mapFormulaReferencesToView, resolveActiveCellReference, toRowNumberLabel } from './dataGridDerivations';
-import type { FormulaReference, IFormulaRowMap } from '@alaarab/ogrid-core';
-import type { IColumnDef } from '../types';
-
-export interface UseDataGridSheetCoordinatesParams<T> {
-  visibleCols: IColumnDef<T>[];
-  /** Flat (formula) column index of a column id, when the grid maps columns. */
-  formulaCol: ((columnId: string) => number) | undefined;
-  formulaRowMap: IFormulaRowMap | undefined;
-  rowNumberOffset: number;
-  /** References in sheet coordinates (from the formula bar). */
-  formulaReferences: FormulaReference[] | undefined;
-  rowCount: number;
-  activeCell: { rowIndex: number; columnIndex: number } | null;
-  colOffset: number;
-  onActiveCellChange: ((ref: string | null) => void) | undefined;
-}
+import type { FormulaReference } from '@alaarab/ogrid-core';
+import type { IColumnDef, IOGridDataGridProps } from '../types';
 
 export interface UseDataGridSheetCoordinatesResult {
   columnLetters: string[];
@@ -27,11 +13,19 @@ export interface UseDataGridSheetCoordinatesResult {
 /**
  * Sheet coordinates (column letters, row numbers, name box). Letters, row
  * numbers and the name box name a cell the way formulas do: flat column index
- * and sheet row (see IFormulaRowMap), so "B3" in the name box is the cell a
- * formula's B3 reads.
+ * (`formulaCol`) and sheet row (`props.formulaRowMap`, see IFormulaRowMap), so
+ * "B3" in the name box is the cell a formula's B3 reads.
  */
-export function useDataGridSheetCoordinates<T>(params: UseDataGridSheetCoordinatesParams<T>): UseDataGridSheetCoordinatesResult {
-  const { visibleCols, formulaCol, formulaRowMap, rowNumberOffset, rowCount, activeCell, colOffset, onActiveCellChange } = params;
+export function useDataGridSheetCoordinates<T>(
+  props: Pick<IOGridDataGridProps<T>, 'formulaRowMap' | 'formulaReferences' | 'items' | 'onActiveCellChange'>,
+  visibleCols: IColumnDef<T>[],
+  formulaCol: ((columnId: string) => number) | undefined,
+  rowNumberOffset: number,
+  activeCell: { rowIndex: number; columnIndex: number } | null,
+  colOffset: number,
+): UseDataGridSheetCoordinatesResult {
+  const { formulaRowMap } = props;
+  const rowCount = props.items.length;
   const columnLetters = useMemo(
     () => visibleCols.map((c, i) => indexToColumnLetter(formulaCol ? Math.max(0, formulaCol(c.columnId)) : i)),
     [visibleCols, formulaCol]
@@ -42,18 +36,17 @@ export function useDataGridSheetCoordinates<T>(params: UseDataGridSheetCoordinat
     return (rowIndex: number) => toRowNumberLabel(formulaRowMap, rowNumberOffset, rowIndex);
   }, [formulaRowMap, rowNumberOffset]);
   const formulaReferences = useMemo(
-    () => mapFormulaReferencesToView(params.formulaReferences, visibleCols, formulaCol, formulaRowMap, rowCount),
-    [params.formulaReferences, visibleCols, formulaCol, formulaRowMap, rowCount]
+    () => mapFormulaReferencesToView(props.formulaReferences, visibleCols, formulaCol, formulaRowMap, rowCount),
+    [props.formulaReferences, visibleCols, formulaCol, formulaRowMap, rowCount]
   );
 
   // Name box: notify the parent when the active cell changes.
-  const onActiveCellChangeRef = useRef(onActiveCellChange);
-  onActiveCellChangeRef.current = onActiveCellChange;
+  const onActiveCellChangeRef = useRef(props.onActiveCellChange);
+  onActiveCellChangeRef.current = props.onActiveCellChange;
   useEffect(() => {
-    if (!onActiveCellChangeRef.current) return;
-    onActiveCellChangeRef.current(resolveActiveCellReference({
-      activeCell, visibleCols, colOffset, formulaCol, formulaRowMap, rowNumberOffset,
-    }));
+    onActiveCellChangeRef.current?.(
+      resolveActiveCellReference(activeCell, visibleCols, colOffset, formulaCol, formulaRowMap, rowNumberOffset),
+    );
   }, [activeCell, rowNumberOffset, colOffset, visibleCols, formulaCol, formulaRowMap]);
 
   return { columnLetters, rowNumberOf, formulaReferences };

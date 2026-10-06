@@ -5,31 +5,21 @@ import type { MutableRefObject, RefObject } from 'react';
 import type { UseVirtualScrollResult } from './useVirtualScroll';
 import type { IColumnDef, IOGridDataGridProps } from '../types';
 
-export interface UseDataGridVirtualizationParams<T> {
-  virtualScroll: IOGridDataGridProps<T>['virtualScroll'];
-  windowed: IOGridDataGridProps<T>['windowed'];
-  rowHeight: number | undefined;
-  itemCount: number;
-  stickyHeader: boolean;
-  visibleCols: IColumnDef<T>[];
-  pinnedColumns: Record<string, 'left' | 'right'> | undefined;
-  getColumnWidth: (col: IColumnDef<T>) => number;
-  wrapperRef: RefObject<HTMLDivElement | null>;
-  /** Filled with the current scrollToIndex every render (keyboard navigation reads it). */
-  scrollToIndexRef: MutableRefObject<UseVirtualScrollResult['scrollToIndex'] | null>;
-  /** OGrid's imperative `scrollToRow`, set while mounted. */
-  scrollToRowRef: IOGridDataGridProps<T>['scrollToRowRef'];
-}
-
 /**
  * Row (and optional column) virtualization, the imperative scroll hooks, and
  * window fetching for a windowed data source.
  */
-export function useDataGridVirtualization<T>(params: UseDataGridVirtualizationParams<T>) {
-  const { virtualScroll, windowed, rowHeight, itemCount, stickyHeader, visibleCols, pinnedColumns, getColumnWidth, wrapperRef, scrollToIndexRef, scrollToRowRef } = params;
-  const settings = resolveVirtualScrollSettings({
-    virtualScroll, windowedRowCount: windowed ? windowed.rowCount : null, rowHeight, itemCount,
-  });
+export function useDataGridVirtualization<T>(
+  props: Pick<IOGridDataGridProps<T>, 'virtualScroll' | 'windowed' | 'rowHeight' | 'items' | 'pinnedColumns' | 'scrollToRowRef'>,
+  stickyHeader: boolean,
+  visibleCols: IColumnDef<T>[],
+  getColumnWidth: (col: IColumnDef<T>) => number,
+  wrapperRef: RefObject<HTMLDivElement | null>,
+  /** Filled with the current scrollToIndex every render (keyboard navigation reads it). */
+  scrollToIndexRef: MutableRefObject<UseVirtualScrollResult['scrollToIndex'] | null>,
+) {
+  const { virtualScroll, windowed, pinnedColumns, scrollToRowRef } = props;
+  const settings = resolveVirtualScrollSettings(virtualScroll, windowed ? windowed.rowCount : null, props.rowHeight, props.items.length);
   const columnVirtualization = settings.columnVirtualization;
 
   // Unpinned column widths for horizontal virtualization.

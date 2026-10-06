@@ -1,28 +1,27 @@
 import { useSheetScopedState } from './useSheetScopedState';
-import type { SortState } from './useOGridSorting';
+import type { SortState, UseOGridSortingState } from './useOGridSorting';
+import type { UseOGridFiltersState } from './useOGridFilters';
+import type { UseOGridPaginationState } from './useOGridPagination';
+import type { UseOGridRowSelectionState } from './useOGridRowSelection';
+import type { UseOGridColumnLayoutState } from './useOGridColumnLayout';
+import type { UseOGridColumnVisibilityState } from './useOGridColumnVisibility';
 import type { SheetScopedGridState } from './useOGrid.types';
-import type { IFilters, RowId } from '../types';
+import type { IOGridProps, RowId } from '../types';
 
-/** Which sheet-scoped slots the host controls. A controlled slot is never written on a sheet switch. */
-export interface SheetStateControlled {
-  visibleColumns: boolean;
-  sort: boolean;
-  filters: boolean;
-  page: boolean;
-  selectedRows: boolean;
-  columnOrder: boolean;
-}
+/** The props whose presence makes a sheet-scoped slot controlled (never written on a sheet switch). */
+export type SheetStateControlProps = Pick<
+  IOGridProps<unknown>,
+  'visibleColumns' | 'sort' | 'filters' | 'page' | 'selectedRows' | 'columnOrder'
+>;
 
-/** Internal-state setters a sheet switch writes through. */
-export interface SheetStateSetters {
-  setVisibleColumns: (cols: Set<string>) => void;
-  setSort: (sort: SortState) => void;
-  setFilters: (filters: IFilters) => void;
-  setPage: (page: number) => void;
-  setSelectedRows: (rows: Set<RowId>) => void;
-  setColumnOrder: (order: string[] | undefined) => void;
-  setColumnWidths: (widths: Record<string, number>) => void;
-  setPinned: (pinned: Record<string, 'left' | 'right'>) => void;
+/** The raw (non-notifying) setters a sheet switch writes through. */
+export interface SheetStateSlices {
+  visibility: Pick<UseOGridColumnVisibilityState, 'setInternalVisibleColumns'>;
+  sorting: Pick<UseOGridSortingState, 'setInternalSort'>;
+  filters: Pick<UseOGridFiltersState, 'setInternalFilters'>;
+  pagination: Pick<UseOGridPaginationState, 'setInternalPage'>;
+  selection: Pick<UseOGridRowSelectionState<unknown>, 'setInternalSelectedRows'>;
+  columnLayout: Pick<UseOGridColumnLayoutState, 'setInternalColumnOrder' | 'setColumnWidthOverrides' | 'setPinnedOverrides'>;
 }
 
 /** State for a sheet seen for the first time: its own defaults, nothing inherited. */
@@ -44,30 +43,19 @@ export function sheetStateDefaults(defaultSort: SortState): SheetScopedGridState
  * Controlled slots are left to the host. `visibleColumns` and `pinned` are
  * skipped when `undefined` (a first-time sheet): their own hooks reconcile
  * against the incoming column defs, which is what preserves a deliberate hide
- * for a column both sheets share. Widths are always internal.
+ * for a column both sheets share. Widths have no controlled prop.
  */
-export function applySheetState(
-  state: SheetScopedGridState,
-  controlled: SheetStateControlled,
-  set: SheetStateSetters,
-): void {
-  if (!controlled.visibleColumns && state.visibleColumns !== undefined) set.setVisibleColumns(state.visibleColumns);
-  if (!controlled.sort) set.setSort(state.sort);
-  if (!controlled.filters) set.setFilters(state.filters);
-  if (!controlled.page) set.setPage(state.page);
-  if (!controlled.selectedRows) set.setSelectedRows(state.selectedRows);
-  if (!controlled.columnOrder) set.setColumnOrder(state.columnOrder);
-  set.setColumnWidths(state.columnWidths);
-  if (state.pinned !== undefined) set.setPinned(state.pinned);
-}
-
-export interface UseOGridSheetStateParams {
-  activeSheet: string | undefined;
-  current: SheetScopedGridState;
-  defaultSortField: string;
-  defaultSortDirection: SortState['direction'];
-  controlled: SheetStateControlled;
-  setters: SheetStateSetters;
+export function applySheetState(state: SheetScopedGridState, props: SheetStateControlProps, s: SheetStateSlices): void {
+  if (props.visibleColumns === undefined && state.visibleColumns !== undefined) {
+    s.visibility.setInternalVisibleColumns(state.visibleColumns);
+  }
+  if (props.sort === undefined) s.sorting.setInternalSort(state.sort);
+  if (props.filters === undefined) s.filters.setInternalFilters(state.filters);
+  if (props.page === undefined) s.pagination.setInternalPage(state.page);
+  if (props.selectedRows === undefined) s.selection.setInternalSelectedRows(state.selectedRows);
+  if (props.columnOrder === undefined) s.columnLayout.setInternalColumnOrder(state.columnOrder);
+  s.columnLayout.setColumnWidthOverrides(state.columnWidths);
+  if (state.pinned !== undefined) s.columnLayout.setPinnedOverrides(state.pinned);
 }
 
 /**
@@ -81,12 +69,17 @@ export interface UseOGridSheetStateParams {
  * `pageSize` is deliberately NOT sheet-scoped: it is a viewport preference,
  * not something the sheet's columns or rows give meaning to.
  */
-export function useOGridSheetState(params: UseOGridSheetStateParams): void {
-  const { activeSheet, current, defaultSortField, defaultSortDirection, controlled, setters } = params;
+export function useOGridSheetState(
+  props: SheetStateControlProps & Pick<IOGridProps<unknown>, 'activeSheet'>,
+  current: SheetScopedGridState,
+  defaultSortField: string,
+  defaultSortDirection: SortState['direction'],
+  slices: SheetStateSlices,
+): void {
   useSheetScopedState<SheetScopedGridState>({
-    activeSheet,
+    activeSheet: props.activeSheet,
     current,
     defaults: () => sheetStateDefaults({ field: defaultSortField, direction: defaultSortDirection }),
-    apply: (state) => applySheetState(state, controlled, setters),
+    apply: (state) => applySheetState(state, props, slices),
   });
 }

@@ -1,20 +1,11 @@
 import { useMemo } from 'react';
 import { useSideBarState } from './useSideBarState';
 import { toColumnChooserColumns, toFilterableColumns } from './ogridDerivations';
-import type { SideBarProps } from '../components/SideBar';
 import type { IColumnDef } from '@alaarab/ogrid-core';
-import type { IColumnDefinition, IFilters, IOGridProps } from '../types';
-
-export interface UseOGridSideBarParams<T> {
-  sideBar: IOGridProps<T>['sideBar'];
-  columns: IColumnDef<T>[];
-  visibleColumns: Set<string>;
-  onVisibilityChange: (columnKey: string, isVisible: boolean) => void;
-  onSetVisibleColumns: (columns: Set<string>) => void;
-  filters: IFilters;
-  onFilterChange: SideBarProps['onFilterChange'];
-  filterOptions: SideBarProps['filterOptions'];
-}
+import type { SideBarProps } from '../components/SideBar';
+import type { IColumnDefinition, IOGridProps } from '../types';
+import type { UseOGridColumnVisibilityState } from './useOGridColumnVisibility';
+import type { UseOGridFiltersState } from './useOGridFilters';
 
 export interface UseOGridSideBarState {
   /** `null` when the side bar is off. */
@@ -24,11 +15,16 @@ export interface UseOGridSideBarState {
 }
 
 /** Side bar view model: panels, column chooser entries and filter panel entries. */
-export function useOGridSideBar<T>(params: UseOGridSideBarParams<T>): UseOGridSideBarState {
-  const { sideBar, columns, visibleColumns, onVisibilityChange, onSetVisibleColumns, filters, onFilterChange, filterOptions } = params;
+export function useOGridSideBar<T>(
+  sideBar: IOGridProps<T>['sideBar'],
+  columns: IColumnDef<T>[],
+  visibility: Pick<UseOGridColumnVisibilityState, 'visibleColumns' | 'handleVisibilityChange' | 'setVisibleColumns'>,
+  filtersState: Pick<UseOGridFiltersState, 'filters' | 'handleFilterChange' | 'clientFilterOptions'>,
+): UseOGridSideBarState {
   const sideBarState = useSideBarState({ config: sideBar });
   const columnChooserColumns = useMemo(() => toColumnChooserColumns(columns), [columns]);
   const filterableColumns = useMemo(() => toFilterableColumns(columns), [columns]);
+  const { visibleColumns, handleVisibilityChange, setVisibleColumns } = visibility;
 
   const sideBarProps: SideBarProps | null = useMemo(() => {
     if (!sideBarState.isEnabled) return null;
@@ -39,18 +35,18 @@ export function useOGridSideBar<T>(params: UseOGridSideBarParams<T>): UseOGridSi
       position: sideBarState.position,
       columns: columnChooserColumns,
       visibleColumns,
-      onVisibilityChange,
-      onSetVisibleColumns,
+      onVisibilityChange: handleVisibilityChange,
+      onSetVisibleColumns: setVisibleColumns,
       filterableColumns,
-      filters,
-      onFilterChange,
-      filterOptions,
+      filters: filtersState.filters,
+      onFilterChange: filtersState.handleFilterChange,
+      filterOptions: filtersState.clientFilterOptions,
     };
   }, [
     sideBarState.isEnabled, sideBarState.activePanel, sideBarState.setActivePanel,
     sideBarState.panels, sideBarState.position,
-    columnChooserColumns, visibleColumns, onVisibilityChange, onSetVisibleColumns,
-    filterableColumns, filters, onFilterChange, filterOptions,
+    columnChooserColumns, visibleColumns, handleVisibilityChange, setVisibleColumns,
+    filterableColumns, filtersState.filters, filtersState.handleFilterChange, filtersState.clientFilterOptions,
   ]);
 
   return { sideBarProps, columnChooserColumns };

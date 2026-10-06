@@ -15,9 +15,15 @@ interface Row { id: number; v: string }
 const getRowId = (r: Row) => r.id;
 const filters = {};
 const columns: unknown[] = [];
-const inputs = (over: Partial<ResortInputs> = {}): ResortInputs => ({
-  sortVersion: 0, filters, columns, sortField: 'v', sortDirection: 'asc', ...over,
-});
+const inputs = (over: {
+  sortVersion?: number; filters?: unknown; columns?: unknown; sortField?: string; sortDirection?: 'asc' | 'desc';
+} = {}): ResortInputs => [
+  over.sortVersion ?? 0,
+  'filters' in over ? over.filters : filters,
+  'columns' in over ? over.columns : columns,
+  over.sortField ?? 'v',
+  over.sortDirection ?? 'asc',
+];
 
 describe('resortInputsChanged', () => {
   it('is true before the first run', () => {

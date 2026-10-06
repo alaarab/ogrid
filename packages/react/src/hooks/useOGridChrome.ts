@@ -22,22 +22,18 @@ const NAME_BOX_STYLE: React.CSSProperties = {
   display: 'block',
 };
 
-export type UseOGridChromeParams<T> = Pick<
-  IOGridProps<T>,
-  'toolbar' | 'toolbarBelow' | 'className' | 'emptyState' | 'fullScreen' | 'sheetDefs' | 'activeSheet' | 'onSheetChange' | 'onSheetAdd'
-> & {
-  showNameBox: boolean;
-  activeCellRef: string | null;
-  sideBarProps: SideBarProps | null;
-  formulaBar: React.ReactNode;
-};
-
 /** Toolbar (with the name box), sheet tabs and the rest of the layout chrome around the grid. */
-export function useOGridChrome<T>(params: UseOGridChromeParams<T>): UseOGridLayout {
-  const {
-    toolbar, toolbarBelow, className, emptyState, fullScreen, sheetDefs, activeSheet, onSheetChange, onSheetAdd,
-    showNameBox, activeCellRef, sideBarProps, formulaBar,
-  } = params;
+export function useOGridChrome<T>(
+  props: Pick<
+    IOGridProps<T>,
+    'toolbar' | 'toolbarBelow' | 'className' | 'emptyState' | 'fullScreen' | 'sheetDefs' | 'activeSheet' | 'onSheetChange' | 'onSheetAdd'
+  >,
+  showNameBox: boolean,
+  activeCellRef: string | null,
+  sideBarProps: SideBarProps | null,
+  formulaBar: React.ReactNode,
+): UseOGridLayout {
+  const { toolbar, toolbarBelow, className, emptyState, fullScreen, sheetDefs, activeSheet, onSheetChange, onSheetAdd } = props;
 
   const nameBoxEl = useMemo(() => showNameBox ? React.createElement('output', {
     style: NAME_BOX_STYLE,

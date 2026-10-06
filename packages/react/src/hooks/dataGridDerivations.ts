@@ -21,13 +21,12 @@ export function resolveRowNumberOffset(
 }
 
 /** Horizontal scrolling is on once the table can't fit its container (and isn't suppressed). */
-export function resolveAllowOverflowX(input: {
-  suppressHorizontalScroll: boolean | undefined;
-  containerWidth: number;
-  minTableWidth: number;
-  desiredTableWidth: number;
-}): boolean {
-  const { suppressHorizontalScroll, containerWidth, minTableWidth, desiredTableWidth } = input;
+export function resolveAllowOverflowX(
+  suppressHorizontalScroll: boolean | undefined,
+  containerWidth: number,
+  minTableWidth: number,
+  desiredTableWidth: number,
+): boolean {
   return !suppressHorizontalScroll && containerWidth > 0 && (minTableWidth > containerWidth || desiredTableWidth > containerWidth);
 }
 
@@ -45,13 +44,12 @@ export interface VirtualScrollSettings {
  * scrolls `rowCount` rows, and drops the activation threshold to 0. The row
  * height prop wins over the virtual scroll config, then 36px.
  */
-export function resolveVirtualScrollSettings(input: {
-  virtualScroll: IVirtualScrollConfig | undefined;
-  windowedRowCount: number | null;
-  rowHeight: number | undefined;
-  itemCount: number;
-}): VirtualScrollSettings {
-  const { virtualScroll, windowedRowCount, rowHeight, itemCount } = input;
+export function resolveVirtualScrollSettings(
+  virtualScroll: IVirtualScrollConfig | undefined,
+  windowedRowCount: number | null,
+  rowHeight: number | undefined,
+  itemCount: number,
+): VirtualScrollSettings {
   const windowed = windowedRowCount !== null;
   return {
     enabled: virtualScroll?.enabled === true || windowed,
@@ -91,15 +89,14 @@ export function toRowNumberLabel(formulaRowMap: IFormulaRowMap, rowNumberOffset:
  * column index and sheet row. `null` when there is no active data cell (or it
  * maps outside the sheet).
  */
-export function resolveActiveCellReference(input: {
-  activeCell: { rowIndex: number; columnIndex: number } | null;
-  visibleCols: readonly { columnId: string }[];
-  colOffset: number;
-  formulaCol: ((columnId: string) => number) | undefined;
-  formulaRowMap: IFormulaRowMap | undefined;
-  rowNumberOffset: number;
-}): string | null {
-  const { activeCell: ac, visibleCols, colOffset, formulaCol, formulaRowMap, rowNumberOffset } = input;
+export function resolveActiveCellReference(
+  ac: { rowIndex: number; columnIndex: number } | null,
+  visibleCols: readonly { columnId: string }[],
+  colOffset: number,
+  formulaCol: ((columnId: string) => number) | undefined,
+  formulaRowMap: IFormulaRowMap | undefined,
+  rowNumberOffset: number,
+): string | null {
   const col = ac ? visibleCols[ac.columnIndex - colOffset] : undefined;
   if (!ac || !col) return null;
   const sheetCol = formulaCol ? formulaCol(col.columnId) : ac.columnIndex - colOffset;

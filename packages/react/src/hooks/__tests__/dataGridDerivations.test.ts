@@ -33,35 +33,28 @@ describe('resolveRowNumberOffset', () => {
 });
 
 describe('resolveAllowOverflowX', () => {
-  const base = { suppressHorizontalScroll: false, containerWidth: 500, minTableWidth: 400, desiredTableWidth: 450 };
   it('is off while the table fits', () => {
-    expect(resolveAllowOverflowX(base)).toBe(false);
+    expect(resolveAllowOverflowX(false, 500, 400, 450)).toBe(false);
   });
   it('turns on when either the minimum or desired width overflows', () => {
-    expect(resolveAllowOverflowX({ ...base, minTableWidth: 600 })).toBe(true);
-    expect(resolveAllowOverflowX({ ...base, desiredTableWidth: 600 })).toBe(true);
+    expect(resolveAllowOverflowX(false, 500, 600, 450)).toBe(true);
+    expect(resolveAllowOverflowX(false, 500, 400, 600)).toBe(true);
   });
   it('stays off before the container is measured or when suppressed', () => {
-    expect(resolveAllowOverflowX({ ...base, containerWidth: 0, minTableWidth: 600 })).toBe(false);
-    expect(resolveAllowOverflowX({ ...base, suppressHorizontalScroll: true, minTableWidth: 600 })).toBe(false);
+    expect(resolveAllowOverflowX(false, 0, 600, 450)).toBe(false);
+    expect(resolveAllowOverflowX(true, 500, 600, 450)).toBe(false);
   });
 });
 
 describe('resolveVirtualScrollSettings', () => {
   it('follows the prop for in-memory rows', () => {
-    expect(resolveVirtualScrollSettings({
-      virtualScroll: { enabled: true, rowHeight: 40, threshold: 50, columns: true }, windowedRowCount: null, rowHeight: undefined, itemCount: 10,
-    })).toEqual({ enabled: true, rowHeight: 40, columnVirtualization: true, totalRows: 10, threshold: 50 });
+    expect(resolveVirtualScrollSettings({ enabled: true, rowHeight: 40, threshold: 50, columns: true }, null, undefined, 10)).toEqual({ enabled: true, rowHeight: 40, columnVirtualization: true, totalRows: 10, threshold: 50 });
   });
   it('forces virtualization for a windowed source, with its row count and no threshold', () => {
-    expect(resolveVirtualScrollSettings({
-      virtualScroll: { threshold: 50 }, windowedRowCount: 10_000, rowHeight: undefined, itemCount: 0,
-    })).toEqual({ enabled: true, rowHeight: 36, columnVirtualization: false, totalRows: 10_000, threshold: 0 });
+    expect(resolveVirtualScrollSettings({ threshold: 50 }, 10_000, undefined, 0)).toEqual({ enabled: true, rowHeight: 36, columnVirtualization: false, totalRows: 10_000, threshold: 0 });
   });
   it('prefers the rowHeight prop over the config', () => {
-    expect(resolveVirtualScrollSettings({
-      virtualScroll: { rowHeight: 40 }, windowedRowCount: null, rowHeight: 28, itemCount: 0,
-    }).rowHeight).toBe(28);
+    expect(resolveVirtualScrollSettings({ rowHeight: 40 }, null, 28, 0).rowHeight).toBe(28);
   });
 });
 
@@ -89,27 +82,20 @@ describe('toRowNumberLabel', () => {
 });
 
 describe('resolveActiveCellReference', () => {
-  const base = {
-    activeCell: { rowIndex: 1, columnIndex: 2 },
-    visibleCols: cols('a', 'b'),
-    colOffset: 1,
-    formulaCol: undefined,
-    formulaRowMap: undefined,
-    rowNumberOffset: 0,
-  };
+  const ac = { rowIndex: 1, columnIndex: 2 };
+  const visible = cols('a', 'b');
   it('names the cell by visible column and page row without a mapping', () => {
-    expect(resolveActiveCellReference(base)).toBe('B2');
-    expect(resolveActiveCellReference({ ...base, rowNumberOffset: 10 })).toBe('B12');
+    expect(resolveActiveCellReference(ac, visible, 1, undefined, undefined, 0)).toBe('B2');
+    expect(resolveActiveCellReference(ac, visible, 1, undefined, undefined, 10)).toBe('B12');
   });
   it('names the cell by flat column and sheet row with a mapping', () => {
-    expect(resolveActiveCellReference({
-      ...base, formulaCol: (id: string) => (id === 'b' ? 4 : 0), formulaRowMap: rowMap([0, 9]),
-    })).toBe('E10');
+    const formulaCol = (id: string) => (id === 'b' ? 4 : 0);
+    expect(resolveActiveCellReference(ac, visible, 1, formulaCol, rowMap([0, 9]), 0)).toBe('E10');
   });
   it('is null without an active data cell or outside the sheet', () => {
-    expect(resolveActiveCellReference({ ...base, activeCell: null })).toBeNull();
-    expect(resolveActiveCellReference({ ...base, activeCell: { rowIndex: 0, columnIndex: 0 } })).toBeNull();
-    expect(resolveActiveCellReference({ ...base, formulaRowMap: rowMap([0]) })).toBeNull();
+    expect(resolveActiveCellReference(null, visible, 1, undefined, undefined, 0)).toBeNull();
+    expect(resolveActiveCellReference({ rowIndex: 0, columnIndex: 0 }, visible, 1, undefined, undefined, 0)).toBeNull();
+    expect(resolveActiveCellReference(ac, visible, 1, undefined, rowMap([0]), 0)).toBeNull();
   });
 });
 
