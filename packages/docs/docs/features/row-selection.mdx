@@ -90,6 +90,7 @@ In `'multiple'` mode, a checkbox column is prepended to the grid:
 - Click a checkbox to toggle that row.
 - Click the header checkbox to select or deselect all rows on the current page. Selections on other pages are kept.
 - Hold **Shift** and click a checkbox to select (or clear) the range from the last clicked row, in the order rows are shown. The last clicked row is remembered by row id, so the range still starts there after a sort or filter; if that row is no longer on the current page, the click toggles just the one row. **Shift+Space** toggles the active row and sets the starting row too.
+- From the keyboard, the checkboxes are reached through their cells: they are not tab stops (the grid has one, the active cell). Press ← from the first data column to move to the row's checkbox cell, Space to toggle the row, and Shift+Space to select the range from the last toggled row. ↑ and ↓ move between checkbox cells, → returns to the data. The header checkbox is a regular tab stop with the other header controls.
 
 ### Controlled Mode
 

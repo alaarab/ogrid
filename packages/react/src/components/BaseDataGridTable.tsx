@@ -128,6 +128,7 @@ export function BaseDataGridTableInner<T>(
     setActiveCell: interaction.setActiveCell,
     editingCell,
     colOffset,
+    checkboxColumn: hasCheckboxCol,
     rowCount: windowed ? windowed.rowCount : items.length,
     colCount: gridProps.cellSelection === false ? 0 : visibleCols.length,
   });

@@ -5,7 +5,7 @@
  */
 
 import { test, expect, type Page } from '@playwright/test';
-import { waitForGrid, getDataCell, getGridRegion } from './helpers';
+import { waitForGrid, getDataCell, getGridRegion, expectSelectedRowCount } from './helpers';
 
 /** Where focus is: the focused cell's coordinates, the grid wrapper, or another element's tag. */
 async function focusedCell(page: Page): Promise<string> {
@@ -97,6 +97,47 @@ test.describe('Roving focus', () => {
     await expect(page.locator('[data-active-cell="true"]')).toHaveCount(0);
     expect(await focusedCell(page)).toBe(`r1c${nameCol}`);
     expect(await tabStopCount(page)).toBe(1);
+  });
+});
+
+test.describe('Roving focus with a row checkbox column', () => {
+  test.beforeEach(async ({ page }) => {
+    await page.goto('/?rowSelection=1');
+    await waitForGrid(page);
+  });
+
+  test('row checkboxes are not tab stops; Shift+Tab from the first cell leaves the grid body', async ({ page }) => {
+    const firstCol = await colIndexOf(page, 'name');
+    let where = '';
+    for (let i = 0; i < 150 && !where.startsWith('r'); i += 1) {
+      await page.keyboard.press('Tab');
+      where = await focusedCell(page);
+    }
+    // Tab skips the row checkboxes and lands on the first data cell.
+    expect(where).toBe(`r0c${firstCol}`);
+    await page.keyboard.press('Shift+Tab');
+    const outsideBody = await page.evaluate(() => !document.activeElement?.closest('tbody'));
+    expect(outsideBody).toBe(true);
+  });
+
+  test('arrow keys reach the checkbox cell; Space toggles its row and Shift+Space selects a range', async ({ page }) => {
+    const firstCol = await colIndexOf(page, 'name');
+    await getDataCell(page, 1, 'name').click();
+    await page.keyboard.press('ArrowLeft');
+    expect(await focusedCell(page)).toBe('r1c0');
+    expect(await tabStopCount(page)).toBe(1);
+
+    await page.keyboard.press('Space');
+    await expectSelectedRowCount(page, 1);
+    await page.keyboard.press('ArrowDown');
+    await page.keyboard.press('ArrowDown');
+    expect(await focusedCell(page)).toBe('r3c0');
+    await page.keyboard.press('Shift+Space');
+    await expectSelectedRowCount(page, 3);
+    expect(await focusedCell(page)).toBe('r3c0');
+
+    await page.keyboard.press('ArrowRight');
+    expect(await focusedCell(page)).toBe(`r3c${firstCol}`);
   });
 });
 

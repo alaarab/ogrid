@@ -45,6 +45,8 @@ const primitives: DataGridPrimitives = {
       checked={checked}
       onCheckedChange={(c: boolean | 'indeterminate') => onCheckedChange(!!c)}
       aria-label={ariaLabel}
+      // The grid cell is the tab stop (roving focus); Space on it toggles the row.
+      tabIndex={-1}
     >
       <Checkbox.Indicator className={styles.rowCheckboxIndicator}>✓</Checkbox.Indicator>
     </Checkbox.Root>
@@ -70,6 +72,8 @@ const primitives: DataGridPrimitives = {
       onPointerDown={onPointerDown}
       onClick={onClick}
       aria-label={ariaLabel}
+      // The grid cell is the tab stop (roving focus); Space on it toggles the value.
+      tabIndex={-1}
     >
       <Checkbox.Indicator className={styles.rowCheckboxIndicator}>✓</Checkbox.Indicator>
     </Checkbox.Root>
