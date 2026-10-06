@@ -55,7 +55,10 @@ export interface UseDataGridTableOrchestrationResult<T> {
   // Column resize
   handleResizeStart: UseColumnResizeResult<T>['handleResizeStart'];
   handleResizeDoubleClick: UseColumnResizeResult<T>['handleResizeDoubleClick'];
+  handleResizeFocus: UseColumnResizeResult<T>['handleResizeFocus'];
+  handleResizeKeyDown: UseColumnResizeResult<T>['handleResizeKeyDown'];
   getColumnWidth: UseColumnResizeResult<T>['getColumnWidth'];
+  getColumnMinWidth: UseColumnResizeResult<T>['getColumnMinWidth'];
 
   // Column reorder
   isReorderDragging: UseColumnReorderResult['isDragging'];
@@ -386,7 +389,7 @@ export function useDataGridTableOrchestration<T>(
     },
     [onColumnResizedRef],
   );
-  const { handleResizeStart, handleResizeDoubleClick, getColumnWidth } = useColumnResize<T>({
+  const { handleResizeStart, handleResizeDoubleClick, handleResizeFocus, handleResizeKeyDown, getColumnWidth, getColumnMinWidth } = useColumnResize<T>({
     columnSizingOverrides,
     setColumnSizingOverrides,
     onColumnResized: reportColumnResized,
@@ -586,7 +589,10 @@ export function useDataGridTableOrchestration<T>(
     // Column resize
     handleResizeStart,
     handleResizeDoubleClick,
+    handleResizeFocus,
+    handleResizeKeyDown,
     getColumnWidth,
+    getColumnMinWidth,
 
     // Column reorder
     isReorderDragging,

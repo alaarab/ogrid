@@ -225,8 +225,8 @@ describe('Column resize handles ARIA', () => {
     const resizeHandles = container.querySelectorAll('[aria-label^="Resize"]');
     expect(resizeHandles.length).toBeGreaterThanOrEqual(2);
     const labels = Array.from(resizeHandles).map((el) => el.getAttribute('aria-label'));
-    expect(labels).toContain('Resize Name');
-    expect(labels).toContain('Resize Status');
+    expect(labels).toContain('Resize column Name');
+    expect(labels).toContain('Resize column Status');
   });
 });
 

@@ -797,7 +797,7 @@ export function getFillHandle(page: Page): Locator {
 
 /**
  * Get the column resize separator for a named column.
- * React/Angular: role="separator" with aria-label="Resize {columnName}".
+ * React: role="separator" with aria-label="Resize column {columnName}".
  * Vue Vuetify: .ogrid-resize-handle class (no role="separator").
  * JS: .ogrid-resize-handle inside the th.
  */
@@ -823,7 +823,7 @@ export function getResizeHandle(page: Page, columnName: string): Locator {
     const th = page.locator('thead th').filter({ hasText: columnName }).first();
     return th.locator(':scope > div').last();
   }
-  return page.getByRole('separator', { name: `Resize ${columnName}` });
+  return page.getByRole('separator', { name: `Resize column ${columnName}` });
 }
 
 /**
