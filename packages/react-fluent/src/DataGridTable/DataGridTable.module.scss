@@ -123,6 +123,15 @@
   }
 }
 
+/* Every header cell carries the line under it, as in Radix. The group-row placeholders
+   above the checkbox, row-number and moved-down leaf columns are plain <th>s with no
+   Fluent class; in the collapsed model Fluent's row border drew their line, in the
+   separate model only cell borders paint. :where() keeps this at zero specificity so
+   .groupHeaderCell's own border still wins. */
+:where(.dataTable thead th) {
+  border-bottom: 1px solid var(--ogrid-border, rgba(0, 0, 0, 0.12));
+}
+
 /* No extra right border on last column */
 .dataTable :global(.fui-TableHeaderCell:last-of-type),
 .dataTable :global(.fui-TableCell:last-of-type) {
@@ -301,6 +310,15 @@
   background-color: var(--colorNeutralBackground1, var(--ogrid-bg, #ffffff));
   border-left: 1px solid var(--colorNeutralStroke1, var(--ogrid-border, rgba(0, 0, 0, 0.12)));
   box-shadow: -2px 0 4px -1px rgba(0, 0, 0, 0.1);
+}
+
+/* A right-pinned column draws its own left line. In the separate border model the
+   cell before it would add its right border next to that line (2px at the scroll end,
+   where they meet), so that cell drops its right border; while the grid is scrolled,
+   that edge is hidden under the pinned column anyway. */
+.dataTable :global(.fui-TableHeaderCell):has(+ .pinnedColRight),
+.dataTable :global(.fui-TableCell):has(+ .pinnedColRight) {
+  border-right: none;
 }
 
 .dataTable :global(.fui-TableHeader) .pinnedColRight {
