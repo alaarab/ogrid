@@ -1,0 +1,105 @@
+---
+sidebar_position: 5
+title: useFillHandle
+description: Headless Excel-style drag-to-fill. Extends the current range toward a target cell and emits cell-change events on release.
+---
+
+import UseFillHandleDemo from '@site/src/components/demos/headless/UseFillHandleDemo';
+
+# `useFillHandle`
+
+Drag the small square at the bottom-right of a selection and the source block
+is tiled over the cells you drag across. The hook tracks the drag target,
+exposes the extended `fillRange` for highlighting, and on commit calls core's
+`applyFillValues` to turn the fill into `ICellValueChangedEvent` objects. You
+apply them to your data. Column `editable`, `type`, and `valueParser` are
+honored, so a text value will not land in a numeric column.
+
+## Live demo
+
+<UseFillHandleDemo />
+
+## Quick example
+
+```tsx
+import { useHeadlessGrid, useRangeSelection, useFillHandle } from '@alaarab/ogrid-react';
+
+const grid = useHeadlessGrid({ columns, data, getRowId });
+const range = useRangeSelection({ rowCount: grid.rows.length, colCount: grid.columns.length });
+const fill = useFillHandle({
+  rangeSelection: range,
+  rows: grid.rows,
+  columns: grid.columns,
+  onFillCells: (events) => setData((prev) => events.reduce(applyOneEvent, prev)),
+});
+
+// Commit even when the mouse is released outside the table.
+useEffect(() => {
+  if (!fill.isFilling) return;
+  window.addEventListener('mouseup', fill.commitFill);
+  return () => window.removeEventListener('mouseup', fill.commitFill);
+}, [fill.isFilling, fill.commitFill]);
+
+// Inside the cell loop:
+const r = range.range;
+<td
+  onMouseEnter={(e) => (fill.isFilling ? fill.updateFill(rowIdx, colIdx) : e.buttons === 1 && range.extendRange(rowIdx, colIdx))}
+  data-fill={fill.isFilling && fill.isInFillRange(rowIdx, colIdx)}
+>
+  {value}
+  {r && rowIdx === r.endRow && colIdx === r.endCol && (
+    <span className="fill-handle" onMouseDown={(e) => { e.stopPropagation(); fill.startFill(); }} />
+  )}
+</td>
+```
+
+## Parameters
+
+`UseFillHandleParams<T>`
+
+| Param | Type | Description |
+|---|---|---|
+| `rangeSelection` | `UseRangeSelectionResult` | The source range. Fill always extends from `rangeSelection.range`. |
+| `rows` | `T[]` | The rows you render (`grid.rows`). Event `rowIndex` values index into this array. |
+| `columns` | `IColumnDef<T>[]` | Visible columns, in render order. |
+| `onFillCells` | `(events: ICellValueChangedEvent<T>[]) => void` | Called once on commit with every accepted cell. Not called when nothing changed. |
+
+## Returns
+
+`UseFillHandleResult`
+
+| Field | Type | Description |
+|---|---|---|
+| `fillTarget` | `CellCoord \| null` | Cell the handle is being dragged toward. |
+| `isFilling` | `boolean` | `fillTarget !== null`. |
+| `fillRange` | `ISelectionRange \| null` | Source range extended to include the target; equals the source range when idle. |
+| `startFill` | `() => void` | Begin a drag from the range's bottom-right cell. No-op without a range. |
+| `updateFill` | `(row, col) => void` | Move the target. No-op when not filling. |
+| `commitFill` | `() => void` | Compute events, call `onFillCells`, end the drag. |
+| `cancelFill` | `() => void` | End the drag without changes. |
+| `isInFillRange` | `(row, col) => boolean` | Hit test against `fillRange` (includes the source cells). |
+
+## Behavior notes
+
+- **Tiling, not series.** The source block repeats across the fill range at
+  the same offset modulo the block size (Excel's behavior for a plain drag).
+  Source cells are never overwritten. There is no 1, 2, 3 series detection.
+- **The fill range is a bounding box** of the source range and the target, so
+  a drag up or to the left fills in that direction too.
+- **Releasing without moving is a no-op**: when `fillRange` equals the source
+  range, `commitFill` ends the drag and `onFillCells` is not called.
+- **Validation per cell.** Read-only cells are skipped, and each value runs
+  through the target column's `valueParser` / built-in type parser; rejected
+  cells are dropped from the event list.
+- **Stop propagation on the handle.** The handle sits inside a cell whose
+  `onMouseDown` starts a new range; `e.stopPropagation()` keeps the source
+  range intact.
+- **Formula-aware fill** (relative reference adjustment) is only available
+  through `<OGrid>` with `formulas` enabled; the headless hook passes no
+  formula options to `applyFillValues`.
+
+## See also
+
+- [`useRangeSelection`](/docs/spreadsheet-hooks/use-range-selection) provides the source range
+- [`useUndoRedo`](/docs/spreadsheet-hooks/use-undo-redo) with `beginBatch` / `endBatch` to undo a whole fill in one step
+- [Editing & Clipboard: fill handle](/docs/features/editing#fill-handle) inside `<OGrid>`

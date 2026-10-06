@@ -1,0 +1,113 @@
+---
+sidebar_position: 7
+title: useUndoRedo
+description: Wrap your cell-change callback with an undo/redo history stack. Batching groups many changes into one step.
+---
+
+import UseUndoRedoDemo from '@site/src/components/demos/headless/UseUndoRedoDemo';
+
+# `useUndoRedo`
+
+Wraps your `onCellValueChanged` handler. Every event that passes through the
+wrapped callback is recorded; `undo()` replays it through your handler with
+`oldValue` and `newValue` swapped, `redo()` replays it forward. Point
+[`useInlineEdit`](/docs/spreadsheet-hooks/use-inline-edit),
+[`useFillHandle`](/docs/spreadsheet-hooks/use-fill-handle), and
+[`useCellClipboard`](/docs/spreadsheet-hooks/use-cell-clipboard) at the
+wrapped callback and all of them become undoable with no extra work. The
+same hook powers `<OGrid>`'s `onUndo` / `onRedo` props.
+
+## Live demo
+
+<UseUndoRedoDemo />
+
+## Quick example
+
+```tsx
+import { useHeadlessGrid, useInlineEdit, useUndoRedo } from '@alaarab/ogrid-react';
+import type { ICellValueChangedEvent } from '@alaarab/ogrid-react';
+
+// The raw writer. Must be a pure "set this cell to newValue" function.
+const applyEdit = useCallback((event: ICellValueChangedEvent<Employee>) => {
+  setData((prev) => prev.map((row) => (row.id === event.item.id ? { ...row, [event.columnId]: event.newValue } : row)));
+}, []);
+
+const undo = useUndoRedo<Employee>({ onCellValueChanged: applyEdit, maxUndoDepth: 100 });
+const commit = undo.onCellValueChanged ?? applyEdit; // defined whenever you passed a handler
+
+const grid = useHeadlessGrid({ columns, data, getRowId });
+const edit = useInlineEdit<Employee>({
+  columns,
+  getRowId,
+  onCellEdit: (event) => commit({ ...event, rowIndex: grid.rows.indexOf(event.item) }),
+});
+
+// Many changes, one undo step:
+const onFillCells = (events: ICellValueChangedEvent<Employee>[]) => {
+  undo.beginBatch();
+  events.forEach(commit);
+  undo.endBatch();
+};
+
+<button onClick={undo.undo} disabled={!undo.canUndo}>Undo</button>
+<button onClick={undo.redo} disabled={!undo.canRedo}>Redo</button>
+```
+
+## Parameters
+
+`UseUndoRedoParams<T>`
+
+| Param | Type | Default | Description |
+|---|---|---|---|
+| `onCellValueChanged` | `((event: ICellValueChangedEvent<T>) => void) \| undefined` | required | Your writer. When `undefined`, the hook is inert and the returned callback is `undefined` too. |
+| `maxUndoDepth` | `number` | `100` | History depth. Changing it after mount rebuilds the stack and drops existing history. |
+| `formulaCells` | `UseUndoRedoFormulaCells<T>` | none | Formula-engine integration, see below. |
+
+`UseUndoRedoFormulaCells<T>` (optional)
+
+| Field | Type | Description |
+|---|---|---|
+| `cellOf` | `(event) => { col; row } \| null` | Map a value change to an engine cell, or `null` if it has none. |
+| `getFormula` | `(col, row) => string \| undefined` | Current formula at a cell. |
+| `setFormula` | `(col, row, formula: string \| null) => void` | Write or clear a formula. |
+| `onCellChanged` | `(col, row) => void` | Optional. Tell the engine a plain value changed so dependents recalculate. |
+
+## Returns
+
+`UseUndoRedoResult<T>`
+
+| Field | Type | Description |
+|---|---|---|
+| `onCellValueChanged` | `((event) => void) \| undefined` | The wrapped writer. Pass this to the other hooks instead of your raw handler. |
+| `undo` / `redo` | `() => void` | Replay the previous / next step. No-ops when there is nothing to do. |
+| `canUndo` / `canRedo` | `boolean` | For button state. |
+| `beginBatch` / `endBatch` | `() => void` | Everything committed in between is one undo step. |
+| `clear` | `() => void` | Drop all history, for example when you replace the dataset. |
+| `maxUndoDepth` | `number` | The configured depth. |
+| `setFormula` | `(col, row, formula: string \| null) => void` | Record a formula change as an undoable step. No-op without `formulaCells`. |
+
+## Behavior notes
+
+- **Your handler must be idempotent and direction-agnostic.** Undo calls it
+  with `{ ...event, oldValue: event.newValue, newValue: event.oldValue }`, so
+  the handler should simply write `newValue` to the cell identified by
+  `item` / `columnId` and not, for example, append to a log.
+- **The wrapped callback has a stable identity** and always calls your latest
+  handler, so it is safe to pass straight into other hooks and effects.
+- **`canUndo` / `canRedo` do not update while a batch is open.** They refresh
+  when `endBatch()` runs. Make sure every `beginBatch()` is paired.
+- **The wrapped callback expects a full `ICellValueChangedEvent`**, including
+  `rowIndex`. `useInlineEdit` emits an `InlineEditEvent` without it; add the
+  index when forwarding (see the example). Fill and clipboard events already
+  carry it.
+- **Formula cells.** With `formulaCells`, writing a plain value over a formula
+  cell records the formula removal as part of the same step, so undo restores
+  the formula. Formula changes made through `undo.setFormula` are undoable too.
+- **Not persisted.** The stack lives in a ref for the component's lifetime;
+  remounting starts empty.
+
+## See also
+
+- [`useInlineEdit`](/docs/spreadsheet-hooks/use-inline-edit), [`useFillHandle`](/docs/spreadsheet-hooks/use-fill-handle), [`useCellClipboard`](/docs/spreadsheet-hooks/use-cell-clipboard) produce the events
+- [Editing & Clipboard: undo / redo](/docs/features/editing#undo--redo) inside `<OGrid>`
+- [Formulas](/docs/features/formulas)

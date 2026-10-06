@@ -1,0 +1,167 @@
+---
+sidebar_position: 1
+title: Headless grid
+slug: /headless
+description: useHeadlessGrid is the primary entry point when you own the table markup. Compose the spreadsheet hooks on top for inline editing, range selection, drag-to-fill, clipboard, undo/redo, keyboard navigation, and virtualization.
+---
+
+import HeadlessSpreadsheetDemo from '@site/src/components/demos/headless/HeadlessSpreadsheetDemo';
+
+# Headless: bring your own table
+
+`useHeadlessGrid` is the primary entry point for apps that own their table
+markup. It gives you OGrid's sort, filter, pagination, and selection logic as
+plain state and actions, and nothing else: no CSS, no components, no DOM.
+You render a `<table>` (or shadcn `<Table>`, Fluent `<DataGrid>`, divs) and
+read from the hook.
+
+Spreadsheet behavior is layered on as separate hooks. Each one is optional,
+each one is small, and they all speak the same vocabulary: row and column
+indices into the rows you are rendering, and `ICellValueChangedEvent` objects
+that you apply to your own data store.
+
+<HeadlessSpreadsheetDemo />
+
+## The composition model
+
+```
+useHeadlessGrid        data layer: sort, filter, paginate, row selection, getCellValue
+  └─ grid.rows / grid.columns are the coordinate system for everything below
+       ├─ useRangeSelection   anchor + focus → normalized ISelectionRange
+       │    ├─ useFillHandle      drag the range corner → ICellValueChangedEvent[]
+       │    ├─ useCellClipboard   copy / cut / paste TSV → ICellValueChangedEvent[]
+       │    └─ useGridFocus       Arrow / Tab / Enter / Home / End / PageUp / PageDown
+       ├─ useInlineEdit       one cell at a time; valueParser validation on commit
+       ├─ useUndoRedo         wraps your write callback with a history stack
+       └─ useGridVirtualization   windowed rendering for very large row counts
+```
+
+Three rules keep the pieces aligned:
+
+1. **One `rows` array.** Pass `grid.rows` to every hook that takes `rows`, and
+   render from the same array. Range, fill, clipboard, and focus coordinates
+   are positions in that array (the current page), not row ids.
+2. **Hooks emit events, you own the data.** Nothing mutates your rows. Every
+   hook hands you `{ item, columnId, oldValue, newValue, rowIndex }` and you
+   write it with `setState`, a store, or a server call.
+3. **Columns carry the rules.** `editable`, `valueParser`, `valueFormatter`,
+   `clipboardFormatter`, and `type` on `IColumnDef` are honored by every hook,
+   the same way `<OGrid>` honors them. Validation lives in one place.
+
+## Which package to import from
+
+```ts
+// Hooks only: no chrome CSS, tree-shakes cleanly (sideEffects: false)
+import { useHeadlessGrid, useInlineEdit } from '@alaarab/ogrid-react';
+
+// Hooks + the <OGrid> component, when you use both on the same page
+import { useHeadlessGrid, OGrid } from '@alaarab/ogrid-react-radix';
+```
+
+Both packages export the same hooks and types. `@alaarab/ogrid-react` has no
+UI dependency and is the right choice for a headless-only app.
+
+## Minimal complete example
+
+A sortable, paginated table in about forty lines. Everything the data layer
+needs is `columns`, `data`, and a stable `getRowId`.
+
+```tsx
+import { useHeadlessGrid } from '@alaarab/ogrid-react';
+import type { IColumnDef } from '@alaarab/ogrid-react';
+
+interface Employee { id: number; name: string; department: string; salary: number }
+
+const columns: IColumnDef<Employee>[] = [
+  { columnId: 'name', name: 'Name', sortable: true },
+  { columnId: 'department', name: 'Department', sortable: true },
+  { columnId: 'salary', name: 'Salary', type: 'numeric', sortable: true,
+    valueFormatter: (v) => `$${Number(v).toLocaleString()}` },
+];
+
+export function EmployeeTable({ data }: { data: Employee[] }) {
+  const grid = useHeadlessGrid({
+    columns,
+    data,
+    getRowId: (e) => e.id,
+    initialSort: { field: 'name', direction: 'asc' },
+    initialPageSize: 25,
+  });
+
+  return (
+    <>
+      <table>
+        <thead>
+          <tr>
+            {grid.columns.map((col) => (
+              <th key={col.columnId} onClick={() => col.sortable && grid.toggleSort(col.columnId)}>
+                {col.name} {grid.sortIndicator(col.columnId)}
+              </th>
+            ))}
+          </tr>
+        </thead>
+        <tbody>
+          {grid.rows.map((row) => (
+            <tr key={grid.getRowId(row)}>
+              {grid.columns.map((col) => {
+                const value = grid.getCellValue(row, col.columnId);
+                return <td key={col.columnId}>{col.valueFormatter ? col.valueFormatter(value, row) : String(value ?? '')}</td>;
+              })}
+            </tr>
+          ))}
+        </tbody>
+      </table>
+      <button onClick={() => grid.setPage(grid.page - 1)} disabled={grid.page <= 1}>Previous</button>
+      <span>Page {grid.page} of {grid.totalPages} ({grid.totalCount} rows)</span>
+      <button onClick={() => grid.setPage(grid.page + 1)} disabled={grid.page >= grid.totalPages}>Next</button>
+    </>
+  );
+}
+```
+
+## Adding spreadsheet features
+
+Each hook plugs into the same `grid`. This is the wiring the demo at the top
+of the page uses; the per-hook pages cover the render glue for each one.
+
+```tsx
+const [data, setData] = useState(initialRows);
+
+// One writer. Undo replays through it with oldValue/newValue swapped.
+const applyEdit = useCallback((event: ICellValueChangedEvent<Employee>) => {
+  setData((prev) => prev.map((row) => (row.id === event.item.id ? { ...row, [event.columnId]: event.newValue } : row)));
+}, []);
+const undo = useUndoRedo<Employee>({ onCellValueChanged: applyEdit });
+const commit = undo.onCellValueChanged ?? applyEdit;
+
+const grid = useHeadlessGrid({ columns, data, getRowId, initialPageSize: 25 });
+const range = useRangeSelection({ rowCount: grid.rows.length, colCount: grid.columns.length });
+const focus = useGridFocus({ rowCount: grid.rows.length, colCount: grid.columns.length, rangeSelection: range });
+const edit = useInlineEdit<Employee>({
+  columns,
+  getRowId,
+  // InlineEditEvent has no rowIndex; add it so the history stack gets a full event.
+  onCellEdit: (event) => commit({ ...event, rowIndex: grid.rows.indexOf(event.item) }),
+});
+const fill = useFillHandle<Employee>({ rangeSelection: range, rows: grid.rows, columns: grid.columns, onFillCells: (events) => events.forEach(commit) });
+const clipboard = useCellClipboard<Employee>({ rangeSelection: range, rows: grid.rows, getRowId, columns: grid.columns, onCellEdit: (events) => events.forEach(commit) });
+```
+
+## The hooks
+
+| Hook | Adds | Builds on |
+|---|---|---|
+| [`useHeadlessGrid`](/docs/spreadsheet-hooks/use-headless-grid) | Sort, filter, paginate, row selection, cell value resolution, server-side `dataSource` | nothing (start here) |
+| [`useInlineEdit`](/docs/spreadsheet-hooks/use-inline-edit) | Start / commit / cancel one cell edit with `valueParser` validation | `columns`, `getRowId` |
+| [`useRangeSelection`](/docs/spreadsheet-hooks/use-range-selection) | Anchor + focus rectangular range | `grid.rows.length`, `grid.columns.length` |
+| [`useFillHandle`](/docs/spreadsheet-hooks/use-fill-handle) | Drag the range corner to tile values across cells | `useRangeSelection` |
+| [`useCellClipboard`](/docs/spreadsheet-hooks/use-cell-clipboard) | Copy / cut / paste as Excel-compatible TSV | `useRangeSelection` |
+| [`useUndoRedo`](/docs/spreadsheet-hooks/use-undo-redo) | History stack with batching, wraps your write callback | your `onCellValueChanged` |
+| [`useGridFocus`](/docs/spreadsheet-hooks/use-grid-focus) | Active cell + keyboard movement, Shift+Arrow extends the range | optional `useRangeSelection` |
+| [`useGridVirtualization`](/docs/spreadsheet-hooks/use-grid-virtualization) | Windowed row (and column) rendering for large datasets | a scroll container ref |
+
+## See also
+
+- [Headless or component?](/docs/getting-started/headless-or-component) for choosing between the hooks and `<OGrid>`
+- [Headless hooks reference](/docs/api/headless-hooks) for the condensed one-page API listing
+- [`SpreadsheetDemo` Storybook story](https://github.com/alaarab/ogrid/blob/main/packages/react-radix/src/OGrid/SpreadsheetDemo.stories.tsx) for a copy-paste starter

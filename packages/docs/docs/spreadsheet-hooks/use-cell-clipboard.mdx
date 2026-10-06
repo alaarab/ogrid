@@ -1,0 +1,111 @@
+---
+sidebar_position: 6
+title: useCellClipboard
+description: Headless copy, cut, and paste of cell ranges as Excel-compatible TSV, with valueParser validation on paste.
+---
+
+import UseCellClipboardDemo from '@site/src/components/demos/headless/UseCellClipboardDemo';
+
+# `useCellClipboard`
+
+Copies the active range to the OS clipboard as tab-separated text, so it
+round-trips through Excel and Google Sheets. Paste reads TSV back, anchors it
+at the top-left of the current range, validates every cell through the target
+column's `valueParser`, and hands you one event per accepted cell. Cut marks
+the range and clears the source cells only when the paste lands.
+
+## Live demo
+
+<UseCellClipboardDemo />
+
+## Quick example
+
+```tsx
+import { useHeadlessGrid, useRangeSelection, useCellClipboard } from '@alaarab/ogrid-react';
+
+const grid = useHeadlessGrid({ columns, data, getRowId });
+const range = useRangeSelection({ rowCount: grid.rows.length, colCount: grid.columns.length });
+const clipboard = useCellClipboard({
+  rangeSelection: range,
+  rows: grid.rows,
+  getRowId,
+  columns: grid.columns,
+  onCellEdit: (events) => setData((prev) => events.reduce(applyOneEvent, prev)),
+  onClipboardError: () => toast('Clipboard access was blocked'),
+});
+
+// On the focusable grid container:
+<div
+  tabIndex={0}
+  onKeyDown={(e) => {
+    const mod = e.metaKey || e.ctrlKey;
+    if (mod && e.key === 'c') clipboard.copyRange();
+    if (mod && e.key === 'x') clipboard.cutRange();
+    if (mod && e.key === 'v') clipboard.pasteRange();
+    if (e.key === 'Escape') clipboard.clearClipboard();
+  }}
+>
+```
+
+## Parameters
+
+`UseCellClipboardParams<T>`
+
+| Param | Type | Description |
+|---|---|---|
+| `rangeSelection` | `UseRangeSelectionResult` | Copy/cut source and paste anchor come from `rangeSelection.range`. |
+| `rows` | `T[]` | The rows you render (`grid.rows`). |
+| `getRowId` | `(item: T) => RowId` | Optional. Keeps a pending cut attached to its rows when the array is re-sorted or replaced. Defaults to object identity. |
+| `columns` | `IColumnDef<T>[]` | Visible columns, in render order. |
+| `onCellEdit` | `(events: ICellValueChangedEvent<T>[]) => void` | Called once per paste with the accepted cells, plus the cut-clear events if a cut was pending. |
+| `clipboard` | `{ readText(): Promise<string>; writeText(text): Promise<void> }` | Optional override. Defaults to `navigator.clipboard`. Useful for tests or an in-memory fallback. |
+| `onClipboardError` | `(error: unknown) => void` | Called when the clipboard read or write throws (permission denied, insecure context). |
+
+## Returns
+
+`UseCellClipboardResult`
+
+| Field | Type | Description |
+|---|---|---|
+| `copyRange` | `() => Promise<void>` | Write the range as TSV, mark it as the copy range. No-op without a range. |
+| `cutRange` | `() => Promise<void>` | Write as TSV and mark the range as cut. Nothing is cleared yet. |
+| `pasteRange` | `() => Promise<void>` | Read TSV, apply at the range's top-left, fire `onCellEdit`, clear markers. |
+| `canPaste` | `boolean` | `navigator.clipboard.readText` is available. `false` on the server and during the first client render. |
+| `activeCopyRange` | `ISelectionRange \| null` | For marching-ants rendering. |
+| `activeCutRange` | `ISelectionRange \| null` | For marching-ants rendering. |
+| `clearClipboard` | `() => void` | Drop both markers and the pending cut. Bind to Escape. |
+
+## Behavior notes
+
+- **The three actions never reject.** Failures go to `onClipboardError` and the
+  promise resolves, so `await clipboard.pasteRange()` is safe without a
+  `try`/`catch`.
+- **Copy text follows the column.** `clipboardFormatter` wins when set (its
+  output is final, so returning `''` keeps a column off the clipboard);
+  otherwise `valueFormatter`; otherwise the raw value. Rows are joined with
+  `\r\n`, cells with `\t`.
+- **Paste anchors at the normalized top-left** of the range, even when the
+  user selected upward or leftward. Cells that would land past the last row or
+  column are dropped; read-only columns and values rejected by `valueParser`
+  are skipped.
+- **Cut clears only what was actually pasted.** For each source cell, the
+  corresponding destination must have accepted the value. Read-only
+  destinations, rejected values, and out-of-bounds cells leave their source
+  intact. When paste overlaps the cut source, the pasted value wins.
+- **A cut survives re-sorting but not an intervening copy.** The cut source is
+  remembered by `getRowId` (or object identity), so sorting between cut and
+  paste still clears the right rows. If the clipboard text no longer matches
+  what the cut wrote (the user copied something else), the paste applies
+  normally and no cells are cleared.
+- **Browser permission is real.** `readText` prompts in Chromium and is
+  unavailable in Firefox for regular pages, so `canPaste` may be `false` even
+  though copy works. Pass a `clipboard` override if you want an in-app
+  fallback, as the demo above does.
+- **Keyboard wiring is yours.** Attach the shortcuts to a focusable container
+  (not `document`) so multiple grids on one page do not fight.
+
+## See also
+
+- [`useRangeSelection`](/docs/spreadsheet-hooks/use-range-selection) provides the range
+- [`useUndoRedo`](/docs/spreadsheet-hooks/use-undo-redo) with `beginBatch` / `endBatch` to undo a whole paste in one step
+- [Editing & Clipboard: clipboard](/docs/features/editing#clipboard) inside `<OGrid>`

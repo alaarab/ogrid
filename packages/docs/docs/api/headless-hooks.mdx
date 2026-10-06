@@ -11,6 +11,20 @@ Pair `useHeadlessGrid` with the spreadsheet hooks to add inline edit, range
 selection, fill handle, clipboard, undo/redo, and keyboard navigation to your
 own table markup (shadcn `<Table>`, plain HTML, Fluent `<DataGrid>`, anything).
 
+:::tip Per-hook guides
+This page is the condensed, one-screen reference. Each hook also has its own
+page with a live demo on a plain `<table>`, full parameter and return tables,
+and behavior notes: start at the [Headless overview](/docs/headless), or jump
+to [`useHeadlessGrid`](/docs/spreadsheet-hooks/use-headless-grid),
+[`useInlineEdit`](/docs/spreadsheet-hooks/use-inline-edit),
+[`useRangeSelection`](/docs/spreadsheet-hooks/use-range-selection),
+[`useFillHandle`](/docs/spreadsheet-hooks/use-fill-handle),
+[`useCellClipboard`](/docs/spreadsheet-hooks/use-cell-clipboard),
+[`useUndoRedo`](/docs/spreadsheet-hooks/use-undo-redo),
+[`useGridFocus`](/docs/spreadsheet-hooks/use-grid-focus), or
+[`useGridVirtualization`](/docs/spreadsheet-hooks/use-grid-virtualization).
+:::
+
 All seven hooks ship as React hooks:
 
 - `import { useX } from '@alaarab/ogrid-react-radix'`
@@ -97,10 +111,19 @@ const edit = useInlineEdit({
     updateRow(item.id, { [columnId]: newValue }),
 });
 
-// In render:
+// In render (per cell). getEditorProps returns hook callbacks, not DOM props:
+// `onChange` takes the value itself, so wire the fields by hand.
+const editor = edit.isEditing(row, col.columnId) ? edit.getEditorProps(row, col.columnId) : null;
+
 <TableCell onDoubleClick={() => edit.startEdit(row, col.columnId)}>
-  {edit.isEditing(row, col.columnId) ? (
-    <input autoFocus {...edit.getEditorProps(row, col.columnId)} />
+  {editor ? (
+    <input
+      autoFocus
+      value={String(editor.value ?? '')}
+      onChange={(e) => editor.onChange(e.target.value)}
+      onBlur={editor.onCommit}
+      onKeyDown={editor.onKeyDown}
+    />
   ) : (
     String(grid.getCellValue(row, col.columnId))
   )}
@@ -127,7 +150,7 @@ const edit = useInlineEdit({
 | `cancelEdit()` | Close without firing |
 | `isEditing(row, columnId)` | `boolean` |
 | `canEdit(row, columnId)` | `boolean` |
-| `getEditorProps(row, columnId)` | Spread onto your input — `{ value, onChange, onBlur, onKeyDown }` (Enter commits, Escape cancels) |
+| `getEditorProps(row, columnId)` | `{ value, onChange(value), onCommit, onCancel, onKeyDown }` — wire each to your input by hand (`onChange` takes the value, not an event); `onKeyDown` handles Enter (commit) and Escape (cancel) |
 
 ---
 
@@ -277,8 +300,13 @@ style undo across all of them for free.
 ```tsx
 const undo = useUndoRedo({ onCellValueChanged: applyEditToRows });
 
-const edit = useInlineEdit({ columns, getRowId, onCellEdit: undo.onCellValueChanged });
-const fill = useFillHandle({ ..., onFillCells: (events) => events.forEach(undo.onCellValueChanged) });
+// useUndoRedo speaks ICellValueChangedEvent (needs rowIndex); useInlineEdit emits
+// InlineEditEvent (no rowIndex), so add the index of the row in the current page.
+const commit = (e: InlineEditEvent<Row>) =>
+  undo.onCellValueChanged?.({ ...e, rowIndex: grid.rows.indexOf(e.item) });
+
+const edit = useInlineEdit({ columns, getRowId, onCellEdit: commit });
+const fill = useFillHandle({ ..., onFillCells: (events) => events.forEach(commit) });
 
 <button onClick={undo.undo} disabled={!undo.canUndo}>Undo</button>
 <button onClick={undo.redo} disabled={!undo.canRedo}>Redo</button>
@@ -409,13 +437,16 @@ The canonical demo combining every hook on a plain HTML table is the
 const grid = useHeadlessGrid({ columns, data, getRowId: (r) => r.id });
 const range = useRangeSelection({ rowCount: grid.rows.length, colCount: grid.columns.length });
 const undo = useUndoRedo({ onCellValueChanged: applyEditToRows });
-const edit = useInlineEdit({ columns, getRowId, onCellEdit: undo.onCellValueChanged });
-const fill = useFillHandle({ rangeSelection: range, rows: grid.rows, columns, onFillCells });
-const clipboard = useCellClipboard({ rangeSelection: range, rows: grid.rows, columns, onCellEdit });
+const commit = (e: InlineEditEvent<Row>) =>
+  undo.onCellValueChanged?.({ ...e, rowIndex: grid.rows.indexOf(e.item) });
+const edit = useInlineEdit({ columns, getRowId, onCellEdit: commit });
+const fill = useFillHandle({ rangeSelection: range, rows: grid.rows, columns, onFillCells: (events) => events.forEach(commit) });
+const clipboard = useCellClipboard({ rangeSelection: range, rows: grid.rows, columns, onCellEdit: commit });
 const focus = useGridFocus({ rowCount: grid.rows.length, colCount: grid.columns.length, rangeSelection: range });
 ```
 
 ## See also
 
+- [Headless overview](/docs/headless) — Composition model and per-hook pages with live demos
 - [Headless or component?](/docs/getting-started/headless-or-component) — When to use these hooks vs `<OGrid>`
 - [Theming](/docs/guides/theming) — Including the shadcn preset

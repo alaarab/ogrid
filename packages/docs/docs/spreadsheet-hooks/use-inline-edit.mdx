@@ -1,0 +1,125 @@
+---
+sidebar_position: 3
+title: useInlineEdit
+description: Headless start / commit / cancel lifecycle for editing one cell at a time, with valueParser validation.
+---
+
+import UseInlineEditDemo from '@site/src/components/demos/headless/UseInlineEditDemo';
+
+# `useInlineEdit`
+
+Manages which cell is being edited, buffers the pending value, and runs the
+commit through the column's `valueParser` before telling you about it. You
+decide what editor to render: a native `<input>`, a select, a date picker.
+The hook only owns the lifecycle, and it honors the column's `editable` flag
+(boolean or per-row predicate) exactly as `<OGrid>` does.
+
+## Live demo
+
+<UseInlineEditDemo />
+
+## Quick example
+
+```tsx
+import { useHeadlessGrid, useInlineEdit } from '@alaarab/ogrid-react';
+
+const grid = useHeadlessGrid({ columns, data, getRowId });
+const edit = useInlineEdit({
+  columns,
+  getRowId,
+  onCellEdit: ({ item, columnId, newValue }) =>
+    setData((prev) => prev.map((row) => (row.id === item.id ? { ...row, [columnId]: newValue } : row))),
+});
+
+// Inside the row loop:
+<td onDoubleClick={() => edit.startEdit(row, col.columnId)}>
+  {edit.isEditing(row, col.columnId) ? (
+    (() => {
+      const editor = edit.getEditorProps(row, col.columnId);
+      return (
+        <input
+          autoFocus
+          value={String(editor.value ?? '')}
+          onChange={(e) => editor.onChange(e.target.value)} // onChange takes the value, not the event
+          onBlur={editor.onBlur}
+          onKeyDown={editor.onKeyDown}
+        />
+      );
+    })()
+  ) : (
+    String(grid.getCellValue(row, col.columnId) ?? '')
+  )}
+</td>
+```
+
+## Parameters
+
+`UseInlineEditParams<T>`
+
+| Param | Type | Description |
+|---|---|---|
+| `columns` | `IColumnDef<T>[]` | Columns. `editable`, `valueParser`, `type`, and `cellEditor: 'select'` allowed values drive validation. |
+| `getRowId` | `(row: T) => RowId` | Must match the extractor passed to `useHeadlessGrid`. |
+| `onCellEdit` | `(event: InlineEditEvent<T>) => void` | Called once per successful commit with `{ item, columnId, oldValue, newValue }`. |
+| `isCellEditable` | `(row: T, columnId: string) => boolean` | Optional override. Defaults to the column's `editable` field. |
+
+## Returns
+
+`UseInlineEditResult<T>`
+
+| Field | Type | Description |
+|---|---|---|
+| `editingCell` | `{ rowId: RowId; columnId: string } \| null` | The cell being edited. |
+| `pendingValue` | `unknown` | What the editor is showing before commit. |
+| `setPendingValue` | `(value: unknown) => void` | Update the buffer. |
+| `startEdit` | `(row: T, columnId: string) => void` | Begin editing. No-op when the cell is not editable. |
+| `commitEdit` | `() => void` | Validate and fire `onCellEdit`. |
+| `cancelEdit` | `() => void` | Close without firing. |
+| `isEditing` | `(row: T, columnId: string) => boolean` | |
+| `canEdit` | `(row: T, columnId: string) => boolean` | Per-cell editability. |
+| `getEditorProps` | `(row: T, columnId: string) => InlineEditorProps` | Props for your editor, see below. |
+
+`InlineEditorProps`
+
+| Field | Type | Description |
+|---|---|---|
+| `value` | `unknown` | Pending value. |
+| `onChange` | `(value: unknown) => void` | Takes the new **value**, not a DOM event. |
+| `onCommit` | `() => void` | Same as `commitEdit`. |
+| `onCancel` | `() => void` | Same as `cancelEdit`. |
+| `onKeyDown` | `(e: { key; preventDefault?; stopPropagation? }) => void` | Enter commits, Escape cancels. |
+| `onBlur` | `() => void` | Commits. |
+
+## Behavior notes
+
+- **Do not spread `getEditorProps()` straight onto a native `<input>`.**
+  `onChange` expects the value, so a React change event would become the
+  pending value, and `onCommit` / `onCancel` would land on the DOM as unknown
+  attributes. Wire the fields individually as in the example.
+- **Validation order on commit** (core `parseValue`): the column's
+  `valueParser` if present; otherwise the allowed `values` for a
+  `cellEditor: 'select'` column (case-insensitive match, empty string allowed);
+  otherwise the built-in parser for `type: 'numeric' | 'date' | 'boolean'`;
+  otherwise the raw value passes through. Returning `undefined` from a
+  `valueParser` rejects the edit.
+- **Rejected and unchanged values cancel silently.** `onCellEdit` fires only
+  when the parsed value differs from the original. There is no rejection
+  callback; show validation feedback in your editor if you need it.
+- **The row is snapshotted at `startEdit`.** `commitEdit` uses the item and
+  old value captured when editing began, so it does not matter if your row
+  objects are replaced mid-edit.
+- **Blur after Escape cannot double-commit.** The hook tracks the live session
+  synchronously, so stale editor callbacks from a previous render are inert.
+- **One cell at a time.** Starting an edit on another cell replaces the
+  current session without committing it; call `commitEdit()` first if you want
+  click-away-to-save semantics.
+- **Forwarding to `useUndoRedo`:** `InlineEditEvent` has no `rowIndex`. Add it
+  (`grid.rows.indexOf(event.item)`) when passing the event to
+  `undo.onCellValueChanged`, which expects a full `ICellValueChangedEvent`.
+
+## See also
+
+- [`useUndoRedo`](/docs/spreadsheet-hooks/use-undo-redo) to make edits undoable
+- [`useGridFocus`](/docs/spreadsheet-hooks/use-grid-focus) to open the editor from the keyboard (F2 on the active cell)
+- [Editing & Clipboard](/docs/features/editing) for the same behavior inside `<OGrid>`, including `valueParser` recipes
+- [Custom cell editors](/docs/guides/custom-cell-editors)

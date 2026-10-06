@@ -67,9 +67,11 @@ import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@
 const grid = useHeadlessGrid({ columns, data, getRowId: (r) => r.id });
 const range = useRangeSelection({ rowCount: grid.rows.length, colCount: grid.columns.length });
 const undo = useUndoRedo({ onCellValueChanged: applyEdit });
-const edit = useInlineEdit({ columns, getRowId: (r) => r.id, onCellEdit: undo.onCellValueChanged });
-const fill = useFillHandle({ rangeSelection: range, rows: grid.rows, columns, onFillCells });
-const clipboard = useCellClipboard({ rangeSelection: range, rows: grid.rows, columns, onCellEdit });
+// useUndoRedo needs rowIndex; the edit hooks emit events without it.
+const commit = (e) => undo.onCellValueChanged?.({ ...e, rowIndex: grid.rows.indexOf(e.item) });
+const edit = useInlineEdit({ columns, getRowId: (r) => r.id, onCellEdit: commit });
+const fill = useFillHandle({ rangeSelection: range, rows: grid.rows, columns, onFillCells: (events) => events.forEach(commit) });
+const clipboard = useCellClipboard({ rangeSelection: range, rows: grid.rows, columns, onCellEdit: commit });
 const focus = useGridFocus({ rowCount: grid.rows.length, colCount: grid.columns.length, rangeSelection: range });
 
 return (
@@ -80,7 +82,9 @@ return (
 );
 ```
 
-The full integration code is the
+Each hook has its own page with a live demo, parameter and return tables, and
+behavior notes under [Spreadsheet Hooks](/docs/headless). The full integration
+code is the
 [`SpreadsheetDemo` Storybook story in `react-radix`](https://github.com/alaarab/ogrid/blob/main/packages/react-radix/src/OGrid/SpreadsheetDemo.stories.tsx)
 — ~200 lines, copy-paste as your starter template.
 

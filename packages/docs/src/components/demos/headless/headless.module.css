@@ -1,0 +1,206 @@
+/* Shared chrome for the headless-hook demos. Every demo renders a plain
+   <table>; these classes are the only styling involved, so the hooks'
+   behavior is what the reader sees. Tokens come from src/css/custom.scss
+   and flip automatically in dark mode. */
+
+.wrap {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  font-size: 0.8rem;
+  color: var(--ogrid-fg);
+  background: var(--ogrid-bg);
+}
+
+.toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--ogrid-border);
+}
+
+.btn {
+  padding: 4px 10px;
+  border-radius: 6px;
+  border: 1px solid var(--ogrid-border);
+  background: var(--ogrid-bg);
+  color: var(--ogrid-fg);
+  font: inherit;
+  cursor: pointer;
+}
+
+.btn:hover:not(:disabled) {
+  background: var(--ogrid-hover-bg);
+}
+
+.btn:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+
+.input {
+  padding: 4px 8px;
+  border-radius: 6px;
+  border: 1px solid var(--ogrid-border);
+  background: var(--ogrid-bg);
+  color: var(--ogrid-fg);
+  font: inherit;
+  min-width: 0;
+}
+
+.status {
+  margin-left: auto;
+  color: var(--ogrid-fg-secondary);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.scroll {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  outline: none;
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  user-select: none;
+}
+
+.th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  text-align: left;
+  padding: 6px 10px;
+  background: var(--ogrid-header-bg);
+  border-bottom: 1px solid var(--ogrid-border);
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.sortBtn {
+  all: unset;
+  display: block;
+  width: 100%;
+  cursor: pointer;
+  font: inherit;
+  color: inherit;
+}
+
+.sortBtn:hover {
+  color: var(--ogrid-accent);
+}
+
+.sortBtn:focus-visible {
+  outline: 2px solid var(--ogrid-selection);
+  outline-offset: 1px;
+}
+
+.td {
+  position: relative;
+  padding: 6px 10px;
+  border-bottom: 1px solid var(--ogrid-border);
+  border-right: 1px solid var(--ogrid-border);
+  white-space: nowrap;
+  cursor: cell;
+}
+
+.td:last-child {
+  border-right: 0;
+}
+
+.numeric {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.readonly {
+  color: var(--ogrid-fg-muted);
+  cursor: default;
+}
+
+.selectedRow {
+  background: var(--ogrid-selected-row-bg);
+}
+
+.selected {
+  background: var(--ogrid-range-bg);
+}
+
+.active {
+  outline: 2px solid var(--ogrid-selection);
+  outline-offset: -2px;
+}
+
+.fill {
+  outline: 2px dashed var(--ogrid-selection);
+  outline-offset: -2px;
+}
+
+.copy {
+  outline: 2px dashed var(--ogrid-accent-secondary);
+  outline-offset: -2px;
+}
+
+.cut {
+  outline: 2px dashed #d9822b;
+  outline-offset: -2px;
+}
+
+.handle {
+  appearance: none;
+  padding: 0;
+  position: absolute;
+  right: -4px;
+  bottom: -4px;
+  width: 8px;
+  height: 8px;
+  z-index: 2;
+  background: var(--ogrid-selection);
+  border: 1px solid var(--ogrid-bg);
+  cursor: crosshair;
+}
+
+.editor {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 3px 6px;
+  border: 1px solid var(--ogrid-selection);
+  border-radius: 3px;
+  background: var(--ogrid-bg);
+  color: var(--ogrid-fg);
+  font: inherit;
+  outline: none;
+}
+
+.editing {
+  padding: 2px 4px;
+  cursor: text;
+}
+
+/* Virtualization demo: fixed 32px rows so scroll geometry stays exact. */
+.vtable {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+}
+
+.vcell {
+  height: 32px;
+  box-sizing: border-box;
+  padding: 0 10px;
+  line-height: 31px;
+  border-bottom: 1px solid var(--ogrid-border);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.spacer {
+  padding: 0;
+  border: 0;
+}

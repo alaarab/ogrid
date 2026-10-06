@@ -1,0 +1,144 @@
+---
+sidebar_position: 2
+title: useHeadlessGrid
+description: The headless data layer. Sort, filter, paginate, and select rows with your own table markup.
+---
+
+import UseHeadlessGridDemo from '@site/src/components/demos/headless/UseHeadlessGridDemo';
+
+# `useHeadlessGrid`
+
+The data layer every other hook sits on. Give it `columns`, `data`, and a
+stable `getRowId`; it returns the current page of sorted and filtered rows
+plus the state and actions to change them. It composes the same
+sort/filter/pagination sub-hooks `<OGrid>` uses internally, so behavior is
+identical to the component, including worker-thread sorting and server-side
+`dataSource` mode. It renders nothing.
+
+## Live demo
+
+<UseHeadlessGridDemo />
+
+## Quick example
+
+```tsx
+import { useHeadlessGrid } from '@alaarab/ogrid-react';
+
+const grid = useHeadlessGrid({
+  columns,
+  data: employees,
+  getRowId: (e) => e.id,
+  initialSort: { field: 'name', direction: 'asc' },
+  initialPageSize: 25,
+});
+
+<table>
+  <thead>
+    <tr>
+      {grid.columns.map((col) => (
+        <th key={col.columnId} onClick={() => grid.toggleSort(col.columnId)}>
+          {col.name} {grid.sortIndicator(col.columnId)}
+        </th>
+      ))}
+    </tr>
+  </thead>
+  <tbody>
+    {grid.rows.map((row) => (
+      <tr key={grid.getRowId(row)}>
+        {grid.columns.map((col) => (
+          <td key={col.columnId}>{String(grid.getCellValue(row, col.columnId) ?? '')}</td>
+        ))}
+      </tr>
+    ))}
+  </tbody>
+</table>
+
+<input
+  value={grid.filters.name?.type === 'text' ? grid.filters.name.value : ''}
+  onChange={(e) => grid.setFilter('name', e.target.value ? { type: 'text', value: e.target.value } : undefined)}
+/>
+<button onClick={() => grid.setPage(grid.page + 1)} disabled={grid.page >= grid.totalPages}>Next</button>
+```
+
+## Parameters
+
+`UseHeadlessGridParams<T>`
+
+| Param | Type | Default | Description |
+|---|---|---|---|
+| `columns` | `IColumnDef<T>[]` | required | Column definitions. `sortable`, `filterable`, `valueGetter`, `type`, and friends are all honored. |
+| `data` | `T[]` | required | Full client-side dataset. Pass `[]` when using `dataSource`. |
+| `getRowId` | `(row: T) => RowId` | required | Stable row identity. Must return the same id for the same row across renders. |
+| `initialSort` | `{ field: string; direction: 'asc' \| 'desc' }` | none | Initial sort for uncontrolled mode. |
+| `initialFilters` | `IFilters` | `{}` | Initial filters keyed by column id (or the column's `filterField`). |
+| `initialPage` | `number` | `1` | Initial page, 1-indexed. |
+| `initialPageSize` | `number \| 'all'` | `25` | Initial page size. `'all'` disables pagination. |
+| `sort` / `onSortChange` | `SortState` / `(sort) => void` | uncontrolled | Controlled sort. |
+| `filters` / `onFiltersChange` | `IFilters` / `(filters) => void` | uncontrolled | Controlled filters. |
+| `page` / `onPageChange` | `number` / `(page) => void` | uncontrolled | Controlled page. |
+| `pageSize` / `onPageSizeChange` | `number \| 'all'` / `(size) => void` | uncontrolled | Controlled page size. |
+| `dataSource` | `IDataSource<T>` | none | Server-side mode. Sort, filter, and page are sent to the server and the returned items are shown as-is. |
+| `workerSort` | `boolean \| 'auto'` | off | `true` always sorts in a Web Worker; `'auto'` does so above roughly 5,000 rows. |
+| `onError` | `(err: unknown) => void` | none | Server-side fetch error callback. |
+| `onFirstDataRendered` | `() => void` | none | Fired once when the first batch of rows lands. |
+
+## Returns
+
+`UseHeadlessGridResult<T>`
+
+| Field | Type | Description |
+|---|---|---|
+| `columns` | `IColumnDef<T>[]` | The columns you passed in. |
+| `rows` | `T[]` | Rows on the current page after sort and filter. Render from this, and pass it to the spreadsheet hooks. |
+| `totalCount` | `number` | Post-filter row count across all pages. |
+| `totalPages` | `number` | Page count at the current page size (`1` when page size is `'all'`). |
+| `allFilteredRows` | `T[]` | Filtered and sorted rows across all pages. Client-side only; equals `rows` in server-side mode. |
+| `sort` | `SortState` | Current sort. `field` is `''` when unsorted. |
+| `setSort` | `(sort: SortState) => void` | Replace the sort. Clear with `{ field: '', direction: 'asc' }`. |
+| `toggleSort` | `(columnId: string) => void` | Header-click behavior: a new column sorts ascending, the same column flips direction. |
+| `sortIndicator` | `(columnId: string) => '▲' \| '▼' \| ''` | Ready-made indicator for header rendering. |
+| `filters` | `IFilters` | Current filter map. |
+| `setFilters` | `(filters: IFilters) => void` | Replace all filters. |
+| `setFilter` | `(key: string, value: FilterValue \| undefined) => void` | Set one filter; `undefined` clears it. |
+| `hasActiveFilters` | `boolean` | Any filter set. |
+| `page`, `pageSize` | `number`, `number \| 'all'` | Current pagination state. |
+| `setPage`, `setPageSize` | `(n) => void` | Pagination actions. |
+| `getRowId` | `(row: T) => RowId` | The extractor you passed in. |
+| `getCellValue` | `(row: T, columnId: string) => unknown` | Resolve a cell value with full column semantics (`valueGetter`, nested keys). Returns `undefined` for unknown columns. |
+| `selectedRowIds` | `Set<RowId>` | Minimal row selection state. |
+| `isRowSelected` | `(row: T) => boolean` | |
+| `toggleRowSelection` | `(row: T) => void` | |
+| `selectAllOnPage` | `() => void` | Adds every row on the current page to the selection. |
+| `clearSelection` | `() => void` | |
+
+## Behavior notes
+
+- **Sorting or filtering resets to page 1**, both for uncontrolled state and
+  through `onPageChange` when you control it.
+- **The page snaps back when data shrinks.** If an uncontrolled page ends up
+  past the last page (rows deleted, host-side filtering), the hook moves to the
+  last page. Controlled `page` is left alone.
+- **`FilterValue` is a discriminated union**: `{ type: 'text', value }`,
+  `{ type: 'multiSelect', value: string[] }`, `{ type: 'people', value }`, or
+  `{ type: 'date', value }`. The filter key is the column id, or the column's
+  `filterField` if set.
+- **`SortState` is `{ field: string; direction: 'asc' | 'desc' }`**, exported from
+  `@alaarab/ogrid-react` and both kits (since 2.17.4; older releases need
+  `UseHeadlessGridResult<T>['sort']`).
+- **Row selection is a plain `Set` that persists across pages and data
+  changes.** It is intentionally minimal; cell-range selection lives in
+  [`useRangeSelection`](/docs/spreadsheet-hooks/use-range-selection).
+- **`workerSort: 'auto'` falls back to synchronous sorting** when a column has a
+  custom `compare`, when `people` filters are active, or when the Worker API is
+  unavailable.
+- **Server-side mode never loads the full set**, so `allFilteredRows` is just
+  the current page and `totalCount` comes from the server's `totalCount`.
+- **Excel-like sort snapshots.** Editing a cell after sorting does not re-sort
+  the grid; the order is recomputed only when the sort changes.
+
+## See also
+
+- [Headless overview](/docs/headless) for the composition model
+- [`useInlineEdit`](/docs/spreadsheet-hooks/use-inline-edit), [`useRangeSelection`](/docs/spreadsheet-hooks/use-range-selection), [`useGridVirtualization`](/docs/spreadsheet-hooks/use-grid-virtualization) build directly on this hook
+- [Sorting](/docs/features/sorting), [Filtering](/docs/features/filtering), [Pagination](/docs/features/pagination), [Server-Side Data](/docs/features/server-side-data) describe the same behavior inside `<OGrid>`
+- [Controlled vs uncontrolled](/docs/guides/controlled-vs-uncontrolled)

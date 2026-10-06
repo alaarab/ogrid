@@ -114,6 +114,7 @@ export type {
   ColumnChooserPlacement,
   UseHeadlessGridParams,
   UseHeadlessGridResult,
+  SortState,
   HeadlessGridRowId,
   UseInlineEditParams,
   UseInlineEditResult,
