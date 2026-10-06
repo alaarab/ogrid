@@ -220,7 +220,10 @@ export {
   parseTsvClipboard,
   applyPastedValues,
   applyCutClear,
+  captureCutSource,
+  resolveCutClear,
 } from './utils';
+export type { ICutSource, ResolveCutClearParams } from './utils';
 
 // Utils  -  fillHelpers
 export { applyFillValues, areFillCompatible, computeFillRange, computeFillDragEdits } from './utils';

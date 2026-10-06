@@ -14,6 +14,7 @@ import type {
 import type { EditingCell } from './useCellEditing';
 import type { ClipboardCopyEventLike, ClipboardPasteEventLike } from './useClipboard';
 import type { ContextMenuPosition } from './useContextMenu';
+import { TEXT_ENTRY_SELECTOR } from './useClipboardMarks';
 
 export interface UseKeyboardNavigationParams<T> {
   data: {
@@ -90,9 +91,6 @@ export interface UseKeyboardNavigationResult {
   handleGridCut: (e: React.ClipboardEvent) => void;
 }
 
-/** Text-entry controls: keystrokes typed into these never belong to the grid. */
-const TEXT_ENTRY_SELECTOR =
-  'input:not([type="checkbox"]):not([type="radio"]):not([type="button"]):not([type="submit"]):not([type="reset"]), textarea, select, [contenteditable=""], [contenteditable="true"]';
 /** Header, menus and popups that live in the wrapper's DOM rather than a portal. */
 const NON_CELL_REGION_SELECTOR = 'thead, [role="columnheader"], [role="menu"], [role="dialog"], [role="listbox"]';
 /** In-cell controls that use Space/Enter for their own activation. */

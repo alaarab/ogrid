@@ -267,3 +267,99 @@ export function applyCutClear<T>(
   }
   return events;
 }
+
+/**
+ * A pending cut, captured by identity (row keys and column ids) rather than
+ * position, so a sort, filter, page or column change before the paste cannot
+ * make it clear the wrong cells.
+ */
+export interface ICutSource {
+  /** Key of each cut row, top to bottom: its row id, or the row object itself. */
+  rowKeys: unknown[];
+  /** Column id of each cut column, left to right. */
+  columnIds: string[];
+  /** The TSV the cut put on the clipboard. */
+  text: string;
+}
+
+/**
+ * Capture the cells of `range` as a pending cut (see `ICutSource`).
+ *
+ * @param range        The cut range (any corner order).
+ * @param items        Array of all row data objects.
+ * @param visibleCols  Visible column definitions.
+ * @param rowKeyOf     Row identity: the row id, or the row object itself.
+ * @param text         The TSV the cut put on the clipboard.
+ */
+export function captureCutSource<T>(
+  range: ISelectionRange,
+  items: T[],
+  visibleCols: IColumnDef<T>[],
+  rowKeyOf: (item: T) => unknown,
+  text: string
+): ICutSource {
+  const norm = normalizeSelectionRange(range);
+  const rowKeys: unknown[] = [];
+  for (let r = norm.startRow; r <= norm.endRow; r++) {
+    const item = items[r];
+    rowKeys.push(item === undefined ? undefined : rowKeyOf(item));
+  }
+  const columnIds: string[] = [];
+  for (let c = norm.startCol; c <= norm.endCol; c++) columnIds.push(visibleCols[c]?.columnId ?? '');
+  return { rowKeys, columnIds, text };
+}
+
+const normalizeClipboardText = (s: string): string => s.replace(/\r\n?/g, '\n').replace(/\n+$/, '');
+
+/** Inputs for `resolveCutClear`. */
+export interface ResolveCutClearParams<T> {
+  /** The pending cut. */
+  cut: ICutSource;
+  /** The pasted text. The cut completes only when it is the text the cut put on the clipboard. */
+  text: string;
+  /** Value events the paste produced. */
+  pasteEvents: ICellValueChangedEvent<T>[];
+  /** `${rowIndex}|${columnId}` of cells the paste wrote a formula to (they produce no value event). */
+  pastedFormulaCells?: string[];
+  /** Paste anchor (top-left target cell). */
+  anchorRow: number;
+  anchorCol: number;
+  items: T[];
+  visibleCols: IColumnDef<T>[];
+  /** Row identity used when the cut was captured. */
+  rowKeyOf: (item: T) => unknown;
+}
+
+/**
+ * The events that empty the source cells of a cut once it has been pasted.
+ *
+ * Returns nothing when the pasted text is not what the cut put on the
+ * clipboard (something was copied elsewhere in the meantime). Source cells
+ * are found by identity, so they are cleared where they are now. A source cell
+ * stays intact when its destination did not accept the paste (read-only,
+ * invalid, or clipped at the grid edge), and a cell the paste itself wrote is
+ * never cleared (cut and paste overlapping: the paste wins).
+ */
+export function resolveCutClear<T>(params: ResolveCutClearParams<T>): ICellValueChangedEvent<T>[] {
+  const { cut, text, pasteEvents, pastedFormulaCells, anchorRow, anchorCol, items, visibleCols, rowKeyOf } = params;
+  if (normalizeClipboardText(text) !== normalizeClipboardText(cut.text)) return [];
+  const pasted = new Set(pasteEvents.map((e) => `${e.rowIndex}|${e.columnId}`));
+  for (const key of pastedFormulaCells ?? []) pasted.add(key);
+  const rowIndexByKey = new Map<unknown, number>();
+  items.forEach((item, i) => { rowIndexByKey.set(rowKeyOf(item), i); });
+  const events: ICellValueChangedEvent<T>[] = [];
+  for (const [sourceRow, key] of cut.rowKeys.entries()) {
+    const r = rowIndexByKey.get(key);
+    if (r === undefined) continue;
+    for (const [sourceCol, columnId] of cut.columnIds.entries()) {
+      const targetColumn = visibleCols[anchorCol + sourceCol];
+      if (!targetColumn || !pasted.has(`${anchorRow + sourceRow}|${targetColumn.columnId}`)) continue;
+      const c = visibleCols.findIndex((col) => col.columnId === columnId);
+      if (c < 0) continue;
+      for (const e of applyCutClear({ startRow: r, endRow: r, startCol: c, endCol: c }, items, visibleCols)) {
+        if (!pasted.has(`${e.rowIndex}|${e.columnId}`)) events.push(e);
+      }
+    }
+  }
+  return events;
+}
