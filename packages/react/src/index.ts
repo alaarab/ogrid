@@ -106,6 +106,7 @@ export {
 } from './hooks';
 export type {
   UseFilterOptionsResult,
+  UseFilterOptionsOptions,
   UseOGridResult,
   UseOGridPagination,
   UseOGridColumnChooser,

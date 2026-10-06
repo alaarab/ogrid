@@ -205,12 +205,22 @@ interface IOGridBaseProps<T> {
 export interface IOGridClientProps<T> extends IOGridBaseProps<T> {
   data: T[];
   dataSource?: never;
+  dataSourceKey?: never;
 }
 
 /** Server-side mode: pass a dataSource. */
 export interface IOGridServerProps<T> extends IOGridBaseProps<T> {
   data?: never;
   dataSource: IDataSource<T>;
+  /**
+   * Identity of the data source. When set, the grid treats the source as
+   * replaced (refetches, drops cached rows and filter options) only when this
+   * key changes, so `dataSource` can be an inline object rebuilt every render.
+   * The grid always calls the latest object's methods. When omitted, a new
+   * object whose own properties are all identical to the previous one's is the
+   * same source; any other new object is treated as a swap.
+   */
+  dataSourceKey?: string | number;
 }
 
 /** Props for the OGrid wrapper component (shared across Fluent, Material, Radix).

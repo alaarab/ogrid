@@ -542,6 +542,92 @@ describe('useOGridDataFetching  -  swapping dataSource', () => {
   });
 });
 
+describe('useOGridDataFetching  -  inline dataSource objects (V06)', () => {
+  const page = () => Promise.resolve({ items: [{ id: 1, name: 'x', age: 1 }], totalCount: 1 });
+  const settle = () => act(async () => { await new Promise((r) => setTimeout(r, 20)); });
+
+  it('an inline object wrapping the same methods never refetches on re-render', async () => {
+    const fetchPage = mock(page);
+    const { result, rerender } = renderHook(() =>
+      useOGridDataFetching(makeParams({ isServerSide: true, dataSource: { fetchPage }, stableFilters: noFilters })),
+    );
+    await waitFor(() => expect(result.current.displayItems).toHaveLength(1));
+    for (let i = 0; i < 4; i++) {
+      rerender();
+      await settle();
+    }
+    expect(fetchPage).toHaveBeenCalledTimes(1);
+  });
+
+  it('a swapped source with different methods still refetches', async () => {
+    const a = mock(page);
+    const b = mock(page);
+    const { rerender } = renderHook(
+      ({ fp }) => useOGridDataFetching(makeParams({ isServerSide: true, dataSource: { fetchPage: fp }, stableFilters: noFilters })),
+      { initialProps: { fp: a } },
+    );
+    await settle();
+    rerender({ fp: a });
+    await settle();
+    rerender({ fp: b });
+    await waitFor(() => expect(b).toHaveBeenCalledTimes(1));
+    expect(a).toHaveBeenCalledTimes(1);
+  });
+
+  it('with dataSourceKey, inline methods do not refetch on re-render; a new key does', async () => {
+    const calls: string[] = [];
+    const { result, rerender } = renderHook(
+      ({ key }) =>
+        useOGridDataFetching(makeParams({
+          isServerSide: true,
+          dataSourceKey: key,
+          // New object and new function every render.
+          dataSource: { fetchPage: () => { calls.push(key); return page(); } },
+          stableFilters: noFilters,
+        })),
+      { initialProps: { key: 'tenant-a' } },
+    );
+    await waitFor(() => expect(result.current.displayItems).toHaveLength(1));
+    for (let i = 0; i < 4; i++) {
+      rerender({ key: 'tenant-a' });
+      await settle();
+    }
+    expect(calls).toEqual(['tenant-a']);
+    rerender({ key: 'tenant-b' });
+    await waitFor(() => expect(calls).toEqual(['tenant-a', 'tenant-b']));
+  });
+
+  it('a windowed inline source keeps its loaded rows across re-renders', async () => {
+    const getRowCount = mock(() => Promise.resolve(100));
+    const getRows = mock(({ start, end }: { start: number; end: number }) =>
+      Promise.resolve({ items: Array.from({ length: end - start }, (_, i) => ({ id: start + i, name: `R${start + i}`, age: 1 })) }),
+    );
+    const { result, rerender } = renderHook(
+      ({ key }: { key?: string }) =>
+        useOGridDataFetching(makeParams({
+          isServerSide: true,
+          displayData: [],
+          dataSourceKey: key,
+          dataSource: { getRowCount: () => getRowCount(), getRows: (p: { start: number; end: number }) => getRows(p) },
+          stableFilters: noFilters,
+        })),
+      { initialProps: { key: 'k' as string | undefined } },
+    );
+    await waitFor(() => expect(result.current.windowed?.rowCount).toBe(100));
+    act(() => { result.current.windowed?.requestWindow(0, 10); });
+    await waitFor(() => expect(result.current.windowed?.getRow(0).status).toBe('loaded'));
+    for (let i = 0; i < 3; i++) {
+      rerender({ key: 'k' });
+      await settle();
+    }
+    expect(result.current.windowed?.getRow(0).status).toBe('loaded');
+    expect(getRowCount).toHaveBeenCalledTimes(1);
+    expect(getRows).toHaveBeenCalledTimes(1);
+    rerender({ key: 'k2' });
+    await waitFor(() => expect(getRowCount).toHaveBeenCalledTimes(2));
+  });
+});
+
 describe('useOGridDataFetching  -  controlled sort with worker sort (D01)', () => {
   it('re-sorts when only sort.field/direction change', async () => {
     const { result, rerender } = renderHook(

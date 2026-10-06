@@ -75,6 +75,26 @@ The `OGrid` component has the same props across all React UI packages. To switch
 
 The grid fetches the first page on mount and re-fetches whenever page, sort, or filters change.
 
+## Replacing the data source
+
+A new `dataSource` object tells the grid you switched backends: it refetches, drops cached rows (windowed sources), and reloads filter options. Which new objects count as a switch:
+
+- **The same object**, or a new object whose own properties are all identical to the previous one's (for example `dataSource={{ fetchPage }}` around a stable `fetchPage`): not a switch, nothing refetches.
+- **Any other new object**: a switch. An inline object with inline functions is new on every render, so it costs one extra fetch the first time the parent re-renders.
+- **With `dataSourceKey`**: only a change of the key is a switch. The object can be rebuilt on every render, inline functions included; the grid always calls the latest one.
+
+```tsx
+<OGrid
+  columns={columns}
+  getRowId={(e) => e.id}
+  // Rebuilt every render; refetches only when tenantId changes.
+  dataSource={{ fetchPage: (params) => api.employees(tenantId, params) }}
+  dataSourceKey={tenantId}
+/>
+```
+
+To reload the same source (data changed on the server), call `gridRef.current?.refreshData()` instead.
+
 ## IDataSource&lt;T&gt; Reference
 
 ```typescript

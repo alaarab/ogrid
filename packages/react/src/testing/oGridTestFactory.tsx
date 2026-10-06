@@ -281,4 +281,36 @@ export function createOGridTests(OGrid: React.ComponentType<IOGridProps<FixtureR
       await waitFor(() => expect(names()).toEqual(['Gamma', 'Alpha', 'Delta']));
     });
   });
+
+  describe('inline dataSource objects', () => {
+    const page = () => Promise.resolve({ items: fixtureRows, totalCount: fixtureRows.length });
+
+    function Host({ tick, sourceKey, fetchPage }: { tick: number; sourceKey?: string; fetchPage: (key?: string) => Promise<{ items: FixtureRow[]; totalCount: number }> }) {
+      return (
+        <div data-tick={tick}>
+          <OGrid
+            columns={fixtureColumns}
+            getRowId={getRowId}
+            // A new object and a new function on every render.
+            dataSource={{ fetchPage: () => fetchPage(sourceKey) }}
+            dataSourceKey={sourceKey}
+          />
+        </div>
+      );
+    }
+
+    it('a parent re-render does not refetch when dataSourceKey is unchanged; a new key refetches', async () => {
+      const fetchPage = jest.fn(page);
+      const { rerender } = render(<Host tick={0} sourceKey="a" fetchPage={fetchPage} />);
+      await waitFor(() => expect(screen.getByText('Alpha')).toBeInTheDocument());
+      for (let tick = 1; tick <= 3; tick++) {
+        rerender(<Host tick={tick} sourceKey="a" fetchPage={fetchPage} />);
+        await new Promise((r) => setTimeout(r, 10));
+      }
+      expect(fetchPage).toHaveBeenCalledTimes(1);
+      rerender(<Host tick={4} sourceKey="b" fetchPage={fetchPage} />);
+      await waitFor(() => expect(fetchPage).toHaveBeenCalledTimes(2));
+      expect(fetchPage).toHaveBeenLastCalledWith('b');
+    });
+  });
 }

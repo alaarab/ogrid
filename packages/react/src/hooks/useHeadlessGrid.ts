@@ -95,6 +95,13 @@ export interface UseHeadlessGridParams<T> {
    */
   dataSource?: IDataSource<T>;
   /**
+   * Identity of `dataSource`. When set, the source counts as replaced
+   * (refetch, filter options reload) only when this key changes, so it can be
+   * an inline object. When omitted, a new object whose own properties are all
+   * identical to the previous one's is the same source.
+   */
+  dataSourceKey?: string | number;
+  /**
    * Worker-sort policy for large datasets. `true` always uses a worker,
    * `'auto'` uses one when row count exceeds ~5000, `false` is sync.
    */
@@ -185,6 +192,7 @@ export function useHeadlessGrid<T>(
     pageSize: controlledPageSize,
     onPageSizeChange,
     dataSource,
+    dataSourceKey,
     workerSort,
     onError,
     onFirstDataRendered,
@@ -221,6 +229,7 @@ export function useHeadlessGrid<T>(
     columns,
     displayData: data,
     dataSource,
+    dataSourceKey,
   });
 
   // Data-layer fetching — handles client-side AND server-side modes,
@@ -228,6 +237,7 @@ export function useHeadlessGrid<T>(
   const dataFetching = useOGridDataFetching<T>({
     isServerSide,
     dataSource,
+    dataSourceKey,
     displayData: data,
     getRowId,
     columns,
