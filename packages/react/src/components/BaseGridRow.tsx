@@ -66,8 +66,12 @@ function GridRowInner(props: BaseGridRowProps) {
           >
             {renderRowCheckbox({
               checked: isSelected,
-              onCheckedChange: (c: boolean) =>
-                handleRowCheckboxChange(rowId, c, rowIndex, lastMouseShiftRef.current),
+              onCheckedChange: (c: boolean) => {
+                // Shift applies to the press that caused this toggle only.
+                const shiftKey = lastMouseShiftRef.current;
+                lastMouseShiftRef.current = false;
+                handleRowCheckboxChange(rowId, c, rowIndex, shiftKey);
+              },
               ariaLabel: `Select row ${rowIndex + 1}`,
             })}
           </div>

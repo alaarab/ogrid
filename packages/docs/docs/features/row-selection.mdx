@@ -89,7 +89,7 @@ In `'multiple'` mode, a checkbox column is prepended to the grid:
 
 - Click a checkbox to toggle that row.
 - Click the header checkbox to select or deselect all rows on the current page. Selections on other pages are kept.
-- Hold **Shift** and click a checkbox to select a range of rows from the last clicked row.
+- Hold **Shift** and click a checkbox to select (or clear) the range from the last clicked row, in the order rows are shown. The last clicked row is remembered by row id, so the range still starts there after a sort or filter; if that row is no longer on the current page, the click toggles just the one row. **Shift+Space** toggles the active row and sets the starting row too.
 
 ### Controlled Mode
 
