@@ -129,6 +129,20 @@ Copied data uses tab-separated format compatible with Excel and Google Sheets. M
 
 Undo/redo requires the `onUndo`, `onRedo`, `canUndo`, and `canRedo` props to be wired up (typically via the `useUndoRedo` hook).
 
+## Keyboard Resizing
+
+Each column's resize handle is a focusable `role="separator"` (Tab to it from the header). While it has focus:
+
+| Key | Action |
+|---|---|
+| Arrow Right / Arrow Left | Widen / narrow the column by 10px |
+| Shift+Arrow Right / Shift+Arrow Left | Widen / narrow the column by 1px |
+| Home | Shrink the column to its minimum width |
+| Enter | Keep the new width and return focus to the grid |
+| Escape | Restore the width the column had when the handle received focus |
+
+Keyboard resizing uses the same state path as dragging: `onColumnResized` fires on every step, the width shows up in `getColumnState()`, and controlled column state and persistence see it. The column's `minWidth` is respected.
+
 ## How It Works
 
 Keyboard navigation is handled by the `useKeyboardNavigation` hook in core, which is automatically wired into the grid when `cellSelection` is enabled (the default). The hook listens for `keydown` events on the grid wrapper element and translates them into active cell movements, selection range changes, or editing actions.
