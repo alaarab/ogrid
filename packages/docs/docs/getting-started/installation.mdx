@@ -77,6 +77,20 @@ function App() {
 
 If the grid renders with a single row showing "Test", your installation is correct.
 
+## Styles, SSR and tests
+
+The kit packages import their own stylesheet, so a bundler (Vite, webpack, Next.js, esbuild) picks up the styles with no extra import. For plain Node, which has no CSS loader, the kits publish a `node` export condition with the same code minus the stylesheet import, so Vite SSR and Vitest work without configuration.
+
+Jest under jsdom still resolves the styled entry. Transform the ESM packages and stub CSS:
+
+```js
+// jest.config.js
+module.exports = {
+  transformIgnorePatterns: ['node_modules/(?!@alaarab/)'],
+  moduleNameMapper: { '\\.css$': '<rootDir>/styleStub.js' }, // styleStub.js: module.exports = {};
+};
+```
+
 ## Next Steps
 
 - [Quick Start](./quick-start) -- build a working React grid

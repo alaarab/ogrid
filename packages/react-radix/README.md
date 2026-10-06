@@ -280,8 +280,7 @@ catalog and component reference.
 
 ## Tests and SSR
 
-The package entry imports its own stylesheet (`import './index.css'`), so bundlers pick up the styles with no extra import. Tools that load `node_modules` with plain Node instead of a bundler can't parse that import. Let them process the package instead:
+The package entry imports its own stylesheet (`import './index.css'`), so bundlers pick up the styles with no extra import. Plain Node has no CSS loader, so the package also publishes a `node` export condition that points at the same code without the stylesheet import. Bundlers match the `module` condition first and keep the styles; tools that load `node_modules` with Node itself get the CSS-free entry:
 
-- **Vitest:** `test: { server: { deps: { inline: [/@alaarab\/ogrid-/] } } }`
-- **Vite SSR:** `ssr: { noExternal: [/@alaarab\/ogrid-/] }`
-- **Jest:** transform the ESM packages and stub CSS: `transformIgnorePatterns: ['node_modules/(?!@alaarab/)']` plus `moduleNameMapper: { '\\.css$': '<rootDir>/styleStub.js' }` (a file containing `module.exports = {};`)
+- **Vite SSR** (dev `ssrLoadModule` and `vite build --ssr`) and **Vitest**: no configuration needed.
+- **Jest:** Jest resolves the `browser`/`default` conditions under jsdom, so it still sees the CSS import. Transform the ESM packages and stub CSS: `transformIgnorePatterns: ['node_modules/(?!@alaarab/)']` plus `moduleNameMapper: { '\\.css$': '<rootDir>/styleStub.js' }` (a file containing `module.exports = {};`).
