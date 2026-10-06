@@ -6,6 +6,11 @@ All notable changes to OGrid will be documented in this file.
 
 ### Added
 
+- Headless `useGridFocus` supports Ctrl/Cmd+Arrow and Ctrl+Shift+Arrow jumps,
+  matching `<OGrid>`. Pass the new optional `isCellEmpty(row, col)` for
+  Excel-style data-region jumps; without it, jumps go to the grid edge.
+- `computeFillRange` in `@alaarab/ogrid-core` computes a fill-handle target
+  range; both the component and headless `useFillHandle` use it.
 - Headless `useCellClipboard` returns an `onPaste(event)` handler for the
   native `paste` event (new `CellClipboardPasteEvent` type). Wire it on the
   table container so Ctrl+V works without clipboard read permission.
@@ -23,6 +28,9 @@ All notable changes to OGrid will be documented in this file.
 
 ### Fixed
 
+- The fill handle fills along one axis only, like Excel: whichever axis the
+  pointer is farther outside the source block on (ties fill down). Diagonal
+  drags no longer fill a rectangle.
 - Inserting or deleting rows no longer re-sorts a sorted grid when
   `getRowId` is set. Existing rows keep their current order (Excel-style, as
   for edits), new rows that pass the active filters are appended at the end,
@@ -42,6 +50,14 @@ All notable changes to OGrid will be documented in this file.
 
 ### Changed
 
+- `useHeadlessGrid`, `useInlineEdit`, `useFillHandle` and `useCellClipboard`
+  take and return `@alaarab/ogrid-react`'s `IColumnDef<T>` instead of core's,
+  so `grid.columns[i]` can be passed to helpers typed with the package type.
+  Plain column object literals still compile; a variable explicitly typed as
+  core's `IColumnDef` with a non-component `cellEditor` may need a cast.
+- Docs: the docs site is type-checked in CI (`turbo typecheck`), and demos
+  that passed nonexistent props (`pagination`, `defaultSortField`) or the old
+  `useUndoRedo` shape now use the current API.
 - Raise the `react-xlsx` and `react-xlsx-browser` size budgets from 400 kB to
   425 kB. ExcelJS is 75% of those bundles, so the budgets guard an upstream
   dependency; at 98% utilisation any ExcelJS patch release failed CI.
@@ -58,6 +74,10 @@ All notable changes to OGrid will be documented in this file.
 
 ### Security
 
+- Override docs-only build dependencies to patched releases: tinypool 2.1.2
+  (two critical advisories), postcss-selector-parser 7.1.6 and katex 0.18.11.
+  braces 3.0.3 has no published fix and is build-time only. None of these ship
+  in published packages. See `.github/dependency-updates/2026-10-05.md`.
 - Resolve esbuild to the patched 0.28.2 release throughout the workspace.
 
 ## [2.17.3] - 2026-10-02
