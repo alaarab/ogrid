@@ -84,8 +84,13 @@ export function BaseTableHeader<T>(props: BaseTableHeaderProps<T>): React.ReactE
   // Spacer cells above the checkbox/row-number headers (column-letter row, group rows) are held to
   // the column width: a wider spacer widens the column and breaks the sticky offsets built on it.
   const leadingRowNumWidth = columnSizingOverrides?.[ROW_NUMBER_COLUMN_ID]?.widthPx ?? ROW_NUMBER_COLUMN_WIDTH;
-  const checkboxSpacerStyle: React.CSSProperties = { boxSizing: 'border-box', width: CHECKBOX_COLUMN_WIDTH, minWidth: CHECKBOX_COLUMN_WIDTH, maxWidth: CHECKBOX_COLUMN_WIDTH };
-  const rowNumberSpacerStyle: React.CSSProperties = { boxSizing: 'border-box', width: leadingRowNumWidth, minWidth: leadingRowNumWidth, maxWidth: leadingRowNumWidth };
+  // They also stick to the left like the columns below them; otherwise they scroll away and
+  // the letters/group labels of horizontally scrolled columns show over the leading columns.
+  const leadingSpacerSticky: React.CSSProperties = { position: 'sticky', zIndex: 'var(--ogrid-z-selection-header-pinned, 12)' };
+  const checkboxSpacerStyle: React.CSSProperties = { ...leadingSpacerSticky, left: 0, boxSizing: 'border-box', width: CHECKBOX_COLUMN_WIDTH, minWidth: CHECKBOX_COLUMN_WIDTH, maxWidth: CHECKBOX_COLUMN_WIDTH };
+  const rowNumberSpacerStyle: React.CSSProperties = { ...leadingSpacerSticky, left: hasCheckboxCol ? CHECKBOX_COLUMN_WIDTH : 0, boxSizing: 'border-box', width: leadingRowNumWidth, minWidth: leadingRowNumWidth, maxWidth: leadingRowNumWidth };
+  // Group-row placeholders have no cell class, so give them the header background to stay opaque.
+  const placeholderBg: React.CSSProperties = { background: 'var(--ogrid-header-bg, #f5f5f5)' };
   // The row-number column is grid chrome with no IColumnDef; this stand-in gives the
   // resize hook its id, label and default width.
   const rowNumberCol = React.useMemo(
@@ -123,7 +128,7 @@ export function BaseTableHeader<T>(props: BaseTableHeaderProps<T>): React.ReactE
           )}
           {/* Empty placeholder for checkbox alignment in non-leaf rows */}
           {rowIdx === 0 && rowIdx < headerRows.length - 1 && hasCheckboxCol && (
-            <th rowSpan={headerRows.length - 1} key="__selection_placeholder__" style={checkboxSpacerStyle} />
+            <th rowSpan={headerRows.length - 1} key="__selection_placeholder__" style={{ ...checkboxSpacerStyle, ...placeholderBg }} />
           )}
           {/* Row numbers header: show in last row (leaf row) */}
           {rowIdx === headerRows.length - 1 && hasRowNumbersCol && (() => {
@@ -156,7 +161,7 @@ export function BaseTableHeader<T>(props: BaseTableHeaderProps<T>): React.ReactE
           })()}
           {/* Empty placeholder for row numbers alignment in non-leaf rows */}
           {rowIdx === 0 && rowIdx < headerRows.length - 1 && hasRowNumbersCol && (
-            <th rowSpan={headerRows.length - 1} key="__row_number_placeholder__" style={rowNumberSpacerStyle} />
+            <th rowSpan={headerRows.length - 1} key="__row_number_placeholder__" style={{ ...rowNumberSpacerStyle, ...placeholderBg }} />
           )}
           {row.map((cell, cellIdx) => {
             if (cell.isGroup) {

@@ -14,6 +14,7 @@
  * Implements ICellEditorProps<T>  -  works with cellEditorPopup: true.
  */
 import * as React from 'react';
+import { nextGridIndex } from '../shared/keyboard-nav';
 import type { ICellEditorProps } from '@alaarab/ogrid-core';
 import {
   DEFAULT_COLOR_PALETTE,
@@ -72,9 +73,11 @@ const previewStyle: React.CSSProperties = {
   flexShrink: 0,
 };
 
+const SWATCH_COLUMNS = 5;
+
 const gridStyle: React.CSSProperties = {
   display: 'grid',
-  gridTemplateColumns: 'repeat(5, 1fr)',
+  gridTemplateColumns: `repeat(${SWATCH_COLUMNS}, 1fr)`,
   gap: '6px',
   padding: '4px 0',
 };
@@ -132,7 +135,9 @@ export function ColorPickerEditor<T>(props: ICellEditorProps<T>): React.ReactEle
     initialColor.replace(/^#/, ''),
   );
   const [hoveredSwatch, setHoveredSwatch] = React.useState<string | null>(null);
+  const [focusedIndex, setFocusedIndex] = React.useState<number | null>(null);
   const rootRef = React.useRef<HTMLDivElement>(null);
+  const swatchGridRef = React.useRef<HTMLDivElement>(null);
   const commitTimerRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const handleSwatchClick = (color: string) => {
@@ -184,12 +189,41 @@ export function ColorPickerEditor<T>(props: ICellEditorProps<T>): React.ReactEle
     onCommit();
   };
 
-  // Focus input on mount
+  // Roving tabindex over the swatches: one swatch (the focused, selected or
+  // first one) is in the tab order; arrows/Home/End move, Enter/Space pick.
+  const selectedIndex = colors.findIndex(
+    (c) => (normalizeHex(c) ?? c).toUpperCase() === selectedColor.toUpperCase(),
+  );
+  const tabbableIndex = focusedIndex ?? (selectedIndex >= 0 ? selectedIndex : 0);
+
+  const focusSwatch = (index: number) => {
+    swatchGridRef.current?.querySelectorAll<HTMLButtonElement>('button')[index]?.focus();
+  };
+
+  const handleSwatchKeyDown = (e: React.KeyboardEvent<HTMLButtonElement>, index: number, color: string) => {
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault();
+      e.stopPropagation();
+      handleSwatchClick(color);
+      return;
+    }
+    const next = nextGridIndex(index, e.key, colors.length, SWATCH_COLUMNS);
+    if (next == null) return;
+    e.preventDefault();
+    e.stopPropagation();
+    setFocusedIndex(next);
+    focusSwatch(next);
+  };
+
+  // Focus the hex input on mount, or the swatches when there is no input.
+  // biome-ignore lint/correctness/useExhaustiveDependencies: mount-only focus
   React.useEffect(() => {
     const input = rootRef.current?.querySelector('input');
     if (input) {
       input.focus();
       input.select();
+    } else {
+      focusSwatch(tabbableIndex);
     }
   }, []);
 
@@ -239,9 +273,9 @@ export function ColorPickerEditor<T>(props: ICellEditorProps<T>): React.ReactEle
         onClick={() => handleSwatchClick(color)}
         onMouseEnter={() => setHoveredSwatch(color)}
         onMouseLeave={() => setHoveredSwatch(null)}
-        // When there is no hex input (allowCustom false) the swatches are the
-        // only keyboard path, so make them reachable via Tab.
-        tabIndex={allowCustom ? -1 : 0}
+        onKeyDown={(e) => handleSwatchKeyDown(e, index, color)}
+        onFocus={() => setFocusedIndex(index)}
+        tabIndex={index === tabbableIndex ? 0 : -1}
         aria-label={color}
         aria-pressed={isSelected}
       >
@@ -282,7 +316,7 @@ export function ColorPickerEditor<T>(props: ICellEditorProps<T>): React.ReactEle
       )}
 
       {/* Color swatch grid */}
-      <div style={gridStyle}>
+      <div ref={swatchGridRef} style={gridStyle}>
         {colors.map((color, i) => renderSwatch(color, i))}
       </div>
 

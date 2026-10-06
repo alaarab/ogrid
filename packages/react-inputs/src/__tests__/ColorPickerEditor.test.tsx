@@ -1,5 +1,5 @@
 import '@testing-library/jest-dom';
-import { render, screen, act } from '@testing-library/react';
+import { render, screen, act, fireEvent } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { ColorPickerEditor } from '../ColorPicker/ColorPickerEditor';
 import { DEFAULT_COLOR_PALETTE } from '@alaarab/ogrid-inputs';
@@ -254,6 +254,43 @@ describe('ColorPickerEditor', () => {
       );
       expect(swatches.length).toBeGreaterThan(0);
       expect(swatches[0]).toHaveAttribute('tabindex', '0');
+    });
+  });
+
+  describe('I04 - swatches use a roving tab stop', () => {
+    const swatch = (hex: string) => screen.getByRole('button', { name: hex });
+
+    it('focuses the selected swatch on open when there is no hex input', () => {
+      const colors = ['#111111', '#222222', '#333333', '#444444', '#555555', '#666666', '#777777'];
+      renderEditor({ value: '#333333', cellEditorParams: { allowCustom: false, colors } });
+      expect(swatch('#333333')).toHaveFocus();
+      expect(swatch('#111111')).toHaveAttribute('tabindex', '-1');
+    });
+
+    it('arrows move between swatches and Enter picks one', () => {
+      jest.useFakeTimers();
+      try {
+        const colors = ['#111111', '#222222', '#333333', '#444444', '#555555', '#666666', '#777777'];
+        const { props } = renderEditor({ value: '#111111', cellEditorParams: { allowCustom: false, colors } });
+        fireEvent.keyDown(swatch('#111111'), { key: 'ArrowDown' });
+        expect(swatch('#666666')).toHaveFocus();
+        fireEvent.keyDown(swatch('#666666'), { key: 'ArrowRight' });
+        expect(swatch('#777777')).toHaveFocus();
+        fireEvent.keyDown(swatch('#777777'), { key: 'Enter' });
+        expect(props.onValueChange).toHaveBeenLastCalledWith('#777777');
+        act(() => { jest.runAllTimers(); });
+        expect(props.onCommit).toHaveBeenCalledTimes(1);
+      } finally {
+        jest.useRealTimers();
+      }
+    });
+
+    it('keeps one swatch tabbable alongside the hex input', () => {
+      renderEditor();
+      const tabbable = screen.getAllByRole('button').filter(
+        (b) => b.getAttribute('aria-pressed') !== null && b.getAttribute('tabindex') === '0',
+      );
+      expect(tabbable).toHaveLength(1);
     });
   });
 });

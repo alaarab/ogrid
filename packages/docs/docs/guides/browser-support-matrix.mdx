@@ -9,7 +9,7 @@ description: What runs in browser CI today, what the smoke suite covers, and whi
 OGrid ships two React UI packages (Radix and Fluent), and not every browser check needs to run on every push. The browser contract is split into two layers:
 
 - `bun run test:e2e:smoke` is the fast merge gate that runs on every push and pull request in the main `CI` workflow.
-- The `Playwright Matrix` GitHub workflow runs the broader browser suite across the React + JS example apps only when you dispatch it manually.
+- The `Playwright Matrix` GitHub workflow runs the broader browser suite across both React example apps only when you dispatch it manually.
 
 ## Main CI smoke suite
 
@@ -22,6 +22,7 @@ bun run test:e2e:smoke
 Projects in the smoke gate:
 
 - `react-radix`
+- `react-fluent`
 
 Journeys covered by the smoke suite:
 
@@ -42,8 +43,10 @@ npm run test:e2e:matrix
 
 | Package | Playwright project | Example port | Main CI smoke | Full matrix |
 |---|---|---:|---|---|
-| `@alaarab/ogrid-react-fluent` | `react-fluent` | 3001 | No | Yes |
+| `@alaarab/ogrid-react-fluent` | `react-fluent` | 3001 | Yes | Yes |
 | `@alaarab/ogrid-react-radix` | `react-radix` | 3003 | Yes | Yes |
+
+Playwright serves each example as a production build (`vite build` then `vite preview`, via `npm run serve:e2e:react-fluent` / `serve:e2e:react-radix`). Under the Vite dev server the Fluent example loads every `@fluentui/react-icons` icon as one ~17 MB pre-bundled module per test, which made Fluent cases slow and flaky. A dev server you already have running on the port is reused instead, and the examples import the packages' built `dist`, so rebuild changed packages before a run.
 
 ## Docs homepage coverage
 

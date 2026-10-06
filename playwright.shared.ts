@@ -11,12 +11,18 @@ function createProject(name: string, baseURL: string): BrowserProject {
   };
 }
 
+// The examples are served as production builds (vite build + vite preview).
+// In dev, Vite pre-bundles every @fluentui/react-icons icon into one ~17 MB
+// module that each test's fresh browser context re-downloads and parses, so a
+// Fluent page took ~2.5 s to load (Radix ~0.5 s) and timed out under load. The
+// built Fluent page is ~1.9 MB. The timeout covers the build before preview
+// starts listening. A dev server already running on the port is reused.
 function createServer(command: string, port: number): BrowserServer {
   return {
     command,
     port,
     reuseExistingServer: true,
-    timeout: 30_000,
+    timeout: 180_000,
   };
 }
 
@@ -33,8 +39,8 @@ export const allBrowserProjects: BrowserProject[] = [
 ];
 
 export const allBrowserServers: BrowserServer[] = [
-  createServer('npm run dev:react-fluent', 3001),
-  createServer('npm run dev:react-radix', 3003),
+  createServer('npm run serve:e2e:react-fluent', 3001),
+  createServer('npm run serve:e2e:react-radix', 3003),
 ];
 
 // Both kits run the smoke suite on every PR so Fluent regressions surface

@@ -22,7 +22,12 @@ const COMMAND_PAYLOADS: Record<GridCommandType, z.ZodType<Record<string, unknown
 
 interface VersionDetectResult {
   found: boolean;
+  /** Installed version (from node_modules) when resolvable, else the declared range without its operator. */
   version?: string;
+  /** True when `version` was read from the installed package. */
+  installed?: boolean;
+  /** The version spec as declared in package.json. */
+  declared?: string;
   framework?: string;
   packages?: Array<{ name: string; version: string }>;
   packageJsonPath?: string;
@@ -35,6 +40,32 @@ function detectFramework(packageNames: string[]): string {
   if (packageNames.some((n) => n.includes('-angular'))) return 'angular (frozen at v2.9.0)';
   if (packageNames.some((n) => n.includes('-vue'))) return 'vue (frozen at v2.9.0)';
   return 'unknown';
+}
+
+/** Version of `name` as installed in node_modules, resolved the way Node does (walking up from `fromDir`). */
+function readInstalledVersion(fromDir: string, name: string): string | null {
+  let dir = fromDir;
+  for (let i = 0; i < 10; i++) {
+    const pkgPath = join(dir, 'node_modules', name, 'package.json');
+    if (existsSync(pkgPath)) {
+      try {
+        const version = (JSON.parse(readFileSync(pkgPath, 'utf-8')) as { version?: unknown }).version;
+        return typeof version === 'string' ? version : null;
+      } catch {
+        return null;
+      }
+    }
+    const parent = dirname(dir);
+    if (parent === dir) break;
+    dir = parent;
+  }
+  return null;
+}
+
+/** "major.minor" of a semver-ish string, or null when it has none (e.g. "workspace:*", "latest"). */
+function majorMinor(version: string | undefined): string | null {
+  const m = version?.match(/(\d+)\.(\d+)/);
+  return m ? `${m[1]}.${m[2]}` : null;
 }
 
 function detectOGridVersion(searchPath: string): VersionDetectResult {
@@ -57,8 +88,17 @@ function detectOGridVersion(searchPath: string): VersionDetectResult {
         const firstPkg = ogridPkgs[0];
         if (firstPkg) {
           const framework = detectFramework(ogridPkgs.map((p) => p.name));
-          const version = firstPkg.version.replace(/^[\^~>=<]+/, '');
-          return { found: true, version, framework, packages: ogridPkgs, packageJsonPath: pkgPath };
+          const installedVersion = readInstalledVersion(dir, firstPkg.name);
+          const version = installedVersion ?? firstPkg.version.replace(/^[\^~>=<\s]+/, '');
+          return {
+            found: true,
+            version,
+            installed: installedVersion != null,
+            declared: firstPkg.version,
+            framework,
+            packages: ogridPkgs,
+            packageJsonPath: pkgPath,
+          };
         }
       } catch {
         // malformed package.json  -  keep walking up
@@ -364,6 +404,18 @@ Categories: features, getting-started, guides, api.`,
           ? `\n\nTip: use \`get_code_example\` with framework="${result.framework}" or \`search_docs\` with framework="${result.framework}" to get framework-specific results.`
           : '';
 
+      // The docs this server answers from match its own release; say so when
+      // the project is on a different minor, where APIs may differ.
+      const projectMinor = majorMinor(result.version);
+      const docsMinor = majorMinor(version);
+      const versionNote =
+        projectMinor && docsMinor && projectMinor !== docsMinor
+          ? `\nNote: these docs are for OGrid ${version} (ogrid-mcp); the project uses ${result.version}. APIs may differ between versions.`
+          : '';
+      const versionLine = result.installed
+        ? `Version:   ${result.version} (installed; declared ${result.declared})`
+        : `Version:   ${result.version} (declared; not installed under node_modules)`;
+
       return {
         content: [
           {
@@ -371,8 +423,10 @@ Categories: features, getting-started, guides, api.`,
             text: [
               `✅ OGrid detected in ${result.packageJsonPath}`,
               '',
-              `Version:   ${result.version}`,
+              versionLine,
               `Framework: ${result.framework}`,
+              `Docs:      ogrid-mcp ${version}`,
+              ...(versionNote ? [versionNote] : []),
               '',
               'Packages installed:',
               pkgList,

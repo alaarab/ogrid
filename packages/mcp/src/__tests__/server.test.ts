@@ -155,6 +155,41 @@ describe('server metadata and detect_version', () => {
   });
 });
 
+describe('detect_version installed version', () => {
+  let dir: string;
+  let app: string;
+
+  beforeEach(() => {
+    dir = makeTmpDocs({ 'features/sorting.mdx': '---\ntitle: Sorting\n---\nContent.' });
+    app = fs.mkdtempSync(path.join(os.tmpdir(), 'ogrid-version-test-'));
+    fs.writeFileSync(path.join(app, 'package.json'), JSON.stringify({ dependencies: { '@alaarab/ogrid-react-radix': '^2.9.0' } }));
+  });
+
+  afterEach(() => {
+    cleanup(dir);
+    cleanup(app);
+  });
+
+  test('reports the installed version over the declared range, and flags a docs version mismatch', async () => {
+    const installed = path.join(app, 'node_modules', '@alaarab', 'ogrid-react-radix');
+    fs.mkdirSync(installed, { recursive: true });
+    fs.writeFileSync(path.join(installed, 'package.json'), JSON.stringify({ version: '2.12.4' }));
+    const client = await connect(createOGridMcpServer(loadDocsIndex(dir), undefined, '2.17.3'));
+    const out = text(await client.callTool({ name: 'detect_version', arguments: { path: app } }));
+    expect(out).toContain('Version:   2.12.4 (installed; declared ^2.9.0)');
+    expect(out).toContain('these docs are for OGrid 2.17.3');
+    await client.close();
+  });
+
+  test('does not flag a mismatch when the minor matches the docs', async () => {
+    const client = await connect(createOGridMcpServer(loadDocsIndex(dir), undefined, '2.9.5'));
+    const out = text(await client.callTool({ name: 'detect_version', arguments: { path: app } }));
+    expect(out).toContain('Version:   2.9.0 (declared; not installed under node_modules)');
+    expect(out).not.toContain('APIs may differ');
+    await client.close();
+  });
+});
+
 describe('bridge tools', () => {
   let dir: string;
 
