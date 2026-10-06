@@ -400,4 +400,6 @@ export interface IFormulaCellWriter {
   canEdit: (col: number, row: number) => boolean;
   /** Commit `text` (a formula when it starts with '='). Returns false when the cell can't be edited. */
   write: (col: number, row: number, text: string) => boolean;
+  /** Move keyboard focus to the grid's active cell (the grid itself while that cell isn't rendered). */
+  focusActiveCell?: () => void;
 }

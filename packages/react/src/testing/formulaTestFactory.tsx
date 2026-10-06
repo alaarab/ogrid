@@ -317,6 +317,45 @@ export function createFormulaTests(OGrid: React.ComponentType<IOGridProps<Row>>)
       expect(totals(container)).toEqual(['30', '21', '60']);
     });
 
+    it('Enter (commit) and Escape (cancel) in the bar return focus to the active cell', async () => {
+      const { container } = renderGrid();
+      activate(container, 2, 'qty');
+      const input = formulaInput(container);
+      fireEvent.click(input);
+      input.focus();
+      expect(document.activeElement).toBe(input);
+      fireEvent.change(input, { target: { value: '5' } });
+      act(() => { fireEvent.keyDown(input, { key: 'Enter' }); });
+      await waitFor(() => expect(text(container, 2, 'qty')).toBe('5'));
+      expect(document.activeElement).toBe(td(container, 2, 'qty'));
+
+      fireEvent.click(input);
+      input.focus();
+      fireEvent.change(input, { target: { value: '9' } });
+      act(() => { fireEvent.keyDown(input, { key: 'Escape' }); });
+      expect(document.activeElement).toBe(td(container, 2, 'qty'));
+      expect(text(container, 2, 'qty')).toBe('5');
+    });
+
+    it('focus that leaves the bar some other way stays where it went', async () => {
+      const { container } = renderGrid();
+      const outside = document.createElement('button');
+      document.body.appendChild(outside);
+      try {
+        activate(container, 2, 'qty');
+        const input = formulaInput(container);
+        fireEvent.click(input);
+        input.focus();
+        fireEvent.change(input, { target: { value: '7' } });
+        // Clicking elsewhere on the page: the bar loses focus without a commit key.
+        act(() => outside.focus());
+        await act(async () => { await new Promise((r) => setTimeout(r, 20)); });
+        expect(document.activeElement).toBe(outside);
+      } finally {
+        outside.remove();
+      }
+    });
+
     it('does not enter edit mode in a read-only grid', () => {
       const { container } = renderGrid({ readOnly: true });
       activate(container, 2, 'total');
