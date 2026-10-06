@@ -6,6 +6,9 @@ All notable changes to OGrid will be documented in this file.
 
 ### Added
 
+- Headless `useCellClipboard` returns `onCopy(event)` and `onCut(event)` for
+  the native `copy`/`cut` events (new `CellClipboardCopyEvent` type), next to
+  `onPaste`.
 - Headless `useGridFocus` supports Ctrl/Cmd+Arrow and Ctrl+Shift+Arrow jumps,
   matching `<OGrid>`. Pass the new optional `isCellEmpty(row, col)` for
   Excel-style data-region jumps; without it, jumps go to the grid edge.
@@ -28,6 +31,10 @@ All notable changes to OGrid will be documented in this file.
 
 ### Fixed
 
+- Ctrl/Cmd+C and Ctrl/Cmd+X copy and cut through the native `copy`/`cut`
+  events, writing TSV to the event's clipboard data. Copying now reaches the
+  system clipboard on plain http and without clipboard write permission. The
+  context-menu Copy/Cut still use `navigator.clipboard.writeText()`.
 - The fill handle fills along one axis only, like Excel: whichever axis the
   pointer is farther outside the source block on (ties fill down). Diagonal
   drags no longer fill a rectangle.
