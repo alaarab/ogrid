@@ -13,8 +13,8 @@ function Inner() {
       const items = [...people];
       if (sort) {
         items.sort((a, b) => {
-          const av = (a as Record<string, unknown>)[sort.field];
-          const bv = (b as Record<string, unknown>)[sort.field];
+          const av = a[sort.field as keyof Person];
+          const bv = b[sort.field as keyof Person];
           const cmp = av < bv ? -1 : av > bv ? 1 : 0;
           return sort.direction === 'asc' ? cmp : -cmp;
         });

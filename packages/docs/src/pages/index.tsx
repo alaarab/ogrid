@@ -85,13 +85,14 @@ function HeroGrid() {
   const { RatingEditor, ColorPickerEditor, TagsEditor } = require('@alaarab/ogrid-react-inputs') as typeof import('@alaarab/ogrid-react-inputs');
   type ApiType = import('@alaarab/ogrid-react-radix').IOGridApi<EmployeeRow>;
   type IFilters = import('@alaarab/ogrid-react-radix').IFilters;
+  type CellChange = import('@alaarab/ogrid-react-radix').ICellValueChangedEvent<EmployeeRow>;
 
   const apiRef = useRef<ApiType>(null);
   const [data, setData] = useState<EmployeeRow[]>(() => generateData());
   const [filters, setFilters] = useState<IFilters>({});
   const [density, setDensity] = useState<'compact' | 'normal' | 'comfortable'>('normal');
 
-  const handleCellValueChanged = useCallback((e: { item: EmployeeRow; columnId: string; newValue: unknown }) => {
+  const handleCellValueChanged = useCallback((e: CellChange) => {
     setData(prev => prev.map(row =>
       row.id === e.item.id ? { ...row, [e.columnId]: e.newValue } : row
     ));
@@ -116,7 +117,7 @@ function HeroGrid() {
     if (!api) return;
     const rows = api.getDisplayedRows();
     exportToCsv(rows, columns, (item, colId) => {
-      const val = (item as Record<string, unknown>)[colId];
+      const val = item[colId as keyof EmployeeRow];
       return val != null ? String(val) : '';
     }, 'ogrid-employees.csv');
   }, [columns, exportToCsv]);

@@ -13,7 +13,6 @@ export default function ToolbarDefaultDemo() {
             data={people}
             getRowId={getRowId}
             columnChooser="toolbar"
-            pagination
             defaultPageSize={10}
           />
         );

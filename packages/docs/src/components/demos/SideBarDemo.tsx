@@ -14,7 +14,6 @@ export default function SideBarDemo() {
             getRowId={getRowId}
             sideBar
             columnChooser="sidebar"
-            pagination
             defaultPageSize={10}
           />
         );

@@ -41,7 +41,7 @@ function Inner() {
     <OGrid
       columns={columns}
       data={data}
-      getRowId={(r) => r.id}
+      getRowId={(r: Row) => r.id}
       virtualScroll={{ enabled: true, rowHeight: 36 }}
       statusBar
     />

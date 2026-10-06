@@ -18,7 +18,6 @@ function Inner() {
       sideBar
       statusBar
       cellSelection
-      pagination
       defaultPageSize={10}
       toolbar={
         <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>

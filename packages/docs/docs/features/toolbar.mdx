@@ -44,7 +44,6 @@ import { OGrid } from '@alaarab/ogrid-react-radix';
   data={items}
   getRowId={(item) => item.id}
   columnChooser="toolbar"
-  pagination
 />
 ```
 
@@ -77,7 +76,6 @@ The `toolbar` prop places your content on the **left** side of the toolbar strip
     </div>
   }
   columnChooser="toolbar"
-  pagination
 />
 ```
 
@@ -109,7 +107,6 @@ The `toolbarBelow` prop renders a **secondary row** below the primary toolbar st
     </div>
   }
   columnChooser="toolbar"
-  pagination
 />
 ```
 
@@ -140,7 +137,6 @@ When `columnChooser="sidebar"`, the column chooser button is removed from the to
   getRowId={(item) => item.id}
   columnChooser="sidebar"
   sideBar
-  pagination
 />
 ```
 
@@ -177,7 +173,6 @@ Here is every layout feature enabled at once  -  toolbar with custom buttons, co
   sideBar
   statusBar
   cellSelection
-  pagination
   toolbar={
     <div style={{ display: 'flex', gap: 8 }}>
       <button onClick={() => gridRef.current?.deselectAll()}>
