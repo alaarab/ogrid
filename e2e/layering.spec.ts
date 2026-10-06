@@ -86,6 +86,9 @@ test.describe('Pinned columns', () => {
     await openColumnOptions(page, 'Project Name');
     await page.getByRole('menuitem', { name: 'Pin left' }).click();
     await page.mouse.move(0, 0);
+    // Let the header menu trigger's hover background finish fading out, or the
+    // first strip can catch it mid-transition on a busy machine.
+    await page.waitForFunction(() => document.getAnimations().length === 0);
 
     const stripClip = () => page.evaluate(() => {
       const table = document.querySelector('table');
@@ -123,5 +126,43 @@ test.describe('Pinned columns', () => {
     // columns: not a column letter over the checkbox/row-number spacers, not a
     // sliver of text through a border seam. The strip must look the same.
     expect(await page.screenshot({ clip })).toEqual(pixelsBefore);
+  });
+});
+
+test.describe('Borders around sticky columns', () => {
+  // Both kits use the separate border model, where two touching borders both paint.
+  // Each boundary must carry exactly one 1px line, as the collapsed model drew it.
+  test('one line between a right-pinned column and its neighbor, and under every header row', async ({ page }) => {
+    // `pinned` pins the first column left and the last ("Active") right; `columnGroups`
+    // adds a group header row, with placeholders above the checkbox and # columns.
+    await page.goto('/?rowSelection&cellReferences&pinned&columnGroups');
+    await waitForGrid(page);
+    // At the far-right scroll end the right-pinned column meets its neighbor.
+    expect(await scrollGridTo(page, 100_000)).toBeGreaterThan(0);
+    await page.waitForTimeout(100);
+
+    const borders = await page.evaluate(() => {
+      const px = (el: Element, side: 'Left' | 'Right' | 'Bottom') =>
+        Number.parseFloat(getComputedStyle(el)[`border${side}Width`]);
+      const pinned = Array.from(document.querySelectorAll('thead th[data-column-id="active"], tbody tr td[data-column-id="active"]')).slice(0, 4);
+      const boundaries = pinned.map((cell) => {
+        const prev = cell.previousElementSibling;
+        if (!prev) throw new Error('right-pinned cell has no neighbor');
+        return {
+          lines: px(prev, 'Right') + px(cell, 'Left'),
+          touching: Math.abs(prev.getBoundingClientRect().right - cell.getBoundingClientRect().left) <= 1,
+        };
+      });
+      // Header cells above the leaf row: the group cells and the placeholders beside them.
+      const headerRows = Array.from(document.querySelectorAll('thead tr'));
+      const upperCells = headerRows.slice(0, -1).flatMap((row) => Array.from(row.querySelectorAll('th')));
+      const missingBottom = upperCells.filter((th) => px(th, 'Bottom') === 0).length;
+      return { boundaries, upperCount: upperCells.length, missingBottom };
+    });
+
+    expect(borders.boundaries.length).toBeGreaterThanOrEqual(2);
+    for (const b of borders.boundaries) expect(b).toEqual({ lines: 1, touching: true });
+    expect(borders.upperCount).toBeGreaterThan(0);
+    expect(borders.missingBottom).toBe(0);
   });
 });

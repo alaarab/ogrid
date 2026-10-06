@@ -4,6 +4,7 @@ import type {
   IPageResult,
   IFetchParams,
   IColumnDef,
+  IColumnGroupDef,
   RowSelectionMode,
   ISideBarDef,
 } from '@alaarab/ogrid-core';
@@ -16,7 +17,7 @@ const SERVER_DELAY_MS = 25;
 const FORMULA_BUDGET_COLUMN_INDEX = 6;
 
 export interface ProjectExampleScenario {
-  columns: IColumnDef<Project>[];
+  columns: Array<IColumnDef<Project> | IColumnGroupDef<Project>>;
   data: Project[];
   dataSource?: IDataSource<Project>;
   defaultPageSize: number;
@@ -60,6 +61,29 @@ function waitForServerTick(signal?: AbortSignal, ms = SERVER_DELAY_MS): Promise<
 
     signal?.addEventListener('abort', onAbort, { once: true });
   });
+}
+
+/**
+ * `?pinned` pins the first column left and the last column right; `?columnGroups`
+ * wraps the columns in two group headers. Both exist so the e2e suite can check
+ * borders around sticky columns and group header rows.
+ */
+function arrangeColumns(
+  columns: IColumnDef<Project>[],
+  flags: ExampleFeatureFlags,
+): Array<IColumnDef<Project> | IColumnGroupDef<Project>> {
+  const leaves = flags.pinned
+    ? columns.map((col, i): IColumnDef<Project> => {
+      if (i === 0) return { ...col, pinned: 'left' };
+      if (i === columns.length - 1) return { ...col, pinned: 'right' };
+      return col;
+    })
+    : columns;
+  if (!flags.columnGroups) return leaves;
+  return [
+    { headerName: 'Project', children: leaves.slice(0, 4) },
+    { headerName: 'Details', children: leaves.slice(4) },
+  ];
 }
 
 function getStringFilterOptions(items: Project[], field: string): string[] {
@@ -115,7 +139,7 @@ export function createProjectExampleScenario(
     : undefined;
 
   return {
-    columns,
+    columns: arrangeColumns(columns, flags),
     data,
     dataSource: flags.serverSide ? createProjectDataSource(data, columns) : undefined,
     defaultPageSize: 100,
