@@ -15,6 +15,22 @@ const sidebars: SidebarsConfig = {
     },
     {
       type: 'category',
+      label: 'Spreadsheet Hooks',
+      collapsed: false,
+      link: { type: 'doc', id: 'spreadsheet-hooks/index' },
+      items: [
+        'spreadsheet-hooks/use-headless-grid',
+        'spreadsheet-hooks/use-inline-edit',
+        'spreadsheet-hooks/use-range-selection',
+        'spreadsheet-hooks/use-fill-handle',
+        'spreadsheet-hooks/use-cell-clipboard',
+        'spreadsheet-hooks/use-undo-redo',
+        'spreadsheet-hooks/use-grid-focus',
+        'spreadsheet-hooks/use-grid-virtualization',
+      ],
+    },
+    {
+      type: 'category',
       label: 'Features',
       collapsed: false,
       items: [

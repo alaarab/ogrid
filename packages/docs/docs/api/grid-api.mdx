@@ -7,6 +7,13 @@ title: Grid API
 
 The `IOGridApi<T>` interface provides imperative methods for controlling the grid programmatically. Access it via a React ref on the `OGrid` component.
 
+:::info Headless alternative
+With [`useHeadlessGrid`](/docs/spreadsheet-hooks/use-headless-grid) there is no
+ref to reach for: `setSort`, `setFilters`, `setPage`, `allFilteredRows`,
+`selectedRowIds`, and the rest are returned directly from the hook. See the
+[Headless overview](/docs/headless).
+:::
+
 ## Accessing the API
 
 ```typescript

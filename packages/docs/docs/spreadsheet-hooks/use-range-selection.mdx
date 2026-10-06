@@ -1,0 +1,90 @@
+---
+sidebar_position: 4
+title: useRangeSelection
+description: Headless Excel-style rectangular cell range with an anchor and a focus cell. Foundation for fill handle and clipboard.
+---
+
+import UseRangeSelectionDemo from '@site/src/components/demos/headless/UseRangeSelectionDemo';
+
+# `useRangeSelection`
+
+A range is an `anchor` (where the user started) and a `focus` (where they are
+now). A single click sets both to the same cell; dragging or Shift+clicking
+moves only the focus. The hook exposes the normalized rectangle as `range`
+and is the input that [`useFillHandle`](/docs/spreadsheet-hooks/use-fill-handle),
+[`useCellClipboard`](/docs/spreadsheet-hooks/use-cell-clipboard), and
+[`useGridFocus`](/docs/spreadsheet-hooks/use-grid-focus) consume. It never
+touches the DOM; you wire the mouse events.
+
+## Live demo
+
+<UseRangeSelectionDemo />
+
+## Quick example
+
+```tsx
+import { useHeadlessGrid, useRangeSelection } from '@alaarab/ogrid-react';
+
+const grid = useHeadlessGrid({ columns, data, getRowId });
+const range = useRangeSelection({
+  rowCount: grid.rows.length,
+  colCount: grid.columns.length,
+});
+
+// Inside the row/column loops (rowIdx, colIdx are positions in grid.rows / grid.columns):
+<td
+  onMouseDown={(e) => (e.shiftKey ? range.extendRange(rowIdx, colIdx) : range.startRange(rowIdx, colIdx))}
+  onMouseEnter={(e) => e.buttons === 1 && range.extendRange(rowIdx, colIdx)}
+  style={{ background: range.isInRange(rowIdx, colIdx) ? 'var(--ogrid-range-bg)' : undefined }}
+/>
+```
+
+## Parameters
+
+`UseRangeSelectionParams`
+
+| Param | Type | Description |
+|---|---|---|
+| `rowCount` | `number` | Visible row count (the current page). Used by `selectAll()`. |
+| `colCount` | `number` | Visible column count. Used by `selectAll()`. |
+
+## Returns
+
+`UseRangeSelectionResult`
+
+| Field | Type | Description |
+|---|---|---|
+| `range` | `ISelectionRange \| null` | Normalized bounds: `startRow <= endRow`, `startCol <= endCol`. |
+| `anchor` | `CellCoord \| null` | `{ row, col }` where the selection started. |
+| `focus` | `CellCoord \| null` | `{ row, col }` where it currently ends. |
+| `startRange` | `(row, col) => void` | New single-cell selection (anchor = focus). |
+| `extendRange` | `(row, col) => void` | Move the focus, keep the anchor. With no anchor yet, behaves like `startRange`. |
+| `setRange` | `(range: ISelectionRange \| null) => void` | Set the bounds explicitly; `null` clears. |
+| `clearRange` | `() => void` | |
+| `selectAll` | `() => void` | `(0,0)` to `(rowCount-1, colCount-1)`. No-op for an empty grid. |
+| `isInRange` | `(row, col) => boolean` | Inclusive hit test. |
+| `getRangeRows` | `() => number[]` | Row indices covered, in order. |
+| `getRangeCells` | `() => CellCoord[]` | Every covered cell, row-major. |
+
+## Behavior notes
+
+- **Coordinates are positions, not ids.** `row` is an index into the array you
+  render (`grid.rows`), `col` an index into `grid.columns`. Pass the same
+  arrays to the fill and clipboard hooks so all three agree.
+- **`range` is always normalized**, so a drag up and to the left still yields
+  `startRow <= endRow`. Use `anchor` / `focus` if you need the drag direction.
+- **The range is not clamped when the grid shrinks.** Changing page, filter, or
+  sort can leave a stale range pointing past the new `rowCount`. Call
+  `clearRange()` in those handlers (or on `grid.page` change) if that matters
+  to you.
+- **Pointer events are yours.** Check `e.buttons === 1` in `onMouseEnter` to
+  turn hover into drag, and `e.button === 0` in `onMouseDown` to ignore right
+  clicks. `<OGrid>` additionally uses the Pointer Events API for touch; the
+  hook does not care which events you use.
+- **Ctrl+A** is just `range.selectAll()` bound to a key.
+
+## See also
+
+- [`useFillHandle`](/docs/spreadsheet-hooks/use-fill-handle) and [`useCellClipboard`](/docs/spreadsheet-hooks/use-cell-clipboard) consume this range
+- [`useGridFocus`](/docs/spreadsheet-hooks/use-grid-focus) extends it with Shift+Arrow
+- [Spreadsheet Selection](/docs/features/spreadsheet-selection) for the same model inside `<OGrid>`

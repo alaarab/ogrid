@@ -4,6 +4,22 @@ All notable changes to OGrid will be documented in this file.
 
 ## [Unreleased]
 
+### Added
+
+- Docs: a "Spreadsheet Hooks" section with a `/headless` landing page and one
+  page per hook (`useHeadlessGrid`, `useInlineEdit`, `useRangeSelection`,
+  `useFillHandle`, `useCellClipboard`, `useUndoRedo`, `useGridFocus`,
+  `useGridVirtualization`), each with a live demo on a plain `<table>`, the
+  real `Params`/`Result` tables and cross-links from the API and feature pages.
+
+### Fixed
+
+- Export `SortState` (the type of `useHeadlessGrid`'s `initialSort`/`sort`) from
+  `@alaarab/ogrid-react` and both kits.
+- Docs: headless examples no longer spread `getEditorProps()` onto an `<input>`
+  or pass `undo.onCellValueChanged` straight to `onCellEdit`; both were type
+  errors against the real hook signatures.
+
 ### Changed
 
 - Add `check:exports`, a static public-API check run in CI and before publishing:

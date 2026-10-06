@@ -1,0 +1,109 @@
+---
+sidebar_position: 9
+title: useGridVirtualization
+description: Headless row and column virtualization. Reports which slice to render and the spacer offsets that keep scroll geometry intact.
+---
+
+import UseGridVirtualizationDemo from '@site/src/components/demos/headless/UseGridVirtualizationDemo';
+
+# `useGridVirtualization`
+
+Render only the rows (and optionally columns) in view. You own the scroll
+container; the hook watches its scroll position and size, and returns the
+visible index range plus the pixel offsets for spacer elements above and
+below. It uses core's pure compute helpers and plain DOM events, with no
+third-party dependency.
+
+## Live demo
+
+<UseGridVirtualizationDemo />
+
+## Quick example
+
+```tsx
+import { useRef } from 'react';
+import { useHeadlessGrid, useGridVirtualization } from '@alaarab/ogrid-react';
+
+const ROW_HEIGHT = 32;
+
+// 'all' turns pagination off so every filtered row is available to the window.
+const grid = useHeadlessGrid({ columns, data, getRowId, initialPageSize: 'all' });
+const containerRef = useRef<HTMLDivElement>(null);
+const virt = useGridVirtualization({
+  rowCount: grid.rows.length,
+  rowHeight: ROW_HEIGHT,
+  containerRef,
+});
+
+const { startIndex, endIndex, offsetTop, offsetBottom } = virt.rowRange;
+
+<div ref={containerRef} onScroll={virt.onScroll} style={{ height: 400, overflow: 'auto' }}>
+  <table style={{ borderCollapse: 'separate', borderSpacing: 0 }}>
+    <tbody>
+      {offsetTop > 0 && <tr><td colSpan={grid.columns.length} style={{ height: offsetTop, padding: 0 }} /></tr>}
+      {grid.rows.slice(startIndex, endIndex + 1).map((row) => (
+        <tr key={grid.getRowId(row)}>
+          {grid.columns.map((col) => (
+            <td key={col.columnId} style={{ height: ROW_HEIGHT, boxSizing: 'border-box' }}>
+              {String(grid.getCellValue(row, col.columnId) ?? '')}
+            </td>
+          ))}
+        </tr>
+      ))}
+      {offsetBottom > 0 && <tr><td colSpan={grid.columns.length} style={{ height: offsetBottom, padding: 0 }} /></tr>}
+    </tbody>
+  </table>
+</div>
+```
+
+## Parameters
+
+`UseGridVirtualizationParams`
+
+| Param | Type | Default | Description |
+|---|---|---|---|
+| `rowCount` | `number` | required | Total rows available to render. |
+| `rowHeight` | `number` | required | Uniform row height in pixels. Must match your CSS exactly. |
+| `containerRef` | `RefObject<HTMLElement \| null>` | required | The scroll container. Needs a fixed height and `overflow: auto`. |
+| `overscan` | `number` | `5` | Extra rows rendered above and below the viewport. |
+| `enabled` | `boolean` | `true` | `false` returns a pass-through range (render everything). |
+| `threshold` | `number` | `100` | Below this row count virtualization is bypassed to avoid small-dataset artifacts. |
+| `columnWidths` | `number[]` | none | Widths of the unpinned columns. Enables horizontal virtualization. |
+| `columnOverscan` | `number` | `2` | Extra columns left and right of the viewport. |
+
+## Returns
+
+`UseGridVirtualizationResult`
+
+| Field | Type | Description |
+|---|---|---|
+| `totalHeight` | `number` | `rowCount * rowHeight`. Use it if you prefer a single absolutely-positioned spacer. |
+| `rowRange` | `{ startIndex; endIndex; offsetTop; offsetBottom }` | Inclusive row slice plus spacer heights in pixels. |
+| `columnRange` | `{ startIndex; endIndex; leftOffset; rightOffset } \| null` | Column slice, or `null` when `columnWidths` is omitted or the container has no width yet. |
+| `scrollToIndex` | `(index: number, align?: 'start' \| 'center' \| 'end') => void` | Scroll the container so a row is in view. Default `'start'`. |
+| `onScroll` | `() => void` | Attach to the container's `onScroll`. |
+| `isActive` | `boolean` | `enabled && rowCount >= threshold && rowHeight > 0`. |
+
+## Behavior notes
+
+- **Row height must be exact.** Every rendered row has to be `rowHeight`
+  pixels tall, borders included, or offsets drift as you scroll. For a
+  `<table>`, `border-collapse: separate` with `box-sizing: border-box` on the
+  cells is the predictable setup; the demo uses that.
+- **Pair with `initialPageSize: 'all'`** (or pass `grid.allFilteredRows`) when
+  virtualizing a `useHeadlessGrid`. `grid.rows` is otherwise one page, and
+  `rowCount` must describe the array you slice from.
+- **Below `threshold` nothing is virtualized**: `rowRange` covers every row and
+  `isActive` is `false`. The default of 100 means small tables render normally.
+- **Scroll updates are coalesced** with `requestAnimationFrame`, and the
+  container size is tracked with `ResizeObserver` (falling back to the mounted
+  size where it is unavailable).
+- **Column virtualization is opt-in** and only covers unpinned columns; keep
+  pinned columns outside the `columnWidths` array and render them yourself.
+- **Keep row keys stable** (`grid.getRowId`) so React reuses rows as the
+  window slides instead of remounting them.
+
+## See also
+
+- [`useHeadlessGrid`](/docs/spreadsheet-hooks/use-headless-grid) supplies the rows
+- [Virtual Scrolling](/docs/features/virtual-scrolling) and [Performance](/docs/features/performance) inside `<OGrid>`

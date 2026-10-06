@@ -1,0 +1,117 @@
+---
+sidebar_position: 8
+title: useGridFocus
+description: Headless active-cell state and keyboard navigation. Arrow, Tab, Enter, Home, End, PageUp, PageDown, with Shift to extend a range.
+---
+
+import UseGridFocusDemo from '@site/src/components/demos/headless/UseGridFocusDemo';
+
+# `useGridFocus`
+
+Tracks the active cell and turns keyboard input into movement clamped to the
+rows and columns you render. Give it the result of
+[`useRangeSelection`](/docs/spreadsheet-hooks/use-range-selection) and
+Shift+Arrow, Shift+Home, and Shift+End extend the range while plain movement
+collapses it to the new cell. The hook is pure state plus a keydown handler
+factory; you make the container focusable and draw the highlight.
+
+## Live demo
+
+<UseGridFocusDemo />
+
+## Quick example
+
+```tsx
+import { useHeadlessGrid, useRangeSelection, useGridFocus } from '@alaarab/ogrid-react';
+
+const grid = useHeadlessGrid({ columns, data, getRowId });
+const range = useRangeSelection({ rowCount: grid.rows.length, colCount: grid.columns.length });
+const focus = useGridFocus({
+  rowCount: grid.rows.length,
+  colCount: grid.columns.length,
+  pageSize: 10,
+  rangeSelection: range, // optional
+});
+
+<div tabIndex={0} onKeyDown={focus.getKeyDownHandler()}>
+  <table>
+    {grid.rows.map((row, rowIdx) => (
+      <tr key={grid.getRowId(row)}>
+        {grid.columns.map((col, colIdx) => (
+          <td
+            key={col.columnId}
+            data-active={focus.activeCell?.row === rowIdx && focus.activeCell?.col === colIdx}
+            onMouseDown={() => {
+              focus.setActiveCell({ row: rowIdx, col: colIdx });
+              range.startRange(rowIdx, colIdx);
+            }}
+          />
+        ))}
+      </tr>
+    ))}
+  </table>
+</div>
+```
+
+## Parameters
+
+`UseGridFocusParams`
+
+| Param | Type | Default | Description |
+|---|---|---|---|
+| `rowCount` | `number` | required | Visible row count (the current page). |
+| `colCount` | `number` | required | Visible column count. |
+| `pageSize` | `number` | `10` | Rows moved by PageUp / PageDown. |
+| `rangeSelection` | `UseRangeSelectionResult` | none | When provided, movement drives the range: plain keys call `startRange`, Shift+keys call `extendRange`. |
+
+## Returns
+
+`UseGridFocusResult`
+
+| Field | Type | Description |
+|---|---|---|
+| `activeCell` | `CellCoord \| null` | `{ row, col }` or `null` before the first interaction. |
+| `setActiveCell` | `(cell: CellCoord \| null) => void` | Set directly, typically from `onMouseDown`. Does not touch the range. |
+| `moveUp` / `moveDown` / `moveLeft` / `moveRight` | `(n?: number) => void` | Move by `n` (default 1), clamped at the edges. |
+| `moveToRowStart` / `moveToRowEnd` | `() => void` | First / last column of the current row. |
+| `moveToStart` / `moveToEnd` | `() => void` | `(0, 0)` / `(lastRow, lastCol)`. |
+| `getKeyDownHandler` | `() => (e) => void` | Returns the handler to attach to your container's `onKeyDown`. It reads `key`, `shiftKey`, `ctrlKey`, `metaKey` and calls `preventDefault` for keys it consumes. |
+
+## Keys handled
+
+| Key | Action | With Shift |
+|---|---|---|
+| Arrow keys | Move one cell | Extend the range |
+| Tab / Shift+Tab | Next / previous column in the row. At the row's first or last cell the event is left to the browser so focus can leave the grid | |
+| Enter / Shift+Enter | Move down / up one row | |
+| Home / End | First / last column of the row | Extend to the row edge, keeping the anchor |
+| Ctrl+Home / Ctrl+End (Cmd on macOS) | First / last cell of the grid | Extend to the grid corner |
+| PageUp / PageDown | Move `pageSize` rows | Extend by `pageSize` rows |
+
+## Behavior notes
+
+- **The first move focuses `(0, 0)`.** With no active cell, any movement key
+  activates the top-left cell instead of moving relative to nothing.
+- **Movement is clamped**, never wrapped: ArrowRight at the last column stays
+  put. Tab is the exception by design: it falls through to the browser at the
+  row edge rather than trapping focus.
+- **The active cell is not clamped when the grid shrinks.** Reset it with
+  `setActiveCell(null)` when the page, filter, or sort changes if a stale
+  coordinate would be visible.
+- **Make the container focusable** (`tabIndex={0}`) and attach the handler
+  there, not on individual cells; clicking a cell focuses the container
+  automatically.
+- **Editing keys are not included.** F2, typing to edit, Delete, and the
+  clipboard and undo shortcuts are left for you to add around
+  `getKeyDownHandler()` (see the landing-page demo for a combined handler).
+  Skip the navigation handler while `edit.editingCell` is set so arrows move
+  the caret inside the editor.
+- **Ctrl+Arrow data-region jumps** are a `<OGrid>` feature and are not
+  implemented by this hook.
+
+## See also
+
+- [`useRangeSelection`](/docs/spreadsheet-hooks/use-range-selection) for Shift+Arrow range extension
+- [`useInlineEdit`](/docs/spreadsheet-hooks/use-inline-edit) to open the editor on the active cell
+- [Keyboard Navigation](/docs/features/keyboard-navigation) for the full shortcut set inside `<OGrid>`
+- [Accessibility](/docs/guides/accessibility)

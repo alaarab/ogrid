@@ -12,6 +12,13 @@ import { OGrid } from '@alaarab/ogrid-react-radix'; // Radix (default)
 import { OGrid } from '@alaarab/ogrid-react-fluent';
 ```
 
+:::info Headless alternative
+Own your table markup? [`useHeadlessGrid`](/docs/spreadsheet-hooks/use-headless-grid)
+accepts the same `columns`, `data`, `getRowId`, `dataSource`, and controlled
+sort / filter / page props as plain hook parameters, and the
+[spreadsheet hooks](/docs/headless) cover editing, selection, clipboard, and undo.
+:::
+
 :::caution v1.6.0 Breaking Changes
 - The `title` prop has been removed. Render your own heading outside `<OGrid>`.
 - `IFilters` values are now discriminated unions: `{ type: 'text', value: string }` instead of raw strings. See [Filtering](../features/filtering) for the new format.
