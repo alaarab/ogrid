@@ -5,6 +5,7 @@ import { useDataGridTableOrchestration } from '../hooks/useDataGridTableOrchestr
 import { useColumnMeta } from '../hooks/useColumnMeta';
 import { useRenderCellContent } from '../hooks/useRenderCellContent';
 import { usePortalTheme } from '../hooks/usePortalTheme';
+import { useGridCellFocus } from '../hooks/useGridCellFocus';
 import { getColumnHeaderMenuProps } from '../hooks/useColumnHeaderMenuState';
 import {
   GRID_ROOT_STYLE,
@@ -41,21 +42,6 @@ const VISUALLY_HIDDEN_STYLE: React.CSSProperties = {
   whiteSpace: 'nowrap',
   border: 0,
 };
-
-/** "Name, row 3" for the active cell, or '' when nothing is active. */
-function useActiveCellAnnouncement(
-  activeCell: { rowIndex: number; columnIndex: number } | null,
-  visibleCols: ReadonlyArray<{ name?: string; columnId: string }>,
-  colOffset: number,
-  pageOffset: number,
-): string {
-  return React.useMemo(() => {
-    if (!activeCell) return '';
-    const col = visibleCols[activeCell.columnIndex - colOffset];
-    if (!col) return '';
-    return `${col.name || col.columnId}, row ${pageOffset + activeCell.rowIndex + 1}`;
-  }, [activeCell, visibleCols, colOffset, pageOffset]);
-}
 
 /**
  * Shared DataGridTable body. Adapters (`react-radix`, `react-fluent`) bind their
@@ -133,7 +119,18 @@ export function BaseDataGridTableInner<T>(
   const ariaRowCount = knownTotalRows >= 0 ? headerRowCount + knownTotalRows : -1;
   // Theme tokens for the portaled context menu (it renders outside the grid).
   const contextMenuTheme = usePortalTheme(wrapperRef, menuPosition != null);
-  const activeCellAnnouncement = useActiveCellAnnouncement(interaction.activeCell, visibleCols, colOffset, pageOffset);
+  // Roving tabindex: one body cell is the tab stop and holds DOM focus; the
+  // wrapper is the fallback stop while that cell isn't rendered. Without cell
+  // selection there is no cell navigation, so the wrapper stays the stop.
+  const cellFocus = useGridCellFocus({
+    wrapperRef,
+    activeCell: interaction.activeCell,
+    setActiveCell: interaction.setActiveCell,
+    editingCell,
+    colOffset,
+    rowCount: windowed ? windowed.rowCount : items.length,
+    colCount: gridProps.cellSelection === false ? 0 : visibleCols.length,
+  });
   // Windowed placeholders are aria-hidden; announce loading once for the grid instead.
   let windowedLoading = false;
   if (windowed) {
@@ -147,15 +144,19 @@ export function BaseDataGridTableInner<T>(
 
   return (
     <div style={virtualScrollEnabled ? GRID_ROOT_VIRTUAL_SCROLL_STYLE : GRID_ROOT_STYLE}>
-      {/* biome-ignore lint/a11y/noNoninteractiveElementInteractions: the grid wrapper hosts the centralized keyboard-navigation layer (useKeyboardNavigation); all cell keyboard interaction is handled here via roving focus */}
+      {/* biome-ignore lint/a11y/noNoninteractiveElementInteractions: the grid wrapper hosts the centralized keyboard-navigation layer (useKeyboardNavigation); key and clipboard events from the focused cell bubble here */}
       {/* biome-ignore lint/a11y/useSemanticElements: the wrapper must stay a div scroll container; role="region" is the intended landmark semantics */}
       <div
         ref={wrapperRef}
-        // biome-ignore lint/a11y/noNoninteractiveTabindex: the grid wrapper is the intentional focus target for the grid's roving-focus/keyboard-navigation system
-        tabIndex={0}
+        // Focusable for the fallback only; useGridCellFocus raises it to 0 while
+        // no cell is the tab stop (rows virtualized away, or none at all).
+        tabIndex={-1}
+        onFocus={cellFocus.onFocus}
+        onBlur={cellFocus.onBlur}
         onMouseDown={(e) => { lastMouseShiftRef.current = e.shiftKey; }}
+        onPointerDownCapture={cellFocus.onPointerDownCapture}
         // A checkbox toggled from the keyboard (Space) reads Shift from its key press, not a stale mouse press.
-        onKeyDownCapture={(e) => { lastMouseShiftRef.current = e.shiftKey; }}
+        onKeyDownCapture={(e) => { lastMouseShiftRef.current = e.shiftKey; cellFocus.onKeyDownCapture(); }}
         onScroll={onHorizontalScroll ? (e) => onHorizontalScroll((e.target as HTMLElement).scrollLeft) : undefined}
         className={`${styles.tableWrapper} ${rowSelection !== 'none' ? styles.selectableGrid : ''} ${styles[`density-${density}`] || ''}`}
         role="region"
@@ -185,11 +186,6 @@ export function BaseDataGridTableInner<T>(
             ? { ['--ogrid-row-height' as string]: `${virtualScrollEnabled ? virtualRowHeight : rowHeight}px` } : {}),
         } as React.CSSProperties}
       >
-        {/* Screen readers don't follow the visual active cell (focus stays on
-            the wrapper), so announce it politely as it moves. */}
-        <div aria-live="polite" aria-atomic="true" style={VISUALLY_HIDDEN_STYLE}>
-          {activeCellAnnouncement}
-        </div>
         {windowed && (
           <div role="status" aria-live="polite" style={VISUALLY_HIDDEN_STYLE}>
             {windowedLoading ? 'Loading rows\u2026' : ''}
@@ -241,6 +237,8 @@ export function BaseDataGridTableInner<T>(
                     copyRange={copyRange}
                     isDragging={isDragging}
                     editingCell={editingCell}
+                    tabStopCell={cellFocus.tabStopCell}
+                    registerTabStop={cellFocus.registerTabStop}
                     popoverAnchorEl={o.editing.popoverAnchorEl}
                     pendingEditorValue={o.editing.pendingEditorValue}
                     formulaVersion={gridProps.formulaVersion}

@@ -50,7 +50,9 @@ The `OGrid` component has the same props across all React UI packages. To switch
   </TabItem>
 </Tabs>
 
-Click any cell to make it the active cell, then use the keyboard to navigate and edit.
+Click any cell, or Tab into the grid, to make it the active cell, then use the keyboard to navigate and edit.
+
+The active cell holds real keyboard focus (a roving tabindex): it is the grid's only tab stop, and focus moves with it as you navigate, so screen readers announce each cell. See [Accessibility: focus model](/docs/guides/accessibility#focus-model).
 
 ## Navigation
 

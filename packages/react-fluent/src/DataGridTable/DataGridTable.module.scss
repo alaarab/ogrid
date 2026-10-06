@@ -45,7 +45,13 @@
   border: none;
   background-color: var(--colorNeutralBackground1, var(--ogrid-bg, #ffffff));
   -webkit-overflow-scrolling: touch;
-  outline: none; // Suppress browser focus ring on the grid wrapper; individual cells handle focus styling
+}
+
+// Fluent's TableCell draws its own keyboard focus outline (tabster's
+// [data-fui-focus-visible]). The focused cell already shows the shared
+// active-cell outline, so drop Fluent's to avoid a doubled border.
+.tableWrapper .dataTable tbody td:global([data-fui-focus-visible]) {
+  outline: none;
 }
 
 // ---- Fluent Table primitives (pure visual, no behavior) ----

@@ -14,8 +14,19 @@
  * Ctrl+Shift+Arrow extends the range to the same target.
  *
  * Consumer attaches `getKeyDownHandler()` to their grid container's
- * `onKeyDown`, makes the container focusable (`tabIndex={0}`), and renders
- * the active cell highlight from `activeCell`.
+ * `onKeyDown` and renders the active cell highlight from `activeCell`. For
+ * focus there are two options:
+ *
+ * - Container focus: make the container focusable (`tabIndex={0}`); the active
+ *   cell is visual only.
+ * - Roving tabindex (WAI-ARIA grid pattern, what `<OGrid>` does): spread
+ *   `getCellProps(row, col)` on each cell. The active cell (or the first cell
+ *   before any is active) gets `tabIndex` 0 and every other cell -1, focusing
+ *   a cell makes it active, and DOM focus follows the active cell while a
+ *   cell has focus. Key events from the focused cell bubble to the
+ *   container's `onKeyDown`. Rows that are virtualized out of the DOM can't
+ *   hold focus: keep the container focusable (`tabIndex={-1}`) and focus it
+ *   when the active row unmounts, or don't unmount the active row.
  *
  * Example:
  *
@@ -39,9 +50,17 @@
  *       )}
  *     </table>
  *   </div>
+ *
+ * Roving tabindex instead (no tabIndex on the container):
+ *
+ *   <table role="grid" onKeyDown={focus.getKeyDownHandler()}>
+ *     ...
+ *       <td role="gridcell" {...focus.getCellProps(rowIdx, colIdx)} />
+ *   </table>
  */
 
-import { useCallback, useRef, useState } from 'react';
+import { useCallback, useLayoutEffect, useRef, useState } from 'react';
+import type * as React from 'react';
 import { computeArrowNavigation } from '@alaarab/ogrid-core';
 import type { CellCoord, UseRangeSelectionResult } from './useRangeSelection';
 
@@ -68,6 +87,18 @@ export interface UseGridFocusParams {
    * omitted, Ctrl+Arrow jumps straight to the grid edge.
    */
   isCellEmpty?: (row: number, col: number) => boolean;
+}
+
+/** Props `getCellProps` returns for one cell (roving tabindex). */
+export interface GridFocusCellProps {
+  /** 0 for the grid's one tab stop (the active cell, else the first cell), -1 otherwise. */
+  tabIndex: 0 | -1;
+  /** Set on the tab-stop cell only, so the hook can move focus to it. Stable identity. */
+  ref: ((el: HTMLElement | null) => void) | undefined;
+  /** Makes a cell active when it receives focus (Tab, click, assistive technology). */
+  onFocus: (e: React.FocusEvent) => void;
+  /** Tracks that focus left the cell. */
+  onBlur: (e: React.FocusEvent) => void;
 }
 
 export interface UseGridFocusResult {
@@ -97,6 +128,14 @@ export interface UseGridFocusResult {
    * Shift+Arrow extending the range when `rangeSelection` was provided and
    * Ctrl/Cmd+Arrow jumping to the data-region or grid edge (see `isCellEmpty`).
    */
+  /**
+   * Optional roving tabindex. Spread on each cell element:
+   * `<td {...getCellProps(row, col)} />`. Exactly one cell is a tab stop;
+   * while a cell has focus, focus follows the active cell (keyboard moves,
+   * `setActiveCell`, `moveTo*`). Additive: not calling it keeps the
+   * container-focus model.
+   */
+  getCellProps: (row: number, col: number) => GridFocusCellProps;
   getKeyDownHandler: () => (e: {
     key: string;
     shiftKey?: boolean;
@@ -116,7 +155,9 @@ const NEVER_EMPTY = (): boolean => false;
 /**
  * Headless arrow-key cell navigation.
  *
- * Pure state + a keydown handler factory. Does not touch the DOM directly.
+ * State + a keydown handler factory. Touches the DOM only when a consumer
+ * opts into roving tabindex through `getCellProps` (it then focuses the
+ * tab-stop cell as the active cell moves).
  */
 export function useGridFocus(params: UseGridFocusParams): UseGridFocusResult {
   const { rowCount, colCount, pageSize = 10, rangeSelection, isCellEmpty } = params;
@@ -301,6 +342,48 @@ export function useGridFocus(params: UseGridFocusParams): UseGridFocusResult {
     };
   }, [moveBy, arrow, extendTo, moveToRowStart, moveToRowEnd, moveToStart, moveToEnd, pageSize, rowCount, colCount]);
 
+  // --- Roving tabindex (opt-in through getCellProps) ---
+  const tabStopElRef = useRef<HTMLElement | null>(null);
+  const cellHasFocusRef = useRef(false);
+  const tabStopRef = useCallback((el: HTMLElement | null) => {
+    tabStopElRef.current = el;
+  }, []);
+  const onCellBlur = useCallback(() => {
+    cellHasFocusRef.current = false;
+  }, []);
+
+  // Focus follows the active cell, but only while a cell already has focus:
+  // moving the active cell from outside the grid must not steal focus.
+  // biome-ignore lint/correctness/useExhaustiveDependencies: runs when the active cell moves; the tab-stop element is read from a ref the ref callback set during that commit
+  useLayoutEffect(() => {
+    const el = tabStopElRef.current;
+    if (!el || !cellHasFocusRef.current || !el.isConnected) return;
+    if (document.activeElement !== el) el.focus({ preventScroll: true });
+  }, [activeCell]);
+
+  const getCellProps = useCallback(
+    (row: number, col: number): GridFocusCellProps => {
+      // An active cell left outside the grid (it shrank) falls back to the first cell.
+      const active = activeCell && activeCell.row < rowCount && activeCell.col < colCount ? activeCell : null;
+      const isStop = active
+        ? active.row === row && active.col === col
+        : row === 0 && col === 0;
+      return {
+        tabIndex: isStop ? 0 : -1,
+        ref: isStop ? tabStopRef : undefined,
+        onFocus: (e: React.FocusEvent) => {
+          // Only the cell itself, not a control inside it.
+          if (e.target !== e.currentTarget) return;
+          cellHasFocusRef.current = true;
+          const prev = activeCellRef.current;
+          if (!prev || prev.row !== row || prev.col !== col) commit({ row, col });
+        },
+        onBlur: onCellBlur,
+      };
+    },
+    [activeCell, rowCount, colCount, tabStopRef, onCellBlur, commit],
+  );
+
   return {
     activeCell,
     setActiveCell,
@@ -312,6 +395,7 @@ export function useGridFocus(params: UseGridFocusParams): UseGridFocusResult {
     moveToRowEnd,
     moveToStart,
     moveToEnd,
+    getCellProps,
     getKeyDownHandler,
   };
 }

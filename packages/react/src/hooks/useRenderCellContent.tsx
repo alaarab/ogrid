@@ -107,6 +107,7 @@ export function useRenderCellContent<T>(
           col.columnId,
           interactionHandlers,
           primitives.useDelegatedCellHandlers ? delegatedCellHandlers : undefined,
+          false, // the <td> is the roving focus target (useGridCellFocus)
         );
 
         content = (
