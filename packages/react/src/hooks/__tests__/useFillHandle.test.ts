@@ -1,7 +1,7 @@
 import { renderHook, act } from '@testing-library/react';
 import { useFillHandle } from '../useFillHandle';
 import { useRangeSelection } from '../useRangeSelection';
-import type { IColumnDef, ICellValueChangedEvent } from '@alaarab/ogrid-core';
+import type { IColumnDef, ICellValueChangedEvent } from '../../types';
 
 type Row = { id: string; a: number; b: number; name: string };
 
@@ -178,5 +178,55 @@ describe('useFillHandle  -  multi-cell source (S01)', () => {
     const got = events.map((e) => `${e.rowIndex}:${e.columnId}=${e.newValue}`);
     // Source cells (rows 0-1) untouched; rows 2-3 repeat the 2-row pattern per column.
     expect(got).toEqual(['2:a=10', '2:b=100', '3:a=20', '3:b=200']);
+  });
+});
+
+describe('useFillHandle  -  axis lock (Excel)', () => {
+  const events = (list: ICellValueChangedEvent<Row>[]) => list.map((e) => `${e.rowIndex}:${e.columnId}=${e.newValue}`);
+
+  it('a row-dominant diagonal drag fills down only, keeping the source column', () => {
+    const { rangeResult, fillResult, rerender, events: out } = setup();
+    act(() => rangeResult.current.startRange(0, 0));
+    rerender({ range: rangeResult.current });
+    act(() => fillResult.current.startFill());
+    // 3 rows down, 1 column right.
+    act(() => fillResult.current.updateFill(3, 1));
+    expect(fillResult.current.fillTarget).toEqual({ row: 3, col: 1 });
+    expect(fillResult.current.fillRange).toEqual({ startRow: 0, startCol: 0, endRow: 3, endCol: 0 });
+    expect(fillResult.current.isInFillRange(3, 1)).toBe(false);
+    act(() => fillResult.current.commitFill());
+    expect(events(out)).toEqual(['1:a=10', '2:a=10', '3:a=10']);
+  });
+
+  it('a column-dominant diagonal drag fills across only, keeping the source row', () => {
+    const { rangeResult, fillResult, rerender, events: out } = setup();
+    act(() => rangeResult.current.startRange(0, 0));
+    rerender({ range: rangeResult.current });
+    act(() => fillResult.current.startFill());
+    // 1 row down, 2 columns right (col 2 is text, so only b accepts the value).
+    act(() => fillResult.current.updateFill(1, 2));
+    expect(fillResult.current.fillRange).toEqual({ startRow: 0, startCol: 0, endRow: 0, endCol: 2 });
+    act(() => fillResult.current.commitFill());
+    expect(events(out)).toEqual(['0:b=10']);
+  });
+
+  it('switches axis as the pointer moves, and shrinking back inside the source is a no-op', () => {
+    const { rangeResult, fillResult, rerender, events: out } = setup();
+    act(() => rangeResult.current.startRange(0, 0));
+    act(() => rangeResult.current.extendRange(1, 0));
+    rerender({ range: rangeResult.current });
+    act(() => fillResult.current.startFill());
+
+    act(() => fillResult.current.updateFill(3, 0));
+    expect(fillResult.current.fillRange).toEqual({ startRow: 0, startCol: 0, endRow: 3, endCol: 0 });
+    act(() => fillResult.current.updateFill(2, 2));
+    expect(fillResult.current.fillRange).toEqual({ startRow: 0, startCol: 0, endRow: 1, endCol: 2 });
+    // Back inside the two-cell source block.
+    act(() => fillResult.current.updateFill(1, 0));
+    expect(fillResult.current.fillRange).toEqual({ startRow: 0, startCol: 0, endRow: 1, endCol: 0 });
+    expect(fillResult.current.isFilling).toBe(true);
+    act(() => fillResult.current.commitFill());
+    expect(out).toEqual([]);
+    expect(fillResult.current.isFilling).toBe(false);
   });
 });

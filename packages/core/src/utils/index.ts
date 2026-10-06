@@ -108,7 +108,7 @@ export {
   applyPastedValues,
   applyCutClear,
 } from './clipboardHelpers';
-export { applyFillValues, areFillCompatible } from './fillHelpers';
+export { applyFillValues, areFillCompatible, computeFillRange } from './fillHelpers';
 export type { IFillFormulaOptions } from './fillHelpers';
 export { UndoRedoStack } from './undoRedoStack';
 export { validateColumns, validateRowIds, validateVirtualScrollConfig } from './validation';
