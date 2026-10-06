@@ -170,6 +170,7 @@ export function BaseDataGridTableInner<T>(
         data-has-selection={rowSelection !== 'none' ? 'true' : undefined}
         onContextMenu={PREVENT_DEFAULT}
         onKeyDown={handleGridKeyDown}
+        onPaste={interaction.handleGridPaste}
         style={{
           ['--data-table-column-count' as string]: totalColCount,
           ['--data-table-width' as string]: showEmptyInGrid ? '100%' : allowOverflowX ? 'fit-content' : fitToContent ? 'fit-content' : '100%',
