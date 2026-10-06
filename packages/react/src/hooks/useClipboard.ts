@@ -30,10 +30,28 @@ export interface UseClipboardParams<T> {
   setFormula?: (col: number, row: number, formula: string | null) => void;
 }
 
+/** The parts of a native or React `ClipboardEvent` the paste handler reads. */
+export type ClipboardPasteEventLike = {
+  clipboardData: Pick<DataTransfer, 'getData'> | null;
+  preventDefault: () => void;
+};
+
 export interface UseClipboardResult {
   handleCopy: () => void;
   handleCut: () => void;
+  /**
+   * Programmatic paste (context menu): reads the system clipboard with
+   * `navigator.clipboard.readText`, which needs a secure context and, in
+   * Firefox/Safari, a permission the user is often not asked for.
+   */
   handlePaste: () => Promise<void>;
+  /**
+   * Paste from a native `paste` event (Ctrl/Cmd+V, Shift+Insert). Takes the
+   * text from `event.clipboardData` without any permission prompt, calls
+   * `preventDefault()` and applies the same TSV paste as `handlePaste`. The
+   * keyboard shortcut must not call `handlePaste` as well, or it pastes twice.
+   */
+  handlePasteEvent: (event: ClipboardPasteEventLike) => void;
   /** Current cut range for UI (marching ants). Null when no cut or after paste. */
   cutRange: ISelectionRange | null;
   /** Current copy range for UI (marching ants). Null when no copy or after paste/cut. */
@@ -183,26 +201,10 @@ export function useClipboard<T>(params: UseClipboardParams<T>): UseClipboardResu
     setCopyRange(null);
   }, [getEffectiveRange, handleCopy, editableRef, onCellValueChangedRef, itemsRef, visibleColsRef, rowKeyOf]);
 
-  const handlePaste = useCallback(async () => {
-    if (editableRef.current === false) return;
+  /** Apply clipboard text at the selection anchor: values, formulas, pending cut, undo batch. */
+  const pasteText = useCallback((text: string) => {
     const onCellValueChanged = onCellValueChangedRef.current;
     if (onCellValueChanged == null) return;
-    let text: string;
-    if (navigator.clipboard?.readText) {
-      try {
-        text = await navigator.clipboard.readText();
-      } catch (err) {
-        // A rejected read (permission denied, unfocused document) must not paste
-        // a possibly stale in-grid copy over what the user meant to paste.
-        onClipboardErrorRef.current?.(err);
-        return;
-      }
-    } else {
-      // No system clipboard (plain http): the in-page copy is the only source.
-      text = internalClipboardRef.current ?? '';
-    }
-    // Bail out if component unmounted during async clipboard read
-    if (!isMountedRef.current) return;
     if (!text.trim()) return;
     const norm = getEffectiveRange();
     const anchorRow = norm ? norm.startRow : 0;
@@ -248,7 +250,43 @@ export function useClipboard<T>(params: UseClipboardParams<T>): UseClipboardResu
       endBatch?.();
     }
     setCopyRange(null);
-  }, [getEffectiveRange, itemsRef, visibleColsRef, editableRef, onCellValueChangedRef, beginBatch, endBatch, formulasRef, flatColumnsRef, setFormulaRef, colOffset, onClipboardErrorRef, rowKeyOf]);
+  }, [getEffectiveRange, itemsRef, visibleColsRef, onCellValueChangedRef, beginBatch, endBatch, formulasRef, flatColumnsRef, setFormulaRef, colOffset, rowKeyOf]);
+
+  const handlePaste = useCallback(async () => {
+    if (editableRef.current === false) return;
+    if (onCellValueChangedRef.current == null) return;
+    let text: string;
+    if (navigator.clipboard?.readText) {
+      try {
+        text = await navigator.clipboard.readText();
+      } catch (err) {
+        // A rejected read (permission denied, unfocused document) must not paste
+        // a possibly stale in-grid copy over what the user meant to paste.
+        onClipboardErrorRef.current?.(err);
+        return;
+      }
+    } else {
+      // No system clipboard (plain http): the in-page copy is the only source.
+      text = internalClipboardRef.current ?? '';
+    }
+    // Bail out if component unmounted during async clipboard read
+    if (!isMountedRef.current) return;
+    pasteText(text);
+  }, [editableRef, onCellValueChangedRef, onClipboardErrorRef, pasteText]);
+
+  const handlePasteEvent = useCallback((event: ClipboardPasteEventLike) => {
+    if (editableRef.current === false) return;
+    if (onCellValueChangedRef.current == null) return;
+    const data = event.clipboardData;
+    // The browser hands over the clipboard text with the event, so this works
+    // on plain http and in browsers that deny navigator.clipboard.readText.
+    let text = data?.getData('text/plain') || data?.getData('text') || '';
+    // An in-grid copy on plain http never reached the system clipboard, so it
+    // is the only thing the user can have meant when the event carries nothing.
+    if (!text.trim()) text = internalClipboardRef.current ?? '';
+    event.preventDefault();
+    pasteText(text);
+  }, [editableRef, onCellValueChangedRef, pasteText]);
 
   const clearClipboardRanges = useCallback(() => {
     setCopyRange(null);
@@ -256,5 +294,5 @@ export function useClipboard<T>(params: UseClipboardParams<T>): UseClipboardResu
     cutSourceRef.current = null;
   }, []);
 
-  return { handleCopy, handleCut, handlePaste, cutRange, copyRange, clearClipboardRanges };
+  return { handleCopy, handleCut, handlePaste, handlePasteEvent, cutRange, copyRange, clearClipboardRanges };
 }

@@ -43,6 +43,19 @@ function getCellAt(container: HTMLElement, rowIndex: number, colIndex: number): 
   return cell;
 }
 
+/**
+ * Dispatch a native-style `paste` event carrying `text` as text/plain.
+ * happy-dom/jsdom may lack ClipboardEvent, so a plain Event gets `clipboardData`.
+ * Returns false when the grid consumed the event (preventDefault).
+ */
+function firePaste(target: Element, text: string): boolean {
+  const event = new Event('paste', { bubbles: true, cancelable: true });
+  Object.defineProperty(event, 'clipboardData', {
+    value: { getData: (format: string) => (format === 'text/plain' || format === 'text' ? text : '') },
+  });
+  return fireEvent(target, event);
+}
+
 export function createSpreadsheetTests(DataGridTable: React.ComponentType<IOGridDataGridProps<FixtureRow>>): void {
   function renderSpreadsheetGrid(overrides: Partial<IOGridDataGridProps<FixtureRow>> = {}) {
     return render(renderSpreadsheetGridElement(overrides));
@@ -274,17 +287,18 @@ export function createSpreadsheetTests(DataGridTable: React.ComponentType<IOGrid
         });
 
         // Paste somewhere else: pasting onto the cut cell itself keeps the
-        // pasted value (the paste wins), so nothing would be cleared.
+        // pasted value (the paste wins), so nothing would be cleared. Ctrl+V
+        // arrives as the browser's paste event carrying what the cut wrote.
         fireEvent.pointerDown(getCellAt(container, 1, 0));
         await act(async () => {
-          fireEvent.keyDown(grid as Element, { key: 'v', ctrlKey: true });
+          firePaste(grid as Element, clipboardText);
         });
 
         await waitFor(() => {
-          expect(readText).toHaveBeenCalled();
           const clearCalls = onCellValueChanged.mock.calls.filter((c: unknown[]) => (c[0] as { newValue: unknown }).newValue === '');
           expect(clearCalls.length).toBeGreaterThanOrEqual(1);
         });
+        expect(readText).not.toHaveBeenCalled();
       });
 
       it('cut then paste onto the same cell keeps the pasted value', async () => {
@@ -305,7 +319,7 @@ export function createSpreadsheetTests(DataGridTable: React.ComponentType<IOGrid
         });
         await waitFor(() => expect(writeText).toHaveBeenCalled());
         await act(async () => {
-          fireEvent.keyDown(grid as Element, { key: 'v', ctrlKey: true });
+          firePaste(grid as Element, clipboardText);
         });
         await waitFor(() => expect(onCellValueChanged).toHaveBeenCalled());
         const values = onCellValueChanged.mock.calls.map((c: unknown[]) => (c[0] as { newValue: unknown }).newValue);
@@ -354,47 +368,99 @@ export function createSpreadsheetTests(DataGridTable: React.ComponentType<IOGrid
 
         const { container } = renderSpreadsheetGrid({ onCellValueChanged, onClipboardError });
         fireEvent.pointerDown(getCellAt(container, 0, 0));
-        const grid = container.querySelector('[role="region"]');
+        const grid = container.querySelector('[role="region"]') as HTMLElement;
         // An earlier in-grid copy must not be pasted when the read fails.
         await act(async () => {
-          fireEvent.keyDown(grid as Element, { key: 'c', ctrlKey: true });
+          fireEvent.keyDown(grid, { key: 'c', ctrlKey: true });
         });
-        fireEvent.pointerDown(getCellAt(container, 1, 0));
-        await act(async () => {
-          fireEvent.keyDown(grid as Element, { key: 'v', ctrlKey: true });
-        });
+        const cell10 = getCellAt(container, 1, 0);
+        fireEvent.pointerDown(cell10);
+        // The context menu is the programmatic (readText) paste path.
+        fireEvent.contextMenu(cell10, { clientX: 100, clientY: 100 });
+        await waitFor(() => expect(screen.getByRole('menu')).toBeInTheDocument());
+        fireEvent.click(screen.getByText('Paste'));
 
         await waitFor(() => expect(onClipboardError).toHaveBeenCalledTimes(1));
         expect(onCellValueChanged).not.toHaveBeenCalled();
       });
 
-      it('pastes from clipboard and calls onCellValueChanged for each cell', async () => {
+      it('pastes the text carried by a native paste event, once per cell, without reading navigator.clipboard', async () => {
         const onCellValueChanged = jest.fn();
-        const readText = jest.fn().mockResolvedValue('Pasted1\tPasted2\nPasted3\tPasted4');
+        const readText = jest.fn().mockResolvedValue('FromReadText');
         Object.defineProperty(navigator, 'clipboard', {
           value: { readText },
           configurable: true,
         });
 
         const { container } = renderSpreadsheetGrid({ onCellValueChanged });
-        const cell00 = getCellAt(container, 0, 0);
-        fireEvent.pointerDown(cell00);
-        const grid = container.querySelector('[role="region"]');
-        expect(grid).toBeTruthy();
+        fireEvent.pointerDown(getCellAt(container, 0, 0));
+        const grid = container.querySelector('[role="region"]') as HTMLElement;
+        grid.focus();
 
+        let consumed = true;
         await act(async () => {
-          fireEvent.keyDown(grid as Element, { key: 'v', ctrlKey: true });
+          consumed = !firePaste(grid, 'Pasted1\tPasted2\nPasted3\tPasted4');
         });
 
-        await waitFor(() => {
-          expect(readText).toHaveBeenCalled();
-          expect(onCellValueChanged).toHaveBeenCalled();
-          const calls = onCellValueChanged.mock.calls;
-          expect(calls.length).toBeGreaterThanOrEqual(2);
-          const values = calls.map((c: unknown[]) => (c[0] as { newValue: unknown }).newValue);
-          expect(values).toContain('Pasted1');
-          expect(values).toContain('Pasted2');
+        expect(consumed).toBe(true);
+        expect(readText).not.toHaveBeenCalled();
+        expect(onCellValueChanged).toHaveBeenCalledTimes(4);
+        const values = onCellValueChanged.mock.calls.map((c: unknown[]) => (c[0] as { newValue: unknown }).newValue);
+        expect(values).toEqual(['Pasted1', 'Pasted2', 'Pasted3', 'Pasted4']);
+        expect(onCellValueChanged.mock.calls[0][0]).toEqual(expect.objectContaining({ rowIndex: 0, columnId: 'name' }));
+        expect(onCellValueChanged.mock.calls[3][0]).toEqual(expect.objectContaining({ rowIndex: 1, columnId: 'status' }));
+      });
+
+      it('Ctrl+V keydown followed by its paste event pastes exactly once', async () => {
+        const onCellValueChanged = jest.fn();
+        const readText = jest.fn().mockResolvedValue('FromReadText');
+        Object.defineProperty(navigator, 'clipboard', {
+          value: { readText },
+          configurable: true,
         });
+
+        const { container } = renderSpreadsheetGrid({ onCellValueChanged });
+        fireEvent.pointerDown(getCellAt(container, 0, 0));
+        const grid = container.querySelector('[role="region"]') as HTMLElement;
+        grid.focus();
+
+        // The browser only fires `paste` when keydown was not prevented.
+        const keydownHandled = !fireEvent.keyDown(grid, { key: 'v', ctrlKey: true });
+        expect(keydownHandled).toBe(false);
+        await act(async () => {
+          firePaste(grid, 'FromEvent');
+        });
+        // Give any stray readText-based paste a chance to land before asserting.
+        await act(async () => { await Promise.resolve(); });
+
+        expect(readText).not.toHaveBeenCalled();
+        expect(onCellValueChanged).toHaveBeenCalledTimes(1);
+        expect(onCellValueChanged.mock.calls[0][0]).toEqual(expect.objectContaining({ rowIndex: 0, columnId: 'name', newValue: 'FromEvent' }));
+      });
+
+      it('a paste event inside an open cell editor is left to the editor', async () => {
+        const onCellValueChanged = jest.fn();
+        const { container } = renderSpreadsheetGrid({ onCellValueChanged });
+        const grid = container.querySelector('[role="region"]') as HTMLElement;
+        const cell = getCellAt(container, 0, 0);
+        fireEvent.pointerDown(cell);
+        fireEvent.doubleClick(cell);
+        const input = await waitFor(() => {
+          const el = grid.querySelector('input');
+          expect(el).toBeInTheDocument();
+          return el as HTMLInputElement;
+        });
+        input.focus();
+
+        let consumed = true;
+        await act(async () => {
+          consumed = !firePaste(input, 'Hijacked');
+        });
+
+        expect(consumed).toBe(false);
+        expect(onCellValueChanged).not.toHaveBeenCalled();
+        // The editor is still open: the grid did not treat the paste as its own.
+        expect(grid.querySelector('input')).toBeInTheDocument();
       });
     });
 
@@ -540,7 +606,9 @@ export function createSpreadsheetTests(DataGridTable: React.ComponentType<IOGrid
         });
 
         fireEvent.pointerDown(getCellAt(container, 1, 0));
-        fireEvent.keyDown(grid as Element, { key: 'v', ctrlKey: true });
+        await act(async () => {
+          firePaste(grid as Element, clipboardText);
+        });
         await waitFor(() => {
           const clearCalls = onCellValueChanged.mock.calls.filter((c: unknown[]) => (c[0] as { newValue: unknown }).newValue === '');
           expect(clearCalls.length).toBeGreaterThanOrEqual(1);
@@ -566,9 +634,10 @@ export function createSpreadsheetTests(DataGridTable: React.ComponentType<IOGrid
 
         fireEvent.click(screen.getByText('Paste'));
 
+        // The menu has no native paste event to read from, so it uses readText.
         await waitFor(() => {
-          expect(readText).toHaveBeenCalled();
-          expect(onCellValueChanged).toHaveBeenCalled();
+          expect(readText).toHaveBeenCalledTimes(1);
+          expect(onCellValueChanged).toHaveBeenCalledTimes(1);
           const values = onCellValueChanged.mock.calls.map((c: unknown[]) => (c[0] as { newValue: unknown }).newValue);
           expect(values).toContain('PastedFromMenu');
         });

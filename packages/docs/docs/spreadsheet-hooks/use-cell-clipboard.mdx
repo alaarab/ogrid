@@ -34,14 +34,15 @@ const clipboard = useCellClipboard({
   onClipboardError: () => toast('Clipboard access was blocked'),
 });
 
-// On the focusable grid container:
+// On the focusable grid container. Ctrl/Cmd+V is left to the browser: the
+// native paste event that follows carries the text, and onPaste reads it.
 <div
   tabIndex={0}
+  onPaste={clipboard.onPaste}
   onKeyDown={(e) => {
     const mod = e.metaKey || e.ctrlKey;
     if (mod && e.key === 'c') clipboard.copyRange();
     if (mod && e.key === 'x') clipboard.cutRange();
-    if (mod && e.key === 'v') clipboard.pasteRange();
     if (e.key === 'Escape') clipboard.clearClipboard();
   }}
 >
@@ -69,8 +70,9 @@ const clipboard = useCellClipboard({
 |---|---|---|
 | `copyRange` | `() => Promise<void>` | Write the range as TSV, mark it as the copy range. No-op without a range. |
 | `cutRange` | `() => Promise<void>` | Write as TSV and mark the range as cut. Nothing is cleared yet. |
-| `pasteRange` | `() => Promise<void>` | Read TSV, apply at the range's top-left, fire `onCellEdit`, clear markers. |
-| `canPaste` | `boolean` | `navigator.clipboard.readText` is available. `false` on the server and during the first client render. |
+| `pasteRange` | `() => Promise<void>` | Programmatic paste for buttons and menus: read TSV with `clipboard.readText`, apply at the range's top-left, fire `onCellEdit`, clear markers. |
+| `onPaste` | `(event: CellClipboardPasteEvent) => void` | Native `paste` handler for the container (`onPaste={clipboard.onPaste}`). Takes the text from `event.clipboardData`, calls `preventDefault()`, then pastes like `pasteRange`. Ignores pastes aimed at an input, textarea or contenteditable inside the container, events without text, and the no-range case. |
+| `canPaste` | `boolean` | `navigator.clipboard.readText` is available, so `pasteRange()` can read the clipboard. `false` on the server and during the first client render. `onPaste` works regardless. |
 | `activeCopyRange` | `ISelectionRange \| null` | For marching-ants rendering. |
 | `activeCutRange` | `ISelectionRange \| null` | For marching-ants rendering. |
 | `clearClipboard` | `() => void` | Drop both markers and the pending cut. Bind to Escape. |
@@ -97,12 +99,22 @@ const clipboard = useCellClipboard({
   paste still clears the right rows. If the clipboard text no longer matches
   what the cut wrote (the user copied something else), the paste applies
   normally and no cells are cleared.
-- **Browser permission is real.** `readText` prompts in Chromium and is
-  unavailable in Firefox for regular pages, so `canPaste` may be `false` even
-  though copy works. Pass a `clipboard` override if you want an in-app
-  fallback, as the demo above does.
-- **Keyboard wiring is yours.** Attach the shortcuts to a focusable container
-  (not `document`) so multiple grids on one page do not fight.
+- **Paste the keyboard shortcut through `onPaste`, not `pasteRange`.**
+  `navigator.clipboard.readText` is undefined on plain http, prompts in
+  Chromium and is denied by default in Firefox and Safari, so a Ctrl+V handler
+  that calls `pasteRange()` silently fails there. The browser delivers the
+  clipboard text with the native `paste` event anyway; `onPaste` reads it from
+  `event.clipboardData` with no permission involved. Do not handle (or
+  `preventDefault()`) Ctrl/Cmd+V in `onKeyDown`: a prevented keydown
+  suppresses the paste event, and calling `pasteRange()` as well pastes twice.
+  Shift+Insert works the same way.
+- **`pasteRange` and `canPaste` are for buttons and menus.** A toolbar or
+  context-menu Paste has no native event to read from, so it goes through
+  `clipboard.readText`; gate it on `canPaste`. Pass a `clipboard` override if
+  you want an in-app fallback for that path, as the demo above does.
+- **Keyboard wiring is yours.** Attach the shortcuts and `onPaste` to a
+  focusable container (not `document`) so multiple grids on one page do not
+  fight.
 
 ## See also
 

@@ -889,6 +889,7 @@ describe('Integration: Keyboard shortcuts for copy/cut/paste', () => {
         handleCopy,
         handleCut,
         handlePaste,
+        handlePasteEvent: jest.fn(),
         setContextMenu: jest.fn(),
         onUndo,
         onRedo,
@@ -925,11 +926,14 @@ describe('Integration: Keyboard shortcuts for copy/cut/paste', () => {
     });
     expect(handleCut).toHaveBeenCalledTimes(1);
 
-    // Ctrl+V should call handlePaste
+    // Ctrl+V is left to the browser: the native paste event that follows
+    // carries the text (handleGridPaste), so keydown neither pastes nor prevents.
+    const ctrlV = makeKeyEvent('v', { ctrlKey: true });
     act(() => {
-      result.current.handleGridKeyDown(makeKeyEvent('v', { ctrlKey: true }));
+      result.current.handleGridKeyDown(ctrlV);
     });
-    expect(handlePaste).toHaveBeenCalledTimes(1);
+    expect(handlePaste).not.toHaveBeenCalled();
+    expect(ctrlV.preventDefault).not.toHaveBeenCalled();
 
     // Ctrl+Z should call onUndo
     act(() => {
