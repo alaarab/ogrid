@@ -8,8 +8,8 @@ import {
 } from '@alaarab/ogrid-core';
 import { useLatestRef } from './useLatestRef';
 import { useDataSourceVersion } from './useDataSourceVersion';
-import { applySnapshot, createSnapshot, keepsSnapshot } from './rowOrderSnapshot';
-import type { RowOrderSnapshot } from './rowOrderSnapshot';
+import { applySnapshot, createResortTracker, createSnapshot, trackResort } from './rowOrderSnapshot';
+import type { ResortInputs, ResortTracker, RowOrderSnapshot } from './rowOrderSnapshot';
 import type { IFilters, IDataSource, WindowedDataState } from '../types';
 import type { IColumnDef as ICoreColumnDef, WindowedRow, PageSize } from '@alaarab/ogrid-core';
 
@@ -142,37 +142,14 @@ export function useOGridDataFetching<T>(params: UseOGridDataFetchingParams<T>): 
   // change (sortVersion increments or filters/columns change), the snapshot is
   // rebuilt from a full re-sort. Rows only move when the user explicitly sorts.
   const snapshotRef = useRef<RowOrderSnapshot<T> | null>(null);
-  const prevSortVersionRef = useRef(-1); // -1 forces initial build
-  const prevFiltersRef = useRef<IFilters | null>(null);
-  const prevColumnsRef = useRef<ICoreColumnDef<T>[] | null>(null);
-  const prevDataRef = useRef<T[] | null>(null);
-  const prevEditVersionRef = useRef(0);
-  const prevSortFieldRef = useRef<string | null>(null);
-  const prevSortDirectionRef = useRef<'asc' | 'desc' | null>(null);
-
-  // Detect when a full re-sort is needed.
-  // sort.field/direction are checked alongside sortVersion so controlled-sort
-  // changes (host swaps the `sort` prop without going through `setSort`) still
-  // invalidate the cached sorted indices.
-  const needsResort =
-    sortVersion !== prevSortVersionRef.current ||
-    stableFilters !== prevFiltersRef.current ||
-    columns !== prevColumnsRef.current ||
-    prevDataRef.current === null ||
-    !keepsSnapshot(snapshotRef.current, prevDataRef.current, displayData, getRowIdRef.current, editVersion !== prevEditVersionRef.current) ||
-    sort.field !== prevSortFieldRef.current ||
-    sort.direction !== prevSortDirectionRef.current;
-
-  if (needsResort) {
-    prevSortVersionRef.current = sortVersion;
-    prevFiltersRef.current = stableFilters;
-    prevColumnsRef.current = columns;
-    prevSortFieldRef.current = sort.field;
-    prevSortDirectionRef.current = sort.direction;
-    snapshotRef.current = null; // will be built in memo
+  const resortTrackerRef = useRef<ResortTracker<T>>(createResortTracker<T>());
+  const resortInputs: ResortInputs = {
+    sortVersion, filters: stableFilters, columns, sortField: sort.field, sortDirection: sort.direction,
+  };
+  // Full re-sort due (see trackResort): the snapshot is dropped and rebuilt in the memo below.
+  if (trackResort(resortTrackerRef.current, resortInputs, displayData, editVersion, snapshotRef.current, getRowIdRef.current)) {
+    snapshotRef.current = null;
   }
-  if (prevDataRef.current !== displayData) prevEditVersionRef.current = editVersion;
-  prevDataRef.current = displayData;
 
   // Current filters only (no sort): applied to rows inserted since the snapshot
   // was taken, so a new row that doesn't match stays hidden.
@@ -182,7 +159,7 @@ export function useOGridDataFetching<T>(params: UseOGridDataFetchingParams<T>): 
   );
 
   // --- Client-side filtering & sorting (sync path) ---
-  // biome-ignore lint/correctness/useExhaustiveDependencies: sortVersion is a deliberate invalidation trigger — it is consumed via needsResort/snapshotRef above, so the memo must recompute when it bumps even though it is not read inside
+  // biome-ignore lint/correctness/useExhaustiveDependencies: sortVersion is a deliberate invalidation trigger — it is consumed via trackResort/snapshotRef above, so the memo must recompute when it bumps even though it is not read inside
   const clientItemsAndTotal = useMemo(() => {
     if (!isClientSide || useWorker) return null;
 
@@ -210,7 +187,7 @@ export function useOGridDataFetching<T>(params: UseOGridDataFetchingParams<T>): 
       return { items: orderedRows, totalCount: total, all: orderedRows };
     }
     return { items: pageWindow(orderedRows, page, pageSize), totalCount: total, all: orderedRows };
-    // Note: sortVersion is implicitly tracked via needsResort / snapshotRef.current === null
+    // Note: sortVersion is implicitly tracked via trackResort / snapshotRef.current === null
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isClientSide, useWorker, displayData, columns, stableFilters, sortVersion, sort.field, sort.direction, page, pageSize, paginate, filterRows, getRowIdRef]);
 
@@ -226,13 +203,7 @@ export function useOGridDataFetching<T>(params: UseOGridDataFetchingParams<T>): 
   const [asyncItems, setAsyncItems] = useState<{ items: T[]; totalCount: number; all: T[] } | null>(null);
   const asyncIdRef = useRef(0);
   const asyncSnapshotRef = useRef<RowOrderSnapshot<T> | null>(null);
-  const asyncPrevSortVersionRef = useRef(-1);
-  const asyncPrevFiltersRef = useRef<IFilters | null>(null);
-  const asyncPrevColumnsRef = useRef<ICoreColumnDef<T>[] | null>(null);
-  const asyncPrevDataRef = useRef<T[] | null>(null);
-  const asyncPrevEditVersionRef = useRef(0);
-  const asyncPrevSortFieldRef = useRef<string | null>(null);
-  const asyncPrevSortDirectionRef = useRef<'asc' | 'desc' | null>(null);
+  const asyncResortTrackerRef = useRef<ResortTracker<T>>(createResortTracker<T>());
 
   // biome-ignore lint/correctness/useExhaustiveDependencies: getRowIdRef.current and editVersionRef.current are latest-value refs read on purpose; depending on them would re-run the worker effect for inline getRowId functions and on every edit
   useEffect(() => {
@@ -241,24 +212,10 @@ export function useOGridDataFetching<T>(params: UseOGridDataFetchingParams<T>): 
       return;
     }
 
-    const asyncEditVersion = editVersionRef?.current ?? 0;
-    const needsResortAsync =
-      sortVersion !== asyncPrevSortVersionRef.current ||
-      stableFilters !== asyncPrevFiltersRef.current ||
-      columns !== asyncPrevColumnsRef.current ||
-      asyncPrevDataRef.current === null ||
-      !keepsSnapshot(asyncSnapshotRef.current, asyncPrevDataRef.current, displayData, getRowIdRef.current, asyncEditVersion !== asyncPrevEditVersionRef.current) ||
-      sort.field !== asyncPrevSortFieldRef.current ||
-      sort.direction !== asyncPrevSortDirectionRef.current;
-    if (asyncPrevDataRef.current !== displayData) asyncPrevEditVersionRef.current = asyncEditVersion;
-    asyncPrevDataRef.current = displayData;
-
-    if (needsResortAsync) {
-      asyncPrevSortVersionRef.current = sortVersion;
-      asyncPrevFiltersRef.current = stableFilters;
-      asyncPrevColumnsRef.current = columns;
-      asyncPrevSortFieldRef.current = sort.field;
-      asyncPrevSortDirectionRef.current = sort.direction;
+    const asyncInputs: ResortInputs = {
+      sortVersion, filters: stableFilters, columns, sortField: sort.field, sortDirection: sort.direction,
+    };
+    if (trackResort(asyncResortTrackerRef.current, asyncInputs, displayData, editVersionRef?.current ?? 0, asyncSnapshotRef.current, getRowIdRef.current)) {
       asyncSnapshotRef.current = null;
     }
 

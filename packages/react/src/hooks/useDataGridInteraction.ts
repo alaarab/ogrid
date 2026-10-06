@@ -11,6 +11,7 @@ import { useFillHandleInternal } from './useFillHandleInternal';
 import { useUndoRedo } from './useUndoRedo';
 import type { UseUndoRedoFormulaCells } from './useUndoRedo';
 import { useLatestRef } from './useLatestRef';
+import { resolveUndoAvailability, usesHostFormulaHistory } from './undoRouting';
 import type { DataGridCellInteractionState } from './useDataGridState';
 
 // Stable no-op handlers used when cellSelection is disabled (module-scope = no re-renders)
@@ -195,7 +196,7 @@ export function useDataGridInteraction<T>(
   // reports the formula as its old value. Undoing then writes the formula text
   // back into the host's data, and the engine (OGrid's formulasFromData)
   // follows the data. The internal stack records nothing in this mode.
-  const hostFormulaHistory = hasHostUndo && formulaCells != null;
+  const hostFormulaHistory = usesHostFormulaHistory(hasHostUndo, formulaCells != null);
 
   // Wrap onCellValueChanged with undo/redo tracking
   const undoRedo = useUndoRedo<T>({
@@ -227,8 +228,8 @@ export function useDataGridInteraction<T>(
     () => (onRedoPropRef.current ?? internalRedo)(),
     [onRedoPropRef, internalRedo]
   );
-  const canUndo = canUndoProp ?? (hasHostUndo ? true : undoRedo.canUndo);
-  const canRedo = canRedoProp ?? (hasHostRedo ? true : undoRedo.canRedo);
+  const canUndo = resolveUndoAvailability(canUndoProp, hasHostUndo, undoRedo.canUndo);
+  const canRedo = resolveUndoAvailability(canRedoProp, hasHostRedo, undoRedo.canRedo);
 
   // Formula access for the clipboard, fill handle and editor, which address
   // cells by (flat column, display row): the row is mapped to the sheet row,
