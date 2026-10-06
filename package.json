@@ -42,6 +42,7 @@
     "test:fast": "bun run --filter '*' test",
     "size": "size-limit",
     "check:types": "node scripts/check-package-types.mjs",
+    "check:exports": "node scripts/check-public-exports.mjs",
     "check:versions": "bun scripts/check-versions.mjs",
     "test:browser-bundle": "node scripts/test-browser-bundle.mjs",
     "test:react-compat": "node scripts/test-react-compat.mjs",
