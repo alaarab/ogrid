@@ -698,3 +698,49 @@ describe('useFormulaEngine  -  settings changes', () => {
     expect(result.current.getFormulaValue(1, 1)).toBe(6);
   });
 });
+
+describe('useFormulaEngine formulasFromData', () => {
+  type R = { id: number; a: unknown; b: unknown };
+  const cols: IColumnDef<R>[] = [
+    { columnId: 'a', name: 'A' },
+    { columnId: 'b', name: 'B' },
+  ];
+  const base: R[] = [
+    { id: 1, a: 2, b: '=A1*10' },
+    { id: 2, a: 3, b: 4 },
+  ];
+  const render = (data: R[]) =>
+    renderHook(({ items: rows }: { items: R[] }) => useFormulaEngine({ formulas: true, items: rows, flatColumns: cols, formulasFromData: true }), {
+      initialProps: { items: data },
+    });
+
+  it('loads formula text from the data on start', () => {
+    const { result } = render(base);
+    expect(result.current.getFormula(1, 0)).toBe('=A1*10');
+    expect(result.current.getFormulaValue(1, 0)).toBe(20);
+  });
+
+  it('follows a cell changing to and from formula text', () => {
+    const { result, rerender } = render(base);
+    rerender({ items: [base[0] as R, { id: 2, a: 3, b: '=A2+1' }] });
+    expect(result.current.getFormulaValue(1, 1)).toBe(4);
+    rerender({ items: [base[0] as R, { id: 2, a: 3, b: 7 }] });
+    expect(result.current.hasFormula(1, 1)).toBe(false);
+  });
+
+  it('keeps a formula whose cell text did not change (another column edited)', () => {
+    const { result, rerender } = renderHook(
+      ({ rows }: { rows: R[] }) =>
+        useFormulaEngine({ formulas: true, items: rows, flatColumns: cols, formulasFromData: true, initialFormulas: [{ col: 1, row: 1, formula: '=A2*2' }] }),
+      { initialProps: { rows: base } },
+    );
+    expect(result.current.getFormulaValue(1, 1)).toBe(6);
+    rerender({ rows: [base[0] as R, { id: 2, a: 5, b: 4 }] });
+    expect(result.current.getFormulaValue(1, 1)).toBe(10);
+  });
+
+  it('ignores formula text in the data when off', () => {
+    const { result } = renderHook(() => useFormulaEngine({ formulas: true, items: base, flatColumns: cols }));
+    expect(result.current.hasFormula(1, 0)).toBe(false);
+  });
+});

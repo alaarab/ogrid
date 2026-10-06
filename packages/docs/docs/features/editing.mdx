@@ -225,6 +225,8 @@ const { onCellValueChanged, undo, redo, canUndo, canRedo } = useUndoRedo({ onCel
 
 Pass the returned `onCellValueChanged` to `<OGrid>` instead of your raw handler — it records each change on the undo stack before calling `applyEdit`. See [`useUndoRedo`](/docs/spreadsheet-hooks/use-undo-redo) for batching, `clear()`, and formula integration. Undo/redo are also available in the right-click [context menu](./context-menu).
 
+With `formulas` on, a host-owned history (`onUndo` / `onRedo`) receives formula edits as value changes whose value is the formula text; store it in your data and undo works for formulas too. See [Formulas: undo with host-controlled history](./formulas#undo-with-host-controlled-history).
+
 ## Props reference
 
 | Prop | Type | Description |
@@ -237,7 +239,7 @@ Pass the returned `onCellValueChanged` to `<OGrid>` instead of your raw handler 
 | `valueParser` | `(params) => unknown` | Validate/transform on edit, paste, fill, delete. Return `undefined` to reject. |
 | `valueFormatter` | `(value, item) => string` | Format value for display and clipboard copy |
 | `onCellValueChanged` | `(event) => void` | Fires after any cell value change |
-| `onUndo` / `onRedo` | `() => void` | Undo/redo callbacks |
+| `onUndo` / `onRedo` | `() => void` | Undo/redo callbacks. When set, they replace the grid's internal history (with `formulas`, see [host-controlled history](./formulas#undo-with-host-controlled-history)). |
 | `canUndo` / `canRedo` | `boolean` | Enable/disable undo/redo in context menu |
 
 ## Headless alternative
