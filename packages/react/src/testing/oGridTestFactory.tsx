@@ -313,4 +313,31 @@ export function createOGridTests(OGrid: React.ComponentType<IOGridProps<FixtureR
       expect(fetchPage).toHaveBeenLastCalledWith('b');
     });
   });
+
+  describe('row selection events', () => {
+    const lastEvent = (fn: jest.Mock) => fn.mock.calls[fn.mock.calls.length - 1]?.[0] as { selectedRowIds: string[]; selectedItems: FixtureRow[] };
+
+    it('selectedItems lists every selected row, including rows on other pages', () => {
+      const onSelectionChange = jest.fn();
+      renderOGrid({ defaultPageSize: 2, rowSelection: 'multiple', onSelectionChange });
+      fireEvent.click(screen.getByRole('checkbox', { name: 'Select row 1' })); // Alpha
+      fireEvent.click(screen.getByRole('button', { name: /next page/i }));
+      fireEvent.click(screen.getByRole('checkbox', { name: 'Select row 1' })); // Gamma
+      const event = lastEvent(onSelectionChange);
+      expect([...event.selectedRowIds].sort()).toEqual(['1', '3']);
+      expect(event.selectedItems.map((r) => r.name).sort()).toEqual(['Alpha', 'Gamma']);
+    });
+
+    it('selectedItems from the header checkbox keep the other pages\' rows', () => {
+      const onSelectionChange = jest.fn();
+      renderOGrid({ defaultPageSize: 2, rowSelection: 'multiple', onSelectionChange });
+      fireEvent.click(screen.getByRole('button', { name: /next page/i }));
+      fireEvent.click(screen.getByRole('checkbox', { name: 'Select row 1' })); // Gamma
+      fireEvent.click(screen.getByRole('button', { name: /previous page/i }));
+      fireEvent.click(screen.getByRole('checkbox', { name: /select all/i }));
+      const event = lastEvent(onSelectionChange);
+      expect(event.selectedItems.map((r) => r.name).sort()).toEqual(['Alpha', 'Beta', 'Gamma']);
+      expect(event.selectedItems).toHaveLength(event.selectedRowIds.length);
+    });
+  });
 }

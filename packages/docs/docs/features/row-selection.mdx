@@ -140,14 +140,14 @@ gridRef.current?.deselectAll();
 |------|------|---------|-------------|
 | `rowSelection` | `'none' \| 'single' \| 'multiple'` | `'none'` | Row selection mode. |
 | `selectedRows` | `Set<RowId>` | -- | Controlled set of selected row IDs. |
-| `onSelectionChange` | `(event: IRowSelectionChangeEvent<T>) => void` | -- | Called when selection changes. Event contains `selectedRowIds` and `selectedItems`. |
+| `onSelectionChange` | `(event: IRowSelectionChangeEvent<T>) => void` | -- | Called when selection changes, from a click or the API. Event contains `selectedRowIds` and `selectedItems`: the row objects for every selected id, including rows on other pages or hidden by a filter (server-side: loaded rows, plus rows seen when they were selected). |
 
 ## API Methods
 
 | Method | Signature | Description |
 |--------|-----------|-------------|
 | `getSelectedRows` | `() => RowId[]` | Returns currently selected row IDs. |
-| `setSelectedRows` | `(rowIds: RowId[]) => void` | Sets selected rows programmatically. |
+| `setSelectedRows` | `(rowIds: RowId[]) => void` | Sets selected rows programmatically and fires `onSelectionChange` (in controlled mode, apply it to `selectedRows` there). |
 | `selectAll` | `() => void` | Selects every row that passes the current filters, across all pages (server-side: loaded records, including all loaded windows). |
 | `deselectAll` | `() => void` | Deselects all rows. |
 
