@@ -4,6 +4,8 @@ All notable changes to OGrid will be documented in this file.
 
 ## [Unreleased]
 
+## [2.18.0] - 2026-10-06
+
 ### Added
 
 - The row-selection checkbox column is part of keyboard navigation: Left
