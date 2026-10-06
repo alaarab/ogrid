@@ -340,4 +340,36 @@ export function createOGridTests(OGrid: React.ComponentType<IOGridProps<FixtureR
       expect(event.selectedItems).toHaveLength(event.selectedRowIds.length);
     });
   });
+
+  describe('shift-click row range', () => {
+    const selectedNames = (fn: jest.Mock) => {
+      const event = fn.mock.calls[fn.mock.calls.length - 1]?.[0] as { selectedItems: FixtureRow[] };
+      return event.selectedItems.map((r) => r.name).sort();
+    };
+    const box = (n: number) => screen.getByRole('checkbox', { name: `Select row ${n}` });
+    const mouseClick = (el: HTMLElement, shiftKey = false) => {
+      fireEvent.mouseDown(el, { shiftKey });
+      fireEvent.click(el, { shiftKey });
+    };
+
+    it('selects the range in the displayed (sorted) order from the last clicked row', () => {
+      const onSelectionChange = jest.fn();
+      renderOGrid({ rowSelection: 'multiple', onSelectionChange, defaultSortBy: 'name', defaultSortDirection: 'desc' });
+      mouseClick(box(1)); // Gamma
+      mouseClick(box(2), true); // Beta
+      expect(selectedNames(onSelectionChange)).toEqual(['Beta', 'Gamma']);
+    });
+
+    it('a later keyboard toggle is not treated as a shift-click', () => {
+      const onSelectionChange = jest.fn();
+      renderOGrid({ rowSelection: 'multiple', onSelectionChange });
+      mouseClick(box(1)); // Alpha
+      mouseClick(box(2), true); // Beta: Alpha..Beta
+      expect(selectedNames(onSelectionChange)).toEqual(['Alpha', 'Beta']);
+      // Space on the focused checkbox: a click with no mouse press before it.
+      fireEvent.keyDown(box(1), { key: ' ' });
+      fireEvent.click(box(1));
+      expect(selectedNames(onSelectionChange)).toEqual(['Beta']);
+    });
+  });
 }
