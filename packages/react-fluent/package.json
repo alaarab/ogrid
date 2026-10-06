@@ -9,13 +9,15 @@
   "exports": {
     ".": {
       "types": "./dist/types/index.d.ts",
+      "module": "./dist/esm/index.js",
+      "node": "./dist/esm/index.node.js",
       "import": "./dist/esm/index.js",
       "default": "./dist/esm/index.js"
     },
     "./styles/*": "./dist/esm/*"
   },
   "scripts": {
-    "build": "rimraf dist && tsup && tsc -p tsconfig.build.json && node ../../scripts/fix-dts-extensions.mjs dist/types && node ../../scripts/add-use-client.mjs dist/esm/index.js",
+    "build": "rimraf dist && tsup && tsc -p tsconfig.build.json && node ../../scripts/fix-dts-extensions.mjs dist/types && node ../../scripts/add-use-client.mjs dist/esm/index.js && node ../../scripts/write-node-entry.mjs",
     "typecheck": "tsc -p tsconfig.build.json --noEmit",
     "test": "bun test --preload ../../bun-test.setup.ts",
     "storybook": "storybook dev -p 6006 --no-open",
