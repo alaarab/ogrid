@@ -1,4 +1,5 @@
 import { useCallback, useRef } from 'react';
+import { getSelectAllRange } from '@alaarab/ogrid-core';
 import { getCellValue, computeTabNavigation, computeArrowNavigation, applyCellDeletion, getScrollTopForRow, getOppositeCorner } from '../utils';
 import { CELL_EDITOR_ATTR } from '../constants/domHelpers';
 import { scrollCellIntoView, type ScrollToRowIndex } from '../utils/scrollCellIntoView';
@@ -14,6 +15,7 @@ import type {
 import type { EditingCell } from './useCellEditing';
 import type { ClipboardCopyEventLike, ClipboardPasteEventLike } from './useClipboard';
 import type { ContextMenuPosition } from './useContextMenu';
+import { TEXT_ENTRY_SELECTOR } from './useClipboardMarks';
 
 export interface UseKeyboardNavigationParams<T> {
   data: {
@@ -90,9 +92,6 @@ export interface UseKeyboardNavigationResult {
   handleGridCut: (e: React.ClipboardEvent) => void;
 }
 
-/** Text-entry controls: keystrokes typed into these never belong to the grid. */
-const TEXT_ENTRY_SELECTOR =
-  'input:not([type="checkbox"]):not([type="radio"]):not([type="button"]):not([type="submit"]):not([type="reset"]), textarea, select, [contenteditable=""], [contenteditable="true"]';
 /** Header, menus and popups that live in the wrapper's DOM rather than a portal. */
 const NON_CELL_REGION_SELECTOR = 'thead, [role="columnheader"], [role="menu"], [role="dialog"], [role="listbox"]';
 /** In-cell controls that use Space/Enter for their own activation. */
@@ -426,13 +425,9 @@ export function useKeyboardNavigation<T>(
           if (e.ctrlKey || e.metaKey) {
             if (editingCell != null) break; // let the input handle select-all
             e.preventDefault();
-            if (items.length > 0 && visibleColumnCount > 0) {
-              setSelectionRange({
-                startRow: 0,
-                startCol: 0,
-                endRow: items.length - 1,
-                endCol: visibleColumnCount - 1,
-              });
+            const all = getSelectAllRange(items.length, visibleColumnCount);
+            if (all) {
+              setSelectionRange(all);
               setActiveCell({ rowIndex: 0, columnIndex: colOffset });
             }
           }

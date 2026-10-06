@@ -211,7 +211,7 @@ export { findCtrlArrowTarget, computeTabNavigation, computeArrowNavigation, appl
 export type { ArrowNavigationContext, ArrowNavigationResult } from './utils';
 
 // Utils  -  selectionHelpers
-export { rangesEqual, clampSelectionToBounds, computeAutoScrollSpeed, applyRangeRowSelection, computeRowSelectionState } from './utils';
+export { rangesEqual, clampSelectionToBounds, computeAutoScrollSpeed, computeAutoScrollDelta, getSelectAllRange, applyRangeRowSelection, computeRowSelectionState } from './utils';
 
 // Utils  -  clipboardHelpers
 export {
@@ -220,10 +220,13 @@ export {
   parseTsvClipboard,
   applyPastedValues,
   applyCutClear,
+  captureCutSource,
+  resolveCutClear,
 } from './utils';
+export type { ICutSource, ResolveCutClearParams } from './utils';
 
 // Utils  -  fillHelpers
-export { applyFillValues, areFillCompatible, computeFillRange } from './utils';
+export { applyFillValues, areFillCompatible, computeFillRange, computeFillDragEdits } from './utils';
 export type { IFillFormulaOptions } from './utils';
 
 // Utils  -  undoRedoStack

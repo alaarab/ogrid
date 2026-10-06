@@ -310,3 +310,180 @@ describe('useFillHandleInternal  -  tiled formula fill with undo (S01 + K05)', (
     }
   });
 });
+
+// ---------------------------------------------------------------------------
+// Pointer drag (characterization): axis lock, no-op release, shrink, cancel
+// ---------------------------------------------------------------------------
+
+describe('useFillHandleInternal  -  pointer drag', () => {
+  type Item = { id: string; a: number; b: number };
+  const makeItems = (): Item[] => [0, 1, 2, 3, 4].map((n) => ({ id: String(n), a: n * 10, b: n * 100 }));
+  const cols = [
+    { columnId: 'a', name: 'A', type: 'numeric', editable: true },
+    { columnId: 'b', name: 'B', type: 'numeric', editable: true },
+  ] as import('../../types').IColumnDef<Item>[];
+
+  /** Renders the hook with the given selection; `pointTo(r, c)` aims elementFromPoint at a cell. */
+  function setup(selectionRange: { startRow: number; startCol: number; endRow: number; endCol: number }, colOffset = 0) {
+    const wrapper = document.createElement('div');
+    const cells = new Map<string, HTMLElement>();
+    for (let r = 0; r < 5; r++) {
+      for (let c = 0; c < 2 + colOffset; c++) {
+        const el = document.createElement('div');
+        el.setAttribute('data-row-index', String(r));
+        el.setAttribute('data-col-index', String(c));
+        wrapper.appendChild(el);
+        cells.set(`${r},${c}`, el);
+      }
+    }
+    document.body.appendChild(wrapper);
+    let pointed: Element | null = null;
+    const original = document.elementFromPoint;
+    document.elementFromPoint = () => pointed;
+    const onCellValueChanged = jest.fn();
+    const setSelectionRange = jest.fn();
+    const setActiveCell = jest.fn();
+    const beginBatch = jest.fn();
+    const endBatch = jest.fn();
+    const { result } = renderHook(() =>
+      useFillHandleInternal<Item>({
+        items: makeItems(),
+        visibleCols: cols,
+        editable: true,
+        onCellValueChanged,
+        selectionRange,
+        setSelectionRange,
+        setActiveCell,
+        colOffset,
+        wrapperRef: { current: wrapper as HTMLDivElement },
+        beginBatch,
+        endBatch,
+      }),
+    );
+    const down = { preventDefault: () => {}, stopPropagation: () => {}, button: 0 } as unknown as React.MouseEvent;
+    act(() => result.current.handleFillHandleMouseDown(down));
+    return {
+      result,
+      onCellValueChanged,
+      setSelectionRange,
+      setActiveCell,
+      beginBatch,
+      endBatch,
+      pointTo: (r: number, c: number) => {
+        pointed = cells.get(`${r},${c + colOffset}`) ?? null;
+      },
+      move: () => act(() => { window.dispatchEvent(new MouseEvent('pointermove', { clientX: 1, clientY: 1 })); }),
+      up: () => act(() => { window.dispatchEvent(new MouseEvent('pointerup', { clientX: 1, clientY: 1 })); }),
+      cancel: () => act(() => { window.dispatchEvent(new MouseEvent('pointercancel')); }),
+      cleanup: () => {
+        document.elementFromPoint = original;
+        wrapper.remove();
+      },
+    };
+  }
+
+  const written = (fn: jest.Mock) =>
+    fn.mock.calls.map(([e]) => `${e.rowIndex}:${e.columnId}=${e.newValue}`);
+
+  it('a row-dominant diagonal drag fills down only, selects the fill range and keeps the active cell at the source', () => {
+    const t = setup({ startRow: 0, startCol: 0, endRow: 0, endCol: 0 });
+    try {
+      t.pointTo(3, 1);
+      t.move();
+      t.up();
+      expect(written(t.onCellValueChanged)).toEqual(['1:a=0', '2:a=0', '3:a=0']);
+      expect(t.setSelectionRange).toHaveBeenLastCalledWith({ startRow: 0, startCol: 0, endRow: 3, endCol: 0 });
+      expect(t.setActiveCell).toHaveBeenLastCalledWith({ rowIndex: 0, columnIndex: 0 });
+      expect(t.beginBatch).toHaveBeenCalledTimes(1);
+      expect(t.endBatch).toHaveBeenCalledTimes(1);
+      expect(t.result.current.fillDrag).toBeNull();
+    } finally {
+      t.cleanup();
+    }
+  });
+
+  it('a column-dominant drag fills across only', () => {
+    const t = setup({ startRow: 2, startCol: 0, endRow: 2, endCol: 0 });
+    try {
+      t.pointTo(3, 1);
+      // Row distance 1, column distance 1: a tie fills rows.
+      t.move();
+      t.pointTo(2, 1);
+      t.up();
+      expect(written(t.onCellValueChanged)).toEqual(['2:b=20']);
+      expect(t.setSelectionRange).toHaveBeenLastCalledWith({ startRow: 2, startCol: 0, endRow: 2, endCol: 1 });
+    } finally {
+      t.cleanup();
+    }
+  });
+
+  it('an upward drag fills up from a multi-row source, tiling it', () => {
+    const t = setup({ startRow: 3, startCol: 0, endRow: 4, endCol: 0 });
+    try {
+      t.pointTo(0, 0);
+      t.move();
+      t.up();
+      expect(written(t.onCellValueChanged)).toEqual(['0:a=40', '1:a=30', '2:a=40']);
+      expect(t.setSelectionRange).toHaveBeenLastCalledWith({ startRow: 0, startCol: 0, endRow: 4, endCol: 0 });
+      expect(t.setActiveCell).toHaveBeenLastCalledWith({ rowIndex: 3, columnIndex: 0 });
+    } finally {
+      t.cleanup();
+    }
+  });
+
+  it('applies the column offset to the pointer cell and the active cell', () => {
+    const t = setup({ startRow: 0, startCol: 0, endRow: 0, endCol: 0 }, 1);
+    try {
+      t.pointTo(2, 0);
+      t.move();
+      t.up();
+      expect(written(t.onCellValueChanged)).toEqual(['1:a=0', '2:a=0']);
+      expect(t.setActiveCell).toHaveBeenLastCalledWith({ rowIndex: 0, columnIndex: 1 });
+    } finally {
+      t.cleanup();
+    }
+  });
+
+  it('releasing without moving leaves the selection and data untouched', () => {
+    const t = setup({ startRow: 0, startCol: 0, endRow: 1, endCol: 1 });
+    try {
+      t.up();
+      expect(t.onCellValueChanged).not.toHaveBeenCalled();
+      expect(t.setSelectionRange).not.toHaveBeenCalled();
+      expect(t.setActiveCell).not.toHaveBeenCalled();
+      expect(t.beginBatch).not.toHaveBeenCalled();
+      expect(t.result.current.fillDrag).toBeNull();
+    } finally {
+      t.cleanup();
+    }
+  });
+
+  it('dragging back inside the source writes nothing but re-selects the source', () => {
+    const t = setup({ startRow: 0, startCol: 0, endRow: 1, endCol: 1 });
+    try {
+      t.pointTo(4, 0);
+      t.move();
+      t.pointTo(1, 1);
+      t.up();
+      expect(t.onCellValueChanged).not.toHaveBeenCalled();
+      expect(t.setSelectionRange).toHaveBeenLastCalledWith({ startRow: 0, startCol: 0, endRow: 1, endCol: 1 });
+      expect(t.setActiveCell).toHaveBeenLastCalledWith({ rowIndex: 0, columnIndex: 0 });
+    } finally {
+      t.cleanup();
+    }
+  });
+
+  it('a cancelled pointer abandons the fill without writing', () => {
+    const t = setup({ startRow: 0, startCol: 0, endRow: 0, endCol: 0 });
+    try {
+      t.pointTo(3, 0);
+      t.move();
+      t.cancel();
+      expect(t.onCellValueChanged).not.toHaveBeenCalled();
+      expect(t.setSelectionRange).not.toHaveBeenCalled();
+      expect(t.result.current.fillDrag).toBeNull();
+    } finally {
+      t.cleanup();
+    }
+  });
+});

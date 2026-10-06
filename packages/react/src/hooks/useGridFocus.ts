@@ -7,9 +7,10 @@
  * Shift+Arrow / Shift+Home / Shift+End extend the range. Tab at the first or
  * last column is left to the browser so focus can leave the grid.
  *
- * Ctrl+Arrow (Cmd on macOS) jumps like Excel and `<OGrid>`: pass
+ * Arrow keys move through core's `computeArrowNavigation`, the same function
+ * `<OGrid>` uses. Ctrl+Arrow (Cmd on macOS) jumps like Excel: pass
  * `isCellEmpty` and it moves to the edge of the current data region along
- * that axis (core's `findCtrlArrowTarget`); without it, to the grid edge.
+ * that axis; without it, to the grid edge.
  * Ctrl+Shift+Arrow extends the range to the same target.
  *
  * Consumer attaches `getKeyDownHandler()` to their grid container's
@@ -41,7 +42,7 @@
  */
 
 import { useCallback, useRef, useState } from 'react';
-import { findCtrlArrowTarget } from '@alaarab/ogrid-core';
+import { computeArrowNavigation } from '@alaarab/ogrid-core';
 import type { CellCoord, UseRangeSelectionResult } from './useRangeSelection';
 
 export interface UseGridFocusParams {
@@ -108,6 +109,10 @@ export interface UseGridFocusResult {
 const clamp = (value: number, min: number, max: number) =>
   Math.max(min, Math.min(max, value));
 
+type ArrowKey = 'ArrowUp' | 'ArrowDown' | 'ArrowLeft' | 'ArrowRight';
+
+const NEVER_EMPTY = (): boolean => false;
+
 /**
  * Headless arrow-key cell navigation.
  *
@@ -132,53 +137,69 @@ export function useGridFocus(params: UseGridFocusParams): UseGridFocusResult {
     commit(cell);
   }, [commit]);
 
+  /** Make `next` active; plain moves collapse the range to it, extending ones move its focus. */
+  const moveTo = useCallback(
+    (next: CellCoord, extendRange: boolean) => {
+      commit(next);
+      if (rangeSelection) {
+        if (extendRange) rangeSelection.extendRange(next.row, next.col);
+        else rangeSelection.startRange(next.row, next.col);
+      }
+    },
+    [rangeSelection, commit],
+  );
+
   const moveBy = useCallback(
     (drow: number, dcol: number, extendRange = false) => {
       if (rowCount <= 0 || colCount <= 0) return;
       const prev = activeCellRef.current;
       // With no active cell yet, the first move focuses the first cell.
-      const next: CellCoord = prev
-        ? {
-            row: clamp(prev.row + drow, 0, rowCount - 1),
-            col: clamp(prev.col + dcol, 0, colCount - 1),
-          }
-        : { row: 0, col: 0 };
-      commit(next);
-      if (rangeSelection) {
-        if (extendRange) rangeSelection.extendRange(next.row, next.col);
-        else rangeSelection.startRange(next.row, next.col);
-      }
+      moveTo(
+        prev
+          ? { row: clamp(prev.row + drow, 0, rowCount - 1), col: clamp(prev.col + dcol, 0, colCount - 1) }
+          : { row: 0, col: 0 },
+        extendRange,
+      );
     },
-    [rowCount, colCount, rangeSelection, commit],
+    [rowCount, colCount, moveTo],
   );
 
-  // Ctrl/Cmd+Arrow: Excel data-region jump along one axis, using the same
-  // core helper as <OGrid>. Without an isCellEmpty predicate every cell counts
-  // as filled, which makes the jump land on the grid edge. With Shift the
-  // active cell still moves (as for Shift+Arrow) and the range extends to it.
-  const jumpBy = useCallback(
-    (drow: -1 | 0 | 1, dcol: -1 | 0 | 1, extendRange = false) => {
+  // Arrow keys go through core's computeArrowNavigation, the function <OGrid>
+  // uses, so steps and Ctrl/Cmd+Arrow data-region jumps match it. Without an
+  // isCellEmpty predicate every cell counts as filled, which makes a jump land
+  // on the grid edge. With Shift the active cell still moves and the range
+  // extends to it.
+  const arrow = useCallback(
+    (direction: ArrowKey, jump: boolean, extendRange: boolean) => {
       if (rowCount <= 0 || colCount <= 0) return;
       const prev = activeCellRef.current;
-      let next: CellCoord;
       if (!prev) {
-        next = { row: 0, col: 0 };
-      } else {
-        const row = clamp(prev.row, 0, rowCount - 1);
-        const col = clamp(prev.col, 0, colCount - 1);
-        const isEmpty = isCellEmpty ?? (() => false);
-        next =
-          drow !== 0
-            ? { row: findCtrlArrowTarget(row, drow > 0 ? rowCount - 1 : 0, drow, (r) => isEmpty(r, col)), col }
-            : { row, col: findCtrlArrowTarget(col, dcol > 0 ? colCount - 1 : 0, dcol, (c) => isEmpty(row, c)) };
+        moveTo({ row: 0, col: 0 }, extendRange);
+        return;
       }
-      commit(next);
-      if (rangeSelection) {
-        if (extendRange) rangeSelection.extendRange(next.row, next.col);
-        else rangeSelection.startRange(next.row, next.col);
-      }
+      const maxRow = rowCount - 1;
+      const maxCol = colCount - 1;
+      // A cell left past the edge after the grid shrank: a jump starts from it
+      // clamped into the grid; a step is clamped after moving, landing on the edge.
+      const row = jump ? clamp(prev.row, 0, maxRow) : prev.row;
+      const col = jump ? clamp(prev.col, 0, maxCol) : prev.col;
+      const { newRowIndex, newColumnIndex } = computeArrowNavigation({
+        direction,
+        rowIndex: row,
+        columnIndex: col,
+        dataColIndex: col,
+        colOffset: 0,
+        maxRowIndex: maxRow,
+        maxColIndex: maxCol,
+        visibleColCount: colCount,
+        isCtrl: jump,
+        isShift: false,
+        selectionRange: null,
+        isEmptyAt: isCellEmpty ?? NEVER_EMPTY,
+      });
+      moveTo({ row: clamp(newRowIndex, 0, maxRow), col: clamp(newColumnIndex, 0, maxCol) }, extendRange);
     },
-    [rowCount, colCount, rangeSelection, isCellEmpty, commit],
+    [rowCount, colCount, isCellEmpty, moveTo],
   );
 
   // Shift+Home/End: extend the range to a row or grid edge, keeping its anchor.
@@ -237,14 +258,10 @@ export function useGridFocus(params: UseGridFocusParams): UseGridFocusResult {
         case 'ArrowUp':
         case 'ArrowDown':
         case 'ArrowLeft':
-        case 'ArrowRight': {
+        case 'ArrowRight':
           e.preventDefault?.();
-          const drow = e.key === 'ArrowUp' ? -1 : e.key === 'ArrowDown' ? 1 : 0;
-          const dcol = e.key === 'ArrowLeft' ? -1 : e.key === 'ArrowRight' ? 1 : 0;
-          if (mod) jumpBy(drow, dcol, shift);
-          else moveBy(drow, dcol, shift);
+          arrow(e.key, mod, shift);
           break;
-        }
         case 'Tab': {
           // At the row's first/last cell (or before any cell is active) let Tab
           // move focus out of the grid instead of trapping it.
@@ -282,7 +299,7 @@ export function useGridFocus(params: UseGridFocusParams): UseGridFocusResult {
           break;
       }
     };
-  }, [moveBy, jumpBy, extendTo, moveToRowStart, moveToRowEnd, moveToStart, moveToEnd, pageSize, rowCount, colCount]);
+  }, [moveBy, arrow, extendTo, moveToRowStart, moveToRowEnd, moveToStart, moveToEnd, pageSize, rowCount, colCount]);
 
   return {
     activeCell,

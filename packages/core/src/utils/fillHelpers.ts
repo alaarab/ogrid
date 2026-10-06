@@ -7,6 +7,7 @@ import type { ISelectionRange } from '../types/dataGridTypes';
 import { getCellValue, isColumnEditable } from './cellValue';
 import { parseValue } from './valueParsers';
 import { normalizeSelectionRange } from '../types';
+import { rangesEqual } from './selectionHelpers';
 import { adjustFormulaReferences } from '../formula/cellAddressUtils';
 
 /**
@@ -196,4 +197,33 @@ export function applyFillValues<T>(
     }
   }
   return events;
+}
+
+/**
+ * The edits a fill-handle drag makes when released over cell (`row`, `col`):
+ * the fill `range` (`computeFillRange`) and the `events` that tile `source`
+ * over it (`applyFillValues`). `<OGrid>` and the headless `useFillHandle`
+ * both commit through this, so their fills cannot drift apart. `events` is
+ * empty when the cell is inside `source` (no extension).
+ *
+ * @param source          The selection the fill extends (any corner order).
+ * @param row             Row index the drag ended on.
+ * @param col             Column index the drag ended on (data column, no offset).
+ * @param items           Array of all row data objects.
+ * @param visibleCols     Visible column definitions.
+ * @param formulaOptions  Optional formula-aware fill configuration.
+ */
+export function computeFillDragEdits<T>(
+  source: ISelectionRange,
+  row: number,
+  col: number,
+  items: T[],
+  visibleCols: IColumnDef<T>[],
+  formulaOptions?: IFillFormulaOptions<T>
+): { range: ISelectionRange; events: ICellValueChangedEvent<T>[] } {
+  const src = normalizeSelectionRange(source);
+  const range = computeFillRange(src, row, col);
+  // A range equal to the source has nothing outside it to tile over.
+  if (rangesEqual(range, src)) return { range, events: [] };
+  return { range, events: applyFillValues(range, src.startRow, src.startCol, items, visibleCols, formulaOptions, src) };
 }

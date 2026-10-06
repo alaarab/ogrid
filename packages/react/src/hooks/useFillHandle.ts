@@ -7,10 +7,12 @@
  * axis only: whichever one the target is farther outside the range on (rows
  * vs columns; ties fill rows). A target inside the range fills nothing. On
  * commit, every cell in that extension gets the source value(s) tiled over
- * it, with type compatibility checks (won't fill text into a date column).
+ * it, with type compatibility checks (won't fill text into a date column),
+ * and the filled range becomes the selection.
  *
- * Smart-fill behavior comes from `applyFillValues` in `@alaarab/ogrid-core`,
- * which produces a list of `ICellValueChangedEvent` objects. The consumer
+ * Smart-fill behavior comes from `computeFillDragEdits` in `@alaarab/ogrid-core`
+ * (the same commit `<OGrid>`'s fill handle uses), which produces a list of
+ * `ICellValueChangedEvent` objects. The consumer
  * wires `onFillCells` to apply those events to their data store.
  *
  * Example:
@@ -36,10 +38,10 @@
 
 import { useCallback, useMemo, useState } from 'react';
 import {
-  applyFillValues,
+  computeFillDragEdits,
   computeFillRange,
   isInSelectionRange,
-  normalizeSelectionRange,
+  rangesEqual,
 } from '@alaarab/ogrid-core';
 import type {
   ISelectionRange,
@@ -75,7 +77,10 @@ export interface UseFillHandleResult {
   startFill: () => void;
   /** Update the current fill target as the user drags. No-op if not filling. */
   updateFill: (row: number, col: number) => void;
-  /** Commit the fill — calls `onFillCells` with the resulting events. */
+  /**
+   * Commit the fill: calls `onFillCells` with the resulting events and, when
+   * the fill extends the source range, selects the filled range (Excel).
+   */
   commitFill: () => void;
   /** Cancel without committing. */
   cancelFill: () => void;
@@ -93,7 +98,7 @@ export interface UseFillHandleResult {
  * Headless drag-to-fill hook.
  *
  * Tracks the fill-target cell and computes the extended range during a
- * drag. On commit, calls `applyFillValues` from core to produce cell-change
+ * drag. On commit, calls core's `computeFillDragEdits` to produce cell-change
  * events, then hands those to the consumer's `onFillCells`.
  */
 export function useFillHandle<T>(
@@ -135,34 +140,18 @@ export function useFillHandle<T>(
     setFillTarget(null);
   }, []);
 
+  const { setRange } = rangeSelection;
   const commitFill = useCallback(() => {
-    if (!sourceRange || !fillRange) {
-      setFillTarget(null);
-      return;
+    // Same commit as <OGrid>'s fill handle: nothing happens when the target is
+    // inside the source range (released without dragging beyond it).
+    // Otherwise the filled range becomes the selection, as in Excel.
+    if (sourceRange && fillTarget) {
+      const { range, events } = computeFillDragEdits(sourceRange, fillTarget.row, fillTarget.col, rows, columns);
+      if (!rangesEqual(range, sourceRange)) setRange(range);
+      if (events.length > 0) onFillCells(events);
     }
-    // No extension — user released without dragging beyond the source range.
-    if (
-      fillRange.startRow === sourceRange.startRow &&
-      fillRange.startCol === sourceRange.startCol &&
-      fillRange.endRow === sourceRange.endRow &&
-      fillRange.endCol === sourceRange.endCol
-    ) {
-      setFillTarget(null);
-      return;
-    }
-
-    const events = applyFillValues(
-      fillRange,
-      sourceRange.startRow,
-      sourceRange.startCol,
-      rows,
-      columns,
-      undefined,
-      normalizeSelectionRange(sourceRange),
-    );
-    if (events.length > 0) onFillCells(events);
     setFillTarget(null);
-  }, [sourceRange, fillRange, rows, columns, onFillCells]);
+  }, [sourceRange, fillTarget, rows, columns, onFillCells, setRange]);
 
   return {
     fillTarget,

@@ -1,6 +1,8 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
 import { normalizeSelectionRange } from '../types';
-import { rangesEqual, computeAutoScrollSpeed, buildCellIndex, cellIndexKey } from '../utils';
+import { computeAutoScrollDelta, getSelectAllRange } from '@alaarab/ogrid-core';
+import { rangesEqual } from '../utils';
+import { createDragRangeMarker, dataCellAtPoint } from './dragRangeMarker';
 import { useLatestRef } from './useLatestRef';
 import type { ISelectionRange, IActiveCell } from '../types';
 
@@ -25,10 +27,6 @@ export interface UseCellSelectionResult {
   /** True while the user is drag-selecting cells (mousedown  to  mousemove  to  mouseup). */
   isDragging: boolean;
 }
-
-/** DOM attribute names used for drag-range highlighting (bypasses React). */
-const DRAG_ATTR = 'data-drag-range';
-const DRAG_ANCHOR_ATTR = 'data-drag-anchor';
 
 /** Auto-scroll config */
 const AUTO_SCROLL_EDGE = 40;   // px from wrapper edge to trigger
@@ -121,13 +119,9 @@ export function useCellSelection(params: UseCellSelectionParams): UseCellSelecti
   );
 
   const handleSelectAllCells = useCallback(() => {
-    if (rowCount === 0 || visibleColCount === 0) return;
-    setSelectionRange({
-      startRow: 0,
-      startCol: 0,
-      endRow: rowCount - 1,
-      endCol: visibleColCount - 1,
-    });
+    const all = getSelectAllRange(rowCount, visibleColCount);
+    if (!all) return;
+    setSelectionRange(all);
     setActiveCell({ rowIndex: 0, columnIndex: colOffsetRef.current });
   }, [rowCount, visibleColCount, setActiveCell, colOffsetRef, setSelectionRange]);
 
@@ -144,44 +138,17 @@ export function useCellSelection(params: UseCellSelectionParams): UseCellSelecti
   // React state is only committed on pointerup (single re-render instead of 60-120/s).
   useEffect(() => {
 
-    /** Set of currently drag-marked HTMLElements  -  avoids O(n) full DOM scan on each frame. */
-    const markedCells = new Set<HTMLElement>();
-
-    /** Cell lookup index built on drag start  -  O(1) lookups per frame instead of querySelectorAll. */
-    let cellIndex: Map<number, HTMLElement> | null = null;
+    /** Drag-range cell marking (shared with the fill handle's drag). */
+    const marker = createDragRangeMarker(() => wrapperRef.current, () => colOffsetRef.current);
 
     /** Single overlay div for the drag-selection border (replaces per-cell box-shadows). */
     let overlayEl: HTMLDivElement | null = null;
     let overlayContainer: HTMLElement | null = null;
 
-    /** Apply data attributes to a single in-range cell (background highlight). */
-    const styleCellInRange = (
-      el: HTMLElement, r: number, _c: number,
-      _minR: number, _maxR: number, _minC: number, _maxC: number,
-      anchor: { row: number; col: number } | null
-    ) => {
-      if (!el.hasAttribute(DRAG_ATTR)) el.setAttribute(DRAG_ATTR, '');
-      const isAnchor = anchor && r === anchor.row && _c === anchor.col;
-      if (isAnchor) {
-        if (!el.hasAttribute(DRAG_ANCHOR_ATTR)) el.setAttribute(DRAG_ANCHOR_ATTR, '');
-      } else {
-        if (el.hasAttribute(DRAG_ANCHOR_ATTR)) el.removeAttribute(DRAG_ANCHOR_ATTR);
-      }
-      markedCells.add(el);
-    };
-
-    /** Remove drag styling from a single cell. */
-    const unstyleCell = (el: HTMLElement) => {
-      el.removeAttribute(DRAG_ATTR);
-      el.removeAttribute(DRAG_ANCHOR_ATTR);
-    };
-
     /** Position a single overlay div over the drag range for a continuous border. */
-    const positionOverlay = (
-      minR: number, maxR: number, minC: number, maxC: number, colOff: number
-    ) => {
-      const topLeftEl = cellIndex?.get(cellIndexKey(minR, minC + colOff));
-      const bottomRightEl = cellIndex?.get(cellIndexKey(maxR, maxC + colOff));
+    const positionOverlay = (minR: number, maxR: number, minC: number, maxC: number) => {
+      const topLeftEl = marker.cellAt(minR, minC);
+      const bottomRightEl = marker.cellAt(maxR, maxC);
       if (!topLeftEl || !bottomRightEl) return;
 
       // Measure from <td> parents for full cell coverage (no gaps at borders)
@@ -227,67 +194,25 @@ export function useCellSelection(params: UseCellSelectionParams): UseCellSelecti
       overlayContainer = null;
     };
 
-    /** Toggle DRAG_ATTR on cells to show the range highlight via CSS.
-     *  Uses a cell index Map for O(1) lookups per cell in the range instead of scanning all cells.
-     *  Positions a single overlay div for a continuous green border around the selection range,
-     *  and marks the anchor cell with DRAG_ANCHOR_ATTR (white background). */
+    /** Show the range: mark its cells (the anchor cell stays white via CSS) and
+     *  position a single overlay div for a continuous border around it. */
     const applyDragAttrs = (range: ISelectionRange) => {
-      const wrapper = wrapperRef.current;
-      if (!wrapper || !isDraggingRef.current) return;
-      const minR = Math.min(range.startRow, range.endRow);
-      const maxR = Math.max(range.startRow, range.endRow);
-      const minC = Math.min(range.startCol, range.endCol);
-      const maxC = Math.max(range.startCol, range.endCol);
-      const anchor = dragStartRef.current;
-      const colOff = colOffsetRef.current;
-
-      // 1. Un-mark cells that are no longer in the new range (iterate the small set, not all DOM)
-      for (const el of markedCells) {
-        const r = parseInt(el.getAttribute('data-row-index') ?? '', 10);
-        const c = parseInt(el.getAttribute('data-col-index') ?? '', 10) - colOff;
-        const stillInRange = r >= minR && r <= maxR && c >= minC && c <= maxC;
-        if (!stillInRange) {
-          unstyleCell(el);
-          markedCells.delete(el);
-        }
-      }
-
-      // Build index on first call if not yet initialized
-      if (!cellIndex) cellIndex = buildCellIndex(wrapperRef.current);
-
-      // 2. Look up only the cells in the new range  -  O(range size) via Map lookup.
-      //    If a stale (disconnected) element is found, rebuild the index once per
-      //    applyDragAttrs call and retry  -  avoids per-cell rebuilds during fast scrolling.
-      let rebuilt = false;
-      for (let r = minR; r <= maxR; r++) {
-        for (let c = minC; c <= maxC; c++) {
-          const key = cellIndexKey(r, c + colOff);
-          let el = cellIndex?.get(key);
-          if (el && !el.isConnected && !rebuilt) {
-            rebuilt = true;
-            cellIndex = buildCellIndex(wrapperRef.current);
-            el = cellIndex?.get(key);
-          }
-          if (el?.isConnected) {
-            styleCellInRange(el, r, c, minR, maxR, minC, maxC, anchor);
-          }
-        }
-      }
-
-      // 3. Position a single overlay div for the continuous selection border
-      positionOverlay(minR, maxR, minC, maxC, colOff);
+      if (!wrapperRef.current || !isDraggingRef.current) return;
+      marker.mark(range, dragStartRef.current);
+      positionOverlay(
+        Math.min(range.startRow, range.endRow),
+        Math.max(range.startRow, range.endRow),
+        Math.min(range.startCol, range.endCol),
+        Math.max(range.startCol, range.endCol)
+      );
     };
 
     // Expose applyDragAttrs via ref so mouseDown can access it
     applyDragAttrsRef.current = applyDragAttrs;
 
-    /** Clear all drag styling using the tracked set  -  O(marked) not O(all cells). */
+    /** Clear all drag styling. */
     const clearDragAttrs = () => {
-      for (const el of markedCells) {
-        unstyleCell(el);
-      }
-      markedCells.clear();
-      cellIndex = null;
+      marker.clear();
       hideOverlay();
     };
 
@@ -305,21 +230,14 @@ export function useCellSelection(params: UseCellSelectionParams): UseCellSelecti
         px = Math.min(Math.max(cx, wr.left + 1), wr.right - 1);
         py = Math.min(Math.max(cy, Math.max(wr.top, headerBottom) + 1), wr.bottom - 1);
       }
-      const target = document.elementFromPoint(px, py);
-      const cell = (target as HTMLElement)?.closest?.('[data-row-index][data-col-index]');
-      // Ignore cells of another grid on the page.
-      if (!cell || (wrapper && !wrapper.contains(cell))) return null;
-      const r = parseInt(cell.getAttribute('data-row-index') ?? '', 10);
-      const c = parseInt(cell.getAttribute('data-col-index') ?? '', 10);
-      const colOff = colOffsetRef.current;
-      if (Number.isNaN(r) || Number.isNaN(c) || c < colOff) return null;
-      const dataCol = c - colOff;
+      const cell = dataCellAtPoint(wrapper, px, py, colOffsetRef.current);
+      if (!cell) return null;
       const start = dragStartRef.current;
       return normalizeSelectionRange({
         startRow: start.row,
         startCol: start.col,
-        endRow: r,
-        endCol: dataCol,
+        endRow: cell.row,
+        endCol: cell.col,
       });
     };
 
@@ -329,20 +247,11 @@ export function useCellSelection(params: UseCellSelectionParams): UseCellSelecti
       const p = lastMousePosRef.current;
       if (!w || !p || !isDraggingRef.current) { autoScrollRef.current = null; return; }
 
-      // Batch all layout reads first
-      const r = w.getBoundingClientRect();
-      let sdx = 0;
-      let sdy = 0;
-      if (p.cy < r.top + AUTO_SCROLL_EDGE) sdy = -computeAutoScrollSpeed(r.top + AUTO_SCROLL_EDGE - p.cy);
-      else if (p.cy > r.bottom - AUTO_SCROLL_EDGE) sdy = computeAutoScrollSpeed(p.cy - (r.bottom - AUTO_SCROLL_EDGE));
-      if (p.cx < r.left + AUTO_SCROLL_EDGE) sdx = -computeAutoScrollSpeed(r.left + AUTO_SCROLL_EDGE - p.cx);
-      else if (p.cx > r.right - AUTO_SCROLL_EDGE) sdx = computeAutoScrollSpeed(p.cx - (r.right - AUTO_SCROLL_EDGE));
-
-      if (sdx === 0 && sdy === 0) { autoScrollRef.current = null; return; }
-
-      // Layout writes
-      w.scrollTop += sdy;
-      w.scrollLeft += sdx;
+      // Layout read first, then writes
+      const { dx, dy } = computeAutoScrollDelta(w.getBoundingClientRect(), p.cx, p.cy, AUTO_SCROLL_EDGE);
+      if (dx === 0 && dy === 0) { autoScrollRef.current = null; return; }
+      w.scrollTop += dy;
+      w.scrollLeft += dx;
 
       // After scrolling, re-resolve the cell under the pointer and update drag range
       const newRange = resolveRange(p.cx, p.cy);
@@ -364,21 +273,7 @@ export function useCellSelection(params: UseCellSelectionParams): UseCellSelecti
         return;
       }
 
-      const rect = wrapper.getBoundingClientRect();
-      let dx = 0;
-      let dy = 0;
-
-      if (pos.cy < rect.top + AUTO_SCROLL_EDGE) {
-        dy = -computeAutoScrollSpeed(rect.top + AUTO_SCROLL_EDGE - pos.cy);
-      } else if (pos.cy > rect.bottom - AUTO_SCROLL_EDGE) {
-        dy = computeAutoScrollSpeed(pos.cy - (rect.bottom - AUTO_SCROLL_EDGE));
-      }
-
-      if (pos.cx < rect.left + AUTO_SCROLL_EDGE) {
-        dx = -computeAutoScrollSpeed(rect.left + AUTO_SCROLL_EDGE - pos.cx);
-      } else if (pos.cx > rect.right - AUTO_SCROLL_EDGE) {
-        dx = computeAutoScrollSpeed(pos.cx - (rect.right - AUTO_SCROLL_EDGE));
-      }
+      const { dx, dy } = computeAutoScrollDelta(wrapper.getBoundingClientRect(), pos.cx, pos.cy, AUTO_SCROLL_EDGE);
 
       if (dx === 0 && dy === 0) {
         stopAutoScroll();
@@ -407,7 +302,7 @@ export function useCellSelection(params: UseCellSelectionParams): UseCellSelecti
         dragMovedRef.current = true;
         setIsDragging(true);
         // Build cell index once at drag start for O(1) lookups during drag
-        cellIndex = buildCellIndex(wrapperRef.current);
+        marker.reindex();
       }
 
       // Always store latest position so pointerUp can flush if RAF hasn't executed

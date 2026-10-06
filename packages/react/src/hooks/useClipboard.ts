@@ -1,8 +1,10 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
-import { formatSelectionAsTsv, parseTsvClipboard, applyPastedValues, applyCutClear } from '../utils';
+import { useCallback, useEffect, useRef } from 'react';
+import { captureCutSource, resolveCutClear } from '@alaarab/ogrid-core';
+import { formatSelectionAsTsv, parseTsvClipboard, applyPastedValues } from '../utils';
 import { normalizeSelectionRange } from '../types';
 import type { ISelectionRange, IActiveCell, ICellValueChangedEvent, IColumnDef, RowId } from '../types';
 import { useLatestRef } from './useLatestRef';
+import { getPastedText, useClipboardMarks } from './useClipboardMarks';
 
 export interface UseClipboardParams<T> {
   items: T[];
@@ -79,35 +81,6 @@ export interface UseClipboardResult {
   clearClipboardRanges: () => void;
 }
 
-const normalizeNewlines = (s: string): string => s.replace(/\r\n?/g, '\n').replace(/\n+$/, '');
-
-/** Resolve transferred cut cells by identity and leave rejected or clipped source cells intact. */
-function resolveCutCells<T>(
-  source: { rowKeys: unknown[]; columnIds: string[] },
-  items: T[],
-  visibleCols: IColumnDef<T>[],
-  rowKeyOf: (item: T) => unknown,
-  transferred: Set<string>,
-  anchorRow: number,
-  anchorCol: number
-): ICellValueChangedEvent<T>[] {
-  const rowIndexByKey = new Map<unknown, number>();
-  items.forEach((item, i) => { rowIndexByKey.set(rowKeyOf(item), i); });
-  const events: ICellValueChangedEvent<T>[] = [];
-  for (const [sourceRow, key] of source.rowKeys.entries()) {
-    const r = rowIndexByKey.get(key);
-    if (r === undefined) continue;
-    for (const [sourceCol, columnId] of source.columnIds.entries()) {
-      const targetColumn = visibleCols[anchorCol + sourceCol];
-      if (!targetColumn || !transferred.has(`${anchorRow + sourceRow}|${targetColumn.columnId}`)) continue;
-      const c = visibleCols.findIndex((col) => col.columnId === columnId);
-      if (c < 0) continue;
-      events.push(...applyCutClear({ startRow: r, endRow: r, startCol: c, endCol: c }, items, visibleCols));
-    }
-  }
-  return events;
-}
-
 // navigator.clipboard is undefined outside secure contexts (plain http);
 // the in-page clipboard still makes copy/paste work there.
 function writeSystemClipboard(tsv: string | null): void {
@@ -153,18 +126,10 @@ export function useClipboard<T>(params: UseClipboardParams<T>): UseClipboardResu
   const getRowIdRef = useLatestRef(params.getRowId);
   const onClipboardErrorRef = useLatestRef(params.onClipboardError);
 
-  /**
-   * Pending cut source, captured by identity (row ids or row objects, column ids)
-   * so a sort/filter/page/column change before paste cannot clear the wrong cells.
-   */
-  const cutSourceRef = useRef<{
-    range: ISelectionRange;
-    rowKeys: unknown[];
-    columnIds: string[];
-    tsv: string;
-  } | null>(null);
-  const [cutRange, setCutRange] = useState<ISelectionRange | null>(null);
-  const [copyRange, setCopyRange] = useState<ISelectionRange | null>(null);
+  // Copy/cut marks and the pending cut (captured by identity, so a
+  // sort/filter/page/column change before paste cannot clear the wrong cells),
+  // shared with the headless useCellClipboard.
+  const { cutRange, copyRange, markCopied, markCut, takePendingCut, clearMarks: clearClipboardRanges } = useClipboardMarks();
   /** In-page clipboard fallback when system clipboard is unavailable. */
   const internalClipboardRef = useRef<string | null>(null);
   /** Guard against async clipboard reads completing after unmount. */
@@ -207,12 +172,9 @@ export function useClipboard<T>(params: UseClipboardParams<T>): UseClipboardResu
       : undefined;
     const tsv = formatSelectionAsTsv(itemsRef.current, visibleColsRef.current, norm, formulaOptions);
     internalClipboardRef.current = tsv;
-    // A new copy replaces any pending cut.
-    cutSourceRef.current = null;
-    setCutRange(null);
-    setCopyRange(norm);
+    markCopied(norm);
     return tsv;
-  }, [getEffectiveRange, itemsRef, visibleColsRef, formulasRef, flatColumnsRef, getFormulaRef, hasFormulaRef, colOffset]);
+  }, [getEffectiveRange, itemsRef, visibleColsRef, formulasRef, flatColumnsRef, getFormulaRef, hasFormulaRef, colOffset, markCopied]);
 
   /** Copy, then register the range as a pending cut. Returns the TSV, or null when cut is not allowed. */
   const cutSelection = useCallback((): string | null => {
@@ -220,23 +182,11 @@ export function useClipboard<T>(params: UseClipboardParams<T>): UseClipboardResu
     const range = getEffectiveRange();
     if (range == null || onCellValueChangedRef.current == null) return null;
     const norm = normalizeSelectionRange(range);
-    // copySelection clears any pending cut; the new cut is registered after it.
+    // copySelection fills the in-page clipboard; the cut mark then replaces its copy mark.
     const tsv = copySelection() ?? '';
-    const items = itemsRef.current;
-    const visibleCols = visibleColsRef.current;
-    const rowKeys: unknown[] = [];
-    for (let r = norm.startRow; r <= norm.endRow; r++) {
-      const item = items[r];
-      rowKeys.push(item === undefined ? undefined : rowKeyOf(item));
-    }
-    const columnIds: string[] = [];
-    for (let c = norm.startCol; c <= norm.endCol; c++) columnIds.push(visibleCols[c]?.columnId ?? '');
-    cutSourceRef.current = { range: norm, rowKeys, columnIds, tsv };
-    setCutRange(norm);
-    // copySelection sets copyRange  -  override it back since this is a cut
-    setCopyRange(null);
+    markCut(norm, captureCutSource(norm, itemsRef.current, visibleColsRef.current, rowKeyOf, tsv));
     return tsv;
-  }, [getEffectiveRange, copySelection, editableRef, onCellValueChangedRef, itemsRef, visibleColsRef, rowKeyOf]);
+  }, [getEffectiveRange, copySelection, editableRef, onCellValueChangedRef, itemsRef, visibleColsRef, rowKeyOf, markCut]);
 
   const handleCopy = useCallback(() => {
     writeSystemClipboard(copySelection());
@@ -283,27 +233,15 @@ export function useClipboard<T>(params: UseClipboardParams<T>): UseClipboardResu
     try {
       const pasteEvents = applyPastedValues(parsedRows, anchorRow, anchorCol, items, visibleCols, formulaOptions);
       for (const evt of pasteEvents) onCellValueChanged(evt);
-      const cutSource = cutSourceRef.current;
-      if (cutSource) {
-        cutSourceRef.current = null;
-        setCutRange(null);
-        // Only clear the cut cells when the pasted text is what the cut put on the
-        // clipboard; something copied elsewhere in the meantime leaves them alone.
-        if (normalizeNewlines(text) === normalizeNewlines(cutSource.tsv)) {
-          // Skip cells the paste just wrote (values and formulas): when the paste
-          // overlaps the cut source, clearing them afterwards would wipe them.
-          const pastedKeys = new Set(pasteEvents.map((e) => `${e.rowIndex}|${e.columnId}`));
-          for (const key of pastedFormulaKeys) pastedKeys.add(key);
-          const cutEvents = resolveCutCells(cutSource, items, visibleCols, rowKeyOf, pastedKeys, anchorRow, anchorCol)
-            .filter((e) => !pastedKeys.has(`${e.rowIndex}|${e.columnId}`));
-          for (const evt of cutEvents) onCellValueChanged(evt);
-        }
+      const cut = takePendingCut();
+      if (cut) {
+        const cutEvents = resolveCutClear({ cut, text, pasteEvents, pastedFormulaCells: pastedFormulaKeys, anchorRow, anchorCol, items, visibleCols, rowKeyOf });
+        for (const evt of cutEvents) onCellValueChanged(evt);
       }
     } finally {
       endBatch?.();
     }
-    setCopyRange(null);
-  }, [getEffectiveRange, itemsRef, visibleColsRef, onCellValueChangedRef, beginBatch, endBatch, formulasRef, flatColumnsRef, setFormulaRef, colOffset, rowKeyOf]);
+  }, [getEffectiveRange, itemsRef, visibleColsRef, onCellValueChangedRef, beginBatch, endBatch, formulasRef, flatColumnsRef, setFormulaRef, colOffset, rowKeyOf, takePendingCut]);
 
   const handlePaste = useCallback(async () => {
     if (editableRef.current === false) return;
@@ -333,19 +271,13 @@ export function useClipboard<T>(params: UseClipboardParams<T>): UseClipboardResu
     const data = event.clipboardData;
     // The browser hands over the clipboard text with the event, so this works
     // on plain http and in browsers that deny navigator.clipboard.readText.
-    let text = data?.getData('text/plain') || data?.getData('text') || '';
+    let text = getPastedText(data);
     // An in-grid copy on plain http never reached the system clipboard, so it
     // is the only thing the user can have meant when the event carries nothing.
     if (!text.trim()) text = internalClipboardRef.current ?? '';
     event.preventDefault();
     pasteText(text);
   }, [editableRef, onCellValueChangedRef, pasteText]);
-
-  const clearClipboardRanges = useCallback(() => {
-    setCopyRange(null);
-    setCutRange(null);
-    cutSourceRef.current = null;
-  }, []);
 
   return { handleCopy, handleCut, handleCopyEvent, handleCutEvent, handlePaste, handlePasteEvent, cutRange, copyRange, clearClipboardRanges };
 }
