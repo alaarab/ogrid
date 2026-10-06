@@ -9,7 +9,12 @@
     "includes": [
       "**/*.ts",
       "**/*.tsx",
-      "**/*.mjs"
+      "**/*.mjs",
+      "!**/.claude/**",
+      "!CLAUDE.md",
+      "!AGENTS.md",
+      "!FINDINGS.md",
+      "!.github/copilot-instructions.md"
     ],
     "ignoreUnknown": true
   },

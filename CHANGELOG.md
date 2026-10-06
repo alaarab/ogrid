@@ -22,6 +22,9 @@ All notable changes to OGrid will be documented in this file.
 
 ### Changed
 
+- Raise the `react-xlsx` and `react-xlsx-browser` size budgets from 400 kB to
+  425 kB. ExcelJS is 75% of those bundles, so the budgets guard an upstream
+  dependency; at 98% utilisation any ExcelJS patch release failed CI.
 - Add `check:exports`, a static public-API check run in CI and before publishing:
   the Radix and Fluent kits must export identical names, hook `Params`/`Result`
   types must travel with their hooks, and every name the docs import from an
