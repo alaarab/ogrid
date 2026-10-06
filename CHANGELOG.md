@@ -6,6 +6,12 @@ All notable changes to OGrid will be documented in this file.
 
 ### Added
 
+- The row-selection checkbox column is part of keyboard navigation: Left
+  Arrow from the first data column reaches it, Space toggles the row and
+  Shift+Space selects the range from the last toggled row. Space on an editable
+  boolean cell toggles it.
+- `FormulaBar` accepts `onReturnFocus`, and `IFormulaCellWriter` has an
+  optional `focusActiveCell()`.
 - Roving focus: DOM focus now sits on the active cell (`tabIndex=0` on one
   cell, `-1` on the rest), following the WAI-ARIA grid pattern. Screen readers
   announce the focused cell with its row and column context, Tab enters the
@@ -108,6 +114,11 @@ All notable changes to OGrid will be documented in this file.
 
 ### Changed
 
+- In-cell checkboxes (row selection and boolean cells) are no longer tab stops,
+  so Tab enters and leaves the grid in one step, per the WAI-ARIA grid pattern.
+  The header select-all checkbox stays a tab stop. The accessibility guide
+  explains how custom cell renderers should do the same.
+- Enter or Escape in the formula bar returns focus to the active cell.
 - The grid wrapper is no longer a separate tab stop, and the `aria-live`
   region that announced cell moves is removed (focus announces the cell
   instead). Shift+Tab from the first cell goes to the previous focusable
