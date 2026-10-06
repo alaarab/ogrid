@@ -359,13 +359,20 @@ export function useOGrid<T>(
   });
 
   // --- Row selection ---
+  // selectedItems resolve against every row the grid holds, not just the page.
+  const selectionKnownItems = isServerSide
+    ? (dataFetchingState.windowed?.loadedRows ?? dataFetchingState.displayItems)
+    : displayData;
   const {
     effectiveSelectedRows,
     handleSelectionChange,
+    commitSelection,
     setInternalSelectedRows,
   } = useOGridRowSelection({
     controlledSelectedRows: selectedRows,
     onSelectionChange,
+    getRowId,
+    knownItems: selectionKnownItems,
   });
 
   // --- Column layout (order / resize / pin) ---
@@ -466,9 +473,8 @@ export function useOGrid<T>(
     ref,
     isServerSide,
     columnOrder,
-    selectedRows,
     onColumnOrderChange,
-    onSelectionChange,
+    commitSelection,
     sortingState,
     filtersState,
     dataFetchingState,
@@ -476,7 +482,6 @@ export function useOGrid<T>(
     setInternalColumnOrder,
     setColumnWidthOverrides,
     setPinnedOverrides,
-    setInternalSelectedRows,
     setInternalData,
     setInternalLoading,
     visibleColumns,
