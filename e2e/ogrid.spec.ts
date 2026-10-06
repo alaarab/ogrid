@@ -855,7 +855,7 @@ test.describe('Clipboard', () => {
     await cell.click();
 
     const region = getGridRegion(page);
-    await region.press('Control+c');
+    await region.press('ControlOrMeta+c');
 
     // Marching ants SVG appears as an absolutely-positioned overlay
     const svg = page.locator('svg').first();
@@ -879,12 +879,12 @@ test.describe('Clipboard', () => {
 
     // Copy it
     const region = getGridRegion(page);
-    await region.press('Control+c');
+    await region.press('ControlOrMeta+c');
 
     // Navigate to cell [1,0] and paste
     const cell10 = getCellContent(page, 1, 0);
     await cell10.click();
-    await region.press('Control+v');
+    await region.press('ControlOrMeta+v');
     await expect.poll(async () => (await getDataCell(page, 1, 'name').textContent()) ?? '').toContain('!Clipboard Value');
   });
 });
