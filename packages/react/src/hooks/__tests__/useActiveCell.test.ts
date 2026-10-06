@@ -22,6 +22,22 @@ describe('useActiveCell', () => {
     expect(scrollToIndex).toHaveBeenCalledTimes(1);
   });
 
+  it('with { focus: false } scrolls to the active row but leaves focus alone', () => {
+    const wrapper = document.createElement('div');
+    document.body.appendChild(wrapper);
+    const cell = document.createElement('div');
+    cell.tabIndex = -1;
+    cell.dataset.rowIndex = '3';
+    cell.dataset.colIndex = '1';
+    wrapper.appendChild(cell);
+    const scrollToIndex = jest.fn();
+    const { result } = renderHook(() => useActiveCell({ current: wrapper }, null, { current: scrollToIndex }, { focus: false }));
+    act(() => result.current.setActiveCell({ rowIndex: 3, columnIndex: 1 }));
+    expect(scrollToIndex).toHaveBeenCalledWith(3, 'auto');
+    expect(document.activeElement).not.toBe(cell);
+    wrapper.remove();
+  });
+
   it('does not scroll while editing', () => {
     const scrollToIndex = jest.fn();
     const { result } = renderHook(() => useActiveCell(

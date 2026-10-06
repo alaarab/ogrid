@@ -97,6 +97,24 @@ export function createRowMemoTests(DataGridTable: React.ComponentType<IOGridData
       expect(Object.keys(renders).sort()).toEqual(['1', '4']);
     });
 
+    it('moving focus with the keyboard repaints only the rows the roving tab stop leaves and enters', () => {
+      const { container } = render(element());
+      const td = (r: number) => getCell(container, r, 0).closest('td') as HTMLElement;
+      act(() => td(1).focus());
+      expect(getCell(container, 1, 0).getAttribute('data-active-cell')).toBe('true');
+
+      resetRenders();
+      act(() => { fireEvent.keyDown(td(1), { key: 'ArrowDown' }); });
+      expect(document.activeElement).toBe(td(2));
+      expect(Object.keys(renders).sort()).toEqual(['2', '3']);
+
+      // Escape clears the active cell; the tab stop stays in row 2, so only it repaints.
+      resetRenders();
+      act(() => { fireEvent.keyDown(td(2), { key: 'Escape' }); });
+      expect(td(2).getAttribute('tabindex')).toBe('0');
+      expect(Object.keys(renders)).toEqual(['3']);
+    });
+
     it('repaints a formula cell in an untouched row when formulaVersion changes', () => {
       let formulaValue = 'first';
       const formulaProps = {

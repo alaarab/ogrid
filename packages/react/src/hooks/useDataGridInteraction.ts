@@ -11,6 +11,7 @@ import { useFillHandleInternal } from './useFillHandleInternal';
 import { useUndoRedo } from './useUndoRedo';
 import type { UseUndoRedoFormulaCells } from './useUndoRedo';
 import { useLatestRef } from './useLatestRef';
+import { cellFocusOptions } from './useGridCellFocus';
 import { resolveUndoAvailability, usesHostFormulaHistory } from './undoRouting';
 import type { DataGridCellInteractionState } from './useDataGridState';
 
@@ -132,6 +133,25 @@ export interface UseDataGridInteractionResult<T> {
    */
   setFormula?: (col: number, row: number, formula: string | null) => void;
   hasFormula?: (col: number, row: number) => boolean;
+}
+
+/**
+ * Pointer down on a cell: bring focus into the grid before the active cell
+ * changes. A cell that already holds focus keeps it, and the clicked cell takes
+ * it when it is already the tab stop (no re-render follows to move it there);
+ * otherwise the wrapper holds focus until useGridCellFocus moves it to the new
+ * active cell after the render.
+ */
+function focusGridForPointer(wrapper: HTMLElement | null, e: React.MouseEvent): void {
+  if (!wrapper) return;
+  const focused = document.activeElement;
+  if (focused && focused.tagName === 'TD' && focused.hasAttribute('tabindex') && wrapper.contains(focused)) return;
+  const cell = (e.currentTarget as Element | null)?.closest?.('td');
+  if (!e.shiftKey && cell instanceof HTMLElement && cell.tabIndex === 0 && wrapper.contains(cell)) {
+    cell.focus(cellFocusOptions(true));
+    return;
+  }
+  wrapper.focus(cellFocusOptions(true));
 }
 
 /**
@@ -338,7 +358,7 @@ export function useDataGridInteraction<T>(
         }
       }
 
-      (wrapperRef as RefObject<HTMLDivElement | null>).current?.focus({ preventScroll: true });
+      focusGridForPointer(wrapperRef.current, e);
       // Clicking another cell keeps a pending cut/copy (Excel behavior), so
       // "cut, click the destination, paste" moves the cells. Escape clears it.
       handleCellMouseDownBase(e, rowIndex, globalColIndex);

@@ -15,6 +15,9 @@ import { useDataGridInteraction } from './useDataGridInteraction';
 import { useDataGridContextMenu } from './useDataGridContextMenu';
 import type { UseVirtualScrollResult } from './useVirtualScroll';
 
+/** The grid moves focus itself (roving tabindex in useGridCellFocus). */
+const ACTIVE_CELL_OPTIONS = { focus: false } as const;
+
 export interface UseDataGridStateParams<T> {
   props: IOGridDataGridProps<T>;
   wrapperRef: RefObject<HTMLDivElement | null>;
@@ -251,7 +254,7 @@ export function useDataGridState<T>(
     setPendingEditorValue,
   } = useCellEditing();
 
-  const { activeCell, setActiveCell } = useActiveCell(wrapperRef, editingCell, scrollToIndexRef);
+  const { activeCell, setActiveCell } = useActiveCell(wrapperRef, editingCell, scrollToIndexRef, ACTIVE_CELL_OPTIONS);
 
   // --- 1. Layout, pinning, header menu ---
   const layoutResult = useDataGridLayout<T>({
