@@ -247,6 +247,18 @@
     background-color: var(--ogrid-accent-dark, #005a9e);
   }
 
+  // Keyboard focus: the handle is a focusable separator (Arrow keys resize), so it gets
+  // the same ring header cells use; the 2px bar fills so the thin target stays visible.
+  &:focus-visible {
+    outline: 2px solid var(--ogrid-accent, #0078d4);
+    outline-offset: -2px;
+    z-index: var(--ogrid-z-header-focus, 11);
+
+    &::after {
+      background-color: var(--ogrid-accent, #0078d4);
+    }
+  }
+
   // Increase touch target on touch-capable devices
   @media (pointer: coarse) {
     width: 16px;

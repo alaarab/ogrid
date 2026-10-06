@@ -328,6 +328,14 @@
   &:active::after {
     background-color: var(--colorBrandForeground1Pressed, #005a9e);
   }
+
+  &:focus-visible {
+    outline-color: var(--colorBrandStroke1, var(--ogrid-accent, #0078d4));
+
+    &::after {
+      background-color: var(--colorBrandForeground1, var(--ogrid-accent, #0078d4));
+    }
+  }
 }
 
 // ---- Fluent-specific: status bar ----

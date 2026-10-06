@@ -4,7 +4,7 @@
  * Each UI package calls createColumnModelTests(OGrid) to run these.
  */
 import * as React from 'react';
-import { render, fireEvent, act } from '@testing-library/react';
+import { render, fireEvent, act, waitFor } from '@testing-library/react';
 import { fixtureRows, getRowId, type FixtureRow } from './fixtures';
 import type { IColumnDef, IOGridApi, IOGridProps } from '../types';
 
@@ -156,7 +156,7 @@ export function createColumnModelTests(OGrid: OGridComponent): void {
       const ref = React.createRef<IOGridApi<FixtureRow>>();
       const onColumnResized = jest.fn();
       const { container, getByRole } = renderOGrid({ onColumnResized }, ref);
-      fireEvent.pointerDown(getByRole('separator', { name: 'Resize Name' }), { clientX: 100 });
+      fireEvent.pointerDown(getByRole('separator', { name: 'Resize column Name' }), { clientX: 100 });
       act(() => {
         document.dispatchEvent(new PointerEvent('pointermove', { clientX: 160, bubbles: true }));
       });
@@ -175,7 +175,7 @@ export function createColumnModelTests(OGrid: OGridComponent): void {
       const onColumnResized = jest.fn();
       const columns: IColumnDef<FixtureRow>[] = [{ columnId: 'name', name: 'Name', minWidth: 150 }, threeColumns[1]!];
       const { getByRole } = renderOGrid({ columns, onColumnResized });
-      fireEvent.pointerDown(getByRole('separator', { name: 'Resize Name' }), { clientX: 100 });
+      fireEvent.pointerDown(getByRole('separator', { name: 'Resize column Name' }), { clientX: 100 });
       act(() => {
         document.dispatchEvent(new PointerEvent('pointermove', { clientX: 0, bubbles: true }));
       });
@@ -183,6 +183,119 @@ export function createColumnModelTests(OGrid: OGridComponent): void {
         document.dispatchEvent(new PointerEvent('pointerup', { bubbles: true }));
       });
       expect(onColumnResized).toHaveBeenCalledWith('name', 150);
+    });
+
+    describe('keyboard resize', () => {
+      const sizedColumns: IColumnDef<FixtureRow>[] = [
+        { columnId: 'name', name: 'Name', defaultWidth: 140, minWidth: 60 },
+        threeColumns[1]!,
+        threeColumns[2]!,
+      ];
+      const nameTh = (container: HTMLElement) => container.querySelector<HTMLElement>('th[data-column-id="name"]');
+      const focusHandle = (handle: HTMLElement) => {
+        act(() => {
+          handle.focus();
+        });
+        expect(document.activeElement).toBe(handle);
+      };
+
+      it('resize handle is a focusable separator exposing the column width range', () => {
+        const { getByRole } = renderOGrid({ columns: sizedColumns });
+        const handle = getByRole('separator', { name: 'Resize column Name' });
+        expect(handle.getAttribute('tabindex')).toBe('0');
+        expect(handle.getAttribute('aria-orientation')).toBe('vertical');
+        expect(handle.getAttribute('aria-valuenow')).toBe('140');
+        expect(handle.getAttribute('aria-valuemin')).toBe('60');
+        expect(handle.hasAttribute('aria-valuemax')).toBe(false);
+        expect(handle.hasAttribute('aria-hidden')).toBe(false);
+      });
+
+      it('ArrowRight widens the column by 10px through the resize callbacks', () => {
+        layout = mockLayout();
+        const ref = React.createRef<IOGridApi<FixtureRow>>();
+        const onColumnResized = jest.fn();
+        const { container, getByRole } = renderOGrid({ columns: sizedColumns, onColumnResized }, ref);
+        const handle = getByRole('separator', { name: 'Resize column Name' });
+        focusHandle(handle);
+        fireEvent.keyDown(handle, { key: 'ArrowRight' });
+        expect(onColumnResized).toHaveBeenCalledWith('name', COL_WIDTH + 10);
+        expect(ref.current?.getColumnState().columnWidths?.name).toBe(COL_WIDTH + 10);
+        expect(nameTh(container)?.style.width).toBe(`${COL_WIDTH + 10}px`);
+        expect(handle.getAttribute('aria-valuenow')).toBe(String(COL_WIDTH + 10));
+        // Other columns are locked at their rendered width, as with a pointer drag.
+        expect(container.querySelector<HTMLElement>('th[data-column-id="status"]')?.style.width).toBe(`${COL_WIDTH}px`);
+      });
+
+      it('Shift+ArrowLeft narrows the column by 1px', () => {
+        layout = mockLayout();
+        const onColumnResized = jest.fn();
+        const { container, getByRole } = renderOGrid({ columns: sizedColumns, onColumnResized });
+        const handle = getByRole('separator', { name: 'Resize column Name' });
+        focusHandle(handle);
+        fireEvent.keyDown(handle, { key: 'ArrowLeft', shiftKey: true });
+        expect(onColumnResized).toHaveBeenCalledWith('name', COL_WIDTH - 1);
+        expect(nameTh(container)?.style.width).toBe(`${COL_WIDTH - 1}px`);
+      });
+
+      it('Home snaps to the min width and ArrowLeft cannot go below it', () => {
+        layout = mockLayout();
+        const onColumnResized = jest.fn();
+        const { container, getByRole } = renderOGrid({ columns: sizedColumns, onColumnResized });
+        const handle = getByRole('separator', { name: 'Resize column Name' });
+        focusHandle(handle);
+        fireEvent.keyDown(handle, { key: 'Home' });
+        expect(onColumnResized).toHaveBeenLastCalledWith('name', 60);
+        expect(nameTh(container)?.style.width).toBe('60px');
+        fireEvent.keyDown(handle, { key: 'ArrowLeft' });
+        expect(onColumnResized).toHaveBeenCalledTimes(1);
+        expect(nameTh(container)?.style.width).toBe('60px');
+      });
+
+      it('Escape restores the width from focus time and keeps focus on the handle', () => {
+        layout = mockLayout();
+        const onColumnResized = jest.fn();
+        const { container, getByRole } = renderOGrid({ columns: sizedColumns, onColumnResized });
+        const handle = getByRole('separator', { name: 'Resize column Name' });
+        focusHandle(handle);
+        fireEvent.keyDown(handle, { key: 'ArrowRight' });
+        fireEvent.keyDown(handle, { key: 'ArrowRight' });
+        expect(nameTh(container)?.style.width).toBe(`${COL_WIDTH + 20}px`);
+        fireEvent.keyDown(handle, { key: 'Escape' });
+        expect(nameTh(container)?.style.width).toBe(`${COL_WIDTH}px`);
+        expect(onColumnResized).toHaveBeenLastCalledWith('name', COL_WIDTH);
+        expect(document.activeElement).toBe(handle);
+      });
+
+      it('Enter commits and hands focus back to the grid', () => {
+        layout = mockLayout();
+        const { container, getByRole } = renderOGrid({ columns: sizedColumns });
+        const handle = getByRole('separator', { name: 'Resize column Name' });
+        focusHandle(handle);
+        fireEvent.keyDown(handle, { key: 'ArrowRight' });
+        fireEvent.keyDown(handle, { key: 'Enter' });
+        expect(nameTh(container)?.style.width).toBe(`${COL_WIDTH + 10}px`);
+        expect(document.activeElement).toBe(getByRole('region', { name: 'Data grid' }));
+      });
+
+      it('Arrow keys on the handle do not move the active cell', async () => {
+        layout = mockLayout();
+        const { container, getByRole } = renderOGrid({ columns: sizedColumns });
+        const cell = (row: number, col: number) =>
+          container.querySelector(`[data-row-index="${row}"][data-col-index="${col}"]`) as HTMLElement;
+        fireEvent.pointerDown(cell(1, 0));
+        await waitFor(() => expect(cell(1, 0).getAttribute('data-active-cell')).toBe('true'));
+        const handle = getByRole('separator', { name: 'Resize column Name' });
+        focusHandle(handle);
+        for (const key of ['ArrowRight', 'ArrowLeft', 'Home']) {
+          const event = new KeyboardEvent('keydown', { key, bubbles: true, cancelable: true });
+          act(() => {
+            handle.dispatchEvent(event);
+          });
+          expect(event.defaultPrevented).toBe(true);
+        }
+        expect(cell(1, 0).getAttribute('data-active-cell')).toBe('true');
+        expect(cell(1, 1).getAttribute('data-active-cell')).not.toBe('true');
+      });
     });
   });
 }
