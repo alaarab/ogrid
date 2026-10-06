@@ -33,6 +33,8 @@
     "test:examples:types": "bun --filter '@alaarab/ogrid-examples' typecheck",
     "dev:react-fluent": "bun --filter '@alaarab/ogrid-examples' dev:react-fluent",
     "dev:react-radix": "bun --filter '@alaarab/ogrid-examples' dev:react-radix",
+    "serve:e2e:react-fluent": "bun --filter '@alaarab/ogrid-examples' serve:e2e:react-fluent",
+    "serve:e2e:react-radix": "bun --filter '@alaarab/ogrid-examples' serve:e2e:react-radix",
     "storybook:react-fluent": "bun --filter '@alaarab/ogrid-react-fluent' storybook",
     "storybook:react-radix": "bun --filter '@alaarab/ogrid-react-radix' storybook",
     "docs:dev": "bun --filter '@alaarab/ogrid-docs' start",
