@@ -3,7 +3,8 @@ import type { RefObject } from 'react';
 import { normalizeSelectionRange } from '../types';
 import type { ISelectionRange, IActiveCell } from '../types';
 import type { IColumnDef, ICellValueChangedEvent } from '../types/columnTypes';
-import { applyFillValues, buildCellIndex, cellIndexKey, computeFillRange } from '../utils';
+import { applyFillValues, computeFillRange } from '../utils';
+import { createDragRangeMarker, dataCellAtPoint } from './dragRangeMarker';
 import { computeFillDragEdits } from '@alaarab/ogrid-core';
 import type { IFillFormulaOptions } from '../utils';
 import { useLatestRef } from './useLatestRef';
@@ -32,9 +33,6 @@ export interface UseFillHandleInternalResult {
   /** Fill the current selection down from the top row (Ctrl+D). No-op if no selection or editable=false. */
   fillDown: () => void;
 }
-
-/** DOM attribute name for fill-drag range highlighting (same as cell selection drag). */
-const DRAG_ATTR = 'data-drag-range';
 
 /**
  * Manages Excel-style fill handle drag-to-fill for cell ranges.
@@ -76,55 +74,8 @@ export function useFillHandleInternal<T>(params: UseFillHandleInternalParams<T>)
     fillDragEndRef.current = { endRow: fillDrag.startRow, endCol: fillDrag.startCol };
     liveFillRangeRef.current = null;
 
-    /** Set of currently drag-marked HTMLElements  -  avoids O(n) full DOM scan on clear. */
-    const markedCells = new Set<Element>();
-
-    /** Cell lookup index built on drag start  -  O(1) lookups per frame. */
-    let cellIndex = buildCellIndex(wrapperRef.current);
-
-    const applyDragAttrs = (range: ISelectionRange) => {
-      const wrapper = wrapperRef.current;
-      if (!wrapper) return;
-      const minR = Math.min(range.startRow, range.endRow);
-      const maxR = Math.max(range.startRow, range.endRow);
-      const minC = Math.min(range.startCol, range.endCol);
-      const maxC = Math.max(range.startCol, range.endCol);
-      const colOff = colOffsetRef.current;
-
-      // Un-mark cells no longer in range
-      for (const el of markedCells) {
-        const r = parseInt(el.getAttribute('data-row-index') ?? '', 10);
-        const c = parseInt(el.getAttribute('data-col-index') ?? '', 10) - colOff;
-        if (!(r >= minR && r <= maxR && c >= minC && c <= maxC)) {
-          el.removeAttribute(DRAG_ATTR);
-          markedCells.delete(el);
-        }
-      }
-
-      // Look up only cells in the new range  -  O(range size) via Map lookup
-      for (let r = minR; r <= maxR; r++) {
-        for (let c = minC; c <= maxC; c++) {
-          const key = cellIndexKey(r, c + colOff);
-          let el = cellIndex?.get(key);
-          // Handle virtual scroll recycling  -  if element is stale, rebuild index once
-          if (el && !el.isConnected) {
-            cellIndex = buildCellIndex(wrapperRef.current);
-            el = cellIndex.get(key);
-          }
-          if (el) {
-            if (!el.hasAttribute(DRAG_ATTR)) el.setAttribute(DRAG_ATTR, '');
-            markedCells.add(el);
-          }
-        }
-      }
-    };
-
-    const clearDragAttrs = () => {
-      for (const el of markedCells) {
-        el.removeAttribute(DRAG_ATTR);
-      }
-      markedCells.clear();
-    };
+    /** Drag-range cell marking (shared with drag-select). */
+    const marker = createDragRangeMarker(() => wrapperRef.current, () => colOffsetRef.current);
 
     let lastFillMousePos: { cx: number; cy: number } | null = null;
 
@@ -142,14 +93,9 @@ export function useFillHandleInternal<T>(params: UseFillHandleInternalParams<T>)
     // the drag end must be the raw cell, or dragging up/left (where the
     // normalized end is the source itself) collapses the fill to nothing.
     const resolveRange = (cx: number, cy: number): { range: ISelectionRange; endRow: number; endCol: number } | null => {
-      const target = document.elementFromPoint(cx, cy) as HTMLElement | null;
-      const cell = target?.closest?.('[data-row-index][data-col-index]');
-      if (!cell || !wrapperRef.current?.contains(cell)) return null;
-      const r = parseInt(cell.getAttribute('data-row-index') ?? '', 10);
-      const c = parseInt(cell.getAttribute('data-col-index') ?? '', 10);
-      if (Number.isNaN(r) || Number.isNaN(c) || c < colOffsetRef.current) return null;
-      const dataCol = c - colOffsetRef.current;
-      return { range: computeFillRange(source, r, dataCol), endRow: r, endCol: dataCol };
+      const cell = dataCellAtPoint(wrapperRef.current, cx, cy, colOffsetRef.current);
+      if (!cell) return null;
+      return { range: computeFillRange(source, cell.row, cell.col), endRow: cell.row, endCol: cell.col };
     };
 
     const onMove = (e: PointerEvent) => {
@@ -178,7 +124,7 @@ export function useFillHandleInternal<T>(params: UseFillHandleInternalParams<T>)
         moved = true;
         liveFillRangeRef.current = newRange;
         fillDragEndRef.current = { endRow: resolved.endRow, endCol: resolved.endCol };
-        applyDragAttrs(newRange);
+        marker.mark(newRange);
       });
     };
 
@@ -198,7 +144,7 @@ export function useFillHandleInternal<T>(params: UseFillHandleInternalParams<T>)
         }
       }
 
-      clearDragAttrs();
+      marker.clear();
 
       // A click without movement leaves the selection untouched (no collapse to the top-left cell).
       if (!moved) {
@@ -235,7 +181,7 @@ export function useFillHandleInternal<T>(params: UseFillHandleInternalParams<T>)
         cancelAnimationFrame(rafRef.current);
         rafRef.current = 0;
       }
-      clearDragAttrs();
+      marker.clear();
       setFillDrag(null);
       liveFillRangeRef.current = null;
     };
