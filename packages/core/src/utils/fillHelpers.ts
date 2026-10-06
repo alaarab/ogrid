@@ -33,6 +33,43 @@ export function areFillCompatible<T>(source: IColumnDef<T>, target: IColumnDef<T
 }
 
 /**
+ * The range a fill-handle drag covers when the pointer is over cell
+ * (`row`, `col`): the source block extended along ONE axis (Excel behavior).
+ *
+ * The axis is the one along which the pointer is farther outside the block,
+ * measured in cells: more rows outside than columns fills down/up and keeps
+ * the source columns; more columns outside fills right/left and keeps the
+ * source rows. An exact tie fills along rows. A pointer inside the block
+ * (also the case while dragging back into it, i.e. shrinking) returns the
+ * normalized source range, which is a no-op fill.
+ *
+ * @param source  The original selection the fill extends (any corner order).
+ * @param row     Row index under the pointer.
+ * @param col     Column index under the pointer (data column, no offset).
+ * @returns       The normalized fill range, which always contains `source`.
+ */
+export function computeFillRange(source: ISelectionRange, row: number, col: number): ISelectionRange {
+  const src = normalizeSelectionRange(source);
+  const rowDist = row < src.startRow ? src.startRow - row : row > src.endRow ? row - src.endRow : 0;
+  const colDist = col < src.startCol ? src.startCol - col : col > src.endCol ? col - src.endCol : 0;
+  if (rowDist === 0 && colDist === 0) return src;
+  if (rowDist >= colDist) {
+    return {
+      startRow: Math.min(src.startRow, row),
+      startCol: src.startCol,
+      endRow: Math.max(src.endRow, row),
+      endCol: src.endCol,
+    };
+  }
+  return {
+    startRow: src.startRow,
+    startCol: Math.min(src.startCol, col),
+    endRow: src.endRow,
+    endCol: Math.max(src.endCol, col),
+  };
+}
+
+/**
  * Options for formula-aware fill. When provided, source cells with formulas will
  * have their relative references adjusted instead of copying raw values.
  */

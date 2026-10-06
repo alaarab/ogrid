@@ -47,6 +47,7 @@ export {
   applyPastedValues,
   applyCutClear,
   applyFillValues,
+  computeFillRange,
   computeArrowNavigation,
   getOppositeCorner,
   applyCellDeletion,

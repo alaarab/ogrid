@@ -3,7 +3,7 @@ import type { RefObject } from 'react';
 import { normalizeSelectionRange } from '../types';
 import type { ISelectionRange, IActiveCell } from '../types';
 import type { IColumnDef, ICellValueChangedEvent } from '../types/columnTypes';
-import { applyFillValues, buildCellIndex, cellIndexKey } from '../utils';
+import { applyFillValues, buildCellIndex, cellIndexKey, computeFillRange } from '../utils';
 import type { IFillFormulaOptions } from '../utils';
 import { useLatestRef } from './useLatestRef';
 
@@ -37,6 +37,10 @@ const DRAG_ATTR = 'data-drag-range';
 
 /**
  * Manages Excel-style fill handle drag-to-fill for cell ranges.
+ *
+ * While dragging, the fill range is the source selection extended along one
+ * axis only, the one the pointer is farther outside the block on (rows vs
+ * columns); a pointer inside the block fills nothing. See `computeFillRange`.
  * @param params - Items, columns, selection range, editability, and value change callback.
  * @returns Fill drag state, setter, and mousedown handler for the fill handle.
  */
@@ -123,19 +127,14 @@ export function useFillHandleInternal<T>(params: UseFillHandleInternalParams<T>)
 
     let lastFillMousePos: { cx: number; cy: number } | null = null;
 
-    // The original selection is the source block; the fill extends it.
+    // The original selection is the source block; the fill extends it along
+    // one axis only (Excel): see computeFillRange.
     const source: ISelectionRange = {
       startRow: fillDrag.startRow,
       startCol: fillDrag.startCol,
       endRow: fillDrag.endRow ?? fillDrag.startRow,
       endCol: fillDrag.endCol ?? fillDrag.startCol,
     };
-    const unionWith = (r: number, c: number): ISelectionRange => ({
-      startRow: Math.min(source.startRow, r),
-      startCol: Math.min(source.startCol, c),
-      endRow: Math.max(source.endRow, r),
-      endCol: Math.max(source.endCol, c),
-    });
     let moved = false;
 
     // Returns the normalized fill range plus the raw cell under the pointer:
@@ -149,7 +148,7 @@ export function useFillHandleInternal<T>(params: UseFillHandleInternalParams<T>)
       const c = parseInt(cell.getAttribute('data-col-index') ?? '', 10);
       if (Number.isNaN(r) || Number.isNaN(c) || c < colOffsetRef.current) return null;
       const dataCol = c - colOffsetRef.current;
-      return { range: unionWith(r, dataCol), endRow: r, endCol: dataCol };
+      return { range: computeFillRange(source, r, dataCol), endRow: r, endCol: dataCol };
     };
 
     const onMove = (e: PointerEvent) => {
@@ -208,7 +207,7 @@ export function useFillHandleInternal<T>(params: UseFillHandleInternalParams<T>)
       }
 
       const end = fillDragEndRef.current;
-      const norm = unionWith(end.endRow, end.endCol);
+      const norm = computeFillRange(source, end.endRow, end.endCol);
 
       // Commit range to React state
       setSelectionRange(norm);
