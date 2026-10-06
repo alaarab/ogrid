@@ -7,7 +7,8 @@
  * axis only: whichever one the target is farther outside the range on (rows
  * vs columns; ties fill rows). A target inside the range fills nothing. On
  * commit, every cell in that extension gets the source value(s) tiled over
- * it, with type compatibility checks (won't fill text into a date column).
+ * it, with type compatibility checks (won't fill text into a date column),
+ * and the filled range becomes the selection.
  *
  * Smart-fill behavior comes from `computeFillDragEdits` in `@alaarab/ogrid-core`
  * (the same commit `<OGrid>`'s fill handle uses), which produces a list of
@@ -40,6 +41,7 @@ import {
   computeFillDragEdits,
   computeFillRange,
   isInSelectionRange,
+  rangesEqual,
 } from '@alaarab/ogrid-core';
 import type {
   ISelectionRange,
@@ -75,7 +77,10 @@ export interface UseFillHandleResult {
   startFill: () => void;
   /** Update the current fill target as the user drags. No-op if not filling. */
   updateFill: (row: number, col: number) => void;
-  /** Commit the fill — calls `onFillCells` with the resulting events. */
+  /**
+   * Commit the fill: calls `onFillCells` with the resulting events and, when
+   * the fill extends the source range, selects the filled range (Excel).
+   */
   commitFill: () => void;
   /** Cancel without committing. */
   cancelFill: () => void;
@@ -135,15 +140,18 @@ export function useFillHandle<T>(
     setFillTarget(null);
   }, []);
 
+  const { setRange } = rangeSelection;
   const commitFill = useCallback(() => {
-    // Same commit as <OGrid>'s fill handle: no events when the target is
+    // Same commit as <OGrid>'s fill handle: nothing happens when the target is
     // inside the source range (released without dragging beyond it).
+    // Otherwise the filled range becomes the selection, as in Excel.
     if (sourceRange && fillTarget) {
-      const { events } = computeFillDragEdits(sourceRange, fillTarget.row, fillTarget.col, rows, columns);
+      const { range, events } = computeFillDragEdits(sourceRange, fillTarget.row, fillTarget.col, rows, columns);
+      if (!rangesEqual(range, sourceRange)) setRange(range);
       if (events.length > 0) onFillCells(events);
     }
     setFillTarget(null);
-  }, [sourceRange, fillTarget, rows, columns, onFillCells]);
+  }, [sourceRange, fillTarget, rows, columns, onFillCells, setRange]);
 
   return {
     fillTarget,
