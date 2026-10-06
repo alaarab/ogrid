@@ -245,7 +245,7 @@ export function useDataGridInteraction<T>(
     activeCell,
   });
 
-  const { handleCopy, handleCut, handlePaste, cutRange, copyRange, clearClipboardRanges } = useClipboard({
+  const { handleCopy, handleCut, handlePaste, handlePasteEvent, cutRange, copyRange, clearClipboardRanges } = useClipboard({
     items,
     getRowId,
     onClipboardError,
@@ -315,10 +315,10 @@ export function useDataGridInteraction<T>(
     formulaOptions: fillFormulaOptions,
   });
 
-  const { handleGridKeyDown } = useKeyboardNavigation({
+  const { handleGridKeyDown, handleGridPaste } = useKeyboardNavigation({
     data: { items, visibleCols, colOffset, hasCheckboxCol, visibleColumnCount, getRowId },
     state: { activeCell, selectionRange, editingCell, selectedRowIds },
-    handlers: { setActiveCell, setSelectionRange, setEditingCell, handleRowCheckboxChange, handleCopy, handleCut, handlePaste, setContextMenu: setContextMenuPosition, onUndo: undo, onRedo: redo, clearClipboardRanges, beginBatch: undoRedo.beginBatch, endBatch: undoRedo.endBatch },
+    handlers: { setActiveCell, setSelectionRange, setEditingCell, handleRowCheckboxChange, handleCopy, handleCut, handlePasteEvent, setContextMenu: setContextMenuPosition, onUndo: undo, onRedo: redo, clearClipboardRanges, beginBatch: undoRedo.beginBatch, endBatch: undoRedo.endBatch },
     features: { editable, onCellValueChanged, rowSelection: rowSelection ?? 'none', wrapperRef, scrollToIndexRef, onKeyDown, fillDown },
   });
 
@@ -333,6 +333,7 @@ export function useDataGridInteraction<T>(
     handleSelectAllCells: cellSelection ? handleSelectAllCells : NOOP,
     hasCellSelection: cellSelection ? hasCellSelection : false,
     handleGridKeyDown: cellSelection ? handleGridKeyDown : (NOOP_KEY as typeof handleGridKeyDown),
+    handleGridPaste: cellSelection ? handleGridPaste : (NOOP as typeof handleGridPaste),
     handleFillHandleMouseDown: cellSelection ? handleFillHandleMouseDown : (NOOP as typeof handleFillHandleMouseDown),
     handleCopy: cellSelection ? handleCopy : NOOP,
     handleCut: cellSelection ? handleCut : NOOP,
@@ -347,7 +348,7 @@ export function useDataGridInteraction<T>(
     isDragging: cellSelection ? isDragging : false,
   }), [
     cellSelection, activeCell, setActiveCell, selectionRange, setSelectionRange,
-    handleCellMouseDown, handleSelectAllCells, hasCellSelection, handleGridKeyDown,
+    handleCellMouseDown, handleSelectAllCells, hasCellSelection, handleGridKeyDown, handleGridPaste,
     handleFillHandleMouseDown, handleCopy, handleCut, handlePaste, cutRange, copyRange,
     clearClipboardRanges, canUndo, canRedo, undo, redo,
     isDragging,

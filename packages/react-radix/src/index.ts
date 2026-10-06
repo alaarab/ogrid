@@ -124,6 +124,7 @@ export type {
   CellCoord,
   UseCellClipboardParams,
   UseCellClipboardResult,
+  CellClipboardPasteEvent,
   UseGridFocusParams,
   UseGridFocusResult,
   UseActiveCellResult,

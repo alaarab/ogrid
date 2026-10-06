@@ -204,6 +204,82 @@ describe('useCellClipboard', () => {
   });
 });
 
+describe('useCellClipboard onPaste (native paste event)', () => {
+  const makeEvent = (text: string, target?: EventTarget | null, currentTarget?: EventTarget | null) => ({
+    clipboardData: { getData: (format: string) => (format === 'text/plain' ? text : '') },
+    preventDefault: jest.fn(),
+    target,
+    currentTarget,
+  });
+
+  it('pastes the event text at the anchor, prevents default and never calls clipboard.readText', () => {
+    const events: ICellValueChangedEvent<Row>[] = [];
+    const readText = jest.fn().mockResolvedValue('FromReadText');
+    const { result: rangeResult } = renderHook(() => useRangeSelection({ rowCount: 3, colCount: columns.length }));
+    act(() => rangeResult.current.startRange(2, 0));
+    const { result } = renderHook(() =>
+      useCellClipboard<Row>({
+        rangeSelection: rangeResult.current,
+        rows: makeRows(),
+        columns,
+        onCellEdit: (e) => events.push(...e),
+        clipboard: { readText, writeText: () => Promise.resolve() },
+      }),
+    );
+
+    const event = makeEvent('hello\t42');
+    act(() => { result.current.onPaste(event); });
+
+    expect(event.preventDefault).toHaveBeenCalledTimes(1);
+    expect(readText).not.toHaveBeenCalled();
+    expect(events.map((e) => [e.rowIndex, e.columnId, e.newValue])).toEqual([[2, 'a', 'hello'], [2, 'b', 42]]);
+  });
+
+  it('leaves a paste aimed at a text input inside the container to that input', () => {
+    const { rangeResult, clipResult, rerender, events } = setup();
+    act(() => rangeResult.current.startRange(0, 0));
+    rerender({ range: rangeResult.current });
+    const container = document.createElement('div');
+    const input = document.createElement('input');
+    container.append(input);
+
+    const event = makeEvent('hijacked', input, container);
+    act(() => { clipResult.current.onPaste(event); });
+
+    expect(event.preventDefault).not.toHaveBeenCalled();
+    expect(events).toEqual([]);
+  });
+
+  it('ignores an event without text or without a range, leaving the browser default', () => {
+    const { rangeResult, clipResult, rerender, events } = setup();
+    const noRange = makeEvent('x');
+    act(() => { clipResult.current.onPaste(noRange); });
+    act(() => rangeResult.current.startRange(0, 0));
+    rerender({ range: rangeResult.current });
+    const empty = makeEvent('  \n');
+    act(() => { clipResult.current.onPaste(empty); });
+
+    expect(noRange.preventDefault).not.toHaveBeenCalled();
+    expect(empty.preventDefault).not.toHaveBeenCalled();
+    expect(events).toEqual([]);
+  });
+
+  it('completes a pending cut exactly like pasteRange', async () => {
+    const { rangeResult, clipResult, rerender, events, clipboardState } = setup();
+    act(() => rangeResult.current.startRange(0, 0));
+    rerender({ range: rangeResult.current });
+    await act(async () => { await clipResult.current.cutRange(); });
+    act(() => rangeResult.current.startRange(1, 0));
+    rerender({ range: rangeResult.current });
+
+    act(() => { clipResult.current.onPaste(makeEvent(clipboardState.text)); });
+
+    expect(events.map((e) => [e.rowIndex, e.columnId, e.newValue])).toEqual([[1, 'a', 'one'], [0, 'a', '']]);
+    expect(clipResult.current.activeCutRange).toBeNull();
+    expect(clipResult.current.activeCopyRange).toBeNull();
+  });
+});
+
 describe('useCellClipboard clipboard failures', () => {
   it('resolves and reports instead of rejecting when the clipboard is denied', async () => {
     const denied = new Error('denied');

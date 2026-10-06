@@ -7,11 +7,13 @@ function Inner() {
   const { useHeadlessGrid, useRangeSelection, useCellClipboard, isInSelectionRange } = require('@alaarab/ogrid-react') as typeof import('@alaarab/ogrid-react');
 
   const [data, setData] = useState<Person[]>(initialRows);
-  const [status, setStatus] = useState('Select cells, then Ctrl/Cmd+C, X, V');
+  const [status, setStatus] = useState('Select cells, then Ctrl/Cmd+C, X, V (paste reads the native paste event)');
 
-  // The hook defaults to navigator.clipboard. The docs site cannot count on
-  // clipboard permission, so this override mirrors writes into memory and
-  // falls back to that buffer when the browser refuses to read.
+  // The hook defaults to navigator.clipboard. Ctrl/Cmd+V goes through the
+  // native paste event (cb.onPaste below) and needs no permission; the Paste
+  // button has no such event and reads programmatically, which the browser may
+  // refuse. This override mirrors writes into memory and falls back to that
+  // buffer when the read is denied, so the button still works in-demo.
   const clipboard = useMemo(() => {
     let buffer = '';
     return {
@@ -85,6 +87,9 @@ function Inner() {
         className={styles.scroll}
         // biome-ignore lint/a11y/noNoninteractiveTabindex: the container is the focus target for the grid's keyboard handling
         tabIndex={0}
+        // Ctrl/Cmd+V is not handled in onKeyDown: the browser follows it with a
+        // native paste event, and onPaste reads the text from that event.
+        onPaste={cb.onPaste}
         onKeyDown={(e) => {
           const mod = e.metaKey || e.ctrlKey;
           if (mod && e.key === 'c') {
@@ -93,9 +98,6 @@ function Inner() {
           } else if (mod && e.key === 'x') {
             e.preventDefault();
             void cut();
-          } else if (mod && e.key === 'v') {
-            e.preventDefault();
-            void paste();
           } else if (e.key === 'Escape') {
             cb.clearClipboard();
           }

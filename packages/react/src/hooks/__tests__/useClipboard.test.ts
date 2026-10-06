@@ -186,6 +186,85 @@ describe('useClipboard', () => {
     );
   });
 
+  describe('handlePasteEvent (native paste event)', () => {
+    const editableCols = visibleCols.map((c) => ({ ...c, editable: true as const }));
+    const makeEvent = (text: string | null) => ({
+      clipboardData: text == null ? null : { getData: jest.fn((format: string) => (format === 'text/plain' ? text : '')) },
+      preventDefault: jest.fn(),
+    });
+
+    it('pastes the event text at the active cell, prevents default and never reads navigator.clipboard', () => {
+      readTextMock.mockResolvedValue('FromReadText');
+      const onCellValueChanged = jest.fn();
+      const { result } = renderHook(() =>
+        useClipboard({ items, visibleCols: editableCols, colOffset: 0, selectionRange: null, activeCell: { rowIndex: 1, columnIndex: 0 }, onCellValueChanged })
+      );
+      const event = makeEvent('NewName\t42');
+      act(() => { result.current.handlePasteEvent(event); });
+
+      expect(event.preventDefault).toHaveBeenCalledTimes(1);
+      expect(readTextMock).not.toHaveBeenCalled();
+      expect(onCellValueChanged).toHaveBeenCalledTimes(2);
+      expect(onCellValueChanged).toHaveBeenNthCalledWith(1, expect.objectContaining({ rowIndex: 1, columnId: 'name', newValue: 'NewName' }));
+      expect(onCellValueChanged).toHaveBeenNthCalledWith(2, expect.objectContaining({ rowIndex: 1, columnId: 'score', newValue: '42' }));
+    });
+
+    it('falls back to the in-page copy when the event carries no text (plain http)', () => {
+      const onCellValueChanged = jest.fn();
+      const { result, rerender } = renderHook(
+        ({ activeCell }: { activeCell: { rowIndex: number; columnIndex: number } }) =>
+          useClipboard({ items, visibleCols: editableCols, colOffset: 0, selectionRange: null, activeCell, onCellValueChanged }),
+        { initialProps: { activeCell: { rowIndex: 0, columnIndex: 0 } } }
+      );
+      act(() => { result.current.handleCopy(); }); // single active cell: 'Alice'
+      rerender({ activeCell: { rowIndex: 1, columnIndex: 0 } });
+      const event = makeEvent('');
+      act(() => { result.current.handlePasteEvent(event); });
+
+      expect(event.preventDefault).toHaveBeenCalledTimes(1);
+      expect(onCellValueChanged).toHaveBeenCalledTimes(1);
+      expect(onCellValueChanged).toHaveBeenCalledWith(expect.objectContaining({ rowIndex: 1, columnId: 'name', newValue: 'Alice' }));
+    });
+
+    it('does nothing (and leaves the default) when the grid is read-only or has no change handler', () => {
+      const onCellValueChanged = jest.fn();
+      const { result: readOnly } = renderHook(() =>
+        useClipboard({ items, visibleCols: editableCols, colOffset: 0, selectionRange: null, activeCell: { rowIndex: 0, columnIndex: 0 }, editable: false, onCellValueChanged })
+      );
+      const { result: noHandler } = renderHook(() =>
+        useClipboard({ items, visibleCols: editableCols, colOffset: 0, selectionRange: null, activeCell: { rowIndex: 0, columnIndex: 0 }, onCellValueChanged: undefined })
+      );
+      const e1 = makeEvent('X');
+      const e2 = makeEvent('X');
+      act(() => { readOnly.current.handlePasteEvent(e1); });
+      act(() => { noHandler.current.handlePasteEvent(e2); });
+      expect(e1.preventDefault).not.toHaveBeenCalled();
+      expect(e2.preventDefault).not.toHaveBeenCalled();
+      expect(onCellValueChanged).not.toHaveBeenCalled();
+    });
+
+    it('clears a pending cut when the event text is what the cut copied', () => {
+      const onCellValueChanged = jest.fn();
+      const { result, rerender } = renderHook(
+        ({ activeCell }: { activeCell: { rowIndex: number; columnIndex: number } }) =>
+          useClipboard({ items, visibleCols: editableCols, colOffset: 0, selectionRange: null, activeCell, onCellValueChanged }),
+        { initialProps: { activeCell: { rowIndex: 0, columnIndex: 0 } } }
+      );
+      act(() => { result.current.handleCut(); });
+      expect(result.current.cutRange).not.toBeNull();
+      rerender({ activeCell: { rowIndex: 1, columnIndex: 0 } });
+      // The event carries the cut cell's own text ('Alice'), so the source is cleared.
+      act(() => { result.current.handlePasteEvent(makeEvent('Alice')); });
+
+      const changes = onCellValueChanged.mock.calls.map((c) => ({ rowIndex: c[0].rowIndex, columnId: c[0].columnId, newValue: c[0].newValue }));
+      expect(changes).toEqual([
+        { rowIndex: 1, columnId: 'name', newValue: 'Alice' },
+        { rowIndex: 0, columnId: 'name', newValue: '' },
+      ]);
+      expect(result.current.cutRange).toBeNull();
+    });
+  });
+
   describe('paste validation (valueParser)', () => {
     type Item = { id: string; name: string; score: number; status: string };
     const editableItems: Item[] = [
