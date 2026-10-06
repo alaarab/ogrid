@@ -15,7 +15,7 @@ for (const version of versions) {
 }
 const packed = await mkdtemp(join(tmpdir(), 'ogrid-react-compat-'));
 try {
-  const names = ['core', 'react', 'react-radix', 'react-fluent'];
+  const names = ['core', 'inputs', 'react', 'react-radix', 'react-fluent', 'react-inputs'];
   const output = execFileSync('npm', ['pack', '--offline', '--ignore-scripts', '--json', '--pack-destination', packed, ...names.flatMap(name => ['--workspace', join(root, 'packages', name)])], { cwd: root, encoding: 'utf8', timeout: 180_000, killSignal: 'SIGKILL' });
   const tarballs = JSON.parse(output).map(pkg => join(packed, pkg.filename));
   for (const version of versions) {

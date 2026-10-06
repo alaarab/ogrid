@@ -74,6 +74,7 @@ jobs:
       - name: Check package compatibility
         run: |
           bun run check:types
+          bun run check:exports
           bun run test:react-compat
 
       - name: Install Playwright Chromium

@@ -6,6 +6,11 @@ All notable changes to OGrid will be documented in this file.
 
 ### Changed
 
+- Add `check:exports`, a static public-API check run in CI and before publishing:
+  the Radix and Fluent kits must export identical names, hook `Params`/`Result`
+  types must travel with their hooks, and every name the docs import from an
+  OGrid package must exist. The React 17/18 packed-package check now also
+  renders a premium popover editor from `@alaarab/ogrid-react-inputs`.
 - Refresh workspace dependencies and the Bun lockfile, including React 19.3,
   Fluent UI, the MCP SDK, Zod, build/test tooling, and Size Limit 14 with the
   esbuild plugin to preserve CSS-inclusive bundle checks. Update CI
