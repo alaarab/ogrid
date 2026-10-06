@@ -208,12 +208,15 @@ export function createFormulaTests(OGrid: React.ComponentType<IOGridProps<Row>>)
     });
 
     it('recalculates dependents after a paste', async () => {
-      const readText = jest.fn().mockResolvedValue('7');
-      Object.defineProperty(navigator, 'clipboard', { value: { readText }, configurable: true });
       const { container } = renderGrid();
       activate(container, 2, 'qty');
+      const grid = container.querySelector('[role="region"]') as HTMLElement;
+      grid.focus();
+      // Ctrl+V reaches the grid as the browser's native paste event.
+      const paste = new Event('paste', { bubbles: true, cancelable: true });
+      Object.defineProperty(paste, 'clipboardData', { value: { getData: () => '7' } });
       await act(async () => {
-        gridKey(container, { key: 'v', ctrlKey: true });
+        fireEvent(grid, paste);
       });
       await waitFor(() => expect(text(container, 2, 'total')).toBe('140'));
     });

@@ -32,6 +32,7 @@ describe('useKeyboardNavigation', () => {
       handleCopy: (overrides.handleCopy !== undefined ? overrides.handleCopy : jest.fn()) as jest.Mock,
       handleCut: (overrides.handleCut !== undefined ? overrides.handleCut : jest.fn()) as jest.Mock,
       handlePaste: (overrides.handlePaste !== undefined ? overrides.handlePaste : jest.fn().mockResolvedValue(undefined)) as jest.Mock,
+      handlePasteEvent: (overrides.handlePasteEvent !== undefined ? overrides.handlePasteEvent : jest.fn()) as jest.Mock,
       setContextMenu: (overrides.setContextMenu !== undefined ? overrides.setContextMenu : jest.fn()) as jest.Mock,
       onUndo: overrides.onUndo as (() => void) | undefined,
       onRedo: overrides.onRedo as (() => void) | undefined,
@@ -828,6 +829,7 @@ describe('useKeyboardNavigation event targets, Tab and anchors', () => {
       handleCopy: jest.fn(),
       handleCut: jest.fn(),
       handlePaste: jest.fn().mockResolvedValue(undefined),
+      handlePasteEvent: jest.fn(),
       setContextMenu: jest.fn(),
     };
     const onCellValueChanged = jest.fn();
@@ -849,8 +851,49 @@ describe('useKeyboardNavigation event targets, Tab and anchors', () => {
       act(() => { result.current.handleGridKeyDown(e as unknown as React.KeyboardEvent); });
       return e;
     };
-    return { state, handlers, onCellValueChanged, press, find, wrapper };
+    const paste = (target: Element = wrapper) => {
+      const e = {
+        target, currentTarget: wrapper,
+        clipboardData: { getData: () => 'pasted' },
+        preventDefault: jest.fn(),
+      };
+      act(() => { result.current.handleGridPaste(e as unknown as React.ClipboardEvent); });
+      return e;
+    };
+    return { state, handlers, onCellValueChanged, press, paste, find, wrapper };
   }
+
+  describe('paste', () => {
+    it('Ctrl+V on the grid is left to the browser so the native paste event follows', () => {
+      const t = setup();
+      const e = t.press('v', t.wrapper, { ctrlKey: true });
+      expect(e.preventDefault).not.toHaveBeenCalled();
+      expect(t.handlers.handlePaste).not.toHaveBeenCalled();
+      expect(t.handlers.handlePasteEvent).not.toHaveBeenCalled();
+    });
+
+    it('handleGridPaste hands a paste on the wrapper or a body cell to the clipboard handler', () => {
+      const t = setup();
+      const onWrapper = t.paste();
+      const onCell = t.paste(t.find('cell-btn').parentElement as Element);
+      expect(t.handlers.handlePasteEvent).toHaveBeenCalledTimes(2);
+      expect(t.handlers.handlePasteEvent).toHaveBeenCalledWith(onWrapper);
+      expect(t.handlers.handlePasteEvent).toHaveBeenCalledWith(onCell);
+    });
+
+    it('handleGridPaste leaves pastes aimed at an editor, a header input or an open editor alone', () => {
+      const t = setup();
+      t.paste(t.find('editor-input'));
+      t.paste(t.find('hdr-input'));
+      t.paste(t.find('portal-input'));
+      expect(t.handlers.handlePasteEvent).not.toHaveBeenCalled();
+
+      t.state.editingCell = { rowId: '0', columnId: 'name' };
+      const e = t.paste();
+      expect(t.handlers.handlePasteEvent).not.toHaveBeenCalled();
+      expect(e.preventDefault).not.toHaveBeenCalled();
+    });
+  });
 
   describe('ignores keystrokes from outside the cell area', () => {
     it('Backspace typed in a portaled filter input does not clear the selected cells', () => {

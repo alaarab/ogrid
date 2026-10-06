@@ -238,16 +238,18 @@ const clipboard = useCellClipboard({
   onCellEdit: (events) => events.forEach(applyEdit),
 });
 
-useEffect(() => {
-  const handler = (e: KeyboardEvent) => {
+// On the focusable grid container. Ctrl/Cmd+V is left to the browser: the
+// native paste event that follows carries the text and needs no clipboard
+// permission, unlike `pasteRange()` (for buttons and menus).
+<div
+  tabIndex={0}
+  onPaste={clipboard.onPaste}
+  onKeyDown={(e) => {
     const mod = e.metaKey || e.ctrlKey;
     if (mod && e.key === 'c') clipboard.copyRange();
     if (mod && e.key === 'x') clipboard.cutRange();
-    if (mod && e.key === 'v') clipboard.pasteRange();
-  };
-  document.addEventListener('keydown', handler);
-  return () => document.removeEventListener('keydown', handler);
-}, [clipboard]);
+  }}
+>
 ```
 
 ## Undo / redo — `useUndoRedo`

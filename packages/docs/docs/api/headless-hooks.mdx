@@ -256,7 +256,8 @@ useEffect(() => {
     const mod = e.metaKey || e.ctrlKey;
     if (mod && e.key === 'c') clipboard.copyRange();
     if (mod && e.key === 'x') clipboard.cutRange();
-    if (mod && e.key === 'v') clipboard.pasteRange();
+    // Ctrl/Cmd+V: leave it to the browser and attach `onPaste={clipboard.onPaste}`
+    // to the grid container instead; it reads the native paste event.
   };
   document.addEventListener('keydown', handler);
   return () => document.removeEventListener('keydown', handler);
@@ -284,8 +285,9 @@ keep their pasted values.
 
 | Field | Description |
 |---|---|
-| `copyRange()`, `cutRange()`, `pasteRange()` | Async actions. They resolve (never reject) when the clipboard is unavailable or denied; see `onClipboardError`. |
-| `canPaste` | `boolean` (feature detection). `false` until mounted, so server-rendered markup hydrates cleanly. |
+| `copyRange()`, `cutRange()`, `pasteRange()` | Async actions. They resolve (never reject) when the clipboard is unavailable or denied; see `onClipboardError`. `pasteRange()` reads via `clipboard.readText` and is meant for buttons and menus. |
+| `onPaste(event)` | Native `paste` handler for the grid container. Reads `event.clipboardData` (no permission prompt, works where `readText` is denied), prevents default, pastes like `pasteRange()`. Leaves pastes aimed at inputs inside the container alone. |
+| `canPaste` | `boolean` (feature detection for `readText`, so for `pasteRange()`). `false` until mounted, so server-rendered markup hydrates cleanly. |
 | `activeCutRange`, `activeCopyRange` | Marching-ants tracking |
 | `clearClipboard()` | Dismiss markers (bind to Escape) |
 

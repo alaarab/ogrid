@@ -12,6 +12,7 @@ import type {
   RowSelectionMode,
 } from '../types';
 import type { EditingCell } from './useCellEditing';
+import type { ClipboardPasteEventLike } from './useClipboard';
 import type { ContextMenuPosition } from './useContextMenu';
 
 export interface UseKeyboardNavigationParams<T> {
@@ -41,7 +42,8 @@ export interface UseKeyboardNavigationParams<T> {
     ) => void;
     handleCopy: () => void;
     handleCut: () => void;
-    handlePaste: () => Promise<void>;
+    /** Paste from a native `paste` event; see `handleGridPaste`. */
+    handlePasteEvent: (event: ClipboardPasteEventLike) => void;
     setContextMenu: (pos: ContextMenuPosition | null) => void;
     onUndo?: () => void;
     onRedo?: () => void;
@@ -64,6 +66,13 @@ export interface UseKeyboardNavigationParams<T> {
 
 export interface UseKeyboardNavigationResult {
   handleGridKeyDown: (e: React.KeyboardEvent) => void;
+  /**
+   * `paste` handler for the grid wrapper. Ctrl/Cmd+V and Shift+Insert are left
+   * to the browser in `handleGridKeyDown`, so the native event arrives here
+   * with the clipboard text and is the one place the shortcut pastes from.
+   * Pastes aimed at an open cell editor or any other text input stay with it.
+   */
+  handleGridPaste: (e: React.ClipboardEvent) => void;
 }
 
 /** Text-entry controls: keystrokes typed into these never belong to the grid. */
@@ -86,7 +95,7 @@ const CELL_CONTROL_SELECTOR = 'button, a[href], input, [role="button"], [role="c
  */
 type KeyTargetKind = 'grid' | 'control' | 'editor' | 'outside';
 
-function getKeyTargetKind(e: React.KeyboardEvent): KeyTargetKind {
+function getKeyTargetKind(e: Pick<React.SyntheticEvent, 'target' | 'currentTarget'>): KeyTargetKind {
   const target = e.target as Element | null | undefined;
   const root = e.currentTarget as Element | null | undefined;
   if (target == null || typeof target.closest !== 'function' || target === root) return 'grid';
@@ -114,7 +123,7 @@ export function useKeyboardNavigation<T>(
       const { data, state, handlers, features } = paramsRef.current;
       const { items, visibleCols, colOffset, hasCheckboxCol, visibleColumnCount, getRowId } = data;
       const { activeCell, selectionRange, editingCell, selectedRowIds } = state;
-      const { setActiveCell, setSelectionRange, setEditingCell, handleRowCheckboxChange, handleCopy, handleCut, handlePaste, setContextMenu, onUndo, onRedo, clearClipboardRanges, beginBatch, endBatch } = handlers;
+      const { setActiveCell, setSelectionRange, setEditingCell, handleRowCheckboxChange, handleCopy, handleCut, setContextMenu, onUndo, onRedo, clearClipboardRanges, beginBatch, endBatch } = handlers;
       const { editable, onCellValueChanged, rowSelection, wrapperRef, scrollToIndexRef, onKeyDown, fillDown } = features;
 
       // Consumer intercept: call consumer's handler first; skip grid default if preventDefault() was called
@@ -205,11 +214,12 @@ export function useKeyboardNavigation<T>(
           }
           break;
         case 'v':
-          if (e.ctrlKey || e.metaKey) {
-            if (editingCell != null) break; // let the input handle paste
-            e.preventDefault();
-            void handlePaste();
-          }
+          // Ctrl/Cmd+V is deliberately not handled (and not prevented) here:
+          // the browser follows it with a native `paste` event that carries the
+          // clipboard text, and handleGridPaste pastes from that. Reading the
+          // clipboard here as well would paste twice, and
+          // navigator.clipboard.readText is unavailable on plain http and
+          // denied by default in Firefox/Safari anyway.
           break;
         case 'ArrowDown':
         case 'ArrowUp':
@@ -471,5 +481,17 @@ export function useKeyboardNavigation<T>(
     [] // stable  -  reads latest values from paramsRef
   );
 
-  return { handleGridKeyDown };
+  const handleGridPaste = useCallback(
+    (e: React.ClipboardEvent) => {
+      const { state, handlers } = paramsRef.current;
+      const targetKind = getKeyTargetKind(e);
+      // Editors and other text inputs (header filters, popovers) own their paste.
+      if (targetKind === 'editor' || targetKind === 'outside') return;
+      if (state.editingCell != null) return;
+      handlers.handlePasteEvent(e);
+    },
+    [] // stable  -  reads latest values from paramsRef
+  );
+
+  return { handleGridKeyDown, handleGridPaste };
 }
