@@ -6,6 +6,12 @@ All notable changes to OGrid will be documented in this file.
 
 ### Added
 
+- `@alaarab/ogrid-react-radix` and `-react-fluent` publish a CSS-free entry
+  under the `"node"` export condition, so Vite SSR (dev and `vite build --ssr`)
+  and Vitest can load the kits. Bundlers still resolve the styled entry.
+- Premium editors: DatePicker and DateTimePicker day grids and ColorPicker
+  swatches are keyboard-operable (arrows, Home/End, PageUp/PageDown, Enter or
+  Space), and ColorPicker focuses the selected swatch on open.
 - `dataSourceKey` prop (also on `useHeadlessGrid` and `useFilterOptions`):
   when set, only a key change refetches, resets the windowed cache or reloads
   filter options. Without it, an inline `dataSource` object whose properties
@@ -35,6 +41,15 @@ All notable changes to OGrid will be documented in this file.
 
 ### Fixed
 
+- Date-time and time pickers write values back in the stored shape: ISO
+  separator, seconds and fraction, the original time zone, and `Date` or epoch
+  number types are kept. TimePicker reads values like `"14:30:00"`.
+- The column-letter row's checkbox and row-number spacers are sticky, so
+  column letters no longer slide over those columns when scrolling sideways.
+  Fluent no longer shows a 1px seam beside sticky columns.
+- MCP: the live bridge reads state from `IOGridApi` alone (`getData` and
+  related options are optional), and `detect_version` reports the installed
+  package version and flags a minor-version mismatch with the docs server.
 - Formulas work with host-controlled undo (`onUndo`/`onRedo`): formula edits,
   paste, fill and formula-bar writes are reported through
   `onCellValueChanged` (with the formula text) so the host history records
@@ -76,6 +91,11 @@ All notable changes to OGrid will be documented in this file.
 
 ### Changed
 
+- The Fluent kit uses the separate border model, like Radix, to fix the sticky
+  column seam. Borders next to right-pinned columns may look slightly heavier.
+- Browser tests serve the example apps as production builds and run the
+  labeled-filter cases on Fluent too. Fluent e2e time dropped from about 13 to
+  about 2 minutes.
 - With host-controlled undo and formulas, `onCellValueChanged` receives formula
   text (for example `=A1*2`) as `newValue` and the host stores it in its data.
 - `useHeadlessGrid`, `useInlineEdit`, `useFillHandle` and `useCellClipboard`
