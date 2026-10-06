@@ -841,9 +841,8 @@ test.describe('Column resize', () => {
 });
 
 test.describe('Clipboard', () => {
-  // Paste reads the system clipboard. A rejected read (no permission) aborts the
-  // paste rather than falling back to a possibly stale in-page copy, so grant it.
-  test.use({ permissions: ['clipboard-read', 'clipboard-write'] });
+  // The shortcuts ride the browser's native copy/cut/paste events, which need
+  // no clipboard permission. ControlOrMeta: on macOS only Cmd+C/V fire them.
 
   test.beforeEach(async ({ page }) => {
     await page.goto('/');
@@ -855,7 +854,7 @@ test.describe('Clipboard', () => {
     await cell.click();
 
     const region = getGridRegion(page);
-    await region.press('Control+c');
+    await region.press('ControlOrMeta+c');
 
     // Marching ants SVG appears as an absolutely-positioned overlay
     const svg = page.locator('svg').first();
@@ -879,13 +878,33 @@ test.describe('Clipboard', () => {
 
     // Copy it
     const region = getGridRegion(page);
-    await region.press('Control+c');
+    await region.press('ControlOrMeta+c');
 
     // Navigate to cell [1,0] and paste
     const cell10 = getCellContent(page, 1, 0);
     await cell10.click();
-    await region.press('Control+v');
+    await region.press('ControlOrMeta+v');
     await expect.poll(async () => (await getDataCell(page, 1, 'name').textContent()) ?? '').toContain('!Clipboard Value');
+  });
+
+  test('Ctrl+C fills the native copy event (no navigator.clipboard needed)', async ({ page }) => {
+    // Runs after the grid's handler (React listens on its root, below document).
+    await page.evaluate(() => {
+      const w = window as unknown as { copies: { prevented: boolean; text: string }[] };
+      w.copies = [];
+      document.addEventListener('copy', (e) => {
+        w.copies.push({ prevented: e.defaultPrevented, text: e.clipboardData?.getData('text/plain') ?? '' });
+      });
+    });
+    const cell = getCellContent(page, 0, 0);
+    await cell.click();
+    const expected = ((await getDataCell(page, 0, 'name').textContent()) ?? '').trim();
+
+    await getGridRegion(page).press('ControlOrMeta+c');
+
+    await expect
+      .poll(() => page.evaluate(() => (window as unknown as { copies: unknown[] }).copies))
+      .toEqual([{ prevented: true, text: expected }]);
   });
 });
 

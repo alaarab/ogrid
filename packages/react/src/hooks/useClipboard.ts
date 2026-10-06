@@ -36,9 +36,28 @@ export type ClipboardPasteEventLike = {
   preventDefault: () => void;
 };
 
+/** The parts of a native or React `ClipboardEvent` the copy and cut handlers use. */
+export type ClipboardCopyEventLike = {
+  clipboardData: Pick<DataTransfer, 'setData'> | null;
+  preventDefault: () => void;
+};
+
 export interface UseClipboardResult {
+  /**
+   * Programmatic copy (context menu): writes the TSV with
+   * `navigator.clipboard.writeText`, which needs a secure context.
+   */
   handleCopy: () => void;
+  /** Programmatic cut (context menu); see `handleCopy`. */
   handleCut: () => void;
+  /**
+   * Copy from a native `copy` event (Ctrl/Cmd+C). Puts the TSV on
+   * `event.clipboardData` (works on plain http, no permission) and calls
+   * `preventDefault()`. Same state changes as `handleCopy`.
+   */
+  handleCopyEvent: (event: ClipboardCopyEventLike) => void;
+  /** Cut from a native `cut` event (Ctrl/Cmd+X); see `handleCopyEvent`. */
+  handleCutEvent: (event: ClipboardCopyEventLike) => void;
   /**
    * Programmatic paste (context menu): reads the system clipboard with
    * `navigator.clipboard.readText`, which needs a secure context and, in
@@ -87,6 +106,23 @@ function resolveCutCells<T>(
     }
   }
   return events;
+}
+
+// navigator.clipboard is undefined outside secure contexts (plain http);
+// the in-page clipboard still makes copy/paste work there.
+function writeSystemClipboard(tsv: string | null): void {
+  if (tsv != null) void navigator.clipboard?.writeText(tsv).catch(() => {});
+}
+
+/** Put the TSV on the event's clipboardData; falls back to writeText if the event has none. */
+function fillClipboardEvent(event: ClipboardCopyEventLike, tsv: string | null): void {
+  if (tsv == null) return;
+  if (event.clipboardData) {
+    event.clipboardData.setData('text/plain', tsv);
+    event.preventDefault();
+  } else {
+    writeSystemClipboard(tsv);
+  }
 }
 
 /**
@@ -156,9 +192,10 @@ export function useClipboard<T>(params: UseClipboardParams<T>): UseClipboardResu
       : null;
   }, [colOffset, selectionRangeRef, activeCellRef]);
 
-  const handleCopy = useCallback(() => {
+  /** Mark the effective range as copied and fill the in-page clipboard. Returns the TSV, or null with no range. */
+  const copySelection = useCallback((): string | null => {
     const range = getEffectiveRange();
-    if (range == null) return;
+    if (range == null) return null;
     const norm = normalizeSelectionRange(range);
     const formulaOptions = formulasRef.current && flatColumnsRef.current
       ? {
@@ -174,18 +211,17 @@ export function useClipboard<T>(params: UseClipboardParams<T>): UseClipboardResu
     cutSourceRef.current = null;
     setCutRange(null);
     setCopyRange(norm);
-    // navigator.clipboard is undefined outside secure contexts (plain http);
-    // the internal clipboard above still makes copy/paste work in-page.
-    void navigator.clipboard?.writeText(tsv).catch(() => {});
+    return tsv;
   }, [getEffectiveRange, itemsRef, visibleColsRef, formulasRef, flatColumnsRef, getFormulaRef, hasFormulaRef, colOffset]);
 
-  const handleCut = useCallback(() => {
-    if (editableRef.current === false) return;
+  /** Copy, then register the range as a pending cut. Returns the TSV, or null when cut is not allowed. */
+  const cutSelection = useCallback((): string | null => {
+    if (editableRef.current === false) return null;
     const range = getEffectiveRange();
-    if (range == null || onCellValueChangedRef.current == null) return;
+    if (range == null || onCellValueChangedRef.current == null) return null;
     const norm = normalizeSelectionRange(range);
-    // handleCopy clears any pending cut; the new cut is registered after it.
-    handleCopy();
+    // copySelection clears any pending cut; the new cut is registered after it.
+    const tsv = copySelection() ?? '';
     const items = itemsRef.current;
     const visibleCols = visibleColsRef.current;
     const rowKeys: unknown[] = [];
@@ -195,11 +231,28 @@ export function useClipboard<T>(params: UseClipboardParams<T>): UseClipboardResu
     }
     const columnIds: string[] = [];
     for (let c = norm.startCol; c <= norm.endCol; c++) columnIds.push(visibleCols[c]?.columnId ?? '');
-    cutSourceRef.current = { range: norm, rowKeys, columnIds, tsv: internalClipboardRef.current ?? '' };
+    cutSourceRef.current = { range: norm, rowKeys, columnIds, tsv };
     setCutRange(norm);
-    // handleCopy sets copyRange  -  override it back since this is a cut
+    // copySelection sets copyRange  -  override it back since this is a cut
     setCopyRange(null);
-  }, [getEffectiveRange, handleCopy, editableRef, onCellValueChangedRef, itemsRef, visibleColsRef, rowKeyOf]);
+    return tsv;
+  }, [getEffectiveRange, copySelection, editableRef, onCellValueChangedRef, itemsRef, visibleColsRef, rowKeyOf]);
+
+  const handleCopy = useCallback(() => {
+    writeSystemClipboard(copySelection());
+  }, [copySelection]);
+
+  const handleCut = useCallback(() => {
+    writeSystemClipboard(cutSelection());
+  }, [cutSelection]);
+
+  const handleCopyEvent = useCallback((event: ClipboardCopyEventLike) => {
+    fillClipboardEvent(event, copySelection());
+  }, [copySelection]);
+
+  const handleCutEvent = useCallback((event: ClipboardCopyEventLike) => {
+    fillClipboardEvent(event, cutSelection());
+  }, [cutSelection]);
 
   /** Apply clipboard text at the selection anchor: values, formulas, pending cut, undo batch. */
   const pasteText = useCallback((text: string) => {
@@ -294,5 +347,5 @@ export function useClipboard<T>(params: UseClipboardParams<T>): UseClipboardResu
     cutSourceRef.current = null;
   }, []);
 
-  return { handleCopy, handleCut, handlePaste, handlePasteEvent, cutRange, copyRange, clearClipboardRanges };
+  return { handleCopy, handleCut, handleCopyEvent, handleCutEvent, handlePaste, handlePasteEvent, cutRange, copyRange, clearClipboardRanges };
 }

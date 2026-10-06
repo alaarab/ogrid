@@ -171,6 +171,8 @@ export function BaseDataGridTableInner<T>(
         onContextMenu={PREVENT_DEFAULT}
         onKeyDown={handleGridKeyDown}
         onPaste={interaction.handleGridPaste}
+        onCopy={interaction.handleGridCopy}
+        onCut={interaction.handleGridCut}
         style={{
           ['--data-table-column-count' as string]: totalColCount,
           ['--data-table-width' as string]: showEmptyInGrid ? '100%' : allowOverflowX ? 'fit-content' : fitToContent ? 'fit-content' : '100%',
