@@ -1,6 +1,6 @@
 {
   "name": "@alaarab/ogrid-docs",
-  "version": "2.17.3",
+  "version": "2.18.0",
   "private": true,
   "scripts": {
     "start": "docusaurus start",
@@ -10,11 +10,11 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@alaarab/ogrid-react": "2.17.3",
-    "@alaarab/ogrid-react-fluent": "2.17.3",
-    "@alaarab/ogrid-react-inputs": "2.17.3",
-    "@alaarab/ogrid-react-radix": "2.17.3",
-    "@alaarab/ogrid-react-xlsx": "2.17.3",
+    "@alaarab/ogrid-react": "2.18.0",
+    "@alaarab/ogrid-react-fluent": "2.18.0",
+    "@alaarab/ogrid-react-inputs": "2.18.0",
+    "@alaarab/ogrid-react-radix": "2.18.0",
+    "@alaarab/ogrid-react-xlsx": "2.18.0",
     "@docusaurus/core": "^3.10.2",
     "@docusaurus/preset-classic": "^3.10.2",
     "@docusaurus/theme-mermaid": "^3.10.2",
