@@ -108,4 +108,58 @@ describe('DateTimePickerEditor', () => {
       expect(props.onValueChange).toHaveBeenLastCalledWith('2024-01-15 14:30');
     });
   });
+
+  describe('I04 - calendar days are keyboard operable', () => {
+    it('arrows move focus and Enter selects the day without committing', () => {
+      const { props } = renderEditor({ value: '2024-01-15 2:30 PM' });
+      const start = screen.getByRole('button', { name: 'January 15, 2024' });
+      expect(start).toHaveAttribute('tabindex', '0');
+      fireEvent.keyDown(start, { key: 'ArrowRight' });
+      const next = screen.getByRole('button', { name: 'January 16, 2024' });
+      expect(next).toHaveFocus();
+      fireEvent.keyDown(next, { key: 'Enter' });
+      expect(props.onValueChange).toHaveBeenLastCalledWith('2024-01-16 2:30 PM');
+      expect(props.onCommit).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('I10 - other stored shapes are preserved', () => {
+    async function recommit(value: unknown) {
+      const user = userEvent.setup();
+      const { props } = renderEditor({ value });
+      await user.click(getInput());
+      await user.keyboard('{Enter}');
+      return props.onValueChange as jest.Mock;
+    }
+
+    it('re-commits an ISO value with its T separator and seconds', async () => {
+      expect(await recommit('2024-01-15T10:30:45')).toHaveBeenLastCalledWith('2024-01-15T10:30:45');
+    });
+
+    it('re-commits a UTC value as the same UTC instant', async () => {
+      expect(await recommit('2024-01-15T18:30:00.000Z')).toHaveBeenLastCalledWith('2024-01-15T18:30:00.000Z');
+    });
+
+    it('writes an edited UTC value back in UTC', () => {
+      const { props } = renderEditor({ value: '2024-01-15T18:30:00Z' });
+      // Pick the next local day, whatever the test machine's zone is.
+      const next = new Date('2024-01-15T18:30:00Z');
+      next.setDate(next.getDate() + 1);
+      const label = next.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
+      fireEvent.click(screen.getByRole('button', { name: label }));
+      expect(props.onValueChange).toHaveBeenLastCalledWith('2024-01-16T18:30:00Z');
+    });
+
+    it('keeps a Date cell a Date', async () => {
+      const onValueChange = await recommit(new Date(2024, 0, 15, 10, 30, 12));
+      const emitted = onValueChange.mock.calls.at(-1)?.[0];
+      expect(emitted).toBeInstanceOf(Date);
+      expect((emitted as Date).getTime()).toBe(new Date(2024, 0, 15, 10, 30, 12).getTime());
+    });
+
+    it('keeps an epoch-millisecond cell a number', async () => {
+      const epoch = new Date(2024, 0, 15, 10, 30).getTime();
+      expect(await recommit(epoch)).toHaveBeenLastCalledWith(epoch);
+    });
+  });
 });

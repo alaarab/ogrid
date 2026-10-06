@@ -15,6 +15,7 @@
 import * as React from 'react';
 import type { ICellEditorProps } from '@alaarab/ogrid-core';
 import { getCalendarGrid, formatDate, parseDate, DAY_NAMES, MONTH_NAMES } from './calendar-utils';
+import { useCalendarKeyboard } from '../shared/useCalendarKeyboard';
 
 // ── Styles (inline to avoid CSS file dependency  -  keeps package sideEffects: false) ──
 
@@ -195,6 +196,14 @@ export function DatePickerEditor<T>(props: ICellEditorProps<T>): React.ReactElem
     }
   };
 
+  const { gridRef, getDayProps } = useCalendarKeyboard({
+    viewYear,
+    viewMonth,
+    setView: (y, m) => { setViewYear(y); setViewMonth(m); },
+    selectedDate,
+    onSelect: selectDay,
+  });
+
   const handleToday = () => {
     const t = new Date();
     selectDay(t.getFullYear(), t.getMonth(), t.getDate());
@@ -221,7 +230,7 @@ export function DatePickerEditor<T>(props: ICellEditorProps<T>): React.ReactElem
     if (commitTimerRef.current) clearTimeout(commitTimerRef.current);
   }, []);
 
-  // Keyboard navigation for the calendar
+  // Escape cancels from anywhere in the editor (day keys: useCalendarKeyboard)
   React.useEffect(() => {
     const handleGlobalKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
@@ -267,7 +276,7 @@ export function DatePickerEditor<T>(props: ICellEditorProps<T>): React.ReactElem
       </div>
 
       {/* Calendar grid */}
-      <div style={gridStyle}>
+      <div ref={gridRef} style={gridStyle}>
         {/* Day headers */}
         {DAY_NAMES.map((d) => (
           <div key={d} style={dayHeaderStyle}>{d}</div>
@@ -304,7 +313,7 @@ export function DatePickerEditor<T>(props: ICellEditorProps<T>): React.ReactElem
               onClick={() => selectDay(day.year, day.month, day.date)}
               onMouseEnter={() => setHoveredCell(key)}
               onMouseLeave={() => setHoveredCell(null)}
-              tabIndex={-1}
+              {...getDayProps(day)}
               aria-label={`${MONTH_NAMES[day.month]} ${day.date}, ${day.year}`}
               aria-pressed={isSelected}
               aria-current={day.isToday ? 'date' : undefined}

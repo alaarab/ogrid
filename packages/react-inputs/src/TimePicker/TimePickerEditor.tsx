@@ -14,11 +14,10 @@
  * Implements ICellEditorProps<T>  -  works with cellEditorPopup: true.
  */
 import * as React from 'react';
+import { formatStoredTime, parseStoredTime } from '../shared/stored-format';
+import type { StoredTimeFormat } from '../shared/stored-format';
 import type { ICellEditorProps } from '@alaarab/ogrid-core';
 import {
-  parseTime,
-  formatTime12,
-  formatTime24,
   toHour12,
   toAmPm,
   fromHour12,
@@ -134,23 +133,20 @@ export function TimePickerEditor<T>(props: ICellEditorProps<T>): React.ReactElem
   const minuteStep = Number.isFinite(rawStep) && rawStep >= 1 ? Math.floor(rawStep) : 1;
 
   // Preserve the stored format: a 24-hour value (e.g. "14:30") should not be
-  // rewritten as 12-hour ("2:30 PM") just by opening and committing.
-  const use24Hour = React.useMemo(() => {
-    const raw = String(value ?? '').trim();
-    return raw !== '' && parseTime(raw) !== null && !/am|pm/i.test(raw);
-  }, [value]);
+  // rewritten as 12-hour ("2:30 PM"), and "14:30:00" keeps its seconds.
+  // Read once at mount: `value` follows the pending edit afterwards.
+  const [stored] = React.useState(() => parseStoredTime(String(value ?? '')));
+  const storedFormat: StoredTimeFormat = stored?.format ?? { hour12: true, seconds: null };
+  const initialTime = stored?.time ?? null;
 
   const parseInitial = (): TimeValue => {
-    const parsed = parseTime(String(value ?? ''));
-    if (parsed) return parsed;
+    if (initialTime) return initialTime;
     const now = new Date();
     return { hours: now.getHours(), minutes: Math.floor(now.getMinutes() / minuteStep) * minuteStep };
   };
 
-  const formatValue = React.useCallback(
-    (tv: TimeValue) => (use24Hour ? formatTime24(tv) : formatTime12(tv)),
-    [use24Hour],
-  );
+  const formatValue = (tv: TimeValue) => formatStoredTime(tv, storedFormat, initialTime);
+  const parseTyped = (text: string): TimeValue | null => parseStoredTime(text)?.time ?? null;
 
   const [time, setTime] = React.useState<TimeValue>(parseInitial);
   const [ampm, setAmpm] = React.useState<AmPm>(toAmPm(time.hours));
@@ -164,13 +160,13 @@ export function TimePickerEditor<T>(props: ICellEditorProps<T>): React.ReactElem
   const hourOptions = getHour12Options();
   const minuteOptions = getMinuteOptions(minuteStep);
 
-  const applyTime = React.useCallback((h12: number, min: number, ap: AmPm) => {
+  const applyTime = (h12: number, min: number, ap: AmPm) => {
     const h24 = fromHour12(h12, ap);
     const tv: TimeValue = { hours: h24, minutes: min };
     const formatted = formatValue(tv);
     setInputText(formatted);
     onValueChange(formatted);
-  }, [onValueChange, formatValue]);
+  };
 
   const handleHourSelect = (h: number) => {
     setHour12(h);
@@ -192,7 +188,7 @@ export function TimePickerEditor<T>(props: ICellEditorProps<T>): React.ReactElem
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const text = e.target.value;
     setInputText(text);
-    const parsed = parseTime(text);
+    const parsed = parseTyped(text);
     if (parsed) {
       setTime(parsed);
       setHour12(toHour12(parsed.hours));
@@ -207,7 +203,7 @@ export function TimePickerEditor<T>(props: ICellEditorProps<T>): React.ReactElem
       e.stopPropagation();
       // Only commit parseable text (in the detected format); otherwise refuse
       // so raw garbage like "25:99" is never stored.
-      const parsed = parseTime(inputText);
+      const parsed = parseTyped(inputText);
       if (!parsed) return;
       setTime(parsed);
       setHour12(toHour12(parsed.hours));

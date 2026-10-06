@@ -26,6 +26,9 @@ import {
 } from '../TimePicker/timepicker-utils';
 import type { AmPm, TimeValue } from '../TimePicker/timepicker-utils';
 import { parseDateTime, formatDateTime } from './datetime-utils';
+import type { DateTimeValue } from './datetime-utils';
+import { useCalendarKeyboard } from '../shared/useCalendarKeyboard';
+import { detectDateTimeFormat, toStoredDateTime } from '../shared/stored-format';
 
 // ── Styles ──
 
@@ -196,15 +199,15 @@ export function DateTimePickerEditor<T>(props: ICellEditorProps<T>): React.React
 
   const today = new Date();
 
-  // Preserve the stored format: a 24-hour value should not be rewritten as 12-hour.
-  const use24Hour = React.useMemo(() => {
-    const raw = String(value ?? '').trim();
-    return raw !== '' && parseDateTime(value as string | number | Date | null | undefined) !== null && !/am|pm/i.test(raw);
-  }, [value]);
+  // Preserve the stored format: 24-hour values stay 24-hour, ISO values keep
+  // their "T", seconds and time zone, Date and epoch cells stay Date/number.
+  // Both are read once at mount: `value` follows the pending edit afterwards.
+  const [storedFormat] = React.useState(() => detectDateTimeFormat(value));
+  const use24Hour = !storedFormat.hour12;
 
-  const parseInitial = () => parseDateTime(value as string | number | Date | null | undefined);
-
-  const initial = parseInitial();
+  const [initial] = React.useState(
+    () => parseDateTime(value as string | number | Date | null | undefined),
+  );
   const base = initial ?? {
     year: today.getFullYear(),
     month: today.getMonth(),
@@ -213,10 +216,15 @@ export function DateTimePickerEditor<T>(props: ICellEditorProps<T>): React.React
     minutes: Math.floor(today.getMinutes() / minuteStep) * minuteStep,
   };
 
+  // Text shown in the input (local wall time).
   const formatValue = React.useCallback(
-    (dt: { year: number; month: number; date: number; hours: number; minutes: number }) =>
-      formatDateTime(dt, use24Hour),
+    (dt: DateTimeValue) => formatDateTime(dt, use24Hour),
     [use24Hour],
+  );
+  // Value written back to the cell, in the stored shape.
+  const toStored = React.useCallback(
+    (dt: DateTimeValue) => toStoredDateTime(dt, storedFormat, initial),
+    [storedFormat, initial],
   );
 
   const [viewYear, setViewYear] = React.useState(initial?.year ?? base.year);
@@ -250,11 +258,11 @@ export function DateTimePickerEditor<T>(props: ICellEditorProps<T>): React.React
       // Without a chosen date we must not fabricate one (that would overwrite
       // an unparseable stored value with today).
       if (year == null || month == null || date == null) return;
-      const formatted = formatValue({ year, month, date, hours, minutes });
-      setInputText(formatted);
-      onValueChange(formatted);
+      const dt = { year, month, date, hours, minutes };
+      setInputText(formatValue(dt));
+      onValueChange(toStored(dt));
     },
-    [formatValue, onValueChange]
+    [formatValue, toStored, onValueChange]
   );
 
   const prevMonth = () => {
@@ -275,6 +283,14 @@ export function DateTimePickerEditor<T>(props: ICellEditorProps<T>): React.React
     setSelectedDay(date);
     buildAndEmit(year, month, date, time.hours, time.minutes);
   };
+
+  const { gridRef, getDayProps } = useCalendarKeyboard({
+    viewYear,
+    viewMonth,
+    setView: (y, m) => { setViewYear(y); setViewMonth(m); },
+    selectedDate,
+    onSelect: selectDay,
+  });
 
   const handleHourSelect = (h: number) => {
     setHour12(h);
@@ -310,7 +326,7 @@ export function DateTimePickerEditor<T>(props: ICellEditorProps<T>): React.React
     setHour12(toHour12(parsed.hours));
     setAmpm(toAmPm(parsed.hours));
     // Emit so Apply (or a later commit) picks up a valid typed value.
-    onValueChange(formatValue(parsed));
+    onValueChange(toStored(parsed));
   };
 
   const handleInputKeyDown = (e: React.KeyboardEvent) => {
@@ -320,7 +336,7 @@ export function DateTimePickerEditor<T>(props: ICellEditorProps<T>): React.React
       // Only commit parseable text; refuse raw garbage.
       const parsed = parseDateTime(inputText);
       if (!parsed) return;
-      onValueChange(formatValue(parsed));
+      onValueChange(toStored(parsed));
       onCommit();
     }
   };
@@ -421,7 +437,7 @@ export function DateTimePickerEditor<T>(props: ICellEditorProps<T>): React.React
       </div>
 
       {/* Calendar grid */}
-      <div style={gridStyle}>
+      <div ref={gridRef} style={gridStyle}>
         {DAY_NAMES.map((d) => (
           <div key={d} style={dayHeaderStyle}>{d}</div>
         ))}
@@ -450,7 +466,7 @@ export function DateTimePickerEditor<T>(props: ICellEditorProps<T>): React.React
               onClick={() => selectDay(day.year, day.month, day.date)}
               onMouseEnter={() => setHoveredCell(key)}
               onMouseLeave={() => setHoveredCell(null)}
-              tabIndex={-1}
+              {...getDayProps(day)}
               aria-label={`${MONTH_NAMES[day.month]} ${day.date}, ${day.year}`}
               aria-pressed={isSelected}
             >
