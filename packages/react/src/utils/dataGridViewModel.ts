@@ -121,18 +121,24 @@ export interface DelegatedCellHandlers {
   onDoubleClick: (e: React.MouseEvent) => void;
 }
 
+/**
+ * Props for a cell's content element. `focusable` (default true) gives it a
+ * roving tabIndex (0 when active, else -1); `<OGrid>` passes false because the
+ * gridcell `<td>` itself is the focus target there.
+ */
 export function getCellInteractionProps(
   descriptor: CellRenderDescriptor,
   columnId: string,
   handlers: CellInteractionHandlers,
-  delegated?: DelegatedCellHandlers
+  delegated?: DelegatedCellHandlers,
+  focusable = true,
 ) {
   const longPressEnd = handlers.handleLongPressEnd;
 
   const props: Record<string, unknown> = {
     'data-row-index': descriptor.rowIndex,
     'data-col-index': descriptor.globalColIndex,
-    tabIndex: descriptor.isActive ? 0 : -1,
+    tabIndex: focusable ? (descriptor.isActive ? 0 : -1) : undefined,
     onPointerUp: longPressEnd,
     onPointerLeave: longPressEnd,
     onPointerCancel: longPressEnd,

@@ -43,6 +43,16 @@ function getCellAt(container: HTMLElement, rowIndex: number, colIndex: number): 
   return cell;
 }
 
+/** The gridcell <td> that holds roving focus for a body cell. */
+function getTdAt(container: HTMLElement, rowIndex: number, colIndex: number): HTMLElement {
+  return getCellAt(container, rowIndex, colIndex).closest('td') as HTMLElement;
+}
+
+/** Body cells that are tab stops (roving tabindex: exactly one is expected). */
+function getTabStops(container: HTMLElement): HTMLElement[] {
+  return Array.from(container.querySelectorAll<HTMLElement>('tbody td[tabindex="0"]'));
+}
+
 /**
  * Dispatch a native-style `paste` event carrying `text` as text/plain.
  * happy-dom/jsdom may lack ClipboardEvent, so a plain Event gets `clipboardData`.
@@ -838,6 +848,157 @@ export function createSpreadsheetTests(DataGridTable: React.ComponentType<IOGrid
           expect(active[0]!.getAttribute('data-row-index')).toBe('2');
           expect(active[0]!.getAttribute('data-col-index')).toBe('1');
         });
+      });
+    });
+
+    describe('roving focus', () => {
+      const getGrid = (container: HTMLElement) => container.querySelector('[role="region"]') as HTMLElement;
+
+      it('makes exactly one body cell a tab stop: the first data cell before any cell is active', () => {
+        const { container } = renderSpreadsheetGrid();
+        expect(getTabStops(container)).toEqual([getTdAt(container, 0, 0)]);
+        // 3 rows x 2 data columns: every other data cell is focusable but not tabbable.
+        expect(container.querySelectorAll('tbody td[tabindex="-1"]').length).toBe(5);
+        // The wrapper is not a second tab stop while a cell is one.
+        expect(getGrid(container).tabIndex).toBe(-1);
+      });
+
+      it('focusing the tab-stop cell (Tab into the grid) makes it the active cell', async () => {
+        const { container } = renderSpreadsheetGrid();
+        act(() => getTdAt(container, 0, 0).focus());
+        await waitFor(() => {
+          const active = container.querySelector('[data-active-cell="true"]');
+          expect(active?.getAttribute('data-row-index')).toBe('0');
+          expect(active?.getAttribute('data-col-index')).toBe('0');
+        });
+        expect(document.activeElement).toBe(getTdAt(container, 0, 0));
+      });
+
+      it('DOM focus and the tab stop follow arrow keys, Home/End and Tab', async () => {
+        const { container } = renderSpreadsheetGrid();
+        act(() => getTdAt(container, 0, 0).focus());
+        const press = (key: string, init: Record<string, unknown> = {}) =>
+          act(() => { fireEvent.keyDown(document.activeElement as Element, { key, ...init }); });
+
+        press('ArrowDown');
+        expect(document.activeElement).toBe(getTdAt(container, 1, 0));
+        press('ArrowRight');
+        expect(document.activeElement).toBe(getTdAt(container, 1, 1));
+        press('Home', { ctrlKey: true });
+        expect(document.activeElement).toBe(getTdAt(container, 0, 0));
+        press('End', { ctrlKey: true });
+        expect(document.activeElement).toBe(getTdAt(container, 2, 1));
+        press('Tab', { shiftKey: true });
+        expect(document.activeElement).toBe(getTdAt(container, 2, 0));
+        expect(getTabStops(container)).toEqual([getTdAt(container, 2, 0)]);
+      });
+
+      it('Shift+Arrow keeps focus on the active cell (the range anchor)', () => {
+        const { container } = renderSpreadsheetGrid();
+        act(() => getTdAt(container, 0, 0).focus());
+        act(() => { fireEvent.keyDown(document.activeElement as Element, { key: 'ArrowDown', shiftKey: true }); });
+        expect(container.querySelectorAll('[data-in-range="true"]').length).toBe(2);
+        expect(document.activeElement).toBe(getTdAt(container, 0, 0));
+      });
+
+      it('clicking a cell moves DOM focus to it', () => {
+        const { container } = renderSpreadsheetGrid();
+        act(() => {
+          fireEvent.pointerDown(getCellAt(container, 2, 1));
+          fireEvent.click(getCellAt(container, 2, 1));
+        });
+        expect(document.activeElement).toBe(getTdAt(container, 2, 1));
+        expect(getTabStops(container)).toEqual([getTdAt(container, 2, 1)]);
+      });
+
+      it('returns focus to the active cell after an edit commits (Enter) or cancels (Escape)', async () => {
+        const onCellValueChanged = jest.fn();
+        const { container } = renderSpreadsheetGrid({ onCellValueChanged });
+        act(() => getTdAt(container, 1, 0).focus());
+        const openEditor = async () => {
+          act(() => { fireEvent.keyDown(document.activeElement as Element, { key: 'F2' }); });
+          await waitFor(() => expect(getGrid(container).querySelector('input')).toBeInTheDocument());
+          return getGrid(container).querySelector('input') as HTMLInputElement;
+        };
+
+        let input = await openEditor();
+        fireEvent.change(input, { target: { value: 'Committed' } });
+        act(() => { fireEvent.keyDown(input, { key: 'Enter' }); });
+        await waitFor(() => expect(getGrid(container).querySelector('input')).toBeNull());
+        expect(onCellValueChanged).toHaveBeenCalledTimes(1);
+        const afterCommit = container.querySelector('[data-active-cell="true"]')?.closest('td');
+        expect(afterCommit).toBeTruthy();
+        expect(document.activeElement).toBe(afterCommit);
+
+        input = await openEditor();
+        act(() => { fireEvent.keyDown(input, { key: 'Escape' }); });
+        await waitFor(() => expect(getGrid(container).querySelector('input')).toBeNull());
+        expect(document.activeElement).toBe(container.querySelector('[data-active-cell="true"]')?.closest('td'));
+      });
+
+      it('Tab at the last cell is left to the browser so focus can leave the grid', () => {
+        const { container } = renderSpreadsheetGrid();
+        act(() => getTdAt(container, 2, 1).focus());
+        // Not prevented: the browser moves focus to the next tabbable element after the grid.
+        expect(fireEvent.keyDown(getTdAt(container, 2, 1), { key: 'Tab' })).toBe(true);
+        // Mid-grid Tab moves between cells instead.
+        act(() => { fireEvent.keyDown(getTdAt(container, 2, 1), { key: 'Home', ctrlKey: true }); });
+        expect(document.activeElement).toBe(getTdAt(container, 0, 0));
+        expect(fireEvent.keyDown(getTdAt(container, 0, 0), { key: 'Tab' })).toBe(false);
+      });
+
+      it('copy and paste events fired at the focused cell are handled exactly once', async () => {
+        Object.defineProperty(navigator, 'clipboard', { value: undefined, configurable: true });
+        const onCellValueChanged = jest.fn();
+        const { container } = renderSpreadsheetGrid({ onCellValueChanged });
+        act(() => getTdAt(container, 0, 0).focus());
+        let copy = { data: {} as Record<string, string>, setData: jest.fn(), consumed: false };
+        await act(async () => {
+          copy = fireCopyOrCut(document.activeElement as Element, 'copy');
+        });
+        expect(copy.consumed).toBe(true);
+        expect(copy.setData).toHaveBeenCalledTimes(1);
+        expect(copy.data['text/plain']).toBe('Alpha');
+
+        act(() => { fireEvent.keyDown(document.activeElement as Element, { key: 'ArrowDown' }); });
+        let consumed = false;
+        await act(async () => {
+          consumed = !firePaste(document.activeElement as Element, 'Pasted');
+        });
+        expect(consumed).toBe(true);
+        expect(onCellValueChanged).toHaveBeenCalledTimes(1);
+        expect(onCellValueChanged.mock.calls[0][0]).toEqual(expect.objectContaining({ rowIndex: 1, columnId: 'name', newValue: 'Pasted' }));
+      });
+
+      it('Escape clears the active cell but focus and the tab stop stay on that cell', () => {
+        const { container } = renderSpreadsheetGrid();
+        act(() => getTdAt(container, 1, 1).focus());
+        act(() => { fireEvent.keyDown(document.activeElement as Element, { key: 'Escape' }); });
+        expect(container.querySelector('[data-active-cell="true"]')).toBeNull();
+        expect(document.activeElement).toBe(getTdAt(container, 1, 1));
+        expect(getTabStops(container)).toEqual([getTdAt(container, 1, 1)]);
+      });
+
+      it('makes the wrapper the tab stop when the grid has no rows', () => {
+        const { container } = renderSpreadsheetGrid({ items: [] });
+        expect(getTabStops(container)).toEqual([]);
+        expect(getGrid(container).tabIndex).toBe(0);
+      });
+
+      it('moves focus from the wrapper into the active cell after a header control hands focus back', () => {
+        const { container } = renderSpreadsheetGrid();
+        act(() => getTdAt(container, 0, 1).focus());
+        act(() => getGrid(container).focus());
+        act(() => { fireEvent.keyDown(getGrid(container), { key: 'ArrowDown' }); });
+        expect(document.activeElement).toBe(getTdAt(container, 1, 1));
+      });
+
+      it('does not announce cell moves through an aria-live region (focus is announced instead)', () => {
+        const { container } = renderSpreadsheetGrid();
+        act(() => getTdAt(container, 0, 0).focus());
+        act(() => { fireEvent.keyDown(document.activeElement as Element, { key: 'ArrowDown' }); });
+        const live = Array.from(container.querySelectorAll('[aria-live]')).map((el) => el.textContent);
+        expect(live.join('')).not.toContain('row 2');
       });
     });
 

@@ -5,6 +5,15 @@ import { scrollCellIntoView } from '../utils/scrollCellIntoView';
 
 const NOOP_SCROLL_TO_INDEX = (): void => {};
 
+export interface UseActiveCellOptions {
+  /**
+   * Move DOM focus to the active cell's `[data-row-index][data-col-index]`
+   * element when it changes. Default `true`. `<OGrid>` passes `false` and
+   * manages focus itself (roving tabindex on the gridcell).
+   */
+  focus?: boolean;
+}
+
 export interface UseActiveCellResult {
   activeCell: IActiveCell | null;
   setActiveCell: (cell: IActiveCell | null) => void;
@@ -18,8 +27,10 @@ export interface UseActiveCellResult {
 export function useActiveCell(
   wrapperRef?: React.RefObject<HTMLElement | null>,
   editingCell?: { rowId: RowId; columnId: string } | null,
-  scrollToIndexRef?: React.RefObject<UseVirtualScrollResult['scrollToIndex'] | null>
+  scrollToIndexRef?: React.RefObject<UseVirtualScrollResult['scrollToIndex'] | null>,
+  options?: UseActiveCellOptions,
 ): UseActiveCellResult {
+  const shouldFocus = options?.focus !== false;
   const [activeCell, _setActiveCell] = useState<IActiveCell | null>(null);
   const activeCellRef = useRef(activeCell);
   activeCellRef.current = activeCell;
@@ -50,10 +61,10 @@ export function useActiveCell(
     const selector = `[data-row-index="${rowIndex}"][data-col-index="${columnIndex}"]`;
     const cell = wrapper.querySelector(selector) as HTMLElement | null;
     scrollToIndexRef?.current?.(rowIndex, 'auto');
-    pendingFocusRef.current = cell == null;
+    pendingFocusRef.current = shouldFocus && cell == null;
 
     // Synchronous focus
-    if (cell && document.activeElement !== cell && typeof cell.focus === 'function') {
+    if (shouldFocus && cell && document.activeElement !== cell && typeof cell.focus === 'function') {
       cell.focus({ preventScroll: true });
     }
 
@@ -66,7 +77,7 @@ export function useActiveCell(
     });
 
     return () => cancelAnimationFrame(scrollRafRef.current);
-  }, [activeCell, editingCell, wrapperRef, scrollToIndexRef]);
+  }, [activeCell, editingCell, wrapperRef, scrollToIndexRef, shouldFocus]);
 
   // A virtualizer renders the target after the index scroll above. Retry focus
   // on that render, without scrolling back when the user later moves the thumb.

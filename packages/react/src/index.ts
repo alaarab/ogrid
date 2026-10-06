@@ -131,6 +131,7 @@ export type {
   UseGridFocusParams,
   UseGridFocusResult,
   UseActiveCellResult,
+  UseActiveCellOptions,
   UseCellEditingResult,
   EditingCell,
   UseContextMenuResult,
