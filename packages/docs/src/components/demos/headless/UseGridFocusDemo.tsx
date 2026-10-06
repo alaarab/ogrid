@@ -12,6 +12,14 @@ function Inner() {
     colCount: grid.columns.length,
     pageSize: 5,
     rangeSelection: range, // Shift+Arrow / Shift+Home / Shift+End extend the range
+    // Ctrl+Arrow jumps by data region; without this it would jump to the grid edge.
+    isCellEmpty: (row, col) => {
+      const item = grid.rows[row];
+      const column = grid.columns[col];
+      if (!item || !column) return true;
+      const v = grid.getCellValue(item, column.columnId);
+      return v == null || v === '';
+    },
   });
 
   const active = focus.activeCell;
@@ -84,7 +92,7 @@ function Inner() {
 
 export default function UseGridFocusDemo() {
   return (
-    <LiveDemo height={480} title="Click a cell, then use Arrow, Shift+Arrow, Tab, Enter, Home/End, PageUp/PageDown">
+    <LiveDemo height={480} title="Click a cell, then use Arrow, Ctrl+Arrow, Shift+Arrow, Tab, Enter, Home/End, PageUp/PageDown">
       {() => <Inner />}
     </LiveDemo>
   );

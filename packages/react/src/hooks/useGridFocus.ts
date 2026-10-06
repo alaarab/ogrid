@@ -7,6 +7,11 @@
  * Shift+Arrow / Shift+Home / Shift+End extend the range. Tab at the first or
  * last column is left to the browser so focus can leave the grid.
  *
+ * Ctrl+Arrow (Cmd on macOS) jumps like Excel and `<OGrid>`: pass
+ * `isCellEmpty` and it moves to the edge of the current data region along
+ * that axis (core's `findCtrlArrowTarget`); without it, to the grid edge.
+ * Ctrl+Shift+Arrow extends the range to the same target.
+ *
  * Consumer attaches `getKeyDownHandler()` to their grid container's
  * `onKeyDown`, makes the container focusable (`tabIndex={0}`), and renders
  * the active cell highlight from `activeCell`.
@@ -18,6 +23,7 @@
  *     colCount: grid.columns.length,
  *     pageSize: 10,
  *     rangeSelection: range,  // optional — enables Shift+Arrow range extend
+ *     isCellEmpty: (row, col) => grid.getCellValue(grid.rows[row], grid.columns[col].columnId) == null,
  *   });
  *
  *   <div tabIndex={0} onKeyDown={focus.getKeyDownHandler()}>
@@ -35,6 +41,7 @@
  */
 
 import { useCallback, useRef, useState } from 'react';
+import { findCtrlArrowTarget } from '@alaarab/ogrid-core';
 import type { CellCoord, UseRangeSelectionResult } from './useRangeSelection';
 
 export interface UseGridFocusParams {
@@ -51,6 +58,15 @@ export interface UseGridFocusParams {
    * selection range; plain Arrow keys collapse the range to a single cell.
    */
   rangeSelection?: UseRangeSelectionResult;
+  /**
+   * Tells Ctrl+Arrow (Cmd+Arrow on macOS) which cells are empty so it can
+   * jump by data region the way Excel and `<OGrid>` do: from a non-empty cell
+   * with a non-empty neighbor, to the last non-empty cell before a gap or the
+   * edge; otherwise past the empty cells to the next non-empty one, or the
+   * edge. `<OGrid>` treats `null`, `undefined`, and `''` as empty. When
+   * omitted, Ctrl+Arrow jumps straight to the grid edge.
+   */
+  isCellEmpty?: (row: number, col: number) => boolean;
 }
 
 export interface UseGridFocusResult {
@@ -77,7 +93,8 @@ export interface UseGridFocusResult {
   /**
    * Returns a keydown handler to attach to the grid container. Translates
    * Arrow/Tab/Enter/Home/End/PageUp/PageDown into cell movement, with
-   * Shift+Arrow extending the range when `rangeSelection` was provided.
+   * Shift+Arrow extending the range when `rangeSelection` was provided and
+   * Ctrl/Cmd+Arrow jumping to the data-region or grid edge (see `isCellEmpty`).
    */
   getKeyDownHandler: () => (e: {
     key: string;
@@ -97,7 +114,7 @@ const clamp = (value: number, min: number, max: number) =>
  * Pure state + a keydown handler factory. Does not touch the DOM directly.
  */
 export function useGridFocus(params: UseGridFocusParams): UseGridFocusResult {
-  const { rowCount, colCount, pageSize = 10, rangeSelection } = params;
+  const { rowCount, colCount, pageSize = 10, rangeSelection, isCellEmpty } = params;
 
   const [activeCell, setActiveCellState] = useState<CellCoord | null>(null);
   // Mirror of activeCell, updated synchronously, so movement can compute the
@@ -133,6 +150,35 @@ export function useGridFocus(params: UseGridFocusParams): UseGridFocusResult {
       }
     },
     [rowCount, colCount, rangeSelection, commit],
+  );
+
+  // Ctrl/Cmd+Arrow: Excel data-region jump along one axis, using the same
+  // core helper as <OGrid>. Without an isCellEmpty predicate every cell counts
+  // as filled, which makes the jump land on the grid edge. With Shift the
+  // active cell still moves (as for Shift+Arrow) and the range extends to it.
+  const jumpBy = useCallback(
+    (drow: -1 | 0 | 1, dcol: -1 | 0 | 1, extendRange = false) => {
+      if (rowCount <= 0 || colCount <= 0) return;
+      const prev = activeCellRef.current;
+      let next: CellCoord;
+      if (!prev) {
+        next = { row: 0, col: 0 };
+      } else {
+        const row = clamp(prev.row, 0, rowCount - 1);
+        const col = clamp(prev.col, 0, colCount - 1);
+        const isEmpty = isCellEmpty ?? (() => false);
+        next =
+          drow !== 0
+            ? { row: findCtrlArrowTarget(row, drow > 0 ? rowCount - 1 : 0, drow, (r) => isEmpty(r, col)), col }
+            : { row, col: findCtrlArrowTarget(col, dcol > 0 ? colCount - 1 : 0, dcol, (c) => isEmpty(row, c)) };
+      }
+      commit(next);
+      if (rangeSelection) {
+        if (extendRange) rangeSelection.extendRange(next.row, next.col);
+        else rangeSelection.startRange(next.row, next.col);
+      }
+    },
+    [rowCount, colCount, rangeSelection, isCellEmpty, commit],
   );
 
   // Shift+Home/End: extend the range to a row or grid edge, keeping its anchor.
@@ -189,21 +235,16 @@ export function useGridFocus(params: UseGridFocusParams): UseGridFocusResult {
 
       switch (e.key) {
         case 'ArrowUp':
-          e.preventDefault?.();
-          moveBy(-1, 0, shift);
-          break;
         case 'ArrowDown':
-          e.preventDefault?.();
-          moveBy(1, 0, shift);
-          break;
         case 'ArrowLeft':
+        case 'ArrowRight': {
           e.preventDefault?.();
-          moveBy(0, -1, shift);
+          const drow = e.key === 'ArrowUp' ? -1 : e.key === 'ArrowDown' ? 1 : 0;
+          const dcol = e.key === 'ArrowLeft' ? -1 : e.key === 'ArrowRight' ? 1 : 0;
+          if (mod) jumpBy(drow, dcol, shift);
+          else moveBy(drow, dcol, shift);
           break;
-        case 'ArrowRight':
-          e.preventDefault?.();
-          moveBy(0, 1, shift);
-          break;
+        }
         case 'Tab': {
           // At the row's first/last cell (or before any cell is active) let Tab
           // move focus out of the grid instead of trapping it.
@@ -241,7 +282,7 @@ export function useGridFocus(params: UseGridFocusParams): UseGridFocusResult {
           break;
       }
     };
-  }, [moveBy, extendTo, moveToRowStart, moveToRowEnd, moveToStart, moveToEnd, pageSize, rowCount, colCount]);
+  }, [moveBy, jumpBy, extendTo, moveToRowStart, moveToRowEnd, moveToStart, moveToEnd, pageSize, rowCount, colCount]);
 
   return {
     activeCell,
