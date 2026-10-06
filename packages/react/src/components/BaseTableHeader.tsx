@@ -2,7 +2,7 @@
 // filter + options menu + resize handles.
 
 import * as React from 'react';
-import { CHECKBOX_COLUMN_WIDTH, ROW_NUMBER_COLUMN_ID, ROW_NUMBER_COLUMN_WIDTH } from '@alaarab/ogrid-core';
+import { CHECKBOX_COLUMN_WIDTH, ROW_NUMBER_COLUMN_ID, ROW_NUMBER_COLUMN_MIN_WIDTH, ROW_NUMBER_COLUMN_WIDTH } from '@alaarab/ogrid-core';
 import { getHeaderFilterConfig, indexToColumnLetter } from '../utils';
 import { useHeaderFilterConfigs } from '../hooks/useHeaderFilterConfigs';
 import type { useColumnMeta } from '../hooks/useColumnMeta';
@@ -66,7 +66,8 @@ export function BaseTableHeader<T>(props: BaseTableHeaderProps<T>): React.ReactE
   const { o, columnMeta, sortBy, sortDirection, styles, primitives } = props;
   const {
     wrapperRef, interaction,
-    handleResizeStart, handleResizeDoubleClick, isReorderDragging, handleHeaderMouseDown,
+    handleResizeStart, handleResizeDoubleClick, handleResizeFocus, handleResizeKeyDown,
+    getColumnWidth, getColumnMinWidth, isReorderDragging, handleHeaderMouseDown,
     visibleCols, hasCheckboxCol, hasRowNumbersCol, columnSizingOverrides,
     showColumnLetters, columnLetters, columnReorder,
     allSelected, someSelected, handleSelectAll, setActiveCell,
@@ -85,6 +86,12 @@ export function BaseTableHeader<T>(props: BaseTableHeaderProps<T>): React.ReactE
   const leadingRowNumWidth = columnSizingOverrides?.[ROW_NUMBER_COLUMN_ID]?.widthPx ?? ROW_NUMBER_COLUMN_WIDTH;
   const checkboxSpacerStyle: React.CSSProperties = { boxSizing: 'border-box', width: CHECKBOX_COLUMN_WIDTH, minWidth: CHECKBOX_COLUMN_WIDTH, maxWidth: CHECKBOX_COLUMN_WIDTH };
   const rowNumberSpacerStyle: React.CSSProperties = { boxSizing: 'border-box', width: leadingRowNumWidth, minWidth: leadingRowNumWidth, maxWidth: leadingRowNumWidth };
+  // The row-number column is grid chrome with no IColumnDef; this stand-in gives the
+  // resize hook its id, label and default width.
+  const rowNumberCol = React.useMemo(
+    () => ({ columnId: ROW_NUMBER_COLUMN_ID, name: '#', defaultWidth: ROW_NUMBER_COLUMN_WIDTH }) as IColumnDef<T>,
+    [],
+  );
 
   return (
     <Thead className={o.stickyHeader ? styles.stickyHeader : undefined}>
@@ -130,13 +137,18 @@ export function BaseTableHeader<T>(props: BaseTableHeaderProps<T>): React.ReactE
                 <div
                   className={styles.resizeHandle}
                   role="separator"
+                  tabIndex={0}
                   aria-orientation="vertical"
                   aria-label="Resize row number column"
+                  aria-valuenow={Math.round(rowNumWidth)}
+                  aria-valuemin={ROW_NUMBER_COLUMN_MIN_WIDTH}
+                  onFocus={(e) => handleResizeFocus(e, rowNumberCol)}
+                  onKeyDown={(e) => handleResizeKeyDown(e, rowNumberCol)}
                   onPointerDown={(e) => {
                     setActiveCell(null);
                     interaction.setSelectionRange(null);
                     wrapperRef.current?.focus({ preventScroll: true });
-                    handleResizeStart(e, { columnId: ROW_NUMBER_COLUMN_ID, name: '#' } as IColumnDef<T>);
+                    handleResizeStart(e, rowNumberCol);
                   }}
                 />
               </primitives.Th>
@@ -223,8 +235,13 @@ export function BaseTableHeader<T>(props: BaseTableHeaderProps<T>): React.ReactE
                 <div
                   className={styles.resizeHandle}
                   role="separator"
+                  tabIndex={0}
                   aria-orientation="vertical"
-                  aria-label={`Resize ${col.name}`}
+                  aria-label={`Resize column ${col.name}`}
+                  aria-valuenow={Math.round(getColumnWidth(col))}
+                  aria-valuemin={getColumnMinWidth(col)}
+                  onFocus={(e) => handleResizeFocus(e, col)}
+                  onKeyDown={(e) => handleResizeKeyDown(e, col)}
                   onPointerDown={(e) => {
                     // Clear cell selection/focus before resize so green outlines
                     // and blue :focus-visible rings don't persist during drag.
