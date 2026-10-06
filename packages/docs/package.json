@@ -6,7 +6,8 @@
     "start": "docusaurus start",
     "build": "docusaurus build",
     "serve": "docusaurus serve",
-    "clear": "docusaurus clear"
+    "clear": "docusaurus clear",
+    "typecheck": "tsc --noEmit"
   },
   "dependencies": {
     "@alaarab/ogrid-react": "2.17.3",
