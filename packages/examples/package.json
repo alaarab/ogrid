@@ -9,7 +9,9 @@
     "dev:react-fluent": "vite --config vite.fluent.config.ts",
     "dev:react-radix": "vite --config vite.radix.config.ts",
     "build:react-fluent": "vite build --config vite.fluent.config.ts",
-    "build:react-radix": "vite build --config vite.radix.config.ts"
+    "build:react-radix": "vite build --config vite.radix.config.ts",
+    "serve:e2e:react-fluent": "vite build --config vite.fluent.config.ts --logLevel warn && vite preview --config vite.fluent.config.ts",
+    "serve:e2e:react-radix": "vite build --config vite.radix.config.ts --logLevel warn && vite preview --config vite.radix.config.ts"
   },
   "dependencies": {
     "@alaarab/ogrid-core": "2.17.3",
