@@ -19,7 +19,7 @@ function Inner() {
   const { OGrid } = require('@alaarab/ogrid-react-radix') as typeof import('@alaarab/ogrid-react-radix');
   type ICellValueChangedEvent = import('@alaarab/ogrid-react-radix').ICellValueChangedEvent<Row>;
   type IColumnDef = import('@alaarab/ogrid-react-radix').IColumnDef<Row>;
-  type ISheetDef = import('@alaarab/ogrid-react-radix').ISheetDef;
+  type ISheetDef = import('@alaarab/ogrid-react').ISheetDef;
 
   const formulaColumns: IColumnDef[] = [
     { columnId: 'revenue', name: 'Revenue', type: 'numeric', editable: true },
@@ -48,7 +48,7 @@ function Inner() {
     <OGrid
       columns={formulaColumns}
       data={data}
-      getRowId={(r) => r.id}
+      getRowId={(r: Row) => r.id}
       editable
       formulas
       onCellValueChanged={handleChange}

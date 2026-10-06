@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useCallback } from 'react';
 import BrowserOnly from '@docusaurus/BrowserOnly';
 import { LiveDemo } from '../LiveDemo';
 
@@ -50,6 +50,8 @@ function FluentGrid() {
   const { colorMode } = useColorMode();
   const theme = colorMode === 'dark' ? webDarkTheme : webLightTheme;
 
+  type CellChange = import('@alaarab/ogrid-react-fluent').ICellValueChangedEvent<Person>;
+
   const [data, setData] = useState(people);
 
   const columns = useMemo(() => [
@@ -75,23 +77,27 @@ function FluentGrid() {
     { columnId: 'email', name: 'Email' },
   ], []);
 
-  const { handleCellValueChanged, undo, redo, canUndo, canRedo } = useUndoRedo({
-    data,
-    setData,
-    getRowId: (p: Person) => p.id,
+  const applyChange = useCallback((event: CellChange) => {
+    setData((prev) =>
+      prev.map((row) => (row.id === event.item.id ? { ...row, [event.columnId]: event.newValue } : row))
+    );
+  }, []);
+
+  const { onCellValueChanged, undo, redo, canUndo, canRedo } = useUndoRedo<Person>({
+    onCellValueChanged: applyChange,
   });
 
   return (
     <FluentProvider theme={theme} style={{ height: '100%', background: 'transparent' }}>
-      <OGrid<Person>
+      <OGrid
         columns={columns}
         data={data}
-        getRowId={(p) => p.id}
+        getRowId={(p: Person) => p.id}
         editable
         cellSelection
         statusBar
         defaultPageSize={10}
-        onCellValueChanged={handleCellValueChanged}
+        onCellValueChanged={onCellValueChanged}
         onUndo={undo}
         onRedo={redo}
         canUndo={canUndo}
