@@ -100,7 +100,7 @@ export type { ISortState } from './sortHelpers';
 export { measureColumnContentWidth, estimateHeaderMinWidth, AUTOSIZE_EXTRA_PX, AUTOSIZE_MAX_PX } from './columnAutosize';
 export { findCtrlArrowTarget, computeTabNavigation, computeArrowNavigation, applyCellDeletion, getOppositeCorner } from './keyboardNavigation';
 export type { ArrowNavigationContext, ArrowNavigationResult } from './keyboardNavigation';
-export { rangesEqual, clampSelectionToBounds, computeAutoScrollSpeed, applyRangeRowSelection, computeRowSelectionState } from './selectionHelpers';
+export { rangesEqual, clampSelectionToBounds, computeAutoScrollSpeed, computeAutoScrollDelta, getSelectAllRange, applyRangeRowSelection, computeRowSelectionState } from './selectionHelpers';
 export {
   formatCellValueForTsv,
   formatSelectionAsTsv,

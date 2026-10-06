@@ -1,4 +1,5 @@
 import { useCallback, useRef } from 'react';
+import { getSelectAllRange } from '@alaarab/ogrid-core';
 import { getCellValue, computeTabNavigation, computeArrowNavigation, applyCellDeletion, getScrollTopForRow, getOppositeCorner } from '../utils';
 import { CELL_EDITOR_ATTR } from '../constants/domHelpers';
 import { scrollCellIntoView, type ScrollToRowIndex } from '../utils/scrollCellIntoView';
@@ -424,13 +425,9 @@ export function useKeyboardNavigation<T>(
           if (e.ctrlKey || e.metaKey) {
             if (editingCell != null) break; // let the input handle select-all
             e.preventDefault();
-            if (items.length > 0 && visibleColumnCount > 0) {
-              setSelectionRange({
-                startRow: 0,
-                startCol: 0,
-                endRow: items.length - 1,
-                endCol: visibleColumnCount - 1,
-              });
+            const all = getSelectAllRange(items.length, visibleColumnCount);
+            if (all) {
+              setSelectionRange(all);
               setActiveCell({ rowIndex: 0, columnIndex: colOffset });
             }
           }
