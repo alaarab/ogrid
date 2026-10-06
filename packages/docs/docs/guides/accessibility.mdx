@@ -16,6 +16,7 @@ You get all of this without any extra setup:
 - Full keyboard navigation — arrow keys, Tab, Home/End, Ctrl+Arrow, all working like a spreadsheet
 - Screen reader announcements for sort, filter, edit, selection, and pagination changes
 - Proper ARIA roles and attributes on the grid, rows, cells, and headers
+- Roving focus: the active cell holds real keyboard focus, so screen readers announce each cell as you move
 - `:focus-visible` indicators so keyboard users always know where they are
 - Focus trapping in dropdowns and popovers (Escape always gets you out)
 - High contrast mode support via CSS custom properties with system color fallbacks
@@ -78,28 +79,44 @@ OGrid uses Excel-style keyboard shortcuts, so if your users know spreadsheets, t
 | `Enter` / `Space` on column header | Toggle sort |
 | `←` `→` on a column resize handle | Resize the column (`Shift` for 1px steps; `Home` = min width, `Escape` = restore) |
 
+## Focus model
+
+OGrid follows the [WAI-ARIA grid pattern](https://www.w3.org/WAI/ARIA/apg/patterns/grid/) with a roving tabindex:
+
+- **One tab stop.** Exactly one body cell has `tabindex="0"`: the active cell, or the first data cell before any cell is active. Every other data cell has `tabindex="-1"`. Tab enters the grid on that cell; Tab from the last cell (or Shift+Tab from the first) leaves it. Header controls (sort and filter buttons, column menus, resize handles) keep their own tab stops.
+- **Focus follows the active cell.** Arrow keys, Ctrl+Arrow, Home/End, Page Up/Down, Tab, clicks and Shift+click all move real DOM focus to the active cell's `<td>` (Shift+Arrow and Shift+click keep focus on the anchor cell while the range grows). Focusing a cell, for example by Tabbing in or from a screen reader, makes it active.
+- **Editors.** While a cell is being edited, its editor (inline, or a popover editor rendered in a portal) has focus and receives every key. When the edit commits or is cancelled, focus returns to the active cell.
+- **Escape** clears the active cell and selection but leaves focus on the cell, which stays the tab stop.
+- **Virtual scrolling.** If you scroll the focused row out of the DOM, focus moves to the grid's scroll container (`role="region"`) instead of falling back to the page body. That container becomes the tab stop (`tabindex="0"`) until the row renders again, and then focus returns to the cell. Keys pressed while the container has focus still navigate, and bring the active cell back into view.
+- **Focus indicator.** The focused cell shows the active-cell outline. There is no second focus ring on top of it. Keyboard focus on a cell that has no outline, such as the active cell inside a multi-cell range, gets the same outline. The scroll container shows a focus ring only when it holds keyboard focus.
+
+Using the headless hooks instead of `<OGrid>`? [`useGridFocus`](/docs/spreadsheet-hooks/use-grid-focus#roving-tabindex) gives you the same model through `getCellProps`.
+
 ## ARIA markup
 
 The grid renders with full ARIA attributes so assistive technologies have the context they need.
 
 ```html
-<div role="grid" aria-label="Product catalog" aria-rowcount="1000">
-  <table>
+<div role="region" aria-label="Product catalog" tabindex="-1">
+  <table role="grid" aria-rowcount="1001" aria-colcount="4">
     <thead>
-      <tr role="row">
+      <tr>
         <th role="columnheader" aria-sort="ascending" scope="col">
           Product Name
         </th>
       </tr>
     </thead>
     <tbody>
-      <tr role="row" aria-rowindex="1" aria-selected="false">
-        <td role="gridcell" tabindex="-1">Widget A</td>
+      <tr aria-rowindex="2">
+        <td aria-colindex="1" tabindex="0">Widget A</td>
+        <td aria-colindex="2" tabindex="-1">$12.00</td>
       </tr>
     </tbody>
   </table>
 </div>
 ```
+
+Body cells are native `<td>` elements, which take the `gridcell` role inside `role="grid"`. `aria-rowindex` counts the header rows.
 
 Key attributes and what they do:
 
@@ -120,7 +137,7 @@ The status bar uses `role="status"` with `aria-live="polite"` — it announces c
 
 OGrid announces meaningful state changes:
 
-- **Navigation:** "Product Name, cell, row 1, column 2"
+- **Navigation:** the focused cell itself, with its column header and row and column position (the exact wording depends on the screen reader)
 - **Sort:** "Sorted by Product Name, ascending"
 - **Edit:** "Editing Salary, row 3"
 - **Value change:** "Salary changed from $68,000 to $72,000"
@@ -233,7 +250,7 @@ Automated tests catch structural issues but can't cover everything. Before shipp
 
 ## Known limitations
 
-**Virtual scrolling:** When `virtualScroll.enabled` is true, only visible rows are in the DOM. Screen readers won't know the full dataset size unless you set `aria-rowcount` on the grid wrapper manually.
+**Virtual scrolling:** When `virtualScroll.enabled` is true, only visible rows are in the DOM. The grid sets `aria-rowcount` and `aria-rowindex` so screen readers know each row's position in the full dataset, but a screen reader's own browse mode can only read the rows that are rendered. While the focused row is scrolled out of the DOM, focus waits on the grid's scroll container (see [Focus model](#focus-model)).
 
 **Custom cell renderers:** If you use `renderCell` to render custom content inside cells, you're responsible for making that content accessible — ARIA attributes, keyboard interaction, announcements. The grid provides the structure; your custom content needs to carry its own accessibility.
 

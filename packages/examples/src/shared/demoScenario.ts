@@ -30,7 +30,15 @@ export interface ProjectExampleScenario {
   fullScreen: boolean;
   responsiveColumns: boolean;
   density: 'compact' | 'normal' | 'comfortable';
+  /** Set by `?virtual`: virtual-scroll every row in one viewport. */
+  virtualScroll?: { enabled: boolean; rowHeight: number; paginate: boolean };
 }
+
+/** Rows in the `?virtual` example. */
+const VIRTUAL_PROJECT_COUNT = 5000;
+
+/** A virtual grid needs a bounded height to scroll within. */
+export const VIRTUAL_GRID_HOST_STYLE = { height: 520, display: 'flex', flexDirection: 'column' } as const;
 
 function createAbortError(): Error {
   try {
@@ -128,7 +136,7 @@ export function createProjectExampleScenario(
 ): ProjectExampleScenario {
   const formulas = !flags.serverSide;
   const cellReferences = !flags.serverSide;
-  const data = makeDemoProjects(DEMO_PROJECT_COUNT);
+  const data = makeDemoProjects(flags.virtualScroll ? VIRTUAL_PROJECT_COUNT : DEMO_PROJECT_COUNT);
   const columns = makeDemoColumns<Project>({ formulaMode: formulas });
   const initialFormulas = formulas
     ? [
@@ -152,5 +160,6 @@ export function createProjectExampleScenario(
     fullScreen: true,
     responsiveColumns: true,
     density: 'normal',
+    virtualScroll: flags.virtualScroll ? { enabled: true, rowHeight: 36, paginate: false } : undefined,
   };
 }

@@ -39,6 +39,7 @@ export { useGridFocus } from './useGridFocus';
 export type {
   UseGridFocusParams,
   UseGridFocusResult,
+  GridFocusCellProps,
 } from './useGridFocus';
 export { useOGridPagination } from './useOGridPagination';
 export type { UseOGridPaginationParams, UseOGridPaginationState } from './useOGridPagination';
@@ -59,7 +60,7 @@ export type { UseOGridActiveCellState } from './useOGridActiveCell';
 export { useOGridImperativeHandle } from './useOGridImperativeHandle';
 export type { UseOGridImperativeHandleParams } from './useOGridImperativeHandle';
 export { useActiveCell } from './useActiveCell';
-export type { UseActiveCellResult } from './useActiveCell';
+export type { UseActiveCellResult, UseActiveCellOptions } from './useActiveCell';
 export { useCellEditing } from './useCellEditing';
 export type { UseCellEditingResult, EditingCell } from './useCellEditing';
 export { useContextMenu } from './useContextMenu';

@@ -40,6 +40,9 @@ export interface BaseTableBodyProps<T> {
   copyRange: GridRowProps['copyRange'];
   isDragging: boolean;
   editingCell: { rowId: string | number; columnId: string } | null;
+  /** Roving focus: the one body cell with tabIndex 0 (see useGridCellFocus). */
+  tabStopCell?: { rowIndex: number; columnIndex: number } | null;
+  registerTabStop?: (el: HTMLElement | null) => void;
   /** Popover editor anchor and pending value; only the editing row receives them. */
   popoverAnchorEl?: HTMLElement | null;
   pendingEditorValue?: unknown;
@@ -58,7 +61,7 @@ export function BaseTableBody<T>(props: BaseTableBodyProps<T>) {
     renderCellContent, handleSingleRowClick, handleRowCheckboxChange,
     lastMouseShiftRef, hasCheckboxCol, hasRowNumbersCol, rowNumberOffset, rowNumberOf, ariaRowIndexBase,
     selectionRange, activeCell, cutRange, copyRange, isDragging,
-    editingCell, popoverAnchorEl, pendingEditorValue, formulaVersion,
+    editingCell, tabStopCell, registerTabStop, popoverAnchorEl, pendingEditorValue, formulaVersion,
     pinnedColumns, rowNumWidth, styles, primitives,
   } = props;
   const { Tbody } = primitives;
@@ -124,6 +127,8 @@ export function BaseTableBody<T>(props: BaseTableBodyProps<T>) {
         popoverAnchorEl={isEditingRow ? popoverAnchorEl : undefined}
         pendingEditorValue={isEditingRow ? pendingEditorValue : undefined}
         formulaVersion={formulaVersion}
+        tabStopColumn={tabStopCell != null && tabStopCell.rowIndex === rowIndex ? tabStopCell.columnIndex : -1}
+        registerTabStop={registerTabStop}
         leftSpacerWidth={leftSpacerWidth}
         rightSpacerWidth={rightSpacerWidth}
         globalColIndexMap={globalColIndexMap}

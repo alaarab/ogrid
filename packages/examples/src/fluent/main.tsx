@@ -6,7 +6,7 @@ import type { IOGridApi } from '@alaarab/ogrid-react-fluent';
 import { DatePickerEditor, RatingEditor, ColorPickerEditor, SliderEditor, TagsEditor } from '@alaarab/ogrid-react-inputs';
 import { createThemeToggle, getInitialTheme, setTheme } from '../shared/themeToggle';
 import { connectGridToBridge } from '@alaarab/ogrid-mcp/bridge-client';
-import { createProjectExampleScenario } from '../shared/demoScenario';
+import { createProjectExampleScenario, VIRTUAL_GRID_HOST_STYLE } from '../shared/demoScenario';
 import { getExampleFeatureFlags } from '../shared/queryFlags';
 import { XlsxExample } from '../shared/xlsxExample';
 import { makePremiumInputColumns, makePremiumInputRows } from '../shared/premiumInputsData';
@@ -96,26 +96,29 @@ function App() {
             : <>A fully featured data table powered by <code>@alaarab/ogrid-react-fluent</code>.
               Includes sorting, multi-select &amp; text filtering, column chooser, and pagination.</>}
         </p>
-        <OGrid
-          ref={apiRef}
-          columns={columns as React.ComponentProps<typeof OGrid>['columns']}
-          getRowId={(row) => (row as ExampleRow).id}
-          entityLabelPlural={isPremiumExample ? 'products' : 'projects'}
-          defaultPageSize={isPremiumExample ? 10 : projectScenario.defaultPageSize}
-          {...gridDataProps}
-          editable={isPremiumExample || !projectScenario.serverSide}
-          cellSelection
-          cellReferences={isPremiumExample ? undefined : projectScenario.cellReferences}
-          rowSelection={isPremiumExample ? undefined : projectScenario.rowSelection}
-          formulas={isPremiumExample ? undefined : projectScenario.formulas}
-          initialFormulas={isPremiumExample ? undefined : projectScenario.initialFormulas}
-          sideBar={isPremiumExample ? undefined : projectScenario.sideBar}
-          fullScreen={isPremiumExample ? undefined : projectScenario.fullScreen}
-          responsiveColumns={isPremiumExample ? undefined : projectScenario.responsiveColumns}
-          density={isPremiumExample ? undefined : projectScenario.density}
-          statusBar
-          onCellValueChanged={onCellValueChanged as React.ComponentProps<typeof OGrid>['onCellValueChanged']}
-        />
+        <div style={!isPremiumExample && projectScenario.virtualScroll ? VIRTUAL_GRID_HOST_STYLE : undefined}>
+          <OGrid
+            ref={apiRef}
+            columns={columns as React.ComponentProps<typeof OGrid>['columns']}
+            getRowId={(row) => (row as ExampleRow).id}
+            entityLabelPlural={isPremiumExample ? 'products' : 'projects'}
+            defaultPageSize={isPremiumExample ? 10 : projectScenario.defaultPageSize}
+            {...gridDataProps}
+            editable={isPremiumExample || !projectScenario.serverSide}
+            cellSelection
+            cellReferences={isPremiumExample ? undefined : projectScenario.cellReferences}
+            rowSelection={isPremiumExample ? undefined : projectScenario.rowSelection}
+            formulas={isPremiumExample ? undefined : projectScenario.formulas}
+            initialFormulas={isPremiumExample ? undefined : projectScenario.initialFormulas}
+            sideBar={isPremiumExample ? undefined : projectScenario.sideBar}
+            fullScreen={isPremiumExample ? undefined : projectScenario.fullScreen}
+            responsiveColumns={isPremiumExample ? undefined : projectScenario.responsiveColumns}
+            density={isPremiumExample ? undefined : projectScenario.density}
+            virtualScroll={isPremiumExample ? undefined : projectScenario.virtualScroll}
+            statusBar
+            onCellValueChanged={onCellValueChanged as React.ComponentProps<typeof OGrid>['onCellValueChanged']}
+          />
+        </div>
       </div>
     </FluentProvider>
   );

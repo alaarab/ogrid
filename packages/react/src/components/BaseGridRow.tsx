@@ -26,6 +26,14 @@ export interface BaseGridRowProps extends GridRowProps {
   pendingEditorValue?: unknown;
   /** Formula recalculation counter; a recalc can change any cell. */
   formulaVersion?: number;
+  /**
+   * Roving focus: column index (colOffset-based, like activeCell.columnIndex)
+   * of the grid's one tab-stop cell when it is in this row, else -1. A number
+   * so the memo comparator re-renders only the rows the tab stop enters/leaves.
+   */
+  tabStopColumn?: number;
+  /** Ref callback for the tab-stop cell (stable identity). */
+  registerTabStop?: (el: HTMLElement | null) => void;
   styles: DataGridStyles;
   primitives: DataGridPrimitives;
 }
@@ -36,7 +44,7 @@ function GridRowInner(props: BaseGridRowProps) {
     renderCellContent, handleSingleRowClick, handleRowCheckboxChange,
     lastMouseShiftRef, hasCheckboxCol, hasRowNumbersCol, rowNumberOffset, rowNumber, ariaRowIndexBase,
     leftSpacerWidth, rightSpacerWidth, globalColIndexMap, rowNumWidth,
-    selectionRange, activeCell, cutRange, styles, primitives,
+    selectionRange, activeCell, cutRange, tabStopColumn = -1, registerTabStop, styles, primitives,
   } = props;
   const { Tr, Td, renderRowCheckbox } = primitives;
   // Leading columns stay put on horizontal scroll. Radix gets `position: sticky` from CSS;
@@ -116,9 +124,13 @@ function GridRowInner(props: BaseGridRowProps) {
           : surfaceState.isRangeCell
           ? 'var(--ogrid-range-bg, rgba(33, 115, 70, 0.12))'
           : undefined;
+        const isTabStop = tabStopColumn === leadingColCount + globalIdx;
         return (
           <Td
             key={col.columnId}
+            ref={isTabStop ? registerTabStop : undefined}
+            // Roving tabindex: the grid's one tab stop is 0, every other data cell -1.
+            tabIndex={isTabStop ? 0 : -1}
             data-column-id={col.columnId}
             aria-colindex={leadingColCount + globalIdx + 1}
             aria-selected={surfaceState.isActiveRangeCell || surfaceState.isRangeCell ? true : undefined}

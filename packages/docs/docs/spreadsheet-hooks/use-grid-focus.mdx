@@ -13,8 +13,10 @@ rows and columns you render. Give it the result of
 [`useRangeSelection`](/docs/spreadsheet-hooks/use-range-selection) and
 Shift+Arrow, Shift+Home, and Shift+End extend the range while plain movement
 collapses it to the new cell. Pass `isCellEmpty` and Ctrl+Arrow jumps by data
-region exactly as `<OGrid>` does. The hook is pure state plus a keydown
-handler factory; you make the container focusable and draw the highlight.
+region exactly as `<OGrid>` does. The hook is state plus a keydown handler
+factory; you draw the highlight and choose how focus works: a focusable
+container, or the same roving tabindex `<OGrid>` uses through
+[`getCellProps`](#roving-tabindex).
 
 ## Live demo
 
@@ -59,6 +61,52 @@ const focus = useGridFocus({
 </div>
 ```
 
+## Roving tabindex
+
+`getCellProps(row, col)` gives you the WAI-ARIA grid focus model that
+`<OGrid>` uses: the active cell is the grid's single tab stop and holds real
+DOM focus, so screen readers announce each cell as you move. Spread it on
+every cell and leave `tabIndex` off the container; key events from the
+focused cell bubble to the container's `onKeyDown`.
+
+```tsx
+<div onKeyDown={focus.getKeyDownHandler()}>
+  <table role="grid" aria-label="Projects">
+    <tbody>
+      {grid.rows.map((row, rowIdx) => (
+        <tr key={grid.getRowId(row)}>
+          {grid.columns.map((col, colIdx) => (
+            <td key={col.columnId} {...focus.getCellProps(rowIdx, colIdx)}>
+              {grid.getCellValue(row, col.columnId)}
+            </td>
+          ))}
+        </tr>
+      ))}
+    </tbody>
+  </table>
+</div>
+```
+
+It returns `{ tabIndex, ref, onFocus, onBlur }`:
+
+- `tabIndex` is `0` on the active cell (on `(0, 0)` before any cell is
+  active) and `-1` on every other cell, so Tab enters the grid once and the
+  next Tab leaves it.
+- `onFocus` makes a focused cell active: Tabbing in, clicking, or a screen
+  reader moving focus all update `activeCell`.
+- While a cell has focus, focus follows the active cell after every move
+  (keys, `setActiveCell`, `moveTo*`) with `preventScroll`; scroll the cell
+  into view yourself. A move made while focus is elsewhere updates the tab
+  stop without stealing focus.
+- `ref` is set only on the tab-stop cell. If you merge it with your own ref,
+  call both.
+- **Virtualized rows:** a row that leaves the DOM can't keep focus. Keep the
+  container focusable (`tabIndex={-1}`) and focus it when the active row
+  unmounts, or keep the active row rendered.
+
+If you'd rather keep the active cell visual only, skip `getCellProps` and make
+the container focusable (`tabIndex={0}`), as in the quick example above.
+
 ## Parameters
 
 `UseGridFocusParams`
@@ -82,6 +130,7 @@ const focus = useGridFocus({
 | `moveUp` / `moveDown` / `moveLeft` / `moveRight` | `(n?: number) => void` | Move by `n` (default 1), clamped at the edges. |
 | `moveToRowStart` / `moveToRowEnd` | `() => void` | First / last column of the current row. |
 | `moveToStart` / `moveToEnd` | `() => void` | `(0, 0)` / `(lastRow, lastCol)`. |
+| `getCellProps` | `(row, col) => GridFocusCellProps` | Optional roving tabindex: `{ tabIndex, ref, onFocus, onBlur }` to spread on each cell. See [Roving tabindex](#roving-tabindex). |
 | `getKeyDownHandler` | `() => (e) => void` | Returns the handler to attach to your container's `onKeyDown`. It reads `key`, `shiftKey`, `ctrlKey`, `metaKey` and calls `preventDefault` for keys it consumes. |
 
 Ctrl+Arrow has no imperative counterpart; `moveUp(n)` and friends move by a
@@ -109,9 +158,10 @@ fixed count, `moveToStart` / `moveToEnd` go to the corners.
 - **The active cell is not clamped when the grid shrinks.** Reset it with
   `setActiveCell(null)` when the page, filter, or sort changes if a stale
   coordinate would be visible.
-- **Make the container focusable** (`tabIndex={0}`) and attach the handler
-  there, not on individual cells; clicking a cell focuses the container
-  automatically.
+- **Attach the handler to the container**, not to individual cells. With
+  container focus, make the container focusable (`tabIndex={0}`); clicking a
+  cell focuses it. With [`getCellProps`](#roving-tabindex) the cells take
+  focus and their key events bubble to the container.
 - **Editing keys are not included.** F2, typing to edit, Delete, and the
   clipboard and undo shortcuts are left for you to add around
   `getKeyDownHandler()` (see the landing-page demo for a combined handler).

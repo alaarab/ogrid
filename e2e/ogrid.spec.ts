@@ -324,7 +324,6 @@ test.describe('Cell selection', () => {
   test('clicking a cell activates it with visual indicator', async ({ page }) => {
     const cellContent = getCellContent(page, 0, 0);
     await cellContent.click();
-    // Active cell: tabindex=0 (React/Angular/Vue) or data-active-cell="true" (JS)
     await expectActiveCellAt(page, 0, 0);
   });
 
@@ -648,11 +647,7 @@ test.describe('Selection seam regressions', () => {
     await page.mouse.up();
 
     await expect.poll(async () => page.evaluate(() => window.getSelection()?.toString() ?? '')).toBe('');
-    if (isJS(page)) {
-      await expect(activeCell).toHaveAttribute('data-active-cell', 'true');
-    } else {
-      await expect(activeCell).toHaveAttribute('tabindex', '0');
-    }
+    await expect(activeCell).toHaveAttribute('data-active-cell', 'true');
   });
 
   test('dragging from the column-letter seam does not select header text', async ({ page }) => {
@@ -676,11 +671,7 @@ test.describe('Selection seam regressions', () => {
     await page.mouse.up();
 
     await expect.poll(async () => page.evaluate(() => window.getSelection()?.toString() ?? '')).toBe('');
-    if (isJS(page)) {
-      await expect(activeCell).toHaveAttribute('data-active-cell', 'true');
-    } else {
-      await expect(activeCell).toHaveAttribute('tabindex', '0');
-    }
+    await expect(activeCell).toHaveAttribute('data-active-cell', 'true');
   });
 });
 

@@ -253,21 +253,15 @@ export function getGridRegion(page: Page): Locator {
 }
 
 /**
- * Assert that the cell at (rowIdx, colIdx) is the active cell.
- * React/Angular/Vue: tabindex="0" on the inner div.
- * JS: data-active-cell="true" on the td.
+ * Assert that the cell at (rowIdx, colIdx) is the active cell:
+ * data-active-cell="true" on the cell content (React) or the td (JS).
  */
 export async function expectActiveCellAt(
   page: Page,
   rowIdx: number,
   colIdx: number,
 ): Promise<void> {
-  const cell = getCellContent(page, rowIdx, colIdx);
-  if (isJS(page)) {
-    await expect(cell).toHaveAttribute('data-active-cell', 'true');
-  } else {
-    await expect(cell).toHaveAttribute('tabindex', '0');
-  }
+  await expect(getCellContent(page, rowIdx, colIdx)).toHaveAttribute('data-active-cell', 'true');
 }
 
 /**

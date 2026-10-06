@@ -73,10 +73,14 @@
   --ogrid-cell-padding-horizontal: 10px;
   --ogrid-cell-font-size: 13px;
 
-  // Suppress the outline for mouse/programmatic focus (the active cell outline handles that),
-  // but keep it for keyboard focus so Tabbing into the grid before any cell is active is visible.
+  // The wrapper holds focus only as the fallback tab stop (no rows, or the
+  // focused row virtualized away). Keyboard focus shows a ring; mouse focus doesn't.
   &:focus:not(:focus-visible) {
     outline: none;
+  }
+  &:focus-visible {
+    outline: 2px solid var(--ogrid-accent, #0078d4);
+    outline-offset: -2px;
   }
 
   &[data-overflow-x='true'] {
@@ -340,6 +344,19 @@
   overflow: visible;
   contain: none;
   background: var(--ogrid-active-cell-bg, rgba(0, 0, 0, 0.02));
+}
+
+// Roving focus: the focused gridcell <td> holds DOM focus. The active-cell
+// outline on its content is the focus indicator, so the td draws no ring of its
+// own (no doubled border). Keyboard focus on a cell whose content shows no
+// outline (the active cell inside a multi-cell range, or a cell left focused
+// after Escape cleared the active cell) gets the same active-cell outline.
+.tableWrapper .dataTable tbody td:focus {
+  outline: none;
+}
+.tableWrapper .dataTable tbody td:focus-visible > .cellContent {
+  outline: 2px solid var(--ogrid-selection-color, #217346);
+  outline-offset: -1px;
 }
 
 // Elevate the td containing the active/editing cell so its outline paints above
