@@ -360,4 +360,26 @@ describe('useGridFocus Ctrl+Arrow (data-region jumps)', () => {
     press('ArrowDown', { ctrlKey: true });
     expect(result.current.activeCell).toEqual({ row: 5, col: 1 });
   });
+
+  it('plain arrows from a stale cell land on the edge cell, not one past it', () => {
+    const { result, press } = setup({ isCellEmpty });
+    act(() => result.current.setActiveCell({ row: 9, col: 7 }));
+    press('ArrowUp');
+    expect(result.current.activeCell).toEqual({ row: 5, col: 4 });
+    act(() => result.current.setActiveCell({ row: 9, col: 7 }));
+    press('ArrowLeft');
+    expect(result.current.activeCell).toEqual({ row: 5, col: 4 });
+    act(() => result.current.setActiveCell({ row: 9, col: 7 }));
+    press('ArrowDown');
+    expect(result.current.activeCell).toEqual({ row: 5, col: 4 });
+  });
+
+  it('ArrowRight / ArrowLeft with Ctrl jump within the row of a stale column', () => {
+    const { result, press } = setup({ isCellEmpty });
+    act(() => result.current.setActiveCell({ row: 1, col: 9 }));
+    press('ArrowLeft', { ctrlKey: true });
+    // Clamped to (1,4), filled with a filled neighbor: scan left to (1,3).
+    expect(result.current.activeCell).toEqual({ row: 1, col: 3 });
+  });
 });
+
