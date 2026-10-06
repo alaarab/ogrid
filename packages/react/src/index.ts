@@ -130,6 +130,7 @@ export type {
   CellClipboardPasteEvent,
   UseGridFocusParams,
   UseGridFocusResult,
+  GridFocusCellProps,
   UseActiveCellResult,
   UseActiveCellOptions,
   UseCellEditingResult,

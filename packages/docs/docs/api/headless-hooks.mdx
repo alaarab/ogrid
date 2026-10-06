@@ -360,6 +360,7 @@ const focus = useGridFocus({
 | `activeCell`, `setActiveCell(cell)` | Current focus + setter |
 | `moveUp/Down/Left/Right(n?)` | Programmatic movement |
 | `moveToRowStart/RowEnd/Start/End()` | Navigation helpers |
+| `getCellProps(row, col)` | Optional roving tabindex: `{ tabIndex, ref, onFocus, onBlur }` for each cell, so the active cell holds DOM focus like `<OGrid>` ([details](/docs/spreadsheet-hooks/use-grid-focus#roving-tabindex)) |
 | `getKeyDownHandler()` | Returns the handler to attach to your grid container's `onKeyDown` |
 
 ---

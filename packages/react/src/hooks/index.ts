@@ -39,6 +39,7 @@ export { useGridFocus } from './useGridFocus';
 export type {
   UseGridFocusParams,
   UseGridFocusResult,
+  GridFocusCellProps,
 } from './useGridFocus';
 export { useOGridPagination } from './useOGridPagination';
 export type { UseOGridPaginationParams, UseOGridPaginationState } from './useOGridPagination';

@@ -42,15 +42,12 @@ function Inner() {
           {r && (r.startRow !== r.endRow || r.startCol !== r.endCol) ? ` · range R${r.startRow + 1}C${r.startCol + 1}:R${r.endRow + 1}C${r.endCol + 1}` : ''}
         </span>
       </div>
-      {/* biome-ignore lint/a11y/noStaticElementInteractions: the grid container dispatches the keyboard shortcuts for the table */}
-      {/* biome-ignore lint/a11y/noNoninteractiveElementInteractions: the grid container dispatches the keyboard shortcuts for the table */}
-      <div
-        className={styles.scroll}
-        // biome-ignore lint/a11y/noNoninteractiveTabindex: the container is the focus target for the grid's keyboard handling
-        tabIndex={0}
-        onKeyDown={focus.getKeyDownHandler()}
-      >
-        <table className={styles.table}>
+      {/* biome-ignore lint/a11y/noStaticElementInteractions: key events from the focused cell bubble to the container's handler */}
+      {/* biome-ignore lint/a11y/noNoninteractiveElementInteractions: key events from the focused cell bubble to the container's handler */}
+      <div className={styles.scroll} onKeyDown={focus.getKeyDownHandler()}>
+        {/* Roving tabindex: getCellProps makes the active cell the one tab stop and moves DOM focus with it. */}
+        {/* biome-ignore lint/a11y/noNoninteractiveElementToInteractiveRole: role="grid" is the WAI-ARIA pattern for an interactive table; its cells become gridcells */}
+        <table className={styles.table} role="grid" aria-label="Projects">
           <thead>
             <tr>
               {grid.columns.map((col) => (
@@ -69,6 +66,7 @@ function Inner() {
                     // biome-ignore lint/a11y/noNoninteractiveElementInteractions: wiring pointer events to cells is the headless hook's integration point
                     <td
                       key={col.columnId}
+                      {...focus.getCellProps(rowIdx, colIdx)}
                       className={[styles.td, isNumeric(col) ? styles.numeric : '', range.isInRange(rowIdx, colIdx) ? styles.selected : '', isActive ? styles.active : ''].join(' ')}
                       onMouseDown={(e) => {
                         if (e.button !== 0) return;
@@ -92,7 +90,7 @@ function Inner() {
 
 export default function UseGridFocusDemo() {
   return (
-    <LiveDemo height={480} title="Click a cell, then use Arrow, Ctrl+Arrow, Shift+Arrow, Tab, Enter, Home/End, PageUp/PageDown">
+    <LiveDemo height={480} title="Tab into the table or click a cell, then use Arrow, Ctrl+Arrow, Shift+Arrow, Tab, Enter, Home/End, PageUp/PageDown">
       {() => <Inner />}
     </LiveDemo>
   );
