@@ -167,9 +167,6 @@ describe('OGrid with a windowed data source', () => {
   });
 
   it('supports keyboard navigation and copy over loaded rows', async () => {
-    const writeText = jest.fn().mockResolvedValue(undefined);
-    Object.defineProperty(navigator, 'clipboard', { value: { writeText }, configurable: true });
-
     const { source } = makeSource(makeRows('Name'));
     const { container } = render(<Grid source={source} />);
     await waitFor(() => expect(firstColumnTexts(container)[0]).toBe('Name 000'));
@@ -180,10 +177,14 @@ describe('OGrid with a windowed data source', () => {
     fireEvent.keyDown(grid, { key: 'ArrowDown' });
 
     // Copy reads the active cell, so 'Name 002' proves both moves landed.
+    // Ctrl+C is left to the browser; the native copy event carries the text.
+    const setData = jest.fn();
+    const copy = new Event('copy', { bubbles: true, cancelable: true });
+    Object.defineProperty(copy, 'clipboardData', { value: { setData } });
     await act(async () => {
-      fireEvent.keyDown(grid, { key: 'c', ctrlKey: true });
+      fireEvent(grid, copy);
     });
-    await waitFor(() => expect(writeText).toHaveBeenCalledWith('Name 002'));
+    expect(setData).toHaveBeenCalledWith('text/plain', 'Name 002');
   });
 
   it('single row selection works on a row loaded after unloaded ones', async () => {

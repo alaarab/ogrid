@@ -265,6 +265,101 @@ describe('useClipboard', () => {
     });
   });
 
+  describe('handleCopyEvent / handleCutEvent (native copy and cut events)', () => {
+    const editableCols = visibleCols.map((c) => ({ ...c, editable: true as const }));
+    const makeEvent = (withData = true) => ({
+      clipboardData: withData ? { setData: jest.fn() } : null,
+      preventDefault: jest.fn(),
+    });
+    const range = { startRow: 0, startCol: 0, endRow: 1, endCol: 1 };
+
+    it('copy puts the TSV on clipboardData, prevents default, marks the copy range and never calls writeText', () => {
+      const { result } = renderHook(() =>
+        useClipboard({ items, visibleCols, colOffset: 0, selectionRange: range, activeCell: null, onCellValueChanged: undefined })
+      );
+      const event = makeEvent();
+      act(() => { result.current.handleCopyEvent(event); });
+
+      expect(event.clipboardData?.setData).toHaveBeenCalledTimes(1);
+      expect(event.clipboardData?.setData).toHaveBeenCalledWith('text/plain', 'Alice\t10\r\nBob\t20');
+      expect(event.preventDefault).toHaveBeenCalledTimes(1);
+      expect(writeTextMock).not.toHaveBeenCalled();
+      expect(result.current.copyRange).toEqual(range);
+      expect(result.current.cutRange).toBeNull();
+    });
+
+    it('does nothing (and leaves the default) with no selection or active cell', () => {
+      const { result } = renderHook(() =>
+        useClipboard({ items, visibleCols, colOffset: 0, selectionRange: null, activeCell: null, onCellValueChanged: undefined })
+      );
+      const event = makeEvent();
+      act(() => { result.current.handleCopyEvent(event); });
+      expect(event.clipboardData?.setData).not.toHaveBeenCalled();
+      expect(event.preventDefault).not.toHaveBeenCalled();
+      expect(result.current.copyRange).toBeNull();
+    });
+
+    it('falls back to writeText when the event has no clipboardData', () => {
+      const { result } = renderHook(() =>
+        useClipboard({ items, visibleCols, colOffset: 0, selectionRange: null, activeCell: { rowIndex: 0, columnIndex: 0 }, onCellValueChanged: undefined })
+      );
+      const event = makeEvent(false);
+      act(() => { result.current.handleCopyEvent(event); });
+      expect(writeTextMock).toHaveBeenCalledWith('Alice');
+      expect(event.preventDefault).not.toHaveBeenCalled();
+    });
+
+    it('a copy event fills the in-page clipboard used when a later paste event carries no text (plain http)', () => {
+      const onCellValueChanged = jest.fn();
+      const { result, rerender } = renderHook(
+        ({ activeCell }: { activeCell: { rowIndex: number; columnIndex: number } }) =>
+          useClipboard({ items, visibleCols: editableCols, colOffset: 0, selectionRange: null, activeCell, onCellValueChanged }),
+        { initialProps: { activeCell: { rowIndex: 0, columnIndex: 1 } } }
+      );
+      act(() => { result.current.handleCopyEvent(makeEvent()); });
+      rerender({ activeCell: { rowIndex: 1, columnIndex: 1 } });
+      act(() => { result.current.handlePasteEvent({ clipboardData: { getData: () => '' }, preventDefault: jest.fn() }); });
+      expect(onCellValueChanged).toHaveBeenCalledTimes(1);
+      expect(onCellValueChanged).toHaveBeenCalledWith(expect.objectContaining({ rowIndex: 1, columnId: 'score', newValue: '10' }));
+    });
+
+    it('cut marks the cut range; the following paste event moves the values and clears the source', () => {
+      const onCellValueChanged = jest.fn();
+      const { result, rerender } = renderHook(
+        ({ activeCell }: { activeCell: { rowIndex: number; columnIndex: number } }) =>
+          useClipboard({ items, visibleCols: editableCols, colOffset: 0, selectionRange: null, activeCell, onCellValueChanged }),
+        { initialProps: { activeCell: { rowIndex: 0, columnIndex: 0 } } }
+      );
+      const cut = makeEvent();
+      act(() => { result.current.handleCutEvent(cut); });
+      expect(cut.clipboardData?.setData).toHaveBeenCalledWith('text/plain', 'Alice');
+      expect(cut.preventDefault).toHaveBeenCalledTimes(1);
+      expect(result.current.cutRange).toEqual({ startRow: 0, startCol: 0, endRow: 0, endCol: 0 });
+      expect(result.current.copyRange).toBeNull();
+      expect(onCellValueChanged).not.toHaveBeenCalled();
+
+      rerender({ activeCell: { rowIndex: 1, columnIndex: 0 } });
+      act(() => { result.current.handlePasteEvent({ clipboardData: { getData: () => 'Alice' }, preventDefault: jest.fn() }); });
+      const changes = onCellValueChanged.mock.calls.map((c) => ({ rowIndex: c[0].rowIndex, columnId: c[0].columnId, newValue: c[0].newValue }));
+      expect(changes).toEqual([
+        { rowIndex: 1, columnId: 'name', newValue: 'Alice' },
+        { rowIndex: 0, columnId: 'name', newValue: '' },
+      ]);
+      expect(result.current.cutRange).toBeNull();
+    });
+
+    it('cut does nothing (and leaves the default) when the grid is read-only', () => {
+      const { result } = renderHook(() =>
+        useClipboard({ items, visibleCols: editableCols, colOffset: 0, selectionRange: null, activeCell: { rowIndex: 0, columnIndex: 0 }, editable: false, onCellValueChanged: jest.fn() })
+      );
+      const event = makeEvent();
+      act(() => { result.current.handleCutEvent(event); });
+      expect(event.clipboardData?.setData).not.toHaveBeenCalled();
+      expect(event.preventDefault).not.toHaveBeenCalled();
+      expect(result.current.cutRange).toBeNull();
+    });
+  });
+
   describe('paste validation (valueParser)', () => {
     type Item = { id: string; name: string; score: number; status: string };
     const editableItems: Item[] = [

@@ -17,17 +17,15 @@
  *     onCellEdit: (events) => events.forEach(applyOneEdit),
  *   });
  *
- *   // On the focusable grid container. Ctrl/Cmd+V is left to the browser: the
- *   // native `paste` event that follows carries the text, and `onPaste` reads
- *   // it without the clipboard-read permission `pasteRange()` needs.
+ *   // On the focusable grid container. Ctrl/Cmd+C, X and V are left to the
+ *   // browser: the native `copy` / `cut` / `paste` events that follow carry
+ *   // the clipboard data, so they work without the clipboard permissions (and
+ *   // secure context) `copyRange()` / `cutRange()` / `pasteRange()` need.
  *   <div
  *     tabIndex={0}
+ *     onCopy={clipboard.onCopy}
+ *     onCut={clipboard.onCut}
  *     onPaste={clipboard.onPaste}
- *     onKeyDown={(e) => {
- *       const mod = e.metaKey || e.ctrlKey;
- *       if (mod && e.key === 'c') clipboard.copyRange();
- *       if (mod && e.key === 'x') clipboard.cutRange();
- *     }}
  *   >
  */
 
@@ -85,14 +83,40 @@ export type CellClipboardPasteEvent = {
   currentTarget?: EventTarget | null;
 };
 
+/** What `onCopy` and `onCut` use from a native or React `ClipboardEvent`. */
+export type CellClipboardCopyEvent = {
+  clipboardData: Pick<DataTransfer, 'setData'> | null;
+  preventDefault: () => void;
+  target?: EventTarget | null;
+  currentTarget?: EventTarget | null;
+};
+
 export interface UseCellClipboardResult {
-  /** Copy the current range to the OS clipboard as TSV. No-op if no range. */
+  /**
+   * Copy the current range to the OS clipboard as TSV through
+   * `clipboard.writeText` (a toolbar button or context menu). No-op if no range.
+   *
+   * For the keyboard shortcut, attach `onCopy` to the container instead.
+   */
   copyRange: () => Promise<void>;
   /**
    * Mark the current range as cut. Range stays visible (marching ants) until
    * paste or `clearClipboard()`. Cleared cells are emptied at paste time.
+   *
+   * For the keyboard shortcut, attach `onCut` to the container instead.
    */
   cutRange: () => Promise<void>;
+  /**
+   * Native `copy` event handler for the grid container (`onCopy={clipboard.onCopy}`).
+   * Puts the range's TSV on `event.clipboardData` (no permission prompt, works
+   * on plain http), calls `preventDefault()` and marks the copy range like
+   * `copyRange`. Ignored when the event targets an input, textarea or
+   * contenteditable inside the container, so cell editors keep their own copy,
+   * and when there is no range. Do not also call `copyRange()` on Ctrl/Cmd+C.
+   */
+  onCopy: (event: CellClipboardCopyEvent) => void;
+  /** Native `cut` event handler (`onCut={clipboard.onCut}`). Like `onCopy`, but marks the range as cut like `cutRange`. */
+  onCut: (event: CellClipboardCopyEvent) => void;
   /**
    * Paste the OS clipboard (TSV) at the current range's anchor cell, reading
    * it programmatically through `clipboard.readText` (a toolbar button or
@@ -128,9 +152,20 @@ export interface UseCellClipboardResult {
   clearClipboard: () => void;
 }
 
-/** Text-entry controls whose own paste must not be hijacked by the grid. */
+/** Text-entry controls whose own copy/cut/paste must not be hijacked by the grid. */
 const TEXT_ENTRY_SELECTOR =
   'input:not([type="checkbox"]):not([type="radio"]):not([type="button"]):not([type="submit"]):not([type="reset"]), textarea, select, [contenteditable=""], [contenteditable="true"]';
+
+/** True when a clipboard event is aimed at a text input inside the container (a cell editor). */
+function isTextEntryTarget(event: { target?: EventTarget | null; currentTarget?: EventTarget | null }): boolean {
+  const target = event.target as Element | null | undefined;
+  return (
+    target != null &&
+    target !== event.currentTarget &&
+    typeof target.matches === 'function' &&
+    target.matches(TEXT_ENTRY_SELECTOR)
+  );
+}
 
 const DEFAULT_CLIPBOARD = {
   readText: () =>
@@ -148,9 +183,10 @@ const DEFAULT_CLIPBOARD = {
  *
  * Honors `clipboardFormatter` on column for copy and `valueParser` on column
  * for paste. Reads/writes navigator.clipboard with TSV format so the data is
- * round-trippable through Excel and Google Sheets. Keyboard paste should go
- * through `onPaste` (the native event), which needs no clipboard-read
- * permission; `pasteRange()` is the programmatic path for buttons and menus.
+ * round-trippable through Excel and Google Sheets. Keyboard copy/cut/paste
+ * should go through `onCopy` / `onCut` / `onPaste` (the native events), which
+ * need no clipboard permission; `copyRange()` / `cutRange()` / `pasteRange()`
+ * are the programmatic paths for buttons and menus.
  */
 export function useCellClipboard<T>(
   params: UseCellClipboardParams<T>,
@@ -172,6 +208,23 @@ export function useCellClipboard<T>(
     setCanPaste(typeof navigator !== 'undefined' && Boolean(navigator.clipboard?.readText));
   }, []);
 
+  const markCopied = useCallback((range: ISelectionRange) => {
+    setActiveCopyRange(range);
+    setActiveCutRange(null);
+    cutSourceRef.current = null;
+  }, []);
+
+  const markCut = useCallback((range: ISelectionRange, text: string) => {
+    const norm = normalizeSelectionRange(range);
+    cutSourceRef.current = {
+      rowKeys: rows.slice(norm.startRow, norm.endRow + 1).map((item) => getRowId ? getRowId(item) : item),
+      columnIds: columns.slice(norm.startCol, norm.endCol + 1).map((c) => c.columnId),
+      text,
+    };
+    setActiveCutRange(range);
+    setActiveCopyRange(null);
+  }, [rows, columns, getRowId]);
+
   const copyRange = useCallback(async () => {
     const range = rangeSelection.range;
     if (!range) return;
@@ -182,10 +235,8 @@ export function useCellClipboard<T>(
       onClipboardErrorRef.current?.(err);
       return;
     }
-    setActiveCopyRange(range);
-    setActiveCutRange(null);
-    cutSourceRef.current = null;
-  }, [rangeSelection.range, rows, columns, clipboard, onClipboardErrorRef]);
+    markCopied(range);
+  }, [rangeSelection.range, rows, columns, clipboard, onClipboardErrorRef, markCopied]);
 
   const cutRange = useCallback(async () => {
     const range = rangeSelection.range;
@@ -197,15 +248,26 @@ export function useCellClipboard<T>(
       onClipboardErrorRef.current?.(err);
       return;
     }
-    const norm = normalizeSelectionRange(range);
-    cutSourceRef.current = {
-      rowKeys: rows.slice(norm.startRow, norm.endRow + 1).map((item) => getRowId ? getRowId(item) : item),
-      columnIds: columns.slice(norm.startCol, norm.endCol + 1).map((c) => c.columnId),
-      text,
-    };
-    setActiveCutRange(range);
-    setActiveCopyRange(null);
-  }, [rangeSelection.range, rows, columns, clipboard, onClipboardErrorRef, getRowId]);
+    markCut(range, text);
+  }, [rangeSelection.range, rows, columns, clipboard, onClipboardErrorRef, markCut]);
+
+  const onCopy = useCallback((event: CellClipboardCopyEvent) => {
+    const range = rangeSelection.range;
+    if (!range || isTextEntryTarget(event) || !event.clipboardData) return;
+    const text = formatSelectionAsTsv(rows, columns, range);
+    event.clipboardData.setData('text/plain', text);
+    event.preventDefault();
+    markCopied(range);
+  }, [rangeSelection.range, rows, columns, markCopied]);
+
+  const onCut = useCallback((event: CellClipboardCopyEvent) => {
+    const range = rangeSelection.range;
+    if (!range || isTextEntryTarget(event) || !event.clipboardData) return;
+    const text = formatSelectionAsTsv(rows, columns, range);
+    event.clipboardData.setData('text/plain', text);
+    event.preventDefault();
+    markCut(range, text);
+  }, [rangeSelection.range, rows, columns, markCut]);
 
   /** Apply clipboard text at the range anchor and clear the pending cut. */
   const pasteText = useCallback((text: string) => {
@@ -270,16 +332,7 @@ export function useCellClipboard<T>(
   }, [rangeSelection.range, clipboard, onClipboardErrorRef, pasteText]);
 
   const onPaste = useCallback((event: CellClipboardPasteEvent) => {
-    if (!rangeSelection.range) return;
-    const target = event.target as Element | null | undefined;
-    if (
-      target != null &&
-      target !== event.currentTarget &&
-      typeof target.matches === 'function' &&
-      target.matches(TEXT_ENTRY_SELECTOR)
-    ) {
-      return;
-    }
+    if (!rangeSelection.range || isTextEntryTarget(event)) return;
     const data = event.clipboardData;
     const text = data?.getData('text/plain') || data?.getData('text') || '';
     if (!text.trim()) return;
@@ -297,6 +350,8 @@ export function useCellClipboard<T>(
     copyRange,
     cutRange,
     pasteRange,
+    onCopy,
+    onCut,
     onPaste,
     canPaste,
     activeCutRange,

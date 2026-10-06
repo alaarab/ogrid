@@ -251,17 +251,11 @@ const clipboard = useCellClipboard({
   onCellEdit: (events) => events.forEach(applyEdit),
 });
 
-useEffect(() => {
-  const handler = (e) => {
-    const mod = e.metaKey || e.ctrlKey;
-    if (mod && e.key === 'c') clipboard.copyRange();
-    if (mod && e.key === 'x') clipboard.cutRange();
-    // Ctrl/Cmd+V: leave it to the browser and attach `onPaste={clipboard.onPaste}`
-    // to the grid container instead; it reads the native paste event.
-  };
-  document.addEventListener('keydown', handler);
-  return () => document.removeEventListener('keydown', handler);
-}, [clipboard]);
+// Ctrl/Cmd+C, X and V are left to the browser: attach the native clipboard
+// event handlers to the focusable grid container.
+<div tabIndex={0} onCopy={clipboard.onCopy} onCut={clipboard.onCut} onPaste={clipboard.onPaste}>
+  {/* cells */}
+</div>
 ```
 
 ### Parameters
@@ -285,7 +279,8 @@ keep their pasted values.
 
 | Field | Description |
 |---|---|
-| `copyRange()`, `cutRange()`, `pasteRange()` | Async actions. They resolve (never reject) when the clipboard is unavailable or denied; see `onClipboardError`. `pasteRange()` reads via `clipboard.readText` and is meant for buttons and menus. |
+| `copyRange()`, `cutRange()`, `pasteRange()` | Async actions for buttons and menus. They write and read through `clipboard.writeText` / `readText` and resolve (never reject) when the clipboard is unavailable or denied; see `onClipboardError`. |
+| `onCopy(event)`, `onCut(event)` | Native `copy` / `cut` handlers for the grid container (`CellClipboardCopyEvent`). Put the range's TSV on `event.clipboardData` (works on plain http, no permission), prevent default, and mark the copy or cut range like `copyRange()` / `cutRange()`. Leave events aimed at inputs inside the container alone. |
 | `onPaste(event)` | Native `paste` handler for the grid container. Reads `event.clipboardData` (no permission prompt, works where `readText` is denied), prevents default, pastes like `pasteRange()`. Leaves pastes aimed at inputs inside the container alone. |
 | `canPaste` | `boolean` (feature detection for `readText`, so for `pasteRange()`). `false` until mounted, so server-rendered markup hydrates cleanly. |
 | `activeCutRange`, `activeCopyRange` | Marching-ants tracking |

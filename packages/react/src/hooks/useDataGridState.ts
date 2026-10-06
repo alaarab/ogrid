@@ -103,6 +103,10 @@ export interface DataGridCellInteractionState {
   handleGridKeyDown: (e: React.KeyboardEvent) => void;
   /** Native `paste` handler for the grid wrapper (Ctrl/Cmd+V, Shift+Insert). */
   handleGridPaste: (e: React.ClipboardEvent) => void;
+  /** Native `copy` handler for the grid wrapper (Ctrl/Cmd+C). */
+  handleGridCopy: (e: React.ClipboardEvent) => void;
+  /** Native `cut` handler for the grid wrapper (Ctrl/Cmd+X). */
+  handleGridCut: (e: React.ClipboardEvent) => void;
   handleFillHandleMouseDown: (e: React.MouseEvent) => void;
   handleCopy: () => void;
   handleCut: () => void;

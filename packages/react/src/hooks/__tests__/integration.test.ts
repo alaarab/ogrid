@@ -386,8 +386,8 @@ describe('Integration: Keyboard navigation at grid boundaries', () => {
         setSelectionRange,
         setEditingCell,
         handleRowCheckboxChange,
-        handleCopy: jest.fn(),
-        handleCut: jest.fn(),
+        handleCopyEvent: jest.fn(),
+        handleCutEvent: jest.fn(),
         handlePaste: jest.fn().mockResolvedValue(undefined),
         setContextMenu: jest.fn(),
       },
@@ -532,8 +532,8 @@ describe('Integration: Keyboard navigation at grid boundaries', () => {
         setSelectionRange,
         setEditingCell: jest.fn(),
         handleRowCheckboxChange: jest.fn(),
-        handleCopy: jest.fn(),
-        handleCut: jest.fn(),
+        handleCopyEvent: jest.fn(),
+        handleCutEvent: jest.fn(),
         handlePaste: jest.fn().mockResolvedValue(undefined),
         setContextMenu: jest.fn(),
       },
@@ -851,12 +851,12 @@ describe('Integration: API ref comprehensive flow', () => {
 });
 
 describe('Integration: Keyboard shortcuts for copy/cut/paste', () => {
-  it('Ctrl+C copies, Ctrl+V pastes via keyboard handler', async () => {
+  it('Ctrl+C/X/V keydowns are left to the native clipboard events', async () => {
     const onCellValueChanged = jest.fn();
     const editableCols: IColumnDef<Row>[] = testColumns.map((c) => ({ ...c, editable: true }));
 
-    const handleCopy = jest.fn();
-    const handleCut = jest.fn();
+    const handleCopyEvent = jest.fn();
+    const handleCutEvent = jest.fn();
     const handlePaste = jest.fn().mockResolvedValue(undefined);
     const onUndo = jest.fn();
     const onRedo = jest.fn();
@@ -886,8 +886,8 @@ describe('Integration: Keyboard shortcuts for copy/cut/paste', () => {
         setSelectionRange: jest.fn(),
         setEditingCell: jest.fn(),
         handleRowCheckboxChange: jest.fn(),
-        handleCopy,
-        handleCut,
+        handleCopyEvent,
+        handleCutEvent,
         handlePaste,
         handlePasteEvent: jest.fn(),
         setContextMenu: jest.fn(),
@@ -914,17 +914,18 @@ describe('Integration: Keyboard shortcuts for copy/cut/paste', () => {
         ...extra,
       }) as unknown as React.KeyboardEvent;
 
-    // Ctrl+C should call handleCopy
+    // Ctrl+C and Ctrl+X are left to the browser: the native copy/cut events
+    // that follow (handleGridCopy / handleGridCut) put the TSV on clipboardData.
+    const ctrlC = makeKeyEvent('c', { ctrlKey: true });
+    const ctrlX = makeKeyEvent('x', { ctrlKey: true });
     act(() => {
-      result.current.handleGridKeyDown(makeKeyEvent('c', { ctrlKey: true }));
+      result.current.handleGridKeyDown(ctrlC);
+      result.current.handleGridKeyDown(ctrlX);
     });
-    expect(handleCopy).toHaveBeenCalledTimes(1);
-
-    // Ctrl+X should call handleCut
-    act(() => {
-      result.current.handleGridKeyDown(makeKeyEvent('x', { ctrlKey: true }));
-    });
-    expect(handleCut).toHaveBeenCalledTimes(1);
+    expect(ctrlC.preventDefault).not.toHaveBeenCalled();
+    expect(ctrlX.preventDefault).not.toHaveBeenCalled();
+    expect(handleCopyEvent).not.toHaveBeenCalled();
+    expect(handleCutEvent).not.toHaveBeenCalled();
 
     // Ctrl+V is left to the browser: the native paste event that follows
     // carries the text (handleGridPaste), so keydown neither pastes nor prevents.
@@ -989,8 +990,8 @@ describe('Integration: Keyboard shortcuts for copy/cut/paste', () => {
         setSelectionRange,
         setEditingCell: jest.fn(),
         handleRowCheckboxChange: jest.fn(),
-        handleCopy: jest.fn(),
-        handleCut: jest.fn(),
+        handleCopyEvent: jest.fn(),
+        handleCutEvent: jest.fn(),
         handlePaste: jest.fn().mockResolvedValue(undefined),
         setContextMenu: jest.fn(),
       },
@@ -1069,8 +1070,8 @@ describe('Integration: Escape key clears selection and editing', () => {
         setSelectionRange,
         setEditingCell: jest.fn(),
         handleRowCheckboxChange: jest.fn(),
-        handleCopy: jest.fn(),
-        handleCut: jest.fn(),
+        handleCopyEvent: jest.fn(),
+        handleCutEvent: jest.fn(),
         handlePaste: jest.fn().mockResolvedValue(undefined),
         setContextMenu: jest.fn(),
         clearClipboardRanges,
@@ -1127,8 +1128,8 @@ describe('Integration: Escape key clears selection and editing', () => {
         setSelectionRange: jest.fn(),
         setEditingCell,
         handleRowCheckboxChange: jest.fn(),
-        handleCopy: jest.fn(),
-        handleCut: jest.fn(),
+        handleCopyEvent: jest.fn(),
+        handleCutEvent: jest.fn(),
         handlePaste: jest.fn().mockResolvedValue(undefined),
         setContextMenu: jest.fn(),
       },
@@ -1196,8 +1197,8 @@ describe('Integration: Delete/Backspace clears cell values', () => {
         setSelectionRange: jest.fn(),
         setEditingCell: jest.fn(),
         handleRowCheckboxChange: jest.fn(),
-        handleCopy: jest.fn(),
-        handleCut: jest.fn(),
+        handleCopyEvent: jest.fn(),
+        handleCutEvent: jest.fn(),
         handlePaste: jest.fn().mockResolvedValue(undefined),
         setContextMenu: jest.fn(),
       },

@@ -238,17 +238,15 @@ const clipboard = useCellClipboard({
   onCellEdit: (events) => events.forEach(applyEdit),
 });
 
-// On the focusable grid container. Ctrl/Cmd+V is left to the browser: the
-// native paste event that follows carries the text and needs no clipboard
-// permission, unlike `pasteRange()` (for buttons and menus).
+// On the focusable grid container. Ctrl/Cmd+C, X and V are left to the
+// browser: the native copy/cut/paste events that follow carry the clipboard
+// data and need no permission, unlike `copyRange()` / `cutRange()` /
+// `pasteRange()` (for buttons and menus).
 <div
   tabIndex={0}
+  onCopy={clipboard.onCopy}
+  onCut={clipboard.onCut}
   onPaste={clipboard.onPaste}
-  onKeyDown={(e) => {
-    const mod = e.metaKey || e.ctrlKey;
-    if (mod && e.key === 'c') clipboard.copyRange();
-    if (mod && e.key === 'x') clipboard.cutRange();
-  }}
 >
 ```
 
