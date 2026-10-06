@@ -6,6 +6,16 @@ All notable changes to OGrid will be documented in this file.
 
 ### Added
 
+- Roving focus: DOM focus now sits on the active cell (`tabIndex=0` on one
+  cell, `-1` on the rest), following the WAI-ARIA grid pattern. Screen readers
+  announce the focused cell with its row and column context, Tab enters the
+  grid once on the active cell and leaves from the last cell, and focus returns
+  to the cell after an edit commits or is cancelled. When the focused row is
+  virtualized out of the DOM, the grid wrapper holds focus until it renders
+  again.
+- Headless `useGridFocus` returns `getCellProps(row, col)` (`tabIndex`, `ref`,
+  `onFocus`, `onBlur`; new `GridFocusCellProps` type) for the same roving
+  tabindex on your own table. `UseActiveCellOptions` is exported.
 - `@alaarab/ogrid-core` exports the shared spreadsheet helpers that both the
   component and headless hooks now use: `computeFillDragEdits`,
   `captureCutSource`, `resolveCutClear`, `getSelectAllRange`,
@@ -98,6 +108,10 @@ All notable changes to OGrid will be documented in this file.
 
 ### Changed
 
+- The grid wrapper is no longer a separate tab stop, and the `aria-live`
+  region that announced cell moves is removed (focus announces the cell
+  instead). Shift+Tab from the first cell goes to the previous focusable
+  control. Bundles grow by about 1 kB.
 - Headless `useFillHandle` selects the filled range after a fill that extends
   the source, as `<OGrid>` and Excel do.
 - Internal: the component clipboard, fill, selection and keyboard hooks share
