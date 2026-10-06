@@ -3,7 +3,7 @@
  * Each UI package calls createOGridTests(OGrid) to run these.
  */
 import * as React from 'react';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { fixtureRows, fixtureColumns, getRowId } from './fixtures';
 import type { IOGridProps } from '../types';
 import type { FixtureRow } from './fixtures';
@@ -205,5 +205,80 @@ export function createOGridTests(OGrid: React.ComponentType<IOGridProps<FixtureR
     const allTh = container.querySelectorAll('thead th');
     const hashHeader = Array.from(allTh).find(th => th.textContent?.trim() === '#');
     expect(hashHeader).toBeTruthy();
+  });
+
+  describe('sorted order through edits, inserts and deletes (Excel-like snapshot)', () => {
+    // Fixture rows sorted by name desc: Gamma, Beta, Alpha.
+    const nameDesc = { field: 'name', direction: 'desc' as const };
+    const nameAsc = { field: 'name', direction: 'asc' as const };
+    const delta: FixtureRow = { id: '4', name: 'Delta', status: 'Closed' };
+    const echo: FixtureRow = { id: '5', name: 'Echo', status: 'Active' };
+    const names = () => screen.getAllByTestId('cell-name').map((el) => el.textContent);
+
+    /** Host-controlled data + sort; `update` re-renders like a host applying an edit, insert or delete. */
+    function renderSorted(extra: Partial<IOGridProps<FixtureRow>> = {}) {
+      const build = (data: FixtureRow[], more: Partial<IOGridProps<FixtureRow>>) =>
+        ({
+          data, columns: fixtureColumns, getRowId, entityLabelPlural: 'items', defaultPageSize: 10,
+          sort: nameDesc, ...extra, ...more,
+        }) as IOGridProps<FixtureRow>;
+      const view = render(<OGrid {...build(fixtureRows, {})} />);
+      return {
+        update: (data: FixtureRow[], more: Partial<IOGridProps<FixtureRow>> = {}) =>
+          view.rerender(<OGrid {...build(data, more)} />),
+      };
+    }
+
+    it('an edited row keeps its place until the user sorts again', () => {
+      const { update } = renderSorted();
+      expect(names()).toEqual(['Gamma', 'Beta', 'Alpha']);
+      // Rename Alpha so it would sort first under name desc.
+      update(fixtureRows.map((r) => (r.id === '1' ? { ...r, name: 'Zulu' } : r)));
+      expect(names()).toEqual(['Gamma', 'Beta', 'Zulu']);
+    });
+
+    it('an inserted row is appended last, on the last page, under the same sort', () => {
+      const { update } = renderSorted({ defaultPageSize: 3 });
+      expect(names()).toEqual(['Gamma', 'Beta', 'Alpha']);
+      update([...fixtureRows, delta]);
+      expect(names()).toEqual(['Gamma', 'Beta', 'Alpha']);
+      expect(screen.getByText(/Showing 1 to 3 of 4 items/i)).toBeInTheDocument();
+      fireEvent.click(screen.getByRole('button', { name: /next page/i }));
+      expect(names()).toEqual(['Delta']);
+    });
+
+    it('a deleted row drops out and the others keep their order', () => {
+      const { update } = renderSorted();
+      update(fixtureRows.filter((r) => r.id !== '2'));
+      expect(names()).toEqual(['Gamma', 'Alpha']);
+    });
+
+    it('changing the sort re-sorts everything, including the inserted row', () => {
+      const { update } = renderSorted();
+      const inserted = [...fixtureRows, delta];
+      update(inserted);
+      expect(names()).toEqual(['Gamma', 'Beta', 'Alpha', 'Delta']);
+      update(inserted, { sort: nameAsc });
+      expect(names()).toEqual(['Alpha', 'Beta', 'Delta', 'Gamma']);
+    });
+
+    it('with an active filter, a non-matching insert stays hidden and a matching one is appended', () => {
+      const filters = { status: { type: 'multiSelect' as const, value: ['Active'] } };
+      const { update } = renderSorted({ filters });
+      expect(names()).toEqual(['Gamma', 'Alpha']);
+      update([...fixtureRows, delta], { filters });
+      expect(names()).toEqual(['Gamma', 'Alpha']);
+      update([...fixtureRows, delta, echo], { filters });
+      expect(names()).toEqual(['Gamma', 'Alpha', 'Echo']);
+    });
+
+    it('worker sort keeps the same order through an insert and a delete', async () => {
+      const { update } = renderSorted({ workerSort: true });
+      await waitFor(() => expect(names()).toEqual(['Gamma', 'Beta', 'Alpha']));
+      update([...fixtureRows, delta], { workerSort: true });
+      await waitFor(() => expect(names()).toEqual(['Gamma', 'Beta', 'Alpha', 'Delta']));
+      update([...fixtureRows, delta].filter((r) => r.id !== '2'), { workerSort: true });
+      await waitFor(() => expect(names()).toEqual(['Gamma', 'Alpha', 'Delta']));
+    });
   });
 }
