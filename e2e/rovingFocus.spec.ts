@@ -4,7 +4,7 @@
  * navigation. Runs in both kits.
  */
 
-import { test, expect, type Page } from '@playwright/test';
+import { test, expect, type Locator, type Page } from '@playwright/test';
 import { waitForGrid, getDataCell, getGridRegion, expectSelectedRowCount } from './helpers';
 
 /** Where focus is: the focused cell's coordinates, the grid wrapper, or another element's tag. */
@@ -27,6 +27,22 @@ async function colIndexOf(page: Page, columnId: string): Promise<number> {
 
 async function tabStopCount(page: Page): Promise<number> {
   return page.locator('tbody td[tabindex="0"]').count();
+}
+
+/**
+ * Scroll a virtual grid's focused row out of the DOM and wait for focus to
+ * reach the wrapper. The click's scroll-to-index can land a few frames late
+ * and pull the row back, so the scroll is re-applied until it sticks.
+ */
+async function scrollFocusedRowAway(page: Page, region: Locator): Promise<void> {
+  await expect.poll(async () => {
+    await region.evaluate((el) => {
+      if (el.scrollTop < el.scrollHeight / 4) el.scrollTop = el.scrollHeight / 2;
+    });
+    await page.waitForTimeout(150);
+    const stillAway = await region.evaluate((el) => el.scrollTop >= el.scrollHeight / 4);
+    return stillAway ? focusedCell(page) : 'scrolled back';
+  }).toBe('wrapper');
 }
 
 test.describe('Roving focus', () => {
@@ -183,11 +199,8 @@ test.describe('Roving focus with virtual scrolling', () => {
     const region = getGridRegion(page);
     await getDataCell(page, 3, 'name').click();
     expect(await focusedCell(page)).toBe(`r3c${nameCol}`);
-    // Let the click's scroll-into-view frame run before scrolling away.
-    await page.waitForTimeout(100);
 
-    await region.evaluate((el) => { el.scrollTop = el.scrollHeight / 2; });
-    await expect.poll(() => focusedCell(page)).toBe('wrapper');
+    await scrollFocusedRowAway(page, region);
     await expect(region).toHaveAttribute('tabindex', '0');
     expect(await tabStopCount(page)).toBe(0);
 
@@ -200,9 +213,7 @@ test.describe('Roving focus with virtual scrolling', () => {
     const nameCol = await colIndexOf(page, 'name');
     const region = getGridRegion(page);
     await getDataCell(page, 3, 'name').click();
-    await page.waitForTimeout(100);
-    await region.evaluate((el) => { el.scrollTop = el.scrollHeight / 2; });
-    await expect.poll(() => focusedCell(page)).toBe('wrapper');
+    await scrollFocusedRowAway(page, region);
 
     await page.keyboard.press('ArrowDown');
     await expect.poll(() => focusedCell(page)).toBe(`r4c${nameCol}`);
