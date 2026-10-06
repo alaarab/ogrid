@@ -30,6 +30,7 @@ import { useCallback, useMemo, useState } from 'react';
 import {
   normalizeSelectionRange,
   isInSelectionRange,
+  getSelectAllRange,
 } from '@alaarab/ogrid-core';
 import type { ISelectionRange } from '@alaarab/ogrid-core';
 
@@ -129,9 +130,11 @@ export function useRangeSelection(
   }, []);
 
   const selectAll = useCallback(() => {
-    if (rowCount <= 0 || colCount <= 0) return;
-    setAnchor({ row: 0, col: 0 });
-    setFocus({ row: rowCount - 1, col: colCount - 1 });
+    // Same range as <OGrid>'s select-all corner and Ctrl+A.
+    const all = getSelectAllRange(rowCount, colCount);
+    if (!all) return;
+    setAnchor({ row: all.startRow, col: all.startCol });
+    setFocus({ row: all.endRow, col: all.endCol });
   }, [rowCount, colCount]);
 
   const isInRange = useCallback(

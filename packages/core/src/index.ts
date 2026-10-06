@@ -211,7 +211,7 @@ export { findCtrlArrowTarget, computeTabNavigation, computeArrowNavigation, appl
 export type { ArrowNavigationContext, ArrowNavigationResult } from './utils';
 
 // Utils  -  selectionHelpers
-export { rangesEqual, clampSelectionToBounds, computeAutoScrollSpeed, applyRangeRowSelection, computeRowSelectionState } from './utils';
+export { rangesEqual, clampSelectionToBounds, computeAutoScrollSpeed, computeAutoScrollDelta, getSelectAllRange, applyRangeRowSelection, computeRowSelectionState } from './utils';
 
 // Utils  -  clipboardHelpers
 export {

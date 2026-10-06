@@ -83,6 +83,38 @@ describe('useKeyboardNavigation', () => {
     expect(e.preventDefault).toHaveBeenCalled();
   });
 
+  it('Ctrl+A selects every cell and puts the active cell at (0, colOffset)', () => {
+    const setActiveCell = jest.fn();
+    const setSelectionRange = jest.fn();
+    const { result } = renderHook(() =>
+      useKeyboardNavigation(makeParams({
+        setActiveCell, setSelectionRange, colOffset: 1, visibleColumnCount: 3,
+        activeCell: { rowIndex: 1, columnIndex: 2 },
+      }))
+    );
+    const e = { key: 'a', ctrlKey: true, metaKey: false, shiftKey: false, preventDefault: jest.fn() } as unknown as React.KeyboardEvent;
+    act(() => { result.current.handleGridKeyDown(e); });
+    expect(e.preventDefault).toHaveBeenCalled();
+    expect(setSelectionRange).toHaveBeenCalledWith({ startRow: 0, startCol: 0, endRow: 1, endCol: 2 });
+    expect(setActiveCell).toHaveBeenCalledWith({ rowIndex: 0, columnIndex: 1 });
+  });
+
+  it('Ctrl+A with no visible columns is consumed but selects nothing', () => {
+    const setActiveCell = jest.fn();
+    const setSelectionRange = jest.fn();
+    const { result } = renderHook(() =>
+      useKeyboardNavigation(makeParams({
+        setActiveCell, setSelectionRange, visibleColumnCount: 0,
+        activeCell: { rowIndex: 0, columnIndex: 0 },
+      }))
+    );
+    const e = { key: 'a', ctrlKey: true, metaKey: false, shiftKey: false, preventDefault: jest.fn() } as unknown as React.KeyboardEvent;
+    act(() => { result.current.handleGridKeyDown(e); });
+    expect(e.preventDefault).toHaveBeenCalled();
+    expect(setSelectionRange).not.toHaveBeenCalled();
+    expect(setActiveCell).not.toHaveBeenCalled();
+  });
+
   it('when items.length is 0, ArrowDown does nothing', () => {
     const setActiveCell = jest.fn();
     const { result } = renderHook(() =>

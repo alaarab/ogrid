@@ -70,6 +70,36 @@ export function computeAutoScrollSpeed(
 }
 
 /**
+ * Pointer auto-scroll step while drag-selecting: how far to scroll the
+ * container on each axis when the pointer is within `edgePx` of (or past) an
+ * edge of `rect`. Zero on an axis when the pointer is clear of both edges.
+ */
+export function computeAutoScrollDelta(
+  rect: { top: number; bottom: number; left: number; right: number },
+  x: number,
+  y: number,
+  edgePx = 40
+): { dx: number; dy: number } {
+  let dx = 0;
+  let dy = 0;
+  if (y < rect.top + edgePx) dy = -computeAutoScrollSpeed(rect.top + edgePx - y, edgePx);
+  else if (y > rect.bottom - edgePx) dy = computeAutoScrollSpeed(y - (rect.bottom - edgePx), edgePx);
+  if (x < rect.left + edgePx) dx = -computeAutoScrollSpeed(rect.left + edgePx - x, edgePx);
+  else if (x > rect.right - edgePx) dx = computeAutoScrollSpeed(x - (rect.right - edgePx), edgePx);
+  return { dx, dy };
+}
+
+/**
+ * The range Select All covers: every cell of a `rowCount` x `colCount` grid,
+ * or null when the grid has no cells. Shared by `<OGrid>` (select-all corner
+ * and Ctrl+A) and the headless `useRangeSelection().selectAll`.
+ */
+export function getSelectAllRange(rowCount: number, colCount: number): ISelectionRange | null {
+  if (rowCount <= 0 || colCount <= 0) return null;
+  return { startRow: 0, startCol: 0, endRow: rowCount - 1, endCol: colCount - 1 };
+}
+
+/**
  * Apply a shift-click range selection to a set of row IDs.
  * Used by the React `useRowSelection` hook.
  *

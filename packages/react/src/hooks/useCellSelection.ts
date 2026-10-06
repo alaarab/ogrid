@@ -1,6 +1,7 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
 import { normalizeSelectionRange } from '../types';
-import { rangesEqual, computeAutoScrollSpeed, buildCellIndex, cellIndexKey } from '../utils';
+import { computeAutoScrollDelta, getSelectAllRange } from '@alaarab/ogrid-core';
+import { rangesEqual, buildCellIndex, cellIndexKey } from '../utils';
 import { useLatestRef } from './useLatestRef';
 import type { ISelectionRange, IActiveCell } from '../types';
 
@@ -121,13 +122,9 @@ export function useCellSelection(params: UseCellSelectionParams): UseCellSelecti
   );
 
   const handleSelectAllCells = useCallback(() => {
-    if (rowCount === 0 || visibleColCount === 0) return;
-    setSelectionRange({
-      startRow: 0,
-      startCol: 0,
-      endRow: rowCount - 1,
-      endCol: visibleColCount - 1,
-    });
+    const all = getSelectAllRange(rowCount, visibleColCount);
+    if (!all) return;
+    setSelectionRange(all);
     setActiveCell({ rowIndex: 0, columnIndex: colOffsetRef.current });
   }, [rowCount, visibleColCount, setActiveCell, colOffsetRef, setSelectionRange]);
 
@@ -329,20 +326,11 @@ export function useCellSelection(params: UseCellSelectionParams): UseCellSelecti
       const p = lastMousePosRef.current;
       if (!w || !p || !isDraggingRef.current) { autoScrollRef.current = null; return; }
 
-      // Batch all layout reads first
-      const r = w.getBoundingClientRect();
-      let sdx = 0;
-      let sdy = 0;
-      if (p.cy < r.top + AUTO_SCROLL_EDGE) sdy = -computeAutoScrollSpeed(r.top + AUTO_SCROLL_EDGE - p.cy);
-      else if (p.cy > r.bottom - AUTO_SCROLL_EDGE) sdy = computeAutoScrollSpeed(p.cy - (r.bottom - AUTO_SCROLL_EDGE));
-      if (p.cx < r.left + AUTO_SCROLL_EDGE) sdx = -computeAutoScrollSpeed(r.left + AUTO_SCROLL_EDGE - p.cx);
-      else if (p.cx > r.right - AUTO_SCROLL_EDGE) sdx = computeAutoScrollSpeed(p.cx - (r.right - AUTO_SCROLL_EDGE));
-
-      if (sdx === 0 && sdy === 0) { autoScrollRef.current = null; return; }
-
-      // Layout writes
-      w.scrollTop += sdy;
-      w.scrollLeft += sdx;
+      // Layout read first, then writes
+      const { dx, dy } = computeAutoScrollDelta(w.getBoundingClientRect(), p.cx, p.cy, AUTO_SCROLL_EDGE);
+      if (dx === 0 && dy === 0) { autoScrollRef.current = null; return; }
+      w.scrollTop += dy;
+      w.scrollLeft += dx;
 
       // After scrolling, re-resolve the cell under the pointer and update drag range
       const newRange = resolveRange(p.cx, p.cy);
@@ -364,21 +352,7 @@ export function useCellSelection(params: UseCellSelectionParams): UseCellSelecti
         return;
       }
 
-      const rect = wrapper.getBoundingClientRect();
-      let dx = 0;
-      let dy = 0;
-
-      if (pos.cy < rect.top + AUTO_SCROLL_EDGE) {
-        dy = -computeAutoScrollSpeed(rect.top + AUTO_SCROLL_EDGE - pos.cy);
-      } else if (pos.cy > rect.bottom - AUTO_SCROLL_EDGE) {
-        dy = computeAutoScrollSpeed(pos.cy - (rect.bottom - AUTO_SCROLL_EDGE));
-      }
-
-      if (pos.cx < rect.left + AUTO_SCROLL_EDGE) {
-        dx = -computeAutoScrollSpeed(rect.left + AUTO_SCROLL_EDGE - pos.cx);
-      } else if (pos.cx > rect.right - AUTO_SCROLL_EDGE) {
-        dx = computeAutoScrollSpeed(pos.cx - (rect.right - AUTO_SCROLL_EDGE));
-      }
+      const { dx, dy } = computeAutoScrollDelta(wrapper.getBoundingClientRect(), pos.cx, pos.cy, AUTO_SCROLL_EDGE);
 
       if (dx === 0 && dy === 0) {
         stopAutoScroll();
