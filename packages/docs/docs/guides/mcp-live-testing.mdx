@@ -175,10 +175,11 @@ Payload: {"rowIndex":0,"columnId":"salary","value":130000}
 | Option | Type | Description |
 |--------|------|-------------|
 | `gridId` | `string` | Unique ID shown in `list_grids` |
-| `getData` | `() => unknown[]` | Returns current displayed rows |
-| `getColumns` | `() => BridgeColumnInfo[]` | Returns current columns |
+| `getData` | `() => unknown[]` | (optional) Returns current displayed rows. Defaults to `api.getDisplayedRows()` |
+| `getColumns` | `() => BridgeColumnInfo[]` | (optional) Returns current columns. Defaults to the visible column ids from `api.getColumnState()` |
+| `getSort` / `getFilters` | `() => ...` | (optional) Current sort / filter model. Default to `api.getColumnState()` |
 | `getPagination` | `() => { page, pageSize, totalCount, pageCount }` | (optional) Pagination state |
-| `api` | `BridgeGridApi` | (optional) Grid API for filter/sort/page commands |
+| `api` | `BridgeGridApi` | (optional) Grid API: an `IOGridApi` (the `<OGrid>` ref) works as-is for state, selection, filter and sort commands. It has no page setter, so add `goToPage` for `go_to_page` |
 | `onCellUpdate` | `(rowIndex, columnId, value) => void` | (optional) Handle `update_cell` commands |
 | `bridgeUrl` | `string` | Bridge URL (default: `http://localhost:7890`) |
 | `pollIntervalMs` | `number` | Poll frequency in ms (default: `500`) |
