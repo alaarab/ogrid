@@ -6,6 +6,10 @@ All notable changes to OGrid will be documented in this file.
 
 ### Added
 
+- `dataSourceKey` prop (also on `useHeadlessGrid` and `useFilterOptions`):
+  when set, only a key change refetches, resets the windowed cache or reloads
+  filter options. Without it, an inline `dataSource` object whose properties
+  are unchanged no longer counts as a new source.
 - Headless `useCellClipboard` returns `onCopy(event)` and `onCut(event)` for
   the native `copy`/`cut` events (new `CellClipboardCopyEvent` type), next to
   `onPaste`.
@@ -31,6 +35,21 @@ All notable changes to OGrid will be documented in this file.
 
 ### Fixed
 
+- Formulas work with host-controlled undo (`onUndo`/`onRedo`): formula edits,
+  paste, fill and formula-bar writes are reported through
+  `onCellValueChanged` (with the formula text) so the host history records
+  them, and formulas stored in data load and follow undo/redo. Previously
+  Ctrl+Z skipped formula edits and could write formula text as a plain value.
+- Inline `dataSource` objects no longer refetch the visible window on every
+  render, and a real source swap after inline re-renders is no longer missed.
+- Filter options: switching data source clears the previous source's options,
+  each field shows its options as soon as they load, and an inline
+  `peopleSearch` function no longer causes an endless re-render.
+- `onSelectionChange` reports `selectedItems` for every selected row, not only
+  rows on the current page, for checkbox clicks, the header checkbox,
+  `setSelectedRows`, `selectAll`, `deselectAll` and `resetGridState`.
+- A Space toggle on a row checkbox after a shift-click toggles one row instead
+  of re-applying the shift range.
 - Ctrl/Cmd+C and Ctrl/Cmd+X copy and cut through the native `copy`/`cut`
   events, writing TSV to the event's clipboard data. Copying now reaches the
   system clipboard on plain http and without clipboard write permission. The
@@ -57,6 +76,8 @@ All notable changes to OGrid will be documented in this file.
 
 ### Changed
 
+- With host-controlled undo and formulas, `onCellValueChanged` receives formula
+  text (for example `=A1*2`) as `newValue` and the host stores it in its data.
 - `useHeadlessGrid`, `useInlineEdit`, `useFillHandle` and `useCellClipboard`
   take and return `@alaarab/ogrid-react`'s `IColumnDef<T>` instead of core's,
   so `grid.columns[i]` can be passed to helpers typed with the package type.
