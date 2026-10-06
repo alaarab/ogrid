@@ -8,6 +8,8 @@ import {
 } from '@alaarab/ogrid-core';
 import { useLatestRef } from './useLatestRef';
 import { useIdentityVersion } from './useIdentityVersion';
+import { applySnapshot, createSnapshot, keepsSnapshot } from './rowOrderSnapshot';
+import type { RowOrderSnapshot } from './rowOrderSnapshot';
 import type { IFilters, IDataSource, WindowedDataState } from '../types';
 import type { IColumnDef as ICoreColumnDef, WindowedRow, PageSize } from '@alaarab/ogrid-core';
 
@@ -29,9 +31,13 @@ export interface UseOGridDataFetchingParams<T> {
   displayData: T[];
   /**
    * Row identity. When `displayData` changes, rows are re-sorted/re-filtered
-   * unless it looks like a cell edit, whose order is preserved: every position
-   * still holds the same row (by id) and either some row objects are unchanged
-   * or `editVersionRef` moved since the last data change.
+   * unless it looks like an edit, whose order is preserved: some row objects
+   * are unchanged (immutable updates touch only the edited rows) or
+   * `editVersionRef` moved since the last data change. With `getRowId` the
+   * snapshot is kept by id, so inserts and deletes keep the order too: rows
+   * still present stay in place, removed rows drop out, and new rows that pass
+   * the current filters are appended at the end in source order. Without it,
+   * the snapshot is positional and any length change re-sorts.
    */
   getRowId?: (row: T) => unknown;
   /**
@@ -100,63 +106,6 @@ export interface UseOGridDataFetchingState<T> {
  */
 const EMPTY_ROWS: readonly unknown[] = Object.freeze([]);
 
-/**
- * True when `next` looks like `prev` after in-place cell edits (same rows at
- * the same positions) rather than a different dataset. Edits keep the snapshot
- * sort order; a different dataset of the same length must be re-sorted and
- * re-filtered.
- */
-function isSameRowSet<T>(
-  prev: readonly T[],
-  next: readonly T[],
-  getRowId: ((row: T) => unknown) | undefined,
-  editPending: boolean,
-): boolean {
-  if (prev === next) return true;
-  if (prev.length !== next.length) return false;
-  let shared = 0;
-  for (let i = 0; i < next.length; i++) {
-    const a = prev[i];
-    const b = next[i];
-    if (a === b) {
-      shared++;
-      continue;
-    }
-    if (getRowId && a !== undefined && b !== undefined && getRowId(a) !== getRowId(b)) return false;
-  }
-  // An edit replaces some row objects while others stay reference-equal; a new
-  // dataset (even one with matching ids) replaces all of them, unless the grid
-  // just emitted edits that the host applied by rebuilding every row.
-  return next.length === 0 || shared > 0 || (getRowId !== undefined && editPending);
-}
-
-/**
- * Maps processed (filtered + sorted) rows back to their positions in `source`.
- * A row reference that appears more than once keeps one position per occurrence
- * (the processing sort is stable, so occurrences come back in source order).
- */
-function rowsToIndices<T>(source: readonly T[], rows: readonly T[]): number[] {
-  const positions = new Map<T, number[]>();
-  for (let i = 0; i < source.length; i++) {
-    const row = source[i];
-    if (row === undefined) continue;
-    const list = positions.get(row);
-    if (list) list.push(i);
-    else positions.set(row, [i]);
-  }
-  const cursor = new Map<T, number>();
-  const indices: number[] = [];
-  for (const row of rows) {
-    const list = positions.get(row);
-    if (!list) continue;
-    const n = cursor.get(row) ?? 0;
-    const idx = list[Math.min(n, list.length - 1)];
-    cursor.set(row, n + 1);
-    if (idx !== undefined) indices.push(idx);
-  }
-  return indices;
-}
-
 export function useOGridDataFetching<T>(params: UseOGridDataFetchingParams<T>): UseOGridDataFetchingState<T> {
   const {
     isServerSide, dataSource, displayData, getRowId, columns, stableFilters,
@@ -177,16 +126,15 @@ export function useOGridDataFetching<T>(params: UseOGridDataFetchingParams<T>): 
     sortBy: sort.field,
   });
 
-  // --- Stable sorted order (index-based) ---
-  // We store the sorted order as indices into `displayData` (at sort time). When data changes
-  // due to cell edits (sortVersion unchanged), we reuse the same indices to look up updated
-  // row objects - preserving order without re-sorting. When sort/filters change (sortVersion
-  // increments or filters/columns change), we rebuild the index array.
-  //
-  // Index-based approach is safe for cell edits: the edited row is at the same position in
-  // displayData, so the same index points to the (possibly mutated or replaced) row object.
-  // Rows are only moved when the user explicitly sorts.
-  const sortedIndicesRef = useRef<number[] | null>(null);
+  // --- Stable sorted order (snapshot) ---
+  // The sorted + filtered order is kept as a snapshot (see rowOrderSnapshot.ts):
+  // row ids when `getRowId` is provided, positions into `displayData` otherwise.
+  // When data changes because of edits (sortVersion unchanged), the snapshot is
+  // re-applied to the new row objects - preserving order without re-sorting;
+  // by id, inserts and deletes keep that order as well. When sort/filters/columns
+  // change (sortVersion increments or filters/columns change), the snapshot is
+  // rebuilt from a full re-sort. Rows only move when the user explicitly sorts.
+  const snapshotRef = useRef<RowOrderSnapshot<T> | null>(null);
   const prevSortVersionRef = useRef(-1); // -1 forces initial build
   const prevFiltersRef = useRef<IFilters | null>(null);
   const prevColumnsRef = useRef<ICoreColumnDef<T>[] | null>(null);
@@ -204,7 +152,7 @@ export function useOGridDataFetching<T>(params: UseOGridDataFetchingParams<T>): 
     stableFilters !== prevFiltersRef.current ||
     columns !== prevColumnsRef.current ||
     prevDataRef.current === null ||
-    !isSameRowSet(prevDataRef.current, displayData, getRowIdRef.current, editVersion !== prevEditVersionRef.current) ||
+    !keepsSnapshot(snapshotRef.current, prevDataRef.current, displayData, getRowIdRef.current, editVersion !== prevEditVersionRef.current) ||
     sort.field !== prevSortFieldRef.current ||
     sort.direction !== prevSortDirectionRef.current;
 
@@ -214,32 +162,38 @@ export function useOGridDataFetching<T>(params: UseOGridDataFetchingParams<T>): 
     prevColumnsRef.current = columns;
     prevSortFieldRef.current = sort.field;
     prevSortDirectionRef.current = sort.direction;
-    sortedIndicesRef.current = null; // will be built in memo
+    snapshotRef.current = null; // will be built in memo
   }
   if (prevDataRef.current !== displayData) prevEditVersionRef.current = editVersion;
   prevDataRef.current = displayData;
 
+  // Current filters only (no sort): applied to rows inserted since the snapshot
+  // was taken, so a new row that doesn't match stays hidden.
+  const filterRows = useCallback(
+    (rows: T[]) => processClientSideData(rows, columns, stableFilters),
+    [columns, stableFilters],
+  );
+
   // --- Client-side filtering & sorting (sync path) ---
-  // biome-ignore lint/correctness/useExhaustiveDependencies: sortVersion is a deliberate invalidation trigger — it is consumed via needsResort/sortedIndicesRef above, so the memo must recompute when it bumps even though it is not read inside
+  // biome-ignore lint/correctness/useExhaustiveDependencies: sortVersion is a deliberate invalidation trigger — it is consumed via needsResort/snapshotRef above, so the memo must recompute when it bumps even though it is not read inside
   const clientItemsAndTotal = useMemo(() => {
     if (!isClientSide || useWorker) return null;
 
+    // Data changed (edit, insert, delete) but the sort order is preserved:
+    // re-apply the snapshot to the current row objects. `null` means the
+    // snapshot was invalidated above or can't be applied (duplicate ids, a
+    // replaced dataset) and a full re-sort is due.
+    const snapshot = snapshotRef.current;
+    const applied = snapshot ? applySnapshot(snapshot, displayData, getRowIdRef.current, filterRows) : null;
     let orderedRows: T[];
-
-    if (sortedIndicesRef.current === null) {
-      // Full re-sort: run processClientSideData to get sorted rows, then derive indices.
-      // We compute sorted rows against the current displayData and store their positions
-      // (indices in displayData) so subsequent edits can look up updated row objects.
-      const sorted = processClientSideData(
-        displayData, columns, stableFilters, sort.field, sort.direction
-      );
-      // Map the sorted rows back to positions in displayData (filtered-in rows are a subset).
-      sortedIndicesRef.current = rowsToIndices(displayData, sorted);
-      orderedRows = sorted;
+    if (applied) {
+      snapshotRef.current = applied.snapshot;
+      orderedRows = applied.rows;
     } else {
-      // Data values changed (cell edit) but sort order is preserved.
-      // Look up current row objects using stored indices.
-      orderedRows = sortedIndicesRef.current.map((idx) => displayData[idx]).filter((r) => r !== undefined);
+      // Full re-sort against the current displayData; the snapshot remembers
+      // the resulting order so later edits can look up the updated rows.
+      orderedRows = processClientSideData(displayData, columns, stableFilters, sort.field, sort.direction);
+      snapshotRef.current = createSnapshot(displayData, orderedRows, getRowIdRef.current);
     }
 
     const total = orderedRows.length;
@@ -249,9 +203,9 @@ export function useOGridDataFetching<T>(params: UseOGridDataFetchingParams<T>): 
       return { items: orderedRows, totalCount: total, all: orderedRows };
     }
     return { items: pageWindow(orderedRows, page, pageSize), totalCount: total, all: orderedRows };
-    // Note: sortVersion is implicitly tracked via needsResort / sortedIndicesRef.current === null
+    // Note: sortVersion is implicitly tracked via needsResort / snapshotRef.current === null
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isClientSide, useWorker, displayData, columns, stableFilters, sortVersion, sort.field, sort.direction, page, pageSize, paginate]);
+  }, [isClientSide, useWorker, displayData, columns, stableFilters, sortVersion, sort.field, sort.direction, page, pageSize, paginate, filterRows, getRowIdRef]);
 
   // Stabilize callback refs so inline dataSource/onError don't cause infinite re-fetches.
   const dataSourceRef = useLatestRef(dataSource);
@@ -263,7 +217,7 @@ export function useOGridDataFetching<T>(params: UseOGridDataFetchingParams<T>): 
   // --- Client-side filtering & sorting (async worker path) ---
   const [asyncItems, setAsyncItems] = useState<{ items: T[]; totalCount: number; all: T[] } | null>(null);
   const asyncIdRef = useRef(0);
-  const asyncSortedIndicesRef = useRef<number[] | null>(null);
+  const asyncSnapshotRef = useRef<RowOrderSnapshot<T> | null>(null);
   const asyncPrevSortVersionRef = useRef(-1);
   const asyncPrevFiltersRef = useRef<IFilters | null>(null);
   const asyncPrevColumnsRef = useRef<ICoreColumnDef<T>[] | null>(null);
@@ -285,7 +239,7 @@ export function useOGridDataFetching<T>(params: UseOGridDataFetchingParams<T>): 
       stableFilters !== asyncPrevFiltersRef.current ||
       columns !== asyncPrevColumnsRef.current ||
       asyncPrevDataRef.current === null ||
-      !isSameRowSet(asyncPrevDataRef.current, displayData, getRowIdRef.current, asyncEditVersion !== asyncPrevEditVersionRef.current) ||
+      !keepsSnapshot(asyncSnapshotRef.current, asyncPrevDataRef.current, displayData, getRowIdRef.current, asyncEditVersion !== asyncPrevEditVersionRef.current) ||
       sort.field !== asyncPrevSortFieldRef.current ||
       sort.direction !== asyncPrevSortDirectionRef.current;
     if (asyncPrevDataRef.current !== displayData) asyncPrevEditVersionRef.current = asyncEditVersion;
@@ -297,20 +251,32 @@ export function useOGridDataFetching<T>(params: UseOGridDataFetchingParams<T>): 
       asyncPrevColumnsRef.current = columns;
       asyncPrevSortFieldRef.current = sort.field;
       asyncPrevSortDirectionRef.current = sort.direction;
-      asyncSortedIndicesRef.current = null;
+      asyncSnapshotRef.current = null;
     }
 
     const id = ++asyncIdRef.current;
 
-    if (asyncSortedIndicesRef.current === null) {
-      const commitRows = (rows: T[]) => {
-        asyncSortedIndicesRef.current = rowsToIndices(displayData, rows);
-        const total = rows.length;
-        if (!paginate) {
-          setAsyncItems({ items: rows, totalCount: total, all: rows });
-          return;
-        }
-        setAsyncItems({ items: pageWindow(rows, page, pageSize), totalCount: total, all: rows });
+    const commitRows = (rows: T[]) => {
+      const total = rows.length;
+      if (!paginate) {
+        setAsyncItems({ items: rows, totalCount: total, all: rows });
+        return;
+      }
+      setAsyncItems({ items: pageWindow(rows, page, pageSize), totalCount: total, all: rows });
+    };
+
+    // Preserve order: re-apply the snapshot to the current row objects (sync,
+    // O(n) by id or position - no worker round trip needed). `null` means a
+    // full re-sort is due (invalidated above, duplicate ids, replaced dataset).
+    const snapshot = asyncSnapshotRef.current;
+    const applied = snapshot ? applySnapshot(snapshot, displayData, getRowIdRef.current, filterRows) : null;
+    if (applied) {
+      asyncSnapshotRef.current = applied.snapshot;
+      commitRows(applied.rows);
+    } else {
+      const commitSorted = (rows: T[]) => {
+        asyncSnapshotRef.current = createSnapshot(displayData, rows, getRowIdRef.current);
+        commitRows(rows);
       };
 
       // Full re-sort via worker.
@@ -322,26 +288,17 @@ export function useOGridDataFetching<T>(params: UseOGridDataFetchingParams<T>): 
         sort.direction,
       ).then((rows) => {
         if (id !== asyncIdRef.current) return; // stale
-        commitRows(rows as T[]);
+        commitSorted(rows as T[]);
       }).catch((err) => {
         if (id !== asyncIdRef.current) return; // stale
         // Worker failed at runtime: report and fall back to synchronous
         // processing so the grid still updates instead of keeping stale rows.
         onErrorRef.current?.(err);
-        commitRows(processClientSideData(displayData, columns, stableFilters, sort.field, sort.direction));
+        commitSorted(processClientSideData(displayData, columns, stableFilters, sort.field, sort.direction));
       });
-    } else {
-      // Preserve order: look up updated rows by stored indices.
-      const orderedRows = asyncSortedIndicesRef.current.map((idx) => displayData[idx]).filter((r) => r !== undefined);
-      const total = orderedRows.length;
-      if (!paginate) {
-        setAsyncItems({ items: orderedRows, totalCount: total, all: orderedRows });
-      } else {
-        setAsyncItems({ items: pageWindow(orderedRows, page, pageSize), totalCount: total, all: orderedRows });
-      }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isClientSide, useWorker, displayData, columns, stableFilters, sortVersion, sort.field, sort.direction, page, pageSize, paginate, onErrorRef]);
+  }, [isClientSide, useWorker, displayData, columns, stableFilters, sortVersion, sort.field, sort.direction, page, pageSize, paginate, onErrorRef, filterRows]);
 
   // --- Server-side data fetching ---
   const [serverItems, setServerItems] = useState<T[]>([]);
