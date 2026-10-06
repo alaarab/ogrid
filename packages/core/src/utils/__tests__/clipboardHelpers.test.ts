@@ -4,6 +4,8 @@ import {
   parseTsvClipboard,
   applyPastedValues,
   applyCutClear,
+  captureCutSource,
+  resolveCutClear,
 } from '../clipboardHelpers';
 import type { IColumnDef } from '../../types/columnTypes';
 import type { ISelectionRange } from '../../types/dataGridTypes';
@@ -302,5 +304,36 @@ describe('clipboard formatting edge cases', () => {
       { startRow: 0, startCol: 0, endRow: 1, endCol: 0 },
     );
     expect(parseTsvClipboard(tsv)).toEqual([['"quoted"'], ['"x""y"']]);
+  });
+});
+
+describe('captureCutSource / resolveCutClear', () => {
+  type Item = { id: number; a: string; b: string };
+  const cols: IColumnDef<Item>[] = [
+    { columnId: 'a', name: 'A', editable: true },
+    { columnId: 'b', name: 'B', editable: true },
+  ];
+  const rowKeyOf = (item: Item) => item.id;
+  const items = (): Item[] => [{ id: 1, a: 'x', b: 'y' }, { id: 2, a: '', b: '' }, { id: 3, a: '', b: '' }];
+
+  it('captures rows by key and columns by id, in any corner order', () => {
+    const cut = captureCutSource({ startRow: 1, startCol: 1, endRow: 0, endCol: 0 }, items(), cols, rowKeyOf, 'x\ty');
+    expect(cut).toEqual({ rowKeys: [1, 2], columnIds: ['a', 'b'], text: 'x\ty' });
+  });
+
+  it('clears the source where it is now, skipping rejected destinations and pasted cells', () => {
+    const cut = captureCutSource({ startRow: 0, startCol: 0, endRow: 0, endCol: 1 }, items(), cols, rowKeyOf, 'x\ty\r\n');
+    const now = items().reverse(); // the cut row moved to index 2
+    const pasteEvents = [{ item: now[0] as Item, columnId: 'a', oldValue: '', newValue: 'x', rowIndex: 0 }];
+    const events = resolveCutClear({ cut, text: 'x\ty\n', pasteEvents, anchorRow: 0, anchorCol: 0, items: now, visibleCols: cols, rowKeyOf });
+    // Only column a's destination accepted the paste, so only a is cleared.
+    expect(events.map((e) => [e.rowIndex, e.columnId, e.newValue])).toEqual([[2, 'a', '']]);
+  });
+
+  it('counts pasted formula cells as written, and clears nothing for other text', () => {
+    const cut = captureCutSource({ startRow: 0, startCol: 0, endRow: 0, endCol: 0 }, items(), cols, rowKeyOf, 'x');
+    const base = { cut, pasteEvents: [], anchorRow: 1, anchorCol: 0, items: items(), visibleCols: cols, rowKeyOf };
+    expect(resolveCutClear({ ...base, text: 'x', pastedFormulaCells: ['1|a'] }).map((e) => e.rowIndex)).toEqual([0]);
+    expect(resolveCutClear({ ...base, text: 'other', pastedFormulaCells: ['1|a'] })).toEqual([]);
   });
 });

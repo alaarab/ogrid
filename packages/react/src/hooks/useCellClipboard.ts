@@ -29,13 +29,14 @@
  *   >
  */
 
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import {
   normalizeSelectionRange,
   formatSelectionAsTsv,
   parseTsvClipboard,
   applyPastedValues,
-  applyCutClear,
+  captureCutSource,
+  resolveCutClear,
 } from '@alaarab/ogrid-core';
 import type {
   ISelectionRange,
@@ -45,6 +46,7 @@ import type {
 import type { IColumnDef } from '../types';
 import type { UseRangeSelectionResult } from './useRangeSelection';
 import { useLatestRef } from './useLatestRef';
+import { getPastedText, TEXT_ENTRY_SELECTOR, useClipboardMarks } from './useClipboardMarks';
 
 export interface UseCellClipboardParams<T> {
   /** Current range selection. Copy/cut/paste targets resolve from here. */
@@ -152,10 +154,6 @@ export interface UseCellClipboardResult {
   clearClipboard: () => void;
 }
 
-/** Text-entry controls whose own copy/cut/paste must not be hijacked by the grid. */
-const TEXT_ENTRY_SELECTOR =
-  'input:not([type="checkbox"]):not([type="radio"]):not([type="button"]):not([type="submit"]):not([type="reset"]), textarea, select, [contenteditable=""], [contenteditable="true"]';
-
 /** True when a clipboard event is aimed at a text input inside the container (a cell editor). */
 function isTextEntryTarget(event: { target?: EventTarget | null; currentTarget?: EventTarget | null }): boolean {
   const target = event.target as Element | null | undefined;
@@ -194,12 +192,8 @@ export function useCellClipboard<T>(
   const { rangeSelection, rows, columns, onCellEdit, clipboard = DEFAULT_CLIPBOARD, onClipboardError, getRowId } = params;
   const onClipboardErrorRef = useLatestRef(onClipboardError);
 
-  const [activeCutRange, setActiveCutRange] = useState<ISelectionRange | null>(null);
-  const [activeCopyRange, setActiveCopyRange] = useState<ISelectionRange | null>(null);
-  // The cut source by identity (row ids or objects, column ids) plus the text it put on
-  // the clipboard, so a re-sort/page change or a later external copy can't make
-  // paste clear the wrong cells.
-  const cutSourceRef = useRef<{ rowKeys: unknown[]; columnIds: string[]; text: string } | null>(null);
+  // Copy/cut marks and the pending cut, shared with <OGrid>'s useClipboard.
+  const { cutRange: activeCutRange, copyRange: activeCopyRange, markCopied, markCut: markCutSource, takePendingCut, clearMarks: clearClipboard } = useClipboardMarks();
 
   // Detected after mount: computing it during render would differ between
   // server (false) and client (true) and break hydration.
@@ -208,22 +202,14 @@ export function useCellClipboard<T>(
     setCanPaste(typeof navigator !== 'undefined' && Boolean(navigator.clipboard?.readText));
   }, []);
 
-  const markCopied = useCallback((range: ISelectionRange) => {
-    setActiveCopyRange(range);
-    setActiveCutRange(null);
-    cutSourceRef.current = null;
-  }, []);
+  const rowKeyOf = useCallback((item: T): unknown => (getRowId ? getRowId(item) : item), [getRowId]);
 
+  // The cut source by identity (row ids or objects, column ids) plus the text it put on
+  // the clipboard, so a re-sort/page change or a later external copy can't make
+  // paste clear the wrong cells.
   const markCut = useCallback((range: ISelectionRange, text: string) => {
-    const norm = normalizeSelectionRange(range);
-    cutSourceRef.current = {
-      rowKeys: rows.slice(norm.startRow, norm.endRow + 1).map((item) => getRowId ? getRowId(item) : item),
-      columnIds: columns.slice(norm.startCol, norm.endCol + 1).map((c) => c.columnId),
-      text,
-    };
-    setActiveCutRange(range);
-    setActiveCopyRange(null);
-  }, [rows, columns, getRowId]);
+    markCutSource(range, captureCutSource(range, rows, columns, rowKeyOf, text));
+  }, [rows, columns, rowKeyOf, markCutSource]);
 
   const copyRange = useCallback(async () => {
     const range = rangeSelection.range;
@@ -269,7 +255,7 @@ export function useCellClipboard<T>(
     markCut(range, text);
   }, [rangeSelection.range, rows, columns, markCut]);
 
-  /** Apply clipboard text at the range anchor and clear the pending cut. */
+  /** Apply clipboard text at the range anchor and complete the pending cut. */
   const pasteText = useCallback((text: string) => {
     const range = rangeSelection.range;
     if (!range) return;
@@ -278,46 +264,14 @@ export function useCellClipboard<T>(
 
     // Anchor at the top-left even for ranges selected upward/leftward.
     const anchor = normalizeSelectionRange(range);
-    const events = applyPastedValues(
-      parsed,
-      anchor.startRow,
-      anchor.startCol,
-      rows,
-      columns,
-    );
-
-    // Clear only cut cells whose corresponding destination accepted the paste.
-    let combined = events;
-    const cutSource = cutSourceRef.current;
-    cutSourceRef.current = null;
-    const norm = (s: string) => s.replace(/\r\n?/g, '\n').replace(/\n+$/, '');
-    if (cutSource && norm(text) === norm(cutSource.text)) {
-      const cutClearEvents: ICellValueChangedEvent<T>[] = [];
-      const pastedKeys = new Set(events.map((e) => `${e.rowIndex}|${e.columnId}`));
-      const rowIndexByKey = new Map<unknown, number>();
-      rows.forEach((item, i) => { rowIndexByKey.set(getRowId ? getRowId(item) : item, i); });
-      for (const [sourceRow, key] of cutSource.rowKeys.entries()) {
-        const r = rowIndexByKey.get(key);
-        if (r === undefined) continue;
-        for (const [sourceCol, columnId] of cutSource.columnIds.entries()) {
-          const targetColumn = columns[anchor.startCol + sourceCol];
-          if (!targetColumn || !pastedKeys.has(`${anchor.startRow + sourceRow}|${targetColumn.columnId}`)) continue;
-          const c = columns.findIndex((col) => col.columnId === columnId);
-          if (c < 0) continue;
-          cutClearEvents.push(...applyCutClear({ startRow: r, endRow: r, startCol: c, endCol: c }, rows, columns));
-        }
-      }
-      // Skip cells that paste already overwrote (cut + paste over the same cell = paste wins).
-      const filtered = cutClearEvents.filter(
-        (e) => !pastedKeys.has(`${e.rowIndex}|${e.columnId}`),
-      );
-      combined = [...events, ...filtered];
-    }
-
+    const events = applyPastedValues(parsed, anchor.startRow, anchor.startCol, rows, columns);
+    const cut = takePendingCut();
+    const cutEvents = cut
+      ? resolveCutClear({ cut, text, pasteEvents: events, anchorRow: anchor.startRow, anchorCol: anchor.startCol, items: rows, visibleCols: columns, rowKeyOf })
+      : [];
+    const combined = cutEvents.length > 0 ? [...events, ...cutEvents] : events;
     if (combined.length > 0) onCellEdit(combined);
-    setActiveCutRange(null);
-    setActiveCopyRange(null);
-  }, [rangeSelection.range, rows, columns, onCellEdit, getRowId]);
+  }, [rangeSelection.range, rows, columns, onCellEdit, rowKeyOf, takePendingCut]);
 
   const pasteRange = useCallback(async () => {
     if (!rangeSelection.range) return;
@@ -333,18 +287,11 @@ export function useCellClipboard<T>(
 
   const onPaste = useCallback((event: CellClipboardPasteEvent) => {
     if (!rangeSelection.range || isTextEntryTarget(event)) return;
-    const data = event.clipboardData;
-    const text = data?.getData('text/plain') || data?.getData('text') || '';
+    const text = getPastedText(event.clipboardData);
     if (!text.trim()) return;
     event.preventDefault();
     pasteText(text);
   }, [rangeSelection.range, pasteText]);
-
-  const clearClipboard = useCallback(() => {
-    cutSourceRef.current = null;
-    setActiveCutRange(null);
-    setActiveCopyRange(null);
-  }, []);
 
   return {
     copyRange,

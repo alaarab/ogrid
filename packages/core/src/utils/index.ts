@@ -100,15 +100,18 @@ export type { ISortState } from './sortHelpers';
 export { measureColumnContentWidth, estimateHeaderMinWidth, AUTOSIZE_EXTRA_PX, AUTOSIZE_MAX_PX } from './columnAutosize';
 export { findCtrlArrowTarget, computeTabNavigation, computeArrowNavigation, applyCellDeletion, getOppositeCorner } from './keyboardNavigation';
 export type { ArrowNavigationContext, ArrowNavigationResult } from './keyboardNavigation';
-export { rangesEqual, clampSelectionToBounds, computeAutoScrollSpeed, applyRangeRowSelection, computeRowSelectionState } from './selectionHelpers';
+export { rangesEqual, clampSelectionToBounds, computeAutoScrollSpeed, computeAutoScrollDelta, getSelectAllRange, applyRangeRowSelection, computeRowSelectionState } from './selectionHelpers';
 export {
   formatCellValueForTsv,
   formatSelectionAsTsv,
   parseTsvClipboard,
   applyPastedValues,
   applyCutClear,
+  captureCutSource,
+  resolveCutClear,
 } from './clipboardHelpers';
-export { applyFillValues, areFillCompatible, computeFillRange } from './fillHelpers';
+export type { ICutSource, ResolveCutClearParams } from './clipboardHelpers';
+export { applyFillValues, areFillCompatible, computeFillRange, computeFillDragEdits } from './fillHelpers';
 export type { IFillFormulaOptions } from './fillHelpers';
 export { UndoRedoStack } from './undoRedoStack';
 export { validateColumns, validateRowIds, validateVirtualScrollConfig } from './validation';
