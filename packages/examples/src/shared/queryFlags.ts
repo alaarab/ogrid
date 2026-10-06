@@ -6,6 +6,8 @@ export interface ExampleFeatureFlags {
   premiumInputs: boolean;
   rowSelection: boolean;
   serverSide: boolean;
+  /** `?virtual`: 5,000 rows in one virtual-scrolled viewport (no pagination). */
+  virtualScroll: boolean;
   xlsx: boolean;
 }
 
@@ -19,6 +21,7 @@ export function getExampleFeatureFlags(search: string): ExampleFeatureFlags {
     premiumInputs: params.has('premiumInputs'),
     rowSelection: params.has('rowSelection'),
     serverSide: params.has('serverSide'),
+    virtualScroll: params.has('virtual'),
     xlsx: params.has('xlsx'),
   };
 }
