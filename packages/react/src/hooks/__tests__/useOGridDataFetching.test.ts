@@ -589,3 +589,146 @@ describe('useOGridDataFetching  -  repeated row references (S13)', () => {
     expect(result.current.displayItems.map((r) => r.name)).toEqual(['Other', 'Edited', 'Dup']);
   });
 });
+
+describe('useOGridDataFetching  -  inserts and deletes keep the sort snapshot by row id', () => {
+  const ageAsc = { field: 'age', direction: 'asc' as const };
+  const rowId = (r: TestRow) => r.id;
+  const frank: TestRow = { id: 6, name: 'Frank', age: 1 }; // would sort first
+  const otto: TestRow = { id: 6, name: 'Otto', age: 1 }; // would sort first; no "a" in the name
+  const ids = (rows: readonly TestRow[]) => rows.map((r) => r.id);
+  type Props = { data: TestRow[]; sortVersion?: number; sort?: typeof ageAsc; filters?: UseOGridDataFetchingParams<TestRow>['stableFilters']; page?: number; noRowId?: boolean; workerSort?: boolean };
+
+  function renderSorted(initial: Props, editVersionRef?: { current: number }) {
+    return renderHook(
+      ({ data, sortVersion = 1, sort = ageAsc, filters = noFilters, page = 1, noRowId, workerSort }: Props) =>
+        useOGridDataFetching(makeParams({ displayData: data, sort, sortVersion, stableFilters: filters, getRowId: noRowId ? undefined : rowId, page, pageSize: 3, workerSort, editVersionRef })),
+      { initialProps: initial },
+    );
+  }
+
+  it('appends an inserted row last, on the last page, without re-sorting', () => {
+    const { result, rerender } = renderSorted({ data: testData });
+    expect(ids(result.current.displayItems)).toEqual([5, 2, 4]);
+    rerender({ data: [...testData, frank] });
+    expect(ids(result.current.allFilteredItems)).toEqual([5, 2, 4, 1, 3, 6]);
+    expect(result.current.displayTotalCount).toBe(6);
+    rerender({ data: [...testData, frank], page: 2 });
+    expect(ids(result.current.displayItems)).toEqual([1, 3, 6]);
+  });
+
+  it('inserting at the front still appends to the visual order', () => {
+    const { result, rerender } = renderSorted({ data: testData });
+    rerender({ data: [frank, ...testData] });
+    expect(ids(result.current.allFilteredItems)).toEqual([5, 2, 4, 1, 3, 6]);
+  });
+
+  it('drops a deleted row and keeps the others in place', () => {
+    const { result, rerender } = renderSorted({ data: testData });
+    rerender({ data: testData.filter((r) => r.id !== 2) });
+    expect(ids(result.current.allFilteredItems)).toEqual([5, 4, 1, 3]);
+    expect(result.current.displayTotalCount).toBe(4);
+  });
+
+  it('an explicit sort after an insert places the new row where it sorts', () => {
+    const { result, rerender } = renderSorted({ data: testData });
+    const inserted = [...testData, frank];
+    rerender({ data: inserted });
+    expect(ids(result.current.allFilteredItems)).toEqual([5, 2, 4, 1, 3, 6]);
+    rerender({ data: inserted, sortVersion: 2 });
+    expect(ids(result.current.allFilteredItems)).toEqual([6, 5, 2, 4, 1, 3]);
+  });
+
+  it('with an active filter, a non-matching insert stays hidden and a matching one is appended', () => {
+    // Names containing "a": Diana(28), Alice(30), Charlie(35).
+    const filters = { name: { type: 'text' as const, value: 'a' } };
+    const { result, rerender } = renderSorted({ data: testData, filters });
+    expect(ids(result.current.allFilteredItems)).toEqual([4, 1, 3]);
+    const withOtto = [...testData, otto];
+    rerender({ data: withOtto, filters });
+    expect(ids(result.current.allFilteredItems)).toEqual([4, 1, 3]);
+    const hanna: TestRow = { id: 7, name: 'Hanna', age: 2 };
+    rerender({ data: [...withOtto, hanna], filters });
+    expect(ids(result.current.allFilteredItems)).toEqual([4, 1, 3, 7]);
+    // Re-sorting puts the appended row where it belongs; Otto stays filtered out.
+    rerender({ data: [...withOtto, hanna], filters, sortVersion: 2 });
+    expect(ids(result.current.allFilteredItems)).toEqual([7, 4, 1, 3]);
+  });
+
+  it('a hidden row edited to match the filter stays hidden until the user re-filters', () => {
+    const filters = { name: { type: 'text' as const, value: 'a' } };
+    const { result, rerender } = renderSorted({ data: testData, filters });
+    rerender({ data: testData.map((r) => (r.id === 5 ? { ...r, name: 'Eva' } : r)), filters });
+    expect(ids(result.current.allFilteredItems)).toEqual([4, 1, 3]);
+  });
+
+  it('without getRowId an insert re-sorts (positional snapshot, old behavior)', () => {
+    const { result, rerender } = renderSorted({ data: testData, noRowId: true });
+    rerender({ data: [...testData, frank], noRowId: true });
+    expect(ids(result.current.allFilteredItems)).toEqual([6, 5, 2, 4, 1, 3]);
+  });
+
+  it('duplicate ids fall back to a full re-sort', () => {
+    const dupA: TestRow = { id: 1, name: 'A', age: 30 };
+    const dupB: TestRow = { id: 1, name: 'B', age: 25 };
+    const data = [dupA, dupB, testData[2]!];
+    const { result, rerender } = renderSorted({ data });
+    expect(result.current.allFilteredItems.map((r) => r.name)).toEqual(['B', 'A', 'Charlie']);
+    rerender({ data: [...data, frank] });
+    expect(result.current.allFilteredItems.map((r) => r.name)).toEqual(['Frank', 'B', 'A', 'Charlie']);
+  });
+
+  it('a host that rebuilds every row while adding one (no grid edit) gets a full re-sort', () => {
+    const { result, rerender } = renderSorted({ data: testData });
+    rerender({ data: [...testData.map((r) => ({ ...r })), frank] });
+    expect(ids(result.current.allFilteredItems)).toEqual([6, 5, 2, 4, 1, 3]);
+  });
+
+  it('a host that rebuilds every row while applying a grid edit keeps the order and appends', () => {
+    const editVersionRef = { current: 0 };
+    const { result, rerender } = renderSorted({ data: testData }, editVersionRef);
+    editVersionRef.current++;
+    rerender({ data: [...testData.map((r) => ({ ...r })), frank] });
+    expect(ids(result.current.allFilteredItems)).toEqual([5, 2, 4, 1, 3, 6]);
+  });
+
+  describe('worker path', () => {
+    beforeEach(() => {
+      (processClientSideDataAsync as jest.Mock).mockClear();
+    });
+
+    it('keeps the order on insert and delete without another worker round trip', async () => {
+      const { result, rerender } = renderSorted({ data: testData, workerSort: true });
+      await waitFor(() => expect(ids(result.current.allFilteredItems)).toEqual([5, 2, 4, 1, 3]));
+      expect(processClientSideDataAsync).toHaveBeenCalledTimes(1);
+
+      rerender({ data: [...testData, frank], workerSort: true });
+      await waitFor(() => expect(ids(result.current.allFilteredItems)).toEqual([5, 2, 4, 1, 3, 6]));
+      expect(result.current.displayTotalCount).toBe(6);
+
+      rerender({ data: [...testData, frank].filter((r) => r.id !== 2), workerSort: true });
+      await waitFor(() => expect(ids(result.current.allFilteredItems)).toEqual([5, 4, 1, 3, 6]));
+      expect(processClientSideDataAsync).toHaveBeenCalledTimes(1);
+
+      rerender({ data: [...testData, frank].filter((r) => r.id !== 2), workerSort: true, sortVersion: 2 });
+      await waitFor(() => expect(ids(result.current.allFilteredItems)).toEqual([6, 5, 4, 1, 3]));
+      expect(processClientSideDataAsync).toHaveBeenCalledTimes(2);
+    });
+
+    it('hides a non-matching insert under an active filter', async () => {
+      const filters = { name: { type: 'text' as const, value: 'a' } };
+      const { result, rerender } = renderSorted({ data: testData, filters, workerSort: true });
+      await waitFor(() => expect(ids(result.current.allFilteredItems)).toEqual([4, 1, 3]));
+      rerender({ data: [...testData, otto], filters, workerSort: true });
+      await waitFor(() => expect(result.current.allFilteredItems.length).toBeGreaterThan(0));
+      expect(ids(result.current.allFilteredItems)).toEqual([4, 1, 3]);
+    });
+
+    it('without getRowId an insert re-sorts through the worker', async () => {
+      const { result, rerender } = renderSorted({ data: testData, workerSort: true, noRowId: true });
+      await waitFor(() => expect(ids(result.current.allFilteredItems)).toEqual([5, 2, 4, 1, 3]));
+      rerender({ data: [...testData, frank], workerSort: true, noRowId: true });
+      await waitFor(() => expect(ids(result.current.allFilteredItems)).toEqual([6, 5, 2, 4, 1, 3]));
+      expect(processClientSideDataAsync).toHaveBeenCalledTimes(2);
+    });
+  });
+});
