@@ -13,6 +13,7 @@
 import { useRef, useCallback, useLayoutEffect, useMemo, useState } from 'react';
 import {
   createGridDataAccessor,
+  getCellValue,
   type IGridDataAccessor,
   type IFormulaFunction,
   type IFormulaLimits,
@@ -43,6 +44,16 @@ export interface UseFormulaEngineParams<T> {
   formulaLimits?: IFormulaLimits;
   /** Sheet accessors for cross-sheet references. Pass a new accessor when a sheet's data changes. */
   sheets?: Record<string, IGridDataAccessor>;
+  /**
+   * Treat a data value that is a string starting with '=' as that cell's
+   * formula. Every such cell is loaded when the engine starts, and after that
+   * the engine follows the data: a cell whose value changes to formula text
+   * gets that formula, and one whose value changes from formula text to
+   * anything else loses its formula. OGrid turns this on when the host owns
+   * undo (`onUndo`), because the host's history then restores formulas by
+   * writing their text back into the data.
+   */
+  formulasFromData?: boolean;
 }
 
 export interface UseFormulaEngineResult {
@@ -99,6 +110,62 @@ function shallowEqual(a: object | undefined, b: object | undefined): boolean {
   return true;
 }
 
+function isFormulaText(value: unknown): value is string {
+  return typeof value === 'string' && value.length > 1 && value.startsWith('=');
+}
+
+/** Above this many formula changes in one data update, reload the engine in bulk. */
+const BULK_ADOPT_THRESHOLD = 32;
+
+/**
+ * Bring the engine's formulas in line with the formula text in `items`.
+ * With `prevItems`, only rows whose object changed are compared cell by cell;
+ * without it (a fresh engine) every cell is scanned.
+ */
+function adoptDataFormulas<T>(
+  engine: FormulaEngine,
+  prevItems: T[] | null,
+  items: T[],
+  flatColumns: IColumnDef<T>[],
+  accessor: IGridDataAccessor,
+): IRecalcResult {
+  const set: Array<{ col: number; row: number; formula: string | null }> = [];
+  for (let row = 0; row < items.length; row++) {
+    const item = items[row];
+    if (item === undefined) continue;
+    const prevItem = prevItems ? prevItems[row] : undefined;
+    if (prevItems && prevItem === item) continue;
+    for (let col = 0; col < flatColumns.length; col++) {
+      const colDef = flatColumns[col];
+      if (colDef === undefined) continue;
+      const value = getCellValue(item, colDef);
+      if (isFormulaText(value)) {
+        if (engine.getFormula(col, row) !== value) set.push({ col, row, formula: value });
+      } else if (
+        prevItem !== undefined &&
+        isFormulaText(getCellValue(prevItem, colDef)) &&
+        engine.hasFormula(col, row)
+      ) {
+        set.push({ col, row, formula: null });
+      }
+    }
+  }
+  if (set.length === 0) return { updatedCells: [] };
+  if (set.length > BULK_ADOPT_THRESHOLD) {
+    const merged = new Map<string, { col: number; row: number; formula: string }>();
+    for (const f of engine.getAllFormulas()) merged.set(`${f.col}:${f.row}`, f);
+    for (const f of set) {
+      const key = `${f.col}:${f.row}`;
+      if (f.formula === null) merged.delete(key);
+      else merged.set(key, { col: f.col, row: f.row, formula: f.formula });
+    }
+    return engine.loadFormulas(Array.from(merged.values()), accessor);
+  }
+  const updatedCells: IRecalcResult['updatedCells'] = [];
+  for (const f of set) updatedCells.push(...engine.setFormula(f.col, f.row, f.formula, accessor).updatedCells);
+  return { updatedCells };
+}
+
 function sameValue(a: unknown, b: unknown): boolean {
   if (Object.is(a, b)) return true;
   if (a instanceof FormulaError && b instanceof FormulaError) return a.type === b.type;
@@ -119,6 +186,7 @@ export function useFormulaEngine<T>(
     namedRanges,
     formulaLimits,
     sheets,
+    formulasFromData = false,
   } = params;
 
   // Refs for stable access in callbacks
@@ -232,22 +300,38 @@ export function useFormulaEngine<T>(
   const [pendingTick, setPendingTick] = useState(0);
   const syncedItemsRef = useRef(items);
   const syncedColumnsRef = useRef(flatColumns);
-  // biome-ignore lint/correctness/useExhaustiveDependencies: pendingTick is the deliberate trigger that flushes queued notifications
+  // Engine whose formulas were last brought in line with the data (formulasFromData).
+  const dataFormulasEngineRef = useRef<FormulaEngine | null>(null);
+  // biome-ignore lint/correctness/useExhaustiveDependencies: pendingTick is the deliberate trigger that flushes queued notifications; engine re-runs it when formulas are switched on so formulasFromData loads the data's formulas
   useLayoutEffect(() => {
-    const dataChanged = syncedItemsRef.current !== items || syncedColumnsRef.current !== flatColumns;
+    const prevItems = syncedItemsRef.current;
+    const columnsChanged = syncedColumnsRef.current !== flatColumns;
+    const dataChanged = prevItems !== items || columnsChanged;
     syncedItemsRef.current = items;
     syncedColumnsRef.current = flatColumns;
     const pending = pendingCellsRef.current;
     pendingCellsRef.current = [];
     const current = engineRef.current;
     if (!current) return;
+    let adopted: IRecalcResult['updatedCells'] = [];
+    if (formulasFromData) {
+      const fresh = dataFormulasEngineRef.current !== current;
+      dataFormulasEngineRef.current = current;
+      if (fresh || dataChanged) {
+        adopted = adoptDataFormulas(current, fresh || columnsChanged ? null : prevItems, items, flatColumns, createAccessor()).updatedCells;
+        if (!dataChanged) report({ updatedCells: adopted });
+      }
+    } else {
+      dataFormulasEngineRef.current = null;
+    }
     if (dataChanged) {
       const result = current.recalcAll(createAccessor());
-      report({ updatedCells: result.updatedCells.filter((c) => !sameValue(c.oldValue, c.newValue)) });
+      // Adopted formulas already changed their values, so the recalc alone would not report them.
+      report({ updatedCells: [...adopted, ...result.updatedCells].filter((c) => !sameValue(c.oldValue, c.newValue)) });
     } else if (pending.length > 0) {
       report(current.onCellsChanged(pending, createAccessor()));
     }
-  }, [items, flatColumns, pendingTick, createAccessor, report]);
+  }, [items, flatColumns, pendingTick, createAccessor, report, formulasFromData, engine]);
 
   const getFormulaValue = useCallback((col: number, row: number): unknown => {
     return engineRef.current?.getValue(col, row);

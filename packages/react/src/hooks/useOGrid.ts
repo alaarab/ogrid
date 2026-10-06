@@ -594,6 +594,10 @@ export function useOGrid<T>(
     namedRanges,
     formulaLimits,
     sheets,
+    // A host that owns undo restores formulas by writing their text back into
+    // its data (the grid emits formula edits as value changes), so the engine
+    // follows formula text in the data.
+    formulasFromData: hasUndo,
   });
 
   // --- Assembly ---

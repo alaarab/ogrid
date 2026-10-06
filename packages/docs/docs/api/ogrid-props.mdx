@@ -79,7 +79,7 @@ sort / filter / page props as plain hook parameters, and the
 |------|------|---------|-------------|
 | `editable` | `boolean` | `false` | Whether inline cell editing is enabled globally. Individual columns can override this via `IColumnDef.editable`. |
 | `onCellValueChanged` | `(event: ICellValueChangedEvent<T>) => void` | `undefined` | Callback fired after a cell value is committed. The event contains `item`, `columnId`, `oldValue`, `newValue`, and `rowIndex`. |
-| `onUndo` | `() => void` | `undefined` | Callback fired when the user triggers undo (Ctrl+Z or context menu). |
+| `onUndo` | `() => void` | `undefined` | Callback fired when the user triggers undo (Ctrl+Z or context menu). Replaces the grid's internal history; with `formulas`, formula edits then arrive through `onCellValueChanged` as formula text (see [Formulas](../features/formulas#undo-with-host-controlled-history)). |
 | `onRedo` | `() => void` | `undefined` | Callback fired when the user triggers redo (Ctrl+Y or context menu). |
 | `canUndo` | `boolean` | `false` | Whether undo is available. Controls the enabled state of the undo context menu item. |
 | `canRedo` | `boolean` | `false` | Whether redo is available. Controls the enabled state of the redo context menu item. |

@@ -1,9 +1,9 @@
 import { useMemo, useCallback } from 'react';
 import type { RefObject } from 'react';
-import type { RowId, IColumnDef } from '../types';
+import type { RowId, IColumnDef, ICellValueChangedEvent } from '../types';
 import type { IFillFormulaOptions } from '../utils';
 import type { ScrollToRowIndex } from '../utils/scrollCellIntoView';
-import { formatCellReference } from '../utils';
+import { formatCellReference, getCellValue } from '../utils';
 import { useCellSelection } from './useCellSelection';
 import { useClipboard } from './useClipboard';
 import { useKeyboardNavigation } from './useKeyboardNavigation';
@@ -183,15 +183,40 @@ export function useDataGridInteraction<T>(
   const formulaColRef = useLatestRef(params.formulaCol);
   const formulaRowRef = useLatestRef(params.formulaRow);
 
-  // Wrap onCellValueChanged with undo/redo tracking
-  const undoRedo = useUndoRedo<T>({ onCellValueChanged: onCellValueChangedProp, formulaCells });
-  const onCellValueChanged = undoRedo.onCellValueChanged;
-
   // Host-supplied undo/redo takes over from the internal stack.
   const onUndoPropRef = useLatestRef(onUndoProp);
   const onRedoPropRef = useLatestRef(onRedoProp);
   const hasHostUndo = onUndoProp != null;
   const hasHostRedo = onRedoProp != null;
+
+  // With host-owned undo the host's history is the only one, so formula
+  // changes must reach it too: every formula write is emitted as a value
+  // change whose value is the formula text, and a value written over a formula
+  // reports the formula as its old value. Undoing then writes the formula text
+  // back into the host's data, and the engine (OGrid's formulasFromData)
+  // follows the data. The internal stack records nothing in this mode.
+  const hostFormulaHistory = hasHostUndo && formulaCells != null;
+
+  // Wrap onCellValueChanged with undo/redo tracking
+  const undoRedo = useUndoRedo<T>({
+    onCellValueChanged: hostFormulaHistory ? undefined : onCellValueChangedProp,
+    formulaCells: hostFormulaHistory ? undefined : formulaCells,
+  });
+  const onCellValueChangedPropRef = useLatestRef(onCellValueChangedProp);
+  const formulaCellsRef = useLatestRef(formulaCells);
+  const hasCellValueChangedProp = onCellValueChangedProp != null;
+  const hostValueChanged = useMemo(() => {
+    if (!hostFormulaHistory || !hasCellValueChangedProp) return undefined;
+    return (event: ICellValueChangedEvent<T>) => {
+      const fc = formulaCellsRef.current;
+      const cell = fc?.cellOf(event) ?? null;
+      const oldFormula = cell ? fc?.getFormula(cell.col, cell.row) : undefined;
+      if (cell && oldFormula !== undefined) fc?.setFormula(cell.col, cell.row, null);
+      onCellValueChangedPropRef.current?.(oldFormula !== undefined ? { ...event, oldValue: oldFormula } : event);
+      if (cell) fc?.onCellChanged?.(cell.col, cell.row);
+    };
+  }, [hostFormulaHistory, hasCellValueChangedProp, formulaCellsRef, onCellValueChangedPropRef]);
+  const onCellValueChanged = hostValueChanged ?? undoRedo.onCellValueChanged;
   const internalUndo = undoRedo.undo;
   const internalRedo = undoRedo.redo;
   const undo = useCallback(
@@ -210,10 +235,36 @@ export function useDataGridInteraction<T>(
   // and writes are recorded for undo.
   const hasFormulaCells = formulaCells != null;
   const undoSetFormula = undoRedo.setFormula;
+  const itemsRef = useLatestRef(items);
+  const flatColumnsRef = useLatestRef(flatColumns);
+  // Host-owned history: write the formula and emit it as a value change (see above).
+  const hostSetFormula = useCallback((col: number, row: number, formula: string | null, displayRow: number) => {
+    const fc = formulaCellsRef.current;
+    if (!fc) return;
+    const oldFormula = fc.getFormula(col, row) || null;
+    const newFormula = formula || null;
+    if (oldFormula === newFormula) return;
+    fc.setFormula(col, row, newFormula);
+    const item = itemsRef.current[displayRow];
+    const colDef = flatColumnsRef.current?.[col];
+    if (item === undefined || !colDef) return;
+    const raw = getCellValue<T>(item, colDef);
+    // Clearing a formula leaves the cell's plain value (never stale formula text).
+    const plain = typeof raw === 'string' && raw.startsWith('=') ? '' : raw;
+    onCellValueChangedPropRef.current?.({
+      item,
+      columnId: colDef.columnId,
+      rowIndex: displayRow,
+      oldValue: oldFormula ?? plain,
+      newValue: newFormula ?? plain,
+    });
+  }, [formulaCellsRef, itemsRef, flatColumnsRef, onCellValueChangedPropRef]);
   const viewFormulas = useMemo(() => {
     if (!formulas) return undefined;
     const toRow = (row: number) => formulaRowRef.current?.(row) ?? row;
-    const write = hasFormulaCells ? undoSetFormula : setFormula;
+    const write = hostFormulaHistory
+      ? (col: number, r: number, formula: string | null, displayRow: number) => hostSetFormula(col, r, formula, displayRow)
+      : hasFormulaCells ? undoSetFormula : setFormula;
     return {
       getFormula: getFormula && ((col: number, row: number) => {
         const r = toRow(row);
@@ -225,10 +276,10 @@ export function useDataGridInteraction<T>(
       }),
       setFormula: write && ((col: number, row: number, formula: string | null) => {
         const r = toRow(row);
-        if (r >= 0) write(col, r, formula);
+        if (r >= 0) write(col, r, formula, row);
       }),
     };
-  }, [formulas, getFormula, hasFormula, setFormula, hasFormulaCells, undoSetFormula, formulaRowRef]);
+  }, [formulas, getFormula, hasFormula, setFormula, hasFormulaCells, undoSetFormula, formulaRowRef, hostFormulaHistory, hostSetFormula]);
 
   const {
     selectionRange,
