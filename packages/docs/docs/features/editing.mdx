@@ -206,7 +206,7 @@ Ctrl+V and Shift+Insert paste from the browser's native `paste` event, so they w
 
 <FillHandleDemo />
 
-The small square in the bottom-right corner of a selection — drag it down to fill cells. Works exactly like Excel. Each filled cell goes through `valueParser`, so validation still applies.
+The small square in the bottom-right corner of a selection — drag it down (or up, or sideways) to fill cells. Works exactly like Excel: the fill extends the selection along one axis at a time, whichever the pointer is farther outside the selection on, so a diagonal drag fills down or across but never both. Dragging back inside the selection fills nothing. Each filled cell goes through `valueParser`, so validation still applies.
 
 :::tip Pro tip
 Select a range of cells before dragging the fill handle to populate multiple columns at once. The fill handle uses `requestAnimationFrame` internally, so it stays smooth even on large selections.

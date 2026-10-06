@@ -223,7 +223,7 @@ export {
 } from './utils';
 
 // Utils  -  fillHelpers
-export { applyFillValues, areFillCompatible } from './utils';
+export { applyFillValues, areFillCompatible, computeFillRange } from './utils';
 export type { IFillFormulaOptions } from './utils';
 
 // Utils  -  undoRedoStack

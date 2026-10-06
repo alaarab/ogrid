@@ -1,7 +1,7 @@
 ---
 sidebar_position: 8
 title: useGridFocus
-description: Headless active-cell state and keyboard navigation. Arrow, Tab, Enter, Home, End, PageUp, PageDown, with Shift to extend a range.
+description: Headless active-cell state and keyboard navigation. Arrow, Ctrl+Arrow, Tab, Enter, Home, End, PageUp, PageDown, with Shift to extend a range.
 ---
 
 import UseGridFocusDemo from '@site/src/components/demos/headless/UseGridFocusDemo';
@@ -12,8 +12,9 @@ Tracks the active cell and turns keyboard input into movement clamped to the
 rows and columns you render. Give it the result of
 [`useRangeSelection`](/docs/spreadsheet-hooks/use-range-selection) and
 Shift+Arrow, Shift+Home, and Shift+End extend the range while plain movement
-collapses it to the new cell. The hook is pure state plus a keydown handler
-factory; you make the container focusable and draw the highlight.
+collapses it to the new cell. Pass `isCellEmpty` and Ctrl+Arrow jumps by data
+region exactly as `<OGrid>` does. The hook is pure state plus a keydown
+handler factory; you make the container focusable and draw the highlight.
 
 ## Live demo
 
@@ -31,6 +32,11 @@ const focus = useGridFocus({
   colCount: grid.columns.length,
   pageSize: 10,
   rangeSelection: range, // optional
+  // optional: Ctrl+Arrow jumps by data region instead of to the grid edge
+  isCellEmpty: (row, col) => {
+    const v = grid.getCellValue(grid.rows[row], grid.columns[col].columnId);
+    return v == null || v === '';
+  },
 });
 
 <div tabIndex={0} onKeyDown={focus.getKeyDownHandler()}>
@@ -63,6 +69,7 @@ const focus = useGridFocus({
 | `colCount` | `number` | required | Visible column count. |
 | `pageSize` | `number` | `10` | Rows moved by PageUp / PageDown. |
 | `rangeSelection` | `UseRangeSelectionResult` | none | When provided, movement drives the range: plain keys call `startRange`, Shift+keys call `extendRange`. |
+| `isCellEmpty` | `(row, col) => boolean` | none | Lets Ctrl+Arrow jump by data region (see below). Without it Ctrl+Arrow jumps to the grid edge. |
 
 ## Returns
 
@@ -77,11 +84,15 @@ const focus = useGridFocus({
 | `moveToStart` / `moveToEnd` | `() => void` | `(0, 0)` / `(lastRow, lastCol)`. |
 | `getKeyDownHandler` | `() => (e) => void` | Returns the handler to attach to your container's `onKeyDown`. It reads `key`, `shiftKey`, `ctrlKey`, `metaKey` and calls `preventDefault` for keys it consumes. |
 
+Ctrl+Arrow has no imperative counterpart; `moveUp(n)` and friends move by a
+fixed count, `moveToStart` / `moveToEnd` go to the corners.
+
 ## Keys handled
 
 | Key | Action | With Shift |
 |---|---|---|
 | Arrow keys | Move one cell | Extend the range |
+| Ctrl+Arrow (Cmd on macOS) | Jump to the edge of the current data region along that axis, or to the grid edge without `isCellEmpty` | Extend the range to the same target |
 | Tab / Shift+Tab | Next / previous column in the row. At the row's first or last cell the event is left to the browser so focus can leave the grid | |
 | Enter / Shift+Enter | Move down / up one row | |
 | Home / End | First / last column of the row | Extend to the row edge, keeping the anchor |
@@ -106,8 +117,17 @@ const focus = useGridFocus({
   `getKeyDownHandler()` (see the landing-page demo for a combined handler).
   Skip the navigation handler while `edit.editingCell` is set so arrows move
   the caret inside the editor.
-- **Ctrl+Arrow data-region jumps** are a `<OGrid>` feature and are not
-  implemented by this hook.
+- **Ctrl+Arrow follows Excel's rules**, computed by the same core helper
+  `<OGrid>` uses (`findCtrlArrowTarget`), one axis at a time. From a
+  non-empty cell whose neighbor in that direction is also non-empty, it stops
+  at the last non-empty cell before a gap or the edge. From an empty cell, or
+  one whose neighbor is empty, it skips the empty cells and lands on the next
+  non-empty one, or the edge when nothing else is filled. `<OGrid>` counts
+  `null`, `undefined`, and `''` as empty; your `isCellEmpty` decides for this
+  hook. Without `isCellEmpty` every cell counts as filled, so the jump lands
+  on the grid edge. With Shift, the active cell moves to the target and the
+  range extends to it, as with Shift+Arrow. A stale active cell outside the
+  grid is clamped before the jump.
 
 ## See also
 
