@@ -108,6 +108,20 @@ describe('useFillHandle', () => {
     expect(events[1].rowIndex).toBe(2);
     expect(events[1].newValue).toBe(10);
     expect(fillResult.current.isFilling).toBe(false);
+    // Like Excel and <OGrid>, the filled range becomes the selection.
+    expect(rangeResult.current.range).toEqual({ startRow: 0, startCol: 0, endRow: 2, endCol: 0 });
+  });
+
+  it('selects the filled range even when every target rejects the value', () => {
+    const { rangeResult, fillResult, rerender, events } = setup();
+    // Numeric column a -> text column name: incompatible, so nothing is written.
+    act(() => rangeResult.current.startRange(0, 1));
+    rerender({ range: rangeResult.current });
+    act(() => fillResult.current.startFill());
+    act(() => fillResult.current.updateFill(0, 2));
+    act(() => fillResult.current.commitFill());
+    expect(events).toEqual([]);
+    expect(rangeResult.current.range).toEqual({ startRow: 0, startCol: 1, endRow: 0, endCol: 2 });
   });
 
   it('commitFill is a no-op when fillRange equals sourceRange', () => {
@@ -120,6 +134,8 @@ describe('useFillHandle', () => {
 
     expect(events.length).toBe(0);
     expect(fillResult.current.isFilling).toBe(false);
+    expect(rangeResult.current.anchor).toEqual({ row: 0, col: 0 });
+    expect(rangeResult.current.range).toEqual({ startRow: 0, startCol: 0, endRow: 0, endCol: 0 });
   });
 
   it('cancelFill clears state without firing onFillCells', () => {
