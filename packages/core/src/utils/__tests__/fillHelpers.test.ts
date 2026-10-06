@@ -1,4 +1,4 @@
-import { applyFillValues, areFillCompatible, computeFillRange } from '../fillHelpers';
+import { applyFillValues, areFillCompatible, computeFillDragEdits, computeFillRange } from '../fillHelpers';
 import type { IFillFormulaOptions } from '../fillHelpers';
 import type { IColumnDef } from '../../types/columnTypes';
 import type { ISelectionRange } from '../../types/dataGridTypes';
@@ -575,5 +575,36 @@ describe('computeFillRange (axis lock)', () => {
     // 1 row below the block but 3 columns right of it: columns win even though
     // the pointer is diagonally below the bottom-right cell.
     expect(computeFillRange(source, 4, 5)).toEqual(makeRange(2, 1, 3, 5));
+  });
+});
+
+describe('computeFillDragEdits', () => {
+  const rows = (): Row[] => [
+    { id: 'r0', value: 'x' },
+    { id: 'r1', value: 'y' },
+    { id: 'r2', value: null },
+    { id: 'r3', value: null },
+  ];
+
+  it('extends along one axis and tiles the source over the extension', () => {
+    const { range, events } = computeFillDragEdits(makeRange(0, 1, 1, 1), 3, 0, rows(), VISIBLE_COLS);
+    // Row distance 2 beats column distance 1: fills down, keeps the source column.
+    expect(range).toEqual(makeRange(0, 1, 3, 1));
+    expect(events.map((e) => [e.rowIndex, e.columnId, e.newValue])).toEqual([
+      [2, 'value', 'x'],
+      [3, 'value', 'y'],
+    ]);
+  });
+
+  it('normalizes a source given in any corner order', () => {
+    const { range, events } = computeFillDragEdits(makeRange(1, 1, 0, 1), 3, 1, rows(), VISIBLE_COLS);
+    expect(range).toEqual(makeRange(0, 1, 3, 1));
+    expect(events).toHaveLength(2);
+  });
+
+  it('returns the source and no events when the target is inside it', () => {
+    const { range, events } = computeFillDragEdits(makeRange(0, 0, 1, 1), 1, 0, rows(), VISIBLE_COLS);
+    expect(range).toEqual(makeRange(0, 0, 1, 1));
+    expect(events).toEqual([]);
   });
 });

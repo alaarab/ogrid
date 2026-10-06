@@ -4,6 +4,7 @@ import { normalizeSelectionRange } from '../types';
 import type { ISelectionRange, IActiveCell } from '../types';
 import type { IColumnDef, ICellValueChangedEvent } from '../types/columnTypes';
 import { applyFillValues, buildCellIndex, cellIndexKey, computeFillRange } from '../utils';
+import { computeFillDragEdits } from '@alaarab/ogrid-core';
 import type { IFillFormulaOptions } from '../utils';
 import { useLatestRef } from './useLatestRef';
 
@@ -207,18 +208,18 @@ export function useFillHandleInternal<T>(params: UseFillHandleInternalParams<T>)
       }
 
       const end = fillDragEndRef.current;
-      const norm = computeFillRange(source, end.endRow, end.endCol);
 
       // Commit range to React state
-      setSelectionRange(norm);
+      setSelectionRange(computeFillRange(source, end.endRow, end.endCol));
       setActiveCell({ rowIndex: fillDrag.startRow, columnIndex: fillDrag.startCol + colOffsetRef.current });
 
-      // Apply fill values: tile the original selection over the extension. The
-      // batch also covers formulas the fill writes, so one undo reverts the whole fill.
+      // Tile the original selection over the extension (the commit the headless
+      // useFillHandle shares). The batch also covers formulas the fill writes,
+      // so one undo reverts the whole fill.
       beginBatch?.();
       try {
-        const fillEvents = applyFillValues(norm, fillDrag.startRow, fillDrag.startCol, itemsRef.current, visibleColsRef.current, formulaOptionsRef.current, source);
-        for (const evt of fillEvents) onCellValueChangedRef.current?.(evt);
+        const { events } = computeFillDragEdits(source, end.endRow, end.endCol, itemsRef.current, visibleColsRef.current, formulaOptionsRef.current);
+        for (const evt of events) onCellValueChangedRef.current?.(evt);
       } finally {
         // Always close the batch, or a throwing handler leaves undo stuck.
         endBatch?.();
