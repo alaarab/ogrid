@@ -6,6 +6,12 @@ All notable changes to OGrid will be documented in this file.
 
 ### Added
 
+- Keyboard column resizing. Resize handles are focusable separators
+  (`role="separator"`, `aria-valuenow`, `aria-valuemin`) labelled
+  "Resize column <name>". Arrow keys resize by 10 px (Shift by 1 px), Home sets
+  the minimum width, Escape restores the width at focus time and Enter returns
+  focus to the grid. Keyboard resizes fire the same `onColumnResized` and
+  column-state updates as pointer drags.
 - Docs: a "Spreadsheet Hooks" section with a `/headless` landing page and one
   page per hook (`useHeadlessGrid`, `useInlineEdit`, `useRangeSelection`,
   `useFillHandle`, `useCellClipboard`, `useUndoRedo`, `useGridFocus`,
