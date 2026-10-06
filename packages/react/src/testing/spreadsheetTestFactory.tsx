@@ -993,6 +993,64 @@ export function createSpreadsheetTests(DataGridTable: React.ComponentType<IOGrid
         expect(document.activeElement).toBe(getTdAt(container, 1, 1));
       });
 
+      describe('with a scaled windowed source (rows scrolled out of the DOM)', () => {
+        // happy-dom has no layout; give elements a size so the virtualizer renders a window.
+        const sizes = { clientHeight: 360, offsetHeight: 360, offsetWidth: 800 };
+        const originals = Object.keys(sizes).map((key) => [key, Object.getOwnPropertyDescriptor(HTMLElement.prototype, key)] as const);
+        beforeAll(() => {
+          for (const [key, value] of Object.entries(sizes)) {
+            Object.defineProperty(HTMLElement.prototype, key, { configurable: true, get: () => value });
+          }
+        });
+        afterAll(() => {
+          for (const [key, descriptor] of originals) {
+            if (descriptor) Object.defineProperty(HTMLElement.prototype, key, descriptor);
+            else delete (HTMLElement.prototype as unknown as Record<string, unknown>)[key];
+          }
+        });
+
+        // 2M rows is past the ~890k-row point where the spacer height is scaled.
+        const ROW_COUNT = 2_000_000;
+        function windowedSource() {
+          const loadedRows: FixtureRow[] = [];
+          loadedRows.length = ROW_COUNT;
+          for (let i = 0; i < 40; i++) loadedRows[i] = { id: String(i), name: `Row ${i}`, status: 'Active' };
+          return {
+            rowCount: ROW_COUNT,
+            loadedRows,
+            getRow: (i: number) => (loadedRows[i] ? { status: 'loaded' as const, row: loadedRows[i] as FixtureRow } : { status: 'loading' as const }),
+            requestWindow: jest.fn(),
+            retryRow: jest.fn(),
+          };
+        }
+        const scrollTo = async (wrapper: HTMLElement, top: number) => {
+          await act(async () => {
+            wrapper.scrollTop = top;
+            fireEvent.scroll(wrapper);
+            await new Promise((r) => setTimeout(r, 50));
+          });
+        };
+
+        it('keeps focus on the wrapper while the focused row is away and returns it to the cell', async () => {
+          const { container } = renderSpreadsheetGrid({ items: [], windowed: windowedSource() });
+          const wrapper = getGrid(container);
+          act(() => getTdAt(container, 2, 0).focus());
+          expect(document.activeElement).toBe(getTdAt(container, 2, 0));
+
+          await scrollTo(wrapper, 16_000_000);
+          expect(container.querySelector('[data-row-index="2"]')).toBeNull();
+          // Placeholder rows only: no cell is a tab stop, so the wrapper is, and it holds focus.
+          expect(getTabStops(container)).toEqual([]);
+          expect(wrapper.tabIndex).toBe(0);
+          expect(document.activeElement).toBe(wrapper);
+
+          await scrollTo(wrapper, 0);
+          await waitFor(() => expect(document.activeElement).toBe(getTdAt(container, 2, 0)));
+          expect(wrapper.tabIndex).toBe(-1);
+          expect(getTabStops(container)).toEqual([getTdAt(container, 2, 0)]);
+        });
+      });
+
       it('does not announce cell moves through an aria-live region (focus is announced instead)', () => {
         const { container } = renderSpreadsheetGrid();
         act(() => getTdAt(container, 0, 0).focus());
