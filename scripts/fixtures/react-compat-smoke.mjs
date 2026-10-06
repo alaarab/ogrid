@@ -2,7 +2,8 @@ import assert from 'node:assert/strict';
 import { createRequire, registerHooks } from 'node:module';
 import { pathToFileURL } from 'node:url';
 const require = createRequire(import.meta.url);
-// Node has no CSS loader; SSR bundlers treat stylesheet imports as assets.
+// No CSS loader hook: Node resolves the kits' "node" export condition to an
+// entry without the stylesheet import, the way Vite SSR / Vitest externals do.
 registerHooks({
   // React 17 predates package exports; bundlers resolve its extensionless runtime.
   resolve(specifier, context, nextResolve) {
@@ -11,9 +12,7 @@ registerHooks({
       ? nextResolve(pathToFileURL(require.resolve(specifier)).href, context)
       : nextResolve(specifier, context);
   },
-  load(url, context, nextLoad) {
-  return url.endsWith('.css') ? { format: 'module', source: '', shortCircuit: true } : nextLoad(url, context);
-} });
+});
 import { Window } from 'happy-dom';
 const window = new Window();
 // happy-dom rejects Animation.finished when Fluent's presence motion cancels an

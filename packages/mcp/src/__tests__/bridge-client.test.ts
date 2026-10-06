@@ -119,4 +119,31 @@ describe('connectGridToBridge with an IOGridApi', () => {
     const result = posted.find((p) => p.url.endsWith('/c1/result'))?.body as { error?: string };
     expect(result?.error).toContain('go_to_page needs');
   });
+
+  it('reads rows, columns, sort and filters from the api when the app passes only the api', async () => {
+    const posted: Array<{ url: string; body: unknown }> = [];
+    globalThis.fetch = (async (url: string, init?: RequestInit) => {
+      if (init?.body) posted.push({ url: String(url), body: JSON.parse(String(init.body)) });
+      return json(String(url).endsWith('/commands') ? [] : { ok: true });
+    }) as typeof fetch;
+    const api = {
+      getDisplayedRows: () => [{ id: 1, name: 'Ada' }],
+      getColumnState: () => ({
+        visibleColumns: ['id', 'name'],
+        sort: { field: 'name', direction: 'desc' as const },
+        filters: { name: { type: 'text', value: 'A' } },
+      }),
+    };
+    const bridge = connectGridToBridge({ gridId: 'g', api, pollIntervalMs: 5 });
+    await wait(40);
+    bridge.disconnect();
+    const state = posted.find((p) => p.url.endsWith('/connect'))?.body;
+    expect(state).toMatchObject({
+      rowCount: 1,
+      data: [{ id: 1, name: 'Ada' }],
+      columns: [{ columnId: 'id' }, { columnId: 'name' }],
+      sortModel: [{ columnId: 'name', direction: 'desc' }],
+      filterModel: { name: { type: 'text', value: 'A' } },
+    });
+  });
 });

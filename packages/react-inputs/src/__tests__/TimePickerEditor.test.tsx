@@ -101,4 +101,24 @@ describe('TimePickerEditor', () => {
       expect(props.onValueChange).toHaveBeenLastCalledWith('14:30');
     });
   });
+
+  describe('I10 - stored seconds are preserved', () => {
+    it('opens "14:30:45" and re-commits it unchanged', async () => {
+      const user = userEvent.setup();
+      const { props } = renderEditor({ value: '14:30:45' });
+      expect(getInput().value).toBe('14:30:45');
+      await user.click(getInput());
+      await user.keyboard('{Enter}');
+      expect(props.onValueChange).toHaveBeenLastCalledWith('14:30:45');
+    });
+
+    it('zeroes the seconds once the minute changes', async () => {
+      const user = userEvent.setup();
+      const { props } = renderEditor({ value: '14:30:45' });
+      await user.clear(getInput());
+      await user.type(getInput(), '15:00:00');
+      await user.keyboard('{Enter}');
+      expect(props.onValueChange).toHaveBeenLastCalledWith('15:00:00');
+    });
+  });
 });

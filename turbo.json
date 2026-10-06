@@ -21,6 +21,7 @@
         "scripts/**",
         "$TURBO_ROOT$/scripts/fix-dts-extensions.mjs",
         "$TURBO_ROOT$/scripts/add-use-client.mjs",
+        "$TURBO_ROOT$/scripts/write-node-entry.mjs",
         "$TURBO_ROOT$/scripts/react-jsx/**"
       ],
       "outputs": [

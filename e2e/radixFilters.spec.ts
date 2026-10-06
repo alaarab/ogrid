@@ -6,8 +6,16 @@ async function boundingBox(locator: Locator) {
   return bounds;
 }
 
-test.beforeEach(async ({ page }, testInfo) => {
-  test.skip(testInfo.project.name !== 'react-radix', 'Radix mobile and portal behavior');
+// Both examples serve /filter-options.html. The labeled-filter cases run on
+// both kits. The scoped-theme and phone cases are Radix-only: Fluent takes its
+// colors from the FluentProvider theme (its grid sets --ogrid-* from Fluent
+// tokens, overriding a host scope), and the 44px touch targets are Radix's
+// mobile styles.
+const radixOnly = (reason: string) => {
+  test.skip(test.info().project.name !== 'react-radix', reason);
+};
+
+test.beforeEach(async ({ page }) => {
   await page.goto('/filter-options.html');
 });
 
@@ -35,6 +43,7 @@ test('All page size stays selected when a labeled boolean filter changes the tot
 });
 
 test('portaled filter and chooser retain scoped dark colors and follow theme changes while open', async ({ page }) => {
+  radixOnly('Fluent popovers use FluentProvider theme tokens, not a host --ogrid-* scope');
   for (const trigger of [page.getByRole('button', { name: 'Filter Status' }), page.getByRole('button', { name: /Column Visibility/ })]) {
     await page.locator('main').evaluate((el) => el.setAttribute('data-theme', 'dark'));
     await trigger.click();
@@ -63,6 +72,7 @@ test.describe('phone controls', () => {
   }
 
   test('has 44px controls, non-overlapping virtual options, and menus within the viewport', async ({ page }) => {
+    radixOnly('44px touch targets are Radix mobile styles');
     const columnMenus = page.getByRole('button', { name: / column options$/ });
     await expect(columnMenus.first()).toBeVisible();
     for (const menu of await columnMenus.all()) await expectTouchTarget(menu);
@@ -99,6 +109,7 @@ test.describe('phone controls', () => {
 });
 
 test('portaled context menu keeps the scoped dark theme', async ({ page }) => {
+  radixOnly('Fluent sets --ogrid-* from FluentProvider tokens, overriding a host scope');
   await page.locator('main').evaluate((el) => el.setAttribute('data-theme', 'dark'));
   const cell = page.locator('[data-row-index="0"][data-col-index]').first();
   await cell.click({ button: 'right' });

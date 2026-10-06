@@ -11,9 +11,8 @@
  *   useEffect(() => {
  *     const bridge = connectGridToBridge({
  *       gridId: 'my-grid',
- *       getData: () => filteredRows,       // current displayed data
- *       getColumns: () => columns,
- *       api: gridApiRef.current,           // IOGridApi (for filter/sort/page commands)
+ *       api: gridApiRef.current,           // IOGridApi: rows, columns, sort, filters, selection
+ *       // getData / getColumns / getSort / getFilters override what the api reports
  *       onCellUpdate: (rowIndex, columnId, value) => {
  *         setData(prev => prev.map((row, i) =>
  *           i === rowIndex ? { ...row, [columnId]: value } : row
@@ -57,7 +56,12 @@ export interface BridgeGridApi {
   getSelectedRows?: () => unknown[];
   // IOGridApi members (method syntax, so IOGridApi<T> stays assignable).
   setFilterModel?(filters: Record<string, unknown>): void;
-  getColumnState?(): { filters?: Record<string, unknown> };
+  getColumnState?(): {
+    visibleColumns?: string[];
+    sort?: { field: string; direction: 'asc' | 'desc' };
+    filters?: Record<string, unknown>;
+  };
+  getDisplayedRows?(): unknown[];
   applyColumnState?(state: { sort?: { field: string; direction: 'asc' | 'desc' } }): void;
   clearSort?(): void;
 }
@@ -65,15 +69,15 @@ export interface BridgeGridApi {
 export interface ConnectGridOptions {
   /** Unique identifier for this grid instance (shown in list_grids). */
   gridId: string;
-  /** Returns the currently displayed rows. Called on every state push. */
-  getData: () => unknown[];
-  /** Returns the current column definitions. */
-  getColumns: () => BridgeColumnInfo[];
+  /** Returns the currently displayed rows. Called on every state push. Defaults to `api.getDisplayedRows()`. */
+  getData?: () => unknown[];
+  /** Returns the current column definitions. Defaults to the visible column ids from `api.getColumnState()`. */
+  getColumns?: () => BridgeColumnInfo[];
   /** Current pagination state. */
   getPagination?: () => { page: number; pageSize: number; totalCount: number; pageCount: number };
-  /** Returns the current sort model. Called on every state push. */
+  /** Returns the current sort model. Called on every state push. Defaults to `api.getColumnState().sort`. */
   getSort?: () => Array<{ columnId: string; direction: 'asc' | 'desc' }>;
-  /** Returns the current filter model. Called on every state push. */
+  /** Returns the current filter model. Called on every state push. Defaults to `api.getColumnState().filters`. */
   getFilters?: () => Record<string, unknown>;
   /** IOGridApi reference for filter/sort/page commands. */
   api?: BridgeGridApi;
@@ -118,16 +122,20 @@ export function connectGridToBridge(options: ConnectGridOptions): BridgeConnecti
 
   /** Serialize current grid state for the bridge. */
   function buildState(): Record<string, unknown> {
-    const data = getData();
-    const columns = getColumns();
+    // With only an IOGridApi, read everything the app did not supply from it.
+    const columnState = api?.getColumnState?.();
+    const data = getData?.() ?? api?.getDisplayedRows?.() ?? [];
+    const columns = getColumns?.() ?? (columnState?.visibleColumns ?? []).map((columnId) => ({ columnId }));
     const pagination = getPagination?.() ?? {
       page: 1,
       pageSize: data.length,
       totalCount: data.length,
       pageCount: 1,
     };
-    const sortModel = getSort?.() ?? [];
-    const filterModel = getFilters?.() ?? {};
+    const sortModel =
+      getSort?.() ??
+      (columnState?.sort ? [{ columnId: columnState.sort.field, direction: columnState.sort.direction }] : []);
+    const filterModel = getFilters?.() ?? columnState?.filters ?? {};
     const selectedRowIds = api?.getSelectedRows?.() ?? [];
 
     return {

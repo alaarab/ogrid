@@ -109,10 +109,11 @@ test.describe('Server-side data parity', () => {
   test('text filters narrow server-fetched rows', async ({ page }) => {
     await applyProjectNameFilter(page, 'Project A');
 
-    const names = await getColumnTexts(page, 'name');
-    expect(names.length).toBeGreaterThan(0);
-    for (const name of names) {
-      expect(name.toLowerCase()).toContain('project a');
-    }
+    // The server page arrives asynchronously after Apply; wait for the refetch
+    // instead of reading the rows still on screen from before the filter.
+    await expect.poll(async () => {
+      const names = await getColumnTexts(page, 'name');
+      return names.length > 0 && names.every((name) => name.toLowerCase().includes('project a'));
+    }).toBe(true);
   });
 });
