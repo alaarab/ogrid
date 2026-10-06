@@ -32,6 +32,7 @@ export { useCellClipboard } from './useCellClipboard';
 export type {
   UseCellClipboardParams,
   UseCellClipboardResult,
+  CellClipboardCopyEvent,
   CellClipboardPasteEvent,
 } from './useCellClipboard';
 export { useGridFocus } from './useGridFocus';

@@ -29,8 +29,8 @@ describe('useKeyboardNavigation', () => {
       setSelectionRange: (overrides.setSelectionRange !== undefined ? overrides.setSelectionRange : jest.fn()) as jest.Mock,
       setEditingCell: (overrides.setEditingCell !== undefined ? overrides.setEditingCell : jest.fn()) as jest.Mock,
       handleRowCheckboxChange: (overrides.handleRowCheckboxChange !== undefined ? overrides.handleRowCheckboxChange : jest.fn()) as jest.Mock,
-      handleCopy: (overrides.handleCopy !== undefined ? overrides.handleCopy : jest.fn()) as jest.Mock,
-      handleCut: (overrides.handleCut !== undefined ? overrides.handleCut : jest.fn()) as jest.Mock,
+      handleCopyEvent: (overrides.handleCopyEvent !== undefined ? overrides.handleCopyEvent : jest.fn()) as jest.Mock,
+      handleCutEvent: (overrides.handleCutEvent !== undefined ? overrides.handleCutEvent : jest.fn()) as jest.Mock,
       handlePaste: (overrides.handlePaste !== undefined ? overrides.handlePaste : jest.fn().mockResolvedValue(undefined)) as jest.Mock,
       handlePasteEvent: (overrides.handlePasteEvent !== undefined ? overrides.handlePasteEvent : jest.fn()) as jest.Mock,
       setContextMenu: (overrides.setContextMenu !== undefined ? overrides.setContextMenu : jest.fn()) as jest.Mock,
@@ -101,25 +101,22 @@ describe('useKeyboardNavigation', () => {
     expect(setActiveCell).not.toHaveBeenCalled();
   });
 
-  it('Ctrl+C when activeCell is set calls handleCopy and prevents default', () => {
-    const handleCopy = jest.fn();
+  it('Ctrl/Cmd+C and Ctrl/Cmd+X are left to the browser so the native copy/cut event follows', () => {
+    const handleCopyEvent = jest.fn();
+    const handleCutEvent = jest.fn();
     const { result } = renderHook(() =>
-      useKeyboardNavigation(makeParams({ activeCell: { rowIndex: 0, columnIndex: 0 }, handleCopy }))
+      useKeyboardNavigation(makeParams({ activeCell: { rowIndex: 0, columnIndex: 0 }, handleCopyEvent, handleCutEvent }))
     );
 
-    const e = {
-      key: 'c',
-      preventDefault: jest.fn(),
-      ctrlKey: true,
-      metaKey: false,
-    } as unknown as React.KeyboardEvent;
-
-    act(() => {
-      result.current.handleGridKeyDown(e);
-    });
-
-    expect(handleCopy).toHaveBeenCalled();
-    expect(e.preventDefault).toHaveBeenCalled();
+    for (const [key, ctrlKey, metaKey] of [['c', true, false], ['C', false, true], ['x', true, false], ['x', false, true]] as const) {
+      const e = { key, preventDefault: jest.fn(), ctrlKey, metaKey, shiftKey: false } as unknown as React.KeyboardEvent;
+      act(() => {
+        result.current.handleGridKeyDown(e);
+      });
+      expect(e.preventDefault).not.toHaveBeenCalled();
+    }
+    expect(handleCopyEvent).not.toHaveBeenCalled();
+    expect(handleCutEvent).not.toHaveBeenCalled();
   });
 
   it('Escape when editingCell is set calls setEditingCell(null)', () => {
@@ -594,8 +591,8 @@ describe('useKeyboardNavigation  -  onKeyDown intercept prop', () => {
         setSelectionRange: jest.fn(),
         setEditingCell: jest.fn(),
         handleRowCheckboxChange: jest.fn(),
-        handleCopy: jest.fn(),
-        handleCut: jest.fn(),
+        handleCopyEvent: jest.fn(),
+        handleCutEvent: jest.fn(),
         handlePaste: jest.fn().mockResolvedValue(undefined),
         setContextMenu: jest.fn(),
       },
@@ -658,8 +655,8 @@ describe('useKeyboardNavigation  -  onKeyDown intercept prop', () => {
         setSelectionRange: jest.fn(),
         setEditingCell: jest.fn(),
         handleRowCheckboxChange: jest.fn(),
-        handleCopy: jest.fn(),
-        handleCut: jest.fn(),
+        handleCopyEvent: jest.fn(),
+        handleCutEvent: jest.fn(),
         handlePaste: jest.fn().mockResolvedValue(undefined),
         setContextMenu: jest.fn(),
       },
@@ -717,8 +714,8 @@ describe('useKeyboardNavigation  -  onKeyDown intercept prop', () => {
         setSelectionRange: jest.fn(),
         setEditingCell: jest.fn(),
         handleRowCheckboxChange: jest.fn(),
-        handleCopy: jest.fn(),
-        handleCut: jest.fn(),
+        handleCopyEvent: jest.fn(),
+        handleCutEvent: jest.fn(),
         handlePaste: jest.fn().mockResolvedValue(undefined),
         setContextMenu: jest.fn(),
       },
@@ -826,8 +823,8 @@ describe('useKeyboardNavigation event targets, Tab and anchors', () => {
       setSelectionRange: jest.fn((r) => { state.selectionRange = r; }),
       setEditingCell: jest.fn((c) => { state.editingCell = c; }),
       handleRowCheckboxChange: jest.fn(),
-      handleCopy: jest.fn(),
-      handleCut: jest.fn(),
+      handleCopyEvent: jest.fn(),
+      handleCutEvent: jest.fn(),
       handlePaste: jest.fn().mockResolvedValue(undefined),
       handlePasteEvent: jest.fn(),
       setContextMenu: jest.fn(),
@@ -860,7 +857,19 @@ describe('useKeyboardNavigation event targets, Tab and anchors', () => {
       act(() => { result.current.handleGridPaste(e as unknown as React.ClipboardEvent); });
       return e;
     };
-    return { state, handlers, onCellValueChanged, press, paste, find, wrapper };
+    const clipboardEvent = (kind: 'copy' | 'cut', target: Element = wrapper) => {
+      const e = {
+        target, currentTarget: wrapper,
+        clipboardData: { setData: jest.fn() },
+        preventDefault: jest.fn(),
+      };
+      act(() => {
+        const handler = kind === 'copy' ? result.current.handleGridCopy : result.current.handleGridCut;
+        handler(e as unknown as React.ClipboardEvent);
+      });
+      return e;
+    };
+    return { state, handlers, onCellValueChanged, press, paste, clipboardEvent, find, wrapper };
   }
 
   describe('paste', () => {
@@ -895,6 +904,34 @@ describe('useKeyboardNavigation event targets, Tab and anchors', () => {
     });
   });
 
+  describe('copy and cut', () => {
+    it('handleGridCopy / handleGridCut hand events on the wrapper or a body cell to the clipboard handlers', () => {
+      const t = setup();
+      const cell = t.find('cell-btn').parentElement as Element;
+      const copyOnWrapper = t.clipboardEvent('copy');
+      const copyOnCell = t.clipboardEvent('copy', cell);
+      const cutOnCell = t.clipboardEvent('cut', cell);
+      expect(t.handlers.handleCopyEvent).toHaveBeenCalledTimes(2);
+      expect(t.handlers.handleCopyEvent).toHaveBeenCalledWith(copyOnWrapper);
+      expect(t.handlers.handleCopyEvent).toHaveBeenCalledWith(copyOnCell);
+      expect(t.handlers.handleCutEvent).toHaveBeenCalledTimes(1);
+      expect(t.handlers.handleCutEvent).toHaveBeenCalledWith(cutOnCell);
+    });
+
+    it('leaves copy/cut aimed at an editor, a header input, a portaled input or an open editor alone', () => {
+      const t = setup();
+      for (const id of ['editor-input', 'hdr-input', 'portal-input']) {
+        t.clipboardEvent('copy', t.find(id));
+        t.clipboardEvent('cut', t.find(id));
+      }
+      t.state.editingCell = { rowId: '0', columnId: 'name' };
+      t.clipboardEvent('copy');
+      t.clipboardEvent('cut');
+      expect(t.handlers.handleCopyEvent).not.toHaveBeenCalled();
+      expect(t.handlers.handleCutEvent).not.toHaveBeenCalled();
+    });
+  });
+
   describe('ignores keystrokes from outside the cell area', () => {
     it('Backspace typed in a portaled filter input does not clear the selected cells', () => {
       const t = setup({ selectionRange: { startRow: 0, startCol: 0, endRow: 2, endCol: 1 } });
@@ -911,7 +948,7 @@ describe('useKeyboardNavigation event targets, Tab and anchors', () => {
         expect(e.preventDefault).not.toHaveBeenCalled();
       }
       expect(t.onCellValueChanged).not.toHaveBeenCalled();
-      expect(t.handlers.handleCut).not.toHaveBeenCalled();
+      expect(t.handlers.handleCutEvent).not.toHaveBeenCalled();
       expect(t.handlers.handlePaste).not.toHaveBeenCalled();
       expect(t.handlers.setSelectionRange).not.toHaveBeenCalled();
     });

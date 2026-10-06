@@ -56,6 +56,21 @@ function firePaste(target: Element, text: string): boolean {
   return fireEvent(target, event);
 }
 
+/**
+ * Dispatch a native-style `copy` or `cut` event with a writable clipboardData.
+ * Returns what the grid put on it and whether it consumed the event (preventDefault).
+ */
+function fireCopyOrCut(target: Element, type: 'copy' | 'cut'): { data: Record<string, string>; setData: jest.Mock; consumed: boolean } {
+  const data: Record<string, string> = {};
+  const setData = jest.fn((format: string, value: string) => { data[format] = value; });
+  const event = new Event(type, { bubbles: true, cancelable: true });
+  Object.defineProperty(event, 'clipboardData', {
+    value: { setData, getData: (format: string) => data[format] ?? '' },
+  });
+  const consumed = !fireEvent(target, event);
+  return { data, setData, consumed };
+}
+
 export function createSpreadsheetTests(DataGridTable: React.ComponentType<IOGridDataGridProps<FixtureRow>>): void {
   function renderSpreadsheetGrid(overrides: Partial<IOGridDataGridProps<FixtureRow>> = {}) {
     return render(renderSpreadsheetGridElement(overrides));
@@ -260,52 +275,10 @@ export function createSpreadsheetTests(DataGridTable: React.ComponentType<IOGrid
     });
 
     describe('cut', () => {
-      it('cut then paste clears source cells and calls onCellValueChanged with empty string', async () => {
+      it('a native cut event marks the cut range; the paste event that follows moves the value and clears the source', async () => {
         const onCellValueChanged = jest.fn();
-        // The clipboard returns what the cut wrote (cut cells are only cleared when the
-        // pasted text is the cut's own text).
-        let clipboardText = '';
-        const writeText = jest.fn().mockImplementation((t: string) => { clipboardText = t; return Promise.resolve(); });
-        const readText = jest.fn().mockImplementation(() => Promise.resolve(clipboardText));
-        Object.defineProperty(navigator, 'clipboard', {
-          value: { writeText, readText },
-          configurable: true,
-        });
-
-        const { container } = renderSpreadsheetGrid({ onCellValueChanged });
-        const cell00 = getCellAt(container, 0, 0);
-        fireEvent.pointerDown(cell00);
-        const grid = container.querySelector('[role="region"]');
-        expect(grid).toBeTruthy();
-
-        await act(async () => {
-          fireEvent.keyDown(grid as Element, { key: 'x', ctrlKey: true });
-        });
-
-        await waitFor(() => {
-          expect(writeText).toHaveBeenCalled();
-        });
-
-        // Paste somewhere else: pasting onto the cut cell itself keeps the
-        // pasted value (the paste wins), so nothing would be cleared. Ctrl+V
-        // arrives as the browser's paste event carrying what the cut wrote.
-        fireEvent.pointerDown(getCellAt(container, 1, 0));
-        await act(async () => {
-          firePaste(grid as Element, clipboardText);
-        });
-
-        await waitFor(() => {
-          const clearCalls = onCellValueChanged.mock.calls.filter((c: unknown[]) => (c[0] as { newValue: unknown }).newValue === '');
-          expect(clearCalls.length).toBeGreaterThanOrEqual(1);
-        });
-        expect(readText).not.toHaveBeenCalled();
-      });
-
-      it('cut then paste onto the same cell keeps the pasted value', async () => {
-        const onCellValueChanged = jest.fn();
-        let clipboardText = '';
-        const writeText = jest.fn().mockImplementation((t: string) => { clipboardText = t; return Promise.resolve(); });
-        const readText = jest.fn().mockImplementation(() => Promise.resolve(clipboardText));
+        const writeText = jest.fn().mockResolvedValue(undefined);
+        const readText = jest.fn().mockResolvedValue('FromReadText');
         Object.defineProperty(navigator, 'clipboard', {
           value: { writeText, readText },
           configurable: true,
@@ -313,13 +286,47 @@ export function createSpreadsheetTests(DataGridTable: React.ComponentType<IOGrid
 
         const { container } = renderSpreadsheetGrid({ onCellValueChanged });
         fireEvent.pointerDown(getCellAt(container, 0, 0));
-        const grid = container.querySelector('[role="region"]');
+        const grid = container.querySelector('[role="region"]') as HTMLElement;
+        grid.focus();
+
+        // Ctrl+X is left to the browser, which follows it with the cut event.
+        expect(fireEvent.keyDown(grid, { key: 'x', ctrlKey: true })).toBe(true);
+        let cut = { data: {} as Record<string, string>, consumed: false };
         await act(async () => {
-          fireEvent.keyDown(grid as Element, { key: 'x', ctrlKey: true });
+          cut = fireCopyOrCut(grid, 'cut');
         });
-        await waitFor(() => expect(writeText).toHaveBeenCalled());
+        expect(cut.consumed).toBe(true);
+        expect(cut.data['text/plain']).toBe('Alpha');
+        expect(writeText).not.toHaveBeenCalled();
+        // Nothing is cleared until the paste.
+        expect(onCellValueChanged).not.toHaveBeenCalled();
+        await waitFor(() => expect(container.querySelector('.ogrid-marching-ants')).toBeInTheDocument());
+
+        fireEvent.pointerDown(getCellAt(container, 1, 0));
         await act(async () => {
-          firePaste(grid as Element, clipboardText);
+          firePaste(grid, cut.data['text/plain'] ?? '');
+        });
+
+        const changes = onCellValueChanged.mock.calls.map((c: unknown[]) => {
+          const e = c[0] as { rowIndex: number; columnId: string; newValue: unknown };
+          return [e.rowIndex, e.columnId, e.newValue];
+        });
+        expect(changes).toEqual([[1, 'name', 'Alpha'], [0, 'name', '']]);
+        expect(readText).not.toHaveBeenCalled();
+        await waitFor(() => expect(container.querySelector('.ogrid-marching-ants')).toBeNull());
+      });
+
+      it('cut then paste onto the same cell keeps the pasted value', async () => {
+        const onCellValueChanged = jest.fn();
+        const { container } = renderSpreadsheetGrid({ onCellValueChanged });
+        fireEvent.pointerDown(getCellAt(container, 0, 0));
+        const grid = container.querySelector('[role="region"]') as HTMLElement;
+        let text = '';
+        await act(async () => {
+          text = fireCopyOrCut(grid, 'cut').data['text/plain'] ?? '';
+        });
+        await act(async () => {
+          firePaste(grid, text);
         });
         await waitFor(() => expect(onCellValueChanged).toHaveBeenCalled());
         const values = onCellValueChanged.mock.calls.map((c: unknown[]) => (c[0] as { newValue: unknown }).newValue);
@@ -328,7 +335,7 @@ export function createSpreadsheetTests(DataGridTable: React.ComponentType<IOGrid
     });
 
     describe('copy', () => {
-      it('copies selected range to clipboard as TSV on Ctrl+C', async () => {
+      it('a native copy event puts the selected range on clipboardData as TSV and marks the copy range', async () => {
         const writeText = jest.fn().mockResolvedValue(undefined);
         Object.defineProperty(navigator, 'clipboard', {
           value: { writeText },
@@ -336,23 +343,89 @@ export function createSpreadsheetTests(DataGridTable: React.ComponentType<IOGrid
         });
 
         const { container } = renderSpreadsheetGrid();
-        const cell00 = getCellAt(container, 0, 0);
-        const cell01 = getCellAt(container, 0, 1);
-        fireEvent.pointerDown(cell00);
-        fireEvent.pointerDown(cell01, { shiftKey: true });
-        const grid = container.querySelector('[role="region"]');
-        expect(grid).toBeTruthy();
+        fireEvent.pointerDown(getCellAt(container, 0, 0));
+        fireEvent.pointerDown(getCellAt(container, 0, 1), { shiftKey: true });
+        const grid = container.querySelector('[role="region"]') as HTMLElement;
 
+        let copy = { data: {} as Record<string, string>, consumed: false };
         await act(async () => {
-          fireEvent.keyDown(grid as Element, { key: 'c', ctrlKey: true });
+          copy = fireCopyOrCut(grid, 'copy');
         });
 
-        await waitFor(() => {
-          expect(writeText).toHaveBeenCalled();
-          const tsv = writeText.mock.calls[0][0];
-          expect(tsv).toContain('Alpha');
-          expect(tsv).toContain('Active');
+        expect(copy.consumed).toBe(true);
+        expect(copy.data['text/plain']).toBe('Alpha\tActive');
+        expect(writeText).not.toHaveBeenCalled();
+        await waitFor(() => expect(container.querySelector('.ogrid-marching-ants')).toBeInTheDocument());
+      });
+
+      it('Ctrl+C keydown is not prevented and the copy event that follows copies exactly once', async () => {
+        const writeText = jest.fn().mockResolvedValue(undefined);
+        Object.defineProperty(navigator, 'clipboard', {
+          value: { writeText },
+          configurable: true,
         });
+
+        const { container } = renderSpreadsheetGrid();
+        fireEvent.pointerDown(getCellAt(container, 0, 0));
+        const grid = container.querySelector('[role="region"]') as HTMLElement;
+        grid.focus();
+
+        // The browser only fires `copy` when keydown was not prevented.
+        expect(fireEvent.keyDown(grid, { key: 'c', ctrlKey: true })).toBe(true);
+        expect(fireEvent.keyDown(grid, { key: 'c', metaKey: true })).toBe(true);
+        let copy = { setData: jest.fn(), consumed: false };
+        await act(async () => {
+          copy = fireCopyOrCut(grid, 'copy');
+        });
+        await act(async () => { await Promise.resolve(); });
+
+        expect(copy.consumed).toBe(true);
+        expect(copy.setData).toHaveBeenCalledTimes(1);
+        expect(copy.setData).toHaveBeenCalledWith('text/plain', 'Alpha');
+        expect(writeText).not.toHaveBeenCalled();
+      });
+
+      it('without navigator.clipboard (plain http) a copy event still feeds the in-page paste fallback', async () => {
+        Object.defineProperty(navigator, 'clipboard', { value: undefined, configurable: true });
+        const onCellValueChanged = jest.fn();
+        const { container } = renderSpreadsheetGrid({ onCellValueChanged });
+        fireEvent.pointerDown(getCellAt(container, 0, 0));
+        const grid = container.querySelector('[role="region"]') as HTMLElement;
+        await act(async () => {
+          fireCopyOrCut(grid, 'copy');
+        });
+        fireEvent.pointerDown(getCellAt(container, 2, 1));
+        await act(async () => {
+          firePaste(grid, '');
+        });
+        expect(onCellValueChanged).toHaveBeenCalledTimes(1);
+        expect(onCellValueChanged.mock.calls[0][0]).toEqual(expect.objectContaining({ rowIndex: 2, columnId: 'status', newValue: 'Alpha' }));
+      });
+
+      it('a copy or cut event inside an open cell editor is left to the editor', async () => {
+        const onCellValueChanged = jest.fn();
+        const { container } = renderSpreadsheetGrid({ onCellValueChanged });
+        const grid = container.querySelector('[role="region"]') as HTMLElement;
+        const cell = getCellAt(container, 0, 0);
+        fireEvent.pointerDown(cell);
+        fireEvent.doubleClick(cell);
+        const input = await waitFor(() => {
+          const el = grid.querySelector('input');
+          expect(el).toBeInTheDocument();
+          return el as HTMLInputElement;
+        });
+        input.focus();
+
+        const copy = fireCopyOrCut(input, 'copy');
+        const cut = fireCopyOrCut(input, 'cut');
+
+        for (const e of [copy, cut]) {
+          expect(e.consumed).toBe(false);
+          expect(e.setData).not.toHaveBeenCalled();
+        }
+        expect(onCellValueChanged).not.toHaveBeenCalled();
+        expect(grid.querySelector('input')).toBeInTheDocument();
+        expect(container.querySelector('.ogrid-marching-ants')).toBeNull();
       });
     });
 
@@ -371,7 +444,7 @@ export function createSpreadsheetTests(DataGridTable: React.ComponentType<IOGrid
         const grid = container.querySelector('[role="region"]') as HTMLElement;
         // An earlier in-grid copy must not be pasted when the read fails.
         await act(async () => {
-          fireEvent.keyDown(grid, { key: 'c', ctrlKey: true });
+          fireCopyOrCut(grid, 'copy');
         });
         const cell10 = getCellAt(container, 1, 0);
         fireEvent.pointerDown(cell10);
@@ -574,9 +647,11 @@ export function createSpreadsheetTests(DataGridTable: React.ComponentType<IOGrid
 
         fireEvent.click(screen.getByText('Copy'));
 
+        // The menu has no native copy event, so it writes programmatically, once.
         await waitFor(() => {
-          expect(writeText).toHaveBeenCalled();
+          expect(writeText).toHaveBeenCalledTimes(1);
         });
+        expect(writeText).toHaveBeenCalledWith('Alpha');
       });
 
       it('Cut from context menu copies to clipboard and sets cut buffer', async () => {

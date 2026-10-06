@@ -127,7 +127,22 @@ function SpreadsheetDemo() {
     onCellEdit: (events) => events.forEach(wrappedEdit),
   });
 
-  // Wire global keyboard shortcuts: copy/cut/paste, undo/redo.
+  // Copy/cut/paste ride the browser's native clipboard events (Ctrl/Cmd+C/X/V
+  // are not prevented below), which carry the clipboard data with no
+  // permission prompt. The hook ignores events aimed at the inline editor.
+  const { onCopy, onCut, onPaste } = clipboard;
+  React.useEffect(() => {
+    document.addEventListener('copy', onCopy);
+    document.addEventListener('cut', onCut);
+    document.addEventListener('paste', onPaste);
+    return () => {
+      document.removeEventListener('copy', onCopy);
+      document.removeEventListener('cut', onCut);
+      document.removeEventListener('paste', onPaste);
+    };
+  }, [onCopy, onCut, onPaste]);
+
+  // Wire global keyboard shortcuts: undo/redo, select all.
   React.useEffect(() => {
     const handler = (e: KeyboardEvent) => {
       const mod = e.metaKey || e.ctrlKey;
@@ -136,10 +151,7 @@ function SpreadsheetDemo() {
       // Don't hijack while typing into the inline editor.
       if (target?.tagName === 'INPUT' || target?.tagName === 'TEXTAREA') return;
 
-      if (e.key === 'c') { e.preventDefault(); clipboard.copyRange(); }
-      else if (e.key === 'x') { e.preventDefault(); clipboard.cutRange(); }
-      else if (e.key === 'v') { e.preventDefault(); clipboard.pasteRange(); }
-      else if (e.key.toLowerCase() === 'z' && !e.shiftKey) { e.preventDefault(); undo.undo(); }
+      if (e.key.toLowerCase() === 'z' && !e.shiftKey) { e.preventDefault(); undo.undo(); }
       else if (e.key.toLowerCase() === 'z' && e.shiftKey) { e.preventDefault(); undo.redo(); }
       else if (e.key === 'a') {
         e.preventDefault();
@@ -148,7 +160,7 @@ function SpreadsheetDemo() {
     };
     document.addEventListener('keydown', handler);
     return () => document.removeEventListener('keydown', handler);
-  }, [clipboard, undo, range]);
+  }, [undo, range]);
 
   return (
     <div style={{ fontFamily: 'system-ui, sans-serif' }}>
