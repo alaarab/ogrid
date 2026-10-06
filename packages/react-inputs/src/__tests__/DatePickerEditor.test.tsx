@@ -446,4 +446,45 @@ describe('DatePickerEditor', () => {
       expect(input.value).toBe('2024-01-05');
     });
   });
+
+  describe('I04 - calendar days are keyboard operable', () => {
+    const day = (label: string) => screen.getByRole('button', { name: label });
+
+    it('puts only the selected day in the tab order', () => {
+      renderEditor({ value: '2024-03-15' });
+      expect(day('March 15, 2024')).toHaveAttribute('tabindex', '0');
+      expect(day('March 16, 2024')).toHaveAttribute('tabindex', '-1');
+    });
+
+    it('arrows move focus by day and week, crossing into the previous month', () => {
+      renderEditor({ value: '2024-03-01' });
+      fireEvent.keyDown(day('March 1, 2024'), { key: 'ArrowDown' });
+      expect(day('March 8, 2024')).toHaveFocus();
+      fireEvent.keyDown(day('March 8, 2024'), { key: 'ArrowUp' });
+      fireEvent.keyDown(day('March 1, 2024'), { key: 'ArrowLeft' });
+      expect(screen.getByText('February 2024')).toBeInTheDocument();
+      expect(day('February 29, 2024')).toHaveFocus();
+    });
+
+    it('PageDown moves a month and clamps the day', () => {
+      renderEditor({ value: '2024-01-31' });
+      fireEvent.keyDown(day('January 31, 2024'), { key: 'PageDown' });
+      expect(screen.getByText('February 2024')).toBeInTheDocument();
+      expect(day('February 29, 2024')).toHaveFocus();
+    });
+
+    it('Enter on a focused day selects and commits it', () => {
+      jest.useFakeTimers();
+      try {
+        const { props } = renderEditor({ value: '2024-03-15' });
+        fireEvent.keyDown(day('March 15, 2024'), { key: 'ArrowRight' });
+        fireEvent.keyDown(day('March 16, 2024'), { key: 'Enter' });
+        expect(props.onValueChange).toHaveBeenLastCalledWith('2024-03-16');
+        act(() => { jest.runAllTimers(); });
+        expect(props.onCommit).toHaveBeenCalledTimes(1);
+      } finally {
+        jest.useRealTimers();
+      }
+    });
+  });
 });
