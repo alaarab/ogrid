@@ -6,11 +6,28 @@ need an npm token on your own machine.
 
 ## One-time setup (already done)
 
-- A repo secret named **`NPM_TOKEN`** holds an npm **Automation** token
-  (Settings → Secrets and variables → Actions).
 - The publish workflow has `id-token: write` and `provenance=true`, so every
   package is published with a signed [npm provenance](https://docs.npmjs.com/generating-provenance-statements)
   attestation linking it back to this repo + commit.
+- Authentication: the workflow supports npm
+  [Trusted Publishing](https://docs.npmjs.com/trusted-publishers) (GitHub OIDC,
+  no long-lived token) and falls back to the **`NPM_TOKEN`** repo secret
+  (Settings → Secrets and variables → Actions) while it exists. npm write
+  tokens expire, so prefer Trusted Publishing.
+
+### Switching to Trusted Publishing (no token to rotate)
+
+1. On npmjs.com, for **each** of the 9 packages (`@alaarab/ogrid-core`,
+   `-inputs`, `-react`, `-react-radix`, `-react-fluent`, `-react-inputs`,
+   `-react-xlsx`, `-react-xlsx-browser`, `-mcp`): Settings → Trusted publishing →
+   GitHub Actions, owner `alaarab`, repository `ogrid`, workflow filename
+   `publish.yml`, no environment.
+2. Run "Publish Packages" once with the token still present. npm uses OIDC
+   for every package that has a trusted publisher.
+3. Delete the `NPM_TOKEN` secret (`gh secret delete NPM_TOKEN`). The workflow
+   then publishes with OIDC only and logs "No NPM_TOKEN".
+4. Optionally, on each package set "Require two-factor authentication and
+   disallow tokens" so only the workflow can publish.
 
 ## Pre-publish checklist
 
