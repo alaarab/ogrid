@@ -10,7 +10,7 @@
       "**/*.ts",
       "**/*.tsx",
       "**/*.mjs",
-      "!**/.claude/**",
+      "!**/.claude",
       "!CLAUDE.md",
       "!AGENTS.md",
       "!FINDINGS.md",
