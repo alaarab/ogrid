@@ -35,8 +35,14 @@ for (const headless of [false, true]) {
           getRowId: (item) => item.id, onCellEdit: (edits) => events.push(...edits),
         });
         return headless
-          ? { cut: custom.cutRange, paste: custom.pasteRange }
-          : { cut: component.handleCut, paste: component.handlePaste };
+          ? {
+              cut: custom.cutRange, copy: custom.copyRange, paste: custom.pasteRange, clear: custom.clearClipboard,
+              marks: { cut: custom.activeCutRange, copy: custom.activeCopyRange },
+            }
+          : {
+              cut: component.handleCut, copy: component.handleCopy, paste: component.handlePaste, clear: component.clearClipboardRanges,
+              marks: { cut: component.cutRange, copy: component.copyRange },
+            };
       });
       return { events, state, result, rerender };
     }
@@ -100,6 +106,40 @@ for (const headless of [false, true]) {
       rerender();
       await act(async () => { await result.current.paste(); });
       expect(events.map((event) => [event.item.id, event.newValue])).toEqual([[2, 'first'], [1, '']]);
+    });
+
+    it('marks the cut, then a copy replaces the mark and cancels the pending cut', async () => {
+      const { result, state, rerender, events } = setup(editable, range(0));
+      await act(async () => { await result.current.cut(); });
+      expect(result.current.marks).toEqual({ cut: range(0), copy: null });
+      await act(async () => { await result.current.copy(); });
+      expect(result.current.marks).toEqual({ cut: null, copy: range(0) });
+      state.selection = range(1);
+      rerender();
+      await act(async () => { await result.current.paste(); });
+      expect(events.map((event) => [event.item.id, event.newValue])).toEqual([[2, 'first']]);
+      expect(result.current.marks).toEqual({ cut: null, copy: null });
+    });
+
+    it('clearing the marks (Escape) drops the pending cut', async () => {
+      const { result, state, rerender, events } = setup(editable, range(0));
+      await act(async () => { await result.current.cut(); });
+      act(() => result.current.clear());
+      expect(result.current.marks).toEqual({ cut: null, copy: null });
+      state.selection = range(1);
+      rerender();
+      await act(async () => { await result.current.paste(); });
+      expect(events.map((event) => [event.item.id, event.newValue])).toEqual([[2, 'first']]);
+    });
+
+    it('completes a cut once: a second paste of the same text moves nothing more', async () => {
+      const { result, state, rerender, events } = setup(editable, range(0));
+      await act(async () => { await result.current.cut(); });
+      state.selection = range(1);
+      rerender();
+      await act(async () => { await result.current.paste(); });
+      await act(async () => { await result.current.paste(); });
+      expect(events.map((event) => [event.item.id, event.newValue])).toEqual([[2, 'first'], [1, ''], [2, 'first']]);
     });
   });
 }

@@ -107,7 +107,10 @@ export {
   parseTsvClipboard,
   applyPastedValues,
   applyCutClear,
+  captureCutSource,
+  resolveCutClear,
 } from './clipboardHelpers';
+export type { ICutSource, ResolveCutClearParams } from './clipboardHelpers';
 export { applyFillValues, areFillCompatible, computeFillRange, computeFillDragEdits } from './fillHelpers';
 export type { IFillFormulaOptions } from './fillHelpers';
 export { UndoRedoStack } from './undoRedoStack';
