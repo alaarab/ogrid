@@ -90,6 +90,37 @@ test.describe('Roving focus', () => {
     expect(await focusedCell(page)).toBe(`r3c${nameCol}`);
   });
 
+  test('a click focuses the cell without a keyboard focus ring; arrow keys show it', async ({ page }) => {
+    const focusVisible = () => page.evaluate(() => document.activeElement?.tagName === 'TD' && document.activeElement.matches(':focus-visible'));
+    await getDataCell(page, 1, 'name').click();
+    expect(await focusVisible()).toBe(false);
+    await page.keyboard.press('ArrowDown');
+    expect(await focusVisible()).toBe(true);
+    // A click after keyboard use goes back to no ring.
+    await getDataCell(page, 0, 'name').click();
+    expect(await focusVisible()).toBe(false);
+  });
+
+  test('native copy and paste fire on the focused cell and go through the grid', async ({ page }) => {
+    // The shortcuts ride the browser's native copy/paste events, dispatched at the focused <td>.
+    await page.evaluate(() => {
+      const w = window as unknown as { events: string[] };
+      w.events = [];
+      for (const type of ['copy', 'paste']) {
+        document.addEventListener(type, (e) => {
+          w.events.push(`${type}:${(document.activeElement as HTMLElement).tagName}:${e.defaultPrevented}`);
+        });
+      }
+    });
+    await getDataCell(page, 0, 'name').click();
+    const source = ((await getDataCell(page, 0, 'name').textContent()) ?? '').trim();
+    await page.keyboard.press('ControlOrMeta+c');
+    await getDataCell(page, 1, 'name').click();
+    await page.keyboard.press('ControlOrMeta+v');
+    await expect.poll(async () => ((await getDataCell(page, 1, 'name').textContent()) ?? '').trim()).toBe(source);
+    expect(await page.evaluate(() => (window as unknown as { events: string[] }).events)).toEqual(['copy:TD:true', 'paste:TD:true']);
+  });
+
   test('Escape clears the active cell but keeps focus on the cell', async ({ page }) => {
     const nameCol = await colIndexOf(page, 'name');
     await getDataCell(page, 1, 'name').click();
