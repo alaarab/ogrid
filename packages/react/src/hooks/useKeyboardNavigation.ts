@@ -1,6 +1,6 @@
 import { useCallback, useRef } from 'react';
-import { getSelectAllRange } from '@alaarab/ogrid-core';
-import { getCellValue, computeTabNavigation, computeArrowNavigation, applyCellDeletion, getScrollTopForRow, getOppositeCorner } from '../utils';
+import { getSelectAllRange, isColumnEditable } from '@alaarab/ogrid-core';
+import { getCellValue, computeTabNavigation, computeArrowNavigation, applyCellDeletion, getScrollTopForRow, getOppositeCorner, booleanParser, parseValue } from '../utils';
 import { CELL_EDITOR_ATTR } from '../constants/domHelpers';
 import { scrollCellIntoView, type ScrollToRowIndex } from '../utils/scrollCellIntoView';
 import { normalizeSelectionRange } from '../types';
@@ -209,6 +209,50 @@ export function useKeyboardNavigation<T>(
       const { rowIndex, columnIndex } = activeCell;
       const dataColIndex = columnIndex - colOffset;
       const shift = e.shiftKey;
+      // The row-selection checkbox column (index 0) is a navigable cell: ArrowLeft
+      // from the first data column reaches it. It holds no cell data, so it has no
+      // selection range, and copy, paste, Delete and editing don't apply there.
+      const onCheckboxCol = hasCheckboxCol && columnIndex === 0;
+      const moveToCheckboxCell = (row: number) => {
+        setSelectionRange(null);
+        setActiveCell({ rowIndex: row, columnIndex: 0 });
+      };
+      const moveToDataCell = (row: number, col: number) => {
+        setSelectionRange({ startRow: row, startCol: col, endRow: row, endCol: col });
+        setActiveCell({ rowIndex: row, columnIndex: col + colOffset });
+      };
+      if (onCheckboxCol && editingCell == null) {
+        const ctrl = e.ctrlKey || e.metaKey;
+        switch (e.key) {
+          case 'ArrowUp':
+          case 'ArrowDown': {
+            e.preventDefault();
+            const down = e.key === 'ArrowDown';
+            const next = ctrl ? (down ? maxRowIndex : 0) : Math.max(0, Math.min(rowIndex + (down ? 1 : -1), maxRowIndex));
+            moveToCheckboxCell(next);
+            return;
+          }
+          case 'ArrowLeft':
+            e.preventDefault();
+            return;
+          case 'ArrowRight':
+            e.preventDefault();
+            moveToDataCell(rowIndex, ctrl ? visibleColumnCount - 1 : 0);
+            return;
+          case 'Tab':
+            // Tab order runs over the data cells; the checkbox cell sits just
+            // before the row's first data cell.
+            if (!shift) {
+              e.preventDefault();
+              moveToDataCell(rowIndex, 0);
+            } else if (moveByTab({ rowIndex, columnIndex: colOffset }, true)) {
+              e.preventDefault();
+            }
+            return;
+          default:
+            break;
+        }
+      }
       const isEmptyAt = (r: number, c: number): boolean => {
         const row = items[r];
         const col = visibleCols[c];
@@ -244,6 +288,10 @@ export function useKeyboardNavigation<T>(
         case 'ArrowLeft': {
           if (editingCell != null) break;
           e.preventDefault();
+          if (e.key === 'ArrowLeft' && hasCheckboxCol && !shift && !(e.ctrlKey || e.metaKey) && columnIndex === colOffset) {
+            moveToCheckboxCell(rowIndex);
+            break;
+          }
           // Shift+Arrow: the active cell is the anchor and stays put (Excel);
           // the far corner of the range is the end that moves.
           const extent = shift ? getOppositeCorner(selectionRange, rowIndex, dataColIndex) : null;
@@ -320,7 +368,7 @@ export function useKeyboardNavigation<T>(
           }
           const pgDirection = e.key === 'PageDown' ? 1 : -1;
           // Shift extends from the active cell (anchor) by moving the range's far row.
-          const extent = shift ? getOppositeCorner(selectionRange, rowIndex, dataColIndex) : null;
+          const extent = shift && !onCheckboxCol ? getOppositeCorner(selectionRange, rowIndex, dataColIndex) : null;
           const fromRow = extent ? extent.row : rowIndex;
           const newRowPage = Math.max(0, Math.min(fromRow + pgDirection * pageSize, maxRowIndex));
           if (extent) {
@@ -330,6 +378,8 @@ export function useKeyboardNavigation<T>(
               endRow: newRowPage,
               endCol: extent.col,
             }));
+          } else if (onCheckboxCol) {
+            moveToCheckboxCell(newRowPage);
           } else {
             setSelectionRange({
               startRow: newRowPage,
@@ -383,23 +433,33 @@ export function useKeyboardNavigation<T>(
             setSelectionRange(null);
           }
           break;
-        case ' ':
-          // Shift+Space toggles the active row's selection from any column (WAI-ARIA
-          // grid); the checkbox column itself isn't a navigation stop.
-          if (
-            rowSelection !== 'none' &&
-            editingCell == null &&
-            (e.shiftKey || (columnIndex === 0 && hasCheckboxCol))
-          ) {
+        case ' ': {
+          if (editingCell != null) break;
+          // Space on the checkbox cell toggles its row, and Shift+Space there
+          // selects the range from the last toggled row, like Shift+click on the
+          // checkbox. Shift+Space in a data cell toggles the active row (WAI-ARIA grid).
+          if (rowSelection !== 'none' && (e.shiftKey || onCheckboxCol)) {
             e.preventDefault();
             const item = items[rowIndex];
             if (item) {
               const id = getRowId(item);
               const isSelected = selectedRowIds.has(id);
-              handleRowCheckboxChange(id, !isSelected, rowIndex, false);
+              handleRowCheckboxChange(id, !isSelected, rowIndex, onCheckboxCol && e.shiftKey);
             }
+            break;
           }
+          // Space toggles an editable boolean (checkbox) cell.
+          const col = visibleCols[dataColIndex];
+          const item = items[rowIndex];
+          if (e.shiftKey || !col || !item || col.type !== 'boolean') break;
+          if (editable === false || onCellValueChanged == null || !isColumnEditable<T>(col, item)) break;
+          e.preventDefault();
+          const oldValue = getCellValue<T>(item, col);
+          const checked = !!(booleanParser<T>({ newValue: oldValue, oldValue, data: item, column: col }) ?? oldValue);
+          const result = parseValue<T>(!checked, oldValue, item, col);
+          if (result.valid) onCellValueChanged({ item, columnId: col.columnId, oldValue, newValue: result.value, rowIndex });
           break;
+        }
         case 'z':
           if (e.ctrlKey || e.metaKey) {
             if (editingCell == null) {
@@ -446,6 +506,7 @@ export function useKeyboardNavigation<T>(
           if (editingCell != null) break;
           if (editable === false) break;
           if (onCellValueChanged == null) break;
+          if (onCheckboxCol && selectionRange == null) break;
           const range =
             selectionRange ??
             (activeCell != null

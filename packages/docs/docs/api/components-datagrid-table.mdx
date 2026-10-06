@@ -182,6 +182,7 @@ Complete Excel-style keyboard navigation:
 - `Shift+Arrows`  -  Extend cell selection range
 - `Ctrl+A`  -  Select all cells
 - `Shift+Space`  -  Toggle the active row's selection
+- `←` from the first column  -  Move to the row's checkbox cell; `Space` there toggles the row, `Shift+Space` selects a range
 
 **Editing:**
 - `Enter` or `F2`  -  Start editing active cell
@@ -208,7 +209,7 @@ See the [Accessibility Guide](/docs/guides/accessibility) for complete keyboard 
 
 - **Focus visible:** `:focus-visible` styles show a 2px solid outline (`--ogrid-accent`) only when navigating via keyboard
 - **Focus restoration:** After closing dialogs or exiting edit mode, focus returns to the active cell
-- **Tab order:** Logical tab order through interactive elements (header buttons, editable cells)
+- **Tab order:** Header controls (including the select-all checkbox) are tab stops; the body is a single tab stop (the active cell). Row and boolean checkboxes have `tabindex="-1"`
 
 ### Screen Reader Support
 

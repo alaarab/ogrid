@@ -442,8 +442,15 @@ export function useDataGridState<T>(
         st.commitCellEdit(item, colDef.columnId, getCellValue<T>(item, colDef), text, displayRow, visibleIdx + st.colOffset, { skipAdvance: true });
         return true;
       },
+      focusActiveCell: () => {
+        const wrapper = wrapperRef.current;
+        if (!wrapper) return;
+        // The roving tab stop is the active cell; the wrapper stands in while it isn't rendered.
+        const cell = wrapper.querySelector<HTMLElement>('tbody td[tabindex="0"]');
+        (cell ?? wrapper).focus({ preventScroll: true });
+      },
     };
-  }, [writerStateRef]);
+  }, [writerStateRef, wrapperRef]);
   useEffect(() => {
     if (!formulaCellWriterRef) return;
     formulaCellWriterRef.current = formulaCellWriter;

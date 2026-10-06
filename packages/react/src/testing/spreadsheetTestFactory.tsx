@@ -1051,6 +1051,109 @@ export function createSpreadsheetTests(DataGridTable: React.ComponentType<IOGrid
         });
       });
 
+      describe('with a row checkbox column', () => {
+        // Column 0 is the checkbox cell; data columns start at data-col-index 1.
+        const renderWithCheckboxes = (overrides: Partial<IOGridDataGridProps<FixtureRow>> = {}) => {
+          const onSelectionChange = jest.fn();
+          const utils = renderSpreadsheetGrid({ rowSelection: 'multiple', onSelectionChange, ...overrides });
+          return { ...utils, onSelectionChange };
+        };
+        const press = (key: string, init: Record<string, unknown> = {}) =>
+          act(() => { fireEvent.keyDown(document.activeElement as Element, { key, ...init }); });
+        const selectedIds = (fn: jest.Mock): string[] => {
+          const event = fn.mock.calls[fn.mock.calls.length - 1]?.[0] as { selectedRowIds: string[] } | undefined;
+          return [...(event?.selectedRowIds ?? [])].sort();
+        };
+
+        it('row checkboxes are not tab stops; the header select-all checkbox still is', () => {
+          const { container } = renderWithCheckboxes();
+          const rowBoxes = Array.from(container.querySelectorAll<HTMLElement>('tbody [role="checkbox"], tbody input[type="checkbox"]'));
+          expect(rowBoxes).toHaveLength(3);
+          for (const box of rowBoxes) expect(box.tabIndex).toBe(-1);
+          const selectAll = container.querySelector<HTMLElement>('thead [role="checkbox"], thead input[type="checkbox"]');
+          expect(selectAll?.tabIndex).toBe(0);
+          // One tab stop in the body: the first data cell, not a checkbox cell.
+          expect(getTabStops(container)).toEqual([getTdAt(container, 0, 1)]);
+        });
+
+        it('ArrowLeft from the first data column reaches the checkbox cell, and focus follows', () => {
+          const { container } = renderWithCheckboxes();
+          act(() => getTdAt(container, 1, 1).focus());
+          press('ArrowLeft');
+          expect(document.activeElement).toBe(getTdAt(container, 1, 0));
+          expect(getTabStops(container)).toEqual([getTdAt(container, 1, 0)]);
+          // No data range while the checkbox cell is active.
+          expect(container.querySelectorAll('[data-in-range="true"]').length).toBe(0);
+          press('ArrowLeft');
+          expect(document.activeElement).toBe(getTdAt(container, 1, 0));
+          press('ArrowDown');
+          expect(document.activeElement).toBe(getTdAt(container, 2, 0));
+          press('ArrowUp', { ctrlKey: true });
+          expect(document.activeElement).toBe(getTdAt(container, 0, 0));
+          press('ArrowRight');
+          expect(document.activeElement).toBe(getTdAt(container, 0, 1));
+          expect(container.querySelector('[data-active-cell="true"]')).toBe(getCellAt(container, 0, 1));
+        });
+
+        it('Tab from the checkbox cell goes to the first data cell; Shift+Tab from the first row leaves the grid', () => {
+          const { container } = renderWithCheckboxes();
+          act(() => getTdAt(container, 0, 1).focus());
+          press('ArrowLeft');
+          expect(document.activeElement).toBe(getTdAt(container, 0, 0));
+          // Not prevented: the browser moves focus to whatever precedes the grid body.
+          expect(fireEvent.keyDown(getTdAt(container, 0, 0), { key: 'Tab', shiftKey: true })).toBe(true);
+          press('Tab');
+          expect(document.activeElement).toBe(getTdAt(container, 0, 1));
+          // Shift+Tab from the first data cell also leaves (the checkbox cell is not in Tab order).
+          expect(fireEvent.keyDown(getTdAt(container, 0, 1), { key: 'Tab', shiftKey: true })).toBe(true);
+        });
+
+        it('Space on the checkbox cell toggles its row; Shift+Space selects the range from the last toggled row', () => {
+          const { container, onSelectionChange } = renderWithCheckboxes();
+          act(() => getTdAt(container, 0, 1).focus());
+          press('ArrowLeft');
+          press(' ');
+          expect(selectedIds(onSelectionChange)).toEqual(['1']);
+          press(' ');
+          expect(selectedIds(onSelectionChange)).toEqual([]);
+          press(' ');
+          press('ArrowDown');
+          press('ArrowDown');
+          press(' ', { shiftKey: true });
+          expect(selectedIds(onSelectionChange)).toEqual(['1', '2', '3']);
+          // Focus stays on the checkbox cell, not the checkbox control.
+          expect(document.activeElement).toBe(getTdAt(container, 2, 0));
+        });
+
+        it('Shift+Space in a data cell still toggles just the active row', () => {
+          const { container, onSelectionChange } = renderWithCheckboxes();
+          act(() => getTdAt(container, 0, 1).focus());
+          press(' ');
+          expect(onSelectionChange).not.toHaveBeenCalled();
+          press('ArrowDown');
+          press(' ', { shiftKey: true });
+          expect(selectedIds(onSelectionChange)).toEqual(['2']);
+        });
+
+        it('copy, paste and Delete on the checkbox cell leave the data alone', async () => {
+          Object.defineProperty(navigator, 'clipboard', { value: undefined, configurable: true });
+          const onCellValueChanged = jest.fn();
+          const { container } = renderWithCheckboxes({ onCellValueChanged });
+          act(() => getTdAt(container, 1, 1).focus());
+          press('ArrowLeft');
+          let copy = { data: {} as Record<string, string>, setData: jest.fn(), consumed: false };
+          await act(async () => {
+            copy = fireCopyOrCut(document.activeElement as Element, 'copy');
+          });
+          expect(copy.setData).not.toHaveBeenCalled();
+          await act(async () => {
+            firePaste(document.activeElement as Element, 'Pasted');
+          });
+          press('Delete');
+          expect(onCellValueChanged).not.toHaveBeenCalled();
+        });
+      });
+
       it('does not announce cell moves through an aria-live region (focus is announced instead)', () => {
         const { container } = renderSpreadsheetGrid();
         act(() => getTdAt(container, 0, 0).focus());

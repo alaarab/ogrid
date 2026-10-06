@@ -57,13 +57,17 @@ OGrid uses Excel-style keyboard shortcuts, so if your users know spreadsheets, t
 | `Shift+Home` / `Shift+End` | Extend selection to row edge |
 | `Shift+Ctrl+Home` / `Shift+Ctrl+End` | Extend to grid corner |
 | `Ctrl+A` | Select all cells |
-| `Space` (on checkbox column) | Toggle row selection |
+| `←` from the first column | Move to the row's checkbox cell (when `rowSelection="multiple"`) |
+| `Space` (on the checkbox cell) | Toggle that row's selection |
+| `Shift+Space` (on the checkbox cell) | Select the rows from the last toggled row to this one, like Shift+click on a checkbox |
+| `Shift+Space` (on any other cell) | Toggle the active row's selection |
 
 ### Editing
 
 | Key | Action |
 |-----|--------|
 | `Enter` or `F2` | Start editing the active cell |
+| `Space` (on an editable boolean cell) | Toggle the checkbox |
 | `Escape` | Cancel edit, revert value |
 | `Enter` (while editing) | Commit and move down |
 | `Tab` / `Shift+Tab` | Commit and move right/left |
@@ -83,9 +87,11 @@ OGrid uses Excel-style keyboard shortcuts, so if your users know spreadsheets, t
 
 OGrid follows the [WAI-ARIA grid pattern](https://www.w3.org/WAI/ARIA/apg/patterns/grid/) with a roving tabindex:
 
-- **One tab stop.** Exactly one body cell has `tabindex="0"`: the active cell, or the first data cell before any cell is active. Every other data cell has `tabindex="-1"`. Tab enters the grid on that cell; Tab from the last cell (or Shift+Tab from the first) leaves it. Header controls (sort and filter buttons, column menus, resize handles) keep their own tab stops.
+- **One tab stop.** Exactly one body cell has `tabindex="0"`: the active cell, or the first data cell before any cell is active. Every other body cell has `tabindex="-1"`. Tab enters the grid on that cell; Tab from the last cell (or Shift+Tab from the first) leaves it. Header controls (sort and filter buttons, column menus, resize handles) keep their own tab stops.
+- **In-cell controls are not tab stops.** The row selection checkboxes and boolean cell checkboxes have `tabindex="-1"`, so Tab never stops inside a row. The cell is what you focus: with `rowSelection="multiple"`, ← from the first data column moves to the row's checkbox cell, Space there toggles the row, and Shift+Space selects the range from the last toggled row. Space on an editable boolean cell toggles it. A mouse click on a checkbox still works as before.
+- **The select-all checkbox stays a tab stop.** It sits in the header row with the other header controls, which are tab stops before the grid body; the header is not part of arrow-key navigation, so making only this checkbox reachable by arrows would leave it the one header control a keyboard user can't Tab to. Tab to it and press Space.
 - **Focus follows the active cell.** Arrow keys, Ctrl+Arrow, Home/End, Page Up/Down, Tab, clicks and Shift+click all move real DOM focus to the active cell's `<td>` (Shift+Arrow and Shift+click keep focus on the anchor cell while the range grows). Focusing a cell, for example by Tabbing in or from a screen reader, makes it active.
-- **Editors.** While a cell is being edited, its editor (inline, or a popover editor rendered in a portal) has focus and receives every key. When the edit commits or is cancelled, focus returns to the active cell.
+- **Editors.** While a cell is being edited, its editor (inline, or a popover editor rendered in a portal) has focus and receives every key. When the edit commits or is cancelled, focus returns to the active cell. The formula bar (`formulas`) works the same way: Enter commits and Escape cancels, and both return focus to the active cell. If you click somewhere else instead, focus stays where you clicked.
 - **Escape** clears the active cell and selection but leaves focus on the cell, which stays the tab stop.
 - **Virtual scrolling.** If you scroll the focused row out of the DOM, focus moves to the grid's scroll container (`role="region"`) instead of falling back to the page body. That container becomes the tab stop (`tabindex="0"`) until the row renders again, and then focus returns to the cell. Keys pressed while the container has focus still navigate, and bring the active cell back into view.
 - **Focus indicator.** The focused cell shows the active-cell outline. There is no second focus ring on top of it. Keyboard focus on a cell that has no outline, such as the active cell inside a multi-cell range, gets the same outline. The scroll container shows a focus ring only when it holds keyboard focus.
@@ -253,6 +259,38 @@ Automated tests catch structural issues but can't cover everything. Before shipp
 **Virtual scrolling:** When `virtualScroll.enabled` is true, only visible rows are in the DOM. The grid sets `aria-rowcount` and `aria-rowindex` so screen readers know each row's position in the full dataset, but a screen reader's own browse mode can only read the rows that are rendered. While the focused row is scrolled out of the DOM, focus waits on the grid's scroll container (see [Focus model](#focus-model)).
 
 **Custom cell renderers:** If you use `renderCell` to render custom content inside cells, you're responsible for making that content accessible — ARIA attributes, keyboard interaction, announcements. The grid provides the structure; your custom content needs to carry its own accessibility.
+
+The grid never changes the DOM your renderer returns, so a link or button in a cell is a tab stop of its own unless you say otherwise. That breaks the one-tab-stop model: Tab would stop on every link in every row. Give such controls `tabIndex={-1}` (they stay clickable) and make the cell the way in from the keyboard. Two patterns from the [WAI-ARIA grid pattern](https://www.w3.org/WAI/ARIA/apg/patterns/grid/#keyboardinteraction-settingfocusandnavigatinginsidecells) work well:
+
+- **One action per cell:** handle Enter on the focused cell and run the action. Key events from the focused `<td>` bubble out of the grid, so a capture-phase handler on an element around `<OGrid>` sees them first; stopping propagation there keeps the grid from also acting on the key.
+- **Several controls in a cell ("widget mode"):** on Enter or F2, move focus into the cell's first control; let Tab and Shift+Tab cycle between the cell's controls; on Escape, put focus back on the cell's `<td>`. Arrow keys typed inside a control stay with the control.
+
+```tsx
+const columns: IColumnDef<Order>[] = [
+  {
+    columnId: 'invoice',
+    name: 'Invoice',
+    renderCell: (order) => (
+      // Clickable, but not a tab stop: the cell is.
+      <a href={order.invoiceUrl} tabIndex={-1}>{order.invoiceNumber}</a>
+    ),
+  },
+];
+
+<div
+  onKeyDownCapture={(e) => {
+    if (e.key !== 'Enter') return;
+    const cell = e.target as HTMLElement;
+    const link = cell.tagName === 'TD' ? cell.querySelector('a') : null;
+    if (link) {
+      e.stopPropagation(); // Enter follows the link instead of starting an edit
+      link.click();
+    }
+  }}
+>
+  <OGrid columns={columns} data={orders} getRowId={(o) => o.id} />
+</div>
+```
 
 ## Resources
 

@@ -78,6 +78,9 @@ export function useOGridFormulaBar<T>(
     if (coords && formulaCellWriterRef.current?.canEdit(coords.col, coords.row)) barStartEditing();
   }, [activeCellCoordsRef, barStartEditing]);
 
+  // Enter / Escape in the bar hand focus back to the active cell, as an inline editor does.
+  const returnFocusToGrid = useCallback(() => formulaCellWriterRef.current?.focusActiveCell?.(), []);
+
   const formulaBarEl = useMemo(() => {
     if (!formulas) return undefined;
     return React.createElement(FormulaBar, {
@@ -89,8 +92,9 @@ export function useOGridFormulaBar<T>(
       onCancel: formulaBarState.onCancel,
       startEditing: startFormulaBarEditing,
       inputRef: formulaBarState.inputRef,
+      onReturnFocus: returnFocusToGrid,
     });
-  }, [formulas, formulaBarState.cellRef, formulaBarState.formulaText, formulaBarState.isEditing, formulaBarState.onInputChange, formulaBarState.onCommit, formulaBarState.onCancel, startFormulaBarEditing, formulaBarState.inputRef]);
+  }, [formulas, formulaBarState.cellRef, formulaBarState.formulaText, formulaBarState.isEditing, formulaBarState.onInputChange, formulaBarState.onCommit, formulaBarState.onCancel, startFormulaBarEditing, formulaBarState.inputRef, returnFocusToGrid]);
 
   return { formulaBarState, formulaCellWriterRef, formulaBarEl };
 }
