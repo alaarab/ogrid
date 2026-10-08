@@ -338,6 +338,9 @@ All notable changes to OGrid will be documented in this file.
 
 ### Fixed
 
+- XLSX structural undo/redo snapshots retain their own spill output caches, so
+  a later formula recalculation cannot change the restored array values.
+
 - Clicking a cell whose text is wider than its fixed-width column no longer
   paints the text over the neighbouring cells. The active cell clips its
   content like Excel does. The fill handle now renders next to the cell

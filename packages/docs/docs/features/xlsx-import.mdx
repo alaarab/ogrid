@@ -124,6 +124,7 @@ Export starts from a copy of the source workbook and writes back only what chang
 |---|---|---|---|
 | Values (numbers, text, dates, booleans) | Yes | Yes | Yes |
 | Row and column insertion/deletion | Yes | Cell and column menus; document API | Yes, including shifted references and worksheet metadata |
+| Dynamic array formulas and `A1#` spill references | Computed spill values; child cells are read-only | Edit the anchor formula | Array refs and cached outputs preserved; refs shift with structural edits |
 | Formulas, including cross-sheet references | Yes, evaluated live | Yes | Yes, with the latest result; Excel recalculates on open after edits |
 | Formulas the engine can't evaluate (unknown functions, references into the promoted header row) | Cached result | Overwrite only | Yes, original formula unchanged |
 | Font: bold, italic, underline, strikethrough, color, size, family | Yes | Bold, italic, underline, color, size and family | Yes |

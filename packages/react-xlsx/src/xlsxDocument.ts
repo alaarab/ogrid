@@ -529,7 +529,7 @@ export class XlsxWorkbookDocument {
   }
 
   private copyState(state: MutableSheetState): MutableSheetState {
-    return { ...state, rows: state.rows.slice(), styles: new Map(state.styles), formulaResults: new Map(state.formulaResults) };
+    return { ...state, rows: state.rows.slice(), styles: new Map(state.styles), formulaResults: new Map(state.formulaResults), outputResults: new Map(state.outputResults) };
   }
 
   private snapshot(): DocumentSnapshot {
