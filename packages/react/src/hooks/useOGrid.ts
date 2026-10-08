@@ -23,6 +23,7 @@ import { useOGridStructureEdits } from './useOGridStructureEdits';
 import { useOGridCellApi } from './useOGridCellApi';
 import { useOGridNameBox } from './useOGridNameBox';
 import { useOGridHiddenRows } from './useOGridHiddenRows';
+import { useOGridFreeze } from './useOGridFreeze';
 import { useLatestRef } from './useLatestRef';
 import { useOGridCellNotes } from './useOGridCellNotes';
 import { useSortFilterColumns } from './useSortFilterColumns';
@@ -71,6 +72,7 @@ export function useOGrid<T>(
     editable, cellSelection, canUndo, canRedo, rowSelection = 'none', statusBar, pageSizeOptions,
     stickyHeader, columnReorder, responsiveColumns, virtualScroll, rowHeight, density = 'normal',
     mergedCells, frozenRows, findReplace,
+    defaultFrozenRows, onFrozenRowsChange, frozenColumns, defaultFrozenColumns, onFrozenColumnsChange, allowFreeze,
     'aria-label': ariaLabel, 'aria-labelledby': ariaLabelledBy,
     rowResize, rowHeights,
   } = props;
@@ -148,6 +150,31 @@ export function useOGrid<T>(
     effectiveColumnOrder, columnWidthOverrides, pinnedOverrides,
     handleColumnOrderChange, handleColumnResized, handleColumnPinned,
   } = columnLayout;
+
+  // --- Frozen panes (allowFreeze) ---
+  // Frozen rows come straight from the resolved count; frozen columns pin the
+  // first N displayed columns left (Excel's Freeze First Column).
+  const freeze = useOGridFreeze({
+    allowFreeze, frozenRows, defaultFrozenRows, onFrozenRowsChange,
+    frozenColumns, defaultFrozenColumns, onFrozenColumnsChange,
+  });
+  const pinnedColumns = useMemo(() => {
+    if (freeze.frozenColumns <= 0) return pinnedOverrides;
+    const rank = new Map<string, number>();
+    effectiveColumnOrder?.forEach((id, i) => { rank.set(id, i); });
+    const ordered = effectiveColumnOrder?.length
+      ? [...columns].sort((a, b) => (rank.get(a.columnId) ?? Number.MAX_SAFE_INTEGER) - (rank.get(b.columnId) ?? Number.MAX_SAFE_INTEGER))
+      : columns;
+    const next: Record<string, 'left' | 'right'> = { ...pinnedOverrides };
+    let pinned = 0;
+    for (const col of ordered) {
+      if (pinned >= freeze.frozenColumns) break;
+      if (visibleColumns && !visibleColumns.has(col.columnId)) continue;
+      next[col.columnId] = 'left';
+      pinned++;
+    }
+    return next;
+  }, [freeze.frozenColumns, pinnedOverrides, columns, effectiveColumnOrder, visibleColumns]);
 
   // --- Per-sheet UI state (captured on leave, restored on return) ---
   useOGridSheetState(props, {
@@ -283,7 +310,7 @@ export function useOGrid<T>(
     onColumnSort: sortingState.handleSort,
     visibleColumns, columnOrder: effectiveColumnOrder, onColumnOrderChange: handleColumnOrderChange,
     onColumnResized: handleColumnResized, onColumnPinned: handleColumnPinned,
-    pinnedColumns: pinnedOverrides, initialColumnWidths: columnWidthOverrides,
+    pinnedColumns, initialColumnWidths: columnWidthOverrides,
     editable, cellSelection, onCellValueChanged, onUndo, onRedo, canUndo, canRedo, onClipboardError,
     rowSelection, selectedRows: effectiveSelectedRows, onSelectionChange: handleSelectionChange,
     showRowNumbers: showRowNumbersResolved, showColumnLetters: showColumnLettersResolved, showNameBox,
@@ -294,8 +321,9 @@ export function useOGrid<T>(
     ...dgFilterProps,
     layoutMode, suppressHorizontalScroll, stickyHeader: stickyHeader ?? true, columnReorder, responsiveColumns,
     virtualScroll, rowHeight, density, 'aria-label': ariaLabel, 'aria-labelledby': ariaLabelledBy,
-    mergedCells, frozenRows, conditionalFormat,
+    mergedCells, frozenRows: freeze.frozenRows, frozenColumns: freeze.frozenColumns, conditionalFormat,
     rowResize, rowHeights, onRowResized, structureActions, gridEditBridgeRef, hidingActions,
+    freezeActions: freeze.freezeActions,
     findReplace, findRows, onFindPageChange: findRows ? setPage : undefined,
     cellNavigatorRef: nameBox.cellNavigatorRef,
     ...dgNoteProps,
@@ -305,15 +333,16 @@ export function useOGrid<T>(
     displayItems, windowed, columnsProp, getRowId,
     sortingState.sort.field, sortingState.sort.direction, sortingState.sortModel, sortingState.handleSort,
     visibleColumns, effectiveColumnOrder, handleColumnOrderChange, handleColumnResized,
-    handleColumnPinned, pinnedOverrides, columnWidthOverrides,
+    handleColumnPinned, columnWidthOverrides,
     editable, cellSelection, onCellValueChanged, onUndo, onRedo, canUndo, canRedo, onClipboardError,
     rowSelection, effectiveSelectedRows, handleSelectionChange,
     showRowNumbersResolved, showColumnLettersResolved, showNameBox, showActiveCellChange, onActiveCellChange,
     isWindowed, page, pageSize, displayTotalCount, statusBarConfig,
     isLoadingResolved, dgFilterProps,
     layoutMode, suppressHorizontalScroll, stickyHeader, columnReorder, responsiveColumns, virtualScroll,
-    rowHeight, density, ariaLabel, ariaLabelledBy, mergedCells, frozenRows, conditionalFormat,
+    rowHeight, density, ariaLabel, ariaLabelledBy, mergedCells, conditionalFormat,
     rowResize, rowHeights, onRowResized, structureActions, hidingActions, dgNoteProps,
+    freeze.frozenRows, freeze.frozenColumns, freeze.freezeActions, pinnedColumns,
     findReplace, findRows, setPage,
     nameBox.cellNavigatorRef, dgEmptyState, dgFormulaProps,
   ]);

@@ -116,6 +116,20 @@ export interface IGridHidingActions {
   hiddenRowGaps?: IHiddenGaps<RowId>;
 }
 
+/**
+ * Freeze-panes state and actions the cell context menu calls (OGrid builds
+ * these when `allowFreeze` is on). `setFreeze(rows, columns)` applies both
+ * counts at once, like Excel's Freeze Panes commands.
+ */
+export interface IGridFreezeActions {
+  /** Currently frozen displayed rows. */
+  frozenRows: number;
+  /** Currently frozen leading visible columns (pinned left). */
+  frozenColumns: number;
+  /** Freeze `rows` rows and `columns` columns (`0, 0` unfreezes). */
+  setFreeze: (rows: number, columns: number) => void;
+}
+
 /** @internal The grid's edit path and undo history, handed to OGrid's imperative API. */
 export interface IGridEditBridge<T> {
   /**
@@ -225,6 +239,27 @@ interface IOGridBaseProps<T> {
    * and virtual scrolling. Default: 0.
    */
   frozenRows?: number;
+  /** Initial frozen rows when `frozenRows` is not controlled. */
+  defaultFrozenRows?: number;
+  /** Called when the user changes the frozen row count (the Freeze menu). */
+  onFrozenRowsChange?: (rows: number) => void;
+  /**
+   * Freeze the first N visible columns to the left while the body scrolls
+   * horizontally, like Excel's Freeze First Column. Implemented with column
+   * pinning (`pinned: 'left'`). Controlled when set; `defaultFrozenColumns`
+   * seeds the uncontrolled case. Default: 0.
+   */
+  frozenColumns?: number;
+  /** Initial frozen columns when `frozenColumns` is not controlled. */
+  defaultFrozenColumns?: number;
+  /** Called when the user changes the frozen column count (the Freeze menu). */
+  onFrozenColumnsChange?: (columns: number) => void;
+  /**
+   * Show Freeze panes / Freeze top row / Freeze first column / Unfreeze panes
+   * in the cell context menu, like Excel's View → Freeze Panes. The active
+   * cell (or selection) decides what Freeze panes freezes. Default: false.
+   */
+  allowFreeze?: boolean;
   /**
    * Excel-style Find & Replace. Ctrl+F (Cmd+F) opens Find and Ctrl+H opens
    * Replace while the grid has focus; the browser's own find is untouched
@@ -517,6 +552,11 @@ export interface IOGridDataGridProps<T> {
    * and virtual scrolling. Default: 0.
    */
   frozenRows?: number;
+  /**
+   * Freeze the first N visible columns to the left. Resolved by OGrid from the
+   * `frozenColumns` prop into left pins on the leading displayed columns.
+   */
+  frozenColumns?: number;
   /** Enable the Find & Replace panel (Ctrl+F / Ctrl+H). */
   findReplace?: boolean;
   /**
@@ -599,6 +639,8 @@ export interface IOGridDataGridProps<T> {
   structureActions?: IGridStructureActions<T>;
   /** Hide/unhide actions for the menus and hidden-gap markers. Omit to hide those menu items and markers. */
   hidingActions?: IGridHidingActions;
+  /** Freeze-panes state for the context menu. Omit to hide the Freeze menu items. */
+  freezeActions?: IGridFreezeActions;
   /** @internal Filled by the grid with its edit path and undo history (OGrid's cell API uses it). */
   gridEditBridgeRef?: React.MutableRefObject<IGridEditBridge<T> | null>;
   /** Cell spacing/density preset. Controls cell padding throughout the grid. Default: 'normal'. */

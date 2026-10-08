@@ -266,6 +266,21 @@ All notable changes to OGrid will be documented in this file.
   the heights are saved on export (`XlsxWorkbookDocument.setRowHeight`), wrapped
   cells show their line breaks, and typing a line break with Alt+Enter turns on
   Wrap Text for the cell.
+- Freeze panes commands, shared by both kits: `allowFreeze` adds a Freeze
+  section to the cell context menu — "Freeze panes" (rows above and columns
+  left of the active cell), "Freeze top row", "Freeze first column" and
+  "Unfreeze panes". New `frozenColumns` / `defaultFrozenColumns` /
+  `onFrozenColumnsChange` pin the first N displayed columns left, next to the
+  existing `frozenRows` and its new `defaultFrozenRows` /
+  `onFrozenRowsChange` pair. Core exports `getFreezeMenuItems`.
+- `@alaarab/ogrid-react-xlsx`: the formatting toolbar gains a Borders menu
+  (all / outside / inside / top / bottom / left / right / no border, with line
+  style and color; outside/inside are resolved per cell across the selection)
+  and Font family and Font size menus (the workbook's own fonts plus the common
+  ones; sizes 8–72). Both are undoable and saved on export. When editable, the
+  cell context menu also freezes panes, recorded in the document
+  (`XlsxWorkbookDocument.setFreeze`) and written to the worksheet's frozen view
+  on export.
 
 ### Changed
 
@@ -292,6 +307,8 @@ All notable changes to OGrid will be documented in this file.
   alignment show the active cell's style (`aria-pressed`), formatting buttons
   are disabled until a cell is selected, arrow keys move between controls,
   and colors follow the `--ogrid-*` theme variables in light and dark mode.
+  The toolbar now also carries the Borders and Font family/size menus, so
+  borders and fonts are editable rather than display-only.
 - Cells merged away in the source file read as empty instead of repeating the
   merged block's value.
 - Merged cells and frozen rows are passed to OGrid as `mergedCells` and

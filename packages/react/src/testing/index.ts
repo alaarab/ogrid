@@ -16,6 +16,7 @@ export { createStructureEditTests } from './structureEditTestFactory';
 export { createFindReplaceTests } from './findReplaceTestFactory';
 export { createExcelKeyboardTests } from './excelKeyboardTestFactory';
 export { createHidingTests } from './hidingTestFactory';
+export { createFreezeTests } from './freezeTestFactory';
 export { createCellNotesTests } from './cellNotesTestFactory';
 export { createConditionalFormattingTests } from './conditionalFormattingTestFactory';
 export { createSortFilterTests } from './sortFilterTestFactory';

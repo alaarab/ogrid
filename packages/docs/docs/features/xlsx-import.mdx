@@ -99,7 +99,7 @@ function Editor({ file }: { file: Blob }) {
 }
 ```
 
-With `editable`, cells take values and formulas (`=SUM(B1:B3)`; typed numbers become numbers, as in Excel). The toolbar applies to the selected range: bold, italic, underline, strikethrough, fill color, font color, left/center/right alignment, a number format menu (General, Number, Currency, Percent, Date), and merge/unmerge. Edits and formatting share one undo history per sheet (Ctrl+Z / Ctrl+Y or the toolbar buttons); edits made in one go, like a paste, undo as one step. Switching sheet tabs keeps each sheet's edits.
+With `editable`, cells take values and formulas (`=SUM(B1:B3)`; typed numbers become numbers, as in Excel). The toolbar applies to the selected range: bold, italic, underline, strikethrough, fill color, font color, font family, font size (8–72), a borders menu (all, outside, inside, top, bottom, left, right or none, with line style and color), left/center/right alignment, a number format menu (General, Number, Currency, Percent, Date), and merge/unmerge. The cell context menu also has Freeze panes / Freeze top row / Freeze first column / Unfreeze panes. Edits and formatting share one undo history per sheet (Ctrl+Z / Ctrl+Y or the toolbar buttons); edits made in one go, like a paste, undo as one step. Switching sheet tabs keeps each sheet's edits.
 
 `XlsxWorkbookDocument` is the editable model behind the grid. Build one yourself (`new XlsxWorkbookDocument(workbook, { headerRow })`) to drive edits from code: `setCellValues`, `applyStyle`, `mergeCells`, `unmergeCells`, `undo`, `redo`, then `toWorkbook()` / `toBlob()` / `download()`.
 
@@ -114,10 +114,10 @@ Export starts from a copy of the source workbook and writes back only what chang
 | Values (numbers, text, dates, booleans) | Yes | Yes | Yes |
 | Formulas, including cross-sheet references | Yes, evaluated live | Yes | Yes, with the latest result; Excel recalculates on open after edits |
 | Formulas the engine can't evaluate (unknown functions, references into the promoted header row) | Cached result | Overwrite only | Yes, original formula unchanged |
-| Font: bold, italic, underline, strikethrough, color, size, family | Yes | Bold, italic, underline, color | Yes |
+| Font: bold, italic, underline, strikethrough, color, size, family | Yes | Bold, italic, underline, color, size and family | Yes |
 | Solid fill | Yes | Yes | Yes |
 | Pattern and gradient fills | Approximated by their main color | No | Yes |
-| Borders | Yes (style, width, color) | No | Yes |
+| Borders | Yes (style, width, color) | Yes (all / outside / inside / edges, style and color) | Yes |
 | Horizontal / vertical alignment, wrap text, indent | Yes | Left/center/right | Yes |
 | Number formats: decimals, thousands, currency, percent, dates and times, scientific, `[Red]` sections, conditions | Yes | General / Number / Currency / Percent / Date | Yes, any format string |
 | Theme and indexed colors | Yes, resolved against the workbook theme | — | Yes |
@@ -126,7 +126,7 @@ Export starts from a copy of the source workbook and writes back only what chang
 | Hidden columns | Hidden | No | Yes |
 | Row heights | No, grid rows are uniform | No | Yes |
 | Merged cells | Pending the grid's `mergedCells` support | Merge / unmerge | Yes |
-| Frozen panes | Frozen columns as pinned columns; frozen rows pending the grid's `frozenRows` support | Pin via the column menu (not saved) | Yes, as in the file |
+| Frozen panes | Frozen rows and columns shown | Freeze via the cell context menu | Yes, as a frozen `ws.views` entry |
 | List data validation | Dropdown editor when one list rule covers every loaded row of a column | No | Yes, every validation kept |
 | Other data validation (number, date, length, custom) | No | No | Yes |
 | Every sheet, in order, with names and tab colors | Tabs with color | No | Yes |

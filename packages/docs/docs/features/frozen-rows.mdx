@@ -1,14 +1,14 @@
 ---
 sidebar_position: 11.6
-title: Frozen Rows
-description: Keep the first rows visible below the header while the body scrolls, like Excel's Freeze Top Rows
+title: Frozen Rows & Columns
+description: Keep the first rows and columns visible while the body scrolls, like Excel's Freeze Panes, with Freeze context-menu commands
 ---
 
 import FrozenRowsDemo from '@site/src/components/demos/FrozenRowsDemo';
 
-# Frozen Rows
+# Frozen Rows and Columns
 
-Keep the first N displayed rows in place below the header while the rest of the body scrolls vertically, like Excel's **Freeze Panes**. A subtle divider marks the last frozen row.
+Keep the first N displayed rows in place below the header, and the first N displayed columns in place at the left, while the rest of the body scrolls, like Excel's **Freeze Panes**. A subtle divider marks the last frozen row; frozen columns use ordinary [column pinning](./column-pinning).
 
 ## Live Demo
 
@@ -24,10 +24,33 @@ import { OGrid } from '@alaarab/ogrid-react-radix';
   data={rows}
   getRowId={(r) => r.id}
   frozenRows={2}
+  frozenColumns={1}
 />;
 ```
 
-The same prop works on `@alaarab/ogrid-react-fluent` and on the bare `DataGridTable`.
+The same props work on `@alaarab/ogrid-react-fluent` and on the bare `DataGridTable`.
+
+## Freeze commands
+
+Set `allowFreeze` to add a **Freeze** section to the cell context menu, like Excel's View → Freeze Panes:
+
+- **Freeze panes** — freezes the rows above and the columns left of the active cell (or the selection's top-left).
+- **Freeze top row** — freezes the first row.
+- **Freeze first column** — freezes the first column.
+- **Unfreeze panes** — clears both.
+
+```tsx
+<OGrid
+  columns={columns}
+  data={rows}
+  getRowId={(r) => r.id}
+  allowFreeze
+  defaultFrozenRows={2}
+  onFrozenRowsChange={setFrozenRows}
+/>
+```
+
+`frozenRows` / `frozenColumns` are controlled when passed; leave them off and the grid keeps the state itself, seeded by `defaultFrozenRows` / `defaultFrozenColumns`, and reported through `onFrozenRowsChange` / `onFrozenColumnsChange`. `frozenColumns` pins the first N displayed columns left, so it follows column visibility and reordering.
 
 ## How It Works
 
